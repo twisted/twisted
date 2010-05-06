@@ -164,6 +164,7 @@ import types, warnings
 
 from cStringIO import StringIO
 from struct import pack
+import decimal, datetime, re
 
 from zope.interface import Interface, implements
 
@@ -846,7 +847,6 @@ class BoxDispatcher:
         @param box: an L{AmpBox} with a value for its L{COMMAND} and L{ASK}
         keys.
         """
-        cmd = box[COMMAND]
         def formatAnswer(answerBox):
             answerBox[ANSWER] = box[ASK]
             return answerBox
@@ -1498,7 +1498,7 @@ class Command:
         'fatalErrors' as class vars.
         """
         def __new__(cls, name, bases, attrs):
-            re = attrs['reverseErrors'] = {}
+            reverseErrors = attrs['reverseErrors'] = {}
             er = attrs['allErrors'] = {}
             if 'commandName' not in attrs:
                 attrs['commandName'] = name
@@ -1508,10 +1508,10 @@ class Command:
             accumulateClassDict(newtype, 'errors', errors)
             accumulateClassDict(newtype, 'fatalErrors', fatalErrors)
             for v, k in errors.iteritems():
-                re[k] = v
+                reverseErrors[k] = v
                 er[v] = k
             for v, k in fatalErrors.iteritems():
-                re[k] = v
+                reverseErrors[k] = v
                 er[v] = k
             return newtype
 
@@ -2394,3 +2394,170 @@ def _objectsToStrings(objects, arglist, strings, proto):
     for argname, argparser in arglist:
         argparser.toBox(argname, strings, myObjects, proto)
     return strings
+
+
+
+class _FixedOffsetTZInfo(datetime.tzinfo):
+    """
+    Represents a fixed timezone offset (without daylight saving time).
+
+    @ivar name: A C{str} giving the name of this timezone; the name just
+        includes how much time this offset represents.
+
+    @ivar offset: A C{datetime.timedelta} giving the amount of time this
+        timezone is offset.
+    """
+
+    def __init__(self, sign, hours, minutes):
+        self.name = '%s%02i:%02i' % (sign, hours, minutes)
+        if sign == '-':
+            hours = -hours
+            minutes = -minutes
+        elif sign != '+':
+            raise ValueError('invalid sign for timezone %r' % (sign,))
+        self.offset = datetime.timedelta(hours=hours, minutes=minutes)
+
+
+    def utcoffset(self, dt):
+        """
+        Return this timezone's offset from UTC.
+        """
+        return self.offset
+
+
+    def dst(self, dt):
+        """
+        Return a zero C{datetime.timedelta} for the daylight saving time offset,
+        since there is never one.
+        """
+        return datetime.timedelta(0)
+
+
+    def tzname(self, dt):
+        """
+        Return a string describing this timezone.
+        """
+        return self.name
+
+
+
+utc = _FixedOffsetTZInfo('+', 0, 0)
+
+
+
+class Decimal(Argument):
+    """
+    Encodes C{decimal.Decimal} instances.
+
+    There are several ways in which a decimal value might be encoded.
+
+    Special values are encoded as special strings::
+
+      - Positive infinity is encoded as C{"Infinity"}
+      - Negative infinity is encoded as C{"-Infinity"}
+      - Quiet not-a-number is encoded as either C{"NaN"} or C{"-NaN"}
+      - Signalling not-a-number is encoded as either C{"sNaN"} or C{"-sNaN"}
+
+    Normal values are encoded using the base ten string representation, using
+    engineering notation to indicate magnitude without precision, and "normal"
+    digits to indicate precision.  For example::
+
+      - C{"1"} represents the value I{1} with precision to one place.
+      - C{"-1"} represents the value I{-1} with precision to one place.
+      - C{"1.0"} represents the value I{1} with precision to two places.
+      - C{"10"} represents the value I{10} with precision to two places.
+      - C{"1E+2"} represents the value I{10} with precision to one place.
+      - C{"1E-1"} represents the value I{0.1} with precision to one place.
+      - C{"1.5E+2"} represents the value I{15} with precision to two places.
+
+    U{http://speleotrove.com/decimal/} should be considered the authoritative
+    specification for the format.
+    """
+    fromString = decimal.Decimal
+
+    def toString(self, inObject):
+        """
+        Serialize a C{decimal.Decimal} instance to the specified wire format.
+        """
+        if isinstance(inObject, decimal.Decimal):
+            # Hopefully decimal.Decimal.__str__ actually does what we want.
+            return str(inObject)
+        raise ValueError(
+            "amp.Decimal can only encode instances of decimal.Decimal")
+
+
+
+class DateTime(Argument):
+    """
+    Encodes C{datetime.datetime} instances.
+
+    Wire format: '%04i-%02i-%02iT%02i:%02i:%02i.%06i%s%02i:%02i'. Fields in
+    order are: year, month, day, hour, minute, second, microsecond, timezone
+    direction (+ or -), timezone hour, timezone minute. Encoded string is
+    always exactly 32 characters long. This format is compatible with ISO 8601,
+    but that does not mean all ISO 8601 dates can be accepted.
+
+    Also, note that the datetime module's notion of a "timezone" can be
+    complex, but the wire format includes only a fixed offset, so the
+    conversion is not lossless. A lossless transmission of a C{datetime} instance
+    is not feasible since the receiving end would require a Python interpreter.
+
+    @ivar _positions: A sequence of slices giving the positions of various
+        interesting parts of the wire format.
+    """
+
+    _positions = [
+        slice(0, 4), slice(5, 7), slice(8, 10), # year, month, day
+        slice(11, 13), slice(14, 16), slice(17, 19), # hour, minute, second
+        slice(20, 26), # microsecond
+        # intentionally skip timezone direction, as it is not an integer
+        slice(27, 29), slice(30, 32) # timezone hour, timezone minute
+        ]
+
+    def fromString(self, s):
+        """
+        Parse a string containing a date and time in the wire format into a
+        C{datetime.datetime} instance.
+        """
+        if len(s) != 32:
+            raise ValueError('invalid date format %r' % (s,))
+
+        values = [int(s[p]) for p in self._positions]
+        sign = s[26]
+        timezone = _FixedOffsetTZInfo(sign, *values[7:])
+        values[7:] = [timezone]
+        return datetime.datetime(*values)
+
+
+    def toString(self, i):
+        """
+        Serialize a C{datetime.datetime} instance to a string in the specified
+        wire format.
+        """
+        offset = i.utcoffset()
+        if offset is None:
+            raise ValueError(
+                'amp.DateTime cannot serialize naive datetime instances.  '
+                'You may find amp.utc useful.')
+
+        minutesOffset = (offset.days * 86400 + offset.seconds) // 60
+
+        if minutesOffset > 0:
+            sign = '+'
+        else:
+            sign = '-'
+
+        # strftime has no way to format the microseconds, or put a ':' in the
+        # timezone. Suprise!
+
+        return '%04i-%02i-%02iT%02i:%02i:%02i.%06i%s%02i:%02i' % (
+            i.year,
+            i.month,
+            i.day,
+            i.hour,
+            i.minute,
+            i.second,
+            i.microsecond,
+            sign,
+            abs(minutesOffset) // 60,
+            abs(minutesOffset) % 60)

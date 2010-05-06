@@ -6,6 +6,9 @@
 Tests for L{twisted.protocols.amp}.
 """
 
+import datetime
+import decimal
+
 from zope.interface.verify import verifyObject
 
 from twisted.python.util import setIDFunction
@@ -415,7 +418,6 @@ class ParsingTest(unittest.TestCase):
         LF = ('lftest', 'hello\n')
         NEWLINE = ('newline', 'test\r\none\r\ntwo')
         NEWLINE2 = ('newline2', 'test\r\none\r\n two')
-        BLANKLINE = ('newline3', 'test\r\n\r\nblank\r\n\r\nline')
         BODYTEST = ('body', 'blah\r\n\r\ntesttest')
 
         testData = [
@@ -966,8 +968,6 @@ class BinaryProtocolTests(unittest.TestCase):
         """
         a = amp.BinaryBoxProtocol(self)
         a.makeConnection(self)
-        aBox = amp.Box({"sample": "data"})
-        a.makeConnection(self)
         connectionFailure = Failure(RuntimeError())
         a.connectionLost(connectionFailure)
         self.assertIdentical(self.stopReason, connectionFailure)
@@ -1195,7 +1195,7 @@ class AMPTest(unittest.TestCase):
         L = []
         SimpleSymmetricCommandProtocol().dispatchCommand(
             amp.AmpBox(_command=BrokenReturn.commandName)).addErrback(L.append)
-        blr = L[0].trap(amp.BadLocalReturn)
+        L[0].trap(amp.BadLocalReturn)
         self.failUnlessIn('None', repr(L[0].value))
 
 
@@ -1271,7 +1271,6 @@ class AMPTest(unittest.TestCase):
         exception.
         """
         c, s, p = connectedServerAndClient()
-        L = []
         x = "H" * (0xff+1)
         tl = self.assertRaises(amp.TooLong,
                                c.callRemoteString, "Hello",
@@ -1290,7 +1289,6 @@ class AMPTest(unittest.TestCase):
         raise an exception.
         """
         c, s, p = connectedServerAndClient()
-        L = []
         x = "H" * (0xffff+1)
         tl = self.assertRaises(amp.TooLong, c.sendHello, x)
         p.flush()
@@ -1388,7 +1386,6 @@ class AMPTest(unittest.TestCase):
             ServerClass=SimpleSymmetricCommandProtocol,
             ClientClass=SimpleSymmetricCommandProtocol)
         L = []
-        HELLO = 'world'
         c.callRemote(WaitForever).addErrback(L.append)
         p.flush()
         self.assertEquals(L, [])
@@ -1404,7 +1401,6 @@ class AMPTest(unittest.TestCase):
         """
         Verify that a command that requires no answer is run.
         """
-        L=[]
         c, s, p = connectedServerAndClient(
             ServerClass=SimpleSymmetricCommandProtocol,
             ClientClass=SimpleSymmetricCommandProtocol)
@@ -1503,8 +1499,6 @@ class AMPTest(unittest.TestCase):
         """
         Sanity check that optional AmpList arguments are processed normally.
         """
-        dontRejectMeCommand = DontRejectMe(magicWord=u'please',
-                list=[{'name': 'foo'}])
         c, s, p = connectedServerAndClient(
             ServerClass=SimpleSymmetricCommandProtocol,
             ClientClass=SimpleSymmetricCommandProtocol)
@@ -1518,10 +1512,9 @@ class AMPTest(unittest.TestCase):
 
     def test_failEarlyOnArgSending(self):
         """
-        Verify that if we pass an invalid argument list (omitting an argument), an
-        exception will be raised.
+        Verify that if we pass an invalid argument list (omitting an argument),
+        an exception will be raised.
         """
-        okayCommand = Hello(hello="What?")
         self.assertRaises(amp.InvalidSignature, Hello)
 
 
@@ -1563,7 +1556,7 @@ class AMPTest(unittest.TestCase):
 
         if spuriousTraffic:
             wfdr = []           # remote
-            wfd = c.callRemote(WaitForever).addErrback(wfdr.append)
+            c.callRemote(WaitForever).addErrback(wfdr.append)
         switchDeferred = c.switchToTestProtocol()
         if spuriousTraffic:
             self.assertRaises(amp.ProtocolSwitched, c.sendHello, 'world')
@@ -1622,7 +1615,7 @@ class AMPTest(unittest.TestCase):
         c, s, p = connectedServerAndClient(ServerClass=lambda: serverProto,
                                            ClientClass=lambda: clientProto)
         L = []
-        switchDeferred = c.switchToTestProtocol(fail=True).addErrback(L.append)
+        c.switchToTestProtocol(fail=True).addErrback(L.append)
         p.flush()
         L.pop().trap(UnknownProtocol)
         self.failIf(self.testSucceeded)
@@ -1803,12 +1796,12 @@ class TLSTest(unittest.TestCase):
 
         # let's buffer something to be delivered securely
         L = []
-        d = cli.callRemote(SecuredPing).addCallback(L.append)
+        cli.callRemote(SecuredPing).addCallback(L.append)
         p.flush()
         # once for client once for server
         self.assertEquals(okc.verifyCount, 2)
         L = []
-        d = cli.callRemote(SecuredPing).addCallback(L.append)
+        cli.callRemote(SecuredPing).addCallback(L.append)
         p.flush()
         self.assertEqual(L[0], {'pinged': True})
 
@@ -1874,8 +1867,7 @@ class TLSTest(unittest.TestCase):
         droppyCert = DroppyCert(svr.transport)
         svr.certFactory = lambda : droppyCert
 
-        secure = cli.callRemote(amp.StartTLS,
-                                tls_localCertificate=droppyCert)
+        cli.callRemote(amp.StartTLS, tls_localCertificate=droppyCert)
 
         p.flush()
 
@@ -2561,7 +2553,7 @@ class ListOfTestsMixin:
 
 class ListOfStringsTests(unittest.TestCase, ListOfTestsMixin):
     """
-    Tests for L{ListOf} combined with L{String}.
+    Tests for L{ListOf} combined with L{amp.String}.
     """
     elementType = amp.String()
 
@@ -2578,7 +2570,7 @@ class ListOfStringsTests(unittest.TestCase, ListOfTestsMixin):
 
 class ListOfIntegersTests(unittest.TestCase, ListOfTestsMixin):
     """
-    Tests for L{ListOf} combined with L{Integer}.
+    Tests for L{ListOf} combined with L{amp.Integer}.
     """
     elementType = amp.Integer()
 
@@ -2601,9 +2593,10 @@ class ListOfIntegersTests(unittest.TestCase, ListOfTestsMixin):
         "negative": [-1]}
 
 
+
 class ListOfUnicodeTests(unittest.TestCase, ListOfTestsMixin):
     """
-    Tests for L{ListOf} combined with L{Unicode}.
+    Tests for L{ListOf} combined with L{amp.Unicode}.
     """
     elementType = amp.Unicode()
 
@@ -2616,6 +2609,244 @@ class ListOfUnicodeTests(unittest.TestCase, ListOfTestsMixin):
         "empty": [],
         "single": [u"foo"],
         "multiple": [u"\N{SNOWMAN}", u"Hello", u"world"]}
+
+
+
+class ListOfDecimalTests(unittest.TestCase, ListOfTestsMixin):
+    """
+    Tests for L{ListOf} combined with L{amp.Decimal}.
+    """
+    elementType = amp.Decimal()
+
+    strings = {
+        "empty": "",
+        "single": "\x00\x031.1",
+        "extreme": "\x00\x08Infinity\x00\x09-Infinity",
+        "scientist": "\x00\x083.141E+5\x00\x0a0.00003141\x00\x083.141E-7"
+                     "\x00\x09-3.141E+5\x00\x0b-0.00003141\x00\x09-3.141E-7",
+        "engineer": "\x00\x04%s\x00\x06%s" % (
+            decimal.Decimal("0e6").to_eng_string(),
+            decimal.Decimal("1.5E-9").to_eng_string()),
+    }
+
+    objects = {
+        "empty": [],
+        "single": [decimal.Decimal("1.1")],
+        "extreme": [
+            decimal.Decimal("Infinity"),
+            decimal.Decimal("-Infinity"),
+        ],
+        # exarkun objected to AMP supporting engineering notation because
+        # it was redundant, until we realised that 1E6 has less precision
+        # than 1000000 and is represented differently.  But they compare
+        # and even hash equally.  There were tears.
+        "scientist": [
+            decimal.Decimal("3.141E5"),
+            decimal.Decimal("3.141e-5"),
+            decimal.Decimal("3.141E-7"),
+            decimal.Decimal("-3.141e5"),
+            decimal.Decimal("-3.141E-5"),
+            decimal.Decimal("-3.141e-7"),
+        ],
+        "engineer": [
+            decimal.Decimal("0e6"),
+            decimal.Decimal("1.5E-9"),
+        ],
+     }
+
+
+
+class ListOfDecimalNanTests(unittest.TestCase, ListOfTestsMixin):
+    """
+    Tests for L{ListOf} combined with L{amp.Decimal} for not-a-number values.
+    """
+    elementType = amp.Decimal()
+
+    strings = {
+        "nan": "\x00\x03NaN\x00\x04-NaN\x00\x04sNaN\x00\x05-sNaN",
+    }
+
+    objects = {
+        "nan": [
+            decimal.Decimal("NaN"),
+            decimal.Decimal("-NaN"),
+            decimal.Decimal("sNaN"),
+            decimal.Decimal("-sNaN"),
+        ]
+    }
+
+    def test_fromBox(self):
+        """
+        L{ListOf.fromBox} reverses the operation performed by L{ListOf.toBox}.
+        """
+        # Helpers.  Decimal.is_{qnan,snan,signed}() are new in 2.6 (or 2.5.2,
+        # but who's counting).
+        def is_qnan(decimal):
+            return 'NaN' in str(decimal) and 'sNaN' not in str(decimal)
+
+        def is_snan(decimal):
+            return 'sNaN' in str(decimal)
+
+        def is_signed(decimal):
+            return '-' in str(decimal)
+
+        # NaN values have unusual equality semantics, so this method is
+        # overridden to compare the resulting objects in a way which works with
+        # NaNs.
+        stringList = amp.ListOf(self.elementType)
+        objects = {}
+        for key in self.strings:
+            stringList.fromBox(key, self.strings.copy(), objects, None)
+        n = objects["nan"]
+        self.assertTrue(is_qnan(n[0]) and not is_signed(n[0]))
+        self.assertTrue(is_qnan(n[1]) and is_signed(n[1]))
+        self.assertTrue(is_snan(n[2]) and not is_signed(n[2]))
+        self.assertTrue(is_snan(n[3]) and is_signed(n[3]))
+
+
+
+class DecimalTests(unittest.TestCase):
+    """
+    Tests for L{amp.Decimal}.
+    """
+    def test_nonDecimal(self):
+        """
+        L{amp.Decimal.toString} raises L{ValueError} if passed an object which
+        is not an instance of C{decimal.Decimal}.
+        """
+        argument = amp.Decimal()
+        self.assertRaises(ValueError, argument.toString, "1.234")
+        self.assertRaises(ValueError, argument.toString, 1.234)
+        self.assertRaises(ValueError, argument.toString, 1234)
+
+
+
+class ListOfDateTimeTests(unittest.TestCase, ListOfTestsMixin):
+    """
+    Tests for L{ListOf} combined with L{amp.DateTime}.
+    """
+    elementType = amp.DateTime()
+
+    strings = {
+        "christmas":
+            "\x00\x202010-12-25T00:00:00.000000-00:00"
+            "\x00\x202010-12-25T00:00:00.000000-00:00",
+        "christmas in eu": "\x00\x202010-12-25T00:00:00.000000+01:00",
+        "christmas in iran": "\x00\x202010-12-25T00:00:00.000000+03:30",
+        "christmas in nyc": "\x00\x202010-12-25T00:00:00.000000-05:00",
+        "previous tests": "\x00\x202010-12-25T00:00:00.000000+03:19"
+                          "\x00\x202010-12-25T00:00:00.000000-06:59",
+    }
+
+    objects = {
+        "christmas": [
+            datetime.datetime(2010, 12, 25, 0, 0, 0, tzinfo=amp.utc),
+            datetime.datetime(2010, 12, 25, 0, 0, 0,
+                tzinfo=amp._FixedOffsetTZInfo('+', 0, 0)),
+        ],
+        "christmas in eu": [
+            datetime.datetime(2010, 12, 25, 0, 0, 0,
+                tzinfo=amp._FixedOffsetTZInfo('+', 1, 0)),
+        ],
+        "christmas in iran": [
+            datetime.datetime(2010, 12, 25, 0, 0, 0,
+                tzinfo=amp._FixedOffsetTZInfo('+', 3, 30)),
+        ],
+        "christmas in nyc": [
+            datetime.datetime(2010, 12, 25, 0, 0, 0,
+                tzinfo=amp._FixedOffsetTZInfo('-', 5, 0)),
+        ],
+        "previous tests": [
+            datetime.datetime(2010, 12, 25, 0, 0, 0,
+                tzinfo=amp._FixedOffsetTZInfo('+', 3, 19)),
+            datetime.datetime(2010, 12, 25, 0, 0, 0,
+                tzinfo=amp._FixedOffsetTZInfo('-', 6, 59)),
+        ],
+    }
+
+
+
+class DateTimeTests(unittest.TestCase):
+    """
+    Tests for L{amp.DateTime}, L{amp._FixedOffsetTZInfo}, and L{amp.utc}.
+    """
+    string = '9876-01-23T12:34:56.054321-01:23'
+    tzinfo = amp._FixedOffsetTZInfo('-', 1, 23)
+    object = datetime.datetime(9876, 1, 23, 12, 34, 56, 54321, tzinfo)
+
+    def test_invalidString(self):
+        """
+        L{amp.DateTime.fromString} raises L{ValueError} when passed a string
+        which does not represent a timestamp in the proper format.
+        """
+        d = amp.DateTime()
+        self.assertRaises(ValueError, d.fromString, 'abc')
+
+
+    def test_invalidDatetime(self):
+        """
+        L{amp.DateTime.toString} raises L{ValueError} when passed a naive
+        datetime (a datetime with no timezone information).
+        """
+        d = amp.DateTime()
+        self.assertRaises(ValueError, d.toString,
+            datetime.datetime(2010, 12, 25, 0, 0, 0))
+
+
+    def test_fromString(self):
+        """
+        L{amp.DateTime.fromString} returns a C{datetime.datetime} with all of
+        its fields populated from the string passed to it.
+        """
+        argument = amp.DateTime()
+        value = argument.fromString(self.string)
+        self.assertEquals(value, self.object)
+
+
+    def test_toString(self):
+        """
+        L{amp.DateTime.toString} returns a C{str} in the wire format including
+        all of the information from the C{datetime.datetime} passed into it,
+        including the timezone offset.
+        """
+        argument = amp.DateTime()
+        value = argument.toString(self.object)
+        self.assertEquals(value, self.string)
+
+
+
+class FixedOffsetTZInfoTests(unittest.TestCase):
+    """
+    Tests for L{amp._FixedOffsetTZInfo} and L{amp.utc}.
+    """
+
+    def test_tzname(self):
+        """
+        L{amp.utc.tzname} returns C{"+00:00"}.
+        """
+        self.assertEquals(amp.utc.tzname(None), '+00:00')
+
+
+    def test_dst(self):
+        """
+        L{amp.utc.dst} returns a zero timedelta.
+        """
+        self.assertEquals(amp.utc.dst(None), datetime.timedelta(0))
+
+
+    def test_utcoffset(self):
+        """
+        L{amp.utc.utcoffset} returns a zero timedelta.
+        """
+        self.assertEquals(amp.utc.utcoffset(None), datetime.timedelta(0))
+
+
+    def test_badSign(self):
+        """
+        L{amp._FixedOffsetTZInfo} raises L{ValueError} if passed an offset sign
+        other than C{'+'} or C{'-'}.
+        """
+        self.assertRaises(ValueError, amp._FixedOffsetTZInfo, '?', 0, 0)
 
 
 
