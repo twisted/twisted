@@ -277,8 +277,12 @@ class SimpleSymmetricCommandProtocol(FactoryNotifier):
         return {'body': [dict(x=1)] * length}
     GetList.responder(cmdGetlist)
 
-    def okiwont(self, magicWord, list):
-        return dict(response=u'%s accepted' % (list[0]['name']))
+    def okiwont(self, magicWord, list=None):
+        if list is None:
+            response = u'list omitted'
+        else:
+            response = u'%s accepted' % (list[0]['name'])
+        return dict(response=response)
     DontRejectMe.responder(okiwont)
 
     def waitforit(self):
@@ -1481,10 +1485,18 @@ class AMPTest(unittest.TestCase):
 
     def test_optionalAmpListOmitted(self):
         """
-        Test that sending a command with an omitted AmpList argument that is
+        Sending a command with an omitted AmpList argument that is
         designated as optional does not raise an InvalidSignature error.
         """
         dontRejectMeCommand = DontRejectMe(magicWord=u'please')
+        c, s, p = connectedServerAndClient(
+            ServerClass=SimpleSymmetricCommandProtocol,
+            ClientClass=SimpleSymmetricCommandProtocol)
+        L = []
+        c.callRemote(DontRejectMe, magicWord=u'please').addCallback(L.append)
+        p.flush()
+        response = L.pop().get('response')
+        self.assertEquals(response, 'list omitted')
 
 
     def test_optionalAmpListPresent(self):
