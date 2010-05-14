@@ -80,14 +80,17 @@ class EPollReactor(posixbase.PosixReactorBase):
             if fd in other:
                 flags |= antievent
                 cmd = _epoll.CTL_MOD
-            primary[fd] = 1
-            selectables[fd] = xer
             # epoll_ctl can raise all kinds of IOErrors, and every one
             # indicates a bug either in the reactor or application-code.
             # Let them all through so someone sees a traceback and fixes
             # something.  We'll do the same thing for every other call to
             # this method in this file.
             self._poller._control(cmd, fd, flags)
+
+            # Update our own tracking state *only* after the epoll call has
+            # succeeded.  Otherwise we may get out of sync.
+            primary[fd] = 1
+            selectables[fd] = xer
 
 
     def addReader(self, reader):

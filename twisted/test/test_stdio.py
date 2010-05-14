@@ -5,12 +5,13 @@
 Tests for L{twisted.internet.stdio}.
 """
 
-import os, sys
+import os, sys, itertools
 
 from twisted.trial import unittest
 from twisted.python import filepath, log
 from twisted.python.runtime import platform
-from twisted.internet import error, defer, protocol, reactor
+from twisted.internet import error, defer, protocol, stdio, reactor
+from twisted.test.test_tcp import ConnectionLostNotifyingProtocol
 
 
 # A short string which is intended to appear here and nowhere else,
@@ -311,3 +312,89 @@ class StandardInputOutputTestCase(unittest.TestCase):
             self.assertEquals(p.data[1], file(junkPath).read())
             reason.trap(error.ProcessDone)
         return self._requireFailure(d, processEnded)
+
+
+    def test_normalFileStandardOut(self):
+        """
+        If L{StandardIO} is created with a file descriptor which refers to a
+        normal file (ie, a file from the filesystem), L{StandardIO.write}
+        writes bytes to that file.  In particular, it does not immediately
+        consider the file closed or call its protocol's C{connectionLost}
+        method.
+        """
+        onConnLost = defer.Deferred()
+        proto = ConnectionLostNotifyingProtocol(onConnLost)
+        path = filepath.FilePath(self.mktemp())
+        self.normal = normal = path.open('w')
+        self.addCleanup(normal.close)
+
+        kwargs = dict(stdout=normal.fileno())
+        if not platform.isWindows():
+            # Make a fake stdin so that StandardIO doesn't mess with the *real*
+            # stdin.
+            r, w = os.pipe()
+            self.addCleanup(os.close, r)
+            self.addCleanup(os.close, w)
+            kwargs['stdin'] = r
+        connection = stdio.StandardIO(proto, **kwargs)
+
+        # The reactor needs to spin a bit before it might have incorrectly
+        # decided stdout is closed.  Use this counter to keep track of how
+        # much we've let it spin.  If it closes before we expected, this
+        # counter will have a value that's too small and we'll know.
+        howMany = 5
+        count = itertools.count()
+
+        def spin():
+            for value in count:
+                if value == howMany:
+                    connection.loseConnection()
+                    return
+                connection.write(str(value))
+                break
+            reactor.callLater(0, spin)
+        reactor.callLater(0, spin)
+
+        # Once the connection is lost, make sure the counter is at the
+        # appropriate value.
+        def cbLost(reason):
+            self.assertEquals(count.next(), howMany + 1)
+            self.assertEquals(
+                path.getContent(),
+                ''.join(map(str, range(howMany))))
+        onConnLost.addCallback(cbLost)
+        return onConnLost
+    if reactor.__class__.__name__ == 'EPollReactor':
+        test_normalFileStandardOut.skip = (
+            "epoll(7) does not support normal files.  See #4429.  "
+            "This should be a todo but technical limitations prevent "
+            "this.")
+    elif platform.isWindows():
+        test_normalFileStandardOut.skip = (
+            "StandardIO does not accept stdout as an argument to Windows.  "
+            "Testing redirection to a file is therefore harder.")
+
+
+    def test_normalFileStandardOutGoodEpollError(self):
+        """
+        Using StandardIO with epollreactor with stdout redirected to a
+        normal file fails with a comprehensible error (until it is
+        supported, when #4429 is resolved).  See also #2259 and #3442.
+        """
+        path = filepath.FilePath(self.mktemp())
+        normal = path.open('w')
+        fd = normal.fileno()
+        self.addCleanup(normal.close)
+        exc = self.assertRaises(
+            RuntimeError,
+            stdio.StandardIO, protocol.Protocol(), stdout=fd)
+        
+        self.assertEquals(
+            str(exc),
+            "This reactor does not support this type of file descriptor (fd "
+            "%d, mode %d) (for example, epollreactor does not support normal "
+            "files.  See #4429)." % (fd, os.fstat(fd).st_mode))
+    if reactor.__class__.__name__ != 'EPollReactor':
+        test_normalFileStandardOutGoodEpollError.skip = (
+            "Only epollreactor is expected to fail with stdout redirected "
+            "to a normal file.")

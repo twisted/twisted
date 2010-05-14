@@ -11,7 +11,7 @@ Future Plans::
 Maintainer: James Y Knight
 """
 
-import warnings
+import warnings, errno, os
 from zope.interface import implements
 
 from twisted.internet import process, error, interfaces
@@ -33,10 +33,23 @@ class StandardIO(object):
         from twisted.internet import reactor
         self.protocol = proto
 
-        self._reader=process.ProcessReader(reactor, self, 'read', stdin)
+        self._writer = process.ProcessWriter(reactor, self, 'write', stdout)
+        try:
+            self._writer.startReading()
+        except IOError, e:
+            if e.errno == errno.EPERM:
+                # epoll will reject certain file descriptors by raising
+                # EPERM.  Most commonly, this means stdout was redirected to
+                # a regular file.
+                raise RuntimeError(
+                    "This reactor does not support this type of file "
+                    "descriptor (fd %d, mode %d) (for example, epollreactor "
+                    "does not support normal files.  See #4429)." % (
+                        stdout, os.fstat(stdout).st_mode))
+            raise
+
+        self._reader = process.ProcessReader(reactor, self, 'read', stdin)
         self._reader.startReading()
-        self._writer=process.ProcessWriter(reactor, self, 'write', stdout)
-        self._writer.startReading()
         self.protocol.makeConnection(self)
 
     # ITransport

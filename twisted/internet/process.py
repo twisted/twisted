@@ -11,7 +11,7 @@ Maintainer: Itamar Shtull-Trauring
 """
 
 # System Imports
-import gc, os, sys, traceback, select, signal, errno
+import gc, os, sys, stat, traceback, select, signal, errno
 
 try:
     import pty
@@ -106,6 +106,12 @@ class ProcessWriter(abstract.FileDescriptor):
 
     I am a helper which describes a selectable asynchronous writer to a
     process's input pipe, including stdin.
+
+    @ivar enableReadHack: A flag which determines how readability on this
+        write descriptor will be handled.  If C{True}, then readability may
+        indicate the reader for this write descriptor has been closed (ie,
+        the connection has been lost).  If C{False}, then readability events
+        are ignored.
     """
     connected = 1
     ic = 0
@@ -121,7 +127,12 @@ class ProcessWriter(abstract.FileDescriptor):
         self.name = name
         self.fd = fileno
 
-        if forceReadHack:
+        if not stat.S_ISFIFO(os.fstat(self.fileno()).st_mode):
+            # If the fd is not a pipe, then the read hack is never
+            # applicable.  This case arises when ProcessWriter is used by
+            # StandardIO and stdout is redirected to a normal file.
+            self.enableReadHack = False
+        elif forceReadHack:
             self.enableReadHack = True
         else:
             # Detect if this fd is actually a write-only fd. If it's
@@ -149,6 +160,9 @@ class ProcessWriter(abstract.FileDescriptor):
         """
         rv = fdesc.writeToFD(self.fd, data)
         if rv == len(data) and self.enableReadHack:
+            # If the send buffer is now empty and it is necessary to monitor
+            # this descriptor for readability to detect close, try detecting
+            # readability now.
             self.startReading()
         return rv
 

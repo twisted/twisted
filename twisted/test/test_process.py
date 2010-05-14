@@ -1311,6 +1311,13 @@ class MockOS(object):
         return -3
 
 
+    def fstat(self, fd):
+        """
+        Fake C{os.fstat}.  Return a C{os.stat_result} filled with garbage.
+        """
+        return os.stat_result((0,) * 10)
+
+
     def fdopen(self, fd, flag):
         """
         Fake C{os.fdopen}. Return a StringIO object whose content can be tested
