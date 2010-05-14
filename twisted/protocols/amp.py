@@ -65,6 +65,19 @@ a L{Deferred} which will fire with the result::
         lambda p: p.callRemote(Sum, a=13, b=81)).addCallback(
             lambda result: result['total'])
 
+Command responders may also return Deferreds, causing the response to be
+sent only once the Deferred fires::
+
+    class DelayedSum(amp.AMP):
+        def slowSum(self, a, b):
+            total = a + b
+            result = defer.Deferred()
+            reactor.callLater(3, result.callback, {'total': total})
+            return result
+        Sum.responder(slowSum)
+
+This is transparent to the caller.
+
 You can also define the propagation of specific errors in AMP.  For example,
 for the slightly more complicated case of division, we might have to deal with
 division by zero::
