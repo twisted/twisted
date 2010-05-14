@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -86,6 +86,28 @@ class D(object):
 
 
 
+class E(object):
+    """
+    Dummy new-style class with slots.
+    """
+
+    __slots__ = ("x", "y")
+
+    def __init__(self, x=None, y=None):
+        self.x = x
+        self.y = y
+
+
+    def __getstate__(self):
+        return {"x" : self.x, "y" : self.y}
+
+
+    def __setstate__(self, state):
+        self.x = state["x"]
+        self.y = state["y"]
+
+
+
 class SimpleJellyTest:
     def __init__(self, x, y):
         self.x = x
@@ -161,6 +183,19 @@ class JellyTestCase(unittest.TestCase):
         m = jelly.unjelly(c)
         self.assertIsInstance(m, D)
         self.assertIdentical(m.n2, m.n3)
+
+
+    def test_newStyleWithSlots(self):
+        """
+        A class defined with I{slots} can be jellied and unjellied with the
+        values for its attributes preserved.
+        """
+        n = E()
+        n.x = 1
+        c = jelly.jelly(n)
+        m = jelly.unjelly(c)
+        self.assertIsInstance(m, E)
+        self.assertEquals(n.x, 1)
 
 
     def test_typeOldStyle(self):

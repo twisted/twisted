@@ -1,0 +1,1 @@
+twisted.spread.jelly now supports jellying and unjellying classes defined with slots if they also implement __getstate__ and __setstate__.

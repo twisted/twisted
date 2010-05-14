@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_jelly -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -154,20 +154,29 @@ unpersistable_atom = "unpersistable"# u
 unjellyableRegistry = {}
 unjellyableFactoryRegistry = {}
 
+_NO_STATE = object()
 
-
-def _newInstance(cls, state):
+def _newInstance(cls, state=_NO_STATE):
     """
-    Make a new instance of a class without calling its __init__ method.
-    'state' will be used to update inst.__dict__ . Supports both new- and
-    old-style classes.
+    Make a new instance of a class without calling its __init__ method. 
+    Supports both new- and old-style classes.
+
+    @param state: A C{dict} used to update C{inst.__dict__} or C{_NO_STATE}
+        to skip this part of initialization.
+
+    @return: A new instance of C{cls}.
     """
     if not isinstance(cls, types.ClassType):
         # new-style
         inst = cls.__new__(cls)
-        inst.__dict__.update(state) # Copy 'instance' behaviour
+
+        if state is not _NO_STATE:
+            inst.__dict__.update(state) # Copy 'instance' behaviour
     else:
-        inst = instance(cls, state)
+        if state is not _NO_STATE:
+            inst = instance(cls, state)
+        else:   
+            inst = instance(cls)
     return inst
 
 
@@ -675,7 +684,7 @@ class _Unjellier:
             if not self.taster.isClassAllowed(clz):
                 raise InsecureJelly("Class %s not allowed." % jelType)
             if hasattr(clz, "__setstate__"):
-                ret = _newInstance(clz, {})
+                ret = _newInstance(clz)
                 state = self.unjelly(obj[1])
                 ret.__setstate__(state)
             else:
