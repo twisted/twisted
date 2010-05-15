@@ -1,14 +1,14 @@
+# -*- test-case-name: twisted.runner.test.test_procmon -*-
 # Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
 Support for starting, monitoring, and restarting child process.
 """
-
-import os, time
+import warnings
 
 from twisted.python import log
-from twisted.internet import error, protocol, reactor
+from twisted.internet import error, protocol, reactor as _reactor
 from twisted.application import service
 from twisted.protocols import basic
 
@@ -26,6 +26,7 @@ class LineLogger(basic.LineReceiver):
     def lineReceived(self, line):
         log.msg('[%s] %s' % (self.tag, line))
 
+
 class LoggingProtocol(protocol.ProcessProtocol):
 
     service = None
@@ -37,11 +38,13 @@ class LoggingProtocol(protocol.ProcessProtocol):
         self.output.tag = self.name
         self.output.makeConnection(transport)
 
+
     def outReceived(self, data):
         self.output.dataReceived(data)
         self.empty = data[-1] == '\n'
 
     errReceived = outReceived
+
 
     def processEnded(self, reason):
         if not self.empty:
@@ -51,171 +54,256 @@ class LoggingProtocol(protocol.ProcessProtocol):
 
 class ProcessMonitor(service.Service):
     """
-    ProcessMonitor runs processes, monitors their progress, and restarts them
-    when they die.
+    ProcessMonitor runs processes, monitors their progress, and restarts
+    them when they die.
 
-    The ProcessMonitor will not attempt to restart a process that appears to die
-    instantly -- with each "instant" death (less than 1 second, by default), it
-    will delay approximately twice as long before restarting it. A successful
-    run will reset the counter.
+    The ProcessMonitor will not attempt to restart a process that appears to
+    die instantly -- with each "instant" death (less than 1 second, by
+    default), it will delay approximately twice as long before restarting
+    it.  A successful run will reset the counter.
 
-    The primary interface is L{addProcess} and L{removeProcess}. When the service
-    is active (that is, when the application it is attached to is running),
-    adding a process automatically starts it.
+    The primary interface is L{addProcess} and L{removeProcess}. When the
+    service is running (that is, when the application it is attached to is
+    running), adding a process automatically starts it.
 
     Each process has a name. This name string must uniquely identify the
-    process. In particular, attempting to add two processes with the same name
-    will result in a C{KeyError}.
+    process.  In particular, attempting to add two processes with the same
+    name will result in a C{KeyError}.
 
     @type threshold: C{float}
     @ivar threshold: How long a process has to live before the death is
-        considered instant, in seconds. The default value is 1 second.
+        considered instant, in seconds.  The default value is 1 second.
 
     @type killTime: C{float}
-    @ivar killTime: How long a process being killed has to get its affairs in
-        order before it gets killed with an unmaskable signal. The default value
-        is 5 seconds.
+    @ivar killTime: How long a process being killed has to get its affairs
+        in order before it gets killed with an unmaskable signal.  The
+        default value is 5 seconds.
 
-    @type consistencyDelay: C{float}
-    @ivar consistencyDelay: The time between consistency checks. The default
-        value is 60 seconds.
+    @type minRestartDelay: C{float}
+    @ivar minRestartDelay: The minimum time (in seconds) to wait before
+        attempting to restart a process.  Default 1s.
+
+    @type maxRestartDelay: C{float}
+    @ivar maxRestartDelay: The maximum time (in seconds) to wait before
+        attempting to restart a process.  Default 3600s (1h).
+
+    @type _reactor: L{IReactorProcess} provider
+    @ivar _reactor: A provider of L{IReactorProcess} and L{IReactorTime}
+        which will be used to spawn processes and register delayed calls.
+
     """
     threshold = 1
-    active = 0
     killTime = 5
-    consistency = None
-    consistencyDelay = 60
+    minRestartDelay = 1
+    maxRestartDelay = 3600
 
-    def __init__(self):
+
+    def __init__(self, reactor=_reactor):
+        self._reactor = reactor
+
         self.processes = {}
         self.protocols = {}
         self.delay = {}
         self.timeStarted = {}
         self.murder = {}
+        self.restart = {}
+
+    def _getActive(self):
+        warnings.warn("active is deprecated since Twisted 10.1.0.  "
+                      "Use running instead.", category=DeprecationWarning,
+                                              stacklevel=2)
+        return self.running
+
+    active = property(_getActive, None)
+
+
+    def _getConsistency(self):
+        warnings.warn("consistency is deprecated since Twisted 10.1.0.",
+                      category=DeprecationWarning, stacklevel=2)
+        return None
+
+    consistency = property(_getConsistency, None)
+
+
+    def _getConsistencyDelay(self):
+        warnings.warn("consistencyDelay is deprecated since Twisted 10.1.0.",
+                      category=DeprecationWarning, stacklevel=2)
+        return 60
+
+    consistencyDelay = property(_getConsistencyDelay, None)
+
 
     def __getstate__(self):
         dct = service.Service.__getstate__(self)
-        for k in ('active', 'consistency'):
-            if dct.has_key(k):
-                del dct[k]
+        del dct['_reactor']
         dct['protocols'] = {}
         dct['delay'] = {}
         dct['timeStarted'] = {}
         dct['murder'] = {}
+        dct['restart'] = {}
         return dct
-
-    def _checkConsistency(self):
-        for name, protocol in self.protocols.items():
-            proc = protocol.transport
-            try:
-                proc.signalProcess(0)
-            except (OSError, error.ProcessExitedAlready):
-                log.msg("Lost process %r somehow, restarting." % name)
-                del self.protocols[name]
-                self.startProcess(name)
-        self.consistency = reactor.callLater(self.consistencyDelay,
-                                             self._checkConsistency)
 
 
     def addProcess(self, name, args, uid=None, gid=None, env={}):
         """
-        Add a new process to launch, monitor, and restart when necessary.
+        Add a new monitored process and start it immediately if the
+        L{ProcessMonitor} service is running.
 
         Note that args are passed to the system call, not to the shell. If
         running the shell is desired, the common idiom is to use
-        C{.addProcess("name", ['/bin/sh', '-c', shell_script])}
+        C{ProcessMonitor.addProcess("name", ['/bin/sh', '-c', shell_script])}
 
-        See L{removeProcess} for removing processes from the monitor.
-
-        @param name: A label for this process.  This value must be unique
-            across all processes added to this monitor.
+        @param name: A name for this process.  This value must be
+            unique across all processes added to this monitor.
         @type name: C{str}
         @param args: The argv sequence for the process to launch.
-        @param uid: The user ID to use to run the process.  If C{None}, the
-            current UID is used.
+        @param uid: The user ID to use to run the process.  If C{None},
+            the current UID is used.
         @type uid: C{int}
-        @param gid: The group ID to use to run the process.  If C{None}, the
-            current GID is used.
+        @param gid: The group ID to use to run the process.  If C{None},
+            the current GID is used.
         @type uid: C{int}
-        @param env: The environment to give to the launched process.  See
+        @param env: The environment to give to the launched process. See
             L{IReactorProcess.spawnProcess}'s C{env} parameter.
         @type env: C{dict}
+        @raises: C{KeyError} if a process with the given name already
+            exists
         """
         if name in self.processes:
-            raise KeyError("remove %s first" % name)
+            raise KeyError("remove %s first" % (name,))
         self.processes[name] = args, uid, gid, env
-        if self.active:
+        self.delay[name] = self.minRestartDelay
+        if self.running:
             self.startProcess(name)
 
 
     def removeProcess(self, name):
         """
-        If the process is started, kill it. It will never get restarted.
-
-        See L{addProcess} for adding processes to the monitor.
+        Stop the named process and remove it from the list of monitored
+        processes.
 
         @type name: C{str}
-        @param name: The string that uniquely identifies the process.
+        @param name: A string that uniquely identifies the process.
         """
-        del self.processes[name]
         self.stopProcess(name)
+        del self.processes[name]
 
 
     def startService(self):
+        """
+        Start all monitored processes.
+        """
         service.Service.startService(self)
-        self.active = 1
-        for name in self.processes.keys():
-            reactor.callLater(0, self.startProcess, name)
-        self.consistency = reactor.callLater(self.consistencyDelay,
-                                             self._checkConsistency)
+        for name in self.processes:
+            self.startProcess(name)
+
 
     def stopService(self):
+        """
+        Stop all monitored processes and cancel all scheduled process restarts.
+        """
         service.Service.stopService(self)
-        self.active = 0
-        for name in self.processes.keys():
+
+        # Cancel any outstanding restarts
+        for name, delayedCall in self.restart.items():
+            if delayedCall.active():
+                delayedCall.cancel()
+
+        for name in self.processes:
             self.stopProcess(name)
-        self.consistency.cancel()
+
 
     def connectionLost(self, name):
-        if self.murder.has_key(name):
-            self.murder[name].cancel()
+        """
+        Called when a monitored processes exits. If
+        L{ProcessMonitor.running} is C{True} (ie the service is started), the
+        process will be restarted.
+        If the process had been running for more than
+        L{ProcessMonitor.threshold} seconds it will be restarted immediately.
+        If the process had been running for less than
+        L{ProcessMonitor.threshold} seconds, the restart will be delayed and
+        each time the process dies before the configured threshold, the restart
+        delay will be doubled - up to a maximum delay of maxRestartDelay sec.
+
+        @type name: C{str}
+        @param name: A string that uniquely identifies the process
+            which exited.
+        """
+        # Cancel the scheduled _forceStopProcess function if the process
+        # dies naturally
+        if name in self.murder:
+            if self.murder[name].active():
+                self.murder[name].cancel()
             del self.murder[name]
-        if self.protocols.has_key(name):
-            del self.protocols[name]
-        if time.time()-self.timeStarted[name]<self.threshold:
-            delay = self.delay[name] = min(1+2*self.delay.get(name, 0), 3600)
+
+        del self.protocols[name]
+
+        if self._reactor.seconds() - self.timeStarted[name] < self.threshold:
+            # The process died too fast - backoff
+            nextDelay = self.delay[name]
+            self.delay[name] = min(self.delay[name] * 2, self.maxRestartDelay)
+
         else:
-            delay = self.delay[name] = 0
-        if self.active and self.processes.has_key(name):
-            reactor.callLater(delay, self.startProcess, name)
+            # Process had been running for a significant amount of time
+            # restart immediately
+            nextDelay = 0
+            self.delay[name] = self.minRestartDelay
+
+        # Schedule a process restart if the service is running
+        if self.running and name in self.processes:
+            self.restart[name] = self._reactor.callLater(nextDelay,
+                                                         self.startProcess,
+                                                         name)
+
 
     def startProcess(self, name):
-        if self.protocols.has_key(name):
+        """
+        @param name: The name of the process to be started
+        """
+        # If a protocol instance already exists, it means the process is
+        # already running
+        if name in self.protocols:
             return
-        p = self.protocols[name] = LoggingProtocol()
-        p.service = self
-        p.name = name
+
         args, uid, gid, env = self.processes[name]
-        self.timeStarted[name] = time.time()
-        reactor.spawnProcess(p, args[0], args, uid=uid, gid=gid, env=env)
+
+        proto = LoggingProtocol()
+        proto.service = self
+        proto.name = name
+        self.protocols[name] = proto
+        self.timeStarted[name] = self._reactor.seconds()
+        self._reactor.spawnProcess(proto, args[0], args, uid=uid,
+                                          gid=gid, env=env)
+
 
     def _forceStopProcess(self, proc):
+        """
+        @param proc: An L{IProcessTransport} provider
+        """
         try:
             proc.signalProcess('KILL')
         except error.ProcessExitedAlready:
             pass
 
+
     def stopProcess(self, name):
-        if not self.protocols.has_key(name):
-            return
-        proc = self.protocols[name].transport
-        del self.protocols[name]
-        try:
-            proc.signalProcess('TERM')
-        except error.ProcessExitedAlready:
-            pass
-        else:
-            self.murder[name] = reactor.callLater(self.killTime, self._forceStopProcess, proc)
+        """
+        @param name: The name of the process to be stopped
+        """
+        if name not in self.processes:
+            raise KeyError('Unrecognized process name: %s' % (name,))
+
+        proto = self.protocols.get(name, None)
+        if proto is not None:
+            proc = proto.transport
+            try:
+                proc.signalProcess('TERM')
+            except error.ProcessExitedAlready:
+                pass
+            else:
+                self.murder[name] = self._reactor.callLater(
+                                            self.killTime,
+                                            self._forceStopProcess, proc)
 
 
     def restartAll(self):
@@ -225,7 +313,7 @@ class ProcessMonitor(service.Service):
         in circumstances -- for example, a new version of a library is
         installed.
         """
-        for name in self.processes.keys():
+        for name in self.processes:
             self.stopProcess(name)
 
 
@@ -244,21 +332,3 @@ class ProcessMonitor(service.Service):
         return ('<' + self.__class__.__name__ + ' '
                 + ' '.join(l)
                 + '>')
-
-def main():
-    from signal import SIGTERM
-    mon = ProcessMonitor()
-    mon.addProcess('foo', ['/bin/sh', '-c', 'sleep 2;echo hello'])
-    mon.addProcess('qux', ['/bin/sh', '-c', 'sleep 2;printf pilim'])
-    mon.addProcess('bar', ['/bin/sh', '-c', 'echo goodbye'])
-    mon.addProcess('baz', ['/bin/sh', '-c',
-                   'echo welcome;while :;do echo blah;sleep 5;done'])
-    reactor.callLater(30, lambda mon=mon:
-                          os.kill(mon.protocols['baz'].transport.pid, SIGTERM))
-    reactor.callLater(60, mon.restartAll)
-    mon.startService()
-    reactor.addSystemEventTrigger('before', 'shutdown', mon.stopService)
-    reactor.run()
-
-if __name__ == '__main__':
-   main()
