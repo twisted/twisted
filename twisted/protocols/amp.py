@@ -1996,7 +1996,8 @@ class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver):
         self.innerProtocol = newProto
         self.innerProtocolClientFactory = clientFactory
         newProto.makeConnection(self.transport)
-        newProto.dataReceived(newProtoData)
+        if newProtoData:
+            newProto.dataReceived(newProtoData)
 
 
     def sendBox(self, box):

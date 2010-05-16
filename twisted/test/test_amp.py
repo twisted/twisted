@@ -52,13 +52,15 @@ class TestProto(protocol.Protocol):
         self.instanceId = TestProto.instanceCount
         TestProto.instanceCount = TestProto.instanceCount + 1
 
+
     def connectionMade(self):
         self.data = []
         self.transport.write(self.dataToSend)
 
+
     def dataReceived(self, bytes):
         self.data.append(bytes)
-        # self.transport.loseConnection()
+
 
     def connectionLost(self, reason):
         self.onConnLost.callback(self.data)
@@ -1007,6 +1009,19 @@ class BinaryProtocolTests(unittest.TestCase):
         self.assertEquals("".join(otherProto.data),
                           "\x00\x00Hello, world!more data")
         self.assertRaises(amp.ProtocolSwitched, a.sendBox, anyOldBox)
+
+
+    def test_protocolSwitchEmptyBuffer(self):
+        """
+        After switching to a different protocol, if no extra bytes beyond
+        the switch box were delivered, an empty string is not passed to the
+        switched protocol's C{dataReceived} method.
+        """
+        a = amp.BinaryBoxProtocol(self)
+        a.makeConnection(self)
+        otherProto = TestProto(None, "")
+        a._switchTo(otherProto)
+        self.assertEquals(otherProto.data, [])
 
 
     def test_protocolSwitchInvalidStates(self):
