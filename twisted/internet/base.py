@@ -150,8 +150,25 @@ class DelayedCall(styles.Ephemeral):
         """
         return not (self.cancelled or self.called)
 
+
     def __le__(self, other):
+        """
+        Implement C{<=} operator between two L{DelayedCall} instances.
+
+        Comparison is based on the C{time} attribute (unadjusted by the
+        delayed time).
+        """
         return self.time <= other.time
+
+
+    def __lt__(self, other):
+        """
+        Implement C{<} operator between two L{DelayedCall} instances.
+
+        Comparison is based on the C{time} attribute (unadjusted by the
+        delayed time).
+        """
+        return self.time < other.time
 
 
     def __str__(self):
