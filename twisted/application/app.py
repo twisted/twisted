@@ -708,14 +708,3 @@ def startApplication(application, save):
     reactor.addSystemEventTrigger('before', 'shutdown',
                                   service.IService(application).stopService)
 
-def getLogFile(logfilename):
-    """
-    Build a log file from the full path.
-    """
-    warnings.warn(
-        "app.getLogFile is deprecated. Use "
-        "twisted.python.logfile.LogFile.fromFullPath instead",
-        DeprecationWarning, stacklevel=2)
-
-    return logfile.LogFile.fromFullPath(logfilename)
-

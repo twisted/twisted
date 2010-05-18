@@ -280,21 +280,6 @@ class TestAppSupport(unittest.TestCase):
                 appl2 = service.loadApplication("converttest.out", outstyle)
                 self.assertEqual(service.IService(appl2).name, "lala")
 
-    def test_getLogFile(self):
-        """
-        Test L{app.getLogFile}, veryfying the LogFile instance it returns.
-        """
-        os.mkdir("logfiledir")
-        l = app.getLogFile(os.path.join("logfiledir", "lala"))
-        self.assertEqual(l.path,
-                         os.path.abspath(os.path.join("logfiledir", "lala")))
-        self.assertEqual(l.name, "lala")
-        self.assertEqual(l.directory, os.path.abspath("logfiledir"))
-
-    test_getLogFile.suppress = [
-        util.suppress(message="app.getLogFile is deprecated. Use "
-                      "twisted.python.logfile.LogFile.fromFullPath instead",
-                      category=DeprecationWarning)]
 
     def test_startApplication(self):
         appl = service.Application("lala")
