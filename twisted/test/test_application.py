@@ -13,7 +13,6 @@ from twisted.trial import unittest, util
 from twisted.application import service, internet, app
 from twisted.persisted import sob
 from twisted.python import usage
-from twisted.python.runtime import platform
 from twisted.internet import interfaces, defer
 from twisted.protocols import wire, basic
 from twisted.internet import protocol, reactor
@@ -891,18 +890,3 @@ class PluggableReactorTestCase(unittest.TestCase):
                                ['--reactor', 'fakereactortest', 'subcommand'])
         self.assertIn(message, e.args[0])
         self.assertIn("help-reactors", e.args[0])
-
-
-
-class ReportProfileTestCase(unittest.TestCase):
-    """
-    Tests for L{app.reportProfile}.
-    """
-
-    def test_deprecation(self):
-        """
-        Check that L{app.reportProfile} prints a warning and does nothing else.
-        """
-        self.assertWarns(DeprecationWarning,
-            "reportProfile is deprecated and a no-op since Twisted 8.0.",
-            app.__file__, app.reportProfile, None, None)

@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_application,twisted.test.test_twistd -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 import sys, os, pdb, getpass, traceback, signal, warnings
@@ -520,15 +520,6 @@ Please read the 'Using Application' HOWTO for details.
         log.deferr()
         sys.exit('\n' + s + '\n')
     return application
-
-
-
-def reportProfile(report_profile, name):
-    """
-    DEPRECATED since Twisted 8.0. This does nothing.
-    """
-    warnings.warn("reportProfile is deprecated and a no-op since Twisted 8.0.",
-                  category=DeprecationWarning)
 
 
 
