@@ -67,9 +67,6 @@ class SSHTransportBase(protocol.Protocol):
     @ivar supportedLanguages: A list of strings representing languages
         supported, from most-preferred to least.
 
-    @ivar supportedVersions: A container of strings representing supported ssh
-        protocol version numbers.
-
     @ivar isClient: A boolean indicating whether this is a client or server.
 
     @ivar gotVersion: A boolean indicating whether we have receieved the
@@ -152,7 +149,6 @@ class SSHTransportBase(protocol.Protocol):
     supportedPublicKeys = ['ssh-rsa', 'ssh-dss']
     supportedCompressions = ['none', 'zlib']
     supportedLanguages = ()
-    supportedVersions = ('1.99', '2.0')
     isClient = False
     gotVersion = False
     buf = ''
@@ -287,19 +283,6 @@ class SSHTransportBase(protocol.Protocol):
         return payload
 
 
-    def _unsupportedVersionReceived(self, remoteVersion):
-        """
-        Called when an unsupported version of the ssh protocol is received from
-            the remote endpoint.
-
-        @param remoteVersion: remote ssh protocol version which is unsupported
-            by us.
-        @type remoteVersion: C{str}
-        """
-        self.sendDisconnect(DISCONNECT_PROTOCOL_VERSION_NOT_SUPPORTED,
-            'bad version ' + remoteVersion)
-
-
     def dataReceived(self, data):
         """
         First, check for the version string (SSH-2.0-*).  After that has been
@@ -317,9 +300,10 @@ class SSHTransportBase(protocol.Protocol):
                 if p.startswith('SSH-'):
                     self.gotVersion = True
                     self.otherVersionString = p.strip()
-                    remoteVersion = p.split('-')[1]
-                    if remoteVersion not in self.supportedVersions:
-                        self._unsupportedVersionReceived(remoteVersion)
+                    if p.split('-')[1] not in ('1.99', '2.0'): # bad version
+                        self.sendDisconnect(
+                            DISCONNECT_PROTOCOL_VERSION_NOT_SUPPORTED,
+                            'bad version ' + p.split('-')[1])
                         return
                     i = lines.index(p)
                     self.buf = '\n'.join(lines[i + 1:])
