@@ -51,7 +51,6 @@ class MockTransportBase(transport.SSHTransportBase):
     @ivar ignoreds: a list of strings: ignored data
     """
 
-
     def connectionMade(self):
         """
         Set up instance variables.
@@ -61,6 +60,17 @@ class MockTransportBase(transport.SSHTransportBase):
         self.unimplementeds = []
         self.debugs = []
         self.ignoreds = []
+        self.gotUnsupportedVersion = None
+
+
+    def _unsupportedVersionReceived(self, remoteVersion):
+        """
+        Intercept unsupported version call.
+
+        @type remoteVersion: C{str}
+        """
+        self.gotUnsupportedVersion = remoteVersion
+        return transport.SSHTransportBase._unsupportedVersionReceived(self, remoteVersion)
 
 
     def receiveError(self, reasonCode, description):
@@ -799,6 +809,28 @@ here's some other stuff
         proto.dataReceived("SSH-1.99-OpenSSH\n")
         self.assertTrue(proto.gotVersion)
         self.assertEquals(proto.otherVersionString, "SSH-1.99-OpenSSH")
+
+
+    def test_supportedVersionsAreAllowed(self):
+        """
+        Test that versions configured as supported work.
+        """
+        proto = MockTransportBase()
+        proto.supportedVersions = ("9.99", )
+        proto.makeConnection(proto_helpers.StringTransport())
+        proto.dataReceived("SSH-9.99-OpenSSH\n")
+        self.assertFalse(proto.gotUnsupportedVersion)
+
+
+    def test_unsupportedVersionsCallUnsupportedVersionReceived(self):
+        """
+        Test that versions not configured as supported don't work.
+        """
+        proto = MockTransportBase()
+        proto.supportedVersions = ("2.0", )
+        proto.makeConnection(proto_helpers.StringTransport())
+        proto.dataReceived("SSH-9.99-OpenSSH\n")
+        self.assertEquals("9.99", proto.gotUnsupportedVersion)
 
 
     def test_badPackets(self):
