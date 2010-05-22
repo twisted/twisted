@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -8,6 +8,12 @@ Serial Port Protocol
 
 # system imports
 import os, sys
+
+# all of them require pyserial at the moment, so check that first
+import serial
+from serial import PARITY_NONE, PARITY_EVEN, PARITY_ODD
+from serial import STOPBITS_ONE, STOPBITS_TWO
+from serial import FIVEBITS, SIXBITS, SEVENBITS, EIGHTBITS
 
 # common code for serial ports
 class BaseSerialPort:
@@ -53,5 +59,7 @@ class SerialPort(BaseSerialPort):
 # replace SerialPort with appropriate serial port
 if os.name == 'posix':
     from twisted.internet._posixserialport import SerialPort
+elif os.name == 'java':
+    from twisted.internet._javaserialport import SerialPort
 elif sys.platform == 'win32':
     from twisted.internet._win32serialport import SerialPort

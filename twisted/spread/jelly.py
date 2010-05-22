@@ -113,11 +113,18 @@ from twisted.python.reflect import namedObject, qual
 from twisted.persisted.crefutil import NotKnown, _Tuple, _InstanceMethod
 from twisted.persisted.crefutil import _DictKeyAndValue, _Dereference
 from twisted.persisted.crefutil import _Container
+from twisted.python import runtime
 from twisted.python.compat import reduce
 
 from twisted.spread.interfaces import IJellyable, IUnjellyable
 
-DictTypes = (DictionaryType,)
+
+if runtime.platform.getType() == "java":
+    from org.python.core import PyStringMap
+    DictTypes = (DictionaryType, PyStringMap)
+else:
+    DictTypes = (DictionaryType,)
+
 
 None_atom = "None"                  # N
 # code

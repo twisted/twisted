@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_threadpool -*-
-# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -19,9 +19,7 @@ import warnings
 
 
 # Twisted Imports
-from twisted.python import log, context, failure
-from twisted.python.deprecate import deprecatedModuleAttribute
-from twisted.python.versions import Version
+from twisted.python import log, runtime, context, failure
 
 WorkerStop = object()
 
@@ -59,9 +57,14 @@ class ThreadPool:
         self.min = minthreads
         self.max = maxthreads
         self.name = name
-        self.waiters = []
-        self.threads = []
-        self.working = []
+        if runtime.platform.getType() != "java":
+            self.waiters = []
+            self.threads = []
+            self.working = []
+        else:
+            self.waiters = ThreadSafeList()
+            self.threads = ThreadSafeList()
+            self.working = ThreadSafeList()
 
     def start(self):
         """
@@ -277,19 +280,10 @@ class ThreadPool:
         log.msg('total: %s'   % self.threads)
 
 
-
 class ThreadSafeList:
     """
-    In Jython 2.1 lists aren't thread-safe, so this wraps it.  Newer versions
-    of Jython are completely different than 2.1, so this class is deprecated
-    to make way for future versions of Jython.
+    In Jython 2.1 lists aren't thread-safe, so this wraps it.
     """
-
-    deprecatedModuleAttribute(
-        Version("Twisted", 10, 1, 0),
-        "This was an internal implementation detail of support for Jython 2.1,"
-        " which is now obsolete.",
-        __name__, "ThreadSafeList")
 
     def __init__(self):
         self.lock = threading.Lock()
@@ -311,3 +305,4 @@ class ThreadSafeList:
 
     def __len__(self):
         return len(self.l)
+

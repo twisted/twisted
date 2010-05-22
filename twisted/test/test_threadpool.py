@@ -1,15 +1,12 @@
-# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-"""
-Tests for L{twisted.python.threadpool}
-"""
 
-import pickle, time, weakref, gc, threading
+import pickle, time, weakref, gc
 
 from twisted.trial import unittest, util
-from twisted.python import threadpool, threadable, failure, context
-from twisted.internet import reactor
+from twisted.python import threadable, failure, context
+from twisted.internet import reactor, interfaces
 from twisted.internet.defer import Deferred
 
 #
@@ -578,22 +575,9 @@ class RaceConditionTestCase(unittest.TestCase):
 
 
 
-class ThreadSafeListDeprecationTestCase(unittest.TestCase):
-    """
-    Test deprecation of threadpool.ThreadSafeList in twisted.python.threadpool
-    """
-
-    def test_threadSafeList(self):
-        """
-        Test deprecation of L{threadpool.ThreadSafeList}.
-        """
-        threadpool.ThreadSafeList()
-
-        warningsShown = self.flushWarnings([self.test_threadSafeList])
-        self.assertEquals(len(warningsShown), 1)
-        self.assertIdentical(warningsShown[0]['category'], DeprecationWarning)
-        self.assertEquals(
-            warningsShown[0]['message'],
-            "twisted.python.threadpool.ThreadSafeList was deprecated in "
-            "Twisted 10.1.0: This was an internal implementation detail of "
-            "support for Jython 2.1, which is now obsolete.")
+if interfaces.IReactorThreads(reactor, None) is None:
+    for cls in ThreadPoolTestCase, RaceConditionTestCase:
+        setattr(cls, 'skip', "No thread support, nothing to test here")
+else:
+    import threading
+    from twisted.python import threadpool
