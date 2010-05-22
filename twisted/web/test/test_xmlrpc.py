@@ -8,18 +8,72 @@ Tests for  XML-RPC support in L{twisted.web.xmlrpc}.
 
 import datetime
 import xmlrpclib
+from StringIO import StringIO
 
 from twisted.trial import unittest
 from twisted.web import xmlrpc
-from twisted.web.xmlrpc import XMLRPC, addIntrospection, _QueryFactory, Proxy
+from twisted.web.xmlrpc import (
+    XMLRPC, payloadTemplate, addIntrospection, _QueryFactory, Proxy)
 from twisted.web import server, static, client, error, http
 from twisted.internet import reactor, defer
 from twisted.internet.error import ConnectionDone
 from twisted.python import failure
+from twisted.web.test.test_web import DummyRequest
+
+
+class AsyncXMLRPCTests(unittest.TestCase):
+    """
+    Tests for L{XMLRPC}'s support of Deferreds.
+    """
+    def setUp(self):
+        self.request = DummyRequest([''])
+        self.request.method = 'POST'
+        self.request.content = StringIO(
+            payloadTemplate % ('async', xmlrpclib.dumps(())))
+
+        result = self.result = defer.Deferred()
+        class AsyncResource(XMLRPC):
+            def xmlrpc_async(self):
+                return result
+
+        self.resource = AsyncResource()
+
+
+    def test_deferredResponse(self):
+        """
+        If an L{XMLRPC} C{xmlrpc_*} method returns a L{defer.Deferred}, the
+        response to the request is the result of that L{defer.Deferred}.
+        """
+        self.resource.render(self.request)
+        self.assertEquals(self.request.written, [])
+
+        self.result.callback("result")
+
+        resp = xmlrpclib.loads("".join(self.request.written))
+        self.assertEquals(resp, (('result',), None))
+        self.assertEquals(self.request.finished, 1)
+
+
+    def test_interruptedDeferredResponse(self):
+        """
+        While waiting for the L{Deferred} returned by an L{XMLRPC} C{xmlrpc_*}
+        method to fire, the connection the request was issued over may close.
+        If this happens, neither C{write} nor C{finish} is called on the
+        request.
+        """
+        self.resource.render(self.request)
+        self.request.processingFailed(
+            failure.Failure(ConnectionDone("Simulated")))
+        self.result.callback("result")
+        self.assertEquals(self.request.written, [])
+        self.assertEquals(self.request.finished, 0)
+
 
 
 class TestRuntimeError(RuntimeError):
     pass
+
+
 
 class TestValueError(ValueError):
     pass

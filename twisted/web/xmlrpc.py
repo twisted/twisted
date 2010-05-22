@@ -140,13 +140,21 @@ class XMLRPC(resource.Resource):
             except Fault, f:
                 self._cbRender(f, request)
             else:
+                # Use this list to track whether the response has failed or not.
+                # This will be used later on to decide if the result of the
+                # Deferred should be written out and Request.finish called.
+                responseFailed = []
+                request.notifyFinish().addErrback(responseFailed.append)
                 d = defer.maybeDeferred(function, *args)
                 d.addErrback(self._ebRender)
-                d.addCallback(self._cbRender, request)
+                d.addCallback(self._cbRender, request, responseFailed)
         return server.NOT_DONE_YET
 
 
-    def _cbRender(self, result, request):
+    def _cbRender(self, result, request, responseFailed=None):
+        if responseFailed:
+            return
+
         if isinstance(result, Handler):
             result = result.result
         if not isinstance(result, Fault):
