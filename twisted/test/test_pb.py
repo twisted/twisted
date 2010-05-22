@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -644,7 +644,7 @@ class BrokerTestCase(unittest.TestCase):
         self.assertIn(rluid, s.localObjects)
         del self.nestedRemote
         # nudge the gc
-        if sys.hexversion >= 0x2000000 and os.name != "java":
+        if sys.hexversion >= 0x2000000:
             gc.collect()
         # try to nudge the GC even if we can't really
         pump.pump()
@@ -707,7 +707,7 @@ class BrokerTestCase(unittest.TestCase):
         pump.flush()
         # del vcc.observer
         # nudge the gc
-        if sys.hexversion >= 0x2000000 and os.name != "java":
+        if sys.hexversion >= 0x2000000:
             gc.collect()
         # try to nudge the GC even if we can't really
         pump.flush()
