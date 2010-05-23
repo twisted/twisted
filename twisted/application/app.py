@@ -174,42 +174,11 @@ class AppProfiler(object):
         saveStats = options.get("savestats", False)
         profileOutput = options.get("profile", None)
         self.profiler = options.get("profiler", "hotshot").lower()
-        if options.get("nothotshot", False):
-            warnings.warn("The --nothotshot option is deprecated. Please "
-                          "specify the profiler name using the --profiler "
-                          "option", category=DeprecationWarning)
-            self.profiler = "profile"
         if self.profiler in self.profilers:
             profiler = self.profilers[self.profiler](profileOutput, saveStats)
             self.run = profiler.run
         else:
             raise SystemExit("Unsupported profiler name: %s" % (self.profiler,))
-
-
-
-def runWithProfiler(reactor, config):
-    """
-    DEPRECATED in Twisted 8.0.
-
-    Run reactor under standard profiler.
-    """
-    warnings.warn("runWithProfiler is deprecated since Twisted 8.0. "
-                  "Use ProfileRunner instead.", DeprecationWarning, 2)
-    item = AppProfiler(config)
-    return item.run(reactor)
-
-
-
-def runWithHotshot(reactor, config):
-    """
-    DEPRECATED in Twisted 8.0.
-
-    Run reactor under hotshot profiler.
-    """
-    warnings.warn("runWithHotshot is deprecated since Twisted 8.0. "
-                  "Use HotshotRunner instead.", DeprecationWarning, 2)
-    item = AppProfiler(config)
-    return item.run(reactor)
 
 
 
@@ -330,12 +299,6 @@ def runReactorWithLogging(config, oldstdout, oldstderr, profiler=None, reactor=N
         if config['profile']:
             if profiler is not None:
                 profiler.run(reactor)
-            else:
-                # Backward compatible code
-                if not config['nothotshot']:
-                    runWithHotshot(reactor, config)
-                else:
-                    runWithProfiler(reactor, config)
         elif config['debug']:
             sys.stdout = oldstdout
             sys.stderr = oldstderr
@@ -580,10 +543,7 @@ class ServerOptions(usage.Options, ReactorSelectionMixin):
                  "the profiler."],
                 ['no_save','o',   "do not save state on shutdown"],
                 ['encrypted', 'e',
-                 "The specified tap/aos file is encrypted."],
-                ['nothotshot', None,
-                 "DEPRECATED. Don't use the hotshot profiler even if "
-                 "it's available."]]
+                 "The specified tap/aos file is encrypted."]]
 
     optParameters = [['logfile','l', None,
                       "log to a specified file, - for stdout"],

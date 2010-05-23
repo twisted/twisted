@@ -1,4 +1,4 @@
-# Copyright (c) 2007-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2007-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -911,20 +911,6 @@ class AppProfilingTestCase(unittest.TestCase):
             sys.modules.update(savedModules)
 
 
-    def test_nothotshotDeprecation(self):
-        """
-        Check that switching on the C{nothotshot} option produces a warning and
-        sets the profiler to B{profile}.
-        """
-        config = twistd.ServerOptions()
-        config['nothotshot'] = True
-        profiler = self.assertWarns(DeprecationWarning,
-            "The --nothotshot option is deprecated. Please specify the "
-            "profiler name using the --profiler option",
-            app.__file__, app.AppProfiler, config)
-        self.assertEquals(profiler.profiler, "profile")
-
-
     def test_hotshotPrintStatsError(self):
         """
         When an error happens while printing the stats, C{sys.stdout}
@@ -1040,50 +1026,6 @@ class AppProfilingTestCase(unittest.TestCase):
         """
         profiler = app.AppProfiler({"profiler": "HotShot"})
         self.assertEquals(profiler.profiler, "hotshot")
-
-
-    def test_oldRunWithProfiler(self):
-        """
-        L{app.runWithProfiler} should print a C{DeprecationWarning} pointing
-        at L{AppProfiler}.
-        """
-        class DummyProfiler(object):
-            called = False
-            def run(self, reactor):
-                self.called = True
-        profiler = DummyProfiler()
-        self.patch(app, "AppProfiler", lambda conf: profiler)
-
-        def runWithProfiler():
-            return app.runWithProfiler(DummyReactor(), {})
-
-        self.assertWarns(DeprecationWarning,
-                "runWithProfiler is deprecated since Twisted 8.0. "
-                "Use ProfileRunner instead.", __file__,
-                runWithProfiler)
-        self.assertTrue(profiler.called)
-
-
-    def test_oldRunWithHotshot(self):
-        """
-        L{app.runWithHotshot} should print a C{DeprecationWarning} pointing
-        at L{AppProfiler}.
-        """
-        class DummyProfiler(object):
-            called = False
-            def run(self, reactor):
-                self.called = True
-        profiler = DummyProfiler()
-        self.patch(app, "AppProfiler", lambda conf: profiler)
-
-        def runWithHotshot():
-            return app.runWithHotshot(DummyReactor(), {})
-
-        self.assertWarns(DeprecationWarning,
-                "runWithHotshot is deprecated since Twisted 8.0. "
-                "Use HotshotRunner instead.", __file__,
-                runWithHotshot)
-        self.assertTrue(profiler.called)
 
 
 
