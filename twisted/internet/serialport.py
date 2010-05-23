@@ -1,10 +1,19 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
 """
 Serial Port Protocol
 """
+
+# http://twistedmatrix.com/trac/ticket/3725#comment:24
+# Apparently applications use these names even though they should
+# be imported from pyserial
+__all__ = ["serial", "PARITY_ODD", "PARITY_EVEN", "PARITY_NONE",
+           "STOPBITS_TWO", "STOPBITS_ONE", "FIVEBITS",
+           "EIGHTBITS", "SEVENBITS", "SIXBITS",
+# Name this module is actually trying to export
+           "SerialPort"]
 
 # system imports
 import os, sys
@@ -59,7 +68,5 @@ class SerialPort(BaseSerialPort):
 # replace SerialPort with appropriate serial port
 if os.name == 'posix':
     from twisted.internet._posixserialport import SerialPort
-elif os.name == 'java':
-    from twisted.internet._javaserialport import SerialPort
 elif sys.platform == 'win32':
     from twisted.internet._win32serialport import SerialPort
