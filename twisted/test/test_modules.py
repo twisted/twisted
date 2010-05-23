@@ -1,4 +1,4 @@
-# Copyright (c) 2006-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2006-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -6,7 +6,6 @@ Tests for twisted.python.modules, abstract access to imported or importable
 objects.
 """
 
-import os
 import sys
 import itertools
 import zipfile
@@ -37,33 +36,99 @@ class PySpaceTestCase(TestCase):
         self.fail("Unable to find module %r through iteration." % (modname,))
 
 
+    def replaceSysPath(self, sysPath):
+        """
+        Replace sys.path, for the duration of the test, with the given value.
+        """
+        originalSysPath = sys.path[:]
+        def cleanUpSysPath():
+            sys.path[:] = originalSysPath
+        self.addCleanup(cleanUpSysPath)
+        sys.path[:] = sysPath
+
+
+    def replaceSysModules(self, sysModules):
+        """
+        Replace sys.modules, for the duration of the test, with the given value.
+        """
+        originalSysModules = sys.modules.copy()
+        def cleanUpSysModules():
+            sys.modules.clear()
+            sys.modules.update(originalSysModules)
+        self.addCleanup(cleanUpSysModules)
+        sys.modules.clear()
+        sys.modules.update(sysModules)
+
+
+    def pathEntryWithOnePackage(self, pkgname="test_package"):
+        """
+        Generate a L{FilePath} with one package, named C{pkgname}, on it, and
+        return the L{FilePath} of the path entry.
+        """
+        entry = FilePath(self.mktemp())
+        pkg = entry.child("test_package")
+        pkg.makedirs()
+        pkg.child("__init__.py").setContent("")
+        return entry
+
+
 
 class BasicTests(PySpaceTestCase):
+
+    def test_unimportablePackageGetItem(self):
+        """
+        If a package has been explicitly forbidden from importing by setting a
+        C{None} key in sys.modules under its name,
+        L{modules.PythonPath.__getitem__} should still be able to retrieve an
+        unloaded L{modules.PythonModule} for that package.
+        """
+        shouldNotLoad = []
+        path = modules.PythonPath(sysPath=[self.pathEntryWithOnePackage().path],
+                                  moduleLoader=shouldNotLoad.append,
+                                  importerCache={},
+                                  sysPathHooks={},
+                                  moduleDict={'test_package': None})
+        self.assertEquals(shouldNotLoad, [])
+        self.assertEquals(path['test_package'].isLoaded(), False)
+
+
+    def test_unimportablePackageWalkModules(self):
+        """
+        If a package has been explicitly forbidden from importing by setting a
+        C{None} key in sys.modules under its name, L{modules.walkModules} should
+        still be able to retrieve an unloaded L{modules.PythonModule} for that
+        package.
+        """
+        existentPath = self.pathEntryWithOnePackage()
+        self.replaceSysPath([existentPath.path])
+        self.replaceSysModules({"test_package": None})
+
+        walked = list(modules.walkModules())
+        self.assertEquals([m.name for m in walked],
+                          ["test_package"])
+        self.assertEquals(walked[0].isLoaded(), False)
+
+
     def test_nonexistentPaths(self):
         """
         Verify that L{modules.walkModules} ignores entries in sys.path which
         do not exist in the filesystem.
         """
-        existentPath = FilePath(self.mktemp())
-        os.makedirs(existentPath.child("test_package").path)
-        existentPath.child("test_package").child("__init__.py").setContent("")
+        existentPath = self.pathEntryWithOnePackage()
 
         nonexistentPath = FilePath(self.mktemp())
         self.failIf(nonexistentPath.exists())
 
-        originalSearchPaths = sys.path[:]
-        sys.path[:] = [existentPath.path]
-        try:
-            expected = [modules.getModule("test_package")]
+        self.replaceSysPath([existentPath.path])
 
-            beforeModules = list(modules.walkModules())
-            sys.path.append(nonexistentPath.path)
-            afterModules = list(modules.walkModules())
-        finally:
-            sys.path[:] = originalSearchPaths
+        expected = [modules.getModule("test_package")]
 
-        self.assertEqual(beforeModules, expected)
-        self.assertEqual(afterModules, expected)
+        beforeModules = list(modules.walkModules())
+        sys.path.append(nonexistentPath.path)
+        afterModules = list(modules.walkModules())
+
+        self.assertEquals(beforeModules, expected)
+        self.assertEquals(afterModules, expected)
 
 
     def test_nonDirectoryPaths(self):
@@ -71,24 +136,19 @@ class BasicTests(PySpaceTestCase):
         Verify that L{modules.walkModules} ignores entries in sys.path which
         refer to regular files in the filesystem.
         """
-        existentPath = FilePath(self.mktemp())
-        os.makedirs(existentPath.child("test_package").path)
-        existentPath.child("test_package").child("__init__.py").setContent("")
+        existentPath = self.pathEntryWithOnePackage()
 
         nonDirectoryPath = FilePath(self.mktemp())
         self.failIf(nonDirectoryPath.exists())
         nonDirectoryPath.setContent("zip file or whatever\n")
 
-        originalSearchPaths = sys.path[:]
-        sys.path[:] = [existentPath.path]
-        try:
-            beforeModules = list(modules.walkModules())
-            sys.path.append(nonDirectoryPath.path)
-            afterModules = list(modules.walkModules())
-        finally:
-            sys.path[:] = originalSearchPaths
+        self.replaceSysPath([existentPath.path])
 
-        self.assertEqual(beforeModules, afterModules)
+        beforeModules = list(modules.walkModules())
+        sys.path.append(nonDirectoryPath.path)
+        afterModules = list(modules.walkModules())
+
+        self.assertEquals(beforeModules, afterModules)
 
 
     def test_twistedShowsUp(self):

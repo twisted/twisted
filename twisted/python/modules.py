@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_modules -*-
-# Copyright (c) 2006-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2006-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -325,13 +325,15 @@ class PythonModule(_ModuleIteratorHelper):
         """
         return 'PythonModule<%r>' % (self.name,)
 
+
     def isLoaded(self):
         """
         Determine if the module is loaded into sys.modules.
 
         @return: a boolean: true if loaded, false if not.
         """
-        return self.name in self.pathEntry.pythonPath.moduleDict
+        return self.pathEntry.pythonPath.moduleDict.get(self.name) is not None
+
 
     def iterAttributes(self):
         """
@@ -650,7 +652,7 @@ class PythonPath:
             for hook in self.sysPathHooks:
                 try:
                     importr = hook(pathName)
-                except ImportError, ie:
+                except ImportError:
                     pass
             if importr is _nothing: # still
                 importr = None
@@ -666,18 +668,26 @@ class PythonPath:
             fp = self._smartPath(pathName)
             yield PathEntry(fp, self)
 
+
     def __getitem__(self, modname):
         """
-        Get a python module by a given fully-qualified name.
+        Get a python module by its given fully-qualified name.
 
-        @return: a PythonModule object.
+        @param modname: The fully-qualified Python module name to load.
 
-        @raise: KeyError, if the module name is a module name.
+        @type modname: C{str}
+
+        @return: an object representing the module identified by C{modname}
+
+        @rtype: L{PythonModule}
+
+        @raise KeyError: if the module name is not a valid module name, or no
+            such module can be identified as loadable.
         """
         # See if the module is already somewhere in Python-land.
-        if modname in self.moduleDict:
+        moduleObject = self.moduleDict.get(modname)
+        if moduleObject is not None:
             # we need 2 paths; one of the path entry and one for the module.
-            moduleObject = self.moduleDict[modname]
             pe = PathEntry(
                 self._smartPath(
                     self._findEntryPathString(moduleObject)),
@@ -697,6 +707,7 @@ class PythonPath:
             if module.name == modname:
                 return module
         raise KeyError(modname)
+
 
     def __repr__(self):
         """
