@@ -533,7 +533,7 @@ it when it is not.
 <code>twisted.web.twcgi</code>, and it's here you'll find the classes that you
 need to subclass in order to support the language of your (or somebody elses)
 taste. You'll also need to create your own kind of resource if you are using a
-non-unix operatingsystem (such as Windows), or if the default resources has
+non-unix operating system (such as Windows), or if the default resources has
 wrong pathnames to the parsers.</p>
 
 <p>The following snippet is a .rpy that serves perl-files. Look at <code>twisted.web.twcgi</code>
@@ -745,8 +745,8 @@ are frustrated after merely 10 seconds.</p>
 <p>Sometimes, you want to be able to send headers and status directly. While
 you can do this with a
 <code base="twisted.web.script" class="API">ResourceScript</code>, an easier
-way is to use <code base="twisted.web.static" class="API">AsIsProcessor</code>.
-Use it by, for example, addding it as a processor for the <code>.asis</code>
+way is to use <code base="twisted.web.static" class="API">ASISProcessor</code>.
+Use it by, for example, adding it as a processor for the <code>.asis</code>
 extension. Here is a sample file:</p>
 
 <pre>
