@@ -70,22 +70,23 @@ class PlatformAssumptionsTestCase(TestCase):
         serverPortNumber = port.getsockname()[1]
         port.listen(5)
 
-        # Use up all the file descriptors
+        # Make a client to use to connect to the server
+        client = self.socket()
+        client.setblocking(False)
+
+        # Use up all the rest of the file descriptors.
         for i in xrange(self.socketLimit):
             try:
                 self.socket()
             except socket.error, e:
                 if e.args[0] in (EMFILE, ENOBUFS):
-                    self.openSockets.pop().close()
+                    # The desired state has been achieved.
                     break
                 else:
+                    # Some unexpected error occurred.
                     raise
         else:
             self.fail("Could provoke neither EMFILE nor ENOBUFS from platform.")
-
-        # Make a client to use to connect to the server
-        client = self.socket()
-        client.setblocking(False)
 
         # Non-blocking connect is supposed to fail, but this is not true
         # everywhere (e.g. freeBSD)
