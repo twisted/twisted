@@ -866,6 +866,24 @@ class FilePathTestCase(AbstractFilePathTestCase):
         self.assertTrue(invokedWith)
 
 
+    def test_createBinaryMode(self):
+        """
+        L{FilePath.create} should always open (and write to) files in binary
+        mode; line-feed octets should be unmodified.
+
+        (While this test should pass on all platforms, it is only really
+        interesting on platforms which have the concept of binary mode, i.e.
+        Windows platforms.)
+        """
+        path = filepath.FilePath(self.mktemp())
+        f = path.create()
+        self.failUnless("b" in f.mode)
+        f.write("\n")
+        f.close()
+        read = open(path.path, "rb").read()
+        self.assertEqual(read, "\n")
+
+
     def testOpen(self):
         # Opening a file for reading when it does not already exist is an error
         nonexistent = self.path.child('nonexistent')

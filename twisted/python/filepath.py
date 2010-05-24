@@ -27,8 +27,14 @@ from twisted.python.runtime import platform
 from twisted.python.hashlib import sha1
 
 from twisted.python.win32 import ERROR_FILE_NOT_FOUND, ERROR_PATH_NOT_FOUND
-from twisted.python.win32 import ERROR_INVALID_NAME, ERROR_DIRECTORY
+from twisted.python.win32 import ERROR_INVALID_NAME, ERROR_DIRECTORY, O_BINARY
 from twisted.python.win32 import WindowsError
+
+_CREATE_FLAGS = (os.O_EXCL |
+                 os.O_CREAT |
+                 os.O_RDWR |
+                 O_BINARY)
+
 
 def _stub_islink(path):
     """
@@ -690,9 +696,7 @@ class FilePath(_PathHelper):
     def create(self):
         """Exclusively create a file, only if this file previously did not exist.
         """
-        fdint = os.open(self.path, (os.O_EXCL |
-                                    os.O_CREAT |
-                                    os.O_RDWR))
+        fdint = os.open(self.path, _CREATE_FLAGS)
 
         # XXX TODO: 'name' attribute of returned files is not mutable or
         # settable via fdopen, so this file is slighly less functional than the
