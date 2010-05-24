@@ -1,5 +1,4 @@
-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -1063,7 +1062,7 @@ class OtherPrimitives(unittest.TestCase):
         should cause a L{defer.CancelledError} failure.
         """
         lock = defer.DeferredLock()
-        _ign = lock.acquire()
+        lock.acquire()
         d = lock.acquire()
         self.assertFailure(d, defer.CancelledError)
         d.cancel()
@@ -1115,6 +1114,15 @@ class OtherPrimitives(unittest.TestCase):
             self.assertEquals(self.counter, N + 1)
 
 
+    def test_semaphoreInvalidTokens(self):
+        """
+        If the token count passed to L{DeferredSemaphore} is less than one
+        then L{ValueError} is raised.
+        """
+        self.assertRaises(ValueError, defer.DeferredSemaphore, 0)
+        self.assertRaises(ValueError, defer.DeferredSemaphore, -1)
+
+
     def test_cancelSemaphoreAfterAcquired(self):
         """
         When canceling a L{Deferred} from a L{DeferredSemaphore} that
@@ -1136,7 +1144,7 @@ class OtherPrimitives(unittest.TestCase):
         the cancel should cause a L{defer.CancelledError} failure.
         """
         sem = defer.DeferredSemaphore(1)
-        _ign = sem.acquire()
+        sem.acquire()
         d = sem.acquire()
         self.assertFailure(d, defer.CancelledError)
         d.cancel()

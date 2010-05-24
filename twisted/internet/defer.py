@@ -1124,11 +1124,20 @@ class DeferredLock(_ConcurrencyPrimitive):
 class DeferredSemaphore(_ConcurrencyPrimitive):
     """
     A semaphore for event driven systems.
-    """
 
+    @ivar tokens: At most this many users may acquire this semaphore at
+        once.
+    @type tokens: C{int}
+
+    @ivar limit: The difference between C{tokens} and the number of users
+        which have currently acquired this semaphore.
+    @type limit: C{int}
+    """
 
     def __init__(self, tokens):
         _ConcurrencyPrimitive.__init__(self)
+        if tokens < 1:
+            raise ValueError("DeferredSemaphore requires tokens >= 1")
         self.tokens = tokens
         self.limit = tokens
 
