@@ -314,7 +314,6 @@ if Crypto is not None and pyasn1 is not None:
     class ConchTestBase:
 
         done = 0
-        allowedToError = 0
 
         def connectionLost(self, reason):
             if self.done:
@@ -325,9 +324,15 @@ if Crypto is not None and pyasn1 is not None:
 
         def receiveError(self, reasonCode, desc):
             self.expectedLoseConnection = 1
-            if not self.allowedToError:
-                unittest.fail('got disconnect for %s: reason %s, desc: %s' %
-                               (self, reasonCode, desc))
+            # Some versions of OpenSSH (for example, OpenSSH_5.3p1) will
+            # send a DISCONNECT_BY_APPLICATION error before closing the
+            # connection.  Other, older versions (for example,
+            # OpenSSH_5.1p1), won't.  So accept this particular error here,
+            # but no others.
+            unittest.assertEquals(
+                reasonCode, transport.DISCONNECT_BY_APPLICATION, 
+                'got disconnect for %s: reason %s, desc: %s' % (
+                    self, reasonCode, desc))
             self.loseConnection()
 
         def receiveUnimplemented(self, seqID):
