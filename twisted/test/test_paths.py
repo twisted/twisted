@@ -360,60 +360,6 @@ class ExplodingFile:
 
 
 
-class TrackingFilePath(filepath.FilePath):
-    """
-    A subclass of L{filepath.FilePath} which maintains a list of all other paths
-    created by clonePath.
-
-    @ivar trackingList: A list of all paths created by this path via
-        C{clonePath} (which also includes paths created by methods like
-        C{parent}, C{sibling}, C{child}, etc (and all paths subsequently created
-        by those paths, etc).
-
-    @type trackingList: C{list} of L{TrackingFilePath}
-
-    @ivar openedFiles: A list of all file objects opened by this
-        L{TrackingFilePath} or any other L{TrackingFilePath} in C{trackingList}.
-
-    @type openedFiles: C{list} of C{file}
-    """
-
-    def __init__(self, path, alwaysCreate=False, trackingList=None):
-        filepath.FilePath.__init__(self, path, alwaysCreate)
-        if trackingList is None:
-            trackingList = []
-        self.trackingList = trackingList
-        self.openedFiles = []
-
-
-    def open(self, *a, **k):
-        """
-        Override 'open' to track all files opened by this path.
-        """
-        f = filepath.FilePath.open(self, *a, **k)
-        self.openedFiles.append(f)
-        return f
-
-
-    def openedPaths(self):
-        """
-        Return a list of all L{TrackingFilePath}s associated with this
-        L{TrackingFilePath} that have had their C{open()} method called.
-        """
-        return [path for path in self.trackingList if path.openedFiles]
-
-
-    def clonePath(self, name):
-        """
-        Override L{filepath.FilePath.clonePath} to give the new path a reference
-        to the same tracking list.
-        """
-        clone = TrackingFilePath(name, trackingList=self.trackingList)
-        self.trackingList.append(clone)
-        return clone
-
-
-
 class ExplodingFilePath(filepath.FilePath):
     """
     A specialized L{FilePath} which always returns an instance of
@@ -422,24 +368,6 @@ class ExplodingFilePath(filepath.FilePath):
     @ivar fp: The L{ExplodingFile} instance most recently returned from the
         C{open} method.
     """
-
-    def __init__(self, pathName, originalExploder=None):
-        """
-        Initialize an L{ExplodingFilePath} with a name and a reference to the
-
-        @param pathName: The path name as passed to L{filepath.FilePath}.
-        @type pathName: C{str}
-
-        @param originalExploder: The L{ExplodingFilePath} to associate opened
-        files with.
-        @type originalExploder: L{ExplodingFilePath}
-        """
-        filepath.FilePath.__init__(self, pathName)
-        if originalExploder is None:
-            originalExploder = self
-        self._originalExploder = originalExploder
-
-
     def open(self, mode=None):
         """
         Create, save, and return a new C{ExplodingFile}.
@@ -448,12 +376,8 @@ class ExplodingFilePath(filepath.FilePath):
 
         @return: A new C{ExplodingFile}.
         """
-        f = self._originalExploder.fp = ExplodingFile()
-        return f
-
-
-    def clonePath(self, name):
-        return ExplodingFilePath(name, self._originalExploder)
+        self.fp = ExplodingFile()
+        return self.fp
 
 
 
@@ -601,46 +525,9 @@ class FilePathTestCase(AbstractFilePathTestCase):
         L{FilePath.setContent} raises that exception after closing the file.
         """
         fp = ExplodingFilePath("")
+        fp.siblingExtension = lambda filepath: fp
         self.assertRaises(IOError, fp.setContent, "blah")
         self.assertTrue(fp.fp.closed)
-
-
-    def test_setContentNameCollision(self):
-        """
-        L{FilePath.setContent} will use a different temporary filename on each
-        invocation, so that multiple processes, threads, or reentrant
-        invocations will not collide with each other.
-        """
-        fp = TrackingFilePath(self.mktemp())
-        fp.setContent("alpha")
-        fp.setContent("beta")
-
-        # Sanity check: setContent should only open one derivative path each
-        # time to store the temporary file.
-        openedSiblings = fp.openedPaths()
-        self.assertEquals(len(openedSiblings), 2)
-        self.assertNotEquals(openedSiblings[0], openedSiblings[1])
-
-
-    def test_setContentExtension(self):
-        """
-        L{FilePath.setContent} creates temporary files with a user-supplied
-        extension, so that if it is somehow interrupted while writing them, the
-        file that it leaves behind will be identifiable.
-        """
-        fp = TrackingFilePath(self.mktemp())
-        fp.setContent("hello")
-        opened = fp.openedPaths()
-        self.assertEquals(len(opened), 1)
-        self.assertTrue(opened[0].basename().endswith(".new"),
-                        "%s does not end with default '.new' extension" % (
-                            opened[0].basename()))
-        fp.setContent("goodbye", "-something-else")
-        opened = fp.openedPaths()
-        self.assertEquals(len(opened), 2)
-        self.assertTrue(opened[1].basename().endswith("-something-else"),
-                        "%s does not end with -something-else extension" % (
-                            opened[1].basename()))
 
 
     def test_symbolicLink(self):
@@ -797,19 +684,6 @@ class FilePathTestCase(AbstractFilePathTestCase):
         self.assertNotIn(ts.basename(), self.path.listdir())
         ts.createDirectory()
         self.assertIn(ts, self.path.parent().children())
-
-
-    def test_temporarySiblingExtension(self):
-        """
-        If L{FilePath.temporarySibling} is given an extension argument, it will
-        produce path objects with that extension appended to their names.
-        """
-        testExtension = ".test-extension"
-        ts = self.path.temporarySibling(testExtension)
-        self.assertTrue(ts.basename().endswith(testExtension),
-                        "%s does not end with %s" % (
-                            ts.basename(), testExtension))
-
 
     def testRemove(self):
         self.path.remove()

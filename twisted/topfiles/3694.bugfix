@@ -1,1 +1,0 @@
-twisted.python.filepath.FilePath.setContent is now safe for multiple processes to use concurrently.
