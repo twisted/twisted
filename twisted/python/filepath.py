@@ -669,8 +669,55 @@ class FilePath(_PathHelper):
     def parent(self):
         return self.clonePath(self.dirname())
 
+
     def setContent(self, content, ext='.new'):
-        sib = self.siblingExtension(ext)
+        """
+        Replace the file at this path with a new file that contains the given
+        bytes, trying to avoid data-loss in the meanwhile.
+
+        On UNIX-like platforms, this method does its best to ensure that by the
+        time this method returns, either the old contents I{or} the new contents
+        of the file will be present at this path for subsequent readers
+        regardless of premature device removal, program crash, or power loss,
+        making the following assumptions:
+
+            - your filesystem is journaled (i.e. your filesystem will not
+              I{itself} lose data due to power loss)
+
+            - your filesystem's C{rename()} is atomic
+
+            - your filesystem will not discard new data while preserving new
+              metadata (see U{http://mjg59.livejournal.com/108257.html} for more
+              detail)
+
+        On most versions of Windows there is no atomic C{rename()} (see
+        U{http://bit.ly/win32-overwrite} for more information), so this method
+        is slightly less helpful.  There is a small window where the file at
+        this path may be deleted before the new file is moved to replace it:
+        however, the new file will be fully written and flushed beforehand so in
+        the unlikely event that there is a crash at that point, it should be
+        possible for the user to manually recover the new version of their data.
+        In the future, Twisted will support atomic file moves on those versions
+        of Windows which I{do} support them: see U{Twisted ticket
+        3004<http://twistedmatrix.com/trac/ticket/3004>}.
+
+        This method should be safe for use by multiple concurrent processes, but
+        note that it is not easy to predict which process's contents will
+        ultimately end up on disk if they invoke this method at close to the
+        same time.
+
+        @param content: The desired contents of the file at this path.
+
+        @type content: L{str}
+
+        @param ext: An extension to append to the temporary filename used to
+            store the bytes while they are being written.  This can be used to
+            make sure that temporary files can be identified by their suffix,
+            for cleanup in case of crashes.
+
+        @type ext: C{str}
+        """
+        sib = self.temporarySibling(ext)
         f = sib.open('w')
         try:
             f.write(content)
@@ -679,6 +726,7 @@ class FilePath(_PathHelper):
         if platform.isWindows() and exists(self.path):
             os.unlink(self.path)
         os.rename(sib.path, self.path)
+
 
     # new in 2.2.0
 
@@ -704,16 +752,33 @@ class FilePath(_PathHelper):
 
         return os.fdopen(fdint, 'w+b')
 
-    def temporarySibling(self):
+
+    def temporarySibling(self, extension=""):
         """
-        Create a path naming a temporary sibling of this path in a secure fashion.
+        Construct a path referring to a sibling of this path.
+
+        The resulting path will be unpredictable, so that other subprocesses
+        should neither accidentally attempt to refer to the same path before it
+        is created, nor they should other processes be able to guess its name in
+        advance.
+
+        @param extension: A suffix to append to the created filename.  (Note
+            that if you want an extension with a '.' you must include the '.'
+            yourself.)
+
+        @type extension: C{str}
+
+        @return: a path object with the given extension suffix, C{alwaysCreate}
+            set to True.
+
+        @rtype: L{FilePath}
         """
-        sib = self.sibling(_secureEnoughString() + self.basename())
+        sib = self.sibling(_secureEnoughString() + self.basename() + extension)
         sib.requireCreate()
         return sib
 
-    _chunkSize = 2 ** 2 ** 2 ** 2
 
+    _chunkSize = 2 ** 2 ** 2 ** 2
 
     def copyTo(self, destination, followLinks=True):
         """
