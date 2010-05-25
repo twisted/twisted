@@ -41,8 +41,8 @@ from twisted.python._release import UncleanWorkingDirectory, NotWorkingDirectory
 from twisted.python._release import ChangeVersionsScript, BuildTarballsScript
 from twisted.python._release import NewsBuilder
 
-if sys.platform != 'linux2':
-    skip = "Release toolchain only supported on Linux."
+if os.name != 'posix':
+    skip = "Release toolchain only supported on POSIX."
 else:
     skip = None
 
