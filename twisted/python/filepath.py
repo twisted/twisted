@@ -160,7 +160,7 @@ class _PathHelper:
 
     def children(self):
         """
-        List the chilren of this path object.
+        List the children of this path object.
 
         @raise OSError: If an error occurs while listing the directory.  If the
         error is 'serious', meaning that the operation failed due to an access
@@ -337,8 +337,23 @@ class FilePath(_PathHelper):
     @type alwaysCreate: C{bool}
     @ivar alwaysCreate: When opening this file, only succeed if the file does
         not already exist.
+
     @type path: C{str}
     @ivar path: The path from which 'downward' traversal is permitted.
+
+    @ivar statinfo: The currently cached status information about the file on
+        the filesystem that this L{FilePath} points to.  This attribute is
+        C{None} if the file is in an indeterminate state (either this
+        L{FilePath} has not yet had cause to call C{stat()} yet or
+        L{FilePath.changed} indicated that new information is required), 0 if
+        C{stat()} was called and returned an error (i.e. the path did not exist
+        when C{stat()} was called), or a C{stat_result} object that describes
+        the last known status of the underlying file (or directory, as the case
+        may be).  Trust me when I tell you that you do not want to use this
+        attribute.  Instead, use the methods on L{FilePath} which give you
+        information about it, like C{getsize()}, C{isdir()},
+        C{getModificationTime()}, and so on.
+    @type statinfo: C{int} or L{types.NoneType} or L{os.stat_result}
     """
 
     statinfo = None
@@ -502,6 +517,15 @@ class FilePath(_PathHelper):
                 raise
 
 
+    def changed(self):
+        """
+        Clear any cached information about the state of this path on disk.
+
+        @since: 10.1.0
+        """
+        self.statinfo = None
+
+
     def chmod(self, mode):
         """
         Changes the permissions on self, if possible.  Propagates errors from
@@ -639,7 +663,7 @@ class FilePath(_PathHelper):
             os.rmdir(self.path)
         else:
             os.remove(self.path)
-        self.restat(False)
+        self.changed()
 
 
     def makedirs(self):
@@ -875,7 +899,6 @@ class FilePath(_PathHelper):
         """
         try:
             os.rename(self.path, destination.path)
-            self.restat(False)
         except OSError, ose:
             if ose.errno == errno.EXDEV:
                 # man 2 rename, ubuntu linux 5.10 "breezy":
@@ -896,6 +919,9 @@ class FilePath(_PathHelper):
                 mysecsib.remove() # slow
             else:
                 raise
+        else:
+            self.changed()
+            destination.changed()
 
 
 FilePath.clonePath = FilePath

@@ -265,7 +265,7 @@ def zipit(dirname, zfname):
     create a zipfile on zfname, containing the contents of dirname'
     """
     zf = zipfile.ZipFile(zfname, "w")
-    for root, dirs, files, in os.walk(dirname):
+    for root, ignored, files, in os.walk(dirname):
         for fname in files:
             fspath = os.path.join(root, fname)
             arcpath = os.path.join(root, fname)[len(dirname)+1:]
@@ -811,7 +811,11 @@ class FilePathTestCase(AbstractFilePathTestCase):
                             ts.basename(), testExtension))
 
 
-    def testRemove(self):
+    def test_removeDirectory(self):
+        """
+        L{FilePath.remove} on a L{FilePath} that refers to a directory will
+        recursively delete its contents.
+        """
         self.path.remove()
         self.failIf(self.path.exists())
 
@@ -829,8 +833,11 @@ class FilePathTestCase(AbstractFilePathTestCase):
         self.assertTrue(self.path.child("sub1").exists())
 
 
-    def test_copyTo(self):
-        self.assertRaises((OSError, IOError), self.path.copyTo, self.path.child('file1'))
+    def test_copyToDirectory(self):
+        """
+        L{FilePath.copyTo} makes a copy of all the contents of the directory
+        named by that L{FilePath} if it is able to do so.
+        """
         oldPaths = list(self.path.walk()) # Record initial state
         fp = filepath.FilePath(self.mktemp())
         self.path.copyTo(fp)
@@ -875,6 +882,16 @@ class FilePathTestCase(AbstractFilePathTestCase):
         self.assertTrue(destination.fp.closed)
 
 
+    def test_copyToDirectoryItself(self):
+        """
+        L{FilePath.copyTo} fails with an OSError or IOError (depending on
+        platform, as it propagates errors from open() and write()) when
+        attempting to copy a directory to a child of itself.
+        """
+        self.assertRaises((OSError, IOError),
+                          self.path.copyTo, self.path.child('file1'))
+
+
     def test_copyToWithSymlink(self):
         """
         Verify that copying with followLinks=True copies symlink targets
@@ -914,6 +931,76 @@ class FilePathTestCase(AbstractFilePathTestCase):
         newPaths.sort()
         oldPaths.sort()
         self.assertEquals(newPaths, oldPaths)
+
+
+    def test_moveToExistsCache(self):
+        """
+        A L{FilePath} that has been moved aside with L{FilePath.moveTo} no
+        longer registers as existing.  Its previously non-existent target
+        exists, though, as it was created by the call to C{moveTo}.
+        """
+        fp = filepath.FilePath(self.mktemp())
+        fp2 = filepath.FilePath(self.mktemp())
+        fp.touch()
+
+        # Both a sanity check (make sure the file status looks right) and an
+        # enticement for stat-caching logic to kick in and remember that these
+        # exist / don't exist.
+        self.assertEquals(fp.exists(), True)
+        self.assertEquals(fp2.exists(), False)
+
+        fp.moveTo(fp2)
+        self.assertEqual(fp.exists(), False)
+        self.assertEqual(fp2.exists(), True)
+
+
+    def test_moveToExistsCacheCrossMount(self):
+        """
+        The assertion of test_moveToExistsCache should hold in the case of a
+        cross-mount move.
+        """
+        self.setUpFaultyRename()
+        self.test_moveToExistsCache()
+
+
+    def test_moveToSizeCache(self, hook=lambda : None):
+        """
+        L{FilePath.moveTo} clears its destination's status cache, such that
+        calls to L{FilePath.getsize} after the call to C{moveTo} will report the
+        new size, not the old one.
+
+        This is a separate test from C{test_moveToExistsCache} because it is
+        intended to cover the fact that the destination's cache is dropped;
+        test_moveToExistsCache doesn't cover this case because (currently) a
+        file that doesn't exist yet does not cache the fact of its non-
+        existence.
+        """
+        fp = filepath.FilePath(self.mktemp())
+        fp2 = filepath.FilePath(self.mktemp())
+        fp.setContent("1234")
+        fp2.setContent("1234567890")
+        hook()
+
+        # Sanity check / kick off caching.
+        self.assertEqual(fp.getsize(), 4)
+        self.assertEqual(fp2.getsize(), 10)
+        # Actually attempting to replace a file on Windows would fail with
+        # ERROR_ALREADY_EXISTS, but we don't need to test that, just the cached
+        # metadata, so, delete the file ...
+        os.remove(fp2.path)
+        # ... but don't clear the status cache, as fp2.remove() would.
+        self.assertEqual(fp2.getsize(), 10)
+
+        fp.moveTo(fp2)
+        self.assertEqual(fp2.getsize(), 4)
+
+
+    def test_moveToSizeCacheCrossMount(self):
+        """
+        The assertion of test_moveToSizeCache should hold in the case of a
+        cross-mount move.
+        """
+        self.test_moveToSizeCache(hook=self.setUpFaultyRename)
 
 
     def test_moveToError(self):
@@ -1142,6 +1229,27 @@ class FilePathTestCase(AbstractFilePathTestCase):
 
         fp.makedirs()
         self.assertEquals(fp.exists(), True)
+
+
+    def test_changed(self):
+        """
+        L{FilePath.changed} indicates that the L{FilePath} has changed, but does
+        not re-read the status information from the filesystem until it is
+        queried again via another method, such as C{getsize}.
+        """
+        fp = filepath.FilePath(self.mktemp())
+        fp.setContent("12345")
+        self.assertEquals(fp.getsize(), 5)
+
+        open(fp.path, 'wb').write("12345678")
+        # Sanity check for caching: size should still be 5.
+        self.assertEquals(fp.getsize(), 5)
+        fp.changed()
+
+        # This path should look like we don't know what status it's in, not that
+        # we know that it didn't exist when last we checked.
+        self.assertEqual(fp.statinfo, None)
+        self.assertEquals(fp.getsize(), 8)
 
 
 
