@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.python.test.test_release -*-
-# Copyright (c) 2007-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2007-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -588,10 +588,10 @@ class NewsBuilder(object):
     """
     Generate the new section of a NEWS file.
 
-    The C{_FEATURE}, C{_BUGFIX}, C{_REMOVAL}, and C{_MISC} attributes of
-    this class are symbolic names for the news entry types which are
-    supported.  Conveniently, they each also take on the value of the file
-    name extension which indicates a news entry of that type.
+    The C{_FEATURE}, C{_BUGFIX}, C{_DOC}, C{_REMOVAL}, and C{_MISC}
+    attributes of this class are symbolic names for the news entry types
+    which are supported.  Conveniently, they each also take on the value of
+    the file name extension which indicates a news entry of that type.
 
     @cvar _headings: A C{dict} mapping one of the news entry types to the
         heading to write out for that type of news entry.
@@ -603,12 +603,14 @@ class NewsBuilder(object):
     """
     _FEATURE = ".feature"
     _BUGFIX = ".bugfix"
+    _DOC = ".doc"
     _REMOVAL = ".removal"
     _MISC = ".misc"
 
     _headings = {
         _FEATURE: "Features",
         _BUGFIX: "Bugfixes",
+        _DOC: "Improved Documentation",
         _REMOVAL: "Deprecations and Removals",
         _MISC: "Other",
         }
@@ -735,7 +737,7 @@ class NewsBuilder(object):
         @type header: L{str}
         """
         changes = []
-        for part in (self._FEATURE, self._BUGFIX, self._REMOVAL):
+        for part in (self._FEATURE, self._BUGFIX, self._DOC, self._REMOVAL):
             tickets = self._findChanges(path, part)
             if tickets:
                 changes.append((part, tickets))

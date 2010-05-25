@@ -1487,7 +1487,9 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
                 '23.bugfix': 'Broken stuff was fixed.\n',
                 '25.removal': 'Stupid stuff was deprecated.\n',
                 '30.misc': '',
-                '35.misc': ''})
+                '35.misc': '',
+                '40.doc': 'foo.bar.Baz.quux',
+                '41.doc': 'writing Foo servers'})
 
 
     def test_today(self):
@@ -1541,6 +1543,20 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         self.assertEquals(
             removals,
             [(25, 'Stupid stuff was deprecated.')])
+
+
+    def test_findDocumentation(self):
+        """
+        When called with L{NewsBuilder._DOC}, L{NewsBuilder._findChanges}
+        returns a list of documentation ticket numbers and descriptions as a
+        list of two-tuples.
+        """
+        doc = self.builder._findChanges(
+            self.project, self.builder._DOC)
+        self.assertEquals(
+            doc,
+            [(40, 'foo.bar.Baz.quux'),
+             (41, 'writing Foo servers')])
 
 
     def test_findMiscellaneous(self):
@@ -1642,6 +1658,11 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
             '--------\n'
             ' - Broken stuff was fixed. (#23)\n'
             '\n'
+            'Improved Documentation\n'
+            '----------------------\n'
+            ' - foo.bar.Baz.quux (#40)\n'
+            ' - writing Foo servers (#41)\n'
+            '\n'
             'Deprecations and Removals\n'
             '-------------------------\n'
             ' - Stupid stuff was deprecated. (#25)\n'
@@ -1704,6 +1725,11 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
             '--------\n'
             ' - Broken stuff was fixed. (#23)\n'
             '\n'
+            'Improved Documentation\n'
+            '----------------------\n'
+            ' - foo.bar.Baz.quux (#40)\n'
+            ' - writing Foo servers (#41)\n'
+            '\n'
             'Deprecations and Removals\n'
             '-------------------------\n'
             ' - Stupid stuff was deprecated. (#25)\n'
@@ -1721,8 +1747,7 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         section for that type is written by L{NewsBuilder.build}.
         """
         for ticket in self.project.children():
-            basename = ticket.basename()
-            if basename.endswith('.feature') or basename.endswith('.misc'):
+            if ticket.splitext()[1] in ('.feature', '.misc', '.doc'):
                 ticket.remove()
 
         self.builder.build(
@@ -1772,6 +1797,11 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
             'Bugfixes\n'
             '--------\n'
             ' - Broken stuff was fixed. (#23)\n'
+            '\n'
+            'Improved Documentation\n'
+            '----------------------\n'
+            ' - foo.bar.Baz.quux (#40)\n'
+            ' - writing Foo servers (#41)\n'
             '\n'
             'Deprecations and Removals\n'
             '-------------------------\n'
