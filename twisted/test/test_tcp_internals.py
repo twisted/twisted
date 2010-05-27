@@ -1,4 +1,4 @@
-# Copyright (c) 2006 Twisted Matrix Laboratories.
+# Copyright (c) 2006-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -32,8 +32,8 @@ class PlatformAssumptionsTestCase(TestCase):
         self.openSockets = []
         if resource is not None:
             self.originalFileLimit = resource.getrlimit(resource.RLIMIT_NOFILE)
-            resource.setrlimit(resource.RLIMIT_NOFILE, (128, self.originalFileLimit[1]))
-            self.socketLimit = 256
+            resource.setrlimit(resource.RLIMIT_NOFILE, (256, self.originalFileLimit[1]))
+            self.socketLimit = 512
 
 
     def tearDown(self):

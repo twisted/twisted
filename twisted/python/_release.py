@@ -19,12 +19,7 @@ import os
 from tempfile import mkdtemp
 import tarfile
 
-# Popen4 isn't available on Windows.  BookBuilder won't work on Windows, but
-# we don't care. -exarkun
-try:
-    from popen2 import Popen4
-except ImportError:
-    Popen4 = None
+from subprocess import PIPE, STDOUT, Popen
 
 from twisted.python.versions import Version
 from twisted.python.filepath import FilePath
@@ -54,11 +49,13 @@ def runCommand(args):
 
     @raise CommandFailed: when the program exited with a non-0 exit code.
     """
-    process = Popen4(args)
-    stdout = process.fromchild.read()
+    process = Popen(args, stdout=PIPE, stderr=STDOUT)
+    stdout = process.stdout.read()
     exitCode = process.wait()
-    if os.WIFSIGNALED(exitCode) or os.WEXITSTATUS(exitCode):
-        raise CommandFailed(exitCode, stdout)
+    if exitCode < 0:
+        raise CommandFailed(None, -exitCode, stdout)
+    elif exitCode > 0:
+        raise CommandFailed(exitCode, None, stdout)
     return stdout
 
 
@@ -66,15 +63,19 @@ class CommandFailed(Exception):
     """
     Raised when a child process exits unsuccessfully.
 
-    @type exitCode: C{int}
-    @ivar exitCode: The exit code for the child process.
+    @type exitStatus: C{int}
+    @ivar exitStatus: The exit status for the child process.
+
+    @type exitSignal: C{int}
+    @ivar exitSignal: The exit signal for the child process.
 
     @type output: C{str}
     @ivar output: The bytes read from stdout and stderr of the child process.
     """
-    def __init__(self, exitCode, output):
-        Exception.__init__(self, exitCode, output)
-        self.exitCode = exitCode
+    def __init__(self, exitStatus, exitSignal, output):
+        Exception.__init__(self, exitStatus, exitSignal, output)
+        self.exitStatus = exitStatus
+        self.exitSignal = exitSignal
         self.output = output
 
 
@@ -523,10 +524,10 @@ class BookBuilder(LoreBuilderMixin):
             try:
                 os.chdir(inputDirectory.path)
 
-                texToDVI = (
-                    "latex -interaction=nonstopmode "
-                    "-output-directory=%s %s") % (
-                    workPath.path, bookPath.path)
+                texToDVI = [
+                    "latex", "-interaction=nonstopmode",
+                    "-output-directory=" + workPath.path,
+                    bookPath.path]
 
                 # What I tell you three times is true!
                 # The first two invocations of latex on the book file allows it
@@ -539,13 +540,10 @@ class BookBuilder(LoreBuilderMixin):
                 dviPath = workPath.child(bookBaseWithoutExtension + ".dvi")
                 psPath = workPath.child(bookBaseWithoutExtension + ".ps")
                 pdfPath = workPath.child(bookBaseWithoutExtension + ".pdf")
-                self.run(
-                    "dvips -o %(postscript)s -t letter -Ppdf %(dvi)s" % {
-                        'postscript': psPath.path,
-                        'dvi': dviPath.path})
-                self.run("ps2pdf13 %(postscript)s %(pdf)s" % {
-                        'postscript': psPath.path,
-                        'pdf': pdfPath.path})
+                self.run([
+                    "dvips", "-o", psPath.path, "-t", "letter", "-Ppdf",
+                    dviPath.path])
+                self.run(["ps2pdf13", psPath.path, pdfPath.path])
                 pdfPath.moveTo(outputPath)
                 workPath.remove()
             finally:

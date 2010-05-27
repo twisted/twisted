@@ -57,14 +57,6 @@ else:
 
 
 try:
-    from popen2 import Popen4
-except ImportError:
-    popen4Skip = "popen2.Popen4 is not available."
-else:
-    popen4Skip = skip
-
-
-try:
     import pydoctor.driver
     # it might not be installed, or it might use syntax not available in
     # this version of Python.
@@ -1098,7 +1090,7 @@ class BookBuilderTests(TestCase, BuilderTestsMixin):
     """
     Tests for L{BookBuilder}.
     """
-    skip = latexSkip or popen4Skip or loreSkip
+    skip = latexSkip or loreSkip
 
     def setUp(self):
         """
@@ -1134,7 +1126,15 @@ class BookBuilderTests(TestCase, BuilderTestsMixin):
         successfully.
         """
         builder = BookBuilder()
-        self.assertEqual(builder.run("echo hi; echo bye 1>&2"), "hi\nbye\n")
+        self.assertEquals(
+                builder.run([
+                    sys.executable, '-c',
+                    'import sys; '
+                    'sys.stdout.write("hi\\n"); '
+                    'sys.stdout.flush(); '
+                    'sys.stderr.write("bye\\n"); '
+                    'sys.stderr.flush()']),
+                "hi\nbye\n")
 
 
     def test_runFailed(self):
@@ -1143,9 +1143,12 @@ class BookBuilderTests(TestCase, BuilderTestsMixin):
         L{CommandFailed} if it completes unsuccessfully.
         """
         builder = BookBuilder()
-        exc = self.assertRaises(CommandFailed, builder.run, "echo hi; false")
-        self.assertNotEqual(os.WEXITSTATUS(exc.exitCode), 0)
-        self.assertEqual(exc.output, "hi\n")
+        exc = self.assertRaises(
+            CommandFailed, builder.run,
+            [sys.executable, '-c', 'print "hi"; raise SystemExit(1)'])
+        self.assertEquals(exc.exitStatus, 1)
+        self.assertEquals(exc.exitSignal, None)
+        self.assertEquals(exc.output, "hi\n")
 
 
     def test_runSignaled(self):
@@ -1155,11 +1158,13 @@ class BookBuilderTests(TestCase, BuilderTestsMixin):
         """
         builder = BookBuilder()
         exc = self.assertRaises(
-            # This is only a little bit too tricky.
-            CommandFailed, builder.run, "echo hi; exec kill -9 $$")
-        self.assertTrue(os.WIFSIGNALED(exc.exitCode))
-        self.assertEqual(os.WTERMSIG(exc.exitCode), signal.SIGKILL)
-        self.assertEqual(exc.output, "hi\n")
+            CommandFailed, builder.run,
+            [sys.executable, '-c',
+            'import sys; print "hi"; sys.stdout.flush(); '
+            'import os; os.kill(os.getpid(), 9)'])
+        self.assertEquals(exc.exitSignal, 9)
+        self.assertEquals(exc.exitStatus, None)
+        self.assertEquals(exc.output, "hi\n")
 
 
     def test_buildTeX(self):
@@ -1316,23 +1321,22 @@ class BookBuilderTests(TestCase, BuilderTestsMixin):
         # have a test which asserted the correctness of the contents of the
         # output files.  I don't know how one could do that, though. -exarkun
         latex1, latex2, latex3, dvips, ps2pdf13 = builder.commands
-        self.assertEqual(latex1, latex2)
-        self.assertEqual(latex2, latex3)
-        self.assertTrue(
-            latex1.startswith("latex "),
-            "LaTeX command %r does not start with 'latex '" % (latex1,))
-        self.assertTrue(
-            latex1.endswith(" " + bookPath.path),
+        self.assertEquals(latex1, latex2)
+        self.assertEquals(latex2, latex3)
+        self.assertEquals(
+            latex1[:1], ["latex"],
+            "LaTeX command %r does not seem right." % (latex1,))
+        self.assertEquals(
+            latex1[-1:], [bookPath.path],
             "LaTeX command %r does not end with the book path (%r)." % (
                 latex1, bookPath.path))
 
-        self.assertTrue(
-            dvips.startswith("dvips "),
-            "dvips command %r does not start with 'dvips '" % (dvips,))
-        self.assertTrue(
-            ps2pdf13.startswith("ps2pdf13 "),
-            "ps2pdf13 command %r does not start with 'ps2pdf13 '" % (
-                ps2pdf13,))
+        self.assertEquals(
+            dvips[:1], ["dvips"],
+            "dvips command %r does not seem right." % (dvips,))
+        self.assertEquals(
+            ps2pdf13[:1], ["ps2pdf13"],
+            "ps2pdf13 command %r does not seem right." % (ps2pdf13,))
 
 
     def test_noSideEffects(self):
@@ -2209,7 +2213,7 @@ class BuildAllTarballsTest(DistributionBuilderTestBase):
     """
     Tests for L{DistributionBuilder.buildAllTarballs}.
     """
-    skip = svnSkip or popen4Skip
+    skip = svnSkip
 
     def setUp(self):
         self.oldHandler = signal.signal(signal.SIGCHLD, signal.SIG_DFL)

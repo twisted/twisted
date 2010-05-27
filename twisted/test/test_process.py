@@ -7,7 +7,6 @@ Test running processes.
 
 import gzip
 import os
-import popen2
 import sys
 import signal
 import StringIO
@@ -1975,21 +1974,28 @@ class MockProcessTestCase(unittest.TestCase):
 class PosixProcessTestCase(unittest.TestCase, PosixProcessBase):
     # add two non-pty test cases
 
-    def testStderr(self):
-        # we assume there is no file named ZZXXX..., both in . and in /tmp
-        cmd = self.getCommand('ls')
+    def test_stderr(self):
+        """
+        Bytes written to stderr by the spawned process are passed to the
+        C{errReceived} callback on the C{ProcessProtocol} passed to
+        C{spawnProcess}.
+        """
+        cmd = sys.executable
+
+        value = "42"
 
         p = Accumulator()
         d = p.endedDeferred = defer.Deferred()
         reactor.spawnProcess(p, cmd,
-                             [cmd,
-                              "ZZXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"],
+                             [cmd, "-c", 
+                              "import sys; sys.stderr.write('%s')" % (value,)],
                              env=None, path="/tmp",
                              usePTY=self.usePTY)
 
         def processEnded(ign):
-            self.assertEquals(lsOut, p.errF.getvalue())
+            self.assertEquals(value, p.errF.getvalue())
         return d.addCallback(processEnded)
+
 
     def testProcess(self):
         cmd = self.getCommand('gzip')
@@ -2402,9 +2408,6 @@ if (runtime.platform.getType() != 'posix') or (not interfaces.IReactorProcess(re
     PosixProcessTestCasePTY.skip = skipMessage
     TestTwoProcessesPosix.skip = skipMessage
     FDTest.skip = skipMessage
-else:
-    # do this before running the tests: it uses SIGCHLD and stuff internally
-    lsOut = popen2.popen3("/bin/ls ZZXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")[2].read()
 
 if (runtime.platform.getType() != 'win32') or (not interfaces.IReactorProcess(reactor, None)):
     Win32ProcessTestCase.skip = skipMessage
