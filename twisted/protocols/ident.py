@@ -1,12 +1,11 @@
 # -*- test-case-name: twisted.test.test_ident -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 """
 Ident protocol implementation.
 
-@author: Jp Calderone
+@author: Jean-Paul Calderone
 """
 
 from __future__ import generators
@@ -88,13 +87,22 @@ class IdentServer(basic.LineOnlyReceiver):
     def invalidQuery(self):
         self.transport.loseConnection()
 
+
     def validQuery(self, portOnServer, portOnClient):
-        serverAddr = self.transport.getHost()[1], portOnServer
-        clientAddr = self.transport.getPeer()[1], portOnClient
+        """
+        Called when a valid query is received to look up and deliver the
+        response.
+
+        @param portOnServer: The server port from the query.
+        @param portOnClient: The client port from the query.
+        """
+        serverAddr = self.transport.getHost().host, portOnServer
+        clientAddr = self.transport.getPeer().host, portOnClient
         defer.maybeDeferred(self.lookup, serverAddr, clientAddr
             ).addCallback(self._cbLookup, portOnServer, portOnClient
             ).addErrback(self._ebLookup, portOnServer, portOnClient
             )
+
 
     def _cbLookup(self, (sysName, userId), sport, cport):
         self.sendLine('%d, %d : USERID : %s : %s' % (sport, cport, sysName, userId))
