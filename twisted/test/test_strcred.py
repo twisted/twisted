@@ -1,4 +1,4 @@
-# Copyright (c) 2007-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2007-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -244,10 +244,15 @@ class TestUnixChecker(unittest.TestCase):
 
 
     if None in (pwd, spwd, crypt):
+        availability = []
+        for module, name in ((pwd, "pwd"), (spwd, "swpd"), (crypt, "crypt")):
+            if module is None:
+                availability += [name]
         for method in (test_unixCheckerSucceeds,
                        test_unixCheckerFailsUsername,
                        test_unixCheckerFailsPassword):
-            method.skip = 'pwd and spwd are both unavailable'
+            method.skip = ("Required module(s) are unavailable: " +
+                           ", ".join(availability))
 
 
 
