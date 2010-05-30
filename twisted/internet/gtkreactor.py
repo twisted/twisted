@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -26,11 +26,16 @@ import gtk
 from zope.interface import implements
 
 # Twisted Imports
-from twisted.python import log, runtime
+from twisted.python import log, runtime, deprecate, versions
 from twisted.internet.interfaces import IReactorFDSet
 
 # Sibling Imports
 from twisted.internet import posixbase, selectreactor
+
+
+deprecatedSince = versions.Version("Twisted", 10, 1, 0)
+deprecationMessage = ("All new applications should be written with gtk 2.x, "
+                      "which is supported by twisted.internet.gtk2reactor.")
 
 
 class GtkReactor(posixbase.PosixReactorBase):
@@ -46,6 +51,9 @@ class GtkReactor(posixbase.PosixReactorBase):
     @ivar _simtag: A gtk timeout handle for the next L{simulate} call.
     """
     implements(IReactorFDSet)
+
+    deprecate.deprecatedModuleAttribute(deprecatedSince, deprecationMessage,
+                                        __name__, "GtkReactor")
 
     def __init__(self):
         """
@@ -185,6 +193,8 @@ class PortableGtkReactor(selectreactor.SelectReactor):
     """
     _simtag = None
 
+    deprecate.deprecatedModuleAttribute(deprecatedSince, deprecationMessage,
+                                        __name__, "PortableGtkReactor")
 
     def crash(self):
         selectreactor.SelectReactor.crash(self)
@@ -218,6 +228,10 @@ def install():
     installReactor(reactor)
     return reactor
 
+deprecate.deprecatedModuleAttribute(deprecatedSince, deprecationMessage,
+                                    __name__, "install")
+
+
 def portableInstall():
     """Configure the twisted mainloop to be run inside the gtk mainloop.
     """
@@ -225,6 +239,10 @@ def portableInstall():
     from twisted.internet.main import installReactor
     installReactor(reactor)
     return reactor
+
+deprecate.deprecatedModuleAttribute(deprecatedSince, deprecationMessage,
+                                    __name__, "portableInstall")
+
 
 if runtime.platform.getType() != 'posix':
     install = portableInstall
