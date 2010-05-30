@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.conch.test.test_scripts -*-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 #
@@ -430,7 +430,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         if not os.path.exists(file):
             return
         try:
-            return keys.getPublicKeyString(file) 
+            return keys.Key.fromFile(file).blob() 
         except:
             return self.getPublicKey() # try again
     
@@ -439,7 +439,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         if not os.path.exists(file):
             return None
         try:
-            return defer.succeed(keys.getPrivateKeyObject(file))
+            return defer.succeed(keys.Key.fromFile(file).keyObject)
         except keys.BadKeyError, e:
             if e.args[0] == 'encrypted key with no password':
                 prompt = "Enter passphrase for key '%s': " % \
@@ -448,7 +448,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
     def _cbGetPrivateKey(self, ans, count):
         file = os.path.expanduser(self.usedFiles[-1])
         try:
-            return keys.getPrivateKeyObject(file, password = ans)
+            return keys.Key.fromFile(file, password = ans).keyObject
         except keys.BadKeyError:
             if count == 2:
                 raise

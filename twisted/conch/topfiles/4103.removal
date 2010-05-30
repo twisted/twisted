@@ -1,0 +1,2 @@
+Removed twisted.conch.ssh.keys.makePrivateKeyString, which has been deprecated
+since 2007.

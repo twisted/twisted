@@ -15,10 +15,10 @@ port    = 5822
 p = portal.Portal(WelshRealm(conf))
 p.registerChecker(WelshChecker(passwd))
 
-pubkey = keys.getPublicKeyString(
-    '%s/ssh_host_dsa_key.pub' % sshkeys)
-privkey = keys.getPrivateKeyObject(
-    '%s/ssh_host_dsa_key' % sshkeys)
+pubkey = keys.Key.fromFile(
+	'%s/ssh_host_dsa_key.pub' % sshkeys).blob()
+privkey = keys.Key.fromFile(
+    '%s/ssh_host_dsa_key' % sshkeys).keyObject
 
 class SSHFactory(factory.SSHFactory):
     publicKeys = {common.getNS(pubkey)[0]: pubkey}

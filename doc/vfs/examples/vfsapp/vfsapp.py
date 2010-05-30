@@ -53,10 +53,10 @@ def createVFSApplication(vfsRoot):
     # sftp
     # http://igloo.its.unimelb.edu.au/Webmail/tips/msg00495.html
     # ssh-keygen -q -b 1024 -t dsa -f ssh_host_dsa_key
-    pubkey = keys.getPublicKeyString(
-        '../sshkeys/ssh_host_dsa_key.pub')
-    privkey = keys.getPrivateKeyObject(
-        '../sshkeys/ssh_host_dsa_key')
+    pubkey = keys.Key.fromFile(
+        '../sshkeys/ssh_host_dsa_key.pub').blob()
+    privkey = keys.Key.fromFile(
+        '../sshkeys/ssh_host_dsa_key').keyObject
 
     class SSHFactory(factory.SSHFactory):
         publicKeys = {common.getNS(pubkey)[0]: pubkey}

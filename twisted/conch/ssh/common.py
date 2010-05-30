@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.conch.test.test_ssh -*-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -18,21 +18,6 @@ except ImportError:
             RuntimeWarning)
 
 from twisted.python import randbytes
-
-class Entropy(object):
-    """
-    A Crypto.Util.randpool.RandomPool mock for compatibility.
-    """
-    def get_bytes(self, numBytes):
-        """
-        Get a number of random bytes.
-        """
-        warnings.warn("entropy.get_bytes is deprecated, please use "
-                      "twisted.python.randbytes.secureRandom instead.",
-            category=DeprecationWarning, stacklevel=2)
-        return randbytes.secureRandom(numBytes)
-
-entropy = Entropy()
 
 
 def NS(t):

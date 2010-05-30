@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.conch.test.test_ckeygen -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -108,19 +108,21 @@ def printFingerprint(options):
     except:
         sys.exit('bad key')
 
+
 def changePassPhrase(options):
     if not options['filename']:
         filename = os.path.expanduser('~/.ssh/id_rsa')
         options['filename'] = raw_input('Enter file in which the key is (%s): ' % filename)
     try:
-        key = keys.getPrivateKeyObject(options['filename'])
+        key = keys.Key.fromFile(options['filename']).keyObject
     except keys.BadKeyError, e:
         if e.args[0] != 'encrypted key with no passphrase':
             raise
         else:
             if not options['pass']:
                 options['pass'] = getpass.getpass('Enter old passphrase: ')
-            key = keys.getPrivateKeyObject(options['filename'], passphrase = options['pass'])
+            key = keys.Key.fromFile(
+                options['filename'], passphrase = options['pass']).keyObject
     if not options['newpass']:
         while 1:
             p1 = getpass.getpass('Enter new passphrase (empty for no passphrase): ')
@@ -130,23 +132,26 @@ def changePassPhrase(options):
             print 'Passphrases do not match.  Try again.'
         options['newpass'] = p1
     open(options['filename'], 'w').write(
-    keys.makePrivateKeyString(key, passphrase=options['newpass']))
+        keys.Key(key).toString(passphrase=options['newpass']))
     print 'Your identification has been saved with the new passphrase.'
+
 
 def displayPublicKey(options):
     if not options['filename']:
         filename = os.path.expanduser('~/.ssh/id_rsa')
         options['filename'] = raw_input('Enter file in which the key is (%s): ' % filename)
     try:
-        key = keys.getPrivateKeyObject(options['filename'])
+        key = keys.Key.fromFile(options['filename']).keyObject
     except keys.BadKeyError, e:
         if e.args[0] != 'encrypted key with no passphrase':
             raise
         else:
             if not options['pass']:
                 options['pass'] = getpass.getpass('Enter passphrase: ')
-            key = keys.getPrivateKeyObject(options['filename'], passphrase = options['pass'])
-    print keys.makePublicKeyString(key)
+            key = keys.Key.fromFile(
+                options['filename'], passphrase = options['pass']).keyObject
+    print keys.Key(key).public().toString()
+
 
 def _saveKey(key, options):
     if not options['filename']:

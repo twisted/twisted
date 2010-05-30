@@ -785,23 +785,6 @@ class TestSSHFactory(unittest.TestCase):
                 p2.supportedKeyExchanges)
 
 
-class EntropyTestCase(unittest.TestCase):
-    """
-    Tests for L{common.entropy}.
-    """
-
-    def test_deprecation(self):
-        """
-        Test the deprecation of L{common.entropy.get_bytes}.
-        """
-        def wrapper():
-            return common.entropy.get_bytes(10)
-        self.assertWarns(DeprecationWarning,
-            "entropy.get_bytes is deprecated, please use "
-            "twisted.python.randbytes.secureRandom instead.",
-            __file__, wrapper)
-
-
 
 class MPTestCase(unittest.TestCase):
     """

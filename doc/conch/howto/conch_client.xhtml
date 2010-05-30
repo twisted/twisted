@@ -98,10 +98,10 @@ class ClientUserAuth(userauth.SSHUserAuthClient):
         # this says we won't do password authentication
 
     def getPublicKey(self):
-        return keys.getPublicKeyString(data = publicKey)
+        return keys.Key.fromString(data = publicKey).blob()
 
     def getPrivateKey(self):
-        return defer.succeed(keys.getPrivateKeyObject(data = privateKey))
+        return defer.succeed(keys.Key.fromString(data = privateKey).keyObject)
 </pre>
 
 <p>Again, fairly simple. The <code
@@ -114,9 +114,13 @@ respectively. <code class="python">getPassword()</code> returns
 a <code class="python">Deferred</code> that is called back with
 the password to use. <code class="python">getPublicKey()</code>
 returns the SSH key data for the public key to use. <code
-class="python">keys.getPublicKeyString()</code> will take
-keys in OpenSSH and LSH format, and convert them to the
-required format. <code class="python">getPrivateKey()</code>
+class="python">keys.Key.fromString()</code> will take
+a key in OpenSSH or LSH format as a string, and convert it to the
+required format. Alternatively, <code
+class="python">keys.Key.fromFile()</code> can be used instead, which
+will take the filename of a key in OpenSSH and LSH format, and 
+convert it to the required format. 
+<code class="python">getPrivateKey()</code>
 returns a <code class="python">Deferred</code> which is
 called back with the key object (as used in PyCrypto) for
 the private key. <code class="python">getPassword()</code>

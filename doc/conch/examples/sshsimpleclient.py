@@ -44,11 +44,11 @@ class SimpleUserAuth(userauth.SSHUserAuthClient):
         if not os.path.exists(path) or self.lastPublicKey:
             # the file doesn't exist, or we've tried a public key
             return
-        return keys.getPublicKeyString(path+'.pub')
+        return keys.Key.fromFile(filename=path+'.pub').blob()
 
     def getPrivateKey(self):
         path = os.path.expanduser('~/.ssh/id_dsa')
-        return defer.succeed(keys.getPrivateKeyObject(path))
+        return defer.succeed(keys.Key.fromFile(path).keyObject)
 
 class SimpleConnection(connection.SSHConnection):
     def serviceStarted(self):
