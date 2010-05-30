@@ -6,7 +6,8 @@
 Tests for L{twisted.conch.scripts.cftp}.
 """
 
-import time, sys, os, operator, getpass
+import time, sys, os, operator, getpass, struct
+from StringIO import StringIO
 
 from twisted.conch.test.test_ssh import Crypto, pyasn1
 
@@ -34,6 +35,7 @@ from twisted.internet.utils import getProcessOutputAndValue
 from twisted.python import log
 from twisted.conch import ls
 from twisted.test.proto_helpers import StringTransport
+from twisted.internet.task import Clock
 
 from twisted.conch.test import test_ssh, test_conch
 from twisted.conch.test.test_filetransfer import SFTPTestBase
@@ -222,6 +224,65 @@ class StdioClientTests(TestCase):
         d = self.client._dispatchCommand("!echo hello")
         d.addCallback(self.assertEquals, "hello\n")
         return d
+
+
+    def setKnownConsoleSize(self, width, height):
+        """
+        For the duration of this test, patch C{cftp}'s C{fcntl} module to return
+        a fixed width and height.
+
+        @param width: the width in characters
+        @type width: C{int}
+        @param height: the height in characters
+        @type height: C{int}
+        """
+        import tty # local import to avoid win32 issues
+        class FakeFcntl(object):
+            def ioctl(self, fd, opt, mutate):
+                if opt != tty.TIOCGWINSZ:
+                    self.fail("Only window-size queries supported.")
+                return struct.pack("4H", height, width, 0, 0)
+        self.patch(cftp, "fcntl", FakeFcntl())
+
+
+    def test_progressReporting(self):
+        """
+        L{StdioClient._printProgressBar} prints a progress description,
+        including percent done, amount transferred, transfer rate, and time
+        remaining, all based the given start time, the given L{FileWrapper}'s
+        progress information and the reactor's current time.
+        """
+        # Use a short, known console width because this simple test doesn't need
+        # to test the console padding.
+        self.setKnownConsoleSize(10, 34)
+        clock = self.client.reactor = Clock()
+        wrapped = StringIO("x")
+        wrapped.name = "sample"
+        wrapper = cftp.FileWrapper(wrapped)
+        wrapper.size = 1024 * 10
+        startTime = clock.seconds()
+        clock.advance(2.0)
+        wrapper.total += 4096
+        self.client._printProgressBar(wrapper, startTime)
+        self.assertEquals(self.client.transport.value(),
+                          "\rsample 40% 4.0kB 2.0kBps 00:03 ")
+
+
+    def test_reportNoProgress(self):
+        """
+        L{StdioClient._printProgressBar} prints a progress description that
+        indicates 0 bytes transferred if no bytes have been transferred and no
+        time has passed.
+        """
+        self.setKnownConsoleSize(10, 34)
+        clock = self.client.reactor = Clock()
+        wrapped = StringIO("x")
+        wrapped.name = "sample"
+        wrapper = cftp.FileWrapper(wrapped)
+        startTime = clock.seconds()
+        self.client._printProgressBar(wrapper, startTime)
+        self.assertEquals(self.client.transport.value(),
+                          "\rsample  0% 0.0B 0.0Bps 00:00 ")
 
 
 

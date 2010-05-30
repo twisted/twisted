@@ -7,7 +7,7 @@ Implementation module for the I{cftp} command.
 """
 
 import os, sys, getpass, struct, tty, fcntl, stat
-import fnmatch, pwd, time, glob
+import fnmatch, pwd, glob
 
 from twisted.conch.client import connect, default, options
 from twisted.conch.ssh import connection, common
@@ -130,6 +130,8 @@ class StdioClient(basic.LineReceiver):
 
     ps = 'cftp> '
     delimiter = '\n'
+
+    reactor = reactor
 
     def __init__(self, client, f = None):
         self.client = client
@@ -337,7 +339,7 @@ class StdioClient(basic.LineReceiver):
         rf.total = 0.0
         dList = []
         chunks = []
-        startTime = time.time()
+        startTime = self.reactor.seconds()
         for i in range(numRequests):
             d = self._cbGetRead('', rf, lf, chunks, 0, bufferSize, startTime)
             dList.append(d)
@@ -379,7 +381,7 @@ class StdioClient(basic.LineReceiver):
                 chunks.insert(i, (start, start + len(data)))
             rf.total += len(data)
         if self.useProgressBar:
-            self._printProgessBar(rf, startTime)
+            self._printProgressBar(rf, startTime)
         chunk = self._getNextChunk(chunks)
         if not chunk:
             return
@@ -461,7 +463,7 @@ class StdioClient(basic.LineReceiver):
             lf = FileWrapper(lf)
         dList = []
         chunks = []
-        startTime = time.time()
+        startTime = self.reactor.seconds()
         for i in range(numRequests):
             d = self._cbPutWrite(None, rf, lf, chunks, startTime)
             if d:
@@ -477,7 +479,7 @@ class StdioClient(basic.LineReceiver):
         data = lf.read(size)
         if self.useProgressBar:
             lf.total += len(data)
-            self._printProgessBar(lf, startTime)
+            self._printProgressBar(lf, startTime)
         if data:
             d = rf.writeChunk(start, data)
             d.addCallback(self._cbPutWrite, rf, lf, chunks, startTime)
@@ -639,10 +641,10 @@ version                         Print the SFTP version.
         else:
             glob = 0
         if tail and not glob: # could be file or directory
-           # try directory first
-           d = self.client.openDirectory(fullPath)
-           d.addCallback(self._cbOpenList, '')
-           d.addErrback(self._ebNotADirectory, head, tail)
+            # try directory first
+            d = self.client.openDirectory(fullPath)
+            d.addCallback(self._cbOpenList, '')
+            d.addErrback(self._ebNotADirectory, head, tail)
         else:
             d = self.client.openDirectory(head)
             d.addCallback(self._cbOpenList, tail)
@@ -681,8 +683,8 @@ version                         Print the SFTP version.
             (1<<40L, 'TB'),
             (1<<30L, 'GB'),
             (1<<20L, 'MB'),
-            (1<<10L, 'kb'),
-            (1, '')
+            (1<<10L, 'kB'),
+            (1, 'B')
             ]
 
         for factor, suffix in _abbrevs:
@@ -702,24 +704,43 @@ version                         Print the SFTP version.
             t -= (60 * mins)
             return "%02i:%02i" % (mins, t)
 
-    def _printProgessBar(self, f, startTime):
-        diff = time.time() - startTime
+
+    def _printProgressBar(self, f, startTime):
+        """
+        Update a console progress bar on this L{StdioClient}'s transport, based
+        on the difference between the start time of the operation and the
+        current time according to the reactor, and appropriate to the size of
+        the console window.
+
+        @param f: a wrapper around the file which is being written or read
+        @type f: L{FileWrapper}
+
+        @param startTime: The time at which the operation being tracked began.
+        @type startTime: C{float}
+        """
+        diff = self.reactor.seconds() - startTime
         total = f.total
         try:
             winSize = struct.unpack('4H',
                 fcntl.ioctl(0, tty.TIOCGWINSZ, '12345679'))
         except IOError:
             winSize = [None, 80]
-        speed = total/diff
+        if diff == 0.0:
+            speed = 0.0
+        else:
+            speed = total / diff
         if speed:
             timeLeft = (f.size - total) / speed
         else:
             timeLeft = 0
         front = f.name
-        back = '%3i%% %s %sps %s ' % ((total/f.size)*100, self._abbrevSize(total),
-                self._abbrevSize(total/diff), self._abbrevTime(timeLeft))
+        back = '%3i%% %s %sps %s ' % ((total / f.size) * 100,
+                                      self._abbrevSize(total),
+                                      self._abbrevSize(speed),
+                                      self._abbrevTime(timeLeft))
         spaces = (winSize[1] - (len(front) + len(back) + 1)) * ' '
         self.transport.write('\r%s%s%s' % (front, spaces, back))
+
 
     def _getFilename(self, line):
         line.lstrip()
