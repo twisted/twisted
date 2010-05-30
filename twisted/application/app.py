@@ -373,28 +373,10 @@ class ApplicationRunner(object):
         self.preApplication()
         self.application = self.createOrGetApplication()
 
-
-        getLogObserverLegacy = getattr(self, 'getLogObserver', None)
-        if getLogObserverLegacy is not None:
-            warnings.warn("Specifying a log observer with getLogObserver is "
-                          "deprecated. Please use a loggerFactory instead.",
-                          category=DeprecationWarning)
-            self.startLogging(self.getLogObserver())
-        else:
-            self.logger.start(self.application)
+        self.logger.start(self.application)
 
         self.postApplication()
         self.logger.stop()
-
-
-    def startLogging(self, observer):
-        """
-        Initialize the logging system. DEPRECATED.
-
-        @param observer: The observer to add to the logging system.
-        """
-        log.startLoggingWithObserver(observer)
-        self.logger._initialLog()
 
 
     def startReactor(self, reactor, oldstdout, oldstderr):
@@ -658,6 +640,8 @@ def convertStyle(filein, typein, passphrase, fileout, typeout, encrypt):
     if passphrase:
         fileout = None
     sob.IPersistable(application).save(filename=fileout, passphrase=passphrase)
+
+
 
 def startApplication(application, save):
     from twisted.internet import reactor

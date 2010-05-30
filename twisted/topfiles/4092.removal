@@ -1,0 +1,3 @@
+Removed twisted.application.app.ApplicationRunner.startLogging, which has been
+deprecated (doesn't say since when), as well as support for the legacy
+twisted.application.app.ApplicationRunner.getLogObserver method.

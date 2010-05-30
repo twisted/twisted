@@ -454,44 +454,6 @@ class ApplicationRunnerTest(unittest.TestCase):
             reactor.called, "startReactor did not call reactor.run()")
 
 
-    def test_legacyApplicationRunnerGetLogObserver(self):
-        """
-        L{app.ApplicationRunner} subclasses can have a getLogObserver that used
-        to return a log observer. This test is there to ensure that it's
-        supported but it raises a warning when used.
-        """
-        observer = []
-        self.addCleanup(log.removeObserver, observer.append)
-        class GetLogObserverRunner(app.ApplicationRunner):
-            def getLogObserver(self):
-                return observer.append
-
-            def startLogging(self, observer):
-                """
-                Override C{startLogging} to call L{log.addObserver} instead of
-                L{log.startLoggingWithObserver}.
-                """
-                log.addObserver(observer)
-                self.logger._initialLog()
-
-            def preApplication(self):
-                pass
-
-            def postApplication(self):
-                pass
-
-            def createOrGetApplication(self):
-                pass
-
-        conf = twistd.ServerOptions()
-        runner = GetLogObserverRunner(conf)
-        self.assertWarns(DeprecationWarning,
-            "Specifying a log observer with getLogObserver is "
-            "deprecated. Please use a loggerFactory instead.",
-            app.__file__, runner.run)
-        self.assertEquals(len(observer), 3)
-
-
 
 class UnixApplicationRunnerSetupEnvironmentTests(unittest.TestCase):
     """
