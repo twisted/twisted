@@ -9,12 +9,15 @@ Assorted functionality which is commonly useful when writing unit tests.
 from StringIO import StringIO
 
 from zope.interface import implements
-from zope.interface.verify import verifyObject
 
-from twisted.internet.interfaces import ITransport, IConsumer, IPushProducer
-from twisted.internet.interfaces import IReactorTCP, IReactorUNIX, IReactorSSL
+from twisted.internet.interfaces import ITransport, IConsumer, IPushProducer,\
+    IConnector
+from twisted.internet.interfaces import IReactorTCP, IReactorSSL, IReactorUNIX
+from twisted.internet.interfaces import IListeningPort
 from twisted.protocols import basic
 from twisted.internet import protocol, error, address
+
+from twisted.internet.address import IPv4Address, UNIXAddress
 
 
 class AccumulatingProtocol(protocol.Protocol):
@@ -259,6 +262,95 @@ class StringIOWithoutClosing(StringIO):
         """
 
 
+
+class _FakePort(object):
+    """
+    A fake L{IListeningPort} to be used in tests.
+
+    @ivar _hostAddress: The L{IAddress} this L{IListeningPort} is pretending
+        to be listening on.
+    """
+    implements(IListeningPort)
+
+    def __init__(self, hostAddress):
+        """
+        @param hostAddress: An L{IAddress} this L{IListeningPort} should
+            pretend to be listening on.
+        """
+        self._hostAddress = hostAddress
+
+
+    def startListening(self):
+        """
+        Fake L{IListeningPort.startListening} that doesn't do anything.
+        """
+
+
+    def stopListening(self):
+        """
+        Fake L{IListeningPort.stopListening} that doesn't do anything.
+        """
+
+
+    def getHost(self):
+        """
+        Fake L{IListeningPort.getHost} that returns our L{IAddress}.
+        """
+        return self._hostAddress
+
+
+
+class _FakeConnector(object):
+    """
+    A fake L{IConnector} that allows us to inspect if it has been told to stop
+    connecting.
+    
+    @ivar stoppedConnecting: has this connector's
+        L{FakeConnector.stopConnecting} method been invoked yet?
+
+    @ivar _address: An L{IAddress} provider that represents our destination.
+    """
+    implements(IConnector)
+
+    stoppedConnecting = False
+
+    def __init__(self, address):
+        """
+        @param address: An L{IAddress} provider that represents this
+            connector's destination.
+        """
+        self._address = address
+
+
+    def stopConnecting(self):
+        """
+        Implement L{IConnector.stopConnecting} and set
+        L{FakeConnector.stoppedConnecting} to C{True}
+        """
+        self.stoppedConnecting = True
+
+
+    def disconnect(self):
+        """
+        Implement L{IConnector.disconnect} as a no-op.
+        """
+
+
+    def connect(self):
+        """
+        Implement L{IConnector.connect} as a no-op.
+        """
+
+
+    def getDestination(self):
+        """
+        Implement L{IConnector.getDestination} to return the C{address} passed
+        to C{__init__}.
+        """
+        return self._address
+
+
+
 class MemoryReactor(object):
     """
     A fake reactor to be used in tests.  This reactor doesn't actually do
@@ -305,51 +397,126 @@ class MemoryReactor(object):
 
     def listenTCP(self, port, factory, backlog=50, interface=''):
         """
-        Fake L{reactor.listenTCP}, that does nothing but log the call.
+        Fake L{reactor.listenTCP}, that logs the call and returns an
+        L{IListeningPort}.
         """
         self.tcpServers.append((port, factory, backlog, interface))
+        return _FakePort(IPv4Address('TCP', '0.0.0.0', port))
 
 
     def connectTCP(self, host, port, factory, timeout=30, bindAddress=None):
         """
-        Fake L{reactor.connectTCP}, that does nothing but log the call.
+        Fake L{reactor.connectTCP}, that logs the call and returns an
+        L{IConnector}.
         """
         self.tcpClients.append((host, port, factory, timeout, bindAddress))
+        return _FakeConnector(IPv4Address('TCP', host, port))
 
 
     def listenSSL(self, port, factory, contextFactory,
                   backlog=50, interface=''):
         """
-        Fake L{reactor.listenSSL}, that logs the call and returns an.
+        Fake L{reactor.listenSSL}, that logs the call and returns an
+        L{IListeningPort}.
         """
         self.sslServers.append((port, factory, contextFactory,
                                 backlog, interface))
+        return _FakePort(IPv4Address('TCP', '0.0.0.0', port))
 
 
     def connectSSL(self, host, port, factory, contextFactory,
                    timeout=30, bindAddress=None):
         """
-        Fake L{reactor.connectSSL}, that does nothing but log the call.
+        Fake L{reactor.connectSSL}, that logs the call and returns an
+        L{IConnector}.
         """
         self.sslClients.append((host, port, factory, contextFactory,
                                 timeout, bindAddress))
+        return _FakeConnector(IPv4Address('TCP', host, port))
 
 
     def listenUNIX(self, address, factory,
                    backlog=50, mode=0666, wantPID=0):
         """
-        Fake L{reactor.listenUNIX}, that logs the call and returns an.
+        Fake L{reactor.listenUNIX}, that logs the call and returns an
+        L{IListeningPort}.
         """
         self.unixServers.append((address, factory, backlog, mode, wantPID))
+        return _FakePort(UNIXAddress(address))
 
 
     def connectUNIX(self, address, factory, timeout=30, checkPID=0):
         """
-        Fake L{reactor.connectUNIX}, that does nothing but log the call.
+        Fake L{reactor.connectUNIX}, that logs the call and returns an
+        L{IConnector}.
         """
         self.unixClients.append((address, factory, timeout, checkPID))
+        return _FakeConnector(UNIXAddress(address))
 
 
-verifyObject(IReactorTCP, MemoryReactor())
-verifyObject(IReactorSSL, MemoryReactor())
-verifyObject(IReactorUNIX, MemoryReactor())
+
+class RaisingMemoryReactor(object):
+    """
+    A fake reactor to be used in tests.  It accepts TCP connection setup
+    attempts, but they will fail.
+
+    @ivar _listenException: An instance of an L{Exception}
+    @ivar _connectException: An instance of an L{Exception}
+    """
+    implements(IReactorTCP, IReactorSSL, IReactorUNIX)
+
+    def __init__(self, listenException=None, connectException=None):
+        """
+        @param listenException: An instance of an L{Exception} to raise when any
+            C{listen} method is called.
+
+        @param connectException: An instance of an L{Exception} to raise when
+            any C{connect} method is called.
+        """
+        self._listenException = listenException
+        self._connectException = connectException
+
+
+    def listenTCP(self, port, factory, backlog=50, interface=''):
+        """
+        Fake L{reactor.listenTCP}, that raises L{self._listenException}.
+        """
+        raise self._listenException
+
+
+    def connectTCP(self, host, port, factory, timeout=30, bindAddress=None):
+        """
+        Fake L{reactor.connectTCP}, that raises L{self._connectException}.
+        """
+        raise self._connectException
+
+
+    def listenSSL(self, port, factory, contextFactory,
+                  backlog=50, interface=''):
+        """
+        Fake L{reactor.listenSSL}, that raises L{self._listenException}.
+        """
+        raise self._listenException
+
+
+    def connectSSL(self, host, port, factory, contextFactory,
+                   timeout=30, bindAddress=None):
+        """
+        Fake L{reactor.connectSSL}, that raises L{self._connectException}.
+        """
+        raise self._connectException
+
+
+    def listenUNIX(self, address, factory,
+                   backlog=50, mode=0666, wantPID=0):
+        """
+        Fake L{reactor.listenUNIX}, that raises L{self._listenException}.
+        """
+        raise self._listenException
+
+
+    def connectUNIX(self, address, factory, timeout=30, checkPID=0):
+        """
+        Fake L{reactor.connectUNIX}, that raises L{self._connectException}.
+        """
+        raise self._connectException

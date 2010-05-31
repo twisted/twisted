@@ -1,11 +1,13 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
 """Address objects for network connections."""
 
 import warnings, os
+
 from zope.interface import implements
+
 from twisted.internet.interfaces import IAddress
 
 
@@ -21,12 +23,12 @@ class IPv4Address(object):
     # _bwHack is given to old users who think we are a tuple. They expected
     # addr[0] to define the socket type rather than the address family, so
     # the value comes from a different namespace than the new .type value:
-    
+
     #  type = map[_bwHack]
     # map = { 'SSL': 'TCP', 'INET': 'TCP', 'INET_UDP': 'UDP' }
 
     implements(IAddress)
-    
+
     def __init__(self, type, host, port, _bwHack = None):
         assert type in ('TCP', 'UDP')
         self.type = type
@@ -66,11 +68,11 @@ class UNIXAddress(object):
     """
 
     implements(IAddress)
-    
+
     def __init__(self, name, _bwHack='UNIX'):
         self.name = name
         self._bwHack = _bwHack
-    
+
     def __getitem__(self, index):
         warnings.warn("UNIXAddress.__getitem__ is deprecated.  Use attributes instead.",
                       category=DeprecationWarning, stacklevel=2)
@@ -85,14 +87,20 @@ class UNIXAddress(object):
         if isinstance(other, tuple):
             return tuple(self) == other
         elif isinstance(other, UNIXAddress):
-            try:
-                return os.path.samefile(self.name, other.name)
-            except OSError:
-                pass
+            # First do the simple thing and check to see if the names are the
+            # same. If not, and the paths exist, check to see if they point to
+            # the same file.
+            if self.name == other.name:
+                return True
+            else:
+                try:
+                    return os.path.samefile(self.name, other.name)
+                except OSError:
+                    pass
         return False
 
     def __str__(self):
-        return 'UNIXSocket(%r)' % (self.name,)
+        return 'UNIXAddress(%r)' % (self.name,)
 
 
 # These are for buildFactory backwards compatability due to
@@ -100,7 +108,7 @@ class UNIXAddress(object):
 
 class _ServerFactoryIPv4Address(IPv4Address):
     """Backwards compatability hack. Just like IPv4Address in practice."""
-    
+
     def __eq__(self, other):
         if isinstance(other, tuple):
             warnings.warn("IPv4Address.__getitem__ is deprecated.  Use attributes instead.",

@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -317,3 +317,20 @@ class ReactorAlreadyRunning(RuntimeError):
     Error raised when trying to start the reactor multiple times.
     """
 
+
+class ConnectingCancelledError(Exception):
+    """
+    An C{Exception} that will be raised when an L{IStreamClientEndpoint} is
+    cancelled before it connects.
+
+    @ivar address: The L{IAddress} that is the destination of the
+        cancelled L{IStreamClientEndpoint}.
+    """
+
+    def __init__(self, address):
+        """
+        @param address: The L{IAddress} that is the destination of the
+            L{IStreamClientEndpoint} that was cancelled.
+        """
+        Exception.__init__(self, address)
+        self.address = address

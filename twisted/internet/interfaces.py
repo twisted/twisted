@@ -1711,3 +1711,42 @@ class IMulticastTransport(Interface):
         """
         Leave multicast group, return L{Deferred} of success.
         """
+
+
+class IStreamClientEndpoint(Interface):
+    """
+    A stream client endpoint is a place that L{ClientFactory} can connect to.
+    For example, a remote TCP host/port pair would be a TCP client endpoint.
+
+    @since: 10.1
+    """
+
+    def connect(protocolFactory):
+        """
+        Connect the C{protocolFactory} to the location specified by this
+        L{IStreamClientEndpoint} provider.
+
+        @param protocolFactory: A provider of L{IProtocolFactory}
+        @return: A L{Deferred} that results in an L{IProtocol} upon successful
+            connection otherwise a L{ConnectError}
+        """
+
+
+
+class IStreamServerEndpoint(Interface):
+    """
+    A stream server endpoint is a place that a L{Factory} can listen for
+    incoming connections.
+
+    @since: 10.1
+    """
+
+    def listen(protocolFactory):
+        """
+        Listen with C{protocolFactory} at the location specified by this
+        L{IStreamServerEndpoint} provider.
+
+        @param protocolFactory: A provider of L{IProtocolFactory}
+        @return: A L{Deferred} that results in an L{IListeningPort} or an
+            L{CannotListenError}
+        """
