@@ -306,11 +306,13 @@ class Deferred:
         """
         Run all success callbacks that have been added to this L{Deferred}.
 
-        Each callback will have its result passed as the first
-        argument to the next; this way, the callbacks act as a
-        'processing chain'. Also, if the success-callback returns a L{Failure}
-        or raises an L{Exception}, processing will continue on the *error*-
-        callback chain.
+        Each callback will have its result passed as the first argument to
+        the next; this way, the callbacks act as a 'processing chain'.  If
+        the success-callback returns a L{Failure} or raises an L{Exception},
+        processing will continue on the *error* callback chain.  If a
+        callback (or errback) returns another L{Deferred}, this L{Deferred}
+        will be chained to it (and further callbacks will not run until that
+        L{Deferred} has a result).
         """
         assert not isinstance(result, Deferred)
         self._startRunCallbacks(result)
