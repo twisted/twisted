@@ -20,7 +20,6 @@ class FingerService(service.Service):
     def __init__(self, filename):
         self.users = {}
         self.filename = filename
-        self._read()
 
     def _read(self):
         for line in file(self.filename):
