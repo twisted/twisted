@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.mail.test.test_mail -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -10,7 +10,6 @@ Maildir-style mailbox support
 import os
 import stat
 import socket
-import time
 
 from zope.interface import implements
 
@@ -190,9 +189,6 @@ class _MaildirMailboxAppendMessageTask:
         if not hasattr(msg, "read"):
             msg = StringIO.StringIO(msg)
         self.msg = msg
-        # This is needed, as this startup phase might call defer.errback and zero out self.defer
-        # By doing it on the reactor iteration appendMessage is able to use .defer without problems.
-        reactor.callLater(0, self.startUp)
 
     def startUp(self):
         self.createTempFile()
@@ -350,9 +346,18 @@ class MaildirMailbox(pop3.Mailbox):
         self.deleted.clear()
 
     def appendMessage(self, txt):
-        """Appends a message into the mailbox."""
+        """
+        Appends a message into the mailbox.
+
+        @param txt: A C{str} or file-like object giving the message to append.
+
+        @return: A L{Deferred} which fires when the message has been appended to
+            the mailbox.
+        """
         task = self.AppendFactory(self, txt)
-        return task.defer
+        result = task.defer
+        task.startUp()
+        return result
 
 class StringListMailbox:
     """

@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -334,43 +334,100 @@ class FailingMaildirMailboxAppendMessageTask(mail.maildir._MaildirMailboxAppendM
         else:
             raise OSError(errno.EPERM, "Faked Permission Problem")
 
-class MaildirAppendStringTestCase(unittest.TestCase):
+
+class _AppendTestMixin(object):
+    """
+    Mixin for L{MaildirMailbox.appendMessage} test cases which defines a helper
+    for serially appending multiple messages to a mailbox.
+    """
+    def _appendMessages(self, mbox, messages):
+        """
+        Deliver the given messages one at a time.  Delivery is serialized to
+        guarantee a predictable order in the mailbox (overlapped message deliver
+        makes no guarantees about which message which appear first).
+        """
+        results = []
+        def append():
+            for m in messages:
+                d = mbox.appendMessage(m)
+                d.addCallback(results.append)
+                yield d
+        d = task.cooperate(append()).whenDone()
+        d.addCallback(lambda ignored: results)
+        return d
+
+
+
+class MaildirAppendStringTestCase(unittest.TestCase, _AppendTestMixin):
+    """
+    Tests for L{MaildirMailbox.appendMessage} when invoked with a C{str}.
+    """
     def setUp(self):
         self.d = self.mktemp()
         mail.maildir.initializeMaildir(self.d)
 
-    def tearDown(self):
-        shutil.rmtree(self.d)
 
     def _append(self, ignored, mbox):
         d = mbox.appendMessage('TEST')
         return self.assertFailure(d, Exception)
 
+
     def _setState(self, ignored, mbox, rename=None, write=None, open=None):
+        """
+        Change the behavior of future C{rename}, C{write}, or C{open} calls made
+        by the mailbox C{mbox}.
+
+        @param rename: If not C{None}, a new value for the C{_renamestate}
+            attribute of the mailbox's append factory.  The original value will
+            be restored at the end of the test.
+
+        @param write: Like C{rename}, but for the C{_writestate} attribute.
+
+        @param open: Like C{rename}, but for the C{_openstate} attribute.
+        """
         if rename is not None:
-            mbox.AppendFactory._renameState = rename
+            self.addCleanup(
+                setattr, mbox.AppendFactory, '_renamestate',
+                mbox.AppendFactory._renamestate)
+            mbox.AppendFactory._renamestate = rename
         if write is not None:
-            mbox.AppendFactory._writeState = write
+            self.addCleanup(
+                setattr, mbox.AppendFactory, '_writestate',
+                mbox.AppendFactory._writestate)
+            mbox.AppendFactory._writestate = write
         if open is not None:
+            self.addCleanup(
+                setattr, mbox.AppendFactory, '_openstate',
+                mbox.AppendFactory._openstate)
             mbox.AppendFactory._openstate = open
 
-    def testAppend(self):
+
+    def test_append(self):
+        """
+        L{MaildirMailbox.appendMessage} returns a L{Deferred} which fires when
+        the message has been added to the end of the mailbox.
+        """
         mbox = mail.maildir.MaildirMailbox(self.d)
         mbox.AppendFactory = FailingMaildirMailboxAppendMessageTask
-        ds = []
-        for i in xrange(1, 11):
-            ds.append(mbox.appendMessage("X" * i))
-            ds[-1].addCallback(self.assertEqual, None)
-        d = defer.gatherResults(ds)
+
+        d = self._appendMessages(mbox, ["X" * i for i in range(1, 11)])
+        d.addCallback(self.assertEquals, [None] * 10)
         d.addCallback(self._cbTestAppend, mbox)
         return d
 
-    def _cbTestAppend(self, result, mbox):
-        self.assertEquals(len(mbox.listMessages()),
-                          10)
-        self.assertEquals(len(mbox.getMessage(5).read()), 6)
+
+    def _cbTestAppend(self, ignored, mbox):
+        """
+        Check that the mailbox has the expected number (ten) of messages in it,
+        and that each has the expected contents, and that they are in the same
+        order as that in which they were appended.
+        """
+        self.assertEquals(len(mbox.listMessages()), 10)
+        self.assertEquals(
+            [len(mbox.getMessage(i).read()) for i in range(10)],
+            range(1, 11))
         # test in the right order: last to first error location.
-        mbox.AppendFactory._renamestate = False
+        self._setState(None, mbox, rename=False)
         d = self._append(None, mbox)
         d.addCallback(self._setState, mbox, rename=True, write=False)
         d.addCallback(self._append, mbox)
@@ -380,32 +437,46 @@ class MaildirAppendStringTestCase(unittest.TestCase):
         return d
 
 
-class MaildirAppendFileTestCase(unittest.TestCase):
+
+class MaildirAppendFileTestCase(unittest.TestCase, _AppendTestMixin):
+    """
+    Tests for L{MaildirMailbox.appendMessage} when invoked with a C{str}.
+    """
     def setUp(self):
         self.d = self.mktemp()
         mail.maildir.initializeMaildir(self.d)
 
-    def tearDown(self):
-        shutil.rmtree(self.d)
 
-    def testAppend(self):
+    def test_append(self):
+        """
+        L{MaildirMailbox.appendMessage} returns a L{Deferred} which fires when
+        the message has been added to the end of the mailbox.
+        """
         mbox = mail.maildir.MaildirMailbox(self.d)
-        ds = []
-        def _check(res, t):
-            t.close()
-            self.assertEqual(res, None)
+        messages = []
         for i in xrange(1, 11):
             temp = tempfile.TemporaryFile()
             temp.write("X" * i)
-            temp.seek(0,0)
-            ds.append(mbox.appendMessage(temp))
-            ds[-1].addCallback(_check, temp)
-        return defer.gatherResults(ds).addCallback(self._cbTestAppend, mbox)
+            temp.seek(0, 0)
+            messages.append(temp)
+            self.addCleanup(temp.close)
+
+        d = self._appendMessages(mbox, messages)
+        d.addCallback(self._cbTestAppend, mbox)
+        return d
+
 
     def _cbTestAppend(self, result, mbox):
-        self.assertEquals(len(mbox.listMessages()),
-                          10)
-        self.assertEquals(len(mbox.getMessage(5).read()), 6)
+        """
+        Check that the mailbox has the expected number (ten) of messages in it,
+        and that each has the expected contents, and that they are in the same
+        order as that in which they were appended.
+        """
+        self.assertEquals(len(mbox.listMessages()), 10)
+        self.assertEquals(
+            [len(mbox.getMessage(i).read()) for i in range(10)],
+            range(1, 11))
+
 
 
 class MaildirTestCase(unittest.TestCase):
