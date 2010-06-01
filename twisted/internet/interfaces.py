@@ -356,9 +356,10 @@ class IReactorUNIX(Interface):
 
         @param backlog: number of connections to allow in backlog.
 
-        @param mode: mode to set on the unix socket.  This parameter is
-            deprecated.  Permissions should be set on the directory which
-            contains the UNIX socket.
+        @param mode: The mode (B{not} umask) to set on the unix socket.  See
+            platform specific documentation for information about how this
+            might affect connection attempts.
+        @type mode: C{int}
 
         @param wantPID: if True, create a pidfile for the socket.
 
@@ -381,9 +382,10 @@ class IReactorUNIXDatagram(Interface):
 
         @param maxPacketSize: maximum packet size to accept
 
-        @param mode: mode to set on the unix socket.  This parameter is
-            deprecated.  Permissions should be set on the directory which
-            contains the UNIX socket.
+        @param mode: The mode (B{not} umask) to set on the unix socket.  See
+            platform specific documentation for information about how this
+            might affect connection attempts.
+        @type mode: C{int}
 
         @param bindAddress: address to bind to
 
@@ -400,9 +402,10 @@ class IReactorUNIXDatagram(Interface):
 
         @param maxPacketSize: maximum packet size to accept
 
-        @param mode: mode to set on the unix socket.  This parameter is
-            deprecated.  Permissions should be set on the directory which
-            contains the UNIX socket.
+        @param mode: The mode (B{not} umask) to set on the unix socket.  See
+            platform specific documentation for information about how this
+            might affect connection attempts.
+        @type mode: C{int}
 
         @return: An object which provides L{IListeningPort}.
         """
