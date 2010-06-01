@@ -1499,7 +1499,6 @@ class AMPTest(unittest.TestCase):
         Sending a command with an omitted AmpList argument that is
         designated as optional does not raise an InvalidSignature error.
         """
-        dontRejectMeCommand = DontRejectMe(magicWord=u'please')
         c, s, p = connectedServerAndClient(
             ServerClass=SimpleSymmetricCommandProtocol,
             ClientClass=SimpleSymmetricCommandProtocol)
@@ -2778,6 +2777,65 @@ class ListOfDateTimeTests(unittest.TestCase, ListOfTestsMixin):
                 tzinfo=amp._FixedOffsetTZInfo('-', 6, 59)),
         ],
     }
+
+
+
+class ListOfOptionalTests(unittest.TestCase):
+    """
+    Tests to ensure L{ListOf} AMP arguments can be omitted from AMP commands
+    via the 'optional' flag.
+    """
+    def test_requiredArgumentWithNoneValueRaisesTypeError(self):
+        """
+        L{ListOf.toBox} raises C{TypeError} when passed a value of C{None}
+        for the argument.
+        """
+        stringList = amp.ListOf(amp.Integer())
+        self.assertRaises(
+            TypeError, stringList.toBox, 'omitted', amp.AmpBox(),
+            {'omitted': None}, None)
+
+
+    def test_optionalArgumentWithNoneValueOmitted(self):
+        """
+        L{ListOf.toBox} silently omits serializing any argument with a
+        value of C{None} that is designated as optional for the protocol.
+        """
+        stringList = amp.ListOf(amp.Integer(), optional=True)
+        strings = amp.AmpBox()
+        stringList.toBox('omitted', strings, {'omitted': None}, None)
+        self.assertEquals(strings, {})
+
+
+    def test_requiredArgumentWithKeyMissingRaisesKeyError(self):
+        """
+        L{ListOf.toBox} raises C{KeyError} if the argument's key is not
+        present in the objects dictionary.
+        """
+        stringList = amp.ListOf(amp.Integer())
+        self.assertRaises(
+            KeyError, stringList.toBox, 'ommited', amp.AmpBox(),
+            {'someOtherKey': 0}, None)
+
+
+    def test_optionalArgumentWithKeyMissingOmitted(self):
+        """
+        L{ListOf.toBox} silently omits serializing any argument designated
+        as optional whose key is not present in the objects dictionary.
+        """
+        stringList = amp.ListOf(amp.Integer(), optional=True)
+        stringList.toBox('ommited', amp.AmpBox(), {'someOtherKey': 0}, None)
+
+
+    def test_omittedOptionalArgumentDeserializesAsNone(self):
+        """
+        L{ListOf.fromBox} correctly reverses the operation performed by
+        L{ListOf.toBox} for optional arguments.
+        """
+        stringList = amp.ListOf(amp.Integer(), optional=True)
+        objects = {}
+        stringList.fromBox('omitted', {}, objects, None)
+        self.assertEquals(objects, {'omitted': None})
 
 
 

@@ -177,7 +177,7 @@ import types, warnings
 
 from cStringIO import StringIO
 from struct import pack
-import decimal, datetime, re
+import decimal, datetime
 
 from zope.interface import Interface, implements
 
@@ -1394,10 +1394,14 @@ class ListOf(Argument):
         arguments must be implemented using only the C{fromString} and
         C{toString} methods, not the C{fromBox} and C{toBox} methods).
 
+    @param optional: a boolean indicating whether this argument can be
+        omitted in the protocol.
+
     @since: 10.0
     """
-    def __init__(self, elementType):
+    def __init__(self, elementType, optional=False):
         self.elementType = elementType
+        Argument.__init__(self, optional)
 
 
     def fromString(self, inString):
