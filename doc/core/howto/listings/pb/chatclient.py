@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-
-# Copyright (c) 2009 Twisted Matrix Laboratories.
+# Copyright (c) 2009-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 from twisted.spread import pb
@@ -22,7 +21,10 @@ class Client(pb.Referenceable):
 
     def connected(self, perspective):
         print "connected, joining group #lookingForFourth"
-        # this perspective is a reference to our User object
+        # this perspective is a reference to our User object.  Save a reference
+        # to it here, otherwise it will get garbage collected after this call,
+        # and the server will think we logged out.
+        self.perspective = perspective
         d = perspective.callRemote("joinGroup", "#lookingForFourth")
         d.addCallback(self.gotGroup)
 
