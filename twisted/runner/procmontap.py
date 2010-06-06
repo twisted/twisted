@@ -14,6 +14,7 @@ class Options(usage.Options):
     """
     Define the options accepted by the I{twistd procmon} plugin.
     """
+
     synopsis = "[procmon options] commandline"
 
     optParameters = [["threshold", "t", 1, "How long a process has to live "
@@ -24,11 +25,11 @@ class Options(usage.Options):
                       "with an unmaskable signal.",
                       float],
                      ["minrestartdelay", "m", 1, "The minimum time (in "
-                      "seconds) to wait before attempting to restart a process",
-                      float],
+                      "seconds) to wait before attempting to restart a "
+                      "process", float],
                      ["maxrestartdelay", "M", 3600, "The maximum time (in "
-                      "seconds) to wait before attempting to restart a process",
-                      float]]
+                      "seconds) to wait before attempting to restart a "
+                      "process", float]]
 
     optFlags = []
 
@@ -52,12 +53,14 @@ Eg twistd procmon sleep 10"""
         """
         self['args'] = args
 
+
     def postOptions(self):
         """
         Check for dependencies.
         """
         if len(self["args"]) < 1:
             raise usage.UsageError("Please specify a process commandline")
+
 
 
 def makeService(config):

@@ -12,6 +12,10 @@ from twisted.runner import procmontap as tap
 
 
 class ProcessMonitorTapTest(unittest.TestCase):
+    """
+    Tests for L{twisted.runner.procmontap}'s option parsing and makeService
+    method.
+    """
 
     def test_commandLineRequired(self):
         """
@@ -23,7 +27,8 @@ class ProcessMonitorTapTest(unittest.TestCase):
 
     def test_threshold(self):
         """
-        The threshold option is recognised as a parameter and coerced to float.
+        The threshold option is recognised as a parameter and coerced to
+        float.
         """
         opt = tap.Options()
         opt.parseOptions(['--threshold', '7.5', 'foo'])
