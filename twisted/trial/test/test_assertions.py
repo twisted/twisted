@@ -5,7 +5,7 @@
 Tests for assertions provided by L{twisted.trial.unittest.TestCase}.
 """
 
-import warnings, StringIO
+import warnings
 from pprint import pformat
 
 from twisted.python import reflect, failure
@@ -52,7 +52,6 @@ class TestAssertions(unittest.TestCase):
 
     def test_failingException_fails(self):
         test = runner.TestLoader().loadClass(TestAssertions.FailingTest)
-        io = StringIO.StringIO()
         result = reporter.TestResult()
         test.run(result)
         self.failIf(result.wasSuccessful())
@@ -165,7 +164,7 @@ class TestAssertions(unittest.TestCase):
         except TypeError:
             self.fail("failUnlessRaises shouldn't re-raise unexpected "
                       "exceptions")
-        except self.failureException, e:
+        except self.failureException:
             # what we expect
             pass
         else:
@@ -189,7 +188,7 @@ class TestAssertions(unittest.TestCase):
         try:
             x = self.failUnlessRaises(self.failureException, self._raiseError,
                                       ValueError)
-        except self.failureException, e:
+        except self.failureException:
             # what we expect
             pass
         else:
@@ -629,11 +628,21 @@ class TestAssertionNames(unittest.TestCase):
     def _name(self, x):
         return x.__name__
 
-    def test_failUnless_matches_assert(self):
-        asserts = self._getAsserts()
-        failUnlesses = reflect.prefixedMethods(self, 'failUnless')
-        self.failUnlessEqual(sorted(asserts, key=self._name),
-                             sorted(failUnlesses, key=self._name))
+
+    def test_failUnlessMatchesAssert(self):
+        """
+        The C{failUnless*} test methods are a subset of the C{assert*} test
+        methods.  This is intended to ensure that methods using the
+        I{failUnless} naming scheme are not added without corresponding methods
+        using the I{assert} naming scheme.  The I{assert} naming scheme is
+        preferred, and new I{assert}-prefixed methods may be added without
+        corresponding I{failUnless}-prefixed methods.
+        """
+        asserts = set(self._getAsserts())
+        failUnlesses = set(reflect.prefixedMethods(self, 'failUnless'))
+        self.assertEquals(
+            failUnlesses, asserts.intersection(failUnlesses))
+
 
     def test_failIf_matches_assertNot(self):
         asserts = reflect.prefixedMethods(unittest.TestCase, 'assertNot')
