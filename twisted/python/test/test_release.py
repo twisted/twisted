@@ -1831,12 +1831,14 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         subproject, passing that subproject's I{topfiles} directory as C{path},
         the I{NEWS} file in that directory as C{output}, and the subproject's
         name as C{header}, and then again for each subproject with the
-        top-level I{NEWS} file for C{output}.
+        top-level I{NEWS} file for C{output}. Blacklisted subprojects are
+        skipped.
         """
         builds = []
         builder = NewsBuilder()
         builder.build = lambda path, output, header: builds.append((
                 path, output, header))
+        builder.blacklist = ['vfs']
         builder._today = lambda: '2009-12-01'
 
         # Create a fake looking Twisted project to build from
@@ -1853,7 +1855,12 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
                     '_version.py': genVersion("twisted.conch", 3, 4, 5),
                     'topfiles': {
                         'NEWS': 'Old conch news.\n',
-                        '7.bugfix': 'Fixed that bug.\n'}}})
+                        '7.bugfix': 'Fixed that bug.\n'}},
+                'vfs': {
+                    '_version.py': genVersion("twisted.vfs", 6, 7, 8),
+                    'topfiles': {
+                        'NEWS': 'Old vfs news.\n',
+                        '8.bugfix': 'Fixed bug 8.\n'}}})
 
         builder.buildAll(project)
 

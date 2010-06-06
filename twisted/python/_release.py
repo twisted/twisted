@@ -36,6 +36,11 @@ except ImportError:
 VERSION_OFFSET = 2000
 
 
+# The list of subproject names to exclude from the main Twisted tarball and
+# for which no individual project tarballs will be built.
+PROJECT_BLACKLIST = ["vfs", "web2"]
+
+
 def runCommand(args):
     """
     Execute a vector of arguments.
@@ -591,6 +596,9 @@ class NewsBuilder(object):
     which are supported.  Conveniently, they each also take on the value of
     the file name extension which indicates a news entry of that type.
 
+    @cvar blacklist: A C{list} of C{str} of projects for which we should not
+        generate news at all. Same as C{PROJECT_BLACKLIST}.
+
     @cvar _headings: A C{dict} mapping one of the news entry types to the
         heading to write out for that type of news entry.
 
@@ -602,6 +610,9 @@ class NewsBuilder(object):
         with all the other content.  Put another way, this is the text after
         which the new news text is inserted.
     """
+
+    blacklist = PROJECT_BLACKLIST
+
     _FEATURE = ".feature"
     _BUGFIX = ".bugfix"
     _DOC = ".doc"
@@ -773,6 +784,8 @@ class NewsBuilder(object):
         I{topfiles} directories and update the news file in C{baseDirectory}
         with all of the news.
 
+        Projects that are listed in L{NewsBuilder.blacklist} will be skipped.
+
         @param baseDirectory: A L{FilePath} representing the root directory
             beneath which to find Twisted projects for which to generate
             news (see L{findTwistedProjects}).
@@ -789,6 +802,8 @@ class NewsBuilder(object):
 
         for aggregateNews in [False, True]:
             for project in projects:
+                if project.directory.basename() in self.blacklist:
+                    continue
                 topfiles = project.directory.child("topfiles")
                 if aggregateNews:
                     news = baseDirectory.child("NEWS")
@@ -853,12 +868,13 @@ class DistributionBuilder(object):
     This knows how to build tarballs for Twisted and all of its subprojects.
 
     @type blacklist: C{list} of C{str}
-    @cvar blacklist: The list subproject names to exclude from the main Twisted
-        tarball and for which no individual project tarballs will be built.
+    @cvar blacklist: The list of subproject names to exclude from the main
+        Twisted tarball and for which no individual project tarballs will be
+        built. The same list as C{PROJECT_BLACKLIST}.
     """
 
     from twisted.python.dist import twisted_subprojects as subprojects
-    blacklist = ["vfs", "web2"]
+    blacklist = PROJECT_BLACKLIST
 
     def __init__(self, rootDirectory, outputDirectory, apiBaseURL=None):
         """
