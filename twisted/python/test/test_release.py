@@ -1677,10 +1677,11 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
             '\n\n' + self.existingText)
 
 
-    def test_emptyProjectOmitted(self):
+    def test_emptyProjectCalledOut(self):
         """
-        If no changes exist for a project, I{NEWS} file stays the same, rather
-        than empty section being prepended to file.
+        If no changes exist for a project, I{NEWS} gains a new section for
+        that project that includes some helpful text about how there were no
+        interesting changes.
         """
         project = FilePath(self.mktemp()).child("twisted")
         project.makedirs()
@@ -1691,7 +1692,13 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
             project, project.child('NEWS'),
             "Super Awesometastic 32.16")
         results = project.child('NEWS').getContent()
-        self.assertEquals(results, self.existingText)
+        self.assertEquals(
+            results,
+            'Super Awesometastic 32.16\n'
+            '=========================\n'
+            '\n' +
+            self.builder._NO_CHANGES +
+            '\n\n' + self.existingText)
 
 
     def test_preserveTicketHint(self):

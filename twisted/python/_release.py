@@ -594,6 +594,9 @@ class NewsBuilder(object):
     @cvar _headings: A C{dict} mapping one of the news entry types to the
         heading to write out for that type of news entry.
 
+    @cvar _NO_CHANGES: A C{str} giving the text which appears when there are
+        no significant changes in a release.
+
     @cvar _TICKET_HINT: A C{str} giving the text which appears at the top of
         each news file and which should be kept at the top, not shifted down
         with all the other content.  Put another way, this is the text after
@@ -612,6 +615,8 @@ class NewsBuilder(object):
         _REMOVAL: "Deprecations and Removals",
         _MISC: "Other",
         }
+
+    _NO_CHANGES = "No significant changes have been made for this release.\n"
 
     _TICKET_HINT = (
         'Ticket numbers in this file can be looked up by visiting\n'
@@ -740,8 +745,6 @@ class NewsBuilder(object):
             if tickets:
                 changes.append((part, tickets))
         misc = self._findChanges(path, self._MISC)
-        if not (misc or changes):
-            return
 
         oldNews = output.getContent()
         newNews = output.sibling('NEWS.new').open('w')
@@ -750,8 +753,12 @@ class NewsBuilder(object):
             oldNews = oldNews[len(self._TICKET_HINT):]
 
         self._writeHeader(newNews, header)
-        for (part, tickets) in changes:
-            self._writeSection(newNews, self._headings.get(part), tickets)
+        if changes:
+            for (part, tickets) in changes:
+                self._writeSection(newNews, self._headings.get(part), tickets)
+        else:
+            newNews.write(self._NO_CHANGES)
+            newNews.write('\n')
         self._writeMisc(newNews, self._headings.get(self._MISC), misc)
         newNews.write('\n')
         newNews.write(oldNews)
