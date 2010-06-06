@@ -1241,7 +1241,11 @@ class FilePathTestCase(AbstractFilePathTestCase):
         fp.setContent("12345")
         self.assertEquals(fp.getsize(), 5)
 
-        open(fp.path, 'wb').write("12345678")
+        # Someone else comes along and changes the file.
+        fObj = open(fp.path, 'wb')
+        fObj.write("12345678")
+        fObj.close()
+
         # Sanity check for caching: size should still be 5.
         self.assertEquals(fp.getsize(), 5)
         fp.changed()
