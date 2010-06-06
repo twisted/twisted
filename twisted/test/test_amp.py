@@ -1290,12 +1290,12 @@ class AMPTest(unittest.TestCase):
         tl = self.assertRaises(amp.TooLong,
                                c.callRemoteString, "Hello",
                                **{x: "hi"})
-        self.failUnless(tl.isKey)
-        self.failUnless(tl.isLocal)
-        self.failUnlessIdentical(tl.keyName, None)
-        self.failUnlessIdentical(tl.value, x)
-        self.failUnless(str(len(x)) in repr(tl))
-        self.failUnless("key" in repr(tl))
+        self.assertTrue(tl.isKey)
+        self.assertTrue(tl.isLocal)
+        self.assertIdentical(tl.keyName, None)
+        self.assertEquals(tl.value, x)
+        self.assertIn(str(len(x)), repr(tl))
+        self.assertIn("key", repr(tl))
 
 
     def test_valueTooLong(self):
