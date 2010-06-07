@@ -1,0 +1,2 @@
+When updating the version number using change-versions, change the NEWS files
+if the current release is a pre-release.

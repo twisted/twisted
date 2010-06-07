@@ -14,6 +14,7 @@ which must run on multiple platforms (eg the setup.py script).
 
 import textwrap
 from datetime import date
+import re
 import sys
 import os
 from tempfile import mkdtemp
@@ -114,33 +115,52 @@ def getNextVersion(version, now=None):
     return Version(version.package, major, minor, 0)
 
 
-def changeAllProjectVersions(root, versionTemplate):
+def changeAllProjectVersions(root, versionTemplate, today=None):
     """
     Change the version of all projects (including core and all subprojects).
+
+    If the current version of a project is pre-release, then also change the
+    versions in the current NEWS entries for that project.
 
     @type root: L{FilePath}
     @param root: The root of the Twisted source tree.
     @type versionTemplate: L{Version}
     @param versionTemplate: The version of all projects.  The name will be
         replaced for each respective project.
+    @type today: C{str}
+    @param today: A YYYY-MM-DD formatted string. If not provided, defaults to
+        the current day, according to the system clock.
     """
+    if not today:
+        today = date.today().strftime('%Y-%m-%d')
     for project in findTwistedProjects(root):
         if project.directory.basename() == "twisted":
             packageName = "twisted"
         else:
             packageName = "twisted." + project.directory.basename()
-        version = Version(packageName, versionTemplate.major,
-                          versionTemplate.minor, versionTemplate.micro,
-                          prerelease=versionTemplate.prerelease)
+        oldVersion = project.getVersion()
+        newVersion = Version(packageName, versionTemplate.major,
+                             versionTemplate.minor, versionTemplate.micro,
+                             prerelease=versionTemplate.prerelease)
+
+        if oldVersion.prerelease:
+            builder = NewsBuilder()
+            builder._changeNewsVersion(
+                root.child("NEWS"), builder._getNewsName(project),
+                oldVersion, newVersion, today)
+            builder._changeNewsVersion(
+                project.directory.child("topfiles").child("NEWS"),
+                builder._getNewsName(project), oldVersion, newVersion,
+                today)
 
         # The placement of the top-level README with respect to other files (eg
         # _version.py) is sufficiently different from the others that we just
         # have to handle it specially.
         if packageName == "twisted":
             _changeVersionInFile(
-                project.getVersion(), version, root.child('README').path)
+                oldVersion, newVersion, root.child('README').path)
 
-        project.updateVersion(version)
+        project.updateVersion(newVersion)
 
 
 
@@ -667,6 +687,19 @@ class NewsBuilder(object):
         return results
 
 
+    def _formatHeader(self, header):
+        """
+        Format a header for a NEWS file.
+
+        A header is a title with '=' signs underlining it.
+
+        @param header: The header string to format.
+        @type header: C{str}
+        @return: A C{str} containing C{header}.
+        """
+        return header + '\n' + '=' * len(header) + '\n\n'
+
+
     def _writeHeader(self, fileObj, header):
         """
         Write a version header to the given file.
@@ -675,7 +708,7 @@ class NewsBuilder(object):
         @param header: The header to write to the file.
         @type header: C{str}
         """
-        fileObj.write(header + '\n' + '=' * len(header) + '\n\n')
+        fileObj.write(self._formatHeader(header))
 
 
     def _writeSection(self, fileObj, header, tickets):
@@ -777,21 +810,35 @@ class NewsBuilder(object):
         output.sibling('NEWS.new').moveTo(output)
 
 
-    def buildAll(self, baseDirectory):
+    def _getNewsName(self, project):
         """
-        Find all of the Twisted subprojects beneath C{baseDirectory} and update
-        their news files from the ticket change description files in their
-        I{topfiles} directories and update the news file in C{baseDirectory}
-        with all of the news.
+        Return the name of C{project} that should appear in NEWS.
 
-        Projects that are listed in L{NewsBuilder.blacklist} will be skipped.
+        @param project: A L{Project}
+        @return: The name of C{project}.
+        """
+        name = project.directory.basename().title()
+        if name == 'Twisted':
+            name = 'Core'
+        return name
+
+
+    def _iterProjects(self, baseDirectory):
+        """
+        Iterate through the Twisted projects in C{baseDirectory}, yielding
+        everything we need to know to build news for them.
+
+        Yields C{topfiles}, C{news}, C{name}, C{version} for each sub-project
+        in reverse-alphabetical order. C{topfile} is the L{FilePath} for the
+        topfiles directory, C{news} is the L{FilePath} for the NEWS file,
+        C{name} is the nice name of the project (as should appear in the NEWS
+        file), C{version} is the current version string for that project.
 
         @param baseDirectory: A L{FilePath} representing the root directory
             beneath which to find Twisted projects for which to generate
             news (see L{findTwistedProjects}).
+        @type baseDirectory: L{FilePath}
         """
-        today = self._today()
-
         # Get all the subprojects to generate news for
         projects = findTwistedProjects(baseDirectory)
         # And order them alphabetically for ease of reading
@@ -809,12 +856,57 @@ class NewsBuilder(object):
                     news = baseDirectory.child("NEWS")
                 else:
                     news = topfiles.child("NEWS")
-                name = project.directory.basename().title()
-                if name == 'Twisted':
-                    name = 'Core'
-                version = project.getVersion().base()
-                self.build(
-                    topfiles, news, "Twisted %s %s (%s)" % (name, version, today))
+                name = self._getNewsName(project)
+                version = project.getVersion()
+                yield topfiles, news, name, version
+
+
+    def buildAll(self, baseDirectory):
+        """
+        Find all of the Twisted subprojects beneath C{baseDirectory} and update
+        their news files from the ticket change description files in their
+        I{topfiles} directories and update the news file in C{baseDirectory}
+        with all of the news.
+
+        Projects that are listed in L{NewsBuilder.blacklist} will be skipped.
+
+        @param baseDirectory: A L{FilePath} representing the root directory
+            beneath which to find Twisted projects for which to generate
+            news (see L{findTwistedProjects}).
+        """
+        today = self._today()
+        for topfiles, news, name, version in self._iterProjects(baseDirectory):
+            self.build(
+                topfiles, news,
+                "Twisted %s %s (%s)" % (name, version.base(), today))
+
+
+    def _changeNewsVersion(self, news, name, oldVersion, newVersion, today):
+        """
+        Change all references to the current version number in a NEWS file to
+        refer to C{newVersion} instead.
+
+        @param news: The NEWS file to change.
+        @type news: L{FilePath}
+        @param name: The name of the project to change.
+        @type name: C{str}
+        @param oldVersion: The old version of the project.
+        @type oldVersion: L{Version}
+        @param newVersion: The new version of the project.
+        @type newVersion: L{Version}
+        @param today: A YYYY-MM-DD string representing today's date.
+        @type today: C{str}
+        """
+        newHeader = self._formatHeader(
+            "Twisted %s %s (%s)" % (name, newVersion.base(), today))
+        expectedHeaderRegex = re.compile(
+            r"Twisted %s %s \(\d{4}-\d\d-\d\d\)\n=+\n\n" % (
+                re.escape(name), re.escape(oldVersion.base())))
+        oldNews = news.getContent()
+        match = expectedHeaderRegex.search(oldNews)
+        if match:
+            oldHeader = match.group()
+            replaceInFile(news.path, {oldHeader: newHeader})
 
 
     def main(self, args):

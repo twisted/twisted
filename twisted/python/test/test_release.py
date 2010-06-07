@@ -275,6 +275,63 @@ class ChangeVersionTest(TestCase, StructureAssertingMixin):
         self.assertStructure(root, outStructure)
 
 
+    def test_changeAllProjectVersionsPreRelease(self):
+        """
+        L{changeAllProjectVersions} changes all version numbers in _version.py
+        and README files for all projects as well as in the the top-level
+        README file. If the old version was a pre-release, it will change the
+        version in NEWS files as well.
+        """
+        root = FilePath(self.mktemp())
+        root.createDirectory()
+        coreNews = ("Twisted Core 1.0.0 (2009-12-25)\n"
+                    "===============================\n"
+                    "\n")
+        webNews = ("Twisted Web 1.0.0pre1 (2009-12-25)\n"
+                   "==================================\n"
+                   "\n")
+        structure = {
+            "README": "Hi this is 1.0.0.",
+            "NEWS": coreNews + webNews,
+            "twisted": {
+                "topfiles": {
+                    "README": "Hi this is 1.0.0",
+                    "NEWS": coreNews},
+                "_version.py":
+                    genVersion("twisted", 1, 0, 0),
+                "web": {
+                    "topfiles": {
+                        "README": "Hi this is 1.0.0pre1",
+                        "NEWS": webNews},
+                    "_version.py": genVersion("twisted.web", 1, 0, 0, 1)
+                    }}}
+        self.createStructure(root, structure)
+        changeAllProjectVersions(root, Version("lol", 1, 0, 2), '2010-01-01')
+        coreNews = (
+            "Twisted Core 1.0.0 (2009-12-25)\n"
+            "===============================\n"
+            "\n")
+        webNews = ("Twisted Web 1.0.2 (2010-01-01)\n"
+                   "==============================\n"
+                   "\n")
+        outStructure = {
+            "README": "Hi this is 1.0.2.",
+            "NEWS": coreNews + webNews,
+            "twisted": {
+                "topfiles": {
+                    "README": "Hi this is 1.0.2",
+                    "NEWS": coreNews},
+                "_version.py":
+                    genVersion("twisted", 1, 0, 2),
+                "web": {
+                    "topfiles": {
+                        "README": "Hi this is 1.0.2",
+                        "NEWS": webNews},
+                    "_version.py": genVersion("twisted.web", 1, 0, 2),
+                    }}}
+        self.assertStructure(root, outStructure)
+
+
 
 class ProjectTest(TestCase):
     """
@@ -1825,23 +1882,10 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
             'Here is stuff which was present previously.\n')
 
 
-    def test_buildAll(self):
+    def createFakeTwistedProject(self):
         """
-        L{NewsBuilder.buildAll} calls L{NewsBuilder.build} once for each
-        subproject, passing that subproject's I{topfiles} directory as C{path},
-        the I{NEWS} file in that directory as C{output}, and the subproject's
-        name as C{header}, and then again for each subproject with the
-        top-level I{NEWS} file for C{output}. Blacklisted subprojects are
-        skipped.
+        Create a fake-looking Twisted project to build from.
         """
-        builds = []
-        builder = NewsBuilder()
-        builder.build = lambda path, output, header: builds.append((
-                path, output, header))
-        builder.blacklist = ['vfs']
-        builder._today = lambda: '2009-12-01'
-
-        # Create a fake looking Twisted project to build from
         project = FilePath(self.mktemp()).child("twisted")
         project.makedirs()
         self.createStructure(project, {
@@ -1861,7 +1905,26 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
                     'topfiles': {
                         'NEWS': 'Old vfs news.\n',
                         '8.bugfix': 'Fixed bug 8.\n'}}})
+        return project
 
+
+    def test_buildAll(self):
+        """
+        L{NewsBuilder.buildAll} calls L{NewsBuilder.build} once for each
+        subproject, passing that subproject's I{topfiles} directory as C{path},
+        the I{NEWS} file in that directory as C{output}, and the subproject's
+        name as C{header}, and then again for each subproject with the
+        top-level I{NEWS} file for C{output}. Blacklisted subprojects are
+        skipped.
+        """
+        builds = []
+        builder = NewsBuilder()
+        builder.build = lambda path, output, header: builds.append((
+                path, output, header))
+        builder.blacklist = ['vfs']
+        builder._today = lambda: '2009-12-01'
+
+        project = self.createFakeTwistedProject()
         builder.buildAll(project)
 
         coreTopfiles = project.child("topfiles")
@@ -1880,6 +1943,36 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
              (coreTopfiles, coreNews, coreHeader),
              (conchTopfiles, aggregateNews, conchHeader),
              (coreTopfiles, aggregateNews, coreHeader)])
+
+
+    def test_changeVersionInNews(self):
+        """
+        L{NewsBuilder._changeVersions} gets the release date for a given
+        version of a project as a string.
+        """
+        builder = NewsBuilder()
+        builder._today = lambda: '2009-12-01'
+        project = self.createFakeTwistedProject()
+        builder.buildAll(project)
+        newVersion = Version('TEMPLATE', 7, 7, 14)
+        coreNews = project.child('topfiles').child('NEWS')
+        # twisted 1.2.3 is the old version.
+        builder._changeNewsVersion(
+            coreNews, "Core", Version("twisted", 1, 2, 3),
+            newVersion, '2010-01-01')
+        expectedCore = (
+            'Twisted Core 7.7.14 (2010-01-01)\n'
+            '================================\n'
+            '\n'
+            'Features\n'
+            '--------\n'
+            ' - Third feature addition. (#3)\n'
+            '\n'
+            'Other\n'
+            '-----\n'
+            ' - #5\n\n\n')
+        self.assertEquals(
+            expectedCore + 'Old core news.\n', coreNews.getContent())
 
 
 
