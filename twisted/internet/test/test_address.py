@@ -15,11 +15,11 @@ class AddressTestCaseMixin(object):
         self.assertEquals(self.buildAddress(), self.buildAddress())
 
 
-    def test_stringRepresentation(self):
+    def _stringRepresentation(self, stringFunction):
         """
-        Test that when addresses are converted to strings, they adhere to a
-        standard pattern. Not sure if it's worth it, but seemed like a bit of
-        fun and demonstrates an inconsistency with UNIXAddress.__str__
+        Verify that the string representation of an address object conforms to a
+        simple pattern (the usual one for Python object reprs) and contains
+        values which accurately reflect the attributes of the address.
         """
         addr = self.buildAddress()
         pattern = "".join([
@@ -30,17 +30,34 @@ class AddressTestCaseMixin(object):
            "\)",       # closing bracket,
            "$"
         ])
-        m = re.match(pattern, str(addr))
-        self.assertNotEqual(None, m,
-                            "%s does not match the standard __str__ pattern "
-                            "ClassName(arg1, arg2, etc)" % str(addr))
-        self.assertEqual(addr.__class__.__name__, m.group(1))
+        stringValue = stringFunction(addr)
+        m = re.match(pattern, stringValue)
+        self.assertNotEquals(
+            None, m,
+            "%s does not match the standard __str__ pattern "
+            "ClassName(arg1, arg2, etc)" % (stringValue,))
+        self.assertEquals(addr.__class__.__name__, m.group(1))
 
         args = [x.strip() for x in m.group(2).split(",")]
-        self.assertEqual(len(args), len(self.addressArgSpec))
-        def checkArg(arg, argSpec):
-            self.assertEqual(argSpec[1] % getattr(addr, argSpec[0]), arg)
-        map(checkArg, args, self.addressArgSpec)
+        self.assertEquals(
+            args,
+            [argSpec[1] % (getattr(addr, argSpec[0]),) for argSpec in self.addressArgSpec])
+
+
+    def test_str(self):
+        """
+        C{str} can be used to get a string representation of an address instance
+        containing information about that address.
+        """
+        self._stringRepresentation(str)
+
+
+    def test_repr(self):
+        """
+        C{repr} can be used to get a string representation of an address
+        instance containing information about that address.
+        """
+        self._stringRepresentation(repr)
 
 
 

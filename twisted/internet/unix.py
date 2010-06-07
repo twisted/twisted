@@ -11,7 +11,7 @@ Maintainer: Itamar Shtull-Trauring
 """
 
 # System imports
-import os, stat, socket
+import os, sys, stat, socket
 from errno import EINTR, EMSGSIZE, EAGAIN, EWOULDBLOCK, ECONNREFUSED
 
 from zope.interface import implements, implementsOnly, implementedBy
@@ -36,7 +36,37 @@ class Server(tcp.Server):
         return address.UNIXAddress(self.hostname)
 
 
-class Port(tcp.Port):
+
+def _inFilesystemNamespace(path):
+    """
+    Determine whether the given unix socket path is in a filesystem namespace.
+
+    While most PF_UNIX sockets are entries in the filesystem, Linux 2.2 and
+    above support PF_UNIX sockets in an "abstract namespace" that does not
+    correspond to any path. This function returns C{True} if the given socket
+    path is stored in the filesystem and C{False} if the path is in this
+    abstract namespace.
+    """
+    return path[:1] != "\0"
+
+
+class _UNIXPort:
+    def getHost(self):
+        """Returns a UNIXAddress.
+
+        This indicates the server's address.
+        """
+        if sys.version_info > (2, 5) or _inFilesystemNamespace(self.port):
+            path = self.socket.getsockname()
+        else:
+            # Abstract namespace sockets aren't well supported on Python 2.4.
+            # getsockname() always returns ''.
+            path = self.port
+        return address.UNIXAddress(path)
+
+
+
+class Port(_UNIXPort, tcp.Port):
     addressFamily = socket.AF_UNIX
     socketType = socket.SOCK_STREAM
 
@@ -89,11 +119,9 @@ class Port(tcp.Port):
         except socket.error, le:
             raise CannotListenError, (None, self.port, le)
         else:
-            # Make the socket readable and writable to the world.
-            try:
+            if _inFilesystemNamespace(self.port):
+                # Make the socket readable and writable to the world.
                 os.chmod(self.port, self.mode)
-            except OSError: # probably not a visible filesystem name
-                pass
             skt.listen(self.backlog)
             self.connected = True
             self.socket = skt
@@ -102,17 +130,12 @@ class Port(tcp.Port):
             self.startReading()
 
     def connectionLost(self, reason):
-        os.unlink(self.port)
+        if _inFilesystemNamespace(self.port):
+            os.unlink(self.port)
         if self.lockFile is not None:
             self.lockFile.unlock()
         tcp.Port.connectionLost(self, reason)
 
-    def getHost(self):
-        """Returns a UNIXAddress.
-
-        This indicates the server's address.
-        """
-        return address.UNIXAddress(self.socket.getsockname())
 
 
 class Client(tcp.BaseClient):
@@ -148,7 +171,7 @@ class Connector(base.BaseConnector):
         return address.UNIXAddress(self.address)
 
 
-class DatagramPort(udp.Port):
+class DatagramPort(_UNIXPort, udp.Port):
     """Datagram UNIX port, listening for packets."""
 
     implements(interfaces.IUNIXDatagramTransport)
@@ -178,11 +201,9 @@ class DatagramPort(udp.Port):
                 skt.bind(self.port)
         except socket.error, le:
             raise error.CannotListenError, (None, self.port, le)
-        if self.port:
-            try:
-                os.chmod(self.port, self.mode)
-            except: # probably not a visible filesystem name
-                pass
+        if self.port and _inFilesystemNamespace(self.port):
+            # Make the socket readable and writable to the world.
+            os.chmod(self.port, self.mode)
         self.connected = 1
         self.socket = skt
         self.fileno = self.socket.fileno
@@ -224,9 +245,6 @@ class DatagramPort(udp.Port):
 
     def setLogStr(self):
         self.logstr = reflect.qual(self.protocol.__class__) + " (UDP)"
-
-    def getHost(self):
-        return address.UNIXAddress(self.socket.getsockname())
 
 
 

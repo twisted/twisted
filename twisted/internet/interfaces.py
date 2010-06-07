@@ -324,6 +324,7 @@ class IReactorSSL(Interface):
         """
 
 
+
 class IReactorUNIX(Interface):
     """
     UNIX socket methods.
@@ -341,10 +342,12 @@ class IReactorUNIX(Interface):
             has failed.
 
         @param checkPID: if True, check for a pid file to verify that a server
-            is listening.
+            is listening.  If C{address} is a Linux abstract namespace path,
+            this must be C{False}.
 
         @return: An object which provides L{IConnector}.
         """
+
 
     def listenUNIX(address, factory, backlog=50, mode=0666, wantPID=0):
         """
@@ -361,10 +364,12 @@ class IReactorUNIX(Interface):
             might affect connection attempts.
         @type mode: C{int}
 
-        @param wantPID: if True, create a pidfile for the socket.
+        @param wantPID: if True, create a pidfile for the socket.  If C{address}
+            is a Linux abstract namespace path, this must be C{False}.
 
         @return: An object which provides L{IListeningPort}.
         """
+
 
 
 class IReactorUNIXDatagram(Interface):
@@ -392,6 +397,7 @@ class IReactorUNIXDatagram(Interface):
         @return: An object which provides L{IConnector}.
         """
 
+
     def listenUNIXDatagram(address, protocol, maxPacketSize=8192, mode=0666):
         """
         Listen on a datagram UNIX socket.
@@ -409,6 +415,7 @@ class IReactorUNIXDatagram(Interface):
 
         @return: An object which provides L{IListeningPort}.
         """
+
 
 
 class IReactorUDP(Interface):

@@ -55,8 +55,9 @@ class IPv4Address(object):
             return a == b
         return False
 
-    def __str__(self):
+    def __repr__(self):
         return 'IPv4Address(%s, %r, %d)' % (self.type, self.host, self.port)
+
 
 
 class UNIXAddress(object):
@@ -99,7 +100,7 @@ class UNIXAddress(object):
                     pass
         return False
 
-    def __str__(self):
+    def __repr__(self):
         return 'UNIXAddress(%r)' % (self.name,)
 
 
