@@ -89,22 +89,8 @@ class Gtk2Reactor(posixbase.PosixReactorBase):
         self._reads = set()
         self._writes = set()
         self._sources = {}
+        self._useGtk = useGtk
         posixbase.PosixReactorBase.__init__(self)
-        # pre 2.3.91 the glib iteration and mainloop functions didn't release
-        # global interpreter lock, thus breaking thread and signal support.
-        if getattr(gobject, "pygtk_version", ()) >= (2, 3, 91) and not useGtk:
-            self.context = gobject.main_context_default()
-            self.__pending = self.context.pending
-            self.__iteration = self.context.iteration
-            self.loop = gobject.MainLoop()
-            self.__crash = self.loop.quit
-            self.__run = self.loop.run
-        else:
-            import gtk
-            self.__pending = gtk.events_pending
-            self.__iteration = gtk.main_iteration
-            self.__crash = _our_mainquit
-            self.__run = gtk.main
 
 
     if runtime.platformType == 'posix':
@@ -264,10 +250,32 @@ class Gtk2Reactor(posixbase.PosixReactorBase):
 
 
     def run(self, installSignalHandlers=1):
+        # pre 2.3.91 the glib iteration and mainloop functions didn't release
+        # global interpreter lock, thus breaking thread and signal support.
+        if (getattr(gobject, "pygtk_version", ()) >= (2, 3, 91)
+            and not self._useGtk):
+            self.context = gobject.main_context_default()
+            self.__pending = self.context.pending
+            self.__iteration = self.context.iteration
+            self.loop = gobject.MainLoop()
+            self.__crash = self.loop.quit
+            self.__run = self.loop.run
+        else:
+            import gtk
+            self.__pending = gtk.events_pending
+            self.__iteration = gtk.main_iteration
+            self.__crash = _our_mainquit
+            self.__run = gtk.main
+
         self.startRunning(installSignalHandlers=installSignalHandlers)
         gobject.timeout_add(0, self.simulate)
         if self._started:
             self.__run()
+
+        if self._stopped:
+            if getattr(self, 'loop', None) is not None:
+                del self.loop, self.__crash, self.__run
+                del self.context, self.__pending, self.__iteration
 
 
     def _doReadOrWrite(self, source, condition, faildict={
