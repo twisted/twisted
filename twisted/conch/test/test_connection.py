@@ -1,4 +1,4 @@
-# Copyright (c) 2007 Twisted Matrix Laboratories.
+# Copyright (c) 2007-2010 Twisted Matrix Laboratories.
 # See LICENSE for details
 
 """
@@ -106,6 +106,7 @@ class TestAvatar:
     """
     A mocked-up version of twisted.conch.avatar.ConchUser
     """
+    _ARGS_ERROR_CODE = 123
 
     def lookupChannel(self, channelType, windowSize, maxPacket, data):
         """
@@ -116,6 +117,14 @@ class TestAvatar:
             return TestChannel(remoteWindow=windowSize,
                     remoteMaxPacket=maxPacket,
                     data=data, avatar=self)
+        elif channelType == "conch-error-args":
+            # Raise a ConchError with backwards arguments to make sure the
+            # connection fixes it for us.  This case should be deprecated and
+            # deleted eventually, but only after all of Conch gets the argument
+            # order right.
+            raise error.ConchError(
+                self._ARGS_ERROR_CODE, "error args in wrong order")
+
 
     def gotGlobalRequest(self, requestType, data):
         """
@@ -130,6 +139,8 @@ class TestAvatar:
             return True, data
         else:
             return False
+
+
 
 class TestConnection(connection.SSHConnection):
     """
@@ -299,6 +310,52 @@ class ConnectionTestCase(unittest.TestCase):
                 [(connection.MSG_CHANNEL_OPEN_FAILURE,
                     '\x00\x00\x00\x02\x00\x00\x00\x02' + common.NS(
                     'unknown failure') + common.NS(''))])
+
+
+    def _lookupChannelErrorTest(self, code):
+        """
+        Deliver a request for a channel open which will result in an exception
+        being raised during channel lookup.  Assert that an error response is
+        delivered as a result.
+        """
+        self.transport.avatar._ARGS_ERROR_CODE = code
+        self.conn.ssh_CHANNEL_OPEN(
+            common.NS('conch-error-args') + '\x00\x00\x00\x01' * 4)
+        errors = self.flushLoggedErrors(error.ConchError)
+        self.assertEquals(
+            len(errors), 1, "Expected one error, got: %r" % (errors,))
+        self.assertEquals(errors[0].value.args, (123, "error args in wrong order"))
+        self.assertEquals(
+            self.transport.packets,
+            [(connection.MSG_CHANNEL_OPEN_FAILURE,
+              # The response includes some bytes which identifying the
+              # associated request, as well as the error code (7b in hex) and
+              # the error message.
+              '\x00\x00\x00\x01\x00\x00\x00\x7b' + common.NS(
+                        'error args in wrong order') + common.NS(''))])
+
+
+    def test_lookupChannelError(self):
+        """
+        If a C{lookupChannel} implementation raises L{error.ConchError} with the
+        arguments in the wrong order, a C{MSG_CHANNEL_OPEN} failure is still
+        sent in response to the message.
+
+        This is a temporary work-around until L{error.ConchError} is given
+        better attributes and all of the Conch code starts constructing
+        instances of it properly.  Eventually this functionality should be
+        deprecated and then removed.
+        """
+        self._lookupChannelErrorTest(123)
+
+
+    def test_lookupChannelErrorLongCode(self):
+        """
+        Like L{test_lookupChannelError}, but for the case where the failure code
+        is represented as a C{long} instead of a C{int}.
+        """
+        self._lookupChannelErrorTest(123L)
+
 
     def test_CHANNEL_OPEN_CONFIRMATION(self):
         """

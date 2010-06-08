@@ -1,8 +1,6 @@
 # -*- test-case-name: twisted.conch.test.test_connection -*-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
-# 
 
 """
 This module contains the implementation of the ssh-connection service, which
@@ -44,10 +42,10 @@ class SSHConnection(service.SSHService):
         self.localChannelID = 0 # this is the current # to use for channel ID
         self.localToRemoteChannel = {} # local channel ID -> remote channel ID
         self.channels = {} # local channel ID -> subclass of SSHChannel
-        self.channelsToRemoteChannel = {} # subclass of SSHChannel -> 
+        self.channelsToRemoteChannel = {} # subclass of SSHChannel ->
                                           # remote channel ID
-        self.deferreds = {} # local channel -> list of deferreds for pending 
-                            # requests or 'global' -> list of deferreds for 
+        self.deferreds = {} # local channel -> list of deferreds for pending
+                            # requests or 'global' -> list of deferreds for
                             # global requests
         self.transport = None # gets set later
 
@@ -132,12 +130,16 @@ class SSHConnection(service.SSHService):
             log.err(e)
             if isinstance(e, error.ConchError):
                 textualInfo, reason = e.args
+                if isinstance(textualInfo, (int, long)):
+                    # See #3657 and #3071
+                    textualInfo, reason = reason, textualInfo
             else:
                 reason = OPEN_CONNECT_FAILED
                 textualInfo = "unknown failure"
-            self.transport.sendPacket(MSG_CHANNEL_OPEN_FAILURE,
-                                struct.pack('>2L', senderChannel, reason) +
-                               common.NS(textualInfo) + common.NS(''))
+            self.transport.sendPacket(
+                MSG_CHANNEL_OPEN_FAILURE,
+                struct.pack('>2L', senderChannel, reason) +
+                common.NS(textualInfo) + common.NS(''))
 
     def ssh_CHANNEL_OPEN_CONFIRMATION(self, packet):
         """
@@ -506,7 +508,7 @@ class SSHConnection(service.SSHService):
 
         By default, this dispatches to a method 'channel_channelType' with any
         non-alphanumerics in the channelType replace with _'s.  If it cannot
-        find a suitable method, it returns an OPEN_UNKNOWN_CHANNEL_TYPE error. 
+        find a suitable method, it returns an OPEN_UNKNOWN_CHANNEL_TYPE error.
         The method is called with arguments of windowSize, maxPacket, data.
 
         @type channelType:  C{str}

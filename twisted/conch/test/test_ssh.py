@@ -330,7 +330,7 @@ if Crypto is not None and pyasn1 is not None:
             # OpenSSH_5.1p1), won't.  So accept this particular error here,
             # but no others.
             unittest.assertEquals(
-                reasonCode, transport.DISCONNECT_BY_APPLICATION, 
+                reasonCode, transport.DISCONNECT_BY_APPLICATION,
                 'got disconnect for %s: reason %s, desc: %s' % (
                     self, reasonCode, desc))
             self.loseConnection()
@@ -415,7 +415,6 @@ if Crypto is not None and pyasn1 is not None:
             good .... good
             """
             log.msg('unknown open failed')
-            log.flushErrors()
             self.conn.addResult()
 
         def channelOpen(self, ignored):
@@ -439,7 +438,6 @@ if Crypto is not None and pyasn1 is not None:
 
         def _ebRequestWorked(self, ignored):
             log.msg('fail exec finished')
-            log.flushErrors()
             self.conn.addResult()
             self.loseConnection()
 
@@ -704,8 +702,11 @@ class SSHProtocolTestCase(unittest.TestCase):
     if not pyasn1:
         skip = "can't run w/o PyASN1"
 
-    def testOurServerOurClient(self):
-        """test the Conch server against the Conch client
+    def test_ourServerOurClient(self):
+        """
+        Run the Conch server against the Conch client.  Set up several different
+        channels which exercise different behaviors and wait for them to
+        complete.  Verify that the channels with errors log them.
         """
         realm = ConchTestRealm()
         p = portal.Portal(realm)
@@ -729,7 +730,21 @@ class SSHProtocolTestCase(unittest.TestCase):
                                 self.serverTransport.clearBuffer)
             log.callWithContext({'system': 'clientTransport'},
                                 self.clientTransport.clearBuffer)
-        self.failIf(self.server.done and self.client.done)
+        self.assertFalse(self.server.done and self.client.done)
+
+        errors = self.flushLoggedErrors(error.ConchError)
+        errors.sort(key=lambda reason: reason.value.args)
+
+        # Two errors exactly are expected.  Report the whole list if we get a
+        # different number.
+        self.assertEquals(
+            len(errors), 2, "Expected two errors, got: %r" % (errors,))
+
+        # SSHUnknownChannel causes this to be logged.
+        self.assertEquals(errors[0].value.args, (3, 'unknown channel'))
+        # SSHTestFailExecChannel causes this to be logged.
+        self.assertEquals(errors[1].value.args, ('bad exec', None))
+
 
 
 class TestSSHFactory(unittest.TestCase):
