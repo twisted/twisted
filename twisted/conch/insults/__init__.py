@@ -10,3 +10,7 @@ deprecate.deprecatedModuleAttribute(
     "Please use twisted.conch.insults.helper instead.",
     __name__, "colors")
 
+deprecate.deprecatedModuleAttribute(
+    versions.Version("Twisted", 10, 1, 0),
+    "Please use twisted.conch.insults.insults instead.",
+    __name__, "client")

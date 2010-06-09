@@ -463,29 +463,48 @@ class ServerProtocolOutputTests(unittest.TestCase):
 
 class Deprecations(unittest.TestCase):
     """
-    Tests to ensure deprecation of L{colors}.
+    Tests to ensure deprecation of L{insults.colors} and L{insults.client}
     """
 
-    def test_colors(self):
+    def ensureDeprecated(self, message):
         """
-        Test deprecation of L{insults.colors}
+        Ensures that the correct deprecation warning was issued.
+
+        Because of the way imports from packages work, the deprecation is
+        first emitted by an insults.colors(-like) access which raises an
+        AttributeError. The access is then retried after colors.py has
+        actually been loaded; the warning is emitted again, and this time the
+        lookup succeeds and the import is complete. Normally this will
+        probably be invisible, because duplicate warnings from the same
+        location are suppressed by the reporting code, but trial goes out of
+        its way to make sure every warning gets emitted.
+
+        As a result, flushWarnings() produces 2 of the exact same warning.
+
+        A ticket has been opened regarding this behavior (see ticket #4492)
         """
-        from twisted.conch.insults import colors
         warningsShown = self.flushWarnings()
-        # Because of the way imports from packages work, the deprecation is
-        # first emitted by an insults.colors(-like) access which raises an
-        # AttributeError. The access is then retried after colors.py has
-        # actually been loaded; the warning is emitted again, and this time the
-        # lookup succeeds and the import is complete. Normally this will
-        # probably be invisible, because duplicate warnings from the same
-        # location are suppressed by the reporting code, but trial goes out of
-        # its way to make sure every warning gets emitted.
-        # As a result, flushWarnings() produces 2 of the exact same warning.
-        # A ticket has been opened regarding this behavior (see ticket #4492)
         self.assertTrue(len(warningsShown) >= 1)
         for warning in warningsShown:
             self.assertIdentical(warning['category'], DeprecationWarning)
-            self.assertEquals(
-                warning['message'],
-                "twisted.conch.insults.colors was deprecated in Twisted "
-                "10.1.0: Please use twisted.conch.insults.helper instead.")
+            self.assertEquals(warning['message'], message)
+
+
+    def test_colors(self):
+        """
+        The L{insults.colors} module is deprecated
+        """
+        from twisted.conch.insults import colors
+        self.ensureDeprecated("twisted.conch.insults.colors was deprecated "
+                              "in Twisted 10.1.0: Please use "
+                              "twisted.conch.insults.helper instead.")
+
+
+    def test_client(self):
+        """
+        The L{insults.client} module is deprecated
+        """
+        from twisted.conch.insults import client
+        self.ensureDeprecated("twisted.conch.insults.client was deprecated "
+                              "in Twisted 10.1.0: Please use "
+                              "twisted.conch.insults.insults instead.")
