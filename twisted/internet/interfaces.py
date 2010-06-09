@@ -1619,21 +1619,6 @@ class IUDPTransport(Interface):
         """
 
 
-class IUDPConnectedTransport(Interface):
-    """
-    DEPRECATED. Transport for UDP ConnectedPacketProtocols.
-    """
-
-    def write(packet):
-        """
-        Write packet to address we are connected to.
-        """
-
-    def getHost():
-        """
-        Returns L{UNIXAddress}.
-        """
-
 
 class IUNIXDatagramTransport(Interface):
     """
