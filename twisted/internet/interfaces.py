@@ -1540,7 +1540,7 @@ class IProcessTransport(ITransport):
         Send a signal to the process.
 
         @param signalID: can be
-          - one of C{\"HUP\"}, C{\"KILL\"}, C{\"STOP\"}, or C{\"INT\"}.
+          - one of C{"KILL"}, C{"TERM"}, or C{"INT"}.
               These will be implemented in a
               cross-platform manner, and so should be used
               if possible.
