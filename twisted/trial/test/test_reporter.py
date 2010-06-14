@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 #
 # Maintainer: Jonathan Lange
@@ -1284,6 +1284,18 @@ class TestSubunitReporter(TestReporterInterface):
         subunitOutput = stream.getvalue()
         self.result.addUnexpectedSuccess(self.test, 'todo')
         self.assertEquals(subunitOutput, self.stream.getvalue())
+
+
+    def test_loadTimeErrors(self):
+        """
+        Load-time errors are reported like normal errors.
+        """
+        test = runner.TestLoader().loadByName('doesntexist')
+        test.run(self.result)
+        output = self.stream.getvalue()
+        # Just check that 'doesntexist' is in the output, rather than
+        # assembling the expected stack trace.
+        self.assertIn('doesntexist', output)
 
 
 

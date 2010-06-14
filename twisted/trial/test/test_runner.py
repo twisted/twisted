@@ -7,6 +7,7 @@
 
 import StringIO, os, sys
 from zope.interface import implements
+from zope.interface.verify import verifyObject
 
 from twisted.trial.itrial import IReporter, ITestCase
 from twisted.trial import unittest, runner, reporter, util
@@ -741,6 +742,21 @@ class TestTestHolder(unittest.TestCase):
         L{runner.TestHolder} implements L{ITestCase}.
         """
         self.assertIdentical(self.holder, ITestCase(self.holder))
+        self.assertTrue(
+            verifyObject(ITestCase, self.holder),
+            "%r claims to provide %r but does not do so correctly."
+            % (self.holder, ITestCase))
+
+
+    def test_runsWithStandardResult(self):
+        """
+        A L{runner.TestHolder} can run against the standard Python
+        C{TestResult}.
+        """
+        result = pyunit.TestResult()
+        self.holder.run(result)
+        self.assertTrue(result.wasSuccessful())
+        self.assertEquals(1, result.testsRun)
 
 
 
@@ -757,6 +773,17 @@ class TestErrorHolder(TestTestHolder):
         except ZeroDivisionError:
             error = failure.Failure()
         self.holder = runner.ErrorHolder(self.description, error)
+
+
+    def test_runsWithStandardResult(self):
+        """
+        A L{runner.ErrorHolder} can run against the standard Python
+        C{TestResult}.
+        """
+        result = pyunit.TestResult()
+        self.holder.run(result)
+        self.assertFalse(result.wasSuccessful())
+        self.assertEquals(1, result.testsRun)
 
 
 

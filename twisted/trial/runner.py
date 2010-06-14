@@ -339,6 +339,8 @@ class TestHolder(object):
 
     implements(ITestCase)
 
+    failureException = None
+
     def __init__(self, description):
         """
         @param description: A string to be displayed L{TestResult}.
@@ -346,8 +348,28 @@ class TestHolder(object):
         self.description = description
 
 
+    def __call__(self, result):
+        return self.run(result)
+
+
     def id(self):
         return self.description
+
+
+    def countTestCases(self):
+        return 0
+
+
+    def run(self, result):
+        """
+        This test is just a placeholder. Run the test successfully.
+
+        @param result: The C{TestResult} to store the results in.
+        @type result: L{twisted.trial.itrial.ITestResult}.
+        """
+        result.startTest(self)
+        result.addSuccess(self)
+        result.stopTest(self)
 
 
     def shortDescription(self):
@@ -381,15 +403,15 @@ class ErrorHolder(TestHolder):
 
 
     def run(self, result):
-        result.addError(self, self.error)
+        """
+        Run the test, reporting the error.
 
-
-    def __call__(self, result):
-        return self.run(result)
-
-
-    def countTestCases(self):
-        return 0
+        @param result: The C{TestResult} to store the results in.
+        @type result: L{twisted.trial.itrial.ITestResult}.
+        """
+        result.startTest(self)
+        result.addError(self, util.excInfoOrFailureToExcInfo(self.error))
+        result.stopTest(self)
 
 
     def visit(self, visitor):
