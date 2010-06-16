@@ -1,3 +1,11 @@
+# Copyright (c) 2004-2010 Twisted Matrix Laboratories.
+# See LICENSE for details.
+#
+
+"""
+Tests for L{twisted.trial.util}
+"""
+
 import os
 
 from zope.interface import implements
@@ -46,6 +54,24 @@ class TestIntrospection(TestCase):
 
 
 class TestFindObject(packages.SysPathManglingTest):
+    """
+    Tests for L{twisted.trial.util.findObject}
+    """
+
+    def test_deprecation(self):
+        """
+        Calling L{findObject} results in a deprecation warning
+        """
+        util.findObject('')
+        warningsShown = self.flushWarnings()
+        self.assertEquals(len(warningsShown), 1)
+        self.assertIdentical(warningsShown[0]['category'], DeprecationWarning)
+        self.assertEquals(warningsShown[0]['message'],
+                          "twisted.trial.util.findObject was deprecated "
+                          "in Twisted 10.1.0: Please use "
+                          "twisted.python.reflect.namedAny instead.")
+
+
     def test_importPackage(self):
         package1 = util.findObject('package')
         import package as package2

@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.trial.test.test_util -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 #
 
@@ -19,6 +19,7 @@ import traceback, sys
 
 from twisted.internet import defer, utils, interfaces
 from twisted.python.failure import Failure
+from twisted.python import deprecate, versions
 
 
 DEFAULT_TIMEOUT = object()
@@ -301,6 +302,14 @@ def acquireAttribute(objects, attr, default=_DEFAULT):
     if default is not _DEFAULT:
         return default
     raise AttributeError('attribute %r not found in %r' % (attr, objects))
+
+
+
+deprecate.deprecatedModuleAttribute(
+    versions.Version("Twisted", 10, 1, 0),
+    "Please use twisted.python.reflect.namedAny instead.",
+    __name__, "findObject")
+
 
 
 def findObject(name):
