@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.trial.test.test_reporter -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 #
 # Maintainer: Jonathan Lange
@@ -208,14 +208,14 @@ class TestResultDecorator(proxyForInterface(itrial.IReporter,
 
 class UncleanWarningsReporterWrapper(TestResultDecorator):
     """
-    A wrapper for a reporter that converts L{util.DirtyReactorError}s
+    A wrapper for a reporter that converts L{util.DirtyReactorAggregateError}s
     to warnings.
     """
     implements(itrial.IReporter)
 
     def addError(self, test, error):
         """
-        If the error is a L{util.DirtyReactorError}, instead of
+        If the error is a L{util.DirtyReactorAggregateError}, instead of
         reporting it as a normal error, throw a warning.
         """
 

@@ -387,7 +387,7 @@ class TestDirtyReactor(unittest.TestCase):
 
     def test_errorByDefault(self):
         """
-        C{DirtyReactorAggregateError}s are reported as errors with the default
+        L{DirtyReactorAggregateError}s are reported as errors with the default
         Reporter.
         """
         result = reporter.Reporter(stream=self.output)
@@ -398,8 +398,8 @@ class TestDirtyReactor(unittest.TestCase):
 
     def test_warningsEnabled(self):
         """
-        C{DirtyReactorErrors}s are reported as warnings when using the
-        L{UncleanWarningsReporterWrapper}.
+        L{DirtyReactorAggregateError}s are reported as warnings when using
+        the L{UncleanWarningsReporterWrapper}.
         """
         result = UncleanWarningsReporterWrapper(
             reporter.Reporter(stream=self.output))
@@ -410,7 +410,7 @@ class TestDirtyReactor(unittest.TestCase):
 
     def test_warningsMaskErrors(self):
         """
-        C{DirtyReactorErrors}s are I{not} reported as errors if the
+        L{DirtyReactorAggregateError}s are I{not} reported as errors if the
         L{UncleanWarningsReporterWrapper} is used.
         """
         result = UncleanWarningsReporterWrapper(
@@ -426,8 +426,8 @@ class TestDirtyReactor(unittest.TestCase):
         Some annoying stuff can pass three-tuples to addError instead of
         Failures (like PyUnit). The wrapper, of course, handles this case,
         since it is a part of L{twisted.trial.itrial.IReporter}! But it does
-        not convert L{DirtyReactorError} to warnings in this case, because
-        nobody should be passing those in the form of three-tuples.
+        not convert L{DirtyReactorAggregateError} to warnings in this case,
+        because nobody should be passing those in the form of three-tuples.
         """
         result = UncleanWarningsReporterWrapper(
             reporter.Reporter(stream=self.output))

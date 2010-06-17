@@ -26,53 +26,6 @@ DEFAULT_TIMEOUT = object()
 DEFAULT_TIMEOUT_DURATION = 120.0
 
 
-class FailureError(Exception):
-    """
-    DEPRECATED in Twisted 8.0. This exception is never raised by Trial.
-
-    Wraps around a Failure so it can get re-raised as an Exception.
-    """
-
-    def __init__(self, failure):
-        Exception.__init__(self)
-        self.original = failure
-
-
-
-class DirtyReactorWarning(Warning):
-    """
-    DEPRECATED in Twisted 8.0.
-
-    This warning is not used by Trial any more.
-    """
-
-
-
-class DirtyReactorError(Exception):
-    """
-    DEPRECATED in Twisted 8.0. This is not used by Trial any more.
-    """
-
-    def __init__(self, msg):
-        Exception.__init__(self, self._getMessage(msg))
-
-    def _getMessage(self, msg):
-        return ("reactor left in unclean state, the following Selectables "
-                "were left over: %s" % (msg,))
-
-
-
-
-class PendingTimedCallsError(DirtyReactorError):
-    """
-    DEPRECATED in Twisted 8.0. This is not used by Trial any more.
-    """
-
-    def _getMessage(self, msg):
-        return ("pendingTimedCalls still pending (consider setting "
-                "twisted.internet.base.DelayedCall.debug = True): %s" % (msg,))
-
-
 
 class DirtyReactorAggregateError(Exception):
     """
