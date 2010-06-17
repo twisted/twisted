@@ -155,6 +155,10 @@ class Port(base.BasePort):
                     raise error.MessageLengthError, "message too long"
                 elif no == ECONNREFUSED:
                     self.protocol.connectionRefused()
+                elif no in (EWOULDBLOCK, EAGAIN):
+                    # in a perfect world we would buffer this data and notify
+                    # the producer to stop producing.
+                    return
                 else:
                     raise
         else:
@@ -174,6 +178,10 @@ class Port(base.BasePort):
                     # in non-connected UDP ECONNREFUSED is platform dependent, I
                     # think and the info is not necessarily useful. Nevertheless
                     # maybe we should call connectionRefused? XXX
+                    return
+                elif no in (EWOULDBLOCK, EAGAIN):
+                    # in a perfect world we would buffer this data and notify
+                    # the producer to stop producing.
                     return
                 else:
                     raise
