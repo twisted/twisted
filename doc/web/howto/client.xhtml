@@ -1,3 +1,7 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <title>
@@ -82,8 +86,8 @@
     <ul>
       <li>
         The length attribute must be a non-negative integer or the constant
-        <code class="API">twisted.web.iweb.UNKNOWN_LENGTH</code>.  If the
-        length is known, it will be used to specify the value for the
+        <code>twisted.web.iweb.UNKNOWN_LENGTH</code>.  If the length is known,
+        it will be used to specify the value for the
         <em>Content-Length</em> header in the request.  If the length is
         unknown the attribute should be set to <code>UNKNOWN_LENGTH</code>.
         Since more servers support <em>Content-Length</em>, if a length can be
@@ -160,9 +164,9 @@
       response information: its code, version, phrase, and headers, as well as
       the length of the body to expect.  The <code>Response</code> object also
       has a method which makes the response body available: <code class="API"
-      base="twisted.web._newclient.Response.deliverBody">deliverBody</code>.
-      Using the attributes of the response object and this method, here's an
-      example which displays part of the response to a request:
+      base="twisted.web._newclient.Response">deliverBody</code>.  Using the
+      attributes of the response object and this method, here's an example which
+      displays part of the response to a request:
     </p>
 
     <a href="listings/client/response.py" class="py-listing">
