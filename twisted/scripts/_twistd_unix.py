@@ -312,6 +312,8 @@ class UnixApplicationRunner(app.ApplicationRunner):
             uid = process.uid
         if gid is None:
             gid = process.gid
+        if gid is None:
+            gid = os.getgid()
 
         self.shedPrivileges(self.config['euid'], uid, gid)
         app.startApplication(application, not self.config['no_save'])
