@@ -322,14 +322,25 @@ class IProcess(Interface):
     Process running parameters.
 
     Represents parameters for how processes should be run.
-
-    @ivar processName: the name the process should have in ps (or C{None})
-    @type processName: C{str}
-    @ivar uid: the user-id the process should run under.
-    @type uid: C{int}
-    @ivar gid: the group-id the process should run under.
-    @type gid: C{int}
     """
+    processName = Attribute(
+        """
+        A C{str} giving the name the process should have in ps (or C{None}
+        to leave the name alone).
+        """)
+
+    uid = Attribute(
+        """
+        A C{int} giving the user id as which the process should run (or
+        C{None} to leave the UID alone).
+        """)    
+
+    gid = Attribute(
+        """
+        A C{int} giving the group id as which the process should run (or
+        C{None} to leave the GID alone).
+        """)    
+
 
 
 class Process:
