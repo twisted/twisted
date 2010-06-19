@@ -1480,7 +1480,7 @@ class MockOS(object):
 
     def switchUID(self, uid, gid):
         """
-        Override C{util.switchuid}. Save the action.
+        Override C{util.switchUID}. Save the action.
         """
         self.actions.append(('switchuid', uid, gid))
 
