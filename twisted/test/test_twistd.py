@@ -14,6 +14,7 @@ except ImportError:
     pwd = grp = None
 
 from zope.interface import implements
+from zope.interface.verify import verifyObject
 
 from twisted.trial import unittest
 
@@ -384,6 +385,17 @@ class ApplicationRunnerTest(unittest.TestCase):
             implements(service.IService, service.IProcess)
 
             processName = None
+            uid = None
+            gid = None
+
+            def setName(self, name):
+                pass
+
+            def setServiceParent(self, parent):
+                pass
+
+            def disownServiceParent(self):
+                pass
 
             def privilegedStartService(self):
                 events.append('privilegedStartService')
@@ -394,9 +406,13 @@ class ApplicationRunnerTest(unittest.TestCase):
             def stopService(self):
                 pass
 
+        application = FakeService()
+        verifyObject(service.IService, application)
+        verifyObject(service.IProcess, application)
+
         runner = FakeUnixApplicationRunner(self.config)
         runner.preApplication()
-        runner.application = FakeService()
+        runner.application = application
         runner.postApplication()
 
         self.assertEqual(
@@ -438,6 +454,15 @@ class ApplicationRunnerTest(unittest.TestCase):
         test_applicationStartsWithConfiguredNameIDs.skip = msg
         test_applicationStartsWithConfiguredNumericIDs.skip = msg
         del msg
+
+
+    def test_applicationStartsWithCurrentGroupID(self):
+        """
+        If no alternate GID is specified, L{postApplication} uses the
+        current GID.
+        """
+        self._applicationStartsWithConfiguredID(
+            ["--uid", "1234"], 1234, os.getgid())
 
 
     def test_startReactorRunsTheReactor(self):
