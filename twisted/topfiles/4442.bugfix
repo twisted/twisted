@@ -1,0 +1,1 @@
+twistd now uses the current GID to initialize groups when --uid is given but --gid is not, preventing an unhandled TypeError from being raised.
