@@ -61,6 +61,10 @@ try:
 except ImportError:
     cProfile = None
 
+if getattr(os, 'setuid', None) is None:
+    setuidSkip = "Platform does not support --uid/--gid twistd options."
+else:
+    setuidSkip = None
 
 
 def patchUserDatabase(patch, user, uid, group, gid):
@@ -432,6 +436,7 @@ class ApplicationRunnerTest(unittest.TestCase):
         gid = 4321
         self._applicationStartsWithConfiguredID(
             ["--uid", str(uid), "--gid", str(gid)], uid, gid)
+    test_applicationStartsWithConfiguredNumericIDs.skip = setuidSkip
 
 
     def test_applicationStartsWithConfiguredNameIDs(self):
@@ -448,12 +453,7 @@ class ApplicationRunnerTest(unittest.TestCase):
         patchUserDatabase(self.patch, user, uid, group, gid)
         self._applicationStartsWithConfiguredID(
             ["--uid", user, "--gid", group], uid, gid)
-
-    if getattr(os, 'setuid', None) is None:
-        msg = "Platform does not support --uid/--gid twistd options."
-        test_applicationStartsWithConfiguredNameIDs.skip = msg
-        test_applicationStartsWithConfiguredNumericIDs.skip = msg
-        del msg
+    test_applicationStartsWithConfiguredNameIDs.skip = setuidSkip
 
 
     def test_applicationStartsWithCurrentGroupID(self):
@@ -463,6 +463,7 @@ class ApplicationRunnerTest(unittest.TestCase):
         """
         self._applicationStartsWithConfiguredID(
             ["--uid", "1234"], 1234, os.getgid())
+    test_applicationStartsWithCurrentGroupID.skip = setuidSkip
 
 
     def test_startReactorRunsTheReactor(self):
