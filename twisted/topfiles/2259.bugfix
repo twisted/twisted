@@ -1,1 +1,0 @@
-twisted.internet.stdio now supports stdout being redirected to a normal file (except when using epollreactor).

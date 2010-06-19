@@ -1,3 +1,0 @@
-twisted.internet.interfaces.IReactorArbitrary,
-twisted.application.internet.GenericServer, and
-twisted.application.internet.GenericClient are now deprecated.

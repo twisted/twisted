@@ -1,2 +1,0 @@
-SSHSessionProcessProtocol now doesn't close the session when stdin is closed,
-but instead when both stdout and stderr are.

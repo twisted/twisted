@@ -1,1 +1,0 @@
-twisted.web.xmlrpc.XMLRPC will now no longer trigger a RuntimeError by trying to write responses to closed connections.

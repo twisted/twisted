@@ -1,2 +1,0 @@
-Removed twisted.conch.ssh.common.Entropy, as Entropy.get_bytes has been 
-deprecated since 2007 and Entropy.get_bytes was the only attribute of Entropy.

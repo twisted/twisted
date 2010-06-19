@@ -1,1 +1,0 @@
-twisted.words.protocols.jabber.xmlstream.ListenAuthenticator now uses unicode objects for session identifiers

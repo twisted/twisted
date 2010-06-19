@@ -1,2 +1,0 @@
-Removed twisted.application.app.runWithProfiler, which has been deprecated since
-Twisted 8.0.

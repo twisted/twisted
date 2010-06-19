@@ -1,2 +1,0 @@
-Removed twisted.conch.ssh.keys.makePublicKeyBlob, which has been deprecated
-since 2007.

@@ -1,3 +1,0 @@
-In twisted.trial.util: FailureError, DirtyReactorWarning, DirtyReactorError,
-and PendingTimedCallsError, which have all been deprecated since Twisted 8.0,
-have been removed.

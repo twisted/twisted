@@ -1,1 +1,0 @@
-twisted.runner.procmon.ProcessMonitor's active, consistency, and consistencyDelay attributes are now deprecated.

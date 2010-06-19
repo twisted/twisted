@@ -1,3 +1,0 @@
-Parameterize the reactor in twisted.runner.procmon.ProcessMonitor for ease of
-testing.
-Add tests for twisted.runner.procmon.ProcessMonitor.

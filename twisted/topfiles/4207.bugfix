@@ -1,4 +1,0 @@
-Redundant 'b' mode is no longer passed to calls to FilePath.open and
-FilePath.open itself now corrects the mode when multiple 'b'
-characters are present, ensuring only one instance of 'b' is
-provided, as a workaround for http://bugs.python.org/issue7686.

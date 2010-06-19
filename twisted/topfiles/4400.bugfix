@@ -1,3 +1,0 @@
-twisted.python.filepath.FilePath now no longer leaves files open, to be closed
-by the garbage collector, when an exception is raised in the implementation of
-setContent, getContent, or copyTo.

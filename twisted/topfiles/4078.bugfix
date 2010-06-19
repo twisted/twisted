@@ -1,2 +1,0 @@
-The mode argument to the methods of twisted.internet.interfaces.IReactorUNIX
-is no longer deprecated.

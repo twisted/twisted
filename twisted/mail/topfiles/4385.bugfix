@@ -1,1 +1,0 @@
-A case which would cause twisted.mail.imap4.IMAP4Server to loop indefinitely when handling a search command has been fixed.

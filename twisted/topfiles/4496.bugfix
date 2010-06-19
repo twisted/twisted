@@ -1,2 +1,0 @@
-The subunit reporter now correctly reports import errors as errors, rather
-than by crashing with an unrelated error.

@@ -1,2 +1,0 @@
-The finger tutorial example which introduces services now avoids double-starting
-the loop to re-read its users file.
