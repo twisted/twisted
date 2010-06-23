@@ -1,0 +1,3 @@
+twisted.internet.interfaces.IReactorTime.cancelCallLater (deprecated since 
+2007) and twisted.internet.interfaces.base.ReactorBase.cancelCallLater 
+(deprecated since 2002) have been removed.

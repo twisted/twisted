@@ -572,17 +572,6 @@ class IReactorTime(Interface):
                  C{reset()} methods.
         """
 
-    def cancelCallLater(callID):
-        """
-        This method is deprecated.
-
-        Cancel a call that would happen later.
-
-        @param callID: this is an opaque identifier returned from C{callLater}
-                       that will be used to cancel a specific call.
-
-        @raise ValueError: if the callID is not recognized.
-        """
 
     def getDelayedCalls():
         """
