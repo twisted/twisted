@@ -186,7 +186,7 @@ class TestConnection(connection.SSHConnection):
 class ConnectionTestCase(unittest.TestCase):
 
     if test_userauth.transport is None:
-        skip = "Cannot run without PyCrypto"
+        skip = "Cannot run without both PyCrypto and pyasn1"
 
     def setUp(self):
         self.transport = test_userauth.FakeTransport(None)
@@ -542,6 +542,8 @@ class ConnectionTestCase(unittest.TestCase):
         Test that global request messages are sent in the right format.
         """
         d = self.conn.sendGlobalRequest('wantReply', 'data', True)
+        # must be added to prevent errbacking during teardown
+        d.addErrback(lambda failure: None)
         self.conn.sendGlobalRequest('noReply', '', False)
         self.assertEquals(self.transport.packets,
                 [(connection.MSG_GLOBAL_REQUEST, common.NS('wantReply') +
@@ -569,6 +571,8 @@ class ConnectionTestCase(unittest.TestCase):
         channel = TestChannel()
         self._openChannel(channel)
         d = self.conn.sendRequest(channel, 'test', 'test', True)
+        # needed to prevent errbacks during teardown.
+        d.addErrback(lambda failure: None)
         self.conn.sendRequest(channel, 'test2', '', False)
         channel.localClosed = True # emulate sending a close message
         self.conn.sendRequest(channel, 'test3', '', True)
@@ -577,7 +581,7 @@ class ConnectionTestCase(unittest.TestCase):
                     common.NS('test') + '\x01test'),
                  (connection.MSG_CHANNEL_REQUEST, '\x00\x00\x00\xff' +
                      common.NS('test2') + '\x00')])
-        self.assertEquals(self.conn.deferreds, {0:[d]})
+        self.assertEquals(self.conn.deferreds[0], [d])
 
     def test_adjustWindow(self):
         """
@@ -678,3 +682,49 @@ class ConnectionTestCase(unittest.TestCase):
         self.assertEquals(self.conn.gotGlobalRequest('Test-Data', 'data'),
                 (True, 'data'))
         self.assertFalse(self.conn.gotGlobalRequest('BadGlobal', 'data'))
+
+
+    def test_channelClosedCausesLeftoverChannelDeferredsToErrback(self):
+        """
+        Whenever an SSH channel gets closed any Deferred that was returned by a
+        sendRequest() on its parent connection must be errbacked.
+        """
+        channel = TestChannel()
+        self._openChannel(channel)
+
+        d = self.conn.sendRequest(
+            channel, "dummyrequest", "dummydata", wantReply=1)
+        d = self.assertFailure(d, error.ConchError)
+        self.conn.channelClosed(channel)
+        return d
+
+
+
+class TestCleanConnectionShutdown(unittest.TestCase):
+    """
+    Check whether correct cleanup is performed on connection shutdown.
+    """
+    if test_userauth.transport is None:
+        skip = "Cannot run without both PyCrypto and pyasn1"
+
+    def setUp(self):
+        self.transport = test_userauth.FakeTransport(None)
+        self.transport.avatar = TestAvatar()
+        self.conn = TestConnection()
+        self.conn.transport = self.transport
+
+
+    def test_serviceStoppedCausesLeftoverGlobalDeferredsToErrback(self):
+        """
+        Once the service is stopped any leftover global deferred returned by
+        a sendGlobalRequest() call must be errbacked.
+        """
+        self.conn.serviceStarted()
+
+        d = self.conn.sendGlobalRequest(
+            "dummyrequest", "dummydata", wantReply=1)
+        d = self.assertFailure(d, error.ConchError)
+        self.conn.serviceStopped()
+        return d
+
+

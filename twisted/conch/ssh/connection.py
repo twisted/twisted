@@ -44,17 +44,35 @@ class SSHConnection(service.SSHService):
         self.channels = {} # local channel ID -> subclass of SSHChannel
         self.channelsToRemoteChannel = {} # subclass of SSHChannel ->
                                           # remote channel ID
-        self.deferreds = {} # local channel -> list of deferreds for pending
-                            # requests or 'global' -> list of deferreds for
-                            # global requests
+        self.deferreds = {"global": []} # local channel -> list of deferreds 
+                            # for pending requests or 'global' -> list of 
+                            # deferreds for global requests
         self.transport = None # gets set later
+
 
     def serviceStarted(self):
         if hasattr(self.transport, 'avatar'):
             self.transport.avatar.conn = self
 
+
     def serviceStopped(self):
+        """
+        Called when the connection is stopped.
+        """
         map(self.channelClosed, self.channels.values())
+        self._cleanupGlobalDeferreds()
+
+
+    def _cleanupGlobalDeferreds(self):
+        """
+        All pending requests that have returned a deferred must be errbacked
+        when this service is stopped, otherwise they might be left uncalled and
+        uncallable.
+        """
+        for d in self.deferreds["global"]:
+            d.errback(error.ConchError("Connection stopped."))
+        del self.deferreds["global"][:]
+
 
     # packet methods
     def ssh_GLOBAL_REQUEST(self, packet):
@@ -379,7 +397,7 @@ class SSHConnection(service.SSHService):
                                   + data)
         if wantReply:
             d = defer.Deferred()
-            self.deferreds.setdefault('global', []).append(d)
+            self.deferreds['global'].append(d)
             return d
 
     def openChannel(self, channel, extra=''):
@@ -572,13 +590,17 @@ class SSHConnection(service.SSHService):
         channel.closed().
         MAKE SURE YOU CALL THIS METHOD, even if you subclass L{SSHConnection}.
         If you don't, things will break mysteriously.
+
+        @type channel: L{SSHChannel}
         """
         if channel in self.channelsToRemoteChannel: # actually open
             channel.localClosed = channel.remoteClosed = True
             del self.localToRemoteChannel[channel.id]
             del self.channels[channel.id]
             del self.channelsToRemoteChannel[channel]
-            self.deferreds[channel.id] = []
+            for d in self.deferreds.setdefault(channel.id, []):
+                d.errback(error.ConchError("Channel closed."))
+            del self.deferreds[channel.id][:]
             log.callWithLogger(channel, channel.closed)
 
 MSG_GLOBAL_REQUEST = 80

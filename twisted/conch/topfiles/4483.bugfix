@@ -1,0 +1,1 @@
+twisted.conch.ssh.connection.SSHConnection now errbacks leftover request deferreds on connection shutdown.
