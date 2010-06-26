@@ -1,6 +1,5 @@
-# Copyright (c) 2008 Twisted Matrix Laboratories.
+# Copyright (c) 2008-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 """
 UDP support for IOCP reactor
@@ -25,9 +24,9 @@ class Port(abstract.FileHandle):
     """
     UDP port, listening for packets.
     """
-
-    implements(IReadWriteHandle, interfaces.IUDPTransport,
-               interfaces.ISystemHandle)
+    implements(
+        IReadWriteHandle, interfaces.IListeningPort, interfaces.IUDPTransport,
+        interfaces.ISystemHandle)
 
     addressFamily = socket.AF_INET
     socketType = socket.SOCK_DGRAM

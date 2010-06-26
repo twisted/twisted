@@ -25,7 +25,7 @@ if platformType == 'win32':
     from errno import WSAEMSGSIZE as EMSGSIZE
     from errno import WSAECONNREFUSED as ECONNREFUSED
     from errno import WSAECONNRESET
-    EAGAIN=EWOULDBLOCK
+    EAGAIN = EWOULDBLOCK
 else:
     from errno import EWOULDBLOCK, EINTR, EMSGSIZE, ECONNREFUSED, EAGAIN
 
@@ -39,8 +39,9 @@ class Port(base.BasePort):
     """
     UDP port, listening for packets.
     """
-
-    implements(interfaces.IUDPTransport, interfaces.ISystemHandle)
+    implements(
+        interfaces.IListeningPort, interfaces.IUDPTransport,
+        interfaces.ISystemHandle)
 
     addressFamily = socket.AF_INET
     socketType = socket.SOCK_DGRAM

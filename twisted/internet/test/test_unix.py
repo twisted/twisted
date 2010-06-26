@@ -14,7 +14,10 @@ try:
 except ImportError:
     AF_UNIX = None
 
+from zope.interface.verify import verifyObject
+
 from twisted.python.hashlib import md5
+from twisted.internet.interfaces import IConnector
 from twisted.internet.address import UNIXAddress
 from twisted.internet.protocol import (
     ServerFactory, ClientFactory, DatagramProtocol)
@@ -54,6 +57,15 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder):
     """
     Builder defining tests relating to L{IReactorUNIX}.
     """
+    def test_interface(self):
+        """
+        L{IReactorUNIX.connectUNIX} returns an object providing L{IConnector}.
+        """
+        reactor = self.buildReactor()
+        connector = reactor.connectUNIX(self.mktemp(), ClientFactory())
+        self.assertTrue(verifyObject(IConnector, connector))
+
+
     def test_mode(self):
         """
         The UNIX socket created by L{IReactorUNIX.listenUNIX} is created with
@@ -107,7 +119,6 @@ class UNIXDatagramTestsBuilder(UNIXFamilyMixin, ReactorBuilder):
         is created with the mode specified.
         """
         self._modeTest('listenUNIXDatagram', self.mktemp(), DatagramProtocol())
-
 
 
     def test_listenOnLinuxAbstractNamespace(self):
