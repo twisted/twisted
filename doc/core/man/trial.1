@@ -2,30 +2,46 @@
 .SH NAME
 trial \- run unit tests
 .SH SYNOPSIS
-.B trial [options] [[file|package|module|TestCase|testmethod]...]
+\fBtrial\fR [ \fIoptions\fR ] [ \fIfile\fR | \fIpackage\fR | \fImodule\fR | \fITestCase\fR | \fItestmethod\fR ] ... ]
 .PP
-.B trial --help
+\fBtrial --help\fR | \fB-h\fR
 .SH DESCRIPTION
 .PP
 trial loads and executes a suite of unit tests, obtained from modules,
 packages and files listed on the command line.
 .PP
 trial will take either filenames or fully qualified Python names as
-arguments.  Thus 'trial myproject/foo.py', 'trial myproject.foo' and
- 'trial myproject.foo.SomeTestCase.test_method' are all valid ways to
+arguments.  Thus `trial myproject/foo.py', `trial myproject.foo' and
+`trial myproject.foo.SomeTestCase.test_method' are all valid ways to
 invoke trial.
 .TP
 \fB-b\fR, \fB--debug\fR
 Run the tests in the Python debugger. Also does post-mortem
-debugging on exceptions. Will load '.pdbrc' from current directory if
+debugging on exceptions. Will load `.pdbrc' from current directory if
 it exists.
 .TP
 \fB-B\fR, \fB--debug-stacktraces\fR
 Report Deferred creation and callback stack traces
 .TP
 \fB--coverage\fR
-Generate coverage information in _trial_temp/coverage/. Requires Python 2.3
-or higher.
+Generate coverage information in the `coverage' subdirectory of the trial temp
+directory (`_trial_temp' by default). For each Python module touched by the
+execution of the given tests, a file will be created in the coverage directory
+named for the module's fully-qualified name with the suffix `.cover'.  For
+example, because the trial test runner is written in Python, the coverage
+directory will almost always contain a file named `twisted.trial.runner.cover'.
+
+Each `.cover' file contains a copy of the Python source of the module in
+question, with a prefix at the beginning of each line containing coverage
+information.  For lines that are not executable (blank lines, comments, etc.)
+the prefix is blank.  For executable lines that were run in the course of the
+test suite, the prefix is a number indicating the number of times that line was
+executed.  The string `>>>>>>' prefixes executable lines that were not executed
+in the course of the test suite.
+
+Note that this functionality uses Python's sys.settrace() function, so tests
+that call sys.settrace() themselves are likely to break trial's coverage
+functionality.
 .TP
 \fB--disablegc\fR
 Disable the garbage collector.  I don't know why this is in trial.
@@ -51,9 +67,9 @@ Print a list of valid reporters to standard output, then exit.
 \fB--help-reactors\fR
 List the names of possibly available reactors.
 .TP
-\fB-l\fR, \fB--logfile\fR <logfile>
-Direct the log to a different file. The default file is 'test.log'.
-<logfile> is relative to _trial_temp.
+\fB-l\fR, \fB--logfile\fR \fIlogfile\fR
+Direct the log to a different file. The default file is `test.log'.
+\fIlogfile\fR is relative to _trial_temp.
 .TP
 \fB-n\fR, \fB--dry-run\fR
 Go through all the tests and make them pass without running.
@@ -69,7 +85,7 @@ exceptions.  Only usable in conjunction with --debug.
 \fB--profile\fR
 Run tests under the Python profiler.
 .TP
-\fB\-r\fR, \fB\--reactor\fR \fI<reactor>\fR
+\fB-r\fR, \fB--reactor\fR \fIreactor\fR
 Choose which reactor to use.  See --help-reactors for a list.
 .TP
 \fB--recursionlimit\fR
@@ -83,11 +99,11 @@ option to see a list of valid reporters.
 Print an insanely verbose log of everything that happens. Useful when
 debugging freezes or locks in complex code.
 .TP
-\fB--tbformat\fR <format>
-Format to display tracebacks with. Acceptable values are 'default', 'brief'
-and 'verbose'. 'brief' produces tracebacks that play nicely with Emacs' GUD.
+\fB--tbformat\fR \fIformat\fR
+Format to display tracebacks with. Acceptable values are `default', `brief'
+and `verbose'. `brief' produces tracebacks that play nicely with Emacs' GUD.
 .TP
-\fB--temp-directory <directory>\fR
+\fB--temp-directory\fR \fIdirectory\fR
 WARNING: Do not use this options unless you know what you are doing. 
 By default, trial creates a directory called _trial_temp under the current
 working directory.  When trial runs, it first \fIdeletes\fR this directory,
@@ -96,9 +112,9 @@ file and any coverage files are stored here. Use this option if you wish to
 have trial run in a directory other than _trial_temp. Be warned, trial
 will \fIdelete\fR the directory before re-creating it.
 .TP
-\fB--testmodule <filename>\fR
-Ask trial to look into <filename> and run any tests specified using the
-Emacs-style buffer variable 'test-case-name'.
+\fB--testmodule\fR \fIfilename\fR
+Ask trial to look into \fIfilename\fR and run any tests specified using the
+Emacs-style buffer variable `test-case-name'.
 .TP
 \fB--unclean-warnings\fR
 As of Twisted 8.0, trial will report an error if the reactor is left unclean
@@ -113,20 +129,20 @@ This is particularly useful for reproducing intermittent failures.
 \fB--version\fR
 Prints the Twisted version number and exit.
 .TP
-\fB--without-module <modulenames>\fR
+\fB--without-module\fR \fImodulenames\fR
 Simulate the lack of the specified comma-separated list of modules. This makes
 it look like the modules are not present in the system, causing tests to check
 the behavior for that configuration.
 .TP
-\fB-z\fR, \fB--random [<seed>]\fR
+\fB-z\fR, \fB--random\fR [\fIseed\fR]
 Run the tests in random order using the specified seed.
 .PP
 .SH AUTHOR
 Written by Jonathan M. Lange
 .SH "REPORTING BUGS"
-To report a bug, visit \fIhttp://twistedmatrix.com/bugs/\fR
+To report a bug, visit http://twistedmatrix.com/trac/newticket
 .SH COPYRIGHT
-Copyright \(co 2003-2008 Twisted Matrix Laboratories
+Copyright \(co 2003-2010 Twisted Matrix Laboratories
 .br
 This is free software; see the source for copying conditions.  There is NO
 warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
