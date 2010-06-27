@@ -1,8 +1,8 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
-Twisted Core 10.1.0pre1 (2010-06-19)
-====================================
+Twisted Core 10.1.0 (2010-06-27)
+================================
 
 Features
 --------
@@ -162,8 +162,8 @@ Other
    #4418, #4443, #4449, #4479, #4485, #4486, #4497
 
 
-Twisted Conch 10.1.0pre1 (2010-06-19)
-=====================================
+Twisted Conch 10.1.0 (2010-06-27)
+=================================
 
 Features
 --------
@@ -216,14 +216,14 @@ Other
  - #3849, #4408, #4454
 
 
-Twisted Lore 10.1.0pre1 (2010-06-19)
-====================================
+Twisted Lore 10.1.0 (2010-06-27)
+================================
 
 No significant changes have been made for this release.
 
 
-Twisted Mail 10.1.0pre1 (2010-06-19)
-====================================
+Twisted Mail 10.1.0 (2010-06-27)
+================================
 
 Bugfixes
 --------
@@ -237,8 +237,8 @@ Other
  - #4069, #4271, #4467
 
 
-Twisted Names 10.1.0pre1 (2010-06-19)
-=====================================
+Twisted Names 10.1.0 (2010-06-27)
+=================================
 
 Features
 --------
@@ -247,20 +247,20 @@ Features
    performance improvement on PyPy. (#4283)
 
 
-Twisted News 10.1.0pre1 (2010-06-19)
-====================================
+Twisted News 10.1.0 (2010-06-27)
+================================
 
 No significant changes have been made for this release.
 
 
-Twisted Pair 10.1.0pre1 (2010-06-19)
-====================================
+Twisted Pair 10.1.0 (2010-06-27)
+================================
 
 No significant changes have been made for this release.
 
 
-Twisted Runner 10.1.0pre1 (2010-06-19)
-======================================
+Twisted Runner 10.1.0 (2010-06-27)
+==================================
 
 Features
 --------
@@ -277,8 +277,8 @@ Other
  - #3775
 
 
-Twisted Web 10.1.0pre1 (2010-06-19)
-===================================
+Twisted Web 10.1.0 (2010-06-27)
+===============================
 
 Features
 --------
@@ -316,8 +316,8 @@ Other
  - #4403, #4452
 
 
-Twisted Words 10.1.0pre1 (2010-06-19)
-=====================================
+Twisted Words 10.1.0 (2010-06-27)
+=================================
 
 Bugfixes
 --------
