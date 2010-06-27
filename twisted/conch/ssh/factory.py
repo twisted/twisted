@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -7,11 +7,6 @@ data sources as OpenSSH.
 
 Maintainer: Paul Swartz
 """
-
-try:
-    import resource
-except ImportError:
-    resource = None
 
 from twisted.internet import protocol
 from twisted.python import log
@@ -25,7 +20,9 @@ import random
 import warnings
 
 class SSHFactory(protocol.Factory):
-
+    """
+    A Factory for SSH servers.
+    """
     protocol = transport.SSHServerTransport
 
     services = {
@@ -33,11 +30,9 @@ class SSHFactory(protocol.Factory):
         'ssh-connection':connection.SSHConnection
     }
     def startFactory(self):
-        # disable coredumps
-        if resource:
-            resource.setrlimit(resource.RLIMIT_CORE, (0,0))
-        else:
-            log.msg('INSECURE: unable to disable core dumps.')
+        """
+        Check for public and private keys.
+        """
         if not hasattr(self,'publicKeys'):
             self.publicKeys = self.getPublicKeys()
         for keyType, value in self.publicKeys.items():
@@ -66,7 +61,17 @@ class SSHFactory(protocol.Factory):
         if not hasattr(self,'primes'):
             self.primes = self.getPrimes()
 
+
     def buildProtocol(self, addr):
+        """
+        Create an instance of the server side of the SSH protocol.
+
+        @type addr: L{twisted.internet.interfaces.IAddress} provider
+        @param addr: The address at which the server will listen.
+
+        @rtype: L{twisted.conch.ssh.SSHServerTransport}
+        @return: The built transport.
+        """
         t = protocol.Factory.buildProtocol(self, addr)
         t.supportedPublicKeys = self.privateKeys.keys()
         if not self.primes:
@@ -76,6 +81,7 @@ class SSHFactory(protocol.Factory):
             ske.remove('diffie-hellman-group-exchange-sha1')
             t.supportedKeyExchanges = ske
         return t
+
 
     def getPublicKeys(self):
         """
@@ -87,6 +93,7 @@ class SSHFactory(protocol.Factory):
         """
         raise NotImplementedError('getPublicKeys unimplemented')
 
+
     def getPrivateKeys(self):
         """
         Called when the factory is started to get the  private portions of the
@@ -97,6 +104,7 @@ class SSHFactory(protocol.Factory):
         """
         raise NotImplementedError('getPrivateKeys unimplemented')
 
+
     def getPrimes(self):
         """
         Called when the factory is started to get Diffie-Hellman generators and
@@ -105,6 +113,7 @@ class SSHFactory(protocol.Factory):
 
         @rtype: C{dict}
         """
+
 
     def getDHPrime(self, bits):
         """
@@ -118,6 +127,7 @@ class SSHFactory(protocol.Factory):
         primesKeys.sort(lambda x, y: cmp(abs(x - bits), abs(y - bits)))
         realBits = primesKeys[0]
         return random.choice(self.primes[realBits])
+
 
     def getService(self, transport, service):
         """
