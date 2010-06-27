@@ -21,24 +21,24 @@ complete discussion of components.</p>
 <h2>Write Maintainable Code</h2>
 
 
-<p>In the last version, the service class was three times longer than
-any other class, and was hard to understand. This was because it turned
-out to have multiple responsibilities. It had to know how to access
-user information, by rereading the file every half minute,
-but also how to display itself in a myriad of protocols. Here, we
-used the component-based architecture that Twisted provides to achieve
-a separation of concerns. All the service is responsible for, now,
-is supporting getUser/getUsers. It declares its support via a call to
-zope.interface.implements. Then, adapters are used to make this service
-look like an appropriate class for various things: for supplying
-a finger factory to TCPServer, for supplying a resource to site's
-constructor, and to provide an IRC client factory for TCPClient.
-All the adapters use are the methods in FingerService they are
-declared to use: getUser/getUsers. We could, of course,
-skip the interfaces and let the configuration code use
-things like FingerFactoryFromService(f) directly. However, using
-interfaces provides the same flexibility inheritance gives: future
-subclasses can override the adapters.</p>
+<p>In the last version, the service class was three times longer than any other
+class, and was hard to understand. This was because it turned out to have
+multiple responsibilities. It had to know how to access user information, by
+rereading the file every half minute, but also how to display itself in a myriad
+of protocols. Here, we used the component-based architecture that Twisted
+provides to achieve a separation of concerns. All the service is responsible
+for, now, is supporting <code>getUser</code>/<code>getUsers</code>. It declares
+its support via a call to <code>zope.interface.implements</code>. Then, adapters
+are used to make this service look like an appropriate class for various things:
+for supplying a finger factory to <code>TCPServer</code>, for supplying a
+resource to site's constructor, and to provide an IRC client factory
+for <code>TCPClient</code>.  All the adapters use are the methods
+in <code>FingerService</code> they are declared to use:
+<code>getUser</code>/<code>getUsers</code>. We could, of course, skip the
+interfaces and let the configuration code use things
+like <code>FingerFactoryFromService(f)</code> directly. However, using
+interfaces provides the same flexibility inheritance gives: future subclasses
+can override the adapters.</p>
 
 <a href="listings/finger/finger19.tac" class="py-listing">finger19.tac</a>
 
@@ -48,7 +48,7 @@ subclasses can override the adapters.</p>
 <li>Readable -- each class is short</li>
 <li>Maintainable -- each class knows only about interfaces</li>
 <li>Dependencies between code parts are minimized</li>
-<li>Example: writing a new IFingerService is easy</li>
+<li>Example: writing a new <code>IFingerService</code> is easy</li>
 </ul>
 <a href="listings/finger/finger19a_changes.py" class="py-listing">finger19a_changes.py</a>
 <p>

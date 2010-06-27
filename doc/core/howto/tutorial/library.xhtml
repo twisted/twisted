@@ -27,8 +27,9 @@ properly organized. Everything above the <code>application=</code> belongs in a
 module, and the HTML templates all belong in separate files.
 </p>
 
-<p>We can use the templateFile and templateDirectory attributes to indicate
-what HTML template file to use for each Page, and where to look for it.</p>
+<p>We can use the <code>templateFile</code> and <code>templateDirectory</code>
+attributes to indicate what HTML template file to use for each Page, and where
+to look for it.</p>
 
 <a href="listings/finger/organized-finger.tac" class="py-listing">organized-finger.tac</a>
 
@@ -38,7 +39,7 @@ Note that our program is now quite separated. We have:
   <li>Code (in the module)</li>
   <li>Configuration (file above)</li>
   <li>Presentation (templates)</li>
-  <li>Content (/etc/users)</li>
+  <li>Content (<code>/etc/users</code>)</li>
   <li>Deployment (twistd)</li>
 </ul>
 
@@ -50,7 +51,8 @@ code correctly, it is easy to achieve a good separation of parts.
 
 <h2>Easy Configuration</h2>
 
-<p>We can also supply easy configuration for common cases with a makeService method that will also help build .tap files later:</p>
+<p>We can also supply easy configuration for common cases with a makeService
+method that will also help build .tap files later:</p>
 
 <a href="listings/finger/finger_config.py" class="py-listing">finger_config.py</a>
 
@@ -64,11 +66,11 @@ code correctly, it is easy to achieve a good separation of parts.
 
 
 <p>Note: the finger <em>user</em> still has ultimate power: he can use
-makeService, or he can use the lower-level interface if he has
-specific needs (maybe an IRC server on some other port? maybe we
-want the non-SSL webserver to listen only locally?  etc. etc.)
-This is an important design principle: never force a layer of abstraction:
-allow usage of layers of abstractions.</p>
+<code>makeService</code>, or he can use the lower-level interface if he has
+specific needs (maybe an IRC server on some other port? Maybe we want the
+non-SSL webserver to listen only locally?  etc. etc.)  This is an important
+design principle: never force a layer of abstraction: allow usage of layers of
+abstractions.</p>
 
 <p>The pasta theory of design:</p>
 

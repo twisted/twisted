@@ -13,14 +13,13 @@
 <p> This is the fifth part of the Twisted tutorial <a
 href="index.xhtml">Twisted from Scratch, or The Evolution of Finger</a>.</p>
 
-<p>In this part we will add new several new backends to our finger service
-using the component-based architecture developed in <a
-href="components.xhtml">The Evolution of Finger: moving to a
-component based architecture</a>. This will show just how convenient it is to
-implement new back-ends when we move to a component based architecture. Note
-that here we also use an interface we previously wrote, FingerSetterFactory,
-by supporting one single method. We manage to preserve the service's ignorance
-of the network.</p>
+<p>In this part we will add new several new backends to our finger service using
+the component-based architecture developed in <a href="components.xhtml">The
+Evolution of Finger: moving to a component based architecture</a>. This will
+show just how convenient it is to implement new back-ends when we move to a
+component based architecture. Note that here we also use an interface we
+previously wrote, <code>FingerSetterFactory</code>, by supporting one single
+method. We manage to preserve the service's ignorance of the network.</p>
 
 <h2>Another Back-end</h2>
 
@@ -40,10 +39,9 @@ the network code is completely separate from the back-end.</p>
 Full source code here: <a class="py-listing" href="listings/finger/finger19c.tac">finger19c.tac</a>
 </p>
 
-<p>Not much to say except that now we
-can be churn out backends like crazy. Feel like doing a back-end
-for Advogato, for example? Dig out the XML-RPC client support Twisted
-has, and get to work!</p>
+<p>Not much to say except that now we can be churn out backends like crazy. Feel
+like doing a back-end for <a href="http://www.advogato.org/">Advogato</a>, for
+example? Dig out the XML-RPC client support Twisted has, and get to work!</p>
 
 </body>
 </html>
