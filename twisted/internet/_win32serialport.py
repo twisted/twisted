@@ -29,22 +29,24 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
     connected = 1
 
     def __init__(self, protocol, deviceNameOrPortNumber, reactor,
-                 baudrate = 9600, bytesize = EIGHTBITS, parity = PARITY_NONE,
-                 stopbits = STOPBITS_ONE, xonxoff = 0, rtscts = 0):
+        baudrate=9600, bytesize=EIGHTBITS, parity=PARITY_NONE,
+        stopbits=STOPBITS_ONE, xonxoff=0, rtscts=0):
         """
         @raise ValueError: If the given reactor doesn't provide
             IReactorWin32Events.
         """
-
         if not IReactorWin32Events.providedBy(reactor):
             raise ValueError(
                 "SerialPort on Windows requires a reactor that "
                 "implements IReactorWin32Events, e.g. win32eventreactor.")
 
-        self._serial = Serial(deviceNameOrPortNumber, baudrate=baudrate,
-                              bytesize=bytesize, parity=parity,
-                              stopbits=stopbits, timeout=None,
-                              xonxoff=xonxoff, rtscts=rtscts)
+        BaseSerialPort.__init__(
+            self, deviceNameOrPortNumber,
+            baudrate=baudrate, bytesize=bytesize,
+            parity=parity, stopbits=stopbits,
+            timeout=None, xonxoff=xonxoff,
+            rtscts=rtscts)
+
         self.flushInput()
         self.flushOutput()
         self.reactor = reactor

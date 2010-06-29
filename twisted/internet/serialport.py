@@ -35,6 +35,70 @@ from serial import FIVEBITS, SIXBITS, SEVENBITS, EIGHTBITS
 
 # common code for serial ports
 class BaseSerialPort:
+    def __init__(
+        self, protocol, deviceNameOrPortNumber, reactor, 
+        baudrate=9600, bytesize=EIGHTBITS, parity=PARITY_NONE,
+        stopbits=STOPBITS_ONE, timeout=0, xonxoff=0, rtscts=0):
+        """
+        Initialize this serial transport.
+
+        Serial parameters are passed through to the underlying pyserial
+        C{Serial} constructor
+        
+        @param protocol: Protocol to use with the serial transport
+        @type protocol: L{IProtocol} provider
+
+        @param deviceNameOrPortNumber: OS-specific device name or number.
+            e.g.  device number, starting at zero or C{'/dev/ttyUSB0'} on
+            GNU/Linux or C{'COM3'} on Windows
+        @type deviceNameOrPortNumber: C{str} or C{int}
+        
+        @param reactor: The reactor to use. On Windows, must implement
+            L{twisted.internet.interfaces.IReactorWin32Events} e.g. 
+            L{twisted.internet.win32eventreactor}
+
+        @param baudrate: The baud rate to use to communicate with the serial
+            device.
+        @type baudrate: C{int}
+        
+        @param bytesize: number of databits
+        @type bytesize: C{int}
+        
+        @param parity: The parity mode to use for error checking.  Must be
+            either C{'N'} for none, C{'O'} for odd, C{'E'} for even, C{'M'}
+            for mark, or C{'S'} for space.
+        @type parity: C{str}
+        
+        @param stopbits: number of stopbits
+        @type stopbits: C{int}
+        
+        @param timeout: ignored; do not pass a value for this parameter.
+        
+        @param xonxoff: enable software flow control (0/1)
+        @type xonxoff: C{int}
+        
+        @param rtscts: enable RTS/CTS flow control (0/1)
+        @type rtscts: C{int}
+        
+        @raise ValueError: On Windows, if the reactor does not support 
+            L{twisted.internet.interfaces.IReactorWin32Events} e.g. 
+            L{twisted.internet.win32eventreactor}
+
+        @raise ValueError: Will be raised when serial parameters are out of range,
+            e.g baudrate, bytesize, etc.
+
+        @raise SerialException: In case the device can not be found or can
+            not be configured.
+        """
+        # Only initialize the underlying Serial instance.  Error checking
+        # and other initialization is done in the subclasses.
+        self._serial = serial.Serial(
+            deviceNameOrPortNumber, baudrate=baudrate,
+            bytesize=bytesize, parity=parity,
+            stopbits=stopbits, timeout=None,
+            xonxoff=xonxoff, rtscts=rtscts)
+
+
     def setBaudRate(self, baudrate):
         if hasattr(self._serial, "setBaudrate"):
             self._serial.setBaudrate(baudrate)
@@ -71,58 +135,14 @@ class BaseSerialPort:
     def setRTS(self, on = 1):
         self._serial.setRTS(on)
 
+
+
 class SerialPort(BaseSerialPort):
     """
-    Initialize the SerialPort
-    Serial parameters are passed through to the underlying 
-    pyserial Serial constructor
-    
-    @param protocol: Protocol to use with the serial transport
-    @type protocol: type which implements L{IProtocol}
-    
-    @param deviceNameOrPortNumber: OS-specific device name or number. e.g.
-                                   device number, starting at zero
-                                   '/dev/ttyUSB0' on GNU/Linux
-                                   'COM3' on Windows
-    @type deviceNameOrPortNumber: C{str} or C{int}
-    
-    @param reactor: The reactor to use. On Windows, must implement 
-                   L{twisted.internet.interfaces.IReactorWin32Events}
-                   e.g. L{twisted.internet.win32eventreactor}
-    @type reactor: type which implements L{IReactor}.
-
-    @param baudrate: baudrate
-    @type baudrate: C{int}
-    
-    @param bytesize: number of databits
-    @type bytesize: C{int}
-    
-    @param parity: enable parity checking
-    @type parity: C{str}
-    
-    @param stopbits: number of stopbits
-    @type stopbits: C{int}
-    
-    @param timeout: set a read timeout value (not implemented on win32)
-    @type timeout: C{int} or C{float}
-    
-    @param xonxoff: enable software flow control (0/1)
-    @type xonxoff: C{int}
-    
-    @param rtscts: enable RTS/CTS flow control (0/1)
-    @type rtscts: C{int}
-    
-    @raise ValueError: On Windows, if the reactor does not support 
-                       L{twisted.internet.interfaces.IReactorWin32Events}
-                       e.g. L{twisted.internet.win32eventreactor}
-
-    @raise ValueError: Will be raised when serial parameters are out of range,
-                       e.g baudrate, bytesize, etc.
-
-    @raise SerialException: In case the device can not be found or 
-                            can not be configured
+    Non-implementation of the serial port transport, only actually used when
+    running on a platform for which Twisted lacks serial port support
+    (currently POSIX and Windows on CPython are supported).
     """
-
 
 # replace SerialPort with appropriate serial port
 if os.name == 'posix':
