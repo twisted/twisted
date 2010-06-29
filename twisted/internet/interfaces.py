@@ -421,8 +421,10 @@ class IReactorUNIXDatagram(Interface):
 class IReactorWin32Events(Interface):
     """
     Win32 Event API methods
+
+    @since: 10.2
     """
-    
+
     def addEvent(event, fd, action):
         """
         Add a new win32 event to the event loop.
@@ -436,6 +438,7 @@ class IReactorWin32Events(Interface):
 
         @return: None
         """
+
 
     def removeEvent(event):
         """
