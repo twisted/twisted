@@ -34,8 +34,7 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
             self, deviceNameOrPortNumber,
             baudrate=baudrate, bytesize=bytesize,
             parity=parity, stopbits=stopbits,
-            timeout=None, xonxoff=xonxoff,
-            rtscts=rtscts)
+            xonxoff=xonxoff, rtscts=rtscts)
 
         self.flushInput()
         self.flushOutput()
