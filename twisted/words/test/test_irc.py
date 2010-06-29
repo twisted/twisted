@@ -1564,3 +1564,14 @@ class ClientTests(TestCase):
             "me() is deprecated since Twisted 9.0. Use IRCClient.describe().")
         self.assertEquals(warnings[0]['category'], DeprecationWarning)
         self.assertEquals(len(warnings), 2)
+
+
+    def test_noticedDoesntPrivmsg(self):
+        """
+        The default implementation of L{IRCClient.noticed} doesn't invoke
+        C{privmsg()}
+        """
+        def privmsg(user, channel, message):
+            self.fail("privmsg() should not have been called")
+        self.protocol.privmsg = privmsg
+        self.protocol.irc_NOTICE('spam', "I don't want any spam!")

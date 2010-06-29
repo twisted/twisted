@@ -1196,12 +1196,13 @@ class IRCClient(basic.LineReceiver):
         intact.
         """
 
-    def noticed(self, user, channel, message):
-        """Called when I have a notice from a user to me or a channel.
 
-        By default, this is equivalent to IRCClient.privmsg, but if your
-        client makes any automated replies, you must override this!
-        From the RFC::
+    def noticed(self, user, channel, message):
+        """
+        Called when I have a notice from a user to me or a channel.
+
+        If the client makes any automated replies, it must not do so in
+        response to a NOTICE message, per the RFC::
 
             The difference between NOTICE and PRIVMSG is that
             automatic replies MUST NEVER be sent in response to a
@@ -1209,7 +1210,7 @@ class IRCClient(basic.LineReceiver):
             loops between clients automatically sending something in
             response to something it received.
         """
-        self.privmsg(user, channel, message)
+
 
     def modeChanged(self, user, channel, set, modes, args):
         """Called when users or channel's modes are changed.
