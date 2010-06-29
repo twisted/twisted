@@ -1,0 +1,1 @@
+twisted.internet.serialport.SerialPort's initializer arguments now have API documentation.
