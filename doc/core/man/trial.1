@@ -2,7 +2,7 @@
 .SH NAME
 trial \- run unit tests
 .SH SYNOPSIS
-\fBtrial\fR [ \fIoptions\fR ] [ \fIfile\fR | \fIpackage\fR | \fImodule\fR | \fITestCase\fR | \fItestmethod\fR ] ... ]
+\fBtrial\fR [ \fIoptions\fR ] [ \fIfile\fR | \fIpackage\fR | \fImodule\fR | \fITestCase\fR | \fItestmethod\fR ] ... 
 .PP
 \fBtrial --help\fR | \fB-h\fR
 .SH DESCRIPTION
@@ -14,6 +14,49 @@ trial will take either filenames or fully qualified Python names as
 arguments.  Thus `trial myproject/foo.py', `trial myproject.foo' and
 `trial myproject.foo.SomeTestCase.test_method' are all valid ways to
 invoke trial.
+.PP
+After running the given test suite, the default test reporter prints a summary
+of the test run. This consists of the word "PASSED" (if all tests ran as
+expected) or "FAILED" (if any test behaved unexpectedly) followed by a count of
+the different kinds of test results encountered. The possible kinds of test
+results includes:
+.TP
+successes
+Tests that passed all their assertions and completed without error.
+These are marked "PASSED" in the normal test output.
+.TP
+failures
+Tests that failed an assertion, called self.fail() or explicitly raised
+self.failureException for some reason. These are marked "FAILED" in the
+normal test output.
+.TP
+errors
+Tests that raised an unexpected exception (including AssertionError),
+tests that caused the tearDown() method to raise an exception, tests
+that run for longer than the timeout interval, tests that caused
+something to call twisted.python.log.err() without subsequently calling
+self.flushLoggedErrors(), tests that leave the reactor in an unclean
+state, etc. These are marked "ERROR" in the normal test output.
+.IP
+Note that because errors can be caused after the actual test method
+returns, it is possible for a single test to be reported as both an
+error and a failure, and hence the total number of test results can be
+greater than the total number of tests executed.
+.TP
+skips
+Tests that were skipped, usually because of missing dependencies. These
+are marked "SKIPPED" in the normal test output.
+.TP
+expectedFailures
+Tests that failed, but were expected to fail, usually because the test
+is for a feature that hasn't been implemented yet. These are marked
+"TODO" in the normal test output.
+.TP
+unexpectedSuccesses
+Tests that should have been listed under expectedFailures, except that
+for some reason the test succeeded. These are marked "SUCCESS!?!" in
+the normal test output.
+.SH OPTIONS
 .TP
 \fB-b\fR, \fB--debug\fR
 Run the tests in the Python debugger. Also does post-mortem
@@ -147,6 +190,9 @@ the behavior for that configuration.
 \fB-z\fR, \fB--random\fR [\fIseed\fR]
 Run the tests in random order using the specified seed.
 .PP
+.SH SEE ALSO
+The latest version of the trial documentation can be found at
+http://twistedmatrix.com/documents/current/core/howto/testing.html
 .SH AUTHOR
 Written by Jonathan M. Lange
 .SH "REPORTING BUGS"
