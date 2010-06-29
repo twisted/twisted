@@ -1,18 +1,8 @@
 # Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
 """
 Serial Port Protocol
-
-pySerial is required for all platforms: http://pyserial.sourceforge.net/
-
-Windows requires the use of a reactor that supports
-L{twisted.internet.interfaces.IReactorWin32Events}
-e.g. L{twisted.internet.win32eventreactor}
-
-pywin32 (previously win32all) is also required for Windows:
-http://sourceforge.net/projects/pywin32/
 """
 
 # http://twistedmatrix.com/trac/ticket/3725#comment:24
@@ -80,10 +70,6 @@ class BaseSerialPort:
         @param rtscts: enable RTS/CTS flow control (0/1)
         @type rtscts: C{int}
         
-        @raise ValueError: On Windows, if the reactor does not support 
-            L{twisted.internet.interfaces.IReactorWin32Events} e.g. 
-            L{twisted.internet.win32eventreactor}
-
         @raise ValueError: Will be raised when serial parameters are out of range,
             e.g baudrate, bytesize, etc.
 
