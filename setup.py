@@ -31,7 +31,7 @@ def getExtensions():
                 execfile(setup_py, ns, ns)
                 if "extensions" in ns:
                     extensions.extend(ns["extensions"])
-                    
+
     return extensions
 
 
@@ -43,7 +43,8 @@ def main(args):
     if os.path.exists('twisted'):
         sys.path.insert(0, '.')
     from twisted import copyright
-    from twisted.python.dist import getDataFiles, getScripts, getPackages, setup
+    from twisted.python.dist import getDataFiles, getScripts, getPackages
+    from twisted.python.dist import setup, _SDistTwisted
 
     # "" is included because core scripts are directly in bin/
     projects = [''] + [x for x in os.listdir('bin')
@@ -72,7 +73,8 @@ on event-based network programming and multiprotocol integration.
             packages = getPackages('twisted'),
             conditionalExtensions = getExtensions(),
             scripts = scripts,
-            data_files=getDataFiles('twisted'), 
+            data_files=getDataFiles('twisted'),
+            cmdclass = {'sdist': _SDistTwisted},
             )
 
     if 'setuptools' in sys.modules:

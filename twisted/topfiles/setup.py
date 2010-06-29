@@ -17,7 +17,7 @@ if os.path.exists('twisted'):
 from twisted import copyright
 from twisted.python.dist import setup, ConditionalExtension as Extension
 from twisted.python.dist import getPackages, getDataFiles, getScripts
-from twisted.python.dist import twisted_subprojects
+from twisted.python._dist import twisted_subprojects
 
 
 

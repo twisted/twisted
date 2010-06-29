@@ -6,15 +6,16 @@ Don't use this outside of Twisted.
 Maintainer: Christopher Armstrong
 """
 
-import sys, os
-from distutils.command import build_scripts, install_data, build_ext, build_py
+import os
+from distutils.command import (build_scripts, install_data, build_ext,
+                               sdist)
 from distutils.errors import CompileError
 from distutils import core
 from distutils.core import Extension
+from twisted.python.filepath import FilePath
+from twisted.python._dist import DistributionBuilder, makeAPIBaseURL
+from twisted.python._dist import isDistributable
 
-twisted_subprojects = ["conch", "lore", "mail", "names",
-                       "news", "pair", "runner", "web", "web2",
-                       "words", "vfs"]
 
 
 class ConditionalExtension(Extension):
@@ -46,6 +47,8 @@ def setup(**kw):
     """
     return core.setup(**get_setup_args(**kw))
 
+
+
 def get_setup_args(**kw):
     if 'twisted_subproject' in kw:
         if 'twisted' not in os.listdir('.'):
@@ -73,12 +76,14 @@ def get_setup_args(**kw):
             kw.setdefault('py_modules', []).extend(py_modules)
             del kw['plugins']
 
-    if 'cmdclass' not in kw:
-        kw['cmdclass'] = {
+    defaultCmdClasses = {
             'install_data': install_data_twisted,
             'build_scripts': build_scripts_twisted}
-        if sys.version_info[:3] < (2, 3, 0):
-            kw['cmdclass']['build_py'] = build_py_twisted
+
+    if 'cmdclass' in kw:
+        # Override our defaults with setup.py's custom cmdclasses
+        defaultCmdClasses.update(kw['cmdclass'])
+    kw['cmdclass'] = defaultCmdClasses
 
     if "conditionalExtensions" in kw:
         extensions = kw["conditionalExtensions"]
@@ -100,6 +105,8 @@ def get_setup_args(**kw):
         kw.setdefault('cmdclass', {})['build_ext'] = my_build_ext
     return kw
 
+
+
 def getVersion(proj, base="twisted"):
     """
     Extract the version number for a given project.
@@ -120,38 +127,22 @@ def getVersion(proj, base="twisted"):
     return ns['version'].base()
 
 
-# Names that are exluded from globbing results:
-EXCLUDE_NAMES = ["{arch}", "CVS", ".cvsignore", "_darcs",
-                 "RCS", "SCCS", ".svn"]
-EXCLUDE_PATTERNS = ["*.py[cdo]", "*.s[ol]", ".#*", "*~", "*.py"]
-
-import fnmatch
-
-def _filterNames(names):
-    """Given a list of file names, return those names that should be copied.
-    """
-    names = [n for n in names
-             if n not in EXCLUDE_NAMES]
-    # This is needed when building a distro from a working
-    # copy (likely a checkout) rather than a pristine export:
-    for pattern in EXCLUDE_PATTERNS:
-        names = [n for n in names
-                 if (not fnmatch.fnmatch(n, pattern))
-                 and (not n.endswith('.py'))]
-    return names
 
 def relativeTo(base, relativee):
     """
-    Gets 'relativee' relative to 'basepath'.
+    Converts the path to C{base} to a path to {relativee}.
 
-    i.e.,
+    >>> relativeTo('/home', '/home/radix')
+    '/home/radix'
+    >>> relativeTo('../radix/', '/home/radix/foo')
+    '../radix/foo'
 
-    >>> relativeTo('/home/', '/home/radix/')
-    'radix'
-    >>> relativeTo('.', '/home/radix/Projects/Twisted') # curdir is /home/radix
-    'Projects/Twisted'
-
-    The 'relativee' must be a child of 'basepath'.
+    @type base: C{str}
+    @param base: A filesystem path.
+    @type relativee: C{str}
+    @param relativee: A filesystem path that is a child of C{base}.
+    @rtype: C{str}
+    @return: A filesystem path to relativee.
     """
     basepath = os.path.abspath(base)
     relativee = os.path.abspath(relativee)
@@ -161,6 +152,7 @@ def relativeTo(base, relativee):
             relative = relative[1:]
         return os.path.join(base, relative)
     raise ValueError("%s is not a subpath of %s" % (relativee, basepath))
+
 
 
 def getDataFiles(dname, ignore=None, parent=None):
@@ -186,20 +178,28 @@ def getDataFiles(dname, ignore=None, parent=None):
     result = []
     for directory, subdirectories, filenames in os.walk(dname):
         resultfiles = []
-        for exname in EXCLUDE_NAMES:
-            if exname in subdirectories:
-                subdirectories.remove(exname)
-        for ig in ignore:
-            if ig in subdirectories:
-                subdirectories.remove(ig)
-        for filename in _filterNames(filenames):
-            resultfiles.append(filename)
+        basePath = FilePath(os.path.join(dname, directory))
+
+        for subdir in subdirectories:
+            if subdir in ignore or not isDistributable(basePath.child(subdir)):
+                subdirectories.remove(subdir)
+
+        for filename in filenames:
+            if (isDistributable(basePath.child(filename))
+                    and not filename.endswith(".py")):
+                resultfiles.append(filename)
+
         if resultfiles:
+            # Sort our results so that tests pass regardless of the underlying
+            # filesystem's file order.
+            resultfiles.sort()
             result.append((relativeTo(parent, directory),
                            [relativeTo(parent,
                                        os.path.join(directory, filename))
                             for filename in resultfiles]))
     return result
+
+
 
 def getPackages(dname, pkgname=None, results=None, ignore=None, parent=None):
     """
@@ -251,21 +251,8 @@ def getScripts(projname, basedir=''):
                   [os.path.join(scriptdir, x) for x in thingies])
 
 
+
 ## Helpers and distutil tweaks
-
-class build_py_twisted(build_py.build_py):
-    """
-    Changes behavior in Python 2.2 to support simultaneous specification of
-    `packages' and `py_modules'.
-    """
-    def run(self):
-        if self.py_modules:
-            self.build_modules()
-        if self.packages:
-            self.build_packages()
-        self.byte_compile(self.get_outputs(include_bytecode=0))
-
-
 
 class build_scripts_twisted(build_scripts.build_scripts):
     """Renames scripts so they end with '.py' on Windows."""
@@ -359,3 +346,34 @@ class build_ext_twisted(build_ext.build_ext):
         self.compiler.announce("checking for %s ..." % header_name, 0)
         return self._compile_helper("#include <%s>\n" % header_name)
 
+
+class _SDistTwisted(sdist.sdist):
+    """
+    Build a Twisted source distribution like the official release scripts do.
+    """
+
+    def get_file_list(self):
+        """
+        Overridden to do nothing.
+
+        Twisted does not use a MANIFEST file.
+        """
+
+    def make_release_tree(self, basedir, _):
+        """
+        Overridden to call the official release scripts' functionality.
+
+        Builds a Twisted source distribution in the given directory.
+        """
+        if 'twisted' not in os.listdir('.'):
+            raise RuntimeError("Sorry, you need to run setup.py from the "
+                               "toplevel source directory.")
+
+        rootDirectory = FilePath(".")
+        outputDirectory = FilePath(".")
+        version = self.distribution.get_version()
+        builder = DistributionBuilder(rootDirectory, outputDirectory,
+                apiBaseURL=makeAPIBaseURL(version))
+        builder.buildTwistedFiles(version, basedir)
+
+        self.distribution.metadata.write_pkg_info(basedir)

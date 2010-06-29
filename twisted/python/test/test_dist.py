@@ -13,7 +13,9 @@ from distutils.core import Distribution
 from twisted.trial.unittest import TestCase
 
 from twisted.python import dist
-from twisted.python.dist import get_setup_args, ConditionalExtension
+from twisted.python.dist import (get_setup_args, ConditionalExtension,
+                                 install_data_twisted, build_scripts_twisted,
+                                 getDataFiles)
 from twisted.python.filepath import FilePath
 
 
@@ -25,7 +27,7 @@ class SetupTest(TestCase):
         """
         Passing C{conditionalExtensions} as a list of L{ConditionalExtension}
         objects to get_setup_args inserts a custom build_ext into the result
-        which knows how to check whether they should be 
+        which knows how to check whether they should be.
         """
         good_ext = ConditionalExtension("whatever", ["whatever.c"],
                                         condition=lambda b: True)
@@ -53,6 +55,41 @@ class SetupTest(TestCase):
         self.patch(os, "name", "nt")
         builder.prepare_extensions()
         self.assertEquals(ext.define_macros, [("whatever", 2), ("WIN32", 1)])
+
+
+    def test_defaultCmdClasses(self):
+        """
+        get_setup_args supplies default values for the cmdclass keyword.
+        """
+        args = get_setup_args()
+        self.assertIn('cmdclass', args)
+        cmdclass = args['cmdclass']
+        self.assertIn('install_data', cmdclass)
+        self.assertEquals(cmdclass['install_data'], install_data_twisted)
+        self.assertIn('build_scripts', cmdclass)
+        self.assertEquals(cmdclass['build_scripts'], build_scripts_twisted)
+
+
+    def test_settingCmdClasses(self):
+        """
+        get_setup_args allows new cmdclasses to be added.
+        """
+        args = get_setup_args(cmdclass={'foo': 'bar'})
+        self.assertEquals(args['cmdclass']['foo'], 'bar')
+
+
+    def test_overridingCmdClasses(self):
+        """
+        get_setup_args allows choosing which defaults to override.
+        """
+        args = get_setup_args(cmdclass={'install_data': 'baz'})
+
+        # Overridden cmdclass should be overridden
+        self.assertEquals(args['cmdclass']['install_data'], 'baz')
+
+        # Non-overridden cmdclasses should still be set to defaults.
+        self.assertEquals(args['cmdclass']['build_scripts'],
+                          build_scripts_twisted)
 
 
 
@@ -171,3 +208,165 @@ class GetScriptsTest(TestCase):
         os.mkdir(basedir)
         scripts = dist.getScripts('noscripts', basedir=basedir)
         self.assertEquals(scripts, [])
+
+
+
+class GetDataFilesTests(TestCase):
+    """
+    Tests for L{getDataFiles}.
+    """
+
+    def _makeBaseDir(self):
+        """
+        Make a directory for getDataFiles to search.
+        """
+        rawBaseDir = os.path.join(".", self.mktemp())
+        baseDir = FilePath(rawBaseDir)
+        baseDir.makedirs()
+
+        return rawBaseDir, baseDir
+
+
+    def test_basicOperation(self):
+        """
+        L{getDataFiles} finds a single data file in a given directory.
+        """
+        # The directory where we'll put our data file.
+        rawBaseDir, baseDir = self._makeBaseDir()
+
+        # A data file to be found.
+        baseDir.child("foo.txt").touch()
+
+        results = getDataFiles(baseDir.path)
+        self.assertEquals(
+            results,
+            [(rawBaseDir, [os.path.join(rawBaseDir, "foo.txt")])])
+
+
+    def test_directoryRecursion(self):
+        """
+        L{getDataFiles} searches for data files inside subdirectories.
+        """
+        rawBaseDir, baseDir = self._makeBaseDir()
+
+        subDir = baseDir.child("foo")
+        subDir.makedirs()
+
+        subDir.child("bar.txt").touch()
+
+        subSubDir = subDir.child("baz")
+        subSubDir.makedirs()
+
+        subSubDir.child("qux.txt").touch()
+
+        results = getDataFiles(baseDir.path)
+        self.assertEquals(
+            results,
+            [(os.path.join(rawBaseDir, "foo"),
+              [os.path.join(rawBaseDir, "foo", "bar.txt")]),
+             (os.path.join(rawBaseDir, "foo", "baz"),
+              [os.path.join(rawBaseDir, "foo", "baz", "qux.txt")])])
+
+
+    def test_ignoreVCSMetadata(self):
+        """
+        L{getDataFiles} ignores Subversion metadata files.
+        """
+        rawBaseDir, baseDir = self._makeBaseDir()
+
+        # Top-level directory contains a VCS dir, containing ignorable data.
+        vcsDir = baseDir.child(".svn")
+        vcsDir.makedirs()
+        vcsDir.child("data.txt").touch()
+
+        # Subdirectory contains a valid data file.
+        subDir = baseDir.child("foo")
+        subDir.makedirs()
+        subDir.child("bar.txt").touch()
+
+        # Subdirectory contains another VCS dir, with more ignorable data.
+        subVcsDir = subDir.child("_darcs")
+        subVcsDir.makedirs()
+        subVcsDir.child("data.txt").touch()
+
+        # Subdirectory contains an ignorable VCS file.
+        subDir.child(".cvsignore").touch()
+
+        results = getDataFiles(baseDir.path)
+        self.assertEquals(
+            results,
+            [(os.path.join(rawBaseDir, "foo"),
+              [os.path.join(rawBaseDir, "foo", "bar.txt")])])
+
+
+    def test_ignoreArbitrarySubdirectories(self):
+        """
+        L{getDataFiles} ignores any filenames it's asked to ignore.
+        """
+        rawBaseDir, baseDir = self._makeBaseDir()
+
+        subDir = baseDir.child("foo")
+        subDir.makedirs()
+
+        # Make an ordinary subdirectory with some data files.
+        subDir.child("bar.txt").touch()
+        subDir.child("ignorable").touch() # not a dir, won't be ignored
+
+        # Make a subdirectory with an ignorable name, and some data files.
+        ignorableSubDir = baseDir.child("ignorable")
+        ignorableSubDir.makedirs()
+        ignorableSubDir.child("bar.txt").touch()
+
+        results = getDataFiles(baseDir.path, ignore=["ignorable"])
+        self.assertEquals(
+            results,
+            [(os.path.join(rawBaseDir, "foo"),
+              [os.path.join(rawBaseDir, "foo", "bar.txt"),
+               os.path.join(rawBaseDir, "foo", "ignorable")])])
+
+
+    def test_ignoreNonDataFiles(self):
+        """
+        L{getDataFiles} ignores Python code, backup files and bytecode.
+        """
+        rawBaseDir, baseDir = self._makeBaseDir()
+
+        # All these are not data files, and should be ignored.
+        baseDir.child("module.py").touch()
+        baseDir.child("module.pyc").touch()
+        baseDir.child("module.pyo").touch()
+
+        subDir = baseDir.child("foo")
+        subDir.makedirs()
+
+        subDir.child("bar.txt").touch()
+
+        # An editor-made backup of bar.txt should be ignored.
+        subDir.child("bar.txt~").touch()
+
+        results = getDataFiles(baseDir.path)
+        self.assertEquals(
+            results,
+            [(os.path.join(rawBaseDir, "foo"),
+              [os.path.join(rawBaseDir, "foo", "bar.txt")])])
+
+
+    def test_pathsRelativeToParent(self):
+        """
+        L{getDataFiles} returns paths relative to the parent parameter.
+        """
+        rawBaseDir, baseDir = self._makeBaseDir()
+
+        # munge rawBaseDir in a way that we can recognise later.
+        mungedBaseDir = os.path.join(rawBaseDir, "foo/../")
+
+        subDir = baseDir.child("foo")
+        subDir.makedirs()
+
+        subDir.child("bar.txt").touch()
+
+        results = getDataFiles(subDir.path, parent=mungedBaseDir)
+        self.assertEquals(
+            results,
+            [(os.path.join(mungedBaseDir, "foo"),
+              [os.path.join(mungedBaseDir, "foo", "bar.txt")])])
