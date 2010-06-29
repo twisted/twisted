@@ -1,6 +1,5 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 """
 Serial port support for Windows.
@@ -10,34 +9,34 @@ reactor.
 """
 
 # system imports
-import os
-import serial
-from serial import PARITY_NONE, PARITY_EVEN, PARITY_ODD
-from serial import STOPBITS_ONE, STOPBITS_TWO
-from serial import FIVEBITS, SIXBITS, SEVENBITS, EIGHTBITS
+from serial import PARITY_NONE, STOPBITS_ONE, EIGHTBITS, Serial
 import win32file, win32event
 
 # twisted imports
-from twisted.protocols import basic
 from twisted.internet import abstract
-from twisted.python import log
+from twisted.internet.interfaces import IReactorWin32Events
 
 # sibling imports
-from serialport import BaseSerialPort
+from twisted.internet.serialport import BaseSerialPort
 
 
 class SerialPort(BaseSerialPort, abstract.FileDescriptor):
-    """A select()able serial device, acting as a transport."""
+    """
+    A select()able serial device, acting as a transport.
+    """
 
     connected = 1
 
-    def __init__(self, protocol, deviceNameOrPortNumber, reactor, 
-        baudrate = 9600, bytesize = EIGHTBITS, parity = PARITY_NONE,
-        stopbits = STOPBITS_ONE, xonxoff = 0, rtscts = 0):
-        self._serial = serial.Serial(deviceNameOrPortNumber, baudrate=baudrate,
-                                     bytesize=bytesize, parity=parity,
-                                     stopbits=stopbits, timeout=None,
-                                     xonxoff=xonxoff, rtscts=rtscts)
+    def __init__(self, protocol, deviceNameOrPortNumber, reactor,
+        baudrate=9600, bytesize=EIGHTBITS, parity=PARITY_NONE,
+        stopbits=STOPBITS_ONE, xonxoff=0, rtscts=0):
+        BaseSerialPort.__init__(
+            self, deviceNameOrPortNumber,
+            baudrate=baudrate, bytesize=bytesize,
+            parity=parity, stopbits=stopbits,
+            timeout=None, xonxoff=xonxoff,
+            rtscts=rtscts)
+
         self.flushInput()
         self.flushOutput()
         self.reactor = reactor
@@ -46,13 +45,13 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
         self.closed = 0
         self.closedNotifies = 0
         self.writeInProgress = 0
-        
+
         self.protocol = protocol
         self._overlappedRead = win32file.OVERLAPPED()
         self._overlappedRead.hEvent = win32event.CreateEvent(None, 1, 0, None)
         self._overlappedWrite = win32file.OVERLAPPED()
         self._overlappedWrite.hEvent = win32event.CreateEvent(None, 0, 0, None)
-        
+
         self.reactor.addEvent(self._overlappedRead.hEvent, self, 'serialReadEvent')
         self.reactor.addEvent(self._overlappedWrite.hEvent, self, 'serialWriteEvent')
 
@@ -104,7 +103,7 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
             return
         else:
             win32file.WriteFile(self._serial.hComPort, dataToWrite, self._overlappedWrite)
-    
+
     def connectionLost(self, reason):
         self.reactor.removeEvent(self._overlappedRead.hEvent)
         self.reactor.removeEvent(self._overlappedWrite.hEvent)
