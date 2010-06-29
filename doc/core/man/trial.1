@@ -44,7 +44,14 @@ that call sys.settrace() themselves are likely to break trial's coverage
 functionality.
 .TP
 \fB--disablegc\fR
-Disable the garbage collector.  I don't know why this is in trial.
+Disable the garbage collector for the duration of the test run. As each test is
+run, trial saves the TestResult objects, which means that Python's garbage
+collector has more non-garbage objects to wade through, making each
+garbage-collection run slightly slower. Disabling garbage collection entirely
+will make some test suites complete faster (contrast --force-gc, below), at the
+cost of increasing (possibly greatly) memory consumption. This option also makes
+tests slightly more deterministic, which might help debugging in extreme
+circumstances.
 .TP
 \fB-x\fR, \fB--extra\fR
 Add an extra argument. (This is a hack necessary for interfacing with emacs's
@@ -62,10 +69,13 @@ the default, except it makes tests run about ten times slower.
 Print a usage message to standard output, then exit.
 .TP
 \fB--help-reporters\fR
-Print a list of valid reporters to standard output, then exit.
+Print a list of valid reporters to standard output, then exit. Reporters can
+be selected with the --reporter option described below.
 .TP
 \fB--help-reactors\fR
-List the names of possibly available reactors.
+Print a list of possible reactors to standard output, then exit. Not all listed
+reactors are available on every platform. Reactors can be selected with the
+--reactor option described below.
 .TP
 \fB-l\fR, \fB--logfile\fR \fIlogfile\fR
 Direct the log to a different file. The default file is `test.log'.
@@ -92,7 +102,7 @@ Choose which reactor to use.  See --help-reactors for a list.
 Set Python's recursion limit. See sys.setrecursionlimit()
 .TP
 \fB--reporter\fR
-Select the reporter to use for Trial's output.  Use the --help-reporters
+Select the reporter to use for trial's output.  Use the --help-reporters
 option to see a list of valid reporters.
 .TP
 \fB--spew\fR
