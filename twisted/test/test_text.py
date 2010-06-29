@@ -1,5 +1,5 @@
 
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -7,6 +7,7 @@ from twisted.trial import unittest
 from twisted.python import text
 import string
 from cStringIO import StringIO
+
 
 sampleText = \
 """Every attempt to employ mathematical methods in the study of chemical
@@ -152,5 +153,26 @@ class StrFileTest(unittest.TestCase):
     def test_insensitive(self):
         self.assertEquals(True, text.strFile("ThIs is A test STRING", self.io, False))
 
-testCases = [WrapTest, SplitTest, StrFileTest]
 
+
+class DeprecationTest(unittest.TestCase):
+    """
+    Tests for deprecations in L{twisted.python.text}
+    """
+
+    def test_docstringLStrip(self):
+        """
+        L{docstringLStrip} is deprecated as of 10.2.0
+        """
+        text.docstringLStrip("")
+        warningsShown = self.flushWarnings([self.test_docstringLStrip])
+        self.assertEquals(1, len(warningsShown))
+        self.assertIdentical(warningsShown[0]['category'], DeprecationWarning)
+        self.assertEquals(warningsShown[0]['message'],
+                          "twisted.python.text.docstringLStrip was "
+                          "deprecated in Twisted 10.2.0: Please use "
+                          "inspect.getdoc instead.")
+
+
+
+testCases = [WrapTest, SplitTest, StrFileTest]

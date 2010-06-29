@@ -1,16 +1,21 @@
 # -*- test-case-name: twisted.test.test_text -*-
 #
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
-"""Miscellany of text-munging functions.
+"""
+Miscellany of text-munging functions.
 """
 
 import string, types
 
+from twisted.python import deprecate, versions
+
+
 def stringyString(object, indentation=''):
-    """Expansive string formatting for sequence types.
+    """
+    Expansive string formatting for sequence types.
 
     list.__str__ and dict.__str__ use repr() to display their
     elements.  This function also turns these sequence types
@@ -70,8 +75,18 @@ def endsInNewline(s):
     """Returns True if this string ends in a newline."""
     return (s[-len('\n'):] == '\n')
 
+
+
+deprecate.deprecatedModuleAttribute(
+    versions.Version("Twisted", 10, 2, 0),
+    "Please use inspect.getdoc instead.",
+    __name__, "docstringLStrip")
+
+
+
 def docstringLStrip(docstring):
-    """Gets rid of unsightly lefthand docstring whitespace residue.
+    """
+    Gets rid of unsightly lefthand docstring whitespace residue.
 
     You'd think someone would have done this already, but apparently
     not in 1.5.2.
