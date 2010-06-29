@@ -9,12 +9,11 @@ reactor.
 """
 
 # system imports
-from serial import PARITY_NONE, STOPBITS_ONE, EIGHTBITS, Serial
+from serial import PARITY_NONE, STOPBITS_ONE, EIGHTBITS
 import win32file, win32event
 
 # twisted imports
 from twisted.internet import abstract
-from twisted.internet.interfaces import IReactorWin32Events
 
 # sibling imports
 from twisted.internet.serialport import BaseSerialPort
