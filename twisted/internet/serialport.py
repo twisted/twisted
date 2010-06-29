@@ -4,6 +4,15 @@
 
 """
 Serial Port Protocol
+
+pySerial is required for all platforms: http://pyserial.sourceforge.net/
+
+Windows requires the use of a reactor that supports
+L{twisted.internet.interfaces.IReactorWin32Events}
+e.g. L{twisted.internet.win32eventreactor}
+
+pywin32 (previously win32all) is also required for Windows:
+http://sourceforge.net/projects/pywin32/
 """
 
 # http://twistedmatrix.com/trac/ticket/3725#comment:24
@@ -63,7 +72,57 @@ class BaseSerialPort:
         self._serial.setRTS(on)
 
 class SerialPort(BaseSerialPort):
-    pass
+    """
+    Initialize the SerialPort
+    Serial parameters are passed through to the underlying 
+    pyserial Serial constructor
+    
+    @param protocol: Protocol to use with the serial transport
+    @type protocol: type which implements L{IProtocol}
+    
+    @param deviceNameOrPortNumber: OS-specific device name or number. e.g.
+                                   device number, starting at zero
+                                   '/dev/ttyUSB0' on GNU/Linux
+                                   'COM3' on Windows
+    @type deviceNameOrPortNumber: C{str} or C{int}
+    
+    @param reactor: The reactor to use. On Windows, must implement 
+                   L{twisted.internet.interfaces.IReactorWin32Events}
+                   e.g. L{twisted.internet.win32eventreactor}
+    @type reactor: type which implements L{IReactor}.
+
+    @param baudrate: baudrate
+    @type baudrate: C{int}
+    
+    @param bytesize: number of databits
+    @type bytesize: C{int}
+    
+    @param parity: enable parity checking
+    @type parity: C{str}
+    
+    @param stopbits: number of stopbits
+    @type stopbits: C{int}
+    
+    @param timeout: set a read timeout value (not implemented on win32)
+    @type timeout: C{int} or C{float}
+    
+    @param xonxoff: enable software flow control (0/1)
+    @type xonxoff: C{int}
+    
+    @param rtscts: enable RTS/CTS flow control (0/1)
+    @type rtscts: C{int}
+    
+    @raise ValueError: On Windows, if the reactor does not support 
+                       L{twisted.internet.interfaces.IReactorWin32Events}
+                       e.g. L{twisted.internet.win32eventreactor}
+
+    @raise ValueError: Will be raised when serial parameters are out of range,
+                       e.g baudrate, bytesize, etc.
+
+    @raise SerialException: In case the device can not be found or 
+                            can not be configured
+    """
+
 
 # replace SerialPort with appropriate serial port
 if os.name == 'posix':

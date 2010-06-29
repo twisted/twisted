@@ -1,0 +1,1 @@
+twisted.internet.serialport will now check for IReactorWin32Events on Windows and fail with a more understandable exception if the reactor is found not to implement it.

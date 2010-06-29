@@ -1,11 +1,17 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
 """
 A win32event based implementation of the Twisted main loop.
 
-This requires win32all or ActivePython to be installed.
+This requires pywin32 (formerly win32all) or ActivePython to be installed.
+
+To install the event loop (and you should do this before any connections,
+listeners or connectors are added)::
+
+    from twisted.internet import win32eventreactor
+    win32eventreactor.install()
 
 Maintainer: Itamar Shtull-Trauring
 
@@ -58,6 +64,7 @@ import win32gui
 from twisted.internet import posixbase
 from twisted.python import log, threadable, failure
 from twisted.internet.interfaces import IReactorFDSet, IReactorProcess
+from twisted.internet.interfaces import IReactorWin32Events
 
 from twisted.internet._dumbwin32proc import Process
 
@@ -76,7 +83,7 @@ class Win32Reactor(posixbase.PosixReactorBase):
     @ivar _events: A dictionary mapping win32 event object to tuples of
         L{FileDescriptor} instances and event masks.
     """
-    implements(IReactorFDSet, IReactorProcess)
+    implements(IReactorFDSet, IReactorProcess, IReactorWin32Events)
 
     dummyEvent = CreateEvent(None, 0, 0, None)
 
