@@ -643,9 +643,8 @@ from twisted.web import vhost
 resource = vhost.VHostMonsterResource()
 </pre>
 
-<p>Of course, an equivalent <code>.trp</code> can also be used. Make sure
-the web server is configured with the correct processors for the
-<code>rpy</code> or <code>trp</code> extensions (the web server
+<p>Make sure the web server is configured with the correct processors for the
+<code>rpy</code> extensions (the web server
 <code>twistd web --path</code> generates by default is so configured).</p>
 
 <p>From the Apache side, instead of using the following ProxyPass directive:</p>

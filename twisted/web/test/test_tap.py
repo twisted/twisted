@@ -1,11 +1,11 @@
-# Copyright (c) 2008 Twisted Matrix Laboratories.
+# Copyright (c) 2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
 Tests for L{twisted.web.tap}.
 """
 
-import os, stat, pickle
+import os, stat
 
 from twisted.python.usage import UsageError
 from twisted.python.filepath import FilePath
@@ -114,41 +114,6 @@ class ServiceTests(TestCase):
         self.assertIsInstance(child, Data)
         self.assertEqual(child.data, 'content')
         self.assertEqual(child.type, 'major/minor')
-
-
-    def test_trpProcessor(self):
-        """
-        The I{--path} option creates a root resource which serves the
-        pickled resource out of any child with the C{".rpy"} extension.
-        """
-        path, root = self._pathOption()
-        path.child("foo.trp").setContent(pickle.dumps(Data("foo", "bar")))
-        child = root.getChild("foo.trp", None)
-        self.assertIsInstance(child, Data)
-        self.assertEqual(child.data, 'foo')
-        self.assertEqual(child.type, 'bar')
-
-        warnings = self.flushWarnings()
-
-        # If the trp module hadn't been imported before this test ran, there
-        # will be two deprecation warnings; one for the module, one for the
-        # function.  If the module has already been imported, the
-        # module-scope deprecation won't be emitted again.
-        if len(warnings) == 2:
-            self.assertEqual(warnings[0]['category'], DeprecationWarning)
-            self.assertEqual(
-                warnings[0]['message'],
-                "twisted.web.trp is deprecated as of Twisted 9.0.  Resource "
-                "persistence is beyond the scope of Twisted Web.")
-            warning = warnings[1]
-        else:
-            warning = warnings[0]
-
-        self.assertEqual(warning['category'], DeprecationWarning)
-        self.assertEqual(
-            warning['message'],
-            "twisted.web.trp.ResourceUnpickler is deprecated as of Twisted "
-            "9.0.  Resource persistence is beyond the scope of Twisted Web.")
 
 
     def test_makePersonalServerFactory(self):

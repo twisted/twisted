@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -7,7 +7,7 @@ I deal with static resources.
 """
 
 # System Imports
-import os, time, stat
+import os, time
 import tempfile
 
 # Sibling Imports
@@ -187,7 +187,7 @@ class File(StaticRenderMixin):
 
     processors = {}
 
-    indexNames = ["index", "index.html", "index.htm", "index.trp", "index.rpy"]
+    indexNames = ["index", "index.html", "index.htm", "index.rpy"]
 
     type = None
 
@@ -590,7 +590,6 @@ def getTypeAndEncoding(filename, types, encodings, defaultType):
 if __name__ == '__builtin__':
     # Running from twistd -y
     from twisted.application import service, strports
-    from twisted.web2 import server
     res = File('/')
     application = service.Application("demo")
     s = strports.service('8080', server.Site(res))

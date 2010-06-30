@@ -309,22 +309,6 @@ class StaticFileTests(TestCase):
         return d
 
 
-    def test_createPickleChild(self):
-        """
-        L{static.File.createPickleChild} is deprecated.
-        """
-        path = FilePath(self.mktemp())
-        path.makedirs()
-        static.File(path.path).createPickleChild("foo", None)
-        warnings = self.flushWarnings([self.test_createPickleChild])
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
-        self.assertEqual(
-            warnings[0]['message'],
-            "File.createPickleChild is deprecated since Twisted 9.0.  "
-            "Resource persistence is beyond the scope of Twisted Web.")
-        self.assertEqual(len(warnings), 1)
-
-
 
 class StaticMakeProducerTests(TestCase):
     """

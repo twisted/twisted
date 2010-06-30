@@ -178,7 +178,7 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
 
     processors = {}
 
-    indexNames = ["index", "index.html", "index.htm", "index.trp", "index.rpy"]
+    indexNames = ["index", "index.html", "index.htm", "index.rpy"]
 
     type = None
 
@@ -648,28 +648,6 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
 
     def listEntities(self):
         return map(lambda fileName, self=self: self.createSimilarFile(os.path.join(self.path, fileName)), self.listNames())
-
-
-    def createPickleChild(self, name, child):
-        warnings.warn(
-            "File.createPickleChild is deprecated since Twisted 9.0.  "
-            "Resource persistence is beyond the scope of Twisted Web.",
-            DeprecationWarning, stacklevel=2)
-
-        if not os.path.isdir(self.path):
-            resource.Resource.putChild(self, name, child)
-        # xxx use a file-extension-to-save-function dictionary instead
-        if type(child) == type(""):
-            fl = open(os.path.join(self.path, name), 'wb')
-            fl.write(child)
-        else:
-            if '.' not in name:
-                name = name + '.trp'
-            fl = open(os.path.join(self.path, name), 'wb')
-            from pickle import Pickler
-            pk = Pickler(fl)
-            pk.dump(child)
-        fl.close()
 
 
     def createSimilarFile(self, path):

@@ -79,12 +79,6 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         php3, epy, or rpy files or any other files that you want to be served
         up raw.
         """
-        def trp(*args, **kwargs):
-            # Help avoid actually importing twisted.web.trp until it is really
-            # needed.  This avoids getting a deprecation warning if you're not
-            # using deprecated functionality.
-            from twisted.web import trp
-            return trp.ResourceUnpickler(*args, **kwargs)
 
         def php3(*args, **kwargs):
             # Help avoid actually importing twisted.web.twcgi.PHP3Script until
@@ -107,7 +101,6 @@ demo webserver that has the Test class from twisted.web.demo in it."""
             '.php': php,
             '.epy': script.PythonScript,
             '.rpy': script.ResourceScript,
-            '.trp': trp,
             }
 
 

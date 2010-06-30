@@ -1,5 +1,4 @@
-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -10,7 +9,7 @@
 # be transmitted to the client.
 
 from twisted.internet import reactor
-from twisted.web import static, server, vhost, twcgi, script, trp
+from twisted.web import static, server, vhost, twcgi, script
 
 root = static.File("static")
 root.processors = {
@@ -19,7 +18,6 @@ root.processors = {
             '.php': twcgi.PHPScript,
             '.epy': script.PythonScript,
             '.rpy': script.ResourceScript,
-            '.trp': trp.ResourceUnpickler,
 }
 root.putChild('vhost', vhost.VHostMonsterResource())
 site = server.Site(root)
