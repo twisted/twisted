@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_tcp -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -71,7 +71,7 @@ else:
 from errno import errorcode
 
 # Twisted Imports
-from twisted.internet import defer, base, address, fdesc
+from twisted.internet import base, address, fdesc
 from twisted.internet.task import deferLater
 from twisted.python import log, failure, reflect
 from twisted.python.util import unsignedID
@@ -969,11 +969,18 @@ class Port(base.BasePort, _SocketCloser):
     stopListening = loseConnection
 
 
+    def _logConnectionLostMsg(self):
+        """
+        Log message for closing port
+        """
+        log.msg('(TCP Port %s Closed)' % (self._realPortNumber,))
+
+
     def connectionLost(self, reason):
         """
         Cleans up the socket.
         """
-        log.msg('(Port %s Closed)' % self._realPortNumber)
+        self._logConnectionLostMsg()
         self._realPortNumber = None
 
         base.BasePort.connectionLost(self, reason)

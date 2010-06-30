@@ -3,7 +3,8 @@
 # See LICENSE for details.
 
 
-"""Various asynchronous TCP/IP classes.
+"""
+Various asynchronous TCP/IP classes.
 
 End users shouldn't use this module directly - use the reactor APIs instead.
 
@@ -128,6 +129,14 @@ class Port(_UNIXPort, tcp.Port):
             self.fileno = self.socket.fileno
             self.numberAccepts = 100
             self.startReading()
+
+
+    def _logConnectionLostMsg(self):
+        """
+        Log message for closing socket
+        """
+        log.msg('(UNIX Port %s Closed)' % (repr(self.port),))
+
 
     def connectionLost(self, reason):
         if _inFilesystemNamespace(self.port):

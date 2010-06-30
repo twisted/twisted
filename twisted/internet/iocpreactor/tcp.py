@@ -1,4 +1,4 @@
-# Copyright (c) 2008-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2008-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -528,11 +528,18 @@ class Port(styles.Ephemeral, _SocketCloser):
     stopListening = loseConnection
 
 
+    def _logConnectionLostMsg(self):
+        """
+        Log message for closing port
+        """
+        log.msg('(TCP Port %s Closed)' % (self._realPortNumber,))
+
+
     def connectionLost(self, reason):
         """
         Cleans up the socket.
         """
-        log.msg('(Port %s Closed)' % self._realPortNumber)
+        self._logConnectionLostMsg()
         self._realPortNumber = None
         d = None
         if hasattr(self, "deferred"):

@@ -19,9 +19,13 @@ from zope.interface.verify import verifyObject
 from twisted.python.hashlib import md5
 from twisted.internet.interfaces import IConnector
 from twisted.internet.address import UNIXAddress
+from twisted.internet import interfaces
 from twisted.internet.protocol import (
     ServerFactory, ClientFactory, DatagramProtocol)
 from twisted.internet.test.reactormixins import ReactorBuilder
+from twisted.internet.test.test_tcp import TCPPortTestsBuilder
+from twisted.trial import unittest
+
 
 
 class UNIXFamilyMixin:
@@ -137,5 +141,28 @@ class UNIXDatagramTestsBuilder(UNIXFamilyMixin, ReactorBuilder):
 
 
 
+class UNIXPortTestsBuilder(TCPPortTestsBuilder):
+    """
+    Tests for L{IReactorUNIX.listenUnix}
+    """
+
+    requiredInterface = interfaces.IReactorUNIX
+
+    def getListeningPort(self, reactor):
+        """
+        Get a UNIX port from a reactor
+        """
+        return reactor.listenUNIX(self.mktemp(), ServerFactory())
+
+
+    def getExpectedConnectionLostLogMsg(self, port):
+        """
+        Get the expected connection lost message for a UNIX port
+        """
+        return "(UNIX Port %s Closed)" % (repr(port.port),)
+
+
+
 globals().update(UNIXTestsBuilder.makeTestCaseClasses())
 globals().update(UNIXDatagramTestsBuilder.makeTestCaseClasses())
+globals().update(UNIXPortTestsBuilder.makeTestCaseClasses())
