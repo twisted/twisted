@@ -102,11 +102,22 @@ class _Traceback(object):
 class _Frame(object):
     """
     A fake frame object, used by L{_Traceback}.
+
+    @ivar f_code: fake L{code<types.CodeType>} object
+    @ivar f_globals: fake f_globals dictionary (usually empty)
+    @ivar f_locals: fake f_locals dictionary (usually empty)
     """
 
     def __init__(self, name, filename):
+        """
+        @param name: method/function name for this frame.
+        @type name: C{str}
+        @param filename: filename for this frame.
+        @type name: C{str}
+        """
         self.f_code = _Code(name, filename)
         self.f_globals = {}
+        self.f_locals = {}
 
 
 class _Code(object):

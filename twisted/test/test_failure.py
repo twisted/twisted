@@ -1,6 +1,5 @@
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 """
 Test cases for failure module.
@@ -312,6 +311,25 @@ class TestFormattableTraceback(unittest.TestCase):
         self.assertEqual(traceback.extract_tb(tb),
                          [('filename.py', 123, 'method1', None),
                           ('filename.py', 235, 'method2', None)])
+
+
+
+class TestFrameAttributes(unittest.TestCase):
+    """
+    _Frame objects should possess some basic attributes that qualify them as
+    fake python Frame objects.
+    """
+
+    def test_fakeFrameAttributes(self):
+        """
+        L{_Frame} instances have the C{f_globals} and C{f_locals} attributes
+        bound to C{dict} instance.  They also have the C{f_code} attribute
+        bound to something like a code object.
+        """
+        frame = failure._Frame("dummyname", "dummyfilename")
+        self.assertIsInstance(frame.f_globals, dict)
+        self.assertIsInstance(frame.f_locals, dict)
+        self.assertIsInstance(frame.f_code, failure._Code)
 
 
 if sys.version_info[:2] >= (2, 5):
