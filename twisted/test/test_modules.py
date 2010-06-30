@@ -21,6 +21,11 @@ from twisted.python.reflect import namedAny
 from twisted.test.test_paths import zipit
 
 
+try:
+    import ast
+except ImportError:
+    ast = None
+
 
 class PySpaceTestCase(TestCase):
 
@@ -269,6 +274,30 @@ class BasicTests(PySpaceTestCase):
             sys.path.remove(mypath.path)
 
 
+sampleModuleContents = """
+import sys, os
+from twisted.python import reflect
+import twisted.python.filepath
+from twisted.python.components import registerAdapter
+
+foo = 123
+def doFoo():
+  import datetime
+class Foo: pass
+"""
+
+sampleModuleWithExportsContents = """
+import sys, os, datetime
+from twisted.python import reflect
+import twisted.python.filepath
+from twisted.python.components import registerAdapter
+
+foo = 123
+baz = 456
+__all__ = ['foo']
+"""
+
+
 
 class PathModificationTest(PySpaceTestCase):
     """
@@ -287,8 +316,8 @@ class PathModificationTest(PySpaceTestCase):
         self.packagePath = self.pathExtension.child(self.packageName)
         self.packagePath.createDirectory()
         self.packagePath.child("__init__.py").setContent("")
-        self.packagePath.child("a.py").setContent("")
-        self.packagePath.child("b.py").setContent("")
+        self.packagePath.child("a.py").setContent(sampleModuleContents)
+        self.packagePath.child("b.py").setContent(sampleModuleWithExportsContents)
         self.packagePath.child("c__init__.py").setContent("")
         self.pathSetUp = False
 
@@ -360,6 +389,71 @@ class PathModificationTest(PySpaceTestCase):
         self._setupSysPath()
         namedAny(self.packageName)
         self._listModules()
+
+
+
+    def test_moduleAttributes(self):
+        """
+        Module attributes can be iterated over without executing the code.
+        """
+        self._setupSysPath()
+        modinfo = modules.getModule(self.packageName+".a")
+        attrs = sorted(modinfo.iterAttributes(), key=lambda a: a.name)
+        names = sorted(["foo", "doFoo", "Foo"])
+        for attr, name in zip(attrs, names):
+            self.assertEqual(attr.onObject, modinfo)
+            self.assertFalse(attr.isLoaded())
+            self.assertEqual(attr.name, modinfo.name+'.'+name)
+            self.assertRaises(NotImplementedError, lambda: list(attr.iterAttributes()))
+
+
+    def test_moduleImportNames(self):
+        """
+        The fully qualified names imported by a module can be inspected.
+        """
+        self._setupSysPath()
+        modinfo = modules.getModule(self.packageName+".a")
+        self.assertEqual(sorted(modinfo.iterImportNames()),
+                         sorted(["sys", "os", "datetime",
+                                 "twisted.python.reflect",
+                                 "twisted.python.filepath",
+                                 "twisted.python.components.registerAdapter"]))
+
+
+    def test_moduleExportNames(self):
+        """
+        The names exported by a module can be inspected.
+        """
+        self._setupSysPath()
+        modinfo = modules.getModule(self.packageName+".a")
+        self.assertEqual(sorted(modinfo.iterExportNames()),
+                         sorted(["foo", "doFoo", "Foo"]))
+
+        modinfo = modules.getModule(self.packageName+".b")
+        self.assertEqual(sorted(modinfo.iterExportNames()),
+                         sorted(["foo"]))
+
+
+    def test_moduleExportProblems(self):
+        """
+        C{SyntaxError} is raised when doing inspection of module
+        exports if __all__ is not a single list of string literals.
+        """
+        self.packagePath.child("e.py").setContent("__all__ = ['a' + 'b']")
+        self.packagePath.child("e.py").setContent("__all__ = ['a']\n__all__ = ['a', 'b']")
+        self._setupSysPath()
+        modinfo1 = modules.getModule(self.packageName+".e")
+        modinfo2 = modules.getModule(self.packageName+".e")
+        self.assertRaises(SyntaxError, lambda: list(modinfo1.iterExportNames()))
+        self.assertRaises(SyntaxError, lambda: list(modinfo2.iterExportNames()))
+
+    if ast is None:
+        astMsg = ("Examining unloaded module attributes requires the 'ast'"
+                 " module from Python 2.6.")
+        test_moduleAttributes.skip = astMsg
+        test_moduleImportNames.skip = astMsg
+        test_moduleExportNames.skip = astMsg
+        test_moduleExportProblems.skip = astMsg
 
 
     def tearDown(self):
