@@ -4,8 +4,13 @@
 """
 Serial port support for Windows.
 
-Requires PySerial and win32all, and needs to be used with win32event
-reactor.
+Requires:
+pySerial - http://pyserial.sourceforge.net/
+pywin32 (previously win32all) - http://pywin32.sourceforge.net/
+
+Also, needs to be used with a reactor that implements
+L{twisted.internet.interfaces.IReactorWin32Events}
+e.g. L{twisted.internet.win32eventreactor} win32eventreactor.
 """
 
 # system imports
@@ -14,9 +19,8 @@ import win32file, win32event
 
 # twisted imports
 from twisted.internet import abstract
-
-# sibling imports
 from twisted.internet.serialport import BaseSerialPort
+
 
 
 class SerialPort(BaseSerialPort, abstract.FileDescriptor):
@@ -29,22 +33,19 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
     def __init__(self, protocol, deviceNameOrPortNumber, reactor,
         baudrate=9600, bytesize=EIGHTBITS, parity=PARITY_NONE,
         stopbits=STOPBITS_ONE, xonxoff=0, rtscts=0):
+
+        abstract.FileDescriptor.__init__(self, reactor)
         BaseSerialPort.__init__(
-            self, deviceNameOrPortNumber,
+            self, protocol, deviceNameOrPortNumber, reactor,
             baudrate=baudrate, bytesize=bytesize,
             parity=parity, stopbits=stopbits,
             xonxoff=xonxoff, rtscts=rtscts)
 
-        self.flushInput()
-        self.flushOutput()
-        self.reactor = reactor
-        self.protocol = protocol
         self.outQueue = []
         self.closed = 0
         self.closedNotifies = 0
         self.writeInProgress = 0
 
-        self.protocol = protocol
         self._overlappedRead = win32file.OVERLAPPED()
         self._overlappedRead.hEvent = win32event.CreateEvent(None, 1, 0, None)
         self._overlappedWrite = win32file.OVERLAPPED()

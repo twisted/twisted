@@ -3,18 +3,19 @@
 
 """
 Serial Port Protocol
+
+Requires:
+pySerial - http://pyserial.sourceforge.net/
 """
 
-# dependent on pyserial ( http://pyserial.sf.net/ )
 # only tested w/ 1.18 (5 Dec 2002)
-from serial import PARITY_NONE
-from serial import STOPBITS_ONE
-from serial import EIGHTBITS
-
-from serialport import BaseSerialPort
+from serial import PARITY_NONE, STOPBITS_ONE, EIGHTBITS
 
 # twisted imports
 from twisted.internet import abstract, fdesc
+from twisted.internet.serialport import BaseSerialPort
+
+
 
 class SerialPort(BaseSerialPort, abstract.FileDescriptor):
     """
@@ -23,21 +24,19 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
 
     connected = 1
 
-    def __init__(self, protocol, deviceNameOrPortNumber, reactor, 
+    def __init__(self, protocol, deviceNameOrPortNumber, reactor,
         baudrate=9600, bytesize=EIGHTBITS, parity=PARITY_NONE,
         stopbits=STOPBITS_ONE, timeout=None, xonxoff=0, rtscts=0):
+
         abstract.FileDescriptor.__init__(self, reactor)
         BaseSerialPort.__init__(
-                self, deviceNameOrPortNumber,
+                self, protocol, deviceNameOrPortNumber, reactor,
                 baudrate=baudrate, bytesize=bytesize,
                 parity=parity, stopbits=stopbits,
                 xonxoff=xonxoff, rtscts=rtscts)
-        self.reactor = reactor
-        self.flushInput()
-        self.flushOutput()
-        self.protocol = protocol
         self.protocol.makeConnection(self)
         self.startReading()
+
 
     def fileno(self):
         return self._serial.fd
