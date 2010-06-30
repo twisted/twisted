@@ -1,0 +1,1 @@
+twisted.python.randbytes no longer uses PyCrypto as a secure random number source (since it is not one).

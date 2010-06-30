@@ -1,19 +1,14 @@
-# Copyright (c) 2007 Twisted Matrix Laboratories.
+# Copyright (c) 2007-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
 Test cases for L{twisted.python.randbytes}.
 """
 
-import os, sys
+import os
 
 from twisted.trial import unittest
 from twisted.python import randbytes
-
-try:
-    from Crypto.Util import randpool
-except ImportError:
-    randpool = None
 
 
 
@@ -79,11 +74,7 @@ class ConditionalSecureRandomTestCase(SecureRandomTestCaseBase,
         L{RandomFactory._osUrandom} should work as a random source whenever
         L{os.urandom} is available.
         """
-        try:
-            self._check(self.factory._osUrandom)
-        except randbytes.SourceNotAvailable:
-            # Not available on Python 2.3
-            self.assertTrue(sys.version_info < (2, 4))
+        self._check(self.factory._osUrandom)
 
 
     def test_fileUrandom(self):
@@ -98,42 +89,6 @@ class ConditionalSecureRandomTestCase(SecureRandomTestCaseBase,
             self.assertFalse(os.path.exists('/dev/urandom'))
 
 
-    def test_cryptoRandom(self):
-        """
-        L{RandomFactory._cryptoRandom} should work as a random source whenever
-        L{PyCrypto} is installed.
-        """
-        try:
-            self._check(self.factory._cryptoRandom)
-        except randbytes.SourceNotAvailable:
-            # It fails if PyCrypto is not here
-            self.assertIdentical(randpool, None)
-
-
-    def test_withoutOsUrandom(self):
-        """
-        If L{os.urandom} is not available but L{PyCrypto} is,
-        L{RandomFactory.secureRandom} should still work as a random source.
-        """
-        self.factory._osUrandom = self.errorFactory
-        self._check(self.factory.secureRandom)
-
-    if randpool is None:
-        test_withoutOsUrandom.skip = "PyCrypto not available"
-
-
-    def test_withoutOsAndFileUrandom(self):
-        """
-        Remove C{os.urandom} and /dev/urandom read.
-        """
-        self.factory._osUrandom = self.errorFactory
-        self.factory._fileUrandom = self.errorFactory
-        self._check(self.factory.secureRandom)
-
-    if randpool is None:
-        test_withoutOsAndFileUrandom.skip = "PyCrypto not available"
-
-
     def test_withoutAnything(self):
         """
         Remove all secure sources and assert it raises a failure. Then try the
@@ -141,14 +96,13 @@ class ConditionalSecureRandomTestCase(SecureRandomTestCaseBase,
         """
         self.factory._osUrandom = self.errorFactory
         self.factory._fileUrandom = self.errorFactory
-        self.factory._cryptoRandom = self.errorFactory
         self.assertRaises(randbytes.SecureRandomNotAvailable,
                           self.factory.secureRandom, 18)
         def wrapper():
             return self.factory.secureRandom(18, fallback=True)
         s = self.assertWarns(
             RuntimeWarning,
-            "Neither PyCrypto nor urandom available - "
+            "urandom unavailable - "
             "proceeding with non-cryptographically secure random source",
             __file__,
             wrapper)

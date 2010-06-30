@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_randbytes -*-
-# Copyright (c) 2007 Twisted Matrix Laboratories.
+# Copyright (c) 2007-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -10,12 +10,6 @@ Cryptographically secure random implementation, with fallback on normal random.
 import warnings, os, random
 
 getrandbits = getattr(random, 'getrandbits', None)
-
-try:
-    from Crypto.Util import randpool
-except ImportError:
-    randpool = None
-
 
 
 class SecureRandomNotAvailable(RuntimeError):
@@ -40,15 +34,10 @@ class RandomFactory(object):
     functions instead: it is an implementation detail and could be removed or
     changed arbitrarily.
 
-    @ivar randomPool: pool of random data.
-    @type randomPool: C{randpool.RandomPool}
-
     @cvar randomSources: list of file sources used when os.urandom is not
         available.
     @type randomSources: C{tuple}
     """
-    randpool = randpool
-    randomPool = None
     randomSources = ('/dev/urandom',)
     getrandbits = getrandbits
 
@@ -83,18 +72,6 @@ class RandomFactory(object):
                                  (self.randomSources,))
 
 
-    def _cryptoRandom(self, nbytes):
-        """
-        Wrapper around Crypo random pool.
-        """
-        if self.randpool is not None:
-            if self.randomPool is None:
-                self.randomPool = self.randpool.RandomPool()
-                self.randomPool.stir()
-            return self.randomPool.get_bytes(nbytes)
-        raise SourceNotAvailable("PyCrypto isn't installed")
-
-
     def secureRandom(self, nbytes, fallback=False):
         """
         Return a number of secure random bytes.
@@ -108,18 +85,17 @@ class RandomFactory(object):
         @return: a string of random bytes.
         @rtype: C{str}
         """
-        for src in ("_osUrandom", "_fileUrandom", "_cryptoRandom"):
+        for src in ("_osUrandom", "_fileUrandom"):
             try:
                 return getattr(self, src)(nbytes)
             except SourceNotAvailable:
                 pass
         if fallback:
             warnings.warn(
-                "Neither PyCrypto nor urandom available - "
+                "urandom unavailable - "
                 "proceeding with non-cryptographically secure random source",
                 category=RuntimeWarning,
-                stacklevel=2
-            )
+                stacklevel=2)
             return self.insecureRandom(nbytes)
         else:
             raise SecureRandomNotAvailable("No secure random source available")
@@ -174,4 +150,3 @@ del factory
 
 
 __all__ = ["secureRandom", "insecureRandom", "SecureRandomNotAvailable"]
-
