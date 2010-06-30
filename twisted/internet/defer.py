@@ -187,7 +187,6 @@ class Deferred:
 
     called = 0
     paused = 0
-    timeoutCall = None
     _debugInfo = None
     _suppressAlreadyCalled = 0
 
@@ -414,13 +413,6 @@ class Deferred:
             self._debugInfo.invoker = traceback.format_stack()[:-2]
         self.called = True
         self.result = result
-        if self.timeoutCall:
-            try:
-                self.timeoutCall.cancel()
-            except:
-                pass
-
-            del self.timeoutCall
         self._runCallbacks()
 
 
@@ -465,32 +457,6 @@ class Deferred:
             if self._debugInfo is not None:
                 self._debugInfo.failResult = None
 
-
-    def setTimeout(self, seconds, timeoutFunc=timeout, *args, **kw):
-        """
-        Set a timeout function to be triggered if I am not called.
-
-        @param seconds: How long to wait (from now) before firing the
-        C{timeoutFunc}.
-
-        @param timeoutFunc: will receive the L{Deferred} and *args, **kw as its
-        arguments.  The default C{timeoutFunc} will call the errback with a
-        L{TimeoutError}.
-        """
-        warnings.warn(
-            "Deferred.setTimeout is deprecated.  Look for timeout "
-            "support specific to the API you are using instead.",
-            DeprecationWarning, stacklevel=2)
-
-        if self.called:
-            return
-        assert not self.timeoutCall, "Don't call setTimeout twice on the same Deferred."
-
-        from twisted.internet import reactor
-        self.timeoutCall = reactor.callLater(
-            seconds,
-            lambda: self.called or timeoutFunc(self, *args, **kw))
-        return self.timeoutCall
 
     def __str__(self):
         cname = self.__class__.__name__

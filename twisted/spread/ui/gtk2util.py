@@ -80,6 +80,8 @@ class LoginDialog(GladeKeeper):
 
     gladefile = util.sibpath(__file__, "login2.glade")
 
+    _timeoutID = None
+
     def __init__(self, client, deferred, defaults):
         self.client = client
         self.deferredResult = deferred
@@ -153,10 +155,12 @@ class LoginDialog(GladeKeeper):
         from twisted.internet import reactor
         reactor.connectTCP(idParams['host'], idParams['port'], f)
         creds = UsernamePassword(idParams['identityName'], idParams['password'])
-        f.login(creds, self.client
-            ).addCallbacks(self._cbGotPerspective, self._ebFailedLogin
-            ).setTimeout(30
-            )
+        d = f.login(creds, self.client)
+        def _timeoutLogin():
+            self._timeoutID = None
+            d.errback(failure.Failure(defer.TimeoutError("Login timed out.")))
+        self._timeoutID = reactor.callLater(30, _timeoutLogin)
+        d.addCallbacks(self._cbGotPerspective, self._ebFailedLogin)
         self.statusMsg("Contacting server...")
 
         # serviceName = self._serviceNameEntry.get_text()
@@ -171,6 +175,9 @@ class LoginDialog(GladeKeeper):
 
     def _cbGotPerspective(self, perspective):
         self.statusMsg("Connected to server.")
+        if self._timeoutID is not None:
+            self._timeoutID.cancel()
+            self._timeoutID = None
         self.deferredResult.callback(perspective)
         # clear waiting cursor
         self._loginDialog.destroy()

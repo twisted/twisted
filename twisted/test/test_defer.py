@@ -18,11 +18,6 @@ class GenericError(Exception):
     pass
 
 
-_setTimeoutSuppression = util.suppress(
-    message="Deferred.setTimeout is deprecated.  Look for timeout "
-            "support specific to the API you are using instead.",
-    category=DeprecationWarning)
-
 
 class DeferredTestCase(unittest.TestCase):
 
@@ -219,40 +214,12 @@ class DeferredTestCase(unittest.TestCase):
 
         d1.addErrback(lambda e: None)  # Swallow error
 
-    def testTimeOut(self):
-        """
-        Test that a Deferred which has setTimeout called on it and never has
-        C{callback} or C{errback} called on it eventually fails with a
-        L{error.TimeoutError}.
-        """
-        L = []
-        d = defer.Deferred()
-        d.setTimeout(0.01)
-        self.assertFailure(d, defer.TimeoutError)
-        d.addCallback(L.append)
-        self.failIf(L, "Deferred failed too soon.")
-        return d
-    testTimeOut.suppress = [_setTimeoutSuppression]
-
 
     def testImmediateSuccess(self):
         l = []
         d = defer.succeed("success")
         d.addCallback(l.append)
         self.assertEquals(l, ["success"])
-
-
-    def test_immediateSuccessBeforeTimeout(self):
-        """
-        Test that a synchronously successful Deferred is not affected by a
-        C{setTimeout} call.
-        """
-        l = []
-        d = defer.succeed("success")
-        d.setTimeout(1.0)
-        d.addCallback(l.append)
-        self.assertEquals(l, ["success"])
-    test_immediateSuccessBeforeTimeout.suppress = [_setTimeoutSuppression]
 
 
     def testImmediateFailure(self):
