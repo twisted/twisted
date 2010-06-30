@@ -1,0 +1,2 @@
+twisted.internet.test.reactormixins.ReactorBuilder's attribute `requiredInterface` (which should an interface)
+is now `requiredInterfaces` (a list of interfaces) as originally described per the documentation.

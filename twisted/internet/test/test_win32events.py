@@ -20,7 +20,7 @@ class Win32EventsTestsBuilder(ReactorBuilder):
     """
     Builder defining tests relating to L{IReactorWin32Events}.
     """
-    requiredInterface = IReactorWin32Events
+    requiredInterfaces = [IReactorWin32Events]
 
     def test_interface(self):
         """

@@ -22,7 +22,7 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
     """
     Builder defining tests relating to L{IReactorFDSet}.
     """
-    requiredInterface = IReactorFDSet
+    requiredInterfaces = [IReactorFDSet]
 
     def _connectedPair(self):
         """

@@ -24,7 +24,6 @@ from twisted.internet.protocol import (
     ServerFactory, ClientFactory, DatagramProtocol)
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.test.test_tcp import TCPPortTestsBuilder
-from twisted.trial import unittest
 
 
 
@@ -146,7 +145,7 @@ class UNIXPortTestsBuilder(TCPPortTestsBuilder):
     Tests for L{IReactorUNIX.listenUnix}
     """
 
-    requiredInterface = interfaces.IReactorUNIX
+    requiredInterfaces = [interfaces.IReactorUNIX]
 
     def getListeningPort(self, reactor):
         """

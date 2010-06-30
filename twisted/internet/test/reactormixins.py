@@ -54,7 +54,7 @@ class ReactorBuilder:
 
     reactorFactory = None
     originalHandler = None
-    requiredInterface = None
+    requiredInterfaces = None
     skippedReactors = {}
 
     def setUp(self):
@@ -130,12 +130,14 @@ class ReactorBuilder:
             self.flushLoggedErrors()
             raise SkipTest(Failure().getErrorMessage())
         else:
-            if self.requiredInterface is not None:
-                if not self.requiredInterface.providedBy(reactor):
+            if self.requiredInterfaces is not None:
+                missing = filter(
+                     lambda required: not required.providedBy(reactor),
+                     self.requiredInterfaces)
+                if missing:
                     self.unbuildReactor(reactor)
-                    raise SkipTest(
-                        "%r does not provide %r" % (
-                            reactor, self.requiredInterface))
+                    raise SkipTest("%r does not provide %s" % (
+                        reactor, ",".join([repr(x) for x in missing])))
         self.addCleanup(self.unbuildReactor, reactor)
         return reactor
 
