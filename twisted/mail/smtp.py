@@ -1,13 +1,12 @@
 # -*- test-case-name: twisted.mail.test.test_smtp -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
 Simple Mail Transfer Protocol implementation.
 """
 
-import time, re, base64, types, socket, os, random, hmac
-import MimeWriter, tempfile, rfc822
+import time, re, base64, types, socket, os, random, rfc822
 import warnings
 import binascii
 from email.base64MIME import encode as encode_base64
@@ -24,7 +23,6 @@ from twisted.internet import reactor
 from twisted.internet.interfaces import ITLSTransport
 from twisted.python import log
 from twisted.python import util
-from twisted.python import failure
 
 from twisted import cred
 import twisted.cred.checkers
@@ -1750,9 +1748,9 @@ class PLAINAuthenticator:
 
     def challengeResponse(self, secret, chal=1):
         if chal == 1:
-           return "%s\0%s\0%s" % (self.user, self.user, secret)
+            return "%s\0%s\0%s" % (self.user, self.user, secret)
         else:
-           return "%s\0%s" % (self.user, secret)
+            return "%s\0%s" % (self.user, secret)
 
 
 
@@ -1910,7 +1908,7 @@ def sendEmail(smtphost, fromEmail, toEmail, content, headers = None, attachments
                   "  Consider revising your code to use the email module\n"
                   "  and smtp.sendmail.",
                   category=DeprecationWarning, stacklevel=2)
-
+    import MimeWriter, tempfile
     f = tempfile.TemporaryFile()
     writer = MimeWriter.MimeWriter(f)
 
