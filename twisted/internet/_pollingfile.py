@@ -4,10 +4,16 @@
 
 """
 Implements a simple polling interface for file descriptors that don't work with
-select() - this is pretty much only useful on Windows.
+C{select()} - this is pretty much only useful on Windows.
 """
 
+import sys
 from zope.interface import implements
+
+import win32pipe
+import win32file
+import win32api
+import pywintypes
 
 from twisted.internet.interfaces import IConsumer, IPushProducer
 
@@ -17,7 +23,8 @@ MAX_TIMEOUT = 0.1
 
 
 
-class _PollableResource:
+class _PollableResource(object):
+
     active = True
 
     def activate(self):
@@ -29,7 +36,7 @@ class _PollableResource:
 
 
 
-class _PollingTimer:
+class _PollingTimer(object):
     # Everything is private here because it is really an implementation detail.
 
     def __init__(self, reactor):
@@ -98,51 +105,27 @@ class _PollingTimer:
 # If we ever (let's hope not) need the above functionality on UNIX, this could
 # be factored into a different module.
 
-import win32pipe
-import win32file
-import win32api
-import pywintypes
 
-class _PollableReadPipe(_PollableResource):
+class _PollableReader(_PollableResource):
 
     implements(IPushProducer)
 
-    def __init__(self, pipe, receivedCallback, lostCallback):
-        # security attributes for pipes
-        self.pipe = pipe
+    def __init__(self, handle, receivedCallback, lostCallback):
+        self.handle = handle
         self.receivedCallback = receivedCallback
         self.lostCallback = lostCallback
 
     def checkWork(self):
-        finished = 0
-        fullDataRead = []
-
-        while 1:
-            try:
-                buffer, bytesToRead, result = win32pipe.PeekNamedPipe(self.pipe, 1)
-                # finished = (result == -1)
-                if not bytesToRead:
-                    break
-                hr, data = win32file.ReadFile(self.pipe, bytesToRead, None)
-                fullDataRead.append(data)
-            except win32api.error:
-                finished = 1
-                break
-
-        dataBuf = ''.join(fullDataRead)
-        if dataBuf:
-            self.receivedCallback(dataBuf)
-        if finished:
-            self.cleanup()
-        return len(dataBuf)
+        raise NotImplementedError()
 
     def cleanup(self):
         self.deactivate()
         self.lostCallback()
 
     def close(self):
+        # XXX why not cleanup?
         try:
-            win32api.CloseHandle(self.pipe)
+            win32api.CloseHandle(self.handle)
         except pywintypes.error:
             # You can't close std handles...?
             pass
@@ -157,28 +140,20 @@ class _PollableReadPipe(_PollableResource):
         self.activate()
 
 
-FULL_BUFFER_SIZE = 64 * 1024
 
-class _PollableWritePipe(_PollableResource):
+class _PollableWriter(_PollableResource):
+    FULL_BUFFER_SIZE = 64 * 1024
 
     implements(IConsumer)
 
-    def __init__(self, writePipe, lostCallback):
+    def __init__(self, handle, lostCallback):
         self.disconnecting = False
         self.producer = None
         self.producerPaused = 0
         self.streamingProducer = 0
         self.outQueue = []
-        self.writePipe = writePipe
+        self.handle = handle
         self.lostCallback = lostCallback
-        try:
-            win32pipe.SetNamedPipeHandleState(writePipe,
-                                              win32pipe.PIPE_NOWAIT,
-                                              None,
-                                              None)
-        except pywintypes.error:
-            # Maybe it's an invalid handle.  Who knows.
-            pass
 
     def close(self):
         self.disconnecting = True
@@ -228,7 +203,7 @@ class _PollableWritePipe(_PollableResource):
     def writeConnectionLost(self):
         self.deactivate()
         try:
-            win32api.CloseHandle(self.writePipe)
+            win32api.CloseHandle(self.handle)
         except pywintypes.error:
             # OMG what
             pass
@@ -241,8 +216,56 @@ class _PollableWritePipe(_PollableResource):
         if self.disconnecting:
             return
         self.outQueue.append(data)
-        if sum(map(len, self.outQueue)) > FULL_BUFFER_SIZE:
+        if sum(map(len, self.outQueue)) > self.FULL_BUFFER_SIZE:
             self.bufferFull()
+
+    def checkWork(self):
+        raise NotImplementedError()
+
+
+
+class _PollableReadPipe(_PollableReader):
+    def __init__(self, pipe, receivedCallback, lostCallback):
+        _PollableReader.__init__(self, pipe, receivedCallback, lostCallback)
+        # security attributes for pipes
+
+    def checkWork(self):
+        finished = 0
+        fullDataRead = []
+
+        while 1:
+            try:
+                buffer, bytesToRead, result = win32pipe.PeekNamedPipe(self.handle, 1)
+                if not bytesToRead:
+                    break
+                hr, data = win32file.ReadFile(self.handle, bytesToRead, None)
+                fullDataRead.append(data)
+            except win32api.error:
+                finished = 1
+                break
+
+        dataBuf = ''.join(fullDataRead)
+        if dataBuf:
+            self.receivedCallback(dataBuf)
+        if finished:
+            self.cleanup()
+        return len(dataBuf)
+
+
+
+class _PollableWritePipe(_PollableWriter):
+    def __init__(self, writePipe, lostCallback):
+        _PollableWriter.__init__(self, writePipe, lostCallback)
+
+        try:
+            win32pipe.SetNamedPipeHandleState(writePipe,
+                                              win32pipe.PIPE_NOWAIT,
+                                              None,
+                                              None)
+        except pywintypes.error:
+            # Maybe it's an invalid handle.  Who knows.
+            pass
+
 
     def checkWork(self):
         numBytesWritten = 0
@@ -251,7 +274,7 @@ class _PollableWritePipe(_PollableResource):
                 self.writeConnectionLost()
                 return 0
             try:
-                win32file.WriteFile(self.writePipe, '', None)
+                win32file.WriteFile(self.handle, '', None)
             except pywintypes.error:
                 self.writeConnectionLost()
                 return numBytesWritten
@@ -261,7 +284,7 @@ class _PollableWritePipe(_PollableResource):
             if isinstance(data, unicode):
                 raise TypeError("unicode not allowed")
             try:
-                errCode, nBytesWritten = win32file.WriteFile(self.writePipe,
+                errCode, nBytesWritten = win32file.WriteFile(self.handle,
                                                              data, None)
             except win32api.error:
                 self.writeConnectionLost()

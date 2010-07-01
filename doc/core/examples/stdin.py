@@ -12,7 +12,12 @@ from twisted.internet import stdio
 from twisted.protocols import basic
 
 class Echo(basic.LineReceiver):
-    from os import linesep as delimiter
+    # Note that using:
+    #
+    #   from os import linesep as delimiter
+    #
+    # will not work here
+    delimiter = '\n'
 
     def connectionMade(self):
         self.transport.write('>>> ')
