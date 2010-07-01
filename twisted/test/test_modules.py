@@ -10,6 +10,10 @@ import sys
 import itertools
 import zipfile
 import compileall
+try:
+    import ast
+except ImportError:
+    ast = None
 
 import twisted
 from twisted.trial.unittest import TestCase
@@ -19,12 +23,6 @@ from twisted.python.filepath import FilePath
 from twisted.python.reflect import namedAny
 
 from twisted.test.test_paths import zipit
-
-
-try:
-    import ast
-except ImportError:
-    ast = None
 
 
 class PySpaceTestCase(TestCase):
@@ -283,7 +281,8 @@ from twisted.python.components import registerAdapter
 foo = 123
 def doFoo():
   import datetime
-class Foo: pass
+class Foo:
+  x = 0
 """
 
 sampleModuleWithExportsContents = """
@@ -397,14 +396,32 @@ class PathModificationTest(PySpaceTestCase):
         Module attributes can be iterated over without executing the code.
         """
         self._setupSysPath()
-        modinfo = modules.getModule(self.packageName+".a")
+        modinfo = modules.getModule(self.packageName + ".a")
         attrs = sorted(modinfo.iterAttributes(), key=lambda a: a.name)
         names = sorted(["foo", "doFoo", "Foo"])
         for attr, name in zip(attrs, names):
-            self.assertEqual(attr.onObject, modinfo)
+            self.assertEquals(attr.onObject, modinfo)
             self.assertFalse(attr.isLoaded())
-            self.assertEqual(attr.name, modinfo.name+'.'+name)
+            self.assertEquals(attr.name, modinfo.name + '.' + name)
             self.assertRaises(NotImplementedError, lambda: list(attr.iterAttributes()))
+
+
+    def test_loadedModuleAttributes(self):
+        """
+        Module attributes can be iterated over after the module has been loaded.
+        """
+        self._setupSysPath()
+        modinfo = modules.getModule(self.packageName + ".a")
+        modinfo.load()
+        attrs = sorted([a for a in modinfo.iterAttributes() if '_' not in a.name], key=lambda a: a.name)
+        names = sorted(["foo", "doFoo", "Foo"])
+        for attr, name in zip(attrs, names):
+            self.assertEquals(attr.onObject, modinfo)
+            self.assertTrue(attr.isLoaded())
+            self.assertEquals(attr.name, modinfo.name + '.' + name)
+            if name == "Foo":
+                classattrs = [a.name for a in attr.iterAttributes()]
+                self.assertIn(modinfo.name + '.Foo.x', classattrs)
 
 
     def test_moduleImportNames(self):
@@ -412,24 +429,32 @@ class PathModificationTest(PySpaceTestCase):
         The fully qualified names imported by a module can be inspected.
         """
         self._setupSysPath()
-        modinfo = modules.getModule(self.packageName+".a")
-        self.assertEqual(sorted(modinfo.iterImportNames()),
+        modinfo = modules.getModule(self.packageName + ".a")
+        self.assertEquals(sorted(modinfo.iterImportNames()),
                          sorted(["sys", "os", "datetime",
                                  "twisted.python.reflect",
                                  "twisted.python.filepath",
                                  "twisted.python.components.registerAdapter"]))
 
 
-    def test_moduleExportNames(self):
+    def test_moduleExportDefinedNames(self):
         """
-        The names exported by a module can be inspected.
+        The exports of a module with no __all__ are all its defined
+        names.
         """
         self._setupSysPath()
-        modinfo = modules.getModule(self.packageName+".a")
+        modinfo = modules.getModule(self.packageName + ".a")
         self.assertEqual(sorted(modinfo.iterExportNames()),
                          sorted(["foo", "doFoo", "Foo"]))
 
-        modinfo = modules.getModule(self.packageName+".b")
+
+    def test_moduleExportAll(self):
+        """
+        If __all__ is defined as a list of string literals, the names
+        in it are used as the list of the module's exports.
+        """
+        self._setupSysPath()
+        modinfo = modules.getModule(self.packageName + ".b")
         self.assertEqual(sorted(modinfo.iterExportNames()),
                          sorted(["foo"]))
 
@@ -440,19 +465,21 @@ class PathModificationTest(PySpaceTestCase):
         exports if __all__ is not a single list of string literals.
         """
         self.packagePath.child("e.py").setContent("__all__ = ['a' + 'b']")
-        self.packagePath.child("e.py").setContent("__all__ = ['a']\n__all__ = ['a', 'b']")
+        self.packagePath.child("f.py").setContent("__all__ = ['a']\n__all__ = ['a', 'b']")
         self._setupSysPath()
-        modinfo1 = modules.getModule(self.packageName+".e")
-        modinfo2 = modules.getModule(self.packageName+".e")
+        modinfo1 = modules.getModule(self.packageName + ".e")
+        modinfo2 = modules.getModule(self.packageName + ".f")
         self.assertRaises(SyntaxError, lambda: list(modinfo1.iterExportNames()))
         self.assertRaises(SyntaxError, lambda: list(modinfo2.iterExportNames()))
+
 
     if ast is None:
         astMsg = ("Examining unloaded module attributes requires the 'ast'"
                  " module from Python 2.6.")
         test_moduleAttributes.skip = astMsg
         test_moduleImportNames.skip = astMsg
-        test_moduleExportNames.skip = astMsg
+        test_moduleExportAll.skip = astMsg
+        test_moduleExportDefinedNames.skip = astMsg
         test_moduleExportProblems.skip = astMsg
 
 
@@ -543,3 +570,37 @@ class PythonPathTestCase(TestCase):
             "(PEP 302 violation - check your local configuration).")
         self.assertEquals(len(warnings), 1)
         self.assertEquals(thisModule.name, __name__)
+
+
+
+class ASTVisitorTests(TestCase):
+    """
+    Tests for L{ast.NodeVisitor} subclasses used to extract
+    information from modules without importing them.
+    """
+
+    def test_justOneAll(self):
+        """
+        Modules with more than one definition of __all__ are rejected
+        by L{_ImportExportFinder}.
+        """
+
+        code = "__all__ = ['a']\n__all__ = ['a', 'b']"
+        tree = ast.parse(code)
+        f = modules._ImportExportFinder()
+        self.assertRaises(SyntaxError, f.visit, tree)
+
+
+    def test_literalStringsAll(self):
+        """
+        Modules with a definition of __all__ that isn't a list of
+        literal strings are rejected by L{_ImportExportFinder}.
+        """
+
+        code = "__all__ = ['a' + 'b']"
+        tree = ast.parse(code)
+        f = modules._ImportExportFinder()
+        self.assertRaises(SyntaxError, f.visit, tree)
+
+if ast is None:
+    ASTVisitorTests.skip = "AST visitor tests require the 'ast' module from Python 2.6."

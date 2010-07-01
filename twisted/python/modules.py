@@ -62,17 +62,17 @@ import sys
 import zipimport
 import inspect
 import warnings
+try:
+    import ast
+except ImportError:
+    ast = None
+
 from zope.interface import Interface, implements
 
 from twisted.python.components import registerAdapter
 from twisted.python.filepath import FilePath, UnlistableError
 from twisted.python.zippath import ZipArchive
 from twisted.python.reflect import namedAny
-
-try:
-    import ast
-except ImportError:
-    ast = None
 
 _nothing = object()
 
@@ -241,63 +241,72 @@ class _ModuleIteratorHelper:
         raise NotImplementedError()
 
 if ast is not None:
-    class ImportExportFinder(ast.NodeVisitor):
+    _iefBase = ast.NodeVisitor
+else:
+    _iefBase = object
+
+class _ImportExportFinder(_iefBase):
+    """
+    Find names of imports and exports (via __all__).
+
+    @ivar imports: A set of (source, name) pairs describing an
+                   imported name. if the source is None, the name
+                   is an import from the top level.
+
+    @ivar exports: A list of names defined in __all__ in this
+                   module, or None if the module has no __all__
+                   attribute.
+
+    @ivar definedNames: A set of names created by assignment,
+                        class definitions, or function definitions
+                        at the top level of this module.
+    """
+
+    def __init__(self):
+        self.imports = set()
+        self.exports = None
+        self.definedNames = set()
+
+
+    def visit_Import(self, node):
         """
-        Find names of imports and exports (via __all__).
-
-        @ivar imports: A set of (source, name) pairs describing an
-                       imported name. if the source is None, the name
-                       is an import from the top level.
-
-        @ivar exports: A list of names defined in __all__ in this
-                       module, or None if the module has no __all__
-                       attribute.
-
-        @ivar definedNames: A set of names created by assignment,
-                            class definitions, or function definitions
-                            at the top level of this module.
+        Collect names for all import statements.
         """
-
-        def __init__(self):
-            self.imports = set()
-            self.exports = None
-            self.definedNames = set()
+        for alias in node.names:
+            self.imports.add((None, alias.name))
 
 
-        def visit_Import(self, node):
-            """
-            Collect names for all import statements.
-            """
-            for alias in node.names:
-                self.imports.add((None, alias.name))
+    def visit_ImportFrom(self, node):
+        """
+        Collect names and source modules from "import x from y" statements.
+        """
+        for name in node.names:
+            self.imports.add((node.module, name.name))
 
 
-        def visit_ImportFrom(self, node):
-            """
-            Collect names and source modules from "import x from y" statements.
-            """
-            for name in node.names:
-                self.imports.add((node.module, name.name))
-
-
-        def visit_Module(self, node):
-            """
-            Look for top-level name bindings and __all__ in a module.
-            """
-            for stmt in node.body:
-                if isinstance(stmt, ast.Assign) and len(stmt.targets) == 1 and isinstance(stmt.targets[0], ast.Name) and stmt.targets[0].id == '__all__':
-                    if not (isinstance(stmt.value, (ast.List, ast.Tuple))) or not all([isinstance(e, (ast.Str)) for e in stmt.value.elts]):
-                        raise SyntaxError("__all__ must be a sequence of literal strings")
-                    elif self.exports is not None:
-                        raise SyntaxError("__all__ can only be defined once")
-                    else:
-                        self.exports = ast.literal_eval(stmt.value)
-                if isinstance(stmt, ast.Assign):
-                    for name in stmt.targets:
-                        self.definedNames.add(name.id)
-                elif isinstance(stmt, (ast.FunctionDef, ast.ClassDef)):
-                    self.definedNames.add(stmt.name)
-                self.visit(stmt)
+    def visit_Module(self, node):
+        """
+        Look for top-level name bindings and __all__ in a module.
+        """
+        for stmt in node.body:
+            if (isinstance(stmt, ast.Assign) and len(stmt.targets) == 1 and
+                isinstance(stmt.targets[0], ast.Name) and
+                stmt.targets[0].id == '__all__'):
+                if (not (isinstance(stmt.value, (ast.List, ast.Tuple))) or
+                    not all([isinstance(e, (ast.Str))
+                             for e in stmt.value.elts])):
+                    raise SyntaxError("__all__ must be a sequence"
+                                      " of literal strings")
+                elif self.exports is not None:
+                    raise SyntaxError("__all__ can only be defined once")
+                else:
+                    self.exports = ast.literal_eval(stmt.value)
+            if isinstance(stmt, ast.Assign):
+                for name in stmt.targets:
+                    self.definedNames.add(name.id)
+            elif isinstance(stmt, (ast.FunctionDef, ast.ClassDef)):
+                self.definedNames.add(stmt.name)
+            self.visit(stmt)
 
 
 
@@ -313,6 +322,7 @@ class PythonAttribute:
     @ivar name: the fully qualified python name of the attribute represented by
     this class.
     """
+
     def __init__(self, name, onObject, loaded, pythonValue):
         """
         Create a PythonAttribute.  This is a private constructor.  Do not construct
@@ -328,8 +338,10 @@ class PythonAttribute:
         self._loaded = loaded
         self.pythonValue = pythonValue
 
+
     def __repr__(self):
         return 'PythonAttribute<%r>'%(self.name,)
+
 
     def isLoaded(self):
         """
@@ -337,6 +349,7 @@ class PythonAttribute:
         actually been loaded into memory by importing its module.
         """
         return self._loaded
+
 
     def load(self, default=_nothing):
         """
@@ -347,12 +360,21 @@ class PythonAttribute:
         """
         return self.pythonValue
 
+
     def iterAttributes(self):
+        """
+        Iterate over the attributes of the value named by this
+        object. Only works when the module is loaded.
+
+        @raise NotImplementedError: when the module is not loaded.
+        """
         if not self.isLoaded():
             raise NotImplementedError("Static inspection of attributes doesn't"
                                       " go beyond the top level of the module.")
         for name, val in inspect.getmembers(self.load()):
-            yield PythonAttribute(self.name+'.'+name, self, True, val)
+            yield PythonAttribute(self.name + '.' + name, self, True, val)
+
+
 
 class PythonModule(_ModuleIteratorHelper):
     """
@@ -365,6 +387,9 @@ class PythonModule(_ModuleIteratorHelper):
 
     @ivar pathEntry: a L{PathEntry} instance which this module was located
     from.
+
+    @ivar _finder: an L{_ImportExportFinder}, or None. Used to
+    discover names used and defined in a module by inspecting its AST.
     """
 
     def __init__(self, name, filePath, pathEntry):
@@ -381,8 +406,9 @@ class PythonModule(_ModuleIteratorHelper):
         self.filePath = filePath
         self.parentPath = filePath.parent()
         self.pathEntry = pathEntry
-        
-        self.finder = None
+
+        self._finder = None
+
 
     def _getEntry(self):
         return self.pathEntry
@@ -407,9 +433,9 @@ class PythonModule(_ModuleIteratorHelper):
         """
         Scan a module for imports, exports, and attributes.
         """
-        if self.finder is None:
-            self.finder = ImportExportFinder()
-            self.finder.visit(ast.parse(self.filePath.getContent()))
+        if self._finder is None:
+            self._finder = _ImportExportFinder()
+            self._finder.visit(ast.parse(self.filePath.getContent()))
 
 
     def iterAttributes(self):
@@ -419,7 +445,7 @@ class PythonModule(_ModuleIteratorHelper):
         On Python 2.6 and later this method can list attributes on a
         module without loading it, via AST inspection. On earlier
         Python versions, they must be loaded. This method will use
-        inspect.getmodule on all Python versions if the module is loaded.
+        inspect.getmembers on all Python versions if the module is loaded.
 
         @raise NotImplementedError: if this module is not loaded and
         AST inspection is not possible.
@@ -433,16 +459,19 @@ class PythonModule(_ModuleIteratorHelper):
                                           " modules requires the 'ast' module,"
                                           " found in Python 2.6 or later.")
             self._maybeLoadFinder()
-            for name in self.finder.definedNames:
-                yield PythonAttribute(self.name+'.'+name, self, False, None)
+            for name in self._finder.definedNames:
+                yield PythonAttribute(self.name + '.' + name, self, False, None)
         else:
             for name, val in inspect.getmembers(self.load()):
-                yield PythonAttribute(self.name+'.'+name, self, True, val)
+                yield PythonAttribute(self.name + '.' + name, self, True, val)
 
 
     def iterImportNames(self):
         """
         List all the fully-qualified names imported in this module.
+
+        @raise NotImplementedError: if this module is not loaded and
+        AST inspection is not possible.
 
         @return: a generator yielding fully qualified name strings for
                  each name imported into this module.
@@ -453,7 +482,7 @@ class PythonModule(_ModuleIteratorHelper):
                                       " Python 2.6 or later.")
 
         self._maybeLoadFinder()
-        for (origin, name) in self.finder.imports:
+        for (origin, name) in self._finder.imports:
             if origin is not None:
                 yield origin+ '.' + name
             else:
@@ -468,6 +497,9 @@ class PythonModule(_ModuleIteratorHelper):
         defined at the top level of the module will be regarded as
         exports.
 
+        @raise NotImplementedError: if this module is not loaded and
+        AST inspection is not possible.
+
         @return: an iterable of names of attributes of this module.
         """
         if ast is None:
@@ -475,7 +507,7 @@ class PythonModule(_ModuleIteratorHelper):
                                       " requires the 'ast' module, found in"
                                       " Python 2.6 or later.")
         self._maybeLoadFinder()
-        return self.finder.exports or self.finder.definedNames
+        return self._finder.exports or self._finder.definedNames
 
 
     def isPackage(self):
