@@ -1,2 +1,0 @@
-twisted.internet.interfaces.IUDPConnectedTransport has been removed
-(deprecated since Twisted 9.0).

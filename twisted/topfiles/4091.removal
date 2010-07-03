@@ -1,2 +1,0 @@
-Removed twisted.application.app.runWithHotshot, which has been deprecated since
-Twisted 8.0.

@@ -1,6 +1,21 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Mail 10.1.0 (2010-06-27)
+================================
+
+Bugfixes
+--------
+ - twisted.mail.imap4.IMAP4Server no longer fails on search queries
+   that contain wildcards. (#2278)
+ - A case which would cause twisted.mail.imap4.IMAP4Server to loop
+   indefinitely when handling a search command has been fixed. (#4385)
+
+Other
+-----
+ - #4069, #4271, #4467
+
+
 Twisted Mail 10.0.0 (2010-03-01)
 ================================
 

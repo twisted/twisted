@@ -1,6 +1,20 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Words 10.1.0 (2010-06-27)
+=================================
+
+Bugfixes
+--------
+ - twisted.words.im.basechat.ChatUI now has a functional
+   contactChangedNick with unit tests. (#229)
+ - twisted.words.protocols.jabber.error.StanzaError now correctly sets
+   a default error type and code for the remote-server-timeout
+   condition (#4311)
+ - twisted.words.protocols.jabber.xmlstream.ListenAuthenticator now
+   uses unicode objects for session identifiers (#4345)
+
+
 Twisted Words 10.0.0 (2010-03-01)
 =================================
 

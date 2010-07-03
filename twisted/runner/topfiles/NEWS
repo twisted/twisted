@@ -1,6 +1,24 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Runner 10.1.0 (2010-06-27)
+==================================
+
+Features
+--------
+ - twistd now has a procmon subcommand plugin - a convenient way to
+   monitor and automatically restart another process. (#4356)
+
+Deprecations and Removals
+-------------------------
+ - twisted.runner.procmon.ProcessMonitor's active, consistency, and
+   consistencyDelay attributes are now deprecated. (#1763)
+
+Other
+-----
+ - #3775
+
+
 Twisted Runner 10.0.0 (2010-03-01)
 ==================================
 

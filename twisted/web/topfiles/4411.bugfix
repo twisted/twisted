@@ -1,1 +1,0 @@
-twisted.web.guard now logs out avatars even if a request completes with an error.

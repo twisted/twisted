@@ -1,1 +1,0 @@
-twisted.words.protocols.jabber.error.StanzaError now correctly sets a default error type and code for the remote-server-timeout condition

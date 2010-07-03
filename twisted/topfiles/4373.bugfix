@@ -1,2 +1,0 @@
-twisted.application.internet no longer generates an extra and invalid
-entry in its __all__ list for the nonexistent MulticastClient.

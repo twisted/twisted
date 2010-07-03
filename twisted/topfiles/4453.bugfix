@@ -1,1 +1,0 @@
-Files opened with FilePath.create() (and therefore also files opened via FilePath.open() on a path with alwaysCreate=True) will now be opened in binary mode as advertised, so that they will behave portably across platforms.

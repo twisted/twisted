@@ -1,1 +1,0 @@
-twisted.test.proto_helpers.StringTransport's getHost and getPeer methods now return IPv4Address instances by default.

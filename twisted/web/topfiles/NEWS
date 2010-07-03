@@ -1,6 +1,45 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Web 10.1.0 (2010-06-27)
+===============================
+
+Features
+--------
+ - twisted.web.xmlrpc.XMLRPC and twisted.web.xmlrpc.Proxy now expose
+   xmlrpclib's support of datetime.datetime objects if useDateTime is
+   set to True. (#3219)
+ - HTTP11ClientProtocol now has an abort() method for cancelling an
+   outstanding request by closing the connection before receiving the
+   entire response. (#3811)
+ - twisted.web.http_headers.Headers initializer now rejects
+   incorrectly structured dictionaries. (#4022)
+ - twisted.web.client.Agent now supports HTTPS URLs. (#4023)
+ - twisted.web.xmlrpc.Proxy.callRemote now returns a Deferred which
+   can be cancelled to abort the attempted XML-RPC call. (#4377)
+
+Bugfixes
+--------
+ - twisted.web.guard now logs out avatars even if a request completes
+   with an error. (#4411)
+ - twisted.web.xmlrpc.XMLRPC will now no longer trigger a RuntimeError
+   by trying to write responses to closed connections. (#4423)
+
+Improved Documentation
+----------------------
+ - Fix broken links to deliverBody and iweb.UNKNOWN_LENGTH in
+   doc/web/howto/client.xhtml. (#4507)
+
+Deprecations and Removals
+-------------------------
+ - twisted.web.twcgi.PHP3Script and twisted.web.twcgi.PHPScript are
+   now deprecated. (#516)
+
+Other
+-----
+ - #4403, #4452
+
+
 Twisted Web 10.0.0 (2010-03-01)
 ===============================
 

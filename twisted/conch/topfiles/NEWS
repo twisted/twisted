@@ -1,6 +1,60 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Conch 10.1.0 (2010-06-27)
+=================================
+
+Features
+--------
+ - twisted.conch.ssh.transport.SSHTransportBase now allows supported
+   ssh protocol versions to be overriden. (#4428)
+
+Bugfixes
+--------
+ - SSHSessionProcessProtocol now doesn't close the session when stdin
+   is closed, but instead when both stdout and stderr are. (#4350)
+ - The 'cftp' command-line tool will no longer encounter an
+   intermittent error, crashing at startup with a ZeroDivisionError
+   while trying to report progress. (#4463)
+ - twisted.conch.ssh.connection.SSHConnection now replies to requests
+   to open an unknown channel with a OPEN_UNKNOWN_CHANNEL_TYPE message
+   instead of closing the connection. (#4490)
+
+Deprecations and Removals
+-------------------------
+ - twisted.conch.insults.client was deprecated. (#4095)
+ - twisted.conch.insults.colors has been deprecated.  Please use
+   twisted.conch.insults.helper instead. (#4096)
+ - Removed twisted.conch.ssh.asn1, which has been deprecated since
+   Twisted 9.0. (#4097)
+ - Removed twisted.conch.ssh.common.Entropy, as Entropy.get_bytes has
+   been  deprecated since 2007 and Entropy.get_bytes was the only
+   attribute of Entropy. (#4098)
+ - Removed twisted.conch.ssh.keys.getPublicKeyString, which has been
+   deprecated since 2007.  Also updated the conch examples
+   sshsimpleserver.py and sshsimpleclient.py to reflect this removal.
+   (#4099)
+ - Removed twisted.conch.ssh.keys.makePublicKeyString, which has been
+   deprecated since 2007. (#4100)
+ - Removed twisted.conch.ssh.keys.getPublicKeyObject, which has been
+   deprecated since 2007. (#4101)
+ - Removed twisted.conch.ssh.keys.getPrivateKeyObject, which has been
+   deprecated since 2007.  Also updated the conch examples to reflect
+   this removal. (#4102)
+ - Removed twisted.conch.ssh.keys.makePrivateKeyString, which has been
+   deprecated since 2007. (#4103)
+ - Removed twisted.conch.ssh.keys.makePublicKeyBlob, which has been
+   deprecated since 2007. (#4104)
+ - Removed twisted.conch.ssh.keys.signData,
+   twisted.conch.ssh.keys.verifySignature, and
+   twisted.conch.ssh.keys.printKey, which have been deprecated since
+   2007.   (#4105)
+
+Other
+-----
+ - #3849, #4408, #4454
+
+
 Twisted Conch 10.0.0 (2010-03-01)
 =================================
 

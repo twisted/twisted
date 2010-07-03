@@ -1,6 +1,167 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Core 10.1.0 (2010-06-27)
+================================
+
+Features
+--------
+ - Add linux inotify support, allowing monitoring of file system
+   events. (#972)
+ - Deferreds now support cancellation. (#990)
+ - Added new "endpoint" interfaces in twisted.internet.interfaces,
+   which abstractly describe stream transport endpoints which can be
+   listened on or connected to.  Implementations for TCP and SSL
+   clients and servers are present in twisted.internet.endpoints.
+   Notably, client endpoints' connect() methods return cancellable
+   Deferreds, so code written to use them can bypass the awkward
+   "ClientFactory.clientConnectionFailed" and
+   "Connector.stopConnecting" methods, and handle errbacks from or
+   cancel the returned deferred, respectively. (#1442)
+ - twisted.protocols.amp.Integer's documentation now clarifies that
+   integers of arbitrary size are supported and that the wire format
+   is a base-10 representation. (#2650)
+ - twisted.protocols.amp now includes support for transferring
+   timestamps (amp.DateTime) and decimal values (amp.Decimal). (#2651)
+ - twisted.protocol.ftp.IWriteFile now has a close() method, which can
+   return a Deferred. Previously a STOR command would finish
+   immediately upon the receipt of the last byte of the uploaded file.
+   With close(), the backend can delay the finish until it has
+   performed some other slow action (like storing the data to a
+   virtual filesystem). (#3462)
+ - FilePath now calls os.stat() only when new status information is
+   required, rather than immediately when anything changes.  For some
+   applications this may result in fewer stat() calls.  Additionally,
+   FilePath has a new method, 'changed', which applications may use to
+   indicate that the FilePath may have been changed on disk and
+   therefore the next status information request must  fetch a new
+   stat result.  This is useful if external systems, such as C
+   libraries, may have changed files that Twisted applications are
+   referencing via a FilePath. (#4130)
+ - Documentation improvements are now summarized in the NEWS file.
+   (#4224)
+ - twisted.internet.task.deferLater now returns a cancellable
+   Deferred. (#4318)
+ - The connect methods of twisted.internet.protocol.ClientCreator now
+   return cancellable Deferreds. (#4329)
+ - twisted.spread.pb now has documentation covering some of its
+   limitations. (#4402)
+ - twisted.spread.jelly now supports jellying and unjellying classes
+   defined with slots if they also implement __getstate__ and
+   __setstate__. (#4430)
+ - twisted.protocols.amp.ListOf arguments can now be specified as
+   optional. (#4474)
+
+Bugfixes
+--------
+ - On POSIX platforms, reactors now support child processes in a way
+   which doesn't cause other syscalls to sometimes fail with EINTR (if
+   running on Python 2.6 or if Twisted's extension modules have been
+   built). (#733)
+ - Substrings are escaped before being passed to a regular expression
+   for searching to ensure that they don't get interpreted as part of
+   the expression. (#1893)
+ - twisted.internet.stdio now supports stdout being redirected to a
+   normal file (except when using epollreactor). (#2259)
+ -  (#2367)
+ - The tap2rpm script now works with modern versions of RPM. (#3292)
+ - twisted.python.modules.walkModules will now handle packages
+   explicitly precluded from importing by a None placed in
+   sys.modules. (#3419)
+ - ConnectedDatagramPort now uses stopListening when a connection
+   fails instead of the deprecated loseConnection. (#3425)
+ - twisted.python.filepath.FilePath.setContent is now safe for
+   multiple processes to use concurrently. (#3694)
+ - The mode argument to the methods of
+   twisted.internet.interfaces.IReactorUNIX is no longer deprecated.
+   (#4078)
+ - Do not include blacklisted projects when generating NEWS. (#4190)
+ - When generating NEWS for a project that had no significant changes,
+   include a section for that project and say that there were no
+   interesting changes. (#4191)
+ - Redundant 'b' mode is no longer passed to calls to FilePath.open
+   and FilePath.open itself now corrects the mode when multiple 'b'
+   characters are present, ensuring only one instance of 'b' is
+   provided, as a workaround for http://bugs.python.org/issue7686.
+   (#4207)
+ - HTML tags inside <pre> tags in the code snippets are now escaped.
+   (#4336)
+ - twisted.protocols.amp.CommandLocator now allows subclasses to
+   override responders inherited from base classes. (#4343)
+ - Fix a bunch of small but important defects in the INSTALL, README
+   and so forth. (#4346)
+ - The poll, epoll, glib2, and gtk2 reactors now all support half-
+   close in the twisted.internet.stdio.StandardIO transport. (#4352)
+ - twisted.application.internet no longer generates an extra and
+   invalid entry in its __all__ list for the nonexistent
+   MulticastClient. (#4373)
+ - Choosing a reactor documentation now says that only the select-
+   based reactor is a truly cross-platform reactor. (#4384)
+ - twisted.python.filepath.FilePath now no longer leaves files open,
+   to be closed by the garbage collector, when an exception is raised
+   in the implementation of setContent, getContent, or copyTo. (#4400)
+ - twisted.test.proto_helpers.StringTransport's getHost and getPeer
+   methods now return IPv4Address instances by default. (#4401)
+ - twisted.protocols.amp.BinaryBoxProtocol will no longer deliver an
+   empty string to a switched-to protocol's dataReceived method when
+   the BinaryBoxProtocol's buffer happened to be empty at the time of
+   the protocol switch. (#4405)
+ - IReactorUNIX.listenUNIX implementations now support abstract
+   namespace sockets on Linux. (#4421)
+ - Files opened with FilePath.create() (and therefore also files
+   opened via FilePath.open() on a path with alwaysCreate=True) will
+   now be opened in binary mode as advertised, so that they will
+   behave portably across platforms. (#4453)
+ - The subunit reporter now correctly reports import errors as errors,
+   rather than by crashing with an unrelated error. (#4496)
+
+Improved Documentation
+----------------------
+ - The finger tutorial example which introduces services now avoids
+   double-starting the loop to re-read its users file. (#4420)
+ - twisted.internet.defer.Deferred.callback's docstring now mentions
+   the implicit chaining feature. (#4439)
+ - doc/core/howto/listing/pb/chatclient.py can now actually send a
+   group message. (#4459)
+
+Deprecations and Removals
+-------------------------
+ - twisted.internet.interfaces.IReactorArbitrary,
+   twisted.application.internet.GenericServer, and
+   twisted.application.internet.GenericClient are now deprecated.
+   (#367)
+ - twisted.internet.gtkreactor is now deprecated. (#2833)
+ - twisted.trial.util.findObject has been deprecated. (#3108)
+ - twisted.python.threadpool.ThreadSafeList is deprecated and Jython
+   platform detection in Twisted core removed (#3725)
+ - twisted.internet.interfaces.IUDPConnectedTransport has been removed
+   (deprecated since Twisted 9.0). (#4077)
+ - Removed twisted.application.app.runWithProfiler, which has been
+   deprecated since Twisted 8.0. (#4090)
+ - Removed twisted.application.app.runWithHotshot, which has been
+   deprecated since Twisted 8.0. (#4091)
+ - Removed twisted.application.app.ApplicationRunner.startLogging,
+   which has been deprecated (doesn't say since when), as well as
+   support for the legacy
+   twisted.application.app.ApplicationRunner.getLogObserver method.
+   (#4092)
+ - twisted.application.app.reportProfile has been removed. (#4093)
+ - twisted.application.app.getLogFile has been removed. (#4094)
+ - Removed twisted.cred.util.py, which has been deprecated since
+   Twisted 8.3. (#4107)
+ - twisted.python.util.dsu is now deprecated. (#4339)
+ - In twisted.trial.util: FailureError, DirtyReactorWarning,
+   DirtyReactorError, and PendingTimedCallsError, which have all been
+   deprecated since Twisted 8.0, have been removed. (#4505)
+
+Other
+-----
+ - #1363, #1742, #3170, #3359, #3431, #3738, #4088, #4206, #4221,
+   #4239, #4257, #4272, #4274, #4287, #4291, #4293, #4309, #4316,
+   #4319, #4324, #4332, #4335, #4348, #4358, #4394, #4399, #4409,
+   #4418, #4443, #4449, #4479, #4485, #4486, #4497
+
+
 Twisted Core 10.0.0 (2010-03-01)
 ================================
 

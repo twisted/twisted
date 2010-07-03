@@ -1,13 +1,15 @@
-Twisted 10.0.0
+Twisted 10.1.0
 
 Quote of the Release:
 
-  [on picking the quote of the release]
-  <glyph> Man, we're going to have to get a lot funnier if we're going
-          to do time-based releases
+  <fijal> glyph: I write a blog post
+  <fijal> and I apply science
+  <glyph> I love science
+  <glyph> except when it tells me I am wrong
+  <glyph> then it is just one out of a large valid set of ways to look at the world
 
 
-For information on what's new in Twisted 10.0.0, see the NEWS file that comes
+For information on what's new in Twisted 10.1.0, see the NEWS file that comes
 with the distribution.
 
 What is this?

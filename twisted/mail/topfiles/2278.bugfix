@@ -1,1 +1,0 @@
-twisted.mail.imap4.IMAP4Server no longer fails on search queries that contain wildcards.

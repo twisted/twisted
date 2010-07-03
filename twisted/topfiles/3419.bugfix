@@ -1,1 +1,0 @@
-twisted.python.modules.walkModules will now handle packages explicitly precluded from importing by a None placed in sys.modules.

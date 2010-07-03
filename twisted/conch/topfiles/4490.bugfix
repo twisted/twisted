@@ -1,3 +1,0 @@
-twisted.conch.ssh.connection.SSHConnection now replies to requests to open
-an unknown channel with a OPEN_UNKNOWN_CHANNEL_TYPE message instead of
-closing the connection.

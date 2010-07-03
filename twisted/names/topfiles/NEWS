@@ -1,6 +1,16 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Names 10.1.0 (2010-06-27)
+=================================
+
+Features
+--------
+ - twisted.names.dns.Message now uses a specially constructed
+   dictionary for looking up record types.  This yields a significant
+   performance improvement on PyPy. (#4283)
+
+
 Twisted Names 10.0.0 (2010-03-01)
 =================================
 

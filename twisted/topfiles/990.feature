@@ -1,1 +1,0 @@
-Deferreds now support cancellation.

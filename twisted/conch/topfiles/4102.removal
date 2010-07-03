@@ -1,2 +1,0 @@
-Removed twisted.conch.ssh.keys.getPrivateKeyObject, which has been deprecated
-since 2007.  Also updated the conch examples to reflect this removal.

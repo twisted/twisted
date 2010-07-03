@@ -1,2 +1,0 @@
-twisted.python.threadpool.ThreadSafeList is deprecated and
-Jython platform detection in Twisted core removed

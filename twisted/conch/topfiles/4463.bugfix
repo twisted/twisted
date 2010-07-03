@@ -1,2 +1,0 @@
-The 'cftp' command-line tool will no longer encounter an intermittent error,
-crashing at startup with a ZeroDivisionError while trying to report progress.

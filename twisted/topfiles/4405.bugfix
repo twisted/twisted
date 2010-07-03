@@ -1,4 +1,0 @@
-twisted.protocols.amp.BinaryBoxProtocol will no longer deliver an empty
-string to a switched-to protocol's dataReceived method when the
-BinaryBoxProtocol's buffer happened to be empty at the time of the protocol
-switch.

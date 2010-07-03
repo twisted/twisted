@@ -1,1 +1,0 @@
-abstract.FileDescriptor is now a purely new-style object, which helps performance on PyPy.

@@ -1,1 +1,0 @@
-twisted.internet.defer.Deferred.callback's docstring now mentions the implicit chaining feature.

@@ -1,3 +1,0 @@
-Removed twisted.conch.ssh.keys.signData, twisted.conch.ssh.keys.verifySignature,
-and twisted.conch.ssh.keys.printKey, which have been deprecated since 2007.
- 

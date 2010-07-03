@@ -1,3 +1,0 @@
-Removed twisted.conch.ssh.keys.getPublicKeyString, which has been deprecated
-since 2007.  Also updated the conch examples sshsimpleserver.py and
-sshsimpleclient.py to reflect this removal.
