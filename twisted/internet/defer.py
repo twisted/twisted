@@ -183,12 +183,32 @@ class Deferred:
     When creating a Deferred, you may provide a canceller function, which
     will be called by d.cancel() to let you do any clean-up necessary if the
     user decides not to wait for the deferred to complete.
+
+    @ivar called: A flag which is C{False} until either C{callback} or
+        C{errback} is called and afterwards always C{True}.
+    @type called: C{bool}
+
+    @ivar paused: A counter of how many unmatched C{pause} calls have been made
+        on this instance.
+    @type paused: C{int}
+
+    @ivar _suppressAlreadyCalled: A flag used by the cancellation mechanism
+        which is C{True} if the Deferred has no canceller and has been
+        cancelled, C{False} otherwise.  If C{True}, it can be expected that
+        C{callback} or C{errback} will eventually be called and the result
+        should be silently discarded.
+    @type _suppressAlreadyCalled: C{bool}
+
+    @ivar _runningCallbacks: A flag which is C{True} while this instance is
+        executing its callback chain, used to stop recursive execution of
+        L{_runCallbacks}
+    @type _runningCallbacks: C{bool}
     """
 
-    called = 0
+    called = False
     paused = 0
     _debugInfo = None
-    _suppressAlreadyCalled = 0
+    _suppressAlreadyCalled = False
 
     # Are we currently running a user-installed callback?  Meant to prevent
     # recursive running of callbacks when a reentrant call to add a callback is
@@ -381,7 +401,7 @@ class Deferred:
             else:
                 # Arrange to eat the callback that will eventually be fired
                 # since there was no real canceller.
-                self._suppressAlreadyCalled = 1
+                self._suppressAlreadyCalled = True
             if not self.called:
                 # There was no canceller, or the canceller didn't call
                 # callback or errback.
@@ -399,7 +419,7 @@ class Deferred:
     def _startRunCallbacks(self, result):
         if self.called:
             if self._suppressAlreadyCalled:
-                self._suppressAlreadyCalled = 0
+                self._suppressAlreadyCalled = False
                 return
             if self.debug:
                 if self._debugInfo is None:
@@ -571,12 +591,12 @@ class DeferredList(Deferred):
     convenient way to do this is simply to set the consumeErrors flag)
     """
 
-    fireOnOneCallback = 0
-    fireOnOneErrback = 0
+    fireOnOneCallback = False
+    fireOnOneErrback = False
 
 
-    def __init__(self, deferredList, fireOnOneCallback=0, fireOnOneErrback=0,
-                 consumeErrors=0):
+    def __init__(self, deferredList, fireOnOneCallback=False,
+                 fireOnOneErrback=False, consumeErrors=False):
         """
         Initialize a DeferredList.
 
@@ -636,7 +656,7 @@ class DeferredList(Deferred):
 
 
 
-def _parseDListResult(l, fireOnOneErrback=0):
+def _parseDListResult(l, fireOnOneErrback=False):
     if __debug__:
         for success, value in l:
             assert success
@@ -653,7 +673,7 @@ def gatherResults(deferredList):
 
     @type deferredList:  C{list} of L{Deferred}s
     """
-    d = DeferredList(deferredList, fireOnOneErrback=1)
+    d = DeferredList(deferredList, fireOnOneErrback=True)
     d.addCallback(_parseDListResult)
     return d
 
@@ -1030,12 +1050,12 @@ class DeferredLock(_ConcurrencyPrimitive):
     """
     A lock for event driven systems.
 
-    @ivar locked: C{True} when this Lock has been acquired, false at all
-    other times.  Do not change this value, but it is useful to
-    examine for the equivalent of a "non-blocking" acquisition.
+    @ivar locked: C{True} when this Lock has been acquired, false at all other
+        times.  Do not change this value, but it is useful to examine for the
+        equivalent of a "non-blocking" acquisition.
     """
 
-    locked = 0
+    locked = False
 
 
     def _cancelAcquire(self, d):
@@ -1066,7 +1086,7 @@ class DeferredLock(_ConcurrencyPrimitive):
         if self.locked:
             self.waiting.append(d)
         else:
-            self.locked = 1
+            self.locked = True
             d.callback(self)
         return d
 
@@ -1080,10 +1100,10 @@ class DeferredLock(_ConcurrencyPrimitive):
         resource is free.
         """
         assert self.locked, "Tried to release an unlocked lock"
-        self.locked = 0
+        self.locked = False
         if self.waiting:
             # someone is waiting to acquire lock
-            self.locked = 1
+            self.locked = True
             d = self.waiting.pop(0)
             d.callback(self)
 
