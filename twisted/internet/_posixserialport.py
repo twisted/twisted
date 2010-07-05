@@ -1,25 +1,21 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# -*- test-case-name: twisted.internet.test.test_serialport -*-
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 """
 Serial Port Protocol
 """
 
-# system imports
-import os, errno
-
 # dependent on pyserial ( http://pyserial.sf.net/ )
 # only tested w/ 1.18 (5 Dec 2002)
 import serial
-from serial import PARITY_NONE, PARITY_EVEN, PARITY_ODD
-from serial import STOPBITS_ONE, STOPBITS_TWO
-from serial import FIVEBITS, SIXBITS, SEVENBITS, EIGHTBITS
+from serial import EIGHTBITS, PARITY_NONE, STOPBITS_ONE
 
+# Gross sibling Twisted import
 from serialport import BaseSerialPort
 
 # twisted imports
-from twisted.internet import abstract, fdesc, main
+from twisted.internet import abstract, fdesc
 
 class SerialPort(BaseSerialPort, abstract.FileDescriptor):
     """
@@ -57,4 +53,5 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
 
     def connectionLost(self, reason):
         abstract.FileDescriptor.connectionLost(self, reason)
+        self.protocol.connectionLost(reason)
         self._serial.close()

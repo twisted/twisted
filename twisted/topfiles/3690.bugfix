@@ -1,0 +1,1 @@
+Protocol's connected to a serial port as their transport will now be notified when the serial port is closed.
