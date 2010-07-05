@@ -13,6 +13,7 @@ except ImportError, e:
 else:
     from twisted.internet.serialport import SerialPort
 
+from twisted.internet.interfaces import IReactorFDSet, IReactorWin32Events
 from twisted.internet.error import ConnectionDone
 from twisted.internet.defer import Deferred
 from twisted.internet.test.reactormixins import ReactorBuilder
@@ -34,6 +35,14 @@ class SerialPortTestsBuilder(ReactorBuilder):
         wrapping L{ConnectionDone}.
         """
         reactor = self.buildReactor()
+
+        interfaces = [IReactorFDSet, IReactorWin32Events]
+        support = [True for iface in interfaces if iface.providedBy(reactor)]
+        if not support:
+            raise SkipTest(
+                "Cannot use SerialPort without IReactorFDSet or "
+                "IReactorWin32Events")
+
         onConnectionLost = Deferred()
         protocol = ConnectionLostNotifyingProtocol(onConnectionLost)
 
