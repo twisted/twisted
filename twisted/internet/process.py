@@ -463,6 +463,37 @@ class _BaseProcess(BaseProcess, object):
         return "<%s pid=%s status=%s>" % (self.__class__.__name__,
                                           self.pid, self.status)
 
+
+
+def _listOpenFDs():
+    """
+    Return an iterable of potentially open file descriptors.
+
+    This function returns an iterable over the contents of /dev/fd or
+    /proc/<pid>/fd, if they're available on the platform. If they're not, the
+    returned value is the range [0, maxfds], where 'maxfds' is at least 256.
+    """
+    dname = "/dev/fd"
+    try:
+        return [int(fd) for fd in os.listdir(dname)]
+    except:
+        dname = "/proc/%d/fd" % (os.getpid(),)
+        try:
+            return [int(fd) for fd in os.listdir(dname)]
+        except:
+            try:
+                import resource
+                maxfds = resource.getrlimit(resource.RLIMIT_NOFILE)[1] + 1
+                # OS-X reports 9223372036854775808. That's a lot of fds
+                # to close
+                if maxfds > 1024:
+                    maxfds = 1024
+            except:
+                maxfds = 256
+            return xrange(maxfds)
+
+
+
 class Process(_BaseProcess):
     """
     An operating-system Process.
@@ -601,7 +632,8 @@ class Process(_BaseProcess):
         This is accomplished in two steps::
 
             1. close all file descriptors that aren't values of fdmap.  This
-               means 0 .. maxfds.
+               means 0 .. maxfds (or just the open fds within that range, if
+               the platform supports '/proc/<pid>/fd').
 
             2. for each childFD::
 
@@ -625,16 +657,7 @@ class Process(_BaseProcess):
             errfd.write("starting _setupChild\n")
 
         destList = fdmap.values()
-        try:
-            import resource
-            maxfds = resource.getrlimit(resource.RLIMIT_NOFILE)[1] + 1
-            # OS-X reports 9223372036854775808. That's a lot of fds to close
-            if maxfds > 1024:
-                maxfds = 1024
-        except:
-            maxfds = 256
-
-        for fd in xrange(maxfds):
+        for fd in _listOpenFDs():
             if fd in destList:
                 continue
             if debug and fd == errfd.fileno():
@@ -885,11 +908,12 @@ class PTYProcess(abstract.FileDescriptor, _BaseProcess):
         os.dup2(slavefd, 1) # stdout
         os.dup2(slavefd, 2) # stderr
 
-        for fd in xrange(3, 256):
-            try:
-                os.close(fd)
-            except:
-                pass
+        for fd in _listOpenFDs():
+            if fd > 2:
+                try:
+                    os.close(fd)
+                except:
+                    pass
 
         self._resetSignalDisposition()
 

@@ -219,6 +219,50 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         self.assertEqual(result, ["Foo\n"])
 
 
+    def test_openFileDescriptors(self):
+        """
+        A spawned process has only stdin, stdout and stderr open
+        (file descriptor 3 is also reported as open, because of the call to
+        'os.listdir()').
+        """
+        from twisted.python.runtime import platformType
+        if platformType != "posix":
+            raise SkipTest("Test only applies to POSIX platforms")
+
+        here = FilePath(__file__)
+        top = here.parent().parent().parent().parent()
+        source = (
+            "import sys",
+            "sys.path.insert(0, '%s')" % (top.path,),
+            "from twisted.internet import process",
+            "sys.stdout.write(str(process._listOpenFDs()))",
+            "sys.stdout.flush()")
+
+        def checkOutput(output):
+            self.assertEquals('[0, 1, 2, 3]', output)
+
+        reactor = self.buildReactor()
+
+        class Protocol(ProcessProtocol):
+            def __init__(self):
+                self.output = []
+
+            def outReceived(self, data):
+                self.output.append(data)
+
+            def processEnded(self, reason):
+                try:
+                    checkOutput("".join(self.output))
+                finally:
+                    reactor.stop()
+
+        proto = Protocol()
+        reactor.callWhenRunning(
+            reactor.spawnProcess, proto, sys.executable,
+            [sys.executable, "-Wignore", "-c", "\n".join(source)],
+            usePTY=self.usePTY)
+        self.runReactor(reactor)
+
 
 class ProcessTestsBuilder(ProcessTestsBuilderBase):
     """

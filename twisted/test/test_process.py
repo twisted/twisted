@@ -1533,6 +1533,12 @@ class MockOS(object):
         """
         return 0, 0, 1, 2
 
+    def listdir(self, path):
+        """
+        Override C{os.listdir}, returning fake contents of '/dev/fd'
+        """
+        return "-1", "-2"
+
 
 
 if process is not None:
