@@ -1,6 +1,9 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+"""
+hosts(5) support.
+"""
 
 from twisted.names import dns
 from twisted.persisted import styles
@@ -9,13 +12,28 @@ from twisted.internet import defer
 
 from twisted.names import common
 
+
 def searchFileFor(file, name):
+    """
+    Grep given file, which is in hosts(5) standard format, for an address
+    entry with a given name.
+
+    @param file: The name of the hosts(5)-format file to search.
+
+    @param name: The name to search for.
+    @type name: C{str}
+
+    @return: C{None} if the name is not found in the file, otherwise a
+        C{str} giving the address in the file associated with the name.
+    """
     try:
         fp = open(file)
     except:
         return None
-
-    lines = fp.readlines()
+    try:
+        lines = fp.readlines()
+    finally:
+        fp.close()
     for line in lines:
         idx = line.find('#')
         if idx != -1:

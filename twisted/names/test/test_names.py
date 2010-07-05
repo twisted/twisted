@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.names.test.test_names -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -598,6 +598,23 @@ class HostsTestCase(unittest.TestCase):
     def testNotFound(self):
         return self.assertFailure(self.resolver.lookupAddress('foueoa'),
                                   dns.DomainError)
+
+
+    def test_searchFileFor(self):
+        """
+        L{searchFileFor} parses hosts(5) files and returns the address for
+        the given name, or C{None} if the name is not found.
+        """
+        tmp = self.mktemp()
+        f = open(tmp, 'w')
+        f.write('127.0.1.1	helmut.example.org	helmut\n')
+        f.write('# a comment\n')
+        f.write('::1     localhost ip6-localhost ip6-loopback\n')
+        f.close()
+        self.assertEquals(hosts.searchFileFor(tmp, 'helmut'), '127.0.1.1')
+        self.assertEquals(hosts.searchFileFor(tmp, 'ip6-localhost'), '::1')
+        self.assertIdentical(hosts.searchFileFor(tmp, 'blah'), None)
+
 
 
 class FakeDNSDatagramProtocol(object):
