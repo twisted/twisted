@@ -149,3 +149,18 @@ class SyslogObserverTests(TestCase):
             self.events,
             [(stdsyslog.LOG_INFO, '[-] hello,'),
              (stdsyslog.LOG_INFO, '[-] \tworld')])
+
+
+    def test_emitUnicode(self):
+        """
+        A unicode message is emitted encoded using UTF-8.
+        """
+        observer = syslog.SyslogObserver('SyslogObserverTests')
+        message = u'Meet the \N{SNOWMAN}'
+        observer.emit({
+                'message': (message,), 'isError': False,
+                'system': '-'})
+        self.assertEquals(
+            self.events,
+            [(stdsyslog.LOG_INFO, '[-] ' + message.encode('utf-8'))])
+

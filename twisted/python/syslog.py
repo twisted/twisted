@@ -32,6 +32,10 @@ class SyslogObserver:
     openlog = syslog.openlog
     syslog = syslog.syslog
 
+    # RFC 5424 strongly suggests that UTF-8 is the only encoding which should
+    # ever be used with syslog.
+    _encoding = 'utf-8'
+
     def __init__(self, prefix, options=DEFAULT_OPTIONS,
                  facility=DEFAULT_FACILITY):
         """
@@ -64,7 +68,7 @@ class SyslogObserver:
             to the syslog separately.
         """
         # Figure out what the message-text is.
-        text = log.textFromEventDict(eventDict)
+        text = log.textFromEventDict(eventDict, self._encoding)
         if text is None:
             return
 
