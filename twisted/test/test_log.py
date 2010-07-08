@@ -5,7 +5,7 @@
 Tests for L{twisted.python.log}.
 """
 
-import os, sys, time, logging, warnings
+import os, sys, time, logging, warnings, codecs
 from cStringIO import StringIO
 
 from twisted.trial import unittest
@@ -38,6 +38,23 @@ class LogTest(unittest.TestCase):
         self.assertEquals(i["testShouldCatch"], True)
         self.failUnless(i.has_key("time"))
         self.assertEquals(len(catcher), 0)
+
+
+    def test_unicode(self):
+        """
+        L{LogPublisher.msg} accepts unicode messages and passes them along to
+        any registered observers unmodified.
+        """
+        publisher = log.LogPublisher()
+        events = []
+        publisher.addObserver(events.append)
+        publisher.msg(u"hello, world")
+        publisher.msg(u"non-ascii: \N{SNOWMAN}")
+        self.assertEquals(len(events), 2)
+        self.assertEquals(events[0]['message'], (u"hello, world",))
+        self.assertIsInstance(events[0]['message'][0], unicode)
+        self.assertEquals(events[1]['message'], (u"non-ascii: \N{SNOWMAN}",))
+        self.assertIsInstance(events[1]['message'][0], unicode)
 
 
     def testContext(self):
@@ -444,6 +461,25 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
         fakeStdout = sys.stdout
         observer = log.startLogging(sys.stdout)
         self.assertIdentical(sys.stdout, fakeStdout)
+
+
+    def test_encoding(self):
+        """
+        If constructed with a file-like object with an C{encoding} attribute,
+        unicode log messages are encoded using that encoding before being
+        written to the file.
+        """
+        binary = StringIO()
+        text = codecs.EncodedFile(binary, 'ASCII', 'utf-8')
+        publisher = log.LogPublisher()
+        observer = log.FileLogObserver(text)
+        observer.formatTime = lambda when: '(now)'
+        publisher.addObserver(observer.emit)
+        message = u"Last winter I made a \N{SNOWMAN}"
+        publisher.msg(message)
+        self.assertEquals(
+            binary.getvalue(), '(now) [-] ' + message.encode('utf-8'))
+
 
 
 class PythonLoggingObserverTestCase(unittest.TestCase):
