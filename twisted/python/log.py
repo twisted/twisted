@@ -399,13 +399,30 @@ class FileLogObserver:
 
     @type timeFormat: C{str} or C{NoneType}
     @ivar timeFormat: If not C{None}, the format string passed to strftime().
+
+    @ivar _encoding: Specifies the encoding which will be used to encode unicode
+        messages in log events.  If unicode messages are not supported, C{None}.
+    @type _encoding: C{NoneType} or C{str}
     """
     timeFormat = None
 
-    def __init__(self, f):
+    def __init__(self, f, encoding=None):
+        """
+        @param f: A file-like object to which log events will be written.  It
+            must have the C{write} and C{flush} methods.  If it has a
+            C{encoding} attribute, this will be used to encode unicode messages
+            in log events and takes priority over the C{encoding} parameter.
+
+        @param encoding: The name of an encoding to use to encode unicode log
+            messages.  This will only be used if C{f.encoding} is C{None}.  If
+            C{f.encoding} is C{None} and this is C{None}, unicode will not be
+            logged in a meaningful way.
+        """
         self.write = f.write
         self.flush = f.flush
         self._encoding = getattr(f, 'encoding', None)
+        if self._encoding is None:
+            self._encoding = encoding
 
 
     def getTimezoneOffset(self, when):

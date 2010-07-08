@@ -462,15 +462,12 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
         observer = log.startLogging(sys.stdout)
         self.assertIdentical(sys.stdout, fakeStdout)
 
+    _unset = object()
 
-    def test_encoding(self):
-        """
-        If constructed with a file-like object with an C{encoding} attribute,
-        unicode log messages are encoded using that encoding before being
-        written to the file.
-        """
+    def _encodingTest(self, fileEncoding, encodingParameter, resultEncoding):
         class EncodedFile(object):
-            encoding = 'utf-8'
+            if fileEncoding is not self._unset:
+                encoding = fileEncoding
 
             def __init__(self):
                 self.bytes = []
@@ -485,13 +482,50 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
 
         text = EncodedFile()
         publisher = log.LogPublisher()
-        observer = log.FileLogObserver(text)
+        observer = log.FileLogObserver(text, encodingParameter)
         observer.formatTime = lambda when: '(now)'
         publisher.addObserver(observer.emit)
         message = u"Last winter I made a \N{SNOWMAN}"
         publisher.msg(message)
         self.assertEquals(
-            ''.join(text.bytes), '(now) [-] %s\n' % (message.encode('utf-8'),))
+            ''.join(text.bytes),
+            '(now) [-] %s\n' % (message.encode(resultEncoding),))
+
+
+    def test_encoding(self):
+        """
+        If constructed with a file-like object with an C{encoding} attribute,
+        unicode log messages are encoded using that encoding before being
+        written to the file.
+        """
+        self._encodingTest('utf-8', None, 'utf-8')
+
+
+    def test_fallbackEncoding(self):
+        """
+        If constructed with a file-like object with an C{encoding} attribute set
+        to C{None}, the C{encoding} parameter to L{FileLogObserver} is used as
+        the encoding.
+        """
+        self._encodingTest(None, 'utf-8', 'utf-8')
+
+
+    def test_withoutFileEncoding(self):
+        """
+        If constructed with a file-like object without an C{encoding} attribute
+        at all, the C{encoding} parameter to L{FileLogObjserver} is used as the
+        encoding.
+        """
+        self._encodingTest(self._unset, 'utf-8', 'utf-8')
+
+
+    def test_conflictingEncodings(self):
+        """
+        If constructed with a file-like object with an C{encoding} attribute and
+        a different value for the C{encoding} parameter, L{FileLogObserver} uses
+        the former encoding.
+        """
+        self._encodingTest('utf-16', 'utf-8', 'utf-16')
 
 
 
