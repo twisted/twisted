@@ -5,7 +5,7 @@
 Tests for L{twisted.python.log}.
 """
 
-import os, sys, time, logging, warnings, codecs
+import os, sys, time, logging, warnings
 from cStringIO import StringIO
 
 from twisted.trial import unittest
