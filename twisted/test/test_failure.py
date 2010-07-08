@@ -19,6 +19,11 @@ except ImportError:
     raiser = None
 
 
+class BrokenStr(Exception):
+    def __str__(self):
+        raise self
+
+
 def getDivisionFailure():
     try:
         1/0
@@ -133,6 +138,24 @@ class FailureTestCase(unittest.TestCase):
         test_printStringExceptions.skip = skipMsg
 
 
+    def testBrokenStr(self):
+        """
+        Formatting a traceback of a Failure which refers to an object
+        that has a broken __str__ implementation should not cause
+        getTraceback to raise an exception.
+        """
+        x = BrokenStr()
+        try:
+            str(x)
+        except:
+            f = failure.Failure()
+        self.assertEquals(f.value, x)
+        try:
+            f.getTraceback()
+        except:
+            self.fail("getTraceback() shouldn't raise an exception")
+
+
     def testConstructionFails(self):
         """
         Creating a Failure with no arguments causes it to try to discover the
@@ -171,113 +194,6 @@ class FailureTestCase(unittest.TestCase):
         """
         f = failure.Failure(Exception("some error"))
         self.assertEqual(f.getTracebackObject(), None)
-
-
-
-class BrokenStr(Exception):
-    """
-    An exception class the instances of which cannot be presented as strings via
-    C{str}.
-    """
-    def __str__(self):
-        # Could raise something else, but there's no point as yet.
-        raise self
-
-
-
-class BrokenExceptionMetaclass(type):
-    """
-    A metaclass for an exception type which cannot be presented as a string via
-    C{str}.
-    """
-    def __str__(self):
-        raise ValueError("You cannot make a string out of me.")
-
-
-
-class BrokenExceptionType(Exception):
-    """
-    The aforementioned exception type which cnanot be presented as a string via
-    C{str}.
-    """
-    __metaclass__ = BrokenExceptionMetaclass
-
-
-
-class GetTracebackTests(unittest.TestCase):
-    """
-    Tests for L{Failure.getTraceback}.
-    """
-    def _brokenValueTest(self, detail):
-        """
-        Construct a L{Failure} with an exception that raises an exception from
-        its C{__str__} method and then call C{getTraceback} with the specified
-        detail and verify that it returns a string.
-        """
-        x = BrokenStr()
-        f = failure.Failure(x)
-        traceback = f.getTraceback(detail=detail)
-        self.assertIsInstance(traceback, str)
-
-
-    def test_brokenValueBriefDetail(self):
-        """
-        A L{Failure} might wrap an exception with a C{__str__} method which
-        raises an exception.  In this case, calling C{getTraceback} on the
-        failure with the C{"brief"} detail does not raise an exception.
-        """
-        self._brokenValueTest("brief")
-
-
-    def test_brokenValueDefaultDetail(self):
-        """
-        Like test_brokenValueBriefDetail, but for the C{"default"} detail case.
-        """
-        self._brokenValueTest("default")
-
-
-    def test_brokenValueVerboseDetail(self):
-        """
-        Like test_brokenValueBriefDetail, but for the C{"default"} detail case.
-        """
-        self._brokenValueTest("verbose")
-
-
-    def _brokenTypeTest(self, detail):
-        """
-        Construct a L{Failure} with an exception type that raises an exception
-        from its C{__str__} method and then call C{getTraceback} with the
-        specified detail and verify that it returns a string.
-        """
-        f = failure.Failure(BrokenExceptionType())
-        traceback = f.getTraceback(detail=detail)
-        self.assertIsInstance(traceback, str)
-
-
-    def test_brokenTypeBriefDetail(self):
-        """
-        A L{Failure} might wrap an exception the type object of which has a
-        C{__str__} method which raises an exception.  In this case, calling
-        C{getTraceback} on the failure with the C{"brief"} detail does not raise
-        an exception.
-        """
-        self._brokenTypeTest("brief")
-
-
-    def test_brokenTypeDefaultDetail(self):
-        """
-        Like test_brokenTypeBriefDetail, but for the C{"default"} detail case.
-        """
-        self._brokenTypeTest("default")
-
-
-    def test_brokenTypeVerboseDetail(self):
-        """
-        Like test_brokenTypeBriefDetail, but for the C{"verbose"} detail case.
-        """
-        self._brokenTypeTest("verbose")
-
-
 
 class FindFailureTests(unittest.TestCase):
     """
