@@ -597,6 +597,15 @@ class PythonLoggingObserverTestCase(unittest.TestCase):
         self.assertEquals(self.out.getvalue(), '')
 
 
+    def test_unicode(self):
+        """
+        A unicode message in an event is conveyed to the logging module.
+        """
+        self.lp.msg(u"\N{SNOWMAN}!")
+        self.assertIn(u"\N{SNOWMAN}".encode("utf-8"), self.out.getvalue())
+
+
+
 class PythonLoggingIntegrationTestCase(unittest.TestCase):
     """
     Test integration of python logging bridge.

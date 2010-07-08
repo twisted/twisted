@@ -353,6 +353,8 @@ def _safeFormat(fmtString, fmtDict):
     return text
 
 
+_DO_NOT_ENCODE = object()
+
 def textFromEventDict(eventDict, encoding=None):
     """
     Extract text from an event dict passed to a log observer. If it cannot
@@ -389,7 +391,9 @@ def textFromEventDict(eventDict, encoding=None):
             for chunk in edm:
                 text = unicode(chunk)
                 parts.append(text)
-            text = u' '.join(parts).encode(encoding)
+            text = u' '.join(parts)
+            if encoding is not _DO_NOT_ENCODE:
+                text = text.encode(encoding)
     return text
 
 
@@ -532,7 +536,7 @@ class PythonLoggingObserver(object):
             level = logging.ERROR
         else:
             level = logging.INFO
-        text = textFromEventDict(eventDict)
+        text = textFromEventDict(eventDict, _DO_NOT_ENCODE)
         if text is None:
             return
         self.logger.log(level, text)
