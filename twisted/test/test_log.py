@@ -469,8 +469,21 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
         unicode log messages are encoded using that encoding before being
         written to the file.
         """
-        binary = StringIO()
-        text = codecs.EncodedFile(binary, 'ASCII', 'utf-8')
+        class EncodedFile(object):
+            encoding = 'utf-8'
+
+            def __init__(self):
+                self.bytes = []
+
+            def flush(self):
+                pass
+
+            def write(self, bytes):
+                if not isinstance(bytes, str):
+                    raise TypeError("EncodedFile.write accepts only str")
+                self.bytes.append(bytes)
+
+        text = EncodedFile()
         publisher = log.LogPublisher()
         observer = log.FileLogObserver(text)
         observer.formatTime = lambda when: '(now)'
@@ -478,7 +491,7 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
         message = u"Last winter I made a \N{SNOWMAN}"
         publisher.msg(message)
         self.assertEquals(
-            binary.getvalue(), '(now) [-] ' + message.encode('utf-8'))
+            ''.join(text.bytes), '(now) [-] ' + message.encode('utf-8'))
 
 
 
