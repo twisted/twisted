@@ -483,8 +483,21 @@ class Failure:
         self.printTraceback(file=io, elideFrameworkCode=elideFrameworkCode, detail=detail)
         return io.getvalue()
 
-    def printTraceback(self, file=None, elideFrameworkCode=0, detail='default'):
-        """Emulate Python's standard error reporting mechanism.
+
+    def printTraceback(self, file=None, elideFrameworkCode=False, detail='default'):
+        """
+        Emulate Python's standard error reporting mechanism.
+
+        @param file: If specified, a file-like object to which to write the
+            traceback.
+
+        @param elideFrameworkCode: A flag indicating whether to attempt to
+            remove uninteresting frames from within Twisted itself from the
+            output.
+
+        @param detail: A string indicating how much information to include
+            in the traceback.  Must be one of C{'brief'}, C{'default'}, or
+            C{'verbose'}.
         """
         if file is None:
             file = log.logerr
@@ -500,7 +513,10 @@ class Failure:
                 hasFrames = 'Traceback'
             else:
                 hasFrames = 'Traceback (failure with no frames)'
-            w("%s: %s: %s\n" % (hasFrames, self.type, self.value))
+            w("%s: %s: %s\n" % (
+                    hasFrames,
+                    reflect.safe_str(self.type),
+                    reflect.safe_str(self.value)))
         else:
             w( 'Traceback (most recent call last):\n')
 
@@ -533,6 +549,7 @@ class Failure:
             self.value.printTraceback(file, elideFrameworkCode, detail)
         if detail == 'verbose':
             w('*--- End of Failure #%d ---\n' % self.count)
+
 
     def printBriefTraceback(self, file=None, elideFrameworkCode=0):
         """Print a traceback as densely as possible.
