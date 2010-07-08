@@ -1,6 +1,5 @@
 # -*- test-case-name: twisted.conch.test.test_transport -*-
-#
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -29,6 +28,41 @@ from twisted.python.hashlib import md5, sha1
 # sibling imports
 from twisted.conch.ssh import keys
 from twisted.conch.ssh.common import NS, getNS, MP, getMP, _MPpow, ffs
+
+
+def _getRandomNumber(random, bits):
+    """
+    Generate a random number in the range [0, 2 ** bits).
+
+    @param bits: The number of bits in the result.
+    @type bits: C{int}
+
+    @rtype: C{int} or C{long}
+    @return: The newly generated random number.
+
+    @raise ValueError: if C{bits} is not a multiple of 8.
+    """
+    if bits % 8:
+        raise ValueError("bits (%d) must be a multiple of 8" % (bits,))
+    bytes = random(bits / 8)
+    result = Util.number.bytes_to_long(bytes)
+    return result
+
+
+
+def _generateX(random, bits):
+    """
+    Generate a new value for the private key x.
+
+    From RFC 2631, section 2.2::
+
+        X9.42 requires that the private key x be in the interval 
+        [2, (q - 2)].  x should be randomly generated in this interval.
+    """
+    while True:
+        x = _getRandomNumber(random, bits)
+        if 2 <= x <= (2 ** bits) - 2:
+            return x
 
 
 
@@ -735,7 +769,7 @@ class SSHServerTransport(SSHTransportBase):
         if self.kexAlg == 'diffie-hellman-group1-sha1':
             # this is really KEXDH_INIT
             clientDHpublicKey, foo = getMP(packet)
-            y = Util.number.getRandomNumber(512, randbytes.secureRandom)
+            y = _getRandomNumber(randbytes.secureRandom, 512)
             serverDHpublicKey = _MPpow(DH_GENERATOR, y, DH_PRIME)
             sharedSecret = _MPpow(clientDHpublicKey, y, DH_PRIME)
             h = sha1()
@@ -803,7 +837,7 @@ class SSHServerTransport(SSHTransportBase):
         #  or do as openssh does and scan f for a single '1' bit instead
 
         pSize = Util.number.size(self.p)
-        y = Util.number.getRandomNumber(pSize, randbytes.secureRandom)
+        y = _getRandomNumber(randbytes.secureRandom, pSize)
 
         serverDHpublicKey = _MPpow(self.g, y, self.p)
         sharedSecret = _MPpow(clientDHpublicKey, y, self.p)
@@ -889,7 +923,6 @@ class SSHClientTransport(SSHTransportBase):
     """
     isClient = True
 
-
     def connectionMade(self):
         """
         Called when the connection is started with the server.  Just sets
@@ -912,7 +945,7 @@ class SSHClientTransport(SSHTransportBase):
         if SSHTransportBase.ssh_KEXINIT(self, packet) is None:
             return # we disconnected
         if self.kexAlg == 'diffie-hellman-group1-sha1':
-            self.x = Util.number.getRandomNumber(512, randbytes.secureRandom)
+            self.x = _generateX(randbytes.secureRandom, 512)
             self.e = _MPpow(DH_GENERATOR, self.x, DH_PRIME)
             self.sendPacket(MSG_KEXDH_INIT, self.e)
         elif self.kexAlg == 'diffie-hellman-group-exchange-sha1':
@@ -958,7 +991,7 @@ class SSHClientTransport(SSHTransportBase):
         else:
             self.p, rest = getMP(packet)
             self.g, rest = getMP(rest)
-            self.x = Util.number.getRandomNumber(320, randbytes.secureRandom)
+            self.x = _generateX(randbytes.secureRandom, 320)
             self.e = _MPpow(self.g, self.x, self.p)
             self.sendPacket(MSG_KEX_DH_GEX_INIT, self.e)
 
