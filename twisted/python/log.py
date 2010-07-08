@@ -353,7 +353,7 @@ def _safeFormat(fmtString, fmtDict):
     return text
 
 
-def textFromEventDict(eventDict):
+def textFromEventDict(eventDict, encoding=None):
     """
     Extract text from an event dict passed to a log observer. If it cannot
     handle the dict, it returns None.
@@ -382,7 +382,14 @@ def textFromEventDict(eventDict):
             # we don't know how to log this
             return
     else:
-        text = ' '.join(map(reflect.safe_str, edm))
+        if encoding is None:
+            text = ' '.join(map(reflect.safe_str, edm))
+        else:
+            parts = []
+            for chunk in edm:
+                text = unicode(chunk)
+                parts.append(text)
+            text = u' '.join(parts).encode(encoding)
     return text
 
 
@@ -398,6 +405,8 @@ class FileLogObserver:
     def __init__(self, f):
         self.write = f.write
         self.flush = f.flush
+        self._encoding = getattr(f, 'encoding', None)
+
 
     def getTimezoneOffset(self, when):
         """
@@ -412,6 +421,7 @@ class FileLogObserver:
         """
         offset = datetime.utcfromtimestamp(when) - datetime.fromtimestamp(when)
         return offset.days * (60 * 60 * 24) + offset.seconds
+
 
     def formatTime(self, when):
         """
@@ -444,8 +454,9 @@ class FileLogObserver:
             when.hour, when.minute, when.second,
             tzSign, tzHour, tzMin)
 
+
     def emit(self, eventDict):
-        text = textFromEventDict(eventDict)
+        text = textFromEventDict(eventDict, self._encoding)
         if text is None:
             return
 
@@ -456,11 +467,13 @@ class FileLogObserver:
         util.untilConcludes(self.write, timeStr + " " + msgStr)
         util.untilConcludes(self.flush)  # Hoorj!
 
+
     def start(self):
         """
         Start observing log events.
         """
         addObserver(self.emit)
+
 
     def stop(self):
         """
