@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -15,7 +15,16 @@ try:
 except ImportError:
     Crypto = None
 
-if pyasn1 is None or Crypto is None:
+if pyasn1 is not None and Crypto is not None:
+    dependencySkip = None
+    from twisted.conch.ssh import transport, common, keys, factory
+    from twisted.conch.test import keydata
+else:
+    if pyasn1 is None:
+        dependencySkip = "can't run w/o PyASN1"
+    elif Crypto is None:
+        dependencySkip = "can't run w/o PyCrypto"
+
     class transport: # fictional modules to make classes work
         class SSHTransportBase: pass
         class SSHServerTransport: pass
@@ -23,9 +32,6 @@ if pyasn1 is None or Crypto is None:
     class factory:
         class SSHFactory:
             pass
-else:
-    from twisted.conch.ssh import transport, common, keys, factory
-    from twisted.conch.test import keydata
 
 from twisted.trial import unittest
 from twisted.internet import defer
@@ -1902,6 +1908,66 @@ class TransportLoopbackTestCase(unittest.TestCase):
                 return proto
             deferreds.append(self._runClientServer(setCompression))
         return defer.DeferredList(deferreds, fireOnOneErrback=True)
+
+
+class RandomNumberTestCase(unittest.TestCase):
+    """
+    Tests for the random number generator L{_getRandomNumber} and private
+    key generator L{_generateX}.
+    """
+    skip = dependencySkip
+
+    def test_usesSuppliedRandomFunction(self):
+        """
+        L{_getRandomNumber} returns an integer constructed directly from the
+        bytes returned by the random byte generator passed to it.
+        """
+        def random(bytes):
+            # The number of bytes requested will be the value of each byte
+            # we return.
+            return chr(bytes) * bytes
+        self.assertEquals(
+            transport._getRandomNumber(random, 32),
+            4 << 24 | 4 << 16 | 4 << 8 | 4)
+
+
+    def test_rejectsNonByteMultiples(self):
+        """
+        L{_getRandomNumber} raises L{ValueError} if the number of bits
+        passed to L{_getRandomNumber} is not a multiple of 8.
+        """
+        self.assertRaises(
+            ValueError,
+            transport._getRandomNumber, None, 9)
+
+
+    def test_excludesSmall(self):
+        """
+        If the random byte generator passed to L{_generateX} produces bytes
+        which would result in 0 or 1 being returned, these bytes are
+        discarded and another attempt is made to produce a larger value.
+        """
+        results = [chr(0), chr(1), chr(127)]
+        def random(bytes):
+            return results.pop(0) * bytes
+        self.assertEquals(
+            transport._generateX(random, 8),
+            127)
+
+
+    def test_excludesLarge(self):
+        """
+        If the random byte generator passed to L{_generateX} produces bytes
+        which would result in C{(2 ** bits) - 1} being returned, these bytes
+        are discarded and another attempt is made to produce a smaller
+        value.
+        """
+        results = [chr(255), chr(64)]
+        def random(bytes):
+            return results.pop(0) * bytes
+        self.assertEquals(
+            transport._generateX(random, 8),
+            64)
 
 
 

@@ -1,0 +1,1 @@
+SSHServerTransport and SSHClientTransport in twisted.conch.ssh.transport no longer use PyCrypto to generate random numbers for DH KEX.  They also now generate values from the full valid range, rather than only half of it.
