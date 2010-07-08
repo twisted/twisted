@@ -491,7 +491,7 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
         message = u"Last winter I made a \N{SNOWMAN}"
         publisher.msg(message)
         self.assertEquals(
-            ''.join(text.bytes), '(now) [-] ' + message.encode('utf-8'))
+            ''.join(text.bytes), '(now) [-] %s\n' % (message.encode('utf-8'),))
 
 
 
