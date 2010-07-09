@@ -540,7 +540,9 @@ with this option will prevent <q>Unhandled error in Deferred</q> warnings from
 the Deferreds it contains without needing to add extra errbacks<span
 class="footnote">Unless of course a later callback starts a fresh error &mdash;
 but as we've already noted, adding callbacks to a Deferred after its used in a
-DeferredList is confusing and usually avoided.</span>.</p>
+DeferredList is confusing and usually avoided.</span>.  Passing a true value
+for the <code>consumeErrors</code> parameter will not change the behavior of
+<code>fireOnOneCallback</code> or <code>fireOnOneErrback</code>.</p>
 
 <a name="class"></a>
 

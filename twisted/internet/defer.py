@@ -578,40 +578,62 @@ class FirstError(Exception):
 
 class DeferredList(Deferred):
     """
-    I combine a group of deferreds into one callback.
+    L{DeferredList} is a tool for collecting the results of several Deferreds.
 
-    I track a list of L{Deferred}s for their callbacks, and make a single
-    callback when they have all completed, a list of (success, result)
-    tuples, 'success' being a boolean.
+    This tracks a list of L{Deferred}s for their results, and makes a single
+    callback when they have all completed.  By default, the ultimate result is a
+    list of (success, result) tuples, 'success' being a boolean.
+    L{DeferredList} exposes the same API that L{Deferred} does, so callbacks and
+    errbacks can be added to it in the same way.
 
-    Note that you can still use a L{Deferred} after putting it in a
-    DeferredList.  For example, you can suppress 'Unhandled error in Deferred'
-    messages by adding errbacks to the Deferreds *after* putting them in the
-    DeferredList, as a DeferredList won't swallow the errors.  (Although a more
-    convenient way to do this is simply to set the consumeErrors flag)
+    L{DeferredList} is implemented by adding callbacks and errbacks to each
+    L{Deferred} in the list passed to it.  This means callbacks and errbacks
+    added to the Deferreds before they are passed to L{DeferredList} will change
+    the result that L{DeferredList} sees (ie, L{DeferredList} is not special).
+    Callbacks and errbacks can also be added to the Deferreds after they are
+    passed to L{DeferredList} and L{DeferredList} may change the result that
+    they see.
+
+    See the documentation for the C{__init__} arguments for more information.
     """
 
     fireOnOneCallback = False
     fireOnOneErrback = False
-
 
     def __init__(self, deferredList, fireOnOneCallback=False,
                  fireOnOneErrback=False, consumeErrors=False):
         """
         Initialize a DeferredList.
 
-        @type deferredList:  C{list} of L{Deferred}s
         @param deferredList: The list of deferreds to track.
-        @param fireOnOneCallback: (keyword param) a flag indicating that
-                             only one callback needs to be fired for me to call
-                             my callback
-        @param fireOnOneErrback: (keyword param) a flag indicating that
-                            only one errback needs to be fired for me to call
-                            my errback
-        @param consumeErrors: (keyword param) a flag indicating that any errors
-                            raised in the original deferreds should be
-                            consumed by this DeferredList.  This is useful to
-                            prevent spurious warnings being logged.
+        @type deferredList:  C{list} of L{Deferred}s
+
+        @param fireOnOneCallback: (keyword param) a flag indicating that this
+            L{DeferredList} will fire when the first L{Deferred} in
+            C{deferredList} fires with a non-failure result without waiting for
+            any of the other Deferreds.  When this flag is set, the DeferredList
+            will fire with a two-tuple: the first element is the index in
+            C{deferredList} of the Deferred which fired; the second element is
+            the result of that Deferred.
+        @type fireOnOneCallback: C{bool}
+
+        @param fireOnOneErrback: (keyword param) a flag indicating that this
+            L{DeferredList} will fire when the first L{Deferred} in
+            C{deferredList} fires with a failure result without waiting for any
+            of the other Deferreds.  When this flag is set, if a Deferred in the
+            list errbacks, the DeferredList will errback with a L{FirstError}
+            failure wrapping the failure of that Deferred.
+        @type fireOnOneErrback: C{bool}
+
+        @param consumeErrors: (keyword param) a flag indicating that failures in
+            any of the included L{Deferreds} should not be propagated to
+            errbacks added to the individual L{Deferreds} after this
+            L{DeferredList} is constructed.  After constructing the
+            L{DeferredList}, any errors in the individual L{Deferred}s will be
+            converted to a callback result of C{None}.  This is useful to
+            prevent spurious 'Unhandled error in Deferred' messages from being
+            logged.  This does not prevent C{fireOnOneErrback} from working.
+        @type consumeErrors: C{bool}
         """
         self.resultList = [None] * len(deferredList)
         Deferred.__init__(self)

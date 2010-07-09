@@ -1,0 +1,2 @@
+The API documentation for twisted.internet.defer.DeferredList now goes into
+more depth about the effects each of the __init__ flags that class accepts.
