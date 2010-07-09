@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_adbapi -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -135,6 +135,14 @@ class ConnectionPool:
     @ivar transactionFactory: factory for transactions, default to
         L{Transaction}.
     @type transactionFactory: any callable
+
+    @ivar shutdownID: C{None} or a handle on the shutdown event trigger
+        which will be used to stop the connection pool workers when the
+        reactor stops.
+
+    @ivar _reactor: The reactor which will be used to schedule startup and
+        shutdown events.
+    @type _reactor: L{IReactorCore} provider
     """
 
     CP_ARGS = "min max name noisy openfun reconnect good_sql".split()
@@ -150,6 +158,10 @@ class ConnectionPool:
     running = False # true when the pool is operating
     connectionFactory = Connection
     transactionFactory = Transaction
+
+    # Initialize this to None so it's available in close() even if start()
+    # never runs.
+    shutdownID = None
 
     def __init__(self, dbapiName, *connargs, **connkw):
         """Create a new ConnectionPool.
@@ -181,6 +193,10 @@ class ConnectionPool:
 
         @param cp_good_sql: an sql query which should always succeed and change
                             no state (default 'select 1')
+
+        @param cp_reactor: use this reactor instead of the global reactor
+            (added in Twisted 10.2).
+        @type cp_reactor: L{IReactorCore} provider
         """
 
         self.dbapiName = dbapiName
@@ -191,6 +207,11 @@ class ConnectionPool:
 
         if getattr(self.dbapi, 'threadsafety', 0) < 1:
             log.msg('DB API module not sufficiently thread-safe.')
+
+        reactor = connkw.pop('cp_reactor', None)
+        if reactor is None:
+            from twisted.internet import reactor
+        self._reactor = reactor
 
         self.connargs = connargs
         self.connkw = connkw
@@ -212,27 +233,25 @@ class ConnectionPool:
 
         self.threadID = thread.get_ident
         self.threadpool = threadpool.ThreadPool(self.min, self.max)
+        self.startID = self._reactor.callWhenRunning(self._start)
 
-        from twisted.internet import reactor
-        self.startID = reactor.callWhenRunning(self._start)
 
     def _start(self):
         self.startID = None
         return self.start()
 
+
     def start(self):
-        """Start the connection pool.
+        """
+        Start the connection pool.
 
         If you are using the reactor normally, this function does *not*
         need to be called.
         """
-
         if not self.running:
-            from twisted.internet import reactor
             self.threadpool.start()
-            self.shutdownID = reactor.addSystemEventTrigger('during',
-                                                            'shutdown',
-                                                            self.finalClose)
+            self.shutdownID = self._reactor.addSystemEventTrigger(
+                'during', 'shutdown', self.finalClose)
             self.running = True
 
 
@@ -353,14 +372,14 @@ class ConnectionPool:
 
 
     def close(self):
-        """Close all pool connections and shutdown the pool."""
-
-        from twisted.internet import reactor
+        """
+        Close all pool connections and shutdown the pool.
+        """
         if self.shutdownID:
-            reactor.removeSystemEventTrigger(self.shutdownID)
+            self._reactor.removeSystemEventTrigger(self.shutdownID)
             self.shutdownID = None
         if self.startID:
-            reactor.removeSystemEventTrigger(self.startID)
+            self._reactor.removeSystemEventTrigger(self.startID)
             self.startID = None
         self.finalClose()
 

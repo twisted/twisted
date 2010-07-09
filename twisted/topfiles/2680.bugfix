@@ -1,0 +1,3 @@
+twisted.enterprise.adbapi.ConnectionPool.close may now be called even if the
+connection pool has not yet been started.  This will prevent the pool from
+ever starting.

@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -689,6 +689,40 @@ class DummyConnectionPool(ConnectionPool):
         """
         Don't forward init call.
         """
+        self.reactor = reactor
+
+
+
+class EventReactor(object):
+    """
+    Partial L{IReactorCore} implementation with simple event-related
+    methods.
+
+    @ivar _running: A C{bool} indicating whether the reactor is pretending
+        to have been started already or not.
+
+    @ivar triggers: A C{list} of pending system event triggers.
+    """
+    def __init__(self, running):
+        self._running = running
+        self.triggers = []
+
+
+    def callWhenRunning(self, function):
+        if self._running:
+            function()
+        else:
+            return self.addSystemEventTrigger('after', 'startup', function)
+
+
+    def addSystemEventTrigger(self, phase, event, trigger):
+        handle = (phase, event, trigger)
+        self.triggers.append(handle)
+        return handle
+
+
+    def removeSystemEventTrigger(self, handle):
+        self.triggers.remove(handle)
 
 
 
@@ -772,3 +806,30 @@ class ConnectionPoolTestCase(unittest.TestCase):
         d.addCallback(cbFailed)
         return d
 
+
+    def test_unstartedClose(self):
+        """
+        If L{ConnectionPool.close} is called without L{ConnectionPool.start}
+        having been called, the pool's startup event is cancelled.
+        """
+        reactor = EventReactor(False)
+        pool = ConnectionPool('twisted.test.test_adbapi', cp_reactor=reactor)
+        # There should be a startup trigger waiting.
+        self.assertEquals(reactor.triggers, [('after', 'startup', pool._start)])
+        pool.close()
+        # But not anymore.
+        self.assertFalse(reactor.triggers)
+
+
+    def test_startedClose(self):
+        """
+        If L{ConnectionPool.close} is called after it has been started, but
+        not by its shutdown trigger, the shutdown trigger is cancelled.
+        """
+        reactor = EventReactor(True)
+        pool = ConnectionPool('twisted.test.test_adbapi', cp_reactor=reactor)
+        # There should be a shutdown trigger waiting.
+        self.assertEquals(reactor.triggers, [('during', 'shutdown', pool.finalClose)])
+        pool.close()
+        # But not anymore.
+        self.assertFalse(reactor.triggers)
