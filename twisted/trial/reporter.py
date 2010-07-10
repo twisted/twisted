@@ -16,7 +16,7 @@ from twisted.python.compat import set
 from twisted.python import reflect, log
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
-from twisted.python.util import untilConcludes
+from twisted.python.util import OrderedDict, untilConcludes
 from twisted.trial import itrial, util
 
 try:
@@ -529,20 +529,49 @@ class Reporter(TestResult):
         return result
 
 
-    def _printResults(self, flavour, errors, formatter):
+    def _groupResults(self, results, formatter):
+        """
+        Group tests together based on their results.
+
+        @param results: An iterable of tuples of two or more elements.  The
+            first element of each tuple is a test case.  The remaining
+            elements describe the outcome of that test case.
+
+        @param formatter: A callable which turns a test case result into a
+            string.  The elements after the first of the tuples in
+            C{results} will be passed as positional arguments to
+            C{formatter}.
+
+        @return: A C{list} of two-tuples.  The first element of each tuple
+            is a unique string describing one result from at least one of
+            the test cases in C{results}.  The second element is a list of
+            the test cases which had that result.
+        """
+        groups = OrderedDict()
+        for content in results:
+            case = content[0]
+            outcome = content[1:]
+            key = formatter(*outcome)
+            groups.setdefault(key, []).append(case)
+        return groups.items()
+
+
+    def _printResults(self, flavor, errors, formatter):
         """
         Print a group of errors to the stream.
 
-        @param flavour: A string indicating the kind of error (e.g. 'TODO').
+        @param flavor: A string indicating the kind of error (e.g. 'TODO').
         @param errors: A list of errors, often L{failure.Failure}s, but
             sometimes 'todo' errors.
         @param formatter: A callable that knows how to format the errors.
         """
-        for content in errors:
+        for reason, cases in self._groupResults(errors, formatter):
             self._writeln(self._doubleSeparator)
-            self._writeln('%s: %s' % (flavour, content[0].id()))
+            self._writeln(flavor)
+            self._write(reason)
             self._writeln('')
-            self._write(formatter(*(content[1:])))
+            for case in cases:
+                self._writeln(case.id())
 
 
     def _printExpectedFailure(self, error, todo):
