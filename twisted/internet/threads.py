@@ -89,8 +89,8 @@ def callMultipleInThread(tupleList):
 def blockingCallFromThread(reactor, f, *a, **kw):
     """
     Run a function in the reactor from a thread, and wait for the result
-    synchronously, i.e. until the callback chain returned by the function
-    get a result.
+    synchronously.  If the function returns a L{Deferred}, wait for its
+    result and return that.
 
     @param reactor: The L{IReactorThreads} provider which will be used to
         schedule the function call.
@@ -99,8 +99,14 @@ def blockingCallFromThread(reactor, f, *a, **kw):
     @param a: the arguments to pass to C{f}.
     @param kw: the keyword arguments to pass to C{f}.
 
-    @return: the result of the callback chain.
-    @raise: any error raised during the callback chain.
+    @return: the result of the L{Deferred} returned by C{f}, or the result
+        of C{f} if it returns anything other than a L{Deferred}.
+
+    @raise: If C{f} raises a synchronous exception,
+        C{blockingCallFromThread} will raise that exception.  If C{f}
+        returns a L{Deferred} which fires with a L{Failure},
+        C{blockingCallFromThread} will raise that failure's exception (see
+        L{Failure.raiseException}).
     """
     queue = Queue.Queue()
     def _callFromThread():

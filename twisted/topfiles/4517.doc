@@ -1,0 +1,1 @@
+twisted.internet.threads.blockingCallFromThread's docstring is now explicit about Deferred support.
