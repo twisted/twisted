@@ -35,11 +35,13 @@ class LineTester(basic.LineReceiver):
         """
         self.clock = clock
 
+
     def connectionMade(self):
         """
         Create/clean data received on connection.
         """
         self.received = []
+
 
     def lineReceived(self, line):
         """
@@ -66,6 +68,7 @@ class LineTester(basic.LineReceiver):
         elif line.startswith('unproduce'):
             self.transport.unregisterProducer()
 
+
     def rawDataReceived(self, data):
         """
         Read raw data, until the quantity specified by a previous 'len' line is
@@ -77,12 +80,14 @@ class LineTester(basic.LineReceiver):
         if self.length == 0:
             self.setLineMode(rest)
 
+
     def lineLengthExceeded(self, line):
         """
         Adjust line mode when long lines received.
         """
         if len(line) > self.MAX_LENGTH + 1:
             self.setLineMode(line[self.MAX_LENGTH + 1:])
+
 
 
 class LineOnlyTester(basic.LineOnlyReceiver):
@@ -98,16 +103,20 @@ class LineOnlyTester(basic.LineOnlyReceiver):
         """
         self.received = []
 
+
     def lineReceived(self, line):
         """
         Save received data.
         """
         self.received.append(line)
 
+
+
 class WireTestCase(unittest.TestCase):
     """
     Test wire protocols.
     """
+
     def test_echo(self):
         """
         Test wire.Echo protocol: send some data and check it send it back.
@@ -206,6 +215,7 @@ a'''
     pause_output1 = ['twiddle1', 'twiddle2', 'pause']
     pause_output2 = pause_output1+['twiddle3']
 
+
     def test_pausing(self):
         """
         Test pause inside data receiving. It uses fake clock to see if
@@ -229,6 +239,7 @@ a'''
     rawpause_output2 = ['twiddle1', 'twiddle2', 'len 5', 'rawpause', '12345',
                         'twiddle3']
 
+
     def test_rawPausing(self):
         """
         Test pause inside raw date receiving.
@@ -248,6 +259,7 @@ a'''
     stop_buf = 'twiddle1\ntwiddle2\nstop\nmore\nstuff\n'
 
     stop_output = ['twiddle1', 'twiddle2', 'stop']
+
 
     def test_stopProducing(self):
         """
@@ -319,6 +331,7 @@ class LineOnlyReceiverTestCase(unittest.TestCase):
             a.dataReceived(c)
         self.assertEquals(a.received, self.buffer.split('\n')[:-1])
 
+
     def test_lineTooLong(self):
         """
         Test sending a line too long: it should close the connection.
@@ -336,24 +349,32 @@ class TestMixin:
     def connectionMade(self):
         self.received = []
 
+
     def stringReceived(self, s):
         self.received.append(s)
 
     MAX_LENGTH = 50
     closed = 0
 
+
     def connectionLost(self, reason):
         self.closed = 1
 
 
+
 class TestNetstring(TestMixin, basic.NetstringReceiver):
-    pass
+
+    def stringReceived(self, s):
+        self.received.append(s)
+        self.transport.write(s)
+
 
 
 class LPTestCaseMixin:
 
     illegalStrings = []
     protocol = None
+
 
     def getProtocol(self):
         """
@@ -377,6 +398,7 @@ class LPTestCaseMixin:
             self.assertTrue(r.transport.disconnecting)
 
 
+
 class NetstringReceiverTestCase(unittest.TestCase, LPTestCaseMixin):
 
     strings = ['hello', 'world', 'how', 'are', 'you123', ':today', "a"*515]
@@ -387,10 +409,15 @@ class NetstringReceiverTestCase(unittest.TestCase, LPTestCaseMixin):
 
     protocol = TestNetstring
 
+    def setUp(self):
+        self.transport = proto_helpers.StringTransport()
+        self.netstringReceiver = TestNetstring()
+        self.netstringReceiver.makeConnection(self.transport)
+
+
     def test_buffer(self):
         """
-        Test that when strings are received in chunks of different lengths,
-        they are still parsed correctly.
+        Strings can be received in chunks of different lengths.
         """
         for packet_size in range(1, 10):
             t = proto_helpers.StringTransport()
@@ -405,6 +432,7 @@ class NetstringReceiverTestCase(unittest.TestCase, LPTestCaseMixin):
                 if s:
                     a.dataReceived(s)
             self.assertEquals(a.received, self.strings)
+
 
     def test_sendNonStrings(self):
         """
@@ -431,11 +459,195 @@ class NetstringReceiverTestCase(unittest.TestCase, LPTestCaseMixin):
         self.assertEqual(len(warnings), 5)
         self.assertEqual(
             warnings[0]["message"],
-            "data passed to sendString() must be a string. Non-string support "
+            "Data passed to sendString() must be a string. Non-string support "
             "is deprecated since Twisted 10.0")
         self.assertEqual(
             warnings[0]['category'],
             DeprecationWarning)
+
+
+    def test_receiveEmptyNetstring(self):
+        """
+        Empty netstrings (with length '0') can be received.
+        """
+        self.netstringReceiver.dataReceived("0:,")
+        self.assertEquals(self.netstringReceiver.received, [""])
+
+
+    def test_receiveOneCharacter(self):
+        """
+        One-character netstrings can be received.
+        """
+        self.netstringReceiver.dataReceived("1:a,")
+        self.assertEquals(self.netstringReceiver.received, ["a"])
+
+
+    def test_receiveTwoCharacters(self):
+        """
+        Two-character netstrings can be received.
+        """
+        self.netstringReceiver.dataReceived("2:ab,")
+        self.assertEquals(self.netstringReceiver.received, ["ab"])
+
+
+    def test_receiveNestedNetstring(self):
+        """
+        Netstrings with embedded netstrings. This test makes sure that
+        the parser does not become confused about the ',' and ':'
+        characters appearing inside the data portion of the netstring.
+        """
+        self.netstringReceiver.dataReceived("4:1:a,,")
+        self.assertEquals(self.netstringReceiver.received, ["1:a,"])
+
+
+    def test_moreDataThanSpecified(self):
+        """
+        Netstrings containing more data than expected are refused.
+        """
+        self.netstringReceiver.dataReceived("2:aaa,")
+        self.assertTrue(self.transport.disconnecting)
+
+
+    def test_moreDataThanSpecifiedBorderCase(self):
+        """
+        Netstrings that should be empty according to their length
+        specification are refused if they contain data.
+        """
+        self.netstringReceiver.dataReceived("0:a,")
+        self.assertTrue(self.transport.disconnecting)
+
+
+    def test_missingNumber(self):
+        """
+        Netstrings without leading digits that specify the length
+        are refused.
+        """
+        self.netstringReceiver.dataReceived(":aaa,")
+        self.assertTrue(self.transport.disconnecting)
+
+
+    def test_missingColon(self):
+        """
+        Netstrings without a colon between length specification and
+        data are refused.
+        """
+        self.netstringReceiver.dataReceived("3aaa,")
+        self.assertTrue(self.transport.disconnecting)
+
+
+    def test_missingNumberAndColon(self):
+        """
+        Netstrings that have no leading digits nor a colon are
+        refused.
+        """
+        self.netstringReceiver.dataReceived("aaa,")
+        self.assertTrue(self.transport.disconnecting)
+
+
+    def test_onlyData(self):
+        """
+        Netstrings consisting only of data are refused.
+        """
+        self.netstringReceiver.dataReceived("aaa")
+        self.assertTrue(self.transport.disconnecting)
+
+
+    def test_receiveNetstringPortions_1(self):
+        """
+        Netstrings can be received in two portions.
+        """
+        self.netstringReceiver.dataReceived("4:aa")
+        self.netstringReceiver.dataReceived("aa,")
+        self.assertEquals(self.netstringReceiver.received, ["aaaa"])
+        self.assertTrue(self.netstringReceiver._payloadComplete())
+
+
+    def test_receiveNetstringPortions_2(self):
+        """
+        Netstrings can be received in more than two portions, even if
+        the length specification is split across two portions.
+        """
+        for part in ["1", "0:01234", "56789", ","]:
+            self.netstringReceiver.dataReceived(part)
+        self.assertEquals(self.netstringReceiver.received, ["0123456789"])
+
+
+    def test_receiveNetstringPortions_3(self):
+        """
+        Netstrings can be received one character at a time.
+        """
+        for part in "2:ab,":
+            self.netstringReceiver.dataReceived(part)
+        self.assertEquals(self.netstringReceiver.received, ["ab"])
+
+
+    def test_receiveTwoNetstrings(self):
+        """
+        A stream of two netstrings can be received in two portions,
+        where the first portion contains the complete first netstring
+        and the length specification of the second netstring.
+        """
+        self.netstringReceiver.dataReceived("1:a,1")
+        self.assertTrue(self.netstringReceiver._payloadComplete())
+        self.assertEquals(self.netstringReceiver.received, ["a"])
+        self.netstringReceiver.dataReceived(":b,")
+        self.assertEquals(self.netstringReceiver.received, ["a", "b"])
+
+
+    def test_maxReceiveLimit(self):
+        """
+        Netstrings with a length specification exceeding the specified
+        C{MAX_LENGTH} are refused.
+        """
+        tooLong = self.netstringReceiver.MAX_LENGTH + 1
+        self.netstringReceiver.dataReceived("%s:%s" %
+                                            (tooLong, "a" * tooLong))
+        self.assertTrue(self.transport.disconnecting)
+
+
+    def test_consumeLength(self):
+        """
+        C{_consumeLength} returns the expected length of the
+        netstring, including the trailing comma.
+        """
+        self.netstringReceiver._remainingData = "12:"
+        length = self.netstringReceiver._consumeLength()
+        self.assertEquals(self.netstringReceiver._expectedPayloadSize, 13)
+
+
+    def test_consumeLengthBorderCase1(self):
+        """
+        C{_consumeLength} works as expected if the length specification
+        contains the value of C{MAX_LENGTH} (border case).
+        """
+        self.netstringReceiver._remainingData = "12:"
+        self.netstringReceiver.MAX_LENGTH = 12
+        length = self.netstringReceiver._consumeLength()
+        self.assertEquals(self.netstringReceiver._expectedPayloadSize, 13)
+
+
+    def test_consumeLengthBorderCase2(self):
+        """
+        C{_consumeLength} raises a L{basic.NetstringParseError} if
+        the length specification exceeds the value of C{MAX_LENGTH}
+        by 1 (border case).
+        """
+        self.netstringReceiver._remainingData = "12:"
+        self.netstringReceiver.MAX_LENGTH = 11
+        self.assertRaises(basic.NetstringParseError,
+                          self.netstringReceiver._consumeLength)
+
+
+    def test_consumeLengthBorderCase3(self):
+        """
+        C{_consumeLength} raises a L{basic.NetstringParseError} if
+        the length specification exceeds the value of C{MAX_LENGTH}
+        by more than 1.
+        """
+        self.netstringReceiver._remainingData = "1000:"
+        self.netstringReceiver.MAX_LENGTH = 11
+        self.assertRaises(basic.NetstringParseError,
+                          self.netstringReceiver._consumeLength)
 
 
 class IntNTestCaseMixin(LPTestCaseMixin):
@@ -458,6 +670,7 @@ class IntNTestCaseMixin(LPTestCaseMixin):
                 r.dataReceived(c)
         self.assertEquals(r.received, self.strings)
 
+
     def test_partial(self):
         """
         Send partial data, nothing should be definitely received.
@@ -467,6 +680,7 @@ class IntNTestCaseMixin(LPTestCaseMixin):
             for c in s:
                 r.dataReceived(c)
             self.assertEquals(r.received, [])
+
 
     def test_send(self):
         """
@@ -514,6 +728,7 @@ class TestInt32(TestMixin, basic.Int32StringReceiver):
     """
 
 
+
 class Int32TestCase(unittest.TestCase, IntNTestCaseMixin):
     """
     Test case for int32-prefixed protocol
@@ -534,12 +749,14 @@ class Int32TestCase(unittest.TestCase, IntNTestCaseMixin):
         self.assertEquals(r.received, ["ubar"])
 
 
+
 class TestInt16(TestMixin, basic.Int16StringReceiver):
     """
     A L{basic.Int16StringReceiver} storing received strings in an array.
 
     @ivar received: array holding received strings.
     """
+
 
 
 class Int16TestCase(unittest.TestCase, IntNTestCaseMixin):
@@ -561,6 +778,7 @@ class Int16TestCase(unittest.TestCase, IntNTestCaseMixin):
         r.dataReceived("\x00\x04ubar")
         self.assertEquals(r.received, ["ubar"])
 
+
     def test_tooLongSend(self):
         """
         Send too much data: that should cause an error.
@@ -570,12 +788,14 @@ class Int16TestCase(unittest.TestCase, IntNTestCaseMixin):
         self.assertRaises(AssertionError, r.sendString, tooSend)
 
 
+
 class TestInt8(TestMixin, basic.Int8StringReceiver):
     """
     A L{basic.Int8StringReceiver} storing received strings in an array.
 
     @ivar received: array holding received strings.
     """
+
 
 
 class Int8TestCase(unittest.TestCase, IntNTestCaseMixin):
@@ -587,6 +807,7 @@ class Int8TestCase(unittest.TestCase, IntNTestCaseMixin):
     illegalStrings = ["\x00\x00aaaaaa"]
     partialStrings = ["\x08", "dzadz", ""]
 
+
     def test_data(self):
         """
         Test specific behavior of the 8-bits length.
@@ -597,6 +818,7 @@ class Int8TestCase(unittest.TestCase, IntNTestCaseMixin):
         r.dataReceived("\x04ubar")
         self.assertEquals(r.received, ["ubar"])
 
+
     def test_tooLongSend(self):
         """
         Send too much data: that should cause an error.
@@ -604,6 +826,7 @@ class Int8TestCase(unittest.TestCase, IntNTestCaseMixin):
         r = self.getProtocol()
         tooSend = "b" * (2**(r.prefixLength*8) + 1)
         self.assertRaises(AssertionError, r.sendString, tooSend)
+
 
 
 class OnlyProducerTransport(object):
@@ -616,14 +839,18 @@ class OnlyProducerTransport(object):
     def __init__(self):
         self.data = []
 
+
     def pauseProducing(self):
         self.paused = True
+
 
     def resumeProducing(self):
         self.paused = False
 
+
     def write(self, bytes):
         self.data.append(bytes)
+
 
 
 class ConsumingProtocol(basic.LineReceiver):
@@ -634,7 +861,9 @@ class ConsumingProtocol(basic.LineReceiver):
         self.pauseProducing()
 
 
+
 class ProducerTestCase(unittest.TestCase):
+
     def testPauseResume(self):
         p = ConsumingProtocol()
         t = OnlyProducerTransport()
@@ -744,7 +973,8 @@ class Portforwarding(unittest.TestCase):
         except AttributeError:
             pass
         try:
-            self.proxyServerFactory.clientFactoryInstance.protoInstance.transport.loseConnection()
+            pi = self.proxyServerFactory.clientFactoryInstance.protoInstance
+            pi.transport.loseConnection()
         except AttributeError:
             pass
         try:
@@ -777,15 +1007,18 @@ class Portforwarding(unittest.TestCase):
         nBytes = 1000
         received = []
         d = defer.Deferred()
+
         def testDataReceived(data):
             received.extend(data)
             if len(received) >= nBytes:
                 self.assertEquals(''.join(received), 'x' * nBytes)
                 d.callback(None)
+
         self.clientProtocol.dataReceived = testDataReceived
 
         def testConnectionMade():
             self.clientProtocol.transport.write('x' * nBytes)
+
         self.clientProtocol.connectionMade = testConnectionMade
 
         clientFactory = protocol.ClientFactory()

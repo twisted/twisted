@@ -1,0 +1,3 @@
+twisted.protocols.basic.NetstringReceiver raises NetstringParseErrors for 
+invalid netstrings now. It handles empty netstrings ("0:,") correctly, and 
+the performance for receiving netstrings has been improved.
