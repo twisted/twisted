@@ -1,9 +1,8 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
 """
-Python 2.5 test cases for failures thrown into generators.
+Python 2.5+ test cases for failures thrown into generators.
 """
 
 import sys
@@ -12,8 +11,17 @@ import traceback
 from twisted.trial.unittest import TestCase
 
 from twisted.python.failure import Failure
-from twisted.test.test_failure import getDivisionFailure
 from twisted.internet import defer
+
+# Re-implement getDivisionFailure here instead of using the one in
+# test_failure.py in order to avoid creating a cyclic dependency.
+def getDivisionFailure():
+    try:
+        1/0
+    except:
+        f = Failure()
+    return f
+
 
 
 class TwoPointFiveFailureTests(TestCase):
