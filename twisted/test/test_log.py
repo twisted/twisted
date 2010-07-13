@@ -479,7 +479,7 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
 
     _unset = object()
 
-    def _encodingTest(self, fileEncoding, encodingParameter, resultEncoding):
+    def _encodingTest(self, fileEncoding, encodingParameter, message, expectedOutput):
         class EncodedFile(object):
             if fileEncoding is not self._unset:
                 encoding = fileEncoding
@@ -500,11 +500,10 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
         observer = log.FileLogObserver(text, encodingParameter)
         observer.formatTime = lambda when: '(now)'
         publisher.addObserver(observer.emit)
-        message = u"Last winter I made a \N{SNOWMAN}"
         publisher.msg(message)
         self.assertEquals(
             ''.join(text.bytes),
-            '(now) [-] %s\n' % (message.encode(resultEncoding),))
+            '(now) [-] %s\n' % (expectedOutput,))
 
 
     def test_encoding(self):
@@ -513,7 +512,8 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
         unicode log messages are encoded using that encoding before being
         written to the file.
         """
-        self._encodingTest('utf-8', None, 'utf-8')
+        message = u"Last winter I made a \N{SNOWMAN}"
+        self._encodingTest('utf-8', None, message, message.encode('utf-8'))
 
 
     def test_fallbackEncoding(self):
@@ -522,16 +522,18 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
         to C{None}, the C{encoding} parameter to L{FileLogObserver} is used as
         the encoding.
         """
-        self._encodingTest(None, 'utf-8', 'utf-8')
+        message = u"Last winter I made a \N{SNOWMAN}"
+        self._encodingTest(None, 'utf-8', message, message.encode('utf-8'))
 
 
     def test_withoutFileEncoding(self):
         """
         If constructed with a file-like object without an C{encoding} attribute
-        at all, the C{encoding} parameter to L{FileLogObjserver} is used as the
+        at all, the C{encoding} parameter to L{FileLogObserver} is used as the
         encoding.
         """
-        self._encodingTest(self._unset, 'utf-8', 'utf-8')
+        message = u"Last winter I made a \N{SNOWMAN}"
+        self._encodingTest(self._unset, 'utf-8', message, message.encode('utf-8'))
 
 
     def test_conflictingEncodings(self):
@@ -540,7 +542,28 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
         a different value for the C{encoding} parameter, L{FileLogObserver} uses
         the former encoding.
         """
-        self._encodingTest('utf-16', 'utf-8', 'utf-16')
+        message = u"Last winter I made a \N{SNOWMAN}"
+        self._encodingTest('utf-16', 'utf-8', message, message.encode('utf-16'))
+
+
+    def test_nonASCII(self):
+        """
+        If a log message of type C{str} containing non-ASCII bytes is emitted to
+        a L{FileLogObserver} with no defined encoding, it is passed through to
+        the underlying file unmodified.
+        """
+        message = u"\N{SNOWMAN} is not ascii".encode('utf-8')
+        self._encodingTest(self._unset, None, message, message)
+
+
+    def test_nonASCIIWithFileEncoding(self):
+        """
+        If a log message if type C{str} containing non-ASCII bytes is emitted to
+        a L{FileLogObserver} with a defined encoding, it is passed through to
+        the underlying file unmodified.
+        """
+        message = u"\N{SNOWMAN} is not ascii".encode('utf-8')
+        self._encodingTest('utf-16', None, message, message)
 
 
 
