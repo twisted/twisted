@@ -474,6 +474,9 @@ def _reactorZshAction():
 class ReactorSelectionMixin:
     """
     Provides options for selecting a reactor to install.
+
+    If a reactor is installed, the short name which was used to locate it is
+    saved as the value for the C{"reactor"} key.
     """
     zsh_actions = {"reactor" : _reactorZshAction}
     messageOutput = sys.stdout
@@ -510,6 +513,8 @@ class ReactorSelectionMixin:
                    "%s.\nSee the list of available reactors with "
                    "--help-reactors" % (e,))
             raise usage.UsageError(msg)
+        else:
+            self["reactor"] = shortName
     opt_r = opt_reactor
 
 

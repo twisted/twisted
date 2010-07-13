@@ -832,6 +832,7 @@ class PluggableReactorTestCase(unittest.TestCase):
         options.parseOptions(['--reactor', 'fakereactortest', 'subcommand'])
         self.assertEqual(executed[0], INSTALL_EVENT)
         self.assertEqual(executed.count(INSTALL_EVENT), 1)
+        self.assertEquals(options["reactor"], "fakereactortest")
 
 
     def test_reactorSelectionMixinNonExistent(self):
