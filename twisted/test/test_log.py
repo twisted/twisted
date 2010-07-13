@@ -11,6 +11,7 @@ from cStringIO import StringIO
 from twisted.trial import unittest
 
 from twisted.python import log, failure
+from twisted.python.log import _DO_NOT_ENCODE, _allBytesOrText
 
 
 class FakeWarning(Warning):
@@ -687,3 +688,57 @@ class PythonLoggingIntegrationTestCase(unittest.TestCase):
         finally:
             log.PythonLoggingObserver.emit = oldEmit
 
+
+
+class AllBytesOrTextTest(unittest.TestCase):
+    """
+    Tests for L{_allBytesOrText}, a function for simplifying a sequence of some
+    objects into a string of some sort.
+    """
+    def test_allStr(self):
+        """
+        If the sequence passed to L{_allBytesOrText} consists only of C{str}
+        instances, they are joined with C{" "} and returned.
+        """
+        self.assertEquals(
+            _allBytesOrText(["hello"], None), "hello")
+        self.assertEquals(
+            _allBytesOrText(["hello", "world"], None), "hello world")
+        self.assertEquals(
+            _allBytesOrText(["\xff", "\x7f"], None), "\xff \x7f")
+
+
+    def test_allUnicode(self):
+        """
+        If the sequence passed to L{_allBytesOrText} consists only of C{unicode}
+        instances, they are joined with C{u" "}, encoded with the specified
+        encoding, and returned.
+        """
+        self.assertEquals(
+            _allBytesOrText([u"hello"], "utf-16"), u"hello".encode("utf-16"))
+        self.assertEquals(
+            _allBytesOrText([u"hello", u"\N{SNOWMAN}"], "utf-8"),
+            u"hello \N{SNOWMAN}".encode("utf-8"))
+
+
+    def test_doNotEncode(self):
+        """
+        If the encoding passed to L{_allBytesOrText} is C{_DO_NOT_ENCODE}, the
+        unicode sequence is not encoded before being returned.
+        """
+        self.assertEquals(
+            _allBytesOrText([u"hello", u"\N{SNOWMAN}"], _DO_NOT_ENCODE),
+            u"hello \N{SNOWMAN}")
+
+
+    def test_mixed(self):
+        """
+        If the sequence passed to L{_allBytesOrText} contains C{str} and
+        C{unicode}, L{ValueError} is raised.
+        """
+        self.assertRaises(
+            ValueError,
+            _allBytesOrText, ["hello", u"world"], None)
+        self.assertRaises(
+            ValueError,
+            _allBytesOrText, [u"hello", "world"], None)

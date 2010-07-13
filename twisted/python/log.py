@@ -384,17 +384,46 @@ def textFromEventDict(eventDict, encoding=None):
             # we don't know how to log this
             return
     else:
-        if encoding is None:
-            text = ' '.join(map(reflect.safe_str, edm))
-        else:
-            parts = []
-            for chunk in edm:
-                text = unicode(chunk)
-                parts.append(text)
-            text = u' '.join(parts)
-            if encoding is not _DO_NOT_ENCODE:
-                text = text.encode(encoding)
+        text = _allBytesOrText(edm, encoding)
     return text
+
+
+
+def _allBytesOrText(sequence, encoding):
+    """
+    Convert C{sequence} to a C{str} or C{unicode} instance by combining its
+    elements and possibly encoding them.
+
+    @param sequence: Any sequence of all either all C{str} instances or all
+        non-C{str} instances which can be converted to unicode.
+
+    @param encoding: If the sequence is of C{str}, this is ignored.  Otherwise,
+        this encoding will be used to encode the resulting C{unicode} into a
+        C{str} to be returned.  If it is C{_DO_NOT_ENCODE}, no encoding is
+        performed and C{unicode} is returned.
+    """
+    if encoding is None:
+        # This case specifically requests str-only handling.
+        text = False
+    else:
+        # Otherwise we'll allow either all str or all non-str, to be detected on
+        # the first iteration of the loop below.
+        text = None
+
+    for message in sequence:
+        if text is None:
+            text = isinstance(message, unicode)
+        else:
+            if text != isinstance(message, unicode):
+                raise ValueError("Cannot mix bytes and non-bytes in one log message")
+    if text:
+        result = u" ".join(sequence)
+        if encoding is not _DO_NOT_ENCODE:
+            result = result.encode(encoding)
+        return result
+    else:
+        return " ".join(map(reflect.safe_str, sequence))
+
 
 
 class FileLogObserver:
