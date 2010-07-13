@@ -8,11 +8,11 @@ Test cases for defer module.
 
 import gc
 
-from twisted.trial import unittest, util
+from twisted.trial import unittest
 from twisted.internet import reactor, defer
-from twisted.python import failure, log
-
 from twisted.internet.task import Clock
+from twisted.python import failure, log
+from twisted.python.util import unsignedID
 
 class GenericError(Exception):
     pass
@@ -393,6 +393,332 @@ class DeferredTestCase(unittest.TestCase):
             self.assertEqual(exception.args, (exceptionMessage,))
         deferred.addCallback(cbFailed)
         return deferred
+
+
+    def test_synchronousImplicitChain(self):
+        """
+        If a first L{Deferred} with a result is returned from a callback on a
+        second L{Deferred}, the result of the second L{Deferred} becomes the
+        result of the first L{Deferred} and the result of the first L{Deferred}
+        becomes C{None}.
+        """
+        result = object()
+        first = defer.succeed(result)
+        second = defer.Deferred()
+        second.addCallback(lambda ign: first)
+        second.callback(None)
+
+        results = []
+        first.addCallback(results.append)
+        self.assertIdentical(results[0], None)
+        second.addCallback(results.append)
+        self.assertIdentical(results[1], result)
+
+
+    def test_asynchronousImplicitChain(self):
+        """
+        If a first L{Deferred} without a result is returned from a callback on
+        a second L{Deferred}, the result of the second L{Deferred} becomes the
+        result of the first L{Deferred} as soon as the first L{Deferred} has
+        one and the result of the first L{Deferred} becomes C{None}.
+        """
+        first = defer.Deferred()
+        second = defer.Deferred()
+        second.addCallback(lambda ign: first)
+        second.callback(None)
+
+        firstResult = []
+        first.addCallback(firstResult.append)
+        secondResult = []
+        second.addCallback(secondResult.append)
+
+        self.assertEquals(firstResult, [])
+        self.assertEquals(secondResult, [])
+
+        result = object()
+        first.callback(result)
+
+        self.assertEquals(firstResult, [None])
+        self.assertEquals(secondResult, [result])
+
+
+    def test_synchronousImplicitErrorChain(self):
+        """
+        If a first L{Deferred} with a L{Failure} result is returned from a
+        callback on a second L{Deferred}, the first L{Deferred}'s result is
+        converted to L{None} and no unhandled error is logged when it is
+        garbage collected.
+        """
+        first = defer.fail(RuntimeError("First Deferred's Failure"))
+        second = defer.Deferred()
+        second.addCallback(lambda ign, first=first: first)
+        self.assertFailure(second, RuntimeError)
+        second.callback(None)
+        firstResult = []
+        first.addCallback(firstResult.append)
+        self.assertIdentical(firstResult[0], None)
+        return second
+
+
+    def test_asynchronousImplicitErrorChain(self):
+        """
+        Let C{a} and C{b} be two L{Deferred}s.
+
+        If C{a} has no result and is returned from a callback on C{b} then when
+        C{a} fails, C{b}'s result becomes the L{Failure} that was C{a}'s result,
+        the result of C{a} becomes C{None} so that no unhandled error is logged
+        when it is garbage collected.
+        """
+        first = defer.Deferred()
+        second = defer.Deferred()
+        second.addCallback(lambda ign: first)
+        second.callback(None)
+        self.assertFailure(second, RuntimeError)
+
+        firstResult = []
+        first.addCallback(firstResult.append)
+        secondResult = []
+        second.addCallback(secondResult.append)
+
+        self.assertEquals(firstResult, [])
+        self.assertEquals(secondResult, [])
+
+        first.errback(RuntimeError("First Deferred's Failure"))
+
+        self.assertEquals(firstResult, [None])
+        self.assertEquals(len(secondResult), 1)
+
+
+    def test_doubleAsynchronousImplicitChaining(self):
+        """
+        L{Deferred} chaining is transitive.
+
+        In other words, let A, B, and C be Deferreds.  If C is returned from a
+        callback on B and B is returned from a callback on A then when C fires,
+        A fires.
+        """
+        first = defer.Deferred()
+        second = defer.Deferred()
+        second.addCallback(lambda ign: first)
+        third = defer.Deferred()
+        third.addCallback(lambda ign: second)
+
+        thirdResult = []
+        third.addCallback(thirdResult.append)
+
+        result = object()
+        # After this, second is waiting for first to tell it to continue.
+        second.callback(None)
+        # And after this, third is waiting for second to tell it to continue.
+        third.callback(None)
+
+        # Still waiting
+        self.assertEquals(thirdResult, [])
+
+        # This will tell second to continue which will tell third to continue.
+        first.callback(result)
+
+        self.assertEquals(thirdResult, [result])
+
+
+    def test_nestedAsynchronousChainedDeferreds(self):
+        """
+        L{Deferred}s can have callbacks that themselves return L{Deferred}s.
+        When these "inner" L{Deferred}s fire (even asynchronously), the
+        callback chain continues.
+        """
+        results = []
+        failures = []
+
+        # A Deferred returned in the inner callback.
+        inner = defer.Deferred()
+
+        def cb(result):
+            results.append(('start-of-cb', result))
+            d = defer.succeed('inner')
+
+            def firstCallback(result):
+                results.append(('firstCallback', 'inner'))
+                # Return a Deferred that definitely has not fired yet, so we
+                # can fire the Deferreds out of order.
+                return inner
+
+            def secondCallback(result):
+                results.append(('secondCallback', result))
+                return result * 2
+
+            d.addCallback(firstCallback).addCallback(secondCallback)
+            d.addErrback(failures.append)
+            return d
+
+        # Create a synchronous Deferred that has a callback 'cb' that returns
+        # a Deferred 'd' that has fired but is now waiting on an unfired
+        # Deferred 'inner'.
+        outer = defer.succeed('outer')
+        outer.addCallback(cb)
+        outer.addCallback(results.append)
+        # At this point, the callback 'cb' has been entered, and the first
+        # callback of 'd' has been called.
+        self.assertEquals(
+            results, [('start-of-cb', 'outer'), ('firstCallback', 'inner')])
+
+        # Once the inner Deferred is fired, processing of the outer Deferred's
+        # callback chain continues.
+        inner.callback('orange')
+
+        # Make sure there are no errors.
+        inner.addErrback(failures.append)
+        outer.addErrback(failures.append)
+        self.assertEquals(
+            [], failures, "Got errbacks but wasn't expecting any.")
+
+        self.assertEquals(
+            results,
+            [('start-of-cb', 'outer'),
+             ('firstCallback', 'inner'),
+             ('secondCallback', 'orange'),
+             'orangeorange'])
+
+
+    def test_nestedAsynchronousChainedDeferredsWithExtraCallbacks(self):
+        """
+        L{Deferred}s can have callbacks that themselves return L{Deferred}s.
+        These L{Deferred}s can have other callbacks added before they are
+        returned, which subtly changes the callback chain. When these "inner"
+        L{Deferred}s fire (even asynchronously), the outer callback chain
+        continues.
+        """
+        results = []
+        failures = []
+
+        # A Deferred returned in the inner callback after a callback is
+        # added explicitly and directly to it.
+        inner = defer.Deferred()
+
+        def cb(result):
+            results.append(('start-of-cb', result))
+            d = defer.succeed('inner')
+
+            def firstCallback(ignored):
+                results.append(('firstCallback', ignored))
+                # Return a Deferred that definitely has not fired yet with a
+                # result-transforming callback so we can fire the Deferreds
+                # out of order and see how the callback affects the ultimate
+                # results.
+                return inner.addCallback(lambda x: [x])
+
+            def secondCallback(result):
+                results.append(('secondCallback', result))
+                return result * 2
+
+            d.addCallback(firstCallback)
+            d.addCallback(secondCallback)
+            d.addErrback(failures.append)
+            return d
+
+        # Create a synchronous Deferred that has a callback 'cb' that returns
+        # a Deferred 'd' that has fired but is now waiting on an unfired
+        # Deferred 'inner'.
+        outer = defer.succeed('outer')
+        outer.addCallback(cb)
+        outer.addCallback(results.append)
+        # At this point, the callback 'cb' has been entered, and the first
+        # callback of 'd' has been called.
+        self.assertEquals(
+            results, [('start-of-cb', 'outer'), ('firstCallback', 'inner')])
+
+        # Once the inner Deferred is fired, processing of the outer Deferred's
+        # callback chain continues.
+        inner.callback('withers')
+
+        # Make sure there are no errors.
+        outer.addErrback(failures.append)
+        inner.addErrback(failures.append)
+        self.assertEquals(
+            [], failures, "Got errbacks but wasn't expecting any.")
+
+        self.assertEquals(
+            results,
+            [('start-of-cb', 'outer'),
+             ('firstCallback', 'inner'),
+             ('secondCallback', ['withers']),
+             ['withers', 'withers']])
+
+
+    def test_chainDeferredRecordsExplicitChain(self):
+        """
+        When we chain a L{Deferred}, that chaining is recorded explicitly.
+        """
+        a = defer.Deferred()
+        b = defer.Deferred()
+        b.chainDeferred(a)
+        self.assertIdentical(a._chainedTo, b)
+
+
+    def test_explicitChainClearedWhenResolved(self):
+        """
+        Any recorded chaining is cleared once the chaining is resolved, since
+        it no longer exists.
+
+        In other words, if one L{Deferred} is recorded as depending on the
+        result of another, and I{that} L{Deferred} has fired, then the
+        dependency is resolved and we no longer benefit from recording it.
+        """
+        a = defer.Deferred()
+        b = defer.Deferred()
+        b.chainDeferred(a)
+        b.callback(None)
+        self.assertIdentical(a._chainedTo, None)
+
+
+    def test_chainDeferredRecordsImplicitChain(self):
+        """
+        We can chain L{Deferred}s implicitly by adding callbacks that return
+        L{Deferred}s. When this chaining happens, we record it explicitly as
+        soon as we can find out about it.
+        """
+        a = defer.Deferred()
+        b = defer.Deferred()
+        a.addCallback(lambda ignored: b)
+        a.callback(None)
+        self.assertIdentical(a._chainedTo, b)
+
+
+    def test_repr(self):
+        """
+        The C{repr()} of a L{Deferred} contains the class name and a
+        representation of the internal Python ID.
+        """
+        d = defer.Deferred()
+        address = hex(unsignedID(d))
+        self.assertEquals(
+            repr(d), '<Deferred at %s>' % (address,))
+
+
+    def test_reprWithResult(self):
+        """
+        If a L{Deferred} has been fired, then its C{repr()} contains its
+        result.
+        """
+        d = defer.Deferred()
+        d.callback('orange')
+        self.assertEquals(
+            repr(d), "<Deferred at %s current result: 'orange'>" % (
+                hex(unsignedID(d))))
+
+
+    def test_reprWithChaining(self):
+        """
+        If a L{Deferred} C{a} has been fired, but is waiting on another
+        L{Deferred} C{b} that appears in its callback chain, then C{repr(a)}
+        says that it is waiting on C{b}.
+        """
+        a = defer.Deferred()
+        b = defer.Deferred()
+        b.chainDeferred(a)
+        self.assertEquals(
+            repr(a), "<Deferred at %s waiting on Deferred at %s>" % (
+                hex(unsignedID(a)), hex(unsignedID(b))))
 
 
 

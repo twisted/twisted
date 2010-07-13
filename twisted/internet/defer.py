@@ -6,6 +6,10 @@
 Support for results that aren't immediately available.
 
 Maintainer: Glyph Lefkowitz
+
+@var _NO_RESULT: The result used to represent the fact that there is no
+    result. B{Never ever ever use this as an actual result for a Deferred}.  You
+    have been warned.
 """
 
 import traceback
@@ -163,6 +167,10 @@ def getDebugging():
     return Deferred.debug
 
 
+# See module docstring.
+_NO_RESULT = object()
+
+
 
 class Deferred:
     """
@@ -177,8 +185,8 @@ class Deferred:
     that come from outside packages that are not under our control, we use
     threads (see for example L{twisted.enterprise.adbapi}).
 
-    For more information about Deferreds, see doc/howto/defer.html or
-    U{http://twistedmatrix.com/projects/core/documentation/howto/defer.html}
+    For more information about Deferreds, see doc/howto/core/defer.html or
+    U{http://twistedmatrix.com/documents/current/core/howto/defer.html}
 
     When creating a Deferred, you may provide a canceller function, which
     will be called by d.cancel() to let you do any clean-up necessary if the
@@ -203,6 +211,9 @@ class Deferred:
         executing its callback chain, used to stop recursive execution of
         L{_runCallbacks}
     @type _runningCallbacks: C{bool}
+
+    @ivar _chainedTo: If this Deferred is waiting for the result of another
+        Deferred, this is a reference to the other Deferred.  Otherwise, C{None}.
     """
 
     called = False
@@ -218,6 +229,8 @@ class Deferred:
     # Keep this class attribute for now, for compatibility with code that
     # sets it directly.
     debug = False
+
+    _chainedTo = None
 
     def __init__(self, canceller=None):
         """
@@ -318,6 +331,7 @@ class Deferred:
         However, the converse is B{not} true; if d2 is fired d1 will not be
         affected.
         """
+        d._chainedTo = self
         return self.addCallbacks(d.callback, d.errback)
 
 
@@ -441,6 +455,7 @@ class Deferred:
             # Don't recursively run callbacks
             return
         if not self.paused:
+            self._chainedTo = None
             while self.callbacks:
                 item = self.callbacks.pop(0)
                 callback, args, kw = item[
@@ -463,6 +478,7 @@ class Deferred:
                         # where there is no more work to be done, so this call
                         # will return as well.
                         self.pause()
+                        self._chainedTo = self.result
                         self.result.addBoth(self._continue)
                         break
                 except:
@@ -478,12 +494,21 @@ class Deferred:
                 self._debugInfo.failResult = None
 
 
+
     def __str__(self):
+        """
+        Return a string representation of this C{Deferred}.
+        """
         cname = self.__class__.__name__
-        if hasattr(self, 'result'):
-            return "<%s at %s  current result: %r>" % (cname, hex(unsignedID(self)),
-                                                       self.result)
-        return "<%s at %s>" % (cname, hex(unsignedID(self)))
+        result = getattr(self, 'result', _NO_RESULT)
+        myID = hex(unsignedID(self))
+        if self._chainedTo is not None:
+            result = ' waiting on Deferred at %s' % (hex(unsignedID(self._chainedTo)),)
+        elif result is _NO_RESULT:
+            result = ''
+        else:
+            result = ' current result: %r' % (result,)
+        return "<%s at %s%s>" % (cname, myID, result)
     __repr__ = __str__
 
 
