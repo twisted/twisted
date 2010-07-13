@@ -248,6 +248,25 @@ class _PathHelper:
     def sibling(self, path):
         return self.parent().child(path)
 
+
+    def descendant(self, segments):
+        """
+        Retrieve a child or child's child of this path.
+
+        @param segments: A sequence of path segments as C{str} instances.
+
+        @return: A L{FilePath} constructed by looking up the C{segments[0]}
+            child of this path, the C{segments[1]} child of that path, and so
+            on.
+
+        @since: 10.2
+        """
+        path = self
+        for name in segments:
+            path = path.child(name)
+        return path
+
+
     def segmentsFrom(self, ancestor):
         """
         Return a list of segments between a child and its ancestor.
@@ -380,6 +399,7 @@ class FilePath(_PathHelper):
         if not newpath.startswith(self.path):
             raise InsecurePath("%r is not a child of %s" % (newpath, self.path))
         return self.clonePath(newpath)
+
 
     def preauthChild(self, path):
         """

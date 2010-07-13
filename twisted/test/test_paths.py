@@ -136,6 +136,16 @@ class AbstractFilePathTestCase(unittest.TestCase):
         self.failUnlessEqual(f2.open().read(), self.f2content)
 
 
+    def test_multipleChildSegments(self):
+        """
+        C{fp.descendant([a, b, c])} returns the same L{FilePath} as is returned
+        by C{fp.child(a).child(b).child(c)}.
+        """
+        multiple = self.path.descendant(['a', 'b', 'c'])
+        single = self.path.child('a').child('b').child('c')
+        self.assertEquals(multiple, single)
+
+
     def test_dictionaryKeys(self):
         """
         Verify that path instances are usable as dictionary keys.
@@ -805,6 +815,16 @@ class FilePathTestCase(AbstractFilePathTestCase):
 
         self.failIf(filepath.FilePath('z') !=
                     filepath.FilePath('z'))
+
+
+    def test_descendantOnly(self):
+        """
+        If C{".."} is in the sequence passed to L{FilePath.descendant},
+        L{InsecurePath} is raised.
+        """
+        self.assertRaises(
+            filepath.InsecurePath, self.path.descendant, ['a', '..'])
+
 
     def testSibling(self):
         p = self.path.child('sibling_start')
