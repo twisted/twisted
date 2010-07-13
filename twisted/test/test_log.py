@@ -52,7 +52,7 @@ class LogTest(unittest.TestCase):
         publisher.msg(message)
         self.assertEquals(len(events), 1)
         self.assertEquals(events[0]['message'], (message,))
-        self.assertIsInstance(events[0]['message'][0], unicode)
+        self.assertIsInstance(events[0]['message'][0], str)
 
 
     def test_unicode(self):
