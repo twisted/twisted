@@ -155,10 +155,13 @@ reactor.resolve('example.com').addCallback(gotIP)
 
     <p>This is a mirror implementation of a standard UDP client.  The only
     difference is that the destination IP is the multicast address.  This
-    datagram will be distributed to every server listening
-    on <code>224.0.0.1</code> and port <code>8005</code>.  Note that the client
-    port is specified as <code>0</code>, as we have no need to keep track of
-    what port the client is listening on.
+    datagram will be distributed to every server listening on 
+    <code>224.0.0.1</code> (a special address for all hosts on the local
+    network segment, defined by
+    <a href="http://www.faqs.org/rfcs/rfc1112.html">RFC 1112</a>) and port 
+    <code>8005</code>.  Note that the client  port is specified as 
+    <code>0</code>, as we have no need to keep track of what port the client
+    is listening on.
     </p>
 
 <h2>Acknowledgments</h2>

@@ -310,6 +310,9 @@ class MulticastPort(MulticastMixin, Port):
     implements(interfaces.IMulticastTransport)
 
     def __init__(self, port, proto, interface='', maxPacketSize=8192, reactor=None, listenMultiple=False):
+        """
+        @see: L{twisted.internet.interfaces.IReactorMulticast.listenMulticast}
+        """
         Port.__init__(self, port, proto, interface, maxPacketSize, reactor)
         self.listenMultiple = listenMultiple
 

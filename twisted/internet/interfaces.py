@@ -480,11 +480,16 @@ class IReactorMulticast(Interface):
         L{DatagramProtocol<twisted.internet.protocol.DatagramProtocol>} to the
         given numeric UDP port.
 
-        @param listenMultiple: boolean indicating whether multiple sockets can
-                               bind to same UDP port.
+        @param listenMultiple: If set to True, allows multiple sockets to
+            bind to the same address and port number at the same time.
+        @type listenMultiple: C{bool}
 
         @returns: An object which provides L{IListeningPort}.
+
+        @see: L{twisted.internet.interfaces.IMulticastTransport}
+        @see: U{http://twistedmatrix.com/documents/current/core/howto/udp.html}
         """
+
 
 
 class IReactorProcess(Interface):
