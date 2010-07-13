@@ -40,6 +40,21 @@ class LogTest(unittest.TestCase):
         self.assertEquals(len(catcher), 0)
 
 
+    def test_nonASCII(self):
+        """
+        L{LogPublisher.msg} accepts C{str} messages containing non-ASCII
+        bytes and passes them along to any registered observers unmodified.
+        """
+        publisher = log.LogPublisher()
+        events = []
+        publisher.addObserver(events.append)
+        message = u"non-ascii: \N{SNOWMAN}".encode('utf-8')
+        publisher.msg(message)
+        self.assertEquals(len(events), 1)
+        self.assertEquals(events[0]['message'], (message,))
+        self.assertIsInstance(events[0]['message'][0], unicode)
+
+
     def test_unicode(self):
         """
         L{LogPublisher.msg} accepts unicode messages and passes them along to
