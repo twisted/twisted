@@ -1,0 +1,1 @@
+twisted.python.deprecate.deprecatedModuleAttribute now emits only one warning when used to deprecate a package attribute which is a module.

@@ -315,10 +315,15 @@ class _DeprecatedAttribute(object):
         """
         Get the underlying attribute value and issue a deprecation warning.
         """
+        # This might fail if the deprecated thing is a module inside a package.
+        # In that case, don't emit the warning this time.  The import system
+        # will come back again when it's not an AttributeError and we can emit
+        # the warning then.
+        result = getattr(self.module, self.__name__)
         message = _getDeprecationWarningString(self.fqpn, self.version,
             DEPRECATION_WARNING_FORMAT + ': ' + self.message)
         warn(message, DeprecationWarning, stacklevel=3)
-        return getattr(self.module, self.__name__)
+        return result
 
 
 

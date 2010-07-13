@@ -469,25 +469,11 @@ class Deprecations(unittest.TestCase):
     def ensureDeprecated(self, message):
         """
         Ensures that the correct deprecation warning was issued.
-
-        Because of the way imports from packages work, the deprecation is
-        first emitted by an insults.colors(-like) access which raises an
-        AttributeError. The access is then retried after colors.py has
-        actually been loaded; the warning is emitted again, and this time the
-        lookup succeeds and the import is complete. Normally this will
-        probably be invisible, because duplicate warnings from the same
-        location are suppressed by the reporting code, but trial goes out of
-        its way to make sure every warning gets emitted.
-
-        As a result, flushWarnings() produces 2 of the exact same warning.
-
-        A ticket has been opened regarding this behavior (see ticket #4492)
         """
-        warningsShown = self.flushWarnings()
-        self.assertTrue(len(warningsShown) >= 1)
-        for warning in warningsShown:
-            self.assertIdentical(warning['category'], DeprecationWarning)
-            self.assertEquals(warning['message'], message)
+        warnings = self.flushWarnings()
+        self.assertIdentical(warnings[0]['category'], DeprecationWarning)
+        self.assertEquals(warnings[0]['message'], message)
+        self.assertEquals(len(warnings), 1)
 
 
     def test_colors(self):

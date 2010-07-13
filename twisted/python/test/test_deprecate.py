@@ -17,6 +17,7 @@ from twisted.python.deprecate import _getDeprecationWarningString
 from twisted.python.deprecate import DEPRECATION_WARNING_FORMAT
 from twisted.python.reflect import fullyQualifiedName
 from twisted.python.versions import Version
+from twisted.python.filepath import FilePath
 
 from twisted.python.test import deprecatedattributes
 
@@ -397,3 +398,33 @@ class DeprecatedAttributeTests(TestCase):
             'second')
 
         self.assertIdentical(proxy, sys.modules[self._testModuleName])
+
+    _packageInit = """\
+from twisted.python.deprecate import deprecatedModuleAttribute
+from twisted.python.versions import Version
+
+deprecatedModuleAttribute(
+    Version('Package', 1, 2, 3), 'message', __name__, 'module')
+"""
+
+    def test_deprecatedModule(self):
+        """
+        If L{deprecatedModuleAttribute} is used to deprecate a module attribute
+        of a package, only one deprecation warning is emitted when the
+        deprecated module is imported.
+        """
+        base = FilePath(self.mktemp())
+        base.makedirs()
+        package = base.child('package')
+        package.makedirs()
+        package.child('__init__.py').setContent(self._packageInit)
+        module = package.child('module.py').setContent('')
+
+        sys.path.insert(0, base.path)
+        self.addCleanup(sys.path.remove, base.path)
+
+        # import package.module
+        from package import module
+        warnings = self.flushWarnings([self.test_deprecatedModule])
+        self.assertEquals(len(warnings), 1)
+
