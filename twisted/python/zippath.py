@@ -1,13 +1,13 @@
 # -*- test-case-name: twisted.test.test_paths.ZipFilePathTestCase -*-
+# Copyright (c) 2006-2010 Twisted Matrix Laboratories.
+# See LICENSE for details.
 
 """
-
 This module contains partial re-implementations of FilePath, pending some
 specification of formal interfaces it is a duck-typing attempt to emulate them
 for certain restricted uses.
 
 See the constructor for ZipArchive for use.
-
 """
 
 __metaclass__ = type
@@ -52,8 +52,13 @@ class ZipPath(_PathHelper):
         return cmp((self.archive, self.pathInArchive),
                    (other.archive, other.pathInArchive))
 
+
     def __repr__(self):
-        return 'ZipPath(%r)' % (os.path.abspath(self.path),)
+        parts = [os.path.abspath(self.archive.path)]
+        parts.extend(self.pathInArchive.split(ZIP_PATH_SEP))
+        path = os.sep.join(parts)
+        return "ZipPath('%s')" % (path.encode('string-escape'),)
+
 
     def parent(self):
         splitup = self.pathInArchive.split(ZIP_PATH_SEP)
@@ -61,8 +66,21 @@ class ZipPath(_PathHelper):
             return self.archive
         return ZipPath(self.archive, ZIP_PATH_SEP.join(splitup[:-1]))
 
+
     def child(self, path):
+        """
+        Return a new ZipPath representing a path in C{self.archive} which is
+        a child of this path.
+
+        @note: Requesting the C{".."} (or other special name) child will not
+            cause L{InsecurePath} to be raised since these names do not have
+            any special meaning inside a zip archive.  Be particularly
+            careful with the C{path} attribute (if you absolutely must use
+            it) as this means it may include special names with special
+            meaning outside of the context of a zip archive.
+        """
         return ZipPath(self.archive, ZIP_PATH_SEP.join([self.pathInArchive, path]))
+
 
     def sibling(self, path):
         return self.parent().child(path)
@@ -215,3 +233,6 @@ class ZipArchive(ZipPath):
 
     def __repr__(self):
         return 'ZipArchive(%r)' % (os.path.abspath(self.path),)
+
+
+__all__ = ['ZipArchive', 'ZipPath']

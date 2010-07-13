@@ -1,0 +1,1 @@
+twisted.python.zippath.ZipPath.__repr__ now correctly formats paths with ".." in them (by including it).

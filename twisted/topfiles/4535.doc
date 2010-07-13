@@ -1,0 +1,1 @@
+twisted.python.zippath.ZipPath.child now documents its handling of ".." (which is not special, making it different from FilePath.child).

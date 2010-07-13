@@ -309,6 +309,29 @@ class ZipFilePathTestCase(AbstractFilePathTestCase):
         self.assertEquals(repr(child), pathRepr)
 
 
+    def test_zipPathReprParentDirSegment(self):
+        """
+        The repr of a ZipPath with C{".."} in the internal part of its path
+        includes the C{".."} rather than applying the usual parent directory
+        meaning.
+        """
+        child = self.path.child("foo").child("..").child("bar")
+        pathRepr = "ZipPath(%r)" % (
+            self.cmn + ".zip" + os.sep.join(["", "foo", "..", "bar"]))
+        self.assertEquals(repr(child), pathRepr)
+
+
+    def test_zipPathReprEscaping(self):
+        """
+        Bytes in the ZipPath path which have special meaning in Python
+        string literals are escaped in the ZipPath repr.
+        """
+        child = self.path.child("'")
+        path = self.cmn + ".zip" + os.sep.join(["", "'"])
+        pathRepr = "ZipPath('%s')" % (path.encode('string-escape'),)
+        self.assertEquals(repr(child), pathRepr)
+
+
     def test_zipArchiveRepr(self):
         """
         Make sure that invoking ZipArchive's repr prints the correct class
