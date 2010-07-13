@@ -14,6 +14,7 @@ except ImportError:
     pwd = grp = None
 
 from zope.interface import implements
+from zope.interface.verify import verifyObject
 
 from twisted.trial import unittest
 
@@ -60,6 +61,10 @@ try:
 except ImportError:
     cProfile = None
 
+if getattr(os, 'setuid', None) is None:
+    setuidSkip = "Platform does not support --uid/--gid twistd options."
+else:
+    setuidSkip = None
 
 
 def patchUserDatabase(patch, user, uid, group, gid):
@@ -384,6 +389,17 @@ class ApplicationRunnerTest(unittest.TestCase):
             implements(service.IService, service.IProcess)
 
             processName = None
+            uid = None
+            gid = None
+
+            def setName(self, name):
+                pass
+
+            def setServiceParent(self, parent):
+                pass
+
+            def disownServiceParent(self):
+                pass
 
             def privilegedStartService(self):
                 events.append('privilegedStartService')
@@ -394,9 +410,13 @@ class ApplicationRunnerTest(unittest.TestCase):
             def stopService(self):
                 pass
 
+        application = FakeService()
+        verifyObject(service.IService, application)
+        verifyObject(service.IProcess, application)
+
         runner = FakeUnixApplicationRunner(self.config)
         runner.preApplication()
-        runner.application = FakeService()
+        runner.application = application
         runner.postApplication()
 
         self.assertEqual(
@@ -416,6 +436,7 @@ class ApplicationRunnerTest(unittest.TestCase):
         gid = 4321
         self._applicationStartsWithConfiguredID(
             ["--uid", str(uid), "--gid", str(gid)], uid, gid)
+    test_applicationStartsWithConfiguredNumericIDs.skip = setuidSkip
 
 
     def test_applicationStartsWithConfiguredNameIDs(self):
@@ -432,12 +453,7 @@ class ApplicationRunnerTest(unittest.TestCase):
         patchUserDatabase(self.patch, user, uid, group, gid)
         self._applicationStartsWithConfiguredID(
             ["--uid", user, "--gid", group], uid, gid)
-
-    if getattr(os, 'setuid', None) is None:
-        msg = "Platform does not support --uid/--gid twistd options."
-        test_applicationStartsWithConfiguredNameIDs.skip = msg
-        test_applicationStartsWithConfiguredNumericIDs.skip = msg
-        del msg
+    test_applicationStartsWithConfiguredNameIDs.skip = setuidSkip
 
 
     def test_startReactorRunsTheReactor(self):
