@@ -1,0 +1,1 @@
+twisted.news.database.PickleStorage now invokes the email APIs correctly, allowing it to actually send moderation emails.
