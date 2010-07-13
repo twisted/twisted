@@ -221,12 +221,13 @@ class ServerDNSTestCase(unittest.TestCase):
         )
 
 
-    def testAdressRecord3(self):
+    def testAddressRecord3(self):
         """Test DNS 'A' record queries with edge cases"""
         return self.namesTest(
             self.resolver.lookupAddress('host-two.test-domain.com'),
             [dns.Record_A('255.255.255.254', ttl=19283784), dns.Record_A('0.0.0.0', ttl=19283784)]
         )
+
 
     def testAuthority(self):
         """Test DNS 'SOA' record queries"""
@@ -767,3 +768,81 @@ class FilterAnswersTests(unittest.TestCase):
         L{DNSUnknownError}.
         """
         return self._rcodeTest(EREFUSED + 1, DNSUnknownError)
+
+
+
+class AuthorityTests(unittest.TestCase):
+    """
+    Tests for the basic response record selection code in L{FileAuthority}
+    (independent of its fileness).
+    """
+    def test_recordMissing(self):
+        """
+        If a L{FileAuthority} has a zone which includes an I{NS} record for a
+        particular name and that authority is asked for another record for the
+        same name which does not exist, the I{NS} record is not included in the
+        authority section of the response.
+        """
+        authority = NoFileAuthority(
+            soa=(str(soa_record.mname), soa_record),
+            records={
+                str(soa_record.mname): [
+                    soa_record,
+                    dns.Record_NS('1.2.3.4'),
+                    ]})
+        d = authority.lookupAddress(str(soa_record.mname))
+        result = []
+        d.addCallback(result.append)
+        answer, authority, additional = result[0]
+        self.assertEquals(answer, [])
+        self.assertEquals(
+            authority, [
+                dns.RRHeader(
+                    str(soa_record.mname), soa_record.TYPE,
+                    ttl=soa_record.expire, payload=soa_record,
+                    auth=True)])
+        self.assertEquals(additional, [])
+
+
+    def _referralTest(self, method):
+        """
+        Create an authority and make a request against it.  Then verify that the
+        result is a referral, including no records in the answers or additional
+        sections, but with an I{NS} record in the authority section.
+        """
+        subdomain = 'example.' + str(soa_record.mname)
+        nameserver = dns.Record_NS('1.2.3.4')
+        authority = NoFileAuthority(
+            soa=(str(soa_record.mname), soa_record),
+            records={
+                subdomain: [
+                    nameserver,
+                    ]})
+        d = getattr(authority, method)(subdomain)
+        result = []
+        d.addCallback(result.append)
+        answer, authority, additional = result[0]
+        self.assertEquals(answer, [])
+        self.assertEquals(
+            authority, [dns.RRHeader(
+                    subdomain, dns.NS, ttl=soa_record.expire,
+                    payload=nameserver, auth=False)])
+        self.assertEquals(additional, [])
+
+
+    def test_referral(self):
+        """
+        When an I{NS} record is found for a child zone, it is included in the
+        authority section of the response.  It is marked as non-authoritative if
+        the authority is not also authoritative for the child zone (RFC 2181,
+        section 6.1).
+        """
+        self._referralTest('lookupAddress')
+
+
+    def test_allRecordsReferral(self):
+        """
+        A referral is also generated for a request of type C{ALL_RECORDS}.
+        """
+        self._referralTest('lookupAllRecords')
+

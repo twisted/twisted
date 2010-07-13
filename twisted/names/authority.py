@@ -1,9 +1,10 @@
 # -*- test-case-name: twisted.names.test.test_names -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-from __future__ import nested_scopes
+"""
+Authoritative resolvers.
+"""
 
 import os
 import time
@@ -90,12 +91,15 @@ class FileAuthority(common.ResolverBase):
                 else:
                     ttl = default_ttl
 
-                if record.TYPE == type or type == dns.ALL_RECORDS:
-                    results.append(
-                        dns.RRHeader(name, record.TYPE, dns.IN, ttl, record, auth=True)
-                    )
-                elif record.TYPE == dns.NS and type != dns.ALL_RECORDS:
+                if record.TYPE == dns.NS and name.lower() != self.soa[0].lower():
+                    # NS record belong to a child zone: this is a referral.  As
+                    # NS records are authoritative in the child zone, ours here
+                    # are not.  RFC 2181, section 6.1.
                     authority.append(
+                        dns.RRHeader(name, record.TYPE, dns.IN, ttl, record, auth=False)
+                    )
+                elif record.TYPE == type or type == dns.ALL_RECORDS:
+                    results.append(
                         dns.RRHeader(name, record.TYPE, dns.IN, ttl, record, auth=True)
                     )
                 if record.TYPE == dns.CNAME:
@@ -115,6 +119,13 @@ class FileAuthority(common.ResolverBase):
                                 dns.RRHeader(n, dns.A, dns.IN, rec.ttl or default_ttl, rec, auth=True)
                             )
 
+            if not results and not authority:
+                # Empty response. Include SOA record to allow clients to cache
+                # this response.  RFC 1034, sections 3.7 and 4.3.4, and RFC 2181
+                # section 7.1.
+                authority.append(
+                    dns.RRHeader(self.soa[0], dns.SOA, dns.IN, ttl, self.soa[1], auth=True)
+                    )
             return defer.succeed((results, authority, additional))
         else:
             if name.lower().endswith(self.soa[0].lower()):

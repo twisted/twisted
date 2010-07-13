@@ -1,0 +1,3 @@
+twisted.names.authority.FileAuthority now generates correct negative caching
+hints, marks its referral NS RRs as non-authoritative, and correctly
+generates referrals for ALL_RECORDS requests.
