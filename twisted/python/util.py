@@ -965,6 +965,46 @@ def runAsEffectiveUser(euid, egid, function, *args, **kwargs):
 
 
 
+def slowStringCompare(s1, s2):
+    """
+    Compare C{s1} and C{s2} for equality, but always take
+    the same amount of time when both strings are of the same length.
+    This is intended to stop U{timing attacks<http://rdist.root.org/2009/05/28/timing-attack-in-google-keyczar-library/>}.
+
+    This implementation should do what keyczar does::
+
+      - http://code.google.com/p/keyczar/source/browse/trunk/python/src/keyczar/keys.py?r=471#352
+      - http://rdist.root.org/2010/01/07/timing-independent-array-comparison/
+
+    @param s1: string to compare to s2
+    @type s1: C{str}
+
+    @param s2: string to compare to s1
+    @type s2: C{str}
+
+    @return: C{True} if strings are equivalent, else C{False}.
+    @rtype: C{bool}
+
+    @since: 10.2
+
+    @warning: if C{s1} and C{s2} are of unequal length, the comparison will take
+        less time.  An attacker may be able to guess how long the expected
+        string is.  To avoid this problem, compare only fixed-length hashes.
+    """
+    if isinstance(s1, unicode):
+        raise TypeError("s1 must not be unicode")
+
+    if isinstance(s2, unicode):
+        raise TypeError("s2 must not be unicode")
+
+    if len(s1) != len(s2):
+        return False
+    result = 0
+    for n in xrange(len(s1)):
+        result |= ord(s1[n]) ^ ord(s2[n])
+    return result == 0
+
+
 __all__ = [
     "uniquify", "padTo", "getPluginDirs", "addPluginDir", "sibpath",
     "getPassword", "dict", "println", "keyed_md5", "makeStatBar",
@@ -973,4 +1013,5 @@ __all__ = [
     "dsu", "switchUID", "SubclassableCStringIO", "moduleMovedForSplit",
     "unsignedID", "mergeFunctionMetadata", "nameToLabel", "uidFromString",
     "gidFromString", "runAsEffectiveUser", "moduleMovedForSplit",
+    "slowStringCompare",
 ]
