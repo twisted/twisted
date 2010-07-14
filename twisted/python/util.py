@@ -971,13 +971,10 @@ def slowStringCompare(s1, s2):
     the same amount of time when both strings are of the same length.
     This is intended to stop U{timing attacks<http://rdist.root.org/2009/05/28/timing-attack-in-google-keyczar-library/>}.
 
-    @warning: if C{s1} and C{s2} are of unequal length, the comparison will take
-        less time.  An attacker may be able to guess how long the expected
-        string is.  To avoid this problem, compare only fixed-length hashes.
+    This implementation should do what keyczar does::
 
-    This implementation should do what keyczar does:
-    http://code.google.com/p/keyczar/source/browse/trunk/python/src/keyczar/keys.py?r=471#352
-    http://rdist.root.org/2010/01/07/timing-independent-array-comparison/
+      - http://code.google.com/p/keyczar/source/browse/trunk/python/src/keyczar/keys.py?r=471#352
+      - http://rdist.root.org/2010/01/07/timing-independent-array-comparison/
 
     @param s1: string to compare to s2
     @type s1: C{str}
@@ -989,6 +986,10 @@ def slowStringCompare(s1, s2):
     @rtype: C{bool}
 
     @since: 10.2
+
+    @warning: if C{s1} and C{s2} are of unequal length, the comparison will take
+        less time.  An attacker may be able to guess how long the expected
+        string is.  To avoid this problem, compare only fixed-length hashes.
     """
     if isinstance(s1, unicode):
         raise TypeError("s1 must not be unicode")
