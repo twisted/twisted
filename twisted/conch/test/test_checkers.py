@@ -6,11 +6,16 @@ Tests for L{twisted.conch.checkers}.
 """
 
 try:
+    import crypt
+except ImportError:
+    cryptSkip = 'cannot run without crypt module'
+else:
+    cryptSkip = None
+
+try:
     import pwd
 except ImportError:
     pwd = None
-else:
-    import crypt
 
 import os, base64
 
@@ -28,7 +33,9 @@ try:
     import pyasn1
 except ImportError:
     SSHPublicKeyDatabase = None
+    dependencySkip = "Cannot run without PyCrypto and pyasn1"
 else:
+    dependencySkip = None
     from twisted.conch.ssh import keys
     from twisted.conch.checkers import (
         SSHPublicKeyDatabase, SSHProtocolChecker, verifyCryptedPassword)
@@ -41,6 +48,8 @@ class HelperTests(TestCase):
     Tests for functionality used to implement checkers in
     L{twisted.conch.checkers}.
     """
+    skip = cryptSkip or dependencySkip
+
     def test_verifyCryptedPassword(self):
         """
         L{verifyCryptedPassword} returns C{True} if the plaintext password
@@ -59,6 +68,7 @@ class HelperTests(TestCase):
         password = 'string secret'
         crypted = crypt.crypt(password, password)
         self.assertFalse(verifyCryptedPassword(crypted, 'secret string'))
+
 
 
 class SSHPublicKeyDatabaseTestCase(TestCase):
