@@ -9,6 +9,8 @@ try:
     import pwd
 except ImportError:
     pwd = None
+else:
+    import crypt
 
 import os, base64
 
@@ -28,9 +30,35 @@ except ImportError:
     SSHPublicKeyDatabase = None
 else:
     from twisted.conch.ssh import keys
-    from twisted.conch.checkers import SSHPublicKeyDatabase, SSHProtocolChecker
+    from twisted.conch.checkers import (
+        SSHPublicKeyDatabase, SSHProtocolChecker, verifyCryptedPassword)
     from twisted.conch.error import NotEnoughAuthentication, ValidPublicKey
     from twisted.conch.test import keydata
+
+
+class HelperTests(TestCase):
+    """
+    Tests for functionality used to implement checkers in
+    L{twisted.conch.checkers}.
+    """
+    def test_verifyCryptedPassword(self):
+        """
+        L{verifyCryptedPassword} returns C{True} if the plaintext password
+        passed to it matches the encrypted password passed to it.
+        """
+        password = 'secret string'
+        crypted = crypt.crypt(password, password)
+        self.assertTrue(verifyCryptedPassword(crypted, password))
+
+
+    def test_refuteCryptedPassword(self):
+        """
+        L{verifyCryptedPassword} returns C{False} if the plaintext password
+        passed to it does not match the encrypted password passed to it.
+        """
+        password = 'string secret'
+        crypted = crypt.crypt(password, password)
+        self.assertFalse(verifyCryptedPassword(crypted, 'secret string'))
 
 
 class SSHPublicKeyDatabaseTestCase(TestCase):

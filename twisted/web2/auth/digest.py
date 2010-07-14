@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.web2.test.test_httpauth -*-
-# Copyright (c) 2006-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2006-2010 Twisted Matrix Laboratories.
 
 """
 Implementation of RFC2617: HTTP Digest Authentication
@@ -11,6 +11,7 @@ import time
 import random
 
 from twisted.cred import credentials, error
+from twisted.python.util import slowStringCompare
 from zope.interface import implements, Interface
 
 from twisted.web2.auth.interfaces import ICredentialFactory
@@ -155,7 +156,7 @@ class DigestedCredentials:
             algo, nonce, nc, cnonce, qop, self.method, uri, None
         )
 
-        return expected == response
+        return slowStringCompare(expected, response)
 
     def checkHash(self, digestHash):
         response = self.fields.get('response')
@@ -171,7 +172,7 @@ class DigestedCredentials:
             algo, nonce, nc, cnonce, qop, self.method, uri, None
         )
 
-        return expected == response
+        return slowStringCompare(expected, response)
 
 
 class DigestCredentialFactory(object):
@@ -261,11 +262,11 @@ class DigestCredentialFactory(object):
         if len(keyParts) != 3:
             raise error.LoginFailed('Invalid response, invalid opaque value')
 
-        if keyParts[0] != nonce:
+        if not slowStringCompare(keyParts[0], nonce):
             raise error.LoginFailed(
                 'Invalid response, incompatible opaque/nonce values')
 
-        if keyParts[1] != clientip:
+        if not slowStringCompare(keyParts[1], clientip):
             raise error.LoginFailed(
                 'Invalid response, incompatible opaque/client values')
 
@@ -277,7 +278,7 @@ class DigestCredentialFactory(object):
 
         # Verify the digest
         digest = md5(key + self.privateKey).hexdigest()
-        if digest != opaqueParts[0]:
+        if not slowStringCompare(digest, opaqueParts[0]):
             raise error.LoginFailed('Invalid response, invalid opaque value')
 
         return True
