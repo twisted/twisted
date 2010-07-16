@@ -129,7 +129,7 @@ class="python">Deferreds</code> because they may need to ask the user
 for input.</p>
 
 <p>Once the authentication is complete, <code
-class="python">SSHUserAuthClient</code> takes care of starting the code
+class="python">SSHUserAuthClient</code> takes care of starting the code 
 <code class="python">SSHConnection</code> object given to it. Next, we'll
 look at how to use the <code class="python">SSHConnection</code></p>
 
@@ -187,21 +187,23 @@ server supports it.</p>
 where everything gets started. It gets passed a chunk of data;
 however, this chunk is usually nothing and can be ignored.
 Our <code class="python">channelOpen()</code> initializes our
-channel, and sends a request to the other side, using the
+channel, and sends a request to the other side, using the 
 <code class="python">sendRequest()</code> method of the <code
 class="python">SSHConnection</code> object. Requests are used to send
 events to the other side. We pass the method self so that it knows to
 send the request for this channel. The 2nd argument of 'exec' tells the
 server that we want to execute a command. The third argument is the data
-that accompanies the request. <code class="API">common.NS</code> encodes
+that accompanies the request. 
+<code class="API" base="twisted.conch.ssh">common.NS</code> encodes
 the data as a length-prefixed string, which is how the server expects
 the data. We also say that we want a reply saying that the process has a
-been started. <code class="python">sendRequest()</code> then returns a
+been started. <code class="python">sendRequest()</code> then returns a 
 <code class="python">Deferred</code> which we add a callback for.</p>
 
 <p>Once the callback fires, we send the data. <code
-class="python">SSHChannel</code> supports the <code class="API">
-twisted.internet.interface.Transport</code> interface, so
+class="python">SSHChannel</code> supports the 
+<code class="API">twisted.internet.interfaces.ITransport</code> 
+interface, so
 it can be given to Protocols to run them over the secure
 connection. In our case, we just write the data directly. <code
 class="python">sendEOF()</code> does not follow the interface,
@@ -235,7 +237,7 @@ of <code class="API">twisted.internet.protocol.ClientFactory</code>.
 This instance has the attribute <code class="python">protocol</code>
 set to our earlier <code class="python">ClientTransport</code>
 class. Note that the protocol attribute is set to the class <code
-class="python">ClientTransport</code>, not an instance of
+class="python">ClientTransport</code>, not an instance of 
 <code class="python">ClientTransport</code>! When the <code
 class="python">connectTCP</code> call completes, the protocol will be
 called to create a <code class="python">ClientTransport()</code> object
