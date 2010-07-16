@@ -12,6 +12,7 @@ from zope.interface.verify import verifyObject
 from twisted.trial.itrial import IReporter, ITestCase
 from twisted.trial import unittest, runner, reporter, util
 from twisted.python import failure, log, reflect, filepath
+from twisted.python.filepath import FilePath
 from twisted.scripts import trial
 from twisted.plugins import twisted_trial
 from twisted import plugin
@@ -378,8 +379,16 @@ class TestRunner(unittest.TestCase):
         """
         self.parseOptions([])
 
-        initialDirectory = os.getcwd()
-        self.addCleanup(os.chdir, initialDirectory)
+        # Make sure we end up with the same working directory after this test
+        # as we had before it.
+        self.addCleanup(os.chdir, os.getcwd())
+
+        # Make a new directory and change into it.  This isolates us from state
+        # that other tests might have dumped into this process's temp
+        # directory.
+        runDirectory = FilePath(self.mktemp())
+        runDirectory.makedirs()
+        os.chdir(runDirectory.path)
 
         firstRunner = self.getRunner()
         secondRunner = self.getRunner()
@@ -396,7 +405,7 @@ class TestRunner(unittest.TestCase):
                 # Change the working directory to the value it had before this
                 # test suite was started.
                 where['concurrent'] = subsequentDirectory = os.getcwd()
-                os.chdir(initialDirectory)
+                os.chdir(runDirectory.path)
                 self.addCleanup(os.chdir, subsequentDirectory)
 
                 secondRunner.run(ConcurrentCase('test_second'))
@@ -413,8 +422,8 @@ class TestRunner(unittest.TestCase):
             self.fail(bad[0][1])
         self.assertEqual(
             where, {
-                'concurrent': os.path.join(initialDirectory, '_trial_temp'),
-                'record': os.path.join(initialDirectory, '_trial_temp-1')})
+                'concurrent': runDirectory.child('_trial_temp').path,
+                'record': runDirectory.child('_trial_temp-1').path})
 
 
     def test_concurrentExplicitWorkingDirectory(self):
@@ -437,7 +446,7 @@ class TestRunner(unittest.TestCase):
                 assert that it raises L{_WorkingDirectoryBusy}.
                 """
                 self.assertRaises(
-                    runner._WorkingDirectoryBusy,
+                    util._WorkingDirectoryBusy,
                     secondRunner.run, ConcurrentCase('test_failure'))
 
             def test_failure(self):
@@ -478,6 +487,11 @@ class TestRunner(unittest.TestCase):
         self.assertEqual(['runcall'], debugger._calls)
 
 
+
+class RemoveSafelyTests(unittest.TestCase):
+    """
+    Tests for L{_removeSafely}.
+    """
     def test_removeSafelyNoTrialMarker(self):
         """
         If a path doesn't contain a node named C{"_trial_marker"}, that path is
@@ -487,11 +501,7 @@ class TestRunner(unittest.TestCase):
         directory = self.mktemp()
         os.mkdir(directory)
         dirPath = filepath.FilePath(directory)
-
-        self.parseOptions([])
-        myRunner = self.getRunner()
-        self.assertRaises(runner._NoTrialMarker,
-                          myRunner._removeSafely, dirPath)
+        self.assertRaises(util._NoTrialMarker, util._removeSafely, dirPath)
 
 
     def test_removeSafelyRemoveFailsMoveSucceeds(self):
@@ -509,7 +519,7 @@ class TestRunner(unittest.TestCase):
 
         # Patch stdout so we can check the print statements in _removeSafely
         out = StringIO.StringIO()
-        stdout = self.patch(sys, 'stdout', out)
+        self.patch(sys, 'stdout', out)
 
         # Set up a trial directory with a _trial_marker
         directory = self.mktemp()
@@ -519,9 +529,7 @@ class TestRunner(unittest.TestCase):
         # Ensure that path.remove() raises an OSError
         dirPath.remove = dummyRemove
 
-        self.parseOptions([])
-        myRunner = self.getRunner()
-        myRunner._removeSafely(dirPath)
+        util._removeSafely(dirPath)
         self.assertIn("could not remove FilePath", out.getvalue())
 
 
@@ -547,7 +555,7 @@ class TestRunner(unittest.TestCase):
 
         # Patch stdout so we can check the print statements in _removeSafely
         out = StringIO.StringIO()
-        stdout = self.patch(sys, 'stdout', out)
+        self.patch(sys, 'stdout', out)
 
         # Set up a trial directory with a _trial_marker
         directory = self.mktemp()
@@ -559,9 +567,7 @@ class TestRunner(unittest.TestCase):
         dirPath.remove = dummyRemove
         dirPath.moveTo = dummyMoveTo
 
-        self.parseOptions([])
-        myRunner = self.getRunner()
-        error = self.assertRaises(OSError, myRunner._removeSafely, dirPath)
+        error = self.assertRaises(OSError, util._removeSafely, dirPath)
         self.assertEquals(str(error), "path movement failed")
         self.assertIn("could not remove FilePath", out.getvalue())
 
@@ -572,8 +578,6 @@ class TestTrialSuite(unittest.TestCase):
     def test_imports(self):
         # FIXME, HTF do you test the reactor can be cleaned up ?!!!
         from twisted.trial.runner import TrialSuite
-        # silence pyflakes warning
-        silencePyflakes = TrialSuite
 
 
 
@@ -681,7 +685,7 @@ class BreakingSuite(runner.TestSuite):
     def run(self, result):
         try:
             raise RuntimeError("error that occurs outside of a test")
-        except RuntimeError, e:
+        except RuntimeError:
             log.err(failure.Failure())
 
 

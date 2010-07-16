@@ -8,14 +8,23 @@ A miscellany of code used to run Trial tests.
 Maintainer: Jonathan Lange
 """
 
+__all__ = [
+    'suiteVisit', 'TestSuite',
+
+    'DestructiveTestSuite', 'DocTestCase', 'DocTestSuite',
+    'DryRunVisitor', 'ErrorHolder', 'LoggedSuite', 'PyUnitTestCase',
+    'TestHolder', 'TestLoader', 'TrialRunner', 'TrialSuite',
+
+    'filenameToModule', 'isPackage', 'isPackageDirectory', 'isTestCase',
+    'name', 'samefile', 'NOT_IN_TEST',
+    ]
 
 import pdb
 import os, types, warnings, sys, inspect, imp
-import random, doctest, time
+import doctest, time
 
 from twisted.python import reflect, log, failure, modules, filepath
 from twisted.python.compat import set
-from twisted.python.lockfile import FilesystemLock
 
 from twisted.internet import defer
 from twisted.trial import util, unittest
@@ -28,24 +37,6 @@ from twisted.trial.unittest import suiteVisit, TestSuite
 from zope.interface import implements
 
 pyunit = __import__('unittest')
-
-
-
-class _WorkingDirectoryBusy(Exception):
-    """
-    A working directory was specified to the runner, but another test run is
-    currently using that directory.
-    """
-
-
-
-class _NoTrialMarker(Exception):
-    """
-    No trial marker file could be found.
-
-    Raised when trial attempts to remove a trial temporary working directory
-    that does not contain a marker file.
-    """
 
 
 
@@ -728,64 +719,12 @@ class TrialRunner(object):
         return dbg
 
 
-    def _removeSafely(self, path):
-        """
-        Safely remove a path, recursively.
-
-        If C{path} does not contain a node named C{"_trial_marker"}, a
-        L{_NoTrialMarker} exception is raised and the path is not removed.
-
-        @type path: L{twisted.python.filepath.FilePath}
-        @param path: The absolute path to a test directory
-        """
-        if not path.child('_trial_marker').exists():
-            raise _NoTrialMarker(
-                '%r is not a trial temporary path, refusing to remove it'
-                % (path,))
-
-        try:
-            path.remove()
-        except OSError, e:
-            print ("could not remove %r, caught OSError [Errno %s]: %s"
-                   % (path, e.errno, e.strerror))
-            try:
-                newPath = filepath.FilePath('_trial_temp_old%s'
-                                            % random.randint(0, 99999999))
-                path.moveTo(newPath)
-            except OSError, e:
-                print ("could not rename path, caught OSError [Errno %s]: %s"
-                       % (e.errno, e.strerror))
-                raise
-
-
     def _setUpTestdir(self):
         self._tearDownLogFile()
         currentDir = os.getcwd()
         base = filepath.FilePath(self.workingDirectory)
-        counter = 0
-        while True:
-            if counter:
-                testdir = base.sibling('%s-%d' % (base.basename(), counter))
-            else:
-                testdir = base
-
-            self._testDirLock = FilesystemLock(testdir.path + '.lock')
-            if self._testDirLock.lock():
-                # It is not in use
-                if testdir.exists():
-                    # It exists though - delete it
-                    self._removeSafely(testdir)
-                break
-            else:
-                # It is in use
-                if self.workingDirectory == '_trial_temp':
-                    counter += 1
-                else:
-                    raise _WorkingDirectoryBusy()
-
-        testdir.makedirs()
+        testdir, self._testDirLock = util._unusedTestDirectory(base)
         os.chdir(testdir.path)
-        file('_trial_marker', 'w').close()
         return currentDir
 
 
