@@ -1,6 +1,5 @@
 # -*- test-case-name: twisted.words.test.test_domish -*-
-#
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -71,7 +70,6 @@ class _ListSerializer:
             return
 
         # Further optimizations
-        parent = elem.parent
         name = elem.name
         uri = elem.uri
         defaultUri, currentDefaultUri = elem.defaultUri, defaultUri
@@ -758,15 +756,17 @@ class ExpatElementStream:
             raise ParserError, str(e)
 
     def _onStartElement(self, name, attrs):
-        # Generate a qname tuple from the provided name
-        qname = name.split(" ")
+        # Generate a qname tuple from the provided name.  See
+        # http://docs.python.org/library/pyexpat.html#xml.parsers.expat.ParserCreate
+        # for an explanation of the formatting of name.
+        qname = name.rsplit(" ", 1)
         if len(qname) == 1:
             qname = ('', name)
 
         # Process attributes
         for k, v in attrs.items():
-            if k.find(" ") != -1:
-                aqname = k.split(" ")
+            if " " in k:
+                aqname = k.rsplit(" ", 1)
                 attrs[(aqname[0], aqname[1])] = v
                 del attrs[k]
 

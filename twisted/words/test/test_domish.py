@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -197,6 +197,19 @@ class DomishStreamTestsMixin:
 
         self.stream.parse(xml)
         self.assertEquals(self.elements[0].child2.uri, '')
+
+
+    def test_namespaceWithWhitespace(self):
+        """
+        Whitespace in an xmlns value is preserved in the resulting node's C{uri}
+        attribute.
+        """
+        xml = "<root xmlns:foo=' bar baz '><foo:bar foo:baz='quux'/></root>"
+        self.stream.parse(xml)
+        self.assertEquals(self.elements[0].uri, " bar baz ")
+        self.assertEquals(
+            self.elements[0].attributes, {(" bar baz ", "baz"): "quux"})
+
 
     def testChildPrefix(self):
         xml = "<root xmlns='testns' xmlns:foo='testns2'><foo:child/></root>"
