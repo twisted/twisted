@@ -9,7 +9,6 @@ from zope.interface import implements, Interface
 import hmac, time, random
 from twisted.python.hashlib import md5
 from twisted.python.randbytes import secureRandom
-from twisted.python.util import slowStringCompare
 from twisted.cred._digest import calcResponse, calcHA1, calcHA2
 from twisted.cred import error
 
@@ -55,10 +54,7 @@ class IUsernameHashedPassword(ICredentials):
 
     def checkPassword(password):
         """
-        Validate these credentials against the correct password. If you are
-        comparing strings, remember to use
-        L{twisted.python.util.slowStringCompare} to be safe against timing
-        attacks.
+        Validate these credentials against the correct password.
 
         @type password: C{str}
         @param password: The correct, plaintext password against which to
@@ -91,10 +87,7 @@ class IUsernamePassword(ICredentials):
 
     def checkPassword(password):
         """
-        Validate these credentials against the correct password. If you are
-        comparing strings, remember to use
-        L{twisted.python.util.slowStringCompare} to be safe against timing
-        attacks.
+        Validate these credentials against the correct password.
 
         @type password: C{str}
         @param password: The correct, plaintext password against which to
@@ -148,7 +141,7 @@ class DigestedCredentials(object):
             calcHA2(algo, self.method, uri, qop, None),
             algo, nonce, nc, cnonce, qop)
 
-        return slowStringCompare(expected, response)
+        return expected == response
 
 
     def checkHash(self, digestHash):
@@ -172,7 +165,7 @@ class DigestedCredentials(object):
             calcHA2(algo, self.method, uri, qop, None),
             algo, nonce, nc, cnonce, qop)
 
-        return slowStringCompare(expected, response)
+        return expected == response
 
 
 
@@ -292,11 +285,11 @@ class DigestCredentialFactory(object):
         if len(keyParts) != 3:
             raise error.LoginFailed('Invalid response, invalid opaque value')
 
-        if not slowStringCompare(keyParts[0], nonce):
+        if keyParts[0] != nonce:
             raise error.LoginFailed(
                 'Invalid response, incompatible opaque/nonce values')
 
-        if not slowStringCompare(keyParts[1], clientip):
+        if keyParts[1] != clientip:
             raise error.LoginFailed(
                 'Invalid response, incompatible opaque/client values')
 
@@ -314,7 +307,7 @@ class DigestCredentialFactory(object):
 
         # Verify the digest
         digest = md5(key + self.privateKey).hexdigest()
-        if not slowStringCompare(digest, opaqueParts[0]):
+        if digest != opaqueParts[0]:
             raise error.LoginFailed('Invalid response, invalid opaque value')
 
         return True
@@ -401,17 +394,8 @@ class CramMD5Credentials:
         return False
 
     def checkPassword(self, password):
-        """
-        Verify that the credentials represented by this object agree with the
-        given plaintext C{password} by computing the HMAC using C{password} and
-        the previously issued challenge.
-
-        @return: C{True} if the response coincides with the given plaintext
-            C{password}, C{False} otherwise.
-        """
         verify = hmac.HMAC(password, self.challenge).hexdigest()
-        return slowStringCompare(verify, self.response)
-
+        return verify == self.response
 
 
 class UsernameHashedPassword:
@@ -421,17 +405,8 @@ class UsernameHashedPassword:
         self.username = username
         self.hashed = hashed
 
-
     def checkPassword(self, password):
-        """
-        Verify that the hashed password C{self.hashed} agrees with the given
-        hashed C{password}.
-
-        @return: C{True} if the hashed C{password} matches C{self.hashed},
-            C{False} otherwise.
-        """
-        return slowStringCompare(self.hashed, password)
-
+        return self.hashed == password
 
 
 class UsernamePassword:
@@ -441,17 +416,8 @@ class UsernamePassword:
         self.username = username
         self.password = password
 
-
     def checkPassword(self, password):
-        """
-        Verify that the plaintext password C{self.password} agrees with the
-        given plaintext C{password}.
-
-        @return: C{True} if the plaintext C{password} matches C{self.password},
-            C{False} otherwise.
-        """
-        return slowStringCompare(self.password, password)
-
+        return self.password == password
 
 
 class Anonymous:

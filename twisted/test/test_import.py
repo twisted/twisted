@@ -1,4 +1,5 @@
-# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
+
+# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -28,7 +29,7 @@ class AtLeastImportTestCase(unittest.TestCase):
         """
         from twisted.internet import tcp
         from twisted.internet import main
-        # from twisted.internet import ssl
+        # from twisted.internet import ssl    
         from twisted.internet import abstract
         from twisted.internet import udp
         from twisted.internet import protocol
@@ -39,10 +40,10 @@ class AtLeastImportTestCase(unittest.TestCase):
         from twisted.internet import stdio
         from twisted.internet import process
         from twisted.internet import unix
-
+    
     if platformType != "posix":
         test_unix.skip = "UNIX-only modules"
-
+    
     def test_spread(self):
         """Test importing spreadables
         """
@@ -50,7 +51,7 @@ class AtLeastImportTestCase(unittest.TestCase):
         from twisted.spread import jelly
         from twisted.spread import banana
         from twisted.spread import flavors
-
+    
     def test_twistedPython(self):
         """Test importing twisted.python
         """
@@ -60,7 +61,8 @@ class AtLeastImportTestCase(unittest.TestCase):
         # from twisted.python import threadable
         # from twisted.python import threadpool
         from twisted.python import usage
-
+        from twisted.python import otp
+    
     def test_protocols(self):
         """Test importing protocols
         """
@@ -68,7 +70,7 @@ class AtLeastImportTestCase(unittest.TestCase):
         from twisted.protocols import ftp
         from twisted.protocols import telnet
         from twisted.protocols import policies
-
+    
     def test_enterprise(self):
         from twisted.enterprise import adbapi
         from twisted.enterprise import reflector

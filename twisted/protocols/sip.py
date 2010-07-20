@@ -1,5 +1,6 @@
 # -*- test-case-name: twisted.test.test_sip -*-
-# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
+
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -1082,9 +1083,7 @@ class DigestedCredentials(UsernameHashedPassword):
             nonce, nc, cnonce, qop, method, uri, None,
         )
 
-        return util.slowStringCompare(expected, response)
-
-
+        return expected == response
 
 class DigestAuthorizer:
     CHALLENGE_LIFETIME = 15
