@@ -888,11 +888,17 @@ class SlowStringCompareTests(unittest.TestCase):
 
     def test_typeError(self):
         """
-        L{util.slowStringCompare} returns L{TypeError} if either argument is a
-        C{unicode} object.
+        L{util.slowStringCompare} raises a C{DeprecationWarning} if either
+        argument is a C{unicode} object.
         """
-        c = util.slowStringCompare
+        def _assertWarns(s1, s2):
+            self.assertWarns(
+                DeprecationWarning,
+                "Passing unicode strings to slowStringCompare is deprecated "
+                "since Twisted 10.2",
+                __file__,
+                lambda: util.slowStringCompare(s1, s2))
 
-        self.assertRaises(TypeError, c, u"test", "test")
-        self.assertRaises(TypeError, c, "test", u"test")
-        self.assertRaises(TypeError, c, u"test", u"test")
+        _assertWarns(u"test", "test")
+        _assertWarns("test", u"test")
+        _assertWarns(u"test", u"test")

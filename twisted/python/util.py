@@ -991,11 +991,11 @@ def slowStringCompare(s1, s2):
         less time.  An attacker may be able to guess how long the expected
         string is.  To avoid this problem, compare only fixed-length hashes.
     """
-    if isinstance(s1, unicode):
-        raise TypeError("s1 must not be unicode")
-
-    if isinstance(s2, unicode):
-        raise TypeError("s2 must not be unicode")
+    if isinstance(s1, unicode) or isinstance(s2, unicode):
+        warnings.warn("Passing unicode strings to slowStringCompare is "
+                      "deprecated since Twisted 10.2",
+                      DeprecationWarning,
+                      stacklevel=2)
 
     if len(s1) != len(s2):
         return False
