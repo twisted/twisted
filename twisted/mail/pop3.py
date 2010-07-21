@@ -1,6 +1,8 @@
 # -*- test-case-name: twisted.mail.test.test_pop3 -*-
-# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
+#
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
+
 
 """
 Post-office Protocol version 3
@@ -23,7 +25,6 @@ from twisted.internet import task
 from twisted.internet import defer
 from twisted.internet import interfaces
 from twisted.python import log
-from twisted.python.util import slowStringCompare
 from twisted.python.hashlib import md5
 
 from twisted import cred
@@ -42,17 +43,9 @@ class APOPCredentials:
         self.digest = digest
 
     def checkPassword(self, password):
-        """
-        Verify that the challenge response C{self.digest} agrees with the given
-        plaintext C{password}.
-
-        @return: C{True} if the plaintext C{password} matches C{self.digest},
-            C{False} otherwise.
-        """
         seed = self.magic + password
         myDigest = md5(seed).hexdigest()
-        return slowStringCompare(myDigest, self.digest)
-
+        return myDigest == self.digest
 
 
 class _HeadersPlusNLines:

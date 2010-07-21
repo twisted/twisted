@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.conch.test.test_knownhosts -*-
-# Copyright (c) 2008-2010 Twisted Matrix Laboratories.
+# Copyright (c) 2008-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -267,7 +267,7 @@ class HashedEntry(_BaseEntry):
         Implement L{IKnownHostEntry.matchesHost} to compare the hash of the
         input to the stored hash.
         """
-        return _hmacedString(self._hostSalt, hostname) == self._hostHash
+        return (_hmacedString(self._hostSalt, hostname) == self._hostHash)
 
 
     def toString(self):
