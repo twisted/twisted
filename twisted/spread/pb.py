@@ -44,6 +44,7 @@ from twisted.cred.credentials import IAnonymous, ICredentials
 from twisted.cred.credentials import IUsernameHashedPassword, Anonymous
 from twisted.persisted import styles
 from twisted.python.components import registerAdapter
+from twisted.python.util import slowStringCompare
 
 from twisted.spread.interfaces import IJellyable, IUnjellyable
 from twisted.spread.jelly import jelly, unjelly, globalSecurity
@@ -1355,11 +1356,14 @@ class _PortalAuthChallenger(Referenceable, _JellyableAvatarMixin):
 
     # IUsernameMD5Password
     def checkMD5Password(self, md5Password):
+        """
+        @see: L{IUsernameMD5Password}
+        """
         md = md5()
         md.update(md5Password)
         md.update(self.challenge)
         correct = md.digest()
-        return self.response == correct
+        return slowStringCompare(self.response, correct)
 
 
 __all__ = [

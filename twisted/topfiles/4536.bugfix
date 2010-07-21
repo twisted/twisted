@@ -1,0 +1,3 @@
+The new twisted.python.util.slowStringCompare function is now used
+throughout Twisted to check passwords and other authorization materials to
+reduce vulnerability to timing attacks.
