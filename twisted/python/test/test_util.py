@@ -893,7 +893,8 @@ class SlowStringCompareTests(unittest.TestCase):
         """
         def _assertWarns(s1, s2):
             util.slowStringCompare(s1, s2)
-            [w] = self.flushWarnings([SlowStringCompareTests.test_typeError])
+            [w] = self.flushWarnings(
+                [SlowStringCompareTests.test_unicodeDeprecated])
             self.assertEquals(w['category'], DeprecationWarning)
             self.assertEquals(
                 w['message'],
