@@ -997,6 +997,17 @@ def slowStringCompare(s1, s2):
                       DeprecationWarning,
                       stacklevel=2)
 
+    if isinstance(s1, unicode) and not isinstance(s2, unicode):
+        try:
+            s2 = unicode(s2)
+        except UnicodeDecodeError:
+            return False
+    elif not isinstance(s1, unicode) and isinstance(s2, unicode):
+        try:
+            s1 = unicode(s1)
+        except UnicodeDecodeError:
+            return False
+
     if len(s1) != len(s2):
         return False
     result = 0

@@ -886,21 +886,37 @@ class SlowStringCompareTests(unittest.TestCase):
         self.assertFalse(c(rainbow, rainbow[::-1]))
 
 
-    def test_unicodeDeprecated(self):
+    def test_unicodeComparison(self):
         """
-        L{util.slowStringCompare} raises a C{DeprecationWarning} if either
-        argument is a C{unicode} object.
+        If only one argument to L{util.slowStringCompare} is unicode, the other
+        argument will be decoded using the default encoding before comparison
+        occurs; if this fails, the comparison will return C{False}.
+        Additionally, a C{DeprecationWarning} is raised if either argument is a
+        C{unicode} object.
         """
-        def _assertWarns(s1, s2):
-            util.slowStringCompare(s1, s2)
+        def _compare(s1, s2):
+            expected = s1 == s2
+
+            ws = self.flushWarnings(
+                [SlowStringCompareTests.test_unicodeComparison])
+            for w in ws:
+                self.assertEquals(w['category'], UnicodeWarning)
+
+            result = util.slowStringCompare(s1, s2)
+            self.assertEquals(result, expected)
+
             [w] = self.flushWarnings(
-                [SlowStringCompareTests.test_unicodeDeprecated])
+                [SlowStringCompareTests.test_unicodeComparison])
             self.assertEquals(w['category'], DeprecationWarning)
             self.assertEquals(
                 w['message'],
                 'Passing unicode strings to slowStringCompare is deprecated '
                 'since Twisted 10.2')
 
-        _assertWarns(u"test", "test")
-        _assertWarns("test", u"test")
-        _assertWarns(u"test", u"test")
+        _compare(u'test', 'test')
+        _compare('test', u'test')
+        _compare(u'test', u'test')
+
+        _compare(u'\xff', u'\xff')
+        _compare('\xff', u'\xff')
+        _compare(u'\xff', '\xff')
