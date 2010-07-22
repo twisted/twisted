@@ -1,0 +1,1 @@
+LineReceiver, NetstringReceiver, and IntNStringReceiver from twisted.protocols.basic now have improved API documentation for read callbacks and write methods.

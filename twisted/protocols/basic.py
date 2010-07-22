@@ -140,20 +140,21 @@ class NetstringReceiver(protocol.Protocol):
         self.brokenPeer = 0
 
 
-    def sendString(self, payload):
+    def sendString(self, string):
         """
         Sends a netstring.
 
-        Wraps up C{payload} by adding length information and a
+        Wraps up C{string} by adding length information and a
         trailing comma; writes the result to the transport.
 
-        @param payload: A string to be sent via C{self.transport}
-        @type payload: C{str}
+        @param string: The string to send.  The necessary framing (length
+            prefix, etc) will be added.
+        @type string: C{str}
         """
-        if not isinstance(payload, str):
+        if not isinstance(string, str):
             warnings.warn(self._DATA_SUPPORT_DEPRECATED, DeprecationWarning, 2)
-            payload = str(payload)
-        self.transport.write('%d:%s,' % (len(payload), payload))
+            string = str(string)
+        self.transport.write('%d:%s,' % (len(string), string))
 
 
     def dataReceived(self, data):
@@ -178,14 +179,16 @@ class NetstringReceiver(protocol.Protocol):
                 break
 
 
-    def stringReceived(self, payload):
+    def stringReceived(self, string):
         """
-        Processes the data portion of a netstring. Override this.
+        Override this for notification when each complete string is received.
+
+        @param string: The complete string which was received with all
+            framing (length prefix, etc) removed.
+        @type string: C{str}
 
         @raise NotImplementedError: because the method has to be implemented
             by the child class.
-        @param payload: The payload portion of a netstring
-        @type payload: C{str}
         """
         raise NotImplementedError()
 
@@ -457,6 +460,9 @@ class LineOnlyReceiver(protocol.Protocol):
     def lineReceived(self, line):
         """
         Override this for when each line is received.
+
+        @param line: The line which was received with the delimiter removed.
+        @type line: C{str}
         """
         raise NotImplementedError
 
@@ -464,8 +470,11 @@ class LineOnlyReceiver(protocol.Protocol):
     def sendLine(self, line):
         """
         Sends a line to the other end of the connection.
+
+        @param line: The line to send, not including the delimiter.
+        @type line: C{str}
         """
-        return self.transport.writeSequence((line,self.delimiter))
+        return self.transport.writeSequence((line, self.delimiter))
 
 
     def lineLengthExceeded(self, line):
@@ -599,6 +608,9 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
     def lineReceived(self, line):
         """
         Override this for when each line is received.
+
+        @param line: The line which was received with the delimiter removed.
+        @type line: C{str}
         """
         raise NotImplementedError
 
@@ -606,6 +618,9 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
     def sendLine(self, line):
         """
         Sends a line to the other end of the connection.
+
+        @param line: The line to send, not including the delimiter.
+        @type line: C{str}
         """
         return self.transport.write(line + self.delimiter)
 
@@ -650,9 +665,13 @@ class IntNStringReceiver(protocol.Protocol, _PauseableMixin):
     MAX_LENGTH = 99999
     recvd = ""
 
-    def stringReceived(self, msg):
+    def stringReceived(self, string):
         """
-        Override this.
+        Override this for notification when each complete string is received.
+
+        @param string: The complete string which was received with all
+            framing (length prefix, etc) removed.
+        @type string: C{str}
         """
         raise NotImplementedError
 
@@ -687,17 +706,20 @@ class IntNStringReceiver(protocol.Protocol, _PauseableMixin):
             self.stringReceived(packet)
 
 
-    def sendString(self, data):
+    def sendString(self, string):
         """
-        Send an prefixed string to the other end of the connection.
+        Send a prefixed string to the other end of the connection.
 
-        @type data: C{str}
+        @param string: The string to send.  The necessary framing (length
+            prefix, etc) will be added.
+        @type string: C{str}
         """
-        if len(data) >= 2 ** (8 * self.prefixLength):
+        if len(string) >= 2 ** (8 * self.prefixLength):
             raise StringTooLongError(
                 "Try to send %s bytes whereas maximum is %s" % (
-                len(data), 2 ** (8 * self.prefixLength)))
-        self.transport.write(struct.pack(self.structFormat, len(data)) + data)
+                len(string), 2 ** (8 * self.prefixLength)))
+        self.transport.write(
+            struct.pack(self.structFormat, len(string)) + string)
 
 
 
@@ -757,7 +779,7 @@ class StatefulStringProtocol:
 
     state = 'init'
 
-    def stringReceived(self,string):
+    def stringReceived(self, string):
         """
         Choose a protocol phase function and call it.
 
