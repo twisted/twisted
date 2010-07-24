@@ -1,0 +1,1 @@
+Use correct Twisted version for when cancellation was introduced in the Deferred docstring.

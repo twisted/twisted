@@ -251,7 +251,7 @@ class Deferred:
             above.  This allows clients of code which returns a L{Deferred}
             to cancel it without requiring the L{Deferred} instantiator to
             provide any specific implementation support for cancellation.
-            New in 10.0.
+            New in 10.1.
 
         @type canceller: a 1-argument callable which takes a L{Deferred}. The
             return result is ignored.
