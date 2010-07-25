@@ -62,6 +62,7 @@ import sys
 import zipimport
 import inspect
 import warnings
+import re
 try:
     import ast
 except ImportError:
@@ -91,10 +92,12 @@ def _isPythonIdentifier(string):
 
     @return: True or False
     """
-    return (' ' not in string and
-            '.' not in string and
-            '-' not in string)
-
+    if string == '':
+        return True
+    try:
+        return re.match('[a-zA-Z_][a-zA-Z0-9_]*$', string) is not None
+    except TypeError:
+        return False
 
 
 class NotLoadedError(Exception):
@@ -293,27 +296,36 @@ class _ImportExportFinder(_iefBase):
         """
         Look for top-level name bindings and __all__ in a module.
         """
+        allval = _nothing
         for stmt in node.body:
-            if (isinstance(stmt, ast.Assign) and len(stmt.targets) == 1 and
-                isinstance(stmt.targets[0], ast.Name) and
-                stmt.targets[0].id == '__all__'):
-                if (not (isinstance(stmt.value, (ast.List, ast.Tuple))) or
-                    not all([isinstance(e, (ast.Str))
-                             for e in stmt.value.elts])):
-                    raise SyntaxError("__all__ must be a sequence"
-                                      " of literal strings")
-                elif self.exports is not None:
-                    raise SyntaxError("__all__ can only be defined once")
-                else:
-                    self.exports = set(ast.literal_eval(stmt.value))
+            self.visit(stmt)
             if isinstance(stmt, ast.Assign):
-                for name in stmt.targets:
-                    self.definedNames.add(name.id)
+                if isinstance(stmt.targets[0], ast.Name):
+                    if stmt.targets[0].id == '__all__':
+                        allval = stmt.value
+                        if self.exports is not None:
+                            raise SyntaxError("__all__ can only be defined once")
+                    else:
+                        self.definedNames.add(stmt.targets[0].id)
+                else:
+                    for i, name in enumerate(stmt.targets[0].elts):
+                        if name.id == "__all__":
+                            allval = stmt.value.elts[i]
+                            if self.exports is not None:
+                                raise SyntaxError("__all__ can only be defined once")
+                        else:
+                            self.definedNames.add(name.id)
+                if allval is not _nothing:
+                    try:
+                        self.exports = set(ast.literal_eval(allval))
+                    except ValueError:
+                        raise SyntaxError("__all__ must only contain literal Python identifier strings")
+
+                    for exp in self.exports:
+                        if not _isPythonIdentifier(exp):
+                            raise SyntaxError("__all__ must only contain literal Python identifier strings")
             elif isinstance(stmt, (ast.FunctionDef, ast.ClassDef)):
                 self.definedNames.add(stmt.name)
-            self.visit(stmt)
-
-
 
 class PythonAttribute:
     """

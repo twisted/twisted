@@ -632,16 +632,34 @@ class ASTVisitorTests(TestCase):
     information from modules without importing them.
     """
 
+    def test_all(self):
+        """
+        If a module's '__all__' attribute contains a sequence of
+        literal strings, they are collected as export names.
+        """
+
+        bits = ["foo = 1\n__all__ = ['foo', 'baz']",
+                "__all__ = ('foo', 'baz')\nbaz = 1"]
+
+        for code in bits:
+            tree = ast.parse(code)
+            f = modules._ImportExportFinder()
+            f.visit(tree)
+            self.assertEqual(f.exports, set(["foo", "baz"]))
+
+
     def test_justOneAll(self):
         """
         Modules with more than one definition of __all__ are rejected
         by L{_ImportExportFinder}.
         """
 
-        code = "__all__ = ['a']\n__all__ = ['a', 'b']"
-        tree = ast.parse(code)
-        f = modules._ImportExportFinder()
-        self.assertRaises(SyntaxError, f.visit, tree)
+        bits  = ["__all__ = ['a']\n__all__ = ['a', 'b']",
+                 "__all__ = ['a']\n__all__, x = ['a', 'b'], 1",]
+        for code in bits:
+            tree = ast.parse(code)
+            f = modules._ImportExportFinder()
+            self.assertRaises(SyntaxError, f.visit, tree)
 
 
     def test_literalStringsAll(self):
@@ -650,10 +668,60 @@ class ASTVisitorTests(TestCase):
         literal strings are rejected by L{_ImportExportFinder}.
         """
 
-        code = "__all__ = ['a' + 'b']"
-        tree = ast.parse(code)
-        f = modules._ImportExportFinder()
-        self.assertRaises(SyntaxError, f.visit, tree)
+        bits = ["__all__ = ['a' + 'b']",
+                "__all__ = ['a', 1, 'b']"]
+        for code in bits:
+            tree = ast.parse(code)
+            f = modules._ImportExportFinder()
+            self.assertRaises(SyntaxError, f.visit, tree)
+
+
+    def test_identifierStringsAll(self):
+        """
+        Modules with a definition of __all__ that contains strings
+        that aren't valid Python identifiers are rejected by
+        L{_ImportExportFinder}.
+        """
+        bits = ["__all__ = ['a nice variable', 'etc']",
+                "__all__ = ['call-with-current-continuation', 'goto']"]
+
+        for code in bits:
+            tree = ast.parse(code)
+            f = modules._ImportExportFinder()
+            self.assertRaises(SyntaxError, f.visit, tree)
+
+
+    def test_multiAssigns(self):
+        """
+        Assignments to __all__ in a tuple unpacking statement are recognized properly.
+        """
+        bits = ['__all__, x = (["foo", "baz"], 1)',
+                'foo = 1\nx, __all__ = (None, ["foo", "baz"])',
+                'x, __all__, y = [[], ["foo", "baz"], {}]']
+
+        for code in bits:
+            tree = ast.parse(code)
+            f = modules._ImportExportFinder()
+            f.visit(tree)
+            self.assertEqual(f.exports, set(["foo", "baz"]))
+
 
 if ast is None:
     ASTVisitorTests.skip = "AST visitor tests require the 'ast' module from Python 2.6."
+
+
+class MiscTests(TestCase):
+    def test_isPythonIdentifier(self):
+        """
+        L{modules._isPythonIdentifier} correctly identifies which strings are
+        and aren't valid python identifiers.
+        """
+        good = ["__init__", "foo", "_foo", "foo_baz", "Foo", "FooBaz_", "foo1", "foo_1", "F00"]
+        bad = ["1f", "-foo", "foo-baz", "a foo", "foo.baz", 3, ["foo"], ()]
+
+        for n in good:
+            self.assertTrue(modules._isPythonIdentifier(n))
+
+        for n in bad:
+            self.assertFalse(modules._isPythonIdentifier(n))
+
