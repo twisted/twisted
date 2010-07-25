@@ -477,7 +477,7 @@ class PythonModule(_ModuleIteratorHelper):
                  each name imported into this module.
         """
         if ast is None:
-            raise NotImplementedError("Examining attributes of unloaded modules"
+            raise NotImplementedError("Static analysis of module attributes"
                                       " requires the 'ast' module, found in"
                                       " Python 2.6 or later.")
 
@@ -503,7 +503,7 @@ class PythonModule(_ModuleIteratorHelper):
         @return: an iterable of names of attributes of this module.
         """
         if ast is None:
-            raise NotImplementedError("Examining attributes of unloaded modules"
+            raise NotImplementedError("Static analysis of module attributes"
                                       " requires the 'ast' module, found in"
                                       " Python 2.6 or later.")
         self._maybeLoadFinder()
