@@ -164,6 +164,16 @@ class BasicTests(PySpaceTestCase):
                           self.findByIteration("twisted"))
 
 
+
+    def test_lookForSource(self):
+        """
+        If a .py file exists for a loaded module, use it as the module path. If not, use __file__.
+        """
+        import pickle, datetime
+        self.assertTrue(modules.getModule('pickle').filePath.path.endswith('.py'))
+        self.assertFalse(modules.getModule('datetime').filePath.path.endswith('.py'))
+
+
     def test_dottedNames(self):
         """
         Verify that the walkModules APIs will give us back subpackages, not just

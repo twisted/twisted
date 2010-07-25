@@ -847,7 +847,10 @@ class PythonPath:
                 self._smartPath(
                     self._findEntryPathString(moduleObject)),
                 self)
-            mp = self._smartPath(moduleObject.__file__)
+            path = inspect.getsourcefile(moduleObject)
+            if path is None:
+                path = moduleObject.__file__
+            mp = self._smartPath(path)
             return PythonModule(modname, mp, pe)
 
         # Recurse if we're trying to get a submodule.
