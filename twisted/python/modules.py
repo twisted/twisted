@@ -300,7 +300,7 @@ class _ImportExportFinder(_iefBase):
                 elif self.exports is not None:
                     raise SyntaxError("__all__ can only be defined once")
                 else:
-                    self.exports = ast.literal_eval(stmt.value)
+                    self.exports = set(ast.literal_eval(stmt.value))
             if isinstance(stmt, ast.Assign):
                 for name in stmt.targets:
                     self.definedNames.add(name.id)
@@ -434,8 +434,12 @@ class PythonModule(_ModuleIteratorHelper):
         Scan a module for imports, exports, and attributes.
         """
         if self._finder is None:
+            try:
+                tree = ast.parse(self.filePath.getContent())
+            except TypeError:
+                raise ValueError("Static analysis of module attributes can only be done on Python source.")
             self._finder = _ImportExportFinder()
-            self._finder.visit(ast.parse(self.filePath.getContent()))
+            self._finder.visit(tree)
 
 
     def iterAttributes(self):
@@ -455,11 +459,15 @@ class PythonModule(_ModuleIteratorHelper):
         """
         if not self.isLoaded():
             if ast is None:
-                raise NotImplementedError("Examining attributes of unloaded"
-                                          " modules requires the 'ast' module,"
+                raise NotImplementedError("Static analysis of module attributes"
+                                          " requires the 'ast' module,"
                                           " found in Python 2.6 or later.")
             self._maybeLoadFinder()
-            for name in self._finder.definedNames:
+            if self._finder.exports:
+                attrs = (set([x[1] for x in self._finder.imports]) | self._finder.definedNames) & self._finder.exports
+            else:
+                attrs = self._finder.definedNames
+            for name in attrs:
                 yield PythonAttribute(self.name + '.' + name, self, False, None)
         else:
             for name, val in inspect.getmembers(self.load()):

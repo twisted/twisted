@@ -306,6 +306,17 @@ baz = 456
 __all__ = ['foo']
 """
 
+sampleModuleWithExportedImportsContents = """
+import sys, os, datetime
+from twisted.python import reflect
+import twisted.python.filepath
+from twisted.python.components import registerAdapter
+
+foo = 123
+baz = 456
+__all__ = ['foo', 'registerAdapter', 'reflect']
+"""
+
 
 
 class PathModificationTest(PySpaceTestCase):
@@ -328,6 +339,8 @@ class PathModificationTest(PySpaceTestCase):
         self.packagePath.child("a.py").setContent(sampleModuleContents)
         self.packagePath.child("b.py").setContent(sampleModuleWithExportsContents)
         self.packagePath.child("c__init__.py").setContent("")
+        self.packagePath.child("d.py").setContent(sampleModuleWithExportedImportsContents)
+
         self.pathSetUp = False
 
 
@@ -377,7 +390,7 @@ class PathModificationTest(PySpaceTestCase):
         nfni = [modinfo.name.split(".")[-1] for modinfo in
                 pkginfo.iterModules()]
         nfni.sort()
-        self.failUnlessEqual(nfni, ['a', 'b', 'c__init__'])
+        self.failUnlessEqual(nfni, ['a', 'b', 'c__init__', 'd'])
 
 
     def test_listingModules(self):
@@ -467,6 +480,16 @@ class PathModificationTest(PySpaceTestCase):
         modinfo = modules.getModule(self.packageName + ".b")
         self.assertEqual(sorted(modinfo.iterExportNames()),
                          sorted(["foo"]))
+
+
+    def test_exportedImports(self):
+        """
+        If __all__ mentions imports, they're included in the collection of defined names.
+        """
+        self._setupSysPath()
+        modinfo = modules.getModule(self.packageName + ".d")
+        self.assertEqual(sorted([x.name.rsplit('.', 1)[1] for x in modinfo.iterAttributes()]),
+                         sorted(["foo", "registerAdapter", "reflect"]))
 
 
     def test_moduleExportProblems(self):
