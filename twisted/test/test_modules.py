@@ -447,6 +447,25 @@ class PathModificationTest(PySpaceTestCase):
                 self.assertIn(modinfo.name + '.Foo.x', classattrs)
 
 
+    def test_attributeLoading(self):
+        """
+        Calling .load() on a L{PythonAttribute} loads the module it's a part of and returns the attribute value.
+        """
+        self._setupSysPath()
+        modinfo = modules.getModule(self.packageName + ".a")
+        attr = [x for x in modinfo.iterAttributes() if x.name.endswith('foo')][0]
+
+        mod = attr.onObject
+        self.assertFalse(attr.isLoaded())
+        self.assertFalse(mod.isLoaded())
+        val = attr.load()
+        self.assertTrue(attr.isLoaded())
+        self.assertTrue(mod.isLoaded())
+        self.assertEquals(val, 123)
+        self.assertEquals(attr.pythonValue, 123)
+        self.assertEquals(attr.load(), 123)
+
+
     def test_moduleImportNames(self):
         """
         The fully qualified names imported by a module can be inspected.
@@ -488,7 +507,8 @@ class PathModificationTest(PySpaceTestCase):
         """
         self._setupSysPath()
         modinfo = modules.getModule(self.packageName + ".d")
-        self.assertEqual(sorted([x.name.rsplit('.', 1)[1] for x in modinfo.iterAttributes()]),
+        self.assertEqual(sorted([x.name.rsplit('.', 1)[1] for x in
+                                 modinfo.iterAttributes()]),
                          sorted(["foo", "registerAdapter", "reflect"]))
 
 

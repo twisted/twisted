@@ -97,6 +97,11 @@ def _isPythonIdentifier(string):
 
 
 
+class NotLoadedError(Exception):
+    """
+    Attempt to access a value that hasn't been loaded yet.
+    """
+
 def _isPackagePath(fpath):
     # Determine if a FilePath-like object is a Python package.  TODO: deal with
     # __init__module.(so|dll|pyd)?
@@ -358,6 +363,10 @@ class PythonAttribute:
         @return: an arbitrary Python object, or 'default' if there is an error
         loading it.
         """
+        if not self.isLoaded():
+            mod = self.onObject.load()
+            self.pythonValue = getattr(mod, self.name.split('.')[-1], default)
+            self._loaded = True
         return self.pythonValue
 
 
@@ -468,7 +477,7 @@ class PythonModule(_ModuleIteratorHelper):
             else:
                 attrs = self._finder.definedNames
             for name in attrs:
-                yield PythonAttribute(self.name + '.' + name, self, False, None)
+                yield PythonAttribute(self.name + '.' + name, self, False, _nothing)
         else:
             for name, val in inspect.getmembers(self.load()):
                 yield PythonAttribute(self.name + '.' + name, self, True, val)
