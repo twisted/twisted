@@ -103,6 +103,8 @@ def _isPythonIdentifier(string):
 class NotLoadedError(Exception):
     """
     Attempt to access a value that hasn't been loaded yet.
+
+    @since: 10.2
     """
 
 def _isPackagePath(fpath):
@@ -504,6 +506,8 @@ class PythonModule(_ModuleIteratorHelper):
 
         @return: a generator yielding fully qualified name strings for
                  each name imported into this module.
+
+        @since: 10.2
         """
         if ast is None:
             raise NotImplementedError("Static analysis of module attributes"
@@ -530,6 +534,8 @@ class PythonModule(_ModuleIteratorHelper):
         AST inspection is not possible.
 
         @return: an iterable of names of attributes of this module.
+
+        @since: 10.2
         """
         if ast is None:
             raise NotImplementedError("Static analysis of module attributes"
