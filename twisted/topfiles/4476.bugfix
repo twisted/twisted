@@ -1,0 +1,1 @@
+twisted.internet.main.installReactor now blocks installation of another reactor when using python -O

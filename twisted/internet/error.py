@@ -318,6 +318,13 @@ class ReactorAlreadyRunning(RuntimeError):
     """
 
 
+class ReactorAlreadyInstalledError(AssertionError):
+    """
+    Could not install reactor because one is already installed.
+    """
+
+
+
 class ConnectingCancelledError(Exception):
     """
     An C{Exception} that will be raised when an L{IStreamClientEndpoint} is
