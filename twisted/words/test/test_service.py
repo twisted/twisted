@@ -1,4 +1,4 @@
-# Copyright (c) 2009-2010 Twisted Matrix Laboratories.
+# Copyright (c) 2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -251,8 +251,7 @@ class IRCProtocolTestCase(unittest.TestCase):
         c = []
         for nick in self.STATIC_USERS:
             c.append(self.realm.createUser(nick))
-            self.checker.addUser(
-                nick.encode('ascii'), nick.encode('ascii') + "_password")
+            self.checker.addUser(nick.encode('ascii'), nick + "_password")
         return DeferredList(c)
 
 

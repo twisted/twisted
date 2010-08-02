@@ -34,30 +34,16 @@ from twisted.cred.credentials import IUsernamePassword, ISSHPrivateKey
 from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
 from twisted.internet import defer
 from twisted.python import failure, reflect, log
-from twisted.python.util import runAsEffectiveUser, slowStringCompare
+from twisted.python.util import runAsEffectiveUser
 from twisted.python.filepath import FilePath
 
 
 def verifyCryptedPassword(crypted, pw):
-    """
-    Verify that the plaintext password C{pw} matches the salted, encrypted
-    version C{crypted}.
-
-    @param crypted: The salted, encrypted version of the password.
-    @type crypted: C{str}
-
-    @param pw: The plaintext password to verify.
-    @type pw: C{str}
-
-    @return: C{True} if C{pw} encrypts to C{crypyted}, C{False} otherwise.
-    """
     if crypted[0] == '$': # md5_crypt encrypted
         salt = '$1$' + crypted.split('$')[2]
     else:
         salt = crypted[:2]
-    return slowStringCompare(crypt.crypt(pw, salt), crypted)
-
-
+    return crypt.crypt(pw, salt) == crypted
 
 class UNIXPasswordDatabase:
     credentialInterfaces = IUsernamePassword,
@@ -188,8 +174,7 @@ class SSHPublicKeyDatabase:
                 if len(l2) < 2:
                     continue
                 try:
-                    keyBlob = base64.decodestring(l2[1])
-                    if keyBlob == credentials.blob:
+                    if base64.decodestring(l2[1]) == credentials.blob:
                         return True
                 except binascii.Error:
                     continue
