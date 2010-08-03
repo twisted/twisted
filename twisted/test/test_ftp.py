@@ -10,15 +10,20 @@ Maintainer: Andrew Bennetts
 import os
 import errno
 from StringIO import StringIO
+import getpass
 
 from zope.interface import implements
+from zope.interface.verify import verifyClass
 
 from twisted.trial import unittest, util
+from twisted.python.randbytes import insecureRandom
+from twisted.cred.portal import IRealm
 from twisted.protocols import basic
 from twisted.internet import reactor, task, protocol, defer, error
 from twisted.internet.interfaces import IConsumer
+from twisted.cred.error import UnauthorizedLogin
 from twisted.cred import portal, checkers, credentials
-from twisted.python import failure, filepath
+from twisted.python import failure, filepath, runtime
 from twisted.test import proto_helpers
 
 from twisted.protocols import ftp, loopback
@@ -29,6 +34,11 @@ _changeDirectorySuppression = util.suppress(
     message=(
         r"FTPClient\.changeDirectory is deprecated in Twisted 8\.2 and "
         r"newer\.  Use FTPClient\.cwd instead\."))
+
+if runtime.platform.isWindows():
+    nonPOSIXSkip = "Cannot run on Windows"
+else:
+    nonPOSIXSkip = None
 
 
 class Dummy(basic.LineReceiver):
@@ -2000,6 +2010,126 @@ class PathHandling(unittest.TestCase):
 
         for inp in ['../..', '../../', '../a/../..']:
             self.assertRaises(ftp.InvalidPath, ftp.toSegments, ['x'], inp)
+
+
+class BaseFTPRealmTests(unittest.TestCase):
+    """
+    Tests for L{ftp.BaseFTPRealm}, a base class to help define L{IFTPShell}
+    realms with different user home directory policies.
+    """
+    def test_interface(self):
+        """
+        L{ftp.BaseFTPRealm} implements L{IRealm}.
+        """
+        self.assertTrue(verifyClass(IRealm, ftp.BaseFTPRealm))
+
+
+    def test_getHomeDirectory(self):
+        """
+        L{ftp.BaseFTPRealm} calls its C{getHomeDirectory} method with the
+        avatarId being requested to determine the home directory for that
+        avatar.
+        """
+        result = filepath.FilePath(self.mktemp())
+        avatars = []
+        class TestRealm(ftp.BaseFTPRealm):
+            def getHomeDirectory(self, avatarId):
+                avatars.append(avatarId)
+                return result
+
+        realm = TestRealm(self.mktemp())
+        iface, avatar, logout = realm.requestAvatar(
+            "alice@example.com", None, ftp.IFTPShell)
+        self.assertIsInstance(avatar, ftp.FTPShell)
+        self.assertEquals(avatar.filesystemRoot, result)
+
+
+    def test_anonymous(self):
+        """
+        L{ftp.BaseFTPRealm} returns an L{ftp.FTPAnonymousShell} instance for
+        anonymous avatar requests.
+        """
+        anonymous = self.mktemp()
+        realm = ftp.BaseFTPRealm(anonymous)
+        iface, avatar, logout = realm.requestAvatar(
+            checkers.ANONYMOUS, None, ftp.IFTPShell)
+        self.assertIsInstance(avatar, ftp.FTPAnonymousShell)
+        self.assertEquals(avatar.filesystemRoot, filepath.FilePath(anonymous))
+
+
+    def test_notImplemented(self):
+        """
+        L{ftp.BaseFTPRealm.getHomeDirectory} should be overridden by a subclass
+        and raises L{NotImplementedError} if it is not.
+        """
+        realm = ftp.BaseFTPRealm(self.mktemp())
+        self.assertRaises(NotImplementedError, realm.getHomeDirectory, object())
+
+
+
+class FTPRealmTestCase(unittest.TestCase):
+    """
+    Tests for L{ftp.FTPRealm}.
+    """
+    def test_getHomeDirectory(self):
+        """
+        L{ftp.FTPRealm} accepts an extra directory to its initializer and treats
+        the avatarId passed to L{ftp.FTPRealm.getHomeDirectory} as a single path
+        segment to construct a child of that directory.
+        """
+        base = '/path/to/home'
+        realm = ftp.FTPRealm(self.mktemp(), base)
+        home = realm.getHomeDirectory('alice@example.com')
+        self.assertEquals(
+            filepath.FilePath(base).child('alice@example.com'), home)
+
+
+    def test_defaultHomeDirectory(self):
+        """
+        If no extra directory is passed to L{ftp.FTPRealm}, it uses C{"/home"}
+        as the base directory containing all user home directories.
+        """
+        realm = ftp.FTPRealm(self.mktemp())
+        home = realm.getHomeDirectory('alice@example.com')
+        self.assertEquals(filepath.FilePath('/home/alice@example.com'), home)
+
+
+
+class SystemFTPRealmTests(unittest.TestCase):
+    """
+    Tests for L{ftp.SystemFTPRealm}.
+    """
+    skip = nonPOSIXSkip
+
+    def test_getHomeDirectory(self):
+        """
+        L{ftp.SystemFTPRealm.getHomeDirectory} treats the avatarId passed to it
+        as a username in the underlying platform and returns that account's home
+        directory.
+        """
+        # Try to pick a username that will have a home directory.
+        user = getpass.getuser()
+
+        # Try to find their home directory in a different way than used by the
+        # implementation.  Maybe this is silly and can only introduce spurious
+        # failures due to system-specific configurations.
+        import pwd
+        expected = pwd.getpwnam(user).pw_dir
+
+        realm = ftp.SystemFTPRealm(self.mktemp())
+        home = realm.getHomeDirectory(user)
+        self.assertEquals(home, filepath.FilePath(expected))
+
+
+    def test_noSuchUser(self):
+        """
+        L{ftp.SystemFTPRealm.getHomeDirectory} raises L{UnauthorizedLogin} when
+        passed a username which has no corresponding home directory in the
+        system's accounts database.
+        """
+        user = insecureRandom(4).encode('hex')
+        realm = ftp.SystemFTPRealm(self.mktemp())
+        self.assertRaises(UnauthorizedLogin, realm.getHomeDirectory, user)
 
 
 

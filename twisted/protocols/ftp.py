@@ -1902,16 +1902,31 @@ class _FileWriter(object):
         return defer.succeed(None)
 
 
-class FTPRealm:
+
+class BaseFTPRealm:
     """
-    @type anonymousRoot: L{twisted.python.filepath.FilePath}
-    @ivar anonymousRoot: Root of the filesystem to which anonymous
-    users will be granted access.
+    Base class for simple FTP realms which provides an easy hook for specifying
+    the home directory for each user.
     """
     implements(portal.IRealm)
 
     def __init__(self, anonymousRoot):
         self.anonymousRoot = filepath.FilePath(anonymousRoot)
+
+
+    def getHomeDirectory(self, avatarId):
+        """
+        Return a L{FilePath} representing the home directory of the given
+        avatar.  Override this in a subclass.
+
+        @param avatarId: A user identifier returned from a credentials checker.
+        @type avatarId: C{str}
+
+        @rtype: L{FilePath}
+        """
+        raise NotImplementedError(
+            "%r did not override getHomeDirectory" % (self.__class__,))
+
 
     def requestAvatar(self, avatarId, mind, *interfaces):
         for iface in interfaces:
@@ -1919,9 +1934,55 @@ class FTPRealm:
                 if avatarId is checkers.ANONYMOUS:
                     avatar = FTPAnonymousShell(self.anonymousRoot)
                 else:
-                    avatar = FTPShell(filepath.FilePath("/home/" + avatarId))
-                return IFTPShell, avatar, getattr(avatar, 'logout', lambda: None)
-        raise NotImplementedError("Only IFTPShell interface is supported by this realm")
+                    avatar = FTPShell(self.getHomeDirectory(avatarId))
+                return (IFTPShell, avatar,
+                        getattr(avatar, 'logout', lambda: None))
+        raise NotImplementedError(
+            "Only IFTPShell interface is supported by this realm")
+
+
+
+class FTPRealm(BaseFTPRealm):
+    """
+    @type anonymousRoot: L{twisted.python.filepath.FilePath}
+    @ivar anonymousRoot: Root of the filesystem to which anonymous
+        users will be granted access.
+
+    @type userHome: L{filepath.FilePath}
+    @ivar userHome: Root of the filesystem containing user home directories.
+    """
+    def __init__(self, anonymousRoot, userHome='/home'):
+        BaseFTPRealm.__init__(self, anonymousRoot)
+        self.userHome = filepath.FilePath(userHome)
+
+
+    def getHomeDirectory(self, avatarId):
+        """
+        Use C{avatarId} as a single path segment to construct a child of
+        C{self.userHome} and return that child.
+        """
+        return self.userHome.child(avatarId)
+
+
+
+class SystemFTPRealm(BaseFTPRealm):
+    """
+    L{SystemFTPRealm} uses system user account information to decide what the
+    home directory for a particular avatarId is.
+
+    This works on POSIX but probably is not reliable on Windows.
+    """
+    def getHomeDirectory(self, avatarId):
+        """
+        Return the system-defined home directory of the system user account with
+        the name C{avatarId}.
+        """
+        path = os.path.expanduser('~' + avatarId)
+        if path.startswith('~'):
+            raise cred_error.UnauthorizedLogin()
+        return filepath.FilePath(path)
+
+
 
 # --- FTP CLIENT  -------------------------------------------------------------
 
