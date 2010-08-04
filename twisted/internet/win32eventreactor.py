@@ -18,7 +18,7 @@ Maintainer: Itamar Shtull-Trauring
 
 LIMITATIONS:
  1. WaitForMultipleObjects and thus the event loop can only handle 64 objects.
- 2. Process running has some problems (see L{Process} docstring).
+ 2. Process running has some problems (see Process docstring).
 
 
 TODO:
