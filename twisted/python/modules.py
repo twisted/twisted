@@ -290,6 +290,8 @@ class _ImportExportFinder(_iefBase):
         """
         Collect names and source modules from "import x from y" statements.
         """
+        if node.names[0].name == "*":
+            raise SyntaxError("Code containing 'import *' cannot be statically analyzed.")
         for name in node.names:
             self.imports.add((node.module, name.name))
 
@@ -298,34 +300,41 @@ class _ImportExportFinder(_iefBase):
         """
         Look for top-level name bindings and __all__ in a module.
         """
-        allval = _nothing
+        def collectNames(target, value):
+            if isinstance(target, ast.Name):
+                collectSingleName(value, target.id)
+            if isinstance(target, (ast.List, ast.Tuple)):
+                if not (isinstance(value, (ast.List, ast.Tuple))
+                        and len(value.elts) == len(target.elts)):
+                    value = None
+                nameNodes = target.elts
+                for (i, n) in enumerate(nameNodes):
+                    if value is not None:
+                        v = value.elts[i]
+                    else:
+                        v = None
+                    collectNames(n, v)
+
+        def collectSingleName(value, name):
+            if name == '__all__':
+                checkAll(value)
+            else:
+                self.definedNames.add(name)
+
+        def checkAll(allval):
+            if self.exports is not None:
+                    raise SyntaxError("__all__ can only be defined once")
+            try:
+                self.exports = set(ast.literal_eval(allval))
+            except ValueError:
+                raise SyntaxError("__all__ must only contain literal Python identifier strings")
+            for exp in self.exports:
+                if not _isPythonIdentifier(exp):
+                    raise SyntaxError("__all__ must only contain literal Python identifier strings")
         for stmt in node.body:
             self.visit(stmt)
             if isinstance(stmt, ast.Assign):
-                if isinstance(stmt.targets[0], ast.Name):
-                    if stmt.targets[0].id == '__all__':
-                        allval = stmt.value
-                        if self.exports is not None:
-                            raise SyntaxError("__all__ can only be defined once")
-                    else:
-                        self.definedNames.add(stmt.targets[0].id)
-                else:
-                    for i, name in enumerate(stmt.targets[0].elts):
-                        if name.id == "__all__":
-                            allval = stmt.value.elts[i]
-                            if self.exports is not None:
-                                raise SyntaxError("__all__ can only be defined once")
-                        else:
-                            self.definedNames.add(name.id)
-                if allval is not _nothing:
-                    try:
-                        self.exports = set(ast.literal_eval(allval))
-                    except ValueError:
-                        raise SyntaxError("__all__ must only contain literal Python identifier strings")
-
-                    for exp in self.exports:
-                        if not _isPythonIdentifier(exp):
-                            raise SyntaxError("__all__ must only contain literal Python identifier strings")
+                collectNames(stmt.targets[0], stmt.value)
             elif isinstance(stmt, (ast.FunctionDef, ast.ClassDef)):
                 self.definedNames.add(stmt.name)
 

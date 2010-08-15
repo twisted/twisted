@@ -19,6 +19,8 @@ import twisted
 from twisted.trial.unittest import TestCase
 
 from twisted.python import modules
+from twisted.python.modules import _isPythonIdentifier, _ImportExportFinder
+
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import namedAny
 
@@ -643,7 +645,7 @@ class ASTVisitorTests(TestCase):
 
         for code in bits:
             tree = ast.parse(code)
-            f = modules._ImportExportFinder()
+            f = _ImportExportFinder()
             f.visit(tree)
             self.assertEqual(f.exports, set(["foo", "baz"]))
 
@@ -658,7 +660,7 @@ class ASTVisitorTests(TestCase):
                  "__all__ = ['a']\n__all__, x = ['a', 'b'], 1",]
         for code in bits:
             tree = ast.parse(code)
-            f = modules._ImportExportFinder()
+            f = _ImportExportFinder()
             self.assertRaises(SyntaxError, f.visit, tree)
 
 
@@ -669,10 +671,11 @@ class ASTVisitorTests(TestCase):
         """
 
         bits = ["__all__ = ['a' + 'b']",
-                "__all__ = ['a', 1, 'b']"]
+                "__all__ = ['a', 1, 'b']",
+                "x, __all__ = ['x', ['a', 1]]"]
         for code in bits:
             tree = ast.parse(code)
-            f = modules._ImportExportFinder()
+            f = _ImportExportFinder()
             self.assertRaises(SyntaxError, f.visit, tree)
 
 
@@ -687,7 +690,7 @@ class ASTVisitorTests(TestCase):
 
         for code in bits:
             tree = ast.parse(code)
-            f = modules._ImportExportFinder()
+            f = _ImportExportFinder()
             self.assertRaises(SyntaxError, f.visit, tree)
 
 
@@ -701,9 +704,57 @@ class ASTVisitorTests(TestCase):
 
         for code in bits:
             tree = ast.parse(code)
-            f = modules._ImportExportFinder()
+            f = _ImportExportFinder()
             f.visit(tree)
             self.assertEqual(f.exports, set(["foo", "baz"]))
+
+
+    def test_bogusMultiAssign(self):
+        """
+        Tuple-unpacking assigments containing __all__ are rejected if
+        the RHS is not a literal sequence of the proper length.
+        """
+        bits = ["(x, __all__) = 1",
+                "[x, __all__] = []",
+                "__all__, x = (1,)",
+                "(x, (y, __all__)) = 1, 2",
+                "(x, (y, __all__)) = (1, (2,))"]
+
+        for code in bits:
+            tree = ast.parse(code)
+            f = _ImportExportFinder()
+            self.assertRaises(SyntaxError, f.visit, tree)
+
+        
+    def test_funnyAssigns(self):
+        """
+        Assignments that aren't to regular names are
+        skipped. Assignments to regular names (whether in unpacking
+        contexts or not) are recognized.
+        """
+        bits = [('x[0] = 1', []),
+                ('x.y = 2', []),
+                ('x, y[0] = 3, 4', ["x"]),
+                ('x.y, z = 5, 6', ["z"]),
+                ("a, b = 7, 8", ["a", "b"]),
+                ("[c, d] = 9, 0", ["c", "d"]),
+                ("[e, (f, g)] = 0xA, 0xB", ["e", "f", "g"])]
+
+        for (code, expectedNames) in bits:
+            tree = ast.parse(code)
+            f = _ImportExportFinder()
+            f.visit(tree)
+            self.assertEqual(f.definedNames, set(expectedNames), "expected %s as defined names in %r" % (expectedNames, code))
+
+
+    def test_noImportStar(self):
+        """
+        Code containing 'import *' is rejected.
+        """
+        tree = ast.parse("from pickle import *")
+        f = _ImportExportFinder()
+        self.assertRaises(SyntaxError, f.visit, tree)
+
 
 
 if ast is None:
@@ -720,8 +771,8 @@ class MiscTests(TestCase):
         bad = ["1f", "-foo", "foo-baz", "a foo", "foo.baz", 3, ["foo"], ()]
 
         for n in good:
-            self.assertTrue(modules._isPythonIdentifier(n))
+            self.assertTrue(_isPythonIdentifier(n))
 
         for n in bad:
-            self.assertFalse(modules._isPythonIdentifier(n))
+            self.assertFalse(_isPythonIdentifier(n))
 
