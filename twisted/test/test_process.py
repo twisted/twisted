@@ -2353,18 +2353,34 @@ class ClosingPipesProcessProtocol(protocol.ProcessProtocol):
         self.errput += data
 
 
+
 class ClosingPipes(unittest.TestCase):
 
     def doit(self, fd):
+        """
+        Create a child process and close one of its output descriptors using
+        L{IProcessTransport.closeStdout} or L{IProcessTransport.closeStderr}.
+        Return a L{Deferred} which fires after verifying that the descriptor was
+        really closed.
+        """
         p = ClosingPipesProcessProtocol(True)
-        p.deferred.addCallbacks(
-            callback=lambda _: self.fail("I wanted an errback."),
-            errback=self._endProcess, errbackArgs=(p,))
-        reactor.spawnProcess(p, sys.executable,
-                             [sys.executable, '-u', '-c',
-                              r'raw_input(); import sys, os; os.write(%d, "foo\n"); sys.exit(42)' % fd],
-                             env=None)
-        p.transport.write('go\n')
+        self.assertFailure(p.deferred, error.ProcessTerminated)
+        p.deferred.addCallback(self._endProcess, p)
+        reactor.spawnProcess(
+            p, sys.executable, [
+                sys.executable, '-u', '-c',
+                'raw_input()\n'
+                'import sys, os, time\n'
+                # Give the system a bit of time to notice the closed
+                # descriptor.  Another option would be to poll() for HUP
+                # instead of relying on an os.write to fail with SIGPIPE. 
+                # However, that wouldn't work on OS X (or Windows?).
+                'for i in range(1000):\n'
+                '    os.write(%d, "foo\\n")\n'
+                '    time.sleep(0.01)\n'
+                'sys.exit(42)\n' % (fd,)
+                ],
+            env=None)
 
         if fd == 1:
             p.transport.closeStdout()
@@ -2373,37 +2389,48 @@ class ClosingPipes(unittest.TestCase):
         else:
             raise RuntimeError
 
+        # Give the close time to propagate
+        p.transport.write('go\n')
+
         # make the buggy case not hang
         p.transport.closeStdin()
         return p.deferred
 
+
     def _endProcess(self, reason, p):
-        self.failIf(reason.check(error.ProcessDone),
-                    'Child should fail due to EPIPE.')
-        reason.trap(error.ProcessTerminated)
+        """
+        Check that a failed write prevented the process from getting to its
+        custom exit code.
+        """
         # child must not get past that write without raising
-        self.failIfEqual(reason.value.exitCode, 42,
-                         'process reason was %r' % reason)
-        self.failUnlessEqual(p.output, '')
+        self.assertNotEquals(
+            reason.exitCode, 42, 'process reason was %r' % reason)
+        self.assertEquals(p.output, '')
         return p.errput
 
+
     def test_stdout(self):
-        """ProcessProtocol.transport.closeStdout actually closes the pipe."""
+        """
+        ProcessProtocol.transport.closeStdout actually closes the pipe.
+        """
         d = self.doit(1)
         def _check(errput):
-            self.failIfEqual(errput.find('OSError'), -1)
+            self.assertIn('OSError', errput)
             if runtime.platform.getType() != 'win32':
-                self.failIfEqual(errput.find('Broken pipe'), -1)
+                self.assertIn('Broken pipe', errput)
         d.addCallback(_check)
         return d
 
+
     def test_stderr(self):
-        """ProcessProtocol.transport.closeStderr actually closes the pipe."""
+        """
+        ProcessProtocol.transport.closeStderr actually closes the pipe.
+        """
         d = self.doit(2)
         def _check(errput):
             # there should be no stderr open, so nothing for it to
             # write the error to.
-            self.failUnlessEqual(errput, '')
+            self.assertEquals(errput, '')
         d.addCallback(_check)
         return d
 
