@@ -27,6 +27,12 @@ from twisted.python.versions import Version
 from twisted.python.components import Componentized
 from twisted.internet.defer import Deferred
 from twisted.python.fakepwd import UserDatabase
+from twisted.test.test_process import MockOS
+try:
+    from twisted.scripts import _twistd_unix
+except ImportError:
+    _twistd_unix = None
+
 
 try:
     from twisted.python import syslog
@@ -505,11 +511,11 @@ class UnixApplicationRunnerSetupEnvironmentTests(unittest.TestCase):
         self.patch(os, 'chroot', lambda path: setattr(self, 'root', path))
         self.patch(os, 'chdir', lambda path: setattr(self, 'cwd', path))
         self.patch(os, 'umask', lambda mask: setattr(self, 'mask', mask))
-        self.patch(_twistd_unix, "daemonize", self.daemonize)
-        self.runner = UnixApplicationRunner({})
+        self.runner = UnixApplicationRunner(twistd.ServerOptions())
+        self.runner.daemonize = self.daemonize
 
 
-    def daemonize(self):
+    def daemonize(self, waitForStart=True):
         """
         Indicate that daemonization has happened and change the PID so that the
         value written to the pidfile can be tested in the daemonization case.
@@ -1296,3 +1302,171 @@ class DeprecationTests(unittest.TestCase):
         self.assertEquals(len(logs), 2)
         self.assertIn("starting up", logs[0]["message"][0])
         self.assertIn("reactor class", logs[1]["message"][0])
+
+
+
+class DaemonizeTests(unittest.TestCase):
+    """
+    Tests for L{_twistd_unix.UnixApplicationRunner} daemonization.
+    """
+
+    def setUp(self):
+        self.mockos = MockOS()
+        self.config = twistd.ServerOptions()
+        self.patch(_twistd_unix, 'os', self.mockos)
+        self.runner = _twistd_unix.UnixApplicationRunner(self.config)
+        self.runner.application = service.Application("Hi!")
+        self.runner.oldstdout = sys.stdout
+        self.runner.oldstderr = sys.stderr
+        self.runner.startReactor = lambda *args: None
+
+
+    def test_daemonizeSuccess(self):
+        """
+        Test daemonize success inside forked child.
+        """
+        self.runner.postApplication()
+        self.assertEquals(self.mockos.actions,
+            [('chdir', '.'), ('fork', True), 'setsid', ('fork', True),
+             ('umask', 077),  ('write', -2, '0'), ('unlink', 'twistd.pid')])
+        self.assertEquals(self.mockos.closed, [-3, -2])
+
+
+    def test_daemonizeSuccessInParent(self):
+        """
+        Test daemonize success inside parent.
+        """
+        self.mockos.child = False
+        self.mockos.readData = "0"
+        self.assertRaises(SystemError, self.runner.postApplication)
+        self.assertEquals(self.mockos.actions,
+            [('chdir', '.'), ('fork', True), ('read', -1, 100), ('exit', 0),
+             ('unlink', 'twistd.pid')])
+        self.assertEquals(self.mockos.closed, [-1])
+
+
+    def test_daemonizeError(self):
+        """
+        Test daemonize error inside forked child.
+        """
+        class FakeService(service.Service):
+
+            def startService(self):
+                raise RuntimeError("Something is wrong")
+
+        errorService = FakeService()
+        errorService.setServiceParent(self.runner.application)
+
+        self.assertRaises(RuntimeError, self.runner.postApplication)
+        self.assertEquals(self.mockos.actions,
+            [('chdir', '.'), ('fork', True), 'setsid', ('fork', True),
+             ('umask', 63), ('write', -2, '1 Something is wrong'),
+             ('unlink', 'twistd.pid')])
+        self.assertEquals(self.mockos.closed, [-3, -2])
+
+
+    def test_daemonizeErrorInParent(self):
+        """
+        Test daemonize error inside parent.
+        """
+        self.mockos.child = False
+        self.mockos.readData = "1: An identified error"
+        errorIO = StringIO.StringIO()
+        self.patch(sys, '__stderr__', errorIO)
+        self.assertRaises(SystemError, self.runner.postApplication)
+        self.assertEquals(errorIO.getvalue(),
+            "An error has occurred: ' An identified error'\n"
+            "Please look at log file for more information.\n")
+        self.assertEquals(self.mockos.actions,
+            [('chdir', '.'), ('fork', True), ('read', -1, 100), ('exit', 1),
+             ('unlink', 'twistd.pid')])
+        self.assertEquals(self.mockos.closed, [-1])
+
+
+    def test_daemonizeErrorMessageTruncated(self):
+        """
+        If an error in daemonize give a too big error message, it's truncated.
+        """
+        class FakeService(service.Service):
+
+            def startService(self):
+                raise RuntimeError("x" * 200)
+
+        errorService = FakeService()
+        errorService.setServiceParent(self.runner.application)
+
+        self.assertRaises(RuntimeError, self.runner.postApplication)
+        self.assertEquals(self.mockos.actions,
+            [('chdir', '.'), ('fork', True), 'setsid', ('fork', True),
+             ('umask', 63), ('write', -2, '1 ' + 'x' * 98),
+             ('unlink', 'twistd.pid')])
+        self.assertEquals(self.mockos.closed, [-3, -2])
+
+
+    def test_daemonizeSuccessNoWait(self):
+        """
+        Test daemonize success inside forked child without reporting (C{nowait}
+        set to C{True}): it does not write '0' on the status pipe.
+        """
+        self.config['nowait'] = True
+        self.runner.postApplication()
+        self.assertEquals(self.mockos.actions,
+            [('chdir', '.'), ('fork', True), 'setsid', ('fork', True),
+             ('umask', 077),  ('unlink', 'twistd.pid')])
+        self.assertEquals(self.mockos.closed, [-3])
+
+
+    def test_daemonizeSuccessInParentNotWait(self):
+        """
+        Test daemonize success inside parent without reporting (C{nowait} set
+        to C{True}): it doesn't read the status pipe.
+        """
+        self.config['nowait'] = True
+        self.mockos.child = False
+        self.mockos.readData = "0"
+        self.assertRaises(SystemError, self.runner.postApplication)
+        self.assertEquals(self.mockos.actions,
+            [('chdir', '.'), ('fork', True), ('exit', 0),
+             ('unlink', 'twistd.pid')])
+        self.assertEquals(self.mockos.closed, [])
+
+
+    def test_daemonizeErrorNoWait(self):
+        """
+        Test daemonize error inside forked child without error reporting: it
+        should not write the error message on the status pipe.
+        """
+        self.config['nowait'] = True
+        class FakeService(service.Service):
+
+            def startService(self):
+                raise RuntimeError("Something is wrong")
+
+        errorService = FakeService()
+        errorService.setServiceParent(self.runner.application)
+
+        self.assertRaises(RuntimeError, self.runner.postApplication)
+        self.assertEquals(self.mockos.actions,
+            [('chdir', '.'), ('fork', True), 'setsid', ('fork', True),
+             ('umask', 63), ('unlink', 'twistd.pid')])
+        self.assertEquals(self.mockos.closed, [-3])
+
+
+    def test_daemonizeErrorInParentNoWait(self):
+        """
+        Test daemonize success inside parent without reporting (C{nowait} set
+        to C{True}): it doesn't read the status pipe, so the behavior is the
+        same as in success.
+        """
+        self.config['nowait'] = True
+        self.mockos.child = False
+        self.assertRaises(SystemError, self.runner.postApplication)
+        self.assertEquals(self.mockos.actions,
+            [('chdir', '.'), ('fork', True), ('exit', 0),
+             ('unlink', 'twistd.pid')])
+        self.assertEquals(self.mockos.closed, [])
+
+
+
+if _twistd_unix is None:
+    DaemonizeTests.skip = "No daemonize for you"

@@ -17,9 +17,9 @@ def _umask(value):
 class ServerOptions(app.ServerOptions):
     synopsis = "Usage: twistd [options]"
 
-    optFlags = [['nodaemon','n',  "don't daemonize, don't use default umask of 0077"],
+    optFlags = [['nodaemon', 'n', "don't daemonize, don't use default umask of 0077"],
                 ['originalname', None, "Don't try to change the process name"],
-                ['syslog', None,   "Log to syslog, not to file"],
+                ['syslog', None, "Log to syslog, not to file"],
                 ['euid', '',
                  "Set only effective user-id rather than real user-id. "
                  "(This option has no effect unless the server is running as "
@@ -27,6 +27,9 @@ class ServerOptions(app.ServerOptions):
                  "after binding ports, retaining the option to regain "
                  "privileges in cases such as spawning processes. "
                  "Use with caution.)"],
+                ['nowait', None, "Don't wait for application startup when "
+                 "daemonize. If set, no error will be reported in case of "
+                 "failure."],
                ]
 
     optParameters = [
@@ -152,24 +155,6 @@ class UnixAppLogger(app.AppLogger):
 
 
 
-def daemonize():
-    # See http://www.erlenstar.demon.co.uk/unix/faq_toc.html#TOC16
-    if os.fork():   # launch child and...
-        os._exit(0) # kill off parent
-    os.setsid()
-    if os.fork():   # launch child and...
-        os._exit(0) # kill off parent again.
-    null = os.open('/dev/null', os.O_RDWR)
-    for i in range(3):
-        try:
-            os.dup2(null, i)
-        except OSError, e:
-            if e.errno != errno.EBADF:
-                raise
-    os.close(null)
-
-
-
 def launchWithName(name):
     if name and name != sys.argv[0]:
         exe = os.path.realpath(sys.executable)
@@ -198,11 +183,26 @@ class UnixApplicationRunner(app.ApplicationRunner):
 
     def postApplication(self):
         """
-        To be called after the application is created: start the
-        application and run the reactor. After the reactor stops,
-        clean up PID files and such.
+        To be called after the application is created: start the application
+        and run the reactor. After the reactor stops, clean up PID files and
+        such.
         """
-        self.startApplication(self.application)
+        try:
+            self.startApplication(self.application)
+        except Exception, e:
+            statusPipe = self.config.get("statusPipe", None)
+            if statusPipe is not None:
+                # Limit the total length to the passed string to 100
+                strippedError = str(e)[:98]
+                os.write(statusPipe, "1 %s" % (strippedError,))
+                os.close(statusPipe)
+            self.removePID(self.config['pidfile'])
+            raise
+        else:
+            statusPipe = self.config.get("statusPipe", None)
+            if statusPipe is not None:
+                os.write(statusPipe, "0")
+                os.close(statusPipe)
         self.startReactor(None, self.oldstdout, self.oldstderr)
         self.removePID(self.config['pidfile'])
 
@@ -223,9 +223,9 @@ class UnixApplicationRunner(app.ApplicationRunner):
             if e.errno == errno.EACCES or e.errno == errno.EPERM:
                 log.msg("Warning: No permission to delete pid file")
             else:
-                log.err(e, "Failed to unlink PID file")
+                log.err(e, "Failed to unlink PID file:")
         except:
-            log.err(None, "Failed to unlink PID file")
+            log.err(None, "Failed to unlink PID file:")
 
 
     def setupEnvironment(self, chroot, rundir, nodaemon, umask, pidfile):
@@ -262,11 +262,66 @@ class UnixApplicationRunner(app.ApplicationRunner):
         if umask is not None:
             os.umask(umask)
         if daemon:
-            daemonize()
+            self.config["statusPipe"] = self.daemonize(not self.config['nowait'])
         if pidfile:
             f = open(pidfile,'wb')
             f.write(str(os.getpid()))
             f.close()
+
+
+    def daemonize(self, waitForStart=True):
+        """
+        Daemonize B{twistd} process.
+
+        @param waitForStart: whether parent process should wait for the forked
+            process to start or not (default to C{True}).
+        @type waitForStart: C{bool}
+
+        @return: if C{waitForStart} is C{True}, a writable pipe to be used to
+            report errors.
+        @rtype: C{int} or C{None}
+        """
+        w = None
+        if waitForStart:
+            r, w = os.pipe()
+        if os.fork():   # launch child and...
+            code = 0
+            if waitForStart:
+                code = self._waitForStart(r)
+                os.close(r)
+            os._exit(code) # kill off parent
+        os.setsid()
+        if os.fork():   # launch child and...
+            os._exit(0) # kill off parent again.
+        os.umask(077)
+        null = os.open('/dev/null', os.O_RDWR)
+        for i in range(3):
+            try:
+                os.dup2(null, i)
+            except OSError, e:
+                if e.errno != errno.EBADF:
+                    raise
+        os.close(null)
+        return w
+
+
+    def _waitForStart(self, readPipe):
+        """
+        Wait for the daemonization success.
+
+        @param readPipe: file descriptor to read start information from.
+        @type readPipe: C{int}
+
+        @return: code to be passed to C{os._exit}: 0 for success, 1 for error.
+        @rtype: C{int}
+        """
+        data = os.read(readPipe, 100)
+        if data != "0":
+            msg = ("An error has occurred: '%s'\nPlease look at log "
+                   "file for more information.\n" % (data[2:],))
+            sys.__stderr__.write(msg)
+            return 1
+        return 0
 
 
     def shedPrivileges(self, euid, uid, gid):
