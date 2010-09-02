@@ -895,14 +895,31 @@ class SlowStringCompareTests(unittest.TestCase):
         C{unicode} object.
         """
         def _compare(s1, s2):
-            expected = s1 == s2
+            if sys.version_info >= (2, 5):
+                expected = s1 == s2
 
-            ws = self.flushWarnings(
-                [SlowStringCompareTests.test_unicodeComparison])
-            for w in ws:
-                self.assertEquals(w['category'], UnicodeWarning)
+                ws = self.flushWarnings(
+                    [SlowStringCompareTests.test_unicodeComparison])
+                for w in ws:
+                    self.assertEquals(w['category'], UnicodeWarning)
 
-            result = util.slowStringCompare(s1, s2)
+                result = util.slowStringCompare(s1, s2)
+            else:
+                # When Python 2.4 cannot decode the non-unicode side of a string
+                # comparion, it raises UnicodeDecodeError instead of giving a
+                # UnicodeWarning and returning False.
+                try:
+                    expected = s1 == s2
+                except UnicodeDecodeError:
+                    # Use the exception class itself as a placeholder to represent
+                    # the raising of the exception.
+                    expected = UnicodeDecodeError
+
+                try:
+                    result = util.slowStringCompare(s1, s2)
+                except UnicodeDecodeError:
+                    result = UnicodeDecodeError
+
             self.assertEquals(result, expected)
 
             [w] = self.flushWarnings(

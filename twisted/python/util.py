@@ -1001,11 +1001,19 @@ def slowStringCompare(s1, s2):
         try:
             s2 = unicode(s2)
         except UnicodeDecodeError:
+            if sys.version_info < (2, 5):
+                # When Python 2.4 cannot decode the non-unicode side of a
+                # string comparion, it raises UnicodeDecodeError instead of
+                # giving a UnicodeWarning and returning False.  Match this
+                # behavior and re-raise the exception.
+                raise
             return False
     elif not isinstance(s1, unicode) and isinstance(s2, unicode):
         try:
             s1 = unicode(s1)
         except UnicodeDecodeError:
+            if sys.version_info < (2, 5):
+                raise
             return False
 
     if len(s1) != len(s2):
