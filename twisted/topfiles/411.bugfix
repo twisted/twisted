@@ -1,0 +1,1 @@
+twisted.internet.defer.Deferred now handles chains iteratively instead of recursively, preventing RuntimeError due to excessive recursion when handling long Deferred chains.

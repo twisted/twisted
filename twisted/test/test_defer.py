@@ -1,12 +1,11 @@
 # Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
 """
 Test cases for defer module.
 """
 
-import gc
+import gc, traceback
 
 from twisted.trial import unittest
 from twisted.internet import reactor, defer
@@ -239,7 +238,7 @@ class DeferredTestCase(unittest.TestCase):
 
     def testCallbackErrors(self):
         l = []
-        d = defer.Deferred().addCallback(lambda _: 1/0).addErrback(l.append)
+        d = defer.Deferred().addCallback(lambda _: 1 / 0).addErrback(l.append)
         d.callback(1)
         self.assert_(isinstance(l[0].value, ZeroDivisionError))
         l = []
@@ -265,7 +264,46 @@ class DeferredTestCase(unittest.TestCase):
         d2.callback(2)
         assert self.callbackResults is None, "Still should not have been called yet."
         d2.unpause()
-        assert self.callbackResults[0][0] == 2, "Result should have been from second deferred:%s"% (self.callbackResults,)
+        assert self.callbackResults[0][0] == 2, "Result should have been from second deferred:%s" % (self.callbackResults,)
+
+
+    def test_chainedPausedDeferredWithResult(self):
+        """
+        When a paused Deferred with a result is returned from a callback on
+        another Deferred, the other Deferred is chained to the first and waits
+        for it to be unpaused.
+        """
+        expected = object()
+        paused = defer.Deferred()
+        paused.callback(expected)
+        paused.pause()
+        chained = defer.Deferred()
+        chained.addCallback(lambda ignored: paused)
+        chained.callback(None)
+
+        result = []
+        chained.addCallback(result.append)
+        self.assertEquals(result, [])
+        paused.unpause()
+        self.assertEquals(result, [expected])
+
+
+    def test_pausedDeferredChained(self):
+        """
+        A paused Deferred encountered while pushing a result forward through a
+        chain does not prevent earlier Deferreds from continuing to execute
+        their callbacks.
+        """
+        first = defer.Deferred()
+        second = defer.Deferred()
+        first.addCallback(lambda ignored: second)
+        first.callback(None)
+        first.pause()
+        second.callback(None)
+        result = []
+        second.addCallback(result.append)
+        self.assertEquals(result, [None])
+
 
     def testGatherResults(self):
         # test successful list of deferreds
@@ -334,6 +372,126 @@ class DeferredTestCase(unittest.TestCase):
         d2 = defer.maybeDeferred(lambda: d)
         d.errback(failure.Failure(RuntimeError()))
         return self.assertFailure(d2, RuntimeError)
+
+
+    def test_innerCallbacksPreserved(self):
+        """
+        When a L{Deferred} encounters a result which is another L{Deferred}
+        which is waiting on a third L{Deferred}, the middle L{Deferred}'s
+        callbacks are executed after the third L{Deferred} fires and before the
+        first receives a result.
+        """
+        results = []
+        failures = []
+        inner = defer.Deferred()
+        def cb(result):
+            results.append(('start-of-cb', result))
+            d = defer.succeed('inner')
+            def firstCallback(result):
+                results.append(('firstCallback', 'inner'))
+                return inner
+            def secondCallback(result):
+                results.append(('secondCallback', result))
+                return result * 2
+            d.addCallback(firstCallback).addCallback(secondCallback)
+            d.addErrback(failures.append)
+            return d
+        outer = defer.succeed('outer')
+        outer.addCallback(cb)
+        inner.callback('orange')
+        outer.addCallback(results.append)
+        inner.addErrback(failures.append)
+        outer.addErrback(failures.append)
+        self.assertEqual([], failures)
+        self.assertEqual(
+            results,
+            [('start-of-cb', 'outer'),
+             ('firstCallback', 'inner'),
+             ('secondCallback', 'orange'),
+             'orangeorange'])
+
+
+    def test_continueCallbackNotFirst(self):
+        """
+        The continue callback of a L{Deferred} waiting for another L{Deferred}
+        is not necessarily the first one. This is somewhat a whitebox test
+        checking that we search for that callback among the whole list of
+        callbacks.
+        """
+        results = []
+        failures = []
+        a = defer.Deferred()
+
+        def cb(result):
+            results.append(('cb', result))
+            d = defer.Deferred()
+
+            def firstCallback(ignored):
+                results.append(('firstCallback', ignored))
+                return defer.gatherResults([a])
+
+            def secondCallback(result):
+                results.append(('secondCallback', result))
+
+            d.addCallback(firstCallback)
+            d.addCallback(secondCallback)
+            d.addErrback(failures.append)
+            d.callback(None)
+            return d
+
+        outer = defer.succeed('outer')
+        outer.addCallback(cb)
+        outer.addErrback(failures.append)
+        self.assertEquals([('cb', 'outer'), ('firstCallback', None)], results)
+        a.callback('withers')
+        self.assertEquals([], failures)
+        self.assertEquals(
+            results,
+            [('cb', 'outer'),
+             ('firstCallback', None),
+             ('secondCallback', ['withers'])])
+
+
+    def test_callbackOrderPreserved(self):
+        """
+        A callback added to a L{Deferred} after a previous callback attached
+        another L{Deferred} as a result is run after the callbacks of the other
+        L{Deferred} are run.
+        """
+        results = []
+        failures = []
+        a = defer.Deferred()
+
+        def cb(result):
+            results.append(('cb', result))
+            d = defer.Deferred()
+
+            def firstCallback(ignored):
+                results.append(('firstCallback', ignored))
+                return defer.gatherResults([a])
+
+            def secondCallback(result):
+                results.append(('secondCallback', result))
+
+            d.addCallback(firstCallback)
+            d.addCallback(secondCallback)
+            d.addErrback(failures.append)
+            d.callback(None)
+            return d
+
+        outer = defer.Deferred()
+        outer.addCallback(cb)
+        outer.addCallback(lambda x: results.append('final'))
+        outer.addErrback(failures.append)
+        outer.callback('outer')
+        self.assertEquals([('cb', 'outer'), ('firstCallback', None)], results)
+        a.callback('withers')
+        self.assertEquals([], failures)
+        self.assertEquals(
+            results,
+            [('cb', 'outer'),
+             ('firstCallback', None),
+             ('secondCallback', ['withers']), 'final'])
 
 
     def test_reentrantRunCallbacks(self):
@@ -719,6 +877,73 @@ class DeferredTestCase(unittest.TestCase):
         self.assertEquals(
             repr(a), "<Deferred at %s waiting on Deferred at %s>" % (
                 hex(unsignedID(a)), hex(unsignedID(b))))
+
+
+    def test_boundedStackDepth(self):
+        """
+        The depth of the call stack does not grow as more L{Deferred} instances
+        are chained together.
+        """
+        def chainDeferreds(howMany):
+            stack = []
+            def recordStackDepth(ignored):
+                stack.append(len(traceback.extract_stack()))
+
+            top = defer.Deferred()
+            innerDeferreds = [defer.Deferred() for ignored in range(howMany)]
+            originalInners = innerDeferreds[:]
+            last = defer.Deferred()
+
+            inner = innerDeferreds.pop()
+            top.addCallback(lambda ign, inner=inner: inner)
+            top.addCallback(recordStackDepth)
+
+            while innerDeferreds:
+                newInner = innerDeferreds.pop()
+                inner.addCallback(lambda ign, inner=newInner: inner)
+                inner = newInner
+            inner.addCallback(lambda ign: last)
+
+            top.callback(None)
+            for inner in originalInners:
+                inner.callback(None)
+
+            # Sanity check - the record callback is not intended to have
+            # fired yet.
+            self.assertEquals(stack, [])
+
+            # Now fire the last thing and return the stack depth at which the
+            # callback was invoked.
+            last.callback(None)
+            return stack[0]
+
+        # Callbacks should be invoked at the same stack depth regardless of
+        # how many Deferreds are chained.
+        self.assertEquals(chainDeferreds(1), chainDeferreds(2))
+
+
+    def test_resultOfDeferredResultOfDeferredOfFiredDeferredCalled(self):
+        """
+        Given three Deferreds, one chained to the next chained to the next,
+        callbacks on the middle Deferred which are added after the chain is
+        created are called once the last Deferred fires.
+
+        This is more of a regression-style test.  It doesn't exercise any
+        particular code path through the current implementation of Deferred, but
+        it does exercise a broken codepath through one of the variations of the
+        implementation proposed as a resolution to ticket #411.
+        """
+        first = defer.Deferred()
+        second = defer.Deferred()
+        third = defer.Deferred()
+        first.addCallback(lambda ignored: second)
+        second.addCallback(lambda ignored: third)
+        second.callback(None)
+        first.callback(None)
+        third.callback(None)
+        L = []
+        second.addCallback(L.append)
+        self.assertEquals(L, [None])
 
 
 
@@ -1214,11 +1439,16 @@ class LogTestCase(unittest.TestCase):
         """
         log.removeObserver(self.c.append)
 
+
+    def _loggedErrors(self):
+        return [e for e in self.c if e["isError"]]
+
+
     def _check(self):
         """
         Check the output of the log observer to see if the error is present.
         """
-        c2 = [e for e in self.c if e["isError"]]
+        c2 = self._loggedErrors()
         self.assertEquals(len(c2), 2)
         c2[1]["failure"].trap(ZeroDivisionError)
         self.flushLoggedErrors(ZeroDivisionError)
@@ -1229,7 +1459,7 @@ class LogTestCase(unittest.TestCase):
         and its final result (the one not handled by any callback) is an
         exception, that exception will be logged immediately.
         """
-        defer.Deferred().addCallback(lambda x: 1/0).callback(1)
+        defer.Deferred().addCallback(lambda x: 1 / 0).callback(1)
         gc.collect()
         self._check()
 
@@ -1239,7 +1469,7 @@ class LogTestCase(unittest.TestCase):
         """
         def _subErrorLogWithInnerFrameRef():
             d = defer.Deferred()
-            d.addCallback(lambda x: 1/0)
+            d.addCallback(lambda x: 1 / 0)
             d.callback(1)
 
         _subErrorLogWithInnerFrameRef()
@@ -1252,13 +1482,61 @@ class LogTestCase(unittest.TestCase):
         """
         def _subErrorLogWithInnerFrameCycle():
             d = defer.Deferred()
-            d.addCallback(lambda x, d=d: 1/0)
+            d.addCallback(lambda x, d=d: 1 / 0)
             d._d = d
             d.callback(1)
 
         _subErrorLogWithInnerFrameCycle()
         gc.collect()
         self._check()
+
+
+    def test_chainedErrorCleanup(self):
+        """
+        If one Deferred with an error result is returned from a callback on
+        another Deferred, when the first Deferred is garbage collected it does
+        not log its error.
+        """
+        d = defer.Deferred()
+        d.addCallback(lambda ign: defer.fail(RuntimeError("zoop")))
+        d.callback(None)
+
+        # Sanity check - this isn't too interesting, but we do want the original
+        # Deferred to have gotten the failure.
+        results = []
+        errors = []
+        d.addCallbacks(results.append, errors.append)
+        self.assertEquals(results, [])
+        self.assertEquals(len(errors), 1)
+        errors[0].trap(Exception)
+
+        # Get rid of any references we might have to the inner Deferred (none of
+        # these should really refer to it, but we're just being safe).
+        del results, errors, d
+        # Force a collection cycle so that there's a chance for an error to be
+        # logged, if it's going to be logged.
+        gc.collect()
+        # And make sure it is not.
+        self.assertEquals(self._loggedErrors(), [])
+
+
+    def test_errorClearedByChaining(self):
+        """
+        If a Deferred with a failure result has an errback which chains it to
+        another Deferred, the initial failure is cleared by the errback so it is
+        not logged.
+        """
+        # Start off with a Deferred with a failure for a result
+        bad = defer.fail(Exception("oh no"))
+        good = defer.Deferred()
+        # Give it a callback that chains it to another Deferred
+        bad.addErrback(lambda ignored: good)
+        # That's all, clean it up.  No Deferred here still has a failure result,
+        # so nothing should be logged.
+        good = bad = None
+        gc.collect()
+        self.assertEquals(self._loggedErrors(), [])
+
 
 
 class DeferredTestCaseII(unittest.TestCase):
@@ -1546,7 +1824,7 @@ class DeferredFilesystemLockTestCase(unittest.TestCase):
         d = self.lock.deferUntilLocked(timeout=5.5)
         self.assertFailure(d, defer.TimeoutError)
 
-        self.clock.pump([1]*10)
+        self.clock.pump([1] * 10)
 
         return d
 
@@ -1566,7 +1844,7 @@ class DeferredFilesystemLockTestCase(unittest.TestCase):
         d = self.lock.deferUntilLocked(timeout=10)
         d.addErrback(onTimeout)
 
-        self.clock.pump([1]*10)
+        self.clock.pump([1] * 10)
 
         return d
 

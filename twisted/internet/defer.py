@@ -10,6 +10,10 @@ Maintainer: Glyph Lefkowitz
 @var _NO_RESULT: The result used to represent the fact that there is no
     result. B{Never ever ever use this as an actual result for a Deferred}.  You
     have been warned.
+
+@var _CONTINUE: A marker left in L{Deferred.callbacks} to indicate a Deferred
+    chain.  Always accompanied by a Deferred instance in the args tuple pointing
+    at the Deferred which is chained to the Deferred which has this marker.
 """
 
 import traceback
@@ -169,6 +173,7 @@ def getDebugging():
 
 # See module docstring.
 _NO_RESULT = object()
+_CONTINUE = object()
 
 
 
@@ -330,6 +335,11 @@ class Deferred:
         chain of d1. Thus any event that fires d1 will also fire d2.
         However, the converse is B{not} true; if d2 is fired d1 will not be
         affected.
+
+        Note that unlike the case where chaining is caused by a L{Deferred}
+        being returned from a callback, it is possible to cause the call
+        stack size limit to be exceeded by chaining many L{Deferred}s
+        together with C{chainDeferred}.
         """
         d._chainedTo = self
         return self.addCallbacks(d.callback, d.errback)
@@ -425,11 +435,6 @@ class Deferred:
             self.result.cancel()
 
 
-    def _continue(self, result):
-        self.result = result
-        self.unpause()
-
-
     def _startRunCallbacks(self, result):
         if self.called:
             if self._suppressAlreadyCalled:
@@ -450,49 +455,139 @@ class Deferred:
         self._runCallbacks()
 
 
+    def _continuation(self):
+        """
+        Build a tuple of callback and errback with L{_continue} to be used by
+        L{_addContinue} and L{_removeContinue} on another Deferred.
+        """
+        return ((_CONTINUE, (self,), None),
+                (_CONTINUE, (self,), None))
+
+
     def _runCallbacks(self):
+        """
+        Run the chain of callbacks once a result is available.
+
+        This consists of a simple loop over all of the callbacks, calling each
+        with the current result and making the current result equal to the
+        return value (or raised exception) of that call.
+
+        If C{self._runningCallbacks} is true, this loop won't run at all, since
+        it is already running above us on the call stack.  If C{self.paused} is
+        true, the loop also won't run, because that's what it means to be
+        paused.
+
+        The loop will terminate before processing all of the callbacks if a
+        C{Deferred} without a result is encountered.
+
+        If a C{Deferred} I{with} a result is encountered, that result is taken
+        and the loop proceeds.
+
+        @note: The implementation is complicated slightly by the fact that
+            chaining (associating two Deferreds with each other such that one
+            will wait for the result of the other, as happens when a Deferred is
+            returned from a callback on another Deferred) is supported
+            iteratively rather than recursively, to avoid running out of stack
+            frames when processing long chains.
+        """
         if self._runningCallbacks:
             # Don't recursively run callbacks
             return
-        if not self.paused:
-            self._chainedTo = None
-            while self.callbacks:
-                item = self.callbacks.pop(0)
+
+        # Keep track of all the Deferreds encountered while propagating results
+        # up a chain.  The way a Deferred gets onto this stack is by having
+        # added its _continuation() to the callbacks list of a second Deferred
+        # and then that second Deferred being fired.  ie, if ever had _chainedTo
+        # set to something other than None, you might end up on this stack.
+        chain = [self]
+
+        while chain:
+            current = chain[-1]
+
+            if current.paused:
+                # This Deferred isn't going to produce a result at all.  All the
+                # Deferreds up the chain waiting on it will just have to...
+                # wait.
+                return
+
+            finished = True
+            current._chainedTo = None
+            while current.callbacks:
+                item = current.callbacks.pop(0)
                 callback, args, kw = item[
-                    isinstance(self.result, failure.Failure)]
+                    isinstance(current.result, failure.Failure)]
                 args = args or ()
                 kw = kw or {}
+
+                # Avoid recursion if we can.
+                if callback is _CONTINUE:
+                    # Give the waiting Deferred our current result and then
+                    # forget about that result ourselves.
+                    chainee = args[0]
+                    chainee.result = current.result
+                    current.result = None
+                    # Making sure to update _debugInfo
+                    if current._debugInfo is not None:
+                        current._debugInfo.failResult = None
+                    chainee.paused -= 1
+                    chain.append(chainee)
+                    # Delay cleaning this Deferred and popping it from the chain
+                    # until after we've dealt with chainee.
+                    finished = False
+                    break
+
                 try:
-                    self._runningCallbacks = True
+                    current._runningCallbacks = True
                     try:
-                        self.result = callback(self.result, *args, **kw)
+                        current.result = callback(current.result, *args, **kw)
                     finally:
-                        self._runningCallbacks = False
-                    if isinstance(self.result, Deferred):
-                        # note: this will cause _runCallbacks to be called
-                        # recursively if self.result already has a result.
-                        # This shouldn't cause any problems, since there is no
-                        # relevant state in this stack frame at this point.
-                        # The recursive call will continue to process
-                        # self.callbacks until it is empty, then return here,
-                        # where there is no more work to be done, so this call
-                        # will return as well.
-                        self.pause()
-                        self._chainedTo = self.result
-                        self.result.addBoth(self._continue)
-                        break
+                        current._runningCallbacks = False
                 except:
-                    self.result = failure.Failure()
+                    current.result = failure.Failure()
+                else:
+                    if isinstance(current.result, Deferred):
+                        # The result is another Deferred.  If it has a result,
+                        # we can take it and keep going.
+                        resultResult = getattr(current.result, 'result', _NO_RESULT)
+                        if resultResult is _NO_RESULT or isinstance(resultResult, Deferred) or current.result.paused:
+                            # Nope, it didn't.  Pause and chain.
+                            current.pause()
+                            current._chainedTo = current.result
+                            # Note: current.result has no result, so it's not
+                            # running its callbacks right now.  Therefore we can
+                            # append to the callbacks list directly instead of
+                            # using addCallbacks.
+                            current.result.callbacks.append(current._continuation())
+                            break
+                        else:
+                            # Yep, it did.  Steal it.
+                            current.result.result = None
+                            # Make sure _debugInfo's failure state is updated.
+                            if current.result._debugInfo is not None:
+                                current.result._debugInfo.failResult = None
+                            current.result = resultResult
 
-        if isinstance(self.result, failure.Failure):
-            self.result.cleanFailure()
-            if self._debugInfo is None:
-                self._debugInfo = DebugInfo()
-            self._debugInfo.failResult = self.result
-        else:
-            if self._debugInfo is not None:
-                self._debugInfo.failResult = None
+            if finished:
+                # As much of the callback chain - perhaps all of it - as can be
+                # processed right now has been.  The current Deferred is waiting on
+                # another Deferred or for more callbacks.  Before finishing with it,
+                # make sure its _debugInfo is in the proper state.
+                if isinstance(current.result, failure.Failure):
+                    # Stash the Failure in the _debugInfo for unhandled error
+                    # reporting.
+                    current.result.cleanFailure()
+                    if current._debugInfo is None:
+                        current._debugInfo = DebugInfo()
+                    current._debugInfo.failResult = current.result
+                else:
+                    # Clear out any Failure in the _debugInfo, since the result
+                    # is no longer a Failure.
+                    if current._debugInfo is not None:
+                        current._debugInfo.failResult = None
 
+                # This Deferred is done, pop it from the chain and move back up
+                # to the Deferred which supplied us with our result.
+                chain.pop()
 
 
     def __str__(self):
@@ -519,7 +614,6 @@ class DebugInfo:
     """
 
     failResult = None
-
 
     def _getDebugTracebacks(self):
         info = ''
