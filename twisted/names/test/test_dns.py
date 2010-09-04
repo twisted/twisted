@@ -11,6 +11,7 @@ try:
 except ImportError:
     from StringIO import StringIO
 
+import hmac
 import struct
 
 from twisted.python.failure import Failure
@@ -1214,3 +1215,259 @@ class EqualityTests(unittest.TestCase):
             dns.Record_TXT(['foo', 'bar'], 10),
             dns.Record_TXT(['foo', 'bar'], 10),
             dns.Record_TXT(['foo', 'bar'], 100))
+
+class TkeyTests(unittest.TestCase):
+    """
+    Tests for the TKEY RR
+    """
+
+    def _tkey(self, algorithm='a.b', inception=0, expiration=1, mode=2, error=3, key='k', other='o'):
+        d = ''
+        for p in algorithm.split('.'):
+            d += chr(len(p))
+            d += p
+        d += '\x00'
+
+        d += struct.pack('!IIHH', inception, expiration, mode, error)
+        d += struct.pack('!H', len(key))
+        d += key
+        d += struct.pack('!H', len(other))
+        d += other
+
+        return d
+
+    def test_tkey_decode(self):
+        fields = {
+                'algorithm': 'foo.bar',
+                'inception': 10000,
+                'expiration': 20000,
+                'mode': 2,
+                'key': 'keydata',
+                'other': 'otherdata',
+                'error': 99,
+                }
+        strio = StringIO(
+                self._tkey(**fields)
+                )
+        r = dns.Record_TKEY()
+        r.decode(strio)
+
+        self.assertEquals(r, dns.Record_TKEY(**fields))
+
+    def test_tkey_encode(self):
+        fields = {
+                'algorithm': 'foo.bar',
+                'inception': 10000,
+                'expiration': 20000,
+                'mode': 2,
+                'key': 'keydata',
+                'other': 'otherdata',
+                'error': 99,
+                }
+        strio = StringIO()
+        r = dns.Record_TKEY(**fields)
+        r.encode(strio)
+        v = strio.getvalue()
+
+        self.assertEquals(v, self._tkey(**fields))
+
+class TsigTests(unittest.TestCase):
+    """
+    Tests for the TSIG RR
+    """
+
+    def _tsig(self, mac='mac', algorithm='gss-tsig', signed=0, fudge=300, original_id=0, error=0, other=''):
+        d = ''
+        for p in algorithm.split('.'):
+            d += chr(len(p))
+            d += p
+        d += '\x00'
+
+        d += struct.pack('!HIHH', 0, signed, fudge, len(mac))
+        d += mac
+        d += struct.pack('!HHH', original_id, error, len(other))
+        d += other
+
+        return d
+
+    def test_tsig_decode(self):
+        fields = {
+                'mac': 'SOMEMAC',
+                'algorithm': 'foo.bar',
+                'signed': 1000000,
+                'fudge': 20000,
+                'original_id': 0xdead,
+                'other': 'otherdata',
+                'error': 99,
+                }
+        strio = StringIO(
+                self._tsig(**fields)
+                )
+        r = dns.Record_TSIG()
+        r.decode(strio)
+
+        self.assertEquals(r, dns.Record_TSIG(**fields))
+
+    def test_tsig_encode(self):
+        fields = {
+                'mac': 'SOMEMAC',
+                'algorithm': 'foo.bar',
+                'signed': 1000000,
+                'fudge': 20000,
+                'original_id': 0xdead,
+                'other': 'otherdata',
+                'error': 99,
+                }
+        strio = StringIO()
+        r = dns.Record_TSIG(**fields)
+        r.encode(strio)
+        v = strio.getvalue()
+
+        self.assertEquals(v, self._tsig(**fields))
+
+    def _msg(self, id, b3=0, b4=0, nq=0, nans=0, nauth=0, nadd=0):
+        return struct.pack('!HBBHHHH', id, b3, b4, nq, nans, nauth, nadd)
+
+    def test_tsig_message(self):
+        """
+        TSIG records should be the last in the packet; save the payload
+        up to that point, so we can feed it into the hash verify function
+        """
+
+        fields = {
+                'mac': 'SOMEMAC',
+                'algorithm': 'foo.bar',
+                'signed': 1000000,
+                'fudge': 20000,
+                'original_id': 0xdead,
+                'other': 'otherdata',
+                'error': 99,
+                }
+
+        qry = str(
+            # 1st query
+            '\x04some\x04name\x00'  # some.name
+            '\x00\x06'              # SOA
+            '\x00\x01'              # IN
+            )
+
+        # data we "received" on the wire
+        wire = self._msg(id=1, nq=1, nadd=1)
+        wire += qry
+
+        tsg = self._tsig(**fields)
+        wire += '\x04some\x04name\x00'  # some.name
+        wire += '\x00\xfa'              # TSIG
+        wire += '\x00\xff'              # ANY
+        wire += '\x00\x00\x00\x00'      # ttl=0
+        wire += struct.pack('!H', len(tsg))
+        wire += tsg
+
+        # data that should be in the hash
+        expect = self._msg(id=fields['original_id'], nq=1, nadd=0)
+        expect += qry
+
+        msg = dns.Message()
+        msg.fromStr(wire)
+
+        self.assertEqual(msg.additional, [
+            dns.RRHeader('some.name', type=dns.TSIG, cls=dns.ANY, ttl=0, payload=dns.Record_TSIG(**fields)),
+            ])
+
+        self.assertEqual(msg.additional[0].payload.hashInput, expect)
+
+    def test_makeTsig(self):
+
+        themac = 'themac'
+        macdata = struct.pack('!H', len(themac)) + themac
+
+        # make a request packet with a TSIG & mac
+        request = dns.Message()
+        request.additional.append(
+                dns.RRHeader('foo.bar', type=dns.TSIG, cls=dns.ANY, payload=dns.Record_TSIG(mac=themac))
+                )
+
+
+        # make a response packet
+        response = dns.Message(id=0xbeef, opCode=4)
+        response.queries.append(
+                dns.Query('www.google.com')
+                )
+
+        # save the wire encoding pre-TSIG
+        wire = response.toStr()
+
+        # add the TSIG
+        tsig = response.makeTsig('foo.bar', request=request)
+
+        # mutuate the message ID; TSIG should handle this
+        response.id = 0xdead
+
+        self.assertEqual(
+                tsig.type,
+                dns.TSIG,
+                )
+        self.assertIsInstance(
+                tsig.payload,
+                dns.Record_TSIG,
+                )
+
+        # check that the TSIG hashInput is the request mac & pre-TSIG wire encoding
+        self.assertEqual(
+                tsig.payload.hashInput,
+                macdata + wire,
+                )
+
+        # ok, check that the signdata method returns the right info
+        signdata = macdata + wire
+        signdata += '\x03foo\x03bar\x00'
+        signdata += struct.pack('!HI', tsig.cls, tsig.ttl)
+        signdata += '\x08gss-tsig\x00'
+        signdata += struct.pack('!HIHHH', 0, tsig.payload.signed, tsig.payload.fudge, tsig.payload.error, len(tsig.payload.other))
+        signdata += tsig.payload.other
+
+        self.assertEqual(
+                tsig.payload.signdata(tsig),
+                signdata,
+                )
+
+    def test_hmac_md5(self):
+        # this data generated by external tools e.g.
+        # dig -y testkey:<base64 of 'value'> www.google.com
+        # don't build it manually, whole point is interop!
+        pkt = str(
+                '\xff\xfe'                                      # manually change this!
+                '\x01\x00'
+                '\x00\x01'
+                '\x00\x00'
+                '\x00\x00'
+                '\x00\x01'
+                '\x03www\x06google\x03com\x00\x00\x01\x00\x01'  # www.google.com IN A
+                '\x07testkey\x00\x00\xfa\x00\xff'               # testkey TSIG ANY
+                '\x00\x00\x00\x00'                              # ttl=0
+                '\x00:'                                         # datalen
+                '\x08hmac-md5\x07sig-alg\x03reg\x03int\x00'     # hmac-md5.sig-alg.reg.int
+                '\x00\x00LE\xaa\xd6'                            # signed=Jul 20, 2010 14:55:34.000000000
+                '\x01,'                                         # fudge=300
+                '\x00\x10'                                      # maclen=16
+                '\x87X]Kn\xa5\xb5\xd8;\x08\xcaA\xfc(\xd8\x0b'   # mac
+                '\x87\xea'                                      # origid=34794
+                '\x00\x00'                                      # error
+                '\x00\x00'                                      # otherlen
+                )
+
+        msg = dns.Message()
+        msg.fromStr(pkt)
+
+        tsig = msg.additional[-1]
+        sign = tsig.payload.signdata(tsig)
+
+        h = hmac.HMAC('value')
+        h.update(sign)
+
+        self.assertEqual(
+                h.digest(),
+                '\x87X]Kn\xa5\xb5\xd8;\x08\xcaA\xfc(\xd8\x0b'   # mac
+                )
+        self.assertEqual(tsig.payload.fudge, 300)
+        self.assertEqual(tsig.payload.signed, 1279634134)
