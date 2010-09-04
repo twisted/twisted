@@ -20,13 +20,20 @@ from zope.interface import implements
 
 # Twisted imports
 from twisted.internet import protocol, defer, interfaces, error
-from twisted.python import log
+from twisted.python import log, deprecate, versions
 
 
 LENGTH, DATA, COMMA = range(3)
 NUMBER = re.compile('(\d*)(:?)')
-DEBUG = 0
 
+deprecatedSince = versions.Version("Twisted", 10, 2, 0)
+message = "NetstringReceiver parser state is private."
+for attr in ["LENGTH", "DATA", "COMMA", "NUMBER"]:
+    deprecate.deprecatedModuleAttribute(
+        deprecatedSince, message, __name__, attr)
+del deprecatedSince, message, attr
+
+DEBUG = 0
 
 class NetstringParseError(ValueError):
     """

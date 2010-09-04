@@ -611,7 +611,7 @@ class NetstringReceiverTestCase(unittest.TestCase, LPTestCaseMixin):
         netstring, including the trailing comma.
         """
         self.netstringReceiver._remainingData = "12:"
-        length = self.netstringReceiver._consumeLength()
+        self.netstringReceiver._consumeLength()
         self.assertEquals(self.netstringReceiver._expectedPayloadSize, 13)
 
 
@@ -622,7 +622,7 @@ class NetstringReceiverTestCase(unittest.TestCase, LPTestCaseMixin):
         """
         self.netstringReceiver._remainingData = "12:"
         self.netstringReceiver.MAX_LENGTH = 12
-        length = self.netstringReceiver._consumeLength()
+        self.netstringReceiver._consumeLength()
         self.assertEquals(self.netstringReceiver._expectedPayloadSize, 13)
 
 
@@ -648,6 +648,37 @@ class NetstringReceiverTestCase(unittest.TestCase, LPTestCaseMixin):
         self.netstringReceiver.MAX_LENGTH = 11
         self.assertRaises(basic.NetstringParseError,
                           self.netstringReceiver._consumeLength)
+
+
+    def test_deprecatedModuleAttributes(self):
+        """
+        Accessing one of the old module attributes used by the
+        NetstringReceiver parser emits a deprecation warning.
+        """
+        basic.LENGTH, basic.DATA, basic.COMMA, basic.NUMBER
+        warnings = self.flushWarnings(
+            offendingFunctions=[self.test_deprecatedModuleAttributes])
+
+        self.assertEquals(len(warnings), 4)
+        for warning in warnings:
+            self.assertEquals(warning['category'], DeprecationWarning)
+        self.assertEquals(
+            warnings[0]['message'],
+            ("twisted.protocols.basic.LENGTH was deprecated in Twisted 10.2.0: "
+             "NetstringReceiver parser state is private."))
+        self.assertEquals(
+            warnings[1]['message'],
+            ("twisted.protocols.basic.DATA was deprecated in Twisted 10.2.0: "
+             "NetstringReceiver parser state is private."))
+        self.assertEquals(
+            warnings[2]['message'],
+            ("twisted.protocols.basic.COMMA was deprecated in Twisted 10.2.0: "
+             "NetstringReceiver parser state is private."))
+        self.assertEquals(
+            warnings[3]['message'],
+            ("twisted.protocols.basic.NUMBER was deprecated in Twisted 10.2.0: "
+             "NetstringReceiver parser state is private."))
+
 
 
 class IntNTestCaseMixin(LPTestCaseMixin):
