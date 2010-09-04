@@ -1,0 +1,2 @@
+The email server example now demonstrates how to set up authentication and
+authorization using twisted.cred.
