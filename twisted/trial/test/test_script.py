@@ -388,3 +388,29 @@ class WithoutModuleTests(unittest.TestCase):
                 self.config.parseOptions, ["--without-module", "smtplib"])
         self.assertRaises(ImportError, self._checkSMTP)
 
+
+
+class CoverageTests(unittest.TestCase):
+    """
+    Tests for the I{coverage} option.
+    """
+    if getattr(sys, 'gettrace', None) is None:
+        skip = (
+            "Cannot test trace hook installation without inspection API.")
+
+    def setUp(self):
+        """
+        Arrange for the current trace hook to be restored when the
+        test is complete.
+        """
+        self.addCleanup(sys.settrace, sys.gettrace())
+
+
+    def test_tracerInstalled(self):
+        """
+        L{trial.Options} handles C{"--coverage"} by installing a trace
+        hook to record coverage information.
+        """
+        options = trial.Options()
+        options.parseOptions(["--coverage"])
+        self.assertEquals(sys.gettrace(), options.tracer.globaltrace)
