@@ -9,6 +9,7 @@ import sys, os, random, gc, time, warnings
 from twisted.internet import defer
 from twisted.application import app
 from twisted.python import usage, reflect, failure
+from twisted.python.filepath import FilePath
 from twisted import plugin
 from twisted.python.util import spewer
 from twisted.python.compat import set
@@ -139,45 +140,20 @@ class Options(usage.Options, app.ReactorSelectionMixin):
         self['tests'] = set()
         usage.Options.__init__(self)
 
+
     def opt_coverage(self):
         """
-        Generate coverage information in the _trial_temp/coverage. Requires
-        Python 2.3.3.
+        Generate coverage information in the I{coverage} file in the
+        directory specified by the I{trial-temp} option.
         """
-        coverdir = 'coverage'
-        print "Setting coverage directory to %s." % (coverdir,)
         import trace
 
-        # begin monkey patch ---------------------------
-        #   Before Python 2.4, this function asserted that 'filename' had
-        #   to end with '.py'  This is wrong for at least two reasons:
-        #   1.  We might be wanting to find executable line nos in a script
-        #   2.  The implementation should use os.splitext
-        #   This monkey patch is the same function as in the stdlib (v2.3)
-        #   but with the assertion removed.
-        def find_executable_linenos(filename):
-            """Return dict where keys are line numbers in the line number
-            table.
-            """
-            #assert filename.endswith('.py') # YOU BASTARDS
-            try:
-                prog = open(filename).read()
-                prog = '\n'.join(prog.splitlines()) + '\n'
-            except IOError, err:
-                sys.stderr.write("Not printing coverage data for %r: %s\n"
-                                 % (filename, err))
-                sys.stderr.flush()
-                return {}
-            code = compile(prog, filename, "exec")
-            strs = trace.find_strings(filename)
-            return trace.find_lines(code, strs)
-
-        trace.find_executable_linenos = find_executable_linenos
-        # end monkey patch ------------------------------
-
-        self.coverdir = os.path.abspath(os.path.join(self['temp-directory'], coverdir))
+        coverdir = 'coverage'
+        print "Setting coverage directory to %s." % (coverdir,)
+        self.coverdir = FilePath(self['temp-directory']).child(coverdir).path
         self.tracer = trace.Trace(count=1, trace=0)
         sys.settrace(self.tracer.globaltrace)
+
 
     def opt_testmodule(self, filename):
         "Filename to grep for test cases (-*- test-case-name)"
