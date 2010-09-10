@@ -1,8 +1,9 @@
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-"""IRC support for Instance Messenger."""
+"""
+IRC support for Instance Messenger.
+"""
 
 import string
 
@@ -105,7 +106,8 @@ class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
             if self.account.password:
                 self.sendLine("PASS :%s" % self.account.password)
             self.setNick(self.account.username)
-            self.sendLine("USER %s foo bar :Twisted-IM user" % (self.nickname,))
+            self.sendLine("USER %s foo bar :Twisted-IM user" % (
+                self.account.username,))
             for channel in self.account.channels:
                 self.joinGroup(channel)
             self.account._isOnline=1
