@@ -1,1 +1,0 @@
-twisted.words.im.ircsupport.IRCProto now sends the correct name in the USER command.

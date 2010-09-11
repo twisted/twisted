@@ -1,2 +1,0 @@
-twisted.internet.defer.Deferred.setTimeout has been removed, after being
-deprecated since Twisted 2.0.
