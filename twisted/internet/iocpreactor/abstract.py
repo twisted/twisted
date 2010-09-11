@@ -1,14 +1,12 @@
-# Copyright (c) 2008 Twisted Matrix Laboratories.
+# Copyright (c) 2008-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 """
 Abstract file handle class
 """
 
 from twisted.internet import main, error, interfaces
-from twisted.python import log, failure
-from twisted.persisted import styles
+from twisted.python import failure
 
 from zope.interface import implements
 import errno
@@ -19,7 +17,7 @@ from twisted.internet.iocpreactor import iocpsupport as _iocp
 
 
 
-class FileHandle(log.Logger, styles.Ephemeral, object):
+class FileHandle(object):
     """
     File handle that can read and write asynchronously
     """
@@ -34,6 +32,15 @@ class FileHandle(log.Logger, styles.Ephemeral, object):
     _readSize = 0 # how much data we have in the read buffer
     _readScheduled = None
     _readScheduledInOS = False
+
+
+    def logPrefix(self):
+        """
+        Override this method to insert custom logging behavior.  Its
+        return value will be inserted in front of every line.  It may
+        be called more times than the number of output lines.
+        """
+        return '-'
 
 
     def startReading(self):

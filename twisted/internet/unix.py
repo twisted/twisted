@@ -51,7 +51,7 @@ def _inFilesystemNamespace(path):
     return path[:1] != "\0"
 
 
-class _UNIXPort:
+class _UNIXPort(object):
     def getHost(self):
         """Returns a UNIXAddress.
 

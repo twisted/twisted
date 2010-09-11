@@ -17,8 +17,29 @@ from twisted.internet.defer import Deferred
 from twisted.internet.test.reactormixins import ReactorBuilder
 
 
+class ObjectModelIntegrationMixin(object):
+    """
+    Helpers for tests about the object model of reactor-related objects.
+    """
+    def assertFullyNewStyle(self, instance):
+        """
+        Assert that the given object is an instance of a new-style class and
+        that there are no classic classes in the inheritance hierarchy of
+        that class.
 
-class ObjectModelIntegrationTest(ReactorBuilder):
+        This is a beneficial condition because PyPy is better able to
+        optimize attribute lookup on such classes.
+        """
+        self.assertIsInstance(instance, object)
+        mro = inspect.getmro(type(instance))
+        for subclass in mro:
+            self.assertTrue(
+                issubclass(subclass, object),
+                "%r is not new-style" % (subclass,))
+
+
+
+class ObjectModelIntegrationTest(ReactorBuilder, ObjectModelIntegrationMixin):
     """
     Test details of object model integration against all reactors.
     """
@@ -29,10 +50,7 @@ class ObjectModelIntegrationTest(ReactorBuilder):
         containing only new style classes.
         """
         reactor = self.buildReactor()
-        self.assertTrue(isinstance(reactor, object))
-        mro = inspect.getmro(type(reactor))
-        for subclass in mro:
-            self.assertTrue(issubclass(subclass, object))
+        self.assertFullyNewStyle(reactor)
 
 
 

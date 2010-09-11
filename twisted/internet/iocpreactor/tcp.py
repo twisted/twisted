@@ -12,7 +12,6 @@ from zope.interface import implements, directlyProvides
 from twisted.internet import interfaces, error, address, main, defer
 from twisted.internet.abstract import isIPAddress
 from twisted.internet.tcp import _SocketCloser, Connector as TCPConnector
-from twisted.persisted import styles
 from twisted.python import log, failure, reflect, util
 
 from twisted.internet.iocpreactor import iocpsupport as _iocp, abstract
@@ -447,7 +446,7 @@ class Connector(TCPConnector):
 
 
 
-class Port(styles.Ephemeral, _SocketCloser):
+class Port(_SocketCloser):
     implements(interfaces.IListeningPort)
 
     connected = False

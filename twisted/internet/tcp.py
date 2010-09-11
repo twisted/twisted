@@ -80,7 +80,7 @@ from twisted.internet import abstract, main, interfaces, error
 
 
 
-class _SocketCloser:
+class _SocketCloser(object):
     _socketShutdownMethod = 'shutdown'
 
     def _closeSocket(self):
@@ -778,6 +778,8 @@ class Server(Connection):
         This indicates the client's address.
         """
         return address.IPv4Address('TCP', *(self.client + ('INET',)))
+
+
 
 class Port(base.BasePort, _SocketCloser):
     """

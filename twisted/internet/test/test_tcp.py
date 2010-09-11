@@ -20,6 +20,8 @@ from twisted.internet.defer import succeed, fail, maybeDeferred
 from twisted.internet.protocol import ServerFactory, ClientFactory, Protocol
 from twisted.python import log
 
+from twisted.internet.test.test_core import ObjectModelIntegrationMixin
+
 
 class Stop(ClientFactory):
     """
@@ -151,7 +153,7 @@ class TCPClientTestsBuilder(ReactorBuilder):
 
 
 
-class TCPPortTestsBuilder(ReactorBuilder):
+class TCPPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin):
     """
     Tests for L{IReactorRCP.listenTCP}
     """
@@ -198,6 +200,16 @@ class TCPPortTestsBuilder(ReactorBuilder):
         reactor.run()
 
         self.assertIn(expectedMessage, loggedMessages)
+
+
+    def test_allNewStyle(self):
+        """
+        The L{IListeningPort} object is an instance of a class with no
+        classic classes in its hierarchy.
+        """
+        reactor = self.buildReactor()
+        port = self.getListeningPort(reactor)
+        self.assertFullyNewStyle(port)
 
 
 
