@@ -1,6 +1,16 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Names 10.2.0pre1 (2010-09-11)
+=====================================
+
+Bugfixes
+--------
+ - twisted.names.common.extractRecords doesn't try to close the
+   transport anymore in case of recursion, as it's done by the
+   Resolver itself now. (#3998)
+
+
 Twisted Names 10.1.0 (2010-06-27)
 =================================
 

@@ -1,6 +1,15 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Web 10.2.0pre1 (2010-09-11)
+===================================
+
+Deprecations and Removals
+-------------------------
+ - twisted.web.trp, which has been deprecated since Twisted 9.0, was
+   removed. (#4299)
+
+
 Twisted Web 10.1.0 (2010-06-27)
 ===============================
 

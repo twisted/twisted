@@ -1,6 +1,19 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Mail 10.2.0pre1 (2010-09-11)
+====================================
+
+Improved Documentation
+----------------------
+ - The email server example now demonstrates how to set up
+   authentication and authorization using twisted.cred. (#4609)
+
+Other
+-----
+ - #4038, #4572
+
+
 Twisted Mail 10.1.0 (2010-06-27)
 ================================
 

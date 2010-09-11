@@ -1,6 +1,21 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Words 10.2.0pre1 (2010-09-11)
+=====================================
+
+Bugfixes
+--------
+ - twisted.words.protocols.irc.IRCClient no longer invokes privmsg()
+   in the default noticed() implementation. (#4419)
+ - twisted.words.im.ircsupport.IRCProto now sends the correct name in
+   the USER command. (#4641)
+
+Deprecations and Removals
+-------------------------
+ - Remove twisted.words.im.proxyui and twisted.words.im.tap. (#1823)
+
+
 Twisted Words 10.1.0 (2010-06-27)
 =================================
 
