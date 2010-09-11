@@ -210,7 +210,8 @@ class ResolverBase:
             raise error.DNSLookupError(name)
         return result
 
-def extractRecord(resolver, name, answers, level = 10):
+
+def extractRecord(resolver, name, answers, level=10):
     if not level:
         return None
     if hasattr(socket, 'inet_ntop'):
@@ -225,18 +226,23 @@ def extractRecord(resolver, name, answers, level = 10):
             return socket.inet_ntop(socket.AF_INET, r.payload.address)
     for r in answers:
         if r.name == name and r.type == dns.CNAME:
-            result = extractRecord(resolver, r.payload.name, answers, level - 1)
+            result = extractRecord(
+                resolver, r.payload.name, answers, level - 1)
             if not result:
-                return resolver.getHostByName(str(r.payload.name), effort=level-1)
+                return resolver.getHostByName(
+                    str(r.payload.name), effort=level - 1)
             return result
-    # No answers, but maybe there's a hint at who we should be asking about this
+    # No answers, but maybe there's a hint at who we should be asking about
+    # this
     for r in answers:
         if r.type == dns.NS:
             from twisted.names import client
             r = client.Resolver(servers=[(str(r.payload.name), dns.PORT)])
             return r.lookupAddress(str(name)
-                ).addCallback(lambda (ans, auth, add): extractRecord(r, name, ans + auth + add, level - 1)
-                ).addBoth(lambda passthrough: (r.protocol.transport.stopListening(), passthrough)[1])
+                ).addCallback(
+                    lambda (ans, auth, add):
+                        extractRecord(r, name, ans + auth + add, level - 1))
+
 
 typeToMethod = {
     dns.A:     'lookupAddress',

@@ -846,3 +846,39 @@ class AuthorityTests(unittest.TestCase):
         """
         self._referralTest('lookupAllRecords')
 
+
+
+class NoInitialResponseTestCase(unittest.TestCase):
+
+    def test_no_answer(self):
+        """
+        If a request returns a L{dns.NS} response, but we can't connect to the
+        given server, the request fails with the error returned at connection.
+        """
+
+        def query(self, *args):
+            # Pop from the message list, so that it blows up if more queries
+            # are run than expected.
+            return succeed(messages.pop(0))
+
+        def queryProtocol(self, *args, **kwargs):
+            return defer.fail(socket.gaierror("Couldn't connect"))
+
+        resolver = Resolver(servers=[('0.0.0.0', 0)])
+        resolver._query = query
+        messages = []
+        # Let's patch dns.DNSDatagramProtocol.query, as there is no easy way to
+        # customize it.
+        self.patch(dns.DNSDatagramProtocol, "query", queryProtocol)
+
+        records = [
+            dns.RRHeader(name='fooba.com', type=dns.NS, cls=dns.IN, ttl=700,
+                         auth=False,
+                         payload=dns.Record_NS(name='ns.twistedmatrix.com',
+                         ttl=700))]
+        m = dns.Message(id=999, answer=1, opCode=0, recDes=0, recAv=1, auth=1,
+                        rCode=0, trunc=0, maxSize=0)
+        m.answers = records
+        messages.append(m)
+        return self.assertFailure(
+            resolver.getHostByName("fooby.com"), socket.gaierror)

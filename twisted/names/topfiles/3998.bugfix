@@ -1,0 +1,2 @@
+twisted.names.common.extractRecords doesn't try to close the transport anymore
+in case of recursion, as it's done by the Resolver itself now.
