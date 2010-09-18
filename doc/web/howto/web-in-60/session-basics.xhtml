@@ -16,16 +16,17 @@ different aspects. This first example demonstrates the very basics of the
 Twisted Web session API: how to get the session object for the current request
 and how to prematurely expire a session.</p>
 
-<p>Before diving into the APIs, let's look at the big picture of sessions in
-Twisted Web. Sessions are represented by instances of <code class="API"
+<p>Before diving into the APIs, let's look at the big picture of
+sessions in Twisted Web. Sessions are represented by instances
+of <code class="API"
 base="twisted.web.server">Session</code>. The <code class="API"
-base="twisted.web.server">Site</code> creates a new instance of
-<code>Session</code> the first time an application asks for it for a particular
-session. <code>Session</code> instances are kept on the <code>Site</code>
-instance until they expire (due to inactivity or because they are explicitly
-expired). Each time after the first that a particular session's
-<code>Session</code> object is requested, it is retrieved from
-the <code>Site</code>.</p>
+base="twisted.web.server">Site</code> creates a new instance
+of <code>Session</code> the first time an application asks for it for
+a particular session. <code>Session</code> instances are kept on
+the <code>Site</code> instance until they expire (due to inactivity or
+because they are explicitly expired). Each time after the first that a
+particular session's <code>Session</code> object is requested, it is
+retrieved from the <code>Site</code>.</p>
 
 <p>With the conceptual underpinnings of the upcoming API in place, here comes
 the example. This will be a very simple <a href="rpy-scripts.xhtml">rpy
@@ -63,9 +64,9 @@ class ExpireSession(Resource):
         return 'Your session has been expired.'
 </pre>
 
-<p>Finally, to make the example an rpy script, we'll make an instance of
-<code>ShowSession</code> and give it an instance of <code>ExpireSession</code>
-as a child using <code class="API"
+<p>Finally, to make the example an rpy script, we'll make an instance
+of <code>ShowSession</code> and give it an instance
+of <code>ExpireSession</code> as a child using <code class="API"
 base="twisted.web.resource">Resource.putChild</code>:</p>
 
 <pre class="python">

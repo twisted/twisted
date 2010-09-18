@@ -49,9 +49,9 @@ True
 
 <p><i>What?</i>, I hear you say.</p>
 
-<p>What's shown in this example is the interface and adaption-based API which
-<code>Session</code> exposes for persisting state. There are several critical
-pieces interacting here:</p>
+<p>What's shown in this example is the interface and adaption-based
+API which <code>Session</code> exposes for persisting state. There are
+several critical pieces interacting here:</p>
 
 <ul>
   <li><code>ICounter</code> is an interface which serves several purposes. Like
@@ -69,7 +69,7 @@ pieces interacting here:</p>
     relationship between its three arguments so that adaption will do what we
     want in this case.</li>
   <li>Adaption is performed by the expression <code>ICounter(ses)</code>. This
-    is read as <i>adapt <code>ses</code> to <code>ICounter</code></i>. Because
+    is read as : adapt <code>ses</code> to <code>ICounter</code>. Because
     of the <code>registerAdapter</code> call, it is roughly equivalent
     to <code>Counter(ses)</code>. However (because of certain
     things <code>Session</code> does), it also saves the <code>Counter</code>
@@ -134,14 +134,15 @@ class CounterResource(Resource):
 resource = CounterResource()
 </pre>
 
-<p>One more thing to note is the <code>cache()</code> call at the top of this
-example. As with the <a href="http-auth.xhtml">previous example</a> where this
-came up, this rpy script is stateful. This time, it's the <code>ICounter</code>
-definition and the
-<code>registerAdapter</code> call that need to be executed only once. If we
-didn't use <code>cache</code>, every request would define a new, different
-interface named <code>ICounter</code>. Each of these would be a different key in
-the session, so the counter would never get past one.</p>
+<p>One more thing to note is the <code>cache()</code> call at the top
+of this example. As with the <a href="http-auth.xhtml">previous
+example</a> where this came up, this rpy script is stateful. This
+time, it's the <code>ICounter</code> definition and
+the <code>registerAdapter</code> call that need to be executed only
+once. If we didn't use <code>cache</code>, every request would define
+a new, different interface named <code>ICounter</code>. Each of these
+would be a different key in the session, so the counter would never
+get past one.</p>
 
 </body>
 </html>

@@ -21,12 +21,13 @@ write code to create the site or set up a listening port with the reactor. That
 means fewer lines of code that aren't dedicated to the task you're trying to
 accomplish.</p>
 
-<p>There are some disadvantages, though. An rpy script must have the extension
-<code>.rpy</code>. This means you can't import it using the usual Python import
-statement. This means it's hard to re-use code in an rpy script. This also means
-you can't easily unit test it. The code in an rpy script is evaluated in an
-unusual context. So, while rpy scripts may be useful for testing out ideas,
-they're not recommend for much more than that.</p>
+<p>There are some disadvantages, though. An rpy script must have the
+extension <code>.rpy</code>. This means you can't import it using the
+usual Python import statement. This means it's hard to re-use code in
+an rpy script. This also means you can't easily unit test it. The code
+in an rpy script is evaluated in an unusual context. So, while rpy
+scripts may be useful for testing out ideas, they're not recommend for
+much more than that.</p>
 
 <p>Okay, with that warning out of the way, let's dive in. First, as mentioned,
 rpy scripts are Python source files with the <code>.rpy</code> extension. So,
@@ -47,13 +48,14 @@ resource = ClockPage()
 </pre>
 
 <p>You may recognize this as the resource from
-the <a href="dynamic-content.xhtml">first dynamic rendering example</a>. What's
-different is what you don't see: we didn't import <code>reactor</code> or
-<code>Site</code>. There are no calls to <code>listenTCP</code> or
-<code>run</code>. Instead, and this is the core idea for rpy scripts, we just
-bound the name <code>resource</code> to the resource we want the script to
-serve. Every rpy script must bind this name, and this name is the only thing
-Twisted Web will pay attention to in an rpy script.</p>
+the <a href="dynamic-content.xhtml">first dynamic rendering
+example</a>. What's different is what you don't see: we didn't
+import <code>reactor</code> or <code>Site</code>. There are no calls
+to <code>listenTCP</code> or <code>run</code>. Instead, and this is
+the core idea for rpy scripts, we just bound the
+name <code>resource</code> to the resource we want the script to
+serve. Every rpy script must bind this name, and this name is the only
+thing Twisted Web will pay attention to in an rpy script.</p>
 
 <p>All that's left is to drop this rpy script into a Twisted Web server. There
 are a few ways to do this. The simplest way is with <code>twistd</code>:</p>

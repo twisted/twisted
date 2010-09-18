@@ -51,9 +51,9 @@ hierarchy: all URLs are children of this resource.</p>
 root = Resource()
 </pre>
 
-<p>Here comes the interesting part of this example. We're now going to create
-three more resources and attach them to the three URLs <code>/foo</code>,
-<code>/bar</code>, and <code>/baz</code>:</p>
+<p>Here comes the interesting part of this example. We're now going to
+create three more resources and attach them to the three
+URLs <code>/foo</code>, <code>/bar</code>, and <code>/baz</code>:</p>
 
 <pre class="python">
 root.putChild("foo", File("/tmp"))
@@ -70,11 +70,12 @@ reactor.listenTCP(8880, factory)
 reactor.run()
 </pre>
 
-<p>With this server running, <code>http://localhost:8880/foo</code> will serve a
-listing of files from <code>/tmp</code>, <code>http://localhost:8880/bar</code>
-will serve a listing of files from <code>/lost+found</code>, and
-<code>http://localhost:8880/baz</code> will serve a listing of files from
-<code>/opt</code>.</p>
+<p>With this server running, <code>http://localhost:8880/foo</code>
+will serve a listing of files
+from <code>/tmp</code>, <code>http://localhost:8880/bar</code> will
+serve a listing of files from <code>/lost+found</code>,
+and <code>http://localhost:8880/baz</code> will serve a listing of
+files from <code>/opt</code>.</p>
 
 <p>Here's the whole example uninterrupted:</p>
 

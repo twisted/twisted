@@ -21,27 +21,31 @@ to provide a uniform interface to many asynchronous events, and shows you an
 example of using a <code>Deferred</code>-returning API to generate an
 asynchronous response to a request in Twisted Web.</p>
 
-<p><code>Deferred</code> is the result of two consequences of the asynchronous
-programming approach. First, asynchronous code is frequently (if not always)
-concerned with some data (in Python, an object) which is not yet available but
-which probably will be soon. Asynchronous code needs a way to define what will
-be done to the object once it does exist. It also needs a way to define how to
-handle errors in the creation or acquisition of that object. These two needs are
-satisfied by the <i>callbacks</i> and <i>errbacks</i> of a
-<code>Deferred</code>. Callbacks are added to a <code>Deferred</code> with <code
-class="API" base="twisted.internet.defer">Deferred.addCallback</code>; errbacks
+<p><code>Deferred</code> is the result of two consequences of the
+asynchronous programming approach. First, asynchronous code is
+frequently (if not always) concerned with some data (in Python, an
+object) which is not yet available but which probably will be
+soon. Asynchronous code needs a way to define what will be done to the
+object once it does exist. It also needs a way to define how to handle
+errors in the creation or acquisition of that object. These two needs
+are satisfied by the <i>callbacks</i> and <i>errbacks</i> of
+a <code>Deferred</code>. Callbacks are added to
+a <code>Deferred</code> with <code class="API"
+base="twisted.internet.defer">Deferred.addCallback</code>; errbacks
 are added with <code class="API"
-base="twisted.internet.defer">Deferred.addErrback</code>. When the object
-finally does exist, it is passed to <code class="API"
-base="twisted.internet.defer">Deferred.callback</code> which passes it on to the
-callback added with <code>addCallback</code>. Similarly, if an error occurs,
-<code class="API" base="twisted.internet.defer">Deferred.errback</code> is
-called and the error is passed along to the errback added with
-<code>addErrback</code>. Second, the events that make asynchronous code actually
-work often take many different, incompatible forms. <code>Deferred</code> acts
-as the uniform interface which lets different parts of an asynchronous
-application interact and isolates them from implementation details they
-shouldn't be concerned with.</p>
+base="twisted.internet.defer">Deferred.addErrback</code>. When the
+object finally does exist, it is passed to <code class="API"
+base="twisted.internet.defer">Deferred.callback</code> which passes it
+on to the callback added with <code>addCallback</code>. Similarly, if
+an error occurs, <code class="API"
+base="twisted.internet.defer">Deferred.errback</code> is called and
+the error is passed along to the errback added
+with <code>addErrback</code>. Second, the events that make
+asynchronous code actually work often take many different,
+incompatible forms. <code>Deferred</code> acts as the uniform
+interface which lets different parts of an asynchronous application
+interact and isolates them from implementation details they shouldn't
+be concerned with.</p>
 
 <p>That's almost all there is to <code>Deferred</code>. To solidify your new
 understanding, now consider this rewritten version
@@ -64,9 +68,9 @@ from twisted.web.server import NOT_DONE_YET
 from twisted.internet import reactor
 </pre>
 
-<p>With the imports done, here's the first part of the
-<code>DelayedResource</code> implementation. Again, this part of the code is
-identical to the previous version:</p>
+<p>With the imports done, here's the first part of
+the <code>DelayedResource</code> implementation. Again, this part of
+the code is identical to the previous version:</p>
 
 <pre class="python">
 class DelayedResource(Resource):
@@ -75,29 +79,31 @@ class DelayedResource(Resource):
         request.finish()
 </pre>
 
-<p>Next we need to define the render method. Here's where things change a
-bit. Instead of using <code class="API"
-base="twisted.internet.interfaces.IReactorTime">callLater</code>, We're going to
-use <code class="API" base="twisted.internet.task">deferLater</code> this
-time. <code>deferLater</code> accepts a reactor, delay (in seconds, as with
-<code>callLater</code>), and a function to call after the delay to produce that
-elusive object discussed in the description of <code>Deferred</code>s. We're
-also going to use <code>_delayedRender</code> as the callback to add to the
-<code>Deferred</code> returned by <code>deferLater</code>. Since it expects the
-request object as an argument, we're going to set up the <code>deferLater</code>
-call to return a <code>Deferred</code> which has the request object as its
-result.</p>
+<p>Next we need to define the render method. Here's where things
+change a bit. Instead of using <code class="API"
+base="twisted.internet.interfaces.IReactorTime">callLater</code>,
+We're going to use <code class="API"
+base="twisted.internet.task">deferLater</code> this
+time. <code>deferLater</code> accepts a reactor, delay (in seconds, as
+with <code>callLater</code>), and a function to call after the delay
+to produce that elusive object discussed in the description
+of <code>Deferred</code>s. We're also going to
+use <code>_delayedRender</code> as the callback to add to
+the <code>Deferred</code> returned by <code>deferLater</code>. Since
+it expects the request object as an argument, we're going to set up
+the <code>deferLater</code> call to return a <code>Deferred</code>
+which has the request object as its result.</p>
 
 <pre class="python">
 def render_GET(self, request):
     d = deferLater(reactor, 5, lambda: request)
 </pre>
 
-<p>The <code>Deferred</code> referenced by <code>d</code> now needs to have the
-<code>_delayedRender</code> callback added to it. Once this is done,
-<code>_delayedRender</code> will be called with the result of <code>d</code>
-(which will be <code>request</code>, of course — the result of <code>(lambda:
-request)()</code>).</p>
+<p>The <code>Deferred</code> referenced by <code>d</code> now needs to
+have the <code>_delayedRender</code> callback added to it. Once this
+is done, <code>_delayedRender</code> will be called with the result
+of <code>d</code> (which will be <code>request</code>, of course — the
+result of <code>(lambda: request)()</code>).</p>
 
 <pre class="python">
 d.addCallback(self._delayedRender)
@@ -111,13 +117,14 @@ example.</p>
 return NOT_DONE_YET
 </pre>
 
-<p>And with that, <code>DelayedResource</code> is now implemented based on a
-<code>Deferred</code>. The example still isn't very realistic, but remember that
-since <code>Deferred</code>s offer a uniform interface to many different
-asynchronous event sources, this code now resembles a real application even more
-closely; you could easily replace <code>deferLater</code> with another
-<code>Deferred</code>-returning API and suddenly you might have a resource that
-does something useful.</p>
+<p>And with that, <code>DelayedResource</code> is now implemented
+based on a <code>Deferred</code>. The example still isn't very
+realistic, but remember that since <code>Deferred</code>s offer a
+uniform interface to many different asynchronous event sources, this
+code now resembles a real application even more closely; you could
+easily replace <code>deferLater</code> with
+another <code>Deferred</code>-returning API and suddenly you might
+have a resource that does something useful.</p>
 
 <p>Finally, here's the complete, uninterrupted example source, as an rpy script:</p>
 

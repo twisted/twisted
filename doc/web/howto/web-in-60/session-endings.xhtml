@@ -31,10 +31,11 @@ class ShortSession(Session):
     sessionTimeout = 60
 </pre>
 
-<p>To have Twisted Web actually make use of this session class, rather than the
-default, it is also necessary to override the <code>sessionFactory</code> attribute of
-<code class="API" base="twisted.web.server">Site</code>. We could do this with
-another subclass, but we could also do it to just one instance
+<p>To have Twisted Web actually make use of this session class, rather
+than the default, it is also necessary to override
+the <code>sessionFactory</code> attribute of <code class="API"
+base="twisted.web.server">Site</code>. We could do this with another
+subclass, but we could also do it to just one instance
 of <code>Site</code>:</p>
 
 <pre class="python">
@@ -47,11 +48,12 @@ factory.sessionFactory = ShortSession
 <p>Sessions given out for requests served by this <code>Site</code> will
 use <code>ShortSession</code> and only last one minute without activity.</p>
 
-<p>You can have arbitrary functions run when sessions expire, too. This can be
-useful for cleaning up external resources associated with the session, tracking
-usage statistics, and more. This functionality is provided via
-<code class="API" base="twisted.web.server">Session.notifyOnExpire</code>. It
-accepts a single argument: a function to call when the session expires. Here's a
+<p>You can have arbitrary functions run when sessions expire,
+too. This can be useful for cleaning up external resources associated
+with the session, tracking usage statistics, and more. This
+functionality is provided via <code class="API"
+base="twisted.web.server">Session.notifyOnExpire</code>. It accepts a
+single argument: a function to call when the session expires. Here's a
 trivial example which prints a message whenever a session expires:</p>
 
 <pre class="python">

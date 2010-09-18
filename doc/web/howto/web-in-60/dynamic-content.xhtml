@@ -26,10 +26,10 @@ from twisted.web.server import Site
 protocol implementation. The reactor is the main loop that drives any Twisted
 application; we'll use it to actually create the listening port in a moment.</p>
 
-<p>Next, we'll import one more thing from Twisted Web: <code class="API"
-base="twisted.web.resource">Resource</code>. An instance of
-<code>Resource</code> (or a subclass) represents a page (technically, the entity
-addressed by a URI).</p>
+<p>Next, we'll import one more thing from Twisted
+Web: <code class="API" base="twisted.web.resource">Resource</code>. An
+instance of <code>Resource</code> (or a subclass) represents a page
+(technically, the entity addressed by a URI).</p>
 
 <pre class="python">
 from twisted.web.resource import Resource
@@ -42,9 +42,10 @@ time module:</p>
 import time
 </pre>
 
-<p>With imports taken care of, the next step is to define a
-<code>Resource</code> subclass which has the dynamic rendering behavior we
-want. Here's a resource which generates a page giving the time:</p>
+<p>With imports taken care of, the next step is to define
+a <code>Resource</code> subclass which has the dynamic rendering
+behavior we want. Here's a resource which generates a page giving the
+time:</p>
 
 <pre class="python">
 class ClockPage(Resource):
@@ -53,8 +54,9 @@ class ClockPage(Resource):
         return "&lt;html&gt;&lt;body&gt;%s&lt;/body&gt;&lt;/html&gt;" % (time.ctime(),)
 </pre>
 
-<p>Setting <code>isLeaf</code> to <code>True</code> indicates that
-<code>ClockPage</code> resources will never have any children.</p>
+<p>Setting <code>isLeaf</code> to <code>True</code> indicates
+that <code>ClockPage</code> resources will never have any
+children.</p>
 
 <p>The <code>render_GET</code> method here will be called whenever the URI we
 hook this resource up to is requested with the <code>GET</code> method. The byte
@@ -67,11 +69,11 @@ resource = ClockPage()
 factory = Site(resource)
 </pre>
 
-<p>Just as with the previous static content example, this configuration puts our
-resource at the very top of the URI hierarchy, ie at <code>/</code>. With that
-<code>Site</code> instance, we can tell the reactor to <a
-href="../../../core/howto/servers.xhtml">create a TCP server</a> and start
-servicing requests:</p>
+<p>Just as with the previous static content example, this
+configuration puts our resource at the very top of the URI hierarchy,
+ie at <code>/</code>. With that <code>Site</code> instance, we can
+tell the reactor to <a href="../../../core/howto/servers.xhtml">create
+a TCP server</a> and start servicing requests:</p>
 
 <pre class="python">
 reactor.listenTCP(8880, factory)

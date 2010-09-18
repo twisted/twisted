@@ -15,12 +15,13 @@ dealt with response errors by aborting response generation, potentially avoiding
 pointless work. However, it did this silently for any error. In this example,
 we'll modify the previous example so that it logs each failed response.</p>
 
-<p>This example will use the Twisted API for logging errors. As was mentioned in
-the <a href="asynchronous-deferred.xhtml">first example covering Deferreds</a>,
-errbacks are passed an error. In the previous example, the
-<code>_responseFailed</code> errback accepted this error as a parameter but
-ignored it. The only way this example will differ is that this
-<code>_responseFailed</code> will use that error parameter to log a message.</p>
+<p>This example will use the Twisted API for logging errors. As was
+mentioned in the <a href="asynchronous-deferred.xhtml">first example
+covering Deferreds</a>, errbacks are passed an error. In the previous
+example, the <code>_responseFailed</code> errback accepted this error
+as a parameter but ignored it. The only way this example will differ
+is that this <code>_responseFailed</code> will use that error
+parameter to log a message.</p>
 
 <p>This example will require all of the imports required by the previous example
 plus one new import:</p>
@@ -29,9 +30,9 @@ plus one new import:</p>
 from twisted.python.log import err
 </pre>
 
-<p>The only other part of the previous example which changes is the
-<code>_responseFailed</code> callback, which will now log the error passed to
-it:</p>
+<p>The only other part of the previous example which changes is
+the <code>_responseFailed</code> callback, which will now log the
+error passed to it:</p>
 
 <pre class="python">
 def _responseFailed(self, failure, call):

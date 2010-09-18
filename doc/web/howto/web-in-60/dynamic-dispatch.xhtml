@@ -30,11 +30,12 @@ from twisted.web.resource import Resource
 from twisted.internet import reactor
 </pre>
 
-<p>With that out of the way, here's the interesting part of this example. We're
-going to define a resource which renders a whole-year calendar. The year it will
-render the calendar for will be the year in the request URL. So, for example,
-<code>/2009</code> will render a calendar for 2009. First, here's a resource
-that renders a calendar for the year passed to its initializer:</p>
+<p>With that out of the way, here's the interesting part of this
+example. We're going to define a resource which renders a whole-year
+calendar. The year it will render the calendar for will be the year in
+the request URL. So, for example, <code>/2009</code> will render a
+calendar for 2009. First, here's a resource that renders a calendar
+for the year passed to its initializer:</p>
 
 <pre class="python">
 from calendar import calendar

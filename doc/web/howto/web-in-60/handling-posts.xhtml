@@ -56,16 +56,18 @@ def render_POST(self, request):
     return '&lt;html&gt;&lt;body&gt;You submitted: %s&lt;/body&gt;&lt;/html&gt;' % (cgi.escape(request.args["the-field"][0]),)
 </pre>
 
-<p>The main thing to note here is the use of <code>request.args</code>. This is
-a dictionary-like object that provides access to the contents of the form. The
-keys in this dictionary are the names of inputs in the form. Each value is a
-list containing strings (since there can be multiple inputs with the same name),
-which is why we had to extract the first element to pass to
-<code>cgi.escape</code>. <code>request.args</code> will be populated from form
-contents whenever a <code>POST</code> request is made with a content type of
-<code>application/x-www-form-urlencoded</code> or
-<code>multipart/form-data</code> (it's also populated by query arguments for any
-type of request).</p>
+<p>The main thing to note here is the use
+of <code>request.args</code>. This is a dictionary-like object that
+provides access to the contents of the form. The keys in this
+dictionary are the names of inputs in the form. Each value is a list
+containing strings (since there can be multiple inputs with the same
+name), which is why we had to extract the first element to pass
+to <code>cgi.escape</code>. <code>request.args</code> will be
+populated from form contents whenever a <code>POST</code> request is
+made with a content type
+of <code>application/x-www-form-urlencoded</code>
+or <code>multipart/form-data</code> (it's also populated by query
+arguments for any type of request).</p>
 
 <p>Finally, the example just needs the usual site creation and port setup:</p>
 

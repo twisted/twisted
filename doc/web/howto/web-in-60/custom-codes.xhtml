@@ -47,10 +47,10 @@ class PaymentRequired(Resource):
         return "&lt;html&gt;&lt;body&gt;Please swipe your credit card.&lt;/body&gt;&lt;/html&gt;"
 </pre>
 
-<p>Just like the other resources I've demonstrated, this one returns a string
-from its <code>render_GET</code> method to define the body of the response. All
-that's different is the call to
-<code>setResponseCode</code> to override the default response code,
+<p>Just like the other resources I've demonstrated, this one returns a
+string from its <code>render_GET</code> method to define the body of
+the response. All that's different is the call
+to <code>setResponseCode</code> to override the default response code,
 200, with a different one.</p>
 
 <p>Finally, the code to set up the site and reactor. We'll put an instance of

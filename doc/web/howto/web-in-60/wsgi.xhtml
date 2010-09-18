@@ -10,11 +10,12 @@
 <body>
 <h1>WSGI</h1>
 
-<p>The goal of this example is to show you how to use <code class="API"
-base="twisted.web.wsgi">WSGIResource</code>, another existing
-<code class="API" base="twisted.web.resource">Resource</code> subclass, to serve
-<a href="http://www.python.org/dev/peps/pep-0333/">WSGI applications</a> in a
-Twisted Web server.</p>
+<p>The goal of this example is to show you how to
+use <code class="API" base="twisted.web.wsgi">WSGIResource</code>,
+another existing <code class="API"
+base="twisted.web.resource">Resource</code> subclass, to
+serve <a href="http://www.python.org/dev/peps/pep-0333/">WSGI applications</a>
+in a Twisted Web server.</p>
 
 <p>Note thate <code>WSGIResource</code> is a multithreaded WSGI container. Like
 any other WSGI container, you can't do anything asynchronous in your WSGI
@@ -53,16 +54,17 @@ another <a href="rpy-scripts.xhtml">rpy script</a> example:</p>
 resource = WSGIResource(reactor, reactor.getThreadPool(), application)
 </pre>
 
-<p>Let's dwell on this line for a minute. The first parameter passed to
-<code>WSGIResource</code> is the reactor. Despite the fact that the reactor is
-global and any code that wants it can always just import it (as, in fact, this
-rpy script simply does itself), passing it around as a parameter leaves the door
-open for certain future possibilities - for example, having more than one
-reactor. There are also testing implications. Consider how much easier it is to
-unit test a function that accepts a reactor - perhaps a mock reactor specially
-constructed to make your tests easy to write - rather than importing the real
-global reactor. That's why <code>WSGIResource</code> requires you to pass the
-reactor to it.</p>
+<p>Let's dwell on this line for a minute. The first parameter passed
+to <code>WSGIResource</code> is the reactor. Despite the fact that the
+reactor is global and any code that wants it can always just import it
+(as, in fact, this rpy script simply does itself), passing it around
+as a parameter leaves the door open for certain future possibilities -
+for example, having more than one reactor. There are also testing
+implications. Consider how much easier it is to unit test a function
+that accepts a reactor - perhaps a mock reactor specially constructed
+to make your tests easy to write - rather than importing the real
+global reactor. That's why <code>WSGIResource</code> requires you to
+pass the reactor to it.</p>
 
 <p>The second parameter passed to <code>WSGIResource</code> is
 a <code class="API"

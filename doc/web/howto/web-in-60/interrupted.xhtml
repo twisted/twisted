@@ -45,21 +45,21 @@ a resource class with the same <code>_delayedRender</code> used previously:</p>
          request.finish()
 </pre>
 
-<p>Before defining the render method, we're going to define an errback (an
-errback being a callback that gets called when there's an error), though. This
-will be the errback attached to the <code>Deferred</code> returned by
-<code>Request.notifyFinish</code>. It will cancel the delayed call to
-<code>_delayedRender</code>.</p>
+<p>Before defining the render method, we're going to define an errback
+(an errback being a callback that gets called when there's an error),
+though. This will be the errback attached to the <code>Deferred</code>
+returned by <code>Request.notifyFinish</code>. It will cancel the
+delayed call to <code>_delayedRender</code>.</p>
 
 <pre class="python">
 def _responseFailed(self, err, call):
     call.cancel()
 </pre>
 
-<p>Finally, the render method will set up the delayed call just as it did
-before, and return <code>NOT_DONE_YET</code> likewise. However, it will also use
-<code>Request.notifyFinish</code> to make sure <code>_responseFailed</code> is
-called if appropriate.</p>
+<p>Finally, the render method will set up the delayed call just as it
+did before, and return <code>NOT_DONE_YET</code> likewise. However, it
+will also use <code>Request.notifyFinish</code> to make
+sure <code>_responseFailed</code> is called if appropriate.</p>
 
 <pre class="python">
 def render_GET(self, request):
@@ -68,14 +68,15 @@ def render_GET(self, request):
     return NOT_DONE_YET
 </pre>
 
-<p>Notice that since <code>_responseFailed</code> needs a reference to the
-delayed call object in order to cancel it, we passed that object to
-<code>addErrback</code>. Any additional arguments passed to
-<code>addErrback</code> (or <code>addCallback</code>) will be passed along to
-the errback after the <code class="API"
-base="twisted.python.failure">Failure</code> instance which is always passed as
-the first argument. Passing <code>call</code> here means it will be passed to
-<code>_responseFailed</code>, where it is expected and required.</p>
+<p>Notice that since <code>_responseFailed</code> needs a reference to
+the delayed call object in order to cancel it, we passed that object
+to <code>addErrback</code>. Any additional arguments passed
+to <code>addErrback</code> (or <code>addCallback</code>) will be
+passed along to the errback after the <code class="API"
+base="twisted.python.failure">Failure</code> instance which is always
+passed as the first argument. Passing <code>call</code> here means it
+will be passed to <code>_responseFailed</code>, where it is expected
+and required.</p>
 
 <p>That covers almost all the code for this example. Here's the entire example
 without interruptions, as an <a href="rpy-scripts.xhtml">rpy script</a>:</p>
