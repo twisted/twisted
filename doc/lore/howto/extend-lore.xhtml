@@ -24,14 +24,15 @@ can be solved by creating an extension.</p>
 
 <h2>Inputs and Outputs</h2>
 
-<p>Lore works by reading the HTML source of your document, and producing
-whatever output the user specifies on the command line.  If the HTML document
-is well-formed XML that meets a certain minimum standard, Lore will be able to
-to produce some output.  All Lore extensions will be written to redefine the
-<em>input</em>, and most will redefine the output in some way.  The name of
-the default input is <q>lore</q>.  When you write your extension, you will
-come up with a new name for your input, telling Lore what rules to use to
-process the file.</p>
+<p>Lore works by reading the HTML source of your document, and
+producing whatever output the user specifies on the command line.  If
+the HTML document is well-formed XML that meets a certain minimum
+standard, Lore will be able to to produce some output.  All Lore
+extensions will be written to redefine the <em>input</em>, and most
+will redefine the output in some way.  The name of the default input
+is <q>lore</q>.  When you write your extension, you will come up with
+a new name for your input, telling Lore what rules to use to process
+the file.</p>
 
 <p>Lore can produce XHTML, LaTeX, and DocBook document formats, which can be
 displayed directly if you have a user agent capable of viewing them, or
@@ -91,19 +92,18 @@ classes.  To make LaTeX and lint work, we start by creating a plugin.</p>
 <a href="listings/lore/factory.py-1" class="py-listing">Listing 2: The Input
   Factory</a>
 
-<p>In Listing 2, we create a subclass of ProcessingFunctionFactory.  This
-class provides a hook for you, a class variable named
-<code>latexSpitters</code>.  This variable tells Lore
-what new class will be generating LaTeX from your input format.  We redefine
-<code>latexSpitters</code> to <code>MyLatexSpitter</code> in the subclass
-because this
-class knows what to do with the new input we have already defined.  Last, you
-must define the module-level variable <code
-    class="py-src-identifier">factory</code>.  It should be an instance with
-  the same
-interface as <code class="py-src-identifier">ProcessingFunctionFactory</code>
-(e.g. an instance of a subclass, in this case, <code
-    class="py-src-identifier">MyProcessingFunctionFactory</code>).</p>
+<p>In Listing 2, we create a subclass of ProcessingFunctionFactory.
+This class provides a hook for you, a class variable
+named <code>latexSpitters</code>.  This variable tells Lore what new
+class will be generating LaTeX from your input format.  We
+redefine <code>latexSpitters</code> to <code>MyLatexSpitter</code> in
+the subclass because this class knows what to do with the new input we
+have already defined.  Last, you must define the module-level
+variable <code class="py-src-identifier">factory</code>.  It should be
+an instance with the same interface
+as <code class="py-src-identifier">ProcessingFunctionFactory</code>
+(e.g. an instance of a subclass, in this
+case, <code class="py-src-identifier">MyProcessingFunctionFactory</code>).</p>
 
 <p>Now let's actually write some code to generate the LaTeX.  Doing this
 requires at least a familiarity with the LaTeX language.  Search Google for
@@ -113,11 +113,11 @@ resources.</p>
 <a href="listings/lore/spitters.py-1" class="py-listing">Listing 3:
   spitters.py</a>
 
-<p>The method <code>visitNode_span_productname</code> is
-our handler for &lt;span&gt; tags with the <code>class="productname"</code>
-identifier.  Lore knows to try methods <code>visitNode_span_*</code> and
-<code>visitNode_div_*</code> whenever it encounters a new
-class in one of these tags.  This is why the class names have to be valid
+<p>The method <code>visitNode_span_productname</code> is our handler
+for &lt;span&gt; tags with the <code>class="productname"</code>
+identifier.  Lore knows to try methods <code>visitNode_span_*</code>
+and <code>visitNode_div_*</code> whenever it encounters a new class in
+one of these tags.  This is why the class names have to be valid
 Python identifiers.</p>
 
 <p>Now let's see what Lore does with these new classes with the following
