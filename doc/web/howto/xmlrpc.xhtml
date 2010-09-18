@@ -99,9 +99,10 @@ resource scripts. The following is an example of such a resource script:</p>
 <h3>Using XML-RPC sub-handlers</h3>
 
 <p>XML-RPC resource can be nested so that one handler calls another if
-a method with a given prefix is called. For example, to add support for
-an XML-RPC method <code>date.time()</code> to the
-<code class="python">Example</code> class, you could do the following:</p>
+a method with a given prefix is called. For example, to add support
+for an XML-RPC method <code>date.time()</code> to
+the <code class="python">Example</code> class, you could do the
+following:</p>
 
 <pre class="python">
 import time
@@ -142,12 +143,14 @@ using this method.</p>
 
 <h3>Adding XML-RPC Introspection support</h3>
 
-<p>XML-RPC has an informal <a href="http://ldp.kernelnotes.de/HOWTO/XML-RPC-HOWTO/xmlrpc-howto-interfaces.html">Introspection API</a> that specifies three
-methods in a <code>system</code> sub-handler which allow a client to query
-a server about the server's API. Adding Introspection support to the
-<code class="python">Example</code> class is easy using the
-<code base="twisted.web.xmlrpc" class="API">XMLRPCIntrospection</code>
-class:</p>
+<p>XML-RPC has an
+informal <a href="http://ldp.kernelnotes.de/HOWTO/XML-RPC-HOWTO/xmlrpc-howto-interfaces.html">Introspection
+API</a> that specifies three methods in a <code>system</code>
+sub-handler which allow a client to query a server about the server's
+API. Adding Introspection support to
+the <code class="python">Example</code> class is easy using
+the <code base="twisted.web.xmlrpc"
+class="API">XMLRPCIntrospection</code> class:</p>
 
 <pre class="python">
 from twisted.web import xmlrpc, server
@@ -181,12 +184,12 @@ if __name__ == '__main__':
     reactor.run()
 </pre>
 
-<p>Note the method attributes <code class="python">help</code> and
-<code class="python">signature</code> which are used by the Introspection
-API methods <code>system.methodHelp</code> and
-<code>system.methodSignature</code> respectively. If no
-<code class="python">help</code> attribute is specified,
-the method's documentation string is used instead.</p>
+<p>Note the method attributes <code class="python">help</code>
+and <code class="python">signature</code> which are used by the
+Introspection API methods <code>system.methodHelp</code>
+and <code>system.methodSignature</code> respectively. If
+no <code class="python">help</code> attribute is specified, the
+method's documentation string is used instead.</p>
 
 <h2>SOAP Support</h2>
 
@@ -210,10 +213,11 @@ from the <code>xmlrpclib</code> way which should be noted:</p>
     <code>callRemote</code>.</li>
 </ol>
 
-<p>The interface Twisted presents to XML-RPC client is that of a proxy object:
-<code class="API">twisted.web.xmlrpc.Proxy</code>. The constructor for the
-object receives a URL: it must be an HTTP or HTTPS URL. When an XML-RPC service
-is described, the URL to that service will be given there.</p>
+<p>The interface Twisted presents to XML-RPC client is that of a proxy
+object: <code class="API">twisted.web.xmlrpc.Proxy</code>. The
+constructor for the object receives a URL: it must be an HTTP or HTTPS
+URL. When an XML-RPC service is described, the URL to that service
+will be given there.</p>
 
 <p>Having a proxy object, one can just call the <code>callRemote</code> method,
 which accepts a method name and a variable argument list (but no named
@@ -257,9 +261,9 @@ SOAP in the one web server, you can use the <code class="API"
 base="twisted.web.resource.IResource">putChild</code> method of Resources.</p>
 
 <p>The following example uses an empty <code class="API"
-base="twisted.web">resource.Resource</code> as the root resource for a <code
-class="API" base="twisted.web.server">Site</code>, and then adds
-<code>/RPC2</code> and <code>/SOAP</code> paths to it.</p>
+base="twisted.web">resource.Resource</code> as the root resource for
+a <code class="API" base="twisted.web.server">Site</code>, and then
+adds <code>/RPC2</code> and <code>/SOAP</code> paths to it.</p>
 
 <a href="listings/xmlAndSoapQuote.py" class="py-listing">xmlAndSoapQuote.py</a>
 
