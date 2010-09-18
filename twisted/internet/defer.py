@@ -913,12 +913,12 @@ def deferredGenerator(f):
     There are two important functions involved: L{waitForDeferred}, and
     L{deferredGenerator}.  They are used together, like this::
 
+        @deferredGenerator
         def thingummy():
             thing = waitForDeferred(makeSomeRequestResultingInDeferred())
             yield thing
             thing = thing.getResult()
             print thing #the result! hoorj!
-        thingummy = deferredGenerator(thingummy)
 
     L{waitForDeferred} returns something that you should immediately yield; when
     your generator is resumed, calling C{thing.getResult()} will either give you
@@ -941,6 +941,7 @@ def deferredGenerator(f):
     The L{Deferred} returned from your deferred generator may also errback if your
     generator raised an exception.  For example::
 
+        @deferredGenerator
         def thingummy():
             thing = waitForDeferred(makeSomeRequestResultingInDeferred())
             yield thing
@@ -952,7 +953,6 @@ def deferredGenerator(f):
             else:
                 # will trigger an errback
                 raise Exception('DESTROY ALL LIFE')
-        thingummy = deferredGenerator(thingummy)
 
     Put succinctly, these functions connect deferred-using code with this 'fake
     blocking' style in both directions: L{waitForDeferred} converts from a
@@ -1107,10 +1107,10 @@ def inlineCallbacks(f):
     the L{deferredGenerator} function instead, which accomplishes the same
     thing, but with somewhat more boilerplate.  For example::
 
+        @inlineCallBacks
         def thingummy():
             thing = yield makeSomeRequestResultingInDeferred()
             print thing #the result! hoorj!
-        thingummy = inlineCallbacks(thingummy)
 
     When you call anything that results in a L{Deferred}, you can simply yield it;
     your generator will automatically be resumed when the Deferred's result is
@@ -1127,6 +1127,7 @@ def inlineCallbacks(f):
     The L{Deferred} returned from your deferred generator may errback if your
     generator raised an exception::
 
+        @inlineCallbacks
         def thingummy():
             thing = yield makeSomeRequestResultingInDeferred()
             if thing == 'I love Twisted':
@@ -1135,7 +1136,6 @@ def inlineCallbacks(f):
             else:
                 # will trigger an errback
                 raise Exception('DESTROY ALL LIFE')
-        thingummy = inlineCallbacks(thingummy)
     """
     def unwindGenerator(*args, **kwargs):
         return _inlineCallbacks(None, f(*args, **kwargs), Deferred())

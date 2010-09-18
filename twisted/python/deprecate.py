@@ -7,12 +7,15 @@ Deprecation framework for Twisted.
 
 To mark a method or function as being deprecated do this::
 
+    from twisted.python.versions import Version
+    from twisted.python.deprecate import deprecated
+
+    @deprecated(Version("Twisted", 8, 0, 0))
     def badAPI(self, first, second):
         '''
         Docstring for badAPI.
         '''
         ...
-    badAPI = deprecate(Version("Twisted", 8, 0, 0))(badAPI)
 
 The newly-decorated badAPI will issue a warning when called. It will also have
 a deprecation notice appended to its docstring.
