@@ -27,12 +27,8 @@ from twisted.python import log, failure
 from twisted.python.hashlib import md5
 from twisted.mail import mail
 from twisted.internet import interfaces, defer, reactor
-
-from twisted import cred
-import twisted.cred.portal
-import twisted.cred.credentials
-import twisted.cred.checkers
-import twisted.cred.error
+from twisted.cred import portal, credentials, checkers
+from twisted.cred.error import UnauthorizedLogin
 
 INTERNAL_ERROR = '''\
 From: Twisted.mail Internals
@@ -433,7 +429,7 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
     """A Maildir Domain where membership is checked by a dirdbm file
     """
 
-    implements(cred.portal.IRealm, mail.IAliasableDomain)
+    implements(portal.IRealm, mail.IAliasableDomain)
 
     portal = None
     _credcheckers = None
@@ -493,7 +489,7 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
     def requestAvatar(self, avatarId, mind, *interfaces):
         if pop3.IMailbox not in interfaces:
             raise NotImplementedError("No interface")
-        if avatarId == cred.checkers.ANONYMOUS:
+        if avatarId == checkers.ANONYMOUS:
             mbox = StringListMailbox([INTERNAL_ERROR])
         else:
             mbox = MaildirMailbox(os.path.join(self.root, avatarId))
@@ -505,11 +501,11 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
         )
 
 class DirdbmDatabase:
-    implements(cred.checkers.ICredentialsChecker)
+    implements(checkers.ICredentialsChecker)
 
     credentialInterfaces = (
-        cred.credentials.IUsernamePassword,
-        cred.credentials.IUsernameHashedPassword
+        credentials.IUsernamePassword,
+        credentials.IUsernameHashedPassword
     )
 
     def __init__(self, dbm):
@@ -519,4 +515,4 @@ class DirdbmDatabase:
         if c.username in self.dirdbm:
             if c.checkPassword(self.dirdbm[c.username]):
                 return c.username
-        raise cred.error.UnauthorizedLogin()
+        raise UnauthorizedLogin()
