@@ -1309,6 +1309,93 @@ class ClientMsgTests(unittest.TestCase):
         self.assertEquals(1, len(self.client.lines))
 
 
+    def test_newlinesAtStart(self):
+        """
+        An LF at the beginning of the message is ignored.
+        """
+        self.client.lines = []
+        self.client.msg('foo', '\nbar')
+        self.assertEquals(self.client.lines, ['PRIVMSG foo :bar'])
+
+
+    def test_newlinesAtEnd(self):
+        """
+        An LF at the end of the message is ignored.
+        """
+        self.client.lines = []
+        self.client.msg('foo', 'bar\n')
+        self.assertEquals(self.client.lines, ['PRIVMSG foo :bar'])
+
+
+    def test_newlinesWithinMessage(self):
+        """
+        An LF within a message causes a new line.
+        """
+        self.client.lines = []
+        self.client.msg('foo', 'bar\n\nbaz')
+        self.assertEquals(self.client.lines, [
+                'PRIVMSG foo :bar',
+                'PRIVMSG foo :baz'
+                ])
+
+
+    def test_consecutiveNewlines(self):
+        """
+        Consecutive LFs do not cause a blank line.
+        """
+        self.client.lines = []
+        self.client.msg('foo', 'bar\n\nbaz')
+        self.assertEquals(self.client.lines, [
+                'PRIVMSG foo :bar',
+                'PRIVMSG foo :baz',
+                ])
+
+
+    def test_longLinesCauseNewLines(self):
+        """
+        Lines that would break the 512-byte barrier cause two lines to be sent.
+        """
+        # The maximum length of a line is 512 bytes, including the line prefix
+        # and the trailing CRLF.
+        maxLineLength = irc.MAX_COMMAND_LENGTH - 2 - len('PRIVMSG foo :')
+
+        self.client.msg('foo', 'o' * (maxLineLength+1))
+        self.assertEquals(self.client.lines, [
+                'PRIVMSG foo :' + maxLineLength * 'o',
+                'PRIVMSG foo :o',
+                ])
+
+
+    def test_newlinesBeforeLineBreaking(self):
+        """
+        IRCClient breaks on newlines before it breaks long lines.
+        """
+        # Because MAX_COMMAND_LENGTH includes framing characters, this long
+        # line is slightly longer than half the permissible message size.
+        longline = 'o' * (irc.MAX_COMMAND_LENGTH // 2)
+
+        self.client.msg('foo', longline + '\n' + longline)
+        self.assertEquals(self.client.lines, [
+                'PRIVMSG foo :' + longline,
+                'PRIVMSG foo :' + longline,
+                ])
+
+
+    def test_lineBreakOnWordBoundaries(self):
+        """
+        IRCClient prefers to break long lines at word boundaries.
+        """
+        # Because MAX_COMMAND_LENGTH includes framing characters, this long
+        # line is slightly longer than half the permissible message size.
+        longline = 'o' * (irc.MAX_COMMAND_LENGTH // 2)
+
+        self.client.msg('foo', longline + ' ' + longline)
+        self.assertEquals(self.client.lines, [
+                'PRIVMSG foo :' + longline,
+                'PRIVMSG foo :' + longline,
+                ])
+
+
     def testSplitSanity(self):
         # Whiteboxing
         self.assertRaises(ValueError, irc.split, 'foo', -1)
@@ -1327,6 +1414,15 @@ class ClientMsgTests(unittest.TestCase):
         self.assertEquals(['xx', 'yy', 'z'], r)
         r = irc.split("xx\nyyz", 2)
         self.assertEquals(['xx', 'yy', 'z'], r)
+
+
+    def test_splitValidatesLength(self):
+        """
+        split() raises ValueError if given a length <= 0
+        """
+        self.assertRaises(ValueError, irc.split, "foo", 0)
+        self.assertRaises(ValueError, irc.split, "foo", -1)
+
 
 
 class ClientTests(TestCase):

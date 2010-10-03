@@ -20,6 +20,9 @@ and "Transfer #2 is 67% done." and otherwise manage the DCC sessions.
 
 Test coverage needs to be better.
 
+@var MAX_COMMAND_LENGTH: The maximum length of a command, as defined by RFC
+    2812 section 2.3.
+
 @author: Kevin Turner
 
 @see: RFC 1459: Internet Relay Chat Protocol
@@ -31,6 +34,7 @@ Test coverage needs to be better.
 import errno, os, random, re, stat, struct, sys, time, types, traceback
 import string, socket
 import warnings
+import textwrap
 from os import path
 
 from twisted.internet import reactor, protocol
@@ -43,6 +47,9 @@ CR = chr(015)
 NL = chr(012)
 LF = NL
 SPC = chr(040)
+
+# This includes the CRLF terminator characters.
+MAX_COMMAND_LENGTH = 512
 
 CHANNEL_PREFIXES = '&#!+'
 
@@ -80,34 +87,26 @@ def parsemsg(s):
     return prefix, command, args
 
 
-def split(str, length = 80):
-    """I break a message into multiple lines.
 
-    I prefer to break at whitespace near str[length].  I also break at \\n.
-
-    @returns: list of strings
+def split(str, length=80):
     """
-    if length <= 0:
-        raise ValueError("Length must be a number greater than zero")
-    r = []
-    while len(str) > length:
-        w, n = str[:length].rfind(' '), str[:length].find('\n')
-        if w == -1 and n == -1:
-            line, str = str[:length], str[length:]
-        else:
-            if n == -1:
-                i = w
-            else:
-                i = n
-            if i == 0: # just skip the space or newline. don't append any output.
-                str = str[1:]
-                continue
-            line, str = str[:i], str[i+1:]
-        r.append(line)
-    if len(str):
-        r.extend(str.split('\n'))
-    return r
+    Split a string into multiple lines.
 
+    Whitespace near C{str[length]} will be preferred as a breaking point.
+    C{"\\n"} will also be used as a breaking point.
+
+    @param str: The string to split.
+    @type str: C{str}
+
+    @param length: The maximum length which will be allowed for any string in
+        the result.
+    @type length: C{int}
+
+    @return: C{list} of C{str}
+    """
+    return [chunk
+            for line in str.split('\n')
+            for chunk in textwrap.wrap(line, length)]
 
 
 def _intOrDefault(value, default=None):
@@ -1449,40 +1448,38 @@ class IRCClient(basic.LineReceiver):
         self.msg(channel, message, length)
 
 
-    def msg(self, user, message, length = None):
-        """Send a message to a user or channel.
-
-        @type user: C{str}
-        @param user: The username or channel name to which to direct the
-        message.
-
-        @type message: C{str}
-        @param message: The text to send
-
-        @type length: C{int}
-        @param length: The maximum number of octets to send at a time.  This
-        has the effect of turning a single call to msg() into multiple
-        commands to the server.  This is useful when long messages may be
-        sent that would otherwise cause the server to kick us off or silently
-        truncate the text we are sending.  If None is passed, the entire
-        message is always send in one command.
+    def msg(self, user, message, length=MAX_COMMAND_LENGTH):
         """
+        Send a message to a user or channel.
 
+        The message will be split into multiple commands to the server if:
+         - The message contains any newline characters
+         - Any span between newline characters is longer than the given
+           line-length.
+
+        @param user: The username or channel name to which to direct the
+            message.
+        @type user: C{str}
+
+        @param message: The text to send.
+        @type message: C{str}
+
+        @param length: The maximum number of octets to send in a single
+            command, including the IRC protocol framing. If not supplied,
+            defaults to L{MAX_COMMAND_LENGTH}.
+        @type length: C{int}
+        """
         fmt = "PRIVMSG %s :%%s" % (user,)
 
-        if length is None:
-            self.sendLine(fmt % (message,))
-        else:
-            # NOTE: minimumLength really equals len(fmt) - 2 (for '%s') + n
-            # where n is how many bytes sendLine sends to end the line.
-            # n was magic numbered to 2, I think incorrectly
-            minimumLength = len(fmt)
-            if length <= minimumLength:
-                raise ValueError("Maximum length must exceed %d for message "
-                                 "to %s" % (minimumLength, user))
-            lines = split(message, length - minimumLength)
-            map(lambda line, self=self, fmt=fmt: self.sendLine(fmt % line),
-                lines)
+        # NOTE: minimumLength really equals len(fmt) - 2 (for '%s') + 2
+        # (for the line-terminating CRLF)
+        minimumLength = len(fmt)
+        if length <= minimumLength:
+            raise ValueError("Maximum length must exceed %d for message "
+                             "to %s" % (minimumLength, user))
+        for line in split(message, length - minimumLength):
+            self.sendLine(fmt % (line,))
+
 
     def notice(self, user, message):
         """
@@ -1498,6 +1495,7 @@ class IRCClient(basic.LineReceiver):
         """
         self.sendLine("NOTICE %s :%s" % (user, message))
 
+
     def away(self, message=''):
         """
         Mark this client as away.
@@ -1506,7 +1504,6 @@ class IRCClient(basic.LineReceiver):
         @param message: If specified, the away message.
         """
         self.sendLine("AWAY :%s" % message)
-
 
 
     def back(self):
