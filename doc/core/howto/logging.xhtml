@@ -78,45 +78,53 @@ log.startLogging(sys.stdout)
     as <code class="API" base="twisted.python.logfile">DailyLogFile</code>,
     which will rotate the log to a new file once per day.</p>
 
-    <h3>Using the Python logging module</h3>
+    <h3>Using the standard library logging module</h3>
 
-    <p>If your application uses the logging module or you want to use its ease
-    of configuration but don't want to lose twisted-produced messages,
+    <p>If your application uses the
+    <a href="http://docs.python.org/library/logging.html">standard library
+    logging module</a> but don't want to lose twisted-produced messages,
     the observer
     <code class="API" base="twisted.python.log">PythonLoggingObserver</code>
-    should be useful to you</p>
+    should be useful to you.
+    </p>
 
-    <p>You just start it like any other observers:
+    <p>You just start it like any other observer:
         <pre class="python">
 observer = log.PythonLoggingObserver()
 observer.start()
         </pre>
-    And then you'll just have to configure logging to do what you want:
-    <a href="http://docs.python.org/lib/module-logging.html">
-    logging documentation</a>.
+
+    Then <a href="http://docs.python.org/library/logging.html">configure the
+    standard library logging module</a> to behave as you want.
     </p>
 
     <p>This method allows you to customize the log level received by the
-    logging module using the <code>logLevel</code> keyword:
+    standard library logging module using the <code>logLevel</code> keyword:
         <pre class="python">
 log.msg("This is important!", logLevel=logging.CRITICAL)
 log.msg("Don't mind", logLevel=logging.DEBUG)
         </pre>
-    Unless logLevel is provided, logging.INFO is used for <code>log.msg</code>
-    and logging.ERROR is used for <code>log.err</code>.
+    Unless <code>logLevel</code> is provided, logging.INFO is used for <code>log.msg</code>
+    and <code>logging.ERROR</code> is used for <code>log.err</code>.
     </p>
 
     <p>One special care should be made when you use special configuration of
-    the python logging module: some handlers (e.g. SMTP, HTTP) uses network
-    so can block inside the reactor loop. <em>Nothing</em> in the bridge is
+    the standard library logging module: some handlers (e.g. SMTP, HTTP) use the network and
+    so can block inside the reactor loop. <em>Nothing</em> in <code>PythonLoggingObserver</code> is
     done to prevent that.</p>
 
     <h2>Writing log observers</h2>
 
-    <p>Log observers are the basis of the Twisted logging system.  An example of
-    a log observer in Twisted is the <code class="API"
-    base="twisted.python.log">FileLogObserver</code> used by
-    <code>startLogging</code> that writes events to a log file.  A log observer
+    <p>Log observers are the basis of the Twisted logging system.
+    Whenever <code>log.msg</code> (or <code>log.err</code>) is called, an
+    event is emitted.  The event is passed to each observer which has been
+    registered.  There can be any number of observers, and each can treat
+    the event in any way desired.
+    An example of
+    a log observer in Twisted is the <code>emit</code> method of <code class="API"
+    base="twisted.python.log">FileLogObserver</code>.
+    <code>FileLogObserver</code>, used by
+    <code>startLogging</code>, writes events to a log file.  A log observer
     is just a callable that accepts a dictionary as its only argument.  You can
     then register it to receive all log events (in addition to any other
     observers):</p>
@@ -157,7 +165,7 @@ twisted.python.log.addObserver(yourCallable)
 
     <ul>
       <li>Never block in a log observer, as it may run in main Twisted thread.
-      This means you can't use socket or syslog Python-logging backends.</li>
+      This means you can't use socket or syslog standard library logging backends.</li>
 
       <li>The observer needs to be thread safe if you anticipate using threads
       in your program.</li>
