@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.conch.test.test_telnet -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -400,20 +400,66 @@ class TelnetTransportTestCase(unittest.TestCase):
         d.addCallback(lambda _:  self._enabledHelper(h, eR=['\x42']))
         return d
 
-    def testRefusedEnableRequest(self):
-        # Try to enable an option through the user-level API.  This
-        # returns a Deferred that fires when negotiation about the option
-        # finishes.  Make sure it fires, make sure state gets updated
-        # properly, make sure the result indicates the option was enabled.
+
+    def test_refusedEnableRequest(self):
+        """
+        If the peer refuses to enable an option we request it to enable, the
+        L{Deferred} returned by L{TelnetProtocol.do} fires with an
+        L{OptionRefused} L{Failure}.
+        """
+        # Try to enable an option through the user-level API.  This returns a
+        # Deferred that fires when negotiation about the option finishes.  Make
+        # sure it fires, make sure state gets updated properly, make sure the
+        # result indicates the option was enabled.
+        self.p.protocol.remoteEnableable = ('\x42',)
         d = self.p.do('\x42')
 
         self.assertEquals(self.t.value(), telnet.IAC + telnet.DO + '\x42')
 
+        s = self.p.getOptionState('\x42')
+        self.assertEquals(s.him.state, 'no')
+        self.assertEquals(s.us.state, 'no')
+        self.assertEquals(s.him.negotiating, True)
+        self.assertEquals(s.us.negotiating, False)
+
         self.p.dataReceived(telnet.IAC + telnet.WONT + '\x42')
 
         d = self.assertFailure(d, telnet.OptionRefused)
-        d.addCallback(lambda _: self._enabledHelper(self.p.protocol))
+        d.addCallback(lambda ignored: self._enabledHelper(self.p.protocol))
+        d.addCallback(
+            lambda ignored: self.assertEquals(s.him.negotiating, False))
         return d
+
+
+    def test_refusedEnableOffer(self):
+        """
+        If the peer refuses to allow us to enable an option, the L{Deferred}
+        returned by L{TelnetProtocol.will} fires with an L{OptionRefused}
+        L{Failure}.
+        """
+        # Try to offer an option through the user-level API.  This returns a
+        # Deferred that fires when negotiation about the option finishes.  Make
+        # sure it fires, make sure state gets updated properly, make sure the
+        # result indicates the option was enabled.
+        self.p.protocol.localEnableable = ('\x42',)
+        d = self.p.will('\x42')
+
+        self.assertEquals(self.t.value(), telnet.IAC + telnet.WILL + '\x42')
+
+        s = self.p.getOptionState('\x42')
+        self.assertEquals(s.him.state, 'no')
+        self.assertEquals(s.us.state, 'no')
+        self.assertEquals(s.him.negotiating, False)
+        self.assertEquals(s.us.negotiating, True)
+
+        self.p.dataReceived(telnet.IAC + telnet.DONT + '\x42')
+
+        d = self.assertFailure(d, telnet.OptionRefused)
+        d.addCallback(lambda ignored: self._enabledHelper(self.p.protocol))
+        d.addCallback(
+            lambda ignored: self.assertEquals(s.us.negotiating, False))
+        return d
+
 
     def testAcceptedDisableRequest(self):
         # Try to disable an option through the user-level API.  This

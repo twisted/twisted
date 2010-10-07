@@ -1,11 +1,11 @@
 # -*- test-case-name: twisted.conch.test.test_telnet -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
 Telnet protocol implementation.
 
-@author: Jp Calderone
+@author: Jean-Paul Calderone
 """
 
 import struct
@@ -672,10 +672,12 @@ class Telnet(protocol.Protocol):
         pass
 
     def dont_no_true(self, state, option):
-        # This is a bogus state.  It is here for completeness.  It will never be
-        # entered.
-        assert False, "dont_no_true can never be entered, but was called with %r, %r" % (state, option)
-
+        # Offered option was refused.  Fail the Deferred returned by the
+        # previous will() call.
+        state.us.negotiating = False
+        d = state.us.onResult
+        state.us.onResult = None
+        d.errback(OptionRefused(option))
 
     def dont_yes_false(self, state, option):
         # Peer is unilaterally demanding we disable an option.
