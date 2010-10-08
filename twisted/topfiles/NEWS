@@ -55,8 +55,6 @@ Bugfixes
  - The "brief" mode of twisted.python.failure.Failure.getTraceback now
    handles exceptions raised by the underlying exception's __str__
    method. (#4501)
- - twisted.words.xish.domish now correctly parses XML with namespaces
-   which include whitespace. (#4503)
  - twisted.names.authority.FileAuthority now generates correct
    negative caching hints, marks its referral NS RRs as non-
    authoritative, and correctly generates referrals for ALL_RECORDS

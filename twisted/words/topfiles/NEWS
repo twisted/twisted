@@ -10,6 +10,8 @@ Bugfixes
    in the default noticed() implementation. (#4419)
  - twisted.words.im.ircsupport.IRCProto now sends the correct name in
    the USER command. (#4641)
+ - twisted.words.xish.domish now correctly parses XML with namespaces
+   which include whitespace. (#4503)
 
 Deprecations and Removals
 -------------------------
