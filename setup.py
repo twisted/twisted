@@ -31,7 +31,7 @@ def getExtensions():
                 execfile(setup_py, ns, ns)
                 if "extensions" in ns:
                     extensions.extend(ns["extensions"])
-                    
+
     return extensions
 
 
@@ -72,7 +72,7 @@ on event-based network programming and multiprotocol integration.
             packages = getPackages('twisted'),
             conditionalExtensions = getExtensions(),
             scripts = scripts,
-            data_files=getDataFiles('twisted'), 
+            data_files=getDataFiles('twisted', ignore=['topfiles']),
             )
 
     if 'setuptools' in sys.modules:
