@@ -16,7 +16,7 @@ from twisted.python.log import msg, err
 from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath
 from twisted.internet import utils
-from twisted.internet.interfaces import IReactorProcess
+from twisted.internet.interfaces import IReactorProcess, IProcessTransport
 from twisted.internet.defer import Deferred, succeed
 from twisted.internet.protocol import ProcessProtocol
 from twisted.internet.error import ProcessDone, ProcessTerminated
@@ -46,6 +46,34 @@ class ProcessTestsBuilderBase(ReactorBuilder):
     C{False}.
     """
     requiredInterfaces = [IReactorProcess]
+
+
+    def test_processTransportInterface(self):
+        """
+        L{IReactorProcess.spawnProcess} connects the protocol passed to it
+        to a transport which provides L{IProcessTransport}.
+        """
+        ended = Deferred()
+        protocol = _ShutdownCallbackProcessProtocol(ended)
+
+        reactor = self.buildReactor()
+        transport = reactor.spawnProcess(
+            protocol, sys.executable, [sys.executable, "-c", ""],
+            usePTY=self.usePTY)
+
+        # The transport is available synchronously, so we can check it right
+        # away (unlike many transport-based tests).  This is convenient even
+        # though it's probably not how the spawnProcess interface should really
+        # work.
+        # We're not using verifyObject here because part of
+        # IProcessTransport is a lie - there are no getHost or getPeer
+        # methods.  See #1124.
+        self.assertTrue(IProcessTransport.providedBy(transport))
+
+        # Let the process run and exit so we don't leave a zombie around.
+        ended.addCallback(lambda ignored: reactor.stop())
+        self.runReactor(reactor)
+
 
     def test_spawnProcessEarlyIsReaped(self):
         """

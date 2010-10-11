@@ -23,11 +23,14 @@ try:
 except ImportError:
     fcntl = None
 
+from zope.interface import implements
+
 from twisted.python import log, failure
 from twisted.python.util import switchUID
 from twisted.internet import fdesc, abstract, error
 from twisted.internet.main import CONNECTION_LOST, CONNECTION_DONE
 from twisted.internet._baseprocess import BaseProcess
+from twisted.internet.interfaces import IProcessTransport
 
 # Some people were importing this, which is incorrect, just keeping it
 # here for backwards compatibility:
@@ -507,6 +510,7 @@ class Process(_BaseProcess):
     code is not cross-platform. (also, windows can only select
     on sockets...)
     """
+    implements(IProcessTransport)
 
     debug = False
     debug_child = False
@@ -822,10 +826,13 @@ class Process(_BaseProcess):
         _BaseProcess.maybeCallProcessEnded(self)
 
 
+
 class PTYProcess(abstract.FileDescriptor, _BaseProcess):
     """
     An operating-system Process that uses PTY support.
     """
+    implements(IProcessTransport)
+
     status = -1
     pid = None
 
