@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_policies -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -595,7 +595,12 @@ class TrafficLoggingFactory(WrappingFactory):
 
 
 class TimeoutMixin:
-    """Mixin for protocols which wish to timeout connections
+    """
+    Mixin for protocols which wish to timeout connections.
+
+    Protocols that mix this in have a single timeout, set using L{setTimeout}.
+    When the timeout is hit, L{timeoutConnection} is called, which, by
+    default, closes the connection.
 
     @cvar timeOut: The number of seconds after which to timeout the connection.
     """
@@ -604,17 +609,31 @@ class TimeoutMixin:
     __timeoutCall = None
 
     def callLater(self, period, func):
+        """
+        Wrapper around L{reactor.callLater} for test purpose.
+        """
         from twisted.internet import reactor
         return reactor.callLater(period, func)
 
 
     def resetTimeout(self):
-        """Reset the timeout count down"""
+        """
+        Reset the timeout count down.
+
+        If the connection has already timed out, then do nothing.  If the
+        timeout has been cancelled (probably using C{setTimeout(None)}), also
+        do nothing.
+
+        It's often a good idea to call this when the protocol has received
+        some meaningful input from the other end of the connection.  "I've got
+        some data, they're still there, reset the timeout".
+        """
         if self.__timeoutCall is not None and self.timeOut is not None:
             self.__timeoutCall.reset(self.timeOut)
 
     def setTimeout(self, period):
-        """Change the timeout period
+        """
+        Change the timeout period
 
         @type period: C{int} or C{NoneType}
         @param period: The period, in seconds, to change the timeout to, or
@@ -639,7 +658,9 @@ class TimeoutMixin:
         self.timeoutConnection()
 
     def timeoutConnection(self):
-        """Called when the connection times out.
+        """
+        Called when the connection times out.
+
         Override to define behavior other than dropping the connection.
         """
         self.transport.loseConnection()

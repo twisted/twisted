@@ -1,0 +1,1 @@
+twisted.protocols.policies.TimeoutMixin now has clearer API documentation.
