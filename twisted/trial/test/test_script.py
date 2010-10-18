@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 import gc
@@ -8,6 +8,7 @@ from twisted.trial import unittest, runner
 from twisted.scripts import trial
 from twisted.python import util
 from twisted.python.compat import set
+from twisted.python.filepath import FilePath
 
 from twisted.trial.test.test_loader import testNames
 
@@ -414,3 +415,26 @@ class CoverageTests(unittest.TestCase):
         options = trial.Options()
         options.parseOptions(["--coverage"])
         self.assertEquals(sys.gettrace(), options.tracer.globaltrace)
+
+
+    def test_coverdirDefault(self):
+        """
+        L{trial.Options.coverdir} returns a L{FilePath} based on the default
+        for the I{temp-directory} option if that option is not specified.
+        """
+        options = trial.Options()
+        self.assertEquals(
+            options.coverdir(),
+            FilePath(".").descendant([options["temp-directory"], "coverage"]))
+
+
+    def test_coverdirOverridden(self):
+        """
+        If a value is specified for the I{temp-directory} option,
+        L{trial.Options.coverdir} returns a child of that path.
+        """
+        path = self.mktemp()
+        options = trial.Options()
+        options.parseOptions(["--temp-directory", path])
+        self.assertEquals(
+            options.coverdir(), FilePath(path).child("coverage"))

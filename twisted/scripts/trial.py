@@ -141,16 +141,23 @@ class Options(usage.Options, app.ReactorSelectionMixin):
         usage.Options.__init__(self)
 
 
+    def coverdir(self):
+        """
+        Return a L{FilePath} representing the directory into which coverage
+        results should be written.
+        """
+        coverdir = 'coverage'
+        result = FilePath(self['temp-directory']).child(coverdir)
+        print "Setting coverage directory to %s." % (result.path,)
+        return result
+
+
     def opt_coverage(self):
         """
         Generate coverage information in the I{coverage} file in the
         directory specified by the I{trial-temp} option.
         """
         import trace
-
-        coverdir = 'coverage'
-        print "Setting coverage directory to %s." % (coverdir,)
-        self.coverdir = FilePath(self['temp-directory']).child(coverdir).path
         self.tracer = trace.Trace(count=1, trace=0)
         sys.settrace(self.tracer.globaltrace)
 
@@ -341,6 +348,6 @@ def run():
         sys.settrace(None)
         results = config.tracer.results()
         results.write_results(show_missing=1, summary=False,
-                              coverdir=config.coverdir)
+                              coverdir=config.coverdir().path)
     sys.exit(not test_result.wasSuccessful())
 
