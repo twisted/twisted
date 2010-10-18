@@ -188,23 +188,29 @@ class ITelnetProtocol(iinternet.IProtocol):
         """Indicate that the peer has disabled this option.
         """
 
+
+
 class ITelnetTransport(iinternet.ITransport):
     def do(option):
-        """Indicate a desire for the peer to begin performing the given option.
+        """
+        Indicate a desire for the peer to begin performing the given option.
 
         Returns a Deferred that fires with True when the peer begins performing
-        the option, or False when the peer refuses to perform it.  If the peer
-        is already performing the given option, the Deferred will fail with
-        L{AlreadyEnabled}.  If a negotiation regarding this option is already
-        in progress, the Deferred will fail with L{AlreadyNegotiating}.
+        the option, or fails with L{OptionRefused} when the peer refuses to
+        perform it.  If the peer is already performing the given option, the
+        Deferred will fail with L{AlreadyEnabled}.  If a negotiation regarding
+        this option is already in progress, the Deferred will fail with
+        L{AlreadyNegotiating}.
 
         Note: It is currently possible that this Deferred will never fire,
         if the peer never responds, or if the peer believes the option to
         already be enabled.
         """
 
+
     def dont(option):
-        """Indicate a desire for the peer to cease performing the given option.
+        """
+        Indicate a desire for the peer to cease performing the given option.
 
         Returns a Deferred that fires with True when the peer ceases performing
         the option.  If the peer is not performing the given option, the
@@ -217,23 +223,27 @@ class ITelnetTransport(iinternet.ITransport):
         already be disabled.
         """
 
-    def will(option):
-        """Indicate our willingness to begin performing this option locally.
 
-        Returns a Deferred that fires with True when the peer agrees to allow
-        us to begin performing this option, or False if the peer refuses to
-        allow us to begin performing it.  If the option is already enabled
-        locally, the Deferred will fail with L{AlreadyEnabled}.  If negotiation
-        regarding this option is already in progress, the Deferred will fail with
-        L{AlreadyNegotiating}.
+    def will(option):
+        """
+        Indicate our willingness to begin performing this option locally.
+
+        Returns a Deferred that fires with True when the peer agrees to allow us
+        to begin performing this option, or fails with L{OptionRefused} if the
+        peer refuses to allow us to begin performing it.  If the option is
+        already enabled locally, the Deferred will fail with L{AlreadyEnabled}.
+        If negotiation regarding this option is already in progress, the
+        Deferred will fail with L{AlreadyNegotiating}.
 
         Note: It is currently possible that this Deferred will never fire,
         if the peer never responds, or if the peer believes the option to
         already be enabled.
         """
 
+
     def wont(option):
-        """Indicate that we will stop performing the given option.
+        """
+        Indicate that we will stop performing the given option.
 
         Returns a Deferred that fires with True when the peer acknowledges
         we have stopped performing this option.  If the option is already
@@ -246,8 +256,10 @@ class ITelnetTransport(iinternet.ITransport):
         already be disabled.
         """
 
+
     def requestNegotiation(about, bytes):
-        """Send a subnegotiation request.
+        """
+        Send a subnegotiation request.
 
         @param about: A byte indicating the feature being negotiated.
         @param bytes: Any number of bytes containing specific information
@@ -255,6 +267,8 @@ class ITelnetTransport(iinternet.ITransport):
         need to be escaped, as this function will escape any value which
         requires it.
         """
+
+
 
 class TelnetError(Exception):
     pass
@@ -345,7 +359,35 @@ class Telnet(protocol.Protocol):
         self.transport.write(bytes)
 
     class _OptionState:
+        """
+        Represents the state of an option on both sides of a telnet
+        connection.
+
+        @ivar us: The state of the option on this side of the connection.
+
+        @ivar him: The state of the option on the other side of the
+            connection.
+        """
         class _Perspective:
+            """
+            Represents the state of an option on side of the telnet
+            connection.  Some options can be enabled on a particular side of
+            the connection (RFC 1073 for example: only the client can have
+            NAWS enabled).  Other options can be enabled on either or both
+            sides (such as RFC 1372: each side can have its own flow control
+            state).
+
+            @ivar state: C{'yes'} or C{'no'} indicating whether or not this
+                option is enabled on one side of the connection.
+
+            @ivar negotiating: A boolean tracking whether negotiation about
+                this option is in progress.
+
+            @ivar onResult: When negotiation about this option has been
+                initiated by this side of the connection, a L{Deferred}
+                which will fire with the result of the negotiation.  C{None}
+                at other times.
+            """
             state = 'no'
             negotiating = False
             onResult = None
