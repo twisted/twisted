@@ -23,7 +23,7 @@ class Options(usage.Options):
     longdesc = "Makes a Conch SSH server."
     optParameters = [
          ["interface", "i", "", "local interface to which we listen"],
-         ["port", "p", "22", "Port on which to listen"],
+         ["port", "p", "tcp:22", "Port on which to listen"],
          ["data", "d", "/etc", "directory to look for host keys in"],
          ["moduli", "", None, "directory to look for moduli in "
                               "(if different from --data)"]

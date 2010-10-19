@@ -627,11 +627,12 @@ class OpenSSLCertificateOptions(object):
         sessions and sessions with certificates which fail validation.  By
         default this is False.
 
-        @param caCerts: List of certificate authority certificates to
-        send to the client when requesting a certificate.  Only used if verify
-        is True, and if verify is True, either this must be specified or
-        caCertsFile must be given.  Since verify is False by default,
-        this is None by default.
+        @param caCerts: List of certificate authority certificate objects to
+            use to verify the peer's certificate.  Only used if verify is
+            C{True}, and if verify is C{True}, this must be specified.  Since
+            verify is C{False} by default, this is C{None} by default.
+
+        @type caCerts: C{list} of L{OpenSSL.crypto.X509}
 
         @param verifyDepth: Depth in certificate chain down to which to verify.
         If unspecified, use the underlying default (9).

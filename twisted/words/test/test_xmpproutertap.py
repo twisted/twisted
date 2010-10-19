@@ -64,11 +64,10 @@ class XMPPRouterTapTest(unittest.TestCase):
         opt = tap.Options()
         opt.parseOptions([])
         s = tap.makeService(opt)
-        self.assertIsInstance(s, internet.TCPServer)
-        self.assertEquals('127.0.0.1', s.kwargs['interface'])
-        self.assertEquals(2, len(s.args))
-        self.assertEquals(5347, s.args[0])
-        factory = s.args[1]
+        self.assertIsInstance(s, internet.StreamServerEndpointService)
+        self.assertEquals('127.0.0.1', s.endpoint._interface)
+        self.assertEquals(5347, s.endpoint._port)
+        factory = s.factory
         self.assertIsInstance(factory, component.XMPPComponentServerFactory)
         self.assertIsInstance(factory.router, component.Router)
         self.assertEquals('secret', factory.secret)
@@ -82,5 +81,4 @@ class XMPPRouterTapTest(unittest.TestCase):
         opt = tap.Options()
         opt.parseOptions(['--verbose'])
         s = tap.makeService(opt)
-        factory = s.args[1]
-        self.assertTrue(factory.logTraffic)
+        self.assertTrue(s.factory.logTraffic)

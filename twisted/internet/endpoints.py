@@ -5,17 +5,23 @@
 Implementations of L{IStreamServerEndpoint} and L{IStreamClientEndpoint} that
 wrap the L{IReactorTCP}, L{IReactorSSL}, and L{IReactorUNIX} interfaces.
 
+This also implements an extensible mini-language for describing endpoints,
+parsed by the L{clientFromString} and L{serverFromString} functions.
+
 @since: 10.1
 """
 
 from zope.interface import implements, directlyProvides
+import warnings
 
 from twisted.internet import interfaces, defer, error
 from twisted.internet.protocol import ClientFactory, Protocol
+from twisted.python.filepath import FilePath
 
 
 
-__all__ = ["TCP4ServerEndpoint", "TCP4ClientEndpoint",
+__all__ = ["clientFromString", "serverFromString",
+           "TCP4ServerEndpoint", "TCP4ClientEndpoint",
            "UNIXServerEndpoint", "UNIXClientEndpoint",
            "SSL4ServerEndpoint", "SSL4ClientEndpoint"]
 
@@ -461,3 +467,513 @@ class UNIXClientEndpoint(object):
             return wf._onConnection
         except:
             return defer.fail()
+
+
+
+def _parseTCP(factory, port, interface="", backlog=50):
+    """
+    Internal parser function for L{_parseServer} to convert the string
+    arguments for a TCP(IPv4) stream endpoint into the structured arguments.
+
+    @param factory: the protocol factory being parsed, or C{None}.  (This was a
+        leftover argument from when this code was in C{strports}, and is now
+        mostly None and unused.)
+
+    @type factory: L{IProtocolFactory} or C{NoneType}
+
+    @param port: the integer port number to bind
+    @type port: C{str}
+
+    @param interface: the interface IP to listen on
+    @param backlog: the length of the listen queue
+    @type backlog: C{str}
+
+    @return: a 2-tuple of (args, kwargs), describing  the parameters to
+        L{IReactorTCP.listenTCP} (or, modulo argument 2, the factory, arguments
+        to L{TCP4ServerEndpoint}.
+    """
+    return (int(port), factory), {'interface': interface,
+                                  'backlog': int(backlog)}
+
+
+
+def _parseUNIX(factory, address, mode='666', backlog=50, lockfile=True):
+    """
+    Internal parser function for L{_parseServer} to convert the string
+    arguments for a UNIX (AF_UNIX/SOCK_STREAM) stream endpoint into the
+    structured arguments.
+
+    @param factory: the protocol factory being parsed, or C{None}.  (This was a
+        leftover argument from when this code was in C{strports}, and is now
+        mostly None and unused.)
+
+    @type factory: L{IProtocolFactory} or C{NoneType}
+
+    @param address: the pathname of the unix socket
+    @type address: C{str}
+
+    @param backlog: the length of the listen queue
+    @type backlog: C{str}
+
+    @param lockfile: A string '0' or '1', mapping to True and False
+        respectively.  See the C{wantPID} argument to C{listenUNIX}
+
+    @return: a 2-tuple of (args, kwargs), describing  the parameters to
+        L{IReactorTCP.listenUNIX} (or, modulo argument 2, the factory,
+        arguments to L{UNIXServerEndpoint}.
+    """
+    return (
+        (address, factory),
+        {'mode': int(mode, 8), 'backlog': int(backlog),
+         'wantPID': bool(int(lockfile))})
+
+
+
+def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
+              sslmethod=None, interface='', backlog=50):
+    """
+    Internal parser function for L{_parseServer} to convert the string
+    arguments for an SSL (over TCP/IPv4) stream endpoint into the structured
+    arguments.
+
+    @param factory: the protocol factory being parsed, or C{None}.  (This was a
+        leftover argument from when this code was in C{strports}, and is now
+        mostly None and unused.)
+
+    @type factory: L{IProtocolFactory} or C{NoneType}
+
+    @param port: the integer port number to bind
+    @type port: C{str}
+
+    @param interface: the interface IP to listen on
+    @param backlog: the length of the listen queue
+    @type backlog: C{str}
+
+    @param privateKey: The file name of a PEM format private key file.
+    @type privateKey: C{str}
+
+    @param certKey: The file name of a PEM format certificate file.
+    @type certKey: C{str}
+
+    @param sslmethod: The string name of an SSL method, based on the name of a
+        constant in C{OpenSSL.SSL}.  Must be one of: "SSLv23_METHOD",
+        "SSLv2_METHOD", "SSLv3_METHOD", "TLSv1_METHOD".
+    @type sslmethod: C{str}
+
+    @return: a 2-tuple of (args, kwargs), describing  the parameters to
+        L{IReactorSSL.listenSSL} (or, modulo argument 2, the factory, arguments
+        to L{SSL4ServerEndpoint}.
+    """
+    from twisted.internet import ssl
+    if certKey is None:
+        certKey = privateKey
+    kw = {}
+    if sslmethod is not None:
+        kw['sslmethod'] = getattr(ssl.SSL, sslmethod)
+    cf = ssl.DefaultOpenSSLContextFactory(privateKey, certKey, **kw)
+    return ((int(port), factory, cf),
+            {'interface': interface, 'backlog': int(backlog)})
+
+_funcs = {"tcp": _parseTCP,
+          "unix": _parseUNIX,
+          "ssl": _parseSSL}
+
+_OP, _STRING = range(2)
+
+def _tokenize(description):
+    """
+    Tokenize a strports string and yield each token.
+
+    @param description: a string as described by L{serverFromString} or
+        L{clientFromString}.
+
+    @return: an iterable of 2-tuples of (L{_OP} or L{_STRING}, string).  Tuples
+        starting with L{_OP} will contain a second element of either ':' (i.e.
+        'next parameter') or '=' (i.e. 'assign parameter value').  For example,
+        the string 'hello:greet\=ing=world' would result in a generator
+        yielding these values::
+
+            _STRING, 'hello'
+            _OP, ':'
+            _STRING, 'greet=ing'
+            _OP, '='
+            _STRING, 'world'
+    """
+    current = ''
+    ops = ':='
+    nextOps = {':': ':=', '=': ':'}
+    description = iter(description)
+    for n in description:
+        if n in ops:
+            yield _STRING, current
+            yield _OP, n
+            current = ''
+            ops = nextOps[n]
+        elif n == '\\':
+            current += description.next()
+        else:
+            current += n
+    yield _STRING, current
+
+
+
+def _parse(description):
+    """
+    Convert a description string into a list of positional and keyword
+    parameters, using logic vaguely like what Python does.
+
+    @param description: a string as described by L{serverFromString} or
+        L{clientFromString}.
+
+    @return: a 2-tuple of C{(args, kwargs)}, where 'args' is a list of all
+        ':'-separated C{str}s not containing an '=' and 'kwargs' is a map of
+        all C{str}s which do contain an '='.  For example, the result of
+        C{_parse('a:b:d=1:c')} would be C{(['a', 'b', 'c'], {'d': '1'})}.
+    """
+    args, kw = [], {}
+    def add(sofar):
+        if len(sofar) == 1:
+            args.append(sofar[0])
+        else:
+            kw[sofar[0]] = sofar[1]
+    sofar = ()
+    for (type, value) in _tokenize(description):
+        if type is _STRING:
+            sofar += (value,)
+        elif value == ':':
+            add(sofar)
+            sofar = ()
+    add(sofar)
+    return args, kw
+
+
+# Mappings from description "names" to endpoint constructors.
+_endpointServerFactories = {
+    'TCP': TCP4ServerEndpoint,
+    'SSL': SSL4ServerEndpoint,
+    'UNIX': UNIXServerEndpoint,
+    }
+
+_endpointClientFactories = {
+    'TCP': TCP4ClientEndpoint,
+    'SSL': SSL4ClientEndpoint,
+    'UNIX': UNIXClientEndpoint,
+    }
+
+
+_NO_DEFAULT = object()
+
+def _parseServer(description, factory, default=None):
+    """
+    Parse a stports description into a 2-tuple of arguments and keyword values.
+
+    @param description: A description in the format explained by
+        L{serverFromString}.
+    @type description: C{str}
+
+    @param factory: A 'factory' argument; this is left-over from
+        twisted.application.strports, it's not really used.
+    @type factory: L{IProtocolFactory} or L{None}
+
+    @param default: Deprecated argument, specifying the default parser mode to
+        use for unqualified description strings (those which do not have a ':'
+        and prefix).
+    @type default: C{str} or C{NoneType}
+    """
+    args, kw = _parse(description)
+    if not args or (len(args) == 1 and not kw):
+        deprecationMessage = (
+            "Unqualified strport description passed to 'service'."
+            "Use qualified endpoint descriptions; for example, 'tcp:%s'."
+            % (description,))
+        if default is None:
+            default = 'tcp'
+            warnings.warn(
+                deprecationMessage, category=DeprecationWarning, stacklevel=4)
+        elif default is _NO_DEFAULT:
+            raise ValueError(deprecationMessage)
+        # If the default has been otherwise specified, the user has already
+        # been warned.
+        args[0:0] = [default]
+    endpointType = args[0]
+    parser = _funcs.get(endpointType)
+    if parser is None:
+        raise ValueError("Unknown endpoint type: '%s'" % (endpointType,))
+    return (endpointType.upper(),) + parser(factory, *args[1:], **kw)
+
+
+
+def _serverFromStringLegacy(reactor, description, default):
+    """
+    Underlying implementation of L{serverFromString} which avoids exposing the
+    deprecated 'default' argument to anything but L{strports.service}.
+    """
+    name, args, kw = _parseServer(description, None, default)
+    # Chop out the factory.
+    args = args[:1] + args[2:]
+    return _endpointServerFactories[name](reactor, *args, **kw)
+
+
+
+def serverFromString(reactor, description):
+    """
+    Construct a stream server endpoint from an endpoint description string.
+
+    The format for server endpoint descriptions is a simple string.  It is a
+    prefix naming the type of endpoint, then a colon, then the arguments for
+    that endpoint.
+
+    For example, you can call it like this to create an endpoint that will
+    listen on TCP port 80::
+
+        serverFromString(reactor, "tcp:80")
+
+    Additional arguments may be specified as keywords, separated with colons.
+    For example, you can specify the interface for a TCP server endpoint to
+    bind to like this::
+
+        serverFromString(reactor, "tcp:80:interface=127.0.0.1")
+
+    SSL server endpoints may be specified with the 'ssl' prefix, and the
+    private key and certificate files may be specified by the C{privateKey} and
+    C{certKey} arguments::
+
+        serverFromString(reactor, "ssl:443:privateKey=key.pem:certKey=crt.pem")
+
+    If a private key file name (C{privateKey}) isn't provided, a "server.pem"
+    file is assumed to exist which contains the private key. If the certificate
+    file name (C{certKey}) isn't provided, the private key file is assumed to
+    contain the certificate as well.
+
+    You may escape colons in arguments with a backslash, which you will need to
+    use if you want to specify a full pathname argument on Windows::
+
+        serverFromString(reactor,
+            "ssl:443:privateKey=C\\:/key.pem:certKey=C\\:/cert.pem")
+
+    finally, the 'unix' prefix may be used to specify a filesystem UNIX socket,
+    optionally with a 'mode' argument to specify the mode of the socket file
+    created by C{listen}::
+
+        serverFromString(reactor, "unix:/var/run/finger")
+        serverFromString(reactor, "unix:/var/run/finger:mode=660")
+
+    @param reactor: The server endpoint will be constructed with this reactor.
+
+    @param description: The strports description to parse.
+
+    @return: A new endpoint which can be used to listen with the parameters
+        given by by C{description}.
+
+    @rtype: L{IStreamServerEndpoint<twisted.internet.interfaces.IStreamServerEndpoint>}
+
+    @raise ValueError: when the 'description' string cannot be parsed.
+
+    @since: 10.2
+    """
+    return _serverFromStringLegacy(reactor, description, _NO_DEFAULT)
+
+
+
+def quoteStringArgument(argument):
+    """
+    Quote an argument to L{serverFromString} and L{clientFromString}.  Since
+    arguments are separated with colons and colons are escaped with
+    backslashes, some care is necessary if, for example, you have a pathname,
+    you may be tempted to interpolate into a string like this::
+
+        serverFromString("ssl:443:privateKey=%s" % (myPathName,))
+
+    This may appear to work, but will have portability issues (Windows
+    pathnames, for example).  Usually you should just construct the appropriate
+    endpoint type rather than interpolating strings, which in this case would
+    be L{SSL4ServerEndpoint}.  There are some use-cases where you may need to
+    generate such a string, though; for example, a tool to manipulate a
+    configuration file which has strports descriptions in it.  To be correct in
+    those cases, do this instead::
+
+        serverFromString("ssl:443:privateKey=%s" %
+                         (quoteStringArgument(myPathName),))
+
+    @param argument: The part of the endpoint description string you want to
+        pass through.
+
+    @type argument: C{str}
+
+    @return: The quoted argument.
+
+    @rtype: C{str}
+    """
+    return argument.replace('\\', '\\\\').replace(':', '\\:')
+
+
+
+def _parseClientTCP(**kwargs):
+    """
+    Perform any argument value coercion necessary for TCP client parameters.
+
+    Valid keyword arguments to this function are all L{IReactorTCP.connectTCP}
+    arguments.
+
+    @return: The coerced values as a C{dict}.
+    """
+    kwargs['port'] = int(kwargs['port'])
+    try:
+        kwargs['timeout'] = int(kwargs['timeout'])
+    except KeyError:
+        pass
+    return kwargs
+
+
+
+def _loadCAsFromDir(directoryPath):
+    """
+    Load certificate-authority certificate objects in a given directory.
+
+    @param directoryPath: a L{FilePath} pointing at a directory to load .pem
+        files from.
+
+    @return: a C{list} of L{OpenSSL.crypto.X509} objects.
+    """
+    from twisted.internet import ssl
+
+    caCerts = {}
+    for child in directoryPath.children():
+        if not child.basename().split('.')[-1].lower() == 'pem':
+            continue
+        try:
+            data = child.getContent()
+        except IOError:
+            # Permission denied, corrupt disk, we don't care.
+            continue
+        try:
+            theCert = ssl.Certificate.loadPEM(data)
+        except ssl.SSL.Error:
+            # Duplicate certificate, invalid certificate, etc.  We don't care.
+            pass
+        else:
+            caCerts[theCert.digest()] = theCert.original
+    return caCerts.values()
+
+
+
+def _parseClientSSL(**kwargs):
+    """
+    Perform any argument value coercion necessary for SSL client parameters.
+
+    Valid keyword arguments to this function are all L{IReactorSSL.connectSSL}
+    arguments except for C{contextFactory}.  Instead, C{certKey} (the path name
+    of the certificate file) C{privateKey} (the path name of the private key
+    associated with the certificate) are accepted and used to construct a
+    context factory.
+    
+    @param caCertsDir: The one parameter which is not part of
+        L{IReactorSSL.connectSSL}'s signature, this is a path name used to
+        construct a list of certificate authority certificates.  The directory
+        will be scanned for files ending in C{.pem}, all of which will be
+        considered valid certificate authorities for this connection.
+
+    @type caCertsDir: C{str}
+
+    @return: The coerced values as a C{dict}.
+    """
+    from twisted.internet import ssl
+    kwargs = _parseClientTCP(**kwargs)
+    certKey = kwargs.pop('certKey', None)
+    privateKey = kwargs.pop('privateKey', None)
+    caCertsDir = kwargs.pop('caCertsDir', None)
+    if certKey is not None:
+        certx509 = ssl.Certificate.loadPEM(
+            FilePath(certKey).getContent()).original
+    else:
+        certx509 = None
+    if privateKey is not None:
+        privateKey = ssl.PrivateCertificate.loadPEM(
+            FilePath(privateKey).getContent()).privateKey.original
+    else:
+        privateKey = None
+    if caCertsDir is not None:
+        verify = True
+        caCerts = _loadCAsFromDir(FilePath(caCertsDir))
+    else:
+        verify = False
+        caCerts = None
+    kwargs['sslContextFactory'] = ssl.CertificateOptions(
+        method=ssl.SSL.SSLv23_METHOD,
+        certificate=certx509,
+        privateKey=privateKey,
+        verify=verify,
+        caCerts=caCerts
+    )
+    return kwargs
+
+
+
+def _parseClientUNIX(**kwargs):
+    """
+    Perform any argument value coercion necessary for UNIX client parameters.
+
+    Valid keyword arguments to this function are all L{IReactorUNIX.connectUNIX}
+    arguments except for C{checkPID}.  Instead, C{lockfile} is accepted and has
+    the same meaning.
+
+    @return: The coerced values as a C{dict}.
+    """
+    try:
+        kwargs['checkPID'] = bool(int(kwargs.pop('lockfile')))
+    except KeyError:
+        pass
+    try:
+        kwargs['timeout'] = int(kwargs['timeout'])
+    except KeyError:
+        pass
+    return kwargs
+
+_clientParsers = {
+    'TCP': _parseClientTCP,
+    'SSL': _parseClientSSL,
+    'UNIX': _parseClientUNIX,
+    }
+
+
+
+def clientFromString(reactor, description):
+    """
+    Construct a client endpoint from a description string.
+
+    Client description strings are much like server description strings,
+    although they take all of their arguments as keywords, since even the
+    simplest client endpoint (plain TCP) requires at least 2 arguments (host
+    and port) to construct.
+
+    You can create a TCP client endpoint with the 'host' and 'port' arguments,
+    like so::
+
+        clientFromString(reactor, "tcp:host=www.example.com:port=80")
+
+    or an SSL client endpoint with those arguments, plus the arguments used by
+    the server SSL, for a client certificate::
+
+        clientFromString(reactor, "ssl:host=web.example.com:port=443:"
+                                  "privateKey=foo.pem:certKey=foo.pem")
+
+    to specify your certificate trust roots, you can identify a directory with
+    PEM files in it with the C{caCertsDir} argument::
+
+        clientFromString(reactor, "ssl:host=web.example.com:port=443:"
+                                  "caCertsDir=/etc/ssl/certs")
+
+    @param reactor: The client endpoint will be constructed with this reactor.
+
+    @param description: The strports description to parse.
+
+    @return: A new endpoint which can be used to connect with the parameters
+        given by by C{description}.
+    @rtype: L{IStreamClientEndpoint<twisted.internet.interfaces.IStreamClientEndpoint>}
+
+    @since: 10.2
+    """
+    args, kwargs = _parse(description)
+    name = args.pop(0).upper()
+    kwargs = _clientParsers[name](*args, **kwargs)
+    return _endpointClientFactories[name](reactor, **kwargs)

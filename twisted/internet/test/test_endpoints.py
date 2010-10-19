@@ -6,6 +6,7 @@ L{IReactorSSL}, and L{IReactorUNIX} interfaces found in
 L{twisted.internet.endpoints}.
 """
 
+from errno import EPERM
 from zope.interface import implements
 
 from twisted.trial import unittest
@@ -16,12 +17,25 @@ from twisted.internet.protocol import ClientFactory, Protocol
 from twisted.test.proto_helpers import MemoryReactor, RaisingMemoryReactor
 from twisted.python.failure import Failure
 
+from twisted.python.modules import getModule
+from twisted.python.filepath import FilePath
+
+pemPath = getModule("twisted.test").filePath.sibling("server.pem")
+casPath = getModule(__name__).filePath.sibling("fake_CAs")
+escapedPEMPathName = endpoints.quoteStringArgument(pemPath.path)
+escapedCAsPathName = endpoints.quoteStringArgument(casPath.path)
+
 try:
     from twisted.test.test_sslverify import makeCertificate
-    from twisted.internet.ssl import CertificateOptions
+    from twisted.internet.ssl import CertificateOptions, Certificate, \
+        KeyPair, PrivateCertificate
+    from OpenSSL.SSL import ContextType
+    testCertificate = Certificate.loadPEM(pemPath.getContent())
+    testPrivateCertificate = PrivateCertificate.loadPEM(pemPath.getContent())
+
     skipSSL = False
 except ImportError:
-    skipSSL = "SSL not available."
+    skipSSL = "OpenSSL is required to construct SSL Endpoints"
 
 
 class TestProtocol(Protocol):
@@ -777,3 +791,360 @@ class UNIXEndpointsTestCase(EndpointTestCaseMixin,
 
 
 
+class ParserTestCase(unittest.TestCase):
+    """
+    Tests for L{endpoints._parseServer}, the low-level parsing logic.
+    """
+
+    f = "Factory"
+
+    def parse(self, *a, **kw):
+        """
+        Provide a hook for test_strports to substitute the deprecated API.
+        """
+        return endpoints._parseServer(*a, **kw)
+
+
+    def test_simpleTCP(self):
+        """
+        Simple strings with a 'tcp:' prefix should be parsed as TCP.
+        """
+        self.assertEquals(self.parse('tcp:80', self.f),
+                         ('TCP', (80, self.f), {'interface':'', 'backlog':50}))
+
+
+    def test_interfaceTCP(self):
+        """
+        TCP port descriptions parse their 'interface' argument as a string.
+        """
+        self.assertEquals(
+             self.parse('tcp:80:interface=127.0.0.1', self.f),
+             ('TCP', (80, self.f), {'interface':'127.0.0.1', 'backlog':50}))
+
+
+    def test_backlogTCP(self):
+        """
+        TCP port descriptions parse their 'backlog' argument as an integer.
+        """
+        self.assertEquals(self.parse('tcp:80:backlog=6', self.f),
+                         ('TCP', (80, self.f),
+                                 {'interface':'', 'backlog':6}))
+
+
+    def test_simpleUNIX(self):
+        """
+        L{endpoints._parseServer} returns a C{'UNIX'} port description with
+        defaults for C{'mode'}, C{'backlog'}, and C{'wantPID'} when passed a
+        string with the C{'unix:'} prefix and no other parameter values.
+        """
+        self.assertEquals(
+            self.parse('unix:/var/run/finger', self.f),
+            ('UNIX', ('/var/run/finger', self.f),
+             {'mode': 0666, 'backlog': 50, 'wantPID': True}))
+
+
+    def test_modeUNIX(self):
+        """
+        C{mode} can be set by including C{"mode=<some integer>"}.
+        """
+        self.assertEquals(
+            self.parse('unix:/var/run/finger:mode=0660', self.f),
+            ('UNIX', ('/var/run/finger', self.f),
+             {'mode': 0660, 'backlog': 50, 'wantPID': True}))
+
+
+    def test_wantPIDUNIX(self):
+        """
+        C{wantPID} can be set to false by included C{"lockfile=0"}.
+        """
+        self.assertEquals(
+            self.parse('unix:/var/run/finger:lockfile=0', self.f),
+            ('UNIX', ('/var/run/finger', self.f),
+             {'mode': 0666, 'backlog': 50, 'wantPID': False}))
+
+
+    def test_escape(self):
+        """
+        Backslash can be used to escape colons and backslashes in port
+        descriptions.
+        """
+        self.assertEquals(
+            self.parse(r'unix:foo\:bar\=baz\:qux\\', self.f),
+            ('UNIX', ('foo:bar=baz:qux\\', self.f),
+             {'mode': 0666, 'backlog': 50, 'wantPID': True}))
+
+
+    def test_quoteStringArgument(self):
+        """
+        L{endpoints.quoteStringArgument} should quote backslashes and colons
+        for interpolation into L{endpoints.serverFromString} and
+        L{endpoints.clientFactory} arguments.
+        """
+        self.assertEquals(endpoints.quoteStringArgument("some : stuff \\"),
+                         "some \\: stuff \\\\")
+
+
+    def test_impliedEscape(self):
+        """
+        In strports descriptions, '=' in a parameter value does not need to be
+        quoted; it will simply be parsed as part of the value.
+        """
+        self.assertEquals(
+            self.parse(r'unix:address=foo=bar', self.f),
+            ('UNIX', ('foo=bar', self.f),
+             {'mode': 0666, 'backlog': 50, 'wantPID': True}))
+
+
+    def test_nonstandardDefault(self):
+        """
+        For compatibility with the old L{twisted.application.strports.parse},
+        the third 'mode' argument may be specified to L{endpoints.parse} to
+        indicate a default other than TCP.
+        """
+        self.assertEquals(
+            self.parse('filename', self.f, 'unix'),
+            ('UNIX', ('filename', self.f),
+             {'mode': 0666, 'backlog': 50, 'wantPID': True}))
+
+
+
+class ServerStringTests(unittest.TestCase):
+    """
+    Tests for L{twisted.internet.endpoints.serverFromString}.
+    """
+
+    def test_tcp(self):
+        """
+        When passed a TCP strports description, L{endpoints.serverFromString}
+        returns a L{TCP4ServerEndpoint} instance initialized with the values
+        from the string.
+        """
+        reactor = object()
+        server = endpoints.serverFromString(
+            reactor, "tcp:1234:backlog=12:interface=10.0.0.1")
+        self.assertIsInstance(server, endpoints.TCP4ServerEndpoint)
+        self.assertIdentical(server._reactor, reactor)
+        self.assertEquals(server._port, 1234)
+        self.assertEquals(server._backlog, 12)
+        self.assertEquals(server._interface, "10.0.0.1")
+
+
+    def test_ssl(self):
+        """
+        When passed an SSL strports description, L{endpoints.serverFromString}
+        returns a L{SSL4ServerEndpoint} instance initialized with the values
+        from the string.
+        """
+        reactor = object()
+        server = endpoints.serverFromString(
+            reactor,
+            "ssl:1234:backlog=12:privateKey=%s:"
+            "certKey=%s:interface=10.0.0.1" % (escapedPEMPathName,
+                                               escapedPEMPathName))
+        self.assertIsInstance(server, endpoints.SSL4ServerEndpoint)
+        self.assertIdentical(server._reactor, reactor)
+        self.assertEquals(server._port, 1234)
+        self.assertEquals(server._backlog, 12)
+        self.assertEquals(server._interface, "10.0.0.1")
+        ctx = server._sslContextFactory.getContext()
+        self.assertIsInstance(ctx, ContextType)
+
+    if skipSSL:
+        test_ssl.skip = skipSSL
+
+
+    def test_unix(self):
+        """
+        When passed a UNIX strports description, L{endpoint.serverFromString}
+        returns a L{UNIXServerEndpoint} instance initialized with the values
+        from the string.
+        """
+        reactor = object()
+        endpoint = endpoints.serverFromString(
+            reactor,
+            "unix:/var/foo/bar:backlog=7:mode=0123:lockfile=1")
+        self.assertIsInstance(endpoint, endpoints.UNIXServerEndpoint)
+        self.assertIdentical(endpoint._reactor, reactor)
+        self.assertEquals(endpoint._address, "/var/foo/bar")
+        self.assertEquals(endpoint._backlog, 7)
+        self.assertEquals(endpoint._mode, 0123)
+        self.assertEquals(endpoint._wantPID, True)
+
+
+    def test_implicitDefaultNotAllowed(self):
+        """
+        The older service-based API (L{twisted.internet.strports.service})
+        allowed an implicit default of 'tcp' so that TCP ports could be
+        specified as a simple integer, but we've since decided that's a bad
+        idea, and the new API does not accept an implicit default argument; you
+        have to say 'tcp:' now.  If you try passing an old implicit port number
+        to the new API, you'll get a C{ValueError}.
+        """
+        value = self.assertRaises(
+            ValueError, endpoints.serverFromString, None, "4321")
+        self.assertEquals(
+            str(value),
+            "Unqualified strport description passed to 'service'."
+            "Use qualified endpoint descriptions; for example, 'tcp:4321'.")
+
+
+    def test_unknownType(self):
+        """
+        L{endpoints.serverFromString} raises C{ValueError} when given an
+        unknown endpoint type.
+        """
+        value = self.assertRaises(
+            # faster-than-light communication not supported
+            ValueError, endpoints.serverFromString, None,
+            "ftl:andromeda/carcosa/hali/2387")
+        self.assertEquals(
+            str(value),
+            "Unknown endpoint type: 'ftl'")
+
+
+
+
+class ClientStringTests(unittest.TestCase):
+    """
+    Tests for L{twisted.internet.endpoints.clientFromString}.
+    """
+
+    def test_tcp(self):
+        """
+        When passed a TCP strports description, L{endpointClient} returns a
+        L{TCP4ClientEndpoint} instance initialized with the values from the
+        string.
+        """
+        reactor = object()
+        client = endpoints.clientFromString(
+            reactor,
+            "tcp:host=example.com:port=1234:timeout=7:bindAddress=10.0.0.2")
+        self.assertIsInstance(client, endpoints.TCP4ClientEndpoint)
+        self.assertIdentical(client._reactor, reactor)
+        self.assertEquals(client._host, "example.com")
+        self.assertEquals(client._port, 1234)
+        self.assertEquals(client._timeout, 7)
+        self.assertEquals(client._bindAddress, "10.0.0.2")
+
+
+    def test_tcpDefaults(self):
+        """
+        A TCP strports description may omit I{timeout} or I{bindAddress} to
+        allow the default to be used.
+        """
+        reactor = object()
+        client = endpoints.clientFromString(
+            reactor,
+            "tcp:host=example.com:port=1234")
+        self.assertEquals(client._timeout, 30)
+        self.assertEquals(client._bindAddress, None)
+
+
+    def test_unix(self):
+        """
+        When passed a UNIX strports description, L{endpointClient} returns a
+        L{UNIXClientEndpoint} instance initialized with the values from the
+        string.
+        """
+        reactor = object()
+        client = endpoints.clientFromString(
+            reactor,
+            "unix:path=/var/foo/bar:lockfile=1:timeout=9")
+        self.assertIsInstance(client, endpoints.UNIXClientEndpoint)
+        self.assertIdentical(client._reactor, reactor)
+        self.assertEquals(client._path, "/var/foo/bar")
+        self.assertEquals(client._timeout, 9)
+        self.assertEquals(client._checkPID, True)
+
+
+    def test_unixDefaults(self):
+        """
+        A UNIX strports description may omit I{lockfile} or I{timeout} to allow
+        the defaults to be used.
+        """
+        client = endpoints.clientFromString(object(), "unix:path=/var/foo/bar")
+        self.assertEquals(client._timeout, 30)
+        self.assertEquals(client._checkPID, False)
+
+
+class SSLClientStringTests(unittest.TestCase):
+    """
+    Tests for L{twisted.internet.endpoints.clientFromString} which require SSL.
+    """
+
+    if skipSSL:
+        skip = skipSSL
+
+    def test_ssl(self):
+        """
+        When passed an SSL strports description, L{clientFromString} returns a
+        L{SSL4ClientEndpoint} instance initialized with the values from the
+        string.
+        """
+        reactor = object()
+        client = endpoints.clientFromString(
+            reactor,
+            "ssl:host=example.net:port=4321:privateKey=%s:"
+            "certKey=%s:bindAddress=10.0.0.3:timeout=3:caCertsDir=%s" %
+             (escapedPEMPathName,
+              escapedPEMPathName,
+              escapedCAsPathName))
+        self.assertIsInstance(client, endpoints.SSL4ClientEndpoint)
+        self.assertIdentical(client._reactor, reactor)
+        self.assertEquals(client._host, "example.net")
+        self.assertEquals(client._port, 4321)
+        self.assertEquals(client._timeout, 3)
+        self.assertEquals(client._bindAddress, "10.0.0.3")
+        certOptions = client._sslContextFactory
+        self.assertIsInstance(certOptions, CertificateOptions)
+        ctx = certOptions.getContext()
+        self.assertIsInstance(ctx, ContextType)
+        self.assertEquals(Certificate(certOptions.certificate),
+                          testCertificate)
+        privateCert = PrivateCertificate(certOptions.certificate)
+        privateCert._setPrivateKey(KeyPair(certOptions.privateKey))
+        self.assertEquals(privateCert, testPrivateCertificate)
+        expectedCerts = [
+            Certificate.loadPEM(x.getContent()) for x in
+                [casPath.child("thing1.pem"), casPath.child("thing2.pem")]
+            if x.basename().lower().endswith('.pem')
+        ]
+        self.assertEquals([Certificate(x) for x in certOptions.caCerts],
+                          expectedCerts)
+
+
+    def test_unreadableCertificate(self):
+        """
+        If a certificate in the directory is unreadable,
+        L{endpoints._loadCAsFromDir} will ignore that certificate.
+        """
+        class UnreadableFilePath(FilePath):
+            def getContent(self):
+                data = FilePath.getContent(self)
+                # There is a duplicate of thing2.pem, so ignore anything that
+                # looks like it.
+                if data == casPath.child("thing2.pem").getContent():
+                    raise IOError(EPERM)
+                else:
+                    return data
+        casPathClone = casPath.child("ignored").parent()
+        casPathClone.clonePath = UnreadableFilePath
+        self.assertEquals(
+            [Certificate(x) for x in endpoints._loadCAsFromDir(casPathClone)],
+            [Certificate.loadPEM(casPath.child("thing1.pem").getContent())])
+
+
+    def test_sslSimple(self):
+        """
+        When passed an SSL strports description without any extra parameters,
+        L{clientFromString} returns a simple non-verifying endpoint that will
+        speak SSL.
+        """
+        reactor = object()
+        client = endpoints.clientFromString(
+            reactor, "ssl:host=simple.example.org:port=4321")
+        certOptions = client._sslContextFactory
+        self.assertIsInstance(certOptions, CertificateOptions)
+        self.assertEquals(certOptions.verify, False)
+        ctx = certOptions.getContext()
+        self.assertIsInstance(ctx, ContextType)

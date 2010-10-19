@@ -1,84 +1,129 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-#
+"""
+Tests for L{twisted.application.strports}.
+"""
+
+from twisted.trial.unittest import TestCase
 from twisted.application import strports
-from twisted.trial import unittest
+from twisted.application import internet
+from twisted.internet.test.test_endpoints import ParserTestCase
+from twisted.internet.protocol import Factory
+from twisted.internet.endpoints import TCP4ServerEndpoint, UNIXServerEndpoint
 
-class ParserTestCase(unittest.TestCase):
 
-    f = "Factory"
 
-    def testSimpleNumeric(self):
-        self.assertEqual(strports.parse('80', self.f),
+class DeprecatedParseTestCase(ParserTestCase):
+    """
+    L{strports.parse} is deprecated.  It's an alias for a method that is now
+    private in L{twisted.internet.endpoints}.
+    """
+
+    def parse(self, *a, **kw):
+        result = strports.parse(*a, **kw)
+        warnings = self.flushWarnings([self.parse])
+        self.assertEquals(len(warnings), 1)
+        self.assertEquals(
+            warnings[0]['message'],
+            "twisted.application.strports.parse was deprecated "
+            "in Twisted 10.2.0: in favor of twisted.internet.endpoints.serverFromString")
+        return result
+
+
+    def test_simpleNumeric(self):
+        """
+        Base numeric ports should be parsed as TCP.
+        """
+        self.assertEquals(self.parse('80', self.f),
                          ('TCP', (80, self.f), {'interface':'', 'backlog':50}))
 
-    def testSimpleTCP(self):
-        self.assertEqual(strports.parse('tcp:80', self.f),
+
+    def test_allKeywords(self):
+        """
+        A collection of keyword arguments with no prefixed type, like 'port=80',
+        will be parsed as keyword arguments to 'tcp'.
+        """
+        self.assertEquals(self.parse('port=80', self.f),
                          ('TCP', (80, self.f), {'interface':'', 'backlog':50}))
 
-    def testInterfaceTCP(self):
-        self.assertEqual(strports.parse('tcp:80:interface=127.0.0.1', self.f),
-                         ('TCP', (80, self.f),
-                                 {'interface':'127.0.0.1', 'backlog':50}))
-
-    def testBacklogTCP(self):
-        self.assertEqual(strports.parse('tcp:80:backlog=6', self.f),
-                         ('TCP', (80, self.f),
-                                 {'interface':'', 'backlog':6}))
 
 
-    def test_simpleUNIX(self):
+class ServiceTestCase(TestCase):
+    """
+    Tests for L{strports.service}.
+    """
+
+    def test_service(self):
         """
-        L{strports.parse} returns a C{'UNIX'} port description with defaults
-        for C{'mode'}, C{'backlog'}, and C{'wantPID'} when passed a string with
-        the C{'unix:'} prefix and no other parameter values.
+        L{strports.service} returns a L{StreamServerEndpointService}
+        constructed with an endpoint produced from
+        L{endpoint.serverFromString}, using the same syntax.
         """
-        self.assertEqual(
-            strports.parse('unix:/var/run/finger', self.f),
-            ('UNIX', ('/var/run/finger', self.f),
-             {'mode': 0666, 'backlog': 50, 'wantPID': True}))
+        reactor = object() # the cake is a lie
+        aFactory = Factory()
+        aGoodPort = 1337
+        svc = strports.service(
+            'tcp:'+str(aGoodPort), aFactory, reactor=reactor)
+        self.assertIsInstance(svc, internet.StreamServerEndpointService)
+        self.assertIsInstance(svc.endpoint, TCP4ServerEndpoint)
+        # Maybe we should implement equality for endpoints.
+        self.assertEquals(svc.endpoint._port, aGoodPort)
+        self.assertIdentical(svc.factory, aFactory)
+        self.assertIdentical(svc.endpoint._reactor, reactor)
 
 
-    def test_modeUNIX(self):
+    def test_serviceDefaultReactor(self):
         """
-        C{mode} can be set by including C{"mode=<some integer>"}.
+        L{strports.service} will use the default reactor when none is provided
+        as an argument.
         """
-        self.assertEqual(
-            strports.parse('unix:/var/run/finger:mode=0660', self.f),
-            ('UNIX', ('/var/run/finger', self.f),
-             {'mode': 0660, 'backlog': 50, 'wantPID': True}))
+        from twisted.internet import reactor as globalReactor
+        aService = strports.service("tcp:80", None)
+        self.assertIdentical(aService.endpoint._reactor, globalReactor)
 
 
-    def test_wantPIDUNIX(self):
+    def test_serviceDeprecatedDefault(self):
         """
-        C{wantPID} can be set to false by included C{"lockfile=0"}.
+        L{strports.service} still accepts a 'default' argument, which will
+        affect the parsing of 'default' (i.e. 'not containing a colon')
+        endpoint descriptions, but this behavior is deprecated.
         """
-        self.assertEqual(
-            strports.parse('unix:/var/run/finger:lockfile=0', self.f),
-            ('UNIX', ('/var/run/finger', self.f),
-             {'mode': 0666, 'backlog': 50, 'wantPID': False}))
+        svc = strports.service("8080", None, "unix")
+        self.assertIsInstance(svc.endpoint, UNIXServerEndpoint)
+        warnings = self.flushWarnings([self.test_serviceDeprecatedDefault])
+        self.assertEquals(warnings[0]['category'], DeprecationWarning)
+        self.assertEquals(
+            warnings[0]['message'],
+            "The 'default' parameter was deprecated in Twisted 10.2.0.  "
+            "Use qualified endpoint descriptions; for example, 'tcp:8080'.")
+        self.assertEquals(len(warnings), 1)
+
+        # Almost the same case, but slightly tricky - explicitly passing the old
+        # default value, None, also must trigger a deprecation warning.
+        svc = strports.service("tcp:8080", None, None)
+        self.assertIsInstance(svc.endpoint, TCP4ServerEndpoint)
+        warnings = self.flushWarnings([self.test_serviceDeprecatedDefault])
+        self.assertEquals(warnings[0]['category'], DeprecationWarning)
+        self.assertEquals(
+            warnings[0]['message'],
+            "The 'default' parameter was deprecated in Twisted 10.2.0.")
+        self.assertEquals(len(warnings), 1)
 
 
-    def testAllKeywords(self):
-        self.assertEqual(strports.parse('port=80', self.f),
-                         ('TCP', (80, self.f), {'interface':'', 'backlog':50}))
+    def test_serviceDeprecatedUnqualified(self):
+        """
+        Unqualified strport descriptions, i.e. "8080", are deprecated.
+        """
+        svc = strports.service("8080", None)
+        self.assertIsInstance(svc.endpoint, TCP4ServerEndpoint)
+        warnings = self.flushWarnings(
+            [self.test_serviceDeprecatedUnqualified])
+        self.assertEquals(warnings[0]['category'], DeprecationWarning)
+        self.assertEquals(
+            warnings[0]['message'],
+            "Unqualified strport description passed to 'service'."
+            "Use qualified endpoint descriptions; for example, 'tcp:8080'.")
+        self.assertEquals(len(warnings), 1)
 
-    def testEscape(self):
-        self.assertEqual(
-            strports.parse(r'unix:foo\:bar\=baz\:qux\\', self.f),
-            ('UNIX', ('foo:bar=baz:qux\\', self.f),
-             {'mode': 0666, 'backlog': 50, 'wantPID': True}))
 
-
-    def testImpliedEscape(self):
-        self.assertEqual(
-            strports.parse(r'unix:address=foo=bar', self.f),
-            ('UNIX', ('foo=bar', self.f),
-             {'mode': 0666, 'backlog': 50, 'wantPID': True}))
-
-    def testNonstandardDefault(self):
-        self.assertEqual(
-            strports.parse('filename', self.f, 'unix'),
-            ('UNIX', ('filename', self.f),
-             {'mode': 0666, 'backlog': 50, 'wantPID': True}))

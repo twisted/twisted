@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_application,twisted.test.test_cooperator -*-
+# -*- test-case-name: twisted.application.test.test_internet,twisted.test.test_application,twisted.test.test_cooperator -*-
 # Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -8,8 +8,15 @@ Reactor-based Services
 Here are services to run clients, servers and periodic services using
 the reactor.
 
-This module (dynamically) defines various Service subclasses that let
-you represent clients and servers in a Service hierarchy.
+If you want to run a server service, L{StreamServerEndpointService} defines a
+service that can wrap an arbitrary L{IStreamServerEndpoint} as an L{IService}.
+See also L{twisted.internet.strports.service} for constructing one of these
+directly from a descriptive string.
+
+Additionally, this module (dynamically) defines various Service subclasses that
+let you represent clients and servers in a Service hierarchy.  Endpoints APIs
+should be preferred for stream server services, but since those APIs do not yet
+exist for clients or datagram services, many of these are still useful.
 
 They are as follows::
 
@@ -27,8 +34,6 @@ reactor.connectXXX calls.
 For example, the following service starts a web server on port 8080:
 C{TCPServer(8080, server.Site(r))}.  See the documentation for the
 reactor.listen/connect* methods for more information.
-
-Maintainer: Moshe Zadka
 """
 
 import warnings
@@ -37,6 +42,7 @@ from twisted.python import log
 from twisted.application import service
 from twisted.internet import task
 
+from twisted.internet.defer import AlreadyCalledError, CancelledError
 
 class _VolatileDataService(service.Service):
 
@@ -308,7 +314,74 @@ class CooperatorService(service.Service):
 
 
 
-__all__ = (['TimerService', 'CooperatorService', 'MulticastServer'] +
+class StreamServerEndpointService(service.Service):
+    """
+    A L{StreamServerEndpointService} is an L{IService} which runs a server on a
+    listening port described by an L{IStreamServerEndpoint}.
+
+    @ivar factory: A server factory which will be used to listen on the
+        endpoint.
+
+    @ivar endpoint: An L{IStreamServerEndpoint} provider which will be used to
+        listen when the service starts.
+
+    @ivar _waitingForPort: a Deferred, if C{listen} has yet been invoked on the
+        endpoint, otherwise None.
+
+    @since: 10.2
+    """
+
+
+    def __init__(self, endpoint, factory):
+        self.endpoint = endpoint
+        self.factory = factory
+        self._waitingForPort = None
+
+
+    def privilegedStartService(self):
+        """
+        Start listening on the endpoint.
+        """
+        service.Service.privilegedStartService(self)
+        self._waitingForPort = self.endpoint.listen(self.factory)
+
+
+    def startService(self):
+        """
+        Start listening on the endpoint, unless L{privilegedStartService} got
+        around to it already.
+        """
+        service.Service.startService(self)
+        if self._waitingForPort is None:
+            self.privilegedStartService()
+
+
+    def stopService(self):
+        """
+        Stop listening on the port if it is already listening, otherwise,
+        cancel the attempt to listen.
+
+        @return: a L{Deferred} which fires when the port has stopped listening.
+        """
+        try:
+            self._waitingForPort.cancel()
+        except AlreadyCalledError:
+            pass
+        def stopIt(port):
+            return port.stopListening()
+        def ignoreCancel(reason):
+            reason.trap(CancelledError)
+        d = self._waitingForPort.addCallbacks(stopIt, ignoreCancel)
+        def stop(passthrough):
+            self.running = False
+            return passthrough
+        d.addBoth(stop)
+        return d
+
+
+
+__all__ = (['TimerService', 'CooperatorService', 'MulticastServer',
+            'StreamServerEndpointService'] +
            [tran+side
             for tran in 'Generic TCP UNIX SSL UDP UNIXDatagram'.split()
             for side in 'Server Client'.split()])

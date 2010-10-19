@@ -25,7 +25,7 @@ if Crypto and pyasn1 and unix:
     from twisted.conch.openssh_compat.factory import OpenSSHFactory
 
 from twisted.python.compat import set
-from twisted.application.internet import TCPServer
+from twisted.application.internet import StreamServerEndpointService
 from twisted.cred.credentials import IPluggableAuthenticationModules
 from twisted.cred.credentials import ISSHPrivateKey
 from twisted.cred.credentials import IUsernamePassword
@@ -50,15 +50,15 @@ class MakeServiceTest(TestCase):
 
     def test_basic(self):
         """
-        L{tap.makeService} returns a L{TCPServer} instance running on port 22,
-        and the linked protocol factory is an instance of L{OpenSSHFactory}.
+        L{tap.makeService} returns a L{StreamServerEndpointService} instance
+        running on TCP port 22, and the linked protocol factory is an instance
+        of L{OpenSSHFactory}.
         """
         config = tap.Options()
         service = tap.makeService(config)
-        self.assertIsInstance(service, TCPServer)
-        self.assertEquals(service.args[0], 22)
-        factory = service.args[1]
-        self.assertIsInstance(factory, OpenSSHFactory)
+        self.assertIsInstance(service, StreamServerEndpointService)
+        self.assertEquals(service.endpoint._port, 22)
+        self.assertIsInstance(service.factory, OpenSSHFactory)
 
 
     def test_checkersPamAuth(self):
@@ -72,7 +72,7 @@ class MakeServiceTest(TestCase):
         self.patch(tap, "pamauth", object())
         config = tap.Options()
         service = tap.makeService(config)
-        portal = service.args[1].portal
+        portal = service.factory.portal
         self.assertEquals(
             set(portal.checkers.keys()),
             set([IPluggableAuthenticationModules, ISSHPrivateKey,
@@ -89,7 +89,7 @@ class MakeServiceTest(TestCase):
         self.patch(tap, "pamauth", None)
         config = tap.Options()
         service = tap.makeService(config)
-        portal = service.args[1].portal
+        portal = service.factory.portal
         self.assertEquals(
             set(portal.checkers.keys()),
             set([ISSHPrivateKey, IUsernamePassword]))
