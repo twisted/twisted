@@ -957,7 +957,7 @@ class FilePath(_PathHelper):
         Therefore, _statinfo is now a private attribute, and statinfo is a
         property that emits a deprecation warning and returns _statinfo
 
-        @return _statinfo
+        @return: _statinfo
         """
 
         warnings.warn("twisted.python.filepath.statinfo was deprecated in "
