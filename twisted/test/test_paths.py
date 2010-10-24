@@ -1299,6 +1299,19 @@ class FilePathTestCase(AbstractFilePathTestCase):
         self.assertEquals(fp.getsize(), 8)
 
 
+    def test_deprecateStatinfo(self):
+        fp = filepath.FilePath(self.mktemp())
+        fp.statinfo
+        warnings = self.flushWarnings([self.test_deprecateStatinfo])
+        self.assertEquals(len(warnings), 1)
+        self.assertEquals(warnings[0]['category'], DeprecationWarning)
+        self.assertEquals(
+            warnings[0]['message'],
+            "twisted.python.filepath.statinfo was deprecated in "
+            "Twisted 10.2.0: use other FilePath methods such as getsize(), "
+            "isdir(), getModificationTime(), etc. instead")
+
+
 
 from twisted.python import urlpath
 

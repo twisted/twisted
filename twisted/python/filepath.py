@@ -10,6 +10,7 @@ import os
 import errno
 import random
 import base64
+import warnings
 
 from os.path import isabs, exists, normpath, abspath, splitext
 from os.path import basename, dirname
@@ -29,6 +30,7 @@ from twisted.python.hashlib import sha1
 from twisted.python.win32 import ERROR_FILE_NOT_FOUND, ERROR_PATH_NOT_FOUND
 from twisted.python.win32 import ERROR_INVALID_NAME, ERROR_DIRECTORY, O_BINARY
 from twisted.python.win32 import WindowsError
+
 
 _CREATE_FLAGS = (os.O_EXCL |
                  os.O_CREAT |
@@ -360,7 +362,9 @@ class FilePath(_PathHelper):
     @type path: C{str}
     @ivar path: The path from which 'downward' traversal is permitted.
 
-    @ivar statinfo: The currently cached status information about the file on
+    @ivar statinfo: (WARNING: statinfo is deprecated as of Twisted 10.2.0 and
+        will become a private attribute)
+        The currently cached status information about the file on
         the filesystem that this L{FilePath} points to.  This attribute is
         C{None} if the file is in an indeterminate state (either this
         L{FilePath} has not yet had cause to call C{stat()} yet or
@@ -375,7 +379,8 @@ class FilePath(_PathHelper):
     @type statinfo: C{int} or L{types.NoneType} or L{os.stat_result}
     """
 
-    statinfo = None
+
+    _statinfo = None
     path = None
 
     def __init__(self, path, alwaysCreate=False):
@@ -384,8 +389,8 @@ class FilePath(_PathHelper):
 
     def __getstate__(self):
         d = self.__dict__.copy()
-        if d.has_key('statinfo'):
-            del d['statinfo']
+        if d.has_key('_statinfo'):
+            del d['_statinfo']
         return d
 
     def child(self, path):
@@ -530,9 +535,9 @@ class FilePath(_PathHelper):
         cached stat information.
         """
         try:
-            self.statinfo = stat(self.path)
+            self._statinfo = stat(self.path)
         except OSError:
-            self.statinfo = 0
+            self._statinfo = 0
             if reraise:
                 raise
 
@@ -543,7 +548,7 @@ class FilePath(_PathHelper):
 
         @since: 10.1.0
         """
-        self.statinfo = None
+        self._statinfo = None
 
 
     def chmod(self, mode):
@@ -559,10 +564,10 @@ class FilePath(_PathHelper):
 
 
     def getsize(self):
-        st = self.statinfo
+        st = self._statinfo
         if not st:
             self.restat()
-            st = self.statinfo
+            st = self._statinfo
         return st.st_size
 
 
@@ -573,10 +578,10 @@ class FilePath(_PathHelper):
         @return: a number of seconds from the epoch.
         @rtype: float
         """
-        st = self.statinfo
+        st = self._statinfo
         if not st:
             self.restat()
-            st = self.statinfo
+            st = self._statinfo
         return float(st.st_mtime)
 
 
@@ -587,10 +592,10 @@ class FilePath(_PathHelper):
         @return: a number of seconds from the epoch.
         @rtype: float
         """
-        st = self.statinfo
+        st = self._statinfo
         if not st:
             self.restat()
-            st = self.statinfo
+            st = self._statinfo
         return float(st.st_ctime)
 
 
@@ -601,10 +606,10 @@ class FilePath(_PathHelper):
         @return: a number of seconds from the epoch.
         @rtype: float
         """
-        st = self.statinfo
+        st = self._statinfo
         if not st:
             self.restat()
-            st = self.statinfo
+            st = self._statinfo
         return float(st.st_atime)
 
 
@@ -616,30 +621,30 @@ class FilePath(_PathHelper):
             C{False} in the other cases.
         @rtype: C{bool}
         """
-        if self.statinfo:
+        if self._statinfo:
             return True
         else:
             self.restat(False)
-            if self.statinfo:
+            if self._statinfo:
                 return True
             else:
                 return False
 
 
     def isdir(self):
-        st = self.statinfo
+        st = self._statinfo
         if not st:
             self.restat(False)
-            st = self.statinfo
+            st = self._statinfo
             if not st:
                 return False
         return S_ISDIR(st.st_mode)
 
     def isfile(self):
-        st = self.statinfo
+        st = self._statinfo
         if not st:
             self.restat(False)
-            st = self.statinfo
+            st = self._statinfo
             if not st:
                 return False
         return S_ISREG(st.st_mode)
@@ -942,6 +947,26 @@ class FilePath(_PathHelper):
         else:
             self.changed()
             destination.changed()
+
+
+    @property
+    def statinfo(self):
+        """
+        FilePath.statinfo is deprecated, but there is no API in
+        twisted.python.deprecate to deprecate an instance attribute.
+        Therefore, _statinfo is now a private attribute, and statinfo is a
+        property that emits a deprecation warning and returns _statinfo
+
+        @return _statinfo
+        """
+
+        warnings.warn("twisted.python.filepath.statinfo was deprecated in "
+            "Twisted 10.2.0: use other FilePath methods such as getsize(), "
+            "isdir(), getModificationTime(), etc. instead",
+            DeprecationWarning, stacklevel=2)
+
+        return self._statinfo
+
 
 
 FilePath.clonePath = FilePath
