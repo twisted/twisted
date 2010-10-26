@@ -1,5 +1,5 @@
-# -*- test-case-name: twisted.python.threadable -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# -*- test-case-name: twisted.python.test_threadable -*-
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -10,7 +10,7 @@ unimplemented.  The idea is to abstract away some commonly used
 functionality so that I don't have to special-case it in all programs.
 """
 
-import warnings
+
 
 from twisted.python import hook
 
@@ -91,6 +91,7 @@ def isInIOThread():
     return ioThread == getThreadID()
 
 
+
 def registerAsIOThread():
     """Mark the current thread as responsable for I/O requests.
     """
@@ -101,11 +102,7 @@ def registerAsIOThread():
 ioThread = None
 threaded = False
 
-def whenThreaded(cb):
-    warnings.warn("threadable.whenThreaded is deprecated. "
-                  "Use application-level logic instead.",
-                  DeprecationWarning, stacklevel=2)
-    cb()
+
 
 try:
     import thread as threadmodule
@@ -116,5 +113,6 @@ except ImportError:
 else:
     init(True)
 
-__all__ = ['isInIOThread', 'registerAsIOThread', 'getThreadID', 'XLock',
-           'whenThreaded']
+
+
+__all__ = ['isInIOThread', 'registerAsIOThread', 'getThreadID', 'XLock']
