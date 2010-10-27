@@ -7,7 +7,6 @@ Simple Mail Transfer Protocol implementation.
 """
 
 import time, re, base64, types, socket, os, random, rfc822
-import warnings
 import binascii
 from email.base64MIME import encode as encode_base64
 
@@ -25,8 +24,6 @@ from twisted.python import log
 from twisted.python import util
 
 from twisted import cred
-import twisted.cred.checkers
-import twisted.cred.credentials
 from twisted.python.runtime import platform
 
 try:
@@ -1400,7 +1397,7 @@ class ESMTPClient(SMTPClient):
         self._failresponse = self.esmtpAUTHDeclined
         try:
             challenge = base64.decodestring(challenge)
-        except binascii.Error, e:
+        except binascii.Error:
             # Illegal challenge, give up, then quit
             self.sendLine('*')
             self._okresponse = self.esmtpAUTHMalformedChallenge
@@ -1872,96 +1869,7 @@ def sendmail(smtphost, from_addr, to_addrs, msg, senderDomainName=None, port=25)
 
     return d
 
-def sendEmail(smtphost, fromEmail, toEmail, content, headers = None, attachments = None, multipartbody = "mixed"):
-    """Send an email, optionally with attachments.
 
-    @type smtphost: str
-    @param smtphost: hostname of SMTP server to which to connect
-
-    @type fromEmail: str
-    @param fromEmail: email address to indicate this email is from
-
-    @type toEmail: str
-    @param toEmail: email address to which to send this email
-
-    @type content: str
-    @param content: The body if this email.
-
-    @type headers: dict
-    @param headers: Dictionary of headers to include in the email
-
-    @type attachments: list of 3-tuples
-    @param attachments: Each 3-tuple should consist of the name of the
-      attachment, the mime-type of the attachment, and a string that is
-      the attachment itself.
-
-    @type multipartbody: str
-    @param multipartbody: The type of MIME multi-part body.  Generally
-      either "mixed" (as in text and images) or "alternative" (html email
-      with a fallback to text/plain).
-
-    @rtype: Deferred
-    @return: The returned Deferred has its callback or errback invoked when
-      the mail is successfully sent or when an error occurs, respectively.
-    """
-    warnings.warn("smtp.sendEmail may go away in the future.\n"
-                  "  Consider revising your code to use the email module\n"
-                  "  and smtp.sendmail.",
-                  category=DeprecationWarning, stacklevel=2)
-    import MimeWriter, tempfile
-    f = tempfile.TemporaryFile()
-    writer = MimeWriter.MimeWriter(f)
-
-    writer.addheader("Mime-Version", "1.0")
-    if headers:
-        # Setup the mail headers
-        for (header, value) in headers.items():
-            writer.addheader(header, value)
-
-        headkeys = [k.lower() for k in headers.keys()]
-    else:
-        headkeys = ()
-
-    # Add required headers if not present
-    if "message-id" not in headkeys:
-        writer.addheader("Message-ID", messageid())
-    if "date" not in headkeys:
-        writer.addheader("Date", rfc822date())
-    if "from" not in headkeys and "sender" not in headkeys:
-        writer.addheader("From", fromEmail)
-    if "to" not in headkeys and "cc" not in headkeys and "bcc" not in headkeys:
-        writer.addheader("To", toEmail)
-
-    writer.startmultipartbody(multipartbody)
-
-    # message body
-    part = writer.nextpart()
-    body = part.startbody("text/plain")
-    body.write(content)
-
-    if attachments is not None:
-        # add attachments
-        for (file, mime, attachment) in attachments:
-            part = writer.nextpart()
-            if mime.startswith('text'):
-                encoding = "7bit"
-            else:
-                attachment = base64.encodestring(attachment)
-                encoding = "base64"
-            part.addheader("Content-Transfer-Encoding", encoding)
-            body = part.startbody("%s; name=%s" % (mime, file))
-            body.write(attachment)
-
-    # finish
-    writer.lastpart()
-
-    # send message
-    f.seek(0, 0)
-    d = defer.Deferred()
-    factory = SMTPSenderFactory(fromEmail, toEmail, f, d)
-    reactor.connectTCP(smtphost, 25, factory)
-
-    return d
 
 ##
 ## Yerg.  Codecs!
