@@ -1,0 +1,2 @@
+twisted.protocols.basic.SafeNetstringReceiver, deprecated since 2001
+(before Twisted 2.0), was removed.

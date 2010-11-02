@@ -419,13 +419,6 @@ class NetstringReceiver(protocol.Protocol):
 
 
 
-class SafeNetstringReceiver(NetstringReceiver):
-    """
-    This class is deprecated, use NetstringReceiver instead.
-    """
-
-
-
 class LineOnlyReceiver(protocol.Protocol):
     """
     A protocol that receives only lines.
