@@ -530,7 +530,7 @@ def getPage(url, contextFactory=None, *args, **kwargs):
     Download a page. Return a deferred, which will callback with a
     page (as a string) or errback with a description of the error.
 
-    See HTTPClientFactory to see what extra args can be passed.
+    See L{HTTPClientFactory} to see what extra arguments can be passed.
     """
     return _makeGetterFactory(
         url,
