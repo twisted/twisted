@@ -66,7 +66,10 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
         """
         reactor, fd, server = self._simpleSetup()
 
-        fd.doRead = reactor.stop
+        def removeAndStop():
+            reactor.removeReader(fd)
+            reactor.stop()
+        fd.doRead = removeAndStop
         reactor.addReader(fd)
         server.sendall('x')
 
@@ -107,7 +110,10 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
         """
         reactor, fd, server = self._simpleSetup()
 
-        fd.doWrite = reactor.stop
+        def removeAndStop():
+            reactor.removeWriter(fd)
+            reactor.stop()
+        fd.doWrite = removeAndStop
         reactor.addWriter(fd)
 
         self.runReactor(reactor)

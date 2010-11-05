@@ -364,7 +364,7 @@ class _ThreePhaseEvent(object):
         """
         try:
             phase, callable, args, kwargs = handle
-        except (TypeError, ValueError), e:
+        except (TypeError, ValueError):
             raise ValueError("invalid trigger handle")
         else:
             if phase not in ('before', 'during', 'after'):

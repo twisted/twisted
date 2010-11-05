@@ -1,342 +1,502 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# -*- test-case-name: twisted.internet.test.test_core -*-
+# Copyright (c) 2010 Twisted Matrix Laboratories
 # See LICENSE for details.
 
-
 """
-This module provides support for Twisted to interact with CoreFoundation
-CFRunLoops.  This includes Cocoa's NSRunLoop.
+A reactor for integrating with U{CFRunLoop<http://bit.ly/cfrunloop>}, the
+CoreFoundation main loop used by MacOS X.
 
-In order to use this support, simply do the following::
-
-    |  from twisted.internet import cfreactor
-    |  cfreactor.install()
-
-Then use the twisted.internet APIs as usual.  The other methods here are not
-intended to be called directly under normal use.  However, install can take
-a runLoop kwarg, and run will take a withRunLoop arg if you need to explicitly
-pass a CFRunLoop for some reason.  Otherwise it will make a pretty good guess
-as to which runLoop you want (the current NSRunLoop if PyObjC is imported,
-otherwise the current CFRunLoop.  Either way, if one doesn't exist, it will
-be created).
-
-Maintainer: Bob Ippolito
+This is useful for integrating Twisted with U{PyObjC<http://pyobjc.sf.net/>}
+applications.
 """
 
-__all__ = ['install']
+__all__ = [
+    'install',
+    'CFReactor'
+]
 
 import sys
 
-# hints for py2app
-import Carbon.CF
-import traceback
-
-import cfsupport as cf
-
 from zope.interface import implements
 
-from twisted.python import log, threadable, failure
 from twisted.internet.interfaces import IReactorFDSet
-from twisted.internet import posixbase, error
-from weakref import WeakKeyDictionary
-from Foundation import NSRunLoop
-from AppKit import NSApp
+from twisted.internet.posixbase import PosixReactorBase, _Waker
+from twisted.internet.selectreactor import _NO_FILENO, _NO_FILEDESC
 
-# cache two extremely common "failures" without traceback info
-_faildict = {
-    error.ConnectionDone: failure.Failure(error.ConnectionDone()),
-    error.ConnectionLost: failure.Failure(error.ConnectionLost()),
-}
+from twisted.python import log
 
-class SelectableSocketWrapper(object):
-    _objCache = WeakKeyDictionary()
+from CoreFoundation import (
+    CFRunLoopAddSource, CFRunLoopRemoveSource, CFRunLoopGetMain, CFRunLoopRun,
+    CFRunLoopStop, CFRunLoopTimerCreate, CFRunLoopAddTimer,
+    CFRunLoopTimerInvalidate, kCFAllocatorDefault, kCFRunLoopCommonModes,
+    CFAbsoluteTimeGetCurrent)
 
-    cf = None
-    def socketWrapperForReactorAndObject(klass, reactor, obj):
-        _objCache = klass._objCache
-        if obj in _objCache:
-            return _objCache[obj]
-        v = _objCache[obj] = klass(reactor, obj)
-        return v
-    socketWrapperForReactorAndObject = classmethod(socketWrapperForReactorAndObject)
-        
-    def __init__(self, reactor, obj):
-        if self.cf:
-            raise ValueError, "This socket wrapper is already initialized"
-        self.reactor = reactor
-        self.obj = obj
-        obj._orig_ssw_connectionLost = obj.connectionLost
-        obj.connectionLost = self.objConnectionLost
-        self.fd = obj.fileno()
-        self.writing = False
-        self.reading = False
-        self.wouldRead = False
-        self.wouldWrite = False
-        self.cf = cf.PyCFSocket(obj.fileno(), self.doRead, self.doWrite, self.doConnect)
-        self.cf.stopWriting()
-        reactor.getRunLoop().addSocket(self.cf)
-       
-    def __repr__(self):
-        return 'SSW(fd=%r r=%r w=%r x=%08x o=%08x)' % (self.fd, int(self.reading), int(self.writing), id(self), id(self.obj))
+from CFNetwork import (
+    CFSocketCreateWithNative, CFSocketSetSocketFlags, CFSocketEnableCallBacks,
+    CFSocketCreateRunLoopSource, CFSocketDisableCallBacks, CFSocketInvalidate,
+    kCFSocketWriteCallBack, kCFSocketReadCallBack, kCFSocketConnectCallBack,
+    kCFSocketAutomaticallyReenableReadCallBack,
+    kCFSocketAutomaticallyReenableWriteCallBack)
 
-    def objConnectionLost(self, *args, **kwargs):
-        obj = self.obj
-        self.reactor.removeReader(obj)
-        self.reactor.removeWriter(obj)
-        obj.connectionLost = obj._orig_ssw_connectionLost
-        obj.connectionLost(*args, **kwargs)
-        try:
-            del self._objCache[obj]
-        except:
-            pass
-        self.obj = None
-        self.cf = None
 
-    def doConnect(self, why):
-        pass
+_READ = 0
+_WRITE = 1
+_preserveSOError = 1 << 6
 
-    def startReading(self):
-        self.cf.startReading()
-        self.reading = True
-        if self.wouldRead:
-            if not self.reactor.running:
-                self.reactor.callLater(0, self.doRead)
-            else:
-                self.doRead()
-            self.wouldRead = False
-        return self
 
-    def stopReading(self):
-        self.cf.stopReading()
-        self.reading = False
-        self.wouldRead = False
-        return self
+class _WakerPlus(_Waker):
+    """
+    The normal Twisted waker will simply wake up the main loop, which causes an
+    iteration to run, which in turn causes L{PosixReactorBase.runUntilCurrent}
+    to get invoked.
 
-    def startWriting(self):
-        self.cf.startWriting()
-        self.writing = True
-        if self.wouldWrite:
-            if not self.reactor.running:
-                self.reactor.callLater(0, self.doWrite)
-            else:
-                self.doWrite()
-            self.wouldWrite = False
-        return self
+    L{CFReactor} has a slightly different model of iteration, though: rather
+    than have each iteration process the thread queue, then timed calls, then
+    file descriptors, each callback is run as it is dispatched by the CFRunLoop
+    observer which triggered it.
 
-    def stopWriting(self):
-        self.cf.stopWriting()
-        self.writing = False
-        self.wouldWrite = False
-    
-    def _finishReadOrWrite(self, fn, faildict=_faildict):
-        try:
-            why = fn()
-        except:
-            why = sys.exc_info()[1]
-            log.err()
-        if why:
-            try:
-                f = faildict.get(why.__class__) or failure.Failure(why)
-                self.objConnectionLost(f)
-            except:
-                log.err()
-        if self.reactor.running:
-            self.reactor.simulate()
+    So this waker needs to not only unblock the loop, but also make sure the
+    work gets done; so, it reschedules the invocation of C{runUntilCurrent} to
+    be immediate (0 seconds from now) even if there is no timed call work to
+    do.
+    """
 
     def doRead(self):
-        obj = self.obj
-        if not obj:
-            return
-        if not self.reading:
-            self.wouldRead = True
-            if self.reactor.running:
-                self.reactor.simulate()
-            return
-        self._finishReadOrWrite(obj.doRead)
+        """
+        Wake up the loop and force C{runUntilCurrent} to run immediately in the
+        next timed iteration.
+        """
+        result = _Waker.doRead(self)
+        self.reactor._scheduleSimulate(True)
+        return result
 
-    def doWrite(self):
-        obj = self.obj
-        if not obj:
-            return
-        if not self.writing:
-            self.wouldWrite = True
-            if self.reactor.running:
-                self.reactor.simulate()
-            return
-        self._finishReadOrWrite(obj.doWrite)
- 
-    def __hash__(self):
-        return hash(self.fd)
 
-class CFReactor(posixbase.PosixReactorBase):
+
+class CFReactor(PosixReactorBase):
+    """
+    The CoreFoundation reactor.
+
+    You probably want to use this via the L{install} API.
+
+    @ivar _fdmap: a dictionary, mapping an integer (a file descriptor) to a
+        4-tuple of:
+
+            - source: a C{CFRunLoopSource}; the source associated with this
+              socket.
+            - socket: a C{CFSocket} wrapping the file descriptor.
+            - descriptor: an L{IReadDescriptor} and/or L{IWriteDescriptor}
+              provider.
+            - read-write: a 2-C{list} of booleans: respectively, whether this
+              descriptor is currently registered for reading or registered for
+              writing.
+
+    @ivar _idmap: a dictionary, mapping the id() of an L{IReadDescriptor} or
+        L{IWriteDescriptor} to a C{fd} in L{_fdmap}.  Implemented in this
+        manner so that we don't have to rely (even more) on the hashability of
+        L{IReadDescriptor} providers, and we know that they won't be collected
+        since these are kept in sync with C{_fdmap}.  Necessary because the
+        .fileno() of a file descriptor may change at will, so we need to be
+        able to look up what its file descriptor I{used} to be, so that we can
+        look it up in C{_fdmap}
+
+    @ivar _cfrunloop: the L{CFRunLoop} pyobjc object wrapped by this reactor.
+
+    @ivar _inCFLoop: Is L{CFRunLoopRun} currently running?
+
+    @type _inCFLoop: C{bool}
+
+    @ivar _currentSimulator: if a CFTimer is currently scheduled with the CF
+        run loop to run Twisted callLater calls, this is a reference to it.
+        Otherwise, it is C{None}
+    """
+
     implements(IReactorFDSet)
-    # how long to poll if we're don't care about signals
-    longIntervalOfTime = 60.0 
 
-    # how long we should poll if we do care about signals
-    shortIntervalOfTime = 1.0
+    def __init__(self, runLoop=None, runner=None):
+        self._fdmap = {}
+        self._idmap = {}
+        if runner is None:
+            runner = CFRunLoopRun
+        self._runner = runner
 
-    # don't set this
-    pollInterval = longIntervalOfTime
+        if runLoop is None:
+            runLoop = CFRunLoopGetMain()
+        self._cfrunloop = runLoop
+        PosixReactorBase.__init__(self)
 
-    def __init__(self, runLoop=None):
-        self.readers = {}
-        self.writers = {}
-        self.running = 0
-        self.crashing = False
-        self._doRunUntilCurrent = True
-        self.timer = None
-        self.runLoop = None
-        self.nsRunLoop = None
-        self.didStartRunLoop = False
-        if runLoop is not None:
-            self.getRunLoop(runLoop)
-        posixbase.PosixReactorBase.__init__(self)
 
-    def getRunLoop(self, runLoop=None):
-        if self.runLoop is None:
-            self.nsRunLoop = runLoop or NSRunLoop.currentRunLoop()
-            self.runLoop = cf.PyCFRunLoop(self.nsRunLoop.getCFRunLoop())
-        return self.runLoop
-    
+    def installWaker(self):
+        """
+        Override C{installWaker} in order to use L{_WakerPlus}; otherwise this
+        should be exactly the same as the parent implementation.
+        """
+        if not self.waker:
+            self.waker = _WakerPlus(self)
+            self._internalReaders.add(self.waker)
+            self.addReader(self.waker)
+
+
+    def _socketCallback(self, cfSocket, callbackType,
+                        ignoredAddress, ignoredData, context):
+        """
+        The socket callback issued by CFRunLoop.  This will issue C{doRead} or
+        C{doWrite} calls to the L{IReadDescriptor} and L{IWriteDescriptor}
+        registered with the file descriptor that we are being notified of.
+
+        @param cfSocket: The L{CFSocket} which has got some activity.
+
+        @param callbackType: The type of activity that we are being notified
+            of.  Either L{kCFSocketReadCallBack} or L{kCFSocketWriteCallBack}.
+
+        @param ignoredAddress: Unused, because this is not used for either of
+            the callback types we register for.
+
+        @param ignoredData: Unused, because this is not used for either of the
+            callback types we register for.
+
+        @param context: The data associated with this callback by
+            L{CFSocketCreateWithNative} (in L{CFReactor._watchFD}).  A 2-tuple
+            of C{(int, CFRunLoopSource)}.
+        """
+        (fd, smugglesrc) = context
+        if fd not in self._fdmap:
+            # Spurious notifications seem to be generated sometimes if you
+            # CFSocketDisableCallBacks in the middle of an event.  I don't know
+            # about this FD, any more, so let's get rid of it.
+            CFRunLoopRemoveSource(
+                self._cfrunloop, smugglesrc, kCFRunLoopCommonModes
+            )
+            return
+        try:
+            src, skt, readWriteDescriptor, rw = self._fdmap[fd]
+            why = None
+            isRead = callbackType == kCFSocketReadCallBack
+            try:
+                # CFSocket seems to deliver duplicate read/write notifications
+                # sometimes, especially a duplicate writability notification
+                # when first registering the socket.  This bears further
+                # investigation, since I may have been mis-interpreting the
+                # behavior I was seeing. (Running the full Twisted test suite,
+                # while thorough, is not always entirely clear.) Until this has
+                # been more thoroughly investigated , we consult our own
+                # reading/writing state flags to determine whether we should
+                # actually attempt a doRead/doWrite first.  -glyph
+                if isRead:
+                    if rw[_READ]:
+                        why = readWriteDescriptor.doRead()
+                else:
+                    if rw[_WRITE]:
+                        why = readWriteDescriptor.doWrite()
+            except:
+                why = sys.exc_info()[1]
+                log.err()
+            handfn = getattr(readWriteDescriptor, 'fileno', None)
+            if handfn is None:
+                why = _NO_FILENO
+            elif handfn() == -1:
+                why = _NO_FILEDESC
+            if why:
+                self._disconnectSelectable(readWriteDescriptor, why, isRead)
+        except:
+            log.err()
+
+
+    def _watchFD(self, fd, descr, flag):
+        """
+        Register a file descriptor with the L{CFRunLoop}, or modify its state
+        so that it's listening for both notifications (read and write) rather
+        than just one; used to implement C{addReader} and C{addWriter}.
+
+        @param fd: The file descriptor.
+
+        @type fd: C{int}
+
+        @param descr: the L{IReadDescriptor} or L{IWriteDescriptor}
+
+        @param flag: the flag to register for callbacks on, either
+            L{kCFSocketReadCallBack} or L{kCFSocketWriteCallBack}
+        """
+        if fd == -1:
+            raise RuntimeError("Invalid file descriptor.")
+        if fd in self._fdmap:
+            src, cfs, gotdescr, rw = self._fdmap[fd]
+            # do I need to verify that it's the same descr?
+        else:
+            ctx = []
+            ctx.append(fd)
+            cfs = CFSocketCreateWithNative(
+                kCFAllocatorDefault, fd,
+                kCFSocketReadCallBack | kCFSocketWriteCallBack |
+                kCFSocketConnectCallBack,
+                self._socketCallback, ctx
+            )
+            CFSocketSetSocketFlags(
+                cfs,
+                kCFSocketAutomaticallyReenableReadCallBack |
+                kCFSocketAutomaticallyReenableWriteCallBack |
+
+                # This extra flag is to ensure that CF doesn't (destructively,
+                # because destructively is the only way to do it) retrieve
+                # SO_ERROR and thereby break twisted.internet.tcp.BaseClient,
+                # which needs SO_ERROR to tell it whether or not it needs to
+                # call connect_ex a second time.
+                _preserveSOError
+            )
+            src = CFSocketCreateRunLoopSource(kCFAllocatorDefault, cfs, 0)
+            ctx.append(src)
+            CFRunLoopAddSource(self._cfrunloop, src, kCFRunLoopCommonModes)
+            CFSocketDisableCallBacks(
+                cfs,
+                kCFSocketReadCallBack | kCFSocketWriteCallBack |
+                kCFSocketConnectCallBack
+            )
+            rw = [False, False]
+            self._idmap[id(descr)] = fd
+            self._fdmap[fd] = src, cfs, descr, rw
+        rw[self._flag2idx(flag)] = True
+        CFSocketEnableCallBacks(cfs, flag)
+
+
+    def _flag2idx(self, flag):
+        """
+        Convert a C{kCFSocket...} constant to an index into the read/write
+        state list (C{_READ} or C{_WRITE}) (the 4th element of the value of
+        C{self._fdmap}).
+
+        @param flag: C{kCFSocketReadCallBack} or C{kCFSocketWriteCallBack}
+
+        @return: C{_READ} or C{_WRITE}
+        """
+        return {kCFSocketReadCallBack: _READ,
+                kCFSocketWriteCallBack: _WRITE}[flag]
+
+
+    def _unwatchFD(self, fd, descr, flag):
+        """
+        Unregister a file descriptor with the L{CFRunLoop}, or modify its state
+        so that it's listening for only one notification (read or write) as
+        opposed to both; used to implement C{removeReader} and C{removeWriter}.
+
+        @param fd: a file descriptor
+
+        @type fd: C{int}
+
+        @param descr: an L{IReadDescriptor} or L{IWriteDescriptor}
+
+        @param flag: L{kCFSocketWriteCallBack} L{kCFSocketReadCallBack}
+        """
+        if id(descr) not in self._idmap:
+            return
+        if fd == -1:
+            # need to deal with it in this case, I think.
+            realfd = self._idmap[id(descr)]
+        else:
+            realfd = fd
+        src, cfs, descr, rw = self._fdmap[realfd]
+        CFSocketDisableCallBacks(cfs, flag)
+        rw[self._flag2idx(flag)] = False
+        if not rw[_READ] and not rw[_WRITE]:
+            del self._idmap[id(descr)]
+            del self._fdmap[realfd]
+            CFRunLoopRemoveSource(self._cfrunloop, src, kCFRunLoopCommonModes)
+            CFSocketInvalidate(cfs)
+
+
     def addReader(self, reader):
-        self.readers[reader] = SelectableSocketWrapper.socketWrapperForReactorAndObject(self, reader).startReading()
+        """
+        Implement L{IReactorFDSet.addReader}.
+        """
+        self._watchFD(reader.fileno(), reader, kCFSocketReadCallBack)
+
 
     def addWriter(self, writer):
-        self.writers[writer] = SelectableSocketWrapper.socketWrapperForReactorAndObject(self, writer).startWriting()
+        """
+        Implement L{IReactorFDSet.addWriter}.
+        """
+        self._watchFD(writer.fileno(), writer, kCFSocketWriteCallBack)
+
 
     def removeReader(self, reader):
-        wrapped = self.readers.get(reader, None)
-        if wrapped is not None:
-            del self.readers[reader]
-            wrapped.stopReading()
+        """
+        Implement L{IReactorFDSet.removeReader}.
+        """
+        self._unwatchFD(reader.fileno(), reader, kCFSocketReadCallBack)
+
 
     def removeWriter(self, writer):
-        wrapped = self.writers.get(writer, None)
-        if wrapped is not None:
-            del self.writers[writer]
-            wrapped.stopWriting()
-
-
-    def getReaders(self):
-        return self.readers.keys()
-
-
-    def getWriters(self):
-        return self.writers.keys()
+        """
+        Implement L{IReactorFDSet.removeWriter}.
+        """
+        self._unwatchFD(writer.fileno(), writer, kCFSocketWriteCallBack)
 
 
     def removeAll(self):
-        r = self.readers.keys()
-        for s in self.readers.itervalues():
-            s.stopReading()
-        for s in self.writers.itervalues():
-            s.stopWriting()
-        self.readers.clear()
-        self.writers.clear()
-        return r
-        
-    def run(self, installSignalHandlers=1, withRunLoop=None):
-        if self.running:
-            raise ValueError, "Reactor already running"
-        if installSignalHandlers:
-            self.pollInterval = self.shortIntervalOfTime
-        runLoop = self.getRunLoop(withRunLoop)
-        self._startup()
-       
-        self.startRunning(installSignalHandlers=installSignalHandlers)
+        """
+        Implement L{IReactorFDSet.removeAll}.
+        """
+        allDesc = set([descr for src, cfs, descr, rw in self._fdmap.values()])
+        allDesc -= set(self._internalReaders)
+        for desc in allDesc:
+            self.removeReader(desc)
+            self.removeWriter(desc)
+        return list(allDesc)
 
-        self.running = True
-        if NSApp() is None and self.nsRunLoop.currentMode() is None:
-            # Most of the time the NSRunLoop will have already started,
-            # but in this case it wasn't.
-            runLoop.run()
-            self.crashing = False
-            self.didStartRunLoop = True
 
-    def callLater(self, howlong, *args, **kwargs):
-        rval = posixbase.PosixReactorBase.callLater(self, howlong, *args, **kwargs)
-        if self.timer:
-            timeout = self.timeout()
-            if timeout is None:
-                timeout = howlong
-            sleepUntil = cf.now() + min(timeout, howlong)
-            if sleepUntil < self.timer.getNextFireDate():
-                self.timer.setNextFireDate(sleepUntil)
-        else:
-            pass
-        return rval
-        
-    def iterate(self, howlong=0.0):
-        if self.running:
-            raise ValueError, "Can't iterate a running reactor"
-        self.runUntilCurrent()
-        self.doIteration(howlong)
-        
-    def doIteration(self, howlong):
-        if self.running:
-            raise ValueError, "Can't iterate a running reactor"
-        howlong = howlong or 0.01
-        pi = self.pollInterval
-        self.pollInterval = howlong
-        self._doRunUntilCurrent = False
-        self.run()
-        self._doRunUntilCurrent = True
-        self.pollInterval = pi
+    def getReaders(self):
+        """
+        Implement L{IReactorFDSet.getReaders}.
+        """
+        return [descr for src, cfs, descr, rw in self._fdmap.values()
+                if rw[_READ]]
 
-    def simulate(self):
-        if self.crashing:
-            return
-        if not self.running:
-            raise ValueError, "You can't simulate a stopped reactor"
-        if self._doRunUntilCurrent:
-            self.runUntilCurrent()
-        if self.crashing:
-            return
-        if self.timer is None:
-            return
-        nap = self.timeout()
-        if nap is None:
-            nap = self.pollInterval
-        else:
-            nap = min(self.pollInterval, nap)
-        if self.running:
-            self.timer.setNextFireDate(cf.now() + nap)
-        if not self._doRunUntilCurrent:
-            self.crash()
-        
-    def _startup(self):
-        if self.running:
-            raise ValueError, "Can't bootstrap a running reactor"
-        self.timer = cf.PyCFRunLoopTimer(cf.now(), self.pollInterval, self.simulate)
-        self.runLoop.addTimer(self.timer)
 
-    def cleanup(self):
-        pass
+    def getWriters(self):
+        """
+        Implement L{IReactorFDSet.getWriters}.
+        """
+        return [descr for src, cfs, descr, rw in self._fdmap.values()
+                if rw[_WRITE]]
 
-    def sigInt(self, *args):
-        self.callLater(0.0, self.stop)
 
-    def crash(self):
-        if not self.running:
-            raise ValueError, "Can't crash a stopped reactor"
-        posixbase.PosixReactorBase.crash(self)
-        self.crashing = True
-        if self.timer is not None:
-            self.runLoop.removeTimer(self.timer)
-            self.timer = None
-        if self.didStartRunLoop:
-            self.runLoop.stop()
+    def _moveCallLaterSooner(self, tple):
+        """
+        Override L{PosixReactorBase}'s implementation of L{IDelayedCall.reset}
+        so that it will immediately reschedule.  Normally
+        C{_moveCallLaterSooner} depends on the fact that C{runUntilCurrent} is
+        always run before the mainloop goes back to sleep, so this forces it to
+        immediately recompute how long the loop needs to stay asleep.
+        """
+        result = PosixReactorBase._moveCallLaterSooner(self, tple)
+        self._scheduleSimulate()
+        return result
+
+
+    _inCFLoop = False
+
+    def mainLoop(self):
+        """
+        Run the runner (L{CFRunLoopRun} or something that calls it), which runs
+        the run loop until C{crash()} is called.
+        """
+        self._inCFLoop = True
+        try:
+            self._runner()
+        finally:
+            self._inCFLoop = False
+
+
+    _currentSimulator = None
+
+    def _scheduleSimulate(self, force=False):
+        """
+        Schedule a call to C{self.runUntilCurrent}.  This will cancel the
+        currently scheduled call if it is already scheduled.
+
+        @param force: Even if there are no timed calls, make sure that
+            C{runUntilCurrent} runs immediately (in a 0-seconds-from-now
+            {CFRunLoopTimer}).  This is necessary for calls which need to
+            trigger behavior of C{runUntilCurrent} other than running timed
+            calls, such as draining the thread call queue or calling C{crash()}
+            when the appropriate flags are set.
+
+        @type force: C{bool}
+        """
+        if self._currentSimulator is not None:
+            CFRunLoopTimerInvalidate(self._currentSimulator)
+            self._currentSimulator = None
+        timeout = self.timeout()
+        if force:
+            timeout = 0.0
+        if timeout is not None:
+            fireDate = (CFAbsoluteTimeGetCurrent() + timeout)
+            def simulate(cftimer, extra):
+                self._currentSimulator = None
+                self.runUntilCurrent()
+                self._scheduleSimulate()
+            c = self._currentSimulator = CFRunLoopTimerCreate(
+                kCFAllocatorDefault, fireDate,
+                0, 0, 0, simulate, None
+            )
+            CFRunLoopAddTimer(self._cfrunloop, c, kCFRunLoopCommonModes)
+
+
+    def callLater(self, _seconds, _f, *args, **kw):
+        """
+        Implement L{IReactorTime.callLater}.
+        """
+        delayedCall = PosixReactorBase.callLater(
+            self, _seconds, _f, *args, **kw
+        )
+        self._scheduleSimulate()
+        return delayedCall
+
 
     def stop(self):
-        if not self.running:
-            raise ValueError, "Can't stop a stopped reactor"
-        posixbase.PosixReactorBase.stop(self)
+        """
+        Implement L{IReactorCore.stop}.
+        """
+        PosixReactorBase.stop(self)
+        self._scheduleSimulate(True)
 
-def install(runLoop=None):
-    """Configure the twisted mainloop to be run inside CFRunLoop.
+
+    def crash(self):
+        """
+        Implement L{IReactorCore.crash}
+        """
+        wasStarted = self._started
+        PosixReactorBase.crash(self)
+        if self._inCFLoop:
+            self._stopNow()
+        else:
+            if wasStarted:
+                self.callLater(0, self._stopNow)
+
+
+    def _stopNow(self):
+        """
+        Immediately stop the CFRunLoop (which must be running!).
+        """
+        CFRunLoopStop(self._cfrunloop)
+
+
+    def iterate(self, delay=0):
+        """
+        Emulate the behavior of C{iterate()} for things that want to call it,
+        by letting the loop run for a little while and then scheduling a timed
+        call to exit it.
+        """
+        self.callLater(delay, self._stopNow)
+        self.mainLoop()
+
+
+
+def install(runLoop=None, runner=None):
     """
-    reactor = CFReactor(runLoop=runLoop)
-    reactor.addSystemEventTrigger('after', 'shutdown', reactor.cleanup)
+    Configure the twisted mainloop to be run inside CFRunLoop.
+
+    @param runLoop: the run loop to use.
+
+    @param runner: the function to call in order to actually invoke the main
+        loop.  This will default to L{CFRunLoopRun} if not specified.  However,
+        this is not an appropriate choice for GUI applications, as you need to
+        run NSApplicationMain (or something like it).  For example, to run the
+        Twisted mainloop in a PyObjC application, your C{main.py} should look
+        something like this::
+
+            from PyObjCTools import AppHelper
+            from twisted.internet.cfreactor import install
+            install(runner=AppHelper.runEventLoop)
+            # initialize your application
+            reactor.run()
+
+    @return: The installed reactor.
+
+    @rtype: L{CFReactor}
+    """
+
+    reactor = CFReactor(runLoop=runLoop, runner=runner)
     from twisted.internet.main import installReactor
     installReactor(reactor)
     return reactor
+
+

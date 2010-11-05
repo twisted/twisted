@@ -50,7 +50,8 @@ class ReactorBuilder:
                  "twisted.internet.gtk2reactor.Gtk2Reactor",
                  "twisted.internet.kqreactor.KQueueReactor",
                  "twisted.internet.win32eventreactor.Win32Reactor",
-                 "twisted.internet.iocpreactor.reactor.IOCPReactor"]
+                 "twisted.internet.iocpreactor.reactor.IOCPReactor",
+                 "twisted.internet.cfreactor.CFReactor"]
 
     reactorFactory = None
     originalHandler = None
@@ -117,6 +118,18 @@ class ReactorBuilder:
         """
         Create and return a reactor using C{self.reactorFactory}.
         """
+        try:
+            from twisted.internet.cfreactor import CFReactor
+            from twisted.internet import reactor as globalReactor
+        except ImportError:
+            pass
+        else:
+            if (isinstance(globalReactor, CFReactor)
+                and self.reactorFactory is CFReactor):
+                raise SkipTest(
+                    "CFReactor uses APIs which manipulate global state, "
+                    "so it's not safe to run its own reactor-builder tests "
+                    "under itself")
         try:
             reactor = self.reactorFactory()
         except:

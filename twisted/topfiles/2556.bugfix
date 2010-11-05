@@ -1,0 +1,1 @@
+twisted.internet.cfreactor now works with trial.

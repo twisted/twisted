@@ -226,6 +226,13 @@ def rebuild(module, doLog=1):
         if not hasattr(mod, '__file__'):
             # It's a builtin module; nothing to replace here.
             continue
+
+        if hasattr(mod, '__bundle__'):
+            # PyObjC has a few buggy objects which segfault if you hash() them.
+            # It doesn't make sense to try rebuilding extension modules like
+            # this anyway, so don't try.
+            continue
+
         changed = 0
 
         for k, v in mod.__dict__.items():

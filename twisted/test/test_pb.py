@@ -1669,7 +1669,6 @@ class SpreadUtilTestCase(unittest.TestCase):
         """
         Test a asynchronous failure on a remote method call.
         """
-        l = []
         o = LocalRemoteTest()
         d = o.callRemote("fail")
         def eb(f):

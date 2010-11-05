@@ -38,13 +38,6 @@ extensions = [
               libraries=["ws2_32"],
               condition=lambda builder: sys.platform == "win32"),
 
-    Extension("twisted.internet.cfsupport",
-              ["twisted/internet/cfsupport/cfsupport.c"],
-              extra_compile_args=['-w'],
-              extra_link_args=['-framework','CoreFoundation',
-                               '-framework','CoreServices',
-                               '-framework','Carbon'],
-              condition=lambda builder: sys.platform == "darwin"),
     Extension("twisted.python._initgroups",
               ["twisted/python/_initgroups.c"]),
     Extension("twisted.internet._sigchld",

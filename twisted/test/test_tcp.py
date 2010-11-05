@@ -51,12 +51,28 @@ class ClosingProtocol(protocol.Protocol):
     def connectionLost(self, reason):
         reason.trap(error.ConnectionDone)
 
+
+
 class ClosingFactory(protocol.ServerFactory):
-    """Factory that closes port immediatley."""
+    """
+    Factory that closes port immediately.
+    """
+
+    _cleanerUpper = None
 
     def buildProtocol(self, conn):
-        self.port.stopListening()
+        self._cleanerUpper = self.port.stopListening()
         return ClosingProtocol()
+
+
+    def cleanUp(self):
+        """
+        Clean-up for tests to wait for the port to stop listening.
+        """
+        if self._cleanerUpper is None:
+            return self.port.stopListening()
+        return self._cleanerUpper
+
 
 
 class MyProtocolFactoryMixin(object):
@@ -321,7 +337,7 @@ class ListeningTestCase(unittest.TestCase):
         client = MyClientFactory()
         serverFactory.protocolConnectionMade = defer.Deferred()
         client.protocolConnectionMade = defer.Deferred()
-        connector = reactor.connectTCP("127.0.0.1", portNumber, client)
+        reactor.connectTCP("127.0.0.1", portNumber, client)
         def check(ign):
             client.reason.trap(error.ConnectionRefusedError)
         return client.failDeferred.addCallback(check)
@@ -364,9 +380,9 @@ class LoopbackTestCase(unittest.TestCase):
         """
         f = ClosingFactory()
         port = reactor.listenTCP(0, f, interface="127.0.0.1")
-        self.addCleanup(port.stopListening)
-        portNumber = port.getHost().port
         f.port = port
+        self.addCleanup(f.cleanUp)
+        portNumber = port.getHost().port
         clientF = MyClientFactory()
         reactor.connectTCP("127.0.0.1", portNumber, clientF)
         def check(x):
@@ -549,7 +565,7 @@ class LoopbackTestCase(unittest.TestCase):
             return 10
         self.patch(socket, 'getservbyname', fakeGetServicePortByName)
 
-        c = reactor.connectTCP('127.0.0.1', 'http', clientFactory)
+        reactor.connectTCP('127.0.0.1', 'http', clientFactory)
 
         connMade = defer.gatherResults([serverConnMade, clientConnMade])
         def connected((serverProtocol, clientProtocol)):
@@ -647,9 +663,9 @@ class FactoryTestCase(unittest.TestCase):
         """
         f = ClosingFactory()
         p = reactor.listenTCP(0, f, interface="127.0.0.1")
-        self.addCleanup(p.stopListening)
-        portNumber = p.getHost().port
         f.port = p
+        self.addCleanup(f.cleanUp)
+        portNumber = p.getHost().port
 
         factory = ClientStartStopFactory()
         reactor.connectTCP("127.0.0.1", portNumber, factory)
@@ -670,9 +686,9 @@ class ConnectorTestCase(unittest.TestCase):
         """
         serverFactory = ClosingFactory()
         tcpPort = reactor.listenTCP(0, serverFactory, interface="127.0.0.1")
-        self.addCleanup(tcpPort.stopListening)
-        portNumber = tcpPort.getHost().port
         serverFactory.port = tcpPort
+        self.addCleanup(serverFactory.cleanUp)
+        portNumber = tcpPort.getHost().port
 
         seenConnectors = []
         seenFailures = []
@@ -730,9 +746,9 @@ class ConnectorTestCase(unittest.TestCase):
         """
         serverFactory = ClosingFactory()
         tcpPort = reactor.listenTCP(0, serverFactory, interface="127.0.0.1")
-        self.addCleanup(tcpPort.stopListening)
-        portNumber = tcpPort.getHost().port
         serverFactory.port = tcpPort
+        self.addCleanup(serverFactory.cleanUp)
+        portNumber = tcpPort.getHost().port
 
         clientFactory = MyClientFactory()
 
@@ -1117,7 +1133,7 @@ class WriteDataTestCase(unittest.TestCase):
             return client.lostReason
         clientConnectionLost.addCallback(cbClientLost)
         msg('Connecting to %s:%s' % (addr.host, addr.port))
-        connector = reactor.connectTCP(addr.host, addr.port, client)
+        reactor.connectTCP(addr.host, addr.port, client)
 
         # By the end of the test, the client should have received notification
         # of unclean disconnection.
