@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -583,6 +583,14 @@ class ClientTestCase(unittest.TestCase):
         """
         d = client.lookupText(self.hostname)
         d.addCallback(self.checkResult, dns.TXT)
+        return d
+
+    def test_lookupSenderPolicy(self):
+        """
+        See L{test_lookupAddress}
+        """
+        d = client.lookupSenderPolicy(self.hostname)
+        d.addCallback(self.checkResult, dns.SPF)
         return d
 
     def test_lookupResponsibility(self):

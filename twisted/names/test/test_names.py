@@ -73,6 +73,8 @@ test_domain_com = NoFileAuthority(
             soa_record,
             dns.Record_A('127.0.0.1'),
             dns.Record_NS('39.28.189.39'),
+            dns.Record_SPF('v=spf1 mx/30 mx:example.org/30 -all'),
+            dns.Record_SPF('v=spf1 +mx a:\0colo', '.example.com/28 -all not valid'),
             dns.Record_MX(10, 'host.test-domain.com'),
             dns.Record_HINFO(os='Linux', cpu='A Fast One, Dontcha know'),
             dns.Record_CNAME('canonical.name.com'),
@@ -343,6 +345,17 @@ class ServerDNSTestCase(unittest.TestCase):
             self.resolver.lookupText('test-domain.com'),
             [dns.Record_TXT('A First piece of Text', 'a SecoNd piece', ttl=19283784),
              dns.Record_TXT('Some more text, haha!  Yes.  \0  Still here?', ttl=19283784)]
+        )
+
+
+    def test_spf(self):
+        """
+        L{DNSServerFactory} can serve I{SPF} resource records.
+        """
+        return self.namesTest(
+            self.resolver.lookupSenderPolicy('test-domain.com'),
+            [dns.Record_SPF('v=spf1 mx/30 mx:example.org/30 -all', ttl=19283784),
+            dns.Record_SPF('v=spf1 +mx a:\0colo', '.example.com/28 -all not valid', ttl=19283784)]
         )
 
 

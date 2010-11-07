@@ -1,0 +1,1 @@
+twisted.names.server can now serve SPF resource records using twisted.names.dns.Record_SPF.  twisted.names.client can query for them using lookupSenderPolicy.  

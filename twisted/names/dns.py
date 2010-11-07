@@ -17,7 +17,7 @@ __all__ = [
 
     'A', 'A6', 'AAAA', 'AFSDB', 'CNAME', 'DNAME', 'HINFO',
     'MAILA', 'MAILB', 'MB', 'MD', 'MF', 'MG', 'MINFO', 'MR', 'MX',
-    'NAPTR', 'NS', 'NULL', 'PTR', 'RP', 'SOA', 'SRV', 'TXT', 'WKS',
+    'NAPTR', 'NS', 'NULL', 'PTR', 'RP', 'SOA', 'SPF', 'SRV', 'TXT', 'WKS',
 
     'ANY', 'CH', 'CS', 'HS', 'IN',
 
@@ -29,7 +29,7 @@ __all__ = [
     'Record_DNAME', 'Record_HINFO', 'Record_MB', 'Record_MD', 'Record_MF',
     'Record_MG', 'Record_MINFO', 'Record_MR', 'Record_MX', 'Record_NAPTR',
     'Record_NS', 'Record_NULL', 'Record_PTR', 'Record_RP', 'Record_SOA',
-    'Record_SRV', 'Record_TXT', 'Record_WKS',
+    'Record_SPF', 'Record_SRV', 'Record_TXT', 'Record_WKS',
 
     'QUERY_CLASSES', 'QUERY_TYPES', 'REV_CLASSES', 'REV_TYPES', 'EXT_QUERIES',
 
@@ -82,6 +82,7 @@ SRV = 33
 NAPTR = 35
 A6 = 38
 DNAME = 39
+SPF = 99
 
 QUERY_TYPES = {
     A: 'A',
@@ -109,7 +110,8 @@ QUERY_TYPES = {
     SRV: 'SRV',
     NAPTR: 'NAPTR',
     A6: 'A6',
-    DNAME: 'DNAME'
+    DNAME: 'DNAME',
+    SPF: 'SPF'
 }
 
 IXFR, AXFR, MAILB, MAILA, ALL_RECORDS = range(251, 256)
@@ -1420,6 +1422,9 @@ class Record_TXT(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
     @type data: C{list} of C{str}
     @ivar data: Freeform text which makes up this record.
+    
+    @type ttl: C{int}
+    @ivar ttl: The maximum number of seconds which this record should be cached.
     """
     implements(IEncodable, IRecord)
 
@@ -1448,14 +1453,30 @@ class Record_TXT(tputil.FancyEqMixin, tputil.FancyStrMixin):
             soFar += L + 1
         if soFar != length:
             log.msg(
-                "Decoded %d bytes in TXT record, but rdlength is %d" % (
-                    soFar, length
+                "Decoded %d bytes in %s record, but rdlength is %d" % (
+                    soFar, self.fancybasename, length
                 )
             )
 
 
     def __hash__(self):
         return hash(tuple(self.data))
+
+
+
+class Record_SPF(Record_TXT):
+    """
+    Structurally, freeform text. Semantically, a policy definition, formatted
+    as defined in U{rfc 4408<http://www.faqs.org/rfcs/rfc4408.html>}.
+    
+    @type data: C{list} of C{str}
+    @ivar data: Freeform text which makes up this record.
+    
+    @type ttl: C{int}
+    @ivar ttl: The maximum number of seconds which this record should be cached.
+    """
+    TYPE = SPF
+    fancybasename = 'SPF'
 
 
 

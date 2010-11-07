@@ -668,6 +668,16 @@ class ReprTests(unittest.TestCase):
             repr(dns.Record_TXT("foo", "bar", ttl=15)),
             "<TXT data=['foo', 'bar'] ttl=15>")
 
+    def test_spf(self):
+        """
+        The repr of a L{dns.Record_SPF} instance includes the data and ttl
+        fields of the record, since it is structurally
+        similar to L{dns.Record_TXT}.
+        """
+        self.assertEqual(
+            repr(dns.Record_SPF("foo", "bar", ttl=15)),
+            "<SPF data=['foo', 'bar'] ttl=15>")
+
 
 
 class _Equal(object):
@@ -1201,16 +1211,38 @@ class EqualityTests(unittest.TestCase):
         """
         # Vary the length of the data
         self._equalityTest(
-            dns.Record_TXT(['foo', 'bar'], 10),
-            dns.Record_TXT(['foo', 'bar'], 10),
-            dns.Record_TXT(['foo', 'bar', 'baz'], 10))
+            dns.Record_TXT('foo', 'bar', ttl=10),
+            dns.Record_TXT('foo', 'bar', ttl=10),
+            dns.Record_TXT('foo', 'bar', 'baz', ttl=10))
         # Vary the value of the data
         self._equalityTest(
-            dns.Record_TXT(['foo', 'bar'], 10),
-            dns.Record_TXT(['foo', 'bar'], 10),
-            dns.Record_TXT(['bar', 'foo'], 10))
+            dns.Record_TXT('foo', 'bar', ttl=10),
+            dns.Record_TXT('foo', 'bar', ttl=10),
+            dns.Record_TXT('bar', 'foo', ttl=10))
         # Vary the ttl
         self._equalityTest(
-            dns.Record_TXT(['foo', 'bar'], 10),
-            dns.Record_TXT(['foo', 'bar'], 10),
-            dns.Record_TXT(['foo', 'bar'], 100))
+            dns.Record_TXT('foo', 'bar', ttl=10),
+            dns.Record_TXT('foo', 'bar', ttl=10),
+            dns.Record_TXT('foo', 'bar', ttl=100))
+
+
+    def test_spf(self):
+        """
+        L{dns.Record_SPF} records are structurally similar to L{dns.Record_TXT}
+        records, so they are equal if and only if they have the same data and ttl. 
+        """
+        # Vary the length of the data
+        self._equalityTest(
+            dns.Record_SPF('foo', 'bar', ttl=10),
+            dns.Record_SPF('foo', 'bar', ttl=10),
+            dns.Record_SPF('foo', 'bar', 'baz', ttl=10))
+        # Vary the value of the data
+        self._equalityTest(
+            dns.Record_SPF('foo', 'bar', ttl=10),
+            dns.Record_SPF('foo', 'bar', ttl=10),
+            dns.Record_SPF('bar', 'foo', ttl=10))
+        # Vary the ttl
+        self._equalityTest(
+            dns.Record_SPF('foo', 'bar', ttl=10),
+            dns.Record_SPF('foo', 'bar', ttl=10),
+            dns.Record_SPF('foo', 'bar', ttl=100))

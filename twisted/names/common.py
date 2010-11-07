@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.names.test -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -163,6 +163,12 @@ class ResolverBase:
         """
         return self._lookup(name, dns.IN, dns.TXT, timeout)
 
+    def lookupSenderPolicy(self, name, timeout = None):
+        """
+        @see: twisted.names.client.lookupSenderPolicy
+        """
+        return self._lookup(name, dns.IN, dns.SPF, timeout)
+
     def lookupResponsibility(self, name, timeout = None):
         """
         @see: twisted.names.client.lookupResponsibility
@@ -261,6 +267,7 @@ typeToMethod = {
     dns.MINFO: 'lookupMailboxInfo',
     dns.MX:    'lookupMailExchange',
     dns.TXT:   'lookupText',
+    dns.SPF:   'lookupSenderPolicy',
 
     dns.RP:    'lookupResponsibility',
     dns.AFSDB: 'lookupAFSDatabase',

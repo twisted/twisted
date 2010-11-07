@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.names.test.test_names -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -849,6 +849,21 @@ def lookupText(name, timeout=None):
     @rtype: C{Deferred}
     """
     return getResolver().lookupText(name, timeout)
+
+def lookupSenderPolicy(name, timeout=None):
+    """
+    Perform a SPF record lookup.
+
+    @type name: C{str}
+    @param name: DNS name to resolve.
+
+    @type timeout: Sequence of C{int}
+    @param timeout: Number of seconds after which to reissue the query.
+    When the last timeout expires, the query is considered failed.
+
+    @rtype: C{Deferred}
+    """
+    return getResolver().lookupSenderPolicy(name, timeout)
 
 def lookupResponsibility(name, timeout=None):
     """
