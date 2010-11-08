@@ -11,6 +11,7 @@ Maintainer: Itamar Shtull-Trauring
 # System Imports
 import sys, xmlrpclib, urlparse
 
+
 # Sibling Imports
 from twisted.web import resource, server, http
 from twisted.internet import defer, protocol, reactor
@@ -31,6 +32,24 @@ DateTime = xmlrpclib.DateTime
 if sys.version_info[:2] < (2, 5):
     _decode = DateTime.decode
     DateTime.decode = lambda self, value: _decode(self, value.encode('ascii'))
+
+
+def withRequest(f, *args, **kwargs):
+    """
+    Decorator to cause the request to be passed as the first argument
+    to the method.
+
+    If an I{xmlrpc_} method is wrapped with C{withRequest}, the
+    request object is passed as the first argument to that method.
+    For example::
+
+        @withRequest
+        def xmlrpc_echo(self, request, s):
+            return s
+    """
+    f.withRequest = True
+    return f
+
 
 
 class NoSuchFunction(Fault):
@@ -145,7 +164,10 @@ class XMLRPC(resource.Resource):
                 # Deferred should be written out and Request.finish called.
                 responseFailed = []
                 request.notifyFinish().addErrback(responseFailed.append)
-                d = defer.maybeDeferred(function, *args)
+                if getattr(function, 'withRequest', False):
+                    d = defer.maybeDeferred(function, request, *args)
+                else:
+                    d = defer.maybeDeferred(function, *args)
                 d.addErrback(self._ebRender)
                 d.addCallback(self._cbRender, request, responseFailed)
         return server.NOT_DONE_YET

@@ -13,7 +13,7 @@ from StringIO import StringIO
 from twisted.trial import unittest
 from twisted.web import xmlrpc
 from twisted.web.xmlrpc import (
-    XMLRPC, payloadTemplate, addIntrospection, _QueryFactory, Proxy)
+    XMLRPC, payloadTemplate, addIntrospection, _QueryFactory, Proxy, withRequest)
 from twisted.web import server, static, client, error, http
 from twisted.internet import reactor, defer
 from twisted.internet.error import ConnectionDone
@@ -135,6 +135,20 @@ class Test(XMLRPC):
     def xmlrpc_dict(self, map, key):
         return map[key]
     xmlrpc_dict.help = 'Help for dict.'
+
+    @withRequest
+    def xmlrpc_withRequest(self, request, other):
+        """
+        A method decorated with L{withRequest} which can be called by
+        a test to verify that the request object really is passed as
+        an argument.
+        """
+        return (
+            # as a proof that request is a request
+            request.method +
+            # plus proof other arguments are still passed along
+            ' ' + other)
+
 
     def _getFunction(self, functionPath):
         try:
@@ -526,7 +540,7 @@ class XMLRPCTestIntrospection(XMLRPCTestCase):
                  'deferFault', 'dict', 'echo', 'fail', 'fault',
                  'pair', 'system.listMethods',
                  'system.methodHelp',
-                 'system.methodSignature'])
+                 'system.methodSignature', 'withRequest'])
 
         d = self.proxy().callRemote("system.listMethods")
         d.addCallback(cbMethods)
@@ -663,3 +677,27 @@ class TestQueryFactoryParseResponse(unittest.TestCase):
         d = self.queryFactory.deferred
         self.queryFactory.parseResponse(content)
         return self.assertFailure(d, IndexError)
+
+
+
+class XMLRPCTestWithRequest(unittest.TestCase):
+
+    def setUp(self):
+        self.resource = Test()
+
+
+    def test_withRequest(self):
+        """
+        When an XML-RPC method is called and the implementation is
+        decorated with L{withRequest}, the request object is passed as
+        the first argument.
+        """
+        request = DummyRequest('/RPC2')
+        request.method = "POST"
+        request.content = StringIO(xmlrpclib.dumps(("foo",), 'withRequest'))
+        def valid(n, request):
+            data = xmlrpclib.loads(request.written[0])
+            self.assertEquals(data, (('POST foo',), None))
+        d = request.notifyFinish().addCallback(valid, request)
+        self.resource.render_POST(request)
+        return d
