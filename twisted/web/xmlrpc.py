@@ -320,6 +320,7 @@ def addIntrospection(xmlrpc):
 class QueryProtocol(http.HTTPClient):
 
     def connectionMade(self):
+        self._response = None
         self.sendCommand('POST', self.factory.path)
         self.sendHeader('User-Agent', 'Twisted/XMLRPClib')
         self.sendHeader('Host', self.factory.host)
@@ -337,7 +338,27 @@ class QueryProtocol(http.HTTPClient):
             self.factory.badStatus(status, message)
 
     def handleResponse(self, contents):
-        self.factory.parseResponse(contents)
+        """
+        Handle the XML-RPC response received from the server.
+
+        Specifically, disconnect from the server and store the XML-RPC
+        response so that it can be properly handled when the disconnect is
+        finished.
+        """
+        self.transport.loseConnection()
+        self._response = contents
+
+    def connectionLost(self, reason):
+        """
+        The connection to the server has been lost.
+
+        If we have a full response from the server, then parse it and fired a
+        Deferred with the return value or C{Fault} that the server gave us.
+        """
+        http.HTTPClient.connectionLost(self, reason)
+        if self._response is not None:
+            response, self._response = self._response, None
+            self.factory.parseResponse(response)
 
 
 payloadTemplate = """<?xml version="1.0"?>

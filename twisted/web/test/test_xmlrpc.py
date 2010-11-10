@@ -182,6 +182,11 @@ class TestQueryProtocol(xmlrpc.QueryProtocol):
     """
     QueryProtocol for tests that saves headers received inside the factory.
     """
+
+    def connectionMade(self):
+        self.factory.transport = self.transport
+        xmlrpc.QueryProtocol.connectionMade(self)
+
     def handleHeader(self, key, val):
         self.factory.headers[key.lower()] = val
 
@@ -356,6 +361,18 @@ class XMLRPCTestCase(unittest.TestCase):
             self.assertEqual(len(self.flushLoggedErrors(RuntimeError)), 1)
         d.addCallback(cbFailed)
         return d
+
+
+    def test_closeConnectionAfterRequest(self):
+        """
+        The connection to the web server is closed when the request is done.
+        """
+        d = self.proxy().callRemote('echo', '')
+        def responseDone(ignored):
+            [factory] = self.factories
+            self.assertFalse(factory.transport.connected)
+            self.assertTrue(factory.transport.disconnected)
+        return d.addCallback(responseDone)
 
 
 

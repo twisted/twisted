@@ -1,0 +1,4 @@
+twisted.web.xmlrpc.QueryProtocol.handleResponse now disconnects from the
+server, meaning that Twisted XML-RPC clients disconnect from the server as
+soon as they receive a response, rather than relying on the server to
+disconnect.
