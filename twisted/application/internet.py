@@ -42,7 +42,19 @@ from twisted.python import log
 from twisted.application import service
 from twisted.internet import task
 
-from twisted.internet.defer import AlreadyCalledError, CancelledError
+from twisted.internet.defer import CancelledError
+
+
+def _maybeGlobalReactor(maybeReactor):
+    """
+    @return: the argument, or the global reactor if the argument is C{None}.
+    """
+    if maybeReactor is None:
+        from twisted.internet import reactor
+        return reactor
+    else:
+        return maybeReactor
+
 
 class _VolatileDataService(service.Service):
 
@@ -115,12 +127,8 @@ class _AbstractServer(_VolatileDataService):
         @return: the port object returned by the listen method.
         @rtype: an object providing L{IListeningPort}.
         """
-        if self.reactor is None:
-            from twisted.internet import reactor
-        else:
-            reactor = self.reactor
-        return getattr(reactor, 'listen%s' % (self.method,))(
-            *self.args, **self.kwargs)
+        return getattr(_maybeGlobalReactor(self.reactor),
+                       'listen%s' % (self.method,))(*self.args, **self.kwargs)
 
 
 
@@ -172,12 +180,8 @@ class _AbstractClient(_VolatileDataService):
         @return: the port object returned by the connect method.
         @rtype: an object providing L{IConnector}.
         """
-        if self.reactor is None:
-            from twisted.internet import reactor
-        else:
-            reactor = self.reactor
-        return getattr(reactor, 'connect%s' % (self.method,))(
-            *self.args, **self.kwargs)
+        return getattr(_maybeGlobalReactor(self.reactor),
+                       'connect%s' % (self.method,))(*self.args, **self.kwargs)
 
 
 
@@ -314,7 +318,7 @@ class CooperatorService(service.Service):
 
 
 
-class StreamServerEndpointService(service.Service):
+class StreamServerEndpointService(service.Service, object):
     """
     A L{StreamServerEndpointService} is an L{IService} which runs a server on a
     listening port described by an L{IStreamServerEndpoint}.
@@ -328,9 +332,16 @@ class StreamServerEndpointService(service.Service):
     @ivar _waitingForPort: a Deferred, if C{listen} has yet been invoked on the
         endpoint, otherwise None.
 
+    @ivar _raiseSynchronously: Defines error-handling behavior for the case
+        where C{listen(...)} raises an exception before C{startService} or
+        C{privilegedStartService} have completed.
+
+    @type _raiseSynchronously: C{bool}
+
     @since: 10.2
     """
 
+    _raiseSynchronously = None
 
     def __init__(self, endpoint, factory):
         self.endpoint = endpoint
@@ -344,6 +355,15 @@ class StreamServerEndpointService(service.Service):
         """
         service.Service.privilegedStartService(self)
         self._waitingForPort = self.endpoint.listen(self.factory)
+        raisedNow = []
+        def handleIt(err):
+            if self._raiseSynchronously:
+                raisedNow.append(err)
+            elif not err.check(CancelledError):
+                log.err(err)
+        self._waitingForPort.addErrback(handleIt)
+        if raisedNow:
+            raisedNow[0].raiseException()
 
 
     def startService(self):
@@ -361,17 +381,14 @@ class StreamServerEndpointService(service.Service):
         Stop listening on the port if it is already listening, otherwise,
         cancel the attempt to listen.
 
-        @return: a L{Deferred} which fires when the port has stopped listening.
+        @return: a L{Deferred} which fires with C{None} when the port has
+            stopped listening.
         """
-        try:
-            self._waitingForPort.cancel()
-        except AlreadyCalledError:
-            pass
+        self._waitingForPort.cancel()
         def stopIt(port):
-            return port.stopListening()
-        def ignoreCancel(reason):
-            reason.trap(CancelledError)
-        d = self._waitingForPort.addCallbacks(stopIt, ignoreCancel)
+            if port is not None:
+                return port.stopListening()
+        d = self._waitingForPort.addCallback(stopIt)
         def stop(passthrough):
             self.running = False
             return passthrough

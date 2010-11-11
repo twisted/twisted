@@ -31,12 +31,16 @@ class FakeServer(object):
         with.
 
     @ivar listenAttempts: The number of times C{listen} has been invoked.
+
+    @ivar failImmediately: If set, the exception to fail the L{Deferred}
+        returned from C{listen} before it is returned.
     """
 
     implements(IStreamServerEndpoint)
 
     result = None
     factory = None
+    failImmediately = None
     cancelException = CancelledError()
     listenAttempts = 0
 
@@ -53,6 +57,8 @@ class FakeServer(object):
         self.factory = factory
         self.result = Deferred(
             canceller=lambda d: d.errback(self.cancelException))
+        if self.failImmediately is not None:
+            self.result.errback(self.failImmediately)
         return self.result
 
 
@@ -121,6 +127,58 @@ class TestEndpointService(TestCase):
         self.assertIdentical(self.factory, self.fakeServer.factory)
 
 
+    def test_synchronousRaiseRaisesSynchronously(self, thunk=None):
+        """
+        L{StreamServerEndpointService.startService} should raise synchronously
+        if the L{Deferred} returned by its wrapped
+        L{IStreamServerEndpoint.listen} has already fired with an errback and
+        the L{StreamServerEndpointService}'s C{_raiseSynchronously} flag has
+        been set.  This feature is necessary to preserve compatibility with old
+        behavior of L{twisted.internet.strports.service}, which is to return a
+        service which synchronously raises an exception from C{startService}
+        (so that, among other things, twistd will not start running).  However,
+        since L{IStreamServerEndpoint.listen} may fail asynchronously, it is
+        a bad idea to rely on this behavior.
+        """
+        self.fakeServer.failImmediately = ZeroDivisionError()
+        self.svc._raiseSynchronously = True
+        self.assertRaises(ZeroDivisionError, thunk or self.svc.startService)
+
+
+    def test_synchronousRaisePrivileged(self):
+        """
+        L{StreamServerEndpointService.privilegedStartService} should behave the
+        same as C{startService} with respect to
+        L{TestEndpointService.test_synchronousRaiseRaisesSynchronously}.
+        """
+        self.test_synchronousRaiseRaisesSynchronously(
+            self.svc.privilegedStartService)
+
+
+    def test_failReportsError(self):
+        """
+        L{StreamServerEndpointService.startService} and
+        L{StreamServerEndpointService.privilegedStartService} should both log
+        an exception when the L{Deferred} returned from their wrapped
+        L{IStreamServerEndpoint.listen} fails.
+        """
+        self.svc.startService()
+        self.fakeServer.result.errback(ZeroDivisionError())
+        logged = self.flushLoggedErrors(ZeroDivisionError)
+        self.assertEquals(len(logged), 1)
+
+
+    def test_synchronousFailReportsError(self):
+        """
+        Without the C{_raiseSynchronously} compatibility flag, failing
+        immediately has the same behavior as failing later; it logs the error.
+        """
+        self.fakeServer.failImmediately = ZeroDivisionError()
+        self.svc.startService()
+        logged = self.flushLoggedErrors(ZeroDivisionError)
+        self.assertEquals(len(logged), 1)
+
+
     def test_startServiceUnstarted(self):
         """
         L{StreamServerEndpointService.startService} sets the C{running} flag,
@@ -145,9 +203,9 @@ class TestEndpointService(TestCase):
 
     def test_stopService(self):
         """
-        L{StreamServerEndpointService.stopService} calls C{stopListening} on the
-        L{IListeningPort} returned from its endpoint, returns the C{Deferred}
-        from stopService, and sets C{running} to C{False}.
+        L{StreamServerEndpointService.stopService} calls C{stopListening} on
+        the L{IListeningPort} returned from its endpoint, returns the
+        C{Deferred} from stopService, and sets C{running} to C{False}.
         """
         self.svc.privilegedStartService()
         self.fakeServer.startedListening()
@@ -165,41 +223,30 @@ class TestEndpointService(TestCase):
     def test_stopServiceBeforeStartFinished(self):
         """
         L{StreamServerEndpointService.stopService} cancels the L{Deferred}
-        returned by C{listen}.
+        returned by C{listen} if it has not yet fired.  No error will be logged
+        about the cancellation of the listen attempt.
         """
-        listeningErrors = []
-        def catchCancel(failure):
-            listeningErrors.append(failure.type)
-            return failure
         self.svc.privilegedStartService()
-        self.fakeServer.result.addErrback(catchCancel)
-        self.assertEquals(listeningErrors, [])
         result = self.svc.stopService()
-        self.assertEquals(listeningErrors, [CancelledError])
         l = []
-        result.addCallback(l.append)
+        result.addBoth(l.append)
         self.assertEquals(l, [None])
+        self.assertEquals(self.flushLoggedErrors(CancelledError), [])
 
 
     def test_stopServiceCancelStartError(self):
         """
         L{StreamServerEndpointService.stopService} cancels the L{Deferred}
-        returned by C{listen}, but will propagate errors other than
-        L{CancelledError}.
+        returned by C{listen} if it has not fired yet.  An error will be logged
+        if the resulting exception is not L{CancelledError}.
         """
         self.fakeServer.cancelException = ZeroDivisionError()
-        listeningErrors = []
-        def catchCancel(failure):
-            listeningErrors.append(failure.type)
-            return failure
         self.svc.privilegedStartService()
-        self.fakeServer.result.addErrback(catchCancel)
-        self.assertEquals(listeningErrors, [])
         result = self.svc.stopService()
-        self.assertEquals(listeningErrors, [ZeroDivisionError])
-        stoppingErrors = []
-        result.addErrback(lambda f: stoppingErrors.append(f.type))
-        self.assertEquals(stoppingErrors,
-                          [ZeroDivisionError])
+        l = []
+        result.addCallback(l.append)
+        self.assertEquals(l, [None])
+        stoppingErrors = self.flushLoggedErrors(ZeroDivisionError)
+        self.assertEquals(len(stoppingErrors), 1)
 
 

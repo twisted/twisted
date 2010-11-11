@@ -32,7 +32,9 @@ deprecatedModuleAttribute(
     __name__, "parse")
 
 
+
 _DEFAULT = object()
+
 def service(description, factory, default=_DEFAULT, reactor=None):
     """
     Return the service corresponding to a description.
@@ -71,9 +73,11 @@ def service(description, factory, default=_DEFAULT, reactor=None):
                 "'tcp:%s'." % (description,))
         warnings.warn(
             message=message, category=DeprecationWarning, stacklevel=2)
-    return StreamServerEndpointService(
+    svc = StreamServerEndpointService(
         endpoints._serverFromStringLegacy(reactor, description, default),
         factory)
+    svc._raiseSynchronously = True
+    return svc
 
 
 
