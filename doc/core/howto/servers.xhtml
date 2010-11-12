@@ -119,34 +119,45 @@ class Echo(Protocol):
 
     <h3>Using the Protocol</h3>
 
-    <p>In this section, I will explain how to test your protocol
-    easily. (In order to see how you should write a production-grade Twisted
-    server, though, you should read the <a href="plugin.xhtml" >Writing Plug-Ins
-    for Twisted</a> HOWTO as well).</p>
+    <p>In this section, I will explain how to run a server which uses your
+    <code>Protocol</code>. (In order to see how you should write a
+    production-grade Twisted server, though, you should read the <a
+    href="plugin.xhtml" >Writing Plug-Ins for Twisted</a> HOWTO as well).</p>
 
     <p>Here is code that will run the QOTD server discussed
-    earlier</p>
+    earlier:</p>
 <pre class="python">
-from twisted.internet.protocol import Protocol, Factory
-from twisted.internet import reactor
-
-class QOTD(Protocol):
-
-    def connectionMade(self):
-        self.transport.write("An apple a day keeps the doctor away\r\n") 
-        self.transport.loseConnection()
-
-# Next lines are magic:
 factory = Factory()
 factory.protocol = QOTD
 
 # 8007 is the port you want to run under. Choose something &gt;1024
-reactor.listenTCP(8007, factory)
+endpoint = TCP4ServerEndpoint(reactor, 8007)
+endpoint.listen(factory)
 reactor.run()
 </pre>
+    <p>In this example, I create a protocol <code class="api"
+    base="twisted.internet.protocol">Factory</code>.  I want to tell this
+    factory that its job is to build QOTD protocol instances, so I set its
+    <code>protocol</code> attribute to the QOTD class.  Then, I want to listen
+    on a TCP port, so I make a <code>TCP4ServerEndpoint</code> to identify the
+    port that I want to bind to, and then pass the factory I just created to
+    its <code class="api"
+    base="twisted.internet.interfaces.IStreamServerEndpoint">listen</code>
+    method.</p>
 
-    <p>Don't worry about the last 6 magic lines -- you will
-    understand what they do later in the document.</p>
+    <p>Because this is a short example, nothing else has yet started up the
+    Twisted reactor.  <code>endpoint.listen</code> tells the reactor to handle
+    connections to the endpoint's address using a particular protocol, but the
+    reactor needs to be <em>running</em> in order for it to do anything.
+    <code>reactor.run()</code> starts the reactor and then waits forever for
+    connections to arrive on the port you've specified.</p>
+
+    <p>You can stop the reactor by hitting Control-C in a terminal or calling
+    <code>reactor.stop</code>.</p>
+
+    <p>For more information on different ways you can listen for incoming
+    connections, see <a href="endpoints.xhtml">the documentation for the
+    endpoints API</a>.</p>
 
     <h3>Helper Protocols</h3>
 

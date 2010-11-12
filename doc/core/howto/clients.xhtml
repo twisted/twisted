@@ -28,13 +28,13 @@
     finished.  This means that persistent configuration is not saved in the
     <code>Protocol</code>.</p>
 
-    <p>The persistent configuration is kept in a <code>Factory</code> class,
-    which usually inherits
-    from <code class="API">twisted.internet.protocol.ClientFactory</code>. The
-    default factory class just instantiates the <code>Protocol</code> and then
-    sets the protocol's <code>factory</code> attribute to point to itself (the
-    factory). This lets the <code>Protocol</code> access, and possibly modify,
-    the persistent configuration.</p>
+    <p>The persistent configuration is kept in a <code>Factory</code>
+    class, which usually inherits from <code class="API">twisted.internet.protocol.Factory</code>
+    (or <code class="API">twisted.internet.protocol.ClientFactory</code>: see
+    below). The default factory class just instantiates the <code>Protocol</code>
+    and then sets the protocol's <code>factory</code> attribute to point to
+    itself (the factory). This lets the <code>Protocol</code> access, and
+    possibly modify, the persistent configuration.</p>
 
     <h2>Protocol</h2>
 
@@ -81,15 +81,15 @@ class WelcomeMessage(Protocol):
 
     <h2>Simple, single-use clients</h2>
 
-    <p>In many cases, the protocol only needs to connect to the server once,
-    and the code just wants to get a connected instance of the protocol. In
-    those cases <code
-    class="API">twisted.internet.protocol.ClientCreator</code> provides the
+    <p>In many cases, the protocol only needs to connect to the server once, and
+    the code just wants to get a connected instance of the protocol. In those
+    cases <code class="API">twisted.internet.endpoints</code> provides the
     appropriate API.</p>
 
     <pre class="python">
 from twisted.internet import reactor
-from twisted.internet.protocol import Protocol, ClientCreator
+from twisted.internet.protocol import Factory, Protocol
+from twisted.internet.endpoints import TCP4ClientEndpoint
 
 class Greeter(Protocol):
     def sendMessage(self, msg):
@@ -100,20 +100,72 @@ def gotProtocol(p):
     reactor.callLater(1, p.sendMessage, "This is sent in a second")
     reactor.callLater(2, p.transport.loseConnection)
 
-c = ClientCreator(reactor, Greeter)
-c.connectTCP("localhost", 1234).addCallback(gotProtocol)
+factory = Factory()
+factory.protocol = Greeter
+point = TCP4ClientEndpoint(reactor, "localhost", 1234)
+d = point.connect(factory)
+d.addCallback(gotProtocol)
     </pre>
+
+    <p>Regardless of the type of client endpoint, the way to set up a new
+    connection is simply to call the <code>connect</code> method on it and pass
+    in a factory.  This means it's easy to change the mechanism you're using to
+    connect, without changing the rest of your program.  For example, to run
+    the greeter example over SSL, the only change required is to instantiate an
+    <code class="API"
+    base="twisted.internet.endpoints">SSL4ClientEndpoint</code> instead of a
+    <code>TCP4ClientEndpoint</code>.  To take advantage of this, functions and
+    methods which initiates a new connection should generally accept an
+    endpoint as an argument and let the caller construct it, rather than taking
+    arguments like 'host' and 'port' and constructing its own before calling
+    <code>connect</code>.</p>
+
+    <p>For more information on different ways you can make outgoing connections
+    to different types of endpoints, as well as parsing strings into endpoints,
+    see <a href="endpoints.xhtml">the documentation for the endpoints
+    API</a>.</p>
+
+    <p><span class="note">If you've used <code>ClientFactory</code> before,
+    make sure you remember that the <code>connect</code> method takes a
+    <code>Factory</code>, not a <code>ClientFactory</code>.  Even if you pass a
+    <code>ClientFactory</code> to <code>endpoint.connect</code>, its
+    <code>clientConnectionFailed</code> and <code>clientConnectionLost</code>
+    methods.</span></p>
+
+    <p>You may come across code using <code base="twisted.internet.protocol"
+    class="API">ClientCreator</code>, an older API which is not as flexible as
+    the endpoint API.  Rather than calling <code>connect</code> on an endpoint,
+    such code will look like this:</p>
+
+    <pre class="python">
+from twisted.internet.protocol import ClientCreator
+
+...
+
+creator = ClientCreator(reactor, Greeter)
+d = creator.connectTCP("localhost", 1234)
+d.addCallback(gotProtocol)
+    </pre>
+
+    <p>In general, the endpoint API should be preferred in new code, as it lets
+    the caller select the method of connecting.</p>
 
     <h2>ClientFactory</h2>
 
-    <p>We use <code>reactor.connect*</code> and a <code class="API"
-    base="twisted.internet.protocol">ClientFactory</code>. The
-    <code>ClientFactory</code> is in charge of creating
-    the <code>Protocol</code> and also receives events relating to the
-    connection state. This allows it to do things like reconnect in the event of
-    a connection error. Here is an example of a
-    simple <code>ClientFactory</code> that uses the <code>Echo</code> protocol
-    (above) and also prints what state the connection is in.</p>
+    <p>Still, there's plenty of code out there that uses lower-level APIs, and
+    a few features (such as automatic reconnection) have not been
+    re-implemented with endpoints yet, so in some cases they may be more
+    convenient to use.</p>
+
+    <p>To use the lower-level connection APIs, you will need to call one of the
+    <em>reactor.connect*</em> methods directly.  For these cases, you need a
+    <code class="API" base="twisted.internet.protocol">ClientFactory</code>.
+    The <code>ClientFactory</code> is in charge of creating the
+    <code>Protocol</code> and also receives events relating to the connection
+    state. This allows it to do things like reconnect in the event of a
+    connection error. Here is an example of a simple <code>ClientFactory</code>
+    that uses the <code>Echo</code> protocol (above) and also prints what state
+    the connection is in.</p>
 
     <pre class="python">
 from twisted.internet.protocol import Protocol, ClientFactory
