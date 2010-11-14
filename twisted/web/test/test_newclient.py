@@ -1,4 +1,4 @@
-# Copyright (c) 2009 Twisted Matrix Laboratories.
+# Copyright (c) 2009-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -10,6 +10,7 @@ __metaclass__ = type
 from zope.interface import implements
 from zope.interface.verify import verifyObject
 
+from twisted.python import log
 from twisted.python.failure import Failure
 from twisted.internet.interfaces import IConsumer, IPushProducer
 from twisted.internet.error import ConnectionDone
@@ -939,6 +940,27 @@ class HTTP11ClientProtocolTests(TestCase):
         lost, nothing happens.
         """
         return self.test_connectionLostDuringRequestGeneration('errback')
+
+
+    def test_errorMessageOnConnectionLostBeforeGenerationFailedDoesNotConfuse(self):
+        """
+        If the request passed to L{HTTP11ClientProtocol} finished generation
+        with an error after the L{HTTP11ClientProtocol}'s connection has been
+        lost, an error is logged that gives a non-confusing hint to user on what
+        went wrong.
+        """
+        errors = []
+        log.addObserver(errors.append)
+        self.addCleanup(log.removeObserver, errors.append)
+
+        def check(ignore):
+            error = errors[0]
+            self.assertEquals(error['why'],
+                              'Error writing request, but not in valid state '
+                              'to finalize request: CONNECTION_LOST')
+
+        return self.test_connectionLostDuringRequestGeneration(
+            'errback').addCallback(check)
 
 
     def test_receiveSimplestResponse(self):

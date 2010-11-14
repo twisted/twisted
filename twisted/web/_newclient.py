@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.web.test.test_newclient -*-
-# Copyright (c) 2009 Twisted Matrix Laboratories.
+# Copyright (c) 2009-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -1291,7 +1291,8 @@ class HTTP11ClientProtocol(Protocol):
                 self._finishedRequest.errback(
                     Failure(RequestGenerationFailed([err])))
             else:
-                log.err(err, "foo")
+                log.err(err, 'Error writing request, but not in valid state '
+                             'to finalize request: %s' % self._state)
 
         _requestDeferred.addCallbacks(cbRequestWrotten, ebRequestWriting)
 
