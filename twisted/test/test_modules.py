@@ -760,7 +760,11 @@ class ASTVisitorTests(TestCase):
 
     def test_noImportStar(self):
         """
-        Code containing 'import *' is rejected.
+        Static attribute analysis currently treats 'import *' as a syntax
+        error, because it is difficult to parse, and bad style besides.
+
+        (This could be fixed, if someone were so inclined, by recursively
+        examining the module that the 'import *' is referring to.)
         """
         tree = ast.parse("from pickle import *")
         f = _ImportExportFinder()
