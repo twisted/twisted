@@ -179,7 +179,8 @@ class BasicTests(PySpaceTestCase):
         # shared object of some kind.
         import pickle, cPickle
         def hasPyExt(module):
-            return modules.getModule(module.__name__).filePath.endswith(".py")
+            return (modules.getModule(module.__name__).filePath.
+                    path.endswith(".py"))
         # Sanity check: if Pickle isn't a pyc, this test isn't valid.
         self.assertEquals(pickle.__file__.split('.')[-1], 'pyc')
         self.assertEquals(hasPyExt(pickle), True)
