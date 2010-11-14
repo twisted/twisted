@@ -486,10 +486,10 @@ class PathModificationTest(PySpaceTestCase):
         self._setupSysPath()
         modinfo = modules.getModule(self.packageName + ".a")
         self.assertEquals(sorted(modinfo.importedNames()),
-                         sorted(["sys", "os", "datetime",
-                                 "twisted.python.reflect",
-                                 "twisted.python.filepath",
-                                 "twisted.python.components.registerAdapter"]))
+                          sorted(["sys", "os", "datetime",
+                                  "twisted.python.reflect",
+                                  "twisted.python.filepath",
+                                  "twisted.python.components.registerAdapter"]))
 
 
     def test_moduleExportDefinedNames(self):
