@@ -10,8 +10,10 @@ import sys
 import itertools
 import zipfile
 import compileall
+
 try:
     import ast
+    ast # work around pyflakes
 except ImportError:
     ast = None
 
@@ -284,7 +286,7 @@ class BasicTests(PySpaceTestCase):
         subpath.createDirectory()
         subpath.child("__init__.py").setContent('del __path__\n')
         sys.path.append(mypath.path)
-        import abcd
+        abcd = __import__('abcd')
         try:
             l = list(pp.walkModules())
             self.assertEquals(len(l), 1)
