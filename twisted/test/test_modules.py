@@ -485,7 +485,7 @@ class PathModificationTest(PySpaceTestCase):
         """
         self._setupSysPath()
         modinfo = modules.getModule(self.packageName + ".a")
-        self.assertEquals(sorted(modinfo.iterImportNames()),
+        self.assertEquals(sorted(modinfo.importedNames()),
                          sorted(["sys", "os", "datetime",
                                  "twisted.python.reflect",
                                  "twisted.python.filepath",
@@ -499,7 +499,7 @@ class PathModificationTest(PySpaceTestCase):
         """
         self._setupSysPath()
         modinfo = modules.getModule(self.packageName + ".a")
-        self.assertEqual(sorted(modinfo.iterExportNames()),
+        self.assertEqual(sorted(modinfo.exportedNames()),
                          sorted(["foo", "doFoo", "Foo"]))
 
 
@@ -510,7 +510,7 @@ class PathModificationTest(PySpaceTestCase):
         """
         self._setupSysPath()
         modinfo = modules.getModule(self.packageName + ".b")
-        self.assertEqual(sorted(modinfo.iterExportNames()),
+        self.assertEqual(sorted(modinfo.exportedNames()),
                          sorted(["foo"]))
 
 
@@ -535,8 +535,8 @@ class PathModificationTest(PySpaceTestCase):
         self._setupSysPath()
         modinfo1 = modules.getModule(self.packageName + ".e")
         modinfo2 = modules.getModule(self.packageName + ".f")
-        self.assertRaises(SyntaxError, lambda: list(modinfo1.iterExportNames()))
-        self.assertRaises(SyntaxError, lambda: list(modinfo2.iterExportNames()))
+        self.assertRaises(SyntaxError, lambda: list(modinfo1.exportedNames()))
+        self.assertRaises(SyntaxError, lambda: list(modinfo2.exportedNames()))
 
 
     if ast is None:

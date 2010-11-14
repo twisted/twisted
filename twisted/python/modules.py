@@ -506,7 +506,7 @@ class PythonModule(_ModuleIteratorHelper):
                 yield PythonAttribute(self.name + '.' + name, self, True, val)
 
 
-    def iterImportNames(self):
+    def importedNames(self):
         """
         List all the fully-qualified names imported in this module.
 
@@ -531,7 +531,7 @@ class PythonModule(_ModuleIteratorHelper):
                 yield name
 
 
-    def iterExportNames(self):
+    def exportedNames(self):
         """
         List all the names exported by this module. If the module
         defines __all__ as a list of literal strings, those names will
