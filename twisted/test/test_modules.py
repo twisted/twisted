@@ -11,16 +11,14 @@ import itertools
 import zipfile
 import compileall
 
-try:
-    import ast
-    ast # work around pyflakes
-except ImportError:
-    ast = None
 
 import twisted
 from twisted.trial.unittest import TestCase
 
 from twisted.python import modules
+
+# import ast module from here so we don't have to catch ImportError again.
+from twisted.python.modules import ast
 from twisted.python.modules import _isPythonIdentifier, _ImportExportFinder
 
 from twisted.python.filepath import FilePath

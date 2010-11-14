@@ -65,6 +65,7 @@ import warnings
 import re
 try:
     import ast
+    ast # work around pyflakes
 except ImportError:
     ast = None
 
