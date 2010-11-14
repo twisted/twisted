@@ -166,14 +166,24 @@ class BasicTests(PySpaceTestCase):
                           self.findByIteration("twisted"))
 
 
-
-    def test_lookForSource(self):
+    def test_preferPyToPyc(self):
         """
-        If a .py file exists for a loaded module, use it as the module path. If not, use __file__.
+        L{modules.PythonModule.filePath} will always point to the original
+        source file (the C{.py} file) rather than the compiled file from which
+        it was loaded (the C{.pyc}), if it is implemented in Python module and
+        source is available.  If it's a built-in module, of course, it will
+        point to the shared object.
         """
-        import pickle, datetime
-        self.assertTrue(modules.getModule('pickle').filePath.path.endswith('.py'))
-        self.assertFalse(modules.getModule('datetime').filePath.path.endswith('.py'))
+        # We choose two modules here: pickle, which is in the stdlib and really
+        # ought to have been compiled already, and cPickle, which should be a
+        # shared object of some kind.
+        import pickle, cPickle
+        def hasPyExt(module):
+            return modules.getModule(module.__name__).filePath.endswith(".py")
+        # Sanity check: if Pickle isn't a pyc, this test isn't valid.
+        self.assertEquals(pickle.__file__.split('.')[-1], 'pyc')
+        self.assertEquals(hasPyExt(pickle), True)
+        self.assertEquals(hasPyExt(cPickle), False)
 
 
     def test_dottedNames(self):
