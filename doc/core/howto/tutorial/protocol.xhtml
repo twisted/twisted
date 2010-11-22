@@ -86,16 +86,16 @@ attributes inside the factories. We are getting better at protocol design:
 none of our protocol classes had to be changed, and neither will have to
 change until the end of the tutorial.</p>
 
-<p>As an application <code class="API"
-base="twisted.application.service">service</code> , this new finger
-service implements the <code class="API"
-base="twisted.application.service">IService</code> interface and can
-be started and stopped in a standardized manner.  We'll make use of
-this in the next example.</p>
+<p>As an application service, this new finger service implements the <code
+class="API" base="twisted.application.service">IService</code> interface and
+can be started and stopped in a standardized manner. We'll make use of this in
+the next example.</p>
 
 <a href="listings/finger/finger13.tac" class="py-listing">finger13.tac</a>
 
-
+<p>Most application services will want to use the <code class="API"
+base="twisted.application.service">Service</code> base class, which implements
+all the generic <code>IService</code> behavior.</p>
 
 <h2>Read Status File</h2>
 
@@ -108,7 +108,7 @@ for such scheduled tasks.</p>
 
 <a href="listings/finger/finger14.tac" class="py-listing">finger14.tac</a>
 
-<p>Since this verison is reading data from a file (and refreshing the data 
+<p>Since this version is reading data from a file (and refreshing the data 
 every 30 seconds), there is no <code>FingerSetterFactory</code> and thus 
 nothing listening on port 1079.</p>
 
