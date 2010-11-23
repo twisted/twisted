@@ -6,6 +6,7 @@ Abstract file handle class
 """
 
 from twisted.internet import main, error, interfaces
+from twisted.internet.abstract import _ConsumerMixin
 from twisted.python import failure
 
 from zope.interface import implements
@@ -17,7 +18,7 @@ from twisted.internet.iocpreactor import iocpsupport as _iocp
 
 
 
-class FileHandle(object):
+class FileHandle(_ConsumerMixin):
     """
     File handle that can read and write asynchronously
     """
@@ -391,46 +392,6 @@ class FileHandle(object):
 
 
     # Producer/consumer implementation
-
-    producerPaused = False
-    streamingProducer = False
-
-    # first, the consumer stuff.  This requires no additional work, as
-    # any object you can write to can be a consumer, really.
-
-    producer = None
-
-
-    def registerProducer(self, producer, streaming):
-        """
-        Register to receive data from a producer.
-
-        This sets this selectable to be a consumer for a producer.  When this
-        selectable runs out of data on a write() call, it will ask the producer
-        to resumeProducing(). A producer should implement the IProducer
-        interface.
-
-        FileDescriptor provides some infrastructure for producer methods.
-        """
-        if self.producer is not None:
-            raise RuntimeError(
-                "Cannot register producer %s, because producer "
-                "%s was never unregistered." % (producer, self.producer))
-        if self.disconnected:
-            producer.stopProducing()
-        else:
-            self.producer = producer
-            self.streamingProducer = streaming
-            if not streaming:
-                producer.resumeProducing()
-
-
-    def unregisterProducer(self):
-        """
-        Stop consuming data from a producer, without disconnecting.
-        """
-        self.producer = None
-
 
     def stopConsuming(self):
         """

@@ -43,12 +43,15 @@ def loopUntil(predicate, interval=0):
     return d
 
 
+
 class ClosingProtocol(protocol.Protocol):
 
     def connectionMade(self):
+        msg("ClosingProtocol.connectionMade")
         self.transport.loseConnection()
 
     def connectionLost(self, reason):
+        msg("ClosingProtocol.connectionLost")
         reason.trap(error.ConnectionDone)
 
 
