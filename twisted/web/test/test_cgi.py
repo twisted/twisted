@@ -21,6 +21,20 @@ print
 print "cgi output"
 '''
 
+DUAL_HEADER_CGI = '''\
+print "Header: spam"
+print "Header: eggs"
+print
+print "cgi output"
+'''
+
+SPECIAL_HEADER_CGI = '''\
+print "Server: monkeys"
+print "Date: last year"
+print
+print "cgi output"
+'''
+
 READINPUT_CGI = '''\
 # this is an example of a correctly-written CGI script which reads a body
 # from stdin, which only reads env['CONTENT_LENGTH'] bytes.
@@ -72,11 +86,16 @@ class CGI(unittest.TestCase):
             return self.p.stopListening()
 
 
-    def testCGI(self):
+    def writeCGI(self, source):
         cgiFilename = os.path.abspath(self.mktemp())
         cgiFile = file(cgiFilename, 'wt')
-        cgiFile.write(DUMMY_CGI)
+        cgiFile.write(source)
         cgiFile.close()
+        return cgiFilename
+
+
+    def testCGI(self):
+        cgiFilename = self.writeCGI(DUMMY_CGI)
 
         portnum = self.startServer(cgiFilename)
         d = client.getPage("http://localhost:%d/cgi" % portnum)
@@ -86,6 +105,42 @@ class CGI(unittest.TestCase):
 
     def _testCGI_1(self, res):
         self.failUnlessEqual(res, "cgi output" + os.linesep)
+
+
+    def test_protectedServerAndDate(self):
+        """
+        If the CGI script emits a I{Server} or I{Date} header, these are
+        ignored.
+        """
+        cgiFilename = self.writeCGI(SPECIAL_HEADER_CGI)
+
+        portnum = self.startServer(cgiFilename)
+        url = "http://localhost:%d/cgi" % (portnum,)
+        factory = client.HTTPClientFactory(url)
+        reactor.connectTCP('localhost', portnum, factory)
+        def checkResponse(ignored):
+            self.assertNotIn('monkeys', factory.response_headers['server'])
+            self.assertNotIn('last year', factory.response_headers['date'])
+        factory.deferred.addCallback(checkResponse)
+        return factory.deferred
+
+
+    def test_duplicateHeaderCGI(self):
+        """
+        If a CGI script emits two instances of the same header, both are sent in
+        the response.
+        """
+        cgiFilename = self.writeCGI(DUAL_HEADER_CGI)
+
+        portnum = self.startServer(cgiFilename)
+        url = "http://localhost:%d/cgi" % (portnum,)
+        factory = client.HTTPClientFactory(url)
+        reactor.connectTCP('localhost', portnum, factory)
+        def checkResponse(ignored):
+            self.assertEquals(
+                factory.response_headers['header'], ['spam', 'eggs'])
+        factory.deferred.addCallback(checkResponse)
+        return factory.deferred
 
 
     def testReadEmptyInput(self):

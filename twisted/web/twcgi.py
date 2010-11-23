@@ -303,7 +303,9 @@ class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
                             else:
                                 self.request.setResponseCode(statusNum)
                         else:
-                            self.request.setHeader(headerName,headerText)
+                            # Don't allow the application to control these required headers.
+                            if headerName.lower() not in ('server', 'date'):
+                                self.request.responseHeaders.addRawHeader(headerName, headerText)
                 output = text[headerend+len(delimiter):]
                 self.handling_headers = 0
             if self.handling_headers:

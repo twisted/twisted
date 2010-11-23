@@ -1,0 +1,2 @@
+twisted.web.twcgi now generates responses containing all occurrences of
+duplicate headers produced by CGI scripts, not just the last value.
