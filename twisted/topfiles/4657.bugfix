@@ -1,2 +1,0 @@
-trial now puts coverage data in the path specified by --temp-directory, even
-if that option comes after --coverage on the command line.

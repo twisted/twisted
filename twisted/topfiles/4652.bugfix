@@ -1,3 +1,0 @@
-Twisted can now be built with the LLVM clang compiler, with 'CC=clang python
-setup.py build'.  C code that caused errors with this compiler has been
-removed.

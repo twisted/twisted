@@ -1,3 +1,0 @@
-The module attributes `LENGTH`, `DATA`, `COMMA`, and `NUMBER` of
-twisted.protocols.basic (previously used by `NetstringReceiver`)
-are now deprecated.

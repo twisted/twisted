@@ -1,2 +1,0 @@
-twisted.python.threadable.whenThreaded, deprecated since Twisted 2.2.0, has
-been removed.
