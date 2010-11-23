@@ -16,6 +16,9 @@ import warnings
 
 from twisted.internet import interfaces, defer, error
 from twisted.internet.protocol import ClientFactory, Protocol
+from twisted.plugin import getPlugins
+from twisted.internet.interfaces import IStreamServerEndpointStringParser
+from twisted.internet.interfaces import IStreamClientEndpointStringParser
 from twisted.python.filepath import FilePath
 
 
@@ -574,9 +577,9 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
     return ((int(port), factory, cf),
             {'interface': interface, 'backlog': int(backlog)})
 
-_funcs = {"tcp": _parseTCP,
-          "unix": _parseUNIX,
-          "ssl": _parseSSL}
+_serverParsers = {"tcp": _parseTCP,
+                  "unix": _parseUNIX,
+                  "ssl": _parseSSL}
 
 _OP, _STRING = range(2)
 
@@ -679,6 +682,8 @@ def _parseServer(description, factory, default=None):
         use for unqualified description strings (those which do not have a ':'
         and prefix).
     @type default: C{str} or C{NoneType}
+
+    @return: a 3-tuple of (plugin or name, arguments, keyword arguments)
     """
     args, kw = _parse(description)
     if not args or (len(args) == 1 and not kw):
@@ -696,8 +701,11 @@ def _parseServer(description, factory, default=None):
         # been warned.
         args[0:0] = [default]
     endpointType = args[0]
-    parser = _funcs.get(endpointType)
+    parser = _serverParsers.get(endpointType)
     if parser is None:
+        for plugin in getPlugins(IStreamServerEndpointStringParser):
+            if plugin.prefix == endpointType: 
+                return (plugin, args[1:], kw)
         raise ValueError("Unknown endpoint type: '%s'" % (endpointType,))
     return (endpointType.upper(),) + parser(factory, *args[1:], **kw)
 
@@ -708,7 +716,12 @@ def _serverFromStringLegacy(reactor, description, default):
     Underlying implementation of L{serverFromString} which avoids exposing the
     deprecated 'default' argument to anything but L{strports.service}.
     """
-    name, args, kw = _parseServer(description, None, default)
+    nameOrPlugin, args, kw = _parseServer(description, None, default)
+    if type(nameOrPlugin) is not str:
+        plugin = nameOrPlugin
+        return plugin.parseStreamServer(reactor, *args, **kw)
+    else:
+        name = nameOrPlugin
     # Chop out the factory.
     args = args[:1] + args[2:]
     return _endpointServerFactories[name](reactor, *args, **kw)
@@ -757,6 +770,10 @@ def serverFromString(reactor, description):
 
         serverFromString(reactor, "unix:/var/run/finger")
         serverFromString(reactor, "unix:/var/run/finger:mode=660")
+
+    This function is also extensible; new endpoint types may be registered as
+    L{IStreamServerEndpointStringParser} plugins.  See that interface for more
+    information.
 
     @param reactor: The server endpoint will be constructed with this reactor.
 
@@ -963,6 +980,10 @@ def clientFromString(reactor, description):
         clientFromString(reactor, "ssl:host=web.example.com:port=443:"
                                   "caCertsDir=/etc/ssl/certs")
 
+    This function is also extensible; new endpoint types may be registered as
+    L{IStreamClientEndpointStringParser} plugins.  See that interface for more
+    information.
+
     @param reactor: The client endpoint will be constructed with this reactor.
 
     @param description: The strports description to parse.
@@ -974,6 +995,12 @@ def clientFromString(reactor, description):
     @since: 10.2
     """
     args, kwargs = _parse(description)
-    name = args.pop(0).upper()
+    aname = args.pop(0)
+    name = aname.upper()
+    for plugin in getPlugins(IStreamClientEndpointStringParser):
+        if plugin.prefix.upper() == name:
+            return plugin.parseStreamClient(*args, **kwargs)
+    if name not in _clientParsers:
+        raise ValueError("Unknown endpoint type: %r" % (aname,))
     kwargs = _clientParsers[name](*args, **kwargs)
     return _endpointClientFactories[name](reactor, **kwargs)

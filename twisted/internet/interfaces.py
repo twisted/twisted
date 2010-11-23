@@ -1772,3 +1772,83 @@ class IStreamServerEndpoint(Interface):
         @return: A L{Deferred} that results in an L{IListeningPort} or an
             L{CannotListenError}
         """
+
+
+
+class IStreamServerEndpointStringParser(Interface):
+    """
+    An L{IStreamServerEndpointStringParser} is like an
+    L{IStreamClientEndpointStringParser}, except for L{IStreamServerEndpoint}s
+    instead of clients.  It integrates with L{endpoints.serverFromString} in
+    much the same way.
+    """
+
+    prefix = Attribute(
+        """
+        @see: L{IStreamClientEndpointStringParser.prefix}
+        """
+    )
+
+
+    def parseStreamServer(reactor, *args, **kwargs):
+        """
+        Parse a stream server endpoint from a reactor and string-only arguments
+        and keyword arguments.
+
+        @see: L{IStreamClientEndpointStringParser.parseStreamClient}
+
+        @return: a stream server endpoint
+        @rtype: L{IStreamServerEndpoint}
+        """
+
+
+
+class IStreamClientEndpointStringParser(Interface):
+    """
+    An L{IStreamClientEndpointStringParser} is a parser which can convert
+    a set of string C{*args} and C{**kwargs} into an L{IStreamClientEndpoint}
+    provider.
+
+    This interface is really only useful in the context of the plugin system
+    for L{endpoints.clientFromString}.  See the document entitled "I{The
+    Twisted Plugin System}" for more details on how to write a plugin.
+
+    If you place an L{IStreamClientEndpointStringParser} plugin in the
+    C{twisted.plugins} package, that plugin's C{parseStreamClient} method will
+    be used to produce endpoints for any description string that begins with
+    the result of that L{IStreamClientEndpointStringParser}'s prefix attribute.
+    """
+
+    prefix = Attribute(
+        """
+        A C{str}, the description prefix to respond to.  For example, an
+        L{IStreamClientEndpointStringParser} plugin which had C{"foo"} for its
+        C{prefix} attribute would be called for endpoint descriptions like
+        C{"foo:bar:baz"} or C{"foo:"}.
+        """
+    )
+
+
+    def parseStreamClient(reactor, *args, **kwargs):
+        """
+        This method is invoked by L{endpoints.clientFromString}, if the type of
+        endpoint matches the return value from this
+        L{IStreamClientEndpointStringParser}'s C{prefix} method.
+
+        @param reactor: The reactor passed to C{clientFromString}.
+
+        @param args: The string arguments, minus the endpoint type, in the
+            endpoint description string, parsed according to the rules
+            described in L{endpoints.quoteStringArgument}.  For example, if the
+            description were C{"my-type:foo:bar:baz=qux"}, C{args} would be
+            C{('foo','bar')}
+
+        @param kwargs: The string arguments from the endpoint description
+            passed as keyword arguments.  For example, if the description were
+            C{"my-type:foo:bar:baz=qux"}, C{kwargs} would be
+            C{dict(baz='qux')}.
+
+        @return: a client endpoint
+        @rtype: L{IStreamClientEndpoint}
+        """
+

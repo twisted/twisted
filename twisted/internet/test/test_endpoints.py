@@ -17,6 +17,7 @@ from twisted.internet.protocol import ClientFactory, Protocol
 from twisted.test.proto_helpers import MemoryReactor, RaisingMemoryReactor
 from twisted.python.failure import Failure
 
+from twisted import plugins
 from twisted.python.modules import getModule
 from twisted.python.filepath import FilePath
 
@@ -907,6 +908,14 @@ class ParserTestCase(unittest.TestCase):
              {'mode': 0666, 'backlog': 50, 'wantPID': True}))
 
 
+    def test_unknownType(self):
+        """
+        L{strports.parse} raises C{ValueError} when given an unknown endpoint
+        type.
+        """
+        self.assertRaises(ValueError, self.parse, "bogus-type:nothing", self.f)
+
+
 
 class ServerStringTests(unittest.TestCase):
     """
@@ -1002,6 +1011,44 @@ class ServerStringTests(unittest.TestCase):
             "Unknown endpoint type: 'ftl'")
 
 
+    def test_typeFromPlugin(self):
+        """
+        L{endpoints.serverFromString} looks up plugins of type
+        L{IStreamServerEndpoint} and constructs endpoints from them.
+        """
+        # Set up a plugin which will only be accessible for the duration of
+        # this test.
+        addFakePlugin(self)
+        # Plugin is set up: now actually test.
+        notAReactor = object()
+        fakeEndpoint = endpoints.serverFromString(
+            notAReactor, "fake:hello:world:yes=no:up=down")
+        from twisted.plugins.fakeendpoint import fake
+        self.assertIdentical(fakeEndpoint.parser, fake)
+        self.assertEquals(fakeEndpoint.args, (notAReactor, 'hello', 'world'))
+        self.assertEquals(fakeEndpoint.kwargs, dict(yes='no', up='down'))
+
+
+
+def addFakePlugin(testCase, dropinSource="fakeendpoint.py"):
+    """
+    For the duration of C{testCase}, add a fake plugin to twisted.plugins which
+    contains some sample endpoint parsers.
+    """
+    import sys
+    savedModules = sys.modules.copy()
+    savedPluginPath = plugins.__path__
+    def cleanup():
+        sys.modules.clear()
+        sys.modules.update(savedModules)
+        plugins.__path__[:] = savedPluginPath
+    testCase.addCleanup(cleanup)
+    fp = FilePath(testCase.mktemp())
+    fp.createDirectory()
+    getModule(__name__).filePath.sibling(dropinSource).copyTo(
+        fp.child(dropinSource))
+    plugins.__path__.append(fp.path)
+
 
 
 class ClientStringTests(unittest.TestCase):
@@ -1065,6 +1112,36 @@ class ClientStringTests(unittest.TestCase):
         client = endpoints.clientFromString(object(), "unix:path=/var/foo/bar")
         self.assertEquals(client._timeout, 30)
         self.assertEquals(client._checkPID, False)
+
+
+    def test_typeFromPlugin(self):
+        """
+        L{endpoints.clientFromString} looks up plugins of type
+        L{IStreamClientEndpoint} and constructs endpoints from them.
+        """
+        addFakePlugin(self)
+        notAReactor = object()
+        clientEndpoint = endpoints.clientFromString(
+            notAReactor, "cfake:alpha:beta:cee=dee:num=1")
+        from twisted.plugins.fakeendpoint import fakeClient
+        self.assertIdentical(clientEndpoint.parser, fakeClient)
+        self.assertEquals(clientEndpoint.args, ('alpha', 'beta'))
+        self.assertEquals(clientEndpoint.kwargs, dict(cee='dee', num='1'))
+
+
+    def test_unknownType(self):
+        """
+        L{endpoints.serverFromString} raises C{ValueError} when given an
+        unknown endpoint type.
+        """
+        value = self.assertRaises(
+            # faster-than-light communication not supported
+            ValueError, endpoints.clientFromString, None,
+            "ftl:andromeda/carcosa/hali/2387")
+        self.assertEquals(
+            str(value),
+            "Unknown endpoint type: 'ftl'")
+
 
 
 class SSLClientStringTests(unittest.TestCase):
