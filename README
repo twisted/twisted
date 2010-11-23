@@ -2,11 +2,12 @@ Twisted 10.2.0pre3
 
 Quote of the Release:
 
-  <fijal> glyph: I write a blog post
-  <fijal> and I apply science
-  <glyph> I love science
-  <glyph> except when it tells me I am wrong
-  <glyph> then it is just one out of a large valid set of ways to look at the world
+  <glyph> khorn: "I know what you're thinking.  'Did he add six callbacks or
+          only five?'  Well, to tell you the truth, in all this excitement, I
+          kind of lost track myself.  But being as this is a Deferred, the most
+          powerful callback abstraction in the world, and would blow your head
+          clean off, you've got to ask yourself one question: do you know how
+          to add callbacks?  well, do ya, punk?"
 
 
 For information on what's new in Twisted 10.2.0pre3, see the NEWS file that comes
