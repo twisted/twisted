@@ -1,6 +1,35 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Web 10.2.0pre3 (2010-11-22)
+===================================
+
+Features
+--------
+ - twisted.web.xmlrpc.XMLRPC.xmlrpc_* methods can now be decorated
+   using withRequest to cause them to be passed the HTTP request
+   object. (#3073)
+
+Bugfixes
+--------
+ - twisted.web.xmlrpc.QueryProtocol.handleResponse now disconnects
+   from the server, meaning that Twisted XML-RPC clients disconnect
+   from the server as soon as they receive a response, rather than
+   relying on the server to disconnect. (#2518)
+ - twisted.web.twcgi now generates responses containing all
+   occurrences of duplicate headers produced by CGI scripts, not just
+   the last value. (#4742)
+
+Deprecations and Removals
+-------------------------
+ - twisted.web.trp, which has been deprecated since Twisted 9.0, was
+   removed. (#4299)
+
+Other
+-----
+ - #4576, #4577, #4709, #4723
+
+
 Twisted Web 10.1.0 (2010-06-27)
 ===============================
 

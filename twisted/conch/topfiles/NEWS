@@ -1,6 +1,28 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Conch 10.2.0pre3 (2010-11-22)
+=====================================
+
+Bugfixes
+--------
+ - twisted.conch.ssh.factory.SSHFactory no longer disables coredumps.
+   (#2715)
+ - The Deferred returned by twisted.conch.telnet.TelnetTransport.will
+   now fires with an OptionRefused failure if the peer responds with a
+   refusal for the option negotiation. (#4231)
+ - SSHServerTransport and SSHClientTransport in
+   twisted.conch.ssh.transport no longer use PyCrypto to generate
+   random numbers for DH KEX.  They also now generate values from the
+   full valid range, rather than only half of it. (#4469)
+ - twisted.conch.ssh.connection.SSHConnection now errbacks leftover
+   request deferreds on connection shutdown. (#4483)
+
+Other
+-----
+ - #4677
+
+
 Twisted Conch 10.1.0 (2010-06-27)
 =================================
 
