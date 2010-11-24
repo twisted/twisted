@@ -559,7 +559,7 @@ class PythonModule(_ModuleIteratorHelper):
                                       " requires the 'ast' module, found in"
                                       " Python 2.6 or later.")
         self._maybeLoadFinder()
-        return self._finder.exports or self._finder.definedNames
+        return self._finder.exports or [name for name in self._finder.definedNames if not name.startswith('_')]
 
 
     def isPackage(self):

@@ -306,6 +306,7 @@ def doFoo():
   import datetime
 class Foo:
   x = 0
+_foo = "boring internal details"
 """
 
 sampleModuleWithExportsContents = """
@@ -438,7 +439,7 @@ class PathModificationTest(PySpaceTestCase):
         self._setupSysPath()
         modinfo = modules.getModule(self.packageName + ".a")
         attrs = sorted(modinfo.iterAttributes(), key=lambda a: a.name)
-        names = sorted(["foo", "doFoo", "Foo"])
+        names = sorted(["_foo", "foo",  "doFoo", "Foo"])
         for attr, name in zip(attrs, names):
             self.assertEquals(attr.onObject, modinfo)
             self.assertFalse(attr.isLoaded())
@@ -476,7 +477,7 @@ class PathModificationTest(PySpaceTestCase):
         self._setupSysPath()
         modinfo = modules.getModule(self.packageName + ".a")
         attr = [x for x in modinfo.iterAttributes()
-                if x.name.endswith('foo')][0]
+                if x.name.endswith('.foo')][0]
 
         mod = attr.onObject
         self.assertFalse(attr.isLoaded())
@@ -504,7 +505,8 @@ class PathModificationTest(PySpaceTestCase):
 
     def test_moduleExportDefinedNames(self):
         """
-        The exports of a module with no __all__ are all its defined names.
+        The exports of a module with no __all__ are all its defined names that
+        have no leading underscore.
         """
         self._setupSysPath()
         modinfo = modules.getModule(self.packageName + ".a")
@@ -748,7 +750,7 @@ class ASTVisitorTests(TestCase):
             f = _ImportExportFinder()
             self.assertRaises(SyntaxError, f.visit, tree)
 
-        
+
     def test_funnyAssigns(self):
         """
         Assignments that aren't to regular names are skipped. Assignments to
