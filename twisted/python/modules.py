@@ -152,9 +152,9 @@ class _ModuleIteratorHelper:
                 ext = potentialTopLevel.splitext()[1]
                 potentialBasename = potentialTopLevel.basename()[:-len(ext)]
                 if ext in PYTHON_EXTENSIONS:
-                    # TODO: this should be a little choosier about which path entry
-                    # it selects first, and it should do all the .so checking and
-                    # crud
+                    # TODO: this should be a little choosier about which path
+                    # entry it selects first, and it should do all the .so
+                    # checking and crud
                     if not _isPythonIdentifier(potentialBasename):
                         continue
                     modname = self._subModuleName(potentialBasename)
@@ -164,7 +164,8 @@ class _ModuleIteratorHelper:
                         continue
                     if modname not in yielded:
                         yielded[modname] = True
-                        pm = PythonModule(modname, potentialTopLevel, self._getEntry())
+                        pm = PythonModule(modname, potentialTopLevel,
+                                          self._getEntry())
                         assert pm != self
                         yield pm
                 else:
@@ -195,8 +196,8 @@ class _ModuleIteratorHelper:
 
     def _subModuleName(self, mn):
         """
-        This is a hook to provide packages with the ability to specify their names
-        as a prefix to submodules here.
+        This is a hook to provide packages with the ability to specify their
+        names as a prefix to submodules here.
         """
         return mn
 
@@ -242,8 +243,8 @@ class _ModuleIteratorHelper:
 
     def __iter__(self):
         """
-        Implemented to raise NotImplementedError for clarity, so that attempting to
-        loop over this object won't call __getitem__.
+        Implemented to raise NotImplementedError for clarity, so that
+        attempting to loop over this object won't call __getitem__.
 
         Note: in the future there might be some sensible default for iteration,
         like 'walkEverything', so this is deliberately untested and undefined
@@ -292,7 +293,8 @@ class _ImportExportFinder(_iefBase):
         Collect names and source modules from "import x from y" statements.
         """
         if node.names[0].name == "*":
-            raise SyntaxError("Code containing 'import *' cannot be statically analyzed.")
+            raise SyntaxError("Code containing 'import *' cannot be "
+                              "statically analyzed.")
         for name in node.names:
             self.imports.add((node.module, name.name))
 
@@ -328,10 +330,12 @@ class _ImportExportFinder(_iefBase):
             try:
                 self.exports = set(ast.literal_eval(allval))
             except ValueError:
-                raise SyntaxError("__all__ must only contain literal Python identifier strings")
+                raise SyntaxError("__all__ must only contain literal"
+                                  " Python identifier strings")
             for exp in self.exports:
                 if not _isPythonIdentifier(exp):
-                    raise SyntaxError("__all__ must only contain literal Python identifier strings")
+                    raise SyntaxError("__all__ must only contain literal "
+                                      "Python identifier strings")
         for stmt in node.body:
             self.visit(stmt)
             if isinstance(stmt, ast.Assign):
@@ -345,17 +349,17 @@ class PythonAttribute:
 
     @ivar name: the fully-qualified python name of this attribute.
 
-    @ivar onObject: a reference to a PythonModule or other PythonAttribute that
-    is this attribute's logical parent.
+    @ivar onObject: a reference to a PythonModule or other PythonAttribute
+    that is this attribute's logical parent.
 
-    @ivar name: the fully qualified python name of the attribute represented by
-    this class.
+    @ivar name: the fully qualified python name of the attribute represented
+    by this class.
     """
 
     def __init__(self, name, onObject, loaded, pythonValue):
         """
-        Create a PythonAttribute.  This is a private constructor.  Do not construct
-        me directly, use PythonModule.iterAttributes.
+        Create a PythonAttribute.  This is a private constructor.  Do not
+        construct me directly, use PythonModule.iterAttributes.
 
         @param name: the FQPN
         @param onObject: see ivar
@@ -427,8 +431,8 @@ class PythonModule(_ModuleIteratorHelper):
 
     def __init__(self, name, filePath, pathEntry):
         """
-        Create a PythonModule.  Do not construct this directly, instead inspect a
-        PythonPath or other PythonModule instances.
+        Create a PythonModule.  Do not construct this directly, instead
+        inspect a PythonPath or other PythonModule instances.
 
         @param name: see ivar
         @param filePath: see ivar
@@ -470,7 +474,8 @@ class PythonModule(_ModuleIteratorHelper):
             try:
                 tree = ast.parse(self.filePath.getContent())
             except TypeError:
-                raise ValueError("Static analysis of module attributes can only be done on Python source.")
+                raise ValueError("Static analysis of module attributes can "
+                                 "only be done on Python source.")
             self._finder = _ImportExportFinder()
             self._finder.visit(tree)
 
@@ -497,11 +502,13 @@ class PythonModule(_ModuleIteratorHelper):
                                           " found in Python 2.6 or later.")
             self._maybeLoadFinder()
             if self._finder.exports:
-                attrs = (set([x[1] for x in self._finder.imports]) | self._finder.definedNames) & self._finder.exports
+                attrs = (set([x[1] for x in self._finder.imports])
+                        | self._finder.definedNames) & self._finder.exports
             else:
                 attrs = self._finder.definedNames
             for name in attrs:
-                yield PythonAttribute(self.name + '.' + name, self, False, _nothing)
+                yield PythonAttribute(self.name + '.' + name, self, False,
+                                      _nothing)
         else:
             for name, val in inspect.getmembers(self.load()):
                 yield PythonAttribute(self.name + '.' + name, self, True, val)
@@ -557,8 +564,8 @@ class PythonModule(_ModuleIteratorHelper):
 
     def isPackage(self):
         """
-        Returns true if this module is also a package, and might yield something
-        from iterModules.
+        Returns true if this module is also a package, and might yield
+        something from iterModules.
         """
         return _isPackagePath(self.filePath)
 
@@ -605,7 +612,8 @@ class PythonModule(_ModuleIteratorHelper):
     def walkModules(self, importPackages=False):
         if importPackages and self.isPackage():
             self.load()
-        return super(PythonModule, self).walkModules(importPackages=importPackages)
+        return super(PythonModule, self
+                     ).walkModules(importPackages=importPackages)
 
     def _subModuleName(self, mn):
         """
@@ -808,8 +816,8 @@ class PythonPath:
 
     def _findEntryPathString(self, modobj):
         """
-        Determine where a given Python module object came from by looking at path
-        entries.
+        Determine where a given Python module object came from by looking at
+        path entries.
         """
         topPackageObj = modobj
         while '.' in topPackageObj.__name__:
@@ -821,8 +829,8 @@ class PythonPath:
             # /a/b here, the path-entry; so go up two steps.
             rval = dirname(dirname(topPackageObj.__file__))
         else:
-            # the module is completely top-level, not within any packages.  The
-            # path entry it's on is just its dirname.
+            # the module is completely top-level, not within any packages.
+            # The path entry it's on is just its dirname.
             rval = dirname(topPackageObj.__file__)
 
         # There are probably some awful tricks that an importer could pull
@@ -928,8 +936,8 @@ class PythonPath:
 
     def walkModules(self, importPackages=False):
         """
-        Similar to L{iterModules}, this yields every module on the path, then every
-        submodule in each package or entry.
+        Similar to L{iterModules}, this yields every module on the path, then
+        every submodule in each package or entry.
         """
         for package in self.iterModules():
             for module in package.walkModules(importPackages=False):

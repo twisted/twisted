@@ -31,9 +31,9 @@ class PySpaceTestCase(TestCase):
 
     def findByIteration(self, modname, where=modules, importPackages=False):
         """
-        You don't ever actually want to do this, so it's not in the public API, but
-        sometimes we want to compare the result of an iterative call with a
-        lookup call and make sure they're the same for test purposes.
+        You don't ever actually want to do this, so it's not in the public
+        API, but sometimes we want to compare the result of an iterative call
+        with a lookup call and make sure they're the same for test purposes.
         """
         for modinfo in where.walkModules(importPackages=importPackages):
             if modinfo.name == modname:
@@ -244,8 +244,8 @@ class BasicTests(PySpaceTestCase):
 
     def test_alwaysPreferPy(self):
         """
-        Verify that .py files will always be preferred to .pyc files, regardless of
-        directory listing order.
+        Verify that .py files will always be preferred to .pyc files,
+        regardless of directory listing order.
         """
         mypath = FilePath(self.mktemp())
         mypath.createDirectory()
@@ -350,9 +350,11 @@ class PathModificationTest(PySpaceTestCase):
         self.packagePath.createDirectory()
         self.packagePath.child("__init__.py").setContent("")
         self.packagePath.child("a.py").setContent(sampleModuleContents)
-        self.packagePath.child("b.py").setContent(sampleModuleWithExportsContents)
+        self.packagePath.child("b.py").setContent(
+            sampleModuleWithExportsContents)
         self.packagePath.child("c__init__.py").setContent("")
-        self.packagePath.child("d.py").setContent(sampleModuleWithExportedImportsContents)
+        self.packagePath.child("d.py").setContent(
+            sampleModuleWithExportedImportsContents)
 
         self.pathSetUp = False
 
@@ -382,14 +384,16 @@ class PathModificationTest(PySpaceTestCase):
 
     def test_underUnderPathAlreadyImported(self):
         """
-        Verify that iterModules will honor the __path__ of already-loaded packages.
+        Verify that iterModules will honor the __path__ of already-loaded
+        packages.
         """
         self._underUnderPathTest()
 
 
     def test_underUnderPathNotAlreadyImported(self):
         """
-        Verify that iterModules will honor the __path__ of already-loaded packages.
+        Verify that iterModules will honor the __path__ of already-loaded
+        packages.
         """
         self._underUnderPathTest(False)
 
@@ -408,8 +412,8 @@ class PathModificationTest(PySpaceTestCase):
 
     def test_listingModules(self):
         """
-        Make sure the module list comes back as we expect from iterModules on a
-        package, whether zipped or not.
+        Make sure the module list comes back as we expect from iterModules on
+        a package, whether zipped or not.
         """
         self._setupSysPath()
         self._listModules()
@@ -417,8 +421,8 @@ class PathModificationTest(PySpaceTestCase):
 
     def test_listingModulesAlreadyImported(self):
         """
-        Make sure the module list comes back as we expect from iterModules on a
-        package, whether zipped or not, even if the package has already been
+        Make sure the module list comes back as we expect from iterModules on
+        a package, whether zipped or not, even if the package has already been
         imported.
         """
         self._setupSysPath()
@@ -439,17 +443,21 @@ class PathModificationTest(PySpaceTestCase):
             self.assertEquals(attr.onObject, modinfo)
             self.assertFalse(attr.isLoaded())
             self.assertEquals(attr.name, modinfo.name + '.' + name)
-            self.assertRaises(NotImplementedError, lambda: list(attr.iterAttributes()))
+            self.assertRaises(NotImplementedError,
+                              lambda: list(attr.iterAttributes()))
 
 
     def test_loadedModuleAttributes(self):
         """
-        Module attributes can be iterated over after the module has been loaded.
+        Module attributes can be iterated over after the module has been
+        loaded.
         """
         self._setupSysPath()
         modinfo = modules.getModule(self.packageName + ".a")
         modinfo.load()
-        attrs = sorted([a for a in modinfo.iterAttributes() if '_' not in a.name], key=lambda a: a.name)
+        attrs = sorted([a for a in modinfo.iterAttributes()
+                        if '_' not in a.name],
+                       key=lambda a: a.name)
         names = sorted(["foo", "doFoo", "Foo"])
         for attr, name in zip(attrs, names):
             self.assertEquals(attr.onObject, modinfo)
@@ -462,11 +470,13 @@ class PathModificationTest(PySpaceTestCase):
 
     def test_attributeLoading(self):
         """
-        Calling .load() on a L{PythonAttribute} loads the module it's a part of and returns the attribute value.
+        Calling .load() on a L{PythonAttribute} loads the module it's a part
+        of and returns the attribute value.
         """
         self._setupSysPath()
         modinfo = modules.getModule(self.packageName + ".a")
-        attr = [x for x in modinfo.iterAttributes() if x.name.endswith('foo')][0]
+        attr = [x for x in modinfo.iterAttributes()
+                if x.name.endswith('foo')][0]
 
         mod = attr.onObject
         self.assertFalse(attr.isLoaded())
@@ -494,8 +504,7 @@ class PathModificationTest(PySpaceTestCase):
 
     def test_moduleExportDefinedNames(self):
         """
-        The exports of a module with no __all__ are all its defined
-        names.
+        The exports of a module with no __all__ are all its defined names.
         """
         self._setupSysPath()
         modinfo = modules.getModule(self.packageName + ".a")
@@ -505,8 +514,8 @@ class PathModificationTest(PySpaceTestCase):
 
     def test_moduleExportAll(self):
         """
-        If __all__ is defined as a list of string literals, the names
-        in it are used as the list of the module's exports.
+        If __all__ is defined as a list of string literals, the names in it
+        are used as the list of the module's exports.
         """
         self._setupSysPath()
         modinfo = modules.getModule(self.packageName + ".b")
@@ -516,7 +525,8 @@ class PathModificationTest(PySpaceTestCase):
 
     def test_exportedImports(self):
         """
-        If __all__ mentions imports, they're included in the collection of defined names.
+        If __all__ mentions imports, they're included in the collection of
+        defined names.
         """
         self._setupSysPath()
         modinfo = modules.getModule(self.packageName + ".d")
@@ -527,11 +537,12 @@ class PathModificationTest(PySpaceTestCase):
 
     def test_moduleExportProblems(self):
         """
-        C{SyntaxError} is raised when doing inspection of module
-        exports if __all__ is not a single list of string literals.
+        C{SyntaxError} is raised when doing inspection of module exports if
+        __all__ is not a single list of string literals.
         """
         self.packagePath.child("e.py").setContent("__all__ = ['a' + 'b']")
-        self.packagePath.child("f.py").setContent("__all__ = ['a']\n__all__ = ['a', 'b']")
+        self.packagePath.child("f.py").setContent(
+            "__all__ = ['a']\n__all__ = ['a', 'b']")
         self._setupSysPath()
         modinfo1 = modules.getModule(self.packageName + ".e")
         modinfo2 = modules.getModule(self.packageName + ".f")
@@ -553,7 +564,8 @@ class PathModificationTest(PySpaceTestCase):
         # Intentionally using 'assert' here, this is not a test assertion, this
         # is just an "oh fuck what is going ON" assertion. -glyph
         if self.pathSetUp:
-            HORK = "path cleanup failed: don't be surprised if other tests break"
+            HORK = ("path cleanup failed: don't be surprised if other tests "
+                    " break")
             assert sys.path.pop() is self.pathExtensionName, HORK+", 1"
             assert self.pathExtensionName not in sys.path, HORK+", 2"
 
@@ -641,14 +653,14 @@ class PythonPathTestCase(TestCase):
 
 class ASTVisitorTests(TestCase):
     """
-    Tests for L{ast.NodeVisitor} subclasses used to extract
-    information from modules without importing them.
+    Tests for L{ast.NodeVisitor} subclasses used to extract information from
+    modules without importing them.
     """
 
     def test_all(self):
         """
-        If a module's '__all__' attribute contains a sequence of
-        literal strings, they are collected as export names.
+        If a module's '__all__' attribute contains a sequence of literal
+        strings, they are collected as export names.
         """
 
         bits = ["foo = 1\n__all__ = ['foo', 'baz']",
@@ -663,8 +675,8 @@ class ASTVisitorTests(TestCase):
 
     def test_justOneAll(self):
         """
-        Modules with more than one definition of __all__ are rejected
-        by L{_ImportExportFinder}.
+        Modules with more than one definition of __all__ are rejected by
+        L{_ImportExportFinder}.
         """
 
         bits  = ["__all__ = ['a']\n__all__ = ['a', 'b']",
@@ -677,8 +689,8 @@ class ASTVisitorTests(TestCase):
 
     def test_literalStringsAll(self):
         """
-        Modules with a definition of __all__ that isn't a list of
-        literal strings are rejected by L{_ImportExportFinder}.
+        Modules with a definition of __all__ that isn't a list of literal
+        strings are rejected by L{_ImportExportFinder}.
         """
 
         bits = ["__all__ = ['a' + 'b']",
@@ -692,9 +704,8 @@ class ASTVisitorTests(TestCase):
 
     def test_identifierStringsAll(self):
         """
-        Modules with a definition of __all__ that contains strings
-        that aren't valid Python identifiers are rejected by
-        L{_ImportExportFinder}.
+        Modules with a definition of __all__ that contains strings that aren't
+        valid Python identifiers are rejected by L{_ImportExportFinder}.
         """
         bits = ["__all__ = ['a nice variable', 'etc']",
                 "__all__ = ['call-with-current-continuation', 'goto']"]
@@ -707,7 +718,8 @@ class ASTVisitorTests(TestCase):
 
     def test_multiAssigns(self):
         """
-        Assignments to __all__ in a tuple unpacking statement are recognized properly.
+        Assignments to __all__ in a tuple unpacking statement are recognized
+        properly.
         """
         bits = ['__all__, x = (["foo", "baz"], 1)',
                 'foo = 1\nx, __all__ = (None, ["foo", "baz"])',
@@ -722,8 +734,8 @@ class ASTVisitorTests(TestCase):
 
     def test_bogusMultiAssign(self):
         """
-        Tuple-unpacking assigments containing __all__ are rejected if
-        the RHS is not a literal sequence of the proper length.
+        Tuple-unpacking assigments containing __all__ are rejected if the RHS
+        is not a literal sequence of the proper length.
         """
         bits = ["(x, __all__) = 1",
                 "[x, __all__] = []",
@@ -739,9 +751,8 @@ class ASTVisitorTests(TestCase):
         
     def test_funnyAssigns(self):
         """
-        Assignments that aren't to regular names are
-        skipped. Assignments to regular names (whether in unpacking
-        contexts or not) are recognized.
+        Assignments that aren't to regular names are skipped. Assignments to
+        regular names (whether in unpacking contexts or not) are recognized.
         """
         bits = [('x[0] = 1', []),
                 ('x.y = 2', []),
@@ -755,7 +766,9 @@ class ASTVisitorTests(TestCase):
             tree = ast.parse(code)
             f = _ImportExportFinder()
             f.visit(tree)
-            self.assertEqual(f.definedNames, set(expectedNames), "expected %s as defined names in %r" % (expectedNames, code))
+            self.assertEqual(f.definedNames, set(expectedNames),
+                             "expected %s as defined names in %r" % (
+                    expectedNames, code))
 
 
     def test_noImportStar(self):
@@ -773,7 +786,8 @@ class ASTVisitorTests(TestCase):
 
 
 if ast is None:
-    ASTVisitorTests.skip = "AST visitor tests require the 'ast' module from Python 2.6."
+    ASTVisitorTests.skip = ("AST visitor tests require the 'ast' module"
+                            " from Python 2.6.")
 
 
 class MiscTests(TestCase):
@@ -782,7 +796,8 @@ class MiscTests(TestCase):
         L{modules._isPythonIdentifier} correctly identifies which strings are
         and aren't valid python identifiers.
         """
-        good = ["__init__", "foo", "_foo", "foo_baz", "Foo", "FooBaz_", "foo1", "foo_1", "F00"]
+        good = ["__init__", "foo", "_foo", "foo_baz", "Foo", "FooBaz_",
+                "foo1", "foo_1", "F00"]
         bad = ["1f", "-foo", "foo-baz", "a foo", "foo.baz", 3, ["foo"], ()]
 
         for n in good:
