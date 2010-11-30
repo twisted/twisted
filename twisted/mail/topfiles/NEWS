@@ -1,6 +1,24 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Mail 10.2.0 (2010-11-29)
+================================
+
+Improved Documentation
+----------------------
+ - The email server example now demonstrates how to set up
+   authentication and authorization using twisted.cred. (#4609)
+
+Deprecations and Removals
+-------------------------
+ - twisted.mail.smtp.sendEmail, deprecated since mid 2003 (before
+   Twisted 2.0), has been removed. (#4529)
+
+Other
+-----
+ - #4038, #4572
+
+
 Twisted Mail 10.1.0 (2010-06-27)
 ================================
 

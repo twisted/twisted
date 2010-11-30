@@ -1,2 +1,0 @@
-twisted.mail.smtp.sendEmail, deprecated since mid 2003 (before Twisted 2.0),
-has been removed.

@@ -1,3 +1,0 @@
-Fixed an issue where the new StreamServerEndpointService didn't log listen
-errors.  (This was a bug not present in any previous releases, as this class is
-new.)

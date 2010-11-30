@@ -1,1 +1,0 @@
-twisted.names.hosts.searchFileFor has been fixed against refcounting dependency.

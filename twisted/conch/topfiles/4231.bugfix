@@ -1,1 +1,0 @@
-The Deferred returned by twisted.conch.telnet.TelnetTransport.will now fires with an OptionRefused failure if the peer responds with a refusal for the option negotiation.

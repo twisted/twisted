@@ -1,4 +1,0 @@
-There is now narrative documentation for the endpoints APIs, in the 'endpoints'
-core howto, as well as modifications to the 'writing clients' and 'writing
-servers' core howto documents to indicate that endpoints are now the preferred
-style of listening and connecting.

@@ -1,1 +1,0 @@
-reactor.listenUDP now returns an object which declares that it implements IListeningPort.

@@ -1,1 +1,0 @@
-The logging howto is now more clear about how the standard library logging module and twisted.python.log can be integrated.
