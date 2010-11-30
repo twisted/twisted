@@ -1,4 +1,4 @@
-Twisted 10.2.0pre3
+Twisted 10.2.0
 
 Quote of the Release:
 
@@ -10,7 +10,7 @@ Quote of the Release:
           to add callbacks?  well, do ya, punk?"
 
 
-For information on what's new in Twisted 10.2.0pre3, see the NEWS file that comes
+For information on what's new in Twisted 10.2.0, see the NEWS file that comes
 with the distribution.
 
 What is this?

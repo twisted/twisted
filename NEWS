@@ -1,8 +1,8 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
-Twisted Core 10.2.0pre3 (2010-11-22)
-====================================
+Twisted Core 10.2.0 (2010-11-29)
+================================
 
 Features
 --------
@@ -167,8 +167,8 @@ Other
    #4616, #4617, #4626, #4630, #4650, #4705
 
 
-Twisted Conch 10.2.0pre3 (2010-11-22)
-=====================================
+Twisted Conch 10.2.0 (2010-11-29)
+=================================
 
 Bugfixes
 --------
@@ -189,8 +189,8 @@ Other
  - #4677
 
 
-Twisted Lore 10.2.0pre3 (2010-11-22)
-====================================
+Twisted Lore 10.2.0 (2010-11-29)
+================================
 
 No significant changes have been made for this release.
 
@@ -199,8 +199,8 @@ Other
  - #4571
 
 
-Twisted Mail 10.2.0pre3 (2010-11-22)
-====================================
+Twisted Mail 10.2.0 (2010-11-29)
+================================
 
 Improved Documentation
 ----------------------
@@ -217,8 +217,8 @@ Other
  - #4038, #4572
 
 
-Twisted Names 10.2.0pre3 (2010-11-22)
-=====================================
+Twisted Names 10.2.0 (2010-11-29)
+=================================
 
 Features
 --------
@@ -238,8 +238,8 @@ Improved Documentation
    (#4573)
 
 
-Twisted News 10.2.0pre3 (2010-11-22)
-====================================
+Twisted News 10.2.0 (2010-11-29)
+================================
 
 Bugfixes
 --------
@@ -247,20 +247,20 @@ Bugfixes
    correctly, allowing it to actually send moderation emails. (#4528)
 
 
-Twisted Pair 10.2.0pre3 (2010-11-22)
-====================================
+Twisted Pair 10.2.0 (2010-11-29)
+================================
 
 No significant changes have been made for this release.
 
 
-Twisted Runner 10.2.0pre3 (2010-11-22)
-======================================
+Twisted Runner 10.2.0 (2010-11-29)
+==================================
 
 No significant changes have been made for this release.
 
 
-Twisted Web 10.2.0pre3 (2010-11-22)
-===================================
+Twisted Web 10.2.0 (2010-11-29)
+===============================
 
 Features
 --------
@@ -288,8 +288,8 @@ Other
  - #4576, #4577, #4709, #4723
 
 
-Twisted Words 10.2.0pre3 (2010-11-22)
-=====================================
+Twisted Words 10.2.0 (2010-11-29)
+=================================
 
 Features
 --------
