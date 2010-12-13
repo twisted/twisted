@@ -510,7 +510,7 @@ class PathModificationTest(PySpaceTestCase):
         """
         self._setupSysPath()
         modinfo = modules.getModule(self.packageName + ".a")
-        self.assertEqual(sorted(modinfo.exportedNames()),
+        self.assertEqual(sorted([x.name for x in modinfo.exported()]),
                          sorted(["foo", "doFoo", "Foo"]))
 
 
@@ -521,8 +521,8 @@ class PathModificationTest(PySpaceTestCase):
         """
         self._setupSysPath()
         modinfo = modules.getModule(self.packageName + ".b")
-        self.assertEqual(sorted(modinfo.exportedNames()),
-                         sorted(["foo"]))
+        self.assertEqual([x.name for x in modinfo.exported()],
+                         ["foo"])
 
 
     def test_exportedImports(self):
@@ -548,8 +548,8 @@ class PathModificationTest(PySpaceTestCase):
         self._setupSysPath()
         modinfo1 = modules.getModule(self.packageName + ".e")
         modinfo2 = modules.getModule(self.packageName + ".f")
-        self.assertRaises(SyntaxError, lambda: list(modinfo1.exportedNames()))
-        self.assertRaises(SyntaxError, lambda: list(modinfo2.exportedNames()))
+        self.assertRaises(SyntaxError, lambda: list(modinfo1.exported()))
+        self.assertRaises(SyntaxError, lambda: list(modinfo2.exported()))
 
 
     if ast is None:

@@ -539,7 +539,7 @@ class PythonModule(_ModuleIteratorHelper):
                 yield name
 
 
-    def exportedNames(self):
+    def exported(self):
         """
         List all the names exported by this module. If the module
         defines __all__ as a list of literal strings, those names will
@@ -550,7 +550,7 @@ class PythonModule(_ModuleIteratorHelper):
         @raise NotImplementedError: if this module is not loaded and
         AST inspection is not possible.
 
-        @return: an iterable of names of attributes of this module.
+        @return: an iterable of L{PythonAttribute}s exported by this module.
 
         @since: 10.2
         """
@@ -559,7 +559,13 @@ class PythonModule(_ModuleIteratorHelper):
                                       " requires the 'ast' module, found in"
                                       " Python 2.6 or later.")
         self._maybeLoadFinder()
-        return self._finder.exports or [name for name in self._finder.definedNames if not name.startswith('_')]
+        if self._finder.exports:
+            return [PythonAttribute(name, self, False, _nothing)
+                    for name in self._finder.exports]
+        else:
+            return [PythonAttribute(name, self, False, _nothing)
+                    for name in self._finder.definedNames
+                    if not name.startswith('_')]
 
 
     def isPackage(self):
