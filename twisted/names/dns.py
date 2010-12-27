@@ -1561,48 +1561,47 @@ class Message:
 
         Note: Part of the response is never truncated.
 
-        @type maxPartSize: C{int}
         @param maxPartSize: The maximum size of a single part in bytes (each
-                            part can a be maximum of 2**16 bytes long).
-                            If tweaking this number, make sure that the value is
-                            large enough for a message to hold at least one
-                            answer.
+            part can a be maximum of 2**16 bytes long).  If tweaking this
+            number, make sure that the value is large enough for a message to
+            hold at least one answer.
+        @type maxPartSize: C{int}
 
         @return: A list of strings where each member contains encoded part of
-                 the response.
+            the response.
         @rtype: L{list}
         """
         parts = []
 
         # queries, authority and additional are only encoded once, because
         # they are the same across all the messages.
-        to_encode = {
-                      'queries': self.queries,
-                      'authority': self.authority,
-                      'additional': self.additional
-                    }
+        toEncode = {
+            'queries': self.queries,
+            'authority': self.authority,
+            'additional': self.additional
+            }
 
         encoded = {}
-        for key, value in to_encode.iteritems():
-            strio_tmp = StringIO.StringIO()
+        for key, value in toEncode.iteritems():
+            strio = StringIO.StringIO()
 
             for q in value:
-                q.encode(strio_tmp, compDict = None)
-            encoded[key] = strio_tmp.getvalue()
+                q.encode(strio, compDict = None)
+            encoded[key] = strio.getvalue()
 
         bodyPartLen = (len(encoded['queries']) + len(encoded['authority']) +
-                      len(encoded['additional']))
+                       len(encoded['additional']))
 
         answerCount = len(self.answers)
         answerLeftCount = answerCount
         while answerLeftCount > 0:
-          strio_part = StringIO.StringIO()
-          strio_answers = StringIO.StringIO()
+          strioPart = StringIO.StringIO()
+          strioAnswers = StringIO.StringIO()
           messageAnswerCount = 0
           partLen = bodyPartLen + self.headerSize
 
           while partLen < maxPartSize:
-            strio_temp = StringIO.StringIO()
+            strioAnswer = StringIO.StringIO()
             index = (answerCount - answerLeftCount) + messageAnswerCount
 
             if index >= answerCount:
@@ -1610,18 +1609,18 @@ class Message:
               break
 
             answer = self.answers[index : index + 1][0]
-            answer.encode(strio_temp, compDict = None)
+            answer.encode(strioAnswer, compDict = None)
 
-            answerLen = len(strio_temp.getvalue())
+            answerLen = len(strioAnswer.getvalue())
             if (partLen + answerLen) > maxPartSize:
               # This part is full.
               break
 
-            strio_answers.write(strio_temp.getvalue())
+            strioAnswers.write(strioAnswer.getvalue())
             partLen += answerLen
             messageAnswerCount += 1
 
-          body = encoded['queries'] + strio_answers.getvalue() + \
+          body = encoded['queries'] + strioAnswers.getvalue() + \
                  encoded['authority'] + encoded['additional']
           byte3 = (( ( self.answer & 1 ) << 7 )
                   | ((self.opCode & 0xf ) << 3 )
@@ -1631,11 +1630,12 @@ class Message:
           byte4 = ( ( (self.recAv & 1 ) << 7 )
                   | (self.rCode & 0xf ) )
 
-          strio_part.write(struct.pack(self.headerFmt, self.id, byte3, byte4,
+          strioPart.write(
+              struct.pack(self.headerFmt, self.id, byte3, byte4,
                           len(self.queries), messageAnswerCount,
                           len(self.authority), len(self.additional)))
-          strio_part.write(body)
-          parts.append(strio_part.getvalue())
+          strioPart.write(body)
+          parts.append(strioPart.getvalue())
           answerLeftCount -= messageAnswerCount
 
         return parts

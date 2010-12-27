@@ -426,34 +426,35 @@ class DNSProtocolTestCase(unittest.TestCase):
 
     def test_toListReturnValueIsList(self):
         """
-        Test that the toList method always returns a list.
+        L{dns.Message.toList} returns a list.
         """
         m = dns.Message()
         m.id = 12345
         m.queries = [dns.Query('foo.bar', dns.AXFR, dns.IN)]
         m.answers = [dns.RRHeader(payload=dns.Record_A(address='1.2.3.4'))]
         s = m.toList(dns.DNSProtocol.axfr_part_size)
-        self.assertTrue(isinstance(s, list))
-        self.assertEqual(1, len(s))
+        self.assertIsInstance(s, list)
+        self.assertEquals(1, len(s))
 
 
     def test_encodeParts(self):
         """
-        Test that the result from the encodeParts method is the same as the
+        The result from L{dns.Message.encodeParts} method is the same as the
         result from the encode method.
         """
         answers = []
-        for i in range(0,  20):
-            answers.append(dns.RRHeader(payload=dns.Record_A(address='1.2.3.%s'
-                                                             % (str(i)))))
+        for i in range(20):
+            answers.append(dns.RRHeader(
+                    payload=dns.Record_A(address='1.2.3.%s' % (i,))))
+
         m = dns.Message()
         m.id = 12348
         m.queries = [dns.Query('foo.bar', dns.AXFR, dns.IN)]
         m.answers = answers
         parts = m.encodeParts(dns.DNSProtocol.axfr_part_size)
 
-        self.assertTrue(isinstance(parts, list))
-        self.assertEqual(len(parts), 1)
+        self.assertIsInstance(parts, list)
+        self.assertEquals(len(parts), 1)
 
         m2 = dns.Message(maxSize = 0)
         m2.id = 12348
@@ -462,20 +463,19 @@ class DNSProtocolTestCase(unittest.TestCase):
         strio = StringIO()
         m2.encode(strio)
 
-        self.assertEqual(parts[0], strio.getvalue())
+        self.assertEquals(parts[0], strio.getvalue())
 
 
     def test_encodePartsWithCustomMaxSize(self):
       """
-      Test that the encodeParts returns multiple parts if a custom axfr_part_size
-      is provided and the total size of all the answers is larger than this
-      value.
+      L{dns.Message.encodeParts} returns multiple parts if a C{maxPartSize}
+      value is provided which is smaller than the total size of all the answers.
       """
       answers = []
-      for i in range(0,  100):
-          for j in range(0, 80):
-            answers.append(dns.RRHeader(payload=dns.Record_A(address='1.2.%s.%s'
-                                                            % (str(i), str(j)))))
+      for i in range(100):
+          for j in range(80):
+            answers.append(dns.RRHeader(
+                    payload=dns.Record_A(address='1.2.%s.%s' % (i, j))))
 
       # Custom value
       m = dns.Message()
@@ -484,7 +484,7 @@ class DNSProtocolTestCase(unittest.TestCase):
       m.answers = answers[:20]
       parts = m.encodeParts(200)
 
-      self.assertTrue(isinstance(parts, list))
+      self.assertIsInstance(parts, list)
       self.assertTrue(len(parts) > 1)
 
       # Default value, but large number of answers
@@ -494,7 +494,7 @@ class DNSProtocolTestCase(unittest.TestCase):
       m.answers = answers
       parts = m.encodeParts(dns.DNSProtocol.axfr_part_size)
 
-      self.assertTrue(isinstance(parts, list))
+      self.assertIsInstance(parts, list)
       self.assertTrue(len(parts) > 1)
 
 
@@ -1303,7 +1303,8 @@ class EqualityTests(unittest.TestCase):
     def test_spf(self):
         """
         L{dns.Record_SPF} records are structurally similar to L{dns.Record_TXT}
-        records, so they are equal if and only if they have the same data and ttl.
+        records, so they are equal if and only if they have the same data and
+        ttl.
         """
         # Vary the length of the data
         self._equalityTest(
