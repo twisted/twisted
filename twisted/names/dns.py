@@ -1595,48 +1595,48 @@ class Message:
         answerCount = len(self.answers)
         answerLeftCount = answerCount
         while answerLeftCount > 0:
-          strioPart = StringIO.StringIO()
-          strioAnswers = StringIO.StringIO()
-          messageAnswerCount = 0
-          partLen = bodyPartLen + self.headerSize
+            strioPart = StringIO.StringIO()
+            strioAnswers = StringIO.StringIO()
+            messageAnswerCount = 0
+            partLen = bodyPartLen + self.headerSize
 
-          while partLen < maxPartSize:
-            strioAnswer = StringIO.StringIO()
-            index = (answerCount - answerLeftCount) + messageAnswerCount
+            while partLen < maxPartSize:
+                strioAnswer = StringIO.StringIO()
+                index = (answerCount - answerLeftCount) + messageAnswerCount
 
-            if index >= answerCount:
-              # No answers left.
-              break
+                if index >= answerCount:
+                    # No answers left.
+                    break
 
-            answer = self.answers[index : index + 1][0]
-            answer.encode(strioAnswer, compDict = None)
+                answer = self.answers[index : index + 1][0]
+                answer.encode(strioAnswer, compDict = None)
 
-            answerLen = len(strioAnswer.getvalue())
-            if (partLen + answerLen) > maxPartSize:
-              # This part is full.
-              break
+                answerLen = len(strioAnswer.getvalue())
+                if (partLen + answerLen) > maxPartSize:
+                    # This part is full.
+                    break
 
-            strioAnswers.write(strioAnswer.getvalue())
-            partLen += answerLen
-            messageAnswerCount += 1
+                strioAnswers.write(strioAnswer.getvalue())
+                partLen += answerLen
+                messageAnswerCount += 1
 
-          body = encoded['queries'] + strioAnswers.getvalue() + \
-                 encoded['authority'] + encoded['additional']
-          byte3 = (( ( self.answer & 1 ) << 7 )
-                  | ((self.opCode & 0xf ) << 3 )
-                  | ((self.auth & 1 ) << 2 )
-                  | ((self.trunc & 1 ) << 1 )
-                  | ( self.recDes & 1 ) )
-          byte4 = ( ( (self.recAv & 1 ) << 7 )
-                  | (self.rCode & 0xf ) )
+            body = encoded['queries'] + strioAnswers.getvalue() + \
+                encoded['authority'] + encoded['additional']
+            byte3 = (( ( self.answer & 1 ) << 7 )
+                     | ((self.opCode & 0xf ) << 3 )
+                     | ((self.auth & 1 ) << 2 )
+                     | ((self.trunc & 1 ) << 1 )
+                     | ( self.recDes & 1 ) )
+            byte4 = ( ( (self.recAv & 1 ) << 7 )
+                      | (self.rCode & 0xf ) )
 
-          strioPart.write(
-              struct.pack(self.headerFmt, self.id, byte3, byte4,
-                          len(self.queries), messageAnswerCount,
-                          len(self.authority), len(self.additional)))
-          strioPart.write(body)
-          parts.append(strioPart.getvalue())
-          answerLeftCount -= messageAnswerCount
+            strioPart.write(
+                struct.pack(self.headerFmt, self.id, byte3, byte4,
+                            len(self.queries), messageAnswerCount,
+                            len(self.authority), len(self.additional)))
+            strioPart.write(body)
+            parts.append(strioPart.getvalue())
+            answerLeftCount -= messageAnswerCount
 
         return parts
 
