@@ -1608,8 +1608,8 @@ class Message:
                     # No answers left.
                     break
 
-                answer = self.answers[index : index + 1][0]
-                answer.encode(strioAnswer, compDict = None)
+                answer = self.answers[index:index + 1][0]
+                answer.encode(strioAnswer, compDict=None)
 
                 answerLen = len(strioAnswer.getvalue())
                 if (partLen + answerLen) > maxPartSize:
@@ -1620,8 +1620,8 @@ class Message:
                 partLen += answerLen
                 messageAnswerCount += 1
 
-            body = encoded['queries'] + strioAnswers.getvalue() + \
-                encoded['authority'] + encoded['additional']
+            body = (encoded['queries'] + strioAnswers.getvalue() +
+                    encoded['authority'] + encoded['additional'])
             byte3 = (( ( self.answer & 1 ) << 7 )
                      | ((self.opCode & 0xf ) << 3 )
                      | ((self.auth & 1 ) << 2 )
