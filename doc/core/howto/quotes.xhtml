@@ -38,16 +38,16 @@ following:</p>
 </li>
 <li>Add the <code>TwistedQuotes</code> directory's <em>parent</em> to your Python
 path. For example, if the TwistedQuotes directory's path is
-<code>/tmp/TwistedQuotes</code>
-add <code>/tmp</code> to your Python path. On UNIX this would be <code
-class="shell">export PYTHONPATH=/my/stuff:$PYTHONPATH</code>, on Microsoft
+<code>/mystuff/TwistedQuotes</code> or <code>c:\mystuff\TwistedQuotes</code>
+add <code>/mystuff</code> to your Python path. On UNIX this would be <code
+class="shell">export PYTHONPATH=/mystuff:$PYTHONPATH</code>, on Microsoft
 Windows change the <code class="shell">PYTHONPATH</code> variable through the
-Systems Properites dialog to add <code class="shell">/my/stuff;</code> at the
-beginning.</li>
+Systems Properties dialog by adding <code class="shell">;c:\mystuff</code> at the
+end.</li>
 <li>
 Test your package by trying to import it in the Python interpreter:
 <pre class="python-interpreter">
-Python 2.1.3 (#1, Apr 20 2002, 22:45:31) 
+Python 2.1.3 (#1, Apr 20 2002, 22:45:31)
 [GCC 2.95.4 20011002 (Debian prerelease)] on linux2
 Type "copyright", "credits" or "license" for more information.
 &gt;&gt;&gt; import TwistedQuotes
