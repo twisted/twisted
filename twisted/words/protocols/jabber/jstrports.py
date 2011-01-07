@@ -1,12 +1,12 @@
 # -*- test-case-name: twisted.words.test -*-
-# Copyright (c) 2001-2005 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2011 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
 """ A temporary placeholder for client-capable strports, until we
 sufficient use cases get identified """
 
-from twisted.application import strports
+from twisted.internet.endpoints import _parse
 
 def _parseTCPSSL(factory, domain, port):
     """ For the moment, parse TCP or SSL connections the same """
@@ -22,7 +22,7 @@ _funcs = { "tcp"  : _parseTCPSSL,
 
 
 def parse(description, factory):
-    args, kw = strports._parse(description)
+    args, kw = _parse(description)
     return (args[0].upper(),) + _funcs[args[0]](factory, *args[1:], **kw)
 
 def client(description, factory):
