@@ -1,15 +1,22 @@
 # -*- test-case-name: twisted.conch.test.test_conch -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 import os, sys, socket
+from itertools import count
+
+from zope.interface import implements
 
 from twisted.cred import portal
 from twisted.internet import reactor, defer, protocol
 from twisted.internet.error import ProcessExitedAlready
+from twisted.internet.task import LoopingCall
 from twisted.python import log, runtime
 from twisted.trial import unittest
 from twisted.conch.error import ConchError
+from twisted.conch.avatar import ConchUser
+from twisted.conch.ssh.session import ISession, SSHSession, wrapProtocol
+
 try:
     from twisted.conch.scripts.conch import SSHSession as StdioInteractingSession
 except ImportError, e:
@@ -254,25 +261,14 @@ run()""" % mod]
 
 
 
-class ForwardingTestBase:
-    """
-    Template class for tests of the Conch server's ability to forward arbitrary
-    protocols over SSH.
-
-    These tests are integration tests, not unit tests. They launch a Conch
-    server, a custom TCP server (just an L{EchoProtocol}) and then call
-    L{execute}.
-
-    L{execute} is implemented by subclasses of L{ForwardingTestBase}. It should
-    cause an SSH client to connect to the Conch server, asking it to forward
-    data to the custom TCP server.
-    """
-
+class ConchServerSetupMixin:
     if not Crypto:
         skip = "can't run w/o PyCrypto"
 
     if not pyasn1:
         skip = "can't run w/o PyASN1"
+
+    realmFactory = ConchTestRealm
 
     def _createFiles(self):
         for f in ['rsa_test','rsa_test.pub','dsa_test','dsa_test.pub',
@@ -301,7 +297,7 @@ class ForwardingTestBase:
         Make a L{ConchTestServerFactory}, which allows us to start a
         L{ConchTestServer} -- i.e. an actually listening conch.
         """
-        realm = ConchTestRealm()
+        realm = self.realmFactory()
         p = portal.Portal(realm)
         p.registerChecker(ConchTestPublicKeyChecker())
         factory = ConchTestServerFactory()
@@ -330,6 +326,21 @@ class ForwardingTestBase:
                 defer.maybeDeferred(self.conchServer.stopListening),
                 defer.maybeDeferred(self.echoServer.stopListening)])
 
+
+
+class ForwardingMixin(ConchServerSetupMixin):
+    """
+    Template class for tests of the Conch server's ability to forward arbitrary
+    protocols over SSH.
+
+    These tests are integration tests, not unit tests. They launch a Conch
+    server, a custom TCP server (just an L{EchoProtocol}) and then call
+    L{execute}.
+
+    L{execute} is implemented by subclasses of L{ForwardingMixin}. It should
+    cause an SSH client to connect to the Conch server, asking it to forward
+    data to the custom TCP server.
+    """
 
     def test_exec(self):
         """
@@ -370,14 +381,102 @@ class ForwardingTestBase:
 
 
 
-class OpenSSHClientTestCase(ForwardingTestBase, unittest.TestCase):
+class RekeyAvatar(ConchUser):
+    """
+    This avatar implements a shell which sends 60 numbered lines to whatever
+    connects to it, then closes the session with a 0 exit status.
 
+    60 lines is selected as being enough to send more than 2kB of traffic, the
+    amount the client is configured to initiate a rekey after.
+    """
+    # Conventionally there is a separate adapter object which provides ISession
+    # for the user, but making the user provide ISession directly works too.
+    # This isn't a full implementation of ISession though, just enough to make
+    # these tests pass.
+    implements(ISession)
+
+    def __init__(self):
+        ConchUser.__init__(self)
+        self.channelLookup['session'] = SSHSession
+
+
+    def openShell(self, transport):
+        """
+        Write 60 lines of data to the transport, then exit.
+        """
+        proto = protocol.Protocol()
+        proto.makeConnection(transport)
+        transport.makeConnection(wrapProtocol(proto))
+
+        # Send enough bytes to the connection so that a rekey is triggered in
+        # the client.
+        def write(counter):
+            i = counter()
+            if i == 60:
+                call.stop()
+                transport.session.conn.sendRequest(
+                    transport.session, 'exit-status', '\x00\x00\x00\x00')
+                transport.loseConnection()
+            else:
+                transport.write("line #%02d\n" % (i,))
+
+        # The timing for this loop is an educated guess (and/or the result of
+        # experimentation) to exercise the case where a packet is generated
+        # mid-rekey.  Since the other side of the connection is (so far) the
+        # OpenSSH command line client, there's no easy way to determine when the
+        # rekey has been initiated.  If there were, then generating a packet
+        # immediately at that time would be a better way to test the
+        # functionality being tested here.
+        call = LoopingCall(write, count().next)
+        call.start(0.01)
+
+
+    def closed(self):
+        """
+        Ignore the close of the session.
+        """
+
+
+
+class RekeyRealm:
+    """
+    This realm gives out new L{RekeyAvatar} instances for any avatar request.
+    """
+    def requestAvatar(self, avatarID, mind, *interfaces):
+        return interfaces[0], RekeyAvatar(), lambda: None
+
+
+
+class RekeyTestsMixin(ConchServerSetupMixin):
+    """
+    TestCase mixin which defines tests exercising L{SSHTransportBase}'s handling
+    of rekeying messages.
+    """
+    realmFactory = RekeyRealm
+
+    def test_clientRekey(self):
+        """
+        After a client-initiated rekey is completed, application data continues
+        to be passed over the SSH connection.
+        """
+        process = ConchTestOpenSSHProcess()
+        d = self.execute("", process, '-o RekeyLimit=2K')
+        def finished(result):
+            self.assertEquals(
+                result,
+                '\n'.join(['line #%02d' % (i,) for i in range(60)]) + '\n')
+        d.addCallback(finished)
+        return d
+
+
+
+class OpenSSHClientMixin:
     if not which('ssh'):
         skip = "no ssh command-line client available"
 
     def execute(self, remoteCommand, process, sshArgs=''):
         """
-        Connects to the SSH server started in L{ForwardingTestBase.setUp} by
+        Connects to the SSH server started in L{ConchServerSetupMixin.setUp} by
         running the 'ssh' command line tool.
 
         @type remoteCommand: str
@@ -407,7 +506,26 @@ class OpenSSHClientTestCase(ForwardingTestBase, unittest.TestCase):
 
 
 
-class CmdLineClientTestCase(ForwardingTestBase, unittest.TestCase):
+class OpenSSHClientForwardingTestCase(ForwardingMixin, OpenSSHClientMixin,
+                                      unittest.TestCase):
+    """
+    Connection forwarding tests run against the OpenSSL command line client.
+    """
+
+
+
+class OpenSSHClientRekeyTestCase(RekeyTestsMixin, OpenSSHClientMixin,
+                                 unittest.TestCase):
+    """
+    Rekeying tests run against the OpenSSL command line client.
+    """
+
+
+
+class CmdLineClientTestCase(ForwardingMixin, unittest.TestCase):
+    """
+    Connection forwarding tests run against the Conch command line client.
+    """
     if runtime.platformType == 'win32':
         skip = "can't run cmdline client on win32"
 
@@ -432,6 +550,3 @@ class CmdLineClientTestCase(ForwardingTestBase, unittest.TestCase):
         env['PYTHONPATH'] = os.pathsep.join(sys.path)
         reactor.spawnProcess(process, sys.executable, cmds, env=env)
         return process.deferred
-
-
-

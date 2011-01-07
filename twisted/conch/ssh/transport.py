@@ -56,7 +56,7 @@ def _generateX(random, bits):
 
     From RFC 2631, section 2.2::
 
-        X9.42 requires that the private key x be in the interval 
+        X9.42 requires that the private key x be in the interval
         [2, (q - 2)].  x should be randomly generated in this interval.
     """
     while True:
@@ -165,6 +165,20 @@ class SSHTransportBase(protocol.Protocol):
         decrypting data twice, the first bytes are decrypted and stored until
         the whole packet is available.
 
+    @ivar _keyExchangeState: The current protocol state with respect to key
+        exchange.  This is either C{_KEY_EXCHANGE_NONE} if no key exchange is in
+        progress (and returns to this value after any key exchange completes),
+        C{_KEY_EXCHANGE_REQUESTED} if this side of the connection initiated a
+        key exchange, and C{_KEY_EXCHANGE_PROGRESSING} if the other side of the
+        connection initiated a key exchange.  C{_KEY_EXCHANGE_NONE} is the
+        initial value (however SSH connections begin with key exchange, so it
+        will quickly change to another state).
+
+    @ivar _blockedByKeyExchange: Whenever C{_keyExchangeState} is not
+        C{_KEY_EXCHANGE_NONE}, this is a C{list} of pending messages which were
+        passed to L{sendPacket} but could not be sent because it is not legal to
+        send them while a key exchange is in progress.  When the key exchange
+        completes, another attempt is made to send these messages.
     """
 
 
@@ -197,6 +211,22 @@ class SSHTransportBase(protocol.Protocol):
     sessionID = None
     service = None
 
+    # There is no key exchange activity in progress.
+    _KEY_EXCHANGE_NONE = '_KEY_EXCHANGE_NONE'
+
+    # Key exchange is in progress and we started it.
+    _KEY_EXCHANGE_REQUESTED = '_KEY_EXCHANGE_REQUESTED'
+
+    # Key exchange is in progress and both sides have sent KEXINIT messages.
+    _KEY_EXCHANGE_PROGRESSING = '_KEY_EXCHANGE_PROGRESSING'
+
+    # There is a fourth conceptual state not represented here: KEXINIT received
+    # but not sent.  Since we always send a KEXINIT as soon as we get it, we
+    # can't ever be in that state.
+
+    # The current key exchange state.
+    _keyExchangeState = _KEY_EXCHANGE_NONE
+    _blockedByKeyExchange = None
 
     def connectionLost(self, reason):
         if self.service:
@@ -218,6 +248,20 @@ class SSHTransportBase(protocol.Protocol):
 
 
     def sendKexInit(self):
+        """
+        Send a I{KEXINIT} message to initiate key exchange or to respond to a
+        key exchange initiated by the peer.
+
+        @raise RuntimeError: If a key exchange has already been started and it
+            is not appropriate to send a I{KEXINIT} message at this time.
+
+        @return: C{None}
+        """
+        if self._keyExchangeState != self._KEY_EXCHANGE_NONE:
+            raise RuntimeError(
+                "Cannot send KEXINIT while key exchange state is %r" % (
+                    self._keyExchangeState,))
+
         self.ourKexInitPayload = (chr(MSG_KEXINIT) +
                randbytes.secureRandom(16) +
                NS(','.join(self.supportedKeyExchanges)) +
@@ -232,12 +276,38 @@ class SSHTransportBase(protocol.Protocol):
                NS(','.join(self.supportedLanguages)) +
                '\000' + '\000\000\000\000')
         self.sendPacket(MSG_KEXINIT, self.ourKexInitPayload[1:])
+        self._keyExchangeState = self._KEY_EXCHANGE_REQUESTED
+        self._blockedByKeyExchange = []
+
+
+    def _allowedKeyExchangeMessageType(self, messageType):
+        """
+        Determine if the given message type may be sent while key exchange is in
+        progress.
+
+        @param messageType: The type of message
+        @type messageType: C{int}
+
+        @return: C{True} if the given type of message may be sent while key
+            exchange is in progress, C{False} if it may not.
+        @rtype: C{bool}
+
+        @see: U{http://tools.ietf.org/html/rfc4253#section-7.1}
+        """
+        # Written somewhat peculularly to reflect the way the specification
+        # defines the allowed message types.
+        if 1 <= messageType <= 19:
+            return messageType not in (MSG_SERVICE_REQUEST, MSG_SERVICE_ACCEPT)
+        if 20 <= messageType <= 29:
+            return messageType not in (MSG_KEXINIT,)
+        return 30 <= messageType <= 49
 
 
     def sendPacket(self, messageType, payload):
         """
-        Sends a packet.  If it's been set up, compress the data, encrypt it,
-        and authenticate it before sending.
+        Sends a packet.  If it's been set up, compress the data, encrypt it, and
+        authenticate it before sending.  If key exchange is in progress and the
+        message is not part of key exchange, queue it to be sent later.
 
         @param messageType: The type of the packet; generally one of the
                             MSG_* values.
@@ -245,6 +315,11 @@ class SSHTransportBase(protocol.Protocol):
         @param payload: The payload for the message.
         @type payload: C{str}
         """
+        if self._keyExchangeState != self._KEY_EXCHANGE_NONE:
+            if not self._allowedKeyExchangeMessageType(messageType):
+                self._blockedByKeyExchange.append((messageType, payload))
+                return
+
         payload = chr(messageType) + payload
         if self.outgoingCompression:
             payload = (self.outgoingCompression.compress(payload)
@@ -389,6 +464,20 @@ class SSHTransportBase(protocol.Protocol):
             self.sendUnimplemented()
 
 
+    # Client-initiated rekeying looks like this:
+    #
+    #  C> MSG_KEXINIT
+    #  S> MSG_KEXINIT
+    #  C> MSG_KEX_DH_GEX_REQUEST  or   MSG_KEXDH_INIT
+    #  S> MSG_KEX_DH_GEX_GROUP    or   MSG_KEXDH_REPLY
+    #  C> MSG_KEX_DH_GEX_INIT     or   --
+    #  S> MSG_KEX_DH_GEX_REPLY    or   --
+    #  C> MSG_NEWKEYS
+    #  S> MSG_NEWKEYS
+    #
+    # Server-initiated rekeying is the same, only the first two messages are
+    # switched.
+
     def ssh_KEXINIT(self, packet):
         """
         Called when we receive a MSG_KEXINIT message.  Payload::
@@ -454,6 +543,12 @@ class SSHTransportBase(protocol.Protocol):
         log.msg('incoming: %s %s %s' % (self.nextEncryptions.inCipType,
                                         self.nextEncryptions.inMACType,
                                         self.incomingCompressionType))
+
+        if self._keyExchangeState == self._KEY_EXCHANGE_REQUESTED:
+            self._keyExchangeState = self._KEY_EXCHANGE_PROGRESSING
+        else:
+            self.sendKexInit()
+
         return kexAlgs, keyAlgs, rest # for SSHServerTransport to use
 
 
@@ -617,6 +712,27 @@ class SSHTransportBase(protocol.Protocol):
         self.sendPacket(MSG_NEWKEYS, '')
 
 
+    def _newKeys(self):
+        """
+        Called back by a subclass once a I{MSG_NEWKEYS} message has been
+        received.  This indicates key exchange has completed and new encryption
+        and compression parameters should be adopted.  Any messages which were
+        queued during key exchange will also be flushed.
+        """
+        log.msg('NEW KEYS')
+        self.currentEncryptions = self.nextEncryptions
+        if self.outgoingCompressionType == 'zlib':
+            self.outgoingCompression = zlib.compressobj(6)
+        if self.incomingCompressionType == 'zlib':
+            self.incomingCompression = zlib.decompressobj()
+
+        self._keyExchangeState = self._KEY_EXCHANGE_NONE
+        messages = self._blockedByKeyExchange
+        self._blockedByKeyExchange = None
+        for (messageType, payload) in messages:
+            self.sendPacket(messageType, payload)
+
+
     def isEncrypted(self, direction="out"):
         """
         Return True if the connection is encrypted in the given direction.
@@ -741,17 +857,49 @@ class SSHServerTransport(SSHTransportBase):
                 self.ignoreNextPacket = True # guess was wrong
 
 
-    def ssh_KEX_DH_GEX_REQUEST_OLD(self, packet):
+    def _ssh_KEXDH_INIT(self, packet):
         """
-        This represents two different key exchange methods that share the
-        same integer value.
+        Called to handle the beginning of a diffie-hellman-group1-sha1 key
+        exchange.
 
-        KEXDH_INIT (for diffie-hellman-group1-sha1 exchanges) payload::
+        Unlike other message types, this is not dispatched automatically.  It is
+        called from C{ssh_KEX_DH_GEX_REQUEST_OLD} because an extra check is
+        required to determine if this is really a KEXDH_INIT message or if it is
+        a KEX_DH_GEX_REQUEST_OLD message.
+
+        The KEXDH_INIT (for diffie-hellman-group1-sha1 exchanges) payload::
 
                 integer e (the client's Diffie-Hellman public key)
 
             We send the KEXDH_REPLY with our host key and signature.
+        """
+        clientDHpublicKey, foo = getMP(packet)
+        y = _getRandomNumber(randbytes.secureRandom, 512)
+        serverDHpublicKey = _MPpow(DH_GENERATOR, y, DH_PRIME)
+        sharedSecret = _MPpow(clientDHpublicKey, y, DH_PRIME)
+        h = sha1()
+        h.update(NS(self.otherVersionString))
+        h.update(NS(self.ourVersionString))
+        h.update(NS(self.otherKexInitPayload))
+        h.update(NS(self.ourKexInitPayload))
+        h.update(NS(self.factory.publicKeys[self.keyAlg].blob()))
+        h.update(MP(clientDHpublicKey))
+        h.update(serverDHpublicKey)
+        h.update(sharedSecret)
+        exchangeHash = h.digest()
+        self.sendPacket(
+            MSG_KEXDH_REPLY,
+            NS(self.factory.publicKeys[self.keyAlg].blob()) +
+            serverDHpublicKey +
+            NS(self.factory.privateKeys[self.keyAlg].sign(exchangeHash)))
+        self._keySetup(sharedSecret, exchangeHash)
 
+
+    def ssh_KEX_DH_GEX_REQUEST_OLD(self, packet):
+        """
+        This represents two different key exchange methods that share the same
+        integer value.  If the message is determined to be a KEXDH_INIT,
+        C{_ssh_KEXDH_INIT} is called to handle it.  Otherwise, for
         KEX_DH_GEX_REQUEST_OLD (for diffie-hellman-group-exchange-sha1)
         payload::
 
@@ -760,34 +908,17 @@ class SSHServerTransport(SSHTransportBase):
             We send the KEX_DH_GEX_GROUP message with the group that is
             closest in size to ideal.
 
-        If we were told to ignore the next key exchange packet by
-        ssh_KEXINIT, drop it on the floor and return.
+        If we were told to ignore the next key exchange packet by ssh_KEXINIT,
+        drop it on the floor and return.
         """
         if self.ignoreNextPacket:
             self.ignoreNextPacket = 0
             return
+
+        # KEXDH_INIT and KEX_DH_GEX_REQUEST_OLD have the same value, so use
+        # another cue to decide what kind of message the peer sent us.
         if self.kexAlg == 'diffie-hellman-group1-sha1':
-            # this is really KEXDH_INIT
-            clientDHpublicKey, foo = getMP(packet)
-            y = _getRandomNumber(randbytes.secureRandom, 512)
-            serverDHpublicKey = _MPpow(DH_GENERATOR, y, DH_PRIME)
-            sharedSecret = _MPpow(clientDHpublicKey, y, DH_PRIME)
-            h = sha1()
-            h.update(NS(self.otherVersionString))
-            h.update(NS(self.ourVersionString))
-            h.update(NS(self.otherKexInitPayload))
-            h.update(NS(self.ourKexInitPayload))
-            h.update(NS(self.factory.publicKeys[self.keyAlg].blob()))
-            h.update(MP(clientDHpublicKey))
-            h.update(serverDHpublicKey)
-            h.update(sharedSecret)
-            exchangeHash = h.digest()
-            self.sendPacket(
-                MSG_KEXDH_REPLY,
-                NS(self.factory.publicKeys[self.keyAlg].blob()) +
-                serverDHpublicKey +
-                NS(self.factory.privateKeys[self.keyAlg].sign(exchangeHash)))
-            self._keySetup(sharedSecret, exchangeHash)
+            return self._ssh_KEXDH_INIT(packet)
         elif self.kexAlg == 'diffie-hellman-group-exchange-sha1':
             self.dhGexRequest = packet
             ideal = struct.unpack('>L', packet)[0]
@@ -808,8 +939,8 @@ class SSHServerTransport(SSHTransportBase):
         maximum size, and close to ideal if possible.  We reply with a
         MSG_KEX_DH_GEX_GROUP message.
 
-        If we were told to ignore the next key exchange packekt by
-        ssh_KEXINIT, drop it on the floor and return.
+        If we were told to ignore the next key exchange packet by ssh_KEXINIT,
+        drop it on the floor and return.
         """
         if self.ignoreNextPacket:
             self.ignoreNextPacket = 0
@@ -868,16 +999,11 @@ class SSHServerTransport(SSHTransportBase):
         When we get this, the keys have been set on both sides, and we
         start using them to encrypt and authenticate the connection.
         """
-        log.msg('NEW KEYS')
         if packet != '':
             self.sendDisconnect(DISCONNECT_PROTOCOL_ERROR,
                                 "NEWKEYS takes no data")
             return
-        self.currentEncryptions = self.nextEncryptions
-        if self.outgoingCompressionType == 'zlib':
-            self.outgoingCompression = zlib.compressobj(6)
-        if self.incomingCompressionType == 'zlib':
-            self.incomingCompression = zlib.decompressobj()
+        self._newKeys()
 
 
     def ssh_SERVICE_REQUEST(self, packet):
@@ -955,17 +1081,40 @@ class SSHClientTransport(SSHTransportBase):
                                    "to something we don't support")
 
 
-    def ssh_KEX_DH_GEX_GROUP(self, packet):
+    def _ssh_KEXDH_REPLY(self, packet):
         """
-        This handles two different message which share an integer value.
-        If the key exchange is diffie-hellman-group1-sha1, this is
-        MSG_KEXDH_REPLY.  Payload::
+        Called to handle a reply to a diffie-hellman-group1-sha1 key exchange
+        message (KEXDH_INIT).
+
+        Like the handler for I{KEXDH_INIT}, this message type has an overlapping
+        value.  This method is called from C{ssh_KEX_DH_GEX_GROUP} if that
+        method detects a diffie-hellman-group1-sha1 key exchange is in progress.
+
+        Payload::
+
             string serverHostKey
             integer f (server Diffie-Hellman public key)
             string signature
 
         We verify the host key by calling verifyHostKey, then continue in
         _continueKEXDH_REPLY.
+        """
+        pubKey, packet = getNS(packet)
+        f, packet = getMP(packet)
+        signature, packet = getNS(packet)
+        fingerprint = ':'.join([ch.encode('hex') for ch in
+                                md5(pubKey).digest()])
+        d = self.verifyHostKey(pubKey, fingerprint)
+        d.addCallback(self._continueKEXDH_REPLY, pubKey, f, signature)
+        d.addErrback(
+            lambda unused: self.sendDisconnect(
+                DISCONNECT_HOST_KEY_NOT_VERIFIABLE, 'bad host key'))
+        return d
+
+
+    def ssh_KEX_DH_GEX_GROUP(self, packet):
+        """
+        This handles two different message which share an integer value.
 
         If the key exchange is diffie-hellman-group-exchange-sha1, this is
         MSG_KEX_DH_GEX_GROUP.  Payload::
@@ -976,18 +1125,7 @@ class SSHClientTransport(SSHTransportBase):
         MSG_KEX_DH_GEX_INIT message.
         """
         if self.kexAlg == 'diffie-hellman-group1-sha1':
-            # actually MSG_KEXDH_REPLY
-            pubKey, packet = getNS(packet)
-            f, packet = getMP(packet)
-            signature, packet = getNS(packet)
-            fingerprint = ':'.join([ch.encode('hex') for ch in
-                                    md5(pubKey).digest()])
-            d = self.verifyHostKey(pubKey, fingerprint)
-            d.addCallback(self._continueKEXDH_REPLY, pubKey, f, signature)
-            d.addErrback(
-                lambda unused: self.sendDisconnect(
-                    DISCONNECT_HOST_KEY_NOT_VERIFIABLE, 'bad host key'))
-            return d
+            return self._ssh_KEXDH_REPLY(packet)
         else:
             self.p, rest = getMP(packet)
             self.g, rest = getMP(rest)
@@ -1105,12 +1243,7 @@ class SSHClientTransport(SSHTransportBase):
         if not self.nextEncryptions.encBlockSize:
             self._gotNewKeys = 1
             return
-        log.msg('NEW KEYS')
-        self.currentEncryptions = self.nextEncryptions
-        if self.outgoingCompressionType == 'zlib':
-            self.outgoingCompression = zlib.compressobj(6)
-        if self.incomingCompressionType == 'zlib':
-            self.incomingCompression = zlib.decompressobj()
+        self._newKeys()
         self.connectionSecure()
 
 

@@ -17,7 +17,7 @@ except ImportError:
 
 if pyasn1 is not None and Crypto is not None:
     dependencySkip = None
-    from twisted.conch.ssh import transport, common, keys, factory
+    from twisted.conch.ssh import transport, keys, factory
     from twisted.conch.test import keydata
 else:
     if pyasn1 is None:
@@ -39,7 +39,7 @@ from twisted.protocols import loopback
 from twisted.python import randbytes
 from twisted.python.reflect import qual
 from twisted.python.hashlib import md5, sha1
-from twisted.conch.ssh import service
+from twisted.conch.ssh import service, common
 from twisted.test import proto_helpers
 
 from twisted.conch.error import ConchError
@@ -347,9 +347,38 @@ class TransportTestCase(unittest.TestCase):
         self.proto.sendPacket = stubSendPacket
 
 
+    def finishKeyExchange(self, proto):
+        """
+        Deliver enough additional messages to C{proto} so that the key exchange
+        which is started in L{SSHTransportBase.connectionMade} completes and
+        non-key exchange messages can be sent and received.
+        """
+        proto.dataReceived("SSH-2.0-BogoClient-1.2i\r\n")
+        proto.dispatchMessage(
+            transport.MSG_KEXINIT, self._A_KEXINIT_MESSAGE)
+        proto._keySetup("foo", "bar")
+        # SSHTransportBase can't handle MSG_NEWKEYS, or it would be the right
+        # thing to deliver next.  _newKeys won't work either, because
+        # sendKexInit (probably) hasn't been called.  sendKexInit is responsible
+        # for setting up certain state _newKeys relies on.  So, just change the
+        # key exchange state to what it would be when key exchange is finished.
+        proto._keyExchangeState = proto._KEY_EXCHANGE_NONE
+
+
     def tearDown(self):
         randbytes.secureRandom = self.oldSecureRandom
         self.oldSecureRandom = None
+
+
+    def simulateKeyExchange(self, sharedSecret, exchangeHash):
+        """
+        Finish a key exchange by calling C{_keySetup} with the given arguments.
+        Also do extra whitebox stuff to satisfy that method's assumption that
+        some kind of key exchange has actually taken place.
+        """
+        self.proto._keyExchangeState = self.proto._KEY_EXCHANGE_REQUESTED
+        self.proto._blockedByKeyExchange = []
+        self.proto._keySetup(sharedSecret, exchangeHash)
 
 
 
@@ -361,6 +390,19 @@ class BaseSSHTransportTestCase(TransportTestCase):
 
     klass = MockTransportBase
 
+    _A_KEXINIT_MESSAGE = (
+        "\xAA" * 16 +
+        common.NS('diffie-hellman-group1-sha1') +
+        common.NS('ssh-rsa') +
+        common.NS('aes256-ctr') +
+        common.NS('aes256-ctr') +
+        common.NS('hmac-sha1') +
+        common.NS('hmac-sha1') +
+        common.NS('none') +
+        common.NS('none') +
+        common.NS('') +
+        common.NS('') +
+        '\x00' + '\x00\x00\x00\x00')
 
     def test_sendVersion(self):
         """
@@ -384,6 +426,7 @@ class BaseSSHTransportTestCase(TransportTestCase):
         """
         proto = MockTransportBase()
         proto.makeConnection(self.transport)
+        self.finishKeyExchange(proto)
         self.transport.clear()
         message = ord('A')
         payload = 'BCDEFG'
@@ -399,6 +442,7 @@ class BaseSSHTransportTestCase(TransportTestCase):
         """
         proto = MockTransportBase()
         proto.makeConnection(self.transport)
+        self.finishKeyExchange(proto)
         proto.currentEncryptions = testCipher = MockCipher()
         message = ord('A')
         payload = 'BC'
@@ -406,7 +450,18 @@ class BaseSSHTransportTestCase(TransportTestCase):
         proto.sendPacket(message, payload)
         self.assertTrue(testCipher.usedEncrypt)
         value = self.transport.value()
-        self.assertEquals(value, '\x00\x00\x00\x08\x04ABC\x99\x99\x99\x99\x01')
+        self.assertEquals(
+            value,
+            # Four byte length prefix
+            '\x00\x00\x00\x08'
+            # One byte padding length
+            '\x04'
+            # The actual application data
+            'ABC'
+            # "Random" padding - see the secureRandom monkeypatch in setUp
+            '\x99\x99\x99\x99'
+            # The MAC
+            '\x02')
 
 
     def test_sendPacketCompressed(self):
@@ -416,6 +471,7 @@ class BaseSSHTransportTestCase(TransportTestCase):
         """
         proto = MockTransportBase()
         proto.makeConnection(self.transport)
+        self.finishKeyExchange(proto)
         proto.outgoingCompression = MockCompression()
         self.transport.clear()
         proto.sendPacket(ord('A'), 'B')
@@ -433,17 +489,27 @@ class BaseSSHTransportTestCase(TransportTestCase):
         """
         proto = MockTransportBase()
         proto.makeConnection(self.transport)
+        self.finishKeyExchange(proto)
         proto.currentEncryptions = testCipher = MockCipher()
         proto.outgoingCompression = MockCompression()
         message = ord('A')
         payload = 'BC'
         self.transport.clear()
         proto.sendPacket(message, payload)
+        self.assertTrue(testCipher.usedEncrypt)
         value = self.transport.value()
         self.assertEquals(
             value,
-            '\x00\x00\x00\x0e\x09CBA\x66\x99\x99\x99\x99\x99\x99\x99\x99\x99'
-            '\x01')
+            # Four byte length prefix
+            '\x00\x00\x00\x0e'
+            # One byte padding length
+            '\x09'
+            # Compressed application data
+            'CBA\x66'
+            # "Random" padding - see the secureRandom monkeypatch in setUp
+            '\x99\x99\x99\x99\x99\x99\x99\x99\x99'
+            # The MAC
+            '\x02')
 
 
     def test_getPacketPlain(self):
@@ -453,6 +519,7 @@ class BaseSSHTransportTestCase(TransportTestCase):
         """
         proto = MockTransportBase()
         proto.makeConnection(self.transport)
+        self.finishKeyExchange(proto)
         self.transport.clear()
         proto.sendPacket(ord('A'), 'BC')
         proto.buf = self.transport.value() + 'extra'
@@ -488,6 +555,7 @@ class BaseSSHTransportTestCase(TransportTestCase):
         """
         proto = MockTransportBase()
         proto.makeConnection(self.transport)
+        self.finishKeyExchange(proto)
         self.transport.clear()
         proto.outgoingCompression = MockCompression()
         proto.incomingCompression = proto.outgoingCompression
@@ -561,6 +629,78 @@ class BaseSSHTransportTestCase(TransportTestCase):
         self.assertEquals(languages1, ','.join(self.proto.supportedLanguages))
         self.assertEquals(languages2, ','.join(self.proto.supportedLanguages))
         self.assertEquals(buf, '\x00' * 5)
+
+
+    def test_receiveKEXINITReply(self):
+        """
+        Immediately after connecting, the transport expects a KEXINIT message
+        and does not reply to it.
+        """
+        self.transport.clear()
+        self.proto.dispatchMessage(
+            transport.MSG_KEXINIT, self._A_KEXINIT_MESSAGE)
+        self.assertEquals(self.packets, [])
+
+
+    def test_sendKEXINITReply(self):
+        """
+        When a KEXINIT message is received which is not a reply to an earlier
+        KEXINIT message which was sent, a KEXINIT reply is sent.
+        """
+        self.finishKeyExchange(self.proto)
+        del self.packets[:]
+
+        self.proto.dispatchMessage(
+            transport.MSG_KEXINIT, self._A_KEXINIT_MESSAGE)
+        self.assertEquals(len(self.packets), 1)
+        self.assertEquals(self.packets[0][0], transport.MSG_KEXINIT)
+
+
+    def test_sendKexInitTwiceFails(self):
+        """
+        A new key exchange cannot be started while a key exchange is already in
+        progress.  If an attempt is made to send a I{KEXINIT} message using
+        L{SSHTransportBase.sendKexInit} while a key exchange is in progress
+        causes that method to raise a L{RuntimeError}.
+        """
+        self.assertRaises(RuntimeError, self.proto.sendKexInit)
+
+
+    def test_sendKexInitBlocksOthers(self):
+        """
+        After L{SSHTransportBase.sendKexInit} has been called, messages types
+        other than the following are queued and not sent until after I{NEWKEYS}
+        is sent by L{SSHTransportBase._keySetup}.
+
+        RFC 4253, section 7.1.
+        """
+        # sendKexInit is called by connectionMade, which is called in setUp.  So
+        # we're in the state already.
+        disallowedMessageTypes = [
+            transport.MSG_SERVICE_REQUEST,
+            transport.MSG_KEXINIT,
+            ]
+
+        # Drop all the bytes sent by setUp, they're not relevant to this test.
+        self.transport.clear()
+
+        # Get rid of the sendPacket monkey patch, we are testing the behavior of
+        # sendPacket.
+        del self.proto.sendPacket
+
+        for messageType in disallowedMessageTypes:
+            self.proto.sendPacket(messageType, 'foo')
+            self.assertEquals(self.transport.value(), "")
+
+        self.finishKeyExchange(self.proto)
+        # Make the bytes written to the transport cleartext so it's easier to
+        # make an assertion about them.
+        self.proto.nextEncryptions = MockCipher()
+
+        # Pseudo-deliver the peer's NEWKEYS message, which should flush the
+        # messages which were queued above.
+        self.proto._newKeys()
+        self.assertEquals(self.transport.value().count("foo"), 2)
 
 
     def test_sendDebug(self):
@@ -1295,9 +1435,9 @@ class ServerSSHTransportTestCase(ServerAndClientSSHTransportBaseCase,
         Test that _keySetup sets up the next encryption keys.
         """
         self.proto.nextEncryptions = MockCipher()
-        self.proto._keySetup('AB', 'CD')
+        self.simulateKeyExchange('AB', 'CD')
         self.assertEquals(self.proto.sessionID, 'CD')
-        self.proto._keySetup('AB', 'EF')
+        self.simulateKeyExchange('AB', 'EF')
         self.assertEquals(self.proto.sessionID, 'CD')
         self.assertEquals(self.packets[-1], (transport.MSG_NEWKEYS, ''))
         newKeys = [self.proto._getKey(c, 'AB', 'EF') for c in 'ABCDEF']
@@ -1322,9 +1462,11 @@ class ServerSSHTransportTestCase(ServerAndClientSSHTransportBaseCase,
         self.assertIdentical(self.proto.outgoingCompression, None)
         self.assertIdentical(self.proto.incomingCompression, None)
         self.proto.outgoingCompressionType = 'zlib'
+        self.simulateKeyExchange('AB', 'CD')
         self.proto.ssh_NEWKEYS('')
         self.failIfIdentical(self.proto.outgoingCompression, None)
         self.proto.incomingCompressionType = 'zlib'
+        self.simulateKeyExchange('AB', 'EF')
         self.proto.ssh_NEWKEYS('')
         self.failIfIdentical(self.proto.incomingCompression, None)
 
@@ -1554,9 +1696,9 @@ class ClientSSHTransportTestCase(ServerAndClientSSHTransportBaseCase,
         Test that _keySetup sets up the next encryption keys.
         """
         self.proto.nextEncryptions = MockCipher()
-        self.proto._keySetup('AB', 'CD')
+        self.simulateKeyExchange('AB', 'CD')
         self.assertEquals(self.proto.sessionID, 'CD')
-        self.proto._keySetup('AB', 'EF')
+        self.simulateKeyExchange('AB', 'EF')
         self.assertEquals(self.proto.sessionID, 'CD')
         self.assertEquals(self.packets[-1], (transport.MSG_NEWKEYS, ''))
         newKeys = [self.proto._getKey(c, 'AB', 'EF') for c in 'ABCDEF']
@@ -1576,24 +1718,25 @@ class ClientSSHTransportTestCase(ServerAndClientSSHTransportBaseCase,
             secure[0] = True
         self.proto.connectionSecure = stubConnectionSecure
 
-        self.proto.nextEncryptions = transport.SSHCiphers('none', 'none',
-                                                          'none', 'none')
-        self.proto.ssh_NEWKEYS('')
-
-        self.failIfIdentical(self.proto.currentEncryptions,
-                             self.proto.nextEncryptions)
+        self.proto.nextEncryptions = transport.SSHCiphers(
+            'none', 'none', 'none', 'none')
+        self.simulateKeyExchange('AB', 'CD')
+        self.assertNotIdentical(
+            self.proto.currentEncryptions, self.proto.nextEncryptions)
 
         self.proto.nextEncryptions = MockCipher()
-        self.proto._keySetup('AB', 'EF')
+        self.proto.ssh_NEWKEYS('')
         self.assertIdentical(self.proto.outgoingCompression, None)
         self.assertIdentical(self.proto.incomingCompression, None)
         self.assertIdentical(self.proto.currentEncryptions,
                              self.proto.nextEncryptions)
         self.assertTrue(secure[0])
         self.proto.outgoingCompressionType = 'zlib'
+        self.simulateKeyExchange('AB', 'GH')
         self.proto.ssh_NEWKEYS('')
         self.failIfIdentical(self.proto.outgoingCompression, None)
         self.proto.incomingCompressionType = 'zlib'
+        self.simulateKeyExchange('AB', 'IJ')
         self.proto.ssh_NEWKEYS('')
         self.failIfIdentical(self.proto.incomingCompression, None)
 

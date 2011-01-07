@@ -1,0 +1,1 @@
+twisted.conch.ssh.transport.SSHTransportBase now responds to key exchange messages at any time during a connection (instead of only at connection setup).  It also queues non-key exchange messages sent during key exchange to avoid corrupting the connection state.
