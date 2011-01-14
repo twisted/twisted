@@ -1,0 +1,1 @@
+The Twisted Web client howto now uses the correct, public name for twisted.web.client.Response.
