@@ -1,0 +1,1 @@
+twisted.words.protocols.irc.IRCClient.say is once again able to send messages when using the default value for the length limit argument.

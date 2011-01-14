@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2011 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -1351,19 +1351,31 @@ class ClientMsgTests(unittest.TestCase):
                 ])
 
 
-    def test_longLinesCauseNewLines(self):
-        """
-        Lines that would break the 512-byte barrier cause two lines to be sent.
-        """
+    def _lengthLimitExceededTest(self, *args):
         # The maximum length of a line is 512 bytes, including the line prefix
         # and the trailing CRLF.
         maxLineLength = irc.MAX_COMMAND_LENGTH - 2 - len('PRIVMSG foo :')
 
-        self.client.msg('foo', 'o' * (maxLineLength+1))
+        self.client.msg('foo', 'o' * (maxLineLength + 1), *args)
         self.assertEquals(self.client.lines, [
                 'PRIVMSG foo :' + maxLineLength * 'o',
                 'PRIVMSG foo :o',
                 ])
+
+
+    def test_longLinesCauseNewLines(self):
+        """
+        Lines that would break the 512-byte barrier cause two lines to be sent.
+        """
+        self._lengthLimitExceededTest()
+
+
+    def test_lengthLimitNone(self):
+        """
+        If C{None} is passed to L{IRCClient.msg} as the length limit, the
+        default limit of C{MAX_COMMAND_LENGTH} is used.
+        """
+        self._lengthLimitExceededTest(None)
 
 
     def test_newlinesBeforeLineBreaking(self):
@@ -1422,6 +1434,15 @@ class ClientMsgTests(unittest.TestCase):
         """
         self.assertRaises(ValueError, irc.split, "foo", 0)
         self.assertRaises(ValueError, irc.split, "foo", -1)
+
+
+    def test_say(self):
+        """
+        L{IRCClient.say} prepends the channel prefix C{"#"} if necessary and
+        then sends the message to the server for delivery to that channel.
+        """
+        self.client.say("thechannel", "the message")
+        self.assertEquals(self.client.lines, ["PRIVMSG #thechannel :the message"])
 
 
 

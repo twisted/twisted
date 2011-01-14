@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.words.test.test_irc -*-
-# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2011 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -1426,7 +1426,7 @@ class IRCClient(basic.LineReceiver):
         self.sendLine(line)
 
 
-    def say(self, channel, message, length = None):
+    def say(self, channel, message, length=None):
         """
         Send a message to a channel
 
@@ -1470,6 +1470,9 @@ class IRCClient(basic.LineReceiver):
         @type length: C{int}
         """
         fmt = "PRIVMSG %s :%%s" % (user,)
+
+        if length is None:
+            length = MAX_COMMAND_LENGTH
 
         # NOTE: minimumLength really equals len(fmt) - 2 (for '%s') + 2
         # (for the line-terminating CRLF)
