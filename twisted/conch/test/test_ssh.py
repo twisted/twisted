@@ -951,8 +951,42 @@ class GMPYMPTestCase(MPTestCase):
     getMP = staticmethod(common._fastgetMP)
 
 
+class BuiltinPowHackTestCase(unittest.TestCase):
+    """
+    Tests that the builtin pow method is still correct after
+    L{twisted.conch.ssh.common} monkeypatches it to use gmpy.
+    """
+
+    def test_floatBase(self):
+        """
+        pow gives the correct result when passed a base of type float with a
+        non-integer value.
+        """
+        self.assertEquals(6.25, pow(2.5, 2))
+
+    def test_intBase(self):
+        """
+        pow gives the correct result when passed a base of type int.
+        """
+        self.assertEquals(81, pow(3, 4))
+
+    def test_longBase(self):
+        """
+        pow gives the correct result when passed a base of type long.
+        """
+        self.assertEquals(81, pow(3, 4))
+
+    def test_mpzBase(self):
+        """
+        pow gives the correct result when passed a base of type gmpy.mpz.
+        """
+        if gmpy is None:
+            raise unittest.SkipTest('gmpy not available')
+        self.assertEquals(81, pow(gmpy.mpz(3), 4))
+
 
 try:
     import gmpy
 except ImportError:
     GMPYMPTestCase.skip = "gmpy not available"
+    gmpy = None

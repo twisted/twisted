@@ -97,14 +97,16 @@ def _fastMPpow(x, y, z=None):
     r = pyPow(gmpy.mpz(x),y,z).binary()[::-1]
     return struct.pack('!L', len(r)) + r
 
-def _fastpow(x, y, z=None):
-    return pyPow(gmpy.mpz(x), y, z)
-
 def install():
     global getMP, MP, _MPpow
     getMP = _fastgetMP
     MP = _fastMP
     _MPpow = _fastMPpow
+    # XXX: We override builtin pow so that PyCrypto can benefit from gmpy too.
+    def _fastpow(x, y, z=None, mpz=gmpy.mpz):
+        if type(x) in (long, int):
+            x = mpz(x)
+        return pyPow(x, y, z)
     __builtins__['pow'] = _fastpow # evil evil
 
 try:

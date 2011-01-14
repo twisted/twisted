@@ -1,0 +1,2 @@
+Importing twisted.conch.ssh.common no longer breaks pow(base, exp[, modulus])
+when the gmpy package is installed and base is not an integer.
