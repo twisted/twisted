@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.python.test.test_deprecate -*-
-# Copyright (c) 2008-2010 Twisted Matrix Laboratories.
+# Copyright (c) 2008-2011 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
