@@ -1195,7 +1195,7 @@ def inlineCallbacks(f):
     C(CancelledError) will be trapped.
     """
     def unwindGenerator(*args, **kwargs):
-        return _startInlineCallbacks(None, f(*args, **kwargs), Deferred())
+        return _startInlineCallbacks(f(*args, **kwargs), Deferred())
     return mergeFunctionMetadata(f, unwindGenerator)
 
 
