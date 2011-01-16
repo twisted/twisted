@@ -1000,7 +1000,30 @@ def returnValue(val):
 
 def _inlineCallbacks(result, g, deferred, state):
     """
-    See L{inlineCallbacks}.
+    Carry out the work of L{inlineCallbacks}.
+
+    Iterate the generator produced by an C{@}L{inlineCallbacks}-decorated
+    function, C{g}, C{send()}ing it the results of each value C{yield}ed by that
+    generator, until a L{Deferred} is yielded, at which point a callback is
+    added to that L{Deferred} to call this function again.
+
+    @param result: The last result seen by this generator.  Note that this is
+        never a L{Deferred} - by the time this function is invoked, the
+        L{Deferred} has been called back and this will be a particular result at
+        a point in its callback chain.
+
+    @param g: a generator object returned by calling a function or method
+        decorated with C{@}L{inlineCallbacks}
+
+    @param deferred: The L{Deferred} which must be fired when C{g} is complete
+        and has called L{returnValue} or fallen off the end.
+
+    @param state: a 2-list of the L{Deferred} being waited upon (which this
+        function must fill out before returning), and a flag indicating whether
+        C{cancel} has been called on the C{deferred} argument (which will be set
+        by C{_startInlineCallbacks}, not this function) and therefore subsequent
+        callbacks to a L{Deferred} being waited upon should not result in C{g}
+        being iterated, but instead, should result in it being stopped.
     """
     # This function is complicated by the need to prevent unbounded recursion
     # arising from repeatedly yielding immediately ready deferreds.  This while
@@ -1100,7 +1123,6 @@ def _inlineCallbacks(result, g, deferred, state):
             # executed once, and if it hasn't been executed yet, the return
             # branch above would have been taken.
 
-
             waiting[0] = True
             waiting[1] = None
 
@@ -1131,9 +1153,11 @@ def _startInlineCallbacks(g, deferred):
         False, # cancelling flag
     ]
 
-    # start cancelling process when `deferred` finished while we are waiting
-    # for result (C)
     def finish(result):
+        """
+        start cancelling process when `deferred` finished while we are waiting
+        for result (C)
+        """
         if state[0] is not None:
             state[1] = True
             state[0].cancel()
