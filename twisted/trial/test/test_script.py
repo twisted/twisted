@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2011 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 import gc
@@ -6,7 +6,7 @@ import StringIO, sys, types
 
 from twisted.trial import unittest, runner
 from twisted.scripts import trial
-from twisted.python import util
+from twisted.python import util, deprecate, versions
 from twisted.python.compat import set
 from twisted.python.filepath import FilePath
 
@@ -438,3 +438,45 @@ class CoverageTests(unittest.TestCase):
         options.parseOptions(["--temp-directory", path])
         self.assertEquals(
             options.coverdir(), FilePath(path).child("coverage"))
+
+
+class ExtraTests(unittest.TestCase):
+    """
+    Tests for the I{extra} option.
+    """
+
+    def setUp(self):
+        self.config = trial.Options()
+
+
+    def tearDown(self):
+        self.config = None
+
+
+    def assertDeprecationWarning(self, deprecatedCallable, warnings):
+        """
+        Check for a deprecation warning
+        """
+        self.assertEquals(len(warnings), 1)
+        self.assertEquals(warnings[0]['category'], DeprecationWarning)
+        self.assertEquals(warnings[0]['message'], 
+                          deprecate.getDeprecationWarningString(
+                              deprecatedCallable, versions.Version('Twisted', 11, 0, 0)))
+
+
+    def test_extraDeprecation(self):
+        """
+        Check that --extra  will emit a deprecation warning
+        """
+        self.config.opt_extra('some.sample.test')
+        self.assertDeprecationWarning(self.config.opt_extra,
+                                      self.flushWarnings([self.test_extraDeprecation]))
+
+    def test_xDeprecation(self):
+        """
+        Check that -x will emit a deprecation warning
+        """
+        self.config.opt_x('some.sample.text')
+        self.assertDeprecationWarning(self.config.opt_extra,
+                                      self.flushWarnings([self.test_xDeprecation]))
+
