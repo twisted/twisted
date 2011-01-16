@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.web.test.test_cgi -*-
-# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2011 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -280,6 +280,10 @@ class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
                 if headerend != -1:
                     headerEnds.append((headerend, delimiter))
             if headerEnds:
+                # twisted.web.server.Request.process always addes a content-type
+                # response header.  That's not appropriate for us.
+                self.request.responseHeaders.removeHeader('content-type')
+
                 headerEnds.sort()
                 headerend, delimiter = headerEnds[0]
                 self.headertext = text[:headerend]

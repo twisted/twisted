@@ -1,4 +1,4 @@
-# Copyright (c) 2009-2010 Twisted Matrix Laboratories.
+# Copyright (c) 2009-2011 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -61,6 +61,12 @@ print
 print "readallinput ok"
 '''
 
+NO_DUPLICATE_CONTENT_TYPE_HEADER_CGI = '''\
+print "content-type: text/cgi-duplicate-test"
+print
+print "cgi output"
+'''
+
 class PythonScript(twcgi.FilteredScript):
     filter = sys.executable
     filters = sys.executable,  # web2's version
@@ -121,6 +127,24 @@ class CGI(unittest.TestCase):
         def checkResponse(ignored):
             self.assertNotIn('monkeys', factory.response_headers['server'])
             self.assertNotIn('last year', factory.response_headers['date'])
+        factory.deferred.addCallback(checkResponse)
+        return factory.deferred
+
+
+    def test_noDuplicateContentTypeHeaders(self):
+        """
+        If the CGI script emits a I{content-type} header, make sure that the
+        server doesn't add an additional (duplicate) one, as per ticket 4786.
+        """
+        cgiFilename = self.writeCGI(NO_DUPLICATE_CONTENT_TYPE_HEADER_CGI)
+
+        portnum = self.startServer(cgiFilename)
+        url = "http://localhost:%d/cgi" % (portnum,)
+        factory = client.HTTPClientFactory(url)
+        reactor.connectTCP('localhost', portnum, factory)
+        def checkResponse(ignored):
+            self.assertEquals(
+                factory.response_headers['content-type'], ['text/cgi-duplicate-test'])
         factory.deferred.addCallback(checkResponse)
         return factory.deferred
 

@@ -1,0 +1,1 @@
+twisted.web.twcgi no longer adds an extra "content-type" header to CGI responses.
