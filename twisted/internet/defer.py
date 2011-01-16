@@ -998,7 +998,7 @@ def returnValue(val):
 
 
 
-def _inlineCallbacks(result, g, deferred):
+def _inlineCallbacks(result, g, deferred, state):
     """
     See L{inlineCallbacks}.
     """
@@ -1006,6 +1006,8 @@ def _inlineCallbacks(result, g, deferred):
     # arising from repeatedly yielding immediately ready deferreds.  This while
     # loop and the waiting variable solve that by manually unfolding the
     # recursion.
+
+    # See _startInlineCallbacks comments about 'state' argument
 
     waiting = [True, # waiting for result?
                None] # result
@@ -1021,7 +1023,7 @@ def _inlineCallbacks(result, g, deferred):
         except StopIteration:
             # fell off the end, or "return" statement
             deferred.callback(None)
-            return deferred
+            return
         except _DefGen_Return, e:
             # returnValue() was called; time to give a result to the original
             # Deferred.  First though, let's try to identify the potentially
@@ -1061,10 +1063,10 @@ def _inlineCallbacks(result, g, deferred):
                         appCodeTrace.tb_frame.f_code.co_name),
                     DeprecationWarning, filename, lineno)
             deferred.callback(e.value)
-            return deferred
+            return
         except:
             deferred.errback()
-            return deferred
+            return
 
         if isinstance(result, Deferred):
             # a deferred was yielded, get the result.
@@ -1073,14 +1075,24 @@ def _inlineCallbacks(result, g, deferred):
                     waiting[0] = False
                     waiting[1] = r
                 else:
-                    _inlineCallbacks(r, g, deferred)
+                    # We are not waiting for deferred result any more
+                    state[0] = None
+                    if state[1]: # if cancelling in progress
+                        # In this case r is normally a
+                        #   result of cancel (Failure(CancelledError))
+                        g.close() # stop generator
+                        if isinstance(r, failure.Failure): # trap CancelledError
+                            r.trap(CancelledError)
+                    else:
+                        _inlineCallbacks(r, g, deferred, state)
 
             result.addBoth(gotResult)
             if waiting[0]:
                 # Haven't called back yet, set flag so that we get reinvoked
                 # and return from the loop
                 waiting[0] = False
-                return deferred
+                state[0] = result # store deferred result we are waiting for
+                return
 
             result = waiting[1]
             # Reset waiting to initial values for next loop.  gotResult uses
@@ -1092,6 +1104,44 @@ def _inlineCallbacks(result, g, deferred):
             waiting[0] = True
             waiting[1] = None
 
+
+
+def _startInlineCallbacks(g, deferred):
+    """
+    This function prepares and starts generator processing. See
+    L{inlineCallbacks} for details about this generator.
+
+    @param g: generator to be processed
+
+    @param deferred: L{Deferred} to be callbacked with generator result
+    """
+
+    # Let's:
+    #   - G is a generator decorated with inlineCallbacks
+    #   - D is a Deferred returned by G
+    #   - C is a Deferred awaited by G with yield
+
+    # `state` is a placeholder for information about current situation:
+    #   1. Deferred (C) we are waiting for (when G yields C)
+    #      This information will be provided by _inlineCallbacks.
+    #   2. Flag "is there a cancelling in progress or not". Cancelling process
+    #      started when D finished while we are waiting for C
+    state = [
+        None, # deferred result we are waiting for or None
+        False, # cancelling flag
+    ]
+
+    # start cancelling process when `deferred` finished while we are waiting
+    # for result (C)
+    def finish(result):
+        if state[0] is not None:
+            state[1] = True
+            state[0].cancel()
+            state[0] = None
+        return result
+    deferred.addBoth(finish)
+
+    _inlineCallbacks(None, g, deferred, state)
 
     return deferred
 
@@ -1136,9 +1186,16 @@ def inlineCallbacks(f):
             else:
                 # will trigger an errback
                 raise Exception('DESTROY ALL LIFE')
+
+
+    You can cancel (or even errback or callback) the L{Deferred} returned from
+    your C(inlineCallbacks) generator before it errback or callback by generator
+    result. In this case yield throws standard C(GeneratorExit) exception. And
+    L{Deferred} that yield was waiting for will be cancelled too and it's
+    C(CancelledError) will be trapped.
     """
     def unwindGenerator(*args, **kwargs):
-        return _inlineCallbacks(None, f(*args, **kwargs), Deferred())
+        return _startInlineCallbacks(None, f(*args, **kwargs), Deferred())
     return mergeFunctionMetadata(f, unwindGenerator)
 
 
