@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2011 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -20,7 +20,6 @@ class AbstractFilePathTestCase(unittest.TestCase):
 
     f1content = "file 1"
     f2content = "file 2"
-
 
     def _mkpath(self, *p):
         x = os.path.abspath(os.path.join(self.cmn, *p))
@@ -1298,69 +1297,6 @@ class FilePathTestCase(AbstractFilePathTestCase):
         # we know that it didn't exist when last we checked.
         self.assertEqual(fp.statinfo, None)
         self.assertEquals(fp.getsize(), 8)
-
-
-    def test_statinfoBitsNotImplementedInWindows(self):
-        """
-        Verify that certain file stats are not available on Windows
-        """
-        self.assertRaises(NotImplementedError, self.path.getInodeNumber)
-        self.assertRaises(NotImplementedError, self.path.getDevice)
-        self.assertRaises(NotImplementedError, self.path.getNumberOfHardLinks)
-        self.assertRaises(NotImplementedError, self.path.getUserID)
-        self.assertRaises(NotImplementedError, self.path.getGroupID)
-
-
-    def test_statinfoBitsAreNumbers(self):
-        """
-        Verify that file inode/device/nlinks/uid/gid stats are numbers in
-        a POSIX environment
-        """
-        c = self.path.child('file1')
-        for p in self.path, c:
-            self.assertIsInstance(p.getInodeNumber(), long)
-            self.assertIsInstance(p.getDevice(), long)
-            self.assertIsInstance(p.getNumberOfHardLinks(), int)
-            self.assertIsInstance(p.getUserID(), int)
-            self.assertIsInstance(p.getGroupID(), int)
-        self.assertEquals(self.path.getUserID(), c.getUserID())
-        self.assertEquals(self.path.getGroupID(), c.getGroupID())
-
-
-    def test_statinfoNumbersAreValid(self):
-        """
-        Verify that the right numbers come back from the right accessor methods
-        for file inode/device/nlinks/uid/gid (in a POSIX environment)
-        """
-        # specify fake statinfo information
-        class FakeStat:
-            st_ino = 200
-            st_dev = 300
-            st_nlink = 400
-            st_uid = 500
-            st_gid = 600
-
-        # monkey patch in a fake restat method for self.path
-        fake = FakeStat()
-        def fakeRestat(*args, **kwargs):
-            self.path.statinfo = fake
-        self.path.restat = fakeRestat
-
-        # ensure that restat will need to be called to get values
-        self.path.statinfo = None
-
-        self.assertEquals(self.path.getInodeNumber(), fake.st_ino)
-        self.assertEquals(self.path.getDevice(), fake.st_dev)
-        self.assertEquals(self.path.getNumberOfHardLinks(), fake.st_nlink)
-        self.assertEquals(self.path.getUserID(), fake.st_uid)
-        self.assertEquals(self.path.getGroupID(), fake.st_gid)
-
-
-    if platform.isWindows():
-        test_statinfoBitsAreNumbers.skip = True
-        test_statinfoNumbersAreValid.skip = True
-    else:
-        test_statinfoBitsNotImplementedInWindows.skip = True
 
 
 
