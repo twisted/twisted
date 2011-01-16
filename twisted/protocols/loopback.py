@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_loopback -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2011 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -310,31 +310,6 @@ class LoopbackRelay:
     def logPrefix(self):
         return 'Loopback(%r)' % (self.target.__class__.__name__,)
 
-def loopback(server, client, logFile=None):
-    """Run session between server and client.
-    DEPRECATED in Twisted 2.5. Use loopbackAsync instead.
-    """
-    import warnings
-    warnings.warn('loopback() is deprecated (since Twisted 2.5). '
-                  'Use loopbackAsync() instead.',
-                  stacklevel=2, category=DeprecationWarning)
-    from twisted.internet import reactor
-    serverToClient = LoopbackRelay(client, logFile)
-    clientToServer = LoopbackRelay(server, logFile)
-    server.makeConnection(serverToClient)
-    client.makeConnection(clientToServer)
-    while 1:
-        reactor.iterate(0.01) # this is to clear any deferreds
-        serverToClient.clearBuffer()
-        clientToServer.clearBuffer()
-        if serverToClient.shouldLose:
-            serverToClient.clearBuffer()
-            server.connectionLost(failure.Failure(main.CONNECTION_DONE))
-            break
-        elif clientToServer.shouldLose:
-            client.connectionLost(failure.Failure(main.CONNECTION_DONE))
-            break
-    reactor.iterate() # last gasp before I go away
 
 
 class LoopbackClientFactory(protocol.ClientFactory):

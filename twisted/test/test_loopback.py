@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2011 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -83,21 +83,7 @@ class LoopbackTestCaseMixin:
 
 
 
-class LoopbackTestCase(LoopbackTestCaseMixin, unittest.TestCase):
-    loopbackFunc = staticmethod(loopback.loopback)
-
-    def testRegularFunction(self):
-        """
-        Suppress loopback deprecation warning.
-        """
-        return LoopbackTestCaseMixin.testRegularFunction(self)
-    testRegularFunction.suppress = [
-        SUPPRESS(message="loopback\(\) is deprecated",
-                 category=DeprecationWarning)]
-
-
-
-class LoopbackAsyncTestCase(LoopbackTestCase):
+class LoopbackAsyncTestCase(LoopbackTestCaseMixin, unittest.TestCase):
     loopbackFunc = staticmethod(loopback.loopbackAsync)
 
 
@@ -422,11 +408,11 @@ class LoopbackAsyncTestCase(LoopbackTestCase):
 
 
 
-class LoopbackTCPTestCase(LoopbackTestCase):
+class LoopbackTCPTestCase(LoopbackTestCaseMixin, unittest.TestCase):
     loopbackFunc = staticmethod(loopback.loopbackTCP)
 
 
-class LoopbackUNIXTestCase(LoopbackTestCase):
+class LoopbackUNIXTestCase(LoopbackTestCaseMixin, unittest.TestCase):
     loopbackFunc = staticmethod(loopback.loopbackUNIX)
 
     if interfaces.IReactorUNIX(reactor, None) is None:
