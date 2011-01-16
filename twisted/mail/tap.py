@@ -1,13 +1,14 @@
 # -*- test-case-name: twisted.mail.test.test_options -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2011 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
-"""I am the support module for creating mail servers with twistd
+"""
+I am the support module for creating mail servers with twistd
 """
 
 import os
-import sys
+import warnings
 
 from twisted.mail import mail
 from twisted.mail import maildir
@@ -16,12 +17,16 @@ from twisted.mail import relaymanager
 from twisted.mail import alias
 
 from twisted.python import usage
+from twisted.python import deprecate
+from twisted.python import versions
 
 from twisted.cred import checkers
+from twisted.cred import strcred
+
 from twisted.application import internet
 
 
-class Options(usage.Options):
+class Options(usage.Options, strcred.AuthOptionMixin):
     synopsis = "[options]"
 
     optParameters = [
@@ -49,9 +54,15 @@ class Options(usage.Options):
         self.last_domain = None
 
     def opt_passwordfile(self, filename):
-        """Specify a file containing username:password login info for authenticated ESMTP connections."""
+        """
+        Specify a file containing username:password login info for
+        authenticated ESMTP connections. (DEPRECATED; see --help-auth instead)
+        """
         ch = checkers.OnDiskUsernamePasswordDatabase(filename)
         self.service.smtpPortal.registerChecker(ch)
+        msg = deprecate.getDeprecationWarningString(self.opt_passwordfile,
+                versions.Version('twisted.mail', 11, 0, 0))
+        warnings.warn(msg, category=DeprecationWarning, stacklevel=2)
     opt_P = opt_passwordfile
 
     def opt_default(self):
