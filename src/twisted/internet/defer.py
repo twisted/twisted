@@ -1326,7 +1326,7 @@ def inlineCallbacks(f):
             raise TypeError(
                 "inlineCallbacks requires %r to produce a generator; "
                 "instead got %r" % (f, gen))
-        return _startInlineCallbacks(None, gen, Deferred())
+        return _startInlineCallbacks(gen, Deferred())
     return unwindGenerator
 
 
