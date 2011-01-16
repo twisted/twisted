@@ -1,0 +1,2 @@
+Changed the man page for ckeygen to accurately reflect what it does, and corrected its synposis so that a second "ckeygen" is not a required part of the ckeygen command line.
+
