@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_paths -*-
-# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2011 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -606,6 +606,115 @@ class FilePath(_PathHelper):
             self.restat()
             st = self.statinfo
         return float(st.st_atime)
+
+
+    def getInodeNumber(self):
+        """
+        Retrieve the file serial number, also called inode number, which 
+        distinguishes this file from all other files on the same device.
+
+        @raise: NotImplementedError if the platform is Windows, since the
+                inode number would be a dummy value for all files in Windows
+        @return: a number representing the file serial number
+        @rtype: C{long}
+        @since: 11.0
+        """
+        if platform.isWindows():
+            raise NotImplementedError
+
+        st = self.statinfo
+        if not st:
+            self.restat()
+            st = self.statinfo
+        return long(st.st_ino)
+
+
+    def getDevice(self):
+        """
+        Retrieves the device containing the file.  The inode number and device
+        number together uniquely identify the file, but the device number is
+        not necessarily consistent across reboots or system crashes.
+
+        @raise: NotImplementedError if the platform is Windows, since the
+                device number would be 0 for all partitions on a Windows
+                platform
+        @return: a number representing the device
+        @rtype: C{long}
+        @since: 11.0
+        """
+        if platform.isWindows():
+            raise NotImplementedError
+
+        st = self.statinfo
+        if not st:
+            self.restat()
+            st = self.statinfo
+        return long(st.st_dev)
+
+
+    def getNumberOfHardLinks(self):
+        """
+        Retrieves the number of hard links to the file.  This count keeps
+        track of how many directories have entries for this file.  If the
+        count is ever decremented to zero then the file itself is discarded
+        as soon as no process still holds it open.  Symbolic links are not
+        counted in the total.
+
+        @raise: NotImplementedError if the platform is Windows, since Windows
+                doesn't maintain a link count for directories, and os.stat
+                does not set st_nlink on Windows anyway.
+        @return: the number of hard links to the file
+        @rtype: C{int}
+        @since: 11.0
+        """
+        if platform.isWindows():
+            raise NotImplementedError
+
+        st = self.statinfo
+        if not st:
+            self.restat()
+            st = self.statinfo
+        return int(st.st_nlink)
+
+
+    def getUserID(self):
+        """
+        Returns the user ID of the file's owner.
+
+        @raise: NotImplementedError if the platform is Windows, since the UID
+                is always 0 on Windows
+        @return: the user ID of the file's owner
+        @rtype: C{int}
+        @since: 11.0
+        """
+        if platform.isWindows():
+            raise NotImplementedError
+
+        st = self.statinfo
+        if not st:
+            self.restat()
+            st = self.statinfo
+        return int(st.st_uid)
+
+
+    def getGroupID(self):
+        """
+        Returns the group ID of the file.
+
+        @raise: NotImplementedError if the platform is Windows, since the GID
+                is always 0 on windows
+        @return: the group ID of the file
+        @rtype: C{int}
+        @since: 11.0
+        """
+        if platform.isWindows():
+            raise NotImplementedError
+
+        st = self.statinfo
+        if not st:
+            self.restat()
+            st = self.statinfo
+        return int(st.st_gid)
 
 
     def exists(self):
