@@ -1329,7 +1329,6 @@ def inlineCallbacks(f):
         def loadData(url):
             response = yield makeRequest(url)
             return json.loads(response)
-
     You can cancel (or even errback or callback) the L{Deferred} returned from
     your C(inlineCallbacks) generator before it errback or callback by generator
     result. In this case yield throws standard C(GeneratorExit) exception. And
