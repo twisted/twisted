@@ -1274,33 +1274,24 @@ def _inlineCallbacks(result, g, deferred, status):
 
 
 
-def _startInlineCallbacks(g, deferred):
+def _startInlineCallbacks(g):
     """
     This function prepares and starts generator processing. See
     L{inlineCallbacks} for details about this generator.
 
-    @param g: generator to be processed
-
-    @param deferred: L{Deferred} to be callbacked with generator result
+    @param g: generator to be processed.
     """
-
     status = _CancellationStatus()
 
-    def finish(result):
-        """
-        start cancelling process when `deferred` finished while we are waiting
-        for result (C)
-        """
+    def cancel(it):
         awaited = status.waitingOn
         if awaited is not None:
             status.nowCancelling()
             awaited.cancel()
             status.nowNotWaiting()
-        return result
-    deferred.addBoth(finish)
 
+    deferred = Deferred(cancel)
     _inlineCallbacks(None, g, deferred, status)
-
     return deferred
 
 
@@ -1380,7 +1371,7 @@ def inlineCallbacks(f):
             raise TypeError(
                 "inlineCallbacks requires %r to produce a generator; "
                 "instead got %r" % (f, gen))
-        return _startInlineCallbacks(gen, Deferred())
+        return _startInlineCallbacks(gen)
     return unwindGenerator
 
 
