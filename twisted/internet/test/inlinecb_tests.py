@@ -112,6 +112,7 @@ class CancellationTests(TestCase):
             self.thingGotten()
 
 
+    @inlineCallbacks
     def _genCascadeCancellingTesting(
         self, resultHolder=[None], getChildThing=None):
         """
@@ -120,7 +121,7 @@ class CancellationTests(TestCase):
         @param resultHolder: A placeholder to report about C{GeneratorExit}
             exception
 
-        @param getChildThing: Some callable returning L{defer.Deferred} that we
+        @param getChildThing: Some callable returning L{Deferred} that we
             awaiting (with C{yield})
         """
         if getChildThing is None:
@@ -133,7 +134,6 @@ class CancellationTests(TestCase):
             # Stop generator with GeneratorExit reraising
             raise
         returnValue(x)
-    _genCascadeCancellingTesting = inlineCallbacks(_genCascadeCancellingTesting)
 
 
     def getThing(self):
@@ -183,8 +183,8 @@ class CancellationTests(TestCase):
         """
         Let:
             - G be a generator decorated with C{inlineCallbacks}
-            - D be a L{defer.Deferred} returned by G
-            - C be a L{defer.Deferred} awaited by G with C{yield}
+            - D be a L{Deferred} returned by G
+            - C be a L{Deferred} awaited by G with C{yield}
 
         When D cancelled, CancelledError from cascade cancelled C will be
         trapped
@@ -200,11 +200,12 @@ class CancellationTests(TestCase):
         """
         Let:
             - G be a generator decorated with C{inlineCallbacks}
-            - D be a L{defer.Deferred} returned by G
-            - C be a L{defer.Deferred} awaited by G with C{yield}
+            - D be a L{Deferred} returned by G
+            - C be a L{Deferred} awaited by G with C{yield}
 
-        When D cancelled and some failure (F) occurs during cascade cancelling,
-        it (F) will be not trapped (in contrast with CancelledError).
+        When D is cancelled and some failure (F) occurs during cascade
+        cancelling, it (F) will be not trapped (in contrast with
+        CancelledError).
         """
         class MyError(ValueError):
             pass
@@ -226,10 +227,10 @@ class CancellationTests(TestCase):
         """
         Let:
             - G be a generator decorated with C{inlineCallbacks}
-            - D be a L{defer.Deferred} returned by G
-            - C be a L{defer.Deferred} awaited by G with C{yield}
+            - D be a L{Deferred} returned by G
+            - C be a L{Deferred} awaited by G with C{yield}
 
-        When D cancelled, G will be immediately stopped
+        When D is cancelled, G will be immediately stopped.
         """
         resultHolder = [None]
         d = self._genCascadeCancellingTesting(resultHolder=resultHolder)
@@ -240,4 +241,42 @@ class CancellationTests(TestCase):
             "generator does not stop with GeneratorExit"
         )
 
+
+    def test_asynchronousCancellation(self):
+        """
+        Let:
+            - G be a generator decorated with C{inlineCallbacks}
+            - D be a L{Deferred} returned by G
+            - C be a L{Deferred} awaited by G with C{yield}
+
+        When D is cancelled, it should not reach the callbacks added to it by
+        application code until C reaches the point in its callback chain where G
+        awaits it.  Otherwise, application code won't be able to track resource
+        usage that D may be using.
+        """
+        moreDeferred = Deferred()
+        def deferMeMore(result):
+            result.trap(CancelledError)
+            return moreDeferred
+        def deferMe():
+            d = Deferred()
+            d.addErrback(deferMeMore)
+            return d
+        d = self._genCascadeCancellingTesting()
+        finalResult = []
+        d.addBoth(finalResult.append)
+        d.cancel()
+        self.assertEquals(finalResult, [])
+        moreDeferred.callback("some data")
+
+        # moreDeferred is just some random implementation detail in the guts of
+        # self._genCascadeCancellingTesting().  We don't know how it's going to
+        # be used (because we are supposed to stop driving that generator) so we
+        # should not give back the final result; given that arbitrary processing
+        # may occur after the result is received, it is _not_ the same as a
+        # Deferred chain which may give back a successful result after
+        # cancellation.  So we always look for a CancelledError rather than a
+        # result.
+        self.assertEquals(len(finalResult), 1)
+        self.failUnlessFailure(finalResult[0], CancelledError)
 
