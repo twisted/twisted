@@ -296,57 +296,6 @@ class InlineCallbacksTests(BaseDefgenTests, unittest.TestCase):
         return _return().addCallback(self.assertEqual, 6)
 
 
-    def test_cascadeCancellingOnCallback(self):
-        """
-        Let:
-            - G be a generator decorated with C{inlineCallbacks}
-            - D be a L{defer.Deferred} returned by G
-            - C be a L{defer.Deferred} awaited by G with C{yield}
-
-        When D callbacked, C will be immediately cancelled.
-        """
-        child_result_holder = ['FAILURE']
-        def getChildThing():
-            d = Deferred()
-            def _eb(result):
-                if result.check(defer.CancelledError):
-                    child_result_holder[0] = 'SUCCESS'
-                return result
-            d.addErrback(_eb)
-            return d
-        d = self._genCascadeCancellingTesting(getChildThing=getChildThing)
-        d.callback(None)
-        self.assertEqual(
-            child_result_holder[0], 'SUCCESS', "no cascade cancelling occurs"
-        )
-
-
-    def test_cascadeCancellingOnErrback(self):
-        """
-        Let:
-            - G be a generator decorated with C{inlineCallbacks}
-            - D be a L{defer.Deferred} returned by G
-            - C be a L{defer.Deferred} awaited by G with C{yield}
-
-        When D errbacked, C will be immediately cancelled.
-        """
-        child_result_holder = ['FAILURE']
-        def getChildThing():
-            d = Deferred()
-            def _eb(result):
-                if result.check(defer.CancelledError):
-                    child_result_holder[0] = 'SUCCESS'
-                return result
-            d.addErrback(_eb)
-            return d
-        d = self._genCascadeCancellingTesting(getChildThing=getChildThing)
-        d.addErrback(lambda result: None)
-        d.errback(RuntimeError('test'))
-        self.assertEqual(
-            child_result_holder[0], 'SUCCESS', "no cascade cancelling occurs"
-        )
-
-
     def test_cascadeCancellingOnCancel(self):
         """
         Let:
