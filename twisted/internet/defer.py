@@ -1209,7 +1209,6 @@ def inlineCallbacks(f):
                 # will trigger an errback
                 raise Exception('DESTROY ALL LIFE')
 
-
     You can cancel (or even errback or callback) the L{Deferred} returned from
     your C(inlineCallbacks) generator before it errback or callback by generator
     result. In this case yield throws standard C(GeneratorExit) exception. And
