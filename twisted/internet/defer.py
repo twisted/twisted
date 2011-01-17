@@ -1209,11 +1209,12 @@ def inlineCallbacks(f):
                 # will trigger an errback
                 raise Exception('DESTROY ALL LIFE')
 
-    You can cancel (or even errback or callback) the L{Deferred} returned from
-    your C(inlineCallbacks) generator before it errback or callback by generator
-    result. In this case yield throws standard C(GeneratorExit) exception. And
-    L{Deferred} that yield was waiting for will be cancelled too and it's
-    C(CancelledError) will be trapped.
+    You can cancel the L{Deferred} returned from your L{inlineCallbacks}
+    generator before it is fired by your generator completing (either by
+    reaching its end, a C{return} statement, or by calling L{returnValue}).
+    When it is cancelled, a 'yield' waiting for a L{Deferred} result will throw
+    a C{GeneratorExit} exception. The L{Deferred} that yield was waiting for
+    will be cancelled too and its C{CancelledError} will be trapped.
     """
     def unwindGenerator(*args, **kwargs):
         return _startInlineCallbacks(f(*args, **kwargs), Deferred())
