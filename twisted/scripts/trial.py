@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.trial.test.test_script -*-
 
-# Copyright (c) 2001-2011 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -8,7 +8,7 @@ import sys, os, random, gc, time, warnings
 
 from twisted.internet import defer
 from twisted.application import app
-from twisted.python import usage, reflect, failure, versions, deprecate
+from twisted.python import usage, reflect, failure
 from twisted.python.filepath import FilePath
 from twisted import plugin
 from twisted.python.util import spewer
@@ -29,8 +29,7 @@ TBFORMAT_MAP = {
 
 
 def _parseLocalVariables(line):
-    """
-    Accepts a single line in Emacs local variable declaration format and
+    """Accepts a single line in Emacs local variable declaration format and
     returns a dict of all the variables {name: value}.
     Raises ValueError if 'line' is in the wrong format.
 
@@ -55,8 +54,7 @@ def _parseLocalVariables(line):
 
 
 def loadLocalVariables(filename):
-    """
-    Accepts a filename and attempts to load the Emacs variable declarations
+    """Accepts a filename and attempts to load the Emacs variable declarations
     from that file, simulating what Emacs does.
 
     See http://www.gnu.org/software/emacs/manual/html_node/File-Variables.html
@@ -80,8 +78,7 @@ def getTestModules(filename):
 
 
 def isTestFile(filename):
-    """
-    Returns true if 'filename' looks like a file containing unit tests.
+    """Returns true if 'filename' looks like a file containing unit tests.
     False otherwise.  Doesn't care whether filename exists.
     """
     basename = os.path.basename(filename)
@@ -95,7 +92,6 @@ def _zshReporterAction():
 class Options(usage.Options, app.ReactorSelectionMixin):
     synopsis = """%s [options] [[file|package|module|TestCase|testmethod]...]
     """ % (os.path.basename(sys.argv[0]),)
-
     longdesc = ("trial loads and executes a suite of unit tests, obtained "
                 "from modules, packages and files listed on the command line.")
 
@@ -167,9 +163,7 @@ class Options(usage.Options, app.ReactorSelectionMixin):
 
 
     def opt_testmodule(self, filename):
-        """
-        Filename to grep for test cases (-*- test-case-name)
-        """
+        "Filename to grep for test cases (-*- test-case-name)"
         # If the filename passed to this parameter looks like a test module
         # we just add that to the test suite.
         #
@@ -189,12 +183,9 @@ class Options(usage.Options, app.ReactorSelectionMixin):
         else:
             self['tests'].update(getTestModules(filename))
 
-
     def opt_spew(self):
-        """
-        Print an insanely verbose log of everything that happens.  Useful
-        when debugging freezes or locks in complex code.
-        """
+        """Print an insanely verbose log of everything that happens.  Useful
+        when debugging freezes or locks in complex code."""
         sys.settrace(spewer)
 
 
@@ -208,52 +199,37 @@ class Options(usage.Options, app.ReactorSelectionMixin):
         print
         sys.exit(0)
 
-
     def opt_disablegc(self):
-        """
-        Disable the garbage collector
-        """
+        """Disable the garbage collector"""
         gc.disable()
 
-
     def opt_tbformat(self, opt):
-        """
-        Specify the format to display tracebacks with. Valid formats are
+        """Specify the format to display tracebacks with. Valid formats are
         'plain', 'emacs', and 'cgitb' which uses the nicely verbose stdlib
-        cgitb.text function
-        """
+        cgitb.text function"""
         try:
             self['tbformat'] = TBFORMAT_MAP[opt]
         except KeyError:
             raise usage.UsageError(
                 "tbformat must be 'plain', 'emacs', or 'cgitb'.")
 
-
     def opt_extra(self, arg):
         """
         Add an extra argument.  (This is a hack necessary for interfacing with
-        emacs's `gud'.)  NOTE: This option is deprecated as of Twisted 11.0
+        emacs's `gud'.)
         """
-        warnings.warn(deprecate.getDeprecationWarningString(Options.opt_extra,
-                                                            versions.Version('twisted', 11, 0, 0)),
-                      category=DeprecationWarning, stacklevel=2)
-
         if self.extra is None:
             self.extra = []
         self.extra.append(arg)
     opt_x = opt_extra
 
-
     def opt_recursionlimit(self, arg):
-        """
-        see sys.setrecursionlimit()
-        """
+        """see sys.setrecursionlimit()"""
         try:
             sys.setrecursionlimit(int(arg))
         except (TypeError, ValueError):
             raise usage.UsageError(
                 "argument to recursionlimit must be an integer")
-
 
     def opt_random(self, option):
         try:
@@ -268,7 +244,6 @@ class Options(usage.Options, app.ReactorSelectionMixin):
             elif self['random'] == 0:
                 self['random'] = long(time.time() * 100)
 
-
     def opt_without_module(self, option):
         """
         Fake the lack of the specified modules, separated with commas.
@@ -280,12 +255,10 @@ class Options(usage.Options, app.ReactorSelectionMixin):
                               category=RuntimeWarning)
             sys.modules[module] = None
 
-
     def parseArgs(self, *args):
         self['tests'].update(args)
         if self.extra is not None:
             self['tests'].update(self.extra)
-
 
     def _loadReporterByName(self, name):
         for p in plugin.getPlugins(itrial.IReporter):
@@ -298,6 +271,7 @@ class Options(usage.Options, app.ReactorSelectionMixin):
 
 
     def postOptions(self):
+
         # Only load reporters now, as opposed to any earlier, to avoid letting
         # application-defined plugins muck up reactor selecting by importing
         # t.i.reactor and causing the default to be installed.
@@ -312,7 +286,6 @@ class Options(usage.Options, app.ReactorSelectionMixin):
             failure.DO_POST_MORTEM = False
 
 
-
 def _initialDebugSetup(config):
     # do this part of debug setup first for easy debugging of import failures
     if config['debug']:
@@ -321,12 +294,10 @@ def _initialDebugSetup(config):
         defer.setDebugging(True)
 
 
-
 def _getSuite(config):
     loader = _getLoader(config)
     recurse = not config['no-recurse']
     return loader.loadByNames(config['tests'], recurse)
-
 
 
 def _getLoader(config):
@@ -339,7 +310,6 @@ def _getLoader(config):
     if not config['until-failure']:
         loader.suiteFactory = runner.DestructiveTestSuite
     return loader
-
 
 
 def _makeRunner(config):
@@ -357,7 +327,6 @@ def _makeRunner(config):
                               uncleanWarnings=config['unclean-warnings'],
                               workingDirectory=config['temp-directory'],
                               forceGarbageCollection=config['force-gc'])
-
 
 
 def run():
