@@ -1,4 +1,4 @@
-# Copyright (c) 2008 Twisted Matrix Laboratories.
+# Copyright (c) 2011 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -52,6 +52,28 @@ class TestData(BaseCase):
             self.assertEquals(str(data), self.text)
         return stream.readStream(iweb.IResponse(self.data.render(None)).stream,
                                  checkStream)
+
+
+
+class TestFile(BaseCase):
+    """
+    Tests for L{twisted.web2.static.File}
+    """
+
+    def test_etagValidWithoutStatinfo(self):
+        import time
+        filename = self.mktemp()
+        f = open(filename, 'w')
+        f.write("TEST")
+        f.close()
+
+        staticFile = static.File(filename)
+        weak = (time.time() - staticFile.fp.getModificationTime() <= 1)
+        self.assertEquals(staticFile.etag(),
+                          http_headers.ETag("%X-%X-%X" % (staticFile.fp.getInodeNumber(),
+                                                          staticFile.fp.getsize(),
+                                                          staticFile.fp.getModificationTime()),
+                                            weak))
 
 
 

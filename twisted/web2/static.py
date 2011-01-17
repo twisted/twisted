@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.web2.test.test_static
 # Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
