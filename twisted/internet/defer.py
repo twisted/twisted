@@ -1030,8 +1030,6 @@ def _inlineCallbacks(result, g, deferred, state):
     # loop and the waiting variable solve that by manually unfolding the
     # recursion.
 
-    # See _startInlineCallbacks comments about 'state' argument
-
     waiting = [True, # waiting for result?
                None] # result
 
