@@ -14,7 +14,10 @@ well: see U{http://twistedmatrix.com/trac/ticket/4182}.
 """
 
 from twisted.trial.unittest import TestCase
-from twisted.internet.defer import Deferred, returnValue, inlineCallbacks
+from twisted.internet.defer import (
+    Deferred, returnValue, inlineCallbacks, CancelledError)
+from twisted.test.test_defgen import getThing
+
 
 class NonLocalExitTests(TestCase):
     """
@@ -90,3 +93,115 @@ class NonLocalExitTests(TestCase):
         self.assertMistakenMethodWarning(results)
 
 
+class CancellationTests(TestCase):
+    def _genCascadeCancellingTesting(
+        self, result_holder=[None], getChildThing=getThing):
+        """
+        Generator for testing cascade cancelling cases
+
+        @param result_holder: A placeholder to report about C{GeneratorExit}
+            exception
+
+        @param getChildThing: Some callable returning L{defer.Deferred} that we
+            awaiting (with C{yield})
+        """
+        try:
+            x = yield getChildThing()
+        except GeneratorExit:
+            # Report about GeneratorExit exception
+            result_holder[0] = 'GeneratorExit'
+            # Stop generator with GeneratorExit reraising
+            raise
+        returnValue(x)
+    _genCascadeCancellingTesting = inlineCallbacks(_genCascadeCancellingTesting)
+
+
+    def test_cascadeCancellingOnCancel(self):
+        """
+        Let:
+            - G be a generator decorated with C{inlineCallbacks}
+            - D be a L{Deferred} returned by G
+            - C be a L{Deferred} awaited by G with C{yield}
+
+        When D cancelled, C will be immediately cancelled too.
+        """
+        child_result_holder = ['FAILURE']
+        def getChildThing():
+            d = Deferred()
+            def _eb(result):
+                if result.check(CancelledError):
+                    child_result_holder[0] = 'SUCCESS'
+                return result
+            d.addErrback(_eb)
+            return d
+        d = self._genCascadeCancellingTesting(getChildThing=getChildThing)
+        d.addErrback(lambda result: None)
+        d.cancel()
+        self.assertEqual(
+            child_result_holder[0], 'SUCCESS', "no cascade cancelling occurs"
+        )
+
+
+    def test_trapChildCancelledErrorOnCascadeCancelling(self):
+        """
+        Let:
+            - G be a generator decorated with C{inlineCallbacks}
+            - D be a L{defer.Deferred} returned by G
+            - C be a L{defer.Deferred} awaited by G with C{yield}
+
+        When D cancelled, CancelledError from cascade cancelled C will be
+        trapped
+        """
+        d = self._genCascadeCancellingTesting()
+        d.addErrback(lambda fail: None)
+        d.cancel()
+        errors = self.flushLoggedErrors(CancelledError)
+        self.assertEquals(len(errors), 0, "CancelledError not trapped")
+
+
+    def test_dontTrapChildFailureOnCascadeCancelling(self):
+        """
+        Let:
+            - G be a generator decorated with C{inlineCallbacks}
+            - D be a L{defer.Deferred} returned by G
+            - C be a L{defer.Deferred} awaited by G with C{yield}
+
+        When D cancelled and some failure (F) occurs during cascade cancelling,
+        it (F) will be not trapped (in contrast with CancelledError).
+        """
+        class MyError(ValueError):
+            pass
+        def getChildThing():
+            d = Deferred()
+            def _eb(result):
+                raise MyError()
+            d.addErrback(_eb)
+            return d
+        d = self._genCascadeCancellingTesting(getChildThing=getChildThing)
+        d.addErrback(lambda fail: None)
+        d.cancel()
+        def check_errors():
+            errors = self.flushLoggedErrors(MyError)
+            self.assertEquals(len(errors), 1, "exception consumed")
+            errors[0].trap(MyError)
+        from twisted.internet import reactor
+        reactor.callLater(0, check_errors)
+
+
+    def test_generatorStopsWhenCancelling(self):
+        """
+        Let:
+            - G be a generator decorated with C{inlineCallbacks}
+            - D be a L{defer.Deferred} returned by G
+            - C be a L{defer.Deferred} awaited by G with C{yield}
+
+        When D cancelled, G will be immediately stopped
+        """
+        result_holder = [None]
+        d = self._genCascadeCancellingTesting(result_holder=result_holder)
+        d.addErrback(lambda fail: None)
+        d.cancel()
+        self.assertEqual(
+            result_holder[0], 'GeneratorExit',
+            "generator does not stop with GeneratorExit"
+        )
