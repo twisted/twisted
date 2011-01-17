@@ -1278,13 +1278,16 @@ def _startInlineCallbacks(g, deferred):
 
 def inlineCallbacks(f):
     """
-    inlineCallbacks helps you write L{Deferred}-using code that looks like a
+    L{inlineCallbacks} helps you write L{Deferred}-using code that looks like a
     regular sequential function. For example::
 
         @inlineCallbacks
         def thingummy():
             thing = yield makeSomeRequestResultingInDeferred()
             print(thing)  # the result! hoorj!
+
+    WARNING: this syntax was introduced in Python 2.5, so this example will not
+    work in Python 2.4 and earlier!
 
     When you call anything that results in a L{Deferred}, you can simply yield it;
     your generator will automatically be resumed when the Deferred's result is
