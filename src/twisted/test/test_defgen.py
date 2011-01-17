@@ -323,10 +323,10 @@ class InlineCallbacksTests(BaseDefgenTests, unittest.TestCase):
 
     def test_cascadeCancellingOnCallback(self):
         """
-        Let's:
-            - G is a generator decorated with C{inlineCallbacks}
-            - D is a L{defer.Deferred} returned by G
-            - C is a L{defer.Deferred} awaited by G with C{yield}
+        Let:
+            - G be a generator decorated with C{inlineCallbacks}
+            - D be a L{defer.Deferred} returned by G
+            - C be a L{defer.Deferred} awaited by G with C{yield}
 
         When D callbacked, C will be immediately cancelled.
         """
@@ -348,10 +348,10 @@ class InlineCallbacksTests(BaseDefgenTests, unittest.TestCase):
 
     def test_cascadeCancellingOnErrback(self):
         """
-        Let's:
-            - G is a generator decorated with C{inlineCallbacks}
-            - D is a L{defer.Deferred} returned by G
-            - C is a L{defer.Deferred} awaited by G with C{yield}
+        Let:
+            - G be a generator decorated with C{inlineCallbacks}
+            - D be a L{defer.Deferred} returned by G
+            - C be a L{defer.Deferred} awaited by G with C{yield}
 
         When D errbacked, C will be immediately cancelled.
         """
@@ -374,10 +374,10 @@ class InlineCallbacksTests(BaseDefgenTests, unittest.TestCase):
 
     def test_cascadeCancellingOnCancel(self):
         """
-        Let's:
-            - G is a generator decorated with C{inlineCallbacks}
-            - D is a L{defer.Deferred} returned by G
-            - C is a L{defer.Deferred} awaited by G with C{yield}
+        Let:
+            - G be a generator decorated with C{inlineCallbacks}
+            - D be a L{defer.Deferred} returned by G
+            - C be a L{defer.Deferred} awaited by G with C{yield}
 
         When D cancelled, C will be immediately cancelled too.
         """
@@ -400,10 +400,10 @@ class InlineCallbacksTests(BaseDefgenTests, unittest.TestCase):
 
     def test_trapChildCancelledErrorOnCascadeCancelling(self):
         """
-        Let's:
-            - G is a generator decorated with C{inlineCallbacks}
-            - D is a L{defer.Deferred} returned by G
-            - C is a L{defer.Deferred} awaited by G with C{yield}
+        Let:
+            - G be a generator decorated with C{inlineCallbacks}
+            - D be a L{defer.Deferred} returned by G
+            - C be a L{defer.Deferred} awaited by G with C{yield}
 
         When D cancelled, CancelledError from cascade cancelled C will be
         trapped
@@ -419,10 +419,10 @@ class InlineCallbacksTests(BaseDefgenTests, unittest.TestCase):
 
     def test_dontTrapChildFailureOnCascadeCancelling(self):
         """
-        Let's:
-            - G is a generator decorated with C{inlineCallbacks}
-            - D is a L{defer.Deferred} returned by G
-            - C is a L{defer.Deferred} awaited by G with C{yield}
+        Let:
+            - G be a generator decorated with C{inlineCallbacks}
+            - D be a L{defer.Deferred} returned by G
+            - C be a L{defer.Deferred} awaited by G with C{yield}
 
         When D cancelled and some failure (F) occurs during cascade cancelling,
         it (F) will be not trapped (in contrast with CancelledError)
@@ -447,10 +447,10 @@ class InlineCallbacksTests(BaseDefgenTests, unittest.TestCase):
 
     def test_generatorStopsWhenCancelling(self):
         """
-        Let's:
-            - G is a generator decorated with C{inlineCallbacks}
-            - D is a L{defer.Deferred} returned by G
-            - C is a L{defer.Deferred} awaited by G with C{yield}
+        Let:
+            - G be a generator decorated with C{inlineCallbacks}
+            - D be a L{defer.Deferred} returned by G
+            - C be a L{defer.Deferred} awaited by G with C{yield}
 
         When D cancelled, G will be immediately stopped
         """
