@@ -1138,10 +1138,10 @@ def _startInlineCallbacks(g, deferred):
     @param deferred: L{Deferred} to be callbacked with generator result
     """
 
-    # Let's:
-    #   - G is a generator decorated with inlineCallbacks
-    #   - D is a Deferred returned by G
-    #   - C is a Deferred awaited by G with yield
+    # Let:
+    #   - G be a generator decorated with inlineCallbacks
+    #   - D be a Deferred returned by G
+    #   - C be a Deferred awaited by G with yield
 
     # `state` is a placeholder for information about current situation:
     #   1. Deferred (C) we are waiting for (when G yields C)
