@@ -998,7 +998,53 @@ def returnValue(val):
 
 
 
-def _inlineCallbacks(result, g, deferred, state):
+class _CancellationStatus(object):
+    """
+    Cancellation status of an L{inlineCallbacks} invocation.
+
+    @ivar waitingOn: the L{Deferred} being waited upon (which
+        L{_inlineCallbacks} must fill out before returning)
+
+    @ivar cancelled: a flag indicating whether C{cancel} has been called on the
+        L{Deferred} returned from the L{inlineCallbacks} invocation in question.
+        Once this is set, subsequent L{_inlineCallbacks}-callbacks to a
+        L{Deferred} being waited upon should not result in the
+        L{inlineCallbacks}-decorated generator being iterated, but instead,
+        should result in that generator being stopped with a C{GeneratorExit}
+        exception.
+    """
+
+    def __init__(self):
+        self.waitingOn = None
+        self.cancelled = False
+
+
+    def nowNotWaiting(self):
+        """
+        The generator is now processing or finished, and no longer waiting on a
+        Deferred.
+        """
+        self.waitingOn = None
+
+
+    def nowWaitingOn(self, waitingOn):
+        """
+        The generator is now waiting on C{waitingOn}.
+
+        @param waitingOn: the L{Deferred} we're waiting on.
+        """
+        self.waitingOn = waitingOn
+
+
+    def nowCancelling(self):
+        """
+        The result deferred has been cancelled.
+        """
+        self.cancelled = True
+
+
+
+def _inlineCallbacks(result, g, deferred, status):
     """
     Carry out the work of L{inlineCallbacks}.
 
@@ -1018,12 +1064,7 @@ def _inlineCallbacks(result, g, deferred, state):
     @param deferred: The L{Deferred} which must be fired when C{g} is complete
         and has called L{returnValue} or fallen off the end.
 
-    @param state: a 2-list of the L{Deferred} being waited upon (which this
-        function must fill out before returning), and a flag indicating whether
-        C{cancel} has been called on the C{deferred} argument (which will be set
-        by C{_startInlineCallbacks}, not this function) and therefore subsequent
-        callbacks to a L{Deferred} being waited upon should not result in C{g}
-        being iterated, but instead, should result in it being stopped.
+    @param status: a L{_CancellationStatus} tracking the current status of C{g}
     """
     # This function is complicated by the need to prevent unbounded recursion
     # arising from repeatedly yielding immediately ready deferreds.  This while
@@ -1097,22 +1138,22 @@ def _inlineCallbacks(result, g, deferred, state):
                     waiting[1] = r
                 else:
                     # We are not waiting for deferred result any more
-                    state[0] = None
-                    if state[1]: # if cancelling in progress
+                    status.nowNotWaiting()
+                    if status.cancelled: # if cancelling in progress
                         # In this case r is normally a
                         #   result of cancel (Failure(CancelledError))
                         g.close() # stop generator
                         if isinstance(r, failure.Failure): # trap CancelledError
                             r.trap(CancelledError)
                     else:
-                        _inlineCallbacks(r, g, deferred, state)
+                        _inlineCallbacks(r, g, deferred, status)
 
             result.addBoth(gotResult)
             if waiting[0]:
                 # Haven't called back yet, set flag so that we get reinvoked
                 # and return from the loop
                 waiting[0] = False
-                state[0] = result # store deferred result we are waiting for
+                status.nowWaitingOn(result)
                 return
 
             result = waiting[1]
@@ -1136,34 +1177,22 @@ def _startInlineCallbacks(g, deferred):
     @param deferred: L{Deferred} to be callbacked with generator result
     """
 
-    # Let:
-    #   - G be a generator decorated with inlineCallbacks
-    #   - D be a Deferred returned by G
-    #   - C be a Deferred awaited by G with yield
-
-    # `state` is a placeholder for information about current situation:
-    #   1. Deferred (C) we are waiting for (when G yields C)
-    #      This information will be provided by _inlineCallbacks.
-    #   2. Flag "is there a cancelling in progress or not". Cancelling process
-    #      started when D finished while we are waiting for C
-    state = [
-        None, # deferred result we are waiting for or None
-        False, # cancelling flag
-    ]
+    status = _CancellationStatus()
 
     def finish(result):
         """
         start cancelling process when `deferred` finished while we are waiting
         for result (C)
         """
-        if state[0] is not None:
-            state[1] = True
-            state[0].cancel()
-            state[0] = None
+        awaited = status.waitingOn
+        if awaited is not None:
+            status.nowCancelling()
+            awaited.cancel()
+            status.nowNotWaiting()
         return result
     deferred.addBoth(finish)
 
-    _inlineCallbacks(None, g, deferred, state)
+    _inlineCallbacks(None, g, deferred, status)
 
     return deferred
 
