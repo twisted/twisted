@@ -16,7 +16,6 @@ well: see U{http://twistedmatrix.com/trac/ticket/4182}.
 from twisted.trial.unittest import TestCase
 from twisted.internet.defer import (
     Deferred, returnValue, inlineCallbacks, CancelledError)
-from twisted.test.test_defgen import getThing
 
 
 class NonLocalExitTests(TestCase):
@@ -94,8 +93,27 @@ class NonLocalExitTests(TestCase):
 
 
 class CancellationTests(TestCase):
+    """
+    Tests for cancellation of L{Deferred}s returned by L{inlineCallbacks}.
+    """
+
+    def setUp(self):
+        """
+        Set up the list of outstanding L{Deferred}s.
+        """
+        self.thingsOutstanding = []
+
+
+    def tearDown(self):
+        """
+        If any L{Deferred}s are still outstanding, fire them.
+        """
+        while self.thingsOutstanding:
+            self.thingGotten()
+
+
     def _genCascadeCancellingTesting(
-        self, resultHolder=[None], getChildThing=getThing):
+        self, resultHolder=[None], getChildThing=None):
         """
         Generator for testing cascade cancelling cases
 
@@ -105,6 +123,8 @@ class CancellationTests(TestCase):
         @param getChildThing: Some callable returning L{defer.Deferred} that we
             awaiting (with C{yield})
         """
+        if getChildThing is None:
+            getChildThing = self.getThing
         try:
             x = yield getChildThing()
         except GeneratorExit:
@@ -114,6 +134,23 @@ class CancellationTests(TestCase):
             raise
         returnValue(x)
     _genCascadeCancellingTesting = inlineCallbacks(_genCascadeCancellingTesting)
+
+
+    def getThing(self):
+        """
+        A sample function that returns a L{Deferred} that can be fired on
+        demand, by L{CancellationTests.thingGotten}.
+        """
+        self.thingsOutstanding.append(Deferred())
+        return self.thingsOutstanding[-1]
+
+
+    def thingGotten(self, result=None):
+        """
+        Fire the L{Deferred} returned from the least-recent call to
+        L{CancellationTests.getThing}.
+        """
+        self.thingsOutstanding.pop(0).callback(result)
 
 
     def test_cascadeCancellingOnCancel(self):
@@ -180,12 +217,9 @@ class CancellationTests(TestCase):
         d = self._genCascadeCancellingTesting(getChildThing=getChildThing)
         d.addErrback(lambda fail: None)
         d.cancel()
-        def check_errors():
-            errors = self.flushLoggedErrors(MyError)
-            self.assertEquals(len(errors), 1, "exception consumed")
-            errors[0].trap(MyError)
-        from twisted.internet import reactor
-        reactor.callLater(0, check_errors)
+        errors = self.flushLoggedErrors(MyError)
+        self.assertEquals(len(errors), 1, "exception consumed")
+        errors[0].trap(MyError)
 
 
     def test_generatorStopsWhenCancelling(self):
@@ -205,3 +239,5 @@ class CancellationTests(TestCase):
             resultHolder[0], 'GeneratorExit',
             "generator does not stop with GeneratorExit"
         )
+
+
