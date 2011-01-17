@@ -95,11 +95,11 @@ class NonLocalExitTests(TestCase):
 
 class CancellationTests(TestCase):
     def _genCascadeCancellingTesting(
-        self, result_holder=[None], getChildThing=getThing):
+        self, resultHolder=[None], getChildThing=getThing):
         """
         Generator for testing cascade cancelling cases
 
-        @param result_holder: A placeholder to report about C{GeneratorExit}
+        @param resultHolder: A placeholder to report about C{GeneratorExit}
             exception
 
         @param getChildThing: Some callable returning L{defer.Deferred} that we
@@ -109,7 +109,7 @@ class CancellationTests(TestCase):
             x = yield getChildThing()
         except GeneratorExit:
             # Report about GeneratorExit exception
-            result_holder[0] = 'GeneratorExit'
+            resultHolder[0] = 'GeneratorExit'
             # Stop generator with GeneratorExit reraising
             raise
         returnValue(x)
@@ -125,12 +125,12 @@ class CancellationTests(TestCase):
 
         When D cancelled, C will be immediately cancelled too.
         """
-        child_result_holder = ['FAILURE']
+        childResultHolder = ['FAILURE']
         def getChildThing():
             d = Deferred()
             def _eb(result):
                 if result.check(CancelledError):
-                    child_result_holder[0] = 'SUCCESS'
+                    childResultHolder[0] = 'SUCCESS'
                 return result
             d.addErrback(_eb)
             return d
@@ -138,7 +138,7 @@ class CancellationTests(TestCase):
         d.addErrback(lambda result: None)
         d.cancel()
         self.assertEqual(
-            child_result_holder[0], 'SUCCESS', "no cascade cancelling occurs"
+            childResultHolder[0], 'SUCCESS', "no cascade cancelling occurs"
         )
 
 
@@ -197,11 +197,11 @@ class CancellationTests(TestCase):
 
         When D cancelled, G will be immediately stopped
         """
-        result_holder = [None]
-        d = self._genCascadeCancellingTesting(result_holder=result_holder)
+        resultHolder = [None]
+        d = self._genCascadeCancellingTesting(resultHolder=resultHolder)
         d.addErrback(lambda fail: None)
         d.cancel()
         self.assertEqual(
-            result_holder[0], 'GeneratorExit',
+            resultHolder[0], 'GeneratorExit',
             "generator does not stop with GeneratorExit"
         )
