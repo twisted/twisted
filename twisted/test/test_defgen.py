@@ -179,7 +179,6 @@ class DeferredGeneratorTests(BaseDefgenTests, unittest.TestCase):
 ## syntax error in Python 2.4 and before.
 inlineCallbacksTestsSource = '''
 from twisted.internet.defer import inlineCallbacks, returnValue
-from twisted.python.failure import Failure
 
 class InlineCallbacksTests(BaseDefgenTests, unittest.TestCase):
     # First provide all the generator impls necessary for BaseDefgenTests
@@ -239,9 +238,6 @@ class InlineCallbacksTests(BaseDefgenTests, unittest.TestCase):
         returnValue(0)
     _genStackUsage2 = inlineCallbacks(_genStackUsage2)
 
-
-
-
     # Tests unique to inlineCallbacks
 
     def testYieldNonDeferrred(self):
@@ -273,7 +269,6 @@ class InlineCallbacksTests(BaseDefgenTests, unittest.TestCase):
         _return = inlineCallbacks(_return)
 
         return _return().addCallback(self.assertEqual, 6)
-
 
 '''
 
