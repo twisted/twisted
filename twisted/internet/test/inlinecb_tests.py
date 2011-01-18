@@ -159,8 +159,8 @@ class CancellationTests(TestCase):
         except TranslateMe:
             raise TranslateResult()
         except DontFail, df:
-            returnValue(df.actualValue)
-        returnValue(x)
+            x = df.actualValue - 2
+        returnValue(x + 1)
 
 
     def getThing(self):
@@ -213,33 +213,11 @@ class CancellationTests(TestCase):
         self.assertEquals(len(errors), 0, "CancelledError not trapped")
 
 
-    def test_dontTrapChildFailureOnCascadeCancelling(self):
-        """
-        When D is cancelled and some failure (F) occurs during cascade
-        cancelling, it (F) will be not trapped (in contrast with
-        CancelledError).
-        """
-        class MyError(ValueError):
-            pass
-        def getChildThing():
-            d = Deferred()
-            def _eb(result):
-                raise MyError()
-            d.addErrback(_eb)
-            return d
-        d = self.sampleInlineCB(getChildThing=getChildThing)
-        d.addErrback(lambda fail: None)
-        d.cancel()
-        errors = self.flushLoggedErrors(MyError)
-        self.assertEquals(len(errors), 1, "exception consumed")
-        errors[0].trap(MyError)
-
-
     def test_errorToErrorTranslation(self):
         """
         When D is cancelled, and C raises a particular type of error, G may
         catch that error at the point of yielding and translate it into
-        something else which may be received by application code.
+        a different error which may be received by application code.
         """
         def cancel(it):
             it.errback(TranslateMe())
@@ -253,7 +231,7 @@ class CancellationTests(TestCase):
         """
         When D is cancelled, and C raises a particular type of error, G may
         catch that error at the point of yielding and translate it into
-        something else which may be received by application code.
+        a result value which may be received by application code.
         """
         def cancel(it):
             it.errback(DontFail(4321))
@@ -262,7 +240,7 @@ class CancellationTests(TestCase):
         results = []
         d.addCallback(results.append)
         d.cancel()
-        self.assertEquals(results, [4321])
+        self.assertEquals(results, [4320])
 
 
     def test_asynchronousCancellation(self):
@@ -285,15 +263,6 @@ class CancellationTests(TestCase):
         d.addBoth(finalResult.append)
         d.cancel()
         self.assertEquals(finalResult, [])
-        moreDeferred.callback("some data")
-
-        # moreDeferred is just some random implementation detail in the guts of
-        # self.sampleInlineCB().  We don't know how it's going to be used
-        # (because we are supposed to stop driving that generator) so we should
-        # not give back the final result; given that arbitrary processing may
-        # occur after the result is received, it is _not_ the same as a Deferred
-        # chain which may give back a successful result after cancellation.  So
-        # we always look for a CancelledError rather than a result.
-        self.assertEquals(len(finalResult), 1)
-        self.failUnlessFailure(finalResult[0], CancelledError)
+        moreDeferred.callback(6543)
+        self.assertEquals(finalResult, [6544])
 
