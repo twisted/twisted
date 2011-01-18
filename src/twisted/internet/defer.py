@@ -1121,17 +1121,9 @@ class _CancellationStatus(object):
         exception.
     """
 
-    def __init__(self):
+    def __init__(self, deferred):
         self.waitingOn = None
-        self.cancelled = False
-
-
-    def nowNotWaiting(self):
-        """
-        The generator is now processing or finished, and no longer waiting on a
-        Deferred.
-        """
-        self.waitingOn = None
+        self.deferred = deferred
 
 
     def nowWaitingOn(self, waitingOn):
@@ -1143,15 +1135,8 @@ class _CancellationStatus(object):
         self.waitingOn = waitingOn
 
 
-    def nowCancelling(self):
-        """
-        The result deferred has been cancelled.
-        """
-        self.cancelled = True
 
-
-
-def _inlineCallbacks(result, g, deferred, status):
+def _inlineCallbacks(result, g, status):
     """
     Carry out the work of L{inlineCallbacks}.
 
@@ -1167,9 +1152,6 @@ def _inlineCallbacks(result, g, deferred, status):
 
     @param g: a generator object returned by calling a function or method
         decorated with C{@}L{inlineCallbacks}
-
-    @param deferred: The L{Deferred} which must be fired when C{g} is complete
-        and has called L{returnValue} or fallen off the end.
 
     @param status: a L{_CancellationStatus} tracking the current status of C{g}
     """
@@ -1191,7 +1173,7 @@ def _inlineCallbacks(result, g, deferred, status):
                 result = g.send(result)
         except StopIteration as e:
             # fell off the end, or "return" statement
-            deferred.callback(getattr(e, "value", None))
+            status.deferred.callback(getattr(e, "value", None))
             return
         except _DefGen_Return as e:
             # returnValue() was called; time to give a result to the original
@@ -1231,10 +1213,10 @@ def _inlineCallbacks(result, g, deferred, status):
                         ultimateTrace.tb_frame.f_code.co_name,
                         appCodeTrace.tb_frame.f_code.co_name),
                     DeprecationWarning, filename, lineno)
-            deferred.callback(e.value)
+            status.deferred.callback(e.value)
             return
         except:
-            deferred.errback()
+            status.deferred.errback()
             return
 
         if isinstance(result, Deferred):
@@ -1245,15 +1227,7 @@ def _inlineCallbacks(result, g, deferred, status):
                     waiting[1] = r
                 else:
                     # We are not waiting for deferred result any more
-                    status.nowNotWaiting()
-                    if status.cancelled: # if cancelling in progress
-                        # In this case r is normally a
-                        #   result of cancel (Failure(CancelledError))
-                        g.close() # stop generator
-                        if isinstance(r, failure.Failure): # trap CancelledError
-                            r.trap(CancelledError)
-                    else:
-                        _inlineCallbacks(r, g, deferred, status)
+                    _inlineCallbacks(r, g, status)
 
             result.addBoth(gotResult)
             if waiting[0]:
@@ -1281,19 +1255,13 @@ def _startInlineCallbacks(g):
 
     @param g: generator to be processed.
     """
-    status = _CancellationStatus()
 
-    def cancel(it):
-        awaited = status.waitingOn
-        if awaited is not None:
-            status.nowCancelling()
-            awaited.cancel()
-            status.nowNotWaiting()
 
-    deferred = Deferred(cancel)
-    _inlineCallbacks(None, g, deferred, status)
-    return deferred
 
+class _PeculiarError(Exception):
+    """
+    A distinctive exception, only raised by cancelling an inline callback.
+    """
 
 
 def inlineCallbacks(f):
@@ -1355,9 +1323,9 @@ def inlineCallbacks(f):
     You can cancel the L{Deferred} returned from your L{inlineCallbacks}
     generator before it is fired by your generator completing (either by
     reaching its end, a C{return} statement, or by calling L{returnValue}).
-    When it is cancelled, a 'yield' waiting for a L{Deferred} result will throw
-    a C{GeneratorExit} exception. The L{Deferred} that yield was waiting for
-    will be cancelled too and its C{CancelledError} will be trapped.
+    This will cause any L{Deferred} being awaited upon in a C{yield} statement
+    to be cancelled, with whatever effects would result from that (often a
+    C{CancelledError} being raised from the C{yield}, but not always).
     """
     @wraps(f)
     def unwindGenerator(*args, **kwargs):
@@ -1371,8 +1339,22 @@ def inlineCallbacks(f):
             raise TypeError(
                 "inlineCallbacks requires %r to produce a generator; "
                 "instead got %r" % (f, gen))
-        return _startInlineCallbacks(gen)
+        def cancel(it):
+            it.errback(_PeculiarError())
+        deferred = Deferred(cancel)
+        status = _CancellationStatus(deferred)
+        def handleCancel(result):
+            result.trap(_PeculiarError)
+            status.deferred = Deferred(cancel)
+            status.deferred.addErrback(handleCancel)
+            awaited = status.waitingOn
+            awaited.cancel()
+            return status.deferred
+        deferred.addErrback(handleCancel)
+        _startInlineCallbacks(None, gen, status)
+        return deferred
     return unwindGenerator
+
 
 
 ## DeferredLock/DeferredQueue
