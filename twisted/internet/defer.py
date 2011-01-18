@@ -1005,27 +1005,13 @@ class _CancellationStatus(object):
     @ivar waitingOn: the L{Deferred} being waited upon (which
         L{_inlineCallbacks} must fill out before returning)
 
-    @ivar cancelled: a flag indicating whether C{cancel} has been called on the
-        L{Deferred} returned from the L{inlineCallbacks} invocation in question.
-        Once this is set, subsequent L{_inlineCallbacks}-callbacks to a
-        L{Deferred} being waited upon should not result in the
-        L{inlineCallbacks}-decorated generator being iterated, but instead,
-        should result in that generator being stopped with a C{GeneratorExit}
-        exception.
+    @ivar deferred: the L{Deferred} to callback or errback when the generator
+        invocation has finished.
     """
 
     def __init__(self, deferred):
         self.waitingOn = None
         self.deferred = deferred
-
-
-    def nowWaitingOn(self, waitingOn):
-        """
-        The generator is now waiting on C{waitingOn}.
-
-        @param waitingOn: the L{Deferred} we're waiting on.
-        """
-        self.waitingOn = waitingOn
 
 
 
@@ -1127,7 +1113,7 @@ def _inlineCallbacks(result, g, status):
                 # Haven't called back yet, set flag so that we get reinvoked
                 # and return from the loop
                 waiting[0] = False
-                status.nowWaitingOn(result)
+                status.waitingOn = result
                 return
 
             result = waiting[1]
@@ -1208,17 +1194,18 @@ def inlineCallbacks(f):
     def unwindGenerator(*args, **kwargs):
         g = f(*args, **kwargs)
         def cancel(it):
+            it.callbacks, tmp = [], it.callbacks
+            it.addErrback(handleCancel)
+            it.callbacks.extend(tmp)
             it.errback(_PeculiarError())
         deferred = Deferred(cancel)
         status = _CancellationStatus(deferred)
         def handleCancel(result):
             result.trap(_PeculiarError)
             status.deferred = Deferred(cancel)
-            status.deferred.addErrback(handleCancel)
             awaited = status.waitingOn
             awaited.cancel()
             return status.deferred
-        deferred.addErrback(handleCancel)
         _inlineCallbacks(None, g, status)
         return deferred
     return mergeFunctionMetadata(f, unwindGenerator)
