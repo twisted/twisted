@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_ftp -*-
-# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2011 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -1743,34 +1743,46 @@ class FTPAnonymousShell(object):
         @type keys: C{iterable}
         """
         filePath.restat()
-        return [getattr(self, '_stat_' + k)(filePath.statinfo) for k in keys]
-
-    _stat_size = operator.attrgetter('st_size')
-    _stat_permissions = operator.attrgetter('st_mode')
-    _stat_hardlinks = operator.attrgetter('st_nlink')
-    _stat_modified = operator.attrgetter('st_mtime')
+        return [getattr(self, '_stat_' + k)(filePath) for k in keys]
 
 
-    def _stat_owner(self, st):
+    def _stat_size(self, fp):
+        return fp.getsize()
+
+
+    def _stat_permissions(self, fp):
+        # TODO - file ticket to add permissions accessor to filepath
+        return fp.statinfo.st_mode
+
+
+    def _stat_hardlinks(self, fp):
+        return fp.getNumberOfHardLinks()
+
+
+    def _stat_modified(self, fp):
+        return fp.getModificationTime()
+
+
+    def _stat_owner(self, fp):
         if pwd is not None:
             try:
-                return pwd.getpwuid(st.st_uid)[0]
+                return pwd.getpwuid(fp.getUserID())[0]
             except KeyError:
                 pass
-        return str(st.st_uid)
+        return str(fp.getUserID())
 
 
-    def _stat_group(self, st):
+    def _stat_group(self, fp):
         if grp is not None:
             try:
-                return grp.getgrgid(st.st_gid)[0]
+                return grp.getgrgid(fp.getGroupID())[0]
             except KeyError:
                 pass
-        return str(st.st_gid)
+        return str(fp.getGroupID())
 
 
-    def _stat_directory(self, st):
-        return bool(st.st_mode & stat.S_IFDIR)
+    def _stat_directory(self, fp):
+        return fp.isdir()
 
 
 
