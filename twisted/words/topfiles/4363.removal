@@ -1,0 +1,2 @@
+Remove twisted.words.protocols.toc, that was largely non-working and useless
+since AOL disabled TOC on their AIM network.

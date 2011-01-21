@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2011 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 from zope.interface import classProvides
@@ -8,11 +8,6 @@ from twisted.plugin import IPlugin
 from twisted.application.service import ServiceMaker
 from twisted.words import iwords
 
-TwistedTOC = ServiceMaker(
-    "Twisted TOC Server",
-    "twisted.words.toctap",
-    "An AIM TOC service.",
-    "toc")
 
 NewTwistedWords = ServiceMaker(
     "New Twisted Words",
