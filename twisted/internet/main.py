@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.internet.test.test_main -*-
-# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2011 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -32,5 +32,4 @@ def installReactor(reactor):
     sys.modules['twisted.internet.reactor'] = reactor
 
 
-__all__ = ["CONNECTION_LOST", "CONNECTION_DONE",
-           "ReactorAlreadyInstalledError", "installReactor"]
+__all__ = ["CONNECTION_LOST", "CONNECTION_DONE", "installReactor"]
