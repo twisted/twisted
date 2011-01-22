@@ -56,6 +56,12 @@
   :type 'string)
 
 
+(defcustom twisted-dev-tbformat "emacs"
+  "*Traceback format for trial"
+  :group 'twisted-dev
+  :type 'string)
+
+
 (defcustom twisted-dev-scratch-directory "~/Scratch/Test"
   "*Directory to base all twisted-dev scratch operations (like unit tests)
   from."
@@ -141,10 +147,13 @@
                   ;;   Combinator (the current hack here is to use Combinator,
                   ;;   but that could be changed)
 
-		  (shell-script-name (format "%s/trialscript" twisted-dev-scratch-directory))
-                  (full-trial-command-line (format "trial --rterrors --reporter=bwverbose --tbformat=emacs %s --testmodule=%s"
-                                                   (if debug "--debug" "")
-                                                   bfn))
+		  (shell-script-name
+                   (format "%s/trialscript" twisted-dev-scratch-directory))
+                  (full-trial-command-line
+                   (format "trial --rterrors --reporter=bwverbose --tbformat=%s %s --testmodule=%s"
+                           twisted-dev-tbformat
+                           (if debug "--debug" "")
+                           bfn))
 		  (full-command-line (if twisted-dev-isnt-windows
                                          (progn
                                            (shell-command
