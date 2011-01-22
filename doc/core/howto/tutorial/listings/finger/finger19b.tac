@@ -12,23 +12,35 @@ import pwd
 class IFingerService(Interface):
 
     def getUser(user):
-        """Return a deferred returning a string"""
+        """
+        Return a deferred returning a string.
+        """
 
     def getUsers():
-        """Return a deferred returning a list of strings"""
+        """
+        Return a deferred returning a list of strings.
+        """
+
 
 class IFingerSetterService(Interface):
 
     def setUser(user, status):
-        """Set the user's status to something"""
+        """
+        Set the user's status to something.
+        """
+
 
 class IFingerSetterService(Interface):
 
     def setUser(user, status):
-        """Set the user's status to something"""
+        """
+        Set the user's status to something.
+        """
+
 
 def catchError(err):
     return "Internal error in server"
+
 
 class FingerProtocol(basic.LineReceiver):
 
@@ -44,10 +56,14 @@ class FingerProtocol(basic.LineReceiver):
 class IFingerFactory(Interface):
 
     def getUser(user):
-        """Return a deferred returning a string"""
+        """
+        Return a deferred returning a string.
+        """
 
     def buildProtocol(addr):
-        """Return a protocol returning a string"""
+        """
+        Return a protocol returning a string.
+        """
 
 
 class FingerFactoryFromService(protocol.ServerFactory):
@@ -66,6 +82,7 @@ components.registerAdapter(FingerFactoryFromService,
                            IFingerService,
                            IFingerFactory)
 
+
 class FingerSetterProtocol(basic.LineReceiver):
 
     def connectionMade(self):
@@ -82,10 +99,14 @@ class FingerSetterProtocol(basic.LineReceiver):
 class IFingerSetterFactory(Interface):
 
     def setUser(user, status):
-        """Return a deferred returning a string"""
+        """
+        Return a deferred returning a string.
+        """
 
     def buildProtocol(addr):
-        """Return a protocol returning a string"""
+        """
+        Return a protocol returning a string.
+        """
 
 
 class FingerSetterFactoryFromService(protocol.ServerFactory):
@@ -127,10 +148,14 @@ class IIRCClientFactory(Interface):
     """
 
     def getUser(user):
-        """Return a deferred returning a string"""
+        """
+        Return a deferred returning a string.
+        """
 
     def buildProtocol(addr):
-        """Return a protocol"""
+        """
+        Return a protocol.
+        """
 
 
 class IRCClientFactoryFromService(protocol.ClientFactory):
@@ -149,6 +174,7 @@ class IRCClientFactoryFromService(protocol.ClientFactory):
 components.registerAdapter(IRCClientFactoryFromService,
                            IFingerService,
                            IIRCClientFactory)
+
 
 class UserStatusTree(resource.Resource):
 
@@ -178,6 +204,7 @@ class UserStatusTree(resource.Resource):
 
 components.registerAdapter(UserStatusTree, IFingerService,
                            resource.IResource)
+
 
 class UserStatus(resource.Resource):
 
@@ -213,7 +240,6 @@ class FingerService(service.Service):
     def __init__(self, filename):
         self.filename = filename
         self.users = {}
-        self._read()
 
     def _read(self):
         self.users.clear()
@@ -229,6 +255,15 @@ class FingerService(service.Service):
 
     def getUsers(self):
         return defer.succeed(self.users.keys())
+
+    def startService(self):
+        self._read()
+        service.Service.startService(self)
+
+    def stopService(self):
+        service.Service.stopService(self)
+        self.call.cancel()
+
 
 # Another back-end
 

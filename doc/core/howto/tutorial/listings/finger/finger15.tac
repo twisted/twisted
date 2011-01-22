@@ -18,6 +18,7 @@ class FingerProtocol(basic.LineReceiver):
             self.transport.loseConnection()
         d.addCallback(writeResponse)
 
+
 class FingerResource(resource.Resource):
 
     def __init__(self, users):
@@ -39,11 +40,11 @@ class FingerResource(resource.Resource):
             text = '<h1>%s</h1><p>No such user</p>' % username
         return static.Data(text, 'text/html')
 
+
 class FingerService(service.Service):
     def __init__(self, filename):
         self.filename = filename
         self.users = {}
-        self._read()
 
     def _read(self):
         self.users.clear()
@@ -66,6 +67,15 @@ class FingerService(service.Service):
     def getResource(self):
         r = FingerResource(self.users)
         return r
+
+    def startService(self):
+        self._read()
+        service.Service.startService(self)
+
+    def stopService(self):
+        service.Service.stopService(self)
+        self.call.cancel()
+
 
 application = service.Application('finger', uid=1, gid=1)
 f = FingerService('/etc/users')

@@ -16,6 +16,7 @@ class FingerProtocol(basic.LineReceiver):
             self.transport.loseConnection()
         d.addCallback(writeResponse)
 
+
 class FingerService(service.Service):
     def __init__(self, filename):
         self.users = {}
@@ -45,6 +46,7 @@ class FingerService(service.Service):
         f.protocol = FingerProtocol
         f.getUser = self.getUser
         return f
+
 
 application = service.Application('finger', uid=1, gid=1)
 f = FingerService('/etc/users')

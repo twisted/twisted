@@ -13,18 +13,27 @@ import cgi
 class IFingerService(Interface):
 
     def getUser(user):
-        """Return a deferred returning a string"""
+        """
+        Return a deferred returning a string.
+        """
 
     def getUsers():
-        """Return a deferred returning a list of strings"""
+        """
+        Return a deferred returning a list of strings.
+        """
+
 
 class IFingerSetterService(Interface):
 
     def setUser(user, status):
-        """Set the user's status to something"""
+        """
+        Set the user's status to something.
+        """
+
 
 def catchError(err):
     return "Internal error in server"
+
 
 class FingerProtocol(basic.LineReceiver):
 
@@ -40,10 +49,14 @@ class FingerProtocol(basic.LineReceiver):
 class IFingerFactory(Interface):
 
     def getUser(user):
-        """Return a deferred returning a string"""
+        """
+        Return a deferred returning a string.
+        """
 
     def buildProtocol(addr):
-        """Return a protocol returning a string"""
+        """
+        Return a protocol returning a string.
+        """
 
 
 class FingerFactoryFromService(protocol.ServerFactory):
@@ -62,6 +75,7 @@ components.registerAdapter(FingerFactoryFromService,
                            IFingerService,
                            IFingerFactory)
 
+
 class FingerSetterProtocol(basic.LineReceiver):
 
     def connectionMade(self):
@@ -78,10 +92,14 @@ class FingerSetterProtocol(basic.LineReceiver):
 class IFingerSetterFactory(Interface):
 
     def setUser(user, status):
-        """Return a deferred returning a string"""
+        """
+        Return a deferred returning a string.
+        """
 
     def buildProtocol(addr):
-        """Return a protocol returning a string"""
+        """
+        Return a protocol returning a string.
+        """
 
 
 class FingerSetterFactoryFromService(protocol.ServerFactory):
@@ -100,6 +118,7 @@ class FingerSetterFactoryFromService(protocol.ServerFactory):
 components.registerAdapter(FingerSetterFactoryFromService,
                            IFingerSetterService,
                            IFingerSetterFactory)
+
 
 class IRCReplyBot(irc.IRCClient):
 
@@ -123,10 +142,14 @@ class IIRCClientFactory(Interface):
     """
 
     def getUser(user):
-        """Return a deferred returning a string"""
+        """
+        Return a deferred returning a string.
+        """
 
     def buildProtocol(addr):
-        """Return a protocol"""
+        """
+        Return a protocol.
+        """
 
 
 class IRCClientFactoryFromService(protocol.ClientFactory):
@@ -145,6 +168,7 @@ class IRCClientFactoryFromService(protocol.ClientFactory):
 components.registerAdapter(IRCClientFactoryFromService,
                            IFingerService,
                            IIRCClientFactory)
+
 
 class UserStatusTree(resource.Resource):
 
@@ -181,6 +205,7 @@ class UserStatusTree(resource.Resource):
 
 components.registerAdapter(UserStatusTree, IFingerService, resource.IResource)
 
+
 class UserStatus(resource.Resource):
 
     def __init__(self, user, service):
@@ -202,6 +227,7 @@ class UserStatus(resource.Resource):
         # signal that the rendering is not complete
         return server.NOT_DONE_YET
 
+
 class UserStatusXR(xmlrpc.XMLRPC):
 
     def __init__(self, service):
@@ -218,10 +244,14 @@ class UserStatusXR(xmlrpc.XMLRPC):
 class IPerspectiveFinger(Interface):
 
     def remote_getUser(username):
-        """return a user's status"""
+        """
+        Return a user's status.
+        """
 
     def remote_getUsers():
-        """return a user's status"""
+        """
+        Return a user's status.
+        """
 
 class PerspectiveFingerFromService(pb.Root):
 
@@ -248,7 +278,6 @@ class FingerService(service.Service):
     def __init__(self, filename):
         self.filename = filename
         self.users = {}
-        self._read()
 
     def _read(self):
         self.users.clear()
@@ -265,14 +294,24 @@ class FingerService(service.Service):
     def getUsers(self):
         return defer.succeed(self.users.keys())
 
+    def startService(self):
+        self._read()
+        service.Service.startService(self)
+
+    def stopService(self):
+        service.Service.stopService(self)
+        self.call.cancel()
+
 
 class ServerContextFactory:
 
     def getContext(self):
-        """Create an SSL context.
+        """
+        Create an SSL context.
 
         This is a sample implementation that loads a certificate from a file
-        called 'server.pem'."""
+        called 'server.pem'.
+        """
         ctx = SSL.Context(SSL.SSLv23_METHOD)
         ctx.use_certificate_file('server.pem')
         ctx.use_privatekey_file('server.pem')

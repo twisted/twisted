@@ -9,6 +9,7 @@ import cgi
 def catchError(err):
     return "Internal error in server"
 
+
 class FingerProtocol(basic.LineReceiver):
 
     def lineReceived(self, user):
@@ -57,6 +58,7 @@ class UserStatusTree(resource.Resource):
         else:
             return UserStatus(path, self.service)
 
+
 class UserStatus(resource.Resource):
 
     def __init__(self, user, service):
@@ -89,7 +91,6 @@ class FingerService(service.Service):
     def __init__(self, filename):
         self.filename = filename
         self.users = {}
-        self._read()
 
     def _read(self):
         self.users.clear()
@@ -124,6 +125,14 @@ class FingerService(service.Service):
         f.nickname = nickname
         f.getUser = self.getUser
         return f
+
+    def startService(self):
+        self._read()
+        service.Service.startService(self)
+
+    def stopService(self):
+        service.Service.stopService(self)
+        self.call.cancel()
 
 
 application = service.Application('finger', uid=1, gid=1)
