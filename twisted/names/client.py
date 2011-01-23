@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.names.test.test_names -*-
-# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2011 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -520,9 +520,10 @@ def createResolver(servers=None, resolvconf=None, hosts=None):
     Create and return a Resolver.
 
     @type servers: C{list} of C{(str, int)} or C{None}
-    @param servers: If not C{None}, interpreted as a list of addresses of
-    domain name servers to attempt to use.  Addresses should be in dotted-quad
-    form.
+
+    @param servers: If not C{None}, interpreted as a list of domain name servers
+    to attempt to use. Each server is a tuple of address in C{str} dotted-quad
+    form and C{int} port number.
 
     @type resolvconf: C{str} or C{None}
     @param resolvconf: If not C{None}, on posix systems will be interpreted as
