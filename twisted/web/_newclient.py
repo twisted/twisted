@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.web.test.test_newclient -*-
-# Copyright (c) 2009-2010 Twisted Matrix Laboratories.
+# Copyright (c) 2009-2011 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -216,6 +216,10 @@ class HTTPParser(LineReceiver):
     #
     # -exarkun
 
+    # Some servers (like http://news.ycombinator.com/) return status lines and
+    # HTTP headers delimited by \n instead of \r\n.
+    delimiter = '\n'
+
     CONNECTION_CONTROL_HEADERS = set([
             'content-length', 'connection', 'keep-alive', 'te', 'trailers',
             'transfer-encoding', 'upgrade', 'proxy-connection'])
@@ -244,6 +248,10 @@ class HTTPParser(LineReceiver):
         """
         Handle one line from a response.
         """
+        # Handle the normal CR LF case.
+        if line[-1:] == '\r':
+            line = line[:-1]
+
         if self.state == STATUS:
             self.statusReceived(line)
             self.state = HEADER

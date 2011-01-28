@@ -1,4 +1,4 @@
-# Copyright (c) 2009-2010 Twisted Matrix Laboratories.
+# Copyright (c) 2009-2011 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -155,11 +155,13 @@ class MakeStatefulDispatcherTests(TestCase):
 
 
 
-class HTTPParserTests(TestCase):
+class _HTTPParserTests(object):
     """
-    Tests for L{HTTPParser} which is responsible for the bulk of the task of
-    parsing HTTP bytes.
+    Base test class for L{HTTPParser} which is responsible for the bulk of
+    the task of parsing HTTP bytes.
     """
+    sep = None
+
     def test_statusCallback(self):
         """
         L{HTTPParser} calls its C{statusReceived} method when it receives a
@@ -170,7 +172,7 @@ class HTTPParserTests(TestCase):
         protocol.statusReceived = status.append
         protocol.makeConnection(StringTransport())
         self.assertEqual(protocol.state, STATUS)
-        protocol.dataReceived('HTTP/1.1 200 OK\r\n')
+        protocol.dataReceived('HTTP/1.1 200 OK' + self.sep)
         self.assertEqual(status, ['HTTP/1.1 200 OK'])
         self.assertEqual(protocol.state, HEADER)
 
@@ -180,7 +182,7 @@ class HTTPParserTests(TestCase):
         protocol = HTTPParser()
         protocol.headerReceived = header.__setitem__
         protocol.makeConnection(StringTransport())
-        protocol.dataReceived('HTTP/1.1 200 OK\r\n')
+        protocol.dataReceived('HTTP/1.1 200 OK' + self.sep)
         return header, protocol
 
 
@@ -190,10 +192,10 @@ class HTTPParserTests(TestCase):
         header.
         """
         header, protocol = self._headerTestSetup()
-        protocol.dataReceived('X-Foo:bar\r\n')
+        protocol.dataReceived('X-Foo:bar' + self.sep)
         # Cannot tell it's not a continue header until the next line arrives
         # and is not a continuation
-        protocol.dataReceived('\r\n')
+        protocol.dataReceived(self.sep)
         self.assertEqual(header, {'X-Foo': 'bar'})
         self.assertEqual(protocol.state, BODY)
 
@@ -204,10 +206,10 @@ class HTTPParserTests(TestCase):
         C{headerReceived} with the entire value once it is received.
         """
         header, protocol = self._headerTestSetup()
-        protocol.dataReceived('X-Foo: bar\r\n')
-        protocol.dataReceived(' baz\r\n')
-        protocol.dataReceived('\tquux\r\n')
-        protocol.dataReceived('\r\n')
+        protocol.dataReceived('X-Foo: bar' + self.sep)
+        protocol.dataReceived(' baz' + self.sep)
+        protocol.dataReceived('\tquux' + self.sep)
+        protocol.dataReceived(self.sep)
         self.assertEqual(header, {'X-Foo': 'bar baz\tquux'})
         self.assertEqual(protocol.state, BODY)
 
@@ -218,10 +220,10 @@ class HTTPParserTests(TestCase):
         value passed to the C{headerReceived} callback.
         """
         header, protocol = self._headerTestSetup()
-        value = ' \t \r\n bar \t\r\n \t\r\n'
+        value = ' \t %(sep)s bar \t%(sep)s \t%(sep)s' % dict(sep=self.sep)
         protocol.dataReceived('X-Bar:' + value)
         protocol.dataReceived('X-Foo:' + value)
-        protocol.dataReceived('\r\n')
+        protocol.dataReceived(self.sep)
         self.assertEqual(header, {'X-Foo': 'bar',
                                   'X-Bar': 'bar'})
 
@@ -237,7 +239,7 @@ class HTTPParserTests(TestCase):
             called.append(protocol.state)
             protocol.state = STATUS
         protocol.allHeadersReceived = allHeadersReceived
-        protocol.dataReceived('\r\n')
+        protocol.dataReceived(self.sep)
         self.assertEqual(called, [HEADER])
         self.assertEqual(protocol.state, STATUS)
 
@@ -248,7 +250,7 @@ class HTTPParserTests(TestCase):
         C{headerReceived}.
         """
         header, protocol = self._headerTestSetup()
-        protocol.dataReceived('\r\n')
+        protocol.dataReceived(self.sep)
         self.assertEqual(header, {})
         self.assertEqual(protocol.state, BODY)
 
@@ -260,13 +262,12 @@ class HTTPParserTests(TestCase):
         """
         protocol = HTTPParser()
         protocol.makeConnection(StringTransport())
-        protocol.dataReceived('HTTP/1.1 200 OK\r\n')
-        protocol.dataReceived('X-Foo: bar\r\n')
-        protocol.dataReceived('X-Foo: baz\r\n')
-        protocol.dataReceived('\r\n')
-        self.assertEqual(
-            list(protocol.headers.getAllRawHeaders()),
-            [('X-Foo', ['bar', 'baz'])])
+        protocol.dataReceived('HTTP/1.1 200 OK' + self.sep)
+        protocol.dataReceived('X-Foo: bar' + self.sep)
+        protocol.dataReceived('X-Foo: baz' + self.sep)
+        protocol.dataReceived(self.sep)
+        expected = [('X-Foo', ['bar', 'baz'])]
+        self.assertEqual(expected, list(protocol.headers.getAllRawHeaders()))
 
 
     def test_connectionControlHeaders(self):
@@ -300,6 +301,22 @@ class HTTPParserTests(TestCase):
         protocol.makeConnection(StringTransport())
         protocol.switchToBodyMode(object())
         self.assertRaises(RuntimeError, protocol.switchToBodyMode, object())
+
+
+
+class HTTPParserTestsRFCComplaintDelimeter(_HTTPParserTests, TestCase):
+    """
+    L{_HTTPParserTests} using standard CR LF newlines.
+    """
+    sep = '\r\n'
+
+
+
+class HTTPParserTestsNonRFCComplaintDelimeter(_HTTPParserTests, TestCase):
+    """
+    L{_HTTPParserTests} using bare LF newlines.
+    """
+    sep = '\n'
 
 
 
