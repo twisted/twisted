@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2011 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -164,6 +164,18 @@ class CountingRedirect(util.Redirect):
         return util.Redirect.render(self, request)
 
 
+class CountingResource(resource.Resource):
+    """
+    A resource that keeps track of the number of times it has been accessed.
+    """
+    def __init__(self):
+        resource.Resource.__init__(self)
+        self.count = 0
+
+    def render(self, request):
+        self.count += 1
+        return "Success"
+
 
 class ParseUrlTestCase(unittest.TestCase):
     """
@@ -282,6 +294,10 @@ class WebClientTestCase(unittest.TestCase):
         r.putChild("payload", PayloadResource())
         r.putChild("broken", BrokenDownloadResource())
         r.putChild("cookiemirror", CookieMirrorResource())
+
+        self.afterFoundGetCounter = CountingResource()
+        r.putChild("afterFoundGetCounter", self.afterFoundGetCounter)
+        r.putChild("afterFoundGetRedirect", util.Redirect("/afterFoundGetCounter"))
 
         miscasedHead = static.Data("miscased-head GET response content", "major/minor")
         miscasedHead.render_Head = lambda request: "miscased-head content"
@@ -593,6 +609,22 @@ class WebClientTestCase(unittest.TestCase):
         d = client.getPage(
             url, followRedirect=True, afterFoundGet=True, method="POST")
         d.addCallback(gotPage)
+        return d
+
+
+    def test_afterFoundGetMakesOneRequest(self):
+        """
+        When C{afterFoundGet} is C{True}, L{client.getPage} only issues one
+        request to the server when following the redirect.  This is a regression
+        test, see #4760.
+        """
+        def checkRedirectCount(*a):
+            self.assertEquals(self.afterFoundGetCounter.count, 1)
+
+        url = self.getURL('afterFoundGetRedirect')
+        d = client.getPage(
+            url, followRedirect=True, afterFoundGet=True, method="POST")
+        d.addCallback(checkRedirectCount)
         return d
 
 

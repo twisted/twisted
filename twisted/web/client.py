@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.web.test.test_webclient -*-
-# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2011 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -144,7 +144,8 @@ class HTTPPageGetter(http.HTTPClient):
     def handleStatus_302(self):
         if self.afterFoundGet:
             self.handleStatus_303()
-        self.handleStatus_301()
+        else:
+            self.handleStatus_301()
 
 
     def handleStatus_303(self):

@@ -1,0 +1,1 @@
+twisted.web.client.HTTPPageGetter and twisted.web.client.getPage now no longer make two requests when using afterFoundGet.
