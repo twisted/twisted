@@ -1369,6 +1369,23 @@ class IRCClient(basic.LineReceiver):
 
     part = leave
 
+
+    def invite(self, user, channel):
+        """
+        Attempt to invite user to channel
+
+        @type user: C{str}
+        @param user: The user to invite
+        @type channel: C{str}
+        @param channel: The channel to invite the user too
+
+        @since: 11.0
+        """
+        if channel[0] not in CHANNEL_PREFIXES:
+            channel = '#' + channel
+        self.sendLine("INVITE %s %s" % (user, channel))
+
+
     def topic(self, channel, topic=None):
         """
         Attempt to set the topic of the given channel, or ask what it is.

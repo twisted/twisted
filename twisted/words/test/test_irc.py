@@ -1273,6 +1273,37 @@ class DummyClient(irc.IRCClient):
         self.lines.append(m)
 
 
+
+class ClientInviteTests(unittest.TestCase):
+    """
+    Tests for L{IRCClient.invite}.
+    """
+    def setUp(self):
+        """
+        Create a L{DummyClient} to call C{invite} on in test methods.
+        """
+        self.client = DummyClient()
+
+
+    def test_channelCorrection(self):
+        """
+        If the channel name passed to L{IRCClient.invite} does not begin with a
+        channel prefix character, one is prepended to it.
+        """
+        self.client.invite('foo', 'bar')
+        self.assertEquals(self.client.lines, ['INVITE foo #bar'])
+
+
+    def test_invite(self):
+        """
+        L{IRCClient.invite} sends an I{INVITE} message with the specified
+        username and a channel.
+        """
+        self.client.invite('foo', '#bar')
+        self.assertEquals(self.client.lines, ['INVITE foo #bar'])
+
+
+
 class ClientMsgTests(unittest.TestCase):
     def setUp(self):
         self.client = DummyClient()
