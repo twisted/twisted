@@ -252,9 +252,6 @@ class AnonUserDeniedError(FTPCmdError):
     Raised when an anonymous user issues a command that will alter the
     filesystem
     """
-    def __init__(self):
-        # No message
-        FTPCmdError.__init__(self, None)
 
     errorCode = ANON_USER_DENIED
 

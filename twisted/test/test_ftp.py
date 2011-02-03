@@ -267,6 +267,19 @@ class BasicFTPServerTestCase(FTPServerTestCase):
             chainDeferred=d)
         return d
 
+
+    def test_anonymousWriteDenied(self):
+        """
+        When an anonymous user attempts to edit the server-side filesystem, they
+        will receive a 550 error with a descriptive message.
+        """
+        d = self._anonymousLogin()
+        return self.assertCommandFailed(
+              'MKD newdir',
+              ['550 Anonymous users are forbidden to change the filesystem'],
+              chainDeferred=d)
+
+
     def testUnknownCommand(self):
         d = self._anonymousLogin()
         return self.assertCommandFailed(
