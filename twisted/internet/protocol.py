@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_factories,twisted.internet.test.test_protocol -*-
-# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2011 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -387,14 +387,12 @@ class ReconnectingClientFactory(ClientFactory):
         if self._callID:
             self._callID.cancel()
             self._callID = None
+        self.continueTrying = 0
         if self.connector:
-            # Hopefully this doesn't just make clientConnectionFailed
-            # retry again.
             try:
                 self.connector.stopConnecting()
             except error.NotConnectingError:
                 pass
-        self.continueTrying = 0
 
 
     def resetDelay(self):
