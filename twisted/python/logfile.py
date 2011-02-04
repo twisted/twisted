@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.test.test_logfile -*-
 
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2011 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -31,7 +31,6 @@ class BaseLogFile:
         current permissions of the file if the file exists.
         """
         self.directory = directory
-        assert os.path.isdir(self.directory)
         self.name = name
         self.path = os.path.join(directory, name)
         if defaultMode is None and os.path.exists(self.path):

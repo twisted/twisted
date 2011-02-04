@@ -1,0 +1,1 @@
+twisted.python.logfile.LogFile now raises a descriptive exception when passed a log  directoy which does not exist.

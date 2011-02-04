@@ -1,12 +1,9 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2011 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+import os, time, stat, errno
+
 from twisted.trial import unittest
-
-# system imports
-import os, time, stat
-
-# twisted imports
 from twisted.python import logfile, runtime
 
 
@@ -249,6 +246,15 @@ class LogFileTestCase(unittest.TestCase):
 
     if runtime.platform.isWindows():
         test_reopen.skip = "Can't test reopen on Windows"
+
+
+    def test_nonExistentDir(self):
+        """
+        Specifying an invalid directory to L{LogFile} raises C{IOError}.
+        """
+        e = self.assertRaises(
+            IOError, logfile.LogFile, self.name, 'this_dir_does_not_exist')
+        self.assertEquals(e.errno, errno.ENOENT)
 
 
 
