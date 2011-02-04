@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.internet.test.test_inotify -*-
-# Copyright (c) 2008-2010 Twisted Matrix Laboratories.
+# Copyright (c) 2008-2011 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -11,7 +11,14 @@ at some point)::
     from twisted.internet import inotify
     from twisted.python import filepath
 
-    def notify(self, filepath, mask):
+    def notify(ignored, filepath, mask):
+        \"""
+        For historical reasons, an opaque handle is passed as first
+        parameter. This object should never be used.
+
+        @param filepath: FilePath on which the event happened.
+        @param mask: inotify event as hexadecimal masks
+        \"""
         print "event %s on %s" % (
             ', '.join(inotify.humanReadableMask(mask)), filepath)
 
@@ -333,6 +340,8 @@ class INotify(FileDescriptor, object):
 
         @param callbacks: A list of callbacks that should be called
                           when an event happens in the given path.
+                          The callback should accept 3 arguments:
+                          (ignored, filepath, mask)
         @type callbacks: C{list} of callables
 
         @param recursive: Also add all the subdirectories in this path
