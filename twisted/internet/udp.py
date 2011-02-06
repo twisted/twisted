@@ -95,8 +95,11 @@ class Port(base.BasePort):
         # Make sure that if we listened on port 0, we update that to
         # reflect what the OS actually assigned us.
         self._realPortNumber = skt.getsockname()[1]
-
-        log.msg("%s starting on %s"%(self.protocol.__class__, self._realPortNumber))
+        
+        log.msg(eventSource=self,
+                eventType="start",
+                protocol=self.protocol,
+                portNumber=self._realPortNumber)
 
         self.connected = 1
         self.socket = skt
@@ -215,7 +218,10 @@ class Port(base.BasePort):
         """
         Cleans up my socket.
         """
-        log.msg('(Port %s Closed)' % self._realPortNumber)
+        log.msg(eventSource=self,
+                eventType="stop",
+                protocol=self.protocol,
+                portNumber=self._realPortNumber)
         self._realPortNumber = None
         base.BasePort.connectionLost(self, reason)
         self.protocol.doStop()

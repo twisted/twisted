@@ -22,10 +22,11 @@ from twisted.internet.address import UNIXAddress
 from twisted.internet import interfaces
 from twisted.internet.protocol import (
     ServerFactory, ClientFactory, DatagramProtocol)
+from twisted.internet.defer import maybeDeferred
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.test.test_tcp import TCPPortTestsBuilder
-
-
+from twisted.python import log
+from twisted.trial import unittest
 
 class UNIXFamilyMixin:
     """
@@ -152,13 +153,52 @@ class UNIXPortTestsBuilder(TCPPortTestsBuilder):
         Get a UNIX port from a reactor
         """
         return reactor.listenUNIX(self.mktemp(), ServerFactory())
-
-
+    
     def getExpectedConnectionLostLogMsg(self, port):
         """
         Get the expected connection lost message for a UNIX port
         """
         return "(UNIX Port %s Closed)" % (repr(port.port),)
+    
+    def test_connectionListeningLogMsg(self):
+        """
+        When a connection is lost, an informative log dict should be logged
+        (see L{getExpectedConnectionLostLogMsg}) containing: the event source,
+        event type, protocol, and port number.
+        
+        """
+        raise unittest.SkipTest("SKIPPED until UNIX socket protocol adopts" + \
+                                "the passing of an event dictionary to " + \
+                                "log.msg() on start.")
+    
+    def test_connectionLostLogMsg(self):
+        """
+        When a connection is lost, an informative message should be logged
+        (see L{getExpectedConnectionLostLogMsg}): an address identifying
+        the port and the fact that it was closed.
+        """
+
+        loggedMessages = []
+        def logConnectionLostMsg(eventDict):
+            loggedMessages.append(log.textFromEventDict(eventDict))
+
+        reactor = self.buildReactor()
+        p = self.getListeningPort(reactor)
+        expectedMessage = self.getExpectedConnectionLostLogMsg(p)
+        log.addObserver(logConnectionLostMsg)
+
+        def stopReactor(ignored):
+            log.removeObserver(logConnectionLostMsg)
+            reactor.stop()
+
+        def doStopListening():
+            log.addObserver(logConnectionLostMsg)
+            maybeDeferred(p.stopListening).addCallback(stopReactor)
+
+        reactor.callWhenRunning(doStopListening)
+        reactor.run()
+
+        self.assertIn(expectedMessage, loggedMessages)
 
 
 

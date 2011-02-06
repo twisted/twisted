@@ -7,11 +7,11 @@ Tests for L{twisted.internet.protocol}.
 
 from twisted.python.failure import Failure
 from twisted.internet.defer import CancelledError
-from twisted.internet.protocol import Protocol, ClientCreator
+from twisted.internet.protocol import Protocol, ClientCreator, AbstractDatagramProtocol
 from twisted.internet.task import Clock
 from twisted.trial.unittest import TestCase
 from twisted.test.proto_helpers import MemoryReactor, StringTransport
-
+from twisted.python import log
 
 
 class MemoryConnector:
@@ -331,3 +331,52 @@ class ClientCreatorTests(TestCase):
             return d, factory
         return self._cancelConnectFailedTimeoutTest(connect)
 
+
+class AbstractDatagramProtocolTestCase(TestCase):
+    
+    def setUp(self):
+        """
+        Setup L{twisted.internet.protocol.AbstractDatagramProtocol} object.
+        """
+        self.proto = AbstractDatagramProtocol()
+    
+    def test_doStartLogMsg(self):
+        """
+        Verify that L{twisted.internet.protocol.AbstractDatagramProtocol.doStart}
+        logs an event dictionary with the correct parameters.
+        """
+        
+        loggedDicts = []
+        
+        def logDoStartMsg(eventDict):
+            loggedDicts.append(eventDict)
+        
+        log.addObserver(logDoStartMsg)
+        self.proto.doStart()
+        
+        self.assertTrue(isinstance(loggedDicts[0]["eventSource"],
+                                   AbstractDatagramProtocol))
+        self.assertTrue(isinstance(loggedDicts[0]["protocol"],
+                                   AbstractDatagramProtocol))
+        self.assertEquals(loggedDicts[0]["eventType"], "start")
+    
+    def test_doStopLogMsg(self):
+        """
+        Verify that L{twisted.internet.protocol.AbstractDatagramProtocol.doStop}
+        logs an event dictionary with the correct parameters.
+        """
+        
+        loggedDicts = []
+        
+        def logDoStopMsg(eventDict):
+            loggedDicts.append(eventDict)
+        
+        log.addObserver(logDoStopMsg)
+        self.proto.numPorts = 1
+        self.proto.doStop()
+        
+        self.assertTrue(isinstance(loggedDicts[0]["eventSource"],
+                                   AbstractDatagramProtocol))
+        self.assertTrue(isinstance(loggedDicts[0]["protocol"],
+                                   AbstractDatagramProtocol))
+        self.assertEquals(loggedDicts[0]["eventType"], "stop")
