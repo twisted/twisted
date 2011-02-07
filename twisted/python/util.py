@@ -673,17 +673,47 @@ else:
 
 
 def switchUID(uid, gid, euid=False):
+    """
+    Attempts to switch the uid/euid and gid/egid for the current process.
+    
+    If C{uid} is the same value as L{os.getuid} (or L{os.geteuid}),
+    this function will issue a L{UserWarning} and not raise an exception.
+    
+    @type uid: C{int} or C{NoneType}
+    @param uid: the UID (or EUID) to switch the current process to. This
+                parameter will be ignored if the value is C{None}.
+    
+    @type gid: C{int} or C{NoneType}
+    @param gid: the GID (or EGID) to switch the current process to. This
+                parameter will be ignored if the value is C{None}.
+                
+    @type euid: C{bool}
+    @param euid: if True, set only effective user-id rather than real user-id.
+                 (This option has no effect unless the process is running
+                 as root, in which case it means not to shed all
+                 privileges, retaining the option to regain privileges
+                 in cases such as spawning processes. Use with caution.)
+    """
     if euid:
         setuid = os.seteuid
         setgid = os.setegid
+        getuid = os.geteuid
     else:
         setuid = os.setuid
         setgid = os.setgid
+        getuid = os.getuid
     if gid is not None:
         setgid(gid)
     if uid is not None:
-        initgroups(uid, gid)
-        setuid(uid)
+        if uid == getuid():
+            uidText = (euid and "euid" or "uid")
+            actionText = "tried to drop privileges and set%s %s" % (uidText, uid)
+            problemText = "%s is already %s" % (uidText, getuid())
+            warnings.warn("%s but %s; should we be root? Continuing."
+                          % (actionText, problemText))
+        else:
+            initgroups(uid, gid)
+            setuid(uid)
 
 
 class SubclassableCStringIO(object):
