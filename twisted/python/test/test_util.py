@@ -1,10 +1,6 @@
-# -*- test-case-name: twisted.python.test.test_util
+# -*- test-case-name: twisted.test.test_util -*-
 # Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
-"""
-Tests for L{twisted.python.util}.
-"""
 
 import os.path, sys
 import shutil, errno
@@ -131,82 +127,6 @@ class UtilTestCase(unittest.TestCase):
             "moduleMovedForSplit is deprecated since Twisted 9.0.")
         self.assertEquals(warnings[0]['category'], DeprecationWarning)
         self.assertEquals(len(warnings), 1)
-
-
-
-class SwitchUIDTest(unittest.TestCase):
-    """
-    Tests for L{util.switchUID}.
-    """
-
-    if getattr(os, "getuid", None) is None:
-        skip = "getuid/setuid not available"
-
-
-    def setUp(self):
-        self.mockos = MockOS()
-        self.patch(util, "os", self.mockos)
-        self.patch(util, "initgroups", self.initgroups)
-        self.initgroupsCalls = []
-
-
-    def initgroups(self, uid, gid):
-        """
-        Save L{util.initgroups} calls in C{self.initgroupsCalls}.
-        """
-        self.initgroupsCalls.append((uid, gid))
-
-
-    def test_uid(self):
-        """
-        L{util.switchUID} calls L{util.initgroups} and then C{os.setuid} with
-        the given uid.
-        """
-        util.switchUID(12000, None)
-        self.assertEquals(self.initgroupsCalls, [(12000, None)])
-        self.assertEquals(self.mockos.actions, [("setuid", 12000)])
-
-
-    def test_euid(self):
-        """
-        L{util.switchUID} calls L{util.initgroups} and then C{os.seteuid} with
-        the given uid if the C{euid} parameter is set to C{True}.
-        """
-        util.switchUID(12000, None, True)
-        self.assertEquals(self.initgroupsCalls, [(12000, None)])
-        self.assertEquals(self.mockos.seteuidCalls, [12000])
-
-
-    def test_currentUID(self):
-        """
-        If the current uid is the same as the uid passed to L{util.switchUID},
-        then initgroups does not get called, but a warning is issued.
-        """
-        uid = self.mockos.getuid()
-        util.switchUID(uid, None)
-        self.assertEquals(self.initgroupsCalls, [])
-        self.assertEquals(self.mockos.actions, [])
-        warnings = self.flushWarnings([util.switchUID])
-        self.assertEquals(len(warnings), 1)
-        self.assertIn('tried to drop privileges and setuid %i' % uid, 
-                      warnings[0]['message'])
-        self.assertIn('but uid is already %i' % uid, warnings[0]['message'])
-
-
-    def test_currentEUID(self):
-        """
-        If the current euid is the same as the uid passed to L{util.switchUID},
-        then initgroups does not get called, but a warning is issued.
-        """
-        euid = self.mockos.geteuid()
-        util.switchUID(euid, None, True)
-        self.assertEquals(self.initgroupsCalls, [])
-        self.assertEquals(self.mockos.seteuidCalls, [])
-        warnings = self.flushWarnings([util.switchUID])
-        self.assertEquals(len(warnings), 1)
-        self.assertIn('tried to drop privileges and seteuid %i' % euid, 
-                      warnings[0]['message'])
-        self.assertIn('but uid is already %i' % uid, warnings[0]['message'])
 
 
 

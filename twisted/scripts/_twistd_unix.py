@@ -284,15 +284,9 @@ class UnixApplicationRunner(app.ApplicationRunner):
         @param gid: If not C{None}, the GID to which to switch.
         """
         if uid is not None or gid is not None:
+            switchUID(uid, gid, euid)
             extra = euid and 'e' or ''
-            desc = '%suid/%sgid %s/%s' % (extra, extra, uid, gid)
-            try:
-                switchUID(uid, gid, euid)
-            except OSError:
-                log.msg('failed to set %s (are you root?) -- exiting.' % desc)
-                sys.exit(1)
-            else:
-                log.msg('set %s' % desc)
+            log.msg('set %suid/%sgid %s/%s' % (extra, extra, uid, gid))
 
 
     def startApplication(self, application):
