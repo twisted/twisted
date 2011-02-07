@@ -1,0 +1,1 @@
+IPv4Address and UNIXAddress now have a __hash__ method.

@@ -1,10 +1,19 @@
-# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2011 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 import re
+import os
 
 from twisted.trial import unittest
 from twisted.internet.address import IPv4Address, UNIXAddress
+
+try:
+    os.symlink
+except AttributeError:
+    symlinkSkip = "Platform does not support symlinks"
+else:
+    symlinkSkip = None
+
 
 class AddressTestCaseMixin(object):
     def test_addressComparison(self):
@@ -60,6 +69,16 @@ class AddressTestCaseMixin(object):
         self._stringRepresentation(repr)
 
 
+    def test_hash(self):
+        """
+        C{__hash__} can be used to get a hash of an address, allowing
+        addresses to be used as keys in dictionaries, for instance.
+        """
+        addr = self.buildAddress()
+        d = {addr: True}
+        self.assertTrue(d[self.buildAddress()])
+
+
 
 class IPv4AddressTestCaseMixin(AddressTestCaseMixin):
     addressArgSpec = (("type", "%s"), ("host", "%r"), ("port", "%d"))
@@ -87,3 +106,27 @@ class UNIXAddressTestCase(unittest.TestCase, AddressTestCaseMixin):
 
     def buildAddress(self):
         return UNIXAddress(self._socketAddress)
+
+
+    def test_comparisonOfLinkedFiles(self):
+        """
+        UNIXAddress objects compare as equal if they link to the same file.
+        """
+        linkName = self.mktemp()
+        self.fd = open(self._socketAddress, 'w')
+        os.symlink(os.path.abspath(self._socketAddress), linkName)
+        self.assertTrue(
+            UNIXAddress(self._socketAddress) == UNIXAddress(linkName))
+    test_comparisonOfLinkedFiles.skip = symlinkSkip
+
+
+    def test_hashOfLinkedFiles(self):
+        """
+        UNIXAddress Objects that compare as equal have the same hash value.
+        """
+        linkName = self.mktemp()
+        self.fd = open(self._socketAddress, 'w')
+        os.symlink(os.path.abspath(self._socketAddress), linkName)
+        self.assertEquals(
+            hash(UNIXAddress(self._socketAddress)), hash(UNIXAddress(linkName)))
+    test_hashOfLinkedFiles.skip = symlinkSkip

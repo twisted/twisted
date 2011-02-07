@@ -1,8 +1,9 @@
-# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2011 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-"""Address objects for network connections."""
+"""
+Address objects for network connections.
+"""
 
 import warnings, os
 
@@ -15,7 +16,8 @@ class IPv4Address(object):
     """
     Object representing an IPv4 socket endpoint.
 
-    @ivar type: A string describing the type of transport, either 'TCP' or 'UDP'.
+    @ivar type: A string describing the type of transport, either 'TCP' or
+        'UDP'.
     @ivar host: A string containing the dotted-quad IP address.
     @ivar port: An integer representing the port number.
     """
@@ -59,6 +61,10 @@ class IPv4Address(object):
         return 'IPv4Address(%s, %r, %d)' % (self.type, self.host, self.port)
 
 
+    def __hash__(self):
+        return hash((self.type, self.host, self.port))
+
+
 
 class UNIXAddress(object):
     """
@@ -100,8 +106,18 @@ class UNIXAddress(object):
                     pass
         return False
 
+
     def __repr__(self):
         return 'UNIXAddress(%r)' % (self.name,)
+
+
+    def __hash__(self):
+        try:
+            s1 = os.stat(self.name)
+            return hash((s1.st_ino, s1.st_dev))
+        except OSError:
+            return hash(self.name)
+
 
 
 # These are for buildFactory backwards compatability due to
