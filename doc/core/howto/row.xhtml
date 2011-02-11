@@ -40,9 +40,11 @@ suited to building a python interface to an existing relational
 database, and slightly less suited to added database persistance
 to an existing python application.</p>
 
-<p><em>If row does not fit your model, you will be best off using
+<div class="note">
+If row does not fit your model, you will be best off using
 the <a href="rdbms.xhtml">low-level database API</a> directly, 
-or writing your own object/relational layer on top of it.</em></p>
+or writing your own object/relational layer on top of it.
+</div>
 
 <h2>Class Definitions</h2>
 
@@ -185,8 +187,7 @@ between database tables. When <code
 class="python">loadObjectsFrom</code> is called for a table, it will
 automatically load all the children rows for the rows from the specified
 table. The child rows will be put into a list member variable of the
-rowObject instance with the name <code>childRows</code> or if a
-<em>containerMethod</em> is specified for the foreign key relationship,
+rowObject instance with the name <code>childRows</code> or if a <em>containerMethod</em> is specified for the foreign key relationship,
 that method will be called on the parent row object for each row that is
 being added to it as a child.</p>
 
