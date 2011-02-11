@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.words.test.test_jabberxmppstringprep -*-
 #
-# Copyright (c) 2001-2005 Twisted Matrix Laboratories.
+# Copyright (c) 2005-2011 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 import sys, warnings
@@ -26,7 +26,12 @@ if sys.version_info < (2,3,2):
 
 else:
     import stringprep
-    import unicodedata
+    # We require Unicode version 3.2. Python 2.5 and later provide this as
+    # a separate object. Before that the unicodedata module uses 3.2. 
+    try:
+        from unicodedata import ucd_3_2_0 as unicodedata
+    except:
+        import unicodedata
     from encodings import idna
 
     crippled = False

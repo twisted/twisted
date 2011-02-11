@@ -1,0 +1,1 @@
+twisted.words.protocols.jabber.xmpp_stringprep now always uses Unicode version 3.2 for stringprep normalization.

@@ -1,4 +1,4 @@
-# Copyright (c) 2005 Twisted Matrix Laboratories.
+# Copyright (c) 2005-2011 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 from twisted.trial import unittest
@@ -69,6 +69,14 @@ class XMPPStringPrepTest(unittest.TestCase):
         self.assertEquals(nodeprep.prepare(u'user'), u'user')
         self.assertEquals(nodeprep.prepare(u'User'), u'user')
         self.assertRaises(UnicodeError, nodeprep.prepare, u'us&er')
+
+
+    def test_nodeprepUnassignedInUnicode32(self):
+        """
+        Make sure unassigned code points from Unicode 3.2 are rejected.
+        """
+        self.assertRaises(UnicodeError, nodeprep.prepare, u'\u1d39')
+
 
     def testNamePrep(self):
         self.assertEquals(nameprep.prepare(u'example.com'), u'example.com')
