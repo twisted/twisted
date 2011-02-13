@@ -361,7 +361,7 @@ class HTTPDownloader(HTTPClientFactory):
                  method='GET', postdata=None, headers=None,
                  agent="Twisted client", supportPartial=0,
                  timeout=0, cookies=None, followRedirect=1,
-                 redirectLimit=20):
+                 redirectLimit=20, afterFoundGet=False):
         self.requestedPartial = 0
         if isinstance(fileOrName, types.StringTypes):
             self.fileName = fileOrName
@@ -378,7 +378,8 @@ class HTTPDownloader(HTTPClientFactory):
         HTTPClientFactory.__init__(
             self, url, method=method, postdata=postdata, headers=headers,
             agent=agent, timeout=timeout, cookies=cookies,
-            followRedirect=followRedirect, redirectLimit=redirectLimit)
+            followRedirect=followRedirect, redirectLimit=redirectLimit,
+            afterFoundGet=afterFoundGet)
 
 
     def gotHeaders(self, headers):
