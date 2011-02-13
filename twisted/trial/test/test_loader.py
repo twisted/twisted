@@ -8,8 +8,9 @@ Tests for loading tests by name.
 import os
 import shutil
 import sys
+import exceptions
 
-from twisted.python import util
+from twisted.python import util, modules
 from twisted.python.hashlib import md5
 from twisted.trial.test import packages
 from twisted.trial import runner, reporter, unittest
@@ -204,6 +205,41 @@ class LoaderTest(packages.SysPathManglingTest):
         self.failUnlessEqual(1, suite.countTestCases())
         self.failUnlessEqual('test_foo', suite._testMethodName)
 
+
+    def test_loadOrphanClass(self):
+        """
+        Loading a test class in a module for which a .pyc file exists with no
+        corresponding .py file should fail.
+        """
+        from stalepackage import test_removed
+        suite = self.loader.loadClass(test_removed.FooTest)
+        self.failUnlessEqual(0, suite.countTestCases())
+        self.failUnlessIsInstance(suite, runner.ErrorHolder)
+
+
+    def test_forceLoadOrphanClass(self):
+        """
+        Loading a test class in a module for which a .pyc file exists with no
+        corresponding .py file should succeed if 'forceOrphan' is specified.
+        """
+        from stalepackage import test_removed
+        self.loader.forceOrphan = True
+        suite = self.loader.loadClass(test_removed.FooTest)
+        self.failUnlessEqual(1, suite.countTestCases())
+
+
+    def test_removeOrphanClass(self):
+        """
+        When 'removeOrphan' is True, loading a method from a module only
+        available as a .pyc file with no corresponding .py file should remove
+        the module.
+        """
+        from stalepackage import test_removed
+        self.loader.removeOrphan = True
+        suite = self.loader.loadClass(test_removed.FooTest)
+        self.failUnlessEqual(0, suite.countTestCases())
+
+
     def test_loadFailingMethod(self):
         # test added for issue1353
         import erroneous
@@ -228,6 +264,40 @@ class LoaderTest(packages.SysPathManglingTest):
         self.failUnlessEqual(2, suite.countTestCases())
         self.failUnlessEqual(['test_bar', 'test_foo'],
                              [test._testMethodName for test in suite._tests])
+
+
+    def test_loadOrphanMethod(self):
+        """
+        Loading a test method in a module for which a .pyc file exists with no
+        corresponding .py file should fail.
+        """
+        from stalepackage import test_removed
+        suite = self.loader.loadMethod(test_removed.FooTest.testFoo)
+        self.failUnlessEqual(0, suite.countTestCases())
+        self.failUnlessIsInstance(suite, runner.ErrorHolder)
+
+
+    def test_forceLoadOrphanMethod(self):
+        """
+        Loading a test method in a module for which a .pyc file exists with no
+        corresponding .py file should succeed if 'forceOrphan' is specified.
+        """
+        from stalepackage import test_removed
+        self.loader.forceOrphan = True
+        suite = self.loader.loadMethod(test_removed.FooTest.testFoo)
+        self.failUnlessEqual(1, suite.countTestCases())
+
+
+    def test_removeOrphanMethod(self):
+        """
+        When 'removeOrphan' is True, loading a class from a module only
+        available as a .pyc file with no corresponding .py file should remove
+        the module.
+        """
+        from stalepackage import test_removed
+        self.loader.removeOrphan = True
+        suite = self.loader.loadMethod(test_removed.FooTest.testFoo)
+        self.failUnlessEqual(0, suite.countTestCases())
 
 
     def test_loadNonClass(self):
@@ -259,10 +329,103 @@ class LoaderTest(packages.SysPathManglingTest):
         self.failUnlessRaises(TypeError,
                               self.loader.loadModule, ('foo', 'bar'))
 
+    def test_loadOrphanModule(self):
+        """
+        Loading a module for which a .pyc file exists with no
+        corresponding .py file should fail.
+        """
+        from stalepackage import test_removed
+        suite = self.loader.loadModule(test_removed)
+        self.failUnlessEqual(0, suite.countTestCases())
+        self.failUnlessIsInstance(suite, runner.ErrorHolder)
+
+
+    def test_forceLoadOrphanModule(self):
+        """
+        Loading a module for which a .pyc file exists with no corresponding .py
+        file should succeed if 'forceOrphan' is specified.
+        """
+        from stalepackage import test_removed
+        self.loader.forceOrphan = True
+        suite = self.loader.loadModule(test_removed)
+        self.failUnlessEqual(1, suite.countTestCases())
+
+
+    def test_removeOrphanModule(self):
+        """
+        When 'removeOrphan' is True, loading a module only available as a .pyc
+        file, with no corresponding .py file, should remove it.
+        """
+        from stalepackage import test_removed
+        self.loader.removeOrphan = True
+        suite = self.loader.loadModule(test_removed)
+        self.failUnlessEqual(0, suite.countTestCases())
+
+
     def test_loadPackage(self):
         import goodpackage
         suite = self.loader.loadPackage(goodpackage)
         self.failUnlessEqual(7, suite.countTestCases())
+
+
+    def test_loadOrphanPackage(self):
+        """
+        Loading a package that contains .pyc files with no
+        corresponding .py file should fail.
+        """
+        import stalepackage
+        suite = self.loader.loadPackage(stalepackage)
+        self.failUnlessEqual(0, suite.countTestCases())
+        self.failUnlessIsInstance(suite, runner.ErrorHolder)
+
+
+    def test_forceLoadOrphanPackage(self):
+        """
+        Loading a package that contains .pyc files with no
+        corresponding .py file should succeed if 'forceOrphan' is specified.
+        """
+        import stalepackage
+        self.loader.forceOrphan = True
+        suite = self.loader.loadPackage(stalepackage)
+        self.failUnlessEqual(3, suite.countTestCases())
+
+
+    def test_removeOrphan(self):
+        """
+        When 'removeOrphan' is True, loading a package that contains .pyc files
+        with no corresponding .py file should remove them and load the package
+        as normal.
+        """
+        import stalepackage
+        self.loader.removeOrphan = True
+        suite = self.loader.loadPackage(stalepackage)
+        self.failUnlessEqual(2, suite.countTestCases())
+
+
+    def test_removeOrphanFailure(self):
+        """
+        When removing orphaned .pyc files fails, they should just be skipped.
+        """
+        import stalepackage
+        self.loader.removeOrphan = True
+        m = modules.getModule("stalepackage.test_removed")
+        def brokenRemove():
+            raise exceptions.OSError("permission denied")
+        m.filePath.remove = brokenRemove
+        tests = list(self.loader._loadModulesNoOrphans([m]))
+        self.assertEqual(len(tests), 0)
+
+
+    def test_noSourcePackage(self):
+        """
+        Packages that do not contain '__init__.py' ignore the 'removeOrphan'
+        flag.
+        """
+        import nosourcepackage
+        self.loader.removeOrphan = True
+        suite = self.loader.loadPackage(nosourcepackage)
+        self.failUnlessEqual(1, suite.countTestCases())
+
 
     def test_loadNonPackage(self):
         import sample
@@ -454,7 +617,7 @@ class PackageOrderingTest(packages.SysPathManglingTest):
         parent = os.path.join(self.topDir, "uberpackage")
         os.makedirs(parent)
         file(os.path.join(parent, "__init__.py"), "wb").close()
-        packages.SysPathManglingTest.setUp(self, parent)
+        packages.SysPathManglingTest.setUp(self, parent, clean=True)
         self.mangleSysPath(self.oldPath + [self.topDir])
 
     def _trialSortAlgorithm(self, sorter):

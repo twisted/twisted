@@ -299,6 +299,15 @@ class PathModificationTest(PySpaceTestCase):
         sys.path.append(self.pathExtensionName)
 
 
+    def _compileModules(self):
+        """
+        Create compiled versions of the modules in the dummy package, removing
+        the source version of 'b' after compiling it.
+        """
+        compileall.compile_dir(self.packagePath.path, quiet=True)
+        self.packagePath.child("b.py").remove()
+
+
     def _underUnderPathTest(self, doImport=True):
         moddir2 = self.mktemp()
         fpmd = FilePath(moddir2)
@@ -360,6 +369,38 @@ class PathModificationTest(PySpaceTestCase):
         self._setupSysPath()
         namedAny(self.packageName)
         self._listModules()
+
+
+    def test_sourcePath(self):
+        """
+        The 'sourcePath' method, when called on a unimported Python module,
+        returns a path to the .py file for the module when available, and None
+        when it is only present in compiled form.
+        """
+        self._compileModules()
+        pp = modules.PythonPath(sysPath=[self.pathExtensionName])
+        pkg = pp[self.packageName]
+        self.assertEqual(pkg['a'].sourcePath(), pkg.filePath.sibling("a.py"))
+        self.assertEqual(pkg['b'].sourcePath(), None)
+
+
+    def test_importedSourcePath(self):
+        """
+        The 'sourcePath' method, when called on a imported Python module,
+        returns a path to the .py file for the module when available, and None
+        when it is only present in compiled form.
+        """
+        self._compileModules()
+        self._setupSysPath()
+        pp = modules.PythonPath(sysPath=[self.pathExtensionName])
+        pp[self.packageName]['a'].load()
+        pp[self.packageName]['b'].load()
+        # string concatenation required here, to make sure we go through
+        # PythonPath.__getitem__
+        self.assertEqual(pp[self.packageName+'.a'].sourcePath().path,
+                         pp[self.packageName].filePath.sibling("a.py").path)
+        self.assertEqual(pp[self.packageName+'.b'].sourcePath(),
+                         None)
 
 
     def tearDown(self):

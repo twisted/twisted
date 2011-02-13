@@ -25,6 +25,7 @@ import doctest, time
 
 from twisted.python import reflect, log, failure, modules, filepath
 from twisted.python.compat import set
+from twisted.python.filepath import FilePath
 
 from twisted.internet import defer
 from twisted.trial import util, unittest
@@ -97,14 +98,21 @@ def filenameToModule(fn):
 
 
 def _importFromFile(fn, moduleName=None):
+    """
+    Given a filename, attempt to load it as a Python module.
+    """
     fn = _resolveDirectory(fn)
+    dirname, filename = os.path.split(fn)
     if not moduleName:
-        moduleName = os.path.splitext(os.path.split(fn)[-1])[0]
+        moduleName = os.path.splitext(filename)[0]
     if moduleName in sys.modules:
         return sys.modules[moduleName]
     fd = open(fn, 'r')
     try:
         module = imp.load_source(moduleName, fn, fd)
+        #XXX this is a hack, load_source probably shouldn't be used at all.
+        #See #3674.
+        sys.path_importer_cache.setdefault(dirname, None)
     finally:
         fd.close()
     return module
@@ -430,6 +438,13 @@ class TestLoader(object):
     @ivar sorter: A key function used to sort C{TestCase}s, test classes,
     modules and packages.
 
+    @ivar forceOrphan: If False, test loading will fail for a module present
+    only in compiled form, or a package containing such a module. If True,
+    tests will be loaded from them as normal.
+
+    @ivar removeOrphan: If True, compiled files for which no source file exists
+    are deleted, and test loading proceeds as normal.
+
     @ivar suiteFactory: A callable which is passed a list of tests (which
     themselves may be suites of tests). Must return a test suite.
     """
@@ -441,6 +456,9 @@ class TestLoader(object):
         self.suiteFactory = TestSuite
         self.sorter = name
         self._importErrors = []
+        self.forceOrphan = False
+        self.removeOrphan = False
+
 
     def sort(self, xs):
         """
@@ -489,6 +507,14 @@ class TestLoader(object):
         ## OR, should I add another method
         if not isinstance(module, types.ModuleType):
             raise TypeError("%r is not a module" % (module,))
+        try:
+            ms = list(self._loadModulesNoOrphans(
+                    [modules.getModule(module.__name__)]))
+            if len(ms) == 0:
+                return self.suiteFactory()
+        except RuntimeError, e:
+            return ErrorHolder(module.__name__, failure.Failure(e))
+
         if hasattr(module, 'testSuite'):
             return module.testSuite()
         elif hasattr(module, 'test_suite'):
@@ -502,6 +528,8 @@ class TestLoader(object):
         for doctest in module.__doctests__:
             docSuite.addTest(self.loadDoctests(doctest))
         return self.suiteFactory([suite, docSuite])
+
+
     loadTestsFromModule = loadModule
 
     def loadClass(self, klass):
@@ -511,12 +539,21 @@ class TestLoader(object):
         """
         if not (isinstance(klass, type) or isinstance(klass, types.ClassType)):
             raise TypeError("%r is not a class" % (klass,))
+        try:
+            m = list(self._loadModulesNoOrphans(
+                    [modules.getModule(klass.__module__)]))
+            if len(m) == 0:
+                return self.suiteFactory()
+        except:
+            return ErrorHolder(klass.__module__, failure.Failure())
         if not isTestCase(klass):
             raise ValueError("%r is not a test case" % (klass,))
         names = self.getTestCaseNames(klass)
         tests = self.sort([self._makeCase(klass, self.methodPrefix+name)
                            for name in names])
         return self.suiteFactory(tests)
+
+
     loadTestsFromTestCase = loadClass
 
     def getTestCaseNames(self, klass):
@@ -533,10 +570,68 @@ class TestLoader(object):
         """
         if not isinstance(method, types.MethodType):
             raise TypeError("%r not a method" % (method,))
+        try:
+            m = list(self._loadModulesNoOrphans(
+                    [modules.getModule(method.im_class.__module__)]))
+            if len(m) == 0:
+                return self.suiteFactory()
+        except RuntimeError, e:
+            return ErrorHolder(method.im_class.__module__, failure.Failure(e))
         return self._makeCase(method.im_class, method.__name__)
+
 
     def _makeCase(self, klass, methodName):
         return klass(methodName)
+
+    def _findModules(self, package, recurse):
+        """
+        Find modules in a package. If the package's __init__.py does not exist,
+        this is assumed to be a compiled-only package and settings to remove
+        compiled files or produce errors when source is not found are ignored.
+
+        @param package: A Python package.
+        @type package: L{types.ModuleType}
+
+        @param recurse: Whether to look in subpackages or not.
+        @type recurse: L{bool}
+
+        @return: An iterable of L{modules.PythonModule}s.
+        """
+        pkgobj = modules.getModule(package.__name__)
+        if not pkgobj.filePath.parent().child("__init__.py").exists():
+            self.forceOrphan = True
+            self.removeOrphan = False
+        if recurse:
+            return pkgobj.walkModules()
+        else:
+            return pkgobj.iterModules()
+
+
+    def _loadModulesNoOrphans(self, modules):
+        """
+        Yield the modules from the iterable given, detecting compiled modules
+        with no source form and either removing them or raising an error,
+        depending on whether C{forceOrphan} or C{removeOrphan} is specified.
+
+        @return: An iterable of L{modules.PythonModule}s.
+        @raise RuntimeError: Raised when an orphaned module is encountered and
+        C{forceOrphan} and C{removeOrphan} are false.
+        """
+        for disco in modules:
+            pycOnly = disco.sourcePath() is None
+            if pycOnly and self.removeOrphan:
+                remove = getattr(disco.filePath, 'remove', None)
+                if remove is not None:
+                    try:
+                        remove()
+                    except OSError:
+                        pass
+                continue
+            if pycOnly and not self.forceOrphan:
+                raise RuntimeError("Orphaned bytecode file in " +
+                                   disco.name)
+            yield disco
+
 
     def loadPackage(self, package, recurse=False):
         """
@@ -560,17 +655,16 @@ class TestLoader(object):
         """
         if not isPackage(package):
             raise TypeError("%r is not a package" % (package,))
-        pkgobj = modules.getModule(package.__name__)
-        if recurse:
-            discovery = pkgobj.walkModules()
-        else:
-            discovery = pkgobj.iterModules()
-        discovered = []
-        for disco in discovery:
-            if disco.name.split(".")[-1].startswith(self.modulePrefix):
-                discovered.append(disco)
+        try:
+            mods = [m for m in
+                    self._loadModulesNoOrphans(self._findModules(package,
+                                                                 recurse))
+                    if m.name.split(".")[-1].startswith(self.modulePrefix)]
+        except:
+            return ErrorHolder(package.__name__, failure.Failure())
+
         suite = self.suiteFactory()
-        for modinfo in self.sort(discovered):
+        for modinfo in self.sort(mods):
             try:
                 module = modinfo.load()
             except:

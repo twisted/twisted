@@ -435,6 +435,20 @@ class PythonModule(_ModuleIteratorHelper):
             yield self.parentPath
 
 
+    def sourcePath(self):
+        """
+        Return the source path of this module.
+        """
+        if (self.filePath.path.endswith('.pyc')
+            or self.filePath.path.endswith('.pyo')):
+            p = self.filePath.sibling(self.filePath.basename()[:-1])
+            if p.exists():
+                return p
+        else:
+            return self.filePath
+
+
+
 class PathEntry(_ModuleIteratorHelper):
     """
     I am a proxy for a single entry on sys.path.

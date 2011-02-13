@@ -116,6 +116,12 @@ class Options(usage.Options, app.ReactorSelectionMixin):
                  "Turn dirty reactor errors into warnings"],
                 ["until-failure", "u", "Repeat test until it fails"],
                 ["no-recurse", "N", "Don't recurse into packages"],
+                ["force-orphan", None, "Run tests in .pyc files even if no "
+                 ".py file exists for them"],
+                ["remove-orphan", None, "Remove compiled files in test"
+                 " packages if no sourcefile exists for them"],
+                ["keep-orphan", None, "Don't remove compiled files "
+                 "in test packages for which no .py files exist."],
                 ['help-reporters', None,
                  "Help on available output plugins (reporters)"]
                 ]
@@ -302,7 +308,10 @@ class Options(usage.Options, app.ReactorSelectionMixin):
         # application-defined plugins muck up reactor selecting by importing
         # t.i.reactor and causing the default to be installed.
         self['reporter'] = self._loadReporterByName(self['reporter'])
-
+        if self['keep-orphan'] and self['remove-orphan']:
+            raise usage.UsageError('you can only specify one of'
+                                   ' --remove-orphan and'
+                                   ' --keep-orphan)')
         if 'tbformat' not in self:
             self['tbformat'] = 'default'
         if self['nopm']:
@@ -338,6 +347,11 @@ def _getLoader(config):
         print 'Running tests shuffled with seed %d\n' % config['random']
     if not config['until-failure']:
         loader.suiteFactory = runner.DestructiveTestSuite
+    if config['force-orphan']:
+        loader.forceOrphan = True
+    if config['remove-orphan']:
+        loader.removeOrphan = True
+
     return loader
 
 

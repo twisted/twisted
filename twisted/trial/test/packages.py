@@ -1,4 +1,4 @@
-import sys, os
+import sys, os, py_compile
 from twisted.trial import unittest
 
 testModule = """
@@ -70,7 +70,13 @@ class PackageTest(unittest.TestCase):
         ('goodpackage/__init__.py', ''),
         ('goodpackage/test_sample.py', testSample),
         ('goodpackage/sub/__init__.py', ''),
-        ('goodpackage/sub/test_sample.py', testSample)
+        ('goodpackage/sub/test_sample.py', testSample),
+        ('stalepackage/__init__.py', ''),
+        ('stalepackage/test_sample.py', testModule),
+        ('stalepackage/test_sample2.py', testModule),
+        ('stalepackage/test_removed.py', testModule),
+        ('nosourcepackage/__init__.py', ''),
+        ('nosourcepackage/test_sample.py', testModule),
         ]
 
     def _toModuleName(self, filename):
@@ -93,35 +99,82 @@ class PackageTest(unittest.TestCase):
             except KeyError:
                 pass
 
-    def createFiles(self, files, parentDir='.'):
-        for filename, contents in self.files:
+    def createFiles(self, files, parentDir='.', clean=False):
+        """
+        Create files for testing Python package loading.
+
+        @param parentDir: A filesystem path in which to create the files.
+        @type parentDir: C{str}, or None.
+
+        @param clean: Whether or not to exclude the package with stale .pyc
+        files.
+        @type clean: C{bool}
+        """
+        for filename, contents in files:
             filename = os.path.join(parentDir, filename)
             self._createDirectory(filename)
             fd = open(filename, 'w')
             fd.write(contents)
             fd.close()
 
+        if not clean:
+            staledir = os.path.join(parentDir, 'stalepackage')
+            py_compile.compile(os.path.join(staledir, 'test_sample2.py'))
+            removable = os.path.join(staledir, 'test_removed.py')
+            py_compile.compile(removable)
+            os.remove(removable)
+
+            nosourcedir = os.path.join(parentDir, 'nosourcepackage')
+            testfile = os.path.join(nosourcedir, 'test_sample.py')
+            initfile = os.path.join(nosourcedir, '__init__.py')
+            py_compile.compile(testfile)
+            py_compile.compile(initfile)
+            os.remove(testfile)
+            os.remove(initfile)
+
+
     def _createDirectory(self, filename):
         directory = os.path.dirname(filename)
         if not os.path.exists(directory):
             os.makedirs(directory)
 
-    def setUp(self, parentDir=None):
+    def setUp(self, parentDir=None, clean=False):
+        """
+        Create files needed for testing Python package loading.
+
+        @param parentDir: A filesystem path in which to create the files.
+        @type parentDir: C{str}, or None.
+
+        @param clean: Whether or not to exclude the package with stale .pyc
+        files.
+        @type clean: C{bool}
+        """
         if parentDir is None:
             parentDir = self.mktemp()
         self.parent = parentDir
-        self.createFiles(self.files, parentDir)
+        self.createFiles(self.files, parentDir, clean)
+
 
     def tearDown(self):
         self.cleanUpModules()
 
 class SysPathManglingTest(PackageTest):
-    def setUp(self, parent=None):
+    def setUp(self, parent=None, clean=False):
+        """
+        Add files created for these tests to sys.path.
+
+        @param parent: A filesystem path in which to create the files.
+        @type parent: C{str}, or None.
+
+        @param clean: Whether or not to exclude the package with stale .pyc
+        files.
+        @type clean: C{bool}
+        """
         self.oldPath = sys.path[:]
         self.newPath = sys.path[:]
         if parent is None:
             parent = self.mktemp()
-        PackageTest.setUp(self, parent)
+        PackageTest.setUp(self, parent, clean)
         self.newPath.append(self.parent)
         self.mangleSysPath(self.newPath)
 

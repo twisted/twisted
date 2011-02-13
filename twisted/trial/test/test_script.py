@@ -6,7 +6,7 @@ import StringIO, sys, types
 
 from twisted.trial import unittest, runner
 from twisted.scripts import trial
-from twisted.python import util, deprecate, versions
+from twisted.python import util, deprecate, versions, usage
 from twisted.python.compat import set
 from twisted.python.filepath import FilePath
 
@@ -479,4 +479,72 @@ class ExtraTests(unittest.TestCase):
         self.config.opt_x('some.sample.text')
         self.assertDeprecationWarning(self.config.opt_extra,
                                       self.flushWarnings([self.test_xDeprecation]))
+
+
+
+class ForceOrphanTests(unittest.TestCase):
+    """
+    Tests for the C{'--force-orphan'} flag.
+    """
+
+    def test_forceOrphan(self):
+        """
+        Use of the C{--force-orphan} flag results in C{forceOrphan} being set
+        to True on the test loader when a test package is loaded.
+        """
+        config = trial.Options()
+        config.parseOptions(["--force-orphan", "twisted.trial.test"])
+        tl = trial._getLoader(config)
+        self.assertEqual(tl.forceOrphan, True)
+
+
+    def test_noForceOrphan(self):
+        """
+        Lack of the C{--force-orphan} flag results in C{forceOrphan} being
+        set to False on the test loader when a test package is loaded.
+        """
+        config = trial.Options()
+        config.parseOptions(["twisted.trial.test"])
+        tl = trial._getLoader(config)
+        self.assertEqual(tl.forceOrphan, False)
+
+
+class RemoveOrphanTests(unittest.TestCase):
+    """
+    Tests for the C{--remove-orphan} flag.
+    """
+
+    def test_removeOrphan(self):
+        """
+        Use of the C{--remove-orphan} flag results in C{removeOrphan} being set
+        to True on the test loader when a test package is loaded.
+        """
+        config = trial.Options()
+        config.parseOptions(["--remove-orphan", "twisted.trial.test"])
+        tl = trial._getLoader(config)
+        self.assertEqual(tl.removeOrphan, True)
+
+
+    def test_keepOrphan(self):
+        """
+        Use of the C{--keep-orphan} flag results in C{removeOrphan} being set
+        to False on the test loader when a test package is loaded.
+        """
+        config = trial.Options()
+        config.parseOptions(["twisted.trial.test"])
+        tl = trial._getLoader(config)
+        self.assertEqual(tl.removeOrphan, False)
+
+
+    def test_exclusiveFlags(self):
+        """
+        Only one of C{--keep-orphan} and C{--remove-orphan}
+        can be used at a time.
+        """
+        config = trial.Options()
+        self.assertRaises(usage.UsageError,
+                          config.parseOptions, ["--keep-orphan",
+                                               "--remove-orphan",
+                                               "twisted.trial.test"])
+
 
