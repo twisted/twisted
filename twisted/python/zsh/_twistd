@@ -50,7 +50,6 @@ _arguments -s -A "-*" \
 '(-q)--quiet[No-op for backwards compatability.]' \
 '(--reactor)-r[Which reactor to use (see --help-reactors for a list of possibilities)]:reactor:(kqueue win32 epoll iocp gtk cf gtk2 default debug-gui poll glib2 select wx)' \
 '(-r)--reactor=[Which reactor to use (see --help-reactors for a list of possibilities)]:reactor:(kqueue win32 epoll iocp gtk cf gtk2 default debug-gui poll glib2 select wx)' \
-'--report-profile=[E-mail address to use when reporting dynamic execution profiler stats.  This should not be combined with other profiling options.  This will only take effect if the application to be run has an application name.]:report-profile:_files' \
 '(--rundir)-d[Change to a supplied directory before running]:rundir:_dirs' \
 '(-d)--rundir=[Change to a supplied directory before running]:rundir:_dirs' \
 '--savestats[save the Stats object rather than the text output of the profiler.]' \
@@ -188,8 +187,6 @@ _arguments -s -A "-*" \
 "(-k)--privkey=[SSL certificate to use for HTTPS.]:privkey:_files -g '*.pem'" \
 "--processor=[\`ext=class' where \`class' is added as a Processor for files ending]:processor:_files" \
 '--resource-script=[An .rpy file to be used as the root resource of the webserver.]:resource-script:_files' \
-'(--static)-s[Same as --path, this is deprecated and will be removed in a]:static:_files' \
-'(-s)--static=[Same as --path, this is deprecated and will be removed in a]:static:_files' \
 '(--user)-u[Makes a server with ~/public_html and ~/.twistd-web-pb support for]' \
 '(-u)--user[Makes a server with ~/public_html and ~/.twistd-web-pb support for]' \
 '--version[version]' \
