@@ -639,7 +639,6 @@ def cooperate(iterator):
 
 
 
-
 class Clock:
     """
     Provide a deterministic, easily-controlled implementation of
@@ -653,6 +652,7 @@ class Clock:
     def __init__(self):
         self.calls = []
 
+
     def seconds(self):
         """
         Pretend to be time.time().  This is used internally when an operation
@@ -665,6 +665,13 @@ class Clock:
         return self.rightNow
 
 
+    def _sortCalls(self):
+        """
+        Sort the pending calls according to the time they are scheduled.
+        """
+        self.calls.sort(lambda a, b: cmp(a.getTime(), b.getTime()))
+
+
     def callLater(self, when, what, *a, **kw):
         """
         See L{twisted.internet.interfaces.IReactorTime.callLater}.
@@ -675,14 +682,16 @@ class Clock:
                                lambda c: None,
                                self.seconds)
         self.calls.append(dc)
-        self.calls.sort(lambda a, b: cmp(a.getTime(), b.getTime()))
+        self._sortCalls()
         return dc
+
 
     def getDelayedCalls(self):
         """
         See L{twisted.internet.interfaces.IReactorTime.getDelayedCalls}
         """
         return self.calls
+
 
     def advance(self, amount):
         """
@@ -694,10 +703,12 @@ class Clock:
         time.
         """
         self.rightNow += amount
+        self._sortCalls()
         while self.calls and self.calls[0].getTime() <= self.seconds():
             call = self.calls.pop(0)
             call.called = 1
             call.func(*call.args, **call.kw)
+            self._sortCalls()
 
 
     def pump(self, timings):
@@ -708,6 +719,7 @@ class Clock:
         """
         for amount in timings:
             self.advance(amount)
+
 
 
 def deferLater(clock, delay, callable, *args, **kw):

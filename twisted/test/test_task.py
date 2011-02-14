@@ -171,6 +171,80 @@ class ClockTestCase(unittest.TestCase):
                         "Clock does not provide IReactorTime")
 
 
+    def test_callLaterKeepsCallsOrdered(self):
+        """
+        The order of calls scheduled by L{task.Clock.callLater} is honored when
+        adding a new call via calling L{task.Clock.callLater} again.
+
+        For example, if L{task.Clock.callLater} is invoked with a callable "A"
+        and a time t0, and then the L{IDelayedCall} which results from that is
+        C{reset} to a later time t2 which is greater than t0, and I{then}
+        L{task.Clock.callLater} is invoked again with a callable "B", and time
+        t1 which is less than t2 but greater than t0, "B" will be invoked before
+        "A".
+        """
+        result = []
+        expected = [('b', 2.0), ('a', 3.0)]
+        clock = task.Clock()
+        logtime = lambda n: result.append((n, clock.seconds()))
+
+        call_a = clock.callLater(1.0, logtime, "a")
+        call_a.reset(3.0)
+        clock.callLater(2.0, logtime, "b")
+
+        clock.pump([1]*3)
+        self.assertEqual(result, expected)
+
+
+    def test_callLaterResetKeepsCallsOrdered(self):
+        """
+        The order of calls scheduled by L{task.Clock.callLater} is honored when
+        re-scheduling an existing call via L{IDelayedCall.reset} on the result
+        of a previous call to C{callLater}.
+
+        For example, if L{task.Clock.callLater} is invoked with a callable "A"
+        and a time t0, and then L{task.Clock.callLater} is invoked again with a
+        callable "B", and time t1 greater than t0, and finally the
+        L{IDelayedCall} for "A" is C{reset} to a later time, t2, which is
+        greater than t1, "B" will be invoked before "A".
+        """
+        result = []
+        expected = [('b', 2.0), ('a', 3.0)]
+        clock = task.Clock()
+        logtime = lambda n: result.append((n, clock.seconds()))
+
+        call_a = clock.callLater(1.0, logtime, "a")
+        clock.callLater(2.0, logtime, "b")
+        call_a.reset(3.0)
+
+        clock.pump([1]*3)
+        self.assertEqual(result, expected)
+
+
+    def test_callLaterResetInsideCallKeepsCallsOrdered(self):
+        """
+        The order of calls scheduled by L{task.Clock.callLater} is honored when
+        re-scheduling an existing call via L{IDelayedCall.reset} on the result
+        of a previous call to C{callLater}, even when that call to C{reset}
+        occurs within the callable scheduled by C{callLater} itself.
+        """
+        result = []
+        expected = [('c', 3.0), ('b', 4.0)]
+        clock = task.Clock()
+        logtime = lambda n: result.append((n, clock.seconds()))
+
+        call_b = clock.callLater(2.0, logtime, "b")
+        def a():
+            call_b.reset(3.0)
+
+        clock.callLater(1.0, a)
+        clock.callLater(3.0, logtime, "c")
+
+        clock.pump([0.5] * 10)
+        self.assertEqual(result, expected)
+
+
+
 class LoopTestCase(unittest.TestCase):
     """
     Tests for L{task.LoopingCall} based on a fake L{IReactorTime}
@@ -434,7 +508,7 @@ class LoopTestCase(unittest.TestCase):
 
         clock = task.Clock()
         lc = TestableLoopingCall(clock, foo)
-        d = lc.start(delay, now=False)
+        lc.start(delay, now=False)
         lc.stop()
         self.failIf(ran)
         self.failIf(clock.calls)
@@ -514,7 +588,7 @@ class ReactorLoopTestCase(unittest.TestCase):
             return d
 
         lc = TestableLoopingCall(clock, foo)
-        d = lc.start(0.2)
+        lc.start(0.2)
         clock.pump(timings)
         self.failIf(clock.calls)
 
