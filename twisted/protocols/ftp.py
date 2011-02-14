@@ -503,6 +503,8 @@ class DTPFactory(protocol.ClientFactory):
     # -- configuration variables --
     peerCheck = False
 
+    protocol = DTP
+
     # -- class variables --
     def __init__(self, pi, peerHost=None, reactor=None):
         """Constructor
@@ -527,7 +529,7 @@ class DTPFactory(protocol.ClientFactory):
         self._state = self._FINISHED
 
         self.cancelTimeout()
-        p = DTP()
+        p = self.protocol()
         p.factory = self
         p.pi = self.pi
         self.pi.dtpInstance = p
@@ -658,6 +660,8 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
     dtpPort = None
     dtpInstance = None
     binary = True
+
+    dtpFactoryClass = DTPFactory
 
     passivePortRange = xrange(0, 1)
 
@@ -845,7 +849,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             # cleanupDTP sets dtpFactory to none.  Later we'll do
             # cleanup here or something.
             self.cleanupDTP()
-        self.dtpFactory = DTPFactory(pi=self)
+        self.dtpFactory = self.dtpFactoryClass(pi=self)
         self.dtpFactory.setTimeout(self.dtpTimeout)
         self.dtpPort = self.getDTPPort(self.dtpFactory)
 
@@ -864,7 +868,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         if self.dtpFactory is not None:
             self.cleanupDTP()
 
-        self.dtpFactory = DTPFactory(pi=self, peerHost=self.transport.getPeer().host)
+        self.dtpFactory = self.dtpFactoryClass(pi=self, peerHost=self.transport.getPeer().host)
         self.dtpFactory.setTimeout(self.dtpTimeout)
         self.dtpPort = reactor.connectTCP(ip, port, self.dtpFactory)
 
