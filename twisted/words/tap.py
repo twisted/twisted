@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.words.test.test_tap -*-
-# Copyright (c) 2001-2005 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 """
 Shiny new words service maker

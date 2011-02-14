@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.words.test.test_jabberxmppstringprep -*-
 #
-# Copyright (c) 2005-2011 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 import sys, warnings

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- test-case-name: twisted.trial.test.test_test_visitor,twisted.trial.test.test_class -*-
 
-# Copyright (c) 2009 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 # fodder for test_script, which parses files for emacs local variable

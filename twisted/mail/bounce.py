@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.mail.test.test_bounce -*-
 #
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 

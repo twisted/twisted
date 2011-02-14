@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.python.test.test_util -*-
-# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 import os, sys, hmac, errno, new, inspect, warnings

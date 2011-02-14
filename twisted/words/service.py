@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.words.test.test_service -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """

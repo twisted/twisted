@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_nmea -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """NMEA 0183 implementation

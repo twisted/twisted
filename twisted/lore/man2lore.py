@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.lore.test.test_man2lore -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """

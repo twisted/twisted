@@ -1,4 +1,4 @@
-# Copyright (c) 2010 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 from twisted.test import proto_helpers, test_protocols

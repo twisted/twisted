@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.test.test_strcred -*-
 #
-# Copyright (c) 2007-2008 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 #
 

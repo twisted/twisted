@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_zshcomp -*-
-# Copyright (c) 2006 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """

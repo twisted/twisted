@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_memcache -*-
-# Copyright (c) 2007-2009 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """

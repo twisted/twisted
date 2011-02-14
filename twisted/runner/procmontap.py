@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.runner.test.test_procmontap -*-
-# Copyright (c) 2010 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """

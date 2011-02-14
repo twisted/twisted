@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_task,twisted.test.test_cooperator -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """

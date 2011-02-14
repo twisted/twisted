@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2007-2009 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """

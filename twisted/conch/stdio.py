@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.conch.test.test_manhole -*-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """

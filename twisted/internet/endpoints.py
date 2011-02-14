@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.internet.test.test_endpoints -*-
-# Copyright (c) 2007-2010 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 """
 Implementations of L{IStreamServerEndpoint} and L{IStreamClientEndpoint} that

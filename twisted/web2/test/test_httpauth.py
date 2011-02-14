@@ -1,4 +1,4 @@
-# Copyright (c) 2006-2009 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 from twisted.python.hashlib import md5

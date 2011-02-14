@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.test.test_explorer -*-
 # $Id: explorer.py,v 1.6 2003/02/18 21:15:30 acapnotic Exp $
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 

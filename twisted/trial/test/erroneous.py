@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.trial.test.test_tests -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 from twisted.trial import unittest, util

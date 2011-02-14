@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_pb -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """

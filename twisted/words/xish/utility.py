@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.words.test.test_xishutil -*-
 #
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """

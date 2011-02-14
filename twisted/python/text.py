@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.test.test_text -*-
 #
-# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 

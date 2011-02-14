@@ -1,5 +1,5 @@
 # Copyright (c) 2005 Divmod, Inc.
-# Copyright (c) 2007 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 # Don't change the docstring, it's part of the tests

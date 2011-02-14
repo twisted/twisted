@@ -1,4 +1,4 @@
-# Copyright (c) 2009-2010 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """

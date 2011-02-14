@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_application,twisted.test.test_twistd -*-
-# Copyright (c) 2001-2011 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 import sys, os, pdb, getpass, traceback, signal, warnings

@@ -1,4 +1,4 @@
-# Copyright (c) 2005-2011 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 from twisted.trial import unittest

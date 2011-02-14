@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.test.test_internet -*-
 #
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 from __future__ import generators

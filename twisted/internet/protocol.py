@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_factories,twisted.internet.test.test_protocol -*-
-# Copyright (c) 2001-2011 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """

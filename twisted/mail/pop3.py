@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.mail.test.test_pop3 -*-
 #
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
