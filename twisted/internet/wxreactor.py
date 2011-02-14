@@ -21,8 +21,6 @@ reactor.stop(), not yourApp.ExitMainLoop().
 IMPORTANT: tests will fail when run under this reactor. This is
 expected and probably does not reflect on the reactor's ability to run
 real applications.
-
-Maintainer: Itamar Shtull-Trauring
 """
 
 import Queue
@@ -72,6 +70,7 @@ class WxReactor(_threadedselect.ThreadedSelectReactor):
         """
         self.wxapp = wxapp
 
+
     def _installSignalHandlersAgain(self):
         """
         wx sometimes removes our own signal handlers, so re-add them.
@@ -84,6 +83,7 @@ class WxReactor(_threadedselect.ThreadedSelectReactor):
             return
         self._handleSignals()
 
+
     def stop(self):
         """
         Stop the reactor.
@@ -92,6 +92,7 @@ class WxReactor(_threadedselect.ThreadedSelectReactor):
             return
         self._stopping = True
         _threadedselect.ThreadedSelectReactor.stop(self)
+
 
     def _runInMainThread(self, f):
         """
@@ -105,6 +106,7 @@ class WxReactor(_threadedselect.ThreadedSelectReactor):
             # wx shutdown but twisted hasn't
             self._postQueue.put(f)
 
+
     def _stopWx(self):
         """
         Stop the wx event loop if it hasn't already been stopped.
@@ -113,6 +115,7 @@ class WxReactor(_threadedselect.ThreadedSelectReactor):
         """
         if hasattr(self, "wxapp"):
             self.wxapp.ExitMainLoop()
+
 
     def run(self, installSignalHandlers=True):
         """
@@ -141,7 +144,7 @@ class WxReactor(_threadedselect.ThreadedSelectReactor):
         if runtime.platform.isMacOSX():
             t = ProcessEventsTimer(self.wxapp)
             t.Start(2) # wake up every 2ms
-        
+
         self.wxapp.MainLoop()
         wxapp = self.wxapp
         del self.wxapp
