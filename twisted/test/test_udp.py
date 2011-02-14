@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_udp -*-
-# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2011 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -113,21 +113,27 @@ class BadClient(protocol.DatagramProtocol):
 
 class UDPTestCase(unittest.TestCase):
 
-    def testOldAddress(self):
+    def test_oldAddress(self):
+        """
+        The C{type} of the host address of a listening L{DatagramProtocol}'s
+        transport is C{"UDP"}.
+        """
         server = Server()
         d = server.startedDeferred = defer.Deferred()
         p = reactor.listenUDP(0, server, interface="127.0.0.1")
         def cbStarted(ignored):
             addr = p.getHost()
-            self.assertEquals(addr, ('INET_UDP', addr.host, addr.port))
+            self.assertEquals(addr.type, 'UDP')
             return p.stopListening()
         return d.addCallback(cbStarted)
-    testOldAddress.suppress = [
-        util.suppress(message='IPv4Address.__getitem__',
-                      category=DeprecationWarning)]
 
 
-    def testStartStop(self):
+    def test_startStop(self):
+        """
+        The L{DatagramProtocol}'s C{startProtocol} and C{stopProtocol}
+        methods are called when its transports starts and stops listening,
+        respectively.
+        """
         server = Server()
         d = server.startedDeferred = defer.Deferred()
         port1 = reactor.listenUDP(0, server, interface="127.0.0.1")
@@ -139,9 +145,12 @@ class UDPTestCase(unittest.TestCase):
             self.assertEquals(server.stopped, 1)
         return d.addCallback(cbStarted).addCallback(cbStopped)
 
-    def testRebind(self):
-        # Ensure binding the same DatagramProtocol repeatedly invokes all
-        # the right callbacks.
+
+    def test_rebind(self):
+        """
+        Re-listening with the same L{DatagramProtocol} re-invokes the
+        C{startProtocol} callback.
+        """
         server = Server()
         d = server.startedDeferred = defer.Deferred()
         p = reactor.listenUDP(0, server, interface="127.0.0.1")
@@ -157,14 +166,17 @@ class UDPTestCase(unittest.TestCase):
         return d.addCallback(cbStarted, p)
 
 
-    def testBindError(self):
+    def test_bindError(self):
+        """
+        A L{CannotListenError} exception is raised when attempting to bind a
+        second protocol instance to an already bound port
+        """
         server = Server()
         d = server.startedDeferred = defer.Deferred()
         port = reactor.listenUDP(0, server, interface='127.0.0.1')
 
         def cbStarted(ignored):
             self.assertEquals(port.getHost(), server.transport.getHost())
-
             server2 = Server()
             self.assertRaises(
                 error.CannotListenError,
@@ -177,7 +189,12 @@ class UDPTestCase(unittest.TestCase):
         d.addCallback(cbFinished)
         return d
 
-    def testSendPackets(self):
+
+    def test_sendPackets(self):
+        """
+        Datagrams can be sent with the transport's C{write} method and
+        received via the C{datagramReceived} callback method.
+        """
         server = Server()
         serverStarted = server.startedDeferred = defer.Deferred()
         port1 = reactor.listenUDP(0, server, interface="127.0.0.1")
@@ -247,8 +264,13 @@ class UDPTestCase(unittest.TestCase):
         return d
 
 
-    def testConnectionRefused(self):
-        # assume no one listening on port 80 UDP
+    def test_connectionRefused(self):
+        """
+        A L{ConnectionRefusedError} exception is raised when a connection
+        attempt is actively refused by the other end.
+
+        Note: This test assumes no one is listening on port 80 UDP.
+        """
         client = GoodClient()
         clientStarted = client.startedDeferred = defer.Deferred()
         port = reactor.listenUDP(0, client, interface="127.0.0.1")
@@ -284,7 +306,15 @@ class UDPTestCase(unittest.TestCase):
         d.addCallback(cbFinished)
         return d
 
-    def testBadConnect(self):
+
+    def test_badConnect(self):
+        """
+        A call to the transport's connect method fails with a L{ValueError}
+        when a non-IP address is passed as the host value.
+
+        A call to a transport's connect method fails with a L{RuntimeError}
+        when the transport is already connected.
+        """
         client = GoodClient()
         port = reactor.listenUDP(0, client, interface="127.0.0.1")
         self.assertRaises(ValueError, client.transport.connect,
@@ -296,10 +326,10 @@ class UDPTestCase(unittest.TestCase):
 
 
 
-    def testDatagramReceivedError(self):
+    def test_datagramReceivedError(self):
         """
-        Test that when datagramReceived raises an exception it is logged but
-        the port is not disconnected.
+        When datagramReceived raises an exception it is logged but the port
+        is not disconnected.
         """
         finalDeferred = defer.Deferred()
 
@@ -395,7 +425,11 @@ class UDPTestCase(unittest.TestCase):
         return finalDeferred
 
 
-    def testPortRepr(self):
+    def test_portRepr(self):
+        """
+        The port number being listened on can be found in the string
+        returned from calling repr() on L{twisted.internet.udp.Port}.
+        """
         client = GoodClient()
         p = reactor.listenUDP(0, client)
         portNo = str(p.getHost().port)

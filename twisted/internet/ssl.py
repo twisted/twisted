@@ -150,11 +150,11 @@ class Client(tcp.Client):
     def getHost(self):
         """Returns the address from which I am connecting."""
         h, p = self.socket.getsockname()
-        return address.IPv4Address('TCP', h, p, 'SSL')
+        return address.IPv4Address('TCP', h, p)
 
     def getPeer(self):
         """Returns the address that I am connected."""
-        return address.IPv4Address('TCP', self.addr[0], self.addr[1], 'SSL')
+        return address.IPv4Address('TCP', self.addr[0], self.addr[1])
 
     def _connectDone(self):
         self.startTLS(self.ctxFactory)
@@ -171,12 +171,12 @@ class Server(tcp.Server):
     def getHost(self):
         """Return server's address."""
         h, p = self.socket.getsockname()
-        return address.IPv4Address('TCP', h, p, 'SSL')
+        return address.IPv4Address('TCP', h, p)
 
     def getPeer(self):
         """Return address of peer."""
         h, p = self.client
-        return address.IPv4Address('TCP', h, p, 'SSL')
+        return address.IPv4Address('TCP', h, p)
 
 
 class Port(tcp.Port):
@@ -214,7 +214,7 @@ class Connector(base.BaseConnector):
         return Client(self.host, self.port, self.bindAddress, self.contextFactory, self, self.reactor)
 
     def getDestination(self):
-        return address.IPv4Address('TCP', self.host, self.port, 'SSL')
+        return address.IPv4Address('TCP', self.host, self.port)
 
 from twisted.internet._sslverify import DistinguishedName, DN, Certificate
 from twisted.internet._sslverify import CertificateRequest, PrivateCertificate

@@ -242,7 +242,7 @@ class Port(base.BasePort):
 
         This indicates the address from which I am connecting.
         """
-        return address.IPv4Address('UDP', *(self.socket.getsockname() + ('INET_UDP',)))
+        return address.IPv4Address('UDP', *self.socket.getsockname())
 
 
 

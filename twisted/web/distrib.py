@@ -56,8 +56,7 @@ class Request(pb.RemoteCopy, server.Request):
             tup = state[k]
             addrdesc = {'INET': 'TCP', 'UNIX': 'UNIX'}[tup[0]]
             addr = {'TCP': lambda: address.IPv4Address(addrdesc,
-                                                       tup[1], tup[2],
-                                                       _bwHack='INET'),
+                                                       tup[1], tup[2]),
                     'UNIX': lambda: address.UNIXAddress(tup[1])}[addrdesc]()
             state[k] = addr
         state['requestHeaders'] = Headers(dict(state['requestHeaders']))
