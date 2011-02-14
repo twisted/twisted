@@ -1,0 +1,4 @@
+When C-extensions are not complied for twisted, on python2.4, skip a test in
+twisted.internet.test.test_process that may hang due to a SIGCHLD related
+problem. Running 'python setup.py build_ext --inplace' will compile the
+extension and cause the test to both run and pass.
