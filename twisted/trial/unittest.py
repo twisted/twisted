@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.trial.test.test_tests -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2011 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -12,34 +12,7 @@ Maintainer: Jonathan Lange
 import doctest, inspect
 import os, warnings, sys, tempfile, gc, types
 from pprint import pformat
-try:
-    from dis import findlinestarts as _findlinestarts
-except ImportError:
-    # Definition copied from Python's Lib/dis.py - findlinestarts was not
-    # available in Python 2.3.  This function is copyright Python Software
-    # Foundation, released under the Python license:
-    # http://www.python.org/psf/license/
-    def _findlinestarts(code):
-        """Find the offsets in a byte code which are start of lines in the source.
-
-        Generate pairs (offset, lineno) as described in Python/compile.c.
-
-        """
-        byte_increments = [ord(c) for c in code.co_lnotab[0::2]]
-        line_increments = [ord(c) for c in code.co_lnotab[1::2]]
-
-        lastlineno = None
-        lineno = code.co_firstlineno
-        addr = 0
-        for byte_incr, line_incr in zip(byte_increments, line_increments):
-            if byte_incr:
-                if lineno != lastlineno:
-                    yield (addr, lineno)
-                    lastlineno = lineno
-                addr += byte_incr
-            lineno += line_incr
-        if lineno != lastlineno:
-            yield (addr, lineno)
+from dis import findlinestarts as _findlinestarts
 
 from twisted.internet import defer, utils
 from twisted.python import components, failure, log, monkey
@@ -997,20 +970,51 @@ class TestCase(_Assertions):
 
     def callDeprecated(self, version, f, *args, **kwargs):
         """
-        Call a function that was deprecated at a specific version.
+        Call a function that should have been deprecated at a specific version
+        and in favor of a specific alternative, and assert that it was thusly
+        deprecated.
 
-        @param version: The version that the function was deprecated in.
+        @param version: A 2-sequence of (since, replacement), where C{since} is
+            a the first L{version<twisted.python.versions.Version>} that C{f}
+            should have been deprecated since, and C{replacement} is a suggested
+            replacement for the deprecated functionality, as described by
+            L{twisted.python.deprecate.deprecated}.  If there is no suggested
+            replacement, this parameter may also be simply a
+            L{version<twisted.python.versions.Version>} by itself.
+
         @param f: The deprecated function to call.
-        @return: Whatever the function returns.
+
+        @param args: The arguments to pass to C{f}.
+
+        @param kwargs: The keyword arguments to pass to C{f}.
+
+        @return: Whatever C{f} returns.
+
+        @raise: Whatever C{f} raises.  If any exception is
+            raised by C{f}, though, no assertions will be made about emitted
+            deprecations.
+
+        @raise FailTest: if no warnings were emitted by C{f}, or if the
+            L{DeprecationWarning} emitted did not produce the canonical
+            please-use-something-else message that is standard for Twisted
+            deprecations according to the given version and replacement.
         """
         result = f(*args, **kwargs)
         warningsShown = self.flushWarnings([self.callDeprecated])
+        try:
+            info = list(version)
+        except TypeError:
+            since = version
+            replacement = None
+        else:
+            [since, replacement] = info
 
         if len(warningsShown) == 0:
             self.fail('%r is not deprecated.' % (f,))
 
         observedWarning = warningsShown[0]['message']
-        expectedWarning = getDeprecationWarningString(f, version)
+        expectedWarning = getDeprecationWarningString(
+            f, since, replacement=replacement)
         self.assertEqual(expectedWarning, observedWarning)
 
         return result
