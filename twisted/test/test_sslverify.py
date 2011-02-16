@@ -1,5 +1,5 @@
 # Copyright 2005 Divmod, Inc.  See LICENSE file for details
-# Copyright (c) 2006-2008 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """

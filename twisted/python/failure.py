@@ -1,7 +1,7 @@
 # -*- test-case-name: twisted.test.test_failure -*-
 # See also test suite twisted.test.test_pbfailure
 
-# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 

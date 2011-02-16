@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.vfs.test.test_sftp -*-
 
-# Copyright (c) 2007 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 import os, time

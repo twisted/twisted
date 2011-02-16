@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.python.test.test_versions -*-
-# Copyright (c) 2006-2010 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """

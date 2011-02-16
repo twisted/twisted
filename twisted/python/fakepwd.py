@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.python.test.test_fakepwd -*-
-# Copyright (c) 2009 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """

@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.web.test.test_http -*-
-# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -919,6 +919,7 @@ class Request:
         if not self.queued:
             self._cleanup()
 
+
     def write(self, data):
         """
         Write some data as a result of an HTTP request.  The first
@@ -927,6 +928,9 @@ class Request:
         @type data: C{str}
         @param data: Some bytes to be sent as part of the response body.
         """
+        if self.finished:
+            raise RuntimeError('Request.write called on a request after '
+                               'Request.finish was called.')
         if not self.startedWriting:
             self.startedWriting = 1
             version = self.clientproto

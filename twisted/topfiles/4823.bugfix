@@ -1,0 +1,1 @@
+twisted.internet.task.Clock now sorts the list of pending calls before and after processing each call

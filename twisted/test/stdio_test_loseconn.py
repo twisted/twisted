@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_stdio.StandardInputOutputTestCase.test_loseConnection -*-
-# Copyright (c) 2006-2007 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """

@@ -1,4 +1,4 @@
-# Copyright (c) 2007-2010 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -178,17 +178,6 @@ class ServerOptionsTest(unittest.TestCase):
         config = twistd.ServerOptions()
         config.postOptions()
         self.assertEquals(config['no_save'], False)
-
-
-    def test_reportProfileDeprecation(self):
-        """
-        Check that the --report-profile option prints a C{DeprecationWarning}.
-        """
-        config = twistd.ServerOptions()
-        self.assertWarns(
-            DeprecationWarning, "--report-profile option is deprecated and "
-            "a no-op since Twisted 8.0.", app.__file__,
-            config.parseOptions, ["--report-profile", "foo"])
 
 
     def test_listAllProfilers(self):

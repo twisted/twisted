@@ -1,4 +1,4 @@
-# Copyright (c) 2005-2007 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 import time

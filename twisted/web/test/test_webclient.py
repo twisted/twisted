@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2011 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -608,6 +608,26 @@ class WebClientTestCase(unittest.TestCase):
 
         d = client.getPage(
             url, followRedirect=True, afterFoundGet=True, method="POST")
+        d.addCallback(gotPage)
+        return d
+
+
+    def test_downloadAfterFoundGet(self):
+        """
+        Passing C{True} for C{afterFoundGet} to L{client.downloadPage} invokes
+        the same kind of redirect handling as passing that argument to
+        L{client.getPage} invokes.
+        """
+        url = self.getURL('extendedRedirect?code=302')
+
+        def gotPage(page):
+            self.assertEquals(
+                self.extendedRedirect.lastMethod,
+                "GET",
+                "With afterFoundGet, the HTTP method must change to GET")
+
+        d = client.downloadPage(url, "downloadTemp",
+            followRedirect=True, afterFoundGet=True, method="POST")
         d.addCallback(gotPage)
         return d
 

@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.python.test.test_deprecate -*-
-# Copyright (c) 2008-2011 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -89,6 +89,7 @@ _fullyQualifiedName.__module__ = 'twisted.python.reflect'
 _fullyQualifiedName.__name__ = 'fullyQualifiedName'
 
 
+
 def getWarningMethod():
     """
     Return the warning method currently used to record deprecation warnings.
@@ -109,38 +110,82 @@ def setWarningMethod(newMethod):
 
 
 
-def _getDeprecationDocstring(version):
-    return "Deprecated in %s." % getVersionString(version)
+def _getDeprecationDocstring(version, replacement=None):
+    """
+    Generate an addition to a deprecated object's docstring that explains its
+    deprecation.
+
+    @param version: the version it was deprecated.
+    @type version: L{Version}
+
+    @param replacement: The replacement, if specified.
+    @type replacement: C{str} or callable
+
+    @return: a string like "Deprecated in Twisted 27.2.0; please use
+        twisted.timestream.tachyon.flux instead."
+    """
+    doc = "Deprecated in %s" % (getVersionString(version),)
+    if replacement:
+        doc = "%s; %s" % (doc, _getReplacementString(replacement))
+    return doc + "."
 
 
 
-def _getDeprecationWarningString(fqpn, version, format=None):
+def _getReplacementString(replacement):
+    """
+    Surround a replacement for a deprecated API with some polite text exhorting
+    the user to consider it as an alternative.
+
+    @type replacement: C{str} or callable
+
+    @return: a string like "please use twisted.python.modules.getModule
+        instead".
+    """
+    if callable(replacement):
+        replacement = _fullyQualifiedName(replacement)
+    return "please use %s instead" % (replacement,)
+
+
+
+def _getDeprecationWarningString(fqpn, version, format=None, replacement=None):
     """
     Return a string indicating that the Python name was deprecated in the given
     version.
 
-    @type fqpn: C{str}
     @param fqpn: Fully qualified Python name of the thing being deprecated
+    @type fqpn: C{str}
 
+    @param version: Version that C{fqpn} was deprecated in.
     @type version: L{twisted.python.versions.Version}
-    @param version: Version that C{fqpn} was deprecated in
 
+    @param format: A user-provided format to interpolate warning values into, or
+        L{DEPRECATION_WARNING_FORMAT
+        <twisted.python.deprecate.DEPRECATION_WARNING_FORMAT>} if C{None} is
+        given.
     @type format: C{str}
-    @param format: A user-provided format to interpolate warning values into,
-        or L{DEPRECATION_WARNING_FORMAT} if C{None} is given
 
-    @rtype: C{str}
+    @param replacement: what should be used in place of C{fqpn}. Either pass in
+        a string, which will be inserted into the warning message, or a
+        callable, which will be expanded to its full import path.
+    @type replacement: C{str} or callable
+
     @return: A textual description of the deprecation
+    @rtype: C{str}
     """
     if format is None:
         format = DEPRECATION_WARNING_FORMAT
-    return format % {
+    warningString = format % {
         'fqpn': fqpn,
         'version': getVersionString(version)}
+    if replacement:
+        warningString = "%s; %s" % (
+            warningString, _getReplacementString(replacement))
+    return warningString
 
 
 
-def getDeprecationWarningString(callableThing, version, format=None):
+def getDeprecationWarningString(callableThing, version, format=None,
+                                replacement=None):
     """
     Return a string indicating that the callable was deprecated in the given
     version.
@@ -149,21 +194,33 @@ def getDeprecationWarningString(callableThing, version, format=None):
     @param callableThing: Callable object to be deprecated
 
     @type version: L{twisted.python.versions.Version}
-    @param version: Version that C{fqpn} was deprecated in
+    @param version: Version that C{callableThing} was deprecated in
 
     @type format: C{str}
     @param format: A user-provided format to interpolate warning values into,
-        or L{DEPRECATION_WARNING_FORMAT} if C{None} is given
+        or L{DEPRECATION_WARNING_FORMAT
+        <twisted.python.deprecate.DEPRECATION_WARNING_FORMAT>} if C{None} is
+        given
 
+    @param callableThing: A callable to be deprecated.
+
+    @param version: The L{twisted.python.versions.Version} that the callable
+        was deprecated in.
+
+    @param replacement: what should be used in place of the callable. Either
+        pass in a string, which will be inserted into the warning message,
+        or a callable, which will be expanded to its full import path.
+    @type replacement: C{str} or callable
+
+    @return: A string describing the deprecation.
     @rtype: C{str}
-    @return: A textual description of the deprecation
     """
     return _getDeprecationWarningString(
-        _fullyQualifiedName(callableThing), version, format)
+        _fullyQualifiedName(callableThing), version, format, replacement)
 
 
 
-def deprecated(version):
+def deprecated(version, replacement=None):
     """
     Return a decorator that marks callables as deprecated.
 
@@ -172,12 +229,21 @@ def deprecated(version):
         having been deprecated.  The decorated function will be annotated
         with this version, having it set as its C{deprecatedVersion}
         attribute.
+
+    @param version: the version that the callable was deprecated in.
+    @type version: L{twisted.python.versions.Version}
+
+    @param replacement: what should be used in place of the callable. Either
+        pass in a string, which will be inserted into the warning message,
+        or a callable, which will be expanded to its full import path.
+    @type replacement: C{str} or callable
     """
     def deprecationDecorator(function):
         """
         Decorator that marks C{function} as deprecated.
         """
-        warningString = getDeprecationWarningString(function, version)
+        warningString = getDeprecationWarningString(
+            function, version, None, replacement)
 
         def deprecatedFunction(*args, **kwargs):
             warn(
@@ -189,7 +255,7 @@ def deprecated(version):
         deprecatedFunction = mergeFunctionMetadata(
             function, deprecatedFunction)
         _appendToDocstring(deprecatedFunction,
-                           _getDeprecationDocstring(version))
+                           _getDeprecationDocstring(version, replacement))
         deprecatedFunction.deprecatedVersion = version
         return deprecatedFunction
 
@@ -228,9 +294,10 @@ class _ModuleProxy(object):
     """
     Python module wrapper to hook module-level attribute access.
 
-    Access to deprecated attributes first checks L{_deprecatedAttributes}, if
-    the attribute does not appear there then access falls through to L{_module},
-    the wrapped module object.
+    Access to deprecated attributes first checks
+    L{_ModuleProxy._deprecatedAttributes}, if the attribute does not appear
+    there then access falls through to L{_ModuleProxy._module}, the wrapped
+    module object.
 
     @type _module: C{module}
     @ivar _module: Module on which to hook attribute access.

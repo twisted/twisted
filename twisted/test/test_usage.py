@@ -1,7 +1,9 @@
-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+"""
+Tests for L{twisted.python.usage}, a command line option parsing library.
+"""
 
 from twisted.trial import unittest
 from twisted.python import usage
@@ -26,8 +28,10 @@ class WellBehaved(usage.Options):
     def opt_myflag(self):
         self.opts['myflag'] = "PONY!"
 
+
     def opt_myparam(self, value):
         self.opts['myparam'] = "%s WITH A PONY!" % (value,)
+
 
 
 class ParseCorrectnessTest(unittest.TestCase):
@@ -71,6 +75,7 @@ class ParseCorrectnessTest(unittest.TestCase):
         self.failUnlessEqual(self.nice.opts['myparam'], "Tofu WITH A PONY!")
 
 
+
 class TypedOptions(usage.Options):
     optParameters = [
         ['fooint', None, 392, 'Foo int', int],
@@ -78,6 +83,15 @@ class TypedOptions(usage.Options):
         ['eggint', None, None, 'Egg int without default', int],
         ['eggfloat', None, None, 'Egg float without default', float],
     ]
+
+    def opt_under_score(self, value):
+        """
+        This option has an underscore in its name to exercise the _ to -
+        translation.
+        """
+        self.underscoreValue = value
+    opt_u = opt_under_score
+
 
 
 class TypedTestCase(unittest.TestCase):
@@ -100,6 +114,7 @@ class TypedTestCase(unittest.TestCase):
         self.failUnlessEqual(self.usage.opts['eggint'], None)
         self.failUnlessEqual(self.usage.opts['eggfloat'], None)
 
+
     def test_parsingValues(self):
         """
         Test basic parsing of int and float values.
@@ -116,12 +131,31 @@ class TypedTestCase(unittest.TestCase):
         self.failUnlessEqual(self.usage.opts['eggfloat'], 21.)
         self.assert_(isinstance(self.usage.opts['eggfloat'], float))
 
+
+    def test_underscoreOption(self):
+        """
+        A dash in an option name is translated to an underscore before being
+        dispatched to a handler.
+        """
+        self.usage.parseOptions(['--under-score', 'foo'])
+        self.assertEquals(self.usage.underscoreValue, 'foo')
+
+
+    def test_underscoreOptionAlias(self):
+        """
+        An option name with a dash in it can have an alias.
+        """
+        self.usage.parseOptions(['-u', 'bar'])
+        self.assertEquals(self.usage.underscoreValue, 'bar')
+
+
     def test_invalidValues(self):
         """
         Check that passing wrong values raises an error.
         """
         argV = "--fooint egg".split()
         self.assertRaises(usage.UsageError, self.usage.parseOptions, argV)
+
 
 
 class WrongTypedOptions(usage.Options):
@@ -365,8 +399,3 @@ class PortCoerceTestCase(unittest.TestCase):
         self.assertRaises(ValueError, usage.portCoerce, "-21")
         self.assertRaises(ValueError, usage.portCoerce, "212189")
         self.assertRaises(ValueError, usage.portCoerce, "foo")
-
-
-if __name__ == '__main__':
-    unittest.main()
-

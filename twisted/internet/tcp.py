@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_tcp -*-
-# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -708,14 +708,14 @@ class Client(BaseClient):
 
         This indicates the address from which I am connecting.
         """
-        return address.IPv4Address('TCP', *(self.socket.getsockname() + ('INET',)))
+        return address.IPv4Address('TCP', *self.socket.getsockname())
 
     def getPeer(self):
         """Returns an IPv4Address.
 
         This indicates the address that I am connected to.
         """
-        return address.IPv4Address('TCP', *(self.realAddress + ('INET',)))
+        return address.IPv4Address('TCP', *self.realAddress)
 
     def __repr__(self):
         s = '<%s to %s at %x>' % (self.__class__, self.addr, unsignedID(self))
@@ -770,14 +770,14 @@ class Server(Connection):
 
         This indicates the server's address.
         """
-        return address.IPv4Address('TCP', *(self.socket.getsockname() + ('INET',)))
+        return address.IPv4Address('TCP', *self.socket.getsockname())
 
     def getPeer(self):
         """Returns an IPv4Address.
 
         This indicates the client's address.
         """
-        return address.IPv4Address('TCP', *(self.client + ('INET',)))
+        return address.IPv4Address('TCP', *self.client)
 
 
 
@@ -860,10 +860,7 @@ class Port(base.BasePort, _SocketCloser):
         # reflect what the OS actually assigned us.
         self._realPortNumber = skt.getsockname()[1]
 
-        log.msg(eventSource=self,
-                eventType="start",
-                protocol=self.factory,
-                portNumber=self._realPortNumber)
+        log.msg("%s starting on %s" % (self.factory.__class__, self._realPortNumber))
 
         # The order of the next 6 lines is kind of bizarre.  If no one
         # can explain it, perhaps we should re-arrange them.
@@ -978,10 +975,7 @@ class Port(base.BasePort, _SocketCloser):
         """
         Log message for closing port
         """
-        log.msg(eventSource=self,
-                eventType="stop",
-                protocol=self.factory,
-                portNumber=self._realPortNumber)
+        log.msg('(TCP Port %s Closed)' % (self._realPortNumber,))
 
 
     def connectionLost(self, reason):
@@ -1013,7 +1007,7 @@ class Port(base.BasePort, _SocketCloser):
 
         This indicates the server's address.
         """
-        return address.IPv4Address('TCP', *(self.socket.getsockname() + ('INET',)))
+        return address.IPv4Address('TCP', *self.socket.getsockname())
 
 class Connector(base.BaseConnector):
     def __init__(self, host, port, factory, timeout, bindAddress, reactor=None):
@@ -1031,4 +1025,4 @@ class Connector(base.BaseConnector):
         return Client(self.host, self.port, self.bindAddress, self, self.reactor)
 
     def getDestination(self):
-        return address.IPv4Address('TCP', self.host, self.port, 'INET')
+        return address.IPv4Address('TCP', self.host, self.port)

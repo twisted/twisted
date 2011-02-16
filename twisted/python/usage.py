@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_usage -*-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -342,6 +342,15 @@ class Options(dict):
     def _gather_handlers(self):
         """
         Gather up options with their own handler methods.
+
+        This returns a tuple of many values.  Amongst those values is a
+        synonyms dictionary, mapping all of the possible aliases (C{str})
+        for an option to the longest spelling of that option's name
+        C({str}).
+
+        Another element is a dispatch dictionary, mapping each user-facing
+        option name (with - substituted for _) to a callable to handle that
+        option.
         """
 
         longOpt, shortOpt = [], ''
@@ -393,7 +402,7 @@ class Options(dict):
             method = getattr(self, 'opt_' + name)
             if method not in reverse_dct:
                 reverse_dct[method] = []
-            reverse_dct[method].append(name)
+            reverse_dct[method].append(name.replace('_', '-'))
 
         cmpLength = lambda a, b: cmp(len(a), len(b))
 

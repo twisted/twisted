@@ -1,0 +1,1 @@
+twisted.web.http.Request.write now raises an exception if it is called after response generation has already finished.

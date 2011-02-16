@@ -105,6 +105,7 @@ factory.protocol = Greeter
 point = TCP4ClientEndpoint(reactor, "localhost", 1234)
 d = point.connect(factory)
 d.addCallback(gotProtocol)
+reactor.run()
     </pre>
 
     <p>Regardless of the type of client endpoint, the way to set up a new
@@ -145,6 +146,7 @@ from twisted.internet.protocol import ClientCreator
 creator = ClientCreator(reactor, Greeter)
 d = creator.connectTCP("localhost", 1234)
 d.addCallback(gotProtocol)
+reactor.run()
     </pre>
 
     <p>In general, the endpoint API should be preferred in new code, as it lets

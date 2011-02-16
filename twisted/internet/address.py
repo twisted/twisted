@@ -1,66 +1,51 @@
-# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-"""Address objects for network connections."""
+"""
+Address objects for network connections.
+"""
 
 import warnings, os
 
 from zope.interface import implements
 
 from twisted.internet.interfaces import IAddress
+from twisted.python import util
 
 
-class IPv4Address(object):
+class IPv4Address(object, util.FancyEqMixin):
     """
     Object representing an IPv4 socket endpoint.
 
-    @ivar type: A string describing the type of transport, either 'TCP' or 'UDP'.
+    @ivar type: A string describing the type of transport, either 'TCP' or
+        'UDP'.
     @ivar host: A string containing the dotted-quad IP address.
     @ivar port: An integer representing the port number.
     """
 
-    # _bwHack is given to old users who think we are a tuple. They expected
-    # addr[0] to define the socket type rather than the address family, so
-    # the value comes from a different namespace than the new .type value:
-
-    #  type = map[_bwHack]
-    # map = { 'SSL': 'TCP', 'INET': 'TCP', 'INET_UDP': 'UDP' }
-
     implements(IAddress)
+
+    compareAttributes = ('type', 'host', 'port')
 
     def __init__(self, type, host, port, _bwHack = None):
         assert type in ('TCP', 'UDP')
         self.type = type
         self.host = host
         self.port = port
-        self._bwHack = _bwHack
-
-    def __getitem__(self, index):
-        warnings.warn("IPv4Address.__getitem__ is deprecated.  Use attributes instead.",
-                      category=DeprecationWarning, stacklevel=2)
-        return (self._bwHack or self.type, self.host, self.port).__getitem__(index)
-
-    def __getslice__(self, start, stop):
-        warnings.warn("IPv4Address.__getitem__ is deprecated.  Use attributes instead.",
-                      category=DeprecationWarning, stacklevel=2)
-        return (self._bwHack or self.type, self.host, self.port)[start:stop]
-
-    def __eq__(self, other):
-        if isinstance(other, tuple):
-            return tuple(self) == other
-        elif isinstance(other, IPv4Address):
-            a = (self.type, self.host, self.port)
-            b = (other.type, other.host, other.port)
-            return a == b
-        return False
+        if _bwHack is not None:
+            warnings.warn("twisted.internet.address.IPv4Address._bwHack is deprecated since Twisted 11.0",
+                    DeprecationWarning, stacklevel=2)
 
     def __repr__(self):
         return 'IPv4Address(%s, %r, %d)' % (self.type, self.host, self.port)
 
 
+    def __hash__(self):
+        return hash((self.type, self.host, self.port))
 
-class UNIXAddress(object):
+
+
+class UNIXAddress(object, util.FancyEqMixin):
     """
     Object representing a UNIX socket endpoint.
 
@@ -70,38 +55,41 @@ class UNIXAddress(object):
 
     implements(IAddress)
 
-    def __init__(self, name, _bwHack='UNIX'):
+    compareAttributes = ('name', )
+
+    def __init__(self, name, _bwHack = None):
         self.name = name
-        self._bwHack = _bwHack
+        if _bwHack is not None:
+            warnings.warn("twisted.internet.address.UNIXAddress._bwHack is deprecated since Twisted 11.0",
+                    DeprecationWarning, stacklevel=2)
 
-    def __getitem__(self, index):
-        warnings.warn("UNIXAddress.__getitem__ is deprecated.  Use attributes instead.",
-                      category=DeprecationWarning, stacklevel=2)
-        return (self._bwHack, self.name).__getitem__(index)
 
-    def __getslice__(self, start, stop):
-        warnings.warn("UNIXAddress.__getitem__ is deprecated.  Use attributes instead.",
-                      category=DeprecationWarning, stacklevel=2)
-        return (self._bwHack, self.name)[start:stop]
-
-    def __eq__(self, other):
-        if isinstance(other, tuple):
-            return tuple(self) == other
-        elif isinstance(other, UNIXAddress):
-            # First do the simple thing and check to see if the names are the
-            # same. If not, and the paths exist, check to see if they point to
-            # the same file.
-            if self.name == other.name:
-                return True
-            else:
+    if getattr(os.path, 'samefile', None) is not None:
+        def __eq__(self, other):
+            """
+            overriding L{util.FancyEqMixin} to ensure the os level samefile check
+            is done if the name attributes do not match.
+            """
+            res = super(UNIXAddress, self).__eq__(other)
+            if res == False:
                 try:
                     return os.path.samefile(self.name, other.name)
                 except OSError:
                     pass
-        return False
+            return res
+
 
     def __repr__(self):
         return 'UNIXAddress(%r)' % (self.name,)
+
+
+    def __hash__(self):
+        try:
+            s1 = os.stat(self.name)
+            return hash((s1.st_ino, s1.st_dev))
+        except OSError:
+            return hash(self.name)
+
 
 
 # These are for buildFactory backwards compatability due to

@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.names.test.test_dns -*-
-# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """

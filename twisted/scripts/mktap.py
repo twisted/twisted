@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.scripts.test.test_mktap -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 import warnings, sys, os

@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.vfs.test.test_ftp -*-
-# Copyright (c) 2007 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """

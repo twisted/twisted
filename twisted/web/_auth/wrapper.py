@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.web.test.test_httpauth -*-
-# Copyright (c) 2008-2010 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """

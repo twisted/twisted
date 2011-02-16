@@ -1,0 +1,2 @@
+__getitem__ __getslice__ and __eq__ (tuple comparison, indexing) removed from twisted.internet.address.IPv4Address and twisted.internet.address.UNIXAddress classes
+UNIXAddress and IPv4Address properties _bwHack are now deprecated in twisted.internet.address

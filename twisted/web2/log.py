@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.web2.test.test_log -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """Logging tools. This is still in flux (even moreso than the rest of web2)."""

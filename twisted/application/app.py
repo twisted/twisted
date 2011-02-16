@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_application,twisted.test.test_twistd -*-
-# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 import sys, os, pdb, getpass, traceback, signal, warnings
@@ -261,8 +261,10 @@ def fixPdb():
         reactor.callLater(0, reactor.stop)
         return 1
 
+
     def help_stop(self):
         print """stop - Continue execution, then cleanly shutdown the twisted reactor."""
+
 
     def set_quit(self):
         os._exit(0)
@@ -471,6 +473,7 @@ Please read the 'Using Application' HOWTO for details.
 def _reactorZshAction():
     return "(%s)" % " ".join([r.shortName for r in reactors.getReactorTypes()])
 
+
 class ReactorSelectionMixin:
     """
     Provides options for selecting a reactor to install.
@@ -547,13 +550,7 @@ class ServerOptions(usage.Options, ReactorSelectionMixin):
                      ['source', 's', None,
                       "Read an application from a .tas file (AOT format)."],
                      ['rundir','d','.',
-                      'Change to a supplied directory before running'],
-                     ['report-profile', None, None,
-                      'E-mail address to use when reporting dynamic execution '
-                      'profiler stats.  This should not be combined with '
-                      'other profiling options.  This will only take effect '
-                      'if the application to be run has an application '
-                      'name.']]
+                      'Change to a supplied directory before running']]
 
     #zsh_altArgDescr = {"foo":"use this description for foo instead"}
     #zsh_multiUse = ["foo", "bar"]
@@ -568,9 +565,10 @@ class ServerOptions(usage.Options, ReactorSelectionMixin):
         self['debug'] = False
         usage.Options.__init__(self, *a, **kw)
 
+
     def opt_debug(self):
         """
-        run the application in the Python Debugger (implies nodaemon),
+        Run the application in the Python Debugger (implies nodaemon),
         sending SIGUSR2 will drop into debugger
         """
         defer.setDebugging(True)
@@ -580,7 +578,8 @@ class ServerOptions(usage.Options, ReactorSelectionMixin):
 
 
     def opt_spew(self):
-        """Print an insanely verbose log of everything that happens.
+        """
+        Print an insanely verbose log of everything that happens.
         Useful when debugging freezes or locks in complex code."""
         sys.settrace(util.spewer)
         try:
@@ -590,24 +589,16 @@ class ServerOptions(usage.Options, ReactorSelectionMixin):
         threading.settrace(util.spewer)
 
 
-    def opt_report_profile(self, value):
-        """
-        DEPRECATED.
-
-        Manage --report-profile option, which does nothing currently.
-        """
-        warnings.warn("--report-profile option is deprecated and a no-op "
-                      "since Twisted 8.0.", category=DeprecationWarning)
-
-
     def parseOptions(self, options=None):
         if options is None:
             options = sys.argv[1:] or ["--help"]
         usage.Options.parseOptions(self, options)
 
+
     def postOptions(self):
         if self.subCommand or self['python']:
             self['no_save'] = True
+
 
     def subCommands(self):
         from twisted import plugin

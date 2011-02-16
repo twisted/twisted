@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.test.test_lockfile -*-
 # Copyright (c) 2005 Divmod, Inc.
-# Copyright (c) 2008 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """

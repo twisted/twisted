@@ -1,4 +1,4 @@
-# Copyright (c) 2007-2010 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 """
 Test the C{I...Endpoint} implementations that wrap the L{IReactorTCP},

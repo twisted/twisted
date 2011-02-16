@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.python.test_threadable -*-
-# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 

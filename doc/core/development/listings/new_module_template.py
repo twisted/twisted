@@ -1,6 +1,6 @@
 # -*- test-case-name: <test module> -*-
 
-# Copyright (c) 2008 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 

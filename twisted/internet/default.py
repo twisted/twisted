@@ -1,7 +1,7 @@
 # -*- test-case-name: twisted.test.test_internet -*-
 # $Id: default.py,v 1.90 2004/01/06 22:35:22 warner Exp $
 #
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 

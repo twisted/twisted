@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2011 Twisted Matrix Laboratories.
 # See LICENSE for details
 
 """
@@ -671,34 +671,28 @@ class TestCallDeprecated(unittest.TestCase):
 
     version = Version('Twisted', 8, 0, 0)
 
-    def oldMethod(self, x):
-        """
-        Deprecated method for testing.
-        """
-        return x
-
-
     def test_callDeprecatedSuppressesWarning(self):
         """
         callDeprecated calls a deprecated callable, suppressing the
         deprecation warning.
         """
-        self.callDeprecated(self.version, self.oldMethod, 'foo')
+        self.callDeprecated(self.version, oldMethod, 'foo')
         self.assertEqual(
             self.flushWarnings(), [], "No warnings should be shown")
 
 
     def test_callDeprecatedCallsFunction(self):
         """
-        L{callDeprecated} actually calls the callable passed to it.
+        L{callDeprecated} actually calls the callable passed to it, and
+        forwards the result.
         """
-        result = self.callDeprecated(self.version, self.oldMethod, 'foo')
+        result = self.callDeprecated(self.version, oldMethod, 'foo')
         self.assertEqual('foo', result)
 
 
     def test_failsWithoutDeprecation(self):
         """
-        callDeprecated raises a test failure if the callable is not
+        L{callDeprecated} raises a test failure if the callable is not
         deprecated.
         """
         def notDeprecated():
@@ -719,7 +713,7 @@ class TestCallDeprecated(unittest.TestCase):
         exception = self.assertRaises(
             self.failureException,
             self.callDeprecated,
-            differentVersion, self.oldMethod, 'foo')
+            differentVersion, oldMethod, 'foo')
         self.assertIn(getVersionString(self.version), str(exception))
         self.assertIn(getVersionString(differentVersion), str(exception))
 
@@ -735,7 +729,7 @@ class TestCallDeprecated(unittest.TestCase):
         differentVersion = Version('Foo', 1, 2, 3)
 
         def nestedDeprecation(*args):
-            return self.oldMethod(*args)
+            return oldMethod(*args)
         nestedDeprecation = deprecated(differentVersion)(nestedDeprecation)
 
         self.callDeprecated(differentVersion, nestedDeprecation, 24)
@@ -746,5 +740,44 @@ class TestCallDeprecated(unittest.TestCase):
         warningsShown = self.flushWarnings()
         self.assertEqual(len(warningsShown), 1)
 
-TestCallDeprecated.oldMethod = deprecated(TestCallDeprecated.version)(
-    TestCallDeprecated.oldMethod)
+
+    def test_callDeprecationWithMessage(self):
+        """
+        L{callDeprecated} can take a message argument used to check the warning
+        emitted.
+        """
+        self.callDeprecated((self.version, "newMethod"),
+                            oldMethodReplaced, 1)
+
+
+    def test_callDeprecationWithWrongMessage(self):
+        """
+        If the message passed to L{callDeprecated} doesn't match,
+        L{callDeprecated} raises a test failure.
+        """
+        exception = self.assertRaises(
+            self.failureException,
+            self.callDeprecated,
+            (self.version, "something.wrong"),
+            oldMethodReplaced, 1)
+        self.assertIn(getVersionString(self.version), str(exception))
+        self.assertIn("please use newMethod instead", str(exception))
+
+
+
+
+@deprecated(TestCallDeprecated.version)
+def oldMethod(x):
+    """
+    Deprecated method for testing.
+    """
+    return x
+
+
+@deprecated(TestCallDeprecated.version, replacement="newMethod")
+def oldMethodReplaced(x):
+    """
+    Another deprecated method, which has been deprecated in favor of the
+    mythical 'newMethod'.
+    """
+    return 2 * x

@@ -1,7 +1,6 @@
 # -*- test-case-name: twisted.test.test_internet -*-
-# $Id: default.py,v 1.90 2004/01/06 22:35:22 warner Exp $
 #
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 from __future__ import generators
@@ -334,6 +333,15 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
 
     def getWriters(self):
         return self.writes.keys()
+
+
+    def stop(self):
+        """
+        Extend the base stop implementation to also wake up the select thread so
+        that C{runUntilCurrent} notices the reactor should stop.
+        """
+        posixbase.PosixReactorBase.stop(self)
+        self.wakeUp()
 
 
     def run(self, installSignalHandlers=1):

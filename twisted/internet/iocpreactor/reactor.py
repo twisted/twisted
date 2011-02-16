@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.internet.test.test_iocp -*-
-# Copyright (c) 2008-2009 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """

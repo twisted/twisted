@@ -1,4 +1,4 @@
-# Copyright (c) 2008-2010 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -20,6 +20,7 @@ from twisted.internet.interfaces import IReactorProcess, IProcessTransport
 from twisted.internet.defer import Deferred, succeed
 from twisted.internet.protocol import ProcessProtocol
 from twisted.internet.error import ProcessDone, ProcessTerminated
+from twisted.internet import _signals
 
 
 
@@ -226,6 +227,8 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         if reactorClassName in skippedReactors and not hasSigInterrupt:
             raise SkipTest(
                 "%s is not supported without siginterrupt" % reactorClassName)
+        if _signals.installHandler.__name__  == "_installHandlerUsingSignal":
+            raise SkipTest("_signals._installHandlerUsingSignal doesn't support this feature")
 
         result = []
 

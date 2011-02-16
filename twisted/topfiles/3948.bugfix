@@ -1,0 +1,1 @@
+twisted.internet.wxreactor now supports stopping more reliably.

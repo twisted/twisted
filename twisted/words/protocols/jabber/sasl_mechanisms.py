@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.words.test.test_jabbersaslmechanisms -*-
 #
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """

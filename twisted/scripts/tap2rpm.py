@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.scripts.test.test_tap2rpm -*-
-# Copyright (c) 2003-2010 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 import sys, os, shutil, time, glob

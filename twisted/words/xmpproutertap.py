@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.words.test.test_xmpproutertap -*-
 #
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 from twisted.application import strports

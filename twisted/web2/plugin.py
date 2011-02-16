@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.web2.test.test_plugin -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """I'm a set of utility functions and resources for using twisted.plugins

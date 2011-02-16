@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -1404,6 +1404,22 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         # probably a bug in Request.
         request.gotLength(1)
         request.finish()
+        return finished
+
+
+    def test_writeAfterFinish(self):
+        """
+        Calling L{Request.write} after L{Request.finish} has been called results
+        in a L{RuntimeError} being raised.
+        """
+        request = http.Request(DummyChannel(), False)
+        finished = request.notifyFinish()
+        # Force the request to have a non-None content attribute.  This is
+        # probably a bug in Request.
+        request.gotLength(1)
+        request.write('foobar')
+        request.finish()
+        self.assertRaises(RuntimeError, request.write, 'foobar')
         return finished
 
 
