@@ -731,9 +731,9 @@ class DeferredList(Deferred):
             L{DeferredList} will fire when the first L{Deferred} in
             C{deferredList} fires with a non-failure result without waiting for
             any of the other Deferreds.  When this flag is set, the DeferredList
-            will fire with a two-tuple: the first element is the index in
-            C{deferredList} of the Deferred which fired; the second element is
-            the result of that Deferred.
+            will fire with a two-tuple: the first element is the result of the
+            Deferred which fired; the second element is the index in
+            C{deferredList} of that Deferred.
         @type fireOnOneCallback: C{bool}
 
         @param fireOnOneErrback: (keyword param) a flag indicating that this
