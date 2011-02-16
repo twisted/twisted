@@ -23,7 +23,6 @@ from twisted.python.runtime import platform
 from twisted.python.failure import Failure
 from twisted.python import log
 from twisted.trial.unittest import SkipTest
-from twisted.internet.tcp import Port
 
 from twisted.test.test_tcp import ClosingProtocol
 from twisted.internet.test.test_core import ObjectModelIntegrationMixin
@@ -315,14 +314,25 @@ class TCPClientTestsBuilder(ReactorBuilder):
 
 class TCPPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin):
     """
-    Tests for L{IReactorRCP.listenTCP}
+    Tests for L{IReactorTCP.listenTCP}
     """
+    def setUp(self):
+        """
+        Add a log observer to collect log events emitted by the listening port.
+        """
+        ReactorBuilder.setUp(self)
+        self.factory = ServerFactory()
+        self.events = []
+        log.addObserver(self.events.append)
+        self.addCleanup(log.removeObserver, self.events.append)
+
 
     def getListeningPort(self, reactor):
         """
         Get a TCP port from a reactor
         """
-        return reactor.listenTCP(0, ServerFactory())
+        return reactor.listenTCP(0, self.factory)
+
 
     def getExpectedConnectionPortNumber(self, port):
         """
@@ -331,87 +341,45 @@ class TCPPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin):
         """
         return port.getHost().port
 
-    def test_connectionListeningLogMsg(self):
-        """
-        When a connection is made, an informative log dict should be logged
-        (see L{getExpectedConnectionLostLogMsg}) containing: the event source,
-        event type, protocol, and port number.
-        """
 
-        loggedDicts = []
-        def logConnectionListeningMsg(eventDict):
-            loggedDicts.append(eventDict)
-
-        log.addObserver(logConnectionListeningMsg)
+    def test_connectionListeningLogMessage(self):
+        """
+        When a port starts or stops listening, a log event is emitted with the
+        keys C{"eventSource"}, C{"eventType"}, C{"portNumber"}, and
+        C{"factory"}.
+        """
         reactor = self.buildReactor()
         p = self.getListeningPort(reactor)
         listenPort = self.getExpectedConnectionPortNumber(p)
 
-
         def stopReactor(ignored):
-            log.removeObserver(logConnectionListeningMsg)
             reactor.stop()
 
         def doStopListening():
             maybeDeferred(p.stopListening).addCallback(stopReactor)
 
         reactor.callWhenRunning(doStopListening)
-        reactor.run()
+        self.runReactor(reactor)
 
-        dictHits = 0
-        for eventDict in loggedDicts:
-            if eventDict.has_key("portNumber") and \
-               eventDict.has_key("eventSource") and \
-               eventDict.has_key("protocol") and \
-               eventDict.has_key("eventType") and \
-               eventDict["portNumber"] == listenPort and \
-               eventDict["eventType"] == "start" and \
-               isinstance(eventDict["eventSource"], Port) and \
-               isinstance(eventDict["protocol"], ServerFactory):
-                dictHits = dictHits + 1
+        expected = {
+            "eventSource": p, "eventType": "start",
+            "portNumber": listenPort, "factory": self.factory}
 
-        self.assertTrue(dictHits > 0)
+        for event in self.events:
+            if event == expected:
+                break
+        else:
+            self.fail(
+                "Port startup message not found in events: %r" % (self.events,))
 
-    def test_connectionLostLogMsg(self):
-        """
-        When a connection is lost, an informative log dict should be logged
-        (see L{getExpectedConnectionLostLogMsg}) containing: the event source,
-        event type, protocol, and port number.
-        """
-
-        loggedDicts = []
-        def logConnectionLostMsg(eventDict):
-            loggedDicts.append(eventDict)
-
-        reactor = self.buildReactor()
-        p = self.getListeningPort(reactor)
-        listenPort = self.getExpectedConnectionPortNumber(p)
-        log.addObserver(logConnectionLostMsg)
-
-        def stopReactor(ignored):
-            log.removeObserver(logConnectionLostMsg)
-            reactor.stop()
-
-        def doStopListening():
-            log.addObserver(logConnectionLostMsg)
-            maybeDeferred(p.stopListening).addCallback(stopReactor)
-
-        reactor.callWhenRunning(doStopListening)
-        reactor.run()
-
-        dictHits = 0
-        for eventDict in loggedDicts:
-            if eventDict.has_key("portNumber") and \
-               eventDict.has_key("eventSource") and \
-               eventDict.has_key("protocol") and \
-               eventDict.has_key("eventType") and \
-               eventDict["portNumber"] == listenPort and \
-               eventDict["eventType"] == "stop" and \
-               isinstance(eventDict["eventSource"], Port) and \
-               isinstance(eventDict["protocol"], ServerFactory):
-                dictHits = dictHits + 1
-
-        self.assertTrue(dictHits > 0)
+        expected["eventType"] = "stop"
+        for event in self.events:
+            if event == expected:
+                break
+        else:
+            self.fail(
+                "Port shutdown message not found in events: %r" % (
+                    self.events,))
 
 
     def test_allNewStyle(self):

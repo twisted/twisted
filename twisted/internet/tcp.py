@@ -860,7 +860,7 @@ class Port(base.BasePort, _SocketCloser):
         # reflect what the OS actually assigned us.
         self._realPortNumber = skt.getsockname()[1]
 
-        log.msg(eventSource=self, eventType="start", protocol=self.factory,
+        log.msg(eventSource=self, eventType="start", factory=self.factory,
                 portNumber=self._realPortNumber)
 
         # The order of the next 6 lines is kind of bizarre.  If no one
@@ -976,7 +976,7 @@ class Port(base.BasePort, _SocketCloser):
         """
         Log message for closing port
         """
-        log.msg(eventSource=self, eventType="stop", protocol=self.factory,
+        log.msg(eventSource=self, eventType="stop", factory=self.factory,
                 portNumber=self._realPortNumber)
 
 
