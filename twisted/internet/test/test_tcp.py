@@ -23,6 +23,7 @@ from twisted.python.runtime import platform
 from twisted.python.failure import Failure
 from twisted.python import log
 from twisted.trial.unittest import SkipTest
+from twisted.internet.tcp import Port
 
 from twisted.test.test_tcp import ClosingProtocol
 from twisted.internet.test.test_core import ObjectModelIntegrationMixin
@@ -322,29 +323,70 @@ class TCPPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin):
         Get a TCP port from a reactor
         """
         return reactor.listenTCP(0, ServerFactory())
-
-
-    def getExpectedConnectionLostLogMsg(self, port):
+    
+    def getExpectedConnectionPortNumber(self, port):
         """
-        Get the expected connection lost message for a TCP port
+        Get the expected port number for the TCP port that experienced
+        the connection event.
         """
-        return "(TCP Port %s Closed)" % (port.getHost().port,)
+        return port.getHost().port
+    
+    def test_connectionListeningLogMsg(self):
+        """
+        When a connection is made, an informative log dict should be logged
+        (see L{getExpectedConnectionLostLogMsg}) containing: the event source,
+        event type, protocol, and port number.
+        """
 
+        loggedDicts = []
+        def logConnectionListeningMsg(eventDict):
+            loggedDicts.append(eventDict)
+        
+        log.addObserver(logConnectionListeningMsg)
+        reactor = self.buildReactor()
+        p = self.getListeningPort(reactor)
+        listenPort = self.getExpectedConnectionPortNumber(p)
+        
+
+        def stopReactor(ignored):
+            log.removeObserver(logConnectionListeningMsg)
+            reactor.stop()
+
+        def doStopListening():
+            maybeDeferred(p.stopListening).addCallback(stopReactor)
+
+        reactor.callWhenRunning(doStopListening)
+        reactor.run()
+        
+        dictHits = 0
+        print loggedDicts
+        for eventDict in loggedDicts:
+            if eventDict.has_key("portNumber") and \
+               eventDict.has_key("eventSource") and \
+               eventDict.has_key("protocol") and \
+               eventDict.has_key("eventType") and \
+               eventDict["portNumber"] == listenPort and \
+               eventDict["eventType"] == "start" and \
+               isinstance(eventDict["eventSource"], Port) and \
+               isinstance(eventDict["protocol"], ServerFactory):
+                dictHits = dictHits + 1
+        
+        self.assertTrue(dictHits > 0)
 
     def test_connectionLostLogMsg(self):
         """
-        When a connection is lost, an informative message should be logged
-        (see L{getExpectedConnectionLostLogMsg}): an address identifying
-        the port and the fact that it was closed.
+        When a connection is lost, an informative log dict should be logged
+        (see L{getExpectedConnectionLostLogMsg}) containing: the event source,
+        event type, protocol, and port number.
         """
 
-        loggedMessages = []
+        loggedDicts = []
         def logConnectionLostMsg(eventDict):
-            loggedMessages.append(log.textFromEventDict(eventDict))
+            loggedDicts.append(eventDict)
 
         reactor = self.buildReactor()
         p = self.getListeningPort(reactor)
-        expectedMessage = self.getExpectedConnectionLostLogMsg(p)
+        listenPort = self.getExpectedConnectionPortNumber(p)
         log.addObserver(logConnectionLostMsg)
 
         def stopReactor(ignored):
@@ -357,8 +399,20 @@ class TCPPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin):
 
         reactor.callWhenRunning(doStopListening)
         reactor.run()
-
-        self.assertIn(expectedMessage, loggedMessages)
+        
+        dictHits = 0
+        for eventDict in loggedDicts:
+            if eventDict.has_key("portNumber") and \
+               eventDict.has_key("eventSource") and \
+               eventDict.has_key("protocol") and \
+               eventDict.has_key("eventType") and \
+               eventDict["portNumber"] == listenPort and \
+               eventDict["eventType"] == "stop" and \
+               isinstance(eventDict["eventSource"], Port) and \
+               isinstance(eventDict["protocol"], ServerFactory):
+                dictHits = dictHits + 1
+        
+        self.assertTrue(dictHits > 0)
 
 
     def test_allNewStyle(self):
