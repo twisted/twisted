@@ -346,8 +346,8 @@ class TCPPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin,
 
     def test_portStartStopLogMessage(self):
         """
-        When a port starts or stops listening, a log event is emitted with the
-        keys C{"eventSource"}, C{"eventType"}, C{"portNumber"}, and
+        When a TCP port starts or stops listening, a log event is emitted with
+        the keys C{"eventSource"}, C{"eventType"}, C{"portNumber"}, and
         C{"factory"}.
         """
         reactor = self.buildReactor()

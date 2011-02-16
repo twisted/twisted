@@ -95,7 +95,6 @@ class Port(_UNIXPort, tcp.Port):
         This is called on unserialization, and must be called after creating a
         server to begin listening on the specified port.
         """
-        log.msg("%s starting on %r" % (self.factory.__class__, repr(self.port)))
         if self.wantPID:
             self.lockFile = lockfile.FilesystemLock(self.port + ".lock")
             if not self.lockFile.lock():
@@ -113,6 +112,8 @@ class Port(_UNIXPort, tcp.Port):
                     except:
                         pass
 
+        log.msg(eventSource=self, eventType="start", factory=self.factory,
+                portNumber=self.port)
         self.factory.doStart()
         try:
             skt = self.createInternetSocket()
@@ -135,7 +136,8 @@ class Port(_UNIXPort, tcp.Port):
         """
         Log message for closing socket
         """
-        log.msg('(UNIX Port %s Closed)' % (repr(self.port),))
+        log.msg(eventSource=self, eventType="stop", factory=self.factory,
+                portNumber=self.port)
 
 
     def connectionLost(self, reason):
