@@ -23,6 +23,7 @@ from twisted.python.runtime import platform
 from twisted.python.failure import Failure
 from twisted.python import log
 from twisted.trial.unittest import SkipTest
+from twisted.test.testutils import DictSubsetMixin
 
 from twisted.test.test_tcp import ClosingProtocol
 from twisted.internet.test.test_core import ObjectModelIntegrationMixin
@@ -312,7 +313,8 @@ class TCPClientTestsBuilder(ReactorBuilder):
 
 
 
-class TCPPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin):
+class TCPPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin,
+                          DictSubsetMixin):
     """
     Tests for L{IReactorTCP.listenTCP}
     """
@@ -362,19 +364,19 @@ class TCPPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin):
         self.runReactor(reactor)
 
         expected = {
-            "eventSource": p, "eventType": "start",
-            "portNumber": listenPort, "factory": self.factory}
+            "eventSource": p, "portNumber": listenPort, "factory": self.factory}
 
         for event in self.events:
-            if event == expected:
+            if event.get("eventType") == "start":
+                self.assertDictSubset(event, expected)
                 break
         else:
             self.fail(
                 "Port startup message not found in events: %r" % (self.events,))
 
-        expected["eventType"] = "stop"
         for event in self.events:
-            if event == expected:
+            if event.get("eventType") == "stop":
+                self.assertDictSubset(event, expected)
                 break
         else:
             self.fail(
