@@ -28,20 +28,20 @@ class UDPServerTestsBuilder(ReactorBuilder):
         reactor = self.buildReactor()
         port = reactor.listenUDP(0, DatagramProtocol())
         self.assertTrue(verifyObject(IListeningPort, port))
-    
+
     def getListeningPort(self, reactor):
         """
         Get a TCP port from a reactor
         """
         return reactor.listenUDP(0, DatagramProtocol())
-    
+
     def getExpectedConnectionPortNumber(self, port):
         """
         Get the expected port number for the TCP port that experienced
         the connection event.
         """
         return port.getHost().port
-    
+
     def test_connectionListeningLogMsg(self):
         """
         When a connection is made, an informative log dict should be logged
@@ -52,7 +52,7 @@ class UDPServerTestsBuilder(ReactorBuilder):
         loggedDicts = []
         def logConnectionListeningMsg(eventDict):
             loggedDicts.append(eventDict)
-        
+
         log.addObserver(logConnectionListeningMsg)
         reactor = self.buildReactor()
         p = self.getListeningPort(reactor)
@@ -64,7 +64,7 @@ class UDPServerTestsBuilder(ReactorBuilder):
 
         reactor.callWhenRunning(stopReactor)
         reactor.run()
-        
+
         dictHits = 0
         for eventDict in loggedDicts:
             if eventDict.has_key("portNumber") and \
@@ -76,7 +76,7 @@ class UDPServerTestsBuilder(ReactorBuilder):
                isinstance(eventDict["eventSource"], Port) and \
                isinstance(eventDict["protocol"], DatagramProtocol):
                 dictHits = dictHits + 1
-        
+
         self.assertTrue(dictHits > 0)
 
     def test_connectionLostLogMsg(self):
@@ -89,7 +89,7 @@ class UDPServerTestsBuilder(ReactorBuilder):
         loggedDicts = []
         def logConnectionListeningMsg(eventDict):
             loggedDicts.append(eventDict)
-        
+
         log.addObserver(logConnectionListeningMsg)
         reactor = self.buildReactor()
         p = self.getListeningPort(reactor)
@@ -102,7 +102,7 @@ class UDPServerTestsBuilder(ReactorBuilder):
 
         reactor.callWhenRunning(stopReactor)
         reactor.run()
-        
+
         dictHits = 0
         for eventDict in loggedDicts:
             if eventDict.has_key("portNumber") and \
@@ -114,7 +114,7 @@ class UDPServerTestsBuilder(ReactorBuilder):
                isinstance(eventDict["eventSource"], Port) and \
                isinstance(eventDict["protocol"], DatagramProtocol):
                 dictHits = dictHits + 1
-        
+
         self.assertTrue(dictHits > 0)
 
 globals().update(UDPServerTestsBuilder.makeTestCaseClasses())
