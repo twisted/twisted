@@ -332,49 +332,50 @@ class ClientCreatorTests(TestCase):
         return self._cancelConnectFailedTimeoutTest(connect)
 
 
+
 class AbstractDatagramProtocolTestCase(TestCase):
-    
+
     def setUp(self):
         """
         Setup L{twisted.internet.protocol.AbstractDatagramProtocol} object.
         """
         self.proto = AbstractDatagramProtocol()
-    
+
     def test_doStartLogMsg(self):
         """
         Verify that L{twisted.internet.protocol.AbstractDatagramProtocol.doStart}
         logs an event dictionary with the correct parameters.
         """
-        
+
         loggedDicts = []
-        
+
         def logDoStartMsg(eventDict):
             loggedDicts.append(eventDict)
-        
+
         log.addObserver(logDoStartMsg)
         self.proto.doStart()
-        
+
         self.assertTrue(isinstance(loggedDicts[0]["eventSource"],
                                    AbstractDatagramProtocol))
         self.assertTrue(isinstance(loggedDicts[0]["protocol"],
                                    AbstractDatagramProtocol))
         self.assertEquals(loggedDicts[0]["eventType"], "start")
-    
+
     def test_doStopLogMsg(self):
         """
         Verify that L{twisted.internet.protocol.AbstractDatagramProtocol.doStop}
         logs an event dictionary with the correct parameters.
         """
-        
+
         loggedDicts = []
-        
+
         def logDoStopMsg(eventDict):
             loggedDicts.append(eventDict)
-        
+
         log.addObserver(logDoStopMsg)
         self.proto.numPorts = 1
         self.proto.doStop()
-        
+
         self.assertTrue(isinstance(loggedDicts[0]["eventSource"],
                                    AbstractDatagramProtocol))
         self.assertTrue(isinstance(loggedDicts[0]["protocol"],
