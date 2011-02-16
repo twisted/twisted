@@ -9,18 +9,28 @@ __metaclass__ = type
 
 from zope.interface.verify import verifyObject
 
+from twisted.test.testutils import DictSubsetMixin
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.interfaces import IListeningPort
 from twisted.internet.protocol import DatagramProtocol
-from twisted.internet.defer import maybeDeferred
-from twisted.internet.udp import Port
 from twisted.python import log
 
 
-class UDPServerTestsBuilder(ReactorBuilder):
+class UDPServerTestsBuilder(ReactorBuilder, DictSubsetMixin):
     """
     Builder defining tests relating to L{IReactorUDP.listenUDP}.
     """
+    def setUp(self):
+        """
+        Add a log observer to collect log events emitted by the listening port.
+        """
+        ReactorBuilder.setUp(self)
+        self.protocol = DatagramProtocol()
+        self.events = []
+        log.addObserver(self.events.append)
+        self.addCleanup(log.removeObserver, self.events.append)
+
+
     def test_interface(self):
         """
         L{IReactorUDP.listenUDP} returns an object providing L{IListeningPort}.
@@ -29,11 +39,13 @@ class UDPServerTestsBuilder(ReactorBuilder):
         port = reactor.listenUDP(0, DatagramProtocol())
         self.assertTrue(verifyObject(IListeningPort, port))
 
+
     def getListeningPort(self, reactor):
         """
         Get a TCP port from a reactor
         """
-        return reactor.listenUDP(0, DatagramProtocol())
+        return reactor.listenUDP(0, self.protocol)
+
 
     def getExpectedConnectionPortNumber(self, port):
         """
@@ -42,79 +54,38 @@ class UDPServerTestsBuilder(ReactorBuilder):
         """
         return port.getHost().port
 
-    def test_connectionListeningLogMsg(self):
-        """
-        When a connection is made, an informative log dict should be logged
-        (see L{getExpectedConnectionLostLogMsg}) containing: the event source,
-        event type, protocol, and port number.
-        """
 
-        loggedDicts = []
-        def logConnectionListeningMsg(eventDict):
-            loggedDicts.append(eventDict)
-
-        log.addObserver(logConnectionListeningMsg)
+    def test_portStartStopLogMessage(self):
+        """
+        When a UDP port starts or stops listening, a log event is emitted with
+        the keys C{"eventSource"}, C{"eventType"}, C{"portNumber"}, and
+        C{"protocol"}.
+        """
         reactor = self.buildReactor()
         p = self.getListeningPort(reactor)
         listenPort = self.getExpectedConnectionPortNumber(p)
+        reactor.callWhenRunning(reactor.stop)
+        self.runReactor(reactor)
 
-        def stopReactor(*ignored):
-            log.removeObserver(logConnectionListeningMsg)
-            reactor.stop()
+        expected = {
+            "eventSource": p, "portNumber": listenPort,
+            "protocol": self.protocol}
 
-        reactor.callWhenRunning(stopReactor)
-        reactor.run()
+        for event in self.events:
+            if event.get("eventType") == "start":
+                self.assertDictSubset(event, expected)
+                break
+        else:
+            self.fail(
+                "Port startup message not found in events: %r" % (self.events,))
 
-        dictHits = 0
-        for eventDict in loggedDicts:
-            if eventDict.has_key("portNumber") and \
-               eventDict.has_key("eventSource") and \
-               eventDict.has_key("protocol") and \
-               eventDict.has_key("eventType") and \
-               eventDict["portNumber"] == listenPort and \
-               eventDict["eventType"] == "start" and \
-               isinstance(eventDict["eventSource"], Port) and \
-               isinstance(eventDict["protocol"], DatagramProtocol):
-                dictHits = dictHits + 1
-
-        self.assertTrue(dictHits > 0)
-
-    def test_connectionLostLogMsg(self):
-        """
-        When a connection is made, an informative log dict should be logged
-        (see L{getExpectedConnectionLostLogMsg}) containing: the event source,
-        event type, protocol, and port number.
-        """
-
-        loggedDicts = []
-        def logConnectionListeningMsg(eventDict):
-            loggedDicts.append(eventDict)
-
-        log.addObserver(logConnectionListeningMsg)
-        reactor = self.buildReactor()
-        p = self.getListeningPort(reactor)
-        listenPort = self.getExpectedConnectionPortNumber(p)
-
-        def stopReactor(*ignored):
-            p.connectionLost()
-            log.removeObserver(logConnectionListeningMsg)
-            reactor.stop()
-
-        reactor.callWhenRunning(stopReactor)
-        reactor.run()
-
-        dictHits = 0
-        for eventDict in loggedDicts:
-            if eventDict.has_key("portNumber") and \
-               eventDict.has_key("eventSource") and \
-               eventDict.has_key("protocol") and \
-               eventDict.has_key("eventType") and \
-               eventDict["portNumber"] == listenPort and \
-               eventDict["eventType"] == "stop" and \
-               isinstance(eventDict["eventSource"], Port) and \
-               isinstance(eventDict["protocol"], DatagramProtocol):
-                dictHits = dictHits + 1
-
-        self.assertTrue(dictHits > 0)
+        for event in self.events:
+            if event.get("eventType") == "stop":
+                self.assertDictSubset(event, expected)
+                break
+        else:
+            self.fail(
+                "Port shutdown message not found in events: %r" % (
+                    self.events,))
 
 globals().update(UDPServerTestsBuilder.makeTestCaseClasses())
