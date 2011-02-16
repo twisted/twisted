@@ -5,13 +5,14 @@
 Tests for L{twisted.internet.protocol}.
 """
 
+from twisted.python import log
 from twisted.python.failure import Failure
 from twisted.internet.defer import CancelledError
-from twisted.internet.protocol import Protocol, ClientCreator, AbstractDatagramProtocol
+from twisted.internet.protocol import (
+    Protocol, ClientCreator, AbstractDatagramProtocol)
 from twisted.internet.task import Clock
 from twisted.trial.unittest import TestCase
 from twisted.test.proto_helpers import MemoryReactor, StringTransport
-from twisted.python import log
 
 
 class MemoryConnector:
@@ -334,50 +335,43 @@ class ClientCreatorTests(TestCase):
 
 
 class AbstractDatagramProtocolTestCase(TestCase):
-
+    """
+    Tests for L{AbstractDatagramProtocol}.
+    """
     def setUp(self):
         """
-        Setup L{twisted.internet.protocol.AbstractDatagramProtocol} object.
+        Create an unconnected L{AbstractDatagramProtocol} and add a log observer
+        to collect log events it emits.
         """
         self.proto = AbstractDatagramProtocol()
+        self.events = []
+        log.addObserver(self.events.append)
+        self.addCleanup(log.removeObserver, self.events.append)
 
-    def test_doStartLogMsg(self):
+
+    def test_doStartLogMessage(self):
         """
-        Verify that L{twisted.internet.protocol.AbstractDatagramProtocol.doStart}
-        logs an event dictionary with the correct parameters.
+        L{AbstractDatagramProtocol.doStart} logs an event dictionary with
+        C{"eventSource"}, C{"protocol"}, and C{"eventType"} keys.
         """
-
-        loggedDicts = []
-
-        def logDoStartMsg(eventDict):
-            loggedDicts.append(eventDict)
-
-        log.addObserver(logDoStartMsg)
         self.proto.doStart()
+        self.assertEquals(
+            self.events, [{
+                    "eventSource": self.proto,
+                    "protocol": self.proto,
+                    "eventType": "start"}])
 
-        self.assertTrue(isinstance(loggedDicts[0]["eventSource"],
-                                   AbstractDatagramProtocol))
-        self.assertTrue(isinstance(loggedDicts[0]["protocol"],
-                                   AbstractDatagramProtocol))
-        self.assertEquals(loggedDicts[0]["eventType"], "start")
 
-    def test_doStopLogMsg(self):
+    def test_doStopLogMessage(self):
         """
-        Verify that L{twisted.internet.protocol.AbstractDatagramProtocol.doStop}
-        logs an event dictionary with the correct parameters.
+        L{AbstractDatagramProtocol.doStop} logs an event dictionary with
+        C{"eventSource"}, C{"protocol"}, and C{"eventType"} keys.
         """
-
-        loggedDicts = []
-
-        def logDoStopMsg(eventDict):
-            loggedDicts.append(eventDict)
-
-        log.addObserver(logDoStopMsg)
-        self.proto.numPorts = 1
+        self.proto.doStart()
+        del self.events[:]
         self.proto.doStop()
-
-        self.assertTrue(isinstance(loggedDicts[0]["eventSource"],
-                                   AbstractDatagramProtocol))
-        self.assertTrue(isinstance(loggedDicts[0]["protocol"],
-                                   AbstractDatagramProtocol))
-        self.assertEquals(loggedDicts[0]["eventType"], "stop")
+        self.assertEquals(
+            self.events, [{
+                    "eventSource": self.proto,
+                    "protocol": self.proto,
+                    "eventType": "stop"}])
