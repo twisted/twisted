@@ -13,6 +13,7 @@ from twisted.internet.protocol import (
 from twisted.internet.task import Clock
 from twisted.trial.unittest import TestCase
 from twisted.test.proto_helpers import MemoryReactor, StringTransport
+from twisted.test.testutils import DictSubsetMixin
 
 
 class MemoryConnector:
@@ -334,7 +335,7 @@ class ClientCreatorTests(TestCase):
 
 
 
-class AbstractDatagramProtocolTestCase(TestCase):
+class AbstractDatagramProtocolTestCase(TestCase, DictSubsetMixin):
     """
     Tests for L{AbstractDatagramProtocol}.
     """
@@ -355,11 +356,11 @@ class AbstractDatagramProtocolTestCase(TestCase):
         C{"eventSource"}, C{"protocol"}, and C{"eventType"} keys.
         """
         self.proto.doStart()
-        self.assertEquals(
-            self.events, [{
-                    "eventSource": self.proto,
-                    "protocol": self.proto,
-                    "eventType": "start"}])
+        self.assertDictSubset(
+            self.events[0],
+            {"eventSource": self.proto,
+             "protocol": self.proto,
+             "eventType": "start"})
 
 
     def test_doStopLogMessage(self):
@@ -370,8 +371,8 @@ class AbstractDatagramProtocolTestCase(TestCase):
         self.proto.doStart()
         del self.events[:]
         self.proto.doStop()
-        self.assertEquals(
-            self.events, [{
-                    "eventSource": self.proto,
-                    "protocol": self.proto,
-                    "eventType": "stop"}])
+        self.assertDictSubset(
+            self.events[0],
+            {"eventSource": self.proto,
+             "protocol": self.proto,
+             "eventType": "stop"})
