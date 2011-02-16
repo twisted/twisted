@@ -323,14 +323,14 @@ class TCPPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin):
         Get a TCP port from a reactor
         """
         return reactor.listenTCP(0, ServerFactory())
-    
+
     def getExpectedConnectionPortNumber(self, port):
         """
         Get the expected port number for the TCP port that experienced
         the connection event.
         """
         return port.getHost().port
-    
+
     def test_connectionListeningLogMsg(self):
         """
         When a connection is made, an informative log dict should be logged
@@ -341,12 +341,12 @@ class TCPPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin):
         loggedDicts = []
         def logConnectionListeningMsg(eventDict):
             loggedDicts.append(eventDict)
-        
+
         log.addObserver(logConnectionListeningMsg)
         reactor = self.buildReactor()
         p = self.getListeningPort(reactor)
         listenPort = self.getExpectedConnectionPortNumber(p)
-        
+
 
         def stopReactor(ignored):
             log.removeObserver(logConnectionListeningMsg)
@@ -357,7 +357,7 @@ class TCPPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin):
 
         reactor.callWhenRunning(doStopListening)
         reactor.run()
-        
+
         dictHits = 0
         for eventDict in loggedDicts:
             if eventDict.has_key("portNumber") and \
@@ -369,7 +369,7 @@ class TCPPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin):
                isinstance(eventDict["eventSource"], Port) and \
                isinstance(eventDict["protocol"], ServerFactory):
                 dictHits = dictHits + 1
-        
+
         self.assertTrue(dictHits > 0)
 
     def test_connectionLostLogMsg(self):
@@ -398,7 +398,7 @@ class TCPPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin):
 
         reactor.callWhenRunning(doStopListening)
         reactor.run()
-        
+
         dictHits = 0
         for eventDict in loggedDicts:
             if eventDict.has_key("portNumber") and \
@@ -410,7 +410,7 @@ class TCPPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin):
                isinstance(eventDict["eventSource"], Port) and \
                isinstance(eventDict["protocol"], ServerFactory):
                 dictHits = dictHits + 1
-        
+
         self.assertTrue(dictHits > 0)
 
 
