@@ -153,24 +153,24 @@ class UNIXPortTestsBuilder(TCPPortTestsBuilder):
         Get a UNIX port from a reactor
         """
         return reactor.listenUNIX(self.mktemp(), ServerFactory())
-    
+
     def getExpectedConnectionLostLogMsg(self, port):
         """
         Get the expected connection lost message for a UNIX port
         """
         return "(UNIX Port %s Closed)" % (repr(port.port),)
-    
+
     def test_connectionListeningLogMsg(self):
         """
         When a connection is lost, an informative log dict should be logged
         (see L{getExpectedConnectionLostLogMsg}) containing: the event source,
         event type, protocol, and port number.
-        
+
         """
         raise unittest.SkipTest("SKIPPED until UNIX socket protocol adopts" + \
                                 "the passing of an event dictionary to " + \
                                 "log.msg() on start.")
-    
+
     def test_connectionLostLogMsg(self):
         """
         When a connection is lost, an informative message should be logged
