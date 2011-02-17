@@ -1,13 +1,12 @@
-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-"""I am a simple test resource.
+"""
+I am a simple test resource.
 """
 
-from twisted.python import log
 from twisted.web import static
+
 
 class Test(static.Data):
     isLeaf = True
@@ -16,14 +15,10 @@ class Test(static.Data):
             self,
             """
             <html>
-            <head><title>Temporary Test</title><head>
+            <head><title>Twisted Web Demo</title><head>
             <body>
-            
-            Hello!  This is a temporary test until a more sophisticated form
-            demo can be put back in using more up-to-date Twisted APIs.
-            
+            Hello! This is a Twisted Web test page.
             </body>
             </html>
             """,
             "text/html")
-
