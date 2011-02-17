@@ -2405,10 +2405,7 @@ def _objectsToStrings(objects, arglist, strings, proto):
     @return: The converted dictionary mapping names to encoded argument
     strings (identical to C{strings}).
     """
-    myObjects = {}
-    for (k, v) in objects.items():
-        myObjects[k] = v
-
+    myObjects = objects.copy()
     for argname, argparser in arglist:
         argparser.toBox(argname, strings, myObjects, proto)
     return strings
