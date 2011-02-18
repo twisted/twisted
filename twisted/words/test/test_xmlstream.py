@@ -6,11 +6,13 @@ Tests for L{twisted.words.xish.xmlstream}.
 """
 
 from twisted.internet import protocol
+from twisted.python import failure
 from twisted.trial import unittest
 from twisted.words.xish import domish, utility, xmlstream
 
 class XmlStreamTest(unittest.TestCase):
     def setUp(self):
+        self.connectionLostMsg = u"no reason"
         self.outlist = []
         self.xmlstream = xmlstream.XmlStream()
         self.xmlstream.transport = self
@@ -21,12 +23,13 @@ class XmlStreamTest(unittest.TestCase):
         """
         Stub loseConnection because we are a transport.
         """
-        self.xmlstream.connectionLost("no reason")
+        self.xmlstream.connectionLost(failure.Failure(
+            Exception(self.connectionLostMsg)))
 
 
     def test_send(self):
         """
-        Sending data should result into it being written to the transport.
+        Sending data results into it being written to the transport.
         """
         self.xmlstream.connectionMade()
         self.xmlstream.send("<root>")
@@ -51,7 +54,7 @@ class XmlStreamTest(unittest.TestCase):
 
     def test_receiveBadXML(self):
         """
-        Receiving malformed XML should result in in error.
+        Receiving malformed XML results in an L{STREAM_ERROR_EVENT}.
         """
         streamError = []
         streamEnd = []
@@ -76,6 +79,24 @@ class XmlStreamTest(unittest.TestCase):
         self.assertEquals(1, len(streamError))
         self.assertTrue(streamError[0].check(domish.ParserError))
         self.assertEquals(1, len(streamEnd))
+
+
+    def test_streamEnd(self):
+        """
+        Ending the stream fires a L{STREAM_END_EVENT}.
+        """
+        streamEnd = []
+
+        def streamEndEvent(reason):
+            streamEnd.append(reason)
+
+        self.xmlstream.addObserver(xmlstream.STREAM_END_EVENT,
+                                   streamEndEvent)
+        self.xmlstream.connectionMade()
+        self.loseConnection()
+        self.assertEquals(1, len(streamEnd))
+        self.assertTrue(type(streamEnd[0]), failure.Failure)
+        self.assertTrue(streamEnd[0].getErrorMessage, self.connectionLostMsg)
 
 
 
@@ -109,7 +130,7 @@ class BootstrapMixinTest(unittest.TestCase):
 
     def test_installBootstraps(self):
         """
-        Dispatching an event should fire registered bootstrap observers.
+        Dispatching an event fires registered bootstrap observers.
         """
         called = []
 
@@ -192,7 +213,7 @@ class XmlStreamFactoryMixinTest(GenericXmlStreamFactoryTestsMixin):
 
     def test_buildProtocolFactoryArguments(self):
         """
-        Arguments passed to the factory should be passed to protocol on
+        Arguments passed to the factory are passed to protocol on
         instantiation.
         """
         xs = self.factory.buildProtocol(None)

@@ -82,7 +82,7 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
 
         Dispatches the L{STREAM_END_EVENT}.
         """
-        self.dispatch(self, STREAM_END_EVENT)
+        self.dispatch(reason, STREAM_END_EVENT)
         self.stream = None
 
     ### --------------------------------------------------------------

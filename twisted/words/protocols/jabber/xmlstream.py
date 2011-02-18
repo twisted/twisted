@@ -1090,7 +1090,7 @@ class StreamManager(XMPPHandlerCollection):
         """
 
 
-    def _disconnected(self, _):
+    def _disconnected(self, reason):
         """
         Called when the stream has been closed.
 
@@ -1104,7 +1104,7 @@ class StreamManager(XMPPHandlerCollection):
         # Notify all child services which implement
         # the IService interface
         for e in self:
-            e.connectionLost(None)
+            e.connectionLost(reason)
 
 
     def send(self, obj):

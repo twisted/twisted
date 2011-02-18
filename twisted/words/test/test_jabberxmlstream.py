@@ -12,6 +12,7 @@ from zope.interface.verify import verifyObject
 from twisted.internet import defer, task
 from twisted.internet.error import ConnectionLost
 from twisted.internet.interfaces import IProtocolFactory
+from twisted.python import failure
 from twisted.test import proto_helpers
 from twisted.words.test.test_xmlstream import GenericXmlStreamFactoryTestsMixin
 from twisted.words.xish import domish
@@ -923,6 +924,20 @@ class DummyXMPPHandler(xmlstream.XMPPHandler):
 
 
 
+class FailureReasonXMPPHandler(xmlstream.XMPPHandler):
+    """
+    Dummy handler specifically for failure Reason tests.
+    """
+    def __init__(self):
+        self.gotFailureReason = False
+
+
+    def connectionLost(self, reason):
+        if isinstance(reason, failure.Failure):
+            self.gotFailureReason = True
+
+
+
 class XMPPHandlerTest(unittest.TestCase):
     """
     Tests for L{xmlstream.XMPPHandler}.
@@ -1114,6 +1129,19 @@ class StreamManagerTest(unittest.TestCase):
         self.assertEquals(0, handler.doneMade)
         self.assertEquals(0, handler.doneInitialized)
         self.assertEquals(1, handler.doneLost)
+
+
+    def test_disconnectedReason(self):
+        """
+        A L{STREAM_END_EVENT} results in L{StreamManager} firing the handlers
+        L{connectionLost} methods, passing a L{failure.Failure} reason.
+        """
+        sm = self.streamManager
+        handler = FailureReasonXMPPHandler()
+        handler.setHandlerParent(sm)
+        xs = xmlstream.XmlStream(xmlstream.Authenticator())
+        sm._disconnected(failure.Failure(Exception("no reason")))
+        self.assertEquals(True, handler.gotFailureReason)
 
 
     def test_addHandler(self):

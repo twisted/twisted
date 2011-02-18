@@ -1,0 +1,1 @@
+twisted.words.xish.xmlstream.XmlStream.connectionLost and twisted.words.protocols.jabber.xmlstream.StreamManager now pass the twisted.python.failure.Failure reason when dispatching the STREAM_END_EVENT
