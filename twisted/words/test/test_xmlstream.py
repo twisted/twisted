@@ -12,7 +12,7 @@ from twisted.words.xish import domish, utility, xmlstream
 
 class XmlStreamTest(unittest.TestCase):
     def setUp(self):
-        self.connectionLostMsg = u"no reason"
+        self.connectionLostMsg = "no reason"
         self.outlist = []
         self.xmlstream = xmlstream.XmlStream()
         self.xmlstream.transport = self
@@ -29,7 +29,8 @@ class XmlStreamTest(unittest.TestCase):
 
     def test_send(self):
         """
-        Sending data results into it being written to the transport.
+        Calling L{xmlstream.XmlStream.send} results in the data being written
+        to the transport.
         """
         self.xmlstream.connectionMade()
         self.xmlstream.send("<root>")
@@ -95,8 +96,9 @@ class XmlStreamTest(unittest.TestCase):
         self.xmlstream.connectionMade()
         self.loseConnection()
         self.assertEquals(1, len(streamEnd))
-        self.assertTrue(type(streamEnd[0]), failure.Failure)
-        self.assertTrue(streamEnd[0].getErrorMessage, self.connectionLostMsg)
+        self.assertIsInstance(streamEnd[0], failure.Failure)
+        self.assertEquals(streamEnd[0].getErrorMessage(),
+                self.connectionLostMsg)
 
 
 
