@@ -480,13 +480,20 @@ class Proxy:
         False.  Requires Python >= 2.5.
     @type useDateTime: C{bool}
 
+    @ivar connectTimeout: Number of seconds to wait before assuming the
+        connection has failed.
+    @type connectTimeout: C{float}
+
+    @ivar _reactor: the reactor used to create connections.
+    @type _reactor: object providing L{twisted.internet.interfaces.IReactorTCP}
+
     @ivar queryFactory: object returning a factory for XML-RPC protocol. Mainly
         useful for tests.
     """
     queryFactory = _QueryFactory
 
     def __init__(self, url, user=None, password=None, allowNone=False,
-                 useDateTime=False):
+                 useDateTime=False, connectTimeout=30.0, reactor=reactor):
         """
         @param url: The URL to which to post method calls.  Calls will be made
             over SSL if the scheme is HTTPS.  If netloc contains username or
@@ -522,6 +529,8 @@ class Proxy:
             self.password = password
         self.allowNone = allowNone
         self.useDateTime = useDateTime
+        self.connectTimeout = connectTimeout
+        self._reactor = reactor
 
 
     def __setattr__(self, name, value):
@@ -549,12 +558,17 @@ class Proxy:
         factory = self.queryFactory(
             self.path, self.host, method, self.user,
             self.password, self.allowNone, args, cancel, self.useDateTime)
+
         if self.secure:
             from twisted.internet import ssl
-            connector = reactor.connectSSL(self.host, self.port or 443,
-                                           factory, ssl.ClientContextFactory())
+            connector = self._reactor.connectSSL(
+                self.host, self.port or 443,
+                factory, ssl.ClientContextFactory(),
+                timeout=self.connectTimeout)
         else:
-            connector = reactor.connectTCP(self.host, self.port or 80, factory)
+            connector = self._reactor.connectTCP(
+                self.host, self.port or 80, factory,
+                timeout=self.connectTimeout)
         return factory.deferred
 
 

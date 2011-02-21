@@ -18,7 +18,14 @@ from twisted.web import server, static, client, error, http
 from twisted.internet import reactor, defer
 from twisted.internet.error import ConnectionDone
 from twisted.python import failure
+from twisted.test.proto_helpers import MemoryReactor
 from twisted.web.test.test_web import DummyRequest
+try:
+    import twisted.internet.ssl
+except ImportError:
+    sslSkip = "OpenSSL not present"
+else:
+    sslSkip = None
 
 
 class AsyncXMLRPCTests(unittest.TestCase):
@@ -373,6 +380,33 @@ class XMLRPCTestCase(unittest.TestCase):
             self.assertFalse(factory.transport.connected)
             self.assertTrue(factory.transport.disconnected)
         return d.addCallback(responseDone)
+
+
+    def test_tcpTimeout(self):
+        """
+        For I{HTTP} URIs, L{xmlrpc.Proxy.callRemote} passes the value it
+        received for the C{connectTimeout} parameter as the C{timeout} argument
+        to the underlying connectTCP call.
+        """
+        reactor = MemoryReactor()
+        proxy = xmlrpc.Proxy("http://127.0.0.1:69", connectTimeout=2.0,
+                             reactor=reactor)
+        proxy.callRemote("someMethod")
+        self.assertEquals(reactor.tcpClients[0][3], 2.0)
+
+
+    def test_sslTimeout(self):
+        """
+        For I{HTTPS} URIs, L{xmlrpc.Proxy.callRemote} passes the value it
+        received for the C{connectTimeout} parameter as the C{timeout} argument
+        to the underlying connectSSL call.
+        """
+        reactor = MemoryReactor()
+        proxy = xmlrpc.Proxy("https://127.0.0.1:69", connectTimeout=3.0,
+                             reactor=reactor)
+        proxy.callRemote("someMethod")
+        self.assertEquals(reactor.sslClients[0][4], 3.0)
+    test_sslTimeout.skip = sslSkip
 
 
 
