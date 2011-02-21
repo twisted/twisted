@@ -352,6 +352,7 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
         Extend the base crash implementation to also wake up the select thread so
         that C{runUntilCurrent} notices the reactor should crash.
         """
+        self._mainLoopShutdown()
         posixbase.PosixReactorBase.crash(self)
         self.wakeUp()
 
