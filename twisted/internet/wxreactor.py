@@ -26,10 +26,10 @@ real applications.
 import Queue
 try:
     from wx import PySimpleApp as wxPySimpleApp, CallAfter as wxCallAfter, \
-         Timer as wxTimer
+         Timer as wxTimer, Frame as wxFrame
 except ImportError:
     # older version of wxPython:
-    from wxPython.wx import wxPySimpleApp, wxCallAfter, wxTimer
+    from wxPython.wx import wxPySimpleApp, wxCallAfter, wxTimer, wxFrame
 
 from twisted.python import log, runtime
 from twisted.internet import _threadedselect
@@ -63,6 +63,7 @@ class WxReactor(_threadedselect.ThreadedSelectReactor):
     """
 
     _stopping = False
+    _crashing = False
 
     def registerWxApp(self, wxapp):
         """
@@ -88,6 +89,7 @@ class WxReactor(_threadedselect.ThreadedSelectReactor):
         """
         Stop the reactor.
         """
+        #print "reactor.stop()"
         if self._stopping:
             return
         self._stopping = True
@@ -100,11 +102,18 @@ class WxReactor(_threadedselect.ThreadedSelectReactor):
 
         Called by the select() thread.
         """
+        # Hide StopIteration errors, which can be the side-effect of reactor.crash():
+        def w():
+            try:
+                f()
+            except StopIteration:
+                pass
+        
         if hasattr(self, "wxapp"):
-            wxCallAfter(f)
+            wxCallAfter(w)
         else:
             # wx shutdown but twisted hasn't
-            self._postQueue.put(f)
+            self._postQueue.put(w)
 
 
     def _stopWx(self):
@@ -117,21 +126,33 @@ class WxReactor(_threadedselect.ThreadedSelectReactor):
             self.wxapp.ExitMainLoop()
 
 
+    def crash(self):
+        #print "reactor.crash()"
+        self._crashing = True
+        self._sendToThread(lambda: wxCallAfter(self._stopWx))
+        _threadedselect.ThreadedSelectReactor.crash(self)
+        self.wakeUp()
+
+
     def run(self, installSignalHandlers=True):
         """
         Start the reactor.
         """
+        #print "reactor.run()"
         self._postQueue = Queue.Queue()
         if not hasattr(self, "wxapp"):
             log.msg("registerWxApp() was not called on reactor, "
                     "registering my own wxApp instance.")
-            self.registerWxApp(wxPySimpleApp())
+            app = wxPySimpleApp()
+            # without a frame, the wx event loop exits immediately...
+            app.frame = wxFrame(None)
+            self.registerWxApp(app)
 
         # start select() thread:
         self.interleave(self._runInMainThread,
                         installSignalHandlers=installSignalHandlers)
         if installSignalHandlers:
-            self.callLater(0, self._installSignalHandlersAgain)
+            wxCallAfter(self._installSignalHandlersAgain)
 
         # add cleanup events:
         self.addSystemEventTrigger("after", "shutdown", self._stopWx)
@@ -146,9 +167,17 @@ class WxReactor(_threadedselect.ThreadedSelectReactor):
             t.Start(2) # wake up every 2ms
 
         self.wxapp.MainLoop()
+        #print "mainloop done"
+
+        if self._crashing:
+            #print "mainloop crash mode!"
+            # short circuit normal shutdown
+            self._crashing = False
+            return
+        
         wxapp = self.wxapp
         del self.wxapp
-
+        
         if not self._stopping:
             # wx event loop exited without reactor.stop() being
             # called.  At this point events from select() thread will
@@ -156,19 +185,23 @@ class WxReactor(_threadedselect.ThreadedSelectReactor):
             # unprocessed in wx, thus the ProcessPendingEvents()
             # below.
             self.stop()
-            wxapp.ProcessPendingEvents() # deal with any queued wxCallAfters
-            while 1:
+            self._finishPendingEvents(wxapp)
+    
+    def _finishPendingEvents(self, wxapp):
+        """Process any pending events from the select() thread."""
+        wxapp.ProcessPendingEvents() # deal with any queued wxCallAfters
+        while 1:
+            try:
+                f = self._postQueue.get(timeout=0.01)
+            except Queue.Empty:
+                continue
+            else:
+                if f is None:
+                    break
                 try:
-                    f = self._postQueue.get(timeout=0.01)
-                except Queue.Empty:
-                    continue
-                else:
-                    if f is None:
-                        break
-                    try:
-                        f()
-                    except:
-                        log.err()
+                    f()
+                except:
+                    log.err()
 
 
 def install():

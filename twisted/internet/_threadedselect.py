@@ -104,7 +104,7 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
         self.mainWaker = None
         posixbase.PosixReactorBase.__init__(self)
         self.addSystemEventTrigger('after', 'shutdown', self._mainLoopShutdown)
-
+    
     def wakeUp(self):
         # we want to wake up from any thread
         self.waker.wakeUp()
@@ -317,15 +317,18 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
         """Remove a Selectable for notification of data available to read.
         """
         self._sendToThread(dictRemove, self.reads, reader)
-
+        self.wakeUp()
+    
     def removeWriter(self, writer):
         """Remove a Selectable for notification of data available to write.
         """
         self._sendToThread(dictRemove, self.writes, writer)
-
+        self.wakeUp()
+    
     def removeAll(self):
-        return self._removeAll(self.reads, self.writes)
-
+        r = self._removeAll(self.reads, self.writes)
+        self.wakeUp()
+        return r
 
     def getReaders(self):
         return self.reads.keys()
@@ -341,6 +344,15 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
         that C{runUntilCurrent} notices the reactor should stop.
         """
         posixbase.PosixReactorBase.stop(self)
+        self.wakeUp()
+
+
+    def crash(self):
+        """
+        Extend the base crash implementation to also wake up the select thread so
+        that C{runUntilCurrent} notices the reactor should crash.
+        """
+        posixbase.PosixReactorBase.crash(self)
         self.wakeUp()
 
 
