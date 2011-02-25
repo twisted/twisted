@@ -423,6 +423,35 @@ class FTPServerTestCaseAdvancedClient(FTPServerTestCase):
         return defer.gatherResults([d1, d2])
 
 
+    def test_STORwriteError(self):
+        """
+        Any errors during writing a file inside a STOR should be returned to
+        the client.
+        """
+        # Make a failing file writer.
+        class FailingFileWriter(ftp._FileWriter):
+            def receive(self):
+                return defer.fail(ftp.IsNotADirectoryError("blah"))
+
+        def failingSTOR(a, b):
+            return defer.succeed(FailingFileWriter(None))
+
+        # Monkey patch the shell so it returns a file writer that will
+        # fail.
+        self.patch(ftp.FTPAnonymousShell, 'openForWriting', failingSTOR)
+
+        def eb(res):
+            self.flushLoggedErrors()
+            res.trap(ftp.CommandFailed)
+            self.assertEquals(
+                res.value.args[0][0],
+                "550 Cannot rmd, blah is not a directory")
+        d1, d2 = self.client.storeFile('failing_file')
+        d2.addErrback(eb)
+        return defer.gatherResults([d1, d2])
+
+
+
 class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
     def _makeDataConnection(self, ignored=None):
         # Establish a passive data connection (i.e. client connecting to
