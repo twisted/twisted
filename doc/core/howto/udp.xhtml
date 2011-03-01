@@ -89,8 +89,11 @@ from twisted.internet import reactor
 class Helloer(DatagramProtocol):
 
     def startProtocol(self):
-        self.transport.connect("192.168.1.1", 1234)
-        print "we can only send to %s now" % str((host, port))
+        host = "192.168.1.1"
+        port = 1234
+
+        self.transport.connect(host, port)
+        print "now we can only send to host %s port %d" % (host, port)
         self.transport.write("hello") # no need for address
 
     def datagramReceived(self, data, (host, port)):
