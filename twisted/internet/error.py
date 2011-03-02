@@ -24,8 +24,12 @@ class BindError(Exception):
         s = '%s.' % s
         return s
 
+
+
 class CannotListenError(BindError):
-    """This gets raised by a call to startListening, when the object cannot start listening.
+    """
+    This gets raised by a call to startListening, when the object cannotstart
+    listening.
 
     @ivar interface: the interface I tried to listen on
     @ivar port: the port I tried to listen on
@@ -44,10 +48,12 @@ class CannotListenError(BindError):
                                                  self.socketError)
 
 
+
 class MulticastJoinError(Exception):
     """
     An attempt to join a multicast group failed.
     """
+
 
 
 class MessageLengthError(Exception):
@@ -61,6 +67,7 @@ class MessageLengthError(Exception):
         return s
 
 
+
 class DNSLookupError(IOError):
     """DNS lookup failed"""
 
@@ -70,6 +77,7 @@ class DNSLookupError(IOError):
             s = '%s: %s' % (s, ' '.join(self.args))
         s = '%s.' % s
         return s
+
 
 
 class ConnectInProgressError(Exception):
@@ -95,56 +103,75 @@ class ConnectError(Exception):
         return s
 
 
+
 class ConnectBindError(ConnectError):
     """Couldn't bind"""
+
 
 
 class UnknownHostError(ConnectError):
     """Hostname couldn't be looked up"""
 
 
+
 class NoRouteError(ConnectError):
     """No route to host"""
+
 
 
 class ConnectionRefusedError(ConnectError):
     """Connection was refused by other side"""
 
 
+
 class TCPTimedOutError(ConnectError):
     """TCP connection timed out"""
+
 
 
 class BadFileError(ConnectError):
     """File used for UNIX socket is no good"""
 
 
+
 class ServiceNameUnknownError(ConnectError):
     """Service name given as port is unknown"""
+
 
 
 class UserError(ConnectError):
     """User aborted connection"""
 
 
+
 class TimeoutError(UserError):
     """User timeout caused connection failure"""
 
+
+
 class SSLError(ConnectError):
     """An SSL error occurred"""
+
+
 
 class VerifyError(Exception):
     """Could not verify something that was supposed to be signed.
     """
 
+
+
 class PeerVerifyError(VerifyError):
     """The peer rejected our verify error.
     """
+
+
 
 class CertificateError(Exception):
     """
     We did not find a certificate where we expected to find one.
     """
+
+
 
 try:
     import errno
@@ -158,6 +185,8 @@ try:
         errnoMapping[errno.WSAENETUNREACH] = NoRouteError
 except ImportError:
     errnoMapping = {}
+
+
 
 def getConnectError(e):
     """Given a socket exception, return connection error."""
@@ -205,8 +234,10 @@ class ConnectionDone(ConnectionClosed):
         return s
 
 
+
 class ConnectionFdescWentAway(ConnectionLost):
     """Uh""" #TODO
+
 
 
 class AlreadyCalled(ValueError):
@@ -218,6 +249,7 @@ class AlreadyCalled(ValueError):
             s = '%s: %s' % (s, ' '.join(self.args))
         s = '%s.' % s
         return s
+
 
 
 class AlreadyCancelled(ValueError):
@@ -265,6 +297,7 @@ class ProcessDone(ConnectionDone):
         self.status = status
 
 
+
 class ProcessTerminated(ConnectionLost):
     """A process has ended with a probable error condition"""
 
@@ -278,11 +311,13 @@ class ProcessTerminated(ConnectionLost):
         Exception.__init__(self, s)
 
 
+
 class ProcessExitedAlready(Exception):
     """
     The process has already exited and the operation requested can no longer
     be performed.
     """
+
 
 
 class NotConnectingError(RuntimeError):
@@ -295,6 +330,8 @@ class NotConnectingError(RuntimeError):
         s = '%s.' % s
         return s
 
+
+
 class NotListeningError(RuntimeError):
     """The Port was not listening when it was asked to stop listening"""
 
@@ -306,10 +343,12 @@ class NotListeningError(RuntimeError):
         return s
 
 
+
 class ReactorNotRunning(RuntimeError):
     """
     Error raised when trying to stop a reactor which is not running.
     """
+
 
 
 class ReactorAlreadyRunning(RuntimeError):
@@ -341,3 +380,19 @@ class ConnectingCancelledError(Exception):
         """
         Exception.__init__(self, address)
         self.address = address
+
+
+
+__all__ = [
+    'BindError', 'CannotListenError', 'MulticastJoinError',
+    'MessageLengthError', 'DNSLookupError', 'ConnectInProgressError',
+    'ConnectError', 'ConnectBindError', 'UnknownHostError', 'NoRouteError',
+    'ConnectionRefusedError', 'TCPTimedOutError', 'BadFileError',
+    'ServiceNameUnknownError', 'UserError', 'TimeoutError', 'SSLError',
+    'VerifyError', 'PeerVerifyError', 'CertificateError',
+    'getConnectError', 'ConnectionClosed', 'ConnectionLost',
+    'ConnectionDone', 'ConnectionFdescWentAway', 'AlreadyCalled',
+    'AlreadyCancelled', 'PotentialZombieWarning', 'ProcessDone',
+    'ProcessTerminated', 'ProcessExitedAlready', 'NotConnectingError',
+    'NotListeningError', 'ReactorNotRunning', 'ReactorAlreadyRunning',
+    'ReactorAlreadyInstalledError', 'ConnectingCancelledError']

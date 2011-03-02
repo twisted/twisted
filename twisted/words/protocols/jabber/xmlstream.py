@@ -1125,7 +1125,7 @@ class StreamManager(XMPPHandlerCollection):
 
 
 __all__ = ['Authenticator', 'BaseFeatureInitiatingInitializer',
-           'ConnectAuthenticator', 'ConnectionLost', 'FeatureNotAdvertized',
+           'ConnectAuthenticator', 'FeatureNotAdvertized',
            'INIT_FAILED_EVENT', 'IQ', 'ListenAuthenticator', 'NS_STREAMS',
            'NS_XMPP_TLS', 'Reset', 'STREAM_AUTHD_EVENT',
            'STREAM_CONNECTED_EVENT', 'STREAM_END_EVENT', 'STREAM_ERROR_EVENT',
