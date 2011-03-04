@@ -1149,11 +1149,49 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
     def test_setHost(self):
         """
         L{http.Request.setHost} sets the value of the host request header.
+        The port should not be added because it is the default.
         """
         req = http.Request(DummyChannel(), None)
-        req.setHost("example.com", 443)
-        self.assertEqual(
+        req.setHost("example.com", 80)
+        self.assertEquals(
             req.requestHeaders.getRawHeaders("host"), ["example.com"])
+
+
+    def test_setHostSSL(self):
+        """
+        L{http.Request.setHost} sets the value of the host request header.
+        The port should not be added because it is the default.
+        """
+        d = DummyChannel()
+        d.transport = DummyChannel.SSL()
+        req = http.Request(d, None)
+        req.setHost("example.com", 443)
+        self.assertEquals(
+            req.requestHeaders.getRawHeaders("host"), ["example.com"])
+
+
+    def test_setHostNonDefaultPort(self):
+        """
+        L{http.Request.setHost} sets the value of the host request header.
+        The port should be added because it is not the default.
+        """
+        req = http.Request(DummyChannel(), None)
+        req.setHost("example.com", 81)
+        self.assertEquals(
+            req.requestHeaders.getRawHeaders("host"), ["example.com:81"])
+
+
+    def test_setHostSSLNonDefaultPort(self):
+        """
+        L{http.Request.setHost} sets the value of the host request header.
+        The port should be added because it is not the default.
+        """
+        d = DummyChannel()
+        d.transport = DummyChannel.SSL()
+        req = http.Request(d, None)
+        req.setHost("example.com", 81)
+        self.assertEquals(
+            req.requestHeaders.getRawHeaders("host"), ["example.com:81"])
 
 
     def test_setHeader(self):

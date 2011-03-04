@@ -1180,8 +1180,16 @@ class Request:
         @param ssl: A flag which, if C{True}, indicates that the request is
             considered secure (if C{True}, L{isSecure} will return C{True}).
         """
-        self._forceSSL = ssl
-        self.requestHeaders.setRawHeaders("host", [host])
+        self._forceSSL = ssl # set first so isSecure will work
+        if self.isSecure():
+            default = 443
+        else:
+            default = 80
+        if port == default:
+            hostHeader = host
+        else:
+            hostHeader = '%s:%d' % (host, port)
+        self.requestHeaders.setRawHeaders("host", [hostHeader])
         self.host = address.IPv4Address("TCP", host, port)
 
 
