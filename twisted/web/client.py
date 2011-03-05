@@ -45,7 +45,13 @@ class HTTPPageGetter(http.HTTPClient):
     def connectionMade(self):
         method = getattr(self.factory, 'method', 'GET')
         self.sendCommand(method, self.factory.path)
-        self.sendHeader('Host', self.factory.headers.get("host", self.factory.host))
+        if self.factory.scheme == 'http' and self.factory.port != 80:
+            host = '%s:%s' % (self.factory.host, self.factory.port)
+        elif self.factory.scheme == 'https' and self.factory.port != 443:
+            host = '%s:%s' % (self.factory.host, self.factory.port)
+        else:
+            host = self.factory.host
+        self.sendHeader('Host', self.factory.headers.get("host", host))
         self.sendHeader('User-Agent', self.factory.agent)
         data = getattr(self.factory, 'postdata', None)
         if data is not None:

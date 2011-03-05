@@ -398,7 +398,7 @@ class WebClientTestCase(unittest.TestCase):
         # if we pass Host header explicitly, it should be used, otherwise
         # it should extract from url
         return defer.gatherResults([
-            client.getPage(self.getURL("host")).addCallback(self.assertEquals, "127.0.0.1"),
+            client.getPage(self.getURL("host")).addCallback(self.assertEquals, "127.0.0.1:%s" % (self.portno,)),
             client.getPage(self.getURL("host"), headers={"Host": "www.example.com"}).addCallback(self.assertEquals, "www.example.com")])
 
 
@@ -442,7 +442,7 @@ class WebClientTestCase(unittest.TestCase):
         called back with the contents of the page.
         """
         d = client.getPage(self.getURL("host"), timeout=100)
-        d.addCallback(self.assertEquals, "127.0.0.1")
+        d.addCallback(self.assertEquals, "127.0.0.1:%s" % (self.portno,))
         return d
 
 
@@ -895,6 +895,99 @@ class CookieTestCase(unittest.TestCase):
             'PART_NUMBER': 'ROCKET_LAUNCHER_0001',
             'SHIPPING': 'FEDEX',
             })
+
+
+
+class TestHostHeader(unittest.TestCase):
+    """
+    Test that L{HTTPClientFactory} includes the port in the host header
+    if needed.
+    """
+
+    def _getHost(self, bytes):
+        """
+        Retrieve the value of the I{Host} header from the serialized
+        request given by C{bytes}.
+        """
+        for line in bytes.splitlines():
+            try:
+                name, value = line.split(':', 1)
+                if name.strip().lower() == 'host':
+                    return value.strip()
+            except ValueError:
+                pass
+
+
+    def test_HTTPDefaultPort(self):
+        """
+        No port should be included in the host header when connecting to the
+        default HTTP port.
+        """
+        factory = client.HTTPClientFactory('http://foo.example.com/')
+        proto = factory.buildProtocol('127.42.42.42')
+        proto.makeConnection(StringTransport())
+        self.assertEquals(self._getHost(proto.transport.value()),
+                          'foo.example.com')
+
+
+    def test_HTTPPort80(self):
+        """
+        No port should be included in the host header when connecting to the
+        default HTTP port even if it is in the URL.
+        """
+        factory = client.HTTPClientFactory('http://foo.example.com:80/')
+        proto = factory.buildProtocol('127.42.42.42')
+        proto.makeConnection(StringTransport())
+        self.assertEquals(self._getHost(proto.transport.value()),
+                          'foo.example.com')
+
+
+    def test_HTTPNotPort80(self):
+        """
+        The port should be included in the host header when connecting to the
+        a non default HTTP port.
+        """
+        factory = client.HTTPClientFactory('http://foo.example.com:8080/')
+        proto = factory.buildProtocol('127.42.42.42')
+        proto.makeConnection(StringTransport())
+        self.assertEquals(self._getHost(proto.transport.value()),
+                          'foo.example.com:8080')
+
+
+    def test_HTTPSDefaultPort(self):
+        """
+        No port should be included in the host header when connecting to the
+        default HTTPS port.
+        """
+        factory = client.HTTPClientFactory('https://foo.example.com/')
+        proto = factory.buildProtocol('127.42.42.42')
+        proto.makeConnection(StringTransport())
+        self.assertEquals(self._getHost(proto.transport.value()),
+                          'foo.example.com')
+
+
+    def test_HTTPSPort443(self):
+        """
+        No port should be included in the host header when connecting to the
+        default HTTPS port even if it is in the URL.
+        """
+        factory = client.HTTPClientFactory('https://foo.example.com:443/')
+        proto = factory.buildProtocol('127.42.42.42')
+        proto.makeConnection(StringTransport())
+        self.assertEquals(self._getHost(proto.transport.value()),
+                          'foo.example.com')
+
+
+    def test_HTTPSNotPort443(self):
+        """
+        The port should be included in the host header when connecting to the
+        a non default HTTPS port.
+        """
+        factory = client.HTTPClientFactory('http://foo.example.com:8080/')
+        proto = factory.buildProtocol('127.42.42.42')
+        proto.makeConnection(StringTransport())
+        self.assertEquals(self._getHost(proto.transport.value()),
+                          'foo.example.com:8080')
 
 
 
