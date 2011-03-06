@@ -325,6 +325,7 @@ class TCPPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin,
         ReactorBuilder.setUp(self)
         self.factory = ServerFactory()
         self.events = []
+        self.transportType = "tcp"
         log.addObserver(self.events.append)
         self.addCleanup(log.removeObserver, self.events.append)
 
@@ -341,7 +342,14 @@ class TCPPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin,
         Get the expected port number for the TCP port that experienced
         the connection event.
         """
-        return port.getHost().port
+        return str(port.getHost().port)
+        
+    def getExpectedConnectionPortHost(self, port):
+        """
+        Get the expected hostname/IP for the TCP port that experienced
+        the connection event.
+        """
+        return port.getHost().host
 
 
     def test_portStartStopLogMessage(self):
@@ -353,6 +361,7 @@ class TCPPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin,
         reactor = self.buildReactor()
         p = self.getListeningPort(reactor)
         listenPort = self.getExpectedConnectionPortNumber(p)
+        listenHost = self.getExpectedConnectionPortHost(p)
 
         def stopReactor(ignored):
             reactor.stop()
@@ -364,7 +373,8 @@ class TCPPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin,
         self.runReactor(reactor)
 
         expected = {
-            "eventSource": p, "portNumber": listenPort, "factory": self.factory}
+            "eventSource": p, "address": "%s:%s" % (listenHost, listenPort),
+            "eventTransport" : self.transportType, "factory": self.factory}
 
         for event in self.events:
             if event.get("eventType") == "start":

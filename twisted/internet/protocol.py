@@ -622,7 +622,8 @@ class AbstractDatagramProtocol:
         This will be called by makeConnection(), users should not call it.
         """
         if not self.numPorts:
-            log.msg(eventSource=self, eventType="start", protocol=self)
+            log.msg(eventSource=self, eventType="start", eventTransport="udp",
+                    address="", protocol=self)
             self.startProtocol()
         self.numPorts = self.numPorts + 1
 
@@ -636,7 +637,8 @@ class AbstractDatagramProtocol:
         self.numPorts = self.numPorts - 1
         self.transport = None
         if not self.numPorts:
-            log.msg(eventSource=self, eventType="stop", protocol=self)
+            log.msg(eventSource=self, eventType="stop", eventTransport="udp",
+                    address="", protocol=self)
             self.stopProtocol()
 
 

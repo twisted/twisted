@@ -360,7 +360,9 @@ class AbstractDatagramProtocolTestCase(TestCase, DictSubsetMixin):
             self.events[0],
             {"eventSource": self.proto,
              "protocol": self.proto,
-             "eventType": "start"})
+             "eventType": "start",
+             "eventTransport" : "udp",
+             "address" : ""})
 
 
     def test_doStopLogMessage(self):
@@ -375,4 +377,6 @@ class AbstractDatagramProtocolTestCase(TestCase, DictSubsetMixin):
             self.events[0],
             {"eventSource": self.proto,
              "protocol": self.proto,
-             "eventType": "stop"})
+             "eventType": "stop",
+             "eventTransport" : "udp",
+             "address" : ""})

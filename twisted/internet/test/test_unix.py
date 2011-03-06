@@ -147,6 +147,13 @@ class UNIXPortTestsBuilder(TCPPortTestsBuilder):
     """
 
     requiredInterfaces = [interfaces.IReactorUNIX]
+    
+    def setUp(self):
+        """
+        Extend TCP test setUp to set transportType to 'unix'.
+        """
+        TCPPortTestsBuilder.setUp(self)
+        self.transportType = "unix"
 
     def getListeningPort(self, reactor):
         """
@@ -160,6 +167,13 @@ class UNIXPortTestsBuilder(TCPPortTestsBuilder):
         Get the expected UNIX socket path from the given UNIX listening port.
         """
         return port.getHost().name
+    
+    def getExpectedConnectionPortHost(self, port):
+        """
+        Return an empty string, since there is no hostname for a UNIX socket.
+        """
+        
+        return ""
 
 
 globals().update(UNIXTestsBuilder.makeTestCaseClasses())

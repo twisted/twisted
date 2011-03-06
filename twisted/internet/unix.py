@@ -112,8 +112,8 @@ class Port(_UNIXPort, tcp.Port):
                     except:
                         pass
 
-        log.msg(eventSource=self, eventType="start", factory=self.factory,
-                portNumber=self.port)
+        log.msg(eventSource=self, eventType="start", eventTransport="unix",
+                address=":%s" % self.port,factory=self.factory)
         self.factory.doStart()
         try:
             skt = self.createInternetSocket()
@@ -136,8 +136,8 @@ class Port(_UNIXPort, tcp.Port):
         """
         Log message for closing socket
         """
-        log.msg(eventSource=self, eventType="stop", factory=self.factory,
-                portNumber=self.port)
+        log.msg(eventSource=self, eventType="stop", eventTransport="unix",
+                address=":%s" % self.port, factory=self.factory)
 
 
     def connectionLost(self, reason):

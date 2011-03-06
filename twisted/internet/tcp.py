@@ -859,9 +859,12 @@ class Port(base.BasePort, _SocketCloser):
         # Make sure that if we listened on port 0, we update that to
         # reflect what the OS actually assigned us.
         self._realPortNumber = skt.getsockname()[1]
+        
+        _ip = self.interface if self.interface else "0.0.0.0"
 
-        log.msg(eventSource=self, eventType="start", factory=self.factory,
-                portNumber=self._realPortNumber)
+        log.msg(eventSource=self, eventType="start", eventTransport="tcp",
+                factory=self.factory,
+                address="%s:%d" % (_ip,self._realPortNumber))
 
         # The order of the next 6 lines is kind of bizarre.  If no one
         # can explain it, perhaps we should re-arrange them.
@@ -976,8 +979,10 @@ class Port(base.BasePort, _SocketCloser):
         """
         Log message for closing port
         """
-        log.msg(eventSource=self, eventType="stop", factory=self.factory,
-                portNumber=self._realPortNumber)
+        _ip = self.interface if self.interface else "0.0.0.0"
+        log.msg(eventSource=self, eventType="stop", eventTransport="tcp",
+                factory=self.factory,
+                address="%s:%d" % (_ip,self._realPortNumber))
 
 
     def connectionLost(self, reason):
