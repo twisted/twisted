@@ -379,6 +379,86 @@ class TestINotify(unittest.TestCase):
         return d
 
 
+    def test_seriesOfWatchAndIgnore(self):
+        """
+        L{inotify.INotify} will watch a filepath for events even if the same
+        path is repeatedly added/removed/re-added to the watchpoints.
+        """
+        expectedPath = self.dirname.child("foo.bar2")
+        expectedPath.touch()
+
+        notified = defer.Deferred()
+        def cbNotified((ignored, filename, events)):
+            self.assertEquals(filename, expectedPath)
+            self.assertTrue(events & inotify.IN_DELETE_SELF)
+
+        def callIt(*args):
+            notified.callback(args)
+
+        # Watch, ignore, watch again to get into the state being tested.
+        self.assertTrue(self.inotify.watch(expectedPath, callbacks=[callIt]))
+        self.inotify.ignore(expectedPath)
+        self.assertTrue(
+            self.inotify.watch(
+                expectedPath, mask=inotify.IN_DELETE_SELF, callbacks=[callIt]))
+
+        notified.addCallback(cbNotified)
+
+        # Apparently in kernel version < 2.6.25, inofify has a bug in the way
+        # similar events are coalesced.  So, be sure to generate a different
+        # event here than the touch() at the top of this method might have
+        # generated.
+        expectedPath.remove()
+
+        return notified
+
+
+    def test_ignoreFilePath(self):
+        """
+        L{inotify.INotify} will ignore a filepath after it has been removed from
+        the watch list.
+        """
+        expectedPath = self.dirname.child("foo.bar2")
+        expectedPath.touch()
+        expectedPath2 = self.dirname.child("foo.bar3")
+        expectedPath2.touch()
+
+        notified = defer.Deferred()
+        def cbNotified((ignored, filename, events)):
+            self.assertEquals(filename, expectedPath2)
+            self.assertTrue(events & inotify.IN_DELETE_SELF)
+
+        def callIt(*args):
+            notified.callback(args)
+
+        self.assertTrue(
+            self.inotify.watch(
+                expectedPath, inotify.IN_DELETE_SELF, callbacks=[callIt]))
+        notified.addCallback(cbNotified)
+
+        self.assertTrue(
+            self.inotify.watch(
+                expectedPath2, inotify.IN_DELETE_SELF, callbacks=[callIt]))
+
+        self.inotify.ignore(expectedPath)
+
+        expectedPath.remove()
+        expectedPath2.remove()
+
+        return notified
+
+
+    def test_ignoreNonWatchedFile(self):
+        """
+        L{inotify.INotify} will raise KeyError if a non-watched filepath is
+        ignored.
+        """
+        expectedPath = self.dirname.child("foo.ignored")
+        expectedPath.touch()
+
+        self.assertRaises(KeyError, self.inotify.ignore, expectedPath)
+
+
     def test_complexSubdirectoryAutoAdd(self):
         """
         L{inotify.INotify} with autoAdd==True for a watched path
