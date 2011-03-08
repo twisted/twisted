@@ -936,7 +936,6 @@ class Port(base.BasePort, _SocketCloser):
                 s = self.sessionno
                 self.sessionno = s+1
                 transport = self.transport(skt, protocol, addr, self, s, self.reactor)
-                transport = self._preMakeConnection(transport)
                 protocol.makeConnection(transport)
             else:
                 self.numberAccepts = self.numberAccepts+20
@@ -949,9 +948,6 @@ class Port(base.BasePort, _SocketCloser):
             # "except SSL.Error:" suite would probably do is log.deferr()
             # and return, so handling it here works just as well.
             log.deferr()
-
-    def _preMakeConnection(self, transport):
-        return transport
 
     def loseConnection(self, connDone=failure.Failure(main.CONNECTION_DONE)):
         """

@@ -17,10 +17,6 @@ moment this is not enforced, but in the future it might be.
 
 Future Plans:
     - split module so reactor-specific classes are in a separate module
-    - support for switching TCP into SSL
-    - more options
-
-Maintainer: Itamar Shtull-Trauring
 """
 
 # If something goes wrong, most notably an OpenSSL import failure,
@@ -137,24 +133,17 @@ class ClientContextFactory:
 
 
 class Client(tcp.Client):
-    """I am an SSL client."""
+    """
+    I am an SSL client.
+    """
 
     implementsOnly(interfaces.ISSLTransport,
                    *[i for i in implementedBy(tcp.Client) if i != interfaces.ITLSTransport])
-    
+
     def __init__(self, host, port, bindAddress, ctxFactory, connector, reactor=None):
         # tcp.Client.__init__ depends on self.ctxFactory being set
         self.ctxFactory = ctxFactory
         tcp.Client.__init__(self, host, port, bindAddress, connector, reactor)
-
-    def getHost(self):
-        """Returns the address from which I am connecting."""
-        h, p = self.socket.getsockname()
-        return address.IPv4Address('TCP', h, p)
-
-    def getPeer(self):
-        """Returns the address that I am connected."""
-        return address.IPv4Address('TCP', self.addr[0], self.addr[1])
 
     def _connectDone(self):
         self.startTLS(self.ctxFactory)
@@ -162,59 +151,41 @@ class Client(tcp.Client):
         tcp.Client._connectDone(self)
 
 
+
 class Server(tcp.Server):
-    """I am an SSL server.
     """
-
+    I am an SSL server.
+    """
     implements(interfaces.ISSLTransport)
-    
-    def getHost(self):
-        """Return server's address."""
-        h, p = self.socket.getsockname()
-        return address.IPv4Address('TCP', h, p)
 
-    def getPeer(self):
-        """Return address of peer."""
-        h, p = self.client
-        return address.IPv4Address('TCP', h, p)
+    def __init__(self, *args, **kwargs):
+        tcp.Server.__init__(self, *args, **kwargs)
+        self.startTLS(self.server.ctxFactory)
+
 
 
 class Port(tcp.Port):
-    """I am an SSL port."""
-    _socketShutdownMethod = 'sock_shutdown'
-    
+    """
+    I am an SSL port.
+    """
     transport = Server
 
     def __init__(self, port, factory, ctxFactory, backlog=50, interface='', reactor=None):
         tcp.Port.__init__(self, port, factory, backlog, interface, reactor)
         self.ctxFactory = ctxFactory
 
-    def createInternetSocket(self):
-        """(internal) create an SSL socket
-        """
-        sock = tcp.Port.createInternetSocket(self)
-        return SSL.Connection(self.ctxFactory.getContext(), sock)
-
-    def _preMakeConnection(self, transport):
-        # *Don't* call startTLS here
-        # The transport already has the SSL.Connection object from above
-        transport._startTLS()
-        return tcp.Port._preMakeConnection(self, transport)
 
 
-class Connector(base.BaseConnector):
+class Connector(tcp.Connector):
     def __init__(self, host, port, factory, contextFactory, timeout, bindAddress, reactor=None):
-        self.host = host
-        self.port = port
-        self.bindAddress = bindAddress
         self.contextFactory = contextFactory
-        base.BaseConnector.__init__(self, factory, timeout, reactor)
+        tcp.Connector.__init__(self, host, port, factory, timeout, bindAddress, reactor)
+
 
     def _makeTransport(self):
         return Client(self.host, self.port, self.bindAddress, self.contextFactory, self, self.reactor)
 
-    def getDestination(self):
-        return address.IPv4Address('TCP', self.host, self.port)
+
 
 from twisted.internet._sslverify import DistinguishedName, DN, Certificate
 from twisted.internet._sslverify import CertificateRequest, PrivateCertificate
