@@ -1114,15 +1114,24 @@ class IConsumer(Interface):
         @return: C{None}
         """
 
+
     def unregisterProducer():
         """
         Stop consuming data from a producer, without disconnecting.
         """
 
+
     def write(data):
         """
         The producer will write data by calling this method.
+
+        The implementation must be non-blocking and perform whatever
+        buffering is necessary.  If the producer has provided enough data
+        for now and it is a L{IPushProducer}, the consumer may call its
+        C{pauseProducing} method.
         """
+
+
 
 class IFinishableConsumer(IConsumer):
     """
