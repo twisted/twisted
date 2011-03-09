@@ -5,14 +5,10 @@
 """
 HyperText Transfer Protocol implementation.
 
-This is used by twisted.web.
-
-Future Plans:
- - HTTP client support will at some point be refactored to support HTTP/1.1.
- - Accept chunked data from clients in server.
- - Other missing HTTP features from the RFC.
-
-Maintainer: Itamar Shtull-Trauring
+This is the basic server-side protocol implementation used by the Twisted
+Web server.  It can parse HTTP 1.0 requests and supports many HTTP 1.1
+features as well.  Additionally, some functionality implemented here is
+also useful for HTTP clients (such as the chunked encoding parser).
 """
 
 # system imports
