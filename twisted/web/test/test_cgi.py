@@ -69,7 +69,6 @@ print "cgi output"
 
 class PythonScript(twcgi.FilteredScript):
     filter = sys.executable
-    filters = sys.executable,  # web2's version
 
 class CGI(unittest.TestCase):
     """

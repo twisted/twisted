@@ -1,7 +1,6 @@
 #compdef mktap
 local _zsh_subcmds_array
 _zsh_subcmds_array=(
-"web2:An HTTP/1.1 web server that can serve from a filesystem or application resource."
 "ftp:An FTP server."
 "telnet:A simple, telnet-based remote debugging service."
 "socks:A SOCKSv4 proxy service."
@@ -48,34 +47,6 @@ fi
 service="$words[1]"
 
 case $service in
-web2)
-_arguments -s -A "-*" \
-"--allow-ignore-ext[Specify whether or not a request for 'foo' should return 'foo.ext']" \
-"(--certificate)-c[SSL certificate to use for HTTPS.]:certificate:_files -g '*.pem'" \
-"(-c)--certificate=[SSL certificate to use for HTTPS.]:certificate:_files -g '*.pem'" \
-'--class=[A class that will be used to serve the root resource.  Must implement twisted.web2.iweb.IResource and take no arguments.]:class:_files' \
-'--dav=[A path that will be used to serve the root resource as a DAV Collection.]:dav:_files' \
-'--help[Display this help and exit.]' \
-'--https=[Port to listen on for Secure HTTP.]:https:_files' \
-'--ignore-ext=[Specify an extension to ignore.  These will be processed in order.]:ignore-ext:_files' \
-'(--index)-i[Add the name of a file used to check for directory indexes.]:index:_files' \
-'(-i)--index=[Add the name of a file used to check for directory indexes.]:index:_files' \
-'(--logfile)-l[Common Access Logging Format file to write to if unspecified access log information will be written to the standard twisted log file.]:logfile:_files' \
-'(-l)--logfile=[Common Access Logging Format file to write to if unspecified access log information will be written to the standard twisted log file.]:logfile:_files' \
-"--mimetype=[Mapping from file extension to MIME Type in the form of 'ext=type'.]:mimetype:_files" \
-'--path=[A path that will be used to serve the root resource as a raw file]:path:_files' \
-'(--port)-p[Port to start the server on.]:port:_files' \
-'(-p)--port=[Port to start the server on.]:port:_files' \
-"(--privkey)-k[SSL certificate to use for HTTPS.]:privkey:_files -g '*.pem'" \
-"(-k)--privkey=[SSL certificate to use for HTTPS.]:privkey:_files -g '*.pem'" \
-"--processor=[\`ext=class' where \`class' is added as a Processor for files ending]:processor:_files" \
-'--version[version]' \
-'--vhost-class=[Specify a virtual host in the form of domain=class,]:vhost-class:_files' \
-'--vhost-dav=[Specify a virtual host in the form of domain=path,]:vhost-dav:_files' \
-'--vhost-path=[Specify a directory to use for automatic named virtual hosts.]:vhost-path:_files' \
-'--vhost-static=[Specify a virtual host in the form of domain=path to be served as]:vhost-static:_files' \
-&& return 0
-;;
 ftp)
 _arguments -s -A "-*" \
 '--help[Display this help and exit.]' \

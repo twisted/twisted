@@ -37,11 +37,6 @@ except ImportError:
 VERSION_OFFSET = 2000
 
 
-# The list of subproject names to exclude from the main Twisted tarball and
-# for which no individual project tarballs will be built.
-PROJECT_BLACKLIST = ["web2"]
-
-
 def runCommand(args):
     """
     Execute a vector of arguments.
@@ -616,9 +611,6 @@ class NewsBuilder(object):
     which are supported.  Conveniently, they each also take on the value of
     the file name extension which indicates a news entry of that type.
 
-    @cvar blacklist: A C{list} of C{str} of projects for which we should not
-        generate news at all. Same as C{PROJECT_BLACKLIST}.
-
     @cvar _headings: A C{dict} mapping one of the news entry types to the
         heading to write out for that type of news entry.
 
@@ -630,8 +622,6 @@ class NewsBuilder(object):
         with all the other content.  Put another way, this is the text after
         which the new news text is inserted.
     """
-
-    blacklist = PROJECT_BLACKLIST
 
     _FEATURE = ".feature"
     _BUGFIX = ".bugfix"
@@ -849,8 +839,6 @@ class NewsBuilder(object):
 
         for aggregateNews in [False, True]:
             for project in projects:
-                if project.directory.basename() in self.blacklist:
-                    continue
                 topfiles = project.directory.child("topfiles")
                 if aggregateNews:
                     news = baseDirectory.child("NEWS")
@@ -867,8 +855,6 @@ class NewsBuilder(object):
         their news files from the ticket change description files in their
         I{topfiles} directories and update the news file in C{baseDirectory}
         with all of the news.
-
-        Projects that are listed in L{NewsBuilder.blacklist} will be skipped.
 
         @param baseDirectory: A L{FilePath} representing the root directory
             beneath which to find Twisted projects for which to generate
@@ -958,15 +944,8 @@ class DistributionBuilder(object):
     A builder of Twisted distributions.
 
     This knows how to build tarballs for Twisted and all of its subprojects.
-
-    @type blacklist: C{list} of C{str}
-    @cvar blacklist: The list of subproject names to exclude from the main
-        Twisted tarball and for which no individual project tarballs will be
-        built. The same list as C{PROJECT_BLACKLIST}.
     """
-
     from twisted.python.dist import twisted_subprojects as subprojects
-    blacklist = PROJECT_BLACKLIST
 
     def __init__(self, rootDirectory, outputDirectory, apiBaseURL=None):
         """
@@ -1022,10 +1001,7 @@ class DistributionBuilder(object):
         """
         Build the main Twisted distribution in C{Twisted-<version>.tar.bz2}.
 
-        Projects listed in in L{blacklist} will not have their plugins, code,
-        documentation, or bin directories included.
-
-        bin/admin is also excluded.
+        bin/admin is excluded.
 
         @type version: C{str}
         @param version: The version of Twisted to build.
@@ -1044,42 +1020,28 @@ class DistributionBuilder(object):
         # Generate docs!
         if docPath.isdir():
             for subProjectDir in docPath.children():
-                if (subProjectDir.isdir()
-                    and subProjectDir.basename() not in self.blacklist):
+                if subProjectDir.isdir():
                     for child in subProjectDir.walk():
                         self._buildDocInDir(child, version,
                             subProjectDir.child("howto"))
 
-        # Now, this part is nasty.  We need to exclude blacklisted subprojects
-        # from the main Twisted distribution. This means we need to exclude
-        # their bin directories, their documentation directories, their
-        # plugins, and their python packages. Given that there's no "add all
-        # but exclude these particular paths" functionality in tarfile, we have
-        # to walk through all these directories and add things that *aren't*
-        # part of the blacklisted projects.
-
         for binthing in self.rootDirectory.child("bin").children():
-            # bin/admin should also not be included.
-            if binthing.basename() not in self.blacklist + ["admin"]:
+            # bin/admin should not be included.
+            if binthing.basename() != "admin":
                 tarball.add(binthing.path,
                             buildPath("bin", binthing.basename()))
-
-        bad_plugins = ["twisted_%s.py" % (blacklisted,)
-                       for blacklisted in self.blacklist]
 
         for submodule in self.rootDirectory.child("twisted").children():
             if submodule.basename() == "plugins":
                 for plugin in submodule.children():
-                    if plugin.basename() not in bad_plugins:
-                        tarball.add(plugin.path, buildPath("twisted", "plugins",
-                                                           plugin.basename()))
-            elif submodule.basename() not in self.blacklist:
+                    tarball.add(plugin.path, buildPath("twisted", "plugins",
+                                                       plugin.basename()))
+            else:
                 tarball.add(submodule.path, buildPath("twisted",
                                                       submodule.basename()))
 
         for docDir in self.rootDirectory.child("doc").children():
-            if docDir.basename() not in self.blacklist:
-                tarball.add(docDir.path, buildPath("doc", docDir.basename()))
+            tarball.add(docDir.path, buildPath("doc", docDir.basename()))
 
         for toplevel in self.rootDirectory.children():
             if not toplevel.isdir():
@@ -1273,8 +1235,7 @@ def buildAllTarballs(checkout, destination):
 
     db.buildCore(versionString)
     for subproject in twisted_subprojects:
-        if (subproject not in db.blacklist
-            and twistedPath.child(subproject).exists()):
+        if twistedPath.child(subproject).exists():
             db.buildSubProject(subproject, versionString)
 
     db.buildTwisted(versionString)

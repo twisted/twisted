@@ -13,7 +13,7 @@ from distutils import core
 from distutils.core import Extension
 
 twisted_subprojects = ["conch", "lore", "mail", "names",
-                       "news", "pair", "runner", "web", "web2",
+                       "news", "pair", "runner", "web",
                        "words"]
 
 

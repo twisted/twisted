@@ -2055,55 +2055,6 @@ class DistributionBuilderTest(DistributionBuilderTestBase):
         self.assertExtractedStructure(outputFile, outStructure)
 
 
-    def test_twistedDistributionExcludesWeb2AndAdmin(self):
-        """
-        The main Twisted distribution does not include web2 or the bin/admin
-        directory.
-        """
-        loreInput, loreOutput = self.getArbitraryLoreInputAndOutput("10.0.0")
-        coreIndexInput, coreIndexOutput = self.getArbitraryLoreInputAndOutput(
-            "10.0.0", prefix="howto/")
-
-        structure = {
-            "README": "Twisted",
-            "unrelated": "x",
-            "LICENSE": "copyright!",
-            "setup.py": "import toplevel",
-            "bin": {"web2": {"websetroot": "SET ROOT"},
-                    "twistd": "TWISTD",
-                    "admin": {"build-a-thing": "yay"}},
-            "twisted":
-                {"web2":
-                     {"__init__.py": "import WEB",
-                      "topfiles": {"setup.py": "import WEBINSTALL",
-                                   "README": "WEB!"}},
-                 "words": {"__init__.py": "import WORDS"},
-                 "plugins": {"twisted_web.py": "import WEBPLUG",
-                             "twisted_words.py": "import WORDPLUG",
-                             "twisted_web2.py": "import WEB2"}},
-            "doc": {"web2": {"excluded!": "yay"},
-                    "core": {"howto": {"template.tpl": self.template},
-                             "index.xhtml": coreIndexInput}}}
-
-        outStructure = {
-            "README": "Twisted",
-            "unrelated": "x",
-            "LICENSE": "copyright!",
-            "setup.py": "import toplevel",
-            "bin": {"twistd": "TWISTD"},
-            "twisted":
-                {"words": {"__init__.py": "import WORDS"},
-                 "plugins": {"twisted_web.py": "import WEBPLUG",
-                             "twisted_words.py": "import WORDPLUG"}},
-            "doc": {"core": {"howto": {"template.tpl": self.template},
-                             "index.html": coreIndexOutput}}}
-        self.createStructure(self.rootDir, structure)
-
-        outputFile = self.builder.buildTwisted("10.0.0")
-
-        self.assertExtractedStructure(outputFile, outStructure)
-
-
     def test_subProjectLayout(self):
         """
         The subproject tarball includes files like so:
@@ -2346,18 +2297,13 @@ class BuildAllTarballsTest(DistributionBuilderTestBase):
             "unrelated": "x",
             "LICENSE": "copyright!",
             "setup.py": "import toplevel",
-            "bin": {"web2": {"websetroot": "SET ROOT"},
-                    "words": {"im": "import im"},
+            "bin": {"words": {"im": "import im"},
                     "twistd": "TWISTD"},
             "twisted":
                 {
                     "topfiles": {"setup.py": "import TOPINSTALL",
                                  "README": "CORE!"},
                     "_version.py": genVersion("twisted", 1, 2, 0),
-                    "web2":
-                    {"__init__.py": "import WEB",
-                      "topfiles": {"setup.py": "import WEBINSTALL",
-                                   "README": "WEB!"}},
                     "words": {"__init__.py": "import WORDS",
                               "_version.py":
                                   genVersion("twisted.words", 1, 2, 0),
@@ -2366,10 +2312,8 @@ class BuildAllTarballsTest(DistributionBuilderTestBase):
                               },
                     "plugins": {"twisted_web.py": "import WEBPLUG",
                                 "twisted_words.py": "import WORDPLUG",
-                                "twisted_web2.py": "import WEB2",
                                 "twisted_yay.py": "import YAY"}},
-            "doc": {"web2": {"excluded!": "yay"},
-                    "core": {"howto": {"template.tpl": self.template},
+            "doc": {"core": {"howto": {"template.tpl": self.template},
                              "index.xhtml": coreIndexInput}}}
 
         twistedStructure = {
