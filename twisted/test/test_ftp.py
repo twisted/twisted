@@ -2411,7 +2411,7 @@ class IFTPShellTestsMixin:
     def test_removeNotExistingFile(self):
         """
         Try to remove a non existent file, and check it raises a
-        L{ivfs.NotFoundError}.
+        L{ftp.FileNotFoundError}.
         """
         d = self.shell.removeFile(('foo',))
         return self.assertFailure(d, ftp.FileNotFoundError)

@@ -14,7 +14,7 @@ from distutils.core import Extension
 
 twisted_subprojects = ["conch", "lore", "mail", "names",
                        "news", "pair", "runner", "web", "web2",
-                       "words", "vfs"]
+                       "words"]
 
 
 class ConditionalExtension(Extension):

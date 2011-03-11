@@ -1900,11 +1900,7 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
                     'topfiles': {
                         'NEWS': 'Old conch news.\n',
                         '7.bugfix': 'Fixed that bug.\n'}},
-                'vfs': {
-                    '_version.py': genVersion("twisted.vfs", 6, 7, 8),
-                    'topfiles': {
-                        'NEWS': 'Old vfs news.\n',
-                        '8.bugfix': 'Fixed bug 8.\n'}}})
+                })
         return project
 
 
@@ -1921,7 +1917,6 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         builder = NewsBuilder()
         builder.build = lambda path, output, header: builds.append((
                 path, output, header))
-        builder.blacklist = ['vfs']
         builder._today = lambda: '2009-12-01'
 
         project = self.createFakeTwistedProject()
@@ -2060,10 +2055,10 @@ class DistributionBuilderTest(DistributionBuilderTestBase):
         self.assertExtractedStructure(outputFile, outStructure)
 
 
-    def test_twistedDistributionExcludesWeb2AndVFSAndAdmin(self):
+    def test_twistedDistributionExcludesWeb2AndAdmin(self):
         """
-        The main Twisted distribution does not include web2 or vfs, or the
-        bin/admin directory.
+        The main Twisted distribution does not include web2 or the bin/admin
+        directory.
         """
         loreInput, loreOutput = self.getArbitraryLoreInputAndOutput("10.0.0")
         coreIndexInput, coreIndexOutput = self.getArbitraryLoreInputAndOutput(
@@ -2075,7 +2070,6 @@ class DistributionBuilderTest(DistributionBuilderTestBase):
             "LICENSE": "copyright!",
             "setup.py": "import toplevel",
             "bin": {"web2": {"websetroot": "SET ROOT"},
-                    "vfs": {"vfsitup": "hee hee"},
                     "twistd": "TWISTD",
                     "admin": {"build-a-thing": "yay"}},
             "twisted":
@@ -2083,16 +2077,11 @@ class DistributionBuilderTest(DistributionBuilderTestBase):
                      {"__init__.py": "import WEB",
                       "topfiles": {"setup.py": "import WEBINSTALL",
                                    "README": "WEB!"}},
-                 "vfs":
-                     {"__init__.py": "import VFS",
-                      "blah blah": "blah blah"},
                  "words": {"__init__.py": "import WORDS"},
                  "plugins": {"twisted_web.py": "import WEBPLUG",
                              "twisted_words.py": "import WORDPLUG",
-                             "twisted_web2.py": "import WEB2",
-                             "twisted_vfs.py": "import VFS"}},
+                             "twisted_web2.py": "import WEB2"}},
             "doc": {"web2": {"excluded!": "yay"},
-                    "vfs": {"unrelated": "whatever"},
                     "core": {"howto": {"template.tpl": self.template},
                              "index.xhtml": coreIndexInput}}}
 
@@ -2358,7 +2347,6 @@ class BuildAllTarballsTest(DistributionBuilderTestBase):
             "LICENSE": "copyright!",
             "setup.py": "import toplevel",
             "bin": {"web2": {"websetroot": "SET ROOT"},
-                    "vfs": {"vfsitup": "hee hee"},
                     "words": {"im": "import im"},
                     "twistd": "TWISTD"},
             "twisted":
@@ -2370,9 +2358,6 @@ class BuildAllTarballsTest(DistributionBuilderTestBase):
                     {"__init__.py": "import WEB",
                       "topfiles": {"setup.py": "import WEBINSTALL",
                                    "README": "WEB!"}},
-                    "vfs":
-                     {"__init__.py": "import VFS",
-                      "blah blah": "blah blah"},
                     "words": {"__init__.py": "import WORDS",
                               "_version.py":
                                   genVersion("twisted.words", 1, 2, 0),
@@ -2382,10 +2367,8 @@ class BuildAllTarballsTest(DistributionBuilderTestBase):
                     "plugins": {"twisted_web.py": "import WEBPLUG",
                                 "twisted_words.py": "import WORDPLUG",
                                 "twisted_web2.py": "import WEB2",
-                                "twisted_vfs.py": "import VFS",
                                 "twisted_yay.py": "import YAY"}},
             "doc": {"web2": {"excluded!": "yay"},
-                    "vfs": {"unrelated": "whatever"},
                     "core": {"howto": {"template.tpl": self.template},
                              "index.xhtml": coreIndexInput}}}
 

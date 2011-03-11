@@ -39,7 +39,7 @@ VERSION_OFFSET = 2000
 
 # The list of subproject names to exclude from the main Twisted tarball and
 # for which no individual project tarballs will be built.
-PROJECT_BLACKLIST = ["vfs", "web2"]
+PROJECT_BLACKLIST = ["web2"]
 
 
 def runCommand(args):
