@@ -125,7 +125,8 @@ class _PollableReadPipe(_PollableResource):
                     break
                 hr, data = win32file.ReadFile(self.pipe, bytesToRead, None)
                 fullDataRead.append(data)
-            except win32api.error:
+            except win32api.error, e:
+                log.err()
                 finished = 1
                 break
 
