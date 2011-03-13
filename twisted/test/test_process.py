@@ -28,6 +28,7 @@ from twisted.internet import reactor, protocol, error, interfaces, defer
 from twisted.trial import unittest
 from twisted.python import util, runtime, procutils
 from twisted.python.compat import set
+from twisted.python.log import msg
 
 
 
@@ -174,6 +175,7 @@ class TrivialProcessProtocol(protocol.ProcessProtocol):
 class TestProcessProtocol(protocol.ProcessProtocol):
 
     def connectionMade(self):
+        msg("[%s] TestProcessProtocol.connectionMade" % (id(self),))
         self.stages = [1]
         self.data = ''
         self.err = ''
@@ -185,6 +187,7 @@ class TestProcessProtocol(protocol.ProcessProtocol):
         that it is really this method which is being called, and the transport
         is not going directly to L{outReceived} or L{errReceived}.
         """
+        msg("[%s] TestProcessProtocol.childDataReceived(%r, %r)" % (id(self), childFD, data))
         if childFD == 1:
             self.data += data
         elif childFD == 2:
@@ -197,22 +200,25 @@ class TestProcessProtocol(protocol.ProcessProtocol):
         provided by the base implementation to verify that the transport is
         calling this method directly.
         """
+        msg("[%s] TestProcessProtocol.childConnectionLost(%r)" % (id(self), childFD))
         if childFD == 1:
             self.stages.append(2)
             if self.data != "abcd":
-                raise RuntimeError
+                raise RuntimeError("Expected 'abcd', received %r" % (self.data,))
             self.transport.write("1234")
         elif childFD == 2:
             self.stages.append(3)
             if self.err != "1234":
                 print 'err != 1234: ' + repr(self.err)
-                raise RuntimeError()
+                raise RuntimeError("Expected '1234', received %r" % (self.err,))
             self.transport.write("abcd")
             self.stages.append(4)
         elif childFD == 0:
             self.stages.append(5)
 
+
     def processEnded(self, reason):
+        msg("[%s] TestProcessProtocol.processEnded(%s)" % (id(self), reason.getErrorMessage()))
         self.reason = reason
         self.deferred.callback(None)
 
@@ -332,6 +338,8 @@ class TestManyProcessProtocol(TestProcessProtocol):
         self.deferred = defer.Deferred()
 
     def processEnded(self, reason):
+        msg("[%s] TestManyProcessProtocol.processEnded(%r)" % (
+                id(self), reason.getErrorMessage()))
         self.reason = reason
         if reason.check(error.ProcessDone):
             self.deferred.callback(None)
