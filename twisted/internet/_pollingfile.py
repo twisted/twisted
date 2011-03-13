@@ -127,7 +127,7 @@ class _PollableReadPipe(_PollableResource):
                 fullDataRead.append(data)
             except win32api.error, e:
                 from twisted.python import log
-                log.err()
+                log.msg('ReadFile choked: %s' % (e,))
                 finished = 1
                 break
 
