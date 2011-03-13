@@ -34,7 +34,7 @@ if sys.version_info[:2] < (2, 5):
     DateTime.decode = lambda self, value: _decode(self, value.encode('ascii'))
 
 
-def withRequest(f, *args, **kwargs):
+def withRequest(f):
     """
     Decorator to cause the request to be passed as the first argument
     to the method.
@@ -46,6 +46,8 @@ def withRequest(f, *args, **kwargs):
         @withRequest
         def xmlrpc_echo(self, request, s):
             return s
+
+    @since: 10.2
     """
     f.withRequest = True
     return f
