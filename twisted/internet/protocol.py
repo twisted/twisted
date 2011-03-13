@@ -299,13 +299,17 @@ class ReconnectingClientFactory(ClientFactory):
 
     @ivar maxDelay: Maximum number of seconds between connection attempts.
     @ivar initialDelay: Delay for the first reconnection attempt.
-    @ivar factor: a multiplicitive factor by which the delay grows
-    @ivar jitter: percentage of randomness to introduce into the delay length
+    @ivar factor: A multiplicitive factor by which the delay grows
+    @ivar jitter: Percentage of randomness to introduce into the delay length
         to prevent stampeding.
-    @ivar clock: the clock used to schedule reconnection. It's mainly useful to
+    @ivar clock: The clock used to schedule reconnection. It's mainly useful to
         be parametrized in tests. If the factory is serialized, this attribute
         will not be serialized, and the default value (the reactor) will be
         restored when deserialized.
+    @type clock: L{IReactorTime}
+    @ivar maxRetries: Maximum number of consecutive unsuccessful connection
+        attempts, after which no further connection attempts will be made. If
+        this is not explicitly set, no maximum is applied.
     """
     maxDelay = 3600
     initialDelay = 1.0
