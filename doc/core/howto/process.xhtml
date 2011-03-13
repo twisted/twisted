@@ -28,9 +28,11 @@ more detail in the documentation of:
 using <code>reactor.spawnProcess</code>. Pipes are created to the child process,
 and added to the reactor core so that the application will not block while
 sending data into or pulling data out of the new
-process. <code>reactor.spawnProcess</code> requires two arguments,
-processProtocol and executable, and optionally takes several more: arguments,
-environment, path, userID, groupID, usePTY, and childFDs.  Not all of these are
+process. <code>reactor.spawnProcess</code> requires two arguments, 
+ <code>processProtocol</code> and <code>executable</code>, and optionally takes
+several more: <code>args</code>, <code>environment</code>, 
+ <code>path</code>, <code>userID</code>, <code>groupID</code>, 
+ <code>usePTY</code>, and <code>childFDs</code>. Not all of these are
 available on Windows.</p>
 
 
@@ -86,12 +88,12 @@ reactor.spawnProcess(processProtocol, executable, args=[program, arg1, arg2],
 </ul>
 
 <p><code>args</code> and <code>env</code> have empty default values, but
-many programs depend upon them to be set correctly. At the very least,
-<code>args[0]</code> should probably be the same as <code>executable</code>.
+many programs depend upon them to be set correctly. At the very least, 
+ <code>args[0]</code> should probably be the same as <code>executable</code>.
 If you just provide <code>os.environ</code> for <code>env</code>, the child
 program will inherit the environment from the current process, which is
 usually the civilized thing to do (unless you want to explicitly clean the
-environment as a security precaution). The default is to give an empty
+environment as a security precaution). The default is to give an empty 
 <code>env</code> to the child.</p>
 
 <p><code>reactor.spawnProcess</code> returns an instance that
@@ -100,12 +102,12 @@ IProcessTransport</code>.</p>
 
   <h2>Writing a ProcessProtocol</h2>
 
-<p>The ProcessProtocol you pass to spawnProcess is your interaction with the
-process. It has a very similar signature to a regular Protocol, but it has
-several extra methods to deal with events specific to a process. In our
-example, we will interface with 'wc' to create a word count of user-given
-text. First, we'll start by importing the required modules, and writing the
-initialization for our ProcessProtocol.</p>
+<p>The ProcessProtocol you pass to <code>spawnProcess</code> is your
+interaction with the process. It has a very similar signature to a regular
+Protocol, but it has several extra methods to deal with events specific to
+a process. In our example, we will interface with 'wc' to create a word count
+of user-given text. First, we'll start by importing the required modules, and
+writing the initialization for our ProcessProtocol.</p>
 
 <pre class="python">
 from twisted.internet import protocol
@@ -167,8 +169,8 @@ reactor.run()
 
 <h2>Things that can happen to your ProcessProtocol</h2>
 
-<p>These are the methods that you can usefully override in your subclass of
-<code>ProcessProtocol</code>:</p>
+<p>These are the methods that you can usefully override in your subclass of 
+ <code>ProcessProtocol</code>:</p>
 
 <ul>
 
@@ -383,8 +385,8 @@ childFDs = { 0: "w", 1: "r", 2: "r" , 4: "w"}
 <p>When you provide a <q>childFDs</q> dictionary with more than the normal
 three fds, you need addtional methods to access those pipes. These methods
 are more generalized than the <code>.outReceived</code> ones described above.
-In fact, those methods (<code>outReceived</code> and
-<code>errReceived</code>) are actually just wrappers left in for
+In fact, those methods (<code>outReceived</code> and 
+ <code>errReceived</code>) are actually just wrappers left in for
 compatibility with older code, written before this generalized fd mapping was
 implemented. The new list of things that can happen to your ProcessProtocol
 is as follows:</p>
@@ -398,7 +400,7 @@ is as follows:</p>
   data that was received from one of the process' output pipes (i.e. where
   the childFDs value was <q>r</q>. The actual file number (from the point of
   view of the child process) is in <q>childFD</q>. For compatibility, the
-  default implementation of <code>.dataReceived</code> dispatches to
+  default implementation of <code>.childDataReceived</code> dispatches to
   <code>.outReceived</code> or <code>.errReceived</code> when <q>childFD</q>
   is 1 or 2.</li>
 
