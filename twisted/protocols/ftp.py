@@ -2042,8 +2042,23 @@ class ProtocolWrapper(protocol.Protocol):
         self.deferred.callback(None)
 
 
+
+class IFinishableConsumer(interfaces.IConsumer):
+    """
+    A Consumer for producers that finish.
+
+    @since: 11.0
+    """
+
+    def finish():
+        """
+        The producer has finished producing.
+        """
+
+
+
 class SenderProtocol(protocol.Protocol):
-    implements(interfaces.IFinishableConsumer)
+    implements(IFinishableConsumer)
 
     def __init__(self):
         # Fired upon connection
