@@ -126,6 +126,7 @@ class _PollableReadPipe(_PollableResource):
                 hr, data = win32file.ReadFile(self.pipe, bytesToRead, None)
                 fullDataRead.append(data)
             except win32api.error, e:
+                from twisted.python import log
                 log.err()
                 finished = 1
                 break
