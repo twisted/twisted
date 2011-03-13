@@ -1,1 +1,0 @@
-Modified twisted.protocols.ftp.SenderProtocol to no longer implement twisted.internet.interfaces.IFinishableConsumer in preparation for the deprecation of that interface.
