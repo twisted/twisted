@@ -1,0 +1,1 @@
+reactor.spawnProcess on Windows can now handle ASCII-encodable Unicode strings in the system environment
