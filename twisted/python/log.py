@@ -33,7 +33,7 @@ class ILogContext:
 class ILogObserver(Interface):
     """
     An observer which can do something with log events.
-    
+
     Given that most log observers are actually bound methods, it's okay to not
     explicitly declare provision of this interface.
     """
@@ -634,15 +634,18 @@ class DefaultObserver:
     Will ignore all non-error messages and send error messages to sys.stderr.
     Will be removed when startLogging() is called for the first time.
     """
+    stderr = sys.stderr
 
     def _emit(self, eventDict):
         if eventDict["isError"]:
             if 'failure' in eventDict:
-                text = eventDict['failure'].getTraceback()
+                text = ((eventDict.get('why') or 'Unhandled Error')
+                        + '\n' + eventDict['failure'].getTraceback())
             else:
                 text = " ".join([str(m) for m in eventDict["message"]]) + "\n"
-            sys.stderr.write(text)
-            sys.stderr.flush()
+
+            self.stderr.write(text)
+            self.stderr.flush()
 
     def start(self):
         addObserver(self._emit)
