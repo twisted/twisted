@@ -36,7 +36,7 @@
 
     <p>Twisted development should always be
      <a href="http://en.wikipedia.org/wiki/Test-driven_development">
-     test-driven</a>.  The complete test suite in trunk@HEAD is required to
+     test-driven</a>.  The complete test suite in the head of the SVN trunk is required to
      be passing on <a href="http://buildbot.twistedmatrix.com/supported">
      supported platforms</a> at all times.  Regressions in the test suite
      are addressed by reverting whatever revisions introduced them.  For
@@ -55,7 +55,7 @@
      the test suite are generally better examples than older parts - check
      when the code you are looking at was written before you use it as an
      example of what you should write).  The names of test modules should
-     begin with <q>test_</q> so that they are automatically discoverable by
+     begin with <code>test_</code> so that they are automatically discoverable by
      test runners such as Trial.  Twisted's unit tests are written using
      <code class="API">twisted.trial</code>, an xUnit library which has been
      extensively customized for use in testing Twisted and Twisted-based
@@ -527,10 +527,10 @@ myref.callRemote("addUser", name="bob", phone="555-1212")
 </pre>
 
     <p>In this case, <code>callRemote</code> (and any code that uses the
-    **kwargs syntax) must be careful to not use <q>name</q>, <q>phone</q>, or
-    any other name that might overlap with a user-provided named parameter.
-    Therefore, <code>callRemote</code> is implemented with the following
-    signature:</p>
+    <code class="python">**kwargs</code> syntax) must be careful to not use
+    <q>name</q>, <q>phone</q>, or any other name that might overlap with
+    a user-provided named parameter.  Therefore, <code>callRemote</code> is
+    implemented with the following signature:</p>
 
 <pre class="python">
 class SomeClass(object):
@@ -546,7 +546,8 @@ class SomeClass(object):
 
     <h2>Special Methods</h2>
 
-    <p>The augmented assignment protocol, defined by __iadd__ and other
+    <p>The augmented assignment protocol, defined by <code
+    class="python">__iadd__</code> and other
     similarly named methods, can be used to allow objects to be modified in
     place or to rebind names if an object is immutable -- both through use
     of the same operator.  This can lead to confusing code, which in turn

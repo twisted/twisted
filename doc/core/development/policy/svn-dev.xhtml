@@ -22,10 +22,10 @@ edge.</p>
 
 <h2>Checkout</h2>
 
-<p>Subversion tutorials can be found elsewhere, see in particular
+<p>Subversion tutorials can be found elsewhere, see in particular 
 <a href="http://subversion.apache.org/">the Subversion homepage</a>. The
 relevant data you need to check out a copy of the Twisted tree is available on
-the <a href="http://twistedmatrix.com/trac/wiki/TwistedDevelopment">development
+the <a href="http://twistedmatrix.com/trac/wiki/TwistedDevelopment">development 
 page</a>, and is as follows:</p>
 
 <pre class="shell">
@@ -35,15 +35,15 @@ $ svn co svn://svn.twistedmatrix.com/svn/Twisted/trunk Twisted
 <h2>Alternate tree names</h2>
 
 <p>By using <code>svn co svn://svn.twistedmatrix.com/svn/Twisted/trunk
-otherdir</code>, you can put the workspace tree in a directory other than
+otherdir</code>, you can put the workspace tree in a directory other than 
 <q>Twisted</q>. I do this (with a name like <q>Twisted-Subversion</q>) to
 remind myself that this tree comes from Subversion and not from a released
 version (like <q>Twisted-1.0.5</q>). This practice can cause a few problems,
 because there are a few places in the Twisted tree that need to know where
 the tree starts, so they can add it to <code>sys.path</code> without
 requiring the user manually set their PYTHONPATH. These functions walk the
-current directory up to the root, looking for a directory named
-<q>Twisted</q> (sometimes exactly that, sometimes with a
+current directory up to the root, looking for a directory named 
+<q>Twisted</q> (sometimes exactly that, sometimes with a 
 <code>.startswith</code> test). Generally these are test scripts or other
 administrative tools which expect to be launched from somewhere inside the
 tree (but not necessarily from the top).</p>
@@ -58,31 +58,33 @@ problems.</p>
 
 <h2>Combinator</h2>
 
-<p>In order to simplify the use of Subversion, we typically use
+<p>In order to simplify the use of Subversion, we typically use 
 <a href="http://divmod.org/trac/wiki/DivmodCombinator">Divmod Combinator</a>.
 You may find it to be useful, too.  In particular, because Twisted uses
 branches for almost all feature development, if you plan to contribute to
 Twisted you will probably find Combinator very useful.  For more details,
-see the Combinator website, as well as the
+see the Combinator website, as well as the 
 <a href="http://divmod.org/trac/wiki/UltimateQualityDevelopmentSystem">
 UQDS</a> page.</p>
 
 <h2>Compiling C extensions</h2>
 
 <p>
-There are currently several C extension modules in Twisted:
-twisted.protocols._c_urlarg, twisted.internet.cfsupport,
-twisted.internet.iocpreactor._iocp, and twisted.python._epoll.  These modules
+There are currently several C extension modules in Twisted: 
+<code class="python">twisted.protocols._c_urlarg</code>, 
+<code class="python">twisted.internet.cfsupport</code>, 
+<code class="python">twisted.internet.iocpreactor._iocp</code>, 
+and <code class="python">twisted.python._epoll</code>.  These modules
 are optional, but you'll have to compile them if you want to experience their
 features, performance improvements, or bugs. There are two approaches.
 </p>
 
 <p>The first is to do a regular distutils <code>./setup.py build</code>, which
-will create a directory under <code>build/</code> to hold both the generated
+will create a directory under <code>build/</code> to hold both the generated 
 <code>.so</code> files as well as a copy of the 600-odd <code>.py</code> files
 that make up Twisted. If you do this, you will need to set your PYTHONPATH to
 something like <code>MyDir/Twisted/build/lib.linux-i686-2.5</code> in order to
-run code against the Subversion twisted (as opposed to whatever's installed in
+run code against the Subversion twisted (as opposed to whatever's installed in 
 <code>/usr/lib/python2.5</code> or wherever python usually looks). In
 addition, you will need to re-run the <code>build</code> command <em>every
 time</em> you change a <code>.py</code> file. The <code>build/lib.foo</code>
@@ -95,7 +97,7 @@ PYTHONPATH at the top of the tree, like <code>MyDir/Twisted</code>. This way
 you're using the .py files in place too, removing the confusion a forgotten
 rebuild could cause with the separate build/ directory above. To build the C
 modules in place, do <code>./setup.py build_ext -i</code>. You only need to
-re-run this command when you change the C files. Note that
+re-run this command when you change the C files. Note that 
 <code>setup.py</code> is not Make, it does not always get the dependencies
 right (<code>.h</code> files in particular), so if you are hacking on the
 cReactor you may need to manually delete the <code>.o</code> files before
@@ -119,21 +121,21 @@ do one of:</p>
 
 <pre class="shell">./bin/trial twisted/test/test_defer.py</pre>
 
-<p>To run any tests that are related to a code file, like
+<p>To run any tests that are related to a code file, like 
 <code>twisted/protocols/imap4.py</code>, do:</p>
 
 <pre class="shell">./bin/trial --testmodule twisted/mail/imap4.py</pre>
 
-<p>This depends upon the <code>.py</code> file having an appropriate
+<p>This depends upon the <code>.py</code> file having an appropriate 
 <q>test-case-name</q> tag that indicates which test cases provide coverage.
 See the <a href="test-standard.xhtml">Test Standards</a> document for
-details about using <q>test-case-name</q>. In this example, the
+details about using <q>test-case-name</q>. In this example, the 
 <code>twisted.mail.test.test_imap</code> test will be run.</p>
 
 <p>Many tests create temporary files in /tmp or ./_trial_temp, but
 everything in /tmp should be deleted when the test finishes. Sometimes these
-cleanup calls are commented out by mistake, so if you see a stray
-/tmp/@12345.1 directory, it is probably from test_dirdbm or test_popsicle.
+cleanup calls are commented out by mistake, so if you see a stray 
+<code>/tmp/@12345.1</code> directory, it is probably from <code>test_dirdbm</code> or <code>test_popsicle</code>.
 Look for an <code>rmtree</code> that has been commented out and complain to
 the last developer who touched that file.</p>
 
@@ -154,7 +156,7 @@ the index file will be placed in <code>doc/core/howto/index.html</code>.</p>
 ./bin/lore/lore -p --config template=doc/core/howto/template.tpl doc/core/howto/*.xhtml
 </pre>
 
-<p>To run hlint over a single Lore document, such as
+<p>To run hlint over a single Lore document, such as 
 <code>doc/development/policy/svn-dev.xhtml</code>, do the following. This is
 useful because the HTML conversion may bail without a useful explanation if
 it sees mismatched tags.</p>
@@ -164,7 +166,7 @@ it sees mismatched tags.</p>
 </pre>
 
 <p>To convert it to HTML (including markup, interpolation of examples,
-footnote processing, etc), do the following. The results will be placed in
+footnote processing, etc), do the following. The results will be placed in 
 <code>doc/development/policy/svn-dev.html</code>:</p>
 
 <pre class="shell">
@@ -176,13 +178,13 @@ footnote processing, etc), do the following. The results will be placed in
 include a <q>-l</q> argument to <code>bin/lore/lore</code>. Links in the
 .xhtml file are to .xhtml targets: when the .xhtml is turned into .html, the
 link targets are supposed to be turned into .html also. In addition to this,
-Lore markup of the form &lt;code class=&quot;API&quot;&gt; is supposed to
+Lore markup of the form <code>&lt;code class=&quot;API&quot;&gt;</code> is supposed to
 turn into a link to the corresponding API reference page. These links will
 probably be wrong unless the correct base URL is provided to Lore.</p>
 
 <h2>Committing and Post-commit Hooks</h2>
 
-<p>Twisted uses a customized
+<p>Twisted uses a customized 
 <a href="http://bazaar.launchpad.net/~exarkun/twisted-trac-integration/trunk/annotate/head%3A/trac-hooks/trac-post-commit-hook">
 trac-post-commit-hook</a> to enable ticket updates based on svn commit
 logs. When making a branch for a ticket, the branch name should end
@@ -205,12 +207,12 @@ Fixes: #9999
 My longer description of the changes made.
 </pre>
 
-<p>The <a href="coding-standard.xhtml#commits">Twisted Coding Standard</a>
+<p>The <a href="coding-standard.xhtml">Twisted Coding Standard</a>
 elaborates on commit messages and source control.</p>
 
 <h2>Emacs</h2>
 
-<p>A minor mode for development with Twisted using Emacs is available.  See
+<p>A minor mode for development with Twisted using Emacs is available.  See 
 <code>emacs/twisted-dev.el</code> for several utility functions which make
 it easier to grep for methods, run test cases, etc.</p>
 
@@ -218,7 +220,7 @@ it easier to grep for methods, run test cases, etc.</p>
 
 <p>Our support for building Debian packages has fallen into disrepair.  We
 would very much like to restore this functionality, but until we do so, if
-you are interested in this, you are on your own.  See
+you are interested in this, you are on your own.  See 
 <a href="http://github.com/astraw/stdeb">stdeb</a> for one possible approach to
 this.</p>
 
