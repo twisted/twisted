@@ -17,7 +17,7 @@
     functions:</p>
 
     <dl>
-      <dt><code class="API" base="twisted.python.log">msg</code></dt>
+      <dt><code class="API" base="twisted.python.log.LogPublisher">msg</code></dt>
       <dd>Logs a new message.  For example:
         <pre class="python">
 from twisted.python import log
@@ -52,6 +52,12 @@ log.startLogging(open('/var/log/foo.log', 'w'))
         <pre class="python">
 log.startLogging(sys.stdout)
         </pre>
+      or:
+        <pre class="python">
+from twisted.python.logging import DailyLogFile
+
+log.startLogging(DailyLogFile.fromFullPath("/var/log/foo.log"))
+        </pre>
 
       By default, <code>startLogging</code> will also redirect anything written
       to <code>sys.stdout</code> and <code>sys.stderr</code> to the log.  You
@@ -81,9 +87,9 @@ log.startLogging(sys.stdout)
     <h3>Using the standard library logging module</h3>
 
     <p>If your application uses the
-    <a href="http://docs.python.org/library/logging.html">standard library
-    logging module</a> but don't want to lose twisted-produced messages,
-    the observer
+    Python <a href="http://docs.python.org/library/logging.html">standard
+    library logging module</a> or you want to use its easy configuration but
+    don't want to lose twisted-produced messages, the observer
     <code class="API" base="twisted.python.log">PythonLoggingObserver</code>
     should be useful to you.
     </p>
