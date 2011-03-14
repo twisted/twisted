@@ -177,8 +177,8 @@
 
 (defun twisted-dev-gendoc ()
   (interactive)
-  (with-cd (format "%s/doc/howto" twisted-dev-directory)
-    (compile (format "../../bin/lore -p %s" buffer-file-name))))
+  (with-cd (format "%s/doc/core/howto" twisted-dev-directory)
+    (compile (format "../../../bin/lore -p %s" buffer-file-name))))
 
 (defun twisted-dev-grep ()
   (interactive)

@@ -190,7 +190,7 @@ class Deferred:
     that come from outside packages that are not under our control, we use
     threads (see for example L{twisted.enterprise.adbapi}).
 
-    For more information about Deferreds, see doc/howto/core/defer.html or
+    For more information about Deferreds, see doc/core/howto/defer.html or
     U{http://twistedmatrix.com/documents/current/core/howto/defer.html}
 
     When creating a Deferred, you may provide a canceller function, which

@@ -148,10 +148,10 @@ before processing, and can also translate the files into LaTeX or PostScript
 instead.</p>
 
 <p>To build the HTML form of the howto/ docs, do the following. Note that
-the index file will be placed in <code>doc/howto/index.html</code>.</p>
+the index file will be placed in <code>doc/core/howto/index.html</code>.</p>
 
 <pre class="shell">
-./bin/lore/lore -p --config template=doc/howto/template.tpl doc/howto/*.xhtml
+./bin/lore/lore -p --config template=doc/core/howto/template.tpl doc/core/howto/*.xhtml
 </pre>
 
 <p>To run hlint over a single Lore document, such as
@@ -168,7 +168,7 @@ footnote processing, etc), do the following. The results will be placed in
 <code>doc/development/policy/svn-dev.html</code>:</p>
 
 <pre class="shell">
-./bin/lore/lore -p --config template=doc/howto/template.tpl \
+./bin/lore/lore -p --config template=doc/core/howto/template.tpl \
    doc/development/policy/svn-dev.xhtml
 </pre>
 

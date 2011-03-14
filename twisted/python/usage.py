@@ -9,7 +9,7 @@ command line of your program.
 
 For information on how to use it, see
 U{http://twistedmatrix.com/projects/core/documentation/howto/options.html},
-or doc/howto/options.html in your Twisted directory.
+or doc/core/howto/options.xhtml in your Twisted directory.
 """
 
 # System Imports
@@ -127,7 +127,7 @@ class Options(dict):
     Advanced functionality is covered in the howto documentation,
     available at
     U{http://twistedmatrix.com/projects/core/documentation/howto/options.html},
-    or doc/howto/options.html in your Twisted directory.
+    or doc/core/howto/options.xhtml in your Twisted directory.
     """
 
     subCommand = None
