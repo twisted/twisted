@@ -6,17 +6,19 @@
 """I hold HTML generation helpers.
 """
 
-from twisted.python import log, versions, deprecate
+from twisted.python import log
+from twisted.python.versions import Version
+from twisted.python.deprecate import deprecated
 
 from cStringIO import StringIO
 from microdom import escape
 
-@deprecate(versions.Version('Twisted', 11, 0, 0))
+@deprecated(Version('Twisted', 11, 0, 0))
 def PRE(text):
     "Wrap <pre> tags around some text and HTML-escape it."
     return "<pre>"+escape(text)+"</pre>"
 
-@deprecate(versions.Version('Twisted', 11, 0, 0))
+@deprecated(Version('Twisted', 11, 0, 0))
 def UL(lst):
     io = StringIO()
     io.write("<ul>\n")
@@ -25,7 +27,7 @@ def UL(lst):
     io.write("</ul>")
     return io.getvalue()
 
-@deprecate(versions.Version('Twisted', 11, 0, 0))
+@deprecated(Version('Twisted', 11, 0, 0))
 def linkList(lst):
     io = StringIO()
     io.write("<ul>\n")
@@ -34,7 +36,7 @@ def linkList(lst):
     io.write("</ul>")
     return io.getvalue()
 
-@deprecate(versions.Version('Twisted', 11, 0, 0))
+@deprecated(Version('Twisted', 11, 0, 0))
 def output(func, *args, **kw):
     """output(func, *args, **kw) -> html string
     Either return the result of a function (which presumably returns an
