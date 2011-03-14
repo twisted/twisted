@@ -578,21 +578,27 @@ def safe_str(o):
 
 ##the following were factored out of usage
 
+@deprecated(Version("Twisted", 11, 0, 0), "inspect.getmro")
 def allYourBase(classObj, baseClass=None):
     """allYourBase(classObj, baseClass=None) -> list of all base
     classes that are subclasses of baseClass, unless it is None,
     in which case all bases will be added.
     """
     l = []
-    accumulateBases(classObj, l, baseClass)
+    _accumulateBases(classObj, l, baseClass)
     return l
 
 
+@deprecated(Version("Twisted", 11, 0, 0), "inspect.getmro")
 def accumulateBases(classObj, l, baseClass=None):
+    _accumulateBases(classObj, l, baseClass)
+
+
+def _accumulateBases(classObj, l, baseClass=None):
     for base in classObj.__bases__:
         if baseClass is None or issubclass(base, baseClass):
             l.append(base)
-        accumulateBases(base, l, baseClass)
+        _accumulateBases(base, l, baseClass)
 
 
 def prefixedMethodNames(classObj, prefix):

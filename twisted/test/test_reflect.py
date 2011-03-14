@@ -754,3 +754,20 @@ class DeprecationTestCase(unittest.TestCase):
         result = self.callDeprecated(Version("Twisted", 8, 2, 0),
             reflect.macro, "test", __file__, "test = 1")
         self.assertEquals(result, 1)
+
+    def test_allYourBase(self):
+        """
+        Test deprecation of L{reflect.allYourBase}.
+        """
+        self.callDeprecated(
+            (Version("Twisted", 11, 0, 0), "inspect.getmro"),
+            reflect.allYourBase, DeprecationTestCase)
+
+    def test_accumulateBases(self):
+        """
+        Test deprecation of L{reflect.accumulateBases}.
+        """
+        l = []
+        self.callDeprecated(
+            (Version("Twisted", 11, 0, 0), "inspect.getmro"),
+            reflect.accumulateBases, DeprecationTestCase, l, None)

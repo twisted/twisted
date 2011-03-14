@@ -1,0 +1,1 @@
+allYourBase and accumulateBases are now deprecated in favor of inspect.getmro.
