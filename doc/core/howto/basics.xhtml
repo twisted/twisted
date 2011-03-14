@@ -12,13 +12,13 @@
 
 <h2>Application</h2>
 
-<p>Twisted programs usually work with
-<code class="API">twisted.application.service.Application</code>.
-This class usually holds all persistent configuration of
-a running server -- ports to bind to, places where connections
-to must be kept or attempted, periodic actions to do and almost
-everything else. It is the root object in a tree of services implementing
-<code class="API" base="twisted.application.service">IService</code>.</p>
+<p>Twisted programs usually work
+with <code class="API">twisted.application.service.Application</code>.
+This class usually holds all persistent configuration of a running
+server -- ports to bind to, places where connections to must be kept
+or attempted, periodic actions to do and almost everything else. It is
+the root object in a tree of services implementing <code class="API"
+base="twisted.application.service">IService</code>.</p>
 
 <p>Other HOWTOs describe how to write custom code for Applications,
 but this one describes how to use already written code (which can be
@@ -52,10 +52,11 @@ directory. When a straight Python file which defines an <code>Application</code>
 object called <code>application</code> is used, use the <code class="shell">-y</code>
 option.</p>
 
-<p>When <code class="shell">twistd</code> runs, it records its process id in a
-<code>twistd.pid</code> file (this can be configured via a command line
-switch). In order to shutdown the <code class="shell">twistd</code> process, kill that
-pid (usually you would do <code class="shell">kill `cat twistd.pid`</code>).
+<p>When <code class="shell">twistd</code> runs, it records its process
+id in a <code>twistd.pid</code> file (this can be configured via a
+command line switch). In order to shutdown
+the <code class="shell">twistd</code> process, kill that pid (usually
+you would do <code class="shell">kill `cat twistd.pid`</code>).
 </p>
 
 <p>As always, the gory details are in the manual page.</p>
@@ -63,25 +64,26 @@ pid (usually you would do <code class="shell">kill `cat twistd.pid`</code>).
 <h2>OS Integration</h2>
 
 <p>
-If you have an Application that runs with <code class="shell">twistd</code>,
-you can easily deploy it on RedHat Linux or Debian GNU/Linux based systems
-using the <code class="shell">tap2deb</code> or <code
-class="shell">tap2rpm</code> tools. These take a Twisted Application file (of
-any of the supported formats — Python source, XML or pickle), and build a
-Debian or RPM package (respectively) that installs the Application as a system
-service. The package includes the Application file, a default
-<code>/etc/init.d/</code> script that starts and stops the process with twistd,
-and post-installation scripts that configure the Application to be run in the
-appropriate init levels.
+If you have an Application that runs
+with <code class="shell">twistd</code>, you can easily deploy it on
+RedHat Linux or Debian GNU/Linux based systems using
+the <code class="shell">tap2deb</code>
+or <code class="shell">tap2rpm</code> tools. These take a Twisted
+Application file (of any of the supported formats — Python source, XML
+or pickle), and build a Debian or RPM package (respectively) that
+installs the Application as a system service. The package includes the
+Application file, a default <code>/etc/init.d/</code> script that
+starts and stops the process with twistd, and post-installation
+scripts that configure the Application to be run in the appropriate
+init levels.
 </p>
 
 <!-- Is "note" really the right class to be using here? -->
-<div class="note">
-<code class="shell">tap2rpm</code> and <code class="shell">tap2deb</code> do
-not package your entire application and dependent code, just the Twisted
-Application file. You will need to find some other way to package your Python
-code, such as <code class="API">distutils</code>' <code>bdist_rpm</code>
-command.
+<div class="note"> <code class="shell">tap2rpm</code>
+and <code class="shell">tap2deb</code> do not package your entire
+application and dependent code, just the Twisted Application file. You
+will need to find some other way to package your Python code, such
+as <code class="API">distutils</code>' <code>bdist_rpm</code> command.
 </div>
 
 <p>

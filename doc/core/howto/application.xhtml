@@ -96,7 +96,7 @@ Client service. </p>
 <h3>twistd and tac</h3><a name="twistd" />
 
 <p>To handle start-up and configuration of your Twisted application, the
-Twisted Application infrastructure uses <code>.tac</code> files.
+Twisted Application infrastructure uses <code>.tac</code> files. 
 <code>.tac</code> are Python files which configure an <code class="API"
 base="twisted.application.service">Application</code> object and assign this
 object to the top-level variable <q><code>application</code></q>.</p>
@@ -105,12 +105,12 @@ object to the top-level variable <q><code>application</code></q>.</p>
 
 <a href="listings/application/service.tac" class="py-listing">service.tac</a>
 
-<p><code>twistd</code> is a program that runs Twisted applications using a
-<code>.tac</code> file. In its most simple form, it takes a single argument
+<p><code>twistd</code> is a program that runs Twisted applications using a 
+<code>.tac</code> file. In its most simple form, it takes a single argument 
 <code>-y</code> and a tac file name. For example, you can run the above server
 with the command <code class="shell">twistd -y service.tac</code>.</p>
 
-<p>By default, <code>twistd</code> daemonizes and logs to a file called
+<p>By default, <code>twistd</code> daemonizes and logs to a file called 
 <code>twistd.log</code>. More usually, when debugging, you will want your
 application to run in the foreground and log to the command line. To run the
 above file like this, use the command <code class="shell">twistd -noy
@@ -124,7 +124,7 @@ service.tac</code></p>
 The logging behavior can be customized through an API
 accessible from <code>.tac</code> files.  The <code class="API"
 base="twisted.python.log">ILogObserver</code> component can be
-set on an Application in order to customize the default log observer that
+set on an Application in order to customize the default log observer that 
 <code>twistd</code> will use.
 </p>
 
@@ -146,16 +146,16 @@ application.setComponent(ILogObserver, FileLogObserver(logfile).emit)
 
 <p>
 invoking <code class="shell">twistd -y my.tac</code> will create a log file
-at<code>/tmp/my.log</code>.
+at <code>/tmp/my.log</code>.
 </p>
 
 <h3>Services provided by Twisted</h3>
 
 <p>Twisted provides several services that you want to know about.</p>
 
-<p>Each of these services (except TimerService) has a corresponding
+<p>Each of these services (except TimerService) has a corresponding 
 <q>connect</q> or <q>listen</q> method on the reactor, and the constructors for
-the services take the same arguments as the reactor methods.  The
+the services take the same arguments as the reactor methods.  The 
 <q>connect</q> methods are for clients and the <q>listen</q> methods are for
 servers.  For example, TCPServer corresponds to reactor.listenTCP and TCPClient
 corresponds to reactor.connectTCP.  </p>
@@ -225,9 +225,9 @@ corresponds to reactor.connectTCP.  </p>
   <dd>Services which send and receive data over UNIX datagram sockets.
     <ul>
       <li><code class="API"
-      base="twisted.internet.interfaces.IReactorUDP">listenUNIXDatagram</code></li>
+      base="twisted.internet.interfaces.IReactorUNIXDatagram">listenUNIXDatagram</code></li>
       <li><code class="API"
-      base="twisted.internet.interfaces.IReactorUDP">connectUNIXDatagram</code></li>
+      base="twisted.internet.interfaces.IReactorUNIXDatagram">connectUNIXDatagram</code></li>
     </ul>
   </dd>
 
@@ -237,7 +237,7 @@ corresponds to reactor.connectTCP.  </p>
     A server for UDP socket methods that support multicast.
     <ul>
       <li><code class="API"
-      base="twisted.internet.interfaces.IReactorUDP">listenMulticast</code></li>
+      base="twisted.internet.interfaces.IReactorMulticast">listenMulticast</code></li>
     </ul>
   </dd>
 
@@ -253,7 +253,7 @@ corresponds to reactor.connectTCP.  </p>
 <h3>Service Collection</h3>
 
 <p><code class="API"
-base="twisted.application.service">IServiceCollection</code> objects contain
+base="twisted.application.service">IServiceCollection</code> objects contain 
 <code class="API" base="twisted.application.service">IService</code> objects.
 IService objects can be added to IServiceCollection by calling <code class="API"
 base="twisted.application.service.IService">setServiceParent</code> and detached
