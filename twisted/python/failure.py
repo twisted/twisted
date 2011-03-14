@@ -17,6 +17,7 @@ import linecache
 import inspect
 import opcode
 from cStringIO import StringIO
+from inspect import getmro
 
 from twisted.python import reflect
 
@@ -280,7 +281,7 @@ class Failure:
                 ])
             tb = tb.tb_next
         if inspect.isclass(self.type) and issubclass(self.type, Exception):
-            parentCs = reflect.allYourBase(self.type)
+            parentCs = getmro(self.type)
             self.parents = map(reflect.qual, parentCs)
             self.parents.append(reflect.qual(self.type))
         else:
