@@ -6,6 +6,7 @@
 Tests for L{twisted.conch.scripts.cftp}.
 """
 
+import locale
 import time, sys, os, operator, getpass, struct
 from StringIO import StringIO
 
@@ -140,6 +141,37 @@ class ListingTests(TestCase):
         self.assertEqual(
             self._lsInTimezone('Pacific/Auckland', stat),
             '!---------    0 0        0               0 Aug 29 09:33 foo')
+
+
+    def test_localeIndependent(self):
+        """
+        The month name in the date should be locale independent.
+        """
+        # A point about three months in the past.
+        then = self.now - (60 * 60 * 24 * 31 * 3)
+        stat = os.stat_result((0, 0, 0, 0, 0, 0, 0, 0, then, 0))
+
+        # Fake that we're in a language where August is not Aug (e.g.: Spanish)
+        current_locale = locale.getlocale()
+        locale.setlocale(locale.LC_ALL, "es_AR.UTF8")
+        self.addCleanup(locale.setlocale, locale.LC_ALL, current_locale)
+
+        self.assertEqual(
+            self._lsInTimezone('America/New_York', stat),
+            '!---------    0 0        0               0 Aug 28 17:33 foo')
+        self.assertEqual(
+            self._lsInTimezone('Pacific/Auckland', stat),
+            '!---------    0 0        0               0 Aug 29 09:33 foo')
+
+    # if alternate locale is not available, the previous test will be
+    # skipped, please install this locale for it to run
+    current_locale = locale.getlocale()
+    try:
+        locale.setlocale(locale.LC_ALL, "es_AR.UTF8")
+    except locale.Error:
+        test_localeIndependent.skip = "The es_AR.UTF8 locale is not installed."
+    finally:
+        locale.setlocale(locale.LC_ALL, current_locale)
 
 
     def test_newSingleDigitDayOfMonth(self):

@@ -7,6 +7,10 @@ import stat
 
 from time import time, strftime, localtime
 
+# locale-independent month names to use instead of strftime's
+MONTH_NAMES = dict(zip(range(1, 13),
+                   "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split()))
+
 
 def lsLine(name, s):
     mode = s.st_mode
@@ -39,22 +43,24 @@ def lsLine(name, s):
     if mode&stat.S_ISGID:
         if perms[6] == 'x': perms[6] = 's'
         else: perms[6] = 'S'
-    l = perms.tostring()
-    l += str(s.st_nlink).rjust(5) + ' '
+
     un = str(s.st_uid)
-    l += un.ljust(9)
     gr = str(s.st_gid)
-    l += gr.ljust(9)
     sz = str(s.st_size)
-    l += sz.rjust(8)
-    l += ' '
     sixmo = 60 * 60 * 24 * 7 * 26
+    l = [perms.tostring(), str(s.st_nlink).rjust(5), ' ',
+         un.ljust(9), gr.ljust(9), sz.rjust(8), ' ']
+
+    # need to specify the month manually, as strftime depends on locale
+    ttup = localtime(s.st_mtime)
     if s.st_mtime + sixmo < time(): # last edited more than 6mo ago
-        l += strftime("%b %d  %Y ", localtime(s.st_mtime))
+        strtime = strftime("%%s %d  %Y ", ttup)
     else:
-        l += strftime("%b %d %H:%M ", localtime(s.st_mtime))
-    l += name
-    return l
+        strtime = strftime("%%s %d %H:%M ", ttup)
+    l.append(strtime % (MONTH_NAMES[ttup[1]],))
+
+    l.append(name)
+    return ''.join(l)
 
 
 __all__ = ['lsLine']

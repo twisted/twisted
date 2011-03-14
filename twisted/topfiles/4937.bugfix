@@ -1,0 +1,1 @@
+Remove a dependency on locale-specific formatting directives used in t.conch and t.m.imap4 and instead only use English month abbreviations.
