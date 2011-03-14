@@ -1,1 +1,0 @@
-The non-deprecated use cases for twisted.python.reflect.allYourBase have been replaced with inspect.getmro from the standard library, which is faster and probably better.
