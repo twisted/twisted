@@ -339,8 +339,10 @@ class Options(usage.Options):
 from twisted.python import usage
 
 class Options(usage.Options):
-    optParameters = [["shiny_integer", "s", 1, None, int]]
-    optParameters = [["dummy_float", "d", 3.14159, None, float]]
+    optParameters = [
+            ["shiny_integer", "s", 1, None, int],
+            ["dummy_float", "d", 3.14159, None, float],
+        ]
 </pre>
 
     <p>Note that default values are not coerced, so you should either declare
@@ -369,7 +371,7 @@ class Options(usage.Options):
 </p>
 
 <pre class="shell">
-$ <em>python myprogram.py --help</em>
+$ python myprogram.py --help
 Usage: myprogram [options] 
 Options:
   -o, --one_choice=           [default: 0]. Must be 1, 2 or 3.
