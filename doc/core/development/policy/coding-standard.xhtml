@@ -533,8 +533,9 @@ myref.callRemote("addUser", name="bob", phone="555-1212")
     signature:</p>
 
 <pre class="python">
-def callRemote(self, _name, *args, **kw):
-   ...
+class SomeClass(object):
+    def callRemote(self, _name, *args, **kw):
+        ...
 </pre>
 
     <p>Do whatever you can to reduce user confusion. It may also be

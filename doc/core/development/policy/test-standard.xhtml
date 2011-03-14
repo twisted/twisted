@@ -137,10 +137,11 @@ printed, at the bottom of the test output) the test is counted as a
 inside a conditional which looks for the necessary prerequisites:</p>
 
 <pre class="python">
-def test_sshClient(self):
-    if not ssh_path:
-        raise unittest.SkipTest("cannot find ssh, nothing to test")
-    foo() # do actual test after the SkipTest
+class SSHClientTests(unittest.TestCase):
+    def test_sshClient(self):
+        if not ssh_path:
+            raise unittest.SkipTest("cannot find ssh, nothing to test")
+        foo() # do actual test after the SkipTest
 </pre>
 
 <p>You can also set the <code>.skip</code> attribute on the method, with a
@@ -149,9 +150,10 @@ temporarily turning off a test case, but it can also be set conditionally (by
 manipulating the class attributes after they've been defined):</p>
 
 <pre class="python">
-def test_thing(self):
-    dotest()
-test_thing.skip = "disabled locally"
+class SomeThingTests(unittest.TestCase):
+    def test_thing(self):
+        dotest()
+    test_thing.skip = "disabled locally"
 </pre>
 
 <pre class="python">

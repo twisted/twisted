@@ -149,9 +149,10 @@ will emit a warning and then calls <code>flushWarnings</code> and makes
 assertions about the result.  For example:</p>
 
 <pre class="python">
-def test_warning(self):
-    warnings.warn("foo is bad")
-    self.assertEqual(len(self.flushWarnings()), 1)
+class SomeWarningsTests(TestCase):
+    def test_warning(self):
+        warnings.warn("foo is bad")
+        self.assertEqual(len(self.flushWarnings()), 1)
 </pre>
 
 <p>Warnings emitted in tests which are not flushed will be included by the

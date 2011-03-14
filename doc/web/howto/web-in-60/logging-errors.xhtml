@@ -35,9 +35,10 @@ the <code>_responseFailed</code> callback, which will now log the
 error passed to it:</p>
 
 <pre class="python">
-def _responseFailed(self, failure, call):
-    call.cancel()
-    err(failure, "Async response demo interrupted response")
+...
+    def _responseFailed(self, failure, call):
+        call.cancel()
+        err(failure, "Async response demo interrupted response")
 </pre>
 
 <p>We're passing two arguments to <code class="API"

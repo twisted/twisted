@@ -35,14 +35,14 @@ before the response is sent.</p>
 a resource class with the same <code>_delayedRender</code> used previously:</p>
 
 <pre class="python">
- from twisted.web.resource import Resource
- from twisted.web.server import NOT_DONE_YET
- from twisted.internet import reactor
+from twisted.web.resource import Resource
+from twisted.web.server import NOT_DONE_YET
+from twisted.internet import reactor
 
- class DelayedResource(Resource):
-     def _delayedRender(self, request):
-         request.write("&lt;html&gt;&lt;body&gt;Sorry to keep you waiting.&lt;/body&gt;&lt;/html&gt;")
-         request.finish()
+class DelayedResource(Resource):
+    def _delayedRender(self, request):
+        request.write("&lt;html&gt;&lt;body&gt;Sorry to keep you waiting.&lt;/body&gt;&lt;/html&gt;")
+        request.finish()
 </pre>
 
 <p>Before defining the render method, we're going to define an errback
@@ -52,8 +52,9 @@ returned by <code>Request.notifyFinish</code>. It will cancel the
 delayed call to <code>_delayedRender</code>.</p>
 
 <pre class="python">
-def _responseFailed(self, err, call):
-    call.cancel()
+...
+    def _responseFailed(self, err, call):
+        call.cancel()
 </pre>
 
 <p>Finally, the render method will set up the delayed call just as it
@@ -62,10 +63,11 @@ will also use <code>Request.notifyFinish</code> to make
 sure <code>_responseFailed</code> is called if appropriate.</p>
 
 <pre class="python">
-def render_GET(self, request):
-    call = reactor.callLater(5, self._delayedRender, request)
-    request.notifyFinish().addErrback(self._responseFailed, call)
-    return NOT_DONE_YET
+...
+    def render_GET(self, request):
+        call = reactor.callLater(5, self._delayedRender, request)
+        request.notifyFinish().addErrback(self._responseFailed, call)
+        return NOT_DONE_YET
 </pre>
 
 <p>Notice that since <code>_responseFailed</code> needs a reference to

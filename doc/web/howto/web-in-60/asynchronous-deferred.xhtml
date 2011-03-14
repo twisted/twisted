@@ -95,8 +95,9 @@ the <code>deferLater</code> call to return a <code>Deferred</code>
 which has the request object as its result.</p>
 
 <pre class="python">
-def render_GET(self, request):
-    d = deferLater(reactor, 5, lambda: request)
+...
+    def render_GET(self, request):
+        d = deferLater(reactor, 5, lambda: request)
 </pre>
 
 <p>The <code>Deferred</code> referenced by <code>d</code> now needs to
@@ -106,7 +107,8 @@ of <code>d</code> (which will be <code>request</code>, of course — the
 result of <code>(lambda: request)()</code>).</p>
 
 <pre class="python">
-d.addCallback(self._delayedRender)
+...
+        d.addCallback(self._delayedRender)
 </pre>
 
 <p>Finally, the render method still needs to return <code>NOT_DONE_YET</code>,
@@ -114,7 +116,8 @@ for exactly the same reasons as it did in the previous version of the
 example.</p>
 
 <pre class="python">
-return NOT_DONE_YET
+...
+        return NOT_DONE_YET
 </pre>
 
 <p>And with that, <code>DelayedResource</code> is now implemented

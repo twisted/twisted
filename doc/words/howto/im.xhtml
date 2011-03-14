@@ -36,13 +36,14 @@
 		this:</p>
 
 		<pre class="python">
-def __init__(self):
-	self.chatui = ... # Your subclass of basechat.ChatUI
-	self.accounts = ... # Load account list
-	for a in self.accounts:
-		a.logOn(self.chatui)
-		</pre>
-		
+...
+    def __init__(self):
+        self.chatui = ... # Your subclass of basechat.ChatUI
+        self.accounts = ... # Load account list
+        for a in self.accounts:
+            a.logOn(self.chatui)
+</pre>
+
 		<h3>ChatUI</h3>
 		<p>Account objects talk to the user via a subclass of <code
 			class="API" base="twisted.words.im">basechat.ChatUI</code>.

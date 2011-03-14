@@ -52,8 +52,9 @@ one more method to give it a second behavior; this <code>render_POST</code>
 method will allow it to accept <code>POST</code> requests:</p>
 
 <pre class="python">
-def render_POST(self, request):
-    return '&lt;html&gt;&lt;body&gt;You submitted: %s&lt;/body&gt;&lt;/html&gt;' % (cgi.escape(request.args["the-field"][0]),)
+...
+    def render_POST(self, request):
+        return '&lt;html&gt;&lt;body&gt;You submitted: %s&lt;/body&gt;&lt;/html&gt;' % (cgi.escape(request.args["the-field"][0]),)
 </pre>
 
 <p>The main thing to note here is the use

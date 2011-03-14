@@ -79,10 +79,11 @@ this case, it will be a <code>File</code>. In general, with <code>Guard</code>,
 the avatar must be a resource of some sort.</p>
 
 <pre class="python">
-def requestAvatar(self, avatarId, mind, *interfaces):
-    if IResource in interfaces:
-        return (IResource, File("/home/%s/public_html" % (avatarId,)), lambda: None)
-    raise NotImplementedError()
+...
+    def requestAvatar(self, avatarId, mind, *interfaces):
+        if IResource in interfaces:
+            return (IResource, File("/home/%s/public_html" % (avatarId,)), lambda: None)
+        raise NotImplementedError()
 </pre>
 
 <p>A few notes on this method:</p>
