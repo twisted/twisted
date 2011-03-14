@@ -634,18 +634,15 @@ class DefaultObserver:
     Will ignore all non-error messages and send error messages to sys.stderr.
     Will be removed when startLogging() is called for the first time.
     """
-    stderr = sys.stderr
 
     def _emit(self, eventDict):
         if eventDict["isError"]:
             if 'failure' in eventDict:
-                text = ((eventDict.get('why') or 'Unhandled Error')
-                        + '\n' + eventDict['failure'].getTraceback())
+                text = eventDict['failure'].getTraceback()
             else:
                 text = " ".join([str(m) for m in eventDict["message"]]) + "\n"
-
-            self.stderr.write(text)
-            self.stderr.flush()
+            sys.stderr.write(text)
+            sys.stderr.flush()
 
     def start(self):
         addObserver(self._emit)
