@@ -471,6 +471,7 @@ class ReactorBase(object):
         self.running = False
         self._started = False
         self._justStopped = False
+        self._startedBefore = False
         # reactor internal readers, e.g. the waker.
         self._internalReaders = set()
         self.waker = None
@@ -570,6 +571,7 @@ class ReactorBase(object):
                 "Can't stop reactor that isn't running.")
         self._stopped = True
         self._justStopped = True
+        self._startedBefore = True
 
 
     def crash(self):
@@ -668,6 +670,8 @@ class ReactorBase(object):
         """
         if self._started:
             raise error.ReactorAlreadyRunning()
+        if self._startedBefore:
+            raise error.ReactorNotRestartable()
         self._started = True
         self._stopped = False
         threadable.registerAsIOThread()

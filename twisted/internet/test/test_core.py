@@ -12,7 +12,7 @@ import time
 import inspect
 
 from twisted.internet.abstract import FileDescriptor
-from twisted.internet.error import ReactorAlreadyRunning
+from twisted.internet.error import ReactorAlreadyRunning, ReactorNotRestartable
 from twisted.internet.defer import Deferred
 from twisted.internet.test.reactormixins import ReactorBuilder
 
@@ -308,6 +308,23 @@ class SystemEventTestsBuilder(ReactorBuilder):
         reactor.callWhenRunning(stop)
         reactor.run()
         self.assertEqual(events, ['crash', ('stop', True)])
+
+
+    def test_runAfterStop(self):
+        """
+        C{reactor.run()} raises L{ReactorNotRestartable} when called when
+        the reactor is being run after getting stopped priorly.
+        """
+        events = []
+        def restart():
+            self.assertRaises(ReactorNotRestartable, reactor.run)
+            events.append('tested')
+        reactor = self.buildReactor()
+        reactor.callWhenRunning(reactor.stop)
+        reactor.addSystemEventTrigger('after', 'shutdown', restart)
+        reactor.run()
+        self.assertEqual(events, ['tested'])
+
 
 
 globals().update(SystemEventTestsBuilder.makeTestCaseClasses())

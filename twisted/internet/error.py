@@ -350,6 +350,12 @@ class ReactorNotRunning(RuntimeError):
     """
 
 
+class ReactorNotRestartable(RuntimeError):
+    """
+    Error raised when trying to run a reactor which was stopped.
+    """
+
+
 
 class ReactorAlreadyRunning(RuntimeError):
     """
