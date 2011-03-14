@@ -67,12 +67,12 @@ This has only 2 methods -</p>
 
 <p>The docstring is quite expansive (see <code class="API">twisted.cred.portal</code>), but in
 brief, this is what you call when you need to call in order to connect
-a user to the system.  Typically you only pass in one interface, and the mind is
-<code class="python">None</code>. The interfaces are the possible interfaces the returned
+a user to the system.  Typically you only pass in one interface, and the mind
+is <code class="python">None</code>. The interfaces are the possible interfaces the returned
 avatar is expected to implement, in order of preference.
 The result is a deferred which fires a tuple of:</p>
     <ul>
-	<li>interface the avatar implements (which was one of the interfaces passed in the *interfaces
+	<li>interface the avatar implements (which was one of the interfaces passed in the <code>*interfaces</code>
 tuple)</li>
 	<li>an object that implements that interface (an avatar)</li>
     <li>logout, a 0-argument callable which disconnects the connection that was
@@ -163,10 +163,10 @@ and each avatar represents a single <q>user</q>.</p>
 
     <h3>The Mind</h3>
 
-<p>As mentioned before, the mind is usually None, so you can skip this
+<p>As mentioned before, the mind is usually <code>None</code>, so you can skip this
 bit if you want.</p>
 
-<p>Masters of Perspective Broker already know this object as the ill-named
+<p>Masters of Perspective Broker already know this object as the ill-named 
 <q>client object</q>.  There is no <q>mind</q> class, or even interface, but it
 is an object which serves an important role - any notifications which are to be
 relayed to an authenticated client are passed through a 'mind'. In addition, it
@@ -346,7 +346,7 @@ href="tap.xhtml">Writing a twistd plugin</a> document.</p>
 <p> To build a plugin for cred, you should first define an <code
 class="python">authType</code>, a short one-word string that defines
 your plugin to the command-line. Once you have this, the convention is
-to create a file named <code>myapp_plugins.py</code> in the
+to create a file named <code>myapp_plugins.py</code> in the 
 <code class="API">twisted.plugins</code> module path. </p>
 
 <p> Below is an example file structure for an application that defines
