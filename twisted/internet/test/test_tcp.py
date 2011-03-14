@@ -49,6 +49,44 @@ class FakeResolver:
             return fail(DNSLookupError("FakeResolver couldn't find " + name))
 
 
+class BaseFD:
+    def logPrefix(self):
+        return 'FD'
+
+
+    def connectionLost(self, _):
+        pass
+
+
+    def fileno(self):
+        return self.fd.fileno()
+
+
+class StopReadingFD(BaseFD):
+    def __init__(self, fd, otherfd, reactor):
+        self.fd = fd
+        self.otherfd = otherfd
+        self.reactor = reactor
+
+
+    def doRead(self):
+        self.reactor.removeReader(self.otherfd)
+
+
+class RecordDoReadFD(BaseFD):
+    doReadCalled = False
+    def __init__(self, fd, reactor):
+        self.fd = fd
+        self.reactor = reactor
+
+
+    def doRead(self):
+        self.doReadCalled = True
+
+
+    def doWrite(self):
+        pass
+
 
 class TCPClientTestsBuilder(ReactorBuilder):
     """
@@ -138,6 +176,25 @@ class TCPClientTestsBuilder(ReactorBuilder):
 
         self.assertTrue(connected)
 
+
+    def test_readStopReading(self):
+        """
+        This test checks that when two file descriptors are returned as
+        readable from a single poll() call, and doRead for the first FD
+        calls stopReading on the second FD, we do not read from the
+        second FD
+        """
+        reactor = self.buildReactor()
+
+        s1, s2 = socket.socketpair()
+        s1.send('hello'); s2.send('hello')
+        fd2 = RecordDoReadFD(s2, reactor)
+        fd1 = StopReadingFD(s1, fd2, reactor)
+        reactor.addReader(fd1)
+        reactor.addReader(fd2)
+        reactor.addWriter(fd2)
+        reactor.doIteration(0)
+        self.assertFalse(fd2.doReadCalled)
 
 
 globals().update(TCPClientTestsBuilder.makeTestCaseClasses())
