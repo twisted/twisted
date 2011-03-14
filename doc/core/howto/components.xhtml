@@ -17,14 +17,15 @@ but because it is so convenient to use, often becomes abused in large software
 systems, especially when multiple inheritance is involved. One solution is to
 use <em>delegation</em> instead of <q>inheritance</q> where appropriate.
 Delegation is simply the act of asking <em>another</em> object to perform a task
-for an object. To support this design pattern, which is often referred to as the
-<em>components</em> pattern because it involves many small interacting components,
-<em>interfaces</em> and <em>adapters</em> were created by the Zope 3 team.</p>
+for an object. To support this design pattern, which is often referred to as 
+the <em>components</em> pattern because it involves many small interacting
+components, <em>interfaces</em> and <em>adapters</em> were created by the Zope
+3 team.</p>
 
 <p><q>Interfaces</q> are simply markers which objects can use to say <q>I
-implement this interface</q>. Other objects may then make requests like
+implement this interface</q>. Other objects may then make requests like 
 <q>Please give me an object which implements interface X for object type Y</q>.
-Objects which implement an interface for another object type are called
+Objects which implement an interface for another object type are called 
 <q>adapters</q>.</p>
 
 <p>The superclass-subclass relationship is said to be an <em>is-a</em> relationship.
@@ -100,30 +101,32 @@ technique called <em>composition</em>, which relies on delegation rather than
 inheritance to break code into small reusable chunks. Let us continue with the
 Multiple Inheritance example, though, because it is often used in practice.</p>
 
-<p>What if both the Color and the Area base class defined the same method,
-perhaps <code>calculate</code>? Where would the implementation come from? The
-implementation that is located for <code>Square().calculate()</code> depends on
-the method resolution order, or MRO, and can change when programmers change
-seemingly unrelated things by refactoring classes in other parts of the system,
-causing obscure bugs. Our first thought might be to change the calculate method
-name to avoid name clashes, to perhaps <code>calculateArea</code> and
-<code>calculateColor</code>.  While explicit, this change could potentially
-require a large number of changes throughout a system, and is error-prone,
-especially when attempting to integrate two systems which you didn't write.</p>
+<p>What if both the Color and the Area base class defined the same
+method, perhaps <code>calculate</code>? Where would the implementation
+come from? The implementation that is located
+for <code>Square().calculate()</code> depends on the method resolution
+order, or MRO, and can change when programmers change seemingly
+unrelated things by refactoring classes in other parts of the system,
+causing obscure bugs. Our first thought might be to change the
+calculate method name to avoid name clashes, to
+perhaps <code>calculateArea</code> and <code>calculateColor</code>.
+While explicit, this change could potentially require a large number
+of changes throughout a system, and is error-prone, especially when
+attempting to integrate two systems which you didn't write.</p>
 
 <p>Let's imagine another example. We have an electric appliance, say a hair
-dryer. The hair dryer is american voltage. We have two electric sockets, one of
-them an american 110 Volt socket, and one of them a foreign 220 Volt socket. If
-we plug the hair dryer into the 220 Volt socket, it is going to expect 110 Volt
+dryer. The hair dryer is American voltage. We have two electric sockets, one of
+them an American 120 Volt socket, and one of them a United Kingdom 240 Volt socket. If
+we plug the hair dryer into the 240 Volt socket, it is going to expect 120 Volt
 current and errors will result. Going back and changing the hair dryer to
-support both <code>plug110Volt</code> and <code>plug220Volt</code> methods would
+support both <code>plug120Volt</code> and <code>plug240Volt</code> methods would
 be tedious, and what if we decided we needed to plug the hair dryer into yet
 another type of socket? For example:</p>
 
 <pre class="python">
 class HairDryer:
     def plug(self, socket):
-        if socket.voltage() == 110:
+        if socket.voltage() == 120:
             print "I was plugged in properly and am operating."
         else:
             print "I was plugged in improperly and "
@@ -131,11 +134,11 @@ class HairDryer:
 
 class AmericanSocket:
     def voltage(self):
-        return 110
+        return 120
 
-class ForeignSocket:
+class UKSocket:
     def voltage(self):
-        return 220
+        return 240
 </pre>
 
 <p>Given these classes, the following operations can be performed:</p>
@@ -145,14 +148,14 @@ class ForeignSocket:
 &gt;&gt;&gt; am = AmericanSocket()
 &gt;&gt;&gt; hd.plug(am)
 I was plugged in properly and am operating.
-&gt;&gt;&gt; fs = ForeignSocket()
-&gt;&gt;&gt; hd.plug(fs)
+&gt;&gt;&gt; uk = UKSocket()
+&gt;&gt;&gt; hd.plug(uk)
 I was plugged in improperly and 
 now you have no hair dryer any more.
 </pre>
 
-<p>We are going to attempt to solve this problem by writing an Adapter for the
-<code>ForeignSocket</code> which converts the voltage for use with an American
+<p>We are going to attempt to solve this problem by writing an Adapter for 
+the <code>UKSocket</code> which converts the voltage for use with an American
 hair dryer. An Adapter is a class which is constructed with one and only one
 argument, the <q>adaptee</q> or <q>original</q> object. In this example, we
 will show all code involved for clarity:</p>
@@ -170,8 +173,8 @@ class AdaptToAmericanSocket:
 
 <pre class="python-interpreter">
 &gt;&gt;&gt; hd = HairDryer()
-&gt;&gt;&gt; fs = ForeignSocket()
-&gt;&gt;&gt; adapted = AdaptToAmericanSocket(fs)
+&gt;&gt;&gt; uk = UKSocket()
+&gt;&gt;&gt; adapted = AdaptToAmericanSocket(uk)
 &gt;&gt;&gt; hd.plug(adapted)
 I was plugged in properly and am operating.
 </pre>
@@ -203,7 +206,8 @@ from zope.interface import Interface
 
 class IAmericanSocket(Interface):
     def voltage():
-      """Return the voltage produced by this socket object, as an integer.
+      """
+      Return the voltage produced by this socket object, as an integer.
       """
 </pre>
 
@@ -214,9 +218,8 @@ native language-level support for Interfaces like Java does, this is what
 distinguishes an Interface definition from a Class.</p>
 
 <p>Now that we have a defined Interface, we can talk about objects using terms
-like this: <q>The <code>AmericanSocket</code> class implements the
-<code>IAmericanSocket</code> interface</q> and <q>Please give me an object which
-adapts <code>ForeignSocket</code> to the <code>IAmericanSocket</code>
+like this: <q>The <code>AmericanSocket</code> class implements the <code>IAmericanSocket</code> interface</q> and <q>Please give me an object which
+adapts <code>UKSocket</code> to the <code>IAmericanSocket</code>
 interface</q>. We can make <em>declarations</em> about what interfaces a certain
 class implements, and we can request adapters which implement a certain
 interface for a specific class.</p>
@@ -231,15 +234,16 @@ class AmericanSocket:
     implements(IAmericanSocket)
 
     def voltage(self):
-        return 110
+        return 120
 </pre>
 
-<p>So, to declare that a class implements an interface, we simply call
-<code>zope.interface.implements</code> at the class level.</p>
+<p>So, to declare that a class implements an interface, we simply
+call <code>zope.interface.implements</code> at the class level.</p>
 
-<p>Now, let's say we want to rewrite the <code>AdaptToAmericanSocket</code>
-class as a real adapter. In this case we also specify it as implementing
-<code>IAmericanSocket</code>:</p>
+<p>Now, let's say we want to rewrite
+the <code>AdaptToAmericanSocket</code> class as a real adapter. In
+this case we also specify it as
+implementing <code>IAmericanSocket</code>:</p>
 
 <pre class="python">
 from zope.interface import implements
@@ -250,7 +254,7 @@ class AdaptToAmericanSocket:
 
     def __init__(self, original):
         """
-        Pass the original ForeignSocket object as original
+        Pass the original UKSocket object as original
         """
         self.original = original
 
@@ -260,12 +264,13 @@ class AdaptToAmericanSocket:
 
 <p>Notice how we placed the implements declaration on this adapter class. So
 far, we have not achieved anything by using components other than requiring us
-to type more. In order for components to be useful, we must use the
-<em>component registry</em>. Since <code>AdaptToAmericanSocket</code> implements
-<code>IAmericanSocket</code> and regulates the voltage of a
-<code>ForeignSocket</code> object, we can <em>register
+to type more. In order for components to be useful, we must use the 
+<em>component registry</em>. Since <code>AdaptToAmericanSocket</code> 
+implements 
+<code>IAmericanSocket</code> and regulates the voltage of a 
+<code>UKSocket</code> object, we can register 
 <code>AdaptToAmericanSocket</code> as an <code>IAmericanSocket</code> adapter
-for the <code>ForeignSocket</code> class</em>. It is easier to see how this is
+for the <code>UKSocket</code> class. It is easier to see how this is
 done in code than to describe it:</p>
 
 <pre class="python">
@@ -281,11 +286,11 @@ class AmericanSocket:
     implements(IAmericanSocket)
 
     def voltage(self):
-        return 110
+        return 120
 
-class ForeignSocket:
+class UKSocket:
     def voltage(self):
-        return 220
+        return 240
 
 class AdaptToAmericanSocket:
 
@@ -299,7 +304,7 @@ class AdaptToAmericanSocket:
     
 components.registerAdapter(
     AdaptToAmericanSocket, 
-    ForeignSocket, 
+    UKSocket, 
     IAmericanSocket)
 </pre>
 
@@ -310,27 +315,26 @@ whether an object implements an interface or not:</p>
 <pre class="python-interpreter">
 &gt;&gt;&gt; IAmericanSocket.implementedBy(AmericanSocket)
 True
-&gt;&gt;&gt; IAmericanSocket.implementedBy(ForeignSocket)
+&gt;&gt;&gt; IAmericanSocket.implementedBy(UKSocket)
 False
 &gt;&gt;&gt; am = AmericanSocket() 
-&gt;&gt;&gt; fs = ForeignSocket()
+&gt;&gt;&gt; uk = UKSocket()
 &gt;&gt;&gt; IAmericanSocket.providedBy(am)
 True
-&gt;&gt;&gt; IAmericanSocket.providedBy(fs)
+&gt;&gt;&gt; IAmericanSocket.providedBy(uk)
 False
 </pre>
 
 <p>As you can see, the <code>AmericanSocket</code> instance claims to
-implement <code>IAmericanSocket</code>, but the <code>ForeignSocket</code>
-does not. If we wanted to use the <code>HairDryer</code> with the
-<code>AmericanSocket</code>, we could know that it would be safe to do so by
+implement <code>IAmericanSocket</code>, but the <code>UKSocket</code>
+does not. If we wanted to use the <code>HairDryer</code> with the <code>AmericanSocket</code>, we could know that it would be safe to do so by
 checking whether it implements <code>IAmericanSocket</code>. However, if we
-decide we want to use <code>HairDryer</code> with a <code>ForeignSocket</code>
+decide we want to use <code>HairDryer</code> with a <code>UKSocket</code>
 instance, we must <em>adapt</em> it to <code>IAmericanSocket</code> before
 doing so.  We use the interface object to do this:</p>
 
 <pre class="python-interpreter">
-&gt;&gt;&gt; IAmericanSocket(fs)
+&gt;&gt;&gt; IAmericanSocket(uk)
 &lt;__main__.AdaptToAmericanSocket instance at 0x1a5120&gt;
 </pre>
 
@@ -338,8 +342,7 @@ doing so.  We use the interface object to do this:</p>
 looks in the adapter registry for an adapter which implements the interface for
 the given instance's class. If it finds one, it constructs an instance of the
 Adapter class, passing the constructor the original instance, and returns it.
-Now the <code>HairDryer</code> can safely be used with the adapted
-<code>ForeignSocket</code>. But what happens if we attempt to adapt an object
+Now the <code>HairDryer</code> can safely be used with the adapted  <code>UKSocket</code>. But what happens if we attempt to adapt an object
 which already implements <code>IAmericanSocket</code>? We simply get back the
 original instance:</p>
 
@@ -355,7 +358,7 @@ automatically looked up an adapter for the socket you tried to plug it into:</p>
 class HairDryer:
     def plug(self, socket):
         adapted = IAmericanSocket(socket)
-        assert adapted.voltage() == 110, "BOOM"
+        assert adapted.voltage() == 120, "BOOM"
         print "I was plugged in properly and am operating"
 </pre>
 
@@ -366,11 +369,11 @@ to:</p>
 
 <pre class="python-interpreter">
 &gt;&gt;&gt; am = AmericanSocket()
-&gt;&gt;&gt; fs = ForeignSocket()
+&gt;&gt;&gt; uk = UKSocket()
 &gt;&gt;&gt; hd = HairDryer()
 &gt;&gt;&gt; hd.plug(am)
 I was plugged in properly and am operating
-&gt;&gt;&gt; hd.plug(fs)
+&gt;&gt;&gt; hd.plug(uk)
 I was plugged in properly and am operating
 </pre>
     
@@ -395,7 +398,7 @@ class Root(Referenceable):
     implements(IPBRoot)
 </pre>
 
-<p>Suppose you have your own class which implements your
+<p>Suppose you have your own class which implements your 
 <code>IMyInterface</code> interface:</p>
 
 <pre class="python">
@@ -409,7 +412,7 @@ class MyThing:
 </pre>
 
 <p>Now if you want to make this class inherit from <code>pb.Root</code>, 
-the interfaces code will automatically determine that it also implements
+the interfaces code will automatically determine that it also implements 
 <code>IPBRoot</code>:</p>
 
 <pre class="python">
@@ -429,8 +432,7 @@ class MyThing(pb.Root):
 True
 </pre>
 
-<p>If you want <code>MyThing</code> to inherit from <code>pb.Root</code> but
-<em>not</em> implement <code>IPBRoot</code> like <code>pb.Root</code> does,
+<p>If you want <code>MyThing</code> to inherit from <code>pb.Root</code> but <em>not</em> implement <code>IPBRoot</code> like <code>pb.Root</code> does,
 use <code>implementOnly</code>:</p>
 
 <pre class="python">
