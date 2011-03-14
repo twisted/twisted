@@ -515,7 +515,7 @@ class IRCUser(irc.IRC):
             targetName = params[0].decode(self.encoding)
         except UnicodeDecodeError:
             self.sendMessage(
-                irc.ERR_NOSUCHNICK, targetName,
+                irc.ERR_NOSUCHNICK, params[0],
                 ":No such nick/channel (could not decode your unicode!)")
             return
 
@@ -546,7 +546,7 @@ class IRCUser(irc.IRC):
             groupName = params[0].decode(self.encoding)
         except UnicodeDecodeError:
             self.sendMessage(
-                irc.IRC_NOSUCHCHANNEL, params[0],
+                irc.ERR_NOSUCHCHANNEL, params[0],
                 ":No such channel (could not decode your unicode!)")
             return
 
