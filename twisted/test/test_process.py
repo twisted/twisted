@@ -13,6 +13,7 @@ import StringIO
 import errno
 import gc
 import stat
+import operator
 try:
     import fcntl
 except ImportError:
@@ -2207,6 +2208,32 @@ class Win32ProcessTestCase(unittest.TestCase):
 
 
 
+class Win32UnicodeEnvironmentTest(unittest.TestCase):
+    """
+    Tests for Unicode environment on Windows
+    """
+    goodKey = u'UNICODE'
+    goodValue = u'UNICODE'
+
+    def test_encodableUnicodeEnvironment(self):
+        """
+        Test C{os.environ} (inherited by every subprocess on Windows) that
+        contains an ascii-encodable Unicode string. This is different from
+        passing Unicode environment explicitly to spawnProcess (which is not
+        supported).
+        """
+        os.environ[self.goodKey] = self.goodValue
+        self.addCleanup(operator.delitem, os.environ, self.goodKey)
+
+        p = GetEnvironmentDictionary.run(reactor, [], {})
+        def gotEnvironment(environ):
+            self.assertEquals(
+                environ[self.goodKey.encode('ascii')],
+                self.goodValue.encode('ascii'))
+        return p.getResult().addCallback(gotEnvironment)
+
+
+
 class Dumbwin32procPidTest(unittest.TestCase):
     """
     Simple test for the pid attribute of Process on win32.
@@ -2446,6 +2473,7 @@ if (runtime.platform.getType() != 'win32') or (not interfaces.IReactorProcess(re
     Win32ProcessTestCase.skip = skipMessage
     TestTwoProcessesNonPosix.skip = skipMessage
     Dumbwin32procPidTest.skip = skipMessage
+    Win32UnicodeEnvironmentTest.skip = skipMessage
 
 if not interfaces.IReactorProcess(reactor, None):
     ProcessTestCase.skip = skipMessage

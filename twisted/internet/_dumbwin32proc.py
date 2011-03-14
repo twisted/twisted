@@ -29,7 +29,6 @@ from twisted.internet.interfaces import IProcessTransport, IConsumer, IProducer
 from twisted.python.win32 import quoteArguments
 
 from twisted.internet import error
-from twisted.python import failure
 
 from twisted.internet import _pollingfile
 from twisted.internet._baseprocess import BaseProcess
@@ -118,6 +117,9 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
     closedNotifies = 0
 
     def __init__(self, reactor, protocol, command, args, environment, path):
+        """
+        Create a new child process.
+        """
         _pollingfile._PollingTimer.__init__(self, reactor)
         BaseProcess.__init__(self, protocol)
 
@@ -168,12 +170,24 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         env.update(environment or {})
 
         cmdline = quoteArguments(args)
-        # TODO: error detection here.
+        # TODO: error detection here.  See #2787 and #4184.
         def doCreate():
             self.hProcess, self.hThread, self.pid, dwTid = win32process.CreateProcess(
                 command, cmdline, None, None, 1, 0, env, path, StartupInfo)
         try:
-            doCreate()
+            try:
+                doCreate()
+            except TypeError, e:
+                # win32process.CreateProcess cannot deal with mixed
+                # str/unicode environment, so we make it all Unicode
+                if e.args != ('All dictionary items must be strings, or '
+                              'all must be unicode',):
+                    raise
+                newenv = {}
+                for key, value in env.items():
+                    newenv[unicode(key)] = unicode(value)
+                env = newenv
+                doCreate()
         except pywintypes.error, pwte:
             if not _invalidWin32App(pwte):
                 # This behavior isn't _really_ documented, but let's make it
