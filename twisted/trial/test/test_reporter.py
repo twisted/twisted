@@ -9,11 +9,11 @@ Tests for L{twisted.trial.reporter}.
 
 
 import errno, sys, os, re, StringIO
+from inspect import getmro
 
 from twisted.internet.utils import suppressWarnings
 from twisted.python import log
 from twisted.python.failure import Failure
-from twisted.python.reflect import allYourBase
 from twisted.trial import itrial, unittest, runner, reporter, util
 from twisted.trial.reporter import UncleanWarningsReporterWrapper
 from twisted.trial.test import erroneous
@@ -1219,7 +1219,7 @@ class TestSubunitReporter(TestReporterInterface):
         method = getattr(klass, methodName, None)
         if method is None:
             return
-        for base in [klass] + allYourBase(klass):
+        for base in getmro(klass):
             try:
                 delattr(base, methodName)
             except (AttributeError, TypeError):
