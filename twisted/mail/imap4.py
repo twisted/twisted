@@ -49,10 +49,6 @@ import twisted.cred.error
 import twisted.cred.credentials
 
 
-# locale-independent month names to use instead of strftime's
-MONTH_NAMES = dict(zip(range(1, 13),
-                   "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split()))
-
 
 class MessageSet(object):
     """
@@ -1908,9 +1904,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             log.msg("%d:%r: unpareseable internaldate: %r" % (id, msg, idate))
             raise IMAP4Exception("Internal failure generating INTERNALDATE")
 
-        # need to specify the month manually, as strftime depends on locale
-        strdate = time.strftime("%d-%%s-%Y %H:%M:%S ", ttup[:9])
-        odate = strdate % (MONTH_NAMES[ttup[1]],)
+        odate = time.strftime("%d-%b-%Y %H:%M:%S ", ttup[:9])
         if ttup[9] is None:
             odate = odate + "+0000"
         else:
