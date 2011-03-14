@@ -74,14 +74,14 @@ tame, but you still wouldn't want to let a foreign program use them to
 create arbitrary objects in your namespace or on your computer. Imagine a
 protocol that involved sending a file-like object with a <code>read()</code>
 method that was supposed to used later to retrieve a document. Then imagine
-what if that object were created with
-<code>os.fdopen("~/.gnupg/secring.gpg")</code>. Or an instance of
-<code>telnetlib.Telnet("localhost", "chargen")</code>. </p>
+what if that object were created with 
+ <code>os.fdopen("~/.gnupg/secring.gpg")</code>. Or an instance of 
+ <code>telnetlib.Telnet("localhost", "chargen")</code>. </p>
 
 <p>Classes you've written for your own program are likely to have far more
 power. They may run code during <code>__init__</code>, or even have special
-meaning simply because of their existence. A program might have
-<code>User</code> objects to represent user accounts, and have a rule that
+meaning simply because of their existence. A program might have 
+ <code>User</code> objects to represent user accounts, and have a rule that
 says all <code>User</code> objects in the system are referenced when
 authorizing a login session. (In this system, <code>User.__init__</code>
 would probably add the object to a global list of known users). The simple
@@ -115,9 +115,8 @@ contents of the object.</p>
 
 <p>PB lets you specify the mapping from remote class names to local classes
 with the <code class="API"
-base="twisted.spread.jelly">setUnjellyableForClass</code> function<!--
-
---><span class="footnote"> <p>Note that, in this context, <q>unjelly</q> is
+base="twisted.spread.jelly">setUnjellyableForClass</code> function 
+<span class="footnote">Note that, in this context, <q>unjelly</q> is
 a verb with the opposite meaning of <q>jelly</q>. The verb <q>to jelly</q>
 means to serialize an object or data structure into a sequence of bytes (or
 other primitive transmittable/storable representation), while <q>to
@@ -127,15 +126,14 @@ adjective), referring to the the class that serves as a destination or
 recipient of the unjellying process. <q>A is unjellyable into B</q> means
 that a serialized representation A (of some remote object) can be
 unserialized into a local object of type B. It is these objects <q>B</q>
-that are the <q>Unjellyable</q> second argument of the
-<code>setUnjellyableForClass</code> function.</p>
-
-<p>In particular, <q>unjellyable</q> does <em>not</em> mean <q>cannot be
+that are the <q>Unjellyable</q> second argument of the 
+<code>setUnjellyableForClass</code> function.
+In particular, <q>unjellyable</q> does <em>not</em> mean <q>cannot be
 jellied</q>. <code class="API"
 base="twisted.spread.jelly">Unpersistable</code> means <q>not
 persistable</q>, but <q>unjelly</q>, <q>unserialize</q>, and <q>unpickle</q>
 mean to reverse the operations of <q>jellying</q>, <q>serializing</q>, and
-<q>pickling</q>.</p> </span>.
+<q>pickling</q>.</span>.
 
 
 This function takes a remote/sender class reference (either the
@@ -144,8 +142,8 @@ which the name can be extracted), and a local/recipient class (used to
 create the local representation for incoming serialized objects). Whenever
 the remote end sends an object, the class name that they transmit is looked
 up in the table controlled by this function. If a matching class is found,
-it is used to create the local object. If not, you get the
-<code>InsecureJelly</code> exception.</p>
+it is used to create the local object. If not, you get the 
+ <code>InsecureJelly</code> exception.</p>
 
 <p>In general you expect both ends to share the same codebase: either you
 control the program that is running on both ends of the wire, or both
@@ -153,8 +151,8 @@ programs share some kind of common language that is implemented in code
 which exists on both ends. You wouldn't expect them to send you an object of
 the MyFooziWhatZit class unless you also had a definition for that class. So
 it is reasonable for the Jelly layer to reject all incoming classes except
-the ones that you have explicitly marked with
-<code>setUnjellyableForClass</code>. But keep in mind that the sender's idea
+the ones that you have explicitly marked with 
+ <code>setUnjellyableForClass</code>. But keep in mind that the sender's idea
 of a <code>User</code> object might differ from the recipient's, either
 through namespace collisions between unrelated packages, version skew
 between nodes that haven't been updated at the same rate, or a malicious
@@ -176,20 +174,20 @@ argument, a return value, or something referenced by either of those [like a
 dictionary value]), it must inherit from one of the four <code class="API"
 base="twisted.spread.pb">Serializable</code> classes. In this section,
 we focus on <code class="API" base="twisted.spread.pb">Copyable</code>.
-The copyable subclass of <code>LilyPond</code> is called
-<code>CopyPond</code>. We create an instance of it and send it through
-<code>callRemote</code> as an argument to the receiver's
-<code>remote_takePond</code> method. The Jelly layer will serialize
+The copyable subclass of <code>LilyPond</code> is called 
+ <code>CopyPond</code>. We create an instance of it and send it through 
+ <code>callRemote</code> as an argument to the receiver's 
+ <code>remote_takePond</code> method. The Jelly layer will serialize
 (<q>jelly</q>) that object as an instance with a class name of
 <q>copy_sender.CopyPond</q> and some chunk of data that represents the
-object's state. <code>pond.__class__.__module__</code> and
-<code>pond.__class__.__name__</code> are used to derive the class name
+object's state. <code>pond.__class__.__module__</code> and 
+ <code>pond.__class__.__name__</code> are used to derive the class name
 string. The object's <code class="API"
-base="twisted.spread.pb.Copyable">getStateToCopy</code> method is
+base="twisted.spread.flavors.Copyable">getStateToCopy</code> method is
 used to get the state: this is provided by <code class="API"
-base="twisted.spread">pb.Copyable</code>, and the default just retrieves
-<code>self.__dict__</code>. This works just like the optional
-<code>__getstate__</code> method used by <code>pickle</code>. The pair of
+base="twisted.spread">pb.Copyable</code>, and the default just retrieves 
+ <code>self.__dict__</code>. This works just like the optional 
+ <code>__getstate__</code> method used by <code>pickle</code>. The pair of
 name and state are sent over the wire to the receiver.</p>
 
 <p>The receiving end defines a local class named <code>ReceiverPond</code>
@@ -201,8 +199,8 @@ sender used. (At the very least, we hope ours will be able to accept a state
 created by theirs). It also inherits from <code class="API"
 base="twisted.spread">pb.RemoteCopy</code>, which is a requirement for all
 classes that act in this local-representative role (those which are given to
-the second argument of <code>setUnjellyableForClass</code>).
-<code>RemoteCopy</code> provides the methods that tell the Jelly layer how
+the second argument of <code>setUnjellyableForClass</code>). 
+ <code>RemoteCopy</code> provides the methods that tell the Jelly layer how
 to create the local object from the incoming serialized state.</p>
 
 <p>Then <code>setUnjellyableForClass</code> is used to register the two
@@ -213,13 +211,13 @@ is transmitted when the sender serializes the remote object.</p>
 
 <p>When the receiver unserializes (<q>unjellies</q>) the object, it will
 create an instance of the local <code>ReceiverPond</code> class, and hand
-the transmitted state (usually in the form of a dictionary) to that object's
-<code class="API"
-base="twisted.spread.pb.RemoteCopy">setCopyableState</code> method.
-This acts just like the <code>__setstate__</code> method that
-<code>pickle</code> uses when unserializing an object.
-<code>getStateToCopy</code>/<code>setCopyableState</code> are distinct from
-<code>__getstate__</code>/<code>__setstate__</code> to allow objects to be
+the transmitted state (usually in the form of a dictionary) to that object's 
+ <code class="API"
+base="twisted.spread.flavors.RemoteCopy">setCopyableState</code> method.
+This acts just like the <code>__setstate__</code> method that 
+ <code>pickle</code> uses when unserializing an object. 
+ <code>getStateToCopy</code>/<code>setCopyableState</code> are distinct from 
+ <code>__getstate__</code>/<code>__setstate__</code> to allow objects to be
 persisted (across time) differently than they are transmitted (across
 [memory]space).</p>
 
@@ -235,20 +233,20 @@ persisted (across time) differently than they are transmitted (across
 </pre>
 
 <pre class="shell">
-% ./copy_sender.py
+$ ./copy_sender.py
 7 frogs
 copy_sender.CopyPond
 pond arrived safe and sound
 Main loop terminated.
-%
+$
 </pre>
 
 
 
 <h3>Controlling the Copied State</h3>
 
-<p>By overriding <code>getStateToCopy</code> and
-<code>setCopyableState</code>, you can control how the object is transmitted
+<p>By overriding <code>getStateToCopy</code> and 
+ <code>setCopyableState</code>, you can control how the object is transmitted
 over the wire. For example, you might want perform some data-reduction:
 pre-compute some results instead of sending all the raw data over the wire.
 Or you could replace references to a local object on the sender's side with
@@ -256,14 +254,14 @@ markers before sending, then upon receipt replace those markers with
 references to a receiver-side proxy that could perform the same operations
 against a local cache of data.</p>
 
-<p>Another good use for <code>getStateToCopy</code> is to implement
+<p>Another good use for <code>getStateToCopy</code> is to implement 
 <q>local-only</q> attributes: data that is only accessible by the local
 process, not to any remote users. For example, a <code>.password</code>
 attribute could be removed from the object state before sending to a remote
 system. Combined with the fact that <code>Copyable</code> objects return
 unchanged from a round trip, this could be used to build a
-challenge-response system (in fact PB does this with
-<code>pb.Referenceable</code> objects to implement authorization as
+challenge-response system (in fact PB does this with 
+ <code>pb.Referenceable</code> objects to implement authorization as
 described <a href="pb-cred.xhtml">here</a>).</p>
 
 <p>Whatever <code>getStateToCopy</code> returns from the sending object will
@@ -277,7 +275,7 @@ the object it lives in.</p>
 <a href="listings/pb/copy2_receiver.py" class="py-listing">copy2_receiver.py</a>
 
 <p>In this example, the classes are defined in a separate source file, which
-also sets up the binding between them. The <code>SenderPond</code> and
+also sets up the binding between them. The <code>SenderPond</code> and 
 <code>ReceiverPond</code> are unrelated save for this binding: they happen
 to implement the same methods, but use different internal instance variables
 to accomplish them.</p>
@@ -292,7 +290,7 @@ course, to create the object in the first place.</p>
 <p>When run, the <code>copy2</code> example emits the following:</p>
 
 <pre class="shell">
-% twistd -n -y copy2_receiver.py
+$ twistd -n -y copy2_receiver.py
 [-] twisted.spread.pb.PBServerFactory starting on 8800
 [-] Starting factory &lt;twisted.spread.pb.PBServerFactory instance at
 0x40604b4c&gt;
@@ -302,11 +300,10 @@ course, to create the object in the first place.</p>
 </pre>
 
 <pre class="shell">
-% ./copy2_sender.py
+$ ./copy2_sender.py
 count 7
 pond arrived safe and sound
 Main loop terminated.
-%
 </pre>
 
 
@@ -326,15 +323,12 @@ Main loop terminated.
   defined together, with the <code>setUnjellyableForClass</code> immediately
   following them.</li>
 
-<!--   (XXX: this works, but does this really get the right names into the table? Or -->
-<!--   does it only work because both are defined in the same (wrong) place?) -->
-
   <li>The class that is sent must inherit from <code class="API"
   base="twisted.spread">pb.Copyable</code>. The class that is registered to
   receive it must inherit from <code class="API"
   base="twisted.spread">pb.RemoteCopy</code><span class="footnote"><code
   class="API" base="twisted.spread">pb.RemoteCopy</code> is actually defined
-  as <code class="API" base="twisted.spread">pb.RemoteCopy</code>, but
+  in <code class="API">twisted.spread.flavors</code>, but
   <code>pb.RemoteCopy</code> is the preferred way to access it</span>. </li>
 
   <li>The same class can be used to send and receive. Just have it inherit
@@ -408,44 +402,40 @@ base="twisted.spread">pb.RemoteCache</code>).</p>
 <p>To effectively use <code>pb.Cacheable</code>, you need to isolate changes
 to your object into accessor functions (specifically <q>setter</q>
 functions). Your object needs to get control <em>every</em> single time some
-attribute is changed<span class="footnote">of course you could be clever and
+attribute is changed<span class="footnote">Of course you could be clever and
 add a hook to <code>__setattr__</code>, along with magical change-announcing
 subclasses of the usual builtin types, to detect changes that result from
 normal <q>=</q> set operations. The semi-magical <q>property attributes</q>
-that were introduced in Python-2.2 could be useful too. The result might be
+that were introduced in Python 2.2 could be useful too. The result might be
 hard to maintain or extend, though.</span>.</p>
 
 <p>You derive your sender-side class from <code>pb.Cacheable</code>, and you
 add two methods: <code class="API"
-base="twisted.spread.pb.Cacheable">getStateToCacheAndObserveFor</code>
+base="twisted.spread.flavors.Cacheable">getStateToCacheAndObserveFor</code>
 and <code class="API"
-base="twisted.spread.pb.Cacheable">stoppedObserving</code>. The first
+base="twisted.spread.flavors.Cacheable">stoppedObserving</code>. The first
 is called when a remote caching reference is first created, and retrieves
 the data with which the cache is first filled. It also provides an
-object called the <q>observer</q><!--
-
---><span class="footnote"> this is actually a <code class="API"
+object called the <q>observer</q> <span class="footnote">This is actually a <code class="API"
 base="twisted.spread.pb">RemoteCacheObserver</code>, but it isn't very
 useful to subclass or modify, so simply treat it as a little demon that sits
 in your <code>pb.Cacheable</code> class and helps you distribute change
-notifications. The only useful thing to do with it is to run its
-<code>callRemote</code> method, which acts just like a normal
-<code>pb.Referenceable</code>'s method of the same name.</span>
-
-that points at that receiver-side cache. Every time the state of the object
+notifications. The only useful thing to do with it is to run its 
+<code>callRemote</code> method, which acts just like a normal 
+<code>pb.Referenceable</code>'s method of the same name.</span> that points at that receiver-side cache. Every time the state of the object
 is changed, you give a message to the observer, informing them of the
 change. The other method, <code>stoppedObserving</code>, is called when the
 remote cache goes away, so that you can stop sending updates.</p>
 
 <p>On the receiver end, you make your cache class inherit from <code
-class="API" base="twisted.spread">pb.RemoteCache</code>, and implement the
-<code>setCopyableState</code> as you would for a <code>pb.RemoteCopy</code>
+class="API" base="twisted.spread">pb.RemoteCache</code>, and implement the 
+ <code>setCopyableState</code> as you would for a <code>pb.RemoteCopy</code>
 object. In addition, you must implement methods to receive the updates sent
 to the observer by the <code>pb.Cacheable</code>: these methods should have
-names that start with <code>observe_</code>, and match the
-<code>callRemote</code> invocations from the sender side just as the usual
-<code>remote_*</code> and <code>perspective_*</code> methods match normal
-<code>callRemote</code> calls. </p>
+names that start with <code>observe_</code>, and match the 
+ <code>callRemote</code> invocations from the sender side just as the usual 
+ <code>remote_*</code> and <code>perspective_*</code> methods match normal 
+ <code>callRemote</code> calls. </p>
 
 <p>The first time a reference to the <code>pb.Cacheable</code> object is
 sent to any particular recipient, a sender-side Observer will be created for
@@ -455,8 +445,8 @@ returns is sent to the remote end and turned into a local representation
 using <code>setCopyableState</code> just like <code>pb.RemoteCopy</code>,
 described above (in fact it inherits from that class). </p>
 
-<p>After that, your <q>setter</q> functions on the sender side should call
-<code>callRemote</code> on the Observer, which causes <code>observe_*</code>
+<p>After that, your <q>setter</q> functions on the sender side should call 
+ <code>callRemote</code> on the Observer, which causes <code>observe_*</code>
 methods to run on the receiver, which are then supposed to update the
 receiver-local (cached) state.</p>
 
@@ -466,13 +456,13 @@ Just before it dies, it tells the sender side it no longer cares about the
 original object. When <em>that</em> reference count goes to zero, the
 Observer goes away and the <code>pb.Cacheable</code> object can stop
 announcing every change that takes place. The <code class="API"
-base="twisted.spread.pb.Cacheable">stoppedObserving</code> method is
+base="twisted.spread.flavors.Cacheable">stoppedObserving</code> method is
 used to tell the <code>pb.Cacheable</code> that the Observer has gone
 away.</p>
 
 <p>With the <code>pb.Cacheable</code> and <code>pb.RemoteCache</code>
-classes in place, bound together by a call to
-<code>pb.setUnjellyableForClass</code>, all that remains is to pass a
+classes in place, bound together by a call to 
+ <code>pb.setUnjellyableForClass</code>, all that remains is to pass a
 reference to your <code>pb.Cacheable</code> over the wire to the remote end.
 The corresponding <code>pb.RemoteCache</code> object will automatically be
 created, and the matching methods will be used to keep the receiver-side
@@ -490,7 +480,7 @@ cache that tracks changes to the master:</p>
 <p>When run, this example emits the following:</p>
 
 <pre class="shell">
-% twistd -n -y cache_receiver.py
+$ twistd -n -y cache_receiver.py
 [-] twisted.spread.pb.PBServerFactory starting on 8800
 [-] Starting factory &lt;twisted.spread.pb.PBServerFactory instance at
 0x40615acc&gt;
@@ -503,16 +493,14 @@ cache that tracks changes to the master:</p>
 [Broker,0,127.0.0.1]  cache - removeDuck
 [Broker,0,127.0.0.1] [2] ducks:  ['two duck', 'ugly duckling']
 [Broker,0,127.0.0.1] dropping pond
-%
 </pre>
 
 <pre class="shell">
-% ./cache_sender.py
+$ ./cache_sender.py
 I have [2] ducks
 I have [3] ducks
 I have [2] ducks
 Main loop terminated.
-%
 </pre>
 
 
@@ -522,7 +510,7 @@ Main loop terminated.
   <li>There is one <code>Observer</code> for each remote program that holds
   an active reference. Multiple references inside the same program don't
   matter: the serialization layer notices the duplicates and does the
-  appropriate reference counting<span class="footnote">this applies to
+  appropriate reference counting<span class="footnote">This applies to
   multiple references through the same <code class="API"
   base="twisted.spread.pb">Broker</code>. If you've managed to make multiple
   TCP connections to the same program, you deserve whatever you get.</span>.
@@ -573,8 +561,6 @@ Main loop terminated.
 
   <li><code class="API">twisted.manhole.explorer</code> uses
   <code>Cacheable</code>, and does some fairly interesting things with it.</li>
-<!--   (XXX: I've heard explorer is currently broken, it might not be a good -->
-<!--   example to recommend)</li> -->
 
   <li>The <code class="API" base="twisted">spread.publish</code> module also
   uses <code>Cacheable</code>, and might be a source of further

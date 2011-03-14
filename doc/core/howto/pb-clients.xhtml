@@ -8,19 +8,19 @@
 
 <h2>Overview</h2>
 
-<p>In all the <code class="API" base="twisted.spread.pb">IPerspective</code>
+<p>In all the <code class="API" base="twisted.spread.pb">IPerspective</code> uses
 we have shown so far, we ignored the <code>mind</code> argument and created
 a new <code>Avatar</code> for every connection. This is usually an easy
 design choice, and it works well for simple cases.</p>
 
 <p>In more complicated cases, for example an <code>Avatar</code> that
 represents a player object which is persistent in the game universe,
-we will want connections from the same player to use the same
+we will want connections from the same player to use the same 
 <code>Avatar</code>.</p>
 
 <p>Another thing which is necessary in more complicated scenarios
 is notifying a player asynchronously. While it is possible, of
-course, to allow a player to call
+course, to allow a player to call 
 <code>perspective_remoteListener(referencable)</code> that would
 mean both duplication of code and a higher latency in logging in,
 both bad.</p>
@@ -82,7 +82,6 @@ class Greeter:
         return "&lt;%d&gt;hello" % (self.greetings, self.name)
 
 class SimpleAvatar(pb.Avatar):
-    greetings = 0
     def __init__(self, name, greeter):
         self.name = name
         self.greeter = greeter

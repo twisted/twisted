@@ -48,7 +48,7 @@ class Group(pb.Viewable):
     def addUser(self, user):
         self.users.append(user)
     def view_send(self, from_user, message):
-        if not self.allowMattress and message.find("mattress") != -1:
+        if not self.allowMattress and "mattress" in message:
             raise ValueError, "Don't say that word"
         for user in self.users:
             user.send("<%s> says: %s" % (from_user.name, message))

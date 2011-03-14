@@ -15,12 +15,12 @@ class One(pb.Root):
         #pb.Root.__init__(self)   # pb.Root doesn't implement __init__
         self.two = two
     def remote_getTwo(self):
-        print "One.getTwo(), returning my two called", two
-        return two
+        print "One.getTwo(), returning my two called", self.two
+        return self.two
     def remote_checkTwo(self, newtwo):
         print "One.checkTwo(): comparing my two", self.two
         print "One.checkTwo(): against your two", newtwo
-        if two == newtwo:
+        if self.two == newtwo:
             print "One.checkTwo(): our twos are the same"
         
 

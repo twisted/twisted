@@ -20,12 +20,12 @@ class Client(pb.Referenceable):
         reactor.run()
 
     def connected(self, perspective):
-        print "connected, joining group #lookingForFourth"
+        print "connected, joining group #NeedAFourth"
         # this perspective is a reference to our User object.  Save a reference
         # to it here, otherwise it will get garbage collected after this call,
         # and the server will think we logged out.
         self.perspective = perspective
-        d = perspective.callRemote("joinGroup", "#lookingForFourth")
+        d = perspective.callRemote("joinGroup", "#NeedAFourth")
         d.addCallback(self.gotGroup)
 
     def gotGroup(self, group):

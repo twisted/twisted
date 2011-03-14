@@ -13,10 +13,10 @@
 have two programs that need to talk to each other, and you get to use any
 protocol you want. If you can think of your problem in terms of objects that
 need to make method calls on each other, then chances are good that you can
-use twisted's Perspective Broker protocol rather than trying to shoehorn
+use Twisted's Perspective Broker protocol rather than trying to shoehorn
 your needs into something like HTTP, or implementing yet another RPC
 mechanism<span class="footnote">Most of Twisted is like this.  Hell, most of
-unix is like this: if <em>you</em> think it would be useful, someone else has
+Unix is like this: if <em>you</em> think it would be useful, someone else has
 probably thought that way in the past, and acted on it, and you can take
 advantage of the tool they created to solve the same problem you're facing
 now.</span>.</p>
@@ -55,13 +55,13 @@ out through their interaction than explaining them one at a time.</p>
 
 <ul>
 
-  <li><em><code class="API" base="twisted.internet.protocol">Factory</code></em>
+  <li><code class="API" base="twisted.internet.protocol">Factory</code>
   : <code>internet/protocol.py</code></li>
 
-  <li><em><code class="API" base="twisted.spread.pb">PBServerFactory</code></em>
+  <li><code class="API" base="twisted.spread.pb">PBServerFactory</code>
   : <code>spread/pb.py</code></li>
 
-  <li><em><code class="API" base="twisted.spread.pb">Broker</code></em>
+  <li><code class="API" base="twisted.spread.pb">Broker</code>
   : <code>spread/pb.py</code></li>
 
 </ul>
@@ -70,15 +70,15 @@ out through their interaction than explaining them one at a time.</p>
 
 <ul>
 
-  <li> <em><code class="API" base="twisted.spread.pb">RemoteReference</code></em>
+  <li> <code class="API" base="twisted.spread.pb">RemoteReference</code>
   : <code>spread/pb.py</code> </li>
 
-  <li> <em><code class="API" base="twisted.spread">pb.Root</code></em>
+  <li> <code class="API" base="twisted.spread">pb.Root</code>
   : <code>spread/pb.py</code>, actually defined as
   <code>twisted.spread.flavors.Root</code>
   in <code>spread/flavors.py</code> </li>
 
-  <li> <em><code class="API" base="twisted.spread">pb.Referenceable</code></em>
+  <li> <code class="API" base="twisted.spread">pb.Referenceable</code>
   : <code>spread/pb.py</code>, actually defined as
   <code>twisted.spread.flavors.Referenceable</code>
   in <code>spread/flavors.py</code> </li>
@@ -89,15 +89,15 @@ out through their interaction than explaining them one at a time.</p>
 about authorization and security:</p>
 
 <ul>
-  <li><em><code class="API" base="twisted.cred.portal">Portal</code></em>
+  <li><code class="API" base="twisted.cred.portal">Portal</code>
   : <code>cred/portal.py</code></li>
 
-  <li><em><code class="API" base="twisted.cred.portal">IRealm</code></em>
+  <li><code class="API" base="twisted.cred.portal">IRealm</code>
   : <code>cred/portal.py</code></li>
   
-  <li><em><code class="API" base="twisted.spread.pb">IPerspective</code></em>
+  <li><code class="API" base="twisted.spread.pb">IPerspective</code>
   : <code>spread/pb.py</code>, which you will usually be interacting
-  with via pb.Avatar (a basic implementor of the interface).</li>
+  with via <code class="API" base="twisted.spread">pb.Avatar</code> (a basic implementor of the interface).</li>
 </ul>
 
 <h3>Subclassing and Implementing</h3>
@@ -207,8 +207,8 @@ can return structured copies of local objects.</p>
 
 <p>There are 2 basic flavors that allow for copying objects remotely.  Again,
 you can use these by subclassing them.  In order to specify what state you want
-to have copied when these are serialized, you can either use the Python default
-<code class="python">__getstate__</code> or specialized method calls for that
+to have copied when these are serialized, you can either use the Python default 
+ <code class="python">__getstate__</code> or specialized method calls for that
 flavor.</p>
 
 <p>

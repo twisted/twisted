@@ -26,15 +26,15 @@ other types.  The purpose of this limit is to put an upper bound on the
 amount of memory which will be allocated to handle a message received over
 the network.  Without, a malicious peer could easily perform a denial of
 service attack resulting in exhaustion of the receiver's memory.  The basic
-limit is 640 * 1024, defined by <code>twisted.spread.banana.SIZE_LIMIT</code>.
+limit is 640 * 1024 bytes, defined by <code>twisted.spread.banana.SIZE_LIMIT</code>.
 It's possible to raise this limit by changing this value (but take care to
 change it on both sides of the connection).</p>
 
   <p>Another limit imposed by Twisted's Banana implementation is a limit on
-the size of long integers.  The purpose of this limit is the same as the
-<code>SIZE_LIMIT</code>.  By default, only integers between -2 ** 448 and 2
-** 448 (exclusive) can be transferred.  This limit can be changed using
-<code class="API">twisted.spread.banana.setPrefixLimit</code>.</p>
+the size of long integers.  The purpose of this limit is the same as the 
+ <code>SIZE_LIMIT</code>.  By default, only integers between -2 ** 448 and 2
+** 448 (exclusive) can be transferred.  This limit can be changed using 
+ <code class="API">twisted.spread.banana.setPrefixLimit</code>.</p>
 
   <h2>Perspective Broker Limits</h2>
 
