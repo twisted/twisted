@@ -16,7 +16,16 @@ import os
 import time
 import errno
 
-from twisted.python.zipstream import ChunkingZipFile
+
+# Python 2.6 includes support for incremental unzipping of zipfiles, and
+# thus obviates the need for ChunkingZipFile.
+import sys
+if sys.version_info[:2] >= (2, 6):
+    _USE_ZIPFILE = True
+    from zipfile import ZipFile
+else:
+    _USE_ZIPFILE = False
+    from twisted.python.zipstream import ChunkingZipFile
 
 from twisted.python.filepath import FilePath, _PathHelper
 
@@ -128,7 +137,10 @@ class ZipPath(_PathHelper):
         return self.parent().path
 
     def open(self):
-        return self.archive.zipfile.readfile(self.pathInArchive)
+        if _USE_ZIPFILE:
+            return self.archive.zipfile.open(self.pathInArchive)
+        else:
+            return self.archive.zipfile.readfile(self.pathInArchive)
 
     def restat(self):
         pass
@@ -177,7 +189,10 @@ class ZipArchive(ZipPath):
 
         @param archivePathname: a str, naming a path in the filesystem.
         """
-        self.zipfile = ChunkingZipFile(archivePathname)
+        if _USE_ZIPFILE:
+            self.zipfile = ZipFile(archivePathname)
+        else:
+            self.zipfile = ChunkingZipFile(archivePathname)
         self.path = archivePathname
         self.pathInArchive = ''
         # zipfile is already wasting O(N) memory on cached ZipInfo instances,
