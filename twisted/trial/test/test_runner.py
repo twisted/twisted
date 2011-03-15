@@ -299,6 +299,9 @@ class TestRunner(unittest.TestCase):
                                'startTest', 'addSuccess', 'stopTest',
                                'startTest', 'addSuccess', 'stopTest',
                                'startTest', 'addSuccess', 'stopTest',
+                               'startTest', 'addSuccess', 'stopTest',
+                               'startTest', 'addSuccess', 'stopTest',
+                               'startTest', 'addSuccess', 'stopTest',
                                'startTest', 'addSuccess', 'stopTest']
 
 

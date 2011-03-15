@@ -181,10 +181,14 @@ class FileTest(packages.SysPathManglingTest):
 
 
 class LoaderTest(packages.SysPathManglingTest):
+    """
+    Tests for L{trial.TestLoader}.
+    """
 
     def setUp(self):
         self.loader = runner.TestLoader()
         packages.SysPathManglingTest.setUp(self)
+
 
     def test_sortCases(self):
         import sample
@@ -198,11 +202,13 @@ class LoaderTest(packages.SysPathManglingTest):
         self.failUnlessEqual(newOrder,
                              [test._testMethodName for test in suite._tests])
 
+
     def test_loadMethod(self):
         import sample
         suite = self.loader.loadMethod(sample.FooTest.test_foo)
         self.failUnlessEqual(1, suite.countTestCases())
         self.failUnlessEqual('test_foo', suite._testMethodName)
+
 
     def test_loadFailingMethod(self):
         # test added for issue1353
@@ -213,6 +219,7 @@ class LoaderTest(packages.SysPathManglingTest):
         self.failUnlessEqual(result.testsRun, 1)
         self.failUnlessEqual(len(result.failures), 1)
 
+
     def test_loadNonMethod(self):
         import sample
         self.failUnlessRaises(TypeError, self.loader.loadMethod, sample)
@@ -221,6 +228,44 @@ class LoaderTest(packages.SysPathManglingTest):
         self.failUnlessRaises(TypeError, self.loader.loadMethod, "string")
         self.failUnlessRaises(TypeError,
                               self.loader.loadMethod, ('foo', 'bar'))
+
+
+    def test_loadBadDecorator(self):
+        """
+        A decorated test method for which the decorator has failed to set the
+        method's __name__ correctly is loaded and its name in the class scope
+        discovered.
+        """
+        import sample
+        suite = self.loader.loadMethod(sample.DecorationTest.test_badDecorator)
+        self.assertEquals(1, suite.countTestCases())
+        self.assertEquals('test_badDecorator', suite._testMethodName)
+
+
+    def test_loadGoodDecorator(self):
+        """
+        A decorated test method for which the decorator has set the method's
+        __name__ correctly is loaded and the only name by which it goes is used.
+        """
+        import sample
+        suite = self.loader.loadMethod(
+            sample.DecorationTest.test_goodDecorator)
+        self.assertEquals(1, suite.countTestCases())
+        self.assertEquals('test_goodDecorator', suite._testMethodName)
+
+
+    def test_loadRenamedDecorator(self):
+        """
+        Load a decorated method which has been copied to a new name inside the
+        class.  Thus its __name__ and its key in the class's __dict__ no
+        longer match.
+        """
+        import sample
+        suite = self.loader.loadMethod(
+            sample.DecorationTest.test_renamedDecorator)
+        self.assertEquals(1, suite.countTestCases())
+        self.assertEquals('test_renamedDecorator', suite._testMethodName)
+
 
     def test_loadClass(self):
         import sample
@@ -239,15 +284,18 @@ class LoaderTest(packages.SysPathManglingTest):
         self.failUnlessRaises(TypeError,
                               self.loader.loadClass, ('foo', 'bar'))
 
+
     def test_loadNonTestCase(self):
         import sample
         self.failUnlessRaises(ValueError, self.loader.loadClass,
                               sample.NotATest)
 
+
     def test_loadModule(self):
         import sample
         suite = self.loader.loadModule(sample)
-        self.failUnlessEqual(7, suite.countTestCases())
+        self.assertEqual(10, suite.countTestCases())
+
 
     def test_loadNonModule(self):
         import sample
@@ -259,10 +307,12 @@ class LoaderTest(packages.SysPathManglingTest):
         self.failUnlessRaises(TypeError,
                               self.loader.loadModule, ('foo', 'bar'))
 
+
     def test_loadPackage(self):
         import goodpackage
         suite = self.loader.loadPackage(goodpackage)
         self.failUnlessEqual(7, suite.countTestCases())
+
 
     def test_loadNonPackage(self):
         import sample
@@ -274,15 +324,18 @@ class LoaderTest(packages.SysPathManglingTest):
         self.failUnlessRaises(TypeError,
                               self.loader.loadPackage, ('foo', 'bar'))
 
+
     def test_loadModuleAsPackage(self):
         import sample
         ## XXX -- should this instead raise a ValueError? -- jml
         self.failUnlessRaises(TypeError, self.loader.loadPackage, sample)
 
+
     def test_loadPackageRecursive(self):
         import goodpackage
         suite = self.loader.loadPackage(goodpackage, recurse=True)
         self.failUnlessEqual(14, suite.countTestCases())
+
 
     def test_loadAnythingOnModule(self):
         import sample
@@ -290,15 +343,18 @@ class LoaderTest(packages.SysPathManglingTest):
         self.failUnlessEqual(sample.__name__,
                              suite._tests[0]._tests[0].__class__.__module__)
 
+
     def test_loadAnythingOnClass(self):
         import sample
         suite = self.loader.loadAnything(sample.FooTest)
         self.failUnlessEqual(2, suite.countTestCases())
 
+
     def test_loadAnythingOnMethod(self):
         import sample
         suite = self.loader.loadAnything(sample.FooTest.test_foo)
         self.failUnlessEqual(1, suite.countTestCases())
+
 
     def test_loadAnythingOnPackage(self):
         import goodpackage
@@ -306,17 +362,20 @@ class LoaderTest(packages.SysPathManglingTest):
         self.failUnless(isinstance(suite, self.loader.suiteFactory))
         self.failUnlessEqual(7, suite.countTestCases())
 
+
     def test_loadAnythingOnPackageRecursive(self):
         import goodpackage
         suite = self.loader.loadAnything(goodpackage, recurse=True)
         self.failUnless(isinstance(suite, self.loader.suiteFactory))
         self.failUnlessEqual(14, suite.countTestCases())
 
+
     def test_loadAnythingOnString(self):
         # the important thing about this test is not the string-iness
         # but the non-handledness.
         self.failUnlessRaises(TypeError,
                               self.loader.loadAnything, "goodpackage")
+
 
     def test_importErrors(self):
         import package
@@ -407,6 +466,7 @@ class LoaderTest(packages.SysPathManglingTest):
         names2.sort()
         self.assertEqual(names1, names2)
 
+
     def test_loadByNamesDuplicate(self):
         """
         Check that loadByNames ignores duplicate names
@@ -415,6 +475,7 @@ class LoaderTest(packages.SysPathManglingTest):
         suite1 = self.loader.loadByNames([module, module], True)
         suite2 = self.loader.loadByName(module, True)
         self.assertSuitesEqual(suite1, suite2)
+
 
     def test_loadDifferentNames(self):
         """
@@ -537,5 +598,3 @@ class PackageOrderingTest(packages.SysPathManglingTest):
             d = md5(n).hexdigest()
             return d
         self.loadSortedPackages(sillySorter)
-
-
