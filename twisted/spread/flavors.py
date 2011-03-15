@@ -124,7 +124,7 @@ class Referenceable(Serializable):
         serialize this to a peer.
         """
 
-        return "remote", jellier.invoker.registerReference(self)
+        return ["remote", jellier.invoker.registerReference(self)]
 
 
 class Root(Referenceable):

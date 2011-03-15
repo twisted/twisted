@@ -452,6 +452,7 @@ class Broker(banana.Banana):
         self.pageProducers = []
         self.currentRequestID = 0
         self.currentLocalID = 0
+        self.unserializingPerspective = None
         # Some terms:
         #  PUID: process unique ID; return value of id() function.  type "int".
         #  LUID: locally unique ID; an ID unique to an object mapped over this

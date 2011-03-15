@@ -14,9 +14,8 @@ except ImportError:
 
 from twisted.spread import jelly, pb
 from twisted.python.compat import set, frozenset
-
 from twisted.trial import unittest
-
+from twisted.test.proto_helpers import StringTransport
 
 
 class TestNode(object, jelly.Jellyable):
@@ -585,6 +584,25 @@ class JellyTestCase(unittest.TestCase):
         self.assertEqual(len(a.children), len(b.children))
         for x, y in zip(a.children, b.children):
             self._check_newstyle(x, y)
+
+
+    def test_referenceable(self):
+        """
+        A L{pb.Referenceable} instance jellies to a structure which unjellies to
+        a L{pb.RemoteReference}.  The C{RemoteReference} has a I{luid} that
+        matches up with the local object key in the L{pb.Broker} which sent the
+        L{Referenceable}.
+        """
+        ref = pb.Referenceable()
+        jellyBroker = pb.Broker()
+        jellyBroker.makeConnection(StringTransport())
+        j = jelly.jelly(ref, invoker=jellyBroker)
+
+        unjellyBroker = pb.Broker()
+        unjellyBroker.makeConnection(StringTransport())
+
+        uj = jelly.unjelly(j, invoker=unjellyBroker)
+        self.assertIn(uj.luid, jellyBroker.localObjects)
 
 
 
