@@ -92,19 +92,16 @@ created, and its <code class="python">connectionMade</code> method is called.
 <p> The <code class="python">QOTDFactory</code>'s role is to specify to the
 Twisted framework how to create a <code class="python">Protocol</code> instance
 that will handle the connection.  Twisted will not instantiate a <code
-class="python">QOTDFactory</code>; you will do that yourself later, in a
-<code class="shell">twistd</code> plug-in.
+class="python">QOTDFactory</code>; you will do that yourself later, in a <code class="shell">twistd</code> plug-in.
 </p>
 
-<p>Note: you can read more specifics of <code class="python">Protocol</code> and
-<code class="python">Factory</code> in the <a href="servers.xhtml">Writing
+<p>Note: you can read more specifics of <code class="python">Protocol</code> and <code class="python">Factory</code> in the <a href="servers.xhtml">Writing
 Servers</a> HOWTO.</p>
 
 <p>Once we have an abstraction -- a <code>Quoter</code> -- and we have a
 mechanism to connect it to the network -- the <code>QOTD</code> protocol -- the
 next thing to do is to put the last link in the chain of functionality between
-abstraction and user.  This last link will allow a user to choose a
-<code>Quoter</code> and configure the protocol. Writing this configuration is
+abstraction and user.  This last link will allow a user to choose a <code>Quoter</code> and configure the protocol. Writing this configuration is
 covered in the <a href="application.xhtml">Application HOWTO</a>.</p>
 
 </body>

@@ -41,11 +41,10 @@ code.</li>
 base="twisted.internet.defer">Deferred</code> object to manage the callback
 sequence. The client application attaches a series of functions to the
 deferred to be called in order when the results of the asychronous request are
-available (this series of functions is known as a series of
+available (this series of functions is known as a series of 
 <strong>callbacks</strong>, or a <strong>callback chain</strong>), together
 with a series of functions to be called if there is an error in the
-asychronous request (known as a series of <strong>errbacks</strong> or an
-<strong>errback chain</strong>). The asychronous library code calls the first
+asychronous request (known as a series of <strong>errbacks</strong> or an  <strong>errback chain</strong>). The asychronous library code calls the first
 callback when the result is available, or the first errback when an error
 occurs, and the <code>Deferred</code> object then hands the results of each
 callback or errback function to the next function in the chain.</p> 
@@ -129,7 +128,7 @@ class Getter:
         order to demonstrate how a callback passes its own result
         to the next callback
         """
-        return "<p>Result: %s</p>" % r
+        return "Result: %s" % r
 
     def getDummyData(self, x):
         """
@@ -161,13 +160,14 @@ d = g.getDummyData(3)
 d.addCallback(printData)
 d.addErrback(printError)
 
-# this series of callbacks and errbacks will print "<p>Result: 12</p>"
+# this series of callbacks and errbacks will print "Result: 12"
 g = Getter()
 d = g.getDummyData(4)
 d.addCallback(printData)
 d.addErrback(printError)
 
-reactor.callLater(4, reactor.stop); reactor.run()
+reactor.callLater(4, reactor.stop)
+reactor.run()
 </pre>
 
 <h3>Visual Explanation</h3>
@@ -296,18 +296,18 @@ d.addCallbacks(callback1, errback1)  # C
 d.addCallbacks(callback2, errback2)  
 </pre>
 
-<p>If an error occurs in <code class="python">callback1</code>, then for Case 1
+<p>If an error occurs in <code class="python">callback1</code>, then for Case 1 
 <code class="python">errback1</code> will be called with the failure. For Case
 2, <code class="python">errback2</code> will be called. Be careful with your
 callbacks and errbacks.</p>
 
-<p>What this means in a practical sense is in Case 1, &quot;A&quot; will
-handle a success condition from <code>getDeferredFromSomewhere</code>, and
-&quot;B&quot; will handle any errors that occur <em>from either the upstream
-source, or that occur in 'A'</em>.  In Case 2, &quot;C&quot;'s errback1
-<em>will only handle an error condition raised by
-<code>getDeferredFromSomewhere</code></em>, it will not do any handling of
-errors raised in callback1.</p>
+<p>What this means in a practical sense is in Case 1, the callback in line
+A will handle a success condition from <code>getDeferredFromSomewhere</code>,
+and the errback in line B will handle any errors that occur <em>from either the
+upstream source, or that occur in A</em>.  In Case 2, the errback in line C  <em>will 
+only handle an error condition raised by</em> <code>getDeferredFromSomewhere</code>, 
+it will not do any handling of errors
+raised in <code>callback1</code>.</p>
 
 
 <h3>Unhandled Errors</h3>
@@ -390,8 +390,7 @@ def asynchronousIsValidUser(d, user):
     return d
 </pre>
 
-<p> Our original implementation of <code>authenticateUser</code> expected
-<code>isValidUser</code> to be synchronous, but now we need to change it to handle both
+<p> Our original implementation of <code>authenticateUser</code> expected  <code>isValidUser</code> to be synchronous, but now we need to change it to handle both
 synchronous and asynchronous implementations of <code>isValidUser</code>. For this, we
 use <code class="API" base="twisted.internet.defer">maybeDeferred</code> to
 call <code>isValidUser</code>, ensuring that the result of <code>isValidUser</code> is a Deferred,
@@ -413,8 +412,7 @@ def authenticateUser(isValidUser, user):
 </pre>
 
 <p>
-Now <code>isValidUser</code> could be either <code>synchronousIsValidUser</code> or
-<code>asynchronousIsValidUser</code>.
+Now <code>isValidUser</code> could be either <code>synchronousIsValidUser</code> or  <code>asynchronousIsValidUser</code>.
 </p>
 
 <p>It is also possible to modify <code>synchronousIsValidUser</code> to return
@@ -436,26 +434,35 @@ the Deferreds you want it to wait for:</p>
 dl = defer.DeferredList([deferred1, deferred2, deferred3])
 </pre>
 
-<p>You can now treat the DeferredList like an ordinary Deferred; you can call
-<code>addCallbacks</code> and so on.  The DeferredList will call its callback
+<p>You can now treat the DeferredList like an ordinary Deferred; you can call  <code>addCallbacks</code> and so on.  The DeferredList will call its callback
 when all the deferreds have completed.  The callback will be called with a list
 of the results of the Deferreds it contains, like so:</p>
 
 <pre class="python">
+# A callback that unpacks and prints the results of a DeferredList
 def printResult(result):
     for (success, value) in result:
         if success:
             print 'Success:', value
         else:
             print 'Failure:', value.getErrorMessage()
+
+# Create three deferreds.
 deferred1 = defer.Deferred()
 deferred2 = defer.Deferred()
 deferred3 = defer.Deferred()
+
+# Pack them into a DeferredList
 dl = defer.DeferredList([deferred1, deferred2, deferred3], consumeErrors=True)
+
+# Add our callback
 dl.addCallback(printResult)
+
+# Fire our three deferreds with various values.
 deferred1.callback('one')
 deferred2.errback(Exception('bang!'))
 deferred3.callback('three')
+
 # At this point, dl will fire its callback, printing:
 #    Success: one
 #    Failure: bang!
@@ -519,7 +526,7 @@ deferred2.callback("two")
 <h3>Other behaviours</h3>
 
 <p>DeferredList accepts three keyword arguments that modify its behaviour:
-<code>fireOnOneCallback</code>, <code>fireOnOneErrback</code> and
+<code>fireOnOneCallback</code>, <code>fireOnOneErrback</code> and 
 <code>consumeErrors</code>.  If <code>fireOnOneCallback</code> is set, the
 DeferredList will immediately call its callback as soon as any of its Deferreds
 call their callback.  Similarly, <code>fireOnOneErrback</code> will call errback
@@ -541,8 +548,7 @@ the Deferreds it contains without needing to add extra errbacks<span
 class="footnote">Unless of course a later callback starts a fresh error &mdash;
 but as we've already noted, adding callbacks to a Deferred after its used in a
 DeferredList is confusing and usually avoided.</span>.  Passing a true value
-for the <code>consumeErrors</code> parameter will not change the behavior of
-<code>fireOnOneCallback</code> or <code>fireOnOneErrback</code>.</p>
+for the <code>consumeErrors</code> parameter will not change the behavior of <code>fireOnOneCallback</code> or <code>fireOnOneErrback</code>.</p>
 
 <a name="class"></a>
 
@@ -553,8 +559,7 @@ Deferred returned by a function. It is not meant to be a
 substitute for the docstrings in the Deferred class, but can provide guidelines
 for its use.</p>
 
-<p>There is a parallel overview of functions used by the Deferred's
-<em>creator</em> in <a href="gendefer.xhtml#class">Generating Deferreds</a>.</p>
+<p>There is a parallel overview of functions used by the Deferred's  <em>creator</em> in <a href="gendefer.xhtml#class">Generating Deferreds</a>.</p>
 
 <h3>Basic Callback Functions</h3>
 

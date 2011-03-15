@@ -35,7 +35,7 @@
 <dt><a name="Avatar">Avatar</a></dt>
 <dd>
    (from <a href="#Cred">Twisted Cred</a>) business logic for specific user.
-   For example, in <a href="#PB">PB</a> these are perspectives, in pop3 these
+   For example, in <a href="#PB">PB</a> these are perspectives, in POP3 these
    are mailboxes, and so on.
 </dd>
 
@@ -111,7 +111,7 @@
 <dt><a name="credential-checker">credential checker</a></dt>
 <dd>
   Where authentication actually happens.  See 
-  <code class="API" base="twisted.cred.checkers">ICredentialChecker</code>.
+  <code class="API" base="twisted.cred.checkers">ICredentialsChecker</code>.
 </dd>
 
 <dt><a name="CVSToys">CVSToys</a></dt>
@@ -121,7 +121,7 @@
 <dt><a name="Daemon">Daemon</a></dt>
 <dd>
   A background process that does a job or handles client requests.
-  <i>Daemon</i> is a Unix term; <i>service</i> is the NT equivalent.
+  <i>Daemon</i> is a Unix term; <i>service</i> is the Windows equivalent.
 </dd>
 
 <dt><a name="Deferred"><code class="API" base="twisted.internet.defer">Deferred</code></a></dt>
@@ -175,14 +175,14 @@
 <dd>
   Instance Messenger is a multi-protocol chat program that comes with
   Twisted.  It can communicate via TOC with the AOL servers, via IRC, as well as
-  via <a href="#PerspectiveBroker">PB</a> with <a href="#Words">Twisted
-  Words</a>.  See <code class="API">twisted.im</code>.
+  via <a href="#PerspectiveBroker">PB</a> with 
+  <a href="#Words">Twisted Words</a>.  See <code class="API">twisted.words.im</code>.
 </dd>
 
-<dt><a name="Interface"><code noexpand="1" class="API" base="twisted.python.components">Interface</code></a></dt>
+<dt><a name="Interface">Interface</a></dt>
 <dd>
   A class that defines and documents methods that a class conforming to that
-  interface needs to have.  A collection of core twisted.internet interfaces can
+  interface needs to have.  A collection of core <code class="API">twisted.internet</code> interfaces can
   be found in <code class="API">twisted.internet.interfaces</code>.  See also <a
   href="components.xhtml">Interfaces and Adapters</a>.
 </dd>
@@ -219,8 +219,8 @@ XHTML, and output formats include HTML and LaTeX.</dd>
 <dd>Twisted's DNS server, found in <code class="API">twisted.names</code>.</dd>
 
 <dt><a name="Nevow">Nevow</a></dt>
-<dd>The successor to <a href="#Woven">Woven</a>; available from
-<a href="http://divmod.org/trac/">Divmod</a>.
+<dd>The successor to <a href="#Woven">Woven</a>; available from <a
+    href="http://divmod.org/trac/">Divmod</a>.
 </dd>
 
 <dt><a name="PB">PB</a></dt>
@@ -299,7 +299,7 @@ XHTML, and output formats include HTML and LaTeX.</dd>
 </dd>
 
 <dt><a name="Spread">Spread</a></dt>
-<dd><a href="http://twistedmatrix.com/products/spread">Twisted Spread</a> is
+<dd>Twisted Spread is
 Twisted's remote-object suite.  It consists of three layers: 
 <a href="#PerspectiveBroker">Perspective Broker</a>, <a href="#Jelly">Jelly</a>
 and <a href="#Banana">Banana.</a>  See <a href="pb.xhtml">Writing Applications
@@ -307,8 +307,7 @@ with Perspective Broker</a>.</dd>
 
 <dt><a name="SUX">SUX</a></dt>
 <dd><em>S</em>mall <em>U</em>ncomplicated <em>X</em>ML, Twisted's simple XML
-parser written in pure Python.  See 
-<code class="API">twisted.protocols.sux</code>.</dd>
+parser written in pure Python.  See <code class="API">twisted.web.sux</code>.</dd>
 
 <dt><a name="TAC">TAC</a></dt>
 <dd>A <em>T</em>wisted <em>A</em>pplication <em>C</em>onfiguration is a Python
@@ -323,8 +322,8 @@ with <code>mktap</code> and runnable by <code>twistd</code>.  See
 
 <dt><a name="Trial">Trial</a></dt>
 <dd><code class="API">twisted.trial</code>, Twisted's unit-testing framework,
-modelled after <a href="http://pyunit.sourceforge.net/">pyunit</a>.  See also
-<a href="testing.xhtml">Writing tests for Twisted code</a>.</dd>
+based on the <code>unittest</code> standard library module.  See also <a
+href="testing.xhtml">Writing tests for Twisted code</a>.</dd>
 
 <dt><a name="TwistedMatrixLaboratories">Twisted Matrix Laboratories</a></dt>
 <dd>The team behind Twisted.  
@@ -335,8 +334,8 @@ modelled after <a href="http://pyunit.sourceforge.net/">pyunit</a>.  See also
 In days of old, the Twisted Reality multiplayer text-based interactive-fiction
 system was the main focus of Twisted Matrix Labs; Twisted, the general networking
 framework, grew out of Reality's need for better network functionality. Twisted
-Reality has been superseded by the
-<a href="http://www.divmod.org/trac/wiki/DivmodImaginary">Imaginary</a> project.
+Reality has been superseded by the <a
+href="http://www.divmod.org/trac/wiki/DivmodImaginary">Imaginary</a> project.
 </dd>
 
 <dt><a name="usage"><code noexpand="1" class="API" base="twisted.python">usage</code></a></dt>

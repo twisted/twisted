@@ -21,21 +21,21 @@ structures. </p>
 
 <h2>Basic Persistence: Application and .tap files</h2>
 
-<p>Simple object persistence (using <code>pickle</code> or
-<code>jelly</code>) provides the fundamental <q>save the object to disk</q>
+<p>Simple object persistence (using <code>pickle</code> or 
+ <code>jelly</code>) provides the fundamental <q>save the object to disk</q>
 functionality at application shutdown. If you use the <code class="API"
 base="twisted.application.service">Application</code> object, every object
-referenced by your Application will be saved into the
-<code>-shutdown.tap</code> file when the program terminates. When you use
-<code>twistd</code> to launch that new .tap file, the Application object
+referenced by your Application will be saved into the 
+ <code>-shutdown.tap</code> file when the program terminates. When you use 
+ <code>twistd</code> to launch that new .tap file, the Application object
 will be restored along with all of its referenced data.</p>
 
 <p>This provides a simple way to have data outlive any particular invocation
 of your program: simply store it as an attribute of the Application. Note
 that all Services are referenced by the Application, so their attributes
 will be stored as well. Ports that have been bound with listenTCP (and the
-like) are also remembered, and the sockets are created at startup time (when
-<code>Application.run</code> is called).</p>
+like) are also remembered, and the sockets are created at startup time (when 
+ <code>Application.run</code> is called).</p>
 
 <p>To influence the way that the <code class="API"
 base="twisted.application.service">Application</code> is persisted, you can adapt
@@ -45,8 +45,8 @@ a string like <q>pickle</q> or <q>source</q>. These use different serializers (a
 extensions: <q>.tap</q> and <q>.tas</q> respectively) for the
 saved Application.</p>
 
-<p>You can manually cause the application to be saved by calling its
-<code>.save</code> method (on the <code class="API">twisted.persisted.sob.IPersistable</code>
+<p>You can manually cause the application to be saved by calling its 
+ <code>.save</code> method (on the <code class="API">twisted.persisted.sob.IPersistable</code>
 adapted object).</p>
 
 
@@ -76,8 +76,8 @@ those data attributes: for example, if you use a string in one version and
 an integer in another, those versions must have different version numbers.
 </p>
 
-<p>The version number is defined in a class attribute named
-<code>persistenceVersion</code>. This is an integer which will be stored in
+<p>The version number is defined in a class attribute named 
+ <code>persistenceVersion</code>. This is an integer which will be stored in
 the .tap file along with the rest of the instance state. When the object is
 unserialized, the saved persistenceVersion is compared against the current
 class's value, and if they differ, special upgrade methods are called. These
@@ -138,7 +138,7 @@ class Thing(Versioned):
 </pre>
 
 <p>Note that we must provide both <code>upgradeToVersion1</code>
-<em>and</em> <code>upgradeToVersion2</code>. We have to assume that the
+ <em>and</em> <code>upgradeToVersion2</code>. We have to assume that the
 saved .tap files which will be provided to this class come from a random
 assortment of old versions: we must be prepared to accept anything ever
 saved by a released version of our application.</p>
@@ -176,18 +176,19 @@ instance contained inside:</p>
 
   <li>An instance of Thing would be created, with a __dict__ that contained
   a single attribute <code>.size</code>, which was an integer, like
-  <q>5</q>.</li>
+  <code class="python">5</code>.</li>
 
   <li><code class="python">self.upgradeToVersion1()</code> would be called,
-  changing <code>self.size</code> into a string, like <q>5 inches</q>.</li>
+  changing <code>self.size</code> into a string, like <code class="python">
+      "5 inches"</code>.</li>
 
   <li><code class="python">self.upgradeToVersion2()</code> would be called,
-  changing <code>self.size</code> into a tuple, like (5,
-  <q>inches</q>).</li>
+  changing <code>self.size</code> into a tuple, like <code class="python"
+      >(5, "inches")</code>.</li>
 
   <li>Finally, <code class="python">self.upgradeToVersion3()</code> would be
   called, creating <code>self.size</code> as a list holding a single
-  dimension, like [(5, <q>inches</q>)]. The old <code>.length</code>
+  dimension, like <code class="python">[(5, "inches")]</code>. The old <code>.length</code>
   attribute is deleted, and a new <code>.name</code> is created with the
   type of shape this instance represents (<q>line</q>).</li>
 
@@ -242,13 +243,13 @@ instance contained inside:</p>
 
 <p>For more information, look at the doc strings for <code class="API"
 base="twisted.persisted">styles.Versioned</code>, as well as the <code
-class="API" base="twisted.internet">app.Application</code> class and the <a
+class="API" base="twisted.application">service.Application</code> class and the <a
 href="application.xhtml">Application HOWTO</a>.</p>
 
 
 <h2>Rebuild: Loading New Code Without Restarting</h2>
 
-<p><code class="API">Versioned</code> is good for handling changes between
+<p><code>Versioned</code> is good for handling changes between
 released versions of your program, where the application state is saved on
 disk during the upgrade. But while you are developing that code, you often
 want to change the behavior of the running program, <em>without</em> the
@@ -298,11 +299,10 @@ base="twisted.python.rebuild">rebuild</code> <em>cannot</em> currently be
 mixed with <code class="API"
 base="twisted.persisted.styles">Versioned</code>. <code>rebuild</code> does
 not run any of the classes' methods, whereas <code>Versioned</code> works by
-running <code>__setstate__</code> during the load process and
-<code>doUpgrade</code> afterwards. This means <code>rebuild</code> can only
+running <code>__setstate__</code> during the load process and  <code>doUpgrade</code> afterwards. This means <code>rebuild</code> can only
 be used to process upgrades that do not change the data attributes of any of
 the involved classes. Any time attributes are added or removed, the program
-must be shut down, persisted, and restarted, with upgradeToVersionNN methods
+must be shut down, persisted, and restarted, with <code>upgradeToVersionNN</code> methods
 used to handle the attributes. (this may change in the future, but for now
 the implementation is easier and more reliable with this restriction).</p>
 
