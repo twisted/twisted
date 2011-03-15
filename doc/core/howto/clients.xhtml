@@ -126,12 +126,12 @@ reactor.run()
     see <a href="endpoints.xhtml">the documentation for the endpoints
     API</a>.</p>
 
-    <p><span class="note">If you've used <code>ClientFactory</code> before,
+    <div class="note">If you've used <code>ClientFactory</code> before,
     make sure you remember that the <code>connect</code> method takes a
     <code>Factory</code>, not a <code>ClientFactory</code>.  Even if you pass a
     <code>ClientFactory</code> to <code>endpoint.connect</code>, its
     <code>clientConnectionFailed</code> and <code>clientConnectionLost</code>
-    methods.</span></p>
+    methods.</div>
 
     <p>You may come across code using <code base="twisted.internet.protocol"
     class="API">ClientCreator</code>, an older API which is not as flexible as
