@@ -156,7 +156,7 @@ class Request(pb.Copyable, http.Request, components.Componentized):
             if self.method in (supportedMethods):
                 # We MUST include an Allow header
                 # (RFC 2616, 10.4.6 and 14.7)
-                self.setHeader('Allow', allowedMethods)
+                self.setHeader('Allow', ', '.join(allowedMethods))
                 s = ('''Your browser approached me (at %(URI)s) with'''
                      ''' the method "%(method)s".  I only allow'''
                      ''' the method%(plural)s %(allowed)s here.''' % {

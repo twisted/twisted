@@ -1,0 +1,1 @@
+twisted.web.server will now produce a correct Allow header when a particular render_FOO method is missing.

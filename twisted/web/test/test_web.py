@@ -6,6 +6,7 @@ Tests for various parts of L{twisted.web}.
 """
 
 from cStringIO import StringIO
+import re
 
 from zope.interface import implements
 from zope.interface.verify import verifyObject
@@ -741,6 +742,77 @@ class NewRenderTestCase(unittest.TestCase):
         req.requestReceived('HEAD', '/newrender', 'HTTP/1.0')
         self.assertEquals(req.code, 200)
         self.assertEquals(-1, req.transport.getvalue().find('hi hi'))
+
+
+
+class GettableResource(resource.Resource):
+    """
+    Used by AllowedMethodsTest to simulate an allowed method.
+    """
+    def render_GET(self):
+        pass
+
+    def render_fred_render_ethel(self):
+        """
+        The unusual method name is designed to test the culling method
+        in C{twisted.web.resource._computeAllowedMethods}.
+        """
+        pass
+
+
+
+class AllowedMethodsTest(unittest.TestCase):
+    """
+    'C{twisted.web.resource._computeAllowedMethods} is provided by a
+    default should the subclass not provide the method.
+    """
+
+
+    def _getReq(self):
+        """
+        Generate a dummy request for use by C{_computeAllowedMethod} tests.
+        """
+        d = DummyChannel()
+        d.site.resource.putChild('gettableresource', GettableResource())
+        d.transport.port = 81
+        request = server.Request(d, 1)
+        request.setHost('example.com', 81)
+        request.gotLength(0)
+        return request
+    
+
+    def test_computeAllowedMethods(self):
+        """
+        C{_computeAllowedMethods} will search through the
+        'gettableresource' for all attributes/methods of the form
+        'render_{method}' ('render_GET', for example) and return a list of
+        the methods. 'HEAD' will always be included from the
+        resource.Resource superclass.
+        """
+        res = GettableResource()
+        allowedMethods = resource._computeAllowedMethods(res)
+        self.assertEquals(set(allowedMethods),
+                          set(['GET', 'HEAD', 'fred_render_ethel'])) 
+
+
+    def test_notAllowed(self):
+        """
+        When an unsupported method is requested, the default
+        L{_computeAllowedMethods} method will be called to determine the
+        allowed methods, and the HTTP 405 'Method Not Allowed' status will
+        be returned with the allowed methods will be returned in the
+        'Allow' header.
+        """
+        req = self._getReq()
+        req.requestReceived('POST', '/gettableresource', 'HTTP/1.0')
+        self.assertEquals(req.code, 405)
+        allow_header_match = re.search(
+            r'\bAllow:\s+([^\r\n]+)', req.transport.getvalue())
+        self.assertTrue(allow_header_match)
+        method_list = allow_header_match.group(1).split(', ')
+        self.assertEqual(len(method_list), 3)
+        self.assertEqual(set(method_list),
+                         set(['GET', 'HEAD','fred_render_ethel']))
 
 
 

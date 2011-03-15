@@ -10,6 +10,7 @@ import warnings
 
 from zope.interface import Attribute, implements, Interface
 
+from twisted.python.reflect import prefixedMethodNames
 from twisted.web import http
 
 
@@ -206,7 +207,9 @@ class Resource:
             # This needs to be here until the deprecated subclasses of the
             # below three error resources in twisted.web.error are removed.
             from twisted.web.error import UnsupportedMethod
-            raise UnsupportedMethod(getattr(self, 'allowedMethods', ()))
+            allowedMethods = (getattr(self, 'allowedMethods', 0) or
+                              _computeAllowedMethods(self))
+            raise UnsupportedMethod(allowedMethods)
         return m(request)
 
 
@@ -218,6 +221,19 @@ class Resource:
         the framework will handle this correctly.
         """
         return self.render_GET(request)
+
+
+
+def _computeAllowedMethods(resource):
+    """
+    Compute the allowed methods on a C{Resource} based on defined render_FOO
+    methods. Used when raising C{UnsupportedMethod} but C{Resource} does
+    not define C{allowedMethods} attribute.
+    """
+    allowedMethods = []
+    for name in prefixedMethodNames(resource.__class__, "render_"):
+        allowedMethods.append(name)
+    return allowedMethods
 
 
 
