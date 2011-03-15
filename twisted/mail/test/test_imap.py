@@ -12,9 +12,10 @@ try:
 except ImportError:
     from StringIO import StringIO
 
+import codecs
+import locale
 import os
 import types
-import codecs
 
 from zope.interface import implements
 
@@ -3460,6 +3461,30 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
 
     def testFetchInternalDateUID(self):
         return self.testFetchInternalDate(1)
+
+
+    def test_fetchInternalDateLocaleIndependent(self):
+        """
+        The month name in the date is locale independent.
+        """
+        # Fake that we're in a language where December is not Dec
+        currentLocale = locale.getlocale()
+        locale.setlocale(locale.LC_ALL, "es_AR.UTF8")
+        self.addCleanup(locale.setlocale, locale.LC_ALL, currentLocale)
+        return self.testFetchInternalDate(1)
+
+    # if alternate locale is not available, the previous test will be
+    # skipped, please install this locale for it to run
+    currentLocale = locale.getlocale()
+    try:
+        try:
+            locale.setlocale(locale.LC_ALL, "es_AR.UTF8")
+        except locale.Error:
+            test_fetchInternalDateLocaleIndependent.skip = (
+                "The es_AR.UTF8 locale is not installed.")
+    finally:
+        locale.setlocale(locale.LC_ALL, currentLocale)
+
 
     def testFetchEnvelope(self, uid=0):
         self.function = self.client.fetchEnvelope
