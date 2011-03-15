@@ -13,8 +13,9 @@ import struct
 import signal
 import sys
 import os
+from zope.interface import implements
 
-from twisted.internet import protocol
+from twisted.internet import interfaces, protocol
 from twisted.python import log
 from twisted.conch.interfaces import ISession
 from twisted.conch.ssh import common, channel
@@ -181,6 +182,13 @@ SUPPORTED_SIGNALS = ["ABRT", "ALRM", "FPE", "HUP", "ILL", "INT", "KILL",
 
 
 class SSHSessionProcessProtocol(protocol.ProcessProtocol):
+    """I am both an L{IProcessProtocol} and an L{ITransport}.
+
+    I am a transport to the remote endpoint and a process protocol to the
+    local subsystem.
+    """
+
+    implements(interfaces.ITransport)
 
     # once initialized, a dictionary mapping signal values to strings
     # that follow RFC 4254.
@@ -267,16 +275,33 @@ class SSHSessionProcessProtocol(protocol.ProcessProtocol):
                         struct.pack('>L', err.exitCode))
         self.session.loseConnection()
 
-    # transport stuff (we are also a transport!)
+
+    def getHost(self):
+        """
+        Return the host from my session's transport.
+        """
+        return self.session.conn.transport.getHost()
+
+
+    def getPeer(self):
+        """
+        Return the peer from my session's transport.
+        """
+        return self.session.conn.transport.getPeer()
+
 
     def write(self, data):
         self.session.write(data)
 
+
     def writeSequence(self, seq):
         self.session.write(''.join(seq))
 
+
     def loseConnection(self):
         self.session.loseConnection()
+
+
 
 class SSHSessionClient(protocol.Protocol):
 

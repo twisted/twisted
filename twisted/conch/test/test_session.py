@@ -11,6 +11,7 @@ import os, signal, sys, struct
 
 from zope.interface import implements
 
+from twisted.internet.address import IPv4Address
 from twisted.internet.error import ProcessTerminated, ProcessDone
 from twisted.python.failure import Failure
 from twisted.conch.ssh import common, session, connection
@@ -361,7 +362,7 @@ class StubConnection(object):
     """
 
 
-    def __init__(self):
+    def __init__(self, transport=None):
         """
         Initialize our instance variables.
         """
@@ -370,6 +371,7 @@ class StubConnection(object):
         self.requests = {}
         self.eofs = {}
         self.closes = {}
+        self.transport = transport
 
 
     def logPrefix(self):
@@ -418,9 +420,6 @@ class StubConnection(object):
 
 
 
-
-
-
 class StubTransport:
     """
     A stub transport which records the data written.
@@ -434,6 +433,20 @@ class StubTransport:
 
     buf = ''
     close = False
+
+
+    def getPeer(self):
+        """
+        Return an arbitrary L{IAddress}.
+        """
+        return IPv4Address('TCP', 'remotehost', '8888')
+
+
+    def getHost(self):
+        """
+        Return an arbitrary L{IAddress}.
+        """
+        return IPv4Address('TCP', 'localhost', '9999')
 
 
     def write(self, data):
@@ -1002,9 +1015,10 @@ class SSHSessionProcessProtocolTestCase(unittest.TestCase):
     """
 
     def setUp(self):
-        self.session = session.SSHSession(
-            conn=StubConnection(), remoteWindow=500, remoteMaxPacket=100)
         self.transport = StubTransport()
+        self.session = session.SSHSession(
+            conn=StubConnection(self.transport), remoteWindow=500,
+            remoteMaxPacket=100)
         self.pp = session.SSHSessionProcessProtocol(self.session)
         self.pp.makeConnection(self.transport)
 
@@ -1031,6 +1045,24 @@ class SSHSessionProcessProtocolTestCase(unittest.TestCase):
         to the __init__ method.
         """
         self.assertEquals(self.pp.session, self.session)
+
+
+    def test_getHost(self):
+        """
+        SSHSessionProcessProtocol.getHost() just delegates to its
+        session.conn.transport.getHost().
+        """
+        self.assertEquals(
+            self.session.conn.transport.getHost(), self.pp.getHost())
+
+
+    def test_getPeer(self):
+        """
+        SSHSessionProcessProtocol.getPeer() just delegates to its
+        session.conn.transport.getPeer().
+        """
+        self.assertEquals(
+            self.session.conn.transport.getPeer(), self.pp.getPeer())
 
 
     def test_connectionMade(self):
