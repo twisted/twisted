@@ -47,10 +47,10 @@ cdef extern from 'python.h':
     void Py_XDECREF(object o)
     int PyObject_AsWriteBuffer(object obj, void **buffer, int *buffer_len) except -1
     int PyObject_AsReadBuffer(object obj, void **buffer, int *buffer_len) except -1
-    object PyString_FromString(char *v)
-    object PyString_FromStringAndSize(char *v, int len)
+    object PyUnicode_FromString(char *v)
+    object PyUnicode_FromStringAndSize(char *v, int len)
     object PyBuffer_New(int size)
-    char *PyString_AsString(object obj) except NULL
+    char *PyUnicode_AS_DATA(object obj) except NULL
     object PySequence_Fast(object o, char *m)
 #    object PySequence_Fast_GET_ITEM(object o, int i)
     PyObject** PySequence_Fast_ITEMS(object o)
@@ -196,9 +196,9 @@ cdef object _makesockaddr(sockaddr *addr, int len):
         return None
     if addr.sa_family == AF_INET:
         sin = <sockaddr_in *>addr
-        return PyString_FromString(inet_ntoa(sin.sin_addr)), ntohs(sin.sin_port)
+        return PyUnicode_FromString(inet_ntoa(sin.sin_addr)), ntohs(sin.sin_port)
     else:
-        return PyString_FromStringAndSize(addr.sa_data, sizeof(addr.sa_data))
+        return PyUnicode_FromStringAndSize(addr.sa_data, sizeof(addr.sa_data))
 
 cdef object fillinetaddr(sockaddr_in *dest, object addr):
     cdef unsigned short port
@@ -206,7 +206,7 @@ cdef object fillinetaddr(sockaddr_in *dest, object addr):
     cdef char *hoststr
     host, port = addr
 
-    hoststr = PyString_AsString(host)
+    hoststr = PyUnicode_AS_DATA(host)
     res = inet_addr(hoststr)
     if res == INADDR_ANY:
         raise ValueError, 'invalid IP address'
