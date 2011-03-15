@@ -12,8 +12,7 @@
 <p>Deferreds are quite possibly the single most confusing topic that a
 newcomer to Twisted has to deal with. I am going to forgo the normal talk
 about what deferreds are, what they aren't, and why they're used in Twisted.
-Instead, I'm going show you the logic behind what they
-<strong>do</strong>.</p>
+Instead, I'm going show you the logic behind what they <strong>do</strong>.</p>
 
 
 <p>A deferred allows you to encapsulate the logic that you'd normally use to
@@ -255,8 +254,7 @@ callback 4
 </pre>
 
 <p>Two things to note here. First, &quot;- A -&quot; was skipped, like we wanted it to,
-and the second thing is that after &quot;- A -&quot;, noDecision is called, because
-<strong>it is the next errback that exists in the chain</strong>. It returns a
+and the second thing is that after &quot;- A -&quot;, noDecision is called, because  <strong>it is the next errback that exists in the chain</strong>. It returns a
 non-failure, so processing continues with the next callback at &quot;- B -&quot;, and
 the errback at the end of the chain is never called </p>
 

@@ -120,8 +120,7 @@ print "Adding the callback now."
 d.addCallback(printNumber)
 </pre>
 
-<p>You will notice that despite creating a Deferred in the
-<code>largeFibonnaciNumber</code> function, these things happened:</p>
+<p>You will notice that despite creating a Deferred in the  <code>largeFibonnaciNumber</code> function, these things happened:</p>
 <ul>
 <li>the &quot;Total time taken for largeFibonnaciNumber call&quot; output
 shows that the function did not return immediately as asynchronous functions
@@ -182,7 +181,7 @@ class="py-listing">synch-validation.py</a>
 <p>While we can require that callers of our function wrap our synchronous
 result in a Deferred using <code class="API"
 base="twisted.internet.defer">maybeDeferred</code>, for the sake of API
-compatibility it is better to return a Deferred ourself using  <code
+compatibility it is better to return a Deferred ourselves using  <code
 class="API" base="twisted.internet">defer.succeed</code>:</p>
 
 <pre class="python">
@@ -286,14 +285,12 @@ to know.</p>
 
 <h3>Firing Deferreds more than once is impossible</h3>
 
-<p>Deferreds are one-shot. You can only call <code>Deferred.callback</code> or
-<code>Deferred.errback</code> once. The processing chain continues each time
+<p>Deferreds are one-shot. You can only call <code>Deferred.callback</code> or <code>Deferred.errback</code> once. The processing chain continues each time
 you add new callbacks to an already-called-back-to Deferred.</p>
 
 <h3>Synchronous callback execution</h3>
 
-<p>If a Deferred already has a result available, addCallback
-<strong>may</strong> call the callback synchronously: that is, immediately
+<p>If a Deferred already has a result available, <code>addCallback</code> <strong>may</strong> call the callback synchronously: that is, immediately
 after it's been added.  In situations where callbacks modify state, it is
 might be desirable for the chain of processing to halt until all callbacks are
 added. For this, it is possible to <code>pause</code> and <code>unpause</code>
@@ -301,8 +298,7 @@ a Deferred's processing chain while you are adding lots of callbacks.</p>
 
 <p>Be careful when you use these methods! If you <code>pause</code> a
 Deferred, it is <em>your</em> responsibility to make sure that you unpause it.
-The function adding the callbacks must unpause a paused Deferred, it should
-<em>never</em> be the responsibility of the code that actually fires the
+The function adding the callbacks must unpause a paused Deferred, it should <em>never</em> be the responsibility of the code that actually fires the
 callback chain by calling <code>callback</code> or <code>errback</code> as
 this would negate its usefulness!</p>
 
