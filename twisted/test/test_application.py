@@ -142,6 +142,34 @@ class TestService(unittest.TestCase):
         self.assert_(not s1.running)
         self.assert_(s.running)
 
+    def test_doubleStarting(self):
+        """
+        Calling startService on a started service should warn.
+        """
+        s = service.Service()
+        s.startService()
+        s.startService()
+        warnings = self.flushWarnings(
+            offendingFunctions=[s.startService])
+        self.assertIn(
+            'calling startService on a running service is deprecated',
+            warnings[0]['message'])
+
+    def test_stopServiceIdempotent(self):
+        """
+        StopService is idempotent - it can be called on an already-stopped
+        service with no ill effects.
+        """
+        s = service.Service()
+        s.startService()
+        self.failUnless(s.running)
+        s.stopService()
+        self.failIf(s.running)
+        s.stopService()
+        self.failIf(s.running)
+        warnings = self.flushWarnings(
+            offendingFunctions=[s.stopService])
+        self.assertEqual(warnings, [])
 
 if hasattr(os, "getuid"):
     curuid = os.getuid()

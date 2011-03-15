@@ -13,6 +13,7 @@ a sibling).
 Maintainer: Moshe Zadka
 """
 
+import warnings
 from zope.interface import implements, Interface, Attribute
 
 from twisted.python.reflect import namedAny
@@ -129,11 +130,17 @@ class IService(Interface):
     def startService():
         """
         Start the service.
+
+        This method must not be called on an already-started service.
         """
 
     def stopService():
         """
         Stop the service.
+
+        This method is idempotent: it can be called on already-stopped service
+        with no ill effects.  This is often done in error-handling code and to
+        reverse the effects of L{priviledgedStartService}.
 
         @rtype: L{Deferred}
         @return: a L{Deferred} which is triggered when the service has
@@ -192,6 +199,10 @@ class Service:
         pass
 
     def startService(self):
+        if self.running:
+            warnings.warn(
+                "calling startService on a running service is deprecated "
+                "since Twisted 11.0.", DeprecationWarning)
         self.running = 1
 
     def stopService(self):
