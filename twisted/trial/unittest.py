@@ -930,7 +930,7 @@ class TestCase(_Assertions):
                     # better (or at least agrees with the warning system
                     # more often), and does some normalization for us which
                     # is desirable.  inspect.getmodule() is attractive, but
-                    # somewhat broken in Python 2.3.  See Python bug 4845.
+                    # somewhat broken in Python < 2.6.  See Python bug 4845.
                     aModule = sys.modules[aFunction.__module__]
                     filename = inspect.getabsfile(aModule)
 

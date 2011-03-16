@@ -22,7 +22,8 @@ from twisted.internet.protocol import ServerFactory, ClientFactory, Protocol
 from twisted.python.runtime import platform
 from twisted.python.failure import Failure
 from twisted.python import log
-from twisted.trial.unittest import SkipTest
+from twisted.trial.unittest import SkipTest, TestCase
+from twisted.internet.tcp import Connection
 
 from twisted.test.test_tcp import ClosingProtocol
 from twisted.internet.test.test_core import ObjectModelIntegrationMixin
@@ -122,6 +123,76 @@ def serverFactoryFor(protocol):
     factory = ServerFactory()
     factory.protocol = protocol
     return factory
+
+
+class FakeSocket(object):
+    """
+    A Fake Socket object
+    """
+    fileno = 1
+
+    def __init__(self, data):
+        self.data = data
+
+    def setblocking(self, blocking):
+        self.blocking = blocking
+
+    def recv(self, size):
+        return self.data
+
+
+
+class TestFakeSocket(TestCase):
+    """
+    Test that the FakeSocket can be used by the doRead method of L{Connection}
+    """
+
+    def test_blocking(self):
+        skt = FakeSocket("someData")
+        skt.setblocking(0)
+        self.assertEquals(skt.blocking, 0)
+
+
+    def test_recv(self):
+        skt = FakeSocket("someData")
+        self.assertEquals(skt.recv(10), "someData")
+
+
+
+class FakeProtocol(Protocol):
+    """
+    An L{IProtocol} that returns a value from its dataReceived method.
+    """
+    def dataReceived(self, data):
+        """
+        Return something other than C{None} to trigger a deprecation warning for
+        that behavior.
+        """
+        return ()
+
+
+
+class TCPConnectionTests(TestCase):
+    """
+    Whitebox tests for L{twisted.internet.tcp.Connection}.
+    """
+    def test_doReadWarningIsRaised(self):
+        """
+        When an L{IProtocol} implementation that returns a value from its
+        C{dataReceived} method, a deprecated warning is emitted.
+        """
+        skt = FakeSocket("someData")
+        protocol = FakeProtocol()
+        conn = Connection(skt, protocol)
+        conn.doRead()
+        warnings = self.flushWarnings([FakeProtocol.dataReceived])
+        self.assertEquals(warnings[0]['category'], DeprecationWarning)
+        self.assertEquals(
+            warnings[0]["message"],
+            "Returning a value other than None from "
+            "twisted.internet.test.test_tcp.FakeProtocol.dataReceived "
+            "is deprecated since Twisted 11.0.0.")
+        self.assertEquals(len(warnings), 1)
 
 
 

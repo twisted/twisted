@@ -1,0 +1,1 @@
+returning a value other than None from IProtocol.dataReceived was deprecated

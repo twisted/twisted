@@ -55,7 +55,8 @@ __all__ = [
 
 
 import sys, inspect
-from warnings import warn
+from warnings import warn, warn_explicit
+from dis import findlinestarts
 
 from twisted.python.versions import getVersionString
 from twisted.python.util import mergeFunctionMetadata
@@ -448,3 +449,40 @@ def deprecatedModuleAttribute(version, message, moduleName, name):
         sys.modules[moduleName] = module
 
     _deprecateAttribute(module, name, version, message)
+
+
+def warnAboutFunction(offender, warningString):
+    """
+    Issue a warning string, identifying C{offender} as the responsible code.
+
+    This function is used to deprecate some behavior of a function.  It differs
+    from L{warnings.warn} in that it is not limited to deprecating the behavior
+    of a function currently on the call stack.
+
+    @param function: The function that is being deprecated.
+
+    @param warningString: The string that should be emitted by this warning.
+    @type warningString: C{str}
+
+    @since: 11.0
+    """
+    # inspect.getmodule() is attractive, but somewhat
+    # broken in Python < 2.6.  See Python bug 4845.
+    offenderModule = sys.modules[offender.__module__]
+    filename = inspect.getabsfile(offenderModule)
+    lineStarts = list(findlinestarts(offender.func_code))
+    lastLineNo = lineStarts[-1][1]
+    globals = offender.func_globals
+
+    kwargs = dict(
+        category=DeprecationWarning,
+        filename=filename,
+        lineno=lastLineNo,
+        module=offenderModule.__name__,
+        registry=globals.setdefault("__warningregistry__", {}),
+        module_globals=None)
+
+    if sys.version_info[:2] < (2, 5):
+        kwargs.pop('module_globals')
+
+    warn_explicit(warningString, **kwargs)

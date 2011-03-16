@@ -26,7 +26,7 @@ except ImportError:
     SSL = None
 
 from twisted.python.runtime import platformType
-
+from twisted.python import versions, deprecate
 
 if platformType == 'win32':
     # no such thing as WSAEPERM or error code 10001 according to winsock.h or MSDN
@@ -457,7 +457,17 @@ class Connection(abstract.FileDescriptor, _SocketCloser):
                 return main.CONNECTION_LOST
         if not data:
             return main.CONNECTION_DONE
-        return self.protocol.dataReceived(data)
+        rval = self.protocol.dataReceived(data)
+        if rval is not None:
+            offender = self.protocol.dataReceived
+            warningFormat = (
+                'Returning a value other than None from %(fqpn)s is '
+                'deprecated since %(version)s.')
+            warningString = deprecate.getDeprecationWarningString(
+                offender, versions.Version('Twisted', 11, 0, 0),
+                format=warningFormat)
+            deprecate.warnAboutFunction(offender, warningString)
+        return rval
 
 
     def writeSomeData(self, data):
