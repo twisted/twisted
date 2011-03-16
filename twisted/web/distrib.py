@@ -111,7 +111,7 @@ class Issue:
         self.request = request
 
     def finished(self, result):
-        if result != server.NOT_DONE_YET:
+        if result is not server.NOT_DONE_YET:
             assert isinstance(result, types.StringType),\
                    "return value not a string"
             self.request.write(result)
