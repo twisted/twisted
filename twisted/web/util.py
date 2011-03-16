@@ -93,13 +93,7 @@ class DeferredResource(resource.Resource):
         return NOT_DONE_YET
 
     def _cbChild(self, child, request):
-        result = resource.getChildForRequest(child, request).render(request)
-        from twisted.web.server import NOT_DONE_YET
-        if result is NOT_DONE_YET:
-            return
-        else:
-            request.write(result)
-            request.finish()
+        request.render(resource.getChildForRequest(child, request))
 
     def _ebChild(self, reason, request):
         request.processingFailed(reason)

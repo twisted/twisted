@@ -147,12 +147,8 @@ class Request(pb.Copyable, http.Request, components.Componentized):
             if body is NOT_DONE_YET:
                 # In a future release of Twisted, we should issue a
                 # DeprecationWarning here.
-                # warnings.warn(
-                #     "Returning NOT_DONE_YET is deprecated, return a "
-                #     "Deferred instead.",
-                #     DeprecationWarning, stacklevel=2)
                 return
-            if not isinstance(type(body), str):
+            if not isinstance(body, str):
                 body = resource.ErrorPage(
                     http.INTERNAL_SERVER_ERROR,
                     "Request did not return a string",
