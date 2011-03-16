@@ -1,1 +1,1 @@
-HTTP HEAD requests made to twisted.web resources satisfied by calling render_GET no longer receive responses containing a body.
+HEAD requests made to resources whose HEAD handling defaults to calling render_GET now always receive a response with no body.

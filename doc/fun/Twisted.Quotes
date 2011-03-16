@@ -5775,3 +5775,7 @@ How do I use it?
 %
 <exarkun> OpenSSL is the original failfest
 %
+* idnar summons The Keymaker
+<glyph> "Are you The Keymaker?" "Not that I know of."  "Are you The Keymaker?" "ssh-keygen -t rsa -b 4096" "I am the gatekeeper!"
+<cyli> Permission denied (publickey).
+%

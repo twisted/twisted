@@ -12,6 +12,7 @@ infrastructure.
 
 import warnings
 import string
+import types
 import copy
 import os
 from urllib import quote
@@ -136,48 +137,15 @@ class Request(pb.Copyable, http.Request, components.Componentized):
             http.Request.write(self, data)
 
     def render(self, resrc):
-        """Render C{resource} as the response to this request.
-
-        @param resrc: The implementation of L{IResource} that is the response
-            to this request.
-        @returns: Nothing.  The resource will be written to the HTTP channel
-            as the response to this request.
         """
-        def _cbRender(body):
-            if body is NOT_DONE_YET:
-                # In a future release of Twisted, we should issue a
-                # DeprecationWarning here.
-                # warnings.warn(
-                #     "Returning NOT_DONE_YET is deprecated, return a "
-                #     "Deferred instead.",
-                #     DeprecationWarning, stacklevel=2)
-                return
-            if not isinstance(type(body), str):
-                body = resource.ErrorPage(
-                    http.INTERNAL_SERVER_ERROR,
-                    "Request did not return a string",
-                    "Request: " + html.PRE(reflect.safe_repr(self)) + "<br />" +
-                    "Resource: " + html.PRE(reflect.safe_repr(resrc)) + "<br />" +
-                    "Value: " + html.PRE(reflect.safe_repr(body))).render(self)
+        Ask a resource to render itself.
 
-            if self.method == "HEAD":
-                if len(body) > 0:
-                    # This is a Bad Thing (RFC 2616, 9.4)
-                    log.msg("Warning: HEAD request %s for resource %s is"
-                            " returning a message body."
-                            "  I think I'll eat it."
-                            % (self, resrc))
-                    self.setHeader('content-length', str(len(body)))
-                self.write('')
-            else:
-                self.setHeader('content-length', str(len(body)))
-                self.write(body)
-            self.finish()
-
-        def _ebRender(fail):
-            fail.trap(UnsupportedMethod)
-            allowedMethods = fail.value.allowedMethods
-
+        @param resrc: a L{twisted.web.resource.IResource}.
+        """
+        try:
+            body = resrc.render(self)
+        except UnsupportedMethod, e:
+            allowedMethods = e.allowedMethods
             if (self.method == "HEAD") and ("GET" in allowedMethods):
                 # We must support HEAD (RFC 2616, 5.1.1).  If the
                 # resource doesn't, fake it by giving the resource
@@ -202,7 +170,7 @@ class Request(pb.Copyable, http.Request, components.Componentized):
                 self.finish()
                 return
 
-            if self.method in supportedMethods:
+            if self.method in (supportedMethods):
                 # We MUST include an Allow header
                 # (RFC 2616, 10.4.6 and 14.7)
                 self.setHeader('Allow', ', '.join(allowedMethods))
@@ -222,10 +190,31 @@ class Request(pb.Copyable, http.Request, components.Componentized):
                                            "I don't know how to treat a"
                                            " %s request." % (self.method,))
                 body = epage.render(self)
-            _cbRender(body)
+        # end except UnsupportedMethod
 
-        d = defer.maybeDeferred(resrc.render, self)
-        d.addCallbacks(_cbRender, _ebRender)
+        if body == NOT_DONE_YET:
+            return
+        if type(body) is not types.StringType:
+            body = resource.ErrorPage(
+                http.INTERNAL_SERVER_ERROR,
+                "Request did not return a string",
+                "Request: " + html.PRE(reflect.safe_repr(self)) + "<br />" +
+                "Resource: " + html.PRE(reflect.safe_repr(resrc)) + "<br />" +
+                "Value: " + html.PRE(reflect.safe_repr(body))).render(self)
+
+        if self.method == "HEAD":
+            if len(body) > 0:
+                # This is a Bad Thing (RFC 2616, 9.4)
+                log.msg("Warning: HEAD request %s for resource %s is"
+                        " returning a message body."
+                        "  I think I'll eat it."
+                        % (self, resrc))
+                self.setHeader('content-length', str(len(body)))
+            self.write('')
+        else:
+            self.setHeader('content-length', str(len(body)))
+            self.write(body)
+        self.finish()
 
     def processingFailed(self, reason):
         log.err(reason)

@@ -204,15 +204,6 @@ class SimpleResource(resource.Resource):
         else:
             return "correct"
 
-class SimpleDeferredResource(resource.Resource):
-    def render(self, request):
-        d = defer.Deferred()
-        if http.CACHED in (request.setLastModified(10),
-                           request.setETag('MatchingTag')):
-            reactor.callLater(0, d.callback, '')
-        else:
-            reactor.callLater(0, d.callback, "correct")
-        return d
 
 class DummyChannel:
     class TCP:
@@ -271,18 +262,6 @@ class SiteTest(unittest.TestCase):
             site.getResourceFor(DummyRequest([''])),
             sres2, "Got the wrong resource.")
 
-    def test_simplestSiteDeferred(self):
-        """
-        L{Site.getResourceFor} returns the C{""} child of the root resource it
-        is constructed with when processing a request for I{/}.
-        """
-        sres1 = SimpleDeferredResource()
-        sres2 = SimpleDeferredResource()
-        sres1.putChild("",sres2)
-        site = server.Site(sres1)
-        self.assertIdentical(
-            site.getResourceFor(DummyRequest([''])),
-            sres2, "Got the wrong resource.")
 
 
 class SessionTest(unittest.TestCase):
