@@ -881,24 +881,6 @@ Hello,
 
 
 class QueryArgumentsTestCase(unittest.TestCase):
-    def testUnquote(self):
-        try:
-            from twisted.protocols import _c_urlarg
-        except ImportError:
-            raise unittest.SkipTest("_c_urlarg module is not available")
-        # work exactly like urllib.unquote, including stupid things
-        # % followed by a non-hexdigit in the middle and in the end
-        self.failUnlessEqual(urllib.unquote("%notreally%n"),
-            _c_urlarg.unquote("%notreally%n"))
-        # % followed by hexdigit, followed by non-hexdigit
-        self.failUnlessEqual(urllib.unquote("%1quite%1"),
-            _c_urlarg.unquote("%1quite%1"))
-        # unquoted text, followed by some quoted chars, ends in a trailing %
-        self.failUnlessEqual(urllib.unquote("blah%21%40%23blah%"),
-            _c_urlarg.unquote("blah%21%40%23blah%"))
-        # Empty string
-        self.failUnlessEqual(urllib.unquote(""), _c_urlarg.unquote(""))
-
     def testParseqs(self):
         self.failUnlessEqual(cgi.parse_qs("a=b&d=c;+=f"),
             http.parse_qs("a=b&d=c;+=f"))
@@ -972,13 +954,6 @@ class QueryArgumentsTestCase(unittest.TestCase):
         self.assertRaises(TypeError, http.urlparse, u'http://example.org/path')
 
 
-    def testEscchar(self):
-        try:
-            from twisted.protocols import _c_urlarg
-        except ImportError:
-            raise unittest.SkipTest("_c_urlarg module is not available")
-        self.failUnlessEqual("!@#+b",
-            _c_urlarg.unquote("+21+40+23+b", "+"))
 
 class ClientDriver(http.HTTPClient):
     def handleStatus(self, version, status, message):

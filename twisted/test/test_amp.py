@@ -369,6 +369,38 @@ class LiteralAmp(amp.AMP):
         self.boxes.append(box)
         return
 
+
+
+class AmpBoxTests(unittest.TestCase):
+    """
+    Test a few essential properties of AMP boxes, mostly with respect to
+    serialization correctness.
+    """
+
+    def test_serializeStr(self):
+        """
+        Make sure that strs serialize to strs.
+        """
+        a = amp.AmpBox(key='value')
+        self.assertEquals(type(a.serialize()), str)
+
+    def test_serializeUnicodeKeyRaises(self):
+        """
+        Verify that TypeError is raised when trying to serialize Unicode keys.
+        """
+        a = amp.AmpBox(**{u'key': 'value'})
+        self.assertRaises(TypeError, a.serialize)
+
+    def test_serializeUnicodeValueRaises(self):
+        """
+        Verify that TypeError is raised when trying to serialize Unicode
+        values.
+        """
+        a = amp.AmpBox(key=u'value')
+        self.assertRaises(TypeError, a.serialize)
+
+
+
 class ParsingTest(unittest.TestCase):
 
     def test_booleanValues(self):

@@ -544,6 +544,11 @@ class AmpBox(dict):
         L = []
         w = L.append
         for k, v in i:
+            if type(k) == unicode:
+                raise TypeError("Unicode key not allowed: %r" % k)
+            if type(v) == unicode:
+                raise TypeError(
+                    "Unicode value for key %r not allowed: %r" % (k, v))
             if len(k) > MAX_KEY_LENGTH:
                 raise TooLong(True, True, k, None)
             if len(v) > MAX_VALUE_LENGTH:

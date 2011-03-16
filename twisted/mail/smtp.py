@@ -1886,7 +1886,7 @@ def xtext_encode(s, errors=None):
     return (''.join(r), len(s))
 
 
-def _slowXTextDecode(s, errors=None):
+def xtext_decode(s, errors=None):
     """
     Decode the xtext-encoded string C{s}.
     """
@@ -1903,17 +1903,6 @@ def _slowXTextDecode(s, errors=None):
             r.append(s[i])
             i += 1
     return (''.join(r), len(s))
-
-try:
-    from twisted.protocols._c_urlarg import unquote as _helper_unquote
-except ImportError:
-    xtext_decode = _slowXTextDecode
-else:
-    def xtext_decode(s, errors=None):
-        """
-        Decode the xtext-encoded string C{s} using a fast extension function.
-        """
-        return (_helper_unquote(s, '+'), len(s))
 
 class xtextStreamReader(codecs.StreamReader):
     def decode(self, s, errors='strict'):

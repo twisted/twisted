@@ -78,7 +78,7 @@ from urllib import quote, unquote
 from twisted.python import failure, log
 from twisted.python.hashlib import md5
 from twisted.internet import reactor
-from twisted.internet.defer import Deferred
+from twisted.internet.defer import Deferred, execute
 from twisted.internet.protocol import ClientFactory
 try:
     from twisted.internet.ssl import ClientContextFactory
@@ -125,6 +125,17 @@ STATUS_LUNCH   = 'LUN'
 CR = "\r"
 LF = "\n"
 
+
+class SSLRequired(Exception):
+    """
+    This exception is raised when it is necessary to talk to a passport server
+    using SSL, but the necessary SSL dependencies are unavailable.
+
+    @since: 11.0
+    """
+
+
+
 def checkParamLen(num, expected, cmd, error=None):
     if error == None:
         error = "Invalid Number of Parameters for %s" % cmd
@@ -160,11 +171,19 @@ def _parsePrimitiveHost(host):
     p = '/' + p
     return h,p
 
+
 def _login(userHandle, passwd, nexusServer, cached=0, authData=''):
     """
     This function is used internally and should not ever be called
     directly.
+
+    @raise SSLRequired: If there is no SSL support available.
     """
+    if ClientContextFactory is None:
+        raise SSLRequired(
+            'Connecting to the Passport server requires SSL, but SSL is '
+            'unavailable.')
+
     cb = Deferred()
     def _cb(server, auth):
         loginFac = ClientFactory()
@@ -824,7 +843,9 @@ class NotificationClient(MSNEventBase):
         elif params[2].upper() == "S":
             # we need to obtain auth from a passport server
             f = self.factory
-            d = _login(f.userHandle, f.password, f.passportServer, authData=params[3])
+            d = execute(
+                _login, f.userHandle, f.password, f.passportServer,
+                authData=params[3])
             d.addCallback(self._passportLogin)
             d.addErrback(self._passportError)
 
@@ -839,8 +860,16 @@ class NotificationClient(MSNEventBase):
         elif result[0] == LOGIN_FAILURE:
             self.loginFailure(result[1])
 
+
     def _passportError(self, failure):
+        """
+        Handle a problem logging in via the Passport server, passing on the
+        error as a string message to the C{loginFailure} callback.
+        """
+        if failure.check(SSLRequired):
+            failure = failure.getErrorMessage()
         self.loginFailure("Exception while authenticating: %s" % failure)
+
 
     def handle_CHG(self, params):
         checkParamLen(len(params), 3, 'CHG')
@@ -1078,13 +1107,14 @@ class NotificationClient(MSNEventBase):
             listVersion = self.factory.contacts.version
         self.syncList(listVersion).addCallback(self.listSynchronized)
 
+
     def loginFailure(self, message):
         """
         Called when the client fails to login.
 
         @param message: a message indicating the problem that was encountered
         """
-        pass
+
 
     def gotProfile(self, message):
         """

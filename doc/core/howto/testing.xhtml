@@ -72,8 +72,8 @@ down.</p>
 The <code>tearDown</code> method is a good place to put cleanup code: it is
 always run regardless of whether your test passes or fails (like a bare <code>
 except</code> clause in a try-except construct). Exceptions in <code>tearDown
-</code> are flagged as errors and flunk the test.
-<code class="API" base="twisted.trial.unittest">TestCase.addCleanup</code> is
+ </code> are flagged as errors and flunk the test. 
+ <code class="API" base="twisted.trial.unittest">TestCase.addCleanup</code> is
 another useful tool for cleaning up.  With it, you can register callables to
 clean up resources as the test allocates them.  Generally, code should be
 written so that only resources allocated in the tests need to be cleaned up in
@@ -83,9 +83,8 @@ should be cleaned up by the implementation.</p>
 <p>If your code uses Deferreds or depends on the reactor running, you can
 return a Deferred from your test method, setUp, or tearDown and Trial will
 do the right thing. That is, it will run the reactor for you until the
-Deferred has triggered and its callbacks have been run. Don't use
-<code>reactor.run()</code>, <code>reactor.stop()</code>, <code>reactor.crash()
-</code>or <code>reactor.iterate()</code> in your tests.</p>
+Deferred has triggered and its callbacks have been run. Don't use 
+ <code>reactor.run()</code>, <code>reactor.stop()</code>, <code>reactor.crash()</code> or <code>reactor.iterate()</code> in your tests.</p>
 
 <p>Calls to <code>reactor.callLater</code> create <code class="API"
 base="twisted.internet.interfaces">IDelayedCall</code>s.  These need to be run
@@ -132,19 +131,16 @@ in unusual cases.</p>
 
 <h3>Interacting with warnings in tests</h3>
 
-<p>Trial includes specific support for interacting with Python's
-<code>warnings</code> module.  This support allows warning-emitting code to
+<p>Trial includes specific support for interacting with Python's 
+ <code>warnings</code> module.  This support allows warning-emitting code to
 be written test-driven, just as any other code would be.  It also improves
 the way in which warnings reporting when a test suite is running.</p>
 
-<p><code class="API"
-base="twisted.trial.unittest">TestCase.assertWarns</code> and <code
+<p><code
 class="API" base="twisted.trial.unittest">TestCase.flushWarnings</code>
-allow tests to be written which make assertions about what warnings have
-been emitted during a particular test method.  <code>flushWarnings</code> is
-the new method and has a simpler and more flexible API and should be
-preferred when writing new code.  In order to test a warning with
-<code>flushWarnings</code>, write a test which first invokes the code which
+allows tests to be written which make assertions about what warnings have
+been emitted during a particular test method. In order to test a warning with 
+ <code>flushWarnings</code>, write a test which first invokes the code which
 will emit a warning and then calls <code>flushWarnings</code> and makes
 assertions about the result.  For example:</p>
 
@@ -165,8 +161,8 @@ the summary section of the default reporter.  Note that unlike usual
 operation, when <code>warnings.warn</code> is called as part of a test
 method, it will not raise an exception when warnings have been configured as
 errors.  However, if called outside of a test method (for example, at module
-scope in a test module or a module imported by a test module) then it
-<em>will</em> raise an exception.</p>
+scope in a test module or a module imported by a test module) then it 
+ <em>will</em> raise an exception.</p>
 
   </body>
 </html>
