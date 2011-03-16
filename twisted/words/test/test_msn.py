@@ -287,6 +287,26 @@ class NotificationTests(unittest.TestCase):
         self.failUnless((self.client.state == 'LOGIN'), msg='Failed to detect successful login')
 
 
+    def test_loginWithoutSSLFailure(self):
+        """
+        L{NotificationClient.loginFailure} is called if the necessary SSL APIs
+        are unavailable.
+        """
+        self.patch(msn, 'ClientContextFactory', None)
+        success = []
+        self.client.loggedIn = lambda *args: success.append(args)
+        failure = []
+        self.client.loginFailure = failure.append
+
+        self.client.lineReceived('USR 6 TWN S opaque-string-goes-here')
+        self.assertEquals(success, [])
+        self.assertEquals(
+            failure,
+            ["Exception while authenticating: "
+             "Connecting to the Passport server requires SSL, but SSL is "
+             "unavailable."])
+
+
     def testProfile(self):
         m = 'MSG Hotmail Hotmail 353\r\nMIME-Version: 1.0\r\nContent-Type: text/x-msmsgsprofile; charset=UTF-8\r\n'
         m += 'LoginTime: 1016941010\r\nEmailEnabled: 1\r\nMemberIdHigh: 40000\r\nMemberIdLow: -600000000\r\nlang_preference: 1033\r\n'
@@ -402,7 +422,7 @@ class MessageHandlingTests(unittest.TestCase):
         m = msn.MSNMessage()
         m.setHeader('Content-Type', 'text/x-clientcaps')
         self.assertEquals(self.client.checkMessage(m), 0, 'Failed to detect client capability message')
-        
+
     def testTypingCheck(self):
         m = msn.MSNMessage()
         m.setHeader('Content-Type', 'text/x-msmsgscontrol')
@@ -494,9 +514,8 @@ class FileTransferTestCase(unittest.TestCase):
         d.addCallback(check)
         return d
 
-
 if msn is None:
-    for testClass in [PassportTests, NotificationTests,
+    for testClass in [DispatchTests, PassportTests, NotificationTests,
                       MessageHandlingTests, FileTransferTestCase]:
         testClass.skip = (
             "MSN requires an HTTP client but none is available, "
