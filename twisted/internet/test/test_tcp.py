@@ -28,6 +28,28 @@ from twisted.test.test_tcp import ClosingProtocol
 from twisted.internet.test.test_core import ObjectModelIntegrationMixin
 
 
+def findFreePort(interface='127.0.0.1', type=socket.SOCK_STREAM):
+    """
+    Ask the platform to allocate a free port on the specified interface,
+    then release the socket and return the address which was allocated.
+
+    @param interface: The local address to try to bind the port on.
+    @type interface: C{str}
+
+    @param type: The socket type which will use the resulting port.
+
+    @return: A two-tuple of address and port, like that returned by
+        L{socket.getsockname}.
+    """
+    family = socket.AF_INET
+    probe = socket.socket(family, type)
+    try:
+        probe.bind((interface, 0))
+        return probe.getsockname()
+    finally:
+        probe.close()
+
+
 class Stop(ClientFactory):
     """
     A client factory which stops a reactor when a connection attempt fails.
@@ -107,14 +129,6 @@ class TCPClientTestsBuilder(ReactorBuilder):
     """
     Builder defining tests relating to L{IReactorTCP.connectTCP}.
     """
-    def _freePort(self, interface='127.0.0.1'):
-        probe = socket.socket()
-        try:
-            probe.bind((interface, 0))
-            return probe.getsockname()
-        finally:
-            probe.close()
-
     def test_interface(self):
         """
         L{IReactorTCP.connectTCP} returns an object providing L{IConnector}.
@@ -129,10 +143,10 @@ class TCPClientTestsBuilder(ReactorBuilder):
         The reactor can be stopped by a client factory's
         C{clientConnectionFailed} method.
         """
-        host, port = self._freePort()
+        host, port = findFreePort()
         reactor = self.buildReactor()
         reactor.connectTCP(host, port, Stop(reactor))
-        reactor.run()
+        self.runReactor(reactor)
 
 
     def test_addresses(self):
@@ -141,7 +155,7 @@ class TCPClientTestsBuilder(ReactorBuilder):
         instances which give the dotted-quad string form of the local and
         remote endpoints of the connection respectively.
         """
-        host, port = self._freePort()
+        host, port = findFreePort()
         reactor = self.buildReactor()
 
         server = reactor.listenTCP(
@@ -162,7 +176,7 @@ class TCPClientTestsBuilder(ReactorBuilder):
             bindAddress=('127.0.0.1', port))
 
         reactor.installResolver(FakeResolver({'localhost': '127.0.0.1'}))
-        reactor.run() # self.runReactor(reactor)
+        self.runReactor(reactor)
 
         self.assertEqual(
             addresses['host'],

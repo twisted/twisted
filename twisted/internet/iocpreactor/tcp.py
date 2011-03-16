@@ -354,8 +354,7 @@ class Client(Connection):
 
         This indicates the address from which I am connecting.
         """
-        return address.IPv4Address('TCP', *(self.socket.getsockname() +
-                                            ('INET',)))
+        return address.IPv4Address('TCP', *self.socket.getsockname())
 
 
     def getPeer(self):
@@ -364,7 +363,7 @@ class Client(Connection):
 
         This indicates the address that I am connected to.
         """
-        return address.IPv4Address('TCP', *(self.realAddress + ('INET',)))
+        return address.IPv4Address('TCP', *self.realAddress)
 
 
     def __repr__(self):
@@ -579,8 +578,7 @@ class Port(_SocketCloser):
 
         This indicates the server's address.
         """
-        return address.IPv4Address('TCP', *(self.socket.getsockname() +
-                                            ('INET',)))
+        return address.IPv4Address('TCP', *self.socket.getsockname())
 
 
     def cbAccept(self, rc, bytes, evt):
@@ -614,8 +612,8 @@ class Port(_SocketCloser):
                 s = self.sessionno
                 self.sessionno = s+1
                 transport = Server(evt.newskt, protocol,
-                        address.IPv4Address('TCP', rAddr[0], rAddr[1], 'INET'),
-                        address.IPv4Address('TCP', lAddr[0], lAddr[1], 'INET'),
+                        address.IPv4Address('TCP', rAddr[0], rAddr[1]),
+                        address.IPv4Address('TCP', lAddr[0], lAddr[1]),
                         s, self.reactor)
                 protocol.makeConnection(transport)
             return True
