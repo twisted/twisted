@@ -25,11 +25,6 @@ class IResource(Interface):
         getChildWithDefault will not be called on this Resource.
         """)
 
-    allowedMethods = Attribute(
-        """
-        A list of strings naming HTTP verbs this resource supports.
-        """)
-
     def getChildWithDefault(name, request):
         """
         Return a child with the given name for the given request.
@@ -53,9 +48,6 @@ class IResource(Interface):
         at some point later (in a Deferred callback, usually)
         call request.write("<html>") to write data to the request,
         and request.finish() to send the data to the browser.
-
-        L{twisted.web.error.UnsupportedMethod} can be raised if the
-        HTTP verb requested is not supported by this resource.
         """
 
 
