@@ -22,9 +22,6 @@ from twisted.python.dist import twisted_subprojects
 
 
 extensions = [
-    Extension("twisted.protocols._c_urlarg",
-              ["twisted/protocols/_c_urlarg.c"]),
-
     Extension("twisted.test.raiser",
               ["twisted/test/raiser.c"]),
 

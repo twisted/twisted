@@ -718,11 +718,6 @@ class SMTPHelperTestCase(unittest.TestCase):
         """
         bytes = 'Hello world'
         self.assertEqual(
-            smtp._slowXTextDecode(bytes, 'strict'),
-            (bytes.decode('xtext'), len(bytes)))
-        # This might be the same as _slowXTextDecode, but it might also be the
-        # fast version instead.
-        self.assertEqual(
             smtp.xtext_decode(bytes, 'strict'),
             (bytes.decode('xtext'), len(bytes)))
         self.assertEqual(

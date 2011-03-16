@@ -19,10 +19,7 @@ from urllib import quote
 
 from zope.interface import implements
 
-try:
-    from twisted.protocols._c_urlarg import unquote
-except ImportError:
-    from urllib import unquote
+from urllib import unquote
 
 #some useful constants
 NOT_DONE_YET = 1
