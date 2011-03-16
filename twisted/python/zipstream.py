@@ -249,18 +249,28 @@ def unzip(filename, directory=".", overwrite=0):
     still get an error if you try to create a directory over a file
     with the same name or vice-versa.
     """
-    for i in unzipIter(filename, directory, overwrite):
+    warnings.warn("zipstream.unzip is deprecated since Twisted 11.0.0 for " +
+                  "security reasons.  Use Python's zipfile instead.",
+                  category=DeprecationWarning, stacklevel=2)
+
+    for i in unzipIter(filename, directory, overwrite, suppress_warning = True):
         pass
 
 DIR_BIT = 16
 
-def unzipIter(filename, directory='.', overwrite=0):
+def unzipIter(filename, directory='.', overwrite=0, suppress_warning = False):
     """
     Return a generator for the zipfile.  This implementation will yield
     after every file.
 
     The value it yields is the number of files left to unzip.
     """
+    if not suppress_warning:
+        warnings.warn("zipstream.unzipIter is deprecated since Twisted " +
+                      "11.0.0 for security reasons. Use Python's " +
+                      "zipfile instead.",
+                      category=DeprecationWarning, stacklevel=2)
+
     zf = zipfile.ZipFile(filename, 'r')
     names = zf.namelist()
     if not os.path.exists(directory):

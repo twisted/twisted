@@ -302,6 +302,22 @@ class ZipstreamTest(unittest.TestCase):
             num = int(child.basename())
             self.assertEquals(child.open().read(), contents[num])
 
+    def test_unzipIter_deprecated(self):
+        """
+        Use of C{twisted.python.zipstream.unzipIter} will emit a
+        deprecated warning.
+        """
+        zpfilename = self.makeZipFile('foo')
+
+        self.assertEqual(len(self.flushWarnings()), 0)
+
+        for f in zipstream.unzipIter(zpfilename, self.unzipdir.path):
+            pass
+
+        warning_list = self.flushWarnings()
+        self.assertEqual(len(warning_list), 1)
+        self.assertRegexpMatches(str(warning_list),
+                                 r'zipstream.unzipIter\b.*deprecated')
 
     def test_unzipIterChunky(self):
         """
@@ -353,6 +369,21 @@ class ZipstreamTest(unittest.TestCase):
             set(map(str, range(numfiles))))
         for i in range(numfiles):
             self.assertEqual(self.unzipdir.child(str(i)).getContent(), str(i))
+
+    def test_unzip_deprecated(self):
+        """
+        Use of C{twisted.python.zipstream.unzip} will emit a deprecated warning.
+        """
+        zpfilename = self.makeZipFile('foo')
+
+        self.assertEqual(len(self.flushWarnings()), 0)
+
+        zipstream.unzip(zpfilename, self.unzipdir.path)
+
+        warning_list = self.flushWarnings()
+        self.assertEqual(len(warning_list), 1)
+        self.assertRegexpMatches(str(warning_list),
+                                 r'zipstream.unzip\b.*deprecated')
 
 
     def test_unzipDirectory(self):
