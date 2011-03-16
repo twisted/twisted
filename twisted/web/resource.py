@@ -43,10 +43,11 @@ class IResource(Interface):
         """
         Render a request. This is called on the leaf resource for
         a request. Render must return either a string, which will
-        be sent to the browser as the HTML for the request, or
-        server.NOT_DONE_YET. If NOT_DONE_YET is returned,
+        be sent to the browser as the HTML for the request,
+        a Deferred containing a string as its result value, or
+        server.NOT_DONE_YET.  If NOT_DONE_YET is returned,
         at some point later (in a Deferred callback, usually)
-        call request.write("<html>") to write data to the request,
+        call request.write('<html>') to write data to the request,
         and request.finish() to send the data to the browser.
 
         L{twisted.web.error.UnsupportedMethod} can be raised if the
