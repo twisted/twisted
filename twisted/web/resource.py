@@ -48,6 +48,9 @@ class IResource(Interface):
         at some point later (in a Deferred callback, usually)
         call request.write("<html>") to write data to the request,
         and request.finish() to send the data to the browser.
+
+        L{twisted.web.error.UnsupportedMethod} can be raised if the
+        HTTP verb requested is not supported by this resource.
         """
 
 

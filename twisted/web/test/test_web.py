@@ -17,7 +17,7 @@ from twisted.internet.address import IPv4Address
 from twisted.internet.defer import Deferred
 from twisted.web import server, resource, util
 from twisted.internet import defer, interfaces, task
-from twisted.web import iweb, http, http_headers
+from twisted.web import iweb, http, http_headers, error
 from twisted.python import log
 
 
@@ -709,10 +709,42 @@ class NewRenderResource(resource.Resource):
         return "ho ho"
 
 
+
+class HeadlessResource(object):
+    """
+    A resource that implements GET but not HEAD.
+    """
+    implements(resource.IResource)
+
+    allowedMethods = ["GET"]
+
+    def render(self, request):
+        """
+        Leave the request open for future writes.
+        """
+        self.request = request
+        if request.method not in self.allowedMethods:
+            raise error.UnsupportedMethod(self.allowedMethods)
+        self.request.write("some data")
+        return server.NOT_DONE_YET
+
+
+
+
 class NewRenderTestCase(unittest.TestCase):
-    def _getReq(self):
+    """
+    Tests for L{server.Request.render}.
+    """
+    def _getReq(self, resource=None):
+        """
+        Create a request object with a stub channel and install the
+        passed resource at /newrender. If no resource is passed,
+        create one.
+        """
         d = DummyChannel()
-        d.site.resource.putChild('newrender', NewRenderResource())
+        if resource is None:
+            resource = NewRenderResource()
+        d.site.resource.putChild('newrender', resource)
         d.transport.port = 81
         request = server.Request(d, 1)
         request.setHost('example.com', 81)
@@ -743,6 +775,17 @@ class NewRenderTestCase(unittest.TestCase):
         self.assertEquals(req.code, 200)
         self.assertEquals(-1, req.transport.getvalue().find('hi hi'))
 
+    def test_unsupportedHead(self):
+        """
+        HEAD requests against resource that only claim support for GET
+        should not include a body in the response.
+        """
+        resource = HeadlessResource()
+        req = self._getReq(resource)
+        req.requestReceived("HEAD", "/newrender", "HTTP/1.0")
+        headers, body = req.transport.getvalue().split('\r\n\r\n')
+        self.assertEqual(req.code, 200)
+        self.assertEqual(body, '')
 
 
 class GettableResource(resource.Resource):
