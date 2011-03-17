@@ -22,6 +22,7 @@ from twisted.conch import avatar, error
 from twisted.conch.test.keydata import publicRSA_openssh, privateRSA_openssh
 from twisted.conch.test.keydata import publicDSA_openssh, privateDSA_openssh
 from twisted.cred import portal
+from twisted.cred.error import UnauthorizedLogin
 from twisted.internet import defer, protocol, reactor
 from twisted.internet.error import ProcessTerminated
 from twisted.python import failure, log
@@ -31,45 +32,80 @@ from twisted.conch.test.test_recvline import LoopbackRelay
 
 
 
-class ConchTestRealm:
+class ConchTestRealm(object):
+    """
+    A realm which expects a particular avatarId to log in once and creates a
+    L{ConchTestAvatar} for that request.
+
+    @ivar expectedAvatarID: The only avatarID that this realm will produce an
+        avatar for.
+
+    @ivar avatar: A reference to the avatar after it is requested.
+    """
+    avatar = None
+
+    def __init__(self, expectedAvatarID):
+        self.expectedAvatarID = expectedAvatarID
+
 
     def requestAvatar(self, avatarID, mind, *interfaces):
-        unittest.assertEquals(avatarID, 'testuser')
-        a = ConchTestAvatar()
-        return interfaces[0], a, a.logout
+        """
+        Return a new L{ConchTestAvatar} if the avatarID matches the expected one
+        and this is the first avatar request.
+        """
+        if avatarID == self.expectedAvatarID:
+            if self.avatar is not None:
+                raise UnauthorizedLogin("Only one login allowed")
+            self.avatar = ConchTestAvatar()
+            return interfaces[0], self.avatar, self.avatar.logout
+        raise UnauthorizedLogin(
+            "Only %r may log in, not %r" % (self.expectedAvatarID, avatarID))
+
+
 
 class ConchTestAvatar(avatar.ConchUser):
+    """
+    An avatar against which various SSH features can be tested.
+
+    @ivar loggedOut: A flag indicating whether the avatar logout method has been
+        called.
+    """
     loggedOut = False
 
     def __init__(self):
         avatar.ConchUser.__init__(self)
         self.listeners = {}
+        self.globalRequests = {}
         self.channelLookup.update({'session': session.SSHSession,
                         'direct-tcpip':forwarding.openConnectForwardingClient})
         self.subsystemLookup.update({'crazy': CrazySubsystem})
 
+
     def global_foo(self, data):
-        unittest.assertEquals(data, 'bar')
+        self.globalRequests['foo'] = data
         return 1
 
+
     def global_foo_2(self, data):
-        unittest.assertEquals(data, 'bar2')
+        self.globalRequests['foo_2'] = data
         return 1, 'data'
+
 
     def global_tcpip_forward(self, data):
         host, port = forwarding.unpackGlobal_tcpip_forward(data)
-        try: listener = reactor.listenTCP(port,
-                forwarding.SSHListenForwardingFactory(self.conn,
-                    (host, port),
+        try:
+            listener = reactor.listenTCP(
+                port, forwarding.SSHListenForwardingFactory(
+                    self.conn, (host, port),
                     forwarding.SSHListenServerForwardingChannel),
-                interface = host)
+                interface=host)
         except:
-            log.err()
-            unittest.fail("something went wrong with remote->local forwarding")
+            log.err(None, "something went wrong with remote->local forwarding")
             return 0
         else:
             self.listeners[(host, port)] = listener
             return 1
+
 
     def global_cancel_tcpip_forward(self, data):
         host, port = forwarding.unpackGlobal_tcpip_forward(data)
@@ -80,41 +116,49 @@ class ConchTestAvatar(avatar.ConchUser):
         listener.stopListening()
         return 1
 
+
     def logout(self):
         self.loggedOut = True
         for listener in self.listeners.values():
             log.msg('stopListening %s' % listener)
             listener.stopListening()
 
-class ConchSessionForTestAvatar:
 
+
+class ConchSessionForTestAvatar(object):
+    """
+    An ISession adapter for ConchTestAvatar.
+    """
     def __init__(self, avatar):
-        unittest.assert_(isinstance(avatar, ConchTestAvatar))
+        """
+        Initialize the session and create a reference to it on the avatar for
+        later inspection.
+        """
         self.avatar = avatar
+        self.avatar._testSession = self
         self.cmd = None
         self.proto = None
         self.ptyReq = False
         self.eof = 0
+        self.onClose = defer.Deferred()
+
 
     def getPty(self, term, windowSize, attrs):
         log.msg('pty req')
-        unittest.assertEquals(term, 'conch-test-term')
-        unittest.assertEquals(windowSize, (24, 80, 0, 0))
+        self._terminalType = term
+        self._windowSize = windowSize
         self.ptyReq = True
 
+
     def openShell(self, proto):
-        log.msg('openning shell')
-        unittest.assertEquals(self.ptyReq, True)
+        log.msg('opening shell')
         self.proto = proto
         EchoTransport(proto)
         self.cmd = 'shell'
 
+
     def execCommand(self, proto, cmd):
         self.cmd = cmd
-        unittest.assert_(cmd.split()[0] in ['false', 'echo', 'secho', 'eecho','jumboliah'],
-                'invalid command: %s' % cmd.split()[0])
-        if cmd == 'jumboliah':
-            raise error.ConchError('bad exec')
         self.proto = proto
         f = cmd.split()[0]
         if f == 'false':
@@ -134,26 +178,19 @@ class ConchSessionForTestAvatar:
             t = ErrEchoTransport(proto)
             t.write(cmd[6:])
             t.loseConnection()
+        else:
+            raise error.ConchError('bad exec')
         self.avatar.conn.transport.expectedLoseConnection = 1
 
-#    def closeReceived(self):
-#        #if self.proto:
-#        #   self.proto.transport.loseConnection()
-#        self.loseConnection()
 
     def eofReceived(self):
         self.eof = 1
 
+
     def closed(self):
         log.msg('closed cmd "%s"' % self.cmd)
-        if self.cmd == 'echo hello':
-            rwl = self.proto.session.remoteWindowLeft
-            unittest.assertEquals(rwl, 4)
-        elif self.cmd == 'eecho hello':
-            rwl = self.proto.session.remoteWindowLeft
-            unittest.assertEquals(rwl, 4)
-        elif self.cmd == 'shell':
-            unittest.assert_(self.eof)
+        self.remoteWindowLeftAtClose = self.proto.session.remoteWindowLeft
+        self.onClose.callback(None)
 
 from twisted.python import components
 components.registerAdapter(ConchSessionForTestAvatar, ConchTestAvatar, session.ISession)
@@ -282,26 +319,27 @@ if Crypto is not None and pyasn1 is not None:
 
     class ConchTestPublicKeyChecker(checkers.SSHPublicKeyDatabase):
         def checkKey(self, credentials):
-            unittest.assertEquals(credentials.username, 'testuser', 'bad username')
-            unittest.assertEquals(credentials.blob, keys.Key.fromString(publicDSA_openssh).blob())
-            return 1
+            blob = keys.Key.fromString(publicDSA_openssh).blob()
+            if credentials.username == 'testuser' and credentials.blob == blob:
+                return True
+            return False
+
 
     class ConchTestPasswordChecker:
         credentialInterfaces = checkers.IUsernamePassword,
 
         def requestAvatarId(self, credentials):
-            unittest.assertEquals(credentials.username, 'testuser', 'bad username')
-            unittest.assertEquals(credentials.password, 'testpass', 'bad password')
-            return defer.succeed(credentials.username)
+            if credentials.username == 'testuser' and credentials.password == 'testpass':
+                return defer.succeed(credentials.username)
+            return defer.fail(Exception("Bad credentials"))
+
 
     class ConchTestSSHChecker(checkers.SSHProtocolChecker):
 
         def areDone(self, avatarId):
-            unittest.assertEquals(avatarId, 'testuser')
-            if len(self.successfulCredentials[avatarId]) < 2:
-                return 0
-            else:
-                return 1
+            if avatarId != 'testuser' or len(self.successfulCredentials[avatarId]) < 2:
+                return False
+            return True
 
     class ConchTestServerFactory(factory.SSHFactory):
         noisy = 0
@@ -360,10 +398,11 @@ if Crypto is not None and pyasn1 is not None:
             # connection.  Other, older versions (for example,
             # OpenSSH_5.1p1), won't.  So accept this particular error here,
             # but no others.
-            unittest.assertEquals(
-                reasonCode, transport.DISCONNECT_BY_APPLICATION,
-                'got disconnect for %s: reason %s, desc: %s' % (
-                    self, reasonCode, desc))
+            if reasonCode != transport.DISCONNECT_BY_APPLICATION:
+                log.err(
+                    Exception(
+                        'got disconnect for %s: reason %s, desc: %s' % (
+                            self, reasonCode, desc)))
             self.loseConnection()
 
         def receiveUnimplemented(self, seqID):
@@ -377,26 +416,32 @@ if Crypto is not None and pyasn1 is not None:
             ConchTestBase.connectionLost(self, reason)
             transport.SSHServerTransport.connectionLost(self, reason)
 
+
     class ConchTestClient(ConchTestBase, transport.SSHClientTransport):
         """
-        @ivar completed: A L{Deferred} which will fire when the expected number
-            of results have been collected.
+        @ivar _channelFactory: A callable which accepts an SSH connection and
+            returns a channel which will be attached to a new channel on that
+            connection.
         """
-        def __init__(self):
-            self.completed = defer.Deferred()
+        def __init__(self, channelFactory):
+            self._channelFactory = channelFactory
 
         def connectionLost(self, reason):
             ConchTestBase.connectionLost(self, reason)
             transport.SSHClientTransport.connectionLost(self, reason)
 
         def verifyHostKey(self, key, fp):
-            unittest.assertEquals(key, keys.Key.fromString(publicRSA_openssh).blob())
-            unittest.assertEquals(fp,'3d:13:5f:cb:c9:79:8a:93:06:27:65:bc:3d:0b:8f:af')
-            return defer.succeed(1)
+            keyMatch = key == keys.Key.fromString(publicRSA_openssh).blob()
+            fingerprintMatch = (
+                fp == '3d:13:5f:cb:c9:79:8a:93:06:27:65:bc:3d:0b:8f:af')
+            if keyMatch and fingerprintMatch:
+                return defer.succeed(1)
+            return defer.fail(Exception("Key or fingerprint mismatch"))
 
         def connectionSecure(self):
             self.requestService(ConchTestClientAuth('testuser',
-                ConchTestClientConnection(self.completed)))
+                ConchTestClientConnection(self._channelFactory)))
+
 
     class ConchTestClientAuth(userauth.SSHUserAuthClient):
 
@@ -420,6 +465,7 @@ if Crypto is not None and pyasn1 is not None:
         def getPublicKey(self):
             return keys.Key.fromString(publicDSA_openssh)
 
+
     class ConchTestClientConnection(connection.SSHConnection):
         """
         @ivar _completed: A L{Deferred} which will be fired when the number of
@@ -429,334 +475,62 @@ if Crypto is not None and pyasn1 is not None:
         results = 0
         totalResults = 8
 
-        def __init__(self, completed):
+        def __init__(self, channelFactory):
             connection.SSHConnection.__init__(self)
-            self._completed = completed
-
+            self._channelFactory = channelFactory
 
         def serviceStarted(self):
-            self.openChannel(SSHTestFailExecChannel(conn = self))
-            self.openChannel(SSHTestFalseChannel(conn = self))
-            self.openChannel(SSHTestEchoChannel(localWindow=4, localMaxPacket=5, conn = self))
-            self.openChannel(SSHTestErrChannel(localWindow=4, localMaxPacket=5, conn = self))
-            self.openChannel(SSHTestMaxPacketChannel(localWindow=12, localMaxPacket=1, conn = self))
-            self.openChannel(SSHTestShellChannel(conn = self))
-            self.openChannel(SSHTestSubsystemChannel(conn = self))
-            self.openChannel(SSHUnknownChannel(conn = self))
+            self.openChannel(self._channelFactory(conn=self))
 
-        def addResult(self):
-            self.results += 1
-            log.msg('got %s of %s results' % (self.results, self.totalResults))
-            if self.results == self.totalResults:
-                self.transport.expectedLoseConnection = 1
-                self.serviceStopped()
-                self._completed.callback(None)
 
-    class SSHUnknownChannel(channel.SSHChannel):
+    class SSHTestChannel(channel.SSHChannel):
 
-        name = 'crazy-unknown-channel'
+        def __init__(self, name, opened, *args, **kwargs):
+            self.name = name
+            self._opened = opened
+            self.received = []
+            self.receivedExt = []
+            self.onClose = defer.Deferred()
+            channel.SSHChannel.__init__(self, *args, **kwargs)
+
 
         def openFailed(self, reason):
-            """
-            good .... good
-            """
-            log.msg('unknown open failed')
-            self.conn.addResult()
+            self._opened.errback(reason)
 
-        def channelOpen(self, ignored):
-            unittest.fail("opened unknown channel")
-
-    class SSHTestFailExecChannel(channel.SSHChannel):
-
-        name = 'session'
-
-        def openFailed(self, reason):
-            unittest.fail('fail exec open failed: %s' % reason)
 
         def channelOpen(self, ignore):
-            d = self.conn.sendRequest(self, 'exec', common.NS('jumboliah'), 1)
-            d.addCallback(self._cbRequestWorked)
-            d.addErrback(self._ebRequestWorked)
-            log.msg('opened fail exec')
-
-        def _cbRequestWorked(self, ignored):
-            unittest.fail('fail exec succeeded')
-
-        def _ebRequestWorked(self, ignored):
-            log.msg('fail exec finished')
-            self.conn.addResult()
-            self.loseConnection()
-
-    class SSHTestFalseChannel(channel.SSHChannel):
-
-        name = 'session'
-
-        def openFailed(self, reason):
-            unittest.fail('false open failed: %s' % reason)
-
-        def channelOpen(self, ignored):
-            d = self.conn.sendRequest(self, 'exec', common.NS('false'), 1)
-            d.addCallback(self._cbRequestWorked)
-            d.addErrback(self._ebRequestFailed)
-            log.msg('opened false')
-
-
-        def _cbRequestWorked(self, ignored):
-            """
-            The false channel request is expected to succeed. No need to check
-            for this to be actually called, since it will automatically be
-            errbacked if this channel is closed with the deferred left pending.
-            """
-
-
-        def _ebRequestFailed(self, reason):
-            """
-            The request deferred should never errback.
-            """
-            log.err(Exception('False channel request errbacked.'))
+            self._opened.callback(self)
 
 
         def dataReceived(self, data):
-            unittest.fail('got data when using false')
+            self.received.append(data)
 
-
-        def request_exit_status(self, status):
-            self.status, = struct.unpack('>L', status)
-
-
-        def closed(self):
-            if self.status == 0:
-                log.err(Exception('false exit status was 0'))
-            log.msg('finished false')
-            self.conn.addResult()
-            return 1
-
-
-
-    class SSHTestEchoChannel(channel.SSHChannel):
-
-        name = 'session'
-        testBuf = ''
-        eofCalled = 0
-
-        def openFailed(self, reason):
-            unittest.fail('echo open failed: %s' % reason)
-
-        def channelOpen(self, ignore):
-            d = self.conn.sendRequest(self, 'exec', common.NS('echo hello'), 1)
-            d.addErrback(self._ebRequestFailed)
-            log.msg('opened echo')
-
-        def _ebRequestFailed(self, reason):
-            unittest.fail('echo exec failed: %s' % reason)
-
-        def dataReceived(self, data):
-            self.testBuf += data
-
-        def errReceived(self, dataType, data):
-            unittest.fail('echo channel got extended data')
-
-        def request_exit_status(self, status):
-            self.status ,= struct.unpack('>L', status)
-
-        def eofReceived(self):
-            log.msg('eof received')
-            self.eofCalled = 1
-
-        def closed(self):
-            if self.status != 0:
-                unittest.fail('echo exit status was not 0: %i' % self.status)
-            if self.testBuf != "hello\r\n":
-                unittest.fail('echo did not return hello: %s' % repr(self.testBuf))
-            unittest.assertEquals(self.localWindowLeft, 4)
-            unittest.assert_(self.eofCalled)
-            log.msg('finished echo')
-            self.conn.addResult()
-            return 1
-
-    class SSHTestErrChannel(channel.SSHChannel):
-
-        name = 'session'
-        testBuf = ''
-        eofCalled = 0
-
-        def openFailed(self, reason):
-            unittest.fail('err open failed: %s' % reason)
-
-        def channelOpen(self, ignore):
-            d = self.conn.sendRequest(self, 'exec', common.NS('eecho hello'), 1)
-            d.addErrback(self._ebRequestFailed)
-            log.msg('opened err')
-
-        def _ebRequestFailed(self, reason):
-            unittest.fail('err exec failed: %s' % reason)
-
-        def dataReceived(self, data):
-            unittest.fail('err channel got regular data: %s' % repr(data))
 
         def extReceived(self, dataType, data):
-            unittest.assertEquals(dataType, connection.EXTENDED_DATA_STDERR)
-            self.testBuf += data
+            if dataType == connection.EXTENDED_DATA_STDERR:
+                self.receivedExt.append(data)
+            else:
+                log.msg("Unrecognized extended data: %r" % (dataType,))
+
 
         def request_exit_status(self, status):
-            self.status ,= struct.unpack('>L', status)
+            [self.status] = struct.unpack('>L', status)
+
 
         def eofReceived(self):
-            log.msg('eof received')
-            self.eofCalled = 1
+            self.eofCalled = True
+
 
         def closed(self):
-            if self.status != 0:
-                unittest.fail('err exit status was not 0: %i' % self.status)
-            if self.testBuf != "hello\r\n":
-                unittest.fail('err did not return hello: %s' % repr(self.testBuf))
-            unittest.assertEquals(self.localWindowLeft, 4)
-            unittest.assert_(self.eofCalled)
-            log.msg('finished err')
-            self.conn.addResult()
-            return 1
-
-    class SSHTestMaxPacketChannel(channel.SSHChannel):
-
-        name = 'session'
-        testBuf = ''
-        testExtBuf = ''
-        eofCalled = 0
-
-        def openFailed(self, reason):
-            unittest.fail('max packet open failed: %s' % reason)
-
-        def channelOpen(self, ignore):
-            d = self.conn.sendRequest(self, 'exec', common.NS('secho hello'), 1)
-            d.addErrback(self._ebRequestFailed)
-            log.msg('opened max packet')
-
-        def _ebRequestFailed(self, reason):
-            unittest.fail('max packet exec failed: %s' % reason)
-
-        def dataReceived(self, data):
-            self.testBuf += data
-
-        def extReceived(self, dataType, data):
-            unittest.assertEquals(dataType, connection.EXTENDED_DATA_STDERR)
-            self.testExtBuf += data
-
-        def request_exit_status(self, status):
-            self.status ,= struct.unpack('>L', status)
-
-        def eofReceived(self):
-            log.msg('eof received')
-            self.eofCalled = 1
-
-        def closed(self):
-            if self.status != 0:
-                unittest.fail('echo exit status was not 0: %i' % self.status)
-            unittest.assertEquals(self.testBuf, 'hello\r\n')
-            unittest.assertEquals(self.testExtBuf, 'hello\r\n')
-            unittest.assertEquals(self.localWindowLeft, 12)
-            unittest.assert_(self.eofCalled)
-            log.msg('finished max packet')
-            self.conn.addResult()
-            return 1
-
-    class SSHTestShellChannel(channel.SSHChannel):
-
-        name = 'session'
-        testBuf = ''
-        eofCalled = 0
-        closeCalled = 0
-
-        def openFailed(self, reason):
-            unittest.fail('shell open failed: %s' % reason)
-
-        def channelOpen(self, ignored):
-            data = session.packRequest_pty_req('conch-test-term', (24, 80, 0, 0), '')
-            d = self.conn.sendRequest(self, 'pty-req', data, 1)
-            d.addCallback(self._cbPtyReq)
-            d.addErrback(self._ebPtyReq)
-            log.msg('opened shell')
-
-        def _cbPtyReq(self, ignored):
-            d = self.conn.sendRequest(self, 'shell', '', 1)
-            d.addCallback(self._cbShellOpen)
-            d.addErrback(self._ebShellOpen)
-
-        def _ebPtyReq(self, reason):
-            unittest.fail('pty request failed: %s' % reason)
-
-        def _cbShellOpen(self, ignored):
-            self.write('testing the shell!\x00')
-            self.conn.sendEOF(self)
-
-        def _ebShellOpen(self, reason):
-            unittest.fail('shell request failed: %s' % reason)
-
-        def dataReceived(self, data):
-            self.testBuf += data
-
-        def request_exit_status(self, status):
-            self.status ,= struct.unpack('>L', status)
-
-        def eofReceived(self):
-            self.eofCalled = 1
-
-        def closed(self):
-            log.msg('calling shell closed')
-            if self.status != 0:
-                log.msg('shell exit status was not 0: %i' % self.status)
-            unittest.assertEquals(self.testBuf, 'testing the shell!\x00\r\n')
-            unittest.assert_(self.eofCalled)
-            log.msg('finished shell')
-            self.conn.addResult()
-
-    class SSHTestSubsystemChannel(channel.SSHChannel):
-
-        name = 'session'
-
-        def openFailed(self, reason):
-            unittest.fail('subsystem open failed: %s' % reason)
-
-        def channelOpen(self, ignore):
-            d = self.conn.sendRequest(self, 'subsystem', common.NS('not-crazy'), 1)
-            d.addCallback(self._cbRequestWorked)
-            d.addErrback(self._ebRequestFailed)
-
-
-        def _cbRequestWorked(self, ignored):
-            unittest.fail('opened non-crazy subsystem')
-
-        def _ebRequestFailed(self, ignored):
-            d = self.conn.sendRequest(self, 'subsystem', common.NS('crazy'), 1)
-            d.addCallback(self._cbRealRequestWorked)
-            d.addErrback(self._ebRealRequestFailed)
-
-        def _cbRealRequestWorked(self, ignored):
-            d1 = self.conn.sendGlobalRequest('foo', 'bar', 1)
-            d1.addErrback(self._ebFirstGlobal)
-
-            d2 = self.conn.sendGlobalRequest('foo-2', 'bar2', 1)
-            d2.addCallback(lambda x: unittest.assertEquals(x, 'data'))
-            d2.addErrback(self._ebSecondGlobal)
-
-            d3 = self.conn.sendGlobalRequest('bar', 'foo', 1)
-            d3.addCallback(self._cbThirdGlobal)
-            d3.addErrback(lambda x,s=self: log.msg('subsystem finished') or s.conn.addResult() or s.loseConnection())
-
-        def _ebRealRequestFailed(self, reason):
-            unittest.fail('opening crazy subsystem failed: %s' % reason)
-
-        def _ebFirstGlobal(self, reason):
-            unittest.fail('first global request failed: %s' % reason)
-
-        def _ebSecondGlobal(self, reason):
-            unittest.fail('second global request failed: %s' % reason)
-
-        def _cbThirdGlobal(self, ignored):
-            unittest.fail('second global request succeeded')
+            self.onClose.callback(None)
 
 
 
 class SSHProtocolTestCase(unittest.TestCase):
+    """
+    Tests for communication between L{SSHServerTransport} and
+    L{SSHClientTransport}.
+    """
 
     if not Crypto:
         skip = "can't run w/o PyCrypto"
@@ -764,14 +538,15 @@ class SSHProtocolTestCase(unittest.TestCase):
     if not pyasn1:
         skip = "can't run w/o PyASN1"
 
-    def test_ourServerOurClient(self):
+    def _ourServerOurClientTest(self, name='session', **kwargs):
         """
-        Run the Conch server against the Conch client.  Set up several different
-        channels which exercise different behaviors and wait for them to
-        complete.  Verify that the channels with errors log them.
+        Create a connected SSH client and server protocol pair and return a
+        L{Deferred} which fires with an L{SSHTestChannel} instance connected to
+        a channel on that SSH connection.
         """
-        realm = ConchTestRealm()
-        p = portal.Portal(realm)
+        result = defer.Deferred()
+        self.realm = ConchTestRealm('testuser')
+        p = portal.Portal(self.realm)
         sshpc = ConchTestSSHChecker()
         sshpc.registerChecker(ConchTestPasswordChecker())
         sshpc.registerChecker(ConchTestPublicKeyChecker())
@@ -781,38 +556,266 @@ class SSHProtocolTestCase(unittest.TestCase):
         fac.startFactory()
         self.server = fac.buildProtocol(None)
         self.clientTransport = LoopbackRelay(self.server)
-        self.client = ConchTestClient()
+        self.client = ConchTestClient(
+            lambda conn: SSHTestChannel(name, result, conn=conn, **kwargs))
+
         self.serverTransport = LoopbackRelay(self.client)
 
         self.server.makeConnection(self.serverTransport)
         self.client.makeConnection(self.clientTransport)
+        return result
 
-        while self.serverTransport.buffer or self.clientTransport.buffer:
-            log.callWithContext({'system': 'serverTransport'},
-                                self.serverTransport.clearBuffer)
-            log.callWithContext({'system': 'clientTransport'},
-                                self.clientTransport.clearBuffer)
-        self.assertFalse(self.server.done and self.client.done)
 
-        return self.client.completed.addCallback(self._verifyExpectedErrors)
-
-    def _verifyExpectedErrors(self, ignored):
+    def test_subsystemsAndGlobalRequests(self):
         """
-        Verify errors of the current test case are as many as we expect and the
-        ones we expect.
+        Run the Conch server against the Conch client.  Set up several different
+        channels which exercise different behaviors and wait for them to
+        complete.  Verify that the channels with errors log them.
         """
-        errors = self.flushLoggedErrors(error.ConchError)
-        errors.sort(key=lambda reason: reason.value.args)
+        channel = self._ourServerOurClientTest()
 
-        # Two errors exactly are expected.  Report the whole list if we get a
-        # different number.
-        self.assertEquals(
-            len(errors), 2, "Expected two errors, got: %r" % (errors,))
+        def cbSubsystem(channel):
+            self.channel = channel
+            return self.assertFailure(
+                channel.conn.sendRequest(
+                    channel, 'subsystem', common.NS('not-crazy'), 1),
+                Exception)
+        channel.addCallback(cbSubsystem)
 
-        # SSHUnknownChannel causes this to be logged.
-        self.assertEquals(errors[0].value.args, (3, 'unknown channel'))
-        # SSHTestFailExecChannel causes this to be logged.
-        self.assertEquals(errors[1].value.args, ('bad exec', None))
+        def cbNotCrazyFailed(ignored):
+            channel = self.channel
+            return channel.conn.sendRequest(
+                channel, 'subsystem', common.NS('crazy'), 1)
+        channel.addCallback(cbNotCrazyFailed)
+
+        def cbGlobalRequests(ignored):
+            channel = self.channel
+            d1 = channel.conn.sendGlobalRequest('foo', 'bar', 1)
+
+            d2 = channel.conn.sendGlobalRequest('foo-2', 'bar2', 1)
+            d2.addCallback(self.assertEquals, 'data')
+
+            d3 = self.assertFailure(
+                channel.conn.sendGlobalRequest('bar', 'foo', 1),
+                Exception)
+
+            return defer.gatherResults([d1, d2, d3])
+        channel.addCallback(cbGlobalRequests)
+
+        def disconnect(ignored):
+            self.assertEquals(
+                self.realm.avatar.globalRequests,
+                {"foo": "bar", "foo_2": "bar2"})
+            channel = self.channel
+            channel.conn.transport.expectedLoseConnection = True
+            channel.conn.serviceStopped()
+            channel.loseConnection()
+        channel.addCallback(disconnect)
+
+        return channel
+
+
+    def test_shell(self):
+        """
+        L{SSHChannel.sendRequest} can open a shell with a I{pty-req} request,
+        specifying a terminal type and window size.
+        """
+        channel = self._ourServerOurClientTest()
+
+        data = session.packRequest_pty_req('conch-test-term', (24, 80, 0, 0), '')
+        def cbChannel(channel):
+            self.channel = channel
+            return channel.conn.sendRequest(channel, 'pty-req', data, 1)
+        channel.addCallback(cbChannel)
+
+        def cbPty(ignored):
+            # The server-side object corresponding to our client side channel.
+            session = self.realm.avatar.conn.channels[0].session
+            self.assertIdentical(session.avatar, self.realm.avatar)
+            self.assertEquals(session._terminalType, 'conch-test-term')
+            self.assertEquals(session._windowSize, (24, 80, 0, 0))
+            self.assertTrue(session.ptyReq)
+            channel = self.channel
+            return channel.conn.sendRequest(channel, 'shell', '', 1)
+        channel.addCallback(cbPty)
+
+        def cbShell(ignored):
+            self.channel.write('testing the shell!\x00')
+            self.channel.conn.sendEOF(self.channel)
+            return defer.gatherResults([
+                    self.channel.onClose,
+                    self.realm.avatar._testSession.onClose])
+        channel.addCallback(cbShell)
+
+        def cbExited(ignored):
+            if self.channel.status != 0:
+                log.msg(
+                    'shell exit status was not 0: %i' % (self.channel.status,))
+            self.assertEquals(
+                "".join(self.channel.received),
+                'testing the shell!\x00\r\n')
+            self.assertTrue(self.channel.eofCalled)
+            self.assertTrue(
+                self.realm.avatar._testSession.eof)
+        channel.addCallback(cbExited)
+        return channel
+
+
+    def test_failedExec(self):
+        """
+        If L{SSHChannel.sendRequest} issues an exec which the server responds to
+        with an error, the L{Deferred} it returns fires its errback.
+        """
+        channel = self._ourServerOurClientTest()
+
+        def cbChannel(channel):
+            self.channel = channel
+            return self.assertFailure(
+                channel.conn.sendRequest(
+                    channel, 'exec', common.NS('jumboliah'), 1),
+                Exception)
+        channel.addCallback(cbChannel)
+
+        def cbFailed(ignored):
+            # The server logs this exception when it cannot perform the
+            # requested exec.
+            errors = self.flushLoggedErrors(error.ConchError)
+            self.assertEquals(errors[0].value.args, ('bad exec', None))
+        channel.addCallback(cbFailed)
+        return channel
+
+
+    def test_falseChannel(self):
+        """
+        When the process started by a L{SSHChannel.sendRequest} exec request
+        exits, the exit status is reported to the channel.
+        """
+        channel = self._ourServerOurClientTest()
+
+        def cbChannel(channel):
+            self.channel = channel
+            return channel.conn.sendRequest(
+                channel, 'exec', common.NS('false'), 1)
+        channel.addCallback(cbChannel)
+
+        def cbExec(ignored):
+            return self.channel.onClose
+        channel.addCallback(cbExec)
+
+        def cbClosed(ignored):
+            # No data is expected
+            self.assertEquals(self.channel.received, [])
+            self.assertNotEquals(self.channel.status, 0)
+        channel.addCallback(cbClosed)
+        return channel
+
+
+    def test_errorChannel(self):
+        """
+        Bytes sent over the extended channel for stderr data are delivered to
+        the channel's C{extReceived} method.
+        """
+        channel = self._ourServerOurClientTest(localWindow=4, localMaxPacket=5)
+
+        def cbChannel(channel):
+            self.channel = channel
+            return channel.conn.sendRequest(
+                channel, 'exec', common.NS('eecho hello'), 1)
+        channel.addCallback(cbChannel)
+
+        def cbExec(ignored):
+            return defer.gatherResults([
+                    self.channel.onClose,
+                    self.realm.avatar._testSession.onClose])
+        channel.addCallback(cbExec)
+
+        def cbClosed(ignored):
+            self.assertEquals(self.channel.received, [])
+            self.assertEquals("".join(self.channel.receivedExt), "hello\r\n")
+            self.assertEquals(self.channel.status, 0)
+            self.assertTrue(self.channel.eofCalled)
+            self.assertEquals(self.channel.localWindowLeft, 4)
+            self.assertEquals(
+                self.channel.localWindowLeft,
+                self.realm.avatar._testSession.remoteWindowLeftAtClose)
+        channel.addCallback(cbClosed)
+        return channel
+
+
+    def test_unknownChannel(self):
+        """
+        When an attempt is made to open an unknown channel type, the L{Deferred}
+        returned by L{SSHChannel.sendRequest} fires its errback.
+        """
+        d = self.assertFailure(
+            self._ourServerOurClientTest('crazy-unknown-channel'), Exception)
+        def cbFailed(ignored):
+            errors = self.flushLoggedErrors(error.ConchError)
+            self.assertEquals(errors[0].value.args, (3, 'unknown channel'))
+            self.assertEquals(len(errors), 1)
+        d.addCallback(cbFailed)
+        return d
+
+
+    def test_maxPacket(self):
+        """
+        An L{SSHChannel} can be configured with a maximum packet size to
+        receive.
+        """
+        # localWindow needs to be at least 11 otherwise the assertion about it
+        # in cbClosed is invalid.
+        channel = self._ourServerOurClientTest(
+            localWindow=11, localMaxPacket=1)
+
+        def cbChannel(channel):
+            self.channel = channel
+            return channel.conn.sendRequest(
+                channel, 'exec', common.NS('secho hello'), 1)
+        channel.addCallback(cbChannel)
+
+        def cbExec(ignored):
+            return self.channel.onClose
+        channel.addCallback(cbExec)
+
+        def cbClosed(ignored):
+            self.assertEquals(self.channel.status, 0)
+            self.assertEquals("".join(self.channel.received), "hello\r\n")
+            self.assertEquals("".join(self.channel.receivedExt), "hello\r\n")
+            self.assertEquals(self.channel.localWindowLeft, 11)
+            self.assertTrue(self.channel.eofCalled)
+        channel.addCallback(cbClosed)
+        return channel
+
+
+    def test_echo(self):
+        """
+        Normal standard out bytes are sent to the channel's C{dataReceived}
+        method.
+        """
+        channel = self._ourServerOurClientTest(localWindow=4, localMaxPacket=5)
+
+        def cbChannel(channel):
+            self.channel = channel
+            return channel.conn.sendRequest(
+                channel, 'exec', common.NS('echo hello'), 1)
+        channel.addCallback(cbChannel)
+
+        def cbEcho(ignored):
+            return defer.gatherResults([
+                    self.channel.onClose,
+                    self.realm.avatar._testSession.onClose])
+        channel.addCallback(cbEcho)
+
+        def cbClosed(ignored):
+            self.assertEquals(self.channel.status, 0)
+            self.assertEquals("".join(self.channel.received), "hello\r\n")
+            self.assertEquals(self.channel.localWindowLeft, 4)
+            self.assertTrue(self.channel.eofCalled)
+            self.assertEquals(
+                self.channel.localWindowLeft,
+                self.realm.avatar._testSession.remoteWindowLeftAtClose)
+        channel.addCallback(cbClosed)
+        return channel
 
 
 

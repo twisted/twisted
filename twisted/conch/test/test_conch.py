@@ -268,7 +268,7 @@ class ConchServerSetupMixin:
     if not pyasn1:
         skip = "can't run w/o PyASN1"
 
-    realmFactory = ConchTestRealm
+    realmFactory = staticmethod(lambda: ConchTestRealm('testuser'))
 
     def _createFiles(self):
         for f in ['rsa_test','rsa_test.pub','dsa_test','dsa_test.pub',
