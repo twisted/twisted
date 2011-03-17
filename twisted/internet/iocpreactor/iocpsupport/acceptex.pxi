@@ -3,6 +3,9 @@
 
 
 def accept(long listening, long accepting, object buff, object obj):
+    """
+    CAUTION: unlike system AcceptEx(), this function returns 0 on success
+    """
     cdef unsigned long bytes
     cdef int size, rc
     cdef void *mem_buffer
@@ -23,7 +26,7 @@ def accept(long listening, long accepting, object buff, object obj):
 
     # operation is in progress
     Py_XINCREF(obj)
-    return rc
+    return 0
 
 def get_accept_addrs(long s, object buff):
     cdef WSAPROTOCOL_INFO wsa_pi

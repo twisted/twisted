@@ -17,7 +17,8 @@ from twisted.internet.error import DNSLookupError
 from twisted.internet.interfaces import (
     IResolverSimple, IConnector, IReactorFDSet)
 from twisted.internet.address import IPv4Address
-from twisted.internet.defer import Deferred, succeed, fail, maybeDeferred
+from twisted.internet.defer import Deferred, DeferredList, succeed, fail, maybeDeferred
+from twisted.internet.endpoints import TCP4ClientEndpoint
 from twisted.internet.protocol import ServerFactory, ClientFactory, Protocol
 from twisted.python.runtime import platform
 from twisted.python.failure import Failure
@@ -457,5 +458,93 @@ class TCPPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin):
 
 
 
+class StopStartReadingProtocol(Protocol):
+    """
+    Protocol that pauses and resumes the transport a few times
+    """
+    def connectionMade(self):
+        self.data = ''
+        self.pauseResumeProducing(3)
+
+
+    def pauseResumeProducing(self, counter):
+        """
+        Toggle transport read state, then count down.
+        """
+        self.transport.pauseProducing()
+        self.transport.resumeProducing()
+        if counter:
+            self.factory.reactor.callLater(0,
+                    self.pauseResumeProducing, counter - 1)
+        else:
+            self.factory.reactor.callLater(0,
+                    self.factory.ready.callback, self)
+
+
+    def dataReceived(self, data):
+        log.msg('got data', len(data))
+        self.data += data
+        if len(self.data) == 4*4096:
+            self.factory.stop.callback(self.data)
+
+
+
+class TCPConnectionTestsBuilder(ReactorBuilder):
+    """
+    Builder defining tests relating to L{twisted.internet.tcp.Connection}.
+    """
+    def test_stopStartReading(self):
+        """
+        This test verifies transport socket read state after multiple
+        pause/resumeProducing calls.
+        """
+        sf = ServerFactory()
+        reactor = sf.reactor = self.buildReactor()
+
+        skippedReactors = ["Glib2Reactor", "Gtk2Reactor"]
+        reactorClassName = reactor.__class__.__name__
+        if reactorClassName in skippedReactors and platform.isWindows():
+            raise SkipTest(
+                "This test is broken on gtk/glib under Windows.")
+
+        sf.protocol = StopStartReadingProtocol
+        sf.ready = Deferred()
+        sf.stop = Deferred()
+        p = reactor.listenTCP(0, sf)
+        port = p.getHost().port
+        def proceed(protos, port):
+            """
+            Send several IOCPReactor's buffers' worth of data.
+            """
+            self.assertTrue(protos[0])
+            self.assertTrue(protos[1])
+            protos = protos[0][1], protos[1][1]
+            protos[0].transport.write('x' * (2 * 4096) + 'y' * (2 * 4096))
+            return (sf.stop.addCallback(cleanup, protos, port)
+                           .addCallback(lambda ign: reactor.stop()))
+        
+        def cleanup(data, protos, port):
+            """
+            Make sure IOCPReactor didn't start several WSARecv operations
+            that clobbered each other's results.
+            """
+            self.assertEquals(data, 'x'*(2*4096) + 'y'*(2*4096),
+                                 'did not get the right data')
+            return DeferredList([
+                    maybeDeferred(protos[0].transport.loseConnection),
+                    maybeDeferred(protos[1].transport.loseConnection),
+                    maybeDeferred(port.stopListening)])
+
+        cc = TCP4ClientEndpoint(reactor, '127.0.0.1', port)
+        cf = ClientFactory()
+        cf.protocol = Protocol
+        d = DeferredList([cc.connect(cf), sf.ready]).addCallback(proceed, p)
+        self.runReactor(reactor)
+        return d
+
+
+
 globals().update(TCPClientTestsBuilder.makeTestCaseClasses())
 globals().update(TCPPortTestsBuilder.makeTestCaseClasses())
+globals().update(TCPConnectionTestsBuilder.makeTestCaseClasses())
+

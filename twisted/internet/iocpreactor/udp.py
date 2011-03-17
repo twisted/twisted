@@ -30,7 +30,6 @@ class Port(abstract.FileHandle):
 
     addressFamily = socket.AF_INET
     socketType = socket.SOCK_DGRAM
-    maxThroughput = 256 * 1024 # max bytes we read in one eventloop iteration
     dynamicReadBuffers = False
 
     # Actual port number being listened on, only set to a non-None
@@ -138,23 +137,16 @@ class Port(abstract.FileHandle):
 
 
     def doRead(self):
-        read = 0
-        while self.reading:
-            evt = _iocp.Event(self.cbRead, self)
+        evt = _iocp.Event(self.cbRead, self)
 
-            evt.buff = buff = self._readBuffers[0]
-            evt.addr_buff = addr_buff = self.addressBuffer
-            evt.addr_len_buff = addr_len_buff = self.addressLengthBuffer
-            rc, bytes = _iocp.recvfrom(self.getFileHandle(), buff,
-                                       addr_buff, addr_len_buff, evt)
+        evt.buff = buff = self._readBuffers[0]
+        evt.addr_buff = addr_buff = self.addressBuffer
+        evt.addr_len_buff = addr_len_buff = self.addressLengthBuffer
+        rc, bytes = _iocp.recvfrom(self.getFileHandle(), buff,
+                                   addr_buff, addr_len_buff, evt)
 
-            if (rc == ERROR_IO_PENDING
-                or (not rc and read >= self.maxThroughput)):
-                break
-            else:
-                evt.ignore = True
-                self.handleRead(rc, bytes, evt)
-                read += bytes
+        if rc and rc != ERROR_IO_PENDING:
+            self.handleRead(rc, bytes, evt)
 
 
     def write(self, datagram, addr=None):

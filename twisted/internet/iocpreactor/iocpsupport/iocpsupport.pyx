@@ -122,7 +122,6 @@ class Event:
     def __init__(self, callback, owner, **kw):
         self.callback = callback
         self.owner = owner
-        self.ignore = False
         for k, v in kw.items():
             setattr(self, k, v)
 

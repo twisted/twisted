@@ -543,7 +543,7 @@ class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
 
             self._download('RETR %d.txt' % (size,), chainDeferred=d)
             def checkDownload(download, size=size):
-                self.assertEqual('x' * size, download)
+                self.assertEqual(size, len(download))
             d.addCallback(checkDownload)
         return d
 

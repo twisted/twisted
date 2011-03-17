@@ -3,6 +3,9 @@
 
 
 def connect(long s, object addr, object obj):
+    """
+    CAUTION: unlike system ConnectEx(), this function returns 0 on success
+    """
     cdef int family, rc
     cdef myOVERLAPPED *ov
     cdef sockaddr name
@@ -30,5 +33,5 @@ def connect(long s, object addr, object obj):
 
     # operation is in progress
     Py_XINCREF(obj)
-    return rc
+    return 0
 

@@ -107,7 +107,12 @@ class Connection(abstract.FileHandle, _SocketCloser):
 
 
     def writeToHandle(self, buff, evt):
-        return _iocp.send(self.getFileHandle(), buff, evt)
+        """
+        Send C{buff} to current file handle using C{_iocp.send}. The buffer
+        sent is limited to a size of C{self.SEND_LIMIT}.
+        """
+        return _iocp.send(self.getFileHandle(),
+            buffer(buff, 0, self.SEND_LIMIT), evt)
 
 
     def _closeWriteConnection(self):
@@ -341,10 +346,7 @@ class Client(Connection):
         evt = _iocp.Event(self.cbConnect, self)
 
         rc = _iocp.connect(self.socket.fileno(), self.realAddress, evt)
-        if rc == ERROR_IO_PENDING:
-            return
-        else:
-            evt.ignore = True
+        if rc and rc != ERROR_IO_PENDING:
             self.cbConnect(rc, 0, 0, evt)
 
 
@@ -455,8 +457,6 @@ class Port(_SocketCloser):
     socketType = socket.SOCK_STREAM
 
     sessionno = 0
-
-    maxAccepts = 100
 
     # Actual port number being listened on, only set to a non-None
     # value when we are actually listening.
@@ -620,24 +620,16 @@ class Port(_SocketCloser):
 
 
     def doAccept(self):
-        numAccepts = 0
-        while 1:
-            evt = _iocp.Event(self.cbAccept, self)
+        evt = _iocp.Event(self.cbAccept, self)
 
-            # see AcceptEx documentation
-            evt.buff = buff = _iocp.AllocateReadBuffer(2 * (self.addrLen + 16))
+        # see AcceptEx documentation
+        evt.buff = buff = _iocp.AllocateReadBuffer(2 * (self.addrLen + 16))
 
-            evt.newskt = newskt = self.reactor.createSocket(self.addressFamily,
-                                                            self.socketType)
-            rc = _iocp.accept(self.socket.fileno(), newskt.fileno(), buff, evt)
+        evt.newskt = newskt = self.reactor.createSocket(self.addressFamily,
+                                                        self.socketType)
+        rc = _iocp.accept(self.socket.fileno(), newskt.fileno(), buff, evt)
 
-            if (rc == ERROR_IO_PENDING
-                or (not rc and numAccepts >= self.maxAccepts)):
-                break
-            else:
-                evt.ignore = True
-                if not self.handleAccept(rc, evt):
-                    break
-            numAccepts += 1
+        if rc and rc != ERROR_IO_PENDING:
+            self.handleAccept(rc, evt)
 
 

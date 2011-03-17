@@ -130,22 +130,15 @@ class FileHandle(_ConsumerMixin):
 
 
     def doRead(self):
-        numReads = 0
-        while 1:
-            evt = _iocp.Event(self._cbRead, self)
+        evt = _iocp.Event(self._cbRead, self)
 
-            evt.buff = buff = self._readBuffers
-            rc, bytes = self.readFromHandle(buff, evt)
+        evt.buff = buff = self._readBuffers
+        rc, bytes = self.readFromHandle(buff, evt)
 
-            if (rc == ERROR_IO_PENDING
-                or (not rc and numReads >= self.maxReads)):
-                self._readScheduledInOS = True
-                break
-            else:
-                evt.ignore = True
-                if not self._handleRead(rc, bytes, evt):
-                    break
-            numReads += 1
+        if not rc or rc == ERROR_IO_PENDING:
+            self._readScheduledInOS = True
+        else:
+            self._handleRead(rc, bytes, evt)
 
 
     def readFromHandle(self, bufflist, evt):
@@ -168,7 +161,6 @@ class FileHandle(_ConsumerMixin):
     _writeDisconnecting = False
     _writeDisconnected = False
     writeBufferSize = 2**2**2**2
-    maxWrites = 5
 
 
     def loseWriteConnection(self):
@@ -252,33 +244,25 @@ class FileHandle(_ConsumerMixin):
 
 
     def doWrite(self):
-        numWrites = 0
-        while 1:
-            if len(self.dataBuffer) - self.offset < self.SEND_LIMIT:
-                # If there is currently less than SEND_LIMIT bytes left to send
-                # in the string, extend it with the array data.
-                self.dataBuffer = (buffer(self.dataBuffer, self.offset) +
-                                   "".join(self._tempDataBuffer))
-                self.offset = 0
-                self._tempDataBuffer = []
-                self._tempDataLen = 0
+        if len(self.dataBuffer) - self.offset < self.SEND_LIMIT:
+            # If there is currently less than SEND_LIMIT bytes left to send
+            # in the string, extend it with the array data.
+            self.dataBuffer = (buffer(self.dataBuffer, self.offset) +
+                               "".join(self._tempDataBuffer))
+            self.offset = 0
+            self._tempDataBuffer = []
+            self._tempDataLen = 0
 
-            evt = _iocp.Event(self._cbWrite, self)
+        evt = _iocp.Event(self._cbWrite, self)
 
-            # Send as much data as you can.
-            if self.offset:
-                evt.buff = buff = buffer(self.dataBuffer, self.offset)
-            else:
-                evt.buff = buff = self.dataBuffer
-            rc, bytes = self.writeToHandle(buff, evt)
-            if (rc == ERROR_IO_PENDING
-                or (not rc and numWrites >= self.maxWrites)):
-                break
-            else:
-                evt.ignore = True
-                if not self._handleWrite(rc, bytes, evt):
-                    break
-            numWrites += 1
+        # Send as much data as you can.
+        if self.offset:
+            evt.buff = buff = buffer(self.dataBuffer, self.offset)
+        else:
+            evt.buff = buff = self.dataBuffer
+        rc, bytes = self.writeToHandle(buff, evt)
+        if rc and rc != ERROR_IO_PENDING:
+            self._handleWrite(rc, bytes, evt)
 
 
     def writeToHandle(self, buff, evt):
@@ -325,8 +309,6 @@ class FileHandle(_ConsumerMixin):
     logstr = "Uninitialized"
 
     SEND_LIMIT = 128*1024
-
-    maxReads = 5
 
 
     def __init__(self, reactor = None):

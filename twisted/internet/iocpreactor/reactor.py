@@ -68,6 +68,9 @@ class IOCPReactor(base._SignalReactorMixin, base.ReactorBase):
 
 
     def doIteration(self, timeout):
+        """
+        Poll the IO completion port for new events.
+        """
         # This function sits and waits for an IO completion event.
         #
         # There are two requirements: process IO events as soon as they arrive
@@ -95,15 +98,16 @@ class IOCPReactor(base._SignalReactorMixin, base.ReactorBase):
         else:
             timeout = min(MAX_TIMEOUT, int(1000*timeout))
         rc, bytes, key, evt = self.port.getEvent(timeout)
-        while processed_events < EVENTS_PER_LOOP:
+        while 1:
             if rc == WAIT_TIMEOUT:
                 break
             if key != KEY_WAKEUP:
                 assert key == KEY_NORMAL
-                if not evt.ignore:
-                    log.callWithLogger(evt.owner, self._callEventCallback,
-                                       rc, bytes, evt)
-                    processed_events += 1
+                log.callWithLogger(evt.owner, self._callEventCallback,
+                                   rc, bytes, evt)
+                processed_events += 1
+            if processed_events >= EVENTS_PER_LOOP:
+                break
             rc, bytes, key, evt = self.port.getEvent(0)
 
 

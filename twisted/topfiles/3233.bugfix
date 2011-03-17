@@ -1,0 +1,1 @@
+IOCPReactor now sends immediate completions to the main loop
