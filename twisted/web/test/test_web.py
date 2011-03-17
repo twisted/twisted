@@ -205,14 +205,22 @@ class SimpleResource(resource.Resource):
             return "correct"
 
 class SimpleDeferredResource(resource.Resource):
-    def render(self, request):
-        d = defer.Deferred()
-        if http.CACHED in (request.setLastModified(10),
+    """
+    A resource whose C{render} method returns a Deferred.
+    """
+    breakIt = False
+    def render_GET(self, request):
+        """
+        Render some text... eventually.
+        """
+        if self.breakIt:
+            return defer.succeed([])
+        elif http.CACHED in (request.setLastModified(10),
                            request.setETag('MatchingTag')):
-            reactor.callLater(0, d.callback, '')
+            return defer.succeed('')
         else:
-            reactor.callLater(0, d.callback, "correct")
-        return d
+            return defer.succeed("correct")
+
 
 class DummyChannel:
     class TCP:
@@ -283,6 +291,7 @@ class SiteTest(unittest.TestCase):
         self.assertIdentical(
             site.getResourceFor(DummyRequest([''])),
             sres2, "Got the wrong resource.")
+
 
 
 class SessionTest(unittest.TestCase):
@@ -807,6 +816,86 @@ class NewRenderTestCase(unittest.TestCase):
         headers, body = req.transport.getvalue().split('\r\n\r\n')
         self.assertEqual(req.code, 200)
         self.assertEqual(body, '')
+
+
+    def test_renderDeferred(self):
+        """
+        L{Request.render} handles resources whose C{render} methods return
+        Deferreds, finishing the request after the Deferred fires.
+        """
+        c = DummyChannel()
+        sres1 = SimpleDeferredResource()
+        request = server.Request(c, 0)
+        request.method = 'GET'
+        request.content = StringIO()
+        def _check(_):
+            self.assertTrue(c.transport.written.getvalue().endswith('correct'))
+        d = request.notifyFinish().addCallback(_check)
+
+        request.render(sres1)
+        return d
+
+
+    def test_implicitHeadDeferred(self):
+        """
+        HEAD requests that are serviced by invoking L{Request.render} generate
+        responses properly when it returns a Deferred.
+        """
+        c = DummyChannel()
+        sres1 = SimpleDeferredResource()
+        request = server.Request(c, 0)
+        request.method = 'HEAD'
+        request.content = StringIO()
+        def _check(_):
+            self.assertTrue(c.transport.written.getvalue().endswith('\r\n\r\n'))
+        d = request.notifyFinish().addCallback(_check)
+
+        request.render(sres1)
+        return d
+
+
+
+    def test_badRenderResultDeferred(self):
+        """
+        L{Request.render} produces an error page when its resource's render
+        method returns does not return a string.
+        """
+        c = DummyChannel()
+        sres1 = SimpleDeferredResource()
+        sres1.breakIt = True
+        request = server.Request(c, 0)
+        request.method = 'GET'
+        request.content = StringIO()
+        erArgs = []
+        def _fakeErrorResource(rq, resrc, body):
+            erArgs.extend([rq, resrc, body])
+            return NewRenderResource()
+        request._notStringError = _fakeErrorResource
+        def _check(val):
+            self.assertEqual(erArgs, [request, sres1, []])
+        d = request.notifyFinish().addCallback(_check)
+        request.render(sres1)
+        return d
+
+    def test_renderError(self):
+        """
+        L{Request._getError} produces an error response page with good stuff
+        in it.
+        """
+        c = DummyChannel()
+        r = server.Request(c, 0)
+
+        def stuff(code, msg, val):
+            return val
+        r._errorResource = stuff
+        rq, resrc, body = "req", "resrc & things", "body <>"
+        x = r._notStringError(rq, resrc, body)
+        sampleNotStringRenderError = (
+            "Request: <pre>'req'</pre><br />"
+            "Resource: <pre>'resrc &amp; things'</pre><br />"
+            "Value: <pre>'body &lt;&gt;'</pre>")
+        self.assertEqual(x, sampleNotStringRenderError)
+
 
 
 class GettableResource(resource.Resource):

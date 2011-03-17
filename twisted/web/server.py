@@ -58,6 +58,7 @@ class Request(pb.Copyable, http.Request, components.Componentized):
     appRootURL = None
     __pychecker__ = 'unusednames=issuer'
     _inFakeHead = False
+    _errorResource = resource.ErrorPage
 
     def __init__(self, *args, **kw):
         http.Request.__init__(self, *args, **kw)
@@ -135,6 +136,19 @@ class Request(pb.Copyable, http.Request, components.Componentized):
         if not self._inFakeHead:
             http.Request.write(self, data)
 
+
+    def _notStringError(self, rq, resrc, body):
+        """
+        Generate an error page when a request didn't return a string.
+        """
+        return self._errorResource(
+            http.INTERNAL_SERVER_ERROR,
+            "Request did not return a string",
+            "Request: " + html.PRE(reflect.safe_repr(rq)) + "<br />" +
+            "Resource: " + html.PRE(reflect.safe_repr(resrc)) + "<br />" +
+            "Value: " + html.PRE(reflect.safe_repr(body)))
+
+
     def render(self, resrc):
         """Render C{resource} as the response to this request.
 
@@ -149,12 +163,7 @@ class Request(pb.Copyable, http.Request, components.Componentized):
                 # DeprecationWarning here.
                 return
             if not isinstance(body, str):
-                body = resource.ErrorPage(
-                    http.INTERNAL_SERVER_ERROR,
-                    "Request did not return a string",
-                    "Request: " + html.PRE(reflect.safe_repr(self)) + "<br />" +
-                    "Resource: " + html.PRE(reflect.safe_repr(resrc)) + "<br />" +
-                    "Value: " + html.PRE(reflect.safe_repr(body))).render(self)
+                body = self._notStringError(self, resrc, body).render(self)
 
             if self.method == "HEAD":
                 if len(body) > 0:
