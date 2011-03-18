@@ -232,33 +232,6 @@ def datetimeToLogString(msSinceEpoch=None):
         hh, mm, ss)
     return s
 
-
-# a hack so we don't need to recalculate log datetime every hit,
-# at the price of a small, unimportant, inaccuracy.
-_logDateTime = None
-_logDateTimeUsers = 0
-_resetLogDateTimeID = None
-
-def _resetLogDateTime():
-    global _logDateTime
-    global _resetLogDateTime
-    global _resetLogDateTimeID
-    _logDateTime = datetimeToLogString()
-    _resetLogDateTimeID = reactor.callLater(1, _resetLogDateTime)
-
-def _logDateTimeStart():
-    global _logDateTimeUsers
-    if not _logDateTimeUsers:
-        _resetLogDateTime()
-    _logDateTimeUsers += 1
-
-def _logDateTimeStop():
-    global _logDateTimeUsers
-    _logDateTimeUsers -= 1;
-    if (not _logDateTimeUsers and _resetLogDateTimeID
-        and _resetLogDateTimeID.active()):
-        _resetLogDateTimeID.cancel()
-
 def timegm(year, month, day, hour, minute, second):
     """
     Convert time tuple in GMT to seconds since epoch, GMT
@@ -1733,6 +1706,14 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 class HTTPFactory(protocol.ServerFactory):
     """
     Factory for HTTP server.
+
+    @ivar _logDateTime: A cached datetime string for log messages, updated by
+        C{_logDateTimeCall}.
+    @type _logDateTime: L{str}
+
+    @ivar _logDateTimeCall: A delayed call for the next update to the cached log
+        datetime string.
+    @type _logDateTimeCall: L{IDelayedCall} provided
     """
 
     protocol = HTTPChannel
@@ -1747,6 +1728,19 @@ class HTTPFactory(protocol.ServerFactory):
         self.logPath = logPath
         self.timeOut = timeout
 
+        # For storing the cached log datetime and the callback to update it
+        self._logDateTime = None
+        self._logDateTimeCall = None
+
+
+    def _updateLogDateTime(self):
+        """
+        Update log datetime periodically, so we aren't always recalculating it.
+        """
+        self._logDateTime = datetimeToLogString()
+        self._logDateTimeCall = reactor.callLater(1, self._updateLogDateTime)
+
+
     def buildProtocol(self, addr):
         p = protocol.ServerFactory.buildProtocol(self, addr)
         # timeOut needs to be on the Protocol instance cause
@@ -1754,19 +1748,30 @@ class HTTPFactory(protocol.ServerFactory):
         p.timeOut = self.timeOut
         return p
 
+
     def startFactory(self):
-        _logDateTimeStart()
+        """
+        Set up request logging if necessary.
+        """
+        if self._logDateTimeCall is None:
+            self._updateLogDateTime()
+
         if self.logPath:
             self.logFile = self._openLogFile(self.logPath)
         else:
             self.logFile = log.logfile
+
 
     def stopFactory(self):
         if hasattr(self, "logFile"):
             if self.logFile != log.logfile:
                 self.logFile.close()
             del self.logFile
-        _logDateTimeStop()
+
+        if self._logDateTimeCall is not None and self._logDateTimeCall.active():
+            self._logDateTimeCall.cancel()
+            self._logDateTimeCall = None
+
 
     def _openLogFile(self, path):
         """
@@ -1791,7 +1796,7 @@ class HTTPFactory(protocol.ServerFactory):
             line = '%s - - %s "%s" %d %s "%s" "%s"\n' % (
                 request.getClientIP(),
                 # request.getUser() or "-", # the remote user is almost never important
-                _logDateTime,
+                self._logDateTime,
                 '%s %s %s' % (self._escape(request.method),
                               self._escape(request.uri),
                               self._escape(request.clientproto)),

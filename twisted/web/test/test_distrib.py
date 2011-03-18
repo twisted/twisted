@@ -25,12 +25,7 @@ from twisted.web.test._util import _render
 
 
 class MySite(server.Site):
-    def stopFactory(self):
-        if hasattr(self, "logFile"):
-            if self.logFile != log.logfile:
-                self.logFile.close()
-            del self.logFile
-
+    pass
 
 
 class PBServerFactory(pb.PBServerFactory):
@@ -71,7 +66,6 @@ class DistribTest(unittest.TestCase):
             self.sub.publisher.broker.transport.loseConnection()
         else:
             dl[1].callback(None)
-        http._logDateTimeStop()
         if self.port1 is not None:
             dl.append(self.port1.stopListening())
         if self.port2 is not None:

@@ -919,7 +919,7 @@ class TestLogEscaping(unittest.TestCase):
         self.request = DummyRequestForLogTest(self.site, False)
 
     def testSimple(self):
-        http._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
+        self.site._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
             25, 'Oct', 2004, 12, 31, 59)
         self.site.log(self.request)
         self.site.logFile.seek(0)
@@ -928,7 +928,7 @@ class TestLogEscaping(unittest.TestCase):
             '1.2.3.4 - - [25/Oct/2004:12:31:59 +0000] "GET /dummy HTTP/1.0" 123 - "-" "-"\n')
 
     def testMethodQuote(self):
-        http._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
+        self.site._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
             25, 'Oct', 2004, 12, 31, 59)
         self.request.method = 'G"T'
         self.site.log(self.request)
@@ -938,7 +938,7 @@ class TestLogEscaping(unittest.TestCase):
             '1.2.3.4 - - [25/Oct/2004:12:31:59 +0000] "G\\"T /dummy HTTP/1.0" 123 - "-" "-"\n')
 
     def testRequestQuote(self):
-        http._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
+        self.site._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
             25, 'Oct', 2004, 12, 31, 59)
         self.request.uri='/dummy"withquote'
         self.site.log(self.request)
@@ -948,7 +948,7 @@ class TestLogEscaping(unittest.TestCase):
             '1.2.3.4 - - [25/Oct/2004:12:31:59 +0000] "GET /dummy\\"withquote HTTP/1.0" 123 - "-" "-"\n')
 
     def testProtoQuote(self):
-        http._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
+        self.site._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
             25, 'Oct', 2004, 12, 31, 59)
         self.request.clientproto='HT"P/1.0'
         self.site.log(self.request)
@@ -958,7 +958,7 @@ class TestLogEscaping(unittest.TestCase):
             '1.2.3.4 - - [25/Oct/2004:12:31:59 +0000] "GET /dummy HT\\"P/1.0" 123 - "-" "-"\n')
 
     def testRefererQuote(self):
-        http._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
+        self.site._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
             25, 'Oct', 2004, 12, 31, 59)
         self.request.headers['referer'] = 'http://malicious" ".website.invalid'
         self.site.log(self.request)
@@ -968,7 +968,7 @@ class TestLogEscaping(unittest.TestCase):
             '1.2.3.4 - - [25/Oct/2004:12:31:59 +0000] "GET /dummy HTTP/1.0" 123 - "http://malicious\\" \\".website.invalid" "-"\n')
 
     def testUserAgentQuote(self):
-        http._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
+        self.site._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
             25, 'Oct', 2004, 12, 31, 59)
         self.request.headers['user-agent'] = 'Malicious Web" Evil'
         self.site.log(self.request)
