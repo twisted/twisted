@@ -105,7 +105,8 @@ def _generateCacheEntry(provider):
     for k, v in provider.__dict__.iteritems():
         plugin = IPlugin(v, None)
         if plugin is not None:
-            cachedPlugin = CachedPlugin(dropin, k, v.__doc__, list(providedBy(plugin)))
+            # Instantiated for its side-effects.
+            CachedPlugin(dropin, k, v.__doc__, list(providedBy(plugin)))
     return dropin
 
 try:
@@ -117,6 +118,8 @@ except AttributeError:
             d[k] = value
         return d
 
+
+
 def getCache(module):
     """
     Compute all the possible loadable plugins, while loading as few as
@@ -125,7 +128,7 @@ def getCache(module):
     @param module: a Python module object.  This represents a package to search
     for plugins.
 
-    @return: a dictionary mapping module names to CachedDropin instances.
+    @return: a dictionary mapping module names to L{CachedDropin} instances.
     """
     allCachesCombined = {}
     mod = getModule(module.__name__)
@@ -176,10 +179,17 @@ def getCache(module):
         if needsWrite:
             try:
                 dropinPath.setContent(pickle.dumps(dropinDotCache))
+            except OSError, e:
+                log.msg(
+                    format=(
+                        "Unable to write to plugin cache %(path)s: error "
+                        "number %(errno)d"),
+                    path=dropinPath.path, errno=e.errno)
             except:
-                log.err()
+                log.err(None, "Unexpected error while writing cache file")
         allCachesCombined.update(dropinDotCache)
     return allCachesCombined
+
 
 
 def getPlugins(interface, package=None):

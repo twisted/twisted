@@ -12,6 +12,7 @@ import compileall
 from zope.interface import Interface
 
 from twisted.trial import unittest
+from twisted.python.log import textFromEventDict, addObserver, removeObserver
 from twisted.python.filepath import FilePath
 from twisted.python.util import mergeFunctionMetadata
 
@@ -301,26 +302,38 @@ class PluginTestCase(unittest.TestCase):
         # Generate the cache
         plugin.getCache(self.module)
 
+        cachepath = self.package.child('dropin.cache')
+
         # Add a new plugin
         FilePath(__file__).sibling('plugin_extra1.py'
             ).copyTo(self.package.child('pluginextra.py'))
 
         os.chmod(self.package.path, 0500)
         # Change the right of dropin.cache too for windows
-        os.chmod(self.package.child('dropin.cache').path, 0400)
+        os.chmod(cachepath.path, 0400)
         self.addCleanup(os.chmod, self.package.path, 0700)
-        self.addCleanup(os.chmod,
-            self.package.child('dropin.cache').path, 0700)
+        self.addCleanup(os.chmod, cachepath.path, 0700)
+
+        # Start observing log events to see the warning
+        events = []
+        addObserver(events.append)
+        self.addCleanup(removeObserver, events.append)
 
         cache = plugin.getCache(self.module)
         # The new plugin should be reported
         self.assertIn('pluginextra', cache)
         self.assertIn(self.originalPlugin, cache)
 
-        errors = self.flushLoggedErrors()
-        self.assertEquals(len(errors), 1)
-        # Windows report OSError, others IOError
-        errors[0].trap(OSError, IOError)
+        # Make sure something was logged about the cache.
+        expected = "Unable to write to plugin cache %s: error number %d" % (
+            cachepath.path, errno.EPERM)
+        for event in events:
+            if expected in textFromEventDict(event):
+                break
+        else:
+            self.fail(
+                "Did not observe unwriteable cache warning in log "
+                "events: %r" % (events,))
 
 
 
@@ -534,11 +547,23 @@ class DeveloperSetupTests(unittest.TestCase):
         # examined.
         sys.path.remove(self.devPath.path)
 
-        # Sanity check to make sure we're only flushing the error logged
-        # below...
-        self.assertEqual(len(self.flushLoggedErrors()), 0)
+        # Start observing log events to see the warning
+        events = []
+        addObserver(events.append)
+        self.addCleanup(removeObserver, events.append)
+
         self.assertIn('one', self.getAllPlugins())
-        self.assertEqual(len(self.flushLoggedErrors()), 1)
+
+        # Make sure something was logged about the cache.
+        expected = "Unable to write to plugin cache %s: error number %d" % (
+            self.syscache.path, errno.EPERM)
+        for event in events:
+            if expected in textFromEventDict(event):
+                break
+        else:
+            self.fail(
+                "Did not observe unwriteable cache warning in log "
+                "events: %r" % (events,))
 
 
 
