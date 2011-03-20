@@ -8,14 +8,16 @@ Tests for L{twisted.mail.tap}.
 from twisted.trial.unittest import TestCase
 
 from twisted.python.usage import UsageError
-from twisted.mail.tap import Options
+from twisted.mail import protocols
+from twisted.mail.tap import Options, makeService
 from twisted.python import deprecate
 from twisted.python import versions
+from twisted.internet import endpoints, defer
 
 
 class OptionsTestCase(TestCase):
     """
-    Tests for the command line option parser used for C{twistd mail}.
+    Tests for the command line option parser used for I{twistd mail}.
     """
     def setUp(self):
         self.aliasFilename = self.mktemp()
@@ -59,3 +61,167 @@ class OptionsTestCase(TestCase):
         self.assertEquals(warnings[0]['message'], msg)
 
 
+    def test_barePort(self):
+        """
+        A bare port passed to I{--pop3} results in deprecation warning in
+        addition to a TCP4ServerEndpoint.
+        """
+        options = Options()
+        options.parseOptions(['--pop3', '8110'])
+        self.assertEquals(len(options['pop3']), 1)
+        self.assertIsInstance(
+            options['pop3'][0], endpoints.TCP4ServerEndpoint)
+        warnings = self.flushWarnings([options.opt_pop3])
+        self.assertEquals(len(warnings), 1)
+        self.assertEquals(warnings[0]['category'], DeprecationWarning)
+        self.assertEquals(
+            warnings[0]['message'],
+            "Specifying plain ports and/or a certificate is deprecated since "
+            "Twisted 11.0; use endpoint descriptions instead.")
+
+
+    def _endpointTest(self, service):
+        """
+        Use L{Options} to parse a single service configuration parameter and
+        verify that an endpoint of the correct type is added to the list for
+        that service.
+        """
+        options = Options()
+        options.parseOptions(['--' + service, 'tcp:1234'])
+        self.assertEquals(len(options[service]), 1)
+        self.assertIsInstance(
+            options[service][0], endpoints.TCP4ServerEndpoint)
+
+
+    def test_endpointSMTP(self):
+        """
+        When I{--smtp} is given a TCP endpoint description as an argument, a
+        TCPServerEndpoint is added to the list of SMTP endpoints.
+        """
+        self._endpointTest('smtp')
+
+
+    def test_endpointPOP3(self):
+        """
+        When I{--pop3} is given a TCP endpoint description as an argument, a
+        TCPServerEndpoint is added to the list of POP3 endpoints.
+        """
+        self._endpointTest('pop3')
+
+
+    def test_protoDefaults(self):
+        """
+        POP3 and SMTP each listen on a TCP4ServerEndpoint by default.
+        """
+        options = Options()
+        options.parseOptions([])
+
+        self.assertEquals(len(options['pop3']), 1)
+        self.assertIsInstance(
+            options['pop3'][0], endpoints.TCP4ServerEndpoint)
+
+        self.assertEquals(len(options['smtp']), 1)
+        self.assertIsInstance(
+            options['smtp'][0], endpoints.TCP4ServerEndpoint)
+
+
+    def test_protoDisable(self):
+        """
+        The I{--no-pop3} and I{--no-smtp} options disable POP3 and SMTP
+        respectively.
+        """
+        options = Options()
+        options.parseOptions(['--no-pop3'])
+        self.assertEquals(options._getEndpoints(None, 'pop3'), [])
+        self.assertNotEquals(options._getEndpoints(None, 'smtp'), [])
+
+        options = Options()
+        options.parseOptions(['--no-smtp'])
+        self.assertNotEquals(options._getEndpoints(None, 'pop3'), [])
+        self.assertEquals(options._getEndpoints(None, 'smtp'), [])
+
+
+    def test_allProtosDisabledError(self):
+        """
+        If all protocols are disabled, L{UsageError} is raised.
+        """
+        options = Options()
+        self.assertRaises(
+            UsageError, options.parseOptions, (['--no-pop3', '--no-smtp']))
+
+
+    def test_pop3sBackwardCompatibility(self):
+        """
+        The deprecated I{--pop3s} and I{--certificate} options set up a POP3 SSL
+        server.
+        """
+        options = Options()
+        options.parseOptions(['--pop3s', '8995',
+                              '--certificate', '/dev/null'])
+        self.assertEquals(len(options['pop3']), 2)
+        self.assertIsInstance(
+            options['pop3'][0], endpoints.SSL4ServerEndpoint)
+        self.assertIsInstance(
+            options['pop3'][1], endpoints.TCP4ServerEndpoint)
+
+        warnings = self.flushWarnings([options.postOptions])
+        self.assertEquals(len(warnings), 1)
+        self.assertEquals(warnings[0]['category'], DeprecationWarning)
+        self.assertEquals(
+            warnings[0]['message'],
+            "Specifying plain ports and/or a certificate is deprecated since "
+            "Twisted 11.0; use endpoint descriptions instead.")
+
+
+
+class SpyEndpoint(object):
+    """
+    SpyEndpoint remembers what factory it is told to listen with.
+    """
+    listeningWith = None
+    def listen(self, factory):
+        self.listeningWith = factory
+        return defer.succeed(None)
+
+
+
+class MakeServiceTests(TestCase):
+    """
+    Tests for L{twisted.mail.tap.makeService}
+    """
+    def _endpointServerTest(self, key, factoryClass):
+        """
+        Configure a service with two endpoints for the protocol associated with
+        C{key} and verify that when the service is started a factory of type
+        C{factoryClass} is used to listen on each of them.
+        """
+        cleartext = SpyEndpoint()
+        secure = SpyEndpoint()
+        config = Options()
+        config[key] = [cleartext, secure]
+        service = makeService(config)
+        service.privilegedStartService()
+        service.startService()
+        self.addCleanup(service.stopService)
+        self.assertIsInstance(cleartext.listeningWith, factoryClass)
+        self.assertIsInstance(secure.listeningWith, factoryClass)
+
+
+    def test_pop3(self):
+        """
+        If one or more endpoints is included in the configuration passed to
+        L{makeService} for the C{"pop3"} key, a service for starting a POP3
+        server is constructed for each of them and attached to the returned
+        service.
+        """
+        self._endpointServerTest("pop3", protocols.POP3Factory)
+
+
+    def test_smtp(self):
+        """
+        If one or more endpoints is included in the configuration passed to
+        L{makeService} for the C{"smtp"} key, a service for starting an SMTP
+        server is constructed for each of them and attached to the returned
+        service.
+        """
+        self._endpointServerTest("smtp", protocols.SMTPFactory)
