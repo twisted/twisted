@@ -91,6 +91,27 @@ xmlrpclib.Fault: &lt;Fault 123: 'The fault procedure is faulty.'&gt;
 
 </pre>
 
+<p>If the <code class="API" base="twisted.web.server">Request</code> object is
+needed by an <code>xmlrpc_*</code> method, it can be made available using
+the <code class="API">twisted.web.xmlrpc.withRequest</code> decorator.  When
+using this decorator, the method will be passed the request object as the first
+argument, before any XML-RPC parameters.  For example:</p>
+
+<pre class="python">
+from twisted.web.xmlrpc import XMLRPC, withRequest
+from twisted.web.server import Site
+
+class Example(XMLRPC):
+    @withRequest
+    def xmlrpc_headerValue(self, request, headerName):
+        return request.requestHeaders.getRawHeaders(headerName)
+
+if __name__ == '__main__':
+    from twisted.internet import reactor
+    reactor.listenTCP(7080, Site(Example()))
+    reactor.run()
+</pre>
+
 <p>XML-RPC resources can also be part of a normal Twisted web server, using
 resource scripts. The following is an example of such a resource script:</p>
 
