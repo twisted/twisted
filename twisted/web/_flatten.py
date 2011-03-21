@@ -299,7 +299,7 @@ def flatten(request, root, write):
 
 def flattenString(request, root):
     """
-    Collate a string representation of C{root} into a single sring.
+    Collate a string representation of C{root} into a single string.
 
     This is basically gluing L{flatten} to a C{StringIO} and returning the
     results. See L{flatten} for the exact meanings of C{request} and

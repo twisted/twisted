@@ -13,7 +13,7 @@ HTML rendering for twisted.web.
     elements used by the templating system, which should be removed from the
     final output document.
 
-@var tags: An convenience object which can produce L{Tag} objects on demand via
+@var tags: A convenience object which can produce L{Tag} objects on demand via
     attribute access.  For example: C{tags.div} is equivalent to C{Tag("div")}.
     Tags not specified in L{VALID_HTML_TAG_NAMES} will result in an
     L{AttributeError}.
