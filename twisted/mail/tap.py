@@ -16,10 +16,6 @@ from twisted.mail import relay
 from twisted.mail import relaymanager
 from twisted.mail import alias
 
-from twisted.mail.protocols import SSLContextFactory
-
-from twisted.internet import endpoints
-
 from twisted.python import usage
 from twisted.python import deprecate
 from twisted.python import versions
@@ -34,37 +30,20 @@ class Options(usage.Options, strcred.AuthOptionMixin):
     synopsis = "[options]"
 
     optParameters = [
-        ["pop3s", "S", 0,
-         "Port to start the POP3-over-SSL server on (0 to disable). "
-         "DEPRECATED: use "
-         "'--pop3 ssl:port:privateKey=pkey.pem:certKey=cert.pem'"],
-
-        ["certificate", "c", None,
-         "Certificate file to use for SSL connections. "
-         "DEPRECATED: use "
-         "'--pop3 ssl:port:privateKey=pkey.pem:certKey=cert.pem'"],
-
+        ["pop3", "p", 8110, "Port to start the POP3 server on (0 to disable).", usage.portCoerce],
+        ["pop3s", "S", 0, "Port to start the POP3-over-SSL server on (0 to disable).", usage.portCoerce],
+        ["smtp", "s", 8025, "Port to start the SMTP server on (0 to disable).", usage.portCoerce],
+        ["certificate", "c", None, "Certificate file to use for SSL connections"],
         ["relay", "R", None,
-         "Relay messages according to their envelope 'To', using "
-         "the given path as a queue directory."],
-
-        ["hostname", "H", None,
-         "The hostname by which to identify this server."],
+            "Relay messages according to their envelope 'To', using the given"
+            "path as a queue directory."],
+        ["hostname", "H", None, "The hostname by which to identify this server."],
     ]
 
     optFlags = [
         ["esmtp", "E", "Use RFC 1425/1869 SMTP extensions"],
-        ["disable-anonymous", None,
-         "Disallow non-authenticated SMTP connections"],
-        ["no-pop3", None, "Disable the default POP3 server."],
-        ["no-smtp", None, "Disable the default SMTP server."],
+        ["disable-anonymous", None, "Disallow non-authenticated SMTP connections"],
     ]
-
-    _protoDefaults = {
-        "pop3": 8110,
-        "smtp": 8025,
-    }
-
     zsh_actions = {"hostname" : "_hosts"}
 
     longdesc = "This creates a mail.tap file that can be used by twistd."
@@ -73,54 +52,18 @@ class Options(usage.Options, strcred.AuthOptionMixin):
         usage.Options.__init__(self)
         self.service = mail.MailService()
         self.last_domain = None
-        for service in self._protoDefaults:
-            self[service] = []
-
-
-    def addEndpoint(self, service, description, certificate=None):
-        """
-        Given a 'service' (pop3 or smtp), add an endpoint.
-        """
-        self[service].append(
-            _toEndpoint(description, certificate=certificate))
-
-
-    def opt_pop3(self, description):
-        """
-        Add a pop3 port listener on the specified endpoint.  You can listen on
-        multiple ports by specifying multiple --pop3 options.  For backwards
-        compatibility, a bare TCP port number can be specified, but this is
-        deprecated. [SSL Example: ssl:8995:privateKey=mycert.pem] [default:
-        tcp:8110]
-        """
-        self.addEndpoint('pop3', description)
-    opt_p = opt_pop3
-
-
-    def opt_smtp(self, description):
-        """
-        Add an smtp port listener on the specified endpoint.  You can listen on
-        multiple ports by specifying multiple --smtp options For backwards
-        compatibility, a bare TCP port number can be specified, but this is
-        deprecated.  [SSL Example: ssl:8465:privateKey=mycert.pem] [default:
-        tcp:8025]
-        """
-        self.addEndpoint('smtp', description)
-    opt_s = opt_smtp
-
 
     def opt_passwordfile(self, filename):
         """
-        Specify a file containing username:password login info for authenticated
-        ESMTP connections. (DEPRECATED; see --help-auth instead)
+        Specify a file containing username:password login info for
+        authenticated ESMTP connections. (DEPRECATED; see --help-auth instead)
         """
         ch = checkers.OnDiskUsernamePasswordDatabase(filename)
         self.service.smtpPortal.registerChecker(ch)
-        msg = deprecate.getDeprecationWarningString(
-            self.opt_passwordfile, versions.Version('twisted.mail', 11, 0, 0))
+        msg = deprecate.getDeprecationWarningString(self.opt_passwordfile,
+                versions.Version('twisted.mail', 11, 0, 0))
         warnings.warn(msg, category=DeprecationWarning, stacklevel=2)
     opt_P = opt_passwordfile
-
 
     def opt_default(self):
         """Make the most recently specified domain the default domain."""
@@ -129,7 +72,6 @@ class Options(usage.Options, strcred.AuthOptionMixin):
         else:
             raise usage.UsageError("Specify a domain before specifying using --default")
     opt_D = opt_default
-
 
     def opt_maildirdbmdomain(self, domain):
         """generate an SMTP/POP3 virtual domain which saves to \"path\"
@@ -182,47 +124,7 @@ class Options(usage.Options, strcred.AuthOptionMixin):
             raise usage.UsageError("Specify a domain before specifying aliases")
     opt_A = opt_aliases
 
-    def _getEndpoints(self, reactor, service):
-        """
-        Return a list of endpoints for the specified service, constructing
-        defaults if necessary.
-
-        @param reactor: If any endpoints are created, this is the reactor with
-            which they are created.
-
-        @param service: A key into self indicating the type of service to
-            retrieve endpoints for.  This is either C{"pop3"} or C{"smtp"}.
-
-        @return: A C{list} of C{IServerStreamEndpoint} providers corresponding
-            to the command line parameters that were specified for C{service}.
-            If none were and the protocol was not explicitly disabled with a
-            I{--no-*} option, a default endpoint for the service is created
-            using C{self._protoDefaults}.
-        """
-        if service == 'pop3' and self['pop3s'] and len(self[service]) == 1:
-            # The single endpoint here is the POP3S service we added in
-            # postOptions.  Include the default endpoint alongside it.
-            return self[service] + [
-                endpoints.TCP4ServerEndpoint(
-                    reactor, self._protoDefaults[service])]
-        elif self[service]:
-            # For any non-POP3S case, if there are any services set up, just
-            # return those.
-            return self[service]
-        elif self['no-' + service]:
-            # If there are no services, but the service was explicitly disabled,
-            # return nothing.
-            return []
-        else:
-            # Otherwise, return the old default service.
-            return [
-                endpoints.TCP4ServerEndpoint(
-                    reactor, self._protoDefaults[service])]
-
-
     def postOptions(self):
-        from twisted.internet import reactor
-
         if self['pop3s']:
             if not self['certificate']:
                 raise usage.UsageError("Cannot specify --pop3s without "
@@ -230,23 +132,12 @@ class Options(usage.Options, strcred.AuthOptionMixin):
             elif not os.path.exists(self['certificate']):
                 raise usage.UsageError("Certificate file %r does not exist."
                                        % self['certificate'])
-            else:
-                self.addEndpoint(
-                    'pop3', self['pop3s'], certificate=self['certificate'])
 
         if not self['disable-anonymous']:
             self.service.smtpPortal.registerChecker(checkers.AllowAnonymousAccess())
 
-        anything = False
-        for service in self._protoDefaults:
-            self[service] = self._getEndpoints(reactor, service)
-            if self[service]:
-                anything = True
-
-        if not anything:
+        if not (self['pop3'] or self['smtp'] or self['pop3s']):
             raise usage.UsageError("You cannot disable all protocols")
-
-
 
 class AliasUpdater:
     def __init__(self, domains, domain):
@@ -255,44 +146,7 @@ class AliasUpdater:
     def __call__(self, new):
         self.domain.setAliasGroup(alias.loadAliasFile(self.domains, new))
 
-
-def _toEndpoint(description, certificate=None):
-    """
-    Tries to guess whether a description is a bare TCP port or a endpoint.  If a
-    bare port is specified and a certificate file is present, returns an
-    SSL4ServerEndpoint and otherwise returns a TCP4ServerEndpoint.
-    """
-    from twisted.internet import reactor
-    try:
-        port = int(description)
-    except ValueError:
-        return endpoints.serverFromString(reactor, description)
-
-    warnings.warn(
-        "Specifying plain ports and/or a certificate is deprecated since "
-        "Twisted 11.0; use endpoint descriptions instead.",
-        category=DeprecationWarning, stacklevel=3)
-
-    if certificate:
-        ctx = SSLContextFactory(certificate)
-        return endpoints.SSL4ServerEndpoint(reactor, port, ctx)
-    return endpoints.TCP4ServerEndpoint(reactor, port)
-
-
 def makeService(config):
-    """
-    Construct a service for operating a mail server.
-
-    The returned service may include POP3 servers or SMTP servers (or both),
-    depending on the configuration passed in.  If there are multiple servers,
-    they will share all of their non-network state (eg, the same user accounts
-    are available on all of them).
-
-    @param config: An L{Options} instance specifying what servers to include in
-        the returned service and where they should keep mail data.
-
-    @return: An L{IService} provider which contains the requested mail servers.
-    """
     if config['esmtp']:
         rmType = relaymanager.SmartHostESMTPRelayingManager
         smtpFactory = config.service.getESMTPFactory
@@ -317,21 +171,26 @@ def makeService(config):
         helper.setServiceParent(config.service)
         config.service.domains.setDefaultDomain(default)
 
-    if config['pop3']:
-        f = config.service.getPOP3Factory()
-        for endpoint in config['pop3']:
-            svc = internet.StreamServerEndpointService(endpoint, f)
-            svc.setServiceParent(config.service)
+    ctx = None
+    if config['certificate']:
+        from twisted.mail.protocols import SSLContextFactory
+        ctx = SSLContextFactory(config['certificate'])
 
+    if config['pop3']:
+        s = internet.TCPServer(config['pop3'], config.service.getPOP3Factory())
+        s.setServiceParent(config.service)
+    if config['pop3s']:
+        s = internet.SSLServer(config['pop3s'],
+                               config.service.getPOP3Factory(), ctx)
+        s.setServiceParent(config.service)
     if config['smtp']:
         f = smtpFactory()
+        f.context = ctx
         if config['hostname']:
             f.domain = config['hostname']
             f.fArgs = (f.domain,)
         if config['esmtp']:
             f.fArgs = (None, None) + f.fArgs
-        for endpoint in config['smtp']:
-            svc = internet.StreamServerEndpointService(endpoint, f)
-            svc.setServiceParent(config.service)
-
+        s = internet.TCPServer(config['smtp'], f)
+        s.setServiceParent(config.service)
     return config.service
