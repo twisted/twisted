@@ -15,16 +15,19 @@
 <p>While high-level templating systems can be used with Twisted (for
 example, <a href="http://divmod.org/trac/wiki/DivmodNevow">Divmod
 Nevow</a>, sometimes one needs a less file-heavy system which lets one
-directly write HTML. While ResourceScripts are available, they have a
-high overhead of coding, needing some boring string
-arithmetic. ResourceTemplates fill the space between Nevow and
-ResourceScript using Quixote's PTL (Python Templating Language).</p>
+directly write HTML. While 
+<code class="API" base="twisted.web.script">ResourceScript</code> is
+available, it has a high coding overhead, and requires some boring string
+arithmetic. 
+<code class="API" base="twisted.web.script">ResourceTemplate</code> fills the
+space between Nevow and ResourceScript using Quixote's PTL (Python Templating
+Language).</p>
 
 <p>ResourceTemplates need Quixote
 installed. In <a href="http://www.debian.org">Debian</a>, that means
-using Python 2.2 and installing the <code>quixote</code> package
-(<code>apt-get install quixote</code>). Other operating systems
-require other ways to install quixote, or it can be done manually.</p>
+installing the <code>python-quixote</code> package
+(<code>apt-get install python-quixote</code>). Other operating systems
+require other ways to install Quixote, or it can be done manually.</p>
 
 <h2>Configuring Twisted.Web</h2>
 
@@ -46,10 +49,10 @@ more Python coding and are outside the scope of this HOWTO.</p>
 <p>ResourceTemplates are coded in an extension of Python called the
 <q>Python Templating Language</q>. Complete documentation of the PTL
 is available
-at <a href="http://www.mems-exchange.org/software/quixote/doc/PTL.html">the
+at <a href="http://quixote.python.ca/quixote.dev/doc/PTL.html">the 
 quixote web site</a>. The web server will expect the PTL source file
 to define a variable named <code>resource</code>.  This should be
-a <code class="API">twisted.web.server.Resource</code>,
+a <code class="API">twisted.web.resource.Resource</code>,
 whose <code>.render</code> method be called. Usually, you would want
 to define <code>render</code> using the keyword <code>template</code>
 rather than <code>def</code>.</p>
