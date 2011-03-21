@@ -5779,3 +5779,6 @@ How do I use it?
 <glyph> "Are you The Keymaker?" "Not that I know of."  "Are you The Keymaker?" "ssh-keygen -t rsa -b 4096" "I am the gatekeeper!"
 <cyli> Permission denied (publickey).
 %
+<Jerub> supposedUTF8Data.decode('utf-8', 'replace').encode('utf-16').decode('utf-16', 'replace').encode('utf-8').replace('"', '&quot';)	
+<Jerub> i feel like my entire life has been a comedy and that was its punch line.	
+%
