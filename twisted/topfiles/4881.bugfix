@@ -1,0 +1,1 @@
+twisted.internet.process now detects the most appropriate mechanism to use for detecting the open file descriptors on a system, getting Twisted working on FreeBSD even when fdescfs is not mounted.
