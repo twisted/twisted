@@ -412,10 +412,61 @@ class IBodyProducer(IPushProducer):
         C{startProducing} is never fired.
         """
 
+
+
+class IRenderable(Interface):
+    """
+    An L{IRenderable} is an object that may be rendered by the
+    L{twisted.web.template} templating system.
+    """
+
+    def lookupRenderMethod(name):
+        """
+        Look up and return the render method associated with the given name.
+
+        @type name: C{str}
+        @param name: The value of a render directive encountered in the
+            document returned by a call to L{IRenderable.render}.
+
+        @return: A two-argument callable which will be invoked with the request
+            being responded to and the tag object on which the render directive
+            was encountered.
+        """
+
+
+    def render(request):
+        """
+        Get the document for this L{IRenderable}.
+
+        @type request: L{IRequest} provider or L{NoneType}
+        @param request: The request in response to which this method is being
+            invoked.
+
+        @return: An object which can be flattened.
+        """
+
+
+
+class ITemplateLoader(Interface):
+    """
+    A loader for templates; something usable as a value for
+    L{twisted.web.template.Element}'s C{loader} attribute.
+    """
+
+    def load():
+        """
+        Load a template suitable for rendering.
+
+        @return: a C{list} of C{list}s, C{unicode} objects, C{Element}s and
+            other L{IRenderable} providers.
+        """
+
+
+
 UNKNOWN_LENGTH = u"twisted.web.iweb.UNKNOWN_LENGTH"
 
 __all__ = [
     "IUsernameDigestHash", "ICredentialFactory", "IRequest",
-    "IBodyProducer",
+    "IBodyProducer", "IRenderable",
 
     "UNKNOWN_LENGTH"]
