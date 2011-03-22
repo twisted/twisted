@@ -1,0 +1,5 @@
+twisted.web will now properly specify an encoding (UTF-8) on error, redirect,
+and directory listing pages, so that IE7 and previous will not improperly guess
+the 'utf7' encoding in these cases.  Please note that Twisted still sets a
+*default* content-type of 'text/html', and you shouldn't rely on that: you
+should set the encoding appropriately in your application.

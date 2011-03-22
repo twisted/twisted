@@ -6,9 +6,12 @@ Tests for L{twisted.web.util}.
 """
 
 from twisted.trial.unittest import TestCase
-from twisted.web.util import _hasSubstring
+from twisted.web.util import _hasSubstring, redirectTo
 
+from twisted.web.http import FOUND
+from twisted.web.server import Request
 
+from twisted.web.test.test_web import DummyChannel
 
 class HasSubstringTestCase(TestCase):
     """
@@ -46,3 +49,28 @@ class HasSubstringTestCase(TestCase):
         """
         self.assertTrue(_hasSubstring("[b-a]",
                                       "Python can generate names like [b-a]."))
+
+
+class RedirectToTestCase(TestCase):
+    """
+    Tests for L{redirectTo}.
+    """
+
+    def test_headersAndCode(self):
+        """
+        L{redirectTo} will set the C{Location} and C{Content-Type} headers on
+        its request, and set the response code to C{FOUND}, so the browser will
+        be redirected.
+        """
+        request = Request(DummyChannel(), True)
+        request.method = 'GET'
+        targetURL = "http://target.example.com/4321"
+        redirectTo(targetURL, request)
+        self.assertEquals(request.code, FOUND)
+        self.assertEquals(
+            request.responseHeaders.getRawHeaders('location'), [targetURL])
+        self.assertEquals(
+            request.responseHeaders.getRawHeaders('content-type'),
+            ['text/html; charset=utf-8'])
+
+

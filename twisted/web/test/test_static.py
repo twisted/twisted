@@ -1360,6 +1360,20 @@ class DirectoryListerTest(TestCase):
         self.assertTrue(content[4].startswith('<tr class="odd">'))
 
 
+    def test_contentType(self):
+        """
+        L{static.DirectoryLister} produces a MIME-type that indicates that it is
+        HTML, and includes its charset (UTF-8).
+        """
+        path = FilePath(self.mktemp())
+        path.makedirs()
+        lister = static.DirectoryLister(path.path)
+        req = self._request('')
+        lister.render(req)
+        self.assertEquals(req.outgoingHeaders['content-type'],
+                          "text/html; charset=utf-8")
+
+
     def test_mimeTypeAndEncodings(self):
         """
         L{static.DirectoryLister} is able to detect mimetype and encoding of

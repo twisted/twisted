@@ -279,7 +279,7 @@ class ErrorPage(Resource):
 
     def render(self, request):
         request.setResponseCode(self.code)
-        request.setHeader("content-type", "text/html")
+        request.setHeader("content-type", "text/html; charset=utf-8")
         return self.template % dict(
             code=self.code,
             brief=self.brief,

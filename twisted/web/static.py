@@ -1060,6 +1060,7 @@ h1 {padding: 0.1em; background-color: #777; color: white; border-bottom: thin wh
         """
         Render a listing of the content of C{self.path}.
         """
+        request.setHeader("content-type", "text/html; charset=utf-8")
         if self.dirs is None:
             directory = os.listdir(self.path)
             directory.sort()

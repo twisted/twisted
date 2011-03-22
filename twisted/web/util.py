@@ -14,6 +14,7 @@ from twisted.web import html, resource
 
 
 def redirectTo(URL, request):
+    request.setHeader("content-type", "text/html; charset=utf-8")
     request.redirect(URL)
     return """
 <html>

@@ -44,7 +44,8 @@ class ErrorPageTests(TestCase):
             "</html>\n" % (code, brief, brief, detail))
         self.assertEqual(request.responseCode, code)
         self.assertEqual(
-            request.outgoingHeaders, {'content-type': 'text/html'})
+            request.outgoingHeaders,
+            {'content-type': 'text/html; charset=utf-8'})
 
 
     def test_errorPageRendering(self):
