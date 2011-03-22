@@ -678,9 +678,25 @@ class TestLoader(object):
             except:
                 errors.append(ErrorHolder(name, failure.Failure()))
         suites = [self.loadAnything(thing, recurse)
-                  for thing in set(things)]
+                  for thing in self._uniqueTests(things)]
         suites.extend(errors)
         return self.suiteFactory(suites)
+
+
+    def _uniqueTests(self, things):
+        """
+        Gather unique suite objects from loaded things. This will guarantee
+        uniqueness of inherited methods on TestCases which would otherwise hash
+        to same value and collapse to one test unexpectedly if using simpler
+        means: e.g. set().
+        """
+        entries = []
+        for thing in things:
+            if isinstance(thing, types.MethodType):
+                entries.append((thing, thing.im_class))
+            else:
+                entries.append((thing,))
+        return [entry[0] for entry in set(entries)]
 
 
 

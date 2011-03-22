@@ -486,6 +486,17 @@ class LoaderTest(packages.SysPathManglingTest):
         suite2 = runner.TestSuite(map(self.loader.loadByName, modules))
         self.assertSuitesEqual(suite1, suite2)
 
+    def test_loadInheritedMethods(self):
+        """
+        Check that test methods names which are inherited from are all
+        loaded rather than just one.
+        """
+        methods = ['inheritancepackage.test_x.A.test_foo',
+                   'inheritancepackage.test_x.B.test_foo']
+        suite1 = self.loader.loadByNames(methods)
+        suite2 = runner.TestSuite(map(self.loader.loadByName, methods))
+        self.assertSuitesEqual(suite1, suite2)
+        
 
 
 class ZipLoadingTest(LoaderTest):

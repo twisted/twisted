@@ -53,6 +53,26 @@ class AlphabetTest(unittest.TestCase):
         pass
 """
 
+testInheritanceSample = """
+'''This module is used by test_loader to test the Trial test loading
+functionality. Do NOT change the number of tests in this module.
+Do NOT change the names the tests in this module.
+'''
+
+from twisted.trial import unittest
+
+class X(object):
+    
+    def test_foo(self):
+        pass
+
+class A(unittest.TestCase, X):
+    pass
+
+class B(unittest.TestCase, X):
+    pass
+
+"""
 
 class PackageTest(unittest.TestCase):
     files = [
@@ -70,7 +90,9 @@ class PackageTest(unittest.TestCase):
         ('goodpackage/__init__.py', ''),
         ('goodpackage/test_sample.py', testSample),
         ('goodpackage/sub/__init__.py', ''),
-        ('goodpackage/sub/test_sample.py', testSample)
+        ('goodpackage/sub/test_sample.py', testSample),
+        ('inheritancepackage/__init__.py', ''),
+        ('inheritancepackage/test_x.py', testInheritanceSample),
         ]
 
     def _toModuleName(self, filename):
