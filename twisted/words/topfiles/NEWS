@@ -1,6 +1,44 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Words 11.0.0pre1 (2011-03-22)
+=====================================
+
+Features
+--------
+ - twisted.words.protocols.irc.IRCClient now has an invite method.
+   (#4820)
+
+Bugfixes
+--------
+ - twisted.words.protocols.irc.IRCClient.say is once again able to
+   send messages when using the default value for the length limit
+   argument. (#4758)
+ - twisted.words.protocols.jabber.jstrports is once again able to
+   parse jstrport description strings. (#4771)
+ - twisted.words.protocols.msn.NotificationClient now calls the
+   loginFailure callback when it is unable to connect to the Passport
+   server due to missing SSL dependencies. (#4801)
+ - twisted.words.protocols.jabber.xmpp_stringprep now always uses
+   Unicode version 3.2 for stringprep normalization. (#4850)
+
+Improved Documentation
+----------------------
+ - Removed the non-working AIM bot example, depending on the obsolete
+   twisted.words.protocols.toc functionality. (#4007)
+ - Outdated GUI-related information was removed from the IM howto.
+   (#4054)
+
+Deprecations and Removals
+-------------------------
+ - Remove twisted.words.protocols.toc, that was largely non-working
+   and useless since AOL disabled TOC on their AIM network. (#4363)
+
+Other
+-----
+ - #4733, #4902
+
+
 Twisted Words 10.2.0 (2010-11-29)
 =================================
 

@@ -1,6 +1,133 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Core 11.0.0pre1 (2011-03-22)
+====================================
+
+Features
+--------
+ - The reactor is not restartable, but it would previously fail to
+   complain. Now, when you restart an unrestartable reactor, you get
+   an exception. (#2066)
+ - twisted.plugin now only emits a short log message, rather than a
+   full traceback, if there is a problem writing out the dropin cache
+   file. (#2409)
+ - Added a 'replacement' parameter to the
+   'twisted.python.deprecate.deprecated' decorator.  This allows
+   deprecations to unambiguously specify what they have been
+   deprecated in favor of. (#3047)
+ - Added access methods to FilePath for FilePath.statinfo's st_ino,
+   st_dev, st_nlink, st_uid, and st_gid fields.  This is in
+   preparation for the deprecation of FilePath.statinfo. (#4712)
+ - IPv4Address and UNIXAddress now have a __hash__ method. (#4783)
+ - twisted.protocols.ftp.FTP.ftp_STOR now catches `FTPCmdError`s
+   raised by the file writer, and returns the error back to the
+   client. (#4909)
+
+Bugfixes
+--------
+ - twistd will no longer fail if a non-root user passes --uid 'myuid'
+   as a command-line argument. Instead, it will emit an error message.
+   (#3172)
+ - IOCPReactor now sends immediate completions to the main loop
+   (#3233)
+ - trial can now load test methods from multiple classes, even if the
+   methods all happen to be inherited from the same base class.
+   (#3383)
+ - twisted.web.server will now produce a correct Allow header when a
+   particular render_FOO method is missing. (#3678)
+ - HEAD requests made to resources whose HEAD handling defaults to
+   calling render_GET now always receive a response with no body.
+   (#3684)
+ - trial now loads decorated test methods whether or not the decorator
+   preserves the original method name. (#3909)
+ - t.p.amp.AmpBox.serialize will now correctly consistently complain
+   when being fed Unicode. (#3931)
+ - twisted.internet.wxreactor now supports stopping more reliably.
+   (#3948)
+ - reactor.spawnProcess on Windows can now handle ASCII-encodable
+   Unicode strings in the system environment (#3964)
+ - twisted.protocols._c_urlarg now doesn't exist (#4162)
+ - When C-extensions are not complied for twisted, on python2.4, skip
+   a test in twisted.internet.test.test_process that may hang due to a
+   SIGCHLD related problem. Running 'python setup.py build_ext
+   --inplace' will compile the extension and cause the test to both
+   run and pass. (#4331)
+ - twisted.python.logfile.LogFile now raises a descriptive exception
+   when passed a log  directoy which does not exist. (#4701)
+ - Fixed a bug where Inotify will fail to add a filepatch to watchlist
+   after it has been added/ignored previously. (#4708)
+ - IPv4Address and UNIXAddress object comparison operators fixed
+   (#4817)
+ - twisted.internet.task.Clock now sorts the list of pending calls
+   before and after processing each call (#4823)
+ - ConnectionLost is now in twisted.internet.error.__all__ instead of
+   twisted.words.protocols.jabber.xmlstream.__all__. (#4856)
+ - twisted.internet.process now detects the most appropriate mechanism
+   to use for detecting the open file descriptors on a system, getting
+   Twisted working on FreeBSD even when fdescfs is not mounted.
+   (#4881)
+ - twisted.words.services referenced nonexistent
+   twisted.words.protocols.irc.IRC_NOSUCHCHANNEL. This has been fixed.
+   Related code has also received test cases. (#4915)
+
+Improved Documentation
+----------------------
+ - The INSTALL file now lists all of Twisted's dependencies. (#967)
+ - Added the stopService and startService methods to all finger
+   example files. (#3375)
+ - Missing reactor.run() calls were added in the UDP and client howto
+   documents. (#3834)
+ - Tidied up the Twisted Development Policy documentation for easier
+   conversion. (#4567)
+ - The maxRetries attribute of
+   twisted.internet.protocols.RetryingClientFactory now has API
+   documentation. (#4618)
+ - Lore docs pointed to a template that no longer existed, this has
+   been fixed. (#4682)
+ - The `servers` argument to `twisted.names.client.createResolver` now
+   has more complete API documentation. (#4713)
+ - Linked to the Twisted endpoints tutorial from the Twisted core
+   howto list.  (#4773)
+ - The Endpoints howto now links to the API documentation. (#4774)
+ - The Quotes howto is now more clear in its PYTHONPATH setup
+   instructions. (#4785)
+ - Clean up lore2sphinx conversion for PB core howto documentation.
+   (#4863)
+ -  (#4872, #4873, #4876, #4879)
+ - The API documentation for DeferredList's fireOnOneCallback
+   parameter now gives the correct order of the elements of the result
+   tuple. (#4882)
+
+Deprecations and Removals
+-------------------------
+ - returning a value other than None from IProtocol.dataReceived was
+   deprecated (#2491)
+ - Deprecated the --extra option in trial.  (#3372)
+ - Remove the --report-profile option for twistd, deprecated since
+   2007. (#4236)
+ - Deprecated twisted.persisted.journal.  This library is no longer
+   maintained.  (#4298)
+ - Removed twisted.protocols.loopback.loopback, which has been
+   deprecated since Twisted 2.5. (#4547)
+ - __getitem__ __getslice__ and __eq__ (tuple comparison, indexing)
+   removed from twisted.internet.address.IPv4Address and
+   twisted.internet.address.UNIXAddress classes UNIXAddress and
+   IPv4Address properties _bwHack are now deprecated in
+   twisted.internet.address (#4817)
+ - twisted.python.reflect.allYourBase is now no longer used, replaced
+   with inspect.getmro (#4928)
+ - allYourBase and accumulateBases are now deprecated in favor of
+   inspect.getmro. (#4946)
+
+Other
+-----
+ - #555, #1982, #2618, #2665, #2666, #4035, #4247, #4636, #4717,
+   #4733, #4750, #4821, #4842, #4846, #4853, #4857, #4858, #4864,
+   #4865, #4866, #4867, #4868, #4869, #4870, #4871, #4874, #4875,
+   #4877, #4878, #4905, #4906, #4908, #4934, #4955, #4960
+
+
 Twisted Core 10.2.0 (2010-11-29)
 ================================
 

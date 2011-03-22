@@ -1,6 +1,28 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Mail 11.0.0pre1 (2011-03-22)
+====================================
+
+Features
+--------
+ - The `twistd mail` command line now accepts endpoint descriptions
+   for POP3 and SMTP servers. (#4739)
+ - The twistd mail plugin now accepts new authentication options via
+   strcred.AuthOptionMixin.  These include --auth, --auth-help, and
+   authentication type-specific help options. (#4740)
+
+Bugfixes
+--------
+ - twisted.protocols._c_urlarg now doesn't exist (#4162)
+ - twisted.mail.imap4.IMAP4Server now generates INTERNALDATE strings
+   which do not consider the locale. (#4937)
+
+Improved Documentation
+----------------------
+ - Added a simple SMTP example, showing how to use sendmail. (#4042)
+
+
 Twisted Mail 10.2.0 (2010-11-29)
 ================================
 
