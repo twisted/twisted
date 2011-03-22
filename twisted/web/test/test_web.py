@@ -6,7 +6,6 @@ Tests for various parts of L{twisted.web}.
 """
 
 from cStringIO import StringIO
-import re
 
 from zope.interface import implements
 from zope.interface.verify import verifyObject
@@ -775,6 +774,7 @@ class NewRenderTestCase(unittest.TestCase):
         self.assertEquals(req.code, 200)
         self.assertEquals(-1, req.transport.getvalue().find('hi hi'))
 
+
     def test_unsupportedHead(self):
         """
         HEAD requests against resource that only claim support for GET
@@ -786,6 +786,7 @@ class NewRenderTestCase(unittest.TestCase):
         headers, body = req.transport.getvalue().split('\r\n\r\n')
         self.assertEqual(req.code, 200)
         self.assertEqual(body, '')
+
 
 
 class GettableResource(resource.Resource):
@@ -822,7 +823,7 @@ class AllowedMethodsTest(unittest.TestCase):
         request.setHost('example.com', 81)
         request.gotLength(0)
         return request
-    
+
 
     def test_computeAllowedMethods(self):
         """
@@ -849,13 +850,41 @@ class AllowedMethodsTest(unittest.TestCase):
         req = self._getReq()
         req.requestReceived('POST', '/gettableresource', 'HTTP/1.0')
         self.assertEquals(req.code, 405)
-        allow_header_match = re.search(
-            r'\bAllow:\s+([^\r\n]+)', req.transport.getvalue())
-        self.assertTrue(allow_header_match)
-        method_list = allow_header_match.group(1).split(', ')
-        self.assertEqual(len(method_list), 3)
-        self.assertEqual(set(method_list),
-                         set(['GET', 'HEAD','fred_render_ethel']))
+        self.assertEquals(
+            set(req.responseHeaders.getRawHeaders('allow')[0].split(", ")),
+            set(['GET', 'HEAD','fred_render_ethel'])
+        )
+
+
+    def test_notAllowedQuoting(self):
+        """
+        When an unsupported method response is generated, an HTML message will
+        be displayed.  That message should include a quoted form of the URI and,
+        since that value come from a browser and shouldn't necessarily be
+        trusted.
+        """
+        req = self._getReq()
+        req.requestReceived('POST', '/gettableresource?'
+                            'value=<script>bad', 'HTTP/1.0')
+        self.assertEquals(req.code, 405)
+        renderedPage = req.transport.getvalue()
+        self.assertNotIn("<script>bad", renderedPage)
+        self.assertIn('&lt;script&gt;bad', renderedPage)
+
+
+    def test_notImplementedQuoting(self):
+        """
+        When an not-implemented method response is generated, an HTML message
+        will be displayed.  That message should include a quoted form of the
+        requested method, since that value come from a browser and shouldn't
+        necessarily be trusted.
+        """
+        req = self._getReq()
+        req.requestReceived('<style>bad', '/gettableresource', 'HTTP/1.0')
+        self.assertEquals(req.code, 501)
+        renderedPage = req.transport.getvalue()
+        self.assertNotIn("<style>bad", renderedPage)
+        self.assertIn('&lt;style&gt;bad', renderedPage)
 
 
 

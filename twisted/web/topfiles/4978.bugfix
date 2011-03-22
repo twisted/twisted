@@ -1,0 +1,3 @@
+default NOT_IMPLEMENTED and NOT_ALLOWED pages now quote the request method and
+URI respectively, to protect against browsers which don't quote those values for
+us.

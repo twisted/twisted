@@ -26,12 +26,13 @@ NOT_DONE_YET = 1
 
 # Twisted Imports
 from twisted.spread import pb
-from twisted.internet import defer, address, task
+from twisted.internet import address, task
 from twisted.web import iweb, http
 from twisted.python import log, reflect, failure, components
 from twisted import copyright
 from twisted.web import util as webutil, resource
 from twisted.web.error import UnsupportedMethod
+from twisted.web.microdom import escape
 
 # backwards compatability
 date_time_string = http.datetimeToString
@@ -177,7 +178,7 @@ class Request(pb.Copyable, http.Request, components.Componentized):
                 s = ('''Your browser approached me (at %(URI)s) with'''
                      ''' the method "%(method)s".  I only allow'''
                      ''' the method%(plural)s %(allowed)s here.''' % {
-                    'URI': self.uri,
+                    'URI': escape(self.uri),
                     'method': self.method,
                     'plural': ((len(allowedMethods) > 1) and 's') or '',
                     'allowed': string.join(allowedMethods, ', ')
@@ -186,9 +187,10 @@ class Request(pb.Copyable, http.Request, components.Componentized):
                                            "Method Not Allowed", s)
                 body = epage.render(self)
             else:
-                epage = resource.ErrorPage(http.NOT_IMPLEMENTED, "Huh?",
-                                           "I don't know how to treat a"
-                                           " %s request." % (self.method,))
+                epage = resource.ErrorPage(
+                    http.NOT_IMPLEMENTED, "Huh?",
+                    "I don't know how to treat a %s request." %
+                    (escape(self.method),))
                 body = epage.render(self)
         # end except UnsupportedMethod
 
