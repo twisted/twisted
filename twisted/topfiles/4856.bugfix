@@ -1,1 +1,0 @@
-ConnectionLost is now in twisted.internet.error.__all__ instead of twisted.words.protocols.jabber.xmlstream.__all__.

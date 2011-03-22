@@ -1,2 +1,0 @@
-Add the contents of the 'why' argument of the event dictionary to the stderr output produced by twisted.python.log.DefaultObserver
-

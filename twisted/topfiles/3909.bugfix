@@ -1,1 +1,0 @@
-trial now loads decorated test methods whether or not the decorator preserves the original method name.

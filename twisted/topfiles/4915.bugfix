@@ -1,1 +1,0 @@
-twisted.words.services referenced nonexistent twisted.words.protocols.irc.IRC_NOSUCHCHANNEL. This has been fixed. Related code has also received test cases.

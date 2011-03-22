@@ -1,1 +1,0 @@
-twistd will no longer fail if a non-root user passes --uid 'myuid' as a command-line argument. Instead, it will emit an error message.

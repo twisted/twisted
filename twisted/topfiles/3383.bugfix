@@ -1,1 +1,0 @@
-trial can now load test methods from multiple classes, even if the methods all happen to be inherited from the same base class.

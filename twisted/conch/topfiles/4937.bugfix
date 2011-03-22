@@ -1,1 +1,0 @@
-twisted.conch.ls.lsLine now returns a time string which does not consider the locale.

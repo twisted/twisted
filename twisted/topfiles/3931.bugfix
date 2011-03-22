@@ -1,1 +1,0 @@
-t.p.amp.AmpBox.serialize will now correctly consistently complain when being fed Unicode.

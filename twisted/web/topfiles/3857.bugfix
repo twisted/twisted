@@ -1,1 +1,0 @@
-HTTPPageGetter now adds the port to the host header if it is not the default for that scheme.

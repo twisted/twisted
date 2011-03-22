@@ -1,2 +1,0 @@
-Removed the non-working AIM bot example, depending on the obsolete
-twisted.words.protocols.toc functionality.
