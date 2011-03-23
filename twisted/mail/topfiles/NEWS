@@ -14,13 +14,17 @@ Features
 
 Bugfixes
 --------
- - twisted.protocols._c_urlarg now doesn't exist (#4162)
  - twisted.mail.imap4.IMAP4Server now generates INTERNALDATE strings
    which do not consider the locale. (#4937)
 
 Improved Documentation
 ----------------------
  - Added a simple SMTP example, showing how to use sendmail. (#4042)
+
+Other
+-----
+
+ - #4162
 
 
 Twisted Mail 10.2.0 (2010-11-29)

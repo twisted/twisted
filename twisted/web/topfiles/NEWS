@@ -21,7 +21,6 @@ Bugfixes
 --------
  - HTTPPageGetter now adds the port to the host header if it is not
    the default for that scheme. (#3857)
- - twisted.protocols._c_urlarg now doesn't exist (#4162)
  - twisted.web.http.Request.write now raises an exception if it is
    called after response generation has already finished. (#4317)
  - twisted.web.client.HTTPPageGetter and twisted.web.client.getPage
@@ -53,7 +52,7 @@ Improved Documentation
 
 Other
 -----
- - #2271, #2386, #4733, #4855, #4911, #4973
+ - #2271, #2386, #4162, #4733, #4855, #4911, #4973
 
 
 Twisted Web 10.2.0 (2010-11-29)

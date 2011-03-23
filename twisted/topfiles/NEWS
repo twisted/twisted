@@ -47,7 +47,6 @@ Bugfixes
    (#3948)
  - reactor.spawnProcess on Windows can now handle ASCII-encodable
    Unicode strings in the system environment (#3964)
- - twisted.protocols._c_urlarg now doesn't exist (#4162)
  - When C-extensions are not complied for twisted, on python2.4, skip
    a test in twisted.internet.test.test_process that may hang due to a
    SIGCHLD related problem. Running 'python setup.py build_ext
@@ -104,6 +103,7 @@ Deprecations and Removals
  - returning a value other than None from IProtocol.dataReceived was
    deprecated (#2491)
  - Deprecated the --extra option in trial.  (#3372)
+ - twisted.protocols._c_urlarg has been removed. (#4162)
  - Remove the --report-profile option for twistd, deprecated since
    2007. (#4236)
  - Deprecated twisted.persisted.journal.  This library is no longer
