@@ -77,8 +77,6 @@ Improved Documentation
    example files. (#3375)
  - Missing reactor.run() calls were added in the UDP and client howto
    documents. (#3834)
- - Tidied up the Twisted Development Policy documentation for easier
-   conversion. (#4567)
  - The maxRetries attribute of
    twisted.internet.protocols.RetryingClientFactory now has API
    documentation. (#4618)
@@ -91,9 +89,6 @@ Improved Documentation
  - The Endpoints howto now links to the API documentation. (#4774)
  - The Quotes howto is now more clear in its PYTHONPATH setup
    instructions. (#4785)
- - Clean up lore2sphinx conversion for PB core howto documentation.
-   (#4863)
- -  (#4872, #4873, #4876, #4879)
  - The API documentation for DeferredList's fireOnOneCallback
    parameter now gives the correct order of the elements of the result
    tuple. (#4882)
