@@ -11,7 +11,7 @@ import zipfile
 from twisted.python.compat import set
 from twisted.python import zipstream, filepath
 from twisted.python.hashlib import md5
-from twisted.trial import unittest
+from twisted.trial import unittest, util
 
 class FileEntryMixin:
     """
@@ -301,6 +301,29 @@ class ZipstreamTest(unittest.TestCase):
         for child in self.unzipdir.children():
             num = int(child.basename())
             self.assertEquals(child.open().read(), contents[num])
+    test_unzipIter.suppress = [
+        util.suppress(message="zipstream.unzipIter is deprecated")]
+
+
+    def test_unzipIterDeprecated(self):
+        """
+        Use of C{twisted.python.zipstream.unzipIter} will emit a
+        deprecated warning.
+        """
+        zpfilename = self.makeZipFile('foo')
+
+        self.assertEquals(len(self.flushWarnings()), 0)
+
+        for f in zipstream.unzipIter(zpfilename, self.unzipdir.path):
+            pass
+
+        warnings = self.flushWarnings()
+        self.assertEquals(len(warnings), 1)
+        self.assertEquals(warnings[0]['category'], DeprecationWarning)
+        self.assertEquals(
+            warnings[0]['message'],
+            "zipstream.unzipIter is deprecated since Twisted 11.0.0 for "
+            "security reasons.  Use Python's zipfile instead.")
 
 
     def test_unzipIterChunky(self):
@@ -353,6 +376,27 @@ class ZipstreamTest(unittest.TestCase):
             set(map(str, range(numfiles))))
         for i in range(numfiles):
             self.assertEqual(self.unzipdir.child(str(i)).getContent(), str(i))
+    test_unzip.suppress = [
+        util.suppress(message="zipstream.unzip is deprecated")]
+
+
+    def test_unzipDeprecated(self):
+        """
+        Use of C{twisted.python.zipstream.unzip} will emit a deprecated warning.
+        """
+        zpfilename = self.makeZipFile('foo')
+
+        self.assertEquals(len(self.flushWarnings()), 0)
+
+        zipstream.unzip(zpfilename, self.unzipdir.path)
+
+        warnings = self.flushWarnings()
+        self.assertEquals(len(warnings), 1)
+        self.assertEquals(warnings[0]['category'], DeprecationWarning)
+        self.assertEquals(
+            warnings[0]['message'],
+            "zipstream.unzip is deprecated since Twisted 11.0.0 for "
+            "security reasons.  Use Python's zipfile instead.")
 
 
     def test_unzipDirectory(self):
@@ -370,6 +414,8 @@ class ZipstreamTest(unittest.TestCase):
         for i in range(numfiles):
             self.assertEqual(
                 self.unzipdir.child('foo').child(str(i)).getContent(), str(i))
+    test_unzipDirectory.suppress = [
+        util.suppress(message="zipstream.unzip is deprecated")]
 
 
     def test_overwrite(self):
@@ -395,6 +441,9 @@ class ZipstreamTest(unittest.TestCase):
                                      overwrite=True)
         uziter.next()
         self.assertEquals(testfile.open().read(), 'OVERWRITTEN')
+    test_overwrite.suppress = [
+        util.suppress(message="zipstream.unzip is deprecated"),
+        util.suppress(message="zipstream.unzipIter is deprecated")]
 
 
     # XXX these tests are kind of gross and old, but I think unzipIterChunky is
