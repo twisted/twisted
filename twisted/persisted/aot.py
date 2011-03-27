@@ -11,7 +11,7 @@ The source-code-marshallin'est abstract-object-serializin'est persister
 this side of Marmalade!
 """
 
-import types, new, string, copy_reg, tokenize, re
+import types, string, copy_reg, tokenize, re
 
 from twisted.python import reflect, log
 from twisted.persisted import crefutil
@@ -120,7 +120,7 @@ class Ref:
         if self.refnum:
             return "Ref(%d, \n\0%s)" % (self.refnum, prettify(self.obj))
         return prettify(self.obj)
- 
+
 
 class Deref:
     def __init__(self, num):
@@ -306,7 +306,7 @@ class AOTUnjellier:
     def unjellyAttribute(self, instance, attrName, ao):
         #XXX this is unused????
         """Utility method for unjellying into instances of attributes.
-        
+
         Use this rather than unjellyAO unless you like surprising bugs!
         Alternatively, you can use unjellyInto on your instance's __dict__.
         """
@@ -337,9 +337,9 @@ class AOTUnjellier:
                     elif isinstance(im_self, crefutil.NotKnown):
                         return crefutil._InstanceMethod(im_name, im_self, im_class)
                     else:
-                        return new.instancemethod(im_class.__dict__[im_name],
-                                                  im_self,
-                                                  im_class)
+                        return types.MethodType(im_class.__dict__[im_name],
+                                                im_self,
+                                                im_class)
                 else:
                     raise TypeError("instance method changed")
 
@@ -347,10 +347,10 @@ class AOTUnjellier:
                 klass = reflect.namedObject(ao.klass)
                 state = self.unjellyAO(ao.state)
                 if hasattr(klass, "__setstate__"):
-                    inst = new.instance(klass, {})
+                    inst = types.InstanceType(klass, {})
                     self.callAfter(inst.__setstate__, state)
                 else:
-                    inst = new.instance(klass, state)
+                    inst = types.InstanceType(klass, state)
                 return inst
 
             elif c is Ref:
@@ -385,17 +385,17 @@ class AOTUnjellier:
                 return d
 
         #Types
-                
+
         elif t in _SIMPLE_BUILTINS:
             return ao
-            
+
         elif t is types.ListType:
             l = []
             for x in ao:
                 l.append(None)
                 self.unjellyInto(l, len(l)-1, x)
             return l
-        
+
         elif t is types.TupleType:
             l = []
             tuple_ = tuple
@@ -418,7 +418,7 @@ class AOTUnjellier:
 
         del self.stack[-1]
 
-        
+
     def unjelly(self, ao):
         try:
             l = [None]
@@ -451,7 +451,7 @@ def jellyToSource(obj, file=None):
         file.write(getSource(aot))
     else:
         return getSource(aot)
-        
+
 
 class AOTJellier:
     def __init__(self):
@@ -473,26 +473,26 @@ class AOTJellier:
         #immutable: We don't care if these have multiple refs!
         if objType in _SIMPLE_BUILTINS:
             retval = obj
-            
+
         elif objType is types.MethodType:
             # TODO: make methods 'prefer' not to jelly the object internally,
             # so that the object will show up where it's referenced first NOT
             # by a method.
             retval = InstanceMethod(obj.im_func.__name__, reflect.qual(obj.im_class),
                                     self.jellyToAO(obj.im_self))
-            
+
         elif objType is types.ModuleType:
             retval = Module(obj.__name__)
-            
+
         elif objType is types.ClassType:
             retval = Class(reflect.qual(obj))
 
         elif issubclass(objType, type):
             retval = Class(reflect.qual(obj))
-            
+
         elif objType is types.FunctionType:
             retval = Function(reflect.fullFuncName(obj))
-            
+
         else: #mutable! gotta watch for refs.
 
 #Marmalade had the nicety of being able to just stick a 'reference' attribute
@@ -518,10 +518,10 @@ class AOTJellier:
 
             retval = Ref()
             self.prepareForRef(retval, obj)
-            
+
             if objType is types.ListType:
                 retval.setObj(map(self.jellyToAO, obj)) #hah!
-                
+
             elif objType is types.TupleType:
                 retval.setObj(tuple(map(self.jellyToAO, obj)))
 
@@ -540,10 +540,10 @@ class AOTJellier:
 
             elif copy_reg.dispatch_table.has_key(objType):
                 unpickleFunc, state = copy_reg.dispatch_table[objType](obj)
-                
+
                 retval.setObj(Copyreg( reflect.fullFuncName(unpickleFunc),
                                        self.jellyToAO(state)))
-                
+
             else:
                 raise TypeError("Unsupported type: %s" % objType.__name__)
 

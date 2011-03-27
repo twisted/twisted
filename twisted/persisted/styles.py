@@ -21,12 +21,6 @@ except ImportError:
 # Twisted Imports
 from twisted.python import log
 
-try:
-    from new import instancemethod
-except:
-    from org.python.core import PyMethod
-    instancemethod = PyMethod
-
 oldModules = {}
 
 ## First, let's register support for some stuff that really ought to
@@ -46,9 +40,7 @@ def unpickleMethod(im_name,
         unbound = getattr(im_class,im_name)
         if im_self is None:
             return unbound
-        bound=instancemethod(unbound.im_func,
-                                 im_self,
-                                 im_class)
+        bound = types.MethodType(unbound.im_func, im_self, im_class)
         return bound
     except AttributeError:
         log.msg("Method",im_name,"not on class",im_class)
@@ -60,9 +52,7 @@ def unpickleMethod(im_name,
         log.msg("Attempting fixup with",unbound)
         if im_self is None:
             return unbound
-        bound=instancemethod(unbound.im_func,
-                                 im_self,
-                                 im_self.__class__)
+        bound = types.MethodType(unbound.im_func, im_self, im_self.__class__)
         return bound
 
 copy_reg.pickle(types.MethodType,
@@ -215,7 +205,7 @@ class Versioned:
         bases.append(self.__class__) # don't forget me!!
         # first let's look for old-skool versioned's
         if self.__dict__.has_key("persistenceVersion"):
-            
+
             # Hacky heuristic: if more than one class subclasses Versioned,
             # we'll assume that the higher version number wins for the older
             # class, so we'll consider the attribute the version of the older
@@ -223,7 +213,7 @@ class Versioned:
             # eventually be an incorrect assumption, but hopefully old-school
             # persistenceVersion stuff won't make it that far into multiple
             # classes inheriting from Versioned.
-            
+
             pver = self.__dict__['persistenceVersion']
             del self.__dict__['persistenceVersion']
             highestVersion = 0

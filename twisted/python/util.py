@@ -2,7 +2,8 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import os, sys, hmac, errno, new, inspect, warnings
+import os, sys, hmac, errno, inspect, warnings
+import types
 try:
     import pwd, grp
 except ImportError:
@@ -624,7 +625,7 @@ else:
 
         If the C extension is present, we're calling it, which in turn calls
         initgroups(3).
-        
+
         If not, this is done by reading the group database /etc/group and using
         all groups of which C{uid} is a member.  The additional group
         C{primaryGid} is also added to the list.
@@ -675,18 +676,18 @@ else:
 def switchUID(uid, gid, euid=False):
     """
     Attempts to switch the uid/euid and gid/egid for the current process.
-    
+
     If C{uid} is the same value as L{os.getuid} (or L{os.geteuid}),
     this function will issue a L{UserWarning} and not raise an exception.
-    
+
     @type uid: C{int} or C{NoneType}
     @param uid: the UID (or EUID) to switch the current process to. This
                 parameter will be ignored if the value is C{None}.
-    
+
     @type gid: C{int} or C{NoneType}
     @param gid: the GID (or EGID) to switch the current process to. This
                 parameter will be ignored if the value is C{None}.
-                
+
     @type euid: C{bool}
     @param euid: if True, set only effective user-id rather than real user-id.
                  (This option has no effect unless the process is running
@@ -840,7 +841,7 @@ def mergeFunctionMetadata(f, g):
         g.__name__ = f.__name__
     except TypeError:
         try:
-            merged = new.function(
+            merged = types.FunctionType(
                 g.func_code, g.func_globals,
                 f.__name__, inspect.getargspec(g)[-1],
                 g.func_closure)

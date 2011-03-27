@@ -15,7 +15,7 @@ L{inspect} module available in Python 2.1.
 """
 
 # System Imports
-import inspect, new, string, sys, types
+import inspect, string, sys, types
 import UserDict
 
 # Twisted Imports
@@ -35,7 +35,7 @@ class Pool(UserDict.UserDict):
             return self.data[oid]
         else:
             klass = typeTable.get(type(object), ExplorerGeneric)
-            e = new.instance(klass, {})
+            e = types.InstanceType(klass, {})
             self.data[oid] = e
             klass.__init__(e, object, identifier)
             return e
@@ -549,12 +549,12 @@ class CRUFT_WatchyThingie:
         members = dct.keys()
 
         clazzNS = {}
-        clazz = new.classobj('Watching%s%X' %
-                             (object.__class__.__name__, id(object)),
-                             (_MonkeysSetattrMixin, object.__class__,),
-                             clazzNS)
+        clazz = types.ClassType('Watching%s%X' %
+                                (object.__class__.__name__, id(object)),
+                                (_MonkeysSetattrMixin, object.__class__,),
+                                clazzNS)
 
-        clazzNS['_watchEmitChanged'] = new.instancemethod(
+        clazzNS['_watchEmitChanged'] = types.MethodType(
             lambda slf, i=identifier, b=self, cb=callback:
             cb(b.browseObject(slf, i)),
             None, clazz)
@@ -604,9 +604,8 @@ class _WatchMonkey:
         # XXX: this conditional probably isn't effective.
         if oldMethod is not self:
             # avoid triggering __setattr__
-            self.instance.__dict__[methodIdentifier] = (
-                new.instancemethod(self, self.instance,
-                                   self.instance.__class__))
+            self.instance.__dict__[methodIdentifier] = types.MethodType(
+                self, self.instance, self.instance.__class__)
             self.oldMethod = (methodIdentifier, oldMethod)
 
     def uninstall(self):

@@ -202,7 +202,7 @@ on arguments to the reactor method.
 """,
 }
 
-import new
+import types
 for tran in 'TCP UNIX SSL UDP UNIXDatagram Multicast'.split():
     for side in 'Server Client'.split():
         if tran == "Multicast" and side == "Client":
@@ -210,8 +210,8 @@ for tran in 'TCP UNIX SSL UDP UNIXDatagram Multicast'.split():
         base = globals()['_Abstract'+side]
         method = {'Generic': 'With'}.get(tran, tran)
         doc = _doc[side]%vars()
-        klass = new.classobj(tran+side, (base,),
-                             {'method': method, '__doc__': doc})
+        klass = types.ClassType(tran+side, (base,),
+                                {'method': method, '__doc__': doc})
         globals()[tran+side] = klass
 
 

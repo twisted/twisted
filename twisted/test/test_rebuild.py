@@ -3,7 +3,7 @@
 
 
 import sys, os
-import new
+import types
 
 from twisted.trial import unittest
 from twisted.python import rebuild
@@ -167,7 +167,7 @@ class NewStyleTestCase(unittest.TestCase):
     Tests for rebuilding new-style classes of various sorts.
     """
     def setUp(self):
-        self.m = new.module('whipping')
+        self.m = types.ModuleType('whipping')
         sys.modules['whipping'] = self.m
 
 

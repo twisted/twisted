@@ -8,13 +8,9 @@
 Utility classes for dealing with circular references.
 """
 
-from twisted.python import log, reflect
+import types
 
-try:
-    from new import instancemethod
-except:
-    from org.python.core import PyMethod
-    instancemethod = PyMethod
+from twisted.python import log, reflect
 
 
 class NotKnown:
@@ -113,9 +109,9 @@ class _InstanceMethod(NotKnown):
     def __setitem__(self, n, obj):
         assert n == 0, "only zero index allowed"
         if not isinstance(obj, NotKnown):
-            self.resolveDependants(instancemethod(self.my_class.__dict__[self.name],
-                                                  obj,
-                                                  self.my_class))
+            method = types.MethodType(self.my_class.__dict__[self.name],
+                                      obj, self.my_class)
+            self.resolveDependants(method)
 
 class _DictKeyAndValue:
     def __init__(self, dict):

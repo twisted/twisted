@@ -15,7 +15,7 @@ import traceback
 import weakref
 import re
 import warnings
-import new
+
 try:
     from collections import deque
 except ImportError:
@@ -493,14 +493,14 @@ def macro(name, filename, source, **identifiers):
     sm = sys.modules
     tprm = "twisted.python.reflect.macros"
     if not sm.has_key(tprm):
-        macros = new.module(tprm)
+        macros = types.ModuleType(tprm)
         sm[tprm] = macros
         macros.count = 0
     macros = sm[tprm]
     macros.count += 1
     macroname = 'macro_' + str(macros.count)
     tprmm = tprm + '.' + macroname
-    mymod = new.module(tprmm)
+    mymod = types.ModuleType(tprmm)
     sys.modules[tprmm] = mymod
     setattr(macros, macroname, mymod)
     dict = mymod.__dict__

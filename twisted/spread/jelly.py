@@ -104,8 +104,6 @@ finally:
     warnings.filters.pop()
 
 
-from new import instance
-from new import instancemethod
 from zope.interface import implements
 
 # Twisted Imports
@@ -151,7 +149,7 @@ _NO_STATE = object()
 
 def _newInstance(cls, state=_NO_STATE):
     """
-    Make a new instance of a class without calling its __init__ method. 
+    Make a new instance of a class without calling its __init__ method.
     Supports both new- and old-style classes.
 
     @param state: A C{dict} used to update C{inst.__dict__} or C{_NO_STATE}
@@ -167,9 +165,9 @@ def _newInstance(cls, state=_NO_STATE):
             inst.__dict__.update(state) # Copy 'instance' behaviour
     else:
         if state is not _NO_STATE:
-            inst = instance(cls, state)
-        else:   
-            inst = instance(cls)
+            inst = InstanceType(cls, state)
+        else:
+            inst = InstanceType(cls)
     return inst
 
 
@@ -930,9 +928,7 @@ class _Unjellier:
             elif isinstance(im_self, NotKnown):
                 im = _InstanceMethod(im_name, im_self, im_class)
             else:
-                im = instancemethod(im_class.__dict__[im_name],
-                                    im_self,
-                                    im_class)
+                im = MethodType(im_class.__dict__[im_name], im_self, im_class)
         else:
             raise TypeError('instance method changed')
         return im

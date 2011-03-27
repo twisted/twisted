@@ -28,7 +28,6 @@ To get started, begin with L{PBClientFactory} and L{PBServerFactory}.
 """
 
 import random
-import new
 import types
 
 from zope.interface import implements, Interface
@@ -429,7 +428,7 @@ class CopiedFailure(RemoteCopy, failure.Failure):
 setUnjellyableForClass(CopyableFailure, CopiedFailure)
 
 def failure2Copyable(fail, unsafeTracebacks=0):
-    f = new.instance(CopyableFailure, fail.__dict__)
+    f = types.InstanceType(CopyableFailure, fail.__dict__)
     f.unsafeTracebacks = unsafeTracebacks
     return f
 

@@ -8,7 +8,8 @@ Tests for twisted.enterprise.adbapi.
 
 from twisted.trial import unittest
 
-import os, stat, new
+import os, stat
+import types
 
 from twisted.enterprise.adbapi import ConnectionPool, ConnectionLost, safe
 from twisted.enterprise.adbapi import Connection, Transaction
@@ -555,7 +556,8 @@ def makeSQLTests(base, suffix, globals):
                   PsycopgConnector, MySQLConnector, FirebirdConnector]
     for connclass in connectors:
         name = connclass.TEST_PREFIX + suffix
-        klass = new.classobj(name, (connclass, base, unittest.TestCase), base.__dict__)
+        klass = types.ClassType(name, (connclass, base, unittest.TestCase),
+                                base.__dict__)
         globals[name] = klass
 
 # GadflyADBAPITestCase SQLiteADBAPITestCase PyPgSQLADBAPITestCase
