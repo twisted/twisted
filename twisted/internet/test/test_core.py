@@ -75,7 +75,7 @@ class SystemEventTestsBuilder(ReactorBuilder):
         """
         reactor = self.buildReactor()
         reactor.callWhenRunning(reactor.stop)
-        reactor.run()
+        self.runReactor(reactor)
         self.assertRaises(RuntimeError, reactor.stop)
 
 
@@ -89,7 +89,7 @@ class SystemEventTestsBuilder(ReactorBuilder):
         reactor.callWhenRunning(events.append, "first")
         reactor.callWhenRunning(events.append, "second")
         reactor.callWhenRunning(reactor.stop)
-        reactor.run()
+        self.runReactor(reactor)
         self.assertEqual(events, ["first", "second"])
 
 
@@ -112,7 +112,7 @@ class SystemEventTestsBuilder(ReactorBuilder):
         reactor.addSystemEventTrigger("after", "startup", afterStartup)
         reactor.callWhenRunning(reactor.stop)
         self.assertEqual(state, {})
-        reactor.run()
+        self.runReactor(reactor)
         self.assertEqual(
             state,
             {"before": False,
@@ -141,7 +141,7 @@ class SystemEventTestsBuilder(ReactorBuilder):
         reactor.callWhenRunning(reactor.stop)
         self.assertEqual(phase[0], None)
         self.assertEqual(sawPhase[0], None)
-        reactor.run()
+        self.runReactor(reactor)
         self.assertEqual(sawPhase[0], "before")
         self.assertEqual(phase[0], "after")
 
@@ -163,7 +163,7 @@ class SystemEventTestsBuilder(ReactorBuilder):
             "after", "shutdown",
             lambda: events.append(("after", "shutdown")))
         reactor.callWhenRunning(reactor.stop)
-        reactor.run()
+        self.runReactor(reactor)
         self.assertEquals(events, [("before", "shutdown"),
                                    ("during", "shutdown"),
                                    ("after", "shutdown")])
@@ -183,7 +183,7 @@ class SystemEventTestsBuilder(ReactorBuilder):
             events.append("stopped")
         reactor.callWhenRunning(stopIt)
         self.assertEqual(events, [])
-        reactor.run()
+        self.runReactor(reactor)
         self.assertEqual(events, ["stopped", "before shutdown"])
 
 
@@ -231,7 +231,7 @@ class SystemEventTestsBuilder(ReactorBuilder):
         reactor = self.buildReactor()
         reactor.callWhenRunning(reentrantRun)
         reactor.callWhenRunning(reactor.stop)
-        reactor.run()
+        self.runReactor(reactor)
         self.assertEqual(events, ["tested"])
 
 
@@ -253,7 +253,7 @@ class SystemEventTestsBuilder(ReactorBuilder):
             reactor.stop()
         reactor = self.buildReactor()
         reactor.addSystemEventTrigger('before', 'startup', trigger)
-        reactor.run()
+        self.runReactor(reactor)
         self.assertEqual(events, ['trigger', 'callback'])
 
 
@@ -283,7 +283,7 @@ class SystemEventTestsBuilder(ReactorBuilder):
             "before", "shutdown",
             lambda: events.append(("before", "shutdown")))
         reactor.callWhenRunning(reactor.callLater, 0, reactor.crash)
-        reactor.run()
+        self.runReactor(reactor)
         self.assertFalse(reactor.running)
         self.assertFalse(
             events,
@@ -301,12 +301,12 @@ class SystemEventTestsBuilder(ReactorBuilder):
             reactor.crash()
         reactor = self.buildReactor()
         reactor.callWhenRunning(crash)
-        reactor.run()
+        self.runReactor(reactor)
         def stop():
             events.append(('stop', reactor.running))
             reactor.stop()
         reactor.callWhenRunning(stop)
-        reactor.run()
+        self.runReactor(reactor)
         self.assertEqual(events, ['crash', ('stop', True)])
 
 
@@ -322,7 +322,7 @@ class SystemEventTestsBuilder(ReactorBuilder):
         reactor = self.buildReactor()
         reactor.callWhenRunning(reactor.stop)
         reactor.addSystemEventTrigger('after', 'shutdown', restart)
-        reactor.run()
+        self.runReactor(reactor)
         self.assertEqual(events, ['tested'])
 
 

@@ -67,7 +67,28 @@ def _our_mainquit():
 
 
 
-class Gtk2Reactor(posixbase.PosixReactorBase):
+class _Gtk2SignalMixin(object):
+    if runtime.platformType == 'posix':
+        def _handleSignals(self):
+            # Let the base class do its thing, but pygtk is probably
+            # going to stomp on us so go beyond that and set up some
+            # signal handling which pygtk won't mess with.  This would
+            # be better done by letting this reactor select a
+            # different implementation of installHandler for
+            # _SIGCHLDWaker to use.  Then, at least, we could fall
+            # back to our extension module.  See #4286.
+            from twisted.internet.process import reapAllProcesses as _reapAllProcesses
+            base._SignalReactorMixin._handleSignals(self)
+            signal.signal(signal.SIGCHLD, lambda *a: self.callFromThread(_reapAllProcesses))
+            if getattr(signal, "siginterrupt", None) is not None:
+                signal.siginterrupt(signal.SIGCHLD, False)
+            # Like the base, reap processes now in case a process
+            # exited before the handlers above were installed.
+            _reapAllProcesses()
+
+
+
+class Gtk2Reactor(_Gtk2SignalMixin, posixbase.PosixReactorBase):
     """
     GTK+-2 event loop reactor.
 
@@ -106,24 +127,6 @@ class Gtk2Reactor(posixbase.PosixReactorBase):
             self.__crash = _our_mainquit
             self.__run = gtk.main
 
-
-    if runtime.platformType == 'posix':
-        def _handleSignals(self):
-            # Let the base class do its thing, but pygtk is probably
-            # going to stomp on us so go beyond that and set up some
-            # signal handling which pygtk won't mess with.  This would
-            # be better done by letting this reactor select a
-            # different implementation of installHandler for
-            # _SIGCHLDWaker to use.  Then, at least, we could fall
-            # back to our extension module.  See #4286.
-            from twisted.internet.process import reapAllProcesses as _reapAllProcesses
-            base._SignalReactorMixin._handleSignals(self)
-            signal.signal(signal.SIGCHLD, lambda *a: self.callFromThread(_reapAllProcesses))
-            if getattr(signal, "siginterrupt", None) is not None:
-                signal.siginterrupt(signal.SIGCHLD, False)
-            # Like the base, reap processes now in case a process
-            # exited before the handlers above were installed.
-            _reapAllProcesses()
 
     # The input_add function in pygtk1 checks for objects with a
     # 'fileno' method and, if present, uses the result of that method
@@ -322,7 +325,7 @@ class Gtk2Reactor(posixbase.PosixReactorBase):
 
 
 
-class PortableGtkReactor(selectreactor.SelectReactor):
+class PortableGtkReactor(_Gtk2SignalMixin, selectreactor.SelectReactor):
     """
     Reactor that works on Windows.
 
@@ -346,10 +349,11 @@ class PortableGtkReactor(selectreactor.SelectReactor):
         self.startRunning(installSignalHandlers=installSignalHandlers)
         gobject.timeout_add(0, self.simulate)
         # mainloop is deprecated in newer versions
-        if hasattr(gtk, 'main'):
-            gtk.main()
-        else:
-            gtk.mainloop()
+        if self._started:
+            if hasattr(gtk, 'main'):
+                gtk.main()
+            else:
+                gtk.mainloop()
 
 
     def simulate(self):

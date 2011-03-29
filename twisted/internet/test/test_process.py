@@ -224,7 +224,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         # we aren't actually providing this functionality on the glib2
         # or gtk2 reactors yet.  See #4286 for the possibility of
         # improving this.
-        skippedReactors = ["Glib2Reactor", "Gtk2Reactor"]
+        skippedReactors = ["Glib2Reactor", "Gtk2Reactor", "PortableGtkReactor"]
         hasSigInterrupt = getattr(signal, "siginterrupt", None) is not None
         reactorClassName = reactor.__class__.__name__
         if reactorClassName in skippedReactors and not hasSigInterrupt:

@@ -11,16 +11,16 @@ import signal
 
 from twisted.internet.defer import TimeoutError
 from twisted.trial.unittest import TestCase, SkipTest
-from twisted.python.runtime import platformType
+from twisted.python.runtime import platform
 from twisted.python.reflect import namedAny
 from twisted.python import log
 from twisted.python.failure import Failure
 
 # Access private APIs.
-if platformType == 'posix':
-    from twisted.internet import process
-else:
+if platform.isWindows():
     process = None
+else:
+    from twisted.internet import process
 
 
 class ReactorBuilder:
@@ -43,15 +43,31 @@ class ReactorBuilder:
         TestCases will be created.
     """
 
-    _reactors = ["twisted.internet.selectreactor.SelectReactor",
-                 "twisted.internet.pollreactor.PollReactor",
-                 "twisted.internet.epollreactor.EPollReactor",
-                 "twisted.internet.glib2reactor.Glib2Reactor",
-                 "twisted.internet.gtk2reactor.Gtk2Reactor",
-                 "twisted.internet.kqreactor.KQueueReactor",
-                 "twisted.internet.win32eventreactor.Win32Reactor",
-                 "twisted.internet.iocpreactor.reactor.IOCPReactor",
-                 "twisted.internet.cfreactor.CFReactor"]
+    _reactors = [
+        # Select works everywhere
+        "twisted.internet.selectreactor.SelectReactor",
+        "twisted.internet.glib2reactor.Glib2Reactor",
+        "twisted.internet.gtk2reactor.Gtk2Reactor",
+        ]
+
+    if platform.isWindows():
+        # PortableGtkReactor is only really interesting on Windows,
+        # but not really Windows specific; if you want you can
+        # temporarily move this up to the all-platforms list to test
+        # it on other platforms.  It's not there in general because
+        # it's not _really_ worth it to support on other platforms,
+        # since no one really wants to use it on other platforms.
+        _reactors.extend([
+                "twisted.internet.gtk2reactor.PortableGtkReactor",
+                "twisted.internet.win32eventreactor.Win32Reactor",
+                "twisted.internet.iocpreactor.reactor.IOCPReactor"])
+    else:
+        _reactors.extend([
+                "twisted.internet.pollreactor.PollReactor",
+                "twisted.internet.epollreactor.EPollReactor",
+                "twisted.internet.kqreactor.KQueueReactor"])
+        if platform.isMacOSX():
+            _reactors.append("twisted.internet.cfreactor.CFReactor")
 
     reactorFactory = None
     originalHandler = None
@@ -63,7 +79,7 @@ class ReactorBuilder:
         Clear the SIGCHLD handler, if there is one, to ensure an environment
         like the one which exists prior to a call to L{reactor.run}.
         """
-        if platformType == 'posix':
+        if not platform.isWindows():
             self.originalHandler = signal.signal(signal.SIGCHLD, signal.SIG_DFL)
 
 
