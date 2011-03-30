@@ -77,8 +77,6 @@ Improved Documentation
    example files. (#3375)
  - Missing reactor.run() calls were added in the UDP and client howto
    documents. (#3834)
- - Tidied up the Twisted Development Policy documentation for easier
-   conversion. (#4567)
  - The maxRetries attribute of
    twisted.internet.protocols.RetryingClientFactory now has API
    documentation. (#4618)
@@ -91,9 +89,6 @@ Improved Documentation
  - The Endpoints howto now links to the API documentation. (#4774)
  - The Quotes howto is now more clear in its PYTHONPATH setup
    instructions. (#4785)
- - Clean up lore2sphinx conversion for PB core howto documentation.
-   (#4863)
- -  (#4872, #4873, #4876, #4879)
  - The API documentation for DeferredList's fireOnOneCallback
    parameter now gives the correct order of the elements of the result
    tuple. (#4882)
@@ -122,10 +117,12 @@ Deprecations and Removals
 
 Other
 -----
- - #555, #1982, #2618, #2665, #2666, #4035, #4247, #4636, #4717,
-   #4733, #4750, #4821, #4842, #4846, #4853, #4857, #4858, #4864,
-   #4865, #4866, #4867, #4868, #4869, #4870, #4871, #4874, #4875,
-   #4877, #4878, #4905, #4906, #4908, #4934, #4955, #4960
+
+- #555, #1982, #2618, #2665, #2666, #4035, #4247, #4567, #4636,
+  #4717, #4733, #4750, #4821, #4842, #4846, #4853, #4857, #4858,
+  #4863, #4864, #4865, #4866, #4867, #4868, #4869, #4870, #4871,
+  #4872, #4873, #4874, #4875, #4876, #4877, #4878, #4879, #4905,
+  #4906, #4908, #4934, #4955, #4960
 
 
 Twisted Conch 11.0.0pre1 (2011-03-22)
