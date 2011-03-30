@@ -72,8 +72,13 @@ on event-based network programming and multiprotocol integration.
             packages = getPackages('twisted'),
             conditionalExtensions = getExtensions(),
             scripts = scripts,
-            data_files=getDataFiles('twisted'), 
-            )
+            data_files=getDataFiles('twisted'),
+            classifiers=[
+                "Programming Language :: Python :: 2.4",
+                "Programming Language :: Python :: 2.5",
+                "Programming Language :: Python :: 2.6",
+                "Programming Language :: Python :: 2.7",
+                ])
 
     if 'setuptools' in sys.modules:
         from pkg_resources import parse_requirements
