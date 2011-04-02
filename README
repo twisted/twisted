@@ -3,11 +3,7 @@ Twisted 11.0.0
 Quote of the Release:
 
 
-  <Jerub> supposedUTF8Data.decode('utf-8', 'replace').encode(
-          'utf-16').decode('utf-16', 'replace').encode('utf-8').replace(
-          '"', '&quot';)
-  <Jerub> i feel like my entire life has been a comedy and that was its punch
-          line.
+  <lvh> PAS MAINTENANT CHEF! CHUIS EN TRAIN DE BRANCHER LE REACTEURRRRR
 
 
 For information on what's new in Twisted 11.0.0, see the NEWS file that comes
