@@ -40,7 +40,7 @@ else:
     DNSNAME = socket.getfqdn()
 
 # Used for fast success code lookup
-SUCCESS = dict(map(None, range(200, 300), []))
+SUCCESS = dict.fromkeys(xrange(200,300))
 
 class IMessageDelivery(Interface):
     def receivedHeader(helo, origin, recipients):
