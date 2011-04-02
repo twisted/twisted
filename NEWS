@@ -1,8 +1,8 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
-Twisted Core 11.0.0pre2 (2011-03-30)
-====================================
+Twisted Core 11.0.0 (2011-04-01)
+================================
 
 Features
 --------
@@ -125,8 +125,8 @@ Other
   #4906, #4908, #4934, #4955, #4960
 
 
-Twisted Conch 11.0.0pre2 (2011-03-30)
-=====================================
+Twisted Conch 11.0.0 (2011-04-01)
+=================================
 
 Bugfixes
 --------
@@ -155,14 +155,14 @@ Other
  - #2112
 
 
-Twisted Lore 11.0.0pre2 (2011-03-30)
-====================================
+Twisted Lore 11.0.0 (2011-04-01)
+================================
 
 No significant changes have been made for this release.
 
 
-Twisted Mail 11.0.0pre2 (2011-03-30)
-====================================
+Twisted Mail 11.0.0 (2011-04-01)
+================================
 
 Features
 --------
@@ -187,14 +187,14 @@ Other
  - #4162
 
 
-Twisted Names 11.0.0pre2 (2011-03-30)
-=====================================
+Twisted Names 11.0.0 (2011-04-01)
+=================================
 
 No significant changes have been made for this release.
 
 
-Twisted News 11.0.0pre2 (2011-03-30)
-====================================
+Twisted News 11.0.0 (2011-04-01)
+================================
 
 No significant changes have been made for this release.
 
@@ -203,20 +203,20 @@ Other
  - #4580
 
 
-Twisted Pair 11.0.0pre2 (2011-03-30)
-====================================
+Twisted Pair 11.0.0 (2011-04-01)
+================================
 
 No significant changes have been made for this release.
 
 
-Twisted Runner 11.0.0pre2 (2011-03-30)
-======================================
+Twisted Runner 11.0.0 (2011-04-01)
+==================================
 
 No significant changes have been made for this release.
 
 
-Twisted Web 11.0.0pre2 (2011-03-30)
-===================================
+Twisted Web 11.0.0 (2011-04-01)
+===============================
 
 Features
 --------
@@ -269,8 +269,8 @@ Other
  - #2271, #2386, #4162, #4733, #4855, #4911, #4973
 
 
-Twisted Words 11.0.0pre2 (2011-03-30)
-=====================================
+Twisted Words 11.0.0 (2011-04-01)
+=================================
 
 Features
 --------
