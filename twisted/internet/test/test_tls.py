@@ -7,13 +7,20 @@ Tests for implementations of L{ITLSTransport}.
 
 __metaclass__ = type
 
+from zope.interface import implements
+
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.protocol import ServerFactory, ClientFactory, Protocol
-from twisted.internet.interfaces import ITLSTransport
+from twisted.internet.interfaces import (
+    IReactorSSL, ITLSTransport, IStreamClientEndpoint)
 from twisted.internet.defer import Deferred, DeferredList
+from twisted.internet.endpoints import (
+    SSL4ServerEndpoint, SSL4ClientEndpoint, TCP4ClientEndpoint)
 from twisted.internet.error import ConnectionClosed
 from twisted.trial.unittest import SkipTest
 from twisted.python.runtime import platform
+
+from twisted.internet.test.connectionmixins import ConnectionTestsMixin
 
 try:
     from OpenSSL.crypto import FILETYPE_PEM
@@ -24,13 +31,8 @@ else:
     from twisted.internet.ssl import ClientContextFactory
 
 
-
-class SSLClientTestsMixin(ReactorBuilder):
-    """
-    Mixin defining tests relating to L{ITLSTransport}.
-    """
-    if FILETYPE_PEM is None:
-        skip = "OpenSSL is unavailable"
+class TLSMixin:
+    requiredInterfaces = [IReactorSSL]
 
     if platform.isWindows():
         msg = (
@@ -85,6 +87,87 @@ class SSLClientTestsMixin(ReactorBuilder):
         return cert.options()
 
 
+
+class StartTLSClientEndpoint(object):
+    """
+    An endpoint which wraps another one and adds a TLS layer immediately when
+    connections are set up.
+
+    @ivar wrapped: A L{IStreamClientEndpoint} provider which will be used to
+        really set up connections.
+
+    @ivar contextFactory: A L{ContextFactory} to use to do TLS.
+    """
+    implements(IStreamClientEndpoint)
+
+    def __init__(self, wrapped, contextFactory):
+        self.wrapped = wrapped
+        self.contextFactory = contextFactory
+
+
+    def connect(self, factory):
+        """
+        Establish a connection using a protocol build by C{factory} and
+        immediately start TLS on it.  Return a L{Deferred} which fires with the
+        protocol instance.
+        """
+        d = self.wrapped.connect(factory)
+        def connected(protocol):
+            protocol.transport.startTLS(self.contextFactory)
+            return protocol
+        d.addCallback(connected)
+        return d
+
+
+
+class StartTLSClientTestsMixin(TLSMixin, ReactorBuilder, ConnectionTestsMixin):
+    """
+    Tests for TLS connections established using L{ITLSTransport.startTLS} (as
+    opposed to L{IReactorSSL.connectSSL} or L{IReactorSSL.listenSSL}).
+    """
+    def serverEndpoint(self, reactor):
+        """
+        Construct an SSL server endpoint.  This should be be constructing a TCP
+        server endpoint which immediately calls C{startTLS} instead, but that
+        is hard.
+        """
+        return SSL4ServerEndpoint(reactor, 0, self.getServerContext())
+
+
+    def clientEndpoint(self, reactor, serverAddress):
+        """
+        Construct a TCP client endpoint wrapped to immediately start TLS.
+        """
+        return StartTLSClientEndpoint(
+            TCP4ClientEndpoint(
+                reactor, '127.0.0.1', serverAddress.port),
+            ClientContextFactory())
+
+
+
+class SSLClientTestsMixin(TLSMixin, ReactorBuilder, ConnectionTestsMixin):
+    """
+    Mixin defining tests relating to L{ITLSTransport}.
+    """
+    def serverEndpoint(self, reactor):
+        """
+        Create an SSL server endpoint on a TCP/IP-stack allocated port.
+        """
+        return SSL4ServerEndpoint(reactor, 0, self.getServerContext())
+
+
+    def clientEndpoint(self, reactor, serverAddress):
+        """
+        Create an SSL client endpoint which will connect localhost on
+        the port given by C{serverAddress}.
+
+        @type serverAddress: L{IPv4Address}
+        """
+        return SSL4ClientEndpoint(
+            reactor, '127.0.0.1', serverAddress.port,
+            ClientContextFactory())
+
+
     def test_disconnectAfterWriteAfterStartTLS(self):
         """
         L{ITCPTransport.loseConnection} ends a connection which was set up with
@@ -126,6 +209,8 @@ class SSLClientTestsMixin(ReactorBuilder):
                     self.factory.finished = None
                     finished.callback(reason)
 
+        reactor = self.buildReactor()
+
         serverFactory = ServerFactory()
         serverFactory.finished = Deferred()
         serverFactory.protocol = ShortProtocol
@@ -145,8 +230,6 @@ class SSLClientTestsMixin(ReactorBuilder):
             lostConnectionResults.extend([results[0][1], results[1][1]])
         finished.addCallback(cbFinished)
 
-        reactor = self.buildReactor()
-
         port = reactor.listenTCP(0, serverFactory, interface='127.0.0.1')
         self.addCleanup(port.stopListening)
 
@@ -161,3 +244,4 @@ class SSLClientTestsMixin(ReactorBuilder):
 
 
 globals().update(SSLClientTestsMixin.makeTestCaseClasses())
+globals().update(StartTLSClientTestsMixin.makeTestCaseClasses())

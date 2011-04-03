@@ -7,7 +7,7 @@ TCP support for IOCP reactor
 
 import socket, operator, errno, struct
 
-from zope.interface import implements, directlyProvides
+from zope.interface import implements, classImplements
 
 from twisted.internet import interfaces, error, address, main, defer
 from twisted.internet.abstract import isIPAddress
@@ -23,12 +23,9 @@ from twisted.internet.iocpreactor.const import ERROR_CONNECTION_REFUSED
 from twisted.internet.iocpreactor.const import ERROR_NETWORK_UNREACHABLE
 
 try:
-    from twisted.protocols.tls import TLSMemoryBIOFactory, TLSMemoryBIOProtocol
+    from twisted.internet._newtls import startTLS as _startTLS
 except ImportError:
-    TLSMemoryBIOProtocol = TLSMemoryBIOFactory = None
-    _extraInterfaces = ()
-else:
-    _extraInterfaces = (interfaces.ITLSTransport,)
+    _startTLS = None
 
 # ConnectEx returns these. XXX: find out what it does for timeout
 connectExErrors = {
@@ -37,54 +34,16 @@ connectExErrors = {
         }
 
 
-class _BypassTLS(object):
-    """
-    L{_BypassTLS} is used as the transport object for the TLS protocol object
-    used to implement C{startTLS}.  Its methods skip any TLS logic which
-    C{startTLS} enables.
-
-    @ivar _connection: A L{Connection} which TLS has been started on which will
-        be proxied to by this object.  Any method which has its behavior
-        altered after C{startTLS} will be skipped in favor of the base class's
-        implementation.  This allows the TLS protocol object to have direct
-        access to the transport, necessary to actually implement TLS.
-    """
-    def __init__(self, connection):
-        self._connection = connection
-
-
-    def __getattr__(self, name):
-        return getattr(self._connection, name)
-
-
-    def write(self, data):
-        return abstract.FileHandle.write(self._connection, data)
-
-
-    def writeSequence(self, iovec):
-        return abstract.FileHandle.writeSequence(self._connection, iovec)
-
-
-    def loseConnection(self, reason=None):
-        return abstract.FileHandle.loseConnection(self._connection, reason)
-
-
-
 class Connection(abstract.FileHandle, _SocketCloser):
     """
-    @ivar _tls: C{False} to indicate the connection is in normal TCP mode,
+    @ivar TLS: C{False} to indicate the connection is in normal TCP mode,
         C{True} to indicate that TLS has been started and that operations must
         be routed through the L{TLSMemoryBIOProtocol} instance.
-
-    @ivar _tlsClientDefault: A flag which must be set by a subclass.  If set to
-        C{True}, L{startTLS} will default to initiating SSL as a client.  If
-        set to C{False}, L{startTLS} will default to initiating SSL as a
-        server.
     """
     implements(IReadWriteHandle, interfaces.ITCPTransport,
-               interfaces.ISystemHandle, *_extraInterfaces)
+               interfaces.ISystemHandle)
 
-    _tls = False
+    TLS = False
 
     def __init__(self, sock, proto, reactor=None):
         abstract.FileHandle.__init__(self, reactor)
@@ -177,36 +136,12 @@ class Connection(abstract.FileHandle, _SocketCloser):
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, enabled)
 
 
-    if TLSMemoryBIOFactory is not None:
+    if _startTLS is not None:
         def startTLS(self, contextFactory, normal=True):
             """
             @see: L{ITLSTransport.startTLS}
             """
-            # Figure out which direction the SSL goes in.  If normal is True,
-            # we'll go in the direction indicated by the subclass.  Otherwise,
-            # we'll go the other way (client = not normal ^ _tlsClientDefault,
-            # in other words).
-            if normal:
-                client = self._tlsClientDefault
-            else:
-                client = not self._tlsClientDefault
-
-            tlsFactory = TLSMemoryBIOFactory(contextFactory, client, None)
-            tlsProtocol = TLSMemoryBIOProtocol(tlsFactory, self.protocol, False)
-            self.protocol = tlsProtocol
-
-            self.getHandle = tlsProtocol.getHandle
-            self.getPeerCertificate = tlsProtocol.getPeerCertificate
-
-            # Mark the transport as secure.
-            directlyProvides(self, interfaces.ISSLTransport)
-
-            # Remember we did this so that write and writeSequence can send the
-            # data to the right place.
-            self._tls = True
-
-            # Hook it up
-            self.protocol.makeConnection(_BypassTLS(self))
+            _startTLS(self, contextFactory, normal, abstract.FileHandle)
 
 
     def write(self, data):
@@ -217,7 +152,7 @@ class Connection(abstract.FileHandle, _SocketCloser):
 
         @see: L{ITCPTransport.write}
         """
-        if self._tls:
+        if self.TLS:
             self.protocol.write(data)
         else:
             abstract.FileHandle.write(self, data)
@@ -231,7 +166,7 @@ class Connection(abstract.FileHandle, _SocketCloser):
 
         @see: L{ITCPTransport.writeSequence}
         """
-        if self._tls:
+        if self.TLS:
             self.protocol.writeSequence(iovec)
         else:
             abstract.FileHandle.writeSequence(self, iovec)
@@ -244,15 +179,22 @@ class Connection(abstract.FileHandle, _SocketCloser):
 
         @see: L{ITCPTransport.loseConnection}
         """
-        if self._tls:
+        if self.TLS:
             if self.connected and not self.disconnecting:
                 self.protocol.loseConnection()
         else:
             abstract.FileHandle.loseConnection(self, reason)
 
+if _startTLS is not None:
+    classImplements(Connection, interfaces.ITLSTransport)
 
 
 class Client(Connection):
+    """
+    @ivar _tlsClientDefault: Always C{True}, indicating that this is a client
+        connection, and by default when TLS is negotiated this class will act as
+        a TLS client.
+    """
     addressFamily = socket.AF_INET
     socketType = socket.SOCK_STREAM
 
@@ -389,6 +331,10 @@ class Server(Connection):
 
     I am a serverside network connection transport; a socket which came from an
     accept() on a server.
+
+    @ivar _tlsClientDefault: Always C{False}, indicating that this is a server
+        connection, and by default when TLS is negotiated this class will act as
+        a TLS server.
     """
 
     _tlsClientDefault = False

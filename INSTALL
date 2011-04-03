@@ -4,8 +4,9 @@ Requirements
 
   Zope Interfaces 3.3.0 or better (http://pypi.python.org/pypi/zope.interface)
 
-  pyOpenSSL 0.10 (<http://launchpad.net/pyopenssl>) or newer is required for any
-  SSL APIs.
+  pyOpenSSL (<http://launchpad.net/pyopenssl>) is required for any SSL APIs.  On
+  Windows, version 0.10 or newer is required.  pyOpenSSL 0.10 or newer is also
+  preferred on other platforms, but older versions will work as well.
 
   On Windows pywin32 (<http://sourceforge.net/projects/pywin32/files/>) is
   recommended (this is already included in ActivePython).  The Windows IOCP

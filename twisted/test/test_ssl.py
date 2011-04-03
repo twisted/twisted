@@ -9,7 +9,6 @@ from twisted.trial import unittest
 from twisted.internet import protocol, reactor, interfaces, defer
 from twisted.protocols import basic
 from twisted.python import util
-from twisted.python.reflect import getClass, fullyQualifiedName
 from twisted.python.runtime import platform
 from twisted.test.test_tcp import WriteDataTestCase, ProperlyCloseFilesMixin
 
@@ -302,8 +301,6 @@ class StolenTCPTestCase(ProperlyCloseFilesMixin, unittest.TestCase):
         return SSL.Error
 
 
-    _iocp = 'twisted.internet.iocpreactor.reactor.IOCPReactor'
-
     def getHandleErrorCode(self):
         """
         Return the argument L{SSL.Error} will be constructed with for this
@@ -320,10 +317,18 @@ class StolenTCPTestCase(ProperlyCloseFilesMixin, unittest.TestCase):
         # and performed an orderly shutdown, then this would probably be a
         # little less weird: writing to a shutdown SSL connection has a more
         # well-defined failure mode (or at least it should).
-        name = fullyQualifiedName(getClass(reactor))
-        if platform.getType() == 'win32' and name != self._iocp:
-            return errno.WSAENOTSOCK
-        # This is terribly implementation-specific.
+
+        # So figure out if twisted.protocols.tls is in use.  If it can be
+        # imported, it should be.
+        try:
+            import twisted.protocols.tls
+        except ImportError:
+            # It isn't available, so we expect WSAENOTSOCK if we're on Windows.
+            if platform.getType() == 'win32':
+                return errno.WSAENOTSOCK
+
+        # Otherwise, we expect an error about how we tried to write to a
+        # shutdown connection.  This is terribly implementation-specific.
         return [('SSL routines', 'SSL_write', 'protocol is shutdown')]
 
 

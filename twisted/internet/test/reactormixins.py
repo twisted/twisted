@@ -46,8 +46,6 @@ class ReactorBuilder:
     _reactors = [
         # Select works everywhere
         "twisted.internet.selectreactor.SelectReactor",
-        "twisted.internet.glib2reactor.Glib2Reactor",
-        "twisted.internet.gtk2reactor.Gtk2Reactor",
         ]
 
     if platform.isWindows():
@@ -63,6 +61,8 @@ class ReactorBuilder:
                 "twisted.internet.iocpreactor.reactor.IOCPReactor"])
     else:
         _reactors.extend([
+                "twisted.internet.glib2reactor.Glib2Reactor",
+                "twisted.internet.gtk2reactor.Gtk2Reactor",
                 "twisted.internet.pollreactor.PollReactor",
                 "twisted.internet.epollreactor.EPollReactor",
                 "twisted.internet.kqreactor.KQueueReactor"])

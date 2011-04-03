@@ -27,13 +27,11 @@ implement SSL and TLS.  Typical usage of this module looks like this::
     reactor.listenTCP(12345, tlsFactory)
     reactor.run()
 
-Because the reactor's SSL and TLS APIs are likely implemented in a more
-efficient way, it is more common to use them (see L{IReactorSSL} and
-L{ITLSTransport}).  However, this API offers somewhat more flexibility; for
-example, a L{TLSMemoryBIOProtocol} instance can use another instance of
+This API offers somewhat more flexibility than L{IReactorSSL}; for example, a
+L{TLSMemoryBIOProtocol} instance can use another instance of
 L{TLSMemoryBIOProtocol} as its transport, yielding TLS over TLS - useful to
-implement onion routing.  Or it can be used to run TLS over a UNIX socket,
-or over stdio to a child process.
+implement onion routing.  It can also be used to run TLS over unusual
+transports, such as UNIX sockets and stdio.
 """
 
 

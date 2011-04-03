@@ -18,16 +18,23 @@ from twisted.internet.interfaces import (
     IResolverSimple, IConnector, IReactorFDSet)
 from twisted.internet.address import IPv4Address
 from twisted.internet.defer import Deferred, DeferredList, succeed, fail, maybeDeferred
-from twisted.internet.endpoints import TCP4ClientEndpoint
+from twisted.internet.endpoints import TCP4ServerEndpoint, TCP4ClientEndpoint
 from twisted.internet.protocol import ServerFactory, ClientFactory, Protocol
 from twisted.python.runtime import platform
 from twisted.python.failure import Failure
 from twisted.python import log
 from twisted.trial.unittest import SkipTest, TestCase
-from twisted.internet.tcp import Connection
+from twisted.internet.tcp import Connection, Server
 
 from twisted.test.test_tcp import ClosingProtocol
 from twisted.internet.test.test_core import ObjectModelIntegrationMixin
+from twisted.internet.test.connectionmixins import (
+    ConnectionTestsMixin, serverFactoryFor)
+
+try:
+    from twisted.internet.ssl import ClientContextFactory
+except ImportError:
+    ClientContextFactory = None
 
 
 def findFreePort(interface='127.0.0.1', type=socket.SOCK_STREAM):
@@ -50,6 +57,7 @@ def findFreePort(interface='127.0.0.1', type=socket.SOCK_STREAM):
         return probe.getsockname()
     finally:
         probe.close()
+
 
 
 class Stop(ClientFactory):
@@ -116,30 +124,59 @@ def _getWriters(reactor):
 
 
 
-def serverFactoryFor(protocol):
-    """
-    Helper function which provides the signature L{ServerFactory} should
-    provide.
-    """
-    factory = ServerFactory()
-    factory.protocol = protocol
-    return factory
-
-
 class FakeSocket(object):
     """
-    A Fake Socket object
-    """
-    fileno = 1
+    A fake for L{socket.socket} objects.
 
+    @ivar data: A C{str} giving the data which will be returned from
+        L{FakeSocket.recv}.
+
+    @ivar sendBuffer: A C{list} of the objects passed to L{FakeSocket.send}.
+    """
     def __init__(self, data):
         self.data = data
+        self.sendBuffer = []
 
     def setblocking(self, blocking):
         self.blocking = blocking
 
     def recv(self, size):
         return self.data
+
+    def send(self, bytes):
+        """
+        I{Send} all of C{bytes} by accumulating it into C{self.sendBuffer}.
+
+        @return: The length of C{bytes}, indicating all the data has been
+            accepted.
+        """
+        self.sendBuffer.append(bytes)
+        return len(bytes)
+
+
+    def shutdown(self, how):
+        """
+        Shutdown is not implemented.  The method is provided since real sockets
+        have it and some code expects it.  No behavior of L{FakeSocket} is
+        affected by a call to it.
+        """
+
+
+    def close(self):
+        """
+        Close is not implemented.  The method is provided since real sockets
+        have it and some code expects it.  No behavior of L{FakeSocket} is
+        affected by a call to it.
+        """
+
+
+    def fileno(self):
+        """
+        Return a fake file descriptor.  If actually used, this will have no
+        connection to this L{FakeSocket} and will probably cause surprising
+        results.
+        """
+        return 1
 
 
 
@@ -159,6 +196,17 @@ class TestFakeSocket(TestCase):
         self.assertEquals(skt.recv(10), "someData")
 
 
+    def test_send(self):
+        """
+        L{FakeSocket.send} accepts the entire string passed to it, adds it to
+        its send buffer, and returns its length.
+        """
+        skt = FakeSocket("")
+        count = skt.send("foo")
+        self.assertEqual(count, 3)
+        self.assertEqual(skt.sendBuffer, ["foo"])
+
+
 
 class FakeProtocol(Protocol):
     """
@@ -170,6 +218,73 @@ class FakeProtocol(Protocol):
         that behavior.
         """
         return ()
+
+
+
+class _FakeFDSetReactor(object):
+    """
+    A no-op implementation of L{IReactorFDSet}, which ignores all adds and
+    removes.
+    """
+    implements(IReactorFDSet)
+
+    addReader = addWriter = removeReader = removeWriter = (
+        lambda self, desc: None)
+
+
+
+class TCPServerTests(TestCase):
+    """
+    Whitebox tests for L{twisted.internet.tcp.Server}.
+    """
+    def setUp(self):
+        self.reactor = _FakeFDSetReactor()
+        class FakePort(object):
+            _realPortNumber = 3
+        self.skt = FakeSocket("")
+        self.protocol = Protocol()
+        self.server = Server(
+            self.skt, self.protocol, ("", 0), FakePort(), None, self.reactor)
+
+
+    def test_writeAfterDisconnect(self):
+        """
+        L{Server.write} discards bytes passed to it if called after it has lost
+        its connection.
+        """
+        self.server.connectionLost(
+            Failure(Exception("Simulated lost connection")))
+        self.server.write("hello world")
+        self.assertEqual(self.skt.sendBuffer, [])
+
+
+    def test_writeAfteDisconnectAfterTLS(self):
+        """
+        L{Server.write} discards bytes passed to it if called after it has lost
+        its connection when the connection had started TLS.
+        """
+        self.server.TLS = True
+        self.test_writeAfterDisconnect()
+
+
+    def test_writeSequenceAfterDisconnect(self):
+        """
+        L{Server.writeSequence} discards bytes passed to it if called after it
+        has lost its connection.
+        """
+        self.server.connectionLost(
+            Failure(Exception("Simulated lost connection")))
+        self.server.writeSequence(["hello world"])
+        self.assertEqual(self.skt.sendBuffer, [])
+
+
+    def test_writeSequenceAfteDisconnectAfterTLS(self):
+        """
+        L{Server.writeSequence} discards bytes passed to it if called after it
+        has lost its connection when the connection had started TLS.
+        """
+        self.server.TLS = True
+        self.test_writeSequenceAfterDisconnect()
 
 
 
@@ -196,11 +311,55 @@ class TCPConnectionTests(TestCase):
         self.assertEquals(len(warnings), 1)
 
 
+    def test_noTLSBeforeStartTLS(self):
+        """
+        The C{TLS} attribute of a L{Connection} instance is C{False} before
+        L{Connection.startTLS} is called.
+        """
+        skt = FakeSocket("")
+        protocol = FakeProtocol()
+        conn = Connection(skt, protocol)
+        self.assertFalse(conn.TLS)
 
-class TCPClientTestsBuilder(ReactorBuilder):
+
+    def test_tlsAfterStartTLS(self):
+        """
+        The C{TLS} attribute of a L{Connection} instance is C{True} after
+        L{Connection.startTLS} is called.
+        """
+        skt = FakeSocket("")
+        protocol = FakeProtocol()
+        conn = Connection(skt, protocol, reactor=_FakeFDSetReactor())
+        conn._tlsClientDefault = True
+        conn.startTLS(ClientContextFactory(), True)
+        self.assertTrue(conn.TLS)
+    if ClientContextFactory is None:
+        test_tlsAfterStartTLS.skip = "No SSL support available"
+
+
+class TCPClientTestsBuilder(ReactorBuilder, ConnectionTestsMixin):
     """
     Builder defining tests relating to L{IReactorTCP.connectTCP}.
     """
+    def serverEndpoint(self, reactor):
+        """
+        Create a L{TCP4ServerEndpoint} listening on localhost on a
+        TCP/IP-selected port.
+        """
+        return TCP4ServerEndpoint(reactor, 0, interface='127.0.0.1')
+
+
+    def clientEndpoint(self, reactor, serverAddress):
+        """
+        Create a L{TCP4ClientEndpoint} which will connect to localhost
+        on the port given by C{serverAddress}.
+
+        @type serverAddress: L{IPv4Address}
+        """
+        return TCP4ClientEndpoint(
+            reactor, '127.0.0.1', serverAddress.port)
+
+
     def test_interface(self):
         """
         L{IReactorTCP.connectTCP} returns an object providing L{IConnector}.

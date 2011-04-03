@@ -12,21 +12,39 @@ Maintainer: Itamar Shtull-Trauring
 
 
 # System Imports
-import os
 import types
 import socket
 import sys
 import operator
 
-from zope.interface import implements, classImplements
-
-try:
-    from OpenSSL import SSL
-except ImportError:
-    SSL = None
+from zope.interface import implements
 
 from twisted.python.runtime import platformType
 from twisted.python import versions, deprecate
+
+try:
+    # Try to get the memory BIO based startTLS implementation, available since
+    # pyOpenSSL 0.10
+    from twisted.internet._newtls import (
+        ConnectionMixin as _TLSConnectionMixin,
+        ClientMixin as _TLSClientMixin,
+        ServerMixin as _TLSServerMixin)
+except ImportError:
+    try:
+        # Try to get the socket BIO based startTLS implementation, available in
+        # all pyOpenSSL versions
+        from twisted.internet._oldtls import (
+            ConnectionMixin as _TLSConnectionMixin,
+            ClientMixin as _TLSClientMixin,
+            ServerMixin as _TLSServerMixin)
+    except ImportError:
+        # There is no version of startTLS available
+        class _TLSConnectionMixin(object):
+            TLS = False
+        class _TLSClientMixin(object):
+            pass
+        class _TLSServerMixin(object):
+            pass
 
 if platformType == 'win32':
     # no such thing as WSAEPERM or error code 10001 according to winsock.h or MSDN
@@ -101,269 +119,7 @@ class _SocketCloser(object):
 
 
 
-class _TLSMixin:
-    _socketShutdownMethod = 'sock_shutdown'
-
-    writeBlockedOnRead = 0
-    readBlockedOnWrite = 0
-    _userWantRead = _userWantWrite = True
-
-    def getPeerCertificate(self):
-        return self.socket.get_peer_certificate()
-
-    def doRead(self):
-        if self.disconnected:
-            # See the comment in the similar check in doWrite below.
-            # Additionally, in order for anything other than returning
-            # CONNECTION_DONE here to make sense, it will probably be necessary
-            # to implement a way to switch back to TCP from TLS (actually, if
-            # we did something other than return CONNECTION_DONE, that would be
-            # a big part of implementing that feature).  In other words, the
-            # expectation is that doRead will be called when self.disconnected
-            # is True only when the connection has been lost.  It's possible
-            # that the other end could stop speaking TLS and then send us some
-            # non-TLS data.  We'll end up ignoring that data and dropping the
-            # connection.  There's no unit tests for this check in the cases
-            # where it makes a difference.  The test suite only hits this
-            # codepath when it would have otherwise hit the SSL.ZeroReturnError
-            # exception handler below, which has exactly the same behavior as
-            # this conditional.  Maybe that's the only case that can ever be
-            # triggered, I'm not sure.  -exarkun
-            return main.CONNECTION_DONE
-        if self.writeBlockedOnRead:
-            self.writeBlockedOnRead = 0
-            self._resetReadWrite()
-        try:
-            return Connection.doRead(self)
-        except SSL.ZeroReturnError:
-            return main.CONNECTION_DONE
-        except SSL.WantReadError:
-            return
-        except SSL.WantWriteError:
-            self.readBlockedOnWrite = 1
-            Connection.startWriting(self)
-            Connection.stopReading(self)
-            return
-        except SSL.SysCallError, (retval, desc):
-            if ((retval == -1 and desc == 'Unexpected EOF')
-                or retval > 0):
-                return main.CONNECTION_LOST
-            log.err()
-            return main.CONNECTION_LOST
-        except SSL.Error, e:
-            return e
-
-    def doWrite(self):
-        # Retry disconnecting
-        if self.disconnected:
-            # This case is triggered when "disconnected" is set to True by a
-            # call to _postLoseConnection from FileDescriptor.doWrite (to which
-            # we upcall at the end of this overridden version of that API).  It
-            # means that while, as far as any protocol connected to this
-            # transport is concerned, the connection no longer exists, the
-            # connection *does* actually still exist.  Instead of closing the
-            # connection in the overridden _postLoseConnection, we probably
-            # tried (and failed) to send a TLS close alert.  The TCP connection
-            # is still up and we're waiting for the socket to become writeable
-            # enough for the TLS close alert to actually be sendable.  Only
-            # then will the connection actually be torn down. -exarkun
-            return self._postLoseConnection()
-        if self._writeDisconnected:
-            return self._closeWriteConnection()
-
-        if self.readBlockedOnWrite:
-            self.readBlockedOnWrite = 0
-            self._resetReadWrite()
-        return Connection.doWrite(self)
-
-    def writeSomeData(self, data):
-        try:
-            return Connection.writeSomeData(self, data)
-        except SSL.WantWriteError:
-            return 0
-        except SSL.WantReadError:
-            self.writeBlockedOnRead = 1
-            Connection.stopWriting(self)
-            Connection.startReading(self)
-            return 0
-        except SSL.ZeroReturnError:
-            return main.CONNECTION_LOST
-        except SSL.SysCallError, e:
-            if e[0] == -1 and data == "":
-                # errors when writing empty strings are expected
-                # and can be ignored
-                return 0
-            else:
-                return main.CONNECTION_LOST
-        except SSL.Error, e:
-            return e
-
-
-    def _postLoseConnection(self):
-        """
-        Gets called after loseConnection(), after buffered data is sent.
-
-        We try to send an SSL shutdown alert, but if it doesn't work, retry
-        when the socket is writable.
-        """
-        # Here, set "disconnected" to True to trick higher levels into thinking
-        # the connection is really gone.  It's not, and we're not going to
-        # close it yet.  Instead, we'll try to send a TLS close alert to shut
-        # down the TLS connection cleanly.  Only after we actually get the
-        # close alert into the socket will we disconnect the underlying TCP
-        # connection.
-        self.disconnected = True
-        if hasattr(self.socket, 'set_shutdown'):
-            # If possible, mark the state of the TLS connection as having
-            # already received a TLS close alert from the peer.  Why do
-            # this???
-            self.socket.set_shutdown(SSL.RECEIVED_SHUTDOWN)
-        return self._sendCloseAlert()
-
-
-    def _sendCloseAlert(self):
-        # Okay, *THIS* is a bit complicated.
-
-        # Basically, the issue is, OpenSSL seems to not actually return
-        # errors from SSL_shutdown. Therefore, the only way to
-        # determine if the close notification has been sent is by
-        # SSL_shutdown returning "done". However, it will not claim it's
-        # done until it's both sent *and* received a shutdown notification.
-
-        # I don't actually want to wait for a received shutdown
-        # notification, though, so, I have to set RECEIVED_SHUTDOWN
-        # before calling shutdown. Then, it'll return True once it's
-        # *SENT* the shutdown.
-
-        # However, RECEIVED_SHUTDOWN can't be left set, because then
-        # reads will fail, breaking half close.
-
-        # Also, since shutdown doesn't report errors, an empty write call is
-        # done first, to try to detect if the connection has gone away.
-        # (*NOT* an SSL_write call, because that fails once you've called
-        # shutdown)
-        try:
-            os.write(self.socket.fileno(), '')
-        except OSError, se:
-            if se.args[0] in (EINTR, EWOULDBLOCK, ENOBUFS):
-                return 0
-            # Write error, socket gone
-            return main.CONNECTION_LOST
-
-        try:
-            if hasattr(self.socket, 'set_shutdown'):
-                laststate = self.socket.get_shutdown()
-                self.socket.set_shutdown(laststate | SSL.RECEIVED_SHUTDOWN)
-                done = self.socket.shutdown()
-                if not (laststate & SSL.RECEIVED_SHUTDOWN):
-                    self.socket.set_shutdown(SSL.SENT_SHUTDOWN)
-            else:
-                #warnings.warn("SSL connection shutdown possibly unreliable, "
-                #              "please upgrade to ver 0.XX", category=UserWarning)
-                self.socket.shutdown()
-                done = True
-        except SSL.Error, e:
-            return e
-
-        if done:
-            self.stopWriting()
-            # Note that this is tested for by identity below.
-            return main.CONNECTION_DONE
-        else:
-            # For some reason, the close alert wasn't sent.  Start writing
-            # again so that we'll get another chance to send it.
-            self.startWriting()
-            # On Linux, select will sometimes not report a closed file
-            # descriptor in the write set (in particular, it seems that if a
-            # send() fails with EPIPE, the socket will not appear in the write
-            # set).  The shutdown call above (which calls down to SSL_shutdown)
-            # may have swallowed a write error.  Therefore, also start reading
-            # so that if the socket is closed we will notice.  This doesn't
-            # seem to be a problem for poll (because poll reports errors
-            # separately) or with select on BSD (presumably because, unlike
-            # Linux, it doesn't implement select in terms of poll and then map
-            # POLLHUP to select's in fd_set).
-            self.startReading()
-            return None
-
-    def _closeWriteConnection(self):
-        result = self._sendCloseAlert()
-
-        if result is main.CONNECTION_DONE:
-            return Connection._closeWriteConnection(self)
-
-        return result
-
-    def startReading(self):
-        self._userWantRead = True
-        if not self.readBlockedOnWrite:
-            return Connection.startReading(self)
-
-    def stopReading(self):
-        self._userWantRead = False
-        if not self.writeBlockedOnRead:
-            return Connection.stopReading(self)
-
-    def startWriting(self):
-        self._userWantWrite = True
-        if not self.writeBlockedOnRead:
-            return Connection.startWriting(self)
-
-    def stopWriting(self):
-        self._userWantWrite = False
-        if not self.readBlockedOnWrite:
-            return Connection.stopWriting(self)
-
-    def _resetReadWrite(self):
-        # After changing readBlockedOnWrite or writeBlockedOnRead,
-        # call this to reset the state to what the user requested.
-        if self._userWantWrite:
-            self.startWriting()
-        else:
-            self.stopWriting()
-
-        if self._userWantRead:
-            self.startReading()
-        else:
-            self.stopReading()
-
-
-
-class _TLSDelayed(object):
-    """
-    State tracking record for TLS startup parameters.  Used to remember how
-    TLS should be started when starting it is delayed to wait for the output
-    buffer to be flushed.
-
-    @ivar bufferedData: A C{list} which contains all the data which was
-        written to the transport after an attempt to start TLS was made but
-        before the buffers outstanding at that time could be flushed and TLS
-        could really be started.  This is appended to by the transport's
-        write and writeSequence methods until it is possible to actually
-        start TLS, then it is written to the TLS-enabled transport.
-
-    @ivar context: An SSL context factory object to use to start TLS.
-
-    @ivar extra: An extra argument to pass to the transport's C{startTLS}
-        method.
-    """
-    def __init__(self, bufferedData, context, extra):
-        self.bufferedData = bufferedData
-        self.context = context
-        self.extra = extra
-
-
-
-def _getTLSClass(klass, _existing={}):
-    if klass not in _existing:
-        class TLSConnection(_TLSMixin, klass):
-            implements(interfaces.ISSLTransport)
-        _existing[klass] = TLSConnection
-    return _existing[klass]
-
-
-
-class Connection(abstract.FileDescriptor, _SocketCloser):
+class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser):
     """
     Superclass of all socket-based FileDescriptors.
 
@@ -373,10 +129,7 @@ class Connection(abstract.FileDescriptor, _SocketCloser):
     @ivar logstr: prefix used when logging events related to this connection.
     @type logstr: C{str}
     """
-
     implements(interfaces.ITCPTransport, interfaces.ISystemHandle)
-
-    TLS = 0
 
     def __init__(self, skt, protocol, reactor=None):
         abstract.FileDescriptor.__init__(self, reactor=reactor)
@@ -384,56 +137,6 @@ class Connection(abstract.FileDescriptor, _SocketCloser):
         self.socket.setblocking(0)
         self.fileno = skt.fileno
         self.protocol = protocol
-
-    if SSL:
-        _tlsWaiting = None
-        def startTLS(self, ctx, extra):
-            assert not self.TLS
-            if self.dataBuffer or self._tempDataBuffer:
-                # pre-TLS bytes are still being written.  Starting TLS now
-                # will do the wrong thing.  Instead, mark that we're trying
-                # to go into the TLS state.
-                self._tlsWaiting = _TLSDelayed([], ctx, extra)
-                return False
-
-            self.stopReading()
-            self.stopWriting()
-            self._startTLS()
-            self.socket = SSL.Connection(ctx.getContext(), self.socket)
-            self.fileno = self.socket.fileno
-            self.startReading()
-            return True
-
-
-        def _startTLS(self):
-            self.TLS = 1
-            self.__class__ = _getTLSClass(self.__class__)
-
-
-        def write(self, bytes):
-            if self._tlsWaiting is not None:
-                self._tlsWaiting.bufferedData.append(bytes)
-            else:
-                abstract.FileDescriptor.write(self, bytes)
-
-
-        def writeSequence(self, iovec):
-            if self._tlsWaiting is not None:
-                self._tlsWaiting.bufferedData.extend(iovec)
-            else:
-                abstract.FileDescriptor.writeSequence(self, iovec)
-
-
-        def doWrite(self):
-            result = abstract.FileDescriptor.doWrite(self)
-            if self._tlsWaiting is not None:
-                if not self.dataBuffer and not self._tempDataBuffer:
-                    waiting = self._tlsWaiting
-                    self._tlsWaiting = None
-                    self.startTLS(waiting.context, waiting.extra)
-                    self.writeSequence(waiting.bufferedData)
-            return result
-
 
     def getHandle(self):
         """Return the socket for this connection."""
@@ -548,17 +251,21 @@ class Connection(abstract.FileDescriptor, _SocketCloser):
     def setTcpKeepAlive(self, enabled):
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, enabled)
 
-if SSL:
-    classImplements(Connection, interfaces.ITLSTransport)
 
-class BaseClient(Connection):
-    """A base class for client TCP (and similiar) sockets.
+
+class BaseClient(_TLSClientMixin, Connection):
     """
+    A base class for client TCP (and similiar) sockets.
+    """
+    _base = Connection
+
     addressFamily = socket.AF_INET
     socketType = socket.SOCK_STREAM
 
     def _finishInit(self, whenDone, skt, error, reactor):
-        """Called by base classes to continue to next stage of initialization."""
+        """
+        Called by base classes to continue to next stage of initialization.
+        """
         if whenDone:
             Connection.__init__(self, skt, None, reactor)
             self.doWrite = self.doConnect
@@ -566,14 +273,6 @@ class BaseClient(Connection):
             reactor.callLater(0, whenDone)
         else:
             reactor.callLater(0, self.failIfNotConnected, error)
-
-    def startTLS(self, ctx, client=1):
-        if Connection.startTLS(self, ctx, client):
-            if client:
-                self.socket.set_connect_state()
-            else:
-                self.socket.set_accept_state()
-
 
     def stopConnecting(self):
         """Stop attempt to connect."""
@@ -732,13 +431,21 @@ class Client(BaseClient):
         return s
 
 
-class Server(Connection):
+class Server(_TLSServerMixin, Connection):
     """
     Serverside socket-stream connection class.
 
     This is a serverside network connection transport; a socket which came from
     an accept() on a server.
+
+    @ivar _base: L{Connection}, which is the base class of this class which has
+        all of the useful file descriptor methods.  This is used by
+        L{_TLSServerMixin} to call the right methods to directly manipulate the
+        transport, as is necessary for writing TLS-encrypted bytes (whereas
+        those methods on L{Server} will go through another layer of TLS if it
+        has been enabled).
     """
+    _base = Connection
 
     def __init__(self, sock, protocol, client, server, sessionno, reactor):
         """
@@ -766,14 +473,6 @@ class Server(Connection):
         """A string representation of this connection.
         """
         return self.repstr
-
-    def startTLS(self, ctx, server=1):
-        if Connection.startTLS(self, ctx, server):
-            if server:
-                self.socket.set_accept_state()
-            else:
-                self.socket.set_connect_state()
-
 
     def getHost(self):
         """Returns an IPv4Address.

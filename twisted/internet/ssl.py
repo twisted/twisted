@@ -19,31 +19,14 @@ Future Plans:
     - split module so reactor-specific classes are in a separate module
 """
 
-# If something goes wrong, most notably an OpenSSL import failure,
-# sys.modules['twisted.internet.ssl'] will be bound to a partially
-# initialized module object.  This is wacko, but we will take advantage
-# of it to publish whether or not SSL is available.
-# See the end of this module for the other half of this solution.
-
-# The correct idiom to import this module is thus:
-
-# try:
-#    from twisted.internet import ssl
-# except ImportError:
-#    # happens the first time the interpreter tries to import it
-#    ssl = None
-# if ssl and not ssl.supported:
-#    # happens second and later times
-#    ssl = None
-
-supported = False
-
 # System imports
 from OpenSSL import SSL
+supported = True
+
 from zope.interface import implements, implementsOnly, implementedBy
 
 # Twisted imports
-from twisted.internet import tcp, interfaces, base, address
+from twisted.internet import tcp, interfaces
 
 
 class ContextFactory:
@@ -200,5 +183,3 @@ __all__ = [
     'KeyPair',
     'CertificateOptions',
     ]
-
-supported = True

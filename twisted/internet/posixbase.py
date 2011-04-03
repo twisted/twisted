@@ -28,10 +28,13 @@ from twisted.python.runtime import platformType, platform
 from twisted.internet.base import ReactorBase, _SignalReactorMixin
 
 try:
-    from twisted.internet import ssl
-    sslEnabled = True
+    from twisted.protocols import tls
 except ImportError:
-    sslEnabled = False
+    tls = None
+    try:
+        from twisted.internet import ssl
+    except ImportError:
+        ssl = None
 
 try:
     from twisted.internet import unix
@@ -431,18 +434,32 @@ class PosixReactorBase(_SignalReactorMixin, ReactorBase):
     def connectSSL(self, host, port, factory, contextFactory, timeout=30, bindAddress=None):
         """@see: twisted.internet.interfaces.IReactorSSL.connectSSL
         """
-        assert sslEnabled, "SSL support is not present"
-        c = ssl.Connector(host, port, factory, contextFactory, timeout, bindAddress, self)
-        c.connect()
-        return c
+        if tls is not None:
+            tlsFactory = tls.TLSMemoryBIOFactory(contextFactory, True, factory)
+            return self.connectTCP(host, port, tlsFactory, timeout, bindAddress)
+        elif ssl is not None:
+            c = ssl.Connector(
+                host, port, factory, contextFactory, timeout, bindAddress, self)
+            c.connect()
+            return c
+        else:
+            assert False, "SSL support is not present"
+
+
 
     def listenSSL(self, port, factory, contextFactory, backlog=50, interface=''):
         """@see: twisted.internet.interfaces.IReactorSSL.listenSSL
         """
-        assert sslEnabled, "SSL support is not present"
-        p = ssl.Port(port, factory, contextFactory, backlog, interface, self)
-        p.startListening()
-        return p
+        if tls is not None:
+            tlsFactory = tls.TLSMemoryBIOFactory(contextFactory, False, factory)
+            return self.listenTCP(port, tlsFactory, backlog, interface)
+        elif ssl is not None:
+            p = ssl.Port(
+                port, factory, contextFactory, backlog, interface, self)
+            p.startListening()
+            return p
+        else:
+            assert False, "SSL support is not present"
 
 
     # IReactorArbitrary
@@ -493,7 +510,7 @@ class PosixReactorBase(_SignalReactorMixin, ReactorBase):
         return list(removedReaders | removedWriters)
 
 
-if sslEnabled:
+if tls is not None or ssl is not None:
     classImplements(PosixReactorBase, IReactorSSL)
 if unixEnabled:
     classImplements(PosixReactorBase, IReactorUNIX, IReactorUNIXDatagram)
