@@ -1,1 +1,0 @@
-The XML-RPC howto now includes an example demonstrating how to access the HTTP request object in a server-side XML-RPC method.

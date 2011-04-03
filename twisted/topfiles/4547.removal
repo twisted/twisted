@@ -1,1 +1,0 @@
-Removed twisted.protocols.loopback.loopback, which has been deprecated since Twisted 2.5.

@@ -1,6 +1,60 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Web 11.0.0 (2011-04-01)
+===============================
+
+Features
+--------
+ - twisted.web._newclient.HTTPParser (and therefore Agent) now handles
+   HTTP headers delimited by bare LF newlines. (#3833)
+ - twisted.web.client.downloadPage now accepts the `afterFoundGet`
+   parameter, with the same meaning as the `getPage` parameter of the
+   same name. (#4364)
+ - twisted.web.xmlrpc.Proxy constructor now takes additional 'timeout'
+   and 'reactor' arguments. The 'timeout' argument defaults to 30
+   seconds. (#4741)
+ - Twisted Web now has a templating system, twisted.web.template,
+   which is a direct, simplified derivative of Divmod Nevow. (#4939)
+
+Bugfixes
+--------
+ - HTTPPageGetter now adds the port to the host header if it is not
+   the default for that scheme. (#3857)
+ - twisted.web.http.Request.write now raises an exception if it is
+   called after response generation has already finished. (#4317)
+ - twisted.web.client.HTTPPageGetter and twisted.web.client.getPage
+   now no longer make two requests when using afterFoundGet. (#4760)
+ - twisted.web.twcgi no longer adds an extra "content-type" header to
+   CGI responses. (#4786)
+ - twisted.web will now properly specify an encoding (UTF-8) on error,
+   redirect, and directory listing pages, so that IE7 and previous
+   will not improperly guess the 'utf7' encoding in these cases.
+   Please note that Twisted still sets a *default* content-type of
+   'text/html', and you shouldn't rely on that: you should set the
+   encoding appropriately in your application. (#4900)
+ - twisted.web.http.Request.setHost now sets the port in the host
+   header if it is not the default. (#4918)
+ - default NOT_IMPLEMENTED and NOT_ALLOWED pages now quote the request
+   method and URI respectively, to protect against browsers which
+   don't quote those values for us. (#4978)
+
+Improved Documentation
+----------------------
+ - The XML-RPC howto now includes an example demonstrating how to
+   access the HTTP request object in a server-side XML-RPC method.
+   (#4732)
+ - The Twisted Web client howto now uses the correct, public name for
+   twisted.web.client.Response. (#4769)
+ - Some broken links were fixed, descriptions were updated, and new
+   API links were added in the Resource Templating documentation
+   (resource-templates.xhtml) (#4968)
+
+Other
+-----
+ - #2271, #2386, #4162, #4733, #4855, #4911, #4973
+
+
 Twisted Web 10.2.0 (2010-11-29)
 ===============================
 

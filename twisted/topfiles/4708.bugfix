@@ -1,1 +1,0 @@
-Fixed a bug where Inotify will fail to add a filepatch to watchlist after it has been added/ignored previously.

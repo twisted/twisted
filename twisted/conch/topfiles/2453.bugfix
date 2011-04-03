@@ -1,1 +1,0 @@
-The transport for subsystem protocols now declares that it implements ITransport and implements the getHost and getPeer methods.

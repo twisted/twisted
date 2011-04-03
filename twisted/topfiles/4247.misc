@@ -1,1 +1,0 @@
-Updated raiser.c and _epoll.c with Cython 0.14.1 to support Python 3.

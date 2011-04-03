@@ -1,1 +1,0 @@
-The maxRetries attribute of twisted.internet.protocols.RetryingClientFactory now has API documentation.

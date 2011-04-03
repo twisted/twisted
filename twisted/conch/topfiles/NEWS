@@ -1,6 +1,36 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Conch 11.0.0 (2011-04-01)
+=================================
+
+Bugfixes
+--------
+ - The transport for subsystem protocols now declares that it
+   implements ITransport and implements the getHost and getPeer
+   methods. (#2453)
+ - twisted.conch.ssh.transport.SSHTransportBase now responds to key
+   exchange messages at any time during a connection (instead of only
+   at connection setup).  It also queues non-key exchange messages
+   sent during key exchange to avoid corrupting the connection state.
+   (#4395)
+ - Importing twisted.conch.ssh.common no longer breaks pow(base, exp[,
+   modulus]) when the gmpy package is installed and base is not an
+   integer. (#4803)
+ - twisted.conch.ls.lsLine now returns a time string which does not
+   consider the locale. (#4937)
+
+Improved Documentation
+----------------------
+ - Changed the man page for ckeygen to accurately reflect what it
+   does, and corrected its synposis so that a second "ckeygen" is not
+   a required part of the ckeygen command line.  (#4738)
+
+Other
+-----
+ - #2112
+
+
 Twisted Conch 10.2.0 (2010-11-29)
 =================================
 

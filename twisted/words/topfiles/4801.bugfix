@@ -1,1 +1,0 @@
-twisted.words.protocols.msn.NotificationClient now calls the loginFailure callback when it is unable to connect to the Passport server due to missing SSL dependencies.
