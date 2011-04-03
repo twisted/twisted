@@ -1054,6 +1054,35 @@ class HTTP11ClientProtocolTests(TestCase):
         return d
 
 
+    def test_connectionLostAfterReceivingResponseBeforeRequestGenerationDone(self):
+        """
+        If response bytes are delivered to L{HTTP11ClientProtocol} before the
+        request completes, calling L{connectionLost} on the protocol will
+        result in protocol being moved to C{'CONNECTION_LOST'} state.
+        """
+        request = SlowRequest()
+        d = self.protocol.request(request)
+        self.protocol.dataReceived(
+            "HTTP/1.1 400 BAD REQUEST\r\n"
+            "Content-Length: 9\r\n"
+            "\r\n"
+            "tisk tisk")
+        def cbResponse(response):
+            p = AccumulatingProtocol()
+            whenFinished = p.closedDeferred = Deferred()
+            response.deliverBody(p)
+            return whenFinished.addCallback(
+                lambda ign: (response, p.data))
+        d.addCallback(cbResponse)
+        def cbAllResponse(ignore):
+            request.finished.callback(None)
+            # Nothing dire will happen when the connection is lost
+            self.protocol.connectionLost(Failure(ArbitraryException()))
+            self.assertEquals(self.protocol._state, 'CONNECTION_LOST')
+        d.addCallback(cbAllResponse)
+        return d
+
+
     def test_receiveResponseBody(self):
         """
         The C{deliverBody} method of the response object with which the

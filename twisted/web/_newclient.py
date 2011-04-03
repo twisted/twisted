@@ -1420,6 +1420,13 @@ class HTTP11ClientProtocol(Protocol):
         self._currentRequest.stopWriting()
 
 
+    def _connectionLost_TRANSMITTING_AFTER_RECEIVING_RESPONSE(self, reason):
+        """
+        Move to the C{'CONNECTION_LOST'} state.
+        """
+        self._state = 'CONNECTION_LOST'
+
+
     def _connectionLost_WAITING(self, reason):
         """
         Disconnect the response parser so that it can propagate the event as
