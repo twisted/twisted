@@ -3,7 +3,7 @@
 
 
 from itertools import count
-import re, os, cStringIO, time, cgi, string, urlparse
+import re, os, cStringIO, time, cgi, urlparse
 from xml.dom import minidom as dom
 from xml.sax.handler import ErrorHandler, feature_validation
 from xml.dom.pulldom import SAX2DOM
@@ -199,7 +199,7 @@ def addPyListings(document, dir):
                                                      "py-listing"):
         filename = node.getAttribute("href")
         outfile = cStringIO.StringIO()
-        lines = map(string.rstrip, open(os.path.join(dir, filename)).readlines())
+        lines = map(str.rstrip, open(os.path.join(dir, filename)).readlines())
 
         skip = node.getAttribute('skipLines') or 0
         lines = lines[int(skip):]

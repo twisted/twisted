@@ -6,7 +6,7 @@ LaTeX output support for Lore.
 """
 
 from xml.dom import minidom as dom
-import os.path, re, string
+import os.path, re
 from cStringIO import StringIO
 import urlparse
 
@@ -207,7 +207,7 @@ class LatexSpitter(BaseLatexSpitter):
     def visitNode_a_listing(self, node):
         fileName = os.path.join(self.currDir, node.getAttribute('href'))
         self.writer('\\begin{verbatim}\n')
-        lines = map(string.rstrip, open(fileName).readlines())
+        lines = map(str.rstrip, open(fileName).readlines())
         skipLines = int(node.getAttribute('skipLines') or 0)
         lines = lines[skipLines:]
         self.writer(text.removeLeadingTrailingBlanks('\n'.join(lines)))
