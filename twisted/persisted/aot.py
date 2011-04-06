@@ -11,7 +11,7 @@ The source-code-marshallin'est abstract-object-serializin'est persister
 this side of Marmalade!
 """
 
-import types, string, copy_reg, tokenize, re
+import types, copy_reg, tokenize, re
 
 from twisted.python import reflect, log
 from twisted.persisted import crefutil
@@ -170,7 +170,7 @@ def dictToKW(d):
         out.append(
             "\n\0%s=%s," % (k, prettify(v))
             )
-    return string.join(out, '')
+    return ''.join(out)
 
 
 def prettify(obj):
@@ -188,21 +188,21 @@ def prettify(obj):
             for k,v in obj.items():
                 out.append('\n\0%s: %s,' % (prettify(k), prettify(v)))
             out.append(len(obj) and '\n\0}' or '}')
-            return string.join(out, '')
+            return ''.join(out)
 
         elif t is types.ListType:
             out = ["["]
             for x in obj:
                 out.append('\n\0%s,' % prettify(x))
             out.append(len(obj) and '\n\0]' or ']')
-            return string.join(out, '')
+            return ''.join(out)
 
         elif t is types.TupleType:
             out = ["("]
             for x in obj:
                 out.append('\n\0%s,' % prettify(x))
             out.append(len(obj) and '\n\0)' or ')')
-            return string.join(out, '')
+            return ''.join(out)
         else:
             raise TypeError("Unsupported type %s when trying to prettify %s." % (t, obj))
 
@@ -222,7 +222,7 @@ def indentify(s):
             out.append(val)
     l = ['', s]
     tokenize.tokenize(l.pop, eater)
-    return string.join(out, '')
+    return ''.join(out)
 
 
 
@@ -428,7 +428,7 @@ class AOTUnjellier:
             return l[0]
         except:
             log.msg("Error jellying object! Stacktrace follows::")
-            log.msg(string.join(map(repr, self.stack), "\n"))
+            log.msg("\n".join(map(repr, self.stack)))
             raise
 #########
 # Jelly #
@@ -556,5 +556,5 @@ class AOTJellier:
             return ao
         except:
             log.msg("Error jellying object! Stacktrace follows::")
-            log.msg(string.join(self.stack, '\n'))
+            log.msg('\n'.join(self.stack))
             raise
