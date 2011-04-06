@@ -3,8 +3,8 @@
 ### Twisted Preamble
 # This makes sure that users don't have to set up their environment
 # specially in order to run these programs from bin/.
-import sys, os, string
-pos = string.find(os.path.abspath(sys.argv[0]), os.sep+'Twisted')
+import sys, os
+pos = os.path.abspath(sys.argv[0]).find(os.sep+'Twisted')
 if pos != -1:
     sys.path.insert(0, os.path.abspath(sys.argv[0])[:pos+8])
 sys.path.insert(0, os.curdir)

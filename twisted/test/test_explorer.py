@@ -11,7 +11,7 @@ from twisted.trial import unittest
 
 from twisted.manhole import explorer
 
-import types, string
+import types
 
 """
 # Tests:
@@ -71,7 +71,7 @@ class SetattrDohickey:
     def __setattr__(self, k, v):
         v = list(str(v))
         v.reverse()
-        self.__dict__[k] = string.join(v, '')
+        self.__dict__[k] = ''.join(v)
 
 class MiddleMan(SomeDohickey, SetattrDohickey):
     pass

@@ -5,7 +5,6 @@
 
 from twisted.trial import unittest
 from twisted.python import text
-import string
 from cStringIO import StringIO
 
 
@@ -27,7 +26,7 @@ def set_lineWidth(n):
 
 class WrapTest(unittest.TestCase):
     def setUp(self):
-        self.sampleSplitText = string.split(sampleText)
+        self.sampleSplitText = sampleText.split()
 
         self.output = text.wordWrap(sampleText, lineWidth)
 
@@ -35,7 +34,7 @@ class WrapTest(unittest.TestCase):
         """Compare the number of words."""
         words = []
         for line in self.output:
-            words.extend(string.split(line))
+            words.extend(line.split())
         wordCount = len(words)
         sampleTextWordCount = len(self.sampleSplitText)
 
@@ -46,7 +45,7 @@ class WrapTest(unittest.TestCase):
 
         words = []
         for line in self.output:
-            words.extend(string.split(line))
+            words.extend(line.split())
 
         # Using failUnlessEqual here prints out some
         # rather too long lists.
