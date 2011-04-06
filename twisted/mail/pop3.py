@@ -11,7 +11,6 @@ Post-office Protocol version 3
 @author: Jp Calderone
 """
 
-import string
 import base64
 import binascii
 import warnings
@@ -351,7 +350,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
             self.blocked.append((command, args))
             return
 
-        command = string.upper(command)
+        command = command.upper()
         authCmd = command in self.AUTH_CMDS
         if not self.mbox and not authCmd:
             raise POP3Error("not authenticated yet: cannot do " + command)

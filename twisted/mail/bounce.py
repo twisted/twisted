@@ -6,7 +6,6 @@
 
 import StringIO
 import rfc822
-import string
 import time
 import os
 
@@ -40,7 +39,7 @@ I've given up, and I will not retry the message again.
 
     boundary = "%s_%s_%s" % (time.time(), os.getpid(), 'XXXXX')
     failedAddress = rfc822.AddressList(failedTo)[0][1]
-    failedDomain = string.split(failedAddress, '@', 1)[1]
+    failedDomain = failedAddress.split('@', 1)[1]
     messageID = smtp.messageid(uniq='bounce')
     ctime = time.ctime(time.time())
 
