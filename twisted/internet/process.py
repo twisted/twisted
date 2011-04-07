@@ -530,6 +530,7 @@ class _FDDetector(object):
         start = self.listdir("/dev/fd")
         fp = self.openfile("/dev/null", "r")
         end = self.listdir("/dev/fd")
+        fp.close()
         return start != end
 
 

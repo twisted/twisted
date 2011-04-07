@@ -599,6 +599,19 @@ class PotentialZombieWarningTests(TestCase):
 
 
 
+class FakeFile(object):
+    """
+    A fake file object which records when it is closed.
+    """
+    def __init__(self, testcase):
+        self.testcase = testcase
+
+
+    def close(self):
+        self.testcase.closedFile = True
+
+
+
 class FakeResourceModule(object):
     """
     Fake version of L{resource} which hard-codes a particular rlimit for maximum
@@ -641,6 +654,7 @@ class FDDetectorTest(TestCase):
 
     procfs = False
     openedFile = False
+    closedFile = False
 
     savedResourceModule = None
 
@@ -682,8 +696,16 @@ class FDDetectorTest(TestCase):
         """
         This is a mock for L{open}.  It just keeps track of the fact that a file
         has opened so an extra file descriptor is found in /dev/fd.
+
+        It also returns a L{FakeFile} which can be "closed". It would be more
+        realistic to make the FD list shrink when the file is "fake closed" but
+        it's not necessary for the detection algorithm we currently have in
+        process.py.
         """
+        if self.openedFile:
+            self.fail("opening more than one file is not supported")
         self.openedFile = True
+        return FakeFile(self)
 
 
     def saveResourceModule(self):
@@ -820,3 +842,13 @@ class FDDetectorTest(TestCase):
         self.assertEquals(
             self.detector._getImplementation().func_name,
             '_fallbackFDImplementation')
+
+
+    def test_checkSanityClosesFile(self):
+        """
+        Checking the devfs implementation for sanity closes the file it opens
+        to check.
+        """
+        self.devfs = True
+        self.detector._checkDevFDSanity()
+        self.assertTrue(self.closedFile)
