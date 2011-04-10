@@ -56,11 +56,11 @@ HELP_MSG                                = "214"
 NAME_SYS_TYPE                           = "215"
 SVC_READY_FOR_NEW_USER                  = "220.1"
 WELCOME_MSG                             = "220.2"
-SVC_CLOSING_CTRL_CNX                    = "221"
-GOODBYE_MSG                             = "221"
+SVC_CLOSING_CTRL_CNX                    = "221.1"
+GOODBYE_MSG                             = "221.2"
 DATA_CNX_OPEN_NO_XFR_IN_PROGRESS        = "225"
-CLOSING_DATA_CNX                        = "226"
-TXFR_COMPLETE_OK                        = "226"
+CLOSING_DATA_CNX                        = "226.1"
+TXFR_COMPLETE_OK                        = "226.2"
 ENTERING_PASV_MODE                      = "227"
 ENTERING_EPSV_MODE                      = "229"
 USR_LOGGED_IN_PROCEED                   = "230.1"     # v1 of code 230
@@ -121,6 +121,7 @@ RESPONSE = {
     NAME_SYS_TYPE:                      '215 UNIX Type: L8',
     WELCOME_MSG:                        "220 %s",
     SVC_READY_FOR_NEW_USER:             '220 Service ready',
+    SVC_CLOSING_CTRL_CNX:               '221 Service closing control connection',
     GOODBYE_MSG:                        '221 Goodbye.',
     DATA_CNX_OPEN_NO_XFR_IN_PROGRESS:   '225 data connection open, no transfer in progress',
     CLOSING_DATA_CNX:                   '226 Abort successful',
@@ -137,6 +138,7 @@ RESPONSE = {
     'userotp':                          '331 Response to %s.',  # ???
     USR_NAME_OK_NEED_PASS:              '331 Password required for %s.',
     GUEST_NAME_OK_NEED_EMAIL:           '331 Guest login ok, type your email address as password.',
+    NEED_ACCT_FOR_LOGIN:                '332 Need account for login.',
 
     REQ_FILE_ACTN_PENDING_FURTHER_INFO: '350 Requested file action pending further information.',
 
@@ -146,8 +148,9 @@ RESPONSE = {
     CANT_OPEN_DATA_CNX:                 "425 Can't open data connection.",
     CNX_CLOSED_TXFR_ABORTED:            '426 Transfer aborted.  Data connection closed.',
 
+    REQ_ACTN_ABRTD_FILE_UNAVAIL:        '450 Requested action aborted. File unavailable.',
     REQ_ACTN_ABRTD_LOCAL_ERR:           '451 Requested action aborted. Local error in processing.',
-
+    REQ_ACTN_ABRTD_INSUFF_STORAGE:      '452 Requested action aborted. Insufficient storage.',
 
     # -- 500's --
     SYNTAX_ERR:                         "500 Syntax error: %s",
@@ -165,6 +168,7 @@ RESPONSE = {
     FILE_EXISTS:                        '550 %s: File exists',
     IS_A_DIR:                           '550 %s: is a directory',
     REQ_ACTN_NOT_TAKEN:                 '550 Requested action not taken: %s',
+    PAGE_TYPE_UNK:                      '551 Page type unknown',
     EXCEEDED_STORAGE_ALLOC:             '552 Requested file action aborted, exceeded file storage allocation',
     FILENAME_NOT_ALLOWED:               '553 Requested action not taken, file name not allowed'
 }

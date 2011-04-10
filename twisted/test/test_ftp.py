@@ -2897,3 +2897,30 @@ class FTPCloseTest(unittest.TestCase):
         self.assertTrue(stor_done)
 
         return d # just in case an errback occurred
+
+
+
+class FTPResponseCodeTests(unittest.TestCase):
+    """
+    Tests relating directly to response codes.
+    """
+    def test_unique(self):
+        """
+        All of the response code globals (for example C{RESTART_MARKER_REPLY} or
+        C{USR_NAME_OK_NEED_PASS}) have unique values and are present in the
+        C{RESPONSE} dictionary.
+        """
+        allValues = set(ftp.RESPONSE)
+        seenValues = set()
+
+        for key, value in vars(ftp).items():
+            if isinstance(value, str) and key.isupper():
+                self.assertIn(
+                    value, allValues,
+                    "Code %r with value %r missing from RESPONSE dict" % (
+                        key, value))
+                self.assertNotIn(
+                    value, seenValues,
+                    "Duplicate code %r with value %r" % (key, value))
+                seenValues.add(value)
+
