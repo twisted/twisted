@@ -53,6 +53,8 @@ def _addressToTuple(addr):
 class Request(pb.Copyable, http.Request, components.Componentized):
     """
     An HTTP request.
+
+    @ivar session: This stores a session available to HTTP and HTTPS requests.
     """
     implements(iweb.IRequest)
 
@@ -283,25 +285,60 @@ class Request(pb.Copyable, http.Request, components.Componentized):
     ### these calls remain local
 
     session = None
+    _secureSession = None
 
-    def getSession(self, sessionInterface = None):
+    def getSession(self, sessionInterface=None, forceNotSecure=False):
+        """
+        Check if there is a session cookie, and if not, create it.
+
+        By default, the cookie with be secure for HTTPS requests and not secure
+        for HTTP requests. If for some reason you need access to the insecure
+        cookie from a secure session you can set L{forceNotSecure} = True.
+        """
+        # Make sure we aren't creating a secure session on a non-secure page
+        cookieString = ''
+        session = None
+
+        secure = self.isSecure()
+
+        if secure and forceNotSecure:
+            secure = False
+
+        if not secure:
+            cookieString = 'TWISTED_SESSION'
+            session = self.session
+
+        else:
+            cookieString = 'TWISTED_SECURE_SESSION'
+            session = self._secureSession
+
         # Session management
-        if not self.session:
-            cookiename = string.join(['TWISTED_SESSION'] + self.sitepath, "_")
+        if not session:
+            cookiename = string.join([cookieString] + self.sitepath, "_")
             sessionCookie = self.getCookie(cookiename)
             if sessionCookie:
                 try:
-                    self.session = self.site.getSession(sessionCookie)
+                    session = self.site.getSession(sessionCookie)
                 except KeyError:
                     pass
             # if it still hasn't been set, fix it up.
-            if not self.session:
-                self.session = self.site.makeSession()
-                self.addCookie(cookiename, self.session.uid, path='/')
-        self.session.touch()
+            if not session:
+                session = self.site.makeSession()
+                self.addCookie(cookiename, session.uid, path='/',
+                               secure=secure)
+
+        session.touch()
+
+        # Save the session to the proper place
+        if not secure:
+            self.session = session
+        else:
+            self._secureSession = session
+
         if sessionInterface:
-            return self.session.getComponent(sessionInterface)
-        return self.session
+            return session.getComponent(sessionInterface)
+
+        return session
 
     def _prePathURL(self, prepath):
         port = self.getHost().port

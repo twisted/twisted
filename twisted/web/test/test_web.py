@@ -52,6 +52,7 @@ class DummyRequest:
         while self.go:
             prod.resumeProducing()
 
+
     def unregisterProducer(self):
         self.go = 0
 
@@ -91,13 +92,6 @@ class DummyRequest:
         """
         self.outgoingHeaders[name.lower()] = value
 
-    def getSession(self):
-        if self.session:
-            return self.session
-        assert not self.written, "Session cannot be requested after data has been written."
-        self.session = self.protoSession
-        return self.session
-
 
     def render(self, resource):
         """
@@ -121,6 +115,7 @@ class DummyRequest:
 
     def write(self, data):
         self.written.append(data)
+
 
     def notifyFinish(self):
         """
@@ -568,8 +563,7 @@ class RequestTests(unittest.TestCase):
         self.assertTrue(
             verifyObject(iweb.IRequest, server.Request(DummyChannel(), True)))
 
-
-    def testChildLink(self):
+    def test_childLink(self):
         request = server.Request(DummyChannel(), 1)
         request.gotLength(0)
         request.requestReceived('GET', '/foo/bar', 'HTTP/1.0')
@@ -579,14 +573,14 @@ class RequestTests(unittest.TestCase):
         request.requestReceived('GET', '/foo/bar/', 'HTTP/1.0')
         self.assertEqual(request.childLink('baz'), 'baz')
 
-    def testPrePathURLSimple(self):
+    def test_prePathURLSimple(self):
         request = server.Request(DummyChannel(), 1)
         request.gotLength(0)
         request.requestReceived('GET', '/foo/bar', 'HTTP/1.0')
         request.setHost('example.com', 80)
         self.assertEqual(request.prePathURL(), 'http://example.com/foo/bar')
 
-    def testPrePathURLNonDefault(self):
+    def test_prePathURLNonDefault(self):
         d = DummyChannel()
         d.transport.port = 81
         request = server.Request(d, 1)
@@ -595,7 +589,7 @@ class RequestTests(unittest.TestCase):
         request.requestReceived('GET', '/foo/bar', 'HTTP/1.0')
         self.assertEqual(request.prePathURL(), 'http://example.com:81/foo/bar')
 
-    def testPrePathURLSSLPort(self):
+    def test_prePathURLSSLPort(self):
         d = DummyChannel()
         d.transport.port = 443
         request = server.Request(d, 1)
@@ -604,7 +598,7 @@ class RequestTests(unittest.TestCase):
         request.requestReceived('GET', '/foo/bar', 'HTTP/1.0')
         self.assertEqual(request.prePathURL(), 'http://example.com:443/foo/bar')
 
-    def testPrePathURLSSLPortAndSSL(self):
+    def test_prePathURLSSLPortAndSSL(self):
         d = DummyChannel()
         d.transport = DummyChannel.SSL()
         d.transport.port = 443
@@ -614,7 +608,7 @@ class RequestTests(unittest.TestCase):
         request.requestReceived('GET', '/foo/bar', 'HTTP/1.0')
         self.assertEqual(request.prePathURL(), 'https://example.com/foo/bar')
 
-    def testPrePathURLHTTPPortAndSSL(self):
+    def test_prePathURLHTTPPortAndSSL(self):
         d = DummyChannel()
         d.transport = DummyChannel.SSL()
         d.transport.port = 80
@@ -624,7 +618,7 @@ class RequestTests(unittest.TestCase):
         request.requestReceived('GET', '/foo/bar', 'HTTP/1.0')
         self.assertEqual(request.prePathURL(), 'https://example.com:80/foo/bar')
 
-    def testPrePathURLSSLNonDefault(self):
+    def test_prePathURLSSLNonDefault(self):
         d = DummyChannel()
         d.transport = DummyChannel.SSL()
         d.transport.port = 81
@@ -634,7 +628,7 @@ class RequestTests(unittest.TestCase):
         request.requestReceived('GET', '/foo/bar', 'HTTP/1.0')
         self.assertEqual(request.prePathURL(), 'https://example.com:81/foo/bar')
 
-    def testPrePathURLSetSSLHost(self):
+    def test_prePathURLSetSSLHost(self):
         d = DummyChannel()
         d.transport.port = 81
         request = server.Request(d, 1)
@@ -642,7 +636,6 @@ class RequestTests(unittest.TestCase):
         request.gotLength(0)
         request.requestReceived('GET', '/foo/bar', 'HTTP/1.0')
         self.assertEqual(request.prePathURL(), 'https://foo.com:81/foo/bar')
-
 
     def test_prePathURLQuoting(self):
         """
@@ -656,7 +649,28 @@ class RequestTests(unittest.TestCase):
         request.requestReceived('GET', '/foo%2Fbar', 'HTTP/1.0')
         self.assertEqual(request.prePathURL(), 'http://example.com/foo%2Fbar')
 
+    def test_sessionDifferentFromSecureSession(self):
+        """
+        L{Request.session} and L{Request.secure_session} should be two separate
+        sessions with unique ids.
+        """
+        d = DummyChannel()
+        d.transport = DummyChannel.SSL()
+        request = server.Request(d, 1)
+        request.site = server.Site('/')
+        request.sitepath = []
+        session = request.getSession(forceNotSecure=True)
+        secure_session = request.getSession()
 
+        # Check that the sessions are not None
+        self.assertTrue(session != None)
+        self.assertTrue(secure_session != None)
+
+        # Check that the sessions are different
+        self.assertNotEqual(session.uid, secure_session.uid)
+
+        session.expire()
+        secure_session.expire()
 
 class RootResource(resource.Resource):
     isLeaf=0
