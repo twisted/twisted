@@ -937,6 +937,8 @@ class FilePath(_PathHelper):
         """
         Copies self to destination.
 
+        If self doesn't exist, an OSError is raised.
+
         If self is a directory, this method copies its children (but not
         itself) recursively to destination - if destination does not exist as a
         directory, this method creates it.  If destination is a file, an
@@ -1000,6 +1002,8 @@ class FilePath(_PathHelper):
                     readfile.close()
             finally:
                 writefile.close()
+        elif not self.exists():
+            raise OSError(errno.ENOENT, "No such file or directory")
         else:
             # If you see the following message because you want to copy
             # symlinks, fifos, block devices, character devices, or unix

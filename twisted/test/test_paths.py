@@ -962,6 +962,15 @@ class FilePathTestCase(AbstractFilePathTestCase):
                           os.readlink(fp.child("link1").path))
 
 
+    def test_copyToMissingSource(self):
+        """
+        If the source path is missing, L{FilePath.copyTo} raises L{OSError}.
+        """
+        path = filepath.FilePath(self.mktemp())
+        exc = self.assertRaises(OSError, path.copyTo, 'some other path')
+        self.assertEquals(exc.errno, errno.ENOENT)
+
+
     def test_moveTo(self):
         """
         Verify that moving an entire directory results into another directory
