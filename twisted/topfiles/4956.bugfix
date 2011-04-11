@@ -1,0 +1,1 @@
+IStreamClientEndpointStringParser.parseStreamClient now correctly describes how it will be called by clientFromString
