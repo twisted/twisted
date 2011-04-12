@@ -246,6 +246,15 @@ class _PathHelper:
 
 
     def sibling(self, path):
+        """
+        Return a L{FilePath} with the same directory as this instance but with a
+        basename of C{path}.
+
+        @param path: The basename of the L{FilePath} to return.
+        @type path: C{str}
+
+        @rtype: L{FilePath}
+        """
         return self.parent().child(path)
 
 
@@ -379,16 +388,36 @@ class FilePath(_PathHelper):
     path = None
 
     def __init__(self, path, alwaysCreate=False):
+        """
+        Convert a path string to an absolute path if necessary and initialize
+        the L{FilePath} with the result.
+        """
         self.path = abspath(path)
         self.alwaysCreate = alwaysCreate
 
     def __getstate__(self):
+        """
+        Support serialization by discarding cached L{os.stat} results and
+        returning everything else.
+        """
         d = self.__dict__.copy()
         if d.has_key('statinfo'):
             del d['statinfo']
         return d
 
+
     def child(self, path):
+        """
+        Create and return a new L{FilePath} representing a path contained by
+        C{self}.
+
+        @param path: The base name of the new L{FilePath}.  If this contains
+            directory separators or parent references it will be rejected.
+        @type path: C{str}
+
+        @raise InsecurePath: If the result of combining this path with C{path}
+            would result in a path which is not a direct child of this path.
+        """
         if platform.isWindows() and path.count(":"):
             # Catch paths like C:blah that don't have a slash
             raise InsecurePath("%r contains a colon." % (path,))
@@ -719,7 +748,7 @@ class FilePath(_PathHelper):
 
     def exists(self):
         """
-        Check if the C{path} exists.
+        Check if this L{FilePath} exists.
 
         @return: C{True} if the stats of C{path} can be retrieved successfully,
             C{False} in the other cases.
@@ -736,6 +765,10 @@ class FilePath(_PathHelper):
 
 
     def isdir(self):
+        """
+        @return: C{True} if this L{FilePath} refers to a directory, C{False}
+            otherwise.
+        """
         st = self.statinfo
         if not st:
             self.restat(False)
@@ -744,7 +777,12 @@ class FilePath(_PathHelper):
                 return False
         return S_ISDIR(st.st_mode)
 
+
     def isfile(self):
+        """
+        @return: C{True} if this L{FilePath} points to a regular file (not a
+            directory, socket, named pipe, etc), C{False} otherwise.
+        """
         st = self.statinfo
         if not st:
             self.restat(False)
@@ -753,31 +791,61 @@ class FilePath(_PathHelper):
                 return False
         return S_ISREG(st.st_mode)
 
+
     def islink(self):
+        """
+        @return: C{True} if this L{FilePath} points to a symbolic link.
+        """
         # We can't use cached stat results here, because that is the stat of
         # the destination - (see #1773) which in *every case* but this one is
         # the right thing to use.  We could call lstat here and use that, but
         # it seems unlikely we'd actually save any work that way.  -glyph
         return islink(self.path)
 
+
     def isabs(self):
+        """
+        @return: C{True}, always.
+        """
         return isabs(self.path)
 
+
     def listdir(self):
+        """
+        List the base names of the direct children of this L{FilePath}.
+
+        @return: a C{list} of C{str} giving the names of the contents of the
+            directory this L{FilePath} refers to.  These names are relative to
+            this L{FilePath}.
+
+        @raise: Anything the platform C{os.listdir} implementation might raise
+            (typically OSError).
+        """
         return listdir(self.path)
 
+
     def splitext(self):
+        """
+        @return: tuple where the first item is the filename and second item is
+            the file extension. See Python docs for C{os.path.splitext}
+        """
         return splitext(self.path)
+
 
     def __repr__(self):
         return 'FilePath(%r)' % (self.path,)
 
+
     def touch(self):
+        """
+        Update the access and modified times of the L{FilePath}'s file.
+        """
         try:
             self.open('a').close()
         except IOError:
             pass
         utime(self.path, None)
+
 
     def remove(self):
         """
@@ -813,13 +881,30 @@ class FilePath(_PathHelper):
         path = self.path[-1] == '/' and self.path + pattern or slash.join([self.path, pattern])
         return map(self.clonePath, glob.glob(path))
 
+
     def basename(self):
+        """
+        @return: The final component of the L{FilePath}'s path (Everything after
+            the final path separator).
+        @rtype: C{str}
+        """
         return basename(self.path)
 
+
     def dirname(self):
+        """
+        @return: All of the components of the L{FilePath}'s path except the last
+            one (everything up to the final path separator).
+        @rtype: C{str}
+        """
         return dirname(self.path)
 
+
     def parent(self):
+        """
+        @return: A L{FilePath} representing the path which directly contains
+            this L{FilePath}.
+        """
         return self.clonePath(self.dirname())
 
 
@@ -888,14 +973,25 @@ class FilePath(_PathHelper):
             return NotImplemented
         return cmp(self.path, other.path)
 
+
     def createDirectory(self):
+        """
+        Create the directory the L{FilePath} refers to.
+
+        @see: L{makedirs}
+
+        @raise OSError: If the directory cannot be created.
+        """
         os.mkdir(self.path)
+
 
     def requireCreate(self, val=1):
         self.alwaysCreate = val
 
+
     def create(self):
-        """Exclusively create a file, only if this file previously did not exist.
+        """
+        Exclusively create a file, only if this file previously did not exist.
         """
         fdint = os.open(self.path, _CREATE_FLAGS)
 
