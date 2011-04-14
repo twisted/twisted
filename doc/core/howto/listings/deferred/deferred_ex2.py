@@ -1,18 +1,17 @@
 #!/usr/bin/env python
-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 from twisted.internet import defer
-from twisted.python import failure, util
+from twisted.python import failure
 
 """
-This example shows an important concept that many deferred newbies
-(myself included) have trouble understanding. 
+This example shows an important concept that many deferred newbies have trouble
+understanding.
 
-when an error occurs in a callback, the first errback after the error
-occurs will be the next method called. (in the next example we'll
-see what happens in the 'chain' after an errback).
+When an error occurs in a callback, the first errback after the error occurs
+will be the next method called. (In the next example we'll see what happens in
+the 'chain' after an errback.)
 """
 
 class Counter(object):
@@ -42,7 +41,7 @@ def behindTheScenes(result):
     # equivalent to d.callback(result)
 
     # now, let's make the error happen in the first callback
-    
+
     if not isinstance(result, failure.Failure): # ---- callback
         try:
             result = failAtHandlingResult(result)
@@ -55,7 +54,7 @@ def behindTheScenes(result):
     # note: this callback will be skipped because
     # result is a failure
 
-    if not isinstance(result, failure.Failure): # ---- callback 
+    if not isinstance(result, failure.Failure): # ---- callback
         try:
             result = handleResult(result)
         except:

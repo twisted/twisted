@@ -116,16 +116,22 @@ method to be called will be the first errback.</p>
 
 <pre>
 callback 1
-        got result: success
-        about to raise exception
+	got result: success
+	about to raise exception
 errback
 we got an exception: Traceback (most recent call last):
-  File "./deferred_ex2.py", line 85, in ?
-    nonDeferredExample("success")
+  File "deferred_ex2.py", line 90, in &lt;module&gt;
+    deferredExample()
+  File "deferred_ex2.py", line 83, in deferredExample
+    d.callback("success")
+  File "twisted/internet/defer.py", line 361, in callback
+    self._startRunCallbacks(result)
+  File "twisted/internet/defer.py", line 455, in _startRunCallbacks
+    self._runCallbacks()
 --- &lt;exception caught here&gt; ---
-  File "./deferred_ex2.py", line 46, in nonDeferredExample
-    result = failAtHandlingResult(result)
-  File "./deferred_ex2.py", line 35, in failAtHandlingResult
+  File "twisted/internet/defer.py", line 542, in _runCallbacks
+    current.result = callback(current.result, *args, **kw)
+  File "deferred_ex2.py", line 37, in failAtHandlingResult
     raise RuntimeError, "whoops! we encountered an error"
 exceptions.RuntimeError: whoops! we encountered an error
 </pre>
