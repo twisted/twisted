@@ -12,45 +12,35 @@
 
     <h2>Overview</h2>
 
-    <p>Twisted is a framework designed to be very flexible and let
-    you write powerful servers. The cost of this flexibility is a
-    few layers in the way to writing your server.</p>
-
-    <p>This document describes the
-    <code class="API" base="twisted.internet.protocol">Protocol</code>
-    layer, where you 
-    implement protocol parsing and handling.  If you are implementing 
-    an application then you should read this document second, after 
-    first reading the top level overview of how to begin writing your 
-    Twisted application, in <a href="plugin.xhtml">Writing Plug-Ins 
-    for Twisted</a>. This document is only relevant to TCP, SSL and
-    Unix socket servers, there is a <a href="udp.xhtml">separate document</a>
-     for UDP.</p>
+    <p>This document explains how you can use Twisted to implement
+    network protocol parsing and handling for TCP servers (the same
+    code can be reused for SSL and Unix socket servers). There is
+    a <a href="udp.xhtml">separate document</a> covering UDP.</p>
 
     <p>Your protocol handling class will usually subclass <code
     class="API">twisted.internet.protocol.Protocol</code>. Most
     protocol handlers inherit either from this class or from one of
     its convenience children. An instance of the protocol class
-    might be instantiated per-connection, on demand, and might go
+    is instantiated per-connection, on demand, and will go
     away when the connection is finished. This means that
     persistent configuration is not saved in the
     <code>Protocol</code>.</p>
 
-    <p>The persistent configuration is kept in a Factory class,
-    which usually inherits from <code
-    class="API">twisted.internet.protocol.Factory</code>. The
-    default factory class just instantiates each <code>Protocol</code>, and then
-    sets on it an attribute called <code>factory</code> which
-    points to itself. This lets every <code>Protocol</code> access,
-    and possibly modify, the persistent configuration.</p>
+    <p>The persistent configuration is kept in a <code>Factory</code>
+    class, which usually inherits
+    from <code class="API">twisted.internet.protocol.Factory</code>. The <code>buildProtocol</code>
+    method of the <code>Factory</code> is used to create
+    a <code>Protocol</code> for each new connection.</p>
 
     <p>It is usually useful to be able to offer the same service on
-    multiple ports or network addresses. This is why the <code>Factory</code>
-    does not listen to connections, and in fact does not
-    know anything about the network. See <code
-    class="API">twisted.internet.interfaces.IReactorTCP.listenTCP</code>,
-    and the other <code>IReactor*.listen*</code> APIs for more
-    information.</p>
+    multiple ports or network addresses. This is why
+    the <code>Factory</code> does not listen to connections, and in
+    fact does not know anything about the
+    network. See <a href="endpoints.xhtml">the endpoints
+    documentation</a> for more information,
+    or <code class="API">twisted.internet.interfaces.IReactorTCP.listenTCP</code>,
+    and the other <code>IReactor*.listen*</code> APIs for the lower
+    level APIs that endpoints are based on.</p>
 
     <p>This document will explain each step of the way.</p>
 
@@ -58,9 +48,9 @@
 
     <p>As mentioned above, this, along with auxiliary classes and
     functions, is where most of the code is. A Twisted protocol
-    handles data in an asynchronous manner. What this means is that
-    the protocol never waits for an event, but rather responds to
-    events as they arrive from the network.</p>
+    handles data in an asynchronous manner: the protocol responds
+    to events as they arrive from the network; the events arrive as
+    calls to methods on the protocol.</p>
 
     <p>Here is a simple example:</p>
 <pre class="python">
@@ -98,11 +88,14 @@ from twisted.internet.protocol import Protocol
 
 class Echo(Protocol):
 
+    def __init__(self, factory):
+        self.factory = factory
+
     def connectionMade(self):
         self.factory.numProtocols = self.factory.numProtocols+1 
-        if self.factory.numProtocols &gt; 100:
-            self.transport.write("Too many connections, try later") 
-            self.transport.loseConnection()
+        self.transport.write(
+            "Welcome! There are currently %d open connections.\n" %
+            (self.factory.numProtocols,))
 
     def connectionLost(self, reason):
         self.factory.numProtocols = self.factory.numProtocols-1
@@ -113,32 +106,37 @@ class Echo(Protocol):
 
     <p>Here <code>connectionMade</code> and
     <code>connectionLost</code> cooperate to keep a count of the
-    active protocols in the factory. <code>connectionMade</code>
-    immediately closes the connection if there are too many active
-    protocols.</p>
+    active protocols in a shared object, the factory. The factory must
+    be passed to <code>Echo.__init__</code> when creating a new
+    instance. The factory is used to share state that exists beyond the
+    lifetime of any given connection. You will see why this object is
+    called a "factory" in the next section.</p>
 
     <h3>Using the Protocol</h3>
 
-    <p>In this section, I will explain how to run a server which uses your
-    <code>Protocol</code>. (In order to see how you should write a
-    production-grade Twisted server, though, you should read the <a
-    href="plugin.xhtml" >Writing Plug-Ins for Twisted</a> HOWTO as well).</p>
+    <p>In this section, you will learn how to run a server which uses your
+    <code>Protocol</code>.</p>
 
     <p>Here is code that will run the QOTD server discussed
     earlier:</p>
 <pre class="python">
-factory = Factory()
-factory.protocol = QOTD
+from twisted.internet.protocol import Factory
+from twisted.internet.endpoints import TCP4ServerEndpoint
+from twisted.internet import reactor
+
+class QOTDFactory(Factory):
+    def buildProtocol(self, addr):
+        return QOTD()
 
 # 8007 is the port you want to run under. Choose something &gt;1024
 endpoint = TCP4ServerEndpoint(reactor, 8007)
-endpoint.listen(factory)
+endpoint.listen(QOTDFactory())
 reactor.run()
 </pre>
     <p>In this example, I create a protocol <code class="api"
     base="twisted.internet.protocol">Factory</code>.  I want to tell this
     factory that its job is to build QOTD protocol instances, so I set its
-    <code>protocol</code> attribute to the QOTD class.  Then, I want to listen
+    <code>buildProtocol</code> method to return instances of the QOTD class.  Then, I want to listen
     on a TCP port, so I make a <code>TCP4ServerEndpoint</code> to identify the
     port that I want to bind to, and then pass the factory I just created to
     its <code class="api"
@@ -177,7 +175,10 @@ reactor.run()
     However, if <code>setRawMode</code> is called, the protocol
     will call <code>rawDataReceived</code> until
     <code>setLineMode</code> is called, which returns it to using
-    <code>lineReceived</code>.</p>
+    <code>lineReceived</code>. It also provides a method,
+    <code>sendLine</code>, that writes data to the transport along
+    with the delimiter the class uses to split lines (by default,
+    <code>\r\n</code>).</p>
 
     <p>Here is an example for a simple use of the line
     receiver:</p>
@@ -212,10 +213,6 @@ class Answer(LineReceiver):
       machine which deals with one level of abstraction at a
       time.</li>
 
-      <li>Use Python's dynamicity to create open ended state
-      machines. See, for example, the code for the SMTP
-      client.</li>
-
       <li>Don't mix application-specific code with Protocol
       handling code. When the protocol handler has to make an
       application-specific call, keep it as a method call.</li>
@@ -223,42 +220,45 @@ class Answer(LineReceiver):
 
     <h2>Factories</h2>
 
-    <p>As mentioned before, usually the class <code
-    class="API">twisted.internet.protocol.Factory</code> works,
-    and there is no need to subclass it. However, sometimes there
-    can be factory-specific configuration of the protocols, or
-    other considerations. In those cases, there is a need to
-    subclass <code>Factory</code>.</p>
+    <h3>Simpler Protocol Creation</h3>
 
     <p>For a factory which simply instantiates instances of a
-    specific protocol class, simply instantiate
-    <code>Factory</code>, and sets its <code>protocol</code> attribute:</p>
-<pre class="python">
-from twisted.internet.protocol import Factory
-from twisted.protocols.wire import Echo
+    specific protocol class, there is a simpler way to implement the factory.
+    The default implementation of the <code>buildProtocol</code> method calls
+    the <code>protocol</code> attribute of the factory to create
+    a <code>Protocol</code> instance, and then sets an attribute on it
+    called <code>factory</code> which points to the factory
+    itself. This lets every <code>Protocol</code> access, and possibly
+    modify, the persistent configuration.  Here is an example that uses these
+    features instead of overriding <code>buildProtocol</code>:</p>
 
-myFactory = Factory()
-myFactory.protocol = Echo
-</pre>
-
-    <p>If there is a need to easily construct factories for a
-    specific configuration, a factory function is often useful:</p>
 <pre class="python">
 from twisted.internet.protocol import Factory, Protocol
+from twisted.internet.endpoints import TCP4ServerEndpoint
+from twisted.internet import reactor
 
 class QOTD(Protocol):
 
     def connectionMade(self):
-        self.transport.write(self.factory.quote+'\r\n')
+        # self.factory was set by the factory's default buildProtocol:
+        self.transport.write(self.factory.quote + '\r\n')
         self.transport.loseConnection()
 
 
-def makeQOTDFactory(quote=None):
-    factory = Factory()
-    factory.protocol = QOTD
-    factory.quote = quote or 'An apple a day keeps the doctor away'
-    return factory
+class QOTDFactory(Factory):
+
+    # This will be used by the default buildProtocol to create new protocols:
+    protocol = QOTD
+
+    def __init__(self, quote=None):
+        self.quote = quote or 'An apple a day keeps the doctor away'
+
+endpoint = TCP4ServerEndpoint(reactor, 8007)
+endpoint.listen(QOTDFactory("configurable quote"))
+reactor.run()
 </pre>
+
+    <h3>Factory Startup and Shutdown</h3>
 
     <p>A Factory has two methods to perform application-specific
     building up and tearing down (since a Factory is frequently
@@ -292,44 +292,41 @@ class LogfileFactory(Factory):
         self.fp.close()
 </pre>
 
-    <h3>Putting it All Together</h3>
+    <h2>Putting it All Together</h2>
 
-    <p>So, you know what factories are, and want to run the QOTD
-    with configurable quote server, do you? No problems, here is an
-    example.</p>
+    <p>As a final example, here's a simple chat server that allows
+    users to choose a username and then communicate with other
+    users. It demonstrates the use of shared state in the factory, a
+    state machine for each individual protocol, and communication
+    between different protocols.</p>
 
-<pre class="python">
-from twisted.internet.protocol import Factory, Protocol
-from twisted.internet import reactor
+    <a href="listings/servers/chat.py" class="py-listing">chat.py</a>
 
-class QOTD(Protocol):
+    <p>The only API you might not be familiar with
+    is <code>listenTCP</code>. <code class="API"
+    base="twisted.internet.interfaces.IReactorTCP">listenTCP</code> is
+    the method which connects a <code>Factory</code> to the network.
+    This is the lower-level API
+    that <a href="endpoints.xhtml">endpoints</a> wraps for you.</p>
 
-    def connectionMade(self):
-        self.transport.write(self.factory.quote+'\r\n')
-        self.transport.loseConnection()
+    <p>Here's a sample transcript of a chat session (<em><strong>this</strong></em> is text entered by the user):</p>
 
-
-class QOTDFactory(Factory):
-
-    protocol = QOTD
-
-    def __init__(self, quote=None):
-        self.quote = quote or 'An apple a day keeps the doctor away'
-
-reactor.listenTCP(8007, QOTDFactory("configurable quote"))
-reactor.run()
+<pre class="shell">
+$ <em><strong>telnet 127.0.0.1 8123</strong></em>
+Trying 127.0.0.1...
+Connected to 127.0.0.1.
+Escape character is '^]'.
+What's your name?
+<em><strong>test</strong></em>
+Name taken, please choose another.
+<em><strong>bob</strong></em>
+Welcome, bob!
+<em><strong>hello</strong></em>
+&lt;alice&gt; hi bob
+<em><strong>twisted makes writing servers so easy!</strong></em>
+&lt;alice&gt; I couldn't agree more
+&lt;carrol&gt; yeah, it's great
 </pre>
-
-    <p>The only lines you might not understand are the last two.</p>
-
-<p><code class="API"
-base="twisted.internet.interfaces.IReactorTCP">listenTCP</code> is
-the method which connects a <code>Factory</code> to the network.
-It uses the reactor interface, which lets many different loops handle
-the networking code, without modifying end-user code, like this.
-As mentioned above, if you want to write your code to be a production-grade
-Twisted server, and not a mere 20-line hack, you will want to
-use <a href="application.xhtml">the Application object</a>.</p>
 
   </body>
 </html>
