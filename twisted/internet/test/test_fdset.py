@@ -7,15 +7,42 @@ Tests for implementations of L{IReactorFDSet}.
 
 __metaclass__ = type
 
-import socket
+import os, socket, traceback
 
-from twisted.internet.interfaces import IReactorFDSet
+from zope.interface import implements
+
+from twisted.python.runtime import platform
+from twisted.trial.unittest import SkipTest
+from twisted.internet.interfaces import IReactorFDSet, IReadDescriptor
 from twisted.internet.abstract import FileDescriptor
 from twisted.internet.test.reactormixins import ReactorBuilder
 
 # twisted.internet.tcp nicely defines some names with proper values on
 # several different platforms.
 from twisted.internet.tcp import EINPROGRESS, EWOULDBLOCK
+
+
+def socketpair():
+    serverSocket = socket.socket()
+    serverSocket.bind(('127.0.0.1', 0))
+    serverSocket.listen(1)
+    try:
+        client = socket.socket()
+        try:
+            client.setblocking(False)
+            try:
+                client.connect(('127.0.0.1', serverSocket.getsockname()[1]))
+            except socket.error, e:
+                if e.args[0] not in (EINPROGRESS, EWOULDBLOCK):
+                    raise
+            server, addr = serverSocket.accept()
+        except:
+            client.close()
+            raise
+    finally:
+        serverSocket.close()
+
+    return client, server
 
 
 class ReactorFDSetTestsBuilder(ReactorBuilder):
@@ -28,23 +55,9 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
         """
         Return the two sockets which make up a new TCP connection.
         """
-        serverSocket = socket.socket()
-        serverSocket.bind(('127.0.0.1', 0))
-        serverSocket.listen(1)
-        self.addCleanup(serverSocket.close)
-
-        client = socket.socket()
+        client, server = socketpair()
         self.addCleanup(client.close)
-        client.setblocking(False)
-        try:
-            client.connect(('127.0.0.1', serverSocket.getsockname()[1]))
-        except socket.error, e:
-            self.assertIn(e.args[0], (EINPROGRESS, EWOULDBLOCK))
-        except Exception, e:
-            self.fail("Connect should have succeeded or raised EINPROGRESS or EWOULDBLOCK")
-        server, addr = serverSocket.accept()
         self.addCleanup(server.close)
-
         return client, server
 
 
@@ -210,6 +223,176 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
         # Getting here means the right thing happened probably.
 
         self.assertEqual(removed, [fd])
+
+
+    def test_removedFromReactor(self):
+        """
+        A descriptor's C{fileno} method should not be called after the
+        descriptor has been removed from the reactor.
+        """
+        reactor = self.buildReactor()
+        descriptor = RemovingDescriptor(reactor)
+        reactor.callWhenRunning(descriptor.start)
+        self.runReactor(reactor)
+        self.assertEquals(descriptor.calls, [])
+
+
+    def test_negativeOneFileDescriptor(self):
+        """
+        If L{FileDescriptor.fileno} returns C{-1}, the descriptor is removed
+        from the reactor.
+        """
+        reactor = self.buildReactor()
+
+        if reactor.__class__.__name__ == 'Win32Reactor':
+            # Win32Reactor uses WinSock to monitor sockets.  This means it never
+            # actually has to call fileno().
+            raise SkipTest("Win32Reactor never calls fileno")
+
+        client, server = self._connectedPair()
+
+        class DisappearingDescriptor(FileDescriptor):
+            _fileno = server.fileno()
+
+            _received = ""
+
+            def fileno(self):
+                return self._fileno
+
+            def doRead(self):
+                self._fileno = -1
+                self._received += server.recv(1)
+                client.send('y')
+
+            def connectionLost(self, reason):
+                reactor.stop()
+
+        descriptor = DisappearingDescriptor(reactor)
+        reactor.addReader(descriptor)
+        client.send('x')
+        self.runReactor(reactor)
+        self.assertEquals(descriptor._received, "x")
+
+
+    def test_lostFileDescriptor(self):
+        """
+        The file descriptor underlying a FileDescriptor may be closed and
+        replaced by another at some point.  Bytes which arrive on the new
+        descriptor must not be delivered to the FileDescriptor which was
+        originally registered with the original descriptor of the same number.
+
+        Practically speaking, this is difficult or impossible to detect.  The
+        implementation relies on C{fileno} raising an exception if the original
+        descriptor has gone away.  If C{fileno} continues to return the original
+        file descriptor value, the reactor may deliver events from that
+        descriptor.  This is a best effort attempt to ease certain debugging
+        situations.  Applications should not rely on it intentionally.
+        """
+        reactor = self.buildReactor()
+
+        if reactor.__class__.__name__ == 'EPollReactor':
+            # Closing a file descriptor immediately removes it from the epoll
+            # set without generating a notification.  That means epollreactor
+            # will not call any methods on Victim after the close, so there's
+            # no chance to notice the socket is no longer valid.
+            raise SkipTest("EPollReactor cannot detect lost file descriptors")
+
+        client, server = self._connectedPair()
+
+        class Victim(FileDescriptor):
+            """
+            This L{FileDescriptor} will have its socket closed out from under it
+            and another socket will take its place.  It will raise a
+            socket.error from C{fileno} after this happens (because socket
+            objects remember whether they have been closed), so as long as the
+            reactor calls the C{fileno} method the problem will be detected.
+            """
+            def fileno(self):
+                return server.fileno()
+
+            def doRead(self):
+                raise Exception("Victim.doRead should never be called")
+
+            def connectionLost(self, reason):
+                """
+                When the problem is detected, the reactor should disconnect this
+                file descriptor.  When that happens, stop the reactor so the
+                test ends.
+                """
+                reactor.stop()
+
+        reactor.addReader(Victim())
+
+        # Arrange for the socket to be replaced at some unspecified time.
+        # Significantly, this will not be while any I/O processing code is on
+        # the stack.  It is something that happens independently and cannot be
+        # relied upon to happen at a convenient time, such as within a call to
+        # doRead.
+        def messItUp():
+            newC, newS = self._connectedPair()
+            fileno = server.fileno()
+            server.close()
+            os.dup2(newS.fileno(), fileno)
+            newC.send("x")
+        reactor.callLater(0, messItUp)
+
+        self.runReactor(reactor)
+
+        # If the implementation feels like logging the exception raised by
+        # MessedUp.fileno, that's fine.
+        self.flushLoggedErrors(socket.error)
+    if platform.isWindows():
+        test_lostFileDescriptor.skip = (
+            "Cannot duplicate socket filenos on Windows")
+
+
+
+class RemovingDescriptor(object):
+    """
+    A read descriptor which removes itself from the reactor as soon as it
+    gets a chance to do a read and keeps track of when its own C{fileno}
+    method is called.
+
+    @ivar insideReactor: A flag which is true as long as the reactor has
+        this descriptor as a reader.
+
+    @ivar calls: A list of the bottom of the call stack for any call to
+        C{fileno} when C{insideReactor} is false.
+    """
+    implements(IReadDescriptor)
+
+
+    def __init__(self, reactor):
+        self.reactor = reactor
+        self.insideReactor = False
+        self.calls = []
+        self.read, self.write = socketpair()
+
+
+    def start(self):
+        self.insideReactor = True
+        self.reactor.addReader(self)
+        self.write.send('a')
+
+
+    def logPrefix(self):
+        return 'foo'
+
+
+    def doRead(self):
+        self.reactor.removeReader(self)
+        self.insideReactor = False
+        self.reactor.stop()
+
+
+    def fileno(self):
+        if not self.insideReactor:
+            self.calls.append(traceback.extract_stack(limit=5)[:-1])
+        return self.read.fileno()
+
+
+    def connectionLost(self, reason):
+        pass
 
 
 globals().update(ReactorFDSetTestsBuilder.makeTestCaseClasses())

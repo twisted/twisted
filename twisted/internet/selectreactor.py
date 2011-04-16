@@ -10,14 +10,12 @@ Maintainer: Itamar Shtull-Trauring
 """
 
 from time import sleep
-import sys
-import select
+import sys, select, socket
 from errno import EINTR, EBADF
 
 from zope.interface import implements
 
 from twisted.internet.interfaces import IReactorFDSet
-from twisted.internet import error
 from twisted.internet import posixbase
 from twisted.python import log
 from twisted.python.runtime import platformType
@@ -44,10 +42,6 @@ if platformType == "win32":
     _select = win32select
 else:
     _select = select.select
-
-# Exceptions that doSelect might return frequently
-_NO_FILENO = error.ConnectionFdescWentAway('Handler has no fileno method')
-_NO_FILEDESC = error.ConnectionFdescWentAway('Filedescriptor went away')
 
 class SelectReactor(posixbase.PosixReactorBase):
     """
@@ -97,36 +91,39 @@ class SelectReactor(posixbase.PosixReactorBase):
         This will run all selectables who had input or output readiness
         waiting for them.
         """
-        while 1:
-            try:
-                r, w, ignored = _select(self._reads.keys(),
-                                        self._writes.keys(),
-                                        [], timeout)
-                break
-            except ValueError, ve:
-                # Possibly a file descriptor has gone negative?
-                log.err()
-                self._preenDescriptors()
-            except TypeError, te:
-                # Something *totally* invalid (object w/o fileno, non-integral
-                # result) was passed
-                log.err()
-                self._preenDescriptors()
-            except (select.error, IOError), se:
-                # select(2) encountered an error
-                if se.args[0] in (0, 2):
-                    # windows does this if it got an empty list
-                    if (not self._reads) and (not self._writes):
-                        return
-                    else:
-                        raise
-                elif se.args[0] == EINTR:
+        try:
+            r, w, ignored = _select(self._reads.keys(),
+                                    self._writes.keys(),
+                                    [], timeout)
+        except ValueError:
+            # Possibly a file descriptor has gone negative?
+            self._preenDescriptors()
+            return
+        except TypeError:
+            # Something *totally* invalid (object w/o fileno, non-integral
+            # result) was passed
+            log.err()
+            self._preenDescriptors()
+            return
+        except (select.error, socket.error, IOError), se:
+            # select(2) encountered an error, perhaps while calling the fileno()
+            # method of a socket.  (Python 2.6 socket.error is an IOError
+            # subclass, but on Python 2.5 and earlier it is not.)
+            if se.args[0] in (0, 2):
+                # windows does this if it got an empty list
+                if (not self._reads) and (not self._writes):
                     return
-                elif se.args[0] == EBADF:
-                    self._preenDescriptors()
                 else:
-                    # OK, I really don't know what's going on.  Blow up.
                     raise
+            elif se.args[0] == EINTR:
+                return
+            elif se.args[0] == EBADF:
+                self._preenDescriptors()
+                return
+            else:
+                # OK, I really don't know what's going on.  Blow up.
+                raise
+
         _drdw = self._doReadOrWrite
         _logrun = log.callWithLogger
         for selectables, method, fdset in ((r, "doRead", self._reads),
@@ -144,11 +141,6 @@ class SelectReactor(posixbase.PosixReactorBase):
     def _doReadOrWrite(self, selectable, method, dict):
         try:
             why = getattr(selectable, method)()
-            handfn = getattr(selectable, 'fileno', None)
-            if not handfn:
-                why = _NO_FILENO
-            elif handfn() == -1:
-                why = _NO_FILEDESC
         except:
             why = sys.exc_info()[1]
             log.err()

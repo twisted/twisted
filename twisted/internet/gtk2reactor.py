@@ -40,10 +40,10 @@ if hasattr(gobject, "threads_init"):
     gobject.threads_init()
 
 # Twisted Imports
-from twisted.python import log, runtime, failure
+from twisted.python import log, runtime
 from twisted.python.compat import set
 from twisted.internet.interfaces import IReactorFDSet
-from twisted.internet import main, base, posixbase, error, selectreactor
+from twisted.internet import base, posixbase, selectreactor
 
 POLL_DISCONNECTED = gobject.IO_HUP | gobject.IO_ERR | gobject.IO_NVAL
 
@@ -88,7 +88,7 @@ class _Gtk2SignalMixin(object):
 
 
 
-class Gtk2Reactor(_Gtk2SignalMixin, posixbase.PosixReactorBase):
+class Gtk2Reactor(_Gtk2SignalMixin, posixbase.PosixReactorBase, posixbase._PollLikeMixin):
     """
     GTK+-2 event loop reactor.
 
@@ -104,6 +104,10 @@ class Gtk2Reactor(_Gtk2SignalMixin, posixbase.PosixReactorBase):
     @ivar _simtag: A gtk timeout handle for the next L{simulate} call.
     """
     implements(IReactorFDSet)
+
+    _POLL_DISCONNECTED = POLL_DISCONNECTED
+    _POLL_IN = gobject.IO_IN
+    _POLL_OUT = gobject.IO_OUT
 
     def __init__(self, useGtk=True):
         self._simtag = None
@@ -273,39 +277,9 @@ class Gtk2Reactor(_Gtk2SignalMixin, posixbase.PosixReactorBase):
             self.__run()
 
 
-    def _doReadOrWrite(self, source, condition, faildict={
-        error.ConnectionDone: failure.Failure(error.ConnectionDone()),
-        error.ConnectionLost: failure.Failure(error.ConnectionLost()),
-        }):
-        why = None
-        inRead = False
-        if condition & POLL_DISCONNECTED and not (condition & gobject.IO_IN):
-            if source in self._reads:
-                why = main.CONNECTION_DONE
-                inRead = True
-            else:
-                why = main.CONNECTION_LOST
-        else:
-            try:
-                if condition & gobject.IO_IN:
-                    why = source.doRead()
-                    inRead = True
-                if not why and condition & gobject.IO_OUT:
-                    # if doRead caused connectionLost, don't call doWrite
-                    # if doRead is doWrite, don't call it again.
-                    if not source.disconnected:
-                        why = source.doWrite()
-            except:
-                why = sys.exc_info()[1]
-                log.msg('Error In %s' % source)
-                log.deferr()
-
-        if why:
-            self._disconnectSelectable(source, why, inRead)
-
-
     def callback(self, source, condition):
-        log.callWithLogger(source, self._doReadOrWrite, source, condition)
+        log.callWithLogger(
+            source, self._doReadOrWrite, source, source, condition)
         self.simulate() # fire Twisted timers
         return 1 # 1=don't auto-remove the source
 

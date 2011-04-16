@@ -11,21 +11,17 @@ listeners or connectors are added)::
     epollreactor.install()
 """
 
-import sys, errno
+import errno
 
 from zope.interface import implements
 
 from twisted.internet.interfaces import IReactorFDSet
 
-from twisted.python import _epoll
-from twisted.python import log
-from twisted.internet import posixbase, error
-from twisted.internet.main import CONNECTION_DONE, CONNECTION_LOST
+from twisted.python import log, _epoll
+from twisted.internet import posixbase
 
 
-_POLL_DISCONNECTED = (_epoll.HUP | _epoll.ERR)
-
-class EPollReactor(posixbase.PosixReactorBase):
+class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
     """
     A reactor that uses epoll(4).
 
@@ -51,6 +47,11 @@ class EPollReactor(posixbase.PosixReactorBase):
         C{_selectables}.
     """
     implements(IReactorFDSet)
+
+    # Attributes for _PollLikeMixin
+    _POLL_DISCONNECTED = (_epoll.HUP | _epoll.ERR)
+    _POLL_IN = _epoll.IN
+    _POLL_OUT = _epoll.OUT
 
     def __init__(self):
         """
@@ -198,36 +199,6 @@ class EPollReactor(posixbase.PosixReactorBase):
 
     doIteration = doPoll
 
-    def _doReadOrWrite(self, selectable, fd, event):
-        """
-        fd is available for read or write, make the work and raise errors
-        if necessary.
-        """
-        why = None
-        inRead = False
-        if event & _POLL_DISCONNECTED and not (event & _epoll.IN):
-            if fd in self._reads:
-                inRead = True
-                why = CONNECTION_DONE
-            else:
-                why = CONNECTION_LOST
-        else:
-            try:
-                if event & _epoll.IN:
-                    why = selectable.doRead()
-                    inRead = True
-                if not why and event & _epoll.OUT:
-                    why = selectable.doWrite()
-                    inRead = False
-                if selectable.fileno() != fd:
-                    why = error.ConnectionFdescWentAway(
-                          'Filedescriptor went away')
-                    inRead = False
-            except:
-                log.err()
-                why = sys.exc_info()[1]
-        if why:
-            self._disconnectSelectable(selectable, why, inRead)
 
 def install():
     """

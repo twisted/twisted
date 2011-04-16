@@ -1,7 +1,6 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
 """
 A poll() based implementation of the twisted main loop.
 
@@ -13,7 +12,7 @@ listeners or connectors are added)::
 """
 
 # System imports
-import errno, sys
+import errno
 from select import error as SelectError, poll
 from select import POLLIN, POLLOUT, POLLHUP, POLLERR, POLLNVAL
 
@@ -21,13 +20,12 @@ from zope.interface import implements
 
 # Twisted imports
 from twisted.python import log
-from twisted.internet import main, posixbase, error
+from twisted.internet import posixbase
 from twisted.internet.interfaces import IReactorFDSet
 
-POLL_DISCONNECTED = (POLLHUP | POLLERR | POLLNVAL)
 
 
-class PollReactor(posixbase.PosixReactorBase):
+class PollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
     """
     A reactor that uses poll(2).
 
@@ -53,6 +51,10 @@ class PollReactor(posixbase.PosixReactorBase):
         C{_selectables}.
     """
     implements(IReactorFDSet)
+
+    _POLL_DISCONNECTED = (POLLHUP | POLLERR | POLLNVAL)
+    _POLL_IN = POLLIN
+    _POLL_OUT = POLLOUT
 
     def __init__(self):
         """
@@ -165,33 +167,6 @@ class PollReactor(posixbase.PosixReactorBase):
             log.callWithLogger(selectable, _drdw, selectable, fd, event)
 
     doIteration = doPoll
-
-    def _doReadOrWrite(self, selectable, fd, event):
-        why = None
-        inRead = False
-        if event & POLL_DISCONNECTED and not (event & POLLIN):
-            if fd in self._reads:
-                why = main.CONNECTION_DONE
-                inRead = True
-            else:
-                why = main.CONNECTION_LOST
-        else:
-            try:
-                if event & POLLIN:
-                    why = selectable.doRead()
-                    inRead = True
-                if not why and event & POLLOUT:
-                    why = selectable.doWrite()
-                    inRead = False
-                if not selectable.fileno() == fd:
-                    why = error.ConnectionFdescWentAway('Filedescriptor went away')
-                    inRead = False
-            except:
-                log.deferr()
-                why = sys.exc_info()[1]
-        if why:
-            self._disconnectSelectable(selectable, why, inRead)
-
 
     def getReaders(self):
         return [self._selectables[fd] for fd in self._reads]

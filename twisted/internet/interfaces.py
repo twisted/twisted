@@ -986,6 +986,7 @@ class ILoggingContext(Interface):
         """
 
 
+
 class IFileDescriptor(ILoggingContext):
     """
     An interface representing a UNIX-style numeric file descriptor.
@@ -993,9 +994,16 @@ class IFileDescriptor(ILoggingContext):
 
     def fileno():
         """
+        @raise: If the descriptor no longer has a valid file descriptor
+            number associated with it.
+
         @return: The platform-specified representation of a file descriptor
-                 number.
+            number.  Or C{-1} if the descriptor no longer has a valid file
+            descriptor number associated with it.  As long as the descriptor
+            is valid, calls to this method on a particular instance must
+            return the same value.
         """
+
 
     def connectionLost(reason):
         """
@@ -1016,6 +1024,7 @@ class IFileDescriptor(ILoggingContext):
         """
 
 
+
 class IReadDescriptor(IFileDescriptor):
     """
     An L{IFileDescriptor} that can read.
@@ -1026,6 +1035,10 @@ class IReadDescriptor(IFileDescriptor):
     def doRead():
         """
         Some data is available for reading on your descriptor.
+
+        @return: If an error is encountered which causes the descriptor to
+            no longer be valid, a L{Failure} should be returned.  Otherwise,
+            C{None}.
         """
 
 
@@ -1039,6 +1052,10 @@ class IWriteDescriptor(IFileDescriptor):
     def doWrite():
         """
         Some data can be written to your descriptor.
+
+        @return: If an error is encountered which causes the descriptor to
+            no longer be valid, a L{Failure} should be returned.  Otherwise,
+            C{None}.
         """
 
 

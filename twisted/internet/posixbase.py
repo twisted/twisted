@@ -10,6 +10,7 @@ import warnings
 import socket
 import errno
 import os
+import sys
 
 from zope.interface import implements, classImplements
 
@@ -26,6 +27,9 @@ from twisted.persisted import styles
 from twisted.python.runtime import platformType, platform
 
 from twisted.internet.base import ReactorBase, _SignalReactorMixin
+from twisted.internet.main import CONNECTION_DONE, CONNECTION_LOST
+
+_FDESC_LOST = error.ConnectionFdescWentAway('File descriptor lost')
 
 try:
     from twisted.protocols import tls
@@ -508,6 +512,80 @@ class PosixReactorBase(_SignalReactorMixin, ReactorBase):
             self.removeWriter(writer)
 
         return list(removedReaders | removedWriters)
+
+
+class _PollLikeMixin(object):
+    """
+    Mixin for poll-like reactors.
+
+    Subclasses must define the following attributes::
+
+      - _POLL_DISCONNECTED - Bitmask for events indicating a connection was
+        lost.
+      - _POLL_IN - Bitmask for events indicating there is input to read.
+      - _POLL_OUT - Bitmask for events indicating output can be written.
+
+    Must be mixed in to a subclass of PosixReactorBase (for
+    _disconnectSelectable).
+    """
+
+    def _doReadOrWrite(self, selectable, fd, event):
+        """
+        fd is available for read or write, do the work and raise errors if
+        necessary.
+        """
+        why = None
+        inRead = False
+        if event & self._POLL_DISCONNECTED and not (event & self._POLL_IN):
+            # Handle disconnection.  But only if we finished processing all
+            # the pending input.
+            if fd in self._reads:
+                # If we were reading from the descriptor then this is a
+                # clean shutdown.  We know there are no read events pending
+                # because we just checked above.  It also might be a
+                # half-close (which is why we have to keep track of inRead).
+                inRead = True
+                why = CONNECTION_DONE
+            else:
+                # If we weren't reading, this is an error shutdown of some
+                # sort.
+                why = CONNECTION_LOST
+        else:
+            # Any non-disconnect event turns into a doRead or a doWrite.
+            try:
+                # First check to see if the descriptor is still valid.  This
+                # gives fileno() a chance to raise an exception, too. 
+                # Ideally, disconnection would always be indicated by the
+                # return value of doRead or doWrite (or an exception from
+                # one of those methods), but calling fileno here helps make
+                # buggy applications more transparent.
+                if selectable.fileno() == -1:
+                    # -1 is sort of a historical Python artifact.  Python
+                    # files and sockets used to change their file descriptor
+                    # to -1 when they closed.  For the time being, we'll
+                    # continue to support this anyway in case applications
+                    # replicated it, plus abstract.FileDescriptor.fileno
+                    # returns -1.  Eventually it'd be good to deprecate this
+                    # case.
+                    why = _FDESC_LOST
+                else:
+                    if event & self._POLL_IN:
+                        # Handle a read event.
+                        why = selectable.doRead()
+                        inRead = True
+                    if not why and event & self._POLL_OUT:
+                        # Handle a write event, as long as doRead didn't
+                        # disconnect us.
+                        why = selectable.doWrite()
+                        inRead = False
+            except:
+                # Any exception from application code gets logged and will
+                # cause us to disconnect the selectable.
+                why = sys.exc_info()[1]
+                log.err()
+        if why:
+            self._disconnectSelectable(selectable, why, inRead)
+
 
 
 if tls is not None or ssl is not None:
