@@ -157,7 +157,7 @@ class XMLRPC(resource.Resource):
             self._cbRender(f, request)
         else:
             try:
-                function = self._getFunction(functionPath)
+                function = self.lookupProcedure(functionPath)
             except Fault, f:
                 self._cbRender(f, request)
             else:
@@ -206,40 +206,50 @@ class XMLRPC(resource.Resource):
         log.err(failure)
         return Fault(self.FAILURE, "error")
 
-    def _getFunction(self, functionPath):
-        """
-        Given a string, return a function, or raise NoSuchFunction.
 
-        This returned function will be called, and should return the result
-        of the call, a Deferred, or a Fault instance.
-
-        Override in subclasses if you want your own policy. The default
-        policy is that given functionPath 'foo', return the method at
-        self.xmlrpc_foo, i.e. getattr(self, "xmlrpc_" + functionPath).
-        If functionPath contains self.separator, the sub-handler for
-        the initial prefix is used to search for the remaining path.
+    def lookupProcedure(self, procedurePath):
         """
-        if functionPath.find(self.separator) != -1:
-            prefix, functionPath = functionPath.split(self.separator, 1)
+        Given a string naming a procedure, return a callable object for that
+        procedure or raise NoSuchFunction.
+
+        The returned object will be called, and should return the result of the
+        procedure, a Deferred, or a Fault instance.
+
+        Override in subclasses if you want your own policy.  The base
+        implementation that given C{'foo'}, C{self.xmlrpc_foo} will be returned.
+        If C{procedurePath} contains C{self.separator}, the sub-handler for the
+        initial prefix is used to search for the remaining path.
+
+        If you override C{lookupProcedure}, you may also want to override
+        C{listProcedures} to accurately report the procedures supported by your
+        resource, so that clients using the I{system.listMethods} procedure
+        receive accurate results.
+
+        @since: 11.1
+        """
+        if procedurePath.find(self.separator) != -1:
+            prefix, procedurePath = procedurePath.split(self.separator, 1)
             handler = self.getSubHandler(prefix)
             if handler is None:
                 raise NoSuchFunction(self.NOT_FOUND,
                     "no such subHandler %s" % prefix)
-            return handler._getFunction(functionPath)
+            return handler.lookupProcedure(procedurePath)
 
-        f = getattr(self, "xmlrpc_%s" % functionPath, None)
+        f = getattr(self, "xmlrpc_%s" % procedurePath, None)
         if not f:
             raise NoSuchFunction(self.NOT_FOUND,
-                "function %s not found" % functionPath)
+                "procedure %s not found" % procedurePath)
         elif not callable(f):
             raise NoSuchFunction(self.NOT_FOUND,
-                "function %s not callable" % functionPath)
+                "procedure %s not callable" % procedurePath)
         else:
             return f
 
-    def _listFunctions(self):
+    def listProcedures(self):
         """
-        Return a list of the names of all xmlrpc methods.
+        Return a list of the names of all xmlrpc procedures.
+
+        @since: 11.1
         """
         return reflect.prefixedMethodNames(self.__class__, 'xmlrpc_')
 
@@ -275,7 +285,7 @@ class XMLRPCIntrospection(XMLRPC):
         todo = [(self._xmlrpc_parent, '')]
         while todo:
             obj, prefix = todo.pop(0)
-            functions.extend([prefix + name for name in obj._listFunctions()])
+            functions.extend([prefix + name for name in obj.listProcedures()])
             todo.extend([ (obj.getSubHandler(name),
                            prefix + name + obj.separator)
                           for name in obj.getSubHandlerPrefixes() ])
@@ -287,7 +297,7 @@ class XMLRPCIntrospection(XMLRPC):
         """
         Return a documentation string describing the use of the given method.
         """
-        method = self._xmlrpc_parent._getFunction(method)
+        method = self._xmlrpc_parent.lookupProcedure(method)
         return (getattr(method, 'help', None)
                 or getattr(method, '__doc__', None) or '')
 
@@ -302,7 +312,7 @@ class XMLRPCIntrospection(XMLRPC):
         argument. If no signature information is available, the empty
         string is returned.
         """
-        method = self._xmlrpc_parent._getFunction(method)
+        method = self._xmlrpc_parent.lookupProcedure(method)
         return getattr(method, 'signature', None) or ''
 
     xmlrpc_methodSignature.signature = [['array', 'string'],

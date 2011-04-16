@@ -13,7 +13,8 @@ from StringIO import StringIO
 from twisted.trial import unittest
 from twisted.web import xmlrpc
 from twisted.web.xmlrpc import (
-    XMLRPC, payloadTemplate, addIntrospection, _QueryFactory, Proxy, withRequest)
+    XMLRPC, payloadTemplate, addIntrospection, _QueryFactory, Proxy,
+    withRequest)
 from twisted.web import server, static, client, error, http
 from twisted.internet import reactor, defer
 from twisted.internet.error import ConnectionDone
@@ -157,15 +158,50 @@ class Test(XMLRPC):
             ' ' + other)
 
 
-    def _getFunction(self, functionPath):
+    def lookupProcedure(self, procedurePath):
         try:
-            return XMLRPC._getFunction(self, functionPath)
+            return XMLRPC.lookupProcedure(self, procedurePath)
         except xmlrpc.NoSuchFunction:
-            if functionPath.startswith("SESSION"):
+            if procedurePath.startswith("SESSION"):
                 raise xmlrpc.Fault(self.SESSION_EXPIRED,
                                    "Session non-existant/expired.")
             else:
                 raise
+
+
+
+class TestLookupProcedure(XMLRPC):
+    """
+    This is a resource which customizes procedure lookup to be used by the tests
+    of support for this customization.
+    """
+    def echo(self, x):
+        return x
+
+
+    def lookupProcedure(self, procedureName):
+        """
+        Lookup a procedure from a fixed set of choices, either I{echo} or
+        I{system.listeMethods}.
+        """
+        if procedureName == 'echo':
+            return self.echo
+        raise xmlrpc.NoSuchFunction(
+            self.NOT_FOUND, 'procedure %s not found' % (procedureName,))
+
+
+
+class TestListProcedures(XMLRPC):
+    """
+    This is a resource which customizes procedure enumeration to be used by the
+    tests of support for this customization.
+    """
+    def listProcedures(self):
+        """
+        Return a list of a single method this resource will claim to support.
+        """
+        return ['foo']
+
 
 
 class TestAuthHeader(Test):
@@ -422,6 +458,65 @@ class XMLRPCTestCase2(XMLRPCTestCase):
         else:
             p.queryFactory = factory
         return p
+
+
+
+class XMLRPCTestPublicLookupProcedure(unittest.TestCase):
+    """
+    Tests for L{XMLRPC}'s support of subclasses which override
+    C{lookupProcedure} and C{listProcedures}.
+    """
+
+    def createServer(self, resource):
+        self.p = reactor.listenTCP(
+            0, server.Site(resource), interface="127.0.0.1")
+        self.addCleanup(self.p.stopListening)
+        self.port = self.p.getHost().port
+        self.proxy = xmlrpc.Proxy('http://127.0.0.1:%d' % self.port)
+
+
+    def test_lookupProcedure(self):
+        """
+        A subclass of L{XMLRPC} can override C{lookupProcedure} to find
+        procedures that are not defined using a C{xmlrpc_}-prefixed method name.
+        """
+        self.createServer(TestLookupProcedure())
+        what = "hello"
+        d = self.proxy.callRemote("echo", what)
+        d.addCallback(self.assertEqual, what)
+        return d
+
+
+    def test_errors(self):
+        """
+        A subclass of L{XMLRPC} can override C{lookupProcedure} to raise
+        L{NoSuchFunction} to indicate that a requested method is not available
+        to be called, signalling a fault to the XML-RPC client.
+        """
+        self.createServer(TestLookupProcedure())
+        d = self.proxy.callRemote("xxxx", "hello")
+        d = self.assertFailure(d, xmlrpc.Fault)
+        return d
+
+
+    def test_listMethods(self):
+        """
+        A subclass of L{XMLRPC} can override C{listProcedures} to define
+        Overriding listProcedures should prevent introspection from being
+        broken.
+        """
+        resource = TestListProcedures()
+        addIntrospection(resource)
+        self.createServer(resource)
+        d = self.proxy.callRemote("system.listMethods")
+        def listed(procedures):
+            # The list will also include other introspection procedures added by
+            # addIntrospection.  We just want to see "foo" from our customized
+            # listProcedures.
+            self.assertIn('foo', procedures)
+        d.addCallback(listed)
+        return d
+
 
 
 class SerializationConfigMixin:

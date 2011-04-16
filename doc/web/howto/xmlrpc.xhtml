@@ -162,6 +162,17 @@ class="python">XMLRPC.separator</code> data member in your base
 XML-RPC server. XML-RPC servers may be nested to arbitrary depths
 using this method.</p>
 
+<h3>Using your own procedure getter</h3>
+
+<p>Sometimes, you want to implement your own policy of getting the end implementation.
+E.g. just like sub-handlers you want to divide the implementations into separate classes but
+may not want to introduce <code class="python">XMLRPC.separator</code> in the procedure name.
+In such cases just override the <code class="python">lookupProcedure(self, procedurePath)</code>
+method and return the correct callable.
+Raise <code class="API">twisted.web.xmlrpc.NoSuchFunction</code> otherwise.</p>
+
+<a href="listings/xmlrpc-customized.py" class="py-listing">xmlrpc-customized.py</a>
+
 <h3>Adding XML-RPC Introspection support</h3>
 
 <p>XML-RPC has an
