@@ -25,6 +25,7 @@ from twisted.cred.error import UnauthorizedLogin
 from twisted.cred import portal, checkers, credentials
 from twisted.python import failure, filepath, runtime
 from twisted.test import proto_helpers
+from twisted.internet.main import CONNECTION_LOST
 
 from twisted.protocols import ftp, loopback
 
@@ -343,6 +344,7 @@ class BasicFTPServerTestCase(FTPServerTestCase):
         # Semi-reasonable way to force cleanup
         self.serverProtocol.transport.loseConnection()
     testPASV = defer.deferredGenerator(testPASV)
+
 
     def testSYST(self):
         d = self._anonymousLogin()
@@ -908,7 +910,6 @@ class FTPClientTests(unittest.TestCase):
             m.append(failure)
             return None
         d.addErrback(_eb)
-        from twisted.internet.main import CONNECTION_LOST
         ftpClient.connectionLost(failure.Failure(CONNECTION_LOST))
         self.failUnless(m, m)
         return d
@@ -2868,3 +2869,36 @@ class FTPCloseTest(unittest.TestCase):
         self.assertTrue(stor_done)
 
         return d # just in case an errback occurred
+
+
+class DTPTests(unittest.TestCase):
+    def test_customDTPFactoryPASV(self):
+        """
+        L{FTP.makeDTPFactory} can be overridden to customize the factory used to
+        create the DTP server protocol.
+        """
+        called = []
+        def makeDTPFactory(pi, peer=None):
+            called.append((pi, peer))
+            result = ftp.FTP.makeDTPFactory(server, pi, peer)
+            result.deferred.callback(None)
+            return result
+
+        factory = ftp.FTPFactory()
+        server = ftp.FTP()
+        server.factory = factory
+        server.makeDTPFactory = makeDTPFactory
+        transport = proto_helpers.StringTransport()
+        server.makeConnection(transport)
+        self.addCleanup(server.connectionLost, failure.Failure(CONNECTION_LOST))
+
+        server.state = server.AUTHED
+        transport.clear()
+
+        server.dataReceived('PORT 1,2,3,4,5,6\r\n')
+        self.assertEquals(
+            transport.value(),
+            "227 Entering Passive Mode (127,0,0,1,4,210).")
+
+        self.assertEqual(called, [(server, None)])
+

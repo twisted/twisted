@@ -661,11 +661,34 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
     dtpInstance = None
     binary = True
 
-    dtpFactoryClass = DTPFactory
-
     passivePortRange = xrange(0, 1)
 
     listenFactory = reactor.listenTCP
+
+    def makeDTPFactory(self, pi, peer=None):
+        """
+        Return a L{ClientFactory} which can be to listen for incoming DTP
+        connections or establish outgoing DTP connections.
+
+        Override this method to customize the factory used for these DTP
+        connections.
+
+        @param pi: The I{protocol interpreter} with which the DTP connection is
+            to be used.  This is the L{FTP} instance which received the I{PASV}
+            or I{PORT} command necessitating this DTP connection.
+
+        @param peer: If the factory will be used to establish an outgoing
+            connection, this is an L{IAddress} provider giving the destination
+            address.  Otherwise, this parameter is not passed.
+
+        @return: A factory with a C{setTimeout} method which may be called to
+            start a connection timeout and a C{deferred} attribute which fires
+            when a connection has been made or when the timeout expires.  The
+            factory must also set the C{dtpInstance} attribute on the C{pi}
+            before C{deferred} fires successfully.
+        """
+        return DTPFactory(pi, peer)
+
 
     def reply(self, key, *args):
         msg = RESPONSE[key] % args
@@ -849,7 +872,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             # cleanupDTP sets dtpFactory to none.  Later we'll do
             # cleanup here or something.
             self.cleanupDTP()
-        self.dtpFactory = self.dtpFactoryClass(pi=self)
+        self.dtpFactory = self.makeDTPFactory(pi=self)
         self.dtpFactory.setTimeout(self.dtpTimeout)
         self.dtpPort = self.getDTPPort(self.dtpFactory)
 
@@ -868,7 +891,8 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         if self.dtpFactory is not None:
             self.cleanupDTP()
 
-        self.dtpFactory = self.dtpFactoryClass(pi=self, peerHost=self.transport.getPeer().host)
+        self.dtpFactory = self.makeDTPFactory(
+            pi=self, peer=self.transport.getPeer())
         self.dtpFactory.setTimeout(self.dtpTimeout)
         self.dtpPort = reactor.connectTCP(ip, port, self.dtpFactory)
 
