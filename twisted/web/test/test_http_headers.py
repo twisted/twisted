@@ -138,10 +138,17 @@ class HeadersTests(TestCase):
         the given header.
         """
         h = Headers()
-        self.assertEqual(h._canonicalNameCaps("test"), "Test")
-        self.assertEqual(h._canonicalNameCaps("test-stuff"), "Test-Stuff")
-        self.assertEqual(h._canonicalNameCaps("www-authenticate"),
+        self.assertEquals(h._canonicalNameCaps("test"), "Test")
+        self.assertEquals(h._canonicalNameCaps("test-stuff"), "Test-Stuff")
+        self.assertEquals(h._canonicalNameCaps("content-md5"), "Content-MD5")
+        self.assertEquals(h._canonicalNameCaps("dnt"), "DNT")
+        self.assertEquals(h._canonicalNameCaps("etag"), "ETag")
+        self.assertEquals(h._canonicalNameCaps("p3p"), "P3P")
+        self.assertEquals(h._canonicalNameCaps("te"), "TE")
+        self.assertEquals(h._canonicalNameCaps("www-authenticate"),
                           "WWW-Authenticate")
+        self.assertEquals(h._canonicalNameCaps("x-xss-protection"),
+                          "X-XSS-Protection")
 
 
     def test_getAllRawHeaders(self):

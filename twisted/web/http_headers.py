@@ -132,7 +132,14 @@ class Headers(object):
     @ivar _rawHeaders: A C{dict} mapping header names as C{str} to C{lists} of
         header values as C{str}.
     """
-    _caseMappings = {'www-authenticate': 'WWW-Authenticate'}
+    _caseMappings = {
+        'content-md5': 'Content-MD5',
+        'dnt': 'DNT',
+        'etag': 'ETag',
+        'p3p': 'P3P',
+        'te': 'TE',
+        'www-authenticate': 'WWW-Authenticate',
+        'x-xss-protection': 'X-XSS-Protection'}
 
     def __init__(self, rawHeaders=None):
         self._rawHeaders = {}
