@@ -332,7 +332,11 @@ class Name:
 
         @raise EOFError: Raised when there are not enough bytes available
         from C{strio}.
+
+        @raise ValueError: Raised when the name cannot be decoded (for example,
+            because it contains a loop).
         """
+        visited = set()
         self.name = ''
         off = 0
         while 1:
@@ -344,6 +348,9 @@ class Name:
             if (l >> 6) == 3:
                 new_off = ((l&63) << 8
                             | ord(readPrecisely(strio, 1)))
+                if new_off in visited:
+                    raise ValueError("Compression loop in encoded name")
+                visited.add(new_off)
                 if off == 0:
                     off = strio.tell()
                 strio.seek(new_off)

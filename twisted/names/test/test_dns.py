@@ -22,6 +22,103 @@ from twisted.names import dns
 from twisted.test import proto_helpers
 
 
+class NameTests(unittest.TestCase):
+    """
+    Tests for L{Name}, the representation of a single domain name with support
+    for encoding into and decoding from DNS message format.
+    """
+    def test_decode(self):
+        """
+        L{Name.decode} populates the L{Name} instance with name information read
+        from the file-like object passed to it.
+        """
+        n = dns.Name()
+        n.decode(StringIO("\x07example\x03com\x00"))
+        self.assertEqual(n.name, "example.com")
+
+
+    def test_encode(self):
+        """
+        L{Name.encode} encodes its name information and writes it to the
+        file-like object passed to it.
+        """
+        name = dns.Name("foo.example.com")
+        stream = StringIO()
+        name.encode(stream)
+        self.assertEqual(stream.getvalue(), "\x03foo\x07example\x03com\x00")
+
+
+    def test_encodeWithCompression(self):
+        """
+        If a compression dictionary is passed to it, L{Name.encode} uses offset
+        information from it to encode its name with references to existing
+        labels in the stream instead of including another copy of them in the
+        output.  It also updates the compression dictionary with the location of
+        the name it writes to the stream.
+        """
+        name = dns.Name("foo.example.com")
+        compression = {"example.com": 0x17}
+
+        # Some bytes already encoded into the stream for this message
+        previous = "some prefix to change .tell()"
+        stream = StringIO()
+        stream.write(previous)
+
+        # The position at which the encoded form of this new name will appear in
+        # the stream.
+        expected = len(previous) + dns.Message.headerSize
+        name.encode(stream, compression)
+        self.assertEqual(
+            "\x03foo\xc0\x17",
+            stream.getvalue()[len(previous):])
+        self.assertEqual(
+            {"example.com": 0x17, "foo.example.com": expected},
+            compression)
+
+
+    def test_decodeWithCompression(self):
+        """
+        If the leading byte of an encoded label (in bytes read from a stream
+        passed to L{Name.decode}) has its two high bits set, the next byte is
+        treated as a pointer to another label in the stream and that label is
+        included in the name being decoded.
+        """
+        # Slightly modified version of the example from RFC 1035, section 4.1.4.
+        stream = StringIO(
+            "x" * 20 +
+            "\x01f\x03isi\x04arpa\x00"
+            "\x03foo\xc0\x14"
+            "\x03bar\xc0\x20")
+        stream.seek(20)
+        name = dns.Name()
+        name.decode(stream)
+        # Verify we found the first name in the stream and that the stream
+        # position is left at the first byte after the decoded name.
+        self.assertEqual("f.isi.arpa", name.name)
+        self.assertEqual(32, stream.tell())
+
+        # Get the second name from the stream and make the same assertions.
+        name.decode(stream)
+        self.assertEqual(name.name, "foo.f.isi.arpa")
+        self.assertEqual(38, stream.tell())
+
+        # Get the third and final name
+        name.decode(stream)
+        self.assertEqual(name.name, "bar.foo.f.isi.arpa")
+        self.assertEqual(44, stream.tell())
+
+
+    def test_rejectCompressionLoop(self):
+        """
+        L{Name.decode} raises L{ValueError} if the stream passed to it includes
+        a compression pointer which forms a loop, causing the name to be
+        undecodable.
+        """
+        name = dns.Name()
+        stream = StringIO("\xc0\x00")
+        self.assertRaises(ValueError, name.decode, stream)
+
+
 
 class RoundtripDNSTestCase(unittest.TestCase):
     """Encoding and then decoding various objects."""
