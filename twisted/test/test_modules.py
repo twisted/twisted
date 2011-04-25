@@ -75,6 +75,84 @@ class PySpaceTestCase(TestCase):
 
 class BasicTests(PySpaceTestCase):
 
+    def test_namespacedPackages(self):
+        """
+        Duplicate packages are not yielded when iterating over namespace
+        packages.
+        """
+        # Force pkgutil to be loaded already, since the probe package being
+        # created depends on it, and the replaceSysPath call below will make
+        # pretty much everything unimportable.
+        import pkgutil
+
+        namespaceBoilerplate = (
+            'import pkgutil; '
+            '__path__ = pkgutil.extend_path(__path__, __name__)')
+
+        # Create two temporary directories with packages:
+        #
+        #   entry:
+        #       test_package/
+        #           __init__.py
+        #           nested_package/
+        #               __init__.py
+        #               module.py
+        #
+        #   anotherEntry:
+        #       test_package/
+        #           __init__.py
+        #           nested_package/
+        #               __init__.py
+        #               module2.py
+        #
+        # test_package and test_package.nested_package are namespace packages,
+        # and when both of these are in sys.path, test_package.nested_package
+        # should become a virtual package containing both "module" and
+        # "module2"
+
+        entry = self.pathEntryWithOnePackage()
+        testPackagePath = entry.child('test_package')
+        testPackagePath.child('__init__.py').setContent(namespaceBoilerplate)
+
+        nestedEntry = testPackagePath.child('nested_package')
+        nestedEntry.makedirs()
+        nestedEntry.child('__init__.py').setContent(namespaceBoilerplate)
+        nestedEntry.child('module.py').setContent('')
+
+        anotherEntry = self.pathEntryWithOnePackage()
+        anotherPackagePath = anotherEntry.child('test_package')
+        anotherPackagePath.child('__init__.py').setContent(namespaceBoilerplate)
+
+        anotherNestedEntry = anotherPackagePath.child('nested_package')
+        anotherNestedEntry.makedirs()
+        anotherNestedEntry.child('__init__.py').setContent(namespaceBoilerplate)
+        anotherNestedEntry.child('module2.py').setContent('')
+
+        self.replaceSysPath([entry.path, anotherEntry.path])
+
+        module = modules.getModule('test_package')
+
+        # We have to use importPackages=True in order to resolve the namespace
+        # packages, so we remove the imported packages from sys.modules after
+        # walking
+        try:
+            walkedNames = [
+                mod.name for mod in module.walkModules(importPackages=True)]
+        finally:
+            for module in sys.modules.keys():
+                if module.startswith('test_package'):
+                    del sys.modules[module]
+
+        expected = [
+            'test_package',
+            'test_package.nested_package',
+            'test_package.nested_package.module',
+            'test_package.nested_package.module2',
+            ]
+
+        self.assertEquals(walkedNames, expected)
+
+
     def test_unimportablePackageGetItem(self):
         """
         If a package has been explicitly forbidden from importing by setting a

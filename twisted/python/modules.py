@@ -158,7 +158,7 @@ class _ModuleIteratorHelper:
                     modname = self._subModuleName(potentialTopLevel.basename())
                     for ext in PYTHON_EXTENSIONS:
                         initpy = potentialTopLevel.child("__init__"+ext)
-                        if initpy.exists():
+                        if initpy.exists() and modname not in yielded:
                             yielded[modname] = True
                             pm = PythonModule(modname, initpy, self._getEntry())
                             assert pm != self
