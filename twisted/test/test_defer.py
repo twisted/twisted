@@ -24,6 +24,8 @@ class DeferredTestCase(unittest.TestCase):
         self.callbackResults = None
         self.errbackResults = None
         self.callback2Results = None
+        # Restore the debug flag to its original state when done.
+        self.addCleanup(defer.setDebugging, defer.getDebugging())
 
     def _callback(self, *args, **kw):
         self.callbackResults = args, kw
@@ -944,6 +946,88 @@ class DeferredTestCase(unittest.TestCase):
         L = []
         second.addCallback(L.append)
         self.assertEquals(L, [None])
+
+
+    def test_errbackWithNoArgsNoDebug(self):
+        """
+        C{Deferred.errback()} creates a failure from the current Python
+        exception.  When Deferred.debug is not set no globals or locals are
+        captured in that failure.
+        """
+        defer.setDebugging(False)
+        d = defer.Deferred()
+        l = []
+        exc = GenericError("Bang")
+        try:
+            raise exc
+        except:
+            d.errback()
+        d.addErrback(l.append)
+        fail = l[0]
+        self.assertEquals(fail.value, exc)
+        localz, globalz = fail.frames[0][-2:]
+        self.assertEquals([], localz)
+        self.assertEquals([], globalz)
+
+
+    def test_errbackWithNoArgs(self):
+        """
+        C{Deferred.errback()} creates a failure from the current Python
+        exception.  When Deferred.debug is set globals and locals are captured
+        in that failure.
+        """
+        defer.setDebugging(True)
+        d = defer.Deferred()
+        l = []
+        exc = GenericError("Bang")
+        try:
+            raise exc
+        except:
+            d.errback()
+        d.addErrback(l.append)
+        fail = l[0]
+        self.assertEquals(fail.value, exc)
+        localz, globalz = fail.frames[0][-2:]
+        self.assertNotEquals([], localz)
+        self.assertNotEquals([], globalz)
+
+
+    def test_errorInCallbackDoesNotCaptureVars(self):
+        """
+        An error raised by a callback creates a Failure.  The Failure captures
+        locals and globals if and only if C{Deferred.debug} is set.
+        """
+        d = defer.Deferred()
+        d.callback(None)
+        defer.setDebugging(False)
+        def raiseError(ignored):
+            raise GenericError("Bang")
+        d.addCallback(raiseError)
+        l = []
+        d.addErrback(l.append)
+        fail = l[0]
+        localz, globalz = fail.frames[0][-2:]
+        self.assertEquals([], localz)
+        self.assertEquals([], globalz)
+
+
+    def test_errorInCallbackCapturesVarsWhenDebugging(self):
+        """
+        An error raised by a callback creates a Failure.  The Failure captures
+        locals and globals if and only if C{Deferred.debug} is set.
+        """
+        d = defer.Deferred()
+        d.callback(None)
+        defer.setDebugging(True)
+        def raiseError(ignored):
+            raise GenericError("Bang")
+        d.addCallback(raiseError)
+        l = []
+        d.addErrback(l.append)
+        fail = l[0]
+        localz, globalz = fail.frames[0][-2:]
+        self.assertNotEquals([], localz)
+        self.assertNotEquals([], globalz)
 
 
 

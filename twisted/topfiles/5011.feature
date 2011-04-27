@@ -1,0 +1,1 @@
+twisted.python.failure.Failure no longer captures the state of locals and globals of all stack frames by default, because it is expensive to do and rarely used.  You can pass captureVars=True to Failure's constructor if you want to capture this data.

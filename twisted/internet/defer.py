@@ -132,7 +132,7 @@ def maybeDeferred(f, *args, **kw):
     try:
         result = f(*args, **kw)
     except:
-        return fail(failure.Failure())
+        return fail(failure.Failure(captureVars=Deferred.debug))
 
     if isinstance(result, Deferred):
         return result
@@ -382,7 +382,9 @@ class Deferred:
         @raise NoCurrentExceptionError: If C{fail} is C{None} but there is
             no current exception state.
         """
-        if not isinstance(fail, failure.Failure):
+        if fail is None:
+            fail = failure.Failure(captureVars=self.debug)
+        elif not isinstance(fail, failure.Failure):
             fail = failure.Failure(fail)
 
         self._startRunCallbacks(fail)
@@ -543,7 +545,9 @@ class Deferred:
                     finally:
                         current._runningCallbacks = False
                 except:
-                    current.result = failure.Failure()
+                    # Including full frame information in the Failure is quite
+                    # expensive, so we avoid it unless self.debug is set.
+                    current.result = failure.Failure(captureVars=self.debug)
                 else:
                     if isinstance(current.result, Deferred):
                         # The result is another Deferred.  If it has a result,

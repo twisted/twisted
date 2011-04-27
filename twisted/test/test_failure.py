@@ -5,6 +5,7 @@
 Test cases for failure module.
 """
 
+import re
 import sys
 import StringIO
 import traceback
@@ -19,11 +20,17 @@ except ImportError:
     raiser = None
 
 
-def getDivisionFailure():
+def getDivisionFailure(*args, **kwargs):
+    """
+    Make a C{Failure} of a divide-by-zero error.
+
+    @param args: Any C{*args} are passed to Failure's constructor.
+    @param kwargs: Any C{**kwargs} are passed to Failure's constructor.
+    """
     try:
         1/0
     except:
-        f = failure.Failure()
+        f = failure.Failure(*args, **kwargs)
     return f
 
 
@@ -39,6 +46,7 @@ class FailureTestCase(unittest.TestCase):
         self.assertEquals(error, RuntimeError)
         self.assertEquals(f.type, NotImplementedError)
 
+
     def test_notTrapped(self):
         """Making sure trap doesn't trap what it shouldn't."""
         try:
@@ -47,15 +55,98 @@ class FailureTestCase(unittest.TestCase):
             f = failure.Failure()
         self.assertRaises(failure.Failure, f.trap, OverflowError)
 
-    def testPrinting(self):
+
+    def assertStartsWith(self, s, prefix):
+        """
+        Assert that s starts with a particular prefix.
+        """
+        self.assertTrue(s.startswith(prefix),
+                        '%r is not the start of %r' % (prefix, s))
+
+
+    def test_printingSmokeTest(self):
+        """
+        None of the print* methods fail when called.
+        """
+        f = getDivisionFailure()
         out = StringIO.StringIO()
-        try:
-            1/0
-        except:
-            f = failure.Failure()
         f.printDetailedTraceback(out)
+        self.assertStartsWith(out.getvalue(), '*--- Failure')
+        out = StringIO.StringIO()
         f.printBriefTraceback(out)
+        self.assertStartsWith(out.getvalue(), 'Traceback')
+        out = StringIO.StringIO()
         f.printTraceback(out)
+        self.assertStartsWith(out.getvalue(), 'Traceback')
+
+
+    def test_printingCapturedVarsSmokeTest(self):
+        """
+        None of the print* methods fail when called on a L{Failure} constructed
+        with C{captureVars=True}.
+
+        Local variables on the stack can be seen in the detailed traceback.
+        """
+        exampleLocalVar = 'xyzzy'
+        f = getDivisionFailure(captureVars=True)
+        out = StringIO.StringIO()
+        f.printDetailedTraceback(out)
+        self.assertStartsWith(out.getvalue(), '*--- Failure')
+        self.assertNotEqual(None, re.search('exampleLocalVar.*xyzzy',
+                                            out.getvalue()))
+        out = StringIO.StringIO()
+        f.printBriefTraceback(out)
+        self.assertStartsWith(out.getvalue(), 'Traceback')
+        out = StringIO.StringIO()
+        f.printTraceback(out)
+        self.assertStartsWith(out.getvalue(), 'Traceback')
+
+
+    def test_printingCapturedVarsCleanedSmokeTest(self):
+        """
+        C{printDetailedTraceback} includes information about local variables on
+        the stack after C{cleanFailure} has been called.
+        """
+        exampleLocalVar = 'xyzzy'
+        f = getDivisionFailure(captureVars=True)
+        f.cleanFailure()
+        out = StringIO.StringIO()
+        f.printDetailedTraceback(out)
+        self.assertNotEqual(None, re.search('exampleLocalVar.*xyzzy',
+                                            out.getvalue()))
+
+
+    def test_printingNoVars(self):
+        """
+        Calling C{Failure()} with no arguments does not capture any locals or
+        globals, so L{printDetailedTraceback} cannot show them in its output.
+        """
+        out = StringIO.StringIO()
+        f = getDivisionFailure()
+        f.printDetailedTraceback(out)
+        # There should be no variables in the detailed output.  Variables are
+        # printed on lines with 2 leading spaces.
+        linesWithVars = [line for line in out.getvalue().splitlines()
+                         if line.startswith('  ')]
+        self.assertEqual([], linesWithVars)
+        self.assertSubstring(
+            'Capture of Locals and Globals disabled', out.getvalue())
+
+
+    def test_printingCaptureVars(self):
+        """
+        Calling C{Failure(captureVars=True)} captures the locals and globals
+        for its stack frames, so L{printDetailedTraceback} will show them in
+        its output.
+        """
+        out = StringIO.StringIO()
+        f = getDivisionFailure(captureVars=True)
+        f.printDetailedTraceback(out)
+        # Variables are printed on lines with 2 leading spaces.
+        linesWithVars = [line for line in out.getvalue().splitlines()
+                         if line.startswith('  ')]
+        self.assertNotEqual([], linesWithVars)
+
 
     def testExplictPass(self):
         e = RuntimeError()
@@ -97,6 +188,7 @@ class FailureTestCase(unittest.TestCase):
         except:
             f = failure.Failure()
         return f
+
 
     def test_raiseStringExceptions(self):
         # String exceptions used to totally bugged f.raiseException
@@ -141,31 +233,59 @@ class FailureTestCase(unittest.TestCase):
         """
         self.assertRaises(failure.NoCurrentExceptionError, failure.Failure)
 
+
     def test_getTracebackObject(self):
         """
         If the C{Failure} has not been cleaned, then C{getTracebackObject}
-        should return the traceback object that it was given in the
-        constructor.
+        returns the traceback object that captured in its constructor.
         """
         f = getDivisionFailure()
         self.assertEqual(f.getTracebackObject(), f.tb)
 
+
+    def test_getTracebackObjectFromCaptureVars(self):
+        """
+        C{captureVars=True} has no effect on the result of
+        C{getTracebackObject}.
+        """
+        try:
+            1/0
+        except ZeroDivisionError:
+            noVarsFailure = failure.Failure()
+            varsFailure = failure.Failure(captureVars=True)
+        self.assertEqual(noVarsFailure.getTracebackObject(), varsFailure.tb)
+
+
     def test_getTracebackObjectFromClean(self):
         """
-        If the Failure has been cleaned, then C{getTracebackObject} should
-        return an object that looks the same to L{traceback.extract_tb}.
+        If the Failure has been cleaned, then C{getTracebackObject} returns an
+        object that looks the same to L{traceback.extract_tb}.
         """
         f = getDivisionFailure()
         expected = traceback.extract_tb(f.getTracebackObject())
         f.cleanFailure()
         observed = traceback.extract_tb(f.getTracebackObject())
+        self.assertNotEqual(None, expected)
         self.assertEqual(expected, observed)
+
+
+    def test_getTracebackObjectFromCaptureVarsAndClean(self):
+        """
+        If the Failure was created with captureVars, then C{getTracebackObject}
+        returns an object that looks the same to L{traceback.extract_tb}.
+        """
+        f = getDivisionFailure(captureVars=True)
+        expected = traceback.extract_tb(f.getTracebackObject())
+        f.cleanFailure()
+        observed = traceback.extract_tb(f.getTracebackObject())
+        self.assertEqual(expected, observed)
+
 
     def test_getTracebackObjectWithoutTraceback(self):
         """
         L{failure.Failure}s need not be constructed with traceback objects. If
         a C{Failure} has no traceback information at all, C{getTracebackObject}
-        should just return None.
+        just returns None.
 
         None is a good value, because traceback.extract_tb(None) -> [].
         """
@@ -382,6 +502,7 @@ class TestFormattableTraceback(unittest.TestCase):
         # it will just use None.
         self.assertEqual(traceback.extract_tb(tb),
                          [('filename.py', 123, 'method', None)])
+
 
     def test_manyFrames(self):
         """

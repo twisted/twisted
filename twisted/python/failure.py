@@ -36,12 +36,18 @@ def format_frames(frames, write, detail="default"):
     @type frames: list
     @param write: this will be called with formatted strings.
     @type write: callable
-    @param detail: Three detail levels are available:
-        default, brief, and verbose.
+    @param detail: Four detail levels are available:
+        default, brief, verbose, and verbose-vars-not-captured.
+        C{Failure.printDetailedTraceback} uses the latter when the caller asks
+        for verbose, but no vars were captured, so that an explicit warning
+        about the missing data is shown.
     @type detail: string
     """
-    if detail not in ('default', 'brief', 'verbose'):
-        raise ValueError, "Detail must be default, brief, or verbose. (not %r)" % (detail,)
+    if detail not in ('default', 'brief', 'verbose',
+                      'verbose-vars-not-captured'):
+        raise ValueError(
+            "Detail must be default, brief, verbose, or "
+            "verbose-vars-not-captured. (not %r)" % (detail,))
     w = write
     if detail == "brief":
         for method, filename, lineno, localVars, globalVars in frames:
@@ -50,6 +56,10 @@ def format_frames(frames, write, detail="default"):
         for method, filename, lineno, localVars, globalVars in frames:
             w( '  File "%s", line %s, in %s\n' % (filename, lineno, method))
             w( '    %s\n' % linecache.getline(filename, lineno).strip())
+    elif detail == "verbose-vars-not-captured":
+        for method, filename, lineno, localVars, globalVars in frames:
+            w("%s:%d: %s(...)\n" % (filename, lineno, method))
+        w(' [Capture of Locals and Globals disabled (use captureVars=True)]\n')
     elif detail == "verbose":
         for method, filename, lineno, localVars, globalVars in frames:
             w("%s:%d: %s(...)\n" % (filename, lineno, method))
@@ -137,8 +147,16 @@ class Failure:
     This is necessary because Python's built-in error mechanisms are
     inconvenient for asynchronous communication.
 
+    The C{stack} and C{frame} attributes contain frames.  Each frame is a tuple
+    of (funcName, fileName, lineNumber, localsItems, globalsItems), where
+    localsItems and globalsItems are the contents of
+    C{locals().items()}/C{globals().items()} for that frame, or an empty tuple
+    if those details were not captured.
+
     @ivar value: The exception instance responsible for this failure.
     @ivar type: The exception's class.
+    @ivar stack: list of frames, innermost last, excluding C{Failure.__init__}.
+    @ivar frames: list of frames, innermost first.
     """
 
     pickled = 0
@@ -149,7 +167,8 @@ class Failure:
     # throwExceptionIntoGenerator.
     _yieldOpcode = chr(opcode.opmap["YIELD_VALUE"])
 
-    def __init__(self, exc_value=None, exc_type=None, exc_tb=None):
+    def __init__(self, exc_value=None, exc_type=None, exc_tb=None,
+                 captureVars=False):
         """
         Initialize me with an explanation of the error.
 
@@ -168,11 +187,16 @@ class Failure:
         If C{None} is supplied for C{exc_value}, the value of C{exc_tb} is
         ignored, otherwise if C{exc_tb} is C{None}, it will be found from
         execution context (ie, L{sys.exc_info}).
+
+        @param captureVars: if set, capture locals and globals of stack
+            frames.  This is pretty slow, and makes no difference unless you
+            are going to use L{printDetailedTraceback}.
         """
         global count
         count = count + 1
         self.count = count
         self.type = self.value = tb = None
+        self.captureVars = captureVars
 
         #strings Exceptions/Failures are bad, mmkay?
         if isinstance(exc_value, (str, unicode)) and exc_type is None:
@@ -244,41 +268,50 @@ class Failure:
         #   what called upon the PB object.
 
         while f:
-            localz = f.f_locals.copy()
-            if f.f_locals is f.f_globals:
-                globalz = {}
+            if captureVars:
+                localz = f.f_locals.copy()
+                if f.f_locals is f.f_globals:
+                    globalz = {}
+                else:
+                    globalz = f.f_globals.copy()
+                for d in globalz, localz:
+                    if "__builtins__" in d:
+                        del d["__builtins__"]
+                localz = localz.items()
+                globalz = globalz.items()
             else:
-                globalz = f.f_globals.copy()
-            for d in globalz, localz:
-                if d.has_key("__builtins__"):
-                    del d["__builtins__"]
-            stack.insert(0, [
+                localz = globalz = ()
+            stack.insert(0, (
                 f.f_code.co_name,
                 f.f_code.co_filename,
                 f.f_lineno,
-                localz.items(),
-                globalz.items(),
-                ])
+                localz,
+                globalz,
+                ))
             f = f.f_back
 
         while tb is not None:
             f = tb.tb_frame
-            localz = f.f_locals.copy()
-            if f.f_locals is f.f_globals:
-                globalz = {}
+            if captureVars:
+                localz = f.f_locals.copy()
+                if f.f_locals is f.f_globals:
+                    globalz = {}
+                else:
+                    globalz = f.f_globals.copy()
+                for d in globalz, localz:
+                    if "__builtins__" in d:
+                        del d["__builtins__"]
+                localz = localz.items()
+                globalz = globalz.items()
             else:
-                globalz = f.f_globals.copy()
-            for d in globalz, localz:
-                if d.has_key("__builtins__"):
-                    del d["__builtins__"]
-
-            frames.append([
+                localz = globalz = ()
+            frames.append((
                 f.f_code.co_name,
                 f.f_code.co_filename,
                 tb.tb_lineno,
-                localz.items(),
-                globalz.items(),
-                ])
+                localz,
+                globalz,
+                ))
             tb = tb.tb_next
         if inspect.isclass(self.type) and issubclass(self.type, Exception):
             parentCs = getmro(self.type)
@@ -424,8 +457,8 @@ class Failure:
         c['frames'] = [
             [
                 v[0], v[1], v[2],
-                [(j[0], reflect.safe_repr(j[1])) for j in v[3]],
-                [(j[0], reflect.safe_repr(j[1])) for j in v[4]]
+                _safeReprVars(v[3]),
+                _safeReprVars(v[4]),
             ] for v in self.frames
         ]
 
@@ -438,8 +471,8 @@ class Failure:
             c['stack'] = [
                 [
                     v[0], v[1], v[2],
-                    [(j[0], reflect.safe_repr(j[1])) for j in v[3]],
-                    [(j[0], reflect.safe_repr(j[1])) for j in v[4]]
+                    _safeReprVars(v[3]),
+                    _safeReprVars(v[4]),
                 ] for v in self.stack
             ]
 
@@ -504,6 +537,14 @@ class Failure:
             file = log.logerr
         w = file.write
 
+        if detail == 'verbose' and not self.captureVars:
+            # We don't have any locals or globals, so rather than show them as
+            # empty make the output explicitly say that we don't have them at
+            # all.
+            formatDetail = 'verbose-vars-not-captured'
+        else:
+            formatDetail = detail
+
         # Preamble
         if detail == 'verbose':
             w( '*--- Failure #%d%s---\n' %
@@ -524,9 +565,9 @@ class Failure:
         # Frames, formatted in appropriate style
         if self.frames:
             if not elideFrameworkCode:
-                format_frames(self.stack[-traceupLength:], w, detail)
+                format_frames(self.stack[-traceupLength:], w, formatDetail)
                 w("%s\n" % (EXCEPTION_CAUGHT_HERE,))
-            format_frames(self.frames, w, detail)
+            format_frames(self.frames, w, formatDetail)
         elif not detail == 'brief':
             # Yeah, it's not really a traceback, despite looking like one...
             w("Failure: ")
@@ -561,6 +602,21 @@ class Failure:
         """Print a traceback with detailed locals and globals information.
         """
         self.printTraceback(file, elideFrameworkCode, detail='verbose')
+
+
+def _safeReprVars(varsDictItems):
+    """
+    Convert a list of (name, object) pairs into (name, repr) pairs.
+
+    L{twisted.python.reflect.safe_repr} is used to generate the repr, so no
+    exceptions will be raised by faulty C{__repr__} methods.
+
+    @param varsDictItems: a sequence of (name, value) pairs as returned by e.g.
+        C{locals().items()}.
+    @returns: a sequence of (name, repr) pairs.
+    """
+    return [(name, reflect.safe_repr(obj)) for (name, obj) in varsDictItems]
+
 
 # slyphon: make post-morteming exceptions tweakable
 
