@@ -687,12 +687,23 @@ class IRCClientWithoutLogin(irc.IRCClient):
     performLogin = 0
 
 
+
 class CTCPTest(unittest.TestCase):
+    """
+    Tests for L{twisted.words.protocols.irc.IRCClient} CTCP handling.
+    """
     def setUp(self):
         self.file = StringIOWithoutClosing()
         self.transport = protocol.FileWrapper(self.file)
         self.client = IRCClientWithoutLogin()
         self.client.makeConnection(self.transport)
+
+
+    def tearDown(self):
+        self.transport.loseConnection()
+        self.client.connectionLost()
+        del self.client
+        del self.transport
 
 
     def test_ERRMSG(self):
@@ -757,11 +768,57 @@ class CTCPTest(unittest.TestCase):
         self.assertEquals(versionReply, reply)
 
 
-    def tearDown(self):
-        self.transport.loseConnection()
-        self.client.connectionLost()
-        del self.client
-        del self.transport
+    def test_noDuplicateCTCPDispatch(self):
+        """
+        Duplicated CTCP messages are ignored and no reply is made.
+        """
+        def testCTCP(user, channel, data):
+            self.called += 1
+
+        self.called = 0
+        self.client.ctcpQuery_TESTTHIS = testCTCP
+
+        self.client.irc_PRIVMSG(
+            'foo!bar@baz.quux', [
+                '#chan',
+                '%(X)sTESTTHIS%(X)sfoo%(X)sTESTTHIS%(X)s' % {'X': irc.X_DELIM}])
+        self.assertEqual(
+            self.file.getvalue(),
+            '')
+        self.assertEqual(self.called, 1)
+
+
+    def test_noDefaultDispatch(self):
+        """
+        The fallback handler is invoked for unrecognized CTCP messages.
+        """
+        def unknownQuery(user, channel, tag, data):
+            self.calledWith = (user, channel, tag, data)
+            self.called += 1
+
+        self.called = 0
+        self.patch(self.client, 'ctcpUnknownQuery', unknownQuery)
+        self.client.irc_PRIVMSG(
+            'foo!bar@baz.quux', [
+                '#chan',
+                '%(X)sNOTREAL%(X)s' % {'X': irc.X_DELIM}])
+        self.assertEqual(
+            self.file.getvalue(),
+            '')
+        self.assertEqual(
+            self.calledWith,
+            ('foo!bar@baz.quux', '#chan', 'NOTREAL', None))
+        self.assertEqual(self.called, 1)
+
+        # The fallback handler is not invoked for duplicate unknown CTCP
+        # messages.
+        self.client.irc_PRIVMSG(
+            'foo!bar@baz.quux', [
+                '#chan',
+                '%(X)sNOTREAL%(X)sfoo%(X)sNOTREAL%(X)s' % {'X': irc.X_DELIM}])
+        self.assertEqual(self.called, 2)
+
+
 
 class NoticingClient(IRCClientWithoutLogin, object):
     methods = {

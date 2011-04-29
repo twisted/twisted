@@ -1,0 +1,1 @@
+twisted.words.protocols.irc.IRCClient now replies only once to known CTCP queries per message and not at all to unknown CTCP queries.

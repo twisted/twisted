@@ -41,6 +41,7 @@ from twisted.internet import reactor, protocol
 from twisted.persisted import styles
 from twisted.protocols import basic
 from twisted.python import log, reflect, text
+from twisted.python.compat import set
 
 NUL = chr(0)
 CR = chr(015)
@@ -1818,9 +1819,11 @@ class IRCClient(basic.LineReceiver):
         channel = params[0]
         message = params[-1]
 
-        if not message: return # don't raise an exception if some idiot sends us a blank message
+        if not message:
+            # Don't raise an exception if we get blank message.
+            return
 
-        if message[0]==X_DELIM:
+        if message[0] == X_DELIM:
             m = ctcpExtract(message)
             if m['extended']:
                 self.ctcpQuery(user, channel, m['extended'])
@@ -1972,15 +1975,34 @@ class IRCClient(basic.LineReceiver):
     ### Receiving a CTCP query from another party
     ### It is safe to leave these alone.
 
+
     def ctcpQuery(self, user, channel, messages):
-        """Dispatch method for any CTCP queries received.
         """
-        for m in messages:
-            method = getattr(self, "ctcpQuery_%s" % m[0], None)
-            if method:
-                method(user, channel, m[1])
-            else:
-                self.ctcpUnknownQuery(user, channel, m[0], m[1])
+        Dispatch method for any CTCP queries received.
+
+        Duplicated CTCP queries are ignored and no dispatch is
+        made. Unrecognized CTCP queries invoke L{IRCClient.ctcpUnknownQuery}.
+        """
+        seen = set()
+        for tag, data in messages:
+            method = getattr(self, 'ctcpQuery_%s' % tag, None)
+            if tag not in seen:
+                if method is not None:
+                    method(user, channel, data)
+                else:
+                    self.ctcpUnknownQuery(user, channel, tag, data)
+            seen.add(tag)
+
+
+    def ctcpUnknownQuery(self, user, channel, tag, data):
+        """
+        Fallback handler for unrecognized CTCP queries.
+
+        No CTCP I{ERRMSG} reply is made to remove a potential denial of service
+        avenue.
+        """
+        log.msg('Unknown CTCP query from %r: %r %r' % (user, tag, data))
+
 
     def ctcpQuery_ACTION(self, user, channel, data):
         self.action(user, channel, data)
@@ -2206,14 +2228,6 @@ class IRCClient(basic.LineReceiver):
     #    """
     #    raise NotImplementedError
 
-    def ctcpUnknownQuery(self, user, channel, tag, data):
-        nick = string.split(user,"!")[0]
-        self.ctcpMakeReply(nick, [('ERRMSG',
-                                   "%s %s: Unknown query '%s'"
-                                   % (tag, data, tag))])
-
-        log.msg("Unknown CTCP query from %s: %s %s\n"
-                 % (user, tag, data))
 
     def ctcpMakeReply(self, user, messages):
         """
@@ -2762,14 +2776,13 @@ class DccFileReceive(DccFileReceiveBasic):
 X_DELIM = chr(001)
 
 def ctcpExtract(message):
-    """Extract CTCP data from a string.
-
-    Returns a dictionary with two items:
-
-       - C{'extended'}: a list of CTCP (tag, data) tuples
-       - C{'normal'}: a list of strings which were not inside a CTCP delimeter
     """
+    Extract CTCP data from a string.
 
+    @return: A C{dict} containing two keys:
+       - C{'extended'}: A list of CTCP (tag, data) tuples.
+       - C{'normal'}: A list of strings which were not inside a CTCP delimiter.
+    """
     extended_messages = []
     normal_messages = []
     retval = {'extended': extended_messages,
