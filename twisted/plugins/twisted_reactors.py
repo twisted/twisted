@@ -5,7 +5,7 @@ from twisted.application.reactors import Reactor
 
 default = Reactor(
     'default', 'twisted.internet.default',
-    'The best reactor for the current platform.')
+    'A reasonable default: poll(2) if available, otherwise select(2).')
 
 select = Reactor(
     'select', 'twisted.internet.selectreactor', 'select(2)-based reactor.')

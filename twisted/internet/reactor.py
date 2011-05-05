@@ -34,5 +34,5 @@ this is not currently possible.
 
 import sys
 del sys.modules['twisted.internet.reactor']
-from twisted.internet import selectreactor
-selectreactor.install()
+from twisted.internet import default
+default.install()

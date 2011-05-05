@@ -35,11 +35,15 @@ class Platform:
 
     type = knownPlatforms.get(os.name)
     seconds = staticmethod(_timeFunctions.get(type, time.time))
+    _platform = sys.platform
 
-    def __init__(self, name=None):
+    def __init__(self, name=None, platform=None):
         if name is not None:
             self.type = knownPlatforms.get(name)
             self.seconds = _timeFunctions.get(self.type, time.time)
+        if platform is not None:
+            self._platform = platform
+
 
     def isKnown(self):
         """Do we know about this platform?"""
@@ -50,8 +54,12 @@ class Platform:
         return self.type
 
     def isMacOSX(self):
-        """Return if we are runnng on Mac OS X."""
-        return sys.platform == "darwin"
+        """Check if current platform is Mac OS X.
+
+        @return: C{True} if the current platform has been detected as OS X
+        @rtype: C{bool}
+        """
+        return self._platform == "darwin"
 
     def isWinNT(self):
         """Are we running in Windows NT?"""
