@@ -54,7 +54,7 @@ log.startLogging(sys.stdout)
         </pre>
       or:
         <pre class="python">
-from twisted.python.logging import DailyLogFile
+from twisted.python.logfile import DailyLogFile
 
 log.startLogging(DailyLogFile.fromFullPath("/var/log/foo.log"))
         </pre>
