@@ -9,6 +9,7 @@ import re
 import sys
 import StringIO
 import traceback
+import pdb
 
 from twisted.trial import unittest, util
 
@@ -535,6 +536,58 @@ class TestFrameAttributes(unittest.TestCase):
         self.assertIsInstance(frame.f_globals, dict)
         self.assertIsInstance(frame.f_locals, dict)
         self.assertIsInstance(frame.f_code, failure._Code)
+
+
+
+class TestDebugMode(unittest.TestCase):
+    """
+    Failure's debug mode should allow jumping into the debugger.
+    """
+
+    def setUp(self):
+        """
+        Override pdb.post_mortem so we can make sure it's called.
+        """
+        # Make sure any changes we make are reversed:
+        post_mortem = pdb.post_mortem
+        origInit = failure.Failure.__dict__['__init__']
+        def restore():
+            pdb.post_mortem = post_mortem
+            failure.Failure.__dict__['__init__'] = origInit
+        self.addCleanup(restore)
+
+        self.result = []
+        pdb.post_mortem = self.result.append
+        failure.startDebugMode()
+
+
+    def test_regularFailure(self):
+        """
+        If startDebugMode() is called, calling Failure() will first call
+        pdb.post_mortem with the traceback.
+        """
+        try:
+            1/0
+        except:
+            typ, exc, tb = sys.exc_info()
+            f = failure.Failure()
+        self.assertEquals(self.result, [tb])
+        self.assertEquals(f.captureVars, False)
+
+
+    def test_captureVars(self):
+        """
+        If startDebugMode() is called, passing captureVars to Failure() will
+        not blow up.
+        """
+        try:
+            1/0
+        except:
+            typ, exc, tb = sys.exc_info()
+            f = failure.Failure(captureVars=True)
+        self.assertEquals(self.result, [tb])
+        self.assertEquals(f.captureVars, True)
+
 
 
 if sys.version_info[:2] >= (2, 5):

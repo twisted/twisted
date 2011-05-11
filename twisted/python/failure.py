@@ -623,7 +623,8 @@ def _safeReprVars(varsDictItems):
 DO_POST_MORTEM = True
 
 def _debuginit(self, exc_value=None, exc_type=None, exc_tb=None,
-             Failure__init__=Failure.__init__.im_func):
+               captureVars=False,
+               Failure__init__=Failure.__init__.im_func):
     """
     Initialize failure object, possibly spawning pdb.
     """
@@ -637,7 +638,8 @@ def _debuginit(self, exc_value=None, exc_type=None, exc_tb=None,
             print "Jumping into debugger for post-mortem of exception '%s':" % (strrepr,)
             import pdb
             pdb.post_mortem(exc[2])
-    Failure__init__(self, exc_value, exc_type, exc_tb)
+    Failure__init__(self, exc_value, exc_type, exc_tb, captureVars)
+
 
 def startDebugMode():
     """Enable debug hooks for Failures."""
