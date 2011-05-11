@@ -175,7 +175,8 @@ class FileDescriptor(_ConsumerMixin):
 
 
     def doRead(self):
-        """Called when data is avaliable for reading.
+        """
+        Called when data is available for reading.
 
         Subclasses must override this method. The result will be interpreted
         in the same way as a result of doWrite().
