@@ -154,8 +154,8 @@ class SomeWarningsTests(TestCase):
 <p>Warnings emitted in tests which are not flushed will be included by the
 default reporter in its output after the result of the test.  If Python's
 warnings filter system (see <a
-href="http://docs.python.org/using/cmdline.html#cmdoption-W">the -W command
-line option to Python</a>) is configured to treat a warning as an error,
+href="http://docs.python.org/using/cmdline.html#cmdoption-unittest-discover-W">the
+-W command option to Python</a>) is configured to treat a warning as an error,
 then unflushed warnings will causes tests to fail and will be included in
 the summary section of the default reporter.  Note that unlike usual
 operation, when <code>warnings.warn</code> is called as part of a test
@@ -166,5 +166,4 @@ scope in a test module or a module imported by a test module) then it
 
   </body>
 </html>
-
 

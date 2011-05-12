@@ -34,7 +34,7 @@ realm, and a number of credential checkers.  Something that wishes to log in,
 such as a <code class="API" base="twisted.internet.protocol">Protocol</code>,
 stores a reference to the portal. Login consists of passing credentials and a
 request interface (e.g. POP3's <code class="API"
-base="twisted.protocols.pop3">IMailbox</code>) to the portal. The portal passes
+base="twisted.mail.pop3">IMailbox</code>) to the portal. The portal passes
 the credentials to the appropriate credential checker, which returns an avatar
 ID. The ID is passed to the realm, which returns the appropriate avatar.  For a
 Portal that has a realm that creates mailbox objects and a credential checker
@@ -379,7 +379,7 @@ such a plugin: </p>
 <p>
 Once you have created this structure within your application, you can
 create the code for your cred plugin by building a factory class which
-implements <code class="API" base="twisted.cred.checkers">ICheckerFactory</code>.
+implements <code class="API" base="twisted.cred.strcred">ICheckerFactory</code>.
 These factory classes should not consist of a tremendous amount of
 code. Most of the real application logic should reside in the cred
 checker itself. (For help on building those, scroll up.)
@@ -398,7 +398,7 @@ checker instance.
 from zope.interface import implements
 
 from twisted import plugin
-from twisted.cred import checkers
+from twisted.cred.strcred import ICheckerFactory
 from myapp.cred import SpecialChecker
 
 class SpecialCheckerFactory(object):
@@ -407,7 +407,7 @@ class SpecialCheckerFactory(object):
     """
     # The class needs to implement both of these interfaces
     # for the plugin system to find our factory.
-    implements(checkers.ICheckerFactory, plugin.IPlugin)
+    implements(ICheckerFactory, plugin.IPlugin)
 
     # This tells AuthOptionsMixin how to find this factory.
     authType = "special"

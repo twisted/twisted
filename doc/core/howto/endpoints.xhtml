@@ -31,8 +31,8 @@ connect to it, and the other side does the connecting.</p>
 
 <p>In Twisted 10.1, several new interfaces were introduced to describe
 each of these roles for stream-oriented connections: <code class="API"
-  base="twisted.internet.interfaces">IServerStreamEndpoint</code> and <code
-  class="API" base="twisted.internet.interfaces">IClientStreamEndpoint</code>.
+  base="twisted.internet.interfaces">IStreamServerEndpoint</code> and <code
+  class="API" base="twisted.internet.interfaces">IStreamClientEndpoint</code>.
 The word "stream", in this case, refers to endpoints which treat a
 connection as a continuous stream of bytes, rather than a sequence of
 discrete datagrams: TCP is a "stream" protocol whereas UDP is a "datagram"
@@ -70,7 +70,7 @@ the connection has connected or the listening port is up and running.</p>
 
 <h3>Servers and Stopping</h3>
 
-<p><code class="API" base="twisted.internet.interfaces">IServerStreamEndpoint.listen</code>
+<p><code class="API" base="twisted.internet.interfaces">IStreamServerEndpoint.listen</code>
 returns a <code class="API" base="twisted.internet.defer">Deferred</code>
 that fires with an <code class="API" base="twisted.internet.interfaces">IListeningPort</code>.
 Note that this deferred may errback. The most common cause of such an error
@@ -99,7 +99,7 @@ particular action, then disposed of.</p>
 
 <h3>Clients and Cancelling</h3>
 
-<p><code class="API" base="twisted.internet.interfaces">IClientStreamEndpoint.connect</code>
+<p><code class="API" base="twisted.internet.interfaces">IStreamClientEndpoint.connect</code>
 will connect your protocol factory to a new outgoing connection attempt. It
 returns a <code>Deferred</code> which fires with the <code>IProtocol</code>
 returned from the factory's <code>buildProtocol</code> method.</p>
