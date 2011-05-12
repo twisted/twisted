@@ -39,7 +39,7 @@ from twisted.internet.error import ConnectionDone
 from twisted.internet.defer import Deferred, succeed, fail, maybeDeferred
 from twisted.internet.protocol import Protocol
 from twisted.protocols.basic import LineReceiver
-from twisted.web.iweb import UNKNOWN_LENGTH
+from twisted.web.iweb import UNKNOWN_LENGTH, IResponse
 from twisted.web.http_headers import Headers
 from twisted.web.http import NO_CONTENT, NOT_MODIFIED
 from twisted.web.http import _DataLoss, PotentialDataLoss
@@ -834,27 +834,6 @@ class Response:
 
     L{Response} should not be subclassed or instantiated.
 
-    @ivar version: A three-tuple describing the protocol and protocol version
-        of the response.  The first element is of type C{str}, the second and
-        third are of type C{int}.  For example, C{('HTTP', 1, 1)}.
-    @type version: C{tuple}
-
-    @ivar code: The HTTP status code of this response.
-    @type code: C{int}
-
-    @ivar phrase: The HTTP reason phrase of this response.
-    @type phrase: C{str}
-
-    @ivar headers: The HTTP response headers of this response.
-    @type headers: L{Headers}
-
-    @ivar length: The number of bytes expected to be in the body of this
-        response or L{UNKNOWN_LENGTH} if the server did not indicate how many
-        bytes to expect.  For I{HEAD} responses, this will be 0; if the
-        response includes a I{Content-Length} header, it will be available in
-        C{headers}.
-    @type length: C{int} or something else
-
     @ivar _transport: The transport which is delivering this response.
 
     @ivar _bodyProtocol: The L{IProtocol} provider to which the body is
@@ -891,6 +870,7 @@ class Response:
             more data, the L{Response} moves to this state.  Nothing else
             can happen once the L{Response} is in this state.
     """
+    implements(IResponse)
 
     length = UNKNOWN_LENGTH
 
@@ -909,23 +889,8 @@ class Response:
 
     def deliverBody(self, protocol):
         """
-        Register an L{IProtocol} provider to receive the response body.
-
-        The protocol will be connected to a transport which provides
-        L{IPushProducer}.  The protocol's C{connectionLost} method will be
-        called with:
-
-            - ResponseDone, which indicates that all bytes from the response
-              have been successfully delivered.
-
-            - PotentialDataLoss, which indicates that it cannot be determined
-              if the entire response body has been delivered.  This only occurs
-              when making requests to HTTP servers which do not set
-              I{Content-Length} or a I{Transfer-Encoding} in the response.
-
-            - ResponseFailed, which indicates that some bytes from the response
-              were lost.  The C{reasons} attribute of the exception may provide
-              more specific indications as to why.
+        Dispatch the given L{IProtocol} depending of the current state of the
+        response.
         """
     deliverBody = makeStatefulDispatcher('deliverBody', deliverBody)
 

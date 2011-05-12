@@ -29,7 +29,7 @@ from twisted.web._newclient import BadHeaders, ResponseDone, PotentialDataLoss, 
 from twisted.web._newclient import TransportProxyProducer, LengthEnforcingConsumer, makeStatefulDispatcher
 from twisted.web.http_headers import Headers
 from twisted.web.http import _DataLoss
-from twisted.web.iweb import IBodyProducer
+from twisted.web.iweb import IBodyProducer, IResponse
 
 
 
@@ -1588,7 +1588,7 @@ class RequestTests(TestCase):
         """
         producer = StringProducer(3)
         request = Request('POST', '/bar', _boringHeaders, producer)
-        writeDeferred = request.writeTo(self.transport)
+        request.writeTo(self.transport)
 
         finishedConsuming = producer.consumer._finished
 
@@ -1736,7 +1736,7 @@ class RequestTests(TestCase):
         """
         producer = StringProducer(3)
         request = Request('GET', '/', _boringHeaders, producer)
-        d = request.writeTo(self.transport)
+        request.writeTo(self.transport)
         self.assertFalse(producer.stopped)
         request.stopWriting()
         self.assertTrue(producer.stopped)
@@ -1753,7 +1753,7 @@ class RequestTests(TestCase):
         producer.stopProducing = brokenStopProducing
 
         request = Request('GET', '/', _boringHeaders, producer)
-        d = request.writeTo(self.transport)
+        request.writeTo(self.transport)
         request.stopWriting()
         self.assertEqual(
             len(self.flushLoggedErrors(ArbitraryException)), 1)
@@ -2008,6 +2008,15 @@ class ResponseTests(TestCase):
     """
     Tests for L{Response}.
     """
+
+    def test_verifyInterface(self):
+        """
+        L{Response} instances provide L{IResponse}.
+        """
+        response = justTransportResponse(StringTransport())
+        self.assertTrue(verifyObject(IResponse, response))
+
+
     def test_makeConnection(self):
         """
         The L{IProtocol} provider passed to L{Response.deliverBody} has its

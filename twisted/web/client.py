@@ -705,10 +705,10 @@ class Agent(object):
         @type bodyProducer: L{IBodyProducer} provider
 
         @return: A L{Deferred} which fires with the result of the request (a
-            L{Response} instance), or fails if there is a problem setting up a
-            connection over which to issue the request.  It may also fail with
-            L{SchemeNotSupported} if the scheme of the given URI is not
-            supported.
+            L{twisted.web.iweb.IResponse} provider), or fails if there is a
+            problem setting up a connection over which to issue the request.
+            It may also fail with L{SchemeNotSupported} if the scheme of the
+            given URI is not supported.
         @rtype: L{Deferred}
         """
         scheme, host, port, path = _parse(uri)
