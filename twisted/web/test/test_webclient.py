@@ -5,6 +5,7 @@
 Tests for L{twisted.web.client}.
 """
 
+import cookielib
 import os
 from errno import ENOSPC
 
@@ -1169,8 +1170,8 @@ class AgentTests(unittest.TestCase):
         L{Agent.request} establishes a new connection to the host indicated by
         the host part of the URI passed to it and issues a request using the
         method, the path portion of the URI, the headers, and the body producer
-        passed to it.  It returns a L{Deferred} which fires with a L{Response}
-        from the server.
+        passed to it.  It returns a L{Deferred} which fires with an
+        L{IResponse} from the server.
         """
         self.agent._connect = self._dummyConnect
 
@@ -1300,6 +1301,175 @@ class AgentTests(unittest.TestCase):
         self.assertEquals(
             self.agent._computeHostValue('https', 'example.com', 54321),
             'example.com:54321')
+
+
+
+class CookieTestsMixin(object):
+    """
+    Mixin for unit tests dealing with cookies.
+    """
+    def addCookies(self, cookieJar, uri, cookies):
+        """
+        Add a cookie to a cookie jar.
+        """
+        response = client._FakeUrllib2Response(
+            client.Response(
+                ('HTTP', 1, 1),
+                200,
+                'OK',
+                client.Headers({'Set-Cookie': cookies}),
+                None))
+        request = client._FakeUrllib2Request(uri)
+        cookieJar.extract_cookies(response, request)
+        return request, response
+
+
+
+class CookieJarTests(unittest.TestCase, CookieTestsMixin):
+    """
+    Tests for L{twisted.web.client._FakeUrllib2Response} and
+    L{twisted.web.client._FakeUrllib2Request}'s interactions with
+    C{cookielib.CookieJar} instances.
+    """
+    def makeCookieJar(self):
+        """
+        Create a C{cookielib.CookieJar} with some sample cookies.
+        """
+        cookieJar = cookielib.CookieJar()
+        reqres = self.addCookies(
+            cookieJar,
+            'http://example.com:1234/foo?bar',
+            ['foo=1; cow=moo; Path=/foo; Comment=hello',
+             'bar=2; Comment=goodbye'])
+        return cookieJar, reqres
+
+
+    def test_extractCookies(self):
+        """
+        L{cookielib.CookieJar.extract_cookies} extracts cookie information from
+        fake urllib2 response instances.
+        """
+        jar = self.makeCookieJar()[0]
+        cookies = dict([(c.name, c) for c in jar])
+
+        cookie = cookies['foo']
+        self.assertEqual(cookie.version, 0)
+        self.assertEqual(cookie.name, 'foo')
+        self.assertEqual(cookie.value, '1')
+        self.assertEqual(cookie.path, '/foo')
+        self.assertEqual(cookie.comment, 'hello')
+        self.assertEqual(cookie.get_nonstandard_attr('cow'), 'moo')
+
+        cookie = cookies['bar']
+        self.assertEqual(cookie.version, 0)
+        self.assertEqual(cookie.name, 'bar')
+        self.assertEqual(cookie.value, '2')
+        self.assertEqual(cookie.path, '/')
+        self.assertEqual(cookie.comment, 'goodbye')
+        self.assertIdentical(cookie.get_nonstandard_attr('cow'), None)
+
+
+    def test_sendCookie(self):
+        """
+        L{cookielib.CookieJar.add_cookie_header} adds a cookie header to a fake
+        urllib2 request instance.
+        """
+        jar, (request, response) = self.makeCookieJar()
+
+        self.assertIdentical(
+            request.get_header('Cookie', None),
+            None)
+
+        jar.add_cookie_header(request)
+        self.assertEqual(
+            request.get_header('Cookie', None),
+            'foo=1; bar=2')
+
+
+
+class CookieAgentTests(unittest.TestCase, CookieTestsMixin):
+    """
+    Tests for L{twisted.web.client.CookieAgent}.
+    """
+    def setUp(self):
+        class Reactor(MemoryReactor, Clock):
+            def __init__(self):
+                MemoryReactor.__init__(self)
+                Clock.__init__(self)
+
+        self.reactor = Reactor()
+
+
+    def _dummyConnect(self, scheme, host, port):
+        """
+        Fake implementation of L{Agent._connect} which synchronously
+        succeeds with an instance of L{StubHTTPProtocol} for ease of
+        testing.
+        """
+        protocol = StubHTTPProtocol()
+        protocol.makeConnection(None)
+        self.protocol = protocol
+        return succeed(protocol)
+
+
+    def test_emptyCookieJarRequest(self):
+        """
+        L{CookieAgent.request} does not insert any C{'Cookie'} header into the
+        L{Request} object if there is no cookie in the cookie jar for the URI
+        being requested. Cookies are extracted from the response and stored in
+        the cookie jar.
+        """
+        cookieJar = cookielib.CookieJar()
+        self.assertEqual(list(cookieJar), [])
+
+        agent = client.Agent(self.reactor)
+        agent._connect = self._dummyConnect
+        cookieAgent = client.CookieAgent(agent, cookieJar)
+        d = cookieAgent.request(
+            'GET', 'http://example.com:1234/foo?bar')
+
+        def _checkCookie(ignored):
+            cookies = list(cookieJar)
+            self.assertEqual(len(cookies), 1)
+            self.assertEqual(cookies[0].name, 'foo')
+            self.assertEqual(cookies[0].value, '1')
+
+        d.addCallback(_checkCookie)
+
+        req, res = self.protocol.requests.pop()
+        self.assertIdentical(req.headers.getRawHeaders('cookie'), None)
+
+        resp = client.Response(
+            ('HTTP', 1, 1),
+            200,
+            'OK',
+            client.Headers({'Set-Cookie': ['foo=1',]}),
+            None)
+        res.callback(resp)
+
+        return d
+
+
+    def test_requestWithCookie(self):
+        """
+        L{CookieAgent.request} inserts a C{'Cookie'} header into the L{Request}
+        object when there is a cookie matching the request URI in the cookie
+        jar.
+        """
+        uri = 'http://example.com:1234/foo?bar'
+        cookie = 'foo=1'
+
+        cookieJar = cookielib.CookieJar()
+        self.addCookies(cookieJar, uri, [cookie])
+        self.assertEqual(len(list(cookieJar)), 1)
+
+        agent = client.Agent(self.reactor)
+        agent._connect = self._dummyConnect
+        cookieAgent = client.CookieAgent(agent, cookieJar)
+        cookieAgent.request('GET', uri)
+
+        req, res = self.protocol.requests.pop()
+        self.assertEqual(req.headers.getRawHeaders('cookie'), [cookie])
 
 
 
