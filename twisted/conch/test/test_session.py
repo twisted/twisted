@@ -439,14 +439,14 @@ class StubTransport:
         """
         Return an arbitrary L{IAddress}.
         """
-        return IPv4Address('TCP', 'remotehost', '8888')
+        return IPv4Address('TCP', 'remotehost', 8888)
 
 
     def getHost(self):
         """
         Return an arbitrary L{IAddress}.
         """
-        return IPv4Address('TCP', 'localhost', '9999')
+        return IPv4Address('TCP', 'localhost', 9999)
 
 
     def write(self, data):
