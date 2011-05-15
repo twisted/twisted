@@ -23,7 +23,8 @@ from twisted.internet import interfaces
 from twisted.internet.protocol import (
     ServerFactory, ClientFactory, DatagramProtocol)
 from twisted.internet.test.reactormixins import ReactorBuilder
-from twisted.internet.test.test_tcp import TCPPortTestsBuilder
+from twisted.internet.test.test_core import ObjectModelIntegrationMixin
+from twisted.internet.test.test_tcp import StreamTransportTestsMixin
 
 
 
@@ -140,7 +141,7 @@ class UNIXDatagramTestsBuilder(UNIXFamilyMixin, ReactorBuilder):
 
 
 
-class UNIXPortTestsBuilder(TCPPortTestsBuilder):
+class UNIXPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin, StreamTransportTestsMixin):
     """
     Tests for L{IReactorUNIX.listenUnix}
     """

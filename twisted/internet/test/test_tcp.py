@@ -7,7 +7,7 @@ Tests for implementations of L{IReactorTCP}.
 
 __metaclass__ = type
 
-import socket
+import socket, errno
 
 from zope.interface import implements
 from zope.interface.verify import verifyObject
@@ -35,7 +35,6 @@ try:
     from twisted.internet.ssl import ClientContextFactory
 except ImportError:
     ClientContextFactory = None
-
 
 def findFreePort(interface='127.0.0.1', type=socket.SOCK_STREAM):
     """
@@ -557,25 +556,10 @@ class TCPClientTestsBuilder(ReactorBuilder, ConnectionTestsMixin):
 
 
 
-class TCPPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin):
+class StreamTransportTestsMixin:
     """
-    Tests for L{IReactorRCP.listenTCP}
+    Mixin defining tests which apply to any port/connection based transport.
     """
-
-    def getListeningPort(self, reactor):
-        """
-        Get a TCP port from a reactor
-        """
-        return reactor.listenTCP(0, ServerFactory())
-
-
-    def getExpectedConnectionLostLogMsg(self, port):
-        """
-        Get the expected connection lost message for a TCP port
-        """
-        return "(TCP Port %s Closed)" % (port.getHost().port,)
-
-
     def test_connectionLostLogMsg(self):
         """
         When a connection is lost, an informative message should be logged
@@ -614,6 +598,156 @@ class TCPPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin):
         reactor = self.buildReactor()
         port = self.getListeningPort(reactor)
         self.assertFullyNewStyle(port)
+
+
+
+class TCPPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin,
+                          StreamTransportTestsMixin):
+    """
+    Tests for L{IReactorTCP.listenTCP}
+    """
+    def getListeningPort(self, reactor):
+        """
+        Get a TCP port from a reactor.
+        """
+        return reactor.listenTCP(0, ServerFactory())
+
+
+    def getExpectedConnectionLostLogMsg(self, port):
+        """
+        Get the expected connection lost message for a TCP port.
+        """
+        return "(TCP Port %s Closed)" % (port.getHost().port,)
+
+
+    def test_portGetHostOnIPv4(self):
+        """
+        When no interface is passed to L{IReactorTCP.listenTCP}, the returned
+        listening port listens on an IPv4 address.
+        """
+        reactor = self.buildReactor()
+        port = reactor.listenTCP(0, ServerFactory())
+        address = port.getHost()
+        self.assertIsInstance(address, IPv4Address)
+
+
+    def _buildProtocolAddressTest(self, client, interface):
+        """
+        Connect C{client} to a server listening on C{interface} started with
+        L{IReactorTCP.listenTCP} and return the address passed to the factory's
+        C{buildProtocol} method.
+
+        @param client: A C{SOCK_STREAM} L{socket.socket} created with an address
+            family such that it will be able to connect to a server listening on
+            C{interface}.
+
+        @param interface: A C{str} giving an address for a server to listen on.
+            This should almost certainly be the loopback address for some
+            address family supported by L{IReactorTCP.listenTCP}.
+
+        @return: Whatever object, probably an L{IAddress} provider, is passed to
+            a server factory's C{buildProtocol} method when C{client}
+            establishes a connection.
+        """
+        class ObserveAddress(ServerFactory):
+            def buildProtocol(self, address):
+                reactor.stop()
+                self.observedAddress = address
+                return Protocol()
+
+        factory = ObserveAddress()
+        reactor = self.buildReactor()
+        port = reactor.listenTCP(0, factory, interface=interface)
+        client.setblocking(False)
+        try:
+            client.connect((port.getHost().host, port.getHost().port))
+        except socket.error, (errnum, message):
+            self.assertIn(errnum, (errno.EINPROGRESS, errno.EWOULDBLOCK))
+
+        self.runReactor(reactor)
+
+        return factory.observedAddress
+
+
+    def test_buildProtocolIPv4Address(self):
+        """
+        When a connection is accepted over IPv4, an L{IPv4Address} is passed
+        to the factory's C{buildProtocol} method giving the peer's address.
+        """
+        interface = '127.0.0.1'
+        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.addCleanup(client.close)
+        observedAddress = self._buildProtocolAddressTest(client, interface)
+        self.assertEqual(
+            IPv4Address('TCP', *client.getsockname()), observedAddress)
+
+
+    def _serverGetConnectionAddressTest(self, client, interface, which):
+        """
+        Connect C{client} to a server listening on C{interface} started with
+        L{IReactorTCP.listenTCP} and return the address returned by one of the
+        server transport's address lookup methods, C{getHost} or C{getPeer}.
+
+        @param client: A C{SOCK_STREAM} L{socket.socket} created with an address
+            family such that it will be able to connect to a server listening on
+            C{interface}.
+
+        @param interface: A C{str} giving an address for a server to listen on.
+            This should almost certainly be the loopback address for some
+            address family supported by L{IReactorTCP.listenTCP}.
+
+        @param which: A C{str} equal to either C{"getHost"} or C{"getPeer"}
+            determining which address will be returned.
+
+        @return: Whatever object, probably an L{IAddress} provider, is returned
+            from the method indicated by C{which}.
+        """
+        class ObserveAddress(Protocol):
+            def makeConnection(self, transport):
+                reactor.stop()
+                self.factory.address = getattr(transport, which)()
+
+        reactor = self.buildReactor()
+        factory = ServerFactory()
+        factory.protocol = ObserveAddress
+        port = reactor.listenTCP(0, factory, interface=interface)
+        client.setblocking(False)
+        try:
+            client.connect((port.getHost().host, port.getHost().port))
+        except socket.error, (errnum, message):
+            self.assertIn(errnum, (errno.EINPROGRESS, errno.EWOULDBLOCK))
+        self.runReactor(reactor)
+        return factory.address
+
+
+    def test_serverGetHostOnIPv4(self):
+        """
+        When a connection is accepted over IPv4, the server
+        L{ITransport.getHost} method returns an L{IPv4Address} giving the
+        address on which the server accepted the connection.
+        """
+        interface = '127.0.0.1'
+        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.addCleanup(client.close)
+        hostAddress = self._serverGetConnectionAddressTest(
+            client, interface, 'getHost')
+        self.assertEqual(
+            IPv4Address('TCP', *client.getpeername()), hostAddress)
+
+
+    def test_serverGetPeerOnIPv4(self):
+        """
+        When a connection is accepted over IPv4, the server
+        L{ITransport.getPeer} method returns an L{IPv4Address} giving the
+        address of the remote end of the connection.
+        """
+        interface = '127.0.0.1'
+        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.addCleanup(client.close)
+        peerAddress = self._serverGetConnectionAddressTest(
+            client, interface, 'getPeer')
+        self.assertEqual(
+            IPv4Address('TCP', *client.getsockname()), peerAddress)
 
 
 

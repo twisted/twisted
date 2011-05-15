@@ -1447,25 +1447,6 @@ class AddressTestCase(unittest.TestCase):
             [IPv4Address('TCP', clientPeer.host, clientPeer.port)])
 
 
-    def test_buildProtocolServer(self):
-        """
-        L{ServerFactory.buildProtocol} should be invoked with the address of
-        the client which has connected to the port the factory is listening on,
-        which should be the same as the address reported by the C{getPeer}
-        method of the transport of the server protocol and as the C{getHost}
-        method of the transport of the client protocol.
-        """
-        clientHost = self.client.protocol.transport.getHost()
-        serverPeer = self.server.protocol.transport.getPeer()
-
-        self.assertEqual(
-            self.serverWrapper.addresses,
-            [IPv4Address('TCP', serverPeer.host, serverPeer.port)])
-        self.assertEqual(
-            self.serverWrapper.addresses,
-            [IPv4Address('TCP', clientHost.host, clientHost.port)])
-
-
 
 class LargeBufferWriterProtocol(protocol.Protocol):
 
