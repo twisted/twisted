@@ -20,7 +20,7 @@ does not:
     option, they're not on by default).
 """
 
-from twisted.internet.protocol import Protocol, FileWrapper
+from twisted.internet.protocol import Protocol
 from twisted.python.reflect import prefixedMethodNames
 
 
@@ -635,23 +635,3 @@ class XMLParser(Protocol):
 
         Default behaviour is to print.'''
         print 'end', name
-
-if __name__ == '__main__':
-    from cStringIO import StringIO
-    testDocument = '''
-
-    <!DOCTYPE ignore all this shit, hah its malformed!!!!@$>
-    <?xml version="suck it"?>
-    <foo>
-    &#65;
-    <bar />
-    <baz boz="buz">boz &zop;</baz>
-    <![CDATA[ foo bar baz ]]>
-    </foo>
-    '''
-    x = XMLParser()
-    x.makeConnection(FileWrapper(StringIO()))
-    # fn = "/home/glyph/Projects/Twisted/doc/howto/ipc10paper.html"
-    fn = "/home/glyph/gruesome.xml"
-    # testDocument = open(fn).read()
-    x.dataReceived(testDocument)
