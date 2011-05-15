@@ -307,13 +307,6 @@ class Options(dict):
 
         parameters = []
 
-        reflect.accumulateClassList(self.__class__, 'optStrings',
-                                    parameters)
-        if parameters:
-            import warnings
-            warnings.warn("Options.optStrings is deprecated, "
-                          "please use optParameters instead.", stacklevel=2)
-
         reflect.accumulateClassList(self.__class__, 'optParameters',
                                     parameters)
 
