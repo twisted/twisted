@@ -382,10 +382,10 @@ a Deferred:
 </p>
 
 <pre class="python">
-from twisted.internet import reactor
+from twisted.internet import reactor, defer
 
-def asynchronousIsValidUser(d, user):
-    d = Deferred()
+def asynchronousIsValidUser(user):
+    d = defer.Deferred()
     reactor.callLater(2, d.callback, user in ["Alice", "Angus", "Agnes"])
     return d
 </pre>
