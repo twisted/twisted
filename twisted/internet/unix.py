@@ -90,7 +90,8 @@ class Port(_UNIXPort, tcp.Port):
         return address.UNIXAddress(name)
 
     def startListening(self):
-        """Create and bind my socket, and begin listening on it.
+        """
+        Create and bind my socket, and begin listening on it.
 
         This is called on unserialization, and must be called after creating a
         server to begin listening on the specified port.
@@ -107,7 +108,7 @@ class Port(_UNIXPort, tcp.Port):
                         # left-over unix sockets on the filesystem.
                         # If it fails, there's not much else we can
                         # do.  The bind() below will fail with an
-                        # exception that actually propegates.
+                        # exception that actually propagates.
                         if stat.S_ISSOCK(os.stat(self.port).st_mode):
                             os.remove(self.port)
                     except:
