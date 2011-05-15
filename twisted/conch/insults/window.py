@@ -729,8 +729,12 @@ class VerticalScrollbar(_Scrollbar):
 
 
 class ScrolledArea(Widget):
+    """
+    A L{ScrolledArea} contains another widget wrapped in a viewport and
+    vertical and horizontal scrollbars for moving the viewport around.
+    """
     def __init__(self, containee):
-        Widget.__init__(self, containee)
+        Widget.__init__(self)
         self._viewport = Viewport(containee)
         self._horiz = HorizontalScrollbar(self._horizScroll)
         self._vert = VerticalScrollbar(self._vertScroll)
