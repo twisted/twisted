@@ -1150,15 +1150,24 @@ class IConsumer(Interface):
 
 
 
+deprecatedModuleAttribute(Version("Twisted", 11, 1, 0),
+    "Please use IConsumer (and IConsumer.unregisterProducer) instead.",
+    __name__, "IFinishableConsumer")
+
 class IFinishableConsumer(IConsumer):
     """
-    A Consumer for producers that finish.
+    A Consumer for producers that finish.  This interface offers no advantages
+    over L{IConsumer} and is deprecated.  Please use
+    L{IConsumer.unregisterProducer} instead of L{IFinishableConsumer.finish}.
     """
 
     def finish():
         """
-        The producer has finished producing.
+        The producer has finished producing.  This method is deprecated.
+        Please use L{IConsumer.unregisterProducer} instead.
         """
+
+
 
 class IProducer(Interface):
     """
