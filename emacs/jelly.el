@@ -1,6 +1,7 @@
+;;;; Copyright (c) Twisted Matrix Laboratories.
+;;;; See LICENSE for details.
 ;;;; Jelly -- portable serialisation for network communication.
-;;;; by Allen Short <washort@twistedmatrix.com>
-;;;; This file is in the public domain.
+;;;; by Allen Short
 
 "'Get into a rut early: Do the same processes the same way. Accumulate idioms. Standardize. The only difference(!) between Shakespeare and you was the size of his idiom list -- not the size of his vocabulary.' -- Alan Perlis,  Programming Epigram #10"
 

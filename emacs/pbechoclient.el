@@ -1,3 +1,7 @@
+;;;; Copyright (c) Twisted Matrix Laboratories.
+;;;; See LICENSE for details.
+;;;; by Allen Short
+
 (require 'pb)
 
 (defvar pbecho-buf (get-buffer-create "*pbechoclient*"))

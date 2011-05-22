@@ -1,3 +1,7 @@
+;;;; Copyright (c) Twisted Matrix Laboratories.
+;;;; See LICENSE for details.
+;;;; by Allen Short
+
 ;;this is all based on ielm.el -- i was planning to copy
 ;;inferior-emacs-lisp-mode as verbatim as possible and just swap
 ;;function names round, and bringing in the python 

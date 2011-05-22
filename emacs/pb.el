@@ -1,6 +1,7 @@
+;;;; Copyright (c) Twisted Matrix Laboratories.
+;;;; See LICENSE for details.
 ;;;; pb.el - a perspective broker implementation for emacs
-;;;; by Allen Short <washort@twistedmatrix.com>
-;;;; this file is in the public domain.
+;;;; by Allen Short
 
 "'We will never run out of things to program as long as there is a
   single program around.' -- Alan Perlis, Programming Epigram #100"

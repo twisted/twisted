@@ -1,3 +1,7 @@
+;;;; Copyright (c) Twisted Matrix Laboratories.
+;;;; See LICENSE for details.
+;;;; by Allen Short
+
 ;; Instructions for Use
 
 ;; In your ~/.emacs, write:

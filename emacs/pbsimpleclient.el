@@ -1,3 +1,7 @@
+;;;; Copyright (c) Twisted Matrix Laboratories.
+;;;; See LICENSE for details.
+;;;; by Allen Short
+
 (require 'pb)
 (defvar pbsimple-buf (get-buffer-create "*pbsimpleclient*"))
 

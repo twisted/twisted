@@ -1,6 +1,7 @@
+;;;; Copyright (c) Twisted Matrix Laboratories.
+;;;; See LICENSE for details.
 ;;;; Banana -- allows network abstraction, nearly always.
-;;;; by Allen Short <washort@twistedmatrix.com>
-;;;; This file is in the public domain.
+;;;; by Allen Short
 
 "'Get into a rut early: Do the same processes the same way. Accumulate
   idioms. Standardize. The only difference(!) between Shakespeare and you was
