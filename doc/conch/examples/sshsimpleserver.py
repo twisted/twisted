@@ -8,10 +8,8 @@ from twisted.conch import error, avatar
 from twisted.conch.checkers import SSHPublicKeyDatabase
 from twisted.conch.ssh import factory, userauth, connection, keys, session
 from twisted.internet import reactor, protocol, defer
-from twisted.python import log
 from zope.interface import implements
-import sys
-log.startLogging(sys.stderr)
+
 
 """
 Example of running another protocol over an SSH channel.
@@ -113,5 +111,9 @@ portal.registerChecker(InMemoryPublicKeyChecker())
 ExampleFactory.portal = portal
 
 if __name__ == '__main__':
+    import sys
+    from twisted.python import log
+    log.startLogging(sys.stdout)
+
     reactor.listenTCP(5022, ExampleFactory())
     reactor.run()

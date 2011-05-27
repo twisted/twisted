@@ -3,21 +3,24 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import sys
 from twisted.names import client
 from twisted.internet import reactor
 from twisted.names import dns
+
 
 r = client.Resolver('/etc/resolv.conf')
 
 def gotAddress(a):
     print 'Addresses: ', ', '.join(map(str, a))
 
+
 def gotMails(a):
     print 'Mail Exchangers: ', ', '.join(map(str, a))
 
+
 def gotNameservers(a):
     print 'Nameservers: ', ', '.join(map(str, a))
+
 
 def gotError(f):
     print 'gotError'
@@ -29,6 +32,8 @@ def gotError(f):
 
 if __name__ == '__main__':
     import sys
+    from twisted.python import log
+    log.startLogging(sys.stdout)
 
     r.lookupAddress(sys.argv[1]).addCallback(gotAddress).addErrback(gotError)
     r.lookupMailExchange(sys.argv[1]).addCallback(gotMails).addErrback(gotError)

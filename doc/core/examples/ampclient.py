@@ -1,6 +1,10 @@
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
+
 from twisted.internet import reactor, defer
 from twisted.internet.protocol import ClientCreator
 from twisted.protocols import amp
+
 from ampserver import Sum, Divide
 
 
@@ -21,6 +25,11 @@ def doMath():
         print 'Done with math:', result
     defer.DeferredList([d1, d2]).addCallback(done)
 
+
 if __name__ == '__main__':
+    import sys
+    from twisted.python import log
+    log.startLogging(sys.stdout)
+
     doMath()
     reactor.run()

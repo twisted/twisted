@@ -1,8 +1,9 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-"""Server for PB benchmark."""
+"""
+Server for PB benchmark.
+"""
 
 from zope.interface import implements
 
@@ -41,8 +42,12 @@ class SimpleRealm:
 
 
 def main():
+    import sys
+    from twisted.python import log
     from twisted.cred.portal import Portal
     from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
+    log.startLogging(sys.stdout)
+
     portal = Portal(SimpleRealm())
     checker = InMemoryUsernamePasswordDatabaseDontUse()
     checker.addUser("benchmark", "benchmark")

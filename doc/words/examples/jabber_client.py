@@ -4,10 +4,13 @@
 # Originally written by Darryl Vandorp
 # http://randomthoughts.vandorp.ca/
 
+import sys
+from twisted.python import log
 from twisted.words.protocols.jabber import client, jid
 from twisted.words.xish import domish
 from twisted.internet import reactor
-        
+
+
 def authd(xmlstream):
     print "authenticated"
 
@@ -18,10 +21,13 @@ def authd(xmlstream):
     xmlstream.addObserver('/presence', debug)
     xmlstream.addObserver('/iq',       debug)   
 
+
 def debug(elem):
     print elem.toXml().encode('utf-8')
     print "="*20
-    
+
+
+log.startLogging(sys.stdout)
 myJid = jid.JID('username@server.jabber/twisted_words')
 factory = client.basicClientFactory(myJid, 'password')
 factory.addBootstrap('//event/stream/authd',authd)

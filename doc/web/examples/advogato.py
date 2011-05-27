@@ -1,17 +1,18 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-#
+"""
+Usage::
 
-'''
-Usage: 
-advogato.py <name> <diary entry file>
-'''
+    advogato.py <name> <diary entry file>
+"""
 
+import sys
+from twisted.python import log
 from twisted.web.xmlrpc import Proxy
 from twisted.internet import reactor
 from getpass import getpass
-import sys
+
 
 class AddDiary:
 
@@ -40,6 +41,9 @@ class AddDiary:
         print "could not set diary", error
         reactor.stop()
 
+
+log.startLogging(sys.stdout)
 diary = AddDiary(sys.argv[1], getpass())
 diary(sys.argv[2])
+
 reactor.run()

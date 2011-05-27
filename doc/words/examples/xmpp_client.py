@@ -2,6 +2,7 @@
 # See LICENSE for details.
 
 import sys
+from twisted.python import log
 from twisted.internet import reactor
 from twisted.names.srvconnect import SRVConnector
 from twisted.words.xish import domish
@@ -75,6 +76,7 @@ class Client(object):
         self.xmlstream.sendFooter()
 
 
+log.startLogging(sys.stdout)
 client_jid = jid.JID(sys.argv[1])
 secret = sys.argv[2]
 c = Client(client_jid, secret)

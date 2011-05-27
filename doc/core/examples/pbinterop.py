@@ -2,14 +2,18 @@
 # See LICENSE for details.
 
 
-"""PB interop server."""
+"""
+PB interop server.
+"""
 
 from twisted.spread import pb, jelly, flavors
 from twisted.internet import reactor
 
 
 class Interop(pb.Root):
-    """Test object for PB interop tests."""
+    """
+    Test object for PB interop tests.
+    """
 
     def __init__(self):
         self.o = pb.Referenceable()
@@ -64,8 +68,10 @@ class Interop(pb.Root):
 
 
 if __name__ == '__main__':
+    import sys
+    from twisted.python import log
+    log.startLogging(sys.stdout)
+
     reactor.listenTCP(8789, pb.PBServerFactory(Interop()))
     reactor.run()
-
-
 

@@ -1,4 +1,8 @@
-"""Example of doing arbitarily long calculations nicely in Twisted.
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+Example of doing arbitarily long calculations nicely in Twisted.
 
 This is also a simple demonstration of twisted.protocols.basic.LineReceiver.
 This example uses generators to do the calculation. It also tries to be
@@ -37,10 +41,10 @@ class Multiply(pb.Referencable):
 
 Note:
 Multiplying zero numbers is a perfectly sensible operation, and the
-result is 1. In that, this example departs from doc/examples/longex.py,
+result is 1. In that, this example departs from doc/core/examples/longex.py,
 which errors out when trying to do this.
 """
-from __future__ import generators
+
 from twisted.protocols import basic
 from twisted.internet import defer, protocol
 
@@ -63,7 +67,8 @@ def multiply(numbers):
     return d, _()
 
 class Numbers(basic.LineReceiver):
-    """Protocol for reading lists of numbers and manipulating them.
+    """
+    Protocol for reading lists of numbers and manipulating them.
 
     It receives a list of numbers (seperated by whitespace) on a line, and
     writes back the answer.  The exact algorithm to use depends on the
@@ -80,7 +85,8 @@ class Numbers(basic.LineReceiver):
         deferred.addCallback(self.sendLine)
 
 class Multiplication(protocol.ServerFactory):
-    """Factory for multiplying numbers.
+    """
+    Factory for multiplying numbers.
 
     It provides a function which calculates the multiplication
     of a list of numbers. The function destroys its input.
@@ -96,6 +102,9 @@ class Multiplication(protocol.ServerFactory):
         return deferred
 
 if __name__ == '__main__':
+    import sys
     from twisted.internet import reactor
+    from twisted.python import log
+    log.startLogging(sys.stdout)
     reactor.listenTCP(1234, Multiplication())
     reactor.run()

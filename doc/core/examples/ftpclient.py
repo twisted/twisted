@@ -1,4 +1,3 @@
-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -15,7 +14,6 @@ from twisted.internet import reactor
 
 # Standard library imports
 import string
-import sys
 try:
     from cStringIO import StringIO
 except ImportError:
@@ -23,7 +21,9 @@ except ImportError:
 
 
 class BufferingProtocol(Protocol):
-    """Simple utility class that holds all data written to it in a buffer."""
+    """
+    Simple utility class that holds all data written to it in a buffer.
+    """
     def __init__(self):
         self.buffer = StringIO()
 
@@ -109,5 +109,9 @@ def connectionMade(ftpClient):
 
 # this only runs if the module was *not* imported
 if __name__ == '__main__':
+    import sys
+    from twisted.python import log
+    log.startLogging(sys.stdout)
+
     run()
 

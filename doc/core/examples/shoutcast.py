@@ -2,15 +2,18 @@
 # See LICENSE for details.
 
 """
-Example Shoutcast client. Run with:
+Example Shoutcast client. Run with::
 
-python shoutcast.py localhost 8080
+    python shoutcast.py localhost 8080
 """
 
 import sys
 
+from twisted.python import log
 from twisted.internet import protocol, reactor
 from twisted.protocols.shoutcast import ShoutcastClient
+
+log.startLogging(sys.stdout)
 
 class Test(ShoutcastClient):
     def gotMetaData(self, data):

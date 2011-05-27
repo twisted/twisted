@@ -1,13 +1,16 @@
-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
+import sys
+
+from twisted.python import log
 from twisted.internet import reactor
 from twisted.spread import pb
 from twisted.cred.credentials import UsernamePassword
 
 from pbecho import DefinedError
+
 
 def success(message):
     print "Message received:",message
@@ -24,6 +27,7 @@ def connected(perspective):
     print "connected."
 
 
+log.startLogging(sys.stdout)
 factory = pb.PBClientFactory()
 reactor.connectTCP("localhost", pb.portno, factory)
 factory.login(

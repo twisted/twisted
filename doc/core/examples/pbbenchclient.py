@@ -1,8 +1,11 @@
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
 
 from twisted.spread import pb
 from twisted.internet import defer, reactor
 from twisted.cred.credentials import UsernamePassword
 import time
+
 
 class PBBenchClient:
     hostname = 'localhost'
@@ -34,6 +37,10 @@ class PBBenchClient:
 
 
 def main():
+    import sys
+    from twisted.python import log
+    log.startLogging(sys.stdout)
+
     PBBenchClient().runTest()
     from twisted.internet import reactor
     reactor.run()

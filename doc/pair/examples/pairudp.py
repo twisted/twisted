@@ -1,13 +1,20 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+import sys
+
+from twisted.python import log
 from twisted.internet import reactor, protocol
 from twisted.pair import ethernet, rawudp, ip
 from twisted.pair import tuntap
 
+
 class MyProto(protocol.DatagramProtocol):
     def datagramReceived(self, *a, **kw):
         print a, kw
+
+
+log.startLogging(sys.stdout)
 
 p_udp = rawudp.RawUDPProtocol()
 p_udp.addProto(42, MyProto())

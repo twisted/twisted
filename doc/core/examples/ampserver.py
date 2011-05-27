@@ -1,4 +1,8 @@
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
+
 from twisted.protocols import amp
+
 
 class Sum(amp.Command):
     arguments = [('a', amp.Integer()),
@@ -28,13 +32,19 @@ class Math(amp.AMP):
 
 
 def main():
+    import sys
     from twisted.internet import reactor
     from twisted.internet.protocol import Factory
+    from twisted.python import log
+    
+    log.startLogging(sys.stdout)
+
     pf = Factory()
     pf.protocol = Math
     reactor.listenTCP(1234, pf)
-    print 'started'
     reactor.run()
+
 
 if __name__ == '__main__':
     main()
+

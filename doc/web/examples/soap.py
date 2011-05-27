@@ -1,8 +1,8 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-# 
-"""Example of publishing SOAP methods.
+"""
+Example of publishing SOAP methods.
 
 Sample usage::
 
@@ -17,12 +17,15 @@ Sample usage::
 
 """
 
+
 from twisted.web import soap, server
 from twisted.internet import reactor, defer
 
 
 class Example(soap.SOAPPublisher):
-    """Publish two methods, 'add' and 'echo'."""
+    """
+    Publish two methods: 'add' and 'echo'.
+    """
 
     def soap_echo(self, x):
         return x
@@ -35,7 +38,11 @@ class Example(soap.SOAPPublisher):
         return defer.succeed(2)
 
 
-reactor.listenTCP(8080, server.Site(Example()))
-reactor.run()
+if __name__ == "__main__":
+    import sys
+    from twisted.python import log
+    log.startLogging(sys.stdout)
 
-                  
+    reactor.listenTCP(8080, server.Site(Example()))
+    reactor.run()
+

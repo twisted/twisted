@@ -40,9 +40,13 @@ class SimpleRealm:
 
 
 def main():
+    import sys
+    from twisted.python import log
     from twisted.internet import reactor
     from twisted.cred.portal import Portal
     from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
+    log.startLogging(sys.stdout)
+
     portal = Portal(SimpleRealm())
     checker = InMemoryUsernamePasswordDatabaseDontUse()
     checker.addUser("guest", "guest")

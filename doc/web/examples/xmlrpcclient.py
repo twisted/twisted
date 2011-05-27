@@ -1,5 +1,11 @@
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+import sys
+from twisted.python import log
 from twisted.web.xmlrpc import Proxy
 from twisted.internet import reactor
+
 
 def printValue(value):
     print repr(value)
@@ -8,6 +14,9 @@ def printValue(value):
 def printError(error):
     print 'error', error
     reactor.stop()
+
+
+log.startLogging(sys.stdout)
 
 proxy = Proxy('http://advogato.org/XMLRPC')
 proxy.callRemote('test.sumprod', 3, 5).addCallbacks(printValue, printError)

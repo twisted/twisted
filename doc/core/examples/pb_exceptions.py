@@ -1,7 +1,10 @@
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
 
 from twisted.python import util
 from twisted.spread import pb
 from twisted.cred import portal, checkers, credentials
+
 
 class Avatar(pb.Avatar):
     def perspective_exception(self, x):
@@ -19,6 +22,10 @@ def ebLogin(failure):
     print failure
 
 def main():
+    import sys
+    from twisted.python import log
+    log.startLogging(sys.stdout)
+
     c = checkers.InMemoryUsernamePasswordDatabaseDontUse(user="pass")
     p = portal.Portal(Realm(), [c])
     server = pb.PBServerFactory(p)

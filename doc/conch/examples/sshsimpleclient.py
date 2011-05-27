@@ -7,6 +7,7 @@ from twisted.conch.ssh import transport, userauth, connection, common, keys, cha
 from twisted.internet import defer, protocol, reactor
 from twisted.python import log
 import struct, sys, getpass, os
+log.startLogging(sys.stdout)
 
 USER = 'z3p'  # replace this with a valid username
 HOST = 'localhost' # and a valid host
