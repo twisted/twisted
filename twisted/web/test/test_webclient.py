@@ -8,6 +8,7 @@ Tests for L{twisted.web.client}.
 import cookielib
 import os
 from errno import ENOSPC
+import zlib
 
 from urlparse import urlparse
 
@@ -17,6 +18,7 @@ from twisted.internet import reactor, defer, interfaces
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.log import msg
+from twisted.python.components import proxyForInterface
 from twisted.protocols.policies import WrappingFactory
 from twisted.test.proto_helpers import StringTransport
 from twisted.test.proto_helpers import MemoryReactor
@@ -26,7 +28,8 @@ from twisted.internet.error import ConnectionRefusedError
 from twisted.internet.protocol import Protocol
 from twisted.internet.defer import Deferred, succeed
 from twisted.web.client import Request
-from twisted.web._newclient import HTTP11ClientProtocol
+from twisted.web.iweb import UNKNOWN_LENGTH, IResponse
+from twisted.web._newclient import HTTP11ClientProtocol, Response
 from twisted.web.error import SchemeNotSupported
 
 try:
@@ -1017,7 +1020,32 @@ class StubHTTPProtocol(Protocol):
 
 
 
-class AgentTests(unittest.TestCase):
+class FakeReactorAndConnectMixin:
+    """
+    A test mixin providing a testable C{Reactor} class and a dummy
+    C{Agent._connect} method.
+    """
+
+    class Reactor(MemoryReactor, Clock):
+        def __init__(self):
+            MemoryReactor.__init__(self)
+            Clock.__init__(self)
+
+
+    def _dummyConnect(self, scheme, host, port):
+        """
+        Fake implementation of L{Agent._connect} which synchronously
+        succeeds with an instance of L{StubHTTPProtocol} for ease of
+        testing.
+        """
+        protocol = StubHTTPProtocol()
+        protocol.makeConnection(None)
+        self.protocol = protocol
+        return succeed(protocol)
+
+
+
+class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
     """
     Tests for the new HTTP client API provided by L{Agent}.
     """
@@ -1025,12 +1053,7 @@ class AgentTests(unittest.TestCase):
         """
         Create an L{Agent} wrapped around a fake reactor.
         """
-        class Reactor(MemoryReactor, Clock):
-            def __init__(self):
-                MemoryReactor.__init__(self)
-                Clock.__init__(self)
-
-        self.reactor = Reactor()
+        self.reactor = self.Reactor()
         self.agent = client.Agent(self.reactor)
 
 
@@ -1151,18 +1174,6 @@ class AgentTests(unittest.TestCase):
         self.completeConnection()
         d.addCallback(self.assertIdentical, protocol)
         return d
-
-
-    def _dummyConnect(self, scheme, host, port):
-        """
-        Fake implementation of L{Agent._connect} which synchronously
-        succeeds with an instance of L{StubHTTPProtocol} for ease of
-        testing.
-        """
-        protocol = StubHTTPProtocol()
-        protocol.makeConnection(None)
-        self.protocol = protocol
-        return succeed(protocol)
 
 
     def test_request(self):
@@ -1470,6 +1481,358 @@ class CookieAgentTests(unittest.TestCase, CookieTestsMixin):
 
         req, res = self.protocol.requests.pop()
         self.assertEqual(req.headers.getRawHeaders('cookie'), [cookie])
+
+
+
+class Decoder1(proxyForInterface(IResponse)):
+    """
+    A test decoder to be used by L{client.ContentDecoderAgent} tests.
+    """
+
+
+
+class Decoder2(Decoder1):
+    """
+    A test decoder to be used by L{client.ContentDecoderAgent} tests.
+    """
+
+
+
+class ContentDecoderAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
+    """
+    Tests for L{client.ContentDecoderAgent}.
+    """
+
+    def setUp(self):
+        """
+        Create an L{Agent} wrapped around a fake reactor.
+        """
+        self.reactor = self.Reactor()
+        self.agent = client.Agent(self.reactor)
+        self.agent._connect = self._dummyConnect
+
+
+    def test_acceptHeaders(self):
+        """
+        L{client.ContentDecoderAgent} sets the I{Accept-Encoding} header to the
+        names of the available decoder objects.
+        """
+        agent = client.ContentDecoderAgent(
+            self.agent, [('decoder1', Decoder1), ('decoder2', Decoder2)])
+
+        agent.request('GET', 'http://example.com/foo')
+
+        protocol = self.protocol
+
+        self.assertEquals(len(protocol.requests), 1)
+        req, res = protocol.requests.pop()
+        self.assertEquals(req.headers.getRawHeaders('accept-encoding'),
+                          ['decoder1,decoder2'])
+
+
+    def test_existingHeaders(self):
+        """
+        If there are existing I{Accept-Encoding} fields,
+        L{client.ContentDecoderAgent} creates a new field for the decoders it
+        knows about.
+        """
+        headers = http_headers.Headers({'foo': ['bar'],
+                                        'accept-encoding': ['fizz']})
+        agent = client.ContentDecoderAgent(
+            self.agent, [('decoder1', Decoder1), ('decoder2', Decoder2)])
+        agent.request('GET', 'http://example.com/foo', headers=headers)
+
+        protocol = self.protocol
+
+        self.assertEquals(len(protocol.requests), 1)
+        req, res = protocol.requests.pop()
+        self.assertEquals(
+            list(req.headers.getAllRawHeaders()),
+            [('Host', ['example.com']),
+             ('Foo', ['bar']),
+             ('Accept-Encoding', ['fizz', 'decoder1,decoder2'])])
+
+
+    def test_plainEncodingResponse(self):
+        """
+        If the response is not encoded despited the request I{Accept-Encoding}
+        headers, L{client.ContentDecoderAgent} simply forwards the response.
+        """
+        agent = client.ContentDecoderAgent(
+            self.agent, [('decoder1', Decoder1), ('decoder2', Decoder2)])
+        deferred = agent.request('GET', 'http://example.com/foo')
+
+        req, res = self.protocol.requests.pop()
+
+        response = Response(('HTTP', 1, 1), 200, 'OK', http_headers.Headers(),
+                            None)
+        res.callback(response)
+
+        return deferred.addCallback(self.assertIdentical, response)
+
+
+    def test_unsupportedEncoding(self):
+        """
+        If an encoding unknown to the L{client.ContentDecoderAgent} is found,
+        the response is unchanged.
+        """
+        agent = client.ContentDecoderAgent(
+            self.agent, [('decoder1', Decoder1), ('decoder2', Decoder2)])
+        deferred = agent.request('GET', 'http://example.com/foo')
+
+        req, res = self.protocol.requests.pop()
+
+        headers = http_headers.Headers({'foo': ['bar'],
+                                        'content-encoding': ['fizz']})
+        response = Response(('HTTP', 1, 1), 200, 'OK', headers, None)
+        res.callback(response)
+
+        return deferred.addCallback(self.assertIdentical, response)
+
+
+    def test_unknownEncoding(self):
+        """
+        When L{client.ContentDecoderAgent} encounters a decoder it doesn't know
+        about, it stops decoding even if another encoding is known afterwards.
+        """
+        agent = client.ContentDecoderAgent(
+            self.agent, [('decoder1', Decoder1), ('decoder2', Decoder2)])
+        deferred = agent.request('GET', 'http://example.com/foo')
+
+        req, res = self.protocol.requests.pop()
+
+        headers = http_headers.Headers({'foo': ['bar'],
+                                        'content-encoding':
+                                        ['decoder1,fizz,decoder2']})
+        response = Response(('HTTP', 1, 1), 200, 'OK', headers, None)
+        res.callback(response)
+
+        def check(result):
+            self.assertNotIdentical(response, result)
+            self.assertIsInstance(result, Decoder2)
+            self.assertEquals(['decoder1,fizz'],
+                              result.headers.getRawHeaders('content-encoding'))
+
+        return deferred.addCallback(check)
+
+
+
+class SimpleAgentProtocol(Protocol):
+    """
+    A L{Protocol} to be used with an L{client.Agent} to receive data.
+
+    @ivar finished: L{Deferred} firing when C{connectionLost} is called.
+
+    @ivar made: L{Deferred} firing when C{connectionMade} is called.
+
+    @ivar received: C{list} of received data.
+    """
+
+    def __init__(self):
+        self.made = Deferred()
+        self.finished = Deferred()
+        self.received = []
+
+
+    def connectionMade(self):
+        self.made.callback(None)
+
+
+    def connectionLost(self, reason):
+        self.finished.callback(None)
+
+
+    def dataReceived(self, data):
+        self.received.append(data)
+
+
+
+class ContentDecoderAgentWithGzipTests(unittest.TestCase,
+                                       FakeReactorAndConnectMixin):
+
+    def setUp(self):
+        """
+        Create an L{Agent} wrapped around a fake reactor.
+        """
+        self.reactor = self.Reactor()
+        agent = client.Agent(self.reactor)
+        agent._connect = self._dummyConnect
+        self.agent = client.ContentDecoderAgent(
+            agent, [("gzip", client.GzipDecoder)])
+
+
+    def test_gzipEncodingResponse(self):
+        """
+        If the response has a C{gzip} I{Content-Encoding} header,
+        L{GzipDecoder} wraps the response to return uncompressed data to the
+        user.
+        """
+        deferred = self.agent.request('GET', 'http://example.com/foo')
+
+        req, res = self.protocol.requests.pop()
+
+        headers = http_headers.Headers({'foo': ['bar'],
+                                        'content-encoding': ['gzip']})
+        transport = StringTransport()
+        response = Response(('HTTP', 1, 1), 200, 'OK', headers, transport)
+        response.length = 12
+        res.callback(response)
+
+        compressor = zlib.compressobj(2, zlib.DEFLATED, 16 + zlib.MAX_WBITS)
+        data = (compressor.compress('x' * 6) + compressor.compress('y' * 4) +
+                compressor.flush())
+
+        def checkResponse(result):
+            self.assertNotIdentical(result, response)
+            self.assertEquals(result.version, ('HTTP', 1, 1))
+            self.assertEquals(result.code, 200)
+            self.assertEquals(result.phrase, 'OK')
+            self.assertEquals(list(result.headers.getAllRawHeaders()),
+                              [('Foo', ['bar'])])
+            self.assertEquals(result.length, UNKNOWN_LENGTH)
+            self.assertRaises(AttributeError, getattr, result, 'unknown')
+
+            response._bodyDataReceived(data[:5])
+            response._bodyDataReceived(data[5:])
+            response._bodyDataFinished()
+
+            protocol = SimpleAgentProtocol()
+            result.deliverBody(protocol)
+
+            self.assertEquals(protocol.received, ['x' * 6 + 'y' * 4])
+            return defer.gatherResults([protocol.made, protocol.finished])
+
+        deferred.addCallback(checkResponse)
+
+        return deferred
+
+
+    def test_brokenContent(self):
+        """
+        If the data received by the L{GzipDecoder} isn't valid gzip-compressed
+        data, the call to C{deliverBody} fails with a C{zlib.error}.
+        """
+        deferred = self.agent.request('GET', 'http://example.com/foo')
+
+        req, res = self.protocol.requests.pop()
+
+        headers = http_headers.Headers({'foo': ['bar'],
+                                        'content-encoding': ['gzip']})
+        transport = StringTransport()
+        response = Response(('HTTP', 1, 1), 200, 'OK', headers, transport)
+        response.length = 12
+        res.callback(response)
+
+        data = "not gzipped content"
+
+        def checkResponse(result):
+            response._bodyDataReceived(data)
+
+            result.deliverBody(Protocol())
+
+        deferred.addCallback(checkResponse)
+        self.assertFailure(deferred, client.ResponseFailed)
+
+        def checkFailure(error):
+            error.reasons[0].trap(zlib.error)
+
+        return deferred.addCallback(checkFailure)
+
+
+    def test_flushData(self):
+        """
+        When the connection with the server is lost, the gzip protocol calls
+        C{flush} on the zlib decompressor object to get uncompressed data which
+        may have been buffered.
+        """
+        class decompressobj(object):
+
+            def __init__(self, wbits):
+                pass
+
+            def decompress(self, data):
+                return 'x'
+
+            def flush(self):
+                return 'y'
+
+
+        oldDecompressObj = zlib.decompressobj
+        zlib.decompressobj = decompressobj
+        self.addCleanup(setattr, zlib, 'decompressobj', oldDecompressObj)
+
+        deferred = self.agent.request('GET', 'http://example.com/foo')
+
+        req, res = self.protocol.requests.pop()
+
+        headers = http_headers.Headers({'content-encoding': ['gzip']})
+        transport = StringTransport()
+        response = Response(('HTTP', 1, 1), 200, 'OK', headers, transport)
+        res.callback(response)
+
+        def checkResponse(result):
+            response._bodyDataReceived('data')
+            response._bodyDataFinished()
+
+            protocol = SimpleAgentProtocol()
+            result.deliverBody(protocol)
+
+            self.assertEquals(protocol.received, ['x', 'y'])
+            return defer.gatherResults([protocol.made, protocol.finished])
+
+        deferred.addCallback(checkResponse)
+
+        return deferred
+
+
+    def test_flushError(self):
+        """
+        If the C{flush} call in C{connectionLost} fails, the C{zlib.error}
+        exception is caught and turned into a L{ResponseFailed}.
+        """
+        class decompressobj(object):
+
+            def __init__(self, wbits):
+                pass
+
+            def decompress(self, data):
+                return 'x'
+
+            def flush(self):
+                raise zlib.error()
+
+
+        oldDecompressObj = zlib.decompressobj
+        zlib.decompressobj = decompressobj
+        self.addCleanup(setattr, zlib, 'decompressobj', oldDecompressObj)
+
+        deferred = self.agent.request('GET', 'http://example.com/foo')
+
+        req, res = self.protocol.requests.pop()
+
+        headers = http_headers.Headers({'content-encoding': ['gzip']})
+        transport = StringTransport()
+        response = Response(('HTTP', 1, 1), 200, 'OK', headers, transport)
+        res.callback(response)
+
+        def checkResponse(result):
+            response._bodyDataReceived('data')
+            response._bodyDataFinished()
+
+            protocol = SimpleAgentProtocol()
+            result.deliverBody(protocol)
+
+            self.assertEquals(protocol.received, ['x', 'y'])
+            return defer.gatherResults([protocol.made, protocol.finished])
+
+        deferred.addCallback(checkResponse)
+
+        self.assertFailure(deferred, client.ResponseFailed)
+
+        def checkFailure(error):
+            error.reasons[1].trap(zlib.error)
+
+        return deferred.addCallback(checkFailure)
 
 
 

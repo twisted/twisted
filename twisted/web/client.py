@@ -8,13 +8,17 @@ HTTP client.
 
 import os, types
 from urlparse import urlunparse
+import zlib
 
 from twisted.python import log
 from twisted.web import http
 from twisted.internet import defer, protocol, reactor
+from twisted.internet.interfaces import IProtocol
 from twisted.python import failure
 from twisted.python.util import InsensitiveDict
+from twisted.python.components import proxyForInterface
 from twisted.web import error
+from twisted.web.iweb import UNKNOWN_LENGTH, IResponse
 from twisted.web.http_headers import Headers
 from twisted.python.compat import set
 
@@ -570,7 +574,7 @@ def downloadPage(url, file, contextFactory=None, *args, **kwargs):
 from twisted.internet.protocol import ClientCreator
 from twisted.web.error import SchemeNotSupported
 from twisted.web._newclient import ResponseDone, Request, HTTP11ClientProtocol
-from twisted.web._newclient import Response
+from twisted.web._newclient import Response, ResponseFailed
 
 try:
     from twisted.internet.ssl import ClientContextFactory
@@ -715,12 +719,12 @@ class Agent(object):
         d = self._connect(scheme, host, port)
         if headers is None:
             headers = Headers()
+
         if not headers.hasHeader('host'):
-            # This is a lot of copying.  It might be nice if there were a bit
-            # less.
-            headers = Headers(dict(headers.getAllRawHeaders()))
+            headers = headers.copy()
             headers.addRawHeader(
                 'host', self._computeHostValue(scheme, host, port))
+
         def cbConnected(proto):
             return proto.request(Request(method, path, headers, bodyProducer))
         d.addCallback(cbConnected)
@@ -747,6 +751,8 @@ class _FakeUrllib2Request(object):
 
     @type headers: L{twisted.web.http_headers.Headers}
     @ivar headers: Request headers.
+
+    @since: 11.1
     """
     def __init__(self, uri):
         self.uri = uri
@@ -784,6 +790,8 @@ class _FakeUrllib2Response(object):
 
     @type response: C{twisted.web.iweb.IResponse}
     @ivar response: Underlying Twisted Web response.
+
+    @since: 11.1
     """
     def __init__(self, response):
         self.response = response
@@ -812,6 +820,8 @@ class CookieAgent(object):
     @type cookieJar: C{cookielib.CookieJar}
     @ivar cookieJar: Initialized cookie jar to read cookies from and store
         cookies to.
+
+    @since: 11.1
     """
     def __init__(self, agent, cookieJar):
         self._agent = agent
@@ -840,7 +850,7 @@ class CookieAgent(object):
             self.cookieJar.add_cookie_header(lastRequest)
             cookieHeader = lastRequest.get_header('Cookie', None)
             if cookieHeader is not None:
-                headers = Headers(dict(headers.getAllRawHeaders()))
+                headers = headers.copy()
                 headers.addRawHeader('cookie', cookieHeader)
 
         d = self._agent.request(method, uri, headers, bodyProducer)
@@ -863,9 +873,138 @@ class CookieAgent(object):
 
 
 
-__all__ = [
-    'PartialDownloadError',
-    'HTTPPageGetter', 'HTTPPageDownloader', 'HTTPClientFactory', 'HTTPDownloader',
-    'getPage', 'downloadPage',
+class GzipDecoder(proxyForInterface(IResponse)):
+    """
+    A wrapper for a L{Response} instance which handles gzip'ed body.
 
-    'ResponseDone', 'Response', 'Agent', 'CookieAgent']
+    @ivar original: The original L{Response} object.
+
+    @since: 11.1
+    """
+
+    def __init__(self, response):
+        self.original = response
+        self.length = UNKNOWN_LENGTH
+
+
+    def deliverBody(self, protocol):
+        """
+        Override C{deliverBody} to wrap the given C{protocol} with
+        L{_GzipProtocol}.
+        """
+        self.original.deliverBody(_GzipProtocol(protocol))
+
+
+
+class _GzipProtocol(proxyForInterface(IProtocol)):
+    """
+    A L{Protocol} implementation which wraps another one, transparently
+    decompressing received data.
+
+    @ivar _zlibDecompress: A zlib decompress object used to decompress the data
+        stream.
+
+    @since: 11.1
+    """
+
+    def __init__(self, protocol):
+        self.original = protocol
+        self._zlibDecompress = zlib.decompressobj(16 + zlib.MAX_WBITS)
+
+
+    def dataReceived(self, data):
+        """
+        Decompress C{data} with the zlib decompressor, forwarding the raw data
+        to the original protocol.
+        """
+        try:
+            rawData = self._zlibDecompress.decompress(data)
+        except zlib.error:
+            raise ResponseFailed([failure.Failure()])
+        if rawData:
+            self.original.dataReceived(rawData)
+
+
+    def connectionLost(self, reason):
+        """
+        Forward the connection lost event, flushing remaining data from the
+        decompressor if any.
+        """
+        try:
+            rawData = self._zlibDecompress.flush()
+        except zlib.error:
+            raise ResponseFailed([reason, failure.Failure()])
+        if rawData:
+            self.original.dataReceived(rawData)
+        self.original.connectionLost(reason)
+
+
+
+class ContentDecoderAgent(object):
+    """
+    An L{Agent} wrapper to handle encoded content.
+
+    It takes care of declaring the support for content in the
+    I{Accept-Encoding} header, and automatically decompresses the received data
+    if it's effectively using compression.
+
+    @param decoders: A list or tuple of (name, decoder) objects. The name
+        declares which decoding the decoder supports, and the decoder must
+        return a response object when called/instantiated. For example,
+        C{(('gzip', GzipDecoder))}. The order determines how the decoders are
+        going to be advertized to the server.
+
+    @since: 11.1
+    """
+
+    def __init__(self, agent, decoders):
+        self._agent = agent
+        self._decoders = dict(decoders)
+        self._supported = ','.join([decoder[0] for decoder in decoders])
+
+
+    def request(self, method, uri, headers=None, bodyProducer=None):
+        """
+        Send a client request which declares supporting compressed content.
+
+        @see: L{Agent.request}.
+        """
+        if headers is None:
+            headers = Headers()
+        else:
+            headers = headers.copy()
+        headers.addRawHeader('accept-encoding', self._supported)
+        deferred = self._agent.request(method, uri, headers, bodyProducer)
+        return deferred.addCallback(self._handleResponse)
+
+
+    def _handleResponse(self, response):
+        """
+        Check if the response is encoded, and wrap it to handle decompression.
+        """
+        contentEncodingHeaders = response.headers.getRawHeaders(
+            'content-encoding', [])
+        contentEncodingHeaders = ','.join(contentEncodingHeaders).split(',')
+        while contentEncodingHeaders:
+            name = contentEncodingHeaders.pop().strip()
+            decoder = self._decoders.get(name)
+            if decoder is not None:
+                response = decoder(response)
+            else:
+                # Add it back
+                contentEncodingHeaders.append(name)
+                break
+        if contentEncodingHeaders:
+            response.headers.setRawHeaders(
+                'content-encoding', [','.join(contentEncodingHeaders)])
+        else:
+            response.headers.removeHeader('content-encoding')
+        return response
+
+
+
+__all__ = [
+    'PartialDownloadError', 'HTTPPageGetter', 'HTTPPageDownloader',
+    'HTTPClientFactory', 'HTTPDownloader', 'getPage', 'downloadPage',
+    'ResponseDone', 'Response', 'ResponseFailed', 'Agent', 'CookieAgent',
+    'ContentDecoderAgent', 'GzipDecoder']

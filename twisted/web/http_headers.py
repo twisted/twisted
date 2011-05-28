@@ -145,7 +145,7 @@ class Headers(object):
         self._rawHeaders = {}
         if rawHeaders is not None:
             for name, values in rawHeaders.iteritems():
-                self.setRawHeaders(name, values)
+                self.setRawHeaders(name, values[:])
 
 
     def __repr__(self):
@@ -163,6 +163,13 @@ class Headers(object):
         if isinstance(other, Headers):
             return cmp(self._rawHeaders, other._rawHeaders)
         return NotImplemented
+
+
+    def copy(self):
+        """
+        Return a copy of itself with the same headers set.
+        """
+        return self.__class__(self._rawHeaders)
 
 
     def hasHeader(self, name):

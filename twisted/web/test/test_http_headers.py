@@ -217,6 +217,22 @@ class HeadersTests(TestCase):
             "FunnyHeaders({'foo': ['bar', 'baz']})")
 
 
+    def test_copy(self):
+        """
+        L{Headers.copy} creates a new independant copy of an existing
+        L{Headers} instance, allowing future modifications without impacts
+        between the copies.
+        """
+        h = Headers()
+        h.setRawHeaders('test', ['foo'])
+        i = h.copy()
+        self.assertEquals(i.getRawHeaders('test'), ['foo'])
+        h.addRawHeader('test', 'bar')
+        self.assertEquals(i.getRawHeaders('test'), ['foo'])
+        i.addRawHeader('test', 'baz')
+        self.assertEquals(h.getRawHeaders('test'), ['foo', 'bar'])
+
+
 
 class HeaderDictTests(TestCase):
     """
