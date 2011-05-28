@@ -350,7 +350,7 @@ class LoopTestCase(unittest.TestCase):
         next interval which is still in the future. If it was created
         using L{LoopingCall.withCount}, a positional argument will be
         inserted at the beginning of the argument list, indicating the number
-        of calls that should have been made. 
+        of calls that should have been made.
         """
         times = []
         clock = task.Clock()
@@ -520,6 +520,25 @@ class LoopTestCase(unittest.TestCase):
 
     def testStoppingBeforeDelayedStart(self):
         return self._stoppingTest(10)
+
+
+    def test_reset(self):
+        """
+        Test that L{LoopingCall} can be reset.
+        """
+        ran = []
+        def foo():
+            ran.append(None)
+
+        c = task.Clock()
+        lc = TestableLoopingCall(c, foo)
+        lc.start(2, now=False)
+        c.advance(1)
+        lc.reset()
+        c.advance(1)
+        self.assertEquals(ran, [])
+        c.advance(1)
+        self.assertEquals(ran, [None])
 
 
 

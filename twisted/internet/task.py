@@ -177,6 +177,20 @@ class LoopingCall:
             d, self.deferred = self.deferred, None
             d.callback(self)
 
+    def reset(self):
+        """
+        Skip the next iteration and reset the timer.
+
+        @since: 11.1
+        """
+        assert self.running, ("Tried to reset a LoopingCall that was "
+                              "not running.")
+        if self.call is not None:
+            self.call.cancel()
+            self.call = None
+            self._expectNextCallAt = self.clock.seconds()
+            self._reschedule()
+
     def __call__(self):
         def cb(result):
             if self.running:
