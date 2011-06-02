@@ -519,8 +519,33 @@ class IResponse(Interface):
 
 UNKNOWN_LENGTH = u"twisted.web.iweb.UNKNOWN_LENGTH"
 
+class IHTTPCache(Interface):
+    """
+    An object representing a cache to store and satisfy http content requests.
+    To accomplish that, it stores cache entries which are in themselves C{dict}
+    objects containing the keys and values as produced by the L{Response} plus
+    a special 'content' key holding the message body, if any.
+    """
+    
+    def put(self, key, entry):
+        """
+        Place a cache entry into the cache.
+        """
+
+
+    def get(self, key, default=None):
+        """
+        Reteive an entry from the cache referenced by L{key}.
+        If no such entry exists, return L{default}.
+        """
+
+    def delete(self, key):
+        """
+        Delete an entry L{key} from the cache.
+        """
+
 __all__ = [
     "IUsernameDigestHash", "ICredentialFactory", "IRequest",
-    "IBodyProducer", "IRenderable", "IResponse",
+    "IBodyProducer", "IRenderable", "IResponse", "IHTTPCache,"
 
     "UNKNOWN_LENGTH"]

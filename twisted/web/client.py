@@ -10,6 +10,8 @@ import os, types
 from urlparse import urlunparse
 import zlib
 
+from zope.interface import implements
+
 from twisted.python import log
 from twisted.web import http
 from twisted.internet import defer, protocol, reactor
@@ -18,7 +20,7 @@ from twisted.python import failure
 from twisted.python.util import InsensitiveDict
 from twisted.python.components import proxyForInterface
 from twisted.web import error
-from twisted.web.iweb import UNKNOWN_LENGTH, IResponse
+from twisted.web.iweb import UNKNOWN_LENGTH, IResponse, IHTTPCache
 from twisted.web.http_headers import Headers
 from twisted.python.compat import set
 
@@ -1003,8 +1005,206 @@ class ContentDecoderAgent(object):
 
 
 
+class CacheBodyProducer(proxyForInterface(IResponse)):
+    """
+    A wrapper for a L{Response} instance which handles cached response bodies.
+    This type of response will be used if a cache hit occurs.
+    
+    @ivar original: The original L{Response} object.
+
+    @since: 11.1
+    """
+
+    def __init__(self,response,cache):
+        self.original = response
+        self.cache = cache
+        self.length = len(cache["content"])
+
+
+    def deliverBody(self,protocol):
+        """
+        Override C{deliverBody} to deliver the cached content
+        to the given protocol
+        """
+        try:
+            protocol.connectionMade()
+            protocol.dataReceived(self.cache["content"])
+            protocol.connectionLost(failure.Failure(ResponseDone("Body delivered from cache.")))
+        except:
+            protocol.connectionLost(failure.Failure())
+
+
+
+class CacheBodyUpdater(proxyForInterface(IResponse)):
+    """
+    A wrapper for a L{Response} instance which transparently generates a cache entry
+    for new content.
+    This type of response will be used if a cache muss occurs.
+    
+    @ivar original: The original L{Response} object.
+
+    @since: 11.1
+    """
+    def __init__(self,response,cache,cacheKey):
+        self.original = response
+        self.cache = cache
+        self.cacheKey = cacheKey
+
+
+    def deliverBody(self,protocol):
+        self.original.deliverBody(_CachingProtocol(protocol,self.cache,self.cacheKey))
+
+
+
+class _CachingProtocol(proxyForInterface(IProtocol)):
+    """
+    A L{Protocol} implementation which wraps another one, transparently
+    cacheing the content as data is received.
+
+    @ivar cache: The cache object used for storing cached responses.
+    
+    @ivar cacheKey: The key to identify the current response by.
+    
+    @since: 11.1
+    """
+
+    def __init__(self,protocol,cache,cacheKey):
+        self.original = protocol
+        self.cache = cache
+        self.cacheKey = cacheKey
+        self.buffer = ""
+
+
+    def dataReceived(self,data):
+        """
+        Buffer all incoming C{data} before writing it to the receiving protocol
+        """
+        self.buffer += data
+        self.original.dataReceived(data)
+
+
+    def connectionLost(self,reason):
+        """
+        Forward the connection lost event, placing the buffered content into
+        the cache beforehand.
+        """
+        entry = self.cache.get(self.cacheKey)
+        if entry is None:
+            entry = {}
+        entry["content"] = self.buffer
+        self.cache.put(self.cacheKey,entry)
+        self.original.connectionLost(reason)
+
+
+
+class MemoryCache(object):
+    """
+    An L{IHTTPCache} storing all data in system memory.
+    A cache entry for this data store musst be a C{dict} object the contains all
+    nessecary http header fileds as keys plus an extra 'content' key to map the
+    request body.
+    
+    @ivar _storage: The C{dict} storing the cache entries. 
+    """
+    implements(IHTTPCache)
+
+    def __init__(self):
+        self._storage = {}
+
+
+    def get(self,key,default=None):
+        """
+        Returns a cache entry from the cache if one exists for a specific C{key}.
+        If none exists, C{default} is returned.
+        """
+        return self._storage.get(key,default)
+
+
+    def put(self,key,entry):
+        """
+        Place a cache C{entry} into the store referenced by a unique C{key}.
+        If an entry already exists for a key, this entry will be overwritten.
+        """
+        self._storage[key] = entry
+
+
+    def delete(self,key):
+        """
+        Delete all entries from the cache that are referenced by C{key}.
+        """
+        if key in self._storage:
+            del self._storage[key]
+
+
+
+class CachingAgent(object):
+    """
+    An L{Agent} wrapper to handle cachable content.
+
+    I manages a cache system by looking at certain http headers and determains
+    if it sould satisfy a request with localy cached content or if a fresh copy
+    should be used.
+    Currently, the following caching-related headers are supported:
+    etag, last-modified, if-match, if-not-match
+     
+    @param cache: An instance of a cache to store data and to satisfy responses from.
+    
+    @since: 11.1
+    """
+
+    def __init__(self,agent,cache=MemoryCache()):
+        self._agent = agent
+        self._cache = cache
+
+
+    def request(self,method,uri,headers=None,bodyProducer=None):
+        """
+        Send a client request which will be checked against the cache.
+
+        @see: L{Agent.request}.
+        """
+        if headers is None:
+            headers = Headers()
+        else:
+            headers = headers.copy()
+
+        cacheKey = uri
+        entry = self._cache.get(cacheKey)
+        if entry is not None:
+            if method in ("GET","HEAD"):
+                if entry.has_key("etag"):
+                    headers.addRawHeader("if-none-match",entry["etag"])
+                if entry.has_key("last-modified"):
+                    headers.addRawHeader("if-modified-since",entry["last-modified"])
+            if method in ("PUT",):
+                if entry.has_key("etag"):
+                    headers.addRawHeader("if-match",entry["etag"])
+        deferred = self._agent.request(method,uri,headers,bodyProducer)
+        return deferred.addCallback(self._handleResponse,method=method,cacheKey=cacheKey)
+
+
+    def _handleResponse(self,response,method,cacheKey):
+        """
+        Check if the server response with a cache hit and read or write to the cache if nessecary.
+        """
+        cache = self._cache.get(cacheKey,{})
+        if cache:
+            self._cache.delete(cacheKey)
+        if response.headers.hasHeader("etag"):
+            cache["etag"] = response.headers.getRawHeaders("etag")[0]
+        if response.headers.hasHeader("last-modified"):
+            cache["last-modified"] = response.headers.getRawHeaders("last-modified")[0]
+        self._cache.put(cacheKey,cache)
+
+        if response.code == 304 and method == "GET":
+            response.code = 200
+            response = CacheBodyProducer(response,cache)
+        elif cache:
+            response = CacheBodyUpdater(response,cache=self._cache,cacheKey=cacheKey)
+        return response
+
 __all__ = [
     'PartialDownloadError', 'HTTPPageGetter', 'HTTPPageDownloader',
     'HTTPClientFactory', 'HTTPDownloader', 'getPage', 'downloadPage',
     'ResponseDone', 'Response', 'ResponseFailed', 'Agent', 'CookieAgent',
-    'ContentDecoderAgent', 'GzipDecoder']
+    'ContentDecoderAgent', 'GzipDecoder', "CachingAgent", "MemoryCache"]
