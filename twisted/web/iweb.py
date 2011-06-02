@@ -529,20 +529,20 @@ class IHTTPCache(Interface):
     a special 'content' key holding the message body, if any.
     """
 
-    def put(self, key, entry):
+    def put(key, entry):
         """
         Place a cache entry into the cache.
         """
 
 
-    def get(self, key, default=None):
+    def get(key, default=None):
         """
-        Reteive an entry from the cache referenced by L{key}.
+        Retrieve an entry from the cache referenced by L{key}.
         If no such entry exists, return L{default}.
         """
 
 
-    def delete(self, key):
+    def delete(key):
         """
         Delete an entry L{key} from the cache.
         """

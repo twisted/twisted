@@ -1853,12 +1853,12 @@ class CachingAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
     def test_requestHeaders(self):
 
         cacheEntry = {
-            'etag':'qwertz',
-            'last-modified':'Sun, 06 Nov 1994 08:49:37 GMT',
+            'etag': 'qwertz',
+            'last-modified': 'Sun, 06 Nov 1994 08:49:37 GMT',
             'content': '0123456789'}
         self.cache.put('http://example.com/foo', cacheEntry)
 
-        self.agent.request('GET','http://example.com/foo')
+        self.agent.request('GET', 'http://example.com/foo')
 
         protocol = self.protocol
 
@@ -1921,9 +1921,10 @@ class CachingAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
 
         data = '0123456789'
 
-        cacheEntry = {'etag':'qwertz',
-             'last-modified':'Sun, 06 Nov 1994 08:49:37 GMT',
-             'content': data}
+        cacheEntry = {
+            'etag': 'qwertz',
+            'last-modified': 'Sun, 06 Nov 1994 08:49:37 GMT',
+            'content': data}
 
         self.cache.put('http://example.com/foo', cacheEntry)
 

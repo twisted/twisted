@@ -1145,7 +1145,7 @@ class CachingAgent(object):
     An L{Agent} wrapper to handle cacheable content.
 
     It manages a cache system by looking at certain http headers and determines
-    if it should satisfy a request with localy cached content or if a fresh
+    if it should satisfy a request with locally cached content or if a fresh
     copy should be used.
     Currently, the following caching-related headers are supported:
     B{etag}, B{last-modified}, B{if-match}, B{if-not-match}
