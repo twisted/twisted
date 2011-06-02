@@ -1107,6 +1107,8 @@ class MemoryCache(object):
     the request body.
 
     @ivar _storage: The C{dict} storing the cache entries.
+
+    @since: 11.1
     """
     implements(IHTTPCache)
 
@@ -1140,11 +1142,11 @@ class MemoryCache(object):
 
 class CachingAgent(object):
     """
-    An L{Agent} wrapper to handle cachable content.
+    An L{Agent} wrapper to handle cacheable content.
 
     It manages a cache system by looking at certain http headers and determines
-    if it sould satisfy a request with localy cached content or if a fresh copy
-    should be used.
+    if it should satisfy a request with localy cached content or if a fresh
+    copy should be used.
     Currently, the following caching-related headers are supported:
     B{etag}, B{last-modified}, B{if-match}, B{if-not-match}
 
@@ -1192,7 +1194,7 @@ class CachingAgent(object):
         Check if the server response with a cache hit and read or write to the
         cache if necessary.
         """
-        cache = self._cache.get(cacheKey,{})
+        cache = self._cache.get(cacheKey, {})
         if cache:
             self._cache.delete(cacheKey)
         if response.headers.hasHeader('etag'):
