@@ -688,15 +688,7 @@ generateFor = [('conch', 'twisted.conch.scripts.conch', 'ClientOptions'),
                ('tkconch', 'twisted.conch.scripts.tkconch', 'GeneralOptions'),
                ('manhole', 'twisted.scripts.manhole', 'MyOptions'),
                ('tap2rpm', 'twisted.scripts.tap2rpm', 'MyOptions'),
-               ('websetroot', None, None),
-               ('tkmktap', None, None),
                ]
-# NOTE: the commands using None above are no longer included in Twisted.
-# However due to limitations in zsh's completion system the version of
-# _twisted_zsh_stub shipped with zsh contains a static list of Twisted's
-# commands. It will display errors if completion functions for these missing
-# commands are not found :( So we just include dummy (empty) completion
-# function files
 
 specialBuilders = {'mktap'  : MktapBuilder,
                    'twistd' : TwistdBuilder}
