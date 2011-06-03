@@ -95,11 +95,15 @@ def inet_ntop(af, addr):
         raise socket.error(97, 'Address family not supported by protocol')
 
 try:
+    socket.AF_INET6
+except AttributeError:
+    socket.AF_INET6 = 'AF_INET6'
+
+try:
     socket.inet_pton(socket.AF_INET6, "::")
 except (AttributeError, NameError, socket.error):
     socket.inet_pton = inet_pton
     socket.inet_ntop = inet_ntop
-    socket.AF_INET6 = 'AF_INET6'
 
 adict = dict
 

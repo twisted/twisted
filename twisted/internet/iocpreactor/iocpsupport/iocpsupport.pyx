@@ -20,6 +20,9 @@ cdef extern from 'errno.h':
 cdef extern from 'winsock2.h':
     pass
 
+cdef extern from 'ws2tcpip.h':
+    pass
+
 cdef extern from 'windows.h':
     ctypedef struct OVERLAPPED:
         pass
@@ -66,6 +69,8 @@ cdef extern from '':
     struct sockaddr_in:
         int sin_port
         in_addr sin_addr
+    struct sockaddr_in6:
+        int sin6_port
     int getsockopt(SOCKET s, int level, int optname, char *optval, int *optlen)
     enum:
         SOL_SOCKET
@@ -73,6 +78,7 @@ cdef extern from '':
         SOCKET_ERROR
         ERROR_IO_PENDING
         AF_INET
+        AF_INET6
         INADDR_ANY
     ctypedef struct WSAPROTOCOL_INFO:
         int iMaxSockAddr
@@ -90,6 +96,10 @@ cdef extern from '':
     int WSARecv(SOCKET s, WSABUF *buffs, DWORD buffcount, DWORD *bytes, DWORD *flags, OVERLAPPED *ov, void *crud)
     int WSARecvFrom(SOCKET s, WSABUF *buffs, DWORD buffcount, DWORD *bytes, DWORD *flags, sockaddr *fromaddr, int *fromlen, OVERLAPPED *ov, void *crud)
     int WSASend(SOCKET s, WSABUF *buffs, DWORD buffcount, DWORD *bytes, DWORD flags, OVERLAPPED *ov, void *crud)
+    int WSAAddressToStringA(sockaddr *lpsaAddress, DWORD dwAddressLength,
+                            WSAPROTOCOL_INFO *lpProtocolInfo,
+                            char *lpszAddressString,
+                            DWORD *lpdwAddressStringLength)
 
 cdef extern from 'string.h':
     void *memset(void *s, int c, size_t n)
@@ -191,11 +201,27 @@ def makesockaddr(object buff):
 
 cdef object _makesockaddr(sockaddr *addr, int len):
     cdef sockaddr_in *sin
+    cdef sockaddr_in6 *sin6
+    cdef char buff[256]
+    cdef int rc
+    cdef DWORD buff_size = sizeof(buff)
     if not len:
         return None
     if addr.sa_family == AF_INET:
         sin = <sockaddr_in *>addr
         return PyString_FromString(inet_ntoa(sin.sin_addr)), ntohs(sin.sin_port)
+    elif addr.sa_family == AF_INET6:
+        sin6 = <sockaddr_in6 *>addr
+        rc = WSAAddressToStringA(addr, sizeof(sockaddr_in6), NULL, buff, &buff_size)
+        if rc == SOCKET_ERROR:
+            raise_error(0, 'WSAAddressToString')
+        host, sa_port = PyString_FromString(buff), ntohs(sin6.sin6_port)
+        host, port = host.rsplit(':', 1)
+        port = int(port)
+        assert host[0] == '['
+        assert host[-1] == ']'
+        assert port == sa_port
+        return host[1:-1], port
     else:
         return PyString_FromStringAndSize(addr.sa_data, sizeof(addr.sa_data))
 
