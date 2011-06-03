@@ -132,7 +132,7 @@ calculus.test.test_base_1
 [FAIL]
 Traceback (most recent call last):
   File "/tmp/calculus/test/test_base_1.py", line 8, in test_add
-    self.assertEquals(result, 11)
+    self.assertEqual(result, 11)
 twisted.trial.unittest.FailTest: not equal:
 a = None
 b = 11
@@ -143,7 +143,7 @@ calculus.test.test_base_1.CalculationTestCase.test_add
 [FAIL]
 Traceback (most recent call last):
   File "/tmp/calculus/test/test_base_1.py", line 23, in test_divide
-    self.assertEquals(result, 2)
+    self.assertEqual(result, 2)
 twisted.trial.unittest.FailTest: not equal:
 a = None
 b = 2
@@ -154,7 +154,7 @@ calculus.test.test_base_1.CalculationTestCase.test_divide
 [FAIL]
 Traceback (most recent call last):
   File "/tmp/calculus/test/test_base_1.py", line 18, in test_multiply
-    self.assertEquals(result, 60)
+    self.assertEqual(result, 60)
 twisted.trial.unittest.FailTest: not equal:
 a = None
 b = 60
@@ -165,7 +165,7 @@ calculus.test.test_base_1.CalculationTestCase.test_multiply
 [FAIL]
 Traceback (most recent call last):
   File "/tmp/calculus/test/test_base_1.py", line 13, in test_subtract
-    self.assertEquals(result, 4)
+    self.assertEqual(result, 4)
 twisted.trial.unittest.FailTest: not equal:
 a = None
 b = 4
@@ -532,7 +532,7 @@ def _test(self, op, a, b, expected):
     creator = protocol.ClientCreator(reactor, RemoteCalculationClient)
     def cb(client):
         self.addCleanup(self.client.transport.loseConnection)
-        return getattr(client, op)(a, b).addCallback(self.assertEquals, expected)
+        return getattr(client, op)(a, b).addCallback(self.assertEqual, expected)
     return creator.connectTCP('127.0.0.1', self.port.getHost().port).addCallback(cb)
 </pre>
 
@@ -551,7 +551,7 @@ So we'll want a test like this:</p>
 <pre class="python">
 def test_invalidParameters(self):
     self.proto.dataReceived('add foo bar\r\n')
-    self.assertEquals(self.tr.value(), "error\r\n")
+    self.assertEqual(self.tr.value(), "error\r\n")
 </pre>
 
 <a href="listings/trial/calculus/remote_2.py" class="py-listing">remote_2.py</a>

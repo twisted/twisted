@@ -106,10 +106,10 @@ $ bin/trial twisted
     <p>PyUnit provides a large number of assertion methods to be used when
     writing tests.  Many of these are redundant.  For consistency, Twisted
     unit tests should use the <code>assert</code> forms rather than the
-    <code>fail</code> forms.  Also, use <code>assertEquals</code>,
-    <code>assertNotEquals</code>, and <code>assertAlmostEquals</code> rather
-    than <code>assertEqual</code>, <code>assertNotEqual</code>, and
-    <code>assertAlmostEqual</code>.  <code>assertTrue</code> is also
+    <code>fail</code> forms.  Also, use <code>assertEqual</code>,
+    <code>assertNotEqual</code>, and <code>assertAlmostEqual</code> rather
+    than <code>assertEquals</code>, <code>assertNotEquals</code>, and
+    <code>assertAlmostEquals</code>.  <code>assertTrue</code> is also
     preferred over <code>assert_</code>.  You may notice this convention is
     not followed everywhere in the Twisted codebase.  If you are changing
     some test code and notice the wrong method being used in nearby code,

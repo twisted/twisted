@@ -14,7 +14,7 @@ class RemoteCalculationTestCase(unittest.TestCase):
 
     def _test(self, operation, a, b, expected):
         self.proto.dataReceived('%s %d %d\r\n' % (operation, a, b))
-        self.assertEquals(int(self.tr.value()), expected)
+        self.assertEqual(int(self.tr.value()), expected)
 
 
     def test_add(self):

@@ -10,7 +10,7 @@ class CalculationTestCase(unittest.TestCase):
 
     def _test(self, operation, a, b, expected):
         result = operation(a, b)
-        self.assertEquals(result, expected)
+        self.assertEqual(result, expected)
 
 
     def _test_error(self, operation):

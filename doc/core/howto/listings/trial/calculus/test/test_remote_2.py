@@ -25,7 +25,7 @@ class RemoteRunCalculationTestCase(unittest.TestCase):
         def cb(client):
             self.client = client
             return getattr(self.client, op)(a, b
-                ).addCallback(self.assertEquals, expected)
+                ).addCallback(self.assertEqual, expected)
         return creator.connectTCP('127.0.0.1', self.port.getHost().port
             ).addCallback(cb)
 
