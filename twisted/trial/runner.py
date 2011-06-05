@@ -11,8 +11,8 @@ Maintainer: Jonathan Lange
 __all__ = [
     'suiteVisit', 'TestSuite',
 
-    'DestructiveTestSuite', 'DocTestCase', 'DocTestSuite',
-    'DryRunVisitor', 'ErrorHolder', 'LoggedSuite', 'PyUnitTestCase',
+    'DestructiveTestSuite', 'DocTestCase', 'DryRunVisitor',
+    'ErrorHolder', 'LoggedSuite', 'PyUnitTestCase',
     'TestHolder', 'TestLoader', 'TrialRunner', 'TrialSuite',
 
     'filenameToModule', 'isPackage', 'isPackageDirectory', 'isTestCase',
@@ -184,25 +184,6 @@ class LoggedSuite(TestSuite):
 
 
 
-class DocTestSuite(TestSuite):
-    """
-    DEPRECATED in Twisted 8.0.
-
-    Behaves like doctest.DocTestSuite, but decorates individual TestCases so
-    they support visit and so that id() behaviour is meaningful and consistent
-    between Python versions.
-    """
-
-    def __init__(self, testModule):
-        warnings.warn("DocTestSuite is deprecated in Twisted 8.0.",
-                      category=DeprecationWarning, stacklevel=2)
-        TestSuite.__init__(self)
-        suite = doctest.DocTestSuite(testModule)
-        for test in suite._tests: #yay encapsulation
-            self.addTest(ITestCase(test))
-
-
-
 class PyUnitTestCase(object):
     """
     DEPRECATED in Twisted 8.0.
@@ -308,7 +289,7 @@ class TrialSuite(TestSuite):
 def name(thing):
     """
     @param thing: an object from modules (instance of PythonModule,
-    PythonAttribute), a TestCase subclass, or an instance of a TestCase.
+        PythonAttribute), a TestCase subclass, or an instance of a TestCase.
     """
     if isTestCase(thing):
         # TestCase subclass
@@ -326,8 +307,8 @@ def name(thing):
 
 def isTestCase(obj):
     """
-    Returns C{True} if C{obj} is a class that contains test cases, C{False}
-    otherwise. Used to find all the tests in a module.
+    @return: C{True} if C{obj} is a class that contains test cases, C{False}
+        otherwise. Used to find all the tests in a module.
     """
     try:
         return issubclass(obj, pyunit.TestCase)
@@ -395,7 +376,7 @@ class ErrorHolder(TestHolder):
         @param description: A string used by C{TestResult}s to identify this
         error. Generally, this is the name of a module that failed to import.
 
-        @param error: The error to be added to the result. Can be an exc_info
+        @param error: The error to be added to the result. Can be an `exc_info`
         tuple or a L{twisted.python.failure.Failure}.
         """
         super(ErrorHolder, self).__init__(description)

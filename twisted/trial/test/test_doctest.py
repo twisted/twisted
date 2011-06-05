@@ -2,7 +2,7 @@
 # See LICENSE for details.
 
 """
-Test twisted's doctest support.
+Test Twisted's doctest support.
 """
 
 from twisted.trial import itrial, runner, unittest, reporter
@@ -25,23 +25,6 @@ class TestRunners(unittest.TestCase):
         idPrefix = 'twisted.trial.test.mockdoctest.Counter'
         for test in suite._tests:
             self.assertIn(idPrefix, itrial.ITestCase(test).id())
-
-
-    def makeDocSuite(self, module):
-        """
-        Return a L{runner.DocTestSuite} for the doctests in C{module}.
-        """
-        return self.assertWarns(
-            DeprecationWarning, "DocTestSuite is deprecated in Twisted 8.0.",
-            __file__, lambda: runner.DocTestSuite(mockdoctest))
-
-
-    def test_correctCount(self):
-        """
-        L{countTestCases} returns the number of doctests in the module.
-        """
-        suite = self.makeDocSuite(mockdoctest)
-        self.assertEqual(7, suite.countTestCases())
 
 
     def test_basicTrialIntegration(self):
