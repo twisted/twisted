@@ -1,6 +1,5 @@
 from twisted.internet.protocol import DatagramProtocol
 from twisted.internet import reactor
-from twisted.application.internet import MulticastServer
 
 class MulticastServerUDP(DatagramProtocol):
     def startProtocol(self):
