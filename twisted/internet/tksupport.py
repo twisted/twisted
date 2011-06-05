@@ -20,6 +20,13 @@ stop Twisted::
 
     | root.protocol('WM_DELETE_WINDOW', reactor.stop)
 
+When using Aqua Tcl/Tk on Mac OS X the standard Quit menu item in
+your application might become unresponsive without the additional
+fix::
+
+    | root.createcommand("::tk::mac::Quit", reactor.stop)
+
+@see: U{Tcl/TkAqua FAQ for more info<http://wiki.tcl.tk/12987>}
 """
 
 # system imports
