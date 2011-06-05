@@ -43,12 +43,14 @@ def main(args):
     if os.path.exists('twisted'):
         sys.path.insert(0, '.')
     from twisted import copyright
-    from twisted.python.dist import getDataFiles, getScripts, getPackages, setup
+    from twisted.python.dist import getDataFiles, getScripts, getPackages, \
+                                    setup, twisted_subprojects
 
     # "" is included because core scripts are directly in bin/
     projects = [''] + [x for x in os.listdir('bin')
                        if os.path.isdir(os.path.join("bin", x))
-                       and not x.startswith(".")]
+                       and x in twisted_subprojects]
+
     scripts = []
     for i in projects:
         scripts.extend(getScripts(i))
