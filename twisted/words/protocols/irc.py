@@ -37,7 +37,7 @@ import warnings
 import textwrap
 from os import path
 
-from twisted.internet import reactor, protocol
+from twisted.internet import reactor, protocol, task
 from twisted.persisted import styles
 from twisted.protocols import basic
 from twisted.python import log, reflect, text
@@ -969,7 +969,8 @@ class ServerSupportedFeatures(_CommandDispatcherMixin):
 
 
 class IRCClient(basic.LineReceiver):
-    """Internet Relay Chat client protocol, with sprinkles.
+    """
+    Internet Relay Chat client protocol, with sprinkles.
 
     In addition to providing an interface for an IRC client protocol,
     this class also contains reasonable implementations of many common
@@ -981,11 +982,6 @@ class IRCClient(basic.LineReceiver):
        does).
      - Add flood protection/rate limiting for my CTCP replies.
      - NickServ cooperation.  (a mix-in?)
-     - Heartbeat.  The transport may die in such a way that it does not realize
-       it is dead until it is written to.  Sending something (like "PING
-       this.irc-host.net") during idle peroids would alleviate that.  If
-       you're concerned with the stability of the host as well as that of the
-       transport, you might care to watch for the corresponding PONG.
 
     @ivar nickname: Nickname the client will use.
     @ivar password: Password used to log on to the server.  May be C{None}.
@@ -1037,7 +1033,23 @@ class IRCClient(basic.LineReceiver):
 
     @type supported: L{ServerSupportedFeatures}
     @ivar supported: Available ISUPPORT features on the server
+
+    @type hostname: C{str}
+    @ivar hostname: Host name of the IRC server the client is connected to.
+        Initially the host name is C{None} and later is set to the host name
+        from which the I{RPL_WELCOME} message is received.
+
+    @type _heartbeat: L{task.LoopingCall}
+    @ivar _heartbeat: Looping call to perform the keepalive by calling
+        L{IRCClient._sendHeartbeat} every L{heartbeatInterval} seconds, or
+        C{None} if there is no heartbeat.
+
+    @type heartbeatInterval: C{float}
+    @ivar heartbeatInterval: Interval, in seconds, to send I{PING} messages to
+        the server as a form of keepalive, defaults to 120 seconds. Use C{None}
+        to disable the heartbeat.
     """
+    hostname = None
     motd = None
     nickname = 'irc'
     password = None
@@ -1073,6 +1085,10 @@ class IRCClient(basic.LineReceiver):
     _attemptedNick = ''
     erroneousNickFallback = 'defaultnick'
 
+    _heartbeat = None
+    heartbeatInterval = 120
+
+
     def _reallySendLine(self, line):
         return basic.LineReceiver.sendLine(self, lowQuote(line) + '\r')
 
@@ -1091,6 +1107,52 @@ class IRCClient(basic.LineReceiver):
                                                     self._sendLine)
         else:
             self._queueEmptying = None
+
+
+    def connectionLost(self, reason):
+        basic.LineReceiver.connectionLost(self, reason)
+        self.stopHeartbeat()
+
+
+    def _createHeartbeat(self):
+        """
+        Create the heartbeat L{LoopingCall}.
+        """
+        return task.LoopingCall(self._sendHeartbeat)
+
+
+    def _sendHeartbeat(self):
+        """
+        Send a I{PING} message to the IRC server as a form of keepalive.
+        """
+        self.sendLine('PING ' + self.hostname)
+
+
+    def stopHeartbeat(self):
+        """
+        Stop sending I{PING} messages to keep the connection to the server
+        alive.
+
+        @since: 11.1
+        """
+        if self._heartbeat is not None:
+            self._heartbeat.stop()
+            self._heartbeat = None
+
+
+    def startHeartbeat(self):
+        """
+        Start sending I{PING} messages every L{IRCClient.heartbeatInterval}
+        seconds to keep the connection to the server alive during periods of no
+        activity.
+
+        @since: 11.1
+        """
+        self.stopHeartbeat()
+        if self.heartbeatInterval is None:
+            return
+        self._heartbeat = self._createHeartbeat()
+        self._heartbeat.start(self.heartbeatInterval, now=False)
 
 
     ### Interface level client->user output methods
@@ -1736,13 +1798,17 @@ class IRCClient(basic.LineReceiver):
         """
         raise IRCPasswordMismatch("Password Incorrect.")
 
+
     def irc_RPL_WELCOME(self, prefix, params):
         """
         Called when we have received the welcome from the server.
         """
+        self.hostname = prefix
         self._registered = True
         self.nickname = self._attemptedNick
         self.signedOn()
+        self.startHeartbeat()
+
 
     def irc_JOIN(self, prefix, params):
         """

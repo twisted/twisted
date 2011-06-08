@@ -11,7 +11,7 @@ from twisted.trial import unittest
 from twisted.trial.unittest import TestCase
 from twisted.words.protocols import irc
 from twisted.words.protocols.irc import IRCClient
-from twisted.internet import protocol
+from twisted.internet import protocol, task
 from twisted.test.proto_helpers import StringTransport, StringIOWithoutClosing
 
 
@@ -698,12 +698,8 @@ class CTCPTest(unittest.TestCase):
         self.client = IRCClientWithoutLogin()
         self.client.makeConnection(self.transport)
 
-
-    def tearDown(self):
-        self.transport.loseConnection()
-        self.client.connectionLost()
-        del self.client
-        del self.transport
+        self.addCleanup(self.transport.loseConnection)
+        self.addCleanup(self.client.connectionLost, None)
 
 
     def test_ERRMSG(self):
@@ -898,19 +894,16 @@ def pop(dict, key, default):
         del dict[key]
         return value
 
+
+
 class ClientImplementationTests(unittest.TestCase):
     def setUp(self):
-        self.file = StringIOWithoutClosing()
-        self.transport = protocol.FileWrapper(self.file)
+        self.transport = StringTransport()
         self.client = NoticingClient()
         self.client.makeConnection(self.transport)
 
-
-    def tearDown(self):
-        self.transport.loseConnection()
-        self.client.connectionLost()
-        del self.client
-        del self.transport
+        self.addCleanup(self.transport.loseConnection)
+        self.addCleanup(self.client.connectionLost, None)
 
 
     def _serverTestImpl(self, code, msg, func, **kw):
@@ -1263,6 +1256,51 @@ class ClientImplementationTests(unittest.TestCase):
         self._checkModeChange([(True, 'Z', ('an_arg',))], target=target)
 
 
+    def test_heartbeat(self):
+        """
+        When the I{RPL_WELCOME} message is received a heartbeat is started that
+        will send a I{PING} message to the IRC server every
+        L{irc.IRCClient.heartbeatInterval} seconds. When the transport is
+        closed the heartbeat looping call is stopped too.
+        """
+        def _createHeartbeat():
+            heartbeat = self._originalCreateHeartbeat()
+            heartbeat.clock = self.clock
+            return heartbeat
+
+        self.clock = task.Clock()
+        self._originalCreateHeartbeat = self.client._createHeartbeat
+        self.patch(self.client, '_createHeartbeat', _createHeartbeat)
+
+        self.assertIdentical(self.client._heartbeat, None)
+        self.client.irc_RPL_WELCOME('foo', [])
+        self.assertNotIdentical(self.client._heartbeat, None)
+        self.assertEqual(self.client.hostname, 'foo')
+
+        # Pump the clock enough to trigger one LoopingCall.
+        self.assertEqual(self.transport.value(), '')
+        self.clock.advance(self.client.heartbeatInterval)
+        self.assertEqual(self.transport.value(), 'PING foo\r\n')
+
+        # When the connection is lost the heartbeat is stopped.
+        self.transport.loseConnection()
+        self.client.connectionLost(None)
+        self.assertEqual(
+            len(self.clock.getDelayedCalls()), 0)
+        self.assertIdentical(self.client._heartbeat, None)
+
+
+    def test_heartbeatDisabled(self):
+        """
+        If L{irc.IRCClient.heartbeatInterval} is set to C{None} then no
+        heartbeat is created.
+        """
+        self.assertIdentical(self.client._heartbeat, None)
+        self.client.heartbeatInterval = None
+        self.client.irc_RPL_WELCOME('foo', [])
+        self.assertIdentical(self.client._heartbeat, None)
+
+
 
 class BasicServerFunctionalityTestCase(unittest.TestCase):
     def setUp(self):
@@ -1551,6 +1589,9 @@ class ClientTests(TestCase):
         # Sanity check - we don't want anything to have happened at this
         # point, since we're not in a test yet.
         self.assertEquals(self.transport.value(), "")
+
+        self.addCleanup(self.transport.loseConnection)
+        self.addCleanup(self.protocol.connectionLost, None)
 
 
     def getLastLine(self, transport):
