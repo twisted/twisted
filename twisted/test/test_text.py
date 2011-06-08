@@ -15,6 +15,7 @@ spirit of chemistry ...  If mathematical analysis should ever hold a
 prominent place in chemistry - an aberration which is happily almost
 impossible - it would occasion a rapid and widespread degeneration of that
 science.
+
            --  Auguste Comte, Philosophie Positive, Paris, 1838
 """
 
@@ -148,7 +149,7 @@ class StrFileTest(unittest.TestCase):
 
     def test_self(self):
         self.assertEquals(True, text.strFile("this is a test string", self.io))
-    
+
     def test_insensitive(self):
         self.assertEquals(True, text.strFile("ThIs is A test STRING", self.io, False))
 
