@@ -5789,3 +5789,14 @@ How do I use it?
 <gxti> you're trying too hard.
 <exarkun> gxti: That's the only way I know how to try.
 %
+<glyph> PenguinOfDoom: plz upload that to PyPI
+<glyph> assuming you did it right
+<glyph> and didn't totally screw it up
+<PenguinOfDoom> haha
+<PenguinOfDoom> how would I even be able to tell
+<glyph> you just assert that you didn't
+<glyph> then when it breaks you blame someone else
+<glyph> it's the distutils' hokey pokey
+<glyph> o/` you put your pathname in o/` you take your sys path out o/` you
+        change your site.py o/` and you shake it all about o/`
+%
