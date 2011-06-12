@@ -132,6 +132,23 @@ class _Warning(object):
         self.lineno = lineno
 
 
+def _setWarningRegistryToNone(modules):
+    """
+    Disable the per-module cache for every module found in C{modules}, typically
+    C{sys.modules}.
+
+    @param modules: Dictionary of modules, typically sys.module dict
+    """
+    for v in modules.values():
+        if v is not None:
+            try:
+                v.__warningregistry__ = None
+            except:
+                # Don't specify a particular exception type to handle in case
+                # some wacky object raises some wacky exception in response to
+                # the setattr attempt.
+                pass
+
 
 def _collectWarnings(observeWarning, f, *args, **kwargs):
     """
@@ -151,15 +168,7 @@ def _collectWarnings(observeWarning, f, *args, **kwargs):
     # Disable the per-module cache for every module otherwise if the warning
     # which the caller is expecting us to collect was already emitted it won't
     # be re-emitted by the call to f which happens below.
-    for v in sys.modules.itervalues():
-        if v is not None:
-            try:
-                v.__warningregistry__ = None
-            except:
-                # Don't specify a particular exception type to handle in case
-                # some wacky object raises some wacky exception in response to
-                # the setattr attempt.
-                pass
+    _setWarningRegistryToNone(sys.modules)
 
     origFilters = warnings.filters[:]
     origShow = warnings.showwarning

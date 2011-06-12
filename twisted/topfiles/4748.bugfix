@@ -1,0 +1,2 @@
+trial now gracefully handles the presence of objects in sys.modules which
+respond to attributes being set on them by modifying sys.modules.

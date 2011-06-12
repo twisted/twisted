@@ -9,7 +9,8 @@ import sys, warnings
 from StringIO import StringIO
 
 from twisted.python.filepath import FilePath
-from twisted.trial.unittest import TestCase, _collectWarnings
+from twisted.trial.unittest import (TestCase, _collectWarnings,
+                                    _setWarningRegistryToNone)
 from twisted.trial.reporter import TestResult
 
 class Mask(object):
@@ -434,3 +435,38 @@ class CollectWarningsTests(TestCase):
         sys.modules[key] = key
         self.addCleanup(sys.modules.pop, key)
         self.test_duplicateWarningCollected()
+
+
+    def test_setWarningRegistryChangeWhileIterating(self):
+        """
+        If the dictionary passed to L{_setWarningRegistryToNone} changes size
+        partway through the process, C{_setWarningRegistryToNone} continues to
+        set C{__warningregistry__} to C{None} on the rest of the values anyway.
+
+
+        This might be caused by C{sys.modules} containing something that's not
+        really a module and imports things on setattr.  py.test does this, as
+        does L{twisted.python.deprecate.deprecatedModuleAttribute}.
+        """
+        d = {}
+
+        class A(object):
+            def __init__(self, key):
+                self.__dict__['_key'] = key
+
+            def __setattr__(self, value, item):
+                d[self._key] = None
+
+        key1 = object()
+        key2 = object()
+        d[key1] = A(key2)
+
+        key3 = object()
+        key4 = object()
+        d[key3] = A(key4)
+
+        _setWarningRegistryToNone(d)
+
+        # If both key2 and key4 were added, then both A instanced were
+        # processed.
+        self.assertEqual(set([key1, key2, key3, key4]), set(d.keys()))
