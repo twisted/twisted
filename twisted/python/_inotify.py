@@ -75,13 +75,22 @@ def remove(fd, wd):
 def initializeModule(libc):
     """
     Intialize the module, checking if the expected APIs exist and setting the
-    argtypes for C{inotify_add_watch}.
+    argtypes and restype for for C{inotify_init}, C{inotify_add_watch}, and
+    C{inotify_rm_watch}.
     """
     for function in ("inotify_add_watch", "inotify_init", "inotify_rm_watch"):
         if getattr(libc, function, None) is None:
             raise ImportError("libc6 2.4 or higher needed")
+    libc.inotify_init.argtypes = []
+    libc.inotify_init.restype = ctypes.c_int
+
+    libc.inotify_rm_watch.argtypes = [
+        ctypes.c_int, ctypes.c_int]
+    libc.inotify_rm_watch.restype = ctypes.c_int
+
     libc.inotify_add_watch.argtypes = [
-        ctypes.c_int, ctypes.c_char_p, ctypes.c_int]
+        ctypes.c_int, ctypes.c_char_p, ctypes.c_uint32]
+    libc.inotify_add_watch.restype = ctypes.c_int
 
 
 

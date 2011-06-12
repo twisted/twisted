@@ -376,7 +376,9 @@ class INotify(FileDescriptor, object):
         @type path: L{FilePath}
         """
         wd = self._isWatched(path)
-        if wd is not False:
+        if wd is None:
+            raise KeyError("%r is not watched" % (path,))
+        else:
             self._rmWatch(wd)
 
 

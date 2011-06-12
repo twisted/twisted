@@ -9,7 +9,7 @@ from twisted.trial.unittest import TestCase
 from twisted.python.runtime import platform
 
 if platform.supportsINotify():
-    from ctypes import c_int, c_char_p
+    from ctypes import c_int, c_uint32, c_char_p
     from twisted.python import _inotify
     from twisted.python._inotify import (
         INotifyError, initializeModule, init, add)
@@ -64,25 +64,36 @@ class INotifyTests(TestCase):
         self.assertRaises(ImportError, initializeModule, libc())
 
 
-    def test_setAddArgtypes(self):
+    def test_setTypes(self):
         """
-        If the I{libc} object passed to L{initializeModule} has all
-        of the necessary attributes, it sets the C{argtypes} attribute
-        of the C{inotify_add_watch} attribute to a list describing the
-        argument types.
+        If the I{libc} object passed to L{initializeModule} has all of the
+        necessary attributes, it sets the C{argtypes} and C{restype} attributes
+        of the three ctypes methods used from libc.
         """
         class libc:
             def inotify_init(self):
                 pass
+            inotify_init = staticmethod(inotify_init)
+
             def inotify_rm_watch(self):
                 pass
+            inotify_rm_watch = staticmethod(inotify_rm_watch)
+
             def inotify_add_watch(self):
                 pass
             inotify_add_watch = staticmethod(inotify_add_watch)
+
         c = libc()
         initializeModule(c)
-        self.assertEquals(
-            c.inotify_add_watch.argtypes, [c_int, c_char_p, c_int])
+        self.assertEqual(c.inotify_init.argtypes, [])
+        self.assertEqual(c.inotify_init.restype, c_int)
+
+        self.assertEqual(c.inotify_rm_watch.argtypes, [c_int, c_int])
+        self.assertEqual(c.inotify_rm_watch.restype, c_int)
+
+        self.assertEqual(
+            c.inotify_add_watch.argtypes, [c_int, c_char_p, c_uint32])
+        self.assertEqual(c.inotify_add_watch.restype, c_int)
 
 
     def test_failedInit(self):
