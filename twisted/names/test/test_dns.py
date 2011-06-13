@@ -1326,7 +1326,7 @@ class EqualityTests(unittest.TestCase):
     def test_spf(self):
         """
         L{dns.Record_SPF} records are structurally similar to L{dns.Record_TXT}
-        records, so they are equal if and only if they have the same data and ttl. 
+        records, so they are equal if and only if they have the same data and ttl.
         """
         # Vary the length of the data
         self._equalityTest(
@@ -1343,3 +1343,88 @@ class EqualityTests(unittest.TestCase):
             dns.Record_SPF('foo', 'bar', ttl=10),
             dns.Record_SPF('foo', 'bar', ttl=10),
             dns.Record_SPF('foo', 'bar', ttl=100))
+
+
+
+class QueryTests(unittest.TestCase):
+    """
+    Tests for the Query class.
+    """
+
+    def test_compareEqualOtherClass(self):
+        """
+        Compare Query to other class.
+        """
+        q = dns.Query()
+        self.assertFalse(q == 'notaquery')
+
+
+    def test_compareOrderOtherClass(self):
+        """
+        Compare Query to other class.
+        """
+        q = dns.Query()
+        self.assertTrue(q < 'notaquery')
+
+
+    def test_compareEqual(self):
+        """
+        Compare Query to other equal Query.
+        """
+        q1 = dns.Query()
+        q2 = dns.Query()
+        self.assertTrue(q1 == q2)
+        self.assertFalse(q1 != q2)
+
+    def test_compareDifferentName(self):
+        """
+        Queries with different name are different.
+        """
+        q1 = dns.Query(name='a')
+        q2 = dns.Query(name='b')
+        self.assertNotEqual(q1, q2)
+
+
+    def test_compareDifferentType(self):
+        """
+        Queries with different type are different.
+        """
+        q1 = dns.Query(type='a')
+        q2 = dns.Query(type='b')
+        self.assertNotEqual(q1, q2)
+
+
+    def test_compareDifferentCls(self):
+        """
+        Queries with different cls are different.
+        """
+        q1 = dns.Query(cls='a')
+        q2 = dns.Query(cls='b')
+        self.assertNotEqual(q1, q2)
+
+
+    def test_compareOrderName(self):
+        """
+        Queries are ordered first with name
+        """
+        q1 = dns.Query(name='a', type=2, cls=2)
+        q2 = dns.Query(name='b', type=1, cls=1)
+        self.assertLess(q1, q2)
+
+
+    def test_compareOrderType(self):
+        """
+        Queries are ordered second with type
+        """
+        q1 = dns.Query(name='a', type=1, cls=2)
+        q2 = dns.Query(name='a', type=2, cls=1)
+        self.assertLess(q1, q2)
+
+
+    def test_compareOrderCls(self):
+        """
+        Queries are ordered third with the cls
+        """
+        q1 = dns.Query(name='a', type=1, cls=1)
+        q2 = dns.Query(name='a', type=1, cls=2)
+        self.assertLess(q1, q2)

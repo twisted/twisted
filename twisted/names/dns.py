@@ -420,11 +420,24 @@ class Query:
         return hash((str(self.name).lower(), self.type, self.cls))
 
 
-    def __cmp__(self, other):
-        return isinstance(other, Query) and cmp(
-            (str(self.name).lower(), self.type, self.cls),
-            (str(other.name).lower(), other.type, other.cls)
-        ) or cmp(self.__class__, other.__class__)
+    def __lt__(self, other):
+        if isinstance(other, Query):
+            return ((str(self.name).lower(), self.type, self.cls) <
+                    (str(other.name).lower(), other.type, other.cls))
+        else:
+            return self.__class__ < other.__class__
+
+
+    def __eq__(self, other):
+        if isinstance(other, Query):
+            return ((str(self.name).lower(), self.type, self.cls) ==
+                    (str(other.name).lower(), other.type, other.cls))
+        else:
+            return self.__class__ == other.__class__
+
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
 
     def __str__(self):
@@ -1429,7 +1442,7 @@ class Record_TXT(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
     @type data: C{list} of C{str}
     @ivar data: Freeform text which makes up this record.
-    
+
     @type ttl: C{int}
     @ivar ttl: The maximum number of seconds which this record should be cached.
     """
@@ -1475,10 +1488,10 @@ class Record_SPF(Record_TXT):
     """
     Structurally, freeform text. Semantically, a policy definition, formatted
     as defined in U{rfc 4408<http://www.faqs.org/rfcs/rfc4408.html>}.
-    
+
     @type data: C{list} of C{str}
     @ivar data: Freeform text which makes up this record.
-    
+
     @type ttl: C{int}
     @ivar ttl: The maximum number of seconds which this record should be cached.
     """

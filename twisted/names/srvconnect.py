@@ -102,12 +102,6 @@ class SRVConnector:
             self.orderedServers.append((a.payload.priority, a.payload.weight,
                                         str(a.payload.target), a.payload.port))
 
-    def _serverCmp(self, a, b):
-        if a[0]!=b[0]:
-            return cmp(a[0], b[0])
-        else:
-            return cmp(a[1], b[1])
-
     def pickServer(self):
         assert self.servers is not None
         assert self.orderedServers is not None
@@ -123,12 +117,12 @@ class SRVConnector:
 
         assert self.servers
 
-        self.servers.sort(self._serverCmp)
+        self.servers.sort(key=lambda s: (s[0], s[1]))
         minPriority=self.servers[0][0]
 
         weightIndex = zip(xrange(len(self.servers)), [x[1] for x in self.servers
                                                       if x[0]==minPriority])
-        weightSum = reduce(lambda x, y: (None, x[1]+y[1]), weightIndex, (None, 0))[1]
+        weightSum = sum([x[1] for x in weightIndex])
         rand = random.randint(0, weightSum)
 
         for index, weight in weightIndex:

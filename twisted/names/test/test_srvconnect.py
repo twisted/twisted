@@ -78,6 +78,46 @@ class SRVConnectorTest(unittest.TestCase):
             self.reactor.tcpClients.pop()[:2], ('host.example.org', 6269))
 
 
+    def test_SRVSeveralPresentDifferentPriorities(self):
+        """
+        Test connectTCP gets called with several addresses from the SRV record.
+        """
+        payload1 = dns.Record_SRV(port=6269, target='host.example.org',
+                                  ttl=60, priority=1)
+        r1 = dns.RRHeader(name='example.org', type=dns.SRV, cls=dns.IN,
+                          ttl=60, payload=payload1)
+        payload2 = dns.Record_SRV(port=6269, target='other.example.org',
+                                  ttl=60, priority=2)
+        r2 = dns.RRHeader(name='example.org', type=dns.SRV, cls=dns.IN,
+                          ttl=60, payload=payload2)
+        client.theResolver.results = [r1, r2]
+        self.connector.connect()
+
+        self.assertIdentical(None, self.factory.reason)
+        self.assertEquals(
+                self.reactor.tcpClients.pop()[:2], ('host.example.org', 6269))
+
+
+    def test_SRVSeveralPresentDifferentWeights(self):
+        """
+        Test connectTCP gets called with several addresses from the SRV record.
+        """
+        payload1 = dns.Record_SRV(port=6269, target='host.example.org',
+                                  ttl=60, priority=1, weight=1)
+        r1 = dns.RRHeader(name='example.org', type=dns.SRV, cls=dns.IN,
+                          ttl=60, payload=payload1)
+        payload2 = dns.Record_SRV(port=6269, target='other.example.org',
+                                  ttl=60, priority=1, weight=2)
+        r2 = dns.RRHeader(name='example.org', type=dns.SRV, cls=dns.IN,
+                          ttl=60, payload=payload2)
+        client.theResolver.results = [r1, r2]
+        self.connector.connect()
+
+        self.assertIdentical(None, self.factory.reason)
+        self.assertEquals(
+                self.reactor.tcpClients.pop()[:2], ('other.example.org', 6269))
+
+
     def test_SRVNotPresent(self):
         """
         Test connectTCP gets called with fallback parameters on NXDOMAIN.
