@@ -10,6 +10,7 @@ __metaclass__ = type
 from weakref import ref
 import gc
 
+from twisted.python.threadable import isInIOThread
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.python.threadpool import ThreadPool
 
@@ -159,6 +160,38 @@ class ThreadTestsBuilder(ReactorBuilder):
         reactor.fireSystemEvent("shutdown")
         gc.collect()
         self.assertIdentical(threadPoolRef(), None)
+
+
+    def test_isInIOThread(self):
+        """
+        The reactor registers itself as the I/O thread when it runs so that
+        L{twisted.python.threadable.isInIOThread} returns C{True} if it is
+        called in the thread the reactor is running in.
+        """
+        results = []
+        reactor = self.buildReactor()
+        def check():
+            results.append(isInIOThread())
+            reactor.stop()
+        reactor.callWhenRunning(check)
+        self.runReactor(reactor)
+        self.assertEqual([True], results)
+
+
+    def test_isNotInIOThread(self):
+        """
+        The reactor registers itself as the I/O thread when it runs so that
+        L{twisted.python.threadable.isInIOThread} returns C{False} if it is
+        called in a different thread than the reactor is running in.
+        """
+        results = []
+        reactor = self.buildReactor()
+        def check():
+            results.append(isInIOThread())
+            reactor.callFromThread(reactor.stop)
+        reactor.callInThread(check)
+        self.runReactor(reactor)
+        self.assertEqual([False], results)
 
 
 globals().update(ThreadTestsBuilder.makeTestCaseClasses())

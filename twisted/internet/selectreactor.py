@@ -5,8 +5,6 @@
 
 """
 Select reactor
-
-Maintainer: Itamar Shtull-Trauring
 """
 
 from time import sleep
@@ -43,7 +41,16 @@ if platformType == "win32":
 else:
     _select = select.select
 
-class SelectReactor(posixbase.PosixReactorBase):
+
+try:
+    from twisted.internet.win32eventreactor import _ThreadedWin32EventsMixin
+except ImportError:
+    _extraBase = object
+else:
+    _extraBase = _ThreadedWin32EventsMixin
+
+
+class SelectReactor(posixbase.PosixReactorBase, _extraBase):
     """
     A select() based reactor - runs on all POSIX platforms and on Win32.
 

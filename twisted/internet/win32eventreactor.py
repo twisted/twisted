@@ -13,9 +13,6 @@ listeners or connectors are added)::
     from twisted.internet import win32eventreactor
     win32eventreactor.install()
 
-Maintainer: Itamar Shtull-Trauring
-
-
 LIMITATIONS:
  1. WaitForMultipleObjects and thus the event loop can only handle 64 objects.
  2. Process running has some problems (see L{Process} docstring).
@@ -50,6 +47,7 @@ The 2nd solution is probably what will get implemented.
 # System imports
 import time
 import sys
+from threading import Thread
 
 from zope.interface import implements
 
@@ -65,6 +63,7 @@ from twisted.internet import posixbase
 from twisted.python import log, threadable, failure
 from twisted.internet.interfaces import IReactorFDSet, IReactorProcess
 from twisted.internet.interfaces import IReactorWin32Events
+from twisted.internet.threads import blockingCallFromThread
 
 from twisted.internet._dumbwin32proc import Process
 
@@ -239,6 +238,118 @@ class Win32Reactor(posixbase.PosixReactorBase):
                 "this platform.")
         args, env = self._checkProcessArgs(args, env)
         return Process(self, processProtocol, executable, args, env, path)
+
+
+
+class _ThreadFDWrapper(object):
+    """
+    This wraps an event handler and translates notification in the helper
+    L{Win32Reactor} thread into a notification in the primary reactor thread.
+
+    @ivar _reactor: The primary reactor, the one to which event notification
+        will be sent.
+
+    @ivar _fd: The L{FileDescriptor} to which the event will be dispatched.
+
+    @ivar _action: A C{str} giving the method of C{_fd} which handles the event.
+
+    @ivar _logPrefix: The pre-fetched log prefix string for C{_fd}, so that
+        C{_fd.logPrefix} does not need to be called in a non-main thread.
+    """
+    def __init__(self, reactor, fd, action, logPrefix):
+        self._reactor = reactor
+        self._fd = fd
+        self._action = action
+        self._logPrefix = logPrefix
+
+
+    def logPrefix(self):
+        """
+        Return the original handler's log prefix, as it was given to
+        C{__init__}.
+        """
+        return self._logPrefix
+
+
+    def _execute(self):
+        """
+        Callback fired when the associated event is set.  Run the C{action}
+        callback on the wrapped descriptor in the main reactor thread and raise
+        or return whatever it raises or returns to cause this event handler to
+        be removed from C{self._reactor} if appropriate.
+        """
+        return blockingCallFromThread(
+            self._reactor, lambda: getattr(self._fd, self._action)())
+
+
+    def connectionLost(self, reason):
+        """
+        Pass through to the wrapped descriptor, but in the main reactor thread
+        instead of the helper C{Win32Reactor} thread.
+        """
+        self._reactor.callFromThread(self._fd.connectionLost, reason)
+
+
+
+class _ThreadedWin32EventsMixin(object):
+    """
+    This mixin implements L{IReactorWin32Events} for another reactor by running
+    a L{Win32Reactor} in a separate thread and dispatching work to it.
+
+    @ivar _reactor: The L{Win32Reactor} running in the other thread.  This is
+        C{None} until it is actually needed.
+
+    @ivar _reactorThread: The L{threading.Thread} which is running the
+        L{Win32Reactor}.  This is C{None} until it is actually needed.
+    """
+    implements(IReactorWin32Events)
+
+    _reactor = None
+    _reactorThread = None
+
+
+    def _unmakeHelperReactor(self):
+        """
+        Stop and discard the reactor started by C{_makeHelperReactor}.
+        """
+        self._reactor.callFromThread(self._reactor.stop)
+        self._reactor = None
+
+
+    def _makeHelperReactor(self):
+        """
+        Create and (in a new thread) start a L{Win32Reactor} instance to use for
+        the implementation of L{IReactorWin32Events}.
+        """
+        self._reactor = Win32Reactor()
+        # This is a helper reactor, it is not the global reactor and its thread
+        # is not "the" I/O thread.  Prevent it from registering it as such.
+        self._reactor._registerAsIOThread = False
+        self._reactorThread = Thread(
+            target=self._reactor.run, args=(False,))
+        self.addSystemEventTrigger(
+            'after', 'shutdown', self._unmakeHelperReactor)
+        self._reactorThread.start()
+
+
+    def addEvent(self, event, fd, action):
+        """
+        @see: L{IReactorWin32Events}
+        """
+        if self._reactor is None:
+            self._makeHelperReactor()
+        self._reactor.callFromThread(
+            self._reactor.addEvent,
+            event, _ThreadFDWrapper(self, fd, action, fd.logPrefix()),
+            "_execute")
+
+
+    def removeEvent(self, event):
+        """
+        @see: L{IReactorWin32Events}
+        """
+        self._reactor.callFromThread(self._reactor.removeEvent, event)
+
 
 
 def install():

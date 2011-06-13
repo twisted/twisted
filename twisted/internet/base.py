@@ -452,8 +452,14 @@ class ReactorBase(object):
         an explicit state machine.
 
     @ivar running: See L{IReactorCore.running}
+
+    @ivar _registerAsIOThread: A flag controlling whether the reactor will
+        register the thread it is running in as the I/O thread when it starts.
+        If C{True}, registration will be done, otherwise it will not be.
     """
     implements(IReactorCore, IReactorTime, IReactorPluggableResolver)
+
+    _registerAsIOThread = True
 
     _stopped = True
     installed = False
@@ -674,7 +680,8 @@ class ReactorBase(object):
             raise error.ReactorNotRestartable()
         self._started = True
         self._stopped = False
-        threadable.registerAsIOThread()
+        if self._registerAsIOThread:
+            threadable.registerAsIOThread()
         self.fireSystemEvent('startup')
 
 

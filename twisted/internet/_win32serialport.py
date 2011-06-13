@@ -1,16 +1,13 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
 """
 Serial port support for Windows.
 
-Requires PySerial and win32all, and needs to be used with win32event
-reactor.
+Requires PySerial and pywin32.
 """
 
 # system imports
-import os
 import serial
 from serial import PARITY_NONE, PARITY_EVEN, PARITY_ODD
 from serial import STOPBITS_ONE, STOPBITS_TWO
@@ -18,9 +15,7 @@ from serial import FIVEBITS, SIXBITS, SEVENBITS, EIGHTBITS
 import win32file, win32event
 
 # twisted imports
-from twisted.protocols import basic
 from twisted.internet import abstract
-from twisted.python import log
 
 # sibling imports
 from serialport import BaseSerialPort

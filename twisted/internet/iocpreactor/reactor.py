@@ -13,6 +13,7 @@ from zope.interface import implements
 from twisted.internet import base, interfaces, main, error
 from twisted.python import log, failure
 from twisted.internet._dumbwin32proc import Process
+from twisted.internet.win32eventreactor import _ThreadedWin32EventsMixin
 
 from twisted.internet.iocpreactor import iocpsupport as _iocp
 from twisted.internet.iocpreactor.const import WAIT_TIMEOUT
@@ -46,7 +47,8 @@ _NO_FILEDESC = error.ConnectionFdescWentAway('Filedescriptor went away')
 
 
 
-class IOCPReactor(base._SignalReactorMixin, base.ReactorBase):
+class IOCPReactor(base._SignalReactorMixin, base.ReactorBase,
+                  _ThreadedWin32EventsMixin):
     implements(interfaces.IReactorTCP, interfaces.IReactorUDP,
                interfaces.IReactorMulticast, interfaces.IReactorProcess,
                *_extraInterfaces)
