@@ -19,7 +19,7 @@ class FakeResolver(ResolverBase):
     Resolver that only gives out one given result.
 
     Either L{results} or L{failure} must be set and will be used for
-    the return value of L{_lookup}
+    the return value of L{_lookup}.
 
     @ivar results: List of L{dns.RRHeader} for the desired result.
     @type results: C{list}
@@ -30,6 +30,7 @@ class FakeResolver(ResolverBase):
     def __init__(self, results=None, failure=None):
         self.results = results
         self.failure = failure
+
 
     def _lookup(self, name, cls, qtype, timeout):
         """
@@ -49,8 +50,11 @@ class DummyFactory(protocol.ClientFactory):
     def __init__(self):
         self.reason = None
 
+
     def clientConnectionFailed(self, connector, reason):
         self.reason = reason
+
+
 
 class SRVConnectorTest(unittest.TestCase):
 

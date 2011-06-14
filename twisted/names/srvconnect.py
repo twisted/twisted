@@ -10,7 +10,7 @@ from twisted.internet import error, interfaces
 
 from twisted.names import client, dns
 from twisted.names.error import DNSNameError
-from twisted.python.compat import reduce
+
 
 class _SRVConnector_ClientFactoryWrapper:
     def __init__(self, connector, wrappedFactory):
@@ -29,8 +29,11 @@ class _SRVConnector_ClientFactoryWrapper:
     def __getattr__(self, key):
         return getattr(self.__wrappedFactory, key)
 
+
 class SRVConnector:
-    """A connector that looks up DNS SRV records. See RFC2782."""
+    """
+    A connector that looks up DNS SRV records. See RFC2782.
+    """
 
     implements(interfaces.IConnector)
 
@@ -55,8 +58,11 @@ class SRVConnector:
         self.servers = None
         self.orderedServers = None # list of servers already used in this round
 
+
     def connect(self):
-        """Start connection to remote server."""
+        """
+        Start connection to remote server.
+        """
         self.factory.doStart()
         self.factory.startedConnecting(self)
 
@@ -75,6 +81,7 @@ class SRVConnector:
         else:
             self.connector.connect()
 
+
     def _ebGotServers(self, failure):
         failure.trap(DNSNameError)
 
@@ -84,6 +91,7 @@ class SRVConnector:
 
         self.servers = []
         self.orderedServers = []
+
 
     def _cbGotServers(self, (answers, auth, add)):
         if len(answers) == 1 and answers[0].type == dns.SRV \
@@ -101,6 +109,7 @@ class SRVConnector:
 
             self.orderedServers.append((a.payload.priority, a.payload.weight,
                                         str(a.payload.target), a.payload.port))
+
 
     def pickServer(self):
         assert self.servers is not None
@@ -137,6 +146,7 @@ class SRVConnector:
 
         raise RuntimeError, 'Impossible %s pickServer result.' % self.__class__.__name__
 
+
     def _reallyConnect(self):
         if self.stopAfterDNS:
             self.stopAfterDNS=0
@@ -152,29 +162,36 @@ class SRVConnector:
             _SRVConnector_ClientFactoryWrapper(self, self.factory),
             *self.connectFuncArgs, **self.connectFuncKwArgs)
 
+
     def stopConnecting(self):
-        """Stop attempting to connect."""
+        """
+        Stop attempting to connect.
+        """
         if self.connector:
             self.connector.stopConnecting()
         else:
             self.stopAfterDNS=1
 
     def disconnect(self):
-        """Disconnect whatever our are state is."""
+        """
+        Disconnect whatever our are state is.
+        """
         if self.connector is not None:
             self.connector.disconnect()
         else:
             self.stopConnecting()
 
+
     def getDestination(self):
         assert self.connector
         return self.connector.getDestination()
+
 
     def connectionFailed(self, reason):
         self.factory.clientConnectionFailed(self, reason)
         self.factory.doStop()
 
+
     def connectionLost(self, reason):
         self.factory.clientConnectionLost(self, reason)
         self.factory.doStop()
-

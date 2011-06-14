@@ -121,7 +121,9 @@ class NameTests(unittest.TestCase):
 
 
 class RoundtripDNSTestCase(unittest.TestCase):
-    """Encoding and then decoding various objects."""
+    """
+    Encoding and then decoding various objects.
+    """
 
     names = ["example.org", "go-away.fish.tv", "23strikesback.net"]
 
@@ -375,7 +377,6 @@ class DatagramProtocolTestCase(unittest.TestCase):
         m = dns.Message()
         m.id = self.proto.liveMessages.items()[0][0]
         m.answers = [dns.RRHeader(payload=dns.Record_A(address='1.2.3.4'))]
-        called = False
         def cb(result):
             self.assertEquals(result.answers[0].payload.dottedQuad(), '1.2.3.4')
         d.addCallback(cb)
@@ -497,7 +498,6 @@ class DNSProtocolTestCase(unittest.TestCase):
         m = dns.Message()
         m.id = self.proto.liveMessages.items()[0][0]
         m.answers = [dns.RRHeader(payload=dns.Record_A(address='1.2.3.4'))]
-        called = False
         def cb(result):
             self.assertEquals(result.answers[0].payload.dottedQuad(), '1.2.3.4')
         d.addCallback(cb)
