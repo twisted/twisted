@@ -300,8 +300,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
 
     def test_processExitedRaises(self):
         """
-        Test that a protocol raising an exception inside processExited
-        doesn't cause the reactor to explode.
+        If L{IProcessProtocol.processExited} raises an exception, it is logged.
         """
         reactor = self.buildReactor()
 
@@ -318,7 +317,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
                protocol, sys.executable, [sys.executable, "-c", ""],
                usePTY=self.usePTY)
         reactor.run()
-        self.flushLoggedErrors()
+        self.assertEqual(1, len(self.flushLoggedErrors(TestException)))
 
         # Manually clean-up broken process handler
         for pid, handler in process.reapProcessHandlers.items():

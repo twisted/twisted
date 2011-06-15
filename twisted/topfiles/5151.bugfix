@@ -1,0 +1,1 @@
+Broken process handlers will no longer be left in the global state if a ProcessProtocol raises an exception from within processExited.

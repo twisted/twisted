@@ -69,9 +69,6 @@ Bugfixes
  - twisted.words.services referenced nonexistent
    twisted.words.protocols.irc.IRC_NOSUCHCHANNEL. This has been fixed.
    Related code has also received test cases. (#4915)
- - Broken process handlers will no longer be left in the global state
-   if a ProcessProtocol raises an exception from within processExited.
-   (#5151)
 
 Improved Documentation
 ----------------------
