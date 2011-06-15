@@ -298,6 +298,37 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         self.runReactor(reactor)
 
 
+    def test_processExitedRaises(self):
+        """
+        Test that a protocol raising an exception inside processExited
+        doesn't cause the reactor to explode.
+        """
+        reactor = self.buildReactor()
+
+        class TestException(Exception):
+            pass
+
+        class Protocol(ProcessProtocol):
+            def processExited(self, reason):
+                reactor.callLater(0.01, lambda: reactor.stop())
+                raise TestException("processedExited raised")
+
+        protocol = Protocol()
+        transport = reactor.spawnProcess(
+               protocol, sys.executable, [sys.executable, "-c", ""],
+               usePTY=self.usePTY)
+        reactor.run()
+        self.flushLoggedErrors()
+
+        # Manually clean-up broken process handler
+        for pid, handler in process.reapProcessHandlers.items():
+            if handler is not transport:
+                continue
+            process.unregisterReapProcessHandler(pid, handler)
+            self.fail("After processExited raised, transport was left in"
+                      " reapProcessHandlers")
+
+
 class ProcessTestsBuilder(ProcessTestsBuilderBase):
     """
     Builder defining tests relating to L{IReactorProcess} for child processes

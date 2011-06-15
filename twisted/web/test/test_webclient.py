@@ -27,6 +27,7 @@ from twisted.internet.task import Clock
 from twisted.internet.error import ConnectionRefusedError
 from twisted.internet.protocol import Protocol
 from twisted.internet.defer import Deferred, succeed
+from twisted.web.http import OK
 from twisted.web.client import Request
 from twisted.web.iweb import UNKNOWN_LENGTH, IResponse
 from twisted.web._newclient import HTTP11ClientProtocol, Response
@@ -1324,9 +1325,9 @@ class CookieTestsMixin(object):
         Add a cookie to a cookie jar.
         """
         response = client._FakeUrllib2Response(
-            client.Response(
+            Response(
                 ('HTTP', 1, 1),
-                200,
+                OK,
                 'OK',
                 client.Headers({'Set-Cookie': cookies}),
                 None))
@@ -1450,9 +1451,9 @@ class CookieAgentTests(unittest.TestCase, CookieTestsMixin):
         req, res = self.protocol.requests.pop()
         self.assertIdentical(req.headers.getRawHeaders('cookie'), None)
 
-        resp = client.Response(
+        resp = Response(
             ('HTTP', 1, 1),
-            200,
+            OK,
             'OK',
             client.Headers({'Set-Cookie': ['foo=1',]}),
             None)
@@ -1564,7 +1565,7 @@ class ContentDecoderAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
 
         req, res = self.protocol.requests.pop()
 
-        response = Response(('HTTP', 1, 1), 200, 'OK', http_headers.Headers(),
+        response = Response(('HTTP', 1, 1), OK, 'OK', http_headers.Headers(),
                             None)
         res.callback(response)
 
@@ -1584,7 +1585,7 @@ class ContentDecoderAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
 
         headers = http_headers.Headers({'foo': ['bar'],
                                         'content-encoding': ['fizz']})
-        response = Response(('HTTP', 1, 1), 200, 'OK', headers, None)
+        response = Response(('HTTP', 1, 1), OK, 'OK', headers, None)
         res.callback(response)
 
         return deferred.addCallback(self.assertIdentical, response)
@@ -1604,7 +1605,7 @@ class ContentDecoderAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         headers = http_headers.Headers({'foo': ['bar'],
                                         'content-encoding':
                                         ['decoder1,fizz,decoder2']})
-        response = Response(('HTTP', 1, 1), 200, 'OK', headers, None)
+        response = Response(('HTTP', 1, 1), OK, 'OK', headers, None)
         res.callback(response)
 
         def check(result):
@@ -1674,7 +1675,7 @@ class ContentDecoderAgentWithGzipTests(unittest.TestCase,
         headers = http_headers.Headers({'foo': ['bar'],
                                         'content-encoding': ['gzip']})
         transport = StringTransport()
-        response = Response(('HTTP', 1, 1), 200, 'OK', headers, transport)
+        response = Response(('HTTP', 1, 1), OK, 'OK', headers, transport)
         response.length = 12
         res.callback(response)
 
@@ -1685,7 +1686,7 @@ class ContentDecoderAgentWithGzipTests(unittest.TestCase,
         def checkResponse(result):
             self.assertNotIdentical(result, response)
             self.assertEquals(result.version, ('HTTP', 1, 1))
-            self.assertEquals(result.code, 200)
+            self.assertEquals(result.code, OK)
             self.assertEquals(result.phrase, 'OK')
             self.assertEquals(list(result.headers.getAllRawHeaders()),
                               [('Foo', ['bar'])])
@@ -1719,7 +1720,7 @@ class ContentDecoderAgentWithGzipTests(unittest.TestCase,
         headers = http_headers.Headers({'foo': ['bar'],
                                         'content-encoding': ['gzip']})
         transport = StringTransport()
-        response = Response(('HTTP', 1, 1), 200, 'OK', headers, transport)
+        response = Response(('HTTP', 1, 1), OK, 'OK', headers, transport)
         response.length = 12
         res.callback(response)
 
@@ -1767,7 +1768,7 @@ class ContentDecoderAgentWithGzipTests(unittest.TestCase,
 
         headers = http_headers.Headers({'content-encoding': ['gzip']})
         transport = StringTransport()
-        response = Response(('HTTP', 1, 1), 200, 'OK', headers, transport)
+        response = Response(('HTTP', 1, 1), OK, 'OK', headers, transport)
         res.callback(response)
 
         def checkResponse(result):
@@ -1812,7 +1813,7 @@ class ContentDecoderAgentWithGzipTests(unittest.TestCase,
 
         headers = http_headers.Headers({'content-encoding': ['gzip']})
         transport = StringTransport()
-        response = Response(('HTTP', 1, 1), 200, 'OK', headers, transport)
+        response = Response(('HTTP', 1, 1), OK, 'OK', headers, transport)
         res.callback(response)
 
         def checkResponse(result):
@@ -1834,6 +1835,66 @@ class ContentDecoderAgentWithGzipTests(unittest.TestCase,
 
         return deferred.addCallback(checkFailure)
 
+
+
+class MemoryAgent(object):
+    """
+    """
+    def __init__(self):
+        self.requests = []
+
+
+    def request(self, method, url, headers, body):
+        result = Deferred()
+        self.requests.append((result, method, url, headers, body))
+        return result
+
+
+
+class HTTPAuthAgentTests(unittest.TestCase):
+    """
+    Tests for L{HTTPAuthAgent}, an Agent-like class which supports responding to
+    HTTP authentication challenges.
+    """
+    def test_unchallengedRequest(self):
+        """
+        L{HTTPAuthAgent.request} issues an HTTP request according to the
+        parameters passed to it and, if the response is not a I{401
+        Unauthorized}, returns the response as-is.
+        """
+        underlying = MemoryAgent()
+        agent = HTTPAuthAgent(underlying)
+
+        expectedMethod = 'GET'
+        expectedURI = '/some/location'
+        expectedHeaders = http_headers.Headers(
+            {'x-test-header': ['excellent value']})
+        expectedBody = object()
+        result = agent.request('GET', '/some/location', headers, body)
+
+        self.assertEqual(1, len(underlying.requests))
+
+        underlyingResult, method, uri, headers, body = underlying.requests.pop()
+
+        self.assertEqual(expectedMethod, method)
+        self.assertEqual(expectedURI, uri)
+        self.assertEqual(expectedHeaders, headers)
+        self.assertEqual(expectedBody, body)
+
+        responseVersion = ('HTTP', 1, 1)
+        responseCode = OK
+        responseMessage = 'OK'
+        responseHeaders = http_headers.Headers({'x-test-response': ['things']})
+
+        underlyingResult.callback(
+            Response(
+                responseVersion, responseCode,
+                responseMessage, responseHeaders, object()))
+
+        response = []
+        result.addCallback(response.append)
+        self.assertEqual(1, len(response))
+        print response
 
 
 if ssl is None or not hasattr(ssl, 'DefaultOpenSSLContextFactory'):
