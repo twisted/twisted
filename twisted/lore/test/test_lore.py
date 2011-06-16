@@ -36,7 +36,6 @@ from xml.dom import minidom as dom
 
 from twisted.trial import unittest
 from twisted.python.filepath import FilePath
-from twisted.python.versions import Version
 
 from twisted.lore import tree, process, indexer, numberer, htmlbook, default
 from twisted.lore.default import factory
@@ -1197,32 +1196,3 @@ class ScriptTests(unittest.TestCase):
         """
         processor = lore.getProcessor("lore", "html", options)
         self.assertNotIdentical(processor, None)
-
-
-
-class DeprecationTests(unittest.TestCase):
-    """
-    Tests for deprecated APIs in L{twisted.lore.tree}.
-    """
-    def test_comparePosition(self):
-        """
-        L{tree.comparePosition} is deprecated.
-        """
-        from twisted.web.microdom import parseString
-        element = parseString('<foo/>').documentElement
-        self.assertEqual(
-            self.callDeprecated(
-                Version('Twisted', 9, 0, 0),
-                tree.comparePosition, element, element),
-            0)
-
-
-    def test_compareMarkPos(self):
-        """
-        L{tree.compareMarkPos} is deprecated.
-        """
-        self.assertEqual(
-            self.callDeprecated(
-                Version('Twisted', 9, 0, 0),
-                tree.compareMarkPos, [0, 1], [1, 2]),
-            -1)

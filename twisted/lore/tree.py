@@ -12,8 +12,6 @@ from xml.sax.xmlreader import InputSource
 
 from twisted.python import htmlizer, text
 from twisted.python.filepath import FilePath
-from twisted.python.deprecate import deprecated
-from twisted.python.versions import Version
 from twisted.web import domhelpers
 import process, latex, indexer, numberer, htmlbook
 
@@ -468,34 +466,6 @@ def notes(document):
     notePrefix = dom.parseString('<strong>Note: </strong>').documentElement
     for note in notes:
         note.childNodes.insert(0, notePrefix)
-
-
-
-def compareMarkPos(a, b):
-    """
-    Perform in every way identically to L{cmp} for valid inputs.
-    """
-    linecmp = cmp(a[0], b[0])
-    if linecmp:
-        return linecmp
-    return cmp(a[1], b[1])
-compareMarkPos = deprecated(Version('Twisted', 9, 0, 0))(compareMarkPos)
-
-
-
-def comparePosition(firstElement, secondElement):
-    """
-    Compare the two elements given by their position in the document or
-    documents they were parsed from.
-
-    @type firstElement: C{dom.Element}
-    @type secondElement: C{dom.Element}
-
-    @return: C{-1}, C{0}, or C{1}, with the same meanings as the return value
-    of L{cmp}.
-    """
-    return cmp(firstElement._markpos, secondElement._markpos)
-comparePosition = deprecated(Version('Twisted', 9, 0, 0))(comparePosition)
 
 
 
