@@ -24,6 +24,8 @@ from twisted.internet import _signals
 from twisted.python import runtime
 if not runtime.platform.isWindows():
     from twisted.internet import process
+else:
+    process = None
 
 
 
@@ -317,15 +319,19 @@ class ProcessTestsBuilderBase(ReactorBuilder):
                protocol, sys.executable, [sys.executable, "-c", ""],
                usePTY=self.usePTY)
         self.runReactor(reactor)
-        self.assertEqual(1, len(self.flushLoggedErrors(TestException)))
 
-        # Manually clean-up broken process handler
-        for pid, handler in process.reapProcessHandlers.items():
-            if handler is not transport:
-                continue
-            process.unregisterReapProcessHandler(pid, handler)
-            self.fail("After processExited raised, transport was left in"
-                      " reapProcessHandlers")
+        # Manually clean-up broken process handler.
+        # Only required if the test fails on systems that support
+        # the process module
+        if process is not None:
+            for pid, handler in process.reapProcessHandlers.items():
+                if handler is not transport:
+                    continue
+                process.unregisterReapProcessHandler(pid, handler)
+                self.fail("After processExited raised, transport was left in"
+                          " reapProcessHandlers")
+
+        self.assertEqual(1, len(self.flushLoggedErrors(TestException)))
 
 
 class ProcessTestsBuilder(ProcessTestsBuilderBase):
