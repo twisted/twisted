@@ -316,7 +316,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         transport = reactor.spawnProcess(
                protocol, sys.executable, [sys.executable, "-c", ""],
                usePTY=self.usePTY)
-        reactor.run()
+        self.runReactor(reactor)
         self.assertEqual(1, len(self.flushLoggedErrors(TestException)))
 
         # Manually clean-up broken process handler
