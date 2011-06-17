@@ -309,7 +309,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
 
         class Protocol(ProcessProtocol):
             def processExited(self, reason):
-                reactor.callLater(0.01, lambda: reactor.stop())
+                reactor.stop()
                 raise TestException("processedExited raised")
 
         protocol = Protocol()
