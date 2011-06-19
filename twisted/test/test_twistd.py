@@ -7,11 +7,17 @@ Tests for L{twisted.application.app} and L{twisted.scripts.twistd}.
 
 import signal, inspect, errno
 
-import os, sys, cPickle, StringIO
+import os, sys, StringIO
+
 try:
     import pwd, grp
 except ImportError:
     pwd = grp = None
+
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 
 from zope.interface import implements
 from zope.interface.verify import verifyObject
@@ -236,7 +242,7 @@ class TapFileTest(unittest.TestCase):
         """
         self.tapfile = self.mktemp()
         f = file(self.tapfile, 'wb')
-        cPickle.dump(service.Application("Hi!"), f)
+        pickle.dump(service.Application("Hi!"), f)
         f.close()
 
 
