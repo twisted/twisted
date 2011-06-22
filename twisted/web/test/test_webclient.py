@@ -27,6 +27,7 @@ from twisted.internet.task import Clock
 from twisted.internet.error import ConnectionRefusedError
 from twisted.internet.protocol import Protocol
 from twisted.internet.defer import Deferred, succeed
+from twisted.internet.endpoints import TCP4ClientEndpoint
 from twisted.web.client import Request
 from twisted.web.iweb import UNKNOWN_LENGTH, IResponse
 from twisted.web._newclient import HTTP11ClientProtocol, Response
@@ -1398,29 +1399,13 @@ class CookieJarTests(unittest.TestCase, CookieTestsMixin):
 
 
 
-class CookieAgentTests(unittest.TestCase, CookieTestsMixin):
+class CookieAgentTests(unittest.TestCase, CookieTestsMixin,
+                       FakeReactorAndConnectMixin):
     """
     Tests for L{twisted.web.client.CookieAgent}.
     """
     def setUp(self):
-        class Reactor(MemoryReactor, Clock):
-            def __init__(self):
-                MemoryReactor.__init__(self)
-                Clock.__init__(self)
-
-        self.reactor = Reactor()
-
-
-    def _dummyConnect(self, scheme, host, port):
-        """
-        Fake implementation of L{Agent._connect} which synchronously
-        succeeds with an instance of L{StubHTTPProtocol} for ease of
-        testing.
-        """
-        protocol = StubHTTPProtocol()
-        protocol.makeConnection(None)
-        self.protocol = protocol
-        return succeed(protocol)
+        self.reactor = self.Reactor()
 
 
     def test_emptyCookieJarRequest(self):
@@ -1833,6 +1818,60 @@ class ContentDecoderAgentWithGzipTests(unittest.TestCase,
             error.reasons[1].trap(zlib.error)
 
         return deferred.addCallback(checkFailure)
+
+
+
+class ProxyAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
+    """
+    Tests for L{client.ProxyAgent}.
+    """
+
+    def setUp(self):
+        self.reactor = self.Reactor()
+        self.agent = client.ProxyAgent(
+            TCP4ClientEndpoint(self.reactor, "bar", 5678))
+        self._oldConnect = self.agent._connect
+        self.agent._connect = self._dummyConnect
+
+
+    def _dummyConnect(self, scheme, host, port):
+        self._oldConnect(scheme, host, port)
+        return FakeReactorAndConnectMixin._dummyConnect(
+            self, scheme, host, port)
+
+
+    def test_proxyRequest(self):
+        """
+        L{client.ProxyAgent} issues an HTTP request against the proxy, with the
+        full URI as path, when C{request} is called.
+        """
+        headers = http_headers.Headers({'foo': ['bar']})
+        # Just going to check the body for identity, so it doesn't need to be
+        # real.
+        body = object()
+        self.agent.request(
+            'GET', 'http://example.com:1234/foo?bar', headers, body)
+
+        host, port, factory = self.reactor.tcpClients.pop()[:3]
+        self.assertEqual(host, "bar")
+        self.assertEqual(port, 5678)
+
+        self.assertIsInstance(factory._wrappedFactory,
+                              client._HTTP11ClientFactory)
+
+        protocol = self.protocol
+
+        # The request should be issued.
+        self.assertEqual(len(protocol.requests), 1)
+        req, res = protocol.requests.pop()
+        self.assertIsInstance(req, Request)
+        self.assertEqual(req.method, 'GET')
+        self.assertEqual(req.uri, 'http://example.com:1234/foo?bar')
+        self.assertEqual(
+            req.headers,
+            http_headers.Headers({'foo': ['bar'],
+                                  'host': ['example.com:1234']}))
+        self.assertIdentical(req.bodyProducer, body)
 
 
 

@@ -286,6 +286,50 @@ if __name__ == "__main__":
       context objects.
     </p>
 
+    <h3>Using a HTTP proxy</h3>
+
+    <p>
+      To be able to use HTTP proxies with an agent, you can use the <code
+      class="API">twisted.web.client.ProxyAgent</code> class. It supports the
+      same interface as <code>Agent</code>, but takes the endpoint of the proxy
+      as initializer argument.
+    </p>
+
+    <p>
+      Here's an example demonstrating the use of an HTTP proxy running on
+      localhost:8000.
+    </p>
+
+    <pre class="python">
+from twisted.python.log import err
+from twisted.web.client import ProxyAgent
+from twisted.internet import reactor
+from twisted.internet.endpoints import TCP4ClientEndpoint
+
+def display(response):
+    print "Received response"
+    print response
+
+def main():
+    endpoint = TCP4ClientEndpoint(reactor, "localhost", 8000)
+    agent = ProxyAgent(endpoint)
+    d = agent.request("GET", "https://example.com/")
+    d.addCallbacks(display, err)
+    d.addCallback(lambda ignored: reactor.stop())
+    reactor.run()
+
+if __name__ == "__main__":
+    main()
+</pre>
+
+    <p>
+      Please refer to the <a
+      href="../../core/howto/endpoints.xhtml">endpoints documentation</a> for
+      more information about how they work and the <code
+      class="API">twisted.internet.endpoints</code> API documentation to learn
+      what other kinds of endpoints exist.
+    </p>
+
     <h2>
       Conclusion
     </h2>

@@ -625,7 +625,50 @@ class _WebToNormalContextFactory(object):
 
 
 
-class Agent(object):
+class _AgentMixin(object):
+    """
+    Base class offering facilities for L{Agent}-type classes.
+
+    @since: 11.1
+    """
+
+    def _connectAndRequest(self, method, uri, headers, bodyProducer,
+                           requestPath=None):
+        """
+        Internal helper to make the request.
+
+        @param requestPath: If specified, the path to use for the request
+            instead of the path extracted from C{uri}.
+        """
+        scheme, host, port, path = _parse(uri)
+        if requestPath is None:
+            requestPath = path
+        d = self._connect(scheme, host, port)
+        if headers is None:
+            headers = Headers()
+        if not headers.hasHeader('host'):
+            headers = headers.copy()
+            headers.addRawHeader(
+                'host', self._computeHostValue(scheme, host, port))
+        def cbConnected(proto):
+            return proto.request(
+                Request(method, requestPath, headers, bodyProducer))
+        d.addCallback(cbConnected)
+        return d
+
+
+    def _computeHostValue(self, scheme, host, port):
+        """
+        Compute the string to use for the value of the I{Host} header, based on
+        the given scheme, host name, and port number.
+        """
+        if (scheme, port) in (('http', 80), ('https', 443)):
+            return host
+        return '%s:%d' % (host, port)
+
+
+
+class Agent(_AgentMixin):
     """
     L{Agent} is a very basic HTTP client.  It supports I{HTTP} and I{HTTPS}
     scheme URIs (but performs no certificate checking by default).  It does not
@@ -655,9 +698,11 @@ class Agent(object):
         @param host: A C{str} giving the hostname which will be connected to in
             order to issue a request.
 
-        @param port: An C{int} giving the port number the connection will be on.
+        @param port: An C{int} giving the port number the connection will be
+            on.
 
-        @return: A context factory suitable to be passed to C{reactor.connectSSL}.
+        @return: A context factory suitable to be passed to
+            C{reactor.connectSSL}.
         """
         return _WebToNormalContextFactory(self._contextFactory, host, port)
 
@@ -674,7 +719,8 @@ class Agent(object):
         @param host: A C{str} giving the hostname which will be connected to in
             order to issue a request.
 
-        @param port: An C{int} giving the port number the connection will be on.
+        @param port: An C{int} giving the port number the connection will be
+            on.
 
         @return: A L{Deferred} which fires with a connected instance of
             C{self._protocol}.
@@ -715,30 +761,52 @@ class Agent(object):
             given URI is not supported.
         @rtype: L{Deferred}
         """
-        scheme, host, port, path = _parse(uri)
-        d = self._connect(scheme, host, port)
-        if headers is None:
-            headers = Headers()
-
-        if not headers.hasHeader('host'):
-            headers = headers.copy()
-            headers.addRawHeader(
-                'host', self._computeHostValue(scheme, host, port))
-
-        def cbConnected(proto):
-            return proto.request(Request(method, path, headers, bodyProducer))
-        d.addCallback(cbConnected)
-        return d
+        return self._connectAndRequest(method, uri, headers, bodyProducer)
 
 
-    def _computeHostValue(self, scheme, host, port):
+
+class _HTTP11ClientFactory(protocol.ClientFactory):
+    """
+    A simple factory for L{HTTP11ClientProtocol}, used by L{ProxyAgent}.
+
+    @since: 11.1
+    """
+    protocol = HTTP11ClientProtocol
+
+
+
+class ProxyAgent(_AgentMixin):
+    """
+    An HTTP agent able to cross HTTP proxies.
+
+    @ivar _factory: The factory used to connect to the proxy.
+
+    @ivar _proxyEndpoint: The endpoint used to connect to the proxy, passing
+        the factory.
+
+    @since: 11.1
+    """
+
+    _factory = _HTTP11ClientFactory
+
+    def __init__(self, endpoint):
+        self._proxyEndpoint = endpoint
+
+
+    def _connect(self, scheme, host, port):
         """
-        Compute the string to use for the value of the I{Host} header, based on
-        the given scheme, host name, and port number.
+        Ignore the connection to the expected host, and connect to the proxy
+        instead.
         """
-        if (scheme, port) in (('http', 80), ('https', 443)):
-            return host
-        return '%s:%d' % (host, port)
+        return self._proxyEndpoint.connect(self._factory())
+
+
+    def request(self, method, uri, headers=None, bodyProducer=None):
+        """
+        Issue a new request via the configured proxy.
+        """
+        return self._connectAndRequest(method, uri, headers, bodyProducer,
+                                       requestPath=uri)
 
 
 
@@ -1007,4 +1075,4 @@ __all__ = [
     'PartialDownloadError', 'HTTPPageGetter', 'HTTPPageDownloader',
     'HTTPClientFactory', 'HTTPDownloader', 'getPage', 'downloadPage',
     'ResponseDone', 'Response', 'ResponseFailed', 'Agent', 'CookieAgent',
-    'ContentDecoderAgent', 'GzipDecoder']
+    'ProxyAgent', 'ContentDecoderAgent', 'GzipDecoder']
