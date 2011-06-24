@@ -4,7 +4,7 @@ import sys
 
 from twisted.internet import reactor
 
-from twisted.trial import unittest, util
+from twisted.trial import unittest
 
 from twisted.internet.defer import waitForDeferred, deferredGenerator, Deferred
 from twisted.internet import defer
@@ -269,6 +269,32 @@ class InlineCallbacksTests(BaseDefgenTests, unittest.TestCase):
         _return = inlineCallbacks(_return)
 
         return _return().addCallback(self.assertEqual, 6)
+
+
+    def test_nonGeneratorReturn(self):
+        """
+        Ensure that C{TypeError} with a message about L{inlineCallbacks} is
+        raised when a non-generator returns something other than a generator.
+        """
+        def _noYield():
+            return 5
+        _noYield = inlineCallbacks(_noYield)
+
+        self.assertIn("inlineCallbacks",
+            str(self.assertRaises(TypeError, _noYield)))
+
+
+    def test_nonGeneratorReturnValue(self):
+        """
+        Ensure that C{TypeError} with a message about L{inlineCallbacks} is
+        raised when a non-generator calls L{returnValue}.
+        """
+        def _noYield():
+            returnValue(5)
+        _noYield = inlineCallbacks(_noYield)
+
+        self.assertIn("inlineCallbacks",
+            str(self.assertRaises(TypeError, _noYield)))
 
 '''
 

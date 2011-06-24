@@ -17,6 +17,7 @@ Maintainer: Glyph Lefkowitz
 """
 
 import traceback
+import types
 import warnings
 from sys import exc_info
 
@@ -1142,7 +1143,17 @@ def inlineCallbacks(f):
                 raise Exception('DESTROY ALL LIFE')
     """
     def unwindGenerator(*args, **kwargs):
-        return _inlineCallbacks(None, f(*args, **kwargs), Deferred())
+        try:
+            gen = f(*args, **kwargs)
+        except _DefGen_Return:
+            raise TypeError(
+                "inlineCallbacks requires %r to produce a generator; instead"
+                "caught returnValue being used in a non-generator" % (f,))
+        if not isinstance(gen, types.GeneratorType):
+            raise TypeError(
+                "inlineCallbacks requires %r to produce a generator; "
+                "instead got %r" % (f, gen))
+        return _inlineCallbacks(None, gen, Deferred())
     return mergeFunctionMetadata(f, unwindGenerator)
 
 
