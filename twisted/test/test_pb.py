@@ -480,14 +480,25 @@ class NewStyleCachedTestCase(unittest.TestCase):
 
     def test_newStyleCache(self):
         """
-        Get the object from the cache, and checks its properties.
+        A new-style cacheable object can be retrieved and re-retrieved over a
+        single connection.  The value of an attribute of the cacheable can be
+        accessed on the receiving side.
         """
         d = self.ref.callRemote("giveMeCache", self.orig)
-        def cb(res):
-            self.failUnless(isinstance(res, NewStyleCacheCopy))
-            self.failUnlessEqual(res.s, "value")
-            self.failIf(res is self.orig) # no cheating :)
-        d.addCallback(cb)
+        def cb(res, again):
+            self.assertIsInstance(res, NewStyleCacheCopy)
+            self.assertEqual("value", res.s)
+            # no cheating :)
+            self.assertNotIdentical(self.orig, res)
+
+            if again:
+                # Save a reference so it stays alive for the rest of this test
+                self.res = res
+                # And ask for it again to exercise the special re-jelly logic in
+                # Cacheable.
+                return self.ref.callRemote("giveMeCache", self.orig)
+        d.addCallback(cb, True)
+        d.addCallback(cb, False)
         return d
 
 

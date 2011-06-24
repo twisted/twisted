@@ -30,7 +30,7 @@ from twisted.python import log, reflect
 
 # sibling imports
 from jelly import setUnjellyableForClass, setUnjellyableForClassTree, setUnjellyableFactoryForClass, unjellyableRegistry
-from jelly import Jellyable, Unjellyable, _Dummy, _DummyNewStyle
+from jelly import Jellyable, Unjellyable, _newDummyLike
 from jelly import setInstanceState, getInstanceState
 
 # compatibility
@@ -437,12 +437,7 @@ class RemoteCache(RemoteCopy, Serializable):
             return setInstanceState(self, unjellier, jellyList)
         self.broker = unjellier.invoker
         self.luid = jellyList[1]
-        if isinstance(self.__class__, type): #new-style class
-            cProxy = _DummyNewStyle()
-        else:
-            cProxy = _Dummy()
-        cProxy.__class__ = self.__class__
-        cProxy.__dict__ = self.__dict__
+        cProxy = _newDummyLike(self)
         # XXX questionable whether this was a good design idea...
         init = getattr(cProxy, "__init__", None)
         if init:
@@ -491,10 +486,7 @@ class RemoteCache(RemoteCopy, Serializable):
 def unjellyCached(unjellier, unjellyList):
     luid = unjellyList[1]
     cNotProxy = unjellier.invoker.cachedLocallyAs(luid)
-
-    cProxy = _Dummy()
-    cProxy.__class__ = cNotProxy.__class__
-    cProxy.__dict__ = cNotProxy.__dict__
+    cProxy = _newDummyLike(cNotProxy)
     return cProxy
 
 setUnjellyableForClass("cached", unjellyCached)

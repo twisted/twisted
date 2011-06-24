@@ -949,6 +949,25 @@ class _DummyNewStyle(object):
     """
 
 
+def _newDummyLike(instance):
+    """
+    Create a new instance like C{instance}.
+
+    The new instance has the same class and instance dictionary as the given
+    instance.
+
+    @return: The new instance.
+    """
+    if isinstance(instance.__class__, type):
+        # New-style class
+        dummy = _DummyNewStyle()
+    else:
+        # Classic class
+        dummy = _Dummy()
+    dummy.__class__ = instance.__class__
+    dummy.__dict__ = instance.__dict__
+    return dummy
+
 
 #### Published Interface.
 
