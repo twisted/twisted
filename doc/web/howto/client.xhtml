@@ -132,6 +132,25 @@
       Issue a request with a body.
     </a>
 
+    <p>
+      If you want to upload a file or you just have some data in a string, you
+      don't have to copy <code>StringProducer</code> though.  Instead, you can
+      use <code class="API" base="twisted.web.client">FileBodyProducer</code>.
+      This <code>IBodyProducer</code> implementation works with any file-like
+      object (so use it with a <code>StringIO</code> if your upload data is
+      already in memory as a string); the idea is the same
+      as <code>StringProducer</code> from the previous example, but with a
+      little extra code to only send data as fast as the server will take it.
+    </p>
+
+    <a href="listings/client/filesendbody.py" class="py-listing">
+      Another way to issue a request with a body.
+    </a>
+
+    <p>
+      <code>FileBodyProducer</code> closes the file when it no longer needs it.
+    </p>
+
     <h3>
       Receiving Responses
     </h3>

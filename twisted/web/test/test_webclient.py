@@ -9,12 +9,15 @@ import cookielib
 import os
 from errno import ENOSPC
 import zlib
+from StringIO import StringIO
 
 from urlparse import urlparse
 
+from zope.interface.verify import verifyObject
+
 from twisted.trial import unittest
 from twisted.web import server, static, client, error, util, resource, http_headers
-from twisted.internet import reactor, defer, interfaces
+from twisted.internet import reactor, defer, interfaces, task
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.log import msg
@@ -28,8 +31,8 @@ from twisted.internet.error import ConnectionRefusedError
 from twisted.internet.protocol import Protocol
 from twisted.internet.defer import Deferred, succeed
 from twisted.internet.endpoints import TCP4ClientEndpoint
-from twisted.web.client import Request
-from twisted.web.iweb import UNKNOWN_LENGTH, IResponse
+from twisted.web.client import FileBodyProducer, Request
+from twisted.web.iweb import UNKNOWN_LENGTH, IBodyProducer, IResponse
 from twisted.web._newclient import HTTP11ClientProtocol, Response
 from twisted.web.error import SchemeNotSupported
 
@@ -1018,6 +1021,253 @@ class StubHTTPProtocol(Protocol):
         result = Deferred()
         self.requests.append((request, result))
         return result
+
+
+
+class FileConsumer(object):
+    def __init__(self, outputFile):
+        self.outputFile = outputFile
+
+
+    def write(self, bytes):
+        self.outputFile.write(bytes)
+
+
+
+class FileBodyProducerTests(unittest.TestCase):
+    """
+    Tests for the L{FileBodyProducer} which reads bytes from a file and writes
+    them to an L{IConsumer}.
+    """
+    _NO_RESULT = object()
+
+    def _resultNow(self, deferred):
+        """
+        Return the current result of C{deferred} if it is not a failure.  If it
+        has no result, return C{self._NO_RESULT}.  If it is a failure, raise an
+        exception.
+        """
+        result = []
+        failure = []
+        deferred.addCallbacks(result.append, failure.append)
+        if len(result) == 1:
+            return result[0]
+        elif len(failure) == 1:
+            raise Exception(
+                "Deferred had failure instead of success: %r" % (failure[0],))
+        return self._NO_RESULT
+
+
+    def _failureNow(self, deferred):
+        """
+        Return the current result of C{deferred} if it is a failure.  If it has
+        no result, return C{self._NO_RESULT}.  If it is not a failure, raise an
+        exception.
+        """
+        result = []
+        failure = []
+        deferred.addCallbacks(result.append, failure.append)
+        if len(result) == 1:
+            raise Exception(
+                "Deferred had success instead of failure: %r" % (result[0],))
+        elif len(failure) == 1:
+            return failure[0]
+        return self._NO_RESULT
+
+
+    def _termination(self):
+        """
+        This method can be used as the C{terminationPredicateFactory} for a
+        L{Cooperator}.  It returns a predicate which immediately returns
+        C{False}, indicating that no more work should be done this iteration.
+        This has the result of only allowing one iteration of a cooperative
+        task to be run per L{Cooperator} iteration.
+        """
+        return lambda: True
+
+
+    def setUp(self):
+        """
+        Create a L{Cooperator} hooked up to an easily controlled, deterministic
+        scheduler to use with L{FileBodyProducer}.
+        """
+        self._scheduled = []
+        self.cooperator = task.Cooperator(
+            self._termination, self._scheduled.append)
+
+
+    def test_interface(self):
+        """
+        L{FileBodyProducer} instances provide L{IBodyProducer}.
+        """
+        self.assertTrue(verifyObject(
+                IBodyProducer, FileBodyProducer(StringIO(""))))
+
+
+    def test_unknownLength(self):
+        """
+        If the L{FileBodyProducer} is constructed with a file-like object
+        without either a C{seek} or C{tell} method, its C{length} attribute is
+        set to C{UNKNOWN_LENGTH}.
+        """
+        class HasSeek(object):
+            def seek(self, offset, whence):
+                pass
+
+        class HasTell(object):
+            def tell(self):
+                pass
+
+        producer = FileBodyProducer(HasSeek())
+        self.assertEqual(UNKNOWN_LENGTH, producer.length)
+        producer = FileBodyProducer(HasTell())
+        self.assertEqual(UNKNOWN_LENGTH, producer.length)
+
+
+    def test_knownLength(self):
+        """
+        If the L{FileBodyProducer} is constructed with a file-like object with
+        both C{seek} and C{tell} methods, its C{length} attribute is set to the
+        size of the file as determined by those methods.
+        """
+        inputBytes = "here are some bytes"
+        inputFile = StringIO(inputBytes)
+        inputFile.seek(5)
+        producer = FileBodyProducer(inputFile)
+        self.assertEqual(len(inputBytes) - 5, producer.length)
+        self.assertEqual(inputFile.tell(), 5)
+
+
+    def test_defaultCooperator(self):
+        """
+        If no L{Cooperator} instance is passed to L{FileBodyProducer}, the
+        global cooperator is used.
+        """
+        producer = FileBodyProducer(StringIO(""))
+        self.assertEqual(task.cooperate, producer._cooperate)
+
+
+    def test_startProducing(self):
+        """
+        L{FileBodyProducer.startProducing} starts writing bytes from the input
+        file to the given L{IConsumer} and returns a L{Deferred} which fires
+        when they have all been written.
+        """
+        expectedResult = "hello, world"
+        readSize = 3
+        output = StringIO()
+        consumer = FileConsumer(output)
+        producer = FileBodyProducer(
+            StringIO(expectedResult), self.cooperator, readSize)
+        complete = producer.startProducing(consumer)
+        for i in range(len(expectedResult) / readSize + 1):
+            self._scheduled.pop(0)()
+        self.assertEqual([], self._scheduled)
+        self.assertEqual(expectedResult, output.getvalue())
+        self.assertEqual(None, self._resultNow(complete))
+
+
+    def test_inputClosedAtEOF(self):
+        """
+        When L{FileBodyProducer} reaches end-of-file on the input file given to
+        it, the input file is closed.
+        """
+        readSize = 4
+        inputBytes = "some friendly bytes"
+        inputFile = StringIO(inputBytes)
+        producer = FileBodyProducer(inputFile, self.cooperator, readSize)
+        consumer = FileConsumer(StringIO())
+        producer.startProducing(consumer)
+        for i in range(len(inputBytes) / readSize + 2):
+            self._scheduled.pop(0)()
+        self.assertTrue(inputFile.closed)
+
+
+    def test_failedReadWhileProducing(self):
+        """
+        If a read from the input file fails while producing bytes to the
+        consumer, the L{Deferred} returned by
+        L{FileBodyProducer.startProducing} fires with a L{Failure} wrapping
+        that exception.
+        """
+        class BrokenFile(object):
+            def read(self, count):
+                raise IOError("Simulated bad thing")
+        producer = FileBodyProducer(BrokenFile(), self.cooperator)
+        complete = producer.startProducing(FileConsumer(StringIO()))
+        self._scheduled.pop(0)()
+        self._failureNow(complete).trap(IOError)
+
+
+    def test_stopProducing(self):
+        """
+        L{FileBodyProducer.stopProducing} stops the underlying L{IPullProducer}
+        and the cooperative task responsible for calling C{resumeProducing} and
+        closes the input file but does not cause the L{Deferred} returned by
+        C{startProducing} to fire.
+        """
+        expectedResult = "hello, world"
+        readSize = 3
+        output = StringIO()
+        consumer = FileConsumer(output)
+        inputFile = StringIO(expectedResult)
+        producer = FileBodyProducer(
+            inputFile, self.cooperator, readSize)
+        complete = producer.startProducing(consumer)
+        producer.stopProducing()
+        self.assertTrue(inputFile.closed)
+        self._scheduled.pop(0)()
+        self.assertEqual("", output.getvalue())
+        self.assertIdentical(self._NO_RESULT, self._resultNow(complete))
+
+
+    def test_pauseProducing(self):
+        """
+        L{FileBodyProducer.pauseProducing} temporarily suspends writing bytes
+        from the input file to the given L{IConsumer}.
+        """
+        expectedResult = "hello, world"
+        readSize = 5
+        output = StringIO()
+        consumer = FileConsumer(output)
+        producer = FileBodyProducer(
+            StringIO(expectedResult), self.cooperator, readSize)
+        complete = producer.startProducing(consumer)
+        self._scheduled.pop(0)()
+        self.assertEqual(output.getvalue(), expectedResult[:5])
+        producer.pauseProducing()
+
+        # Sort of depends on an implementation detail of Cooperator: even
+        # though the only task is paused, there's still a scheduled call.  If
+        # this were to go away because Cooperator became smart enough to cancel
+        # this call in this case, that would be fine.
+        self._scheduled.pop(0)()
+
+        # Since the producer is paused, no new data should be here.
+        self.assertEqual(output.getvalue(), expectedResult[:5])
+        self.assertEqual([], self._scheduled)
+        self.assertIdentical(self._NO_RESULT, self._resultNow(complete))
+
+
+    def test_resumeProducing(self):
+        """
+        L{FileBodyProducer.resumeProducing} re-commences writing bytes from the
+        input file to the given L{IConsumer} after it was previously paused
+        with L{FileBodyProducer.pauseProducing}.
+        """
+        expectedResult = "hello, world"
+        readSize = 5
+        output = StringIO()
+        consumer = FileConsumer(output)
+        producer = FileBodyProducer(
+            StringIO(expectedResult), self.cooperator, readSize)
+        producer.startProducing(consumer)
+        self._scheduled.pop(0)()
+        self.assertEqual(expectedResult[:readSize], output.getvalue())
+        producer.pauseProducing()
+        producer.resumeProducing()
+        self._scheduled.pop(0)()
+        self.assertEqual(expectedResult[:readSize * 2], output.getvalue())
 
 
 

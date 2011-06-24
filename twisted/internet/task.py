@@ -498,7 +498,7 @@ class Cooperator(object):
 
         @param terminationPredicateFactory: A no-argument callable which will
         be invoked at the beginning of each step and should return a
-        no-argument callable which will return False when the step should be
+        no-argument callable which will return True when the step should be
         terminated.  The default factory is time-based and allows iterators to
         run for 1/100th of a second at a time.
 
