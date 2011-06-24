@@ -290,8 +290,14 @@ class LogPublisher:
             except:
                 observer = self.observers[i]
                 self.observers[i] = lambda event: None
-                err(failure.Failure(),
-                    "Log observer %s failed." % (observer,))
+                try:
+                    err(failure.Failure(),
+                        "Log observer %s failed." % (observer,))
+                except:
+                    # Sometimes err() will throw an exception,
+                    # e.g. RuntimeError due to blowing the stack; if that
+                    # happens, there's not much we can do...
+                    pass
                 self.observers[i] = observer
 
 
