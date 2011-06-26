@@ -39,7 +39,7 @@ class IServiceMaker(Interface):
         "Twisted application plugin.")
 
     options = Attribute(
-        "A C{twisted.python.usage.Options} subclass defining the"
+        "A C{twisted.python.usage.Options} subclass defining the "
         "configuration options for this application.")
 
 
