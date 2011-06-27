@@ -349,6 +349,23 @@ if __name__ == "__main__":
       what other kinds of endpoints exist.
     </p>
 
+    <h3>Handling HTTP cookies</h3>
+
+    <p>
+      An existing agent instance can be wrapped with
+      <code class="API">twisted.web.client.CookieAgent</code> to automatically
+      store, send and track HTTP cookies. A <code>CookieJar</code>
+      instance, from the Python standard library module
+      <a href="http://docs.python.org/library/cookielib.html">cookielib</a>, is
+      used to store the cookie information. An example of using
+      <code>CookieAgent</code> to perform a request and display the collected
+      cookies might look like this:
+    </p>
+
+    <a href="listings/client/cookies.py" class="py-listing">
+      Storing cookies with CookieAgent
+    </a>
+
     <h2>
       Conclusion
     </h2>
