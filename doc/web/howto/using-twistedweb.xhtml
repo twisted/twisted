@@ -206,7 +206,7 @@ arguments passed to the resource regardless of whether they used GET
 <p>Non-trivial configurations of Twisted Web are achieved with Python
 configuration files. This is a Python snippet which builds up a
 variable called application. Usually,
-a <code class="API">twisted.application.internet.TCPServer</code>
+a <code>twisted.application.internet.TCPServer</code>
 instance will be used to make the application listen on a TCP port
 (80, in case direct web serving is desired), with the listener being
 a <code class="API">twisted.web.server.Site</code>. The resulting file
@@ -498,8 +498,8 @@ class Counter:
 <h3>Web UIs</h3>
 
 <p>
-The <a href="http://www.divmod.org/projects/nevow">Nevow</a> framework, available as
-part of the <a href="http://www.divmod.org/projects/quotient">Quotient</a> project,
+The <a href="https://launchpad.net/nevow">Nevow</a> framework, available as
+part of the <a href="https://launchpad.net/quotient">Quotient</a> project,
 is an advanced system for giving Web UIs to your application. Nevow uses Twisted Web but is
 not itself part of Twisted.
 </p>
@@ -560,7 +560,7 @@ resource.indexNames = ['index.pl']
 
 <h3>Serving WSGI Applications</h3>
 
-<p><a href="http://wsgi.org/wsgi/">WSGI</a> is the Web Server Gateway
+<p><a href="http://wsgi.org/wsgi">WSGI</a> is the Web Server Gateway
 Interface. It is a specification for web servers and application servers to
 communicate with Python web applications. All modern Python web frameworks
 support the WSGI interface.</p>

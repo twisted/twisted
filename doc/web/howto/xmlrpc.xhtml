@@ -12,9 +12,11 @@
 
 <h2>Introduction</h2>
 
-<p><a href="http://www.xmlrpc.com">XML-RPC</a> is a simple request/reply protocol that runs over HTTP. It is simple,
-easy to implement and supported by most programming languages. Twisted's XML-RPC
-support is implemented using the xmlrpclib library that is included with Python 2.2 and later.</p>
+<p><a href="http://www.xmlrpc.com">XML-RPC</a> is a simple request/reply protocol
+that runs over HTTP. It is simple, easy to implement and supported by most programming
+languages. Twisted's XML-RPC support is implemented using the
+<a href='http://docs.python.org/library/xmlrpclib.html'>xmlrpclib</a> library that is
+included with Python 2.2 and later.</p>
 
 <h2>Creating a XML-RPC server</h2>
 
@@ -26,16 +28,13 @@ The result is what will be returned to the clients.</p>
 <p>Methods published via XML-RPC can return all the basic XML-RPC
 types, such as strings, lists and so on (just return a regular python
 integer, etc).  They can also raise exceptions or return Failure instances to indicate an
-error has occurred, or <code base="twisted.web.xmlrpc"
-class="API">Binary</code>, <code base="twisted.web.xmlrpc"
-class="API">Boolean</code> or <code base="twisted.web.xmlrpc"
-class="API">DateTime</code> instances (all of these are the same as
-the respective classes in xmlrpclib. In addition, XML-RPC published
-methods can return <code base="twisted.internet.defer"
-class="API">Deferred</code> instances whose results are one of the
-above. This allows you to return results that can't be calculated
-immediately, such as database queries. See the <a
-href="../../core/howto/defer.xhtml">Deferred documentation</a> for more details.</p>
+error has occurred, or <code>Binary</code>, <code>Boolean</code> or <code>DateTime</code>
+instances (all of these are the same as the respective classes in xmlrpclib. In
+addition, XML-RPC published methods can return <code base="twisted.internet.defer"
+class="API">Deferred</code> instances whose results are one of the above. This allows
+you to return results that can't be calculated immediately, such as database queries.
+See the <a href="../../core/howto/defer.xhtml">Deferred documentation</a> for more
+details.</p>
 
 <p><code base="twisted.web.xmlrpc" class="API">XMLRPC</code> instances
 are Resource objects, and they can thus be published using a Site. The
@@ -46,7 +45,9 @@ b)</code> and <code>echo(x)</code>.</p>
 from twisted.web import xmlrpc, server
 
 class Example(xmlrpc.XMLRPC):
-    """An example object to be published."""
+    """
+    An example object to be published.
+    """
 
     def xmlrpc_echo(self, x):
         """
@@ -130,21 +131,31 @@ import time
 from twisted.web import xmlrpc, server
 
 class Example(xmlrpc.XMLRPC):
-    """An example object to be published."""
+    """
+    An example object to be published.
+    """
 
     def xmlrpc_echo(self, x):
-        """Return all passed args."""
+        """
+        Return all passed args.
+        """
         return x
 
     def xmlrpc_add(self, a, b):
-        """Return sum of arguments."""
+        """
+        Return sum of arguments.
+        """
         return a + b
 
 class Date(xmlrpc.XMLRPC):
-    """Serve the XML-RPC 'time' method."""
+    """
+    Serve the XML-RPC 'time' method.
+    """
 
     def xmlrpc_time(self):
-        """Return UNIX time."""
+        """
+        Return UNIX time.
+        """
         return time.time()
 
 if __name__ == '__main__':
@@ -176,7 +187,7 @@ Raise <code class="API">twisted.web.xmlrpc.NoSuchFunction</code> otherwise.</p>
 <h3>Adding XML-RPC Introspection support</h3>
 
 <p>XML-RPC has an
-informal <a href="http://ldp.kernelnotes.de/HOWTO/XML-RPC-HOWTO/xmlrpc-howto-interfaces.html">Introspection
+informal <a href="http://tldp.org/HOWTO/XML-RPC-HOWTO/xmlrpc-howto-interfaces.html">Introspection
 API</a> that specifies three methods in a <code>system</code>
 sub-handler which allow a client to query a server about the server's
 API. Adding Introspection support to
@@ -288,9 +299,9 @@ reactor.run()
 
 <p><code class="API">twisted.web.xmlrpc.XMLRPC</code> and <code
 class="API">twisted.web.soap.SOAPPublisher</code> are both <code class="API"
-base="twisted.web.resource">Resources</code>.  So, to serve both XML-RPC and
+base="twisted.web.resource">Resource</code>s.  So, to serve both XML-RPC and
 SOAP in the one web server, you can use the <code class="API"
-base="twisted.web.resource.IResource">putChild</code> method of Resources.</p>
+base="twisted.web.resource.IResource">putChild</code> method of Resource.</p>
 
 <p>The following example uses an empty <code class="API"
 base="twisted.web">resource.Resource</code> as the root resource for
