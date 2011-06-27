@@ -68,7 +68,7 @@
     <tr><th>select()</th><td>Stable</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Unix, Win32</td></tr>
     <tr><th>poll</th><td>Stable</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Unix</td></tr>
     <tr><th>WaitForMultipleObjects (WFMO) for Win32</th><td>Experimental</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Win32</td></tr>
-    <tr><th>Input/Output Completion Port (IOCP) for Win32</th><td>Experimental</td><td>Y</td><td>Y</td><td>N</td><td>N</td><td>N</td><td>Y</td><td>Win32</td></tr>
+    <tr><th>Input/Output Completion Port (IOCP) for Win32</th><td>Experimental</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Win32</td></tr>
     <tr><th>CoreFoundation</th><td>Unmaintained</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Mac OS X</td></tr>
     <tr><th>epoll</th><td>Stable</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Linux 2.6</td></tr>
     <tr><th>GTK+</th><td>Stable</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Unix, Win32</td></tr>
@@ -150,8 +150,7 @@ from twisted.internet import reactor
     <p>
     Windows provides a fast, scalable event notification system known as IO
     Completion Ports, or IOCP for short.  Twisted includes a reactor based
-    on IOCP which is nearly complete.  The reactor has a handful of known
-    bugs and lacks SSL support.
+    on IOCP which is nearly complete.
     </p>
 
 <pre class="python">
