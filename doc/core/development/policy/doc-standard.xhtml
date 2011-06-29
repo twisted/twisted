@@ -125,18 +125,11 @@ $ twistd web --path /var/www
     <blockquote>
 <pre>
         &lt;p&gt;
-    To add a &lt;code class="API"&gt;twisted.web.widgets.Widget&lt;/code&gt;
+    To add a &lt;code class="API"&gt;twisted.web.static.File&lt;/code&gt;
     instance to a &lt;code class="API"
-    base="twisted.web.widgets"&gt;Gadget&lt;/code&gt; instance, do 
-    &lt;code class="python"&gt;myGadget.putWidget("widgetPath",
-    MyWidget())&lt;/code&gt;.  
-        &lt;/p&gt;
-    
-        &lt;p&gt; 
-    (implementation note: the widgets are stored in the &lt;code
-    class="python"&gt;gadgetInstance.widgets&lt;/code&gt; attribute,
-    which is a
-    list.)
+    base="twisted.web.resource"&gt;Resource&lt;/code&gt; instance, do 
+    &lt;code class="python"&gt;myResource.putChild("resourcePath",
+    File("/tmp"))&lt;/code&gt;.  
         &lt;/p&gt;
     
 </pre>
@@ -145,17 +138,10 @@ $ twistd web --path /var/www
     <p>Rendered result:</p>
     <blockquote>
         <p>
-    To add a <code class="API">twisted.web.widgets.Widget</code>
-    instance to a <code class="API" base="twisted.web.widgets">Gadget</code>
+    To add a <code class="API">twisted.web.static.File</code>
+    instance to a <code class="API" base="twisted.web.resource">Resource</code>
     instance, do
-    <code class="python">myGadget.putWidget("widgetPath", MyWidget())</code>.
-        </p>
-
-        <p>
-    (implementation note: the widgets are stored in the <code
-    class="python">gadgetInstance.widgets</code> attribute,
-    which is a
-    list.)
+    <code class="python">myResource.putChild("resourcePath", File("/tmp"))</code>.
         </p>
     </blockquote>
 
