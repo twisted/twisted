@@ -17,6 +17,7 @@ try:
 except:
     import StringIO
 
+from twisted.copyright import version
 from twisted.internet import reactor
 from twisted.mail import smtp
 
@@ -66,6 +67,11 @@ def parseOptions(argv):
     # Just be very stupid
 
     # Skip -bm -- it is the default
+
+    # Add a non-standard option for querying the version of this tool.
+    if '--version' in argv:
+        print 'mailmail version:', version
+        raise SystemExit()
 
     # -bp lists queue information.  Screw that.
     if '-bp' in argv:

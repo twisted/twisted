@@ -25,7 +25,7 @@ class SetupTest(TestCase):
         """
         Passing C{conditionalExtensions} as a list of L{ConditionalExtension}
         objects to get_setup_args inserts a custom build_ext into the result
-        which knows how to check whether they should be 
+        which knows how to check whether they should be built.
         """
         good_ext = ConditionalExtension("whatever", ["whatever.c"],
                                         condition=lambda b: True)
@@ -94,6 +94,10 @@ version = versions.Version("twisted.blat", 9, 8, 10)
 
 
 class GetScriptsTest(TestCase):
+    """
+    Tests for L{dist.getScripts} which returns the scripts which should be
+    included in the distribution of a project.
+    """
 
     def test_scriptsInSVN(self):
         """
@@ -110,6 +114,21 @@ class GetScriptsTest(TestCase):
         scripts = dist.getScripts('proj', basedir=basedir)
         self.assertEquals(len(scripts), 1)
         self.assertEquals(os.path.basename(scripts[0]), 'exy')
+
+
+    def test_excludedPreamble(self):
+        """
+        L{dist.getScripts} includes neither C{"_preamble.py"} nor
+        C{"_preamble.pyc"}.
+        """
+        basedir = FilePath(self.mktemp())
+        bin = basedir.child('bin')
+        bin.makedirs()
+        bin.child('_preamble.py').setContent('some preamble code\n')
+        bin.child('_preamble.pyc').setContent('some preamble byte code\n')
+        bin.child('program').setContent('good program code\n')
+        scripts = dist.getScripts("", basedir=basedir.path)
+        self.assertEqual(scripts, [bin.child('program').path])
 
 
     def test_scriptsInRelease(self):

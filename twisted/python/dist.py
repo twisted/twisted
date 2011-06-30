@@ -245,8 +245,9 @@ def getScripts(projname, basedir=''):
         if not os.path.isdir(scriptdir):
             return []
     thingies = os.listdir(scriptdir)
-    if '.svn' in thingies:
-        thingies.remove('.svn')
+    for specialExclusion in ['.svn', '_preamble.py', '_preamble.pyc']:
+        if specialExclusion in thingies:
+            thingies.remove(specialExclusion)
     return filter(os.path.isfile,
                   [os.path.join(scriptdir, x) for x in thingies])
 

@@ -3468,21 +3468,23 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
         The month name in the date is locale independent.
         """
         # Fake that we're in a language where December is not Dec
-        currentLocale = locale.getlocale()
+        currentLocale = locale.setlocale(locale.LC_ALL, None)
         locale.setlocale(locale.LC_ALL, "es_AR.UTF8")
         self.addCleanup(locale.setlocale, locale.LC_ALL, currentLocale)
         return self.testFetchInternalDate(1)
 
-    # if alternate locale is not available, the previous test will be
-    # skipped, please install this locale for it to run
-    currentLocale = locale.getlocale()
+    # if alternate locale is not available, the previous test will be skipped,
+    # please install this locale for it to run.  Avoid using locale.getlocale to
+    # learn the current locale; its values don't round-trip well on all
+    # platforms.  Fortunately setlocale returns a value which does round-trip
+    # well.
+    currentLocale = locale.setlocale(locale.LC_ALL, None)
     try:
-        try:
-            locale.setlocale(locale.LC_ALL, "es_AR.UTF8")
-        except locale.Error:
-            test_fetchInternalDateLocaleIndependent.skip = (
-                "The es_AR.UTF8 locale is not installed.")
-    finally:
+        locale.setlocale(locale.LC_ALL, "es_AR.UTF8")
+    except locale.Error:
+        test_fetchInternalDateLocaleIndependent.skip = (
+            "The es_AR.UTF8 locale is not installed.")
+    else:
         locale.setlocale(locale.LC_ALL, currentLocale)
 
 
