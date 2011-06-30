@@ -1,1 +1,1 @@
-Broken process handlers will no longer be left in the global state if a ProcessProtocol raises an exception from within processExited.
+If a ProcessProtocol.processExited method raised an exception a broken process handler would be left in the global process state leading to errors later on. This has been fixed and now an error will be logged instead.
