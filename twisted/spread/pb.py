@@ -76,16 +76,21 @@ MAX_BROKER_REFS = 1024
 portno = 8787
 
 
+
 class ProtocolError(Exception):
     """
     This error is raised when an invalid protocol statement is received.
     """
+
+
 
 class DeadReferenceError(ProtocolError):
     """
     This error is raised when a method is called on a dead reference (one whose
     broker has been disconnected).
     """
+
+
 
 class Error(Exception):
     """
@@ -97,6 +102,34 @@ class Error(Exception):
     sent.
     """
 
+
+
+class RemoteError(Exception):
+    """
+    This class is used to wrap a string-ified exception from the remote side to
+    be able to reraise it. (Raising string exceptions is no longer possible in
+    Python 2.6+)
+
+    The value of this exception will be a str() representation of the remote
+    value.
+
+    @ivar remoteType: The full import path of the exception class which was
+        raised on the remote end.
+    @type remoteType: C{str}
+
+    @ivar remoteTraceback: The remote traceback.
+    @type remoteTraceback: C{str}
+
+    @note: It's not possible to include the remoteTraceback if this exception is
+        thrown into a generator. It must be accessed as an attribute.
+    """
+    def __init__(self, remoteType, value, remoteTraceback):
+        Exception.__init__(self, value)
+        self.remoteType = remoteType
+        self.remoteTraceback = remoteTraceback
+
+
+
 class RemoteMethod:
     """This is a translucent reference to a remote message.
     """
@@ -106,11 +139,14 @@ class RemoteMethod:
         self.obj = obj
         self.name = name
 
+
     def __cmp__(self, other):
         return cmp((self.obj, self.name), other)
 
+
     def __hash__(self):
         return hash((self.obj, self.name))
+
 
     def __call__(self, *args, **kw):
         """Asynchronously invoke a remote method.
@@ -142,6 +178,7 @@ def printTraceback(tb):
     log.msg('Perspective Broker Traceback:' )
     log.msg(tb)
 printTraceback = deprecated(Version("twisted", 8, 2, 0))(printTraceback)
+
 
 
 class IPerspective(Interface):
@@ -311,7 +348,7 @@ class RemoteReference(Serializable, styles.Ephemeral):
     def callRemote(self, _name, *args, **kw):
         """Asynchronously invoke a remote method.
 
-        @type _name:   C{string}
+        @type _name: C{str}
         @param _name:  the name of the remote method to invoke
         @param args: arguments to serialize for the remote function
         @param kw:  keyword arguments to serialize for the remote function.
@@ -400,10 +437,7 @@ class CopyableFailure(failure.Failure, Copyable):
         state['tb'] = None
         state['frames'] = []
         state['stack'] = []
-        if isinstance(self.value, failure.Failure):
-            state['value'] = failure2Copyable(self.value, self.unsafeTracebacks)
-        else:
-            state['value'] = str(self.value) # Exception instance
+        state['value'] = str(self.value) # Exception instance
         if isinstance(self.type, str):
             state['type'] = self.type
         else:
@@ -415,22 +449,56 @@ class CopyableFailure(failure.Failure, Copyable):
         return state
 
 
+
 class CopiedFailure(RemoteCopy, failure.Failure):
+    """
+    A L{CopiedFailure} is a L{pb.RemoteCopy} of a L{failure.Failure}
+    transfered via PB.
+
+    @ivar type: The full import path of the exception class which was raised on
+        the remote end.
+    @type type: C{str}
+
+    @ivar value: A str() representation of the remote value.
+    @type value: L{CopiedFailure} or C{str}
+
+    @ivar traceback: The remote traceback.
+    @type traceback: C{str}
+    """
+
     def printTraceback(self, file=None, elideFrameworkCode=0, detail='default'):
         if file is None:
             file = log.logfile
         file.write("Traceback from remote host -- ")
         file.write(self.traceback)
 
+
+    def throwExceptionIntoGenerator(self, g):
+        """
+        Throw the original exception into the given generator, preserving
+        traceback information if available. In the case of a L{CopiedFailure}
+        where the exception type is a string, a L{pb.RemoteError} is thrown
+        instead.
+
+        @return: The next value yielded from the generator.
+        @raise StopIteration: If there are no more values in the generator.
+        @raise RemoteError: The wrapped remote exception.
+        """
+        return g.throw(RemoteError(self.type, self.value, self.traceback))
+
     printBriefTraceback = printTraceback
     printDetailedTraceback = printTraceback
 
 setUnjellyableForClass(CopyableFailure, CopiedFailure)
 
+
+
 def failure2Copyable(fail, unsafeTracebacks=0):
     f = types.InstanceType(CopyableFailure, fail.__dict__)
     f.unsafeTracebacks = unsafeTracebacks
     return f
+
+
 
 class Broker(banana.Banana):
     """I am a broker for objects.

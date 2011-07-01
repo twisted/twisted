@@ -1,0 +1,1 @@
+twisted.spread.pb.CopiedFailure will no longer be thrown into a generator as a (deprecated) string exception but as a twisted.spread.pb.RemoteException.
