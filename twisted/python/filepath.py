@@ -17,7 +17,11 @@ from os.path import join as joinpath
 from os import sep as slash
 from os import listdir, utime, stat
 
-from stat import S_ISREG, S_ISDIR
+from stat import S_ISREG, S_ISDIR, S_IMODE, S_ISBLK, S_ISSOCK
+from stat import S_IRUSR, S_IWUSR, S_IXUSR
+from stat import S_IRGRP, S_IWGRP, S_IXGRP
+from stat import S_IROTH, S_IWOTH, S_IXOTH
+
 
 # Please keep this as light as possible on other Twisted imports; many, many
 # things import this module, and it would be good if it could easily be
@@ -29,6 +33,8 @@ from twisted.python.hashlib import sha1
 from twisted.python.win32 import ERROR_FILE_NOT_FOUND, ERROR_PATH_NOT_FOUND
 from twisted.python.win32 import ERROR_INVALID_NAME, ERROR_DIRECTORY, O_BINARY
 from twisted.python.win32 import WindowsError
+
+from twisted.python.util import FancyEqMixin
 
 _CREATE_FLAGS = (os.O_EXCL |
                  os.O_CREAT |
@@ -335,6 +341,95 @@ class _PathHelper:
         Deprecated.  Use getStatusChangeTime instead.
         """
         return int(self.getStatusChangeTime())
+
+
+
+class RWX(FancyEqMixin, object):
+    """
+    A class representing read/write/execute permissions for a single user
+    category (i.e. user/owner, group, or other/world).  Instantiate with
+    three boolean values: readable? writable? executable?.
+
+    @type read: C{bool}
+    @ivar read: Whether permission to read is given
+
+    @type write: C{bool}
+    @ivar write: Whether permission to write is given
+
+    @type execute: C{bool}
+    @ivar execute: Whether permission to execute is given
+
+    @since: 11.1
+    """
+    compareAttributes = ('read', 'write', 'execute')
+    def __init__(self, readable, writable, executable):
+        self.read = readable
+        self.write = writable
+        self.execute = executable
+
+
+    def __repr__(self):
+        return "RWX(read=%s, write=%s, execute=%s)" % (
+            self.read, self.write, self.execute)
+
+
+    def shorthand(self):
+        """
+        Returns a short string representing the permission bits.  Looks like
+        part of what is printed by command line utilities such as 'ls -l'
+        (e.g. 'rwx')
+        """
+        returnval = ['r', 'w', 'x']
+        i = 0
+        for val in (self.read, self.write, self.execute):
+            if not val:
+                returnval[i] = '-'
+            i += 1
+        return ''.join(returnval)
+
+
+
+class Permissions(FancyEqMixin, object):
+    """
+    A class representing read/write/execute permissions.  Instantiate with any
+    portion of the file's mode that includes the permission bits.
+
+    @type user: L{RWX}
+    @ivar user: User/Owner permissions
+
+    @type group: L{RWX}
+    @ivar group: Group permissions
+
+    @type other: L{RWX}
+    @ivar other: Other/World permissions
+
+    @since: 11.1
+    """
+
+    compareAttributes = ('user', 'group', 'other')
+
+    def __init__(self, statModeInt):
+        self.user, self.group, self.other = (
+            [RWX(*[statModeInt & bit > 0 for bit in bitGroup]) for bitGroup in
+             [[S_IRUSR, S_IWUSR, S_IXUSR],
+              [S_IRGRP, S_IWGRP, S_IXGRP],
+              [S_IROTH, S_IWOTH, S_IXOTH]]]
+        )
+
+
+    def __repr__(self):
+        return "[%s | %s | %s]" % (
+            str(self.user), str(self.group), str(self.other))
+
+
+    def shorthand(self):
+        """
+        Returns a short string representing the permission bits.  Looks like
+        what is printed by command line utilities such as 'ls -l'
+        (e.g. 'rwx-wx--x')
+        """
+        return "".join(
+            [x.shorthand() for x in (self.user, self.group, self.other)])
 
 
 
@@ -746,6 +841,22 @@ class FilePath(_PathHelper):
         return int(st.st_gid)
 
 
+    def getPermissions(self):
+        """
+        Returns the permissions of the file.  Should also work on Windows,
+        however, those permissions may not what is expected in Windows.
+
+        @return: the permissions for the file
+        @rtype: L{Permissions}
+        @since: 11.1
+        """
+        st = self.statinfo
+        if not st:
+            self.restat()
+            st = self.statinfo
+        return Permissions(S_IMODE(st.st_mode))
+
+
     def exists(self):
         """
         Check if this L{FilePath} exists.
@@ -790,6 +901,40 @@ class FilePath(_PathHelper):
             if not st:
                 return False
         return S_ISREG(st.st_mode)
+
+
+    def isBlockDevice(self):
+        """
+        Returns whether the underlying path is a block device.
+
+        @return: C{True} if it is a block device, C{False} otherwise 
+        @rtype: C{bool}
+        @since: 11.1
+        """
+        st = self.statinfo
+        if not st:
+            self.restat(False)
+            st = self.statinfo
+            if not st:
+                return False
+        return S_ISBLK(st.st_mode)
+
+
+    def isSocket(self):
+        """
+        Returns whether the underlying path is a socket.
+
+        @return: C{True} if it is a socket, C{False} otherwise 
+        @rtype: C{bool}
+        @since: 11.1
+        """
+        st = self.statinfo
+        if not st:
+            self.restat(False)
+            st = self.statinfo
+            if not st:
+                return False
+        return S_ISSOCK(st.st_mode)
 
 
     def islink(self):

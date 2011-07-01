@@ -491,6 +491,153 @@ class ExplodingFilePath(filepath.FilePath):
 
 
 
+class PermissionsTestCase(unittest.TestCase):
+    """
+    Test Permissions and RWX classes
+    """
+
+    def assertNotUnequal(self, first, second, msg=None):
+        """
+        Tests that C{first} != C{second} is false.  This method tests the
+        __ne__ method, as opposed to L{assertEquals} (C{first} == C{second}),
+        which tests the __eq__ method.
+
+        Note: this should really be part of trial
+        """
+        if first != second:
+            if msg is None:
+                msg = '';
+            if len(msg) > 0:
+                msg += '\n'
+            raise self.failureException(
+                '%snot not unequal (__ne__ not implemented correctly):'
+                '\na = %s\nb = %s\n'
+                % (msg, pformat(first), pformat(second)))
+        return first
+
+
+    def test_rwxFromBools(self):
+        """
+        L{RWX}'s constructor takes a set of booleans
+        """
+        for r in (True, False):
+            for w in (True, False):
+                for x in (True, False):
+                    rwx = filepath.RWX(r, w, x)
+                    self.assertEquals(rwx.read, r)
+                    self.assertEquals(rwx.write, w)
+                    self.assertEquals(rwx.execute, x)
+        rwx = filepath.RWX(True, True, True)
+        self.assertTrue(rwx.read and rwx.write and rwx.execute)
+
+
+    def test_rwxEqNe(self):
+        """
+        L{RWX}'s created with the same booleans are equivalent.  If booleans
+        are different, they are not equal.
+        """
+        for r in (True, False):
+            for w in (True, False):
+                for x in (True, False):
+                    self.assertEquals(filepath.RWX(r, w, x),
+                                      filepath.RWX(r, w, x))
+                    self.assertNotUnequal(filepath.RWX(r, w, x),
+                                          filepath.RWX(r, w, x))
+        self.assertNotEqual(filepath.RWX(True, True, True),
+                            filepath.RWX(True, True, False))
+        self.assertNotEqual(3, filepath.RWX(True, True, True))
+
+
+    def test_rwxShorthand(self):
+        """
+        L{RWX}'s shorthand string should be 'rwx' if read, write, and execute
+        permission bits are true.  If any of those permissions bits are false,
+        the character is replaced by a '-'.
+        """
+
+        def getChar(val, letter):
+            if val:
+                return letter
+            return '-'
+
+        for r in (True, False):
+            for w in (True, False):
+                for x in (True, False):
+                    rwx = filepath.RWX(r, w, x)
+                    self.assertEquals(rwx.shorthand(),
+                                      getChar(r, 'r') +
+                                      getChar(w, 'w') +
+                                      getChar(x, 'x'))
+        self.assertEquals(filepath.RWX(True, False, True).shorthand(), "r-x")
+
+
+    def test_permissionsFromStat(self):
+        """
+        L{Permissions}'s constructor takes a valid permissions bitmask and
+        parsaes it to produce the correct set of boolean permissions.
+        """
+        def _rwxFromStat(statModeInt, who):
+            def getPermissionBit(what, who):
+                return (statModeInt &
+                        getattr(stat, "S_I%s%s" % (what, who))) > 0
+            return filepath.RWX(*[getPermissionBit(what, who) for what in
+                         ('R', 'W', 'X')])
+
+        for u in range(0, 8):
+            for g in range(0, 8):
+                for o in range(0, 8):
+                    chmodString = "%d%d%d" % (u, g, o)
+                    chmodVal = int(chmodString, 8)
+                    perm = filepath.Permissions(chmodVal)
+                    self.assertEquals(perm.user,
+                                      _rwxFromStat(chmodVal, "USR"),
+                                      "%s: got user: %s" %
+                                      (chmodString, perm.user))
+                    self.assertEquals(perm.group,
+                                      _rwxFromStat(chmodVal, "GRP"),
+                                      "%s: got group: %s" %
+                                      (chmodString, perm.group))
+                    self.assertEquals(perm.other,
+                                      _rwxFromStat(chmodVal, "OTH"),
+                                      "%s: got other: %s" %
+                                      (chmodString, perm.other))
+        perm = filepath.Permissions(0777)
+        for who in ("user", "group", "other"):
+            for what in ("read", "write", "execute"):
+                self.assertTrue(getattr(getattr(perm, who), what))
+
+
+    def test_permissionsEq(self):
+        """
+        Two L{Permissions}'s that are created with the same bitmask
+        are equivalent
+        """
+        self.assertEquals(filepath.Permissions(0777),
+                          filepath.Permissions(0777))
+        self.assertNotUnequal(filepath.Permissions(0777),
+                              filepath.Permissions(0777))
+        self.assertNotEqual(filepath.Permissions(0777),
+                            filepath.Permissions(0700))
+        self.assertNotEqual(3, filepath.Permissions(0777))
+
+
+    def test_permissionsShorthand(self):
+        """
+        L{Permissions}'s shorthand string is the RWX shorthand string for its
+        user permission bits, group permission bits, and other permission bits
+        concatenated together, without a space.
+        """
+        for u in range(0, 8):
+            for g in range(0, 8):
+                for o in range(0, 8):
+                    perm = filepath.Permissions(eval("0%d%d%d" % (u, g, o)))
+                    self.assertEquals(perm.shorthand(),
+                                      ''.join(x.shorthand() for x in (
+                                          perm.user, perm.group, perm.other)))
+        self.assertEquals(filepath.Permissions(0770).shorthand(), "rwxrwx---")
+
+
+
 class FilePathTestCase(AbstractFilePathTestCase):
     """
     Test various L{FilePath} path manipulations.
@@ -498,7 +645,7 @@ class FilePathTestCase(AbstractFilePathTestCase):
 
     def test_chmod(self):
         """
-        Make sure that calling L{FilePath.chmod} modifies the permissions of
+        L{FilePath.chmod} modifies the permissions of
         the passed file as expected (using C{os.stat} to check). We use some
         basic modes that should work everywhere (even on Windows).
         """
@@ -1309,6 +1456,47 @@ class FilePathTestCase(AbstractFilePathTestCase):
         self.assertEquals(fp.getsize(), 8)
 
 
+    def test_getPermissions_POSIX(self):
+        """
+        Getting permissions for a file returns a L{Permissions} object for
+        POSIX platforms (which supports separate user, group, and other
+        permissions bits.
+        """
+        for mode in (0777, 0700):
+            self.path.child("sub1").chmod(mode)
+            self.assertEquals(self.path.child("sub1").getPermissions(),
+                              filepath.Permissions(mode))
+        self.path.child("sub1").chmod(0764) #sanity check
+        self.assertEquals(self.path.child("sub1").getPermissions().shorthand(),
+                          "rwxrw-r--")
+
+
+    def test_getPermissions_Windows(self):
+        """
+        Getting permissions for a file returns a L{Permissions} object in
+        Windows.  Windows requires a different test, because user permissions
+        = group permissions = other permissions.  Also, chmod may not be able
+        to set the execute bit, so we are skipping tests that set the execute
+        bit.
+        """
+        for mode in (0777, 0555):
+            self.path.child("sub1").chmod(mode)
+            self.assertEquals(self.path.child("sub1").getPermissions(),
+                              filepath.Permissions(mode))
+        self.path.child("sub1").chmod(0511) #sanity check to make sure that
+        # user=group=other permissions
+        self.assertEquals(self.path.child("sub1").getPermissions().shorthand(),
+                          "r-xr-xr-x")
+
+
+    def test_whetherBlockOrSocket(self):
+        """
+        Ensure that a file is not a block or socket
+        """
+        self.assertFalse(self.path.isBlockDevice())
+        self.assertFalse(self.path.isSocket())
+
+
     def test_statinfoBitsNotImplementedInWindows(self):
         """
         Verify that certain file stats are not available on Windows
@@ -1368,8 +1556,10 @@ class FilePathTestCase(AbstractFilePathTestCase):
     if platform.isWindows():
         test_statinfoBitsAreNumbers.skip = True
         test_statinfoNumbersAreValid.skip = True
+        test_getPermissions_POSIX.skip = True
     else:
         test_statinfoBitsNotImplementedInWindows.skip = True
+        test_getPermissions_Windows.skip = True
 
 
 
