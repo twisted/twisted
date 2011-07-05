@@ -12,7 +12,7 @@
 
 <p>Applications must frequently deal with data that lives longer than the
 programs that create it. Sometimes the structure of that data changes over
-time, but new versions of a program must be able to accomodate data created
+time, but new versions of a program must be able to accommodate data created
 by an older version. These versions may change very quickly, especially
 during development of new code. Sometimes different versions of the same
 program are running at the same time, sharing data across a network
@@ -145,7 +145,7 @@ saved by a released version of our application.</p>
 
 <p>Finally, version 2.0 adds multiple dimensions. Instead of merely
 recording the length of a line, it records the size of an N-dimensional
-rectangular solid. For backwards compatiblity, all 1.X version of the
+rectangular solid. For backwards compatibility, all 1.X version of the
 program are assumed to be dealing with a 1-dimensional line. We change the
 name of the attribute from <code>.length</code> to <code>.size</code> to
 reflect the new meaning.</p>
@@ -227,7 +227,7 @@ instance contained inside:</p>
   can probably be sent across a network connection, and the upgrade process
   can be made to occur upon receipt. (You'll want to look at the <code
   class="API" base="twisted.persisted.styles">requireUpgrade</code>
-  function). This might be useful in providing compability with an older
+  function). This might be useful in providing compatibility with an older
   peer. Note, however, that <code>Versioned</code> does not let you go
   backwards in time; there is no <code>downgradeVersionNN</code> method.
   This means it is probably only useful for compatibility in one direction:
@@ -249,9 +249,10 @@ href="application.xhtml">Application HOWTO</a>.</p>
 
 <h2>Rebuild: Loading New Code Without Restarting</h2>
 
-<p><code>Versioned</code> is good for handling changes between
-released versions of your program, where the application state is saved on
-disk during the upgrade. But while you are developing that code, you often
+<p><code class="API"
+base="twisted.persisted.styles">Versioned</code> is good for handling changes
+between released versions of your program, where the application state is saved
+on disk during the upgrade. But while you are developing that code, you often
 want to change the behavior of the running program, <em>without</em> the
 slowdown of saving everything out to disk, shutting down, and restarting.
 Sometimes it will be difficult or time-consuming to get back to the previous
