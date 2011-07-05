@@ -7,8 +7,9 @@ Tests for L{twisted.application.app} and L{twisted.scripts.twistd}.
 
 import signal, inspect, errno
 
-import os, sys, StringIO
+import os, sys
 
+from StringIO import StringIO
 try:
     import pwd, grp
 except ImportError:
@@ -19,14 +20,16 @@ try:
 except ImportError:
     import pickle
 
-from zope.interface import implements
+from zope.interface import implements, noLongerProvides, directlyProvides
 from zope.interface.verify import verifyObject
 
 from twisted.trial import unittest
 
 from twisted.application import service, app
 from twisted.scripts import twistd
-from twisted.python import log
+from twisted.python import log, usage
+from twisted.plugins.twisted_run import RunPlugin
+from twisted import plugin
 from twisted.python.usage import UsageError
 from twisted.python.log import ILogObserver
 from twisted.python.versions import Version
@@ -742,7 +745,7 @@ class AppProfilingTestCase(unittest.TestCase):
 
 
     def _testStats(self, statsClass, profile):
-        out = StringIO.StringIO()
+        out = StringIO()
 
         # Patch before creating the pstats, because pstats binds self.stream to
         # sys.stdout early in 2.5 and newer.
@@ -1291,3 +1294,162 @@ class DeprecationTests(unittest.TestCase):
         self.assertEquals(len(logs), 2)
         self.assertIn("starting up", logs[0]["message"][0])
         self.assertIn("reactor class", logs[1]["message"][0])
+
+
+
+class StubOptions(usage.Options):
+    """
+    Some options for tests.
+    """
+    optParameters = [["foo", "f", "1234", "Some description"]]
+
+
+
+class StubServiceMaker(object):
+    """
+    A simple service maker to be run by L{RunPlugin}.
+    """
+    options = StubOptions
+
+    def makeService(self, options):
+        """
+        Create a dummy service and save options in C{self.savedOptions}.
+        """
+        self.savedOptions = options
+        self.service = service.Service()
+        return self.service
+
+
+
+class RunPluginTests(unittest.TestCase):
+    """
+    Tests for the twistd L{RunPlugin}.
+
+    @cvar stubService: a service to use during tests.
+    @type stubService: L{StubServiceMaker}
+
+    @ivar plugin: a instance of L{RunPlugin} to be used in tests.
+    @type plugin: C{RunPlugin}
+
+    @ivar serviceName: fully qualified name of C{stubService}.
+    @type serviceName: C{str}
+    """
+    stubService = None
+
+    def setUp(self):
+        self.plugin = RunPlugin()
+        stubService = StubServiceMaker()
+        directlyProvides(stubService, service.ISimpleServiceMaker)
+        cls = self.__class__
+        self.patch(cls, "stubService", stubService)
+        self.serviceName = "%s.%s.stubService" % (
+            RunPluginTests.__module__, cls.__name__)
+
+
+    def test_nonExistentPackage(self):
+        """
+        Running a non existent package raises C{ValueError}, as done by
+        L{reflect.namedAny}.
+        """
+        opt = self.plugin.options()
+        opt.parseArgs("idontexist")
+        error = self.assertRaises(SystemExit, self.plugin.makeService, opt)
+        self.assertEquals(
+            str(error), "Unable to import service named 'idontexist'")
+
+
+    def test_nonExistentModuleInPackage(self):
+        """
+        Running a non existent module in a package raises C{AttributeError}, as
+        done by L{reflect.namedAny}.
+        """
+        opt = self.plugin.options()
+        opt.parseArgs("twisted.idontexist")
+        error = self.assertRaises(SystemExit, self.plugin.makeService, opt)
+        self.assertEquals(
+            str(error), "Unable to import service named 'twisted.idontexist'")
+
+
+    def test_nonISimpleServiceMaker(self):
+        """
+        L{service.ISimpleServiceMaker} must be provided by the plugin to be
+        run.
+        """
+        noLongerProvides(self.__class__.stubService, service.ISimpleServiceMaker)
+        opt = self.plugin.options()
+        opt.parseArgs(self.serviceName)
+        error = self.assertRaises(SystemExit, self.plugin.makeService, opt)
+        self.assertIn(
+            "doesn't provide the ISimpleServiceMaker interface", str(error))
+
+
+    def test_run(self):
+        """
+        A call to L{RunPlugin.makeService} calls the makeService method on the
+        run object, and create the appropriate options.
+        """
+        opt = self.plugin.options()
+        opt.parseArgs(self.serviceName)
+        srv = self.plugin.makeService(opt)
+        self.assertIdentical(srv, self.stubService.service)
+        self.assertEquals(self.stubService.savedOptions, {'foo': '1234'})
+
+
+    def test_optionsParsing(self):
+        """
+        L{RunPlugin} forwards options gathered in the arguments parsing
+        to the service options object.
+        """
+        opt = self.plugin.options()
+        opt.parseArgs(self.serviceName, "--foo", "1235")
+        srv = self.plugin.makeService(opt)
+        self.assertIdentical(srv, self.stubService.service)
+        self.assertEquals(self.stubService.savedOptions, {'foo': '1235'})
+
+
+    def test_helpOptions(self):
+        """
+        L{RunPlugin.makeService} raises C{SystemExit} when getting the
+        C{--help} argument, and prints the service options.
+        """
+        opt = self.plugin.options()
+        opt.parseArgs(self.serviceName, "--help")
+        stdout = StringIO()
+        oldStdout = sys.stdout
+        try:
+            sys.stdout = stdout
+            self.assertRaises(SystemExit, self.plugin.makeService, opt)
+        finally:
+            sys.stdout = oldStdout
+
+        self.assertIn("-f, --foo=     Some description [default: 1234]",
+                      stdout.getvalue(),)
+
+
+    def test_unknownOptions(self):
+        """
+        Error at options parsing of the service goes through
+        L{RunPlugin.makeService}
+        """
+        opt = self.plugin.options()
+        opt.parseArgs(self.serviceName, "--bar", "1235")
+        self.assertRaises(usage.UsageError, self.plugin.makeService, opt)
+
+
+    def test_foundInPlugins(self):
+        """
+        L{plugin.getPlugins} should return L{RunPlugin} as a potential
+        L{service.IServiceMaker} with the C{run} tapname.
+
+        The returned plugin should provide both L{service.IServiceMaker} and
+        L{plugin.IPlugin}.
+        """
+        plugins = plugin.getPlugins(service.IServiceMaker)
+        for plug in plugins:
+            if isinstance(plug, RunPlugin):
+                break
+        else:
+            self.fail("RunPlugin not found in plugins list")
+        self.assertEquals(plug.tapname, "run")
+        verifyObject(service.IServiceMaker, plug)
+        verifyObject(plugin.IPlugin, plug)

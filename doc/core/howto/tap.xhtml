@@ -70,10 +70,149 @@ your application. For more information on <code>.tac</code> files, see
 the document <a href="application.xhtml">Using the Twisted Application
 Framework</a>.</p>
 
+<h2>Using the run plugin</h2>
 
-<h2>Creating the plugin</h2>
+<p>
+   The simplest way to run your service is using the <code class="shell">twistd
+   run</code> command.  It allows you to use <code class="shell">twistd</code> to
+   start a service with a minimum of coding overhead.  The interface to provide
+   to use this is simple: just provide <code>options</code> and <code>makeService
+   </code>.  Imagine the following directory structure:
+</p>
 
-<p>The following directory structure is assumed of your project:</p>
+<ul>
+  <li><strong>MyProject</strong> - Top level directory
+    <ul>
+      <li><strong>myproject</strong> - Python package
+        <ul><li><strong>__init__.py</strong></li></ul>
+        <ul><li><strong>service.py</strong></li></ul>
+      </li>
+    </ul>
+  </li>
+</ul>
+
+<p>
+    And imagine <strong>service.py</strong> contains the following code:
+</p>
+
+<pre class="python">
+from zope.interface import implements
+
+from twisted.python import usage
+from twisted.application.service import ISimpleServiceMaker
+from twisted.application import internet
+
+from myproject import MyFactory
+
+
+class MyServiceOptions(usage.Options):
+    optParameters = [["port", "p", 1235, "The port number to listen on."]]
+    longdesc = "Run this! It'll make your dog happy."
+
+
+class MyServiceMaker(object):
+    implements(ISimpleServiceMaker)
+
+    options = MyServiceOptions
+
+    def makeService(self, options):
+        """
+        Construct a TCPServer from a factory defined in myproject.
+        """
+        return internet.TCPServer(int(options["port"]), MyFactory())
+
+
+serviceMaker = MyServiceMaker()
+</pre>
+
+<p>
+    <code class="python">MyServiceMaker</code> implements <code class="API"
+    base="twisted.application.service">ISimpleServiceMaker</code>, providing
+    two important attributes.  First, <code class="python">options</code> is a
+    callable which returns a new option parsing object.  This object will
+    have <code class="python">parseOptions</code> called on it with a list of
+    arguments from the command line.  Afterwards, the object will be passed as
+    the only argument to <code class="python">MyServiceMaker.makeService
+    </code>.  <code class="python">makeService</code> is to return the <code
+    class="API" base="twisted.application.service">IService</code>
+    implementation which will be run by <code class="shell">twistd</code>,
+    in this case an
+    <code class="API" base="twisted.application">internet.TCPServer</code>. You
+    can read more about services in the <a href="application.xhtml">application
+    howto</a>: for example, it describes <a
+    href="application.xhtml#services-provided">the list of services
+    provided</a> and how to build <a
+    href="application.xhtml#service-collection">service collections</a>.
+</p> 
+<p>
+    Note that you need to create an instance of
+    <code class="python">MyServiceMaker</code> because <code class="shell">
+    twistd run</code> accepts the name of an object that <strong>provides
+    </strong>
+    <code class="API" base="twisted.application.service">ISimpleServiceMaker</code>,
+    not the name of an object that <strong> implements</strong> it.
+</p>
+
+<p>
+    To run this service, you call the run plugin with twistd, passing the fully
+    qualified named of your object providing
+    <code class="API" base="twisted.application.service">ISimpleServiceMaker</code>.
+</p>
+
+<pre class="shell">
+$ twistd run myprojects.service.serviceMaker --port 8080
+</pre>
+
+<p>
+    It's also possible for a module to provide <code class="API"
+    base="twisted.application.service">ISimpleServiceMaker</code>.  This
+    is useful if the implementation is stateless or multiple instances
+    are not required.  For example, the above service.py could be rewritten
+    like this:
+</p>
+
+<pre class="python">
+from zope.interface import moduleProvides
+
+from twisted.python import usage
+from twisted.application import service, internet
+from myproject import MyFactory
+
+
+class options(usage.Options):
+    optParameters = [["port", "p", 1235, "The port number to listen on."]]
+    longdesc = "Run this! It'll make your dog happy."
+
+
+def makeService(options):
+    """
+    Construct a TCPServer from a factory defined in myproject.
+    """
+    return internet.TCPServer(int(options["port"]), MyFactory())
+
+moduleProvides(service.ISimpleServiceMaker)
+</pre>
+
+<p>
+    Then you can run your service this way:
+</p>
+
+<pre class="shell">
+$ twistd run myprojects.service --port 8080
+</pre>
+
+<h2>Creating a plugin</h2>
+
+<p>
+    The other way to run a server is by creating a <code
+    class="shell">twistd</code> plugin. The main advantage of this method
+    over the <code>run</code> plugin is automatic discovery: whereas you
+    have to know the full name of your service to use the <code>run</code>
+    plugin, <code class="shell">twistd</code> can present a list of every
+    plugin available.  Plugins also add support for descriptions which will
+    be included in the list presented by <code class="shell">twistd --help
+    </code> .The following directory structure is assumed of your project:
+</p>
 
 <ul>
   <li><strong>MyProject</strong> - Top level directory
@@ -148,14 +287,17 @@ serviceMaker = MyServiceMaker()
 </pre>
 
 <p>
-  Now running <code class="shell">twistd --help</code> should
-  print <code>myproject</code> in the list of available subcommands,
-  followed by the description that we specified in the
-  plugin. <code class="shell">twistd -n myproject</code> would,
-  assuming we defined a <code>MyFactory</code> factory
-  inside <code>myproject</code>, start a listening server on port 1235
-  with that factory.
+  The interface is slighty more complex than <code>ISimpleServiceMaker</code>,
+  but overall much the same.  Now running <code class="shell">twistd
+  --help</code> should print <code>myproject</code> in the list of available
+  subcommands, followed by the description that we specified in the plugin.
+  <code class="shell">twistd -n myproject</code> would, assuming we defined a
+  <code>MyFactory</code> factory inside <code>myproject</code>, start a
+  listening server on port 1235 with that factory.
 </p>
+
+
+
 
 <h2>Using cred with your TAP</h2>
 

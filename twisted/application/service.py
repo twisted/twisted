@@ -21,23 +21,15 @@ from twisted.internet import defer
 from twisted.persisted import sob
 from twisted.plugin import IPlugin
 
-class IServiceMaker(Interface):
+
+
+class ISimpleServiceMaker(Interface):
     """
-    An object which can be used to construct services in a flexible
-    way.
+    An object which can be used to construct services in a flexible way.
 
-    This interface should most often be implemented along with
-    L{twisted.plugin.IPlugin}, and will most often be used by the
-    'twistd' command.
+    A simple service maker isn't meant to be used as a plugin, but behind the
+    B{twistd} run plugin.
     """
-    tapname = Attribute(
-        "A short string naming this Twisted plugin, for example 'web' or "
-        "'pencil'. This name will be used as the subcommand of 'twistd'.")
-
-    description = Attribute(
-        "A brief summary of the features provided by this "
-        "Twisted application plugin.")
-
     options = Attribute(
         "A C{twisted.python.usage.Options} subclass defining the "
         "configuration options for this application.")
@@ -49,9 +41,26 @@ class IServiceMaker(Interface):
         L{twisted.application.service.IService}.
 
         @param options: A mapping (typically a C{dict} or
-        C{twisted.python.usage.Options} instance) of configuration
-        options to desired configuration values.
+            C{twisted.python.usage.Options} instance) of configuration options
+            to desired configuration values.
         """
+
+
+
+class IServiceMaker(ISimpleServiceMaker):
+    """
+    A service maker meant to be used as a twistd plugin.
+
+    This interface should most often be implemented along with L{IPlugin}, and
+    then be run with the B{twistd} command.
+    """
+    tapname = Attribute(
+        "A short string naming this Twisted plugin, for example 'web' or "
+        "'pencil'. This name will be used as the subcommand of 'twistd'.")
+
+    description = Attribute(
+        "A brief summary of the features provided by this Twisted "
+        "application plugin.")
 
 
 
@@ -403,6 +412,6 @@ def loadApplication(filename, kind, passphrase=None):
     return application
 
 
-__all__ = ['IServiceMaker', 'IService', 'Service',
-           'IServiceCollection', 'MultiService',
-           'IProcess', 'Process', 'Application', 'loadApplication']
+__all__ = ['ISimpleServiceMaker', 'IServiceMaker', 'IService', 'Service',
+           'IServiceCollection', 'MultiService', 'IProcess', 'Process',
+           'Application', 'loadApplication']
