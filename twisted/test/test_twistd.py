@@ -35,6 +35,7 @@ from twisted.python.log import ILogObserver
 from twisted.python.versions import Version
 from twisted.python.components import Componentized
 from twisted.internet.defer import Deferred
+from twisted.internet import reactor
 from twisted.python.fakepwd import UserDatabase
 
 try:
@@ -1321,29 +1322,42 @@ class StubServiceMaker(object):
 
 
 
+class FakeModule(object):
+    """A mutable object that we will pretend is a module."""
+
+
+
 class RunPluginTests(unittest.TestCase):
     """
     Tests for the twistd L{RunPlugin}.
 
-    @cvar stubService: a service to use during tests.
-    @type stubService: L{StubServiceMaker}
-
-    @ivar plugin: a instance of L{RunPlugin} to be used in tests.
+    @ivar plugin: an instance of L{RunPlugin} to be used in tests.
     @type plugin: C{RunPlugin}
 
-    @ivar serviceName: fully qualified name of C{stubService}.
-    @type serviceName: C{str}
+    @ivar savedModules: a backup of sys.modules
+    @type savedModules: C{dict} mapping str to modules or None
+
+    @ivar module: A fake module that will have a 'main' that L{RunPlugin}
+        will be invoking (maybe).
+    @type module: L{FakeModule}
+
+    @ivar moduleName: fully qualified name of C{module}.
+    @type moduleName: C{str}
     """
-    stubService = None
 
     def setUp(self):
+        """
+        Save C{sys.modules}, and create a fake module for the tests.
+        """
         self.plugin = RunPlugin()
-        stubService = StubServiceMaker()
-        directlyProvides(stubService, service.ISimpleServiceMaker)
-        cls = self.__class__
-        self.patch(cls, "stubService", stubService)
-        self.serviceName = "%s.%s.stubService" % (
-            RunPluginTests.__module__, cls.__name__)
+        self.savedModules = sys.modules.copy()
+        self.moduleName = 'RunPlugin_awesome_module'
+        self.module = sys.modules[self.moduleName] = FakeModule()
+
+
+    def tearDown(self):
+        sys.modules.clear()
+        sys.modules.update(self.savedModules)
 
 
     def test_nonExistentPackage(self):
@@ -1370,70 +1384,50 @@ class RunPluginTests(unittest.TestCase):
             str(error), "Unable to import service named 'twisted.idontexist'")
 
 
-    def test_nonISimpleServiceMaker(self):
-        """
-        L{service.ISimpleServiceMaker} must be provided by the plugin to be
-        run.
-        """
-        noLongerProvides(self.__class__.stubService, service.ISimpleServiceMaker)
-        opt = self.plugin.options()
-        opt.parseArgs(self.serviceName)
-        error = self.assertRaises(SystemExit, self.plugin.makeService, opt)
-        self.assertIn(
-            "doesn't provide the ISimpleServiceMaker interface", str(error))
-
-
     def test_run(self):
         """
-        A call to L{RunPlugin.makeService} calls the makeService method on the
-        run object, and create the appropriate options.
+        A call to L{RunPlugin.makeService} returns a L{IService} provider
+        whose C{privilegedStartService} method calls the function specified
+        with the FQPN passed on the command line, passing the reactor and
+        further command line arguments.
         """
         opt = self.plugin.options()
-        opt.parseArgs(self.serviceName)
-        srv = self.plugin.makeService(opt)
-        self.assertIdentical(srv, self.stubService.service)
-        self.assertEquals(self.stubService.savedOptions, {'foo': '1234'})
+        opt.parseArgs(self.moduleName, '--funopt')
+        calls = []
+        self.module.main = lambda reactor, argv: calls.append((reactor, argv))
+        service = self.plugin.makeService(opt)
+        self.assertEqual(calls, [])
+        service.privilegedStartService()
+        self.assertEqual(calls, [(reactor, ['--funopt'])])
 
 
-    def test_optionsParsing(self):
-        """
-        L{RunPlugin} forwards options gathered in the arguments parsing
-        to the service options object.
-        """
-        opt = self.plugin.options()
-        opt.parseArgs(self.serviceName, "--foo", "1235")
-        srv = self.plugin.makeService(opt)
-        self.assertIdentical(srv, self.stubService.service)
-        self.assertEquals(self.stubService.savedOptions, {'foo': '1235'})
+    # def test_helpOptions(self):
+    #     """
+    #     L{RunPlugin.makeService} raises C{SystemExit} when getting the
+    #     C{--help} argument, and prints the service options.
+    #     """
+    #     opt = self.plugin.options()
+    #     opt.parseArgs(self.serviceName, "--help")
+    #     stdout = StringIO()
+    #     oldStdout = sys.stdout
+    #     try:
+    #         sys.stdout = stdout
+    #         self.assertRaises(SystemExit, self.plugin.makeService, opt)
+    #     finally:
+    #         sys.stdout = oldStdout
+
+    #     self.assertIn("-f, --foo=     Some description [default: 1234]",
+    #                   stdout.getvalue(),)
 
 
-    def test_helpOptions(self):
-        """
-        L{RunPlugin.makeService} raises C{SystemExit} when getting the
-        C{--help} argument, and prints the service options.
-        """
-        opt = self.plugin.options()
-        opt.parseArgs(self.serviceName, "--help")
-        stdout = StringIO()
-        oldStdout = sys.stdout
-        try:
-            sys.stdout = stdout
-            self.assertRaises(SystemExit, self.plugin.makeService, opt)
-        finally:
-            sys.stdout = oldStdout
-
-        self.assertIn("-f, --foo=     Some description [default: 1234]",
-                      stdout.getvalue(),)
-
-
-    def test_unknownOptions(self):
-        """
-        Error at options parsing of the service goes through
-        L{RunPlugin.makeService}
-        """
-        opt = self.plugin.options()
-        opt.parseArgs(self.serviceName, "--bar", "1235")
-        self.assertRaises(usage.UsageError, self.plugin.makeService, opt)
+    # def test_unknownOptions(self):
+    #     """
+    #     Error at options parsing of the service goes through
+    #     L{RunPlugin.makeService}
+    #     """
+    #     opt = self.plugin.options()
+    #     opt.parseArgs(self.serviceName, "--bar", "1235")
+    #     self.assertRaises(usage.UsageError, self.plugin.makeService, opt)
 
 
     def test_foundInPlugins(self):
@@ -1453,3 +1447,5 @@ class RunPluginTests(unittest.TestCase):
         self.assertEquals(plug.tapname, "run")
         verifyObject(service.IServiceMaker, plug)
         verifyObject(plugin.IPlugin, plug)
+
+

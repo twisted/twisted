@@ -14,7 +14,7 @@ from zope.interface import implements
 
 from twisted.plugin import IPlugin
 from twisted.python.reflect import namedAny
-from twisted.application.service import IServiceMaker, ISimpleServiceMaker
+from twisted.application.service import IServiceMaker, ISimpleServiceMaker, Service
 from twisted.python.usage import Options
 
 
@@ -74,13 +74,39 @@ class RunPlugin(object):
         except (ValueError, AttributeError):
             raise SystemExit(
                 "Unable to import service named '%s'" % (options['maker'],))
-        if not ISimpleServiceMaker.providedBy(maker):
-            raise SystemExit("'%s' doesn't provide the ISimpleServiceMaker "
-                             "interface" % (options['maker'],))
-        subOptions = maker.options()
-        subOptions.parseOptions(options['maker_options'])
-        return maker.makeService(subOptions)
+        if ISimpleServiceMaker.providedBy(maker):
+            subOptions = maker.options()
+            subOptions.parseOptions(options['maker_options'])
+            return maker.makeService(subOptions)
+        else:
+            main = getattr(maker, 'main')
+            return FunctionService(main, list(options['maker_options']))
+            #from twisted.internet import reactor
+            #main(reactor, list(options['maker_options']))
 
+
+class FunctionService(Service):
+    """
+    An L{IService} provider which will invoke a function when
+    C{privilegedStartService} is called.
+
+    @ivar _function: The function to invoke.
+    @type _function: callable taking two arguments
+
+    @ivar _args: Extra command-line arguments to pass to the function.
+    @type _args: list of str
+    """
+
+    def __init__(self, function, args):
+        self._function = function
+        self._args = args
+
+    def privilegedStartService(self):
+        """
+        Invoke C{self._function} with the global reactor and any extra arguments.
+        """
+        from twisted.internet import reactor
+        self._function(reactor, self._args)
 
 
 run = RunPlugin()
