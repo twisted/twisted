@@ -70,9 +70,9 @@ down.</p>
 
 <p>If your test leaves event sources in the reactor, Trial will fail the test.
 The <code>tearDown</code> method is a good place to put cleanup code: it is
-always run regardless of whether your test passes or fails (like a bare <code>
-except</code> clause in a try-except construct). Exceptions in <code>tearDown
- </code> are flagged as errors and flunk the test. 
+always run regardless of whether your test passes or fails (like a <code>finally</code>
+clause in a try-except-finally construct). Exceptions in <code>tearDown</code>
+are flagged as errors and flunk the test. 
  <code class="API" base="twisted.trial.unittest">TestCase.addCleanup</code> is
 another useful tool for cleaning up.  With it, you can register callables to
 clean up resources as the test allocates them.  Generally, code should be
