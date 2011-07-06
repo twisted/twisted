@@ -794,13 +794,22 @@ class Agent(_AgentMixin):
     @ivar _contextFactory: A web context factory which will be used to create
         SSL context objects for any SSL connections the agent needs to make.
 
+    @ivar _connectTimeout: If not C{None}, the timeout passed to C{connectTCP}
+        or C{connectSSL} for specifying the connection timeout.
+
+    @ivar _bindAddress: If not C{None}, the address passed to C{connectTCP} or
+        C{connectSSL} for specifying the local address to bind to.
+
     @since: 9.0
     """
     _protocol = HTTP11ClientProtocol
 
-    def __init__(self, reactor, contextFactory=WebClientContextFactory()):
+    def __init__(self, reactor, contextFactory=WebClientContextFactory(),
+                 connectTimeout=None, bindAddress=None):
         self._reactor = reactor
         self._contextFactory = contextFactory
+        self._connectTimeout = connectTimeout
+        self._bindAddress = bindAddress
 
 
     def _wrapContextFactory(self, host, port):
@@ -840,10 +849,15 @@ class Agent(_AgentMixin):
             C{self._protocol}.
         """
         cc = ClientCreator(self._reactor, self._protocol)
+        kwargs = {}
+        if self._connectTimeout is not None:
+            kwargs['timeout'] = self._connectTimeout
+        kwargs['bindAddress'] = self._bindAddress
         if scheme == 'http':
-            d = cc.connectTCP(host, port)
+            d = cc.connectTCP(host, port, **kwargs)
         elif scheme == 'https':
-            d = cc.connectSSL(host, port, self._wrapContextFactory(host, port))
+            d = cc.connectSSL(host, port, self._wrapContextFactory(host, port),
+                              **kwargs)
         else:
             d = defer.fail(SchemeNotSupported(
                     "Unsupported scheme: %r" % (scheme,)))

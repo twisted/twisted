@@ -1565,6 +1565,50 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
             'example.com:54321')
 
 
+    def test_connectTimeout(self):
+        """
+        L{Agent} takes a C{connectTimeout} argument which is forwarded to the
+        following C{connectTCP} call.
+        """
+        agent = client.Agent(self.reactor, connectTimeout=5)
+        result = agent.request('GET', 'http://foo/')
+        timeout = self.reactor.tcpClients.pop()[3]
+        self.assertEqual(5, timeout)
+
+
+    def test_connectSSLTimeout(self):
+        """
+        L{Agent} takes a C{connectTimeout} argument which is forwarded to the
+        following C{connectSSL} call.
+        """
+        agent = client.Agent(self.reactor, connectTimeout=5)
+        result = agent.request('GET', 'https://foo/')
+        timeout = self.reactor.sslClients.pop()[4]
+        self.assertEqual(5, timeout)
+
+
+    def test_bindAddress(self):
+        """
+        L{Agent} takes a C{bindAddress} argument which is forwarded to the
+        following C{connectTCP} call.
+        """
+        agent = client.Agent(self.reactor, bindAddress='192.168.0.1')
+        result = agent.request('GET', 'http://foo/')
+        address = self.reactor.tcpClients.pop()[4]
+        self.assertEqual('192.168.0.1', address)
+
+
+    def test_bindAddressSSL(self):
+        """
+        L{Agent} takes a C{bindAddress} argument which is forwarded to the
+        following C{connectSSL} call.
+        """
+        agent = client.Agent(self.reactor, bindAddress='192.168.0.1')
+        result = agent.request('GET', 'https://foo/')
+        address = self.reactor.sslClients.pop()[5]
+        self.assertEqual('192.168.0.1', address)
+
+
 
 class CookieTestsMixin(object):
     """
