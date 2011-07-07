@@ -152,6 +152,8 @@ class Connection(abstract.FileHandle, _SocketCloser):
 
         @see: L{ITCPTransport.write}
         """
+        if self.disconnected:
+            return
         if self.TLS:
             self.protocol.write(data)
         else:
@@ -166,6 +168,8 @@ class Connection(abstract.FileHandle, _SocketCloser):
 
         @see: L{ITCPTransport.writeSequence}
         """
+        if self.disconnected:
+            return
         if self.TLS:
             self.protocol.writeSequence(iovec)
         else:

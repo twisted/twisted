@@ -26,7 +26,7 @@ from twisted.protocols.policies import WrappingFactory
 from twisted.test.proto_helpers import StringTransport
 from twisted.test.proto_helpers import MemoryReactor
 from twisted.internet.address import IPv4Address
-from twisted.internet.task import Clock
+from twisted.internet.task import Clock, deferLater
 from twisted.internet.error import ConnectionRefusedError
 from twisted.internet.protocol import Protocol
 from twisted.internet.defer import Deferred, succeed
@@ -42,6 +42,7 @@ except:
     ssl = None
 else:
     from OpenSSL.SSL import ContextType
+
 
 
 class ExtendedRedirect(resource.Resource):
@@ -282,6 +283,7 @@ class HTTPPageGetterTests(unittest.TestCase):
 
 
 class WebClientTestCase(unittest.TestCase):
+
     def _listen(self, site):
         return reactor.listenTCP(0, site, interface="127.0.0.1")
 
@@ -490,8 +492,7 @@ class WebClientTestCase(unittest.TestCase):
                 pass
         ef = errorfile()
         return self.assertFailure(
-            client.downloadPage(self.getURL("file"), ef),
-            IOError)
+            client.downloadPage(self.getURL("file"), ef), IOError)
 
     def testDownloadPageError2(self):
         class errorfile:
@@ -501,8 +502,7 @@ class WebClientTestCase(unittest.TestCase):
                 raise IOError, "badness happened during close"
         ef = errorfile()
         return self.assertFailure(
-            client.downloadPage(self.getURL("file"), ef),
-            IOError)
+            client.downloadPage(self.getURL("file"), ef), IOError)
 
     def testDownloadPageError3(self):
         # make sure failures in open() are caught too. This is tricky.
@@ -767,6 +767,10 @@ class WebClientTestCase(unittest.TestCase):
 
 
 class WebClientSSLTestCase(WebClientTestCase):
+    """
+    HTTPS tests for getPage and downloadPage web clients.
+    """
+
     def _listen(self, site):
         from twisted import test
         return reactor.listenSSL(0, site,
@@ -776,8 +780,10 @@ class WebClientSSLTestCase(WebClientTestCase):
             ),
                                  interface="127.0.0.1")
 
+
     def getURL(self, path):
         return "https://127.0.0.1:%d/%s" % (self.portno, path)
+
 
     def testFactoryInfo(self):
         url = self.getURL('file')
@@ -786,6 +792,26 @@ class WebClientSSLTestCase(WebClientTestCase):
         reactor.connectSSL(host, port, factory, ssl.ClientContextFactory())
         # The base class defines _cbFactoryInfo correctly for this
         return factory.deferred.addCallback(self._cbFactoryInfo, factory)
+
+
+    def tearDown(self):
+        """
+        Delay ending the test a little. Because downloadPage fires its
+        Deferred when download finishes, rather than when connection is lost,
+        it is fragile in the face of delays to shutdown, leading to reactor
+        dirty errors from trial when using TLS shutdown. This is a workaround;
+        a real fix is not worth it since we are replacing downloadPage and
+        friends with Agent.
+        """
+        d = WebClientTestCase.tearDown(self)
+        def slightDelay(counter):
+            if counter == 0:
+                return
+            return deferLater(reactor, 0.001, slightDelay, counter - 1)
+        d.addCallback(lambda ign: slightDelay(10))
+        return d
+
+
 
 class WebClientRedirectBetweenSSLandPlainText(unittest.TestCase):
     def getHTTPS(self, path):
