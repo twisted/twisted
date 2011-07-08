@@ -1416,6 +1416,24 @@ class RunPluginTests(unittest.TestCase):
         self.assertIdentical(predefinedService, returnedService)
 
 
+    def test_mainCanExit(self):
+        """
+        The C{main} function that is invoked by the L{RunPlugin} can raise
+        SystemExit to cease execution.
+        """
+
+        def main(reactor, args):
+            sys.exit("Sorry, need more args!")
+
+        self.module.main = main
+        opt = self.plugin.options()
+        opt.parseArgs(self.moduleName)
+        # It is assumed here that raising SystemExit from makeService causes
+        # twistd to do something reasonable (like propagate it).
+        e = self.assertRaises(SystemExit, self.plugin.makeService, opt)
+        self.assertEquals(e.args, ("Sorry, need more args!",))
+
+
     # def test_helpOptions(self):
     #     """
     #     L{RunPlugin.makeService} raises C{SystemExit} when getting the
