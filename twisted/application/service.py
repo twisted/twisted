@@ -23,12 +23,11 @@ from twisted.plugin import IPlugin
 
 
 
-class ISimpleServiceMaker(Interface):
+class IRunServiceMaker(Interface):
     """
-    An object which can be used to construct services in a flexible way.
+    An object which can be used to construct services with command line arguments.
 
-    A simple service maker isn't meant to be used as a plugin, but behind the
-    B{twistd} run plugin.
+    Providers of this interface are used by the C{twistd run} command.
     """
     options = Attribute(
         "A C{twisted.python.usage.Options} subclass defining the "
@@ -47,7 +46,7 @@ class ISimpleServiceMaker(Interface):
 
 
 
-class IServiceMaker(ISimpleServiceMaker):
+class IServiceMaker(IRunServiceMaker):
     """
     A service maker meant to be used as a twistd plugin.
 

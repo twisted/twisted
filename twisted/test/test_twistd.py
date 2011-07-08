@@ -1310,7 +1310,7 @@ class StubServiceMaker(object):
     """
     A simple service maker to be run by L{RunPlugin}.
     """
-    implements(service.IServiceMaker)
+    implements(service.IRunServiceMaker)
     options = StubOptions
 
     def makeService(self, options):
@@ -1474,9 +1474,9 @@ class RunPluginTests(unittest.TestCase):
         verifyObject(plugin.IPlugin, plug)
 
 
-    def test_mainAsIServiceMakerReturnsCreatedService(self):
+    def test_mainAsIRunServiceMakerReturnsCreatedService(self):
         """
-        When the 'main' object is an L{IServiceMaker} provider,
+        When the 'main' object is an L{IRunServiceMaker} provider,
         L{RunPlugin.makeService} simply returns the service that it makes.
         """
         self.module.main = StubServiceMaker()
@@ -1486,9 +1486,9 @@ class RunPluginTests(unittest.TestCase):
         self.assertIdentical(service, self.module.main.service)
 
 
-    def test_mainAsIServiceMakerDelegatesCommandLineArguments(self):
+    def test_mainAsIRunServiceMakerDelegatesCommandLineArguments(self):
         """
-        When the 'main' object is an L{IServiceMaker} provider,
+        When the 'main' object is an L{IRunServiceMaker} provider,
         L{RunPlugin.makeService} delegates arguments to
         L{IServiceMaker.options}.
         """

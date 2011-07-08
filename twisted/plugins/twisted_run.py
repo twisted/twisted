@@ -14,7 +14,7 @@ from zope.interface import implements
 
 from twisted.plugin import IPlugin
 from twisted.python.reflect import namedAny
-from twisted.application.service import IServiceMaker, ISimpleServiceMaker, Service
+from twisted.application.service import IServiceMaker, IRunServiceMaker, Service
 from twisted.python.usage import Options
 
 
@@ -31,7 +31,7 @@ class RunOptions(Options):
 
       $ twistd run <fqpn> --help
 
-    Alternatively, 'main' can be an IServiceMaker provider instead of a
+    Alternatively, 'main' can be an IRunServiceMaker provider instead of a
     function.
     """
 
@@ -47,8 +47,8 @@ class RunOptions(Options):
 
 class RunPlugin(object):
     """
-    A plugin which delegates to another L{IServiceMaker} specified by a
-    fully-qualified Python name.
+    A plugin which can load a module specified on the command line and either
+    invoke a 'main' function or L{IRunServiceMaker} to start a service.
     """
     implements(IPlugin, IServiceMaker)
 
@@ -85,7 +85,7 @@ class RunPlugin(object):
         except AttributeError:
             raise SystemExit("Can't find 'main' in '%s'" % (options['maker'],))
 
-        if IServiceMaker.providedBy(main):
+        if IRunServiceMaker.providedBy(main):
             subOptions = main.options()
             subOptions.parseOptions(options['maker_options'])
             return main.makeService(subOptions)
