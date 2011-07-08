@@ -1346,17 +1346,19 @@ class _JellyableAvatarMixin:
 
         puid = avatar.processUniqueID()
 
-        def dereferenceLogout():
-            self.broker.dontNotifyOnDisconnect(logout)
-            logout()
+        # only call logout once, whether the connection is dropped (disconnect)
+        # or a logout occurs (cleanup), and be careful to drop the reference to
+        # it in either case
+        logout = [ logout ]
+        def maybeLogout():
+            if not logout:
+                return
+            fn = logout[0]
+            del logout[0]
+            fn()
+        self.broker._localCleanup[puid] = maybeLogout
+        self.broker.notifyOnDisconnect(maybeLogout)
 
-        self.broker._localCleanup[puid] = dereferenceLogout
-        # No special helper function is necessary for notifyOnDisconnect
-        # because dereference callbacks won't be invoked if the connection is
-        # randomly dropped.  I'm not sure those are ideal semantics, but this
-        # is the only user of the (private) API at the moment and it works just
-        # fine as things are. -exarkun
-        self.broker.notifyOnDisconnect(logout)
         return avatar
 
 

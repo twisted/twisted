@@ -11,7 +11,7 @@ only specific tests for old API.
 # issue1195 TODOs: replace pump.pump() with something involving Deferreds.
 # Clean up warning suppression.
 
-import sys, os, time, gc
+import sys, os, time, gc, weakref
 
 from cStringIO import StringIO
 from zope.interface import implements, Interface
@@ -23,6 +23,7 @@ from twisted.internet import protocol, main, reactor
 from twisted.internet.error import ConnectionRefusedError
 from twisted.internet.defer import Deferred, gatherResults, succeed
 from twisted.protocols.policies import WrappingFactory
+from twisted.protocols import loopback
 from twisted.python import failure, log
 from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
 from twisted.cred import portal, checkers, credentials
@@ -66,16 +67,28 @@ class IOPump:
         self.clientIO = clientIO
         self.serverIO = serverIO
 
+
     def flush(self):
         """
-        Pump until there is no more input or output. This does not run any
-        timers, so don't use it with any code that calls reactor.callLater.
+        Pump until there is no more input or output or until L{stop} is called.
+        This does not run any timers, so don't use it with any code that calls
+        reactor.callLater.
         """
         # failsafe timeout
+        self._stop = False
         timeout = time.time() + 5
-        while self.pump():
+        while not self._stop and self.pump():
             if time.time() > timeout:
                 return
+
+
+    def stop(self):
+        """
+        Stop a running L{flush} operation, even if data remains to be
+        transferred.
+        """
+        self._stop = True
+
 
     def pump(self):
         """
@@ -103,13 +116,19 @@ class IOPump:
             return 0
 
 
-def connectedServerAndClient():
+
+def connectedServerAndClient(realm=None):
     """
-    Returns a 3-tuple: (client, server, pump).
+    Connect a client and server L{Broker} together with an L{IOPump}
+
+    @param realm: realm to use, defaulting to a L{DummyRealm}
+
+    @returns: a 3-tuple (client, server, pump).
     """
+    realm = realm or DummyRealm()
     clientBroker = pb.Broker()
     checker = checkers.InMemoryUsernamePasswordDatabaseDontUse(guest='guest')
-    factory = pb.PBServerFactory(portal.Portal(DummyRealm(), [checker]))
+    factory = pb.PBServerFactory(portal.Portal(realm, [checker]))
     serverBroker = factory.buildProtocol(('127.0.0.1',))
 
     clientTransport = StringIO()
@@ -1125,6 +1144,74 @@ class MyView(pb.Viewable):
 
     def view_check(self, user):
         return isinstance(user, MyPerspective)
+
+
+
+class LeakyRealm(TestRealm):
+    """
+    A realm which hangs onto a reference to the mind object in its logout
+    function.
+    """
+    def __init__(self, mindEater):
+        """
+        Create a L{LeakyRealm}.
+
+        @param mindEater: a callable that will be called with the C{mind}
+        object when it is available
+        """
+        self._mindEater = mindEater
+
+
+    def requestAvatar(self, avatarId, mind, interface):
+        self._mindEater(mind)
+        persp = self.perspectiveFactory(avatarId)
+        return (pb.IPerspective, persp, lambda : (mind, persp.logout()))
+
+
+
+class NewCredLeakTests(unittest.TestCase):
+    """
+    Tests to try to trigger memory leaks.
+    """
+    def test_logoutLeak(self):
+        """
+        The server does not leak a reference when the client disconnects
+        suddenly, even if the cred logout function forms a reference cycle with
+        the perspective.
+        """
+        # keep a weak reference to the mind object, which we can verify later
+        # evaluates to None, thereby ensuring the reference leak is fixed.
+        self.mindRef = None
+        def setMindRef(mind):
+            self.mindRef = weakref.ref(mind)
+
+        clientBroker, serverBroker, pump = connectedServerAndClient(
+                LeakyRealm(setMindRef))
+
+        # log in from the client
+        connectionBroken = []
+        root = clientBroker.remoteForName("root")
+        d = root.callRemote("login", 'guest')
+        def cbResponse((challenge, challenger)):
+            mind = SimpleRemote()
+            return challenger.callRemote("respond",
+                    pb.respond(challenge, 'guest'), mind)
+        d.addCallback(cbResponse)
+        def connectionLost(_):
+            pump.stop() # don't try to pump data anymore - it won't work
+            connectionBroken.append(1)
+            serverBroker.connectionLost(failure.Failure(RuntimeError("boom")))
+        d.addCallback(connectionLost)
+
+        # flush out the response and connectionLost
+        pump.flush()
+        self.assertEqual(connectionBroken, [1])
+
+        # and check for lingering references - requestAvatar sets mindRef
+        # to a weakref to the mind; this object should be gc'd, and thus
+        # the ref should return None
+        gc.collect()
+        self.assertEqual(self.mindRef(), None)
 
 
 
