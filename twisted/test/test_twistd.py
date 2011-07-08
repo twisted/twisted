@@ -1439,33 +1439,19 @@ class RunPluginTests(unittest.TestCase):
         self.assertEquals(str(e), "need more args!")
 
 
-    # def test_helpOptions(self):
-    #     """
-    #     L{RunPlugin.makeService} raises C{SystemExit} when getting the
-    #     C{--help} argument, and prints the service options.
-    #     """
-    #     opt = self.plugin.options()
-    #     opt.parseArgs(self.serviceName, "--help")
-    #     stdout = StringIO()
-    #     oldStdout = sys.stdout
-    #     try:
-    #         sys.stdout = stdout
-    #         self.assertRaises(SystemExit, self.plugin.makeService, opt)
-    #     finally:
-    #         sys.stdout = oldStdout
+    def test_unknownOptions(self):
+        """
+        Error at options parsing of the service goes through
+        L{RunPlugin.makeService}
+        """
+        opt = self.plugin.options()
 
-    #     self.assertIn("-f, --foo=     Some description [default: 1234]",
-    #                   stdout.getvalue(),)
+        def main(reactor, args):
+            raise UsageError("Bad args!")
 
-
-    # def test_unknownOptions(self):
-    #     """
-    #     Error at options parsing of the service goes through
-    #     L{RunPlugin.makeService}
-    #     """
-    #     opt = self.plugin.options()
-    #     opt.parseArgs(self.serviceName, "--bar", "1235")
-    #     self.assertRaises(usage.UsageError, self.plugin.makeService, opt)
+        self.module.main = main
+        opt.parseArgs(self.moduleName, "--bar", "1235")
+        self.assertRaises(usage.UsageError, self.plugin.makeService, opt)
 
 
     def test_foundInPlugins(self):
