@@ -1386,19 +1386,34 @@ class RunPluginTests(unittest.TestCase):
 
     def test_run(self):
         """
-        A call to L{RunPlugin.makeService} returns a L{IService} provider
-        whose C{privilegedStartService} method calls the function specified
-        with the FQPN passed on the command line, passing the reactor and
-        further command line arguments.
+        A call to L{RunPlugin.makeService} invokes the function specified by
+        the FQPN passed on the command line, and returns a Service object.
         """
         opt = self.plugin.options()
         opt.parseArgs(self.moduleName, '--funopt')
         calls = []
         self.module.main = lambda reactor, argv: calls.append((reactor, argv))
-        service = self.plugin.makeService(opt)
-        self.assertEqual(calls, [])
-        service.privilegedStartService()
+        serv = self.plugin.makeService(opt)
         self.assertEqual(calls, [(reactor, ['--funopt'])])
+        self.assertTrue(verifyObject(service.IService, serv))
+
+
+    def test_runReturnsService(self):
+        """
+        L{RunPlugin.makeService} returns the service that was returned by the
+        function specified by the FQPN given on the command line, if that
+        function indeed returns a service.
+        """
+        predefinedService = service.Service()
+
+        def main(reactor, args):
+            return predefinedService
+        
+        self.module.main = main
+        opt = self.plugin.options()
+        opt.parseArgs(self.moduleName)
+        returnedService = self.plugin.makeService(opt)
+        self.assertIdentical(predefinedService, returnedService)
 
 
     # def test_helpOptions(self):

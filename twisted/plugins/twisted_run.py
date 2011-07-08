@@ -27,9 +27,8 @@ class RunOptions(Options):
 
     longdesc = """
     Load the object at the given fully-qualified python name (fqpn), which
-    should provide the IServiceMaker interface, and run the service that it
-    makes. The specified [service options] will be processed by the service
-    maker. For help on a given service maker, use::
+    should have a 'main' attribute, and call that function with the specified
+    [service options]. For help on a given service maker, use::
 
       $ twistd run <fqpn> --help
     """
@@ -80,33 +79,12 @@ class RunPlugin(object):
             return maker.makeService(subOptions)
         else:
             main = getattr(maker, 'main')
-            return FunctionService(main, list(options['maker_options']))
-            #from twisted.internet import reactor
-            #main(reactor, list(options['maker_options']))
-
-
-class FunctionService(Service):
-    """
-    An L{IService} provider which will invoke a function when
-    C{privilegedStartService} is called.
-
-    @ivar _function: The function to invoke.
-    @type _function: callable taking two arguments
-
-    @ivar _args: Extra command-line arguments to pass to the function.
-    @type _args: list of str
-    """
-
-    def __init__(self, function, args):
-        self._function = function
-        self._args = args
-
-    def privilegedStartService(self):
-        """
-        Invoke C{self._function} with the global reactor and any extra arguments.
-        """
-        from twisted.internet import reactor
-        self._function(reactor, self._args)
+            from twisted.internet import reactor
+            service = main(reactor, list(options['maker_options']))
+            if service is None:
+                return Service()
+            else:
+                return service
 
 
 run = RunPlugin()
