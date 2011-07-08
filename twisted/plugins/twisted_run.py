@@ -68,23 +68,31 @@ class RunPlugin(object):
 
         @param options: Instance of L{RunOptions}.
         """
+        # We could just call namedAny on the full path (modulename + '.main'),
+        # but breaking it into multiple steps gives us the chance to provide
+        # nicer error messages (when we can't find the module, we tell you
+        # that we can't find the module; when we can't find 'main', we tell
+        # you that.)
         try:
             maker = namedAny(options['maker'])
         except (ValueError, AttributeError):
             raise SystemExit(
-                "Unable to import service named '%s'" % (options['maker'],))
-        if ISimpleServiceMaker.providedBy(maker):
-            subOptions = maker.options()
-            subOptions.parseOptions(options['maker_options'])
-            return maker.makeService(subOptions)
-        else:
+                "Can't find Python object '%s'" % (options['maker'],))
+        # if ISimpleServiceMaker.providedBy(maker):
+        #     subOptions = maker.options()
+        #     subOptions.parseOptions(options['maker_options'])
+        #     return maker.makeService(subOptions)
+        # else:
+        try:
             main = getattr(maker, 'main')
-            from twisted.internet import reactor
-            service = main(reactor, list(options['maker_options']))
-            if service is None:
-                return Service()
-            else:
-                return service
+        except AttributeError:
+            raise SystemExit("Can't find 'main' in '%s'" % (options['maker'],))
+        from twisted.internet import reactor
+        service = main(reactor, list(options['maker_options']))
+        if service is None:
+            return Service()
+        else:
+            return service
 
 
 run = RunPlugin()

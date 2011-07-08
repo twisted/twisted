@@ -1369,7 +1369,7 @@ class RunPluginTests(unittest.TestCase):
         opt.parseArgs("idontexist")
         error = self.assertRaises(SystemExit, self.plugin.makeService, opt)
         self.assertEquals(
-            str(error), "Unable to import service named 'idontexist'")
+            str(error), "Can't find Python object 'idontexist'")
 
 
     def test_nonExistentModuleInPackage(self):
@@ -1381,8 +1381,22 @@ class RunPluginTests(unittest.TestCase):
         opt.parseArgs("twisted.idontexist")
         error = self.assertRaises(SystemExit, self.plugin.makeService, opt)
         self.assertEquals(
-            str(error), "Unable to import service named 'twisted.idontexist'")
+            str(error), "Can't find Python object 'twisted.idontexist'")
 
+
+    def test_nonExistentMain(self):
+        """
+        Running a module with no C{main} attribute exits wiith a message
+        describing the problem.
+        """
+        opt = self.plugin.options()
+        # Sanity check:
+        self.assertFalse(hasattr(self.module, 'main'))
+        opt.parseArgs(self.moduleName)
+        e = self.assertRaises(SystemExit, self.plugin.makeService, opt)
+        self.assertEquals(
+            str(e),
+            "Can't find 'main' in 'RunPlugin_awesome_module'")
 
     def test_run(self):
         """
@@ -1401,15 +1415,10 @@ class RunPluginTests(unittest.TestCase):
     def test_runReturnsService(self):
         """
         L{RunPlugin.makeService} returns the service that was returned by the
-        function specified by the FQPN given on the command line, if that
-        function indeed returns a service.
+        C{main} function, if that function indeed returns a service.
         """
         predefinedService = service.Service()
-
-        def main(reactor, args):
-            return predefinedService
-        
-        self.module.main = main
+        self.module.main = lambda reactor, args: predefinedService
         opt = self.plugin.options()
         opt.parseArgs(self.moduleName)
         returnedService = self.plugin.makeService(opt)
@@ -1421,17 +1430,13 @@ class RunPluginTests(unittest.TestCase):
         The C{main} function that is invoked by the L{RunPlugin} can raise
         SystemExit to cease execution.
         """
-
-        def main(reactor, args):
-            sys.exit("Sorry, need more args!")
-
-        self.module.main = main
+        self.module.main = lambda reactor, args: sys.exit("need more args!")
         opt = self.plugin.options()
         opt.parseArgs(self.moduleName)
         # It is assumed here that raising SystemExit from makeService causes
         # twistd to do something reasonable (like propagate it).
         e = self.assertRaises(SystemExit, self.plugin.makeService, opt)
-        self.assertEquals(e.args, ("Sorry, need more args!",))
+        self.assertEquals(str(e), "need more args!")
 
 
     # def test_helpOptions(self):
