@@ -26,11 +26,13 @@ class RunOptions(Options):
     synopsis = "<fqpn> [service options]"
 
     longdesc = """
-    Load the object at the given fully-qualified python name (fqpn), which
-    should have a 'main' attribute, and call that function with the specified
-    [service options]. For help on a given service maker, use::
+    Call the 'main' function in the specified Python module with the specified
+    [service options]. For help on a given service maker, try::
 
       $ twistd run <fqpn> --help
+
+    Alternatively, 'main' can be an IServiceMaker provider instead of a
+    function.
     """
 
 
@@ -51,7 +53,7 @@ class RunPlugin(object):
     implements(IPlugin, IServiceMaker)
 
     name = "Twisted Run Plugin"
-    description = "A plugin to run services"
+    description = "Runs services from Python modules"
     tapname = "run"
 
 
@@ -78,21 +80,22 @@ class RunPlugin(object):
         except (ValueError, AttributeError):
             raise SystemExit(
                 "Can't find Python object '%s'" % (options['maker'],))
-        # if ISimpleServiceMaker.providedBy(maker):
-        #     subOptions = maker.options()
-        #     subOptions.parseOptions(options['maker_options'])
-        #     return maker.makeService(subOptions)
-        # else:
         try:
             main = getattr(maker, 'main')
         except AttributeError:
             raise SystemExit("Can't find 'main' in '%s'" % (options['maker'],))
-        from twisted.internet import reactor
-        service = main(reactor, list(options['maker_options']))
-        if service is None:
-            return Service()
+
+        if IServiceMaker.providedBy(main):
+            subOptions = main.options()
+            subOptions.parseOptions(options['maker_options'])
+            return main.makeService(subOptions)
         else:
-            return service
+            from twisted.internet import reactor
+            service = main(reactor, list(options['maker_options']))
+            if service is None:
+                return Service()
+            else:
+                return service
 
 
 run = RunPlugin()

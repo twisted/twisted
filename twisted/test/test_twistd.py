@@ -1310,6 +1310,7 @@ class StubServiceMaker(object):
     """
     A simple service maker to be run by L{RunPlugin}.
     """
+    implements(service.IServiceMaker)
     options = StubOptions
 
     def makeService(self, options):
@@ -1436,7 +1437,7 @@ class RunPluginTests(unittest.TestCase):
         # It is assumed here that raising SystemExit from makeService causes
         # twistd to do something reasonable (like propagate it).
         e = self.assertRaises(SystemExit, self.plugin.makeService, opt)
-        self.assertEquals(str(e), "need more args!")
+        self.assertEqual(str(e), "need more args!")
 
 
     def test_unknownOptions(self):
@@ -1468,8 +1469,31 @@ class RunPluginTests(unittest.TestCase):
                 break
         else:
             self.fail("RunPlugin not found in plugins list")
-        self.assertEquals(plug.tapname, "run")
+        self.assertEqual(plug.tapname, "run")
         verifyObject(service.IServiceMaker, plug)
         verifyObject(plugin.IPlugin, plug)
 
 
+    def test_mainAsIServiceMakerReturnsCreatedService(self):
+        """
+        When the 'main' object is an L{IServiceMaker} provider,
+        L{RunPlugin.makeService} simply returns the service that it makes.
+        """
+        self.module.main = StubServiceMaker()
+        opt = self.plugin.options()
+        opt.parseArgs(self.moduleName)
+        service = self.plugin.makeService(opt)
+        self.assertIdentical(service, self.module.main.service)
+
+
+    def test_mainAsIServiceMakerDelegatesCommandLineArguments(self):
+        """
+        When the 'main' object is an L{IServiceMaker} provider,
+        L{RunPlugin.makeService} delegates arguments to
+        L{IServiceMaker.options}.
+        """
+        self.module.main = StubServiceMaker()
+        opt = self.plugin.options()
+        opt.parseArgs(self.moduleName, "-f", "5678")
+        self.plugin.makeService(opt)
+        self.assertEqual(self.module.main.savedOptions, {'foo': '5678'})
