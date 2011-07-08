@@ -49,9 +49,8 @@ from zope.interface import implements
 
 from twisted.python.failure import Failure
 from twisted.internet.interfaces import ISystemHandle, ISSLTransport
-from twisted.internet.main import CONNECTION_LOST
+from twisted.internet.main import CONNECTION_DONE, CONNECTION_LOST
 from twisted.internet.protocol import Protocol
-from twisted.internet.interfaces import ITCPTransport
 from twisted.protocols.policies import ProtocolWrapper, WrappingFactory
 
 
@@ -65,9 +64,8 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
     @ivar _tlsConnection: The L{OpenSSL.SSL.Connection} instance which is
         encrypted and decrypting this connection.
 
-    @ivar _lostTLSConnection: A flag indicating whether connection loss has
-        already been dealt with (C{True}) or not (C{False}). TLS disconnection
-        is distinct from the underlying connection being lost.
+    @ivar _lostConnection: A flag indicating whether connection loss has
+        already been dealt with (C{True}) or not (C{False}).
 
     @ivar _writeBlockedOnRead: A flag indicating whether further writing must
         wait for data to be received (C{True}) or not (C{False}).
@@ -102,7 +100,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
 
     _reason = None
     _handshakeDone = False
-    _lostTLSConnection = False
+    _lostConnection = False
     _writeBlockedOnRead = False
 
     def __init__(self, factory, wrappedProtocol, _connectWrapped=True):
@@ -185,7 +183,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         # close the connection.  Looping is necessary to make sure we
         # process all of the data which was put into the receive BIO, as
         # there is no guarantee that a single recv call will do it all.
-        while not self._lostTLSConnection:
+        while not self._lostConnection:
             try:
                 bytes = self._tlsConnection.recv(2 ** 15)
             except WantReadError:
@@ -195,25 +193,32 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
             except ZeroReturnError:
                 # TLS has shut down and no more TLS data will be received over
                 # this connection.
-                self._shutdownTLS()
-                # Passing in None means the user protocol's connnectionLost
-                # will get called with reason from underlying transport:
-                self._tlsShutdownFinished(None)
+                self._lostConnection = True
+                self.transport.loseConnection()
+                if not self._handshakeDone and self._reason is not None:
+                    failure = self._reason
+                else:
+                    failure = Failure(CONNECTION_DONE)
+                # Failure's are fat.  Drop the reference.
+                self._reason = None
+                ProtocolWrapper.connectionLost(self, failure)
             except Error, e:
                 # Something went pretty wrong.  For example, this might be a
                 # handshake failure (because there were no shared ciphers, because
                 # a certificate failed to verify, etc).  TLS can no longer proceed.
+                self._flushSendBIO()
+                self._lostConnection = True
 
-                # Squash EOF in violation of protocol into ConnectionLost; we
-                # create Failure before calling _flushSendBio so that no new
-                # exception will get thrown in the interim.
+                # Squash EOF in violation of protocol into ConnectionLost
                 if e.args[0] == -1 and e.args[1] == 'Unexpected EOF':
                     failure = Failure(CONNECTION_LOST)
                 else:
                     failure = Failure()
-
-                self._flushSendBIO()
-                self._tlsShutdownFinished(failure)
+                ProtocolWrapper.connectionLost(self, failure)
+                # This loseConnection call is basically tested by
+                # test_handshakeFailure.  At least one side will need to do it
+                # or the test never finishes.
+                self.transport.loseConnection()
             else:
                 # If we got application bytes, the handshake must be done by
                 # now.  Keep track of this to control error reporting later.
@@ -241,46 +246,11 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
             appSendBuffer = self._appSendBuffer
             self._appSendBuffer = []
             for bytes in appSendBuffer:
-                self._write(bytes)
+                self.write(bytes)
             if not self._writeBlockedOnRead and self.disconnecting:
-                self._shutdownTLS()
+                self.loseConnection()
 
         self._flushReceiveBIO()
-
-
-    def _shutdownTLS(self):
-        """
-        Initiate, or reply to, the shutdown handshake of the TLS layer.
-        """
-        if (not self._lostTLSConnection and
-            ITCPTransport.providedBy(self.transport)):
-            # In order for TLS shutdown notification to arrive as fast as
-            # possible, disable Nagle algorithm:
-            self.transport.setTcpNoDelay(True)
-        shutdownSuccess = self._tlsConnection.shutdown()
-        self._flushSendBIO()
-        if shutdownSuccess:
-            # Both sides have shutdown, so we can start closing lower-level
-            # transport. This will also happen if we haven't started
-            # negotiation at all yet, in which case shutdown succeeds
-            # immediately.
-            self.transport.loseConnection()
-
-
-    def _tlsShutdownFinished(self, reason):
-        """
-        Called when TLS connection has gone away; tell underlying transport to
-        disconnect.
-        """
-        self._reason = reason
-        self._lostTLSConnection = True
-        # Using loseConnection causes the application protocol's
-        # connectionLost method to be invoked non-reentrantly, which is always
-        # a nice feature. However, for error cases (reason != None) we might
-        # want to use abortConnection when it becomes available. The
-        # loseConnection call is basically tested by test_handshakeFailure.
-        # At least one side will need to do it or the test never finishes.
-        self.transport.loseConnection()
 
 
     def connectionLost(self, reason):
@@ -289,51 +259,30 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         the underlying transport going away or due to an error at the TLS
         layer) and make sure the base implementation only gets invoked once.
         """
-        if not self._lostTLSConnection:
+        if not self._lostConnection:
             # Tell the TLS connection that it's not going to get any more data
             # and give it a chance to finish reading.
             self._tlsConnection.bio_shutdown()
             self._flushReceiveBIO()
-            self._lostTLSConnection = True
-        reason = self._reason or reason
-        self._reason = None
-        ProtocolWrapper.connectionLost(self, reason)
 
 
     def loseConnection(self):
         """
         Send a TLS close alert and close the underlying connection.
         """
-        if self.disconnecting:
-            return
         self.disconnecting = True
         if not self._writeBlockedOnRead:
-            self._shutdownTLS()
+            self._tlsConnection.shutdown()
+            self._flushSendBIO()
+            self.transport.loseConnection()
 
 
     def write(self, bytes):
         """
         Process the given application bytes and send any resulting TLS traffic
         which arrives in the send BIO.
-
-        If C{loseConnection} was called, subsequent calls to C{write} will
-        drop the bytes on the floor.
         """
-        if self.disconnecting:
-            return
-        self._write(bytes)
-
-
-    def _write(self, bytes):
-        """
-        Process the given application bytes and send any resulting TLS traffic
-        which arrives in the send BIO.
-
-        This may be called by C{dataReceived} with bytes that were buffered
-        before C{loseConnection} was called, which is why this function
-        doesn't check for disconnection but accepts the bytes regardless.
-        """
-        if self._lostTLSConnection:
+        if self._lostConnection:
             return
 
         leftToSend = bytes
@@ -344,13 +293,16 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
                 self._writeBlockedOnRead = True
                 self._appSendBuffer.append(leftToSend)
                 break
-            except Error:
-                # Pretend TLS connection disconnected, which will trigger
-                # disconnect of underlying transport. The error will be passed
-                # to the application protocol's connectionLost method.  The
-                # other SSL implementation doesn't, but losing helpful
-                # debugging information is a bad idea.
-                self._tlsShutdownFinished(Failure())
+            except Error, e:
+                # Just drop the connection.  This has two useful consequences.
+                # First, for the application protocol's connectionLost method,
+                # it will squash any error into connection lost.  We *could*
+                # let the real exception propagate to application code, but the
+                # other SSL implementation doesn't.  Second, it causes the
+                # protocol's connectionLost method to be invoked
+                # non-reentrantly, which is always a nice feature.
+                self._reason = Failure()
+                self.transport.loseConnection()
                 break
             else:
                 # If we sent some bytes, the handshake must be done.  Keep
