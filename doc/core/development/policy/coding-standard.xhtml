@@ -47,9 +47,16 @@
     <h3>Test Suite</h3>
 
     <p>The Twisted test suite is spread across many subpackages of the
-     <code>twisted</code> package.  Many tests are in
+     <code>twisted</code> package.  Many older tests are in
      <code>twisted.test</code>.  Others can be found at places such as
-     <code>twisted.web.test</code> or <code>twisted.internet.test</code>.
+     <code>twisted.web.test</code> (for <code>twisted.web</code> tests)
+     or <code>twisted.internet.test</code> (for <code>twisted.internet</code>
+     tests). The latter arrangement, <code>twisted.somepackage.test</code>,
+     is preferred for new tests except when a test module already exists in
+     <code>twisted.test</code>.
+    </p>
+
+    <p>
      Parts of the Twisted test suite may serve as good examples of how to
      write tests for Twisted or for Twisted-based libraries (newer parts of
      the test suite are generally better examples than older parts - check
