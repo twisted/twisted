@@ -316,7 +316,6 @@ class Failure:
         if inspect.isclass(self.type) and issubclass(self.type, Exception):
             parentCs = getmro(self.type)
             self.parents = map(reflect.qual, parentCs)
-            self.parents.append(reflect.qual(self.type))
         else:
             self.parents = [self.type]
 
