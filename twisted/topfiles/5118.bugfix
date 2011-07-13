@@ -1,0 +1,1 @@
+twisted.protocols.tls, and SSL/TLS support in general, now do clean TLS close alerts when disconnecting.

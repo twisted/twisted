@@ -480,7 +480,15 @@ class TLSServerFactory(protocol.ServerFactory):
 
 
 class POP3TLSTestCase(unittest.TestCase):
-    def testStartTLS(self):
+    """
+    Tests for POP3Client's support for TLS connections.
+    """
+
+    def test_startTLS(self):
+        """
+        POP3Client.startTLS starts a TLS session over its existing TCP
+        connection.
+        """
         sf = TLSServerFactory()
         sf.protocol.output = [
             ['+OK'], # Server greeting
@@ -491,10 +499,16 @@ class POP3TLSTestCase(unittest.TestCase):
             ]
         sf.protocol.context = ServerTLSContext()
         port = reactor.listenTCP(0, sf, interface='127.0.0.1')
+        self.addCleanup(port.stopListening)
         H = port.getHost().host
         P = port.getHost().port
 
+        connLostDeferred = defer.Deferred()
         cp = SimpleClient(defer.Deferred(), ClientTLSContext())
+        def connectionLost(reason):
+            SimpleClient.connectionLost(cp, reason)
+            connLostDeferred.callback(None)
+        cp.connectionLost = connectionLost
         cf = protocol.ClientFactory()
         cf.protocol = lambda: cp
 
@@ -517,12 +531,7 @@ class POP3TLSTestCase(unittest.TestCase):
         def cleanup(result):
             log.msg("Asserted correct input; disconnecting client and shutting down server")
             conn.disconnect()
-
-            def cbShutdown(ignored):
-                log.msg("Shut down server")
-                return result
-
-            return defer.maybeDeferred(port.stopListening).addCallback(cbShutdown)
+            return connLostDeferred
 
         cp.deferred.addCallback(cbConnected)
         cp.deferred.addCallback(cbStartedTLS)
