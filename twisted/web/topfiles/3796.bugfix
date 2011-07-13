@@ -1,0 +1,1 @@
+twisted.web.client.getPage and .downloadPage now only fire their result Deferred after the underlying connection they use has been closed.

@@ -551,16 +551,28 @@ class WebClientTestCase(unittest.TestCase):
         self.assertEquals(factory.response_headers['content-length'][0], '10')
 
 
-    def testRedirect(self):
-        return client.getPage(self.getURL("redirect")).addCallback(self._cbRedirect)
+    def test_followRedirect(self):
+        """
+        By default, L{client.getPage} follows redirects and returns the content
+        of the target resource.
+        """
+        d = client.getPage(self.getURL("redirect"))
+        d.addCallback(self.assertEqual, "0123456789")
+        return d
 
-    def _cbRedirect(self, pageData):
-        self.assertEquals(pageData, "0123456789")
+
+    def test_noFollowRedirect(self):
+        """
+        If C{followRedirect} is passed a false value, L{client.getPage} does not
+        follow redirects and returns a L{Deferred} which fails with
+        L{error.PageRedirect} when it encounters one.
+        """
         d = self.assertFailure(
-            client.getPage(self.getURL("redirect"), followRedirect=0),
+            client.getPage(self.getURL("redirect"), followRedirect=False),
             error.PageRedirect)
         d.addCallback(self._cbCheckLocation)
         return d
+
 
     def _cbCheckLocation(self, exc):
         self.assertEquals(exc.location, "/file")
@@ -1571,7 +1583,7 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         following C{connectTCP} call.
         """
         agent = client.Agent(self.reactor, connectTimeout=5)
-        result = agent.request('GET', 'http://foo/')
+        agent.request('GET', 'http://foo/')
         timeout = self.reactor.tcpClients.pop()[3]
         self.assertEqual(5, timeout)
 
@@ -1582,7 +1594,7 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         following C{connectSSL} call.
         """
         agent = client.Agent(self.reactor, connectTimeout=5)
-        result = agent.request('GET', 'https://foo/')
+        agent.request('GET', 'https://foo/')
         timeout = self.reactor.sslClients.pop()[4]
         self.assertEqual(5, timeout)
 
@@ -1593,7 +1605,7 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         following C{connectTCP} call.
         """
         agent = client.Agent(self.reactor, bindAddress='192.168.0.1')
-        result = agent.request('GET', 'http://foo/')
+        agent.request('GET', 'http://foo/')
         address = self.reactor.tcpClients.pop()[4]
         self.assertEqual('192.168.0.1', address)
 
@@ -1604,7 +1616,7 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         following C{connectSSL} call.
         """
         agent = client.Agent(self.reactor, bindAddress='192.168.0.1')
-        result = agent.request('GET', 'https://foo/')
+        agent.request('GET', 'https://foo/')
         address = self.reactor.sslClients.pop()[5]
         self.assertEqual('192.168.0.1', address)
 

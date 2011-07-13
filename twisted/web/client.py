@@ -40,11 +40,20 @@ class HTTPPageGetter(http.HTTPClient):
     Typically used with L{HTTPClientFactory}.  Note that this class does not, by
     itself, do anything with the response.  If you want to download a resource
     into a file, use L{HTTPPageDownloader} instead.
+
+    @ivar _completelyDone: A boolean indicating whether any further requests are
+        necessary after this one completes in order to provide a result to
+        C{self.factory.deferred}.  If it is C{False}, then a redirect is going
+        to be followed.  Otherwise, this protocol's connection is the last one
+        before firing the result Deferred.  This is used to make sure the result
+        Deferred is only fired after the connection is cleaned up.
     """
 
     quietLoss = 0
     followRedirect = True
     failed = 0
+
+    _completelyDone = True
 
     _specialHeaders = set(('host', 'user-agent', 'cookie', 'content-length'))
 
@@ -134,6 +143,7 @@ class HTTPPageGetter(http.HTTPClient):
                 self.transport.loseConnection()
                 return
 
+            self._completelyDone = False
             self.factory.setURL(url)
 
             if self.factory.scheme == 'https':
@@ -164,10 +174,21 @@ class HTTPPageGetter(http.HTTPClient):
         self.factory.method = 'GET'
         self.handleStatus_301()
 
+
     def connectionLost(self, reason):
+        """
+        When the connection used to issue the HTTP request is closed, notify the
+        factory if we have not already, so it can produce a result.
+        """
         if not self.quietLoss:
             http.HTTPClient.connectionLost(self, reason)
             self.factory.noPage(reason)
+        if self._completelyDone:
+            # Only if we think we're completely done do we tell the factory that
+            # we're "disconnected".  This way when we're following redirects,
+            # only the last protocol used will fire the _disconnectedDeferred.
+            self.factory._disconnectedDeferred.callback(None)
+
 
     def handleResponse(self, response):
         if self.quietLoss:
@@ -268,6 +289,12 @@ class HTTPClientFactory(protocol.ClientFactory):
 
     @type _redirectCount: int
     @ivar _redirectCount: The current number of HTTP redirects encountered.
+
+    @ivar _disconnectedDeferred: A L{Deferred} which only fires after the last
+        connection associated with the request (redirects may cause multiple
+        connections to be required) has closed.  The result Deferred will only
+        fire after this Deferred, so that callers can be assured that there are
+        no more event sources in the reactor once they get the result.
     """
 
     protocol = HTTPPageGetter
@@ -305,8 +332,23 @@ class HTTPClientFactory(protocol.ClientFactory):
         self.setURL(url)
 
         self.waiting = 1
+        self._disconnectedDeferred = defer.Deferred()
         self.deferred = defer.Deferred()
+        # Make sure the first callback on the result Deferred pauses the
+        # callback chain until the request connection is closed.
+        self.deferred.addBoth(self._waitForDisconnect)
         self.response_headers = None
+
+
+    def _waitForDisconnect(self, passthrough):
+        """
+        Chain onto the _disconnectedDeferred, preserving C{passthrough}, so that
+        the result is only available after the associated connection has been
+        closed.
+        """
+        self._disconnectedDeferred.addCallback(lambda ignored: passthrough)
+        return self._disconnectedDeferred
+
 
     def __repr__(self):
         return "<%s: %s>" % (self.__class__.__name__, self.url)
@@ -358,9 +400,18 @@ class HTTPClientFactory(protocol.ClientFactory):
             self.deferred.errback(reason)
 
     def clientConnectionFailed(self, _, reason):
+        """
+        When a connection attempt fails, the request cannot be issued.  If no
+        result has yet been provided to the result Deferred, provide the
+        connection failure reason as an error result.
+        """
         if self.waiting:
             self.waiting = 0
+            # If the connection attempt failed, there is nothing more to
+            # disconnect, so just fire that Deferred now.
+            self._disconnectedDeferred.callback(None)
             self.deferred.errback(reason)
+
 
 
 class HTTPDownloader(HTTPClientFactory):
