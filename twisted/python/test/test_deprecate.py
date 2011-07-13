@@ -22,6 +22,7 @@ from twisted.python.versions import Version
 from twisted.python.filepath import FilePath
 
 from twisted.python.test import deprecatedattributes
+from twisted.python.test.modules_helpers import TwistedModulesTestCase
 
 
 
@@ -486,6 +487,14 @@ class DeprecatedAttributeTests(TestCase):
 
         self.assertIdentical(proxy, sys.modules[self._testModuleName])
 
+
+
+class ImportedModuleAttributeTests(TwistedModulesTestCase):
+    """
+    Tests for L{deprecatedModuleAttribute} which involve loading a module via
+    'import'.
+    """
+
     _packageInit = """\
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.versions import Version
@@ -494,29 +503,97 @@ deprecatedModuleAttribute(
     Version('Package', 1, 2, 3), 'message', __name__, 'module')
 """
 
+
+    def pathEntryTree(self, tree):
+        """
+        Create some files in a hierarchy, based on a dictionary describing those
+        files.  The resulting hierarchy will be placed onto sys.path for the
+        duration of the test.
+
+        @param tree: A dictionary representing a directory structure.  Keys are
+            strings, representing filenames, dictionary values represent
+            directories, string values represent file contents.
+
+        @return: another dictionary similar to the input, with file content
+            strings replaced with L{FilePath} objects pointing at where those
+            contents are now stored.
+        """
+        def makeSomeFiles(pathobj, dirdict):
+            pathdict = {}
+            for (key, value) in dirdict.items():
+                child = pathobj.child(key)
+                if isinstance(value, str):
+                    pathdict[key] = child
+                    child.setContent(value)
+                elif isinstance(value, dict):
+                    child.createDirectory()
+                    pathdict[key] = makeSomeFiles(child, value)
+                else:
+                    raise ValueError("only strings and dicts allowed as values")
+            return pathdict
+        base = FilePath(self.mktemp())
+        base.makedirs()
+
+        result = makeSomeFiles(base, tree)
+        self.replaceSysPath([base.path] + sys.path)
+        self.replaceSysModules(sys.modules.copy())
+        return result
+
+
+    def simpleModuleEntry(self):
+        """
+        Add a sample module and package to the path, returning a L{FilePath}
+        pointing at the module which will be loadable as C{package.module}.
+        """
+        paths = self.pathEntryTree(
+            {"package": {"__init__.py": self._packageInit,
+                         "module.py": ""}})
+        return paths['package']['module.py']
+
+
+    def checkOneWarning(self, modulePath):
+        """
+        Verification logic for L{test_deprecatedModule}.
+        """
+        # import package.module
+        from package import module
+        self.assertEquals(module.__file__, modulePath.path)
+        emitted = self.flushWarnings([self.checkOneWarning])
+        self.assertEquals(len(emitted), 1)
+        self.assertEquals(emitted[0]['message'],
+                          'package.module was deprecated in Package 1.2.3: '
+                          'message')
+        self.assertEquals(emitted[0]['category'], DeprecationWarning)
+
+
     def test_deprecatedModule(self):
         """
         If L{deprecatedModuleAttribute} is used to deprecate a module attribute
         of a package, only one deprecation warning is emitted when the
         deprecated module is imported.
         """
-        base = FilePath(self.mktemp())
-        base.makedirs()
-        package = base.child('package')
-        package.makedirs()
-        package.child('__init__.py').setContent(self._packageInit)
-        module = package.child('module.py').setContent('')
+        self.checkOneWarning(self.simpleModuleEntry())
 
-        sys.path.insert(0, base.path)
-        self.addCleanup(sys.path.remove, base.path)
 
-        # import package.module
-        from package import module
-        # make sure it's the right module.
-        self.assertEquals(module.__file__.rsplit(".", 1)[0],
-                          package.child('module.py').path.rsplit(".", 1)[0])
-        warningsShown = self.flushWarnings([self.test_deprecatedModule])
-        self.assertEquals(len(warningsShown), 1)
+    def test_deprecatedModuleMultipleTimes(self):
+        """
+        If L{deprecatedModuleAttribute} is used to deprecate a module attribute
+        of a package, only one deprecation warning is emitted when the
+        deprecated module is subsequently imported.
+        """
+        mp = self.simpleModuleEntry()
+        # The first time, the code needs to be loaded.
+        self.checkOneWarning(mp)
+        # The second time, things are slightly different; the object's already
+        # in the namespace.
+        self.checkOneWarning(mp)
+        # The third and fourth times, things things should all be exactly the
+        # same, but this is a sanity check to make sure the implementation isn't
+        # special casing the second time.  Also, putting these cases into a loop
+        # means that the stack will be identical, to make sure that the
+        # implementation doesn't rely too much on stack-crawling.
+        for x in range(2):
+            self.checkOneWarning(mp)
 
 
 

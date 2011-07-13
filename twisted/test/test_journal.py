@@ -6,15 +6,16 @@
 Testing for twisted.persisted.journal.
 """
 
+import shutil, os.path, sys
+
 from twisted.trial import unittest
-from twisted.test.test_modules import PySpaceTestCase
+
 from twisted.persisted.journal.base import ICommand, MemoryJournal, serviceCommand, ServiceWrapperCommand, command, Wrappable
 from twisted.persisted.journal.picklelog import DirDBMLog
 from twisted.python import deprecate, versions
 from zope.interface import implements
 
-import shutil, os.path, sys
-
+from twisted.python.test.modules_helpers import TwistedModulesTestCase
 
 
 class AddTime:
@@ -195,7 +196,7 @@ class JournalTestCase(unittest.TestCase):
 
 
 
-class JournalDeprecationTest(PySpaceTestCase):
+class JournalDeprecationTest(TwistedModulesTestCase):
     """
     Tests for twisted.persisted.journal being deprecated.
     """
@@ -225,7 +226,6 @@ class JournalDeprecationTest(PySpaceTestCase):
                     del(listOfStuff[j])
                 else:
                     j += 1
-            duplicates = []
 
 
     def test_deprecated(self):

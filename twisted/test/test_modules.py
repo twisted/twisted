@@ -18,62 +18,12 @@ from twisted.python import modules
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import namedAny
 
+from twisted.python.test.modules_helpers import TwistedModulesTestCase
 from twisted.test.test_paths import zipit
 
 
 
-class PySpaceTestCase(TestCase):
-
-    def findByIteration(self, modname, where=modules, importPackages=False):
-        """
-        You don't ever actually want to do this, so it's not in the public API, but
-        sometimes we want to compare the result of an iterative call with a
-        lookup call and make sure they're the same for test purposes.
-        """
-        for modinfo in where.walkModules(importPackages=importPackages):
-            if modinfo.name == modname:
-                return modinfo
-        self.fail("Unable to find module %r through iteration." % (modname,))
-
-
-    def replaceSysPath(self, sysPath):
-        """
-        Replace sys.path, for the duration of the test, with the given value.
-        """
-        originalSysPath = sys.path[:]
-        def cleanUpSysPath():
-            sys.path[:] = originalSysPath
-        self.addCleanup(cleanUpSysPath)
-        sys.path[:] = sysPath
-
-
-    def replaceSysModules(self, sysModules):
-        """
-        Replace sys.modules, for the duration of the test, with the given value.
-        """
-        originalSysModules = sys.modules.copy()
-        def cleanUpSysModules():
-            sys.modules.clear()
-            sys.modules.update(originalSysModules)
-        self.addCleanup(cleanUpSysModules)
-        sys.modules.clear()
-        sys.modules.update(sysModules)
-
-
-    def pathEntryWithOnePackage(self, pkgname="test_package"):
-        """
-        Generate a L{FilePath} with one package, named C{pkgname}, on it, and
-        return the L{FilePath} of the path entry.
-        """
-        entry = FilePath(self.mktemp())
-        pkg = entry.child("test_package")
-        pkg.makedirs()
-        pkg.child("__init__.py").setContent("")
-        return entry
-
-
-
-class BasicTests(PySpaceTestCase):
+class BasicTests(TwistedModulesTestCase):
 
     def test_namespacedPackages(self):
         """
@@ -83,7 +33,7 @@ class BasicTests(PySpaceTestCase):
         # Force pkgutil to be loaded already, since the probe package being
         # created depends on it, and the replaceSysPath call below will make
         # pretty much everything unimportable.
-        import pkgutil
+        __import__('pkgutil')
 
         namespaceBoilerplate = (
             'import pkgutil; '
@@ -336,19 +286,18 @@ class BasicTests(PySpaceTestCase):
         subpath.createDirectory()
         subpath.child("__init__.py").setContent('del __path__\n')
         sys.path.append(mypath.path)
-        import abcd
+        __import__("abcd")
         try:
             l = list(pp.walkModules())
             self.assertEquals(len(l), 1)
             self.assertEquals(l[0].name, 'abcd')
         finally:
-            del abcd
             del sys.modules['abcd']
             sys.path.remove(mypath.path)
 
 
 
-class PathModificationTest(PySpaceTestCase):
+class PathModificationTest(TwistedModulesTestCase):
     """
     These tests share setup/cleanup behavior of creating a dummy package and
     stuffing some code in it.

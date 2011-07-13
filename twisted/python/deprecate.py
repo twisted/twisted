@@ -291,6 +291,29 @@ def _appendToDocstring(thingWithDoc, textToAppend):
 
 
 
+class _InternalState(object):
+    """
+    An L{_InternalState} is a helper object for a L{_ModuleProxy}, so that it
+    can easily access its own attributes, bypassing its logic for delegating to
+    another object that it's proxying for.
+
+    @ivar proxy: a L{ModuleProxy}
+    """
+    def __init__(self, proxy):
+        object.__setattr__(self, 'proxy', proxy)
+
+
+    def __getattribute__(self, name):
+        return object.__getattribute__(object.__getattribute__(self, 'proxy'),
+                                       name)
+
+
+    def __setattr__(self, name, value):
+        return object.__setattr__(object.__getattribute__(self, 'proxy'),
+                                  name, value)
+
+
+
 class _ModuleProxy(object):
     """
     Python module wrapper to hook module-level attribute access.
@@ -300,17 +323,29 @@ class _ModuleProxy(object):
     there then access falls through to L{_ModuleProxy._module}, the wrapped
     module object.
 
-    @type _module: C{module}
     @ivar _module: Module on which to hook attribute access.
+    @type _module: C{module}
 
-    @type _deprecatedAttributes: C{dict} mapping C{str} to
-        L{_DeprecatedAttribute}
     @ivar _deprecatedAttributes: Mapping of attribute names to objects that
         retrieve the module attribute's original value.
+    @type _deprecatedAttributes: C{dict} mapping C{str} to
+        L{_DeprecatedAttribute}
+
+    @ivar _lastWasPath: Heuristic guess as to whether warnings about this
+        package should be ignored for the next call.  If the last attribute
+        access of this module was a C{getattr} of C{__path__}, we will assume
+        that it was the import system doing it and we won't emit a warning for
+        the next access, even if it is to a deprecated attribute.  The CPython
+        import system always tries to access C{__path__}, then the attribute
+        itself, then the attribute itself again, in both successful and failed
+        cases.
+    @type _lastWasPath: C{bool}
     """
     def __init__(self, module):
-        object.__setattr__(self, '_module', module)
-        object.__setattr__(self, '_deprecatedAttributes', {})
+        state = _InternalState(self)
+        state._module = module
+        state._deprecatedAttributes = {}
+        state._lastWasPath = False
 
 
     def __repr__(self):
@@ -318,35 +353,46 @@ class _ModuleProxy(object):
         Get a string containing the type of the module proxy and a
         representation of the wrapped module object.
         """
-        _module = object.__getattribute__(self, '_module')
-        return '<%s module=%r>' % (
-            type(self).__name__,
-            _module)
+        state = _InternalState(self)
+        return '<%s module=%r>' % (type(self).__name__, state._module)
 
 
     def __setattr__(self, name, value):
         """
         Set an attribute on the wrapped module object.
         """
-        _module = object.__getattribute__(self, '_module')
-        setattr(_module, name, value)
+        state = _InternalState(self)
+        state._lastWasPath = False
+        setattr(state._module, name, value)
 
 
     def __getattribute__(self, name):
         """
-        Get an attribute on the wrapped module object.
+        Get an attribute from the module object, possibly emitting a warning.
 
-        If the specified name has been deprecated then a warning is issued.
+        If the specified name has been deprecated, then a warning is issued.
+        (Unless certain obscure conditions are met; see
+        L{_ModuleProxy._lastWasPath} for more information about what might quash
+        such a warning.)
         """
-        _module = object.__getattribute__(self, '_module')
-        _deprecatedAttributes = object.__getattribute__(
-            self, '_deprecatedAttributes')
-
-        getter = _deprecatedAttributes.get(name)
-        if getter is not None:
-            value = getter.get()
+        state = _InternalState(self)
+        if state._lastWasPath:
+            deprecatedAttribute = None
         else:
-            value = getattr(_module, name)
+            deprecatedAttribute = state._deprecatedAttributes.get(name)
+
+        if deprecatedAttribute is not None:
+            # If we have a _DeprecatedAttribute object from the earlier lookup,
+            # allow it to issue the warning.
+            value = deprecatedAttribute.get()
+        else:
+            # Otherwise, just retrieve the underlying value directly; it's not
+            # deprecated, there's no warning to issue.
+            value = getattr(state._module, name)
+        if name == '__path__':
+            state._lastWasPath = True
+        else:
+            state._lastWasPath = False
         return value
 
 
