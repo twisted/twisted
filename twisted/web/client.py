@@ -8,6 +8,7 @@ HTTP client.
 
 import os, types
 from urlparse import urlunparse
+from urllib import splithost, splittype
 import zlib
 
 from zope.interface import implements
@@ -993,17 +994,27 @@ class _FakeUrllib2Request(object):
     """
     A fake C{urllib2.Request} object for C{cookielib} to work with.
 
+    @see: U{http://docs.python.org/library/urllib2.html#request-objects}
+
     @type uri: C{str}
     @ivar uri: Request URI.
 
     @type headers: L{twisted.web.http_headers.Headers}
     @ivar headers: Request headers.
 
+    @type type: C{str}
+    @ivar type: The scheme of the URI.
+
+    @type host: C{str}
+    @ivar host: The host[:port] of the URI.
+
     @since: 11.1
     """
     def __init__(self, uri):
         self.uri = uri
         self.headers = Headers()
+        self.type, rest = splittype(self.uri)
+        self.host, rest = splithost(rest)
 
 
     def has_header(self, header):
@@ -1023,6 +1034,14 @@ class _FakeUrllib2Request(object):
         if headers is not None:
             return headers[0]
         return None
+
+
+    def get_host(self):
+        return self.host
+
+
+    def get_type(self):
+        return self.type
 
 
     def is_unverifiable(self):

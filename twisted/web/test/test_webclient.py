@@ -1774,6 +1774,82 @@ class CookieAgentTests(unittest.TestCase, CookieTestsMixin,
         self.assertEqual(req.headers.getRawHeaders('cookie'), [cookie])
 
 
+    def test_secureCookie(self):
+        """
+        L{CookieAgent} is able to handle secure cookies, ie cookies which
+        should only be handled over https.
+        """
+        uri = 'https://example.com:1234/foo?bar'
+        cookie = 'foo=1;secure'
+
+        cookieJar = cookielib.CookieJar()
+        self.addCookies(cookieJar, uri, [cookie])
+        self.assertEqual(len(list(cookieJar)), 1)
+
+        agent = client.Agent(self.reactor)
+        agent._connect = self._dummyConnect
+        cookieAgent = client.CookieAgent(agent, cookieJar)
+        cookieAgent.request('GET', uri)
+
+        req, res = self.protocol.requests.pop()
+        self.assertEqual(req.headers.getRawHeaders('cookie'), ['foo=1'])
+
+
+    def test_secureCookieOnInsecureConnection(self):
+        """
+        If a cookie is setup as secure, it won't be sent with the request if
+        it's not over HTTPS.
+        """
+        uri = 'http://example.com/foo?bar'
+        cookie = 'foo=1;secure'
+
+        cookieJar = cookielib.CookieJar()
+        self.addCookies(cookieJar, uri, [cookie])
+        self.assertEqual(len(list(cookieJar)), 1)
+
+        agent = client.Agent(self.reactor)
+        agent._connect = self._dummyConnect
+        cookieAgent = client.CookieAgent(agent, cookieJar)
+        cookieAgent.request('GET', uri)
+
+        req, res = self.protocol.requests.pop()
+        self.assertIdentical(None, req.headers.getRawHeaders('cookie'))
+
+
+    def test_portCookie(self):
+        """
+        L{CookieAgent} supports cookies which enforces the port number they
+        need to be transferred upon.
+        """
+        uri = 'https://example.com:1234/foo?bar'
+        cookie = 'foo=1;port=1234'
+
+        cookieJar = cookielib.CookieJar()
+        self.addCookies(cookieJar, uri, [cookie])
+        self.assertEqual(len(list(cookieJar)), 1)
+
+        agent = client.Agent(self.reactor)
+        agent._connect = self._dummyConnect
+        cookieAgent = client.CookieAgent(agent, cookieJar)
+        cookieAgent.request('GET', uri)
+
+        req, res = self.protocol.requests.pop()
+        self.assertEqual(req.headers.getRawHeaders('cookie'), ['foo=1'])
+
+
+    def test_portCookieOnWrongPort(self):
+        """
+        When creating a cookie with a port directive, it won't be added to the
+        L{cookie.CookieJar} if the URI is on a different port.
+        """
+        uri = 'https://example.com:4567/foo?bar'
+        cookie = 'foo=1;port=1234'
+
+        cookieJar = cookielib.CookieJar()
+        self.addCookies(cookieJar, uri, [cookie])
+        self.assertEqual(len(list(cookieJar)), 0)
+
+
 
 class Decoder1(proxyForInterface(IResponse)):
     """
