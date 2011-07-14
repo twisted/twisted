@@ -53,13 +53,13 @@ class AsyncXMLRPCTests(unittest.TestCase):
         response to the request is the result of that L{defer.Deferred}.
         """
         self.resource.render(self.request)
-        self.assertEquals(self.request.written, [])
+        self.assertEqual(self.request.written, [])
 
         self.result.callback("result")
 
         resp = xmlrpclib.loads("".join(self.request.written))
-        self.assertEquals(resp, (('result',), None))
-        self.assertEquals(self.request.finished, 1)
+        self.assertEqual(resp, (('result',), None))
+        self.assertEqual(self.request.finished, 1)
 
 
     def test_interruptedDeferredResponse(self):
@@ -73,8 +73,8 @@ class AsyncXMLRPCTests(unittest.TestCase):
         self.request.processingFailed(
             failure.Failure(ConnectionDone("Simulated")))
         self.result.callback("result")
-        self.assertEquals(self.request.written, [])
-        self.assertEquals(self.request.finished, 0)
+        self.assertEqual(self.request.written, [])
+        self.assertEqual(self.request.finished, 0)
 
 
 
@@ -300,7 +300,7 @@ class XMLRPCTestCase(unittest.TestCase):
         dl = []
         for meth, args, outp in inputOutput:
             d = self.proxy().callRemote(meth, *args)
-            d.addCallback(self.assertEquals, outp)
+            d.addCallback(self.assertEqual, outp)
             dl.append(d)
         return defer.DeferredList(dl, fireOnOneErrback=True)
 
@@ -318,12 +318,12 @@ class XMLRPCTestCase(unittest.TestCase):
             d = self.proxy().callRemote(methodName)
             d = self.assertFailure(d, xmlrpc.Fault)
             d.addCallback(lambda exc, code=code:
-                self.assertEquals(exc.faultCode, code))
+                self.assertEqual(exc.faultCode, code))
             dl.append(d)
         d = defer.DeferredList(dl, fireOnOneErrback=True)
         def cb(ign):
             for factory in self.factories:
-                self.assertEquals(factory.headers['content-type'],
+                self.assertEqual(factory.headers['content-type'],
                                   'text/xml')
             self.flushLoggedErrors(TestRuntimeError, TestValueError)
         d.addCallback(cb)
@@ -341,7 +341,7 @@ class XMLRPCTestCase(unittest.TestCase):
         d = self.proxy(factory).callRemote('add', 2, 3)
         self.assertNotEquals(factory.f.connector.state, "disconnected")
         d.cancel()
-        self.assertEquals(factory.f.connector.state, "disconnected")
+        self.assertEqual(factory.f.connector.state, "disconnected")
         d = self.assertFailure(d, defer.CancelledError)
         return d
 
@@ -353,7 +353,7 @@ class XMLRPCTestCase(unittest.TestCase):
         d = client.getPage("http://127.0.0.1:%d/" % (self.port,))
         d = self.assertFailure(d, error.Error)
         d.addCallback(
-            lambda exc: self.assertEquals(int(exc.args[0]), http.NOT_ALLOWED))
+            lambda exc: self.assertEqual(int(exc.args[0]), http.NOT_ALLOWED))
         return d
 
     def test_errorXMLContent(self):
@@ -428,7 +428,7 @@ class XMLRPCTestCase(unittest.TestCase):
         proxy = xmlrpc.Proxy("http://127.0.0.1:69", connectTimeout=2.0,
                              reactor=reactor)
         proxy.callRemote("someMethod")
-        self.assertEquals(reactor.tcpClients[0][3], 2.0)
+        self.assertEqual(reactor.tcpClients[0][3], 2.0)
 
 
     def test_sslTimeout(self):
@@ -441,7 +441,7 @@ class XMLRPCTestCase(unittest.TestCase):
         proxy = xmlrpc.Proxy("https://127.0.0.1:69", connectTimeout=3.0,
                              reactor=reactor)
         proxy.callRemote("someMethod")
-        self.assertEquals(reactor.sslClients[0][4], 3.0)
+        self.assertEqual(reactor.sslClients[0][4], 3.0)
     test_sslTimeout.skip = sslSkip
 
 
@@ -552,7 +552,7 @@ class SerializationConfigMixin:
         C{self.value} can be round-tripped over an XMLRPC method call/response.
         """
         d = self.proxy.callRemote('defer', self.value)
-        d.addCallback(self.assertEquals, self.value)
+        d.addCallback(self.assertEqual, self.value)
         return d
 
 
@@ -562,7 +562,7 @@ class SerializationConfigMixin:
         XMLRPC method call/response.
         """
         d = self.proxy.callRemote('defer', {'a': self.value})
-        d.addCallback(self.assertEquals, {'a': self.value})
+        d.addCallback(self.assertEqual, {'a': self.value})
         return d
 
 
@@ -647,7 +647,7 @@ class XMLRPCTestAuthenticated(XMLRPCTestCase):
         p = xmlrpc.Proxy("http://%s:%s@127.0.0.1:%d/" % (
             self.user, self.password, self.port))
         d = p.callRemote("authinfo")
-        d.addCallback(self.assertEquals, [self.user, self.password])
+        d.addCallback(self.assertEqual, [self.user, self.password])
         return d
 
 
@@ -655,7 +655,7 @@ class XMLRPCTestAuthenticated(XMLRPCTestCase):
         p = xmlrpc.Proxy("http://127.0.0.1:%d/" % (
             self.port,), self.user, self.password)
         d = p.callRemote("authinfo")
-        d.addCallback(self.assertEquals, [self.user, self.password])
+        d.addCallback(self.assertEqual, [self.user, self.password])
         return d
 
 
@@ -663,7 +663,7 @@ class XMLRPCTestAuthenticated(XMLRPCTestCase):
         p = xmlrpc.Proxy("http://wrong:info@127.0.0.1:%d/" % (
                 self.port,), self.user, self.password)
         d = p.callRemote("authinfo")
-        d.addCallback(self.assertEquals, [self.user, self.password])
+        d.addCallback(self.assertEqual, [self.user, self.password])
         return d
 
 
@@ -701,7 +701,7 @@ class XMLRPCTestIntrospection(XMLRPCTestCase):
         dl = []
         for meth, expected in inputOutputs:
             d = self.proxy().callRemote("system.methodHelp", meth)
-            d.addCallback(self.assertEquals, expected)
+            d.addCallback(self.assertEqual, expected)
             dl.append(d)
         return defer.DeferredList(dl, fireOnOneErrback=True)
 
@@ -715,7 +715,7 @@ class XMLRPCTestIntrospection(XMLRPCTestCase):
         dl = []
         for meth, expected in inputOutputs:
             d = self.proxy().callRemote("system.methodSignature", meth)
-            d.addCallback(self.assertEquals, expected)
+            d.addCallback(self.assertEqual, expected)
             dl.append(d)
         return defer.DeferredList(dl, fireOnOneErrback=True)
 
@@ -843,7 +843,7 @@ class XMLRPCTestWithRequest(unittest.TestCase):
         request.content = StringIO(xmlrpclib.dumps(("foo",), 'withRequest'))
         def valid(n, request):
             data = xmlrpclib.loads(request.written[0])
-            self.assertEquals(data, (('POST foo',), None))
+            self.assertEqual(data, (('POST foo',), None))
         d = request.notifyFinish().addCallback(valid, request)
         self.resource.render_POST(request)
         return d

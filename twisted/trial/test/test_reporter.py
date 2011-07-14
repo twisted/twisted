@@ -328,7 +328,7 @@ class PyunitTestNames(unittest.TestCase):
         result = reporter.VerboseTextReporter(self.stream)
         result.startTest(self.test)
         output = self.stream.getvalue()
-        self.failUnlessEqual(
+        self.assertEqual(
             output, 'twisted.trial.test.sample.PyunitTest.test_foo ... ')
 
     def test_treeReporter(self):
@@ -336,12 +336,12 @@ class PyunitTestNames(unittest.TestCase):
         result.startTest(self.test)
         output = self.stream.getvalue()
         output = output.splitlines()[-1].strip()
-        self.failUnlessEqual(output, result.getDescription(self.test) + ' ...')
+        self.assertEqual(output, result.getDescription(self.test) + ' ...')
 
     def test_getDescription(self):
         result = reporter.TreeReporter(self.stream)
         output = result.getDescription(self.test)
-        self.failUnlessEqual(output, 'test_foo')
+        self.assertEqual(output, 'test_foo')
 
 
     def test_minimalReporter(self):
@@ -360,7 +360,7 @@ class PyunitTestNames(unittest.TestCase):
         self.test.run(result)
         result._printSummary()
         output = self.stream.getvalue().strip().split(' ')
-        self.failUnlessEqual(output[1:], ['1', '1', '0', '0', '0'])
+        self.assertEqual(output[1:], ['1', '1', '0', '0', '0'])
 
 
     def test_minimalReporterTime(self):
@@ -375,7 +375,7 @@ class PyunitTestNames(unittest.TestCase):
         result._printSummary()
         output = self.stream.getvalue().strip().split(' ')
         timer = output[0]
-        self.assertEquals(timer, "0.7")
+        self.assertEqual(timer, "0.7")
 
 
     def test_emptyMinimalReporter(self):
@@ -386,7 +386,7 @@ class PyunitTestNames(unittest.TestCase):
         result = reporter.MinimalReporter(self.stream)
         result._printSummary()
         output = self.stream.getvalue().strip().split(' ')
-        self.failUnlessEqual(output, ['0', '0', '0', '0', '0', '0'])
+        self.assertEqual(output, ['0', '0', '0', '0', '0', '0'])
 
 
 
@@ -438,7 +438,7 @@ class TestDirtyReactor(unittest.TestCase):
         self.assertWarns(UserWarning, self.dirtyError.getErrorMessage(),
                          reporter.__file__,
                          result.addError, self.test, self.dirtyError)
-        self.assertEquals(result._originalReporter.errors, [])
+        self.assertEqual(result._originalReporter.errors, [])
 
 
     def test_dealsWithThreeTuples(self):
@@ -454,9 +454,9 @@ class TestDirtyReactor(unittest.TestCase):
         result.addError(self.test,
                         (self.dirtyError.type, self.dirtyError.value, None))
         self.assertEqual(len(result._originalReporter.errors), 1)
-        self.assertEquals(result._originalReporter.errors[0][1].type,
+        self.assertEqual(result._originalReporter.errors[0][1].type,
                           self.dirtyError.type)
-        self.assertEquals(result._originalReporter.errors[0][1].value,
+        self.assertEqual(result._originalReporter.errors[0][1].value,
                           self.dirtyError.value)
 
 
@@ -471,14 +471,14 @@ class TrialTestNames(unittest.TestCase):
         result = reporter.VerboseTextReporter(self.stream)
         result.startTest(self.test)
         output = self.stream.getvalue()
-        self.failUnlessEqual(output, self.test.id() + ' ... ')
+        self.assertEqual(output, self.test.id() + ' ... ')
 
     def test_treeReporter(self):
         result = reporter.TreeReporter(self.stream)
         result.startTest(self.test)
         output = self.stream.getvalue()
         output = output.splitlines()[-1].strip()
-        self.failUnlessEqual(output, result.getDescription(self.test) + ' ...')
+        self.assertEqual(output, result.getDescription(self.test) + ' ...')
 
     def test_treeReporterWithDocstrings(self):
         """A docstring"""
@@ -489,7 +489,7 @@ class TrialTestNames(unittest.TestCase):
     def test_getDescription(self):
         result = reporter.TreeReporter(self.stream)
         output = result.getDescription(self.test)
-        self.failUnlessEqual(output, "test_foo")
+        self.assertEqual(output, "test_foo")
 
 
 class TestSkip(unittest.TestCase):
@@ -513,7 +513,7 @@ class TestSkip(unittest.TestCase):
 
     def test_success(self):
         self.result.addSkip(self.test, 'some reason')
-        self.failUnlessEqual(True, self.result.wasSuccessful())
+        self.assertEqual(True, self.result.wasSuccessful())
 
 
     def test_summary(self):
@@ -526,7 +526,7 @@ class TestSkip(unittest.TestCase):
         output = self.stream.getvalue().splitlines()[-1]
         prefix = 'PASSED '
         self.failUnless(output.startswith(prefix))
-        self.failUnlessEqual(output[len(prefix):].strip(), '(skips=1)')
+        self.assertEqual(output[len(prefix):].strip(), '(skips=1)')
 
 
     def test_basicErrors(self):
@@ -537,7 +537,7 @@ class TestSkip(unittest.TestCase):
         self.result.addSkip(self.test, 'some reason')
         self.result.done()
         output = self.stream.getvalue().splitlines()[3]
-        self.failUnlessEqual(output.strip(), 'some reason')
+        self.assertEqual(output.strip(), 'some reason')
 
 
     def test_booleanSkip(self):
@@ -549,7 +549,7 @@ class TestSkip(unittest.TestCase):
         self.result.addSkip(self.test, True)
         self.result.done()
         output = self.stream.getvalue().splitlines()[3]
-        self.failUnlessEqual(output, 'True')
+        self.assertEqual(output, 'True')
 
 
     def test_exceptionSkip(self):
@@ -564,7 +564,7 @@ class TestSkip(unittest.TestCase):
         self.result.addSkip(self.test, error)
         self.result.done()
         output = '\n'.join(self.stream.getvalue().splitlines()[3:5]).strip()
-        self.failUnlessEqual(output, str(e))
+        self.assertEqual(output, str(e))
 
 
 class UncleanWarningSkipTest(TestSkip):
@@ -791,8 +791,8 @@ class TestTreeReporter(unittest.TestCase):
         """
         self.result.addSuccess(self.test)
         self.result.done()
-        self.assertEquals(self.log[1], (self.result.SUCCESS, 'PASSED'))
-        self.assertEquals(
+        self.assertEqual(self.log[1], (self.result.SUCCESS, 'PASSED'))
+        self.assertEqual(
             self.stream.getvalue().splitlines()[-1].strip(), "(successes=1)")
 
 
@@ -806,8 +806,8 @@ class TestTreeReporter(unittest.TestCase):
         except RuntimeError:
             self.result.addError(self, sys.exc_info())
         self.result.done()
-        self.assertEquals(self.log[1], (self.result.FAILURE, 'FAILED'))
-        self.assertEquals(
+        self.assertEqual(self.log[1], (self.result.FAILURE, 'FAILED'))
+        self.assertEqual(
             self.stream.getvalue().splitlines()[-1].strip(), "(errors=1)")
 
 
@@ -846,8 +846,8 @@ class TestTreeReporter(unittest.TestCase):
         self.result.done()
 	grouped = self.result._groupResults(
 	    self.result.errors, self.result._formatFailureTraceback)
-        self.assertEquals(grouped[0][1], [self, self.test])
-        self.assertEquals(grouped[1][1], [extra])
+        self.assertEqual(grouped[0][1], [self, self.test])
+        self.assertEqual(grouped[1][1], [extra])
 
 
     def test_printResults(self):
@@ -862,7 +862,7 @@ class TestTreeReporter(unittest.TestCase):
         third = sample.PyunitTest('test_foo')
         self.result._printResults(
             'FOO', [(first, 1), (second, 1), (third, 2)], formatter)
-        self.assertEquals(
+        self.assertEqual(
             self.stream.getvalue(),
             "%(double separator)s\n"
             "FOO\n"
@@ -908,7 +908,7 @@ class TestReporterInterface(unittest.TestCase):
         """
         shouldStop is False to begin with.
         """
-        self.assertEquals(False, self.result.shouldStop)
+        self.assertEqual(False, self.result.shouldStop)
 
 
     def test_shouldStopTrueAfterStop(self):
@@ -916,14 +916,14 @@ class TestReporterInterface(unittest.TestCase):
         shouldStop becomes True soon as someone calls stop().
         """
         self.result.stop()
-        self.assertEquals(True, self.result.shouldStop)
+        self.assertEqual(True, self.result.shouldStop)
 
 
     def test_wasSuccessfulInitiallyTrue(self):
         """
         wasSuccessful() is True when there have been no results reported.
         """
-        self.assertEquals(True, self.result.wasSuccessful())
+        self.assertEqual(True, self.result.wasSuccessful())
 
 
     def test_wasSuccessfulTrueAfterSuccesses(self):
@@ -932,7 +932,7 @@ class TestReporterInterface(unittest.TestCase):
         otherwise.
         """
         self.result.addSuccess(self.test)
-        self.assertEquals(True, self.result.wasSuccessful())
+        self.assertEqual(True, self.result.wasSuccessful())
 
 
     def test_wasSuccessfulFalseAfterErrors(self):
@@ -943,7 +943,7 @@ class TestReporterInterface(unittest.TestCase):
             1 / 0
         except ZeroDivisionError:
             self.result.addError(self.test, sys.exc_info())
-        self.assertEquals(False, self.result.wasSuccessful())
+        self.assertEqual(False, self.result.wasSuccessful())
 
 
     def test_wasSuccessfulFalseAfterFailures(self):
@@ -954,7 +954,7 @@ class TestReporterInterface(unittest.TestCase):
             self.fail("foo")
         except self.failureException:
             self.result.addFailure(self.test, sys.exc_info())
-        self.assertEquals(False, self.result.wasSuccessful())
+        self.assertEqual(False, self.result.wasSuccessful())
 
 
 
@@ -1198,8 +1198,8 @@ class TestSubunitReporter(TestReporterInterface):
         subunitReturn = getattr(subunitClient, methodName)(*args, **kwargs)
         subunitOutput = stream.getvalue()
         reporterReturn = getattr(self.result, methodName)(*args, **kwargs)
-        self.assertEquals(subunitReturn, reporterReturn)
-        self.assertEquals(subunitOutput, self.stream.getvalue())
+        self.assertEqual(subunitReturn, reporterReturn)
+        self.assertEqual(subunitOutput, self.stream.getvalue())
 
 
     def removeMethod(self, klass, methodName):
@@ -1242,7 +1242,7 @@ class TestSubunitReporter(TestReporterInterface):
         self.stream.truncate(0)
         self.result.addSuccess(self.test)
         successOutput = self.stream.getvalue()
-        self.assertEquals(successOutput, expectedFailureOutput)
+        self.assertEqual(successOutput, expectedFailureOutput)
 
 
     def test_subunitWithoutAddSkipInstalled(self):
@@ -1256,7 +1256,7 @@ class TestSubunitReporter(TestReporterInterface):
         self.stream.truncate(0)
         self.result.addSuccess(self.test)
         successOutput = self.stream.getvalue()
-        self.assertEquals(successOutput, skipOutput)
+        self.assertEqual(successOutput, skipOutput)
 
 
     def test_addExpectedFailurePassedThrough(self):
@@ -1277,7 +1277,7 @@ class TestSubunitReporter(TestReporterInterface):
         except ZeroDivisionError:
             exc_info = sys.exc_info()
             self.result.addExpectedFailure(self.test, exc_info, 'todo')
-        self.assertEquals(addExpectedFailureCalls, [(self.test, exc_info)])
+        self.assertEqual(addExpectedFailureCalls, [(self.test, exc_info)])
 
 
     def test_addSkipSendsSubunitAddSkip(self):
@@ -1294,7 +1294,7 @@ class TestSubunitReporter(TestReporterInterface):
         # subunit has addSkip.
         self.result._subunit.addSkip = addSkip
         self.result.addSkip(self.test, 'reason')
-        self.assertEquals(addSkipCalls, [(self.test, 'reason')])
+        self.assertEqual(addSkipCalls, [(self.test, 'reason')])
 
 
     def test_doneDoesNothing(self):
@@ -1303,7 +1303,7 @@ class TestSubunitReporter(TestReporterInterface):
         of results is everything. Thus, done() does nothing.
         """
         self.result.done()
-        self.assertEquals('', self.stream.getvalue())
+        self.assertEqual('', self.stream.getvalue())
 
 
     def test_startTestSendsSubunitStartTest(self):
@@ -1359,7 +1359,7 @@ class TestSubunitReporter(TestReporterInterface):
         subunitClient.addSuccess(self.test)
         subunitOutput = stream.getvalue()
         self.result.addUnexpectedSuccess(self.test, 'todo')
-        self.assertEquals(subunitOutput, self.stream.getvalue())
+        self.assertEqual(subunitOutput, self.stream.getvalue())
 
 
     def test_loadTimeErrors(self):
@@ -1388,7 +1388,7 @@ class TestSubunitReporterNotInstalled(unittest.TestCase):
         stream = StringIO.StringIO()
         self.patch(reporter, 'TestProtocolClient', None)
         e = self.assertRaises(Exception, reporter.SubunitReporter, stream)
-        self.assertEquals("Subunit not available", str(e))
+        self.assertEqual("Subunit not available", str(e))
 
 
 
@@ -1595,7 +1595,7 @@ class AnsiColorizerTests(unittest.TestCase):
         self.assertTrue(reporter._AnsiColorizer.supported(FakeStream()))
         self.assertTrue(reporter._AnsiColorizer.supported(FakeStream()))
 
-        self.assertEquals(sys.modules['curses'].setUp, 1)
+        self.assertEqual(sys.modules['curses'].setUp, 1)
 
 
     def test_supportedTigetNumWrongError(self):
@@ -1646,4 +1646,4 @@ class AnsiColorizerTests(unittest.TestCase):
 
         sys.modules['curses'] = fakecurses()
         self.assertFalse(reporter._AnsiColorizer.supported(FakeStream()))
-        self.assertEquals(sys.modules['curses'].setUp, 1)
+        self.assertEqual(sys.modules['curses'].setUp, 1)

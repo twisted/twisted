@@ -86,7 +86,7 @@ class SASLInitiatingInitializerTest(unittest.TestCase):
         self.init.onFailure(failure)
         self.assertFailure(self.init._deferred, sasl.SASLAuthError)
         self.init._deferred.addCallback(lambda e:
-                                        self.assertEquals('not-authorized',
+                                        self.assertEqual('not-authorized',
                                                           e.condition))
         return self.init._deferred
 
@@ -98,10 +98,10 @@ class SASLInitiatingInitializerTest(unittest.TestCase):
         self.init.initialResponse = "dummy"
         self.init.start()
         auth = self.output[0]
-        self.assertEquals(NS_XMPP_SASL, auth.uri)
-        self.assertEquals('auth', auth.name)
-        self.assertEquals('DUMMY', auth['mechanism'])
-        self.assertEquals('ZHVtbXk=', str(auth))
+        self.assertEqual(NS_XMPP_SASL, auth.uri)
+        self.assertEqual('auth', auth.name)
+        self.assertEqual('DUMMY', auth['mechanism'])
+        self.assertEqual('ZHVtbXk=', str(auth))
 
 
     def test_sendAuthNoInitialResponse(self):
@@ -111,7 +111,7 @@ class SASLInitiatingInitializerTest(unittest.TestCase):
         self.init.initialResponse = None
         self.init.start()
         auth = self.output[0]
-        self.assertEquals('', str(auth))
+        self.assertEqual('', str(auth))
 
 
     def test_sendAuthEmptyInitialResponse(self):
@@ -121,7 +121,7 @@ class SASLInitiatingInitializerTest(unittest.TestCase):
         self.init.initialResponse = ""
         self.init.start()
         auth = self.output[0]
-        self.assertEquals('=', str(auth))
+        self.assertEqual('=', str(auth))
 
 
     def test_onChallenge(self):

@@ -193,9 +193,9 @@ class DigestAuthTestCase(RequestMixin, unittest.TestCase):
         None of the values may have newlines in them.
         """
         challenge = self.credentialFactory.getChallenge(self.request)
-        self.assertEquals(challenge['qop'], 'auth')
-        self.assertEquals(challenge['realm'], 'test realm')
-        self.assertEquals(challenge['algorithm'], 'md5')
+        self.assertEqual(challenge['qop'], 'auth')
+        self.assertEqual(challenge['realm'], 'test realm')
+        self.assertEqual(challenge['algorithm'], 'md5')
         self.assertIn('nonce', challenge)
         self.assertIn('opaque', challenge)
         for v in challenge.values():
@@ -346,7 +346,7 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         child = getChildForRequest(self.wrapper, request)
         d = request.notifyFinish()
         def cbFinished(result):
-            self.assertEquals(request.responseCode, 401)
+            self.assertEqual(request.responseCode, 401)
         d.addCallback(cbFinished)
         request.render(child)
         return d
@@ -412,7 +412,7 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         child = self._authorizedBasicLogin(request)
         d = request.notifyFinish()
         def cbFinished(ignored):
-            self.assertEquals(request.written, [self.childContent])
+            self.assertEqual(request.written, [self.childContent])
         d.addCallback(cbFinished)
         request.render(child)
         return d
@@ -431,7 +431,7 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         child = self._authorizedBasicLogin(request)
         d = request.notifyFinish()
         def cbFinished(ignored):
-            self.assertEquals(request.written, [self.avatarContent])
+            self.assertEqual(request.written, [self.avatarContent])
         d.addCallback(cbFinished)
         request.render(child)
         return d
@@ -485,7 +485,7 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         request = self.makeRequest([self.childName])
         child = self._authorizedBasicLogin(request)
         request.render(child)
-        self.assertEquals(self.realm.loggedOut, 0)
+        self.assertEqual(self.realm.loggedOut, 0)
         return request
 
 
@@ -495,7 +495,7 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         """
         request = self._logoutTest()
         request.finish()
-        self.assertEquals(self.realm.loggedOut, 1)
+        self.assertEqual(self.realm.loggedOut, 1)
 
 
     def test_logoutOnError(self):
@@ -507,7 +507,7 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         request = self._logoutTest()
         request.processingFailed(
             Failure(ConnectionDone("Simulated disconnect")))
-        self.assertEquals(self.realm.loggedOut, 1)
+        self.assertEqual(self.realm.loggedOut, 1)
 
 
     def test_decodeRaises(self):
@@ -607,7 +607,7 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         child = getChildForRequest(self.wrapper, request)
         d = request.notifyFinish()
         def cbFinished(ignored):
-            self.assertEquals(request.written, [unprotectedContents])
+            self.assertEqual(request.written, [unprotectedContents])
         d.addCallback(cbFinished)
         request.render(child)
         return d

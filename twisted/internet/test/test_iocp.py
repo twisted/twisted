@@ -135,7 +135,7 @@ class IOCPReactorTestCase(unittest.TestCase):
         for _ in range(EVENTS_PER_LOOP + 1):
             ir.port.postEvent(0, KEY_NORMAL, event)
         ir.doIteration(None)
-        self.assertEquals(fd.counter, EVENTS_PER_LOOP)
+        self.assertEqual(fd.counter, EVENTS_PER_LOOP)
         ir.doIteration(0)
-        self.assertEquals(fd.counter, EVENTS_PER_LOOP + 1)
+        self.assertEqual(fd.counter, EVENTS_PER_LOOP + 1)
 

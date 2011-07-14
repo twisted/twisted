@@ -19,7 +19,7 @@ class QuotingTestCase(unittest.TestCase):
             (12, "text", "'12'"),
             (u"123'456", "text", u"'123''456'")
             ]:
-            self.assertEquals(
+            self.assertEqual(
                 self.callDeprecated(util._deprecatedVersion, util.quote, value,
                                     typ),
                 expected)

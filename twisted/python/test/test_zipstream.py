@@ -33,7 +33,7 @@ class FileEntryMixin:
         """
         zip files should not be ttys, so isatty() should be false
         """
-        self.assertEquals(self.getFileEntry('').isatty(), False)
+        self.assertEqual(self.getFileEntry('').isatty(), False)
 
 
     def test_closed(self):
@@ -42,9 +42,9 @@ class FileEntryMixin:
         called.
         """
         fileEntry = self.getFileEntry('')
-        self.assertEquals(fileEntry.closed, False)
+        self.assertEqual(fileEntry.closed, False)
         fileEntry.close()
-        self.assertEquals(fileEntry.closed, True)
+        self.assertEqual(fileEntry.closed, True)
 
 
     def test_readline(self):
@@ -53,9 +53,9 @@ class FileEntryMixin:
         deliminter.
         """
         fileEntry = self.getFileEntry('hoho\nho')
-        self.assertEquals(fileEntry.readline(), 'hoho\n')
-        self.assertEquals(fileEntry.readline(), 'ho')
-        self.assertEquals(fileEntry.readline(), '')
+        self.assertEqual(fileEntry.readline(), 'hoho\n')
+        self.assertEqual(fileEntry.readline(), 'ho')
+        self.assertEqual(fileEntry.readline(), '')
 
 
     def test_next(self):
@@ -63,8 +63,8 @@ class FileEntryMixin:
         Zip file entries should implement the iterator protocol as files do.
         """
         fileEntry = self.getFileEntry('ho\nhoho')
-        self.assertEquals(fileEntry.next(), 'ho\n')
-        self.assertEquals(fileEntry.next(), 'hoho')
+        self.assertEqual(fileEntry.next(), 'ho\n')
+        self.assertEqual(fileEntry.next(), 'hoho')
         self.assertRaises(StopIteration, fileEntry.next)
 
 
@@ -73,7 +73,7 @@ class FileEntryMixin:
         C{readlines()} should return a list of all the lines.
         """
         fileEntry = self.getFileEntry('ho\nho\nho')
-        self.assertEquals(fileEntry.readlines(), ['ho\n', 'ho\n', 'ho'])
+        self.assertEqual(fileEntry.readlines(), ['ho\n', 'ho\n', 'ho'])
 
 
     def test_iteration(self):
@@ -91,7 +91,7 @@ class FileEntryMixin:
         """
         contents = "Hello, world!"
         entry = self.getFileEntry(contents)
-        self.assertEquals(entry.read(), contents)
+        self.assertEqual(entry.read(), contents)
 
 
     def test_readPartial(self):
@@ -102,8 +102,8 @@ class FileEntryMixin:
         entry = self.getFileEntry(contents)
         one = entry.read(4)
         two = entry.read(200)
-        self.assertEquals(one, "0123")
-        self.assertEquals(two, "456789")
+        self.assertEqual(one, "0123")
+        self.assertEqual(two, "456789")
 
 
     def test_tell(self):
@@ -114,9 +114,9 @@ class FileEntryMixin:
         contents = "x" * 100
         entry = self.getFileEntry(contents)
         entry.read(2)
-        self.assertEquals(entry.tell(), 2)
+        self.assertEqual(entry.tell(), 2)
         entry.read(4)
-        self.assertEquals(entry.tell(), 6)
+        self.assertEqual(entry.tell(), 6)
 
 
 
@@ -177,7 +177,7 @@ class ZipstreamTest(unittest.TestCase):
                                   "countZipFileEntries is deprecated.",
                                   __file__, lambda :
                                       zipstream.countZipFileEntries(name))
-        self.assertEquals(result, 5)
+        self.assertEqual(result, 5)
 
 
     def test_invalidMode(self):
@@ -216,7 +216,7 @@ class ZipstreamTest(unittest.TestCase):
         scribble.close()
         czf = zipstream.ChunkingZipFile(fn)
         self.assertRaises(zipfile.BadZipfile, czf.readfile, "0")
-        self.assertEquals(czf.readfile("1").read(), "more contents")
+        self.assertEqual(czf.readfile("1").read(), "more contents")
 
 
     def test_filenameMismatch(self):
@@ -237,7 +237,7 @@ class ZipstreamTest(unittest.TestCase):
 
         czf = zipstream.ChunkingZipFile(fn)
         self.assertRaises(zipfile.BadZipfile, czf.readfile, "0")
-        self.assertEquals(czf.readfile("1").read(), "more contents")
+        self.assertEqual(czf.readfile("1").read(), "more contents")
 
 
     if sys.version_info < (2, 5):
@@ -280,7 +280,7 @@ class ZipstreamTest(unittest.TestCase):
         zf.writestr(zi, "the real data")
         zf.close()
         czf = zipstream.ChunkingZipFile(fn)
-        self.assertEquals(czf.readfile("0").read(), "the real data")
+        self.assertEqual(czf.readfile("0").read(), "the real data")
 
 
     def test_unzipIter(self):
@@ -294,13 +294,13 @@ class ZipstreamTest(unittest.TestCase):
         zpfilename = self.makeZipFile(contents)
         uziter = zipstream.unzipIter(zpfilename, self.unzipdir.path)
         for i in range(numfiles):
-            self.assertEquals(len(list(self.unzipdir.children())), i)
-            self.assertEquals(uziter.next(), numfiles - i - 1)
-        self.assertEquals(len(list(self.unzipdir.children())), numfiles)
+            self.assertEqual(len(list(self.unzipdir.children())), i)
+            self.assertEqual(uziter.next(), numfiles - i - 1)
+        self.assertEqual(len(list(self.unzipdir.children())), numfiles)
 
         for child in self.unzipdir.children():
             num = int(child.basename())
-            self.assertEquals(child.open().read(), contents[num])
+            self.assertEqual(child.open().read(), contents[num])
     test_unzipIter.suppress = [
         util.suppress(message="zipstream.unzipIter is deprecated")]
 
@@ -312,15 +312,15 @@ class ZipstreamTest(unittest.TestCase):
         """
         zpfilename = self.makeZipFile('foo')
 
-        self.assertEquals(len(self.flushWarnings()), 0)
+        self.assertEqual(len(self.flushWarnings()), 0)
 
         for f in zipstream.unzipIter(zpfilename, self.unzipdir.path):
             pass
 
         warnings = self.flushWarnings()
-        self.assertEquals(len(warnings), 1)
-        self.assertEquals(warnings[0]['category'], DeprecationWarning)
-        self.assertEquals(
+        self.assertEqual(len(warnings), 1)
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(
             warnings[0]['message'],
             "zipstream.unzipIter is deprecated since Twisted 11.0.0 for "
             "security reasons.  Use Python's zipfile instead.")
@@ -335,13 +335,13 @@ class ZipstreamTest(unittest.TestCase):
         contents = ['This is test file %d!' % i for i in range(numfiles)]
         zpfilename = self.makeZipFile(contents)
         list(zipstream.unzipIterChunky(zpfilename, self.unzipdir.path))
-        self.assertEquals(
+        self.assertEqual(
             set(self.unzipdir.listdir()),
             set(map(str, range(numfiles))))
 
         for child in self.unzipdir.children():
             num = int(child.basename())
-            self.assertEquals(child.getContent(), contents[num])
+            self.assertEqual(child.getContent(), contents[num])
 
 
     def test_unzipIterChunkyDirectory(self):
@@ -354,13 +354,13 @@ class ZipstreamTest(unittest.TestCase):
         contents = ['This is test file %d!' % i for i in range(numfiles)]
         zpfilename = self.makeZipFile(contents, 'foo')
         list(zipstream.unzipIterChunky(zpfilename, self.unzipdir.path))
-        self.assertEquals(
+        self.assertEqual(
             set(self.unzipdir.child('foo').listdir()),
             set(map(str, range(numfiles))))
 
         for child in self.unzipdir.child('foo').children():
             num = int(child.basename())
-            self.assertEquals(child.getContent(), contents[num])
+            self.assertEqual(child.getContent(), contents[num])
 
 
     def test_unzip(self):
@@ -386,14 +386,14 @@ class ZipstreamTest(unittest.TestCase):
         """
         zpfilename = self.makeZipFile('foo')
 
-        self.assertEquals(len(self.flushWarnings()), 0)
+        self.assertEqual(len(self.flushWarnings()), 0)
 
         zipstream.unzip(zpfilename, self.unzipdir.path)
 
         warnings = self.flushWarnings()
-        self.assertEquals(len(warnings), 1)
-        self.assertEquals(warnings[0]['category'], DeprecationWarning)
-        self.assertEquals(
+        self.assertEqual(len(warnings), 1)
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(
             warnings[0]['message'],
             "zipstream.unzip is deprecated since Twisted 11.0.0 for "
             "security reasons.  Use Python's zipfile instead.")
@@ -429,18 +429,18 @@ class ZipstreamTest(unittest.TestCase):
 
         testfile.setContent('NOT OVERWRITTEN')
         zipstream.unzip(zpfilename, self.unzipdir.path)
-        self.assertEquals(testfile.open().read(), 'NOT OVERWRITTEN')
+        self.assertEqual(testfile.open().read(), 'NOT OVERWRITTEN')
         zipstream.unzip(zpfilename, self.unzipdir.path, overwrite=True)
-        self.assertEquals(testfile.open().read(), 'OVERWRITTEN')
+        self.assertEqual(testfile.open().read(), 'OVERWRITTEN')
 
         testfile.setContent('NOT OVERWRITTEN')
         uziter = zipstream.unzipIter(zpfilename, self.unzipdir.path)
         uziter.next()
-        self.assertEquals(testfile.open().read(), 'NOT OVERWRITTEN')
+        self.assertEqual(testfile.open().read(), 'NOT OVERWRITTEN')
         uziter = zipstream.unzipIter(zpfilename, self.unzipdir.path,
                                      overwrite=True)
         uziter.next()
-        self.assertEquals(testfile.open().read(), 'OVERWRITTEN')
+        self.assertEqual(testfile.open().read(), 'OVERWRITTEN')
     test_overwrite.suppress = [
         util.suppress(message="zipstream.unzip is deprecated"),
         util.suppress(message="zipstream.unzipIter is deprecated")]

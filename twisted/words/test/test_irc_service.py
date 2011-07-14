@@ -38,7 +38,7 @@ class IRCUserTestCase(unittest.TestCase):
         self.ircUser.irc_NICK("", ["mynick"])
         self.stringTransport.clear()
         self.ircUser.sendMessage("foo")
-        self.assertEquals(":example.com foo mynick\r\n",
+        self.assertEqual(":example.com foo mynick\r\n",
                           self.stringTransport.value())
 
 
@@ -77,9 +77,9 @@ class IRCUserTestCase(unittest.TestCase):
         response = self.response()
         start = list(self.scanResponse(response, irc.RPL_MOTDSTART))
         end = list(self.scanResponse(response, irc.RPL_ENDOFMOTD))
-        self.assertEquals(start,
+        self.assertEqual(start,
             [(0, ('example.com', '375', ['mynick', '- example.com Message of the Day - ']))])
-        self.assertEquals(end,
+        self.assertEqual(end,
             [(1, ('example.com', '376', ['mynick', 'End of /MOTD command.']))])
 
 
@@ -98,7 +98,7 @@ class IRCUserTestCase(unittest.TestCase):
         creation = ('This server was created on %s' %
             (self.factory._serverInfo["creationDate"],))
 
-        self.assertEquals(self.response(),
+        self.assertEqual(self.response(),
             [('example.com', '375',
               ['john', '- example.com Message of the Day - ']),
              ('example.com', '376', ['john', 'End of /MOTD command.']),

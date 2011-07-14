@@ -100,7 +100,7 @@ class BasicTests(TwistedModulesTestCase):
             'test_package.nested_package.module2',
             ]
 
-        self.assertEquals(walkedNames, expected)
+        self.assertEqual(walkedNames, expected)
 
 
     def test_unimportablePackageGetItem(self):
@@ -116,8 +116,8 @@ class BasicTests(TwistedModulesTestCase):
                                   importerCache={},
                                   sysPathHooks={},
                                   moduleDict={'test_package': None})
-        self.assertEquals(shouldNotLoad, [])
-        self.assertEquals(path['test_package'].isLoaded(), False)
+        self.assertEqual(shouldNotLoad, [])
+        self.assertEqual(path['test_package'].isLoaded(), False)
 
 
     def test_unimportablePackageWalkModules(self):
@@ -132,9 +132,9 @@ class BasicTests(TwistedModulesTestCase):
         self.replaceSysModules({"test_package": None})
 
         walked = list(modules.walkModules())
-        self.assertEquals([m.name for m in walked],
+        self.assertEqual([m.name for m in walked],
                           ["test_package"])
-        self.assertEquals(walked[0].isLoaded(), False)
+        self.assertEqual(walked[0].isLoaded(), False)
 
 
     def test_nonexistentPaths(self):
@@ -155,8 +155,8 @@ class BasicTests(TwistedModulesTestCase):
         sys.path.append(nonexistentPath.path)
         afterModules = list(modules.walkModules())
 
-        self.assertEquals(beforeModules, expected)
-        self.assertEquals(afterModules, expected)
+        self.assertEqual(beforeModules, expected)
+        self.assertEqual(afterModules, expected)
 
 
     def test_nonDirectoryPaths(self):
@@ -176,7 +176,7 @@ class BasicTests(TwistedModulesTestCase):
         sys.path.append(nonDirectoryPath.path)
         afterModules = list(modules.walkModules())
 
-        self.assertEquals(beforeModules, afterModules)
+        self.assertEqual(beforeModules, afterModules)
 
 
     def test_twistedShowsUp(self):
@@ -185,7 +185,7 @@ class BasicTests(TwistedModulesTestCase):
         Twisted shows up, and that the module thusly obtained is the same as
         the module that we find when we look for it explicitly by name.
         """
-        self.assertEquals(modules.getModule('twisted'),
+        self.assertEqual(modules.getModule('twisted'),
                           self.findByIteration("twisted"))
 
 
@@ -194,7 +194,7 @@ class BasicTests(TwistedModulesTestCase):
         Verify that the walkModules APIs will give us back subpackages, not just
         subpackages.
         """
-        self.assertEquals(
+        self.assertEqual(
             modules.getModule('twisted.python'),
             self.findByIteration("twisted.python",
                                  where=modules.getModule('twisted')))
@@ -268,9 +268,9 @@ class BasicTests(TwistedModulesTestCase):
         mypath.child("abcd.py").setContent('\n')
         compileall.compile_dir(mypath.path, quiet=True)
         # sanity check
-        self.assertEquals(len(mypath.children()), 2)
+        self.assertEqual(len(mypath.children()), 2)
         pp._smartPath = _evilSmartPath
-        self.assertEquals(pp['abcd'].filePath,
+        self.assertEqual(pp['abcd'].filePath,
                           mypath.child('abcd.py'))
 
 
@@ -289,8 +289,8 @@ class BasicTests(TwistedModulesTestCase):
         __import__("abcd")
         try:
             l = list(pp.walkModules())
-            self.assertEquals(len(l), 1)
-            self.assertEquals(l[0].name, 'abcd')
+            self.assertEqual(len(l), 1)
+            self.assertEqual(l[0].name, 'abcd')
         finally:
             del sys.modules['abcd']
             sys.path.remove(mypath.path)
@@ -336,11 +336,11 @@ class PathModificationTest(TwistedModulesTestCase):
         # Cut here
         self._setupSysPath()
         modinfo = modules.getModule(self.packageName)
-        self.assertEquals(
+        self.assertEqual(
             self.findByIteration(self.packageName+".foozle", modinfo,
                                  importPackages=doImport),
             modinfo['foozle'])
-        self.assertEquals(modinfo['foozle'].load().x, 123)
+        self.assertEqual(modinfo['foozle'].load().x, 123)
 
 
     def test_underUnderPathAlreadyImported(self):
@@ -366,7 +366,7 @@ class PathModificationTest(TwistedModulesTestCase):
         nfni = [modinfo.name.split(".")[-1] for modinfo in
                 pkginfo.iterModules()]
         nfni.sort()
-        self.failUnlessEqual(nfni, ['a', 'b', 'c__init__'])
+        self.assertEqual(nfni, ['a', 'b', 'c__init__'])
 
 
     def test_listingModules(self):
@@ -455,7 +455,7 @@ class PythonPathTestCase(TestCase):
         space = modules.PythonPath(
             syspath, sysmodules, syshooks, syscache, sysloader)
         entries = list(space.iterEntries())
-        self.assertEquals(len(entries), 1)
+        self.assertEqual(len(entries), 1)
         self.assertRaises(KeyError, lambda: entries[0]['module'])
 
 
@@ -468,11 +468,11 @@ class PythonPathTestCase(TestCase):
         space = modules.PythonPath([], sys.modules, [], {})
         thisModule = space[__name__]
         warnings = self.flushWarnings([self.test_inconsistentImporterCache])
-        self.assertEquals(warnings[0]['category'], UserWarning)
-        self.assertEquals(
+        self.assertEqual(warnings[0]['category'], UserWarning)
+        self.assertEqual(
             warnings[0]['message'],
             FilePath(twisted.__file__).parent().dirname() +
             " (for module " + __name__ + ") not in path importer cache "
             "(PEP 302 violation - check your local configuration).")
-        self.assertEquals(len(warnings), 1)
-        self.assertEquals(thisModule.name, __name__)
+        self.assertEqual(len(warnings), 1)
+        self.assertEqual(thisModule.name, __name__)

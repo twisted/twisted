@@ -75,7 +75,7 @@ class DefaultTagCheckerTests(TestCase):
             '<body><h1>foo</h1><a>A link.</a></body>'
             '</html>')
 
-        self.assertEquals(self._lintCheck(True, documentSource), "")
+        self.assertEqual(self._lintCheck(True, documentSource), "")
 
 
     def test_textMatchesRef(self):
@@ -91,7 +91,7 @@ class DefaultTagCheckerTests(TestCase):
             '<a href="http://bar/baz">%s</a>'
             '</body>'
             '</html>')
-        self.assertEquals(
+        self.assertEqual(
             self._lintCheck(True, documentSource % ("http://bar/baz",)), "")
         self.assertIn(
             "link text does not match href",

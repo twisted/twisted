@@ -48,4 +48,4 @@ class TestCaseTests(TestCase):
         container = {}
         container[self.first] = None
         container[self.second] = None
-        self.assertEquals(len(container), 2)
+        self.assertEqual(len(container), 2)

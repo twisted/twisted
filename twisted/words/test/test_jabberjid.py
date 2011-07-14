@@ -15,27 +15,27 @@ class JIDParsingTest(unittest.TestCase):
         Test different forms of JIDs.
         """
         # Basic forms
-        self.assertEquals(jid.parse("user@host/resource"),
+        self.assertEqual(jid.parse("user@host/resource"),
                           ("user", "host", "resource"))
-        self.assertEquals(jid.parse("user@host"),
+        self.assertEqual(jid.parse("user@host"),
                           ("user", "host", None))
-        self.assertEquals(jid.parse("host"),
+        self.assertEqual(jid.parse("host"),
                           (None, "host", None))
-        self.assertEquals(jid.parse("host/resource"),
+        self.assertEqual(jid.parse("host/resource"),
                           (None, "host", "resource"))
 
         # More interesting forms
-        self.assertEquals(jid.parse("foo/bar@baz"),
+        self.assertEqual(jid.parse("foo/bar@baz"),
                           (None, "foo", "bar@baz"))
-        self.assertEquals(jid.parse("boo@foo/bar@baz"),
+        self.assertEqual(jid.parse("boo@foo/bar@baz"),
                           ("boo", "foo", "bar@baz"))
-        self.assertEquals(jid.parse("boo@foo/bar/baz"),
+        self.assertEqual(jid.parse("boo@foo/bar/baz"),
                           ("boo", "foo", "bar/baz"))
-        self.assertEquals(jid.parse("boo/foo@bar@baz"),
+        self.assertEqual(jid.parse("boo/foo@bar@baz"),
                           (None, "boo", "foo@bar@baz"))
-        self.assertEquals(jid.parse("boo/foo/bar"),
+        self.assertEqual(jid.parse("boo/foo/bar"),
                           (None, "boo", "foo/bar"))
-        self.assertEquals(jid.parse("boo//foo"),
+        self.assertEqual(jid.parse("boo//foo"),
                           (None, "boo", "/foo"))
 
     def test_noHost(self):
@@ -69,21 +69,21 @@ class JIDParsingTest(unittest.TestCase):
         """
         Test case mapping of the user part of the JID.
         """
-        self.assertEquals(jid.prep("UsEr", "host", "resource"),
+        self.assertEqual(jid.prep("UsEr", "host", "resource"),
                           ("user", "host", "resource"))
 
     def test_prepCaseMapHost(self):
         """
         Test case mapping of the host part of the JID.
         """
-        self.assertEquals(jid.prep("user", "hoST", "resource"),
+        self.assertEqual(jid.prep("user", "hoST", "resource"),
                           ("user", "host", "resource"))
 
     def test_prepNoCaseMapResource(self):
         """
         Test no case mapping of the resourcce part of the JID.
         """
-        self.assertEquals(jid.prep("user", "hoST", "resource"),
+        self.assertEqual(jid.prep("user", "hoST", "resource"),
                           ("user", "host", "resource"))
         self.assertNotEquals(jid.prep("user", "host", "Resource"),
                              ("user", "host", "resource"))
@@ -101,23 +101,23 @@ class JIDTest(unittest.TestCase):
         Test that the attributes correspond with the JID parts.
         """
         j = jid.JID("user@host/resource")
-        self.assertEquals(j.user, "user")
-        self.assertEquals(j.host, "host")
-        self.assertEquals(j.resource, "resource")
+        self.assertEqual(j.user, "user")
+        self.assertEqual(j.host, "host")
+        self.assertEqual(j.resource, "resource")
 
     def test_userhost(self):
         """
         Test the extraction of the bare JID.
         """
         j = jid.JID("user@host/resource")
-        self.assertEquals("user@host", j.userhost())
+        self.assertEqual("user@host", j.userhost())
 
     def test_userhostOnlyHost(self):
         """
         Test the extraction of the bare JID of the full form host/resource.
         """
         j = jid.JID("host/resource")
-        self.assertEquals("host", j.userhost())
+        self.assertEqual("host", j.userhost())
 
     def test_userhostJID(self):
         """
@@ -206,14 +206,14 @@ class JIDTest(unittest.TestCase):
         Test unicode representation of JIDs.
         """
         j = jid.JID(tuple=('user', 'host', 'resource'))
-        self.assertEquals("user@host/resource", unicode(j))
+        self.assertEqual("user@host/resource", unicode(j))
 
     def test_repr(self):
         """
         Test representation of JID objects.
         """
         j = jid.JID(tuple=('user', 'host', 'resource'))
-        self.assertEquals("JID(u'user@host/resource')", repr(j))
+        self.assertEqual("JID(u'user@host/resource')", repr(j))
 
 class InternJIDTest(unittest.TestCase):
     def test_identity(self):

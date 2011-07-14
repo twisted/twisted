@@ -37,13 +37,13 @@ class UserDatabaseTestsMixin:
 
             # Now try to look it up and make sure the result is correct.
             entry = self.database.getpwuid(uid)
-            self.assertEquals(entry.pw_name, username)
-            self.assertEquals(entry.pw_passwd, password)
-            self.assertEquals(entry.pw_uid, uid)
-            self.assertEquals(entry.pw_gid, gid)
-            self.assertEquals(entry.pw_gecos, gecos)
-            self.assertEquals(entry.pw_dir, dir)
-            self.assertEquals(entry.pw_shell, shell)
+            self.assertEqual(entry.pw_name, username)
+            self.assertEqual(entry.pw_passwd, password)
+            self.assertEqual(entry.pw_uid, uid)
+            self.assertEqual(entry.pw_gid, gid)
+            self.assertEqual(entry.pw_gecos, gecos)
+            self.assertEqual(entry.pw_dir, dir)
+            self.assertEqual(entry.pw_shell, shell)
 
 
     def test_noSuchUID(self):
@@ -65,13 +65,13 @@ class UserDatabaseTestsMixin:
 
             # Now try to look it up and make sure the result is correct.
             entry = self.database.getpwnam(username)
-            self.assertEquals(entry.pw_name, username)
-            self.assertEquals(entry.pw_passwd, password)
-            self.assertEquals(entry.pw_uid, uid)
-            self.assertEquals(entry.pw_gid, gid)
-            self.assertEquals(entry.pw_gecos, gecos)
-            self.assertEquals(entry.pw_dir, dir)
-            self.assertEquals(entry.pw_shell, shell)
+            self.assertEqual(entry.pw_name, username)
+            self.assertEqual(entry.pw_passwd, password)
+            self.assertEqual(entry.pw_uid, uid)
+            self.assertEqual(entry.pw_gid, gid)
+            self.assertEqual(entry.pw_gecos, gecos)
+            self.assertEqual(entry.pw_dir, dir)
+            self.assertEqual(entry.pw_shell, shell)
 
 
     def test_noSuchName(self):
@@ -106,15 +106,15 @@ class UserDatabaseTestsMixin:
         db = self.database
         username, password, uid, gid, gecos, dir, shell = self.getExistingUserInfo()
         for entry in [db.getpwuid(uid), db.getpwnam(username), db.getpwall()[0]]:
-            self.assertEquals(entry[0], username)
-            self.assertEquals(entry[1], password)
-            self.assertEquals(entry[2], uid)
-            self.assertEquals(entry[3], gid)
-            self.assertEquals(entry[4], gecos)
-            self.assertEquals(entry[5], dir)
-            self.assertEquals(entry[6], shell)
+            self.assertEqual(entry[0], username)
+            self.assertEqual(entry[1], password)
+            self.assertEqual(entry[2], uid)
+            self.assertEqual(entry[3], gid)
+            self.assertEqual(entry[4], gecos)
+            self.assertEqual(entry[5], dir)
+            self.assertEqual(entry[6], shell)
 
-            self.assertEquals(len(entry), len(list(entry)))
+            self.assertEqual(len(entry), len(list(entry)))
             self.assertRaises(IndexError, getitem, entry, 7)
 
 
@@ -168,22 +168,22 @@ class UserDatabaseTests(TestCase, UserDatabaseTestsMixin):
         db.addUser(username, password, uid, gid, gecos, home, shell)
 
         for entry in [db.getpwuid(uid), db.getpwnam(username)]:
-            self.assertEquals(entry.pw_name, username)
-            self.assertEquals(entry.pw_passwd, password)
-            self.assertEquals(entry.pw_uid, uid)
-            self.assertEquals(entry.pw_gid, gid)
-            self.assertEquals(entry.pw_gecos, gecos)
-            self.assertEquals(entry.pw_dir, home)
-            self.assertEquals(entry.pw_shell, shell)
+            self.assertEqual(entry.pw_name, username)
+            self.assertEqual(entry.pw_passwd, password)
+            self.assertEqual(entry.pw_uid, uid)
+            self.assertEqual(entry.pw_gid, gid)
+            self.assertEqual(entry.pw_gecos, gecos)
+            self.assertEqual(entry.pw_dir, home)
+            self.assertEqual(entry.pw_shell, shell)
 
         [entry] = db.getpwall()
-        self.assertEquals(entry.pw_name, username)
-        self.assertEquals(entry.pw_passwd, password)
-        self.assertEquals(entry.pw_uid, uid)
-        self.assertEquals(entry.pw_gid, gid)
-        self.assertEquals(entry.pw_gecos, gecos)
-        self.assertEquals(entry.pw_dir, home)
-        self.assertEquals(entry.pw_shell, shell)
+        self.assertEqual(entry.pw_name, username)
+        self.assertEqual(entry.pw_passwd, password)
+        self.assertEqual(entry.pw_uid, uid)
+        self.assertEqual(entry.pw_gid, gid)
+        self.assertEqual(entry.pw_gecos, gecos)
+        self.assertEqual(entry.pw_dir, home)
+        self.assertEqual(entry.pw_shell, shell)
 
 
 

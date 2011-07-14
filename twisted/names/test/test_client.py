@@ -438,14 +438,14 @@ class ClientTestCase(unittest.TestCase):
         Verify that the result is the same query type as what is expected.
         """
         result = results[0]
-        self.assertEquals(str(result.name), self.hostname)
-        self.assertEquals(result.type, qtype)
+        self.assertEqual(str(result.name), self.hostname)
+        self.assertEqual(result.type, qtype)
 
     def checkGetHostByName(self, result):
         """
         Test that the getHostByName query returns the 127.0.0.1 address.
         """
-        self.assertEquals(result, '127.0.0.1')
+        self.assertEqual(result, '127.0.0.1')
 
     def test_getHostByName(self):
         """
@@ -654,10 +654,10 @@ class ThreadedResolverTests(unittest.TestCase):
         """
         client.ThreadedResolver()
         warnings = self.flushWarnings(offendingFunctions=[self.test_deprecated])
-        self.assertEquals(
+        self.assertEqual(
             warnings[0]['message'],
             "twisted.names.client.ThreadedResolver is deprecated since "
             "Twisted 9.0, use twisted.internet.base.ThreadedResolver "
             "instead.")
-        self.assertEquals(warnings[0]['category'], DeprecationWarning)
-        self.assertEquals(len(warnings), 1)
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(len(warnings), 1)

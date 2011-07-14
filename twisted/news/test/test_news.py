@@ -50,10 +50,10 @@ class NewsTestCase(unittest.TestCase):
         def cbArticle(result):
             self.failUnless(isinstance(result, tuple),
                             'callback result is wrong type: ' + str(result))
-            self.assertEquals(len(result), 3,
+            self.assertEqual(len(result), 3,
                               'callback result list should have three entries: ' +
                               str(result))
-            self.assertEquals(result[1], MESSAGE_ID,
+            self.assertEqual(result[1], MESSAGE_ID,
                               "callback result Message-Id doesn't match: %s vs %s" %
                               (MESSAGE_ID, result[1]))
             body = result[2].read()
@@ -76,11 +76,11 @@ class NewsTestCase(unittest.TestCase):
             return d
 
         def cbHead(result):
-            self.assertEquals(result[1], MESSAGE_ID,
+            self.assertEqual(result[1], MESSAGE_ID,
                               "callback result Message-Id doesn't match: %s vs %s" %
                               (MESSAGE_ID, result[1]))
 
-            self.assertEquals(result[2][-2:], '\r\n',
+            self.assertEqual(result[2][-2:], '\r\n',
                               "headers must be \\r\\n terminated.")
 
         d.addCallback(cbArticle)
@@ -99,7 +99,7 @@ class NewsTestCase(unittest.TestCase):
 
         def cbBody(result):
             body = result[2].read()
-            self.assertEquals(body[0:4], 'this',
+            self.assertEqual(body[0:4], 'this',
                               "message body has been altered: " +
                               pformat(body[0:4]))
 

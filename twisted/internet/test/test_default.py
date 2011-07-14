@@ -33,7 +33,7 @@ class PollReactorTests(TestCase):
         L{_getInstallFunction} chooses the poll reactor on Linux.
         """
         install = _getInstallFunction(linux)
-        self.assertEquals(
+        self.assertEqual(
             install.__module__, 'twisted.internet.pollreactor')
 
 
@@ -48,7 +48,7 @@ class SelectReactorTests(TestCase):
         L{_getInstallFunction} chooses the select reactor on OS X.
         """
         install = _getInstallFunction(osx)
-        self.assertEquals(
+        self.assertEqual(
             install.__module__, 'twisted.internet.selectreactor')
 
 
@@ -57,5 +57,5 @@ class SelectReactorTests(TestCase):
         L{_getInstallFunction} chooses the select reactor on Windows.
         """
         install = _getInstallFunction(windows)
-        self.assertEquals(
+        self.assertEqual(
             install.__module__, 'twisted.internet.selectreactor')

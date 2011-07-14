@@ -57,9 +57,9 @@ class LoopbackTestCaseMixin:
         s.conn.addCallback(sendALine)
 
         def check(ignored):
-            self.assertEquals(c.lines, ["THIS IS LINE ONE!"])
-            self.assertEquals(len(s.connLost), 1)
-            self.assertEquals(len(c.connLost), 1)
+            self.assertEqual(c.lines, ["THIS IS LINE ONE!"])
+            self.assertEqual(len(s.connLost), 1)
+            self.assertEqual(len(c.connLost), 1)
         d = defer.maybeDeferred(self.loopbackFunc, s, c)
         d.addCallback(check)
         return d
@@ -73,10 +73,10 @@ class LoopbackTestCaseMixin:
         s.conn.addCallback(sendALine)
 
         def check(ignored):
-            self.assertEquals(s.lines, ['Hello 1', 'Hello 2', 'Hello 3'])
-            self.assertEquals(c.lines, ['DOOM LINE', 'Hello 1', 'Hello 2', 'Hello 3'])
-            self.assertEquals(len(s.connLost), 1)
-            self.assertEquals(len(c.connLost), 1)
+            self.assertEqual(s.lines, ['Hello 1', 'Hello 2', 'Hello 3'])
+            self.assertEqual(c.lines, ['DOOM LINE', 'Hello 1', 'Hello 2', 'Hello 3'])
+            self.assertEqual(len(s.connLost), 1)
+            self.assertEqual(len(c.connLost), 1)
         d = defer.maybeDeferred(self.loopbackFunc, s, c)
         d.addCallback(check)
         return d
@@ -351,7 +351,7 @@ class LoopbackAsyncTestCase(LoopbackTestCaseMixin, unittest.TestCase):
         server = Protocol()
 
         finished = loopback.loopbackAsync(server, client, dummyPolicy)
-        self.assertEquals(pumpCalls, [])
+        self.assertEqual(pumpCalls, [])
 
         client.transport.write("foo")
         client.transport.write("bar")
@@ -360,7 +360,7 @@ class LoopbackAsyncTestCase(LoopbackTestCaseMixin, unittest.TestCase):
         server.transport.loseConnection()
 
         def cbComplete(ignored):
-            self.assertEquals(
+            self.assertEqual(
                 pumpCalls,
                 # The order here is somewhat arbitrary.  The implementation
                 # happens to always deliver data to the client first.
@@ -385,7 +385,7 @@ class LoopbackAsyncTestCase(LoopbackTestCaseMixin, unittest.TestCase):
 
         loopback.identityPumpPolicy(queue, client)
 
-        self.assertEquals(bytes, ["foo", "bar"])
+        self.assertEqual(bytes, ["foo", "bar"])
 
 
     def test_collapsingPumpPolicy(self):
@@ -404,7 +404,7 @@ class LoopbackAsyncTestCase(LoopbackTestCaseMixin, unittest.TestCase):
 
         loopback.collapsingPumpPolicy(queue, client)
 
-        self.assertEquals(bytes, ["foobar"])
+        self.assertEqual(bytes, ["foobar"])
 
 
 

@@ -35,7 +35,7 @@ class PersistTestCase(unittest.TestCase):
                 p.setStyle(style)
                 p.save(filename='persisttest.'+style)
                 o1 = sob.load('persisttest.'+style, style)
-                self.failUnlessEqual(o, o1)
+                self.assertEqual(o, o1)
 
     def testStylesBeingSet(self):
         o = Dummy()
@@ -45,8 +45,8 @@ class PersistTestCase(unittest.TestCase):
             sob.IPersistable(o).setStyle(style)
             sob.IPersistable(o).save(filename='lala.'+style)
             o1 = sob.load('lala.'+style, style)
-            self.failUnlessEqual(o.foo, o1.foo)
-            self.failUnlessEqual(sob.IPersistable(o1).style, style)
+            self.assertEqual(o.foo, o1.foo)
+            self.assertEqual(sob.IPersistable(o1).style, style)
 
 
     def testNames(self):
@@ -56,11 +56,11 @@ class PersistTestCase(unittest.TestCase):
             p.setStyle(style)
             p.save()
             o1 = sob.load('object.ta'+style[0], style)
-            self.failUnlessEqual(o, o1)
+            self.assertEqual(o, o1)
             for tag in 'lala lolo'.split():
                 p.save(tag)
                 o1 = sob.load('object-'+tag+'.ta'+style[0], style)
-                self.failUnlessEqual(o, o1)
+                self.assertEqual(o, o1)
       
     def testEncryptedStyles(self):
         for o in objects:
@@ -70,7 +70,7 @@ class PersistTestCase(unittest.TestCase):
                 p.setStyle(style)
                 p.save(filename='epersisttest.'+style, passphrase=phrase)
                 o1 = sob.load('epersisttest.'+style, style, phrase)
-                self.failUnlessEqual(o, o1)
+                self.assertEqual(o, o1)
     if Crypto is None:
         testEncryptedStyles.skip = "PyCrypto required for encrypted config"
 
@@ -79,7 +79,7 @@ class PersistTestCase(unittest.TestCase):
         f.write('foo=[1,2,3] ')
         f.close()
         o = sob.loadValueFromFile('persisttest.python', 'foo')
-        self.failUnlessEqual(o, [1,2,3])
+        self.assertEqual(o, [1,2,3])
 
     def testEncryptedPython(self):
         phrase='once I was the king of spain'
@@ -88,7 +88,7 @@ class PersistTestCase(unittest.TestCase):
             sob._encrypt(phrase, 'foo=[1,2,3]'))
         f.close()
         o = sob.loadValueFromFile('epersisttest.python', 'foo', phrase)
-        self.failUnlessEqual(o, [1,2,3])
+        self.assertEqual(o, [1,2,3])
     if Crypto is None:
         testEncryptedPython.skip = "PyCrypto required for encrypted config"
 

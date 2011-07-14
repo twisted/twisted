@@ -11,4 +11,4 @@ class Caching(unittest.TestCase):
     def testLookup(self):
         c = cache.CacheResolver({
             dns.Query(name='example.com', type=dns.MX, cls=dns.IN): (time.time(), ([], [], []))})
-        return c.lookupMailExchange('example.com').addCallback(self.assertEquals, ([], [], []))
+        return c.lookupMailExchange('example.com').addCallback(self.assertEqual, ([], [], []))

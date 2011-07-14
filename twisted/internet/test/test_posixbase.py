@@ -108,9 +108,9 @@ class PosixReactorBaseTests(TestCase):
 
         warningsShown = self.flushWarnings(
             [self.test_IReactorArbitraryIsDeprecated])
-        self.assertEquals(len(warningsShown), 1)
-        self.assertEquals(warningsShown[0]['category'], DeprecationWarning)
-        self.assertEquals(
+        self.assertEqual(len(warningsShown), 1)
+        self.assertEqual(warningsShown[0]['category'], DeprecationWarning)
+        self.assertEqual(
             "twisted.internet.interfaces.IReactorArbitrary was deprecated "
             "in Twisted 10.1.0: See IReactorFDSet.",
             warningsShown[0]['message'])
@@ -136,9 +136,9 @@ class PosixReactorBaseTests(TestCase):
         reactor.listenWith(fakePort)
 
         warnings = self.flushWarnings([self.test_listenWithIsDeprecated])
-        self.assertEquals(len(warnings), 1)
-        self.assertEquals(warnings[0]['category'], DeprecationWarning)
-        self.assertEquals(
+        self.assertEqual(len(warnings), 1)
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(
             "listenWith is deprecated since Twisted 10.1.  "
             "See IReactorFDSet.",
             warnings[0]['message'])
@@ -164,9 +164,9 @@ class PosixReactorBaseTests(TestCase):
         reactor.connectWith(fakeConnector)
 
         warnings = self.flushWarnings([self.test_connectWithIsDeprecated])
-        self.assertEquals(len(warnings), 1)
-        self.assertEquals(warnings[0]['category'], DeprecationWarning)
-        self.assertEquals(
+        self.assertEqual(len(warnings), 1)
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(
             "connectWith is deprecated since Twisted 10.1.  "
             "See IReactorFDSet.",
             warnings[0]['message'])
@@ -258,7 +258,7 @@ class IterationTimeoutTests(TestCase):
         """
         reactor = TimeoutReportReactor()
         timeout = self._checkIterationTimeout(reactor)
-        self.assertEquals(timeout, None)
+        self.assertEqual(timeout, None)
 
 
     def test_delayedCall(self):
@@ -270,7 +270,7 @@ class IterationTimeoutTests(TestCase):
         reactor = TimeoutReportReactor()
         reactor.callLater(100, lambda: None)
         timeout = self._checkIterationTimeout(reactor)
-        self.assertEquals(timeout, 100)
+        self.assertEqual(timeout, 100)
 
 
     def test_timePasses(self):
@@ -283,7 +283,7 @@ class IterationTimeoutTests(TestCase):
         reactor.callLater(100, lambda: None)
         reactor.now += 25
         timeout = self._checkIterationTimeout(reactor)
-        self.assertEquals(timeout, 75)
+        self.assertEqual(timeout, 75)
 
 
     def test_multipleDelayedCalls(self):
@@ -297,7 +297,7 @@ class IterationTimeoutTests(TestCase):
         reactor.callLater(10, lambda: None)
         reactor.callLater(100, lambda: None)
         timeout = self._checkIterationTimeout(reactor)
-        self.assertEquals(timeout, 10)
+        self.assertEqual(timeout, 10)
 
 
     def test_resetDelayedCall(self):
@@ -311,7 +311,7 @@ class IterationTimeoutTests(TestCase):
         reactor.now += 25
         call.reset(15)
         timeout = self._checkIterationTimeout(reactor)
-        self.assertEquals(timeout, 15)
+        self.assertEqual(timeout, 15)
 
 
     def test_delayDelayedCall(self):
@@ -326,7 +326,7 @@ class IterationTimeoutTests(TestCase):
         reactor.now += 10
         call.delay(20)
         timeout = self._checkIterationTimeout(reactor)
-        self.assertEquals(timeout, 60)
+        self.assertEqual(timeout, 60)
 
 
     def test_cancelDelayedCall(self):
@@ -338,7 +338,7 @@ class IterationTimeoutTests(TestCase):
         call = reactor.callLater(50, lambda: None)
         call.cancel()
         timeout = self._checkIterationTimeout(reactor)
-        self.assertEquals(timeout, None)
+        self.assertEqual(timeout, None)
 
 
 
@@ -384,4 +384,4 @@ class ConnectedDatagramPortTestCase(TestCase):
         port = unix.ConnectedDatagramPort(None, ClientProto())
         port.stopListening = stopListening
         port.connectionFailed("goodbye")
-        self.assertEquals(self.called, True)
+        self.assertEqual(self.called, True)

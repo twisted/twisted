@@ -88,7 +88,7 @@ class DistribTest(unittest.TestCase):
         self.port2 = reactor.listenTCP(0, f2)
         d = client.getPage("http://127.0.0.1:%d/here/there" % \
                            self.port2.getHost().port)
-        d.addCallback(self.failUnlessEqual, 'root')
+        d.addCallback(self.assertEqual, 'root')
         return d
 
 
@@ -141,7 +141,7 @@ class DistribTest(unittest.TestCase):
         request = self._requestTest(
             ReportRequestHeaders(), headers={'foo': 'bar'})
         def cbRequested(result):
-            self.assertEquals(requestHeaders['Foo'], ['bar'])
+            self.assertEqual(requestHeaders['Foo'], ['bar'])
         request.addCallback(cbRequested)
         return request
 
@@ -159,7 +159,7 @@ class DistribTest(unittest.TestCase):
                 return server.NOT_DONE_YET
 
         request = self._requestTest(LargeWrite())
-        request.addCallback(self.assertEquals, 'x' * SIZE_LIMIT + 'y')
+        request.addCallback(self.assertEqual, 'x' * SIZE_LIMIT + 'y')
         return request
 
 
@@ -173,7 +173,7 @@ class DistribTest(unittest.TestCase):
                 return 'x' * SIZE_LIMIT + 'y'
 
         request = self._requestTest(LargeReturn())
-        request.addCallback(self.assertEquals, 'x' * SIZE_LIMIT + 'y')
+        request.addCallback(self.assertEqual, 'x' * SIZE_LIMIT + 'y')
         return request
 
 

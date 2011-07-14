@@ -15,7 +15,7 @@ class PlainTest(unittest.TestCase):
         Test the initial response.
         """
         m = sasl_mechanisms.Plain(None, 'test', 'secret')
-        self.assertEquals(m.getInitialResponse(), '\x00test\x00secret')
+        self.assertEqual(m.getInitialResponse(), '\x00test\x00secret')
 
 
 
@@ -28,7 +28,7 @@ class AnonymousTest(unittest.TestCase):
         Test the initial response to be empty.
         """
         m = sasl_mechanisms.Anonymous()
-        self.assertEquals(m.getInitialResponse(), None)
+        self.assertEqual(m.getInitialResponse(), None)
 
 
 

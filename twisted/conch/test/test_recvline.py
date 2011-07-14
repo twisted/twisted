@@ -33,41 +33,41 @@ class Arrows(unittest.TestCase):
         self.p.keystrokeReceived('y', None)
         self.p.keystrokeReceived('z', None)
 
-        self.assertEquals(self.p.currentLineBuffer(), ('xyz', ''))
+        self.assertEqual(self.p.currentLineBuffer(), ('xyz', ''))
 
     def testHorizontalArrows(self):
         kR = lambda ch: self.p.keystrokeReceived(ch, None)
         for ch in 'xyz':
             kR(ch)
 
-        self.assertEquals(self.p.currentLineBuffer(), ('xyz', ''))
+        self.assertEqual(self.p.currentLineBuffer(), ('xyz', ''))
 
         kR(self.pt.RIGHT_ARROW)
-        self.assertEquals(self.p.currentLineBuffer(), ('xyz', ''))
+        self.assertEqual(self.p.currentLineBuffer(), ('xyz', ''))
 
         kR(self.pt.LEFT_ARROW)
-        self.assertEquals(self.p.currentLineBuffer(), ('xy', 'z'))
+        self.assertEqual(self.p.currentLineBuffer(), ('xy', 'z'))
 
         kR(self.pt.LEFT_ARROW)
-        self.assertEquals(self.p.currentLineBuffer(), ('x', 'yz'))
+        self.assertEqual(self.p.currentLineBuffer(), ('x', 'yz'))
 
         kR(self.pt.LEFT_ARROW)
-        self.assertEquals(self.p.currentLineBuffer(), ('', 'xyz'))
+        self.assertEqual(self.p.currentLineBuffer(), ('', 'xyz'))
 
         kR(self.pt.LEFT_ARROW)
-        self.assertEquals(self.p.currentLineBuffer(), ('', 'xyz'))
+        self.assertEqual(self.p.currentLineBuffer(), ('', 'xyz'))
 
         kR(self.pt.RIGHT_ARROW)
-        self.assertEquals(self.p.currentLineBuffer(), ('x', 'yz'))
+        self.assertEqual(self.p.currentLineBuffer(), ('x', 'yz'))
 
         kR(self.pt.RIGHT_ARROW)
-        self.assertEquals(self.p.currentLineBuffer(), ('xy', 'z'))
+        self.assertEqual(self.p.currentLineBuffer(), ('xy', 'z'))
 
         kR(self.pt.RIGHT_ARROW)
-        self.assertEquals(self.p.currentLineBuffer(), ('xyz', ''))
+        self.assertEqual(self.p.currentLineBuffer(), ('xyz', ''))
 
         kR(self.pt.RIGHT_ARROW)
-        self.assertEquals(self.p.currentLineBuffer(), ('xyz', ''))
+        self.assertEqual(self.p.currentLineBuffer(), ('xyz', ''))
 
     def testNewline(self):
         kR = lambda ch: self.p.keystrokeReceived(ch, None)
@@ -75,17 +75,17 @@ class Arrows(unittest.TestCase):
         for ch in 'xyz\nabc\n123\n':
             kR(ch)
 
-        self.assertEquals(self.p.currentHistoryBuffer(),
+        self.assertEqual(self.p.currentHistoryBuffer(),
                           (('xyz', 'abc', '123'), ()))
 
         kR('c')
         kR('b')
         kR('a')
-        self.assertEquals(self.p.currentHistoryBuffer(),
+        self.assertEqual(self.p.currentHistoryBuffer(),
                           (('xyz', 'abc', '123'), ()))
 
         kR('\n')
-        self.assertEquals(self.p.currentHistoryBuffer(),
+        self.assertEqual(self.p.currentHistoryBuffer(),
                           (('xyz', 'abc', '123', 'cba'), ()))
 
     def testVerticalArrows(self):
@@ -94,33 +94,33 @@ class Arrows(unittest.TestCase):
         for ch in 'xyz\nabc\n123\n':
             kR(ch)
 
-        self.assertEquals(self.p.currentHistoryBuffer(),
+        self.assertEqual(self.p.currentHistoryBuffer(),
                           (('xyz', 'abc', '123'), ()))
-        self.assertEquals(self.p.currentLineBuffer(), ('', ''))
+        self.assertEqual(self.p.currentLineBuffer(), ('', ''))
 
         kR(self.pt.UP_ARROW)
-        self.assertEquals(self.p.currentHistoryBuffer(),
+        self.assertEqual(self.p.currentHistoryBuffer(),
                           (('xyz', 'abc'), ('123',)))
-        self.assertEquals(self.p.currentLineBuffer(), ('123', ''))
+        self.assertEqual(self.p.currentLineBuffer(), ('123', ''))
 
         kR(self.pt.UP_ARROW)
-        self.assertEquals(self.p.currentHistoryBuffer(),
+        self.assertEqual(self.p.currentHistoryBuffer(),
                           (('xyz',), ('abc', '123')))
-        self.assertEquals(self.p.currentLineBuffer(), ('abc', ''))
+        self.assertEqual(self.p.currentLineBuffer(), ('abc', ''))
 
         kR(self.pt.UP_ARROW)
-        self.assertEquals(self.p.currentHistoryBuffer(),
+        self.assertEqual(self.p.currentHistoryBuffer(),
                           ((), ('xyz', 'abc', '123')))
-        self.assertEquals(self.p.currentLineBuffer(), ('xyz', ''))
+        self.assertEqual(self.p.currentLineBuffer(), ('xyz', ''))
 
         kR(self.pt.UP_ARROW)
-        self.assertEquals(self.p.currentHistoryBuffer(),
+        self.assertEqual(self.p.currentHistoryBuffer(),
                           ((), ('xyz', 'abc', '123')))
-        self.assertEquals(self.p.currentLineBuffer(), ('xyz', ''))
+        self.assertEqual(self.p.currentLineBuffer(), ('xyz', ''))
 
         for i in range(4):
             kR(self.pt.DOWN_ARROW)
-        self.assertEquals(self.p.currentHistoryBuffer(),
+        self.assertEqual(self.p.currentHistoryBuffer(),
                           (('xyz', 'abc', '123'), ()))
 
     def testHome(self):
@@ -128,63 +128,63 @@ class Arrows(unittest.TestCase):
 
         for ch in 'hello, world':
             kR(ch)
-        self.assertEquals(self.p.currentLineBuffer(), ('hello, world', ''))
+        self.assertEqual(self.p.currentLineBuffer(), ('hello, world', ''))
 
         kR(self.pt.HOME)
-        self.assertEquals(self.p.currentLineBuffer(), ('', 'hello, world'))
+        self.assertEqual(self.p.currentLineBuffer(), ('', 'hello, world'))
 
     def testEnd(self):
         kR = lambda ch: self.p.keystrokeReceived(ch, None)
 
         for ch in 'hello, world':
             kR(ch)
-        self.assertEquals(self.p.currentLineBuffer(), ('hello, world', ''))
+        self.assertEqual(self.p.currentLineBuffer(), ('hello, world', ''))
 
         kR(self.pt.HOME)
         kR(self.pt.END)
-        self.assertEquals(self.p.currentLineBuffer(), ('hello, world', ''))
+        self.assertEqual(self.p.currentLineBuffer(), ('hello, world', ''))
 
     def testBackspace(self):
         kR = lambda ch: self.p.keystrokeReceived(ch, None)
 
         for ch in 'xyz':
             kR(ch)
-        self.assertEquals(self.p.currentLineBuffer(), ('xyz', ''))
+        self.assertEqual(self.p.currentLineBuffer(), ('xyz', ''))
 
         kR(self.pt.BACKSPACE)
-        self.assertEquals(self.p.currentLineBuffer(), ('xy', ''))
+        self.assertEqual(self.p.currentLineBuffer(), ('xy', ''))
 
         kR(self.pt.LEFT_ARROW)
         kR(self.pt.BACKSPACE)
-        self.assertEquals(self.p.currentLineBuffer(), ('', 'y'))
+        self.assertEqual(self.p.currentLineBuffer(), ('', 'y'))
 
         kR(self.pt.BACKSPACE)
-        self.assertEquals(self.p.currentLineBuffer(), ('', 'y'))
+        self.assertEqual(self.p.currentLineBuffer(), ('', 'y'))
 
     def testDelete(self):
         kR = lambda ch: self.p.keystrokeReceived(ch, None)
 
         for ch in 'xyz':
             kR(ch)
-        self.assertEquals(self.p.currentLineBuffer(), ('xyz', ''))
+        self.assertEqual(self.p.currentLineBuffer(), ('xyz', ''))
 
         kR(self.pt.DELETE)
-        self.assertEquals(self.p.currentLineBuffer(), ('xyz', ''))
-
-        kR(self.pt.LEFT_ARROW)
-        kR(self.pt.DELETE)
-        self.assertEquals(self.p.currentLineBuffer(), ('xy', ''))
+        self.assertEqual(self.p.currentLineBuffer(), ('xyz', ''))
 
         kR(self.pt.LEFT_ARROW)
         kR(self.pt.DELETE)
-        self.assertEquals(self.p.currentLineBuffer(), ('x', ''))
+        self.assertEqual(self.p.currentLineBuffer(), ('xy', ''))
 
         kR(self.pt.LEFT_ARROW)
         kR(self.pt.DELETE)
-        self.assertEquals(self.p.currentLineBuffer(), ('', ''))
+        self.assertEqual(self.p.currentLineBuffer(), ('x', ''))
+
+        kR(self.pt.LEFT_ARROW)
+        kR(self.pt.DELETE)
+        self.assertEqual(self.p.currentLineBuffer(), ('', ''))
 
         kR(self.pt.DELETE)
-        self.assertEquals(self.p.currentLineBuffer(), ('', ''))
+        self.assertEqual(self.p.currentLineBuffer(), ('', ''))
 
     def testInsert(self):
         kR = lambda ch: self.p.keystrokeReceived(ch, None)
@@ -196,11 +196,11 @@ class Arrows(unittest.TestCase):
 
         kR(self.pt.LEFT_ARROW)
         kR('A')
-        self.assertEquals(self.p.currentLineBuffer(), ('xyA', 'z'))
+        self.assertEqual(self.p.currentLineBuffer(), ('xyA', 'z'))
 
         kR(self.pt.LEFT_ARROW)
         kR('B')
-        self.assertEquals(self.p.currentLineBuffer(), ('xyB', 'Az'))
+        self.assertEqual(self.p.currentLineBuffer(), ('xyB', 'Az'))
 
     def testTypeover(self):
         kR = lambda ch: self.p.keystrokeReceived(ch, None)
@@ -212,11 +212,11 @@ class Arrows(unittest.TestCase):
 
         kR(self.pt.LEFT_ARROW)
         kR('A')
-        self.assertEquals(self.p.currentLineBuffer(), ('xyA', ''))
+        self.assertEqual(self.p.currentLineBuffer(), ('xyA', ''))
 
         kR(self.pt.LEFT_ARROW)
         kR('B')
-        self.assertEquals(self.p.currentLineBuffer(), ('xyB', ''))
+        self.assertEqual(self.p.currentLineBuffer(), ('xyB', ''))
 
 
 from twisted.conch import telnet
@@ -375,9 +375,9 @@ class _BaseMixin:
     def _assertBuffer(self, lines):
         receivedLines = str(self.recvlineClient).splitlines()
         expectedLines = lines + ([''] * (self.HEIGHT - len(lines) - 1))
-        self.assertEquals(len(receivedLines), len(expectedLines))
+        self.assertEqual(len(receivedLines), len(expectedLines))
         for i in range(len(receivedLines)):
-            self.assertEquals(
+            self.assertEqual(
                 receivedLines[i], expectedLines[i],
                 str(receivedLines[max(0, i-1):i+1]) +
                 " != " +
@@ -531,8 +531,8 @@ class _StdioMixin(_BaseMixin):
             pass
         def trap(failure):
             failure.trap(error.ProcessTerminated)
-            self.assertEquals(failure.value.exitCode, None)
-            self.assertEquals(failure.value.status, 9)
+            self.assertEqual(failure.value.exitCode, None)
+            self.assertEqual(failure.value.status, 9)
         return self.testTerminal.onDisconnection.addErrback(trap)
 
     def _testwrite(self, bytes):

@@ -120,4 +120,4 @@ class ConnectionTestsMixin(object):
         portDeferred.addCallback(lambda ignored: reactor.stop())
 
         self.runReactor(reactor)
-        self.assertEquals(finished, [True, True])
+        self.assertEqual(finished, [True, True])

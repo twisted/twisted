@@ -34,7 +34,7 @@ class XmlStreamTest(unittest.TestCase):
         """
         self.xmlstream.connectionMade()
         self.xmlstream.send("<root>")
-        self.assertEquals(self.outlist[0], "<root>")
+        self.assertEqual(self.outlist[0], "<root>")
 
 
     def test_receiveRoot(self):
@@ -50,7 +50,7 @@ class XmlStreamTest(unittest.TestCase):
                                    streamStartEvent)
         self.xmlstream.connectionMade()
         self.xmlstream.dataReceived("<root>")
-        self.assertEquals(1, len(streamStarted))
+        self.assertEqual(1, len(streamStarted))
 
 
     def test_receiveBadXML(self):
@@ -73,13 +73,13 @@ class XmlStreamTest(unittest.TestCase):
         self.xmlstream.connectionMade()
 
         self.xmlstream.dataReceived("<root>")
-        self.assertEquals(0, len(streamError))
-        self.assertEquals(0, len(streamEnd))
+        self.assertEqual(0, len(streamError))
+        self.assertEqual(0, len(streamEnd))
 
         self.xmlstream.dataReceived("<child><unclosed></child>")
-        self.assertEquals(1, len(streamError))
+        self.assertEqual(1, len(streamError))
         self.assertTrue(streamError[0].check(domish.ParserError))
-        self.assertEquals(1, len(streamEnd))
+        self.assertEqual(1, len(streamEnd))
 
 
     def test_streamEnd(self):
@@ -95,9 +95,9 @@ class XmlStreamTest(unittest.TestCase):
                                    streamEndEvent)
         self.xmlstream.connectionMade()
         self.loseConnection()
-        self.assertEquals(1, len(streamEnd))
+        self.assertEqual(1, len(streamEnd))
         self.assertIsInstance(streamEnd[0], failure.Failure)
-        self.assertEquals(streamEnd[0].getErrorMessage(),
+        self.assertEqual(streamEnd[0].getErrorMessage(),
                 self.connectionLostMsg)
 
 
@@ -144,7 +144,7 @@ class BootstrapMixinTest(unittest.TestCase):
         self.factory.installBootstraps(dispatcher)
 
         dispatcher.dispatch(None, '//event/myevent')
-        self.assertEquals(1, len(called))
+        self.assertEqual(1, len(called))
 
 
     def test_addAndRemoveBootstrap(self):
@@ -191,7 +191,7 @@ class GenericXmlStreamFactoryTestsMixin(BootstrapMixinTest):
         xs = self.factory.buildProtocol(None)
         xs.dispatch(None, '//event/myevent')
 
-        self.assertEquals(1, len(called))
+        self.assertEqual(1, len(called))
 
 
     def test_buildProtocolStoresFactory(self):
@@ -220,5 +220,5 @@ class XmlStreamFactoryMixinTest(GenericXmlStreamFactoryTestsMixin):
         """
         xs = self.factory.buildProtocol(None)
 
-        self.assertEquals((None,), xs.args)
-        self.assertEquals({'test': None}, xs.kwargs)
+        self.assertEqual((None,), xs.args)
+        self.assertEqual({'test': None}, xs.kwargs)

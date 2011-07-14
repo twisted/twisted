@@ -55,24 +55,24 @@ class ParseCorrectnessTest(unittest.TestCase):
         """
         Checking that parameters have correct values.
         """
-        self.failUnlessEqual(self.nice.opts['long'], "Alpha")
-        self.failUnlessEqual(self.nice.opts['another'], "Beta")
-        self.failUnlessEqual(self.nice.opts['longonly'], "noshort")
-        self.failUnlessEqual(self.nice.opts['shortless'], "Gamma")
+        self.assertEqual(self.nice.opts['long'], "Alpha")
+        self.assertEqual(self.nice.opts['another'], "Beta")
+        self.assertEqual(self.nice.opts['longonly'], "noshort")
+        self.assertEqual(self.nice.opts['shortless'], "Gamma")
 
     def test_checkFlags(self):
         """
         Checking that flags have correct values.
         """
-        self.failUnlessEqual(self.nice.opts['aflag'], 1)
-        self.failUnlessEqual(self.nice.opts['flout'], 0)
+        self.assertEqual(self.nice.opts['aflag'], 1)
+        self.assertEqual(self.nice.opts['flout'], 0)
 
     def test_checkCustoms(self):
         """
         Checking that custom flags and parameters have correct values.
         """
-        self.failUnlessEqual(self.nice.opts['myflag'], "PONY!")
-        self.failUnlessEqual(self.nice.opts['myparam'], "Tofu WITH A PONY!")
+        self.assertEqual(self.nice.opts['myflag'], "PONY!")
+        self.assertEqual(self.nice.opts['myparam'], "Tofu WITH A PONY!")
 
 
 
@@ -107,12 +107,12 @@ class TypedTestCase(unittest.TestCase):
         """
         argV = []
         self.usage.parseOptions(argV)
-        self.failUnlessEqual(self.usage.opts['fooint'], 392)
+        self.assertEqual(self.usage.opts['fooint'], 392)
         self.assert_(isinstance(self.usage.opts['fooint'], int))
-        self.failUnlessEqual(self.usage.opts['foofloat'], 4.23)
+        self.assertEqual(self.usage.opts['foofloat'], 4.23)
         self.assert_(isinstance(self.usage.opts['foofloat'], float))
-        self.failUnlessEqual(self.usage.opts['eggint'], None)
-        self.failUnlessEqual(self.usage.opts['eggfloat'], None)
+        self.assertEqual(self.usage.opts['eggint'], None)
+        self.assertEqual(self.usage.opts['eggfloat'], None)
 
 
     def test_parsingValues(self):
@@ -122,13 +122,13 @@ class TypedTestCase(unittest.TestCase):
         argV = ("--fooint 912 --foofloat -823.1 "
                 "--eggint 32 --eggfloat 21").split()
         self.usage.parseOptions(argV)
-        self.failUnlessEqual(self.usage.opts['fooint'], 912)
+        self.assertEqual(self.usage.opts['fooint'], 912)
         self.assert_(isinstance(self.usage.opts['fooint'], int))
-        self.failUnlessEqual(self.usage.opts['foofloat'], -823.1)
+        self.assertEqual(self.usage.opts['foofloat'], -823.1)
         self.assert_(isinstance(self.usage.opts['foofloat'], float))
-        self.failUnlessEqual(self.usage.opts['eggint'], 32)
+        self.assertEqual(self.usage.opts['eggint'], 32)
         self.assert_(isinstance(self.usage.opts['eggint'], int))
-        self.failUnlessEqual(self.usage.opts['eggfloat'], 21.)
+        self.assertEqual(self.usage.opts['eggfloat'], 21.)
         self.assert_(isinstance(self.usage.opts['eggfloat'], float))
 
 
@@ -138,7 +138,7 @@ class TypedTestCase(unittest.TestCase):
         dispatched to a handler.
         """
         self.usage.parseOptions(['--under-score', 'foo'])
-        self.assertEquals(self.usage.underscoreValue, 'foo')
+        self.assertEqual(self.usage.underscoreValue, 'foo')
 
 
     def test_underscoreOptionAlias(self):
@@ -146,7 +146,7 @@ class TypedTestCase(unittest.TestCase):
         An option name with a dash in it can have an alias.
         """
         self.usage.parseOptions(['-u', 'bar'])
-        self.assertEquals(self.usage.underscoreValue, 'bar')
+        self.assertEqual(self.usage.underscoreValue, 'bar')
 
 
     def test_invalidValues(self):
@@ -204,7 +204,7 @@ class WrongTypedTestCase(unittest.TestCase):
         argV = "--foowrong blah".split()
         # ValueError is swallowed as UsageError
         e = self.assertRaises(usage.UsageError, us.parseOptions, argV)
-        self.assertEquals(str(e), "Parameter type enforcement failed: Yay")
+        self.assertEqual(str(e), "Parameter type enforcement failed: Yay")
 
         us = WeirdCallableOptions()
         argV = "--barwrong blah".split()
@@ -220,7 +220,7 @@ class OutputTest(unittest.TestCase):
         opt = WellBehaved()
         e = self.assertRaises(usage.UsageError,
                               opt.parseOptions, ['-Z'])
-        self.assertEquals(str(e), 'option -Z not recognized')
+        self.assertEqual(str(e), 'option -Z not recognized')
 
 
 class InquisitionOptions(usage.Options):
@@ -258,55 +258,55 @@ class SubCommandTest(unittest.TestCase):
     def test_simpleSubcommand(self):
         o = SubCommandOptions()
         o.parseOptions(['--europian-swallow', 'inquisition'])
-        self.failUnlessEqual(o['europian-swallow'], True)
-        self.failUnlessEqual(o.subCommand, 'inquisition')
+        self.assertEqual(o['europian-swallow'], True)
+        self.assertEqual(o.subCommand, 'inquisition')
         self.failUnless(isinstance(o.subOptions, InquisitionOptions))
-        self.failUnlessEqual(o.subOptions['expect'], False)
-        self.failUnlessEqual(o.subOptions['torture-device'], 'comfy-chair')
+        self.assertEqual(o.subOptions['expect'], False)
+        self.assertEqual(o.subOptions['torture-device'], 'comfy-chair')
 
     def test_subcommandWithFlagsAndOptions(self):
         o = SubCommandOptions()
         o.parseOptions(['inquisition', '--expect', '--torture-device=feather'])
-        self.failUnlessEqual(o['europian-swallow'], False)
-        self.failUnlessEqual(o.subCommand, 'inquisition')
+        self.assertEqual(o['europian-swallow'], False)
+        self.assertEqual(o.subCommand, 'inquisition')
         self.failUnless(isinstance(o.subOptions, InquisitionOptions))
-        self.failUnlessEqual(o.subOptions['expect'], True)
-        self.failUnlessEqual(o.subOptions['torture-device'], 'feather')
+        self.assertEqual(o.subOptions['expect'], True)
+        self.assertEqual(o.subOptions['torture-device'], 'feather')
 
     def test_subcommandAliasWithFlagsAndOptions(self):
         o = SubCommandOptions()
         o.parseOptions(['inquest', '--expect', '--torture-device=feather'])
-        self.failUnlessEqual(o['europian-swallow'], False)
-        self.failUnlessEqual(o.subCommand, 'inquisition')
+        self.assertEqual(o['europian-swallow'], False)
+        self.assertEqual(o.subCommand, 'inquisition')
         self.failUnless(isinstance(o.subOptions, InquisitionOptions))
-        self.failUnlessEqual(o.subOptions['expect'], True)
-        self.failUnlessEqual(o.subOptions['torture-device'], 'feather')
+        self.assertEqual(o.subOptions['expect'], True)
+        self.assertEqual(o.subOptions['torture-device'], 'feather')
 
     def test_anotherSubcommandWithFlagsAndOptions(self):
         o = SubCommandOptions()
         o.parseOptions(['holyquest', '--for-grail'])
-        self.failUnlessEqual(o['europian-swallow'], False)
-        self.failUnlessEqual(o.subCommand, 'holyquest')
+        self.assertEqual(o['europian-swallow'], False)
+        self.assertEqual(o.subCommand, 'holyquest')
         self.failUnless(isinstance(o.subOptions, HolyQuestOptions))
-        self.failUnlessEqual(o.subOptions['horseback'], False)
-        self.failUnlessEqual(o.subOptions['for-grail'], True)
+        self.assertEqual(o.subOptions['horseback'], False)
+        self.assertEqual(o.subOptions['for-grail'], True)
 
     def test_noSubcommand(self):
         o = SubCommandOptions()
         o.parseOptions(['--europian-swallow'])
-        self.failUnlessEqual(o['europian-swallow'], True)
-        self.failUnlessEqual(o.subCommand, None)
+        self.assertEqual(o['europian-swallow'], True)
+        self.assertEqual(o.subCommand, None)
         self.failIf(hasattr(o, 'subOptions'))
 
     def test_defaultSubcommand(self):
         o = SubCommandOptions()
         o.defaultSubCommand = 'inquest'
         o.parseOptions(['--europian-swallow'])
-        self.failUnlessEqual(o['europian-swallow'], True)
-        self.failUnlessEqual(o.subCommand, 'inquisition')
+        self.assertEqual(o['europian-swallow'], True)
+        self.assertEqual(o.subCommand, 'inquisition')
         self.failUnless(isinstance(o.subOptions, InquisitionOptions))
-        self.failUnlessEqual(o.subOptions['expect'], False)
-        self.failUnlessEqual(o.subOptions['torture-device'], 'comfy-chair')
+        self.assertEqual(o.subOptions['expect'], False)
+        self.assertEqual(o.subOptions['torture-device'], 'comfy-chair')
 
     def test_subCommandParseOptionsHasParent(self):
         class SubOpt(usage.Options):
@@ -320,7 +320,7 @@ class SubCommandTest(unittest.TestCase):
         o = Opt()
         o.parseOptions(['foo'])
         self.failUnless(hasattr(o.subOptions, 'sawParent'))
-        self.failUnlessEqual(o.subOptions.sawParent , o)
+        self.assertEqual(o.subOptions.sawParent , o)
 
     def test_subCommandInTwoPlaces(self):
         """
@@ -387,9 +387,9 @@ class PortCoerceTestCase(unittest.TestCase):
         """
         Test the answers with valid input.
         """
-        self.assertEquals(0, usage.portCoerce("0"))
-        self.assertEquals(3210, usage.portCoerce("3210"))
-        self.assertEquals(65535, usage.portCoerce("65535"))
+        self.assertEqual(0, usage.portCoerce("0"))
+        self.assertEqual(3210, usage.portCoerce("3210"))
+        self.assertEqual(65535, usage.portCoerce("65535"))
 
     def test_errorCoerce(self):
         """

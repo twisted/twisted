@@ -129,7 +129,7 @@ class WireTestCase(unittest.TestCase):
         a.dataReceived("how")
         a.dataReceived("are")
         a.dataReceived("you")
-        self.assertEquals(t.value(), "helloworldhowareyou")
+        self.assertEqual(t.value(), "helloworldhowareyou")
 
 
     def test_who(self):
@@ -139,7 +139,7 @@ class WireTestCase(unittest.TestCase):
         t = proto_helpers.StringTransport()
         a = wire.Who()
         a.makeConnection(t)
-        self.assertEquals(t.value(), "root\r\n")
+        self.assertEqual(t.value(), "root\r\n")
 
 
     def test_QOTD(self):
@@ -149,7 +149,7 @@ class WireTestCase(unittest.TestCase):
         t = proto_helpers.StringTransport()
         a = wire.QOTD()
         a.makeConnection(t)
-        self.assertEquals(t.value(),
+        self.assertEqual(t.value(),
                           "An apple a day keeps the doctor away.\r\n")
 
 
@@ -207,7 +207,7 @@ a'''
             for i in range(len(self.buffer)/packet_size + 1):
                 s = self.buffer[i*packet_size:(i+1)*packet_size]
                 a.dataReceived(s)
-            self.failUnlessEqual(self.output, a.received)
+            self.assertEqual(self.output, a.received)
 
 
     pause_buf = 'twiddle1\ntwiddle2\npause\ntwiddle3\n'
@@ -229,9 +229,9 @@ a'''
             for i in range(len(self.pause_buf)/packet_size + 1):
                 s = self.pause_buf[i*packet_size:(i+1)*packet_size]
                 a.dataReceived(s)
-            self.assertEquals(self.pause_output1, a.received)
+            self.assertEqual(self.pause_output1, a.received)
             clock.advance(0)
-            self.assertEquals(self.pause_output2, a.received)
+            self.assertEqual(self.pause_output2, a.received)
 
     rawpause_buf = 'twiddle1\ntwiddle2\nlen 5\nrawpause\n12345twiddle3\n'
 
@@ -252,9 +252,9 @@ a'''
             for i in range(len(self.rawpause_buf)/packet_size + 1):
                 s = self.rawpause_buf[i*packet_size:(i+1)*packet_size]
                 a.dataReceived(s)
-            self.assertEquals(self.rawpause_output1, a.received)
+            self.assertEqual(self.rawpause_output1, a.received)
             clock.advance(0)
-            self.assertEquals(self.rawpause_output2, a.received)
+            self.assertEqual(self.rawpause_output2, a.received)
 
     stop_buf = 'twiddle1\ntwiddle2\nstop\nmore\nstuff\n'
 
@@ -272,7 +272,7 @@ a'''
             for i in range(len(self.stop_buf)/packet_size + 1):
                 s = self.stop_buf[i*packet_size:(i+1)*packet_size]
                 a.dataReceived(s)
-            self.assertEquals(self.stop_output, a.received)
+            self.assertEqual(self.stop_output, a.received)
 
 
     def test_lineReceiverAsProducer(self):
@@ -283,7 +283,7 @@ a'''
         t = proto_helpers.StringIOWithoutClosing()
         a.makeConnection(protocol.FileWrapper(t))
         a.dataReceived('produce\nhello world\nunproduce\ngoodbye\n')
-        self.assertEquals(a.received,
+        self.assertEqual(a.received,
                           ['produce', 'hello world', 'unproduce', 'goodbye'])
 
 
@@ -329,7 +329,7 @@ class LineOnlyReceiverTestCase(unittest.TestCase):
         a.makeConnection(t)
         for c in self.buffer:
             a.dataReceived(c)
-        self.assertEquals(a.received, self.buffer.split('\n')[:-1])
+        self.assertEqual(a.received, self.buffer.split('\n')[:-1])
 
 
     def test_lineTooLong(self):
@@ -431,7 +431,7 @@ class NetstringReceiverTestCase(unittest.TestCase, LPTestCaseMixin):
                 s = out[i*packet_size:(i+1)*packet_size]
                 if s:
                     a.dataReceived(s)
-            self.assertEquals(a.received, self.strings)
+            self.assertEqual(a.received, self.strings)
 
 
     def test_sendNonStrings(self):
@@ -451,8 +451,8 @@ class NetstringReceiverTestCase(unittest.TestCase, LPTestCaseMixin):
             t.clear()
             length = out[:out.find(":")]
             data = out[out.find(":") + 1:-1] #[:-1] to ignore the trailing ","
-            self.assertEquals(int(length), len(str(s)))
-            self.assertEquals(data, str(s))
+            self.assertEqual(int(length), len(str(s)))
+            self.assertEqual(data, str(s))
 
         warnings = self.flushWarnings(
             offendingFunctions=[self.test_sendNonStrings])
@@ -471,7 +471,7 @@ class NetstringReceiverTestCase(unittest.TestCase, LPTestCaseMixin):
         Empty netstrings (with length '0') can be received.
         """
         self.netstringReceiver.dataReceived("0:,")
-        self.assertEquals(self.netstringReceiver.received, [""])
+        self.assertEqual(self.netstringReceiver.received, [""])
 
 
     def test_receiveOneCharacter(self):
@@ -479,7 +479,7 @@ class NetstringReceiverTestCase(unittest.TestCase, LPTestCaseMixin):
         One-character netstrings can be received.
         """
         self.netstringReceiver.dataReceived("1:a,")
-        self.assertEquals(self.netstringReceiver.received, ["a"])
+        self.assertEqual(self.netstringReceiver.received, ["a"])
 
 
     def test_receiveTwoCharacters(self):
@@ -487,7 +487,7 @@ class NetstringReceiverTestCase(unittest.TestCase, LPTestCaseMixin):
         Two-character netstrings can be received.
         """
         self.netstringReceiver.dataReceived("2:ab,")
-        self.assertEquals(self.netstringReceiver.received, ["ab"])
+        self.assertEqual(self.netstringReceiver.received, ["ab"])
 
 
     def test_receiveNestedNetstring(self):
@@ -497,7 +497,7 @@ class NetstringReceiverTestCase(unittest.TestCase, LPTestCaseMixin):
         characters appearing inside the data portion of the netstring.
         """
         self.netstringReceiver.dataReceived("4:1:a,,")
-        self.assertEquals(self.netstringReceiver.received, ["1:a,"])
+        self.assertEqual(self.netstringReceiver.received, ["1:a,"])
 
 
     def test_moreDataThanSpecified(self):
@@ -558,7 +558,7 @@ class NetstringReceiverTestCase(unittest.TestCase, LPTestCaseMixin):
         """
         self.netstringReceiver.dataReceived("4:aa")
         self.netstringReceiver.dataReceived("aa,")
-        self.assertEquals(self.netstringReceiver.received, ["aaaa"])
+        self.assertEqual(self.netstringReceiver.received, ["aaaa"])
         self.assertTrue(self.netstringReceiver._payloadComplete())
 
 
@@ -569,7 +569,7 @@ class NetstringReceiverTestCase(unittest.TestCase, LPTestCaseMixin):
         """
         for part in ["1", "0:01234", "56789", ","]:
             self.netstringReceiver.dataReceived(part)
-        self.assertEquals(self.netstringReceiver.received, ["0123456789"])
+        self.assertEqual(self.netstringReceiver.received, ["0123456789"])
 
 
     def test_receiveNetstringPortions_3(self):
@@ -578,7 +578,7 @@ class NetstringReceiverTestCase(unittest.TestCase, LPTestCaseMixin):
         """
         for part in "2:ab,":
             self.netstringReceiver.dataReceived(part)
-        self.assertEquals(self.netstringReceiver.received, ["ab"])
+        self.assertEqual(self.netstringReceiver.received, ["ab"])
 
 
     def test_receiveTwoNetstrings(self):
@@ -589,9 +589,9 @@ class NetstringReceiverTestCase(unittest.TestCase, LPTestCaseMixin):
         """
         self.netstringReceiver.dataReceived("1:a,1")
         self.assertTrue(self.netstringReceiver._payloadComplete())
-        self.assertEquals(self.netstringReceiver.received, ["a"])
+        self.assertEqual(self.netstringReceiver.received, ["a"])
         self.netstringReceiver.dataReceived(":b,")
-        self.assertEquals(self.netstringReceiver.received, ["a", "b"])
+        self.assertEqual(self.netstringReceiver.received, ["a", "b"])
 
 
     def test_maxReceiveLimit(self):
@@ -612,7 +612,7 @@ class NetstringReceiverTestCase(unittest.TestCase, LPTestCaseMixin):
         """
         self.netstringReceiver._remainingData = "12:"
         self.netstringReceiver._consumeLength()
-        self.assertEquals(self.netstringReceiver._expectedPayloadSize, 13)
+        self.assertEqual(self.netstringReceiver._expectedPayloadSize, 13)
 
 
     def test_consumeLengthBorderCase1(self):
@@ -623,7 +623,7 @@ class NetstringReceiverTestCase(unittest.TestCase, LPTestCaseMixin):
         self.netstringReceiver._remainingData = "12:"
         self.netstringReceiver.MAX_LENGTH = 12
         self.netstringReceiver._consumeLength()
-        self.assertEquals(self.netstringReceiver._expectedPayloadSize, 13)
+        self.assertEqual(self.netstringReceiver._expectedPayloadSize, 13)
 
 
     def test_consumeLengthBorderCase2(self):
@@ -659,22 +659,22 @@ class NetstringReceiverTestCase(unittest.TestCase, LPTestCaseMixin):
         warnings = self.flushWarnings(
             offendingFunctions=[self.test_deprecatedModuleAttributes])
 
-        self.assertEquals(len(warnings), 4)
+        self.assertEqual(len(warnings), 4)
         for warning in warnings:
-            self.assertEquals(warning['category'], DeprecationWarning)
-        self.assertEquals(
+            self.assertEqual(warning['category'], DeprecationWarning)
+        self.assertEqual(
             warnings[0]['message'],
             ("twisted.protocols.basic.LENGTH was deprecated in Twisted 10.2.0: "
              "NetstringReceiver parser state is private."))
-        self.assertEquals(
+        self.assertEqual(
             warnings[1]['message'],
             ("twisted.protocols.basic.DATA was deprecated in Twisted 10.2.0: "
              "NetstringReceiver parser state is private."))
-        self.assertEquals(
+        self.assertEqual(
             warnings[2]['message'],
             ("twisted.protocols.basic.COMMA was deprecated in Twisted 10.2.0: "
              "NetstringReceiver parser state is private."))
-        self.assertEquals(
+        self.assertEqual(
             warnings[3]['message'],
             ("twisted.protocols.basic.NUMBER was deprecated in Twisted 10.2.0: "
              "NetstringReceiver parser state is private."))
@@ -699,7 +699,7 @@ class IntNTestCaseMixin(LPTestCaseMixin):
         for s in self.strings:
             for c in struct.pack(r.structFormat,len(s)) + s:
                 r.dataReceived(c)
-        self.assertEquals(r.received, self.strings)
+        self.assertEqual(r.received, self.strings)
 
 
     def test_partial(self):
@@ -710,7 +710,7 @@ class IntNTestCaseMixin(LPTestCaseMixin):
             r = self.getProtocol()
             for c in s:
                 r.dataReceived(c)
-            self.assertEquals(r.received, [])
+            self.assertEqual(r.received, [])
 
 
     def test_send(self):
@@ -719,7 +719,7 @@ class IntNTestCaseMixin(LPTestCaseMixin):
         """
         r = self.getProtocol()
         r.sendString("b" * 16)
-        self.assertEquals(r.transport.value(),
+        self.assertEqual(r.transport.value(),
             struct.pack(r.structFormat, 16) + "b" * 16)
 
 
@@ -775,9 +775,9 @@ class Int32TestCase(unittest.TestCase, IntNTestCaseMixin):
         """
         r = self.getProtocol()
         r.sendString("foo")
-        self.assertEquals(r.transport.value(), "\x00\x00\x00\x03foo")
+        self.assertEqual(r.transport.value(), "\x00\x00\x00\x03foo")
         r.dataReceived("\x00\x00\x00\x04ubar")
-        self.assertEquals(r.received, ["ubar"])
+        self.assertEqual(r.received, ["ubar"])
 
 
 
@@ -805,9 +805,9 @@ class Int16TestCase(unittest.TestCase, IntNTestCaseMixin):
         """
         r = self.getProtocol()
         r.sendString("foo")
-        self.assertEquals(r.transport.value(), "\x00\x03foo")
+        self.assertEqual(r.transport.value(), "\x00\x03foo")
         r.dataReceived("\x00\x04ubar")
-        self.assertEquals(r.received, ["ubar"])
+        self.assertEqual(r.received, ["ubar"])
 
 
     def test_tooLongSend(self):
@@ -845,9 +845,9 @@ class Int8TestCase(unittest.TestCase, IntNTestCaseMixin):
         """
         r = self.getProtocol()
         r.sendString("foo")
-        self.assertEquals(r.transport.value(), "\x03foo")
+        self.assertEqual(r.transport.value(), "\x03foo")
         r.dataReceived("\x04ubar")
-        self.assertEquals(r.received, ["ubar"])
+        self.assertEqual(r.received, ["ubar"])
 
 
     def test_tooLongSend(self):
@@ -907,7 +907,7 @@ class ProducerTestCase(unittest.TestCase):
 
         p.dataReceived('world\r\n')
 
-        self.assertEquals(t.data, ['hello, world'])
+        self.assertEqual(t.data, ['hello, world'])
         self.failUnless(t.paused)
         self.failUnless(p.paused)
 
@@ -918,26 +918,26 @@ class ProducerTestCase(unittest.TestCase):
 
         p.dataReceived('hello\r\nworld\r\n')
 
-        self.assertEquals(t.data, ['hello, world', 'hello'])
+        self.assertEqual(t.data, ['hello, world', 'hello'])
         self.failUnless(t.paused)
         self.failUnless(p.paused)
 
         p.resumeProducing()
         p.dataReceived('goodbye\r\n')
 
-        self.assertEquals(t.data, ['hello, world', 'hello', 'world'])
+        self.assertEqual(t.data, ['hello, world', 'hello', 'world'])
         self.failUnless(t.paused)
         self.failUnless(p.paused)
 
         p.resumeProducing()
 
-        self.assertEquals(t.data, ['hello, world', 'hello', 'world', 'goodbye'])
+        self.assertEqual(t.data, ['hello, world', 'hello', 'world', 'goodbye'])
         self.failUnless(t.paused)
         self.failUnless(p.paused)
 
         p.resumeProducing()
 
-        self.assertEquals(t.data, ['hello, world', 'hello', 'world', 'goodbye'])
+        self.assertEqual(t.data, ['hello, world', 'hello', 'world', 'goodbye'])
         self.failIf(t.paused)
         self.failIf(p.paused)
 
@@ -1042,7 +1042,7 @@ class Portforwarding(unittest.TestCase):
         def testDataReceived(data):
             received.extend(data)
             if len(received) >= nBytes:
-                self.assertEquals(''.join(received), 'x' * nBytes)
+                self.assertEqual(''.join(received), 'x' * nBytes)
                 d.callback(None)
 
         self.clientProtocol.dataReceived = testDataReceived

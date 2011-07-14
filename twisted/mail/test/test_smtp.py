@@ -308,7 +308,7 @@ class SMTPClientTestCase(unittest.TestCase, LoopbackMixin):
         server = FakeSMTPServer()
         d = self.loopback(server, client)
         d.addCallback(lambda x :
-                      self.assertEquals(server.buffer, self.expected_output))
+                      self.assertEqual(server.buffer, self.expected_output))
         return d
 
 
@@ -514,7 +514,7 @@ To: foo
                 for recip in msgdata[2]:
                     expected = list(msgdata[:])
                     expected[2] = [recip]
-                    self.assertEquals(
+                    self.assertEqual(
                         a.message[(recip,)],
                         tuple(expected)
                     )
@@ -602,7 +602,7 @@ class AuthTestCase(unittest.TestCase, LoopbackMixin):
         client.registerAuthenticator(cAuth)
 
         d = self.loopback(server, client)
-        d.addCallback(lambda x : self.assertEquals(server.authenticated, 1))
+        d.addCallback(lambda x : self.assertEqual(server.authenticated, 1))
         return d
 
 
@@ -675,11 +675,11 @@ class SMTPHelperTestCase(unittest.TestCase):
         ]
 
         for (c, e) in cases:
-            self.assertEquals(smtp.quoteaddr(c), e)
+            self.assertEqual(smtp.quoteaddr(c), e)
 
     def testUser(self):
         u = smtp.User('user@host', 'helo.host.name', None, None)
-        self.assertEquals(str(u), 'user@host')
+        self.assertEqual(str(u), 'user@host')
 
     def testXtextEncoding(self):
         cases = [
@@ -691,10 +691,10 @@ class SMTPHelperTestCase(unittest.TestCase):
 
         for (case, expected) in cases:
             self.assertEqual(smtp.xtext_encode(case), (expected, len(case)))
-            self.assertEquals(case.encode('xtext'), expected)
+            self.assertEqual(case.encode('xtext'), expected)
             self.assertEqual(
                 smtp.xtext_decode(expected), (case, len(expected)))
-            self.assertEquals(expected.decode('xtext'), case)
+            self.assertEqual(expected.decode('xtext'), case)
 
 
     def test_encodeWithErrors(self):
@@ -742,8 +742,8 @@ class TLSTestCase(unittest.TestCase, LoopbackMixin):
         server = DummyESMTP(contextFactory=serverCTX)
 
         def check(ignored):
-            self.assertEquals(client.tls, True)
-            self.assertEquals(server.startedTLS, True)
+            self.assertEqual(client.tls, True)
+            self.assertEqual(server.startedTLS, True)
 
         return self.loopback(server, client).addCallback(check)
 
@@ -768,9 +768,9 @@ class EmptyLineTestCase(unittest.TestCase):
         proto.setTimeout(None)
 
         out = transport.value().splitlines()
-        self.assertEquals(len(out), 2)
+        self.assertEqual(len(out), 2)
         self.failUnless(out[0].startswith('220'))
-        self.assertEquals(out[1], "500 Error: bad syntax")
+        self.assertEqual(out[1], "500 Error: bad syntax")
 
 
 
@@ -791,7 +791,7 @@ class TimeoutTestCase(unittest.TestCase, LoopbackMixin):
         client.makeConnection(t)
         t.protocol = client
         def check(ign):
-            self.assertEquals(clock.seconds(), 0.5)
+            self.assertEqual(clock.seconds(), 0.5)
         d = self.assertFailure(onDone, smtp.SMTPTimeoutError
             ).addCallback(check)
         # The first call should not trigger the timeout
@@ -978,7 +978,7 @@ class SMTPSenderFactoryRetryTestCase(unittest.TestCase):
             Verify that the message was successfully delivered and flush the
             error which caused the first attempt to fail.
             """
-            self.assertEquals(
+            self.assertEqual(
                 domain.messages,
                 {recipient: ["\n%s\n" % (message,)]})
             # Flush the RuntimeError that BrokenMessage caused to be logged.
@@ -1449,11 +1449,11 @@ class ESMTPAuthenticationTestCase(unittest.TestCase):
         d, credentials, mind, interfaces = loginArgs.pop()
         d.errback(RuntimeError("Something wrong with the server"))
 
-        self.assertEquals(
+        self.assertEqual(
             '451 Requested action aborted: local error in processing\r\n',
             self.transport.value())
 
-        self.assertEquals(len(self.flushLoggedErrors(RuntimeError)), 1)
+        self.assertEqual(len(self.flushLoggedErrors(RuntimeError)), 1)
 
 
 
@@ -1467,7 +1467,7 @@ class SMTPClientErrorTestCase(unittest.TestCase):
         the response code and response string.
         """
         err = smtp.SMTPClientError(123, "some text")
-        self.assertEquals(str(err), "123 some text")
+        self.assertEqual(str(err), "123 some text")
 
 
     def test_strWithNegativeCode(self):
@@ -1476,7 +1476,7 @@ class SMTPClientErrorTestCase(unittest.TestCase):
         is excluded from the string representation.
         """
         err = smtp.SMTPClientError(-1, "foo bar")
-        self.assertEquals(str(err), "foo bar")
+        self.assertEqual(str(err), "foo bar")
 
 
     def test_strWithLog(self):
@@ -1488,7 +1488,7 @@ class SMTPClientErrorTestCase(unittest.TestCase):
         log.append("testlog")
         log.append("secondline")
         err = smtp.SMTPClientError(100, "test error", log=log.str())
-        self.assertEquals(
+        self.assertEqual(
             str(err),
             "100 test error\n"
             "testlog\n"
@@ -1507,7 +1507,7 @@ class SenderMixinSentMailTests(unittest.TestCase):
         SMTP response codes to the log passed to the factory's errback.
         """
         onDone = self.assertFailure(defer.Deferred(), smtp.SMTPDeliveryError)
-        onDone.addCallback(lambda e: self.assertEquals(
+        onDone.addCallback(lambda e: self.assertEqual(
                 e.log, "bob@example.com: 199 Error in sending.\n"))
 
         clientFactory = smtp.SMTPSenderFactory(

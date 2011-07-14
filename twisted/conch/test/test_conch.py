@@ -349,7 +349,7 @@ class ForwardingMixin(ConchServerSetupMixin):
         server.
         """
         d = self.execute('echo goodbye', ConchTestOpenSSHProcess())
-        return d.addCallback(self.assertEquals, 'goodbye\n')
+        return d.addCallback(self.assertEqual, 'goodbye\n')
 
 
     def test_localToRemoteForwarding(self):
@@ -462,7 +462,7 @@ class RekeyTestsMixin(ConchServerSetupMixin):
         process = ConchTestOpenSSHProcess()
         d = self.execute("", process, '-o RekeyLimit=2K')
         def finished(result):
-            self.assertEquals(
+            self.assertEqual(
                 result,
                 '\n'.join(['line #%02d' % (i,) for i in range(60)]) + '\n')
         d.addCallback(finished)

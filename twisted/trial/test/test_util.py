@@ -25,7 +25,7 @@ class TestMktemp(TestCase):
     def test_name(self):
         name = self.mktemp()
         dirs = os.path.dirname(name).split(os.sep)[:-1]
-        self.failUnlessEqual(
+        self.assertEqual(
             dirs, ['twisted.trial.test.test_util', 'TestMktemp', 'test_name'])
 
     def test_unique(self):
@@ -50,7 +50,7 @@ class TestIntrospection(TestCase):
             suppression.TestSuppression2.testSuppressModule)
         expected = [suppression.TestSuppression2, suppression]
         for a, b in zip(parents, expected):
-            self.failUnlessEqual(a, b)
+            self.assertEqual(a, b)
 
 
 class TestFindObject(packages.SysPathManglingTest):
@@ -64,9 +64,9 @@ class TestFindObject(packages.SysPathManglingTest):
         """
         util.findObject('')
         warningsShown = self.flushWarnings()
-        self.assertEquals(len(warningsShown), 1)
+        self.assertEqual(len(warningsShown), 1)
         self.assertIdentical(warningsShown[0]['category'], DeprecationWarning)
-        self.assertEquals(warningsShown[0]['message'],
+        self.assertEqual(warningsShown[0]['message'],
                           "twisted.trial.util.findObject was deprecated "
                           "in Twisted 10.1.0: Please use "
                           "twisted.python.reflect.namedAny instead.")
@@ -75,12 +75,12 @@ class TestFindObject(packages.SysPathManglingTest):
     def test_importPackage(self):
         package1 = util.findObject('package')
         import package as package2
-        self.failUnlessEqual(package1, (True, package2))
+        self.assertEqual(package1, (True, package2))
 
     def test_importModule(self):
         test_sample2 = util.findObject('goodpackage.test_sample')
         from goodpackage import test_sample
-        self.failUnlessEqual((True, test_sample), test_sample2)
+        self.assertEqual((True, test_sample), test_sample2)
 
     def test_importError(self):
         self.failUnlessRaises(ZeroDivisionError,
@@ -91,21 +91,21 @@ class TestFindObject(packages.SysPathManglingTest):
                               util.findObject, 'package2.test_module')
 
     def test_importNonexistentPackage(self):
-        self.failUnlessEqual(util.findObject('doesntexist')[0], False)
+        self.assertEqual(util.findObject('doesntexist')[0], False)
 
     def test_findNonexistentModule(self):
-        self.failUnlessEqual(util.findObject('package.doesntexist')[0], False)
+        self.assertEqual(util.findObject('package.doesntexist')[0], False)
 
     def test_findNonexistentObject(self):
-        self.failUnlessEqual(util.findObject(
+        self.assertEqual(util.findObject(
             'goodpackage.test_sample.doesnt')[0], False)
-        self.failUnlessEqual(util.findObject(
+        self.assertEqual(util.findObject(
             'goodpackage.test_sample.AlphabetTest.doesntexist')[0], False)
 
     def test_findObjectExist(self):
         alpha1 = util.findObject('goodpackage.test_sample.AlphabetTest')
         from goodpackage import test_sample
-        self.failUnlessEqual(alpha1, (True, test_sample.AlphabetTest))
+        self.assertEqual(alpha1, (True, test_sample.AlphabetTest))
 
 
 
@@ -264,7 +264,7 @@ class DirtyReactorAggregateErrorTest(TestCase):
         Delayed calls are formatted nicely.
         """
         error = DirtyReactorAggregateError(["Foo", "bar"])
-        self.assertEquals(str(error),
+        self.assertEqual(str(error),
                           """\
 Reactor was unclean.
 DelayedCalls: (set twisted.internet.base.DelayedCall.debug = True to debug)
@@ -277,7 +277,7 @@ bar""")
         Selectables are formatted nicely.
         """
         error = DirtyReactorAggregateError([], ["selectable 1", "selectable 2"])
-        self.assertEquals(str(error),
+        self.assertEqual(str(error),
                           """\
 Reactor was unclean.
 Selectables:
@@ -291,7 +291,7 @@ selectable 2""")
         """
         error = DirtyReactorAggregateError(["bleck", "Boozo"],
                                            ["Sel1", "Sel2"])
-        self.assertEquals(str(error),
+        self.assertEqual(str(error),
                           """\
 Reactor was unclean.
 DelayedCalls: (set twisted.internet.base.DelayedCall.debug = True to debug)
@@ -386,7 +386,7 @@ class JanitorTests(TestCase):
         reactor = StubReactor([])
         jan = _Janitor(None, None, reactor=reactor)
         jan._cleanPending()
-        self.assertEquals(reactor.iterations, [0, 0])
+        self.assertEqual(reactor.iterations, [0, 0])
 
 
     def test_cleanPendingCancelsCalls(self):
@@ -401,7 +401,7 @@ class JanitorTests(TestCase):
         reactor = StubReactor([delayedCall])
         jan = _Janitor(None, None, reactor=reactor)
         jan._cleanPending()
-        self.assertEquals(cancelled, [delayedCall])
+        self.assertEqual(cancelled, [delayedCall])
 
 
     def test_cleanPendingReturnsDelayedCallStrings(self):
@@ -419,7 +419,7 @@ class JanitorTests(TestCase):
         reactor = StubReactor([delayedCall])
         jan = _Janitor(None, None, reactor=reactor)
         strings = jan._cleanPending()
-        self.assertEquals(strings, [delayedCallString])
+        self.assertEqual(strings, [delayedCallString])
 
 
     def test_cleanReactorRemovesSelectables(self):
@@ -429,7 +429,7 @@ class JanitorTests(TestCase):
         reactor = StubReactor([])
         jan = _Janitor(None, None, reactor=reactor)
         jan._cleanReactor()
-        self.assertEquals(reactor.removeAllCalled, 1)
+        self.assertEqual(reactor.removeAllCalled, 1)
 
 
     def test_cleanReactorKillsProcesses(self):
@@ -456,7 +456,7 @@ class JanitorTests(TestCase):
         reactor = StubReactor([], [pt])
         jan = _Janitor(None, None, reactor=reactor)
         jan._cleanReactor()
-        self.assertEquals(pt.signals, ["KILL"])
+        self.assertEqual(pt.signals, ["KILL"])
 
 
     def test_cleanReactorReturnsSelectableStrings(self):
@@ -474,7 +474,7 @@ class JanitorTests(TestCase):
 
         reactor = StubReactor([], [Selectable()])
         jan = _Janitor(None, None, reactor=reactor)
-        self.assertEquals(jan._cleanReactor(), ["(SELECTABLE!)"])
+        self.assertEqual(jan._cleanReactor(), ["(SELECTABLE!)"])
 
 
     def test_postCaseCleanupNoErrors(self):
@@ -487,7 +487,7 @@ class JanitorTests(TestCase):
         reporter = StubErrorReporter()
         jan = _Janitor(test, reporter, reactor=reactor)
         self.assertTrue(jan.postCaseCleanup())
-        self.assertEquals(reporter.errors, [])
+        self.assertEqual(reporter.errors, [])
 
 
     def test_postCaseCleanupWithErrors(self):
@@ -505,8 +505,8 @@ class JanitorTests(TestCase):
         reporter = StubErrorReporter()
         jan = _Janitor(test, reporter, reactor=reactor)
         self.assertFalse(jan.postCaseCleanup())
-        self.assertEquals(len(reporter.errors), 1)
-        self.assertEquals(reporter.errors[0][1].value.delayedCalls,
+        self.assertEqual(len(reporter.errors), 1)
+        self.assertEqual(reporter.errors[0][1].value.delayedCalls,
                           [delayedCallString])
 
 
@@ -520,7 +520,7 @@ class JanitorTests(TestCase):
         reporter = StubErrorReporter()
         jan = _Janitor(test, reporter, reactor=reactor)
         jan.postClassCleanup()
-        self.assertEquals(reporter.errors, [])
+        self.assertEqual(reporter.errors, [])
 
 
     def test_postClassCleanupWithPendingCallErrors(self):
@@ -537,8 +537,8 @@ class JanitorTests(TestCase):
         reporter = StubErrorReporter()
         jan = _Janitor(test, reporter, reactor=reactor)
         jan.postClassCleanup()
-        self.assertEquals(len(reporter.errors), 1)
-        self.assertEquals(reporter.errors[0][1].value.delayedCalls,
+        self.assertEqual(len(reporter.errors), 1)
+        self.assertEqual(reporter.errors[0][1].value.delayedCalls,
                           [delayedCallString])
 
 
@@ -553,7 +553,7 @@ class JanitorTests(TestCase):
         reporter = StubErrorReporter()
         jan = _Janitor(test, reporter, reactor=reactor)
         jan.postClassCleanup()
-        self.assertEquals(len(reporter.errors), 1)
-        self.assertEquals(reporter.errors[0][1].value.selectables,
+        self.assertEqual(len(reporter.errors), 1)
+        self.assertEqual(reporter.errors[0][1].value.selectables,
                           [repr(selectable)])
 

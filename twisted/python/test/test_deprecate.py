@@ -66,7 +66,7 @@ class TestDeprecationWarnings(TestCase):
         """
         version = Version('Twisted', 8, 0, 0)
         format = deprecate.DEPRECATION_WARNING_FORMAT + ': This is a message'
-        self.assertEquals(
+        self.assertEqual(
             getDeprecationWarningString(self.test_getDeprecationWarningString,
                                         version, format),
             'twisted.python.test.test_deprecate.TestDeprecationWarnings.'
@@ -183,7 +183,7 @@ class TestDeprecationWarnings(TestCase):
         """
         version = Version('Twisted', 8, 0, 0)
         dummy = deprecated(version, "something.foobar")(dummyCallable)
-        self.assertEquals(dummy.__doc__,
+        self.assertEqual(dummy.__doc__,
             "\n"
             "    Do nothing.\n\n"
             "    This is used to test the deprecation decorators.\n\n"
@@ -203,7 +203,7 @@ class TestDeprecationWarnings(TestCase):
         version = Version('Twisted', 8, 0, 0)
         decorator = deprecated(version, replacement=dummyReplacementMethod)
         dummy = decorator(dummyCallable)
-        self.assertEquals(dummy.__doc__,
+        self.assertEqual(dummy.__doc__,
             "\n"
             "    Do nothing.\n\n"
             "    This is used to test the deprecation decorators.\n\n"
@@ -342,7 +342,7 @@ class ModuleProxyTests(TestCase):
         _deprecatedAttributes = object.__getattribute__(
             proxy, '_deprecatedAttributes')
         _deprecatedAttributes['foo'] = _MockDeprecatedAttribute(42)
-        self.assertEquals(proxy.foo, 42)
+        self.assertEqual(proxy.foo, 42)
 
 
     def test_privateAttributes(self):
@@ -364,7 +364,7 @@ class ModuleProxyTests(TestCase):
         proxy = self._makeProxy()
         proxy._module = 1
         self.assertNotEquals(object.__getattribute__(proxy, '_module'), 1)
-        self.assertEquals(proxy._module, 1)
+        self.assertEqual(proxy._module, 1)
 
 
     def test_repr(self):
@@ -375,7 +375,7 @@ class ModuleProxyTests(TestCase):
         """
         proxy = self._makeProxy()
         realModule = object.__getattribute__(proxy, '_module')
-        self.assertEquals(
+        self.assertEqual(
             repr(proxy), '<%s module=%r>' % (type(proxy).__name__, realModule))
 
 
@@ -413,7 +413,7 @@ class DeprecatedAttributeTests(TestCase):
         attr = deprecate._DeprecatedAttribute(
             deprecatedattributes, name, self.version, self.message)
 
-        self.assertEquals(attr.__name__, name)
+        self.assertEqual(attr.__name__, name)
 
         # Since we're accessing the value getter directly, as opposed to via
         # the module proxy, we need to match the warning's stack level.
@@ -425,10 +425,10 @@ class DeprecatedAttributeTests(TestCase):
         warningsShown = self.flushWarnings([
             self.test_deprecatedAttributeHelper])
         self.assertIdentical(warningsShown[0]['category'], DeprecationWarning)
-        self.assertEquals(
+        self.assertEqual(
             warningsShown[0]['message'],
             self._getWarningString(name))
-        self.assertEquals(len(warningsShown), 1)
+        self.assertEqual(len(warningsShown), 1)
 
 
     def test_deprecatedAttribute(self):
@@ -441,7 +441,7 @@ class DeprecatedAttributeTests(TestCase):
         # Accessing non-deprecated attributes does not issue a warning.
         deprecatedattributes.ANOTHER_ATTRIBUTE
         warningsShown = self.flushWarnings([self.test_deprecatedAttribute])
-        self.assertEquals(len(warningsShown), 0)
+        self.assertEqual(len(warningsShown), 0)
 
         name = 'DEPRECATED_ATTRIBUTE'
 
@@ -450,9 +450,9 @@ class DeprecatedAttributeTests(TestCase):
         getattr(deprecatedattributes, name)
 
         warningsShown = self.flushWarnings([self.test_deprecatedAttribute])
-        self.assertEquals(len(warningsShown), 1)
+        self.assertEqual(len(warningsShown), 1)
         self.assertIdentical(warningsShown[0]['category'], DeprecationWarning)
-        self.assertEquals(
+        self.assertEqual(
             warningsShown[0]['message'],
             self._getWarningString(name))
 
@@ -557,13 +557,13 @@ deprecatedModuleAttribute(
         """
         # import package.module
         from package import module
-        self.assertEquals(module.__file__, modulePath.path)
+        self.assertEqual(module.__file__, modulePath.path)
         emitted = self.flushWarnings([self.checkOneWarning])
-        self.assertEquals(len(emitted), 1)
-        self.assertEquals(emitted[0]['message'],
+        self.assertEqual(len(emitted), 1)
+        self.assertEqual(emitted[0]['message'],
                           'package.module was deprecated in Package 1.2.3: '
                           'message')
-        self.assertEquals(emitted[0]['category'], DeprecationWarning)
+        self.assertEqual(emitted[0]['category'], DeprecationWarning)
 
 
     def test_deprecatedModule(self):
@@ -647,7 +647,7 @@ def callTestFunction():
             filename = filename[:-1]
         self.assertSamePath(
             FilePath(warningsShown[0]["filename"]), FilePath(filename))
-        self.assertEquals(warningsShown[0]["message"], "A Warning Message")
+        self.assertEqual(warningsShown[0]["message"], "A Warning Message")
 
 
     def test_warningLineNumber(self):
@@ -663,9 +663,9 @@ def callTestFunction():
             self.package.sibling('twisted_private_helper').child('module.py'))
         # Line number 9 is the last line in the testFunction in the helper
         # module.
-        self.assertEquals(warningsShown[0]["lineno"], 9)
-        self.assertEquals(warningsShown[0]["message"], "A Warning String")
-        self.assertEquals(len(warningsShown), 1)
+        self.assertEqual(warningsShown[0]["lineno"], 9)
+        self.assertEqual(warningsShown[0]["message"], "A Warning String")
+        self.assertEqual(len(warningsShown), 1)
 
 
     def assertSamePath(self, first, second):
@@ -710,9 +710,9 @@ def callTestFunction():
         expectedPath = self.package.sibling(
             'twisted_renamed_helper').child('module.py')
         self.assertSamePath(warnedPath, expectedPath)
-        self.assertEquals(warningsShown[0]["lineno"], 9)
-        self.assertEquals(warningsShown[0]["message"], "A Warning String")
-        self.assertEquals(len(warningsShown), 1)
+        self.assertEqual(warningsShown[0]["lineno"], 9)
+        self.assertEqual(warningsShown[0]["message"], "A Warning String")
+        self.assertEqual(len(warningsShown), 1)
 
 
     def test_filteredWarning(self):
@@ -733,7 +733,7 @@ def callTestFunction():
         module.callTestFunction()
 
         warningsShown = self.flushWarnings()
-        self.assertEquals(len(warningsShown), 0)
+        self.assertEqual(len(warningsShown), 0)
 
 
     def test_filteredOnceWarning(self):
@@ -755,7 +755,7 @@ def callTestFunction():
         module.callTestFunction()
 
         warningsShown = self.flushWarnings()
-        self.assertEquals(len(warningsShown), 1)
+        self.assertEqual(len(warningsShown), 1)
         message = warningsShown[0]['message']
         category = warningsShown[0]['category']
         filename = warningsShown[0]['filename']

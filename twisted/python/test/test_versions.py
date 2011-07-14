@@ -112,7 +112,7 @@ class VersionsTest(unittest.TestCase):
 
         This is a regression test.
         """
-        self.assertEquals(_inf, _inf)
+        self.assertEqual(_inf, _inf)
 
 
     def testDontAllowBuggyComparisons(self):
@@ -127,7 +127,7 @@ class VersionsTest(unittest.TestCase):
         Calling C{repr} on a version returns a human-readable string
         representation of the version.
         """
-        self.assertEquals(repr(Version("dummy", 1, 2, 3)),
+        self.assertEqual(repr(Version("dummy", 1, 2, 3)),
                           "Version('dummy', 1, 2, 3)")
 
 
@@ -136,7 +136,7 @@ class VersionsTest(unittest.TestCase):
         Calling C{repr} on a version with a prerelease returns a human-readable
         string representation of the version including the prerelease.
         """
-        self.assertEquals(repr(Version("dummy", 1, 2, 3, prerelease=4)),
+        self.assertEqual(repr(Version("dummy", 1, 2, 3, prerelease=4)),
                           "Version('dummy', 1, 2, 3, prerelease=4)")
 
 
@@ -145,7 +145,7 @@ class VersionsTest(unittest.TestCase):
         Calling C{str} on a version returns a human-readable string
         representation of the version.
         """
-        self.assertEquals(str(Version("dummy", 1, 2, 3)),
+        self.assertEqual(str(Version("dummy", 1, 2, 3)),
                           "[dummy, version 1.2.3]")
 
 
@@ -153,12 +153,12 @@ class VersionsTest(unittest.TestCase):
         """
         Calling C{str} on a version with a prerelease includes the prerelease.
         """
-        self.assertEquals(str(Version("dummy", 1, 0, 0, prerelease=1)),
+        self.assertEqual(str(Version("dummy", 1, 0, 0, prerelease=1)),
                           "[dummy, version 1.0.0pre1]")
 
 
     def testShort(self):
-        self.assertEquals(Version('dummy', 1, 2, 3).short(), '1.2.3')
+        self.assertEqual(Version('dummy', 1, 2, 3).short(), '1.2.3')
 
 
     def test_goodSVNEntries_4(self):
@@ -166,7 +166,7 @@ class VersionsTest(unittest.TestCase):
         Version should be able to parse an SVN format 4 entries file.
         """
         version = Version("dummy", 1, 0, 0)
-        self.assertEquals(
+        self.assertEqual(
             version._parseSVNEntries_4(StringIO(VERSION_4_ENTRIES)), '18211')
 
 
@@ -219,14 +219,14 @@ class VersionsTest(unittest.TestCase):
         """
         The L{base} method returns a very simple representation of the version.
         """
-        self.assertEquals(Version("foo", 1, 0, 0).base(), "1.0.0")
+        self.assertEqual(Version("foo", 1, 0, 0).base(), "1.0.0")
 
 
     def test_baseWithPrerelease(self):
         """
         The base version includes 'preX' for versions with prereleases.
         """
-        self.assertEquals(Version("foo", 1, 0, 0, prerelease=8).base(),
+        self.assertEqual(Version("foo", 1, 0, 0, prerelease=8).base(),
                           "1.0.0pre8")
 
 
@@ -313,7 +313,7 @@ class FormatDiscoveryTests(unittest.TestCase):
         line of the I{entries} file.
         """
         self.svnEntries.child("entries").setContent(VERSION_10_ENTRIES)
-        self.assertEquals(self.getVersion()._getSVNVersion(), '22715')
+        self.assertEqual(self.getVersion()._getSVNVersion(), '22715')
 
 
     def test_detectUnknownVersion(self):

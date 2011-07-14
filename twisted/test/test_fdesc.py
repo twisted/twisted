@@ -77,8 +77,8 @@ class ReadWriteTestCase(unittest.TestCase):
         n = self.write("hello")
         self.failUnless(n > 0)
         s = self.read()
-        self.assertEquals(len(s), n)
-        self.assertEquals("hello"[:n], s)
+        self.assertEqual(len(s), n)
+        self.assertEqual("hello"[:n], s)
 
 
     def test_writeAndReadLarge(self):
@@ -98,8 +98,8 @@ class ReadWriteTestCase(unittest.TestCase):
             # Increment a counter to be sure we'll exit at some point
             i += 1
         result = "".join(result)
-        self.assertEquals(len(result), written)
-        self.assertEquals(orig[:written], result)
+        self.assertEqual(len(result), written)
+        self.assertEqual(orig[:written], result)
 
 
     def test_readFromEmpty(self):
@@ -109,8 +109,8 @@ class ReadWriteTestCase(unittest.TestCase):
         """
         l = []
         result = fdesc.readFromFD(self.r, l.append)
-        self.assertEquals(l, [])
-        self.assertEquals(result, None)
+        self.assertEqual(l, [])
+        self.assertEqual(result, None)
 
 
     def test_readFromCleanClose(self):
@@ -119,7 +119,7 @@ class ReadWriteTestCase(unittest.TestCase):
         returns a connection done indicator.
         """
         os.close(self.w)
-        self.assertEquals(self.read(), fdesc.CONNECTION_DONE)
+        self.assertEqual(self.read(), fdesc.CONNECTION_DONE)
 
 
     def test_writeToClosed(self):
@@ -128,7 +128,7 @@ class ReadWriteTestCase(unittest.TestCase):
         results in a connection lost indicator.
         """
         os.close(self.r)
-        self.assertEquals(self.write("s"), fdesc.CONNECTION_LOST)
+        self.assertEqual(self.write("s"), fdesc.CONNECTION_LOST)
 
 
     def test_readFromInvalid(self):
@@ -137,7 +137,7 @@ class ReadWriteTestCase(unittest.TestCase):
         closed results in a connection lost indicator.
         """
         os.close(self.r)
-        self.assertEquals(self.read(), fdesc.CONNECTION_LOST)
+        self.assertEqual(self.read(), fdesc.CONNECTION_LOST)
 
 
     def test_writeToInvalid(self):
@@ -146,7 +146,7 @@ class ReadWriteTestCase(unittest.TestCase):
         closed results in a connection lost indicator.
         """
         os.close(self.w)
-        self.assertEquals(self.write("s"), fdesc.CONNECTION_LOST)
+        self.assertEqual(self.write("s"), fdesc.CONNECTION_LOST)
 
 
     def test_writeErrors(self):
@@ -160,7 +160,7 @@ class ReadWriteTestCase(unittest.TestCase):
             raise err
         os.write = eagainWrite
         try:
-            self.assertEquals(self.write("s"), 0)
+            self.assertEqual(self.write("s"), 0)
         finally:
             os.write = oldOsWrite
 
@@ -170,7 +170,7 @@ class ReadWriteTestCase(unittest.TestCase):
             raise err
         os.write = eintrWrite
         try:
-            self.assertEquals(self.write("s"), 0)
+            self.assertEqual(self.write("s"), 0)
         finally:
             os.write = oldOsWrite
 

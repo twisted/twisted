@@ -122,21 +122,21 @@ class PluginTestCase(unittest.TestCase):
         cache = plugin.getCache(self.module)
 
         dropin = cache[self.originalPlugin]
-        self.assertEquals(dropin.moduleName,
+        self.assertEqual(dropin.moduleName,
                           'mypackage.%s' % (self.originalPlugin,))
         self.assertIn("I'm a test drop-in.", dropin.description)
 
         # Note, not the preferred way to get a plugin by its interface.
         p1 = [p for p in dropin.plugins if ITestPlugin in p.provided][0]
         self.assertIdentical(p1.dropin, dropin)
-        self.assertEquals(p1.name, "TestPlugin")
+        self.assertEqual(p1.name, "TestPlugin")
 
         # Check the content of the description comes from the plugin module
         # docstring
-        self.assertEquals(
+        self.assertEqual(
             p1.description.strip(),
             "A plugin used solely for testing purposes.")
-        self.assertEquals(p1.provided, [ITestPlugin, plugin.IPlugin])
+        self.assertEqual(p1.provided, [ITestPlugin, plugin.IPlugin])
         realPlugin = p1.load()
         # The plugin should match the class present in sys.modules
         self.assertIdentical(
@@ -159,7 +159,7 @@ class PluginTestCase(unittest.TestCase):
         """
         plugins = list(plugin.getPlugins(ITestPlugin2, self.module))
 
-        self.assertEquals(len(plugins), 2)
+        self.assertEqual(len(plugins), 2)
 
         names = ['AnotherTestPlugin', 'ThirdTestPlugin']
         for p in plugins:
@@ -186,7 +186,7 @@ class PluginTestCase(unittest.TestCase):
 
             # We should find 2 plugins: the one in testplugin, and the one in
             # pluginextra
-            self.assertEquals(len(plgs), 2)
+            self.assertEqual(len(plgs), 2)
 
             names = ['TestPlugin', 'FourthTestPlugin']
             for p in plgs:
@@ -210,7 +210,7 @@ class PluginTestCase(unittest.TestCase):
         try:
             plgs = list(plugin.getPlugins(ITestPlugin, self.module))
             # Sanity check
-            self.assertEquals(len(plgs), 2)
+            self.assertEqual(len(plgs), 2)
 
             FilePath(__file__).sibling('plugin_extra2.py'
                 ).copyTo(self.package.child('pluginextra.py'))
@@ -221,7 +221,7 @@ class PluginTestCase(unittest.TestCase):
             # Make sure additions are noticed
             plgs = list(plugin.getPlugins(ITestPlugin, self.module))
 
-            self.assertEquals(len(plgs), 3)
+            self.assertEqual(len(plgs), 3)
 
             names = ['TestPlugin', 'FourthTestPlugin', 'FifthTestPlugin']
             for p in plgs:
@@ -251,7 +251,7 @@ class PluginTestCase(unittest.TestCase):
                 sys.modules['mypackage.pluginextra'],
                 True)
         plgs = list(plugin.getPlugins(ITestPlugin, self.module))
-        self.assertEquals(1, len(plgs))
+        self.assertEqual(1, len(plgs))
 
     test_detectFilesRemoved = _withCacheness(test_detectFilesRemoved)
 

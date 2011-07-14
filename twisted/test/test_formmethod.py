@@ -16,7 +16,7 @@ class ArgumentTestCase(unittest.TestCase):
     def argTest(self, argKlass, testPairs, badValues, *args, **kwargs):
         arg = argKlass("name", *args, **kwargs)
         for val, result in testPairs:
-            self.assertEquals(arg.coerce(val), result)
+            self.assertEqual(arg.coerce(val), result)
         for val in badValues:
             self.assertRaises(formmethod.InputError, arg.coerce, val)
     

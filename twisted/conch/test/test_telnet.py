@@ -93,7 +93,7 @@ class TelnetTransportTestCase(unittest.TestCase):
         for b in L:
             self.p.dataReceived(b)
 
-        self.assertEquals(h.bytes, ''.join(L))
+        self.assertEqual(h.bytes, ''.join(L))
 
     def testNewlineHandling(self):
         # Send various kinds of newlines and make sure they get translated
@@ -108,7 +108,7 @@ class TelnetTransportTestCase(unittest.TestCase):
         for b in L:
             self.p.dataReceived(b)
 
-        self.assertEquals(h.bytes, L[0][:-2] + '\n' +
+        self.assertEqual(h.bytes, L[0][:-2] + '\n' +
                           L[1][:-2] + '\r' +
                           L[2][:-2] + '\n' +
                           L[3][:-2] + '\r')
@@ -126,7 +126,7 @@ class TelnetTransportTestCase(unittest.TestCase):
         for b in L:
             self.p.dataReceived(b)
 
-        self.assertEquals(h.bytes, ''.join(L).replace('\xff\xff', '\xff'))
+        self.assertEqual(h.bytes, ''.join(L).replace('\xff\xff', '\xff'))
 
     def _simpleCommandTest(self, cmdName):
         # Send a single simple telnet command and make sure
@@ -141,8 +141,8 @@ class TelnetTransportTestCase(unittest.TestCase):
         for b in L:
             self.p.dataReceived(b)
 
-        self.assertEquals(h.calls, [cmdName])
-        self.assertEquals(h.bytes, ''.join(L).replace(cmd, ''))
+        self.assertEqual(h.calls, [cmdName])
+        self.assertEqual(h.bytes, ''.join(L).replace(cmd, ''))
 
     def testInterrupt(self):
         self._simpleCommandTest("IP")
@@ -183,8 +183,8 @@ class TelnetTransportTestCase(unittest.TestCase):
         for b in L:
             self.p.dataReceived(b)
 
-        self.assertEquals(h.bytes, ''.join(L).replace(cmd, ''))
-        self.assertEquals(h.subcmd, list("hello world"))
+        self.assertEqual(h.bytes, ''.join(L).replace(cmd, ''))
+        self.assertEqual(h.subcmd, list("hello world"))
 
     def testSubnegotiationWithEmbeddedSE(self):
         # Send a subnegotiation command with an embedded SE.  Make sure
@@ -201,8 +201,8 @@ class TelnetTransportTestCase(unittest.TestCase):
         for b in L:
             self.p.dataReceived(b)
 
-        self.assertEquals(h.bytes, ''.join(L).replace(cmd, ''))
-        self.assertEquals(h.subcmd, [telnet.SE])
+        self.assertEqual(h.bytes, ''.join(L).replace(cmd, ''))
+        self.assertEqual(h.subcmd, [telnet.SE])
 
     def testBoundarySubnegotiation(self):
         # Send a subnegotiation command.  Split it at every possible byte boundary
@@ -223,14 +223,14 @@ class TelnetTransportTestCase(unittest.TestCase):
             for bytes in L:
                 self.p.dataReceived(bytes)
 
-            self.assertEquals(h.bytes, ''.join(L).replace(cmd, ''))
-            self.assertEquals(h.subcmd, [telnet.SE] + list('hello'))
+            self.assertEqual(h.bytes, ''.join(L).replace(cmd, ''))
+            self.assertEqual(h.subcmd, [telnet.SE] + list('hello'))
 
     def _enabledHelper(self, o, eL=[], eR=[], dL=[], dR=[]):
-        self.assertEquals(o.enabledLocal, eL)
-        self.assertEquals(o.enabledRemote, eR)
-        self.assertEquals(o.disabledLocal, dL)
-        self.assertEquals(o.disabledRemote, dR)
+        self.assertEqual(o.enabledLocal, eL)
+        self.assertEqual(o.enabledRemote, eR)
+        self.assertEqual(o.disabledLocal, dL)
+        self.assertEqual(o.disabledRemote, dR)
 
     def testRefuseWill(self):
         # Try to enable an option.  The server should refuse to enable it.
@@ -239,8 +239,8 @@ class TelnetTransportTestCase(unittest.TestCase):
         bytes = "surrounding bytes" + cmd + "to spice things up"
         self.p.dataReceived(bytes)
 
-        self.assertEquals(self.p.protocol.bytes, bytes.replace(cmd, ''))
-        self.assertEquals(self.t.value(), telnet.IAC + telnet.DONT + '\x12')
+        self.assertEqual(self.p.protocol.bytes, bytes.replace(cmd, ''))
+        self.assertEqual(self.t.value(), telnet.IAC + telnet.DONT + '\x12')
         self._enabledHelper(self.p.protocol)
 
     def testRefuseDo(self):
@@ -250,8 +250,8 @@ class TelnetTransportTestCase(unittest.TestCase):
         bytes = "surrounding bytes" + cmd + "to spice things up"
         self.p.dataReceived(bytes)
 
-        self.assertEquals(self.p.protocol.bytes, bytes.replace(cmd, ''))
-        self.assertEquals(self.t.value(), telnet.IAC + telnet.WONT + '\x12')
+        self.assertEqual(self.p.protocol.bytes, bytes.replace(cmd, ''))
+        self.assertEqual(self.t.value(), telnet.IAC + telnet.WONT + '\x12')
         self._enabledHelper(self.p.protocol)
 
     def testAcceptDo(self):
@@ -264,7 +264,7 @@ class TelnetTransportTestCase(unittest.TestCase):
         h.localEnableable = ('\x19',)
         self.p.dataReceived(bytes)
 
-        self.assertEquals(self.t.value(), telnet.IAC + telnet.WILL + '\x19')
+        self.assertEqual(self.t.value(), telnet.IAC + telnet.WILL + '\x19')
         self._enabledHelper(h, eL=['\x19'])
 
     def testAcceptWill(self):
@@ -276,7 +276,7 @@ class TelnetTransportTestCase(unittest.TestCase):
         h.remoteEnableable = ('\x91',)
         self.p.dataReceived(bytes)
 
-        self.assertEquals(self.t.value(), telnet.IAC + telnet.DO + '\x91')
+        self.assertEqual(self.t.value(), telnet.IAC + telnet.DO + '\x91')
         self._enabledHelper(h, eR=['\x91'])
 
     def testAcceptWont(self):
@@ -294,9 +294,9 @@ class TelnetTransportTestCase(unittest.TestCase):
         bytes = "fiddle dee" + cmd
         self.p.dataReceived(bytes)
 
-        self.assertEquals(self.p.protocol.bytes, bytes.replace(cmd, ''))
-        self.assertEquals(self.t.value(), telnet.IAC + telnet.DONT + '\x29')
-        self.assertEquals(s.him.state, 'no')
+        self.assertEqual(self.p.protocol.bytes, bytes.replace(cmd, ''))
+        self.assertEqual(self.t.value(), telnet.IAC + telnet.DONT + '\x29')
+        self.assertEqual(s.him.state, 'no')
         self._enabledHelper(self.p.protocol, dR=['\x29'])
 
     def testAcceptDont(self):
@@ -314,9 +314,9 @@ class TelnetTransportTestCase(unittest.TestCase):
         bytes = "fiddle dum " + cmd
         self.p.dataReceived(bytes)
 
-        self.assertEquals(self.p.protocol.bytes, bytes.replace(cmd, ''))
-        self.assertEquals(self.t.value(), telnet.IAC + telnet.WONT + '\x29')
-        self.assertEquals(s.us.state, 'no')
+        self.assertEqual(self.p.protocol.bytes, bytes.replace(cmd, ''))
+        self.assertEqual(self.t.value(), telnet.IAC + telnet.WONT + '\x29')
+        self.assertEqual(s.us.state, 'no')
         self._enabledHelper(self.p.protocol, dL=['\x29'])
 
     def testIgnoreWont(self):
@@ -327,8 +327,8 @@ class TelnetTransportTestCase(unittest.TestCase):
         bytes = "dum de dum" + cmd + "tra la la"
         self.p.dataReceived(bytes)
 
-        self.assertEquals(self.p.protocol.bytes, bytes.replace(cmd, ''))
-        self.assertEquals(self.t.value(), '')
+        self.assertEqual(self.p.protocol.bytes, bytes.replace(cmd, ''))
+        self.assertEqual(self.t.value(), '')
         self._enabledHelper(self.p.protocol)
 
     def testIgnoreDont(self):
@@ -340,8 +340,8 @@ class TelnetTransportTestCase(unittest.TestCase):
         bytes = "dum de dum" + cmd + "tra la la"
         self.p.dataReceived(bytes)
 
-        self.assertEquals(self.p.protocol.bytes, bytes.replace(cmd, ''))
-        self.assertEquals(self.t.value(), '')
+        self.assertEqual(self.p.protocol.bytes, bytes.replace(cmd, ''))
+        self.assertEqual(self.t.value(), '')
         self._enabledHelper(self.p.protocol)
 
     def testIgnoreWill(self):
@@ -359,8 +359,8 @@ class TelnetTransportTestCase(unittest.TestCase):
         bytes = "tra la la" + cmd + "dum de dum"
         self.p.dataReceived(bytes)
 
-        self.assertEquals(self.p.protocol.bytes, bytes.replace(cmd, ''))
-        self.assertEquals(self.t.value(), '')
+        self.assertEqual(self.p.protocol.bytes, bytes.replace(cmd, ''))
+        self.assertEqual(self.t.value(), '')
         self._enabledHelper(self.p.protocol)
 
     def testIgnoreDo(self):
@@ -378,8 +378,8 @@ class TelnetTransportTestCase(unittest.TestCase):
         bytes = "tra la la" + cmd + "dum de dum"
         self.p.dataReceived(bytes)
 
-        self.assertEquals(self.p.protocol.bytes, bytes.replace(cmd, ''))
-        self.assertEquals(self.t.value(), '')
+        self.assertEqual(self.p.protocol.bytes, bytes.replace(cmd, ''))
+        self.assertEqual(self.t.value(), '')
         self._enabledHelper(self.p.protocol)
 
     def testAcceptedEnableRequest(self):
@@ -392,11 +392,11 @@ class TelnetTransportTestCase(unittest.TestCase):
         h = self.p.protocol
         h.remoteEnableable = ('\x42',)
 
-        self.assertEquals(self.t.value(), telnet.IAC + telnet.DO + '\x42')
+        self.assertEqual(self.t.value(), telnet.IAC + telnet.DO + '\x42')
 
         self.p.dataReceived(telnet.IAC + telnet.WILL + '\x42')
 
-        d.addCallback(self.assertEquals, True)
+        d.addCallback(self.assertEqual, True)
         d.addCallback(lambda _:  self._enabledHelper(h, eR=['\x42']))
         return d
 
@@ -414,20 +414,20 @@ class TelnetTransportTestCase(unittest.TestCase):
         self.p.protocol.remoteEnableable = ('\x42',)
         d = self.p.do('\x42')
 
-        self.assertEquals(self.t.value(), telnet.IAC + telnet.DO + '\x42')
+        self.assertEqual(self.t.value(), telnet.IAC + telnet.DO + '\x42')
 
         s = self.p.getOptionState('\x42')
-        self.assertEquals(s.him.state, 'no')
-        self.assertEquals(s.us.state, 'no')
-        self.assertEquals(s.him.negotiating, True)
-        self.assertEquals(s.us.negotiating, False)
+        self.assertEqual(s.him.state, 'no')
+        self.assertEqual(s.us.state, 'no')
+        self.assertEqual(s.him.negotiating, True)
+        self.assertEqual(s.us.negotiating, False)
 
         self.p.dataReceived(telnet.IAC + telnet.WONT + '\x42')
 
         d = self.assertFailure(d, telnet.OptionRefused)
         d.addCallback(lambda ignored: self._enabledHelper(self.p.protocol))
         d.addCallback(
-            lambda ignored: self.assertEquals(s.him.negotiating, False))
+            lambda ignored: self.assertEqual(s.him.negotiating, False))
         return d
 
 
@@ -444,20 +444,20 @@ class TelnetTransportTestCase(unittest.TestCase):
         self.p.protocol.localEnableable = ('\x42',)
         d = self.p.will('\x42')
 
-        self.assertEquals(self.t.value(), telnet.IAC + telnet.WILL + '\x42')
+        self.assertEqual(self.t.value(), telnet.IAC + telnet.WILL + '\x42')
 
         s = self.p.getOptionState('\x42')
-        self.assertEquals(s.him.state, 'no')
-        self.assertEquals(s.us.state, 'no')
-        self.assertEquals(s.him.negotiating, False)
-        self.assertEquals(s.us.negotiating, True)
+        self.assertEqual(s.him.state, 'no')
+        self.assertEqual(s.us.state, 'no')
+        self.assertEqual(s.him.negotiating, False)
+        self.assertEqual(s.us.negotiating, True)
 
         self.p.dataReceived(telnet.IAC + telnet.DONT + '\x42')
 
         d = self.assertFailure(d, telnet.OptionRefused)
         d.addCallback(lambda ignored: self._enabledHelper(self.p.protocol))
         d.addCallback(
-            lambda ignored: self.assertEquals(s.us.negotiating, False))
+            lambda ignored: self.assertEqual(s.us.negotiating, False))
         return d
 
 
@@ -471,11 +471,11 @@ class TelnetTransportTestCase(unittest.TestCase):
 
         d = self.p.dont('\x42')
 
-        self.assertEquals(self.t.value(), telnet.IAC + telnet.DONT + '\x42')
+        self.assertEqual(self.t.value(), telnet.IAC + telnet.DONT + '\x42')
 
         self.p.dataReceived(telnet.IAC + telnet.WONT + '\x42')
 
-        d.addCallback(self.assertEquals, True)
+        d.addCallback(self.assertEqual, True)
         d.addCallback(lambda _: self._enabledHelper(self.p.protocol,
                                                     dR=['\x42']))
         return d
@@ -504,7 +504,7 @@ class TelnetTransportTestCase(unittest.TestCase):
             self.p.protocol.remoteEnableable = ('\x24',)
             d = self.p.do('\x24')
             self.p.dataReceived(telnet.IAC + telnet.WILL + '\x24')
-            d.addCallback(self.assertEquals, True)
+            d.addCallback(self.assertEqual, True)
             d.addCallback(lambda _: self._enabledHelper(self.p.protocol,
                                                         eR=['\x24'],
                                                         dR=['\x24']))

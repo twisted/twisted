@@ -90,10 +90,10 @@ class ClientCreatorTests(TestCase):
         def check(reactor, cc):
             cc.connectTCP('example.com', 1234, 4321, ('1.2.3.4', 9876))
             host, port, factory, timeout, bindAddress = reactor.tcpClients.pop()
-            self.assertEquals(host, 'example.com')
-            self.assertEquals(port, 1234)
-            self.assertEquals(timeout, 4321)
-            self.assertEquals(bindAddress, ('1.2.3.4', 9876))
+            self.assertEqual(host, 'example.com')
+            self.assertEqual(port, 1234)
+            self.assertEqual(timeout, 4321)
+            self.assertEqual(bindAddress, ('1.2.3.4', 9876))
             return factory
         self._basicConnectTest(check)
 
@@ -107,9 +107,9 @@ class ClientCreatorTests(TestCase):
         def check(reactor, cc):
             cc.connectUNIX('/foo/bar', 123, True)
             address, factory, timeout, checkPID = reactor.unixClients.pop()
-            self.assertEquals(address, '/foo/bar')
-            self.assertEquals(timeout, 123)
-            self.assertEquals(checkPID, True)
+            self.assertEqual(address, '/foo/bar')
+            self.assertEqual(timeout, 123)
+            self.assertEqual(checkPID, True)
             return factory
         self._basicConnectTest(check)
 
@@ -124,11 +124,11 @@ class ClientCreatorTests(TestCase):
             expectedContextFactory = object()
             cc.connectSSL('example.com', 1234, expectedContextFactory, 4321, ('4.3.2.1', 5678))
             host, port, factory, contextFactory, timeout, bindAddress = reactor.sslClients.pop()
-            self.assertEquals(host, 'example.com')
-            self.assertEquals(port, 1234)
+            self.assertEqual(host, 'example.com')
+            self.assertEqual(port, 1234)
             self.assertIdentical(contextFactory, expectedContextFactory)
-            self.assertEquals(timeout, 4321)
-            self.assertEquals(bindAddress, ('4.3.2.1', 5678))
+            self.assertEqual(timeout, 4321)
+            self.assertEqual(bindAddress, ('4.3.2.1', 5678))
             return factory
         self._basicConnectTest(check)
 
@@ -198,13 +198,13 @@ class ClientCreatorTests(TestCase):
         connector = reactor.connectors.pop()
         # Sanity check - there is an outstanding delayed call to fire the
         # Deferred.
-        self.assertEquals(len(reactor.getDelayedCalls()), 1)
+        self.assertEqual(len(reactor.getDelayedCalls()), 1)
 
         # Cancel the Deferred, disconnecting the transport just set up and
         # cancelling the delayed call.
         d.cancel()
 
-        self.assertEquals(reactor.getDelayedCalls(), [])
+        self.assertEqual(reactor.getDelayedCalls(), [])
 
         # A real connector implementation is responsible for disconnecting the
         # transport as well.  For our purposes, just check that someone told the
@@ -286,12 +286,12 @@ class ClientCreatorTests(TestCase):
 
         # Sanity check - there is an outstanding delayed call to fire the
         # Deferred.
-        self.assertEquals(len(reactor.getDelayedCalls()), 1)
+        self.assertEqual(len(reactor.getDelayedCalls()), 1)
 
         # Cancel the Deferred, cancelling the delayed call.
         d.cancel()
 
-        self.assertEquals(reactor.getDelayedCalls(), [])
+        self.assertEqual(reactor.getDelayedCalls(), [])
 
         return self.assertFailure(d, CancelledError)
 

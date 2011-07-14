@@ -23,26 +23,26 @@ class XMPPStringPrepTest(unittest.TestCase):
     """
 
     def testResourcePrep(self):
-        self.assertEquals(resourceprep.prepare(u'resource'), u'resource')
+        self.assertEqual(resourceprep.prepare(u'resource'), u'resource')
         self.assertNotEquals(resourceprep.prepare(u'Resource'), u'resource')
-        self.assertEquals(resourceprep.prepare(u' '), u' ')
+        self.assertEqual(resourceprep.prepare(u' '), u' ')
 
         if crippled:
             return
 
-        self.assertEquals(resourceprep.prepare(u'Henry \u2163'), u'Henry IV')
-        self.assertEquals(resourceprep.prepare(u'foo\xad\u034f\u1806\u180b'
+        self.assertEqual(resourceprep.prepare(u'Henry \u2163'), u'Henry IV')
+        self.assertEqual(resourceprep.prepare(u'foo\xad\u034f\u1806\u180b'
                                                u'bar\u200b\u2060'
                                                u'baz\ufe00\ufe08\ufe0f\ufeff'),
                           u'foobarbaz')
-        self.assertEquals(resourceprep.prepare(u'\u00a0'), u' ')
+        self.assertEqual(resourceprep.prepare(u'\u00a0'), u' ')
         self.assertRaises(UnicodeError, resourceprep.prepare, u'\u1680')
-        self.assertEquals(resourceprep.prepare(u'\u2000'), u' ')
-        self.assertEquals(resourceprep.prepare(u'\u200b'), u'')
+        self.assertEqual(resourceprep.prepare(u'\u2000'), u' ')
+        self.assertEqual(resourceprep.prepare(u'\u200b'), u'')
         self.assertRaises(UnicodeError, resourceprep.prepare, u'\u0010\u007f')
         self.assertRaises(UnicodeError, resourceprep.prepare, u'\u0085')
         self.assertRaises(UnicodeError, resourceprep.prepare, u'\u180e')
-        self.assertEquals(resourceprep.prepare(u'\ufeff'), u'')
+        self.assertEqual(resourceprep.prepare(u'\ufeff'), u'')
         self.assertRaises(UnicodeError, resourceprep.prepare, u'\uf123')
         self.assertRaises(UnicodeError, resourceprep.prepare, u'\U000f1234')
         self.assertRaises(UnicodeError, resourceprep.prepare, u'\U0010f234')
@@ -51,23 +51,23 @@ class XMPPStringPrepTest(unittest.TestCase):
         self.assertRaises(UnicodeError, resourceprep.prepare, u'\udf42')
         self.assertRaises(UnicodeError, resourceprep.prepare, u'\ufffd')
         self.assertRaises(UnicodeError, resourceprep.prepare, u'\u2ff5')
-        self.assertEquals(resourceprep.prepare(u'\u0341'), u'\u0301')
+        self.assertEqual(resourceprep.prepare(u'\u0341'), u'\u0301')
         self.assertRaises(UnicodeError, resourceprep.prepare, u'\u200e')
         self.assertRaises(UnicodeError, resourceprep.prepare, u'\u202a')
         self.assertRaises(UnicodeError, resourceprep.prepare, u'\U000e0001')
         self.assertRaises(UnicodeError, resourceprep.prepare, u'\U000e0042')
         self.assertRaises(UnicodeError, resourceprep.prepare, u'foo\u05bebar')
         self.assertRaises(UnicodeError, resourceprep.prepare, u'foo\ufd50bar')
-        #self.assertEquals(resourceprep.prepare(u'foo\ufb38bar'),
+        #self.assertEqual(resourceprep.prepare(u'foo\ufb38bar'),
         #                  u'foo\u064ebar')
         self.assertRaises(UnicodeError, resourceprep.prepare, u'\u06271')
-        self.assertEquals(resourceprep.prepare(u'\u06271\u0628'),
+        self.assertEqual(resourceprep.prepare(u'\u06271\u0628'),
                           u'\u06271\u0628')
         self.assertRaises(UnicodeError, resourceprep.prepare, u'\U000e0002')
 
     def testNodePrep(self):
-        self.assertEquals(nodeprep.prepare(u'user'), u'user')
-        self.assertEquals(nodeprep.prepare(u'User'), u'user')
+        self.assertEqual(nodeprep.prepare(u'user'), u'user')
+        self.assertEqual(nodeprep.prepare(u'User'), u'user')
         self.assertRaises(UnicodeError, nodeprep.prepare, u'us&er')
 
 
@@ -79,8 +79,8 @@ class XMPPStringPrepTest(unittest.TestCase):
 
 
     def testNamePrep(self):
-        self.assertEquals(nameprep.prepare(u'example.com'), u'example.com')
-        self.assertEquals(nameprep.prepare(u'Example.com'), u'example.com')
+        self.assertEqual(nameprep.prepare(u'example.com'), u'example.com')
+        self.assertEqual(nameprep.prepare(u'Example.com'), u'example.com')
         self.assertRaises(UnicodeError, nameprep.prepare, u'ex@mple.com')
         self.assertRaises(UnicodeError, nameprep.prepare, u'-example.com')
         self.assertRaises(UnicodeError, nameprep.prepare, u'example-.com')
@@ -88,5 +88,5 @@ class XMPPStringPrepTest(unittest.TestCase):
         if crippled:
             return
 
-        self.assertEquals(nameprep.prepare(u'stra\u00dfe.example.com'),
+        self.assertEqual(nameprep.prepare(u'stra\u00dfe.example.com'),
                           u'strasse.example.com')

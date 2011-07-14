@@ -187,12 +187,12 @@ class TestFakeSocket(TestCase):
     def test_blocking(self):
         skt = FakeSocket("someData")
         skt.setblocking(0)
-        self.assertEquals(skt.blocking, 0)
+        self.assertEqual(skt.blocking, 0)
 
 
     def test_recv(self):
         skt = FakeSocket("someData")
-        self.assertEquals(skt.recv(10), "someData")
+        self.assertEqual(skt.recv(10), "someData")
 
 
     def test_send(self):
@@ -301,13 +301,13 @@ class TCPConnectionTests(TestCase):
         conn = Connection(skt, protocol)
         conn.doRead()
         warnings = self.flushWarnings([FakeProtocol.dataReceived])
-        self.assertEquals(warnings[0]['category'], DeprecationWarning)
-        self.assertEquals(
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(
             warnings[0]["message"],
             "Returning a value other than None from "
             "twisted.internet.test.test_tcp.FakeProtocol.dataReceived "
             "is deprecated since Twisted 11.0.0.")
-        self.assertEquals(len(warnings), 1)
+        self.assertEqual(len(warnings), 1)
 
 
     def test_noTLSBeforeStartTLS(self):
@@ -821,7 +821,7 @@ class TCPConnectionTestsBuilder(ReactorBuilder):
             Make sure IOCPReactor didn't start several WSARecv operations
             that clobbered each other's results.
             """
-            self.assertEquals(data, 'x'*(2*4096) + 'y'*(2*4096),
+            self.assertEqual(data, 'x'*(2*4096) + 'y'*(2*4096),
                                  'did not get the right data')
             return DeferredList([
                     maybeDeferred(protos[0].transport.loseConnection),

@@ -404,7 +404,7 @@ class TLSTestCase(unittest.TestCase):
         before and after the startTLS.
         """
         def check(ignore):
-            self.assertEquals(
+            self.assertEqual(
                 self.serverFactory.lines,
                 UnintelligentProtocol.pretext + UnintelligentProtocol.posttext
             )
@@ -419,7 +419,7 @@ class TLSTestCase(unittest.TestCase):
         received after server startTLS should be received as raw.
         """
         def check(ignored):
-            self.assertEquals(
+            self.assertEqual(
                 self.serverFactory.lines,
                 UnintelligentProtocol.pretext
             )
@@ -435,7 +435,7 @@ class TLSTestCase(unittest.TestCase):
         Test startTLS first initiated by client.
         """
         def check(ignored):
-            self.assertEquals(
+            self.assertEqual(
                 self.clientFactory.lines,
                 UnintelligentProtocol.pretext + UnintelligentProtocol.posttext
             )
@@ -484,7 +484,7 @@ class BufferingTestCase(unittest.TestCase):
         reactor.connectSSL('127.0.0.1', port.getHost().port, client, cCTX)
 
         return clientProto.deferred.addCallback(
-            self.assertEquals, "+OK <some crap>\r\n")
+            self.assertEqual, "+OK <some crap>\r\n")
 
 
 

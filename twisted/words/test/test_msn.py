@@ -60,7 +60,7 @@ class PassportTests(unittest.TestCase):
         for (h, v) in headers.items():
             protocol.dataReceived('%s: %s\r\n' % (h,v))
         protocol.dataReceived('\r\n')
-        self.assertEquals(self.result[0], "https://login.myserver.com/")
+        self.assertEqual(self.result[0], "https://login.myserver.com/")
 
 
     def _doLoginTest(self, response, headers):
@@ -175,12 +175,12 @@ class DispatchTests(unittest.TestCase):
 
         transport = StringTransport()
         client.makeConnection(transport)
-        self.assertEquals(
+        self.assertEqual(
             transport.value(), "VER 1 MSNP8 CVR0\r\n")
         transport.clear()
 
         client.dataReceived(serverVersionResponse)
-        self.assertEquals(
+        self.assertEqual(
             transport.value(),
             "CVR 2 0x0409 win 4.10 i386 MSNMSGR 5.0.0544 MSMSGS foo\r\n")
 
@@ -228,12 +228,12 @@ class NotificationTests(unittest.TestCase):
 
         transport = StringTransport()
         self.client.makeConnection(transport)
-        self.assertEquals(
+        self.assertEqual(
             transport.value(), "VER 1 MSNP8 CVR0\r\n")
         transport.clear()
 
         self.client.dataReceived(serverVersionResponse)
-        self.assertEquals(
+        self.assertEqual(
             transport.value(),
             "CVR 2 0x0409 win 4.10 i386 MSNMSGR 5.0.0544 MSMSGS foo\r\n")
 
@@ -273,9 +273,9 @@ class NotificationTests(unittest.TestCase):
         # md5 of the challenge and a magic string defined by the protocol
         response = "8f2f5a91b72102cd28355e9fc9000d6e"
         # Sanity check - the response is what the comment above says it is.
-        self.assertEquals(
+        self.assertEqual(
             response, md5(challenge + "Q1P7W2E4J9R8U3S5").hexdigest())
-        self.assertEquals(
+        self.assertEqual(
             transport.value(),
             # 2 is the next transaction identifier.  32 is the length of the
             # response.
@@ -299,8 +299,8 @@ class NotificationTests(unittest.TestCase):
         self.client.loginFailure = failure.append
 
         self.client.lineReceived('USR 6 TWN S opaque-string-goes-here')
-        self.assertEquals(success, [])
-        self.assertEquals(
+        self.assertEqual(success, [])
+        self.assertEqual(
             failure,
             ["Exception while authenticating: "
              "Connecting to the Passport server requires SSL, but SSL is "
@@ -421,7 +421,7 @@ class MessageHandlingTests(unittest.TestCase):
     def testClientCapabilitiesCheck(self):
         m = msn.MSNMessage()
         m.setHeader('Content-Type', 'text/x-clientcaps')
-        self.assertEquals(self.client.checkMessage(m), 0, 'Failed to detect client capability message')
+        self.assertEqual(self.client.checkMessage(m), 0, 'Failed to detect client capability message')
 
     def testTypingCheck(self):
         m = msn.MSNMessage()

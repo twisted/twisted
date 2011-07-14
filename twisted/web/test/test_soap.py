@@ -77,13 +77,13 @@ class SOAPTestCase(unittest.TestCase):
         dl = []
         for meth, args, outp in inputOutput:
             d = self.proxy().callRemote(meth, *args)
-            d.addCallback(self.assertEquals, outp)
+            d.addCallback(self.assertEqual, outp)
             dl.append(d)
 
         # SOAPpy kinda blows.
         d = self.proxy().callRemote('complex')
         d.addCallback(lambda result: result._asdict())
-        d.addCallback(self.assertEquals, {"a": ["b", "c", 12, []], "D": "foo"})
+        d.addCallback(self.assertEqual, {"a": ["b", "c", 12, []], "D": "foo"})
         dl.append(d)
 
         # We now return to our regularly scheduled program, already in progress.
@@ -96,7 +96,7 @@ class SOAPTestCase(unittest.TestCase):
         d = self.proxy().callRemote('doesntexist')
         self.assertFailure(d, error.Error)
         def cb(err):
-            self.assertEquals(int(err.status), 500)
+            self.assertEqual(int(err.status), 500)
         d.addCallback(cb)
         return d
 

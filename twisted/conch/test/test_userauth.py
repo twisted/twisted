@@ -306,7 +306,7 @@ class SSHUserAuthServerTestCase(unittest.TestCase):
         """
         Check that the authentication has failed.
         """
-        self.assertEquals(self.authServer.transport.packets[-1],
+        self.assertEqual(self.authServer.transport.packets[-1],
                 (userauth.MSG_USERAUTH_FAILURE,
                 NS('keyboard-interactive,password,publickey') + '\x00'))
 
@@ -353,7 +353,7 @@ class SSHUserAuthServerTestCase(unittest.TestCase):
         packet = NS('foo') + NS('none') + NS('password') + chr(0) + NS('bar')
         self.authServer.clock = task.Clock()
         d = self.authServer.ssh_USERAUTH_REQUEST(packet)
-        self.assertEquals(self.authServer.transport.packets, [])
+        self.assertEqual(self.authServer.transport.packets, [])
         self.authServer.clock.advance(2)
         return d.addCallback(self._checkFailed)
 
@@ -372,7 +372,7 @@ class SSHUserAuthServerTestCase(unittest.TestCase):
         packet += NS(signature)
         d = self.authServer.ssh_USERAUTH_REQUEST(packet)
         def check(ignored):
-            self.assertEquals(self.authServer.transport.packets,
+            self.assertEqual(self.authServer.transport.packets,
                     [(userauth.MSG_USERAUTH_SUCCESS, '')])
         return d.addCallback(check)
 
@@ -413,7 +413,7 @@ class SSHUserAuthServerTestCase(unittest.TestCase):
                 + NS('ssh-rsa') + NS(blob))
         d = self.authServer.ssh_USERAUTH_REQUEST(packet)
         def check(ignored):
-            self.assertEquals(self.authServer.transport.packets,
+            self.assertEqual(self.authServer.transport.packets,
                     [(userauth.MSG_USERAUTH_PK_OK, NS('ssh-rsa') + NS(blob))])
         return d.addCallback(check)
 
@@ -454,7 +454,7 @@ class SSHUserAuthServerTestCase(unittest.TestCase):
         d = self.authServer.ssh_USERAUTH_REQUEST(packet)
         self.authServer.ssh_USERAUTH_INFO_RESPONSE(response)
         def check(ignored):
-            self.assertEquals(self.authServer.transport.packets,
+            self.assertEqual(self.authServer.transport.packets,
                     [(userauth.MSG_USERAUTH_INFO_REQUEST, (NS('') + NS('')
                         + NS('') + '\x00\x00\x00\x02' + NS('Name: ') + '\x01'
                         + NS('Password: ') + '\x00')),
@@ -473,7 +473,7 @@ class SSHUserAuthServerTestCase(unittest.TestCase):
         d = self.authServer.ssh_USERAUTH_REQUEST(packet)
         self.authServer.ssh_USERAUTH_INFO_RESPONSE(response)
         def check(ignored):
-            self.assertEquals(self.authServer.transport.packets[0],
+            self.assertEqual(self.authServer.transport.packets[0],
                     (userauth.MSG_USERAUTH_INFO_REQUEST, (NS('') + NS('')
                         + NS('') + '\x00\x00\x00\x02' + NS('Name: ') + '\x01'
                         + NS('Password: ') + '\x00')))
@@ -515,9 +515,9 @@ class SSHUserAuthServerTestCase(unittest.TestCase):
                 + NS('') + NS(''))
         self.authServer.ssh_USERAUTH_REQUEST(packet)
         self.authServer.ssh_USERAUTH_REQUEST(packet)
-        self.assertEquals(self.authServer.transport.packets[-1][0],
+        self.assertEqual(self.authServer.transport.packets[-1][0],
                 transport.MSG_DISCONNECT)
-        self.assertEquals(self.authServer.transport.packets[-1][1][3],
+        self.assertEqual(self.authServer.transport.packets[-1][1][3],
                 chr(transport.DISCONNECT_PROTOCOL_ERROR))
 
 
@@ -536,7 +536,7 @@ class SSHUserAuthServerTestCase(unittest.TestCase):
         server.serviceStarted()
         server.serviceStopped()
         server.supportedAuthentications.sort() # give a consistent order
-        self.assertEquals(server.supportedAuthentications,
+        self.assertEqual(server.supportedAuthentications,
                           ['keyboard-interactive', 'password', 'publickey'])
 
 
@@ -603,7 +603,7 @@ class SSHUserAuthServerTestCase(unittest.TestCase):
         clearAuthServer.transport.isEncrypted = lambda x: False
         clearAuthServer.serviceStarted()
         clearAuthServer.serviceStopped()
-        self.assertEquals(clearAuthServer.supportedAuthentications,
+        self.assertEqual(clearAuthServer.supportedAuthentications,
                           ['publickey'])
 
         # only encrypt incoming (the direction the password is sent)
@@ -612,7 +612,7 @@ class SSHUserAuthServerTestCase(unittest.TestCase):
         halfAuthServer.transport.isEncrypted = lambda x: x == 'in'
         halfAuthServer.serviceStarted()
         halfAuthServer.serviceStopped()
-        self.assertEquals(clearAuthServer.supportedAuthentications,
+        self.assertEqual(clearAuthServer.supportedAuthentications,
                           ['publickey'])
 
 
@@ -626,7 +626,7 @@ class SSHUserAuthServerTestCase(unittest.TestCase):
         timeoutAuthServer.serviceStarted()
         timeoutAuthServer.clock.advance(11 * 60 * 60)
         timeoutAuthServer.serviceStopped()
-        self.assertEquals(timeoutAuthServer.transport.packets,
+        self.assertEqual(timeoutAuthServer.transport.packets,
                 [(transport.MSG_DISCONNECT,
                 '\x00' * 3 +
                 chr(transport.DISCONNECT_NO_MORE_AUTH_METHODS_AVAILABLE) +
@@ -644,7 +644,7 @@ class SSHUserAuthServerTestCase(unittest.TestCase):
         timeoutAuthServer.serviceStarted()
         timeoutAuthServer.serviceStopped()
         timeoutAuthServer.clock.advance(11 * 60 * 60)
-        self.assertEquals(timeoutAuthServer.transport.packets, [])
+        self.assertEqual(timeoutAuthServer.transport.packets, [])
         self.assertFalse(timeoutAuthServer.transport.lostConnection)
 
 
@@ -659,7 +659,7 @@ class SSHUserAuthServerTestCase(unittest.TestCase):
             d = self.authServer.ssh_USERAUTH_REQUEST(packet)
             self.authServer.clock.advance(2)
         def check(ignored):
-            self.assertEquals(self.authServer.transport.packets[-1],
+            self.assertEqual(self.authServer.transport.packets[-1],
                 (transport.MSG_DISCONNECT,
                 '\x00' * 3 +
                 chr(transport.DISCONNECT_NO_MORE_AUTH_METHODS_AVAILABLE) +
@@ -743,9 +743,9 @@ class SSHUserAuthClientTestCase(unittest.TestCase):
         """
         Test that client is initialized properly.
         """
-        self.assertEquals(self.authClient.user, 'foo')
-        self.assertEquals(self.authClient.instance.name, 'nancy')
-        self.assertEquals(self.authClient.transport.packets,
+        self.assertEqual(self.authClient.user, 'foo')
+        self.assertEqual(self.authClient.instance.name, 'nancy')
+        self.assertEqual(self.authClient.transport.packets,
                 [(userauth.MSG_USERAUTH_REQUEST, NS('foo') + NS('nancy')
                     + NS('none'))])
 
@@ -759,7 +759,7 @@ class SSHUserAuthClientTestCase(unittest.TestCase):
             instance[0] = service
         self.authClient.transport.setService = stubSetService
         self.authClient.ssh_USERAUTH_SUCCESS('')
-        self.assertEquals(instance[0], self.authClient.instance)
+        self.assertEqual(instance[0], self.authClient.instance)
 
 
     def test_publickey(self):
@@ -767,7 +767,7 @@ class SSHUserAuthClientTestCase(unittest.TestCase):
         Test that the client can authenticate with a public key.
         """
         self.authClient.ssh_USERAUTH_FAILURE(NS('publickey') + '\x00')
-        self.assertEquals(self.authClient.transport.packets[-1],
+        self.assertEqual(self.authClient.transport.packets[-1],
                 (userauth.MSG_USERAUTH_REQUEST, NS('foo') + NS('nancy')
                     + NS('publickey') + '\x00' + NS('ssh-dss')
                     + NS(keys.Key.fromString(
@@ -775,7 +775,7 @@ class SSHUserAuthClientTestCase(unittest.TestCase):
        # that key isn't good
         self.authClient.ssh_USERAUTH_FAILURE(NS('publickey') + '\x00')
         blob = NS(keys.Key.fromString(keydata.publicRSA_openssh).blob())
-        self.assertEquals(self.authClient.transport.packets[-1],
+        self.assertEqual(self.authClient.transport.packets[-1],
                 (userauth.MSG_USERAUTH_REQUEST, (NS('foo') + NS('nancy')
                     + NS('publickey') + '\x00'+ NS('ssh-rsa') + blob)))
         self.authClient.ssh_USERAUTH_PK_OK(NS('ssh-rsa')
@@ -785,7 +785,7 @@ class SSHUserAuthClientTestCase(unittest.TestCase):
                 + NS('nancy') + NS('publickey') + '\xff' + NS('ssh-rsa')
                 + blob)
         obj = keys.Key.fromString(keydata.privateRSA_openssh)
-        self.assertEquals(self.authClient.transport.packets[-1],
+        self.assertEqual(self.authClient.transport.packets[-1],
                 (userauth.MSG_USERAUTH_REQUEST, NS('foo') + NS('nancy')
                     + NS('publickey') + '\xff' + NS('ssh-rsa') + blob
                     + NS(obj.sign(sigData))))
@@ -806,7 +806,7 @@ class SSHUserAuthClientTestCase(unittest.TestCase):
         authClient.tryAuth('publickey')
         authClient.transport.packets = []
         self.assertIdentical(authClient.ssh_USERAUTH_PK_OK(''), None)
-        self.assertEquals(authClient.transport.packets, [
+        self.assertEqual(authClient.transport.packets, [
                 (userauth.MSG_USERAUTH_REQUEST, NS('foo') + NS('nancy') +
                  NS('none'))])
 
@@ -826,7 +826,7 @@ class SSHUserAuthClientTestCase(unittest.TestCase):
                          "SSHUserAuthClient.getPublicKey() is deprecated since "
                          "Twisted 9.0.  Return a keys.Key() instead.",
                          userauth.__file__, oldAuth.tryAuth, 'publickey')
-        self.assertEquals(oldAuth.transport.packets, [
+        self.assertEqual(oldAuth.transport.packets, [
                 (userauth.MSG_USERAUTH_REQUEST, NS('foo') + NS('nancy') +
                  NS('publickey') + '\x00' + NS('ssh-rsa') +
                  NS(keys.Key.fromString(keydata.publicRSA_openssh).blob()))])
@@ -845,7 +845,7 @@ class SSHUserAuthClientTestCase(unittest.TestCase):
                              "Return a keys.Key() instead.", userauth.__file__,
                              oldAuth.signData, None, 'data')
         def _checkSignedData(sig):
-            self.assertEquals(sig,
+            self.assertEqual(sig,
                 keys.Key.fromString(keydata.privateRSA_openssh).sign(
                     'data'))
         d.addCallback(_checkSignedData)
@@ -869,11 +869,11 @@ class SSHUserAuthClientTestCase(unittest.TestCase):
         includes changing the password.
         """
         self.authClient.ssh_USERAUTH_FAILURE(NS('password') + '\x00')
-        self.assertEquals(self.authClient.transport.packets[-1],
+        self.assertEqual(self.authClient.transport.packets[-1],
                 (userauth.MSG_USERAUTH_REQUEST, NS('foo') + NS('nancy')
                     + NS('password') + '\x00' + NS('foo')))
         self.authClient.ssh_USERAUTH_PK_OK(NS('') + NS(''))
-        self.assertEquals(self.authClient.transport.packets[-1],
+        self.assertEqual(self.authClient.transport.packets[-1],
                 (userauth.MSG_USERAUTH_REQUEST, NS('foo') + NS('nancy')
                     + NS('password') + '\xff' + NS('foo') * 2))
 
@@ -893,12 +893,12 @@ class SSHUserAuthClientTestCase(unittest.TestCase):
         """
         self.authClient.ssh_USERAUTH_FAILURE(NS('keyboard-interactive')
                + '\x00')
-        self.assertEquals(self.authClient.transport.packets[-1],
+        self.assertEqual(self.authClient.transport.packets[-1],
                 (userauth.MSG_USERAUTH_REQUEST, NS('foo') + NS('nancy')
                     + NS('keyboard-interactive') + NS('')*2))
         self.authClient.ssh_USERAUTH_PK_OK(NS('')*3 + '\x00\x00\x00\x02'
                 + NS('Name: ') + '\xff' + NS('Password: ') + '\x00')
-        self.assertEquals(self.authClient.transport.packets[-1],
+        self.assertEqual(self.authClient.transport.packets[-1],
                 (userauth.MSG_USERAUTH_INFO_RESPONSE, '\x00\x00\x00\x02'
                     + NS('foo')*2))
 
@@ -912,7 +912,7 @@ class SSHUserAuthClientTestCase(unittest.TestCase):
         self.authClient.lastAuth = 'unknown'
         self.authClient.transport.packets = []
         self.authClient.ssh_USERAUTH_PK_OK('')
-        self.assertEquals(self.authClient.transport.packets,
+        self.assertEqual(self.authClient.transport.packets,
                           [(userauth.MSG_USERAUTH_REQUEST, NS('foo') +
                             NS('nancy') + NS('none'))])
 
@@ -936,12 +936,12 @@ class SSHUserAuthClientTestCase(unittest.TestCase):
         self.authClient.ssh_USERAUTH_FAILURE(NS('anothermethod,password') +
                                              '\x00')
         # should send password packet
-        self.assertEquals(self.authClient.transport.packets[-1],
+        self.assertEqual(self.authClient.transport.packets[-1],
                 (userauth.MSG_USERAUTH_REQUEST, NS('foo') + NS('nancy')
                     + NS('password') + '\x00' + NS('foo')))
         self.authClient.ssh_USERAUTH_FAILURE(
             NS('firstmethod,anothermethod,password') + '\xff')
-        self.assertEquals(self.authClient.transport.packets[-2:],
+        self.assertEqual(self.authClient.transport.packets[-2:],
                           [(255, 'here is data'), (254, 'other data')])
 
 
@@ -953,7 +953,7 @@ class SSHUserAuthClientTestCase(unittest.TestCase):
         """
         self.authClient.ssh_USERAUTH_FAILURE(NS('password') + '\x00')
         self.authClient.ssh_USERAUTH_FAILURE(NS('password') + '\xff')
-        self.assertEquals(self.authClient.transport.packets[-1],
+        self.assertEqual(self.authClient.transport.packets[-1],
                           (transport.MSG_DISCONNECT, '\x00\x00\x00\x0e' +
                            NS('no more authentication methods available') +
                            '\x00\x00\x00\x00'))
@@ -966,7 +966,7 @@ class SSHUserAuthClientTestCase(unittest.TestCase):
         """
         self.authClient.transport.packets = []
         self.authClient._ebAuth(None)
-        self.assertEquals(self.authClient.transport.packets,
+        self.assertEqual(self.authClient.transport.packets,
                 [(userauth.MSG_USERAUTH_REQUEST, NS('foo') + NS('nancy')
                     + NS('none'))])
 
@@ -1058,5 +1058,5 @@ class LoopbackTestCase(unittest.TestCase):
         client.serviceStarted()
 
         def check(ignored):
-            self.assertEquals(server.transport.service.name, 'TestService')
+            self.assertEqual(server.transport.service.name, 'TestService')
         return d.addCallback(check)

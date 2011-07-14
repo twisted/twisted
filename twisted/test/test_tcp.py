@@ -235,7 +235,7 @@ class ListeningTestCase(unittest.TestCase):
         self.addCleanup(connector.disconnect)
         def check((serverProto, clientProto)):
             portNumber = port.getHost().port
-            self.assertEquals(
+            self.assertEqual(
                 repr(serverProto.transport),
                 "<AccumulatingProtocol #0 on %s>" % (portNumber,))
             serverProto.transport.loseConnection()
@@ -434,11 +434,11 @@ class LoopbackTestCase(unittest.TestCase):
         def check(serverProtocol, clientProtocol):
             for p in [serverProtocol, clientProtocol]:
                 transport = p.transport
-                self.assertEquals(transport.getTcpNoDelay(), 0)
+                self.assertEqual(transport.getTcpNoDelay(), 0)
                 transport.setTcpNoDelay(1)
-                self.assertEquals(transport.getTcpNoDelay(), 1)
+                self.assertEqual(transport.getTcpNoDelay(), 1)
                 transport.setTcpNoDelay(0)
-                self.assertEquals(transport.getTcpNoDelay(), 0)
+                self.assertEqual(transport.getTcpNoDelay(), 0)
         return self._connectedClientAndServerTest(check)
 
 
@@ -452,11 +452,11 @@ class LoopbackTestCase(unittest.TestCase):
         def check(serverProtocol, clientProtocol):
             for p in [serverProtocol, clientProtocol]:
                 transport = p.transport
-                self.assertEquals(transport.getTcpKeepAlive(), 0)
+                self.assertEqual(transport.getTcpKeepAlive(), 0)
                 transport.setTcpKeepAlive(1)
-                self.assertEquals(transport.getTcpKeepAlive(), 1)
+                self.assertEqual(transport.getTcpKeepAlive(), 1)
                 transport.setTcpKeepAlive(0)
-                self.assertEquals(transport.getTcpKeepAlive(), 0)
+                self.assertEqual(transport.getTcpKeepAlive(), 0)
         return self._connectedClientAndServerTest(check)
 
 
@@ -654,7 +654,7 @@ class FactoryTestCase(unittest.TestCase):
         closedDeferred.addCallback(cbClosed)
 
         def cbClosedAll(ignored):
-            self.assertEquals((f.started, f.stopped), (1, 1))
+            self.assertEqual((f.started, f.stopped), (1, 1))
         closedDeferred.addCallback(cbClosedAll)
         return closedDeferred
 
@@ -705,9 +705,9 @@ class ConnectorTestCase(unittest.TestCase):
         connector = reactor.connectTCP("127.0.0.1", portNumber, clientFactory)
         self.assertTrue(interfaces.IConnector.providedBy(connector))
         dest = connector.getDestination()
-        self.assertEquals(dest.type, "TCP")
-        self.assertEquals(dest.host, "127.0.0.1")
-        self.assertEquals(dest.port, portNumber)
+        self.assertEqual(dest.type, "TCP")
+        self.assertEqual(dest.host, "127.0.0.1")
+        self.assertEqual(dest.port, portNumber)
 
         d = loopUntil(lambda: clientFactory.stopped)
         def clientFactoryStopped(ignored):
@@ -737,7 +737,7 @@ class ConnectorTestCase(unittest.TestCase):
 
         d = loopUntil(lambda: clientFactory.stopped)
         def check(ignored):
-            self.assertEquals(clientFactory.failed, 1)
+            self.assertEqual(clientFactory.failed, 1)
             clientFactory.reason.trap(error.UserError)
         return d.addCallback(check)
 
@@ -787,9 +787,9 @@ class CannotBindTestCase(unittest.TestCase):
         self.addCleanup(p1.stopListening)
         n = p1.getHost().port
         dest = p1.getHost()
-        self.assertEquals(dest.type, "TCP")
-        self.assertEquals(dest.host, "127.0.0.1")
-        self.assertEquals(dest.port, n)
+        self.assertEqual(dest.type, "TCP")
+        self.assertEqual(dest.host, "127.0.0.1")
+        self.assertEqual(dest.port, n)
 
         # make sure new listen raises error
         self.assertRaises(error.CannotListenError,
@@ -837,7 +837,7 @@ class CannotBindTestCase(unittest.TestCase):
             return d
 
         def _check1connect2(results, cf1):
-            self.assertEquals(cf1.protocol.made, 1)
+            self.assertEqual(cf1.protocol.made, 1)
 
             d1 = defer.Deferred()
             d2 = defer.Deferred()
@@ -855,13 +855,13 @@ class CannotBindTestCase(unittest.TestCase):
             return dl
 
         def _check2failed(results, cf1, cf2):
-            self.assertEquals(cf2.failed, 1)
+            self.assertEqual(cf2.failed, 1)
             cf2.reason.trap(error.ConnectBindError)
             self.assertTrue(cf2.reason.check(error.ConnectBindError))
             return results
 
         def _check2stopped(results, cf1, cf2):
-            self.assertEquals(cf2.stopped, 1)
+            self.assertEqual(cf2.stopped, 1)
             return results
 
         def _stop(results, cf1, cf2):
@@ -872,7 +872,7 @@ class CannotBindTestCase(unittest.TestCase):
             return d
 
         def _check1cleanup(results, cf1):
-            self.assertEquals(cf1.stopped, 1)
+            self.assertEqual(cf1.stopped, 1)
 
         theDeferred.addCallback(_connect1)
         return theDeferred
@@ -909,8 +909,8 @@ class LocalRemoteAddressTestCase(unittest.TestCase):
         connector = reactor.connectTCP('127.0.0.1', n, clientFactory)
 
         def check(ignored):
-            self.assertEquals([port.getHost()], clientFactory.peerAddresses)
-            self.assertEquals(
+            self.assertEqual([port.getHost()], clientFactory.peerAddresses)
+            self.assertEqual(
                 port.getHost(), clientFactory.protocol.transport.getPeer())
         onConnection.addCallback(check)
 
@@ -1575,12 +1575,12 @@ class HalfCloseTestCase(unittest.TestCase):
     def _setUp(self, client):
         self.client = client
         self.clientProtoConnectionLost = self.client.closedDeferred = defer.Deferred()
-        self.assertEquals(self.client.transport.connected, 1)
+        self.assertEqual(self.client.transport.connected, 1)
         # Wait for the server to notice there is a connection, too.
         return loopUntil(lambda: getattr(self.f, 'protocol', None) is not None)
 
     def tearDown(self):
-        self.assertEquals(self.client.closed, 0)
+        self.assertEqual(self.client.closed, 0)
         self.client.transport.loseConnection()
         d = defer.maybeDeferred(self.p.stopListening)
         d.addCallback(lambda ign: self.clientProtoConnectionLost)
@@ -1588,17 +1588,17 @@ class HalfCloseTestCase(unittest.TestCase):
         return d
 
     def _tearDown(self, ignored):
-        self.assertEquals(self.client.closed, 1)
+        self.assertEqual(self.client.closed, 1)
         # because we did half-close, the server also needs to
         # closed explicitly.
-        self.assertEquals(self.f.protocol.closed, 0)
+        self.assertEqual(self.f.protocol.closed, 0)
         d = defer.Deferred()
         def _connectionLost(reason):
             self.f.protocol.closed = 1
             d.callback(None)
         self.f.protocol.connectionLost = _connectionLost
         self.f.protocol.transport.loseConnection()
-        d.addCallback(lambda x:self.assertEquals(self.f.protocol.closed, 1))
+        d.addCallback(lambda x:self.assertEqual(self.f.protocol.closed, 1))
         return d
 
     def testCloseWriteCloser(self):
@@ -1612,18 +1612,18 @@ class HalfCloseTestCase(unittest.TestCase):
             t.loseWriteConnection()
             return loopUntil(lambda :t._writeDisconnected)
         def check(ignored):
-            self.assertEquals(client.closed, False)
-            self.assertEquals(client.writeHalfClosed, True)
-            self.assertEquals(client.readHalfClosed, False)
+            self.assertEqual(client.closed, False)
+            self.assertEqual(client.writeHalfClosed, True)
+            self.assertEqual(client.readHalfClosed, False)
             return loopUntil(lambda :f.protocol.readHalfClosed)
         def write(ignored):
             w = client.transport.write
             w(" world")
             w("lalala fooled you")
-            self.assertEquals(0, len(client.transport._tempDataBuffer))
-            self.assertEquals(f.protocol.data, "hello")
-            self.assertEquals(f.protocol.closed, False)
-            self.assertEquals(f.protocol.readHalfClosed, True)
+            self.assertEqual(0, len(client.transport._tempDataBuffer))
+            self.assertEqual(f.protocol.data, "hello")
+            self.assertEqual(f.protocol.closed, False)
+            self.assertEqual(f.protocol.readHalfClosed, True)
         return d.addCallback(loseWrite).addCallback(check).addCallback(write)
 
     def testWriteCloseNotification(self):
@@ -1633,7 +1633,7 @@ class HalfCloseTestCase(unittest.TestCase):
         d = defer.gatherResults([
             loopUntil(lambda :f.protocol.writeHalfClosed),
             loopUntil(lambda :self.client.readHalfClosed)])
-        d.addCallback(lambda _: self.assertEquals(
+        d.addCallback(lambda _: self.assertEqual(
             f.protocol.readHalfClosed, False))
         return d
 
@@ -1689,7 +1689,7 @@ class HalfClose2TestCase(unittest.TestCase):
         self.f.protocol.closedDeferred = d = defer.Deferred()
         self.client.closedDeferred = d2 = defer.Deferred()
         d.addCallback(lambda x:
-                      self.failUnlessEqual(self.f.protocol.closed, True))
+                      self.assertEqual(self.f.protocol.closed, True))
         return defer.gatherResults([d, d2])
 
 
@@ -1785,11 +1785,11 @@ class LogTestCase(unittest.TestCase):
         self.addCleanup(connector.disconnect)
 
         # It should still have the default value
-        self.assertEquals(connector.transport.logstr,
+        self.assertEqual(connector.transport.logstr,
                           "Uninitialized")
 
         def cb(ign):
-            self.assertEquals(connector.transport.logstr,
+            self.assertEqual(connector.transport.logstr,
                               "AccumulatingProtocol,client")
         client.protocolConnectionMade.addCallback(cb)
         return client.protocolConnectionMade
@@ -1890,7 +1890,7 @@ class CallBackOrderTestCase(unittest.TestCase):
             return 'CL'
 
         def _cbGather(res):
-            self.assertEquals(res, ['CL', 'CCL'])
+            self.assertEqual(res, ['CL', 'CCL'])
 
         d = defer.gatherResults([
                 client.protocolConnectionLost.addCallback(_cbCL),

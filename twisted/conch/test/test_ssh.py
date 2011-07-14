@@ -311,10 +311,10 @@ if Crypto is not None and pyasn1 is not None:
         def testCounter(self):
             c = transport._Counter('\x00\x00', 2)
             for i in xrange(256 * 256):
-                self.assertEquals(c(), struct.pack('!H', (i + 1) % (2 ** 16)))
+                self.assertEqual(c(), struct.pack('!H', (i + 1) % (2 ** 16)))
             # It should wrap around, too.
             for i in xrange(256 * 256):
-                self.assertEquals(c(), struct.pack('!H', (i + 1) % (2 ** 16)))
+                self.assertEqual(c(), struct.pack('!H', (i + 1) % (2 ** 16)))
 
 
     class ConchTestPublicKeyChecker(checkers.SSHPublicKeyDatabase):
@@ -593,7 +593,7 @@ class SSHProtocolTestCase(unittest.TestCase):
             d1 = channel.conn.sendGlobalRequest('foo', 'bar', 1)
 
             d2 = channel.conn.sendGlobalRequest('foo-2', 'bar2', 1)
-            d2.addCallback(self.assertEquals, 'data')
+            d2.addCallback(self.assertEqual, 'data')
 
             d3 = self.assertFailure(
                 channel.conn.sendGlobalRequest('bar', 'foo', 1),
@@ -603,7 +603,7 @@ class SSHProtocolTestCase(unittest.TestCase):
         channel.addCallback(cbGlobalRequests)
 
         def disconnect(ignored):
-            self.assertEquals(
+            self.assertEqual(
                 self.realm.avatar.globalRequests,
                 {"foo": "bar", "foo_2": "bar2"})
             channel = self.channel
@@ -632,8 +632,8 @@ class SSHProtocolTestCase(unittest.TestCase):
             # The server-side object corresponding to our client side channel.
             session = self.realm.avatar.conn.channels[0].session
             self.assertIdentical(session.avatar, self.realm.avatar)
-            self.assertEquals(session._terminalType, 'conch-test-term')
-            self.assertEquals(session._windowSize, (24, 80, 0, 0))
+            self.assertEqual(session._terminalType, 'conch-test-term')
+            self.assertEqual(session._windowSize, (24, 80, 0, 0))
             self.assertTrue(session.ptyReq)
             channel = self.channel
             return channel.conn.sendRequest(channel, 'shell', '', 1)
@@ -651,7 +651,7 @@ class SSHProtocolTestCase(unittest.TestCase):
             if self.channel.status != 0:
                 log.msg(
                     'shell exit status was not 0: %i' % (self.channel.status,))
-            self.assertEquals(
+            self.assertEqual(
                 "".join(self.channel.received),
                 'testing the shell!\x00\r\n')
             self.assertTrue(self.channel.eofCalled)
@@ -680,7 +680,7 @@ class SSHProtocolTestCase(unittest.TestCase):
             # The server logs this exception when it cannot perform the
             # requested exec.
             errors = self.flushLoggedErrors(error.ConchError)
-            self.assertEquals(errors[0].value.args, ('bad exec', None))
+            self.assertEqual(errors[0].value.args, ('bad exec', None))
         channel.addCallback(cbFailed)
         return channel
 
@@ -704,7 +704,7 @@ class SSHProtocolTestCase(unittest.TestCase):
 
         def cbClosed(ignored):
             # No data is expected
-            self.assertEquals(self.channel.received, [])
+            self.assertEqual(self.channel.received, [])
             self.assertNotEquals(self.channel.status, 0)
         channel.addCallback(cbClosed)
         return channel
@@ -730,12 +730,12 @@ class SSHProtocolTestCase(unittest.TestCase):
         channel.addCallback(cbExec)
 
         def cbClosed(ignored):
-            self.assertEquals(self.channel.received, [])
-            self.assertEquals("".join(self.channel.receivedExt), "hello\r\n")
-            self.assertEquals(self.channel.status, 0)
+            self.assertEqual(self.channel.received, [])
+            self.assertEqual("".join(self.channel.receivedExt), "hello\r\n")
+            self.assertEqual(self.channel.status, 0)
             self.assertTrue(self.channel.eofCalled)
-            self.assertEquals(self.channel.localWindowLeft, 4)
-            self.assertEquals(
+            self.assertEqual(self.channel.localWindowLeft, 4)
+            self.assertEqual(
                 self.channel.localWindowLeft,
                 self.realm.avatar._testSession.remoteWindowLeftAtClose)
         channel.addCallback(cbClosed)
@@ -751,8 +751,8 @@ class SSHProtocolTestCase(unittest.TestCase):
             self._ourServerOurClientTest('crazy-unknown-channel'), Exception)
         def cbFailed(ignored):
             errors = self.flushLoggedErrors(error.ConchError)
-            self.assertEquals(errors[0].value.args, (3, 'unknown channel'))
-            self.assertEquals(len(errors), 1)
+            self.assertEqual(errors[0].value.args, (3, 'unknown channel'))
+            self.assertEqual(len(errors), 1)
         d.addCallback(cbFailed)
         return d
 
@@ -778,10 +778,10 @@ class SSHProtocolTestCase(unittest.TestCase):
         channel.addCallback(cbExec)
 
         def cbClosed(ignored):
-            self.assertEquals(self.channel.status, 0)
-            self.assertEquals("".join(self.channel.received), "hello\r\n")
-            self.assertEquals("".join(self.channel.receivedExt), "hello\r\n")
-            self.assertEquals(self.channel.localWindowLeft, 11)
+            self.assertEqual(self.channel.status, 0)
+            self.assertEqual("".join(self.channel.received), "hello\r\n")
+            self.assertEqual("".join(self.channel.receivedExt), "hello\r\n")
+            self.assertEqual(self.channel.localWindowLeft, 11)
             self.assertTrue(self.channel.eofCalled)
         channel.addCallback(cbClosed)
         return channel
@@ -807,11 +807,11 @@ class SSHProtocolTestCase(unittest.TestCase):
         channel.addCallback(cbEcho)
 
         def cbClosed(ignored):
-            self.assertEquals(self.channel.status, 0)
-            self.assertEquals("".join(self.channel.received), "hello\r\n")
-            self.assertEquals(self.channel.localWindowLeft, 4)
+            self.assertEqual(self.channel.status, 0)
+            self.assertEqual("".join(self.channel.received), "hello\r\n")
+            self.assertEqual(self.channel.localWindowLeft, 4)
             self.assertTrue(self.channel.eofCalled)
-            self.assertEquals(
+            self.assertEqual(
                 self.channel.localWindowLeft,
                 self.realm.avatar._testSession.remoteWindowLeftAtClose)
         channel.addCallback(cbClosed)
@@ -858,7 +858,7 @@ class TestSSHFactory(unittest.TestCase):
         factory = self.makeSSHFactory()
         factory.protocol = makeProtocol
         factory.buildProtocol(None)
-        self.assertEquals([()], calls)
+        self.assertEqual([()], calls)
 
 
     def test_multipleFactories(self):
@@ -894,7 +894,7 @@ class MPTestCase(unittest.TestCase):
         L{common.getMP} should parse the a multiple precision integer from a
         string: a 4-byte length followed by length bytes of the integer.
         """
-        self.assertEquals(
+        self.assertEqual(
             self.getMP('\x00\x00\x00\x04\x00\x00\x00\x01'),
             (1, ''))
 
@@ -904,7 +904,7 @@ class MPTestCase(unittest.TestCase):
         L{common.getMP} should be able to parse a big enough integer
         (that doesn't fit on one byte).
         """
-        self.assertEquals(
+        self.assertEqual(
             self.getMP('\x00\x00\x00\x04\x01\x02\x03\x04'),
             (16909060, ''))
 
@@ -914,7 +914,7 @@ class MPTestCase(unittest.TestCase):
         L{common.getMP} has the ability to parse multiple integer in the same
         string.
         """
-        self.assertEquals(
+        self.assertEqual(
             self.getMP('\x00\x00\x00\x04\x00\x00\x00\x01'
                        '\x00\x00\x00\x04\x00\x00\x00\x02', 2),
             (1, 2, ''))
@@ -925,7 +925,7 @@ class MPTestCase(unittest.TestCase):
         When more data than needed is sent to L{common.getMP}, it should return
         the remaining data.
         """
-        self.assertEquals(
+        self.assertEqual(
             self.getMP('\x00\x00\x00\x04\x00\x00\x00\x01foo'),
             (1, 'foo'))
 
@@ -965,19 +965,19 @@ class BuiltinPowHackTestCase(unittest.TestCase):
         pow gives the correct result when passed a base of type float with a
         non-integer value.
         """
-        self.assertEquals(6.25, pow(2.5, 2))
+        self.assertEqual(6.25, pow(2.5, 2))
 
     def test_intBase(self):
         """
         pow gives the correct result when passed a base of type int.
         """
-        self.assertEquals(81, pow(3, 4))
+        self.assertEqual(81, pow(3, 4))
 
     def test_longBase(self):
         """
         pow gives the correct result when passed a base of type long.
         """
-        self.assertEquals(81, pow(3, 4))
+        self.assertEqual(81, pow(3, 4))
 
     def test_mpzBase(self):
         """
@@ -985,7 +985,7 @@ class BuiltinPowHackTestCase(unittest.TestCase):
         """
         if gmpy is None:
             raise unittest.SkipTest('gmpy not available')
-        self.assertEquals(81, pow(gmpy.mpz(3), 4))
+        self.assertEqual(81, pow(gmpy.mpz(3), 4))
 
 
 try:

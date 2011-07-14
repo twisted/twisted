@@ -49,10 +49,10 @@ class AddressTestCaseMixin(object):
             None, m,
             "%s does not match the standard __str__ pattern "
             "ClassName(arg1, arg2, etc)" % (stringValue,))
-        self.assertEquals(addr.__class__.__name__, m.group(1))
+        self.assertEqual(addr.__class__.__name__, m.group(1))
 
         args = [x.strip() for x in m.group(2).split(",")]
-        self.assertEquals(
+        self.assertEqual(
             args,
             [argSpec[1] % (getattr(addr, argSpec[0]),) for argSpec in self.addressArgSpec])
 
@@ -98,9 +98,9 @@ class AddressTestCaseMixin(object):
         emitted against the given method.
         """
         warnings = self.flushWarnings([testMethod])
-        self.assertEquals(warnings[0]['category'], DeprecationWarning)
-        self.assertEquals(warnings[0]['message'], message)
-        self.assertEquals(len(warnings), 1)
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(warnings[0]['message'], message)
+        self.assertEqual(len(warnings), 1)
 
 
 
@@ -211,7 +211,7 @@ class UNIXAddressTestCase(unittest.TestCase, AddressTestCaseMixin):
         linkName = self.mktemp()
         self.fd = open(self._socketAddress, 'w')
         os.symlink(os.path.abspath(self._socketAddress), linkName)
-        self.assertEquals(
+        self.assertEqual(
             hash(UNIXAddress(self._socketAddress)), hash(UNIXAddress(linkName)))
     test_hashOfLinkedFiles.skip = symlinkSkip
 

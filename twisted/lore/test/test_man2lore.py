@@ -50,7 +50,7 @@ class ManConverterTestCase(TestCase):
         inputFile.seek(0)
         outputFile = StringIO()
         self.converter.convert(inputFile, outputFile)
-        self.assertEquals(
+        self.assertEqual(
             outputFile.getvalue(), _TRANSITIONAL_XHTML_DTD + expectedOutput)
 
 

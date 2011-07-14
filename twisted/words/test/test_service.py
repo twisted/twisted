@@ -34,7 +34,7 @@ class RealmTestCase(unittest.TestCase):
         d = wFD(create(name))
         yield d
         p = d.getResult()
-        self.assertEquals(p.name, name)
+        self.assertEqual(p.name, name)
 
         # Creating the same user again should not
         d = wFD(create(name))
@@ -46,7 +46,7 @@ class RealmTestCase(unittest.TestCase):
         d = wFD(get(u"new" + kind.lower()))
         yield d
         p = d.getResult()
-        self.assertEquals(p.name, "new" + kind.lower())
+        self.assertEqual(p.name, "new" + kind.lower())
 
         # Getting that user again should return the same object
         d = wFD(get(u"new" + kind.lower()))
@@ -190,7 +190,7 @@ class RealmTestCase(unittest.TestCase):
 
         n = [g.name for g in groups]
         n.sort()
-        self.assertEquals(n, ["groupone", "grouptwo"])
+        self.assertEqual(n, ["groupone", "grouptwo"])
     testEnumeration = dG(testEnumeration)
 
 
@@ -324,10 +324,10 @@ class IRCProtocolTestCase(unittest.TestCase):
         user = TestCaseUserAgg(firstuser, self.realm, self.factory)
         user.write('NICK firstuser extrainfo\r\n')
         response = self._response(user, 'PRIVMSG')
-        self.assertEquals(len(response), 1)
-        self.assertEquals(response[0][0], service.NICKSERV)
-        self.assertEquals(response[0][1], 'PRIVMSG')
-        self.assertEquals(response[0][2], ['firstuser', 'Password?'])
+        self.assertEqual(len(response), 1)
+        self.assertEqual(response[0][0], service.NICKSERV)
+        self.assertEqual(response[0][1], 'PRIVMSG')
+        self.assertEqual(response[0][2], ['firstuser', 'Password?'])
         user.transport.clear()
 
         user.write('PRIVMSG nickserv firstuser_password\r\n')
@@ -343,8 +343,8 @@ class IRCProtocolTestCase(unittest.TestCase):
         user = TestCaseUserAgg(firstuser, self.realm, self.factory)
         self._login(user, "firstuser", "wrongpass")
         response = self._response(user, "PRIVMSG")
-        self.assertEquals(len(response), 1)
-        self.assertEquals(response[0][2], ['firstuser', 'Login failed.  Goodbye.'])
+        self.assertEqual(len(response), 1)
+        self.assertEqual(response[0][2], ['firstuser', 'Login failed.  Goodbye.'])
     testFailedLogin = dG(testFailedLogin)
 
 
@@ -358,7 +358,7 @@ class IRCProtocolTestCase(unittest.TestCase):
         self._login(user, "firstuser")
         user.protocol.logout = lambda: logout.append(True)
         user.write('QUIT\r\n')
-        self.assertEquals(logout, [True])
+        self.assertEqual(logout, [True])
     testLogout = dG(testLogout)
 
 
@@ -380,20 +380,20 @@ class IRCProtocolTestCase(unittest.TestCase):
         user.write('JOIN #somechannel\r\n')
 
         response = self._response(user)
-        self.assertEquals(len(response), 5)
+        self.assertEqual(len(response), 5)
 
         # Join message
-        self.assertEquals(response[0][0], 'firstuser!firstuser@realmname')
-        self.assertEquals(response[0][1], 'JOIN')
-        self.assertEquals(response[0][2], ['#somechannel'])
+        self.assertEqual(response[0][0], 'firstuser!firstuser@realmname')
+        self.assertEqual(response[0][1], 'JOIN')
+        self.assertEqual(response[0][2], ['#somechannel'])
 
         # User list
-        self.assertEquals(response[1][1], '353')
-        self.assertEquals(response[2][1], '366')
+        self.assertEqual(response[1][1], '353')
+        self.assertEqual(response[2][1], '366')
 
         # Topic (or lack thereof, as the case may be)
-        self.assertEquals(response[3][1], '332')
-        self.assertEquals(response[4][1], '333')
+        self.assertEqual(response[3][1], '332')
+        self.assertEqual(response[4][1], '333')
 
 
         # Hook up another client!  It is a CHAT SYSTEM!!!!!!!
@@ -409,14 +409,14 @@ class IRCProtocolTestCase(unittest.TestCase):
         response = self._response(other)
 
         event = self._response(user)
-        self.assertEquals(len(event), 1)
-        self.assertEquals(event[0][0], 'otheruser!otheruser@realmname')
-        self.assertEquals(event[0][1], 'JOIN')
-        self.assertEquals(event[0][2], ['#somechannel'])
+        self.assertEqual(len(event), 1)
+        self.assertEqual(event[0][0], 'otheruser!otheruser@realmname')
+        self.assertEqual(event[0][1], 'JOIN')
+        self.assertEqual(event[0][2], ['#somechannel'])
 
-        self.assertEquals(response[1][0], 'realmname')
-        self.assertEquals(response[1][1], '353')
-        self.assertEquals(response[1][2], ['otheruser', '=', '#somechannel', 'firstuser otheruser'])
+        self.assertEqual(response[1][0], 'realmname')
+        self.assertEqual(response[1][1], '353')
+        self.assertEqual(response[1][2], ['otheruser', '=', '#somechannel', 'firstuser otheruser'])
     testJoin = dG(testJoin)
 
 
@@ -472,11 +472,11 @@ class IRCProtocolTestCase(unittest.TestCase):
         response = self._response(user)
         event = self._response(other)
 
-        self.assertEquals(len(response), 1)
-        self.assertEquals(response[0][0], 'useruser!useruser@realmname')
-        self.assertEquals(response[0][1], 'PART')
-        self.assertEquals(response[0][2], ['#somechannel', 'leaving'])
-        self.assertEquals(response, event)
+        self.assertEqual(len(response), 1)
+        self.assertEqual(response[0][0], 'useruser!useruser@realmname')
+        self.assertEqual(response[0][1], 'PART')
+        self.assertEqual(response[0][2], ['#somechannel', 'leaving'])
+        self.assertEqual(response, event)
 
         # Now again, with a part message
         user.write('JOIN #somechannel\r\n')
@@ -489,11 +489,11 @@ class IRCProtocolTestCase(unittest.TestCase):
         response = self._response(user)
         event = self._response(other)
 
-        self.assertEquals(len(response), 1)
-        self.assertEquals(response[0][0], 'useruser!useruser@realmname')
-        self.assertEquals(response[0][1], 'PART')
-        self.assertEquals(response[0][2], ['#somechannel', 'goodbye stupidheads'])
-        self.assertEquals(response, event)
+        self.assertEqual(len(response), 1)
+        self.assertEqual(response[0][0], 'useruser!useruser@realmname')
+        self.assertEqual(response[0][1], 'PART')
+        self.assertEqual(response[0][2], ['#somechannel', 'goodbye stupidheads'])
+        self.assertEqual(response, event)
     testLeave = dG(testLeave)
 
 
@@ -516,13 +516,13 @@ class IRCProtocolTestCase(unittest.TestCase):
 
         response = self._response(user)
 
-        self.assertEquals(response[3][0], 'realmname')
-        self.assertEquals(response[3][1], '332')
+        self.assertEqual(response[3][0], 'realmname')
+        self.assertEqual(response[3][1], '332')
 
         # XXX Sigh.  irc.parsemsg() is not as correct as one might hope.
-        self.assertEquals(response[3][2], ['useruser', '#somechannel', 'This is a test topic.'])
-        self.assertEquals(response[4][1], '333')
-        self.assertEquals(response[4][2], ['useruser', '#somechannel', 'some_fellow', '77777777'])
+        self.assertEqual(response[3][2], ['useruser', '#somechannel', 'This is a test topic.'])
+        self.assertEqual(response[4][1], '333')
+        self.assertEqual(response[4][2], ['useruser', '#somechannel', 'some_fellow', '77777777'])
 
         user.transport.clear()
 
@@ -530,10 +530,10 @@ class IRCProtocolTestCase(unittest.TestCase):
 
         response = self._response(user)
 
-        self.assertEquals(response[0][1], '332')
-        self.assertEquals(response[0][2], ['useruser', '#somechannel', 'This is a test topic.'])
-        self.assertEquals(response[1][1], '333')
-        self.assertEquals(response[1][2], ['useruser', '#somechannel', 'some_fellow', '77777777'])
+        self.assertEqual(response[0][1], '332')
+        self.assertEqual(response[0][2], ['useruser', '#somechannel', 'This is a test topic.'])
+        self.assertEqual(response[1][1], '333')
+        self.assertEqual(response[1][2], ['useruser', '#somechannel', 'some_fellow', '77777777'])
     testGetTopic = dG(testGetTopic)
 
 
@@ -562,11 +562,11 @@ class IRCProtocolTestCase(unittest.TestCase):
         response = self._response(other)
         event = self._response(user)
 
-        self.assertEquals(response, event)
+        self.assertEqual(response, event)
 
-        self.assertEquals(response[0][0], 'otheruser!otheruser@realmname')
-        self.assertEquals(response[0][1], 'TOPIC')
-        self.assertEquals(response[0][2], ['#somechannel', 'This is the new topic.'])
+        self.assertEqual(response[0][0], 'otheruser!otheruser@realmname')
+        self.assertEqual(response[0][1], 'TOPIC')
+        self.assertEqual(response[0][2], ['#somechannel', 'This is the new topic.'])
 
         other.transport.clear()
 
@@ -574,16 +574,16 @@ class IRCProtocolTestCase(unittest.TestCase):
         other.write('TOPIC #somechannel\r\n')
 
         response = self._response(other)
-        self.assertEquals(response[0][1], '332')
-        self.assertEquals(response[0][2], ['otheruser', '#somechannel', 'This is the new topic.'])
-        self.assertEquals(response[1][1], '333')
-        self.assertEquals(response[1][2], ['otheruser', '#somechannel', 'otheruser', '12345'])
+        self.assertEqual(response[0][1], '332')
+        self.assertEqual(response[0][2], ['otheruser', '#somechannel', 'This is the new topic.'])
+        self.assertEqual(response[1][1], '333')
+        self.assertEqual(response[1][2], ['otheruser', '#somechannel', 'otheruser', '12345'])
 
         other.transport.clear()
         other.write('TOPIC #asdlkjasd\r\n')
 
         response = self._response(other)
-        self.assertEquals(response[0][1], '403')
+        self.assertEqual(response[0][1], '403')
     testSetTopic = dG(testSetTopic)
 
 
@@ -613,10 +613,10 @@ class IRCProtocolTestCase(unittest.TestCase):
         event = self._response(other)
 
         self.failIf(response)
-        self.assertEquals(len(event), 1)
-        self.assertEquals(event[0][0], 'useruser!useruser@realmname')
-        self.assertEquals(event[0][1], 'PRIVMSG', -1)
-        self.assertEquals(event[0][2], ['#somechannel', 'Hello, world.'])
+        self.assertEqual(len(event), 1)
+        self.assertEqual(event[0][0], 'useruser!useruser@realmname')
+        self.assertEqual(event[0][1], 'PRIVMSG', -1)
+        self.assertEqual(event[0][2], ['#somechannel', 'Hello, world.'])
     testGroupMessage = dG(testGroupMessage)
 
 
@@ -638,19 +638,19 @@ class IRCProtocolTestCase(unittest.TestCase):
         event = self._response(other)
 
         self.failIf(response)
-        self.assertEquals(len(event), 1)
-        self.assertEquals(event[0][0], 'useruser!useruser@realmname')
-        self.assertEquals(event[0][1], 'PRIVMSG')
-        self.assertEquals(event[0][2], ['otheruser', 'Hello, monkey.'])
+        self.assertEqual(len(event), 1)
+        self.assertEqual(event[0][0], 'useruser!useruser@realmname')
+        self.assertEqual(event[0][1], 'PRIVMSG')
+        self.assertEqual(event[0][2], ['otheruser', 'Hello, monkey.'])
 
         user.write('PRIVMSG nousernamedthis :Hello, monkey.\r\n')
 
         response = self._response(user)
 
-        self.assertEquals(len(response), 1)
-        self.assertEquals(response[0][0], 'realmname')
-        self.assertEquals(response[0][1], '401')
-        self.assertEquals(response[0][2], ['useruser', 'nousernamedthis', 'No such nick/channel.'])
+        self.assertEqual(len(response), 1)
+        self.assertEqual(response[0][0], 'realmname')
+        self.assertEqual(response[0][1], '401')
+        self.assertEqual(response[0][2], ['useruser', 'nousernamedthis', 'No such nick/channel.'])
     testPrivateMessage = dG(testPrivateMessage)
 
 
@@ -663,8 +663,8 @@ class IRCProtocolTestCase(unittest.TestCase):
         user.write('OPER user pass\r\n')
         response = self._response(user)
 
-        self.assertEquals(len(response), 1)
-        self.assertEquals(response[0][1], '491')
+        self.assertEqual(len(response), 1)
+        self.assertEqual(response[0][1], '491')
     testOper = dG(testOper)
 
 
@@ -677,10 +677,10 @@ class IRCProtocolTestCase(unittest.TestCase):
         user.write('MODE useruser\r\n')
 
         response = self._response(user)
-        self.assertEquals(len(response), 1)
-        self.assertEquals(response[0][0], 'realmname')
-        self.assertEquals(response[0][1], '221')
-        self.assertEquals(response[0][2], ['useruser', '+'])
+        self.assertEqual(len(response), 1)
+        self.assertEqual(response[0][0], 'realmname')
+        self.assertEqual(response[0][1], '221')
+        self.assertEqual(response[0][2], ['useruser', '+'])
     testGetUserMode = dG(testGetUserMode)
 
 
@@ -693,8 +693,8 @@ class IRCProtocolTestCase(unittest.TestCase):
         user.write('MODE useruser +abcd\r\n')
 
         response = self._response(user)
-        self.assertEquals(len(response), 1)
-        self.assertEquals(response[0][1], '472')
+        self.assertEqual(len(response), 1)
+        self.assertEqual(response[0][1], '472')
     testSetUserMode = dG(testSetUserMode)
 
 
@@ -713,8 +713,8 @@ class IRCProtocolTestCase(unittest.TestCase):
         user.write('MODE #somechannel\r\n')
 
         response = self._response(user)
-        self.assertEquals(len(response), 1)
-        self.assertEquals(response[0][1], '324')
+        self.assertEqual(len(response), 1)
+        self.assertEqual(response[0][1], '324')
     testGetGroupMode = dG(testGetGroupMode)
 
 
@@ -733,8 +733,8 @@ class IRCProtocolTestCase(unittest.TestCase):
         user.write('MODE #groupname +abcd\r\n')
 
         response = self._response(user)
-        self.assertEquals(len(response), 1)
-        self.assertEquals(response[0][1], '472')
+        self.assertEqual(len(response), 1)
+        self.assertEqual(response[0][1], '472')
     testSetGroupMode = dG(testSetGroupMode)
 
 
@@ -762,27 +762,27 @@ class IRCProtocolTestCase(unittest.TestCase):
 
         wantusers = ['userone', 'usertwo', 'userthree']
         for (prefix, code, stuff) in r[:-1]:
-            self.assertEquals(prefix, 'realmname')
-            self.assertEquals(code, '352')
+            self.assertEqual(prefix, 'realmname')
+            self.assertEqual(code, '352')
 
             (myname, group, theirname, theirhost, theirserver, theirnick, flag, extra) = stuff
-            self.assertEquals(myname, 'userone')
-            self.assertEquals(group, '#groupname')
+            self.assertEqual(myname, 'userone')
+            self.assertEqual(group, '#groupname')
             self.failUnless(theirname in wantusers)
-            self.assertEquals(theirhost, 'realmname')
-            self.assertEquals(theirserver, 'realmname')
+            self.assertEqual(theirhost, 'realmname')
+            self.assertEqual(theirserver, 'realmname')
             wantusers.remove(theirnick)
-            self.assertEquals(flag, 'H')
-            self.assertEquals(extra, '0 ' + theirnick)
+            self.assertEqual(flag, 'H')
+            self.assertEqual(extra, '0 ' + theirnick)
         self.failIf(wantusers)
 
         prefix, code, stuff = r[-1]
-        self.assertEquals(prefix, 'realmname')
-        self.assertEquals(code, '315')
+        self.assertEqual(prefix, 'realmname')
+        self.assertEqual(code, '315')
         myname, channel, extra = stuff
-        self.assertEquals(myname, 'userone')
-        self.assertEquals(channel, '#groupname')
-        self.assertEquals(extra, 'End of /WHO list.')
+        self.assertEqual(myname, 'userone')
+        self.assertEqual(channel, '#groupname')
+        self.assertEqual(extra, 'End of /WHO list.')
     testWho = dG(testWho)
 
 
@@ -802,36 +802,36 @@ class IRCProtocolTestCase(unittest.TestCase):
         user.write('LIST #somegroup\r\n')
 
         r = self._response(user)
-        self.assertEquals(len(r), 2)
+        self.assertEqual(len(r), 2)
         resp, end = r
 
-        self.assertEquals(resp[0], 'realmname')
-        self.assertEquals(resp[1], '322')
-        self.assertEquals(resp[2][0], 'someuser')
-        self.assertEquals(resp[2][1], 'somegroup')
-        self.assertEquals(resp[2][2], '17')
-        self.assertEquals(resp[2][3], 'this is the topic woo')
+        self.assertEqual(resp[0], 'realmname')
+        self.assertEqual(resp[1], '322')
+        self.assertEqual(resp[2][0], 'someuser')
+        self.assertEqual(resp[2][1], 'somegroup')
+        self.assertEqual(resp[2][2], '17')
+        self.assertEqual(resp[2][3], 'this is the topic woo')
 
-        self.assertEquals(end[0], 'realmname')
-        self.assertEquals(end[1], '323')
-        self.assertEquals(end[2][0], 'someuser')
-        self.assertEquals(end[2][1], 'End of /LIST')
+        self.assertEqual(end[0], 'realmname')
+        self.assertEqual(end[1], '323')
+        self.assertEqual(end[2][0], 'someuser')
+        self.assertEqual(end[2][1], 'End of /LIST')
 
         user.transport.clear()
         # Test all groups
 
         user.write('LIST\r\n')
         r = self._response(user)
-        self.assertEquals(len(r), 2)
+        self.assertEqual(len(r), 2)
 
         fg1, end = r
 
-        self.assertEquals(fg1[1], '322')
-        self.assertEquals(fg1[2][1], 'somegroup')
-        self.assertEquals(fg1[2][2], '17')
-        self.assertEquals(fg1[2][3], 'this is the topic woo')
+        self.assertEqual(fg1[1], '322')
+        self.assertEqual(fg1[2][1], 'somegroup')
+        self.assertEqual(fg1[2][2], '17')
+        self.assertEqual(fg1[2][3], 'this is the topic woo')
 
-        self.assertEquals(end[1], '323')
+        self.assertEqual(end[1], '323')
     testList = dG(testList)
 
 
@@ -855,44 +855,44 @@ class IRCProtocolTestCase(unittest.TestCase):
         user.write('WHOIS otherguy\r\n')
         r = self._response(user)
 
-        self.assertEquals(len(r), 5)
+        self.assertEqual(len(r), 5)
         wuser, wserver, idle, channels, end = r
 
-        self.assertEquals(wuser[0], 'realmname')
-        self.assertEquals(wuser[1], '311')
-        self.assertEquals(wuser[2][0], 'someguy')
-        self.assertEquals(wuser[2][1], 'otherguy')
-        self.assertEquals(wuser[2][2], 'otherguy')
-        self.assertEquals(wuser[2][3], 'realmname')
-        self.assertEquals(wuser[2][4], '*')
-        self.assertEquals(wuser[2][5], 'otherguy')
+        self.assertEqual(wuser[0], 'realmname')
+        self.assertEqual(wuser[1], '311')
+        self.assertEqual(wuser[2][0], 'someguy')
+        self.assertEqual(wuser[2][1], 'otherguy')
+        self.assertEqual(wuser[2][2], 'otherguy')
+        self.assertEqual(wuser[2][3], 'realmname')
+        self.assertEqual(wuser[2][4], '*')
+        self.assertEqual(wuser[2][5], 'otherguy')
 
-        self.assertEquals(wserver[0], 'realmname')
-        self.assertEquals(wserver[1], '312')
-        self.assertEquals(wserver[2][0], 'someguy')
-        self.assertEquals(wserver[2][1], 'otherguy')
-        self.assertEquals(wserver[2][2], 'realmname')
-        self.assertEquals(wserver[2][3], 'Hi mom!')
+        self.assertEqual(wserver[0], 'realmname')
+        self.assertEqual(wserver[1], '312')
+        self.assertEqual(wserver[2][0], 'someguy')
+        self.assertEqual(wserver[2][1], 'otherguy')
+        self.assertEqual(wserver[2][2], 'realmname')
+        self.assertEqual(wserver[2][3], 'Hi mom!')
 
-        self.assertEquals(idle[0], 'realmname')
-        self.assertEquals(idle[1], '317')
-        self.assertEquals(idle[2][0], 'someguy')
-        self.assertEquals(idle[2][1], 'otherguy')
-        self.assertEquals(idle[2][2], '15')
-        self.assertEquals(idle[2][3], '10')
-        self.assertEquals(idle[2][4], "seconds idle, signon time")
+        self.assertEqual(idle[0], 'realmname')
+        self.assertEqual(idle[1], '317')
+        self.assertEqual(idle[2][0], 'someguy')
+        self.assertEqual(idle[2][1], 'otherguy')
+        self.assertEqual(idle[2][2], '15')
+        self.assertEqual(idle[2][3], '10')
+        self.assertEqual(idle[2][4], "seconds idle, signon time")
 
-        self.assertEquals(channels[0], 'realmname')
-        self.assertEquals(channels[1], '319')
-        self.assertEquals(channels[2][0], 'someguy')
-        self.assertEquals(channels[2][1], 'otherguy')
-        self.assertEquals(channels[2][2], '#groupA #groupB')
+        self.assertEqual(channels[0], 'realmname')
+        self.assertEqual(channels[1], '319')
+        self.assertEqual(channels[2][0], 'someguy')
+        self.assertEqual(channels[2][1], 'otherguy')
+        self.assertEqual(channels[2][2], '#groupA #groupB')
 
-        self.assertEquals(end[0], 'realmname')
-        self.assertEquals(end[1], '318')
-        self.assertEquals(end[2][0], 'someguy')
-        self.assertEquals(end[2][1], 'otherguy')
-        self.assertEquals(end[2][2], 'End of WHOIS list.')
+        self.assertEqual(end[0], 'realmname')
+        self.assertEqual(end[1], '318')
+        self.assertEqual(end[2][0], 'someguy')
+        self.assertEqual(end[2][1], 'otherguy')
+        self.assertEqual(end[2][2], 'End of WHOIS list.')
     testWhois = dG(testWhois)
 
 

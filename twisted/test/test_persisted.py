@@ -85,8 +85,8 @@ class VersionTestCase(unittest.TestCase):
         ClassWithCustomHash.upgradeToVersion1 = lambda self: setattr(self, 'upgraded', True)
         v1, v2 = pickle.loads(pkl)
         styles.doUpgrade()
-        self.assertEquals(v1.unique, 'v1')
-        self.assertEquals(v2.unique, 'v2')
+        self.assertEqual(v1.unique, 'v1')
+        self.assertEqual(v2.unique, 'v2')
         self.failUnless(v1.upgraded)
         self.failUnless(v2.upgraded)
     
@@ -122,13 +122,13 @@ class EphemeralTestCase(unittest.TestCase):
 
     def testEphemeral(self):
         o = MyEphemeral(3)
-        self.assertEquals(o.__class__, MyEphemeral)
-        self.assertEquals(o.x, 3)
+        self.assertEqual(o.__class__, MyEphemeral)
+        self.assertEqual(o.x, 3)
         
         pickl = pickle.dumps(o)
         o = pickle.loads(pickl)
         
-        self.assertEquals(o.__class__, styles.Ephemeral)
+        self.assertEqual(o.__class__, styles.Ephemeral)
         self.assert_(not hasattr(o, 'x'))
 
 
@@ -163,27 +163,27 @@ class PicklingTestCase(unittest.TestCase):
     def testModule(self):
         pickl = pickle.dumps(styles)
         o = pickle.loads(pickl)
-        self.assertEquals(o, styles)
+        self.assertEqual(o, styles)
     
     def testClassMethod(self):
         pickl = pickle.dumps(Pickleable.getX)
         o = pickle.loads(pickl)
-        self.assertEquals(o, Pickleable.getX)
+        self.assertEqual(o, Pickleable.getX)
     
     def testInstanceMethod(self):
         obj = Pickleable(4)
         pickl = pickle.dumps(obj.getX)
         o = pickle.loads(pickl)
-        self.assertEquals(o(), 4)
-        self.assertEquals(type(o), type(obj.getX))
+        self.assertEqual(o(), 4)
+        self.assertEqual(type(o), type(obj.getX))
     
     def testStringIO(self):
         f = StringIO.StringIO()
         f.write("abc")
         pickl = pickle.dumps(f)
         o = pickle.loads(pickl)
-        self.assertEquals(type(o), type(f))
-        self.assertEquals(f.getvalue(), "abc")
+        self.assertEqual(type(o), type(f))
+        self.assertEqual(f.getvalue(), "abc")
 
 
 class EvilSourceror:
@@ -202,7 +202,7 @@ class AOTTestCase(unittest.TestCase):
     def testSimpleTypes(self):
         obj = (1, 2.0, 3j, True, slice(1, 2, 3), 'hello', u'world', sys.maxint + 1, None, Ellipsis)
         rtObj = aot.unjellyFromSource(aot.jellyToSource(obj))
-        self.assertEquals(obj, rtObj)
+        self.assertEqual(obj, rtObj)
 
     def testMethodSelfIdentity(self):
         a = A()
@@ -210,7 +210,7 @@ class AOTTestCase(unittest.TestCase):
         a.bmethod = b.bmethod
         b.a = a
         im_ = aot.unjellyFromSource(aot.jellyToSource(b)).a.bmethod
-        self.assertEquals(im_.im_class, im_.im_self.__class__)
+        self.assertEqual(im_.im_class, im_.im_self.__class__)
 
 
     def test_methodNotSelfIdentity(self):

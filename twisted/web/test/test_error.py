@@ -19,7 +19,7 @@ class ErrorTestCase(unittest.TestCase):
         descriptive string to which C{message} is assigned.
         """
         e = error.Error("200")
-        self.assertEquals(e.message, "OK")
+        self.assertEqual(e.message, "OK")
 
 
     def test_noMessageInvalidStatus(self):
@@ -28,7 +28,7 @@ class ErrorTestCase(unittest.TestCase):
         C{code} isn't a valid HTTP status code, C{message} stays C{None}.
         """
         e = error.Error("InvalidCode")
-        self.assertEquals(e.message, None)
+        self.assertEqual(e.message, None)
 
 
     def test_messageExists(self):
@@ -37,7 +37,7 @@ class ErrorTestCase(unittest.TestCase):
         C{message} isn't affected by the value of C{status}.
         """
         e = error.Error("200", "My own message")
-        self.assertEquals(e.message, "My own message")
+        self.assertEqual(e.message, "My own message")
 
 
 
@@ -52,7 +52,7 @@ class PageRedirectTestCase(unittest.TestCase):
         to a descriptive string to which C{message} is assigned.
         """
         e = error.PageRedirect("200", location="/foo")
-        self.assertEquals(e.message, "OK to /foo")
+        self.assertEqual(e.message, "OK to /foo")
 
 
     def test_noMessageValidStatusNoLocation(self):
@@ -63,7 +63,7 @@ class PageRedirectTestCase(unittest.TestCase):
         C{message} is assigned without trying to include an empty location.
         """
         e = error.PageRedirect("200")
-        self.assertEquals(e.message, "OK")
+        self.assertEqual(e.message, "OK")
 
 
     def test_noMessageInvalidStatusLocationExists(self):
@@ -72,7 +72,7 @@ class PageRedirectTestCase(unittest.TestCase):
         and C{code} isn't a valid HTTP status code, C{message} stays C{None}.
         """
         e = error.PageRedirect("InvalidCode", location="/foo")
-        self.assertEquals(e.message, None)
+        self.assertEqual(e.message, None)
 
 
     def test_messageExistsLocationExists(self):
@@ -81,7 +81,7 @@ class PageRedirectTestCase(unittest.TestCase):
         the C{message} isn't affected by the value of C{status}.
         """
         e = error.PageRedirect("200", "My own message", location="/foo")
-        self.assertEquals(e.message, "My own message to /foo")
+        self.assertEqual(e.message, "My own message to /foo")
 
 
     def test_messageExistsNoLocation(self):
@@ -91,7 +91,7 @@ class PageRedirectTestCase(unittest.TestCase):
         location.
         """
         e = error.PageRedirect("200", "My own message")
-        self.assertEquals(e.message, "My own message")
+        self.assertEqual(e.message, "My own message")
 
 
 
@@ -107,7 +107,7 @@ class InfiniteRedirectionTestCase(unittest.TestCase):
         assigned.
         """
         e = error.InfiniteRedirection("200", location="/foo")
-        self.assertEquals(e.message, "OK to /foo")
+        self.assertEqual(e.message, "OK to /foo")
 
 
     def test_noMessageValidStatusNoLocation(self):
@@ -119,7 +119,7 @@ class InfiniteRedirectionTestCase(unittest.TestCase):
         location.
         """
         e = error.InfiniteRedirection("200")
-        self.assertEquals(e.message, "OK")
+        self.assertEqual(e.message, "OK")
 
 
     def test_noMessageInvalidStatusLocationExists(self):
@@ -129,7 +129,7 @@ class InfiniteRedirectionTestCase(unittest.TestCase):
         C{None}.
         """
         e = error.InfiniteRedirection("InvalidCode", location="/foo")
-        self.assertEquals(e.message, None)
+        self.assertEqual(e.message, None)
 
 
     def test_messageExistsLocationExists(self):
@@ -138,7 +138,7 @@ class InfiniteRedirectionTestCase(unittest.TestCase):
         constructor, the C{message} isn't affected by the value of C{status}.
         """
         e = error.InfiniteRedirection("200", "My own message", location="/foo")
-        self.assertEquals(e.message, "My own message to /foo")
+        self.assertEqual(e.message, "My own message to /foo")
 
 
     def test_messageExistsNoLocation(self):
@@ -148,4 +148,4 @@ class InfiniteRedirectionTestCase(unittest.TestCase):
         include the empty location.
         """
         e = error.InfiniteRedirection("200", "My own message")
-        self.assertEquals(e.message, "My own message")
+        self.assertEqual(e.message, "My own message")

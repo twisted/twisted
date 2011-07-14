@@ -195,7 +195,7 @@ class DelayedCallTests(TestCase):
             except (TypeError, KeyError):
                 return id(obj)
         self.addCleanup(setIDFunction, setIDFunction(fakeID))
-        self.assertEquals(
+        self.assertEqual(
             str(dc),
             "<DelayedCall 0xc8 [10.5s] called=0 cancelled=0 nothing(3, A=5)>")
 
@@ -254,7 +254,7 @@ class DelayedCallTests(TestCase):
         """
         A L{DelayedCall} instance is only equal to itself.
         """
-        # Explicitly use == here, instead of assertEquals, to be more
+        # Explicitly use == here, instead of assertEqual, to be more
         # confident __eq__ is being tested.
         self.assertFalse(self.zero == self.one)
         self.assertTrue(self.zero == self.zero)
@@ -265,7 +265,7 @@ class DelayedCallTests(TestCase):
         """
         A L{DelayedCall} instance is not equal to any other object.
         """
-        # Explicitly use != here, instead of assertEquals, to be more
+        # Explicitly use != here, instead of assertEqual, to be more
         # confident __ne__ is being tested.
         self.assertTrue(self.zero != self.one)
         self.assertFalse(self.zero != self.zero)

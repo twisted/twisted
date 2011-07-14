@@ -52,7 +52,7 @@ class SSHUserAuthClientTest(TestCase):
         client.keyAgent = agent
         cleartext = "Sign here"
         client.signData(self.rsaPublic, cleartext)
-        self.assertEquals(
+        self.assertEqual(
             transport.value(),
             "\x00\x00\x00\x8b\r\x00\x00\x00u" + self.rsaPublic.blob() +
             "\x00\x00\x00\t" + cleartext +
@@ -69,9 +69,9 @@ class SSHUserAuthClientTest(TestCase):
         agent = SSHAgentClient()
         agent.blobs = [self.rsaPublic.blob()]
         key = agent.getPublicKey()
-        self.assertEquals(key.isPublic(), True)
-        self.assertEquals(key, self.rsaPublic)
-        self.assertEquals(agent.getPublicKey(), None)
+        self.assertEqual(key.isPublic(), True)
+        self.assertEqual(key, self.rsaPublic)
+        self.assertEqual(agent.getPublicKey(), None)
 
 
     def test_getPublicKeyFromFile(self):
@@ -84,8 +84,8 @@ class SSHUserAuthClientTest(TestCase):
         options.identitys = [self.rsaFile.path]
         client = SSHUserAuthClient("user",  options, None)
         key = client.getPublicKey()
-        self.assertEquals(key.isPublic(), True)
-        self.assertEquals(key, self.rsaPublic)
+        self.assertEqual(key.isPublic(), True)
+        self.assertEqual(key, self.rsaPublic)
 
 
     def test_getPublicKeyAgentFallback(self):
@@ -99,8 +99,8 @@ class SSHUserAuthClientTest(TestCase):
         client = SSHUserAuthClient("user",  options, None)
         client.keyAgent = agent
         key = client.getPublicKey()
-        self.assertEquals(key.isPublic(), True)
-        self.assertEquals(key, self.rsaPublic)
+        self.assertEqual(key.isPublic(), True)
+        self.assertEqual(key, self.rsaPublic)
 
 
     def test_getPublicKeyBadKeyError(self):
@@ -117,9 +117,9 @@ class SSHUserAuthClientTest(TestCase):
         self.tmpdir.child('id_rsa.pub').setContent('not a key!')
         client = SSHUserAuthClient("user",  options, None)
         key = client.getPublicKey()
-        self.assertEquals(key.isPublic(), True)
-        self.assertEquals(key, Key.fromString(keydata.publicDSA_openssh))
-        self.assertEquals(client.usedFiles, [self.rsaFile.path, dsaFile.path])
+        self.assertEqual(key.isPublic(), True)
+        self.assertEqual(key, Key.fromString(keydata.publicDSA_openssh))
+        self.assertEqual(client.usedFiles, [self.rsaFile.path, dsaFile.path])
 
 
     def test_getPrivateKey(self):
@@ -136,8 +136,8 @@ class SSHUserAuthClientTest(TestCase):
         client.getPublicKey()
 
         def _cbGetPrivateKey(key):
-            self.assertEquals(key.isPublic(), False)
-            self.assertEquals(key, rsaPrivate)
+            self.assertEqual(key.isPublic(), False)
+            self.assertEqual(key, rsaPrivate)
 
         return client.getPrivateKey().addCallback(_cbGetPrivateKey)
 
@@ -158,14 +158,14 @@ class SSHUserAuthClientTest(TestCase):
         client.getPublicKey()
 
         def _getPassword(prompt):
-            self.assertEquals(prompt,
+            self.assertEqual(prompt,
                               "Enter passphrase for key '%s': " % (
                               self.rsaFile.path,))
             return passphrase
 
         def _cbGetPrivateKey(key):
-            self.assertEquals(key.isPublic(), False)
-            self.assertEquals(key, rsaPrivate)
+            self.assertEqual(key.isPublic(), False)
+            self.assertEqual(key, rsaPrivate)
 
         self.patch(client, '_getPassword', _getPassword)
         return client.getPrivateKey().addCallback(_cbGetPrivateKey)

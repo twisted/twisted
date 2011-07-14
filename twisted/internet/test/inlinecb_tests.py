@@ -46,8 +46,8 @@ class NonLocalExitTests(TestCase):
         self.assertEqual(resultList, [1])
         warnings = self.flushWarnings(offendingFunctions=[self.mistakenMethod])
         self.assertEqual(len(warnings), 1)
-        self.assertEquals(warnings[0]['category'], DeprecationWarning)
-        self.assertEquals(
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(
             warnings[0]['message'],
             "returnValue() in 'mistakenMethod' causing 'inline' to exit: "
             "returnValue should only be invoked by functions decorated with "
@@ -85,7 +85,7 @@ class NonLocalExitTests(TestCase):
         effect = inline()
         results = []
         effect.addCallback(results.append)
-        self.assertEquals(results, [])
+        self.assertEqual(results, [])
         cause.callback(1)
         self.assertMistakenMethodWarning(results)
 

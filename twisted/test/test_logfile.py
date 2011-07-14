@@ -38,7 +38,7 @@ class LogFileTestCase(unittest.TestCase):
         log.close()
 
         f = open(self.path, "r")
-        self.assertEquals(f.read(), "1234567890")
+        self.assertEqual(f.read(), "1234567890")
         f.close()
 
     def testRotation(self):
@@ -64,7 +64,7 @@ class LogFileTestCase(unittest.TestCase):
         self.assert_(not os.path.exists("%s.4" % self.path))
         log.close()
 
-        self.assertEquals(log.listLogs(), [1, 2, 3])
+        self.assertEqual(log.listLogs(), [1, 2, 3])
 
     def testAppend(self):
         log = logfile.LogFile(self.name, self.dir)
@@ -72,14 +72,14 @@ class LogFileTestCase(unittest.TestCase):
         log.close()
 
         log = logfile.LogFile(self.name, self.dir)
-        self.assertEquals(log.size, 10)
-        self.assertEquals(log._file.tell(), log.size)
+        self.assertEqual(log.size, 10)
+        self.assertEqual(log._file.tell(), log.size)
         log.write("abc")
-        self.assertEquals(log.size, 13)
-        self.assertEquals(log._file.tell(), log.size)
+        self.assertEqual(log.size, 13)
+        self.assertEqual(log._file.tell(), log.size)
         f = log._file
         f.seek(0, 0)
-        self.assertEquals(f.read(), "0123456789abc")
+        self.assertEqual(f.read(), "0123456789abc")
         log.close()
 
     def testLogReader(self):
@@ -91,15 +91,15 @@ class LogFileTestCase(unittest.TestCase):
         log.flush()
 
         # check reading logs
-        self.assertEquals(log.listLogs(), [1])
+        self.assertEqual(log.listLogs(), [1])
         reader = log.getCurrentLog()
         reader._file.seek(0)
-        self.assertEquals(reader.readLines(), ["ghi\n"])
-        self.assertEquals(reader.readLines(), [])
+        self.assertEqual(reader.readLines(), ["ghi\n"])
+        self.assertEqual(reader.readLines(), [])
         reader.close()
         reader = log.getLog(1)
-        self.assertEquals(reader.readLines(), ["abc\n", "def\n"])
-        self.assertEquals(reader.readLines(), [])
+        self.assertEqual(reader.readLines(), ["abc\n", "def\n"])
+        self.assertEqual(reader.readLines(), [])
         reader.close()
 
         # check getting illegal log readers
@@ -108,15 +108,15 @@ class LogFileTestCase(unittest.TestCase):
 
         # check that log numbers are higher for older logs
         log.rotate()
-        self.assertEquals(log.listLogs(), [1, 2])
+        self.assertEqual(log.listLogs(), [1, 2])
         reader = log.getLog(1)
         reader._file.seek(0)
-        self.assertEquals(reader.readLines(), ["ghi\n"])
-        self.assertEquals(reader.readLines(), [])
+        self.assertEqual(reader.readLines(), ["ghi\n"])
+        self.assertEqual(reader.readLines(), [])
         reader.close()
         reader = log.getLog(2)
-        self.assertEquals(reader.readLines(), ["abc\n", "def\n"])
-        self.assertEquals(reader.readLines(), [])
+        self.assertEqual(reader.readLines(), ["abc\n", "def\n"])
+        self.assertEqual(reader.readLines(), [])
         reader.close()
 
     def testModePreservation(self):
@@ -129,7 +129,7 @@ class LogFileTestCase(unittest.TestCase):
         log = logfile.LogFile(self.name, self.dir)
         log.write("abc")
         log.rotate()
-        self.assertEquals(mode, os.stat(self.path)[stat.ST_MODE])
+        self.assertEqual(mode, os.stat(self.path)[stat.ST_MODE])
 
 
     def test_noPermission(self):
@@ -158,9 +158,9 @@ class LogFileTestCase(unittest.TestCase):
         log.flush()
 
         f = log._file
-        self.assertEquals(f.tell(), 6)
+        self.assertEqual(f.tell(), 6)
         f.seek(0, 0)
-        self.assertEquals(f.read(), "abcdef")
+        self.assertEqual(f.read(), "abcdef")
         log.close()
 
 
@@ -180,10 +180,10 @@ class LogFileTestCase(unittest.TestCase):
 
         log.write("4" * 11)
         self.failUnless(os.path.exists("%s.3" % self.path))
-        self.assertEquals(file("%s.3" % self.path).read(), "1" * 11)
+        self.assertEqual(file("%s.3" % self.path).read(), "1" * 11)
 
         log.write("5" * 11)
-        self.assertEquals(file("%s.3" % self.path).read(), "2" * 11)
+        self.assertEqual(file("%s.3" % self.path).read(), "2" * 11)
         self.failUnless(not os.path.exists("%s.4" % self.path))
 
     def test_fromFullPath(self):
@@ -192,10 +192,10 @@ class LogFileTestCase(unittest.TestCase):
         """
         log1 = logfile.LogFile(self.name, self.dir, 10, defaultMode=0777)
         log2 = logfile.LogFile.fromFullPath(self.path, 10, defaultMode=0777)
-        self.assertEquals(log1.name, log2.name)
-        self.assertEquals(os.path.abspath(log1.path), log2.path)
-        self.assertEquals(log1.rotateLength, log2.rotateLength)
-        self.assertEquals(log1.defaultMode, log2.defaultMode)
+        self.assertEqual(log1.name, log2.name)
+        self.assertEqual(os.path.abspath(log1.path), log2.path)
+        self.assertEqual(log1.rotateLength, log2.rotateLength)
+        self.assertEqual(log1.defaultMode, log2.defaultMode)
 
     def test_defaultPermissions(self):
         """
@@ -207,7 +207,7 @@ class LogFileTestCase(unittest.TestCase):
         currentMode = stat.S_IMODE(os.stat(self.path)[stat.ST_MODE])
         f.close()
         log1 = logfile.LogFile(self.name, self.dir)
-        self.assertEquals(stat.S_IMODE(os.stat(self.path)[stat.ST_MODE]),
+        self.assertEqual(stat.S_IMODE(os.stat(self.path)[stat.ST_MODE]),
                           currentMode)
 
 
@@ -219,9 +219,9 @@ class LogFileTestCase(unittest.TestCase):
         mode = stat.S_IMODE(os.stat(self.path)[stat.ST_MODE])
         if runtime.platform.isWindows():
             # The only thing we can get here is global read-only
-            self.assertEquals(mode, 0444)
+            self.assertEqual(mode, 0444)
         else:
-            self.assertEquals(mode, 0066)
+            self.assertEqual(mode, 0066)
 
 
     def test_reopen(self):
@@ -238,10 +238,10 @@ class LogFileTestCase(unittest.TestCase):
         log1.close()
 
         f = open(self.path, "r")
-        self.assertEquals(f.read(), "hello2")
+        self.assertEqual(f.read(), "hello2")
         f.close()
         f = open(savePath, "r")
-        self.assertEquals(f.read(), "hello1")
+        self.assertEqual(f.read(), "hello1")
         f.close()
 
     if runtime.platform.isWindows():
@@ -254,7 +254,7 @@ class LogFileTestCase(unittest.TestCase):
         """
         e = self.assertRaises(
             IOError, logfile.LogFile, self.name, 'this_dir_does_not_exist')
-        self.assertEquals(e.errno, errno.ENOENT)
+        self.assertEqual(e.errno, errno.ENOENT)
 
 
 
@@ -292,7 +292,7 @@ class DailyLogFileTestCase(unittest.TestCase):
         log.close()
 
         f = open(self.path, "r")
-        self.assertEquals(f.read(), "1234567890")
+        self.assertEqual(f.read(), "1234567890")
         f.close()
 
     def testRotation(self):

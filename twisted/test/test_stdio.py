@@ -238,7 +238,7 @@ class StandardInputOutputTestCase(unittest.TestCase):
         self._spawnProcess(p, 'stdio_test_write.py')
 
         def processEnded(reason):
-            self.assertEquals(p.data[1], 'ok!')
+            self.assertEqual(p.data[1], 'ok!')
             reason.trap(error.ProcessDone)
         return self._requireFailure(d, processEnded)
 
@@ -254,7 +254,7 @@ class StandardInputOutputTestCase(unittest.TestCase):
         self._spawnProcess(p, 'stdio_test_writeseq.py')
 
         def processEnded(reason):
-            self.assertEquals(p.data[1], 'ok!')
+            self.assertEqual(p.data[1], 'ok!')
             reason.trap(error.ProcessDone)
         return self._requireFailure(d, processEnded)
 
@@ -290,7 +290,7 @@ class StandardInputOutputTestCase(unittest.TestCase):
         p.onConnection.addCallback(connectionMade)
 
         def processEnded(reason):
-            self.assertEquals(p.data[1], ''.join(written))
+            self.assertEqual(p.data[1], ''.join(written))
             self.failIf(toWrite, "Connection lost with %d writes left to go." % (len(toWrite),))
             reason.trap(error.ProcessDone)
         return self._requireFailure(d, processEnded)
@@ -309,7 +309,7 @@ class StandardInputOutputTestCase(unittest.TestCase):
         self._spawnProcess(p, 'stdio_test_consumer.py', junkPath)
 
         def processEnded(reason):
-            self.assertEquals(p.data[1], file(junkPath).read())
+            self.assertEqual(p.data[1], file(junkPath).read())
             reason.trap(error.ProcessDone)
         return self._requireFailure(d, processEnded)
 
@@ -358,8 +358,8 @@ class StandardInputOutputTestCase(unittest.TestCase):
         # Once the connection is lost, make sure the counter is at the
         # appropriate value.
         def cbLost(reason):
-            self.assertEquals(count.next(), howMany + 1)
-            self.assertEquals(
+            self.assertEqual(count.next(), howMany + 1)
+            self.assertEqual(
                 path.getContent(),
                 ''.join(map(str, range(howMany))))
         onConnLost.addCallback(cbLost)
@@ -389,7 +389,7 @@ class StandardInputOutputTestCase(unittest.TestCase):
             RuntimeError,
             stdio.StandardIO, protocol.Protocol(), stdout=fd)
         
-        self.assertEquals(
+        self.assertEqual(
             str(exc),
             "This reactor does not support this type of file descriptor (fd "
             "%d, mode %d) (for example, epollreactor does not support normal "

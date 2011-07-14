@@ -551,7 +551,7 @@ class AXFRTest(unittest.TestCase):
         m.queries = [dns.Query('fooby.com', dns.AXFR, dns.IN)]
         m.answers = self.records
         self.controller.messageReceived(m, None)
-        self.assertEquals(self.results, self.records)
+        self.assertEqual(self.results, self.records)
 
     def _gotResults(self, result):
         self.results = result
@@ -564,7 +564,7 @@ class AXFRTest(unittest.TestCase):
             m.queries = [] # DJB *doesn't* specify any queries.. hmm..
             m.answers = [records.pop(0)]
             self.controller.messageReceived(m, None)
-        self.assertEquals(self.results, self.records)
+        self.assertEqual(self.results, self.records)
 
 class FakeDNSDatagramProtocol(object):
     def __init__(self):
@@ -613,8 +613,8 @@ class RetryLogic(unittest.TestCase):
             expected.sort()
 
             for ((addr, query, timeout, id), expectedAddr) in zip(tries, expected):
-                self.assertEquals(addr, (expectedAddr, 53))
-                self.assertEquals(timeout, t)
+                self.assertEqual(addr, (expectedAddr, 53))
+                self.assertEqual(timeout, t)
 
         self.failIf(fakeProto.queries)
 
@@ -622,7 +622,7 @@ class ResolvConfHandling(unittest.TestCase):
     def testMissing(self):
         resolvConf = self.mktemp()
         r = client.Resolver(resolv=resolvConf)
-        self.assertEquals(r.dynServers, [('127.0.0.1', 53)])
+        self.assertEqual(r.dynServers, [('127.0.0.1', 53)])
         r._parseCall.cancel()
 
     def testEmpty(self):
@@ -630,7 +630,7 @@ class ResolvConfHandling(unittest.TestCase):
         fObj = file(resolvConf, 'w')
         fObj.close()
         r = client.Resolver(resolv=resolvConf)
-        self.assertEquals(r.dynServers, [('127.0.0.1', 53)])
+        self.assertEqual(r.dynServers, [('127.0.0.1', 53)])
         r._parseCall.cancel()
 
 
@@ -742,14 +742,14 @@ class AuthorityTests(unittest.TestCase):
         result = []
         d.addCallback(result.append)
         answer, authority, additional = result[0]
-        self.assertEquals(answer, [])
-        self.assertEquals(
+        self.assertEqual(answer, [])
+        self.assertEqual(
             authority, [
                 dns.RRHeader(
                     str(soa_record.mname), soa_record.TYPE,
                     ttl=soa_record.expire, payload=soa_record,
                     auth=True)])
-        self.assertEquals(additional, [])
+        self.assertEqual(additional, [])
 
 
     def _referralTest(self, method):
@@ -770,12 +770,12 @@ class AuthorityTests(unittest.TestCase):
         result = []
         d.addCallback(result.append)
         answer, authority, additional = result[0]
-        self.assertEquals(answer, [])
-        self.assertEquals(
+        self.assertEqual(answer, [])
+        self.assertEqual(
             authority, [dns.RRHeader(
                     subdomain, dns.NS, ttl=soa_record.expire,
                     payload=nameserver, auth=False)])
-        self.assertEquals(additional, [])
+        self.assertEqual(additional, [])
 
 
     def test_referral(self):

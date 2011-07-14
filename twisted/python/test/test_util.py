@@ -30,7 +30,7 @@ class UtilTestCase(unittest.TestCase):
 
     def testUniq(self):
         l = ["a", 1, "ab", "a", 3, 4, 1, 2, 2, 4, 6]
-        self.assertEquals(util.uniquify(l), ["a", 1, "ab", 3, 4, 2, 6])
+        self.assertEqual(util.uniquify(l), ["a", 1, "ab", 3, 4, 2, 6])
 
     def testRaises(self):
         self.failUnless(util.raises(ZeroDivisionError, divmod, 1, 0))
@@ -53,13 +53,13 @@ class UtilTestCase(unittest.TestCase):
 
         self.exceptions = [None]
         self.calls = 0
-        self.assertEquals(util.untilConcludes(f, 1, 2), 3)
-        self.assertEquals(self.calls, 1)
+        self.assertEqual(util.untilConcludes(f, 1, 2), 3)
+        self.assertEqual(self.calls, 1)
 
         self.exceptions = [None, OSError, IOError]
         self.calls = 0
-        self.assertEquals(util.untilConcludes(f, 2, 3), 5)
-        self.assertEquals(self.calls, 3)
+        self.assertEqual(util.untilConcludes(f, 2, 3), 5)
+        self.assertEqual(self.calls, 3)
 
     def testNameToLabel(self):
         """
@@ -74,7 +74,7 @@ class UtilTestCase(unittest.TestCase):
             ]
         for inp, out in nameData:
             got = util.nameToLabel(inp)
-            self.assertEquals(
+            self.assertEqual(
                 got, out,
                 "nameToLabel(%r) == %r != %r" % (inp, got, out))
 
@@ -126,11 +126,11 @@ class UtilTestCase(unittest.TestCase):
         util.moduleMovedForSplit("foo", "bar", "baz", "quux", "corge", {})
         warnings = self.flushWarnings(
             offendingFunctions=[self.test_moduleMovedForSplitDeprecation])
-        self.assertEquals(
+        self.assertEqual(
             warnings[0]['message'],
             "moduleMovedForSplit is deprecated since Twisted 9.0.")
-        self.assertEquals(warnings[0]['category'], DeprecationWarning)
-        self.assertEquals(len(warnings), 1)
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(len(warnings), 1)
 
 
 
@@ -163,8 +163,8 @@ class SwitchUIDTest(unittest.TestCase):
         the given uid.
         """
         util.switchUID(12000, None)
-        self.assertEquals(self.initgroupsCalls, [(12000, None)])
-        self.assertEquals(self.mockos.actions, [("setuid", 12000)])
+        self.assertEqual(self.initgroupsCalls, [(12000, None)])
+        self.assertEqual(self.mockos.actions, [("setuid", 12000)])
 
 
     def test_euid(self):
@@ -173,8 +173,8 @@ class SwitchUIDTest(unittest.TestCase):
         the given uid if the C{euid} parameter is set to C{True}.
         """
         util.switchUID(12000, None, True)
-        self.assertEquals(self.initgroupsCalls, [(12000, None)])
-        self.assertEquals(self.mockos.seteuidCalls, [12000])
+        self.assertEqual(self.initgroupsCalls, [(12000, None)])
+        self.assertEqual(self.mockos.seteuidCalls, [12000])
 
 
     def test_currentUID(self):
@@ -184,10 +184,10 @@ class SwitchUIDTest(unittest.TestCase):
         """
         uid = self.mockos.getuid()
         util.switchUID(uid, None)
-        self.assertEquals(self.initgroupsCalls, [])
-        self.assertEquals(self.mockos.actions, [])
+        self.assertEqual(self.initgroupsCalls, [])
+        self.assertEqual(self.mockos.actions, [])
         warnings = self.flushWarnings([util.switchUID])
-        self.assertEquals(len(warnings), 1)
+        self.assertEqual(len(warnings), 1)
         self.assertIn('tried to drop privileges and setuid %i' % uid, 
                       warnings[0]['message'])
         self.assertIn('but uid is already %i' % uid, warnings[0]['message'])
@@ -200,10 +200,10 @@ class SwitchUIDTest(unittest.TestCase):
         """
         euid = self.mockos.geteuid()
         util.switchUID(euid, None, True)
-        self.assertEquals(self.initgroupsCalls, [])
-        self.assertEquals(self.mockos.seteuidCalls, [])
+        self.assertEqual(self.initgroupsCalls, [])
+        self.assertEqual(self.mockos.seteuidCalls, [])
         warnings = self.flushWarnings([util.switchUID])
-        self.assertEquals(len(warnings), 1)
+        self.assertEqual(len(warnings), 1)
         self.assertIn('tried to drop privileges and seteuid %i' % euid, 
                       warnings[0]['message'])
         self.assertIn('but euid is already %i' % euid, warnings[0]['message'])
@@ -313,16 +313,16 @@ class OrderedDictTest(unittest.TestCase):
         d['b'] = 'a'
         d[3] = 12
         d[1234] = 4321
-        self.assertEquals(repr(d), "{'a': 'b', 'b': 'a', 3: 12, 1234: 4321}")
-        self.assertEquals(d.values(), ['b', 'a', 12, 4321])
+        self.assertEqual(repr(d), "{'a': 'b', 'b': 'a', 3: 12, 1234: 4321}")
+        self.assertEqual(d.values(), ['b', 'a', 12, 4321])
         del d[3]
-        self.assertEquals(repr(d), "{'a': 'b', 'b': 'a', 1234: 4321}")
-        self.assertEquals(d, {'a': 'b', 'b': 'a', 1234:4321})
-        self.assertEquals(d.keys(), ['a', 'b', 1234])
-        self.assertEquals(list(d.iteritems()),
+        self.assertEqual(repr(d), "{'a': 'b', 'b': 'a', 1234: 4321}")
+        self.assertEqual(d, {'a': 'b', 'b': 'a', 1234:4321})
+        self.assertEqual(d.keys(), ['a', 'b', 1234])
+        self.assertEqual(list(d.iteritems()),
                           [('a', 'b'), ('b','a'), (1234, 4321)])
         item = d.popitem()
-        self.assertEquals(item, (1234, 4321))
+        self.assertEqual(item, (1234, 4321))
 
     def testInitialization(self):
         d = util.OrderedDict({'monkey': 'ook',
@@ -330,23 +330,23 @@ class OrderedDictTest(unittest.TestCase):
         self.failUnless(d._order)
 
         d = util.OrderedDict(((1,1),(3,3),(2,2),(0,0)))
-        self.assertEquals(repr(d), "{1: 1, 3: 3, 2: 2, 0: 0}")
+        self.assertEqual(repr(d), "{1: 1, 3: 3, 2: 2, 0: 0}")
 
 class InsensitiveDictTest(unittest.TestCase):
     def testPreserve(self):
         InsensitiveDict=util.InsensitiveDict
         dct=InsensitiveDict({'Foo':'bar', 1:2, 'fnz':{1:2}}, preserve=1)
-        self.assertEquals(dct['fnz'], {1:2})
-        self.assertEquals(dct['foo'], 'bar')
-        self.assertEquals(dct.copy(), dct)
-        self.assertEquals(dct['foo'], dct.get('Foo'))
+        self.assertEqual(dct['fnz'], {1:2})
+        self.assertEqual(dct['foo'], 'bar')
+        self.assertEqual(dct.copy(), dct)
+        self.assertEqual(dct['foo'], dct.get('Foo'))
         assert 1 in dct and 'foo' in dct
-        self.assertEquals(eval(repr(dct)), dct)
+        self.assertEqual(eval(repr(dct)), dct)
         keys=['Foo', 'fnz', 1]
         for x in keys:
             assert x in dct.keys()
             assert (x, dct[x]) in dct.items()
-        self.assertEquals(len(keys), len(dct))
+        self.assertEqual(len(keys), len(dct))
         del dct[1]
         del dct['foo']
 
@@ -357,7 +357,7 @@ class InsensitiveDictTest(unittest.TestCase):
         for x in keys:
             assert x in dct.keys()
             assert (x, dct[x]) in dct.items()
-        self.assertEquals(len(keys), len(dct))
+        self.assertEqual(len(keys), len(dct))
         del dct[1]
         del dct['foo']
 
@@ -445,7 +445,7 @@ class DSU(unittest.TestCase):
     def test_dsu(self):
         L = [Foo(x) for x in range(20, 9, -1)]
         L2 = util.dsu(L, lambda o: o.x)
-        self.assertEquals(range(10, 21), [o.x for o in L2])
+        self.assertEqual(range(10, 21), [o.x for o in L2])
 
 
     def test_deprecation(self):
@@ -460,76 +460,76 @@ class IntervalDifferentialTestCase(unittest.TestCase):
     def testDefault(self):
         d = iter(util.IntervalDifferential([], 10))
         for i in range(100):
-            self.assertEquals(d.next(), (10, None))
+            self.assertEqual(d.next(), (10, None))
 
     def testSingle(self):
         d = iter(util.IntervalDifferential([5], 10))
         for i in range(100):
-            self.assertEquals(d.next(), (5, 0))
+            self.assertEqual(d.next(), (5, 0))
 
     def testPair(self):
         d = iter(util.IntervalDifferential([5, 7], 10))
         for i in range(100):
-            self.assertEquals(d.next(), (5, 0))
-            self.assertEquals(d.next(), (2, 1))
-            self.assertEquals(d.next(), (3, 0))
-            self.assertEquals(d.next(), (4, 1))
-            self.assertEquals(d.next(), (1, 0))
-            self.assertEquals(d.next(), (5, 0))
-            self.assertEquals(d.next(), (1, 1))
-            self.assertEquals(d.next(), (4, 0))
-            self.assertEquals(d.next(), (3, 1))
-            self.assertEquals(d.next(), (2, 0))
-            self.assertEquals(d.next(), (5, 0))
-            self.assertEquals(d.next(), (0, 1))
+            self.assertEqual(d.next(), (5, 0))
+            self.assertEqual(d.next(), (2, 1))
+            self.assertEqual(d.next(), (3, 0))
+            self.assertEqual(d.next(), (4, 1))
+            self.assertEqual(d.next(), (1, 0))
+            self.assertEqual(d.next(), (5, 0))
+            self.assertEqual(d.next(), (1, 1))
+            self.assertEqual(d.next(), (4, 0))
+            self.assertEqual(d.next(), (3, 1))
+            self.assertEqual(d.next(), (2, 0))
+            self.assertEqual(d.next(), (5, 0))
+            self.assertEqual(d.next(), (0, 1))
 
     def testTriple(self):
         d = iter(util.IntervalDifferential([2, 4, 5], 10))
         for i in range(100):
-            self.assertEquals(d.next(), (2, 0))
-            self.assertEquals(d.next(), (2, 0))
-            self.assertEquals(d.next(), (0, 1))
-            self.assertEquals(d.next(), (1, 2))
-            self.assertEquals(d.next(), (1, 0))
-            self.assertEquals(d.next(), (2, 0))
-            self.assertEquals(d.next(), (0, 1))
-            self.assertEquals(d.next(), (2, 0))
-            self.assertEquals(d.next(), (0, 2))
-            self.assertEquals(d.next(), (2, 0))
-            self.assertEquals(d.next(), (0, 1))
-            self.assertEquals(d.next(), (2, 0))
-            self.assertEquals(d.next(), (1, 2))
-            self.assertEquals(d.next(), (1, 0))
-            self.assertEquals(d.next(), (0, 1))
-            self.assertEquals(d.next(), (2, 0))
-            self.assertEquals(d.next(), (2, 0))
-            self.assertEquals(d.next(), (0, 1))
-            self.assertEquals(d.next(), (0, 2))
+            self.assertEqual(d.next(), (2, 0))
+            self.assertEqual(d.next(), (2, 0))
+            self.assertEqual(d.next(), (0, 1))
+            self.assertEqual(d.next(), (1, 2))
+            self.assertEqual(d.next(), (1, 0))
+            self.assertEqual(d.next(), (2, 0))
+            self.assertEqual(d.next(), (0, 1))
+            self.assertEqual(d.next(), (2, 0))
+            self.assertEqual(d.next(), (0, 2))
+            self.assertEqual(d.next(), (2, 0))
+            self.assertEqual(d.next(), (0, 1))
+            self.assertEqual(d.next(), (2, 0))
+            self.assertEqual(d.next(), (1, 2))
+            self.assertEqual(d.next(), (1, 0))
+            self.assertEqual(d.next(), (0, 1))
+            self.assertEqual(d.next(), (2, 0))
+            self.assertEqual(d.next(), (2, 0))
+            self.assertEqual(d.next(), (0, 1))
+            self.assertEqual(d.next(), (0, 2))
 
     def testInsert(self):
         d = iter(util.IntervalDifferential([], 10))
-        self.assertEquals(d.next(), (10, None))
+        self.assertEqual(d.next(), (10, None))
         d.addInterval(3)
-        self.assertEquals(d.next(), (3, 0))
-        self.assertEquals(d.next(), (3, 0))
+        self.assertEqual(d.next(), (3, 0))
+        self.assertEqual(d.next(), (3, 0))
         d.addInterval(6)
-        self.assertEquals(d.next(), (3, 0))
-        self.assertEquals(d.next(), (3, 0))
-        self.assertEquals(d.next(), (0, 1))
-        self.assertEquals(d.next(), (3, 0))
-        self.assertEquals(d.next(), (3, 0))
-        self.assertEquals(d.next(), (0, 1))
+        self.assertEqual(d.next(), (3, 0))
+        self.assertEqual(d.next(), (3, 0))
+        self.assertEqual(d.next(), (0, 1))
+        self.assertEqual(d.next(), (3, 0))
+        self.assertEqual(d.next(), (3, 0))
+        self.assertEqual(d.next(), (0, 1))
 
     def testRemove(self):
         d = iter(util.IntervalDifferential([3, 5], 10))
-        self.assertEquals(d.next(), (3, 0))
-        self.assertEquals(d.next(), (2, 1))
-        self.assertEquals(d.next(), (1, 0))
+        self.assertEqual(d.next(), (3, 0))
+        self.assertEqual(d.next(), (2, 1))
+        self.assertEqual(d.next(), (1, 0))
         d.removeInterval(3)
-        self.assertEquals(d.next(), (4, 0))
-        self.assertEquals(d.next(), (5, 0))
+        self.assertEqual(d.next(), (4, 0))
+        self.assertEqual(d.next(), (5, 0))
         d.removeInterval(5)
-        self.assertEquals(d.next(), (10, None))
+        self.assertEqual(d.next(), (10, None))
         self.assertRaises(ValueError, d.removeInterval, 10)
 
 
@@ -728,7 +728,7 @@ class RunAsEffectiveUserTests(unittest.TestCase):
         given function
         """
         result = util.runAsEffectiveUser(0, 0, lambda: 1)
-        self.assertEquals(result, 1)
+        self.assertEqual(result, 1)
 
 
     def test_takeParameters(self):
@@ -737,7 +737,7 @@ class RunAsEffectiveUserTests(unittest.TestCase):
         function.
         """
         result = util.runAsEffectiveUser(0, 0, lambda x: 2*x, 3)
-        self.assertEquals(result, 6)
+        self.assertEqual(result, 6)
 
 
     def test_takesKeyworkArguments(self):
@@ -746,7 +746,7 @@ class RunAsEffectiveUserTests(unittest.TestCase):
         function.
         """
         result = util.runAsEffectiveUser(0, 0, lambda x, y=1, z=1: x*y*z, 2, z=3)
-        self.assertEquals(result, 6)
+        self.assertEqual(result, 6)
 
 
     def _testUIDGIDSwitch(self, startUID, startGID, wantUID, wantGID,
@@ -761,8 +761,8 @@ class RunAsEffectiveUserTests(unittest.TestCase):
         util.runAsEffectiveUser(
             wantUID, wantGID,
             self._securedFunction, startUID, startGID, wantUID, wantGID)
-        self.assertEquals(self.mockos.seteuidCalls, expectedUIDSwitches)
-        self.assertEquals(self.mockos.setegidCalls, expectedGIDSwitches)
+        self.assertEqual(self.mockos.seteuidCalls, expectedUIDSwitches)
+        self.assertEqual(self.mockos.setegidCalls, expectedGIDSwitches)
         self.mockos.seteuidCalls = []
         self.mockos.setegidCalls = []
 
@@ -849,8 +849,8 @@ class UnsignedIDTests(unittest.TestCase):
 
         util.setIDFunction(fakeId)
 
-        self.assertEquals(util.unsignedID(foo), 17)
-        self.assertEquals(util.unsignedID(bar), (sys.maxint + 1) * 2 - 73)
+        self.assertEqual(util.unsignedID(foo), 17)
+        self.assertEqual(util.unsignedID(bar), (sys.maxint + 1) * 2 - 73)
 
 
     def test_defaultIDFunction(self):
@@ -862,7 +862,7 @@ class UnsignedIDTests(unittest.TestCase):
         if idValue < 0:
             idValue += (sys.maxint + 1) * 2
 
-        self.assertEquals(util.unsignedID(obj), idValue)
+        self.assertEqual(util.unsignedID(obj), idValue)
 
 
 
@@ -891,7 +891,7 @@ class InitGroupsTests(unittest.TestCase):
         util.setgroups = calls.append
 
         util.initgroups(os.getuid(), 4)
-        self.assertEquals(calls, [(pwd.getpwuid(os.getuid())[0], 4)])
+        self.assertEqual(calls, [(pwd.getpwuid(os.getuid())[0], 4)])
         self.assertFalse(setgroupsCalls)
 
 

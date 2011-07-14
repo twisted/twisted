@@ -339,7 +339,7 @@ class WebClientTestCase(unittest.TestCase):
     def testPayload(self):
         s = "0123456789" * 10
         return client.getPage(self.getURL("payload"), postdata=s
-            ).addCallback(self.assertEquals, s
+            ).addCallback(self.assertEqual, s
             )
 
 
@@ -351,7 +351,7 @@ class WebClientTestCase(unittest.TestCase):
         """
         d = client.getPage(self.getURL("broken"))
         d = self.assertFailure(d, client.PartialDownloadError)
-        d.addCallback(lambda exc: self.assertEquals(exc.response, "abc"))
+        d.addCallback(lambda exc: self.assertEqual(exc.response, "abc"))
         return d
 
 
@@ -371,13 +371,13 @@ class WebClientTestCase(unittest.TestCase):
             The HTTP status code from the server is propagated through the
             C{PartialDownloadError}.
             """
-            self.assertEquals(response.status, "200")
-            self.assertEquals(response.message, "OK")
+            self.assertEqual(response.status, "200")
+            self.assertEqual(response.message, "OK")
             return response
         d.addCallback(checkResponse)
 
         def cbFailed(ignored):
-            self.assertEquals(path.getContent(), "abc")
+            self.assertEqual(path.getContent(), "abc")
         d.addCallback(cbFailed)
         return d
 
@@ -397,7 +397,7 @@ class WebClientTestCase(unittest.TestCase):
         d = client.downloadPage(self.getURL("broken"), BrokenFile())
         d = self.assertFailure(d, client.PartialDownloadError)
         def cbFailed(ignored):
-            self.assertEquals(len(self.flushLoggedErrors(IOError)), 1)
+            self.assertEqual(len(self.flushLoggedErrors(IOError)), 1)
         d.addCallback(cbFailed)
         return d
 
@@ -406,8 +406,8 @@ class WebClientTestCase(unittest.TestCase):
         # if we pass Host header explicitly, it should be used, otherwise
         # it should extract from url
         return defer.gatherResults([
-            client.getPage(self.getURL("host")).addCallback(self.assertEquals, "127.0.0.1:%s" % (self.portno,)),
-            client.getPage(self.getURL("host"), headers={"Host": "www.example.com"}).addCallback(self.assertEquals, "www.example.com")])
+            client.getPage(self.getURL("host")).addCallback(self.assertEqual, "127.0.0.1:%s" % (self.portno,)),
+            client.getPage(self.getURL("host"), headers={"Host": "www.example.com"}).addCallback(self.assertEqual, "www.example.com")])
 
 
     def test_getPage(self):
@@ -416,7 +416,7 @@ class WebClientTestCase(unittest.TestCase):
         the body of the response if the default method B{GET} is used.
         """
         d = client.getPage(self.getURL("file"))
-        d.addCallback(self.assertEquals, "0123456789")
+        d.addCallback(self.assertEqual, "0123456789")
         return d
 
 
@@ -427,7 +427,7 @@ class WebClientTestCase(unittest.TestCase):
         response code.
         """
         d = client.getPage(self.getURL("file"), method="HEAD")
-        d.addCallback(self.assertEquals, "")
+        d.addCallback(self.assertEqual, "")
         return d
 
 
@@ -439,7 +439,7 @@ class WebClientTestCase(unittest.TestCase):
         is returned.
         """
         d = client.getPage(self.getURL("miscased-head"), method='Head')
-        d.addCallback(self.assertEquals, "miscased-head content")
+        d.addCallback(self.assertEqual, "miscased-head content")
         return d
 
 
@@ -450,7 +450,7 @@ class WebClientTestCase(unittest.TestCase):
         called back with the contents of the page.
         """
         d = client.getPage(self.getURL("host"), timeout=100)
-        d.addCallback(self.assertEquals, "127.0.0.1:%s" % (self.portno,))
+        d.addCallback(self.assertEqual, "127.0.0.1:%s" % (self.portno,))
         return d
 
 
@@ -480,7 +480,7 @@ class WebClientTestCase(unittest.TestCase):
 
     def _cbDownloadPageTest(self, ignored, data, name):
         bytes = file(name, "rb").read()
-        self.assertEquals(bytes, data)
+        self.assertEqual(bytes, data)
 
     def testDownloadPageError1(self):
         class errorfile:
@@ -527,7 +527,7 @@ class WebClientTestCase(unittest.TestCase):
                             ("error?showlength=1", "401")]:
             d = method(url)
             d = self.assertFailure(d, error.Error)
-            d.addCallback(lambda exc, code=code: self.assertEquals(exc.args[0], code))
+            d.addCallback(lambda exc, code=code: self.assertEqual(exc.args[0], code))
             dl.append(d)
         return defer.DeferredList(dl, fireOnOneErrback=True)
 
@@ -545,10 +545,10 @@ class WebClientTestCase(unittest.TestCase):
         return factory.deferred.addCallback(self._cbFactoryInfo, factory)
 
     def _cbFactoryInfo(self, ignoredResult, factory):
-        self.assertEquals(factory.status, '200')
+        self.assertEqual(factory.status, '200')
         self.assert_(factory.version.startswith('HTTP/'))
-        self.assertEquals(factory.message, 'OK')
-        self.assertEquals(factory.response_headers['content-length'][0], '10')
+        self.assertEqual(factory.message, 'OK')
+        self.assertEqual(factory.response_headers['content-length'][0], '10')
 
 
     def test_followRedirect(self):
@@ -575,7 +575,7 @@ class WebClientTestCase(unittest.TestCase):
 
 
     def _cbCheckLocation(self, exc):
-        self.assertEquals(exc.location, "/file")
+        self.assertEqual(exc.location, "/file")
 
 
     def test_infiniteRedirection(self):
@@ -584,8 +584,8 @@ class WebClientTestCase(unittest.TestCase):
         page request fails with L{InfiniteRedirection}.
         """
         def checkRedirectCount(*a):
-            self.assertEquals(f._redirectCount, 13)
-            self.assertEquals(self.infiniteRedirectResource.count, 13)
+            self.assertEqual(f._redirectCount, 13)
+            self.assertEqual(self.infiniteRedirectResource.count, 13)
 
         f = client._makeGetterFactory(
             self.getURL('infiniteRedirect'),
@@ -621,7 +621,7 @@ class WebClientTestCase(unittest.TestCase):
             "By default, afterFoundGet must be disabled")
 
         def gotPage(page):
-            self.assertEquals(
+            self.assertEqual(
                 self.extendedRedirect.lastMethod,
                 "GET",
                 "With afterFoundGet, the HTTP method must change to GET")
@@ -641,7 +641,7 @@ class WebClientTestCase(unittest.TestCase):
         url = self.getURL('extendedRedirect?code=302')
 
         def gotPage(page):
-            self.assertEquals(
+            self.assertEqual(
                 self.extendedRedirect.lastMethod,
                 "GET",
                 "With afterFoundGet, the HTTP method must change to GET")
@@ -659,7 +659,7 @@ class WebClientTestCase(unittest.TestCase):
         test, see #4760.
         """
         def checkRedirectCount(*a):
-            self.assertEquals(self.afterFoundGetCounter.count, 1)
+            self.assertEqual(self.afterFoundGetCounter.count, 1)
 
         url = self.getURL('afterFoundGetRedirect')
         d = client.getPage(
@@ -692,7 +692,7 @@ class WebClientTestCase(unittest.TestCase):
 
     def _cbPartialTest(self, ignored, expectedData, filename):
         bytes = file(filename, "rb").read()
-        self.assertEquals(bytes, expectedData)
+        self.assertEqual(bytes, expectedData)
 
 
     def test_downloadTimeout(self):
@@ -727,9 +727,9 @@ class WebClientTestCase(unittest.TestCase):
         attributes are populated with the values from the response.
         """
         def checkHeaders(factory):
-            self.assertEquals(factory.status, '200')
-            self.assertEquals(factory.response_headers['content-type'][0], 'text/html')
-            self.assertEquals(factory.response_headers['content-length'][0], '10')
+            self.assertEqual(factory.status, '200')
+            self.assertEqual(factory.response_headers['content-type'][0], 'text/html')
+            self.assertEqual(factory.response_headers['content-length'][0], '10')
             os.unlink(factory.fileName)
         factory = client._makeGetterFactory(
             self.getURL('file'),
@@ -764,8 +764,8 @@ class WebClientTestCase(unittest.TestCase):
         page request fails with L{InfiniteRedirection}.
         """
         def checkRedirectCount(*a):
-            self.assertEquals(f._redirectCount, 7)
-            self.assertEquals(self.infiniteRedirectResource.count, 7)
+            self.assertEqual(f._redirectCount, 7)
+            self.assertEqual(self.infiniteRedirectResource.count, 7)
 
         f = client._makeGetterFactory(
             self.getURL('infiniteRedirect'),
@@ -837,7 +837,7 @@ class WebClientRedirectBetweenSSLandPlainText(unittest.TestCase):
 
     def testHoppingAround(self):
         return client.getPage(self.getHTTP("one")
-            ).addCallback(self.assertEquals, "FOUND IT!"
+            ).addCallback(self.assertEqual, "FOUND IT!"
             )
 
 class FakeTransport:
@@ -867,24 +867,24 @@ class CookieTestCase(unittest.TestCase):
 
     def testNoCookies(self):
         return client.getPage(self.getHTTP("cookiemirror")
-            ).addCallback(self.assertEquals, "[]"
+            ).addCallback(self.assertEqual, "[]"
             )
 
     def testSomeCookies(self):
         cookies = {'foo': 'bar', 'baz': 'quux'}
         return client.getPage(self.getHTTP("cookiemirror"), cookies=cookies
-            ).addCallback(self.assertEquals, "[('baz', 'quux'), ('foo', 'bar')]"
+            ).addCallback(self.assertEqual, "[('baz', 'quux'), ('foo', 'bar')]"
             )
 
     def testRawNoCookies(self):
         return client.getPage(self.getHTTP("rawcookiemirror")
-            ).addCallback(self.assertEquals, "None"
+            ).addCallback(self.assertEqual, "None"
             )
 
     def testRawSomeCookies(self):
         cookies = {'foo': 'bar', 'baz': 'quux'}
         return client.getPage(self.getHTTP("rawcookiemirror"), cookies=cookies
-            ).addCallback(self.assertEquals, "'foo=bar; baz=quux'"
+            ).addCallback(self.assertEqual, "'foo=bar; baz=quux'"
             )
 
     def testCookieHeaderParsing(self):
@@ -904,12 +904,12 @@ class CookieTestCase(unittest.TestCase):
             'more body',
             ]:
             proto.dataReceived(line + '\r\n')
-        self.assertEquals(proto.transport.data,
+        self.assertEqual(proto.transport.data,
                           ['GET / HTTP/1.0\r\n',
                            'Host: foo.example.com\r\n',
                            'User-Agent: Twisted PageGetter\r\n',
                            '\r\n'])
-        self.assertEquals(factory.cookies,
+        self.assertEqual(factory.cookies,
                           {
             'CUSTOMER': 'WILE_E_COYOTE',
             'PART_NUMBER': 'ROCKET_LAUNCHER_0001',
@@ -946,7 +946,7 @@ class TestHostHeader(unittest.TestCase):
         factory = client.HTTPClientFactory('http://foo.example.com/')
         proto = factory.buildProtocol('127.42.42.42')
         proto.makeConnection(StringTransport())
-        self.assertEquals(self._getHost(proto.transport.value()),
+        self.assertEqual(self._getHost(proto.transport.value()),
                           'foo.example.com')
 
 
@@ -958,7 +958,7 @@ class TestHostHeader(unittest.TestCase):
         factory = client.HTTPClientFactory('http://foo.example.com:80/')
         proto = factory.buildProtocol('127.42.42.42')
         proto.makeConnection(StringTransport())
-        self.assertEquals(self._getHost(proto.transport.value()),
+        self.assertEqual(self._getHost(proto.transport.value()),
                           'foo.example.com')
 
 
@@ -970,7 +970,7 @@ class TestHostHeader(unittest.TestCase):
         factory = client.HTTPClientFactory('http://foo.example.com:8080/')
         proto = factory.buildProtocol('127.42.42.42')
         proto.makeConnection(StringTransport())
-        self.assertEquals(self._getHost(proto.transport.value()),
+        self.assertEqual(self._getHost(proto.transport.value()),
                           'foo.example.com:8080')
 
 
@@ -982,7 +982,7 @@ class TestHostHeader(unittest.TestCase):
         factory = client.HTTPClientFactory('https://foo.example.com/')
         proto = factory.buildProtocol('127.42.42.42')
         proto.makeConnection(StringTransport())
-        self.assertEquals(self._getHost(proto.transport.value()),
+        self.assertEqual(self._getHost(proto.transport.value()),
                           'foo.example.com')
 
 
@@ -994,7 +994,7 @@ class TestHostHeader(unittest.TestCase):
         factory = client.HTTPClientFactory('https://foo.example.com:443/')
         proto = factory.buildProtocol('127.42.42.42')
         proto.makeConnection(StringTransport())
-        self.assertEquals(self._getHost(proto.transport.value()),
+        self.assertEqual(self._getHost(proto.transport.value()),
                           'foo.example.com')
 
 
@@ -1006,7 +1006,7 @@ class TestHostHeader(unittest.TestCase):
         factory = client.HTTPClientFactory('http://foo.example.com:8080/')
         proto = factory.buildProtocol('127.42.42.42')
         proto.makeConnection(StringTransport())
-        self.assertEquals(self._getHost(proto.transport.value()),
+        self.assertEqual(self._getHost(proto.transport.value()),
                           'foo.example.com:8080')
 
 
@@ -1368,8 +1368,8 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         expectedPort = 1234
         d = self.agent._connect('http', expectedHost, expectedPort)
         host, port, factory = self.reactor.tcpClients.pop()[:3]
-        self.assertEquals(host, expectedHost)
-        self.assertEquals(port, expectedPort)
+        self.assertEqual(host, expectedHost)
+        self.assertEqual(port, expectedPort)
         protocol = factory.buildProtocol(IPv4Address('TCP', '10.0.0.1', port))
         self.assertIsInstance(protocol, HTTP11ClientProtocol)
         self.completeConnection()
@@ -1388,8 +1388,8 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         expectedPort = 4321
         d = self.agent._connect('https', expectedHost, expectedPort)
         host, port, factory, contextFactory = self.reactor.sslClients.pop()[:4]
-        self.assertEquals(host, expectedHost)
-        self.assertEquals(port, expectedPort)
+        self.assertEqual(host, expectedHost)
+        self.assertEqual(port, expectedPort)
         context = contextFactory.getContext()
 
         # This is a pretty weak assertion.  It's true that the context must be
@@ -1430,8 +1430,8 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         d = agent._connect('https', expectedHost, expectedPort)
         host, port, factory, contextFactory = self.reactor.sslClients.pop()[:4]
         context = contextFactory.getContext()
-        self.assertEquals(context, expectedContext)
-        self.assertEquals(contextArgs, [(expectedHost, expectedPort)])
+        self.assertEqual(context, expectedContext)
+        self.assertEqual(contextArgs, [(expectedHost, expectedPort)])
         protocol = factory.buildProtocol(IPv4Address('TCP', '10.0.0.1', port))
         self.assertIsInstance(protocol, HTTP11ClientProtocol)
         self.completeConnection()
@@ -1459,12 +1459,12 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         protocol = self.protocol
 
         # The request should be issued.
-        self.assertEquals(len(protocol.requests), 1)
+        self.assertEqual(len(protocol.requests), 1)
         req, res = protocol.requests.pop()
         self.assertIsInstance(req, Request)
-        self.assertEquals(req.method, 'GET')
-        self.assertEquals(req.uri, '/foo?bar')
-        self.assertEquals(
+        self.assertEqual(req.method, 'GET')
+        self.assertEqual(req.uri, '/foo?bar')
+        self.assertEqual(
             req.headers,
             http_headers.Headers({'foo': ['bar'],
                                   'host': ['example.com:1234']}))
@@ -1485,9 +1485,9 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
 
         # The request should have been issued with a host header based on
         # the request URL.
-        self.assertEquals(len(protocol.requests), 1)
+        self.assertEqual(len(protocol.requests), 1)
         req, res = protocol.requests.pop()
-        self.assertEquals(req.headers.getRawHeaders('host'), ['example.com'])
+        self.assertEqual(req.headers.getRawHeaders('host'), ['example.com'])
 
 
     def test_hostOverride(self):
@@ -1507,9 +1507,9 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
 
         # The request should have been issued with the host header specified
         # above, not one based on the request URI.
-        self.assertEquals(len(protocol.requests), 1)
+        self.assertEqual(len(protocol.requests), 1)
         req, res = protocol.requests.pop()
-        self.assertEquals(req.headers.getRawHeaders('host'), ['quux'])
+        self.assertEqual(req.headers.getRawHeaders('host'), ['quux'])
 
 
     def test_headersUnmodified(self):
@@ -1527,9 +1527,9 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         protocol = self.protocol
 
         # The request should have been issued.
-        self.assertEquals(len(protocol.requests), 1)
+        self.assertEqual(len(protocol.requests), 1)
         # And the headers object passed in should not have changed.
-        self.assertEquals(headers, http_headers.Headers())
+        self.assertEqual(headers, http_headers.Headers())
 
 
     def test_hostValueStandardHTTP(self):
@@ -1538,7 +1538,7 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         L{Agent._computeHostValue} returns a string giving just the
         host name passed to it.
         """
-        self.assertEquals(
+        self.assertEqual(
             self.agent._computeHostValue('http', 'example.com', 80),
             'example.com')
 
@@ -1549,7 +1549,7 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         L{Agent._computeHostValue} returns a string giving the host
         passed to it joined together with the port number by C{":"}.
         """
-        self.assertEquals(
+        self.assertEqual(
             self.agent._computeHostValue('http', 'example.com', 54321),
             'example.com:54321')
 
@@ -1560,7 +1560,7 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         L{Agent._computeHostValue} returns a string giving just the
         host name passed to it.
         """
-        self.assertEquals(
+        self.assertEqual(
             self.agent._computeHostValue('https', 'example.com', 443),
             'example.com')
 
@@ -1572,7 +1572,7 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         host passed to it joined together with the port number by
         C{":"}.
         """
-        self.assertEquals(
+        self.assertEqual(
             self.agent._computeHostValue('https', 'example.com', 54321),
             'example.com:54321')
 
@@ -1891,9 +1891,9 @@ class ContentDecoderAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
 
         protocol = self.protocol
 
-        self.assertEquals(len(protocol.requests), 1)
+        self.assertEqual(len(protocol.requests), 1)
         req, res = protocol.requests.pop()
-        self.assertEquals(req.headers.getRawHeaders('accept-encoding'),
+        self.assertEqual(req.headers.getRawHeaders('accept-encoding'),
                           ['decoder1,decoder2'])
 
 
@@ -1911,9 +1911,9 @@ class ContentDecoderAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
 
         protocol = self.protocol
 
-        self.assertEquals(len(protocol.requests), 1)
+        self.assertEqual(len(protocol.requests), 1)
         req, res = protocol.requests.pop()
-        self.assertEquals(
+        self.assertEqual(
             list(req.headers.getAllRawHeaders()),
             [('Host', ['example.com']),
              ('Foo', ['bar']),
@@ -1977,7 +1977,7 @@ class ContentDecoderAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         def check(result):
             self.assertNotIdentical(response, result)
             self.assertIsInstance(result, Decoder2)
-            self.assertEquals(['decoder1,fizz'],
+            self.assertEqual(['decoder1,fizz'],
                               result.headers.getRawHeaders('content-encoding'))
 
         return deferred.addCallback(check)
@@ -2051,12 +2051,12 @@ class ContentDecoderAgentWithGzipTests(unittest.TestCase,
 
         def checkResponse(result):
             self.assertNotIdentical(result, response)
-            self.assertEquals(result.version, ('HTTP', 1, 1))
-            self.assertEquals(result.code, 200)
-            self.assertEquals(result.phrase, 'OK')
-            self.assertEquals(list(result.headers.getAllRawHeaders()),
+            self.assertEqual(result.version, ('HTTP', 1, 1))
+            self.assertEqual(result.code, 200)
+            self.assertEqual(result.phrase, 'OK')
+            self.assertEqual(list(result.headers.getAllRawHeaders()),
                               [('Foo', ['bar'])])
-            self.assertEquals(result.length, UNKNOWN_LENGTH)
+            self.assertEqual(result.length, UNKNOWN_LENGTH)
             self.assertRaises(AttributeError, getattr, result, 'unknown')
 
             response._bodyDataReceived(data[:5])
@@ -2066,7 +2066,7 @@ class ContentDecoderAgentWithGzipTests(unittest.TestCase,
             protocol = SimpleAgentProtocol()
             result.deliverBody(protocol)
 
-            self.assertEquals(protocol.received, ['x' * 6 + 'y' * 4])
+            self.assertEqual(protocol.received, ['x' * 6 + 'y' * 4])
             return defer.gatherResults([protocol.made, protocol.finished])
 
         deferred.addCallback(checkResponse)
@@ -2144,7 +2144,7 @@ class ContentDecoderAgentWithGzipTests(unittest.TestCase,
             protocol = SimpleAgentProtocol()
             result.deliverBody(protocol)
 
-            self.assertEquals(protocol.received, ['x', 'y'])
+            self.assertEqual(protocol.received, ['x', 'y'])
             return defer.gatherResults([protocol.made, protocol.finished])
 
         deferred.addCallback(checkResponse)
@@ -2189,7 +2189,7 @@ class ContentDecoderAgentWithGzipTests(unittest.TestCase,
             protocol = SimpleAgentProtocol()
             result.deliverBody(protocol)
 
-            self.assertEquals(protocol.received, ['x', 'y'])
+            self.assertEqual(protocol.received, ['x', 'y'])
             return defer.gatherResults([protocol.made, protocol.finished])
 
         deferred.addCallback(checkResponse)

@@ -151,7 +151,7 @@ class JellyTestCase(unittest.TestCase):
         a.bmethod = b.bmethod
         b.a = a
         im_ = jelly.unjelly(jelly.jelly(b)).a.bmethod
-        self.assertEquals(im_.im_class, im_.im_self.__class__)
+        self.assertEqual(im_.im_class, im_.im_self.__class__)
 
 
     def test_methodsNotSelfIdentity(self):
@@ -194,7 +194,7 @@ class JellyTestCase(unittest.TestCase):
         c = jelly.jelly(n)
         m = jelly.unjelly(c)
         self.assertIsInstance(m, E)
-        self.assertEquals(n.x, 1)
+        self.assertEqual(n.x, 1)
 
 
     def test_typeOldStyle(self):
@@ -204,7 +204,7 @@ class JellyTestCase(unittest.TestCase):
         """
         t = [C]
         r = jelly.unjelly(jelly.jelly(t))
-        self.assertEquals(t, r)
+        self.assertEqual(t, r)
 
 
     def test_typeNewStyle(self):
@@ -214,7 +214,7 @@ class JellyTestCase(unittest.TestCase):
         """
         t = [D]
         r = jelly.unjelly(jelly.jelly(t))
-        self.assertEquals(t, r)
+        self.assertEqual(t, r)
 
 
     def test_typeBuiltin(self):
@@ -224,7 +224,7 @@ class JellyTestCase(unittest.TestCase):
         """
         t = [str]
         r = jelly.unjelly(jelly.jelly(t))
-        self.assertEquals(t, r)
+        self.assertEqual(t, r)
 
 
     def test_dateTime(self):
@@ -233,7 +233,7 @@ class JellyTestCase(unittest.TestCase):
         input = [dtn, dtd]
         c = jelly.jelly(input)
         output = jelly.unjelly(c)
-        self.assertEquals(input, output)
+        self.assertEqual(input, output)
         self.assertNotIdentical(input, output)
 
 
@@ -249,7 +249,7 @@ class JellyTestCase(unittest.TestCase):
                      decimal.Decimal('-78.901')]
         c = jelly.jelly(inputList)
         output = jelly.unjelly(c)
-        self.assertEquals(inputList, output)
+        self.assertEqual(inputList, output)
         self.assertNotIdentical(inputList, output)
 
 
@@ -274,7 +274,7 @@ class JellyTestCase(unittest.TestCase):
                     decimal.Decimal(123456),
                     decimal.Decimal('-78.901')]
         output = jelly.unjelly(self.decimalData)
-        self.assertEquals(output, expected)
+        self.assertEqual(output, expected)
 
 
     def test_decimalMissing(self):
@@ -284,16 +284,16 @@ class JellyTestCase(unittest.TestCase):
         """
         self.patch(jelly, 'decimal', None)
         output = jelly.unjelly(self.decimalData)
-        self.assertEquals(len(output), 4)
+        self.assertEqual(len(output), 4)
         for i in range(4):
             self.assertIsInstance(output[i], jelly.Unpersistable)
-        self.assertEquals(output[0].reason,
+        self.assertEqual(output[0].reason,
             "Could not unpersist decimal: 9.95")
-        self.assertEquals(output[1].reason,
+        self.assertEqual(output[1].reason,
             "Could not unpersist decimal: 0")
-        self.assertEquals(output[2].reason,
+        self.assertEqual(output[2].reason,
             "Could not unpersist decimal: 123456")
-        self.assertEquals(output[3].reason,
+        self.assertEqual(output[3].reason,
             "Could not unpersist decimal: -78.901")
 
 
@@ -321,7 +321,7 @@ class JellyTestCase(unittest.TestCase):
         """
         inputList = [set([1, 2, 3])]
         output = jelly.unjelly(jelly.jelly(inputList))
-        self.assertEquals(inputList, output)
+        self.assertEqual(inputList, output)
         self.assertNotIdentical(inputList, output)
 
 
@@ -333,7 +333,7 @@ class JellyTestCase(unittest.TestCase):
         """
         inputList = [frozenset([1, 2, 3])]
         output = jelly.unjelly(jelly.jelly(inputList))
-        self.assertEquals(inputList, output)
+        self.assertEqual(inputList, output)
         self.assertNotIdentical(inputList, output)
 
 
@@ -364,10 +364,10 @@ class JellyTestCase(unittest.TestCase):
         """
         inputList = [jelly._sets.Set([1, 2, 3])]
         inputJelly = jelly.jelly(inputList)
-        self.assertEquals(inputJelly, jelly.jelly([set([1, 2, 3])]))
+        self.assertEqual(inputJelly, jelly.jelly([set([1, 2, 3])]))
         output = jelly.unjelly(inputJelly)
         # Even if the class is different, it should coerce to the same list
-        self.assertEquals(list(inputList[0]), list(output[0]))
+        self.assertEqual(list(inputList[0]), list(output[0]))
         if set is jelly._sets.Set:
             self.assertIsInstance(output[0], jelly._sets.Set)
         else:
@@ -382,10 +382,10 @@ class JellyTestCase(unittest.TestCase):
         """
         inputList = [jelly._sets.ImmutableSet([1, 2, 3])]
         inputJelly = jelly.jelly(inputList)
-        self.assertEquals(inputJelly, jelly.jelly([frozenset([1, 2, 3])]))
+        self.assertEqual(inputJelly, jelly.jelly([frozenset([1, 2, 3])]))
         output = jelly.unjelly(inputJelly)
         # Even if the class is different, it should coerce to the same list
-        self.assertEquals(list(inputList[0]), list(output[0]))
+        self.assertEqual(list(inputList[0]), list(output[0]))
         if frozenset is jelly._sets.ImmutableSet:
             self.assertIsInstance(output[0], jelly._sets.ImmutableSet)
         else:
@@ -423,8 +423,8 @@ class JellyTestCase(unittest.TestCase):
     def test_unicode(self):
         x = unicode('blah')
         y = jelly.unjelly(jelly.jelly(x))
-        self.assertEquals(x, y)
-        self.assertEquals(type(x), type(y))
+        self.assertEqual(x, y)
+        self.assertEqual(type(x), type(y))
 
 
     def test_stressReferences(self):
@@ -471,7 +471,7 @@ class JellyTestCase(unittest.TestCase):
         items = [afunc, [1, 2, 3], not bool(1), bool(1), 'test', 20.3,
                  (1, 2, 3), None, A, unittest, {'a': 1}, A.amethod]
         for i in items:
-            self.assertEquals(i, jelly.unjelly(jelly.jelly(i)))
+            self.assertEqual(i, jelly.unjelly(jelly.jelly(i)))
 
 
     def test_setState(self):
@@ -534,7 +534,7 @@ class JellyTestCase(unittest.TestCase):
         input = JellyableTestClass()
         input.attribute = 'value'
         output = jelly.unjelly(jelly.jelly(input))
-        self.assertEquals(output.attribute, 'value')
+        self.assertEqual(output.attribute, 'value')
         self.assertIsInstance(output, jelly.Unjellyable)
 
 
@@ -655,7 +655,7 @@ class CircularReferenceTestCase(unittest.TestCase):
         s.add(a)
         res = jelly.unjelly(jelly.jelly(a))
         self.assertIsInstance(res.x, set)
-        self.assertEquals(list(res.x), [res])
+        self.assertEqual(list(res.x), [res])
 
 
     def test_frozenset(self):
@@ -668,4 +668,4 @@ class CircularReferenceTestCase(unittest.TestCase):
         a.x = s
         res = jelly.unjelly(jelly.jelly(a))
         self.assertIsInstance(res.x, frozenset)
-        self.assertEquals(list(res.x), [res])
+        self.assertEqual(list(res.x), [res])

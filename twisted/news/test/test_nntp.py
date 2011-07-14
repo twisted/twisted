@@ -36,39 +36,39 @@ class TestNNTPClient(nntp.NNTPClient):
     def __init__(self):
         nntp.NNTPClient.__init__(self)
 
-    def assertEquals(self, foo, bar):
+    def assertEqual(self, foo, bar):
         if foo != bar: raise AssertionError("%r != %r!" % (foo, bar))
-    
+
     def connectionMade(self):
         nntp.NNTPClient.connectionMade(self)
         self.fetchSubscriptions()
 
 
     def gotSubscriptions(self, subscriptions):
-        self.assertEquals(len(subscriptions), len(SUBSCRIPTIONS))
+        self.assertEqual(len(subscriptions), len(SUBSCRIPTIONS))
         for s in subscriptions:
             assert s in SUBSCRIPTIONS
 
         self.fetchGroups()
-    
+
     def gotAllGroups(self, info):
-        self.assertEquals(len(info), len(ALL_GROUPS))
-        self.assertEquals(info[0], ALL_GROUPS[0])
-        
+        self.assertEqual(len(info), len(ALL_GROUPS))
+        self.assertEqual(info[0], ALL_GROUPS[0])
+
         self.fetchGroup('alt.test.nntp')
-    
-    
+
+
     def getAllGroupsFailed(self, error):
         raise AssertionError("fetchGroups() failed: %s" % (error,))
 
 
     def gotGroup(self, info):
-        self.assertEquals(len(info), 6)
-        self.assertEquals(info, GROUP)
-        
+        self.assertEqual(len(info), 6)
+        self.assertEqual(info, GROUP)
+
         self.postArticle(POST_STRING)
-    
-    
+
+
     def getSubscriptionsFailed(self, error):
         raise AssertionError("fetchSubscriptions() failed: %s" % (error,))
 
@@ -84,17 +84,17 @@ class TestNNTPClient(nntp.NNTPClient):
     def postedOk(self):
         self.fetchArticle(1)
 
-    
+
     def gotArticle(self, info):
         origBody = POST_STRING.split('\n\n')[1]
         newBody = info.split('\n\n', 1)[1]
 
-        self.assertEquals(origBody, newBody)
-        
+        self.assertEqual(origBody, newBody)
+
         # We're done
         self.transport.loseConnection()
-    
-    
+
+
     def getArticleFailed(self, error):
         raise AssertionError("fetchArticle() failed: %s" % (error,))
 
@@ -105,7 +105,7 @@ class NNTPTestCase(unittest.TestCase):
         self.server.factory = self
         self.backend = database.NewsShelf(None, 'news.db')
         self.backend.addGroup('alt.test.nntp', 'y')
-        
+
         for s in SUBSCRIPTIONS:
             self.backend.addSubscription(s)
 

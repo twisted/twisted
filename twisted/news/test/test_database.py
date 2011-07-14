@@ -102,7 +102,7 @@ Body of the message is such.
         result = storage.postRequest(message)
 
         def cbPosted(ignored):
-            self.assertEquals(self._email, [])
+            self.assertEqual(self._email, [])
             exists = storage.articleExistsRequest(articleID)
             exists.addCallback(self.assertTrue)
             return exists
@@ -126,14 +126,14 @@ Body of the message is such.
         result = storage.postRequest(message)
 
         def cbModerated(ignored):
-            self.assertEquals(len(self._email), 1)
-            self.assertEquals(self._email[0][0], mailhost)
-            self.assertEquals(self._email[0][1], sender)
-            self.assertEquals(self._email[0][2], [moderator])
+            self.assertEqual(len(self._email), 1)
+            self.assertEqual(self._email[0][0], mailhost)
+            self.assertEqual(self._email[0][1], sender)
+            self.assertEqual(self._email[0][2], [moderator])
             self._checkModeratorMessage(
                 self._email[0][3], sender, moderator, group, message)
-            self.assertEquals(self._email[0][4], None)
-            self.assertEquals(self._email[0][5], 25)
+            self.assertEqual(self._email[0][4], None)
+            self.assertEqual(self._email[0][5], 25)
             exists = storage.articleExistsRequest(articleID)
             exists.addCallback(self.assertFalse)
             return exists
@@ -146,7 +146,7 @@ Body of the message is such.
         msg = p.parsestr(messageText)
         headers = dict(msg.items())
         del headers['Message-ID']
-        self.assertEquals(
+        self.assertEqual(
             headers,
             {'From': sender,
              'To': moderator,
@@ -157,9 +157,9 @@ Body of the message is such.
         attachment = msg.get_payload()[0]
 
         for header in ['from', 'to', 'subject', 'message-id', 'newsgroups']:
-            self.assertEquals(posting[header], attachment[header])
+            self.assertEqual(posting[header], attachment[header])
 
-        self.assertEquals(posting.get_payload(), attachment.get_payload())
+        self.assertEqual(posting.get_payload(), attachment.get_payload())
 
 
 
@@ -208,7 +208,7 @@ class NewsShelfTests(ModerationTestsMixin, TestCase):
         shelf = NewsShelf('example.com', self.mktemp(), 'alice@example.com')
         shelf.sendmail = self.sendmail
         shelf.notifyModerator('bob@example.org', Article('Foo: bar', 'Some text'))
-        self.assertEquals(len(self._email), 1)
+        self.assertEqual(len(self._email), 1)
 
 
     def test_defaultSender(self):
@@ -220,5 +220,5 @@ class NewsShelfTests(ModerationTestsMixin, TestCase):
         shelf = NewsShelf('example.com', self.mktemp())
         shelf.sendmail = self.sendmail
         shelf.notifyModerators(['bob@example.org'], Article('Foo: bar', 'Some text'))
-        self.assertEquals(self._email[0][1], 'twisted-news@' + gethostname())
+        self.assertEqual(self._email[0][1], 'twisted-news@' + gethostname())
         self.assertIn('From: twisted-news@' + gethostname(), self._email[0][3])

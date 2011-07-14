@@ -66,10 +66,10 @@ class RedirectToTestCase(TestCase):
         request.method = 'GET'
         targetURL = "http://target.example.com/4321"
         redirectTo(targetURL, request)
-        self.assertEquals(request.code, FOUND)
-        self.assertEquals(
+        self.assertEqual(request.code, FOUND)
+        self.assertEqual(
             request.responseHeaders.getRawHeaders('location'), [targetURL])
-        self.assertEquals(
+        self.assertEqual(
             request.responseHeaders.getRawHeaders('content-type'),
             ['text/html; charset=utf-8'])
 

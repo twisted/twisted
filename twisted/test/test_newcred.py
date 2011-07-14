@@ -93,7 +93,7 @@ class NewCredTest(unittest.TestCase):
         got = self.portal.listCredentialsInterfaces()
         expected.sort()
         got.sort()
-        self.assertEquals(got, expected)
+        self.assertEqual(got, expected)
 
     def testBasicLogin(self):
         l = []; f = []
@@ -105,7 +105,7 @@ class NewCredTest(unittest.TestCase):
         # print l[0].getBriefTraceback()
         iface, impl, logout = l[0]
         # whitebox
-        self.assertEquals(iface, ITestable)
+        self.assertEqual(iface, ITestable)
         self.failUnless(iface.providedBy(impl),
                         "%s does not implement %s" % (impl, iface))
         # greybox
@@ -128,7 +128,7 @@ class NewCredTest(unittest.TestCase):
             raise f[0]
         iface, impl, logout = l[0]
         # whitebox
-        self.assertEquals(iface, ITestable)
+        self.assertEqual(iface, ITestable)
         self.failUnless(iface.providedBy(impl),
                         "%s does not implement %s" % (impl, iface))
         # greybox
@@ -143,7 +143,7 @@ class NewCredTest(unittest.TestCase):
                           self, ITestable).addErrback(
             lambda x: x.trap(error.UnauthorizedLogin)).addCallback(l.append)
         self.failUnless(l)
-        self.failUnlessEqual(error.UnauthorizedLogin, l[0])
+        self.assertEqual(error.UnauthorizedLogin, l[0])
 
     def testFailedLoginName(self):
         l = []
@@ -151,14 +151,14 @@ class NewCredTest(unittest.TestCase):
                           self, ITestable).addErrback(
             lambda x: x.trap(error.UnauthorizedLogin)).addCallback(l.append)
         self.failUnless(l)
-        self.failUnlessEqual(error.UnauthorizedLogin, l[0])
+        self.assertEqual(error.UnauthorizedLogin, l[0])
 
 
 class CramMD5CredentialsTestCase(unittest.TestCase):
     def testIdempotentChallenge(self):
         c = credentials.CramMD5Credentials()
         chal = c.getChallenge()
-        self.assertEquals(chal, c.getChallenge())
+        self.assertEqual(chal, c.getChallenge())
 
     def testCheckPassword(self):
         c = credentials.CramMD5Credentials()
@@ -188,7 +188,7 @@ class OnDiskDatabaseTestCase(unittest.TestCase):
 
         for (u, p) in self.users:
             self.failUnlessRaises(KeyError, db.getUser, u.upper())
-            self.assertEquals(db.getUser(u), (u, p))
+            self.assertEqual(db.getUser(u), (u, p))
 
     def testCaseInSensitivity(self):
         dbfile = self.mktemp()
@@ -199,7 +199,7 @@ class OnDiskDatabaseTestCase(unittest.TestCase):
         f.close()
 
         for (u, p) in self.users:
-            self.assertEquals(db.getUser(u.upper()), (u, p))
+            self.assertEqual(db.getUser(u.upper()), (u, p))
 
     def testRequestAvatarId(self):
         dbfile = self.mktemp()
@@ -211,7 +211,7 @@ class OnDiskDatabaseTestCase(unittest.TestCase):
         creds = [credentials.UsernamePassword(u, p) for u, p in self.users]
         d = defer.gatherResults(
             [defer.maybeDeferred(db.requestAvatarId, c) for c in creds])
-        d.addCallback(self.assertEquals, [u for u, p in self.users])
+        d.addCallback(self.assertEqual, [u for u, p in self.users])
         return d
 
     def testRequestAvatarId_hashed(self):
@@ -224,7 +224,7 @@ class OnDiskDatabaseTestCase(unittest.TestCase):
         creds = [credentials.UsernameHashedPassword(u, p) for u, p in self.users]
         d = defer.gatherResults(
             [defer.maybeDeferred(db.requestAvatarId, c) for c in creds])
-        d.addCallback(self.assertEquals, [u for u, p in self.users])
+        d.addCallback(self.assertEqual, [u for u, p in self.users])
         return d
 
 
@@ -254,7 +254,7 @@ class HashedPasswordOnDiskDatabaseTestCase(unittest.TestCase):
     def testGoodCredentials(self):
         goodCreds = [credentials.UsernamePassword(u, p) for u, p in self.users]
         d = defer.gatherResults([self.db.requestAvatarId(c) for c in goodCreds])
-        d.addCallback(self.assertEquals, [u for u, p in self.users])
+        d.addCallback(self.assertEqual, [u for u, p in self.users])
         return d
 
     def testGoodCredentials_login(self):
@@ -262,7 +262,7 @@ class HashedPasswordOnDiskDatabaseTestCase(unittest.TestCase):
         d = defer.gatherResults([self.port.login(c, None, ITestable)
                                  for c in goodCreds])
         d.addCallback(lambda x: [a.original.name for i, a, l in x])
-        d.addCallback(self.assertEquals, [u for u, p in self.users])
+        d.addCallback(self.assertEqual, [u for u, p in self.users])
         return d
 
     def testBadCredentials(self):
@@ -283,7 +283,7 @@ class HashedPasswordOnDiskDatabaseTestCase(unittest.TestCase):
 
     def _assertFailures(self, failures, *expectedFailures):
         for flag, failure in failures:
-            self.failUnlessEqual(flag, defer.FAILURE)
+            self.assertEqual(flag, defer.FAILURE)
             failure.trap(*expectedFailures)
         return None
 
@@ -338,7 +338,7 @@ class PluggableAuthenticationModulesTest(unittest.TestCase):
         creds = credentials.PluggableAuthenticationModules('testuser',
                 conv)
         d = db.requestAvatarId(creds)
-        d.addCallback(self.assertEquals, 'testuser')
+        d.addCallback(self.assertEqual, 'testuser')
         return d
 
     def testBadCredentials(self):
@@ -368,7 +368,7 @@ class CheckersMixin:
             for (cred, avatarId) in self.getGoodCredentials():
                 r = wFD(chk.requestAvatarId(cred))
                 yield r
-                self.assertEquals(r.getResult(), avatarId)
+                self.assertEqual(r.getResult(), avatarId)
     testPositive = dG(testPositive)
 
     def testNegative(self):

@@ -57,7 +57,7 @@ class MakeServiceTest(TestCase):
         config = tap.Options()
         service = tap.makeService(config)
         self.assertIsInstance(service, StreamServerEndpointService)
-        self.assertEquals(service.endpoint._port, 22)
+        self.assertEqual(service.endpoint._port, 22)
         self.assertIsInstance(service.factory, OpenSSHFactory)
 
 
@@ -73,7 +73,7 @@ class MakeServiceTest(TestCase):
         config = tap.Options()
         service = tap.makeService(config)
         portal = service.factory.portal
-        self.assertEquals(
+        self.assertEqual(
             set(portal.checkers.keys()),
             set([IPluggableAuthenticationModules, ISSHPrivateKey,
                  IUsernamePassword]))
@@ -90,6 +90,6 @@ class MakeServiceTest(TestCase):
         config = tap.Options()
         service = tap.makeService(config)
         portal = service.factory.portal
-        self.assertEquals(
+        self.assertEqual(
             set(portal.checkers.keys()),
             set([ISSHPrivateKey, IUsernamePassword]))

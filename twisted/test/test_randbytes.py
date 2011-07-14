@@ -27,9 +27,9 @@ class SecureRandomTestCaseBase(object):
         """
         for nbytes in range(17, 25):
             s = source(nbytes)
-            self.assertEquals(len(s), nbytes)
+            self.assertEqual(len(s), nbytes)
             s2 = source(nbytes)
-            self.assertEquals(len(s2), nbytes)
+            self.assertEqual(len(s2), nbytes)
             # This is crude but hey
             self.assertNotEquals(s2, s)
 
@@ -106,7 +106,7 @@ class ConditionalSecureRandomTestCase(SecureRandomTestCaseBase,
             "proceeding with non-cryptographically secure random source",
             __file__,
             wrapper)
-        self.assertEquals(len(s), 18)
+        self.assertEqual(len(s), 18)
 
 
 

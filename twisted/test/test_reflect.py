@@ -28,8 +28,8 @@ class SettableTest(unittest.TestCase):
 
     def testSet(self):
         self.setter(a=1, b=2)
-        self.failUnlessEqual(self.setter.a, 1)
-        self.failUnlessEqual(self.setter.b, 2)
+        self.assertEqual(self.setter.a, 1)
+        self.assertEqual(self.setter.b, 2)
 
 
 
@@ -81,21 +81,21 @@ class AccessorTest(unittest.TestCase):
 
     def testSet(self):
         self.tester.x = 1
-        self.failUnlessEqual(self.tester.x, 1)
-        self.failUnlessEqual(self.tester.y, 1)
+        self.assertEqual(self.tester.x, 1)
+        self.assertEqual(self.tester.y, 1)
 
     def testGet(self):
-        self.failUnlessEqual(self.tester.z, 1)
-        self.failUnlessEqual(self.tester.q, 1)
+        self.assertEqual(self.tester.z, 1)
+        self.assertEqual(self.tester.q, 1)
 
     def testDel(self):
         self.tester.z
-        self.failUnlessEqual(self.tester.q, 1)
+        self.assertEqual(self.tester.q, 1)
         del self.tester.z
-        self.failUnlessEqual(hasattr(self.tester, "q"), 0)
+        self.assertEqual(hasattr(self.tester, "q"), 0)
         self.tester.x = 1
         del self.tester.x
-        self.failUnlessEqual(hasattr(self.tester, "x"), 0)
+        self.assertEqual(hasattr(self.tester, "x"), 0)
 
 
 
@@ -113,10 +113,10 @@ class PropertyAccessorTest(AccessorTest):
         If an attribute is present in the class, it can be retrieved by
         default.
         """
-        self.assertEquals(self.tester.r, 0)
+        self.assertEqual(self.tester.r, 0)
         self.tester.r = 1
-        self.assertEquals(self.tester.r, 0)
-        self.assertEquals(self.tester.s, 1)
+        self.assertEqual(self.tester.r, 0)
+        self.assertEqual(self.tester.s, 1)
 
 
     def test_getValueInDict(self):
@@ -125,7 +125,7 @@ class PropertyAccessorTest(AccessorTest):
         C{__dict__}.
         """
         self.tester.__dict__["r"] = 10
-        self.assertEquals(self.tester.r, 10)
+        self.assertEqual(self.tester.r, 10)
 
 
     def test_notYetInDict(self):
@@ -409,9 +409,9 @@ class ObjectGrep(unittest.TestCase):
         c = [a, b]
         d = [a, c]
 
-        self.assertEquals(['[0]'], reflect.objgrep(d, a, reflect.isSame, maxDepth=1))
-        self.assertEquals(['[0]', '[1][0]'], reflect.objgrep(d, a, reflect.isSame, maxDepth=2))
-        self.assertEquals(['[0]', '[1][0]', '[1][1][0]'], reflect.objgrep(d, a, reflect.isSame, maxDepth=3))
+        self.assertEqual(['[0]'], reflect.objgrep(d, a, reflect.isSame, maxDepth=1))
+        self.assertEqual(['[0]', '[1][0]'], reflect.objgrep(d, a, reflect.isSame, maxDepth=2))
+        self.assertEqual(['[0]', '[1][0]', '[1][1][0]'], reflect.objgrep(d, a, reflect.isSame, maxDepth=3))
 
     def test_deque(self):
         """
@@ -434,14 +434,14 @@ class GetClass(unittest.TestCase):
             pass
         old = OldClass()
         self.assertIn(reflect.getClass(OldClass).__name__, ('class', 'classobj'))
-        self.assertEquals(reflect.getClass(old).__name__, 'OldClass')
+        self.assertEqual(reflect.getClass(old).__name__, 'OldClass')
 
     def testNew(self):
         class NewClass(object):
             pass
         new = NewClass()
-        self.assertEquals(reflect.getClass(NewClass).__name__, 'type')
-        self.assertEquals(reflect.getClass(new).__name__, 'NewClass')
+        self.assertEqual(reflect.getClass(NewClass).__name__, 'type')
+        self.assertEqual(reflect.getClass(new).__name__, 'NewClass')
 
 
 
@@ -498,7 +498,7 @@ class SafeRepr(unittest.TestCase):
         object.
         """
         x = [1, 2, 3]
-        self.assertEquals(reflect.safe_repr(x), repr(x))
+        self.assertEqual(reflect.safe_repr(x), repr(x))
 
 
     def test_brokenRepr(self):
@@ -522,7 +522,7 @@ class SafeRepr(unittest.TestCase):
         """
         b = Breakable()
         b.breakStr = True
-        self.assertEquals(reflect.safe_repr(b), repr(b))
+        self.assertEqual(reflect.safe_repr(b), repr(b))
 
 
     def test_brokenClassRepr(self):
@@ -595,7 +595,7 @@ class SafeStr(unittest.TestCase):
 
     def test_workingStr(self):
         x = [1, 2, 3]
-        self.assertEquals(reflect.safe_str(x), str(x))
+        self.assertEqual(reflect.safe_str(x), str(x))
 
 
     def test_brokenStr(self):
@@ -662,10 +662,10 @@ class FilenameToModule(unittest.TestCase):
         Tests it finds good name for directories/packages.
         """
         module = reflect.filenameToModuleName(os.path.join('twisted', 'test'))
-        self.assertEquals(module, 'test')
+        self.assertEqual(module, 'test')
         module = reflect.filenameToModuleName(os.path.join('twisted', 'test')
                                               + os.path.sep)
-        self.assertEquals(module, 'test')
+        self.assertEqual(module, 'test')
 
     def test_file(self):
         """
@@ -673,7 +673,7 @@ class FilenameToModule(unittest.TestCase):
         """
         module = reflect.filenameToModuleName(
             os.path.join('twisted', 'test', 'test_reflect.py'))
-        self.assertEquals(module, 'test_reflect')
+        self.assertEqual(module, 'test_reflect')
 
 
 
@@ -687,7 +687,7 @@ class FullyQualifiedNameTests(unittest.TestCase):
         Helper to check that fully qualified name of C{obj} results to
         C{expected}.
         """
-        self.assertEquals(
+        self.assertEqual(
             reflect.fullyQualifiedName(obj), expected)
 
 
@@ -753,7 +753,7 @@ class DeprecationTestCase(unittest.TestCase):
         """
         result = self.callDeprecated(Version("Twisted", 8, 2, 0),
             reflect.macro, "test", __file__, "test = 1")
-        self.assertEquals(result, 1)
+        self.assertEqual(result, 1)
 
     def test_allYourBase(self):
         """

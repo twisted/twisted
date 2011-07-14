@@ -42,7 +42,7 @@ class UDPServerTestsBuilder(ReactorBuilder):
         reactor = self.buildReactor()
         port = reactor.listenUDP(
             portNumber, DatagramProtocol(), interface=host)
-        self.assertEquals(
+        self.assertEqual(
             port.getHost(), IPv4Address('UDP', host, portNumber))
 
 

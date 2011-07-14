@@ -382,7 +382,7 @@ class AmpBoxTests(unittest.TestCase):
         Make sure that strs serialize to strs.
         """
         a = amp.AmpBox(key='value')
-        self.assertEquals(type(a.serialize()), str)
+        self.assertEqual(type(a.serialize()), str)
 
     def test_serializeUnicodeKeyRaises(self):
         """
@@ -409,13 +409,13 @@ class ParsingTest(unittest.TestCase):
         else.
         """
         b = amp.Boolean()
-        self.assertEquals(b.fromString("True"), True)
-        self.assertEquals(b.fromString("False"), False)
+        self.assertEqual(b.fromString("True"), True)
+        self.assertEqual(b.fromString("False"), False)
         self.assertRaises(TypeError, b.fromString, "ninja")
         self.assertRaises(TypeError, b.fromString, "true")
         self.assertRaises(TypeError, b.fromString, "TRUE")
-        self.assertEquals(b.toString(True), 'True')
-        self.assertEquals(b.toString(False), 'False')
+        self.assertEqual(b.toString(True), 'True')
+        self.assertEqual(b.toString(False), 'False')
 
     def test_pathValueRoundTrip(self):
         """
@@ -426,7 +426,7 @@ class ParsingTest(unittest.TestCase):
         s = p.toString(fp)
         v = p.fromString(s)
         self.assertNotIdentical(fp, v) # sanity check
-        self.assertEquals(fp, v)
+        self.assertEqual(fp, v)
 
 
     def test_sillyEmptyThing(self):
@@ -470,7 +470,7 @@ class ParsingTest(unittest.TestCase):
             jb.update(dict(test))
             jb._sendTo(c)
             p.flush()
-            self.assertEquals(s.boxes[-1], jb)
+            self.assertEqual(s.boxes[-1], jb)
 
 
 
@@ -571,7 +571,7 @@ class CommandDispatchTests(unittest.TestCase):
                         hello="world")
         self.locator.commands['hello'] = thunk
         self.dispatcher.ampBoxReceived(input)
-        self.assertEquals(received, [input])
+        self.assertEqual(received, [input])
 
 
     def test_sendUnhandledError(self):
@@ -603,8 +603,8 @@ class CommandDispatchTests(unittest.TestCase):
                         hello="world")
         self.sender.expectError()
         self.dispatcher.ampBoxReceived(input)
-        self.assertEquals(len(self.sender.unhandledErrors), 1)
-        self.assertEquals(self.sender.unhandledErrors[0].value, err)
+        self.assertEqual(len(self.sender.unhandledErrors), 1)
+        self.assertEqual(self.sender.unhandledErrors[0].value, err)
 
 
     def test_callRemote(self):
@@ -616,17 +616,17 @@ class CommandDispatchTests(unittest.TestCase):
         de-serialization.
         """
         D = self.dispatcher.callRemote(Hello, hello='world')
-        self.assertEquals(self.sender.sentBoxes,
+        self.assertEqual(self.sender.sentBoxes,
                           [amp.AmpBox(_command="hello",
                                       _ask="1",
                                       hello="world")])
         answers = []
         D.addCallback(answers.append)
-        self.assertEquals(answers, [])
+        self.assertEqual(answers, [])
         self.dispatcher.ampBoxReceived(amp.AmpBox({'hello': "yay",
                                                    'print': "ignored",
                                                    '_answer': "1"}))
-        self.assertEquals(answers, [dict(hello="yay",
+        self.assertEqual(answers, [dict(hello="yay",
                                          Print=u"ignored")])
 
 
@@ -722,7 +722,7 @@ class CommandLocatorTests(unittest.TestCase):
         responderCallable = locator.locateResponder("simple")
         result = responderCallable(amp.Box(greeting="ni hao", cookie="5"))
         def done(values):
-            self.assertEquals(values, amp.AmpBox(cookieplus=str(expected)))
+            self.assertEqual(values, amp.AmpBox(cookieplus=str(expected)))
         return result.addCallback(done)
 
 
@@ -765,7 +765,7 @@ class CommandLocatorTests(unittest.TestCase):
             PendingDeprecationWarning,
             "Override locateResponder, not lookupFunction.",
             __file__, lambda : locator.locateResponder("custom"))
-        self.assertEquals(locator.customResponder, customResponderObject)
+        self.assertEqual(locator.customResponder, customResponderObject)
         # Make sure upcalling works too
         normalResponderObject = self.assertWarns(
             PendingDeprecationWarning,
@@ -773,7 +773,7 @@ class CommandLocatorTests(unittest.TestCase):
             __file__, lambda : locator.locateResponder("simple"))
         result = normalResponderObject(amp.Box(greeting="ni hao", cookie="5"))
         def done(values):
-            self.assertEquals(values, amp.AmpBox(cookieplus='8'))
+            self.assertEqual(values, amp.AmpBox(cookieplus='8'))
         return result.addCallback(done)
 
 
@@ -789,7 +789,7 @@ class CommandLocatorTests(unittest.TestCase):
             lambda : locator.lookupFunction("simple"))
         result = responderCallable(amp.Box(greeting="ni hao", cookie="5"))
         def done(values):
-            self.assertEquals(values, amp.AmpBox(cookieplus='8'))
+            self.assertEqual(values, amp.AmpBox(cookieplus='8'))
         return result.addCallback(done)
 
 
@@ -892,7 +892,7 @@ class BinaryProtocolTests(unittest.TestCase):
         a.stringReceived("hello")
         a.stringReceived("world")
         a.stringReceived("")
-        self.assertEquals(self.boxes, [amp.AmpBox(hello="world")])
+        self.assertEqual(self.boxes, [amp.AmpBox(hello="world")])
 
 
     def test_firstBoxFirstKeyExcessiveLength(self):
@@ -961,7 +961,7 @@ class BinaryProtocolTests(unittest.TestCase):
         a = amp.BinaryBoxProtocol(self)
         a.dataReceived(amp.Box({"testKey": "valueTest",
                                 "anotherKey": "anotherValue"}).serialize())
-        self.assertEquals(self.boxes,
+        self.assertEqual(self.boxes,
                           [amp.Box({"testKey": "valueTest",
                                     "anotherKey": "anotherValue"})])
 
@@ -992,7 +992,7 @@ class BinaryProtocolTests(unittest.TestCase):
                         "someData": "hello"})
         a.makeConnection(self)
         a.sendBox(aBox)
-        self.assertEquals(''.join(self.data), aBox.serialize())
+        self.assertEqual(''.join(self.data), aBox.serialize())
 
 
     def test_connectionLostStopSendingBoxes(self):
@@ -1035,10 +1035,10 @@ class BinaryProtocolTests(unittest.TestCase):
         moreThanOneBox = anyOldBox.serialize() + "\x00\x00Hello, world!"
         a.dataReceived(moreThanOneBox)
         self.assertIdentical(otherProto.transport, self)
-        self.assertEquals("".join(otherProto.data), "\x00\x00Hello, world!")
-        self.assertEquals(self.data, ["outgoing data"])
+        self.assertEqual("".join(otherProto.data), "\x00\x00Hello, world!")
+        self.assertEqual(self.data, ["outgoing data"])
         a.dataReceived("more data")
-        self.assertEquals("".join(otherProto.data),
+        self.assertEqual("".join(otherProto.data),
                           "\x00\x00Hello, world!more data")
         self.assertRaises(amp.ProtocolSwitched, a.sendBox, anyOldBox)
 
@@ -1053,7 +1053,7 @@ class BinaryProtocolTests(unittest.TestCase):
         a.makeConnection(self)
         otherProto = TestProto(None, "")
         a._switchTo(otherProto)
-        self.assertEquals(otherProto.data, [])
+        self.assertEqual(otherProto.data, [])
 
 
     def test_protocolSwitchInvalidStates(self):
@@ -1070,7 +1070,7 @@ class BinaryProtocolTests(unittest.TestCase):
         self.assertRaises(amp.ProtocolSwitched, a.sendBox, sampleBox)
         a._unlockFromSwitch()
         a.sendBox(sampleBox)
-        self.assertEquals(''.join(self.data), sampleBox.serialize())
+        self.assertEqual(''.join(self.data), sampleBox.serialize())
         a._lockForSwitch()
         otherProto = TestProto(None, "outgoing data")
         a._switchTo(otherProto)
@@ -1093,7 +1093,7 @@ class BinaryProtocolTests(unittest.TestCase):
         a._switchTo(connectionLoser)
         connectionFailure = Failure(RuntimeError())
         a.connectionLost(connectionFailure)
-        self.assertEquals(connectionLoser.reason, connectionFailure)
+        self.assertEqual(connectionLoser.reason, connectionFailure)
 
 
     def test_protocolSwitchLoseClientConnection(self):
@@ -1113,7 +1113,7 @@ class BinaryProtocolTests(unittest.TestCase):
         a._switchTo(connectionLoser, clientLoser)
         connectionFailure = Failure(RuntimeError())
         a.connectionLost(connectionFailure)
-        self.assertEquals(clientLoser.reason, connectionFailure)
+        self.assertEqual(clientLoser.reason, connectionFailure)
 
 
 
@@ -1145,7 +1145,7 @@ class AMPTest(unittest.TestCase):
         HELLO = 'world'
         c.sendHello(HELLO).addCallback(L.append)
         p.flush()
-        self.assertEquals(L[0]['hello'], HELLO)
+        self.assertEqual(L[0]['hello'], HELLO)
 
 
     def test_wireFormatRoundTrip(self):
@@ -1158,7 +1158,7 @@ class AMPTest(unittest.TestCase):
         HELLO = 'world'
         c.sendHello(HELLO).addCallback(L.append)
         p.flush()
-        self.assertEquals(L[0]['hello'], HELLO)
+        self.assertEqual(L[0]['hello'], HELLO)
 
 
     def test_helloWorldUnicode(self):
@@ -1173,8 +1173,8 @@ class AMPTest(unittest.TestCase):
         HELLO_UNICODE = 'wor\u1234ld'
         c.sendUnicodeHello(HELLO, HELLO_UNICODE).addCallback(L.append)
         p.flush()
-        self.assertEquals(L[0]['hello'], HELLO)
-        self.assertEquals(L[0]['Print'], HELLO_UNICODE)
+        self.assertEqual(L[0]['hello'], HELLO)
+        self.assertEqual(L[0]['Print'], HELLO_UNICODE)
 
 
     def test_callRemoteStringRequiresAnswerFalse(self):
@@ -1202,11 +1202,11 @@ class AMPTest(unittest.TestCase):
             return "OK"
         c.callRemoteString("WTF").addErrback(clearAndAdd).addCallback(L.append)
         p.flush()
-        self.assertEquals(L.pop(), "OK")
+        self.assertEqual(L.pop(), "OK")
         HELLO = 'world'
         c.sendHello(HELLO).addCallback(L.append)
         p.flush()
-        self.assertEquals(L[0]['hello'], HELLO)
+        self.assertEqual(L[0]['hello'], HELLO)
 
 
     def test_unknownCommandHigh(self):
@@ -1224,11 +1224,11 @@ class AMPTest(unittest.TestCase):
             return "OK"
         c.callRemote(WTF).addErrback(clearAndAdd).addCallback(L.append)
         p.flush()
-        self.assertEquals(L.pop(), "OK")
+        self.assertEqual(L.pop(), "OK")
         HELLO = 'world'
         c.sendHello(HELLO).addCallback(L.append)
         p.flush()
-        self.assertEquals(L[0]['hello'], HELLO)
+        self.assertEqual(L[0]['hello'], HELLO)
 
 
     def test_brokenReturnValue(self):
@@ -1262,16 +1262,16 @@ class AMPTest(unittest.TestCase):
                      bonus="I'm not in the book!").addCallback(
             L.append)
         p.flush()
-        self.assertEquals(L[0]['hello'], HELLO)
+        self.assertEqual(L[0]['hello'], HELLO)
 
 
     def test_simpleReprs(self):
         """
         Verify that the various Box objects repr properly, for debugging.
         """
-        self.assertEquals(type(repr(amp._SwitchBox('a'))), str)
-        self.assertEquals(type(repr(amp.QuitBox())), str)
-        self.assertEquals(type(repr(amp.AmpBox())), str)
+        self.assertEqual(type(repr(amp._SwitchBox('a'))), str)
+        self.assertEqual(type(repr(amp.QuitBox())), str)
+        self.assertEqual(type(repr(amp.AmpBox())), str)
         self.failUnless("AmpBox" in repr(amp.AmpBox()))
 
 
@@ -1286,7 +1286,7 @@ class AMPTest(unittest.TestCase):
             return {a: 0x1234}.get(obj, id(obj))
         self.addCleanup(setIDFunction, setIDFunction(fakeID))
 
-        self.assertEquals(
+        self.assertEqual(
             repr(a), "<AMP inner <TestProto #%d> at 0x1234>" % (
                 otherProto.instanceId,))
 
@@ -1300,14 +1300,14 @@ class AMPTest(unittest.TestCase):
         def fakeID(obj):
             return {a: 0x4321}.get(obj, id(obj))
         self.addCleanup(setIDFunction, setIDFunction(fakeID))
-        self.assertEquals(repr(a), "<AMP at 0x4321>")
+        self.assertEqual(repr(a), "<AMP at 0x4321>")
 
 
     def test_simpleSSLRepr(self):
         """
         L{amp._TLSBox.__repr__} returns a string.
         """
-        self.assertEquals(type(repr(amp._TLSBox())), str)
+        self.assertEqual(type(repr(amp._TLSBox())), str)
 
     test_simpleSSLRepr.skip = skipSSL
 
@@ -1325,7 +1325,7 @@ class AMPTest(unittest.TestCase):
         self.assertTrue(tl.isKey)
         self.assertTrue(tl.isLocal)
         self.assertIdentical(tl.keyName, None)
-        self.assertEquals(tl.value, x)
+        self.assertEqual(tl.value, x)
         self.assertIn(str(len(x)), repr(tl))
         self.assertIn("key", repr(tl))
 
@@ -1341,7 +1341,7 @@ class AMPTest(unittest.TestCase):
         p.flush()
         self.failIf(tl.isKey)
         self.failUnless(tl.isLocal)
-        self.assertEquals(tl.keyName, 'hello')
+        self.assertEqual(tl.keyName, 'hello')
         self.failUnlessIdentical(tl.value, x)
         self.failUnless(str(len(x)) in repr(tl))
         self.failUnless("value" in repr(tl))
@@ -1360,7 +1360,7 @@ class AMPTest(unittest.TestCase):
         HELLO = 'world'
         c.sendHello(HELLO).addCallback(L.append)
         p.flush()
-        self.assertEquals(L[0]['hello'], HELLO)
+        self.assertEqual(L[0]['hello'], HELLO)
 
 
     def test_helloErrorHandling(self):
@@ -1377,7 +1377,7 @@ class AMPTest(unittest.TestCase):
         c.sendHello(HELLO).addErrback(L.append)
         p.flush()
         L[0].trap(UnfriendlyGreeting)
-        self.assertEquals(str(L[0].value), "Don't be a dick.")
+        self.assertEqual(str(L[0].value), "Don't be a dick.")
 
 
     def test_helloFatalErrorHandling(self):
@@ -1435,7 +1435,7 @@ class AMPTest(unittest.TestCase):
         L = []
         c.callRemote(WaitForever).addErrback(L.append)
         p.flush()
-        self.assertEquals(L, [])
+        self.assertEqual(L, [])
         s.transport.loseConnection()
         p.flush()
         L.pop().trap(error.ConnectionDone)
@@ -1492,7 +1492,7 @@ class AMPTest(unittest.TestCase):
         c.callRemote(NoAnswerHello, hello="hello")
         p.flush()
         le = self.flushLoggedErrors(amp.BadLocalReturn)
-        self.assertEquals(len(le), 1)
+        self.assertEqual(len(le), 1)
 
 
     def test_noAnswerResponderAskedForAnswer(self):
@@ -1507,8 +1507,8 @@ class AMPTest(unittest.TestCase):
         L = []
         c.callRemote(Hello, hello="Hello!").addCallback(L.append)
         p.flush()
-        self.assertEquals(len(L), 1)
-        self.assertEquals(L, [dict(hello="Hello!-noanswer",
+        self.assertEqual(len(L), 1)
+        self.assertEqual(L, [dict(hello="Hello!-noanswer",
                                    Print=None)])  # Optional response argument
 
 
@@ -1523,7 +1523,7 @@ class AMPTest(unittest.TestCase):
         c.callRemote(GetList, length=10).addCallback(L.append)
         p.flush()
         values = L.pop().get('body')
-        self.assertEquals(values, [{'x': 1}] * 10)
+        self.assertEqual(values, [{'x': 1}] * 10)
 
 
     def test_optionalAmpListOmitted(self):
@@ -1538,7 +1538,7 @@ class AMPTest(unittest.TestCase):
         c.callRemote(DontRejectMe, magicWord=u'please').addCallback(L.append)
         p.flush()
         response = L.pop().get('response')
-        self.assertEquals(response, 'list omitted')
+        self.assertEqual(response, 'list omitted')
 
 
     def test_optionalAmpListPresent(self):
@@ -1553,7 +1553,7 @@ class AMPTest(unittest.TestCase):
                 list=[{'name': 'foo'}]).addCallback(L.append)
         p.flush()
         response = L.pop().get('response')
-        self.assertEquals(response, 'foo accepted')
+        self.assertEqual(response, 'foo accepted')
 
 
     def test_failEarlyOnArgSending(self):
@@ -1611,8 +1611,8 @@ class AMPTest(unittest.TestCase):
                          (clientSuccess, clientData))):
             self.failUnless(serverSuccess)
             self.failUnless(clientSuccess)
-            self.assertEquals(''.join(serverData), SWITCH_CLIENT_DATA)
-            self.assertEquals(''.join(clientData), SWITCH_SERVER_DATA)
+            self.assertEqual(''.join(serverData), SWITCH_CLIENT_DATA)
+            self.assertEqual(''.join(clientData), SWITCH_SERVER_DATA)
             self.testSucceeded = True
 
         def cbSwitch(proto):
@@ -1703,10 +1703,10 @@ class AMPTest(unittest.TestCase):
         GOODBYE = 'everyone'
         c.sendHello(HELLO).addCallback(L.append)
         p.flush()
-        self.assertEquals(L.pop()['hello'], HELLO)
+        self.assertEqual(L.pop()['hello'], HELLO)
         c.callRemote(Goodbye).addCallback(L.append)
         p.flush()
-        self.assertEquals(L.pop()['goodbye'], GOODBYE)
+        self.assertEqual(L.pop()['goodbye'], GOODBYE)
         c.sendHello(HELLO).addErrback(L.append)
         L.pop().trap(error.ConnectionDone)
 
@@ -1722,15 +1722,15 @@ class AMPTest(unittest.TestCase):
         c.callRemote(Hello, hello='hello test', mixedCase='mixed case arg test',
                      dash_arg='x', underscore_arg='y')
         p.flush()
-        self.assertEquals(len(L), 1)
+        self.assertEqual(len(L), 1)
         for k, v in [('_command', Hello.commandName),
                      ('hello', 'hello test'),
                      ('mixedCase', 'mixed case arg test'),
                      ('dash-arg', 'x'),
                      ('underscore_arg', 'y')]:
-            self.assertEquals(L[-1].pop(k), v)
+            self.assertEqual(L[-1].pop(k), v)
         L[-1].pop('_ask')
-        self.assertEquals(L[-1], {})
+        self.assertEqual(L[-1], {})
 
 
     def test_basicStructuredEmit(self):
@@ -1749,8 +1749,8 @@ class AMPTest(unittest.TestCase):
         c.callRemote(Hello, hello='hello test', mixedCase='mixed case arg test',
                      dash_arg='x', underscore_arg='y').addCallback(L.append)
         p.flush()
-        self.assertEquals(len(L), 2)
-        self.assertEquals(L[0],
+        self.assertEqual(len(L), 2)
+        self.assertEqual(L[0],
                           ((), dict(
                     hello='hello test',
                     mixedCase='mixed case arg test',
@@ -1764,7 +1764,7 @@ class AMPTest(unittest.TestCase):
                     Print=None,
                     optional=None,
                     )))
-        self.assertEquals(L[1], dict(Print=None, hello='aaa'))
+        self.assertEqual(L[1], dict(Print=None, hello='aaa'))
 
 class PretendRemoteCertificateAuthority:
     def checkIsPretendRemote(self):
@@ -1845,7 +1845,7 @@ class TLSTest(unittest.TestCase):
         cli.callRemote(SecuredPing).addCallback(L.append)
         p.flush()
         # once for client once for server
-        self.assertEquals(okc.verifyCount, 2)
+        self.assertEqual(okc.verifyCount, 2)
         L = []
         cli.callRemote(SecuredPing).addCallback(L.append)
         p.flush()
@@ -1895,7 +1895,7 @@ class TLSTest(unittest.TestCase):
 
         p.flush()
         # once for client once for server - but both fail
-        self.assertEquals(badCert.verifyCount, 2)
+        self.assertEqual(badCert.verifyCount, 2)
         d = cli.callRemote(SecuredPing)
         p.flush()
         self.assertFailure(d, iosim.NativeOpenSSLError)
@@ -1917,7 +1917,7 @@ class TLSTest(unittest.TestCase):
 
         p.flush()
 
-        self.assertEquals(droppyCert.verifyCount, 2)
+        self.assertEqual(droppyCert.verifyCount, 2)
 
         d = cli.callRemote(SecuredPing)
         p.flush()
@@ -1983,7 +1983,7 @@ class TLSNotAvailableTest(unittest.TestCase):
         svr.sendBox = boxes.append
         svr.makeConnection(StringTransport())
         svr.ampBoxReceived(box)
-        self.assertEquals(boxes,
+        self.assertEqual(boxes,
             [{'_error_code': 'TLS_ERROR',
               '_error': '1',
               '_error_description': 'TLS not available'}])
@@ -2222,10 +2222,10 @@ class LiveFireTLSTestCase(LiveFireBase, unittest.TestCase):
                 # cert until we negotiate.  we should be able to do this in
                 # 'secured' instead, but it looks like we can't.  I think this
                 # is a bug somewhere far deeper than here.
-                self.failUnlessEqual(x, self.cli.hostCertificate.digest())
-                self.failUnlessEqual(x, self.cli.peerCertificate.digest())
-                self.failUnlessEqual(x, self.svr.hostCertificate.digest())
-                self.failUnlessEqual(x, self.svr.peerCertificate.digest())
+                self.assertEqual(x, self.cli.hostCertificate.digest())
+                self.assertEqual(x, self.cli.peerCertificate.digest())
+                self.assertEqual(x, self.svr.hostCertificate.digest())
+                self.assertEqual(x, self.svr.peerCertificate.digest())
             return self.cli.callRemote(SecuredPing).addCallback(pinged)
         return self.cli.callRemote(amp.StartTLS,
                                    tls_localCertificate=cert,
@@ -2441,7 +2441,7 @@ class CommandTestCase(unittest.TestCase):
         thingy = "weeoo"
         response = client.callRemote(MagicSchemaCommand, weird=thingy)
         def gotResponse(ign):
-            self.assertEquals(client.parseResponseArguments,
+            self.assertEqual(client.parseResponseArguments,
                               ({"weird": thingy}, client))
         response.addCallback(gotResponse)
         return response
@@ -2582,7 +2582,7 @@ class ListOfTestsMixin:
         strings = amp.AmpBox()
         for key in self.objects:
             stringList.toBox(key, strings, self.objects.copy(), None)
-        self.assertEquals(strings, self.strings)
+        self.assertEqual(strings, self.strings)
 
 
     def test_fromBox(self):
@@ -2593,7 +2593,7 @@ class ListOfTestsMixin:
         objects = {}
         for key in self.strings:
             stringList.fromBox(key, self.strings.copy(), objects, None)
-        self.assertEquals(objects, self.objects)
+        self.assertEqual(objects, self.objects)
 
 
 
@@ -2836,7 +2836,7 @@ class ListOfOptionalTests(unittest.TestCase):
         stringList = amp.ListOf(amp.Integer(), optional=True)
         strings = amp.AmpBox()
         stringList.toBox('omitted', strings, {'omitted': None}, None)
-        self.assertEquals(strings, {})
+        self.assertEqual(strings, {})
 
 
     def test_requiredArgumentWithKeyMissingRaisesKeyError(self):
@@ -2867,7 +2867,7 @@ class ListOfOptionalTests(unittest.TestCase):
         stringList = amp.ListOf(amp.Integer(), optional=True)
         objects = {}
         stringList.fromBox('omitted', {}, objects, None)
-        self.assertEquals(objects, {'omitted': None})
+        self.assertEqual(objects, {'omitted': None})
 
 
 
@@ -2905,7 +2905,7 @@ class DateTimeTests(unittest.TestCase):
         """
         argument = amp.DateTime()
         value = argument.fromString(self.string)
-        self.assertEquals(value, self.object)
+        self.assertEqual(value, self.object)
 
 
     def test_toString(self):
@@ -2916,7 +2916,7 @@ class DateTimeTests(unittest.TestCase):
         """
         argument = amp.DateTime()
         value = argument.toString(self.object)
-        self.assertEquals(value, self.string)
+        self.assertEqual(value, self.string)
 
 
 
@@ -2929,21 +2929,21 @@ class FixedOffsetTZInfoTests(unittest.TestCase):
         """
         L{amp.utc.tzname} returns C{"+00:00"}.
         """
-        self.assertEquals(amp.utc.tzname(None), '+00:00')
+        self.assertEqual(amp.utc.tzname(None), '+00:00')
 
 
     def test_dst(self):
         """
         L{amp.utc.dst} returns a zero timedelta.
         """
-        self.assertEquals(amp.utc.dst(None), datetime.timedelta(0))
+        self.assertEqual(amp.utc.dst(None), datetime.timedelta(0))
 
 
     def test_utcoffset(self):
         """
         L{amp.utc.utcoffset} returns a zero timedelta.
         """
-        self.assertEquals(amp.utc.utcoffset(None), datetime.timedelta(0))
+        self.assertEqual(amp.utc.utcoffset(None), datetime.timedelta(0))
 
 
     def test_badSign(self):

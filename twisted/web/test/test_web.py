@@ -192,7 +192,7 @@ class DummyRequest:
 class ResourceTestCase(unittest.TestCase):
     def testListEntities(self):
         r = resource.Resource()
-        self.failUnlessEqual([], r.listEntities())
+        self.assertEqual([], r.listEntities())
 
 
 class SimpleResource(resource.Resource):
@@ -455,8 +455,8 @@ class ConditionalTest(unittest.TestCase):
         self.channel.lineReceived("If-Modified-Since: " + modifiedSince)
         self.channel.lineReceived('')
         result = self.transport.getvalue()
-        self.failUnlessEqual(httpCode(result), http.OK)
-        self.failUnlessEqual(httpBody(result), "correct")
+        self.assertEqual(httpCode(result), http.OK)
+        self.assertEqual(httpBody(result), "correct")
 
 
     def test_modified(self):
@@ -480,8 +480,8 @@ class ConditionalTest(unittest.TestCase):
                                   % http.datetimeToString(100))
         self.channel.lineReceived('')
         result = self.transport.getvalue()
-        self.failUnlessEqual(httpCode(result), http.NOT_MODIFIED)
-        self.failUnlessEqual(httpBody(result), "")
+        self.assertEqual(httpCode(result), http.NOT_MODIFIED)
+        self.assertEqual(httpBody(result), "")
 
 
     def test_invalidTimestamp(self):
@@ -530,17 +530,17 @@ class ConditionalTest(unittest.TestCase):
         self.channel.lineReceived("If-None-Match: unmatchedTag")
         self.channel.lineReceived('')
         result = self.transport.getvalue()
-        self.failUnlessEqual(httpCode(result), http.OK)
-        self.failUnlessEqual(httpBody(result), "correct")
+        self.assertEqual(httpCode(result), http.OK)
+        self.assertEqual(httpBody(result), "correct")
 
     def test_etagMatched(self):
         """If-None-Match ETag cache validator (negative)"""
         self.channel.lineReceived("If-None-Match: MatchingTag")
         self.channel.lineReceived('')
         result = self.transport.getvalue()
-        self.failUnlessEqual(httpHeader(result, "ETag"), "MatchingTag")
-        self.failUnlessEqual(httpCode(result), http.NOT_MODIFIED)
-        self.failUnlessEqual(httpBody(result), "")
+        self.assertEqual(httpHeader(result, "ETag"), "MatchingTag")
+        self.assertEqual(httpCode(result), http.NOT_MODIFIED)
+        self.assertEqual(httpBody(result), "")
 
 
 
@@ -549,7 +549,7 @@ class GoogleTestCase(unittest.TestCase):
     def testCheckGoogle(self):
         raise unittest.SkipTest("no violation of google ToS")
         d = google.checkGoogle('site:www.twistedmatrix.com twisted')
-        d.addCallback(self.assertEquals, 'http://twistedmatrix.com/')
+        d.addCallback(self.assertEqual, 'http://twistedmatrix.com/')
         return d
 
 
@@ -753,26 +753,26 @@ class NewRenderTestCase(unittest.TestCase):
     def testGoodMethods(self):
         req = self._getReq()
         req.requestReceived('GET', '/newrender', 'HTTP/1.0')
-        self.assertEquals(req.transport.getvalue().splitlines()[-1], 'hi hi')
+        self.assertEqual(req.transport.getvalue().splitlines()[-1], 'hi hi')
 
         req = self._getReq()
         req.requestReceived('HEH', '/newrender', 'HTTP/1.0')
-        self.assertEquals(req.transport.getvalue().splitlines()[-1], 'ho ho')
+        self.assertEqual(req.transport.getvalue().splitlines()[-1], 'ho ho')
 
     def testBadMethods(self):
         req = self._getReq()
         req.requestReceived('CONNECT', '/newrender', 'HTTP/1.0')
-        self.assertEquals(req.code, 501)
+        self.assertEqual(req.code, 501)
 
         req = self._getReq()
         req.requestReceived('hlalauguG', '/newrender', 'HTTP/1.0')
-        self.assertEquals(req.code, 501)
+        self.assertEqual(req.code, 501)
 
     def testImplicitHead(self):
         req = self._getReq()
         req.requestReceived('HEAD', '/newrender', 'HTTP/1.0')
-        self.assertEquals(req.code, 200)
-        self.assertEquals(-1, req.transport.getvalue().find('hi hi'))
+        self.assertEqual(req.code, 200)
+        self.assertEqual(-1, req.transport.getvalue().find('hi hi'))
 
 
     def test_unsupportedHead(self):
@@ -835,7 +835,7 @@ class AllowedMethodsTest(unittest.TestCase):
         """
         res = GettableResource()
         allowedMethods = resource._computeAllowedMethods(res)
-        self.assertEquals(set(allowedMethods),
+        self.assertEqual(set(allowedMethods),
                           set(['GET', 'HEAD', 'fred_render_ethel'])) 
 
 
@@ -849,8 +849,8 @@ class AllowedMethodsTest(unittest.TestCase):
         """
         req = self._getReq()
         req.requestReceived('POST', '/gettableresource', 'HTTP/1.0')
-        self.assertEquals(req.code, 405)
-        self.assertEquals(
+        self.assertEqual(req.code, 405)
+        self.assertEqual(
             set(req.responseHeaders.getRawHeaders('allow')[0].split(", ")),
             set(['GET', 'HEAD','fred_render_ethel'])
         )
@@ -866,7 +866,7 @@ class AllowedMethodsTest(unittest.TestCase):
         req = self._getReq()
         req.requestReceived('POST', '/gettableresource?'
                             'value=<script>bad', 'HTTP/1.0')
-        self.assertEquals(req.code, 405)
+        self.assertEqual(req.code, 405)
         renderedPage = req.transport.getvalue()
         self.assertNotIn("<script>bad", renderedPage)
         self.assertIn('&lt;script&gt;bad', renderedPage)
@@ -881,7 +881,7 @@ class AllowedMethodsTest(unittest.TestCase):
         """
         req = self._getReq()
         req.requestReceived('<style>bad', '/gettableresource', 'HTTP/1.0')
-        self.assertEquals(req.code, 501)
+        self.assertEqual(req.code, 501)
         renderedPage = req.transport.getvalue()
         self.assertNotIn("<style>bad", renderedPage)
         self.assertIn('&lt;style&gt;bad', renderedPage)
@@ -927,7 +927,7 @@ class DeferredResourceTests(unittest.TestCase):
         result = resource.Resource()
         deferredResource = util.DeferredResource(defer.succeed(result))
         deferredResource.render(request)
-        self.assertEquals(rendered, [result])
+        self.assertEqual(rendered, [result])
 
 
 

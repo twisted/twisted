@@ -13,46 +13,46 @@ class Serialization(unittest.TestCase):
         self.attrs = helper.CharacterAttribute()
 
     def testTrivial(self):
-        self.assertEquals(
+        self.assertEqual(
             text.flatten(A.normal['Hello, world.'], self.attrs),
             'Hello, world.')
 
     def testBold(self):
-        self.assertEquals(
+        self.assertEqual(
             text.flatten(A.bold['Hello, world.'], self.attrs),
             '\x1b[1mHello, world.')
 
     def testUnderline(self):
-        self.assertEquals(
+        self.assertEqual(
             text.flatten(A.underline['Hello, world.'], self.attrs),
             '\x1b[4mHello, world.')
 
     def testBlink(self):
-        self.assertEquals(
+        self.assertEqual(
             text.flatten(A.blink['Hello, world.'], self.attrs),
             '\x1b[5mHello, world.')
 
     def testReverseVideo(self):
-        self.assertEquals(
+        self.assertEqual(
             text.flatten(A.reverseVideo['Hello, world.'], self.attrs),
             '\x1b[7mHello, world.')
 
     def testMinus(self):
-        self.assertEquals(
+        self.assertEqual(
             text.flatten(
                 A.bold[A.blink['Hello', -A.bold[' world'], '.']],
                 self.attrs),
             '\x1b[1;5mHello\x1b[0;5m world\x1b[1;5m.')
 
     def testForeground(self):
-        self.assertEquals(
+        self.assertEqual(
             text.flatten(
                 A.normal[A.fg.red['Hello, '], A.fg.green['world!']],
                 self.attrs),
             '\x1b[31mHello, \x1b[32mworld!')
 
     def testBackground(self):
-        self.assertEquals(
+        self.assertEqual(
             text.flatten(
                 A.normal[A.bg.red['Hello, '], A.bg.green['world!']],
                 self.attrs),
@@ -82,7 +82,7 @@ class EfficiencyTestCase(unittest.TestCase):
                     A.fg.green[
                         "Foreground Green, Background Cyan, Bold"]]]]
 
-        self.assertEquals(
+        self.assertEqual(
             text.flatten(output, self.attrs),
             "\x1b[1;31;46mForeground Red, Background Cyan, Bold"
             "\x1b[5mBlinking"
@@ -90,11 +90,11 @@ class EfficiencyTestCase(unittest.TestCase):
             "\x1b[1;32;46mForeground Green, Background Cyan, Bold")
 
     def testNesting(self):
-        self.assertEquals(
+        self.assertEqual(
             text.flatten(A.bold['Hello, ', A.underline['world.']], self.attrs),
             '\x1b[1mHello, \x1b[4mworld.')
 
-        self.assertEquals(
+        self.assertEqual(
             text.flatten(
                 A.bold[A.reverseVideo['Hello, ', A.normal['world'], '.']],
                 self.attrs),

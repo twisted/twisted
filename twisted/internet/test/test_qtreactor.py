@@ -32,4 +32,4 @@ class QtreactorTestCase(unittest.TestCase):
         try:
             import twisted.internet.qtreactor
         except ImportError, e:
-            self.assertEquals(str(e), errorMessage)
+            self.assertEqual(str(e), errorMessage)

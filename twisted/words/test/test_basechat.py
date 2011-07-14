@@ -26,12 +26,12 @@ class ChatUITests(unittest.TestCase):
         L{twisted.words.im.interfaces.IPerson} who doesn't have an account
         associated with the L{basechat.ChatUI} instance has no effect.
         """
-        self.assertEquals(self.person.name, "foo")
-        self.assertEquals(self.person.account, self.account)
+        self.assertEqual(self.person.name, "foo")
+        self.assertEqual(self.person.account, self.account)
 
         self.ui.contactChangedNick(self.person, "bar")
-        self.assertEquals(self.person.name, "foo")
-        self.assertEquals(self.person.account, self.account)
+        self.assertEqual(self.person.name, "foo")
+        self.assertEqual(self.person.account, self.account)
 
 
     def test_contactChangedNickNoConversation(self):
@@ -41,12 +41,12 @@ class ChatUITests(unittest.TestCase):
         """
         self.ui.persons[self.person.name, self.person.account] = self.person
 
-        self.assertEquals(self.person.name, "foo")
-        self.assertEquals(self.person.account, self.account)
+        self.assertEqual(self.person.name, "foo")
+        self.assertEqual(self.person.account, self.account)
 
         self.ui.contactChangedNick(self.person, "bar")
-        self.assertEquals(self.person.name, "bar")
-        self.assertEquals(self.person.account, self.account)
+        self.assertEqual(self.person.name, "bar")
+        self.assertEqual(self.person.account, self.account)
 
 
     def test_contactChangedNickHasConversation(self):
@@ -60,9 +60,9 @@ class ChatUITests(unittest.TestCase):
         conversation = basechat.Conversation(self.person, self.ui)
         self.ui.conversations[self.person] = conversation
 
-        self.assertEquals(self.person.name, "foo")
-        self.assertEquals(self.person.account, self.account)
+        self.assertEqual(self.person.name, "foo")
+        self.assertEqual(self.person.account, self.account)
 
         self.ui.contactChangedNick(self.person, "bar")
-        self.assertEquals(self.person.name, "bar")
-        self.assertEquals(self.person.account, self.account)
+        self.assertEqual(self.person.name, "bar")
+        self.assertEqual(self.person.account, self.account)

@@ -205,7 +205,7 @@ class StaticFileTests(TestCase):
         staticFile = static.File(self.mktemp())
         request = DummyRequest(['foo.bar'])
         child = staticFile.getChild("foo.bar", request)
-        self.assertEquals(child, staticFile.childNotFound)
+        self.assertEqual(child, staticFile.childNotFound)
 
 
     def test_staticFileDeletedRender(self):
@@ -220,7 +220,7 @@ class StaticFileTests(TestCase):
         d2 = self._render(staticFile.childNotFound, request2)
         def cbRendered2(ignored):
             def cbRendered(ignored):
-                self.assertEquals(''.join(request.written),
+                self.assertEqual(''.join(request.written),
                                   ''.join(request2.written))
             d.addCallback(cbRendered)
             return d
@@ -904,7 +904,7 @@ class RangeTests(TestCase):
         Asserts that a given log message occurred with an expected message.
         """
         logItem = self.catcher.pop()
-        self.assertEquals(logItem["message"][0], expected)
+        self.assertEqual(logItem["message"][0], expected)
         self.assertEqual(
             self.catcher, [], "An additional log occured: %r" % (logItem,))
 
@@ -1010,7 +1010,7 @@ class RangeTests(TestCase):
         """
         self.request.headers['range'] = 'bytes=0-43'
         self.resource.render(self.request)
-        self.assertEquals(len(''.join(self.request.written)), 44)
+        self.assertEqual(len(''.join(self.request.written)), 44)
 
 
     def test_invalidRangeRequest(self):
@@ -1024,9 +1024,9 @@ class RangeTests(TestCase):
         self.resource.render(self.request)
         expected = "Ignoring malformed Range header %r" % (range,)
         self._assertLogged(expected)
-        self.assertEquals(''.join(self.request.written), self.payload)
-        self.assertEquals(self.request.responseCode, http.OK)
-        self.assertEquals(
+        self.assertEqual(''.join(self.request.written), self.payload)
+        self.assertEqual(self.request.responseCode, http.OK)
+        self.assertEqual(
             self.request.outgoingHeaders['content-length'],
             str(len(self.payload)))
 
@@ -1040,8 +1040,8 @@ class RangeTests(TestCase):
         """
         sep = "\r\n--" + boundary
         parts = ''.join(body).split(sep)
-        self.assertEquals('', parts[0])
-        self.assertEquals('--\r\n', parts[-1])
+        self.assertEqual('', parts[0])
+        self.assertEqual('--\r\n', parts[-1])
         parsed_parts = []
         for part in parts[1:-1]:
             before, header1, header2, blank, partBody = part.split('\r\n', 4)
@@ -1069,12 +1069,12 @@ class RangeTests(TestCase):
         rangeHeaderValue = ','.join(["%s-%s"%(s,e) for (s, e) in startEnds])
         self.request.headers['range'] = 'bytes=' + rangeHeaderValue
         self.resource.render(self.request)
-        self.assertEquals(self.request.responseCode, http.PARTIAL_CONTENT)
+        self.assertEqual(self.request.responseCode, http.PARTIAL_CONTENT)
         boundary = re.match(
             '^multipart/byteranges; boundary="(.*)"$',
             self.request.outgoingHeaders['content-type']).group(1)
         parts = self.parseMultipartBody(''.join(self.request.written), boundary)
-        self.assertEquals(len(startEnds), len(parts))
+        self.assertEqual(len(startEnds), len(parts))
         for part, (s, e) in zip(parts, startEnds):
             self.assertEqual(self.resource.type, part['contentType'])
             start, end, size = part['contentRange']
@@ -1094,12 +1094,12 @@ class RangeTests(TestCase):
         rangeHeaderValue = ','.join(["%s-%s"%(s,e) for (s, e) in startEnds])
         self.request.headers['range'] = 'bytes=' + rangeHeaderValue
         self.resource.render(self.request)
-        self.assertEquals(self.request.responseCode, http.PARTIAL_CONTENT)
+        self.assertEqual(self.request.responseCode, http.PARTIAL_CONTENT)
         boundary = re.match(
             '^multipart/byteranges; boundary="(.*)"$',
             self.request.outgoingHeaders['content-type']).group(1)
         parts = self.parseMultipartBody(''.join(self.request.written), boundary)
-        self.assertEquals(len(startEnds), len(parts))
+        self.assertEqual(len(startEnds), len(parts))
         for part, (s, e) in zip(parts, startEnds):
             self.assertEqual(self.resource.type, part['contentType'])
             start, end, size = part['contentRange']
@@ -1116,12 +1116,12 @@ class RangeTests(TestCase):
         """
         self.request.headers['range'] = 'bytes=23-'
         self.resource.render(self.request)
-        self.assertEquals(''.join(self.request.written), self.payload[23:])
-        self.assertEquals(len(''.join(self.request.written)), 41)
-        self.assertEquals(self.request.responseCode, http.PARTIAL_CONTENT)
-        self.assertEquals(
+        self.assertEqual(''.join(self.request.written), self.payload[23:])
+        self.assertEqual(len(''.join(self.request.written)), 41)
+        self.assertEqual(self.request.responseCode, http.PARTIAL_CONTENT)
+        self.assertEqual(
             self.request.outgoingHeaders['content-range'], 'bytes 23-63/64')
-        self.assertEquals(self.request.outgoingHeaders['content-length'], '41')
+        self.assertEqual(self.request.outgoingHeaders['content-length'], '41')
 
 
     def test_implicitStart(self):
@@ -1132,12 +1132,12 @@ class RangeTests(TestCase):
         """
         self.request.headers['range'] = 'bytes=-17'
         self.resource.render(self.request)
-        self.assertEquals(''.join(self.request.written), self.payload[-17:])
-        self.assertEquals(len(''.join(self.request.written)), 17)
-        self.assertEquals(self.request.responseCode, http.PARTIAL_CONTENT)
-        self.assertEquals(
+        self.assertEqual(''.join(self.request.written), self.payload[-17:])
+        self.assertEqual(len(''.join(self.request.written)), 17)
+        self.assertEqual(self.request.responseCode, http.PARTIAL_CONTENT)
+        self.assertEqual(
             self.request.outgoingHeaders['content-range'], 'bytes 47-63/64')
-        self.assertEquals(self.request.outgoingHeaders['content-length'], '17')
+        self.assertEqual(self.request.outgoingHeaders['content-length'], '17')
 
 
     def test_explicitRange(self):
@@ -1149,11 +1149,11 @@ class RangeTests(TestCase):
         self.request.headers['range'] = 'bytes=3-43'
         self.resource.render(self.request)
         written = ''.join(self.request.written)
-        self.assertEquals(written, self.payload[3:44])
-        self.assertEquals(self.request.responseCode, http.PARTIAL_CONTENT)
-        self.assertEquals(
+        self.assertEqual(written, self.payload[3:44])
+        self.assertEqual(self.request.responseCode, http.PARTIAL_CONTENT)
+        self.assertEqual(
             self.request.outgoingHeaders['content-range'], 'bytes 3-43/64')
-        self.assertEquals(
+        self.assertEqual(
             str(len(written)), self.request.outgoingHeaders['content-length'])
 
 
@@ -1167,11 +1167,11 @@ class RangeTests(TestCase):
         self.request.headers['range'] = 'bytes=40-100'
         self.resource.render(self.request)
         written = ''.join(self.request.written)
-        self.assertEquals(written, self.payload[40:])
-        self.assertEquals(self.request.responseCode, http.PARTIAL_CONTENT)
-        self.assertEquals(
+        self.assertEqual(written, self.payload[40:])
+        self.assertEqual(self.request.responseCode, http.PARTIAL_CONTENT)
+        self.assertEqual(
             self.request.outgoingHeaders['content-range'], 'bytes 40-63/64')
-        self.assertEquals(
+        self.assertEqual(
             str(len(written)), self.request.outgoingHeaders['content-length'])
 
 
@@ -1183,9 +1183,9 @@ class RangeTests(TestCase):
         """
         self.request.headers['range'] = 'bytes=20-13'
         self.resource.render(self.request)
-        self.assertEquals(self.request.responseCode, http.OK)
-        self.assertEquals(''.join(self.request.written), self.payload)
-        self.assertEquals(
+        self.assertEqual(self.request.responseCode, http.OK)
+        self.assertEqual(''.join(self.request.written), self.payload)
+        self.assertEqual(
             self.request.outgoingHeaders['content-length'],
             str(len(self.payload)))
 
@@ -1199,12 +1199,12 @@ class RangeTests(TestCase):
         """
         self.request.headers['range'] = 'bytes=67-108'
         self.resource.render(self.request)
-        self.assertEquals(
+        self.assertEqual(
             self.request.responseCode, http.REQUESTED_RANGE_NOT_SATISFIABLE)
-        self.assertEquals(''.join(self.request.written), '')
-        self.assertEquals(self.request.outgoingHeaders['content-length'], '0')
+        self.assertEqual(''.join(self.request.written), '')
+        self.assertEqual(self.request.outgoingHeaders['content-length'], '0')
         # Sections 10.4.17 and 14.16
-        self.assertEquals(
+        self.assertEqual(
             self.request.outgoingHeaders['content-range'],
             'bytes */%d' % (len(self.payload),))
 
@@ -1352,7 +1352,7 @@ class DirectoryListerTest(TestCase):
                      "encoding": ""}  for i in xrange(5)]
         content = lister._buildTableContent(elements)
 
-        self.assertEquals(len(content), 5)
+        self.assertEqual(len(content), 5)
         self.assertTrue(content[0].startswith('<tr class="odd">'))
         self.assertTrue(content[1].startswith('<tr class="even">'))
         self.assertTrue(content[2].startswith('<tr class="odd">'))
@@ -1370,7 +1370,7 @@ class DirectoryListerTest(TestCase):
         lister = static.DirectoryLister(path.path)
         req = self._request('')
         lister.render(req)
-        self.assertEquals(req.outgoingHeaders['content-type'],
+        self.assertEqual(req.outgoingHeaders['content-type'],
                           "text/html; charset=utf-8")
 
 
@@ -1397,8 +1397,8 @@ class DirectoryListerTest(TestCase):
 
         lister = static.DirectoryLister(path.path, contentTypes=contentTypes)
         dirs, files = lister._getFilesAndDirectories(directory)
-        self.assertEquals(dirs, [])
-        self.assertEquals(files, [
+        self.assertEqual(dirs, [])
+        self.assertEqual(files, [
             {'encoding': '',
              'href': 'file1.txt',
              'size': '5B',
@@ -1437,8 +1437,8 @@ class DirectoryListerTest(TestCase):
         directory = os.listdir(path.path)
         directory.sort()
         dirs, files = lister._getFilesAndDirectories(directory)
-        self.assertEquals(dirs, [])
-        self.assertEquals(files, [])
+        self.assertEqual(dirs, [])
+        self.assertEqual(files, [])
 
     if getattr(os, "symlink", None) is None:
         test_brokenSymlink.skip = "No symlink support"
@@ -1456,7 +1456,7 @@ class DirectoryListerTest(TestCase):
         child = resource.getChildForRequest(lister, request)
         result = _render(child, request)
         def cbRendered(ignored):
-            self.assertEquals(request.responseCode, http.NOT_FOUND)
+            self.assertEqual(request.responseCode, http.NOT_FOUND)
         result.addCallback(cbRendered)
         return result
 
@@ -1467,9 +1467,9 @@ class DirectoryListerTest(TestCase):
         """
         path = FilePath(self.mktemp())
         lister = static.DirectoryLister(path.path)
-        self.assertEquals(repr(lister),
+        self.assertEqual(repr(lister),
                           "<DirectoryLister of %r>" % (path.path,))
-        self.assertEquals(str(lister),
+        self.assertEqual(str(lister),
                           "<DirectoryLister of %r>" % (path.path,))
 
     def test_formatFileSize(self):
@@ -1477,12 +1477,12 @@ class DirectoryListerTest(TestCase):
         L{static.formatFileSize} format an amount of bytes into a more readable
         format.
         """
-        self.assertEquals(static.formatFileSize(0), "0B")
-        self.assertEquals(static.formatFileSize(123), "123B")
-        self.assertEquals(static.formatFileSize(4567), "4K")
-        self.assertEquals(static.formatFileSize(8900000), "8M")
-        self.assertEquals(static.formatFileSize(1234000000), "1G")
-        self.assertEquals(static.formatFileSize(1234567890000), "1149G")
+        self.assertEqual(static.formatFileSize(0), "0B")
+        self.assertEqual(static.formatFileSize(123), "123B")
+        self.assertEqual(static.formatFileSize(4567), "4K")
+        self.assertEqual(static.formatFileSize(8900000), "8M")
+        self.assertEqual(static.formatFileSize(1234000000), "1G")
+        self.assertEqual(static.formatFileSize(1234567890000), "1149G")
 
 
 

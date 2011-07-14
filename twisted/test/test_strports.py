@@ -23,8 +23,8 @@ class DeprecatedParseTestCase(ParserTestCase):
     def parse(self, *a, **kw):
         result = strports.parse(*a, **kw)
         warnings = self.flushWarnings([self.parse])
-        self.assertEquals(len(warnings), 1)
-        self.assertEquals(
+        self.assertEqual(len(warnings), 1)
+        self.assertEqual(
             warnings[0]['message'],
             "twisted.application.strports.parse was deprecated "
             "in Twisted 10.2.0: in favor of twisted.internet.endpoints.serverFromString")
@@ -35,7 +35,7 @@ class DeprecatedParseTestCase(ParserTestCase):
         """
         Base numeric ports should be parsed as TCP.
         """
-        self.assertEquals(self.parse('80', self.f),
+        self.assertEqual(self.parse('80', self.f),
                          ('TCP', (80, self.f), {'interface':'', 'backlog':50}))
 
 
@@ -44,7 +44,7 @@ class DeprecatedParseTestCase(ParserTestCase):
         A collection of keyword arguments with no prefixed type, like 'port=80',
         will be parsed as keyword arguments to 'tcp'.
         """
-        self.assertEquals(self.parse('port=80', self.f),
+        self.assertEqual(self.parse('port=80', self.f),
                          ('TCP', (80, self.f), {'interface':'', 'backlog':50}))
 
 
@@ -69,10 +69,10 @@ class ServiceTestCase(TestCase):
 
         # See twisted.application.test.test_internet.TestEndpointService.
         # test_synchronousRaiseRaisesSynchronously
-        self.assertEquals(svc._raiseSynchronously, True)
+        self.assertEqual(svc._raiseSynchronously, True)
         self.assertIsInstance(svc.endpoint, TCP4ServerEndpoint)
         # Maybe we should implement equality for endpoints.
-        self.assertEquals(svc.endpoint._port, aGoodPort)
+        self.assertEqual(svc.endpoint._port, aGoodPort)
         self.assertIdentical(svc.factory, aFactory)
         self.assertIdentical(svc.endpoint._reactor, reactor)
 
@@ -96,23 +96,23 @@ class ServiceTestCase(TestCase):
         svc = strports.service("8080", None, "unix")
         self.assertIsInstance(svc.endpoint, UNIXServerEndpoint)
         warnings = self.flushWarnings([self.test_serviceDeprecatedDefault])
-        self.assertEquals(warnings[0]['category'], DeprecationWarning)
-        self.assertEquals(
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(
             warnings[0]['message'],
             "The 'default' parameter was deprecated in Twisted 10.2.0.  "
             "Use qualified endpoint descriptions; for example, 'tcp:8080'.")
-        self.assertEquals(len(warnings), 1)
+        self.assertEqual(len(warnings), 1)
 
         # Almost the same case, but slightly tricky - explicitly passing the old
         # default value, None, also must trigger a deprecation warning.
         svc = strports.service("tcp:8080", None, None)
         self.assertIsInstance(svc.endpoint, TCP4ServerEndpoint)
         warnings = self.flushWarnings([self.test_serviceDeprecatedDefault])
-        self.assertEquals(warnings[0]['category'], DeprecationWarning)
-        self.assertEquals(
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(
             warnings[0]['message'],
             "The 'default' parameter was deprecated in Twisted 10.2.0.")
-        self.assertEquals(len(warnings), 1)
+        self.assertEqual(len(warnings), 1)
 
 
     def test_serviceDeprecatedUnqualified(self):
@@ -123,11 +123,11 @@ class ServiceTestCase(TestCase):
         self.assertIsInstance(svc.endpoint, TCP4ServerEndpoint)
         warnings = self.flushWarnings(
             [self.test_serviceDeprecatedUnqualified])
-        self.assertEquals(warnings[0]['category'], DeprecationWarning)
-        self.assertEquals(
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(
             warnings[0]['message'],
             "Unqualified strport description passed to 'service'."
             "Use qualified endpoint descriptions; for example, 'tcp:8080'.")
-        self.assertEquals(len(warnings), 1)
+        self.assertEqual(len(warnings), 1)
 
 

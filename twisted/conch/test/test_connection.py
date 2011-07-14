@@ -235,20 +235,20 @@ class ConnectionTestCase(unittest.TestCase):
         messages.
         """
         self.conn.ssh_GLOBAL_REQUEST(common.NS('TestGlobal') + '\xff')
-        self.assertEquals(self.transport.packets,
+        self.assertEqual(self.transport.packets,
                 [(connection.MSG_REQUEST_SUCCESS, '')])
         self.transport.packets = []
         self.conn.ssh_GLOBAL_REQUEST(common.NS('TestData') + '\xff' +
                 'test data')
-        self.assertEquals(self.transport.packets,
+        self.assertEqual(self.transport.packets,
                 [(connection.MSG_REQUEST_SUCCESS, 'test data')])
         self.transport.packets = []
         self.conn.ssh_GLOBAL_REQUEST(common.NS('TestBad') + '\xff')
-        self.assertEquals(self.transport.packets,
+        self.assertEqual(self.transport.packets,
                 [(connection.MSG_REQUEST_FAILURE, '')])
         self.transport.packets = []
         self.conn.ssh_GLOBAL_REQUEST(common.NS('TestGlobal') + '\x00')
-        self.assertEquals(self.transport.packets, [])
+        self.assertEqual(self.transport.packets, [])
 
     def test_REQUEST_SUCCESS(self):
         """
@@ -258,7 +258,7 @@ class ConnectionTestCase(unittest.TestCase):
         d = self.conn.sendGlobalRequest('request', 'data', True)
         self.conn.ssh_REQUEST_SUCCESS('data')
         def check(data):
-            self.assertEquals(data, 'data')
+            self.assertEqual(data, 'data')
         d.addCallback(check)
         d.addErrback(self.fail)
         return d
@@ -271,7 +271,7 @@ class ConnectionTestCase(unittest.TestCase):
         d = self.conn.sendGlobalRequest('request', 'data', True)
         self.conn.ssh_REQUEST_FAILURE('data')
         def check(f):
-            self.assertEquals(f.value.data, 'data')
+            self.assertEqual(f.value.data, 'data')
         d.addCallback(self.fail)
         d.addErrback(check)
         return d
@@ -285,12 +285,12 @@ class ConnectionTestCase(unittest.TestCase):
         self.conn.ssh_CHANNEL_OPEN(common.NS('TestChannel') +
                 '\x00\x00\x00\x01' * 4)
         self.assertTrue(self.conn.channel.gotOpen)
-        self.assertEquals(self.conn.channel.conn, self.conn)
-        self.assertEquals(self.conn.channel.data, '\x00\x00\x00\x01')
-        self.assertEquals(self.conn.channel.specificData, '\x00\x00\x00\x01')
-        self.assertEquals(self.conn.channel.remoteWindowLeft, 1)
-        self.assertEquals(self.conn.channel.remoteMaxPacket, 1)
-        self.assertEquals(self.transport.packets,
+        self.assertEqual(self.conn.channel.conn, self.conn)
+        self.assertEqual(self.conn.channel.data, '\x00\x00\x00\x01')
+        self.assertEqual(self.conn.channel.specificData, '\x00\x00\x00\x01')
+        self.assertEqual(self.conn.channel.remoteWindowLeft, 1)
+        self.assertEqual(self.conn.channel.remoteMaxPacket, 1)
+        self.assertEqual(self.transport.packets,
                 [(connection.MSG_CHANNEL_OPEN_CONFIRMATION,
                     '\x00\x00\x00\x01\x00\x00\x00\x00\x00\x02\x00\x00'
                     '\x00\x00\x80\x00')])
@@ -298,7 +298,7 @@ class ConnectionTestCase(unittest.TestCase):
         self.conn.ssh_CHANNEL_OPEN(common.NS('BadChannel') +
                 '\x00\x00\x00\x02' * 4)
         self.flushLoggedErrors()
-        self.assertEquals(self.transport.packets,
+        self.assertEqual(self.transport.packets,
                 [(connection.MSG_CHANNEL_OPEN_FAILURE,
                     '\x00\x00\x00\x02\x00\x00\x00\x03' + common.NS(
                     'unknown channel') + common.NS(''))])
@@ -306,7 +306,7 @@ class ConnectionTestCase(unittest.TestCase):
         self.conn.ssh_CHANNEL_OPEN(common.NS('ErrorChannel') +
                 '\x00\x00\x00\x02' * 4)
         self.flushLoggedErrors()
-        self.assertEquals(self.transport.packets,
+        self.assertEqual(self.transport.packets,
                 [(connection.MSG_CHANNEL_OPEN_FAILURE,
                     '\x00\x00\x00\x02\x00\x00\x00\x02' + common.NS(
                     'unknown failure') + common.NS(''))])
@@ -322,10 +322,10 @@ class ConnectionTestCase(unittest.TestCase):
         self.conn.ssh_CHANNEL_OPEN(
             common.NS('conch-error-args') + '\x00\x00\x00\x01' * 4)
         errors = self.flushLoggedErrors(error.ConchError)
-        self.assertEquals(
+        self.assertEqual(
             len(errors), 1, "Expected one error, got: %r" % (errors,))
-        self.assertEquals(errors[0].value.args, (123, "error args in wrong order"))
-        self.assertEquals(
+        self.assertEqual(errors[0].value.args, (123, "error args in wrong order"))
+        self.assertEqual(
             self.transport.packets,
             [(connection.MSG_CHANNEL_OPEN_FAILURE,
               # The response includes some bytes which identifying the
@@ -365,12 +365,12 @@ class ConnectionTestCase(unittest.TestCase):
         channel = TestChannel()
         self.conn.openChannel(channel)
         self.conn.ssh_CHANNEL_OPEN_CONFIRMATION('\x00\x00\x00\x00'*5)
-        self.assertEquals(channel.remoteWindowLeft, 0)
-        self.assertEquals(channel.remoteMaxPacket, 0)
-        self.assertEquals(channel.specificData, '\x00\x00\x00\x00')
-        self.assertEquals(self.conn.channelsToRemoteChannel[channel],
+        self.assertEqual(channel.remoteWindowLeft, 0)
+        self.assertEqual(channel.remoteMaxPacket, 0)
+        self.assertEqual(channel.specificData, '\x00\x00\x00\x00')
+        self.assertEqual(self.conn.channelsToRemoteChannel[channel],
                 0)
-        self.assertEquals(self.conn.localToRemoteChannel[0], 0)
+        self.assertEqual(self.conn.localToRemoteChannel[0], 0)
 
     def test_CHANNEL_OPEN_FAILURE(self):
         """
@@ -381,8 +381,8 @@ class ConnectionTestCase(unittest.TestCase):
         self.conn.openChannel(channel)
         self.conn.ssh_CHANNEL_OPEN_FAILURE('\x00\x00\x00\x00\x00\x00\x00'
                 '\x01' + common.NS('failure!'))
-        self.assertEquals(channel.openFailureReason.args, ('failure!', 1))
-        self.assertEquals(self.conn.channels.get(channel), None)
+        self.assertEqual(channel.openFailureReason.args, ('failure!', 1))
+        self.assertEqual(self.conn.channels.get(channel), None)
 
 
     def test_CHANNEL_WINDOW_ADJUST(self):
@@ -395,7 +395,7 @@ class ConnectionTestCase(unittest.TestCase):
         oldWindowSize = channel.remoteWindowLeft
         self.conn.ssh_CHANNEL_WINDOW_ADJUST('\x00\x00\x00\x00\x00\x00\x00'
                 '\x01')
-        self.assertEquals(channel.remoteWindowLeft, oldWindowSize + 1)
+        self.assertEqual(channel.remoteWindowLeft, oldWindowSize + 1)
 
     def test_CHANNEL_DATA(self):
         """
@@ -405,23 +405,23 @@ class ConnectionTestCase(unittest.TestCase):
         channel = TestChannel(localWindow=6, localMaxPacket=5)
         self._openChannel(channel)
         self.conn.ssh_CHANNEL_DATA('\x00\x00\x00\x00' + common.NS('data'))
-        self.assertEquals(channel.inBuffer, ['data'])
-        self.assertEquals(self.transport.packets,
+        self.assertEqual(channel.inBuffer, ['data'])
+        self.assertEqual(self.transport.packets,
                 [(connection.MSG_CHANNEL_WINDOW_ADJUST, '\x00\x00\x00\xff'
                     '\x00\x00\x00\x04')])
         self.transport.packets = []
         longData = 'a' * (channel.localWindowLeft + 1)
         self.conn.ssh_CHANNEL_DATA('\x00\x00\x00\x00' + common.NS(longData))
-        self.assertEquals(channel.inBuffer, ['data'])
-        self.assertEquals(self.transport.packets,
+        self.assertEqual(channel.inBuffer, ['data'])
+        self.assertEqual(self.transport.packets,
                 [(connection.MSG_CHANNEL_CLOSE, '\x00\x00\x00\xff')])
         channel = TestChannel()
         self._openChannel(channel)
         bigData = 'a' * (channel.localMaxPacket + 1)
         self.transport.packets = []
         self.conn.ssh_CHANNEL_DATA('\x00\x00\x00\x01' + common.NS(bigData))
-        self.assertEquals(channel.inBuffer, [])
-        self.assertEquals(self.transport.packets,
+        self.assertEqual(channel.inBuffer, [])
+        self.assertEqual(self.transport.packets,
                 [(connection.MSG_CHANNEL_CLOSE, '\x00\x00\x00\xff')])
 
     def test_CHANNEL_EXTENDED_DATA(self):
@@ -433,16 +433,16 @@ class ConnectionTestCase(unittest.TestCase):
         self._openChannel(channel)
         self.conn.ssh_CHANNEL_EXTENDED_DATA('\x00\x00\x00\x00\x00\x00\x00'
                                             '\x00' + common.NS('data'))
-        self.assertEquals(channel.extBuffer, [(0, 'data')])
-        self.assertEquals(self.transport.packets,
+        self.assertEqual(channel.extBuffer, [(0, 'data')])
+        self.assertEqual(self.transport.packets,
                 [(connection.MSG_CHANNEL_WINDOW_ADJUST, '\x00\x00\x00\xff'
                     '\x00\x00\x00\x04')])
         self.transport.packets = []
         longData = 'a' * (channel.localWindowLeft + 1)
         self.conn.ssh_CHANNEL_EXTENDED_DATA('\x00\x00\x00\x00\x00\x00\x00'
                                             '\x00' + common.NS(longData))
-        self.assertEquals(channel.extBuffer, [(0, 'data')])
-        self.assertEquals(self.transport.packets,
+        self.assertEqual(channel.extBuffer, [(0, 'data')])
+        self.assertEqual(self.transport.packets,
                 [(connection.MSG_CHANNEL_CLOSE, '\x00\x00\x00\xff')])
         channel = TestChannel()
         self._openChannel(channel)
@@ -450,8 +450,8 @@ class ConnectionTestCase(unittest.TestCase):
         self.transport.packets = []
         self.conn.ssh_CHANNEL_EXTENDED_DATA('\x00\x00\x00\x01\x00\x00\x00'
                                             '\x00' + common.NS(bigData))
-        self.assertEquals(channel.extBuffer, [])
-        self.assertEquals(self.transport.packets,
+        self.assertEqual(channel.extBuffer, [])
+        self.assertEqual(self.transport.packets,
                 [(connection.MSG_CHANNEL_CLOSE, '\x00\x00\x00\xff')])
 
     def test_CHANNEL_EOF(self):
@@ -484,11 +484,11 @@ class ConnectionTestCase(unittest.TestCase):
         self._openChannel(channel)
         self.conn.ssh_CHANNEL_REQUEST('\x00\x00\x00\x00' + common.NS('test')
                 + '\x00')
-        self.assertEquals(channel.numberRequests, 1)
+        self.assertEqual(channel.numberRequests, 1)
         d = self.conn.ssh_CHANNEL_REQUEST('\x00\x00\x00\x00' + common.NS(
             'test') + '\xff' + 'data')
         def check(result):
-            self.assertEquals(self.transport.packets,
+            self.assertEqual(self.transport.packets,
                     [(connection.MSG_CHANNEL_SUCCESS, '\x00\x00\x00\xff')])
         d.addCallback(check)
         return d
@@ -502,7 +502,7 @@ class ConnectionTestCase(unittest.TestCase):
         d = self.conn.ssh_CHANNEL_REQUEST('\x00\x00\x00\x00' + common.NS(
             'test') + '\xff')
         def check(result):
-            self.assertEquals(self.transport.packets,
+            self.assertEqual(self.transport.packets,
                     [(connection.MSG_CHANNEL_FAILURE, '\x00\x00\x00\xff'
                         )])
         d.addCallback(self.fail)
@@ -532,7 +532,7 @@ class ConnectionTestCase(unittest.TestCase):
         d = self.conn.sendRequest(channel, 'test', '', True)
         self.conn.ssh_CHANNEL_FAILURE('\x00\x00\x00\x00')
         def check(result):
-            self.assertEquals(result.value.value, 'channel request failed')
+            self.assertEqual(result.value.value, 'channel request failed')
         d.addCallback(self.fail)
         d.addErrback(check)
         return d
@@ -545,12 +545,12 @@ class ConnectionTestCase(unittest.TestCase):
         # must be added to prevent errbacking during teardown
         d.addErrback(lambda failure: None)
         self.conn.sendGlobalRequest('noReply', '', False)
-        self.assertEquals(self.transport.packets,
+        self.assertEqual(self.transport.packets,
                 [(connection.MSG_GLOBAL_REQUEST, common.NS('wantReply') +
                     '\xffdata'),
                  (connection.MSG_GLOBAL_REQUEST, common.NS('noReply') +
                      '\x00')])
-        self.assertEquals(self.conn.deferreds, {'global':[d]})
+        self.assertEqual(self.conn.deferreds, {'global':[d]})
 
     def test_openChannel(self):
         """
@@ -558,11 +558,11 @@ class ConnectionTestCase(unittest.TestCase):
         """
         channel = TestChannel()
         self.conn.openChannel(channel, 'aaaa')
-        self.assertEquals(self.transport.packets,
+        self.assertEqual(self.transport.packets,
                 [(connection.MSG_CHANNEL_OPEN, common.NS('TestChannel') +
                     '\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x80\x00aaaa')])
-        self.assertEquals(channel.id, 0)
-        self.assertEquals(self.conn.localChannelID, 1)
+        self.assertEqual(channel.id, 0)
+        self.assertEqual(self.conn.localChannelID, 1)
 
     def test_sendRequest(self):
         """
@@ -576,12 +576,12 @@ class ConnectionTestCase(unittest.TestCase):
         self.conn.sendRequest(channel, 'test2', '', False)
         channel.localClosed = True # emulate sending a close message
         self.conn.sendRequest(channel, 'test3', '', True)
-        self.assertEquals(self.transport.packets,
+        self.assertEqual(self.transport.packets,
                 [(connection.MSG_CHANNEL_REQUEST, '\x00\x00\x00\xff' +
                     common.NS('test') + '\x01test'),
                  (connection.MSG_CHANNEL_REQUEST, '\x00\x00\x00\xff' +
                      common.NS('test2') + '\x00')])
-        self.assertEquals(self.conn.deferreds[0], [d])
+        self.assertEqual(self.conn.deferreds[0], [d])
 
     def test_adjustWindow(self):
         """
@@ -592,11 +592,11 @@ class ConnectionTestCase(unittest.TestCase):
         self._openChannel(channel)
         channel.localWindowLeft = 0
         self.conn.adjustWindow(channel, 1)
-        self.assertEquals(channel.localWindowLeft, 1)
+        self.assertEqual(channel.localWindowLeft, 1)
         channel.localClosed = True
         self.conn.adjustWindow(channel, 2)
-        self.assertEquals(channel.localWindowLeft, 1)
-        self.assertEquals(self.transport.packets,
+        self.assertEqual(channel.localWindowLeft, 1)
+        self.assertEqual(self.transport.packets,
                 [(connection.MSG_CHANNEL_WINDOW_ADJUST, '\x00\x00\x00\xff'
                     '\x00\x00\x00\x01')])
 
@@ -609,7 +609,7 @@ class ConnectionTestCase(unittest.TestCase):
         self.conn.sendData(channel, 'a')
         channel.localClosed = True
         self.conn.sendData(channel, 'b')
-        self.assertEquals(self.transport.packets,
+        self.assertEqual(self.transport.packets,
                 [(connection.MSG_CHANNEL_DATA, '\x00\x00\x00\xff' +
                     common.NS('a'))])
 
@@ -622,7 +622,7 @@ class ConnectionTestCase(unittest.TestCase):
         self.conn.sendExtendedData(channel, 1, 'test')
         channel.localClosed = True
         self.conn.sendExtendedData(channel, 2, 'test2')
-        self.assertEquals(self.transport.packets,
+        self.assertEqual(self.transport.packets,
                 [(connection.MSG_CHANNEL_EXTENDED_DATA, '\x00\x00\x00\xff' +
                     '\x00\x00\x00\x01' + common.NS('test'))])
 
@@ -633,11 +633,11 @@ class ConnectionTestCase(unittest.TestCase):
         channel = TestChannel()
         self._openChannel(channel)
         self.conn.sendEOF(channel)
-        self.assertEquals(self.transport.packets,
+        self.assertEqual(self.transport.packets,
                 [(connection.MSG_CHANNEL_EOF, '\x00\x00\x00\xff')])
         channel.localClosed = True
         self.conn.sendEOF(channel)
-        self.assertEquals(self.transport.packets,
+        self.assertEqual(self.transport.packets,
                 [(connection.MSG_CHANNEL_EOF, '\x00\x00\x00\xff')])
 
     def test_sendClose(self):
@@ -648,10 +648,10 @@ class ConnectionTestCase(unittest.TestCase):
         self._openChannel(channel)
         self.conn.sendClose(channel)
         self.assertTrue(channel.localClosed)
-        self.assertEquals(self.transport.packets,
+        self.assertEqual(self.transport.packets,
                 [(connection.MSG_CHANNEL_CLOSE, '\x00\x00\x00\xff')])
         self.conn.sendClose(channel)
-        self.assertEquals(self.transport.packets,
+        self.assertEqual(self.transport.packets,
                 [(connection.MSG_CHANNEL_CLOSE, '\x00\x00\x00\xff')])
 
         channel2 = TestChannel()
@@ -667,9 +667,9 @@ class ConnectionTestCase(unittest.TestCase):
         test_CHANNEL_OPEN.
         """
         channel = self.conn.getChannel('TestChannel', 50, 30, 'data')
-        self.assertEquals(channel.data, 'data')
-        self.assertEquals(channel.remoteWindowLeft, 50)
-        self.assertEquals(channel.remoteMaxPacket, 30)
+        self.assertEqual(channel.data, 'data')
+        self.assertEqual(channel.remoteWindowLeft, 50)
+        self.assertEqual(channel.remoteMaxPacket, 30)
         self.assertRaises(error.ConchError, self.conn.getChannel,
                 'BadChannel', 50, 30, 'data')
 
@@ -679,7 +679,7 @@ class ConnectionTestCase(unittest.TestCase):
         """
         del self.transport.avatar
         self.assertTrue(self.conn.gotGlobalRequest('TestGlobal', 'data'))
-        self.assertEquals(self.conn.gotGlobalRequest('Test-Data', 'data'),
+        self.assertEqual(self.conn.gotGlobalRequest('Test-Data', 'data'),
                 (True, 'data'))
         self.assertFalse(self.conn.gotGlobalRequest('BadGlobal', 'data'))
 

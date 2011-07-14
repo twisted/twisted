@@ -494,7 +494,7 @@ class ProcessTestCase(unittest.TestCase):
         p.transport.closeStdin()
 
         def processEnded(ign):
-            self.assertEquals(p.outF.getvalue(), "hello, worldabc123",
+            self.assertEqual(p.outF.getvalue(), "hello, worldabc123",
                               "Output follows:\n"
                               "%s\n"
                               "Error message from process_twisted follows:\n"
@@ -534,12 +534,12 @@ class ProcessTestCase(unittest.TestCase):
         p.deferred = d
         reactor.spawnProcess(p, exe, [exe, "-u", scriptPath], env=None)
         def check(ignored):
-            self.assertEquals(p.stages, [1, 2, 3, 4, 5])
+            self.assertEqual(p.stages, [1, 2, 3, 4, 5])
             f = p.reason
             f.trap(error.ProcessTerminated)
-            self.assertEquals(f.value.exitCode, 23)
+            self.assertEqual(f.value.exitCode, 23)
             # would .signal be available on non-posix?
-            # self.assertEquals(f.value.signal, None)
+            # self.assertEqual(f.value.signal, None)
             self.assertRaises(
                 error.ProcessExitedAlready, p.transport.signalProcess, 'INT')
             try:
@@ -555,11 +555,11 @@ class ProcessTestCase(unittest.TestCase):
 
         def _check(results, protocols):
             for p in protocols:
-                self.assertEquals(p.stages, [1, 2, 3, 4, 5], "[%d] stages = %s" % (id(p.transport), str(p.stages)))
+                self.assertEqual(p.stages, [1, 2, 3, 4, 5], "[%d] stages = %s" % (id(p.transport), str(p.stages)))
                 # test status code
                 f = p.reason
                 f.trap(error.ProcessTerminated)
-                self.assertEquals(f.value.exitCode, 23)
+                self.assertEqual(f.value.exitCode, 23)
 
         exe = sys.executable
         scriptPath = util.sibpath(__file__, "process_tester.py")
@@ -594,7 +594,7 @@ class ProcessTestCase(unittest.TestCase):
         def asserts(ignored):
             self.failIf(p.failure, p.failure)
             self.failUnless(hasattr(p, 'buffer'))
-            self.assertEquals(len(''.join(p.buffer)), len(p.s * p.n))
+            self.assertEqual(len(''.join(p.buffer)), len(p.s * p.n))
 
         def takedownProcess(err):
             p.transport.closeStdin()
@@ -613,9 +613,9 @@ class ProcessTestCase(unittest.TestCase):
                              path=None)
 
         def processEnded(ign):
-            self.assertEquals(p.errF.getvalue(), "")
+            self.assertEqual(p.errF.getvalue(), "")
             recvdArgs = p.outF.getvalue().splitlines()
-            self.assertEquals(recvdArgs, args)
+            self.assertEqual(recvdArgs, args)
         return d.addCallback(processEnded)
 
 
@@ -953,7 +953,7 @@ class FDTest(unittest.TestCase):
                              childFDs={1:"r", 2:2},
                              )
         def processEnded(ign):
-            self.failUnlessEqual(p.outF.getvalue(),
+            self.assertEqual(p.outF.getvalue(),
                                  "here is some text\ngoodbye\n")
         return d.addCallback(processEnded)
 
@@ -1017,8 +1017,8 @@ class PosixProcessBase:
                              usePTY=self.usePTY)
         def check(ignored):
             p.reason.trap(error.ProcessDone)
-            self.assertEquals(p.reason.value.exitCode, 0)
-            self.assertEquals(p.reason.value.signal, None)
+            self.assertEqual(p.reason.value.exitCode, 0)
+            self.assertEqual(p.reason.value.signal, None)
         d.addCallback(check)
         return d
 
@@ -1038,8 +1038,8 @@ class PosixProcessBase:
 
         def check(ignored):
             p.reason.trap(error.ProcessTerminated)
-            self.assertEquals(p.reason.value.exitCode, 1)
-            self.assertEquals(p.reason.value.signal, None)
+            self.assertEqual(p.reason.value.exitCode, 1)
+            self.assertEqual(p.reason.value.signal, None)
         d.addCallback(check)
         return d
 
@@ -1634,7 +1634,7 @@ class MockProcessTestCase(unittest.TestCase):
                                  usePTY=False)
         except SystemError:
             self.assert_(self.mockos.exited)
-            self.assertEquals(
+            self.assertEqual(
                 self.mockos.actions, [("fork", False), "exec", "exit"])
         else:
             self.fail("Should not be here")
@@ -1658,7 +1658,7 @@ class MockProcessTestCase(unittest.TestCase):
                              usePTY=False)
         # It should close the first read pipe, and the 2 last write pipes
         self.assertEqual(set(self.mockos.closed), set([-1, -4, -6]))
-        self.assertEquals(self.mockos.actions, [("fork", False), "waitpid"])
+        self.assertEqual(self.mockos.actions, [("fork", False), "waitpid"])
 
 
     def test_mockForkInParentGarbageCollectorEnabled(self):
@@ -1699,7 +1699,7 @@ class MockProcessTestCase(unittest.TestCase):
                                  usePTY=True)
         except SystemError:
             self.assert_(self.mockos.exited)
-            self.assertEquals(
+            self.assertEqual(
                 self.mockos.actions, [("fork", False), "exec", "exit"])
         else:
             self.fail("Should not be here")
@@ -1809,7 +1809,7 @@ class MockProcessTestCase(unittest.TestCase):
                                  usePTY=False)
         except SystemError:
             self.assert_(self.mockos.exited)
-            self.assertEquals(
+            self.assertEqual(
                 self.mockos.actions, [("fork", False), "exec", "exit"])
             # Check that fd have been closed
             self.assertIn(0, self.mockos.closed)
@@ -1835,7 +1835,7 @@ class MockProcessTestCase(unittest.TestCase):
                                  usePTY=False, uid=8080)
         except SystemError:
             self.assert_(self.mockos.exited)
-            self.assertEquals(self.mockos.actions,
+            self.assertEqual(self.mockos.actions,
                 [('setuid', 0), ('setgid', 0), ('fork', False),
                   ('switchuid', 8080, 1234), 'exec', 'exit'])
         else:
@@ -1854,7 +1854,7 @@ class MockProcessTestCase(unittest.TestCase):
         p = TrivialProcessProtocol(d)
         reactor.spawnProcess(p, cmd, ['ouch'], env=None,
                              usePTY=False, uid=8080)
-        self.assertEquals(self.mockos.actions,
+        self.assertEqual(self.mockos.actions,
             [('setuid', 0), ('setgid', 0), ('fork', False),
              ('setregid', 1235, 1234), ('setreuid', 1237, 1236), 'waitpid'])
 
@@ -1874,7 +1874,7 @@ class MockProcessTestCase(unittest.TestCase):
                                  usePTY=True, uid=8081)
         except SystemError:
             self.assert_(self.mockos.exited)
-            self.assertEquals(self.mockos.actions,
+            self.assertEqual(self.mockos.actions,
                 [('setuid', 0), ('setgid', 0), ('fork', False),
                   ('switchuid', 8081, 1234), 'exec', 'exit'])
         else:
@@ -1898,7 +1898,7 @@ class MockProcessTestCase(unittest.TestCase):
                                  usePTY=True, uid=8080)
         finally:
             process.PTYProcess = oldPTYProcess
-        self.assertEquals(self.mockos.actions,
+        self.assertEqual(self.mockos.actions,
             [('setuid', 0), ('setgid', 0), ('fork', False),
              ('setregid', 1235, 1234), ('setreuid', 1237, 1236), 'waitpid'])
 
@@ -1915,12 +1915,12 @@ class MockProcessTestCase(unittest.TestCase):
         p = TrivialProcessProtocol(d)
         proc = reactor.spawnProcess(p, cmd, ['ouch'], env=None,
                              usePTY=False)
-        self.assertEquals(self.mockos.actions, [("fork", False), "waitpid"])
+        self.assertEqual(self.mockos.actions, [("fork", False), "waitpid"])
 
         self.mockos.raiseWaitPid = OSError()
         proc.reapProcess()
         errors = self.flushLoggedErrors()
-        self.assertEquals(len(errors), 1)
+        self.assertEqual(len(errors), 1)
         errors[0].trap(OSError)
 
 
@@ -1937,7 +1937,7 @@ class MockProcessTestCase(unittest.TestCase):
         p = TrivialProcessProtocol(d)
         proc = reactor.spawnProcess(p, cmd, ['ouch'], env=None,
                                     usePTY=False)
-        self.assertEquals(self.mockos.actions, [("fork", False), "waitpid"])
+        self.assertEqual(self.mockos.actions, [("fork", False), "waitpid"])
 
         self.mockos.raiseWaitPid = OSError()
         self.mockos.raiseWaitPid.errno = errno.ECHILD
@@ -2000,7 +2000,7 @@ class PosixProcessTestCase(unittest.TestCase, PosixProcessBase):
                              usePTY=self.usePTY)
 
         def processEnded(ign):
-            self.assertEquals(value, p.errF.getvalue())
+            self.assertEqual(value, p.errF.getvalue())
         return d.addCallback(processEnded)
 
 
@@ -2018,7 +2018,7 @@ class PosixProcessTestCase(unittest.TestCase, PosixProcessBase):
             f = p.outF
             f.seek(0, 0)
             gf = gzip.GzipFile(fileobj=f)
-            self.assertEquals(gf.read(), s)
+            self.assertEqual(gf.read(), s)
         return d.addCallback(processEnded)
 
 
@@ -2047,7 +2047,7 @@ class PosixProcessTestCasePTY(unittest.TestCase, PosixProcessBase):
         def processEnded(ign):
             self.assertRaises(
                 error.ProcessExitedAlready, p.transport.signalProcess, 'HUP')
-            self.assertEquals(
+            self.assertEqual(
                 p.outF.getvalue(),
                 "hello world!\r\nhello world!\r\n",
                 "Error message from process_tty follows:\n\n%s\n\n" % p.outF.getvalue())
@@ -2102,8 +2102,8 @@ class Win32ProcessTestCase(unittest.TestCase):
         p.transport.closeStdin()
 
         def processEnded(ign):
-            self.assertEquals(p.errF.getvalue(), "err\nerr\n")
-            self.assertEquals(p.outF.getvalue(), "out\nhello, world\nout\n")
+            self.assertEqual(p.errF.getvalue(), "err\nerr\n")
+            self.assertEqual(p.outF.getvalue(), "out\nhello, world\nout\n")
         return d.addCallback(processEnded)
 
 
@@ -2227,7 +2227,7 @@ class Win32UnicodeEnvironmentTest(unittest.TestCase):
 
         p = GetEnvironmentDictionary.run(reactor, [], {})
         def gotEnvironment(environ):
-            self.assertEquals(
+            self.assertEqual(
                 environ[self.goodKey.encode('ascii')],
                 self.goodValue.encode('ascii'))
         return p.getResult().addCallback(gotEnvironment)
@@ -2261,11 +2261,11 @@ class Dumbwin32procPidTest(unittest.TestCase):
                                   cmd,
                                   {},
                                   None)
-        self.assertEquals(42, p.pid)
-        self.assertEquals("<Process pid=42>", repr(p))
+        self.assertEqual(42, p.pid)
+        self.assertEqual("<Process pid=42>", repr(p))
 
         def pidCompleteCb(result):
-            self.assertEquals(None, p.pid)
+            self.assertEqual(None, p.pid)
         return d.addCallback(pidCompleteCb)
 
 
@@ -2339,7 +2339,7 @@ class UtilTestCase(unittest.TestCase):
                          j(self.bazfoo, "executable")]
         if runtime.platform.isWindows():
             expectedPaths.append(j(self.bazbar, "executable"))
-        self.assertEquals(paths, expectedPaths)
+        self.assertEqual(paths, expectedPaths)
 
 
     def testWhichPathExt(self):
@@ -2358,7 +2358,7 @@ class UtilTestCase(unittest.TestCase):
                          j(self.bazfoo, "executable.bin")]
         if runtime.platform.isWindows():
             expectedPaths.append(j(self.bazbar, "executable"))
-        self.assertEquals(paths, expectedPaths)
+        self.assertEqual(paths, expectedPaths)
 
 
 
@@ -2432,7 +2432,7 @@ class ClosingPipes(unittest.TestCase):
         # child must not get past that write without raising
         self.assertNotEquals(
             reason.exitCode, 42, 'process reason was %r' % reason)
-        self.assertEquals(p.output, '')
+        self.assertEqual(p.output, '')
         return p.errput
 
 
@@ -2457,7 +2457,7 @@ class ClosingPipes(unittest.TestCase):
         def _check(errput):
             # there should be no stderr open, so nothing for it to
             # write the error to.
-            self.assertEquals(errput, '')
+            self.assertEqual(errput, '')
         d.addCallback(_check)
         return d
 

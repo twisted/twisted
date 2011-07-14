@@ -145,7 +145,7 @@ class StructureAssertingMixin(object):
                 self.assertStructure(child, dirDict[x])
             else:
                 a = child.getContent().replace(os.linesep, '\n')
-                self.assertEquals(a, dirDict[x], child.path)
+                self.assertEqual(a, dirDict[x], child.path)
             children.remove(x)
         if children:
             self.fail("There were extra children in %s: %s"
@@ -203,7 +203,7 @@ class ChangeVersionTest(TestCase, StructureAssertingMixin):
         now = date.today()
         major = now.year - VERSION_OFFSET
         version = Version("twisted", major, 9, 0)
-        self.assertEquals(getNextVersion(version, now=now),
+        self.assertEqual(getNextVersion(version, now=now),
                           Version("twisted", major, 10, 0))
 
 
@@ -215,7 +215,7 @@ class ChangeVersionTest(TestCase, StructureAssertingMixin):
         now = date.today()
         major = now.year - VERSION_OFFSET
         version = Version("twisted", major - 1, 9, 0)
-        self.assertEquals(getNextVersion(version, now=now),
+        self.assertEqual(getNextVersion(version, now=now),
                           Version("twisted", major, 0, 0))
 
 
@@ -396,7 +396,7 @@ class ProjectTest(TestCase):
         """
         version = Version('foo', 2, 1, 0)
         project = self.makeProject(version)
-        self.assertEquals(project.getVersion(), version)
+        self.assertEqual(project.getVersion(), version)
 
 
     def test_updateVersion(self):
@@ -407,8 +407,8 @@ class ProjectTest(TestCase):
         project = self.makeProject(Version("bar", 2, 1, 0))
         newVersion = Version("bar", 3, 2, 9)
         project.updateVersion(newVersion)
-        self.assertEquals(project.getVersion(), newVersion)
-        self.assertEquals(
+        self.assertEqual(project.getVersion(), newVersion)
+        self.assertEqual(
             project.directory.child("topfiles").child("README").getContent(),
             "3.2.9")
 
@@ -479,7 +479,7 @@ class UtilityTest(TestCase):
             1/0
         self.assertRaises(ZeroDivisionError,
                           release.runChdirSafe, chAndBreak)
-        self.assertEquals(cwd, os.getcwd())
+        self.assertEqual(cwd, os.getcwd())
 
 
 
@@ -496,12 +496,12 @@ class UtilityTest(TestCase):
 
         expected = in_.replace('$VER', '2.0.0')
         replaceInFile('release.replace', {'$VER': '2.0.0'})
-        self.assertEquals(open('release.replace').read(), expected)
+        self.assertEqual(open('release.replace').read(), expected)
 
 
         expected = expected.replace('2.0.0', '3.0.0')
         replaceInFile('release.replace', {'2.0.0': '3.0.0'})
-        self.assertEquals(open('release.replace').read(), expected)
+        self.assertEqual(open('release.replace').read(), expected)
 
 
 
@@ -520,7 +520,7 @@ class VersionWritingTest(TestCase):
                               Version("twisted.test_project", 0, 82, 7))
         ns = {'__name___': 'twisted.test_project'}
         execfile("test_project", ns)
-        self.assertEquals(ns["version"].base(), "0.82.7")
+        self.assertEqual(ns["version"].base(), "0.82.7")
 
 
     def test_replaceProjectVersionWithPrerelease(self):
@@ -533,7 +533,7 @@ class VersionWritingTest(TestCase):
                                       prerelease=8))
         ns = {'__name___': 'twisted.test_project'}
         execfile("test_project", ns)
-        self.assertEquals(ns["version"].base(), "0.82.7pre8")
+        self.assertEqual(ns["version"].base(), "0.82.7pre8")
 
 
 
@@ -877,7 +877,7 @@ class DocBuilderTestCase(TestCase, BuilderTestsMixin):
         """
         linkrel = self.builder.getLinkrel(FilePath("/foo/bar"),
                                           FilePath("/foo/bar"))
-        self.assertEquals(linkrel, "")
+        self.assertEqual(linkrel, "")
 
 
     def test_getLinkrelToParentDirectory(self):
@@ -887,7 +887,7 @@ class DocBuilderTestCase(TestCase, BuilderTestsMixin):
         """
         linkrel = self.builder.getLinkrel(FilePath("/foo"),
                                           FilePath("/foo/bar"))
-        self.assertEquals(linkrel, "../")
+        self.assertEqual(linkrel, "../")
 
 
     def test_getLinkrelToSibling(self):
@@ -897,7 +897,7 @@ class DocBuilderTestCase(TestCase, BuilderTestsMixin):
         """
         linkrel = self.builder.getLinkrel(FilePath("/foo/howto"),
                                           FilePath("/foo/examples"))
-        self.assertEquals(linkrel, "../howto/")
+        self.assertEqual(linkrel, "../howto/")
 
 
     def test_getLinkrelToUncle(self):
@@ -908,7 +908,7 @@ class DocBuilderTestCase(TestCase, BuilderTestsMixin):
         """
         linkrel = self.builder.getLinkrel(FilePath("/foo/howto"),
                                           FilePath("/foo/examples/quotes"))
-        self.assertEquals(linkrel, "../../howto/")
+        self.assertEqual(linkrel, "../../howto/")
 
 
 
@@ -1047,7 +1047,7 @@ class APIBuilderTestCase(TestCase):
         calls = []
         script.buildAPIDocs = lambda a, b: calls.append((a, b))
         script.main(["hello", "there"])
-        self.assertEquals(calls, [(FilePath("hello"), FilePath("there"))])
+        self.assertEqual(calls, [(FilePath("hello"), FilePath("there"))])
 
 
 
@@ -1091,7 +1091,7 @@ class ManBuilderTestCase(TestCase, BuilderTestsMixin):
         expected = self.getArbitraryManLoreOutput()
         # No-op on *nix, fix for windows
         expected = expected.replace('\n', os.linesep)
-        self.assertEquals(output, expected)
+        self.assertEqual(output, expected)
 
 
     def test_toHTML(self):
@@ -1183,7 +1183,7 @@ class BookBuilderTests(TestCase, BuilderTestsMixin):
         successfully.
         """
         builder = BookBuilder()
-        self.assertEquals(
+        self.assertEqual(
                 builder.run([
                     sys.executable, '-c',
                     'import sys; '
@@ -1203,9 +1203,9 @@ class BookBuilderTests(TestCase, BuilderTestsMixin):
         exc = self.assertRaises(
             CommandFailed, builder.run,
             [sys.executable, '-c', 'print "hi"; raise SystemExit(1)'])
-        self.assertEquals(exc.exitStatus, 1)
-        self.assertEquals(exc.exitSignal, None)
-        self.assertEquals(exc.output, "hi\n")
+        self.assertEqual(exc.exitStatus, 1)
+        self.assertEqual(exc.exitSignal, None)
+        self.assertEqual(exc.output, "hi\n")
 
 
     def test_runSignaled(self):
@@ -1219,9 +1219,9 @@ class BookBuilderTests(TestCase, BuilderTestsMixin):
             [sys.executable, '-c',
             'import sys; print "hi"; sys.stdout.flush(); '
             'import os; os.kill(os.getpid(), 9)'])
-        self.assertEquals(exc.exitSignal, 9)
-        self.assertEquals(exc.exitStatus, None)
-        self.assertEquals(exc.output, "hi\n")
+        self.assertEqual(exc.exitSignal, 9)
+        self.assertEqual(exc.exitStatus, None)
+        self.assertEqual(exc.output, "hi\n")
 
 
     def test_buildTeX(self):
@@ -1378,20 +1378,20 @@ class BookBuilderTests(TestCase, BuilderTestsMixin):
         # have a test which asserted the correctness of the contents of the
         # output files.  I don't know how one could do that, though. -exarkun
         latex1, latex2, latex3, dvips, ps2pdf13 = builder.commands
-        self.assertEquals(latex1, latex2)
-        self.assertEquals(latex2, latex3)
-        self.assertEquals(
+        self.assertEqual(latex1, latex2)
+        self.assertEqual(latex2, latex3)
+        self.assertEqual(
             latex1[:1], ["latex"],
             "LaTeX command %r does not seem right." % (latex1,))
-        self.assertEquals(
+        self.assertEqual(
             latex1[-1:], [bookPath.path],
             "LaTeX command %r does not end with the book path (%r)." % (
                 latex1, bookPath.path))
 
-        self.assertEquals(
+        self.assertEqual(
             dvips[:1], ["dvips"],
             "dvips command %r does not seem right." % (dvips,))
-        self.assertEquals(
+        self.assertEqual(
             ps2pdf13[:1], ["ps2pdf13"],
             "ps2pdf13 command %r does not seem right." % (ps2pdf13,))
 
@@ -1484,7 +1484,7 @@ class FilePathDeltaTest(TestCase):
         """
         L{filePathDelta} can create a simple relative path to a child path.
         """
-        self.assertEquals(filePathDelta(FilePath("/foo/bar"),
+        self.assertEqual(filePathDelta(FilePath("/foo/bar"),
                                         FilePath("/foo/bar/baz")),
                           ["baz"])
 
@@ -1494,7 +1494,7 @@ class FilePathDeltaTest(TestCase):
         L{filePathDelta} can traverse upwards to create relative paths to
         siblings.
         """
-        self.assertEquals(filePathDelta(FilePath("/foo/bar"),
+        self.assertEqual(filePathDelta(FilePath("/foo/bar"),
                                         FilePath("/foo/baz")),
                           ["..", "baz"])
 
@@ -1504,7 +1504,7 @@ class FilePathDeltaTest(TestCase):
         L{filePathDelta} can create relative paths to totally unrelated paths
         for maximum portability.
         """
-        self.assertEquals(filePathDelta(FilePath("/foo/bar"),
+        self.assertEqual(filePathDelta(FilePath("/foo/bar"),
                                         FilePath("/baz/quux")),
                           ["..", "..", "baz", "quux"])
 
@@ -1514,7 +1514,7 @@ class FilePathDeltaTest(TestCase):
         L{filePathDelta} doesn't take into account final elements when
         comparing 2 paths, but stops at the first difference.
         """
-        self.assertEquals(filePathDelta(FilePath("/foo/bar/bar/spam"),
+        self.assertEqual(filePathDelta(FilePath("/foo/bar/bar/spam"),
                                         FilePath("/foo/bar/baz/spam")),
                           ["..", "..", "baz", "spam"])
 
@@ -1557,7 +1557,7 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         """
         L{NewsBuilder._today} returns today's date in YYYY-MM-DD form.
         """
-        self.assertEquals(
+        self.assertEqual(
             self.builder._today(), date.today().strftime('%Y-%m-%d'))
 
 
@@ -1569,7 +1569,7 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         """
         features = self.builder._findChanges(
             self.project, self.builder._FEATURE)
-        self.assertEquals(
+        self.assertEqual(
             features,
             [(5, "We now support the web."),
              (12, "The widget is more robust."),
@@ -1588,7 +1588,7 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         """
         bugfixes = self.builder._findChanges(
             self.project, self.builder._BUGFIX)
-        self.assertEquals(
+        self.assertEqual(
             bugfixes,
             [(23, 'Broken stuff was fixed.')])
 
@@ -1601,7 +1601,7 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         """
         removals = self.builder._findChanges(
             self.project, self.builder._REMOVAL)
-        self.assertEquals(
+        self.assertEqual(
             removals,
             [(25, 'Stupid stuff was deprecated.')])
 
@@ -1614,7 +1614,7 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         """
         doc = self.builder._findChanges(
             self.project, self.builder._DOC)
-        self.assertEquals(
+        self.assertEqual(
             doc,
             [(40, 'foo.bar.Baz.quux'),
              (41, 'writing Foo servers')])
@@ -1628,7 +1628,7 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         """
         misc = self.builder._findChanges(
             self.project, self.builder._MISC)
-        self.assertEquals(
+        self.assertEqual(
             misc,
             [(30, ''),
              (35, '')])
@@ -1641,7 +1641,7 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         """
         output = StringIO()
         self.builder._writeHeader(output, "Super Awesometastic 32.16")
-        self.assertEquals(
+        self.assertEqual(
             output.getvalue(),
             "Super Awesometastic 32.16\n"
             "=========================\n"
@@ -1661,7 +1661,7 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
             [(3, "Great stuff."),
              (17, "Very long line which goes on and on and on, seemingly "
               "without end until suddenly without warning it does end.")])
-        self.assertEquals(
+        self.assertEqual(
             output.getvalue(),
             "Features\n"
             "--------\n"
@@ -1682,7 +1682,7 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         self.builder._writeMisc(
             output, "Other",
             [(x, "") for x in range(2, 50, 3)])
-        self.assertEquals(
+        self.assertEqual(
             output.getvalue(),
             "Other\n"
             "-----\n"
@@ -1701,7 +1701,7 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
             "Super Awesometastic 32.16")
 
         results = self.project.child('NEWS').getContent()
-        self.assertEquals(
+        self.assertEqual(
             results,
             'Super Awesometastic 32.16\n'
             '=========================\n'
@@ -1749,7 +1749,7 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
             project, project.child('NEWS'),
             "Super Awesometastic 32.16")
         results = project.child('NEWS').getContent()
-        self.assertEquals(
+        self.assertEqual(
             results,
             'Super Awesometastic 32.16\n'
             '=========================\n'
@@ -1772,7 +1772,7 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
 
         self.builder.build(self.project, news, "Super Awesometastic 32.16")
 
-        self.assertEquals(
+        self.assertEqual(
             news.getContent(),
             'Ticket numbers in this file can be looked up by visiting\n'
             'http://twistedmatrix.com/trac/ticket/<number>\n'
@@ -1822,7 +1822,7 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
             self.project, self.project.child('NEWS'),
             'Some Thing 1.2')
 
-        self.assertEquals(
+        self.assertEqual(
             self.project.child('NEWS').getContent(),
             'Some Thing 1.2\n'
             '==============\n'
@@ -1852,7 +1852,7 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
             self.project, self.project.child('NEWS'),
             'Project Name 5.0')
 
-        self.assertEquals(
+        self.assertEqual(
             self.project.child('NEWS').getContent(),
             'Project Name 5.0\n'
             '================\n'
@@ -1932,7 +1932,7 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
 
         aggregateNews = project.child("NEWS")
 
-        self.assertEquals(
+        self.assertEqual(
             builds,
             [(conchTopfiles, conchNews, conchHeader),
              (coreTopfiles, coreNews, coreHeader),
@@ -1966,7 +1966,7 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
             'Other\n'
             '-----\n'
             ' - #5\n\n\n')
-        self.assertEquals(
+        self.assertEqual(
             expectedCore + 'Old core news.\n', coreNews.getContent())
 
 
@@ -2370,7 +2370,7 @@ class BuildAllTarballsTest(DistributionBuilderTestBase):
         runCommand(["svn", "commit", checkout.path, "-m", "yay"])
 
         buildAllTarballs(checkout, self.outputDir)
-        self.assertEquals(
+        self.assertEqual(
             set(self.outputDir.children()),
             set([self.outputDir.child("Twisted-1.2.0.tar.bz2"),
                  self.outputDir.child("TwistedCore-1.2.0.tar.bz2"),
@@ -2441,12 +2441,12 @@ class ScriptTests(BuilderTestsMixin, StructureAssertingMixin, TestCase):
         if prerelease is not None:
             version += "pre%d" % (prerelease,)
         versionChanger.main([version])
-        self.assertEquals(len(versionUpdates), 1)
-        self.assertEquals(versionUpdates[0][0], FilePath("."))
-        self.assertEquals(versionUpdates[0][1].major, major)
-        self.assertEquals(versionUpdates[0][1].minor, minor)
-        self.assertEquals(versionUpdates[0][1].micro, micro)
-        self.assertEquals(versionUpdates[0][1].prerelease, prerelease)
+        self.assertEqual(len(versionUpdates), 1)
+        self.assertEqual(versionUpdates[0][0], FilePath("."))
+        self.assertEqual(versionUpdates[0][1].major, major)
+        self.assertEqual(versionUpdates[0][1].minor, minor)
+        self.assertEqual(versionUpdates[0][1].micro, micro)
+        self.assertEqual(versionUpdates[0][1].prerelease, prerelease)
 
 
     def test_changeVersions(self):
@@ -2470,7 +2470,7 @@ class ScriptTests(BuilderTestsMixin, StructureAssertingMixin, TestCase):
         L{changeAllProjectVersions}.
         """
         versionChanger = ChangeVersionsScript()
-        self.assertEquals(versionChanger.changeAllProjectVersions,
+        self.assertEqual(versionChanger.changeAllProjectVersions,
                           changeAllProjectVersions)
 
 
@@ -2515,7 +2515,7 @@ class ScriptTests(BuilderTestsMixin, StructureAssertingMixin, TestCase):
         tarballBuilder.buildAllTarballs = myBuilder
 
         tarballBuilder.main(["checkoutDir", "destinationDir"])
-        self.assertEquals(
+        self.assertEqual(
             builds,
             [(FilePath("checkoutDir"), FilePath("destinationDir"))])
 
@@ -2526,7 +2526,7 @@ class ScriptTests(BuilderTestsMixin, StructureAssertingMixin, TestCase):
         is L{buildAllTarballs}.
         """
         tarballBuilder = BuildTarballsScript()
-        self.assertEquals(tarballBuilder.buildAllTarballs, buildAllTarballs)
+        self.assertEqual(tarballBuilder.buildAllTarballs, buildAllTarballs)
 
 
     def test_badNumberOfArgumentsToBuildTarballs(self):
@@ -2557,4 +2557,4 @@ class ScriptTests(BuilderTestsMixin, StructureAssertingMixin, TestCase):
         newsBuilder = NewsBuilder()
         newsBuilder.buildAll = builds.append
         newsBuilder.main(["/foo/bar/baz"])
-        self.assertEquals(builds, [FilePath("/foo/bar/baz")])
+        self.assertEqual(builds, [FilePath("/foo/bar/baz")])

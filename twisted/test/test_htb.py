@@ -31,7 +31,7 @@ class TestBucket(TestBucketBase):
         """Testing the size of the bucket."""
         b = SomeBucket()
         fit = b.add(1000)
-        self.failUnlessEqual(100, fit)
+        self.assertEqual(100, fit)
 
     def testBucketDrian(self):
         """Testing the bucket's drain rate."""
@@ -39,7 +39,7 @@ class TestBucket(TestBucketBase):
         fit = b.add(1000)
         self.clock.set(10)
         fit = b.add(1000)
-        self.failUnlessEqual(20, fit)
+        self.assertEqual(20, fit)
 
 class TestBucketNesting(TestBucketBase):
     def setUp(self):
@@ -52,7 +52,7 @@ class TestBucketNesting(TestBucketBase):
         # Use up most of the parent bucket.
         self.child1.add(90)
         fit = self.child2.add(90)
-        self.failUnlessEqual(10, fit)
+        self.assertEqual(10, fit)
 
     def testBucketParentRate(self):
         # Make the parent bucket drain slower.
@@ -65,7 +65,7 @@ class TestBucketNesting(TestBucketBase):
         # but the parent bucket only ten (so no, it wouldn't make too much
         # sense to have a child bucket draining faster than its parent in a real
         # application.)
-        self.failUnlessEqual(10, fit)
+        self.assertEqual(10, fit)
 
 
 # TODO: Test the Transport stuff?
@@ -87,10 +87,10 @@ class ConsumerShaperTest(TestBucketBase):
         self.shaped.write("x" * 100)
         self.clock.set(delta_t)
         self.shaped.resumeProducing()
-        self.failUnlessEqual(len(self.underlying.getvalue()),
+        self.assertEqual(len(self.underlying.getvalue()),
                              delta_t * self.bucket.rate)
 
     def testBucketRefs(self):
-        self.failUnlessEqual(self.bucket._refcount, 1)
+        self.assertEqual(self.bucket._refcount, 1)
         self.shaped.stopProducing()
-        self.failUnlessEqual(self.bucket._refcount, 0)
+        self.assertEqual(self.bucket._refcount, 0)

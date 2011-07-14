@@ -273,7 +273,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
             "sys.stdout.flush()")
 
         def checkOutput(output):
-            self.assertEquals('[0, 1, 2, 3]', output)
+            self.assertEqual('[0, 1, 2, 3]', output)
 
         reactor = self.buildReactor()
 
@@ -539,7 +539,7 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
             output = output.split('\0')
             # Drop the trailing \0.
             output.pop()
-            self.assertEquals(args, output)
+            self.assertEqual(args, output)
 
         def shutdown(result):
             reactor.stop()
@@ -589,13 +589,13 @@ class PotentialZombieWarningTests(TestCase):
         error.PotentialZombieWarning
 
         warnings = self.flushWarnings([self.test_deprecated])
-        self.assertEquals(warnings[0]['category'], DeprecationWarning)
-        self.assertEquals(
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(
             warnings[0]['message'],
             "twisted.internet.error.PotentialZombieWarning was deprecated in "
             "Twisted 10.0.0: There is no longer any potential for zombie "
             "process.")
-        self.assertEquals(len(warnings), 1)
+        self.assertEqual(len(warnings), 1)
 
 
 
@@ -772,7 +772,7 @@ class FDDetectorTest(TestCase):
         third = detector._listOpenFDs.func_name
 
         self.assertNotEquals(first, second)
-        self.assertEquals(second, third)
+        self.assertEqual(second, third)
 
 
     def test_accurateDevFDResults(self):
@@ -784,7 +784,7 @@ class FDDetectorTest(TestCase):
         self.procfs = False
         self.devfs = True
         self.accurateDevFDResults = True
-        self.assertEquals(
+        self.assertEqual(
             self.detector._getImplementation().func_name,
             '_devFDImplementation')
 
@@ -798,7 +798,7 @@ class FDDetectorTest(TestCase):
         self.procfs = False
         self.devfs = True
         self.accurateDevFDResults = False
-        self.assertEquals(
+        self.assertEqual(
             self.detector._getImplementation().func_name,
             '_fallbackFDImplementation')
 
@@ -810,7 +810,7 @@ class FDDetectorTest(TestCase):
         """
         self.devfs = False
         self.procfs = True
-        self.assertEquals(
+        self.assertEqual(
             self.detector._getImplementation().func_name,
             '_procFDImplementation')
 
@@ -824,7 +824,7 @@ class FDDetectorTest(TestCase):
         self.devfs = False
         self.procfs = False
         self.revealResourceModule()
-        self.assertEquals(
+        self.assertEqual(
             self.detector._getImplementation().func_name,
             '_resourceFDImplementation')
 
@@ -839,7 +839,7 @@ class FDDetectorTest(TestCase):
         self.devfs = False
         self.procfs = False
         self.hideResourceModule()
-        self.assertEquals(
+        self.assertEqual(
             self.detector._getImplementation().func_name,
             '_fallbackFDImplementation')
 

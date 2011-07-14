@@ -134,7 +134,7 @@ class TrialRunnerTestsMixin:
         self.runner._setUpLogFile = setUpLogFile
         self.runner.run(self.test)
         self.runner.run(self.test)
-        self.failUnlessEqual(len(l), 2)
+        self.assertEqual(len(l), 2)
         self.failIf(l[0] is l[1], "Should have created a new file observer")
 
 
@@ -149,7 +149,7 @@ class TrialRunnerTestsMixin:
             l.append(self.runner._logFileObject)
         self.runner._setUpLogFile = setUpLogFile
         self.runner.run(self.test)
-        self.failUnlessEqual(len(l), 1)
+        self.assertEqual(len(l), 1)
         self.failUnless(l[0].closed)
 
 
@@ -371,7 +371,7 @@ class TestRunner(unittest.TestCase):
     def test_runner_working_directory(self):
         self.parseOptions(['--temp-directory', 'some_path'])
         runner = self.getRunner()
-        self.assertEquals(runner.workingDirectory, 'some_path')
+        self.assertEqual(runner.workingDirectory, 'some_path')
 
 
     def test_concurrentImplicitWorkingDirectory(self):
@@ -571,7 +571,7 @@ class RemoveSafelyTests(unittest.TestCase):
         dirPath.moveTo = dummyMoveTo
 
         error = self.assertRaises(OSError, util._removeSafely, dirPath)
-        self.assertEquals(str(error), "path movement failed")
+        self.assertEqual(str(error), "path movement failed")
         self.assertIn("could not remove FilePath", out.getvalue())
 
 
@@ -610,9 +610,9 @@ class TestUntilFailure(unittest.TestCase):
         a few runs.
         """
         result = self.runner.runUntilFailure(self.test)
-        self.failUnlessEqual(result.testsRun, 1)
+        self.assertEqual(result.testsRun, 1)
         self.failIf(result.wasSuccessful())
-        self.assertEquals(self._getFailures(result), 1)
+        self.assertEqual(self._getFailures(result), 1)
 
 
     def _getFailures(self, result):
@@ -633,10 +633,10 @@ class TestUntilFailure(unittest.TestCase):
             return test
         self.patch(unittest, "decorate", decorate)
         result = self.runner.runUntilFailure(self.test)
-        self.failUnlessEqual(result.testsRun, 1)
+        self.assertEqual(result.testsRun, 1)
 
-        self.assertEquals(len(decorated), 1)
-        self.assertEquals(decorated, [(self.test, ITestCase)])
+        self.assertEqual(len(decorated), 1)
+        self.assertEqual(decorated, [(self.test, ITestCase)])
 
 
     def test_runUntilFailureForceGCDecorate(self):
@@ -651,10 +651,10 @@ class TestUntilFailure(unittest.TestCase):
         self.patch(unittest, "decorate", decorate)
         self.runner._forceGarbageCollection = True
         result = self.runner.runUntilFailure(self.test)
-        self.failUnlessEqual(result.testsRun, 1)
+        self.assertEqual(result.testsRun, 1)
 
-        self.assertEquals(len(decorated), 2)
-        self.assertEquals(decorated,
+        self.assertEqual(len(decorated), 2)
+        self.assertEqual(decorated,
             [(self.test, ITestCase),
              (self.test, unittest._ForceGarbageCollectionDecorator)])
 
@@ -763,7 +763,7 @@ class TestTestHolder(unittest.TestCase):
         result = pyunit.TestResult()
         self.holder.run(result)
         self.assertTrue(result.wasSuccessful())
-        self.assertEquals(1, result.testsRun)
+        self.assertEqual(1, result.testsRun)
 
 
 
@@ -790,7 +790,7 @@ class TestErrorHolder(TestTestHolder):
         result = pyunit.TestResult()
         self.holder.run(result)
         self.assertFalse(result.wasSuccessful())
-        self.assertEquals(1, result.testsRun)
+        self.assertEqual(1, result.testsRun)
 
 
 
@@ -816,9 +816,9 @@ class TestMalformedMethod(unittest.TestCase):
         trialRunner = runner.TrialRunner(reporter.Reporter, stream=stream)
         test = TestMalformedMethod.ContainMalformed(method)
         result = trialRunner.run(test)
-        self.failUnlessEqual(result.testsRun, 1)
+        self.assertEqual(result.testsRun, 1)
         self.failIf(result.wasSuccessful())
-        self.failUnlessEqual(len(result.errors), 1)
+        self.assertEqual(len(result.errors), 1)
 
     def test_extraArg(self):
         """
@@ -856,10 +856,10 @@ class DestructiveTestSuiteTestCase(unittest.TestCase):
         test = MockTest('test_foo')
         result = reporter.TestResult()
         suite = runner.DestructiveTestSuite([test])
-        self.assertEquals(called, [])
+        self.assertEqual(called, [])
         suite.run(result)
-        self.assertEquals(called, [True])
-        self.assertEquals(suite.countTestCases(), 0)
+        self.assertEqual(called, [True])
+        self.assertEqual(suite.countTestCases(), 0)
 
 
     def test_shouldStop(self):
@@ -879,11 +879,11 @@ class DestructiveTestSuiteTestCase(unittest.TestCase):
         loader = runner.TestLoader()
         loader.suiteFactory = runner.DestructiveTestSuite
         suite = loader.loadClass(MockTest)
-        self.assertEquals(called, [])
+        self.assertEqual(called, [])
         suite.run(result)
-        self.assertEquals(called, [1])
+        self.assertEqual(called, [1])
         # The last test shouldn't have been run
-        self.assertEquals(suite.countTestCases(), 1)
+        self.assertEqual(suite.countTestCases(), 1)
 
 
     def test_cleanup(self):
@@ -897,9 +897,9 @@ class DestructiveTestSuiteTestCase(unittest.TestCase):
         test = MockTest('test_foo')
         result = reporter.TestResult()
         suite = runner.DestructiveTestSuite([test])
-        self.assertEquals(suite.countTestCases(), 1)
+        self.assertEqual(suite.countTestCases(), 1)
         suite.run(result)
-        self.assertEquals(suite.countTestCases(), 0)
+        self.assertEqual(suite.countTestCases(), 0)
 
 
 

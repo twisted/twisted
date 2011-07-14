@@ -164,7 +164,7 @@ class SystemEventTestsBuilder(ReactorBuilder):
             lambda: events.append(("after", "shutdown")))
         reactor.callWhenRunning(reactor.stop)
         self.runReactor(reactor)
-        self.assertEquals(events, [("before", "shutdown"),
+        self.assertEqual(events, [("before", "shutdown"),
                                    ("during", "shutdown"),
                                    ("after", "shutdown")])
 

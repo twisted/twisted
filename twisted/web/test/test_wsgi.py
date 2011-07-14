@@ -603,7 +603,7 @@ class InputStreamTestMixin(WSGITestsMixin):
         """
         bytes = "some bytes are here"
         d = self._renderAndReturnReaderResult(lambda input: input.read(), bytes)
-        d.addCallback(self.assertEquals, bytes)
+        d.addCallback(self.assertEqual, bytes)
         return d
 
 
@@ -615,7 +615,7 @@ class InputStreamTestMixin(WSGITestsMixin):
         """
         bytes = "hello, world."
         d = self._renderAndReturnReaderResult(lambda input: input.read(3), bytes)
-        d.addCallback(self.assertEquals, "hel")
+        d.addCallback(self.assertEqual, "hel")
         return d
 
 
@@ -628,7 +628,7 @@ class InputStreamTestMixin(WSGITestsMixin):
         bytes = "some bytes are here"
         d = self._renderAndReturnReaderResult(
             lambda input: input.read(len(bytes) + 3), bytes)
-        d.addCallback(self.assertEquals, bytes)
+        d.addCallback(self.assertEqual, bytes)
         return d
 
 
@@ -642,7 +642,7 @@ class InputStreamTestMixin(WSGITestsMixin):
             input.read(3)
             return input.read()
         d = self._renderAndReturnReaderResult(read, bytes)
-        d.addCallback(self.assertEquals, bytes[3:])
+        d.addCallback(self.assertEqual, bytes[3:])
         return d
 
 
@@ -654,7 +654,7 @@ class InputStreamTestMixin(WSGITestsMixin):
         bytes = "the entire stream"
         d = self._renderAndReturnReaderResult(
             lambda input: input.read(None), bytes)
-        d.addCallback(self.assertEquals, bytes)
+        d.addCallback(self.assertEqual, bytes)
         return d
 
 
@@ -666,7 +666,7 @@ class InputStreamTestMixin(WSGITestsMixin):
         bytes = "all of the input"
         d = self._renderAndReturnReaderResult(
             lambda input: input.read(-1), bytes)
-        d.addCallback(self.assertEquals, bytes)
+        d.addCallback(self.assertEqual, bytes)
         return d
 
 
@@ -678,7 +678,7 @@ class InputStreamTestMixin(WSGITestsMixin):
         bytes = "hello\nworld"
         d = self._renderAndReturnReaderResult(
             lambda input: input.readline(), bytes)
-        d.addCallback(self.assertEquals, "hello\n")
+        d.addCallback(self.assertEqual, "hello\n")
         return d
 
 
@@ -696,7 +696,7 @@ class InputStreamTestMixin(WSGITestsMixin):
         bytes = "goodbye\nworld"
         d = self._renderAndReturnReaderResult(
             lambda input: input.readline(3), bytes)
-        d.addCallback(self.assertEquals, "goo")
+        d.addCallback(self.assertEqual, "goo")
         return d
 
 
@@ -708,7 +708,7 @@ class InputStreamTestMixin(WSGITestsMixin):
         bytes = "some lines\nof text"
         d = self._renderAndReturnReaderResult(
             lambda input: input.readline(20), bytes)
-        d.addCallback(self.assertEquals, "some lines\n")
+        d.addCallback(self.assertEqual, "some lines\n")
         return d
 
 
@@ -722,7 +722,7 @@ class InputStreamTestMixin(WSGITestsMixin):
             input.readline()
             return input.readline()
         d = self._renderAndReturnReaderResult(readline, bytes)
-        d.addCallback(self.assertEquals, "second line\n")
+        d.addCallback(self.assertEqual, "second line\n")
         return d
 
 
@@ -734,7 +734,7 @@ class InputStreamTestMixin(WSGITestsMixin):
         bytes = "this is one line\nthis is another line"
         d = self._renderAndReturnReaderResult(
             lambda input: input.readline(None), bytes)
-        d.addCallback(self.assertEquals, "this is one line\n")
+        d.addCallback(self.assertEqual, "this is one line\n")
         return d
 
 
@@ -746,7 +746,7 @@ class InputStreamTestMixin(WSGITestsMixin):
         bytes = "input stream line one\nline two"
         d = self._renderAndReturnReaderResult(
             lambda input: input.readline(-1), bytes)
-        d.addCallback(self.assertEquals, "input stream line one\n")
+        d.addCallback(self.assertEqual, "input stream line one\n")
         return d
 
 
@@ -758,7 +758,7 @@ class InputStreamTestMixin(WSGITestsMixin):
         bytes = "alice\nbob\ncarol"
         d = self._renderAndReturnReaderResult(
             lambda input: input.readlines(), bytes)
-        d.addCallback(self.assertEquals, ["alice\n", "bob\n", "carol"])
+        d.addCallback(self.assertEqual, ["alice\n", "bob\n", "carol"])
         return d
 
 
@@ -774,7 +774,7 @@ class InputStreamTestMixin(WSGITestsMixin):
         def cbLines(lines):
             # Make sure we got enough lines to make 5 bytes.  Anything beyond
             # that is fine too.
-            self.assertEquals(lines[:2], ["123\n", "456\n"])
+            self.assertEqual(lines[:2], ["123\n", "456\n"])
         d.addCallback(cbLines)
         return d
 
@@ -789,7 +789,7 @@ class InputStreamTestMixin(WSGITestsMixin):
         d = self._renderAndReturnReaderResult(
             lambda input: input.readlines(100), bytes)
         d.addCallback(
-            self.assertEquals,
+            self.assertEqual,
             ["one potato\n", "two potato\n", "three potato"])
         return d
 
@@ -805,7 +805,7 @@ class InputStreamTestMixin(WSGITestsMixin):
             input.read(7)
             return input.readlines()
         d = self._renderAndReturnReaderResult(readlines, bytes)
-        d.addCallback(self.assertEquals, ["orld\n", "foo"])
+        d.addCallback(self.assertEqual, ["orld\n", "foo"])
         return d
 
 
@@ -817,7 +817,7 @@ class InputStreamTestMixin(WSGITestsMixin):
         bytes = "one fish\ntwo fish\n"
         d = self._renderAndReturnReaderResult(
             lambda input: input.readlines(None), bytes)
-        d.addCallback(self.assertEquals, ["one fish\n", "two fish\n"])
+        d.addCallback(self.assertEqual, ["one fish\n", "two fish\n"])
         return d
 
 
@@ -829,7 +829,7 @@ class InputStreamTestMixin(WSGITestsMixin):
         bytes = "red fish\nblue fish\n"
         d = self._renderAndReturnReaderResult(
             lambda input: input.readlines(-1), bytes)
-        d.addCallback(self.assertEquals, ["red fish\n", "blue fish\n"])
+        d.addCallback(self.assertEqual, ["red fish\n", "blue fish\n"])
         return d
 
 
@@ -839,7 +839,7 @@ class InputStreamTestMixin(WSGITestsMixin):
         """
         bytes = "green eggs\nand ham\n"
         d = self._renderAndReturnReaderResult(lambda input: list(input), bytes)
-        d.addCallback(self.assertEquals, ["green eggs\n", "and ham\n"])
+        d.addCallback(self.assertEqual, ["green eggs\n", "and ham\n"])
         return d
 
 
@@ -854,7 +854,7 @@ class InputStreamTestMixin(WSGITestsMixin):
             input.read(3)
             return list(input)
         d = self._renderAndReturnReaderResult(iterate, bytes)
-        d.addCallback(self.assertEquals, ["en eggs\n", "and ham\n"])
+        d.addCallback(self.assertEqual, ["en eggs\n", "and ham\n"])
         return d
 
 
@@ -1463,7 +1463,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
         d, requestFactory = self.requestFactoryFactory()
         def cbRendered(ignored):
             errors = self.flushLoggedErrors(RuntimeError)
-            self.assertEquals(len(errors), 1)
+            self.assertEqual(len(errors), 1)
 
             self.assertTrue(
                 channel.transport.written.getvalue().startswith(
@@ -1515,7 +1515,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
 
         def ebRendered(ignored):
             errors = self.flushLoggedErrors(RuntimeError)
-            self.assertEquals(len(errors), 1)
+            self.assertEqual(len(errors), 1)
 
             response = channel.transport.written.getvalue()
             self.assertTrue(response.startswith('HTTP/1.1 200 OK'))

@@ -147,7 +147,7 @@ class ProducerInterfaceTest:
         self.producer = self.proxyClass(self.consumer)
 
     def testRegistersProducer(self):
-        self.failUnlessEqual(self.consumer.producer[0], self.producer)
+        self.assertEqual(self.consumer.producer[0], self.producer)
 
     def testPause(self):
         self.producer.pauseProducing()
@@ -159,19 +159,19 @@ class ProducerInterfaceTest:
         self.producer.pauseProducing()
         self.producer.resumeProducing()
         self.producer.write("yakkity yak")
-        self.failUnlessEqual(self.consumer.getvalue(), "yakkity yak")
+        self.assertEqual(self.consumer.getvalue(), "yakkity yak")
 
     def testResumeNoEmptyWrite(self):
         self.producer.pauseProducing()
         self.producer.resumeProducing()
-        self.failUnlessEqual(len(self.consumer._writes), 0,
+        self.assertEqual(len(self.consumer._writes), 0,
                              "Resume triggered an empty write.")
 
     def testResumeBuffer(self):
         self.producer.pauseProducing()
         self.producer.write("buffer this")
         self.producer.resumeProducing()
-        self.failUnlessEqual(self.consumer.getvalue(), "buffer this")
+        self.assertEqual(self.consumer.getvalue(), "buffer this")
 
     def testStop(self):
         self.producer.stopProducing()
@@ -219,7 +219,7 @@ class ConsumerProxyTest(unittest.TestCase):
     def testWrite(self):
         # NOTE: This test only valid for streaming (Push) systems.
         self.consumer.write("some bytes")
-        self.failUnlessEqual(self.underlying.getvalue(), "some bytes")
+        self.assertEqual(self.underlying.getvalue(), "some bytes")
 
     def testFinish(self):
         self.consumer.finish()
@@ -246,16 +246,16 @@ class PullProducerTest:
     def testPull(self):
         self.proxy.write("hello")
         self.proxy.resumeProducing()
-        self.failUnlessEqual(self.underlying.getvalue(), "hello")
+        self.assertEqual(self.underlying.getvalue(), "hello")
 
     def testMergeWrites(self):
         self.proxy.write("hello ")
         self.proxy.write("sunshine")
         self.proxy.resumeProducing()
         nwrites = len(self.underlying._writes)
-        self.failUnlessEqual(nwrites, 1, "Pull resulted in %d writes instead "
+        self.assertEqual(nwrites, 1, "Pull resulted in %d writes instead "
                              "of 1." % (nwrites,))
-        self.failUnlessEqual(self.underlying.getvalue(), "hello sunshine")
+        self.assertEqual(self.underlying.getvalue(), "hello sunshine")
 
 
     def testLateWrite(self):
@@ -263,7 +263,7 @@ class PullProducerTest:
         self.proxy.resumeProducing()
         self.proxy.write("data")
         # This data should answer that pull request.
-        self.failUnlessEqual(self.underlying.getvalue(), "data")
+        self.assertEqual(self.underlying.getvalue(), "data")
 
 class PCP_PullProducerTest(PullProducerTest, unittest.TestCase):
     class proxyClass(pcp.BasicProducerConsumerProxy):
@@ -356,9 +356,9 @@ class BufferedPullTests(unittest.TestCase):
         self.proxy.resumeProducing()
         self.proxy.write("datum" * 21)
         # This data should answer that pull request.
-        self.failUnlessEqual(self.underlying.getvalue(), "datum" * 20)
+        self.assertEqual(self.underlying.getvalue(), "datum" * 20)
         # but there should be some left over
-        self.failUnlessEqual(self.proxy._buffer, ["datum"])
+        self.assertEqual(self.proxy._buffer, ["datum"])
 
 
 # TODO:

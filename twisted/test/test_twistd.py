@@ -174,7 +174,7 @@ class ServerOptionsTest(unittest.TestCase):
         config = twistd.ServerOptions()
         config.subCommand = 'ueoa'
         config.postOptions()
-        self.assertEquals(config['no_save'], True)
+        self.assertEqual(config['no_save'], True)
 
 
     def test_postOptionsNoSubCommandSavesAsUsual(self):
@@ -183,7 +183,7 @@ class ServerOptionsTest(unittest.TestCase):
         """
         config = twistd.ServerOptions()
         config.postOptions()
-        self.assertEquals(config['no_save'], False)
+        self.assertEqual(config['no_save'], False)
 
 
     def test_listAllProfilers(self):
@@ -254,7 +254,7 @@ class TapFileTest(unittest.TestCase):
         config = twistd.ServerOptions()
         config.parseOptions(['-f', self.tapfile])
         application = CrippledApplicationRunner(config).createOrGetApplication()
-        self.assertEquals(service.IService(application).name, 'Hi!')
+        self.assertEqual(service.IService(application).name, 'Hi!')
 
 
 
@@ -350,7 +350,7 @@ class ApplicationRunnerTest(unittest.TestCase):
         self.assertFalse(s.hadApplicationPreApplication)
         self.assertTrue(s.hadApplicationPostApplication)
         self.assertTrue(s.hadApplicationLogObserver)
-        self.assertEquals(s.order, ["pre", "log", "post"])
+        self.assertEqual(s.order, ["pre", "log", "post"])
 
 
     def _applicationStartsWithConfiguredID(self, argv, uid, gid):
@@ -689,8 +689,8 @@ class UnixApplicationRunnerRemovePID(unittest.TestCase):
         runner = UnixApplicationRunner({})
         runner.removePID("fakepid")
         errors = self.flushLoggedErrors(OSError)
-        self.assertEquals(len(errors), 1)
-        self.assertEquals(errors[0].value.errno, errno.ENOENT)
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0].value.errno, errno.ENOENT)
 
 
 
@@ -981,7 +981,7 @@ class AppProfilingTestCase(unittest.TestCase):
         config["profiler"] = "foobar"
 
         error = self.assertRaises(SystemExit, app.AppProfiler, config)
-        self.assertEquals(str(error), "Unsupported profiler name: foobar")
+        self.assertEqual(str(error), "Unsupported profiler name: foobar")
 
 
     def test_defaultProfiler(self):
@@ -989,7 +989,7 @@ class AppProfilingTestCase(unittest.TestCase):
         L{app.Profiler} defaults to the hotshot profiler if not specified.
         """
         profiler = app.AppProfiler({})
-        self.assertEquals(profiler.profiler, "hotshot")
+        self.assertEqual(profiler.profiler, "hotshot")
 
 
     def test_profilerNameCaseInsentive(self):
@@ -998,7 +998,7 @@ class AppProfilingTestCase(unittest.TestCase):
         relevant.
         """
         profiler = app.AppProfiler({"profiler": "HotShot"})
-        self.assertEquals(profiler.profiler, "hotshot")
+        self.assertEqual(profiler.profiler, "hotshot")
 
 
 
@@ -1058,7 +1058,7 @@ class AppLoggerTestCase(unittest.TestCase):
         @param logs: The list whose C{append} method was specified as the
             initial log observer.
         """
-        self.assertEquals(self.observers, [logs.append])
+        self.assertEqual(self.observers, [logs.append])
         self.assertIn("starting up", logs[0]["message"][0])
         self.assertIn("reactor class", logs[1]["message"][0])
 
@@ -1099,13 +1099,13 @@ class AppLoggerTestCase(unittest.TestCase):
 
         observer = logger._getLogObserver()
 
-        self.assertEquals(len(logFiles), 1)
+        self.assertEqual(len(logFiles), 1)
         self.assertIdentical(logFiles[0], sys.stdout)
 
         logger = app.AppLogger({"logfile": ""})
         observer = logger._getLogObserver()
 
-        self.assertEquals(len(logFiles), 2)
+        self.assertEqual(len(logFiles), 2)
         self.assertIdentical(logFiles[1], sys.stdout)
 
 
@@ -1120,8 +1120,8 @@ class AppLoggerTestCase(unittest.TestCase):
 
         observer = logger._getLogObserver()
 
-        self.assertEquals(len(logFiles), 1)
-        self.assertEquals(logFiles[0].path,
+        self.assertEqual(len(logFiles), 1)
+        self.assertEqual(logFiles[0].path,
                           os.path.abspath(filename))
 
 
@@ -1139,9 +1139,9 @@ class AppLoggerTestCase(unittest.TestCase):
         logger = app.AppLogger({})
         logger._observer = observer
         logger.stop()
-        self.assertEquals(removed, [observer])
+        self.assertEqual(removed, [observer])
         logger.stop()
-        self.assertEquals(removed, [observer])
+        self.assertEqual(removed, [observer])
         self.assertIdentical(logger._observer, None)
 
 
@@ -1177,12 +1177,12 @@ class UnixAppLoggerTestCase(unittest.TestCase):
 
         logger = UnixAppLogger({"logfile": "-", "nodaemon": True})
         observer = logger._getLogObserver()
-        self.assertEquals(len(logFiles), 1)
+        self.assertEqual(len(logFiles), 1)
         self.assertIdentical(logFiles[0], sys.stdout)
 
         logger = UnixAppLogger({"logfile": "", "nodaemon": True})
         observer = logger._getLogObserver()
-        self.assertEquals(len(logFiles), 2)
+        self.assertEqual(len(logFiles), 2)
         self.assertIdentical(logFiles[1], sys.stdout)
 
 
@@ -1193,7 +1193,7 @@ class UnixAppLoggerTestCase(unittest.TestCase):
         """
         logger = UnixAppLogger({"logfile": "-", "nodaemon": False})
         error = self.assertRaises(SystemExit, logger._getLogObserver)
-        self.assertEquals(str(error), "Daemons cannot log to stdout, exiting!")
+        self.assertEqual(str(error), "Daemons cannot log to stdout, exiting!")
 
 
     def test_getLogObserverFile(self):
@@ -1207,12 +1207,12 @@ class UnixAppLoggerTestCase(unittest.TestCase):
         logger = UnixAppLogger({"logfile": filename})
         observer = logger._getLogObserver()
 
-        self.assertEquals(len(logFiles), 1)
-        self.assertEquals(logFiles[0].path,
+        self.assertEqual(len(logFiles), 1)
+        self.assertEqual(logFiles[0].path,
                           os.path.abspath(filename))
 
-        self.assertEquals(len(self.signals), 1)
-        self.assertEquals(self.signals[0][0], signal.SIGUSR1)
+        self.assertEqual(len(self.signals), 1)
+        self.assertEqual(self.signals[0][0], signal.SIGUSR1)
 
         d = Deferred()
         def rotate():
@@ -1230,14 +1230,14 @@ class UnixAppLoggerTestCase(unittest.TestCase):
         L{UnixAppLogger._getLogObserver} doesn't override it.
         """
         def fakeGetSignal(sig):
-            self.assertEquals(sig, signal.SIGUSR1)
+            self.assertEqual(sig, signal.SIGUSR1)
             return object()
         self.patch(signal, "getsignal", fakeGetSignal)
         filename = self.mktemp()
         logger = UnixAppLogger({"logfile": filename})
         observer = logger._getLogObserver()
 
-        self.assertEquals(self.signals, [])
+        self.assertEqual(self.signals, [])
 
 
     def test_getLogObserverDefaultFile(self):
@@ -1250,8 +1250,8 @@ class UnixAppLoggerTestCase(unittest.TestCase):
         logger = UnixAppLogger({"logfile": "", "nodaemon": False})
         observer = logger._getLogObserver()
 
-        self.assertEquals(len(logFiles), 1)
-        self.assertEquals(logFiles[0].path,
+        self.assertEqual(len(logFiles), 1)
+        self.assertEqual(logFiles[0].path,
                           os.path.abspath("twistd.log"))
 
 
@@ -1268,7 +1268,7 @@ class UnixAppLoggerTestCase(unittest.TestCase):
         self.patch(syslog, "SyslogObserver", fakesyslogobserver)
         logger = UnixAppLogger({"syslog": True, "prefix": "test-prefix"})
         observer = logger._getLogObserver()
-        self.assertEquals(fakesyslogobserver.prefix, "test-prefix")
+        self.assertEqual(fakesyslogobserver.prefix, "test-prefix")
 
     if syslog is None:
         test_getLogObserverSyslog.skip = "Syslog not available"
@@ -1288,6 +1288,6 @@ class DeprecationTests(unittest.TestCase):
         log.addObserver(logs.append)
         self.addCleanup(log.removeObserver, logs.append)
         self.callDeprecated(Version("Twisted", 8, 2, 0), app.initialLog)
-        self.assertEquals(len(logs), 2)
+        self.assertEqual(len(logs), 2)
         self.assertIn("starting up", logs[0]["message"][0])
         self.assertIn("reactor class", logs[1]["message"][0])

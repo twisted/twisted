@@ -39,8 +39,8 @@ class TestPlugins(unittest.TestCase):
         One of the reporter plugins is the subunit reporter plugin.
         """
         subunitPlugin = self.getPluginsByLongOption('subunit')
-        self.assertEquals('Subunit Reporter', subunitPlugin.name)
-        self.assertEquals('twisted.trial.reporter', subunitPlugin.module)
-        self.assertEquals('subunit', subunitPlugin.longOpt)
+        self.assertEqual('Subunit Reporter', subunitPlugin.name)
+        self.assertEqual('twisted.trial.reporter', subunitPlugin.module)
+        self.assertEqual('subunit', subunitPlugin.longOpt)
         self.assertIdentical(None, subunitPlugin.shortOpt)
-        self.assertEquals('SubunitReporter', subunitPlugin.klass)
+        self.assertEqual('SubunitReporter', subunitPlugin.klass)

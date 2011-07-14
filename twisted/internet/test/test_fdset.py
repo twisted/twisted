@@ -234,7 +234,7 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
         descriptor = RemovingDescriptor(reactor)
         reactor.callWhenRunning(descriptor.start)
         self.runReactor(reactor)
-        self.assertEquals(descriptor.calls, [])
+        self.assertEqual(descriptor.calls, [])
 
 
     def test_negativeOneFileDescriptor(self):
@@ -271,7 +271,7 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
         reactor.addReader(descriptor)
         client.send('x')
         self.runReactor(reactor)
-        self.assertEquals(descriptor._received, "x")
+        self.assertEqual(descriptor._received, "x")
 
 
     def test_lostFileDescriptor(self):

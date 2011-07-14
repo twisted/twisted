@@ -40,7 +40,7 @@ class CheckVersionInitializerTest(unittest.TestCase):
         """
         self.init.xmlstream.version = (0, 0)
         exc = self.assertRaises(error.StreamError, self.init.initialize)
-        self.assertEquals('unsupported-version', exc.condition)
+        self.assertEqual('unsupported-version', exc.condition)
 
 
 
@@ -136,9 +136,9 @@ class IQAuthInitializerTest(InitiatingInitializerHarness, unittest.TestCase):
             The server checks the credentials and responds with an empty result
             signalling success.
             """
-            self.assertEquals('user', unicode(iq.query.username))
-            self.assertEquals('secret', unicode(iq.query.password))
-            self.assertEquals('resource', unicode(iq.query.resource))
+            self.assertEqual('user', unicode(iq.query.username))
+            self.assertEqual('secret', unicode(iq.query.password))
+            self.assertEqual('resource', unicode(iq.query.resource))
 
             # Send server response
             response = xmlstream.toResponse(iq, 'result')
@@ -192,10 +192,10 @@ class IQAuthInitializerTest(InitiatingInitializerHarness, unittest.TestCase):
             The server checks the credentials and responds with an empty result
             signalling success.
             """
-            self.assertEquals('user', unicode(iq.query.username))
-            self.assertEquals(sha1('12345secret').hexdigest(),
+            self.assertEqual('user', unicode(iq.query.username))
+            self.assertEqual(sha1('12345secret').hexdigest(),
                               unicode(iq.query.digest).encode('utf-8'))
-            self.assertEquals('resource', unicode(iq.query.resource))
+            self.assertEqual('resource', unicode(iq.query.resource))
 
             # Send server response
             response = xmlstream.toResponse(iq, 'result')
@@ -312,7 +312,7 @@ class BindInitializerTest(InitiatingInitializerHarness, unittest.TestCase):
             self.pipe.source.send(response)
 
         def cb(result):
-            self.assertEquals(jid.JID('user@example.com/other resource'),
+            self.assertEqual(jid.JID('user@example.com/other resource'),
                               self.authenticator.jid)
 
         d1 = self.waitFor(IQ_BIND_SET, onBind)

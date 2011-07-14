@@ -252,7 +252,8 @@ class _Assertions(pyunit.TestCase, object):
                                         % (exception.__name__, result))
     assertRaises = failUnlessRaises
 
-    def failUnlessEqual(self, first, second, msg=''):
+
+    def assertEqual(self, first, second, msg=''):
         """
         Fail the test if C{first} and C{second} are not equal.
 
@@ -268,7 +269,8 @@ class _Assertions(pyunit.TestCase, object):
                 '%snot equal:\na = %s\nb = %s\n'
                 % (msg, pformat(first), pformat(second)))
         return first
-    assertEqual = assertEquals = failUnlessEquals = failUnlessEqual
+    failUnlessEqual = failUnlessEquals = assertEquals = assertEqual
+
 
     def failUnlessIdentical(self, first, second, msg=None):
         """

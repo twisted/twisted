@@ -72,14 +72,14 @@ class XPathTest(unittest.TestCase):
         """
         Test basic operation of the static methods.
         """
-        self.assertEquals(xpath.matches("/foo/bar", self.e),
+        self.assertEqual(xpath.matches("/foo/bar", self.e),
                           True)
-        self.assertEquals(xpath.queryForNodes("/foo/bar", self.e),
+        self.assertEqual(xpath.queryForNodes("/foo/bar", self.e),
                           [self.bar1, self.bar2, self.bar4,
                            self.bar5, self.bar6, self.bar7])
-        self.assertEquals(xpath.queryForString("/foo", self.e),
+        self.assertEqual(xpath.queryForString("/foo", self.e),
                           "somecontent")
-        self.assertEquals(xpath.queryForStringList("/foo", self.e),
+        self.assertEqual(xpath.queryForStringList("/foo", self.e),
                           ["somecontent", "somemorecontent"])
 
     def test_locationFooBar(self):
@@ -87,15 +87,15 @@ class XPathTest(unittest.TestCase):
         Test matching foo with child bar.
         """
         xp = XPathQuery("/foo/bar")
-        self.assertEquals(xp.matches(self.e), 1)
+        self.assertEqual(xp.matches(self.e), 1)
 
     def test_locationFooBarFoo(self):
         """
         Test finding foos at the second level.
         """
         xp = XPathQuery("/foo/bar/foo")
-        self.assertEquals(xp.matches(self.e), 1)
-        self.assertEquals(xp.queryForNodes(self.e), [self.subfoo,
+        self.assertEqual(xp.matches(self.e), 1)
+        self.assertEqual(xp.queryForNodes(self.e), [self.subfoo,
                                                      self.subfoo3,
                                                      self.subfoo4])
 
@@ -104,15 +104,15 @@ class XPathTest(unittest.TestCase):
         Test not finding bar3.
         """
         xp = XPathQuery("/foo/bar3")
-        self.assertEquals(xp.matches(self.e), 0)
+        self.assertEqual(xp.matches(self.e), 0)
 
     def test_locationAllChilds(self):
         """
         Test finding childs of foo.
         """
         xp = XPathQuery("/foo/*")
-        self.assertEquals(xp.matches(self.e), True)
-        self.assertEquals(xp.queryForNodes(self.e), [self.bar1, self.bar2,
+        self.assertEqual(xp.matches(self.e), True)
+        self.assertEqual(xp.queryForNodes(self.e), [self.bar1, self.bar2,
                                                      self.bar4, self.bar5,
                                                      self.bar6, self.bar7])
 
@@ -121,23 +121,23 @@ class XPathTest(unittest.TestCase):
         Test matching foo with attribute.
         """
         xp = XPathQuery("/foo[@attrib1]")
-        self.assertEquals(xp.matches(self.e), True)
+        self.assertEqual(xp.matches(self.e), True)
 
     def test_attributeWithValueAny(self):
         """
         Test find nodes with attribute having value.
         """
         xp = XPathQuery("/foo/*[@attrib2='value2']")
-        self.assertEquals(xp.matches(self.e), True)
-        self.assertEquals(xp.queryForNodes(self.e), [self.bar2])
+        self.assertEqual(xp.matches(self.e), True)
+        self.assertEqual(xp.queryForNodes(self.e), [self.bar2])
 
     def test_position(self):
         """
         Test finding element at position.
         """
         xp = XPathQuery("/foo/bar[2]")
-        self.assertEquals(xp.matches(self.e), 1)
-        self.assertEquals(xp.queryForNodes(self.e), [self.bar1])
+        self.assertEqual(xp.matches(self.e), 1)
+        self.assertEqual(xp.queryForNodes(self.e), [self.bar1])
 
     test_position.todo = "XPath queries with position are not working."
 
@@ -146,29 +146,29 @@ class XPathTest(unittest.TestCase):
         Test matching node with namespace.
         """
         xp = XPathQuery("/foo[@xmlns='testns']/bar")
-        self.assertEquals(xp.matches(self.e), 1)
+        self.assertEqual(xp.matches(self.e), 1)
 
     def test_namespaceNotFound(self):
         """
         Test not matching node with wrong namespace.
         """
         xp = XPathQuery("/foo[@xmlns='badns']/bar2")
-        self.assertEquals(xp.matches(self.e), 0)
+        self.assertEqual(xp.matches(self.e), 0)
 
     def test_attributeWithValue(self):
         """
         Test matching node with attribute having value.
         """
         xp = XPathQuery("/foo[@attrib1='value1']")
-        self.assertEquals(xp.matches(self.e), 1)
+        self.assertEqual(xp.matches(self.e), 1)
 
     def test_queryForString(self):
         """
         Test for queryForString and queryForStringList.
         """
         xp = XPathQuery("/foo")
-        self.assertEquals(xp.queryForString(self.e), "somecontent")
-        self.assertEquals(xp.queryForStringList(self.e),
+        self.assertEqual(xp.queryForString(self.e), "somecontent")
+        self.assertEqual(xp.queryForStringList(self.e),
                           ["somecontent", "somemorecontent"])
 
     def test_queryForNodes(self):
@@ -176,7 +176,7 @@ class XPathTest(unittest.TestCase):
         Test finding nodes.
         """
         xp = XPathQuery("/foo/bar")
-        self.assertEquals(xp.queryForNodes(self.e), [self.bar1, self.bar2,
+        self.assertEqual(xp.queryForNodes(self.e), [self.bar1, self.bar2,
                                                      self.bar4, self.bar5,
                                                      self.bar6, self.bar7])
 
@@ -185,24 +185,24 @@ class XPathTest(unittest.TestCase):
         Test matching a node with given text.
         """
         xp = XPathQuery("/foo[text() = 'somecontent']")
-        self.assertEquals(xp.matches(self.e), True)
+        self.assertEqual(xp.matches(self.e), True)
 
     def test_textNotOperator(self):
         """
         Test for not operator.
         """
         xp = XPathQuery("/foo[not(@nosuchattrib)]")
-        self.assertEquals(xp.matches(self.e), True)
+        self.assertEqual(xp.matches(self.e), True)
 
     def test_anyLocationAndText(self):
         """
         Test finding any nodes named gar and getting their text contents.
         """
         xp = XPathQuery("//gar")
-        self.assertEquals(xp.matches(self.e), True)
-        self.assertEquals(xp.queryForNodes(self.e), [self.gar1, self.gar2,
+        self.assertEqual(xp.matches(self.e), True)
+        self.assertEqual(xp.queryForNodes(self.e), [self.gar1, self.gar2,
                                                      self.gar3, self.gar4])
-        self.assertEquals(xp.queryForStringList(self.e), ["DEF", "ABC",
+        self.assertEqual(xp.queryForStringList(self.e), ["DEF", "ABC",
                                                           "JKL", "MNO"])
 
     def test_anyLocation(self):
@@ -210,8 +210,8 @@ class XPathTest(unittest.TestCase):
         Test finding any nodes named bar.
         """
         xp = XPathQuery("//bar")
-        self.assertEquals(xp.matches(self.e), True)
-        self.assertEquals(xp.queryForNodes(self.e), [self.bar1, self.bar2,
+        self.assertEqual(xp.matches(self.e), True)
+        self.assertEqual(xp.queryForNodes(self.e), [self.bar1, self.bar2,
                                                      self.bar3, self.bar4,
                                                      self.bar5, self.bar6,
                                                      self.bar7])
@@ -229,16 +229,16 @@ class XPathTest(unittest.TestCase):
         Test boolean and operator in condition.
         """
         xp = XPathQuery("//bar[@attrib4='value4' and @attrib5='value5']")
-        self.assertEquals(xp.matches(self.e), True)
-        self.assertEquals(xp.queryForNodes(self.e), [self.bar5])
+        self.assertEqual(xp.matches(self.e), True)
+        self.assertEqual(xp.queryForNodes(self.e), [self.bar5])
 
     def test_orOperator(self):
         """
         Test boolean or operator in condition.
         """
         xp = XPathQuery("//bar[@attrib5='value4' or @attrib5='value5']")
-        self.assertEquals(xp.matches(self.e), True)
-        self.assertEquals(xp.queryForNodes(self.e), [self.bar5, self.bar6])
+        self.assertEqual(xp.matches(self.e), True)
+        self.assertEqual(xp.queryForNodes(self.e), [self.bar5, self.bar6])
 
     def test_booleanOperatorsParens(self):
         """
@@ -246,8 +246,8 @@ class XPathTest(unittest.TestCase):
         """
         xp = XPathQuery("""//bar[@attrib4='value4' and
                                  (@attrib5='value4' or @attrib5='value6')]""")
-        self.assertEquals(xp.matches(self.e), True)
-        self.assertEquals(xp.queryForNodes(self.e), [self.bar6, self.bar7])
+        self.assertEqual(xp.matches(self.e), True)
+        self.assertEqual(xp.queryForNodes(self.e), [self.bar6, self.bar7])
 
     def test_booleanOperatorsNoParens(self):
         """
@@ -256,5 +256,5 @@ class XPathTest(unittest.TestCase):
         xp = XPathQuery("""//bar[@attrib5='value4' or
                                  @attrib5='value5' or
                                  @attrib5='value6']""")
-        self.assertEquals(xp.matches(self.e), True)
-        self.assertEquals(xp.queryForNodes(self.e), [self.bar5, self.bar6, self.bar7])
+        self.assertEqual(xp.matches(self.e), True)
+        self.assertEqual(xp.queryForNodes(self.e), [self.bar5, self.bar6, self.bar7])

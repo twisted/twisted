@@ -42,7 +42,7 @@ class IRCProtoTests(TestCase):
         """
         transport = StringTransport()
         self.proto.makeConnection(transport)
-        self.assertEquals(
+        self.assertEqual(
             transport.value(),
             "NICK alice\r\n"
             "USER alice foo bar :Twisted-IM user\r\n")
@@ -56,7 +56,7 @@ class IRCProtoTests(TestCase):
         self.account.password = "secret"
         transport = StringTransport()
         self.proto.makeConnection(transport)
-        self.assertEquals(
+        self.assertEqual(
             transport.value(),
             "PASS :secret\r\n"
             "NICK alice\r\n"
@@ -71,7 +71,7 @@ class IRCProtoTests(TestCase):
         self.account.channels = ['#foo', '#bar']
         transport = StringTransport()
         self.proto.makeConnection(transport)
-        self.assertEquals(
+        self.assertEqual(
             transport.value(),
             "NICK alice\r\n"
             "USER alice foo bar :Twisted-IM user\r\n"

@@ -76,23 +76,23 @@ class EventDispatcherTest(unittest.TestCase):
         pres.addElement("presence")
 
         d.dispatch(msg)
-        self.assertEquals(cb1.called, 2)
-        self.assertEquals(cb1.obj, msg)
-        self.assertEquals(cb2.called, 0)
+        self.assertEqual(cb1.called, 2)
+        self.assertEqual(cb1.obj, msg)
+        self.assertEqual(cb2.called, 0)
 
         d.dispatch(pres)
-        self.assertEquals(cb1.called, 2)
-        self.assertEquals(cb2.called, 1)
-        self.assertEquals(cb2.obj, pres)
-        self.assertEquals(cb3.called, 0)
+        self.assertEqual(cb1.called, 2)
+        self.assertEqual(cb2.called, 1)
+        self.assertEqual(cb2.obj, pres)
+        self.assertEqual(cb3.called, 0)
 
         d.dispatch(d, "//event/testevent")
-        self.assertEquals(cb3.called, 1)
-        self.assertEquals(cb3.obj, d)
+        self.assertEqual(cb3.called, 1)
+        self.assertEqual(cb3.obj, d)
 
         d.removeObserver("/presence", cb2.call)
         d.dispatch(pres)
-        self.assertEquals(cb2.called, 1)
+        self.assertEqual(cb2.called, 1)
 
 
     def test_addObserverTwice(self):
@@ -109,10 +109,10 @@ class EventDispatcherTest(unittest.TestCase):
         d.addObserver("//event/testevent", cb2.call)
         d.dispatch(d, "//event/testevent")
 
-        self.assertEquals(cb1.called, 1)
-        self.assertEquals(cb1.obj, d)
-        self.assertEquals(cb2.called, 1)
-        self.assertEquals(cb2.obj, d)
+        self.assertEqual(cb1.called, 1)
+        self.assertEqual(cb1.obj, d)
+        self.assertEqual(cb2.called, 1)
+        self.assertEqual(cb2.obj, d)
 
 
     def test_addObserverInDispatch(self):
@@ -129,13 +129,13 @@ class EventDispatcherTest(unittest.TestCase):
         d.addOnetimeObserver("/message", onMessage)
 
         d.dispatch(msg)
-        self.assertEquals(cb.called, 0)
+        self.assertEqual(cb.called, 0)
 
         d.dispatch(msg)
-        self.assertEquals(cb.called, 1)
+        self.assertEqual(cb.called, 1)
 
         d.dispatch(msg)
-        self.assertEquals(cb.called, 2)
+        self.assertEqual(cb.called, 2)
 
 
     def test_addOnetimeObserverInDispatch(self):
@@ -152,13 +152,13 @@ class EventDispatcherTest(unittest.TestCase):
         d.addOnetimeObserver("/message", onMessage)
 
         d.dispatch(msg)
-        self.assertEquals(cb.called, 0)
+        self.assertEqual(cb.called, 0)
 
         d.dispatch(msg)
-        self.assertEquals(cb.called, 1)
+        self.assertEqual(cb.called, 1)
 
         d.dispatch(msg)
-        self.assertEquals(cb.called, 1)
+        self.assertEqual(cb.called, 1)
 
 
     def testOnetimeDispatch(self):
@@ -168,9 +168,9 @@ class EventDispatcherTest(unittest.TestCase):
 
         d.addOnetimeObserver("/message", cb.call)
         d.dispatch(msg)
-        self.assertEquals(cb.called, 1)
+        self.assertEqual(cb.called, 1)
         d.dispatch(msg)
-        self.assertEquals(cb.called, 1)
+        self.assertEqual(cb.called, 1)
 
 
     def testDispatcherResult(self):
@@ -181,10 +181,10 @@ class EventDispatcherTest(unittest.TestCase):
 
         d.addObserver("/presence", cb.call)
         result = d.dispatch(msg)
-        self.assertEquals(False, result)
+        self.assertEqual(False, result)
 
         result = d.dispatch(pres)
-        self.assertEquals(True, result)
+        self.assertEqual(True, result)
 
 
     def testOrderedXPathDispatch(self):
@@ -197,7 +197,7 @@ class EventDispatcherTest(unittest.TestCase):
         msg = Element(("ns", "message"))
         msg.addElement("body")
         d.dispatch(msg)
-        self.assertEquals(cb.callList, [cb.call1, cb.call2, cb.call3],
+        self.assertEqual(cb.callList, [cb.call1, cb.call2, cb.call3],
                           "Calls out of order: %s" %
                           repr([c.__name__ for c in cb.callList]))
 
@@ -328,7 +328,7 @@ class XmlPipeTest(unittest.TestCase):
         self.pipe.sink.addObserver('/test[@xmlns="testns"]', cb)
         element = Element(('testns', 'test'))
         self.pipe.source.send(element)
-        self.assertEquals([element], called)
+        self.assertEqual([element], called)
 
 
     def test_sendFromSink(self):
@@ -342,4 +342,4 @@ class XmlPipeTest(unittest.TestCase):
         self.pipe.source.addObserver('/test[@xmlns="testns"]', cb)
         element = Element(('testns', 'test'))
         self.pipe.sink.send(element)
-        self.assertEquals([element], called)
+        self.assertEqual([element], called)

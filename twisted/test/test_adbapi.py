@@ -141,13 +141,13 @@ class ADBAPITestBase:
     def _testPool_4(self, res):
         # runInteraction
         d = self.dbpool.runInteraction(self.interaction)
-        d.addCallback(lambda res: self.assertEquals(res, "done"))
+        d.addCallback(lambda res: self.assertEqual(res, "done"))
         return d
 
     def _testPool_5(self, res):
         # withConnection
         d = self.dbpool.runWithConnection(self.withConnection)
-        d.addCallback(lambda res: self.assertEquals(res, "done"))
+        d.addCallback(lambda res: self.assertEqual(res, "done"))
         return d
 
     def _testPool_6(self, res):
@@ -196,12 +196,12 @@ class ADBAPITestBase:
         curs.execute("insert into simple(x) values(1)")
         curs.execute("select x from simple")
         res = curs.fetchall()
-        self.failUnlessEqual(len(res), 1)
-        self.failUnlessEqual(len(res[0]), 1)
-        self.failUnlessEqual(res[0][0], 1)
+        self.assertEqual(len(res), 1)
+        self.assertEqual(len(res[0]), 1)
+        self.assertEqual(res[0][0], 1)
         curs.execute("delete from simple")
         curs.execute("select x from simple")
-        self.failUnlessEqual(len(curs.fetchall()), 0)
+        self.assertEqual(len(curs.fetchall()), 0)
         curs.close()
         self.dbpool.disconnect(conn)
 
@@ -634,8 +634,8 @@ class ConnectionTestCase(unittest.TestCase):
         connection = Connection(pool)
         self.assertRaises(ConnectionLost, connection.rollback)
         errors = self.flushLoggedErrors(RuntimeError)
-        self.assertEquals(len(errors), 1)
-        self.assertEquals(errors[0].value.args[0], "problem!")
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0].value.args[0], "problem!")
 
 
 
@@ -664,8 +664,8 @@ class TransactionTestCase(unittest.TestCase):
         transaction = Transaction(pool, ConnectionCursorRaise())
         transaction.reopen()
         errors = self.flushLoggedErrors(RuntimeError)
-        self.assertEquals(len(errors), 1)
-        self.assertEquals(errors[0].value.args[0], "problem!")
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0].value.args[0], "problem!")
 
 
 
@@ -754,8 +754,8 @@ class ConnectionPoolTestCase(unittest.TestCase):
         d = self.assertFailure(d, ValueError)
         def cbFailed(ignored):
             errors = self.flushLoggedErrors(RuntimeError)
-            self.assertEquals(len(errors), 1)
-            self.assertEquals(errors[0].value.args[0], "problem!")
+            self.assertEqual(len(errors), 1)
+            self.assertEqual(errors[0].value.args[0], "problem!")
         d.addCallback(cbFailed)
         return d
 
@@ -772,8 +772,8 @@ class ConnectionPoolTestCase(unittest.TestCase):
         pool._close(ConnectionCloseRaise())
 
         errors = self.flushLoggedErrors(RuntimeError)
-        self.assertEquals(len(errors), 1)
-        self.assertEquals(errors[0].value.args[0], "problem!")
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0].value.args[0], "problem!")
 
 
     def test_runWithInteractionRaiseOriginalError(self):
@@ -803,8 +803,8 @@ class ConnectionPoolTestCase(unittest.TestCase):
         d = self.assertFailure(d, ValueError)
         def cbFailed(ignored):
             errors = self.flushLoggedErrors(RuntimeError)
-            self.assertEquals(len(errors), 1)
-            self.assertEquals(errors[0].value.args[0], "problem!")
+            self.assertEqual(len(errors), 1)
+            self.assertEqual(errors[0].value.args[0], "problem!")
         d.addCallback(cbFailed)
         return d
 
@@ -817,7 +817,7 @@ class ConnectionPoolTestCase(unittest.TestCase):
         reactor = EventReactor(False)
         pool = ConnectionPool('twisted.test.test_adbapi', cp_reactor=reactor)
         # There should be a startup trigger waiting.
-        self.assertEquals(reactor.triggers, [('after', 'startup', pool._start)])
+        self.assertEqual(reactor.triggers, [('after', 'startup', pool._start)])
         pool.close()
         # But not anymore.
         self.assertFalse(reactor.triggers)
@@ -831,7 +831,7 @@ class ConnectionPoolTestCase(unittest.TestCase):
         reactor = EventReactor(True)
         pool = ConnectionPool('twisted.test.test_adbapi', cp_reactor=reactor)
         # There should be a shutdown trigger waiting.
-        self.assertEquals(reactor.triggers, [('during', 'shutdown', pool.finalClose)])
+        self.assertEqual(reactor.triggers, [('during', 'shutdown', pool.finalClose)])
         pool.close()
         # But not anymore.
         self.assertFalse(reactor.triggers)

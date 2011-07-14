@@ -63,7 +63,7 @@ class AbstractFilePathTestCase(unittest.TestCase):
         """
         Verify that the segments between two paths are correctly identified.
         """
-        self.assertEquals(
+        self.assertEqual(
             self.path.child("a").child("b").child("c").segmentsFrom(self.path),
             ["a", "b", "c"])
 
@@ -82,7 +82,7 @@ class AbstractFilePathTestCase(unittest.TestCase):
         hierarchy.
         """
         x = [foo.path for foo in self.path.walk()]
-        self.assertEquals(set(x), set(self.all))
+        self.assertEqual(set(x), set(self.all))
 
 
     def test_parents(self):
@@ -99,7 +99,7 @@ class AbstractFilePathTestCase(unittest.TestCase):
             L.append(thispath)
             lastpath = thispath
             thispath = os.path.dirname(thispath)
-        self.assertEquals([x.path for x in pathobj.parents()], L)
+        self.assertEqual([x.path for x in pathobj.parents()], L)
 
 
     def test_validSubdir(self):
@@ -115,7 +115,7 @@ class AbstractFilePathTestCase(unittest.TestCase):
                         "It's a directory.")
         self.failUnless(not sub1.islink(),
                         "It's a directory.")
-        self.failUnlessEqual(sub1.listdir(),
+        self.assertEqual(sub1.listdir(),
                              ['file2'])
 
 
@@ -132,9 +132,9 @@ class AbstractFilePathTestCase(unittest.TestCase):
         Make sure that we can read existent non-empty files.
         """
         f1 = self.path.child('file1')
-        self.failUnlessEqual(f1.open().read(), self.f1content)
+        self.assertEqual(f1.open().read(), self.f1content)
         f2 = self.path.child('sub1').child('file2')
-        self.failUnlessEqual(f2.open().read(), self.f2content)
+        self.assertEqual(f2.open().read(), self.f2content)
 
 
     def test_multipleChildSegments(self):
@@ -144,7 +144,7 @@ class AbstractFilePathTestCase(unittest.TestCase):
         """
         multiple = self.path.descendant(['a', 'b', 'c'])
         single = self.path.child('a').child('b').child('c')
-        self.assertEquals(multiple, single)
+        self.assertEqual(multiple, single)
 
 
     def test_dictionaryKeys(self):
@@ -157,13 +157,13 @@ class AbstractFilePathTestCase(unittest.TestCase):
         dictoid = {}
         dictoid[f1] = 3
         dictoid[f1prime] = 4
-        self.assertEquals(dictoid[f1], 4)
-        self.assertEquals(dictoid.keys(), [f1])
+        self.assertEqual(dictoid[f1], 4)
+        self.assertEqual(dictoid.keys(), [f1])
         self.assertIdentical(dictoid.keys()[0], f1)
         self.assertNotIdentical(dictoid.keys()[0], f1prime) # sanity check
         dictoid[f2] = 5
-        self.assertEquals(dictoid[f2], 5)
-        self.assertEquals(len(dictoid), 2)
+        self.assertEqual(dictoid[f2], 5)
+        self.assertEqual(len(dictoid), 2)
 
 
     def test_dictionaryKeyWithString(self):
@@ -174,7 +174,7 @@ class AbstractFilePathTestCase(unittest.TestCase):
         f1 = self.path.child('file1')
         dictoid = {f1: 'hello'}
         dictoid[f1.path] = 'goodbye'
-        self.assertEquals(len(dictoid), 2)
+        self.assertEqual(len(dictoid), 2)
 
 
     def test_childrenNonexistentError(self):
@@ -200,9 +200,9 @@ class AbstractFilePathTestCase(unittest.TestCase):
         (and hopefully therefore 'high precision').
         """
         for p in self.path, self.path.child('file1'):
-            self.failUnlessEqual(type(p.getAccessTime()), float)
-            self.failUnlessEqual(type(p.getModificationTime()), float)
-            self.failUnlessEqual(type(p.getStatusChangeTime()), float)
+            self.assertEqual(type(p.getAccessTime()), float)
+            self.assertEqual(type(p.getModificationTime()), float)
+            self.assertEqual(type(p.getStatusChangeTime()), float)
 
 
     def test_oldTimesAreInts(self):
@@ -211,9 +211,9 @@ class AbstractFilePathTestCase(unittest.TestCase):
         integers, for compatibility.
         """
         for p in self.path, self.path.child('file1'):
-            self.failUnlessEqual(type(p.getatime()), int)
-            self.failUnlessEqual(type(p.getmtime()), int)
-            self.failUnlessEqual(type(p.getctime()), int)
+            self.assertEqual(type(p.getatime()), int)
+            self.assertEqual(type(p.getmtime()), int)
+            self.assertEqual(type(p.getctime()), int)
 
 
 
@@ -267,7 +267,7 @@ class ListingCompatibilityTests(unittest.TestCase):
         d2 = ose.originalException.__dict__.keys()
         d1.sort()
         d2.sort()
-        self.assertEquals(d1, d2)
+        self.assertEqual(d1, d2)
 
 
 
@@ -309,7 +309,7 @@ class ZipFilePathTestCase(AbstractFilePathTestCase):
             os.path.abspath(self.cmn + ".zip" + os.sep + 'foo'),)
 
         # Check for an absolute path
-        self.assertEquals(repr(child), pathRepr)
+        self.assertEqual(repr(child), pathRepr)
 
         # Create a path to the file rooted in the current working directory
         relativeCommon = self.cmn.replace(os.getcwd() + os.sep, "", 1) + ".zip"
@@ -317,7 +317,7 @@ class ZipFilePathTestCase(AbstractFilePathTestCase):
         child = relpath.child("foo")
 
         # Check using a path without the cwd prepended
-        self.assertEquals(repr(child), pathRepr)
+        self.assertEqual(repr(child), pathRepr)
 
 
     def test_zipPathReprParentDirSegment(self):
@@ -329,7 +329,7 @@ class ZipFilePathTestCase(AbstractFilePathTestCase):
         child = self.path.child("foo").child("..").child("bar")
         pathRepr = "ZipPath(%r)" % (
             self.cmn + ".zip" + os.sep.join(["", "foo", "..", "bar"]))
-        self.assertEquals(repr(child), pathRepr)
+        self.assertEqual(repr(child), pathRepr)
 
 
     def test_zipPathReprEscaping(self):
@@ -340,7 +340,7 @@ class ZipFilePathTestCase(AbstractFilePathTestCase):
         child = self.path.child("'")
         path = self.cmn + ".zip" + os.sep.join(["", "'"])
         pathRepr = "ZipPath('%s')" % (path.encode('string-escape'),)
-        self.assertEquals(repr(child), pathRepr)
+        self.assertEqual(repr(child), pathRepr)
 
 
     def test_zipArchiveRepr(self):
@@ -351,14 +351,14 @@ class ZipFilePathTestCase(AbstractFilePathTestCase):
         pathRepr = 'ZipArchive(%r)' % (os.path.abspath(self.cmn + '.zip'),)
 
         # Check for an absolute path
-        self.assertEquals(repr(self.path), pathRepr)
+        self.assertEqual(repr(self.path), pathRepr)
 
         # Create a path to the file rooted in the current working directory
         relativeCommon = self.cmn.replace(os.getcwd() + os.sep, "", 1) + ".zip"
         relpath = ZipArchive(relativeCommon)
 
         # Check using a path without the cwd prepended
-        self.assertEquals(repr(relpath), pathRepr)
+        self.assertEqual(repr(relpath), pathRepr)
 
 
 
@@ -499,7 +499,7 @@ class PermissionsTestCase(unittest.TestCase):
     def assertNotUnequal(self, first, second, msg=None):
         """
         Tests that C{first} != C{second} is false.  This method tests the
-        __ne__ method, as opposed to L{assertEquals} (C{first} == C{second}),
+        __ne__ method, as opposed to L{assertEqual} (C{first} == C{second}),
         which tests the __eq__ method.
 
         Note: this should really be part of trial
@@ -524,9 +524,9 @@ class PermissionsTestCase(unittest.TestCase):
             for w in (True, False):
                 for x in (True, False):
                     rwx = filepath.RWX(r, w, x)
-                    self.assertEquals(rwx.read, r)
-                    self.assertEquals(rwx.write, w)
-                    self.assertEquals(rwx.execute, x)
+                    self.assertEqual(rwx.read, r)
+                    self.assertEqual(rwx.write, w)
+                    self.assertEqual(rwx.execute, x)
         rwx = filepath.RWX(True, True, True)
         self.assertTrue(rwx.read and rwx.write and rwx.execute)
 
@@ -539,7 +539,7 @@ class PermissionsTestCase(unittest.TestCase):
         for r in (True, False):
             for w in (True, False):
                 for x in (True, False):
-                    self.assertEquals(filepath.RWX(r, w, x),
+                    self.assertEqual(filepath.RWX(r, w, x),
                                       filepath.RWX(r, w, x))
                     self.assertNotUnequal(filepath.RWX(r, w, x),
                                           filepath.RWX(r, w, x))
@@ -564,11 +564,11 @@ class PermissionsTestCase(unittest.TestCase):
             for w in (True, False):
                 for x in (True, False):
                     rwx = filepath.RWX(r, w, x)
-                    self.assertEquals(rwx.shorthand(),
+                    self.assertEqual(rwx.shorthand(),
                                       getChar(r, 'r') +
                                       getChar(w, 'w') +
                                       getChar(x, 'x'))
-        self.assertEquals(filepath.RWX(True, False, True).shorthand(), "r-x")
+        self.assertEqual(filepath.RWX(True, False, True).shorthand(), "r-x")
 
 
     def test_permissionsFromStat(self):
@@ -589,15 +589,15 @@ class PermissionsTestCase(unittest.TestCase):
                     chmodString = "%d%d%d" % (u, g, o)
                     chmodVal = int(chmodString, 8)
                     perm = filepath.Permissions(chmodVal)
-                    self.assertEquals(perm.user,
+                    self.assertEqual(perm.user,
                                       _rwxFromStat(chmodVal, "USR"),
                                       "%s: got user: %s" %
                                       (chmodString, perm.user))
-                    self.assertEquals(perm.group,
+                    self.assertEqual(perm.group,
                                       _rwxFromStat(chmodVal, "GRP"),
                                       "%s: got group: %s" %
                                       (chmodString, perm.group))
-                    self.assertEquals(perm.other,
+                    self.assertEqual(perm.other,
                                       _rwxFromStat(chmodVal, "OTH"),
                                       "%s: got other: %s" %
                                       (chmodString, perm.other))
@@ -612,7 +612,7 @@ class PermissionsTestCase(unittest.TestCase):
         Two L{Permissions}'s that are created with the same bitmask
         are equivalent
         """
-        self.assertEquals(filepath.Permissions(0777),
+        self.assertEqual(filepath.Permissions(0777),
                           filepath.Permissions(0777))
         self.assertNotUnequal(filepath.Permissions(0777),
                               filepath.Permissions(0777))
@@ -631,10 +631,10 @@ class PermissionsTestCase(unittest.TestCase):
             for g in range(0, 8):
                 for o in range(0, 8):
                     perm = filepath.Permissions(eval("0%d%d%d" % (u, g, o)))
-                    self.assertEquals(perm.shorthand(),
+                    self.assertEqual(perm.shorthand(),
                                       ''.join(x.shorthand() for x in (
                                           perm.user, perm.group, perm.other)))
-        self.assertEquals(filepath.Permissions(0770).shorthand(), "rwxrwx---")
+        self.assertEqual(filepath.Permissions(0770).shorthand(), "rwxrwx---")
 
 
 
@@ -651,7 +651,7 @@ class FilePathTestCase(AbstractFilePathTestCase):
         """
         for mode in (0555, 0777):
             self.path.child("sub1").chmod(mode)
-            self.assertEquals(
+            self.assertEqual(
                 stat.S_IMODE(os.stat(self.path.child("sub1").path).st_mode),
                 mode)
 
@@ -690,7 +690,7 @@ class FilePathTestCase(AbstractFilePathTestCase):
         self.createLinks()
         self.symlink(self.path.child("file2.link").path,
                      self.path.child("link.link").path)
-        self.assertEquals(self.path.child("link.link").realpath(),
+        self.assertEqual(self.path.child("link.link").realpath(),
                           self.path.child("sub1").child("file2"))
 
 
@@ -710,7 +710,7 @@ class FilePathTestCase(AbstractFilePathTestCase):
         L{FilePath.realpath} returns the path itself if the path is not a
         symbolic link.
         """
-        self.assertEquals(self.path.child("sub1").realpath(),
+        self.assertEqual(self.path.child("sub1").realpath(),
                           self.path.child("sub1"))
 
 
@@ -752,18 +752,18 @@ class FilePathTestCase(AbstractFilePathTestCase):
         def noSymLinks(path):
             return not path.islink()
         x = [foo.path for foo in self.path.walk(descend=noSymLinks)]
-        self.assertEquals(set(x), set(self.all))
+        self.assertEqual(set(x), set(self.all))
 
 
     def test_getAndSet(self):
         content = 'newcontent'
         self.path.child('new').setContent(content)
         newcontent = self.path.child('new').getContent()
-        self.failUnlessEqual(content, newcontent)
+        self.assertEqual(content, newcontent)
         content = 'content'
         self.path.child('new').setContent(content, '.tmp')
         newcontent = self.path.child('new').getContent()
-        self.failUnlessEqual(content, newcontent)
+        self.assertEqual(content, newcontent)
 
 
     def test_getContentFileClosing(self):
@@ -799,7 +799,7 @@ class FilePathTestCase(AbstractFilePathTestCase):
         # Sanity check: setContent should only open one derivative path each
         # time to store the temporary file.
         openedSiblings = fp.openedPaths()
-        self.assertEquals(len(openedSiblings), 2)
+        self.assertEqual(len(openedSiblings), 2)
         self.assertNotEquals(openedSiblings[0], openedSiblings[1])
 
 
@@ -812,13 +812,13 @@ class FilePathTestCase(AbstractFilePathTestCase):
         fp = TrackingFilePath(self.mktemp())
         fp.setContent("hello")
         opened = fp.openedPaths()
-        self.assertEquals(len(opened), 1)
+        self.assertEqual(len(opened), 1)
         self.assertTrue(opened[0].basename().endswith(".new"),
                         "%s does not end with default '.new' extension" % (
                             opened[0].basename()))
         fp.setContent("goodbye", "-something-else")
         opened = fp.openedPaths()
-        self.assertEquals(len(opened), 2)
+        self.assertEqual(len(opened), 2)
         self.assertTrue(opened[1].basename().endswith("-something-else"),
                         "%s does not end with -something-else extension" % (
                             opened[1].basename()))
@@ -853,8 +853,8 @@ class FilePathTestCase(AbstractFilePathTestCase):
         for target, link in targetLinks:
             target.linkTo(link)
             self.assertTrue(link.islink(), "This is a link")
-            self.assertEquals(target.isdir(), link.isdir())
-            self.assertEquals(target.isfile(), link.isfile())
+            self.assertEqual(target.isdir(), link.isdir())
+            self.assertEqual(target.isfile(), link.isfile())
 
 
     def test_linkToErrors(self):
@@ -895,26 +895,26 @@ class FilePathTestCase(AbstractFilePathTestCase):
     def testStatCache(self):
         p = self.path.child('stattest')
         p.touch()
-        self.failUnlessEqual(p.getsize(), 0)
-        self.failUnlessEqual(abs(p.getmtime() - time.time()) // 20, 0)
-        self.failUnlessEqual(abs(p.getctime() - time.time()) // 20, 0)
-        self.failUnlessEqual(abs(p.getatime() - time.time()) // 20, 0)
-        self.failUnlessEqual(p.exists(), True)
-        self.failUnlessEqual(p.exists(), True)
+        self.assertEqual(p.getsize(), 0)
+        self.assertEqual(abs(p.getmtime() - time.time()) // 20, 0)
+        self.assertEqual(abs(p.getctime() - time.time()) // 20, 0)
+        self.assertEqual(abs(p.getatime() - time.time()) // 20, 0)
+        self.assertEqual(p.exists(), True)
+        self.assertEqual(p.exists(), True)
         # OOB removal: FilePath.remove() will automatically restat
         os.remove(p.path)
         # test caching
-        self.failUnlessEqual(p.exists(), True)
+        self.assertEqual(p.exists(), True)
         p.restat(reraise=False)
-        self.failUnlessEqual(p.exists(), False)
-        self.failUnlessEqual(p.islink(), False)
-        self.failUnlessEqual(p.isdir(), False)
-        self.failUnlessEqual(p.isfile(), False)
+        self.assertEqual(p.exists(), False)
+        self.assertEqual(p.islink(), False)
+        self.assertEqual(p.isdir(), False)
+        self.assertEqual(p.isfile(), False)
 
     def testPersist(self):
         newpath = pickle.loads(pickle.dumps(self.path))
-        self.failUnlessEqual(self.path.__class__, newpath.__class__)
-        self.failUnlessEqual(self.path.path, newpath.path)
+        self.assertEqual(self.path.__class__, newpath.__class__)
+        self.assertEqual(self.path.path, newpath.path)
 
     def testInsecureUNIX(self):
         self.assertRaises(filepath.InsecurePath, self.path.child, "..")
@@ -942,7 +942,7 @@ class FilePathTestCase(AbstractFilePathTestCase):
         testInsecureWin32Whacky.skip = "Consider yourself lucky."
 
     def testComparison(self):
-        self.assertEquals(filepath.FilePath('a'),
+        self.assertEqual(filepath.FilePath('a'),
                           filepath.FilePath('a'))
         self.failUnless(filepath.FilePath('z') >
                         filepath.FilePath('a'))
@@ -977,14 +977,14 @@ class FilePathTestCase(AbstractFilePathTestCase):
     def testSibling(self):
         p = self.path.child('sibling_start')
         ts = p.sibling('sibling_test')
-        self.assertEquals(ts.dirname(), p.dirname())
-        self.assertEquals(ts.basename(), 'sibling_test')
+        self.assertEqual(ts.dirname(), p.dirname())
+        self.assertEqual(ts.basename(), 'sibling_test')
         ts.createDirectory()
         self.assertIn(ts, self.path.children())
 
     def testTemporarySibling(self):
         ts = self.path.temporarySibling()
-        self.assertEquals(ts.dirname(), self.path.dirname())
+        self.assertEqual(ts.dirname(), self.path.dirname())
         self.assertNotIn(ts.basename(), self.path.listdir())
         ts.createDirectory()
         self.assertIn(ts, self.path.parent().children())
@@ -1037,7 +1037,7 @@ class FilePathTestCase(AbstractFilePathTestCase):
         newPaths = list(self.path.walk()) # Record double-copy state
         newPaths.sort()
         oldPaths.sort()
-        self.assertEquals(newPaths, oldPaths)
+        self.assertEqual(newPaths, oldPaths)
 
 
     def test_copyToMissingDestFileClosing(self):
@@ -1093,7 +1093,7 @@ class FilePathTestCase(AbstractFilePathTestCase):
         fp = filepath.FilePath(self.mktemp())
         self.path.copyTo(fp)
         self.assertFalse(fp.child("link1").islink())
-        self.assertEquals([x.basename() for x in fp.child("sub1").children()],
+        self.assertEqual([x.basename() for x in fp.child("sub1").children()],
                           [x.basename() for x in fp.child("link1").children()])
 
 
@@ -1105,7 +1105,7 @@ class FilePathTestCase(AbstractFilePathTestCase):
         fp = filepath.FilePath(self.mktemp())
         self.path.copyTo(fp, followLinks=False)
         self.assertTrue(fp.child("link1").islink())
-        self.assertEquals(os.readlink(self.path.child("link1").path),
+        self.assertEqual(os.readlink(self.path.child("link1").path),
                           os.readlink(fp.child("link1").path))
 
 
@@ -1115,7 +1115,7 @@ class FilePathTestCase(AbstractFilePathTestCase):
         """
         path = filepath.FilePath(self.mktemp())
         exc = self.assertRaises(OSError, path.copyTo, 'some other path')
-        self.assertEquals(exc.errno, errno.ENOENT)
+        self.assertEqual(exc.errno, errno.ENOENT)
 
 
     def test_moveTo(self):
@@ -1130,7 +1130,7 @@ class FilePathTestCase(AbstractFilePathTestCase):
         newPaths = list(self.path.walk()) # Record double-move state
         newPaths.sort()
         oldPaths.sort()
-        self.assertEquals(newPaths, oldPaths)
+        self.assertEqual(newPaths, oldPaths)
 
 
     def test_moveToExistsCache(self):
@@ -1146,8 +1146,8 @@ class FilePathTestCase(AbstractFilePathTestCase):
         # Both a sanity check (make sure the file status looks right) and an
         # enticement for stat-caching logic to kick in and remember that these
         # exist / don't exist.
-        self.assertEquals(fp.exists(), True)
-        self.assertEquals(fp2.exists(), False)
+        self.assertEqual(fp.exists(), True)
+        self.assertEqual(fp2.exists(), False)
 
         fp.moveTo(fp2)
         self.assertEqual(fp.exists(), False)
@@ -1260,7 +1260,7 @@ class FilePathTestCase(AbstractFilePathTestCase):
         self.symlink(self.path.child('file1').path, f2.path)
         f2.moveTo(f3)
         self.assertFalse(f3.islink())
-        self.assertEquals(f3.getContent(), 'file 1')
+        self.assertEqual(f3.getContent(), 'file 1')
         self.assertTrue(invokedWith)
 
 
@@ -1275,7 +1275,7 @@ class FilePathTestCase(AbstractFilePathTestCase):
         self.symlink(self.path.child('file1').path, f2.path)
         f2.moveTo(f3, followLinks=False)
         self.assertTrue(f3.islink())
-        self.assertEquals(f3.getContent(), 'file 1')
+        self.assertEqual(f3.getContent(), 'file 1')
         self.assertTrue(invokedWith)
 
 
@@ -1301,7 +1301,7 @@ class FilePathTestCase(AbstractFilePathTestCase):
         # Opening a file for reading when it does not already exist is an error
         nonexistent = self.path.child('nonexistent')
         e = self.assertRaises(IOError, nonexistent.open)
-        self.assertEquals(e.errno, errno.ENOENT)
+        self.assertEqual(e.errno, errno.ENOENT)
 
         # Opening a file for writing when it does not exist is okay
         writer = self.path.child('writer')
@@ -1312,14 +1312,14 @@ class FilePathTestCase(AbstractFilePathTestCase):
         # Make sure those bytes ended up there - and test opening a file for
         # reading when it does exist at the same time
         f = writer.open()
-        self.assertEquals(f.read(), 'abc\ndef')
+        self.assertEqual(f.read(), 'abc\ndef')
         f.close()
 
         # Re-opening that file in write mode should erase whatever was there.
         f = writer.open('w')
         f.close()
         f = writer.open()
-        self.assertEquals(f.read(), '')
+        self.assertEqual(f.read(), '')
         f.close()
 
         # Put some bytes in a file so we can test that appending does not
@@ -1334,12 +1334,12 @@ class FilePathTestCase(AbstractFilePathTestCase):
         f.close()
 
         f = appender.open('r')
-        self.assertEquals(f.read(), 'abcdef')
+        self.assertEqual(f.read(), 'abcdef')
         f.close()
 
         # read/write should let us do both without erasing those bytes
         f = appender.open('r+')
-        self.assertEquals(f.read(), 'abcdef')
+        self.assertEqual(f.read(), 'abcdef')
         # ANSI C *requires* an fseek or an fgetpos between an fread and an
         # fwrite or an fwrite and a fread.  We can't reliable get Python to
         # invoke fgetpos, so we seek to a 0 byte offset from the current
@@ -1353,13 +1353,13 @@ class FilePathTestCase(AbstractFilePathTestCase):
 
         # Make sure those new bytes really showed up
         f = appender.open('r')
-        self.assertEquals(f.read(), 'abcdefghi')
+        self.assertEqual(f.read(), 'abcdefghi')
         f.close()
 
         # write/read should let us do both, but erase anything that's there
         # already.
         f = appender.open('w+')
-        self.assertEquals(f.read(), '')
+        self.assertEqual(f.read(), '')
         f.seek(0, 1) # Don't forget this!
         f.write('123')
         f.close()
@@ -1372,10 +1372,10 @@ class FilePathTestCase(AbstractFilePathTestCase):
         # The cursor is not at the end of the file until after the first write.
         f.write('456')
         f.seek(0, 1) # Asinine.
-        self.assertEquals(f.read(), '')
+        self.assertEqual(f.read(), '')
 
         f.seek(0, 0)
-        self.assertEquals(f.read(), '123456')
+        self.assertEqual(f.read(), '123456')
         f.close()
 
         # Opening a file exclusively must fail if that file exists already.
@@ -1425,10 +1425,10 @@ class FilePathTestCase(AbstractFilePathTestCase):
         an operation has occurred in the mean time.
         """
         fp = filepath.FilePath(self.mktemp())
-        self.assertEquals(fp.exists(), False)
+        self.assertEqual(fp.exists(), False)
 
         fp.makedirs()
-        self.assertEquals(fp.exists(), True)
+        self.assertEqual(fp.exists(), True)
 
 
     def test_changed(self):
@@ -1439,7 +1439,7 @@ class FilePathTestCase(AbstractFilePathTestCase):
         """
         fp = filepath.FilePath(self.mktemp())
         fp.setContent("12345")
-        self.assertEquals(fp.getsize(), 5)
+        self.assertEqual(fp.getsize(), 5)
 
         # Someone else comes along and changes the file.
         fObj = open(fp.path, 'wb')
@@ -1447,13 +1447,13 @@ class FilePathTestCase(AbstractFilePathTestCase):
         fObj.close()
 
         # Sanity check for caching: size should still be 5.
-        self.assertEquals(fp.getsize(), 5)
+        self.assertEqual(fp.getsize(), 5)
         fp.changed()
 
         # This path should look like we don't know what status it's in, not that
         # we know that it didn't exist when last we checked.
         self.assertEqual(fp.statinfo, None)
-        self.assertEquals(fp.getsize(), 8)
+        self.assertEqual(fp.getsize(), 8)
 
 
     def test_getPermissions_POSIX(self):
@@ -1464,10 +1464,10 @@ class FilePathTestCase(AbstractFilePathTestCase):
         """
         for mode in (0777, 0700):
             self.path.child("sub1").chmod(mode)
-            self.assertEquals(self.path.child("sub1").getPermissions(),
+            self.assertEqual(self.path.child("sub1").getPermissions(),
                               filepath.Permissions(mode))
         self.path.child("sub1").chmod(0764) #sanity check
-        self.assertEquals(self.path.child("sub1").getPermissions().shorthand(),
+        self.assertEqual(self.path.child("sub1").getPermissions().shorthand(),
                           "rwxrw-r--")
 
 
@@ -1481,11 +1481,11 @@ class FilePathTestCase(AbstractFilePathTestCase):
         """
         for mode in (0777, 0555):
             self.path.child("sub1").chmod(mode)
-            self.assertEquals(self.path.child("sub1").getPermissions(),
+            self.assertEqual(self.path.child("sub1").getPermissions(),
                               filepath.Permissions(mode))
         self.path.child("sub1").chmod(0511) #sanity check to make sure that
         # user=group=other permissions
-        self.assertEquals(self.path.child("sub1").getPermissions().shorthand(),
+        self.assertEqual(self.path.child("sub1").getPermissions().shorthand(),
                           "r-xr-xr-x")
 
 
@@ -1520,8 +1520,8 @@ class FilePathTestCase(AbstractFilePathTestCase):
             self.assertIsInstance(p.getNumberOfHardLinks(), int)
             self.assertIsInstance(p.getUserID(), int)
             self.assertIsInstance(p.getGroupID(), int)
-        self.assertEquals(self.path.getUserID(), c.getUserID())
-        self.assertEquals(self.path.getGroupID(), c.getGroupID())
+        self.assertEqual(self.path.getUserID(), c.getUserID())
+        self.assertEqual(self.path.getGroupID(), c.getGroupID())
 
 
     def test_statinfoNumbersAreValid(self):
@@ -1546,11 +1546,11 @@ class FilePathTestCase(AbstractFilePathTestCase):
         # ensure that restat will need to be called to get values
         self.path.statinfo = None
 
-        self.assertEquals(self.path.getInodeNumber(), fake.st_ino)
-        self.assertEquals(self.path.getDevice(), fake.st_dev)
-        self.assertEquals(self.path.getNumberOfHardLinks(), fake.st_nlink)
-        self.assertEquals(self.path.getUserID(), fake.st_uid)
-        self.assertEquals(self.path.getGroupID(), fake.st_gid)
+        self.assertEqual(self.path.getInodeNumber(), fake.st_ino)
+        self.assertEqual(self.path.getDevice(), fake.st_dev)
+        self.assertEqual(self.path.getNumberOfHardLinks(), fake.st_nlink)
+        self.assertEqual(self.path.getUserID(), fake.st_uid)
+        self.assertEqual(self.path.getGroupID(), fake.st_gid)
 
 
     if platform.isWindows():
@@ -1570,31 +1570,31 @@ class URLPathTestCase(unittest.TestCase):
         self.path = urlpath.URLPath.fromString("http://example.com/foo/bar?yes=no&no=yes#footer")
 
     def testStringConversion(self):
-        self.assertEquals(str(self.path), "http://example.com/foo/bar?yes=no&no=yes#footer")
+        self.assertEqual(str(self.path), "http://example.com/foo/bar?yes=no&no=yes#footer")
 
     def testChildString(self):
-        self.assertEquals(str(self.path.child('hello')), "http://example.com/foo/bar/hello")
-        self.assertEquals(str(self.path.child('hello').child('')), "http://example.com/foo/bar/hello/")
+        self.assertEqual(str(self.path.child('hello')), "http://example.com/foo/bar/hello")
+        self.assertEqual(str(self.path.child('hello').child('')), "http://example.com/foo/bar/hello/")
 
     def testSiblingString(self):
-        self.assertEquals(str(self.path.sibling('baz')), 'http://example.com/foo/baz')
+        self.assertEqual(str(self.path.sibling('baz')), 'http://example.com/foo/baz')
 
         # The sibling of http://example.com/foo/bar/
         #     is http://example.comf/foo/bar/baz
         # because really we are constructing a sibling of
         # http://example.com/foo/bar/index.html
-        self.assertEquals(str(self.path.child('').sibling('baz')), 'http://example.com/foo/bar/baz')
+        self.assertEqual(str(self.path.child('').sibling('baz')), 'http://example.com/foo/bar/baz')
 
     def testParentString(self):
         # parent should be equivalent to '..'
         # 'foo' is the current directory, '/' is the parent directory
-        self.assertEquals(str(self.path.parent()), 'http://example.com/')
-        self.assertEquals(str(self.path.child('').parent()), 'http://example.com/foo/')
-        self.assertEquals(str(self.path.child('baz').parent()), 'http://example.com/foo/')
-        self.assertEquals(str(self.path.parent().parent().parent().parent().parent()), 'http://example.com/')
+        self.assertEqual(str(self.path.parent()), 'http://example.com/')
+        self.assertEqual(str(self.path.child('').parent()), 'http://example.com/foo/')
+        self.assertEqual(str(self.path.child('baz').parent()), 'http://example.com/foo/')
+        self.assertEqual(str(self.path.parent().parent().parent().parent().parent()), 'http://example.com/')
 
     def testHereString(self):
         # here should be equivalent to '.'
-        self.assertEquals(str(self.path.here()), 'http://example.com/foo/')
-        self.assertEquals(str(self.path.child('').here()), 'http://example.com/foo/bar/')
+        self.assertEqual(str(self.path.here()), 'http://example.com/foo/')
+        self.assertEqual(str(self.path.child('').here()), 'http://example.com/foo/bar/')
 

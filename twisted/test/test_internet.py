@@ -667,7 +667,7 @@ class TimeTestCase(unittest.TestCase):
            floats: For example, datetime-datetime == timedelta(0).
         """
         now = reactor.seconds()
-        self.assertEquals(now-now+now, now)
+        self.assertEqual(now-now+now, now)
 
 
     def test_callLaterUsesReactorSecondsInDelayedCall(self):
@@ -679,7 +679,7 @@ class TimeTestCase(unittest.TestCase):
         reactor.seconds = lambda: 100
         try:
             call = reactor.callLater(5, lambda: None)
-            self.assertEquals(call.getTime(), 105)
+            self.assertEqual(call.getTime(), 105)
         finally:
             reactor.seconds = oseconds
 
@@ -693,7 +693,7 @@ class TimeTestCase(unittest.TestCase):
         reactor.seconds = lambda: 100
         try:
             call = reactor.callLater(5, lambda: None)
-            self.assertEquals(call.seconds(), 100)
+            self.assertEqual(call.seconds(), 100)
         finally:
             reactor.seconds = oseconds
 
@@ -795,9 +795,9 @@ class TimeTestCase(unittest.TestCase):
         def f2(x):
             l2.append(x)
         def done():
-            self.assertEquals(l, range(20))
+            self.assertEqual(l, range(20))
         def done2():
-            self.assertEquals(l2, range(10))
+            self.assertEqual(l2, range(10))
 
         for n in range(10):
             reactor.callLater(0, f, n)
@@ -866,9 +866,9 @@ class TimeTestCase(unittest.TestCase):
             return 10
         dc = base.DelayedCall(5, lambda: None, (), {}, lambda dc: None,
                               lambda dc: None, seconds)
-        self.assertEquals(dc.getTime(), 5)
+        self.assertEqual(dc.getTime(), 5)
         dc.reset(3)
-        self.assertEquals(dc.getTime(), 13)
+        self.assertEqual(dc.getTime(), 13)
 
 
 class CallFromThreadTests(unittest.TestCase):
@@ -987,10 +987,10 @@ class DelayedTestCase(unittest.TestCase):
         L{IDelayedCall.active} returns False once the call has run.
         """
         dcall = reactor.callLater(0.01, self.deferred.callback, True)
-        self.assertEquals(dcall.active(), True)
+        self.assertEqual(dcall.active(), True)
 
         def checkDeferredCall(success):
-            self.assertEquals(dcall.active(), False)
+            self.assertEqual(dcall.active(), False)
             return success
 
         self.deferred.addCallback(checkDeferredCall)
@@ -1123,7 +1123,7 @@ class CallFromThreadTestCase(unittest.TestCase):
         order = []
 
         def check(_):
-            self.assertEquals(order, [1, 2, 3])
+            self.assertEqual(order, [1, 2, 3])
 
         self.deferred.addCallback(check)
         self.schedule(order.append, 1)
@@ -1144,7 +1144,7 @@ class CallFromThreadTestCase(unittest.TestCase):
         self.schedule(incAndFinish)
 
         # Callback shouldn't have fired yet.
-        self.assertEquals(self.counter, 0)
+        self.assertEqual(self.counter, 0)
 
         return self.deferred
 
@@ -1168,7 +1168,7 @@ class ProtocolTestCase(unittest.TestCase):
     def testFactory(self):
         factory = MyFactory()
         protocol = factory.buildProtocol(None)
-        self.assertEquals(protocol.factory, factory)
+        self.assertEqual(protocol.factory, factory)
         self.assert_( isinstance(protocol, factory.protocol) )
 
 
@@ -1268,7 +1268,7 @@ class TestProducer(unittest.TestCase):
         fd.connected = 1
         dp = DummyProducer()
         fd.registerProducer(dp, 0)
-        self.assertEquals(dp.events, ['resume'])
+        self.assertEqual(dp.events, ['resume'])
         self.assertRaises(RuntimeError, fd.registerProducer, DummyProducer(), 0)
 
 
@@ -1281,7 +1281,7 @@ class TestProducer(unittest.TestCase):
         fd.disconnected = 1
         dp = DummyProducer()
         fd.registerProducer(dp, 0)
-        self.assertEquals(dp.events, ['stop'])
+        self.assertEqual(dp.events, ['stop'])
 
 
     def _dontPausePullConsumerTest(self, methodName):

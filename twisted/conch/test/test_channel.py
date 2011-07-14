@@ -91,31 +91,31 @@ class ChannelTestCase(unittest.TestCase):
         order.
         """
         c = channel.SSHChannel(conn=self.conn)
-        self.assertEquals(c.localWindowSize, 131072)
-        self.assertEquals(c.localWindowLeft, 131072)
-        self.assertEquals(c.localMaxPacket, 32768)
-        self.assertEquals(c.remoteWindowLeft, 0)
-        self.assertEquals(c.remoteMaxPacket, 0)
-        self.assertEquals(c.conn, self.conn)
-        self.assertEquals(c.data, None)
-        self.assertEquals(c.avatar, None)
+        self.assertEqual(c.localWindowSize, 131072)
+        self.assertEqual(c.localWindowLeft, 131072)
+        self.assertEqual(c.localMaxPacket, 32768)
+        self.assertEqual(c.remoteWindowLeft, 0)
+        self.assertEqual(c.remoteMaxPacket, 0)
+        self.assertEqual(c.conn, self.conn)
+        self.assertEqual(c.data, None)
+        self.assertEqual(c.avatar, None)
 
         c2 = channel.SSHChannel(1, 2, 3, 4, 5, 6, 7)
-        self.assertEquals(c2.localWindowSize, 1)
-        self.assertEquals(c2.localWindowLeft, 1)
-        self.assertEquals(c2.localMaxPacket, 2)
-        self.assertEquals(c2.remoteWindowLeft, 3)
-        self.assertEquals(c2.remoteMaxPacket, 4)
-        self.assertEquals(c2.conn, 5)
-        self.assertEquals(c2.data, 6)
-        self.assertEquals(c2.avatar, 7)
+        self.assertEqual(c2.localWindowSize, 1)
+        self.assertEqual(c2.localWindowLeft, 1)
+        self.assertEqual(c2.localMaxPacket, 2)
+        self.assertEqual(c2.remoteWindowLeft, 3)
+        self.assertEqual(c2.remoteMaxPacket, 4)
+        self.assertEqual(c2.conn, 5)
+        self.assertEqual(c2.data, 6)
+        self.assertEqual(c2.avatar, 7)
 
     def test_str(self):
         """
         Test that str(SSHChannel) works gives the channel name and local and
         remote windows at a glance..
         """
-        self.assertEquals(str(self.channel), '<SSHChannel channel (lw 131072 '
+        self.assertEqual(str(self.channel), '<SSHChannel channel (lw 131072 '
                 'rw 0)>')
 
     def test_logPrefix(self):
@@ -123,7 +123,7 @@ class ChannelTestCase(unittest.TestCase):
         Test that SSHChannel.logPrefix gives the name of the channel, the
         local channel ID and the underlying connection.
         """
-        self.assertEquals(self.channel.logPrefix(), 'SSHChannel channel '
+        self.assertEqual(self.channel.logPrefix(), 'SSHChannel channel '
                 '(unknown) on MockConnection')
 
     def test_addWindowBytes(self):
@@ -138,13 +138,13 @@ class ChannelTestCase(unittest.TestCase):
         self.channel.write('test')
         self.channel.writeExtended(1, 'test')
         self.channel.addWindowBytes(50)
-        self.assertEquals(self.channel.remoteWindowLeft, 50 - 4 - 4)
+        self.assertEqual(self.channel.remoteWindowLeft, 50 - 4 - 4)
         self.assertTrue(self.channel.areWriting)
         self.assertTrue(cb[0])
-        self.assertEquals(self.channel.buf, '')
-        self.assertEquals(self.conn.data[self.channel], ['test'])
-        self.assertEquals(self.channel.extBuf, [])
-        self.assertEquals(self.conn.extData[self.channel], [(1, 'test')])
+        self.assertEqual(self.channel.buf, '')
+        self.assertEqual(self.conn.data[self.channel], ['test'])
+        self.assertEqual(self.channel.extBuf, [])
+        self.assertEqual(self.conn.extData[self.channel], [(1, 'test')])
 
         cb[0] = False
         self.channel.addWindowBytes(20)
@@ -192,20 +192,20 @@ class ChannelTestCase(unittest.TestCase):
         self.channel.addWindowBytes(20)
         self.channel.write('ta')
         data = self.conn.data[self.channel]
-        self.assertEquals(data, ['da', 'ta'])
-        self.assertEquals(self.channel.remoteWindowLeft, 16)
+        self.assertEqual(data, ['da', 'ta'])
+        self.assertEqual(self.channel.remoteWindowLeft, 16)
         # larger than max packet
         self.channel.write('12345678901')
-        self.assertEquals(data, ['da', 'ta', '1234567890', '1'])
-        self.assertEquals(self.channel.remoteWindowLeft, 5)
+        self.assertEqual(data, ['da', 'ta', '1234567890', '1'])
+        self.assertEqual(self.channel.remoteWindowLeft, 5)
         # running out of window
         cb[0] = False
         self.channel.write('123456')
         self.assertFalse(self.channel.areWriting)
         self.assertTrue(cb[0])
-        self.assertEquals(data, ['da', 'ta', '1234567890', '1', '12345'])
-        self.assertEquals(self.channel.buf, '6')
-        self.assertEquals(self.channel.remoteWindowLeft, 0)
+        self.assertEqual(data, ['da', 'ta', '1234567890', '1', '12345'])
+        self.assertEqual(self.channel.buf, '6')
+        self.assertEqual(self.channel.remoteWindowLeft, 0)
 
     def test_writeExtended(self):
         """
@@ -227,22 +227,22 @@ class ChannelTestCase(unittest.TestCase):
         self.channel.addWindowBytes(20)
         self.channel.writeExtended(2, 'a')
         data = self.conn.extData[self.channel]
-        self.assertEquals(data, [(1, 'da'), (2, 't'), (2, 'a')])
-        self.assertEquals(self.channel.remoteWindowLeft, 16)
+        self.assertEqual(data, [(1, 'da'), (2, 't'), (2, 'a')])
+        self.assertEqual(self.channel.remoteWindowLeft, 16)
         # larger than max packet
         self.channel.writeExtended(3, '12345678901')
-        self.assertEquals(data, [(1, 'da'), (2, 't'), (2, 'a'),
+        self.assertEqual(data, [(1, 'da'), (2, 't'), (2, 'a'),
             (3, '1234567890'), (3, '1')])
-        self.assertEquals(self.channel.remoteWindowLeft, 5)
+        self.assertEqual(self.channel.remoteWindowLeft, 5)
         # running out of window
         cb[0] = False
         self.channel.writeExtended(4, '123456')
         self.assertFalse(self.channel.areWriting)
         self.assertTrue(cb[0])
-        self.assertEquals(data, [(1, 'da'), (2, 't'), (2, 'a'),
+        self.assertEqual(data, [(1, 'da'), (2, 't'), (2, 'a'),
             (3, '1234567890'), (3, '1'), (4, '12345')])
-        self.assertEquals(self.channel.extBuf, [[4, '6']])
-        self.assertEquals(self.channel.remoteWindowLeft, 0)
+        self.assertEqual(self.channel.extBuf, [[4, '6']])
+        self.assertEqual(self.channel.remoteWindowLeft, 0)
 
     def test_writeSequence(self):
         """
@@ -250,7 +250,7 @@ class ChannelTestCase(unittest.TestCase):
         """
         self.channel.addWindowBytes(20)
         self.channel.writeSequence(map(str, range(10)))
-        self.assertEquals(self.conn.data[self.channel], ['0123456789'])
+        self.assertEqual(self.conn.data[self.channel], ['0123456789'])
 
     def test_loseConnection(self):
         """
@@ -260,9 +260,9 @@ class ChannelTestCase(unittest.TestCase):
         self.channel.write('data')
         self.channel.writeExtended(1, 'datadata')
         self.channel.loseConnection()
-        self.assertEquals(self.conn.closes.get(self.channel), None)
+        self.assertEqual(self.conn.closes.get(self.channel), None)
         self.channel.addWindowBytes(4) # send regular data
-        self.assertEquals(self.conn.closes.get(self.channel), None)
+        self.assertEqual(self.conn.closes.get(self.channel), None)
         self.channel.addWindowBytes(8) # send extended data
         self.assertTrue(self.conn.closes.get(self.channel))
 
@@ -270,10 +270,10 @@ class ChannelTestCase(unittest.TestCase):
         """
         Test that getPeer() returns ('SSH', <connection transport peer>).
         """
-        self.assertEquals(self.channel.getPeer(), ('SSH', 'MockPeer'))
+        self.assertEqual(self.channel.getPeer(), ('SSH', 'MockPeer'))
 
     def test_getHost(self):
         """
         Test that getHost() returns ('SSH', <connection transport host>).
         """
-        self.assertEquals(self.channel.getHost(), ('SSH', 'MockHost'))
+        self.assertEqual(self.channel.getHost(), ('SSH', 'MockHost'))

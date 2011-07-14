@@ -1,0 +1,2 @@
+Change all usages of failUnlessEqual, failUnlessEquals, and assertEquals to assertEqual in Twisted's test code.  Also, change some docstrings in trial to reflect the fact that assertEqual is the preferred assertion method.
+

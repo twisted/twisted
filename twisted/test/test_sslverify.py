@@ -171,7 +171,7 @@ class OpenSSLOptions(unittest.TestCase):
         Check that abbreviations used in certificates correctly map to
         complete names.
         """
-        self.assertEquals(
+        self.assertEqual(
                 sslverify.DN(CN='a', OU='hello'),
                 sslverify.DistinguishedName(commonName='a',
                                             organizationalUnitName='hello'))
@@ -180,9 +180,9 @@ class OpenSSLOptions(unittest.TestCase):
                 sslverify.DN(CN='a', OU='hello', emailAddress='xxx'))
         dn = sslverify.DN(CN='abcdefg')
         self.assertRaises(AttributeError, setattr, dn, 'Cn', 'x')
-        self.assertEquals(dn.CN, dn.commonName)
+        self.assertEqual(dn.CN, dn.commonName)
         dn.CN = 'bcdefga'
-        self.assertEquals(dn.CN, dn.commonName)
+        self.assertEqual(dn.CN, dn.commonName)
 
 
     def testInspectDistinguishedName(self):
@@ -300,7 +300,7 @@ class OpenSSLOptions(unittest.TestCase):
         """
         opts = sslverify.OpenSSLCertificateOptions(enableSessionTickets=True)
         ctx = opts.getContext()
-        self.assertEquals(0, ctx.set_options(0) & 0x00004000)
+        self.assertEqual(0, ctx.set_options(0) & 0x00004000)
 
 
     def test_certificateOptionsSessionTicketsDisabled(self):
@@ -309,7 +309,7 @@ class OpenSSLOptions(unittest.TestCase):
         """
         opts = sslverify.OpenSSLCertificateOptions(enableSessionTickets=False)
         ctx = opts.getContext()
-        self.assertEquals(0x00004000, ctx.set_options(0) & 0x00004000)
+        self.assertEqual(0x00004000, ctx.set_options(0) & 0x00004000)
 
 
     def test_allowedAnonymousClientConnection(self):
@@ -325,7 +325,7 @@ class OpenSSLOptions(unittest.TestCase):
                       onData=onData)
 
         return onData.addCallback(
-            lambda result: self.assertEquals(result, WritingProtocol.byte))
+            lambda result: self.assertEqual(result, WritingProtocol.byte))
 
     def test_refusedAnonymousClientConnection(self):
         """
@@ -396,7 +396,7 @@ class OpenSSLOptions(unittest.TestCase):
                       onData=onData)
 
         return onData.addCallback(
-                lambda result: self.assertEquals(result, WritingProtocol.byte))
+                lambda result: self.assertEqual(result, WritingProtocol.byte))
 
     def test_successfulSymmetricSelfSignedCertificateVerification(self):
         """
@@ -413,7 +413,7 @@ class OpenSSLOptions(unittest.TestCase):
                       onData=onData)
 
         return onData.addCallback(
-                lambda result: self.assertEquals(result, WritingProtocol.byte))
+                lambda result: self.assertEqual(result, WritingProtocol.byte))
 
     def test_verification(self):
         """
@@ -455,7 +455,7 @@ class OpenSSLOptions(unittest.TestCase):
                       onData=onData)
 
         return onData.addCallback(
-                lambda result: self.assertEquals(result, WritingProtocol.byte))
+                lambda result: self.assertEqual(result, WritingProtocol.byte))
 
 
 

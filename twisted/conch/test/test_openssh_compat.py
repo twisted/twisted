@@ -61,7 +61,7 @@ class OpenSSHFactoryTests(TestCase):
         in the data directory
         """
         keys = self.factory.getPublicKeys()
-        self.assertEquals(len(keys), 1)
+        self.assertEqual(len(keys), 1)
         keyTypes = keys.keys()
         self.assertEqual(keyTypes, ['ssh-rsa'])
 
@@ -72,11 +72,11 @@ class OpenSSHFactoryTests(TestCase):
         keys in the data directory.
         """
         keys = self.factory.getPrivateKeys()
-        self.assertEquals(len(keys), 2)
+        self.assertEqual(len(keys), 2)
         keyTypes = keys.keys()
         self.assertEqual(set(keyTypes), set(['ssh-rsa', 'ssh-dss']))
-        self.assertEquals(self.mockos.seteuidCalls, [])
-        self.assertEquals(self.mockos.setegidCalls, [])
+        self.assertEqual(self.mockos.seteuidCalls, [])
+        self.assertEqual(self.mockos.setegidCalls, [])
 
 
     def test_getPrivateKeysAsRoot(self):
@@ -95,8 +95,8 @@ class OpenSSHFactoryTests(TestCase):
             return savedSeteuid(euid)
         self.patch(os, "seteuid", seteuid)
         keys = self.factory.getPrivateKeys()
-        self.assertEquals(len(keys), 2)
+        self.assertEqual(len(keys), 2)
         keyTypes = keys.keys()
         self.assertEqual(set(keyTypes), set(['ssh-rsa', 'ssh-dss']))
-        self.assertEquals(self.mockos.seteuidCalls, [0, os.geteuid()])
-        self.assertEquals(self.mockos.setegidCalls, [0, os.getegid()])
+        self.assertEqual(self.mockos.seteuidCalls, [0, os.geteuid()])
+        self.assertEqual(self.mockos.setegidCalls, [0, os.getegid()])

@@ -28,30 +28,30 @@ class TestService(unittest.TestCase):
     def testName(self):
         s = service.Service()
         s.setName("hello")
-        self.failUnlessEqual(s.name, "hello")
+        self.assertEqual(s.name, "hello")
 
     def testParent(self):
         s = service.Service()
         p = service.MultiService()
         s.setServiceParent(p)
-        self.failUnlessEqual(list(p), [s])
-        self.failUnlessEqual(s.parent, p)
+        self.assertEqual(list(p), [s])
+        self.assertEqual(s.parent, p)
 
     def testApplicationAsParent(self):
         s = service.Service()
         p = service.Application("")
         s.setServiceParent(p)
-        self.failUnlessEqual(list(service.IServiceCollection(p)), [s])
-        self.failUnlessEqual(s.parent, service.IServiceCollection(p))
+        self.assertEqual(list(service.IServiceCollection(p)), [s])
+        self.assertEqual(s.parent, service.IServiceCollection(p))
 
     def testNamedChild(self):
         s = service.Service()
         p = service.MultiService()
         s.setName("hello")
         s.setServiceParent(p)
-        self.failUnlessEqual(list(p), [s])
-        self.failUnlessEqual(s.parent, p)
-        self.failUnlessEqual(p.getServiceNamed("hello"), s)
+        self.assertEqual(list(p), [s])
+        self.assertEqual(s.parent, p)
+        self.assertEqual(p.getServiceNamed("hello"), s)
 
     def testDoublyNamedChild(self):
         s = service.Service()
@@ -73,11 +73,11 @@ class TestService(unittest.TestCase):
         s = service.Service()
         p = service.MultiService()
         s.setServiceParent(p)
-        self.failUnlessEqual(list(p), [s])
-        self.failUnlessEqual(s.parent, p)
+        self.assertEqual(list(p), [s])
+        self.assertEqual(s.parent, p)
         s.disownServiceParent()
-        self.failUnlessEqual(list(p), [])
-        self.failUnlessEqual(s.parent, None)
+        self.assertEqual(list(p), [])
+        self.assertEqual(s.parent, None)
 
     def testRunning(self):
         s = service.Service()
@@ -497,11 +497,11 @@ class TestInternet2(unittest.TestCase):
         internet.GenericServer()
         warnings = self.flushWarnings(
             offendingFunctions=[self.test_genericServerDeprecated])
-        self.assertEquals(
+        self.assertEqual(
             warnings[0]['message'],
             'GenericServer was deprecated in Twisted 10.1.')
-        self.assertEquals(warnings[0]['category'], DeprecationWarning)
-        self.assertEquals(len(warnings), 1)
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(len(warnings), 1)
 
 
     def test_genericClientDeprecated(self):
@@ -511,11 +511,11 @@ class TestInternet2(unittest.TestCase):
         internet.GenericClient()
         warnings = self.flushWarnings(
             offendingFunctions=[self.test_genericClientDeprecated])
-        self.assertEquals(
+        self.assertEqual(
             warnings[0]['message'],
             'GenericClient was deprecated in Twisted 10.1.')
-        self.assertEquals(warnings[0]['category'], DeprecationWarning)
-        self.assertEquals(len(warnings), 1)
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(len(warnings), 1)
 
 
     def test_everythingThere(self):
@@ -540,7 +540,7 @@ class TestInternet2(unittest.TestCase):
                 self.assertTrue(hasattr(reactor, prefix + method) or
                         (prefix == "connect" and method == "UDP"))
                 o = getattr(internet, tran + side)()
-                self.assertEquals(service.IService(o), o)
+                self.assertEqual(service.IService(o), o)
     test_everythingThere.suppress = [
         util.suppress(message='GenericServer was deprecated in Twisted 10.1.',
                       category=DeprecationWarning),
@@ -573,7 +573,7 @@ class TestInternet2(unittest.TestCase):
         factory = object()
         t = internet.TCPServer(1234, factory, reactor=reactor)
         t.startService()
-        self.assertEquals(reactor.tcpServers.pop()[:2], (1234, factory))
+        self.assertEqual(reactor.tcpServers.pop()[:2], (1234, factory))
 
 
     def test_reactorParametrizationInClient(self):
@@ -587,7 +587,7 @@ class TestInternet2(unittest.TestCase):
         factory = object()
         t = internet.TCPClient('127.0.0.1', 1234, factory, reactor=reactor)
         t.startService()
-        self.assertEquals(
+        self.assertEqual(
             reactor.tcpClients.pop()[:3], ('127.0.0.1', 1234, factory))
 
 
@@ -601,10 +601,10 @@ class TestInternet2(unittest.TestCase):
         factory = object()
         t = internet.TCPServer(1234, factory, reactor=reactor)
         t.startService()
-        self.assertEquals(reactor.tcpServers.pop()[:2], (1234, factory))
+        self.assertEqual(reactor.tcpServers.pop()[:2], (1234, factory))
         t.stopService()
         t.startService()
-        self.assertEquals(reactor.tcpServers.pop()[:2], (1234, factory))
+        self.assertEqual(reactor.tcpServers.pop()[:2], (1234, factory))
 
 
     def test_reactorParametrizationInClientMultipleStart(self):
@@ -617,11 +617,11 @@ class TestInternet2(unittest.TestCase):
         factory = object()
         t = internet.TCPClient('127.0.0.1', 1234, factory, reactor=reactor)
         t.startService()
-        self.assertEquals(
+        self.assertEqual(
             reactor.tcpClients.pop()[:3], ('127.0.0.1', 1234, factory))
         t.stopService()
         t.startService()
-        self.assertEquals(
+        self.assertEqual(
             reactor.tcpClients.pop()[:3], ('127.0.0.1', 1234, factory))
 
 
@@ -832,7 +832,7 @@ class PluggableReactorTestCase(unittest.TestCase):
         options.parseOptions(['--reactor', 'fakereactortest', 'subcommand'])
         self.assertEqual(executed[0], INSTALL_EVENT)
         self.assertEqual(executed.count(INSTALL_EVENT), 1)
-        self.assertEquals(options["reactor"], "fakereactortest")
+        self.assertEqual(options["reactor"], "fakereactortest")
 
 
     def test_reactorSelectionMixinNonExistent(self):

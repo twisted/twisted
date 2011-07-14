@@ -156,10 +156,10 @@ class ListingTests(TestCase):
         locale.setlocale(locale.LC_ALL, "es_AR.UTF8")
         self.addCleanup(locale.setlocale, locale.LC_ALL, currentLocale)
 
-        self.assertEquals(
+        self.assertEqual(
             self._lsInTimezone('America/New_York', stat),
             '!---------    0 0        0               0 Aug 28 17:33 foo')
-        self.assertEquals(
+        self.assertEqual(
             self._lsInTimezone('Pacific/Auckland', stat),
             '!---------    0 0        0               0 Aug 29 09:33 foo')
 
@@ -229,7 +229,7 @@ class StdioClientTests(TestCase):
             sys.executable)
 
         d = self.client._dispatchCommand("exec print 1 + 2")
-        d.addCallback(self.assertEquals, "3\n")
+        d.addCallback(self.assertEqual, "3\n")
         return d
 
 
@@ -242,7 +242,7 @@ class StdioClientTests(TestCase):
             getpass.getuser(), 'secret', os.getuid(), 1234, 'foo', 'bar', '')
 
         d = self.client._dispatchCommand("exec echo hello")
-        d.addCallback(self.assertEquals, "hello\n")
+        d.addCallback(self.assertEqual, "hello\n")
         return d
 
 
@@ -255,7 +255,7 @@ class StdioClientTests(TestCase):
             '/bin/sh')
 
         d = self.client._dispatchCommand("!echo hello")
-        d.addCallback(self.assertEquals, "hello\n")
+        d.addCallback(self.assertEqual, "hello\n")
         return d
 
 
@@ -297,7 +297,7 @@ class StdioClientTests(TestCase):
         clock.advance(2.0)
         wrapper.total += 4096
         self.client._printProgressBar(wrapper, startTime)
-        self.assertEquals(self.client.transport.value(),
+        self.assertEqual(self.client.transport.value(),
                           "\rsample 40% 4.0kB 2.0kBps 00:03 ")
 
 
@@ -314,7 +314,7 @@ class StdioClientTests(TestCase):
         wrapper = cftp.FileWrapper(wrapped)
         startTime = clock.seconds()
         self.client._printProgressBar(wrapper, startTime)
-        self.assertEquals(self.client.transport.value(),
+        self.assertEqual(self.client.transport.value(),
                           "\rsample  0% 0.0B 0.0Bps 00:00 ")
 
 
@@ -615,7 +615,7 @@ class TestOurServerCmdLineClient(CFTPClientTestBase):
         """
         f1 = file(name1).read()
         f2 = file(name2).read()
-        self.failUnlessEqual(f1, f2, msg)
+        self.assertEqual(f1, f2, msg)
 
 
     def testGet(self):
@@ -786,8 +786,8 @@ class TestOurServerCmdLineClient(CFTPClientTestBase):
         appropriate error, and doesn't log an useless error server side.
         """
         def _check(results):
-            self.assertEquals(results[0], '')
-            self.assertEquals(results[1],
+            self.assertEqual(results[0], '')
+            self.assertEqual(results[1],
                               'remote error 11: mkdir failed')
 
         d = self.runScript('mkdir testMakeDirectory',
@@ -875,7 +875,7 @@ exit
             res = res.split('\n')
             log.msg('RES %s' % str(res))
             self.failUnless(res[1].find(self.testDir) != -1, repr(res))
-            self.failUnlessEqual(res[3:-2], ['testDirectory', 'testRemoveFile',
+            self.assertEqual(res[3:-2], ['testDirectory', 'testRemoveFile',
                                              'testRenameFile', 'testfile1'])
 
         d = self._getBatchOutput(cmds)
@@ -954,7 +954,7 @@ class TestOurServerSftpClient(CFTPClientTestBase):
                 '-o', 'Port=%i' % (port,), '-b', fn, 'testuser@127.0.0.1')
         d = getProcessOutputAndValue("sftp", cmds)
         def check(result):
-            self.assertEquals(result[2], 0)
+            self.assertEqual(result[2], 0)
             for i in ['testDirectory', 'testRemoveFile',
                       'testRenameFile', 'testfile1']:
                 self.assertIn(i, result[0])

@@ -67,12 +67,12 @@ class ModeParsingTests(unittest.TestCase):
         "removed" direction.
         """
         added, removed = irc.parseModes('+s', [])
-        self.assertEquals(added, [('s', None)])
-        self.assertEquals(removed, [])
+        self.assertEqual(added, [('s', None)])
+        self.assertEqual(removed, [])
 
         added, removed = irc.parseModes('-s', [])
-        self.assertEquals(added, [])
-        self.assertEquals(removed, [('s', None)])
+        self.assertEqual(added, [])
+        self.assertEqual(removed, [('s', None)])
 
 
     def test_singleDirection(self):
@@ -81,14 +81,14 @@ class ModeParsingTests(unittest.TestCase):
         parameters, results in all modes falling into the same direction group.
         """
         added, removed = irc.parseModes('+stn', [])
-        self.assertEquals(added, [('s', None),
+        self.assertEqual(added, [('s', None),
                                   ('t', None),
                                   ('n', None)])
-        self.assertEquals(removed, [])
+        self.assertEqual(removed, [])
 
         added, removed = irc.parseModes('-nt', [])
-        self.assertEquals(added, [])
-        self.assertEquals(removed, [('n', None),
+        self.assertEqual(added, [])
+        self.assertEqual(removed, [('n', None),
                                     ('t', None)])
 
 
@@ -97,10 +97,10 @@ class ModeParsingTests(unittest.TestCase):
         Parsing a multi-direction mode setting with no parameters.
         """
         added, removed = irc.parseModes('+s-n+ti', [])
-        self.assertEquals(added, [('s', None),
+        self.assertEqual(added, [('s', None),
                                   ('t', None),
                                   ('i', None)])
-        self.assertEquals(removed, [('n', None)])
+        self.assertEqual(removed, [('n', None)])
 
 
     def test_consecutiveDirection(self):
@@ -110,11 +110,11 @@ class ModeParsingTests(unittest.TestCase):
         there were only one mode sequence in the same direction.
         """
         added, removed = irc.parseModes('+sn+ti', [])
-        self.assertEquals(added, [('s', None),
+        self.assertEqual(added, [('s', None),
                                   ('n', None),
                                   ('t', None),
                                   ('i', None)])
-        self.assertEquals(removed, [])
+        self.assertEqual(removed, [])
 
 
     def test_mismatchedParams(self):
@@ -142,18 +142,18 @@ class ModeParsingTests(unittest.TestCase):
             '+klbb',
             ['somekey', '42', 'nick!user@host', 'other!*@*'],
             self.paramModes)
-        self.assertEquals(added, [('k', 'somekey'),
+        self.assertEqual(added, [('k', 'somekey'),
                                   ('l', '42'),
                                   ('b', 'nick!user@host'),
                                   ('b', 'other!*@*')])
-        self.assertEquals(removed, [])
+        self.assertEqual(removed, [])
 
         added, removed = irc.parseModes(
             '-klbb',
             ['nick!user@host', 'other!*@*'],
             self.paramModes)
-        self.assertEquals(added, [])
-        self.assertEquals(removed, [('k', None),
+        self.assertEqual(added, [])
+        self.assertEqual(removed, [('k', None),
                                     ('l', None),
                                     ('b', 'nick!user@host'),
                                     ('b', 'other!*@*')])
@@ -163,11 +163,11 @@ class ModeParsingTests(unittest.TestCase):
             '+knbb',
             ['somekey', 'nick!user@host', 'other!*@*'],
             self.paramModes)
-        self.assertEquals(added, [('k', 'somekey'),
+        self.assertEqual(added, [('k', 'somekey'),
                                   ('n', None),
                                   ('b', 'nick!user@host'),
                                   ('b', 'other!*@*')])
-        self.assertEquals(removed, [])
+        self.assertEqual(removed, [])
 
 
 
@@ -185,13 +185,13 @@ class QuotingTest(unittest.TestCase):
     def test_lowquoteSanity(self):
         """Testing client-server level quote/dequote"""
         for s in stringSubjects:
-            self.failUnlessEqual(s, irc.lowDequote(irc.lowQuote(s)))
+            self.assertEqual(s, irc.lowDequote(irc.lowQuote(s)))
 
 
     def test_ctcpquoteSanity(self):
         """Testing CTCP message level quote/dequote"""
         for s in stringSubjects:
-            self.failUnlessEqual(s, irc.ctcpDequote(irc.ctcpQuote(s)))
+            self.assertEqual(s, irc.ctcpDequote(irc.ctcpQuote(s)))
 
 
 
@@ -227,7 +227,7 @@ class DispatcherTests(unittest.TestCase):
         disp = Dispatcher()
         args = (1, 2)
         res = disp.dispatch('working', *args)
-        self.assertEquals(res, args)
+        self.assertEqual(res, args)
 
 
     def test_dispatchUnknown(self):
@@ -238,7 +238,7 @@ class DispatcherTests(unittest.TestCase):
         name = 'missing'
         args = (1, 2)
         res = disp.dispatch(name, *args)
-        self.assertEquals(res, (name,) + args)
+        self.assertEqual(res, (name,) + args)
 
 
     def test_dispatchMissingUnknown(self):
@@ -261,12 +261,12 @@ class ServerSupportedFeatureTests(unittest.TestCase):
         L{_intOrDefault} converts values to C{int} if possible, otherwise
         returns a default value.
         """
-        self.assertEquals(irc._intOrDefault(None), None)
-        self.assertEquals(irc._intOrDefault([]), None)
-        self.assertEquals(irc._intOrDefault(''), None)
-        self.assertEquals(irc._intOrDefault('hello', 5), 5)
-        self.assertEquals(irc._intOrDefault('123'), 123)
-        self.assertEquals(irc._intOrDefault(123), 123)
+        self.assertEqual(irc._intOrDefault(None), None)
+        self.assertEqual(irc._intOrDefault([]), None)
+        self.assertEqual(irc._intOrDefault(''), None)
+        self.assertEqual(irc._intOrDefault('hello', 5), 5)
+        self.assertEqual(irc._intOrDefault('123'), 123)
+        self.assertEqual(irc._intOrDefault(123), 123)
 
 
     def test_splitParam(self):
@@ -289,7 +289,7 @@ class ServerSupportedFeatureTests(unittest.TestCase):
 
         for param, expected in params:
             res = _splitParam(param)
-            self.assertEquals(res, expected)
+            self.assertEqual(res, expected)
 
         self.assertRaises(ValueError, _splitParam, 'FOO=\\x')
         self.assertRaises(ValueError, _splitParam, 'FOO=\\xNN')
@@ -304,7 +304,7 @@ class ServerSupportedFeatureTests(unittest.TestCase):
         split into a key and an empty string.
         """
         res = irc.ServerSupportedFeatures._splitParamArgs(['A:1', 'B:2', 'C:', 'D'])
-        self.assertEquals(res, [('A', '1'),
+        self.assertEqual(res, [('A', '1'),
                                 ('B', '2'),
                                 ('C', ''),
                                 ('D', '')])
@@ -318,7 +318,7 @@ class ServerSupportedFeatureTests(unittest.TestCase):
         """
         res = irc.ServerSupportedFeatures._splitParamArgs(['A:1', 'B:2', 'C'],
                                            irc._intOrDefault)
-        self.assertEquals(res, [('A', 1),
+        self.assertEqual(res, [('A', 1),
                                 ('B', 2),
                                 ('C', None)])
 
@@ -331,9 +331,9 @@ class ServerSupportedFeatureTests(unittest.TestCase):
         C{ValueError} if the prefix parameter is malformed.
         """
         _parsePrefixParam = irc.ServerSupportedFeatures._parsePrefixParam
-        self.assertEquals(_parsePrefixParam(''), None)
+        self.assertEqual(_parsePrefixParam(''), None)
         self.assertRaises(ValueError, _parsePrefixParam, 'hello')
-        self.assertEquals(_parsePrefixParam('(ov)@+'),
+        self.assertEqual(_parsePrefixParam('(ov)@+'),
                           {'o': ('@', 0),
                            'v': ('+', 1)})
 
@@ -347,21 +347,21 @@ class ServerSupportedFeatureTests(unittest.TestCase):
         C{ValueError}.
         """
         _parseChanModesParam = irc.ServerSupportedFeatures._parseChanModesParam
-        self.assertEquals(
+        self.assertEqual(
             _parseChanModesParam([]),
             {'addressModes': '',
              'param': '',
              'setParam': '',
              'noParam': ''})
 
-        self.assertEquals(
+        self.assertEqual(
             _parseChanModesParam(['b', 'k', 'l', 'imnpst']),
             {'addressModes': 'b',
              'param': 'k',
              'setParam': 'l',
              'noParam': 'imnpst'})
 
-        self.assertEquals(
+        self.assertEqual(
             _parseChanModesParam(['b', 'k', 'l']),
             {'addressModes': 'b',
              'param': 'k',
@@ -387,13 +387,13 @@ class ServerSupportedFeatureTests(unittest.TestCase):
                         'EXCEPTS=Z',
                         'UNKNOWN=A,B,C'])
 
-        self.assertEquals(supported.getFeature('MODES'), 4)
-        self.assertEquals(supported.getFeature('CHANLIMIT'),
+        self.assertEqual(supported.getFeature('MODES'), 4)
+        self.assertEqual(supported.getFeature('CHANLIMIT'),
                           [('#', 20),
                            ('&', 10)])
-        self.assertEquals(supported.getFeature('INVEX'), 'I')
-        self.assertEquals(supported.getFeature('EXCEPTS'), 'Z')
-        self.assertEquals(supported.getFeature('UNKNOWN'), ('A', 'B', 'C'))
+        self.assertEqual(supported.getFeature('INVEX'), 'I')
+        self.assertEqual(supported.getFeature('EXCEPTS'), 'Z')
+        self.assertEqual(supported.getFeature('UNKNOWN'), ('A', 'B', 'C'))
 
         self.assertTrue(supported.hasFeature('INVEX'))
         supported.parse(['-INVEX'])
@@ -431,13 +431,13 @@ class ServerSupportedFeatureTests(unittest.TestCase):
         """
         Perform some common tests on a feature known to use L{_intOrDefault}.
         """
-        self.assertEquals(
+        self.assertEqual(
             self._parseFeature(name, None),
             default)
-        self.assertEquals(
+        self.assertEqual(
             self._parseFeature(name, 'notanint'),
             default)
-        self.assertEquals(
+        self.assertEqual(
             self._parseFeature(name, '42'),
             42)
 
@@ -455,7 +455,7 @@ class ServerSupportedFeatureTests(unittest.TestCase):
 
         supported = self._parse(features)
         self.assertTrue(supported.hasFeature(name))
-        self.assertEquals(supported.getFeature(name), default)
+        self.assertEqual(supported.getFeature(name), default)
 
 
     def test_support_CHANMODES(self):
@@ -468,21 +468,21 @@ class ServerSupportedFeatureTests(unittest.TestCase):
         self._testFeatureDefault('CHANMODES', [('CHANMODES', 'b,,lk,')])
         self._testFeatureDefault('CHANMODES', [('CHANMODES', 'b,,lk,ha,ha')])
 
-        self.assertEquals(
+        self.assertEqual(
             self._parseFeature('CHANMODES', ''),
             {'addressModes': '',
              'param': '',
              'setParam': '',
              'noParam': ''})
 
-        self.assertEquals(
+        self.assertEqual(
             self._parseFeature('CHANMODES', ',A'),
             {'addressModes': '',
              'param': 'A',
              'setParam': '',
              'noParam': ''})
 
-        self.assertEquals(
+        self.assertEqual(
             self._parseFeature('CHANMODES', 'A,Bc,Def,Ghij'),
             {'addressModes': 'A',
              'param': 'Bc',
@@ -495,7 +495,7 @@ class ServerSupportedFeatureTests(unittest.TestCase):
         The IDCHAN support parameter is parsed into a sequence of two-tuples
         giving channel prefix and ID length pairs.
         """
-        self.assertEquals(
+        self.assertEqual(
             self._parseFeature('IDCHAN', '!:5'),
             [('!', '5')])
 
@@ -505,14 +505,14 @@ class ServerSupportedFeatureTests(unittest.TestCase):
         The MAXLIST support parameter is parsed into a sequence of two-tuples
         giving modes and their limits.
         """
-        self.assertEquals(
+        self.assertEqual(
             self._parseFeature('MAXLIST', 'b:25,eI:50'),
             [('b', 25), ('eI', 50)])
         # A non-integer parameter argument results in None.
-        self.assertEquals(
+        self.assertEqual(
             self._parseFeature('MAXLIST', 'b:25,eI:50,a:3.1415'),
             [('b', 25), ('eI', 50), ('a', None)])
-        self.assertEquals(
+        self.assertEqual(
             self._parseFeature('MAXLIST', 'b:25,eI:50,a:notanint'),
             [('b', 25), ('eI', 50), ('a', None)])
 
@@ -522,7 +522,7 @@ class ServerSupportedFeatureTests(unittest.TestCase):
         The NETWORK support parameter is parsed as the network name, as
         specified by the server.
         """
-        self.assertEquals(
+        self.assertEqual(
             self._parseFeature('NETWORK', 'IRCNet'),
             'IRCNet')
 
@@ -532,7 +532,7 @@ class ServerSupportedFeatureTests(unittest.TestCase):
         The SAFELIST support parameter is parsed into a boolean indicating
         whether the safe "list" command is supported or not.
         """
-        self.assertEquals(
+        self.assertEqual(
             self._parseFeature('SAFELIST'),
             True)
 
@@ -542,7 +542,7 @@ class ServerSupportedFeatureTests(unittest.TestCase):
         The STATUSMSG support parameter is parsed into a string of channel
         status that support the exclusive channel notice method.
         """
-        self.assertEquals(
+        self.assertEqual(
             self._parseFeature('STATUSMSG', '@+'),
             '@+')
 
@@ -553,17 +553,17 @@ class ServerSupportedFeatureTests(unittest.TestCase):
         strings to integers, of the maximum number of targets for a particular
         command.
         """
-        self.assertEquals(
+        self.assertEqual(
             self._parseFeature('TARGMAX', 'PRIVMSG:4,NOTICE:3'),
             {'PRIVMSG': 4,
              'NOTICE': 3})
         # A non-integer parameter argument results in None.
-        self.assertEquals(
+        self.assertEqual(
             self._parseFeature('TARGMAX', 'PRIVMSG:4,NOTICE:3,KICK:3.1415'),
             {'PRIVMSG': 4,
              'NOTICE': 3,
              'KICK': None})
-        self.assertEquals(
+        self.assertEqual(
             self._parseFeature('TARGMAX', 'PRIVMSG:4,NOTICE:3,KICK:notanint'),
             {'PRIVMSG': 4,
              'NOTICE': 3,
@@ -599,7 +599,7 @@ class ServerSupportedFeatureTests(unittest.TestCase):
         """
         self._testFeatureDefault('CHANTYPES')
 
-        self.assertEquals(
+        self.assertEqual(
             self._parseFeature('CHANTYPES', '#&%'),
             ('#', '&', '%'))
 
@@ -620,15 +620,15 @@ class ServerSupportedFeatureTests(unittest.TestCase):
         self._testFeatureDefault('PREFIX')
         self._testFeatureDefault('PREFIX', [('PREFIX', 'hello')])
 
-        self.assertEquals(
+        self.assertEqual(
             self._parseFeature('PREFIX', None),
             None)
-        self.assertEquals(
+        self.assertEqual(
             self._parseFeature('PREFIX', '(ohv)@%+'),
             {'o': ('@', 0),
              'h': ('%', 1),
              'v': ('+', 2)})
-        self.assertEquals(
+        self.assertEqual(
             self._parseFeature('PREFIX', '(hov)@%+'),
             {'o': ('%', 1),
              'h': ('@', 0),
@@ -660,10 +660,10 @@ class ServerSupportedFeatureTests(unittest.TestCase):
         to be used for "ban exception" modes. If no parameter is specified
         then the character C{e} is assumed.
         """
-        self.assertEquals(
+        self.assertEqual(
             self._parseFeature('EXCEPTS', 'Z'),
             'Z')
-        self.assertEquals(
+        self.assertEqual(
             self._parseFeature('EXCEPTS'),
             'e')
 
@@ -674,10 +674,10 @@ class ServerSupportedFeatureTests(unittest.TestCase):
         used for "invite exception" modes. If no parameter is specified then
         the character C{I} is assumed.
         """
-        self.assertEquals(
+        self.assertEqual(
             self._parseFeature('INVEX', 'Z'),
             'Z')
-        self.assertEquals(
+        self.assertEqual(
             self._parseFeature('INVEX'),
             'I')
 
@@ -723,7 +723,7 @@ class CTCPTest(unittest.TestCase):
         self.client.dataReceived(errQuery)
         reply = self.file.getvalue()
 
-        self.failUnlessEqual(errReply, reply)
+        self.assertEqual(errReply, reply)
 
 
     def test_noNumbersVERSION(self):
@@ -740,7 +740,7 @@ class CTCPTest(unittest.TestCase):
                            'EOL': irc.CR + irc.LF,
                            'vname': self.client.versionName})
         reply = self.file.getvalue()
-        self.assertEquals(versionReply, reply)
+        self.assertEqual(versionReply, reply)
 
 
     def test_fullVERSION(self):
@@ -761,7 +761,7 @@ class CTCPTest(unittest.TestCase):
                            'vnum': self.client.versionNum,
                            'venv': self.client.versionEnv})
         reply = self.file.getvalue()
-        self.assertEquals(versionReply, reply)
+        self.assertEqual(versionReply, reply)
 
 
     def test_noDuplicateCTCPDispatch(self):
@@ -919,7 +919,7 @@ class ClientImplementationTests(unittest.TestCase):
                    msg + "\r\n")
 
         self.client.dataReceived(message)
-        self.assertEquals(
+        self.assertEqual(
             self.client.calls,
             [(func, kw)])
 
@@ -1015,10 +1015,10 @@ class ClientImplementationTests(unittest.TestCase):
             ":host.name 372 nickname :- Welcome to host.name",
             ":host.name 376 nickname :End of /MOTD command."]
         for L in lines:
-            self.assertEquals(self.client.calls, [])
+            self.assertEqual(self.client.calls, [])
             self.client.dataReceived(L + '\r\n')
 
-        self.assertEquals(
+        self.assertEqual(
             self.client.calls,
             [("receivedMOTD", {"motd": ["host.name Message of the Day -", "Welcome to host.name"]})])
 
@@ -1040,7 +1040,7 @@ class ClientImplementationTests(unittest.TestCase):
         for L in lines:
             self.client.dataReceived(L + '\r\n')
 
-        self.assertEquals(
+        self.assertEqual(
             self.client.calls,
             [("receivedMOTD", {"motd": ["Welcome to host.name"]})])
 
@@ -1056,7 +1056,7 @@ class ClientImplementationTests(unittest.TestCase):
                    group + " :" +
                    msg + "\r\n")
         self.client.dataReceived(message)
-        self.assertEquals(
+        self.assertEqual(
             self.client.calls,
             [(func, kw)])
         self.client.calls = []
@@ -1086,8 +1086,8 @@ class ClientImplementationTests(unittest.TestCase):
         require arguments when being added or removed.
         """
         add, remove = map(sorted, self.client.getChannelModeParams())
-        self.assertEquals(add, ['b', 'h', 'k', 'l', 'o', 'v'])
-        self.assertEquals(remove, ['b', 'h', 'o', 'v'])
+        self.assertEqual(add, ['b', 'h', 'k', 'l', 'o', 'v'])
+        self.assertEqual(remove, ['b', 'h', 'o', 'v'])
 
         def removeFeature(name):
             name = '-' + name
@@ -1102,14 +1102,14 @@ class ClientImplementationTests(unittest.TestCase):
         # None.
         removeFeature('CHANMODES')
         add, remove = map(sorted, self.client.getChannelModeParams())
-        self.assertEquals(add, ['h', 'o', 'v'])
-        self.assertEquals(remove, ['h', 'o', 'v'])
+        self.assertEqual(add, ['h', 'o', 'v'])
+        self.assertEqual(remove, ['h', 'o', 'v'])
 
         # Remove PREFIX feature, causing getFeature('PREFIX') to return None.
         removeFeature('PREFIX')
         add, remove = map(sorted, self.client.getChannelModeParams())
-        self.assertEquals(add, [])
-        self.assertEquals(remove, [])
+        self.assertEqual(add, [])
+        self.assertEqual(remove, [])
 
         # Restore ISUPPORT features.
         self._sendISUPPORT()
@@ -1124,8 +1124,8 @@ class ClientImplementationTests(unittest.TestCase):
         parameters when added and removed, respectively.
         """
         add, remove = map(sorted, self.client.getUserModeParams())
-        self.assertEquals(add, [])
-        self.assertEquals(remove, [])
+        self.assertEqual(add, [])
+        self.assertEqual(remove, [])
 
 
     def _sendModeChange(self, msg, args='', target=None):
@@ -1148,9 +1148,9 @@ class ClientImplementationTests(unittest.TestCase):
 
         for n, result in enumerate(results):
             method, data = result
-            self.assertEquals(method, 'modeChanged')
-            self.assertEquals(data['user'], 'Wolf!~wolf@yok.utu.fi')
-            self.assertEquals(data['channel'], target)
+            self.assertEqual(method, 'modeChanged')
+            self.assertEqual(data['user'], 'Wolf!~wolf@yok.utu.fi')
+            self.assertEqual(data['channel'], target)
             results[n] = tuple([data[key] for key in ('set', 'modes', 'args')])
         return results
 
@@ -1160,7 +1160,7 @@ class ClientImplementationTests(unittest.TestCase):
         Compare the expected result with the one returned by the client.
         """
         result = self._parseModeChange(self.client.calls, target)
-        self.assertEquals(result, expected)
+        self.assertEqual(result, expected)
         self.client.calls = []
 
 
@@ -1216,7 +1216,7 @@ class ClientImplementationTests(unittest.TestCase):
         self._sendModeChange('+s', 'wrong')
         self._checkModeChange([])
         errors = self.flushLoggedErrors(irc.IRCBadModes)
-        self.assertEquals(len(errors), 1)
+        self.assertEqual(len(errors), 1)
         self.assertSubstring(
             'Too many parameters', errors[0].getErrorMessage())
 
@@ -1229,7 +1229,7 @@ class ClientImplementationTests(unittest.TestCase):
         self._sendModeChange('+o')
         self._checkModeChange([])
         errors = self.flushLoggedErrors(irc.IRCBadModes)
-        self.assertEquals(len(errors), 1)
+        self.assertEqual(len(errors), 1)
         self.assertSubstring(
             'Not enough parameters', errors[0].getErrorMessage())
 
@@ -1311,7 +1311,7 @@ class BasicServerFunctionalityTestCase(unittest.TestCase):
 
 
     def check(self, s):
-        self.assertEquals(self.f.getvalue(), s)
+        self.assertEqual(self.f.getvalue(), s)
 
 
     def testPrivmsg(self):
@@ -1386,7 +1386,7 @@ class ClientInviteTests(unittest.TestCase):
         channel prefix character, one is prepended to it.
         """
         self.client.invite('foo', 'bar')
-        self.assertEquals(self.client.lines, ['INVITE foo #bar'])
+        self.assertEqual(self.client.lines, ['INVITE foo #bar'])
 
 
     def test_invite(self):
@@ -1395,7 +1395,7 @@ class ClientInviteTests(unittest.TestCase):
         username and a channel.
         """
         self.client.invite('foo', '#bar')
-        self.assertEquals(self.client.lines, ['INVITE foo #bar'])
+        self.assertEqual(self.client.lines, ['INVITE foo #bar'])
 
 
 
@@ -1406,7 +1406,7 @@ class ClientMsgTests(unittest.TestCase):
 
     def testSingleLine(self):
         self.client.msg('foo', 'bar')
-        self.assertEquals(self.client.lines, ['PRIVMSG foo :bar'])
+        self.assertEqual(self.client.lines, ['PRIVMSG foo :bar'])
 
 
     def testDodgyMaxLength(self):
@@ -1417,7 +1417,7 @@ class ClientMsgTests(unittest.TestCase):
     def testMultipleLine(self):
         maxLen = len('PRIVMSG foo :') + 3 + 2 # 2 for line endings
         self.client.msg('foo', 'barbazbo', maxLen)
-        self.assertEquals(self.client.lines, ['PRIVMSG foo :bar',
+        self.assertEqual(self.client.lines, ['PRIVMSG foo :bar',
                                               'PRIVMSG foo :baz',
                                               'PRIVMSG foo :bo'])
 
@@ -1426,13 +1426,13 @@ class ClientMsgTests(unittest.TestCase):
         msg = 'barbazbo'
         maxLen = len('PRIVMSG foo :%s' % (msg,)) + 2
         self.client.msg('foo', msg, maxLen)
-        self.assertEquals(self.client.lines, ['PRIVMSG foo :%s' % (msg,)])
+        self.assertEqual(self.client.lines, ['PRIVMSG foo :%s' % (msg,)])
         self.client.lines = []
         self.client.msg('foo', msg, maxLen-1)
-        self.assertEquals(2, len(self.client.lines))
+        self.assertEqual(2, len(self.client.lines))
         self.client.lines = []
         self.client.msg('foo', msg, maxLen+1)
-        self.assertEquals(1, len(self.client.lines))
+        self.assertEqual(1, len(self.client.lines))
 
 
     def test_newlinesAtStart(self):
@@ -1441,7 +1441,7 @@ class ClientMsgTests(unittest.TestCase):
         """
         self.client.lines = []
         self.client.msg('foo', '\nbar')
-        self.assertEquals(self.client.lines, ['PRIVMSG foo :bar'])
+        self.assertEqual(self.client.lines, ['PRIVMSG foo :bar'])
 
 
     def test_newlinesAtEnd(self):
@@ -1450,7 +1450,7 @@ class ClientMsgTests(unittest.TestCase):
         """
         self.client.lines = []
         self.client.msg('foo', 'bar\n')
-        self.assertEquals(self.client.lines, ['PRIVMSG foo :bar'])
+        self.assertEqual(self.client.lines, ['PRIVMSG foo :bar'])
 
 
     def test_newlinesWithinMessage(self):
@@ -1459,7 +1459,7 @@ class ClientMsgTests(unittest.TestCase):
         """
         self.client.lines = []
         self.client.msg('foo', 'bar\n\nbaz')
-        self.assertEquals(self.client.lines, [
+        self.assertEqual(self.client.lines, [
                 'PRIVMSG foo :bar',
                 'PRIVMSG foo :baz'
                 ])
@@ -1471,7 +1471,7 @@ class ClientMsgTests(unittest.TestCase):
         """
         self.client.lines = []
         self.client.msg('foo', 'bar\n\nbaz')
-        self.assertEquals(self.client.lines, [
+        self.assertEqual(self.client.lines, [
                 'PRIVMSG foo :bar',
                 'PRIVMSG foo :baz',
                 ])
@@ -1483,7 +1483,7 @@ class ClientMsgTests(unittest.TestCase):
         maxLineLength = irc.MAX_COMMAND_LENGTH - 2 - len('PRIVMSG foo :')
 
         self.client.msg('foo', 'o' * (maxLineLength + 1), *args)
-        self.assertEquals(self.client.lines, [
+        self.assertEqual(self.client.lines, [
                 'PRIVMSG foo :' + maxLineLength * 'o',
                 'PRIVMSG foo :o',
                 ])
@@ -1513,7 +1513,7 @@ class ClientMsgTests(unittest.TestCase):
         longline = 'o' * (irc.MAX_COMMAND_LENGTH // 2)
 
         self.client.msg('foo', longline + '\n' + longline)
-        self.assertEquals(self.client.lines, [
+        self.assertEqual(self.client.lines, [
                 'PRIVMSG foo :' + longline,
                 'PRIVMSG foo :' + longline,
                 ])
@@ -1528,7 +1528,7 @@ class ClientMsgTests(unittest.TestCase):
         longline = 'o' * (irc.MAX_COMMAND_LENGTH // 2)
 
         self.client.msg('foo', longline + ' ' + longline)
-        self.assertEquals(self.client.lines, [
+        self.assertEqual(self.client.lines, [
                 'PRIVMSG foo :' + longline,
                 'PRIVMSG foo :' + longline,
                 ])
@@ -1538,8 +1538,8 @@ class ClientMsgTests(unittest.TestCase):
         # Whiteboxing
         self.assertRaises(ValueError, irc.split, 'foo', -1)
         self.assertRaises(ValueError, irc.split, 'foo', 0)
-        self.assertEquals([], irc.split('', 1))
-        self.assertEquals([], irc.split(''))
+        self.assertEqual([], irc.split('', 1))
+        self.assertEqual([], irc.split(''))
 
 
     def test_splitDelimiters(self):
@@ -1549,9 +1549,9 @@ class ClientMsgTests(unittest.TestCase):
         Nothing should be added to the output list because of it.
         """
         r = irc.split("xx yyz", 2)
-        self.assertEquals(['xx', 'yy', 'z'], r)
+        self.assertEqual(['xx', 'yy', 'z'], r)
         r = irc.split("xx\nyyz", 2)
-        self.assertEquals(['xx', 'yy', 'z'], r)
+        self.assertEqual(['xx', 'yy', 'z'], r)
 
 
     def test_splitValidatesLength(self):
@@ -1568,7 +1568,7 @@ class ClientMsgTests(unittest.TestCase):
         then sends the message to the server for delivery to that channel.
         """
         self.client.say("thechannel", "the message")
-        self.assertEquals(self.client.lines, ["PRIVMSG #thechannel :the message"])
+        self.assertEqual(self.client.lines, ["PRIVMSG #thechannel :the message"])
 
 
 
@@ -1588,7 +1588,7 @@ class ClientTests(TestCase):
 
         # Sanity check - we don't want anything to have happened at this
         # point, since we're not in a test yet.
-        self.assertEquals(self.transport.value(), "")
+        self.assertEqual(self.transport.value(), "")
 
         self.addCleanup(self.transport.loseConnection)
         self.addCleanup(self.protocol.connectionLost, None)
@@ -1611,7 +1611,7 @@ class ClientTests(TestCase):
             'AWAY :%s' % (message,),
             '',
         ]
-        self.assertEquals(self.transport.value().split('\r\n'), expected)
+        self.assertEqual(self.transport.value().split('\r\n'), expected)
 
 
     def test_back(self):
@@ -1623,7 +1623,7 @@ class ClientTests(TestCase):
             'AWAY :',
             '',
         ]
-        self.assertEquals(self.transport.value().split('\r\n'), expected)
+        self.assertEqual(self.transport.value().split('\r\n'), expected)
 
 
     def test_whois(self):
@@ -1631,7 +1631,7 @@ class ClientTests(TestCase):
         L{IRCClient.whois} sends a WHOIS message.
         """
         self.protocol.whois('alice')
-        self.assertEquals(
+        self.assertEqual(
             self.transport.value().split('\r\n'),
             ['WHOIS alice', ''])
 
@@ -1642,7 +1642,7 @@ class ClientTests(TestCase):
         value is passed for the C{server} parameter.
         """
         self.protocol.whois('alice', 'example.org')
-        self.assertEquals(
+        self.assertEqual(
             self.transport.value().split('\r\n'),
             ['WHOIS example.org alice', ''])
 
@@ -1663,7 +1663,7 @@ class ClientTests(TestCase):
             'USER %s %s %s :%s' % (
                 username, hostname, servername, self.protocol.realname),
             '']
-        self.assertEquals(self.transport.value().split('\r\n'), expected)
+        self.assertEqual(self.transport.value().split('\r\n'), expected)
 
 
     def test_registerWithPassword(self):
@@ -1684,7 +1684,7 @@ class ClientTests(TestCase):
             'USER %s %s %s :%s' % (
                 username, hostname, servername, self.protocol.realname),
             '']
-        self.assertEquals(self.transport.value().split('\r\n'), expected)
+        self.assertEqual(self.transport.value().split('\r\n'), expected)
 
 
     def test_registerWithTakenNick(self):
@@ -1706,7 +1706,7 @@ class ClientTests(TestCase):
         # Keep chaining underscores for each collision
         self.protocol.irc_ERR_NICKNAMEINUSE('prefix', ['param'])
         lastLine = self.getLastLine(self.transport)
-        self.assertEquals(lastLine, 'NICK %s' % (username + '__',))
+        self.assertEqual(lastLine, 'NICK %s' % (username + '__',))
 
 
     def test_overrideAlterCollidedNick(self):
@@ -1719,7 +1719,7 @@ class ClientTests(TestCase):
         self.protocol.register(nick)
         self.protocol.irc_ERR_NICKNAMEINUSE('prefix', ['param'])
         lastLine = self.getLastLine(self.transport)
-        self.assertEquals(
+        self.assertEqual(
             lastLine, 'NICK %s' % (nick + '***',))
 
 
@@ -1733,9 +1733,9 @@ class ClientTests(TestCase):
         self.protocol.register(oldnick)
         self.protocol.irc_RPL_WELCOME('prefix', ['param'])
         self.protocol.setNick(newnick)
-        self.assertEquals(self.protocol.nickname, oldnick)
+        self.assertEqual(self.protocol.nickname, oldnick)
         self.protocol.irc_NICK('%s!quux@qux' % (oldnick,), [newnick])
-        self.assertEquals(self.protocol.nickname, newnick)
+        self.assertEqual(self.protocol.nickname, newnick)
 
 
     def test_erroneousNick(self):
@@ -1746,16 +1746,16 @@ class ClientTests(TestCase):
         """
         # Registration case: change illegal nickname to erroneousNickFallback
         badnick = 'foo'
-        self.assertEquals(self.protocol._registered, False)
+        self.assertEqual(self.protocol._registered, False)
         self.protocol.register(badnick)
         self.protocol.irc_ERR_ERRONEUSNICKNAME('prefix', ['param'])
         lastLine = self.getLastLine(self.transport)
-        self.assertEquals(
+        self.assertEqual(
             lastLine, 'NICK %s' % (self.protocol.erroneousNickFallback,))
         self.protocol.irc_RPL_WELCOME('prefix', ['param'])
-        self.assertEquals(self.protocol._registered, True)
+        self.assertEqual(self.protocol._registered, True)
         self.protocol.setNick(self.protocol.erroneousNickFallback)
-        self.assertEquals(
+        self.assertEqual(
             self.protocol.nickname, self.protocol.erroneousNickFallback)
 
         # Illegal nick change attempt after registration. Fall back to the old
@@ -1764,9 +1764,9 @@ class ClientTests(TestCase):
         self.protocol.setNick(badnick)
         self.protocol.irc_ERR_ERRONEUSNICKNAME('prefix', ['param'])
         lastLine = self.getLastLine(self.transport)
-        self.assertEquals(
+        self.assertEqual(
             lastLine, 'NICK %s' % (badnick,))
-        self.assertEquals(self.protocol.nickname, oldnick)
+        self.assertEqual(self.protocol.nickname, oldnick)
 
 
     def test_describe(self):
@@ -1783,7 +1783,7 @@ class ClientTests(TestCase):
             'PRIVMSG %s :\01ACTION %s\01' % (target, action),
             'PRIVMSG %s :\01ACTION %s\01' % (channel, action),
             '']
-        self.assertEquals(self.transport.value().split('\r\n'), expected)
+        self.assertEqual(self.transport.value().split('\r\n'), expected)
 
 
     def test_me(self):
@@ -1802,14 +1802,14 @@ class ClientTests(TestCase):
             'PRIVMSG %s :\01ACTION %s\01' % ('#' + target, action),
             'PRIVMSG %s :\01ACTION %s\01' % (channel, action),
             '']
-        self.assertEquals(self.transport.value().split('\r\n'), expected)
+        self.assertEqual(self.transport.value().split('\r\n'), expected)
         warnings = self.flushWarnings(
             offendingFunctions=[self.test_me])
-        self.assertEquals(
+        self.assertEqual(
             warnings[0]['message'],
             "me() is deprecated since Twisted 9.0. Use IRCClient.describe().")
-        self.assertEquals(warnings[0]['category'], DeprecationWarning)
-        self.assertEquals(len(warnings), 2)
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(len(warnings), 2)
 
 
     def test_noticedDoesntPrivmsg(self):

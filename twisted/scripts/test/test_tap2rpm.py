@@ -150,7 +150,7 @@ class TestTap2RPM(TestCase):
         """
 
         d = _queryRPMTags(rpmfile, tags.keys())
-        d.addCallback(self.assertEquals, tags)
+        d.addCallback(self.assertEqual, tags)
         return d
 
 
@@ -164,18 +164,18 @@ class TestTap2RPM(TestCase):
         config = tap2rpm.MyOptions()
         config.parseOptions([])
 
-        self.assertEquals(config['tapfile'], 'twistd.tap')
-        self.assertEquals(config['maintainer'], 'tap2rpm')
-        self.assertEquals(config['protocol'], 'twistd')
-        self.assertEquals(config['description'], 'A TCP server for twistd')
-        self.assertEquals(config['long_description'],
+        self.assertEqual(config['tapfile'], 'twistd.tap')
+        self.assertEqual(config['maintainer'], 'tap2rpm')
+        self.assertEqual(config['protocol'], 'twistd')
+        self.assertEqual(config['description'], 'A TCP server for twistd')
+        self.assertEqual(config['long_description'],
                 'Automatically created by tap2rpm')
-        self.assertEquals(config['set-version'], '1.0')
-        self.assertEquals(config['rpmfile'], 'twisted-twistd')
-        self.assertEquals(config['type'], 'tap')
-        self.assertEquals(config['quiet'], False)
-        self.assertEquals(config['twistd_option'], 'file')
-        self.assertEquals(config['release-name'], 'twisted-twistd-1.0')
+        self.assertEqual(config['set-version'], '1.0')
+        self.assertEqual(config['rpmfile'], 'twisted-twistd')
+        self.assertEqual(config['type'], 'tap')
+        self.assertEqual(config['quiet'], False)
+        self.assertEqual(config['twistd_option'], 'file')
+        self.assertEqual(config['release-name'], 'twisted-twistd-1.0')
 
 
     def test_protocolCalculatedFromTapFile(self):
@@ -185,8 +185,8 @@ class TestTap2RPM(TestCase):
         config = tap2rpm.MyOptions()
         config.parseOptions(['--tapfile', 'pancakes.tap'])
 
-        self.assertEquals(config['tapfile'], 'pancakes.tap')
-        self.assertEquals(config['protocol'], 'pancakes')
+        self.assertEqual(config['tapfile'], 'pancakes.tap')
+        self.assertEqual(config['protocol'], 'pancakes')
 
 
     def test_optionsDefaultToProtocolValue(self):
@@ -199,18 +199,18 @@ class TestTap2RPM(TestCase):
                 '--protocol', 'eggs',
             ])
 
-        self.assertEquals(config['tapfile'], 'sausages.tap')
-        self.assertEquals(config['maintainer'], 'tap2rpm')
-        self.assertEquals(config['protocol'], 'eggs')
-        self.assertEquals(config['description'], 'A TCP server for eggs')
-        self.assertEquals(config['long_description'],
+        self.assertEqual(config['tapfile'], 'sausages.tap')
+        self.assertEqual(config['maintainer'], 'tap2rpm')
+        self.assertEqual(config['protocol'], 'eggs')
+        self.assertEqual(config['description'], 'A TCP server for eggs')
+        self.assertEqual(config['long_description'],
                 'Automatically created by tap2rpm')
-        self.assertEquals(config['set-version'], '1.0')
-        self.assertEquals(config['rpmfile'], 'twisted-eggs')
-        self.assertEquals(config['type'], 'tap')
-        self.assertEquals(config['quiet'], False)
-        self.assertEquals(config['twistd_option'], 'file')
-        self.assertEquals(config['release-name'], 'twisted-eggs-1.0')
+        self.assertEqual(config['set-version'], '1.0')
+        self.assertEqual(config['rpmfile'], 'twisted-eggs')
+        self.assertEqual(config['type'], 'tap')
+        self.assertEqual(config['quiet'], False)
+        self.assertEqual(config['twistd_option'], 'file')
+        self.assertEqual(config['release-name'], 'twisted-eggs-1.0')
 
 
     def test_releaseNameDefaultsToRpmfileValue(self):
@@ -223,7 +223,7 @@ class TestTap2RPM(TestCase):
                 "--set-version", "1.2.3",
             ])
 
-        self.assertEquals(config['release-name'], 'beans-1.2.3')
+        self.assertEqual(config['release-name'], 'beans-1.2.3')
 
 
     def test_basicOperation(self):

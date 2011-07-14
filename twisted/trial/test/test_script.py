@@ -98,7 +98,7 @@ class TestSuiteUsed(unittest.TestCase):
         By default, the loader should use L{runner.DestructiveTestSuite}
         """
         loader = trial._getLoader(self.config)
-        self.assertEquals(loader.suiteFactory, runner.DestructiveTestSuite)
+        self.assertEqual(loader.suiteFactory, runner.DestructiveTestSuite)
 
 
     def test_untilFailureSuite(self):
@@ -108,7 +108,7 @@ class TestSuiteUsed(unittest.TestCase):
         """
         self.config['until-failure'] = True
         loader = trial._getLoader(self.config)
-        self.assertEquals(loader.suiteFactory, runner.TestSuite)
+        self.assertEqual(loader.suiteFactory, runner.TestSuite)
 
 
 
@@ -135,7 +135,7 @@ class TestModuleTest(unittest.TestCase):
         self.assertEqual(names1, names2)
 
     def test_baseState(self):
-        self.failUnlessEqual(0, len(self.config['tests']))
+        self.assertEqual(0, len(self.config['tests']))
 
     def test_testmoduleOnModule(self):
         """
@@ -196,8 +196,8 @@ class TestModuleTest(unittest.TestCase):
         filename = 'test_thisbetternoteverexist.py'
         try:
             self.config.opt_testmodule(filename)
-            self.failUnlessEqual(0, len(self.config['tests']))
-            self.failUnlessEqual("File %r doesn't exist\n" % (filename,),
+            self.assertEqual(0, len(self.config['tests']))
+            self.assertEqual("File %r doesn't exist\n" % (filename,),
                                  buffy.getvalue())
         finally:
             sys.stderr = stderr
@@ -208,7 +208,7 @@ class TestModuleTest(unittest.TestCase):
         which lack test-case-name buffer variables.
         """
         self.config.opt_testmodule(sibpath('novars.py'))
-        self.failUnlessEqual(0, len(self.config['tests']))
+        self.assertEqual(0, len(self.config['tests']))
 
     def test_testmoduleOnModuleName(self):
         """
@@ -220,8 +220,8 @@ class TestModuleTest(unittest.TestCase):
         moduleName = 'twisted.trial.test.test_script'
         try:
             self.config.opt_testmodule(moduleName)
-            self.failUnlessEqual(0, len(self.config['tests']))
-            self.failUnlessEqual("File %r doesn't exist\n" % (moduleName,),
+            self.assertEqual(0, len(self.config['tests']))
+            self.assertEqual("File %r doesn't exist\n" % (moduleName,),
                                  buffy.getvalue())
         finally:
             sys.stderr = stderr
@@ -229,14 +229,14 @@ class TestModuleTest(unittest.TestCase):
     def test_parseLocalVariable(self):
         declaration = '-*- test-case-name: twisted.trial.test.test_tests -*-'
         localVars = trial._parseLocalVariables(declaration)
-        self.failUnlessEqual({'test-case-name':
+        self.assertEqual({'test-case-name':
                               'twisted.trial.test.test_tests'},
                              localVars)
 
     def test_trailingSemicolon(self):
         declaration = '-*- test-case-name: twisted.trial.test.test_tests; -*-'
         localVars = trial._parseLocalVariables(declaration)
-        self.failUnlessEqual({'test-case-name':
+        self.assertEqual({'test-case-name':
                               'twisted.trial.test.test_tests'},
                              localVars)
 
@@ -244,7 +244,7 @@ class TestModuleTest(unittest.TestCase):
         declaration = ('-*- test-case-name: twisted.trial.test.test_tests; '
                        'foo: bar -*-')
         localVars = trial._parseLocalVariables(declaration)
-        self.failUnlessEqual({'test-case-name':
+        self.assertEqual({'test-case-name':
                               'twisted.trial.test.test_tests',
                               'foo': 'bar'},
                              localVars)
@@ -253,7 +253,7 @@ class TestModuleTest(unittest.TestCase):
         declaration = ('## -*- test-case-name: '
                        'twisted.trial.test.test_tests -*- #')
         localVars = trial._parseLocalVariables(declaration)
-        self.failUnlessEqual({'test-case-name':
+        self.assertEqual({'test-case-name':
                               'twisted.trial.test.test_tests'},
                              localVars)
 
@@ -271,32 +271,32 @@ class TestModuleTest(unittest.TestCase):
 
     def test_variablesFromFile(self):
         localVars = trial.loadLocalVariables(sibpath('moduletest.py'))
-        self.failUnlessEqual({'test-case-name':
+        self.assertEqual({'test-case-name':
                               'twisted.trial.test.test_test_visitor'},
                              localVars)
 
     def test_noVariablesInFile(self):
         localVars = trial.loadLocalVariables(sibpath('novars.py'))
-        self.failUnlessEqual({}, localVars)
+        self.assertEqual({}, localVars)
 
     def test_variablesFromScript(self):
         localVars = trial.loadLocalVariables(sibpath('scripttest.py'))
-        self.failUnlessEqual(
+        self.assertEqual(
             {'test-case-name': ('twisted.trial.test.test_test_visitor,'
                                 'twisted.trial.test.test_class')},
             localVars)
 
     def test_getTestModules(self):
         modules = trial.getTestModules(sibpath('moduletest.py'))
-        self.failUnlessEqual(modules, ['twisted.trial.test.test_test_visitor'])
+        self.assertEqual(modules, ['twisted.trial.test.test_test_visitor'])
 
     def test_getTestModules_noVars(self):
         modules = trial.getTestModules(sibpath('novars.py'))
-        self.failUnlessEqual(len(modules), 0)
+        self.assertEqual(len(modules), 0)
 
     def test_getTestModules_multiple(self):
         modules = trial.getTestModules(sibpath('scripttest.py'))
-        self.failUnlessEqual(set(modules),
+        self.assertEqual(set(modules),
                              set(['twisted.trial.test.test_test_visitor',
                                   'twisted.trial.test.test_class']))
 
@@ -414,7 +414,7 @@ class CoverageTests(unittest.TestCase):
         """
         options = trial.Options()
         options.parseOptions(["--coverage"])
-        self.assertEquals(sys.gettrace(), options.tracer.globaltrace)
+        self.assertEqual(sys.gettrace(), options.tracer.globaltrace)
 
 
     def test_coverdirDefault(self):
@@ -423,7 +423,7 @@ class CoverageTests(unittest.TestCase):
         for the I{temp-directory} option if that option is not specified.
         """
         options = trial.Options()
-        self.assertEquals(
+        self.assertEqual(
             options.coverdir(),
             FilePath(".").descendant([options["temp-directory"], "coverage"]))
 
@@ -436,7 +436,7 @@ class CoverageTests(unittest.TestCase):
         path = self.mktemp()
         options = trial.Options()
         options.parseOptions(["--temp-directory", path])
-        self.assertEquals(
+        self.assertEqual(
             options.coverdir(), FilePath(path).child("coverage"))
 
 
@@ -457,9 +457,9 @@ class ExtraTests(unittest.TestCase):
         """
         Check for a deprecation warning
         """
-        self.assertEquals(len(warnings), 1)
-        self.assertEquals(warnings[0]['category'], DeprecationWarning)
-        self.assertEquals(warnings[0]['message'], 
+        self.assertEqual(len(warnings), 1)
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(warnings[0]['message'], 
                           deprecate.getDeprecationWarningString(
                               deprecatedCallable, versions.Version('Twisted', 11, 0, 0)))
 

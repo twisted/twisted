@@ -109,7 +109,7 @@ class CGI(unittest.TestCase):
 
 
     def _testCGI_1(self, res):
-        self.failUnlessEqual(res, "cgi output" + os.linesep)
+        self.assertEqual(res, "cgi output" + os.linesep)
 
 
     def test_protectedServerAndDate(self):
@@ -142,7 +142,7 @@ class CGI(unittest.TestCase):
         factory = client.HTTPClientFactory(url)
         reactor.connectTCP('localhost', portnum, factory)
         def checkResponse(ignored):
-            self.assertEquals(
+            self.assertEqual(
                 factory.response_headers['content-type'], ['text/cgi-duplicate-test'])
         factory.deferred.addCallback(checkResponse)
         return factory.deferred
@@ -160,7 +160,7 @@ class CGI(unittest.TestCase):
         factory = client.HTTPClientFactory(url)
         reactor.connectTCP('localhost', portnum, factory)
         def checkResponse(ignored):
-            self.assertEquals(
+            self.assertEqual(
                 factory.response_headers['header'], ['spam', 'eggs'])
         factory.deferred.addCallback(checkResponse)
         return factory.deferred
@@ -178,7 +178,7 @@ class CGI(unittest.TestCase):
         return d
     testReadEmptyInput.timeout = 5
     def _testReadEmptyInput_1(self, res):
-        self.failUnlessEqual(res, "readinput ok%s" % os.linesep)
+        self.assertEqual(res, "readinput ok%s" % os.linesep)
 
     def testReadInput(self):
         cgiFilename = os.path.abspath(self.mktemp())
@@ -194,7 +194,7 @@ class CGI(unittest.TestCase):
         return d
     testReadInput.timeout = 5
     def _testReadInput_1(self, res):
-        self.failUnlessEqual(res, "readinput ok%s" % os.linesep)
+        self.assertEqual(res, "readinput ok%s" % os.linesep)
 
 
     def testReadAllInput(self):
@@ -211,7 +211,7 @@ class CGI(unittest.TestCase):
         return d
     testReadAllInput.timeout = 5
     def _testReadAllInput_1(self, res):
-        self.failUnlessEqual(res, "readallinput ok%s" % os.linesep)
+        self.assertEqual(res, "readallinput ok%s" % os.linesep)
 
 
 
@@ -282,8 +282,8 @@ class CGIDeprecationTests(unittest.TestCase):
         twcgi.PHP3Script
 
         warnings = self.flushWarnings([self.test_PHP3ScriptIsDeprecated])
-        self.assertEquals(len(warnings), 1)
-        self.assertEquals(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(len(warnings), 1)
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
         self.assertIn("PHP3Script is deprecated. "
                       "Use twisted.web.twcgi.FilteredScript instead.",
                       warnings[0]['message'])
@@ -296,8 +296,8 @@ class CGIDeprecationTests(unittest.TestCase):
         twcgi.PHPScript
 
         warnings = self.flushWarnings([self.test_PHPScriptIsDeprecated])
-        self.assertEquals(len(warnings), 1)
-        self.assertEquals(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(len(warnings), 1)
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
         self.assertIn("PHPScript is deprecated. "
                       "Use twisted.web.twcgi.FilteredScript instead.",
                       warnings[0]['message'])

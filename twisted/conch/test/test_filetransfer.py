@@ -147,8 +147,8 @@ class TestOurServerOurClient(SFTPTestBase):
 
 
     def testServerVersion(self):
-        self.failUnlessEqual(self._serverVersion, 3)
-        self.failUnlessEqual(self._extData, {'conchTest' : 'ext data'})
+        self.assertEqual(self._serverVersion, 3)
+        self.assertEqual(self._extData, {'conchTest' : 'ext data'})
 
 
     def test_openedFileClosedWithConnection(self):
@@ -173,7 +173,7 @@ class TestOurServerOurClient(SFTPTestBase):
             self.clientTransport.loseConnection()
             self.serverTransport.clearBuffer()
             self.clientTransport.clearBuffer()
-            self.assertEquals(self.server.openFiles, {})
+            self.assertEqual(self.server.openFiles, {})
             self.assertIn(fd, closed)
 
         d.addCallback(_fileOpened)
@@ -193,7 +193,7 @@ class TestOurServerOurClient(SFTPTestBase):
             self.clientTransport.loseConnection()
             self.serverTransport.clearBuffer()
             self.clientTransport.clearBuffer()
-            self.assertEquals(self.server.openDirs, {})
+            self.assertEqual(self.server.openDirs, {})
 
         d.addCallback(_getFiles)
         return d
@@ -205,7 +205,7 @@ class TestOurServerOurClient(SFTPTestBase):
         self._emptyBuffers()
 
         def _fileOpened(openFile):
-            self.failUnlessEqual(openFile, filetransfer.ISFTPFile(openFile))
+            self.assertEqual(openFile, filetransfer.ISFTPFile(openFile))
             d = _readChunk(openFile)
             d.addCallback(_writeChunk, openFile)
             return d
@@ -213,7 +213,7 @@ class TestOurServerOurClient(SFTPTestBase):
         def _readChunk(openFile):
             d = openFile.readChunk(0, 20)
             self._emptyBuffers()
-            d.addCallback(self.failUnlessEqual, 'a'*10 + 'b'*10)
+            d.addCallback(self.assertEqual, 'a'*10 + 'b'*10)
             return d
 
         def _writeChunk(_, openFile):
@@ -225,7 +225,7 @@ class TestOurServerOurClient(SFTPTestBase):
         def _readChunk2(_, openFile):
             d = openFile.readChunk(0, 30)
             self._emptyBuffers()
-            d.addCallback(self.failUnlessEqual, 'a'*10 + 'b'*10 + 'c'*10)
+            d.addCallback(self.assertEqual, 'a'*10 + 'b'*10 + 'c'*10)
             return d
 
         d.addCallback(_fileOpened)
@@ -269,7 +269,7 @@ class TestOurServerOurClient(SFTPTestBase):
         def _getAttrs2(attrs1):
             d = self.client.getAttrs('testfile1')
             self._emptyBuffers()
-            d.addCallback(self.failUnlessEqual, attrs1)
+            d.addCallback(self.assertEqual, attrs1)
             return d
 
         return d.addCallback(_getAttrs)
@@ -293,7 +293,7 @@ class TestOurServerOurClient(SFTPTestBase):
             d = self.client.setAttrs('testfile1', attrs)
             self._emptyBuffers()
             d.addCallback(_getAttrs2)
-            d.addCallback(self.failUnlessEqual, attrs)
+            d.addCallback(self.assertEqual, attrs)
             return d
 
         def _getAttrs2(_):
@@ -323,7 +323,7 @@ class TestOurServerOurClient(SFTPTestBase):
         self._emptyBuffers()
 
         def check(ign):
-            self.assertEquals(savedAttributes, {"ext_foo": "bar"})
+            self.assertEqual(savedAttributes, {"ext_foo": "bar"})
 
         return d.addCallback(check)
 
@@ -350,7 +350,7 @@ class TestOurServerOurClient(SFTPTestBase):
         def _testRenamed(_, attrs):
             d = self.client.getAttrs("testRenamedFile")
             self._emptyBuffers()
-            d.addCallback(self.failUnlessEqual, attrs)
+            d.addCallback(self.assertEqual, attrs)
         return d.addCallback(_rename)
 
     def testDirectoryBad(self):
@@ -368,7 +368,7 @@ class TestOurServerOurClient(SFTPTestBase):
             return d
 
         # XXX not until version 4/5
-        # self.failUnlessEqual(filetransfer.FILEXFER_TYPE_DIRECTORY&attrs['type'],
+        # self.assertEqual(filetransfer.FILEXFER_TYPE_DIRECTORY&attrs['type'],
         #                     filetransfer.FILEXFER_TYPE_DIRECTORY)
 
         def _removeDirectory(_):
@@ -400,7 +400,7 @@ class TestOurServerOurClient(SFTPTestBase):
         def _checkFiles(ignored):
             fs = list(zip(*files)[0])
             fs.sort()
-            self.failUnlessEqual(fs,
+            self.assertEqual(fs,
                                  ['.testHiddenFile', 'testDirectory',
                                   'testRemoveFile', 'testRenameFile',
                                   'testfile1'])
@@ -440,13 +440,13 @@ class TestOurServerOurClient(SFTPTestBase):
         def _readLink(_):
             d = self.client.readLink('testLink')
             self._emptyBuffers()
-            d.addCallback(self.failUnlessEqual,
+            d.addCallback(self.assertEqual,
                           os.path.join(os.getcwd(), self.testDir, 'testfile1'))
             return d
         def _realPath(_):
             d = self.client.realPath('testLink')
             self._emptyBuffers()
-            d.addCallback(self.failUnlessEqual,
+            d.addCallback(self.assertEqual,
                           os.path.join(os.getcwd(), self.testDir, 'testfile1'))
             return d
         d.addCallback(_readLink)
@@ -456,7 +456,7 @@ class TestOurServerOurClient(SFTPTestBase):
     def testExtendedRequest(self):
         d = self.client.extendedRequest('testExtendedRequest', 'foo')
         self._emptyBuffers()
-        d.addCallback(self.failUnlessEqual, 'bar')
+        d.addCallback(self.assertEqual, 'bar')
         d.addCallback(self._cbTestExtendedRequest)
         return d
 

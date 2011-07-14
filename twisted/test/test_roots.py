@@ -25,10 +25,10 @@ class RootsTest(unittest.TestCase):
     def testCollection(self):
         collection = roots.Collection()
         collection.putEntity("x", 'test')
-        self.failUnlessEqual(collection.getStaticEntity("x"),
+        self.assertEqual(collection.getStaticEntity("x"),
                              'test')
         collection.delEntity("x")
-        self.failUnlessEqual(collection.getStaticEntity('x'),
+        self.assertEqual(collection.getStaticEntity('x'),
                              None)
         try:
             collection.storeEntity("x", None)
@@ -48,7 +48,7 @@ class RootsTest(unittest.TestCase):
             def nameConstraint(self, name):
                 return (name == 'x')
         c = const()
-        self.failUnlessEqual(c.putEntity('x', 'test'), None)
+        self.assertEqual(c.putEntity('x', 'test'), None)
         self.failUnlessRaises(roots.ConstraintViolation,
                               c.putEntity, 'y', 'test')
 
@@ -57,7 +57,7 @@ class RootsTest(unittest.TestCase):
         h = roots.Homogenous()
         h.entityType = types.IntType
         h.putEntity('a', 1)
-        self.failUnlessEqual(h.getStaticEntity('a'),1 )
+        self.assertEqual(h.getStaticEntity('a'),1 )
         self.failUnlessRaises(roots.ConstraintViolation,
                               h.putEntity, 'x', 'y')
 

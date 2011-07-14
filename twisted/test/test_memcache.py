@@ -255,8 +255,8 @@ class MemCacheTestCase(CommandMixin, TestCase):
         @type result: C{any}
         """
         def cb(res):
-            self.assertEquals(res, result)
-        self.assertEquals(self.transport.value(), send)
+            self.assertEqual(res, result)
+        self.assertEqual(self.transport.value(), send)
         d.addCallback(cb)
         self.proto.dataReceived(recv)
         return d
@@ -302,7 +302,7 @@ class MemCacheTestCase(CommandMixin, TestCase):
         self.assertFailure(d1, TimeoutError)
         self.assertFailure(d2, TimeoutError)
         def checkMessage(error):
-            self.assertEquals(str(error), "Connection timeout")
+            self.assertEqual(str(error), "Connection timeout")
         d1.addCallback(checkMessage)
         return gatherResults([d1, d2, d3])
 
@@ -317,8 +317,8 @@ class MemCacheTestCase(CommandMixin, TestCase):
         self.proto.dataReceived("VALUE foo 0 3\r\nbar\r\nEND\r\n")
 
         def check(result):
-            self.assertEquals(result, (0, "bar"))
-            self.assertEquals(len(self.clock.calls), 0)
+            self.assertEqual(result, (0, "bar"))
+            self.assertEqual(len(self.clock.calls), 0)
         d.addCallback(check)
         return d
 
@@ -368,15 +368,15 @@ class MemCacheTestCase(CommandMixin, TestCase):
         self.proto.dataReceived("VALUE foo 0 3\r\nbar\r\nEND\r\n")
 
         def check(result):
-            self.assertEquals(result, (0, "bar"))
-            self.assertEquals(len(self.clock.calls), 1)
+            self.assertEqual(result, (0, "bar"))
+            self.assertEqual(len(self.clock.calls), 1)
             for i in range(self.proto.persistentTimeOut):
                 self.clock.advance(1)
             return self.assertFailure(d2, TimeoutError).addCallback(checkTime)
         def checkTime(ignored):
             # Check that the timeout happened C{self.proto.persistentTimeOut}
             # after the last response
-            self.assertEquals(
+            self.assertEqual(
                 self.clock.seconds(), 2 * self.proto.persistentTimeOut - 1)
         d1.addCallback(check)
         return d1
@@ -454,7 +454,7 @@ class MemCacheTestCase(CommandMixin, TestCase):
         L{NoSuchCommand}.
         """
         d = self.proto._set("egg", "foo", "bar", 0, 0, "")
-        self.assertEquals(self.transport.value(), "egg foo 0 0 3\r\nbar\r\n")
+        self.assertEqual(self.transport.value(), "egg foo 0 0 3\r\nbar\r\n")
         self.assertFailure(d, NoSuchCommand)
         self.proto.dataReceived("ERROR\r\n")
         return d
@@ -468,11 +468,11 @@ class MemCacheTestCase(CommandMixin, TestCase):
         """
         a = "eggspamm"
         d = self.proto.set("foo", a)
-        self.assertEquals(self.transport.value(),
+        self.assertEqual(self.transport.value(),
                           "set foo 0 0 8\r\neggspamm\r\n")
         self.assertFailure(d, ClientError)
         def check(err):
-            self.assertEquals(str(err), "We don't like egg and spam")
+            self.assertEqual(str(err), "We don't like egg and spam")
         d.addCallback(check)
         self.proto.dataReceived("CLIENT_ERROR We don't like egg and spam\r\n")
         return d
@@ -486,11 +486,11 @@ class MemCacheTestCase(CommandMixin, TestCase):
         """
         a = "eggspamm"
         d = self.proto.set("foo", a)
-        self.assertEquals(self.transport.value(),
+        self.assertEqual(self.transport.value(),
                           "set foo 0 0 8\r\neggspamm\r\n")
         self.assertFailure(d, ServerError)
         def check(err):
-            self.assertEquals(str(err), "zomg")
+            self.assertEqual(str(err), "zomg")
         d.addCallback(check)
         self.proto.dataReceived("SERVER_ERROR zomg\r\n")
         return d
@@ -525,12 +525,12 @@ class MemCacheTestCase(CommandMixin, TestCase):
         corresponding client command.
         """
         d1 = self.proto.get("foo")
-        d1.addCallback(self.assertEquals, (0, "bar"))
+        d1.addCallback(self.assertEqual, (0, "bar"))
         d2 = self.proto.set("bar", "spamspamspam")
-        d2.addCallback(self.assertEquals, True)
+        d2.addCallback(self.assertEqual, True)
         d3 = self.proto.get("egg")
-        d3.addCallback(self.assertEquals, (0, "spam"))
-        self.assertEquals(self.transport.value(),
+        d3.addCallback(self.assertEqual, (0, "spam"))
+        self.assertEqual(self.transport.value(),
             "get foo\r\nset bar 0 0 12\r\nspamspamspam\r\nget egg\r\n")
         self.proto.dataReceived("VALUE foo 0 3\r\nbar\r\nEND\r\n"
                                 "STORED\r\n"
@@ -544,8 +544,8 @@ class MemCacheTestCase(CommandMixin, TestCase):
         is able to reconstruct it and to produce the good value.
         """
         d = self.proto.get("foo")
-        d.addCallback(self.assertEquals, (0, "0123456789"))
-        self.assertEquals(self.transport.value(), "get foo\r\n")
+        d.addCallback(self.assertEqual, (0, "0123456789"))
+        self.assertEqual(self.transport.value(), "get foo\r\n")
         self.proto.dataReceived("VALUE foo 0 10\r\n0123456")
         self.proto.dataReceived("789")
         self.proto.dataReceived("\r\nEND")

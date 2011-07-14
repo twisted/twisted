@@ -35,7 +35,7 @@ class FileDescriptorTests(TestCase):
             try:
                 fcntl.fcntl(fd, fcntl.F_GETFL)
             except IOError, err:
-                self.assertEquals(
+                self.assertEqual(
                     errno.EBADF, err.errno,
                     "fcntl(%d, F_GETFL) failed with unexpected errno %d" % (
                         fd, err.errno))

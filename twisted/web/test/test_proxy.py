@@ -42,15 +42,15 @@ class ReverseProxyResourceTestCase(TestCase):
                              (uri,))
 
         # Check that one connection has been created, to the good host/port
-        self.assertEquals(len(reactor.tcpClients), 1)
-        self.assertEquals(reactor.tcpClients[0][0], "127.0.0.1")
-        self.assertEquals(reactor.tcpClients[0][1], 1234)
+        self.assertEqual(len(reactor.tcpClients), 1)
+        self.assertEqual(reactor.tcpClients[0][0], "127.0.0.1")
+        self.assertEqual(reactor.tcpClients[0][1], 1234)
 
         # Check the factory passed to the connect, and its given path
         factory = reactor.tcpClients[0][2]
         self.assertIsInstance(factory, ProxyClientFactory)
-        self.assertEquals(factory.rest, expectedURI)
-        self.assertEquals(factory.headers["host"], "127.0.0.1:1234")
+        self.assertEqual(factory.rest, expectedURI)
+        self.assertEqual(factory.headers["host"], "127.0.0.1:1234")
 
 
     def test_render(self):
@@ -81,9 +81,9 @@ class ReverseProxyResourceTestCase(TestCase):
         child = resource.getChild('foo', None)
         # The child should keep the same class
         self.assertIsInstance(child, ReverseProxyResource)
-        self.assertEquals(child.path, "/path/foo")
-        self.assertEquals(child.port, 1234)
-        self.assertEquals(child.host, "127.0.0.1")
+        self.assertEqual(child.path, "/path/foo")
+        self.assertEqual(child.port, 1234)
+        self.assertEqual(child.host, "127.0.0.1")
         self.assertIdentical(child.reactor, resource.reactor)
 
 
@@ -201,8 +201,8 @@ class ProxyClientTestCase(TestCase):
         requestContent = proxyClient.transport.value()
         receivedLine, receivedHeaders, body = self._parseOutHeaders(
             requestContent)
-        self.assertEquals(receivedLine, requestLine)
-        self.assertEquals(receivedHeaders, headers)
+        self.assertEqual(receivedLine, requestLine)
+        self.assertEqual(receivedHeaders, headers)
         return body
 
 
@@ -225,14 +225,14 @@ class ProxyClientTestCase(TestCase):
         @param headers: The expected HTTP headers.
         @param body: The expected response body.
         """
-        self.assertEquals(request.responseCode, code)
-        self.assertEquals(request.responseMessage, message)
+        self.assertEqual(request.responseCode, code)
+        self.assertEqual(request.responseMessage, message)
         receivedHeaders = list(request.responseHeaders.getAllRawHeaders())
         receivedHeaders.sort()
         expectedHeaders = headers[:]
         expectedHeaders.sort()
-        self.assertEquals(receivedHeaders, expectedHeaders)
-        self.assertEquals(''.join(request.written), body)
+        self.assertEqual(receivedHeaders, expectedHeaders)
+        self.assertEqual(''.join(request.written), body)
 
 
     def _testDataForward(self, code, message, headers, body, method="GET",
@@ -249,7 +249,7 @@ class ProxyClientTestCase(TestCase):
             client, '%s /foo HTTP/1.0' % (method,),
             {'connection': 'close', 'accept': 'text/html'})
 
-        self.assertEquals(receivedBody, requestBody)
+        self.assertEqual(receivedBody, requestBody)
 
         # Fake an answer
         client.dataReceived(
@@ -267,7 +267,7 @@ class ProxyClientTestCase(TestCase):
         # disconnected.  This lets us not rely on the server to close our
         # sockets for us.
         self.assertFalse(client.transport.connected)
-        self.assertEquals(request.finished, 1)
+        self.assertEqual(request.finished, 1)
 
 
     def test_forward(self):
@@ -327,7 +327,7 @@ class ProxyClientTestCase(TestCase):
         """
         client = ProxyClient('GET', '/foo', 'HTTP/1.0',
                 {"accept": "text/html", "proxy-connection": "foo"}, '', None)
-        self.assertEquals(client.headers,
+        self.assertEqual(client.headers,
                 {"accept": "text/html", "connection": "close"})
 
 
@@ -389,15 +389,15 @@ class ProxyClientFactoryTestCase(TestCase):
                                      {"accept": "text/html"}, '', request)
 
         factory.clientConnectionFailed(None, None)
-        self.assertEquals(request.responseCode, 501)
-        self.assertEquals(request.responseMessage, "Gateway error")
-        self.assertEquals(
+        self.assertEqual(request.responseCode, 501)
+        self.assertEqual(request.responseMessage, "Gateway error")
+        self.assertEqual(
             list(request.responseHeaders.getAllRawHeaders()),
             [("Content-Type", ["text/html"])])
-        self.assertEquals(
+        self.assertEqual(
             ''.join(request.written),
             "<H1>Could not connect</H1>")
-        self.assertEquals(request.finished, 1)
+        self.assertEqual(request.finished, 1)
 
 
     def test_buildProtocol(self):
@@ -410,10 +410,10 @@ class ProxyClientFactoryTestCase(TestCase):
                                      None)
         proto = factory.buildProtocol(None)
         self.assertIsInstance(proto, ProxyClient)
-        self.assertEquals(proto.command, 'GET')
-        self.assertEquals(proto.rest, '/foo')
-        self.assertEquals(proto.data, 'Some data')
-        self.assertEquals(proto.headers,
+        self.assertEqual(proto.command, 'GET')
+        self.assertEqual(proto.rest, '/foo')
+        self.assertEqual(proto.data, 'Some data')
+        self.assertEqual(proto.headers,
                           {"accept": "text/html", "connection": "close"})
 
 
@@ -437,18 +437,18 @@ class ProxyRequestTestCase(TestCase):
         request.requestReceived(method, 'http://example.com%s' % (uri,),
                                 'HTTP/1.0')
 
-        self.assertEquals(len(reactor.tcpClients), 1)
-        self.assertEquals(reactor.tcpClients[0][0], "example.com")
-        self.assertEquals(reactor.tcpClients[0][1], 80)
+        self.assertEqual(len(reactor.tcpClients), 1)
+        self.assertEqual(reactor.tcpClients[0][0], "example.com")
+        self.assertEqual(reactor.tcpClients[0][1], 80)
 
         factory = reactor.tcpClients[0][2]
         self.assertIsInstance(factory, ProxyClientFactory)
-        self.assertEquals(factory.command, method)
-        self.assertEquals(factory.version, 'HTTP/1.0')
-        self.assertEquals(factory.headers, {'host': 'example.com'})
-        self.assertEquals(factory.data, data)
-        self.assertEquals(factory.rest, expectedURI)
-        self.assertEquals(factory.father, request)
+        self.assertEqual(factory.command, method)
+        self.assertEqual(factory.version, 'HTTP/1.0')
+        self.assertEqual(factory.headers, {'host': 'example.com'})
+        self.assertEqual(factory.data, data)
+        self.assertEqual(factory.rest, expectedURI)
+        self.assertEqual(factory.father, request)
 
 
     def test_process(self):
@@ -496,9 +496,9 @@ class ProxyRequestTestCase(TestCase):
                                 'HTTP/1.0')
 
         # That should create one connection, with the port parsed from the URL
-        self.assertEquals(len(reactor.tcpClients), 1)
-        self.assertEquals(reactor.tcpClients[0][0], "example.com")
-        self.assertEquals(reactor.tcpClients[0][1], 1234)
+        self.assertEqual(len(reactor.tcpClients), 1)
+        self.assertEqual(reactor.tcpClients[0][0], "example.com")
+        self.assertEqual(reactor.tcpClients[0][1], 1234)
 
 
 
@@ -534,11 +534,11 @@ class ReverseProxyRequestTestCase(TestCase):
         request.requestReceived('GET', '/foo/bar', 'HTTP/1.0')
 
         # Check that one connection has been created, to the good host/port
-        self.assertEquals(len(reactor.tcpClients), 1)
-        self.assertEquals(reactor.tcpClients[0][0], "example.com")
-        self.assertEquals(reactor.tcpClients[0][1], 1234)
+        self.assertEqual(len(reactor.tcpClients), 1)
+        self.assertEqual(reactor.tcpClients[0][0], "example.com")
+        self.assertEqual(reactor.tcpClients[0][1], 1234)
 
         # Check the factory passed to the connect, and its headers
         factory = reactor.tcpClients[0][2]
         self.assertIsInstance(factory, ProxyClientFactory)
-        self.assertEquals(factory.headers, {'host': 'example.com'})
+        self.assertEqual(factory.headers, {'host': 'example.com'})

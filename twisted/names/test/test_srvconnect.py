@@ -74,7 +74,7 @@ class SRVConnectorTest(unittest.TestCase):
         self.connector.connect()
 
         self.assertIdentical(None, self.factory.reason)
-        self.assertEquals(
+        self.assertEqual(
             self.reactor.tcpClients.pop()[:2], ('host.example.org', 6269))
 
 
@@ -86,7 +86,7 @@ class SRVConnectorTest(unittest.TestCase):
         self.connector.connect()
 
         self.assertIdentical(None, self.factory.reason)
-        self.assertEquals(
+        self.assertEqual(
             self.reactor.tcpClients.pop()[:2], ('example.org', 'xmpp-server'))
 
 
@@ -98,7 +98,7 @@ class SRVConnectorTest(unittest.TestCase):
         self.connector.connect()
 
         self.assertIdentical(None, self.factory.reason)
-        self.assertEquals(
+        self.assertEqual(
             self.reactor.tcpClients.pop()[:2], ('example.org', 'xmpp-server'))
 
 
@@ -113,7 +113,7 @@ class SRVConnectorTest(unittest.TestCase):
         self.connector.connect()
 
         self.assertIdentical(None, self.factory.reason)
-        self.assertEquals(
+        self.assertEqual(
             self.reactor.tcpClients.pop()[:2], ('example.org', 'xmpp-server'))
 
 
@@ -130,4 +130,4 @@ class SRVConnectorTest(unittest.TestCase):
 
         self.assertNotIdentical(None, self.factory.reason)
         self.factory.reason.trap(DNSLookupError)
-        self.assertEquals(self.reactor.tcpClients, [])
+        self.assertEqual(self.reactor.tcpClients, [])

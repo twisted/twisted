@@ -54,7 +54,7 @@ class BananaTestCase(unittest.TestCase):
         for value in (10151, 10151L):
             self.enc.sendEncoded(value)
             self.enc.dataReceived(self.io.getvalue())
-            self.assertEquals(self.result, 10151)
+            self.assertEqual(self.result, 10151)
             self.assertIsInstance(self.result, int)
 
 
@@ -72,7 +72,7 @@ class BananaTestCase(unittest.TestCase):
                     self.io.truncate(0)
                     self.enc.sendEncoded(n)
                     self.enc.dataReceived(self.io.getvalue())
-                    self.assertEquals(self.result, n)
+                    self.assertEqual(self.result, n)
                     if n > sys.maxint or n < -sys.maxint - 1:
                         self.assertIsInstance(self.result, long)
                     else:

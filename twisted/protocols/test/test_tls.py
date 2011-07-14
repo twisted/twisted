@@ -283,7 +283,7 @@ class TLSMemoryBIOTests(TestCase):
             # Grab the server's certificate and check it out
             cert = sslClientProtocol.getPeerCertificate()
             self.assertIsInstance(cert, X509Type)
-            self.assertEquals(
+            self.assertEqual(
                 cert.digest('md5'),
                 '9B:A4:AB:43:10:BE:82:AE:94:3E:6B:91:F2:F3:40:E8')
         handshakeDeferred.addCallback(cbHandshook)
@@ -330,7 +330,7 @@ class TLSMemoryBIOTests(TestCase):
         # Once the connection is lost, make sure the server received the
         # expected bytes.
         def cbDisconnected(ignored):
-            self.assertEquals("".join(serverProtocol.received), bytes)
+            self.assertEqual("".join(serverProtocol.received), bytes)
         handshakeDeferred.addCallback(cbDisconnected)
 
         return handshakeDeferred
@@ -364,7 +364,7 @@ class TLSMemoryBIOTests(TestCase):
         # Wait for the connection to end, then make sure the server received
         # the bytes sent by the client.
         def cbConnectionDone(ignored):
-            self.assertEquals("".join(serverProtocol.received), bytes)
+            self.assertEqual("".join(serverProtocol.received), bytes)
         connectionDeferred.addCallback(cbConnectionDone)
         return connectionDeferred
 
@@ -447,7 +447,7 @@ class TLSMemoryBIOTests(TestCase):
         # Wait for the connection to end, then make sure the server received
         # the bytes sent by the client.
         def cbConnectionDone(ignored):
-            self.assertEquals("".join(serverProtocol.received), ''.join(bytes))
+            self.assertEqual("".join(serverProtocol.received), ''.join(bytes))
         connectionDeferred.addCallback(cbConnectionDone)
         return connectionDeferred
 
@@ -486,7 +486,7 @@ class TLSMemoryBIOTests(TestCase):
         # Wait for the connection to end, then make sure the server received
         # the bytes sent by the client.
         def cbConnectionDone(ignored):
-            self.assertEquals("".join(serverProtocol.received), bytes * factor)
+            self.assertEqual("".join(serverProtocol.received), bytes * factor)
         connectionDeferred.addCallback(cbConnectionDone)
         return connectionDeferred
 

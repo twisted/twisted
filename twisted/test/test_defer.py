@@ -41,22 +41,22 @@ class DeferredTestCase(unittest.TestCase):
         deferred = defer.Deferred()
         deferred.addCallback(self._callback)
         deferred.callback("hello")
-        self.failUnlessEqual(self.errbackResults, None)
-        self.failUnlessEqual(self.callbackResults, (('hello',), {}))
+        self.assertEqual(self.errbackResults, None)
+        self.assertEqual(self.callbackResults, (('hello',), {}))
 
     def testCallbackWithArgs(self):
         deferred = defer.Deferred()
         deferred.addCallback(self._callback, "world")
         deferred.callback("hello")
-        self.failUnlessEqual(self.errbackResults, None)
-        self.failUnlessEqual(self.callbackResults, (('hello', 'world'), {}))
+        self.assertEqual(self.errbackResults, None)
+        self.assertEqual(self.callbackResults, (('hello', 'world'), {}))
 
     def testCallbackWithKwArgs(self):
         deferred = defer.Deferred()
         deferred.addCallback(self._callback, world="world")
         deferred.callback("hello")
-        self.failUnlessEqual(self.errbackResults, None)
-        self.failUnlessEqual(self.callbackResults,
+        self.assertEqual(self.errbackResults, None)
+        self.assertEqual(self.callbackResults,
                              (('hello',), {'world': 'world'}))
 
     def testTwoCallbacks(self):
@@ -64,10 +64,10 @@ class DeferredTestCase(unittest.TestCase):
         deferred.addCallback(self._callback)
         deferred.addCallback(self._callback2)
         deferred.callback("hello")
-        self.failUnlessEqual(self.errbackResults, None)
-        self.failUnlessEqual(self.callbackResults,
+        self.assertEqual(self.errbackResults, None)
+        self.assertEqual(self.callbackResults,
                              (('hello',), {}))
-        self.failUnlessEqual(self.callback2Results,
+        self.assertEqual(self.callback2Results,
                              (('hello',), {}))
 
     def testDeferredList(self):
@@ -91,7 +91,7 @@ class DeferredTestCase(unittest.TestCase):
         # it from flunking the test.
         defr2.errback(GenericError("2"))
         defr3.callback("3")
-        self.failUnlessEqual([result[0],
+        self.assertEqual([result[0],
                     #result[1][1] is now a Failure instead of an Exception
                               (result[1][0], str(result[1][1].value)),
                               result[2]],
@@ -107,12 +107,12 @@ class DeferredTestCase(unittest.TestCase):
 
         dl = defer.DeferredList([])
         dl.addCallbacks(cb)
-        self.failUnlessEqual(result, [[]])
+        self.assertEqual(result, [[]])
 
         result[:] = []
         dl = defer.DeferredList([], fireOnOneCallback=1)
         dl.addCallbacks(cb)
-        self.failUnlessEqual(result, [])
+        self.assertEqual(result, [])
 
     def testDeferredListFireOnOneError(self):
         defr1 = defer.Deferred()
@@ -130,11 +130,11 @@ class DeferredTestCase(unittest.TestCase):
 
         # fire one Deferred's callback, no result yet
         defr1.callback("1")
-        self.failUnlessEqual(result, [])
+        self.assertEqual(result, [])
 
         # fire one Deferred's errback -- now we have a result
         defr2.errback(GenericError("from def2"))
-        self.failUnlessEqual(len(result), 1)
+        self.assertEqual(len(result), 1)
 
         # extract the result from the list
         aFailure = result[0]
@@ -149,9 +149,9 @@ class DeferredTestCase(unittest.TestCase):
 
         # check that the GenericError("2") from the deferred at index 1
         # (defr2) is intact inside failure.value
-        self.failUnlessEqual(firstError.subFailure.type, GenericError)
-        self.failUnlessEqual(firstError.subFailure.value.args, ("from def2",))
-        self.failUnlessEqual(firstError.index, 1)
+        self.assertEqual(firstError.subFailure.type, GenericError)
+        self.assertEqual(firstError.subFailure.value.args, ("from def2",))
+        self.assertEqual(firstError.index, 1)
 
 
     def testDeferredListDontConsumeErrors(self):
@@ -165,9 +165,9 @@ class DeferredTestCase(unittest.TestCase):
         dl.addCallback(result.append)
 
         d1.errback(GenericError('Bang'))
-        self.failUnlessEqual('Bang', errorTrap[0].value.args[0])
-        self.failUnlessEqual(1, len(result))
-        self.failUnlessEqual('Bang', result[0][0][1].value.args[0])
+        self.assertEqual('Bang', errorTrap[0].value.args[0])
+        self.assertEqual(1, len(result))
+        self.assertEqual('Bang', result[0][0][1].value.args[0])
 
     def testDeferredListConsumeErrors(self):
         d1 = defer.Deferred()
@@ -180,9 +180,9 @@ class DeferredTestCase(unittest.TestCase):
         dl.addCallback(result.append)
 
         d1.errback(GenericError('Bang'))
-        self.failUnlessEqual([], errorTrap)
-        self.failUnlessEqual(1, len(result))
-        self.failUnlessEqual('Bang', result[0][0][1].value.args[0])
+        self.assertEqual([], errorTrap)
+        self.assertEqual(1, len(result))
+        self.assertEqual('Bang', result[0][0][1].value.args[0])
 
     def testDeferredListFireOnOneErrorWithAlreadyFiredDeferreds(self):
         # Create some deferreds, and errback one
@@ -194,7 +194,7 @@ class DeferredTestCase(unittest.TestCase):
         dl = defer.DeferredList([d1, d2], fireOnOneErrback=True)
         result = []
         dl.addErrback(result.append)
-        self.failUnlessEqual(1, len(result))
+        self.assertEqual(1, len(result))
 
         d1.addErrback(lambda e: None)  # Swallow error
 
@@ -211,7 +211,7 @@ class DeferredTestCase(unittest.TestCase):
         result = []
         dl.addCallback(result.append)
 
-        self.failUnlessEqual(1, len(result))
+        self.assertEqual(1, len(result))
 
         d1.addErrback(lambda e: None)  # Swallow error
 
@@ -220,23 +220,23 @@ class DeferredTestCase(unittest.TestCase):
         l = []
         d = defer.succeed("success")
         d.addCallback(l.append)
-        self.assertEquals(l, ["success"])
+        self.assertEqual(l, ["success"])
 
 
     def testImmediateFailure(self):
         l = []
         d = defer.fail(GenericError("fail"))
         d.addErrback(l.append)
-        self.assertEquals(str(l[0].value), "fail")
+        self.assertEqual(str(l[0].value), "fail")
 
     def testPausedFailure(self):
         l = []
         d = defer.fail(GenericError("fail"))
         d.pause()
         d.addErrback(l.append)
-        self.assertEquals(l, [])
+        self.assertEqual(l, [])
         d.unpause()
-        self.assertEquals(str(l[0].value), "fail")
+        self.assertEqual(str(l[0].value), "fail")
 
     def testCallbackErrors(self):
         l = []
@@ -285,9 +285,9 @@ class DeferredTestCase(unittest.TestCase):
 
         result = []
         chained.addCallback(result.append)
-        self.assertEquals(result, [])
+        self.assertEqual(result, [])
         paused.unpause()
-        self.assertEquals(result, [expected])
+        self.assertEqual(result, [expected])
 
 
     def test_pausedDeferredChained(self):
@@ -304,19 +304,19 @@ class DeferredTestCase(unittest.TestCase):
         second.callback(None)
         result = []
         second.addCallback(result.append)
-        self.assertEquals(result, [None])
+        self.assertEqual(result, [None])
 
 
     def testGatherResults(self):
         # test successful list of deferreds
         l = []
         defer.gatherResults([defer.succeed(1), defer.succeed(2)]).addCallback(l.append)
-        self.assertEquals(l, [[1, 2]])
+        self.assertEqual(l, [[1, 2]])
         # test failing list of deferreds
         l = []
         dl = [defer.succeed(1), defer.fail(ValueError)]
         defer.gatherResults(dl).addErrback(l.append)
-        self.assertEquals(len(l), 1)
+        self.assertEqual(len(l), 1)
         self.assert_(isinstance(l[0], failure.Failure))
         # get rid of error
         dl[1].addErrback(lambda e: 1)
@@ -330,8 +330,8 @@ class DeferredTestCase(unittest.TestCase):
         S, E = [], []
         d = defer.maybeDeferred((lambda x: x + 5), 10)
         d.addCallbacks(S.append, E.append)
-        self.assertEquals(E, [])
-        self.assertEquals(S, [15])
+        self.assertEqual(E, [])
+        self.assertEqual(S, [15])
         return d
 
 
@@ -347,9 +347,9 @@ class DeferredTestCase(unittest.TestCase):
             expected = str(e)
         d = defer.maybeDeferred((lambda x: x + 5), '10')
         d.addCallbacks(S.append, E.append)
-        self.assertEquals(S, [])
-        self.assertEquals(len(E), 1)
-        self.assertEquals(str(E[0].value), expected)
+        self.assertEqual(S, [])
+        self.assertEqual(len(E), 1)
+        self.assertEqual(str(E[0].value), expected)
         return d
 
 
@@ -361,7 +361,7 @@ class DeferredTestCase(unittest.TestCase):
         d = defer.Deferred()
         d2 = defer.maybeDeferred(lambda: d)
         d.callback('Success')
-        return d2.addCallback(self.assertEquals, 'Success')
+        return d2.addCallback(self.assertEqual, 'Success')
 
 
     def test_maybeDeferredAsyncError(self):
@@ -444,10 +444,10 @@ class DeferredTestCase(unittest.TestCase):
         outer = defer.succeed('outer')
         outer.addCallback(cb)
         outer.addErrback(failures.append)
-        self.assertEquals([('cb', 'outer'), ('firstCallback', None)], results)
+        self.assertEqual([('cb', 'outer'), ('firstCallback', None)], results)
         a.callback('withers')
-        self.assertEquals([], failures)
-        self.assertEquals(
+        self.assertEqual([], failures)
+        self.assertEqual(
             results,
             [('cb', 'outer'),
              ('firstCallback', None),
@@ -486,10 +486,10 @@ class DeferredTestCase(unittest.TestCase):
         outer.addCallback(lambda x: results.append('final'))
         outer.addErrback(failures.append)
         outer.callback('outer')
-        self.assertEquals([('cb', 'outer'), ('firstCallback', None)], results)
+        self.assertEqual([('cb', 'outer'), ('firstCallback', None)], results)
         a.callback('withers')
-        self.assertEquals([], failures)
-        self.assertEquals(
+        self.assertEqual([], failures)
+        self.assertEqual(
             results,
             [('cb', 'outer'),
              ('firstCallback', None),
@@ -528,7 +528,7 @@ class DeferredTestCase(unittest.TestCase):
         def callback1(result):
             called.append(1)
             deferred.addCallback(callback2)
-            self.assertEquals(called, [1])
+            self.assertEqual(called, [1])
         deferred.addCallback(callback1)
         deferred.callback(None)
         self.assertEqual(called, [1, 2])
@@ -592,14 +592,14 @@ class DeferredTestCase(unittest.TestCase):
         secondResult = []
         second.addCallback(secondResult.append)
 
-        self.assertEquals(firstResult, [])
-        self.assertEquals(secondResult, [])
+        self.assertEqual(firstResult, [])
+        self.assertEqual(secondResult, [])
 
         result = object()
         first.callback(result)
 
-        self.assertEquals(firstResult, [None])
-        self.assertEquals(secondResult, [result])
+        self.assertEqual(firstResult, [None])
+        self.assertEqual(secondResult, [result])
 
 
     def test_synchronousImplicitErrorChain(self):
@@ -640,13 +640,13 @@ class DeferredTestCase(unittest.TestCase):
         secondResult = []
         second.addCallback(secondResult.append)
 
-        self.assertEquals(firstResult, [])
-        self.assertEquals(secondResult, [])
+        self.assertEqual(firstResult, [])
+        self.assertEqual(secondResult, [])
 
         first.errback(RuntimeError("First Deferred's Failure"))
 
-        self.assertEquals(firstResult, [None])
-        self.assertEquals(len(secondResult), 1)
+        self.assertEqual(firstResult, [None])
+        self.assertEqual(len(secondResult), 1)
 
 
     def test_doubleAsynchronousImplicitChaining(self):
@@ -673,12 +673,12 @@ class DeferredTestCase(unittest.TestCase):
         third.callback(None)
 
         # Still waiting
-        self.assertEquals(thirdResult, [])
+        self.assertEqual(thirdResult, [])
 
         # This will tell second to continue which will tell third to continue.
         first.callback(result)
 
-        self.assertEquals(thirdResult, [result])
+        self.assertEqual(thirdResult, [result])
 
 
     def test_nestedAsynchronousChainedDeferreds(self):
@@ -719,7 +719,7 @@ class DeferredTestCase(unittest.TestCase):
         outer.addCallback(results.append)
         # At this point, the callback 'cb' has been entered, and the first
         # callback of 'd' has been called.
-        self.assertEquals(
+        self.assertEqual(
             results, [('start-of-cb', 'outer'), ('firstCallback', 'inner')])
 
         # Once the inner Deferred is fired, processing of the outer Deferred's
@@ -729,10 +729,10 @@ class DeferredTestCase(unittest.TestCase):
         # Make sure there are no errors.
         inner.addErrback(failures.append)
         outer.addErrback(failures.append)
-        self.assertEquals(
+        self.assertEqual(
             [], failures, "Got errbacks but wasn't expecting any.")
 
-        self.assertEquals(
+        self.assertEqual(
             results,
             [('start-of-cb', 'outer'),
              ('firstCallback', 'inner'),
@@ -784,7 +784,7 @@ class DeferredTestCase(unittest.TestCase):
         outer.addCallback(results.append)
         # At this point, the callback 'cb' has been entered, and the first
         # callback of 'd' has been called.
-        self.assertEquals(
+        self.assertEqual(
             results, [('start-of-cb', 'outer'), ('firstCallback', 'inner')])
 
         # Once the inner Deferred is fired, processing of the outer Deferred's
@@ -794,10 +794,10 @@ class DeferredTestCase(unittest.TestCase):
         # Make sure there are no errors.
         outer.addErrback(failures.append)
         inner.addErrback(failures.append)
-        self.assertEquals(
+        self.assertEqual(
             [], failures, "Got errbacks but wasn't expecting any.")
 
-        self.assertEquals(
+        self.assertEqual(
             results,
             [('start-of-cb', 'outer'),
              ('firstCallback', 'inner'),
@@ -851,7 +851,7 @@ class DeferredTestCase(unittest.TestCase):
         """
         d = defer.Deferred()
         address = hex(unsignedID(d))
-        self.assertEquals(
+        self.assertEqual(
             repr(d), '<Deferred at %s>' % (address,))
 
 
@@ -862,7 +862,7 @@ class DeferredTestCase(unittest.TestCase):
         """
         d = defer.Deferred()
         d.callback('orange')
-        self.assertEquals(
+        self.assertEqual(
             repr(d), "<Deferred at %s current result: 'orange'>" % (
                 hex(unsignedID(d))))
 
@@ -876,7 +876,7 @@ class DeferredTestCase(unittest.TestCase):
         a = defer.Deferred()
         b = defer.Deferred()
         b.chainDeferred(a)
-        self.assertEquals(
+        self.assertEqual(
             repr(a), "<Deferred at %s waiting on Deferred at %s>" % (
                 hex(unsignedID(a)), hex(unsignedID(b))))
 
@@ -912,7 +912,7 @@ class DeferredTestCase(unittest.TestCase):
 
             # Sanity check - the record callback is not intended to have
             # fired yet.
-            self.assertEquals(stack, [])
+            self.assertEqual(stack, [])
 
             # Now fire the last thing and return the stack depth at which the
             # callback was invoked.
@@ -921,7 +921,7 @@ class DeferredTestCase(unittest.TestCase):
 
         # Callbacks should be invoked at the same stack depth regardless of
         # how many Deferreds are chained.
-        self.assertEquals(chainDeferreds(1), chainDeferreds(2))
+        self.assertEqual(chainDeferreds(1), chainDeferreds(2))
 
 
     def test_resultOfDeferredResultOfDeferredOfFiredDeferredCalled(self):
@@ -945,7 +945,7 @@ class DeferredTestCase(unittest.TestCase):
         third.callback(None)
         L = []
         second.addCallback(L.append)
-        self.assertEquals(L, [None])
+        self.assertEqual(L, [None])
 
 
     def test_errbackWithNoArgsNoDebug(self):
@@ -964,10 +964,10 @@ class DeferredTestCase(unittest.TestCase):
             d.errback()
         d.addErrback(l.append)
         fail = l[0]
-        self.assertEquals(fail.value, exc)
+        self.assertEqual(fail.value, exc)
         localz, globalz = fail.frames[0][-2:]
-        self.assertEquals([], localz)
-        self.assertEquals([], globalz)
+        self.assertEqual([], localz)
+        self.assertEqual([], globalz)
 
 
     def test_errbackWithNoArgs(self):
@@ -986,7 +986,7 @@ class DeferredTestCase(unittest.TestCase):
             d.errback()
         d.addErrback(l.append)
         fail = l[0]
-        self.assertEquals(fail.value, exc)
+        self.assertEqual(fail.value, exc)
         localz, globalz = fail.frames[0][-2:]
         self.assertNotEquals([], localz)
         self.assertNotEquals([], globalz)
@@ -1007,8 +1007,8 @@ class DeferredTestCase(unittest.TestCase):
         d.addErrback(l.append)
         fail = l[0]
         localz, globalz = fail.frames[0][-2:]
-        self.assertEquals([], localz)
-        self.assertEquals([], globalz)
+        self.assertEqual([], localz)
+        self.assertEqual([], globalz)
 
 
     def test_errorInCallbackCapturesVarsWhenDebugging(self):
@@ -1276,8 +1276,8 @@ class DeferredCancellerTest(unittest.TestCase):
         d = defer.Deferred()
         d.addCallbacks(self._callback, self._errback)
         d.cancel()
-        self.assertEquals(self.errbackResults.type, defer.CancelledError)
-        self.assertEquals(self.callbackResults, None)
+        self.assertEqual(self.errbackResults.type, defer.CancelledError)
+        self.assertEqual(self.callbackResults, None)
 
 
     def test_raisesAfterCancelAndCallback(self):
@@ -1340,12 +1340,12 @@ class DeferredCancellerTest(unittest.TestCase):
         d = defer.Deferred()
         d.addCallbacks(self._callback, self._errback)
         d.cancel()
-        self.assertEquals(self.errbackResults.type, defer.CancelledError)
+        self.assertEqual(self.errbackResults.type, defer.CancelledError)
         currentFailure = self.errbackResults
         # One errback will be ignored
         d.errback(GenericError())
         # I.e., we should still have a CancelledError.
-        self.assertEquals(self.errbackResults.type, defer.CancelledError)
+        self.assertEqual(self.errbackResults.type, defer.CancelledError)
         d.cancel()
         self.assertIdentical(currentFailure, self.errbackResults)
 
@@ -1359,7 +1359,7 @@ class DeferredCancellerTest(unittest.TestCase):
         d = defer.Deferred()
         d.addCallbacks(self._callback, self._errback)
         d.cancel()
-        self.assertEquals(self.errbackResults.type, defer.CancelledError)
+        self.assertEqual(self.errbackResults.type, defer.CancelledError)
         currentFailure = self.errbackResults
         d.cancel()
         self.assertIdentical(currentFailure, self.errbackResults)
@@ -1379,11 +1379,11 @@ class DeferredCancellerTest(unittest.TestCase):
         d = defer.Deferred(canceller=cancel)
         d.addCallbacks(self._callback, self._errback)
         d.cancel()
-        self.assertEquals(self.errbackResults.type, defer.CancelledError)
+        self.assertEqual(self.errbackResults.type, defer.CancelledError)
         currentFailure = self.errbackResults
         d.cancel()
         self.assertIdentical(currentFailure, self.errbackResults)
-        self.assertEquals(self.cancellerCallCount, 1)
+        self.assertEqual(self.cancellerCallCount, 1)
 
 
     def test_simpleCanceller(self):
@@ -1398,8 +1398,8 @@ class DeferredCancellerTest(unittest.TestCase):
         d = defer.Deferred(canceller=cancel)
         d.addCallbacks(self._callback, self._errback)
         d.cancel()
-        self.assertEquals(self.cancellerCallCount, 1)
-        self.assertEquals(self.errbackResults.type, defer.CancelledError)
+        self.assertEqual(self.cancellerCallCount, 1)
+        self.assertEqual(self.errbackResults.type, defer.CancelledError)
 
         # Test that further call/errbacks are *not* swallowed
         self.assertRaises(defer.AlreadyCalledError, d.callback, None)
@@ -1429,9 +1429,9 @@ class DeferredCancellerTest(unittest.TestCase):
         d.addCallbacks(self._callback, self._errback)
         d.callback('biff!')
         d.cancel()
-        self.assertEquals(self.cancellerCallCount, 0)
-        self.assertEquals(self.errbackResults, None)
-        self.assertEquals(self.callbackResults, 'biff!')
+        self.assertEqual(self.cancellerCallCount, 0)
+        self.assertEqual(self.errbackResults, None)
+        self.assertEqual(self.callbackResults, 'biff!')
 
 
     def test_cancelAfterErrback(self):
@@ -1446,9 +1446,9 @@ class DeferredCancellerTest(unittest.TestCase):
         d.addCallbacks(self._callback, self._errback)
         d.errback(GenericError())
         d.cancel()
-        self.assertEquals(self.cancellerCallCount, 0)
-        self.assertEquals(self.errbackResults.type, GenericError)
-        self.assertEquals(self.callbackResults, None)
+        self.assertEqual(self.cancellerCallCount, 0)
+        self.assertEqual(self.errbackResults.type, GenericError)
+        self.assertEqual(self.callbackResults, None)
 
 
     def test_cancellerThatErrbacks(self):
@@ -1461,8 +1461,8 @@ class DeferredCancellerTest(unittest.TestCase):
         d = defer.Deferred(canceller=cancel)
         d.addCallbacks(self._callback, self._errback)
         d.cancel()
-        self.assertEquals(self.cancellerCallCount, 1)
-        self.assertEquals(self.errbackResults.type, GenericError)
+        self.assertEqual(self.cancellerCallCount, 1)
+        self.assertEqual(self.errbackResults.type, GenericError)
 
 
     def test_cancellerThatCallbacks(self):
@@ -1475,9 +1475,9 @@ class DeferredCancellerTest(unittest.TestCase):
         d = defer.Deferred(canceller=cancel)
         d.addCallbacks(self._callback, self._errback)
         d.cancel()
-        self.assertEquals(self.cancellerCallCount, 1)
-        self.assertEquals(self.callbackResults, 'hello!')
-        self.assertEquals(self.errbackResults, None)
+        self.assertEqual(self.cancellerCallCount, 1)
+        self.assertEqual(self.callbackResults, 'hello!')
+        self.assertEqual(self.errbackResults, None)
 
 
     def test_cancelNestedDeferred(self):
@@ -1498,10 +1498,10 @@ class DeferredCancellerTest(unittest.TestCase):
         a.cancel()
         a.addCallbacks(self._callback, self._errback)
         # The cancel count should be one (the cancellation done by B)
-        self.assertEquals(self.cancellerCallCount, 1)
+        self.assertEqual(self.cancellerCallCount, 1)
         # B's canceller didn't errback, so defer.py will have called errback
         # with a CancelledError.
-        self.assertEquals(self.errbackResults.type, defer.CancelledError)
+        self.assertEqual(self.errbackResults.type, defer.CancelledError)
 
 
 
@@ -1533,7 +1533,7 @@ class LogTestCase(unittest.TestCase):
         Check the output of the log observer to see if the error is present.
         """
         c2 = self._loggedErrors()
-        self.assertEquals(len(c2), 2)
+        self.assertEqual(len(c2), 2)
         c2[1]["failure"].trap(ZeroDivisionError)
         self.flushLoggedErrors(ZeroDivisionError)
 
@@ -1590,8 +1590,8 @@ class LogTestCase(unittest.TestCase):
         results = []
         errors = []
         d.addCallbacks(results.append, errors.append)
-        self.assertEquals(results, [])
-        self.assertEquals(len(errors), 1)
+        self.assertEqual(results, [])
+        self.assertEqual(len(errors), 1)
         errors[0].trap(Exception)
 
         # Get rid of any references we might have to the inner Deferred (none of
@@ -1601,7 +1601,7 @@ class LogTestCase(unittest.TestCase):
         # logged, if it's going to be logged.
         gc.collect()
         # And make sure it is not.
-        self.assertEquals(self._loggedErrors(), [])
+        self.assertEqual(self._loggedErrors(), [])
 
 
     def test_errorClearedByChaining(self):
@@ -1619,7 +1619,7 @@ class LogTestCase(unittest.TestCase):
         # so nothing should be logged.
         good = bad = None
         gc.collect()
-        self.assertEquals(self._loggedErrors(), [])
+        self.assertEqual(self._loggedErrors(), [])
 
 
 
@@ -1634,7 +1634,7 @@ class DeferredTestCaseII(unittest.TestCase):
 
     def cb_empty(self, res):
         self.callbackRan = 1
-        self.failUnlessEqual([], res)
+        self.assertEqual([], res)
 
     def tearDown(self):
         self.failUnless(self.callbackRan, "Callback was never run.")
@@ -1650,19 +1650,19 @@ class OtherPrimitives(unittest.TestCase):
         lock = defer.DeferredLock()
         lock.acquire().addCallback(self._incr)
         self.failUnless(lock.locked)
-        self.assertEquals(self.counter, 1)
+        self.assertEqual(self.counter, 1)
 
         lock.acquire().addCallback(self._incr)
         self.failUnless(lock.locked)
-        self.assertEquals(self.counter, 1)
+        self.assertEqual(self.counter, 1)
 
         lock.release()
         self.failUnless(lock.locked)
-        self.assertEquals(self.counter, 2)
+        self.assertEqual(self.counter, 2)
 
         lock.release()
         self.failIf(lock.locked)
-        self.assertEquals(self.counter, 2)
+        self.assertEqual(self.counter, 2)
 
         self.assertRaises(TypeError, lock.run)
 
@@ -1676,22 +1676,22 @@ class OtherPrimitives(unittest.TestCase):
 
         resultDeferred = lock.run(helper, self=self, b=firstUnique)
         self.failUnless(lock.locked)
-        self.assertEquals(self.b, firstUnique)
+        self.assertEqual(self.b, firstUnique)
 
         resultDeferred.addCallback(lambda x: setattr(self, 'result', x))
 
         lock.acquire().addCallback(self._incr)
         self.failUnless(lock.locked)
-        self.assertEquals(self.counter, 2)
+        self.assertEqual(self.counter, 2)
 
         controlDeferred.callback(secondUnique)
-        self.assertEquals(self.result, secondUnique)
+        self.assertEqual(self.result, secondUnique)
         self.failUnless(lock.locked)
-        self.assertEquals(self.counter, 3)
+        self.assertEqual(self.counter, 3)
 
         d = lock.acquire().addBoth(lambda x: setattr(self, 'result', x))
         d.cancel()
-        self.assertEquals(self.result.type, defer.CancelledError)
+        self.assertEqual(self.result.type, defer.CancelledError)
 
         lock.release()
         self.failIf(lock.locked)
@@ -1737,16 +1737,16 @@ class OtherPrimitives(unittest.TestCase):
         resultDeferred = sem.run(helper, self=self, arg=uniqueObject)
         resultDeferred.addCallback(results.append)
         resultDeferred.addCallback(self._incr)
-        self.assertEquals(results, [])
-        self.assertEquals(self.arg, uniqueObject)
+        self.assertEqual(results, [])
+        self.assertEqual(self.arg, uniqueObject)
         controlDeferred.callback(None)
-        self.assertEquals(results.pop(), None)
-        self.assertEquals(self.counter, 1)
+        self.assertEqual(results.pop(), None)
+        self.assertEqual(self.counter, 1)
 
         self.counter = 0
         for i in range(1, 1 + N):
             sem.acquire().addCallback(self._incr)
-            self.assertEquals(self.counter, i)
+            self.assertEqual(self.counter, i)
 
 
         success = []
@@ -1756,17 +1756,17 @@ class OtherPrimitives(unittest.TestCase):
             success.append(True)
         d = sem.acquire().addCallbacks(fail, succeed)
         d.cancel()
-        self.assertEquals(success, [True])
+        self.assertEqual(success, [True])
 
         sem.acquire().addCallback(self._incr)
-        self.assertEquals(self.counter, N)
+        self.assertEqual(self.counter, N)
 
         sem.release()
-        self.assertEquals(self.counter, N + 1)
+        self.assertEqual(self.counter, N + 1)
 
         for i in range(1, 1 + N):
             sem.release()
-            self.assertEquals(self.counter, N + 1)
+            self.assertEqual(self.counter, N + 1)
 
 
     def test_semaphoreInvalidTokens(self):
@@ -1818,16 +1818,16 @@ class OtherPrimitives(unittest.TestCase):
 
         for i in range(M):
             queue.put(i)
-            self.assertEquals(gotten, range(i + 1))
+            self.assertEqual(gotten, range(i + 1))
         for i in range(N):
             queue.put(N + i)
-            self.assertEquals(gotten, range(M))
+            self.assertEqual(gotten, range(M))
         self.assertRaises(defer.QueueOverflow, queue.put, None)
 
         gotten = []
         for i in range(N):
             queue.get().addCallback(gotten.append)
-            self.assertEquals(gotten, range(N, N + i + 1))
+            self.assertEqual(gotten, range(N, N + i + 1))
 
         queue = defer.DeferredQueue()
         gotten = []
@@ -1835,7 +1835,7 @@ class OtherPrimitives(unittest.TestCase):
             queue.get().addCallback(gotten.append)
         for i in range(N):
             queue.put(i)
-        self.assertEquals(gotten, range(N))
+        self.assertEqual(gotten, range(N))
 
         queue = defer.DeferredQueue(size=0)
         self.assertRaises(defer.QueueOverflow, queue.put, None)
@@ -1939,7 +1939,7 @@ class DeferredFilesystemLockTestCase(unittest.TestCase):
         """
         lock = defer.DeferredFilesystemLock(self.mktemp())
 
-        self.assertEquals(lock._scheduler, reactor)
+        self.assertEqual(lock._scheduler, reactor)
 
 
     def test_concurrentUsage(self):

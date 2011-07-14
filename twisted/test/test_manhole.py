@@ -60,7 +60,7 @@ class ManholeTest(unittest.TestCase):
         self.client.setZero()
         self.p.perspective_do("int(service is sys.modules['twisted.manhole.service'])")
         msg = self.client.getMessages()[0]
-        self.failUnlessEqual(msg, ('result',"1\n"))
+        self.assertEqual(msg, ('result',"1\n"))
 
     def test_importMain(self):
         """Trying to import __main__"""

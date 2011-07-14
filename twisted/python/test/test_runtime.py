@@ -36,7 +36,7 @@ class PlatformTests(TestCase):
         """
         platform = Platform()
         if platform.isMacOSX():
-            self.assertEquals(platform.getType(), 'posix')
+            self.assertEqual(platform.getType(), 'posix')
 
 
 
@@ -51,10 +51,10 @@ class ForeignPlatformTests(TestCase):
         L{Platform.getType} returns the platform type which corresponds to that
         name.
         """
-        self.assertEquals(Platform('nt').getType(), 'win32')
-        self.assertEquals(Platform('ce').getType(), 'win32')
-        self.assertEquals(Platform('posix').getType(), 'posix')
-        self.assertEquals(Platform('java').getType(), 'java')
+        self.assertEqual(Platform('nt').getType(), 'win32')
+        self.assertEqual(Platform('ce').getType(), 'win32')
+        self.assertEqual(Platform('posix').getType(), 'posix')
+        self.assertEqual(Platform('java').getType(), 'java')
 
 
     def test_isMacOSX(self):

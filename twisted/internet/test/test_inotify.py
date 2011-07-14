@@ -72,7 +72,7 @@ class TestINotify(unittest.TestCase):
             expectedPath = self.dirname.child("foo.bar")
         notified = defer.Deferred()
         def cbNotified((watch, filename, events)):
-            self.assertEquals(filename, expectedPath)
+            self.assertEqual(filename, expectedPath)
             self.assertTrue(events & mask)
         notified.addCallback(cbNotified)
 
@@ -316,11 +316,11 @@ class TestINotify(unittest.TestCase):
         masks to a human readable string.
         """
         for mask, value in inotify._FLAG_TO_HUMAN:
-            self.assertEquals(inotify.humanReadableMask(mask)[0], value)
+            self.assertEqual(inotify.humanReadableMask(mask)[0], value)
 
         checkMask = (
             inotify.IN_CLOSE_WRITE | inotify.IN_ACCESS | inotify.IN_OPEN)
-        self.assertEquals(
+        self.assertEqual(
             set(inotify.humanReadableMask(checkMask)),
             set(['close_write', 'access', 'open']))
 
@@ -389,7 +389,7 @@ class TestINotify(unittest.TestCase):
 
         notified = defer.Deferred()
         def cbNotified((ignored, filename, events)):
-            self.assertEquals(filename, expectedPath)
+            self.assertEqual(filename, expectedPath)
             self.assertTrue(events & inotify.IN_DELETE_SELF)
 
         def callIt(*args):
@@ -425,7 +425,7 @@ class TestINotify(unittest.TestCase):
 
         notified = defer.Deferred()
         def cbNotified((ignored, filename, events)):
-            self.assertEquals(filename, expectedPath2)
+            self.assertEqual(filename, expectedPath2)
             self.assertTrue(events & inotify.IN_DELETE_SELF)
 
         def callIt(*args):
@@ -477,8 +477,8 @@ class TestINotify(unittest.TestCase):
                     self.assertTrue(self.inotify._isWatched(subdir2))
                     self.assertTrue(self.inotify._isWatched(subdir3))
                     created = someFiles + [subdir, subdir2, subdir3]
-                    self.assertEquals(len(calls), len(created))
-                    self.assertEquals(calls, set(created))
+                    self.assertEqual(len(calls), len(created))
+                    self.assertEqual(calls, set(created))
                 except Exception:
                     d.errback()
                 else:

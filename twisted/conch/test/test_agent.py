@@ -309,7 +309,7 @@ class TestAgentIdentityRequests(AgentTestBase):
         def _check(sig):
             # Cannot do this b/c DSA uses random numbers when signing
             #   expected = self.dsaPrivate.sign("John Hancock")
-            #   self.assertEquals(expected, sig)
+            #   self.assertEqual(expected, sig)
             self.assertTrue(self.dsaPublic.verify(sig, "John Hancock"))
         return d.addCallback(_check)
 
@@ -340,7 +340,7 @@ class TestAgentIdentityRequests(AgentTestBase):
             received = {}
             for k in keyt:
                 received[keys.Key.fromString(k[0], type='blob').blob()] = k[1]
-            self.assertEquals(expected, received)
+            self.assertEqual(expected, received)
         return d.addCallback(_check)
 
 
@@ -395,5 +395,5 @@ class TestAgentKeyRemoval(AgentTestBase):
         self.pump.flush()
 
         def _check(ignored):
-            self.assertEquals(0, len(self.server.factory.keys))
+            self.assertEqual(0, len(self.server.factory.keys))
         return d.addCallback(_check)

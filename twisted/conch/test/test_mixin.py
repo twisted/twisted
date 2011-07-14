@@ -40,8 +40,8 @@ class BufferingTest(unittest.TestCase):
         for s in L:
             n = p.rescheduled
             p.write(s)
-            self.assertEquals(p.rescheduled, n + 1)
-            self.assertEquals(t.value(), '')
+            self.assertEqual(p.rescheduled, n + 1)
+            self.assertEqual(t.value(), '')
 
         p.flush()
-        self.assertEquals(t.value(), 'foo' + ''.join(L))
+        self.assertEqual(t.value(), 'foo' + ''.join(L))

@@ -18,9 +18,9 @@ class TestIFinishableConsumer(unittest.TestCase):
         Importing C{testmethod} emits a deprecation warning.
         """
         warningsShown = self.flushWarnings([testmethod])
-        self.assertEquals(len(warningsShown), 1)
+        self.assertEqual(len(warningsShown), 1)
         self.assertIdentical(warningsShown[0]['category'], DeprecationWarning)
-        self.assertEquals(
+        self.assertEqual(
             warningsShown[0]['message'],
             "twisted.internet.interfaces.IFinishableConsumer "
             "was deprecated in Twisted 11.1.0: Please use IConsumer "

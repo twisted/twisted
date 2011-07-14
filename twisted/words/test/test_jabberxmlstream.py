@@ -81,20 +81,20 @@ class IQTest(unittest.TestCase):
 
 
     def testBasic(self):
-        self.assertEquals(self.iq['type'], 'get')
+        self.assertEqual(self.iq['type'], 'get')
         self.assertTrue(self.iq['id'])
 
 
     def testSend(self):
         self.xmlstream.transport.clear()
         self.iq.send()
-        self.assertEquals("<iq type='get' id='%s'/>" % self.iq['id'],
+        self.assertEqual("<iq type='get' id='%s'/>" % self.iq['id'],
                           self.xmlstream.transport.value())
 
 
     def testResultResponse(self):
         def cb(result):
-            self.assertEquals(result['type'], 'result')
+            self.assertEqual(result['type'], 'result')
 
         d = self.iq.send()
         d.addCallback(cb)
@@ -683,12 +683,12 @@ class TLSInitiatingInitializerTest(unittest.TestCase):
         self.xmlstream.sendHeader = lambda: self.done.append('header')
 
         d = self.init.start()
-        d.addCallback(self.assertEquals, xmlstream.Reset)
+        d.addCallback(self.assertEqual, xmlstream.Reset)
         starttls = self.output[0]
-        self.assertEquals('starttls', starttls.name)
-        self.assertEquals(NS_XMPP_TLS, starttls.uri)
+        self.assertEqual('starttls', starttls.name)
+        self.assertEqual(NS_XMPP_TLS, starttls.uri)
         self.xmlstream.dataReceived("<proceed xmlns='%s'/>" % NS_XMPP_TLS)
-        self.assertEquals(['TLS', 'reset', 'header'], self.done)
+        self.assertEqual(['TLS', 'reset', 'header'], self.done)
 
         return d
 
@@ -703,8 +703,8 @@ class TLSInitiatingInitializerTest(unittest.TestCase):
         xmlstream.ssl = None
 
         d = self.init.start()
-        d.addCallback(self.assertEquals, None)
-        self.assertEquals([], self.output)
+        d.addCallback(self.assertEqual, None)
+        self.assertEqual([], self.output)
 
         return d
 
@@ -718,7 +718,7 @@ class TLSInitiatingInitializerTest(unittest.TestCase):
 
         d = self.init.start()
         self.assertFailure(d, xmlstream.TLSNotSupported)
-        self.assertEquals([], self.output)
+        self.assertEqual([], self.output)
 
         return d
 
@@ -733,7 +733,7 @@ class TLSInitiatingInitializerTest(unittest.TestCase):
         self.init.wanted = False
 
         d = self.init.start()
-        self.assertEquals([], self.output)
+        self.assertEqual([], self.output)
         self.assertFailure(d, xmlstream.TLSRequired)
 
         return d
@@ -749,7 +749,7 @@ class TLSInitiatingInitializerTest(unittest.TestCase):
 
         d = self.init.start()
         d.addCallback(self.assertEqual, None)
-        self.assertEquals([], self.output)
+        self.assertEqual([], self.output)
         return d
 
 
@@ -964,7 +964,7 @@ class XMPPHandlerTest(unittest.TestCase):
         handler = xmlstream.XMPPHandler()
         handler.parent = DummyStreamManager()
         handler.send('<presence/>')
-        self.assertEquals(['<presence/>'], handler.parent.outlist)
+        self.assertEqual(['<presence/>'], handler.parent.outlist)
 
 
     def test_makeConnection(self):
@@ -1048,14 +1048,14 @@ class StreamManagerTest(unittest.TestCase):
         """
         sm = self.streamManager
         self.assertIdentical(None, sm.xmlstream)
-        self.assertEquals([], sm.handlers)
-        self.assertEquals(sm._connected,
+        self.assertEqual([], sm.handlers)
+        self.assertEqual(sm._connected,
                           sm.factory.callbacks['//event/stream/connected'])
-        self.assertEquals(sm._authd,
+        self.assertEqual(sm._authd,
                           sm.factory.callbacks['//event/stream/authd'])
-        self.assertEquals(sm._disconnected,
+        self.assertEqual(sm._disconnected,
                           sm.factory.callbacks['//event/stream/end'])
-        self.assertEquals(sm.initializationFailed,
+        self.assertEqual(sm.initializationFailed,
                           sm.factory.callbacks['//event/xmpp/initfailed'])
 
 
@@ -1069,9 +1069,9 @@ class StreamManagerTest(unittest.TestCase):
         handler.setHandlerParent(sm)
         xs = xmlstream.XmlStream(xmlstream.Authenticator())
         sm._connected(xs)
-        self.assertEquals(1, handler.doneMade)
-        self.assertEquals(0, handler.doneInitialized)
-        self.assertEquals(0, handler.doneLost)
+        self.assertEqual(1, handler.doneMade)
+        self.assertEqual(0, handler.doneInitialized)
+        self.assertEqual(0, handler.doneLost)
 
 
     def test_connectedLogTrafficFalse(self):
@@ -1111,9 +1111,9 @@ class StreamManagerTest(unittest.TestCase):
         handler.setHandlerParent(sm)
         xs = xmlstream.XmlStream(xmlstream.Authenticator())
         sm._authd(xs)
-        self.assertEquals(0, handler.doneMade)
-        self.assertEquals(1, handler.doneInitialized)
-        self.assertEquals(0, handler.doneLost)
+        self.assertEqual(0, handler.doneMade)
+        self.assertEqual(1, handler.doneInitialized)
+        self.assertEqual(0, handler.doneLost)
 
 
     def test_disconnected(self):
@@ -1126,9 +1126,9 @@ class StreamManagerTest(unittest.TestCase):
         handler.setHandlerParent(sm)
         xs = xmlstream.XmlStream(xmlstream.Authenticator())
         sm._disconnected(xs)
-        self.assertEquals(0, handler.doneMade)
-        self.assertEquals(0, handler.doneInitialized)
-        self.assertEquals(1, handler.doneLost)
+        self.assertEqual(0, handler.doneMade)
+        self.assertEqual(0, handler.doneInitialized)
+        self.assertEqual(1, handler.doneLost)
 
 
     def test_disconnectedReason(self):
@@ -1141,7 +1141,7 @@ class StreamManagerTest(unittest.TestCase):
         handler.setHandlerParent(sm)
         xs = xmlstream.XmlStream(xmlstream.Authenticator())
         sm._disconnected(failure.Failure(Exception("no reason")))
-        self.assertEquals(True, handler.gotFailureReason)
+        self.assertEqual(True, handler.gotFailureReason)
 
 
     def test_addHandler(self):
@@ -1152,9 +1152,9 @@ class StreamManagerTest(unittest.TestCase):
         handler = DummyXMPPHandler()
         handler.setHandlerParent(sm)
 
-        self.assertEquals(0, handler.doneMade)
-        self.assertEquals(0, handler.doneInitialized)
-        self.assertEquals(0, handler.doneLost)
+        self.assertEqual(0, handler.doneMade)
+        self.assertEqual(0, handler.doneInitialized)
+        self.assertEqual(0, handler.doneLost)
 
 
     def test_addHandlerInitialized(self):
@@ -1173,9 +1173,9 @@ class StreamManagerTest(unittest.TestCase):
         handler = DummyXMPPHandler()
         handler.setHandlerParent(sm)
 
-        self.assertEquals(1, handler.doneMade)
-        self.assertEquals(1, handler.doneInitialized)
-        self.assertEquals(0, handler.doneLost)
+        self.assertEqual(1, handler.doneMade)
+        self.assertEqual(1, handler.doneInitialized)
+        self.assertEqual(0, handler.doneLost)
 
 
     def test_sendInitialized(self):
@@ -1194,7 +1194,7 @@ class StreamManagerTest(unittest.TestCase):
                         "from='example.com' id='12345'>")
         xs.dispatch(xs, "//event/stream/authd")
         sm.send("<presence/>")
-        self.assertEquals("<presence/>", xs.transport.value())
+        self.assertEqual("<presence/>", xs.transport.value())
 
 
     def test_sendNotConnected(self):
@@ -1212,19 +1212,19 @@ class StreamManagerTest(unittest.TestCase):
         xs = factory.buildProtocol(None)
         xs.transport = proto_helpers.StringTransport()
         sm.send("<presence/>")
-        self.assertEquals("", xs.transport.value())
-        self.assertEquals("<presence/>", sm._packetQueue[0])
+        self.assertEqual("", xs.transport.value())
+        self.assertEqual("<presence/>", sm._packetQueue[0])
 
         xs.connectionMade()
-        self.assertEquals("", xs.transport.value())
-        self.assertEquals("<presence/>", sm._packetQueue[0])
+        self.assertEqual("", xs.transport.value())
+        self.assertEqual("<presence/>", sm._packetQueue[0])
 
         xs.dataReceived("<stream:stream xmlns='jabber:client' "
                         "xmlns:stream='http://etherx.jabber.org/streams' "
                         "from='example.com' id='12345'>")
         xs.dispatch(xs, "//event/stream/authd")
 
-        self.assertEquals("<presence/>", xs.transport.value())
+        self.assertEqual("<presence/>", xs.transport.value())
         self.assertFalse(sm._packetQueue)
 
 
@@ -1243,8 +1243,8 @@ class StreamManagerTest(unittest.TestCase):
                         "xmlns:stream='http://etherx.jabber.org/streams' "
                         "from='example.com' id='12345'>")
         sm.send("<presence/>")
-        self.assertEquals("", xs.transport.value())
-        self.assertEquals("<presence/>", sm._packetQueue[0])
+        self.assertEqual("", xs.transport.value())
+        self.assertEqual("<presence/>", sm._packetQueue[0])
 
 
     def test_sendDisconnected(self):
@@ -1265,8 +1265,8 @@ class StreamManagerTest(unittest.TestCase):
         xs.connectionLost(None)
 
         sm.send("<presence/>")
-        self.assertEquals("", xs.transport.value())
-        self.assertEquals("<presence/>", sm._packetQueue[0])
+        self.assertEqual("", xs.transport.value())
+        self.assertEqual("<presence/>", sm._packetQueue[0])
 
 
 
@@ -1310,7 +1310,7 @@ class XmlStreamServerFactoryTest(GenericXmlStreamFactoryTestsMixin):
         instance gets an authenticator.
         """
         xs = self.factory.buildProtocol(None)
-        self.assertEquals([xs], xs.authenticator.xmlstreams)
+        self.assertEqual([xs], xs.authenticator.xmlstreams)
 
 
     def test_buildProtocolXmlStream(self):

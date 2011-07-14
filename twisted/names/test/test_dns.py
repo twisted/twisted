@@ -135,7 +135,7 @@ class RoundtripDNSTestCase(unittest.TestCase):
             f.seek(0, 0)
             result = dns.Name()
             result.decode(f)
-            self.assertEquals(result.name, n)
+            self.assertEqual(result.name, n)
 
     def testQuery(self):
         for n in self.names:
@@ -149,9 +149,9 @@ class RoundtripDNSTestCase(unittest.TestCase):
                     f.seek(0, 0)
                     result = dns.Query()
                     result.decode(f)
-                    self.assertEquals(result.name.name, n)
-                    self.assertEquals(result.type, dnstype)
-                    self.assertEquals(result.cls, dnscls)
+                    self.assertEqual(result.name.name, n)
+                    self.assertEqual(result.type, dnstype)
+                    self.assertEqual(result.cls, dnscls)
 
     def testRR(self):
         # encode the RR
@@ -162,10 +162,10 @@ class RoundtripDNSTestCase(unittest.TestCase):
         f.seek(0, 0)
         result = dns.RRHeader()
         result.decode(f)
-        self.assertEquals(str(result.name), "test.org")
-        self.assertEquals(result.type, 3)
-        self.assertEquals(result.cls, 4)
-        self.assertEquals(result.ttl, 17)
+        self.assertEqual(str(result.name), "test.org")
+        self.assertEqual(result.type, 3)
+        self.assertEqual(result.cls, 4)
+        self.assertEqual(result.ttl, 17)
 
 
     def testResources(self):
@@ -182,7 +182,7 @@ class RoundtripDNSTestCase(unittest.TestCase):
             f.seek(0, 0)
             result = dns.SimpleRecord()
             result.decode(f)
-            self.assertEquals(str(result.name), s)
+            self.assertEqual(str(result.name), s)
 
     def test_hashable(self):
         """
@@ -201,7 +201,7 @@ class RoundtripDNSTestCase(unittest.TestCase):
             k1, k2 = k(), k()
             hk1 = hash(k1)
             hk2 = hash(k2)
-            self.assertEquals(hk1, hk2, "%s != %s (for %s)" % (hk1,hk2,k))
+            self.assertEqual(hk1, hk2, "%s != %s (for %s)" % (hk1,hk2,k))
 
 
     def test_Charstr(self):
@@ -217,7 +217,7 @@ class RoundtripDNSTestCase(unittest.TestCase):
             f.seek(0, 0)
             result = dns.Charstr()
             result.decode(f)
-            self.assertEquals(result.string, n)
+            self.assertEqual(result.string, n)
 
 
     def test_NAPTR(self):
@@ -237,13 +237,13 @@ class RoundtripDNSTestCase(unittest.TestCase):
             e.seek(0,0)
             rout = dns.Record_NAPTR()
             rout.decode(e)
-            self.assertEquals(rin.order, rout.order)
-            self.assertEquals(rin.preference, rout.preference)
-            self.assertEquals(rin.flags, rout.flags)
-            self.assertEquals(rin.service, rout.service)
-            self.assertEquals(rin.regexp, rout.regexp)
-            self.assertEquals(rin.replacement.name, rout.replacement.name)
-            self.assertEquals(rin.ttl, rout.ttl)
+            self.assertEqual(rin.order, rout.order)
+            self.assertEqual(rin.preference, rout.preference)
+            self.assertEqual(rin.flags, rout.flags)
+            self.assertEqual(rin.service, rout.service)
+            self.assertEqual(rin.regexp, rout.regexp)
+            self.assertEqual(rin.replacement.name, rout.replacement.name)
+            self.assertEqual(rin.ttl, rout.ttl)
 
 
 
@@ -276,15 +276,15 @@ class MessageTestCase(unittest.TestCase):
             '\x00\x00' # number of authorities
             '\x00\x00' # number of additionals
             )
-        self.assertEquals(msg.id, 256)
+        self.assertEqual(msg.id, 256)
         self.failIf(msg.answer, "Message was not supposed to be an answer.")
-        self.assertEquals(msg.opCode, dns.OP_QUERY)
+        self.assertEqual(msg.opCode, dns.OP_QUERY)
         self.failIf(msg.auth, "Message was not supposed to be authoritative.")
         self.failIf(msg.trunc, "Message was not supposed to be truncated.")
-        self.assertEquals(msg.queries, [])
-        self.assertEquals(msg.answers, [])
-        self.assertEquals(msg.authority, [])
-        self.assertEquals(msg.additional, [])
+        self.assertEqual(msg.queries, [])
+        self.assertEqual(msg.answers, [])
+        self.assertEqual(msg.authority, [])
+        self.assertEqual(msg.additional, [])
 
 
     def testNULL(self):
@@ -300,7 +300,7 @@ class MessageTestCase(unittest.TestCase):
         msg2.decode(s)
 
         self.failUnless(isinstance(msg2.answers[0].payload, dns.Record_NULL))
-        self.assertEquals(msg2.answers[0].payload.payload, bytes)
+        self.assertEqual(msg2.answers[0].payload.payload, bytes)
 
 
     def test_lookupRecordTypeDefault(self):
@@ -363,7 +363,7 @@ class DatagramProtocolTestCase(unittest.TestCase):
         """
         self.proto.datagramReceived('',
             address.IPv4Address('UDP', '127.0.0.1', 12345))
-        self.assertEquals(self.controller.messages, [])
+        self.assertEqual(self.controller.messages, [])
 
 
     def test_simpleQuery(self):
@@ -371,13 +371,13 @@ class DatagramProtocolTestCase(unittest.TestCase):
         Test content received after a query.
         """
         d = self.proto.query(('127.0.0.1', 21345), [dns.Query('foo')])
-        self.assertEquals(len(self.proto.liveMessages.keys()), 1)
+        self.assertEqual(len(self.proto.liveMessages.keys()), 1)
         m = dns.Message()
         m.id = self.proto.liveMessages.items()[0][0]
         m.answers = [dns.RRHeader(payload=dns.Record_A(address='1.2.3.4'))]
         called = False
         def cb(result):
-            self.assertEquals(result.answers[0].payload.dottedQuad(), '1.2.3.4')
+            self.assertEqual(result.answers[0].payload.dottedQuad(), '1.2.3.4')
         d.addCallback(cb)
         self.proto.datagramReceived(m.toStr(), ('127.0.0.1', 21345))
         return d
@@ -388,10 +388,10 @@ class DatagramProtocolTestCase(unittest.TestCase):
         Test that query timeouts after some seconds.
         """
         d = self.proto.query(('127.0.0.1', 21345), [dns.Query('foo')])
-        self.assertEquals(len(self.proto.liveMessages), 1)
+        self.assertEqual(len(self.proto.liveMessages), 1)
         self.clock.advance(10)
         self.assertFailure(d, dns.DNSQueryTimeoutError)
-        self.assertEquals(len(self.proto.liveMessages), 0)
+        self.assertEqual(len(self.proto.liveMessages), 0)
         return d
 
 
@@ -481,10 +481,10 @@ class DNSProtocolTestCase(unittest.TestCase):
         Test that query timeouts after some seconds.
         """
         d = self.proto.query([dns.Query('foo')])
-        self.assertEquals(len(self.proto.liveMessages), 1)
+        self.assertEqual(len(self.proto.liveMessages), 1)
         self.clock.advance(60)
         self.assertFailure(d, dns.DNSQueryTimeoutError)
-        self.assertEquals(len(self.proto.liveMessages), 0)
+        self.assertEqual(len(self.proto.liveMessages), 0)
         return d
 
 
@@ -493,13 +493,13 @@ class DNSProtocolTestCase(unittest.TestCase):
         Test content received after a query.
         """
         d = self.proto.query([dns.Query('foo')])
-        self.assertEquals(len(self.proto.liveMessages.keys()), 1)
+        self.assertEqual(len(self.proto.liveMessages.keys()), 1)
         m = dns.Message()
         m.id = self.proto.liveMessages.items()[0][0]
         m.answers = [dns.RRHeader(payload=dns.Record_A(address='1.2.3.4'))]
         called = False
         def cb(result):
-            self.assertEquals(result.answers[0].payload.dottedQuad(), '1.2.3.4')
+            self.assertEqual(result.answers[0].payload.dottedQuad(), '1.2.3.4')
         d.addCallback(cb)
         s = m.toStr()
         s = struct.pack('!H', len(s)) + s

@@ -88,7 +88,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder):
         path = _abstractPath(self)
         reactor = self.buildReactor()
         port = reactor.listenUNIX('\0' + path, ServerFactory())
-        self.assertEquals(port.getHost(), UNIXAddress('\0' + path))
+        self.assertEqual(port.getHost(), UNIXAddress('\0' + path))
     if platform != 'linux2':
         test_listenOnLinuxAbstractNamespace.skip = (
             'Abstract namespace UNIX sockets only supported on Linux.')
@@ -102,7 +102,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder):
         path = _abstractPath(self)
         reactor = self.buildReactor()
         connector = reactor.connectUNIX('\0' + path, ClientFactory())
-        self.assertEquals(
+        self.assertEqual(
             connector.getDestination(), UNIXAddress('\0' + path))
     if platform != 'linux2':
         test_connectToLinuxAbstractNamespace.skip = (
@@ -134,7 +134,7 @@ class UNIXDatagramTestsBuilder(UNIXFamilyMixin, ReactorBuilder):
         path = _abstractPath(self)
         reactor = self.buildReactor()
         port = reactor.listenUNIXDatagram('\0' + path, DatagramProtocol())
-        self.assertEquals(port.getHost(), UNIXAddress('\0' + path))
+        self.assertEqual(port.getHost(), UNIXAddress('\0' + path))
     if platform != 'linux2':
         test_listenOnLinuxAbstractNamespace.skip = (
             'Abstract namespace UNIX sockets only supported on Linux.')

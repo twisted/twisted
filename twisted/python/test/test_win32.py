@@ -16,7 +16,7 @@ class CommandLineQuotingTests(unittest.TestCase):
         Calling C{cmdLineQuote} with an argument with no spaces should
         return the argument unchanged.
         """
-        self.assertEquals(cmdLineQuote('an_argument'), 'an_argument')
+        self.assertEqual(cmdLineQuote('an_argument'), 'an_argument')
 
 
     def test_argWithSpaces(self):
@@ -24,7 +24,7 @@ class CommandLineQuotingTests(unittest.TestCase):
         Calling C{cmdLineQuote} with an argument containing spaces should
         return the argument surrounded by quotes.
         """
-        self.assertEquals(cmdLineQuote('An Argument'), '"An Argument"')
+        self.assertEqual(cmdLineQuote('An Argument'), '"An Argument"')
 
 
     def test_emptyStringArg(self):
@@ -32,4 +32,4 @@ class CommandLineQuotingTests(unittest.TestCase):
         Calling C{cmdLineQuote} with an empty string should return a
         quoted empty string.
         """
-        self.assertEquals(cmdLineQuote(''), '""')
+        self.assertEqual(cmdLineQuote(''), '""')

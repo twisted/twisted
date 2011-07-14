@@ -138,16 +138,16 @@ class HeadersTests(TestCase):
         the given header.
         """
         h = Headers()
-        self.assertEquals(h._canonicalNameCaps("test"), "Test")
-        self.assertEquals(h._canonicalNameCaps("test-stuff"), "Test-Stuff")
-        self.assertEquals(h._canonicalNameCaps("content-md5"), "Content-MD5")
-        self.assertEquals(h._canonicalNameCaps("dnt"), "DNT")
-        self.assertEquals(h._canonicalNameCaps("etag"), "ETag")
-        self.assertEquals(h._canonicalNameCaps("p3p"), "P3P")
-        self.assertEquals(h._canonicalNameCaps("te"), "TE")
-        self.assertEquals(h._canonicalNameCaps("www-authenticate"),
+        self.assertEqual(h._canonicalNameCaps("test"), "Test")
+        self.assertEqual(h._canonicalNameCaps("test-stuff"), "Test-Stuff")
+        self.assertEqual(h._canonicalNameCaps("content-md5"), "Content-MD5")
+        self.assertEqual(h._canonicalNameCaps("dnt"), "DNT")
+        self.assertEqual(h._canonicalNameCaps("etag"), "ETag")
+        self.assertEqual(h._canonicalNameCaps("p3p"), "P3P")
+        self.assertEqual(h._canonicalNameCaps("te"), "TE")
+        self.assertEqual(h._canonicalNameCaps("www-authenticate"),
                           "WWW-Authenticate")
-        self.assertEquals(h._canonicalNameCaps("x-xss-protection"),
+        self.assertEqual(h._canonicalNameCaps("x-xss-protection"),
                           "X-XSS-Protection")
 
 
@@ -226,11 +226,11 @@ class HeadersTests(TestCase):
         h = Headers()
         h.setRawHeaders('test', ['foo'])
         i = h.copy()
-        self.assertEquals(i.getRawHeaders('test'), ['foo'])
+        self.assertEqual(i.getRawHeaders('test'), ['foo'])
         h.addRawHeader('test', 'bar')
-        self.assertEquals(i.getRawHeaders('test'), ['foo'])
+        self.assertEqual(i.getRawHeaders('test'), ['foo'])
         i.addRawHeader('test', 'baz')
-        self.assertEquals(h.getRawHeaders('test'), ['foo', 'bar'])
+        self.assertEqual(h.getRawHeaders('test'), ['foo', 'bar'])
 
 
 

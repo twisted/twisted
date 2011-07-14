@@ -201,9 +201,9 @@ class ThrottlingTestCase(unittest.TestCase):
             return c3.dDisconnected
 
         def _check123(results):
-            self.assertEquals([c.connected for c in c1, c2, c3], [1, 1, 1])
-            self.assertEquals([c.disconnected for c in c1, c2, c3], [0, 0, 1])
-            self.assertEquals(len(tServer.protocols.keys()), 2)
+            self.assertEqual([c.connected for c in c1, c2, c3], [1, 1, 1])
+            self.assertEqual([c.disconnected for c in c1, c2, c3], [0, 0, 1])
+            self.assertEqual(len(tServer.protocols.keys()), 2)
             return results
 
         def _lose1(results):
@@ -216,8 +216,8 @@ class ThrottlingTestCase(unittest.TestCase):
             return c4.dConnected
 
         def _check4(results):
-            self.assertEquals(c4.connected, 1)
-            self.assertEquals(c4.disconnected, 0)
+            self.assertEqual(c4.connected, 1)
+            self.assertEqual(c4.disconnected, 0)
             return results
 
         def _cleanup(results):
@@ -252,19 +252,19 @@ class ThrottlingTestCase(unittest.TestCase):
 
         port.dataReceived("0123456789")
         port.dataReceived("abcdefghij")
-        self.assertEquals(tr.value(), "0123456789abcdefghij")
-        self.assertEquals(tServer.writtenThisSecond, 20)
+        self.assertEqual(tr.value(), "0123456789abcdefghij")
+        self.assertEqual(tServer.writtenThisSecond, 20)
         self.assertFalse(port.wrappedProtocol.paused)
 
         # at this point server should've written 20 bytes, 10 bytes
         # above the limit so writing should be paused around 1 second
         # from 'now', and resumed a second after that
         tServer.clock.advance(1.05)
-        self.assertEquals(tServer.writtenThisSecond, 0)
+        self.assertEqual(tServer.writtenThisSecond, 0)
         self.assertTrue(port.wrappedProtocol.paused)
 
         tServer.clock.advance(1.05)
-        self.assertEquals(tServer.writtenThisSecond, 0)
+        self.assertEqual(tServer.writtenThisSecond, 0)
         self.assertFalse(port.wrappedProtocol.paused)
 
 
@@ -282,30 +282,30 @@ class ThrottlingTestCase(unittest.TestCase):
 
         port.dataReceived("0123456789")
         port.dataReceived("abcdefghij")
-        self.assertEquals(tr.value(), "0123456789abcdefghij")
-        self.assertEquals(tServer.readThisSecond, 20)
+        self.assertEqual(tr.value(), "0123456789abcdefghij")
+        self.assertEqual(tServer.readThisSecond, 20)
 
         tServer.clock.advance(1.05)
-        self.assertEquals(tServer.readThisSecond, 0)
-        self.assertEquals(tr.producerState, 'paused')
+        self.assertEqual(tServer.readThisSecond, 0)
+        self.assertEqual(tr.producerState, 'paused')
 
         tServer.clock.advance(1.05)
-        self.assertEquals(tServer.readThisSecond, 0)
-        self.assertEquals(tr.producerState, 'producing')
+        self.assertEqual(tServer.readThisSecond, 0)
+        self.assertEqual(tr.producerState, 'producing')
 
         tr.clear()
         port.dataReceived("0123456789")
         port.dataReceived("abcdefghij")
-        self.assertEquals(tr.value(), "0123456789abcdefghij")
-        self.assertEquals(tServer.readThisSecond, 20)
+        self.assertEqual(tr.value(), "0123456789abcdefghij")
+        self.assertEqual(tServer.readThisSecond, 20)
 
         tServer.clock.advance(1.05)
-        self.assertEquals(tServer.readThisSecond, 0)
-        self.assertEquals(tr.producerState, 'paused')
+        self.assertEqual(tServer.readThisSecond, 0)
+        self.assertEqual(tr.producerState, 'paused')
 
         tServer.clock.advance(1.05)
-        self.assertEquals(tServer.readThisSecond, 0)
-        self.assertEquals(tr.producerState, 'producing')
+        self.assertEqual(tServer.readThisSecond, 0)
+        self.assertEqual(tr.producerState, 'producing')
 
 
 
@@ -469,7 +469,7 @@ class TestTimeout(unittest.TestCase):
         C{reactor.callLater}.
         """
         self.proto.setTimeout(10)
-        self.assertEquals(len(self.clock.calls), 1)
+        self.assertEqual(len(self.clock.calls), 1)
 
 
     def test_timeout(self):
@@ -510,7 +510,7 @@ class TestTimeout(unittest.TestCase):
         self.proto.makeConnection(StringTransport())
 
         self.proto.setTimeout(1)
-        self.assertEquals(self.proto.timeOut, 1)
+        self.assertEqual(self.proto.timeOut, 1)
 
         self.clock.pump([0, 0.9])
         self.failIf(self.proto.timedOut)
@@ -526,7 +526,7 @@ class TestTimeout(unittest.TestCase):
         self.proto.makeConnection(StringTransport())
 
         self.proto.setTimeout(None)
-        self.assertEquals(self.proto.timeOut, None)
+        self.assertEqual(self.proto.timeOut, None)
 
         self.clock.pump([0, 5, 5, 5])
         self.failIf(self.proto.timedOut)
@@ -538,10 +538,10 @@ class TestTimeout(unittest.TestCase):
         """
         self.proto.timeOut = 5
 
-        self.assertEquals(self.proto.setTimeout(10), 5)
-        self.assertEquals(self.proto.setTimeout(None), 10)
-        self.assertEquals(self.proto.setTimeout(1), None)
-        self.assertEquals(self.proto.timeOut, 1)
+        self.assertEqual(self.proto.setTimeout(10), 5)
+        self.assertEqual(self.proto.setTimeout(None), 10)
+        self.assertEqual(self.proto.setTimeout(1), None)
+        self.assertEqual(self.proto.timeOut, 1)
 
         # Clean up the DelayedCall
         self.proto.setTimeout(None)
@@ -650,13 +650,13 @@ class LoggingFactoryTestCase(unittest.TestCase):
         v = f.openFile.getvalue()
         self.assertIn("C 1: 'here are some bytes'", v)
         self.assertIn("S 1: 'here are some bytes'", v)
-        self.assertEquals(t.value(), 'here are some bytes')
+        self.assertEqual(t.value(), 'here are some bytes')
 
         t.clear()
         p.dataReceived('prepare for vector! to the extreme')
         v = f.openFile.getvalue()
         self.assertIn("SV 1: ['prepare for vector! to the extreme']", v)
-        self.assertEquals(t.value(), 'prepare for vector! to the extreme')
+        self.assertEqual(t.value(), 'prepare for vector! to the extreme')
 
         p.loseConnection()
 

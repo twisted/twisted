@@ -24,7 +24,7 @@ class DirDbmTestCase(unittest.TestCase):
         k = "//==".decode("base64")
         self.dbm[k] = "a"
         self.dbm[k] = "a"
-        self.assertEquals(self.dbm[k], "a")
+        self.assertEqual(self.dbm[k], "a")
 
 
     def testRebuildInteraction(self):

@@ -532,7 +532,7 @@ class SessionInterfaceTestCase(unittest.TestCase):
         """
         s = session.SSHSession(avatar=object) # use object because it doesn't
                                               # have an adapter
-        self.assertEquals(s.buf, '')
+        self.assertEqual(s.buf, '')
         self.assertIdentical(s.client, None)
         self.assertIdentical(s.session, None)
 
@@ -545,7 +545,7 @@ class SessionInterfaceTestCase(unittest.TestCase):
         self.session.dataReceived('1')
         self.session.client = StubClient()
         self.session.dataReceived('2')
-        self.assertEquals(self.session.client.transport.buf, '2')
+        self.assertEqual(self.session.client.transport.buf, '2')
 
     def test_client_extReceived(self):
         """
@@ -557,7 +557,7 @@ class SessionInterfaceTestCase(unittest.TestCase):
         self.session.extReceived(255, '2') # 255 is arbitrary
         self.session.client = StubClient()
         self.session.extReceived(connection.EXTENDED_DATA_STDERR, '3')
-        self.assertEquals(self.session.client.transport.err, '3')
+        self.assertEqual(self.session.client.transport.err, '3')
 
 
     def test_client_extReceivedWithoutWriteErr(self):
@@ -645,10 +645,10 @@ class SessionInterfaceTestCase(unittest.TestCase):
         self.session.requestReceived('subsystem',
                                      common.NS('TestSubsystem') + 'data')
 
-        self.assertEquals(self.session.conn.data[self.session],
+        self.assertEqual(self.session.conn.data[self.session],
                 ['\x00\x00\x00\x0dTestSubsystemdata~'])
         self.session.dataReceived('more data')
-        self.assertEquals(self.session.conn.data[self.session][-1],
+        self.assertEqual(self.session.conn.data[self.session][-1],
                 'more data~')
 
 
@@ -670,7 +670,7 @@ class SessionInterfaceTestCase(unittest.TestCase):
         RuntimeError).
         """
         errors = self.flushLoggedErrors(RuntimeError)
-        self.assertEquals(len(errors), 1, "Multiple RuntimeErrors raised: %s" %
+        self.assertEqual(len(errors), 1, "Multiple RuntimeErrors raised: %s" %
                           '\n'.join([repr(error) for error in errors]))
         errors[0].trap(RuntimeError)
 
@@ -703,12 +703,12 @@ class SessionInterfaceTestCase(unittest.TestCase):
         self.assertTrue(ret)
         self.assertSessionIsStubSession()
         self.session.dataReceived('some data\x00')
-        self.assertEquals(self.session.session.shellTransport.data,
+        self.assertEqual(self.session.session.shellTransport.data,
                           'some data\x00')
-        self.assertEquals(self.session.conn.data[self.session],
+        self.assertEqual(self.session.conn.data[self.session],
                           ['some data\x00', '\r\n'])
         self.assertTrue(self.session.session.shellTransport.closed)
-        self.assertEquals(self.session.conn.requests[self.session],
+        self.assertEqual(self.session.conn.requests[self.session],
                           [('exit-status', '\x00\x00\x00\x00', False)])
 
 
@@ -732,7 +732,7 @@ class SessionInterfaceTestCase(unittest.TestCase):
                               session.SSHSessionProcessProtocol)
         self.assertIdentical(self.session.session.execProtocol,
                 self.session.client)
-        self.assertEquals(self.session.session.execCommandLine,
+        self.assertEqual(self.session.session.execCommandLine,
                 'success')
 
 
@@ -746,14 +746,14 @@ class SessionInterfaceTestCase(unittest.TestCase):
         self.assertTrue(ret)
         self.assertSessionIsStubSession()
         self.session.dataReceived('some data')
-        self.assertEquals(self.session.session.execTransport.data, 'some data')
-        self.assertEquals(self.session.conn.data[self.session],
+        self.assertEqual(self.session.session.execTransport.data, 'some data')
+        self.assertEqual(self.session.conn.data[self.session],
                           ['hello', 'some data', '\r\n'])
         self.session.eofReceived()
         self.session.closeReceived()
         self.session.closed()
         self.assertTrue(self.session.session.execTransport.closed)
-        self.assertEquals(self.session.conn.requests[self.session],
+        self.assertEqual(self.session.conn.requests[self.session],
                           [('exit-status', '\x00\x00\x00\x00', False)])
 
 
@@ -774,7 +774,7 @@ class SessionInterfaceTestCase(unittest.TestCase):
         # 'good' terminal type succeeds
         self.assertTrue(self.session.requestReceived('pty_req',
             session.packRequest_pty_req('good', (1, 2, 3, 4), '')))
-        self.assertEquals(self.session.session.ptyRequest,
+        self.assertEqual(self.session.session.ptyRequest,
                 ('good', (1, 2, 3, 4), []))
 
 
@@ -792,7 +792,7 @@ class SessionInterfaceTestCase(unittest.TestCase):
         self.assertSessionIsStubSession()
         self.assertTrue(self.session.requestReceived('window_change',
             session.packRequest_window_change((1, 2, 3, 4))))
-        self.assertEquals(self.session.session.windowChange,
+        self.assertEqual(self.session.session.windowChange,
                 (1, 2, 3, 4))
 
 
@@ -908,11 +908,11 @@ class WrappersTestCase(unittest.TestCase):
         protocol.connectionMade()
         wrapped = session.wrapProtocol(protocol)
         wrapped.dataReceived('dataReceived')
-        self.assertEquals(protocol.transport.buf, 'dataReceived')
+        self.assertEqual(protocol.transport.buf, 'dataReceived')
         wrapped.write('data')
         wrapped.writeSequence(['1', '2'])
         wrapped.loseConnection()
-        self.assertEquals(protocol.data, 'data12')
+        self.assertEqual(protocol.data, 'data12')
         protocol.reason.trap(error.ConnectionDone)
 
     def test_wrapProcessProtocol_Protocol(self):
@@ -927,7 +927,7 @@ class WrappersTestCase(unittest.TestCase):
         process_protocol = session.wrapProcessProtocol(protocol)
         process_protocol.connectionMade()
         process_protocol.outReceived('data')
-        self.assertEquals(protocol.transport.buf, 'data~')
+        self.assertEqual(protocol.transport.buf, 'data~')
         process_protocol.processEnded(failure.Failure(
             error.ProcessTerminated(0, None, None)))
         protocol.reason.trap(error.ProcessTerminated)
@@ -954,7 +954,7 @@ class TestHelpers(unittest.TestCase):
             byte    mode number
             uint32  mode value
         """
-        self.assertEquals(session.parseRequest_pty_req(common.NS('xterm') +
+        self.assertEqual(session.parseRequest_pty_req(common.NS('xterm') +
                                                        struct.pack('>4L',
                                                                    1, 2, 3, 4)
                                                        + common.NS(
@@ -969,7 +969,7 @@ class TestHelpers(unittest.TestCase):
         packed = session.packRequest_pty_req('xterm', (2, 1, 3, 4),
                                              '\x05\x00\x00\x00\x06')
 
-        self.assertEquals(packed,
+        self.assertEqual(packed,
                           common.NS('xterm') + struct.pack('>4L', 1, 2, 3, 4) +
                           common.NS(struct.pack('>BL', 5, 6)))
 
@@ -980,7 +980,7 @@ class TestHelpers(unittest.TestCase):
         """
         packed = session.packRequest_pty_req('xterm', (2, 1, 3, 4),
                                              '\x05\x00\x00\x00\x06')
-        self.assertEquals(packed,
+        self.assertEqual(packed,
                           common.NS('xterm') + struct.pack('>4L', 1, 2, 3, 4) +
                           common.NS(struct.pack('>BL', 5, 6)))
 
@@ -996,7 +996,7 @@ class TestHelpers(unittest.TestCase):
         parseRequest_window_change() returns (rows, columns, x pixels,
         y pixels).
         """
-        self.assertEquals(session.parseRequest_window_change(
+        self.assertEqual(session.parseRequest_window_change(
                 struct.pack('>4L', 1, 2, 3, 4)), (2, 1, 3, 4))
 
 
@@ -1004,7 +1004,7 @@ class TestHelpers(unittest.TestCase):
         """
         See test_parseRequest_window_change for the payload format.
         """
-        self.assertEquals(session.packRequest_window_change((2, 1, 3, 4)),
+        self.assertEqual(session.packRequest_window_change((2, 1, 3, 4)),
                           struct.pack('>4L', 1, 2, 3, 4))
 
 
@@ -1044,7 +1044,7 @@ class SSHSessionProcessProtocolTestCase(unittest.TestCase):
         SSHSessionProcessProtocol should set self.session to the session passed
         to the __init__ method.
         """
-        self.assertEquals(self.pp.session, self.session)
+        self.assertEqual(self.pp.session, self.session)
 
 
     def test_getHost(self):
@@ -1052,7 +1052,7 @@ class SSHSessionProcessProtocolTestCase(unittest.TestCase):
         SSHSessionProcessProtocol.getHost() just delegates to its
         session.conn.transport.getHost().
         """
-        self.assertEquals(
+        self.assertEqual(
             self.session.conn.transport.getHost(), self.pp.getHost())
 
 
@@ -1061,7 +1061,7 @@ class SSHSessionProcessProtocolTestCase(unittest.TestCase):
         SSHSessionProcessProtocol.getPeer() just delegates to its
         session.conn.transport.getPeer().
         """
-        self.assertEquals(
+        self.assertEqual(
             self.session.conn.transport.getPeer(), self.pp.getPeer())
 
 
@@ -1072,7 +1072,7 @@ class SSHSessionProcessProtocolTestCase(unittest.TestCase):
         """
         self.session.buf = 'buffer'
         self.pp.connectionMade()
-        self.assertEquals(self.transport.buf, 'buffer')
+        self.assertEqual(self.transport.buf, 'buffer')
 
 
     def test_getSignalName(self):
@@ -1084,7 +1084,7 @@ class SSHSessionProcessProtocolTestCase(unittest.TestCase):
             signalName = 'SIG' + signalName
             signalValue = getattr(signal, signalName)
             sshName = self.pp._getSignalName(signalValue)
-            self.assertEquals(sshName, signalName,
+            self.assertEqual(sshName, signalName,
                               "%i: %s != %s" % (signalValue, sshName,
                                                 signalName))
 
@@ -1097,7 +1097,7 @@ class SSHSessionProcessProtocolTestCase(unittest.TestCase):
         signal.SIGTwistedTest = signal.NSIG + 1 # value can't exist normally
         # Force reinitialization of signals
         self.pp._signalValuesToNames = None
-        self.assertEquals(self.pp._getSignalName(signal.SIGTwistedTest),
+        self.assertEqual(self.pp._getSignalName(signal.SIGTwistedTest),
                           'SIGTwistedTest@' + sys.platform)
 
 
@@ -1112,7 +1112,7 @@ class SSHSessionProcessProtocolTestCase(unittest.TestCase):
         the session's write method.
         """
         self.pp.outReceived('test data')
-        self.assertEquals(self.session.conn.data[self.session],
+        self.assertEqual(self.session.conn.data[self.session],
                 ['test data'])
 
 
@@ -1122,7 +1122,7 @@ class SSHSessionProcessProtocolTestCase(unittest.TestCase):
         session channel's write method.
         """
         self.pp.write('test data')
-        self.assertEquals(self.session.conn.data[self.session],
+        self.assertEqual(self.session.conn.data[self.session],
                 ['test data'])
 
     def test_writeSequence(self):
@@ -1131,7 +1131,7 @@ class SSHSessionProcessProtocolTestCase(unittest.TestCase):
         joined together and sent to the session channel's write method.
         """
         self.pp.writeSequence(['test ', 'data'])
-        self.assertEquals(self.session.conn.data[self.session],
+        self.assertEqual(self.session.conn.data[self.session],
                 ['test data'])
 
 
@@ -1141,7 +1141,7 @@ class SSHSessionProcessProtocolTestCase(unittest.TestCase):
         the session's writeExtended method.
         """
         self.pp.errReceived('test data')
-        self.assertEquals(self.session.conn.extData[self.session],
+        self.assertEqual(self.session.conn.extData[self.session],
                 [(1, 'test data')])
 
 
@@ -1253,4 +1253,4 @@ class SSHSessionClientTestCase(unittest.TestCase):
         client = session.SSHSessionClient()
         client.transport = StubTransport()
         client.dataReceived('test data')
-        self.assertEquals(client.transport.buf, 'test data')
+        self.assertEqual(client.transport.buf, 'test data')

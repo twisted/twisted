@@ -23,7 +23,7 @@ class JabberStrPortsPlaceHolderTest(unittest.TestCase):
         """
         expected = ('TCP', ('DOMAIN', 65535, 'Factory'), {})
         got = jstrports.parse("tcp:DOMAIN:65535", "Factory")
-        self.assertEquals(expected, got)
+        self.assertEqual(expected, got)
 
 
     def test_client(self):

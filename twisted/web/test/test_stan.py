@@ -32,12 +32,12 @@ class TestTag(TestCase):
         tag.lineNumber = 6
         tag.columnNumber = 12
         clone = tag.clone(deep=False)
-        self.assertEquals(clone.attributes['hello'], 'world')
+        self.assertEqual(clone.attributes['hello'], 'world')
         self.assertNotIdentical(clone.attributes, tag.attributes)
-        self.assertEquals(clone.children, ["How are you", innerList])
+        self.assertEqual(clone.children, ["How are you", innerList])
         self.assertNotIdentical(clone.children, tag.children)
         self.assertIdentical(clone.children[1], innerList)
-        self.assertEquals(tag.slotData, clone.slotData)
+        self.assertEqual(tag.slotData, clone.slotData)
         self.assertNotIdentical(tag.slotData, clone.slotData)
         self.assertEqual(clone.filename, "foo/bar")
         self.assertEqual(clone.lineNumber, 6)
@@ -60,7 +60,7 @@ class TestTag(TestCase):
         tag.lineNumber = 6
         tag.columnNumber = 12
         clone = tag.clone()
-        self.assertEquals(clone.attributes['hello'], 'world')
+        self.assertEqual(clone.attributes['hello'], 'world')
         self.assertNotIdentical(clone.attributes, tag.attributes)
         self.assertNotIdentical(clone.children, tag.children)
         # sanity check
@@ -71,7 +71,7 @@ class TestTag(TestCase):
         self.assertIdentical(tag.children[2], innerList)
         # clone should have sub-clone
         self.assertNotIdentical(clone.children[2], innerList)
-        self.assertEquals(tag.slotData, clone.slotData)
+        self.assertEqual(tag.slotData, clone.slotData)
         self.assertNotIdentical(tag.slotData, clone.slotData)
         self.assertEqual(clone.filename, "foo/bar")
         self.assertEqual(clone.lineNumber, 6)
@@ -86,8 +86,8 @@ class TestTag(TestCase):
         """
         tag = proto("these are", "children", "cool", andSoIs='this-attribute')
         tag.clear()
-        self.assertEquals(tag.children, [])
-        self.assertEquals(tag.attributes, {'andSoIs': 'this-attribute'})
+        self.assertEqual(tag.children, [])
+        self.assertEqual(tag.attributes, {'andSoIs': 'this-attribute'})
 
 
     def test_suffix(self):
@@ -98,7 +98,7 @@ class TestTag(TestCase):
         proto = Tag('div')
         tag = proto()
         tag(class_='a')
-        self.assertEquals(tag.attributes, {'class': 'a'})
+        self.assertEqual(tag.attributes, {'class': 'a'})
 
 
     def test_commentRepr(self):
@@ -106,7 +106,7 @@ class TestTag(TestCase):
         L{Comment.__repr__} returns a value which makes it easy to see what's in
         the comment.
         """
-        self.assertEquals(repr(Comment(u"hello there")),
+        self.assertEqual(repr(Comment(u"hello there")),
                           "Comment(u'hello there')")
 
 
@@ -115,6 +115,6 @@ class TestTag(TestCase):
         L{CDATA.__repr__} returns a value which makes it easy to see what's in
         the comment.
         """
-        self.assertEquals(repr(CDATA(u"test data")),
+        self.assertEqual(repr(CDATA(u"test data")),
                           "CDATA(u'test data')")
 

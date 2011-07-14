@@ -140,7 +140,7 @@ class AdapterTestCase(unittest.TestCase):
         o = object()
         a = Adept(o)
         self.assertRaises(components.CannotAdapt, ITest, a)
-        self.assertEquals(ITest(a, None), None)
+        self.assertEqual(ITest(a, None), None)
 
 
 
@@ -220,13 +220,13 @@ class TestMetaInterface(unittest.TestCase):
 
     def testBasic(self):
         n = MetaNumber(1)
-        self.assertEquals(IMeta(n).add(1), 2)
+        self.assertEqual(IMeta(n).add(1), 2)
 
     def testComponentizedInteraction(self):
         c = ComponentNumber()
         IMeta(c).add(1)
         IMeta(c).add(1)
-        self.assertEquals(IMeta(c).add(1), 3)
+        self.assertEqual(IMeta(c).add(1), 3)
 
     def testAdapterWithCmp(self):
         # Make sure that a __cmp__ on an adapter doesn't break anything
@@ -554,8 +554,8 @@ class ProxyForInterfaceTests(unittest.TestCase):
         yayable = Yayable()
         proxy = klass(yayable)
         proxy.yay()
-        self.assertEquals(proxy.yay(), 2)
-        self.assertEquals(yayable.yays, 2)
+        self.assertEqual(proxy.yay(), 2)
+        self.assertEqual(yayable.yays, 2)
 
 
     def test_proxyAttribute(self):
@@ -601,8 +601,8 @@ class ProxyForInterfaceTests(unittest.TestCase):
         """
         multi = MultipleMethodImplementor()
         proxy = proxyForInterface(IMultipleMethods)(multi)
-        self.assertEquals(proxy.methodOne(), 1)
-        self.assertEquals(proxy.methodTwo(), 2)
+        self.assertEqual(proxy.methodOne(), 1)
+        self.assertEqual(proxy.methodTwo(), 2)
 
 
     def test_subclassing(self):
@@ -622,9 +622,9 @@ class ProxyForInterfaceTests(unittest.TestCase):
 
         yayable = Yayable()
         special = SpecializedProxy(yayable)
-        self.assertEquals(yayable.yays, 0)
+        self.assertEqual(yayable.yays, 0)
         special.boo()
-        self.assertEquals(yayable.yays, -1)
+        self.assertEqual(yayable.yays, -1)
 
 
     def test_proxyName(self):
@@ -632,7 +632,7 @@ class ProxyForInterfaceTests(unittest.TestCase):
         The name of a proxy class indicates which interface it proxies.
         """
         proxy = proxyForInterface(IProxiedInterface)
-        self.assertEquals(
+        self.assertEqual(
             proxy.__name__,
             "(Proxy for "
             "twisted.python.test.test_components.IProxiedInterface)")
@@ -670,7 +670,7 @@ class ProxyForInterfaceTests(unittest.TestCase):
         testObject = Sample()
         fakeProxy.original = testObject
         pd = components._ProxyDescriptor("hello", "original")
-        self.assertEquals(pd.__get__(fakeProxy), testObject.hello)
+        self.assertEqual(pd.__get__(fakeProxy), testObject.hello)
         fakeClassMethod = pd.__get__(None)
         fakeClassMethod(fakeProxy)
         self.failUnless(testObject.called)
@@ -698,8 +698,8 @@ class ProxyForInterfaceTests(unittest.TestCase):
 
         yayable = Yayable()
         wrapper = EnhancedWrapper(yayable)
-        self.assertEquals(wrapper.yay(3, 4, x=5, y=6), 8)
-        self.assertEquals(yayable.yayArgs,
+        self.assertEqual(wrapper.yay(3, 4, x=5, y=6), 8)
+        self.assertEqual(yayable.yayArgs,
                           [((3, 4), dict(x=5, y=6))])
 
 
@@ -731,7 +731,7 @@ class ProxyForInterfaceTests(unittest.TestCase):
         self.assertIdentical(proxy.foo, yayable)
 
         # Check the behavior
-        self.assertEquals(proxy.yay(), 1)
+        self.assertEqual(proxy.yay(), 1)
         self.assertIdentical(proxy.ifaceAttribute, yayable.ifaceAttribute)
         thingy = object()
         proxy.ifaceAttribute = thingy

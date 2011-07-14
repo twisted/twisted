@@ -81,8 +81,8 @@ class SSHPublicKeyDatabaseTestCase(TestCase):
         authorized_keys file and check the keys against that file.
         """
         self._testCheckKey("authorized_keys")
-        self.assertEquals(self.mockos.seteuidCalls, [])
-        self.assertEquals(self.mockos.setegidCalls, [])
+        self.assertEqual(self.mockos.seteuidCalls, [])
+        self.assertEqual(self.mockos.setegidCalls, [])
 
 
     def test_checkKey2(self):
@@ -91,8 +91,8 @@ class SSHPublicKeyDatabaseTestCase(TestCase):
         authorized_keys2 file and check the keys against that file.
         """
         self._testCheckKey("authorized_keys2")
-        self.assertEquals(self.mockos.seteuidCalls, [])
-        self.assertEquals(self.mockos.setegidCalls, [])
+        self.assertEqual(self.mockos.seteuidCalls, [])
+        self.assertEqual(self.mockos.setegidCalls, [])
 
 
     def test_checkKeyAsRoot(self):
@@ -114,8 +114,8 @@ class SSHPublicKeyDatabaseTestCase(TestCase):
         user = UsernamePassword("user", "password")
         user.blob = "foobar"
         self.assertTrue(self.checker.checkKey(user))
-        self.assertEquals(self.mockos.seteuidCalls, [0, 1, 0, os.getuid()])
-        self.assertEquals(self.mockos.setegidCalls, [2, os.getgid()])
+        self.assertEqual(self.mockos.seteuidCalls, [0, 1, 0, os.getuid()])
+        self.assertEqual(self.mockos.setegidCalls, [2, os.getgid()])
 
 
     def test_requestAvatarId(self):
@@ -130,7 +130,7 @@ class SSHPublicKeyDatabaseTestCase(TestCase):
                                     'foo', keys.Key.fromString(keydata.privateRSA_openssh).sign('foo'))
         d = self.checker.requestAvatarId(credentials)
         def _verify(avatarId):
-            self.assertEquals(avatarId, 'test')
+            self.assertEqual(avatarId, 'test')
         return d.addCallback(_verify)
 
 
@@ -208,9 +208,9 @@ class SSHProtocolCheckerTestCase(TestCase):
         the list of registered checkers.
         """
         checker = SSHProtocolChecker()
-        self.assertEquals(checker.credentialInterfaces, [])
+        self.assertEqual(checker.credentialInterfaces, [])
         checker.registerChecker(SSHPublicKeyDatabase(), )
-        self.assertEquals(checker.credentialInterfaces, [ISSHPrivateKey])
+        self.assertEqual(checker.credentialInterfaces, [ISSHPrivateKey])
         self.assertIsInstance(checker.checkers[ISSHPrivateKey],
                               SSHPublicKeyDatabase)
 
@@ -223,9 +223,9 @@ class SSHProtocolCheckerTestCase(TestCase):
         credentialIntefaces.
         """
         checker = SSHProtocolChecker()
-        self.assertEquals(checker.credentialInterfaces, [])
+        self.assertEqual(checker.credentialInterfaces, [])
         checker.registerChecker(SSHPublicKeyDatabase(), IUsernamePassword)
-        self.assertEquals(checker.credentialInterfaces, [IUsernamePassword])
+        self.assertEqual(checker.credentialInterfaces, [IUsernamePassword])
         self.assertIsInstance(checker.checkers[IUsernamePassword],
                               SSHPublicKeyDatabase)
 
@@ -241,7 +241,7 @@ class SSHProtocolCheckerTestCase(TestCase):
         checker.registerChecker(passwordDatabase)
         d = checker.requestAvatarId(UsernamePassword('test', 'test'))
         def _callback(avatarId):
-            self.assertEquals(avatarId, 'test')
+            self.assertEqual(avatarId, 'test')
         return d.addCallback(_callback)
 
 
@@ -277,4 +277,4 @@ class SSHProtocolCheckerTestCase(TestCase):
         """
         The default L{SSHProcotolChecker.areDone} should simply return True.
         """
-        self.assertEquals(SSHProtocolChecker().areDone(None), True)
+        self.assertEqual(SSHProtocolChecker().areDone(None), True)

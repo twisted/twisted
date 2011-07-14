@@ -32,6 +32,9 @@ class TestAssertions(unittest.TestCase):
     Tests for TestCase's assertion methods.  That is, failUnless*,
     failIf*, assert*.
 
+    Note: As of 11.2, assertEqual is preferred over the failUnlessEqual(s)
+    variants.  Tests have been modified to reflect this preference.
+
     This is pretty paranoid.  Still, a certain paranoia is healthy if you
     are testing a unit testing framework.
     """
@@ -55,8 +58,8 @@ class TestAssertions(unittest.TestCase):
         result = reporter.TestResult()
         test.run(result)
         self.failIf(result.wasSuccessful())
-        self.failUnlessEqual(result.errors, [])
-        self.failUnlessEqual(len(result.failures), 1)
+        self.assertEqual(result.errors, [])
+        self.assertEqual(len(result.failures), 1)
 
     def test_failIf(self):
         for notTrue in [0, 0.0, False, None, (), []]:
@@ -65,7 +68,7 @@ class TestAssertions(unittest.TestCase):
             try:
                 self.failIf(true, "failed on %r" % (true,))
             except self.failureException, e:
-                self.failUnlessEqual(str(e), "failed on %r" % (true,))
+                self.assertEqual(str(e), "failed on %r" % (true,))
             else:
                 self.fail("Call to failIf(%r) didn't fail" % (true,))
 
@@ -74,36 +77,40 @@ class TestAssertions(unittest.TestCase):
             try:
                 self.failUnless(notTrue, "failed on %r" % (notTrue,))
             except self.failureException, e:
-                self.failUnlessEqual(str(e), "failed on %r" % (notTrue,))
+                self.assertEqual(str(e), "failed on %r" % (notTrue,))
             else:
                 self.fail("Call to failUnless(%r) didn't fail" % (notTrue,))
         for true in [1, True, 'cat', [1,2], (3,4)]:
             self.failUnless(true, "failed on %r" % (true,))
 
+
     def _testEqualPair(self, first, second):
-        x = self.failUnlessEqual(first, second)
+        x = self.assertEqual(first, second)
         if x != first:
-            self.fail("failUnlessEqual should return first parameter")
+            self.fail("assertEqual should return first parameter")
+
 
     def _testUnequalPair(self, first, second):
         try:
-            self.failUnlessEqual(first, second)
+            self.assertEqual(first, second)
         except self.failureException, e:
             expected = 'not equal:\na = %s\nb = %s\n' % (
                 pformat(first), pformat(second))
             if str(e) != expected:
                 self.fail("Expected: %r; Got: %s" % (expected, str(e)))
         else:
-            self.fail("Call to failUnlessEqual(%r, %r) didn't fail"
+            self.fail("Call to assertEqual(%r, %r) didn't fail"
                       % (first, second))
 
-    def test_failUnlessEqual_basic(self):
+
+    def test_assertEqual_basic(self):
         self._testEqualPair('cat', 'cat')
         self._testUnequalPair('cat', 'dog')
         self._testEqualPair([1], [1])
         self._testUnequalPair([1], 'orange')
 
-    def test_failUnlessEqual_custom(self):
+
+    def test_assertEqual_custom(self):
         x = MockEquality('first')
         y = MockEquality('second')
         z = MockEquality('fecund')
@@ -112,7 +119,8 @@ class TestAssertions(unittest.TestCase):
         self._testUnequalPair(x, y)
         self._testUnequalPair(y, z)
 
-    def test_failUnlessEqualMessage(self):
+
+    def test_assertEqualMessage(self):
         """
         When a message is passed to L{assertEqual}, it is included in the
         error message.
@@ -125,7 +133,7 @@ class TestAssertions(unittest.TestCase):
             "message\nnot equal:\na = 'foo'\nb = 'bar'\n")
 
 
-    def test_failUnlessEqualNoneMessage(self):
+    def test_assertEqualNoneMessage(self):
         """
         If a message is specified as C{None}, it is not included in the error
         message of L{assertEqual}.
@@ -135,11 +143,11 @@ class TestAssertions(unittest.TestCase):
         self.assertEqual(str(exception), "not equal:\na = 'foo'\nb = 'bar'\n")
 
 
-    def test_failUnlessEqual_incomparable(self):
+    def test_assertEqual_incomparable(self):
         apple = MockEquality('apple')
         orange = ['orange']
         try:
-            self.failUnlessEqual(apple, orange)
+            self.assertEqual(apple, orange)
         except self.failureException:
             self.fail("Fail raised when ValueError ought to have been raised.")
         except ValueError:
@@ -148,6 +156,7 @@ class TestAssertions(unittest.TestCase):
         else:
             self.fail("Comparing %r and %r should have raised an exception"
                       % (apple, orange))
+
 
     def _raiseError(self, error):
         raise error
@@ -174,7 +183,7 @@ class TestAssertions(unittest.TestCase):
         try:
             self.failUnlessRaises(ValueError, lambda : None)
         except self.failureException, e:
-            self.failUnlessEqual(str(e),
+            self.assertEqual(str(e),
                                  'ValueError not raised (None returned)')
         else:
             self.fail("Exception not raised. Should have failed")
@@ -197,7 +206,7 @@ class TestAssertions(unittest.TestCase):
     def test_failIfEqual_basic(self):
         x, y, z = [1], [2], [1]
         ret = self.failIfEqual(x, y)
-        self.failUnlessEqual(ret, x,
+        self.assertEqual(ret, x,
                              "failIfEqual should return first parameter")
         self.failUnlessRaises(self.failureException,
                               self.failIfEqual, x, x)
@@ -209,7 +218,7 @@ class TestAssertions(unittest.TestCase):
         y = MockEquality('second')
         z = MockEquality('fecund')
         ret = self.failIfEqual(x, y)
-        self.failUnlessEqual(ret, x,
+        self.assertEqual(ret, x,
                              "failIfEqual should return first parameter")
         self.failUnlessRaises(self.failureException,
                               self.failIfEqual, x, x)
@@ -219,7 +228,7 @@ class TestAssertions(unittest.TestCase):
     def test_failUnlessIdentical(self):
         x, y, z = [1], [1], [2]
         ret = self.failUnlessIdentical(x, x)
-        self.failUnlessEqual(ret, x,
+        self.assertEqual(ret, x,
                              'failUnlessIdentical should return first '
                              'parameter')
         self.failUnlessRaises(self.failureException,
@@ -231,7 +240,7 @@ class TestAssertions(unittest.TestCase):
         x, y, z = 1.0, 1.1, 1.2
         self.failUnlessApproximates(x, x, 0.2)
         ret = self.failUnlessApproximates(x, y, 0.2)
-        self.failUnlessEqual(ret, x, "failUnlessApproximates should return "
+        self.assertEqual(ret, x, "failUnlessApproximates should return "
                              "first parameter")
         self.failUnlessRaises(self.failureException,
                               self.failUnlessApproximates, x, z, 0.1)
@@ -245,7 +254,7 @@ class TestAssertions(unittest.TestCase):
         z = 8.000002
         self.failUnlessAlmostEqual(x, x, precision)
         ret = self.failUnlessAlmostEqual(x, z, precision)
-        self.failUnlessEqual(ret, x, "failUnlessAlmostEqual should return "
+        self.assertEqual(ret, x, "failUnlessAlmostEqual should return "
                              "first parameter (%r, %r)" % (ret, x))
         self.failUnlessRaises(self.failureException,
                               self.failUnlessAlmostEqual, x, y, precision)
@@ -256,7 +265,7 @@ class TestAssertions(unittest.TestCase):
         y = 8.00001
         z = 8.000002
         ret = self.failIfAlmostEqual(x, y, precision)
-        self.failUnlessEqual(ret, x, "failIfAlmostEqual should return "
+        self.assertEqual(ret, x, "failIfAlmostEqual should return "
                              "first parameter (%r, %r)" % (ret, x))
         self.failUnlessRaises(self.failureException,
                               self.failIfAlmostEqual, x, x, precision)
@@ -269,7 +278,7 @@ class TestAssertions(unittest.TestCase):
         z = "the cat sat"
         self.failUnlessSubstring(x, x)
         ret = self.failUnlessSubstring(x, z)
-        self.failUnlessEqual(ret, x, 'should return first parameter')
+        self.assertEqual(ret, x, 'should return first parameter')
         self.failUnlessRaises(self.failureException,
                               self.failUnlessSubstring, x, y)
         self.failUnlessRaises(self.failureException,
@@ -281,7 +290,7 @@ class TestAssertions(unittest.TestCase):
         z = "the cat sat"
         self.failIfSubstring(z, x)
         ret = self.failIfSubstring(x, y)
-        self.failUnlessEqual(ret, x, 'should return first parameter')
+        self.assertEqual(ret, x, 'should return first parameter')
         self.failUnlessRaises(self.failureException,
                               self.failIfSubstring, x, x)
         self.failUnlessRaises(self.failureException,
@@ -355,7 +364,7 @@ class TestAssertions(unittest.TestCase):
             return a
         r = self.assertWarns(DeprecationWarning, "Woo deprecated", __file__,
             deprecated, 123)
-        self.assertEquals(r, 123)
+        self.assertEqual(r, 123)
 
 
     def test_assertWarnsRegistryClean(self):
@@ -368,11 +377,11 @@ class TestAssertions(unittest.TestCase):
             return a
         r1 = self.assertWarns(DeprecationWarning, "Woo deprecated", __file__,
             deprecated, 123)
-        self.assertEquals(r1, 123)
+        self.assertEqual(r1, 123)
         # The warning should be raised again
         r2 = self.assertWarns(DeprecationWarning, "Woo deprecated", __file__,
             deprecated, 321)
-        self.assertEquals(r2, 321)
+        self.assertEqual(r2, 321)
 
 
     def test_assertWarnsError(self):
@@ -461,10 +470,10 @@ class TestAssertions(unittest.TestCase):
         w = Warn()
         r = self.assertWarns(DeprecationWarning, "Bar deprecated", __file__,
             w.deprecated, 321)
-        self.assertEquals(r, 321)
+        self.assertEqual(r, 321)
         r = self.assertWarns(DeprecationWarning, "Bar deprecated", __file__,
             w.deprecated, 321)
-        self.assertEquals(r, 321)
+        self.assertEqual(r, 321)
 
 
     def test_assertWarnsOnCall(self):
@@ -478,10 +487,10 @@ class TestAssertions(unittest.TestCase):
         w = Warn()
         r = self.assertWarns(DeprecationWarning, "Egg deprecated", __file__,
             w, 321)
-        self.assertEquals(r, 321)
+        self.assertEqual(r, 321)
         r = self.assertWarns(DeprecationWarning, "Egg deprecated", __file__,
             w, 321)
-        self.assertEquals(r, 321)
+        self.assertEqual(r, 321)
 
 
     def test_assertWarnsFilter(self):
@@ -493,7 +502,7 @@ class TestAssertions(unittest.TestCase):
             return a
         r = self.assertWarns(PendingDeprecationWarning, "Woo deprecated",
             __file__, deprecated, 123)
-        self.assertEquals(r, 123)
+        self.assertEqual(r, 123)
 
 
     def test_assertWarnsMultipleWarnings(self):
@@ -521,7 +530,7 @@ class TestAssertions(unittest.TestCase):
         e = self.assertRaises(self.failureException,
                 self.assertWarns, DeprecationWarning, "Woo deprecated",
                 __file__, deprecated, 123)
-        self.assertEquals(str(e), "Can't handle different warnings")
+        self.assertEqual(str(e), "Can't handle different warnings")
 
 
     def test_assertWarnsAfterUnassertedWarning(self):
@@ -603,7 +612,7 @@ class TestAssertions(unittest.TestCase):
         a = A()
         error = self.assertRaises(self.failureException,
                                   self.assertNotIsInstance, a, A)
-        self.assertEquals(str(error), "%r is an instance of %s" % (a, A))
+        self.assertEqual(str(error), "%r is an instance of %s" % (a, A))
 
     def test_assertNotIsInstanceErrorMultipleClasses(self):
         """
@@ -640,14 +649,14 @@ class TestAssertionNames(unittest.TestCase):
         """
         asserts = set(self._getAsserts())
         failUnlesses = set(reflect.prefixedMethods(self, 'failUnless'))
-        self.assertEquals(
+        self.assertEqual(
             failUnlesses, asserts.intersection(failUnlesses))
 
 
     def test_failIf_matches_assertNot(self):
         asserts = reflect.prefixedMethods(unittest.TestCase, 'assertNot')
         failIfs = reflect.prefixedMethods(unittest.TestCase, 'failIf')
-        self.failUnlessEqual(sorted(asserts, key=self._name),
+        self.assertEqual(sorted(asserts, key=self._name),
                              sorted(failIfs, key=self._name))
 
     def test_equalSpelling(self):
@@ -657,11 +666,11 @@ class TestAssertionNames(unittest.TestCase):
             if name.endswith('Equal'):
                 self.failUnless(hasattr(self, name+'s'),
                                 "%s but no %ss" % (name, name))
-                self.failUnlessEqual(value, getattr(self, name+'s'))
+                self.assertEqual(value, getattr(self, name+'s'))
             if name.endswith('Equals'):
                 self.failUnless(hasattr(self, name[:-1]),
                                 "%s but no %s" % (name, name[:-1]))
-                self.failUnlessEqual(value, getattr(self, name[:-1]))
+                self.assertEqual(value, getattr(self, name[:-1]))
 
 
 class TestCallDeprecated(unittest.TestCase):

@@ -61,12 +61,12 @@ class MockMixin:
     def assertCall(self, occurrence, methodName, expectedPositionalArgs=(),
                    expectedKeywordArgs={}):
         attr, mock = occurrence
-        self.assertEquals(attr, methodName)
-        self.assertEquals(len(occurrences(mock)), 1)
+        self.assertEqual(attr, methodName)
+        self.assertEqual(len(occurrences(mock)), 1)
         [(call, result, args, kw)] = occurrences(mock)
-        self.assertEquals(call, "__call__")
-        self.assertEquals(args, expectedPositionalArgs)
-        self.assertEquals(kw, expectedKeywordArgs)
+        self.assertEqual(call, "__call__")
+        self.assertEqual(args, expectedPositionalArgs)
+        self.assertEqual(kw, expectedKeywordArgs)
         return result
 
 
@@ -95,7 +95,7 @@ class ByteGroupingsMixin(MockMixin):
 
     def verifyResults(self, transport, proto, parser):
         result = self.assertCall(occurrences(proto).pop(0), "makeConnection", (parser,))
-        self.assertEquals(occurrences(result), [])
+        self.assertEqual(occurrences(result), [])
 
 del _byteGroupingTestTemplate
 
@@ -111,7 +111,7 @@ class ServerArrowKeys(ByteGroupingsMixin, unittest.TestCase):
         for arrow in (parser.UP_ARROW, parser.DOWN_ARROW,
                       parser.RIGHT_ARROW, parser.LEFT_ARROW):
             result = self.assertCall(occurrences(proto).pop(0), "keystrokeReceived", (arrow, None))
-            self.assertEquals(occurrences(result), [])
+            self.assertEqual(occurrences(result), [])
         self.failIf(occurrences(proto))
 
 
@@ -128,11 +128,11 @@ class PrintableCharacters(ByteGroupingsMixin, unittest.TestCase):
 
         for char in 'abc123ABC!@#':
             result = self.assertCall(occurrences(proto).pop(0), "keystrokeReceived", (char, None))
-            self.assertEquals(occurrences(result), [])
+            self.assertEqual(occurrences(result), [])
 
         for char in 'abc123':
             result = self.assertCall(occurrences(proto).pop(0), "keystrokeReceived", (char, parser.ALT))
-            self.assertEquals(occurrences(result), [])
+            self.assertEqual(occurrences(result), [])
 
         occs = occurrences(proto)
         self.failIf(occs, "%r should have been []" % (occs,))
@@ -155,7 +155,7 @@ class ServerFunctionKeys(ByteGroupingsMixin, unittest.TestCase):
         for funcNum in range(1, 13):
             funcArg = getattr(parser, 'F%d' % (funcNum,))
             result = self.assertCall(occurrences(proto).pop(0), "keystrokeReceived", (funcArg, None))
-            self.assertEquals(occurrences(result), [])
+            self.assertEqual(occurrences(result), [])
         self.failIf(occurrences(proto))
 
 class ClientCursorMovement(ByteGroupingsMixin, unittest.TestCase):
@@ -175,7 +175,7 @@ class ClientCursorMovement(ByteGroupingsMixin, unittest.TestCase):
         for (method, count) in [('Down', 2), ('Forward', 4), ('Up', 1),
                                 ('Backward', 2), ('Up', 1), ('Backward', 2)]:
             result = self.assertCall(occurrences(proto).pop(0), "cursor" + method, (count,))
-            self.assertEquals(occurrences(result), [])
+            self.assertEqual(occurrences(result), [])
         self.failIf(occurrences(proto))
 
 class ClientControlSequences(unittest.TestCase, MockMixin):
@@ -354,13 +354,13 @@ class ClientControlSequences(unittest.TestCase, MockMixin):
     def testCursorPosition(self):
         methods(self.proto)['reportCursorPosition'] = (6, 7)
         self.parser.dataReceived("\x1b[6n")
-        self.assertEquals(self.transport.value(), "\x1b[7;8R")
+        self.assertEqual(self.transport.value(), "\x1b[7;8R")
         occs = occurrences(self.proto)
 
         result = self.assertCall(occs.pop(0), "reportCursorPosition")
         # This isn't really an interesting assert, since it only tests that
         # our mock setup is working right, but I'll include it anyway.
-        self.assertEquals(result, (6, 7))
+        self.assertEqual(result, (6, 7))
 
 
     def test_applicationDataBytes(self):
@@ -472,8 +472,8 @@ class Deprecations(unittest.TestCase):
         """
         warnings = self.flushWarnings()
         self.assertIdentical(warnings[0]['category'], DeprecationWarning)
-        self.assertEquals(warnings[0]['message'], message)
-        self.assertEquals(len(warnings), 1)
+        self.assertEqual(warnings[0]['message'], message)
+        self.assertEqual(len(warnings), 1)
 
 
     def test_colors(self):

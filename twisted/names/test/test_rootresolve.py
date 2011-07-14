@@ -159,14 +159,14 @@ class RootResolverTests(TestCase):
         msg.fromStr(packet)
 
         # It should be a query with the parameters used above.
-        self.assertEquals(msg.queries, [Query('foo.example.com', A, IN)])
-        self.assertEquals(msg.answers, [])
-        self.assertEquals(msg.authority, [])
-        self.assertEquals(msg.additional, [])
+        self.assertEqual(msg.queries, [Query('foo.example.com', A, IN)])
+        self.assertEqual(msg.answers, [])
+        self.assertEqual(msg.authority, [])
+        self.assertEqual(msg.additional, [])
 
         response = []
         d.addCallback(response.append)
-        self.assertEquals(response, [])
+        self.assertEqual(response, [])
 
         # Once a reply is received, the Deferred should fire.
         del msg.queries[:]
@@ -184,11 +184,11 @@ class RootResolverTests(TestCase):
         result is a three-tuple of lists of records.
         """
         answer, authority, additional = self._queryTest(True)
-        self.assertEquals(
+        self.assertEqual(
             answer,
             [RRHeader('foo.example.com', payload=Record_A('5.8.13.21', ttl=0))])
-        self.assertEquals(authority, [])
-        self.assertEquals(additional, [])
+        self.assertEqual(authority, [])
+        self.assertEqual(additional, [])
 
 
     def test_unfilteredQuery(self):
@@ -199,12 +199,12 @@ class RootResolverTests(TestCase):
         """
         message = self._queryTest(False)
         self.assertIsInstance(message, Message)
-        self.assertEquals(message.queries, [])
-        self.assertEquals(
+        self.assertEqual(message.queries, [])
+        self.assertEqual(
             message.answers,
             [RRHeader('foo.example.com', payload=Record_A('5.8.13.21', ttl=0))])
-        self.assertEquals(message.authority, [])
-        self.assertEquals(message.additional, [])
+        self.assertEqual(message.authority, [])
+        self.assertEqual(message.additional, [])
 
 
     def _respond(self, answers=[], authority=[], additional=[], rCode=OK):
@@ -282,7 +282,7 @@ class RootResolverTests(TestCase):
         resolver = self._getResolver(servers)
         d = resolver.lookupAddress('foo.example.com')
         d.addCallback(lambda (ans, auth, add): ans[0].payload.dottedQuad())
-        d.addCallback(self.assertEquals, '10.0.0.1')
+        d.addCallback(self.assertEqual, '10.0.0.1')
         return d
 
 
@@ -311,7 +311,7 @@ class RootResolverTests(TestCase):
         resolver = self._getResolver(servers)
         d = resolver.lookupAddress('foo.example.com')
         d.addCallback(lambda (ans, auth, add): ans[0].payload)
-        d.addCallback(self.assertEquals, Record_A('10.0.0.3'))
+        d.addCallback(self.assertEqual, Record_A('10.0.0.3'))
         return d
 
 
@@ -339,7 +339,7 @@ class RootResolverTests(TestCase):
         resolver = self._getResolver(servers)
         d = resolver.lookupAddress('foo.example.com')
         d.addCallback(lambda (ans, auth, add): ans[0].payload.dottedQuad())
-        d.addCallback(self.assertEquals, '10.0.0.2')
+        d.addCallback(self.assertEqual, '10.0.0.2')
         return d
 
 
@@ -436,7 +436,7 @@ class RootResolverTests(TestCase):
         resolver = self._getResolver(servers)
         d = resolver.lookupNameservers('example.com')
         d.addCallback(lambda (ans, auth, add): str(ans[0].payload.name))
-        d.addCallback(self.assertEquals, 'ns1.example.com')
+        d.addCallback(self.assertEqual, 'ns1.example.com')
         return d
 
 
@@ -457,7 +457,7 @@ class RootResolverTests(TestCase):
         d = resolver.lookupAddress('example.com')
         d.addCallback(lambda (ans, auth, add): ans)
         d.addCallback(
-            self.assertEquals,
+            self.assertEqual,
             [RRHeader('example.com', CNAME, payload=Record_CNAME('example.net')),
              RRHeader('example.net', A, payload=Record_A('10.0.0.7'))])
         return d
@@ -483,7 +483,7 @@ class RootResolverTests(TestCase):
         d = resolver.lookupAddress('example.com')
         d.addCallback(lambda (ans, auth, add): ans)
         d.addCallback(
-            self.assertEquals,
+            self.assertEqual,
             [RRHeader('example.com', CNAME, payload=Record_CNAME('example.net')),
              RRHeader('example.net', A, payload=Record_A('10.0.0.5'))])
         return d
@@ -553,7 +553,7 @@ class RootResolverTests(TestCase):
         succeeder = self._getResolver(servers, 4)
         succeedD = succeeder.lookupAddress('example.com')
         succeedD.addCallback(lambda (ans, auth, add): ans[0].payload)
-        succeedD.addCallback(self.assertEquals, Record_A('10.0.0.4'))
+        succeedD.addCallback(self.assertEqual, Record_A('10.0.0.4'))
 
         return gatherResults([failD, succeedD])
 
@@ -567,12 +567,12 @@ class RootResolverTests(TestCase):
 
         warnings = self.flushWarnings([
                 self.test_discoveredAuthorityDeprecated])
-        self.assertEquals(warnings[0]['category'], DeprecationWarning)
-        self.assertEquals(
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(
             warnings[0]['message'],
             'twisted.names.root.Resolver.discoveredAuthority is deprecated since '
             'Twisted 10.0.  Use twisted.names.client.Resolver directly, instead.')
-        self.assertEquals(len(warnings), 1)
+        self.assertEqual(len(warnings), 1)
 
         # This will time out quickly, but we need to wait for it because there
         # are resources associated with.
@@ -614,13 +614,13 @@ class DiscoveryToolsTests(TestCase):
 
         warnings = self.flushWarnings([
                 self.test_lookupNameserversDeprecated])
-        self.assertEquals(warnings[0]['category'], DeprecationWarning)
-        self.assertEquals(
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(
             warnings[0]['message'],
             'twisted.names.root.lookupNameservers is deprecated since Twisted '
             '10.0.  Use twisted.names.root.Resolver.lookupNameservers '
             'instead.')
-        self.assertEquals(len(warnings), 1)
+        self.assertEqual(len(warnings), 1)
     test_lookupNameserversDeprecated.suppress = [_retrySuppression]
 
 
@@ -634,13 +634,13 @@ class DiscoveryToolsTests(TestCase):
 
         warnings = self.flushWarnings([
                 self.test_lookupAddressDeprecated])
-        self.assertEquals(warnings[0]['category'], DeprecationWarning)
-        self.assertEquals(
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(
             warnings[0]['message'],
             'twisted.names.root.lookupAddress is deprecated since Twisted '
             '10.0.  Use twisted.names.root.Resolver.lookupAddress '
             'instead.')
-        self.assertEquals(len(warnings), 1)
+        self.assertEqual(len(warnings), 1)
     test_lookupAddressDeprecated.suppress = [_retrySuppression]
 
 
@@ -652,12 +652,12 @@ class DiscoveryToolsTests(TestCase):
 
         warnings = self.flushWarnings([
                 self.test_extractAuthorityDeprecated])
-        self.assertEquals(warnings[0]['category'], DeprecationWarning)
-        self.assertEquals(
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(
             warnings[0]['message'],
             'twisted.names.root.extractAuthority is deprecated since Twisted '
             '10.0.  Please inspect the Message object directly.')
-        self.assertEquals(len(warnings), 1)
+        self.assertEqual(len(warnings), 1)
 
 
     def test_discoverAuthorityDeprecated(self):
@@ -669,13 +669,13 @@ class DiscoveryToolsTests(TestCase):
 
         warnings = self.flushWarnings([
                 self.test_discoverAuthorityDeprecated])
-        self.assertEquals(warnings[0]['category'], DeprecationWarning)
-        self.assertEquals(
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(
             warnings[0]['message'],
             'twisted.names.root.discoverAuthority is deprecated since Twisted '
             '10.0.  Use twisted.names.root.Resolver.lookupNameservers '
             'instead.')
-        self.assertEquals(len(warnings), 1)
+        self.assertEqual(len(warnings), 1)
 
     # discoverAuthority is implemented in terms of deprecated functions,
     # too.  Ignore those.
@@ -697,9 +697,9 @@ class DiscoveryToolsTests(TestCase):
 
         warnings = self.flushWarnings([
                 self.test_retryDeprecated])
-        self.assertEquals(warnings[0]['category'], DeprecationWarning)
-        self.assertEquals(
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(
             warnings[0]['message'],
             'twisted.names.root.retry is deprecated since Twisted '
             '10.0.  Use a Resolver object for retry logic.')
-        self.assertEquals(len(warnings), 1)
+        self.assertEqual(len(warnings), 1)

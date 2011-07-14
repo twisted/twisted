@@ -73,5 +73,5 @@ class Int32TestCase(test_protocols.Int32TestCase):
         for s in self.strings * 4:
             big += pack("!i", len(s)) + s
         r.dataReceived(big)
-        self.assertEquals(r.received, self.strings * 4)
+        self.assertEqual(r.received, self.strings * 4)
 

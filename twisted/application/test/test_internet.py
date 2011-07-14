@@ -165,7 +165,7 @@ class TestEndpointService(TestCase):
         self.svc.startService()
         self.fakeServer.result.errback(ZeroDivisionError())
         logged = self.flushLoggedErrors(ZeroDivisionError)
-        self.assertEquals(len(logged), 1)
+        self.assertEqual(len(logged), 1)
 
 
     def test_synchronousFailReportsError(self):
@@ -176,7 +176,7 @@ class TestEndpointService(TestCase):
         self.fakeServer.failImmediately = ZeroDivisionError()
         self.svc.startService()
         logged = self.flushLoggedErrors(ZeroDivisionError)
-        self.assertEquals(len(logged), 1)
+        self.assertEqual(len(logged), 1)
 
 
     def test_startServiceUnstarted(self):
@@ -187,7 +187,7 @@ class TestEndpointService(TestCase):
         """
         self.svc.startService()
         self.assertIdentical(self.factory, self.fakeServer.factory)
-        self.assertEquals(self.svc.running, True)
+        self.assertEqual(self.svc.running, True)
 
 
     def test_startServiceStarted(self):
@@ -197,8 +197,8 @@ class TestEndpointService(TestCase):
         """
         self.test_privilegedStartService()
         self.svc.startService()
-        self.assertEquals(self.fakeServer.listenAttempts, 1)
-        self.assertEquals(self.svc.running, True)
+        self.assertEqual(self.fakeServer.listenAttempts, 1)
+        self.assertEqual(self.svc.running, True)
 
 
     def test_stopService(self):
@@ -214,9 +214,9 @@ class TestEndpointService(TestCase):
         result = self.svc.stopService()
         l = []
         result.addCallback(l.append)
-        self.assertEquals(len(l), 0)
+        self.assertEqual(len(l), 0)
         self.fakeServer.stoppedListening()
-        self.assertEquals(len(l), 1)
+        self.assertEqual(len(l), 1)
         self.assertFalse(self.svc.running)
 
 
@@ -230,8 +230,8 @@ class TestEndpointService(TestCase):
         result = self.svc.stopService()
         l = []
         result.addBoth(l.append)
-        self.assertEquals(l, [None])
-        self.assertEquals(self.flushLoggedErrors(CancelledError), [])
+        self.assertEqual(l, [None])
+        self.assertEqual(self.flushLoggedErrors(CancelledError), [])
 
 
     def test_stopServiceCancelStartError(self):
@@ -245,8 +245,8 @@ class TestEndpointService(TestCase):
         result = self.svc.stopService()
         l = []
         result.addCallback(l.append)
-        self.assertEquals(l, [None])
+        self.assertEqual(l, [None])
         stoppingErrors = self.flushLoggedErrors(ZeroDivisionError)
-        self.assertEquals(len(stoppingErrors), 1)
+        self.assertEqual(len(stoppingErrors), 1)
 
 

@@ -123,7 +123,7 @@ class UDPTestCase(unittest.TestCase):
         p = reactor.listenUDP(0, server, interface="127.0.0.1")
         def cbStarted(ignored):
             addr = p.getHost()
-            self.assertEquals(addr.type, 'UDP')
+            self.assertEqual(addr.type, 'UDP')
             return p.stopListening()
         return d.addCallback(cbStarted)
 
@@ -138,11 +138,11 @@ class UDPTestCase(unittest.TestCase):
         d = server.startedDeferred = defer.Deferred()
         port1 = reactor.listenUDP(0, server, interface="127.0.0.1")
         def cbStarted(ignored):
-            self.assertEquals(server.started, 1)
-            self.assertEquals(server.stopped, 0)
+            self.assertEqual(server.started, 1)
+            self.assertEqual(server.stopped, 0)
             return port1.stopListening()
         def cbStopped(ignored):
-            self.assertEquals(server.stopped, 1)
+            self.assertEqual(server.stopped, 1)
         return d.addCallback(cbStarted).addCallback(cbStopped)
 
 
@@ -176,7 +176,7 @@ class UDPTestCase(unittest.TestCase):
         port = reactor.listenUDP(0, server, interface='127.0.0.1')
 
         def cbStarted(ignored):
-            self.assertEquals(port.getHost(), server.transport.getHost())
+            self.assertEqual(port.getHost(), server.transport.getHost())
             server2 = Server()
             self.assertRaises(
                 error.CannotListenError,
@@ -242,11 +242,11 @@ class UDPTestCase(unittest.TestCase):
         def cbSendsFinished(ignored):
             cAddr = client.transport.getHost()
             sAddr = server.transport.getHost()
-            self.assertEquals(
+            self.assertEqual(
                 client.packets,
                 [("hello", (sAddr.host, sAddr.port))])
             clientAddr = (cAddr.host, cAddr.port)
-            self.assertEquals(
+            self.assertEqual(
                 server.packets,
                 [("a", clientAddr),
                  ("b", clientAddr),
@@ -339,7 +339,7 @@ class UDPTestCase(unittest.TestCase):
             sure they're actually there.
             """
             errs = self.flushLoggedErrors(BadClientError)
-            self.assertEquals(len(errs), 2, "Incorrectly found %d errors, expected 2" % (len(errs),))
+            self.assertEqual(len(errs), 2, "Incorrectly found %d errors, expected 2" % (len(errs),))
         finalDeferred.addCallback(cbCompleted)
 
         client = BadClient()
@@ -458,7 +458,7 @@ class UDPTestCase(unittest.TestCase):
         p.write("test", ("<broadcast>", 1234))
 
         warnings = self.flushWarnings([self.test_NoWarningOnBroadcast])
-        self.assertEquals(len(warnings), 0)
+        self.assertEqual(len(warnings), 0)
 
 
 
@@ -531,9 +531,9 @@ class MulticastTestCase(unittest.TestCase):
 
     def testTTL(self):
         for o in self.client, self.server:
-            self.assertEquals(o.transport.getTTL(), 1)
+            self.assertEqual(o.transport.getTTL(), 1)
             o.transport.setTTL(2)
-            self.assertEquals(o.transport.getTTL(), 2)
+            self.assertEqual(o.transport.getTTL(), 2)
 
 
     def test_loopback(self):
@@ -541,7 +541,7 @@ class MulticastTestCase(unittest.TestCase):
         Test that after loopback mode has been set, multicast packets are
         delivered to their sender.
         """
-        self.assertEquals(self.server.transport.getLoopbackMode(), 1)
+        self.assertEqual(self.server.transport.getLoopbackMode(), 1)
         addr = self.server.transport.getHost()
         joined = self.server.transport.joinGroup("225.0.0.250")
 
@@ -554,7 +554,7 @@ class MulticastTestCase(unittest.TestCase):
         def cbPacket(ignored):
             self.assertEqual(len(self.server.packets), 1)
             self.server.transport.setLoopbackMode(0)
-            self.assertEquals(self.server.transport.getLoopbackMode(), 0)
+            self.assertEqual(self.server.transport.getLoopbackMode(), 0)
             self.server.transport.write("hello", ("225.0.0.250", addr.port))
 
             # This is fairly lame.
@@ -644,7 +644,7 @@ class MulticastTestCase(unittest.TestCase):
         joined.addCallback(cbJoined)
 
         def cbPacket(ignored):
-            self.assertEquals(self.server.packets[0][0], "hello world")
+            self.assertEqual(self.server.packets[0][0], "hello world")
         joined.addCallback(cbPacket)
 
         def cleanup(passthrough):
@@ -681,8 +681,8 @@ class MulticastTestCase(unittest.TestCase):
         joined.addCallback(serverJoined)
 
         def gotPackets(ignored):
-            self.assertEquals(firstClient.packets[0][0], "hello world")
-            self.assertEquals(secondClient.packets[0][0], "hello world")
+            self.assertEqual(firstClient.packets[0][0], "hello world")
+            self.assertEqual(secondClient.packets[0][0], "hello world")
         joined.addCallback(gotPackets)
 
         def cleanup(passthrough):

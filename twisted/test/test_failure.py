@@ -44,8 +44,8 @@ class FailureTestCase(unittest.TestCase):
         except:
             f = failure.Failure()
         error = f.trap(SystemExit, RuntimeError)
-        self.assertEquals(error, RuntimeError)
-        self.assertEquals(f.type, NotImplementedError)
+        self.assertEqual(error, RuntimeError)
+        self.assertEqual(f.type, NotImplementedError)
 
 
     def test_notTrapped(self):
@@ -153,7 +153,7 @@ class FailureTestCase(unittest.TestCase):
         e = RuntimeError()
         f = failure.Failure(e)
         f.trap(RuntimeError)
-        self.assertEquals(f.value, e)
+        self.assertEqual(f.value, e)
 
 
     def _getInnermostFrameLine(self, f):
@@ -170,14 +170,14 @@ class FailureTestCase(unittest.TestCase):
     def testRaiseExceptionWithTB(self):
         f = getDivisionFailure()
         innerline = self._getInnermostFrameLine(f)
-        self.assertEquals(innerline, '1/0')
+        self.assertEqual(innerline, '1/0')
 
 
     def testLackOfTB(self):
         f = getDivisionFailure()
         f.cleanFailure()
         innerline = self._getInnermostFrameLine(f)
-        self.assertEquals(innerline, '1/0')
+        self.assertEqual(innerline, '1/0')
 
     testLackOfTB.todo = "the traceback is not preserved, exarkun said he'll try to fix this! god knows how"
 
@@ -197,7 +197,7 @@ class FailureTestCase(unittest.TestCase):
         try:
             f.raiseException()
         except:
-            self.assertEquals(sys.exc_info()[0], self._stringException)
+            self.assertEqual(sys.exc_info()[0], self._stringException)
         else:
             raise AssertionError("Should have raised")
     test_raiseStringExceptions.suppress = [
@@ -571,8 +571,8 @@ class TestDebugMode(unittest.TestCase):
         except:
             typ, exc, tb = sys.exc_info()
             f = failure.Failure()
-        self.assertEquals(self.result, [tb])
-        self.assertEquals(f.captureVars, False)
+        self.assertEqual(self.result, [tb])
+        self.assertEqual(f.captureVars, False)
 
 
     def test_captureVars(self):
@@ -585,8 +585,8 @@ class TestDebugMode(unittest.TestCase):
         except:
             typ, exc, tb = sys.exc_info()
             f = failure.Failure(captureVars=True)
-        self.assertEquals(self.result, [tb])
-        self.assertEquals(f.captureVars, True)
+        self.assertEqual(self.result, [tb])
+        self.assertEqual(f.captureVars, True)
 
 
 

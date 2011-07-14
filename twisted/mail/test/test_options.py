@@ -56,11 +56,11 @@ class OptionsTestCase(TestCase):
         options = Options()
         options.opt_passwordfile(passwd.path)
         warnings = self.flushWarnings([self.testPasswordfileDeprecation])
-        self.assertEquals(warnings[0]['category'], DeprecationWarning)
-        self.assertEquals(len(warnings), 1)
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(len(warnings), 1)
         msg = deprecate.getDeprecationWarningString(options.opt_passwordfile,
                              versions.Version('twisted.mail', 11, 0, 0))
-        self.assertEquals(warnings[0]['message'], msg)
+        self.assertEqual(warnings[0]['message'], msg)
 
 
     def test_barePort(self):
@@ -70,13 +70,13 @@ class OptionsTestCase(TestCase):
         """
         options = Options()
         options.parseOptions(['--pop3', '8110'])
-        self.assertEquals(len(options['pop3']), 1)
+        self.assertEqual(len(options['pop3']), 1)
         self.assertIsInstance(
             options['pop3'][0], endpoints.TCP4ServerEndpoint)
         warnings = self.flushWarnings([options.opt_pop3])
-        self.assertEquals(len(warnings), 1)
-        self.assertEquals(warnings[0]['category'], DeprecationWarning)
-        self.assertEquals(
+        self.assertEqual(len(warnings), 1)
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(
             warnings[0]['message'],
             "Specifying plain ports and/or a certificate is deprecated since "
             "Twisted 11.0; use endpoint descriptions instead.")
@@ -90,7 +90,7 @@ class OptionsTestCase(TestCase):
         """
         options = Options()
         options.parseOptions(['--' + service, 'tcp:1234'])
-        self.assertEquals(len(options[service]), 1)
+        self.assertEqual(len(options[service]), 1)
         self.assertIsInstance(
             options[service][0], endpoints.TCP4ServerEndpoint)
 
@@ -118,11 +118,11 @@ class OptionsTestCase(TestCase):
         options = Options()
         options.parseOptions([])
 
-        self.assertEquals(len(options['pop3']), 1)
+        self.assertEqual(len(options['pop3']), 1)
         self.assertIsInstance(
             options['pop3'][0], endpoints.TCP4ServerEndpoint)
 
-        self.assertEquals(len(options['smtp']), 1)
+        self.assertEqual(len(options['smtp']), 1)
         self.assertIsInstance(
             options['smtp'][0], endpoints.TCP4ServerEndpoint)
 
@@ -134,13 +134,13 @@ class OptionsTestCase(TestCase):
         """
         options = Options()
         options.parseOptions(['--no-pop3'])
-        self.assertEquals(options._getEndpoints(None, 'pop3'), [])
+        self.assertEqual(options._getEndpoints(None, 'pop3'), [])
         self.assertNotEquals(options._getEndpoints(None, 'smtp'), [])
 
         options = Options()
         options.parseOptions(['--no-smtp'])
         self.assertNotEquals(options._getEndpoints(None, 'pop3'), [])
-        self.assertEquals(options._getEndpoints(None, 'smtp'), [])
+        self.assertEqual(options._getEndpoints(None, 'smtp'), [])
 
 
     def test_allProtosDisabledError(self):
@@ -162,16 +162,16 @@ class OptionsTestCase(TestCase):
         options = Options()
         options.parseOptions(['--pop3s', '8995',
                               '--certificate', cert.path])
-        self.assertEquals(len(options['pop3']), 2)
+        self.assertEqual(len(options['pop3']), 2)
         self.assertIsInstance(
             options['pop3'][0], endpoints.SSL4ServerEndpoint)
         self.assertIsInstance(
             options['pop3'][1], endpoints.TCP4ServerEndpoint)
 
         warnings = self.flushWarnings([options.postOptions])
-        self.assertEquals(len(warnings), 1)
-        self.assertEquals(warnings[0]['category'], DeprecationWarning)
-        self.assertEquals(
+        self.assertEqual(len(warnings), 1)
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(
             warnings[0]['message'],
             "Specifying plain ports and/or a certificate is deprecated since "
             "Twisted 11.0; use endpoint descriptions instead.")

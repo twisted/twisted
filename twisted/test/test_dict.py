@@ -19,4 +19,4 @@ class ParamTest(unittest.TestCase):
             if param == None:
                 break
             params.append(param)
-        self.failUnlessEqual(params, goodparams)#, "DictClient.parseParam returns unexpected results")
+        self.assertEqual(params, goodparams)#, "DictClient.parseParam returns unexpected results")

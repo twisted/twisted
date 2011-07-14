@@ -48,7 +48,7 @@ class TwoPointFiveFailureTests(TestCase):
         ic(d).addErrback(collect_error)
 
         newFailure, = failures
-        self.assertEquals(
+        self.assertEqual(
             traceback.extract_tb(newFailure.getTracebackObject())[-1][-1],
             "1/0"
         )
@@ -81,10 +81,10 @@ class TwoPointFiveFailureTests(TestCase):
         g.next()
         self._throwIntoGenerator(f, g)
 
-        self.assertEquals(stuff[0][0], ZeroDivisionError)
+        self.assertEqual(stuff[0][0], ZeroDivisionError)
         self.assertTrue(isinstance(stuff[0][1], ZeroDivisionError))
 
-        self.assertEquals(traceback.extract_tb(stuff[0][2])[-1][-1], "1/0")
+        self.assertEqual(traceback.extract_tb(stuff[0][2])[-1][-1], "1/0")
 
 
     def test_findFailureInGenerator(self):

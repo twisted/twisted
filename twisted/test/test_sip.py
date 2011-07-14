@@ -101,16 +101,16 @@ class MessageParsingTestCase(unittest.TestCase):
 
     def validateMessage(self, m, method, uri, headers, body):
         """Validate Requests."""
-        self.assertEquals(m.method, method)
-        self.assertEquals(m.uri.toString(), uri)
-        self.assertEquals(m.headers, headers)
-        self.assertEquals(m.body, body)
-        self.assertEquals(m.finished, 1)
+        self.assertEqual(m.method, method)
+        self.assertEqual(m.uri.toString(), uri)
+        self.assertEqual(m.headers, headers)
+        self.assertEqual(m.body, body)
+        self.assertEqual(m.finished, 1)
 
     def testSimple(self):
         l = self.l
         self.feedMessage(request1)
-        self.assertEquals(len(l), 1)
+        self.assertEqual(len(l), 1)
         self.validateMessage(
             l[0], "INVITE", "sip:foo",
             {"from": ["mo"], "to": ["joe"], "content-length": ["4"]},
@@ -120,7 +120,7 @@ class MessageParsingTestCase(unittest.TestCase):
         l = self.l
         self.feedMessage(request1)
         self.feedMessage(request2)
-        self.assertEquals(len(l), 2)
+        self.assertEqual(len(l), 2)
         self.validateMessage(
             l[0], "INVITE", "sip:foo",
             {"from": ["mo"], "to": ["joe"], "content-length": ["4"]},
@@ -132,7 +132,7 @@ class MessageParsingTestCase(unittest.TestCase):
     def testGarbage(self):
         l = self.l
         self.feedMessage(request3)
-        self.assertEquals(len(l), 1)
+        self.assertEqual(len(l), 1)
         self.validateMessage(
             l[0], "INVITE", "sip:foo",
             {"from": ["mo"], "to": ["joe"], "content-length": ["4"]},
@@ -141,7 +141,7 @@ class MessageParsingTestCase(unittest.TestCase):
     def testThreeInOne(self):
         l = self.l
         self.feedMessage(request4)
-        self.assertEquals(len(l), 3)
+        self.assertEqual(len(l), 3)
         self.validateMessage(
             l[0], "INVITE", "sip:foo",
             {"from": ["mo"], "to": ["joe"], "content-length": ["0"]},
@@ -158,7 +158,7 @@ class MessageParsingTestCase(unittest.TestCase):
     def testShort(self):
         l = self.l
         self.feedMessage(request_short)
-        self.assertEquals(len(l), 1)
+        self.assertEqual(len(l), 1)
         self.validateMessage(
             l[0], "INVITE", "sip:foo",
             {"from": ["mo"], "to": ["joe"], "content-length": ["4"]},
@@ -167,15 +167,15 @@ class MessageParsingTestCase(unittest.TestCase):
     def testSimpleResponse(self):
         l = self.l
         self.feedMessage(response1)
-        self.assertEquals(len(l), 1)
+        self.assertEqual(len(l), 1)
         m = l[0]
-        self.assertEquals(m.code, 200)
-        self.assertEquals(m.phrase, "OK")
-        self.assertEquals(
+        self.assertEqual(m.code, 200)
+        self.assertEqual(m.phrase, "OK")
+        self.assertEqual(
             m.headers,
             {"from": ["foo"], "to": ["bar"], "content-length": ["0"]})
-        self.assertEquals(m.body, "")
-        self.assertEquals(m.finished, 1)
+        self.assertEqual(m.body, "")
+        self.assertEqual(m.finished, 1)
 
 
 class MessageParsingTestCase2(MessageParsingTestCase):
@@ -192,7 +192,7 @@ class MakeMessageTestCase(unittest.TestCase):
     def testRequest(self):
         r = sip.Request("INVITE", "sip:foo")
         r.addHeader("foo", "bar")
-        self.assertEquals(
+        self.assertEqual(
             r.toString(),
             "INVITE sip:foo SIP/2.0\r\nFoo: bar\r\n\r\n")
 
@@ -201,27 +201,27 @@ class MakeMessageTestCase(unittest.TestCase):
         r.addHeader("foo", "bar")
         r.addHeader("Content-Length", "4")
         r.bodyDataReceived("1234")
-        self.assertEquals(
+        self.assertEqual(
             r.toString(),
             "SIP/2.0 200 OK\r\nFoo: bar\r\nContent-Length: 4\r\n\r\n1234")
 
     def testStatusCode(self):
         r = sip.Response(200)
-        self.assertEquals(r.toString(), "SIP/2.0 200 OK\r\n\r\n")
+        self.assertEqual(r.toString(), "SIP/2.0 200 OK\r\n\r\n")
 
 
 class ViaTestCase(unittest.TestCase):
 
     def checkRoundtrip(self, v):
         s = v.toString()
-        self.assertEquals(s, sip.parseViaHeader(s).toString())
+        self.assertEqual(s, sip.parseViaHeader(s).toString())
 
     def testExtraWhitespace(self):
         v1 = sip.parseViaHeader('SIP/2.0/UDP 192.168.1.1:5060')
         v2 = sip.parseViaHeader('SIP/2.0/UDP     192.168.1.1:5060')
-        self.assertEquals(v1.transport, v2.transport)
-        self.assertEquals(v1.host, v2.host)
-        self.assertEquals(v1.port, v2.port)
+        self.assertEqual(v1.transport, v2.transport)
+        self.assertEqual(v1.host, v2.host)
+        self.assertEqual(v1.port, v2.port)
 
     def test_complex(self):
         """
@@ -230,17 +230,17 @@ class ViaTestCase(unittest.TestCase):
         s = ("SIP/2.0/UDP first.example.com:4000;ttl=16;maddr=224.2.0.1"
              " ;branch=a7c6a8dlze (Example)")
         v = sip.parseViaHeader(s)
-        self.assertEquals(v.transport, "UDP")
-        self.assertEquals(v.host, "first.example.com")
-        self.assertEquals(v.port, 4000)
-        self.assertEquals(v.rport, None)
-        self.assertEquals(v.rportValue, None)
-        self.assertEquals(v.rportRequested, False)
-        self.assertEquals(v.ttl, 16)
-        self.assertEquals(v.maddr, "224.2.0.1")
-        self.assertEquals(v.branch, "a7c6a8dlze")
-        self.assertEquals(v.hidden, 0)
-        self.assertEquals(v.toString(),
+        self.assertEqual(v.transport, "UDP")
+        self.assertEqual(v.host, "first.example.com")
+        self.assertEqual(v.port, 4000)
+        self.assertEqual(v.rport, None)
+        self.assertEqual(v.rportValue, None)
+        self.assertEqual(v.rportRequested, False)
+        self.assertEqual(v.ttl, 16)
+        self.assertEqual(v.maddr, "224.2.0.1")
+        self.assertEqual(v.branch, "a7c6a8dlze")
+        self.assertEqual(v.hidden, 0)
+        self.assertEqual(v.toString(),
                           "SIP/2.0/UDP first.example.com:4000"
                           ";ttl=16;branch=a7c6a8dlze;maddr=224.2.0.1")
         self.checkRoundtrip(v)
@@ -251,17 +251,17 @@ class ViaTestCase(unittest.TestCase):
         """
         s = "SIP/2.0/UDP example.com;hidden"
         v = sip.parseViaHeader(s)
-        self.assertEquals(v.transport, "UDP")
-        self.assertEquals(v.host, "example.com")
-        self.assertEquals(v.port, 5060)
-        self.assertEquals(v.rport, None)
-        self.assertEquals(v.rportValue, None)
-        self.assertEquals(v.rportRequested, False)
-        self.assertEquals(v.ttl, None)
-        self.assertEquals(v.maddr, None)
-        self.assertEquals(v.branch, None)
-        self.assertEquals(v.hidden, True)
-        self.assertEquals(v.toString(),
+        self.assertEqual(v.transport, "UDP")
+        self.assertEqual(v.host, "example.com")
+        self.assertEqual(v.port, 5060)
+        self.assertEqual(v.rport, None)
+        self.assertEqual(v.rportValue, None)
+        self.assertEqual(v.rportRequested, False)
+        self.assertEqual(v.ttl, None)
+        self.assertEqual(v.maddr, None)
+        self.assertEqual(v.branch, None)
+        self.assertEqual(v.hidden, True)
+        self.assertEqual(v.toString(),
                           "SIP/2.0/UDP example.com:5060;hidden")
         self.checkRoundtrip(v)
 
@@ -318,11 +318,11 @@ class ViaTestCase(unittest.TestCase):
     def testNAT(self):
         s = "SIP/2.0/UDP 10.0.0.1:5060;received=22.13.1.5;rport=12345"
         v = sip.parseViaHeader(s)
-        self.assertEquals(v.transport, "UDP")
-        self.assertEquals(v.host, "10.0.0.1")
-        self.assertEquals(v.port, 5060)
-        self.assertEquals(v.received, "22.13.1.5")
-        self.assertEquals(v.rport, 12345)
+        self.assertEqual(v.transport, "UDP")
+        self.assertEqual(v.host, "10.0.0.1")
+        self.assertEqual(v.port, 5060)
+        self.assertEqual(v.received, "22.13.1.5")
+        self.assertEqual(v.rport, 12345)
 
         self.assertNotEquals(v.toString().find("rport=12345"), -1)
 
@@ -346,7 +346,7 @@ class URLTestCase(unittest.TestCase):
             "sip:j.doe@big.com?subject=project",
             "sip:example.com",
             ]:
-            self.assertEquals(sip.parseURL(url).toString(), url)
+            self.assertEqual(sip.parseURL(url).toString(), url)
 
     def testComplex(self):
         s = ("sip:user:pass@hosta:123;transport=udp;user=phone;method=foo;"
@@ -358,7 +358,7 @@ class URLTestCase(unittest.TestCase):
                      ("method", "foo"), ("ttl", 12),
                      ("maddr", "1.2.3.4"), ("other", ["blah", "goo=bar"]),
                      ("headers", {"a": "b", "c": "d"})]:
-            self.assertEquals(getattr(url, k), v)
+            self.assertEqual(getattr(url, k), v)
 
 
 class ParseTestCase(unittest.TestCase):
@@ -374,9 +374,9 @@ class ParseTestCase(unittest.TestCase):
              "sip:foo@example.com", {"tag": "bar", "foo": "baz"}),
             ]:
             gname, gurl, gparams = sip.parseAddress(address)
-            self.assertEquals(name, gname)
-            self.assertEquals(gurl.toString(), urls)
-            self.assertEquals(gparams, params)
+            self.assertEqual(name, gname)
+            self.assertEqual(gurl.toString(), urls)
+            self.assertEqual(gparams, params)
 
 
 class DummyLocator:
@@ -406,13 +406,13 @@ class ProxyTestCase(unittest.TestCase):
         r.addHeader("to", "<sip:joe@server.com>")
         r.addHeader("contact", "<sip:joe@1.2.3.5>")
         self.proxy.datagramReceived(r.toString(), ("1.2.3.4", 5060))
-        self.assertEquals(len(self.sent), 1)
+        self.assertEqual(len(self.sent), 1)
         dest, m = self.sent[0]
-        self.assertEquals(dest.port, 5060)
-        self.assertEquals(dest.host, "server.com")
-        self.assertEquals(m.uri.toString(), "sip:foo")
-        self.assertEquals(m.method, "INVITE")
-        self.assertEquals(m.headers["via"],
+        self.assertEqual(dest.port, 5060)
+        self.assertEqual(dest.host, "server.com")
+        self.assertEqual(m.uri.toString(), "sip:foo")
+        self.assertEqual(m.method, "INVITE")
+        self.assertEqual(m.headers["via"],
                           ["SIP/2.0/UDP 127.0.0.1:5060",
                            "SIP/2.0/UDP 1.2.3.4:5060",
                            "SIP/2.0/UDP 1.2.3.5:5060"])
@@ -426,7 +426,7 @@ class ProxyTestCase(unittest.TestCase):
         r.addHeader("contact", "<sip:joe@1.2.3.4>")
         self.proxy.datagramReceived(r.toString(), ("1.1.1.1", 5060))
         dest, m = self.sent[0]
-        self.assertEquals(m.headers["via"],
+        self.assertEqual(m.headers["via"],
                           ["SIP/2.0/UDP 127.0.0.1:5060",
                            "SIP/2.0/UDP 1.2.3.4:5060;received=1.1.1.1"])
 
@@ -436,18 +436,18 @@ class ProxyTestCase(unittest.TestCase):
         r = sip.Response(200)
         r.addHeader("via", sip.Via("foo.com").toString())
         self.proxy.datagramReceived(r.toString(), ("1.1.1.1", 5060))
-        self.assertEquals(len(self.sent), 0)
+        self.assertEqual(len(self.sent), 0)
 
     def testResponseForward(self):
         r = sip.Response(200)
         r.addHeader("via", sip.Via("127.0.0.1").toString())
         r.addHeader("via", sip.Via("client.com", port=1234).toString())
         self.proxy.datagramReceived(r.toString(), ("1.1.1.1", 5060))
-        self.assertEquals(len(self.sent), 1)
+        self.assertEqual(len(self.sent), 1)
         dest, m = self.sent[0]
-        self.assertEquals((dest.host, dest.port), ("client.com", 1234))
-        self.assertEquals(m.code, 200)
-        self.assertEquals(m.headers["via"], ["SIP/2.0/UDP client.com:1234"])
+        self.assertEqual((dest.host, dest.port), ("client.com", 1234))
+        self.assertEqual(m.code, 200)
+        self.assertEqual(m.headers["via"], ["SIP/2.0/UDP client.com:1234"])
 
     def testReceivedResponseForward(self):
         r = sip.Response(200)
@@ -456,9 +456,9 @@ class ProxyTestCase(unittest.TestCase):
             "via",
             sip.Via("10.0.0.1", received="client.com").toString())
         self.proxy.datagramReceived(r.toString(), ("1.1.1.1", 5060))
-        self.assertEquals(len(self.sent), 1)
+        self.assertEqual(len(self.sent), 1)
         dest, m = self.sent[0]
-        self.assertEquals((dest.host, dest.port), ("client.com", 5060))
+        self.assertEqual((dest.host, dest.port), ("client.com", 5060))
 
     def testResponseToUs(self):
         r = sip.Response(200)
@@ -466,17 +466,17 @@ class ProxyTestCase(unittest.TestCase):
         l = []
         self.proxy.gotResponse = lambda *a: l.append(a)
         self.proxy.datagramReceived(r.toString(), ("1.1.1.1", 5060))
-        self.assertEquals(len(l), 1)
+        self.assertEqual(len(l), 1)
         m, addr = l[0]
-        self.assertEquals(len(m.headers.get("via", [])), 0)
-        self.assertEquals(m.code, 200)
+        self.assertEqual(len(m.headers.get("via", [])), 0)
+        self.assertEqual(m.code, 200)
 
     def testLoop(self):
         r = sip.Request("INVITE", "sip:foo")
         r.addHeader("via", sip.Via("1.2.3.4").toString())
         r.addHeader("via", sip.Via("127.0.0.1").toString())
         self.proxy.datagramReceived(r.toString(), ("client.com", 5060))
-        self.assertEquals(self.sent, [])
+        self.assertEqual(self.sent, [])
 
     def testCantForwardRequest(self):
         r = sip.Request("INVITE", "sip:foo")
@@ -484,11 +484,11 @@ class ProxyTestCase(unittest.TestCase):
         r.addHeader("to", "<sip:joe@server.com>")
         self.proxy.locator = FailingLocator()
         self.proxy.datagramReceived(r.toString(), ("1.2.3.4", 5060))
-        self.assertEquals(len(self.sent), 1)
+        self.assertEqual(len(self.sent), 1)
         dest, m = self.sent[0]
-        self.assertEquals((dest.host, dest.port), ("1.2.3.4", 5060))
-        self.assertEquals(m.code, 404)
-        self.assertEquals(m.headers["via"], ["SIP/2.0/UDP 1.2.3.4:5060"])
+        self.assertEqual((dest.host, dest.port), ("1.2.3.4", 5060))
+        self.assertEqual(m.code, 404)
+        self.assertEqual(m.headers["via"], ["SIP/2.0/UDP 1.2.3.4:5060"])
 
     def testCantForwardResponse(self):
         pass
@@ -531,33 +531,33 @@ class RegistrationTestCase(unittest.TestCase):
     def testRegister(self):
         self.register()
         dest, m = self.sent[0]
-        self.assertEquals((dest.host, dest.port), ("client.com", 5060))
-        self.assertEquals(m.code, 200)
-        self.assertEquals(m.headers["via"], ["SIP/2.0/UDP client.com:5060"])
-        self.assertEquals(m.headers["to"], ["sip:joe@bell.example.com"])
-        self.assertEquals(m.headers["contact"], ["sip:joe@client.com:5060"])
+        self.assertEqual((dest.host, dest.port), ("client.com", 5060))
+        self.assertEqual(m.code, 200)
+        self.assertEqual(m.headers["via"], ["SIP/2.0/UDP client.com:5060"])
+        self.assertEqual(m.headers["to"], ["sip:joe@bell.example.com"])
+        self.assertEqual(m.headers["contact"], ["sip:joe@client.com:5060"])
         self.failUnless(
             int(m.headers["expires"][0]) in (3600, 3601, 3599, 3598))
-        self.assertEquals(len(self.registry.users), 1)
+        self.assertEqual(len(self.registry.users), 1)
         dc, uri = self.registry.users["joe"]
-        self.assertEquals(uri.toString(), "sip:joe@client.com:5060")
+        self.assertEqual(uri.toString(), "sip:joe@client.com:5060")
         d = self.proxy.locator.getAddress(sip.URL(username="joe",
                                                   host="bell.example.com"))
         d.addCallback(lambda desturl : (desturl.host, desturl.port))
-        d.addCallback(self.assertEquals, ('client.com', 5060))
+        d.addCallback(self.assertEqual, ('client.com', 5060))
         return d
 
     def testUnregister(self):
         self.register()
         self.unregister()
         dest, m = self.sent[1]
-        self.assertEquals((dest.host, dest.port), ("client.com", 5060))
-        self.assertEquals(m.code, 200)
-        self.assertEquals(m.headers["via"], ["SIP/2.0/UDP client.com:5060"])
-        self.assertEquals(m.headers["to"], ["sip:joe@bell.example.com"])
-        self.assertEquals(m.headers["contact"], ["sip:joe@client.com:5060"])
-        self.assertEquals(m.headers["expires"], ["0"])
-        self.assertEquals(self.registry.users, {})
+        self.assertEqual((dest.host, dest.port), ("client.com", 5060))
+        self.assertEqual(m.code, 200)
+        self.assertEqual(m.headers["via"], ["SIP/2.0/UDP client.com:5060"])
+        self.assertEqual(m.headers["to"], ["sip:joe@bell.example.com"])
+        self.assertEqual(m.headers["contact"], ["sip:joe@client.com:5060"])
+        self.assertEqual(m.headers["expires"], ["0"])
+        self.assertEqual(self.registry.users, {})
 
 
     def addPortal(self):
@@ -572,10 +572,10 @@ class RegistrationTestCase(unittest.TestCase):
         self.addPortal()
         self.register()
 
-        self.assertEquals(len(self.registry.users), 0)
-        self.assertEquals(len(self.sent), 1)
+        self.assertEqual(len(self.registry.users), 0)
+        self.assertEqual(len(self.sent), 1)
         dest, m = self.sent[0]
-        self.assertEquals(m.code, 401)
+        self.assertEqual(m.code, 401)
 
 
     def test_basicAuthentication(self):
@@ -603,10 +603,10 @@ class RegistrationTestCase(unittest.TestCase):
                     "Basic " + "userXname:passXword".encode('base64'))
         self.proxy.datagramReceived(r.toString(), ("client.com", 5060))
 
-        self.assertEquals(len(self.registry.users), 1)
-        self.assertEquals(len(self.sent), 1)
+        self.assertEqual(len(self.registry.users), 1)
+        self.assertEqual(len(self.sent), 1)
         dest, m = self.sent[0]
-        self.assertEquals(m.code, 200)
+        self.assertEqual(m.code, 200)
 
 
     def test_failedBasicAuthentication(self):
@@ -635,10 +635,10 @@ class RegistrationTestCase(unittest.TestCase):
             "authorization", "Basic " + "userXname:password".encode('base64'))
         self.proxy.datagramReceived(r.toString(), ("client.com", 5060))
 
-        self.assertEquals(len(self.registry.users), 0)
-        self.assertEquals(len(self.sent), 1)
+        self.assertEqual(len(self.registry.users), 0)
+        self.assertEqual(len(self.sent), 1)
         dest, m = self.sent[0]
-        self.assertEquals(m.code, 401)
+        self.assertEqual(m.code, 401)
 
 
     def testWrongDomainRegister(self):
@@ -647,7 +647,7 @@ class RegistrationTestCase(unittest.TestCase):
         r.addHeader("contact", "sip:joe@client.com:1234")
         r.addHeader("via", sip.Via("client.com").toString())
         self.proxy.datagramReceived(r.toString(), ("client.com", 5060))
-        self.assertEquals(len(self.sent), 0)
+        self.assertEqual(len(self.sent), 0)
 
     def testWrongToDomainRegister(self):
         r = sip.Request("REGISTER", "sip:bell.example.com")
@@ -655,7 +655,7 @@ class RegistrationTestCase(unittest.TestCase):
         r.addHeader("contact", "sip:joe@client.com:1234")
         r.addHeader("via", sip.Via("client.com").toString())
         self.proxy.datagramReceived(r.toString(), ("client.com", 5060))
-        self.assertEquals(len(self.sent), 0)
+        self.assertEqual(len(self.sent), 0)
 
     def testWrongDomainLookup(self):
         self.register()
@@ -718,9 +718,9 @@ class LiveTest(unittest.TestCase):
             sip.URL(host="127.0.0.1", port=self.serverAddress[1]), r)
         d = self.client.deferred
         def check(received):
-            self.assertEquals(len(received), 1)
+            self.assertEqual(len(received), 1)
             r = received[0]
-            self.assertEquals(r.code, 200)
+            self.assertEqual(r.code, 200)
         d.addCallback(check)
         return d
 
@@ -752,9 +752,9 @@ class LiveTest(unittest.TestCase):
                                 r)
         d = self.client.deferred
         def check(received):
-            self.assertEquals(len(received), 1)
+            self.assertEqual(len(received), 1)
             r = received[0]
-            self.assertEquals(r.code, 200)
+            self.assertEqual(r.code, 200)
         d.addCallback(check)
         return d
 
@@ -871,7 +871,7 @@ class AuthorizationTestCase(unittest.TestCase):
     def testChallenge(self):
         self.proxy.datagramReceived(registerRequest, ("127.0.0.1", 5632))
 
-        self.assertEquals(
+        self.assertEqual(
             self.transport.written[-1],
             ((challengeResponse, ("127.0.0.1", 5632)))
         )
@@ -879,7 +879,7 @@ class AuthorizationTestCase(unittest.TestCase):
 
         self.proxy.datagramReceived(authRequest, ("127.0.0.1", 5632))
 
-        self.assertEquals(
+        self.assertEqual(
             self.transport.written[-1],
             ((okResponse, ("127.0.0.1", 5632)))
         )

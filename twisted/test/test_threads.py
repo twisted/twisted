@@ -25,9 +25,9 @@ class ReactorThreadsTestCase(unittest.TestCase):
         Try to change maximum number of threads.
         """
         reactor.suggestThreadPoolSize(34)
-        self.assertEquals(reactor.threadpool.max, 34)
+        self.assertEqual(reactor.threadpool.max, 34)
         reactor.suggestThreadPoolSize(4)
-        self.assertEquals(reactor.threadpool.max, 4)
+        self.assertEqual(reactor.threadpool.max, 4)
 
 
     def _waitForThread(self):
@@ -56,7 +56,7 @@ class ReactorThreadsTestCase(unittest.TestCase):
             if not waiter.isSet():
                 self.fail("Timed out waiting for event.")
             else:
-                self.assertEquals(result, [False])
+                self.assertEqual(result, [False])
         return self._waitForThread().addCallback(cb)
 
 
@@ -142,7 +142,7 @@ class ReactorThreadsTestCase(unittest.TestCase):
         def reactorFunc():
             return defer.succeed("foo")
         def cb(res):
-            self.assertEquals(res[0][0], "foo")
+            self.assertEqual(res[0][0], "foo")
 
         return self._testBlockingCallFromThread(reactorFunc).addCallback(cb)
 
@@ -156,7 +156,7 @@ class ReactorThreadsTestCase(unittest.TestCase):
             reactor.callLater(0.1, d.callback, "egg")
             return d
         def cb(res):
-            self.assertEquals(res[0][0], "egg")
+            self.assertEqual(res[0][0], "egg")
 
         return self._testBlockingCallFromThread(reactorFunc).addCallback(cb)
 
@@ -168,7 +168,7 @@ class ReactorThreadsTestCase(unittest.TestCase):
             return defer.fail(RuntimeError("bar"))
         def cb(res):
             self.assert_(isinstance(res[1][0], RuntimeError))
-            self.assertEquals(res[1][0].args[0], "bar")
+            self.assertEqual(res[1][0].args[0], "bar")
 
         return self._testBlockingCallFromThread(reactorFunc).addCallback(cb)
 
@@ -183,7 +183,7 @@ class ReactorThreadsTestCase(unittest.TestCase):
             return d
         def cb(res):
             self.assert_(isinstance(res[1][0], RuntimeError))
-            self.assertEquals(res[1][0].args[0], "spam")
+            self.assertEqual(res[1][0].args[0], "spam")
 
         return self._testBlockingCallFromThread(reactorFunc).addCallback(cb)
 
@@ -226,7 +226,7 @@ class DeferredResultTestCase(unittest.TestCase):
         d = defer.Deferred()
 
         def finished():
-            self.assertEquals(L, range(N))
+            self.assertEqual(L, range(N))
             d.callback(None)
 
         threads.callMultipleInThread([
@@ -241,7 +241,7 @@ class DeferredResultTestCase(unittest.TestCase):
         handles the positional and keyword arguments given.
         """
         d = threads.deferToThread(lambda x, y=5: x + y, 3, y=4)
-        d.addCallback(self.assertEquals, 7)
+        d.addCallback(self.assertEqual, 7)
         return d
 
 

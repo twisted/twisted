@@ -27,14 +27,14 @@ class TestInterruptInTest(TrialTest):
         TestInterruptInTest.test_03_doNothing_run = None
 
     def test_setUpOK(self):
-        self.failUnlessEqual(3, self.suite.countTestCases())
-        self.failUnlessEqual(0, self.reporter.testsRun)
+        self.assertEqual(3, self.suite.countTestCases())
+        self.assertEqual(0, self.reporter.testsRun)
         self.failIf(self.reporter.shouldStop)
         
     def test_interruptInTest(self):
         runner.TrialSuite([self.suite]).run(self.reporter)
         self.failUnless(self.reporter.shouldStop)
-        self.failUnlessEqual(2, self.reporter.testsRun)
+        self.assertEqual(2, self.reporter.testsRun)
         self.failIf(TestInterruptInTest.test_03_doNothing_run,
                     "test_03_doNothing ran.")
 
@@ -62,15 +62,15 @@ class TestInterruptInSetUp(TrialTest):
         TestInterruptInSetUp.testsRun = 0
 
     def test_setUpOK(self):
-        self.failUnlessEqual(0, TestInterruptInSetUp.testsRun)
-        self.failUnlessEqual(2, self.suite.countTestCases())
-        self.failUnlessEqual(0, self.reporter.testsRun)
+        self.assertEqual(0, TestInterruptInSetUp.testsRun)
+        self.assertEqual(2, self.suite.countTestCases())
+        self.assertEqual(0, self.reporter.testsRun)
         self.failIf(self.reporter.shouldStop)
 
     def test_interruptInSetUp(self):
         runner.TrialSuite([self.suite]).run(self.reporter)
         self.failUnless(self.reporter.shouldStop)
-        self.failUnlessEqual(2, self.reporter.testsRun)
+        self.assertEqual(2, self.reporter.testsRun)
         self.failIf(TestInterruptInSetUp.test_02_run,
                     "test_02 ran")
 
@@ -98,14 +98,14 @@ class TestInterruptInTearDown(TrialTest):
         TestInterruptInTearDown.test_02_run = False
 
     def test_setUpOK(self):
-        self.failUnlessEqual(0, TestInterruptInTearDown.testsRun)
-        self.failUnlessEqual(2, self.suite.countTestCases())
-        self.failUnlessEqual(0, self.reporter.testsRun)
+        self.assertEqual(0, TestInterruptInTearDown.testsRun)
+        self.assertEqual(2, self.suite.countTestCases())
+        self.assertEqual(0, self.reporter.testsRun)
         self.failIf(self.reporter.shouldStop)
 
     def test_interruptInTearDown(self):
         runner.TrialSuite([self.suite]).run(self.reporter)
-        self.failUnlessEqual(1, self.reporter.testsRun)
+        self.assertEqual(1, self.reporter.testsRun)
         self.failUnless(self.reporter.shouldStop)
         self.failIf(TestInterruptInTearDown.test_02_run,
                     "test_02 ran")

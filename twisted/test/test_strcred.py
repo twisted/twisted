@@ -121,7 +121,7 @@ class TestMemoryChecker(unittest.TestCase):
         Test that the checker works with valid credentials.
         """
         def _gotAvatar(username):
-            self.assertEquals(username, self.admin.username)
+            self.assertEqual(username, self.admin.username)
         return (self.checker
                 .requestAvatarId(self.admin)
                 .addCallback(_gotAvatar))
@@ -221,7 +221,7 @@ class TestUnixChecker(unittest.TestCase):
         Test that the checker works with valid credentials.
         """
         def _gotAvatar(username):
-            self.assertEquals(username, self.admin.username)
+            self.assertEqual(username, self.admin.username)
         return (self.checker
                 .requestAvatarId(self.admin)
                 .addCallback(_gotAvatar))
@@ -293,7 +293,7 @@ class TestFileDBChecker(unittest.TestCase):
         Test that the checker works with valid credentials.
         """
         def _gotAvatar(username):
-            self.assertEquals(username, self.admin.username)
+            self.assertEqual(username, self.admin.username)
         return (self.checker
                 .requestAvatarId(self.admin)
                 .addCallback(_gotAvatar))
@@ -385,8 +385,8 @@ class TestCheckerOptions(unittest.TestCase):
         options = DummyOptions()
         options.parseOptions(['--auth', 'memory', '--auth', 'anonymous'])
         chd = options['credInterfaces']
-        self.assertEquals(len(chd[credentials.IAnonymous]), 1)
-        self.assertEquals(len(chd[credentials.IUsernamePassword]), 1)
+        self.assertEqual(len(chd[credentials.IAnonymous]), 1)
+        self.assertEqual(len(chd[credentials.IUsernamePassword]), 1)
         chdAnonymous = chd[credentials.IAnonymous][0]
         chdUserPass = chd[credentials.IUsernamePassword][0]
         self.assertTrue(checkers.ICredentialsChecker.providedBy(chdAnonymous))
@@ -404,7 +404,7 @@ class TestCheckerOptions(unittest.TestCase):
         """
         options = DummyOptions()
         options.parseOptions(['--auth', 'memory', '--auth', 'unix'])
-        self.assertEquals(
+        self.assertEqual(
             options['credCheckers'],
             options['credInterfaces'][credentials.IUsernamePassword])
 
@@ -456,7 +456,7 @@ class TestCheckerOptions(unittest.TestCase):
         options = DummyOptions()
         err = self.assertRaises(usage.UsageError, options.parseOptions,
                                 ['--auth', 'file'])
-        self.assertEquals(str(err),
+        self.assertEqual(str(err),
                           "Unexpected error: 'file' requires a filename")
 
 
@@ -562,8 +562,8 @@ class TestLimitingInterfaces(unittest.TestCase):
         self.assertIdentical(options['credInterfaces'][iface][0], self.goodChecker)
         self.assertIdentical(options['credCheckers'][0], self.goodChecker)
         # Test that we didn't get IUsernameHashedPassword
-        self.assertEquals(len(options['credInterfaces'][iface]), 1)
-        self.assertEquals(len(options['credCheckers']), 1)
+        self.assertEqual(len(options['credInterfaces'][iface]), 1)
+        self.assertEqual(len(options['credCheckers']), 1)
 
 
     def test_failOnAddingUnsupportedChecker(self):

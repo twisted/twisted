@@ -152,7 +152,7 @@ class Connect(unittest.TestCase):
 
         # Verify that the server responded with the address which will be
         # connected to.
-        self.assertEquals(
+        self.assertEqual(
             sent,
             struct.pack('!BBH', 0, 90, 34) + socket.inet_aton('127.0.0.1'))
         self.assertFalse(self.sock.transport.stringTCPTransport_closing)
@@ -161,13 +161,13 @@ class Connect(unittest.TestCase):
         # Pass some data through and verify it is forwarded to the outgoing
         # connection.
         self.sock.dataReceived('hello, world')
-        self.assertEquals(
+        self.assertEqual(
             self.sock.driver_outgoing.transport.value(), 'hello, world')
 
         # Deliver some data from the output connection and verify it is
         # passed along to the incoming side.
         self.sock.driver_outgoing.dataReceived('hi there')
-        self.assertEquals(self.sock.transport.value(), 'hi there')
+        self.assertEqual(self.sock.transport.value(), 'hi there')
 
         self.sock.connectionLost('fake reason')
 
@@ -192,7 +192,7 @@ class Connect(unittest.TestCase):
 
         # Verify that the server responds with a 91 error.
         sent = self.sock.transport.value()
-        self.assertEquals(
+        self.assertEqual(
             sent,
             struct.pack('!BBH', 0, 91, 0) + socket.inet_aton('0.0.0.0'))
 
@@ -337,7 +337,7 @@ class Bind(unittest.TestCase):
 
         # Verify that the server responded with the address which will be
         # connected to.
-        self.assertEquals(
+        self.assertEqual(
             sent,
             struct.pack('!BBH', 0, 90, 1234) + socket.inet_aton('6.7.8.9'))
         self.assertFalse(self.sock.transport.stringTCPTransport_closing)
@@ -361,7 +361,7 @@ class Bind(unittest.TestCase):
         # Deliver some data from the output connection and verify it is
         # passed along to the incoming side.
         self.sock.dataReceived('hi there')
-        self.assertEquals(incoming.transport.value(), 'hi there')
+        self.assertEqual(incoming.transport.value(), 'hi there')
 
         # the other way around
         incoming.dataReceived('hi there')
@@ -390,7 +390,7 @@ class Bind(unittest.TestCase):
 
         # Verify that the server responds with a 91 error.
         sent = self.sock.transport.value()
-        self.assertEquals(
+        self.assertEqual(
             sent,
             struct.pack('!BBH', 0, 91, 0) + socket.inet_aton('0.0.0.0'))
 

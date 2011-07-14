@@ -101,14 +101,14 @@ class DeferredGeneratorTests(BaseDefgenTests, unittest.TestCase):
         yield x
         x = x.getResult()
 
-        self.assertEquals(x, "hi")
+        self.assertEqual(x, "hi")
 
         ow = waitForDeferred(getOwie())
         yield ow
         try:
             ow.getResult()
         except ZeroDivisionError, e:
-            self.assertEquals(str(e), 'OMG')
+            self.assertEqual(str(e), 'OMG')
         yield "WOOSH"
         return
     _genBasics = deferredGenerator(_genBasics)
@@ -187,12 +187,12 @@ class InlineCallbacksTests(BaseDefgenTests, unittest.TestCase):
 
         x = yield getThing()
 
-        self.assertEquals(x, "hi")
+        self.assertEqual(x, "hi")
 
         try:
             ow = yield getOwie()
         except ZeroDivisionError, e:
-            self.assertEquals(str(e), 'OMG')
+            self.assertEqual(str(e), 'OMG')
         returnValue("WOOSH")
     _genBasics = inlineCallbacks(_genBasics)
 

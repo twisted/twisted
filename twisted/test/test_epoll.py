@@ -48,7 +48,7 @@ class EPoll(unittest.TestCase):
         try:
             client.connect(('127.0.0.1', self.serverSocket.getsockname()[1]))
         except socket.error, e:
-            self.assertEquals(e.args[0], errno.EINPROGRESS)
+            self.assertEqual(e.args[0], errno.EINPROGRESS)
         else:
             raise unittest.FailTest("Connect should have raised EINPROGRESS")
         server, addr = self.serverSocket.accept()
@@ -120,7 +120,7 @@ class EPoll(unittest.TestCase):
                     (server.fileno(), _epoll.OUT)]
         expected.sort()
 
-        self.assertEquals(events, expected)
+        self.assertEqual(events, expected)
 
         now = time.time()
         events = untilConcludes(p.wait, 4, 200)
@@ -141,7 +141,7 @@ class EPoll(unittest.TestCase):
                     (server.fileno(), _epoll.IN | _epoll.OUT)]
         expected.sort()
 
-        self.assertEquals(events, expected)
+        self.assertEqual(events, expected)
 
 if _epoll is None:
     EPoll.skip = "_epoll module unavailable"

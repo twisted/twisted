@@ -972,7 +972,7 @@ class HTTP11ClientProtocolTests(TestCase):
 
         def check(ignore):
             error = errors[0]
-            self.assertEquals(error['why'],
+            self.assertEqual(error['why'],
                               'Error writing request, but not in valid state '
                               'to finalize request: CONNECTION_LOST')
 
@@ -1078,7 +1078,7 @@ class HTTP11ClientProtocolTests(TestCase):
             request.finished.callback(None)
             # Nothing dire will happen when the connection is lost
             self.protocol.connectionLost(Failure(ArbitraryException()))
-            self.assertEquals(self.protocol._state, 'CONNECTION_LOST')
+            self.assertEqual(self.protocol._state, 'CONNECTION_LOST')
         d.addCallback(cbAllResponse)
         return d
 

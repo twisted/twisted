@@ -47,9 +47,9 @@ class ComponentInitiatingInitializerTest(unittest.TestCase):
         # the initializer should have sent the handshake request
 
         handshake = self.output[-1]
-        self.assertEquals('handshake', handshake.name)
-        self.assertEquals('test:component', handshake.uri)
-        self.assertEquals(sha1("%s%s" % ('12345', 'secret')).hexdigest(),
+        self.assertEqual('handshake', handshake.name)
+        self.assertEqual('test:component', handshake.uri)
+        self.assertEqual(sha1("%s%s" % ('12345', 'secret')).hexdigest(),
                           unicode(handshake))
 
         # successful authentication
@@ -81,11 +81,11 @@ class ComponentAuthTest(unittest.TestCase):
         # Calculate what we expect the handshake value to be
         hv = sha1("%s%s" % ("12345", "secret")).hexdigest()
 
-        self.assertEquals(outlist[1], "<handshake>%s</handshake>" % (hv))
+        self.assertEqual(outlist[1], "<handshake>%s</handshake>" % (hv))
 
         xs.dataReceived("<handshake/>")
 
-        self.assertEquals(self.authComplete, True)
+        self.assertEqual(self.authComplete, True)
 
 
 class JabberServiceHarness(component.Service):
@@ -123,19 +123,19 @@ class TestJabberServiceManager(unittest.TestCase):
         xs.connectionMade()
 
         # Ensure the test service harness got notified
-        self.assertEquals(True, svc.transportConnectedFlag)
+        self.assertEqual(True, svc.transportConnectedFlag)
 
         # Jump ahead and pretend like the stream got auth'd
         xs.dispatch(xs, xmlstream.STREAM_AUTHD_EVENT)
 
         # Ensure the test service harness got notified
-        self.assertEquals(True, svc.componentConnectedFlag)
+        self.assertEqual(True, svc.componentConnectedFlag)
 
         # Pretend to drop the connection
         xs.connectionLost(None)
 
         # Ensure the test service harness got notified
-        self.assertEquals(True, svc.componentDisconnectedFlag)
+        self.assertEqual(True, svc.componentDisconnectedFlag)
 
 
 
@@ -154,12 +154,12 @@ class RouterTest(unittest.TestCase):
 
         pipe = XmlPipe()
         router.addRoute('example.org', pipe.sink)
-        self.assertEquals(1, len(router.routes))
-        self.assertEquals(pipe.sink, router.routes['example.org'])
+        self.assertEqual(1, len(router.routes))
+        self.assertEqual(pipe.sink, router.routes['example.org'])
 
         element = domish.Element(('testns', 'test'))
         pipe.source.send(element)
-        self.assertEquals([element], routed)
+        self.assertEqual([element], routed)
 
 
     def test_route(self):
@@ -179,7 +179,7 @@ class RouterTest(unittest.TestCase):
         stanza['from'] = 'component1.example.org'
         stanza['to'] = 'component2.example.org'
         component1.source.send(stanza)
-        self.assertEquals([stanza], outgoing)
+        self.assertEqual([stanza], outgoing)
 
 
     def test_routeDefault(self):
@@ -202,7 +202,7 @@ class RouterTest(unittest.TestCase):
         stanza['from'] = 'component1.example.org'
         stanza['to'] = 'example.com'
         component1.source.send(stanza)
-        self.assertEquals([stanza], outgoing)
+        self.assertEqual([stanza], outgoing)
 
 
 
@@ -247,7 +247,7 @@ class ListenComponentAuthenticatorTest(unittest.TestCase):
         self.assertEqual((0, 0), xs.version)
         self.assertNotIdentical(None, xs.sid)
         self.assertTrue(xs._headerSent)
-        self.assertEquals(('/*', xs.authenticator.onElement), observers[-1])
+        self.assertEqual(('/*', xs.authenticator.onElement), observers[-1])
 
 
     def test_streamStartedWrongNamespace(self):
@@ -262,8 +262,8 @@ class ListenComponentAuthenticatorTest(unittest.TestCase):
         xs.dataReceived("<stream:stream xmlns='jabber:client' "
                          "xmlns:stream='http://etherx.jabber.org/streams' "
                          "to='component.example.org'>")
-        self.assertEquals(1, len(streamErrors))
-        self.assertEquals('invalid-namespace', streamErrors[-1].condition)
+        self.assertEqual(1, len(streamErrors))
+        self.assertEqual('invalid-namespace', streamErrors[-1].condition)
 
 
     def test_streamStartedNoTo(self):
@@ -277,8 +277,8 @@ class ListenComponentAuthenticatorTest(unittest.TestCase):
         xs.makeConnection(self)
         xs.dataReceived("<stream:stream xmlns='jabber:component:accept' "
                          "xmlns:stream='http://etherx.jabber.org/streams'>")
-        self.assertEquals(1, len(streamErrors))
-        self.assertEquals('improper-addressing', streamErrors[-1].condition)
+        self.assertEqual(1, len(streamErrors))
+        self.assertEqual('improper-addressing', streamErrors[-1].condition)
 
 
     def test_onElement(self):
@@ -309,7 +309,7 @@ class ListenComponentAuthenticatorTest(unittest.TestCase):
         element = domish.Element(('jabber:component:accept', 'message'))
         xs.authenticator.onElement(element)
         self.assertFalse(handshakes)
-        self.assertEquals('not-authorized', streamErrors[-1].condition)
+        self.assertEqual('not-authorized', streamErrors[-1].condition)
 
 
     def test_onHandshake(self):
@@ -327,7 +327,7 @@ class ListenComponentAuthenticatorTest(unittest.TestCase):
         theHash = '32532c0f7dbf1253c095b18b18e36d38d94c1256'
         xs.authenticator.onHandshake(theHash)
         self.assertEqual('<handshake/>', self.output[-1])
-        self.assertEquals(1, len(authd))
+        self.assertEqual(1, len(authd))
 
 
     def test_onHandshakeWrongHash(self):
@@ -347,8 +347,8 @@ class ListenComponentAuthenticatorTest(unittest.TestCase):
         xs.sid = u'1234'
         theHash = '1234'
         xs.authenticator.onHandshake(theHash)
-        self.assertEquals('not-authorized', streamErrors[-1].condition)
-        self.assertEquals(0, len(authd))
+        self.assertEqual('not-authorized', streamErrors[-1].condition)
+        self.assertEqual(0, len(authd))
 
 
 

@@ -21,12 +21,12 @@ To: nonexistant@example.org
 Subject: test
 
 '''), 'moshez@example.com', 'nonexistant@example.org')
-        self.assertEquals(from_, '')
-        self.assertEquals(to, 'moshez@example.com')
+        self.assertEqual(from_, '')
+        self.assertEqual(to, 'moshez@example.com')
         mess = rfc822.Message(cStringIO.StringIO(s))
-        self.assertEquals(mess['To'], 'moshez@example.com')
-        self.assertEquals(mess['From'], 'postmaster@example.org')
-        self.assertEquals(mess['subject'], 'Returned Mail: see transcript for details')
+        self.assertEqual(mess['To'], 'moshez@example.com')
+        self.assertEqual(mess['From'], 'postmaster@example.org')
+        self.assertEqual(mess['subject'], 'Returned Mail: see transcript for details')
 
     def testBounceMIME(self):
         pass

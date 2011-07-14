@@ -45,13 +45,13 @@ class ZshcompTestCase(unittest.TestCase):
         actionDescr = TestOptions.zsh_actionDescr.copy()
         actionDescr.update(TestOptions2.zsh_actionDescr)
 
-        self.failUnlessEquals(ag.altArgDescr, altArgDescr)
-        self.failUnlessEquals(ag.actionDescr, actionDescr)
-        self.failUnlessEquals(ag.multiUse, TestOptions.zsh_multiUse)
-        self.failUnlessEquals(ag.mutuallyExclusive,
+        self.assertEqual(ag.altArgDescr, altArgDescr)
+        self.assertEqual(ag.actionDescr, actionDescr)
+        self.assertEqual(ag.multiUse, TestOptions.zsh_multiUse)
+        self.assertEqual(ag.mutuallyExclusive,
                               TestOptions.zsh_mutuallyExclusive)
-        self.failUnlessEquals(ag.actions, TestOptions.zsh_actions)
-        self.failUnlessEquals(ag.extras, TestOptions.zsh_extras)
+        self.assertEqual(ag.actions, TestOptions.zsh_actions)
+        self.assertEqual(ag.extras, TestOptions.zsh_extras)
 
     def test_accumulateAdditionalOptions(self):
         """
@@ -90,7 +90,7 @@ class ZshcompTestCase(unittest.TestCase):
         b = zshcomp.Builder(cmd_name, opts, f)
         b.write()
         f.reset()
-        self.failUnlessEquals(f.read(), testOutput1)
+        self.assertEqual(f.read(), testOutput1)
 
     def test_skipBuild(self):
         """
@@ -100,9 +100,9 @@ class ZshcompTestCase(unittest.TestCase):
         generateFor = [('test_cmd', 'no.way.your.gonna.import.this', 'Foo')]
         skips = zshcomp.makeCompFunctionFiles('out_dir', generateFor, {})
         # no exceptions should be raised. hooray.
-        self.failUnlessEqual(len(skips), 1)
-        self.failUnlessEqual(len(skips[0]), 2)
-        self.failUnlessEqual(skips[0][0], 'test_cmd')
+        self.assertEqual(len(skips), 1)
+        self.assertEqual(len(skips[0]), 2)
+        self.assertEqual(skips[0][0], 'test_cmd')
         self.failUnless(isinstance(skips[0][1], ImportError))
         self.flushLoggedErrors(self, ImportError)
 

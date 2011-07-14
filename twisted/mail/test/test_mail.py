@@ -56,57 +56,57 @@ class DomainWithDefaultsTestCase(unittest.TestCase):
         d = dict([(x, x + 10) for x in range(10)])
         d = mail.mail.DomainWithDefaultDict(d, 'Default')
 
-        self.assertEquals(len(d), 10)
-        self.assertEquals(list(iter(d)), range(10))
-        self.assertEquals(list(d.iterkeys()), list(iter(d)))
+        self.assertEqual(len(d), 10)
+        self.assertEqual(list(iter(d)), range(10))
+        self.assertEqual(list(d.iterkeys()), list(iter(d)))
 
         items = list(d.iteritems())
         items.sort()
-        self.assertEquals(items, [(x, x + 10) for x in range(10)])
+        self.assertEqual(items, [(x, x + 10) for x in range(10)])
 
         values = list(d.itervalues())
         values.sort()
-        self.assertEquals(values, range(10, 20))
+        self.assertEqual(values, range(10, 20))
 
         items = d.items()
         items.sort()
-        self.assertEquals(items, [(x, x + 10) for x in range(10)])
+        self.assertEqual(items, [(x, x + 10) for x in range(10)])
 
         values = d.values()
         values.sort()
-        self.assertEquals(values, range(10, 20))
+        self.assertEqual(values, range(10, 20))
 
         for x in range(10):
-            self.assertEquals(d[x], x + 10)
-            self.assertEquals(d.get(x), x + 10)
+            self.assertEqual(d[x], x + 10)
+            self.assertEqual(d.get(x), x + 10)
             self.failUnless(x in d)
             self.failUnless(d.has_key(x))
 
         del d[2], d[4], d[6]
 
-        self.assertEquals(len(d), 7)
-        self.assertEquals(d[2], 'Default')
-        self.assertEquals(d[4], 'Default')
-        self.assertEquals(d[6], 'Default')
+        self.assertEqual(len(d), 7)
+        self.assertEqual(d[2], 'Default')
+        self.assertEqual(d[4], 'Default')
+        self.assertEqual(d[6], 'Default')
 
         d.update({'a': None, 'b': (), 'c': '*'})
-        self.assertEquals(len(d), 10)
-        self.assertEquals(d['a'], None)
-        self.assertEquals(d['b'], ())
-        self.assertEquals(d['c'], '*')
+        self.assertEqual(len(d), 10)
+        self.assertEqual(d['a'], None)
+        self.assertEqual(d['b'], ())
+        self.assertEqual(d['c'], '*')
 
         d.clear()
-        self.assertEquals(len(d), 0)
+        self.assertEqual(len(d), 0)
 
-        self.assertEquals(d.setdefault('key', 'value'), 'value')
-        self.assertEquals(d['key'], 'value')
+        self.assertEqual(d.setdefault('key', 'value'), 'value')
+        self.assertEqual(d['key'], 'value')
 
-        self.assertEquals(d.popitem(), ('key', 'value'))
-        self.assertEquals(len(d), 0)
+        self.assertEqual(d.popitem(), ('key', 'value'))
+        self.assertEqual(len(d), 0)
 
         dcopy = d.copy()
-        self.assertEquals(d.domains, dcopy.domains)
-        self.assertEquals(d.default, dcopy.default)
+        self.assertEqual(d.domains, dcopy.domains)
+        self.assertEqual(d.default, dcopy.default)
 
 
     def _stringificationTest(self, stringifier):
@@ -150,7 +150,7 @@ class BounceTestCase(unittest.TestCase):
         self.assertRaises(smtp.AddressError, self.domain.exists, "any user")
 
     def testRelay(self):
-        self.assertEquals(
+        self.assertEqual(
             self.domain.willRelay("random q emailer", "protocol"),
             False
         )
@@ -187,7 +187,7 @@ class FileMessageTestCase(unittest.TestCase):
         return self.fp.eomReceived().addCallback(self._cbFinalName)
 
     def _cbFinalName(self, result):
-        self.assertEquals(result, self.final)
+        self.assertEqual(result, self.final)
         self.failUnless(self.f.closed)
         self.failIf(os.path.exists(self.name))
 
@@ -196,7 +196,7 @@ class FileMessageTestCase(unittest.TestCase):
         for line in contents.splitlines():
             self.fp.lineReceived(line)
         self.fp.eomReceived()
-        self.assertEquals(file(self.final).read(), contents)
+        self.assertEqual(file(self.final).read(), contents)
 
     def testInterrupted(self):
         contents = "first line\nsecond line\n"
@@ -411,7 +411,7 @@ class MaildirAppendStringTestCase(unittest.TestCase, _AppendTestMixin):
         mbox.AppendFactory = FailingMaildirMailboxAppendMessageTask
 
         d = self._appendMessages(mbox, ["X" * i for i in range(1, 11)])
-        d.addCallback(self.assertEquals, [None] * 10)
+        d.addCallback(self.assertEqual, [None] * 10)
         d.addCallback(self._cbTestAppend, mbox)
         return d
 
@@ -422,8 +422,8 @@ class MaildirAppendStringTestCase(unittest.TestCase, _AppendTestMixin):
         and that each has the expected contents, and that they are in the same
         order as that in which they were appended.
         """
-        self.assertEquals(len(mbox.listMessages()), 10)
-        self.assertEquals(
+        self.assertEqual(len(mbox.listMessages()), 10)
+        self.assertEqual(
             [len(mbox.getMessage(i).read()) for i in range(10)],
             range(1, 11))
         # test in the right order: last to first error location.
@@ -472,8 +472,8 @@ class MaildirAppendFileTestCase(unittest.TestCase, _AppendTestMixin):
         and that each has the expected contents, and that they are in the same
         order as that in which they were appended.
         """
-        self.assertEquals(len(mbox.listMessages()), 10)
-        self.assertEquals(
+        self.assertEqual(len(mbox.listMessages()), 10)
+        self.assertEqual(
             [len(mbox.getMessage(i).read()) for i in range(10)],
             range(1, 11))
 
@@ -543,12 +543,12 @@ class MaildirTestCase(unittest.TestCase):
             i = i + 1
 
         mb = mail.maildir.MaildirMailbox(self.d)
-        self.assertEquals(mb.listMessages(), range(1, 11))
-        self.assertEquals(mb.listMessages(1), 2)
-        self.assertEquals(mb.listMessages(5), 6)
+        self.assertEqual(mb.listMessages(), range(1, 11))
+        self.assertEqual(mb.listMessages(1), 2)
+        self.assertEqual(mb.listMessages(5), 6)
 
-        self.assertEquals(mb.getMessage(6).read(), 'x' * 7)
-        self.assertEquals(mb.getMessage(1).read(), 'x' * 2)
+        self.assertEqual(mb.getMessage(6).read(), 'x' * 7)
+        self.assertEqual(mb.getMessage(1).read(), 'x' * 2)
 
         d = {}
         for i in range(10):
@@ -559,12 +559,12 @@ class MaildirTestCase(unittest.TestCase):
         p, f = os.path.split(msgs[5])
 
         mb.deleteMessage(5)
-        self.assertEquals(mb.listMessages(5), 0)
+        self.assertEqual(mb.listMessages(5), 0)
         self.failUnless(os.path.exists(j(self.d, '.Trash', 'cur', f)))
         self.failIf(os.path.exists(j(self.d, msgs[5])))
 
         mb.undeleteMessages()
-        self.assertEquals(mb.listMessages(5), 6)
+        self.assertEqual(mb.listMessages(5), 6)
         self.failIf(os.path.exists(j(self.d, '.Trash', 'cur', f)))
         self.failUnless(os.path.exists(j(self.d, msgs[5])))
 
@@ -584,13 +584,13 @@ class MaildirDirdbmDomainTestCase(unittest.TestCase):
 
         for (u, p) in toAdd:
             self.failUnless(u in self.D.dbm)
-            self.assertEquals(self.D.dbm[u], p)
+            self.assertEqual(self.D.dbm[u], p)
             self.failUnless(os.path.exists(os.path.join(self.P, u)))
 
     def testCredentials(self):
         creds = self.D.getCredentialsCheckers()
 
-        self.assertEquals(len(creds), 1)
+        self.assertEqual(len(creds), 1)
         self.failUnless(cred.checkers.ICredentialsChecker.providedBy(creds[0]))
         self.failUnless(cred.credentials.IUsernamePassword in creds[0].credentialInterfaces)
 
@@ -605,7 +605,7 @@ class MaildirDirdbmDomainTestCase(unittest.TestCase):
         )
 
         t = self.D.requestAvatar('user', None, pop3.IMailbox)
-        self.assertEquals(len(t), 3)
+        self.assertEqual(len(t), 3)
         self.failUnless(t[0] is pop3.IMailbox)
         self.failUnless(pop3.IMailbox.providedBy(t[1]))
 
@@ -622,7 +622,7 @@ class MaildirDirdbmDomainTestCase(unittest.TestCase):
         )
 
         creds = cred.credentials.UsernamePassword('user', 'password')
-        self.assertEquals(database.requestAvatarId(creds), 'user')
+        self.assertEqual(database.requestAvatarId(creds), 'user')
 
 
 class StubAliasableDomain(object):
@@ -701,7 +701,7 @@ class ServiceDomainTestCase(unittest.TestCase):
          )
          fp = StringIO.StringIO(hdr)
          m = rfc822.Message(fp)
-         self.assertEquals(len(m.items()), 1)
+         self.assertEqual(len(m.items()), 1)
          self.failUnless(m.has_key('Received'))
 
     def testValidateTo(self):
@@ -769,8 +769,8 @@ class VirtualPOP3TestCase(unittest.TestCase):
             )
 
     def _cbAuthenticateAPOP(self, result):
-        self.assertEquals(len(result), 3)
-        self.assertEquals(result[0], pop3.IMailbox)
+        self.assertEqual(len(result), 3)
+        self.assertEqual(result[0], pop3.IMailbox)
         self.failUnless(pop3.IMailbox.providedBy(result[1]))
         result[2]()
 
@@ -792,8 +792,8 @@ class VirtualPOP3TestCase(unittest.TestCase):
             )
 
     def _cbAuthenticatePASS(self, result):
-        self.assertEquals(len(result), 3)
-        self.assertEquals(result[0], pop3.IMailbox)
+        self.assertEqual(len(result), 3)
+        self.assertEqual(result[0], pop3.IMailbox)
         self.failUnless(pop3.IMailbox.providedBy(result[1]))
         result[2]()
 
@@ -870,22 +870,22 @@ class RelayerTestCase(unittest.TestCase):
 
     def testMailFrom(self):
         for i in range(10):
-            self.assertEquals(self.R.getMailFrom(), 'from-%d' % (i,))
+            self.assertEqual(self.R.getMailFrom(), 'from-%d' % (i,))
             self.R.sentMail(250, None, None, None, None)
-        self.assertEquals(self.R.getMailFrom(), None)
+        self.assertEqual(self.R.getMailFrom(), None)
 
     def testMailTo(self):
         for i in range(10):
-            self.assertEquals(self.R.getMailTo(), ['to-%d' % (i,)])
+            self.assertEqual(self.R.getMailTo(), ['to-%d' % (i,)])
             self.R.sentMail(250, None, None, None, None)
-        self.assertEquals(self.R.getMailTo(), None)
+        self.assertEqual(self.R.getMailTo(), None)
 
     def testMailData(self):
         for i in range(10):
             name = os.path.join(self.tmpdir, 'body-%d' % (i,))
-            self.assertEquals(self.R.getMailData().read(), name)
+            self.assertEqual(self.R.getMailData().read(), name)
             self.R.sentMail(250, None, None, None, None)
-        self.assertEquals(self.R.getMailData(), None)
+        self.assertEqual(self.R.getMailData(), None)
 
 class Manager:
     def __init__(self):
@@ -916,7 +916,7 @@ class ManagedRelayerTestCase(unittest.TestCase):
         for i in self.messages:
             self.relay.sentMail(250, None, None, None, None)
 
-        self.assertEquals(
+        self.assertEqual(
             self.manager.success,
             [(self.factory, m) for m in self.messages]
         )
@@ -925,14 +925,14 @@ class ManagedRelayerTestCase(unittest.TestCase):
         for i in self.messages:
             self.relay.sentMail(550, None, None, None, None)
 
-        self.assertEquals(
+        self.assertEqual(
             self.manager.failure,
             [(self.factory, m) for m in self.messages]
         )
 
     def testConnectionLost(self):
         self.relay.connectionLost(failure.Failure(Exception()))
-        self.assertEquals(self.manager.done, [self.factory])
+        self.assertEqual(self.manager.done, [self.factory])
 
 class DirectoryQueueTestCase(unittest.TestCase):
     def setUp(self):
@@ -954,19 +954,19 @@ class DirectoryQueueTestCase(unittest.TestCase):
 
     def testWaiting(self):
         self.failUnless(self.queue.hasWaiting())
-        self.assertEquals(len(self.queue.getWaiting()), 25)
+        self.assertEqual(len(self.queue.getWaiting()), 25)
 
         waiting = self.queue.getWaiting()
         self.queue.setRelaying(waiting[0])
-        self.assertEquals(len(self.queue.getWaiting()), 24)
+        self.assertEqual(len(self.queue.getWaiting()), 24)
 
         self.queue.setWaiting(waiting[0])
-        self.assertEquals(len(self.queue.getWaiting()), 25)
+        self.assertEqual(len(self.queue.getWaiting()), 25)
 
     def testRelaying(self):
         for m in self.queue.getWaiting():
             self.queue.setRelaying(m)
-            self.assertEquals(
+            self.assertEqual(
                 len(self.queue.getRelayed()),
                 25 - len(self.queue.getWaiting())
             )
@@ -975,16 +975,16 @@ class DirectoryQueueTestCase(unittest.TestCase):
 
         relayed = self.queue.getRelayed()
         self.queue.setWaiting(relayed[0])
-        self.assertEquals(len(self.queue.getWaiting()), 1)
-        self.assertEquals(len(self.queue.getRelayed()), 24)
+        self.assertEqual(len(self.queue.getWaiting()), 1)
+        self.assertEqual(len(self.queue.getRelayed()), 24)
 
     def testDone(self):
         msg = self.queue.getWaiting()[0]
         self.queue.setRelaying(msg)
         self.queue.done(msg)
 
-        self.assertEquals(len(self.queue.getWaiting()), 24)
-        self.assertEquals(len(self.queue.getRelayed()), 0)
+        self.assertEqual(len(self.queue.getWaiting()), 24)
+        self.assertEqual(len(self.queue.getRelayed()), 0)
 
         self.failIf(msg in self.queue.getWaiting())
         self.failIf(msg in self.queue.getRelayed())
@@ -997,7 +997,7 @@ class DirectoryQueueTestCase(unittest.TestCase):
 
         envelopes.sort()
         for i in range(25):
-            self.assertEquals(
+            self.assertEqual(
                 envelopes.pop(0),
                 ['header', i]
             )
@@ -1078,8 +1078,8 @@ class MXTestCase(unittest.TestCase):
         return self.mx.getMX('test.domain').addCallback(self._cbSimpleSuccess)
 
     def _cbSimpleSuccess(self, mx):
-        self.assertEquals(mx.preference, 0)
-        self.assertEquals(str(mx.name), 'the.email.test.domain')
+        self.assertEqual(mx.preference, 0)
+        self.assertEqual(str(mx.name), 'the.email.test.domain')
 
     def testSimpleFailure(self):
         self.mx.fallbackToDomain = False
@@ -1636,35 +1636,35 @@ class AliasTestCase(unittest.TestCase):
         for l in lines:
             mail.alias.handle(result, l, 'TestCase', None)
 
-        self.assertEquals(result['user'], ['another@host', 'me@again'])
-        self.assertEquals(result['nextuser'], ['|/bin/program'])
-        self.assertEquals(result['moreusers'], [':/etc/include/filename'])
-        self.assertEquals(result['multiuser'], ['first@host', 'second@host', 'last@anotherhost'])
+        self.assertEqual(result['user'], ['another@host', 'me@again'])
+        self.assertEqual(result['nextuser'], ['|/bin/program'])
+        self.assertEqual(result['moreusers'], [':/etc/include/filename'])
+        self.assertEqual(result['multiuser'], ['first@host', 'second@host', 'last@anotherhost'])
 
     def testFileLoader(self):
         domains = {'': object()}
         result = mail.alias.loadAliasFile(domains, fp=aliasFile)
 
-        self.assertEquals(len(result), 3)
+        self.assertEqual(len(result), 3)
 
         group = result['testuser']
         s = str(group)
         for a in ('address1', 'address2', 'address3', 'continuation@address', '/bin/process/this'):
             self.failIfEqual(s.find(a), -1)
-        self.assertEquals(len(group), 5)
+        self.assertEqual(len(group), 5)
 
         group = result['usertwo']
         s = str(group)
         for a in ('thisaddress', 'thataddress', 'lastaddress'):
             self.failIfEqual(s.find(a), -1)
-        self.assertEquals(len(group), 3)
+        self.assertEqual(len(group), 3)
 
         group = result['lastuser']
         s = str(group)
-        self.failUnlessEqual(s.find('/includable'), -1)
+        self.assertEqual(s.find('/includable'), -1)
         for a in ('/filename', 'program', 'address'):
             self.failIfEqual(s.find(a), -1, '%s not found' % a)
-        self.assertEquals(len(group), 3)
+        self.assertEqual(len(group), 3)
 
     def testMultiWrapper(self):
         msgs = LineBufferMessage(), LineBufferMessage(), LineBufferMessage()
@@ -1678,7 +1678,7 @@ class AliasTestCase(unittest.TestCase):
         for m in msgs:
             self.failUnless(m.eom)
             self.failIf(m.lost)
-            self.assertEquals(self.lines, m.lines)
+            self.assertEqual(self.lines, m.lines)
 
     def testFileAlias(self):
         tmpfile = self.mktemp()
@@ -1691,7 +1691,7 @@ class AliasTestCase(unittest.TestCase):
 
     def _cbTestFileAlias(self, ignored, tmpfile):
         lines = file(tmpfile).readlines()
-        self.assertEquals([L[:-1] for L in lines], self.lines)
+        self.assertEqual([L[:-1] for L in lines], self.lines)
 
 
 
@@ -1843,7 +1843,7 @@ done""")
 
         def _cbProcessAlias(ignored):
             lines = file('process.alias.out').readlines()
-            self.assertEquals([L[:-1] for L in lines], self.lines)
+            self.assertEqual([L[:-1] for L in lines], self.lines)
 
         return m.eomReceived().addCallback(_cbProcessAlias)
 
@@ -1951,7 +1951,7 @@ done""")
             mail.alias.FileWrapper('/file'),
         ])
         expected.sort()
-        self.assertEquals(r1, expected)
+        self.assertEqual(r1, expected)
 
         res2 = A2.resolve(aliases)
         r2 = map(str, res2.objs)
@@ -1961,7 +1961,7 @@ done""")
             mail.alias.AddressAlias('user3', None, None)
         ])
         expected.sort()
-        self.assertEquals(r2, expected)
+        self.assertEqual(r2, expected)
 
         res3 = A3.resolve(aliases)
         r3 = map(str, res3.objs)
@@ -1972,7 +1972,7 @@ done""")
             mail.alias.FileWrapper('/file'),
         ])
         expected.sort()
-        self.assertEquals(r3, expected)
+        self.assertEqual(r3, expected)
 
 
     def test_cyclicAlias(self):
@@ -1990,9 +1990,9 @@ done""")
             'alias3': A3
         })
 
-        self.assertEquals(aliases['alias1'].resolve(aliases), None)
-        self.assertEquals(aliases['alias2'].resolve(aliases), None)
-        self.assertEquals(aliases['alias3'].resolve(aliases), None)
+        self.assertEqual(aliases['alias1'].resolve(aliases), None)
+        self.assertEqual(aliases['alias2'].resolve(aliases), None)
+        self.assertEqual(aliases['alias3'].resolve(aliases), None)
 
         A4 = MockAliasGroup(['|echo', 'alias1'], domain, 'alias4')
         aliases['alias4'] = A4
@@ -2004,7 +2004,7 @@ done""")
             mail.alias.MessageWrapper(DummyProcess(), 'echo')
         ])
         expected.sort()
-        self.assertEquals(r, expected)
+        self.assertEqual(r, expected)
 
 
 

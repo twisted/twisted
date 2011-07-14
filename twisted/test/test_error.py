@@ -148,7 +148,7 @@ class TestStringification(unittest.TestCase):
             except IndexError:
                 kwargs = {}
 
-            self.failUnlessEqual(
+            self.assertEqual(
                 str(exception(*args, **kwargs)),
                 output)
 

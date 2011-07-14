@@ -131,8 +131,8 @@ class ThreadPoolTestCase(unittest.TestCase):
         del worker
         del unique
         gc.collect()
-        self.assertEquals(uniqueRef(), None)
-        self.assertEquals(workerRef(), None)
+        self.assertEqual(uniqueRef(), None)
+        self.assertEqual(workerRef(), None)
 
 
     def test_threadCreationArgumentsCallInThreadWithCallback(self):
@@ -191,8 +191,8 @@ class ThreadPoolTestCase(unittest.TestCase):
         # wait for onResult
         onResultDone.wait(self.getTimeout())
 
-        self.assertEquals(uniqueRef(), None)
-        self.assertEquals(workerRef(), None)
+        self.assertEqual(uniqueRef(), None)
+        self.assertEqual(workerRef(), None)
 
         # XXX There's a race right here - has onResult in the worker thread
         # returned and the locals in _worker holding it and the result been
@@ -211,14 +211,14 @@ class ThreadPoolTestCase(unittest.TestCase):
         """
         pool = threadpool.ThreadPool(7, 20)
 
-        self.assertEquals(pool.min, 7)
-        self.assertEquals(pool.max, 20)
+        self.assertEqual(pool.min, 7)
+        self.assertEqual(pool.max, 20)
 
         # check that unpickled threadpool has same number of threads
         copy = pickle.loads(pickle.dumps(pool))
 
-        self.assertEquals(copy.min, 7)
-        self.assertEquals(copy.max, 20)
+        self.assertEqual(copy.min, 7)
+        self.assertEqual(copy.max, 20)
 
 
     def _threadpoolTest(self, method):
@@ -554,7 +554,7 @@ class RaceConditionTestCase(unittest.TestCase):
         N threads will ever be created.
         """
         # Ensure no threads running
-        self.assertEquals(self.threadpool.workers, 0)
+        self.assertEqual(self.threadpool.workers, 0)
 
         loopDeferred = Deferred()
 
@@ -590,9 +590,9 @@ class ThreadSafeListDeprecationTestCase(unittest.TestCase):
         threadpool.ThreadSafeList()
 
         warningsShown = self.flushWarnings([self.test_threadSafeList])
-        self.assertEquals(len(warningsShown), 1)
+        self.assertEqual(len(warningsShown), 1)
         self.assertIdentical(warningsShown[0]['category'], DeprecationWarning)
-        self.assertEquals(
+        self.assertEqual(
             warningsShown[0]['message'],
             "twisted.python.threadpool.ThreadSafeList was deprecated in "
             "Twisted 10.1.0: This was an internal implementation detail of "

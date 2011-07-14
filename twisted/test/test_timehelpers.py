@@ -24,8 +24,8 @@ class TimeHelpersTests(TestCase):
         import twisted.test.time_helpers
         warnings = self.flushWarnings(
             offendingFunctions=[self.test_deprecated])
-        self.assertEquals(warnings[0]['category'], DeprecationWarning)
-        self.assertEquals(
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(
             warnings[0]['message'],
             "twisted.test.time_helpers is deprecated since Twisted 10.0.  "
             "See twisted.internet.task.Clock instead.")

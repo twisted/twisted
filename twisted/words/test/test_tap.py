@@ -40,7 +40,7 @@ class WordsTap(unittest.TestCase):
         """
         opt = tap.Options()
         opt.parseOptions(['--hostname', 'myhost'])
-        self.assertEquals(opt['hostname'], 'myhost')
+        self.assertEqual(opt['hostname'], 'myhost')
 
 
     def test_passwd(self):
@@ -69,10 +69,10 @@ class WordsTap(unittest.TestCase):
 
         @param opt: An instance of L{tap.Options}.
         """
-        self.assertEquals(len(opt['credCheckers']), 1)
+        self.assertEqual(len(opt['credCheckers']), 1)
         checker = opt['credCheckers'][0]
         self.assertFailure(checker.requestAvatarId(self.joeWrong),
                            error.UnauthorizedLogin)
         def _gotAvatar(username):
-            self.assertEquals(username, self.admin.username)
+            self.assertEqual(username, self.admin.username)
         return checker.requestAvatarId(self.admin).addCallback(_gotAvatar)

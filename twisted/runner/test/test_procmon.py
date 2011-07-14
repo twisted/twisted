@@ -135,7 +135,7 @@ class ProcmonTests(unittest.TestCase):
         """
         self.pm.addProcess("foo", ["arg1", "arg2"],
                            uid=1, gid=2, env={})
-        self.assertEquals(self.pm.__getstate__()['processes'],
+        self.assertEqual(self.pm.__getstate__()['processes'],
                           {'foo': (['arg1', 'arg2'], 1, 2, {})})
 
 
@@ -154,12 +154,12 @@ class ProcmonTests(unittest.TestCase):
         """
         self.pm.addProcess("foo", ["arg1", "arg2"],
                            uid=1, gid=2, env={})
-        self.assertEquals(self.pm.protocols, {})
-        self.assertEquals(self.pm.processes,
+        self.assertEqual(self.pm.protocols, {})
+        self.assertEqual(self.pm.processes,
                           {"foo": (["arg1", "arg2"], 1, 2, {})})
         self.pm.startService()
         self.reactor.advance(0)
-        self.assertEquals(self.pm.protocols.keys(), ["foo"])
+        self.assertEqual(self.pm.protocols.keys(), ["foo"])
 
 
     def test_addProcessDuplicateKeyError(self):
@@ -182,7 +182,7 @@ class ProcmonTests(unittest.TestCase):
         self.pm.startService()
         self.pm.addProcess("foo", ["foo"], uid=1, gid=2, env=fakeEnv)
         self.reactor.advance(0)
-        self.assertEquals(
+        self.assertEqual(
             self.reactor.spawnedProcesses[0]._environment, fakeEnv)
 
 
@@ -193,9 +193,9 @@ class ProcmonTests(unittest.TestCase):
         """
         self.pm.startService()
         self.pm.addProcess("foo", ["foo"])
-        self.assertEquals(len(self.pm.processes), 1)
+        self.assertEqual(len(self.pm.processes), 1)
         self.pm.removeProcess("foo")
-        self.assertEquals(len(self.pm.processes), 0)
+        self.assertEqual(len(self.pm.processes), 0)
 
 
     def test_removeProcessUnknownKeyError(self):
@@ -261,7 +261,7 @@ class ProcmonTests(unittest.TestCase):
         self.reactor.advance(timeToDie)
 
         # We expect it to be restarted immediately
-        self.assertEquals(self.reactor.seconds(),
+        self.assertEqual(self.reactor.seconds(),
                          self.pm.timeStarted["foo"])
 
 
@@ -281,11 +281,11 @@ class ProcmonTests(unittest.TestCase):
         # If process doesn't die before the killTime, procmon should
         # terminate it
         self.reactor.advance(self.pm.killTime - 1)
-        self.assertEquals(0.0, self.pm.timeStarted["foo"])
+        self.assertEqual(0.0, self.pm.timeStarted["foo"])
 
         self.reactor.advance(1)
         # We expect it to be immediately restarted
-        self.assertEquals(self.reactor.seconds(), self.pm.timeStarted["foo"])
+        self.assertEqual(self.reactor.seconds(), self.pm.timeStarted["foo"])
 
 
     def test_stopProcessUnknownKeyError(self):
@@ -390,10 +390,10 @@ class ProcmonTests(unittest.TestCase):
         self.pm.addProcess("foo", ["foo"])
         self.reactor.advance(self.pm.threshold - 1) #9s
         self.assertIn("foo", self.pm.protocols)
-        self.assertEquals(self.pm.delay["foo"], self.pm.minRestartDelay)
+        self.assertEqual(self.pm.delay["foo"], self.pm.minRestartDelay)
         # process dies within the threshold and should not restart immediately
         self.pm.protocols["foo"].processEnded(Failure(ProcessDone(0)))
-        self.assertEquals(self.pm.delay["foo"], self.pm.minRestartDelay * 2)
+        self.assertEqual(self.pm.delay["foo"], self.pm.minRestartDelay * 2)
 
 
     def test_startService(self):
@@ -428,7 +428,7 @@ class ProcmonTests(unittest.TestCase):
         # should have exited
         self.reactor.advance(self.pm.killTime + 1)
         # The processes shouldn't be restarted
-        self.assertEquals({}, self.pm.protocols)
+        self.assertEqual({}, self.pm.protocols)
 
 
     def test_stopServiceCancelRestarts(self):
@@ -473,7 +473,7 @@ class ProcmonTests(unittest.TestCase):
         self.reactor.advance(6)
         # The process shouldn't have restarted because stopService has cancelled
         # all pending process restarts.
-        self.assertEquals(self.pm.protocols, {})
+        self.assertEqual(self.pm.protocols, {})
 
 
     def test_activeAttributeEqualsRunning(self):
@@ -481,9 +481,9 @@ class ProcmonTests(unittest.TestCase):
         L{ProcessMonitor.active} unneccessarily duplicates the standard
         L{IService.running} flag.
         """
-        self.assertEquals(self.pm.active, self.pm.running)
+        self.assertEqual(self.pm.active, self.pm.running)
         self.pm.startService()
-        self.assertEquals(self.pm.active, self.pm.running)
+        self.assertEqual(self.pm.active, self.pm.running)
 
 
     def test_activeAttributeDeprecation(self):

@@ -21,14 +21,14 @@ class ResultsTestMixin:
 
     def test_setUp(self):
         self.failUnless(self.reporter.wasSuccessful())
-        self.failUnlessEqual(self.reporter.errors, [])
-        self.failUnlessEqual(self.reporter.failures, [])
-        self.failUnlessEqual(self.reporter.skips, [])
+        self.assertEqual(self.reporter.errors, [])
+        self.assertEqual(self.reporter.failures, [])
+        self.assertEqual(self.reporter.skips, [])
 
     def assertCount(self, numTests):
-        self.failUnlessEqual(self.suite.countTestCases(), numTests)
+        self.assertEqual(self.suite.countTestCases(), numTests)
         self.suite(self.reporter)
-        self.failUnlessEqual(self.reporter.testsRun, numTests)
+        self.assertEqual(self.reporter.testsRun, numTests)
 
 
 
@@ -122,24 +122,24 @@ class TestSkipMethods(unittest.TestCase, ResultsTestMixin):
     def test_results(self):
         self.suite(self.reporter)
         self.failUnless(self.reporter.wasSuccessful())
-        self.failUnlessEqual(self.reporter.errors, [])
-        self.failUnlessEqual(self.reporter.failures, [])
-        self.failUnlessEqual(len(self.reporter.skips), 3)
+        self.assertEqual(self.reporter.errors, [])
+        self.assertEqual(self.reporter.failures, [])
+        self.assertEqual(len(self.reporter.skips), 3)
 
     def test_setUp(self):
         self.loadSuite(TestSkipMethods.SkippingSetUp)
         self.suite(self.reporter)
         self.failUnless(self.reporter.wasSuccessful())
-        self.failUnlessEqual(self.reporter.errors, [])
-        self.failUnlessEqual(self.reporter.failures, [])
-        self.failUnlessEqual(len(self.reporter.skips), 2)
+        self.assertEqual(self.reporter.errors, [])
+        self.assertEqual(self.reporter.failures, [])
+        self.assertEqual(len(self.reporter.skips), 2)
 
     def test_reasons(self):
         self.suite(self.reporter)
         prefix = 'test_'
         # whiteboxing reporter
         for test, reason in self.reporter.skips:
-            self.failUnlessEqual(test.shortDescription()[len(prefix):],
+            self.assertEqual(test.shortDescription()[len(prefix):],
                                  str(reason))
 
 
@@ -187,9 +187,9 @@ class TestSkipClasses(unittest.TestCase, ResultsTestMixin):
         """
         self.suite(self.reporter)
         self.failUnless(self.reporter.wasSuccessful())
-        self.failUnlessEqual(self.reporter.errors, [])
-        self.failUnlessEqual(self.reporter.failures, [])
-        self.failUnlessEqual(len(self.reporter.skips), 4)
+        self.assertEqual(self.reporter.errors, [])
+        self.assertEqual(self.reporter.failures, [])
+        self.assertEqual(len(self.reporter.skips), 4)
 
 
     def test_reasons(self):
@@ -201,7 +201,7 @@ class TestSkipClasses(unittest.TestCase, ResultsTestMixin):
         expectedReasons = ['class', 'skip2', 'class', 'class']
         # whitebox reporter
         reasonsGiven = [reason for test, reason in self.reporter.skips]
-        self.assertEquals(expectedReasons, reasonsGiven)
+        self.assertEqual(expectedReasons, reasonsGiven)
 
 
 
@@ -228,25 +228,25 @@ class TestTodo(unittest.TestCase, ResultsTestMixin):
     def test_results(self):
         self.suite(self.reporter)
         self.failUnless(self.reporter.wasSuccessful())
-        self.failUnlessEqual(self.reporter.errors, [])
-        self.failUnlessEqual(self.reporter.failures, [])
-        self.failUnlessEqual(self.reporter.skips, [])
-        self.failUnlessEqual(len(self.reporter.expectedFailures), 2)
-        self.failUnlessEqual(len(self.reporter.unexpectedSuccesses), 1)
+        self.assertEqual(self.reporter.errors, [])
+        self.assertEqual(self.reporter.failures, [])
+        self.assertEqual(self.reporter.skips, [])
+        self.assertEqual(len(self.reporter.expectedFailures), 2)
+        self.assertEqual(len(self.reporter.unexpectedSuccesses), 1)
 
     def test_expectedFailures(self):
         self.suite(self.reporter)
         expectedReasons = ['todo1', 'todo2']
         reasonsGiven = [ r.reason
                          for t, e, r in self.reporter.expectedFailures ]
-        self.failUnlessEqual(expectedReasons, reasonsGiven)
+        self.assertEqual(expectedReasons, reasonsGiven)
 
     def test_unexpectedSuccesses(self):
         self.suite(self.reporter)
         expectedReasons = ['todo3']
         reasonsGiven = [ r.reason
                          for t, r in self.reporter.unexpectedSuccesses ]
-        self.failUnlessEqual(expectedReasons, reasonsGiven)
+        self.assertEqual(expectedReasons, reasonsGiven)
 
 
 class TestTodoClass(unittest.TestCase, ResultsTestMixin):
@@ -272,25 +272,25 @@ class TestTodoClass(unittest.TestCase, ResultsTestMixin):
     def test_results(self):
         self.suite(self.reporter)
         self.failUnless(self.reporter.wasSuccessful())
-        self.failUnlessEqual(self.reporter.errors, [])
-        self.failUnlessEqual(self.reporter.failures, [])
-        self.failUnlessEqual(self.reporter.skips, [])
-        self.failUnlessEqual(len(self.reporter.expectedFailures), 2)
-        self.failUnlessEqual(len(self.reporter.unexpectedSuccesses), 2)
+        self.assertEqual(self.reporter.errors, [])
+        self.assertEqual(self.reporter.failures, [])
+        self.assertEqual(self.reporter.skips, [])
+        self.assertEqual(len(self.reporter.expectedFailures), 2)
+        self.assertEqual(len(self.reporter.unexpectedSuccesses), 2)
 
     def test_expectedFailures(self):
         self.suite(self.reporter)
         expectedReasons = ['method', 'class']
         reasonsGiven = [ r.reason
                          for t, e, r in self.reporter.expectedFailures ]
-        self.failUnlessEqual(expectedReasons, reasonsGiven)
+        self.assertEqual(expectedReasons, reasonsGiven)
 
     def test_unexpectedSuccesses(self):
         self.suite(self.reporter)
         expectedReasons = ['method', 'class']
         reasonsGiven = [ r.reason
                          for t, r in self.reporter.unexpectedSuccesses ]
-        self.failUnlessEqual(expectedReasons, reasonsGiven)
+        self.assertEqual(expectedReasons, reasonsGiven)
 
 
 class TestStrictTodo(unittest.TestCase, ResultsTestMixin):
@@ -332,25 +332,25 @@ class TestStrictTodo(unittest.TestCase, ResultsTestMixin):
     def test_results(self):
         self.suite(self.reporter)
         self.failIf(self.reporter.wasSuccessful())
-        self.failUnlessEqual(len(self.reporter.errors), 2)
-        self.failUnlessEqual(len(self.reporter.failures), 1)
-        self.failUnlessEqual(len(self.reporter.expectedFailures), 3)
-        self.failUnlessEqual(len(self.reporter.unexpectedSuccesses), 1)
-        self.failUnlessEqual(self.reporter.skips, [])
+        self.assertEqual(len(self.reporter.errors), 2)
+        self.assertEqual(len(self.reporter.failures), 1)
+        self.assertEqual(len(self.reporter.expectedFailures), 3)
+        self.assertEqual(len(self.reporter.unexpectedSuccesses), 1)
+        self.assertEqual(self.reporter.skips, [])
 
     def test_expectedFailures(self):
         self.suite(self.reporter)
         expectedReasons = ['todo1', 'todo2', 'todo5']
         reasonsGotten = [ r.reason
                           for t, e, r in self.reporter.expectedFailures ]
-        self.failUnlessEqual(expectedReasons, reasonsGotten)
+        self.assertEqual(expectedReasons, reasonsGotten)
 
     def test_unexpectedSuccesses(self):
         self.suite(self.reporter)
         expectedReasons = [([RuntimeError], 'todo7')]
         reasonsGotten = [ (r.errors, r.reason)
                           for t, r in self.reporter.unexpectedSuccesses ]
-        self.failUnlessEqual(expectedReasons, reasonsGotten)
+        self.assertEqual(expectedReasons, reasonsGotten)
 
 
 
@@ -552,7 +552,7 @@ class TestGarbageCollectionDefault(GCMixin, unittest.TestCase):
         test = self.BasicTest('test_foo')
         result = reporter.TestResult()
         test.run(result)
-        self.failUnlessEqual(self._collectCalled, ['setUp', 'test', 'tearDown'])
+        self.assertEqual(self._collectCalled, ['setUp', 'test', 'tearDown'])
 
 
 
@@ -566,7 +566,7 @@ class TestGarbageCollection(GCMixin, unittest.TestCase):
         test = unittest._ForceGarbageCollectionDecorator(test)
         result = reporter.TestResult()
         test.run(result)
-        self.failUnlessEqual(
+        self.assertEqual(
             self._collectCalled,
             ['collect', 'setUp', 'test', 'tearDown', 'collect'])
 
@@ -904,7 +904,7 @@ class TestTestDecorator(unittest.TestCase):
         count1 = getrefcount(test)
         decoratedTest = unittest.decorate(suite, unittest.TestDecorator)
         count2 = getrefcount(test)
-        self.assertEquals(count1, count2)
+        self.assertEqual(count1, count2)
 
 
     def test_decorateNestedTestSuite(self):

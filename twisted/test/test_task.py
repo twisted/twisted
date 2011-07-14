@@ -34,7 +34,7 @@ class ClockTestCase(unittest.TestCase):
         Test that the L{seconds} method of the fake clock returns fake time.
         """
         c = task.Clock()
-        self.assertEquals(c.seconds(), 0)
+        self.assertEqual(c.seconds(), 0)
 
 
     def testCallLater(self):
@@ -45,7 +45,7 @@ class ClockTestCase(unittest.TestCase):
         c = task.Clock()
         call = c.callLater(1, lambda a, b: None, 1, b=2)
         self.failUnless(interfaces.IDelayedCall.providedBy(call))
-        self.assertEquals(call.getTime(), 1)
+        self.assertEqual(call.getTime(), 1)
         self.failUnless(call.active())
 
 
@@ -78,9 +78,9 @@ class ClockTestCase(unittest.TestCase):
         c = task.Clock()
         call = c.callLater(2, lambda: events.append(None))
         c.advance(1)
-        self.assertEquals(events, [])
+        self.assertEqual(events, [])
         c.advance(1)
-        self.assertEquals(events, [None])
+        self.assertEqual(events, [None])
         self.failIf(call.active())
 
 
@@ -107,11 +107,11 @@ class ClockTestCase(unittest.TestCase):
         c = task.Clock()
         call = c.callLater(1, lambda a, b: events.append((a, b)), 1, b=2)
         call.delay(1)
-        self.assertEquals(call.getTime(), 2)
+        self.assertEqual(call.getTime(), 2)
         c.advance(1.5)
-        self.assertEquals(events, [])
+        self.assertEqual(events, [])
         c.advance(1.0)
-        self.assertEquals(events, [(1, 2)])
+        self.assertEqual(events, [(1, 2)])
 
 
     def testCallLaterResetLater(self):
@@ -123,11 +123,11 @@ class ClockTestCase(unittest.TestCase):
         call = c.callLater(2, lambda a, b: events.append((a, b)), 1, b=2)
         c.advance(1)
         call.reset(3)
-        self.assertEquals(call.getTime(), 4)
+        self.assertEqual(call.getTime(), 4)
         c.advance(2)
-        self.assertEquals(events, [])
+        self.assertEqual(events, [])
         c.advance(1)
-        self.assertEquals(events, [(1, 2)])
+        self.assertEqual(events, [(1, 2)])
 
 
     def testCallLaterResetSooner(self):
@@ -138,9 +138,9 @@ class ClockTestCase(unittest.TestCase):
         c = task.Clock()
         call = c.callLater(4, lambda a, b: events.append((a, b)), 1, b=2)
         call.reset(3)
-        self.assertEquals(call.getTime(), 3)
+        self.assertEqual(call.getTime(), 3)
         c.advance(3)
-        self.assertEquals(events, [(1, 2)])
+        self.assertEqual(events, [(1, 2)])
 
 
     def test_getDelayedCalls(self):
@@ -153,7 +153,7 @@ class ClockTestCase(unittest.TestCase):
 
         calls = c.getDelayedCalls()
 
-        self.assertEquals(set([call, call2]), set(calls))
+        self.assertEqual(set([call, call2]), set(calls))
 
 
     def test_getDelayedCallsEmpty(self):
@@ -162,7 +162,7 @@ class ClockTestCase(unittest.TestCase):
         constructed Clock.
         """
         c = task.Clock()
-        self.assertEquals(c.getDelayedCalls(), [])
+        self.assertEqual(c.getDelayedCalls(), [])
 
 
     def test_providesIReactorTime(self):
@@ -455,14 +455,14 @@ class LoopTestCase(unittest.TestCase):
 
         clock.pump(timings)
 
-        self.assertEquals(len(L), 3,
+        self.assertEqual(len(L), 3,
                           "got %d iterations, not 3" % (len(L),))
 
         for (a, b, c, d) in L:
-            self.assertEquals(a, "a")
-            self.assertEquals(b, "b")
-            self.assertEquals(c, None)
-            self.assertEquals(d, "d")
+            self.assertEqual(a, "a")
+            self.assertEqual(b, "b")
+            self.assertEqual(c, None)
+            self.assertEqual(d, "d")
 
         lc.stop()
         self.assertIdentical(theResult[0], lc)
@@ -487,7 +487,7 @@ class LoopTestCase(unittest.TestCase):
 
         clock.pump(timings)
 
-        self.assertEquals(len(L), 2,
+        self.assertEqual(len(L), 2,
                           "got %d iterations, not 2" % (len(L),))
         lc.stop()
         self.assertIdentical(theResult[0], lc)
@@ -536,9 +536,9 @@ class LoopTestCase(unittest.TestCase):
         c.advance(1)
         lc.reset()
         c.advance(1)
-        self.assertEquals(ran, [])
+        self.assertEqual(ran, [])
         c.advance(1)
-        self.assertEquals(ran, [None])
+        self.assertEqual(ran, [None])
 
 
 
@@ -573,7 +573,7 @@ class ReactorLoopTestCase(unittest.TestCase):
         lc = task.LoopingCall(foo)
         d = lc.start(0)
         def stopped(ign):
-            self.assertEquals(len(ran), 6)
+            self.assertEqual(len(ran), 6)
         return d.addCallback(stopped)
 
 
@@ -663,21 +663,21 @@ class ReactorLoopTestCase(unittest.TestCase):
         d = lc.start(0.2, now=False)
 
         # Confirm that nothing has happened yet.
-        self.assertEquals(deferredCounts, [])
+        self.assertEqual(deferredCounts, [])
 
         # Advance the clock by 0.2 and then 0.4;
         testClock.pump([0.2, 0.4])
         # We should now have exactly one count (of 1 call)
-        self.assertEquals(len(deferredCounts), 1)
+        self.assertEqual(len(deferredCounts), 1)
 
         # Fire the deferred, and advance the clock by another 0.2
         d.callback(None)
         testClock.pump([0.2])
         # We should now have exactly 2 counts...
-        self.assertEquals(len(deferredCounts), 2)
+        self.assertEqual(len(deferredCounts), 2)
         # The first count should be 1 (one call)
         # The second count should be 3 (calls were missed at about 0.6 and 0.8)
-        self.assertEquals(deferredCounts, [1, 3])
+        self.assertEqual(deferredCounts, [1, 3])
 
 
 
@@ -731,7 +731,7 @@ class DeferLaterTests(unittest.TestCase):
         d.cancel()
         def cbCancelled(ignored):
             # Make sure there are no calls outstanding.
-            self.assertEquals([], clock.getDelayedCalls())
+            self.assertEqual([], clock.getDelayedCalls())
             # And make sure the call didn't somehow happen already.
             self.assertFalse(called)
         self.assertFailure(d, defer.CancelledError)

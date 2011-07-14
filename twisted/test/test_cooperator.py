@@ -85,7 +85,7 @@ class TestCooperator(unittest.TestCase):
             d.addCallback(self.cbIter)
             d.addErrback(self.ebIter)
             return d.addCallback(lambda result:
-                                 self.assertEquals(result, self.RESULT))
+                                 self.assertEqual(result, self.RESULT))
         return testwith(None).addCallback(lambda ign: testwith(defer.Deferred()))
 
 
@@ -104,8 +104,8 @@ class TestCooperator(unittest.TestCase):
         d.addErrback(self.ebIter)
         c.stop()
         def doasserts(result):
-            self.assertEquals(result, self.RESULT)
-            self.assertEquals(myiter.value, -1)
+            self.assertEqual(result, self.RESULT)
+            self.assertEqual(myiter.value, -1)
         d.addCallback(doasserts)
         return d
 
@@ -133,7 +133,7 @@ class TestCooperator(unittest.TestCase):
         d.addErrback(self.ebIter)
 
         return d.addCallback(
-            lambda result: self.assertEquals(result, self.RESULT))
+            lambda result: self.assertEqual(result, self.RESULT))
 
 
     def testUnexpectedError(self):
@@ -182,7 +182,7 @@ class TestCooperator(unittest.TestCase):
             tasks.append(c.coiterate(myiter(stuff)))
 
         return defer.DeferredList(tasks).addCallback(
-            lambda ign: self.assertEquals(tuple(L), sum(zip(*groupsOfThings), ())))
+            lambda ign: self.assertEqual(tuple(L), sum(zip(*groupsOfThings), ())))
 
 
     def testResourceExhaustion(self):
@@ -207,7 +207,7 @@ class TestCooperator(unittest.TestCase):
         c._tick()
         c.stop()
         self.failUnless(_TPF.stopped)
-        self.assertEquals(output, range(10))
+        self.assertEqual(output, range(10))
 
 
     def testCallbackReCoiterate(self):
@@ -371,20 +371,20 @@ class RunStateTests(unittest.TestCase):
         """
         # first, sanity check
         self.scheduler.pump()
-        self.assertEquals(self.work, [1])
+        self.assertEqual(self.work, [1])
         self.scheduler.pump()
-        self.assertEquals(self.work, [1, 2])
+        self.assertEqual(self.work, [1, 2])
 
         # OK, now for real
         self.task.pause()
         self.scheduler.pump()
-        self.assertEquals(self.work, [1, 2])
+        self.assertEqual(self.work, [1, 2])
         self.task.resume()
         # Resuming itself shoult not do any work
-        self.assertEquals(self.work, [1, 2])
+        self.assertEqual(self.work, [1, 2])
         self.scheduler.pump()
         # But when the scheduler rolls around again...
-        self.assertEquals(self.work, [1, 2, 3])
+        self.assertEqual(self.work, [1, 2, 3])
 
 
     def test_resumeNotPaused(self):
@@ -407,19 +407,19 @@ class RunStateTests(unittest.TestCase):
         # pause once
         self.task.pause()
         self.scheduler.pump()
-        self.assertEquals(self.work, [])
+        self.assertEqual(self.work, [])
         # pause twice
         self.task.pause()
         self.scheduler.pump()
-        self.assertEquals(self.work, [])
+        self.assertEqual(self.work, [])
         # resume once (it shouldn't)
         self.task.resume()
         self.scheduler.pump()
-        self.assertEquals(self.work, [])
+        self.assertEqual(self.work, [])
         # resume twice (now it should go)
         self.task.resume()
         self.scheduler.pump()
-        self.assertEquals(self.work, [1])
+        self.assertEqual(self.work, [1])
 
 
     def test_pauseWhileDeferred(self):
@@ -431,20 +431,20 @@ class RunStateTests(unittest.TestCase):
         """
         self.deferNext()
         self.scheduler.pump()
-        self.assertEquals(len(self.work), 1)
+        self.assertEqual(len(self.work), 1)
         self.failUnless(isinstance(self.work[0], defer.Deferred))
         self.scheduler.pump()
-        self.assertEquals(len(self.work), 1)
+        self.assertEqual(len(self.work), 1)
         self.task.pause()
         self.scheduler.pump()
-        self.assertEquals(len(self.work), 1)
+        self.assertEqual(len(self.work), 1)
         self.task.resume()
         self.scheduler.pump()
-        self.assertEquals(len(self.work), 1)
+        self.assertEqual(len(self.work), 1)
         self.work[0].callback("STUFF!")
         self.scheduler.pump()
-        self.assertEquals(len(self.work), 2)
-        self.assertEquals(self.work[1], 2)
+        self.assertEqual(len(self.work), 2)
+        self.assertEqual(self.work[1], 2)
 
 
     def test_whenDone(self):
@@ -481,14 +481,14 @@ class RunStateTests(unittest.TestCase):
         self.stopNext()
         self.scheduler.pump()
 
-        self.assertEquals(len(results1), 1)
-        self.assertEquals(len(results2), 1)
+        self.assertEqual(len(results1), 1)
+        self.assertEqual(len(results2), 1)
 
         self.assertIdentical(results1[0], self.task._iterator)
         self.assertIdentical(results2[0], self.task._iterator)
 
-        self.assertEquals(final1, [1])
-        self.assertEquals(final2, [2])
+        self.assertEqual(final1, [1])
+        self.assertEqual(final2, [2])
 
 
     def test_whenDoneError(self):
@@ -502,8 +502,8 @@ class RunStateTests(unittest.TestCase):
         deferred1.addErrback(results.append)
         self.dieNext()
         self.scheduler.pump()
-        self.assertEquals(len(results), 1)
-        self.assertEquals(results[0].check(UnhandledException), UnhandledException)
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].check(UnhandledException), UnhandledException)
 
 
     def test_whenDoneStop(self):
@@ -516,8 +516,8 @@ class RunStateTests(unittest.TestCase):
         errors = []
         deferred1.addErrback(errors.append)
         self.task.stop()
-        self.assertEquals(len(errors), 1)
-        self.assertEquals(errors[0].check(task.TaskStopped), task.TaskStopped)
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0].check(task.TaskStopped), task.TaskStopped)
 
 
     def test_whenDoneAlreadyDone(self):
@@ -529,7 +529,7 @@ class RunStateTests(unittest.TestCase):
         self.scheduler.pump()
         results = []
         self.task.whenDone().addCallback(results.append)
-        self.assertEquals(results, [self.task._iterator])
+        self.assertEqual(results, [self.task._iterator])
 
 
     def test_stopStops(self):
@@ -540,12 +540,12 @@ class RunStateTests(unittest.TestCase):
         """
         self.task.stop()
         self.scheduler.pump()
-        self.assertEquals(len(self.work), 0)
+        self.assertEqual(len(self.work), 0)
         self.assertRaises(task.TaskStopped, self.task.stop)
         self.assertRaises(task.TaskStopped, self.task.pause)
         # Sanity check - it's still not scheduled, is it?
         self.scheduler.pump()
-        self.assertEquals(self.work, [])
+        self.assertEqual(self.work, [])
 
 
     def test_pauseStopResume(self):
@@ -558,7 +558,7 @@ class RunStateTests(unittest.TestCase):
         self.task.stop()
         self.task.resume()
         self.scheduler.pump()
-        self.assertEquals(self.work, [])
+        self.assertEqual(self.work, [])
 
 
     def test_stopDeferred(self):
@@ -571,7 +571,7 @@ class RunStateTests(unittest.TestCase):
         self.deferNext()
         self.scheduler.pump()
         d = self.work.pop()
-        self.assertEquals(self.task._pauseCount, 1)
+        self.assertEqual(self.task._pauseCount, 1)
         results = []
         d.addBoth(results.append)
         self.scheduler.pump()
@@ -583,9 +583,9 @@ class RunStateTests(unittest.TestCase):
         # unhandled error that will be logged.  The value is None, rather than
         # our test value, 7, because this Deferred is returned to and consumed
         # by the cooperator code.  Its callback therefore has no contract.
-        self.assertEquals(results, [None])
+        self.assertEqual(results, [None])
         # But more importantly, no further work should have happened.
-        self.assertEquals(self.work, [])
+        self.assertEqual(self.work, [])
 
 
     def test_stopExhausted(self):
@@ -628,7 +628,7 @@ class RunStateTests(unittest.TestCase):
         self.task.whenDone().addCallback(stopit)
         self.stopNext()
         self.scheduler.pump()
-        self.assertEquals(callbackPhases, [self.task._iterator, "done"])
+        self.assertEqual(callbackPhases, [self.task._iterator, "done"])
 
 
 

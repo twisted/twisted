@@ -35,9 +35,9 @@ class MonkeyPatcherTest(unittest.TestCase):
 
         # We can't assert that all state is unchanged, but at least we can
         # check our test object.
-        self.assertEquals(self.originalObject.foo, self.testObject.foo)
-        self.assertEquals(self.originalObject.bar, self.testObject.bar)
-        self.assertEquals(self.originalObject.baz, self.testObject.baz)
+        self.assertEqual(self.originalObject.foo, self.testObject.foo)
+        self.assertEqual(self.originalObject.bar, self.testObject.bar)
+        self.assertEqual(self.originalObject.baz, self.testObject.baz)
 
 
     def test_constructWithPatches(self):
@@ -48,9 +48,9 @@ class MonkeyPatcherTest(unittest.TestCase):
         patcher = MonkeyPatcher((self.testObject, 'foo', 'haha'),
                                 (self.testObject, 'bar', 'hehe'))
         patcher.patch()
-        self.assertEquals('haha', self.testObject.foo)
-        self.assertEquals('hehe', self.testObject.bar)
-        self.assertEquals(self.originalObject.baz, self.testObject.baz)
+        self.assertEqual('haha', self.testObject.foo)
+        self.assertEqual('hehe', self.testObject.bar)
+        self.assertEqual(self.originalObject.baz, self.testObject.baz)
 
 
     def test_patchExisting(self):
@@ -60,7 +60,7 @@ class MonkeyPatcherTest(unittest.TestCase):
         """
         self.monkeyPatcher.addPatch(self.testObject, 'foo', 'haha')
         self.monkeyPatcher.patch()
-        self.assertEquals(self.testObject.foo, 'haha')
+        self.assertEqual(self.testObject.foo, 'haha')
 
 
     def test_patchNonExisting(self):
@@ -80,9 +80,9 @@ class MonkeyPatcherTest(unittest.TestCase):
         self.monkeyPatcher.addPatch(self.testObject, 'foo', 'blah')
         self.monkeyPatcher.addPatch(self.testObject, 'foo', 'BLAH')
         self.monkeyPatcher.patch()
-        self.assertEquals(self.testObject.foo, 'BLAH')
+        self.assertEqual(self.testObject.foo, 'BLAH')
         self.monkeyPatcher.restore()
-        self.assertEquals(self.testObject.foo, self.originalObject.foo)
+        self.assertEqual(self.testObject.foo, self.originalObject.foo)
 
 
     def test_restoreTwiceIsANoOp(self):
@@ -92,9 +92,9 @@ class MonkeyPatcherTest(unittest.TestCase):
         self.monkeyPatcher.addPatch(self.testObject, 'foo', 'blah')
         self.monkeyPatcher.patch()
         self.monkeyPatcher.restore()
-        self.assertEquals(self.testObject.foo, self.originalObject.foo)
+        self.assertEqual(self.testObject.foo, self.originalObject.foo)
         self.monkeyPatcher.restore()
-        self.assertEquals(self.testObject.foo, self.originalObject.foo)
+        self.assertEqual(self.testObject.foo, self.originalObject.foo)
 
 
     def test_runWithPatchesDecoration(self):
@@ -109,8 +109,8 @@ class MonkeyPatcherTest(unittest.TestCase):
             return 'foo'
 
         result = self.monkeyPatcher.runWithPatches(f, 1, 2, c=10)
-        self.assertEquals('foo', result)
-        self.assertEquals([(1, 2, 10)], log)
+        self.assertEqual('foo', result)
+        self.assertEqual([(1, 2, 10)], log)
 
 
     def test_repeatedRunWithPatches(self):
@@ -124,10 +124,10 @@ class MonkeyPatcherTest(unittest.TestCase):
 
         self.monkeyPatcher.addPatch(self.testObject, 'foo', 'haha')
         result = self.monkeyPatcher.runWithPatches(f)
-        self.assertEquals(
+        self.assertEqual(
             ('haha', self.originalObject.bar, self.originalObject.baz), result)
         result = self.monkeyPatcher.runWithPatches(f)
-        self.assertEquals(
+        self.assertEqual(
             ('haha', self.originalObject.bar, self.originalObject.baz),
             result)
 
@@ -138,9 +138,9 @@ class MonkeyPatcherTest(unittest.TestCase):
         has executed.
         """
         self.monkeyPatcher.addPatch(self.testObject, 'foo', 'haha')
-        self.assertEquals(self.originalObject.foo, self.testObject.foo)
+        self.assertEqual(self.originalObject.foo, self.testObject.foo)
         self.monkeyPatcher.runWithPatches(lambda: None)
-        self.assertEquals(self.originalObject.foo, self.testObject.foo)
+        self.assertEqual(self.originalObject.foo, self.testObject.foo)
 
 
     def test_runWithPatchesRestoresOnException(self):
@@ -149,13 +149,13 @@ class MonkeyPatcherTest(unittest.TestCase):
         raises an exception.
         """
         def _():
-            self.assertEquals(self.testObject.foo, 'haha')
-            self.assertEquals(self.testObject.bar, 'blahblah')
+            self.assertEqual(self.testObject.foo, 'haha')
+            self.assertEqual(self.testObject.bar, 'blahblah')
             raise RuntimeError, "Something went wrong!"
 
         self.monkeyPatcher.addPatch(self.testObject, 'foo', 'haha')
         self.monkeyPatcher.addPatch(self.testObject, 'bar', 'blahblah')
 
         self.assertRaises(RuntimeError, self.monkeyPatcher.runWithPatches, _)
-        self.assertEquals(self.testObject.foo, self.originalObject.foo)
-        self.assertEquals(self.testObject.bar, self.originalObject.bar)
+        self.assertEqual(self.testObject.foo, self.originalObject.foo)
+        self.assertEqual(self.testObject.bar, self.originalObject.bar)

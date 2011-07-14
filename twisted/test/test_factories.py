@@ -99,12 +99,12 @@ class ReconnectingFactoryTestCase(TestCase):
 
 
     def _testStopTrying_1(self, res, f, c):
-        self.assertEquals(len(f.allMessages), 2,
+        self.assertEqual(len(f.allMessages), 2,
                           "not enough messages -- %s" % f.allMessages)
-        self.assertEquals(f.connections, 2,
+        self.assertEqual(f.connections, 2,
                           "Number of successful connections incorrect %d" %
                           f.connections)
-        self.assertEquals(f.allMessages, [Out.msgs] * 2)
+        self.assertEqual(f.allMessages, [Out.msgs] * 2)
         self.failIf(c.continueTrying, "stopTrying never called or ineffective")
 
 
@@ -194,4 +194,4 @@ class ReconnectingFactoryTestCase(TestCase):
         factory.clock = clock
 
         factory.clientConnectionLost(FakeConnector(), None)
-        self.assertEquals(len(clock.calls), 1)
+        self.assertEqual(len(clock.calls), 1)

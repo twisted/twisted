@@ -32,7 +32,7 @@ class SUXTest(TestCase):
         ms = Sux0r()
         ms.connectionMade()
         ms.dataReceived(s)
-        self.failUnlessEqual(len(ms.getTagStarts()),3)
+        self.assertEqual(len(ms.getTagStarts()),3)
 
 
 class MicroDOMTest(TestCase):
@@ -44,7 +44,7 @@ class MicroDOMTest(TestCase):
         """
         s = "Hi orders! <br>Well. <br>"
         d = microdom.parseString(s, beExtremelyLenient=True)
-        self.assertEquals(d.firstChild().toxml(),
+        self.assertEqual(d.firstChild().toxml(),
                           '<html>Hi orders! <br />Well. <br /></html>')
 
     def test_trailingTextDropping(self):
@@ -54,7 +54,7 @@ class MicroDOMTest(TestCase):
         """
         s = "<br>Hi orders!"
         d = microdom.parseString(s, beExtremelyLenient=True)
-        self.assertEquals(d.firstChild().toxml(),
+        self.assertEqual(d.firstChild().toxml(),
                           '<html><br />Hi orders!</html>')
 
 
@@ -65,7 +65,7 @@ class MicroDOMTest(TestCase):
         """
         s = "Hi orders!"
         d = microdom.parseString(s, beExtremelyLenient=True)
-        self.assertEquals(d.firstChild().toxml(),
+        self.assertEqual(d.firstChild().toxml(),
                           "<html>Hi orders!</html>")
 
 
@@ -76,7 +76,7 @@ class MicroDOMTest(TestCase):
         """
         s = "Hi<br> orders!"
         d = microdom.parseString(s, beExtremelyLenient=True)
-        self.assertEquals(d.firstChild().toxml(),
+        self.assertEqual(d.firstChild().toxml(),
                           "<html>Hi<br /> orders!</html>")
 
 
@@ -96,7 +96,7 @@ class MicroDOMTest(TestCase):
         d = microdom.parseString(s, beExtremelyLenient=1)
         l = domhelpers.findNodesNamed(d.documentElement, 'a')
         n = domhelpers.gatherTextNodes(l[0],1).replace('&nbsp;',' ')
-        self.assertEquals(n.find('insane'), -1)
+        self.assertEqual(n.find('insane'), -1)
 
 
     def test_lenientParenting(self):
@@ -148,7 +148,7 @@ class MicroDOMTest(TestCase):
         </test>
         """
         d = microdom.parseString(s)
-        self.assertEquals(
+        self.assertEqual(
             domhelpers.gatherTextNodes(d.documentElement).strip() ,'test')
 
     def testAwfulTagSoup(self):
@@ -175,7 +175,7 @@ alert("I hate you");
         """
         d = microdom.parseString(s, beExtremelyLenient=1)
         l = domhelpers.findNodesNamed(d.documentElement, 'blink')
-        self.assertEquals(len(l), 1)
+        self.assertEqual(len(l), 1)
 
     def testScriptLeniency(self):
         s = """
@@ -186,9 +186,9 @@ alert("I hate you");
         <script /><script></script>
         """
         d = microdom.parseString(s, beExtremelyLenient=1)
-        self.assertEquals(d.firstChild().firstChild().firstChild().data,
+        self.assertEqual(d.firstChild().firstChild().firstChild().data,
                           "(foo < bar) and (bar > foo)")
-        self.assertEquals(
+        self.assertEqual(
             d.firstChild().getElementsByTagName("script")[1].firstChild().data,
             "foo </scrip bar ")
 
@@ -196,15 +196,15 @@ alert("I hate you");
         # if there is comment or CDATA in script, the autoquoting in bEL mode
         # should not happen
         s = """<script><!-- lalal --></script>"""
-        self.assertEquals(
+        self.assertEqual(
             microdom.parseString(s, beExtremelyLenient=1).firstChild().toxml(), s)
         s = """<script><![CDATA[lalal]]></script>"""
-        self.assertEquals(
+        self.assertEqual(
             microdom.parseString(s, beExtremelyLenient=1).firstChild().toxml(), s)
         s = """<script> // <![CDATA[
         lalal
         //]]></script>"""
-        self.assertEquals(
+        self.assertEqual(
             microdom.parseString(s, beExtremelyLenient=1).firstChild().toxml(), s)
 
     def testPreserveCase(self):
@@ -222,7 +222,7 @@ alert("I hate you");
         # for the documents to be equivalent (i.e. <b></b> to <b/>),
         # however this assertion tests preserving case for start and
         # end tags while still matching stuff like <bOrk></BoRk>
-        self.assertEquals(d.documentElement.toxml(), s)
+        self.assertEqual(d.documentElement.toxml(), s)
         self.assert_(d.isEqualToDocument(d2), "%r != %r" % (d.toxml(), d2.toxml()))
         self.assert_(d2.isEqualToDocument(d3), "%r != %r" % (d2.toxml(), d3.toxml()))
         # caseInsensitive=0 on the left, NOT perserveCase=1 on the right
@@ -235,15 +235,15 @@ alert("I hate you");
         s = '<test a="a" b=\'b\' />'
         d = microdom.parseString(s)
         e = d.documentElement
-        self.assertEquals(e.getAttribute('a'), 'a')
-        self.assertEquals(e.getAttribute('b'), 'b')
+        self.assertEqual(e.getAttribute('a'), 'a')
+        self.assertEqual(e.getAttribute('b'), 'b')
 
     def testLinebreaks(self):
         s = '<test \na="a"\n\tb="#b" />'
         d = microdom.parseString(s)
         e = d.documentElement
-        self.assertEquals(e.getAttribute('a'), 'a')
-        self.assertEquals(e.getAttribute('b'), '#b')
+        self.assertEqual(e.getAttribute('a'), 'a')
+        self.assertEqual(e.getAttribute('b'), '#b')
 
     def testMismatchedTags(self):
         for s in '<test>', '<test> </tset>', '</test>':
@@ -253,29 +253,29 @@ alert("I hate you");
         s = "<bar><!--<foo />--></bar>"
         d = microdom.parseString(s)
         e = d.documentElement
-        self.assertEquals(e.nodeName, "bar")
+        self.assertEqual(e.nodeName, "bar")
         c = e.childNodes[0]
         self.assert_(isinstance(c, microdom.Comment))
-        self.assertEquals(c.value, "<foo />")
+        self.assertEqual(c.value, "<foo />")
         c2 = c.cloneNode()
         self.assert_(c is not c2)
-        self.assertEquals(c2.toxml(), "<!--<foo />-->")
+        self.assertEqual(c2.toxml(), "<!--<foo />-->")
 
     def testText(self):
         d = microdom.parseString("<bar>xxxx</bar>").documentElement
         text = d.childNodes[0]
         self.assert_(isinstance(text, microdom.Text))
-        self.assertEquals(text.value, "xxxx")
+        self.assertEqual(text.value, "xxxx")
         clone = text.cloneNode()
         self.assert_(clone is not text)
-        self.assertEquals(clone.toxml(), "xxxx")
+        self.assertEqual(clone.toxml(), "xxxx")
 
     def testEntities(self):
         nodes = microdom.parseString("<b>&amp;&#12AB;</b>").documentElement.childNodes
-        self.assertEquals(len(nodes), 2)
-        self.assertEquals(nodes[0].data, "&amp;")
-        self.assertEquals(nodes[1].data, "&#12AB;")
-        self.assertEquals(nodes[0].cloneNode().toxml(), "&amp;")
+        self.assertEqual(len(nodes), 2)
+        self.assertEqual(nodes[0].data, "&amp;")
+        self.assertEqual(nodes[1].data, "&#12AB;")
+        self.assertEqual(nodes[0].cloneNode().toxml(), "&amp;")
         for n in nodes:
             self.assert_(isinstance(n, microdom.EntityReference))
 
@@ -283,40 +283,40 @@ alert("I hate you");
         s = '<x><![CDATA[</x>\r\n & foo]]></x>'
         cdata = microdom.parseString(s).documentElement.childNodes[0]
         self.assert_(isinstance(cdata, microdom.CDATASection))
-        self.assertEquals(cdata.data, "</x>\r\n & foo")
-        self.assertEquals(cdata.cloneNode().toxml(), "<![CDATA[</x>\r\n & foo]]>")
+        self.assertEqual(cdata.data, "</x>\r\n & foo")
+        self.assertEqual(cdata.cloneNode().toxml(), "<![CDATA[</x>\r\n & foo]]>")
 
     def testSingletons(self):
         s = "<foo><b/><b /><b\n/></foo>"
         s2 = "<foo><b/><b/><b/></foo>"
         nodes = microdom.parseString(s).documentElement.childNodes
         nodes2 = microdom.parseString(s2).documentElement.childNodes
-        self.assertEquals(len(nodes), 3)
+        self.assertEqual(len(nodes), 3)
         for (n, n2) in zip(nodes, nodes2):
             self.assert_(isinstance(n, microdom.Element))
-            self.assertEquals(n.nodeName, "b")
+            self.assertEqual(n.nodeName, "b")
             self.assert_(n.isEqualToNode(n2))
 
     def testAttributes(self):
         s = '<foo a="b" />'
         node = microdom.parseString(s).documentElement
 
-        self.assertEquals(node.getAttribute("a"), "b")
-        self.assertEquals(node.getAttribute("c"), None)
+        self.assertEqual(node.getAttribute("a"), "b")
+        self.assertEqual(node.getAttribute("c"), None)
         self.assert_(node.hasAttribute("a"))
         self.assert_(not node.hasAttribute("c"))
         a = node.getAttributeNode("a")
-        self.assertEquals(a.value, "b")
+        self.assertEqual(a.value, "b")
 
         node.setAttribute("foo", "bar")
-        self.assertEquals(node.getAttribute("foo"), "bar")
+        self.assertEqual(node.getAttribute("foo"), "bar")
 
     def testChildren(self):
         s = "<foo><bar /><baz /><bax>foo</bax></foo>"
         d = microdom.parseString(s).documentElement
-        self.assertEquals([n.nodeName for n in d.childNodes], ["bar", "baz", "bax"])
-        self.assertEquals(d.lastChild().nodeName, "bax")
-        self.assertEquals(d.firstChild().nodeName, "bar")
+        self.assertEqual([n.nodeName for n in d.childNodes], ["bar", "baz", "bax"])
+        self.assertEqual(d.lastChild().nodeName, "bax")
+        self.assertEqual(d.firstChild().nodeName, "bar")
         self.assert_(d.hasChildNodes())
         self.assert_(not d.firstChild().hasChildNodes())
 
@@ -331,23 +331,23 @@ alert("I hate you");
         d.appendChild(d.cloneNode())
         d.setAttribute("a", "b")
         child = d.childNodes[0]
-        self.assertEquals(child.getAttribute("a"), None)
-        self.assertEquals(child.nodeName, "foo")
+        self.assertEqual(child.getAttribute("a"), None)
+        self.assertEqual(child.nodeName, "foo")
 
         d.insertBefore(microdom.Element("bar"), child)
-        self.assertEquals(d.childNodes[0].nodeName, "bar")
-        self.assertEquals(d.childNodes[1], child)
+        self.assertEqual(d.childNodes[0].nodeName, "bar")
+        self.assertEqual(d.childNodes[1], child)
         for n in d.childNodes:
-            self.assertEquals(n.parentNode, d)
+            self.assertEqual(n.parentNode, d)
         self.assert_(d.isEqualToNode(d1))
 
         d.removeChild(child)
-        self.assertEquals(len(d.childNodes), 1)
-        self.assertEquals(d.childNodes[0].nodeName, "bar")
+        self.assertEqual(len(d.childNodes), 1)
+        self.assertEqual(d.childNodes[0].nodeName, "bar")
 
         t = microdom.Text("foo")
         d.replaceChild(t, d.firstChild())
-        self.assertEquals(d.firstChild(), t)
+        self.assertEqual(d.firstChild(), t)
         self.assert_(d.isEqualToNode(d2))
 
 
@@ -372,22 +372,22 @@ alert("I hate you");
         d3 = microdom.parseString(s2, caseInsensitive=1, preserveCase=1)
 
         root = d.documentElement
-        self.assertEquals(root.firstChild(), d.getElementById('me'))
-        self.assertEquals(d.getElementsByTagName("foo"),
+        self.assertEqual(root.firstChild(), d.getElementById('me'))
+        self.assertEqual(d.getElementsByTagName("foo"),
                           [root, root.lastChild().firstChild()])
 
         root = d2.documentElement
-        self.assertEquals(root.firstChild(), d2.getElementById('me'))
-        self.assertEquals(d2.getElementsByTagName('fOo'), [root])
-        self.assertEquals(d2.getElementsByTagName('fOO'),
+        self.assertEqual(root.firstChild(), d2.getElementById('me'))
+        self.assertEqual(d2.getElementsByTagName('fOo'), [root])
+        self.assertEqual(d2.getElementsByTagName('fOO'),
                           [root.lastChild().firstChild()])
-        self.assertEquals(d2.getElementsByTagName('foo'), [])
+        self.assertEqual(d2.getElementsByTagName('foo'), [])
 
         root = d3.documentElement
-        self.assertEquals(root.firstChild(), d3.getElementById('me'))
-        self.assertEquals(d3.getElementsByTagName('FOO'),
+        self.assertEqual(root.firstChild(), d3.getElementById('me'))
+        self.assertEqual(d3.getElementsByTagName('FOO'),
                           [root, root.lastChild().firstChild()])
-        self.assertEquals(d3.getElementsByTagName('fOo'),
+        self.assertEqual(d3.getElementsByTagName('fOo'),
                           [root, root.lastChild().firstChild()])
 
     def testDoctype(self):
@@ -397,9 +397,9 @@ alert("I hate you");
         s2 = '<foo/>'
         d = microdom.parseString(s)
         d2 = microdom.parseString(s2)
-        self.assertEquals(d.doctype,
+        self.assertEqual(d.doctype,
                           'foo PUBLIC "baz" "http://www.example.com/example.dtd"')
-        self.assertEquals(d.toxml(), s)
+        self.assertEqual(d.toxml(), s)
         self.failIf(d.isEqualToDocument(d2))
         self.failUnless(d.documentElement.isEqualToNode(d2.documentElement))
 
@@ -415,7 +415,7 @@ alert("I hate you");
             d = microdom.parseString(s, caseInsensitive=0)
             d2 = microdom.parseString(out, caseInsensitive=0)
             testOut = d.documentElement.toxml()
-            self.assertEquals(out, testOut)
+            self.assertEqual(out, testOut)
             self.assert_(d.isEqualToDocument(d2))
 
     def testErrors(self):
@@ -436,13 +436,13 @@ alert("I hate you");
         out = microdom.parseString(s).documentElement.toxml()
         self.assertRaises(microdom.MismatchedTags, microdom.parseString,
             s, caseInsensitive=0)
-        self.assertEquals(out, s2)
+        self.assertEqual(out, s2)
         self.failUnless(d.isEqualToDocument(d2))
         self.failUnless(d.isEqualToDocument(d3))
         self.failUnless(d4.documentElement.hasAttribute('a'))
         self.failIf(d6.documentElement.hasAttribute('a'))
-        self.assertEquals(d4.documentElement.toxml(), '<foo A="b">x</foo>')
-        self.assertEquals(d5.documentElement.toxml(), '<foo a="b">x</foo>')
+        self.assertEqual(d4.documentElement.toxml(), '<foo A="b">x</foo>')
+        self.assertEqual(d5.documentElement.toxml(), '<foo a="b">x</foo>')
     def testEatingWhitespace(self):
         s = """<hello>
         </hello>"""
@@ -460,31 +460,31 @@ alert("I hate you");
                      ("&hello monkey", "&amp;hello monkey")]:
             d = microdom.parseString("%s<pre>%s</pre>"
                                      % (prefix, i), beExtremelyLenient=1)
-            self.assertEquals(d.documentElement.toxml(), "<pre>%s</pre>" % o)
+            self.assertEqual(d.documentElement.toxml(), "<pre>%s</pre>" % o)
         # non-space preserving
         d = microdom.parseString("<t>hello & there</t>", beExtremelyLenient=1)
-        self.assertEquals(d.documentElement.toxml(), "<t>hello &amp; there</t>")
+        self.assertEqual(d.documentElement.toxml(), "<t>hello &amp; there</t>")
 
     def testInsensitiveLenient(self):
         # testing issue #537
         d = microdom.parseString(
             "<?xml version='1.0'?><bar><xA><y>c</Xa> <foo></bar>",
             beExtremelyLenient=1)
-        self.assertEquals(d.documentElement.firstChild().toxml(), "<xa><y>c</y></xa>")
+        self.assertEqual(d.documentElement.firstChild().toxml(), "<xa><y>c</y></xa>")
 
     def testLaterCloserSimple(self):
         s = "<ul><li>foo<li>bar<li>baz</ul>"
         d = microdom.parseString(s, beExtremelyLenient=1)
         expected = "<ul><li>foo</li><li>bar</li><li>baz</li></ul>"
         actual = d.documentElement.toxml()
-        self.assertEquals(expected, actual)
+        self.assertEqual(expected, actual)
 
     def testLaterCloserCaseInsensitive(self):
         s = "<DL><p><DT>foo<DD>bar</DL>"
         d = microdom.parseString(s, beExtremelyLenient=1)
         expected = "<dl><p></p><dt>foo</dt><dd>bar</dd></dl>"
         actual = d.documentElement.toxml()
-        self.assertEquals(expected, actual)
+        self.assertEqual(expected, actual)
 
     def testLaterCloserTable(self):
         s = ("<table>"
@@ -499,7 +499,7 @@ alert("I hate you");
                     "</table>")
         d = microdom.parseString(s, beExtremelyLenient=1)
         actual = d.documentElement.toxml()
-        self.assertEquals(expected, actual)
+        self.assertEqual(expected, actual)
     testLaterCloserTable.todo = "Table parsing needs to be fixed."
 
     def testLaterCloserDL(self):
@@ -513,7 +513,7 @@ alert("I hate you");
                     "</dl>")
         d = microdom.parseString(s, beExtremelyLenient=1)
         actual = d.documentElement.toxml()
-        self.assertEquals(expected, actual)
+        self.assertEqual(expected, actual)
 
     def testLaterCloserDL2(self):
         s = ("<dl>"
@@ -526,7 +526,7 @@ alert("I hate you");
                     "</dl>")
         d = microdom.parseString(s, beExtremelyLenient=1)
         actual = d.documentElement.toxml()
-        self.assertEquals(expected, actual)
+        self.assertEqual(expected, actual)
 
     testLaterCloserDL2.todo = "unclosed <p> messes it up."
 
@@ -564,7 +564,7 @@ alert("I hate you");
         de=j3.documentElement
         de.appendChild(div)
         de.appendChild(j3.createComment(u'\u221a'))
-        self.assertEquals(j3.toxml(), hdr+
+        self.assertEqual(j3.toxml(), hdr+
                           u'<foo><div>\u221a</div><!--\u221a--></foo>'.encode('utf8'))
 
     def testNamedChildren(self):
@@ -576,7 +576,7 @@ alert("I hate you");
         for t in tests.keys():
             node = microdom.parseString(t).documentElement
             result = domhelpers.namedChildren(node, 'bar')
-            self.assertEquals(len(result), tests[t])
+            self.assertEqual(len(result), tests[t])
             if result:
                 self.assert_(hasattr(result[0], 'tagName'))
 
@@ -585,13 +585,13 @@ alert("I hate you");
         node = microdom.parseString(s).documentElement
         clone = node.cloneNode(deep=1)
         self.failIfEquals(node, clone)
-        self.assertEquals(len(node.childNodes), len(clone.childNodes))
+        self.assertEqual(len(node.childNodes), len(clone.childNodes))
         c1, c2 = node.firstChild(), clone.firstChild()
         self.failIfEquals(c1, c2)
-        self.assertEquals(len(c1.childNodes), len(c2.childNodes))
+        self.assertEqual(len(c1.childNodes), len(c2.childNodes))
         self.failIfEquals(c1.firstChild(), c2.firstChild())
-        self.assertEquals(s, clone.toxml())
-        self.assertEquals(node.namespace, clone.namespace)
+        self.assertEqual(s, clone.toxml())
+        self.assertEqual(node.namespace, clone.namespace)
 
     def testCloneDocument(self):
         s = ('<?xml version="1.0"?>'
@@ -601,8 +601,8 @@ alert("I hate you");
         node = microdom.parseString(s)
         clone = node.cloneNode(deep=1)
         self.failIfEquals(node, clone)
-        self.assertEquals(len(node.childNodes), len(clone.childNodes))
-        self.assertEquals(s, clone.toxml())
+        self.assertEqual(len(node.childNodes), len(clone.childNodes))
+        self.assertEqual(s, clone.toxml())
 
         self.failUnless(clone.isEqualToDocument(node))
         self.failUnless(node.isEqualToDocument(clone))
@@ -618,7 +618,7 @@ alert("I hate you");
         b.add("bar", c="y")
 
         s = '<p>foo<b a="c"><foo z="foo"></foo><foo></foo><bar c="y"></bar></b></p>'
-        self.assertEquals(s, n.toxml())
+        self.assertEqual(s, n.toxml())
 
     def testDict(self):
         n = microdom.Element("p")
@@ -629,8 +629,8 @@ alert("I hate you");
         raw = "&'some \"stuff\"', <what up?>"
         cooked = "&amp;'some &quot;stuff&quot;', &lt;what up?&gt;"
         esc1 = microdom.escape(raw)
-        self.assertEquals(esc1, cooked)
-        self.assertEquals(microdom.unescape(esc1), raw)
+        self.assertEqual(esc1, cooked)
+        self.assertEqual(microdom.unescape(esc1), raw)
 
     def testNamespaces(self):
         s = '''
@@ -645,20 +645,20 @@ alert("I hate you");
         d = microdom.parseString(s)
         # at least make sure it doesn't traceback
         s2 = d.toprettyxml()
-        self.assertEquals(d.documentElement.namespace,
+        self.assertEqual(d.documentElement.namespace,
                           "base")
-        self.assertEquals(d.documentElement.getElementsByTagName("y")[0].namespace,
+        self.assertEqual(d.documentElement.getElementsByTagName("y")[0].namespace,
                           "base")
-        self.assertEquals(
+        self.assertEqual(
             d.documentElement.getElementsByTagName("y")[1].getAttributeNS('base','q'),
             '1')
 
         d2 = microdom.parseString(s2)
-        self.assertEquals(d2.documentElement.namespace,
+        self.assertEqual(d2.documentElement.namespace,
                           "base")
-        self.assertEquals(d2.documentElement.getElementsByTagName("y")[0].namespace,
+        self.assertEqual(d2.documentElement.getElementsByTagName("y")[0].namespace,
                           "base")
-        self.assertEquals(
+        self.assertEqual(
             d2.documentElement.getElementsByTagName("y")[1].getAttributeNS('base','q'),
             '1')
 
@@ -669,7 +669,7 @@ alert("I hate you");
         s1 = ('<?xml version="1.0"?><html xmlns="http://www.w3.org/TR/REC-html40">'
               '<body xmlns=""></body></html>')
         s2 = microdom.parseString(s1).toxml()
-        self.assertEquals(s1, s2)
+        self.assertEqual(s1, s2)
 
     def testNamespaceInheritance(self):
         """
@@ -680,7 +680,7 @@ alert("I hate you");
         child = microdom.Element('ol')
         parent = microdom.Element('div', namespace='http://www.w3.org/1999/xhtml')
         parent.childNodes = [child]
-        self.assertEquals(parent.toxml(),
+        self.assertEqual(parent.toxml(),
                           '<div xmlns="http://www.w3.org/1999/xhtml"><ol></ol></div>')
 
     def test_prefixedTags(self):
@@ -723,7 +723,7 @@ alert("I hate you");
             '</root>')
 
         xmlOut = document.toxml()
-        self.assertEquals(xmlOut, xmlOk)
+        self.assertEqual(xmlOut, xmlOk)
 
 
     def test_prefixPropagation(self):
@@ -783,7 +783,7 @@ alert("I hate you");
             '</root>'
         )
         xmlOut = document.toxml()
-        self.assertEquals(xmlOut, xmlOk)
+        self.assertEqual(xmlOut, xmlOk)
 
 
 
@@ -802,7 +802,7 @@ class TestBrokenHTML(TestCase):
         """
         output = microdom.parseString(input,
                                       beExtremelyLenient=beExtremelyLenient)
-        self.assertEquals(output.documentElement.toxml(), expected)
+        self.assertEqual(output.documentElement.toxml(), expected)
 
 
     def test_brokenAttributeName(self):

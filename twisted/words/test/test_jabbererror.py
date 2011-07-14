@@ -24,7 +24,7 @@ class BaseErrorTest(unittest.TestCase):
         e = error.BaseError('feature-not-implemented')
         element = e.getElement()
         self.assertIdentical(element.uri, None)
-        self.assertEquals(len(element.children), 1)
+        self.assertEqual(len(element.children), 1)
 
     def test_getElementText(self):
         """
@@ -32,9 +32,9 @@ class BaseErrorTest(unittest.TestCase):
         """
         e = error.BaseError('feature-not-implemented', 'text')
         element = e.getElement()
-        self.assertEquals(len(element.children), 2)
-        self.assertEquals(unicode(element.text), 'text')
-        self.assertEquals(element.text.getAttribute((NS_XML, 'lang')), None)
+        self.assertEqual(len(element.children), 2)
+        self.assertEqual(unicode(element.text), 'text')
+        self.assertEqual(element.text.getAttribute((NS_XML, 'lang')), None)
 
     def test_getElementTextLang(self):
         """
@@ -42,9 +42,9 @@ class BaseErrorTest(unittest.TestCase):
         """
         e = error.BaseError('feature-not-implemented', 'text', 'en_US')
         element = e.getElement()
-        self.assertEquals(len(element.children), 2)
-        self.assertEquals(unicode(element.text), 'text')
-        self.assertEquals(element.text[(NS_XML, 'lang')], 'en_US')
+        self.assertEqual(len(element.children), 2)
+        self.assertEqual(unicode(element.text), 'text')
+        self.assertEqual(element.text[(NS_XML, 'lang')], 'en_US')
 
     def test_getElementAppCondition(self):
         """
@@ -53,8 +53,8 @@ class BaseErrorTest(unittest.TestCase):
         ac = domish.Element(('testns', 'myerror'))
         e = error.BaseError('feature-not-implemented', appCondition=ac)
         element = e.getElement()
-        self.assertEquals(len(element.children), 2)
-        self.assertEquals(element.myerror, ac)
+        self.assertEqual(len(element.children), 2)
+        self.assertEqual(element.myerror, ac)
 
 class StreamErrorTest(unittest.TestCase):
 
@@ -64,7 +64,7 @@ class StreamErrorTest(unittest.TestCase):
         """
         e = error.StreamError('feature-not-implemented')
         element = e.getElement()
-        self.assertEquals(element.uri, NS_STREAMS)
+        self.assertEqual(element.uri, NS_STREAMS)
 
     def test_getElementConditionNamespace(self):
         """
@@ -72,7 +72,7 @@ class StreamErrorTest(unittest.TestCase):
         """
         e = error.StreamError('feature-not-implemented')
         element = e.getElement()
-        self.assertEquals(NS_XMPP_STREAMS, getattr(element, 'feature-not-implemented').uri)
+        self.assertEqual(NS_XMPP_STREAMS, getattr(element, 'feature-not-implemented').uri)
 
     def test_getElementTextNamespace(self):
         """
@@ -80,7 +80,7 @@ class StreamErrorTest(unittest.TestCase):
         """
         e = error.StreamError('feature-not-implemented', 'text')
         element = e.getElement()
-        self.assertEquals(NS_XMPP_STREAMS, element.text.uri)
+        self.assertEqual(NS_XMPP_STREAMS, element.text.uri)
 
 
 
@@ -95,8 +95,8 @@ class StanzaErrorTest(unittest.TestCase):
         Remote Server Timeout should yield type wait, code 504.
         """
         e = error.StanzaError('remote-server-timeout')
-        self.assertEquals('wait', e.type)
-        self.assertEquals('504', e.code)
+        self.assertEqual('wait', e.type)
+        self.assertEqual('504', e.code)
 
 
     def test_getElementPlain(self):
@@ -105,9 +105,9 @@ class StanzaErrorTest(unittest.TestCase):
         """
         e = error.StanzaError('feature-not-implemented')
         element = e.getElement()
-        self.assertEquals(element.uri, None)
-        self.assertEquals(element['type'], 'cancel')
-        self.assertEquals(element['code'], '501')
+        self.assertEqual(element.uri, None)
+        self.assertEqual(element['type'], 'cancel')
+        self.assertEqual(element['code'], '501')
 
 
     def test_getElementType(self):
@@ -116,9 +116,9 @@ class StanzaErrorTest(unittest.TestCase):
         """
         e = error.StanzaError('feature-not-implemented', 'auth')
         element = e.getElement()
-        self.assertEquals(element.uri, None)
-        self.assertEquals(element['type'], 'auth')
-        self.assertEquals(element['code'], '501')
+        self.assertEqual(element.uri, None)
+        self.assertEqual(element['type'], 'auth')
+        self.assertEqual(element['code'], '501')
 
 
     def test_getElementConditionNamespace(self):
@@ -127,7 +127,7 @@ class StanzaErrorTest(unittest.TestCase):
         """
         e = error.StanzaError('feature-not-implemented')
         element = e.getElement()
-        self.assertEquals(NS_XMPP_STANZAS, getattr(element, 'feature-not-implemented').uri)
+        self.assertEqual(NS_XMPP_STANZAS, getattr(element, 'feature-not-implemented').uri)
 
 
     def test_getElementTextNamespace(self):
@@ -136,7 +136,7 @@ class StanzaErrorTest(unittest.TestCase):
         """
         e = error.StanzaError('feature-not-implemented', text='text')
         element = e.getElement()
-        self.assertEquals(NS_XMPP_STANZAS, element.text.uri)
+        self.assertEqual(NS_XMPP_STANZAS, element.text.uri)
 
 
     def test_toResponse(self):
@@ -244,7 +244,7 @@ class ParseErrorTest(unittest.TestCase):
         self.error.addElement(('testns', 'condition'))
         condition = self.error.addElement(('testns', 'condition2'))
         result = error._parseError(self.error, 'errorns')
-        self.assertEquals(condition, result['appCondition'])
+        self.assertEqual(condition, result['appCondition'])
 
 
 
@@ -286,10 +286,10 @@ class ExceptionFromStanzaTest(unittest.TestCase):
 
         result = error.exceptionFromStanza(stanza)
         self.assert_(isinstance(result, error.StanzaError))
-        self.assertEquals('feature-not-implemented', result.condition)
-        self.assertEquals('cancel', result.type)
-        self.assertEquals(uc, result.appCondition)
-        self.assertEquals([p], result.children)
+        self.assertEqual('feature-not-implemented', result.condition)
+        self.assertEqual('cancel', result.type)
+        self.assertEqual(uc, result.appCondition)
+        self.assertEqual([p], result.children)
 
     def test_legacy(self):
         """
@@ -314,10 +314,10 @@ class ExceptionFromStanzaTest(unittest.TestCase):
 
         result = error.exceptionFromStanza(stanza)
         self.assert_(isinstance(result, error.StanzaError))
-        self.assertEquals('service-unavailable', result.condition)
-        self.assertEquals('wait', result.type)
-        self.assertEquals('Unable to resolve hostname.', result.text)
-        self.assertEquals([p], result.children)
+        self.assertEqual('service-unavailable', result.condition)
+        self.assertEqual('wait', result.type)
+        self.assertEqual('Unable to resolve hostname.', result.text)
+        self.assertEqual([p], result.children)
 
 class ExceptionFromStreamErrorTest(unittest.TestCase):
 
@@ -339,4 +339,4 @@ class ExceptionFromStreamErrorTest(unittest.TestCase):
 
         result = error.exceptionFromStreamError(e)
         self.assert_(isinstance(result, error.StreamError))
-        self.assertEquals('xml-not-well-formed', result.condition)
+        self.assertEqual('xml-not-well-formed', result.condition)

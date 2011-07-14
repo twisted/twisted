@@ -48,16 +48,16 @@ class UtilityTestCase(unittest.TestCase):
         input = iter(itertools.cycle(['012', '345', '6', '7', '8', '9']))
         c = pop3._IteratorBuffer(output.extend, input, 6)
         i = iter(c)
-        self.assertEquals(output, []) # nothing is buffer
+        self.assertEqual(output, []) # nothing is buffer
         i.next()
-        self.assertEquals(output, []) # '012' is buffered
+        self.assertEqual(output, []) # '012' is buffered
         i.next()
-        self.assertEquals(output, []) # '012345' is buffered
+        self.assertEqual(output, []) # '012345' is buffered
         i.next()
-        self.assertEquals(output, ['012', '345', '6']) # nothing is buffered
+        self.assertEqual(output, ['012', '345', '6']) # nothing is buffered
         for n in range(5):
             i.next()
-        self.assertEquals(output, ['012', '345', '6', '7', '8', '9', '012', '345'])
+        self.assertEqual(output, ['012', '345', '6', '7', '8', '9', '012', '345'])
 
 
     def testFinishLineBuffering(self):
@@ -70,7 +70,7 @@ class UtilityTestCase(unittest.TestCase):
         c = pop3._IteratorBuffer(output.extend, input, 5)
         for i in c:
             pass
-        self.assertEquals(output, ['a', 'b', 'c'])
+        self.assertEqual(output, ['a', 'b', 'c'])
 
 
     def testSuccessResponseFormatter(self):
@@ -78,7 +78,7 @@ class UtilityTestCase(unittest.TestCase):
         Test that the thing that spits out POP3 'success responses' works
         right.
         """
-        self.assertEquals(
+        self.assertEqual(
             pop3.successResponse('Great.'),
             '+OK Great.\r\n')
 
@@ -88,10 +88,10 @@ class UtilityTestCase(unittest.TestCase):
         Test that the function which formats stat lines does so appropriately.
         """
         statLine = list(pop3.formatStatResponse([]))[-1]
-        self.assertEquals(statLine, '+OK 0 0\r\n')
+        self.assertEqual(statLine, '+OK 0 0\r\n')
 
         statLine = list(pop3.formatStatResponse([10, 31, 0, 10101]))[-1]
-        self.assertEquals(statLine, '+OK 4 10142\r\n')
+        self.assertEqual(statLine, '+OK 4 10142\r\n')
 
 
     def testListLineFormatter(self):
@@ -100,12 +100,12 @@ class UtilityTestCase(unittest.TestCase):
         command does so appropriately.
         """
         listLines = list(pop3.formatListResponse([]))
-        self.assertEquals(
+        self.assertEqual(
             listLines,
             ['+OK 0\r\n', '.\r\n'])
 
         listLines = list(pop3.formatListResponse([1, 2, 3, 100]))
-        self.assertEquals(
+        self.assertEqual(
             listLines,
             ['+OK 4\r\n', '1 1\r\n', '2 2\r\n', '3 3\r\n', '4 100\r\n', '.\r\n'])
 
@@ -118,17 +118,17 @@ class UtilityTestCase(unittest.TestCase):
         """
         UIDs = ['abc', 'def', 'ghi']
         listLines = list(pop3.formatUIDListResponse([], UIDs.__getitem__))
-        self.assertEquals(
+        self.assertEqual(
             listLines,
             ['+OK \r\n', '.\r\n'])
 
         listLines = list(pop3.formatUIDListResponse([123, 431, 591], UIDs.__getitem__))
-        self.assertEquals(
+        self.assertEqual(
             listLines,
             ['+OK \r\n', '1 abc\r\n', '2 def\r\n', '3 ghi\r\n', '.\r\n'])
 
         listLines = list(pop3.formatUIDListResponse([0, None, 591], UIDs.__getitem__))
-        self.assertEquals(
+        self.assertEqual(
             listLines,
             ['+OK \r\n', '1 abc\r\n', '3 ghi\r\n', '.\r\n'])
 
@@ -247,7 +247,7 @@ Someone set up us the bomb!\015
         server.service = self.factory
         def check(ignored):
             output = '\r\n'.join(client.response) + '\r\n'
-            self.assertEquals(output, self.expectedOutput)
+            self.assertEqual(output, self.expectedOutput)
         return loopback.loopbackTCP(server, client).addCallback(check)
 
     def testLoopback(self):
@@ -255,7 +255,7 @@ Someone set up us the bomb!\015
         protocol.service = self.factory
         clientProtocol = MyPOP3Downloader()
         def check(ignored):
-            self.failUnlessEqual(clientProtocol.message, self.message)
+            self.assertEqual(clientProtocol.message, self.message)
             protocol.connectionLost(
                 failure.Failure(Exception("Test harness disconnect")))
         d = loopback.loopbackAsync(protocol, clientProtocol)
@@ -310,7 +310,7 @@ class AnotherPOP3TestCase(unittest.TestCase):
 
 
     def _cbRunTest(self, ignored, client, dummy, expectedOutput):
-        self.failUnlessEqual('\r\n'.join(expectedOutput),
+        self.assertEqual('\r\n'.join(expectedOutput),
                              '\r\n'.join(client.response))
         dummy.connectionLost(failure.Failure(Exception("Test harness disconnect")))
         return ignored
@@ -382,7 +382,7 @@ class AnotherPOP3TestCase(unittest.TestCase):
 
     def _cbTestAuthListing(self, ignored, client):
         self.failUnless(client.response[1].startswith('+OK'))
-        self.assertEquals(client.response[2:6],
+        self.assertEqual(client.response[2:6],
                           ["AUTH1", "SECONDAUTH", "AUTHLAST", "."])
 
     def testIllegalPASS(self):
@@ -396,7 +396,7 @@ class AnotherPOP3TestCase(unittest.TestCase):
 
     def _cbTestIllegalPASS(self, ignored, client, dummy):
         expected_output = '+OK <moshez>\r\n-ERR USER required before PASS\r\n+OK \r\n'
-        self.failUnlessEqual(expected_output, '\r\n'.join(client.response) + '\r\n')
+        self.assertEqual(expected_output, '\r\n'.join(client.response) + '\r\n')
         dummy.connectionLost(failure.Failure(Exception("Test harness disconnect")))
 
     def testEmptyPASS(self):
@@ -410,7 +410,7 @@ class AnotherPOP3TestCase(unittest.TestCase):
 
     def _cbTestEmptyPASS(self, ignored, client, dummy):
         expected_output = '+OK <moshez>\r\n-ERR USER required before PASS\r\n+OK \r\n'
-        self.failUnlessEqual(expected_output, '\r\n'.join(client.response) + '\r\n')
+        self.assertEqual(expected_output, '\r\n'.join(client.response) + '\r\n')
         dummy.connectionLost(failure.Failure(Exception("Test harness disconnect")))
 
 
@@ -625,12 +625,12 @@ More message text for you.
 
         p.lineReceived("LIST 1")
         self._flush()
-        self.assertEquals(s.getvalue(), "+OK 1 44\r\n")
+        self.assertEqual(s.getvalue(), "+OK 1 44\r\n")
         s.truncate(0)
 
         p.lineReceived("LIST")
         self._flush()
-        self.assertEquals(s.getvalue(), "+OK 1\r\n1 44\r\n.\r\n")
+        self.assertEqual(s.getvalue(), "+OK 1\r\n1 44\r\n.\r\n")
 
 
     def testLISTWithBadArgument(self):
@@ -642,19 +642,19 @@ More message text for you.
         s = self.pop3Transport
 
         p.lineReceived("LIST a")
-        self.assertEquals(
+        self.assertEqual(
             s.getvalue(),
             "-ERR Invalid message-number: 'a'\r\n")
         s.truncate(0)
 
         p.lineReceived("LIST 0")
-        self.assertEquals(
+        self.assertEqual(
             s.getvalue(),
             "-ERR Invalid message-number: 0\r\n")
         s.truncate(0)
 
         p.lineReceived("LIST 2")
-        self.assertEquals(
+        self.assertEqual(
             s.getvalue(),
             "-ERR Invalid message-number: 2\r\n")
         s.truncate(0)
@@ -669,12 +669,12 @@ More message text for you.
         s = self.pop3Transport
 
         p.lineReceived("UIDL 1")
-        self.assertEquals(s.getvalue(), "+OK 0\r\n")
+        self.assertEqual(s.getvalue(), "+OK 0\r\n")
         s.truncate(0)
 
         p.lineReceived("UIDL")
         self._flush()
-        self.assertEquals(s.getvalue(), "+OK \r\n1 0\r\n.\r\n")
+        self.assertEqual(s.getvalue(), "+OK \r\n1 0\r\n.\r\n")
 
 
     def testUIDLWithBadArgument(self):
@@ -686,19 +686,19 @@ More message text for you.
         s = self.pop3Transport
 
         p.lineReceived("UIDL a")
-        self.assertEquals(
+        self.assertEqual(
             s.getvalue(),
             "-ERR Bad message number argument\r\n")
         s.truncate(0)
 
         p.lineReceived("UIDL 0")
-        self.assertEquals(
+        self.assertEqual(
             s.getvalue(),
             "-ERR Bad message number argument\r\n")
         s.truncate(0)
 
         p.lineReceived("UIDL 2")
-        self.assertEquals(
+        self.assertEqual(
             s.getvalue(),
             "-ERR Bad message number argument\r\n")
         s.truncate(0)
@@ -714,7 +714,7 @@ More message text for you.
 
         p.lineReceived("STAT")
         self._flush()
-        self.assertEquals(s.getvalue(), "+OK 1 44\r\n")
+        self.assertEqual(s.getvalue(), "+OK 1 44\r\n")
 
 
     def testRETR(self):
@@ -726,7 +726,7 @@ More message text for you.
 
         p.lineReceived("RETR 1")
         self._flush()
-        self.assertEquals(
+        self.assertEqual(
             s.getvalue(),
             "+OK 44\r\n"
             "From: moshe\r\n"
@@ -747,19 +747,19 @@ More message text for you.
         s = self.pop3Transport
 
         p.lineReceived("RETR a")
-        self.assertEquals(
+        self.assertEqual(
             s.getvalue(),
             "-ERR Bad message number argument\r\n")
         s.truncate(0)
 
         p.lineReceived("RETR 0")
-        self.assertEquals(
+        self.assertEqual(
             s.getvalue(),
             "-ERR Bad message number argument\r\n")
         s.truncate(0)
 
         p.lineReceived("RETR 2")
-        self.assertEquals(
+        self.assertEqual(
             s.getvalue(),
             "-ERR Bad message number argument\r\n")
         s.truncate(0)
@@ -775,7 +775,7 @@ More message text for you.
 
         p.lineReceived("TOP 1 0")
         self._flush()
-        self.assertEquals(
+        self.assertEqual(
             s.getvalue(),
             "+OK Top of message follows\r\n"
             "From: moshe\r\n"
@@ -796,31 +796,31 @@ More message text for you.
         p.mbox.messages.append(self.extraMessage)
 
         p.lineReceived("TOP 1 a")
-        self.assertEquals(
+        self.assertEqual(
             s.getvalue(),
             "-ERR Bad line count argument\r\n")
         s.truncate(0)
 
         p.lineReceived("TOP 1 -1")
-        self.assertEquals(
+        self.assertEqual(
             s.getvalue(),
             "-ERR Bad line count argument\r\n")
         s.truncate(0)
 
         p.lineReceived("TOP a 1")
-        self.assertEquals(
+        self.assertEqual(
             s.getvalue(),
             "-ERR Bad message number argument\r\n")
         s.truncate(0)
 
         p.lineReceived("TOP 0 1")
-        self.assertEquals(
+        self.assertEqual(
             s.getvalue(),
             "-ERR Bad message number argument\r\n")
         s.truncate(0)
 
         p.lineReceived("TOP 3 1")
-        self.assertEquals(
+        self.assertEqual(
             s.getvalue(),
             "-ERR Bad message number argument\r\n")
         s.truncate(0)
@@ -836,7 +836,7 @@ More message text for you.
         p.mbox.messages.append(self.extraMessage)
 
         p.lineReceived('LAST')
-        self.assertEquals(
+        self.assertEqual(
             s.getvalue(),
             "+OK 0\r\n")
         s.truncate(0)
@@ -854,7 +854,7 @@ More message text for you.
         self._flush()
         s.truncate(0)
         p.lineReceived('LAST')
-        self.assertEquals(
+        self.assertEqual(
             s.getvalue(),
             '+OK 2\r\n')
         s.truncate(0)
@@ -872,7 +872,7 @@ More message text for you.
         self._flush()
         s.truncate(0)
         p.lineReceived('LAST')
-        self.assertEquals(
+        self.assertEqual(
             s.getvalue(),
             '+OK 2\r\n')
 
@@ -892,7 +892,7 @@ More message text for you.
         self._flush()
         s.truncate(0)
         p.lineReceived('LAST')
-        self.assertEquals(
+        self.assertEqual(
             s.getvalue(),
             '+OK 2\r\n')
 
@@ -910,7 +910,7 @@ More message text for you.
         p.lineReceived('RSET')
         s.truncate(0)
         p.lineReceived('LAST')
-        self.assertEquals(
+        self.assertEqual(
             s.getvalue(),
             '+OK 0\r\n')
 

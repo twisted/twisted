@@ -48,7 +48,7 @@ class ProcessUtilsTests(unittest.TestCase):
                 "    sys.stdout.write(s)",
                 "    sys.stdout.flush()"])
         d = utils.getProcessOutput(self.exe, ['-u', scriptFile])
-        return d.addCallback(self.assertEquals, "hello world\n")
+        return d.addCallback(self.assertEqual, "hello world\n")
 
 
     def test_outputWithErrorIgnored(self):
@@ -116,9 +116,9 @@ class ProcessUtilsTests(unittest.TestCase):
             ])
 
         def gotOutputAndValue((out, err, code)):
-            self.assertEquals(out, "hello world!\n")
-            self.assertEquals(err, "goodbye world!" + os.linesep)
-            self.assertEquals(code, 1)
+            self.assertEqual(out, "hello world!\n")
+            self.assertEqual(err, "goodbye world!" + os.linesep)
+            self.assertEqual(code, 1)
         d = utils.getProcessOutputAndValue(self.exe, ["-u", scriptFile])
         return d.addCallback(gotOutputAndValue)
 
@@ -142,9 +142,9 @@ class ProcessUtilsTests(unittest.TestCase):
             "os.kill(os.getpid(), signal.SIGKILL)"])
 
         def gotOutputAndValue((out, err, sig)):
-            self.assertEquals(out, "stdout bytes\n")
-            self.assertEquals(err, "stderr bytes\n")
-            self.assertEquals(sig, signal.SIGKILL)
+            self.assertEqual(out, "stdout bytes\n")
+            self.assertEqual(err, "stderr bytes\n")
+            self.assertEqual(sig, signal.SIGKILL)
 
         d = utils.getProcessOutputAndValue(self.exe, ['-u', scriptFile])
         d = self.assertFailure(d, tuple)
@@ -283,14 +283,14 @@ class WarningSuppression(unittest.TestCase):
         # Start off with a sanity check - calling the original function
         # should emit the warning.
         f("Sanity check message")
-        self.assertEquals(len(self.warnings), 1)
+        self.assertEqual(len(self.warnings), 1)
 
         # Now that that's out of the way, call the wrapped function, and
         # make sure no new warnings show up.
         g("This is message")
-        self.assertEquals(len(self.warnings), 1)
+        self.assertEqual(len(self.warnings), 1)
 
         # Finally, emit another warning which should not be ignored, and
         # make sure it is not.
         g("Unignored message")
-        self.assertEquals(len(self.warnings), 2)
+        self.assertEqual(len(self.warnings), 2)

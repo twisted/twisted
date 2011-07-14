@@ -311,9 +311,9 @@ class DatagramUnixSocketTestCase(unittest.TestCase):
                                         cp.deferredGotBack])
 
         def _cbTestExchange(ignored):
-            self.failUnlessEqual("hi", sp.gotwhat)
-            self.failUnlessEqual(clientaddr, sp.gotfrom)
-            self.failUnlessEqual("hi back", cp.gotback)
+            self.assertEqual("hi", sp.gotwhat)
+            self.assertEqual(clientaddr, sp.gotfrom)
+            self.assertEqual("hi back", cp.gotback)
 
         d.addCallback(write)
         d.addCallback(_cbTestExchange)
