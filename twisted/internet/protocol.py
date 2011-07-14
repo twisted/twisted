@@ -431,22 +431,15 @@ class ServerFactory(Factory):
     """
 
 
+
 class BaseProtocol:
-    """This is the abstract superclass of all protocols.
-
-    If you are going to write a new protocol for Twisted, start here.  The
-    docstrings of this class explain how you can get started.  Any protocol
-    implementation, either client or server, should be a subclass of me.
-
-    My API is quite simple.  Implement dataReceived(data) to handle both
-    event-based and synchronous input; output can be sent through the
-    'transport' attribute, which is to be an instance that implements
-    L{twisted.internet.interfaces.ITransport}.
-
-    Some subclasses exist already to help you write common types of protocols:
-    see the L{twisted.protocols.basic} module for a few of them.
     """
+    This is the abstract superclass of all protocols.
 
+    Some methods have helpful default implementations here so that they can
+    easily be shared, but otherwise the direct subclasses of this class are more
+    interesting, L{Protocol} and L{ProcessProtocol}.
+    """
     connected = 0
     transport = None
 
@@ -476,7 +469,22 @@ connectionDone.cleanFailure()
 
 
 class Protocol(BaseProtocol):
+    """
+    This is the base class for streaming connection-oriented protocols.
 
+    If you are going to write a new connection-oriented protocol for Twisted,
+    start here.  Any protocol implementation, either client or server, should
+    be a subclass of this class.
+
+    The API is quite simple.  Implement L{dataReceived} to handle both
+    event-based and synchronous input; output can be sent through the
+    'transport' attribute, which is to be an instance that implements
+    L{twisted.internet.interfaces.ITransport}.  Override C{connectionLost} to be
+    notified when the connection ends.
+
+    Some subclasses exist already to help you write common types of protocols:
+    see the L{twisted.protocols.basic} module for a few of them.
+    """
     implements(interfaces.IProtocol)
 
     def dataReceived(self, data):
