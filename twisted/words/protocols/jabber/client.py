@@ -186,6 +186,7 @@ class BasicAuthenticator(xmlstream.ConnectAuthenticator):
         xmlstream.ConnectAuthenticator.associateWithStream(self, xs)
 
         inits = [ (xmlstream.TLSInitiatingInitializer, False),
+                  (xmlstream.CompressInitiatingInitializer, False),
                   (IQAuthInitializer, True),
                 ]
 
@@ -359,6 +360,7 @@ class XMPPAuthenticator(xmlstream.ConnectAuthenticator):
         xs.initializers = [CheckVersionInitializer(xs)]
         inits = [ (xmlstream.TLSInitiatingInitializer, False),
                   (sasl.SASLInitiatingInitializer, True),
+                  (xmlstream.CompressInitiatingInitializer, False),
                   (BindInitializer, False),
                   (SessionInitializer, False),
                 ]

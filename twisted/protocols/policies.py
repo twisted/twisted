@@ -10,6 +10,7 @@ Resource limiting policies.
 
 # system imports
 import sys, operator
+import zlib
 
 from zope.interface import directlyProvides, providedBy
 
@@ -664,3 +665,57 @@ class TimeoutMixin:
         Override to define behavior other than dropping the connection.
         """
         self.transport.loseConnection()
+
+
+
+class CompressingProtocol(ProtocolWrapper):
+    """
+    Wraps a transport with zlib compression.
+
+    @ivar _compressor: Zlib object to compress the data stream
+    @type _compressor: C{zlib.compressobj}
+    @ivar _decompressor: Zlib object to decompress the data stream
+    @type _decompressor: C{zlib.decompressobj}
+
+    @since: 11.1
+    """
+
+    def __init__(self, factory, wrappedProtocol):
+        ProtocolWrapper.__init__(self, factory, wrappedProtocol)
+        self._compressor = zlib.compressobj()
+        self._decompressor = zlib.decompressobj()
+
+
+    def write(self, data):
+        if not data:
+            return
+        compressed = self._compressor.compress(data)
+        compressed += self._compressor.flush(zlib.Z_SYNC_FLUSH)
+        self.transport.write(compressed)
+
+
+    def writeSequence(self, dataSequence):
+        if not dataSequence:
+            return
+        compressed = [ self._compressor.compress(data)
+                       for data in dataSequence if data ]
+        if not compressed:
+            return
+        compressed.append(self._compressor.flush(zlib.Z_SYNC_FLUSH))
+        self.transport.writeSequence(compressed)
+
+
+    def dataReceived(self, data):
+        toDecompress = self._decompressor.unconsumed_tail + data
+        decompressed = self._decompressor.decompress(toDecompress, 1024)
+        self.wrappedProtocol.dataReceived(decompressed)
+
+
+    def connectionLost(self, reason):
+        try:
+            self.wrappedProtocol.dataReceived(self._decompressor.flush())
+        finally:
+            ProtocolWrapper.connectionLost(self, reason)
+
+
+

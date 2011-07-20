@@ -401,14 +401,17 @@ class XMPPAuthenticatorTest(unittest.TestCase):
         self.assertEqual('secret', xs.authenticator.password)
 
         # test list of initializers
-        version, tls, sasl, bind, session = xs.initializers
+        version, tls, sasl, compress, bind, session = xs.initializers
 
-        self.assert_(isinstance(tls, xmlstream.TLSInitiatingInitializer))
-        self.assert_(isinstance(sasl, SASLInitiatingInitializer))
-        self.assert_(isinstance(bind, client.BindInitializer))
-        self.assert_(isinstance(session, client.SessionInitializer))
+        self.assertIsInstance(tls, xmlstream.TLSInitiatingInitializer)
+        self.assertIsInstance(sasl, SASLInitiatingInitializer)
+        self.assertIsInstance(compress,
+                              xmlstream.CompressInitiatingInitializer)
+        self.assertIsInstance(bind, client.BindInitializer)
+        self.assertIsInstance(session, client.SessionInitializer)
 
         self.assertFalse(tls.required)
+        self.assertFalse(compress.required)
         self.assertTrue(sasl.required)
         self.assertFalse(bind.required)
         self.assertFalse(session.required)

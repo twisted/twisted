@@ -11,12 +11,16 @@ doing authentication on either client or server side, and working with XML
 Stanzas.
 """
 
-from zope.interface import directlyProvides, implements
+import zlib
+
+from zope.interface import directlyProvides, implements, providedBy
 
 from twisted.internet import defer, protocol
 from twisted.internet.error import ConnectionLost
+from twisted.internet.interfaces import ISSLTransport
 from twisted.python import failure, log, randbytes
 from twisted.python.hashlib import sha1
+from twisted.protocols.policies import CompressingProtocol, WrappingFactory
 from twisted.words.protocols.jabber import error, ijabber, jid
 from twisted.words.xish import domish, xmlstream
 from twisted.words.xish.xmlstream import STREAM_CONNECTED_EVENT
@@ -36,6 +40,8 @@ INIT_FAILED_EVENT = intern("//event/xmpp/initfailed")
 
 NS_STREAMS = 'http://etherx.jabber.org/streams'
 NS_XMPP_TLS = 'urn:ietf:params:xml:ns:xmpp-tls'
+NS_XMPP_FEATURE_COMPRESS = "http://jabber.org/features/compress"
+NS_XMPP_COMPRESS = "http://jabber.org/protocol/compress"
 
 Reset = object()
 
@@ -442,6 +448,123 @@ class TLSInitiatingInitializer(BaseFeatureInitiatingInitializer):
         self.xmlstream.addOnetimeObserver("/proceed", self.onProceed)
         self.xmlstream.addOnetimeObserver("/failure", self.onFailure)
         self.xmlstream.send(domish.Element((NS_XMPP_TLS, "starttls")))
+        return self._deferred
+
+
+
+class XmppCompressingProtocol(CompressingProtocol):
+    """
+    Wraps a transport with zlib compression, to implement XEP-0138 (stream
+    compression). Used by L{CompressInitiatingInitializer}.
+
+    @since: 11.1
+    """
+
+    def __init__(self, wrappedProtocol):
+        CompressingProtocol.__init__(self, WrappingFactory(None), wrappedProtocol)
+
+
+    def makeConnection(self, transport):
+        """
+        Connects the factory to us and us to the underlying transport.
+
+        L{CompressingProtocol.makeConnection}() can't be used because it calls
+        makeConnection on the wrapped protocol, which causes a second full
+        initialization, while the stream just needs a reset (done by
+        L{CompressInitiatingInitializer}).
+        """
+        directlyProvides(self, providedBy(transport))
+        protocol.Protocol.makeConnection(self, transport)
+        self.factory.registerProtocol(self)
+        self.wrappedProtocol.transport = self
+        transport.protocol = self
+
+
+
+class CompressNegotiationFailed(Exception):
+    """
+    Exception concerning stream compression (XEP-0138). Raised when no
+    compatible compression algorithm could be found.
+
+    @since: 11.1
+    """
+
+
+
+class CompressInitiatingInitializer(BaseFeatureInitiatingInitializer):
+    """
+    Compressing stream initializer for the initiating entity.
+
+    If it is included in the list of initializers for an XMPP stream, it must
+    be after the TLS initializer. The spec allows stream compression after
+    TLS if TLS negotiation failed, or if it is not desired.
+
+    The only supported compression method at the moment is C{zlib}.
+
+    @cvar wanted: indicates if stream compression negotiation is wanted.
+    @type wanted: C{bool}
+    @ivar withTLS: if set to C{True}, allows negociating compression when TLS
+        is already used.
+    @type withTLS: C{bool}
+
+    @since: 11.1
+    """
+
+    feature = (NS_XMPP_FEATURE_COMPRESS, 'compression')
+    wanted = True
+    withTLS = False
+    _deferred = None
+
+    def _onSuccess(self, obj):
+        """
+        Negotiation succeeded, wrap the transport in zlib compression
+        """
+        self.xmlstream.removeObserver('/failure', self._onFailure)
+        compressingProtocol = XmppCompressingProtocol(self.xmlstream)
+        compressingProtocol.makeConnection(self.xmlstream.transport)
+        self.xmlstream.reset()
+        self.xmlstream.sendHeader()
+        self._deferred.callback(Reset)
+
+
+    def _onFailure(self, obj):
+        """
+        Compression negotiation failed
+        """
+        self.xmlstream.removeObserver('/compressed', self._onSuccess)
+        self._deferred.errback(CompressNegotiationFailed())
+
+
+    def start(self):
+        """
+        Start compression negotiation.
+
+        This checks the TLS status and the proposed compression methods.
+        TLS and stream compression should be mutually exclusive: XEP-0138
+        states that compression may be offered if TLS failed.
+        If both TLS and stream compression are desired, the L{withTLS}
+        attribute should be set to C{True}.
+
+        If TLS is active or if no proposed compression method is supported,
+        the initialization silently succeeds, moving on to the next step.
+        """
+        if not self.wanted:
+            return defer.succeed(None)
+        if (not self.withTLS and
+                ISSLTransport.providedBy(self.xmlstream.transport)):
+            return defer.succeed(None)
+
+        allowed_methods = [ str(m) for m in
+                            self.xmlstream.features[self.feature].elements() ]
+        if "zlib" not in allowed_methods:
+            return defer.succeed(None)
+
+        self._deferred = defer.Deferred()
+        self.xmlstream.addOnetimeObserver("/compressed", self._onSuccess)
+        self.xmlstream.addOnetimeObserver("/failure", self._onFailure)
+        element = domish.Element((NS_XMPP_COMPRESS, "compress"))
+        element.addElement("method", None, content="zlib")
+        self.xmlstream.send(element)
         return self._deferred
 
 
@@ -1131,6 +1254,8 @@ __all__ = ['Authenticator', 'BaseFeatureInitiatingInitializer',
            'STREAM_CONNECTED_EVENT', 'STREAM_END_EVENT', 'STREAM_ERROR_EVENT',
            'STREAM_START_EVENT', 'StreamManager', 'TLSError', 'TLSFailed',
            'TLSInitiatingInitializer', 'TLSNotSupported', 'TLSRequired',
-           'TimeoutError', 'XMPPHandler', 'XMPPHandlerCollection', 'XmlStream',
-           'XmlStreamFactory', 'XmlStreamServerFactory', 'hashPassword',
-           'toResponse', 'upgradeWithIQResponseTracker']
+           'XmppCompressingProtocol', 'CompressInitiatingInitializer',
+           'CompressNegotiationFailed', 'TimeoutError', 'XMPPHandler',
+           'XMPPHandlerCollection', 'XmlStream', 'XmlStreamFactory',
+           'XmlStreamServerFactory', 'hashPassword', 'toResponse',
+           'upgradeWithIQResponseTracker']

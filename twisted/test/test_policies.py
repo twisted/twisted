@@ -5,7 +5,10 @@
 Test code for policies.
 """
 
+import zlib
+
 from zope.interface import Interface, implements, implementedBy
+from zope.interface import providedBy, directlyProvides
 
 from StringIO import StringIO
 
@@ -37,6 +40,16 @@ class SimpleProtocol(protocol.Protocol):
 
     def dataReceived(self, data):
         self.buffer += data
+
+
+
+class SynchronousSimpleProtocol(SimpleProtocol):
+
+    def connectionMade(self):
+        self.connected = 1
+
+    def connectionLost(self, reason):
+        self.disconnected = 1
 
 
 
@@ -680,4 +693,138 @@ class LoggingFactoryTestCase(unittest.TestCase):
 
         f.resetCounter()
         self.assertEqual(f._counter, 0)
+
+
+
+class CompressingProtocolTestCase(unittest.TestCase):
+    """
+    Tests for L{policies.CompressingProtocol}.
+    """
+
+    def setUp(self):
+        self.output = []
+        self.proto = SynchronousSimpleProtocol()
+        self.proto.makeConnection(StringTransport())
+        self.compress = policies.CompressingProtocol(WrappingFactory(None),
+                                                     self.proto)
+
+
+    def test_makeConnection(self):
+        """
+        The underlying transport should be wrapped transparently, and
+        C{connectionMade} should be called.
+        """
+        self.compress.makeConnection(self.proto.transport)
+        self.assertIdentical(self.proto.transport, self.compress)
+        self.assertEqual(self.proto.connected, 1)
+
+
+    def test_forwardProvides(self):
+        """
+        The underlying transport's interfaces should be provided by the wrapped
+        transport.
+        """
+        class ITesting(Interface):
+            pass
+
+        directlyProvides(self.proto.transport, ITesting)
+        self.compress.makeConnection(self.proto.transport)
+        for iface in providedBy(self.proto.transport):
+            self.assertTrue(iface.providedBy(self.compress))
+
+
+    def test_write(self):
+        """
+        Data passed to the transport is zlib compressed before being sent
+        over the connection.
+        """
+        self.proto.transport.write = self.output.append
+        self.compress.makeConnection(self.proto.transport)
+
+        data = "x" * 100
+        self.proto.transport.write(data)
+
+        self.assertTrue(len(self.output) > 0)
+        decompressor = zlib.decompressobj()
+        decompressedData = decompressor.decompress(self.output[0])
+        decompressedData += decompressor.flush()
+        self.assertEquals(data, decompressedData)
+
+
+    def test_writeSequence(self):
+        """
+        A sequence of data passed to the transport is zlib compressed
+        before being sent over the connection.
+        """
+        self.proto.transport.writeSequence = self.output.extend
+        self.compress.makeConnection(self.proto.transport)
+
+        data = [ "x" * 100 for i in range(10) ]
+        self.compress.writeSequence(data)
+
+        self.assertTrue(len(self.output) > 0)
+        decompressor = zlib.decompressobj()
+        decompressedData = [ decompressor.decompress(d)
+                             for d in self.output ]
+        self.assertEquals(''.join(data), ''.join(decompressedData))
+
+
+    def test_writeNoData(self):
+        """
+        If given no data, it should produce no output.
+        """
+        self.proto.transport.write = self.output.append
+        self.compress.makeConnection(self.proto.transport)
+        self.compress.write("")
+        self.assertEqual(len(self.output), 0)
+
+
+    def test_writeSequenceNoData(self):
+        """
+        If given an empty sequence as data, it should produce no output.
+        """
+        self.proto.transport.writeSequence = self.output.extend
+        self.compress.makeConnection(self.proto.transport)
+        self.compress.writeSequence([])
+        self.assertEqual(len(self.output), 0)
+
+
+    def test_writeSequenceOnlyEmpty(self):
+        """
+        If given a sequence with only empty data, it should produce no output.
+        """
+        self.proto.transport.writeSequence = self.output.extend
+        self.compress.makeConnection(self.proto.transport)
+        self.compress.writeSequence(["", "", ""])
+        self.assertEqual(len(self.output), 0)
+
+
+    def test_read(self):
+        """
+        Data comming from the connection should be zlib decompressed before
+        being passed to the protocol's C{dataReceived} method.
+        """
+        self.proto.dataReceived = self.output.append
+        self.compress.makeConnection(self.proto.transport)
+        data = "x" * 100
+        self.compress.dataReceived(zlib.compress(data))
+        self.compress.connectionLost(None)
+        self.assertEquals(data, ''.join(self.output))
+
+
+    def test_read_flush(self):
+        """
+        The C{zlib.Decompress.flush} method should be called on connection loss
+        and pass to C{dataReceived} the decompressed bytes left
+        before relaying C{connectionLost}.
+        """
+        self.proto.dataReceived = self.output.append
+        self.compress.makeConnection(self.proto.transport)
+        data = "x" * 4096
+        self.compress.dataReceived(zlib.compress(data))
+        assert len(self.output[0]) < 4096 # too much data, should be bufferred
+        self.compress.connectionLost(None)
+        self.assertEquals(data, ''.join(self.output))
+
+
 
