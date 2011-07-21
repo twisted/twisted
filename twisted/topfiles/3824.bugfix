@@ -1,0 +1,1 @@
+twisted.internet.win32eventreactor now stops immediately if reactor.stop() is called from an IWriteDescriptor.doWrite implementation instead of delaying shutdown for an arbitrary period of time.

@@ -177,6 +177,11 @@ class Win32Reactor(posixbase.PosixReactorBase):
         for fd in self._writes.keys():
             if log.callWithLogger(fd, self._runWrite, fd):
                 canDoMoreWrites = 1
+            # Allow for a reactor.stop() call somewhere beneath a doWrite.  This
+            # avoids getting to the MsgWaitForMultipleObjects call below, which
+            # will block indefinitely.
+            if self._stopped:
+               return
 
         if canDoMoreWrites:
             timeout = 0
