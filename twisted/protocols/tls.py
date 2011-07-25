@@ -48,10 +48,160 @@ except TypeError, e:
 from zope.interface import implements
 
 from twisted.python.failure import Failure
+from twisted.python import log
+from twisted.python.reflect import safe_str
 from twisted.internet.interfaces import ISystemHandle, ISSLTransport
+from twisted.internet.interfaces import IPushProducer
 from twisted.internet.main import CONNECTION_LOST
 from twisted.internet.protocol import Protocol
+from twisted.internet.task import cooperate
 from twisted.protocols.policies import ProtocolWrapper, WrappingFactory
+
+
+class _PullToPush(object):
+    """
+    An adapter that converts a non-streaming to a streaming producer.
+
+    Because of limitations of the producer API, this adapter requires the
+    cooperation of the consumer. When the consumer's C{registerProducer} is
+    called with a non-streaming producer, it must wrap it with L{_PullToPush}
+    and then call C{startStreaming} on the resulting object. When the
+    consumer's C{unregisterProducer} is called, it must call
+    C{stopStreaming} on the L{_PullToPush} instance.
+
+    If the underlying producer throws an exception from C{resumeProducing},
+    the producer will be unregistered from the consumer.
+
+    @ivar _producer: the underling non-streaming producer.
+
+    @ivar _consumer: the consumer with which the underlying producer was
+                     registered.
+
+    @ivar _finished: C{bool} indicating whether the producer has finished.
+
+    @ivar _coopTask: the result of calling L{cooperate}, the task driving the
+                     streaming producer.
+    """
+    implements(IPushProducer)
+
+    _finished = False
+
+
+    def __init__(self, pullProducer, consumer):
+        self._producer = pullProducer
+        self._consumer = consumer
+
+
+    def _pull(self):
+        """
+        A generator that calls C{resumeProducing} on the underlying producer
+        forever.
+
+        If C{resumeProducing} throws an exception, the producer is
+        unregistered, which should result in streaming stopping.
+        """
+        while True:
+            try:
+                self._producer.resumeProducing()
+            except:
+                log.err(None, "%s failed, producing will be stopped:" %
+                        (safe_str(self._producer),))
+                try:
+                    self._consumer.unregisterProducer()
+                    # The consumer should now call stopStreaming() on us,
+                    # thus stopping the streaming.
+                except:
+                    # Since the consumer blew up, we may not have had
+                    # stopStreaming() called, so we just stop on our own:
+                    log.err(None, "%s failed to unregister producer:" %
+                            (safe_str(self._consumer),))
+                    self._finished = True
+                    return
+            yield None
+
+
+    def startStreaming(self):
+        """
+        This should be called by the consumer when the producer is registered.
+
+        Start streaming data to the consumer.
+        """
+        self._coopTask = cooperate(self._pull())
+
+
+    def stopStreaming(self):
+        """
+        This should be called by the consumer when the producer is unregistered.
+
+        Stop streaming data to the consumer.
+        """
+        if self._finished:
+            return
+        self._finished = True
+        self._coopTask.stop()
+
+
+    # IPushProducer implementation:
+    def pauseProducing(self):
+        self._coopTask.pause()
+
+
+    def resumeProducing(self):
+        self._coopTask.resume()
+
+
+    def stopProducing(self):
+        self.stopStreaming()
+        self._producer.stopProducing()
+
+
+
+class _ProducerMembrane(object):
+    """
+    Stand-in for producer registered with a L{TLSMemoryBIOProtocol} transport.
+
+    Ensures that producer pause/resume events from the undelying transport are
+    coordinated with pause/resume events from the TLS layer.
+
+    @ivar _producer: The application-layer producer.
+    """
+    implements(IPushProducer)
+
+    _producerPaused = False
+
+    def __init__(self, producer):
+        self._producer = producer
+
+
+    def pauseProducing(self):
+        """
+        C{pauseProducing} the underlying producer, if it's not paused.
+        """
+        if self._producerPaused:
+            return
+        self._producerPaused = True
+        self._producer.pauseProducing()
+
+
+    def resumeProducing(self):
+        """
+        C{resumeProducing} the underlying producer, if it's paused.
+        """
+        if not self._producerPaused:
+            return
+        self._producerPaused = False
+        self._producer.resumeProducing()
+
+
+    def stopProducing(self):
+        """
+        C{stopProducing} the underlying producer.
+
+        There is only a single source for this event, so it's simply passed
+        on.
+        """
+        self._producer.stopProducing()
+
 
 
 class TLSMemoryBIOProtocol(ProtocolWrapper):
@@ -60,6 +210,13 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
     memory BIO to encrypt bytes written to it before sending them on to the
     underlying transport and decrypts bytes received from the underlying
     transport before delivering them to the wrapped protocol.
+
+    In addition to producer events from the underlying transport, the need to
+    wait for reads before a write can proceed means the
+    L{TLSMemoryBIOProtocol} may also want to pause a producer. Pause/resume
+    events are therefore merged using the L{_ProducerMembrane}
+    wrapper. Non-streaming (pull) producers are supported by wrapping them
+    with L{_PullToPush}.
 
     @ivar _tlsConnection: The L{OpenSSL.SSL.Connection} instance which is
         encrypted and decrypting this connection.
@@ -96,6 +253,10 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         the connection to be lost, it is saved here.  If appropriate, this may
         be used as the reason passed to the application protocol's
         C{connectionLost} method.
+
+    @ivar _producer: The current producer registered via C{registerProducer},
+        or C{None} if no producer has been registered or a previous one was
+        unregistered.
     """
     implements(ISystemHandle, ISSLTransport)
 
@@ -103,6 +264,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
     _handshakeDone = False
     _lostTLSConnection = False
     _writeBlockedOnRead = False
+    _producer = None
 
     def __init__(self, factory, wrappedProtocol, _connectWrapped=True):
         ProtocolWrapper.__init__(self, factory, wrappedProtocol)
@@ -241,8 +403,11 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
             self._appSendBuffer = []
             for bytes in appSendBuffer:
                 self._write(bytes)
-            if not self._writeBlockedOnRead and self.disconnecting:
+            if (not self._writeBlockedOnRead and self.disconnecting and
+                self.producer is None):
                 self._shutdownTLS()
+            if self._producer is not None:
+                self._producer.resumeProducing()
 
         self._flushReceiveBIO()
 
@@ -301,7 +466,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         if self.disconnecting:
             return
         self.disconnecting = True
-        if not self._writeBlockedOnRead:
+        if not self._writeBlockedOnRead and self._producer is None:
             self._shutdownTLS()
 
 
@@ -313,7 +478,10 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         If C{loseConnection} was called, subsequent calls to C{write} will
         drop the bytes on the floor.
         """
-        if self.disconnecting:
+        # Writes after loseConnection are not supported, unless a producer has
+        # been registered, in which case writes can happen until the producer
+        # is unregistered:
+        if self.disconnecting and self._producer is None:
             return
         self._write(bytes)
 
@@ -337,6 +505,8 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
             except WantReadError:
                 self._writeBlockedOnRead = True
                 self._appSendBuffer.append(leftToSend)
+                if self._producer is not None:
+                    self._producer.pauseProducing()
                 break
             except Error:
                 # Pretend TLS connection disconnected, which will trigger
@@ -364,6 +534,33 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
 
     def getPeerCertificate(self):
         return self._tlsConnection.get_peer_certificate()
+
+
+    def registerProducer(self, producer, streaming):
+        # If we received a non-streaming producer, wrap it so it becomes a
+        # streaming producer:
+        if not streaming:
+            producer = streamingProducer = _PullToPush(producer, self)
+        producer = _ProducerMembrane(producer)
+        # This will raise an exception if a producer is already registered:
+        self.transport.registerProducer(producer, True)
+        self._producer = producer
+        # If we received a non-streaming producer, we need to start the
+        # streaming wrapper:
+        if not streaming:
+            streamingProducer.startStreaming()
+
+
+    def unregisterProducer(self):
+        # If we received a non-streaming producer, we need to stop the
+        # streaming wrapper:
+        if isinstance(self._producer._producer, _PullToPush):
+            self._producer._producer.stopStreaming()
+        self._producer = None
+        self._producerPaused = False
+        self.transport.unregisterProducer()
+        if self.disconnecting and not self._writeBlockedOnRead:
+            self._shutdownTLS()
 
 
 
