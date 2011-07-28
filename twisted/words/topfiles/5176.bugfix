@@ -1,0 +1,1 @@
+IRCClient.msg now determines a safe maximum command length, drastically reducing the chance of relayed text being truncated on the server side.

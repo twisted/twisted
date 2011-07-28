@@ -1361,11 +1361,36 @@ class BasicServerFunctionalityTestCase(unittest.TestCase):
         self.check(expected)
 
 
+
 class DummyClient(irc.IRCClient):
+    """
+    A L{twisted.words.protocols.irc.IRCClient} that stores sent lines in a
+    C{list} rather than transmitting them.
+    """
     def __init__(self):
         self.lines = []
+
+
+    def connectionMade(self):
+        irc.IRCClient.connectionMade(self)
+        self.lines = []
+
+
+    def _truncateLine(self, line):
+        """
+        Truncate an IRC line to the maximum allowed length.
+        """
+        return line[:irc.MAX_COMMAND_LENGTH - len(self.delimiter)]
+
+
+    def lineReceived(self, line):
+        # Emulate IRC servers throwing away our important data.
+        line = self._truncateLine(line)
+        return irc.IRCClient.lineReceived(self, line)
+
+
     def sendLine(self, m):
-        self.lines.append(m)
+        self.lines.append(self._truncateLine(m))
 
 
 
@@ -1400,29 +1425,50 @@ class ClientInviteTests(unittest.TestCase):
 
 
 class ClientMsgTests(unittest.TestCase):
+    """
+    Tests for messages sent with L{twisted.words.protocols.irc.IRCClient}.
+    """
     def setUp(self):
         self.client = DummyClient()
+        self.client.connectionMade()
 
 
-    def testSingleLine(self):
+    def test_singleLine(self):
+        """
+        A message containing no newlines is sent in a single command.
+        """
         self.client.msg('foo', 'bar')
         self.assertEqual(self.client.lines, ['PRIVMSG foo :bar'])
 
 
-    def testDodgyMaxLength(self):
+    def test_invalidMaxLength(self):
+        """
+        Specifying a C{length} value to L{IRCClient.msg} that is too short to
+        contain the protocol command to send a message raises C{ValueError}.
+        """
         self.assertRaises(ValueError, self.client.msg, 'foo', 'bar', 0)
         self.assertRaises(ValueError, self.client.msg, 'foo', 'bar', 3)
 
 
-    def testMultipleLine(self):
+    def test_multipleLine(self):
+        """
+        Messages longer than the C{length} parameter to L{IRCClient.msg} will
+        be split and sent in multiple commands.
+        """
         maxLen = len('PRIVMSG foo :') + 3 + 2 # 2 for line endings
         self.client.msg('foo', 'barbazbo', maxLen)
-        self.assertEqual(self.client.lines, ['PRIVMSG foo :bar',
-                                              'PRIVMSG foo :baz',
-                                              'PRIVMSG foo :bo'])
+        self.assertEqual(
+            self.client.lines,
+            ['PRIVMSG foo :bar',
+             'PRIVMSG foo :baz',
+             'PRIVMSG foo :bo'])
 
 
-    def testSufficientWidth(self):
+    def test_sufficientWidth(self):
+        """
+        Messages exactly equal in length to the C{length} paramtere to
+        L{IRCClient.msg} are sent in a single command.
+        """
         msg = 'barbazbo'
         maxLen = len('PRIVMSG foo :%s' % (msg,)) + 2
         self.client.msg('foo', msg, maxLen)
@@ -1458,11 +1504,11 @@ class ClientMsgTests(unittest.TestCase):
         An LF within a message causes a new line.
         """
         self.client.lines = []
-        self.client.msg('foo', 'bar\n\nbaz')
-        self.assertEqual(self.client.lines, [
-                'PRIVMSG foo :bar',
-                'PRIVMSG foo :baz'
-                ])
+        self.client.msg('foo', 'bar\nbaz')
+        self.assertEqual(
+            self.client.lines,
+            ['PRIVMSG foo :bar',
+             'PRIVMSG foo :baz'])
 
 
     def test_consecutiveNewlines(self):
@@ -1471,37 +1517,62 @@ class ClientMsgTests(unittest.TestCase):
         """
         self.client.lines = []
         self.client.msg('foo', 'bar\n\nbaz')
-        self.assertEqual(self.client.lines, [
-                'PRIVMSG foo :bar',
-                'PRIVMSG foo :baz',
-                ])
+        self.assertEqual(
+            self.client.lines,
+            ['PRIVMSG foo :bar',
+             'PRIVMSG foo :baz'])
 
 
-    def _lengthLimitExceededTest(self, *args):
-        # The maximum length of a line is 512 bytes, including the line prefix
-        # and the trailing CRLF.
-        maxLineLength = irc.MAX_COMMAND_LENGTH - 2 - len('PRIVMSG foo :')
-
-        self.client.msg('foo', 'o' * (maxLineLength + 1), *args)
-        self.assertEqual(self.client.lines, [
-                'PRIVMSG foo :' + maxLineLength * 'o',
-                'PRIVMSG foo :o',
-                ])
-
-
-    def test_longLinesCauseNewLines(self):
+    def assertLongMessageSplitting(self, message, expectedNumCommands,
+                                   length=None):
         """
-        Lines that would break the 512-byte barrier cause two lines to be sent.
+        Assert that messages sent by L{IRCClient.msg} are split into an
+        expected number of commands and the original message is transmitted in
+        its entirety over those commands.
         """
-        self._lengthLimitExceededTest()
+        responsePrefix = ':%s!%s@%s ' % (
+            self.client.nickname,
+            self.client.realname,
+            self.client.hostname)
+
+        self.client.msg('foo', message, length=length)
+
+        privmsg = []
+        self.patch(self.client, 'privmsg', lambda *a: privmsg.append(a))
+        # Deliver these to IRCClient via the normal mechanisms.
+        for line in self.client.lines:
+            self.client.lineReceived(responsePrefix + line)
+
+        self.assertEqual(len(privmsg), expectedNumCommands)
+        receivedMessage = ''.join(
+            message for user, target, message in privmsg)
+
+        # Did the long message we sent arrive as intended?
+        self.assertEqual(message, receivedMessage)
 
 
-    def test_lengthLimitNone(self):
+    def test_splitLongMessagesWithDefault(self):
         """
-        If C{None} is passed to L{IRCClient.msg} as the length limit, the
-        default limit of C{MAX_COMMAND_LENGTH} is used.
+        If a maximum message length is not provided to L{IRCClient.msg} a
+        best-guess effort is made to determine a safe maximum,  messages longer
+        than this are split into multiple commands with the intent of
+        delivering long messages without losing data due to message truncation
+        when the server relays them.
         """
-        self._lengthLimitExceededTest(None)
+        message = 'o' * (irc.MAX_COMMAND_LENGTH - 2)
+        self.assertLongMessageSplitting(message, 2)
+
+
+    def test_splitLongMessagesWithOverride(self):
+        """
+        The maximum message length can be specified to L{IRCClient.msg},
+        messages longer than this are split into multiple commands with the
+        intent of delivering long messages without losing data due to message
+        truncation when the server relays them.
+        """
+        message = 'o' * (irc.MAX_COMMAND_LENGTH - 2)
+        self.assertLongMessageSplitting(
+            message, 3, length=irc.MAX_COMMAND_LENGTH / 2)
 
 
     def test_newlinesBeforeLineBreaking(self):
@@ -1513,10 +1584,10 @@ class ClientMsgTests(unittest.TestCase):
         longline = 'o' * (irc.MAX_COMMAND_LENGTH // 2)
 
         self.client.msg('foo', longline + '\n' + longline)
-        self.assertEqual(self.client.lines, [
-                'PRIVMSG foo :' + longline,
-                'PRIVMSG foo :' + longline,
-                ])
+        self.assertEqual(
+            self.client.lines,
+            ['PRIVMSG foo :' + longline,
+             'PRIVMSG foo :' + longline])
 
 
     def test_lineBreakOnWordBoundaries(self):
@@ -1528,13 +1599,18 @@ class ClientMsgTests(unittest.TestCase):
         longline = 'o' * (irc.MAX_COMMAND_LENGTH // 2)
 
         self.client.msg('foo', longline + ' ' + longline)
-        self.assertEqual(self.client.lines, [
-                'PRIVMSG foo :' + longline,
-                'PRIVMSG foo :' + longline,
-                ])
+        self.assertEqual(
+            self.client.lines,
+            ['PRIVMSG foo :' + longline,
+             'PRIVMSG foo :' + longline])
 
 
-    def testSplitSanity(self):
+    def test_splitSanity(self):
+        """
+        L{twisted.words.protocols.irc.split} raises C{ValueError} if given a
+        length less than or equal to C{0} and returns C{[]} when splitting
+        C{''}.
+        """
         # Whiteboxing
         self.assertRaises(ValueError, irc.split, 'foo', -1)
         self.assertRaises(ValueError, irc.split, 'foo', 0)
@@ -1544,9 +1620,10 @@ class ClientMsgTests(unittest.TestCase):
 
     def test_splitDelimiters(self):
         """
-        Test that split() skips any delimiter (space or newline) that it finds
-        at the very beginning of the string segment it is operating on.
-        Nothing should be added to the output list because of it.
+        L{twisted.words.protocols.irc.split} skips any delimiter (space or
+        newline) that it finds at the very beginning of the string segment it
+        is operating on.  Nothing should be added to the output list because of
+        it.
         """
         r = irc.split("xx yyz", 2)
         self.assertEqual(['xx', 'yy', 'z'], r)
@@ -1556,7 +1633,8 @@ class ClientMsgTests(unittest.TestCase):
 
     def test_splitValidatesLength(self):
         """
-        split() raises ValueError if given a length <= 0
+        L{twisted.words.protocols.irc.split} raises C{ValueError} if given a
+        length less than or equal to C{0}.
         """
         self.assertRaises(ValueError, irc.split, "foo", 0)
         self.assertRaises(ValueError, irc.split, "foo", -1)
@@ -1568,7 +1646,8 @@ class ClientMsgTests(unittest.TestCase):
         then sends the message to the server for delivery to that channel.
         """
         self.client.say("thechannel", "the message")
-        self.assertEqual(self.client.lines, ["PRIVMSG #thechannel :the message"])
+        self.assertEquals(
+            self.client.lines, ["PRIVMSG #thechannel :the message"])
 
 
 

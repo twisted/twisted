@@ -1528,7 +1528,30 @@ class IRCClient(basic.LineReceiver):
         self.msg(channel, message, length)
 
 
-    def msg(self, user, message, length=MAX_COMMAND_LENGTH):
+    def _safeMaximumLineLength(self, command):
+        """
+        Estimate a safe maximum line length for the given command.
+
+        This is done by assuming the maximum values for nickname length,
+        realname and hostname combined with the command that needs to be sent
+        and some guessing. A theoretical maximum value is used because it is
+        possible that our nickname, username or hostname changes (on the server
+        side) while the length is still being calculated.
+        """
+        # :nickname!realname@hostname COMMAND ...
+        theoretical = ':%s!%s@%s %s' % (
+            'a' * self.supported.getFeature('NICKLEN'),
+            # This value is based on observation.
+            'b' * 10,
+            # See <http://tools.ietf.org/html/rfc2812#section-2.3.1>.
+            'c' * 63,
+            command)
+        # Fingers crossed.
+        fudge = 10
+        return MAX_COMMAND_LENGTH - len(theoretical) - fudge
+
+
+    def msg(self, user, message, length=None):
         """
         Send a message to a user or channel.
 
@@ -1537,31 +1560,31 @@ class IRCClient(basic.LineReceiver):
          - Any span between newline characters is longer than the given
            line-length.
 
-        @param user: The username or channel name to which to direct the
+        @param user: Username or channel name to which to direct the
             message.
         @type user: C{str}
 
-        @param message: The text to send.
+        @param message: Text to send.
         @type message: C{str}
 
-        @param length: The maximum number of octets to send in a single
-            command, including the IRC protocol framing. If not supplied,
-            defaults to L{MAX_COMMAND_LENGTH}.
+        @param length: Maximum number of octets to send in a single
+            command, including the IRC protocol framing. If C{None} is given
+            then L{IRCClient._safeMaximumLineLength} is used to determine a
+            value.
         @type length: C{int}
         """
-        fmt = "PRIVMSG %s :%%s" % (user,)
+        fmt = 'PRIVMSG %s :' % (user,)
 
         if length is None:
-            length = MAX_COMMAND_LENGTH
+            length = self._safeMaximumLineLength(fmt)
 
-        # NOTE: minimumLength really equals len(fmt) - 2 (for '%s') + 2
-        # (for the line-terminating CRLF)
-        minimumLength = len(fmt)
+        # Account for the line terminator.
+        minimumLength = len(fmt) + 2
         if length <= minimumLength:
             raise ValueError("Maximum length must exceed %d for message "
                              "to %s" % (minimumLength, user))
         for line in split(message, length - minimumLength):
-            self.sendLine(fmt % (line,))
+            self.sendLine(fmt + line)
 
 
     def notice(self, user, message):
