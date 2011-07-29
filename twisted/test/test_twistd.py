@@ -26,7 +26,7 @@ from twisted.trial import unittest
 
 from twisted.application import service, app
 from twisted.scripts import twistd
-from twisted.python import log, reflect
+from twisted.python import log
 from twisted.python.usage import UsageError
 from twisted.python.log import ILogObserver
 from twisted.python.versions import Version
@@ -229,29 +229,6 @@ class ServerOptionsTest(unittest.TestCase):
         msg = "twistd unix not available"
         test_defaultUmask.skip = test_umask.skip = test_invalidUmask.skip = msg
 
-
-    def test_unimportableConfiguredLogObserver(self):
-        """
-        C{--logger} with an unimportable module raises a L{UsageError}.
-        """
-        config = twistd.ServerOptions()
-        e = self.assertRaises(UsageError, config.parseOptions,
-                          ['--logger', 'no.such.module.I.hope'])
-        self.assertTrue(e.args[0].startswith(
-                "Logger 'no.such.module.I.hope' could not be imported: "
-                "'no.such.module.I.hope' does not name an object"))
-
-
-    def test_badAttributeWithConfiguredLogObserver(self):
-        """
-        C{--logger} with a non-existent object raises a L{UsageError}.
-        """
-        config = twistd.ServerOptions()
-        e = self.assertRaises(UsageError, config.parseOptions,
-                              ["--logger", "twisted.test.test_twistd.FOOBAR"])
-        self.assertTrue(e.args[0].startswith(
-                "Logger 'twisted.test.test_twistd.FOOBAR' could not be "
-                "imported: 'module' object has no attribute 'FOOBAR'"))
 
 
 class TapFileTest(unittest.TestCase):
@@ -1045,22 +1022,6 @@ def _patchFileLogObserver(patch):
 
 
 
-def _setupSyslog(testCase):
-    """
-    Make fake syslog, and return list to which prefix and then log
-    messages will be appended if it is used.
-    """
-    logMessages = []
-    class fakesyslogobserver(object):
-        def __init__(self, prefix):
-            logMessages.append(prefix)
-        def emit(self, eventDict):
-            logMessages.append(eventDict)
-    testCase.patch(syslog, "SyslogObserver", fakesyslogobserver)
-    return logMessages
-
-
-
 class AppLoggerTestCase(unittest.TestCase):
     """
     Tests for L{app.AppLogger}.
@@ -1126,81 +1087,6 @@ class AppLoggerTestCase(unittest.TestCase):
         logger = app.AppLogger({})
         logger.start(application)
         self._checkObserver(logs)
-
-
-    def _setupConfiguredLogger(self, application, extraLogArgs={},
-                               appLogger=app.AppLogger):
-        """
-        Set up an AppLogger which exercises the C{logger} configuration option.
-
-        @type application: L{Componentized}
-        @param application: The L{Application} object to pass to
-            L{app.AppLogger.start}.
-        @type extraLogArgs: C{dict}
-        @param extraLogArgs: extra values to pass to AppLogger.
-        @type appLogger: L{AppLogger} class, or a subclass
-        @param appLogger: factory for L{AppLogger} instances.
-
-        @rtype: C{list}
-        @return: The logs accumulated by the log observer.
-        """
-        logs = []
-        logArgs = {"logger": lambda: logs.append}
-        logArgs.update(extraLogArgs)
-        logger = appLogger(logArgs)
-        logger.start(application)
-        return logs
-
-
-    def test_startUsesConfiguredLogObserver(self):
-        """
-        When the C{logger} key is specified in the configuration dictionary
-        (i.e., when C{--logger} is passed to twistd), the initial log observer
-        will be the log observer returned from the callable which the value
-        refers to in FQPN form.
-        """
-        application = Componentized()
-        self._checkObserver(self._setupConfiguredLogger(application))
-
-
-    def test_configuredLogObserverBeatsComponent(self):
-        """
-        C{--logger} takes precedence over a ILogObserver component set on
-        Application.
-        """
-        nonlogs = []
-        application = Componentized()
-        application.setComponent(ILogObserver, nonlogs.append)
-        self._checkObserver(self._setupConfiguredLogger(application))
-        self.assertEqual(nonlogs, [])
-
-
-    def test_configuredLogObserverBeatsSyslog(self):
-        """
-        C{--logger} takes precedence over a C{--syslog} command line
-        argument.
-        """
-        logs = _setupSyslog(self)
-        application = Componentized()
-        self._checkObserver(self._setupConfiguredLogger(application,
-                                                        {"syslog": True},
-                                                        UnixAppLogger))
-        self.assertEqual(logs, [])
-
-    if _twistd_unix is None or syslog is None:
-        test_configuredLogObserverBeatsSyslog.skip = "Not on POSIX, or syslog not available."
-
-
-    def test_configuredLogObserverBeatsLogfile(self):
-        """
-        C{--logger} takes precedence over a C{--logfile} command line
-        argument.
-        """
-        application = Componentized()
-        path = self.mktemp()
-        self._checkObserver(self._setupConfiguredLogger(application,
-                                                        {"logfile": "path"}))
-        self.assertFalse(os.path.exists(path))
 
 
     def test_getLogObserverStdout(self):
@@ -1374,16 +1260,18 @@ class UnixAppLoggerTestCase(unittest.TestCase):
         If C{syslog} is set to C{True}, L{UnixAppLogger._getLogObserver} starts
         a L{syslog.SyslogObserver} with given C{prefix}.
         """
-        logs = _setupSyslog(self)
+        class fakesyslogobserver(object):
+            def __init__(self, prefix):
+                fakesyslogobserver.prefix = prefix
+            def emit(self, eventDict):
+                pass
+        self.patch(syslog, "SyslogObserver", fakesyslogobserver)
         logger = UnixAppLogger({"syslog": True, "prefix": "test-prefix"})
         observer = logger._getLogObserver()
-        self.assertEqual(logs, ["test-prefix"])
-        observer({"a": "b"})
-        self.assertEqual(logs, ["test-prefix", {"a": "b"}])
+        self.assertEqual(fakesyslogobserver.prefix, "test-prefix")
 
     if syslog is None:
         test_getLogObserverSyslog.skip = "Syslog not available"
-
 
 
 
