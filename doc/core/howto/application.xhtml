@@ -118,10 +118,29 @@ service.tac</code></p>
 
 <p>For more information, see the <code>twistd</code> man page.</p>
 
-<h3>Customizing <code>twistd</code> logging in a .tac application</h3>
+<h3>Customizing <code>twistd</code> logging</h3>
 
 <p>
-The logging behavior can be customized through an API
+<code>twistd</code> logging can be customized using the command
+line. This requires that a <em>log observer factory</em> be
+importable. Given a file named <code>my.py</code> with the code:
+</p>
+
+<pre class="python">
+from twisted.python.log import FileLogObserver
+
+def logger():
+    return FileLogObserver(open("/tmp/my.log", "w")).emit
+</pre>
+
+<p>
+invoking <code class="shell">twistd --logger my.logger ...</code> will log
+to a file named <code>/tmp/my.log</code> (this simple example could easily be
+replaced with use of the <code>--logfile</code> parameter to twistd).
+</p>
+
+<p>
+Alternatively, the logging behavior can be customized through an API
 accessible from <code>.tac</code> files.  The <code class="API"
 base="twisted.python.log">ILogObserver</code> component can be
 set on an Application in order to customize the default log observer that 

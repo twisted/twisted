@@ -47,6 +47,10 @@ with the standard process name (the Python binary in most cases).
 Log to a specified file, - for stdout (default: twistd.log).
 The log file will be rotated on SIGUSR1.
 .TP
+\fB\-l\fR, \fB\--logger\fR \fI<fully qualified python name>\fR
+A fully-qualified name to a log observer factory to use for the initial log
+observer. Takes precedence over --logfile and --syslog.
+.TP
 \fB\--pidfile\fR \fI<pidfile>\fR
 Save pid in specified file (default: twistd.pid).
 .TP

@@ -2,11 +2,11 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import sys, os, pdb, getpass, traceback, signal, warnings
+import sys, os, pdb, getpass, traceback, signal
 
 from twisted.python import runtime, log, usage, failure, util, logfile
 from twisted.python.versions import Version
-from twisted.python.reflect import qual
+from twisted.python.reflect import qual, namedAny
 from twisted.python.deprecate import deprecated
 from twisted.python.log import ILogObserver
 from twisted.persisted import sob
@@ -190,6 +190,9 @@ class AppLogger(object):
         default.
     @type _logfilename: C{str}
 
+    @ivar _observerFactory: Callable object that will create a log observer, or
+        None.
+
     @ivar _observer: log observer added at C{start} and removed at C{stop}.
     @type _observer: C{callable}
     """
@@ -197,20 +200,26 @@ class AppLogger(object):
 
     def __init__(self, options):
         self._logfilename = options.get("logfile", "")
+        self._observerFactory = options.get("logger") or None
 
 
     def start(self, application):
         """
         Initialize the logging system.
 
-        If an L{ILogObserver} component has been set on C{application}, then
-        it will be used as the log observer.  Otherwise a log observer will be
-        created based on the command-line options.
+        If a customer logger was specified on the command line it will be
+        used. If not, and an L{ILogObserver} component has been set on
+        C{application}, then it will be used as the log observer.  Otherwise a
+        log observer will be created based on the command-line options for
+        built-in loggers (e.g. C{--logfile}).
 
         @param application: The application on which to check for an
             L{ILogObserver}.
         """
-        observer = application.getComponent(ILogObserver, None)
+        if self._observerFactory is not None:
+            observer = self._observerFactory()
+        else:
+            observer = application.getComponent(ILogObserver, None)
 
         if observer is None:
             observer = self._getLogObserver()
@@ -537,6 +546,10 @@ class ServerOptions(usage.Options, ReactorSelectionMixin):
 
     optParameters = [['logfile','l', None,
                       "log to a specified file, - for stdout"],
+                     ['logger', None, None,
+                      "A fully-qualified name to a log observer factory to use "
+                      "for the initial log observer.  Takes precedence over "
+                      "--logfile and --syslog (when available)."],
                      ['profile', 'p', None,
                       "Run in profile mode, dumping results to specified file"],
                      ['profiler', None, "hotshot",
@@ -598,6 +611,12 @@ class ServerOptions(usage.Options, ReactorSelectionMixin):
     def postOptions(self):
         if self.subCommand or self['python']:
             self['no_save'] = True
+        if self['logger'] is not None:
+            try:
+                self['logger'] = namedAny(self['logger'])
+            except Exception, e:
+                raise usage.UsageError("Logger '%s' could not be imported: %s" % (
+                        self['logger'], e))
 
 
     def subCommands(self):
@@ -618,8 +637,7 @@ def run(runApp, ServerOptions):
     except usage.error, ue:
         print config
         print "%s: %s" % (sys.argv[0], ue)
-    else:
-        runApp(config)
+    runApp(config)
 
 
 
