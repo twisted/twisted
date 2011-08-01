@@ -713,7 +713,7 @@ class DeferredList(Deferred):
     L{DeferredList} is implemented by adding callbacks and errbacks to each
     L{Deferred} in the list passed to it.  This means callbacks and errbacks
     added to the Deferreds before they are passed to L{DeferredList} will change
-    the result that L{DeferredList} sees (ie, L{DeferredList} is not special).
+    the result that L{DeferredList} sees (i.e., L{DeferredList} is not special).
     Callbacks and errbacks can also be added to the Deferreds after they are
     passed to L{DeferredList} and L{DeferredList} may change the result that
     they see.
@@ -810,16 +810,30 @@ def _parseDListResult(l, fireOnOneErrback=False):
 
 
 
-def gatherResults(deferredList):
+def gatherResults(deferredList, consumeErrors=False):
     """
-    Returns list with result of given L{Deferred}s.
+    Returns, via a L{Deferred}, a list with the results of the given
+    L{Deferred}s - in effect, a "join" of multiple deferred operations.
 
-    This builds on L{DeferredList} but is useful since you don't
-    need to parse the result for success/failure.
+    The returned L{Deferred} will fire when I{all} of the provided L{Deferred}s
+    have fired, or when any one of them has failed.
+
+    This differs from L{DeferredList} in that you don't need to parse
+    the result for success/failure.
 
     @type deferredList:  C{list} of L{Deferred}s
+
+    @param consumeErrors: (keyword param) a flag, defaulting to False,
+        indicating that failures in any of the given L{Deferreds} should not be
+        propagated to errbacks added to the individual L{Deferreds} after this
+        L{gatherResults} invocation.  Any such errors in the individual
+        L{Deferred}s will be converted to a callback result of C{None}.  This
+        is useful to prevent spurious 'Unhandled error in Deferred' messages
+        from being logged.  This parameter is available since 11.1.0.
+    @type consumeErrors: C{bool}
     """
-    d = DeferredList(deferredList, fireOnOneErrback=True)
+    d = DeferredList(deferredList, fireOnOneErrback=True,
+                                   consumeErrors=consumeErrors)
     d.addCallback(_parseDListResult)
     return d
 

@@ -307,7 +307,7 @@ class DeferredTestCase(unittest.TestCase):
         self.assertEqual(result, [None])
 
 
-    def testGatherResults(self):
+    def test_gatherResults(self):
         # test successful list of deferreds
         l = []
         defer.gatherResults([defer.succeed(1), defer.succeed(2)]).addCallback(l.append)
@@ -320,6 +320,28 @@ class DeferredTestCase(unittest.TestCase):
         self.assert_(isinstance(l[0], failure.Failure))
         # get rid of error
         dl[1].addErrback(lambda e: 1)
+
+
+    def test_gatherResultsWithConsumeErrors(self):
+        """
+        If a L{Deferred} in the list passed to L{gatherResults} fires with a
+        failure and C{consumerErrors} is C{True}, the failure is converted to a
+        C{None} result on that L{Deferred}.
+        """
+        # test successful list of deferreds
+        dgood = defer.succeed(1)
+        dbad = defer.fail(RuntimeError("oh noes"))
+        d = defer.gatherResults([dgood, dbad], consumeErrors=True)
+        unconsumedErrors = []
+        dbad.addErrback(unconsumedErrors.append)
+        gatheredErrors = []
+        d.addErrback(gatheredErrors.append)
+
+        self.assertEqual((len(unconsumedErrors), len(gatheredErrors)),
+                         (0, 1))
+        self.assertIsInstance(gatheredErrors[0].value, defer.FirstError)
+        firstError = gatheredErrors[0].value.subFailure
+        self.assertIsInstance(firstError.value, RuntimeError)
 
 
     def test_maybeDeferredSync(self):
