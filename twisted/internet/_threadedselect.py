@@ -66,6 +66,7 @@ from zope.interface import implements
 from twisted.internet.interfaces import IReactorFDSet
 from twisted.internet import error
 from twisted.internet import posixbase
+from twisted.internet.posixbase import _NO_FILENO, _NO_FILEDESC
 from twisted.python import log, failure, threadable
 from twisted.persisted import styles
 from twisted.python.runtime import platformType
@@ -74,10 +75,6 @@ import select
 from errno import EINTR, EBADF
 
 from twisted.internet.selectreactor import _select
-
-# Exceptions that doSelect might return frequently
-_NO_FILENO = error.ConnectionFdescWentAway('Handler has no fileno method')
-_NO_FILEDESC = error.ConnectionFdescWentAway('Filedescriptor went away')
 
 def dictRemove(dct, value):
     try:

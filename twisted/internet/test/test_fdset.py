@@ -290,12 +290,13 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
         """
         reactor = self.buildReactor()
 
-        if reactor.__class__.__name__ == 'EPollReactor':
+        name = reactor.__class__.__name__
+        if name in ('EPollReactor', 'CFReactor'):
             # Closing a file descriptor immediately removes it from the epoll
             # set without generating a notification.  That means epollreactor
             # will not call any methods on Victim after the close, so there's
             # no chance to notice the socket is no longer valid.
-            raise SkipTest("EPollReactor cannot detect lost file descriptors")
+            raise SkipTest("%r cannot detect lost file descriptors" % (name,))
 
         client, server = self._connectedPair()
 

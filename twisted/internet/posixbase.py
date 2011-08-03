@@ -29,7 +29,10 @@ from twisted.python.runtime import platformType, platform
 from twisted.internet.base import ReactorBase, _SignalReactorMixin
 from twisted.internet.main import CONNECTION_DONE, CONNECTION_LOST
 
-_FDESC_LOST = error.ConnectionFdescWentAway('File descriptor lost')
+# Exceptions that doSelect might return frequently
+_NO_FILENO = error.ConnectionFdescWentAway('Handler has no fileno method')
+_NO_FILEDESC = error.ConnectionFdescWentAway('File descriptor lost')
+
 
 try:
     from twisted.protocols import tls
@@ -567,7 +570,7 @@ class _PollLikeMixin(object):
                     # replicated it, plus abstract.FileDescriptor.fileno
                     # returns -1.  Eventually it'd be good to deprecate this
                     # case.
-                    why = _FDESC_LOST
+                    why = _NO_FILEDESC
                 else:
                     if event & self._POLL_IN:
                         # Handle a read event.

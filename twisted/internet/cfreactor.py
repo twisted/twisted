@@ -21,7 +21,7 @@ from zope.interface import implements
 
 from twisted.internet.interfaces import IReactorFDSet
 from twisted.internet.posixbase import PosixReactorBase, _Waker
-from twisted.internet.selectreactor import _NO_FILENO, _NO_FILEDESC
+from twisted.internet.posixbase import _NO_FILEDESC
 
 from twisted.python import log
 
@@ -167,11 +167,15 @@ class CFReactor(PosixReactorBase):
                 self._cfrunloop, smugglesrc, kCFRunLoopCommonModes
             )
             return
+
+        why = None
+        isRead = False
+        src, skt, readWriteDescriptor, rw = self._fdmap[fd]
         try:
-            src, skt, readWriteDescriptor, rw = self._fdmap[fd]
-            why = None
-            isRead = callbackType == kCFSocketReadCallBack
-            try:
+            if readWriteDescriptor.fileno() == -1:
+                why = _NO_FILEDESC
+            else:
+                isRead = callbackType == kCFSocketReadCallBack
                 # CFSocket seems to deliver duplicate read/write notifications
                 # sometimes, especially a duplicate writability notification
                 # when first registering the socket.  This bears further
@@ -187,18 +191,11 @@ class CFReactor(PosixReactorBase):
                 else:
                     if rw[_WRITE]:
                         why = readWriteDescriptor.doWrite()
-            except:
-                why = sys.exc_info()[1]
-                log.err()
-            handfn = getattr(readWriteDescriptor, 'fileno', None)
-            if handfn is None:
-                why = _NO_FILENO
-            elif handfn() == -1:
-                why = _NO_FILEDESC
-            if why:
-                self._disconnectSelectable(readWriteDescriptor, why, isRead)
         except:
+            why = sys.exc_info()[1]
             log.err()
+        if why:
+            self._disconnectSelectable(readWriteDescriptor, why, isRead)
 
 
     def _watchFD(self, fd, descr, flag):
