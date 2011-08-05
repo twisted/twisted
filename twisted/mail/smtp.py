@@ -1733,6 +1733,22 @@ class SMTPSenderFactory(protocol.ClientFactory):
 
 from twisted.mail.imap4 import IClientAuthentication
 from twisted.mail.imap4 import CramMD5ClientAuthenticator, LOGINAuthenticator
+from twisted.mail.imap4 import LOGINCredentials as _lcredentials
+
+class LOGINCredentials(_lcredentials):
+    """
+    L{LOGINCredentials} generates challenges for I{LOGIN} authentication.
+
+    For interoperability with Outlook, the challenge generated does not exactly
+    match the one defined in the
+    U{draft specification<http://sepp.oetiker.ch/sasl-2.1.19-ds/draft-murchison-sasl-login-00.txt>}.
+    """
+
+    def __init__(self):
+        _lcredentials.__init__(self)
+        self.challenges = ['Password:', 'Username:']
+
+
 
 class PLAINAuthenticator:
     implements(IClientAuthentication)

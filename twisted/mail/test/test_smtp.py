@@ -639,12 +639,7 @@ class AuthTestCase(unittest.TestCase, LoopbackMixin):
         p = cred.portal.Portal(realm)
         p.registerChecker(DummyChecker())
 
-        class WeirdLOGIN(imap4.LOGINCredentials):
-            def __init__(self):
-                imap4.LOGINCredentials.__init__(self)
-                self.challenges[1] = 'Username:'
-
-        server = DummyESMTP({'LOGIN': WeirdLOGIN})
+        server = DummyESMTP({'LOGIN': smtp.LOGINCredentials})
         server.portal = p
 
         client = MyESMTPClient('testpassword')
