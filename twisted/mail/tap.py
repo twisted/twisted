@@ -234,6 +234,9 @@ class Options(usage.Options, strcred.AuthOptionMixin):
                 self.addEndpoint(
                     'pop3', self['pop3s'], certificate=self['certificate'])
 
+        if self['esmtp'] and self['hostname'] is None:
+            raise usage.UsageError("--esmtp requires --hostname")
+
         if not self['disable-anonymous']:
             self.service.smtpPortal.registerChecker(checkers.AllowAnonymousAccess())
 

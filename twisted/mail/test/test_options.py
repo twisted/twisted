@@ -177,6 +177,16 @@ class OptionsTestCase(TestCase):
             "Twisted 11.0; use endpoint descriptions instead.")
 
 
+    def test_esmtpWithoutHostname(self):
+        """
+        If I{--esmtp} is given without I{--hostname}, L{Options.parseOptions}
+        raises L{UsageError}.
+        """
+        options = Options()
+        exc = self.assertRaises(UsageError, options.parseOptions, ['--esmtp'])
+        self.assertEqual("--esmtp requires --hostname", str(exc))
+
+
 
 class SpyEndpoint(object):
     """
