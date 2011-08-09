@@ -487,10 +487,19 @@ class _FDDetector(object):
     getpid = os.getpid
     openfile = open
 
+    def __init__(self):
+        self._implementations = [
+            self._procFDImplementation, self._devFDImplementation,
+            self._fallbackFDImplementation]
+
 
     def _listOpenFDs(self):
         """
-        Figure out which implementation to use, then run it.
+        Return an iterable of file descriptors which I{may} be open in this
+        process.
+
+        This will try to return the fewest possible descriptors without missing
+        any.
         """
         self._listOpenFDs = self._getImplementation()
         return self._listOpenFDs()
@@ -498,40 +507,35 @@ class _FDDetector(object):
 
     def _getImplementation(self):
         """
-        Check if /dev/fd works, if so, use that.  Otherwise, check if
-        /proc/%d/fd exists, if so use that.
-        
-        Otherwise, ask resource.getrlimit, if that throws an exception, then
-        fallback to _fallbackFDImplementation.
+        Pick a method which gives correct results for C{_listOpenFDs} in this
+        runtime environment.
+
+        This involves a lot of very platform-specific checks, some of which may
+        be relatively expensive.  Therefore the returned method should be saved
+        and re-used, rather than always calling this method to determine what it
+        is.
+
+        See the implementation for the details of how a method is selected.
         """
-        try:
-            self.listdir("/dev/fd")
-            if self._checkDevFDSanity(): # FreeBSD support :-)
-                return self._devFDImplementation
-            else:
-                return self._fallbackFDImplementation
-        except:
+        for impl in self._implementations:
             try:
-                self.listdir("/proc/%d/fd" % (self.getpid(),))
-                return self._procFDImplementation
+                before = impl()
             except:
-                try:
-                    self._resourceFDImplementation() # Imports resource
-                    return self._resourceFDImplementation
-                except:
-                    return self._fallbackFDImplementation
-
-
-    def _checkDevFDSanity(self):
-        """
-        Returns true iff opening a file modifies the fds visible
-        in /dev/fd, as it should on a sane platform.
-        """
-        start = self.listdir("/dev/fd")
-        fp = self.openfile("/dev/null", "r")
-        end = self.listdir("/dev/fd")
-        fp.close()
-        return start != end
+                continue
+            try:
+                fp = self.openfile("/dev/null", "r")
+                after = impl()
+            finally:
+                fp.close()
+            if before != after:
+                return impl
+        # If no implementation can detect the newly opened file above, then just
+        # return the last one.  The last one should therefore always be one
+        # which makes a simple static guess which includes all possible open
+        # file descriptors, but perhaps also many other values which do not
+        # correspond to file descriptors.  For example, the scheme implemented
+        # by _fallbackFDImplementation is suitable to be the last entry.
+        return impl
 
 
     def _devFDImplementation(self):
@@ -540,7 +544,7 @@ class _FDDetector(object):
         See: http://www.freebsd.org/cgi/man.cgi?fdescfs
         """
         dname = "/dev/fd"
-        result = [int(fd) for fd in os.listdir(dname)]
+        result = [int(fd) for fd in self.listdir(dname)]
         return result
 
 
@@ -549,33 +553,30 @@ class _FDDetector(object):
         Simple implementation for systems where /proc/pid/fd exists (we assume
         it works).
         """
-        dname = "/proc/%d/fd" % (os.getpid(),)
-        return [int(fd) for fd in os.listdir(dname)]
-
-
-    def _resourceFDImplementation(self):
-        """
-        Fallback implementation where the resource module can inform us about
-        how many FDs we can expect.
-
-        Note that on OS-X we expect to be using the /dev/fd implementation.
-        """
-        import resource
-        maxfds = resource.getrlimit(resource.RLIMIT_NOFILE)[1] + 1
-        # OS-X reports 9223372036854775808. That's a lot of fds
-        # to close
-        if maxfds > 1024:
-            maxfds = 1024
-        return xrange(maxfds)
+        dname = "/proc/%d/fd" % (self.getpid(),)
+        return [int(fd) for fd in self.listdir(dname)]
 
 
     def _fallbackFDImplementation(self):
         """
-        Fallback-fallback implementation where we just assume that we need to
-        close 256 FDs.
+        Fallback implementation where either the resource module can inform us
+        about the upper bound of how many FDs to expect, or where we just guess
+        a constant maximum if there is no resource module.
+
+        All possible file descriptors from 0 to that upper bound are returned
+        with no attempt to exclude invalid file descriptor values.
         """
-        maxfds = 256
-        return xrange(maxfds)
+        try:
+            import resource
+        except ImportError:
+            maxfds = 1024
+        else:
+            # OS-X reports 9223372036854775808. That's a lot of fds to close.
+            # OS-X should get the /dev/fd implementation instead, so mostly
+            # this check probably isn't necessary.
+            maxfds = min(1024, resource.getrlimit(resource.RLIMIT_NOFILE)[1])
+        return range(maxfds)
+
 
 
 detector = _FDDetector()
