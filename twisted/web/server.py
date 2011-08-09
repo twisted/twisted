@@ -53,8 +53,14 @@ def _addressToTuple(addr):
 class Request(pb.Copyable, http.Request, components.Componentized):
     """
     An HTTP request.
+
+    @ivar defaultContentType: A C{str} giving the default I{Content-Type} value
+        to send in responses if no other value is set.  C{None} disables the
+        default.
     """
     implements(iweb.IRequest)
+
+    defaultContentType = "text/html"
 
     site = None
     appRootURL = None
@@ -117,7 +123,6 @@ class Request(pb.Copyable, http.Request, components.Componentized):
         # set various default headers
         self.setHeader('server', version)
         self.setHeader('date', http.datetimeToString())
-        self.setHeader('content-type', "text/html")
 
         # Resource Identification
         self.prepath = []
@@ -134,8 +139,23 @@ class Request(pb.Copyable, http.Request, components.Componentized):
 
         @param data: A string to write to the response.
         """
+        if not self.startedWriting:
+            # Before doing the first write, check to see if a default
+            # Content-Type header should be supplied.
+            modified = self.code != http.NOT_MODIFIED
+            contentType = self.responseHeaders.getRawHeaders('content-type')
+            if modified and contentType is None and self.defaultContentType is not None:
+                self.responseHeaders.setRawHeaders(
+                    'content-type', [self.defaultContentType])
+
+        # Only let the write happen if we're not generating a HEAD response by
+        # faking out the request method.  Note, if we are doing that,
+        # startedWriting will never be true, and the above logic may run
+        # multiple times.  It will only actually change the responseHeaders once
+        # though, so it's still okay.
         if not self._inFakeHead:
             http.Request.write(self, data)
+
 
     def render(self, resrc):
         """

@@ -201,6 +201,12 @@ class _WSGIResponse:
             'SERVER_PORT': str(request.getHost().port),
             'SERVER_PROTOCOL': request.clientproto}
 
+
+        # The application object is entirely in control of response headers;
+        # disable the default Content-Type value normally provided by
+        # twisted.web.server.Request.
+        self.request.defaultContentType = None
+
         for name, values in request.requestHeaders.getAllRawHeaders():
             name = 'HTTP_' + name.upper().replace('-', '_')
             # It might be preferable for http.HTTPChannel to clear out
@@ -282,10 +288,6 @@ class _WSGIResponse:
         code, message = self.status.split(None, 1)
         code = int(code)
         self.request.setResponseCode(code, message)
-
-        # twisted.web.server.Request.process always addes a content-type
-        # response header.  That's not appropriate for us.
-        self.request.responseHeaders.removeHeader('content-type')
 
         for name, value in self.headers:
             # Don't allow the application to control these required headers.

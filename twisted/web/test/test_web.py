@@ -196,7 +196,21 @@ class ResourceTestCase(unittest.TestCase):
 
 
 class SimpleResource(resource.Resource):
+    """
+    @ivar _contentType: C{None} or a C{str} giving the value of the
+        I{Content-Type} header in the response this resource will render.  If it
+        is C{None}, no I{Content-Type} header will be set in the response.
+    """
+    def __init__(self, contentType=None):
+        resource.Resource.__init__(self)
+        self._contentType = contentType
+
+
     def render(self, request):
+        if self._contentType is not None:
+            request.responseHeaders.setRawHeaders(
+                "content-type", [self._contentType])
+
         if http.CACHED in (request.setLastModified(10),
                            request.setETag('MatchingTag')):
             return ''
@@ -420,13 +434,10 @@ class ConditionalTest(unittest.TestCase):
     """
     web.server's handling of conditional requests for cache validation.
     """
-
-    # XXX: test web.distrib.
-
     def setUp(self):
         self.resrc = SimpleResource()
         self.resrc.putChild('', self.resrc)
-        self.site = server.Site(self.resrc)
+        self.resrc.putChild('with-content-type', SimpleResource('image/jpeg'))
         self.site = server.Site(self.resrc)
         self.site.logFile = log.logfile
 
@@ -438,25 +449,29 @@ class ConditionalTest(unittest.TestCase):
         self.transport.getPeer = lambda *a, **kw: "peer"
         self.transport.getHost = lambda *a, **kw: "host"
         self.channel.makeConnection(self.transport)
-        for l in ["GET / HTTP/1.1",
-                  "Accept: text/html"]:
-            self.channel.lineReceived(l)
+
 
     def tearDown(self):
         self.channel.connectionLost(None)
 
 
-    def _modifiedTest(self, modifiedSince):
+    def _modifiedTest(self, modifiedSince=None, etag=None):
         """
-        Given the value C{modifiedSince} for the I{If-Modified-Since}
-        header, verify that a response with a 200 code and the resource as
-        the body is returned.
+        Given the value C{modifiedSince} for the I{If-Modified-Since} header or
+        the value C{etag} for the I{If-Not-Match} header, verify that a response
+        with a 200 code, a default Content-Type, and the resource as the body is
+        returned.
         """
-        self.channel.lineReceived("If-Modified-Since: " + modifiedSince)
-        self.channel.lineReceived('')
+        if modifiedSince is not None:
+            validator = "If-Modified-Since: " + modifiedSince
+        else:
+            validator = "If-Not-Match: " + etag
+        for line in ["GET / HTTP/1.1", validator, ""]:
+            self.channel.lineReceived(line)
         result = self.transport.getvalue()
         self.assertEqual(httpCode(result), http.OK)
         self.assertEqual(httpBody(result), "correct")
+        self.assertEqual(httpHeader(result, "Content-Type"), "text/html")
 
 
     def test_modified(self):
@@ -466,22 +481,26 @@ class ConditionalTest(unittest.TestCase):
         requested resource, a 200 response is returned along with a response
         body containing the resource.
         """
-        self._modifiedTest(http.datetimeToString(1))
+        self._modifiedTest(modifiedSince=http.datetimeToString(1))
 
 
     def test_unmodified(self):
         """
-        If a request is made with an I{If-Modified-Since} header value with
-        a timestamp indicating a time after the last modification of the
-        request resource, a 304 response is returned along with an empty
-        response body.
+        If a request is made with an I{If-Modified-Since} header value with a
+        timestamp indicating a time after the last modification of the request
+        resource, a 304 response is returned along with an empty response body
+        and no Content-Type header if the application does not set one.
         """
-        self.channel.lineReceived("If-Modified-Since: %s"
-                                  % http.datetimeToString(100))
-        self.channel.lineReceived('')
+        for line in ["GET / HTTP/1.1",
+                     "If-Modified-Since: " + http.datetimeToString(100), ""]:
+            self.channel.lineReceived(line)
         result = self.transport.getvalue()
         self.assertEqual(httpCode(result), http.NOT_MODIFIED)
         self.assertEqual(httpBody(result), "")
+        # Since there SHOULD NOT (RFC 2616, section 10.3.5) be any
+        # entity-headers, the Content-Type is not set if the application does
+        # not explicitly set it.
+        self.assertEqual(httpHeader(result, "Content-Type"), None)
 
 
     def test_invalidTimestamp(self):
@@ -491,7 +510,7 @@ class ConditionalTest(unittest.TestCase):
         and a normal 200 response is returned with a response body
         containing the resource.
         """
-        self._modifiedTest("like, maybe a week ago, I guess?")
+        self._modifiedTest(modifiedSince="like, maybe a week ago, I guess?")
 
 
     def test_invalidTimestampYear(self):
@@ -501,7 +520,7 @@ class ConditionalTest(unittest.TestCase):
         header is treated as not having been present and a normal 200
         response is returned with a response body containing the resource.
         """
-        self._modifiedTest("Thu, 01 Jan blah 00:00:10 GMT")
+        self._modifiedTest(modifiedSince="Thu, 01 Jan blah 00:00:10 GMT")
 
 
     def test_invalidTimestampTooLongAgo(self):
@@ -511,7 +530,7 @@ class ConditionalTest(unittest.TestCase):
         having been present and a normal 200 response is returned with a
         response body containing the resource.
         """
-        self._modifiedTest("Thu, 01 Jan 1899 00:00:10 GMT")
+        self._modifiedTest(modifiedSince="Thu, 01 Jan 1899 00:00:10 GMT")
 
 
     def test_invalidTimestampMonth(self):
@@ -522,25 +541,50 @@ class ConditionalTest(unittest.TestCase):
         and a normal 200 response is returned with a response body
         containing the resource.
         """
-        self._modifiedTest("Thu, 01 Blah 1970 00:00:10 GMT")
+        self._modifiedTest(modifiedSince="Thu, 01 Blah 1970 00:00:10 GMT")
 
 
     def test_etagMatchedNot(self):
-        """If-None-Match ETag cache validator (positive)"""
-        self.channel.lineReceived("If-None-Match: unmatchedTag")
-        self.channel.lineReceived('')
-        result = self.transport.getvalue()
-        self.assertEqual(httpCode(result), http.OK)
-        self.assertEqual(httpBody(result), "correct")
+        """
+        If a request is made with an I{If-None-Match} ETag which does not match
+        the current ETag of the requested resource, the header is treated as not
+        having been present and a normal 200 response is returned with a
+        response body containing the resource.
+        """
+        self._modifiedTest(etag="unmatchedTag")
+
 
     def test_etagMatched(self):
-        """If-None-Match ETag cache validator (negative)"""
-        self.channel.lineReceived("If-None-Match: MatchingTag")
-        self.channel.lineReceived('')
+        """
+        If a request is made with an I{If-None-Match} ETag which does match the
+        current ETag of the requested resource, a 304 response is returned along
+        with an empty response body.
+        """
+        for line in ["GET / HTTP/1.1", "If-None-Match: MatchingTag", ""]:
+            self.channel.lineReceived(line)
         result = self.transport.getvalue()
         self.assertEqual(httpHeader(result, "ETag"), "MatchingTag")
         self.assertEqual(httpCode(result), http.NOT_MODIFIED)
         self.assertEqual(httpBody(result), "")
+
+
+    def test_unmodifiedWithContentType(self):
+        """
+        Similar to L{test_etagMatched}, but the response should include a
+        I{Content-Type} header if the application explicitly sets one.
+
+        This I{Content-Type} header SHOULD NOT be present according to RFC 2616,
+        section 10.3.5.  It will only be present if the application explicitly
+        sets it.
+        """
+        for line in ["GET /with-content-type HTTP/1.1",
+                     "If-None-Match: MatchingTag", ""]:
+            self.channel.lineReceived(line)
+        result = self.transport.getvalue()
+        self.assertEqual(httpCode(result), http.NOT_MODIFIED)
+        self.assertEqual(httpBody(result), "")
+        self.assertEqual(httpHeader(result, "Content-Type"), "image/jpeg")
+
 
 
 

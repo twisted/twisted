@@ -276,26 +276,27 @@ class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
             text = self.headertext + output
             headerEnds = []
             for delimiter in '\n\n','\r\n\r\n','\r\r', '\n\r\n':
-                headerend = string.find(text,delimiter)
+                headerend = text.find(delimiter)
                 if headerend != -1:
                     headerEnds.append((headerend, delimiter))
             if headerEnds:
-                # twisted.web.server.Request.process always addes a content-type
-                # response header.  That's not appropriate for us.
-                self.request.responseHeaders.removeHeader('content-type')
+                # The script is entirely in control of response headers; disable the
+                # default Content-Type value normally provided by
+                # twisted.web.server.Request.
+                self.request.defaultContentType = None
 
                 headerEnds.sort()
                 headerend, delimiter = headerEnds[0]
                 self.headertext = text[:headerend]
                 # This is a final version of the header text.
                 linebreak = delimiter[:len(delimiter)/2]
-                headers = string.split(self.headertext, linebreak)
+                headers = self.headertext.split(linebreak)
                 for header in headers:
-                    br = string.find(header,': ')
+                    br = header.find(': ')
                     if br == -1:
                         log.msg( 'ignoring malformed CGI header: %s' % header )
                     else:
-                        headerName = string.lower(header[:br])
+                        headerName = header[:br].lower()
                         headerText = header[br+2:]
                         if headerName == 'location':
                             self.request.setResponseCode(http.FOUND)
