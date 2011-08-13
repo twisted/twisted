@@ -566,6 +566,10 @@ class Cooperator(object):
         Remove a L{CooperativeTask} from this L{Cooperator}.
         """
         self._tasks.remove(task)
+        # If no work left to do, cancel the delayed call:
+        if not self._tasks and self._delayedCall:
+            self._delayedCall.cancel()
+            self._delayedCall = None
 
 
     def _tasksWhileNotStopped(self):

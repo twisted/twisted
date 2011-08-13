@@ -250,6 +250,41 @@ class TestCooperator(unittest.TestCase):
                 self.fail("Cooperator took too long")
 
 
+    def test_removingLastTaskStopsScheduledCall(self):
+        """
+        If the last task in a Cooperator is removed, the scheduled call for
+        the next tick is cancelled, since it is no longer necessary.
+
+        This behavior is useful for tests that want to assert they have left
+        no reactor state behind when they're done.
+        """
+        calls = [None]
+        def sched(f):
+            calls[0] = FakeDelayedCall(f)
+            return calls[0]
+        coop = task.Cooperator(scheduler=sched)
+
+        # Add two task; this should schedule the tick:
+        task1 = coop.cooperate(iter([1, 2]))
+        task2 = coop.cooperate(iter([1, 2]))
+        self.assertEqual(calls[0].func, coop._tick)
+
+        # Remove first task; scheduled call should still be going:
+        task1.stop()
+        self.assertEqual(calls[0].cancelled, False)
+        self.assertEqual(coop._delayedCall, calls[0])
+
+        # Remove second task; scheduled call should be cancelled:
+        task2.stop()
+        self.assertEqual(calls[0].cancelled, True)
+        self.assertEqual(coop._delayedCall, None)
+
+        # Add another task; scheduled call will be recreated:
+        task3 = coop.cooperate(iter([1, 2]))
+        self.assertEqual(calls[0].cancelled, False)
+        self.assertEqual(coop._delayedCall, calls[0])
+
+
 
 class UnhandledException(Exception):
     """
