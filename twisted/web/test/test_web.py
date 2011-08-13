@@ -597,6 +597,14 @@ class GoogleTestCase(unittest.TestCase):
         return d
 
 
+    def test_deprecated(self):
+        """
+        Google module is deprecated since Twisted 11.1.0
+        """
+        from twisted.web import google
+        warnings = self.flushWarnings(offendingFunctions=[self.test_deprecated])
+        self.assertEqual(len(warnings), 1)
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
 
 
 
