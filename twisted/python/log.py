@@ -291,7 +291,7 @@ class LogPublisher:
                 observer = self.observers[i]
                 self.observers[i] = lambda event: None
                 try:
-                    err(failure.Failure(),
+                    self._err(failure.Failure(),
                         "Log observer %s failed." % (observer,))
                 except:
                     # Sometimes err() will throw an exception,
@@ -299,6 +299,24 @@ class LogPublisher:
                     # happens, there's not much we can do...
                     pass
                 self.observers[i] = observer
+
+
+    def _err(self, failure, why):
+        """
+        Log a failure.
+
+        Similar in functionality to the global {err} function, but the failure
+        gets published only to observers attached to this publisher.
+
+        @param failure: The failure to log.
+        @type failure: L{Failure}.
+
+        @param why: The source of this failure.  This will be logged along with
+            the C{failure} and should describe the context in which the failure
+            occurred.
+        @type why: C{str}
+        """
+        self.msg(failure=failure, why=why, isError=1)
 
 
     def showwarning(self, message, category, filename, lineno, file=None,

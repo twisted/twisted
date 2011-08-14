@@ -97,11 +97,7 @@ class LogTest(unittest.TestCase):
             # Send out the event which will break one of the observers.
             log.msg("Howdy, y'all.")
 
-            # The broken observer should have caused this to be logged.  There
-            # is a slight bug with LogPublisher - when it logs an error from an
-            # observer, it uses the global "err", which is not necessarily
-            # associated with it, but which may be associated with a different
-            # LogPublisher!  See #3307.
+            # The broken observer should have caused this to be logged.
             excs = self.flushLoggedErrors(ZeroDivisionError)
             self.assertEqual(len(excs), 1)
 
@@ -120,41 +116,37 @@ class LogTest(unittest.TestCase):
         If logging causes an error, make sure that if logging the fact that
         logging failed also causes an error, the log observer is not removed.
         """
-        catcher = []
-
+        events = []
+        errors = []
         publisher = log.LogPublisher()
-        oldLogPublisher = log.theLogPublisher
-        log.theLogPublisher = publisher
-        log.msg = publisher.msg
 
-        def _cleanup():
-            log.theLogPublisher = oldLogPublisher
-            log.msg = oldLogPublisher.msg
-        self.addCleanup(_cleanup)
-
-        class FailingObserver(list):
+        class FailingObserver(object):
             calls = 0
             def log(self, msg, **kwargs):
                 # First call raises RuntimeError:
                 self.calls += 1
                 if self.calls < 2:
-                    raise RuntimeError("Failure #%s" % (len(calls),))
+                    raise RuntimeError("Failure #%s" % (self.calls,))
                 else:
-                    self.append(msg)
+                    events.append(msg)
+
         observer = FailingObserver()
         publisher.addObserver(observer.log)
         self.assertEqual(publisher.observers, [observer.log])
 
         try:
             # When observer throws, the publisher attempts to log the fact by
-            # calling err()... which also fails with recursion error:
-            oldError = log.err
-            def failingErr(*arg, **kwargs):
+            # calling self._err()... which also fails with recursion error:
+            oldError = publisher._err
+
+            def failingErr(failure, why, **kwargs):
+                errors.append(failure.value)
                 raise RuntimeError("Fake recursion error")
-            log.err = failingErr
+
+            publisher._err = failingErr
             publisher.msg("error in first observer")
         finally:
-            log.err = oldError
+            publisher._err = oldError
             # Observer should still exist; we do this in finally since before
             # bug was fixed the test would fail due to uncaught exception, so
             # we want failing assert too in that case:
@@ -164,8 +156,10 @@ class LogTest(unittest.TestCase):
         publisher.msg("but this should succeed")
 
         self.assertEqual(observer.calls, 2)
-        self.assertEqual(len(observer), 1)
-        self.assertEqual(observer[0]['message'], ("but this should succeed",))
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]['message'], ("but this should succeed",))
+        self.assertEqual(len(errors), 1)
+        self.assertIsInstance(errors[0], RuntimeError)
 
 
     def test_showwarning(self):
@@ -229,6 +223,30 @@ class LogTest(unittest.TestCase):
                 output.getvalue(),
                 warnings.formatwarning(message, category, filename, lineno,
                                        line))
+
+
+    def test_publisherReportsBrokenObserversPrivately(self):
+        """
+        Log publisher does not use the global L{log.err} when reporting broken
+        observers.
+        """
+        errors = []
+        def logError(eventDict):
+            if eventDict.get("isError"):
+                errors.append(eventDict["failure"].value)
+
+        def fail(eventDict):
+            raise RuntimeError("test_publisherLocalyReportsBrokenObservers")
+
+        publisher = log.LogPublisher()
+        publisher.addObserver(logError)
+        publisher.addObserver(fail)
+
+        publisher.msg("Hello!")
+        self.assertEqual(publisher.observers, [logError, fail])
+        self.assertEqual(len(errors), 1)
+        self.assertIsInstance(errors[0], RuntimeError)
+
 
 
 class FakeFile(list):
