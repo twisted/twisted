@@ -1,0 +1,1 @@
+twisted.persisted.styles no longer uses the deprecated allYourBase function

@@ -12,6 +12,7 @@ Different styles of persisted objects.
 import types
 import copy_reg
 import copy
+import inspect
 
 try:
     import cStringIO as StringIO
@@ -20,6 +21,7 @@ except ImportError:
 
 # Twisted Imports
 from twisted.python import log
+from twisted.python import reflect
 
 oldModules = {}
 
@@ -143,14 +145,25 @@ def requireUpgrade(obj):
         obj.versionUpgrade()
         return obj
 
-from twisted.python import reflect
-
 def _aybabtu(c):
-    l = []
-    for b in reflect.allYourBase(c, Versioned):
-        if b not in l and b is not Versioned:
+    """
+    Get all of the parent classes of C{c}, not including C{c} itself, which are
+    strict subclasses of L{Versioned}.
+
+    The name comes from "all your base are belong to us", from the deprecated
+    L{twisted.python.reflect.allYourBase} function.
+
+    @param c: a class
+    @returns: list of classes
+    """
+    # begin with two classes that should *not* be included in the
+    # final result
+    l = [c, Versioned]
+    for b in inspect.getmro(c):
+        if b not in l and issubclass(b, Versioned):
             l.append(b)
-    return l
+    # return all except the unwanted classes
+    return l[2:]
 
 class Versioned:
     """

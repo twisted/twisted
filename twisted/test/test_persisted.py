@@ -112,6 +112,69 @@ class VersionTestCase(unittest.TestCase):
         styles.doUpgrade()
         self.failUnless(x.y.upgraded)
 
+
+
+class VersionedSubClass(styles.Versioned):
+    pass
+
+
+
+class SecondVersionedSubClass(styles.Versioned):
+    pass
+
+
+
+class VersionedSubSubClass(VersionedSubClass):
+    pass
+
+
+
+class VersionedDiamondSubClass(VersionedSubSubClass, SecondVersionedSubClass):
+    pass
+
+
+
+class AybabtuTests(unittest.TestCase):
+    """
+    L{styles._aybabtu} gets all of classes in the inheritance hierarchy of its
+    argument that are strictly between L{Versioned} and the class itself.
+    """
+
+    def test_aybabtuStrictEmpty(self):
+        """
+        L{styles._aybabtu} of L{Versioned} itself is an empty list.
+        """
+        self.assertEqual(styles._aybabtu(styles.Versioned), [])
+
+
+    def test_aybabtuStrictSubclass(self):
+        """
+        There are no classes I{between} L{VersionedSubClass} and L{Versioned},
+        so L{styles._aybabtu} returns an empty list.
+        """
+        self.assertEqual(styles._aybabtu(VersionedSubClass), [])
+
+
+    def test_aybabtuSubsubclass(self):
+        """
+        With a sub-sub-class of L{Versioned}, L{styles._aybabtu} returns a list
+        containing the intervening subclass.
+        """
+        self.assertEqual(styles._aybabtu(VersionedSubSubClass),
+                         [VersionedSubClass])
+
+
+    def test_aybabtuStrict(self):
+        """
+        For a diamond-shaped inheritance graph, L{styles._aybabtu} returns a
+        list containing I{both} intermediate subclasses.
+        """
+        self.assertEqual(
+            styles._aybabtu(VersionedDiamondSubClass),
+            [VersionedSubSubClass, VersionedSubClass, SecondVersionedSubClass])
+
+
+
 class MyEphemeral(styles.Ephemeral):
 
     def __init__(self, x):
