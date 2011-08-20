@@ -7,10 +7,11 @@ Test cases for Twisted component architecture.
 """
 
 from zope.interface import Interface, implements, Attribute
+from zope.interface.adapter import AdapterRegistry
 
 from twisted.trial import unittest
 from twisted.python import components
-from twisted.python.components import proxyForInterface
+from twisted.python.components import _addHook, _removeHook, proxyForInterface
 
 
 class InterfacesTestCase(unittest.TestCase):
@@ -46,9 +47,6 @@ class Elapsed(components.Adapter):
     def elapsedFunc(self):
         return 1
 
-components.registerAdapter(Adept, Compo, IAdept)
-components.registerAdapter(Elapsed, Compo, IElapsed)
-
 class AComp(components.Componentized):
     pass
 class BComp(AComp):
@@ -74,17 +72,45 @@ class Test2:
     def __init__(self, orig):
         pass
 
-components.registerAdapter(Test, AComp, ITest)
-components.registerAdapter(Test, AComp, ITest3)
-components.registerAdapter(Test2, AComp, ITest2)
 
 
-
-
-class ComponentizedTestCase(unittest.TestCase):
-    """Simple test case for caching in Componentized.
+class RegistryUsingMixin(object):
     """
+    Mixin for test cases which modify the global registry somehow.
+    """
+    def setUp(self):
+        """
+        Configure L{twisted.python.components.registerAdapter} to mutate an
+        alternate registry to improve test isolation.
+        """
+        # Create a brand new, empty registry and put it onto the components
+        # module where registerAdapter will use it.  Also ensure that it goes
+        # away at the end of the test.
+        scratchRegistry = AdapterRegistry()
+        self.patch(components, 'globalRegistry', scratchRegistry)
+        # Hook the new registry up to the adapter lookup system and ensure that
+        # association is also discarded after the test.
+        hook = _addHook(scratchRegistry)
+        self.addCleanup(_removeHook, hook)
+
+
+
+class ComponentizedTestCase(unittest.TestCase, RegistryUsingMixin):
+    """
+    Simple test case for caching in Componentized.
+    """
+    def setUp(self):
+        RegistryUsingMixin.setUp(self)
+
+        components.registerAdapter(Test, AComp, ITest)
+        components.registerAdapter(Test, AComp, ITest3)
+        components.registerAdapter(Test2, AComp, ITest2)
+
+
     def testComponentized(self):
+        components.registerAdapter(Adept, Compo, IAdept)
+        components.registerAdapter(Elapsed, Compo, IElapsed)
+
         c = Compo()
         assert c.getComponent(IAdept).adaptorFunc() == (1, 1)
         assert c.getComponent(IAdept).adaptorFunc() == (2, 2)
@@ -110,8 +136,8 @@ class ComponentizedTestCase(unittest.TestCase):
         co2 = c.getComponent(ITest2)
         co3 = c.getComponent(ITest3)
         co4 = c.getComponent(ITest4)
-        assert co4 == None
-        assert co1 is co3
+        self.assertIdentical(None, co4)
+        self.assertIdentical(co1, co3)
 
 
     def test_getComponentDefaults(self):
@@ -189,9 +215,6 @@ class ComponentDoubler(ComponentMeta):
         self.num += (num * 2)
         return self.original.num
 
-components.registerAdapter(MetaAdder, MetaNumber, IMeta)
-components.registerAdapter(ComponentAdder, ComponentNumber, IMeta)
-
 class IAttrX(Interface):
     def x():
         pass
@@ -214,15 +237,15 @@ class DoubleXAdapter:
     def __cmp__(self, other):
         return cmp(self.num, other.num)
 
-components.registerAdapter(DoubleXAdapter, IAttrX, IAttrXX)
 
-class TestMetaInterface(unittest.TestCase):
-
+class TestMetaInterface(RegistryUsingMixin, unittest.TestCase):
     def testBasic(self):
+        components.registerAdapter(MetaAdder, MetaNumber, IMeta)
         n = MetaNumber(1)
         self.assertEqual(IMeta(n).add(1), 2)
 
     def testComponentizedInteraction(self):
+        components.registerAdapter(ComponentAdder, ComponentNumber, IMeta)
         c = ComponentNumber()
         IMeta(c).add(1)
         IMeta(c).add(1)
@@ -230,21 +253,25 @@ class TestMetaInterface(unittest.TestCase):
 
     def testAdapterWithCmp(self):
         # Make sure that a __cmp__ on an adapter doesn't break anything
+        components.registerAdapter(DoubleXAdapter, IAttrX, IAttrXX)
         xx = IAttrXX(Xcellent())
         self.assertEqual(('x!', 'x!'), xx.xx())
 
 
-class RegistrationTestCase(unittest.TestCase):
+class RegistrationTestCase(RegistryUsingMixin, unittest.TestCase):
     """
     Tests for adapter registration.
     """
     def _registerAdapterForClassOrInterface(self, original):
+        """
+        Register an adapter with L{components.registerAdapter} for the given
+        class or interface and verify that the adapter can be looked up with
+        L{components.getAdapterFactory}.
+        """
         adapter = lambda o: None
-        class TheInterface(Interface):
-            pass
-        components.registerAdapter(adapter, original, TheInterface)
+        components.registerAdapter(adapter, original, ITest)
         self.assertIdentical(
-            components.getAdapterFactory(original, TheInterface, None),
+            components.getAdapterFactory(original, ITest, None),
             adapter)
 
 
@@ -263,24 +290,24 @@ class RegistrationTestCase(unittest.TestCase):
         Test that an adapter from an interface can be registered and then
         looked up.
         """
-        class TheOriginal(Interface):
-            pass
-        return self._registerAdapterForClassOrInterface(TheOriginal)
+        return self._registerAdapterForClassOrInterface(ITest2)
 
 
     def _duplicateAdapterForClassOrInterface(self, original):
+        """
+        Verify that L{components.registerAdapter} raises L{ValueError} if the
+        from-type/interface and to-interface pair is not unique.
+        """
         firstAdapter = lambda o: False
         secondAdapter = lambda o: True
-        class TheInterface(Interface):
-            pass
-        components.registerAdapter(firstAdapter, original, TheInterface)
+        components.registerAdapter(firstAdapter, original, ITest)
         self.assertRaises(
             ValueError,
             components.registerAdapter,
-            secondAdapter, original, TheInterface)
+            secondAdapter, original, ITest)
         # Make sure that the original adapter is still around as well
         self.assertIdentical(
-            components.getAdapterFactory(original, TheInterface, None),
+            components.getAdapterFactory(original, ITest, None),
             firstAdapter)
 
 
@@ -299,12 +326,15 @@ class RegistrationTestCase(unittest.TestCase):
         Test that attempting to register a second adapter from an interface
         raises the appropriate exception.
         """
-        class TheOriginal(Interface):
-            pass
-        return self._duplicateAdapterForClassOrInterface(TheOriginal)
+        return self._duplicateAdapterForClassOrInterface(ITest2)
 
 
     def _duplicateAdapterForClassOrInterfaceAllowed(self, original):
+        """
+        Verify that when C{components.ALLOW_DUPLICATES} is set to C{True}, new
+        adapter registrations for a particular from-type/interface and
+        to-interface pair replace older registrations.
+        """
         firstAdapter = lambda o: False
         secondAdapter = lambda o: True
         class TheInterface(Interface):
@@ -329,6 +359,7 @@ class RegistrationTestCase(unittest.TestCase):
             components.getAdapterFactory(original, TheInterface, None),
             secondAdapter)
 
+
     def test_duplicateAdapterForClassAllowed(self):
         """
         Test that when L{components.ALLOW_DUPLICATES} is set to a true
@@ -352,18 +383,16 @@ class RegistrationTestCase(unittest.TestCase):
 
 
     def _multipleInterfacesForClassOrInterface(self, original):
+        """
+        Verify that an adapter can be registered for multiple to-interfaces at a
+        time.
+        """
         adapter = lambda o: None
-        class FirstInterface(Interface):
-            pass
-        class SecondInterface(Interface):
-            pass
-        components.registerAdapter(adapter, original, FirstInterface, SecondInterface)
+        components.registerAdapter(adapter, original, ITest, ITest2)
         self.assertIdentical(
-            components.getAdapterFactory(original, FirstInterface, None),
-            adapter)
+            components.getAdapterFactory(original, ITest, None), adapter)
         self.assertIdentical(
-            components.getAdapterFactory(original, SecondInterface, None),
-            adapter)
+            components.getAdapterFactory(original, ITest2, None), adapter)
 
 
     def test_multipleInterfacesForClass(self):
@@ -381,25 +410,27 @@ class RegistrationTestCase(unittest.TestCase):
         Test the registration of an adapter from an interface to several
         interfaces at once.
         """
-        class TheOriginal(Interface):
-            pass
-        return self._multipleInterfacesForClassOrInterface(TheOriginal)
+        return self._multipleInterfacesForClassOrInterface(ITest3)
 
 
     def _subclassAdapterRegistrationForClassOrInterface(self, original):
+        """
+        Verify that a new adapter can be registered for a particular
+        to-interface from a subclass of a type or interface which already has an
+        adapter registered to that interface and that the subclass adapter takes
+        precedence over the base class adapter.
+        """
         firstAdapter = lambda o: True
         secondAdapter = lambda o: False
         class TheSubclass(original):
             pass
-        class TheInterface(Interface):
-            pass
-        components.registerAdapter(firstAdapter, original, TheInterface)
-        components.registerAdapter(secondAdapter, TheSubclass, TheInterface)
+        components.registerAdapter(firstAdapter, original, ITest)
+        components.registerAdapter(secondAdapter, TheSubclass, ITest)
         self.assertIdentical(
-            components.getAdapterFactory(original, TheInterface, None),
+            components.getAdapterFactory(original, ITest, None),
             firstAdapter)
         self.assertIdentical(
-            components.getAdapterFactory(TheSubclass, TheInterface, None),
+            components.getAdapterFactory(TheSubclass, ITest, None),
             secondAdapter)
 
 
@@ -418,9 +449,7 @@ class RegistrationTestCase(unittest.TestCase):
         Test that an adapter to a particular interface can be registered
         from both an interface and its subclass.
         """
-        class TheOriginal(Interface):
-            pass
-        return self._subclassAdapterRegistrationForClassOrInterface(TheOriginal)
+        return self._subclassAdapterRegistrationForClassOrInterface(ITest2)
 
 
 

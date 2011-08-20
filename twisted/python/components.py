@@ -110,14 +110,38 @@ def getAdapterFactory(fromInterface, toInterface, default):
     return factory
 
 
+def _addHook(registry):
+    """
+    Add an adapter hook which will attempt to look up adapters in the given
+    registry.
+
+    @type registry: L{zope.interface.adapter.AdapterRegistry}
+
+    @return: The hook which was added, for later use with L{_removeHook}.
+    """
+    lookup = registry.lookup1
+    def _hook(iface, ob):
+        factory = lookup(declarations.providedBy(ob), iface)
+        if factory is None:
+            return None
+        else:
+            return factory(ob)
+    interface.adapter_hooks.append(_hook)
+    return _hook
+
+
+def _removeHook(hook):
+    """
+    Remove a previously added adapter hook.
+
+    @param hook: An object previously returned by a call to L{_addHook}.  This
+        will be removed from the list of adapter hooks.
+    """
+    interface.adapter_hooks.remove(hook)
+
 # add global adapter lookup hook for our newly created registry
-def _hook(iface, ob, lookup=globalRegistry.lookup1):
-    factory = lookup(declarations.providedBy(ob), iface)
-    if factory is None:
-        return None
-    else:
-        return factory(ob)
-interface.adapter_hooks.append(_hook)
+_addHook(globalRegistry)
+
 
 ## backwardsCompatImplements and fixClassImplements should probably stick around for another
 ## release cycle. No harm doing so in any case.
