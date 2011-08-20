@@ -2102,6 +2102,7 @@ class ContentDecoderAgentWithGzipTests(unittest.TestCase,
 
         def checkFailure(error):
             error.reasons[0].trap(zlib.error)
+            self.assertIsInstance(error.response, Response)
 
         return deferred.addCallback(checkFailure)
 
@@ -2198,6 +2199,7 @@ class ContentDecoderAgentWithGzipTests(unittest.TestCase,
 
         def checkFailure(error):
             error.reasons[1].trap(zlib.error)
+            self.assertIsInstance(error.response, Response)
 
         return deferred.addCallback(checkFailure)
 
@@ -2254,6 +2256,200 @@ class ProxyAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
             http_headers.Headers({'foo': ['bar'],
                                   'host': ['example.com:1234']}))
         self.assertIdentical(req.bodyProducer, body)
+
+
+
+class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
+    """
+    Tests for L{client.RedirectAgent}.
+    """
+
+    def setUp(self):
+        self.reactor = self.Reactor()
+        agent = client.Agent(self.reactor)
+        self._oldConnect = agent._connect
+        agent._connect = self._dummyConnect
+        self.agent = client.RedirectAgent(agent)
+
+
+    def _dummyConnect(self, scheme, host, port):
+        self._oldConnect(scheme, host, port)
+        return FakeReactorAndConnectMixin._dummyConnect(
+            self, scheme, host, port)
+
+
+    def test_noRedirect(self):
+        """
+        L{client.RedirectAgent} behaves like L{client.Agent} if the response
+        doesn't contain a redirect.
+        """
+        deferred = self.agent.request('GET', 'http://example.com/foo')
+
+        req, res = self.protocol.requests.pop()
+
+        headers = http_headers.Headers()
+        response = Response(('HTTP', 1, 1), 200, 'OK', headers, None)
+        res.callback(response)
+
+        self.assertEqual(0, len(self.protocol.requests))
+
+        def checkResponse(result):
+            self.assertIdentical(result, response)
+
+        return deferred.addCallback(checkResponse)
+
+
+    def _testRedirectDefault(self, code):
+        """
+        When getting a redirect, L{RedirectAgent} follows the URL specified in
+        the L{Location} header field and make a new request.
+        """
+        self.agent.request('GET', 'http://example.com/foo')
+
+        host, port = self.reactor.tcpClients.pop()[:2]
+        self.assertEqual("example.com", host)
+        self.assertEqual(80, port)
+
+        req, res = self.protocol.requests.pop()
+
+        headers = http_headers.Headers(
+            {'location': ['https://example.com/bar']})
+        response = Response(('HTTP', 1, 1), code, 'OK', headers, None)
+        res.callback(response)
+
+        req2, res2 = self.protocol.requests.pop()
+        self.assertEqual('GET', req2.method)
+        self.assertEqual('/bar', req2.uri)
+
+        host, port = self.reactor.sslClients.pop()[:2]
+        self.assertEqual("example.com", host)
+        self.assertEqual(443, port)
+
+
+    def test_redirect301(self):
+        """
+        L{RedirectAgent} follows redirects on status code 301.
+        """
+        self._testRedirectDefault(301)
+
+
+    def test_redirect302(self):
+        """
+        L{RedirectAgent} follows redirects on status code 302.
+        """
+        self._testRedirectDefault(302)
+
+
+    def test_redirect307(self):
+        """
+        L{RedirectAgent} follows redirects on status code 307.
+        """
+        self._testRedirectDefault(307)
+
+
+    def test_redirect303(self):
+        """
+        L{RedirectAgent} changes the methods to C{GET} when getting a redirect
+        on a C{POST} request.
+        """
+        self.agent.request('POST', 'http://example.com/foo')
+
+        req, res = self.protocol.requests.pop()
+
+        headers = http_headers.Headers(
+            {'location': ['http://example.com/bar']})
+        response = Response(('HTTP', 1, 1), 303, 'OK', headers, None)
+        res.callback(response)
+
+        req2, res2 = self.protocol.requests.pop()
+        self.assertEqual('GET', req2.method)
+        self.assertEqual('/bar', req2.uri)
+
+
+    def test_noLocationField(self):
+        """
+        If no L{Location} header field is found when getting a redirect,
+        L{RedirectAgent} fails with a L{ResponseFailed} error wrapping a
+        L{error.RedirectWithNoLocation} exception.
+        """
+        deferred = self.agent.request('GET', 'http://example.com/foo')
+
+        req, res = self.protocol.requests.pop()
+
+        headers = http_headers.Headers()
+        response = Response(('HTTP', 1, 1), 301, 'OK', headers, None)
+        res.callback(response)
+
+        self.assertFailure(deferred, client.ResponseFailed)
+
+        def checkFailure(fail):
+            fail.reasons[0].trap(error.RedirectWithNoLocation)
+            self.assertEqual('http://example.com/foo',
+                             fail.reasons[0].value.uri)
+            self.assertEqual(301, fail.response.code)
+
+        return deferred.addCallback(checkFailure)
+
+
+    def test_307OnPost(self):
+        """
+        When getting a 307 redirect on a C{POST} request, L{RedirectAgent} fais
+        with a L{ResponseFailed} error wrapping a L{error.PageRedirect}
+        exception.
+        """
+        deferred = self.agent.request('POST', 'http://example.com/foo')
+
+        req, res = self.protocol.requests.pop()
+
+        headers = http_headers.Headers()
+        response = Response(('HTTP', 1, 1), 307, 'OK', headers, None)
+        res.callback(response)
+
+        self.assertFailure(deferred, client.ResponseFailed)
+
+        def checkFailure(fail):
+            fail.reasons[0].trap(error.PageRedirect)
+            self.assertEqual('http://example.com/foo',
+                             fail.reasons[0].value.location)
+            self.assertEqual(307, fail.response.code)
+
+        return deferred.addCallback(checkFailure)
+
+
+    def test_redirectLimit(self):
+        """
+        If the limit of redirects specified to L{RedirectAgent} is reached, the
+        deferred fires with L{ResponseFailed} error wrapping a
+        L{InfiniteRedirection} exception.
+        """
+        agent = client.Agent(self.reactor)
+        self._oldConnect = agent._connect
+        agent._connect = self._dummyConnect
+        redirectAgent = client.RedirectAgent(agent, 1)
+
+        deferred = redirectAgent.request('GET', 'http://example.com/foo')
+
+        req, res = self.protocol.requests.pop()
+
+        headers = http_headers.Headers(
+            {'location': ['http://example.com/bar']})
+        response = Response(('HTTP', 1, 1), 302, 'OK', headers, None)
+        res.callback(response)
+
+        req2, res2 = self.protocol.requests.pop()
+
+        response2 = Response(('HTTP', 1, 1), 302, 'OK', headers, None)
+        res2.callback(response2)
+
+        self.assertFailure(deferred, client.ResponseFailed)
+
+        def checkFailure(fail):
+            fail.reasons[0].trap(error.InfiniteRedirection)
+            self.assertEqual('http://example.com/foo',
+                             fail.reasons[0].value.location)
+            self.assertEqual(302, fail.response.code)
+
+        return deferred.addCallback(checkFailure)
 
 
 

@@ -148,6 +148,37 @@ class InfiniteRedirection(Error):
 
 
 
+class RedirectWithNoLocation(Error):
+    """
+    Exception passed to L{ResponseFailed} if we got a redirect without a
+    C{Location} header field.
+
+    @since: 11.1
+    """
+
+    def __init__(self, code, message, uri):
+        """
+        Initializes a page redirect exception when no location is given.
+
+        @type code: C{str}
+        @param code: Refers to an HTTP status code, for example
+            L{http.NOT_FOUND}. If no C{message} is given, C{code} is mapped to
+            a descriptive string that is used instead.
+
+        @type message: C{str}
+        @param message: A short error message.
+
+        @type uri: C{str}
+        @param uri: The URI which failed to give a proper location header
+            field.
+        """
+        message = "%s to %s" % (message, uri)
+
+        Error.__init__(self, code, message)
+        self.uri = uri
+
+
+
 class UnsupportedMethod(Exception):
     """
     Raised by a resource when faced with a strange request method.
@@ -387,5 +418,5 @@ __all__ = [
     'Error', 'PageRedirect', 'InfiniteRedirection', 'ErrorPage', 'NoResource',
     'ForbiddenResource', 'RenderError', 'MissingRenderMethod',
     'MissingTemplateLoader', 'UnexposedMethodError', 'UnfilledSlot',
-    'UnsupportedType', 'FlattenerError'
+    'UnsupportedType', 'FlattenerError', 'RedirectWithNoLocation'
 ]

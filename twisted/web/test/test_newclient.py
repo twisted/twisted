@@ -1302,9 +1302,15 @@ class HTTP11ClientProtocolTests(TestCase):
             self.assertTrue(transport.disconnecting)
             protocol.connectionLost(Failure(ConnectionDone()))
 
+
+        def checkError(error):
+            self.assertIsInstance(error.response, Response)
+
+
         result.addCallback(deliverBody)
-        return assertResponseFailed(self, testResult,
-                                    [ConnectionAborted, _DataLoss])
+        deferred = assertResponseFailed(self, testResult,
+                                        [ConnectionAborted, _DataLoss])
+        return deferred.addCallback(checkError)
 
 
 

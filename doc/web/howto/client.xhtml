@@ -305,6 +305,41 @@ if __name__ == "__main__":
       context objects.
     </p>
 
+    <h3>Following redirects</h3>
+
+    <p>
+      By itself, <code>Agent</code> doesn't follow HTTP redirects (responses
+      with 301, 302, 303, 307 status codes and a <code>location</code> header
+      field). You need to use the <code
+      class="API">twisted.web.client.RedirectAgent</code> class to do so. It
+      implements a rather strict behavior of the RFC, meaning it will redirect
+      301 and 302 as 307, only on <code>GET</code> and <code>HEAD</code>
+      requests.
+    </p>
+    <p>
+      The following example shows how to have a redirect-enabled agent.
+    </p>
+
+    <pre class="python">
+from twisted.python.log import err
+from twisted.web.client import Agent, RedirectAgent
+from twisted.internet import reactor
+
+def display(response):
+    print "Received response"
+    print response
+
+def main():
+    agent = RedirectAgent(Agent(reactor))
+    d = agent.request("GET", "http://example.com/")
+    d.addCallbacks(display, err)
+    d.addCallback(lambda ignored: reactor.stop())
+    reactor.run()
+
+if __name__ == "__main__":
+    main()
+</pre>
+
     <h3>Using a HTTP proxy</h3>
 
     <p>

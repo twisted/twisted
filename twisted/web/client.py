@@ -1158,7 +1158,7 @@ class GzipDecoder(proxyForInterface(IResponse)):
         Override C{deliverBody} to wrap the given C{protocol} with
         L{_GzipProtocol}.
         """
-        self.original.deliverBody(_GzipProtocol(protocol))
+        self.original.deliverBody(_GzipProtocol(protocol, self.original))
 
 
 
@@ -1170,11 +1170,14 @@ class _GzipProtocol(proxyForInterface(IProtocol)):
     @ivar _zlibDecompress: A zlib decompress object used to decompress the data
         stream.
 
+    @ivar _response: A reference to the original response, in case of errors.
+
     @since: 11.1
     """
 
-    def __init__(self, protocol):
+    def __init__(self, protocol, response):
         self.original = protocol
+        self._response = response
         self._zlibDecompress = zlib.decompressobj(16 + zlib.MAX_WBITS)
 
 
@@ -1186,7 +1189,7 @@ class _GzipProtocol(proxyForInterface(IProtocol)):
         try:
             rawData = self._zlibDecompress.decompress(data)
         except zlib.error:
-            raise ResponseFailed([failure.Failure()])
+            raise ResponseFailed([failure.Failure()], self._response)
         if rawData:
             self.original.dataReceived(rawData)
 
@@ -1199,7 +1202,7 @@ class _GzipProtocol(proxyForInterface(IProtocol)):
         try:
             rawData = self._zlibDecompress.flush()
         except zlib.error:
-            raise ResponseFailed([reason, failure.Failure()])
+            raise ResponseFailed([reason, failure.Failure()], self._response)
         if rawData:
             self.original.dataReceived(rawData)
         self.original.connectionLost(reason)
@@ -1269,8 +1272,77 @@ class ContentDecoderAgent(object):
 
 
 
+class RedirectAgent(object):
+    """
+    An L{Agent} wrapper which handles HTTP redirects.
+
+    The implementation is rather strict: 301 and 302 behaves like 307, not
+    redirecting automatically on methods different from C{GET} and C{HEAD}.
+
+    @param redirectLimit: The maximum number of times the agent is allowed to
+        follow redirects before failing with a L{error.InfiniteRedirection}.
+
+    @since: 11.1
+    """
+
+    def __init__(self, agent, redirectLimit=20):
+        self._agent = agent
+        self._redirectLimit = redirectLimit
+
+
+    def request(self, method, uri, headers=None, bodyProducer=None):
+        """
+        Send a client request following HTTP redirects.
+
+        @see: L{Agent.request}.
+        """
+        deferred = self._agent.request(method, uri, headers, bodyProducer)
+        return deferred.addCallback(
+            self._handleResponse, method, uri, headers, 0)
+
+
+    def _handleRedirect(self, response, method, uri, headers, redirectCount):
+        """
+        Handle a redirect response, checking the number of redirects already
+        followed, and extracting the location header fields.
+        """
+        if redirectCount >= self._redirectLimit:
+            err = error.InfiniteRedirection(
+                response.code,
+                'Infinite redirection detected',
+                location=uri)
+            raise ResponseFailed([failure.Failure(err)], response)
+        locationHeaders = response.headers.getRawHeaders('location', [])
+        if not locationHeaders:
+            err = error.RedirectWithNoLocation(
+                response.code, 'No location header field', uri)
+            raise ResponseFailed([failure.Failure(err)], response)
+        location = locationHeaders[0]
+        deferred = self._agent.request(method, location, headers)
+        return deferred.addCallback(
+            self._handleResponse, method, uri, headers, redirectCount + 1)
+
+
+    def _handleResponse(self, response, method, uri, headers, redirectCount):
+        """
+        Handle the response, making another request if it indicates a redirect.
+        """
+        if response.code in (http.MOVED_PERMANENTLY, http.FOUND,
+                             http.TEMPORARY_REDIRECT):
+            if method not in ('GET', 'HEAD'):
+                err = error.PageRedirect(response.code, location=uri)
+                raise ResponseFailed([failure.Failure(err)], response)
+            return self._handleRedirect(response, method, uri, headers,
+                                        redirectCount)
+        elif response.code == http.SEE_OTHER:
+            return self._handleRedirect(response, 'GET', uri, headers,
+                                        redirectCount)
+        return response
+
+
+
 __all__ = [
     'PartialDownloadError', 'HTTPPageGetter', 'HTTPPageDownloader',
     'HTTPClientFactory', 'HTTPDownloader', 'getPage', 'downloadPage',
     'ResponseDone', 'Response', 'ResponseFailed', 'Agent', 'CookieAgent',
-    'ProxyAgent', 'ContentDecoderAgent', 'GzipDecoder']
+    'ProxyAgent', 'ContentDecoderAgent', 'GzipDecoder', 'RedirectAgent']

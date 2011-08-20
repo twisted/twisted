@@ -151,8 +151,14 @@ class ResponseFailed(_WrapperException):
 
     @ivar reasons: A C{list} of one or more L{Failure} instances giving the
         reasons the response was considered to have failed.
+
+    @ivar response: If specified, the L{Response} received from the server (and
+        in particular the status code and the headers).
     """
 
+    def __init__(self, reasons, response=None):
+        _WrapperException.__init__(self, reasons)
+        self.response = response
 
 
 class RequestNotSent(Exception):
@@ -496,7 +502,8 @@ class HTTPClientParser(HTTPParser):
                     self.response._bodyDataFinished(Failure())
                 except _DataLoss:
                     self.response._bodyDataFinished(
-                        Failure(ResponseFailed([reason, Failure()])))
+                        Failure(ResponseFailed([reason, Failure()],
+                                               self.response)))
                 else:
                     self.response._bodyDataFinished()
             except:
