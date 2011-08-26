@@ -564,7 +564,7 @@ class SSHUserAuthClient(service.SSHService):
         publicKey = self.lastPublicKey
         b = (NS(self.transport.sessionID) + chr(MSG_USERAUTH_REQUEST) +
              NS(self.user) + NS(self.instance.name) + NS('publickey') +
-             '\xff' + NS(publicKey.sshType()) + NS(publicKey.blob()))
+             '\x01' + NS(publicKey.sshType()) + NS(publicKey.blob()))
         d  = self.signData(publicKey, b)
         if not d:
             self.askForAuth('none', '')
@@ -617,7 +617,7 @@ class SSHUserAuthClient(service.SSHService):
         @type signedData: C{str}
         """
         publicKey = self.lastPublicKey
-        self.askForAuth('publickey', '\xff' + NS(publicKey.sshType()) +
+        self.askForAuth('publickey', '\x01' + NS(publicKey.sshType()) +
                 NS(publicKey.blob()) + NS(signedData))
 
 

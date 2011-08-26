@@ -782,12 +782,12 @@ class SSHUserAuthClientTestCase(unittest.TestCase):
             + NS(keys.Key.fromString(keydata.publicRSA_openssh).blob()))
         sigData = (NS(self.authClient.transport.sessionID)
                 + chr(userauth.MSG_USERAUTH_REQUEST) + NS('foo')
-                + NS('nancy') + NS('publickey') + '\xff' + NS('ssh-rsa')
+                + NS('nancy') + NS('publickey') + '\x01' + NS('ssh-rsa')
                 + blob)
         obj = keys.Key.fromString(keydata.privateRSA_openssh)
         self.assertEqual(self.authClient.transport.packets[-1],
                 (userauth.MSG_USERAUTH_REQUEST, NS('foo') + NS('nancy')
-                    + NS('publickey') + '\xff' + NS('ssh-rsa') + blob
+                    + NS('publickey') + '\x01' + NS('ssh-rsa') + blob
                     + NS(obj.sign(sigData))))
 
 
