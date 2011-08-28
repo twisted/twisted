@@ -2202,12 +2202,11 @@ class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver):
         The buck stops here.  This error was completely unhandled, time to
         terminate the connection.
         """
-        log.msg("Amp server or network failure "
-                "unhandled by client application:")
-        log.err(failure)
-        log.msg(
-            "Dropping connection!  "
-            "To avoid, add errbacks to ALL remote commands!")
+        log.err(
+            failure,
+            "Amp server or network failure unhandled by client application.  "
+            "Dropping connection!  To avoid, add errbacks to ALL remote "
+            "commands!")
         if self.transport is not None:
             self.transport.loseConnection()
 

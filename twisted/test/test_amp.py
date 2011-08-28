@@ -978,6 +978,31 @@ class BinaryProtocolTests(unittest.TestCase):
         self.assertIdentical(self.stopReason.value.keyName, None)
 
 
+    def test_unhandledErrorWithTransport(self):
+        """
+        L{amp.BinaryBoxProtocol.unhandledError} logs the failure passed to it
+        and disconnects its transport.
+        """
+        transport = StringTransport()
+        protocol = amp.BinaryBoxProtocol(self)
+        protocol.makeConnection(transport)
+        protocol.unhandledError(Failure(RuntimeError("Fake error")))
+        self.assertEqual(1, len(self.flushLoggedErrors(RuntimeError)))
+        self.assertTrue(transport.disconnecting)
+
+
+    def test_unhandledErrorWithoutTransport(self):
+        """
+        L{amp.BinaryBoxProtocol.unhandledError} completes without error when
+        there is no associated transport.
+        """
+        protocol = amp.BinaryBoxProtocol(self)
+        protocol.makeConnection(StringTransport())
+        protocol.connectionLost(Failure(Exception("Simulated")))
+        protocol.unhandledError(Failure(RuntimeError("Fake error")))
+        self.assertEqual(1, len(self.flushLoggedErrors(RuntimeError)))
+
+
     def test_receiveBoxData(self):
         """
         When a binary box protocol receives the serialized form of an AMP box,
