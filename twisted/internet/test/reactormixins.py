@@ -63,11 +63,13 @@ class ReactorBuilder:
         _reactors.extend([
                 "twisted.internet.glib2reactor.Glib2Reactor",
                 "twisted.internet.gtk2reactor.Gtk2Reactor",
-                "twisted.internet.pollreactor.PollReactor",
-                "twisted.internet.epollreactor.EPollReactor",
                 "twisted.internet.kqreactor.KQueueReactor"])
         if platform.isMacOSX():
             _reactors.append("twisted.internet.cfreactor.CFReactor")
+        else:
+            _reactors.extend([
+                    "twisted.internet.pollreactor.PollReactor",
+                    "twisted.internet.epollreactor.EPollReactor"])
 
     reactorFactory = None
     originalHandler = None

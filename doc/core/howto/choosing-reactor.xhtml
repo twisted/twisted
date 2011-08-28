@@ -103,11 +103,8 @@ from twisted.internet import reactor
     <h3>Poll-based Reactor</h3><a name="poll" />
 
     <p>The PollReactor will work on any platform that provides <code
-    class="python">poll()</code> (while Mac OS X provides <code
-    class="python">poll()</code>, it is not recommended to use the
-    PollReactor on Mac OS X due to bugs in its implementation of the call).
-    With larger numbers of connected sockets, it may provide for better
-    performance than the SelectReactor.</p>
+    class="python">select.poll</code>.  With larger numbers of connected
+    sockets, it may provide for better performance than the SelectReactor.</p>
 
 <pre class="python">
 from twisted.internet import pollreactor
