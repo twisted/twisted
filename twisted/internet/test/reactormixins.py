@@ -12,7 +12,7 @@ import signal
 from twisted.internet.defer import TimeoutError
 from twisted.trial.unittest import TestCase, SkipTest
 from twisted.python.runtime import platform
-from twisted.python.reflect import namedAny
+from twisted.python.reflect import namedAny, fullyQualifiedName
 from twisted.python import log
 from twisted.python.failure import Failure
 
@@ -165,8 +165,9 @@ class ReactorBuilder:
                      self.requiredInterfaces)
                 if missing:
                     self.unbuildReactor(reactor)
-                    raise SkipTest("%r does not provide %s" % (
-                        reactor, ",".join([repr(x) for x in missing])))
+                    raise SkipTest("%s does not provide %s" % (
+                        fullyQualifiedName(reactor.__class__),
+                        ",".join([fullyQualifiedName(x) for x in missing])))
         self.addCleanup(self.unbuildReactor, reactor)
         return reactor
 
