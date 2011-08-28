@@ -630,6 +630,31 @@ class CommandDispatchTests(unittest.TestCase):
                                          Print=u"ignored")])
 
 
+    def test_callRemoteLocalCallbackErrorLogging(self):
+        """
+        If the last callback on the L{Deferred} returned by C{callRemote}
+        (added by application code calling C{callRemote}) fails, the failure is
+        passed to the sender's C{unhandledError} method.
+        """
+        self.sender.expectError()
+
+        callResult = self.dispatcher.callRemote(Hello, hello='world')
+        callResult.addCallback(lambda result: 1 / 0)
+
+        self.dispatcher.ampBoxReceived(amp.AmpBox({
+                    'hello': "yay", 'print': "ignored", '_answer': "1"}))
+
+        finalResult = []
+        callResult.addBoth(finalResult.append)
+
+        self.assertEqual(1, len(self.sender.unhandledErrors))
+        self.assertIsInstance(
+            self.sender.unhandledErrors[0].value, ZeroDivisionError)
+
+        self.assertEqual([None], finalResult)
+
+
+
 class SimpleGreeting(amp.Command):
     """
     A very simple greeting command that uses a few basic argument types.
