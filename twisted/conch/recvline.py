@@ -116,6 +116,7 @@ class RecvLine(insults.TerminalProtocol):
 
     ps = ('>>> ', '... ')
     pn = 0
+    _printableChars = set(string.printable)
 
     def connectionMade(self):
         # A list containing the characters making up the current line
@@ -196,7 +197,7 @@ class RecvLine(insults.TerminalProtocol):
         m = self.keyHandlers.get(keyID)
         if m is not None:
             m()
-        elif keyID in string.printable:
+        elif keyID in self._printableChars:
             self.characterReceived(keyID, False)
         else:
             log.msg("Received unhandled keyID: %r" % (keyID,))
