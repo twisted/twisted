@@ -344,7 +344,7 @@ class IResponderLocator(Interface):
     AMP commands.
     """
 
-    def locateResponder(self, name):
+    def locateResponder(name):
         """
         Locate a responder method appropriate for the named command.
 
