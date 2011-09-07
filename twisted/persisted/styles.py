@@ -13,6 +13,7 @@ import types
 import copy_reg
 import copy
 import inspect
+import sys
 
 try:
     import cStringIO as StringIO
@@ -116,9 +117,10 @@ class Ephemeral:
     def __getstate__(self):
         log.msg( "WARNING: serializing ephemeral %s" % self )
         import gc
-        if getattr(gc, 'get_referrers', None):
-            for r in gc.get_referrers(self):
-                log.msg( " referred to by %s" % (r,))
+        if '__pypy__' not in sys.builtin_module_names:
+            if getattr(gc, 'get_referrers', None):
+                for r in gc.get_referrers(self):
+                    log.msg( " referred to by %s" % (r,))
         return None
 
     def __setstate__(self, state):
