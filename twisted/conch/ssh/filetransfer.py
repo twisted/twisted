@@ -708,8 +708,15 @@ class FileTransferClient(FileTransferBase):
         d, data = self._parseRequest(data)
         code, = struct.unpack('!L', data[:4])
         data = data[4:]
-        msg, data = getNS(data)
-        lang = getNS(data)
+        if len(data) >= 4:
+            msg, data = getNS(data)
+            if len(data) >= 4:
+                lang, data = getNS(data)
+            else:
+                lang = ''
+        else:
+            msg = ''
+            lang = ''
         if code == FX_OK:
             d.callback((msg, lang))
         elif code == FX_EOF:
