@@ -28,14 +28,23 @@ class Arrows(unittest.TestCase):
         self.pt.makeConnection(self.underlyingTransport)
         # self.p.makeConnection(self.pt)
 
-    def testPrintableCharacters(self):
+    def test_printableCharacters(self):
+        """
+        When L{HistoricRecvLine} receives a printable character,
+        it adds it to the current line buffer.
+        """
         self.p.keystrokeReceived('x', None)
         self.p.keystrokeReceived('y', None)
         self.p.keystrokeReceived('z', None)
 
         self.assertEqual(self.p.currentLineBuffer(), ('xyz', ''))
 
-    def testHorizontalArrows(self):
+    def test_horizontalArrows(self):
+        """
+        When L{HistoricRecvLine} receives an LEFT_ARROW or
+        RIGHT_ARROW keystroke it moves the cursor left or right
+        in the current line buffer, respectively.
+        """
         kR = lambda ch: self.p.keystrokeReceived(ch, None)
         for ch in 'xyz':
             kR(ch)
@@ -69,7 +78,11 @@ class Arrows(unittest.TestCase):
         kR(self.pt.RIGHT_ARROW)
         self.assertEqual(self.p.currentLineBuffer(), ('xyz', ''))
 
-    def testNewline(self):
+    def test_newline(self):
+        """
+        When {HistoricRecvLine} receives a newline, it adds the current
+        line buffer to the end of its history buffer.
+        """
         kR = lambda ch: self.p.keystrokeReceived(ch, None)
 
         for ch in 'xyz\nabc\n123\n':
@@ -88,7 +101,13 @@ class Arrows(unittest.TestCase):
         self.assertEqual(self.p.currentHistoryBuffer(),
                           (('xyz', 'abc', '123', 'cba'), ()))
 
-    def testVerticalArrows(self):
+    def test_verticalArrows(self):
+        """
+        When L{HistoricRecvLine} receives UP_ARROW or DOWN_ARROW
+        keystrokes it move the current index in the current history
+        buffer up or down, and resets the current line buffer to the
+        previous or next line in history, respectively for each.
+        """
         kR = lambda ch: self.p.keystrokeReceived(ch, None)
 
         for ch in 'xyz\nabc\n123\n':
@@ -123,7 +142,11 @@ class Arrows(unittest.TestCase):
         self.assertEqual(self.p.currentHistoryBuffer(),
                           (('xyz', 'abc', '123'), ()))
 
-    def testHome(self):
+    def test_home(self):
+        """
+        When L{HistoricRecvLine} receives a HOME keystroke it moves the
+        cursor to the beginning of the current line buffer.
+        """
         kR = lambda ch: self.p.keystrokeReceived(ch, None)
 
         for ch in 'hello, world':
@@ -133,7 +156,11 @@ class Arrows(unittest.TestCase):
         kR(self.pt.HOME)
         self.assertEqual(self.p.currentLineBuffer(), ('', 'hello, world'))
 
-    def testEnd(self):
+    def test_end(self):
+        """
+        When L{HistoricRecvLine} receives a END keystroke it moves the cursor
+        to the end of the current line buffer.
+        """
         kR = lambda ch: self.p.keystrokeReceived(ch, None)
 
         for ch in 'hello, world':
@@ -144,7 +171,11 @@ class Arrows(unittest.TestCase):
         kR(self.pt.END)
         self.assertEqual(self.p.currentLineBuffer(), ('hello, world', ''))
 
-    def testBackspace(self):
+    def test_backspace(self):
+        """
+        When L{HistoricRecvLine} receives a BACKSPACE keystroke it deletes
+        the character immediately before the cursor.
+        """
         kR = lambda ch: self.p.keystrokeReceived(ch, None)
 
         for ch in 'xyz':
@@ -161,7 +192,11 @@ class Arrows(unittest.TestCase):
         kR(self.pt.BACKSPACE)
         self.assertEqual(self.p.currentLineBuffer(), ('', 'y'))
 
-    def testDelete(self):
+    def test_delete(self):
+        """
+        When L{HistoricRecvLine} receives a DELETE keystroke, it
+        delets the character immediately after the cursor.
+        """
         kR = lambda ch: self.p.keystrokeReceived(ch, None)
 
         for ch in 'xyz':
@@ -186,13 +221,15 @@ class Arrows(unittest.TestCase):
         kR(self.pt.DELETE)
         self.assertEqual(self.p.currentLineBuffer(), ('', ''))
 
-    def testInsert(self):
+    def test_insert(self):
+        """
+        When not in INSERT mode, L{HistoricRecvLine} inserts the typed
+        character at the cursor before the next character.
+        """
         kR = lambda ch: self.p.keystrokeReceived(ch, None)
 
         for ch in 'xyz':
             kR(ch)
-
-        # kR(self.pt.INSERT)
 
         kR(self.pt.LEFT_ARROW)
         kR('A')
@@ -202,7 +239,13 @@ class Arrows(unittest.TestCase):
         kR('B')
         self.assertEqual(self.p.currentLineBuffer(), ('xyB', 'Az'))
 
-    def testTypeover(self):
+    def test_typeover(self):
+        """
+        When in INSERT mode and upon receiving a keystroke with a printable
+        character, L{HistoricRecvLine} replaces the character at
+        the cursor with the typed character rather than inserting before.
+        Ah, the ironies of INSERT mode.
+        """
         kR = lambda ch: self.p.keystrokeReceived(ch, None)
 
         for ch in 'xyz':
