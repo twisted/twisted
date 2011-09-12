@@ -55,6 +55,21 @@ class SetupTest(TestCase):
         self.assertEqual(ext.define_macros, [("whatever", 2), ("WIN32", 1)])
 
 
+class MSIBuilderTest(TestCase):
+    """
+    Test for L{dist.bdist_msi_twisted}.
+    """
+    def test_metadataGetVersion(self):
+        """
+        Test that distribution.metadata.get_version is patched.
+        """
+        args = get_setup_args()
+        bdist_command = args["cmdclass"]["bdist_msi"](Distribution())
+        old_hash = hash(bdist_command.distribution.metadata.get_version)
+        bdist_command._patch_get_version()
+        new_hash = hash(bdist_command.distribution.metadata.get_version)
+        self.assertNotEquals(old_hash, new_hash)
+
 
 class GetVersionTest(TestCase):
     """

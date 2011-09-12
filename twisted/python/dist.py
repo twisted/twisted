@@ -7,7 +7,10 @@ Maintainer: Christopher Armstrong
 """
 
 import sys, os
+import inspect
+import types
 from distutils.command import build_scripts, install_data, build_ext, build_py
+from distutils.command import bdist_msi
 from distutils.errors import CompileError
 from distutils import core
 from distutils.core import Extension
@@ -73,12 +76,17 @@ def get_setup_args(**kw):
             kw.setdefault('py_modules', []).extend(py_modules)
             del kw['plugins']
 
-    if 'cmdclass' not in kw:
-        kw['cmdclass'] = {
-            'install_data': install_data_twisted,
-            'build_scripts': build_scripts_twisted}
-        if sys.version_info[:3] < (2, 3, 0):
-            kw['cmdclass']['build_py'] = build_py_twisted
+    if 'cmdclass' in kw:
+        print "Twisted Warning: cmdclass override from setup.py may fail"
+    else:
+        kw['cmdclass'] = {}
+    kw['cmdclass'].update({
+        'install_data': install_data_twisted,
+        'build_scripts': build_scripts_twisted,
+        'bdist_msi': bdist_msi_twisted,
+    })
+    if sys.version_info[:3] < (2, 3, 0):
+        kw['cmdclass']['build_py'] = build_py_twisted
 
     if "conditionalExtensions" in kw:
         extensions = kw["conditionalExtensions"]
@@ -287,8 +295,39 @@ class build_scripts_twisted(build_scripts.build_scripts):
 
 
 
+class bdist_msi_twisted(bdist_msi.bdist_msi):
+    """
+    MSI builder requires version to be in the x.x.x format
+
+    @see: http://bugs.python.org/issue6040
+    @since: 11.1
+    """
+    def _patch_get_version(self):
+        """
+        Patches DistributionMetadata.get_version() call to return normalized
+        version when called from distutils.bdist_msi.bdist_msi.run()
+        """
+        def monkey_get_version(self):
+            if inspect.stack()[1][1].endswith('bdist_msi.py'):
+                # strip revision from version (if any), e.g. 11.0.0-r31546
+                return self.version.split('-')[0]
+            else:
+                return self.version
+
+        self.distribution.metadata.get_version = \
+            types.MethodType(monkey_get_version, self.distribution.metadata)
+
+    def run(self):
+        # We can't just modify distribution.metadata.version for the duration
+        # of bdist_msi.run(), because run() triggers `build` command
+        self._patch_get_version()
+        bdist_msi.bdist_msi.run(self)
+
+
 class install_data_twisted(install_data.install_data):
-    """I make sure data files are installed in the package directory."""
+    """
+    I make sure data files are installed in the package directory.
+    """
     def finalize_options(self):
         self.set_undefined_options('install',
             ('install_lib', 'install_dir')
