@@ -3,9 +3,10 @@
 # See LICENSE for details.
 
 """
-Implementation of a TLS transport (L{ISSLTransport}) as an L{IProtocol}
-layered on top of any L{ITransport} implementation, based on OpenSSL's
-memory BIO features.
+Implementation of a TLS transport (L{ISSLTransport}) as an
+L{IProtocol<twisted.internet.interfaces.IProtocol>} layered on top of any
+L{ITransport<twisted.internet.interfaces.ITransport>} implementation, based on
+U{OpenSSL<http://www.openssl.org>}'s memory BIO features.
 
 L{TLSMemoryBIOFactory} is a L{WrappingFactory} which wraps protocols created by
 the factory it wraps with L{TLSMemoryBIOProtocol}.  L{TLSMemoryBIOProtocol}
@@ -27,11 +28,11 @@ implement SSL and TLS.  Typical usage of this module looks like this::
     reactor.listenTCP(12345, tlsFactory)
     reactor.run()
 
-This API offers somewhat more flexibility than L{IReactorSSL}; for example, a
-L{TLSMemoryBIOProtocol} instance can use another instance of
-L{TLSMemoryBIOProtocol} as its transport, yielding TLS over TLS - useful to
-implement onion routing.  It can also be used to run TLS over unusual
-transports, such as UNIX sockets and stdio.
+This API offers somewhat more flexibility than
+L{twisted.internet.interfaces.IReactorSSL}; for example, a L{TLSMemoryBIOProtocol}
+instance can use another instance of L{TLSMemoryBIOProtocol} as its transport,
+yielding TLS over TLS - useful to implement onion routing.  It can also be used
+to run TLS over unusual transports, such as UNIX sockets and stdio.
 """
 
 
@@ -235,9 +236,9 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
 
     @ivar _connectWrapped: A flag indicating whether or not to call
         C{makeConnection} on the wrapped protocol.  This is for the reactor's
-        L{ITLSTransport.startTLS} implementation, since it has a protocol which
-        it has already called C{makeConnection} on, and which has no interest
-        in a new transport.  See #3821.
+        L{twisted.internet.interfaces.ITLSTransport.startTLS} implementation,
+        since it has a protocol which it has already called C{makeConnection}
+        on, and which has no interest in a new transport.  See #3821.
 
     @ivar _handshakeDone: A flag indicating whether or not the handshake is
         known to have completed successfully (C{True}) or not (C{False}).  This
