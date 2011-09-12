@@ -9,9 +9,10 @@ Here are services to run clients, servers and periodic services using
 the reactor.
 
 If you want to run a server service, L{StreamServerEndpointService} defines a
-service that can wrap an arbitrary L{IStreamServerEndpoint} as an L{IService}.
-See also L{twisted.internet.strports.service} for constructing one of these
-directly from a descriptive string.
+service that can wrap an arbitrary L{IStreamServerEndpoint
+<twisted.internet.interfaces.IStreamServerEndpoint>}
+as an L{IService}. See also L{twisted.application.strports.service} for
+constructing one of these directly from a descriptive string.
 
 Additionally, this module (dynamically) defines various Service subclasses that
 let you represent clients and servers in a Service hierarchy.  Endpoints APIs
@@ -83,7 +84,7 @@ class _AbstractServer(_VolatileDataService):
         C{IReactorSSL} or C{IReactorUnix}.
 
     @ivar _port: instance of port set when the service is started.
-    @type _port: a provider of C{IListeningPort}.
+    @type _port: a provider of L{twisted.internet.interfaces.IListeningPort}.
     """
 
     volatile = ['_port']
@@ -125,7 +126,8 @@ class _AbstractServer(_VolatileDataService):
         Wrapper around the appropriate listen method of the reactor.
 
         @return: the port object returned by the listen method.
-        @rtype: an object providing L{IListeningPort}.
+        @rtype: an object providing
+            L{twisted.internet.interfaces.IListeningPort}.
         """
         return getattr(_maybeGlobalReactor(self.reactor),
                        'listen%s' % (self.method,))(*self.args, **self.kwargs)
@@ -146,7 +148,7 @@ class _AbstractClient(_VolatileDataService):
         C{IReactorSSL} or C{IReactorUnix}.
 
     @ivar _connection: instance of connection set when the service is started.
-    @type _connection: a provider of C{IConnector}.
+    @type _connection: a provider of L{twisted.internet.interfaces.IConnector}.
     """
     volatile = ['_connection']
     method = None
@@ -178,7 +180,7 @@ class _AbstractClient(_VolatileDataService):
         Wrapper around the appropriate connect method of the reactor.
 
         @return: the port object returned by the connect method.
-        @rtype: an object providing L{IConnector}.
+        @rtype: an object providing L{twisted.internet.interfaces.IConnector}.
         """
         return getattr(_maybeGlobalReactor(self.reactor),
                        'connect%s' % (self.method,))(*self.args, **self.kwargs)
@@ -321,13 +323,15 @@ class CooperatorService(service.Service):
 class StreamServerEndpointService(service.Service, object):
     """
     A L{StreamServerEndpointService} is an L{IService} which runs a server on a
-    listening port described by an L{IStreamServerEndpoint}.
+    listening port described by an L{IStreamServerEndpoint
+    <twisted.internet.interfaces.IStreamServerEndpoint>}.
 
     @ivar factory: A server factory which will be used to listen on the
         endpoint.
 
-    @ivar endpoint: An L{IStreamServerEndpoint} provider which will be used to
-        listen when the service starts.
+    @ivar endpoint: An L{IStreamServerEndpoint
+        <twisted.internet.interfaces.IStreamServerEndpoint>} provider
+        which will be used to listen when the service starts.
 
     @ivar _waitingForPort: a Deferred, if C{listen} has yet been invoked on the
         endpoint, otherwise None.
@@ -381,8 +385,8 @@ class StreamServerEndpointService(service.Service, object):
         Stop listening on the port if it is already listening, otherwise,
         cancel the attempt to listen.
 
-        @return: a L{Deferred} which fires with C{None} when the port has
-            stopped listening.
+        @return: a L{Deferred<twisted.internet.defer.Deferred>} which fires
+            with C{None} when the port has stopped listening.
         """
         self._waitingForPort.cancel()
         def stopIt(port):

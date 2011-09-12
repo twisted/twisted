@@ -21,6 +21,7 @@ from twisted.internet import defer
 from twisted.persisted import sob
 from twisted.plugin import IPlugin
 
+
 class IServiceMaker(Interface):
     """
     An object which can be used to construct services in a flexible
@@ -49,7 +50,7 @@ class IServiceMaker(Interface):
         L{twisted.application.service.IService}.
 
         @param options: A mapping (typically a C{dict} or
-        C{twisted.python.usage.Options} instance) of configuration
+        L{twisted.python.usage.Options} instance) of configuration
         options to desired configuration values.
         """
 
@@ -120,9 +121,9 @@ class IService(Interface):
         This method is used symmetrically with L{setServiceParent} in that it
         sets the C{parent} attribute on the child.
 
-        @rtype: L{Deferred}
-        @return: a L{Deferred} which is triggered when the service has
-            finished shutting down. If shutting down is immediate,
+        @rtype: L{Deferred<defer.Deferred>}
+        @return: a L{Deferred<defer.Deferred>} which is triggered when the 
+            service has finished shutting down. If shutting down is immediate,
             a value can be returned (usually, C{None}).
         """
 
@@ -135,10 +136,10 @@ class IService(Interface):
         """
         Stop the service.
 
-        @rtype: L{Deferred}
-        @return: a L{Deferred} which is triggered when the service has
-            finished shutting down. If shutting down is immediate, a
-            value can be returned (usually, C{None}).
+        @rtype: L{Deferred<defer.Deferred>}
+        @return: a L{Deferred<defer.Deferred>} which is triggered when the 
+            service has finished shutting down. If shutting down is immediate,
+            a value can be returned (usually, C{None}).
         """
 
     def privilegedStartService():
@@ -241,10 +242,10 @@ class IServiceCollection(Interface):
 
         @type service: L{IService}
         @raise ValueError: Raised if the given service is not a child.
-        @rtype: L{Deferred}
-        @return: a L{Deferred} which is triggered when the service has
-            finished shutting down. If shutting down is immediate, a
-            value can be returned (usually, C{None}).
+        @rtype: L{Deferred<defer.Deferred>}
+        @return: a L{Deferred<defer.Deferred>} which is triggered when the 
+            service has finished shutting down. If shutting down is immediate,
+            a value can be returned (usually, C{None}).
         """
 
 
