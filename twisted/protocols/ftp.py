@@ -4,10 +4,6 @@
 
 """
 An FTP protocol implementation
-
-@author: Itamar Shtull-Trauring
-@author: Jp Calderone
-@author: Andrew Bennetts
 """
 
 # System Imports
@@ -2760,6 +2756,27 @@ class FTPClient(FTPClientBasic):
         return self.queueStringCommand('DELE ' + self.escapePath(path))
 
 
+    def removeDirectory(self, path):
+        """
+        Delete a directory on the server.
+
+        L{removeDirectory} issues a I{RMD} command to the server to remove the
+        indicated directory. Described in RFC959.
+
+        @param path: The path to the directory to delete. May be relative to
+            the current working directory.
+        @type path: C{str}
+
+        @return: A L{Deferred} which fires when the server responds. On error,
+            it is errbacked with either L{CommandFailed} or L{BadResponse}. On
+            success, it is called back with a list of response lines.
+        @rtype: L{Deferred}
+
+        @since: 11.1
+        """
+        return self.queueStringCommand('RMD ' + self.escapePath(path))
+
+
     def cdup(self):
         """
         Issues the CDUP (Change Directory UP) command.
@@ -2781,6 +2798,7 @@ class FTPClient(FTPClientBasic):
             in this module should work.
         """
         return self.queueStringCommand('PWD')
+
 
     def getDirectory(self):
         """

@@ -3,8 +3,6 @@
 
 """
 FTP tests.
-
-Maintainer: Andrew Bennetts
 """
 
 import os
@@ -1883,6 +1881,66 @@ class FTPClientTestCase(unittest.TestCase):
         """
         self._testLogin()
         d = self.client.removeFile("/tmp/test")
+        response = ['250-perhaps a progress report',
+                    '250 okay']
+        map(self.client.lineReceived, response)
+        return d.addCallback(self.assertTrue)
+
+
+    def test_removeDirectory(self):
+        """
+        L{ftp.FTPClient.removeDirectory} sends a I{RMD} command to the server
+        for the indicated directory and returns a Deferred which fires after
+        the server sends a 250 response code.
+        """
+        self._testLogin()
+        d = self.client.removeDirectory('/tmp/test')
+        self.assertEqual(self.transport.value(), 'RMD /tmp/test\r\n')
+        response = '250 Requested file action okay, completed.'
+        self.client.lineReceived(response)
+        return d.addCallback(self.assertEqual, [response])
+
+
+    def test_failedRemoveDirectory(self):
+        """
+        If the server returns a response code other than 250 in response to a
+        I{RMD} sent by L{ftp.FTPClient.removeDirectory}, the L{Deferred}
+        returned by C{removeDirectory} is errbacked with a L{Failure} wrapping
+        a L{CommandFailed}.
+        """
+        self._testLogin()
+        d = self.client.removeDirectory("/tmp/test")
+        self.assertEqual(self.transport.value(), 'RMD /tmp/test\r\n')
+        response = '501 Syntax error in parameters or arguments.'
+        self.client.lineReceived(response)
+        d = self.assertFailure(d, ftp.CommandFailed)
+        d.addCallback(lambda exc: self.assertEqual(exc.args, ([response],)))
+        return d
+
+
+    def test_unparsableRemoveDirectoryResponse(self):
+        """
+        If the server returns a response line which cannot be parsed, the
+        L{Deferred} returned by L{ftp.FTPClient.removeDirectory} is errbacked
+        with a L{BadResponse} containing the response.
+        """
+        self._testLogin()
+        d = self.client.removeDirectory("/tmp/test")
+        response = '765 blah blah blah'
+        self.client.lineReceived(response)
+        d = self.assertFailure(d, ftp.BadResponse)
+        d.addCallback(lambda exc: self.assertEqual(exc.args, ([response],)))
+        return d
+
+
+    def test_multilineRemoveDirectoryResponse(self):
+        """
+        If the server returns multiple response lines, the L{Deferred} returned
+        by L{ftp.FTPClient.removeDirectory} is still fired with a true value
+         if the ultimate response code is 250.
+        """
+        self._testLogin()
+        d = self.client.removeDirectory("/tmp/test")
         response = ['250-perhaps a progress report',
                     '250 okay']
         map(self.client.lineReceived, response)
