@@ -131,7 +131,6 @@ RESPONSE = {
     MKD_REPLY:                          '257 "%s" created',
 
     # -- 300's --
-    'userotp':                          '331 Response to %s.',  # ???
     USR_NAME_OK_NEED_PASS:              '331 Password required for %s.',
     GUEST_NAME_OK_NEED_EMAIL:           '331 Guest login ok, type your email address as password.',
     NEED_ACCT_FOR_LOGIN:                '332 Need account for login.',
