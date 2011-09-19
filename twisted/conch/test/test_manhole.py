@@ -304,6 +304,30 @@ class ManholeLoopbackMixin:
     testControlL = defer.deferredGenerator(testControlL)
 
 
+    def test_controlA(self):
+        """
+        CTRL-A can be used as HOME - returning cursor to beginning of
+        current line buffer.
+        """
+        self._testwrite('rint "hello"' + '\x01' + 'p')
+        d = self.recvlineClient.expect('print "hello"')
+        def cb(ignore):
+            self._assertBuffer(['>>> print "hello"'])
+        return d.addCallback(cb)
+
+
+    def test_controlE(self):
+        """
+        CTRL-E can be used as END - setting cursor to end of current
+        line buffer.
+        """
+        self._testwrite('rint "hello' + '\x01' + 'p' + '\x05' + '"')
+        d = self.recvlineClient.expect('print "hello"')
+        def cb(ignore):
+            self._assertBuffer(['>>> print "hello"'])
+        return d.addCallback(cb)
+
+
     def testDeferred(self):
         self._testwrite(
             "from twisted.internet import defer, reactor\n"

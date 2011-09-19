@@ -135,6 +135,8 @@ CTRL_C = '\x03'
 CTRL_D = '\x04'
 CTRL_BACKSLASH = '\x1c'
 CTRL_L = '\x0c'
+CTRL_A = '\x01'
+CTRL_E = '\x05'
 
 class Manhole(recvline.HistoricRecvLine):
     """Mediator between a fancy line source and an interactive interpreter.
@@ -159,6 +161,8 @@ class Manhole(recvline.HistoricRecvLine):
         self.keyHandlers[CTRL_C] = self.handle_INT
         self.keyHandlers[CTRL_D] = self.handle_EOF
         self.keyHandlers[CTRL_L] = self.handle_FF
+        self.keyHandlers[CTRL_A] = self.handle_HOME
+        self.keyHandlers[CTRL_E] = self.handle_END
         self.keyHandlers[CTRL_BACKSLASH] = self.handle_QUIT
 
 
