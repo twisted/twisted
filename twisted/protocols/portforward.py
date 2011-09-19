@@ -31,6 +31,14 @@ class Proxy(protocol.Protocol):
 class ProxyClient(Proxy):
     def connectionMade(self):
         self.peer.setPeer(self)
+
+        # Wire this and the peer transport together to enable
+        # flow control (this stops connections from filling
+        # this proxy memory when one side produces data at a
+        # higher rate than the other can consume).
+        self.transport.registerProducer(self.peer.transport, True)
+        self.peer.transport.registerProducer(self.transport, True)
+
         # We're connected, everybody can read to their hearts content.
         self.peer.transport.resumeProducing()
 
@@ -53,6 +61,7 @@ class ProxyClientFactory(protocol.ClientFactory):
 class ProxyServer(Proxy):
 
     clientProtocolFactory = ProxyClientFactory
+    reactor = None
 
     def connectionMade(self):
         # Don't read anything from the connecting client until we have
@@ -62,8 +71,10 @@ class ProxyServer(Proxy):
         client = self.clientProtocolFactory()
         client.setServer(self)
 
-        from twisted.internet import reactor
-        reactor.connectTCP(self.factory.host, self.factory.port, client)
+        if self.reactor is None:
+            from twisted.internet import reactor
+            self.reactor = reactor
+        self.reactor.connectTCP(self.factory.host, self.factory.port, client)
 
 
 class ProxyFactory(protocol.Factory):

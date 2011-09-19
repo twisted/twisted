@@ -9,7 +9,7 @@ import struct
 
 from twisted.trial import unittest
 from twisted.protocols import basic, wire, portforward
-from twisted.internet import reactor, protocol, defer, task, error
+from twisted.internet import reactor, protocol, defer, task, error, address
 from twisted.test import proto_helpers
 
 
@@ -1059,6 +1059,42 @@ class Portforwarding(unittest.TestCase):
             '127.0.0.1', proxyServerPort.getHost().port, clientFactory)
 
         return d
+
+
+    def test_registerProducers(self):
+        """
+        The proxy client registers itself as a producer of the proxy server and
+        vice versa.
+        """
+        # create a ProxyServer instance
+        addr = address.IPv4Address('TCP', '127.0.0.1', 0)
+        server = portforward.ProxyFactory('127.0.0.1', 0).buildProtocol(addr)
+
+        # set the reactor for this test
+        reactor = proto_helpers.MemoryReactor()
+        server.reactor = reactor
+
+        # make the connection
+        serverTransport = proto_helpers.StringTransport()
+        server.makeConnection(serverTransport)
+
+        # check that the ProxyClientFactory is connecting to the backend
+        self.assertEqual(len(reactor.tcpClients), 1)
+        # get the factory instance and check it's the one we expect
+        host, port, clientFactory, timeout, _ = reactor.tcpClients[0]
+        self.assertIsInstance(clientFactory, portforward.ProxyClientFactory)
+
+        # Connect it
+        client = clientFactory.buildProtocol(addr)
+        clientTransport = proto_helpers.StringTransport()
+        client.makeConnection(clientTransport)
+
+        # check that the producers are registered
+        self.assertIdentical(clientTransport.producer, serverTransport)
+        self.assertIdentical(serverTransport.producer, clientTransport)
+        # check the streaming attribute in both transports
+        self.assertTrue(clientTransport.streaming)
+        self.assertTrue(serverTransport.streaming)
 
 
 
