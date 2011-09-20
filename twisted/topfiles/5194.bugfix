@@ -1,0 +1,1 @@
+twisted.python.log now copes with log observers that are removed during log.msg calls.

@@ -279,26 +279,30 @@ class LogPublisher:
         actualEventDict.update(kw)
         actualEventDict['message'] = message
         actualEventDict['time'] = time.time()
-        for i in xrange(len(self.observers) - 1, -1, -1):
+        failed = []
+        for observer in reversed(self.observers):
             try:
-                self.observers[i](actualEventDict)
+                observer(actualEventDict)
             except KeyboardInterrupt:
                 # Don't swallow keyboard interrupt!
                 raise
             except UnicodeEncodeError:
                 raise
             except:
-                observer = self.observers[i]
-                self.observers[i] = lambda event: None
                 try:
-                    self._err(failure.Failure(),
-                        "Log observer %s failed." % (observer,))
-                except:
-                    # Sometimes err() will throw an exception,
-                    # e.g. RuntimeError due to blowing the stack; if that
-                    # happens, there's not much we can do...
+                    fail = failure.Failure()
+                    why = "Log observer %s failed." % (observer,)
+                    publisher = LogPublisher()
+                    for o in self.observers:
+                        if o is not observer:
+                            publisher.addObserver(o)
+                    failed.append((publisher, fail, why))
+                except Exception:
+                    # OOM, stack overflow or an observer with broken __str__.
+                    # Give up.
                     pass
-                self.observers[i] = observer
+        for publisher, fail, why in failed:
+            publisher._err(fail, why)
 
 
     def _err(self, failure, why):

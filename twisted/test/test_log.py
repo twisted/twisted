@@ -105,9 +105,7 @@ class LogTest(unittest.TestCase):
             self.assertEqual(len(L1), 2)
             self.assertEqual(len(L2), 2)
 
-            # The order is slightly wrong here.  The first event should be
-            # delivered to all observers; then, errors should be delivered.
-            self.assertEqual(L1[1]['message'], ("Howdy, y'all.",))
+            self.assertEqual(L1[0]['message'], ("Howdy, y'all.",))
             self.assertEqual(L2[0]['message'], ("Howdy, y'all.",))
 
 
@@ -246,6 +244,108 @@ class LogTest(unittest.TestCase):
         self.assertEqual(publisher.observers, [logError, fail])
         self.assertEqual(len(errors), 1)
         self.assertIsInstance(errors[0], RuntimeError)
+
+
+    def test_removeObserverDuringMsg(self):
+        """
+        Removing an observer during L{log.msg} call has no ill effects.
+        """
+        publisher = log.LogPublisher()
+
+        def dummyObserver(eventDict):
+            pass
+
+        def evilObserver(eventdict):
+            for i in range(2):
+                publisher.removeObserver(dummyObserver)
+
+        for i in range(2):
+            publisher.addObserver(dummyObserver)
+        publisher.addObserver(evilObserver)
+        publisher.msg("Hello!")
+        self.assertEqual(publisher.observers, [evilObserver])
+
+
+    def test_removeObserverAndRaiseDuringMsg(self):
+        """
+        An observer that removes itself by calling L{log.removeObserver} and
+        then raises an error has no ill effect on L{log.msg}.
+        """
+        errors = []
+        def logError(eventDict):
+            if eventDict.get("isError"):
+                errors.append(eventDict["failure"].value)
+
+        def stupidObserver(eventDict):
+            publisher.removeObserver(stupidObserver)
+            raise RuntimeError("test_removeObserverAndRaise")
+
+        publisher = log.LogPublisher()
+        publisher.addObserver(logError)
+        publisher.addObserver(stupidObserver)
+
+        publisher.msg("Hello!")
+        self.assertEqual(publisher.observers, [logError])
+        self.assertEqual(len(errors), 1)
+        self.assertIsInstance(errors[0], RuntimeError)
+
+
+    def test_multipleBuggyObservers(self):
+        """
+        L{LogPublisher.msg} handles buggy observers one by one, so that
+        they have a chance to report about other buggy observers, even if
+        they both failed in the same L{log.msg} call.
+        """
+        errors = []
+        def logError(eventDict):
+            if eventDict.get("isError"):
+                errors.append(eventDict["failure"].value)
+
+        def fail1(eventDict):
+            raise RuntimeError("fail1")
+
+        def fail2(eventDict):
+            raise RuntimeError("fail2")
+
+        publisher = log.LogPublisher()
+        observers = [logError, fail1, fail2]
+        for observer in observers:
+            publisher.addObserver(observer)
+
+        publisher.msg("Hello!")
+        self.assertEqual(publisher.observers, observers)
+        self.assertEqual(len(errors), 4)
+        for error in errors:
+            self.assertIsInstance(error, RuntimeError)
+
+
+    def test_noObserverSkipped(self):
+        """
+        All observers added to a L{LogPublisher} are given a chance to report
+        an event, even if observers are being removed during the C{msg} call.
+
+        However, that means that some observers might be given a chance
+        to report the same log event multiple times.
+        """
+        events = []
+        def report(eventDict):
+            events.append(eventDict)
+
+        def remover(eventDict):
+            publisher.removeObserver(remover)
+
+        publisher = log.LogPublisher()
+        for observer in remover, report:
+            publisher.addObserver(observer)
+        publisher.msg("Hello!")
+        self.assertTrue(events, events)
+
+        del events[:]
+        publisher = log.LogPublisher()
+        for observer in report, remover:
+            publisher.addObserver(observer)
+        publisher.msg("Hello!")
+        self.assertTrue(events, events)
 
 
 
