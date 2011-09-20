@@ -6,10 +6,7 @@
 Tests for twisted.names.dns.
 """
 
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
+from cStringIO import StringIO
 
 import struct
 
@@ -21,6 +18,14 @@ from twisted.names import dns
 
 from twisted.test import proto_helpers
 
+RECORD_TYPES = [
+    dns.Record_NS, dns.Record_MD, dns.Record_MF, dns.Record_CNAME,
+    dns.Record_MB, dns.Record_MG, dns.Record_MR, dns.Record_PTR,
+    dns.Record_DNAME, dns.Record_A, dns.Record_SOA, dns.Record_NULL,
+    dns.Record_WKS, dns.Record_SRV, dns.Record_AFSDB, dns.Record_RP,
+    dns.Record_HINFO, dns.Record_MINFO, dns.Record_MX, dns.Record_TXT,
+    dns.Record_AAAA, dns.Record_A6, dns.Record_NAPTR, dns.UnknownRecord,
+    ]
 
 class NameTests(unittest.TestCase):
     """
@@ -74,6 +79,66 @@ class NameTests(unittest.TestCase):
         self.assertEqual(
             {"example.com": 0x17, "foo.example.com": expected},
             compression)
+
+
+    def test_unknown(self):
+        """
+        A resource record of unknown type and class is parsed into an
+        L{UnknownRecord} instance with its data preserved, and an
+        L{UnknownRecord} instance is serialized to a string equal to the one it
+        was parsed from.
+        """
+        wire = (
+            '\x01\x00' # Message ID
+            '\x00' # answer bit, opCode nibble, auth bit, trunc bit, recursive
+                   # bit
+            '\x00' # recursion bit, empty bit, empty bit, empty bit, response
+                   # code nibble
+            '\x00\x01' # number of queries
+            '\x00\x01' # number of answers
+            '\x00\x00' # number of authorities
+            '\x00\x01' # number of additionals
+
+            # query
+            '\x03foo\x03bar\x00'    # foo.bar
+            '\xde\xad'              # type=0xdead
+            '\xbe\xef'              # cls=0xbeef
+
+            # 1st answer
+            '\xc0\x0c'              # foo.bar - compressed
+            '\xde\xad'              # type=0xdead
+            '\xbe\xef'              # cls=0xbeef
+            '\x00\x00\x01\x01'      # ttl=257
+            '\x00\x08somedata'      # some payload data
+
+            # 1st additional
+            '\x03baz\x03ban\x00'    # baz.ban
+            '\x00\x01'              # type=A
+            '\x00\x01'              # cls=IN
+            '\x00\x00\x01\x01'      # ttl=257
+            '\x00\x04'              # len=4
+            '\x01\x02\x03\x04'      # 1.2.3.4
+
+            )
+
+        msg = dns.Message()
+        msg.fromStr(wire)
+
+        self.assertEqual(msg.queries, [
+                dns.Query('foo.bar', type=0xdead, cls=0xbeef),
+                ])
+        self.assertEqual(msg.answers, [
+                dns.RRHeader('foo.bar', type=0xdead, cls=0xbeef, ttl=257,
+                             payload=dns.UnknownRecord('somedata', ttl=257)),
+                ])
+        self.assertEqual(msg.additional, [
+                dns.RRHeader('baz.ban', type=dns.A, cls=dns.IN, ttl=257,
+                             payload=dns.Record_A('1.2.3.4', ttl=257)),
+                ])
+
+        enc = msg.toStr()
+
+        self.assertEqual(enc, wire)
 
 
     def test_decodeWithCompression(self):
@@ -188,16 +253,7 @@ class RoundtripDNSTestCase(unittest.TestCase):
         """
         Instances of all record types are hashable.
         """
-        records = [
-            dns.Record_NS, dns.Record_MD, dns.Record_MF, dns.Record_CNAME,
-            dns.Record_MB, dns.Record_MG, dns.Record_MR, dns.Record_PTR,
-            dns.Record_DNAME, dns.Record_A, dns.Record_SOA, dns.Record_NULL,
-            dns.Record_WKS, dns.Record_SRV, dns.Record_AFSDB, dns.Record_RP,
-            dns.Record_HINFO, dns.Record_MINFO, dns.Record_MX, dns.Record_TXT,
-            dns.Record_AAAA, dns.Record_A6, dns.Record_NAPTR
-        ]
-
-        for k in records:
+        for k in RECORD_TYPES:
             k1, k2 = k(), k()
             hk1 = hash(k1)
             hk2 = hash(k2)
@@ -305,14 +361,15 @@ class MessageTestCase(unittest.TestCase):
 
     def test_lookupRecordTypeDefault(self):
         """
-        L{Message.lookupRecordType} returns C{None} if it is called
-        with an integer which doesn't correspond to any known record
+        L{Message.lookupRecordType} returns C{dns.UnknownRecord} if it is
+        called with an integer which doesn't correspond to any known record
         type.
         """
         # 65280 is the first value in the range reserved for private
         # use, so it shouldn't ever conflict with an officially
         # allocated value.
-        self.assertIdentical(dns.Message().lookupRecordType(65280), None)
+        self.assertIdentical(
+            dns.Message().lookupRecordType(65280), dns.UnknownRecord)
 
 
 
@@ -375,7 +432,6 @@ class DatagramProtocolTestCase(unittest.TestCase):
         m = dns.Message()
         m.id = self.proto.liveMessages.items()[0][0]
         m.answers = [dns.RRHeader(payload=dns.Record_A(address='1.2.3.4'))]
-        called = False
         def cb(result):
             self.assertEqual(result.answers[0].payload.dottedQuad(), '1.2.3.4')
         d.addCallback(cb)
@@ -497,7 +553,6 @@ class DNSProtocolTestCase(unittest.TestCase):
         m = dns.Message()
         m.id = self.proto.liveMessages.items()[0][0]
         m.answers = [dns.RRHeader(payload=dns.Record_A(address='1.2.3.4'))]
-        called = False
         def cb(result):
             self.assertEqual(result.answers[0].payload.dottedQuad(), '1.2.3.4')
         d.addCallback(cb)
@@ -765,15 +820,25 @@ class ReprTests(unittest.TestCase):
             repr(dns.Record_TXT("foo", "bar", ttl=15)),
             "<TXT data=['foo', 'bar'] ttl=15>")
 
+
     def test_spf(self):
         """
         The repr of a L{dns.Record_SPF} instance includes the data and ttl
-        fields of the record, since it is structurally
-        similar to L{dns.Record_TXT}.
+        fields of the record.
         """
         self.assertEqual(
             repr(dns.Record_SPF("foo", "bar", ttl=15)),
             "<SPF data=['foo', 'bar'] ttl=15>")
+
+
+    def test_unknown(self):
+        """
+        The repr of a L{dns.UnknownRecord} instance includes the data and ttl
+        fields of the record.
+        """
+        self.assertEqual(
+            repr(dns.UnknownRecord("foo\x1fbar", 12)),
+            "<UNKNOWN data='foo\\x1fbar' ttl=12>")
 
 
 
@@ -1325,8 +1390,8 @@ class EqualityTests(unittest.TestCase):
 
     def test_spf(self):
         """
-        L{dns.Record_SPF} records are structurally similar to L{dns.Record_TXT}
-        records, so they are equal if and only if they have the same data and ttl. 
+        L{dns.Record_SPF} instances compare equal if and only if they have the
+        same data and ttl.
         """
         # Vary the length of the data
         self._equalityTest(
@@ -1343,3 +1408,25 @@ class EqualityTests(unittest.TestCase):
             dns.Record_SPF('foo', 'bar', ttl=10),
             dns.Record_SPF('foo', 'bar', ttl=10),
             dns.Record_SPF('foo', 'bar', ttl=100))
+
+
+    def test_unknown(self):
+        """
+        L{dns.UnknownRecord} instances compare equal if and only if they have
+        the same data and ttl.
+        """
+        # Vary the length of the data
+        self._equalityTest(
+            dns.UnknownRecord('foo', ttl=10),
+            dns.UnknownRecord('foo', ttl=10),
+            dns.UnknownRecord('foobar', ttl=10))
+        # Vary the value of the data
+        self._equalityTest(
+            dns.UnknownRecord('foo', ttl=10),
+            dns.UnknownRecord('foo', ttl=10),
+            dns.UnknownRecord('bar', ttl=10))
+        # Vary the ttl
+        self._equalityTest(
+            dns.UnknownRecord('foo', ttl=10),
+            dns.UnknownRecord('foo', ttl=10),
+            dns.UnknownRecord('foo', ttl=100))

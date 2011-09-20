@@ -29,7 +29,7 @@ __all__ = [
     'Record_DNAME', 'Record_HINFO', 'Record_MB', 'Record_MD', 'Record_MF',
     'Record_MG', 'Record_MINFO', 'Record_MR', 'Record_MX', 'Record_NAPTR',
     'Record_NS', 'Record_NULL', 'Record_PTR', 'Record_RP', 'Record_SOA',
-    'Record_SPF', 'Record_SRV', 'Record_TXT', 'Record_WKS',
+    'Record_SPF', 'Record_SRV', 'Record_TXT', 'Record_WKS', 'UnknownRecord',
 
     'QUERY_CLASSES', 'QUERY_TYPES', 'REV_CLASSES', 'REV_TYPES', 'EXT_QUERIES',
 
@@ -48,10 +48,7 @@ import warnings
 
 import struct, random, types, socket
 
-try:
-    import cStringIO as StringIO
-except ImportError:
-    import StringIO
+import cStringIO as StringIO
 
 AF_INET6 = socket.AF_INET6
 
@@ -483,7 +480,7 @@ class RRHeader(tputil.FancyEqMixin):
         @type payload: An object implementing C{IEncodable}
         @param payload: A Query Type specific data object.
         """
-        assert (payload is None) or (payload.TYPE == type)
+        assert (payload is None) or isinstance(payload, UnknownRecord) or (payload.TYPE == type)
 
         self.name = Name(name)
         self.type = type
@@ -1429,7 +1426,7 @@ class Record_TXT(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
     @type data: C{list} of C{str}
     @ivar data: Freeform text which makes up this record.
-    
+
     @type ttl: C{int}
     @ivar ttl: The maximum number of seconds which this record should be cached.
     """
@@ -1471,14 +1468,62 @@ class Record_TXT(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
 
 
+# This is a fallback record
+class UnknownRecord(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
+    """
+    Encapsulate the wire data for unkown record types so that they can
+    pass through the system unchanged.
+
+    @type data: C{str}
+    @ivar data: Wire data which makes up this record.
+
+    @type ttl: C{int}
+    @ivar ttl: The maximum number of seconds which this record should be cached.
+
+    @since: 11.1
+    """
+    implements(IEncodable, IRecord)
+
+    fancybasename = 'UNKNOWN'
+    compareAttributes = ('data', 'ttl')
+    showAttributes = ('data', 'ttl')
+
+    def __init__(self, data='', ttl=None):
+        self.data = data
+        self.ttl = str2time(ttl)
+
+
+    def encode(self, strio, compDict=None):
+        """
+        Write the raw bytes corresponding to this record's payload to the
+        stream.
+        """
+        strio.write(self.data)
+
+
+    def decode(self, strio, length=None):
+        """
+        Load the bytes which are part of this record from the stream and store
+        them unparsed and unmodified.
+        """
+        if length is None:
+            raise Exception('must know length for unknown record types')
+        self.data = readPrecisely(strio, length)
+
+
+    def __hash__(self):
+        return hash((self.data, self.ttl))
+
+
+
 class Record_SPF(Record_TXT):
     """
     Structurally, freeform text. Semantically, a policy definition, formatted
     as defined in U{rfc 4408<http://www.faqs.org/rfcs/rfc4408.html>}.
-    
+
     @type data: C{list} of C{str}
     @ivar data: Freeform text which makes up this record.
-    
+
     @type ttl: C{int}
     @ivar ttl: The maximum number of seconds which this record should be cached.
     """
@@ -1631,7 +1676,7 @@ class Message:
             can be found for the given type.
         @rtype: L{types.ClassType}
         """
-        return self._recordTypes.get(type, None)
+        return self._recordTypes.get(type, UnknownRecord)
 
 
     def toStr(self):
