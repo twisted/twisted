@@ -13,39 +13,63 @@ Start the example with::
 
     twistd -ny sftpserver.tac
 
-
-Note: this example only works on POSIX.
+Then connect to it on port 2200 with an SFTP client, using the username "alice"
+and the password "secret".  It will grant access to files and directories
+beneath its working directory.
 """
 
 
 from zope.interface import implements
 
+from twisted.python.filepath import FilePath
 from twisted.application import service, internet
 from twisted.conch.ssh.keys import Key
 from twisted.conch.ssh.factory import SSHFactory
 from twisted.conch.unix import UnixSSHRealm
-from twisted.cred.checkers import ICredentialsChecker
+from twisted.cred.checkers import (
+    ICredentialsChecker, InMemoryUsernamePasswordDatabaseDontUse)
 from twisted.cred.credentials import IUsernamePassword
-from twisted.cred.portal import Portal
+from twisted.cred.portal import IRealm, Portal
 
 
-class DummyChecker(object):
-    credentialInterfaces = (IUsernamePassword,)
-    implements(ICredentialsChecker)
+class SandboxSFTPUser(ConchUser):
+    implements(ISFTPServer)
 
-    def requestAvatarId(self, credentials):
-        return credentials.username
+    def __init__(self, sandboxPath):
+        ConchUser.__init__(self)
+        self.sandboxPath = sandboxPath
+        self.subsystemLookup["sftp"] = FileTransferServer
+
+
+    def getHomeDir(self):
+        return self.sandboxPath
+
+
+
+class SandboxRealm(object):
+    implements(IRealm)
+
+    def requestAvatar(self, avatarId, mind, *interfaces):
+        if IConchUser in interfaces:
+            return IConchUser, SandboxSFTPUser(FilePath(".")), self.logout
+        raise NotImplementedError()
+
+
+    def logout(self):
+        pass
 
 
 def makeService():
     publicKey = Key.fromFile('id_rsa.pub')
     privateKey = Key.fromFile('id_rsa')
 
+    checker = InMemoryUsernamePasswordDatabaseDontUse()
+    checker.addUser("alice", "secret")
+
     factory = SSHFactory()
     factory.privateKeys = {'ssh-rsa': privateKey}
     factory.publicKeys = {'ssh-rsa': publicKey}
-    factory.portal = Portal(UnixSSHRealm())
-    factory.portal.registerChecker(DummyChecker())
+    factory.portal = Portal(UnixSSHRealm(), [checker])
 
     return internet.TCPServer(2200, factory)
 
