@@ -413,15 +413,18 @@ class LoopbackRelay(loopback.LoopbackRelay):
 
 
 class NotifyingExpectableBuffer(helper.ExpectableBuffer):
-    def __init__(self):
+    def __init__(self, recvlineServer=None):
         self.onConnection = defer.Deferred()
         self.onDisconnection = defer.Deferred()
+        self._recvlineServer = recvlineServer
 
     def connectionMade(self):
         helper.ExpectableBuffer.connectionMade(self)
         self.onConnection.callback(self)
 
     def connectionLost(self, reason):
+        if self._recvlineServer is not None:
+            self._recvlineServer.connectionLost(reason)
         self.onDisconnection.errback(reason)
 
 
@@ -473,7 +476,7 @@ class _SSHMixin(_BaseMixin):
         sshServer = sshFactory.buildProtocol(None)
         clientTransport = LoopbackRelay(sshServer)
 
-        recvlineClient = NotifyingExpectableBuffer()
+        recvlineClient = NotifyingExpectableBuffer(recvlineServer)
         insultsClient = insults.ClientProtocol(lambda: recvlineClient)
         sshClient = TestTransport(lambda: insultsClient, (), {}, u, p, self.WIDTH, self.HEIGHT)
         serverTransport = LoopbackRelay(sshClient)
@@ -510,7 +513,7 @@ class _TelnetMixin(_BaseMixin):
         telnetServer = telnet.TelnetTransport(lambda: insultsServer)
         clientTransport = LoopbackRelay(telnetServer)
 
-        recvlineClient = NotifyingExpectableBuffer()
+        recvlineClient = NotifyingExpectableBuffer(recvlineServer)
         insultsClient = TestInsultsClientProtocol(lambda: recvlineClient)
         telnetClient = telnet.TelnetTransport(lambda: insultsClient)
         serverTransport = LoopbackRelay(telnetClient)

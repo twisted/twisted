@@ -14,7 +14,7 @@ from twisted.internet import reactor, stdio, protocol, defer
 from twisted.python import failure, reflect, log
 
 from twisted.conch.insults.insults import ServerProtocol
-from twisted.conch.manhole import ColoredManhole
+from twisted.conch.manhole import PersistentManhole
 
 class UnexpectedOutputError(Exception):
     pass
@@ -52,7 +52,7 @@ class TerminalProcessProtocol(protocol.ProcessProtocol):
 
 
 
-class ConsoleManhole(ColoredManhole):
+class ConsoleManhole(PersistentManhole):
     """
     A manhole protocol specifically for use with L{stdio.StandardIO}.
     """
@@ -61,6 +61,7 @@ class ConsoleManhole(ColoredManhole):
         When the connection is lost, there is nothing more to do.  Stop the
         reactor so that the process can exit.
         """
+        PersistentManhole.connectionLost(self, reason)
         reactor.stop()
 
 

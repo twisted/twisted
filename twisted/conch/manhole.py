@@ -13,12 +13,13 @@ and reasonable handling of Deferreds.
 @author: Jp Calderone
 """
 
-import code, sys, StringIO, tokenize
+import os, code, sys, StringIO, tokenize
 
 from twisted.conch import recvline
 
 from twisted.internet import defer
 from twisted.python.htmlizer import TokenPrinter
+from twisted.python.filepath import FilePath
 
 class FileWrapper:
     """Minimal write-file-like object.
@@ -338,3 +339,91 @@ class ColoredManhole(Manhole):
             n = len(self.lineBuffer) - self.lineBufferIndex
             if n:
                 self.terminal.cursorBackward(n)
+
+
+class PersistentManhole(ColoredManhole):
+    """
+    A REPL which color-codes input and saves/loads input
+    history to/from a history file.
+    """
+
+    historyFile = os.path.join(os.environ.get('HOME', ''),
+                               '.twistedconch.history')
+    maxLines = 2**12
+
+    def connectionMade(self):
+        ColoredManhole.connectionMade(self)
+        self._readHistoryFile()
+
+    def _readHistoryFile(self):
+        """
+        Read pesisted lines from C{historyFile} into current C{historyLines}
+        buffer and adjust C{historyPosition} according to updated buffer.
+        """
+        if os.path.exists(self.historyFile):
+            fd = open(self.historyFile)
+            try:
+                lineCount = 1
+                for line in fd:
+                    if not line.strip():
+                        continue
+                    if lineCount > self.maxLines:
+                        self.historyLines.pop(0)
+                    self.historyLines.append(line[:-1])
+                    lineCount += 1
+            finally:
+                fd.close()
+        fd = open(self.historyFile + '.tmp', 'w')
+        try:
+            for line in self.historyLines:
+                fd.write(line + '\n')
+        finally:
+            fd.close()
+        path = FilePath(self.historyFile + '.tmp')
+        path.moveTo(FilePath(self.historyFile))
+        self._historyFd = open(self.historyFile, 'a')
+        self.historyPosition = len(self.historyLines)
+
+    def connectionLost(self, reason):
+        self._historyFd.close()
+        ColoredManhole.connectionLost(self, reason)
+
+    def handle_RETURN(self):
+        """
+        In addition to normal habdling of RETURN key, if there is
+        any input, write to C{historyFile}.
+        """
+        line = ''.join(self.lineBuffer)
+        r = ColoredManhole.handle_RETURN(self)
+        if line:
+            self._historyFd.write(line + '\n')
+        return r
+
+
+    def handle_UP(self):
+        """
+        Replace current line buffer with next entry in history, if any.
+        """
+        lineToDeliver = None
+        if (self.lineBuffer
+                and self.historyPosition == len(self.historyLines)):
+            current = ''.join(self.lineBuffer)
+            for line in reversed(self.historyLines):
+                if line[:len(current)] == current:
+                    lineToDeliver = line
+                    break
+        elif self.historyPosition > 0:
+            self.historyPosition -= 1
+            lineToDeliver = self.historyLines[self.historyPosition]
+        if lineToDeliver:
+            self._resetAndDeliverBuffer(lineToDeliver)
+
+    def _resetAndDeliverBuffer(self, buffer):
+        """
+        Reset the current line buffer and replace with the given
+        C{buffer}.
+        """
+        self.handle_HOME()
+        self.terminal.eraseToLineEnd()
+        self.lineBuffer = []
+        self._deliverBuffer(buffer)

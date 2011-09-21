@@ -5,8 +5,7 @@
 """
 Tests for L{twisted.conch.manhole}.
 """
-
-import traceback
+import os, traceback
 
 from twisted.trial import unittest
 from twisted.internet import error, defer
@@ -358,15 +357,118 @@ class ManholeLoopbackMixin:
 
     testDeferred = defer.deferredGenerator(testDeferred)
 
+
 class ManholeLoopbackTelnet(_TelnetMixin, unittest.TestCase, ManholeLoopbackMixin):
     pass
+
 
 class ManholeLoopbackSSH(_SSHMixin, unittest.TestCase, ManholeLoopbackMixin):
     if ssh is None:
         skip = "Crypto requirements missing, can't run manhole tests over ssh"
+
 
 class ManholeLoopbackStdio(_StdioMixin, unittest.TestCase, ManholeLoopbackMixin):
     if stdio is None:
         skip = "Terminal requirements missing, can't run manhole tests over stdio"
     else:
         serverProtocol = stdio.ConsoleManhole
+
+
+def _setUpPersistentManhole(self):
+    self._historyFile = self.mktemp()
+    self.patch(manhole.PersistentManhole, 'historyFile', self._historyFile)
+    self.patch(manhole.PersistentManhole, 'maxLines', 10)
+    m = self._postSetUp.get(self._testMethodName, None)
+    if m:
+        m(self)
+
+
+class _PersistentTelnetMixin(_TelnetMixin):
+
+    def setUp(self):
+        _setUpPersistentManhole(self)
+        return _TelnetMixin.setUp(self)
+
+
+class _PersistentSSHMixin(_SSHMixin):
+
+    def setUp(self):
+        _setUpPersistentManhole(self)
+        return _SSHMixin.setUp(self)
+
+
+class PersistentManholeLoopbackMixin:
+    serverProtocol = manhole.PersistentManhole
+    UP_ARROW_1 = '\x1b[A'
+
+    def test_controlD(self):
+        """
+        Test that after connection is lost the history file exists,
+        and has the relavant history lines.
+        """
+        self._testwrite(
+            '1 + 1\n'
+            'print "hello"\n'
+            'True != False\n')
+        self._testwrite(manhole.CTRL_D)
+        d = self.recvlineClient.onDisconnection
+        def done(ignore):
+            self.assert_(os.path.exists(self._historyFile))
+            buf = open(self._historyFile).read()
+            self.assertEqual(buf, '1 + 1\nprint "hello"\nTrue != False\n')
+        return self.assertFailure(d, error.ConnectionDone).addBoth(done)
+
+    def test_maxLines(self):
+        """
+        History file is shorted (oldest lines removed) after maxlines
+        is exceeded.
+        """
+        for i in range(11):
+            self._testwrite('print "line %d"\n' % i)
+        self._testwrite(manhole.CTRL_D)
+        expected = [ ('print "line %d"' % i) for i in range(1, 11) ]
+        d = self.recvlineClient.onDisconnection
+        def done(ignore):
+            buf = open(self._historyFile).read()
+            pt = self.serverProtocol()
+            pt.historyLines = []
+            pt._readHistoryFile()
+            self.assertEqual(pt.historyLines, expected)
+        return self.assertFailure(d, error.ConnectionDone).addBoth(done)
+
+    def _writeHistory(self):
+        fd = open(self._historyFile, 'w')
+        fd.write(
+            '2 + 3\n'
+            'print 2 + 5\n'
+            'print "hello"\n')
+        fd.close()
+
+    def test_UP_ARROW(self):
+        """
+        UP_ARROW should reset line with next line from history,
+        """
+        def onup(ignore, check=True):
+            self._assertBuffer([ '>>> print "hello"' ])
+        d = self.recvlineClient.expect('print "hello"')
+        self._testwrite(self.UP_ARROW_1)
+        d.addCallback(onup)
+        return d
+
+    _postSetUp = {
+        'test_UP_ARROW' : _writeHistory
+    }
+
+class PersistentManholeLoopbackTelnet(
+        _PersistentTelnetMixin, unittest.TestCase,
+        PersistentManholeLoopbackMixin):
+    pass
+
+
+class PersistentManholeLoopbackSSH(
+        _PersistentSSHMixin, unittest.TestCase,
+        PersistentManholeLoopbackMixin):
+    if ssh is None:
+        skip = "Crypto requirements missing, can't run manhole tests over ssh"
+
+

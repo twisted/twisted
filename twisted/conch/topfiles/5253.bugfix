@@ -1,0 +1,1 @@
+ColoredManhole extension twisted.conch.manhole.PersistentManhole adds support for persistent input history.
