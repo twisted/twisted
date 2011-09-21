@@ -138,6 +138,7 @@ class FingerService(service.Service):
 application = service.Application('finger', uid=1, gid=1)
 f = FingerService('/etc/users')
 serviceCollection = service.IServiceCollection(application)
+f.setServiceParent(serviceCollection)
 internet.TCPServer(79, f.getFingerFactory()
                    ).setServiceParent(serviceCollection)
 internet.TCPServer(8000, server.Site(f.getResource())

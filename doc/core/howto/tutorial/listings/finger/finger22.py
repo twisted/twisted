@@ -321,6 +321,7 @@ class ServerContextFactory:
 application = service.Application('finger', uid=1, gid=1)
 f = FingerService('/etc/users')
 serviceCollection = service.IServiceCollection(application)
+f.setServiceParent(serviceCollection)
 internet.TCPServer(79, IFingerFactory(f)
                    ).setServiceParent(serviceCollection)
 site = server.Site(resource.IResource(f))
