@@ -630,6 +630,56 @@ class CommandDispatchTests(unittest.TestCase):
                                          Print=u"ignored")])
 
 
+    def _localCallbackErrorLoggingTest(self, callResult):
+        """
+        Verify that C{callResult} completes with a C{None} result and that an
+        unhandled error has been logged.
+        """
+        finalResult = []
+        callResult.addBoth(finalResult.append)
+
+        self.assertEqual(1, len(self.sender.unhandledErrors))
+        self.assertIsInstance(
+            self.sender.unhandledErrors[0].value, ZeroDivisionError)
+
+        self.assertEqual([None], finalResult)
+
+
+    def test_callRemoteSuccessLocalCallbackErrorLogging(self):
+        """
+        If the last callback on the L{Deferred} returned by C{callRemote} (added
+        by application code calling C{callRemote}) fails, the failure is passed
+        to the sender's C{unhandledError} method.
+        """
+        self.sender.expectError()
+
+        callResult = self.dispatcher.callRemote(Hello, hello='world')
+        callResult.addCallback(lambda result: 1 / 0)
+
+        self.dispatcher.ampBoxReceived(amp.AmpBox({
+                    'hello': "yay", 'print': "ignored", '_answer': "1"}))
+
+        self._localCallbackErrorLoggingTest(callResult)
+
+
+    def test_callRemoteErrorLocalCallbackErrorLogging(self):
+        """
+        Like L{test_callRemoteSuccessLocalCallbackErrorLogging}, but for the
+        case where the L{Deferred} returned by C{callRemote} fails.
+        """
+        self.sender.expectError()
+
+        callResult = self.dispatcher.callRemote(Hello, hello='world')
+        callResult.addErrback(lambda result: 1 / 0)
+
+        self.dispatcher.ampBoxReceived(amp.AmpBox({
+                    '_error': '1', '_error_code': 'bugs',
+                    '_error_description': 'stuff'}))
+
+        self._localCallbackErrorLoggingTest(callResult)
+
+
+
 class SimpleGreeting(amp.Command):
     """
     A very simple greeting command that uses a few basic argument types.
@@ -951,6 +1001,31 @@ class BinaryProtocolTests(unittest.TestCase):
         self.assertFalse(self.stopReason.value.isLocal)
         self.assertIdentical(self.stopReason.value.value, None)
         self.assertIdentical(self.stopReason.value.keyName, None)
+
+
+    def test_unhandledErrorWithTransport(self):
+        """
+        L{amp.BinaryBoxProtocol.unhandledError} logs the failure passed to it
+        and disconnects its transport.
+        """
+        transport = StringTransport()
+        protocol = amp.BinaryBoxProtocol(self)
+        protocol.makeConnection(transport)
+        protocol.unhandledError(Failure(RuntimeError("Fake error")))
+        self.assertEqual(1, len(self.flushLoggedErrors(RuntimeError)))
+        self.assertTrue(transport.disconnecting)
+
+
+    def test_unhandledErrorWithoutTransport(self):
+        """
+        L{amp.BinaryBoxProtocol.unhandledError} completes without error when
+        there is no associated transport.
+        """
+        protocol = amp.BinaryBoxProtocol(self)
+        protocol.makeConnection(StringTransport())
+        protocol.connectionLost(Failure(Exception("Simulated")))
+        protocol.unhandledError(Failure(RuntimeError("Fake error")))
+        self.assertEqual(1, len(self.flushLoggedErrors(RuntimeError)))
 
 
     def test_receiveBoxData(self):
