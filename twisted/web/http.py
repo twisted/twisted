@@ -1584,7 +1584,6 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             self.length = None
             self._transferDecoder = _ChunkedTransferDecoder(
                 self.requests[-1].handleContentChunk, self._finishRequestBody)
-
         reqHeaders = self.requests[-1].requestHeaders
         values = reqHeaders.getRawHeaders(header)
         if values is not None:
@@ -1628,6 +1627,12 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         req.parseCookies()
         self.persistent = self.checkPersistence(req, self._version)
         req.gotLength(self.length)
+        # Handle 'Expect: 100-continue' with automated 100 response code,
+        # a simplistic implementation of RFC 2686 8.2.3:
+        expectContinue = req.requestHeaders.getRawHeaders('expect')
+        if (expectContinue and expectContinue[0].lower() == '100-continue' and
+            self._version == 'HTTP/1.1'):
+            req.transport.write("HTTP/1.1 100 Continue\r\n\r\n")
 
 
     def checkPersistence(self, request, version):

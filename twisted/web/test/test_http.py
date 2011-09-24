@@ -1558,3 +1558,106 @@ class MultilineHeadersTestCase(unittest.TestCase):
         self.assertEqual(c.version, 'HTTP/1.0')
         self.assertEqual(c.status, '201')
         self.assertEqual(c.length, 10)
+
+
+
+class Expect100ContinueServerTests(unittest.TestCase):
+    """
+    Test that the HTTP server handles 'Expect: 100-continue' header correctly.
+
+    The tests in this class all assume a simplistic behavior where user code
+    cannot choose to deny a request. Once ticket #288 is implemented and user
+    code can run before the body of a POST is processed this should be
+    extended to support overriding this behavior.
+    """
+
+    def test_HTTP10(self):
+        """
+        HTTP/1.0 requests do not get 100-continue returned, even if 'Expect:
+        100-continue' is included (RFC 2616 10.1.1).
+        """
+        transport = StringTransport()
+        channel = http.HTTPChannel()
+        channel.requestFactory = DummyHTTPHandler
+        channel.makeConnection(transport)
+        channel.dataReceived("GET / HTTP/1.0\r\n")
+        channel.dataReceived("Host: www.example.com\r\n")
+        channel.dataReceived("Content-Length: 3\r\n")
+        channel.dataReceived("Expect: 100-continue\r\n")
+        channel.dataReceived("\r\n")
+        self.assertEqual(transport.value(), "")
+        channel.dataReceived("abc")
+        self.assertEqual(transport.value(),
+                         "HTTP/1.0 200 OK\r\n"
+                         "Command: GET\r\n"
+                         "Content-Length: 13\r\n"
+                         "Version: HTTP/1.0\r\n"
+                         "Request: /\r\n\r\n'''\n3\nabc'''\n")
+
+
+    def test_expect100ContinueHeader(self):
+        """
+        If a HTTP/1.1 client sends a 'Expect: 100-continue' header, the server
+        responds with a 100 response code before handling the request body, if
+        any. The normal resource rendering code will then be called, which
+        will send an additional response code.
+        """
+        transport = StringTransport()
+        channel = http.HTTPChannel()
+        channel.requestFactory = DummyHTTPHandler
+        channel.makeConnection(transport)
+        channel.dataReceived("GET / HTTP/1.1\r\n")
+        channel.dataReceived("Host: www.example.com\r\n")
+        channel.dataReceived("Expect: 100-continue\r\n")
+        channel.dataReceived("Content-Length: 3\r\n")
+        # The 100 continue response is not sent until all headers are
+        # received:
+        self.assertEqual(transport.value(), "")
+        channel.dataReceived("\r\n")
+        # The 100 continue response is sent *before* the body is even
+        # received:
+        self.assertEqual(transport.value(), "HTTP/1.1 100 Continue\r\n\r\n")
+        channel.dataReceived("abc")
+        self.assertEqual(transport.value(),
+                         "HTTP/1.1 100 Continue\r\n\r\n"
+                         "HTTP/1.1 200 OK\r\n"
+                         "Command: GET\r\n"
+                         "Content-Length: 13\r\n"
+                         "Version: HTTP/1.1\r\n"
+                         "Request: /\r\n\r\n'''\n3\nabc'''\n")
+
+
+    def test_expect100ContinueWithPipelining(self):
+        """
+        If a HTTP/1.1 client sends a 'Expect: 100-continue' header, followed
+        by another pipelined request, the 100 response does not interfere with
+        the response to the second request.
+        """
+        transport = StringTransport()
+        channel = http.HTTPChannel()
+        channel.requestFactory = DummyHTTPHandler
+        channel.makeConnection(transport)
+        channel.dataReceived(
+            "GET / HTTP/1.1\r\n"
+            "Host: www.example.com\r\n"
+            "Expect: 100-continue\r\n"
+            "Content-Length: 3\r\n"
+            "\r\nabc"
+            "POST /foo HTTP/1.1\r\n"
+            "Host: www.example.com\r\n"
+            "Content-Length: 4\r\n"
+            "\r\ndefg")
+        self.assertEqual(transport.value(),
+                         "HTTP/1.1 100 Continue\r\n\r\n"
+                         "HTTP/1.1 200 OK\r\n"
+                         "Command: GET\r\n"
+                         "Content-Length: 13\r\n"
+                         "Version: HTTP/1.1\r\n"
+                         "Request: /\r\n\r\n"
+                         "'''\n3\nabc'''\n"
+                         "HTTP/1.1 200 OK\r\n"
+                         "Command: POST\r\n"
+                         "Content-Length: 14\r\n"
+                         "Version: HTTP/1.1\r\n"
+                         "Request: /foo\r\n\r\n"
+                         "'''\n4\ndefg'''\n")
