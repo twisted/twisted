@@ -6,15 +6,20 @@ Don't use this outside of Twisted.
 Maintainer: Christopher Armstrong
 """
 
-import sys, os
 from distutils.command import build_scripts, install_data, build_ext, build_py
 from distutils.errors import CompileError
 from distutils import core
 from distutils.core import Extension
+import fnmatch
+import os
+import platform
+import sys
+
 
 twisted_subprojects = ["conch", "lore", "mail", "names",
                        "news", "pair", "runner", "web",
                        "words"]
+
 
 
 class ConditionalExtension(Extension):
@@ -45,6 +50,7 @@ def setup(**kw):
     @type conditionalExtensions: C{list} of L{ConditionalExtension}
     """
     return core.setup(**get_setup_args(**kw))
+
 
 def get_setup_args(**kw):
     if 'twisted_subproject' in kw:
@@ -100,6 +106,7 @@ def get_setup_args(**kw):
         kw.setdefault('cmdclass', {})['build_ext'] = my_build_ext
     return kw
 
+
 def getVersion(proj, base="twisted"):
     """
     Extract the version number for a given project.
@@ -125,10 +132,10 @@ EXCLUDE_NAMES = ["{arch}", "CVS", ".cvsignore", "_darcs",
                  "RCS", "SCCS", ".svn"]
 EXCLUDE_PATTERNS = ["*.py[cdo]", "*.s[ol]", ".#*", "*~", "*.py"]
 
-import fnmatch
 
 def _filterNames(names):
-    """Given a list of file names, return those names that should be copied.
+    """
+    Given a list of file names, return those names that should be copied.
     """
     names = [n for n in names
              if n not in EXCLUDE_NAMES]
@@ -139,6 +146,7 @@ def _filterNames(names):
                  if (not fnmatch.fnmatch(n, pattern))
                  and (not n.endswith('.py'))]
     return names
+
 
 def relativeTo(base, relativee):
     """
@@ -201,6 +209,7 @@ def getDataFiles(dname, ignore=None, parent=None):
                             for filename in resultfiles]))
     return result
 
+
 def getPackages(dname, pkgname=None, results=None, ignore=None, parent=None):
     """
     Get all packages which are under dname. This is necessary for
@@ -229,7 +238,6 @@ def getPackages(dname, pkgname=None, results=None, ignore=None, parent=None):
                         parent=parent)
     res = ['.'.join(result) for result in results]
     return res
-
 
 
 def getScripts(projname, basedir=''):
@@ -360,3 +368,50 @@ class build_ext_twisted(build_ext.build_ext):
         self.compiler.announce("checking for %s ..." % header_name, 0)
         return self._compile_helper("#include <%s>\n" % header_name)
 
+
+
+def _checkCPython(sys=sys, platform=platform):
+    """
+    Checks if this implementation is CPython.
+
+    On recent versions of Python, will use C{platform.python_implementation}.
+    On 2.5, it will try to extract the implementation from sys.subversion. On
+    older versions (currently the only supported older version is 2.4), checks
+    if C{__pypy__} is in C{sys.modules}, since PyPy is the implementation we
+    really care about. If it isn't, assumes CPython.
+
+    This takes C{sys} and C{platform} kwargs that by default use the real
+    modules. You shouldn't care about these -- they are for testing purposes
+    only.
+
+    @return: C{False} if the implementation is definitely not CPython, C{True}
+        otherwise.
+    """
+    try:
+        return platform.python_implementation() == "CPython"
+    except AttributeError:
+        # For 2.5:
+        try:
+            implementation, _, _ = sys.subversion
+            return implementation == "CPython"
+        except AttributeError:
+            pass
+
+        # Are we on Pypy?
+        if "__pypy__" in sys.modules:
+            return False
+
+        # No? Well, then we're *probably* on CPython.
+        return True
+
+
+_isCPython = _checkCPython()
+
+
+def _hasEpoll(builder):
+    """
+    Checks if the header for building epoll (C{sys/epoll.h}) is available.
+
+    @return: C{True} if the header is available, C{False} otherwise.
+    """
+    return builder._check_header("sys/epoll.h")

@@ -6,7 +6,8 @@
 Distutils installer for Twisted.
 """
 
-import os, sys
+import os
+import sys
 
 if sys.version_info < (2,3):
     print >>sys.stderr, "You must use at least Python 2.3 for Twisted"
@@ -17,29 +18,29 @@ if os.path.exists('twisted'):
 from twisted import copyright
 from twisted.python.dist import setup, ConditionalExtension as Extension
 from twisted.python.dist import getPackages, getDataFiles, getScripts
-from twisted.python.dist import twisted_subprojects
-
+from twisted.python.dist import twisted_subprojects, _isCPython, _hasEpoll
 
 
 extensions = [
     Extension("twisted.test.raiser",
-              ["twisted/test/raiser.c"]),
+              ["twisted/test/raiser.c"],
+              condition=lambda _: _isCPython),
 
     Extension("twisted.python._epoll",
               ["twisted/python/_epoll.c"],
-              condition=lambda builder: builder._check_header("sys/epoll.h")),
+              condition=lambda builder: _isCPython and _hasEpoll(builder)),
 
     Extension("twisted.internet.iocpreactor.iocpsupport",
               ["twisted/internet/iocpreactor/iocpsupport/iocpsupport.c",
                "twisted/internet/iocpreactor/iocpsupport/winsock_pointers.c"],
               libraries=["ws2_32"],
-              condition=lambda builder: sys.platform == "win32"),
+              condition=lambda _: _isCPython and sys.platform == "win32"),
 
     Extension("twisted.python._initgroups",
               ["twisted/python/_initgroups.c"]),
     Extension("twisted.internet._sigchld",
               ["twisted/internet/_sigchld.c"],
-              condition=lambda builder: sys.platform != "win32"),
+              condition=lambda _: sys.platform != "win32"),
 ]
 
 # Figure out which plugins to include: all plugins except subproject ones
