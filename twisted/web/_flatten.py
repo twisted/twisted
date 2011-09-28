@@ -75,7 +75,10 @@ def escapedComment(data):
     """
     if isinstance(data, unicode):
         data = data.encode('utf-8')
-    return data.replace('--', '- -')
+    data = data.replace('--', '- - ').replace('>', '&gt;')
+    if data and data[-1] == '-':
+        data += ' '
+    return data
 
 
 def _getSlotValue(name, slotData, default=None):

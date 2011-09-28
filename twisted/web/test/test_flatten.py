@@ -10,6 +10,7 @@ from zope.interface import implements
 from twisted.trial.unittest import TestCase
 from twisted.internet.defer import succeed, gatherResults
 from twisted.web._stan import Tag
+from twisted.web._flatten import flattenString
 from twisted.web.error import UnfilledSlot, UnsupportedType, FlattenerError
 from twisted.web.template import tags, Comment, CDATA, slot
 from twisted.web.iweb import IRenderable
@@ -50,10 +51,54 @@ class TestSerialization(FlattenTestCase):
         """
         Test that comments are correctly flattened and escaped.
         """
-        return gatherResults([
-            self.assertFlattensTo(Comment('foo bar'), '<!--foo bar-->'),
-            self.assertFlattensTo(Comment('foo -- bar'), '<!--foo - - bar-->'),
-        ])
+        return self.assertFlattensTo(Comment('foo bar'), '<!--foo bar-->'),
+
+
+    def test_commentEscaping(self):
+        """
+        The data in a L{Comment} is escaped and mangled in the flattened output
+        so that the result is a legal SGML and XML comment.
+
+        SGML comment syntax is complicated and hard to use. This rule is more
+        restrictive, and more compatible:
+
+        Comments start with <!-- and end with --> and never contain -- or >.
+
+        Also by XML syntax, a comment may not end with '-'.
+
+        @see: U{http://www.w3.org/TR/REC-xml/#sec-comments}
+        """
+        def verifyComment(c):
+            self.assertTrue(
+                c.startswith('<!--'),
+                "%r does not start with the comment prefix" % (c,))
+            self.assertTrue(
+                c.endswith('-->'),
+                "%r does not end with the comment suffix" % (c,))
+            # If it is shorter than 7, then the prefix and suffix overlap
+            # illegally.
+            self.assertTrue(
+                len(c) >= 7,
+                "%r is too short to be a legal comment" % (c,))
+            content = c[4:-3]
+            self.assertNotIn('--', content)
+            self.assertNotIn('>', content)
+            if content:
+                self.assertNotEqual(content[-1], '-')
+
+        results = []
+        for c in [
+            '',
+            'foo---bar',
+            'foo---bar-',
+            'foo>bar',
+            'foo-->bar',
+            '----------------',
+        ]:
+            d = flattenString(None, Comment(c))
+            d.addCallback(verifyComment)
+            results.append(d)
+        return gatherResults(results)
 
 
     def test_serializeCDATA(self):
