@@ -11,7 +11,7 @@ Maintainer: Itamar Shtull-Trauring
 
 # System imports
 import re
-import struct
+from struct import pack, unpack, calcsize
 import warnings
 import cStringIO
 import math
@@ -647,12 +647,36 @@ class StringTooLongError(AssertionError):
 
 
 
+class _RecvdCompatHack(object):
+    """
+    Emulates the to-be-deprecated C{IntNStringReceiver.recvd} attribute.
+
+    The C{recvd} attribute was where the working buffer for buffering and
+    parsing netstrings was kept.  It was updated each time new data arrived and
+    each time some of that data was parsed and delivered to application code.
+    The piecemeal updates to its string value were expensive and have been
+    removed from C{IntNStringReceiver} in the normal case.  However, for
+    applications directly reading this attribute, this descriptor restores that
+    behavior.  It only copies the working buffer when necessary (ie, when
+    accessed).  This avoids the cost for applications not using the data.
+
+    This is a custom descriptor rather than a property, because we still need
+    the default __set__ behavior in both new-style and old-style subclasses.
+    """
+    def __get__(self, oself, type=None):
+        return oself._unprocessed[oself._compatibilityOffset:]
+
+
+
 class IntNStringReceiver(protocol.Protocol, _PauseableMixin):
     """
     Generic class for length prefixed protocols.
 
-    @ivar recvd: buffer holding received data when splitted.
-    @type recvd: C{str}
+    @ivar _unprocessed: bytes received, but not yet broken up into messages /
+        sent to stringReceived.  _compatibilityOffset must be updated when this
+        value is updated so that the C{recvd} attribute can be generated
+        correctly.
+    @type _unprocessed: C{bytes}
 
     @ivar structFormat: format used for struct packing/unpacking. Define it in
         subclass.
@@ -661,9 +685,19 @@ class IntNStringReceiver(protocol.Protocol, _PauseableMixin):
     @ivar prefixLength: length of the prefix, in bytes. Define it in subclass,
         using C{struct.calcsize(structFormat)}
     @type prefixLength: C{int}
+
+    @ivar _compatibilityOffset: the offset within C{_unprocessed} to the next
+        message to be parsed. (used to generate the recvd attribute)
+    @type _compatibilityOffset: C{int}
     """
+
     MAX_LENGTH = 99999
-    recvd = ""
+    _unprocessed = ""
+    _compatibilityOffset = 0
+
+    # Backwards compatibility support for applications which directly touch the
+    # "internal" parse buffer.
+    recvd = _RecvdCompatHack()
 
     def stringReceived(self, string):
         """
@@ -688,22 +722,54 @@ class IntNStringReceiver(protocol.Protocol, _PauseableMixin):
         self.transport.loseConnection()
 
 
-    def dataReceived(self, recd):
+    def dataReceived(self, data):
         """
         Convert int prefixed strings into calls to stringReceived.
         """
-        self.recvd = self.recvd + recd
-        while len(self.recvd) >= self.prefixLength and not self.paused:
-            length ,= struct.unpack(
-                self.structFormat, self.recvd[:self.prefixLength])
+        # Try to minimize string copying (via slices) by keeping one buffer
+        # containing all the data we have so far and a separate offset into that
+        # buffer.
+        alldata = self._unprocessed + data
+        currentOffset = 0
+        prefixLength = self.prefixLength
+        fmt = self.structFormat
+        self._unprocessed = alldata
+
+        while len(alldata) >= (currentOffset + prefixLength) and not self.paused:
+            messageStart = currentOffset + prefixLength
+            length, = unpack(fmt, alldata[currentOffset:messageStart])
             if length > self.MAX_LENGTH:
+                self._unprocessed = alldata
+                self._compatibilityOffset = currentOffset
                 self.lengthLimitExceeded(length)
                 return
-            if len(self.recvd) < length + self.prefixLength:
+            messageEnd = messageStart + length
+            if len(alldata) < messageEnd:
                 break
-            packet = self.recvd[self.prefixLength:length + self.prefixLength]
-            self.recvd = self.recvd[length + self.prefixLength:]
+
+            # Here we have to slice the working buffer so we can send just the
+            # netstring into the stringReceived callback.
+            packet = alldata[messageStart:messageEnd]
+            currentOffset = messageEnd
+            self._compatibilityOffset = currentOffset
             self.stringReceived(packet)
+
+            # Check to see if the backwards compat "recvd" attribute got written
+            # to by application code.  If so, drop the current data buffer and
+            # switch to the new buffer given by that attribute's value.
+            if 'recvd' in self.__dict__:
+                alldata = self.__dict__.pop('recvd')
+                self._unprocessed = alldata
+                self._compatibilityOffset = currentOffset = 0
+                if alldata:
+                    continue
+                return
+
+        # Slice off all the data that has been processed, avoiding holding onto
+        # memory to store it, and update the compatibility attributes to reflect
+        # that change.
+        self._unprocessed = alldata[currentOffset:]
+        self._compatibilityOffset = 0
 
 
     def sendString(self, string):
@@ -719,7 +785,7 @@ class IntNStringReceiver(protocol.Protocol, _PauseableMixin):
                 "Try to send %s bytes whereas maximum is %s" % (
                 len(string), 2 ** (8 * self.prefixLength)))
         self.transport.write(
-            struct.pack(self.structFormat, len(string)) + string)
+            pack(self.structFormat, len(string)) + string)
 
 
 
@@ -733,7 +799,7 @@ class Int32StringReceiver(IntNStringReceiver):
     This class publishes the same interface as NetstringReceiver.
     """
     structFormat = "!I"
-    prefixLength = struct.calcsize(structFormat)
+    prefixLength = calcsize(structFormat)
 
 
 
@@ -747,7 +813,7 @@ class Int16StringReceiver(IntNStringReceiver):
     This class publishes the same interface as NetstringReceiver.
     """
     structFormat = "!H"
-    prefixLength = struct.calcsize(structFormat)
+    prefixLength = calcsize(structFormat)
 
 
 
@@ -761,7 +827,7 @@ class Int8StringReceiver(IntNStringReceiver):
     This class publishes the same interface as NetstringReceiver.
     """
     structFormat = "!B"
-    prefixLength = struct.calcsize(structFormat)
+    prefixLength = calcsize(structFormat)
 
 
 

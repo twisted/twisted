@@ -751,6 +751,111 @@ class IntNTestCaseMixin(LPTestCaseMixin):
 
 
 
+class RecvdAttributeMixin(object):
+    """
+    Mixin defining tests for string receiving protocols with a C{recvd}
+    attribute which should be settable by application code, to be combined with
+    L{IntNTestCaseMixin} on a L{TestCase} subclass
+    """
+
+    def makeMessage(self, protocol, data):
+        """
+        Return C{data} prefixed with message length in C{protocol.structFormat}
+        form.
+        """
+        return struct.pack(protocol.structFormat, len(data)) + data
+
+
+    def test_recvdContainsRemainingData(self):
+        """
+        In stringReceived, recvd contains the remaining data that was passed to
+        dataReceived that was not part of the current message.
+        """
+        result = []
+        r = self.getProtocol()
+        def stringReceived(receivedString):
+            result.append(r.recvd)
+        r.stringReceived = stringReceived
+        completeMessage = (struct.pack(r.structFormat, 5) + ('a' * 5))
+        incompleteMessage = (struct.pack(r.structFormat, 5) + ('b' * 4))
+        # Receive a complete message, followed by an incomplete one
+        r.dataReceived(completeMessage + incompleteMessage)
+        self.assertEquals(result, [incompleteMessage])
+
+
+    def test_recvdChanged(self):
+        """
+        In stringReceived, if recvd is changed, messages should be parsed from
+        it rather than the input to dataReceived.
+        """
+        r = self.getProtocol()
+        result = []
+        payloadC = 'c' * 5
+        messageC = self.makeMessage(r, payloadC)
+        def stringReceived(receivedString):
+            if not result:
+                r.recvd = messageC
+            result.append(receivedString)
+        r.stringReceived = stringReceived
+        payloadA = 'a' * 5
+        payloadB = 'b' * 5
+        messageA = self.makeMessage(r, payloadA)
+        messageB = self.makeMessage(r, payloadB)
+        r.dataReceived(messageA + messageB)
+        self.assertEquals(result, [payloadA, payloadC])
+
+
+    def test_switching(self):
+        """
+        Data already parsed by L{IntNStringReceiver.dataReceived} is not
+        reparsed if C{stringReceived} consumes some of the
+        L{IntNStringReceiver.recvd} buffer.
+        """
+        proto = self.getProtocol()
+        mix = []
+        SWITCH = "\x00\x00\x00\x00"
+        for s in self.strings:
+            mix.append(self.makeMessage(proto, s))
+            mix.append(SWITCH)
+
+        result = []
+        def stringReceived(receivedString):
+            result.append(receivedString)
+            proto.recvd = proto.recvd[len(SWITCH):]
+
+        proto.stringReceived = stringReceived
+        proto.dataReceived("".join(mix))
+        # Just another byte, to trigger processing of anything that might have
+        # been left in the buffer (should be nothing).
+        proto.dataReceived("\x01")
+        self.assertEqual(result, self.strings)
+        # And verify that another way
+        self.assertEqual(proto.recvd, "\x01")
+
+
+    def test_recvdInLengthLimitExceeded(self):
+        """
+        The L{IntNStringReceiver.recvd} buffer contains all data not yet
+        processed by L{IntNStringReceiver.dataReceived} if the
+        C{lengthLimitExceeded} event occurs.
+        """
+        proto = self.getProtocol()
+        DATA = "too long"
+        proto.MAX_LENGTH = len(DATA) - 1
+        message = self.makeMessage(proto, DATA)
+
+        result = []
+        def lengthLimitExceeded(length):
+            result.append(length)
+            result.append(proto.recvd)
+
+        proto.lengthLimitExceeded = lengthLimitExceeded
+        proto.dataReceived(message)
+        self.assertEqual(result[0], len(DATA))
+        self.assertEqual(result[1], message)
+
+
+
 class TestInt32(TestMixin, basic.Int32StringReceiver):
     """
     A L{basic.Int32StringReceiver} storing received strings in an array.
@@ -760,7 +865,7 @@ class TestInt32(TestMixin, basic.Int32StringReceiver):
 
 
 
-class Int32TestCase(unittest.TestCase, IntNTestCaseMixin):
+class Int32TestCase(unittest.TestCase, IntNTestCaseMixin, RecvdAttributeMixin):
     """
     Test case for int32-prefixed protocol
     """
@@ -790,7 +895,7 @@ class TestInt16(TestMixin, basic.Int16StringReceiver):
 
 
 
-class Int16TestCase(unittest.TestCase, IntNTestCaseMixin):
+class Int16TestCase(unittest.TestCase, IntNTestCaseMixin, RecvdAttributeMixin):
     """
     Test case for int16-prefixed protocol
     """
@@ -820,6 +925,22 @@ class Int16TestCase(unittest.TestCase, IntNTestCaseMixin):
 
 
 
+class NewStyleTestInt16(TestInt16, object):
+    """
+    A new-style class version of TestInt16
+    """
+
+
+
+class NewStyleInt16TestCase(Int16TestCase):
+    """
+    This test case verifies that IntNStringReceiver still works when inherited
+    by a new-style class.
+    """
+    protocol = NewStyleTestInt16
+
+
+
 class TestInt8(TestMixin, basic.Int8StringReceiver):
     """
     A L{basic.Int8StringReceiver} storing received strings in an array.
@@ -829,7 +950,7 @@ class TestInt8(TestMixin, basic.Int8StringReceiver):
 
 
 
-class Int8TestCase(unittest.TestCase, IntNTestCaseMixin):
+class Int8TestCase(unittest.TestCase, IntNTestCaseMixin, RecvdAttributeMixin):
     """
     Test case for int8-prefixed protocol
     """

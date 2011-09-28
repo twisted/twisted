@@ -6,6 +6,7 @@
 Test cases for twisted.protocols.stateful
 """
 
+from twisted.trial.unittest import TestCase
 from twisted.test import test_protocols
 from twisted.protocols.stateful import StatefulProtocol
 
@@ -64,8 +65,11 @@ class TestInt32(MyInt32StringReceiver):
         self.closed = 1
 
 
-class Int32TestCase(test_protocols.Int32TestCase):
+class Int32TestCase(TestCase, test_protocols.IntNTestCaseMixin):
     protocol = TestInt32
+    strings = ["a", "b" * 16]
+    illegalStrings = ["\x10\x00\x00\x00aaaaaa"]
+    partialStrings = ["\x00\x00\x00", "hello there", ""]
 
     def test_bigReceive(self):
         r = self.getProtocol()
