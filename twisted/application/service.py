@@ -106,7 +106,8 @@ class IService(Interface):
 
     def setServiceParent(parent):
         """
-        Set the parent of the service.
+        Set the parent of the service.  This method is responsible for setting
+        the C{parent} attribute on this service (the child service).
 
         @type parent: L{IServiceCollection}
         @raise RuntimeError: Raised if the service already has a parent
@@ -122,7 +123,7 @@ class IService(Interface):
         sets the C{parent} attribute on the child.
 
         @rtype: L{Deferred<defer.Deferred>}
-        @return: a L{Deferred<defer.Deferred>} which is triggered when the 
+        @return: a L{Deferred<defer.Deferred>} which is triggered when the
             service has finished shutting down. If shutting down is immediate,
             a value can be returned (usually, C{None}).
         """
@@ -137,7 +138,7 @@ class IService(Interface):
         Stop the service.
 
         @rtype: L{Deferred<defer.Deferred>}
-        @return: a L{Deferred<defer.Deferred>} which is triggered when the 
+        @return: a L{Deferred<defer.Deferred>} which is triggered when the
             service has finished shutting down. If shutting down is immediate,
             a value can be returned (usually, C{None}).
         """
@@ -228,6 +229,9 @@ class IServiceCollection(Interface):
         """
         Add a child service.
 
+        Only implementations of L{IService.setServiceParent} should use this
+        method.
+
         @type service: L{IService}
         @raise RuntimeError: Raised if the service has a child with
             the given name.
@@ -243,7 +247,7 @@ class IServiceCollection(Interface):
         @type service: L{IService}
         @raise ValueError: Raised if the given service is not a child.
         @rtype: L{Deferred<defer.Deferred>}
-        @return: a L{Deferred<defer.Deferred>} which is triggered when the 
+        @return: a L{Deferred<defer.Deferred>} which is triggered when the
             service has finished shutting down. If shutting down is immediate,
             a value can be returned (usually, C{None}).
         """
@@ -333,13 +337,13 @@ class IProcess(Interface):
         """
         An C{int} giving the user id as which the process should run (or
         C{None} to leave the UID alone).
-        """)    
+        """)
 
     gid = Attribute(
         """
         An C{int} giving the group id as which the process should run (or
         C{None} to leave the GID alone).
-        """)    
+        """)
 
 
 
