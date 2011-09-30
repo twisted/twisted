@@ -18,6 +18,17 @@ def proto(*a, **kw):
 
 
 class TestTag(TestCase):
+    """
+    Tests for L{Tag}.
+    """
+    def test_fillSlots(self):
+        """
+        L{Tag.fillSlots} returns self.
+        """
+        tag = proto()
+        self.assertIdentical(tag, tag.fillSlots(test='test'))
+
+
     def test_cloneShallow(self):
         """
         L{Tag.clone} copies all attributes and children of a tag, including its

@@ -145,6 +145,9 @@ class Tag(object):
 
         During the rendering of children of this node, slots with names in
         C{slots} will be rendered as their corresponding values.
+
+        @return: C{self}. This enables the idiom C{return tag.fillSlots(...)} in
+            renderers.
         """
         if self.slotData is None:
             self.slotData = {}
@@ -200,7 +203,7 @@ class Tag(object):
         @param deep: whether to continue cloning child objects; i.e. the
             contents of lists, the sub-tags within a tag.
 
-        @return: a clone of obj.
+        @return: a clone of C{obj}.
         """
         if hasattr(obj, 'clone'):
             return obj.clone(deep)
