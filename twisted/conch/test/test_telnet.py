@@ -7,6 +7,7 @@ Tests for L{twisted.conch.telnet}.
 """
 
 from zope.interface import implements
+from zope.interface.verify import verifyObject
 
 from twisted.internet import defer
 
@@ -66,6 +67,16 @@ class TestProtocol:
 
     def disableRemote(self, option):
         self.disabledRemote.append(option)
+
+
+
+class TestInterfaces(unittest.TestCase):
+    def test_interface(self):
+        """
+        L{telnet.TelnetProtocol} implements L{telnet.ITelnetProtocol}
+        """
+        p = telnet.TelnetProtocol()
+        verifyObject(telnet.ITelnetProtocol, p)
 
 
 

@@ -155,10 +155,23 @@ LINEMODE_ABORT = chr(238)
 class ITelnetProtocol(iinternet.IProtocol):
     def unhandledCommand(command, argument):
         """A command was received but not understood.
+
+        @param command: the command received.
+        @type command: C{str}, a single character.
+        @param argument: the argument to the received command.
+        @type argument: C{str}, a single character, or None if the command that
+            was unhandled does not provide an argument.
         """
 
-    def unhandledSubnegotiation(bytes):
+    def unhandledSubnegotiation(command, bytes):
         """A subnegotiation command was received but not understood.
+
+        @param command: the command being subnegotiated. That is, the first
+            byte after the SB command.
+        @type command: C{str}, a single character.
+        @param bytes: all other bytes of the subneogation. That is, all but the
+            first bytes between SB and SE, with IAC un-escaping applied.
+        @type bytes: C{list} of C{str}, each a single character
         """
 
     def enableLocal(option):
@@ -168,6 +181,9 @@ class ITelnetProtocol(iinternet.IProtocol):
         telnet connection and return True.  If False is returned,
         the option will be treated as still disabled and the peer
         will be notified.
+
+        @param option: the option to be enabled.
+        @type option: C{str}, a single character.
         """
 
     def enableRemote(option):
@@ -175,6 +191,9 @@ class ITelnetProtocol(iinternet.IProtocol):
 
         Returns True if the peer should be allowed to enable this option,
         False otherwise.
+
+        @param option: the option to be enabled.
+        @type option: C{str}, a single character.
         """
 
     def disableLocal(option):
@@ -182,10 +201,16 @@ class ITelnetProtocol(iinternet.IProtocol):
 
         Unlike enableLocal, this method cannot fail.  The option must be
         disabled.
+
+        @param option: the option to be disabled.
+        @type option: C{str}, a single character.
         """
 
     def disableRemote(option):
         """Indicate that the peer has disabled this option.
+
+        @param option: the option to be disabled.
+        @type option: C{str}, a single character.
         """
 
 
