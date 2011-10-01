@@ -58,11 +58,7 @@ class Options(usage.Options):
 
     def __init__(self):
         usage.Options.__init__(self)
-        self.users = []
         self['namespace'] = None
-    
-    def opt_user(self, name):
-        self.users.append(name)
     
     def postOptions(self):
         if self['telnetPort'] is None and self['sshPort'] is None:
