@@ -16,6 +16,7 @@ from zope.interface import directlyProvides, providedBy
 # twisted imports
 from twisted.internet.protocol import ServerFactory, Protocol, ClientFactory
 from twisted.internet import error
+from twisted.internet.interfaces import ILoggingContext
 from twisted.python import log
 
 
@@ -23,7 +24,8 @@ class ProtocolWrapper(Protocol):
     """
     Wraps protocol instances and acts as their transport as well.
 
-    @ivar wrappedProtocol: An L{IProtocol} provider to which L{IProtocol}
+    @ivar wrappedProtocol: An L{IProtocol<twisted.internet.interfaces.IProtocol>}
+        provider to which L{IProtocol<twisted.internet.interfaces.IProtocol>}
         method calls onto this L{ProtocolWrapper} will be proxied.
 
     @ivar factory: The L{WrappingFactory} which created this
@@ -36,6 +38,19 @@ class ProtocolWrapper(Protocol):
         self.wrappedProtocol = wrappedProtocol
         self.factory = factory
 
+
+    def logPrefix(self):
+        """
+        Use a customized log prefix mentioning both the wrapped protocol and
+        the current one.
+        """
+        if ILoggingContext.providedBy(self.wrappedProtocol):
+            logPrefix = self.wrappedProtocol.logPrefix()
+        else:
+            logPrefix = self.wrappedProtocol.__class__.__name__
+        return "%s (%s)" % (logPrefix, self.__class__.__name__)
+
+
     def makeConnection(self, transport):
         """
         When a connection is made, register this wrapper with its factory,
@@ -47,44 +62,56 @@ class ProtocolWrapper(Protocol):
         self.factory.registerProtocol(self)
         self.wrappedProtocol.makeConnection(self)
 
+
     # Transport relaying
 
     def write(self, data):
         self.transport.write(data)
 
+
     def writeSequence(self, data):
         self.transport.writeSequence(data)
+
 
     def loseConnection(self):
         self.disconnecting = 1
         self.transport.loseConnection()
 
+
     def getPeer(self):
         return self.transport.getPeer()
+
 
     def getHost(self):
         return self.transport.getHost()
 
+
     def registerProducer(self, producer, streaming):
         self.transport.registerProducer(producer, streaming)
+
 
     def unregisterProducer(self):
         self.transport.unregisterProducer()
 
+
     def stopConsuming(self):
         self.transport.stopConsuming()
 
+
     def __getattr__(self, name):
         return getattr(self.transport, name)
+
 
     # Protocol relaying
 
     def dataReceived(self, data):
         self.wrappedProtocol.dataReceived(data)
 
+
     def connectionLost(self, reason):
         self.factory.unregisterProtocol(self)
         self.wrappedProtocol.connectionLost(reason)
+
 
 
 class WrappingFactory(ClientFactory):

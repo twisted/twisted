@@ -5,8 +5,9 @@
 Various helpers for tests for connection-oriented transports.
 """
 
+from twisted.python import context
 from twisted.python.reflect import fullyQualifiedName
-from twisted.python.log import msg, err
+from twisted.python.log import ILogContext, msg, err
 from twisted.internet.defer import Deferred, gatherResults
 from twisted.internet.protocol import ServerFactory, Protocol
 
@@ -24,6 +25,26 @@ def serverFactoryFor(protocol):
 
 # ServerFactory is good enough for client endpoints, too.
 factoryFor = serverFactoryFor
+
+class _AcceptOneClient(ServerFactory):
+    """
+    This factory fires a L{Deferred} with a protocol instance shortly after it
+    is constructed (hopefully long enough afterwards so that it has been
+    connected to a transport).
+
+    @ivar reactor: The reactor used to schedule the I{shortly}.
+    @ivar result: A L{Deferred} which will be fired with the protocol instance.
+    """
+    def __init__(self, reactor, result):
+        self.reactor = reactor
+        self.result = result
+
+
+    def buildProtocol(self, addr):
+        protocol = ServerFactory.buildProtocol(self, addr)
+        self.reactor.callLater(0, self.result.callback, protocol)
+        return protocol
+
 
 
 class ClosingLaterProtocol(Protocol):
@@ -74,6 +95,66 @@ class ConnectionTestsMixin(object):
         """
         raise NotImplementedError("%s.clientEndpoint() not implemented" % (
                 fullyQualifiedName(self.__class__),))
+
+
+    def loopback(self, reactor, clientProtocol, serverProtocol):
+        """
+        Create a loopback connection of the type to be tested, using
+        C{clientProtocol} and C{serverProtocol} to handle each end of the
+        connection.
+
+        @return: A L{Deferred} which fires when the connection is established.
+            The result is a two-tuple of the client protocol instance and
+            server protocol instance.
+        """
+        accepted = Deferred()
+        factory = _AcceptOneClient(reactor, accepted)
+        factory.protocol = serverProtocol
+        server = self.serverEndpoint(reactor)
+        listening = server.listen(factory)
+        def startedListening(port):
+            address = port.getHost()
+            client = self.clientEndpoint(reactor, address)
+            return gatherResults([
+                    client.connect(factoryFor(clientProtocol)), accepted])
+        listening.addCallback(startedListening)
+        return listening
+
+
+    def test_logPrefix(self):
+        """
+        Client and server transports implement L{ILoggingContext.logPrefix} to
+        return a message reflecting the protocol they are running.
+        """
+        class CustomLogPrefixProtocol(Protocol):
+            def __init__(self, prefix):
+                self._prefix = prefix
+                self.system = Deferred()
+
+            def logPrefix(self):
+                return self._prefix
+
+            def dataReceived(self, bytes):
+                self.system.callback(context.get(ILogContext)["system"])
+
+        reactor = self.buildReactor()
+        d = self.loopback(
+            reactor,
+            lambda: CustomLogPrefixProtocol("Custom Client"),
+            lambda: CustomLogPrefixProtocol("Custom Server"))
+        def connected((client, server)):
+            client.transport.write("foo")
+            server.transport.write("bar")
+            return gatherResults([client.system, server.system])
+        d.addCallback(connected)
+
+        def gotSystem((client, server)):
+            self.assertIn("Custom Client", client)
+            self.assertIn("Custom Server", server)
+        d.addCallback(gotSystem)
+        d.addErrback(err)
+        d.addCallback(lambda ignored: reactor.stop())
+        self.runReactor(reactor)
 
 
     def test_writeAfterDisconnect(self):

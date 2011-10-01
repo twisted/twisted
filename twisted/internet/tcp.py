@@ -375,7 +375,8 @@ class BaseClient(_TLSClientMixin, Connection):
     def _connectDone(self):
         self.protocol = self.connector.buildProtocol(self.getPeer())
         self.connected = 1
-        self.logstr = self.protocol.__class__.__name__ + ",client"
+        logPrefix = self._getLogPrefix(self.protocol)
+        self.logstr = "%s,client" % logPrefix
         self.startReading()
         self.protocol.makeConnection(self)
 
@@ -460,7 +461,9 @@ class Server(_TLSServerMixin, Connection):
         self.client = client
         self.sessionno = sessionno
         self.hostname = client[0]
-        self.logstr = "%s,%s,%s" % (self.protocol.__class__.__name__,
+
+        logPrefix = self._getLogPrefix(self.protocol)
+        self.logstr = "%s,%s,%s" % (logPrefix,
                                     sessionno,
                                     self.hostname)
         self.repstr = "<%s #%s on %s>" % (self.protocol.__class__.__name__,

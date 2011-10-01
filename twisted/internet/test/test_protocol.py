@@ -5,7 +5,10 @@
 Tests for L{twisted.internet.protocol}.
 """
 
+from zope.interface.verify import verifyObject
+
 from twisted.python.failure import Failure
+from twisted.internet.interfaces import IProtocol, ILoggingContext
 from twisted.internet.defer import CancelledError
 from twisted.internet.protocol import Protocol, ClientCreator
 from twisted.internet.task import Clock
@@ -331,3 +334,24 @@ class ClientCreatorTests(TestCase):
             return d, factory
         return self._cancelConnectFailedTimeoutTest(connect)
 
+
+class ProtocolTests(TestCase):
+    """
+    Tests for L{twisted.internet.protocol.Protocol}.
+    """
+    def test_interfaces(self):
+        """
+        L{Protocol} instances provide L{IProtocol} and L{ILoggingContext}.
+        """
+        proto = Protocol()
+        self.assertTrue(verifyObject(IProtocol, proto))
+        self.assertTrue(verifyObject(ILoggingContext, proto))
+
+
+    def test_logPrefix(self):
+        """
+        L{Protocol.logPrefix} returns the protocol class's name.
+        """
+        class SomeThing(Protocol):
+            pass
+        self.assertEqual("SomeThing", SomeThing().logPrefix())

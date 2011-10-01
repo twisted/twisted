@@ -187,10 +187,12 @@ class CFReactor(PosixReactorBase):
                 # actually attempt a doRead/doWrite first.  -glyph
                 if isRead:
                     if rw[_READ]:
-                        why = readWriteDescriptor.doRead()
+                        why = log.callWithLogger(
+                            readWriteDescriptor, readWriteDescriptor.doRead)
                 else:
                     if rw[_WRITE]:
-                        why = readWriteDescriptor.doWrite()
+                        why = log.callWithLogger(
+                            readWriteDescriptor, readWriteDescriptor.doWrite)
         except:
             why = sys.exc_info()[1]
             log.err()

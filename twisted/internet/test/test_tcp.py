@@ -815,7 +815,7 @@ class TCPConnectionTestsBuilder(ReactorBuilder):
             protos[0].transport.write('x' * (2 * 4096) + 'y' * (2 * 4096))
             return (sf.stop.addCallback(cleanup, protos, port)
                            .addCallback(lambda ign: reactor.stop()))
-        
+
         def cleanup(data, protos, port):
             """
             Make sure IOCPReactor didn't start several WSARecv operations
@@ -835,6 +835,8 @@ class TCPConnectionTestsBuilder(ReactorBuilder):
         self.runReactor(reactor)
         return d
 
+
+    
 
 
 globals().update(TCPClientTestsBuilder.makeTestCaseClasses())

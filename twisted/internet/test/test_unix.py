@@ -19,13 +19,14 @@ from zope.interface.verify import verifyObject
 from twisted.python.hashlib import md5
 from twisted.internet.interfaces import IConnector
 from twisted.internet.address import UNIXAddress
+from twisted.internet.endpoints import UNIXServerEndpoint, UNIXClientEndpoint
 from twisted.internet import interfaces
 from twisted.internet.protocol import (
     ServerFactory, ClientFactory, DatagramProtocol)
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.test.test_core import ObjectModelIntegrationMixin
 from twisted.internet.test.test_tcp import StreamTransportTestsMixin
-
+from twisted.internet.test.connectionmixins import ConnectionTestsMixin
 
 
 class UNIXFamilyMixin:
@@ -57,10 +58,24 @@ def _abstractPath(case):
     return md5(case.mktemp()).hexdigest()
 
 
-class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder):
+class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
     """
     Builder defining tests relating to L{IReactorUNIX}.
     """
+    def serverEndpoint(self, reactor):
+        """
+        Construct a UNIX server endpoint.
+        """
+        return UNIXServerEndpoint(reactor, self.mktemp())
+
+
+    def clientEndpoint(self, reactor, serverAddress):
+        """
+        Construct a UNIX client endpoint.
+        """
+        return UNIXClientEndpoint(reactor, serverAddress.name)
+
+
     def test_interface(self):
         """
         L{IReactorUNIX.connectUNIX} returns an object providing L{IConnector}.

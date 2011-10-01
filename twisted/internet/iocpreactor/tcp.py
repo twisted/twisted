@@ -277,7 +277,8 @@ class Client(Connection):
                                    struct.pack('I', self.socket.fileno()))
             self.protocol = self.connector.buildProtocol(self.getPeer())
             self.connected = True
-            self.logstr = self.protocol.__class__.__name__+",client"
+            logPrefix = self._getLogPrefix(self.protocol)
+            self.logstr = logPrefix + ",client"
             self.protocol.makeConnection(self)
             self.startReading()
 
@@ -356,8 +357,8 @@ class Server(Connection):
         self.serverAddr = serverAddr
         self.clientAddr = clientAddr
         self.sessionno = sessionno
-        self.logstr = "%s,%s,%s" % (self.protocol.__class__.__name__,
-                                    sessionno, self.clientAddr.host)
+        logPrefix = self._getLogPrefix(self.protocol)
+        self.logstr = "%s,%s,%s" % (logPrefix, sessionno, self.clientAddr.host)
         self.repstr = "<%s #%s on %s>" % (self.protocol.__class__.__name__,
                                           self.sessionno, self.serverAddr.port)
         self.connected = True

@@ -56,6 +56,16 @@ class _WrappingProtocol(Protocol):
             self._wrappedProtocol):
             directlyProvides(self, interfaces.IHalfCloseableProtocol)
 
+
+    def logPrefix(self):
+        """
+        Transparently pass through the wrapped protocol's log prefix.
+        """
+        if interfaces.ILoggingContext.providedBy(self._wrappedProtocol):
+            return self._wrappedProtocol.logPrefix()
+        return self._wrappedProtocol.__class__.__name__
+
+
     def connectionMade(self):
         """
         Connect the C{self._wrappedProtocol} to our C{self.transport} and

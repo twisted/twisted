@@ -257,7 +257,11 @@ class Port(abstract.FileHandle):
 
 
     def setLogStr(self):
-        self.logstr = reflect.qual(self.protocol.__class__) + " (UDP)"
+        """
+        Initialize the C{logstr} attribute to be used by C{logPrefix}.
+        """
+        logPrefix = self._getLogPrefix(self.protocol)
+        self.logstr = "%s (UDP)" % logPrefix
 
 
     def logPrefix(self):

@@ -485,7 +485,15 @@ class Protocol(BaseProtocol):
     Some subclasses exist already to help you write common types of protocols:
     see the L{twisted.protocols.basic} module for a few of them.
     """
-    implements(interfaces.IProtocol)
+    implements(interfaces.IProtocol, interfaces.ILoggingContext)
+
+    def logPrefix(self):
+        """
+        Return a prefix matching the class name, to identify log messages
+        related to this protocol instance.
+        """
+        return self.__class__.__name__
+
 
     def dataReceived(self, data):
         """Called whenever data is received.
@@ -691,6 +699,15 @@ class DatagramProtocol(AbstractDatagramProtocol):
     @ivar transport: The transport with which this protocol is associated,
         if it is associated with one.
     """
+    implements(interfaces.ILoggingContext)
+
+    def logPrefix(self):
+        """
+        Return a prefix matching the class name, to identify log messages
+        related to this protocol instance.
+        """
+        return self.__class__.__name__
+
 
     def connectionRefused(self):
         """Called due to error from write in connected mode.

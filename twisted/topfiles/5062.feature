@@ -1,0 +1,1 @@
+Protocols may now implement ILoggingContext to customize the their logging prefix.  twisted.protocols.policies.ProtocolWrapper and the endpoints wrapper now take advantage of this feature to ensure the application protocol is still reflected in logs.

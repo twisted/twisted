@@ -50,6 +50,11 @@ class TestProtocol(Protocol):
         self.connectionsLost = []
         self.connectionMadeCalls = 0
 
+
+    def logPrefix(self):
+        return "A Test Protocol"
+
+
     def connectionMade(self):
         self.connectionMadeCalls += 1
 
@@ -126,6 +131,31 @@ class WrappingFactoryTests(unittest.TestCase):
                 ("My protocol is poorly defined.",)))
 
         return d
+
+
+    def test_logPrefixPassthrough(self):
+        """
+        If the wrapped protocol provides L{ILoggingContext}, whatever is
+        returned from the wrapped C{logPrefix} method is returned from
+        L{_WrappingProtocol.logPrefix}.
+        """
+        wf = endpoints._WrappingFactory(TestFactory(), None)
+        wp = wf.buildProtocol(None)
+        self.assertEqual(wp.logPrefix(), "A Test Protocol")
+
+
+    def test_logPrefixDefault(self):
+        """
+        If the wrapped protocol does not provide L{ILoggingContext}, the wrapped
+        protocol's class name is returned from L{_WrappingProtocol.logPrefix}.
+        """
+        class NoProtocol(object):
+            pass
+        factory = TestFactory()
+        factory.protocol = NoProtocol
+        wf = endpoints._WrappingFactory(factory, None)
+        wp = wf.buildProtocol(None)
+        self.assertEqual(wp.logPrefix(), "NoProtocol")
 
 
     def test_wrappedProtocolDataReceived(self):
