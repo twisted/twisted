@@ -11,6 +11,7 @@ Scheduling utility methods and classes.
 __metaclass__ = type
 
 import time
+import warnings
 
 from zope.interface import implements
 
@@ -504,7 +505,9 @@ class Cooperator(object):
 
         @param scheduler: A one-argument callable which takes a no-argument
         callable and should invoke it at some future point.  This will be used
-        to schedule each step of this Cooperator.
+        to schedule each step of this Cooperator. The scheduler must return
+        an L{IDelayedCall}, or at the very least an object which emulates the
+        L{IDelayedCall.cancel} method.
 
         @param started: A boolean which indicates whether iterators should be
         stepped as soon as they are added, or if they will be queued up until
@@ -603,6 +606,10 @@ class Cooperator(object):
             return
         if self._delayedCall is None and self._tasks:
             self._delayedCall = self._scheduler(self._tick)
+            if self._delayedCall is None:
+                warnings.warn('scheduler must not return None', category=RuntimeWarning)
+            elif not callable(getattr(self._delayedCall, 'cancel', None)):
+                warnings.warn('scheduler must return an object with a .cancel() method', category=RuntimeWarning)
 
 
     def start(self):

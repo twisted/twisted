@@ -6,6 +6,8 @@ This module contains tests for L{twisted.internet.task.Cooperator} and
 related functionality.
 """
 
+import warnings
+
 from twisted.internet import reactor, defer, task
 from twisted.trial import unittest
 
@@ -226,6 +228,9 @@ class TestCooperator(unittest.TestCase):
             def __repr__(self):
                 return '<FakeCall %r>' % (self.func,)
 
+            def cancel(self):
+                return
+
         def sched(f):
             self.failIf(calls, repr(calls))
             calls.append(FakeCall(f))
@@ -284,7 +289,67 @@ class TestCooperator(unittest.TestCase):
         self.assertEqual(calls[0].cancelled, False)
         self.assertEqual(coop._delayedCall, calls[0])
 
+    def testBadSchedulerNone(self):
+        """
+        The scheduler object is expected to return an object with a .cancel()
+        method i.e. an L{IDelayedCall}. Warn if it doesn't, and certainly if
+        it returns None
+        """
+        def badsched(work):
+            reactor.callLater(0, work)
+            return
+        def thework():
+            yield 1
+            return
+        def finish(ignore):
+            warns = self.flushWarnings()
+            if len(warns)!=1:
+                self.fail('bad scheduler raises no or too many warnings')
+                return
+            self.assertEqual(
+                    warns[0]['message'],
+                    'scheduler must not return None',
+                    )
+            self.assertEqual(
+                    warns[0]['category'],
+                    RuntimeWarning,
+                    )
 
+        c = task.Cooperator(scheduler=badsched)
+        d = c.coiterate(thework())
+        d.addCallback(finish)
+        return d
+
+    def testBadScheduler(self):
+        """
+        The scheduler object is expected to return an object with a .cancel()
+        method i.e. an L{IDelayedCall}. Warn if it doesn't, and certainly if
+        it returns None
+        """
+        def badsched(work):
+            reactor.callLater(0, work)
+            return True
+        def thework():
+            yield 1
+            return
+        def finish(ignore):
+            warns = self.flushWarnings()
+            if len(warns)!=1:
+                self.fail('bad scheduler raises no or too many warnings')
+                return
+            self.assertEqual(
+                    warns[0]['message'],
+                    'scheduler must return an object with a .cancel() method',
+                    )
+            self.assertEqual(
+                    warns[0]['category'],
+                    RuntimeWarning,
+                    )
+
+        c = task.Cooperator(scheduler=badsched)
+        d = c.coiterate(thework())
+        d.addCallback(finish)
+        return d
 
 class UnhandledException(Exception):
     """
