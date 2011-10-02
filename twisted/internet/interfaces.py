@@ -1581,8 +1581,6 @@ class IProcessTransport(ITransport):
         Similar to L{ITransport.write} but also allows the file descriptor in
         the child process which will receive the bytes to be specified.
 
-        This is not available on all platforms.
-
         @type childFD: C{int}
         @param childFD: The file descriptor to which to write.
 
@@ -1590,6 +1588,10 @@ class IProcessTransport(ITransport):
         @param data: The bytes to write.
 
         @return: C{None}
+
+        @raise KeyError: If C{childFD} is not a file descriptor that was mapped
+            in the child when L{IReactorProcess.spawnProcess} was used to create
+            it.
         """
 
     def loseConnection():

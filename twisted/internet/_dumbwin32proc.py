@@ -262,12 +262,47 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
 
 
     def write(self, data):
-        """Write data to the process' stdin."""
+        """
+        Write data to the process' stdin.
+
+        @type data: C{str}
+        """
         self.stdin.write(data)
 
+
     def writeSequence(self, seq):
-        """Write data to the process' stdin."""
+        """
+        Write data to the process' stdin.
+
+        @type data: C{list} of C{str}
+        """
         self.stdin.writeSequence(seq)
+
+
+    def writeToChild(self, fd, data):
+        """
+        Similar to L{ITransport.write} but also allows the file descriptor in
+        the child process which will receive the bytes to be specified.
+
+        This implementation is limited to writing to the child's standard input.
+
+        @param fd: The file descriptor to which to write.  Only stdin (C{0}) is
+            supported.
+        @type fd: C{int}
+
+        @param data: The bytes to write.
+        @type data: C{str}
+
+        @return: C{None}
+
+        @raise KeyError: If C{fd} is anything other than the stdin file
+            descriptor (C{0}).
+        """
+        if fd == 0:
+            self.stdin.write(data)
+        else:
+            raise KeyError(fd)
+
 
     def closeChildFD(self, fd):
         if fd == 0:
@@ -345,7 +380,6 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
 
     def stopProducing(self):
         self.loseConnection()
-
 
     def __repr__(self):
         """

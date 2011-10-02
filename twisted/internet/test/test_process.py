@@ -28,9 +28,17 @@ class _ShutdownCallbackProcessProtocol(ProcessProtocol):
     """
     An L{IProcessProtocol} which fires a Deferred when the process it is
     associated with ends.
+
+    @ivar received: A C{dict} mapping file descriptors to lists of bytes
+        received from the child process on those file descriptors.
     """
     def __init__(self, whenFinished):
         self.whenFinished = whenFinished
+        self.received = {}
+
+
+    def childDataReceived(self, fd, bytes):
+        self.received.setdefault(fd, []).append(bytes)
 
 
     def processEnded(self, reason):
@@ -74,6 +82,87 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         # Let the process run and exit so we don't leave a zombie around.
         ended.addCallback(lambda ignored: reactor.stop())
         self.runReactor(reactor)
+
+
+    def _writeTest(self, write):
+        """
+        Helper for testing L{IProcessTransport} write functionality.  This
+        method spawns a child process and gives C{write} a chance to write some
+        bytes to it.  It then verifies that the bytes were actually written to
+        it (by relying on the child process to echo them back).
+
+        @param write: A two-argument callable.  This is invoked with a process
+            transport and some bytes to write to it.
+        """
+        reactor = self.buildReactor()
+
+        ended = Deferred()
+        protocol = _ShutdownCallbackProcessProtocol(ended)
+
+        bytes = "hello, world" + os.linesep
+        program = (
+            "import sys\n"
+            "sys.stdout.write(sys.stdin.readline())\n"
+            )
+
+        def startup():
+            transport = reactor.spawnProcess(
+                protocol, sys.executable, [sys.executable, "-c", program])
+            try:
+                write(transport, bytes)
+            except:
+                err(None, "Unhandled exception while writing")
+                transport.signalProcess('KILL')
+        reactor.callWhenRunning(startup)
+
+        ended.addCallback(lambda ignored: reactor.stop())
+
+        self.runReactor(reactor)
+        self.assertEqual(bytes, "".join(protocol.received[1]))
+
+
+    def test_write(self):
+        """
+        L{IProcessTransport.write} writes the specified C{str} to the standard
+        input of the child process.
+        """
+        def write(transport, bytes):
+            transport.write(bytes)
+        self._writeTest(write)
+
+
+    def test_writeSequence(self):
+        """
+        L{IProcessTransport.writeSequence} writes the specified C{list} of
+        C{str} to the standard input of the child process.
+        """
+        def write(transport, bytes):
+            transport.writeSequence(list(bytes))
+        self._writeTest(write)
+
+
+    def test_writeToChild(self):
+        """
+        L{IProcessTransport.writeToChild} writes the specified C{str} to the
+        specified file descriptor of the child process.
+        """
+        def write(transport, bytes):
+            transport.writeToChild(0, bytes)
+        self._writeTest(write)
+
+
+    def test_writeToChildBadFileDescriptor(self):
+        """
+        L{IProcessTransport.writeToChild} raises L{KeyError} if passed a file
+        descriptor which is was not set up by L{IReactorProcess.spawnProcess}.
+        """
+        def write(transport, bytes):
+            try:
+                self.assertRaises(KeyError, transport.writeToChild, 13, bytes)
+            finally:
+                # Just get the process to exit so the test can complete
+                transport.write(bytes)
+        self._writeTest(write)
 
 
     def test_spawnProcessEarlyIsReaped(self):
