@@ -380,12 +380,14 @@ class ErrorHolder(TestHolder):
         tuple or a L{twisted.python.failure.Failure}.
         """
         super(ErrorHolder, self).__init__(description)
-        self.error = error
+        self.error = util.excInfoOrFailureToExcInfo(error)
 
 
     def __repr__(self):
-        return "<ErrorHolder description=%r error=%r>" % (self.description,
-                                                          self.error)
+        return "<ErrorHolder description=%r error=%s%s>" % (
+            # Format the exception type and arguments explicitly, as exception
+            # objects do not have nice looking string formats on Python 2.4.
+            self.description, self.error[0].__name__, self.error[1].args)
 
 
     def run(self, result):
@@ -396,7 +398,7 @@ class ErrorHolder(TestHolder):
         @type result: L{twisted.trial.itrial.ITestResult}.
         """
         result.startTest(self)
-        result.addError(self, util.excInfoOrFailureToExcInfo(self.error))
+        result.addError(self, self.error)
         result.stopTest(self)
 
 

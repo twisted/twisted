@@ -767,19 +767,33 @@ class TestTestHolder(unittest.TestCase):
 
 
 
-class TestErrorHolder(TestTestHolder):
+class ErrorHolderTestsMixin(object):
     """
-    Test L{runner.ErrorHolder} shares behaviour with L{runner.TestHolder}.
-    """
+    This mixin defines test methods which can be applied to a
+    L{runner.ErrorHolder} constructed with either a L{Failure} or a
+    C{exc_info}-style tuple.
 
-    def setUp(self):
-        self.description = "description"
-        # make a real Failure so we can construct ErrorHolder()
-        try:
-            1/0
-        except ZeroDivisionError:
-            error = failure.Failure()
-        self.holder = runner.ErrorHolder(self.description, error)
+    Subclass this and implement C{setUp} to create C{self.holder} referring to a
+    L{runner.ErrorHolder} instance and C{self.error} referring to a L{Failure}
+    which the holder holds.
+    """
+    exceptionForTests = ZeroDivisionError('integer division or modulo by zero')
+
+    class TestResultStub(object):
+        """
+        Stub for L{TestResult}.
+        """
+        def __init__(self):
+            self.errors = []
+
+        def startTest(self, test):
+            pass
+
+        def stopTest(self, test):
+            pass
+
+        def addError(self, test, error):
+            self.errors.append((test, error))
 
 
     def test_runsWithStandardResult(self):
@@ -791,6 +805,78 @@ class TestErrorHolder(TestTestHolder):
         self.holder.run(result)
         self.assertFalse(result.wasSuccessful())
         self.assertEqual(1, result.testsRun)
+
+
+    def test_run(self):
+        """
+        L{runner.ErrorHolder} adds an error to the result when run.
+        """
+        self.holder.run(self.result)
+        self.assertEqual(
+            self.result.errors,
+            [(self.holder, (self.error.type, self.error.value, self.error.tb))])
+
+
+    def test_call(self):
+        """
+        L{runner.ErrorHolder} adds an error to the result when called.
+        """
+        self.holder(self.result)
+        self.assertEqual(
+            self.result.errors,
+            [(self.holder, (self.error.type, self.error.value, self.error.tb))])
+
+
+    def test_countTestCases(self):
+        """
+        L{runner.ErrorHolder.countTestCases} always returns 0.
+        """
+        self.assertEqual(self.holder.countTestCases(), 0)
+
+
+    def test_repr(self):
+        """
+        L{runner.ErrorHolder.__repr__} returns a string describing the error it
+        holds.
+        """
+        self.assertEqual(repr(self.holder),
+            "<ErrorHolder description='description' "
+            "error=ZeroDivisionError('integer division or modulo by zero',)>")
+
+
+
+class FailureHoldingErrorHolderTests(ErrorHolderTestsMixin, TestTestHolder):
+    """
+    Tests for L{runner.ErrorHolder} behaving similarly to L{runner.TestHolder}
+    when constructed with a L{Failure} representing its error.
+    """
+    def setUp(self):
+        self.description = "description"
+        # make a real Failure so we can construct ErrorHolder()
+        try:
+            raise self.exceptionForTests
+        except ZeroDivisionError:
+            self.error = failure.Failure()
+        self.holder = runner.ErrorHolder(self.description, self.error)
+        self.result = self.TestResultStub()
+
+
+
+class ExcInfoHoldingErrorHolderTests(ErrorHolderTestsMixin, TestTestHolder):
+    """
+    Tests for L{runner.ErrorHolder} behaving similarly to L{runner.TestHolder}
+    when constructed with a C{exc_info}-style tuple representing its error.
+    """
+    def setUp(self):
+        self.description = "description"
+        # make a real Failure so we can construct ErrorHolder()
+        try:
+            raise self.exceptionForTests
+        except ZeroDivisionError:
+            exceptionInfo = sys.exc_info()
+            self.error = failure.Failure()
+        self.holder = runner.ErrorHolder(self.description, exceptionInfo)
+        self.result = self.TestResultStub()
 
 
 
