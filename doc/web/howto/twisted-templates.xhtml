@@ -134,8 +134,6 @@ element.
 conveniently fill with multiple pieces of data straight from your Python
 program.
 
-<h3>A nice example of Slots and Attributes</h3>
-
 The following example demonstrates both <code>t:attr</code>
 and <code>t:slot</code> in action. Here we have a layout which displays a person's
 profile on your snazzy new Twisted-powered social networking site. We use
@@ -151,6 +149,24 @@ sense when you see the code:
     class="py-listing">slots and attributes element</a>
 <a href="listings/slots-attributes-output.html"
     class="html-listing">slots and attributes output</a>
+
+<h3>Iteration</h3>
+
+<p>Often, you will have a sequence of things, and want to render each of them,
+repeating a part of the template for each one. This can be done by
+cloning <code>tag</code> in your renderer:</p>
+
+<a href="listings/iteration-1.xml" class="html-listing">iteration template</a>
+<a href="listings/iteration-1.py" class="py-listing">iteration element</a>
+<a href="listings/iteration-output-1.xml" class="html-listing">iteration output</a>
+
+<p>This renderer works because a renderer can return anything that can be
+rendered, not just <code>tag</code>. In this case, we define a generator, which
+returns a thing that is iterable. We also could have returned
+a <code>list</code>. Anything that is iterable will be rendered by <code
+    class="API">twisted.web.template</code> rendering each item in it. In
+this case, each item is a copy of the tag the renderer received, each filled
+with the name of a widget.</p>
 
 <h3>Transparent</h3>
 
