@@ -178,10 +178,11 @@ brassPlate = SimpleMaterial(1.03421359e11, 1.4 + 0.5j)
     need to pass this argument.  However, if you have developed an
     interface of your own, you may want to mandate that plugins for it
     are installed in your own plugins package, rather than in
-    Twisted's.  In this case, you probably also want to support <code
-    class="shell">yourproject/plugins/</code> directories for ease of
-    development.  To do so, you should make the <code
-    class="shell">__init__.py</code> for that package contain at least
+    Twisted's.</p>
+
+    <p>You may want to support <code class="shell">yourproject/plugins/</code>
+    directories for ease of development.  To do so, you should make <code
+    class="shell">yourproject/plugins/__init__.py</code> contain at least
     the following lines.</p>
 
     <pre class="python">
