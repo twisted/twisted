@@ -12,24 +12,28 @@ import socket, errno
 from zope.interface import implements
 from zope.interface.verify import verifyObject
 
+from twisted.python.runtime import platform
+from twisted.python.failure import Failure
+from twisted.python import log
+
+from twisted.trial.unittest import SkipTest, TestCase
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.error import DNSLookupError
 from twisted.internet.interfaces import (
     IResolverSimple, IConnector, IReactorFDSet)
 from twisted.internet.address import IPv4Address
-from twisted.internet.defer import Deferred, DeferredList, succeed, fail, maybeDeferred
+from twisted.internet.defer import (
+    Deferred, DeferredList, succeed, fail, maybeDeferred, gatherResults)
 from twisted.internet.endpoints import TCP4ServerEndpoint, TCP4ClientEndpoint
 from twisted.internet.protocol import ServerFactory, ClientFactory, Protocol
-from twisted.python.runtime import platform
-from twisted.python.failure import Failure
-from twisted.python import log
-from twisted.trial.unittest import SkipTest, TestCase
+from twisted.internet.interfaces import IPushProducer, IPullProducer
 from twisted.internet.tcp import Connection, Server
 
-from twisted.test.test_tcp import ClosingProtocol
-from twisted.internet.test.test_core import ObjectModelIntegrationMixin
 from twisted.internet.test.connectionmixins import (
     ConnectionTestsMixin, serverFactoryFor)
+from twisted.internet.test.test_core import ObjectModelIntegrationMixin
+from twisted.test.test_tcp import MyClientFactory, MyServerFactory
+from twisted.test.test_tcp import ClosingProtocol
 
 try:
     from twisted.internet.ssl import ClientContextFactory
@@ -836,10 +840,213 @@ class TCPConnectionTestsBuilder(ReactorBuilder):
         return d
 
 
-    
+
+class WriteSequenceTests(ReactorBuilder):
+    """
+    Test for L{twisted.internet.abstract.FileDescriptor.writeSequence}.
+
+    @ivar client: the connected client factory to be used in tests.
+    @type client: L{MyClientFactory}
+
+    @ivar server: the listening server factory to be used in tests.
+    @type server: L{MyServerFactory}
+    """
+    def setUp(self):
+        server = MyServerFactory()
+        server.protocolConnectionMade = Deferred()
+        server.protocolConnectionLost = Deferred()
+        self.server = server
+
+        client = MyClientFactory()
+        client.protocolConnectionMade = Deferred()
+        client.protocolConnectionLost = Deferred()
+        self.client = client
+
+
+    def setWriteBufferSize(self, transport, value):
+        """
+        Set the write buffer size for the given transport, mananing possible
+        differences (ie, IOCP). Bug #4322 should remove the need of that hack.
+        """
+        if getattr(transport, "writeBufferSize", None) is not None:
+            transport.writeBufferSize = value
+        else:
+            transport.bufferSize = value
+
+
+    def test_withoutWrite(self):
+        """
+        C{writeSequence} sends the data even if C{write} hasn't been called.
+        """
+        client, server = self.client, self.server
+        reactor = self.buildReactor()
+
+        port = reactor.listenTCP(0, server)
+        self.addCleanup(port.stopListening)
+
+        connector = reactor.connectTCP(
+            "127.0.0.1", port.getHost().port, client)
+        self.addCleanup(connector.disconnect)
+
+        def dataReceived(data):
+            log.msg("data received: %r" % data)
+            self.assertEquals(data, "Some sequence splitted")
+            client.protocol.transport.loseConnection()
+
+        def clientConnected(proto):
+            log.msg("client connected %s" % proto)
+            proto.transport.writeSequence(["Some ", "sequence ", "splitted"])
+
+        def serverConnected(proto):
+            log.msg("server connected %s" % proto)
+            proto.dataReceived = dataReceived
+
+        d1 = client.protocolConnectionMade.addCallback(clientConnected)
+        d2 = server.protocolConnectionMade.addCallback(serverConnected)
+        d3 = server.protocolConnectionLost
+        d4 = client.protocolConnectionLost
+        d = gatherResults([d1, d2, d3, d4])
+        def stop(result):
+            reactor.stop()
+            return result
+        d.addBoth(stop)
+        self.runReactor(reactor)
+
+
+    def _producerTest(self, clientConnected):
+        """
+        Helper for testing producers which call C{writeSequence}.  This will set
+        up a connection which a producer can use.  It returns after the
+        connection is closed.
+
+        @param clientConnected: A callback which will be invoked with a client
+            protocol after a connection is setup.  This is responsible for
+            setting up some sort of producer.
+        """
+        reactor = self.buildReactor()
+
+        port = reactor.listenTCP(0, self.server)
+        self.addCleanup(port.stopListening)
+
+        connector = reactor.connectTCP(
+            "127.0.0.1", port.getHost().port, self.client)
+        self.addCleanup(connector.disconnect)
+
+        # The following could probably all be much simpler, but for #5285.
+
+        # First let the server notice the connection
+        d1 = self.server.protocolConnectionMade
+
+        # Grab the client connection Deferred now though, so we don't lose it if
+        # the client connects before the server.
+        d2 = self.client.protocolConnectionMade
+
+        def serverConnected(proto):
+            # Now take action as soon as the client is connected
+            d2.addCallback(clientConnected)
+            return d2
+        d1.addCallback(serverConnected)
+
+        d3 = self.server.protocolConnectionLost
+        d4 = self.client.protocolConnectionLost
+
+        # After the client is connected and does its producer stuff, wait for
+        # the disconnection events.
+        def didProducerActions(ignored):
+            return gatherResults([d3, d4])
+        d1.addCallback(didProducerActions)
+
+        def stop(result):
+            reactor.stop()
+            return result
+        d1.addBoth(stop)
+        self.runReactor(reactor)
+
+
+    def test_streamingProducer(self):
+        """
+        C{writeSequence} pauses its streaming producer if too much data is
+        buffered, and then resumes it.
+        """
+        client, server = self.client, self.server
+
+        class SaveActionProducer(object):
+            implements(IPushProducer)
+            def __init__(self):
+                self.actions = []
+
+            def pauseProducing(self):
+                self.actions.append("pause")
+
+            def resumeProducing(self):
+                self.actions.append("resume")
+                # Unregister the producer so the connection can close
+                client.protocol.transport.unregisterProducer()
+                # This is why the code below waits for the server connection
+                # first - so we have it to close here.  We close the server side
+                # because win32evenreactor cannot reliably observe us closing
+                # the client side (#5285).
+                server.protocol.transport.loseConnection()
+
+            def stopProducing(self):
+                self.actions.append("stop")
+
+        producer = SaveActionProducer()
+
+        def clientConnected(proto):
+            # Register a streaming producer and verify that it gets paused after
+            # it writes more than the local send buffer can hold.
+            proto.transport.registerProducer(producer, True)
+            self.assertEquals(producer.actions, [])
+            self.setWriteBufferSize(proto.transport, 500)
+            proto.transport.writeSequence(["x" * 50] * 20)
+            self.assertEquals(producer.actions, ["pause"])
+
+        self._producerTest(clientConnected)
+        # After the send buffer gets a chance to empty out a bit, the producer
+        # should be resumed.
+        self.assertEquals(producer.actions, ["pause", "resume"])
+
+
+    def test_nonStreamingProducer(self):
+        """
+        C{writeSequence} pauses its producer if too much data is buffered only
+        if this is a streaming producer.
+        """
+        client, server = self.client, self.server
+        test = self
+
+        class SaveActionProducer(object):
+            implements(IPullProducer)
+            def __init__(self):
+                self.actions = []
+
+            def resumeProducing(self):
+                self.actions.append("resume")
+                if self.actions.count("resume") == 2:
+                    client.protocol.transport.stopConsuming()
+                else:
+                    test.setWriteBufferSize(client.protocol.transport, 500)
+                    client.protocol.transport.writeSequence(["x" * 50] * 20)
+
+            def stopProducing(self):
+                self.actions.append("stop")
+
+        producer = SaveActionProducer()
+
+        def clientConnected(proto):
+            # Register a non-streaming producer and verify that it is resumed
+            # immediately.
+            proto.transport.registerProducer(producer, False)
+            self.assertEquals(producer.actions, ["resume"])
+
+        self._producerTest(clientConnected)
+        # After the local send buffer empties out, the producer should be
+        # resumed again.
+        self.assertEquals(producer.actions, ["resume", "resume"])
 
 
 globals().update(TCPClientTestsBuilder.makeTestCaseClasses())
 globals().update(TCPPortTestsBuilder.makeTestCaseClasses())
 globals().update(TCPConnectionTestsBuilder.makeTestCaseClasses())
-
+globals().update(WriteSequenceTests.makeTestCaseClasses())

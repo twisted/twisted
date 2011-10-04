@@ -272,7 +272,7 @@ class FileHandle(_ConsumerMixin, _LogOwner):
         if data:
             self._tempDataBuffer.append(data)
             self._tempDataLen += len(data)
-            if self.producer is not None:
+            if self.producer is not None and self.streamingProducer:
                 if (len(self.dataBuffer) + self._tempDataLen
                     > self.writeBufferSize):
                     self.producerPaused = True
@@ -286,7 +286,7 @@ class FileHandle(_ConsumerMixin, _LogOwner):
         self._tempDataBuffer.extend(iovec)
         for i in iovec:
             self._tempDataLen += len(i)
-        if self.producer is not None:
+        if self.producer is not None and self.streamingProducer:
             if len(self.dataBuffer) + self._tempDataLen > self.writeBufferSize:
                 self.producerPaused = True
                 self.producer.pauseProducing()
