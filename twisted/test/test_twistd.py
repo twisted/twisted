@@ -24,9 +24,11 @@ from zope.interface.verify import verifyObject
 
 from twisted.trial import unittest
 
-from twisted.application import service, app
+from twisted import plugin
+from twisted.application.service import IServiceMaker
+from twisted.application import service, app, reactors
 from twisted.scripts import twistd
-from twisted.python import log, reflect
+from twisted.python import log
 from twisted.python.usage import UsageError
 from twisted.python.log import ILogObserver
 from twisted.python.versions import Version
@@ -166,6 +168,90 @@ class ServerOptionsTest(unittest.TestCase):
     """
     Non-platform-specific tests for the pltaform-specific ServerOptions class.
     """
+    def test_subCommands(self):
+        """
+        subCommands is built from IServiceMaker plugins, and is sorted
+        alphabetically.
+        """
+        class FakePlugin(object):
+            def __init__(self, name):
+                self.tapname = name
+                self._options = 'options for ' + name
+                self.description = 'description of ' + name
+
+            def options(self):
+                return self._options
+
+        apple = FakePlugin('apple')
+        banana = FakePlugin('banana')
+        coconut = FakePlugin('coconut')
+        donut = FakePlugin('donut')
+
+        def getPlugins(interface):
+            self.assertEqual(interface, IServiceMaker)
+            yield coconut
+            yield banana
+            yield donut
+            yield apple
+
+        config = twistd.ServerOptions()
+        self.assertEqual(config._getPlugins, plugin.getPlugins)
+        config._getPlugins = getPlugins
+
+        # "subCommands is a list of 4-tuples of (command name, command
+        # shortcut, parser class, documentation)."
+        subCommands = config.subCommands
+        expectedOrder = [apple, banana, coconut, donut]
+
+        for subCommand, expectedCommand in zip(subCommands, expectedOrder):
+            name, shortcut, parserClass, documentation = subCommand
+            self.assertEqual(name, expectedCommand.tapname)
+            self.assertEqual(shortcut, None)
+            self.assertEqual(parserClass(), expectedCommand._options),
+            self.assertEqual(documentation, expectedCommand.description)
+
+
+    def test_sortedReactorHelp(self):
+        """
+        Reactor names are listed alphabetically by I{--help-reactors}.
+        """
+        class FakeReactorInstaller(object):
+            def __init__(self, name):
+                self.shortName = 'name of ' + name
+                self.description = 'description of ' + name
+
+        apple = FakeReactorInstaller('apple')
+        banana = FakeReactorInstaller('banana')
+        coconut = FakeReactorInstaller('coconut')
+        donut = FakeReactorInstaller('donut')
+
+        def getReactorTypes():
+            yield coconut
+            yield banana
+            yield donut
+            yield apple
+
+        config = twistd.ServerOptions()
+        self.assertEqual(config._getReactorTypes, reactors.getReactorTypes)
+        config._getReactorTypes = getReactorTypes
+        config.messageOutput = StringIO.StringIO()
+
+        self.assertRaises(SystemExit, config.parseOptions, ['--help-reactors'])
+        helpOutput = config.messageOutput.getvalue()
+        indexes = []
+        for reactor in apple, banana, coconut, donut:
+            def getIndex(s):
+                self.assertIn(s, helpOutput)
+                indexes.append(helpOutput.index(s))
+
+            getIndex(reactor.shortName)
+            getIndex(reactor.description)
+
+        self.assertEqual(
+            indexes, sorted(indexes),
+            'reactor descriptions were not in alphabetical order: %r' % (
+                helpOutput,))
+
 
     def test_postOptionsSubCommandCausesNoSave(self):
         """

@@ -3,6 +3,7 @@
 # See LICENSE for details.
 
 import sys, os, pdb, getpass, traceback, signal
+from operator import attrgetter
 
 from twisted.python import runtime, log, usage, failure, util, logfile
 from twisted.python.versions import Version
@@ -12,7 +13,7 @@ from twisted.python.log import ILogObserver
 from twisted.persisted import sob
 from twisted.application import service, reactors
 from twisted.internet import defer
-from twisted import copyright
+from twisted import copyright, plugin
 
 # Expose the new implementation of installReactor at the old location.
 from twisted.application.reactors import installReactor
@@ -492,13 +493,15 @@ class ReactorSelectionMixin:
     """
     zsh_actions = {"reactor" : _reactorZshAction}
     messageOutput = sys.stdout
+    _getReactorTypes = staticmethod(reactors.getReactorTypes)
 
 
     def opt_help_reactors(self):
         """
         Display a list of possibly available reactor names.
         """
-        for r in reactors.getReactorTypes():
+        rcts = sorted(self._getReactorTypes(), key=attrgetter('shortName'))
+        for r in rcts:
             self.messageOutput.write('    %-4s\t%s\n' %
                                      (r.shortName, r.description))
         raise SystemExit(0)
@@ -574,6 +577,8 @@ class ServerOptions(usage.Options, ReactorSelectionMixin):
                    "rundir":"_dirs"}
     #zsh_actionDescr = {"logfile":"log file name", "random":"random seed"}
 
+    _getPlugins = staticmethod(plugin.getPlugins)
+
     def __init__(self, *a, **kw):
         self['debug'] = False
         usage.Options.__init__(self, *a, **kw)
@@ -620,12 +625,17 @@ class ServerOptions(usage.Options, ReactorSelectionMixin):
 
 
     def subCommands(self):
-        from twisted import plugin
-        plugins = plugin.getPlugins(service.IServiceMaker)
+        plugins = self._getPlugins(service.IServiceMaker)
         self.loadedPlugins = {}
-        for plug in plugins:
+        for plug in sorted(plugins, key=attrgetter('tapname')):
             self.loadedPlugins[plug.tapname] = plug
-            yield (plug.tapname, None, lambda: plug.options(), plug.description)
+            yield (plug.tapname,
+                   None,
+                   # Avoid resolving the options attribute right away, in case
+                   # it's a property with a non-trivial getter (eg, one which
+                   # imports modules).
+                   lambda plug=plug: plug.options(),
+                   plug.description)
     subCommands = property(subCommands)
 
 
