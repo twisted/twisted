@@ -95,15 +95,17 @@ class Greeter(Protocol):
     def sendMessage(self, msg):
         self.transport.write("MESSAGE %s\n" % msg)
 
+class GreeterFactory(Factory):
+    def buildProtocol(self, addr):
+        return Greeter()
+
 def gotProtocol(p):
     p.sendMessage("Hello")
     reactor.callLater(1, p.sendMessage, "This is sent in a second")
     reactor.callLater(2, p.transport.loseConnection)
 
-factory = Factory()
-factory.protocol = Greeter
 point = TCP4ClientEndpoint(reactor, "localhost", 1234)
-d = point.connect(factory)
+d = point.connect(GreeterFactory())
 d.addCallback(gotProtocol)
 reactor.run()
     </pre>
@@ -310,17 +312,35 @@ class LogBot(irc.IRCClient):
 
 class LogBotFactory(protocol.ClientFactory):
 
-    protocol = LogBot
-
     def __init__(self, channel, filename):
         self.channel = channel
         self.filename = filename
+
+    def buildProtocol(self, addr):
+        p = LogBot()
+        p.factory = self
+        return p
     </pre>
 
     <p>When the protocol is created, it gets a reference to the factory as
     <code>self.factory</code>. It can then access attributes of the factory in
     its logic. In the case of <code>LogBot</code>, it opens the file and
     connects to the channel stored in the factory.</p>
+
+    <p>Factories have a default implementation of <code>buildProtocol</code>
+    that does the same thing the example above does, using
+    the <code>protocol</code> attribute of the factory to create the protocol
+    instance. In the example above, the factory could be rewritten to look
+    like this:</p>
+
+    <pre class="python">
+class LogBotFactory(protocol.ClientFactory):
+    protocol = LogBot
+
+    def __init__(self, channel, filename):
+        self.channel = channel
+        self.filename = filename
+    </pre>
 
     <h2>Further Reading</h2>
 
