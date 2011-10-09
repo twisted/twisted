@@ -11,7 +11,7 @@ from twisted.internet.error import ConnectionDone
 from twisted.protocols import basic
 from twisted.python import util
 from twisted.python.runtime import platform
-from twisted.test.test_tcp import WriteDataTestCase, ProperlyCloseFilesMixin
+from twisted.test.test_tcp import ProperlyCloseFilesMixin
 
 import os, errno
 
@@ -724,5 +724,3 @@ if interfaces.IReactorSSL(reactor, None) is None:
                   ClientContextFactoryTests]:
         tCase.skip = "Reactor does not support SSL, cannot run SSL tests"
 
-# Otherwise trial will run this test here
-del WriteDataTestCase
