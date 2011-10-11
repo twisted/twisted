@@ -6,7 +6,7 @@ Tests for error handling in PB.
 """
 
 import sys
-
+from StringIO import StringIO
 
 from twisted.trial import unittest
 
@@ -455,3 +455,21 @@ class FailureJellyingTests(unittest.TestCase):
             copiedTwice.check(ZeroDivisionError), ZeroDivisionError)
         self.assertIdentical(
             copiedTwice.check(ArithmeticError), ArithmeticError)
+
+
+    def test_printTracebackIncludesValue(self):
+        """
+        When L{CopiedFailure.printTraceback} is used to print a copied failure
+        which was unjellied from a L{CopyableFailure} with C{unsafeTracebacks}
+        set to C{False}, the string representation of the exception value is
+        included in the output.
+        """
+        original = pb.CopyableFailure(Exception("some reason"))
+        copied = jelly.unjelly(jelly.jelly(original, invoker=DummyInvoker()))
+        output = StringIO()
+        copied.printTraceback(output)
+        self.assertEqual(
+            "Traceback from remote host -- Traceback unavailable\n"
+            "exceptions.Exception: some reason\n",
+            output.getvalue())
+

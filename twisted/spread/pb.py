@@ -471,6 +471,8 @@ class CopiedFailure(RemoteCopy, failure.Failure):
             file = log.logfile
         file.write("Traceback from remote host -- ")
         file.write(self.traceback)
+        file.write(self.type + ": " + self.value)
+        file.write('\n')
 
 
     def throwExceptionIntoGenerator(self, g):
@@ -1439,6 +1441,7 @@ __all__ = [
     'RemoteCopy', 'RemoteCache', 'RemoteCacheObserver', 'copyTags',
     'setUnjellyableForClass', 'setUnjellyableFactoryForClass',
     'setUnjellyableForClassTree',
+    'setCopierForClass', 'setFactoryForClass', 'setCopierForClassTree',
 
     'MAX_BROKER_REFS', 'portno',
 
