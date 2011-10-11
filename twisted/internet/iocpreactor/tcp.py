@@ -10,7 +10,7 @@ import socket, operator, errno, struct
 from zope.interface import implements, classImplements
 
 from twisted.internet import interfaces, error, address, main, defer
-from twisted.internet.abstract import isIPAddress
+from twisted.internet.abstract import _LogOwner, isIPAddress
 from twisted.internet.tcp import _SocketCloser, Connector as TCPConnector
 from twisted.python import log, failure, reflect, util
 
@@ -398,7 +398,7 @@ class Connector(TCPConnector):
 
 
 
-class Port(_SocketCloser):
+class Port(_SocketCloser, _LogOwner):
     implements(interfaces.IListeningPort)
 
     connected = False
@@ -413,6 +413,11 @@ class Port(_SocketCloser):
     # value when we are actually listening.
     _realPortNumber = None
 
+    # A string describing the connections which will be created by this port.
+    # Normally this is C{"TCP"}, since this is a TCP port, but when the TLS
+    # implementation re-uses this class it overrides the value with C{"TLS"}.
+    # Only used for logging.
+    _type = 'TCP'
 
     def __init__(self, port, factory, backlog=50, interface='', reactor=None):
         self.port = port
@@ -447,7 +452,7 @@ class Port(_SocketCloser):
         # reflect what the OS actually assigned us.
         self._realPortNumber = skt.getsockname()[1]
 
-        log.msg("%s starting on %s" % (self.factory.__class__,
+        log.msg("%s starting on %s" % (self._getLogPrefix(self.factory),
                                        self._realPortNumber))
 
         self.factory.doStart()
@@ -481,7 +486,7 @@ class Port(_SocketCloser):
         """
         Log message for closing port
         """
-        log.msg('(TCP Port %s Closed)' % (self._realPortNumber,))
+        log.msg('(%s Port %s Closed)' % (self._type, self._realPortNumber))
 
 
     def connectionLost(self, reason):

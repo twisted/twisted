@@ -8,6 +8,7 @@ Tests for implementations of L{IReactorUNIX}.
 from stat import S_IMODE
 from os import stat
 from sys import platform
+from tempfile import mktemp
 
 try:
     from socket import AF_UNIX
@@ -156,18 +157,27 @@ class UNIXDatagramTestsBuilder(UNIXFamilyMixin, ReactorBuilder):
 
 
 
-class UNIXPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin, StreamTransportTestsMixin):
+class UNIXPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin,
+                           StreamTransportTestsMixin):
     """
     Tests for L{IReactorUNIX.listenUnix}
     """
-
     requiredInterfaces = [interfaces.IReactorUNIX]
 
-    def getListeningPort(self, reactor):
+    def getListeningPort(self, reactor, factory):
         """
         Get a UNIX port from a reactor
         """
-        return reactor.listenUNIX(self.mktemp(), ServerFactory())
+        # self.mktemp() often returns a path which is too long to be used.
+        path = mktemp(suffix='.sock', dir='.')
+        return reactor.listenUNIX(path, factory)
+
+
+    def getExpectedStartListeningLogMessage(self, port, factory):
+        """
+        Get the message expected to be logged when a UNIX port starts listening.
+        """
+        return "%s starting on %r" % (factory, port.getHost().name)
 
 
     def getExpectedConnectionLostLogMsg(self, port):

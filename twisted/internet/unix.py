@@ -96,7 +96,8 @@ class Port(_UNIXPort, tcp.Port):
         This is called on unserialization, and must be called after creating a
         server to begin listening on the specified port.
         """
-        log.msg("%s starting on %r" % (self.factory.__class__, repr(self.port)))
+        log.msg("%s starting on %r" % (
+                self._getLogPrefix(self.factory), self.port))
         if self.wantPID:
             self.lockFile = lockfile.FilesystemLock(self.port + ".lock")
             if not self.lockFile.lock():

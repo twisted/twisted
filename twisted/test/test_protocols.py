@@ -7,9 +7,12 @@ Test cases for twisted.protocols package.
 
 import struct
 
+from zope.interface.verify import verifyObject
+
 from twisted.trial import unittest
 from twisted.protocols import basic, wire, portforward
 from twisted.internet import reactor, protocol, defer, task, error, address
+from twisted.internet.interfaces import IProtocolFactory, ILoggingContext
 from twisted.test import proto_helpers
 
 
@@ -109,6 +112,31 @@ class LineOnlyTester(basic.LineOnlyReceiver):
         Save received data.
         """
         self.received.append(line)
+
+
+
+class FactoryTests(unittest.TestCase):
+    """
+    Tests for L{protocol.Factory}.
+    """
+    def test_interfaces(self):
+        """
+        L{protocol.Factory} instances provide both L{IProtocolFactory} and
+        L{ILoggingContext}.
+        """
+        factory = protocol.Factory()
+        self.assertTrue(verifyObject(IProtocolFactory, factory))
+        self.assertTrue(verifyObject(ILoggingContext, factory))
+
+
+    def test_logPrefix(self):
+        """
+        L{protocol.Factory.logPrefix} returns the name of the factory class.
+        """
+        class SomeKindOfFactory(protocol.Factory):
+            pass
+
+        self.assertEqual("SomeKindOfFactory", SomeKindOfFactory().logPrefix())
 
 
 

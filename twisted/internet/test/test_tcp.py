@@ -20,7 +20,7 @@ from twisted.trial.unittest import SkipTest, TestCase
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.error import DNSLookupError
 from twisted.internet.interfaces import (
-    IResolverSimple, IConnector, IReactorFDSet)
+    ILoggingContext, IResolverSimple, IConnector, IReactorFDSet)
 from twisted.internet.address import IPv4Address
 from twisted.internet.defer import (
     Deferred, DeferredList, succeed, fail, maybeDeferred, gatherResults)
@@ -564,6 +564,31 @@ class StreamTransportTestsMixin:
     """
     Mixin defining tests which apply to any port/connection based transport.
     """
+    def observe(self):
+        loggedMessages = []
+        log.addObserver(loggedMessages.append)
+        self.addCleanup(log.removeObserver, loggedMessages.append)
+        return loggedMessages
+
+
+    def test_startedListeningLogMessage(self):
+        """
+        When a port starts, a message including a description of the associated
+        factory is logged.
+        """
+        loggedMessages = self.observe()
+        reactor = self.buildReactor()
+        class SomeFactory(ServerFactory):
+            implements(ILoggingContext)
+            def logPrefix(self):
+                return "Crazy Factory"
+        factory = SomeFactory()
+        p = self.getListeningPort(reactor, factory)
+        expectedMessage = self.getExpectedStartListeningLogMessage(
+            p, "Crazy Factory")
+        self.assertEqual((expectedMessage,), loggedMessages[0]['message'])
+
+
     def test_connectionLostLogMsg(self):
         """
         When a connection is lost, an informative message should be logged
@@ -576,7 +601,7 @@ class StreamTransportTestsMixin:
             loggedMessages.append(log.textFromEventDict(eventDict))
 
         reactor = self.buildReactor()
-        p = self.getListeningPort(reactor)
+        p = self.getListeningPort(reactor, ServerFactory())
         expectedMessage = self.getExpectedConnectionLostLogMsg(p)
         log.addObserver(logConnectionLostMsg)
 
@@ -600,7 +625,7 @@ class StreamTransportTestsMixin:
         classic classes in its hierarchy.
         """
         reactor = self.buildReactor()
-        port = self.getListeningPort(reactor)
+        port = self.getListeningPort(reactor, ServerFactory())
         self.assertFullyNewStyle(port)
 
 
@@ -610,11 +635,18 @@ class TCPPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin,
     """
     Tests for L{IReactorTCP.listenTCP}
     """
-    def getListeningPort(self, reactor):
+    def getListeningPort(self, reactor, factory):
         """
         Get a TCP port from a reactor.
         """
-        return reactor.listenTCP(0, ServerFactory())
+        return reactor.listenTCP(0, factory)
+
+
+    def getExpectedStartListeningLogMessage(self, port, factory):
+        """
+        Get the message expected to be logged when a TCP port starts listening.
+        """
+        return "%s starting on %d" % (factory, port.getHost().port)
 
 
     def getExpectedConnectionLostLogMsg(self, port):

@@ -173,10 +173,12 @@ class IOCPReactor(base._SignalReactorMixin, base.ReactorBase,
             """
             @see: twisted.internet.interfaces.IReactorSSL.listenSSL
             """
-            return self.listenTCP(
+            port = self.listenTCP(
                 port,
                 TLSMemoryBIOFactory(contextFactory, False, factory),
                 backlog, interface)
+            port._type = 'TLS'
+            return port
 
 
         def connectSSL(self, host, port, factory, contextFactory, timeout=30, bindAddress=None):

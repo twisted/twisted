@@ -20,19 +20,27 @@ from twisted.internet import interfaces, error, defer
 
 
 class Factory:
-    """This is a factory which produces protocols.
+    """
+    This is a factory which produces protocols.
 
     By default, buildProtocol will create a protocol of the class given in
     self.protocol.
     """
 
-    implements(interfaces.IProtocolFactory)
+    implements(interfaces.IProtocolFactory, interfaces.ILoggingContext)
 
     # put a subclass of Protocol here:
     protocol = None
 
     numPorts = 0
     noisy = True
+
+    def logPrefix(self):
+        """
+        Describe this factory for log messages.
+        """
+        return self.__class__.__name__
+
 
     def doStart(self):
         """Make sure startFactory is called.

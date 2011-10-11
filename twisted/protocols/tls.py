@@ -52,7 +52,7 @@ from twisted.python.failure import Failure
 from twisted.python import log
 from twisted.python.reflect import safe_str
 from twisted.internet.interfaces import ISystemHandle, ISSLTransport
-from twisted.internet.interfaces import IPushProducer
+from twisted.internet.interfaces import IPushProducer, ILoggingContext
 from twisted.internet.main import CONNECTION_LOST
 from twisted.internet.protocol import Protocol
 from twisted.internet.task import cooperate
@@ -581,3 +581,18 @@ class TLSMemoryBIOFactory(WrappingFactory):
         WrappingFactory.__init__(self, wrappedFactory)
         self._contextFactory = contextFactory
         self._isClient = isClient
+
+
+    def logPrefix(self):
+        """
+        Annotate the wrapped factory's log prefix with some text indicating TLS
+        is in use.
+
+        @rtype: C{str}
+        """
+        if ILoggingContext.providedBy(self.wrappedFactory):
+            logPrefix = self.wrappedFactory.logPrefix()
+        else:
+            logPrefix = self.wrappedFactory.__class__.__name__
+        return "%s (TLS)" % (logPrefix,)
+

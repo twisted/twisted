@@ -153,9 +153,19 @@ class Port(tcp.Port):
     """
     transport = Server
 
+    _type = 'TLS'
+
     def __init__(self, port, factory, ctxFactory, backlog=50, interface='', reactor=None):
         tcp.Port.__init__(self, port, factory, backlog, interface, reactor)
         self.ctxFactory = ctxFactory
+
+
+    def _getLogPrefix(self, factory):
+        """
+        Override the normal prefix to include an annotation indicating this is a
+        port for TLS connections.
+        """
+        return tcp.Port._getLogPrefix(self, factory) + ' (TLS)'
 
 
 

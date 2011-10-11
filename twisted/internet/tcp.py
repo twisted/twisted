@@ -517,6 +517,11 @@ class Port(base.BasePort, _SocketCloser):
     @ivar connected: flag set once the listen has successfully been called on
         the socket.
     @type connected: C{bool}
+
+    @ivar _type: A string describing the connections which will be created by
+        this port.  Normally this is C{"TCP"}, since this is a TCP port, but
+        when the TLS implementation re-uses this class it overrides the value
+        with C{"TLS"}.  Only used for logging.
     """
 
     implements(interfaces.IListeningPort)
@@ -528,6 +533,8 @@ class Port(base.BasePort, _SocketCloser):
     sessionno = 0
     interface = ''
     backlog = 50
+
+    _type = 'TCP'
 
     # Actual port number being listened on, only set to a non-None
     # value when we are actually listening.
@@ -572,7 +579,8 @@ class Port(base.BasePort, _SocketCloser):
         # reflect what the OS actually assigned us.
         self._realPortNumber = skt.getsockname()[1]
 
-        log.msg("%s starting on %s" % (self.factory.__class__, self._realPortNumber))
+        log.msg("%s starting on %s" % (
+                self._getLogPrefix(self.factory), self._realPortNumber))
 
         # The order of the next 6 lines is kind of bizarre.  If no one
         # can explain it, perhaps we should re-arrange them.
@@ -678,12 +686,11 @@ class Port(base.BasePort, _SocketCloser):
 
     stopListening = loseConnection
 
-
     def _logConnectionLostMsg(self):
         """
         Log message for closing port
         """
-        log.msg('(TCP Port %s Closed)' % (self._realPortNumber,))
+        log.msg('(%s Port %s Closed)' % (self._type, self._realPortNumber))
 
 
     def connectionLost(self, reason):

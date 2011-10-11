@@ -459,7 +459,9 @@ class PosixReactorBase(_SignalReactorMixin, ReactorBase):
         """
         if tls is not None:
             tlsFactory = tls.TLSMemoryBIOFactory(contextFactory, False, factory)
-            return self.listenTCP(port, tlsFactory, backlog, interface)
+            port = self.listenTCP(port, tlsFactory, backlog, interface)
+            port._type = 'TLS'
+            return port
         elif ssl is not None:
             p = ssl.Port(
                 port, factory, contextFactory, backlog, interface, self)

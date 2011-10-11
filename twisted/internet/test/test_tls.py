@@ -20,6 +20,8 @@ from twisted.internet.error import ConnectionClosed
 from twisted.trial.unittest import SkipTest
 from twisted.python.runtime import platform
 
+from twisted.internet.test.test_core import ObjectModelIntegrationMixin
+from twisted.internet.test.test_tcp import StreamTransportTestsMixin
 from twisted.internet.test.connectionmixins import ConnectionTestsMixin
 
 try:
@@ -243,5 +245,32 @@ class SSLClientTestsMixin(TLSMixin, ReactorBuilder, ConnectionTestsMixin):
         lostConnectionResults[1].trap(ConnectionClosed)
 
 
+class TLSPortTestsBuilder(TLSMixin, ObjectModelIntegrationMixin,
+                          StreamTransportTestsMixin, ReactorBuilder):
+    """
+    Tests for L{IReactorSSL.listenSSL}
+    """
+    def getListeningPort(self, reactor, factory):
+        """
+        Get a TLS port from a reactor.
+        """
+        return reactor.listenSSL(0, factory, self.getServerContext())
+
+
+    def getExpectedStartListeningLogMessage(self, port, factory):
+        """
+        Get the message expected to be logged when a TLS port starts listening.
+        """
+        return "%s (TLS) starting on %d" % (factory, port.getHost().port)
+
+
+    def getExpectedConnectionLostLogMsg(self, port):
+        """
+        Get the expected connection lost message for a TLS port.
+        """
+        return "(TLS Port %s Closed)" % (port.getHost().port,)
+
+
 globals().update(SSLClientTestsMixin.makeTestCaseClasses())
 globals().update(StartTLSClientTestsMixin.makeTestCaseClasses())
+globals().update(TLSPortTestsBuilder().makeTestCaseClasses())

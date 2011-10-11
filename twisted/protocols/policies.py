@@ -20,6 +20,20 @@ from twisted.internet.interfaces import ILoggingContext
 from twisted.python import log
 
 
+def _wrappedLogPrefix(wrapper, wrapped):
+    """
+    Compute a log prefix for a wrapper and the object it wraps.
+
+    @rtype: C{str}
+    """
+    if ILoggingContext.providedBy(wrapped):
+        logPrefix = wrapped.logPrefix()
+    else:
+        logPrefix = wrapped.__class__.__name__
+    return "%s (%s)" % (logPrefix, wrapper.__class__.__name__)
+
+
+
 class ProtocolWrapper(Protocol):
     """
     Wraps protocol instances and acts as their transport as well.
@@ -44,11 +58,7 @@ class ProtocolWrapper(Protocol):
         Use a customized log prefix mentioning both the wrapped protocol and
         the current one.
         """
-        if ILoggingContext.providedBy(self.wrappedProtocol):
-            logPrefix = self.wrappedProtocol.logPrefix()
-        else:
-            logPrefix = self.wrappedProtocol.__class__.__name__
-        return "%s (%s)" % (logPrefix, self.__class__.__name__)
+        return _wrappedLogPrefix(self, self.wrappedProtocol)
 
 
     def makeConnection(self, transport):
@@ -115,7 +125,9 @@ class ProtocolWrapper(Protocol):
 
 
 class WrappingFactory(ClientFactory):
-    """Wraps a factory and its protocols, and keeps track of them."""
+    """
+    Wraps a factory and its protocols, and keeps track of them.
+    """
 
     protocol = ProtocolWrapper
 
@@ -123,33 +135,53 @@ class WrappingFactory(ClientFactory):
         self.wrappedFactory = wrappedFactory
         self.protocols = {}
 
+
+    def logPrefix(self):
+        """
+        Generate a log prefix mentioning both the wrapped factory and this one.
+        """
+        return _wrappedLogPrefix(self, self.wrappedFactory)
+
+
     def doStart(self):
         self.wrappedFactory.doStart()
         ClientFactory.doStart(self)
+
 
     def doStop(self):
         self.wrappedFactory.doStop()
         ClientFactory.doStop(self)
 
+
     def startedConnecting(self, connector):
         self.wrappedFactory.startedConnecting(connector)
+
 
     def clientConnectionFailed(self, connector, reason):
         self.wrappedFactory.clientConnectionFailed(connector, reason)
 
+
     def clientConnectionLost(self, connector, reason):
         self.wrappedFactory.clientConnectionLost(connector, reason)
+
 
     def buildProtocol(self, addr):
         return self.protocol(self, self.wrappedFactory.buildProtocol(addr))
 
+
     def registerProtocol(self, p):
-        """Called by protocol to register itself."""
+        """
+        Called by protocol to register itself.
+        """
         self.protocols[p] = 1
 
+
     def unregisterProtocol(self, p):
-        """Called by protocols when they go away."""
+        """
+        Called by protocols when they go away.
+        """
         del self.protocols[p]
+
 
 
 class ThrottlingProtocol(ProtocolWrapper):

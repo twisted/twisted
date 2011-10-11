@@ -163,7 +163,30 @@ class WrapperTestCase(unittest.TestCase):
         self.assertTrue(IStubTransport.providedBy(proto.transport))
 
 
-    def test_logPrefix(self):
+    def test_factoryLogPrefix(self):
+        """
+        L{WrappingFactory.logPrefix} is customized to mention both the original
+        factory and the wrapping factory.
+        """
+        server = Server()
+        factory = policies.WrappingFactory(server)
+        self.assertEqual("Server (WrappingFactory)", factory.logPrefix())
+
+
+    def test_factoryLogPrefixFallback(self):
+        """
+        If the wrapped factory doesn't have a L{logPrefix} method,
+        L{WrappingFactory.logPrefix} falls back to the factory class name.
+        """
+        class NoFactory(object):
+            pass
+
+        server = NoFactory()
+        factory = policies.WrappingFactory(server)
+        self.assertEqual("NoFactory (WrappingFactory)", factory.logPrefix())
+
+
+    def test_protocolLogPrefix(self):
         """
         L{ProtocolWrapper.logPrefix} is customized to mention both the original
         protocol and the wrapper.
@@ -176,7 +199,7 @@ class WrapperTestCase(unittest.TestCase):
                          protocol.logPrefix())
 
 
-    def test_logPrefixFallback(self):
+    def test_protocolLogPrefixFallback(self):
         """
         If the wrapped protocol doesn't have a L{logPrefix} method,
         L{ProtocolWrapper.logPrefix} falls back to the protocol class name.
