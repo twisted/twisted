@@ -105,6 +105,28 @@ class WrappingFactoryTests(unittest.TestCase):
     """
     Test the behaviour of our ugly implementation detail C{_WrappingFactory}.
     """
+    def test_doStart(self):
+        """
+        L{_WrappingFactory.doStart} passes through to the wrapped factory's
+        C{doStart} method, allowing application-specific setup and logging.
+        """
+        factory = ClientFactory()
+        wf = endpoints._WrappingFactory(factory, None)
+        wf.doStart()
+        self.assertEqual(1, factory.numPorts)
+
+
+    def test_doStop(self):
+        """
+        L{_WrappingFactory.doStop} passes through to the wrapped factory's
+        C{doStop} method, allowing application-specific cleanup and logging.
+        """
+        factory = ClientFactory()
+        factory.numPorts = 3
+        wf = endpoints._WrappingFactory(factory, None)
+        wf.doStop()
+        self.assertEqual(2, factory.numPorts)
+
 
     def test_failedBuildProtocol(self):
         """

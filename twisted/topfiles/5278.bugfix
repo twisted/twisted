@@ -1,0 +1,1 @@
+Stream client endpoints now start (doStart) and stop (doStop) the factory passed to the connect method, instead of a different implementation-detail factory.

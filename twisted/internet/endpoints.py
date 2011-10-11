@@ -131,6 +131,20 @@ class _WrappingFactory(ClientFactory):
         self._onConnection = defer.Deferred(canceller=canceller)
 
 
+    def doStart(self):
+        """
+        Start notifications are passed straight through to the wrapped factory.
+        """
+        self._wrappedFactory.doStart()
+
+
+    def doStop(self):
+        """
+        Stop notifications are passed straight through to the wrapped factory.
+        """
+        self._wrappedFactory.doStop()
+
+
     def buildProtocol(self, addr):
         """
         Proxy C{buildProtocol} to our C{self._wrappedFactory} or errback
