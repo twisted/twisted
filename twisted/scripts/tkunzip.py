@@ -1,4 +1,10 @@
-"""Post-install GUI to compile to pyc and unpack twisted doco"""
+# -*- test-case-name: twisted.scripts.test.test_scripts -*-
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+Post-install GUI to compile to pyc and unpack twisted doco
+"""
 
 from __future__ import generators
 

@@ -132,3 +132,19 @@ class ScriptTests(TestCase, ScriptTestsMixin):
 
     def test_tapconvert(self):
         self.scriptTest("tapconvert")
+
+
+    def test_deprecatedTkunzip(self):
+        """
+        The entire L{twisted.scripts.tkunzip} module, part of the old Windows
+        installer tool chain, is deprecated.
+        """
+        from twisted.scripts import tkunzip
+        warnings = self.flushWarnings(
+            offendingFunctions=[self.test_deprecatedTkunzip])
+        self.assertEqual(DeprecationWarning, warnings[0]['category'])
+        self.assertEqual(
+            "twisted.scripts.tkunzip was deprecated in Twisted 11.1.0: "
+            "Seek unzipping software outside of Twisted.",
+            warnings[0]['message'])
+        self.assertEqual(1, len(warnings))
