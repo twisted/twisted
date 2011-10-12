@@ -31,9 +31,17 @@ class PlatformAssumptionsTestCase(TestCase):
     def setUp(self):
         self.openSockets = []
         if resource is not None:
+            # On some buggy platforms we might leak FDs, and the test will
+            # fail creating the initial two sockets we *do* want to
+            # succeed. So, we make the soft limit the current number of fds
+            # plus two more (for the two sockets we want to succeed). If we've
+            # leaked too many fds for that to work, there's nothing we can
+            # do.
+            from twisted.internet.process import _listOpenFDs
+            newLimit = len(_listOpenFDs()) + 2
             self.originalFileLimit = resource.getrlimit(resource.RLIMIT_NOFILE)
-            resource.setrlimit(resource.RLIMIT_NOFILE, (256, self.originalFileLimit[1]))
-            self.socketLimit = 512
+            resource.setrlimit(resource.RLIMIT_NOFILE, (newLimit, self.originalFileLimit[1]))
+            self.socketLimit = newLimit + 100
 
 
     def tearDown(self):
