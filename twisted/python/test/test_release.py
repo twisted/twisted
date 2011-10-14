@@ -12,6 +12,7 @@ only ever performed on Linux.
 import warnings
 import operator
 import os, sys, signal
+import textwrap
 from StringIO import StringIO
 import tarfile
 from xml.dom import minidom as dom
@@ -1982,24 +1983,23 @@ class SphinxBuilderTests(TestCase):
     '''
     
     conf_content = '''\
-source_suffix = '.rst'
-master_doc = 'index'
-'''
+    source_suffix = '.rst'
+    master_doc = 'index'
+    '''
+    conf_content = textwrap.dedent(conf_content)
     
     index_content = '''\
-==============
-This is a Test
-==============
+    ==============
+    This is a Test
+    ==============
 
-This is only a test
--------------------
+    This is only a test
+    -------------------
 
-In case you hadn't figured it out yet, this is a test.
-'''
+    In case you hadn't figured it out yet, this is a test.
+    '''
+    index_content = textwrap.dedent(index_content)
 
-    expected_index_html = '''
-
-'''
     
     def setUp(self):
         '''
@@ -2073,6 +2073,17 @@ In case you hadn't figured it out yet, this is a test.
                     self.fail("Sphinx output not parsed")
                 
             f.close()
+
+
+    def test_FailToBuild(self):
+        '''
+        Check that SphinxBuilder.build fails when run against a non-sphinx
+        directory.
+        '''
+        # note no fake sphinx project is created
+        self.assertRaises(CommandFailed,
+                          self.builder.build, 
+                          self.sphinxDir)
 
 
 
