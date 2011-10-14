@@ -909,6 +909,59 @@ class NewsBuilder(object):
         self.buildAll(FilePath(args[0]))
 
 
+class SphinxBuilder(object):
+    """
+    Generate HTML documentation using Sphinx.
+    
+    %SPHINXBUILD% -b html %ALLSPHINXOPTS% %BUILDDIR%/html
+    """
+    
+    def build(self, docDir, buildDir=None):
+        """
+        Build the documentation in C{docDir} with Sphinx.
+        
+        @param docDir: The directory of the documentation.
+        @type docDir: L{twisted.python.filepath.FilePath}
+        
+        @param buildDir: The directory to build the documentation in.
+        @type docDir: L{twisted.python.filepath.FilePath}
+        """
+        
+        if buildDir is None:
+            buildDir = docDir.child('build')
+        
+        # TODO: do we want to use -w to write the stdout to a file?
+
+        sphinxBuild = 'sphinx-build'
+        allSphinxOpts = '-d %s/doctrees %s/source' % (buildDir.path, 
+                                                      docDir.path)
+        
+        # list of sphinx builders and associated extra options
+        # each builder will be run with the extra options provided
+        builders = [
+                    ('html', ''),
+                    # text builder info is just here as an example
+                    #~ ('text', '-t thisisatag')
+                    # we probably also want latex/pdf builders
+                   ]
+        
+        # TODO: maybe use a dict for config file overrides? (-D options)
+        #       maybe do the same for tags? (-t options)
+        #       maybe even for -A options?
+        
+        for builder, buildOpts in builders:
+            if buildOpts:
+                allSphinxOpts = '%s %s' % (buildOpts, allSphinxOpts)
+        
+            command = '%s -b %s %s %s/%s' % (sphinxBuild, 
+                                             builder, 
+                                             allSphinxOpts, 
+                                             buildDir.path, 
+                                             builder)
+
+            cmdOutput = runCommand(command)
+
+
 
 def filePathDelta(origin, destination):
     """

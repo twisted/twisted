@@ -40,6 +40,7 @@ from twisted.python._release import buildAllTarballs, runCommand
 from twisted.python._release import UncleanWorkingDirectory, NotWorkingDirectory
 from twisted.python._release import ChangeVersionsScript, BuildTarballsScript
 from twisted.python._release import NewsBuilder
+from twisted.python._release import SphinxBuilder
 
 if os.name != 'posix':
     skip = "Release toolchain only supported on POSIX."
@@ -1969,6 +1970,88 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         self.assertEquals(
             expectedCore + 'Old core news.\n', coreNews.getContent())
 
+
+
+class SphinxBuilderTests(TestCase):
+    '''
+    Tests for L{SphinxBuilder}.
+    '''
+    
+    conf_content = '''\
+source_suffix = '.rst'
+master_doc = 'index'
+'''
+    
+    index_content = '''\
+==============
+This is a Test
+==============
+
+This is only a test
+-------------------
+
+In case you hadn't figured it out yet, this is a test.
+'''
+
+    expected_index_html = '''
+
+'''
+    
+    def setUp(self):
+        '''
+        Set up a few instance variables that will be useful.
+
+        @ivar builder: A plain L{SphinxBuilder}.
+        @ivar sphinxDir: A L{FilePath} representing a directory to be used for
+            containing a Sphinx project.
+        @ivar sourceDir: A L{FilePath} representing a directory to be used for
+            containing the source files for a Sphinx project.
+        '''
+        self.builder = SphinxBuilder()
+        
+        # set up a place for a fake sphinx project
+        self.sphinxDir = FilePath(self.mktemp())
+        self.sphinxDir.makedirs()
+        self.sourceDir = self.sphinxDir.child('source')
+        self.sourceDir.makedirs()
+
+
+    def createFakeSphinxProject(self):
+        '''
+        Create a fake Sphinx project for test purposes.
+        
+        Creates a fake Sphinx project with the absolute minimum of source files.
+        This includes a single source file ('index.rst') and the smallest 
+        'conf.py' file possible in order to find that source file.
+        '''
+        self.sourceDir.child("conf.py").setContent(self.conf_content)
+        self.sourceDir.child("index.rst").setContent(self.index_content)        
+
+
+    def test_build(self):
+        '''
+        Creates and builds a fake Sphinx project using a L{SphinxBuilder}.
+        '''
+        self.createFakeSphinxProject()
+        self.builder.build(self.sphinxDir)
+        
+        # assert some stuff
+        for each in ['doctrees', 'html']:
+            fpath = self.sphinxDir.child('build').child(each)
+            self.assertTrue(fpath.exists())
+
+        htmlDir = self.sphinxDir.child('build').child('html')
+        builtFiles = [
+            'index.html',
+            'genindex.html',
+            'objects.inv',
+            'search.html',
+            'searchindex.js'
+        ]
+        
+        for each in builtFiles:
+            fpath = htmlDir.child(each)
+            self.assertTrue(fpath.exists())
 
 
 class DistributionBuilderTestBase(BuilderTestsMixin, StructureAssertingMixin,
