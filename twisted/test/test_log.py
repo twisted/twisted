@@ -137,7 +137,7 @@ class LogTest(unittest.TestCase):
             # calling self._err()... which also fails with recursion error:
             oldError = publisher._err
 
-            def failingErr(failure, why, **kwargs):
+            def failingErr(observers, failure, why, **kwargs):
                 errors.append(failure.value)
                 raise RuntimeError("Fake recursion error")
 
@@ -158,6 +158,39 @@ class LogTest(unittest.TestCase):
         self.assertEqual(events[0]['message'], ("but this should succeed",))
         self.assertEqual(len(errors), 1)
         self.assertIsInstance(errors[0], RuntimeError)
+
+
+    def test_doubleErrorNeverRemovesObserver(self):
+        """
+        If an exception is raised while trying to report a broken observer,
+        that observer isn't removed from the L{log.LogPublisher}.
+        """
+        observerError = RuntimeError("brokenObserver")
+        def brokenObserver(eventDict):
+            raise observerError
+
+        errors = []
+        def brokenFailure(*args):
+            errors.append(sys.exc_info()[1])
+            raise RuntimeError("Failure")
+
+        events = []
+        def report(eventDict):
+            events.append(eventDict)
+
+        publisher = log.LogPublisher()
+        publisher.addObserver(brokenObserver)
+        publisher.addObserver(report)
+        patcher = self.patch(log.failure, "Failure", brokenFailure)
+        try:
+            publisher.msg("Hello!")
+        finally:
+            patcher.restore()
+
+        self.assertEqual(errors, [observerError])
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]["message"], ("Hello!",))
+        self.assertEqual(publisher.observers, [brokenObserver, report])
 
 
     def test_showwarning(self):
@@ -292,7 +325,7 @@ class LogTest(unittest.TestCase):
 
     def test_multipleBuggyObservers(self):
         """
-        L{LogPublisher.msg} handles buggy observers one by one, so that
+        L{log.LogPublisher.msg} handles buggy observers one by one, so that
         they have a chance to report about other buggy observers, even if
         they both failed in the same L{log.msg} call.
         """
@@ -321,8 +354,9 @@ class LogTest(unittest.TestCase):
 
     def test_noObserverSkipped(self):
         """
-        All observers added to a L{LogPublisher} are given a chance to report
-        an event, even if observers are being removed during the C{msg} call.
+        All observers added to a L{log.LogPublisher} are given a chance to
+        report an event, even if observers are being removed during the C{msg}
+        call.
 
         However, that means that some observers might be given a chance
         to report the same log event multiple times.
@@ -346,6 +380,76 @@ class LogTest(unittest.TestCase):
             publisher.addObserver(observer)
         publisher.msg("Hello!")
         self.assertTrue(events, events)
+
+
+    def test_keyboardInterruptRespected(self):
+        """
+        L{log.LogPublisher.msg} does not swallow KeyboardInterrupt errors.
+        """
+        def simulatedUser(eventDict):
+            raise KeyboardInterrupt
+
+        publisher = log.LogPublisher()
+        publisher.addObserver(simulatedUser)
+
+        self.assertRaises(KeyboardInterrupt, publisher.msg, "Hello!")
+        self.assertEqual(publisher.observers, [simulatedUser])
+
+
+    def test_keyboardInterruptRespectedDuringErrorHandling(self):
+        """
+        L{log.LogPublisher.msg} does not swallow KeyboardInterrupt errors even
+        while handling buggy log observers.
+        """
+        observerError = RuntimeError("buggyObserver")
+        def buggyObserver(eventDict):
+            raise observerError
+
+        errors = []
+        def interruptedErr(observers, failure, why):
+            errors.append(failure.value)
+            raise KeyboardInterrupt
+
+        publisher = log.LogPublisher()
+        publisher.addObserver(buggyObserver)
+        publisher._err = interruptedErr
+
+        self.assertRaises(KeyboardInterrupt, publisher.msg, "Hello!")
+        self.assertEqual(publisher.observers, [buggyObserver])
+        self.assertEqual(errors, [observerError])
+
+
+    def test_brokenObserverWithBrokenStr(self):
+        """
+        An observer that raises an error is reported even if its C{__str__}
+        method raises an error.
+        """
+        observerError = RuntimeError("Observer")
+        class Observer(object):
+
+            def __call__(self, eventDict):
+                raise observerError
+
+            def __str__(self):
+                raise ValueError("arbitrary")
+
+        errors = []
+        messages = []
+        def report(eventDict):
+            if eventDict["isError"]:
+                errors.append(eventDict["failure"].value)
+            else:
+                messages.append(eventDict["message"][0])
+
+        observer = Observer()
+        publisher = log.LogPublisher()
+        publisher.addObserver(observer)
+        publisher.addObserver(report)
+
+        publisher.msg("Hello!")
+        self.assertEqual(errors, [observerError])
+        self.assertEqual(messages, ["Hello!"])
+        self.assertEqual(publisher.observers, [observer, report])
 
 
 
@@ -606,7 +710,7 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
         self.assertIn("Hello!", fakeFile.getvalue())
         self.assertIsInstance(sys.stdout, log.StdioOnnaStick)
         self.assertEqual(sys.stdout.isError, False)
-        self.assertEqual(sys.stdout.encoding, 
+        self.assertEqual(sys.stdout.encoding,
                          origStdout.encoding or sys.getdefaultencoding())
         self.assertIsInstance(sys.stderr, log.StdioOnnaStick)
         self.assertEqual(sys.stderr.isError, True)

@@ -275,12 +275,29 @@ class LogPublisher:
         These forms work (sometimes) by accident and will be disabled
         entirely in the future.
         """
+        self._publishMessage(self.observers, *message, **kw)
+
+
+    def _publishMessage(self, observers, *message, **kw):
+        """
+        Prepare an C{eventDict} from C{message} and C{kw} and send it to
+        C{observers}.
+
+        @param observers: A list of observers to which the C{eventDict} should
+            be sent (by calling each observer with the said C{eventDict}).
+        @type observers: C{list} of L{ILogObserver}s
+
+        @param message: Optional encoded string describing the event being
+            logged. See also L{msg}.
+
+        @param kw: Additional keys to be added to the C{eventDict}.
+        """
         actualEventDict = (context.get(ILogContext) or {}).copy()
         actualEventDict.update(kw)
         actualEventDict['message'] = message
         actualEventDict['time'] = time.time()
         failed = []
-        for observer in reversed(self.observers):
+        for observer in reversed(observers):
             try:
                 observer(actualEventDict)
             except KeyboardInterrupt:
@@ -291,26 +308,34 @@ class LogPublisher:
             except:
                 try:
                     fail = failure.Failure()
-                    why = "Log observer %s failed." % (observer,)
-                    publisher = LogPublisher()
-                    for o in self.observers:
+                    why = ("Log observer %s failed." %
+                           (reflect.safe_str(observer),))
+                    innocentObservers = []
+                    for o in observers:
                         if o is not observer:
-                            publisher.addObserver(o)
-                    failed.append((publisher, fail, why))
+                            innocentObservers.append(o)
+                    failed.append((innocentObservers, fail, why))
                 except Exception:
-                    # OOM, stack overflow or an observer with broken __str__.
-                    # Give up.
+                    # OOM or stack overflow. Give up.
                     pass
-        for publisher, fail, why in failed:
-            publisher._err(fail, why)
+        for innocentObservers, fail, why in failed:
+            try:
+                self._err(innocentObservers, fail, why)
+            except (MemoryError, RuntimeError):
+                # OOM or stack overflow. Give up.
+                pass
 
 
-    def _err(self, failure, why):
+    def _err(self, observers, failure, why):
         """
         Log a failure.
 
-        Similar in functionality to the global {err} function, but the failure
-        gets published only to observers attached to this publisher.
+        Similar in functionality to the global L{err} function, but the failure
+        gets published only to specified observers.
+
+        @param observers: A list of observers that will be called to log the
+            failure.
+        @type observers: C{list} of L{ILogObserver}s
 
         @param failure: The failure to log.
         @type failure: L{Failure}.
@@ -320,7 +345,7 @@ class LogPublisher:
             occurred.
         @type why: C{str}
         """
-        self.msg(failure=failure, why=why, isError=1)
+        self._publishMessage(observers, failure=failure, why=why, isError=1)
 
 
     def showwarning(self, message, category, filename, lineno, file=None,
