@@ -1975,6 +1975,10 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
 class SphinxBuilderTests(TestCase):
     '''
     Tests for L{SphinxBuilder}.
+    
+    no stderr, 0 response code
+    check that output looks vaguely like html
+        - twisted.web.microdom
     '''
     
     conf_content = '''\
@@ -2050,8 +2054,26 @@ In case you hadn't figured it out yet, this is a test.
         ]
         
         for each in builtFiles:
+            # check that file exists
             fpath = htmlDir.child(each)
             self.assertTrue(fpath.exists())
+            
+            # check that the output files have some content
+            f = open(fpath.path, 'r')
+            fcontents = f.read()
+            self.assertGreater(len(fcontents), 0)
+
+            # check that the html files are at least html-ish
+            # this is not a terribly rigorous check
+            if fpath.path.endswith('.html'):    
+                try:
+                    parseXMLString(fcontents)
+                except:
+                    # any exception probably means some kind of parse error
+                    self.fail("Sphinx output not parsed")
+                
+            f.close()
+
 
 
 class DistributionBuilderTestBase(BuilderTestsMixin, StructureAssertingMixin,
