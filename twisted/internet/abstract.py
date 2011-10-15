@@ -5,8 +5,6 @@
 
 """
 Support for generic select()able objects.
-
-Maintainer: Itamar Shtull-Trauring
 """
 
 from zope.interface import implements
@@ -165,6 +163,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         self._tempDataBuffer = [] # will be added to dataBuffer in doWrite
         self._tempDataLen = 0
 
+
     def connectionLost(self, reason):
         """The connection was lost.
 
@@ -175,7 +174,6 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
 
         Clean up state here, but make sure to call back up to FileDescriptor.
         """
-
         self.disconnected = 1
         self.connected = 0
         if self.producer is not None:

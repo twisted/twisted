@@ -12,6 +12,7 @@ from zope.interface import implements, classImplements
 from twisted.internet import interfaces, error, address, main, defer
 from twisted.internet.abstract import _LogOwner, isIPAddress
 from twisted.internet.tcp import _SocketCloser, Connector as TCPConnector
+from twisted.internet.tcp import _AbortingMixin
 from twisted.python import log, failure, reflect, util
 
 from twisted.internet.iocpreactor import iocpsupport as _iocp, abstract
@@ -34,7 +35,7 @@ connectExErrors = {
         }
 
 
-class Connection(abstract.FileHandle, _SocketCloser):
+class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
     """
     @ivar TLS: C{False} to indicate the connection is in normal TCP mode,
         C{True} to indicate that TLS has been started and that operations must
@@ -44,6 +45,7 @@ class Connection(abstract.FileHandle, _SocketCloser):
                interfaces.ISystemHandle)
 
     TLS = False
+
 
     def __init__(self, sock, proto, reactor=None):
         abstract.FileHandle.__init__(self, reactor)
@@ -102,8 +104,12 @@ class Connection(abstract.FileHandle, _SocketCloser):
 
 
     def connectionLost(self, reason):
+        if self.disconnected:
+            return
         abstract.FileHandle.connectionLost(self, reason)
-        self._closeSocket()
+        isClean = (reason is None or
+                   not reason.check(error.ConnectionAborted))
+        self._closeSocket(isClean)
         protocol = self.protocol
         del self.protocol
         del self.socket
@@ -248,7 +254,7 @@ class Client(Connection):
             return
 
         try:
-            self._closeSocket()
+            self._closeSocket(True)
         except AttributeError:
             pass
         else:
@@ -503,7 +509,7 @@ class Port(_SocketCloser, _LogOwner):
         self.disconnected = True
         self.reactor.removeActiveHandle(self)
         self.connected = False
-        self._closeSocket()
+        self._closeSocket(True)
         del self.socket
         del self.getFileHandle
 

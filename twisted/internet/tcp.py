@@ -6,8 +6,6 @@
 Various asynchronous TCP/IP classes.
 
 End users shouldn't use this module directly - use the reactor APIs instead.
-
-Maintainer: Itamar Shtull-Trauring
 """
 
 
@@ -16,6 +14,7 @@ import types
 import socket
 import sys
 import operator
+import struct
 
 from zope.interface import implements
 
@@ -101,15 +100,22 @@ from twisted.internet import abstract, main, interfaces, error
 class _SocketCloser(object):
     _socketShutdownMethod = 'shutdown'
 
-    def _closeSocket(self):
-        # socket.close() doesn't *really* close if there's another reference
-        # to it in the TCP/IP stack, e.g. if it was was inherited by a
-        # subprocess. And we really do want to close the connection. So we
-        # use shutdown() instead, and then close() in order to release the
-        # filedescriptor.
+    def _closeSocket(self, orderly):
+        # The call to shutdown() before close() isn't really necessary, because
+        # we set FD_CLOEXEC now, which will ensure this is the only process
+        # holding the FD, thus ensuring close() really will shutdown the TCP
+        # socket. However, do it anyways, just to be safe.
         skt = self.socket
         try:
-            getattr(skt, self._socketShutdownMethod)(2)
+            if orderly:
+                getattr(skt, self._socketShutdownMethod)(2)
+            else:
+                # Set SO_LINGER to 1,0 which, by convention, causes a
+                # connection reset to be sent when close is called,
+                # instead of the standard FIN shutdown sequence.
+                self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER,
+                                       struct.pack("ii", 1, 0))
+
         except socket.error:
             pass
         try:
@@ -119,7 +125,35 @@ class _SocketCloser(object):
 
 
 
-class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser):
+class _AbortingMixin(object):
+    """
+    Common implementation of C{abortConnection}.
+
+    @ivar _aborting: Set to C{True} when C{abortConnection} is called.
+    @type _aborting: C{bool}
+    """
+    _aborting = False
+
+    def abortConnection(self):
+        """
+        Aborts the connection immediately, dropping any buffered data.
+
+        @since: 11.1
+        """
+        if self.disconnected or self._aborting:
+            return
+        self._aborting = True
+        self.stopReading()
+        self.stopWriting()
+        self.doRead = lambda *args, **kwargs: None
+        self.doWrite = lambda *args, **kwargs: None
+        self.reactor.callLater(0, self.connectionLost,
+                               failure.Failure(error.ConnectionAborted()))
+
+
+
+class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser,
+                 _AbortingMixin):
     """
     Superclass of all socket-based FileDescriptors.
 
@@ -131,12 +165,14 @@ class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser):
     """
     implements(interfaces.ITCPTransport, interfaces.ISystemHandle)
 
+
     def __init__(self, skt, protocol, reactor=None):
         abstract.FileDescriptor.__init__(self, reactor=reactor)
         self.socket = skt
         self.socket.setblocking(0)
         self.fileno = skt.fileno
         self.protocol = protocol
+
 
     def getHandle(self):
         """Return the socket for this connection."""
@@ -220,16 +256,26 @@ class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser):
         else:
             self.connectionLost(reason)
 
+
+
     def connectionLost(self, reason):
         """See abstract.FileDescriptor.connectionLost().
         """
+        # Make sure we're not called twice, which can happen e.g. if
+        # abortConnection() is called from protocol's dataReceived and then
+        # code immediately after throws an exception that reaches the
+        # reactor. We can't rely on "disconnected" attribute for this check
+        # since twisted.internet._oldtls does evil things to it:
+        if not hasattr(self, "socket"):
+            return
         abstract.FileDescriptor.connectionLost(self, reason)
-        self._closeSocket()
+        self._closeSocket(not reason.check(error.ConnectionAborted))
         protocol = self.protocol
         del self.protocol
         del self.socket
         del self.fileno
         protocol.connectionLost(reason)
+
 
     logstr = "Uninitialized"
 
@@ -296,7 +342,7 @@ class BaseClient(_TLSClientMixin, Connection):
             del self.connector
 
         try:
-            self._closeSocket()
+            self._closeSocket(True)
         except AttributeError:
             pass
         else:
@@ -702,7 +748,7 @@ class Port(base.BasePort, _SocketCloser):
 
         base.BasePort.connectionLost(self, reason)
         self.connected = False
-        self._closeSocket()
+        self._closeSocket(True)
         del self.socket
         del self.fileno
 

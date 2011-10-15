@@ -1481,6 +1481,19 @@ class ITCPTransport(ITransport):
         producer.
         """
 
+
+    def abortConnection():
+        """
+        Close the connection abruptly.
+
+        Discards any buffered data, stops any registered producer,
+        and, if possible, notifies the other end of the unclean
+        closure.
+
+        @since: 11.1
+        """
+
+
     def getTcpNoDelay():
         """
         Return if C{TCP_NODELAY} is enabled.

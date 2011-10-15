@@ -1,0 +1,1 @@
+TCP and TLS transports now support abortConnection() which, unlike loseConnection(), always closes the connection immediately.

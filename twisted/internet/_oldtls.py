@@ -237,20 +237,30 @@ class _TLSMixin:
         if not self.readBlockedOnWrite:
             return self._base.startReading(self)
 
+
     def stopReading(self):
         self._userWantRead = False
-        if not self.writeBlockedOnRead:
+        # If we've disconnected, preventing stopReading() from happening
+        # because we are blocked on a read is silly; the read will never
+        # happen.
+        if self.disconnected or not self.writeBlockedOnRead:
             return self._base.stopReading(self)
+
 
     def startWriting(self):
         self._userWantWrite = True
         if not self.writeBlockedOnRead:
             return self._base.startWriting(self)
 
+
     def stopWriting(self):
         self._userWantWrite = False
-        if not self.readBlockedOnWrite:
+        # If we've disconnected, preventing stopWriting() from happening
+        # because we are blocked on a write is silly; the write will never
+        # happen.
+        if self.disconnected or not self.readBlockedOnWrite:
             return self._base.stopWriting(self)
+
 
     def _resetReadWrite(self):
         # After changing readBlockedOnWrite or writeBlockedOnRead,

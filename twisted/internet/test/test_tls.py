@@ -17,12 +17,14 @@ from twisted.internet.defer import Deferred, DeferredList
 from twisted.internet.endpoints import (
     SSL4ServerEndpoint, SSL4ClientEndpoint, TCP4ClientEndpoint)
 from twisted.internet.error import ConnectionClosed
+from twisted.internet.task import Cooperator
 from twisted.trial.unittest import SkipTest
 from twisted.python.runtime import platform
 
 from twisted.internet.test.test_core import ObjectModelIntegrationMixin
 from twisted.internet.test.test_tcp import StreamTransportTestsMixin
 from twisted.internet.test.connectionmixins import ConnectionTestsMixin
+from twisted.internet.test.test_tcp import AbortConnectionMixin
 
 try:
     from OpenSSL.crypto import FILETYPE_PEM
@@ -45,6 +47,7 @@ class TLSMixin:
             "twisted.internet.gtk2reactor.Gtk2Reactor": msg}
 
 
+class ContextGeneratingMixin(object):
     _certificateText = (
         "-----BEGIN CERTIFICATE-----\n"
         "MIIDBjCCAm+gAwIBAgIBATANBgkqhkiG9w0BAQQFADB7MQswCQYDVQQGEwJTRzER\n"
@@ -89,6 +92,10 @@ class TLSMixin:
         return cert.options()
 
 
+    def getClientContext(self):
+        return ClientContextFactory()
+
+
 
 class StartTLSClientEndpoint(object):
     """
@@ -122,7 +129,8 @@ class StartTLSClientEndpoint(object):
 
 
 
-class StartTLSClientTestsMixin(TLSMixin, ReactorBuilder, ConnectionTestsMixin):
+class StartTLSClientTestsMixin(TLSMixin, ReactorBuilder, ConnectionTestsMixin,
+                               ContextGeneratingMixin):
     """
     Tests for TLS connections established using L{ITLSTransport.startTLS} (as
     opposed to L{IReactorSSL.connectSSL} or L{IReactorSSL.listenSSL}).
@@ -147,10 +155,12 @@ class StartTLSClientTestsMixin(TLSMixin, ReactorBuilder, ConnectionTestsMixin):
 
 
 
-class SSLClientTestsMixin(TLSMixin, ReactorBuilder, ConnectionTestsMixin):
+class SSLClientTestsMixin(TLSMixin, ReactorBuilder, ContextGeneratingMixin,
+                          ConnectionTestsMixin):
     """
     Mixin defining tests relating to L{ITLSTransport}.
     """
+
     def serverEndpoint(self, reactor):
         """
         Create an SSL server endpoint on a TCP/IP-stack allocated port.
@@ -221,7 +231,7 @@ class SSLClientTestsMixin(TLSMixin, ReactorBuilder, ConnectionTestsMixin):
         clientFactory = ClientFactory()
         clientFactory.finished = Deferred()
         clientFactory.protocol = ShortProtocol
-        clientFactory.context = ClientContextFactory()
+        clientFactory.context = self.getClientContext()
         clientFactory.context.method = serverFactory.context.method
 
         lostConnectionResults = []
@@ -245,7 +255,9 @@ class SSLClientTestsMixin(TLSMixin, ReactorBuilder, ConnectionTestsMixin):
         lostConnectionResults[1].trap(ConnectionClosed)
 
 
-class TLSPortTestsBuilder(TLSMixin, ObjectModelIntegrationMixin,
+
+class TLSPortTestsBuilder(TLSMixin, ContextGeneratingMixin,
+                          ObjectModelIntegrationMixin,
                           StreamTransportTestsMixin, ReactorBuilder):
     """
     Tests for L{IReactorSSL.listenSSL}
@@ -274,3 +286,49 @@ class TLSPortTestsBuilder(TLSMixin, ObjectModelIntegrationMixin,
 globals().update(SSLClientTestsMixin.makeTestCaseClasses())
 globals().update(StartTLSClientTestsMixin.makeTestCaseClasses())
 globals().update(TLSPortTestsBuilder().makeTestCaseClasses())
+
+
+
+class AbortSSLConnectionTest(ReactorBuilder, AbortConnectionMixin, ContextGeneratingMixin):
+    requiredInterfaces = (IReactorSSL,)
+
+    def buildReactor(self):
+        reactor = ReactorBuilder.buildReactor(self)
+        try:
+            from twisted.protocols import tls
+        except ImportError:
+            return reactor
+
+        # Patch twisted.protocols.tls to use this reactor, until we get
+        # around to fixing #5206, or the TLS code uses an explicit reactor:
+        cooperator = Cooperator(
+            scheduler=lambda x: reactor.callLater(0.00001, x))
+        self.patch(tls, "cooperate", cooperator.cooperate)
+        return reactor
+
+
+    def setUp(self):
+        if FILETYPE_PEM is None:
+            raise SkipTest("OpenSSL not available.")
+        self.serverContext = self.getServerContext()
+        self.clientContext = self.getClientContext()
+        self.clientContext.method = self.serverContext.method
+
+
+    def listen(self, reactor, server):
+        """
+        Listen using SSL.
+        """
+        return reactor.listenSSL(
+            0, server, self.serverContext, interface="127.0.0.1")
+
+
+    def connect(self, clientcreator, serverport):
+        """
+        Connect using SSL.
+        """
+        return clientcreator.connectSSL(
+            serverport.getHost().host, serverport.getHost().port,
+            self.clientContext)
+
+globals().update(AbortSSLConnectionTest.makeTestCaseClasses())

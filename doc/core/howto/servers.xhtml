@@ -112,6 +112,28 @@ class Echo(Protocol):
     lifetime of any given connection. You will see why this object is
     called a "factory" in the next section.</p>
 
+    <h3>loseConnection() and abortConnection()</h3>
+
+    <p>In the code above, <code>loseConnection</code> is called immediately
+    after writing to the transport. The <code>loseConnection</code> call will
+    close the connection only when all the data has been written by Twisted
+    out to the operating system, so it is safe to use in this case without
+    worrying about transport writes being lost. If
+    a <a href="producers.xhtml">producer</a> is being used with the
+    transport, <code>loseConnection</code> will only close the connection once
+    the producer is unregistered.</p>
+
+    <p>In some cases, waiting until all the data is written out is not what we
+    want. Due to network failures, or bugs or maliciousness in the other side
+    of the connection, data written to the transport may not be deliverable,
+    and so even though <code>loseConnection</code> was called the connection
+    will not be lost. In these cases, <code>abortConnection</code> can be
+    used: it closes the connection immediately, regardless of buffered data
+    that is still unwritten in the transport, or producers that are still
+    registered. Note that <code>abortConnection</code> is only available in
+    Twisted 11.1 and newer.</p>
+
+
     <h3>Using the Protocol</h3>
 
     <p>In this section, you will learn how to run a server which uses your
