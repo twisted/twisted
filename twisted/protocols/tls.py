@@ -577,6 +577,8 @@ class TLSMemoryBIOFactory(WrappingFactory):
     """
     protocol = TLSMemoryBIOProtocol
 
+    noisy = False  # disable unnecessary logging.
+    
     def __init__(self, contextFactory, isClient, wrappedFactory):
         WrappingFactory.__init__(self, wrappedFactory)
         self._contextFactory = contextFactory

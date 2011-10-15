@@ -142,6 +142,29 @@ def buildTLSProtocol(server=False, transport=None):
 
 
 class TLSMemoryBIOFactoryTests(TestCase):
+    """
+    Ensure TLSMemoryBIOFactory logging acts correctly.
+    """
+
+    def test_quiet(self):
+        """
+        L{TLSMemoryBIOFactory.doStart} and L{TLSMemoryBIOFactory.doStop} do
+        not log any messages.
+        """
+        logs = []
+        logger = logs.append
+        log.addObserver(logger)
+        self.addCleanup(log.removeObserver, logger)
+        wrappedFactory = ServerFactory()
+        # Disable logging on the wrapped factory:
+        wrappedFactory.doStart = lambda: None
+        wrappedFactory.doStop = lambda: None
+        factory = TLSMemoryBIOFactory(None, False, wrappedFactory)
+        factory.doStart()
+        factory.doStop()
+        self.assertEqual(logs, [])
+
+
     def test_logPrefix(self):
         """
         L{TLSMemoryBIOFactory.logPrefix} amends the wrapped factory's log prefix
