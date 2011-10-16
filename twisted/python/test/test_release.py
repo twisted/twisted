@@ -40,6 +40,7 @@ from twisted.python._release import buildAllTarballs, runCommand
 from twisted.python._release import UncleanWorkingDirectory, NotWorkingDirectory
 from twisted.python._release import ChangeVersionsScript, BuildTarballsScript
 from twisted.python._release import NewsBuilder
+from twisted.python._release import SphinxBuilder
 
 if os.name != 'posix':
     skip = "Release toolchain only supported on POSIX."
@@ -1968,6 +1969,120 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
             ' - #5\n\n\n')
         self.assertEqual(
             expectedCore + 'Old core news.\n', coreNews.getContent())
+
+
+
+class SphinxBuilderTests(TestCase):
+    '''
+    Tests for L{SphinxBuilder}.
+    
+    no stderr, 0 response code
+    check that output looks vaguely like html
+        - twisted.web.microdom
+    '''
+    
+    conf_content = '''\
+    source_suffix = '.rst'
+    master_doc = 'index'
+    '''
+    conf_content = textwrap.dedent(conf_content)
+    
+    index_content = '''\
+    ==============
+    This is a Test
+    ==============
+
+    This is only a test
+    -------------------
+
+    In case you hadn't figured it out yet, this is a test.
+    '''
+    index_content = textwrap.dedent(index_content)
+
+    
+    def setUp(self):
+        '''
+        Set up a few instance variables that will be useful.
+
+        @ivar builder: A plain L{SphinxBuilder}.
+        @ivar sphinxDir: A L{FilePath} representing a directory to be used for
+            containing a Sphinx project.
+        @ivar sourceDir: A L{FilePath} representing a directory to be used for
+            containing the source files for a Sphinx project.
+        '''
+        self.builder = SphinxBuilder()
+        
+        # set up a place for a fake sphinx project
+        self.sphinxDir = FilePath(self.mktemp())
+        self.sphinxDir.makedirs()
+        self.sourceDir = self.sphinxDir.child('source')
+        self.sourceDir.makedirs()
+
+
+    def createFakeSphinxProject(self):
+        '''
+        Create a fake Sphinx project for test purposes.
+        
+        Creates a fake Sphinx project with the absolute minimum of source files.
+        This includes a single source file ('index.rst') and the smallest 
+        'conf.py' file possible in order to find that source file.
+        '''
+        self.sourceDir.child("conf.py").setContent(self.conf_content)
+        self.sourceDir.child("index.rst").setContent(self.index_content)        
+
+
+    def test_build(self):
+        '''
+        Creates and builds a fake Sphinx project using a L{SphinxBuilder}.
+        '''
+        self.createFakeSphinxProject()
+        self.builder.build(self.sphinxDir)
+        
+        # assert some stuff
+        for each in ['doctrees', 'html']:
+            fpath = self.sphinxDir.child('build').child(each)
+            self.assertTrue(fpath.exists())
+
+        htmlDir = self.sphinxDir.child('build').child('html')
+        builtFiles = [
+            'index.html',
+            'genindex.html',
+            'objects.inv',
+            'search.html',
+            'searchindex.js'
+        ]
+        
+        for each in builtFiles:
+            # check that file exists
+            fpath = htmlDir.child(each)
+            self.assertTrue(fpath.exists())
+            
+            # check that the output files have some content
+            f = open(fpath.path, 'r')
+            fcontents = f.read()
+            self.assertGreater(len(fcontents), 0)
+
+            # check that the html files are at least html-ish
+            # this is not a terribly rigorous check
+            if fpath.path.endswith('.html'):    
+                try:
+                    parseXMLString(fcontents)
+                except:
+                    # any exception probably means some kind of parse error
+                    self.fail("Sphinx output not parsed")
+                
+            f.close()
+
+
+    def test_FailToBuild(self):
+        '''
+        Check that SphinxBuilder.build fails when run against a non-sphinx
+        directory.
+        '''
+        # note no fake sphinx project is created
+        self.assertRaises(CommandFailed,
+                          self.builder.build, 
+                          self.sphinxDir)
 
 
 
