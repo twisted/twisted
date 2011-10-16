@@ -12,12 +12,59 @@ from cStringIO import StringIO
 from twisted.internet.defer import succeed, gatherResults
 from twisted.trial.unittest import TestCase
 from twisted.web.template import (
-    Element, renderer, XMLFile, XMLString)
+    Element, renderer, tags, XMLFile, XMLString)
 
 from twisted.web.error import MissingTemplateLoader, MissingRenderMethod
 
 from twisted.web._element import UnexposedMethodError
 from twisted.web.test._util import FlattenTestCase
+
+class TagFactoryTests(TestCase):
+    """
+    Tests for L{_TagFactory} through the publicly-exposed L{tags} object.
+    """
+    def test_lookupTag(self):
+        """
+        HTML tags can be retrieved through C{tags}.
+        """
+        tag = tags.a
+        self.assertEqual(tag.tagName, "a")
+
+
+    def test_lookupHTML5Tag(self):
+        """
+        Twisted supports the latest and greatest HTML tags from the HTML5
+        specification.
+        """
+        tag = tags.video
+        self.assertEqual(tag.tagName, "video")
+
+
+    def test_lookupTransparentTag(self):
+        """
+        To support transparent inclusion in templates, there is a special tag,
+        the transparent tag, which has no name of its own but is accessed
+        through the "transparent" attribute.
+        """
+        tag = tags.transparent
+        self.assertEqual(tag.tagName, "")
+
+
+    def test_lookupInvalidTag(self):
+        """
+        Invalid tags which are not part of HTML cause AttributeErrors when
+        accessed through C{tags}.
+        """
+        self.assertRaises(AttributeError, getattr, tags, "invalid")
+
+
+    def test_lookupXMP(self):
+        """
+        As a special case, the <xmp> tag is simply not available through
+        C{tags} or any other part of the templating machinery.
+        """
+        self.assertRaises(AttributeError, getattr, tags, "xmp")
+
 
 
 class ElementTests(TestCase):
@@ -452,5 +499,3 @@ class FlattenIntegrationTests(FlattenTestCase):
         self.assertFlattensImmediately(e1, "<p>1 1</p>")
         self.assertFlattensImmediately(e1, "<p>2 2</p>")
         self.assertFlattensImmediately(e2, "<p>3 1</p>")
-
-

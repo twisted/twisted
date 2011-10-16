@@ -375,19 +375,26 @@ class XMLFile(object):
         return self._loadedTemplate
 
 
-
+# Last updated October 2011, using W3Schools as a reference. Link:
+# http://www.w3schools.com/html5/html5_reference.asp
+# Note that <xmp> is explicitly omitted; its semantics do not work with
+# t.w.template and it is officially deprecated.
 VALID_HTML_TAG_NAMES = set([
-    'a', 'abbr', 'acronym', 'address', 'applet', 'area', 'b', 'base',
-    'basefont', 'bdo', 'big', 'blockquote', 'body', 'br', 'button', 'caption',
-    'center', 'cite', 'code', 'col', 'colgroup', 'dd', 'del', 'dfn', 'dir',
-    'div', 'dl', 'dt', 'em', 'fieldset', 'font', 'form', 'frame', 'frameset',
-    'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'head', 'hr', 'html', 'i', 'iframe',
-    'img', 'input', 'ins', 'isindex', 'kbd', 'label', 'legend', 'li', 'link',
-    'map', 'menu', 'meta', 'noframes', 'noscript', 'object', 'ol', 'optgroup',
-    'option', 'p', 'param', 'pre', 'q', 's', 'samp', 'script', 'select',
-    'small', 'span', 'strike', 'strong', 'style', 'sub', 'sup', 'table',
-    'tbody', 'td', 'textarea', 'tfoot', 'th', 'thead', 'title', 'tr', 'tt', 'u',
-    'ul', 'var'
+    'a', 'abbr', 'acronym', 'address', 'applet', 'area', 'article', 'aside',
+    'audio', 'b', 'base', 'basefont', 'bdi', 'bdo', 'big', 'blockquote',
+    'body', 'br', 'button', 'canvas', 'caption', 'center', 'cite', 'code',
+    'col', 'colgroup', 'command', 'datalist', 'dd', 'del', 'details', 'dfn',
+    'dir', 'div', 'dl', 'dt', 'em', 'embed', 'fieldset', 'figcaption',
+    'figure', 'font', 'footer', 'form', 'frame', 'frameset', 'h1', 'h2', 'h3',
+    'h4', 'h5', 'h6', 'head', 'header', 'hgroup', 'hr', 'html', 'i', 'iframe',
+    'img', 'input', 'ins', 'isindex', 'keygen', 'kbd', 'label', 'legend',
+    'li', 'link', 'map', 'mark', 'menu', 'meta', 'meter', 'nav', 'noframes',
+    'noscript', 'object', 'ol', 'optgroup', 'option', 'output', 'p', 'param',
+    'pre', 'progress', 'q', 'rp', 'rt', 'ruby', 's', 'samp', 'script',
+    'section', 'select', 'small', 'source', 'span', 'strike', 'strong',
+    'style', 'sub', 'summary', 'sup', 'table', 'tbody', 'td', 'textarea',
+    'tfoot', 'th', 'thead', 'time', 'title', 'tr', 'tt', 'u', 'ul', 'var',
+    'video', 'wbr',
 ])
 
 
