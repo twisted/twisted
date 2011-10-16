@@ -285,6 +285,9 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         # override in subclasses
         self.connectionLost(reason)
 
+
+    _aborting = False
+
     def write(self, data):
         """Reliably write some data.
 
@@ -295,9 +298,18 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         """
         if isinstance(data, unicode): # no, really, I mean it
             raise TypeError("Data must not be unicode")
-        if not self.connected or self._writeDisconnected:
+        if not self.connected or self._writeDisconnected or self._aborting:
             return
         if data:
+            if not self._tempDataBuffer:
+                # The user-space write buffer is empty, so maybe there is some
+                # room in the kernel-space write buffer.  Try to fill it.
+                l = self.writeSomeData(data)
+                if isinstance(l, int) and l > 0:
+                    data = data[l:]
+        if data:
+            # If there is data left, there was no room in the kernel-space write
+            # buffer.  Accumulate it in our user-space write buffer.
             self._tempDataBuffer.append(data)
             self._tempDataLen += len(data)
             # If we are responsible for pausing our producer,
@@ -308,6 +320,12 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
                     self.producerPaused = 1
                     self.producer.pauseProducing()
             self.startWriting()
+        else:
+            if self.producer is not None and ((not self.streamingProducer)
+                                              or self.producerPaused):
+                # tell them to supply some more.
+                self.producerPaused = 0
+                self.reactor.callLater(0, self.producer.resumeProducing)
 
     def writeSequence(self, iovec):
         """Reliably write a sequence of data.
