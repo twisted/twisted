@@ -940,30 +940,27 @@ class SphinxBuilder(object):
         if buildDir is None:
             buildDir = docDir.child('build')
 
-        # TODO: do we want to use -w to write the stdout to a file?
-
-        allSphinxOpts = '-d %s/doctrees %s/source' % (buildDir.path,
-                                                      docDir.path)
+        doctreeDir = buildDir.child('doctrees')
+        sourceDir = docDir.child('source')
 
         # list of sphinx builders and associated extra options
         # each builder will be run with the extra options provided
         builders = [
-                    ('html', ''),
+                    ('html', []),
                    ]
 
         for builder, builderOpts in builders:
+            argsList = ['sphinx-build', '-b', builder]
+            allSphinxOpts = ['-d', doctreeDir.path, sourceDir.path]
             if builderOpts:
-                allSphinxOpts = '%s %s' % (builderOpts, allSphinxOpts)
+                allSphinxOpts.extend(builderOpts)
 
-            #~ outDir = '%s/%s' % (buildDir.path, builder)
             outDir = buildDir.child(builder)
 
-            cmdOutput = runCommand(['sphinx-build',
-                                    '-b',
-                                     builder,
-                                     allSphinxOpts,
-                                     outDir.path
-                                    ])
+            argsList.extend(allSphinxOpts)
+            argsList.append(outDir.path)
+
+            cmdOutput = runCommand(argsList)
 
 
 

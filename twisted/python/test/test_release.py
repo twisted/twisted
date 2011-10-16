@@ -71,6 +71,14 @@ else:
         pydoctorSkip = skip
 
 
+try:
+    import sphinx
+except ImportError:
+    sphinxSkip = "Sphinx not available."
+else:
+    sphinxSkip = None
+
+
 if which("latex") and which("dvips") and which("ps2pdf13"):
     latexSkip = skip
 else:
@@ -1983,7 +1991,8 @@ class SphinxBuilderTests(TestCase):
     @ivar sourceDir: A L{FilePath} representing a directory to be used for
         containing the source files for a Sphinx project.
     """
-
+    skip = sphinxSkip
+    
     confContent = """\
                   source_suffix = '.rst'
                   master_doc = 'index'
@@ -2035,7 +2044,7 @@ class SphinxBuilderTests(TestCase):
         the file extension indicates that it should be html.
         """
         # check that file exists
-        fpath = htmlDir.child(fileName)
+        fpath = fileDir.child(fileName)
         self.assertTrue(fpath.exists())
 
         # check that the output files have some content
@@ -2063,8 +2072,6 @@ class SphinxBuilderTests(TestCase):
         self.builder.build(self.sphinxDir)
 
         # assert some stuff
-
-
         for each in ['doctrees', 'html']:
             fpath = self.sphinxDir.child('build').child(each)
             self.assertTrue(fpath.exists())
