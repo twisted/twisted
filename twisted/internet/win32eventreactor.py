@@ -61,11 +61,9 @@ import win32gui
 # Twisted imports
 from twisted.internet import posixbase
 from twisted.python import log, threadable, failure
-from twisted.internet.interfaces import IReactorFDSet, IReactorProcess
+from twisted.internet.interfaces import IReactorFDSet
 from twisted.internet.interfaces import IReactorWin32Events
 from twisted.internet.threads import blockingCallFromThread
-
-from twisted.internet._dumbwin32proc import Process
 
 
 class Win32Reactor(posixbase.PosixReactorBase):
@@ -82,7 +80,7 @@ class Win32Reactor(posixbase.PosixReactorBase):
     @ivar _events: A dictionary mapping win32 event object to tuples of
         L{FileDescriptor} instances and event masks.
     """
-    implements(IReactorFDSet, IReactorProcess, IReactorWin32Events)
+    implements(IReactorFDSet, IReactorWin32Events)
 
     dummyEvent = CreateEvent(None, 0, 0, None)
 
@@ -228,21 +226,6 @@ class Win32Reactor(posixbase.PosixReactorBase):
             self._disconnectSelectable(fd, closed, action == 'doRead')
 
     doIteration = doWaitForMultipleEvents
-
-    def spawnProcess(self, processProtocol, executable, args=(), env={}, path=None, uid=None, gid=None, usePTY=0, childFDs=None):
-        """Spawn a process."""
-        if uid is not None:
-            raise ValueError("Setting UID is unsupported on this platform.")
-        if gid is not None:
-            raise ValueError("Setting GID is unsupported on this platform.")
-        if usePTY:
-            raise ValueError("PTYs are unsupported on this platform.")
-        if childFDs is not None:
-            raise ValueError(
-                "Custom child file descriptor mappings are unsupported on "
-                "this platform.")
-        args, env = self._checkProcessArgs(args, env)
-        return Process(self, processProtocol, executable, args, env, path)
 
 
 
