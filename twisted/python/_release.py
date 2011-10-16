@@ -913,54 +913,57 @@ class NewsBuilder(object):
 class SphinxBuilder(object):
     """
     Generate HTML documentation using Sphinx.
-    
-    %SPHINXBUILD% -b html %ALLSPHINXOPTS% %BUILDDIR%/html
+
+    Generates and runs a shell command that looks something like:
+        sphinx-build -b html -d [BUILDDIR]/doctrees [DOCDIR]/source [BUILDDIR]/html
+
+    where DOCDIR is a directory containing another directory called
+    "source" which contains the Sphinx source files, and BUILDDIR is the
+    directory in which the Sphinx output will be created.
     """
-    
+
     def build(self, docDir, buildDir=None):
         """
         Build the documentation in C{docDir} with Sphinx.
-        
-        @param docDir: The directory of the documentation.
+
+        @param docDir: The directory of the documentation.  This is a
+            directory which contains another directory called "source"
+            which contains the Sphinx "conf.py" file and sphinx source
+            documents.
         @type docDir: L{twisted.python.filepath.FilePath}
-        
+
         @param buildDir: The directory to build the documentation in.
-        @type docDir: L{twisted.python.filepath.FilePath}
+            By default this will be a child directory of {docDir} named "build".
+        @type buildDir: L{twisted.python.filepath.FilePath}
         """
-        
+
         if buildDir is None:
             buildDir = docDir.child('build')
-        
+
         # TODO: do we want to use -w to write the stdout to a file?
 
-        sphinxBuild = 'sphinx-build'
-        allSphinxOpts = '-d %s/doctrees %s/source' % (buildDir.path, 
+        allSphinxOpts = '-d %s/doctrees %s/source' % (buildDir.path,
                                                       docDir.path)
-        
+
         # list of sphinx builders and associated extra options
         # each builder will be run with the extra options provided
         builders = [
                     ('html', ''),
-                    # text builder info is just here as an example
-                    #~ ('text', '-t thisisatag')
-                    # we probably also want latex/pdf builders
                    ]
-        
-        # TODO: maybe use a dict for config file overrides? (-D options)
-        #       maybe do the same for tags? (-t options)
-        #       maybe even for -A options?
-        
-        for builder, buildOpts in builders:
-            if buildOpts:
-                allSphinxOpts = '%s %s' % (buildOpts, allSphinxOpts)
-        
-            command = '%s -b %s %s %s/%s' % (sphinxBuild, 
-                                             builder, 
-                                             allSphinxOpts, 
-                                             buildDir.path, 
-                                             builder)
 
-            cmdOutput = runCommand(command)
+        for builder, builderOpts in builders:
+            if builderOpts:
+                allSphinxOpts = '%s %s' % (builderOpts, allSphinxOpts)
+
+            #~ outDir = '%s/%s' % (buildDir.path, builder)
+            outDir = buildDir.child(builder)
+
+            cmdOutput = runCommand(['sphinx-build',
+                                    '-b',
+                                     builder,
+                                     allSphinxOpts,
+                                     outDir.path
+                                    ])
 
 
 
