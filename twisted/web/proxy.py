@@ -167,7 +167,7 @@ class Proxy(HTTPChannel):
     """
     This class implements a simple web proxy.
 
-    Since it inherits from L{twisted.protocols.http.HTTPChannel}, to use it you
+    Since it inherits from L{twisted.web.http.HTTPChannel}, to use it you
     should do something like this::
 
         from twisted.web import http
