@@ -6,7 +6,7 @@
 Tests for implementations of L{IReactorUDP} and L{IReactorMulticast}.
 """
 
-from twisted.trial import unittest, util
+from twisted.trial import unittest
 
 from twisted.internet.defer import Deferred, gatherResults, maybeDeferred
 from twisted.internet import protocol, reactor, error, defer, interfaces, udp
@@ -671,12 +671,16 @@ class MulticastTestCase(unittest.TestCase):
         secondPort = reactor.listenMulticast(
             portno, secondClient, listenMultiple=True)
 
-        joined = self.server.transport.joinGroup("225.0.0.250")
+        theGroup = "225.0.0.250"
+        joined = gatherResults([self.server.transport.joinGroup(theGroup),
+                                firstPort.joinGroup(theGroup),
+                                secondPort.joinGroup(theGroup)])
+
 
         def serverJoined(ignored):
             d1 = firstClient.packetReceived = Deferred()
             d2 = secondClient.packetReceived = Deferred()
-            firstClient.transport.write("hello world", ("225.0.0.250", portno))
+            firstClient.transport.write("hello world", (theGroup, portno))
             return gatherResults([d1, d2])
         joined.addCallback(serverJoined)
 
@@ -697,6 +701,7 @@ class MulticastTestCase(unittest.TestCase):
         test_multiListen.skip = ("on non-linux platforms it appears multiple "
                                  "processes can listen, but not multiple sockets "
                                  "in same process?")
+
 
 if not interfaces.IReactorUDP(reactor, None):
     UDPTestCase.skip = "This reactor does not support UDP"
