@@ -29,14 +29,10 @@ from twisted.internet.endpoints import TCP4ServerEndpoint, TCP4ClientEndpoint
 from twisted.internet.protocol import ServerFactory, ClientFactory, Protocol
 from twisted.internet.interfaces import IPushProducer, IPullProducer
 from twisted.internet.protocol import ClientCreator
-from twisted.python.runtime import platform
-from twisted.python.failure import Failure
-from twisted.python import log
-from twisted.trial.unittest import SkipTest, TestCase
 from twisted.internet.tcp import Connection, Server
 
 from twisted.internet.test.connectionmixins import (
-    ConnectionTestsMixin, serverFactoryFor)
+    LogObserverMixin, ConnectionTestsMixin, serverFactoryFor)
 from twisted.internet.test.test_core import ObjectModelIntegrationMixin
 from twisted.test.test_tcp import MyClientFactory, MyServerFactory
 from twisted.test.test_tcp import ClosingProtocol
@@ -574,17 +570,10 @@ class TCPClientTestsBuilder(ReactorBuilder, ConnectionTestsMixin):
 
 
 
-class StreamTransportTestsMixin:
+class StreamTransportTestsMixin(LogObserverMixin):
     """
     Mixin defining tests which apply to any port/connection based transport.
     """
-    def observe(self):
-        loggedMessages = []
-        log.addObserver(loggedMessages.append)
-        self.addCleanup(log.removeObserver, loggedMessages.append)
-        return loggedMessages
-
-
     def test_startedListeningLogMessage(self):
         """
         When a port starts, a message including a description of the associated

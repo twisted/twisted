@@ -5,7 +5,7 @@
 Various helpers for tests for connection-oriented transports.
 """
 
-from twisted.python import context
+from twisted.python import context, log
 from twisted.python.reflect import fullyQualifiedName
 from twisted.python.log import ILogContext, msg, err
 from twisted.internet.defer import Deferred, gatherResults
@@ -202,3 +202,15 @@ class ConnectionTestsMixin(object):
 
         self.runReactor(reactor)
         self.assertEqual(finished, [True, True])
+
+
+
+class LogObserverMixin(object):
+    """
+    Mixin for L{TestCase} subclasses which want to observe log events.
+    """
+    def observe(self):
+        loggedMessages = []
+        log.addObserver(loggedMessages.append)
+        self.addCleanup(log.removeObserver, loggedMessages.append)
+        return loggedMessages

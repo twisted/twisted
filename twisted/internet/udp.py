@@ -31,7 +31,7 @@ else:
 
 # Twisted Imports
 from twisted.internet import base, defer, address
-from twisted.python import log, reflect, failure
+from twisted.python import log, failure
 from twisted.internet import abstract, error, interfaces
 
 
@@ -96,7 +96,8 @@ class Port(base.BasePort):
         # reflect what the OS actually assigned us.
         self._realPortNumber = skt.getsockname()[1]
 
-        log.msg("%s starting on %s"%(self.protocol.__class__, self._realPortNumber))
+        log.msg("%s starting on %s" % (
+                self._getLogPrefix(self.protocol), self._realPortNumber))
 
         self.connected = 1
         self.socket = skt
@@ -196,8 +197,7 @@ class Port(base.BasePort):
     def _loseConnection(self):
         self.stopReading()
         if self.connected: # actually means if we are *listening*
-            from twisted.internet import reactor
-            reactor.callLater(0, self.connectionLost)
+            self.reactor.callLater(0, self.connectionLost)
 
     def stopListening(self):
         if self.connected:
@@ -215,11 +215,10 @@ class Port(base.BasePort):
         """
         Cleans up my socket.
         """
-        log.msg('(Port %s Closed)' % self._realPortNumber)
+        log.msg('(UDP Port %s Closed)' % self._realPortNumber)
         self._realPortNumber = None
         base.BasePort.connectionLost(self, reason)
         self.protocol.doStop()
-        self.connected = 0
         self.socket.close()
         del self.socket
         del self.fileno
