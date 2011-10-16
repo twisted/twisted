@@ -2012,10 +2012,8 @@ class SphinxBuilderTests(TestCase):
         # set up a place for a fake sphinx project
         self.sphinxDir = FilePath(self.mktemp())
         self.sphinxDir.makedirs()
-        print self.sphinxDir.path
         self.sourceDir = self.sphinxDir.child('source')
         self.sourceDir.makedirs()
-        print self.sourceDir.path
 
 
     def createFakeSphinxProject(self):
