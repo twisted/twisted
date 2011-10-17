@@ -125,7 +125,7 @@ some omissions, but if you find one, please feel free to file a bug.
 <h3>Template Attributes</h3>
 
 <code>t:attr</code> tags allow you to set HTML attributes
-(like <code>href</code> in an <code>&lt;a href="...</code>) on an enclosing
+(like <code>href</code> in an <code>&lt;a href=&quot;...</code>) on an enclosing
 element.
 
 <h3>Slots</h3>
@@ -167,6 +167,26 @@ a <code>list</code>. Anything that is iterable will be rendered by <code
     class="API">twisted.web.template</code> rendering each item in it. In
 this case, each item is a copy of the tag the renderer received, each filled
 with the name of a widget.</p>
+
+<h3>Sub-views</h3>
+
+<p>Another common pattern is to delegate the rendering logic for a small part of
+the page to a separate <code>Element</code>.  For example, the widgets from the
+iteration example above might be more complicated to render.  You can define
+an <code>Element</code> subclass which can render a single widget.  The renderer
+method on the container can then yield instances of this
+new <code>Element</code> subclass.</p>
+
+<a href="listings/subviews-1.xml" class="py-listing">subview template</a>
+<a href="listings/subviews-1.py" class="py-listing">subview element</a>
+<a href="listings/subviews-output-1.xml" class="html-listing">subview output</a>
+
+<p><code>TagLoader</code> lets the portion of the overall template related to
+widgets be re-used for <code>WidgetElement</code>, which is otherwise a
+normal <code>Element</code> subclass not much different
+from <code>WidgetsElement</code>.  Notice that the <em>name</em> renderer on
+the <code>span</code> tag in this template is satisfied
+from <code>WidgetElement</code>, not <code>WidgetsElement</code>.</p>
 
 <h3>Transparent</h3>
 

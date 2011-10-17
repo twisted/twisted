@@ -331,6 +331,23 @@ def _flatsaxParse(fl):
     return s.document
 
 
+class TagLoader(object):
+    """
+    An L{ITemplateLoader} that loads existing L{IRenderable} providers.
+
+    @type tag: An L{IRenderable} provider.
+    @param tag: The object which will be loaded.
+    """
+    implements(ITemplateLoader)
+
+    def __init__(self, tag):
+        self.tag = tag
+
+
+    def load(self):
+        return [self.tag]
+
+
 class XMLString(object):
     """
     An L{ITemplateLoader} that loads and parses XML from a string.
@@ -431,7 +448,7 @@ from twisted.web._element import Element, renderer
 from twisted.web._flatten import flatten, flattenString
 
 __all__ = [
-    'TEMPLATE_NAMESPACE', 'VALID_HTML_TAG_NAMES', 'Element', 'renderer',
+    'TEMPLATE_NAMESPACE', 'VALID_HTML_TAG_NAMES', 'Element', 'TagLoader', 'renderer',
     'flatten', 'flattenString', 'tags', 'Comment', 'CDATA', 'Tag', 'slot'
 ]
 

@@ -9,10 +9,13 @@ Tests for L{twisted.web.template}
 
 from cStringIO import StringIO
 
+from zope.interface.verify import verifyObject
+
 from twisted.internet.defer import succeed, gatherResults
 from twisted.trial.unittest import TestCase
 from twisted.web.template import (
-    Element, renderer, tags, XMLFile, XMLString)
+    Element, TagLoader, renderer, tags, XMLFile, XMLString)
+from twisted.web.iweb import ITemplateLoader
 
 from twisted.web.error import MissingTemplateLoader, MissingRenderMethod
 
@@ -499,3 +502,35 @@ class FlattenIntegrationTests(FlattenTestCase):
         self.assertFlattensImmediately(e1, "<p>1 1</p>")
         self.assertFlattensImmediately(e1, "<p>2 2</p>")
         self.assertFlattensImmediately(e2, "<p>3 1</p>")
+
+
+
+class TagLoaderTests(FlattenTestCase):
+    """
+    Tests for L{TagLoader}.
+    """
+    def setUp(self):
+        self.loader = TagLoader(tags.i('test'))
+
+
+    def test_interface(self):
+        """
+        An instance of L{TagLoader} provides L{ITemplateLoader}.
+        """
+        self.assertTrue(verifyObject(ITemplateLoader, self.loader))
+
+
+    def test_loadsList(self):
+        """
+        L{TagLoader.load} returns a list, per L{ITemplateLoader}.
+        """
+        self.assertIsInstance(self.loader.load(), list)
+
+
+    def test_flatten(self):
+        """
+        L{TagLoader} can be used in an L{Element}, and flattens as the tag used
+        to construct the L{TagLoader} would flatten.
+        """
+        e = Element(self.loader)
+        self.assertFlattensImmediately(e, '<i>test</i>')
