@@ -183,13 +183,17 @@ stringSubjects = [
 
 class QuotingTest(unittest.TestCase):
     def test_lowquoteSanity(self):
-        """Testing client-server level quote/dequote"""
+        """
+        Testing client-server level quote/dequote.
+        """
         for s in stringSubjects:
             self.assertEqual(s, irc.lowDequote(irc.lowQuote(s)))
 
 
     def test_ctcpquoteSanity(self):
-        """Testing CTCP message level quote/dequote"""
+        """
+        Testing CTCP message level quote/dequote.
+        """
         for s in stringSubjects:
             self.assertEqual(s, irc.ctcpDequote(irc.ctcpQuote(s)))
 
@@ -1863,32 +1867,6 @@ class ClientTests(TestCase):
             'PRIVMSG %s :\01ACTION %s\01' % (channel, action),
             '']
         self.assertEqual(self.transport.value().split('\r\n'), expected)
-
-
-    def test_me(self):
-        """
-        L{IRCClient.me} sends a CTCP ACTION message to the target channel
-        specified.
-        If the target does not begin with a standard channel prefix,
-        '#' is prepended.
-        """
-        target = 'foo'
-        channel = '#bar'
-        action = 'waves'
-        self.protocol.me(target, action)
-        self.protocol.me(channel, action)
-        expected = [
-            'PRIVMSG %s :\01ACTION %s\01' % ('#' + target, action),
-            'PRIVMSG %s :\01ACTION %s\01' % (channel, action),
-            '']
-        self.assertEqual(self.transport.value().split('\r\n'), expected)
-        warnings = self.flushWarnings(
-            offendingFunctions=[self.test_me])
-        self.assertEqual(
-            warnings[0]['message'],
-            "me() is deprecated since Twisted 9.0. Use IRCClient.describe().")
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
-        self.assertEqual(len(warnings), 2)
 
 
     def test_noticedDoesntPrivmsg(self):

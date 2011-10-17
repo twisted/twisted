@@ -1162,21 +1162,24 @@ class IRCClient(basic.LineReceiver):
     ### Methods relating to the server itself
 
     def created(self, when):
-        """Called with creation date information about the server, usually at logon.
+        """
+        Called with creation date information about the server, usually at logon.
 
         @type when: C{str}
         @param when: A string describing when the server was created, probably.
         """
 
     def yourHost(self, info):
-        """Called with daemon information about the server, usually at logon.
+        """
+        Called with daemon information about the server, usually at logon.
 
         @type info: C{str}
         @param when: A string describing what software the server is running, probably.
         """
 
     def myInfo(self, servername, version, umodes, cmodes):
-        """Called with information about the server, usually at logon.
+        """
+        Called with information about the server, usually at logon.
 
         @type servername: C{str}
         @param servername: The hostname of this server.
@@ -1192,7 +1195,8 @@ class IRCClient(basic.LineReceiver):
         """
 
     def luserClient(self, info):
-        """Called with information about the number of connections, usually at logon.
+        """
+        Called with information about the number of connections, usually at logon.
 
         @type info: C{str}
         @param info: A description of the number of clients and servers
@@ -1200,7 +1204,8 @@ class IRCClient(basic.LineReceiver):
         """
 
     def bounce(self, info):
-        """Called with information about where the client should reconnect.
+        """
+        Called with information about where the client should reconnect.
 
         @type info: C{str}
         @param info: A plaintext description of the address that should be
@@ -1208,7 +1213,8 @@ class IRCClient(basic.LineReceiver):
         """
 
     def isupport(self, options):
-        """Called with various information about what the server supports.
+        """
+        Called with various information about what the server supports.
 
         @type options: C{list} of C{str}
         @param options: Descriptions of features or limits of the server, possibly
@@ -1216,19 +1222,22 @@ class IRCClient(basic.LineReceiver):
         """
 
     def luserChannels(self, channels):
-        """Called with the number of channels existant on the server.
+        """
+        Called with the number of channels existant on the server.
 
         @type channels: C{int}
         """
 
     def luserOp(self, ops):
-        """Called with the number of ops logged on to the server.
+        """
+        Called with the number of ops logged on to the server.
 
         @type ops: C{int}
         """
 
     def luserMe(self, info):
-        """Called with information about the server connected to.
+        """
+        Called with information about the server connected to.
 
         @type info: C{str}
         @param info: A plaintext string describing the number of users and servers
@@ -1238,7 +1247,8 @@ class IRCClient(basic.LineReceiver):
     ### Methods involving me directly
 
     def privmsg(self, user, channel, message):
-        """Called when I have a message from a user to me or a channel.
+        """
+        Called when I have a message from a user to me or a channel.
         """
         pass
 
@@ -1275,7 +1285,8 @@ class IRCClient(basic.LineReceiver):
 
 
     def modeChanged(self, user, channel, set, modes, args):
-        """Called when users or channel's modes are changed.
+        """
+        Called when users or channel's modes are changed.
 
         @type user: C{str}
         @param user: The user and hostmask which instigated this change.
@@ -1301,22 +1312,26 @@ class IRCClient(basic.LineReceiver):
         """
 
     def pong(self, user, secs):
-        """Called with the results of a CTCP PING query.
+        """
+        Called with the results of a CTCP PING query.
         """
         pass
 
     def signedOn(self):
-        """Called after sucessfully signing on to the server.
+        """
+        Called after sucessfully signing on to the server.
         """
         pass
 
     def kickedFrom(self, channel, kicker, message):
-        """Called when I am kicked from a channel.
+        """
+        Called when I am kicked from a channel.
         """
         pass
 
     def nickChanged(self, nick):
-        """Called when my nick has been changed.
+        """
+        Called when my nick has been changed.
         """
         self.nickname = nick
 
@@ -1324,46 +1339,54 @@ class IRCClient(basic.LineReceiver):
     ### Things I observe other people doing in a channel.
 
     def userJoined(self, user, channel):
-        """Called when I see another user joining a channel.
+        """
+        Called when I see another user joining a channel.
         """
         pass
 
     def userLeft(self, user, channel):
-        """Called when I see another user leaving a channel.
+        """
+        Called when I see another user leaving a channel.
         """
         pass
 
     def userQuit(self, user, quitMessage):
-        """Called when I see another user disconnect from the network.
+        """
+        Called when I see another user disconnect from the network.
         """
         pass
 
     def userKicked(self, kickee, channel, kicker, message):
-        """Called when I observe someone else being kicked from a channel.
+        """
+        Called when I observe someone else being kicked from a channel.
         """
         pass
 
     def action(self, user, channel, data):
-        """Called when I see a user perform an ACTION on a channel.
+        """
+        Called when I see a user perform an ACTION on a channel.
         """
         pass
 
     def topicUpdated(self, user, channel, newTopic):
-        """In channel, user changed the topic to newTopic.
+        """
+        In channel, user changed the topic to newTopic.
 
         Also called when first joining a channel.
         """
         pass
 
     def userRenamed(self, oldname, newname):
-        """A user changed their name from oldname to newname.
+        """
+        A user changed their name from oldname to newname.
         """
         pass
 
     ### Information from the server.
 
     def receivedMOTD(self, motd):
-        """I received a message-of-the-day banner from the server.
+        """
+        I received a message-of-the-day banner from the server.
 
         motd is a list of strings, where each string was sent as a seperate
         message from the server. To display, you might want to use::
@@ -1470,6 +1493,7 @@ class IRCClient(basic.LineReceiver):
             self.sendLine("TOPIC %s :%s" % (channel, topic))
         else:
             self.sendLine("TOPIC %s" % (channel,))
+
 
     def mode(self, chan, set, modes, limit = None, user = None, mask = None):
         """
@@ -1653,6 +1677,7 @@ class IRCClient(basic.LineReceiver):
             self.username = nickname
         self.sendLine("USER %s %s %s :%s" % (self.username, hostname, servername, self.realname))
 
+
     def setNick(self, nickname):
         """
         Set this client's nickname.
@@ -1662,6 +1687,7 @@ class IRCClient(basic.LineReceiver):
         """
         self._attemptedNick = nickname
         self.sendLine("NICK %s" % nickname)
+
 
     def quit(self, message = ''):
         """
@@ -1690,26 +1716,6 @@ class IRCClient(basic.LineReceiver):
         self.ctcpMakeQuery(channel, [('ACTION', action)])
 
 
-    def me(self, channel, action):
-        """
-        Strike a pose.
-
-        This function is deprecated since Twisted 9.0. Use describe().
-
-        @type channel: C{str}
-        @param channel: The name of the channel to have an action on. If it
-            has no prefix, C{'#'} will be prepended to it.
-        @type action: C{str}
-        @param action: The action to preform.
-        """
-        warnings.warn("me() is deprecated since Twisted 9.0. Use IRCClient.describe().",
-                DeprecationWarning, stacklevel=2)
-
-        if channel[0] not in CHANNEL_PREFIXES:
-            channel = '#' + channel
-        self.describe(channel, action)
-
-
     _pings = None
     _MAX_PINGRING = 12
 
@@ -1735,6 +1741,7 @@ class IRCClient(basic.LineReceiver):
             excess = self._MAX_PINGRING - len(self._pings)
             for i in xrange(excess):
                 del self._pings[byValue[i][1]]
+
 
     def dccSend(self, user, file):
         if type(file) == types.StringType:
@@ -1762,13 +1769,18 @@ class IRCClient(basic.LineReceiver):
 
         self.ctcpMakeQuery(user, [('DCC', args)])
 
+
     def dccResume(self, user, fileName, port, resumePos):
-        """Send a DCC RESUME request to another user."""
+        """
+        Send a DCC RESUME request to another user.
+        """
         self.ctcpMakeQuery(user, [
             ('DCC', ['RESUME', fileName, port, resumePos])])
 
+
     def dccAcceptResume(self, user, fileName, port, resumePos):
-        """Send a DCC ACCEPT response to clients who have requested a resume.
+        """
+        Send a DCC ACCEPT response to clients who have requested a resume.
         """
         self.ctcpMakeQuery(user, [
             ('DCC', ['ACCEPT', fileName, port, resumePos])])
@@ -2149,7 +2161,8 @@ class IRCClient(basic.LineReceiver):
             self.ctcpMakeReply(nick, [('USERINFO', self.userinfo)])
 
     def ctcpQuery_CLIENTINFO(self, user, channel, data):
-        """A master index of what CTCP tags this client knows.
+        """
+        A master index of what CTCP tags this client knows.
 
         If no arguments are provided, respond with a list of known tags.
         If an argument is provided, provide human-readable help on
