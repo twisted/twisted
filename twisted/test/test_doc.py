@@ -1,13 +1,18 @@
-from twisted.trial import unittest
-import inspect, glob, os
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+import inspect, glob
 from os import path
 
+from twisted.trial import unittest
 from twisted.python import reflect
+from twisted.python.modules import getModule
 
-import twisted
+
 
 def errorInFile(f, line=17, name=''):
-    """Return a filename formatted so emacs will recognize it as an error point
+    """
+    Return a filename formatted so emacs will recognize it as an error point
 
     @param line: Line number in file.  Defaults to 17 because that's about how
         long the copyright headers are.
@@ -15,19 +20,22 @@ def errorInFile(f, line=17, name=''):
     return '%s:%d:%s' % (f, line, name)
     # return 'File "%s", line %d, in %s' % (f, line, name)
 
+
 class DocCoverage(unittest.TestCase):
+    """
+    Looking for docstrings in all modules and packages.
+    """
     def setUp(self):
-        remove = len(os.path.dirname(os.path.dirname(twisted.__file__)))+1
-        def visit(dirlist, directory, files):
-            if '__init__.py' in files:
-                d = directory[remove:].replace('/','.')
-                dirlist.append(d)
         self.packageNames = []
-        os.path.walk(os.path.dirname(twisted.__file__),
-                     visit, self.packageNames)
+        for mod in getModule('twisted').walkModules():
+            if mod.isPackage():
+                self.packageNames.append(mod.name)
+
 
     def testModules(self):
-        """Looking for docstrings in all modules."""
+        """
+        Looking for docstrings in all modules.
+        """
         docless = []
         for packageName in self.packageNames:
             if packageName in ('twisted.test',):
@@ -45,6 +53,7 @@ class DocCoverage(unittest.TestCase):
                 docless.extend(self.modulesInPackage(packageName, package))
         self.failIf(docless, "No docstrings in module files:\n"
                     "%s" % ('\n'.join(map(errorInFile, docless)),))
+
 
     def modulesInPackage(self, packageName, package):
         docless = []
@@ -69,8 +78,11 @@ class DocCoverage(unittest.TestCase):
                     docless.append(modfile)
         return docless
 
+
     def testPackages(self):
-        """Looking for docstrings in all packages."""
+        """
+        Looking for docstrings in all packages.
+        """
         docless = []
         for packageName in self.packageNames:
             try:
