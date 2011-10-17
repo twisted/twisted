@@ -585,6 +585,19 @@ class TestAssertions(unittest.TestCase):
         a = A()
         self.assertRaises(self.failureException, self.assertIsInstance, a, (B, C))
 
+
+    def test_assertIsInstanceCustomMessage(self):
+        """
+        If L{TestCase.assertIsInstance} is passed a custom message as its 3rd
+        argument, the message is included in the failure exception raised when
+        the assertion fails.
+        """
+        exc = self.assertRaises(
+            self.failureException,
+            self.assertIsInstance, 3, str, "Silly assertion")
+        self.assertIn("Silly assertion", str(exc))
+
+
     def test_assertNotIsInstance(self):
         """
         Test a true condition of assertNotIsInstance.
@@ -614,6 +627,7 @@ class TestAssertions(unittest.TestCase):
                                   self.assertNotIsInstance, a, A)
         self.assertEqual(str(error), "%r is an instance of %s" % (a, A))
 
+
     def test_assertNotIsInstanceErrorMultipleClasses(self):
         """
         Test an error with assertNotIsInstance and multiple classes.
@@ -622,6 +636,17 @@ class TestAssertions(unittest.TestCase):
         B = type('B', (object,), {})
         a = A()
         self.assertRaises(self.failureException, self.assertNotIsInstance, a, (A, B))
+
+
+    def test_assertDictEqual(self):
+        """
+        L{twisted.trial.unittest.TestCase} supports the C{assertDictEqual}
+        method inherited from the standard library in Python 2.7.
+        """
+        self.assertDictEqual({'a': 1}, {'a': 1})
+    if getattr(unittest.TestCase, 'assertDictEqual', None) is None:
+        test_assertDictEqual.skip = (
+            "assertDictEqual is not available on this version of Python")
 
 
 

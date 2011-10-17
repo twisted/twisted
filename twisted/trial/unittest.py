@@ -472,7 +472,7 @@ class _Assertions(pyunit.TestCase, object):
         return result
     assertWarns = failUnlessWarns
 
-    def failUnlessIsInstance(self, instance, classOrTuple):
+    def failUnlessIsInstance(self, instance, classOrTuple, message=None):
         """
         Fail if C{instance} is not an instance of the given class or of
         one of the given classes.
@@ -483,9 +483,17 @@ class _Assertions(pyunit.TestCase, object):
         @param classOrTuple: the class or classes to test against (second
             argument of the C{isinstance} call).
         @type classOrTuple: class, type, or tuple.
+
+        @param message: Custom text to include in the exception text if the
+            assertion fails.
         """
         if not isinstance(instance, classOrTuple):
-            self.fail("%r is not an instance of %s" % (instance, classOrTuple))
+            if message is None:
+                suffix = ""
+            else:
+                suffix = ": " + message
+            self.fail("%r is not an instance of %s%s" % (
+                    instance, classOrTuple, suffix))
     assertIsInstance = failUnlessIsInstance
 
     def failIfIsInstance(self, instance, classOrTuple):
