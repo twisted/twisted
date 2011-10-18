@@ -1,6 +1,5 @@
-#compdef tap2rpm
-# This file is deprecated. See README.
-
+#compdef twistd trial conch mktap cftp tapconvert ckeygen lore pyhtmlizer tap2deb tkconch manhole tap2rpm
+#
 # This is the ZSH completion file for Twisted commands. It calls the current
 # command-line with the special "--_shell-completion" option which is handled
 # by twisted.python.usage. t.p.usage then generates zsh code on stdout to

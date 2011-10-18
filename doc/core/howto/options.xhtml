@@ -376,6 +376,50 @@ Usage: myprogram [options]
 Options:
   -o, --one_choice=           [default: 0]. Must be 1, 2 or 3.
 </pre>
+    <h2>Shell tab-completion</h2>
+
+    <p>The <code>Options</code> class may provide tab-completion to interactive
+    command shells. Only <code>zsh</code> is supported at present, but there is 
+    some interest in supporting <code>bash</code> in the future.</p>
+
+    <p>Support is automatic for all of the commands shipped with Twisted. Zsh
+    has shipped, for a number of years, a completion function which ties in to
+    the support provided by the <code>Options</code> class.</p>
+
+    <p>If you are writing a <code>twistd</code> plugin, then tab-completion
+    for your <code>twistd</code> sub-command is also automatic.</p>
+
+    <p>For other commands you may easily provide zsh tab-completion support.
+    Copy the file "twisted/python/twisted-completion.zsh" and name it something
+    like "_mycommand". A leading underscore with no extension is zsh's
+    convention for completion function files.</p>
+
+    <p>Edit the new file and change the first line to refer only to your new
+    command(s), like so:</p>
+
+<pre class="shell">
+#compdef mycommand
+</pre>
+    
+    <p>Then ensure this file is made available to the shell by placing it in
+    one of the directories appearing in zsh's $fpath. Restart zsh, and ensure
+    advanced completion is enabled
+    (<code>autoload -U compinit; compinit)</code>. You should then be able to
+    type the name of your command and press Tab to have your command-line
+    options completed.</p>
+
+    <h3>Completion metadata</h3>
+
+    <p>Optionally, a special attribute, <code>compData</code>, may be defined
+    on your <code>Options</code> subclass in order to provide more information
+    to the shell-completion system. The attribute should be an instance of
+    <a class="API" base="twisted.python.usage">Completions</a>. See that class
+    for further details.</p>
+
+    <p>In addition, <code>compData</code> may be defined on parent classes in
+    your inheritance hiearchy. The information from each
+    <a class="API" base="twisted.python.usage">Completions</a> instance will be
+    aggregated when producing the final tab-completion results.</p>
   </body>
 </html>
 

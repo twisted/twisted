@@ -33,8 +33,6 @@ class Options(usage.Options):
 
     optFlags = []
 
-    zsh_actions = {}
-
 
     longdesc = """\
 procmon runs processes, monitors their progress, and restarts them when they

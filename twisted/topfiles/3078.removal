@@ -1,0 +1,1 @@
+twisted.python.zshcomp is now deprecated in favor of the tab-completion system in twisted.python.usage

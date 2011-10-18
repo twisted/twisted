@@ -1,4 +1,4 @@
-#compdef tap2rpm
+#compdef websetroot
 # This file is deprecated. See README.
 
 # This is the ZSH completion file for Twisted commands. It calls the current

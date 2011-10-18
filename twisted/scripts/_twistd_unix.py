@@ -4,7 +4,7 @@
 
 import os, errno, sys
 
-from twisted.python import log, syslog, logfile
+from twisted.python import log, syslog, logfile, usage
 from twisted.python.util import switchUID, uidFromString, gidFromString
 from twisted.application import app, service
 from twisted import copyright
@@ -41,12 +41,15 @@ class ServerOptions(app.ServerOptions):
                      ['umask', None, None,
                       "The (octal) file creation mask to apply.", _umask],
                     ]
-    zsh_altArgDescr = {"prefix":"Use the given prefix when syslogging (default: twisted)",
-                       "pidfile":"Name of the pidfile (default: twistd.pid)",}
-    #zsh_multiUse = ["foo", "bar"]
-    #zsh_mutuallyExclusive = [("foo", "bar"), ("bar", "baz")]
-    zsh_actions = {"pidfile":'_files -g "*.pid"', "chroot":'_dirs'}
-    zsh_actionDescr = {"chroot":"chroot directory"}
+
+    compData = usage.Completions(
+        optActions={"pidfile": usage.CompleteFiles("*.pid"),
+                    "chroot": usage.CompleteDirs(descr="chroot directory"),
+                    "gid": usage.CompleteGroups(descr="gid to run as"),
+                    "uid": usage.CompleteUsernames(descr="uid to run as"),
+                    "prefix": usage.Completer(descr="syslog prefix"),
+                    },
+        )
 
     def opt_version(self):
         """Print version information and exit.

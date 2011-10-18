@@ -42,12 +42,8 @@ class Options(usage.Options):
                      ["prefixurl", None, "", "The prefix to stick on to relative links; only useful when processing directories"],
                     ]
 
-    #zsh_altArgDescr = {"foo":"use this description for foo instead"}
-    #zsh_multiUse = ["foo", "bar"]
-    #zsh_mutuallyExclusive = [("foo", "bar"), ("bar", "baz")]
-    #zsh_actions = {"foo":'_files -g "*.foo"', "bar":"(one two three)"}
-    #zsh_actionDescr = {"logfile":"log file name", "random":"random seed"}
-    zsh_extras = ["*:files:_files"]
+    compData = usage.Completions(
+        extraActions=[usage.CompleteFiles(descr="files", repeat=True)])
 
     def __init__(self, *args, **kw):
         usage.Options.__init__(self, *args, **kw)

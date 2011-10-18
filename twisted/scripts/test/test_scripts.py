@@ -15,6 +15,7 @@ from subprocess import PIPE, Popen
 from twisted.trial.unittest import SkipTest, TestCase
 from twisted.python.modules import getModule
 from twisted.python.filepath import FilePath
+from twisted.python.test.test_shellcomp import ZshScriptTestMixin
 
 
 class ScriptTestsMixin:
@@ -148,3 +149,20 @@ class ScriptTests(TestCase, ScriptTestsMixin):
             "Seek unzipping software outside of Twisted.",
             warnings[0]['message'])
         self.assertEqual(1, len(warnings))
+
+
+
+class ZshIntegrationTestCase(TestCase, ZshScriptTestMixin):
+    """
+    Test that zsh completion functions are generated without error
+    """
+    generateFor = [('mktap', 'twisted.scripts.mktap.FirstPassOptions'),
+                   ('twistd', 'twisted.scripts.twistd.ServerOptions'),
+                   ('trial', 'twisted.scripts.trial.Options'),
+                   ('pyhtmlizer', 'twisted.scripts.htmlizer.Options'),
+                   ('tap2rpm', 'twisted.scripts.tap2rpm.MyOptions'),
+                   ('tap2deb', 'twisted.scripts.tap2deb.MyOptions'),
+                   ('tapconvert', 'twisted.scripts.tapconvert.ConvertOptions'),
+                   ('manhole', 'twisted.scripts.manhole.MyOptions')
+                   ]
+

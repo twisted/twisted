@@ -37,7 +37,10 @@ class Options(usage.Options):
     ]
 
     optFlags = [['nointernal', 'i', "Don't run internal services"]]
-    zsh_actions = {"file" : "_files -g '*.conf'"}
+
+    compData = usage.Completions(
+        optActions={"file": usage.CompleteFiles('*.conf')}
+        )
 
 class RPCServer(internet.TCPServer):
 

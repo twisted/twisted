@@ -1,7 +1,6 @@
-# -*- test-case-name: twisted.test.test_zshcomp -*-
+# -*- test-case-name: twisted.python.test.test_zshcomp -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 """
 Rebuild the completion functions for the currently active version of Twisted::
     $ python zshcomp.py -i
@@ -134,10 +133,17 @@ For some extra verbosity, and general niceness add these lines too::
 
 Have fun!
 """
+import warnings
+warnings.warn(
+    "zshcomp is deprecated as of Twisted 11.1. Shell tab-completion is now "
+    "handled by twisted.python.usage.", DeprecationWarning, stacklevel=2)
+
 import itertools, sys, commands, os.path
 
 from twisted.python import reflect, util, usage
 from twisted.scripts.mktap import IServiceMaker
+
+
 
 class MyOptions(usage.Options):
     """
@@ -151,6 +157,8 @@ class MyOptions(usage.Options):
                  'Twisted package)']]
     optParameters = [["directory", "d", None,
                       "Output files to this directory"]]
+
+
     def postOptions(self):
         if self['install'] and self['directory']:
             raise usage.UsageError, "Can't have --install and " \
@@ -159,6 +167,8 @@ class MyOptions(usage.Options):
             raise usage.UsageError, "Not enough arguments"
         if self['directory'] and not os.path.isdir(self['directory']):
             raise usage.UsageError, "%s is not a directory" % self['directory']
+
+
 
 class Builder:
     def __init__(self, cmd_name, options, file):
@@ -178,6 +188,7 @@ class Builder:
         self.options = options
         self.file = file
 
+
     def write(self):
         """
         Write the completion function to the file given to __init__
@@ -188,6 +199,8 @@ class Builder:
         gen = ArgumentsGenerator(self.cmd_name, self.options, self.file)
         gen.write()
 
+
+
 class SubcommandBuilder(Builder):
     """
     Use this builder for commands that have sub-commands. twisted.python.usage
@@ -196,6 +209,7 @@ class SubcommandBuilder(Builder):
     """
     interface = None
     subcmdLabel = None
+
 
     def write(self):
         """
@@ -233,6 +247,8 @@ case $service in\n""" % (self.subcmdLabel,))
         self.file.write("*) _message \"don't know how to" \
                         " complete $service\";;\nesac")
 
+
+
 class MktapBuilder(SubcommandBuilder):
     """
     Builder for the mktap command
@@ -240,12 +256,16 @@ class MktapBuilder(SubcommandBuilder):
     interface = IServiceMaker
     subcmdLabel = 'tap to build'
 
+
+
 class TwistdBuilder(SubcommandBuilder):
     """
     Builder for the twistd command
     """
     interface = IServiceMaker
     subcmdLabel = 'service to run'
+
+
 
 class ArgumentsGenerator:
     """
@@ -327,6 +347,7 @@ class ArgumentsGenerator:
 
         self.excludes = self.makeExcludesDict()
 
+
     def write(self):
         """
         Write the zsh completion code to the file given to __init__
@@ -337,12 +358,14 @@ class ArgumentsGenerator:
         self.writeOptions()
         self.writeFooter()
 
+
     def writeHeader(self):
         """
         This is the start of the code that calls _arguments
         @return: C{None}
         """
         self.file.write('_arguments -s -A "-*" \\\n')
+
 
     def writeOptions(self):
         """
@@ -354,6 +377,7 @@ class ArgumentsGenerator:
         for long in optNames:
             self.writeOpt(long)
 
+
     def writeExtras(self):
         """
         Write out the "extras" list. These are just passed verbatim to the
@@ -364,12 +388,14 @@ class ArgumentsGenerator:
             self.file.write(escape(s))
             self.file.write(' \\\n')
 
+
     def writeFooter(self):
         """
         Write the last bit of code that finishes the call to _arguments
         @return: C{None}
         """
         self.file.write('&& return 0\n')
+
 
     def verifyZshNames(self):
         """
@@ -392,6 +418,7 @@ class ArgumentsGenerator:
             for name in seq:
                 if name not in self.optAll_d:
                     err(name)
+
 
     def excludeStr(self, long, buildShort=False):
         """
@@ -436,6 +463,7 @@ class ArgumentsGenerator:
                 strings.append("--" + optName)
         return "(%s)" % " ".join(strings)
 
+
     def makeExcludesDict(self):
         """
         @return: A C{dict} that maps each option name appearing in
@@ -467,6 +495,7 @@ class ArgumentsGenerator:
                 else:
                     excludes[long] = tmp
         return excludes
+
 
     def writeOpt(self, long):
         """
@@ -520,6 +549,7 @@ class ArgumentsGenerator:
             multi_field, long_field, descr_field, action_field)))
         self.file.write(' \\\n')
 
+
     def getAction(self, long):
         """
         Return a zsh "action" string for the given argument
@@ -535,6 +565,7 @@ class ArgumentsGenerator:
             return ':%s:_files' % self.getActionDescr(long)
         return ''
 
+
     def getActionDescr(self, long):
         """
         Return the description to be used when this argument is completed
@@ -544,6 +575,7 @@ class ArgumentsGenerator:
             return self.actionDescr[long]
         else:
             return long
+
 
     def getDescription(self, long):
         """
@@ -576,6 +608,7 @@ class ArgumentsGenerator:
 
         return long # we really ought to have a good description to use
 
+
     def getShortOption(self, long):
         """
         Return the short option letter or None
@@ -586,6 +619,7 @@ class ArgumentsGenerator:
             return optList[0] or None
         except IndexError:
             pass
+
 
     def addAdditionalOptions(self):
         """
@@ -627,6 +661,8 @@ class ArgumentsGenerator:
                 raise TypeError, '%r has wrong number ' \
                                  'of arguments' % (methodObj,)
 
+
+
 def descrFromDoc(obj):
     """
     Generate an appropriate description from docstring of the given object
@@ -646,6 +682,8 @@ def descrFromDoc(obj):
         pass
     return descr
 
+
+
 def firstLine(s):
     """
     Return the first line of the given string
@@ -656,11 +694,15 @@ def firstLine(s):
     except ValueError:
         return s
 
+
+
 def escape(str):
     """
     Shell escape the given string
     """
     return commands.mkarg(str)[1:]
+
+
 
 def siteFunctionsPath():
     """
@@ -674,6 +716,8 @@ def siteFunctionsPath():
             return output
     except:
         pass
+
+
 
 generateFor = [('conch', 'twisted.conch.scripts.conch', 'ClientOptions'),
                ('mktap', 'twisted.scripts.mktap', 'FirstPassOptions'),
@@ -692,6 +736,8 @@ generateFor = [('conch', 'twisted.conch.scripts.conch', 'ClientOptions'),
 
 specialBuilders = {'mktap'  : MktapBuilder,
                    'twistd' : TwistdBuilder}
+
+
 
 def makeCompFunctionFiles(out_path, generateFor=generateFor,
                           specialBuilders=specialBuilders):
@@ -742,8 +788,12 @@ def makeCompFunctionFiles(out_path, generateFor=generateFor,
             continue
     return skips
 
+
+
 def _openCmdFile(out_path, cmd_name):
     return file(os.path.join(out_path, '_'+cmd_name), 'w')
+
+
 
 def run():
     options = MyOptions()
@@ -767,6 +817,8 @@ def run():
         sys.stderr.write(str(error)+'\n')
     if skips:
         sys.exit(3)
+
+
 
 if __name__ == '__main__':
     run()

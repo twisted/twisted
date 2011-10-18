@@ -28,7 +28,11 @@ class Options(usage.Options):
          ["moduli", "", None, "directory to look for moduli in "
                               "(if different from --data)"]
     ]
-    zsh_actions = {"data" : "_dirs", "moduli" : "_dirs"}
+    compData = usage.Completions(
+        optActions={"data" : usage.CompleteDirs(descr="data directory"),
+                    "moduli" : usage.CompleteDirs(descr="moduli directory"),
+                    "interface" : usage.CompleteNetInterfaces()}
+        )
 
 
 def makeService(config):

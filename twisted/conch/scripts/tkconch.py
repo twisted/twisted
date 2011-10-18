@@ -192,7 +192,7 @@ class GeneralOptions(usage.Options):
                     ['localforward', 'L', None, 'listen-port:host:port   Forward local port to remote address'],
                     ['remoteforward', 'R', None, 'listen-port:host:port   Forward remote port to local address'],
                     ]
-    
+
     optFlags = [['tty', 't', 'Tty; allocate a tty even if command is given.'],
                 ['notty', 'T', 'Do not allocate a tty.'],
                 ['version', 'V', 'Display version number only.'],
@@ -202,16 +202,20 @@ class GeneralOptions(usage.Options):
                 ['log', 'v', 'Log to stderr'],
                 ['ansilog', 'a', 'Print the receieved data to stdout']]
 
-    #zsh_altArgDescr = {"foo":"use this description for foo instead"}
-    #zsh_multiUse = ["foo", "bar"]
-    zsh_mutuallyExclusive = [("tty", "notty")]
-    zsh_actions = {"cipher":"(%s)" % " ".join(transport.SSHClientTransport.supportedCiphers),
-                   "macs":"(%s)" % " ".join(transport.SSHClientTransport.supportedMACs)}
-    zsh_actionDescr = {"localforward":"listen-port:host:port",
-                       "remoteforward":"listen-port:host:port"}
-    # user, host, or user@host completion similar to zsh's ssh completion
-    zsh_extras = ['1:host | user@host:{_ssh;if compset -P "*@"; then _wanted hosts expl "remote host name" _ssh_hosts && ret=0 elif compset -S "@*"; then _wanted users expl "login name" _ssh_users -S "" && ret=0 else if (( $+opt_args[-l] )); then tmp=() else tmp=( "users:login name:_ssh_users -qS@" ) fi; _alternative "hosts:remote host name:_ssh_hosts" "$tmp[@]" && ret=0 fi}',
-                  '*:command: ']
+    _ciphers = transport.SSHClientTransport.supportedCiphers
+    _macs = transport.SSHClientTransport.supportedMACs
+
+    compData = usage.Completions(
+        mutuallyExclusive=[("tty", "notty")],
+        optActions={
+            "cipher": usage.CompleteList(_ciphers),
+            "macs": usage.CompleteList(_macs),
+            "localforward": usage.Completer(descr="listen-port:host:port"),
+            "remoteforward": usage.Completer(descr="listen-port:host:port")},
+        extraActions=[usage.CompleteUserAtHost(),
+                      usage.Completer(descr="command"),
+                      usage.Completer(descr="argument", repeat=True)]
+        )
 
     identitys = []
     localForwards = []

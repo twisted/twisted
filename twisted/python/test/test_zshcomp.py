@@ -4,12 +4,14 @@
 """
 Test cases for twisted.python.zshcomp
 """
-
-import os, os.path
+import os
+import os.path
 from cStringIO import StringIO
 
 from twisted.trial import unittest
 from twisted.python import zshcomp, usage
+
+
 
 class ZshcompTestCase(unittest.TestCase):
     """
@@ -29,55 +31,60 @@ class ZshcompTestCase(unittest.TestCase):
             if info[0] in skippedCmds:
                 continue
             funcPath = os.path.join(dirname, '_' + info[0])
-            self.failUnless(os.path.exists(funcPath))
+            self.assertTrue(os.path.exists(funcPath))
+
 
     def test_accumulateMetadata(self):
         """
-        Test that the zsh_* variables you can place on Option classes gets
-        picked up correctly
+        The zsh_* variables you can place on Options classes are
+        picked up correctly?
         """
-        opts = TestOptions2()
+        opts = FighterAceExtendedOptions()
         ag = zshcomp.ArgumentsGenerator('dummy_cmd', opts, 'dummy_value')
 
-        altArgDescr = TestOptions.zsh_altArgDescr.copy()
-        altArgDescr.update(TestOptions2.zsh_altArgDescr)
+        altArgDescr = FighterAceOptions.zsh_altArgDescr.copy()
+        altArgDescr.update(FighterAceExtendedOptions.zsh_altArgDescr)
 
-        actionDescr = TestOptions.zsh_actionDescr.copy()
-        actionDescr.update(TestOptions2.zsh_actionDescr)
+        actionDescr = FighterAceOptions.zsh_actionDescr.copy()
+        actionDescr.update(FighterAceExtendedOptions.zsh_actionDescr)
 
         self.assertEqual(ag.altArgDescr, altArgDescr)
         self.assertEqual(ag.actionDescr, actionDescr)
-        self.assertEqual(ag.multiUse, TestOptions.zsh_multiUse)
+        self.assertEqual(ag.multiUse, FighterAceOptions.zsh_multiUse)
         self.assertEqual(ag.mutuallyExclusive,
-                              TestOptions.zsh_mutuallyExclusive)
-        self.assertEqual(ag.actions, TestOptions.zsh_actions)
-        self.assertEqual(ag.extras, TestOptions.zsh_extras)
+                          FighterAceOptions.zsh_mutuallyExclusive)
+        self.assertEqual(ag.actions, FighterAceOptions.zsh_actions)
+        self.assertEqual(ag.extras, FighterAceOptions.zsh_extras)
+
 
     def test_accumulateAdditionalOptions(self):
         """
-        Test that we pick up options that are only defined by having an
+        We pick up options that are only defined by having an
         appropriately named method on your Options class,
         e.g. def opt_foo(self, foo)
         """
-        opts = TestOptions2()
+        opts = FighterAceExtendedOptions()
         ag = zshcomp.ArgumentsGenerator('dummy_cmd', opts, 'dummy_value')
 
-        self.failUnless('nocrash' in ag.optFlags_d and \
-                        'nocrash' in ag.optAll_d)
-        self.failUnless('difficulty' in ag.optParams_d and \
-                        'difficulty' in ag.optAll_d)
+        self.assertIn('nocrash', ag.optFlags_d)
+        self.assertIn('nocrash', ag.optAll_d)
+
+        self.assertIn('difficulty', ag.optParams_d)
+        self.assertIn('difficulty', ag.optAll_d)
+
 
     def test_verifyZshNames(self):
         """
-        Test that using a parameter/flag name that doesn't exist
+        Using a parameter/flag name that doesn't exist
         will raise an error
         """
-        class TmpOptions(TestOptions2):
+        class TmpOptions(FighterAceExtendedOptions):
             zsh_actions = {'detaill' : 'foo'} # Note typo of detail
 
         opts = TmpOptions()
-        self.failUnlessRaises(ValueError, zshcomp.ArgumentsGenerator,
+        self.assertRaises(ValueError, zshcomp.ArgumentsGenerator,
                               'dummy_cmd', opts, 'dummy_value')
+
 
     def test_zshCode(self):
         """
@@ -85,16 +92,17 @@ class ZshcompTestCase(unittest.TestCase):
         against a known correct output
         """
         cmd_name = 'testprog'
-        opts = CodeTestOptions()
+        opts = SillyOptions()
         f = StringIO()
         b = zshcomp.Builder(cmd_name, opts, f)
         b.write()
         f.reset()
         self.assertEqual(f.read(), testOutput1)
 
+
     def test_skipBuild(self):
         """
-        Test that makeCompFunctionFiles skips building for commands whos
+        makeCompFunctionFiles skips building for commands whos
         script module cannot be imported
         """
         generateFor = [('test_cmd', 'no.way.your.gonna.import.this', 'Foo')]
@@ -103,12 +111,13 @@ class ZshcompTestCase(unittest.TestCase):
         self.assertEqual(len(skips), 1)
         self.assertEqual(len(skips[0]), 2)
         self.assertEqual(skips[0][0], 'test_cmd')
-        self.failUnless(isinstance(skips[0][1], ImportError))
-        self.flushLoggedErrors(self, ImportError)
+        self.assertTrue(isinstance(skips[0][1], ImportError))
 
-class TestOptions(usage.Options):
+
+
+class FighterAceOptions(usage.Options):
     """
-    Command-line options for an imaginary game
+    Command-line options for an imaginary "Fighter Ace" game
     """
     optFlags = [['fokker', 'f',
                  'Select the Fokker Dr.I as your dogfighter aircraft'],
@@ -130,8 +139,7 @@ class TestOptions(usage.Options):
                       'Manfred von Richthofen'],
                      ['detail', 'd',
                       'Select the level of rendering detail (1-5)', '3'],
-            ]
-
+                     ]
 
     zsh_altArgDescr = {'physics' : 'Twisted-Physics',
                        'detail' : 'Rendering detail level'}
@@ -141,11 +149,13 @@ class TestOptions(usage.Options):
     zsh_actions = {'detail' : '(1 2 3 4 5)'}
     zsh_extras = [':saved game file to load:_files']
 
-class TestOptions2(TestOptions):
+
+
+class FighterAceExtendedOptions(FighterAceOptions):
     """
-    Extend the options and zsh metadata provided by TestOptions. zshcomp must
-    accumulate options and metadata from all classes in the hiearchy so this
-    is important for testing
+    Extend the options and zsh metadata provided by FighterAceOptions. zshcomp
+    must accumulate options and metadata from all classes in the hiearchy so
+    this is important for testing
     """
     optFlags = [['no-stalls', None,
                  'Turn off the ability to stall your aircraft']]
@@ -155,18 +165,24 @@ class TestOptions2(TestOptions):
     zsh_altArgDescr = {'no-stalls' : 'Can\'t stall your plane'}
     zsh_actionDescr = {'reality-level' : 'Physics reality level'}
 
+
     def opt_nocrash(self):
         """Select that you can't crash your plane"""
+
 
     def opt_difficulty(self, difficulty):
         """How tough are you? (1-10)"""
 
+
+
 def _accuracyAction():
     return '(1 2 3)'
 
-class CodeTestOptions(usage.Options):
+
+
+class SillyOptions(usage.Options):
     """
-    Command-line options for an imaginary program
+    Command-line options for a "silly" program
     """
     optFlags = [['color', 'c', 'Turn on color output'],
                 ['gray', 'g', 'Turn on gray-scale output'],
@@ -191,6 +207,8 @@ class CodeTestOptions(usage.Options):
                    'accuracy' : _accuracyAction}
     zsh_extras = [':output file:_files']
 
+
+
 testOutput1 = """#compdef testprog
 _arguments -s -A "-*" \\
 ':output file:_files' \\
@@ -204,7 +222,7 @@ _arguments -s -A "-*" \\
 '--optimization=[Optimization level]:Optimization?:(1 2 3 4 5)' \\
 '*-v[Verbose logging (may be specified more than once)]' \\
 '*--verbose[Verbose logging (may be specified more than once)]' \\
-'--version[version]' \\
+'--version[Display Twisted version and exit.]' \\
 && return 0
 """
 

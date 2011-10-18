@@ -1,0 +1,3 @@
+Zsh tab-completion of Twisted commands no longer relies on statically generated
+files, but instead generates results on-the-fly - ensuring accurate
+tab-completion for the version of Twisted actually in use.

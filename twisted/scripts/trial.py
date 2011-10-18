@@ -89,8 +89,9 @@ def isTestFile(filename):
             and os.path.splitext(basename)[1] == ('.py'))
 
 
-def _zshReporterAction():
-    return "(%s)" % (" ".join([p.longOpt for p in plugin.getPlugins(itrial.IReporter)]),)
+def _reporterAction():
+    return usage.CompleteList([p.longOpt for p in
+                               plugin.getPlugins(itrial.IReporter)])
 
 class Options(usage.Options, app.ReactorSelectionMixin):
     synopsis = """%s [options] [[file|package|module|TestCase|testmethod]...]
@@ -130,11 +131,15 @@ class Options(usage.Options, app.ReactorSelectionMixin):
          'The reporter to use for this test run.  See --help-reporters for '
          'more info.']]
 
-    zsh_actions = {"tbformat":"(plain emacs cgitb)",
-                   "reporter":_zshReporterAction}
-    zsh_actionDescr = {"logfile":"log file name",
-                       "random":"random seed"}
-    zsh_extras = ["*:file|module|package|TestCase|testMethod:_files -g '*.py'"]
+    compData = usage.Completions(
+        optActions={"tbformat": usage.CompleteList(["plain", "emacs", "cgitb"]),
+                    "reporter": _reporterAction,
+                    "logfile": usage.CompleteFiles(descr="log file name"),
+                    "random": usage.Completer(descr="random seed")},
+        extraActions=[usage.CompleteFiles(
+                "*.py", descr="file | module | package | TestCase | testMethod",
+                repeat=True)],
+        )
 
     fallbackReporter = reporter.TreeReporter
     extra = None

@@ -38,9 +38,11 @@ class Options(usage.Options):
                  "Displaying tracebacks to users may be security risk!"],
                 ]
 
-    zsh_actions = {"logfile" : "_files -g '*.log'", "certificate" : "_files -g '*.pem'",
-                   "privkey" : "_files -g '*.pem'"}
-
+    compData = usage.Completions(
+                   optActions={"logfile" : usage.CompleteFiles("*.log"),
+                               "certificate" : usage.CompleteFiles("*.pem"),
+                               "privkey" : usage.CompleteFiles("*.pem")}
+                   )
 
     longdesc = """\
 This starts a webserver.  If you specify no arguments, it will be a

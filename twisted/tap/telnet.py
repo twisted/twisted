@@ -19,7 +19,10 @@ class Options(usage.Options):
          ["password", "w", "changeme","set the password"],
          ["port", "p", "4040", "port to listen on"],
     ]
-    zsh_actions = {"username":"_users"}
+
+    compData = usage.Completions(
+        optActions={"username": usage.CompleteUsernames()}
+        )
 
 def makeService(config):
     t = telnet.ShellFactory()

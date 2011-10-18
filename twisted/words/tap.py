@@ -21,6 +21,8 @@ class Options(usage.Options, strcred.AuthOptionMixin):
         ('hostname', None, socket.gethostname(),
          'Name of this server; purely an informative')]
 
+    compData = usage.Completions(multiUse=["group"])
+
     interfacePlugins = {}
     plg = None
     for plg in plugin.getPlugins(iwords.IProtocolPlugin):

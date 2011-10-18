@@ -26,6 +26,10 @@ class Options(usage.Options):
         ["password-file", "", None,           "username:password-style credentials database"],
     ]
 
+    compData = usage.Completions(
+        optActions={"root": usage.CompleteDirs(descr="root of the ftp site")}
+        )
+
     longdesc = ''
 
 

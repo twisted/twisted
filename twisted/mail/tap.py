@@ -65,7 +65,10 @@ class Options(usage.Options, strcred.AuthOptionMixin):
         "smtp": 8025,
     }
 
-    zsh_actions = {"hostname" : "_hosts"}
+    compData = usage.Completions(
+                   optActions={"hostname" : usage.CompleteHostnames(),
+                               "certificate" : usage.CompleteFiles("*.pem")}
+                   )
 
     longdesc = "This creates a mail.tap file that can be used by twistd."
 

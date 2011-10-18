@@ -31,6 +31,10 @@ class Options(usage.Options):
         ["verbose",     "v", "Log verbosely"],
     ]
 
+    compData = usage.Completions(
+        optActions={"interface" : usage.CompleteNetInterfaces()}
+        )
+
     zones = None
     zonefiles = None
 

@@ -33,7 +33,10 @@ class Options(usage.Options):
     optParameters = [
         ('stylesheet', 's', None, "URL of stylesheet to link to."),
         ]
-    zsh_extras = ["1:source python file:_files -g '*.py'"]
+
+    compData = usage.Completions(
+        extraActions=[usage.CompleteFiles('*.py', descr='source python file')]
+        )
 
     def parseArgs(self, filename):
         self['filename'] = filename

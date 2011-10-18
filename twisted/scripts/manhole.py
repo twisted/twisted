@@ -59,7 +59,11 @@ class MyOptions(usage.Options):
                    ("perspective", "P", "",
                     "PB Perspective to ask for "
                     "(if different than username)")]
-    zsh_actions = {"host":"_hosts"}
+
+    compData = usage.Completions(
+        optActions={"host": usage.CompleteHostnames(),
+                    "user": usage.CompleteUsernames()}
+        )
 
 if __name__ == '__main__':
     run()

@@ -1,38 +1,34 @@
 #compdef tkconch
-_arguments -s -A "-*" \
-'1:host | user@host:{_ssh;if compset -P "*@"; then _wanted hosts expl "remote host name" _ssh_hosts && ret=0 elif compset -S "@*"; then _wanted users expl "login name" _ssh_users -S "" && ret=0 else if (( $+opt_args[-l] )); then tmp=() else tmp=( "users:login name:_ssh_users -qS@" ) fi; _alternative "hosts:remote host name:_ssh_hosts" "$tmp[@]" && ret=0 fi}' \
-'*:command: ' \
-'(--ansilog)-a[Print the receieved data to stdout]' \
-'(-a)--ansilog[Print the receieved data to stdout]' \
-'(--cipher)-c[Select encryption algorithm.]:cipher:(aes256-ctr aes256-cbc aes192-ctr aes192-cbc aes128-ctr aes128-cbc cast128-ctr cast128-cbc blowfish-ctr blowfish idea-ctridea-cbc 3des-ctr 3des-cbc)' \
-'(-c)--cipher=[Select encryption algorithm.]:cipher:(aes256-ctr aes256-cbc aes192-ctr aes192-cbc aes128-ctr aes128-cbc cast128-ctr cast128-cbc blowfish-ctr blowfish idea-ctridea-cbc 3des-ctr 3des-cbc)' \
-'(--compress)-C[Enable compression.]' \
-'(-C)--compress[Enable compression.]' \
-"(--escape)-e[Set escape character; \`\`none'' = disable]:escape:_files" \
-"(-e)--escape=[Set escape character; \`\`none'' = disable]:escape:_files" \
-'--help[Display this help and exit.]' \
-'(--identity)-i[Identity for public key authentication]:identity:_files' \
-'(-i)--identity=[Identity for public key authentication]:identity:_files' \
-'(--localforward)-L[listen-port:host:port   Forward local port to remote address]:listen-port:host:port:_files' \
-'(-L)--localforward=[listen-port:host:port   Forward local port to remote address]:listen-port:host:port:_files' \
-'(--log)-v[Log to stderr]' \
-'(-v)--log[Log to stderr]' \
-'(--macs)-m[Specify MAC algorithms for protocol version 2.]:macs:(hmac-sha1 hmac-md5)' \
-'(-m)--macs=[Specify MAC algorithms for protocol version 2.]:macs:(hmac-sha1 hmac-md5)' \
-'(--noshell)-N[Do not execute a shell or command.]' \
-'(-N)--noshell[Do not execute a shell or command.]' \
-'(--tty -t --notty)-T[Do not allocate a tty.]' \
-'(--tty -t -T)--notty[Do not allocate a tty.]' \
-'(--port)-p[Connect to this port.  Server must be on the same port.]:port:_files' \
-'(-p)--port=[Connect to this port.  Server must be on the same port.]:port:_files' \
-'(--remoteforward)-R[listen-port:host:port   Forward remote port to local address]:listen-port:host:port:_files' \
-'(-R)--remoteforward=[listen-port:host:port   Forward remote port to local address]:listen-port:host:port:_files' \
-'(--subsystem)-s[Invoke command (mandatory) as SSH2 subsystem.]' \
-'(-s)--subsystem[Invoke command (mandatory) as SSH2 subsystem.]' \
-'(--notty -T --tty)-t[Tty; allocate a tty even if command is given.]' \
-'(--notty -T -t)--tty[Tty; allocate a tty even if command is given.]' \
-'(--user)-l[Log in using this user name.]:user:_files' \
-'(-l)--user=[Log in using this user name.]:user:_files' \
-'(--version)-V[Display version number only.]' \
-'(-V)--version[Display version number only.]' \
-&& return 0
+# This file is deprecated. See README.
+
+# This is the ZSH completion file for Twisted commands. It calls the current
+# command-line with the special "--_shell-completion" option which is handled
+# by twisted.python.usage. t.p.usage then generates zsh code on stdout to
+# handle the completions for this particular command-line.
+#
+# 3rd parties that wish to provide zsh completion for commands that
+# use t.p.usage may copy this file and change the first line to reference
+# the name(s) of their command(s).
+#
+# This file is included in the official Zsh distribution as
+# Completion/Unix/Command/_twisted
+
+# redirect stderr to /dev/null otherwise deprecation warnings may get puked
+# all over the user's terminal if completing options for mktap or other
+# deprecated commands. Redirect stderr to a file to debug errors.
+local cmd output
+cmd=("$words[@]" --_shell-completion zsh:$CURRENT)
+output=$("$cmd[@]" 2>/dev/null)
+
+if [[ $output == "#compdef "* ]]; then
+    # Looks like we got a valid completion function - so eval it to produce
+    # the completion matches.
+    eval $output
+else
+    echo "\nCompletion error running command:" ${(qqq)cmd}
+    echo -n "If output below is unhelpful you may need to edit this file and "
+    echo    "redirect stderr to a file."
+    echo "Expected completion function, but instead got:" 
+    echo $output
+    return 1
+fi

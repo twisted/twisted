@@ -152,12 +152,11 @@ class MyOptions(usage.Options):
                       "'source' or 'python'"],
                     ]
 
-    #zsh_altArgDescr = {"foo":"use this description for foo instead"}
-    #zsh_multiUse = ["foo", "bar"]
-    #zsh_mutuallyExclusive = [("foo", "bar"), ("bar", "baz")]
-    zsh_actions = {"type":"(tap xml source python)",
-                   "rpmfile":'_files -g "*.rpm"'}
-    #zsh_actionDescr = {"logfile":"log file name", "random":"random seed"}
+    compData = usage.Completions(
+        optActions={"type": usage.CompleteList(["tap", "xml", "source",
+                                                "python"]),
+                    "rpmfile": usage.CompleteFiles("*.rpm")}
+        )
 
     def postOptions(self):
         """

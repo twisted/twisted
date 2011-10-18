@@ -40,6 +40,7 @@ else:
 
 from twisted.trial.unittest import TestCase
 from twisted.scripts.test.test_scripts import ScriptTestsMixin
+from twisted.python.test.test_shellcomp import ZshScriptTestMixin
 
 
 
@@ -67,3 +68,15 @@ class ScriptTests(TestCase, ScriptTestsMixin):
     def test_tkconch(self):
         self.scriptTest("conch/tkconch")
     test_tkconch.skip = tkskip or skip
+
+
+
+class ZshIntegrationTestCase(TestCase, ZshScriptTestMixin):
+    """
+    Test that zsh completion functions are generated without error
+    """
+    generateFor = [('conch', 'twisted.conch.scripts.conch.ClientOptions'),
+                   ('cftp', 'twisted.conch.scripts.cftp.ClientOptions'),
+                   ('ckeygen', 'twisted.conch.scripts.ckeygen.GeneralOptions'),
+                   ('tkconch', 'twisted.conch.scripts.tkconch.GeneralOptions'),
+                   ]

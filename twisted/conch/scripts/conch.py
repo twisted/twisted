@@ -37,13 +37,15 @@ class ClientOptions(options.ConchOptions):
                  ['subsystem', 's', 'Invoke command (mandatory) as SSH2 subsystem.'],
                 ]
 
-    #zsh_altArgDescr = {"foo":"use this description for foo instead"}
-    #zsh_multiUse = ["foo", "bar"]
-    #zsh_mutuallyExclusive = [("foo", "bar"), ("bar", "baz")]
-    #zsh_actions = {"foo":'_files -g "*.foo"', "bar":"(one two three)"}
-    zsh_actionDescr = {"localforward":"listen-port:host:port",
-                       "remoteforward":"listen-port:host:port"}
-    zsh_extras = ["*:command: "]
+    compData = usage.Completions(
+        mutuallyExclusive=[("tty", "notty")],
+        optActions={
+            "localforward": usage.Completer(descr="listen-port:host:port"),
+            "remoteforward": usage.Completer(descr="listen-port:host:port")},
+        extraActions=[usage.CompleteUserAtHost(),
+                      usage.Completer(descr="command"),
+                      usage.Completer(descr="argument", repeat=True)]
+        )
 
     localForwards = []
     remoteForwards = []

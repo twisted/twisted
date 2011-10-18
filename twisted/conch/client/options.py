@@ -29,26 +29,32 @@ class ConchOptions(usage.Options):
                 ['noagent', 'a', 'Disable authentication agent forwarding (default)'],
                 ['reconnect', 'r', 'Reconnect to the server if the connection is lost.'],
                ]
-    zsh_altArgDescr = {"connection-usage":"Connection types to use"}
-    #zsh_multiUse = ["foo", "bar"]
-    zsh_mutuallyExclusive = [("agent", "noagent")]
-    zsh_actions = {"user":"_users",
-                   "ciphers":"_values -s , 'ciphers to choose from' %s" %
-                       " ".join(SSHCiphers.cipherMap.keys()),
-                   "macs":"_values -s , 'macs to choose from' %s" %
-                       " ".join(SSHCiphers.macMap.keys()),
-                   "host-key-algorithms":"_values -s , 'host key algorithms to choose from' %s" %
-                       " ".join(SSHClientTransport.supportedPublicKeys),
-                   #"user-authentications":"_values -s , 'user authentication types to choose from' %s" %
-                   #    " ".join(???),
-                   }
-    #zsh_actionDescr = {"logfile":"log file name", "random":"random seed"}
-    # user, host, or user@host completion similar to zsh's ssh completion
-    zsh_extras = ['1:host | user@host:{_ssh;if compset -P "*@"; then _wanted hosts expl "remote host name" _ssh_hosts && ret=0 elif compset -S "@*"; then _wanted users expl "login name" _ssh_users -S "" && ret=0 else if (( $+opt_args[-l] )); then tmp=() else tmp=( "users:login name:_ssh_users -qS@" ) fi; _alternative "hosts:remote host name:_ssh_hosts" "$tmp[@]" && ret=0 fi}']
+
+    compData = usage.Completions(
+        mutuallyExclusive=[("agent", "noagent")],
+        optActions={
+            "user": usage.CompleteUsernames(),
+            "ciphers": usage.CompleteMultiList(
+                SSHCiphers.cipherMap.keys(),
+                descr='ciphers to choose from'),
+            "macs": usage.CompleteMultiList(
+                SSHCiphers.macMap.keys(),
+                descr='macs to choose from'),
+            "host-key-algorithms": usage.CompleteMultiList(
+                SSHClientTransport.supportedPublicKeys,
+                descr='host key algorithms to choose from'),
+            #"user-authentications": usage.CompleteMultiList(?
+            # descr='user authentication types' ),
+            },
+        extraActions=[usage.CompleteUserAtHost(),
+                      usage.Completer(descr="command"),
+                      usage.Completer(descr='argument',
+                                      repeat=True)]
+        )
 
     def __init__(self, *args, **kw):
         usage.Options.__init__(self, *args, **kw)
-        self.identitys = [] 
+        self.identitys = []
         self.conns = None
 
     def opt_identity(self, i):

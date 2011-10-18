@@ -22,14 +22,16 @@ class ConvertOptions(usage.Options):
         ['decrypt', 'd', "The specified tap/aos/xml file is encrypted."],
         ['encrypt', 'e', "Encrypt file before writing"]
         ]
-    #zsh_altArgDescr = {"foo":"use this description for foo instead"}
-    #zsh_multiUse = ["foo", "bar"]
-    #zsh_mutuallyExclusive = [("foo", "bar"), ("bar", "baz")]
-    zsh_actions = {"typein":"(guess python pickle xml source)",
-                   "typeout":"(pickle xml source)"}
-    zsh_actionDescr = {"in":"tap file to read from",
-                       "out":"tap file to write to"}
-    
+
+    compData = usage.Completions(
+        optActions={"typein": usage.CompleteList(["guess", "python", "pickle",
+                                                  "xml", "source"]),
+                    "typeout": usage.CompleteList(["pickle", "xml", "source"]),
+                    "in": usage.CompleteFiles(descr="tap file to read from"),
+                    "out": usage.CompleteFiles(descr="tap file to write to"),
+                    }
+        )
+
     def postOptions(self):
         if self['in'] is None:
             raise usage.UsageError("%s\nYou must specify the input filename."

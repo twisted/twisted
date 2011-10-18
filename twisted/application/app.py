@@ -480,8 +480,8 @@ Please read the 'Using Application' HOWTO for details.
 
 
 
-def _reactorZshAction():
-    return "(%s)" % " ".join([r.shortName for r in reactors.getReactorTypes()])
+def _reactorAction():
+    return usage.CompleteList([r.shortName for r in reactors.getReactorTypes()])
 
 
 class ReactorSelectionMixin:
@@ -491,7 +491,9 @@ class ReactorSelectionMixin:
     If a reactor is installed, the short name which was used to locate it is
     saved as the value for the C{"reactor"} key.
     """
-    zsh_actions = {"reactor" : _reactorZshAction}
+    compData = usage.Completions(
+        optActions={"reactor": _reactorAction})
+
     messageOutput = sys.stdout
     _getReactorTypes = staticmethod(reactors.getReactorTypes)
 
@@ -568,14 +570,13 @@ class ServerOptions(usage.Options, ReactorSelectionMixin):
                      ['rundir','d','.',
                       'Change to a supplied directory before running']]
 
-    #zsh_altArgDescr = {"foo":"use this description for foo instead"}
-    #zsh_multiUse = ["foo", "bar"]
-    zsh_mutuallyExclusive = [("file", "python", "source")]
-    zsh_actions = {"file":'_files -g "*.tap"',
-                   "python":'_files -g "*.(tac|py)"',
-                   "source":'_files -g "*.tas"',
-                   "rundir":"_dirs"}
-    #zsh_actionDescr = {"logfile":"log file name", "random":"random seed"}
+    compData = usage.Completions(
+        mutuallyExclusive=[("file", "python", "source")],
+        optActions={"file": usage.CompleteFiles("*.tap"),
+                    "python": usage.CompleteFiles("*.(tac|py)"),
+                    "source": usage.CompleteFiles("*.tas"),
+                    "rundir": usage.CompleteDirs()}
+        )
 
     _getPlugins = staticmethod(plugin.getPlugins)
 
