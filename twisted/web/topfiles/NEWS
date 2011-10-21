@@ -51,6 +51,8 @@ Improved Documentation
 ----------------------
  - The twisted.web.template howto now documents the common idiom of
    yielding tag clones from a renderer. (#5286)
+ - CookieAgent is now documented in the twisted.web.client how-to.
+   (#5110)
 
 Deprecations and Removals
 -------------------------

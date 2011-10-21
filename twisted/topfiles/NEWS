@@ -137,8 +137,6 @@ Improved Documentation
  - The Clients howto now uses buildProtocol more explicitly, hopefully
    making it easier to understand where Protocol instances come from.
    (#5044)
- - CookieAgent is now documented in the twisted.web.client how-to.
-   (#5110)
 
 Deprecations and Removals
 -------------------------
