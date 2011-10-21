@@ -83,7 +83,7 @@ Bugfixes
  - trial now gracefully handles the presence of objects in sys.modules
    which respond to attributes being set on them by modifying
    sys.modules. (#4748)
- - twsited.python.deprecate.deprecatedModuleAttribute no longer
+ - twisted.python.deprecate.deprecatedModuleAttribute no longer
    spuriously warns twice when used to deprecate a module within a
    package.  This should make it easier to write unit tests for
    deprecated modules. (#4806)
