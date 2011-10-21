@@ -43,7 +43,6 @@ Bugfixes
  - twisted.web.http_headers.Headers now correctly capitalizes the
    header names Content-MD5, DNT, ETag, P3P, TE, and X-XSS-Protection.
    (#5054)
- -  (#5175)
  - twisted.web.template now escapes more inputs to comments which
    require escaping in the output. (#5275)
 
@@ -60,7 +59,7 @@ Deprecations and Removals
 
 Other
 -----
- - #4951, #5057, #5288, #5316
+ - #4951, #5057, #5175, #5288, #5316
 
 
 Twisted Web 11.0.0 (2011-04-01)
