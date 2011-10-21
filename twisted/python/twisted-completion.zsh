@@ -1,4 +1,4 @@
-#compdef twistd trial conch mktap cftp tapconvert ckeygen lore pyhtmlizer tap2deb tkconch manhole tap2rpm
+#compdef twistd trial conch cftp tapconvert ckeygen lore pyhtmlizer tap2deb tkconch manhole tap2rpm
 #
 # This is the ZSH completion file for Twisted commands. It calls the current
 # command-line with the special "--_shell-completion" option which is handled
@@ -12,9 +12,9 @@
 # This file is included in the official Zsh distribution as
 # Completion/Unix/Command/_twisted
 
-# redirect stderr to /dev/null otherwise deprecation warnings may get puked
-# all over the user's terminal if completing options for mktap or other
-# deprecated commands. Redirect stderr to a file to debug errors.
+# redirect stderr to /dev/null otherwise deprecation warnings may get puked all
+# over the user's terminal if completing options for a deprecated command.
+# Redirect stderr to a file to debug errors.
 local cmd output
 cmd=("$words[@]" --_shell-completion zsh:$CURRENT)
 output=$("$cmd[@]" 2>/dev/null)

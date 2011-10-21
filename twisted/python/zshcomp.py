@@ -141,7 +141,7 @@ warnings.warn(
 import itertools, sys, commands, os.path
 
 from twisted.python import reflect, util, usage
-from twisted.scripts.mktap import IServiceMaker
+from twisted.application.service import IServiceMaker
 
 
 

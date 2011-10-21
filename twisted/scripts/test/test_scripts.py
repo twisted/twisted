@@ -59,10 +59,6 @@ class ScriptTests(TestCase, ScriptTestsMixin):
     """
     Tests for the core scripts.
     """
-    def test_mktap(self):
-        self.scriptTest("mktap")
-
-
     def test_twistd(self):
         self.scriptTest("twistd")
 
@@ -156,8 +152,7 @@ class ZshIntegrationTestCase(TestCase, ZshScriptTestMixin):
     """
     Test that zsh completion functions are generated without error
     """
-    generateFor = [('mktap', 'twisted.scripts.mktap.FirstPassOptions'),
-                   ('twistd', 'twisted.scripts.twistd.ServerOptions'),
+    generateFor = [('twistd', 'twisted.scripts.twistd.ServerOptions'),
                    ('trial', 'twisted.scripts.trial.Options'),
                    ('pyhtmlizer', 'twisted.scripts.htmlizer.Options'),
                    ('tap2rpm', 'twisted.scripts.tap2rpm.MyOptions'),
