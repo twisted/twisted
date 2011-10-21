@@ -1,1 +1,0 @@
-twisted.python.usage.Options now supports performing Zsh tab-completion on demand. Tab-completion for Twisted commands is supported out-of-the-box on any recent zsh release. Third-party commands may take advantage of zsh completion by copying the provided stub file.

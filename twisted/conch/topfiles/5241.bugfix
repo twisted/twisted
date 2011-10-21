@@ -1,1 +1,0 @@
-twisted.conch.ssh.userauth.SSHUserAuthClient now more closely follows the RFC 4251 definition of boolean values when negotiating for key-based authentication, allowing better interoperability with other SSH implementations.

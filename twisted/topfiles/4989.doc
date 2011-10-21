@@ -1,2 +1,0 @@
-The testing standard and the trial tutorial now recommend the `assertEqual` form of assertions
-rather than the `assertEquals` to coincide with the standard library unittest's preference.

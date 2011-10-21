@@ -1,1 +1,0 @@
-The default reactor is now poll(2) on platforms that support it.

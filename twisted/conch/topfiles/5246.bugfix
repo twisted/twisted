@@ -1,1 +1,0 @@
-twisted.conch.recvline.RecvLine now ignores certain function keys in its keystrokeReceived method instead of raising an exception.

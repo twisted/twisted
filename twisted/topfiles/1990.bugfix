@@ -1,1 +1,0 @@
-Unicode print statements no longer blow up when using Twisted's logging system.

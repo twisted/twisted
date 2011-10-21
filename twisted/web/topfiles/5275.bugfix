@@ -1,1 +1,0 @@
-twisted.web.template now escapes more inputs to comments which require escaping in the output.

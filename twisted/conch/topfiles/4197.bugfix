@@ -1,1 +1,0 @@
-twisted.conch.insults.window.ScrolledArea now passes no extra arguments to object.__init__ (which works on more versions of Python).

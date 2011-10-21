@@ -1,1 +1,0 @@
-When run from an unpacked source tarball or a VCS checkout, the bin/conch/ scripts will now use the version of Twisted they are part of.

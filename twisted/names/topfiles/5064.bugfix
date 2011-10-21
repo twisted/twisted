@@ -1,1 +1,0 @@
-twisted.names.dns.Name now detects loops in names it is decoding and raises an exception.  Previously it would follow the loop forever, allowing a remote denial of service attack against any twisted.names client or server.

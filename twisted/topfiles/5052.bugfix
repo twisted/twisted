@@ -1,1 +1,0 @@
-reactor.spawnProcess now uses the resource module to guess the maximum possible open file descriptor when /dev/fd exists but gives incorrect results.

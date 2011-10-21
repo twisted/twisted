@@ -1,1 +1,0 @@
-When run from an unpacked source tarball or a VCS checkout, bin/lore/lore will now use the version of Twisted it is part of.
