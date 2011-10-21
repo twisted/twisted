@@ -1,6 +1,45 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Conch 11.1.0pre1 (2011-10-21)
+=====================================
+
+Features
+--------
+ - twisted.conch.ssh.filetransfer.FileTransferClient now handles short
+   status messages, not strictly allowed by the RFC, but sent by some
+   SSH implementations. (#3009)
+ - twisted.conch.manhole now supports CTRL-A and CTRL-E to trigger
+   HOME and END functions respectively. (#5252)
+
+Bugfixes
+--------
+ - When run from an unpacked source tarball or a VCS checkout, the
+   bin/conch/ scripts will now use the version of Twisted they are
+   part of. (#3526)
+ - twisted.conch.insults.window.ScrolledArea now passes no extra
+   arguments to object.__init__ (which works on more versions of
+   Python). (#4197)
+ - twisted.conch.telnet.ITelnetProtocol now has the correct signature
+   for its unhandledSubnegotiation() method. (#4751)
+ - twisted.conch.ssh.userauth.SSHUserAuthClient now more closely
+   follows the RFC 4251 definition of boolean values when negotiating
+   for key-based authentication, allowing better interoperability with
+   other SSH implementations. (#5241)
+ - twisted.conch.recvline.RecvLine now ignores certain function keys
+   in its keystrokeReceived method instead of raising an exception.
+   (#5246)
+
+Deprecations and Removals
+-------------------------
+ - The --user option to `twistd manhole' has been removed as it was
+   dead code with no functionality associated with it. (#5283)
+
+Other
+-----
+ - #5107, #5256
+
+
 Twisted Conch 11.0.0 (2011-04-01)
 =================================
 

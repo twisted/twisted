@@ -1,6 +1,21 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Lore 11.1.0pre1 (2011-10-21)
+====================================
+
+Bugfixes
+--------
+ - When run from an unpacked source tarball or a VCS checkout,
+   bin/lore/lore will now use the version of Twisted it is part of.
+   (#3526)
+
+Deprecations and Removals
+-------------------------
+ - Removed compareMarkPos and comparePosition from lore.tree,
+   deprecated in Twisted 9.0. (#5127)
+
+
 Twisted Lore 11.0.0 (2011-04-01)
 ================================
 

@@ -1,6 +1,175 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Core 11.1.0pre1 (2011-10-21)
+====================================
+
+Features
+--------
+ - TCP and TLS transports now support abortConnection() which, unlike
+   loseConnection(), always closes the connection immediately. (#78)
+ - Failures received over PB when tracebacks are disabled now display
+   the wrapped exception value when they are printed. (#581)
+ - twistd now has a --logger option, allowing the use of custom log
+   observers. (#638)
+ - The default reactor is now poll(2) on platforms that support it.
+   (#2234)
+ - twisted.internet.defer.inlineCallbacks(f) now raises TypeError when
+   f returns something other than a generator or uses returnValue as a
+   non-generator. (#2501)
+ - twisted.python.usage.Options now supports performing Zsh tab-
+   completion on demand. Tab-completion for Twisted commands is
+   supported out-of-the-box on any recent zsh release. Third-party
+   commands may take advantage of zsh completion by copying the
+   provided stub file. (#3078)
+ - twisted.protocols.portforward now uses flow control between its
+   client and server connections to avoid having to buffer an
+   unbounded amount of data when one connection is slower than the
+   other. (#3350)
+ - On Windows, the select, IOCP, and Gtk2 reactors now implement
+   IReactorWin32Events (most notably adding support for serial ports
+   to these reactors). (#4862)
+ - twisted.python.failure.Failure no longer captures the state of
+   locals and globals of all stack frames by default, because it is
+   expensive to do and rarely used.  You can pass captureVars=True to
+   Failure's constructor if you want to capture this data. (#5011)
+ - twisted.web.client now supports automatic content-decoding via
+   twisted.web.client.ContentDecoderAgent, gzip being supported for
+   now. (#5053)
+ - Protocols may now implement ILoggingContext to customize the their
+   logging prefix.  twisted.protocols.policies.ProtocolWrapper and the
+   endpoints wrapper now take advantage of this feature to ensure the
+   application protocol is still reflected in logs. (#5062)
+ - AMP's raw message-parsing performance was increased by
+   approximately 12%. (#5075)
+ - Twisted is now installable on PyPy, because some incompatible C
+   extensions are no longer built. (#5158)
+ - twisted.internet.defer.gatherResults now accepts a consumeErrors
+   parameter, with the same meaning as the corresponding argument for
+   DeferredList. (#5159)
+ - Added RMD (remove directory) support to the FTP client. (#5259)
+ - Server factories may now implement ILoggingContext to customize the
+   name that is logged when the reactor uses one to start listening on
+   a port. (#5292)
+
+Bugfixes
+--------
+ - The IOCP reactor now does not try to erroneously pause non-
+   streaming producers. (#745)
+ - Unicode print statements no longer blow up when using Twisted's
+   logging system. (#1990)
+ - Process transports on Windows now support the `writeToChild` method
+   (but only for stdin). (#2838)
+ - Zsh tab-completion of Twisted commands no longer relies on
+   statically generated files, but instead generates results on-the-
+   fly - ensuring accurate tab-completion for the version of Twisted
+   actually in use. (#3078)
+ - LogPublishers don't use the global log publisher for reporting
+   broken observers anymore. (#3307)
+ - trial and twistd now add the current directory to sys.path even
+   when running as root or on Windows. mktap, tapconvert, and
+   pyhtmlizer no longer add the current directory to sys.path. (#3526)
+ - twisted.internet.win32eventreactor now stops immediately if
+   reactor.stop() is called from an IWriteDescriptor.doWrite
+   implementation instead of delaying shutdown for an arbitrary period
+   of time. (#3824)
+ - twisted.python.log now handles RuntimeErrors more gracefully, and
+   always restores log observers after an exception is raised. (#4379)
+ - twisted.spread now supports updating new-style RemoteCache
+   instances. (#4447)
+ - twisted.spread.pb.CopiedFailure will no longer be thrown into a
+   generator as a (deprecated) string exception but as a
+   twisted.spread.pb.RemoteException. (#4520)
+ - trial now gracefully handles the presence of objects in sys.modules
+   which respond to attributes being set on them by modifying
+   sys.modules. (#4748)
+ - twsited.python.deprecate.deprecatedModuleAttribute no longer
+   spuriously warns twice when used to deprecate a module within a
+   package.  This should make it easier to write unit tests for
+   deprecated modules. (#4806)
+ - When pyOpenSSL 0.10 or newer is available, SSL support now uses
+   Twisted for all I/O and only relies on OpenSSL for cryptography,
+   avoiding a number of tricky, potentially broken edge cases. (#4854)
+ - IStreamClientEndpointStringParser.parseStreamClient now correctly
+   describes how it will be called by clientFromString (#4956)
+ - twisted.internet.defer.Deferreds are 10 times faster at handling
+   exceptions raised from callbacks, except when setDebugging(True)
+   has been called. (#5011)
+ - twisted.python.filepath.FilePath.copyTo now raises OSError(ENOENT)
+   if the source path being copied does not exist. (#5017)
+ - twisted.python.modules now supports iterating over namespace
+   packages without yielding duplicates. (#5030)
+ - reactor.spawnProcess now uses the resource module to guess the
+   maximum possible open file descriptor when /dev/fd exists but gives
+   incorrect results. (#5052)
+ - The memory BIO TLS/SSL implementation now supports producers
+   correctly. (#5063)
+ - twisted.spread.pb.Broker no longer creates an uncollectable
+   reference cycle when the logout callback holds a reference to the
+   client mind object. (#5079)
+ - twisted.protocols.tls, and SSL/TLS support in general, now do clean
+   TLS close alerts when disconnecting. (#5118)
+ - twisted.persisted.styles no longer uses the deprecated allYourBase
+   function (#5193)
+ - Stream client endpoints now start (doStart) and stop (doStop) the
+   factory passed to the connect method, instead of a different
+   implementation-detail factory. (#5278)
+ - SSL ports now consistently report themselves as SSL rather than TCP
+   when logging their close message. (#5292)
+
+Improved Documentation
+----------------------
+ - Test driven development with Twisted and Trial is now documented in
+   a how-to. (#2443)
+ - A new howto-style document covering twisted.protocols.amp has been
+   added. (#3476)
+ - Added sample implementation of a Twisted push producer/consumer
+   system. (#3835)
+ - The "Deferred in Depth" tutorial now includes accurate output for
+   the deferred_ex2.py example. (#3941)
+ - The server howto now covers the Factory.buildProtocol method.
+   (#4761)
+ - The testing standard and the trial tutorial now recommend the
+   `assertEqual` form of assertions rather than the `assertEquals` to
+   coincide with the standard library unittest's preference. (#4989)
+ - twisted.python.filepath.FilePath's methods now have more complete
+   API documentation (docstrings). (#5027)
+ - The Clients howto now uses buildProtocol more explicitly, hopefully
+   making it easier to understand where Protocol instances come from.
+   (#5044)
+ - CookieAgent is now documented in the twisted.web.client how-to.
+   (#5110)
+
+Deprecations and Removals
+-------------------------
+ - twisted.internet.interfaces.IFinishableConsumer is now deprecated.
+   (#2661)
+ - twisted.python.zshcomp is now deprecated in favor of the tab-
+   completion system in twisted.python.usage (#3078)
+ - The unzip and unzipIter functions in twisted.python.zipstream are
+   now deprecated. (#3666)
+ - Options.optStrings, deprecated for 7 years, has been removed.  Use
+   Options.optParameters instead. (#4552)
+ - Removed the deprecated twisted.python.dispatch module. (#5023)
+ - Removed the twisted.runner.procutils module that was deprecated in
+   Twisted 2.3. (#5049)
+ - Removed twisted.trial.runner.DocTestSuite, deprecated in Twisted
+   8.0. (#5111)
+ - twisted.scripts.tkunzip is now deprecated. (#5140)
+
+Other
+-----
+ - #1946, #2562, #2674, #3074, #3077, #3776, #4227, #4539, #4587,
+   #4619, #4624, #4629, #4683, #4690, #4702, #4778, #4944, #4945,
+   #4949, #4952, #4957, #4979, #4980, #4987, #4990, #4994, #4995,
+   #4997, #5003, #5008, #5009, #5012, #5019, #5042, #5046, #5051,
+   #5065, #5083, #5088, #5089, #5090, #5101, #5108, #5109, #5112,
+   #5114, #5125, #5128, #5131, #5136, #5139, #5144, #5146, #5147,
+   #5156, #5160, #5165, #5191, #5205, #5215, #5217, #5218, #5223,
+   #5243, #5244, #5250, #5254, #5261, #5266, #5273, #5299, #5301,
+   #5302, #5304, #5308, #5311
+
+
 Twisted Core 11.0.0 (2011-04-01)
 ================================
 
