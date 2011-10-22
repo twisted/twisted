@@ -183,13 +183,13 @@ class _InstanceFactory(ClientFactory):
         self.deferred = None
 
 
-    def fire(self, callable, value):
+    def fire(self, func, value):
         """
-        Clear C{self.pending} to avoid a reference cycle and then invoke the
-        callable with the value.
+        Clear C{self.pending} to avoid a reference cycle and then invoke func
+        with the value.
         """
         self.pending = None
-        callable(value)
+        func(value)
 
 
 

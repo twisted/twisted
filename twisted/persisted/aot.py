@@ -423,8 +423,8 @@ class AOTUnjellier:
         try:
             l = [None]
             self.unjellyInto(l, 0, ao)
-            for callable, v in self.afterUnjelly:
-                callable(v[0])
+            for func, v in self.afterUnjelly:
+                func(v[0])
             return l[0]
         except:
             log.msg("Error jellying object! Stacktrace follows::")
