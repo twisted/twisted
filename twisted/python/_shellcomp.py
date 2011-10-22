@@ -362,8 +362,8 @@ class ZshArgumentsGenerator(object):
         """
         optNames = self.allOptionsNameToDefinition.keys()
         optNames.sort()
-        for long in optNames:
-            self.writeOpt(long)
+        for longname in optNames:
+            self.writeOpt(longname)
 
 
     def writeExtras(self):
@@ -420,12 +420,12 @@ class ZshArgumentsGenerator(object):
                     err(name)
 
 
-    def excludeStr(self, long, buildShort=False):
+    def excludeStr(self, longname, buildShort=False):
         """
         Generate an "exclusion string" for the given option
 
-        @type long: C{str}
-        @param long: The long option name (e.g. "verbose" instead of "v")
+        @type longname: C{str}
+        @param longname: The long option name (e.g. "verbose" instead of "v")
 
         @type buildShort: C{bool}
         @param buildShort: May be True to indicate we're building an excludes
@@ -433,21 +433,21 @@ class ZshArgumentsGenerator(object):
 
         @return: The generated C{str}
         """
-        if long in self.excludes:
-            exclusions = self.excludes[long].copy()
+        if longname in self.excludes:
+            exclusions = self.excludes[longname].copy()
         else:
             exclusions = set()
 
-        # if long isn't a multiUse option (can't appear on the cmd line more
+        # if longname isn't a multiUse option (can't appear on the cmd line more
         # than once), then we have to exclude the short option if we're
         # building for the long option, and vice versa.
-        if long not in self.multiUse:
+        if longname not in self.multiUse:
             if buildShort is False:
-                short = self.getShortOption(long)
+                short = self.getShortOption(longname)
                 if short is not None:
                     exclusions.add(short)
             else:
-                exclusions.add(long)
+                exclusions.add(longname)
 
         if not exclusions:
             return ''
@@ -478,57 +478,57 @@ class ZshArgumentsGenerator(object):
 
         excludes = {}
         for lst in self.mutuallyExclusive:
-            for i, long in enumerate(lst):
+            for i, longname in enumerate(lst):
                 tmp = set(lst[:i] + lst[i+1:])
                 for name in tmp.copy():
                     if name in longToShort:
                         tmp.add(longToShort[name])
 
-                if long in excludes:
-                    excludes[long] = excludes[long].union(tmp)
+                if longname in excludes:
+                    excludes[longname] = excludes[longname].union(tmp)
                 else:
-                    excludes[long] = tmp
+                    excludes[longname] = tmp
         return excludes
 
 
-    def writeOpt(self, long):
+    def writeOpt(self, longname):
         """
         Write out the zsh code for the given argument. This is just part of the
         one big call to _arguments
 
-        @type long: C{str}
-        @param long: The long option name (e.g. "verbose" instead of "v")
+        @type longname: C{str}
+        @param longname: The long option name (e.g. "verbose" instead of "v")
 
         @return: C{None}
         """
-        if long in self.flagNameToDefinition:
+        if longname in self.flagNameToDefinition:
             # It's a flag option. Not one that takes a parameter.
-            longField = "--%s" % long
+            longField = "--%s" % longname
         else:
-            longField = "--%s=" % long
+            longField = "--%s=" % longname
 
-        short = self.getShortOption(long)
+        short = self.getShortOption(longname)
         if short != None:
             shortField = "-" + short
         else:
             shortField = ''
 
-        descr = self.getDescription(long)
+        descr = self.getDescription(longname)
         descriptionField = descr.replace("[", "\[")
         descriptionField = descriptionField.replace("]", "\]")
         descriptionField = '[%s]' % descriptionField
 
-        actionField = self.getAction(long)
-        if long in self.multiUse:
+        actionField = self.getAction(longname)
+        if longname in self.multiUse:
             multiField = '*'
         else:
             multiField = ''
 
-        longExclusionsField = self.excludeStr(long)
+        longExclusionsField = self.excludeStr(longname)
 
         if short:
             #we have to write an extra line for the short option if we have one
-            shortExclusionsField = self.excludeStr(long, buildShort=True)
+            shortExclusionsField = self.excludeStr(longname, buildShort=True)
             self.file.write(escape('%s%s%s%s%s' % (shortExclusionsField,
                 multiField, shortField, descriptionField, actionField)))
             self.file.write(' \\\n')
@@ -538,38 +538,38 @@ class ZshArgumentsGenerator(object):
         self.file.write(' \\\n')
 
 
-    def getAction(self, long):
+    def getAction(self, longname):
         """
         Return a zsh "action" string for the given argument
         @return: C{str}
         """
-        if long in self.optActions:
-            if callable(self.optActions[long]):
-                action = self.optActions[long]()
+        if longname in self.optActions:
+            if callable(self.optActions[longname]):
+                action = self.optActions[longname]()
             else:
-                action = self.optActions[long]
-            return action._shellCode(long, usage._ZSH)
+                action = self.optActions[longname]
+            return action._shellCode(longname, usage._ZSH)
 
-        if long in self.paramNameToDefinition:
-            return ':%s:_files' % (long,)
+        if longname in self.paramNameToDefinition:
+            return ':%s:_files' % (longname,)
         return ''
 
 
-    def getDescription(self, long):
+    def getDescription(self, longname):
         """
         Return the description to be used for this argument
         @return: C{str}
         """
         #check if we have an alternate descr for this arg, and if so use it
-        if long in self.descriptions:
-            return self.descriptions[long]
+        if longname in self.descriptions:
+            return self.descriptions[longname]
 
         #otherwise we have to get it from the optFlags or optParams
         try:
-            descr = self.flagNameToDefinition[long][1]
+            descr = self.flagNameToDefinition[longname][1]
         except KeyError:
             try:
-                descr = self.paramNameToDefinition[long][2]
+                descr = self.paramNameToDefinition[longname][2]
             except KeyError:
                 descr = None
 
@@ -577,22 +577,22 @@ class ZshArgumentsGenerator(object):
             return descr
 
         # let's try to get it from the opt_foo method doc string if there is one
-        longMangled = long.replace('-', '_') # this is what t.p.usage does
+        longMangled = longname.replace('-', '_') # this is what t.p.usage does
         obj = getattr(self.options, 'opt_%s' % longMangled, None)
         if obj is not None:
             descr = descrFromDoc(obj)
             if descr is not None:
                 return descr
 
-        return long # we really ought to have a good description to use
+        return longname # we really ought to have a good description to use
 
 
-    def getShortOption(self, long):
+    def getShortOption(self, longname):
         """
         Return the short option letter or None
         @return: C{str} or C{None}
         """
-        optList = self.allOptionsNameToDefinition[long]
+        optList = self.allOptionsNameToDefinition[longname]
         return optList[0] or None
 
 
@@ -611,13 +611,13 @@ class ZshArgumentsGenerator(object):
                 del methodsDict[name]
 
         for methodName, methodObj in methodsDict.items():
-            long = methodName.replace('_', '-') # t.p.usage does this
+            longname = methodName.replace('_', '-') # t.p.usage does this
             # if this option is already defined by the optFlags or
             # optParameters then we don't want to override that data
-            if long in self.allOptionsNameToDefinition:
+            if longname in self.allOptionsNameToDefinition:
                 continue
 
-            descr = self.getDescription(long)
+            descr = self.getDescription(longname)
 
             short = None
             if methodObj in methodToShort:
@@ -625,15 +625,15 @@ class ZshArgumentsGenerator(object):
 
             reqArgs = methodObj.im_func.func_code.co_argcount
             if reqArgs == 2:
-                self.optParams.append([long, short, None, descr])
-                self.paramNameToDefinition[long] = [short, None, descr]
-                self.allOptionsNameToDefinition[long] = [short, None, descr]
+                self.optParams.append([longname, short, None, descr])
+                self.paramNameToDefinition[longname] = [short, None, descr]
+                self.allOptionsNameToDefinition[longname] = [short, None, descr]
             else:
                 # reqArgs must equal 1. self.options would have failed
                 # to instantiate if it had opt_ methods with bad signatures.
-                self.optFlags.append([long, short, descr])
-                self.flagNameToDefinition[long] = [short, descr]
-                self.allOptionsNameToDefinition[long] = [short, None, descr]
+                self.optFlags.append([longname, short, descr])
+                self.flagNameToDefinition[longname] = [short, descr]
+                self.allOptionsNameToDefinition[longname] = [short, None, descr]
 
 
 

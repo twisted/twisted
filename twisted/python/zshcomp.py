@@ -374,8 +374,8 @@ class ArgumentsGenerator:
         """
         optNames = self.optAll_d.keys()
         optNames.sort()
-        for long in optNames:
-            self.writeOpt(long)
+        for longname in optNames:
+            self.writeOpt(longname)
 
 
     def writeExtras(self):
@@ -420,13 +420,13 @@ class ArgumentsGenerator:
                     err(name)
 
 
-    def excludeStr(self, long, buildShort=False):
+    def excludeStr(self, longname, buildShort=False):
         """
         Generate an "exclusion string" for the given option
 
-        @type long: C{str}
-        @param long: The long name of the option
-                     (i.e. "verbose" instead of "v")
+        @type longname: C{str}
+        @param longname: The long name of the option
+                         (i.e. "verbose" instead of "v")
 
         @type buildShort: C{bool}
         @param buildShort: May be True to indicate we're building an excludes
@@ -435,21 +435,21 @@ class ArgumentsGenerator:
 
         @return: The generated C{str}
         """
-        if long in self.excludes:
-            exclusions = self.excludes[long][:]
+        if longname in self.excludes:
+            exclusions = self.excludes[longname][:]
         else:
             exclusions = []
 
-        # if long isn't a multiUse option (can't appear on the cmd line more
+        # if longname isn't a multiUse option (can't appear on the cmd line more
         # than once), then we have to exclude the short option if we're
         # building for the long option, and vice versa.
-        if long not in self.multiUse:
+        if longname not in self.multiUse:
             if buildShort is False:
-                short = self.getShortOption(long)
+                short = self.getShortOption(longname)
                 if short is not None:
                     exclusions.append(short)
             else:
-                exclusions.append(long)
+                exclusions.append(longname)
 
         if not exclusions:
             return ''
@@ -482,7 +482,7 @@ class ArgumentsGenerator:
 
         excludes = {}
         for lst in self.mutuallyExclusive:
-            for i, long in enumerate(lst):
+            for i, longname in enumerate(lst):
                 tmp = []
                 tmp.extend(lst[:i])
                 tmp.extend(lst[i+1:])
@@ -490,57 +490,57 @@ class ArgumentsGenerator:
                     if name in longToShort:
                         tmp.append(longToShort[name])
 
-                if long in excludes:
-                    excludes[long].extend(tmp)
+                if longname in excludes:
+                    excludes[longname].extend(tmp)
                 else:
-                    excludes[long] = tmp
+                    excludes[longname] = tmp
         return excludes
 
 
-    def writeOpt(self, long):
+    def writeOpt(self, longname):
         """
         Write out the zsh code for the given argument. This is just part of the
         one big call to _arguments
 
-        @type long: C{str}
-        @param long: The long name of the option
-                     (i.e. "verbose" instead of "v")
+        @type longname: C{str}
+        @param longname: The long name of the option
+            (i.e. "verbose" instead of "v")
 
         @return: C{None}
         """
-        if long in self.optFlags_d:
+        if longname in self.optFlags_d:
             # It's a flag option. Not one that takes a parameter.
-            long_field = "--%s" % long
+            long_field = "--%s" % longname
         else:
-            long_field = "--%s=" % long
+            long_field = "--%s=" % longname
 
-        short = self.getShortOption(long)
+        short = self.getShortOption(longname)
         if short != None:
             short_field = "-" + short
         else:
             short_field = ''
 
-        descr = self.getDescription(long)
+        descr = self.getDescription(longname)
         descr_field = descr.replace("[", "\[")
         descr_field = descr_field.replace("]", "\]")
         descr_field = '[%s]' % descr_field
 
-        if long in self.actionDescr:
-            actionDescr_field = self.actionDescr[long]
+        if longname in self.actionDescr:
+            actionDescr_field = self.actionDescr[longname]
         else:
             actionDescr_field = descr
 
-        action_field = self.getAction(long)
-        if long in self.multiUse:
+        action_field = self.getAction(longname)
+        if longname in self.multiUse:
             multi_field = '*'
         else:
             multi_field = ''
 
-        longExclusions_field = self.excludeStr(long)
+        longExclusions_field = self.excludeStr(longname)
 
         if short:
             #we have to write an extra line for the short option if we have one
-            shortExclusions_field = self.excludeStr(long, buildShort=True)
+            shortExclusions_field = self.excludeStr(longname, buildShort=True)
             self.file.write(escape('%s%s%s%s%s' % (shortExclusions_field,
                 multi_field, short_field, descr_field, action_field)))
             self.file.write(' \\\n')
@@ -550,48 +550,48 @@ class ArgumentsGenerator:
         self.file.write(' \\\n')
 
 
-    def getAction(self, long):
+    def getAction(self, longname):
         """
         Return a zsh "action" string for the given argument
         @return: C{str}
         """
-        if long in self.actions:
-            if callable(self.actions[long]):
-                action = self.actions[long]()
+        if longname in self.actions:
+            if callable(self.actions[longname]):
+                action = self.actions[longname]()
             else:
-                action = self.actions[long]
-            return ":%s:%s" % (self.getActionDescr(long), action)
-        if long in self.optParams_d:
-            return ':%s:_files' % self.getActionDescr(long)
+                action = self.actions[longname]
+            return ":%s:%s" % (self.getActionDescr(longname), action)
+        if longname in self.optParams_d:
+            return ':%s:_files' % self.getActionDescr(longname)
         return ''
 
 
-    def getActionDescr(self, long):
+    def getActionDescr(self, longname):
         """
         Return the description to be used when this argument is completed
         @return: C{str}
         """
-        if long in self.actionDescr:
-            return self.actionDescr[long]
+        if longname in self.actionDescr:
+            return self.actionDescr[longname]
         else:
-            return long
+            return longname
 
 
-    def getDescription(self, long):
+    def getDescription(self, longname):
         """
         Return the description to be used for this argument
         @return: C{str}
         """
         #check if we have an alternate descr for this arg, and if so use it
-        if long in self.altArgDescr:
-            return self.altArgDescr[long]
+        if longname in self.altArgDescr:
+            return self.altArgDescr[longname]
 
         #otherwise we have to get it from the optFlags or optParams
         try:
-            descr = self.optFlags_d[long][1]
+            descr = self.optFlags_d[longname][1]
         except KeyError:
             try:
-                descr = self.optParams_d[long][2]
+                descr = self.optParams_d[longname][2]
             except KeyError:
                 descr = None
 
@@ -599,22 +599,22 @@ class ArgumentsGenerator:
             return descr
 
         # lets try to get it from the opt_foo method doc string if there is one
-        longMangled = long.replace('-', '_') # this is what t.p.usage does
+        longMangled = longname.replace('-', '_') # this is what t.p.usage does
         obj = getattr(self.options, 'opt_%s' % longMangled, None)
         if obj:
             descr = descrFromDoc(obj)
             if descr is not None:
                 return descr
 
-        return long # we really ought to have a good description to use
+        return longname # we really ought to have a good description to use
 
 
-    def getShortOption(self, long):
+    def getShortOption(self, longname):
         """
         Return the short option letter or None
         @return: C{str} or C{None}
         """
-        optList = self.optAll_d[long]
+        optList = self.optAll_d[longname]
         try:
             return optList[0] or None
         except IndexError:
@@ -636,13 +636,13 @@ class ArgumentsGenerator:
                 del methodsDict[name]
 
         for methodName, methodObj in methodsDict.items():
-            long = methodName.replace('_', '-') # t.p.usage does this
+            longname = methodName.replace('_', '-') # t.p.usage does this
             # if this option is already defined by the optFlags or
             # optParameters then we don't want to override that data
-            if long in self.optAll_d:
+            if longname in self.optAll_d:
                 continue
 
-            descr = self.getDescription(long)
+            descr = self.getDescription(longname)
 
             short = None
             if methodObj in methodToShort:
@@ -650,13 +650,13 @@ class ArgumentsGenerator:
 
             reqArgs = methodObj.im_func.func_code.co_argcount
             if reqArgs == 2:
-                self.optParams.append([long, short, None, descr])
-                self.optParams_d[long] = [short, None, descr]
-                self.optAll_d[long] = [short, None, descr]
+                self.optParams.append([longname, short, None, descr])
+                self.optParams_d[longname] = [short, None, descr]
+                self.optAll_d[longname] = [short, None, descr]
             elif reqArgs == 1:
-                self.optFlags.append([long, short, descr])
-                self.optFlags_d[long] = [short, descr]
-                self.optAll_d[long] = [short, None, descr]
+                self.optFlags.append([longname, short, descr])
+                self.optFlags_d[longname] = [short, descr]
+                self.optAll_d[longname] = [short, None, descr]
             else:
                 raise TypeError, '%r has wrong number ' \
                                  'of arguments' % (methodObj,)
