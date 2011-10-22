@@ -914,7 +914,8 @@ class SphinxBuilder(object):
     """
     Generate HTML documentation using Sphinx.
 
-    Generates and runs a shell command that looks something like:
+    Generates and runs a shell command that looks something like::
+
         sphinx-build -b html -d [BUILDDIR]/doctrees [DOCDIR]/source [BUILDDIR]/html
 
     where DOCDIR is a directory containing another directory called
@@ -922,7 +923,7 @@ class SphinxBuilder(object):
     directory in which the Sphinx output will be created.
     """
 
-    def build(self, docDir, buildDir=None):
+    def build(self, docDir, buildDir=None, version=''):
         """
         Build the documentation in C{docDir} with Sphinx.
 
@@ -933,8 +934,12 @@ class SphinxBuilder(object):
         @type docDir: L{twisted.python.filepath.FilePath}
 
         @param buildDir: The directory to build the documentation in.
-            By default this will be a child directory of {docDir} named "build".
+            By default this will be a child directory of {docDir}
+            named "build".
         @type buildDir: L{twisted.python.filepath.FilePath}
+
+        @param version: The version of Twisted to set in the docs.
+        @type version: C{str}
         """
 
         if buildDir is None:
@@ -943,24 +948,20 @@ class SphinxBuilder(object):
         doctreeDir = buildDir.child('doctrees')
         sourceDir = docDir.child('source')
 
-        # list of sphinx builders and associated extra options
-        # each builder will be run with the extra options provided
-        builders = [
-                    ('html', []),
-                   ]
+        # only support html builder for now
+        builder, builderOpts = ('html', [])
 
-        for builder, builderOpts in builders:
-            argsList = ['sphinx-build', '-b', builder]
-            allSphinxOpts = ['-d', doctreeDir.path, sourceDir.path]
-            if builderOpts:
-                allSphinxOpts.extend(builderOpts)
+        argsList = ['sphinx-build', '-b', builder]
+        allSphinxOpts = ['-d', doctreeDir.path, sourceDir.path]
+        if builderOpts:
+            allSphinxOpts.extend(builderOpts)
 
-            outDir = buildDir.child(builder)
+        outDir = buildDir.child(builder)
 
-            argsList.extend(allSphinxOpts)
-            argsList.append(outDir.path)
+        argsList.extend(allSphinxOpts)
+        argsList.append(outDir.path)
 
-            cmdOutput = runCommand(argsList)
+        cmdOutput = runCommand(argsList)
 
 
 

@@ -1985,6 +1985,12 @@ class SphinxBuilderTests(TestCase):
     """
     Tests for L{SphinxBuilder}.
 
+    NOTE: this test case depends on twisted.web, which violates the standard 
+          Twisted practice of not having anything in twisted.python depend
+          on other Twisted packages and opens up the possibility of creating
+          circular dependencies.  Do not use this as an example of
+          how to structure your dependencies.
+
     @ivar builder: A plain L{SphinxBuilder}.
     @ivar sphinxDir: A L{FilePath} representing a directory to be used for
         containing a Sphinx project.
@@ -2048,9 +2054,8 @@ class SphinxBuilderTests(TestCase):
         self.assertTrue(fpath.exists())
 
         # check that the output files have some content
-        f = open(fpath.path, 'r')
-        fcontents = f.read()
-        self.assertGreater(len(fcontents), 0)
+        fcontents = fpath.getContent()
+        self.assertTrue(len(fcontents) > 0)
 
         # check that the html files are at least html-ish
         # this is not a terribly rigorous check
@@ -2059,9 +2064,8 @@ class SphinxBuilderTests(TestCase):
                 parseXMLString(fcontents)
             except:
                 # any exception probably means some kind of parse error
+                raise
                 self.fail("Sphinx output not parsed")
-
-        f.close()
 
 
     def test_build(self):
