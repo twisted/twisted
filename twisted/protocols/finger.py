@@ -5,12 +5,11 @@
 """The Finger User Information Protocol (RFC 1288)"""
 
 from twisted.protocols import basic
-import string
 
 class Finger(basic.LineReceiver):
 
     def lineReceived(self, line):
-        parts = string.split(line)
+        parts = line.split()
         if not parts:
             parts = ['']
         if len(parts) == 1:
@@ -19,7 +18,7 @@ class Finger(basic.LineReceiver):
             slash_w = 1
         user = parts[-1]
         if '@' in user:
-            host_place = string.rfind(user, '@')
+            host_place = user.rfind('@')
             user = user[:host_place]
             host = user[host_place+1:]
             return self.forwardQuery(slash_w, user, host)
