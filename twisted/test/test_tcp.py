@@ -29,15 +29,25 @@ def loopUntil(predicate, interval=0):
     """
     from twisted.internet import task
     d = defer.Deferred()
-    def check():
+    def check(counter=[0]):
+        counter[0] += 1
         res = predicate()
         if res:
             d.callback(res)
+        elif counter[0] == 10000:
+            # not getting anywhere, abort the test in an informative manner:
+            import inspect
+            try:
+                predSource = inspect.getsource(predicate).strip()
+            except IOError:
+                predSource = str(predicate)
+            d.errback(RuntimeError(
+                    "%r isn't passing after 10000 checks" % (predSource,)))
     call = task.LoopingCall(check)
     def stop(result):
         call.stop()
         return result
-    d.addCallback(stop)
+    d.addBoth(stop)
     d2 = call.start(interval)
     d2.addErrback(d.errback)
     return d
@@ -1556,21 +1566,38 @@ class MyHCFactory(protocol.ServerFactory):
         return p
 
 
-class HalfCloseTestCase(unittest.TestCase):
+
+class _TCPListenMixin(object):
+    """
+    Mixin for half-close tests supporting TCP connections.
+    """
+
+    def listen(self, reactor, factory):
+        """
+        Listen on a TCP port.
+        """
+        self._port = p = reactor.listenTCP(0, factory, interface="127.0.0.1")
+        self.addCleanup(p.stopListening)
+        return p
+
+
+    def connect(self, reactor, protocolClass):
+        """
+        Connect to the TCP port.
+        """
+        return protocol.ClientCreator(reactor, protocolClass).connectTCP(
+            "127.0.0.1", self._port.getHost().port)
+
+
+
+class HalfCloseTestCase(unittest.TestCase, _TCPListenMixin):
     """Test half-closing connections."""
 
     def setUp(self):
         self.f = f = MyHCFactory()
-        self.p = p = reactor.listenTCP(0, f, interface="127.0.0.1")
-        self.addCleanup(p.stopListening)
-        d = loopUntil(lambda :p.connected)
+        self.listen(reactor, f)
+        return self.connect(reactor, MyHCProtocol).addCallback(self._setUp)
 
-        self.cf = protocol.ClientCreator(reactor, MyHCProtocol)
-
-        d.addCallback(lambda _: self.cf.connectTCP(p.getHost().host,
-                                                   p.getHost().port))
-        d.addCallback(self._setUp)
-        return d
 
     def _setUp(self, client):
         self.client = client
@@ -1579,13 +1606,12 @@ class HalfCloseTestCase(unittest.TestCase):
         # Wait for the server to notice there is a connection, too.
         return loopUntil(lambda: getattr(self.f, 'protocol', None) is not None)
 
+
     def tearDown(self):
         self.assertEqual(self.client.closed, 0)
         self.client.transport.loseConnection()
-        d = defer.maybeDeferred(self.p.stopListening)
-        d.addCallback(lambda ign: self.clientProtoConnectionLost)
-        d.addCallback(self._tearDown)
-        return d
+        return self.clientProtoConnectionLost.addCallback(self._tearDown)
+
 
     def _tearDown(self, ignored):
         self.assertEqual(self.client.closed, 1)
@@ -1638,18 +1664,18 @@ class HalfCloseTestCase(unittest.TestCase):
         return d
 
 
-class HalfClose2TestCase(unittest.TestCase):
+class HalfClose2TestCase(unittest.TestCase, _TCPListenMixin):
 
     def setUp(self):
         self.f = f = MyServerFactory()
         self.f.protocolConnectionMade = defer.Deferred()
-        self.p = p = reactor.listenTCP(0, f, interface="127.0.0.1")
+        self.p = self.listen(reactor, f)
 
         # XXX we don't test server side yet since we don't do it yet
-        d = protocol.ClientCreator(reactor, AccumulatingProtocol).connectTCP(
-            p.getHost().host, p.getHost().port)
+        d = self.connect(reactor, AccumulatingProtocol)
         d.addCallback(self._gotClient)
         return d
+
 
     def _gotClient(self, client):
         self.client = client
@@ -1658,9 +1684,10 @@ class HalfClose2TestCase(unittest.TestCase):
         # return None and not wait at all, which is precisely correct.
         return self.f.protocolConnectionMade
 
+
     def tearDown(self):
         self.client.transport.loseConnection()
-        return self.p.stopListening()
+
 
     def testNoNotification(self):
         """
@@ -1678,6 +1705,7 @@ class HalfClose2TestCase(unittest.TestCase):
         d.addCallback(lambda x: self.assertEqual(self.f.protocol.closed, True))
         return defer.gatherResults([d, d2])
 
+
     def testShutdownException(self):
         """
         If the other side has already closed its connection,
@@ -1693,7 +1721,8 @@ class HalfClose2TestCase(unittest.TestCase):
         return defer.gatherResults([d, d2])
 
 
-class HalfCloseBuggyApplicationTests(unittest.TestCase):
+
+class HalfCloseBuggyApplicationTests(unittest.TestCase, _TCPListenMixin):
     """
     Test half-closing connections where notification code has bugs.
     """
@@ -1705,12 +1734,8 @@ class HalfCloseBuggyApplicationTests(unittest.TestCase):
         """
         self.serverFactory = MyHCFactory()
         self.serverFactory.protocolConnectionMade = defer.Deferred()
-        self.port = reactor.listenTCP(
-            0, self.serverFactory, interface="127.0.0.1")
-        self.addCleanup(self.port.stopListening)
-        addr = self.port.getHost()
-        creator = protocol.ClientCreator(reactor, MyHCProtocol)
-        clientDeferred = creator.connectTCP(addr.host, addr.port)
+        self.listen(reactor, self.serverFactory)
+        clientDeferred = self.connect(reactor, MyHCProtocol)
         def setClient(clientProtocol):
             self.clientProtocol = clientProtocol
         clientDeferred.addCallback(setClient)

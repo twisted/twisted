@@ -11,12 +11,13 @@ from zope.interface import implements
 
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.protocol import ServerFactory, ClientFactory, Protocol
+from twisted.internet.protocol import ClientCreator
 from twisted.internet.interfaces import (
-    IReactorSSL, ITLSTransport, IStreamClientEndpoint)
-from twisted.internet.defer import Deferred, DeferredList
+    IReactorSSL, ITLSTransport, IStreamClientEndpoint, IHalfCloseableProtocol)
+from twisted.internet.defer import Deferred, DeferredList, gatherResults
 from twisted.internet.endpoints import (
     SSL4ServerEndpoint, SSL4ClientEndpoint, TCP4ClientEndpoint)
-from twisted.internet.error import ConnectionClosed
+from twisted.internet.error import ConnectionClosed, ConnectionDone
 from twisted.internet.task import Cooperator
 from twisted.trial.unittest import SkipTest
 from twisted.python.runtime import platform
@@ -25,6 +26,8 @@ from twisted.internet.test.test_core import ObjectModelIntegrationMixin
 from twisted.internet.test.test_tcp import StreamTransportTestsMixin
 from twisted.internet.test.connectionmixins import ConnectionTestsMixin
 from twisted.internet.test.test_tcp import AbortConnectionMixin
+from twisted.test.test_tcp import HalfCloseTestCase, HalfClose2TestCase
+from twisted.test.test_tcp import HalfCloseBuggyApplicationTests
 
 try:
     from OpenSSL.crypto import FILETYPE_PEM
@@ -255,6 +258,85 @@ class SSLClientTestsMixin(TLSMixin, ReactorBuilder, ContextGeneratingMixin,
         lostConnectionResults[1].trap(ConnectionClosed)
 
 
+    def test_halfClose(self):
+        """
+        If side A of a connection calls C{loseWriteConnection}, side B can
+        delay shutting down TLS and send some bytes first, and these bytes
+        will arrive, and the connection will close cleanly.
+
+        This tests the regression covered in ticket #5341.
+        """
+        serverDeferred = Deferred()
+        clientDeferred = Deferred()
+        reactor = self.buildReactor()
+
+        class ServerProtocol(Protocol):
+            data = ""
+
+            implements(IHalfCloseableProtocol)
+
+            def readConnectionLost(self):
+                print "Read", self
+
+            def writeConnectionLost(self):
+                print "Write", self
+
+            def dataReceived(self, data):
+                if not self.data:
+                    # Only do half-close after the handshake:
+                    self.transport.loseWriteConnection()
+                self.data += data
+
+            def connectionLost(self, reason):
+                self.reason = reason
+                serverDeferred.callback(self)
+
+
+        class ClientProtocol(Protocol):
+            implements(IHalfCloseableProtocol)
+
+            def connectionMade(self):
+                self.transport.write("these ")
+
+            def writeConnectionLost(self):
+                print "Shouldn't be reached"
+
+            def readConnectionLost(self):
+                print "read lost"
+                self.transport.write("should arrive")
+                reactor.callLater(0.01, self.transport.loseConnection)
+
+            def connectionLost(self, reason):
+                self.reason = reason
+                clientDeferred.callback(self)
+
+        serverFactory = ServerFactory()
+        serverFactory.protocol = ServerProtocol
+        clientFactory = ClientFactory()
+        clientFactory.protocol = ClientProtocol
+
+
+        def finishTest(port):
+            self.clientEndpoint(reactor, port.getHost()).connect(clientFactory)
+
+            result = []
+            d = gatherResults([serverDeferred, clientDeferred])
+            def done(protocols):
+                result.append(protocols)
+                reactor.stop()
+            d.addCallback(done)
+            self.runReactor(reactor, timeout=2)
+
+            server, client = result[0]
+            self.assertEqual(server.data, "these should arrive")
+            server.reason.trap(ConnectionDone)
+            client.reason.trap(ConnectionDone)
+
+        self.serverEndpoint(reactor).listen(serverFactory).addCallback(
+            finishTest)
+
+
+
 
 class TLSPortTestsBuilder(TLSMixin, ContextGeneratingMixin,
                           ObjectModelIntegrationMixin,
@@ -332,3 +414,48 @@ class AbortSSLConnectionTest(ReactorBuilder, AbortConnectionMixin, ContextGenera
             self.clientContext)
 
 globals().update(AbortSSLConnectionTest.makeTestCaseClasses())
+
+
+
+class _SSLListenMixin(ContextGeneratingMixin):
+    """
+    SSL mixin for half-close tests.
+    """
+
+    def listen(self, reactor, server):
+        """
+        Listen using SSL.
+        """
+        self._port = reactor.listenSSL(
+            0, server, self.getServerContext(), interface="127.0.0.1")
+        self.addCleanup(self._port.stopListening)
+
+
+    def connect(self, reactor, clientClass):
+        """
+        Connect using SSL.
+        """
+        return ClientCreator(reactor, clientClass).connectSSL(
+            "127.0.0.1", self._port.getHost().port, self.getClientContext())
+
+
+
+class HalfCloseBuggyApplicationTests(_SSLListenMixin,
+                                     HalfCloseBuggyApplicationTests):
+    """
+    SSL version of half-close tests.
+    """
+
+
+
+class HalfCloseTestCase(_SSLListenMixin, HalfCloseTestCase):
+    """
+    SSL version of half-close tests.
+    """
+
+
+
+class HalfClose2TestCase(_SSLListenMixin, HalfClose2TestCase):
+    """
+    SSL version of half-close tests.
+    """
