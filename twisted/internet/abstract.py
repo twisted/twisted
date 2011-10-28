@@ -324,6 +324,9 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         streaming producer is registered, it will be paused until the buffered
         data is written to the underlying file descriptor.
         """
+        for i in iovec:
+            if isinstance(i, unicode): # no, really, I mean it
+                raise TypeError("Data must not be unicode")
         if not self.connected or not iovec or self._writeDisconnected:
             return
         self._tempDataBuffer.extend(iovec)

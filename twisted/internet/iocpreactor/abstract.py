@@ -281,6 +281,9 @@ class FileHandle(_ConsumerMixin, _LogOwner):
 
 
     def writeSequence(self, iovec):
+        for i in iovec:
+            if isinstance(i, unicode): # no, really, I mean it
+                raise TypeError("Data must not be unicode")
         if not self.connected or not iovec or self._writeDisconnected:
             return
         self._tempDataBuffer.extend(iovec)
