@@ -22,17 +22,17 @@ from serialport import BaseSerialPort
 
 
 class SerialPort(BaseSerialPort, abstract.FileDescriptor):
-    """A select()able serial device, acting as a transport."""
+    """A serial device, acting as a transport, that uses a win32 event."""
 
     connected = 1
 
     def __init__(self, protocol, deviceNameOrPortNumber, reactor, 
         baudrate = 9600, bytesize = EIGHTBITS, parity = PARITY_NONE,
         stopbits = STOPBITS_ONE, xonxoff = 0, rtscts = 0):
-        self._serial = serial.Serial(deviceNameOrPortNumber, baudrate=baudrate,
-                                     bytesize=bytesize, parity=parity,
-                                     stopbits=stopbits, timeout=None,
-                                     xonxoff=xonxoff, rtscts=rtscts)
+        self._serial = self._serialFactory(
+            deviceNameOrPortNumber, baudrate=baudrate, bytesize=bytesize,
+            parity=parity, stopbits=stopbits, timeout=None,
+            xonxoff=xonxoff, rtscts=rtscts)
         self.flushInput()
         self.flushOutput()
         self.reactor = reactor
@@ -41,22 +41,31 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
         self.closed = 0
         self.closedNotifies = 0
         self.writeInProgress = 0
-        
+
         self.protocol = protocol
         self._overlappedRead = win32file.OVERLAPPED()
         self._overlappedRead.hEvent = win32event.CreateEvent(None, 1, 0, None)
         self._overlappedWrite = win32file.OVERLAPPED()
         self._overlappedWrite.hEvent = win32event.CreateEvent(None, 0, 0, None)
-        
+
         self.reactor.addEvent(self._overlappedRead.hEvent, self, 'serialReadEvent')
         self.reactor.addEvent(self._overlappedWrite.hEvent, self, 'serialWriteEvent')
 
         self.protocol.makeConnection(self)
+        self._finishPortSetup()
 
+
+    def _finishPortSetup(self):
+        """
+        Finish setting up the serial port.
+
+        This is a separate method to facilitate testing.
+        """
         flags, comstat = win32file.ClearCommError(self._serial.hComPort)
         rc, self.read_buf = win32file.ReadFile(self._serial.hComPort,
                                                win32file.AllocateReadBuffer(1),
                                                self._overlappedRead)
+
 
     def serialReadEvent(self):
         #get that character we set up
@@ -83,6 +92,7 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
                                                win32file.AllocateReadBuffer(1),
                                                self._overlappedRead)
 
+
     def write(self, data):
         if data:
             if self.writeInProgress:
@@ -90,6 +100,7 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
             else:
                 self.writeInProgress = 1
                 win32file.WriteFile(self._serial.hComPort, data, self._overlappedWrite)
+
 
     def serialWriteEvent(self):
         try:
@@ -99,9 +110,17 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
             return
         else:
             win32file.WriteFile(self._serial.hComPort, dataToWrite, self._overlappedWrite)
-    
+
+
     def connectionLost(self, reason):
+        """
+        Called when the serial port disconnects.
+
+        Will call C{connectionLost} on the protocol that is handling the
+        serial data.
+        """
         self.reactor.removeEvent(self._overlappedRead.hEvent)
         self.reactor.removeEvent(self._overlappedWrite.hEvent)
         abstract.FileDescriptor.connectionLost(self, reason)
         self._serial.close()
+        self.protocol.connectionLost(reason)
