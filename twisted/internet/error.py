@@ -95,8 +95,8 @@ class ConnectError(Exception):
         s = self.__doc__ or self.__class__.__name__
         if self.osError:
             s = '%s: %s' % (s, self.osError)
-        if self[0]:
-            s = '%s: %s' % (s, self[0])
+        if self.args[0]:
+            s = '%s: %s' % (s, self.args[0])
         s = '%s.' % s
         return s
 

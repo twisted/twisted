@@ -449,13 +449,13 @@ class Client(BaseClient):
         try:
             skt = self.createInternetSocket()
         except socket.error, se:
-            err = error.ConnectBindError(se[0], se[1])
+            err = error.ConnectBindError(se.args[0], se.args[1])
             whenDone = None
         if whenDone and bindAddress is not None:
             try:
                 skt.bind(bindAddress)
             except socket.error, se:
-                err = error.ConnectBindError(se[0], se[1])
+                err = error.ConnectBindError(se.args[0], se.args[1])
                 whenDone = None
         self._finishInit(whenDone, skt, err, reactor)
 

@@ -152,7 +152,7 @@ class PollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         try:
             l = self._poller.poll(timeout)
         except SelectError, e:
-            if e[0] == errno.EINTR:
+            if e.args[0] == errno.EINTR:
                 return
             else:
                 raise
