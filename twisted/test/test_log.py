@@ -318,31 +318,34 @@ class LogTest(unittest.TestCase):
 
     def test_multipleBuggyObservers(self):
         """
-        L{log.LogPublisher.msg} handles buggy observers one by one, so that
-        they have a chance to report about other buggy observers, even if
-        they both failed in the same L{log.msg} call.
+        L{log.LogPublisher.msg} reports buggy observers only after it has
+        completed normal event publishing, and reports them only to observers
+        that haven't failed in the same C{msg} call.
         """
-        errors = []
-        def logError(eventDict):
+        events = []
+        def report(eventDict):
             if eventDict.get("isError"):
-                errors.append(eventDict["failure"].value)
+                events.append(eventDict["failure"].value)
+            else:
+                events.append(eventDict["message"][0])
 
+        error1 = RuntimeError("fail1")
         def fail1(eventDict):
-            raise RuntimeError("fail1")
+            raise error1
 
+        error2 = RuntimeError("fail2")
         def fail2(eventDict):
-            raise RuntimeError("fail2")
+            raise error2
 
         publisher = log.LogPublisher()
-        observers = [logError, fail1, fail2]
+        observers = [report, fail1, fail2]
         for observer in observers:
             publisher.addObserver(observer)
 
-        publisher.msg("Hello!")
+        message = "Hello!"
+        publisher.msg(message)
         self.assertEqual(publisher.observers, observers)
-        self.assertEqual(len(errors), 4)
-        for error in errors:
-            self.assertIsInstance(error, RuntimeError)
+        self.assertEqual(events, [message, error2, error1])
 
 
     def test_noObserverSkipped(self):
