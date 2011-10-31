@@ -115,8 +115,13 @@ class LogTest(unittest.TestCase):
         logging failed also causes an error, the log observer is not removed.
         """
         events = []
-        errors = []
         publisher = log.LogPublisher()
+
+        def report(eventDict):
+            if eventDict["isError"]:
+                events.append(eventDict["failure"].value)
+            else:
+                events.append(eventDict["message"][0])
 
         class FailingObserver(object):
             calls = 0
@@ -125,39 +130,33 @@ class LogTest(unittest.TestCase):
                 self.calls += 1
                 if self.calls < 2:
                     raise RuntimeError("Failure #%s" % (self.calls,))
-                else:
-                    events.append(msg)
+
+        def failIfError(eventDict):
+            if eventDict["isError"]:
+                raise ValueError("second")
 
         observer = FailingObserver()
-        publisher.addObserver(observer.log)
-        self.assertEqual(publisher.observers, [observer.log])
+        observers = [report, observer.log, failIfError]
+        for o in observers:
+            publisher.addObserver(o)
+        self.assertEqual(publisher.observers, observers)
 
-        try:
-            # When observer throws, the publisher attempts to log the fact by
-            # calling self._err()... which also fails with recursion error:
-            oldError = publisher._err
-
-            def failingErr(observers, failure, why, **kwargs):
-                errors.append(failure.value)
-                raise RuntimeError("Fake recursion error")
-
-            publisher._err = failingErr
-            publisher.msg("error in first observer")
-        finally:
-            publisher._err = oldError
-            # Observer should still exist; we do this in finally since before
-            # bug was fixed the test would fail due to uncaught exception, so
-            # we want failing assert too in that case:
-            self.assertEqual(publisher.observers, [observer.log])
+        publisher.msg("error in first observer")
+        self.assertEqual(observer.calls, 1)
+        self.assertEqual(len(events), 3)
+        self.assertEqual(events[0], "error in first observer")
+        self.assertIsInstance(events[1], RuntimeError)
+        self.assertIsInstance(events[2], ValueError)
+        self.assertEqual(publisher.observers, observers)
+        del events[:]
 
         # The next message should succeed:
         publisher.msg("but this should succeed")
 
         self.assertEqual(observer.calls, 2)
         self.assertEqual(len(events), 1)
-        self.assertEqual(events[0]['message'], ("but this should succeed",))
-        self.assertEqual(len(errors), 1)
-        self.assertIsInstance(errors[0], RuntimeError)
+        self.assertEqual(events[0], "but this should succeed")
+        self.assertEqual(publisher.observers, observers)
 
 
     def test_resourceExhaustionDoesNotRemoveObserver(self):
