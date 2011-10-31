@@ -42,13 +42,12 @@ class DirDbmTestCase(unittest.TestCase):
 
         # insert keys
         keys = []
-        values = []
+        values = set()
         for k, v in self.items:
             d[k] = v
             keys.append(k)
-            values.append(v)
+            values.add(v)
         keys.sort()
-        values.sort()
 
         # check they exist
         for k, v in self.items:
@@ -65,13 +64,10 @@ class DirDbmTestCase(unittest.TestCase):
 
         # check keys(), values() and items()
         dbkeys = list(d.keys())
-        dbvalues = list(d.values())
-        dbitems = list(d.items())
+        dbvalues = set(d.values())
+        dbitems = set(d.items())
         dbkeys.sort()
-        dbvalues.sort()
-        dbitems.sort()
-        items = list(self.items)
-        items.sort()
+        items = set(self.items)
         assert keys == dbkeys, ".keys() output didn't match: %s != %s" % (repr(keys), repr(dbkeys))
         assert values == dbvalues, ".values() output didn't match: %s != %s" % (repr(values), repr(dbvalues))
         assert items == dbitems, "items() didn't match: %s != %s" % (repr(items), repr(dbitems))
@@ -80,11 +76,9 @@ class DirDbmTestCase(unittest.TestCase):
         d2 = d.copyTo(copyPath)
 
         copykeys = list(d.keys())
-        copyvalues = list(d.values())
-        copyitems = list(d.items())
+        copyvalues = set(d.values())
+        copyitems = set(d.items())
         copykeys.sort()
-        copyvalues.sort()
-        copyitems.sort()
 
         assert dbkeys == copykeys, ".copyTo().keys() didn't match: %s != %s" % (repr(dbkeys), repr(copykeys))
         assert dbvalues == copyvalues, ".copyTo().values() didn't match: %s != %s" % (repr(dbvalues), repr(copyvalues))
