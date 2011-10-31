@@ -160,7 +160,7 @@ class LogTest(unittest.TestCase):
         self.assertIsInstance(errors[0], RuntimeError)
 
 
-    def test_doubleErrorNeverRemovesObserver(self):
+    def test_resourceExhaustionDoesNotRemoveObserver(self):
         """
         If an exception is raised while trying to report a broken observer,
         that observer isn't removed from the L{log.LogPublisher}.
@@ -172,25 +172,18 @@ class LogTest(unittest.TestCase):
         errors = []
         def brokenFailure(*args):
             errors.append(sys.exc_info()[1])
-            raise RuntimeError("Failure")
-
-        events = []
-        def report(eventDict):
-            events.append(eventDict)
+            raise MemoryError("Failure")
 
         publisher = log.LogPublisher()
         publisher.addObserver(brokenObserver)
-        publisher.addObserver(report)
         patcher = self.patch(log.failure, "Failure", brokenFailure)
         try:
-            publisher.msg("Hello!")
+            self.assertRaises(MemoryError, publisher.msg, "Hello!")
         finally:
             patcher.restore()
 
         self.assertEqual(errors, [observerError])
-        self.assertEqual(len(events), 1)
-        self.assertEqual(events[0]["message"], ("Hello!",))
-        self.assertEqual(publisher.observers, [brokenObserver, report])
+        self.assertEqual(publisher.observers, [brokenObserver])
 
 
     def test_showwarning(self):
