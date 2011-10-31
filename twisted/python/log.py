@@ -296,8 +296,9 @@ class LogPublisher:
         actualEventDict.update(kw)
         actualEventDict['message'] = message
         actualEventDict['time'] = time.time()
-        failed = []
-        for observer in reversed(observers):
+        failed = set()
+        retry = []
+        for observer in observers:
             try:
                 observer(actualEventDict)
             except KeyboardInterrupt:
@@ -306,24 +307,15 @@ class LogPublisher:
             except UnicodeEncodeError:
                 raise
             except:
-                try:
-                    fail = failure.Failure()
-                    why = ("Log observer %s failed." %
-                           (reflect.safe_str(observer),))
-                    innocentObservers = []
-                    for o in observers:
-                        if o is not observer:
-                            innocentObservers.append(o)
-                    failed.append((innocentObservers, fail, why))
-                except Exception:
-                    # OOM or stack overflow. Give up.
-                    pass
-        for innocentObservers, fail, why in failed:
-            try:
+                fail = failure.Failure()
+                why = "Log observer %s failed." % (reflect.safe_str(observer),)
+                retry.append((fail, why))
+                failed.add(id(observer))
+        if retry:
+            innocentObservers = [
+                obs for obs in observers if id(obs) not in failed]
+            for fail, why in retry:
                 self._err(innocentObservers, fail, why)
-            except (MemoryError, RuntimeError):
-                # OOM or stack overflow. Give up.
-                pass
 
 
     def _err(self, observers, failure, why):
