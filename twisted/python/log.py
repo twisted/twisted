@@ -298,7 +298,7 @@ class LogPublisher:
         actualEventDict['time'] = time.time()
         failed = set()
         retry = []
-        for observer in observers:
+        for observer in reversed(observers):
             try:
                 observer(actualEventDict)
             except KeyboardInterrupt:

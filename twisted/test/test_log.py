@@ -362,23 +362,49 @@ class LogTest(unittest.TestCase):
         to report the same log event multiple times.
         """
         events = []
+        errors = []
         def report(eventDict):
-            events.append(eventDict)
+            if eventDict["isError"]:
+                errors.append(eventDict)
+            else:
+                events.append(eventDict)
 
         def remover(eventDict):
             publisher.removeObserver(remover)
 
+        added = []
+        def adder(eventDict):
+            if not added:
+                added.append(remover)
+                publisher.addObserver(remover)
+
+        # Check that the observer is not skipped if an observer in front of it
+        # is removed.
         publisher = log.LogPublisher()
         for observer in remover, report:
             publisher.addObserver(observer)
         publisher.msg("Hello!")
+        self.assertFalse(errors, errors)
         self.assertTrue(events, events)
 
+        # Check that the observer is not skipped if an observer after it is
+        # removed.
         del events[:]
         publisher = log.LogPublisher()
         for observer in report, remover:
             publisher.addObserver(observer)
         publisher.msg("Hello!")
+        self.assertFalse(errors, errors)
+        self.assertTrue(events, events)
+
+        # Check that the observer is not skipped if an observer is added after
+        # it.
+        del events[:]
+        publisher = log.LogPublisher()
+        for observer in report, adder:
+            publisher.addObserver(observer)
+        publisher.msg("Hello!")
+        self.assertFalse(errors, errors)
         self.assertTrue(events, events)
 
 
