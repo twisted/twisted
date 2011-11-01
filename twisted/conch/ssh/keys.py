@@ -461,9 +461,9 @@ class Key(object):
         'RSA' or 'DSA'.
         """
         # the class is Crypto.PublicKey.<type>.<stuff we don't care about>
-        klass = str(self.keyObject.__class__)
-        if klass.startswith('Crypto.PublicKey'):
-            type = klass.split('.')[2]
+        mod = self.keyObject.__class__.__module__
+        if mod.startswith('Crypto.PublicKey'):
+            type = mod.split('.')[2]
         else:
             raise RuntimeError('unknown type of object: %r' % self.keyObject)
         if type in ('RSA', 'DSA'):
