@@ -64,11 +64,11 @@ class _BypassTLS(object):
         return self._base.writeSequence(self._connection, iovec)
 
 
-    def loseConnection(self, reason=None):
+    def loseConnection(self, *args, **kwargs):
         """
         Close the underlying connection.
         """
-        return self._base.loseConnection(self._connection, reason)
+        return self._base.loseConnection(self._connection, *args, **kwargs)
 
 
 
