@@ -9,8 +9,8 @@ Requirements
   preferred on other platforms, but older versions will work as well.
 
   On Windows pywin32 (<http://sourceforge.net/projects/pywin32/files/>) is
-  recommended (this is already included in ActivePython).  The Windows IOCP
-  reactor requires pywin32 build 205 or later.
+  required.  Build 215 or later is highly recommended for reliable operation
+  (this is already included in ActivePython).
 
   If you would like to use Trial's subunit reporter, then you will need to
   install Subunit 0.0.2 or later (https://launchpad.net/subunit).

@@ -511,10 +511,11 @@ class TCPClientTestsBuilder(ReactorBuilder, ConnectionTestsMixin):
         """
         reactor = self.buildReactor()
 
-        # XXX For some reason, pyobject/pygtk will not deliver the close
+        # For some reason, pyobject/pygtk will not deliver the close
         # notification that should happen after the unregisterProducer call in
         # this test.  The selectable is in the write notification set, but no
-        # notification ever arrives.
+        # notification ever arrives.  Probably for the same reason #5233 led
+        # win32eventreactor to be broken.
         skippedReactors = ["Glib2Reactor", "Gtk2Reactor"]
         reactorClassName = reactor.__class__.__name__
         if reactorClassName in skippedReactors and platform.isWindows():
@@ -873,6 +874,55 @@ class TCPConnectionTestsBuilder(ReactorBuilder):
         d = DeferredList([cc.connect(cf), sf.ready]).addCallback(proceed, p)
         self.runReactor(reactor)
         return d
+
+
+    def test_connectionLostAfterPausedTransport(self):
+        """
+        Alice connects to Bob.  Alice writes some bytes and then shuts down the
+        connection.  Bob receives the bytes from the connection and then pauses
+        the transport object.  Shortly afterwards Bob resumes the transport
+        object.  At that point, Bob is notified that the connection has been
+        closed.
+
+        This is no problem for most reactors.  The underlying event notification
+        API will probably just remind them that the connection has been closed.
+        It is a little tricky for win32eventreactor (MsgWaitForMultipleObjects).
+        MsgWaitForMultipleObjects will only deliver the close notification once.
+        The reactor needs to remember that notification until Bob resumes the
+        transport.
+        """
+        reactor = self.buildReactor()
+        events = []
+        class Pauser(Protocol):
+            def dataReceived(self, bytes):
+                events.append("paused")
+                self.transport.pauseProducing()
+                reactor.callLater(0, self.resume)
+
+            def resume(self):
+                events.append("resumed")
+                self.transport.resumeProducing()
+
+            def connectionLost(self, reason):
+                # This is the event you have been waiting for.
+                events.append("lost")
+                reactor.stop()
+
+        serverFactory = ServerFactory()
+        serverFactory.protocol = Pauser
+        port = reactor.listenTCP(0, serverFactory)
+
+        cc = TCP4ClientEndpoint(reactor, '127.0.0.1', port.getHost().port)
+        cf = ClientFactory()
+        cf.protocol = Protocol
+        clientDeferred = cc.connect(cf)
+        def connected(client):
+            client.transport.write("some bytes for you")
+            client.transport.loseConnection()
+        clientDeferred.addCallback(connected)
+
+        self.runReactor(reactor)
+        self.assertEqual(events, ["paused", "resumed", "lost"])
 
 
 
@@ -1699,10 +1749,6 @@ class AbortConnectionMixin(object):
         that bugs should not be masked by abortConnection, in particular
         unexpected exceptions.
         """
-        # Skip if we're in win32event reactor:
-        if self.buildReactor().__class__.__name__ ==  "Win32Reactor":
-            raise SkipTest("This test will fail until ticket #5233 is fixed")
-
         self.runAbortTest(ResumeThrowsClient,
                           AbortServerProtocol,
                           clientConnectionLostReason=ZeroDivisionError)

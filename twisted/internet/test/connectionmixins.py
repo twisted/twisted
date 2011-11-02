@@ -5,6 +5,9 @@
 Various helpers for tests for connection-oriented transports.
 """
 
+from gc import collect
+from weakref import ref
+
 from twisted.python import context, log
 from twisted.python.reflect import fullyQualifiedName
 from twisted.python.log import ILogContext, msg, err
@@ -202,6 +205,43 @@ class ConnectionTestsMixin(object):
 
         self.runReactor(reactor)
         self.assertEqual(finished, [True, True])
+
+
+    def test_protocolGarbageAfterLostConnection(self):
+        """
+        After the connection a protocol is being used for is closed, the reactor
+        discards all of its references to the protocol.
+        """
+        lostConnectionDeferred = Deferred()
+        clientProtocol = ClosingLaterProtocol(lostConnectionDeferred)
+        clientRef = ref(clientProtocol)
+
+        reactor = self.buildReactor()
+        portDeferred = self.serverEndpoint(reactor).listen(
+            serverFactoryFor(Protocol))
+        def listening(port):
+            msg("Listening on %r" % (port.getHost(),))
+            endpoint = self.clientEndpoint(reactor, port.getHost())
+
+            client = endpoint.connect(factoryFor(lambda: clientProtocol))
+            def disconnect(proto):
+                msg("About to disconnect %r" % (proto,))
+                proto.transport.loseConnection()
+            client.addCallback(disconnect)
+            client.addErrback(lostConnectionDeferred.errback)
+            return lostConnectionDeferred
+
+        portDeferred.addCallback(listening)
+        portDeferred.addErrback(err)
+        portDeferred.addCallback(lambda ignored: reactor.stop())
+
+        self.runReactor(reactor)
+
+        # Drop the reference and get the garbage collector to tell us if there
+        # are no references to the protocol instance left in the reactor.
+        clientProtocol = None
+        collect()
+        self.assertIdentical(None, clientRef())
 
 
 

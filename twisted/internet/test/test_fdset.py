@@ -244,11 +244,6 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
         """
         reactor = self.buildReactor()
 
-        if reactor.__class__.__name__ == 'Win32Reactor':
-            # Win32Reactor uses WinSock to monitor sockets.  This means it never
-            # actually has to call fileno().
-            raise SkipTest("Win32Reactor never calls fileno")
-
         client, server = self._connectedPair()
 
         class DisappearingDescriptor(FileDescriptor):

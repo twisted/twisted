@@ -67,7 +67,9 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         """
         Construct a UNIX server endpoint.
         """
-        return UNIXServerEndpoint(reactor, self.mktemp())
+        # self.mktemp() often returns a path which is too long to be used.
+        path = mktemp(suffix='.sock', dir='.')
+        return UNIXServerEndpoint(reactor, path)
 
 
     def clientEndpoint(self, reactor, serverAddress):
