@@ -5,12 +5,13 @@
 Tests for L{twisted.words.protocols.irc}.
 """
 
+import operator
 import time
 
 from twisted.trial import unittest
 from twisted.trial.unittest import TestCase
 from twisted.words.protocols import irc
-from twisted.words.protocols.irc import IRCClient
+from twisted.words.protocols.irc import IRCClient, attributes as A
 from twisted.internet import protocol, task
 from twisted.test.proto_helpers import StringTransport, StringIOWithoutClosing
 
@@ -168,6 +169,305 @@ class ModeParsingTests(unittest.TestCase):
                                   ('b', 'nick!user@host'),
                                   ('b', 'other!*@*')])
         self.assertEqual(removed, [])
+
+
+class MiscTests(unittest.TestCase):
+    """
+    Tests for miscellaneous functions.
+    """
+    def test_foldr(self):
+        """
+        Apply a function of two arguments cumulatively to the items of
+        a sequence, from right to left, so as to reduce the sequence to
+        a single value.
+        """
+        self.assertEquals(
+            irc._foldr(operator.sub, 0, [1, 2, 3, 4]),
+            -2)
+        self.assertEquals(
+            reduce(operator.sub, [1, 2, 3, 4], 0),
+            -10)
+
+        def insertTop(l, x):
+            l.insert(0, x)
+            return l
+
+        self.assertEquals(
+            irc._foldr(insertTop, [], [[1], [2], [3], [4]]),
+            [[[[[], 4], 3], 2], 1])
+
+        self.assertEquals(
+            reduce(insertTop, [[1], [2], [3], [4]], []),
+            [[4], [3], [2], [1]])
+
+
+
+class FormattedTextTests(unittest.TestCase):
+    """
+    Tests for parsing and assembling formatted IRC text.
+    """
+    def assertParsesTo(self, text, expectedFormatted):
+        """
+        Assert that C{text} is parsed and assembled to the same value as what
+        C{expectedFormatted} is assembled to.
+        """
+        formatted = irc.parseFormattedText(text)
+        self.assertAssemblesTo(formatted, expectedFormatted)
+
+
+    def assertAssemblesTo(self, formatted, expectedFormatted):
+        """
+        Assert that C{formatted} and C{expectedFormatted} assemble to the same
+        value.
+        """
+        text = irc.assembleFormattedText(formatted)
+        expectedText = irc.assembleFormattedText(expectedFormatted)
+        self.assertEquals(
+            irc.assembleFormattedText(formatted),
+            expectedText,
+            '%r (%r) is not equivalent to %r (%r)' % (
+                text, formatted, expectedText, expectedFormatted))
+
+
+    def test_parseEmpty(self):
+        """
+        An empty string parses to a I{normal} attribute with no text.
+        """
+        self.assertParsesTo('', A.normal)
+
+
+    def test_assembleEmpty(self):
+        """
+        An attribute with no text assembles to the empty string. An attribute
+        whose text is the empty string assembles to two control codes: C{off}
+        and that of the attribute.
+        """
+        self.assertEquals(
+            irc.assembleFormattedText(A.normal),
+            '')
+
+        # Attempting to apply an attribute to the empty string should still
+        # produce two control codes.
+        self.assertEquals(
+            irc.assembleFormattedText(
+                A.bold['']),
+            '\x0f\x02')
+
+
+    def test_assembleNormal(self):
+        """
+        A I{normal} string assembles to a string prefixed with the I{off}
+        control code.
+        """
+        self.assertEquals(
+            irc.assembleFormattedText(
+                A.normal['hello']),
+            '\x0fhello')
+
+
+    def test_assembleBold(self):
+        """
+        A I{bold} string assembles to a string prefixed with the I{off} and
+        I{bold} control codes.
+        """
+        self.assertEquals(
+            irc.assembleFormattedText(
+                A.bold['hello']),
+            '\x0f\x02hello')
+
+
+    def test_assembleUnderline(self):
+        """
+        An I{underline} string assembles to a string prefixed with the I{off}
+        and I{underline} control codes.
+        """
+        self.assertEquals(
+            irc.assembleFormattedText(
+                A.underline['hello']),
+            '\x0f\x1fhello')
+
+
+    def test_assembleReverseVideo(self):
+        """
+        A I{reverse video} string assembles to a string prefixed with the I{off}
+        and I{reverse video} control codes.
+        """
+        self.assertEquals(
+            irc.assembleFormattedText(
+                A.reverseVideo['hello']),
+            '\x0f\x16hello')
+
+
+    def test_assembleForegroundColor(self):
+        """
+        A I{foreground color} string assembles to a string prefixed with the
+        I{off} and I{color} (followed by the relevant foreground color code)
+        control codes.
+        """
+        self.assertEquals(
+            irc.assembleFormattedText(
+                A.fg.blue['hello']),
+            '\x0f\x0302hello')
+
+
+    def test_assembleBackgroundColor(self):
+        """
+        A I{background color} string assembles to a string prefixed with the
+        I{off} and I{color} (followed by a I{,} to indicate the absence of a
+        foreground color, followed by the relevant background color code)
+        control codes.
+        """
+        self.assertEquals(
+            irc.assembleFormattedText(
+                A.bg.blue['hello']),
+            '\x0f\x03,02hello')
+
+
+    def test_assembleColor(self):
+        """
+        A I{foreground} and I{background} color string assembles to a string
+        prefixed with the I{off} and I{color} (followed by the relevant
+        foreground color, I{,} and the relevant background color code) control
+        codes.
+        """
+        self.assertEquals(
+            irc.assembleFormattedText(
+                A.bg.blue['hello']),
+            '\x0f\x03,02hello')
+
+
+    def test_assembleNested(self):
+        """
+        Nested attributes retain the attributes of their parents.
+        """
+        self.assertEquals(
+            irc.assembleFormattedText(
+                A.bold['hello', A.underline[' world']]),
+            '\x0f\x02hello\x0f\x02\x1f world')
+
+        self.assertEquals(
+            irc.assembleFormattedText(
+                A.normal[
+                    A.fg.red[A.bg.green['hello'], ' world'],
+                    A.reverseVideo[' yay']]),
+            '\x0f\x0305,03hello\x0f\x0305 world\x0f\x16 yay')
+
+
+    def test_parseEmptyString(self):
+        """
+        Parsing an empty string results in an empty list of formatting
+        information.
+        """
+        self.assertEquals(
+            irc.parseFormattedText(''),
+            A.normal)
+
+
+    def test_parseUnformattedText(self):
+        """
+        Parsing unformatted text results in text with attributes that
+        constitute a no-op.
+        """
+        self.assertEquals(
+            irc.parseFormattedText('hello'),
+            A.normal['hello'])
+
+
+    def test_colorFormatting(self):
+        """
+        Correctly formatted text with colors uses 2 digits to specify
+        foreground and (optionally) background.
+        """
+        self.assertEquals(
+            irc.parseFormattedText('\x0301yay\x03'),
+            A.fg.black['yay'])
+        self.assertEquals(
+            irc.parseFormattedText('\x0301,02yay\x03'),
+            A.fg.black[A.bg.blue['yay']])
+
+
+    def test_weirdColorFormatting(self):
+        """
+        Formatted text with colors can use 1 digit for both foreground and
+        background, as long as the text part does not begin with a digit.
+        Foreground and background colors are only processed to a maximum of 2
+        digits per component, anything else is treated as text. Color sequences
+        must begin with a digit, otherwise processing falls back to unformatted
+        text.
+        """
+        self.assertParsesTo(
+            '\x031kinda valid',
+            A.fg.black['kinda valid'])
+        self.assertParsesTo(
+            '\x03999,999kinda valid',
+            A.fg.green['9,999kinda valid'])
+        self.assertParsesTo(
+            '\x031,2kinda valid',
+            A.fg.black[A.bg.blue['kinda valid']])
+        self.assertParsesTo(
+            '\x031,999kinda valid',
+            A.fg.black[A.bg.green['9kinda valid']])
+        self.assertParsesTo(
+            '\x031,242 is a special number',
+            A.fg.black[A.bg.yellow['2 is a special number']])
+        self.assertParsesTo(
+            '\x03,02oops\x03',
+            A.normal[',02oops'])
+        self.assertParsesTo(
+            '\x03wrong',
+            A.normal['wrong'])
+        self.assertParsesTo(
+            '\x031,hello',
+            A.fg.black['hello'])
+        self.assertParsesTo(
+            '\x03\x03',
+            A.normal)
+
+
+    def test_stripFormatting(self):
+        """
+        Strip formatting codes from formatted text, leaving only the text parts.
+        """
+        self.assertEquals(
+            irc.stripFormatting(
+                irc.assembleFormattedText(
+                    A.bold[
+                        A.underline[
+                            A.reverseVideo[A.fg.red[A.bg.green['hello']]],
+                            ' world']])),
+            'hello world')
+
+
+
+class CharacterAttributeTests(unittest.TestCase):
+    """
+    Tests for L{twisted.words.protocols.irc.CharacterAttribute}.
+    """
+    def test_equality(self):
+        """
+        L{CharacterAttribute}s must have matching character attribute values
+        (bold, underline, etc) with the same values to be considered
+        equal.
+        """
+        self.assertEquals(
+            irc.CharacterAttribute(),
+            irc.CharacterAttribute())
+
+        self.assertEquals(
+            irc.CharacterAttribute(),
+            irc.CharacterAttribute(off=False))
+
+        self.assertEquals(
+            irc.CharacterAttribute(
+                bold=True, underline=True, off=False, reverseVideo=True,
+                foreground=irc._IRC_COLORS['blue']),
+            irc.CharacterAttribute(
+                bold=True, underline=True, off=False, reverseVideo=True,
+                foreground=irc._IRC_COLORS['blue']))
+
+        self.assertNotEquals(
+            irc.CharacterAttribute(bold=True),
+            irc.CharacterAttribute(bold=False))
 
 
 

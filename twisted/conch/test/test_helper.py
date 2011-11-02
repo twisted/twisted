@@ -556,5 +556,60 @@ class ExpectTestCase(unittest.TestCase):
 
         self.fs.calls[0].call()
 
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0].group(), "zoom")
+        self.assertEquals(len(result), 1)
+        self.assertEquals(result[0].group(), "zoom")
+
+
+
+class DefaultCharacterAttributeTests(unittest.TestCase):
+    """
+    Tests for L{twisted.conch.insults.helper.DefaultCharacterAttribute}.
+    """
+    def test_equality(self):
+        """
+        L{DefaultCharacterAttribute}s are always equal to other
+        L{DefaultCharacterAttribute}s.
+        """
+        b = helper.DefaultCharacterAttribute()
+        self.assertEquals(
+            helper.DefaultCharacterAttribute(),
+            helper.DefaultCharacterAttribute())
+        self.assertNotEquals(
+            helper.DefaultCharacterAttribute(),
+            'hello')
+
+
+
+class CharacterAttributeTests(unittest.TestCase):
+    """
+    Tests for L{twisted.conch.insults.helper.CharacterAttribute}.
+    """
+    def test_equality(self):
+        """
+        L{CharacterAttribute}s must have matching character attribute values
+        (bold, blink, underline, etc) with the same values to be considered
+        equal.
+        """
+        self.assertEquals(
+            helper.CharacterAttribute(),
+            helper.CharacterAttribute())
+
+        self.assertEquals(
+            helper.CharacterAttribute(),
+            helper.CharacterAttribute(charset=G0))
+
+        self.assertEquals(
+            helper.CharacterAttribute(
+                bold=True, underline=True, blink=False, reverseVideo=True,
+                foreground=helper.BLUE),
+            helper.CharacterAttribute(
+                bold=True, underline=True, blink=False, reverseVideo=True,
+                foreground=helper.BLUE))
+
+        self.assertNotEquals(
+            helper.CharacterAttribute(),
+            helper.CharacterAttribute(charset=G1))
+
+        self.assertNotEquals(
+            helper.CharacterAttribute(bold=True),
+            helper.CharacterAttribute(bold=False))
