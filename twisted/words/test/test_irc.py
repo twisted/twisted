@@ -1877,4 +1877,5 @@ class ClientTests(TestCase):
         def privmsg(user, channel, message):
             self.fail("privmsg() should not have been called")
         self.protocol.privmsg = privmsg
-        self.protocol.irc_NOTICE('spam', "I don't want any spam!")
+        self.protocol.irc_NOTICE(
+            'spam', ['#greasyspooncafe', "I don't want any spam!"])
