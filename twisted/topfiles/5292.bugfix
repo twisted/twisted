@@ -1,1 +1,0 @@
-SSL ports now consistently report themselves as SSL rather than TCP when logging their close message.

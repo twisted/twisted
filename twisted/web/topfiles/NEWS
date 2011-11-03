@@ -1,6 +1,67 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Web 11.1.0pre1 (2011-10-21)
+===================================
+
+Features
+--------
+ - twisted.web.client.ProxyAgent is a new HTTP/1.1 web client which
+   adds proxy support. (#1774)
+ - twisted.web.client.Agent now takes optional connectTimeout and
+   bindAddress arguments which are forwarded to the subsequent
+   connectTCP/connectSSL call. (#3450)
+ - The new class twisted.web.client.FileBodyProducer makes it easy to
+   upload data in HTTP requests made using the Agent client APIs.
+   (#4017)
+ - twisted.web.xmlrpc.XMLRPC now allows its lookupProcedure method to
+   be overridden to change how XML-RPC procedures are dispatched.
+   (#4836)
+ - A new HTTP cookie-aware Twisted Web Agent wrapper is included in
+   twisted.web.client.CookieAgent (#4922)
+ - New class twisted.web.template.TagLoader provides an
+   ITemplateLoader implementation which loads already-created
+   twisted.web.iweb.IRenderable providers. (#5040)
+ - The new class twisted.web.client.RedirectAgent adds redirect
+   support to the HTTP 1.1 client stack. (#5157)
+ - twisted.web.template now supports HTML tags from the HTML5
+   standard, including <canvas> and <video>. (#5306)
+
+Bugfixes
+--------
+ - twisted.web.client.getPage and .downloadPage now only fire their
+   result Deferred after the underlying connection they use has been
+   closed. (#3796)
+ - twisted.web.server now omits the default Content-Type header from
+   NOT MODIFIED responses. (#4156)
+ - twisted.web.server now responds correctly to 'Expect: 100-continue'
+   headers, although this is not yet usefully exposed to user code.
+   (#4673)
+ - twisted.web.client.Agent no longer raises an exception if a server
+   responds and closes the connection before the request has been
+   fully transmitted. (#5013)
+ - twisted.web.http_headers.Headers now correctly capitalizes the
+   header names Content-MD5, DNT, ETag, P3P, TE, and X-XSS-Protection.
+   (#5054)
+ - twisted.web.template now escapes more inputs to comments which
+   require escaping in the output. (#5275)
+
+Improved Documentation
+----------------------
+ - The twisted.web.template howto now documents the common idiom of
+   yielding tag clones from a renderer. (#5286)
+ - CookieAgent is now documented in the twisted.web.client how-to.
+   (#5110)
+
+Deprecations and Removals
+-------------------------
+ - twisted.web.google is now deprecated. (#5209)
+
+Other
+-----
+ - #4951, #5057, #5175, #5288, #5316
+
+
 Twisted Web 11.0.0 (2011-04-01)
 ===============================
 

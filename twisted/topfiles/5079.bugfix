@@ -1,1 +1,0 @@
-twisted.spread.pb.Broker no longer creates an uncollectable reference cycle when the logout callback holds a reference to the client mind object.

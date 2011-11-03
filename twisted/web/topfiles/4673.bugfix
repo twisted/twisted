@@ -1,1 +1,0 @@
-twisted.web.server now responds correctly to 'Expect: 100-continue' headers, although this is not yet usefully exposed to user code.

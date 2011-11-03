@@ -1,2 +1,0 @@
-twisted.web.http_headers.Headers now correctly capitalizes the header names
-Content-MD5, DNT, ETag, P3P, TE, and X-XSS-Protection.

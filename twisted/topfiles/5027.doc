@@ -1,1 +1,0 @@
-twisted.python.filepath.FilePath's methods now have more complete API documentation (docstrings).

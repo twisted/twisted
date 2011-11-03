@@ -1,1 +1,0 @@
-twisted.python.filepath.FilePath.copyTo now raises OSError(ENOENT) if the source path being copied does not exist.

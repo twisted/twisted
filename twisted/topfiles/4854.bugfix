@@ -1,3 +1,0 @@
-When pyOpenSSL 0.10 or newer is available, SSL support now uses Twisted for all
-I/O and only relies on OpenSSL for cryptography, avoiding a number of tricky,
-potentially broken edge cases.
