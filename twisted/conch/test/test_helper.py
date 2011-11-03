@@ -561,25 +561,6 @@ class ExpectTestCase(unittest.TestCase):
 
 
 
-class DefaultCharacterAttributeTests(unittest.TestCase):
-    """
-    Tests for L{twisted.conch.insults.helper.DefaultCharacterAttribute}.
-    """
-    def test_equality(self):
-        """
-        L{DefaultCharacterAttribute}s are always equal to other
-        L{DefaultCharacterAttribute}s.
-        """
-        b = helper.DefaultCharacterAttribute()
-        self.assertEquals(
-            helper.DefaultCharacterAttribute(),
-            helper.DefaultCharacterAttribute())
-        self.assertNotEquals(
-            helper.DefaultCharacterAttribute(),
-            'hello')
-
-
-
 class CharacterAttributeTests(unittest.TestCase):
     """
     Tests for L{twisted.conch.insults.helper.CharacterAttribute}.

@@ -13,8 +13,7 @@ import re, string
 from zope.interface import implements
 
 from twisted.internet import defer, protocol, reactor
-from twisted.python import log
-from twisted.python.util import FancyEqMixin
+from twisted.python import log, _textattributes
 from twisted.conch.insults import insults
 
 FOREGROUND = 30
@@ -23,37 +22,7 @@ BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE, N_COLORS = range(9)
 
 
 
-class DefaultCharacterAttribute(object, FancyEqMixin):
-    """
-    A character attribute that does nothing, thus applying no attributes to
-    text.
-    """
-    compareAttributes = ('_dummy',)
-
-    _dummy = 0
-
-
-    def copy(self):
-        """
-        Make a copy of this character attribute.
-        """
-        return type(self)()
-
-
-    def wantOne(self, **kw):
-        return self.copy()
-
-
-    def toVT102(self):
-        """
-        Emit a VT102 control sequence that will set up all the attributes this
-        character attribute has set.
-        """
-        return ''
-
-
-
-class CharacterAttribute(DefaultCharacterAttribute):
+class CharacterAttribute(_textattributes.CharacterAttributeMixin):
     """
     Represents the attributes of a single character.
 
@@ -77,23 +46,6 @@ class CharacterAttribute(DefaultCharacterAttribute):
         self.foreground = foreground
         self.background = background
         self._subtracting = _subtracting
-
-
-    def copy(self):
-        c = DefaultCharacterAttribute.copy(self)
-        c.__dict__.update(vars(self))
-        return c
-
-
-    def wantOne(self, **kw):
-        k, v = kw.popitem()
-        if getattr(self, k) != v:
-            attr = self.copy()
-            attr._subtracting = not v
-            setattr(attr, k, v)
-            return attr
-        else:
-            return self.copy()
 
 
     def toVT102(self):

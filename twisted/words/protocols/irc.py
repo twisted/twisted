@@ -56,11 +56,10 @@ import textwrap
 from copy import deepcopy
 from os import path
 
-from twisted.conch.insults import helper as insulthelper, text as insulttext
 from twisted.internet import reactor, protocol, task
 from twisted.persisted import styles
 from twisted.protocols import basic
-from twisted.python import log, reflect, text
+from twisted.python import log, reflect, text, _textattributes
 from twisted.python.compat import set
 
 NUL = chr(0)
@@ -2911,7 +2910,7 @@ _IRC_COLOR_NAMES = dict((code, name) for name, code in _IRC_COLORS.items())
 
 
 
-class CharacterAttributes(insulttext.CharacterAttributes):
+class CharacterAttributes(_textattributes.CharacterAttributesMixin):
     """
     Factory for character attributes, including foreground and background color
     and non-color attributes such as bold, reverse video and underline.
@@ -2962,10 +2961,10 @@ class CharacterAttributes(insulttext.CharacterAttributes):
     @ivar bg: Background colors accessed by attribute name, see above
         for possible names.
     """
-    fg = insulttext._ColorAttribute(
-        insulttext._ForegroundColorAttr, _IRC_COLORS)
-    bg = insulttext._ColorAttribute(
-        insulttext._BackgroundColorAttr, _IRC_COLORS)
+    fg = _textattributes._ColorAttribute(
+        _textattributes._ForegroundColorAttr, _IRC_COLORS)
+    bg = _textattributes._ColorAttribute(
+        _textattributes._BackgroundColorAttr, _IRC_COLORS)
 
     attrs = {
         'bold': _BOLD,
@@ -2978,7 +2977,7 @@ attributes = CharacterAttributes()
 
 
 
-class CharacterAttribute(insulthelper.CharacterAttribute):
+class CharacterAttribute(_textattributes.CharacterAttributeMixin):
     """
     Attributes of a single character.
 
@@ -3293,7 +3292,7 @@ def assembleFormattedText(formatted):
 
     @since: 11.0
     """
-    return insulttext.flatten(
+    return _textattributes.flatten(
         formatted, CharacterAttribute(), 'toMIRCControlCodes')
 
 
@@ -3309,8 +3308,8 @@ def stripFormatting(text):
     @since: 11.0
     """
     formatted = parseFormattedText(text)
-    return insulttext.flatten(
-        formatted, insulthelper.DefaultCharacterAttribute())
+    return _textattributes.flatten(
+        formatted, _textattributes.DefaultCharacterAttribute())
 
 
 
