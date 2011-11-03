@@ -51,6 +51,16 @@ Features
  - Server factories may now implement ILoggingContext to customize the
    name that is logged when the reactor uses one to start listening on
    a port. (#5292)
+ - The implementations of ITransport.writeSequence will now raise
+   TypeError if passed unicode strings. (#3896)
+ - iocp reactor now operates correctly on 64 bit Python runtimes.
+   (#4669)
+ - Added cred plugin support to twistd ftp (#4752)
+ - Added an API to twisted.python.filepath.FilePath to retrieve the
+   permissions of the underlying file.  Also, two methods to determine
+   whether it is a block device or a socket.  (#4813)
+ - twisted.trial.unittest.TestCase is now compatible with Python 2.7's
+   assertDictEqual method. (#5291)
 
 Bugfixes
 --------
@@ -116,6 +126,11 @@ Bugfixes
    implementation-detail factory. (#5278)
  - SSL ports now consistently report themselves as SSL rather than TCP
    when logging their close message. (#5292)
+ - Serial ports now deliver connectionLost to the protocol when
+   closed. (#3690)
+ - win32eventreactor now behaves better in certain rare cases in which
+   it previously would have failed to deliver connection lost
+   notification to a protocol. (#5233)
 
 Improved Documentation
 ----------------------
@@ -154,6 +169,8 @@ Deprecations and Removals
  - Removed twisted.trial.runner.DocTestSuite, deprecated in Twisted
    8.0. (#5111)
  - twisted.scripts.tkunzip is now deprecated. (#5140)
+ - Deprecated option --password-file in twistd ftp (#4752)
+ - mktap, deprecated since Twisted 8.0, has been removed. (#5293)
 
 Other
 -----
@@ -165,7 +182,8 @@ Other
    #5114, #5125, #5128, #5131, #5136, #5139, #5144, #5146, #5147,
    #5156, #5160, #5165, #5191, #5205, #5215, #5217, #5218, #5223,
    #5243, #5244, #5250, #5254, #5261, #5266, #5273, #5299, #5301,
-   #5302, #5304, #5308, #5311
+   #5302, #5304, #5308, #5311, #5321, #5322, #5327, #5328, #5332,
+   #5336
 
 
 Twisted Conch 11.1.0pre2 (2011-11-03)
@@ -204,7 +222,7 @@ Deprecations and Removals
 
 Other
 -----
- - #5107, #5256
+ - #5107, #5256, #5349
 
 
 Twisted Lore 11.1.0pre2 (2011-11-03)
@@ -365,7 +383,7 @@ Deprecations and Removals
 
 Other
 -----
- - #5025
+ - #5025, #5330
 
 
 Twisted Core 11.0.0 (2011-04-01)
