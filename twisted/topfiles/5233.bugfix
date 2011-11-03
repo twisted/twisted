@@ -1,1 +1,0 @@
-win32eventreactor now behaves better in certain rare cases in which it previously would have failed to deliver connection lost notification to a protocol.

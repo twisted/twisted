@@ -1,1 +1,0 @@
-Serial ports now deliver connectionLost to the protocol when closed.
