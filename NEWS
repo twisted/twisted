@@ -1,7 +1,7 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
-Twisted Core 11.1.0pre1 (2011-10-21)
+Twisted Core 11.1.0pre2 (2011-11-03)
 ====================================
 
 Features
@@ -168,7 +168,7 @@ Other
    #5302, #5304, #5308, #5311
 
 
-Twisted Conch 11.1.0pre1 (2011-10-21)
+Twisted Conch 11.1.0pre2 (2011-11-03)
 =====================================
 
 Features
@@ -207,7 +207,7 @@ Other
  - #5107, #5256
 
 
-Twisted Lore 11.1.0pre1 (2011-10-21)
+Twisted Lore 11.1.0pre2 (2011-11-03)
 ====================================
 
 Bugfixes
@@ -222,7 +222,7 @@ Deprecations and Removals
    deprecated in Twisted 9.0. (#5127)
 
 
-Twisted Mail 11.1.0pre1 (2011-10-21)
+Twisted Mail 11.1.0pre2 (2011-11-03)
 ====================================
 
 Features
@@ -242,7 +242,7 @@ Other
  - #4796, #5006
 
 
-Twisted Names 11.1.0pre1 (2011-10-21)
+Twisted Names 11.1.0pre2 (2011-11-03)
 =====================================
 
 Features
@@ -261,25 +261,25 @@ Bugfixes
    method is now implemented. (#5098)
 
 
-Twisted News 11.1.0pre1 (2011-10-21)
+Twisted News 11.1.0pre2 (2011-11-03)
 ====================================
 
 No significant changes have been made for this release.
 
 
-Twisted Pair 11.1.0pre1 (2011-10-21)
+Twisted Pair 11.1.0pre2 (2011-11-03)
 ====================================
 
 No significant changes have been made for this release.
 
 
-Twisted Runner 11.1.0pre1 (2011-10-21)
+Twisted Runner 11.1.0pre2 (2011-11-03)
 ======================================
 
 No significant changes have been made for this release.
 
 
-Twisted Web 11.1.0pre1 (2011-10-21)
+Twisted Web 11.1.0pre2 (2011-11-03)
 ===================================
 
 Features
@@ -340,7 +340,7 @@ Other
  - #4951, #5057, #5175, #5288, #5316
 
 
-Twisted Words 11.1.0pre1 (2011-10-21)
+Twisted Words 11.1.0pre2 (2011-11-03)
 =====================================
 
 Features
