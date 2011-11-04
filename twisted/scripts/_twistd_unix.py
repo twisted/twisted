@@ -20,6 +20,7 @@ class ServerOptions(app.ServerOptions):
     optFlags = [['nodaemon','n',  "don't daemonize, don't use default umask of 0077"],
                 ['originalname', None, "Don't try to change the process name"],
                 ['syslog', None,   "Log to syslog, not to file"],
+                ['no-pidfile', None, "Don't check or write a pidfile"],
                 ['euid', '',
                  "Set only effective user-id rather than real user-id. "
                  "(This option has no effect unless the server is running as "
@@ -61,7 +62,9 @@ class ServerOptions(app.ServerOptions):
 
     def postOptions(self):
         app.ServerOptions.postOptions(self)
-        if self['pidfile']:
+        if self['no-pidfile']:
+            self['pidfile'] = None
+        elif self['pidfile']:
             self['pidfile'] = os.path.abspath(self['pidfile'])
 
 
