@@ -3,7 +3,18 @@ from twisted.python.util import FancyEqMixin
 
 
 class _Attribute(object, FancyEqMixin):
+    """
+    A text attribute.
+
+    Indexing a text attribute with a C{str} or another text attribute adds that
+    object as a child, indexing with a C{list} or C{tuple} adds the elements as
+    children; in either case C{self} is returned.
+
+    @type children: C{list}
+    @ivar children: Child attributes.
+    """
     compareAttributes = ('children',)
+
 
     def __init__(self):
         self.children = []
@@ -23,6 +34,20 @@ class _Attribute(object, FancyEqMixin):
 
 
     def serialize(self, write, attrs=None, attributeRenderer='toVT102'):
+        """
+        Serialize the text attribute and its children.
+
+        @param write: C{callable}, taking one C{str} argument, called to output
+            a single text attribute at a time.
+
+        @param attrs: A character attribute instance used to determine how to
+            serialize the attribute children.
+
+        @type attributeRenderer: C{str}
+        @param attributeRenderer: Name of the method on L{attrs} that should be
+            called to render the attributes during serialization. Defaults to
+            C{'toVT102'}.
+        """
         if attrs is None:
             attrs = DefaultCharacterAttribute()
         for ch in self.children:
@@ -36,6 +61,9 @@ class _Attribute(object, FancyEqMixin):
 
 
 class _NormalAttr(_Attribute):
+    """
+    A text attribute for normal text.
+    """
     def serialize(self, write, attrs, attributeRenderer):
         attrs.__init__()
         _Attribute.serialize(self, write, attrs, attributeRenderer)
@@ -43,7 +71,19 @@ class _NormalAttr(_Attribute):
 
 
 class _OtherAttr(_Attribute):
+    """
+    A text attribute for text with formatting attributes.
+
+    The unary minus operator returns the inverse of this attribute, where that
+    makes sense.
+
+    @type attrname: C{str}
+    @ivar attrname: Text attribute name.
+
+    @ivar attrvalue: Text attribute value.
+    """
     compareAttributes = ('attrname', 'attrvalue', 'children')
+
 
     def __init__(self, attrname, attrvalue):
         _Attribute.__init__(self)
@@ -64,7 +104,15 @@ class _OtherAttr(_Attribute):
 
 
 class _ColorAttr(_Attribute):
+    """
+    Generic color attribute.
+
+    @param color: Color value.
+
+    @param ground: Foreground or background attribute name.
+    """
     compareAttributes = ('color', 'ground', 'children')
+
 
     def __init__(self, color, ground):
         _Attribute.__init__(self)
@@ -79,21 +127,39 @@ class _ColorAttr(_Attribute):
 
 
 class _ForegroundColorAttr(_ColorAttr):
+    """
+    Foreground color attribute.
+    """
     def __init__(self, color):
         _ColorAttr.__init__(self, color, 'foreground')
 
 
 
 class _BackgroundColorAttr(_ColorAttr):
+    """
+    Background color attribute.
+    """
     def __init__(self, color):
         _ColorAttr.__init__(self, color, 'background')
 
 
 
 class _ColorAttribute(object):
+    """
+    A color text attribute.
+
+    Attribute access results in a color value lookup, by name, in L{attrs}.
+
+    @type ground: L{_ColorAttr}
+    @param ground: Foreground or background color attribute to look color names
+        up from.
+
+    @param attrs: Mapping of color names to color values.
+    """
     def __init__(self, ground, attrs):
         self.ground = ground
         self.attrs = attrs
+
 
     def __getattr__(self, name):
         try:
@@ -104,6 +170,12 @@ class _ColorAttribute(object):
 
 
 class CharacterAttributesMixin(object):
+    """
+    Mixin for character attributes that implements a C{__getattr__} method
+    returning a new C{_NormalAttr} instance when attempting to access
+    a C{'normal'} attribute; otherwise a new C{_OtherAttr} instance is returned
+    for names that appears in the C{'attrs'} attribute.
+    """
     def __getattr__(self, name):
         if name == 'normal':
             return _NormalAttr()
@@ -131,6 +203,12 @@ class DefaultCharacterAttribute(object, FancyEqMixin):
 
 
     def wantOne(self, **kw):
+        """
+        Create a new attribute instance.
+
+        @param **kw: An optional attribute name and value can be provided with
+            a keyword argument.
+        """
         return self.copy()
 
 
@@ -177,18 +255,18 @@ def flatten(output, attrs, attributeRenderer='toVT102'):
     For example, if your terminal is VT102 compatible, you might run
     this for a colorful variation on the \"hello world\" theme::
 
-     | from twisted.conch.insults.text import flatten, attributes as A
-     | from twisted.conch.insults.helper import CharacterAttribute
-     | print flatten(
-     |     A.normal[A.bold[A.fg.red['He'], A.fg.green['ll'], A.fg.magenta['o'], ' ',
-     |                     A.fg.yellow['Wo'], A.fg.blue['rl'], A.fg.cyan['d!']]],
-     |     CharacterAttribute())
+        from twisted.conch.insults.text import flatten, attributes as A
+        from twisted.conch.insults.helper import CharacterAttribute
+        print flatten(
+            A.normal[A.bold[A.fg.red['He'], A.fg.green['ll'], A.fg.magenta['o'], ' ',
+                            A.fg.yellow['Wo'], A.fg.blue['rl'], A.fg.cyan['d!']]],
+            CharacterAttribute())
 
     @param output: Object returned by accessing attributes of the
         module-level attributes object.
 
-    @param attrs: A L{twisted.python._textattributes.CharacterAttribute}
-        instance.
+    @param attrs: A character attribute instance used to determine how to
+        serialize C{output}.
 
     @type attributeRenderer: C{str}
     @param attributeRenderer: Name of the method on L{attrs} that should be
