@@ -5,20 +5,6 @@
 """
 Internet Relay Chat protocol for client and server.
 
-
-Formatting IRC text
-===================
-
-Formatted (color, bold, etc.) text information is created by accessing the
-various attributes on the L{attributes} (see L{CharacterAttributes} for more
-information) module-level attribute. Formatted text information can then be
-converted into raw bytes with L{assembleFormattedText} that may be sent (e.g.
-with L{IRCClient.msg}). Raw bytes containing formatting codes can be parsed
-back into structured information with L{parseFormattedText}. Formatting can be
-removed altogether from raw bytes with L{stripFormatting}. See
-L{assembleFormattedText} for examples of constructing formatted text
-information.
-
 Future Plans
 ============
 
@@ -3245,21 +3231,6 @@ def assembleFormattedText(formatted):
 
     Would produce "Time: " in bold formatting, followed by "Now!" with a
     foreground color of light red and without any additional formatting.
-
-    A more complicated example::
-
-        from twisted.words.protocols.irc import attributes as A
-        assembleFormattedText(
-            A.bold[
-                'WARNING: Do ',
-                A.underline['NOT'],
-                ' cross the ',
-                A.fg.white[A.bg.red['red']],
-                ' line!'])
-
-    Would produce "WARNING: Do NOT cross the red line!" in bold formatting,
-    additionally "NOT" would be underlined and the word "red" would be
-    white-on-red.
 
     Available attributes are:
         - bold
