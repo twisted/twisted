@@ -13,17 +13,19 @@ import errno, os
 
 from time import time as _uniquefloat
 
+from twisted.python.runtime import platform
+
 def unique():
     return str(long(_uniquefloat() * 1000))
 
 from os import rename
-try:
+if not platform.isWindows():
     from os import kill
     from os import symlink
     from os import readlink
     from os import remove as rmlink
     _windows = False
-except:
+else:
     _windows = True
 
     try:
