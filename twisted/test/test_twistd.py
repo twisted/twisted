@@ -311,6 +311,15 @@ class ServerOptionsTest(unittest.TestCase):
         config = twistd.ServerOptions()
         self.assertRaises(UsageError, config.parseOptions, ['--umask', 'abcdef'])
 
+
+    def test_noPidfile(self):
+        """
+        Passing C{--no-pidfile} sets the C{pidfile} option to C{None}.
+        """
+        config = twistd.ServerOptions()
+        config.parseOptions(['--no-pidfile'])
+        self.assertEqual(config['pidfile'], None)
+
     if _twistd_unix is None:
         msg = "twistd unix not available"
         test_defaultUmask.skip = test_umask.skip = test_invalidUmask.skip = msg
