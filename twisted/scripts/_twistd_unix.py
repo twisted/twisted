@@ -90,8 +90,9 @@ def checkPID(pidfile):
             sys.exit("""\
 Another twistd server is running, PID %s\n
 This could either be a previously started instance of your application or a
-different application entirely. To start a new one, either run it in some other
-directory, or use the --pidfile and --logfile parameters to avoid clashes.
+different application entirely. To start a new one, run it in some other
+directory, use the --pidfile and --logfile parameters to avoid clashes, or
+disable pidfile checking entirely with the --no-pidfile parameter.
 """ %  pid)
 
 

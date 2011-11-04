@@ -31,10 +31,10 @@ debugger.
 The specified tap/aos file is encrypted.
 .TP
 \fB--euid\fR
-Set only effective user-id rather than real user-id. This option has no  
-effect unless the server is running as root, in which case it means not  
-to shed all privileges after binding ports, retaining the option to regain 
-privileges in cases such as spawning processes. Use with caution. 
+Set only effective user-id rather than real user-id. This option has no
+effect unless the server is running as root, in which case it means not
+to shed all privileges after binding ports, retaining the option to regain
+privileges in cases such as spawning processes. Use with caution.
 .TP
 \fB\-o\fR, \fB\--no_save\fR
 Do not save shutdown state.
@@ -53,6 +53,10 @@ observer. Takes precedence over --logfile and --syslog.
 .TP
 \fB\--pidfile\fR \fI<pidfile>\fR
 Save pid in specified file (default: twistd.pid).
+.TP
+\fB\--no-pidfile\fR
+Disable the use of a pidfile entirely; don't check for a pidfile on startup and
+don't write a pidfile out. Takes precedence over --pidfile.
 .TP
 \fB\--chroot\fR \fI<directory>\fR
 Chroot to a supplied directory before running (default: don't chroot).
