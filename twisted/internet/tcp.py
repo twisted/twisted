@@ -691,6 +691,12 @@ class Port(base.BasePort, _SocketCloser):
 
                         log.msg("Could not accept new connection (%s)" % (
                             errorcode[e.args[0]],))
+                        # Next time event loop comes around it'll just try to
+                        # accept() again... so stop listening for a second in
+                        # the hope that some file descriptors/memory/other
+                        # free up:
+                        self.stopReading()
+                        self.reactor.callLater(1, self.startReading)
                         break
                     raise
 

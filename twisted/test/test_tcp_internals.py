@@ -13,13 +13,14 @@ except ImportError:
     resource = None
 
 from twisted.trial.unittest import TestCase
-
 from twisted.python import log
 from twisted.internet.tcp import ECONNABORTED, ENOMEM, ENFILE, EMFILE, ENOBUFS, EINPROGRESS, Port
 from twisted.internet.protocol import ServerFactory
 from twisted.python.runtime import platform
 from twisted.internet.defer import maybeDeferred, gatherResults
 from twisted.internet import reactor, interfaces
+from twisted.internet.task import Clock
+
 
 
 class PlatformAssumptionsTestCase(TestCase):
@@ -111,12 +112,32 @@ class PlatformAssumptionsTestCase(TestCase):
 
 
 
-class SelectReactorTestCase(TestCase):
+class FakeReactor(Clock):
     """
-    Tests for select-specific failure conditions.
+    A reactor that supports time, and adding and removing readers.
+    """
+
+    def __init__(self):
+        Clock.__init__(self)
+        self.readers = set()
+
+
+    def addReader(self, reader):
+        self.readers.add(reader)
+
+
+    def removeReader(self, reader):
+        self.readers.remove(reader)
+
+
+
+class ResourceExhaustionTestCase(TestCase):
+    """
+    Tests for resource exhaustion failure conditions.
     """
 
     def setUp(self):
+        self.reactor = FakeReactor()
         self.ports = []
         self.messages = []
         log.addObserver(self.messages.append)
@@ -124,9 +145,6 @@ class SelectReactorTestCase(TestCase):
 
     def tearDown(self):
         log.removeObserver(self.messages.append)
-        return gatherResults([
-            maybeDeferred(p.stopListening)
-            for p in self.ports])
 
 
     def port(self, portNumber, factory, interface):
@@ -134,9 +152,12 @@ class SelectReactorTestCase(TestCase):
         Create, start, and return a new L{Port}, also tracking it so it can
         be stopped in the test tear down.
         """
-        p = Port(portNumber, factory, interface=interface)
+        p = Port(portNumber, factory, interface=interface, reactor=self.reactor)
         p.startListening()
-        self.ports.append(p)
+        def cleanup():
+            p.stopListening()
+            self.reactor.advance(0.01)
+        self.addCleanup(cleanup)
         return p
 
 
@@ -161,6 +182,10 @@ class SelectReactorTestCase(TestCase):
 
         factory = ServerFactory()
         port = self.port(0, factory, interface='127.0.0.1')
+        self.assertIn(port, self.reactor.readers)
+
+        # When we fail to accept(), we log an error message but do not throw
+        # an exception:
         originalSocket = port.socket
         try:
             port.socket = FakeSocket()
@@ -178,6 +203,13 @@ class SelectReactorTestCase(TestCase):
                           "%r" % (self.messages,))
         finally:
             port.socket = originalSocket
+
+        # Additionally, in order to prevent busy looping in the reactor as we
+        # try and fail to accept(), we remove the port from the reactor for a
+        # second, at which point hopefully the resource will have freed up:
+        self.assertNotIn(port, self.reactor.readers)
+        self.reactor.advance(1)
+        self.assertIn(port, self.reactor.readers)
 
 
     def test_tooManyFilesFromAccept(self):
