@@ -1,0 +1,1 @@
+The event loop no longer uses 100% CPU in certain resource exhaustion cases.

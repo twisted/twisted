@@ -112,32 +112,44 @@ class PlatformAssumptionsTestCase(TestCase):
 
 
 
-class FakeReactor(Clock):
-    """
-    A reactor that supports time, and adding and removing readers.
-    """
-
-    def __init__(self):
-        Clock.__init__(self)
-        self.readers = set()
-
-
-    def addReader(self, reader):
-        self.readers.add(reader)
-
-
-    def removeReader(self, reader):
-        self.readers.remove(reader)
-
-
-
 class ResourceExhaustionTestCase(TestCase):
     """
     Tests for resource exhaustion failure conditions.
     """
 
+    class FakeSocket(object):
+        """
+        Pretend to be a socket in an overloaded system.
+        """
+        def __init__(self, socketErrorNumber):
+            self.socketErrorNumber = socketErrorNumber
+
+        def accept(self):
+            raise socket.error(
+                self.socketErrorNumber, os.strerror(self.socketErrorNumber))
+
+
+    class FakeReactor(Clock):
+        """
+        A reactor that supports time, and adding and removing readers.
+        """
+        def __init__(self):
+            Clock.__init__(self)
+            self.readers = set()
+
+        def addReader(self, reader):
+            self.readers.add(reader)
+
+        def removeReader(self, reader):
+            if reader in self.readers:
+                self.readers.remove(reader)
+
+        def removeWriter(self, writer):
+            pass
+
+
     def setUp(self):
-        self.reactor = FakeReactor()
+        self.reactor = self.FakeReactor()
         self.ports = []
         self.messages = []
         log.addObserver(self.messages.append)
@@ -154,14 +166,10 @@ class ResourceExhaustionTestCase(TestCase):
         """
         p = Port(portNumber, factory, interface=interface, reactor=self.reactor)
         p.startListening()
-        def cleanup():
-            p.stopListening()
-            self.reactor.advance(0.01)
-        self.addCleanup(cleanup)
         return p
 
 
-    def _acceptFailureTest(self, socketErrorNumber):
+    def _acceptFailureTest(self, socketErrorNumber, shouldStopListening=True):
         """
         Test behavior in the face of an exception from C{accept(2)}.
 
@@ -172,23 +180,19 @@ class ResourceExhaustionTestCase(TestCase):
 
         @param socketErrorNumber: The errno to simulate from accept.
         """
-        class FakeSocket(object):
-            """
-            Pretend to be a socket in an overloaded system.
-            """
-            def accept(self):
-                raise socket.error(
-                    socketErrorNumber, os.strerror(socketErrorNumber))
-
         factory = ServerFactory()
         port = self.port(0, factory, interface='127.0.0.1')
+        def cleanup():
+            port.stopListening()
+            self.reactor.advance(0.01)
+        self.addCleanup(cleanup)
         self.assertIn(port, self.reactor.readers)
 
         # When we fail to accept(), we log an error message but do not throw
         # an exception:
         originalSocket = port.socket
         try:
-            port.socket = FakeSocket()
+            port.socket = self.FakeSocket(socketErrorNumber)
 
             port.doRead()
 
@@ -204,19 +208,24 @@ class ResourceExhaustionTestCase(TestCase):
         finally:
             port.socket = originalSocket
 
-        # Additionally, in order to prevent busy looping in the reactor as we
-        # try and fail to accept(), we remove the port from the reactor for a
-        # second, at which point hopefully the resource will have freed up:
-        self.assertNotIn(port, self.reactor.readers)
-        self.reactor.advance(1)
-        self.assertIn(port, self.reactor.readers)
+        if shouldStopListening:
+            # Additionally, in order to prevent busy looping in the reactor as
+            # we try and fail to accept(), we remove the port from the reactor
+            # for a second, at which point hopefully the resource will have
+            # freed up:
+            self.assertNotIn(port, self.reactor.readers)
+            self.reactor.advance(1)
+            self.assertIn(port, self.reactor.readers)
+        else:
+            self.assertIn(port, self.reactor.readers)
 
 
     def test_tooManyFilesFromAccept(self):
         """
         C{accept(2)} can fail with C{EMFILE} when there are too many open file
         descriptors in the process.  Test that this doesn't negatively impact
-        any other existing connections.
+        any other existing connections, and that the port temporarily stops
+        listening to prevent busy looping in the event loop.
 
         C{EMFILE} mainly occurs on Linux when the open file rlimit is
         encountered.
@@ -240,10 +249,11 @@ class ResourceExhaustionTestCase(TestCase):
         Similar to L{test_tooManyFilesFromAccept}, but test the case where
         C{accept(2)} fails with C{ECONNABORTED}.
 
-        It is not clear whether this is actually possible for TCP
-        connections on modern versions of Linux.
+        It is not clear whether this is actually possible for TCP connections
+        on modern versions of Linux. If it is, the port should not stop
+        listening when it occurs because it is not a resource issue.
         """
-        return self._acceptFailureTest(ECONNABORTED)
+        return self._acceptFailureTest(ECONNABORTED, False)
 
 
     def test_noFilesFromAccept(self):
@@ -273,6 +283,33 @@ class ResourceExhaustionTestCase(TestCase):
         return self._acceptFailureTest(ENOMEM)
     if platform.getType() == 'win32':
         test_noMemoryFromAccept.skip = "Windows accept(2) cannot generate ENOMEM"
+
+
+    def test_noRestartReadingIfPortStopped(self):
+        """
+        If the port has temporarily stopped reading as a result of resource
+        exhaustion, it should not restart reading if the port was closed in
+        the interim.
+        """
+        factory = ServerFactory()
+        port = self.port(0, factory, interface='127.0.0.1')
+        self.assertIn(port, self.reactor.readers)
+
+        # When we fail to accept(), we log an error message but do not throw
+        # an exception:
+        originalSocket = port.socket
+        try:
+            port.socket = self.FakeSocket(EMFILE)
+            port.doRead()
+        finally:
+            port.socket = originalSocket
+
+        self.assertNotIn(port, self.reactor.readers)
+        # Stop listening; after a second, the port should not be re-added to
+        # readers:
+        port.stopListening()
+        self.reactor.advance(1)
+        self.assertNotIn(port, self.reactor.readers)
 
 if not interfaces.IReactorFDSet.providedBy(reactor):
     skipMsg = 'This test only applies to reactors that implement IReactorFDset'
