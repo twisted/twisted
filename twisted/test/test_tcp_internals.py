@@ -17,7 +17,6 @@ from twisted.python import log
 from twisted.internet.tcp import ECONNABORTED, ENOMEM, ENFILE, EMFILE, ENOBUFS, EINPROGRESS, Port
 from twisted.internet.protocol import ServerFactory
 from twisted.python.runtime import platform
-from twisted.internet.defer import maybeDeferred, gatherResults
 from twisted.internet import reactor, interfaces
 from twisted.internet.task import Clock
 
@@ -314,5 +313,5 @@ class ResourceExhaustionTestCase(TestCase):
 if not interfaces.IReactorFDSet.providedBy(reactor):
     skipMsg = 'This test only applies to reactors that implement IReactorFDset'
     PlatformAssumptionsTestCase.skip = skipMsg
-    SelectReactorTestCase.skip = skipMsg
+    ResourceExhaustionTestCase.skip = skipMsg
 
