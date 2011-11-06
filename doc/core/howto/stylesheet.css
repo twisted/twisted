@@ -1,12 +1,139 @@
 
 body
 {
+  background: #fff;
+  color: #000;
   margin-left: 2em;
   margin-right: 2em;
   border: 0px;
   padding: 0px;
-  font-family: sans-serif;
-  }
+}
+
+body, th, td {
+  font: normal 13px trebuchet ms,verdana,arial,'Bitstream Vera Sans',helvetica,sans-serif;
+}
+
+h1, h2, h3, h4 {
+ font-family: trebuchet ms,arial,verdana,'Bitstream Vera Sans',helvetica,sans-serif;
+ font-weight: normal; 
+ letter-spacing: -0.018em;
+ color: #83A501; 
+ border-width: 0 0 1px 0;
+ border-style: dotted;
+ border-color: #dddddd;
+}
+
+h1 { font-size: 19px; margin: .15em 1em 0 0 }
+h2 { font-size: 16px }
+h3 { font-size: 14px }
+
+img { border: none; }
+
+/* Link styles */
+:link, :visited
+{
+ text-decoration: none;
+ color: #517489;
+ border-bottom: 0px dotted #bbb;
+}
+:link:hover, :visited:hover
+{
+ background-color: transparent;
+ color: #555;
+}
+h1 :link, h1 :visited ,h2 :link, h2 :visited, h3 :link, h3 :visited,
+h4 :link, h4 :visited, h5 :link, h5 :visited, h6 :link, h6 :visited {
+ color: inherit;
+}
+
+/* Header */
+#header hr { display: none }
+#header h1 { margin: 1.5em 0 -1.5em; }
+#header img { border: none; margin: 0 0 -3em }
+#header :link, #header :visited, #header :link:hover, #header :visited:hover {
+ background: transparent;
+ color: #555;
+ margin-bottom: 2px;
+ border: none;
+}
+#header h1 :link:hover, #header h1 :visited:hover { color: #000 }
+
+
+/* Navigation */
+.nav h2, .nav hr { display: none }
+.nav ul { font-size: 10px; list-style: none; margin: 0; text-align: right }
+.nav li {
+ border-right: 0px solid #d7d7d7;
+ display: inline;
+ padding: 0 .75em;
+ white-space: nowrap;
+}
+.nav li.last { border-right: none }
+
+#content { padding:0 50px 0 50px; position: relative }
+
+/* Custom */
+#top_grad {
+	background-image: url(../top_grad.png);
+	height: 26px;
+}
+#tab {
+	height: 32px;
+	width: 282px;
+	color: #ffffff;
+	text-align: center;
+	margin: -2px 49px 0 0;
+	background-image: url(../tab.png);
+	background-repeat: no-repeat;
+	float: right;
+}
+
+#tab :link, #tab :visited {
+	background: transparent;
+	color: #ffffff;
+	font-size: 12px;
+	border: none;
+	padding: 4px;
+	
+}
+#tab :link:hover, #tab :visited:hover {
+	border-width: 0 0 1px 0;
+	border-style: solid;
+	border-color: #a4cd0d;
+}
+
+#banner {
+	background-image: url(../main_grad.png);
+	height: 135px;
+}
+
+#header {
+	margin: 20px 0 0 49px;
+}
+
+#metanav {
+	margin-right: 61px;
+}
+
+#metanav :link, #metanav :visited {
+	color: #ffffff;
+}
+
+#metanav :link:hover, #metanav :visited:hover {
+	color: #bbbbbb;
+}
+
+#metanav ul li.first {
+    color: #ccc;
+}
+
+#side_bar {
+	float: right;
+	background-color: #ffffff;
+	padding: 0 0 0 15px;
+}
+
+/* Original */
 
 .done { color: #005500; background-color: #99ff99 }
 .notdone { color: #550000; background-color: #ff9999;}
@@ -44,7 +171,6 @@ pre
   background-color: #ddddff;
 }
 
-
 .python-interpreter
 {
   background-color: #ddddff;
@@ -52,38 +178,38 @@ pre
 
 .doit 
 {
-  border: thin blue dashed ;
-  background-color: #0ef
+  border: thin blue dashed;
+  background-color: #0ef;
 }
 
 .py-src-comment
 {
-  color: #1111CC
+  color: #1111CC;
 }
 
 .py-src-keyword
 {
   color: #3333CC;
   font-weight: bold;
-  line-height: 1.0em
+  line-height: 1.0em;
 }
 
 .py-src-parameter
 {
   color: #000066;
   font-weight: bold;
-  line-height: 1.0em
+  line-height: 1.0em;
 }
 
 .py-src-identifier
 {
-  color: #CC0000
+  color: #CC0000;
 }
 
 .py-src-string
 {
   
-  color: #115511
+  color: #115511;
 }
 
 .py-src-endmarker
@@ -96,7 +222,7 @@ pre
   background-color: #cdcdcd;
   float: left;
   margin-top: 0px;
-  width: 4.0em
+  width: 4.0em;
 }
 
 .py-listing, .html-listing, .listing 
@@ -119,7 +245,7 @@ pre
   margin-bottom: 0;
   border: none;
   border-bottom: thin solid black;
-  }
+}
 
 .html-listing .htmlsource
 {
@@ -127,7 +253,7 @@ pre
   margin-bottom: 0;
   border: none;
   border-bottom: thin solid black;
-  }
+}
 
 .caption
 {
@@ -139,7 +265,7 @@ pre
 .filename
 {
   font-style: italic;
-  }
+}
 
 .manhole-output
 {
@@ -149,7 +275,7 @@ pre
 hr
 {
   display: inline;
-  }
+}
 
 ul
 {
@@ -158,23 +284,23 @@ ul
   margin-left: 1em;
   padding-left: 1em;
   border-left: 1em;
-  }
+}
 
 li
 {
   padding: 2px;
-  }
+}
 
 dt
 {
   font-weight: bold;
   margin-left: 1ex;
-  }
+}
 
 dd
 {
   margin-bottom: 1em;
-  }
+}
 
 div.note
 {
