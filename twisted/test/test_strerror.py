@@ -14,6 +14,12 @@ from twisted.python.win32 import _ErrorFormatter, formatError
 from twisted.python.runtime import platform
 
 
+class _MyWindowsException(OSError):
+    """
+    An exception type like L{ctypes.WinError}, but available on all platforms.
+    """
+
+
 
 class ErrorFormatingTestCase(TestCase):
     """
@@ -81,7 +87,7 @@ class ErrorFormatingTestCase(TestCase):
         winCalls = []
         def winError(errorCode):
             winCalls.append(errorCode)
-            return (errorCode, self.probeMessage)
+            return _MyWindowsException(errorCode, self.probeMessage)
         formatter = _ErrorFormatter(
             winError,
             lambda error: 'formatMessage: wrong message',
@@ -101,7 +107,7 @@ class ErrorFormatingTestCase(TestCase):
             from ctypes import WinError
             self.assertEqual(
                 formatter.formatError(self.probeErrorCode),
-                WinError(self.probeErrorCode)[1])
+                WinError(self.probeErrorCode).strerror)
             formatter.winError = None
 
         if formatter.formatMessage is not None:
@@ -130,7 +136,7 @@ class ErrorFormatingTestCase(TestCase):
         acceptable = [socket.errorTab[ECONNABORTED]]
         try:
             from ctypes import WinError
-            acceptable.append(WinError(ECONNABORTED)[1])
+            acceptable.append(WinError(ECONNABORTED).strerror)
         except ImportError:
             pass
         try:
