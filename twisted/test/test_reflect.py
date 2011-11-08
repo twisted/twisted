@@ -731,15 +731,25 @@ class FullyQualifiedNameTests(unittest.TestCase):
             "twisted.python.reflect.fullyQualifiedName")
 
 
-    def test_method(self):
+    def test_boundMethod(self):
         """
-        L{reflect.fullyQualifiedName} returns the name of a method inside its
-        class and its module.
+        L{reflect.fullyQualifiedName} returns the name of a bound method inside
+        its class and its module.
         """
-        self._checkFullyQualifiedName(reflect.PropertyAccessor.reallyDel,
+        self._checkFullyQualifiedName(
+            reflect.PropertyAccessor().reallyDel,
             "twisted.python.reflect.PropertyAccessor.reallyDel")
-        self._checkFullyQualifiedName(reflect.PropertyAccessor().reallyDel,
+
+
+    def test_unboundMethod(self):
+        """
+        L{reflect.fullyQualifiedName} returns the name of an unbound method
+        inside its class and its module.
+        """
+        self._checkFullyQualifiedName(
+            reflect.PropertyAccessor.reallyDel,
             "twisted.python.reflect.PropertyAccessor.reallyDel")
+
 
 
 class DeprecationTestCase(unittest.TestCase):
