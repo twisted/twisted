@@ -7,7 +7,12 @@ Various asynchronous UDP classes.
 
 Please do not use this module directly.
 
-Maintainer: Itamar Shtull-Trauring
+@var _sockErrReadIgnore: list of symbolic error constants (from the C{errno}
+    module) representing socket errors where the error is temporary and can be
+    ignored.
+
+@var _sockErrReadRefuse: list of symbolic error constants (from the C{errno}
+    module) representing socket errors that indicate connection refused.
 """
 
 # System Imports
@@ -20,14 +25,25 @@ from zope.interface import implements
 
 from twisted.python.runtime import platformType
 if platformType == 'win32':
-    from errno import WSAEWOULDBLOCK as EWOULDBLOCK
-    from errno import WSAEINTR as EINTR
-    from errno import WSAEMSGSIZE as EMSGSIZE
-    from errno import WSAECONNREFUSED as ECONNREFUSED
-    from errno import WSAECONNRESET
-    EAGAIN = EWOULDBLOCK
+    from errno import WSAEWOULDBLOCK
+    from errno import WSAEINTR, WSAEMSGSIZE, WSAETIMEDOUT
+    from errno import WSAECONNREFUSED, WSAECONNRESET, WSAENETRESET
+    from errno import WSAEINPROGRESS
+
+    # Classify read and write errors
+    _sockErrReadIgnore = [WSAEINTR, WSAEWOULDBLOCK, WSAEMSGSIZE, WSAEINPROGRESS]
+    _sockErrReadRefuse = [WSAECONNREFUSED, WSAECONNRESET, WSAENETRESET,
+                          WSAETIMEDOUT]
+
+    # POSIX-compatible write errors
+    EMSGSIZE = WSAEMSGSIZE
+    ECONNREFUSED = WSAECONNREFUSED
+    EAGAIN = WSAEWOULDBLOCK
+    EINTR = WSAEINTR
 else:
     from errno import EWOULDBLOCK, EINTR, EMSGSIZE, ECONNREFUSED, EAGAIN
+    _sockErrReadIgnore = [EAGAIN, EINTR, EWOULDBLOCK]
+    _sockErrReadRefuse = [ECONNREFUSED]
 
 # Twisted Imports
 from twisted.internet import base, defer, address
@@ -118,13 +134,13 @@ class Port(base.BasePort):
                 data, addr = self.socket.recvfrom(self.maxPacketSize)
             except socket.error, se:
                 no = se.args[0]
-                if no in (EAGAIN, EINTR, EWOULDBLOCK):
+                if no in _sockErrReadIgnore:
                     return
-                if (no == ECONNREFUSED) or (platformType == "win32" and no == WSAECONNRESET):
+                if no in _sockErrReadRefuse:
                     if self._connectedAddr:
                         self.protocol.connectionRefused()
-                else:
-                    raise
+                    return
+                raise
             else:
                 read += len(data)
                 try:
