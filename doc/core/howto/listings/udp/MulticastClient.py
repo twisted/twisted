@@ -1,12 +1,19 @@
 from twisted.internet.protocol import DatagramProtocol
 from twisted.internet import reactor
 
-class MulticastClientUDP(DatagramProtocol):
+
+class MulticastPingClient(DatagramProtocol):
+
+    def startProtocol(self):
+        # Join the multicast address, so we can receive replies:
+        self.transport.joinGroup("228.0.0.5")
+        # Send to 228.0.0.5:8005 - all listeners on the multicast address
+        # (including us) will receive this message.
+        self.transport.write('Client: Ping', ("228.0.0.5", 8005))
 
     def datagramReceived(self, datagram, address):
-            print "Received:" + repr(datagram)
+        print "Datagram %s received from %s" % (repr(datagram), repr(address))
 
-# Send multicast on 224.0.0.1:8005, on our dynamically allocated port
-port = reactor.listenUDP(0, MulticastClientUDP())
-port.write('UniqueID', ('224.0.0.1', 8005))
+
+reactor.listenMulticast(8005, MulticastPingClient(), listenMultiple=True)
 reactor.run()

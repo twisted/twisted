@@ -131,51 +131,50 @@ reactor.run()
 
     <h2>Multicast UDP</h2>
 
-    <p>A multicast UDP socket can send and receive datagrams from multiple
-    clients.  The interesting and useful feature of multicast is that a client
-    can contact multiple servers with a single packet, without knowing the
-    specific IP address of any of the hosts.</p>
+    <p>Multicast allows a process to contact multiple hosts with a single
+    packet, without knowing the specific IP address of any of the hosts. This
+    is in contrast to normal, or unicast, UDP, where each datagram has a single
+    IP as its destination. Multicast datagrams are sent to special multicast
+    group addresses (in the IPv4 range 224.0.0.0 to 239.255.255.255), along with
+    a corresponding port. In order to receive multicast datagrams, you must
+    join that specific group address. However, any UDP socket can send to
+    multicast addresses.</p>
 
     <a href="listings/udp/MulticastServer.py"
     class="py-listing">MulticastServer.py</a>
 
-    <p>The server protocol is very simple and closely resembles a
-    normal <code class="API"
+    <p>As with UDP, with multicast there is no server/client differentiation
+    at the protocol level. Our server example is very simple and closely
+    resembles a normal <code class="API"
     base="twisted.internet.interfaces.IReactorUDP">listenUDP</code>
-    implementation.  The main difference is that instead
+    protocol implementation.  The main difference is that instead
     of <code>listenUDP</code>, <code class="API"
     base="twisted.internet.interfaces.IReactorMulticast">listenMulticast</code>
-    is called with a specified port number.  The server must also
-    call <code class="API"
+    is called with the port number. The server calls <code class="API"
     base="twisted.internet.interfaces.IMulticastTransport">joinGroup</code> to
-    specify on which multicast IP address it will service requests.  Another
-    item of interest is the contents of the datagram.  Many different
-    applications use multicast as a way of device discovery, which leads to an
-    abundance of packets flying around.  Checking the payload can ensure that we
-    only service requests from our specific clients.
+    join a multicast group. A <code class="python">DatagramProtocol</code>
+    that is listening with multicast and has joined a group can receive
+    multicast datagrams, but also unicast datagrams sent directly to its
+    address. The server in the example above sends such a unicast message in
+    reply to the multicast message it receives from the client.
     </p>
 
     <a href="listings/udp/MulticastClient.py"
-    class="py-listing">MulticastClient.py</a>
+       class="py-listing">MulticastClient.py</a>
 
-    <p>This is a mirror implementation of a standard UDP client.  The only
-    difference is that the destination IP is the multicast address.  This
-    datagram will be distributed to every server listening on 
-    <code>224.0.0.1</code> (a special address for all hosts on the local
-    network segment, defined by
-    <a href="http://www.faqs.org/rfcs/rfc1112.html">RFC 1112</a>) and port 
-    <code>8005</code>.  Note that the client  port is specified as 
-    <code>0</code>, as we have no need to keep track of what port the client
-    is listening on.
-    </p>
-
-<h2>Acknowledgments</h2>
-
-<p>Thank you to all contributors to this document, including:</p>
-
-<ul>
-<li>Kyle Robertson, author of the explanation and examples of multicast</li>
-</ul>
+    <p>Note that a multicast socket will have a default TTL (time to live) of
+    1. That is, datagrams won't traverse more than one router hop, unless a
+    higher TTL is set with
+     <code class="API"
+    base="twisted.internet.interfaces.IMulticastTransport">setTTL</code>. Other
+    functionality provided by the multicast transport
+    includes <code class="API"
+    base="twisted.internet.interfaces.IMulticastTransport">setOutgoingInterface</code>
+    and <code class="API"
+    base="twisted.internet.interfaces.IMulticastTransport">setLoopbackMode</code>
+    -- see <code class="API"
+    base="twisted.internet.interfaces">IMulticastTransport</code> for more
+    information.</p>
 
 </body>
 </html>
