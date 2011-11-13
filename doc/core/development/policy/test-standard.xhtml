@@ -119,6 +119,41 @@ $ bin/trial twisted
     specifying at a high level the intent of the test. That is, a description
     that users of the method would understand.</p>
 
+    <h2>Test Implementation Guidelines</h2>
+
+    <p>Here are some guidelines to follow when writing tests for the Twisted
+    test suite.  Many tests predate these guidelines and so do not follow them.
+    When in doubt, follow the guidelines given here, not the example of old unit
+    tests.</p>
+
+    <h3>Real I/O</h3>
+
+    <p>Most unit tests should avoid performing real, platform-implemented I/O
+    operations.  Real I/O is slow, unreliable, and unwieldy.  When implementing
+    a protocol, <code>twisted.test.proto_helpers.StringTransport</code> can be
+    used instead of a real TCP transport.  <code>StringTransport</code> is fast,
+    deterministic, and can easily be used to exercise all possible network
+    behaviors.</p>
+
+    <h3>Real Time</h3>
+
+    <p>Most unit tests should also avoid waiting for real time to pass.  Unit
+    tests which construct and advance
+    a <code class="API">twisted.internet.task.Clock</code> are fast and
+    deterministic.</p>
+
+    <h3>The Global Reactor</h3>
+
+    <p>Since unit tests are avoiding real I/O and real time, they can usually
+    avoid using a real reactor.  The only exceptions to this are unit tests for
+    a real reactor implementation.  Unit tests for protocol implementations or
+    other application code should not use a reactor.  Unit tests for real
+    reactor implementations should not use the global reactor, but should
+    instead use <code>twisted.internet.test.reactormixins.ReactorBuilder</code>
+    so they can be applied to all of the reactor implementations automatically.
+    In no case should new unit tests use the global reactor.</p>
+
+
 <h2>Skipping tests, TODO items</h2>
 
 <p>Trial, the Twisted unit test framework, has some extensions which are
