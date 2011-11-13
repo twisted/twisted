@@ -7,6 +7,8 @@ URL parsing, construction and rendering.
 
 @see: RFC 3986, Uniform Resource Identifier (URI): Generic Syntax
 @see: RFC 3987, Internationalized Resource Identifiers
+
+XXX what about domain names, do we need to do IDNA?
 """
 
 import weakref
@@ -226,7 +228,9 @@ def unparseIRI((scheme, netloc, pathsegs, querysegs, fragment)):
 
 
 class URL(object):
-    """Represents a URL and provides a convenient API for modifying its parts.
+    """
+    Represents a URL (actually, an IRI) and provides a convenient API for
+    modifying its parts.
 
     A URL is split into a number of distinct parts: scheme, netloc (domain
     name), path segments, query parameters and fragment identifier.
@@ -235,23 +239,17 @@ class URL(object):
     the path and query parameters. Values can be passed to methods as-is;
     encoding and escaping is handled automatically.
 
-    There are a number of ways to create a URL:
-        * Standard Python creation, i.e. __init__.
-        * fromString, a class method that parses a string.
-        * fromContext, a class method that creates a URL to represent the
-          current URL in the path traversal process.
-
-    URL instances can be used in a stan tree or to fill template slots. They can
-    also be used as a redirect mechanism - simply return an instance from an
-    IResource method. See URLRedirectAdapter for details.
+    There preferred way of creating a URL is to call fromString, a class
+    method that parses the string format of URLs.
 
     URL subclasses with different constructor signatures should override
     L{cloneURL} to ensure that the numerous instance methods which return
-    copies do so correctly.  Additionally, the L{fromString}, L{fromContext}
-    and L{fromRequest} class methods need overriding.
+    copies do so correctly.  Additionally, the L{fromString} method will need
+    to be overridden.
 
-    The following attributes are always stored and passed to __init__ in decoded
-    form (that is, without any percent-encoding).
+    The following attributes are always stored and passed to __init__ in
+    decoded form (that is, as C{unicode}, without any
+    percent-encoding). C{str} objects should never be passed to C{__init__}!
 
     @ivar scheme: the URI scheme
     @type scheme: C{unicode}
@@ -272,8 +270,8 @@ class URL(object):
     def __init__(self, scheme=u'http', netloc=u'', pathsegs=None,
                  querysegs=None, fragment=None):
         def _unicodify(s):
-            if isinstance(s, str):
-                s = s.decode('ascii')
+            if not isinstance(s, (unicode, None.__class__)):
+                raise TypeError("%r is not unicode" % (s,))
             return s
         self.scheme = _unicodify(scheme)
         self.netloc = _unicodify(netloc)
@@ -374,6 +372,8 @@ class URL(object):
         """
         Construct a url where the given path segment is a sibling of this url.
         """
+        if not isinstance(path, unicode):
+            raise TypeError("Given path must be unicode.")
         l = self.pathList()
         l[-1] = path
         return self._pathMod(l, self.queryList(0))
@@ -383,16 +383,18 @@ class URL(object):
         """
         Construct a url where the given path segment is a child of this url.
         """
+        if not isinstance(path, unicode):
+            raise TypeError("Given path must be unicode.")
         l = self.pathList()
-        if l[-1] == '':
+        if l[-1] == u'':
             l[-1] = path
         else:
             l.append(path)
         return self._pathMod(l, self.queryList(0))
 
 
-    def isRoot(self, pathlist):
-        return (pathlist == [''] or not pathlist)
+    def _isRoot(self, pathlist):
+        return (pathlist == [u''] or not pathlist)
 
 
     def curdir(self):
@@ -406,8 +408,8 @@ class URL(object):
         http://foo.com/bar/
         """
         l = self.pathList()
-        if l[-1] != '':
-            l[-1] = ''
+        if l[-1] != u'':
+            l[-1] = u''
         return self._pathMod(l, self.queryList(0))
 
 
@@ -433,14 +435,15 @@ class URL(object):
         http://foo.com/bar/
         """
         l = self.pathList()
-        if not self.isRoot(l) and l[-1] == '':
+        if not self._isRoot(l) and l[-1] == u'':
             del l[-2]
         else:
             # we are a file, such as http://example.com/foo/bar our
             # parent directory is http://example.com/
             l.pop()
-            if self.isRoot(l): l.append('')
-            else: l[-1] = ''
+            if self._isRoot(l):
+                l.append(u'')
+            else: l[-1] = u''
         return self._pathMod(l, self.queryList(0))
 
 
@@ -520,6 +523,9 @@ class URL(object):
         Add a query argument with the given value None indicates that the
         argument has no value
         """
+        if (not isinstance(name, unicode) or
+            not isinstance(value, (unicode, None.__class__))):
+            raise TypeError("name and value must be unicode.")
         q = self.queryList()
         q.append((name, value))
         return self._pathMod(self.pathList(copy=False), q)
@@ -532,6 +538,9 @@ class URL(object):
 
         C{None} indicates that the argument has no value.
         """
+        if (not isinstance(name, unicode) or
+            not isinstance(value, (unicode, None.__class__))):
+            raise TypeError("name and value must be unicode.")
         ql = self.queryList(False)
         ## Preserve the original position of the query key in the list
         i = 0
@@ -548,15 +557,20 @@ class URL(object):
         """
         Remove all query arguments with the given name.
         """
+        if not isinstance(name, (unicode, None.__class__)):
+            raise TypeError("name  must be unicode.")
         return self._pathMod(
             self.pathList(copy=False),
             filter(
                 lambda x: x[0] != name, self.queryList(False)))
 
+
     def clear(self, name=None):
         """
         Remove all existing query arguments.
         """
+        if not isinstance(name, (unicode, None.__class__)):
+            raise TypeError("name  must be unicode.")
         if name is None:
             q = []
         else:
@@ -576,14 +590,14 @@ class URL(object):
 
         # Choose the scheme and default port.
         if secure:
-            scheme, defaultPort = 'https', 443
+            scheme, defaultPort = u'https', 443
         else:
-            scheme, defaultPort = 'http', 80
+            scheme, defaultPort = u'http', 80
 
         # Rebuild the netloc with port if not default.
-        netloc = self.netloc.split(':',1)[0]
+        netloc = self.netloc.split(u':',1)[0]
         if port is not None and port != defaultPort:
-            netloc = '%s:%d' % (netloc, port)
+            netloc = u'%s:%d' % (netloc, port)
 
         return self.cloneURL(
             scheme, netloc, self.pathsegs, self.querysegs, self.fragment)
@@ -632,15 +646,15 @@ def normURLPath(pathSegs):
     segs = []
 
     for seg in pathSegs:
-        if seg == '.':
+        if seg == u'.':
             pass
-        elif seg == '..':
+        elif seg == u'..':
             if segs:
                 segs.pop()
         else:
             segs.append(seg)
 
-    if pathSegs[-1:] in (['.'],['..']):
-        segs.append('')
+    if pathSegs[-1:] in ([u'.'],[u'..']):
+        segs.append(u'')
 
     return segs
