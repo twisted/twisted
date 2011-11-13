@@ -1582,5 +1582,10 @@ DISCONNECT_ILLEGAL_USER_NAME = 15
 
 messages = {}
 for name, value in globals().items():
-    if name.startswith('MSG_'):
+    # Avoid legacy messages which overlap with never ones
+    if name.startswith('MSG_') and not name.startswith('MSG_KEXDH_'):
         messages[value] = name
+# Check for regressions (#5352)
+if 'MSG_KEXDH_INIT' in messages or 'MSG_KEXDH_REPLY' in messages:
+    raise RuntimeError(
+        "legacy SSH mnemonics should not end up in messages dict")
