@@ -16,14 +16,12 @@ import sys, os, time, gc, weakref
 from cStringIO import StringIO
 from zope.interface import implements, Interface
 
-from twisted.python.versions import Version
 from twisted.trial import unittest
 from twisted.spread import pb, util, publish, jelly
 from twisted.internet import protocol, main, reactor
 from twisted.internet.error import ConnectionRefusedError
 from twisted.internet.defer import Deferred, gatherResults, succeed
 from twisted.protocols.policies import WrappingFactory
-from twisted.protocols import loopback
 from twisted.python import failure, log
 from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
 from twisted.cred import portal, checkers, credentials
@@ -1846,27 +1844,3 @@ class PBWithSecurityOptionsTest(unittest.TestCase):
         factory = pb.PBServerFactory(Echoer(), security=security)
         broker = factory.buildProtocol(None)
         self.assertIdentical(broker.security, security)
-
-
-
-class DeprecationTests(unittest.TestCase):
-    """
-    Tests for certain deprecations of free-functions in L{twisted.spread.pb}.
-    """
-    def test_noOperationDeprecated(self):
-        """
-        L{pb.noOperation} is deprecated.
-        """
-        self.callDeprecated(
-            Version("twisted", 8, 2, 0),
-            pb.noOperation, 1, 2, x=3, y=4)
-
-
-    def test_printTraceback(self):
-        """
-        L{pb.printTraceback} is deprecated.
-        """
-        self.callDeprecated(
-            Version("twisted", 8, 2, 0),
-            pb.printTraceback,
-            "printTraceback deprecation fake traceback value")

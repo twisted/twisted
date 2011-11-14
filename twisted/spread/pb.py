@@ -34,8 +34,6 @@ from zope.interface import implements, Interface
 
 # Twisted Imports
 from twisted.python import log, failure, reflect
-from twisted.python.versions import Version
-from twisted.python.deprecate import deprecated
 from twisted.python.hashlib import md5
 from twisted.internet import defer, protocol
 from twisted.cred.portal import Portal
@@ -131,10 +129,12 @@ class RemoteError(Exception):
 
 
 class RemoteMethod:
-    """This is a translucent reference to a remote message.
+    """
+    This is a translucent reference to a remote message.
     """
     def __init__(self, obj, name):
-        """Initialize with a L{RemoteReference} and the name of this message.
+        """
+        Initialize with a L{RemoteReference} and the name of this message.
         """
         self.obj = obj
         self.name = name
@@ -149,35 +149,16 @@ class RemoteMethod:
 
 
     def __call__(self, *args, **kw):
-        """Asynchronously invoke a remote method.
         """
-        return self.obj.broker._sendMessage('',self.obj.perspective, self.obj.luid,  self.name, args, kw)
-
-
-
-def noOperation(*args, **kw):
-    """
-    Do nothing.
-
-    Neque porro quisquam est qui dolorem ipsum quia dolor sit amet,
-    consectetur, adipisci velit...
-    """
-noOperation = deprecated(Version("twisted", 8, 2, 0))(noOperation)
+        Asynchronously invoke a remote method.
+        """
+        return self.obj.broker._sendMessage('',self.obj.perspective,
+            self.obj.luid, self.name, args, kw)
 
 
 
 class PBConnectionLost(Exception):
     pass
-
-
-
-def printTraceback(tb):
-    """
-    Print a traceback (string) to the standard log.
-    """
-    log.msg('Perspective Broker Traceback:' )
-    log.msg(tb)
-printTraceback = deprecated(Version("twisted", 8, 2, 0))(printTraceback)
 
 
 
