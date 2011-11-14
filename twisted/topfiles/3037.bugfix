@@ -1,0 +1,1 @@
+Fixed an obscure case where connectionLost wasn't called on the protocol when using half-close.

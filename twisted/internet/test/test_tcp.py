@@ -27,7 +27,8 @@ from twisted.internet.defer import (
     Deferred, DeferredList, succeed, fail, maybeDeferred, gatherResults)
 from twisted.internet.endpoints import TCP4ServerEndpoint, TCP4ClientEndpoint
 from twisted.internet.protocol import ServerFactory, ClientFactory, Protocol
-from twisted.internet.interfaces import IPushProducer, IPullProducer
+from twisted.internet.interfaces import (
+    IPushProducer, IPullProducer, IHalfCloseableProtocol)
 from twisted.internet.protocol import ClientCreator
 from twisted.internet.tcp import Connection, Server
 
@@ -923,6 +924,45 @@ class TCPConnectionTestsBuilder(ReactorBuilder):
 
         self.runReactor(reactor)
         self.assertEqual(events, ["paused", "resumed", "lost"])
+
+
+    def test_doubleHalfClose(self):
+        """
+        If one side half-closes its connection, and then the other side of the
+        connection calls C{loseWriteConnection}, and then C{loseConnection} in
+        {writeConnectionLost}, the connection is closed correctly.
+
+        This rather obscure case used to fail (see ticket #3037).
+        """
+        reactor = self.buildReactor()
+
+        class ListenerProtocol(Protocol):
+            implements(IHalfCloseableProtocol)
+
+            def readConnectionLost(self):
+                self.transport.loseWriteConnection()
+
+            def writeConnectionLost(self):
+                self.transport.loseConnection()
+
+            def connectionLost(self, reason):
+                reactor.stop()
+
+        factory = ServerFactory()
+        factory.protocol = ListenerProtocol
+        port = reactor.listenTCP(0, factory, interface="127.0.0.1")
+        self.addCleanup(port.stopListening)
+
+        cc = TCP4ClientEndpoint(reactor, '127.0.0.1', port.getHost().port)
+        cf = ClientFactory()
+        cf.protocol = Protocol
+        clientDeferred = cc.connect(cf)
+        def connected(client):
+            client.transport.loseWriteConnection()
+        clientDeferred.addCallback(connected)
+
+        # If test fails, reactor won't stop and we'll hit timeout:
+        self.runReactor(reactor, timeout=1)
 
 
 

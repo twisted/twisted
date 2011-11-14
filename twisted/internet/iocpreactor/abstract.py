@@ -227,8 +227,8 @@ class FileHandle(_ConsumerMixin, _LogOwner):
                     self.connectionLost(failure.Failure(main.CONNECTION_DONE))
                 elif self._writeDisconnecting:
                     # I was previously asked to to half-close the connection.
-                    self._closeWriteConnection()
                     self._writeDisconnected = True
+                    self._closeWriteConnection()
                 return False
             else:
                 return True
