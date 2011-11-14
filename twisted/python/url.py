@@ -201,8 +201,10 @@ def parseIRI(s):
     pathsegs = map(iridecode, path.split('/'))
     querysegs = [(iridecode(k), _maybe(iridecode, v))
                  for (k, v) in unquerify(query)]
+    if isinstance(netloc, str) or netloc.startswith(u"xn-"):
+        netloc = netloc.decode("idna")
     return (iridecode(scheme),
-            iridecode(netloc),
+            netloc,
             pathsegs,
             querysegs,
             iridecode(fragment))
@@ -220,7 +222,7 @@ def unparseIRI((scheme, netloc, pathsegs, querysegs, fragment)):
                     for (k, v) in querysegs)
     return urlparse.urlunsplit(
         (iriencode(scheme),
-         iriencodePath(netloc),
+         netloc.encode("idna"),
          path,
          query,
          iriencodeFragment(fragment)))

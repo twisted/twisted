@@ -310,13 +310,13 @@ class TestComponentCoding(TestCase):
         ('http://foo/p?q=http://foo/p?q%26q%3Dq%23f&@=:#g',
          (u'http', u'foo', [u'', u'p'],
           [(u'q', u'http://foo/p?q&q=q#f'), ('@',':')], u'g')),
-        # percent-decoding
-        ('http://%2525/%2525/%2525?%2525&%2525=%2525#%2525',
-         (u'http', u'%25', [u'', u'%25', u'%25'],
+        # idna-decoding
+        ('http://xn--n3h.com/%2525/%2525?%2525&%2525=%2525#%2525',
+         (u'http', u'\N{SNOWMAN}.com', [u'', u'%25', u'%25'],
           [(u'%25', None), (u'%25', u'%25')], u'%25')),
         # UTF-8 decoding
-        ('http://%C3%A9/%C3%A9/%C3%A9?%C3%A9&%C3%A9=%C3%A9#%C3%A9',
-         (u'http', u'\xe9', [u'', u'\xe9', u'\xe9'],
+        ('http://xn--n3h/%C3%A9/%C3%A9?%C3%A9&%C3%A9=%C3%A9#%C3%A9',
+         (u'http', u'\N{SNOWMAN}', [u'', u'\xe9', u'\xe9'],
           [(u'\xe9', None), (u'\xe9', u'\xe9')], u'\xe9')),
     ]
 
@@ -336,7 +336,7 @@ class TestComponentCoding(TestCase):
         for (s, p) in self.uriParses:
             self.assertEquals(url.parseIRI(s.decode('ascii')), p)
         self.assertEquals(
-            url.parseIRI(u'http://\xe9/\xe9/\xe9?\xe9&\xe9=\xe9#\xe9'),
+            url.parseIRI(u'http://xn--9ca/\xe9/\xe9?\xe9&\xe9=\xe9#\xe9'),
             (u'http', u'\xe9', [u'', u'\xe9', u'\xe9'],
              [(u'\xe9', None), (u'\xe9', u'\xe9')], u'\xe9'))
 
@@ -347,6 +347,22 @@ class TestComponentCoding(TestCase):
         """
         for (s, p) in self.uriParses:
             self.assertMatches(url.unparseIRI(p), s)
+
+
+    def test_parseIDNAHostname(self):
+        """
+        L{url.parseIRI} will decode hostnames using IDNA.
+        """
+        _, netloc, _, _, _ = url.parseIRI("http://xn--n3h.com/")
+        self.assertEqual(netloc, u"\N{SNOWMAN}.com")
+
+
+    def test_unparseIDNAHostname(self):
+        """
+        L{url.unparseIRI} will encode hostnames using IDNA.
+        """
+        result = url.unparseIRI((u'http', u"\N{SNOWMAN}.com", [u"", u""], u"", u""))
+        self.assertEqual(result, "http://xn--n3h.com/")
 
 
 
