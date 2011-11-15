@@ -7,8 +7,6 @@ URL parsing, construction and rendering.
 
 @see: RFC 3986, Uniform Resource Identifier (URI): Generic Syntax
 @see: RFC 3987, Internationalized Resource Identifiers
-
-XXX what about domain names, do we need to do IDNA?
 """
 
 import weakref
@@ -201,8 +199,13 @@ def parseIRI(s):
     pathsegs = map(iridecode, path.split('/'))
     querysegs = [(iridecode(k), _maybe(iridecode, v))
                  for (k, v) in unquerify(query)]
-    if isinstance(netloc, str) or netloc.startswith(u"xn-"):
+    if isinstance(netloc, str):
         netloc = netloc.decode("idna")
+    elif isinstance(netloc, unicode):
+        try:
+            netloc = netloc.decode("idna")
+        except UnicodeError:
+            pass
     return (iridecode(scheme),
             netloc,
             pathsegs,

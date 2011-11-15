@@ -349,20 +349,31 @@ class TestComponentCoding(TestCase):
             self.assertMatches(url.unparseIRI(p), s)
 
 
-    def test_parseIDNAHostname(self):
+    def test_parseStringHostname(self):
         """
-        L{url.parseIRI} will decode hostnames using IDNA.
+        L{url.parseIRI} will decode C{str} hostnames using IDNA.
         """
-        _, netloc, _, _, _ = url.parseIRI("http://xn--n3h.com/")
-        self.assertEqual(netloc, u"\N{SNOWMAN}.com")
+        _, netloc, _, _, _ = url.parseIRI("http://www.xn--n3h.com/")
+        self.assertEqual(netloc, u"www.\N{SNOWMAN}.com")
+
+
+    def test_parseStringHostname(self):
+        """
+        L{url.parseIRI} will decode C{unicode} hostnames using IDNA, falling
+        back to given value if it's not IDNA.
+        """
+        _, netloc, _, _, _ = url.parseIRI(u"http://www.xn--n3h.com/")
+        self.assertEqual(netloc, u"www.\N{SNOWMAN}.com")
+        _, netloc, _, _, _ = url.parseIRI(u"http://www.\N{SNOWMAN}.com/")
+        self.assertEqual(netloc, u"www.\N{SNOWMAN}.com")
 
 
     def test_unparseIDNAHostname(self):
         """
         L{url.unparseIRI} will encode hostnames using IDNA.
         """
-        result = url.unparseIRI((u'http', u"\N{SNOWMAN}.com", [u"", u""], u"", u""))
-        self.assertEqual(result, "http://xn--n3h.com/")
+        result = url.unparseIRI((u'http', u"www.\N{SNOWMAN}.com", [u"", u""], u"", u""))
+        self.assertEqual(result, "http://www.xn--n3h.com/")
 
 
 
