@@ -1,8 +1,8 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
-Twisted Core 11.1.0pre2 (2011-11-03)
-====================================
+Twisted Core 11.1.0 (2011-11-15)
+================================
 
 Features
 --------
@@ -186,8 +186,8 @@ Other
    #5336
 
 
-Twisted Conch 11.1.0pre2 (2011-11-03)
-=====================================
+Twisted Conch 11.1.0 (2011-11-15)
+=================================
 
 Features
 --------
@@ -225,8 +225,8 @@ Other
  - #5107, #5256, #5349
 
 
-Twisted Lore 11.1.0pre2 (2011-11-03)
-====================================
+Twisted Lore 11.1.0 (2011-11-15)
+================================
 
 Bugfixes
 --------
@@ -240,8 +240,8 @@ Deprecations and Removals
    deprecated in Twisted 9.0. (#5127)
 
 
-Twisted Mail 11.1.0pre2 (2011-11-03)
-====================================
+Twisted Mail 11.1.0 (2011-11-15)
+================================
 
 Features
 --------
@@ -260,8 +260,8 @@ Other
  - #4796, #5006
 
 
-Twisted Names 11.1.0pre2 (2011-11-03)
-=====================================
+Twisted Names 11.1.0 (2011-11-15)
+=================================
 
 Features
 --------
@@ -279,26 +279,26 @@ Bugfixes
    method is now implemented. (#5098)
 
 
-Twisted News 11.1.0pre2 (2011-11-03)
-====================================
+Twisted News 11.1.0 (2011-11-15)
+================================
 
 No significant changes have been made for this release.
 
 
-Twisted Pair 11.1.0pre2 (2011-11-03)
-====================================
+Twisted Pair 11.1.0 (2011-11-15)
+================================
 
 No significant changes have been made for this release.
 
 
-Twisted Runner 11.1.0pre2 (2011-11-03)
-======================================
+Twisted Runner 11.1.0 (2011-11-15)
+==================================
 
 No significant changes have been made for this release.
 
 
-Twisted Web 11.1.0pre2 (2011-11-03)
-===================================
+Twisted Web 11.1.0 (2011-11-15)
+===============================
 
 Features
 --------
@@ -358,8 +358,8 @@ Other
  - #4951, #5057, #5175, #5288, #5316
 
 
-Twisted Words 11.1.0pre2 (2011-11-03)
-=====================================
+Twisted Words 11.1.0 (2011-11-15)
+=================================
 
 Features
 --------
