@@ -36,7 +36,7 @@ Features
  - twisted.web.client now supports automatic content-decoding via
    twisted.web.client.ContentDecoderAgent, gzip being supported for
    now. (#5053)
- - Protocols may now implement ILoggingContext to customize the their
+ - Protocols may now implement ILoggingContext to customize their
    logging prefix.  twisted.protocols.policies.ProtocolWrapper and the
    endpoints wrapper now take advantage of this feature to ensure the
    application protocol is still reflected in logs. (#5062)
@@ -55,9 +55,9 @@ Features
    TypeError if passed unicode strings. (#3896)
  - iocp reactor now operates correctly on 64 bit Python runtimes.
    (#4669)
- - Added cred plugin support to twistd ftp (#4752)
- - Added an API to twisted.python.filepath.FilePath to retrieve the
-   permissions of the underlying file.  Also, two methods to determine
+ - twistd ftp now supports the cred plugin. (#4752)
+ - twisted.python.filepath.FilePath now has an API to retrieve the
+   permissions of the underlying file, and two methods to determine
    whether it is a block device or a socket.  (#4813)
  - twisted.trial.unittest.TestCase is now compatible with Python 2.7's
    assertDictEqual method. (#5291)
