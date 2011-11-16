@@ -7,6 +7,53 @@ URL parsing, construction and rendering.
 
 @see: RFC 3986, Uniform Resource Identifier (URI): Generic Syntax
 @see: RFC 3987, Internationalized Resource Identifiers
+
+Valid parsable URLs may show up looking like
+C{'http://example.com/foo%2Fbar/baz'}. Or they might show up as the
+ASCII-decoded equivalent: C{u'http://example.com/foo%2Fbar/baz'}. The fully
+decoded human-readable version, however, is not something the URL code should
+be parsing; it should only ever be displayed, not used a reference or key. For
+example, in this case it would be the problematic
+C{u'http://example.com/foo/bar/baz'}, assuming a UTF-8 encoding for '%2F'. As
+this example shows, the only reasonable thing to parse is still-encoded
+URLs. C{str} URLs with non-ASCII bytes can also be ignored as invalid.
+
+The Unicode encoding of the %-encoded characters (e.g. the '%2F' above) is
+another issue. Domains will always use IDNA. Paths will usually (but probably
+not always) be UTF-8, query strings can be whatever the hell the browser feels
+like, either UTF-8 or the encoding of the page. The path and query string may
+well have different encodings, and the encodings for path and query string may
+not be known! This module will therefore allow the original bytes in paths and
+queries to be preserved, so they can be passed through to someone who
+hopefully does know how to decode them.
+
+Of course, if there's no % in the path or query, you can just assume an encoding
+of ASCII.
+"""
+
+"""
+XXX temporary design notes and TODOs XXX
+
+parseIRI() should only accept either C{str}, or C{unicode} that will then
+immediately be encoded in ASCII. If the encoding fails the URL will be
+rejected; it may be human readable, but we cannot guarantee parsing it
+correctly. It may be that this a human-readable version that has already been
+decoded, with lost information as a result
+(e.g. C{u'http://example.com/foo/bar/baz'}) above, and we will parse it
+incorrectly. There is nothing we can do about that however, it's up to the
+user not to feed as bad data. The various other utility functions used for
+parsing can thereafter be modified to assume only C{str} as input.
+
+URL objects should somehow preserve the incoming path and query, and deal with
+the potential for different or unknown encodings somehow. API details are not
+yet clear; exarkun suggests Segment() objects that have original bytes and
+optional decoded version, and presumably we could have equivalent
+QueryArgument for query. It should be possible to reencode a URL and get back
+the same bytes as what was originally parsed.
+
+The change where URL is all unicode and only accepts Unicode methods may
+therefore be wrong... or maybe you shouldn't be modifying the path/query if
+you don't know the encoding.
 """
 
 import weakref
