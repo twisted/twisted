@@ -1,2 +1,0 @@
-twisted.conch.telnet.ITelnetProtocol now has the correct signature for its
-unhandledSubnegotiation() method.

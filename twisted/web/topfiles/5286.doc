@@ -1,1 +1,0 @@
-The twisted.web.template howto now documents the common idiom of yielding tag clones from a renderer.

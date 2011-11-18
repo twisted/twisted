@@ -1,3 +1,0 @@
-trial and twistd now add the current directory to sys.path even when running as
-root or on Windows. mktap, tapconvert, and pyhtmlizer no longer add the current
-directory to sys.path.

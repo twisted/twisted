@@ -1,1 +1,0 @@
-twisted.python.modules now supports iterating over namespace packages without yielding duplicates.

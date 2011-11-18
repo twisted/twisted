@@ -1,1 +1,0 @@
-Options.optStrings, deprecated for 7 years, has been removed.  Use Options.optParameters instead.

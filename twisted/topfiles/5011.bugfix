@@ -1,1 +1,0 @@
-twisted.internet.defer.Deferreds are 10 times faster at handling exceptions raised from callbacks, except when setDebugging(True) has been called.

@@ -1,6 +1,26 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Mail 11.1.0 (2011-11-15)
+================================
+
+Features
+--------
+ - twisted.mail.smtp.LOGINCredentials now generates challenges with
+   ":" instead of "\0" for interoperability with Microsoft Outlook.
+   (#4692)
+
+Bugfixes
+--------
+ - When run from an unpacked source tarball or a VCS checkout,
+   bin/mail/mailmail will now use the version of Twisted it is part
+   of. (#3526)
+
+Other
+-----
+ - #4796, #5006
+
+
 Twisted Mail 11.0.0 (2011-04-01)
 ================================
 

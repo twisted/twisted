@@ -1,2 +1,0 @@
-twisted.web.client.Agent no longer raises an exception if a server responds and
-closes the connection before the request has been fully transmitted.

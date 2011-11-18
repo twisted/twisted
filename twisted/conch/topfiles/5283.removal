@@ -1,1 +1,0 @@
-The --user option to `twistd manhole' has been removed as it was dead code with no functionality associated with it.

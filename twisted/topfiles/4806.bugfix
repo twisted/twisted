@@ -1,3 +1,0 @@
-twsited.python.deprecate.deprecatedModuleAttribute no longer spuriously warns
-twice when used to deprecate a module within a package.  This should make it
-easier to write unit tests for deprecated modules.

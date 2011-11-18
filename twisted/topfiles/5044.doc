@@ -1,1 +1,0 @@
-The Clients howto now uses buildProtocol more explicitly, hopefully making it easier to understand where Protocol instances come from.

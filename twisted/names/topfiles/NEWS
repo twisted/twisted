@@ -1,6 +1,25 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Names 11.1.0 (2011-11-15)
+=================================
+
+Features
+--------
+ - twisted.names.dns.Message now parses records of unknown type into
+   instances of a new `UnknownType` class. (#4603)
+
+Bugfixes
+--------
+ - twisted.names.dns.Name now detects loops in names it is decoding
+   and raises an exception.  Previously it would follow the loop
+   forever, allowing a remote denial of service attack against any
+   twisted.names client or server. (#5064)
+ - twisted.names.hosts.Resolver now supports IPv6 addresses; its
+   lookupAddress method now filters them out and its lookupIPV6Address
+   method is now implemented. (#5098)
+
+
 Twisted Names 11.0.0 (2011-04-01)
 =================================
 

@@ -1,1 +1,0 @@
-twisted.words.protocols.irc.IRCClient.me was deprecated in Twisted 9.0 and has been removed. Use IRCClient.describe instead.

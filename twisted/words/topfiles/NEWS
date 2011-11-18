@@ -1,6 +1,34 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Words 11.1.0 (2011-11-15)
+=================================
+
+Features
+--------
+ - twisted.words.protocols.irc.IRCClient now uses a PING heartbeat as
+   a keepalive to avoid losing an IRC connection without being aware
+   of it. (#5047)
+
+Bugfixes
+--------
+ - twisted.words.protocols.irc.IRCClient now replies only once to
+   known CTCP queries per message and not at all to unknown CTCP
+   queries. (#5029)
+ - IRCClient.msg now determines a safe maximum command length,
+   drastically reducing the chance of relayed text being truncated on
+   the server side. (#5176)
+
+Deprecations and Removals
+-------------------------
+ - twisted.words.protocols.irc.IRCClient.me was deprecated in Twisted
+   9.0 and has been removed. Use IRCClient.describe instead. (#5059)
+
+Other
+-----
+ - #5025, #5330
+
+
 Twisted Words 11.0.0 (2011-04-01)
 =================================
 
