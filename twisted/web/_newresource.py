@@ -106,7 +106,10 @@ class Resource:
 class Traversal:
 
     def __init__(self, iri):
-        self.iri = []
-        self.history = [] # list of (iri, resource) pairs, e.g. www.foo.com/ -> R1, www.foo.com/bar -> R2
-        # Replace *replaces* last item in history
-    
+        # ...
+
+    def consume(self, encoding="UTF-8"):
+        """
+        Return next path segment. Encoding of None means return underlying
+        bytes of path segment.
+        """
