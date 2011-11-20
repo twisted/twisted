@@ -6,7 +6,7 @@ Don't use this outside of Twisted.
 Maintainer: Christopher Armstrong
 """
 
-from distutils.command import build_scripts, install_data, build_ext, build_py
+from distutils.command import build_scripts, install_data, build_ext
 from distutils.errors import CompileError
 from distutils import core
 from distutils.core import Extension
@@ -83,8 +83,6 @@ def get_setup_args(**kw):
         kw['cmdclass'] = {
             'install_data': install_data_twisted,
             'build_scripts': build_scripts_twisted}
-        if sys.version_info[:3] < (2, 3, 0):
-            kw['cmdclass']['build_py'] = build_py_twisted
 
     if "conditionalExtensions" in kw:
         extensions = kw["conditionalExtensions"]
@@ -261,20 +259,6 @@ def getScripts(projname, basedir=''):
 
 
 ## Helpers and distutil tweaks
-
-class build_py_twisted(build_py.build_py):
-    """
-    Changes behavior in Python 2.2 to support simultaneous specification of
-    `packages' and `py_modules'.
-    """
-    def run(self):
-        if self.py_modules:
-            self.build_modules()
-        if self.packages:
-            self.build_packages()
-        self.byte_compile(self.get_outputs(include_bytecode=0))
-
-
 
 class build_scripts_twisted(build_scripts.build_scripts):
     """Renames scripts so they end with '.py' on Windows."""

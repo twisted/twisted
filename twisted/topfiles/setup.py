@@ -9,8 +9,8 @@ Distutils installer for Twisted.
 import os
 import sys
 
-if sys.version_info < (2,3):
-    print >>sys.stderr, "You must use at least Python 2.3 for Twisted"
+if sys.version_info < (2, 5):
+    print >>sys.stderr, "You must use at least Python 2.5 for Twisted"
     sys.exit(3)
 
 if os.path.exists('twisted'):
