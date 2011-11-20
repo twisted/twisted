@@ -986,7 +986,7 @@ class DistributionBuilder(object):
         @type howtoPath: L{FilePath}
         """
         templatePath = self.rootDirectory.child("doc").child("core"
-            ).child("howto").child("website-template.tpl")
+            ).child("howto").child("template.tpl")
         if path.basename() == "man":
             self.manBuilder.build(path)
         if path.isdir():
