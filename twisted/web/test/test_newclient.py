@@ -124,36 +124,6 @@ def justTransportResponse(transport):
     return Response(('HTTP', 1, 1), 200, 'OK', _boringHeaders, transport)
 
 
-class MakeStatefulDispatcherTests(TestCase):
-    """
-    Tests for L{makeStatefulDispatcher}.
-    """
-    def test_functionCalledByState(self):
-        """
-        A method defined with L{makeStatefulDispatcher} invokes a second
-        method based on the current state of the object.
-        """
-        class Foo:
-            _state = 'A'
-
-            def bar(self):
-                pass
-            bar = makeStatefulDispatcher('quux', bar)
-
-            def _quux_A(self):
-                return 'a'
-
-            def _quux_B(self):
-                return 'b'
-
-        stateful = Foo()
-        self.assertEqual(stateful.bar(), 'a')
-        stateful._state = 'B'
-        self.assertEqual(stateful.bar(), 'b')
-        stateful._state = 'C'
-        self.assertRaises(RuntimeError, stateful.bar)
-
-
 
 class _HTTPParserTests(object):
     """
