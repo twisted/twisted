@@ -43,7 +43,7 @@ class FileDescriptor(_LogOwner):
         Some data is available for reading on this descriptor.
 
         @return: If an error is encountered which causes the descriptor to
-            no longer be valid, a L{Failure} should be returned.  Otherwise,
+            no longer be valid, a C{Failure} should be returned.  Otherwise,
             C{None}.
         """
     doRead = makeStatefulDispatcher("doRead", doRead)
@@ -54,7 +54,7 @@ class FileDescriptor(_LogOwner):
         Some data can be written to this descriptor.
 
         @return: If an error is encountered which causes the descriptor to
-            no longer be valid, a L{Failure} should be returned.  Otherwise,
+            no longer be valid, a C{Failure} should be returned.  Otherwise,
             C{None}.
         """
     doWrite = makeStatefulDispatcher("doWrite", doWrite)
