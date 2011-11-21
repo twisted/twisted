@@ -38,6 +38,40 @@ class FileDescriptor(_LogOwner):
     fileno = makeStatefulDispatcher("fileno", fileno)
 
 
+    def doRead(self):
+        """
+        Some data is available for reading on this descriptor.
+
+        @return: If an error is encountered which causes the descriptor to
+            no longer be valid, a L{Failure} should be returned.  Otherwise,
+            C{None}.
+        """
+    doRead = makeStatefulDispatcher("doRead", doRead)
+
+
+    def doWrite():
+        """
+        Some data can be written to this descriptor.
+
+        @return: If an error is encountered which causes the descriptor to
+            no longer be valid, a L{Failure} should be returned.  Otherwise,
+            C{None}.
+        """
+    doWrite = makeStatefulDispatcher("doWrite", doWrite)
+
+
+    def connectionLost(self, reason):
+        """
+        The connection was lost.
+
+        This is called when the connection on a selectable object has been
+        lost.  It will be called whether the connection was closed explicitly,
+        an exception occurred in an event handler, or the other end of the
+        connection closed it first.
+        """
+    connectionLost = makeStatefulDispatcher("connectionLost", connectionLost)
+
+
     def stopReading(self):
         """
         Stop waiting for read notification.

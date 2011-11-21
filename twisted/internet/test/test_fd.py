@@ -18,17 +18,57 @@ class FileDescriptorTests(TestCase):
             self.append(name)
             return self.append
 
+
+    def noDefaultTest(self, methodName):
+        """
+        The given method name has stateful dispath, with no default
+        implementation.
+        """
+        class TestFD(FileDescriptor):
+            _state = "NEW"
+        def method(self):
+            return "hello"
+        setattr(TestFD, "_%s_NEW" % (methodName,), method)
+
+        # State dispatch happens:
+        fd = TestFD(None)
+        self.assertEqual(getattr(fd, methodName)(), "hello")
+
+        # And there is no default implementation:
+        fd._state = "SOMEOTHER"
+        self.assertRaises(RuntimeError, getattr(fd, methodName))
+
+
     def test_fileno(self):
         """
         L{FileDescriptor} provides a stateful implementation of its C{fileno}
         method.
         """
-        class TestFD(FileDescriptor):
-            _state = "PERPLEXED"
-            def _fileno_PERPLEXED(self):
-                return "hello"
-        fd = TestFD(None)
-        self.assertEqual(fd.fileno(), "hello")
+        self.noDefaultTest("fileno")
+
+
+    def test_doWrite(self):
+        """
+        L{FileDescriptor} provides a stateful dispatch of its C{doWrite}
+        method.
+        """
+        self.noDefaultTest("doWrite")
+
+
+    def test_doRead(self):
+        """
+        L{FileDescriptor} provides a stateful dispatch of its C{doRead}
+        method.
+        """
+        self.noDefaultTest("doRead")
+
+
+    def test_connectionLost(self):
+        """
+        L{FileDescriptor} provides a stateful dispatch of its C{connectionLost}
+        method.
+        """
+        self.noDefaultTest("connectionLost")
 
 
     def readWriteTest(self, methodName, expectedReactorCall):
@@ -86,4 +126,3 @@ class FileDescriptorTests(TestCase):
         calls C{reactor.addWriter(self)}.
         """
         self.readWriteTest("startWriting", "addWriter")
-
