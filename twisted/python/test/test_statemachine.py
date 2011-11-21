@@ -49,3 +49,29 @@ class MakeStatefulDispatcherTests(TestCase):
         aFunc = makeStatefulDispatcher("theName", aFunc)
         self.assertEqual(aFunc.__name__, "theName")
         self.assertEqual(aFunc.func_name, "theName")
+
+
+    def test_default(self):
+        """
+        If no method can be found for a given state, L{makeStatefulDispatcher}
+        will lookup '_method_default'.
+        """
+        class Foo:
+            _state = 'A'
+
+            def bar(self):
+                pass
+            bar = makeStatefulDispatcher('quux', bar)
+
+            def _quux_A(self):
+                return 'a'
+
+            def _quux_default(self):
+                return 'default'
+
+        stateful = Foo()
+        self.assertEqual(stateful.bar(), 'a')
+        stateful._state = 'B'
+        self.assertEqual(stateful.bar(), 'default')
+        stateful._state = 'C'
+        self.assertEqual(stateful.bar(), 'default')

@@ -22,7 +22,8 @@ def makeStatefulDispatcher(name, template):
     @return: The dispatcher function.
     """
     def dispatcher(self, *args, **kwargs):
-        func = getattr(self, '_' + name + '_' + self._state, None)
+        func = (getattr(self, '_' + name + '_' + self._state, None) or
+                getattr(self, '_' + name + '_default', None))
         if func is None:
             raise RuntimeError(
                 "%r has no %s method in state %s" % (self, name, self._state))
