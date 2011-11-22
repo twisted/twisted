@@ -20,7 +20,7 @@ from twisted.python.util import unsignedID
 from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorThreads
 from twisted.internet.interfaces import IResolverSimple, IReactorPluggableResolver
 from twisted.internet.interfaces import IConnector, IDelayedCall
-from twisted.internet import fdesc, main, error, abstract, defer, threads
+from twisted.internet import fdesc, main, error, abstract, defer, threads, _fd
 from twisted.python import log, failure, reflect
 from twisted.python.runtime import seconds as runtimeSeconds, platform
 from twisted.internet.defer import Deferred, DeferredList
@@ -1073,8 +1073,9 @@ class BaseConnector(styles.Ephemeral):
 
 
 
-class BasePort(abstract.FileDescriptor):
-    """Basic implementation of a ListeningPort.
+class BasePort(_fd.ReadDescriptor):
+    """
+    Basic implementation of a ListeningPort.
 
     Note: This does not actually implement IListeningPort.
     """
@@ -1083,6 +1084,9 @@ class BasePort(abstract.FileDescriptor):
     socketType = None
 
     def createInternetSocket(self):
+        """
+        Create a new non-blocking socket.
+        """
         s = socket.socket(self.addressFamily, self.socketType)
         s.setblocking(0)
         fdesc._setCloseOnExec(s.fileno())
@@ -1090,8 +1094,10 @@ class BasePort(abstract.FileDescriptor):
 
 
     def doWrite(self):
-        """Raises a RuntimeError"""
-        raise RuntimeError, "doWrite called on a %s" % reflect.qual(self.__class__)
+        """
+        This should never be called, but add it just in case.
+        """
+        raise RuntimeError("doWrite called on a %s" % reflect.qual(self.__class__))
 
 
 

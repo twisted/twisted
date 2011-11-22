@@ -21,14 +21,14 @@ class Descriptor(_LogOwner):
 
     @ivar _state: The current state of the state machine.
 
-    @ivar _reactor: The reactor this file descriptor is connected to.
+    @ivar reactor: The reactor this file descriptor is connected to.
     """
     implements(IReadWriteDescriptor)
 
     _state = None
 
     def __init__(self, reactor):
-        self._reactor = reactor
+        self.reactor = reactor
 
 
     @makeStatefulDispatcher
@@ -79,7 +79,7 @@ class ReadDescriptor(Descriptor):
         """
         Remove the file descriptor from the reactor's read set.
         """
-        self._reactor.removeReader(self)
+        self.reactor.removeReader(self)
 
 
     @makeStatefulDispatcher
@@ -93,4 +93,4 @@ class ReadDescriptor(Descriptor):
         """
         Add file descriptor to reactor read set.
         """
-        self._reactor.addReader(self)
+        self.reactor.addReader(self)

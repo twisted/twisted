@@ -24,6 +24,8 @@ import warnings
 from zope.interface import implements
 
 from twisted.python.runtime import platformType
+from twisted.python._statedispatch import makeStatefulDispatcher
+
 if platformType == 'win32':
     from errno import WSAEWOULDBLOCK
     from errno import WSAEINTR, WSAEMSGSIZE, WSAETIMEDOUT
@@ -51,9 +53,23 @@ from twisted.python import log, failure
 from twisted.internet import abstract, error, interfaces
 
 
+NOTLISTENING, LISTENING, LISTENING_CONNECTED, DISCONNECTING, DISCONNECTED = (
+    "NOTLISTENING, LISTENING, LISTENING_CONNECTED, DISCONNECTING, "
+    "DISCONNECTED").split(", ")
+
 class Port(base.BasePort):
     """
     UDP port, listening for packets.
+
+    States can include:
+
+    - NOTLISTENING: a newly created port, that hasn't started listening on a
+      socket yet.
+    - LISTENING: the port is listening for datagrams.
+    - LISTENING_CONNECTED: the port is listening, and is connected to a
+      specific address.
+    - DISCONNECTING: stopListening() has been called.
+    - DISCONNECTED: the port has closed the socket and is no longer listening.
     """
     implements(
         interfaces.IListeningPort, interfaces.IUDPTransport,
@@ -67,10 +83,14 @@ class Port(base.BasePort):
     # value when we are actually listening.
     _realPortNumber = None
 
+    _state = NOTLISTENING
+
     def __init__(self, port, proto, interface='', maxPacketSize=8192, reactor=None):
         """
         Initialize with a numeric port to listen on.
         """
+        if reactor is None:
+            from twisted.internet import reactor
         base.BasePort.__init__(self, reactor)
         self.port = port
         self.protocol = proto
@@ -79,11 +99,13 @@ class Port(base.BasePort):
         self.setLogStr()
         self._connectedAddr = None
 
+
     def __repr__(self):
         if self._realPortNumber is not None:
             return "<%s on %s>" % (self.protocol.__class__, self._realPortNumber)
         else:
             return "<%s not connected>" % (self.protocol.__class__,)
+
 
     def getHandle(self):
         """
@@ -91,6 +113,8 @@ class Port(base.BasePort):
         """
         return self.socket
 
+
+    @makeStatefulDispatcher
     def startListening(self):
         """
         Create and bind my socket, and begin listening on it.
@@ -98,8 +122,11 @@ class Port(base.BasePort):
         This is called on unserialization, and must be called after creating a
         server to begin listening on the specified port.
         """
+
+    def _startListening_NOTLISTENING(self):
         self._bindSocket()
         self._connectToProtocol()
+
 
     def _bindSocket(self):
         try:
@@ -118,16 +145,21 @@ class Port(base.BasePort):
         self.connected = 1
         self.socket = skt
         self.fileno = self.socket.fileno
+        self._state = LISTENING
+
 
     def _connectToProtocol(self):
         self.protocol.makeConnection(self)
         self.startReading()
 
 
+    @makeStatefulDispatcher
     def doRead(self):
         """
         Called when my socket is ready for reading.
         """
+
+    def _doRead_LISTENING(self):
         read = 0
         while read < self.maxThroughput:
             try:
@@ -137,7 +169,7 @@ class Port(base.BasePort):
                 if no in _sockErrReadIgnore:
                     return
                 if no in _sockErrReadRefuse:
-                    if self._connectedAddr:
+                    if self._state == LISTENING_CONNECTED:
                         self.protocol.connectionRefused()
                     return
                 raise
@@ -148,7 +180,10 @@ class Port(base.BasePort):
                 except:
                     log.err()
 
+    _doRead_LISTENING_CONNECTED = _doRead_LISTENING
 
+
+    @makeStatefulDispatcher
     def write(self, datagram, addr=None):
         """
         Write a datagram.
@@ -161,86 +196,102 @@ class Port(base.BasePort):
         @param addr: A tuple of (I{stringified dotted-quad IP address},
             I{integer port number}); can be C{None} in connected mode.
         """
-        if self._connectedAddr:
-            assert addr in (None, self._connectedAddr)
-            try:
-                return self.socket.send(datagram)
-            except socket.error, se:
-                no = se.args[0]
-                if no == EINTR:
-                    return self.write(datagram)
-                elif no == EMSGSIZE:
-                    raise error.MessageLengthError, "message too long"
-                elif no == ECONNREFUSED:
-                    self.protocol.connectionRefused()
-                else:
-                    raise
-        else:
-            assert addr != None
-            if not addr[0].replace(".", "").isdigit() and addr[0] != "<broadcast>":
-                warnings.warn("Please only pass IPs to write(), not hostnames",
-                              DeprecationWarning, stacklevel=2)
-            try:
-                return self.socket.sendto(datagram, addr)
-            except socket.error, se:
-                no = se.args[0]
-                if no == EINTR:
-                    return self.write(datagram, addr)
-                elif no == EMSGSIZE:
-                    raise error.MessageLengthError, "message too long"
-                elif no == ECONNREFUSED:
-                    # in non-connected UDP ECONNREFUSED is platform dependent, I
-                    # think and the info is not necessarily useful. Nevertheless
-                    # maybe we should call connectionRefused? XXX
-                    return
-                else:
-                    raise
+
+    def _write_LISTENING_CONNECTED(self, datagram, addr=None):
+        try:
+            return self.socket.send(datagram)
+        except socket.error, se:
+            no = se.args[0]
+            if no == EINTR:
+                return self.write(datagram)
+            elif no == EMSGSIZE:
+                raise error.MessageLengthError, "message too long"
+            elif no == ECONNREFUSED:
+                self.protocol.connectionRefused()
+            else:
+                raise
+
+
+    def _write_LISTENING(self, datagram, addr=None):
+        assert addr != None
+        if not addr[0].replace(".", "").isdigit() and addr[0] != "<broadcast>":
+            warnings.warn("Please only pass IPs to write(), not hostnames",
+                          DeprecationWarning, stacklevel=2)
+        try:
+            return self.socket.sendto(datagram, addr)
+        except socket.error, se:
+            no = se.args[0]
+            if no == EINTR:
+                return self.write(datagram, addr)
+            elif no == EMSGSIZE:
+                raise error.MessageLengthError, "message too long"
+            elif no == ECONNREFUSED:
+                # in non-connected UDP ECONNREFUSED is platform dependent, I
+                # think and the info is not necessarily useful. Nevertheless
+                # maybe we should call connectionRefused? XXX
+                return
+            else:
+                raise
+
 
     def writeSequence(self, seq, addr):
         self.write("".join(seq), addr)
 
+
+    @makeStatefulDispatcher
     def connect(self, host, port):
         """
         'Connect' to remote server.
         """
-        if self._connectedAddr:
-            raise RuntimeError, "already connected, reconnecting is not currently supported (talk to itamar if you want this)"
+
+    def _connect_LISTENING(self, host, port):
         if not abstract.isIPAddress(host):
             raise ValueError, "please pass only IP addresses, not domain names"
         self._connectedAddr = (host, port)
         self.socket.connect((host, port))
+        self._state = LISTENING_CONNECTED
 
-    def _loseConnection(self):
-        self.stopReading()
-        if self.connected: # actually means if we are *listening*
-            self.reactor.callLater(0, self.connectionLost)
 
+    @makeStatefulDispatcher
     def stopListening(self):
-        if self.connected:
-            result = self.d = defer.Deferred()
-        else:
-            result = None
-        self._loseConnection()
-        return result
+        """
+        Stop listening on the port.
+        """
+
+
+    def _stopListening_default(self):
+        return None
+
+    def _stopListening_LISTENING(self):
+        self.d = defer.Deferred()
+        self.stopReading()
+        self._state = DISCONNECTING
+        self.reactor.callLater(0, self.connectionLost)
+        return self.d
+
+    _stopListening_LISTENING_CONNECTED = _stopListening_LISTENING
+
 
     def loseConnection(self):
         warnings.warn("Please use stopListening() to disconnect port", DeprecationWarning, stacklevel=2)
         self.stopListening()
 
-    def connectionLost(self, reason=None):
-        """
-        Cleans up my socket.
-        """
+
+    def _connectionLost_default(self, reason=None):
+        self._state = DISCONNECTED
         log.msg('(UDP Port %s Closed)' % self._realPortNumber)
+        self.stopReading()
         self._realPortNumber = None
-        base.BasePort.connectionLost(self, reason)
         self.protocol.doStop()
         self.socket.close()
         del self.socket
         del self.fileno
-        if hasattr(self, "d"):
-            self.d.callback(None)
-            del self.d
+
+
+    def _connectionLost_DISCONNECTING(self, reason=None):
+        self._connectionLost_default(reason)
+        self.d.callback(None)
+        del self.d
 
 
     def setLogStr(self):
@@ -335,6 +386,8 @@ class MulticastPort(MulticastMixin, Port):
         """
         @see: L{twisted.internet.interfaces.IReactorMulticast.listenMulticast}
         """
+        if reactor is None:
+            from twisted.internet import reactor
         Port.__init__(self, port, proto, interface, maxPacketSize, reactor)
         self.listenMultiple = listenMultiple
 
