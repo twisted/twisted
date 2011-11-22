@@ -873,7 +873,7 @@ class Response:
         Dispatch the given L{IProtocol} depending of the current state of the
         response.
         """
-    deliverBody = makeStatefulDispatcher('deliverBody', deliverBody)
+    deliverBody = makeStatefulDispatcher(deliverBody)
 
 
     def _deliverBody_INITIAL(self, protocol):
@@ -938,8 +938,8 @@ class Response:
         They will be buffered or delivered to the protocol passed to
         deliverBody.
         """
-    _bodyDataReceived = makeStatefulDispatcher('bodyDataReceived',
-                                               _bodyDataReceived)
+    _bodyDataReceived = makeStatefulDispatcher(_bodyDataReceived,
+                                               name='bodyDataReceived')
 
 
     def _bodyDataReceived_INITIAL(self, data):
@@ -984,8 +984,8 @@ class Response:
         optional reason is supplied, this indicates a problem or potential
         problem receiving all of the response body.
         """
-    _bodyDataFinished = makeStatefulDispatcher('bodyDataFinished',
-                                               _bodyDataFinished)
+    _bodyDataFinished = makeStatefulDispatcher(_bodyDataFinished,
+                                               name='bodyDataFinished')
 
 
     def _bodyDataFinished_INITIAL(self, reason=None):
@@ -1332,7 +1332,7 @@ class HTTP11ClientProtocol(Protocol):
         The underlying transport went away.  If appropriate, notify the parser
         object.
         """
-    connectionLost = makeStatefulDispatcher('connectionLost', connectionLost)
+    connectionLost = makeStatefulDispatcher(connectionLost)
 
 
     def _connectionLost_QUIESCENT(self, reason):

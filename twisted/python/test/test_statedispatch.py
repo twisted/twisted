@@ -23,12 +23,12 @@ class MakeStatefulDispatcherTests(TestCase):
 
             def bar(self):
                 pass
-            bar = makeStatefulDispatcher('quux', bar)
+            bar = makeStatefulDispatcher(bar)
 
-            def _quux_A(self):
+            def _bar_A(self):
                 return 'a'
 
-            def _quux_B(self):
+            def _bar_B(self):
                 return 'b'
 
         stateful = Foo()
@@ -42,13 +42,20 @@ class MakeStatefulDispatcherTests(TestCase):
     def test_name(self):
         """
         A method defined with L{makeStatefulDispatcher} has its name set to
-        given one.
+        that of the template function, unless the name is overridden.
         """
         def aFunc():
             pass
-        aFunc = makeStatefulDispatcher("theName", aFunc)
-        self.assertEqual(aFunc.__name__, "theName")
-        self.assertEqual(aFunc.func_name, "theName")
+        aFunc = makeStatefulDispatcher(aFunc)
+        self.assertEqual(aFunc.__name__, "aFunc")
+        self.assertEqual(aFunc.func_name, "aFunc")
+
+        # We can override the name, though:
+        def another():
+            pass
+        anotherFunc = makeStatefulDispatcher(another, name="different")
+        self.assertEqual(anotherFunc.__name__, "different")
+        self.assertEqual(anotherFunc.func_name, "different")
 
 
     def test_default(self):
@@ -61,12 +68,12 @@ class MakeStatefulDispatcherTests(TestCase):
 
             def bar(self):
                 pass
-            bar = makeStatefulDispatcher('quux', bar)
+            bar = makeStatefulDispatcher(bar)
 
-            def _quux_A(self):
+            def _bar_A(self):
                 return 'a'
 
-            def _quux_default(self):
+            def _bar_default(self):
                 return 'default'
 
         stateful = Foo()

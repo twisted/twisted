@@ -31,13 +31,14 @@ class Descriptor(_LogOwner):
         self._reactor = reactor
 
 
+    @makeStatefulDispatcher
     def fileno(self):
         """
         Return a valid file descriptor, which the reactor will wait on.
         """
-    fileno = makeStatefulDispatcher("fileno", fileno)
 
 
+    @makeStatefulDispatcher
     def connectionLost(self, reason):
         """
         The connection was lost.
@@ -47,7 +48,6 @@ class Descriptor(_LogOwner):
         an exception occurred in an event handler, or the other end of the
         connection closed it first.
         """
-    connectionLost = makeStatefulDispatcher("connectionLost", connectionLost)
 
 
 
@@ -56,6 +56,7 @@ class ReadDescriptor(Descriptor):
     A {Descriptor} that supports read notifications.
     """
 
+    @makeStatefulDispatcher
     def doRead(self):
         """
         Some data is available for reading on this descriptor.
@@ -64,14 +65,14 @@ class ReadDescriptor(Descriptor):
             no longer be valid, a C{Failure} should be returned.  Otherwise,
             C{None}.
         """
-    doRead = makeStatefulDispatcher("doRead", doRead)
 
 
+    @makeStatefulDispatcher
     def stopReading(self):
         """
         Stop waiting for read notification.
         """
-    stopReading = makeStatefulDispatcher("stopReading", stopReading)
+
 
 
     def _stopReading_default(self):
@@ -81,11 +82,11 @@ class ReadDescriptor(Descriptor):
         self._reactor.removeReader(self)
 
 
+    @makeStatefulDispatcher
     def startReading(self):
         """
         Start waiting for read notification.
         """
-    startReading = makeStatefulDispatcher("startReading", startReading)
 
 
     def _startReading_default(self):
