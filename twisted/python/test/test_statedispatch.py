@@ -2,11 +2,11 @@
 # See LICENSE for details.
 
 """
-Tests for C{twisted.python.statemachine}.
+Tests for C{twisted.python._statedispatch}.
 """
 
 from twisted.trial.unittest import TestCase
-from twisted.python.statemachine import makeStatefulDispatcher
+from twisted.python._statedispatch import makeStatefulDispatcher
 
 
 class MakeStatefulDispatcherTests(TestCase):

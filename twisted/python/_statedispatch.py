@@ -2,7 +2,7 @@
 # See LICENSE for details.
 
 """
-Support code for implementing state machines.
+Support code for implementing state-based method dispatch.
 """
 
 def makeStatefulDispatcher(name, template):

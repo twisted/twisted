@@ -31,7 +31,7 @@ __metaclass__ = type
 from zope.interface import implements
 
 from twisted.python import log
-from twisted.python.statemachine import makeStatefulDispatcher
+from twisted.python._statedispatch import makeStatefulDispatcher
 from twisted.python.reflect import fullyQualifiedName
 from twisted.python.failure import Failure
 from twisted.python.compat import set

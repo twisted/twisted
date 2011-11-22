@@ -8,7 +8,7 @@ Support for generic select()able objects with explicit state machines.
 __metaclass__ = type
 
 from zope.interface import implements
-from twisted.python.statemachine import makeStatefulDispatcher
+from twisted.python._statedispatch import makeStatefulDispatcher
 from twisted.internet.interfaces import IReadWriteDescriptor
 from twisted.internet.abstract import _LogOwner
 
