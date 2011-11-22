@@ -13,7 +13,7 @@ from twisted.internet.interfaces import IReadWriteDescriptor
 from twisted.internet.abstract import _LogOwner
 
 
-class FileDescriptor(_LogOwner):
+class Descriptor(_LogOwner):
     """
     A file descriptor which can be queried by select() and similar APIs.
 
@@ -38,28 +38,6 @@ class FileDescriptor(_LogOwner):
     fileno = makeStatefulDispatcher("fileno", fileno)
 
 
-    def doRead(self):
-        """
-        Some data is available for reading on this descriptor.
-
-        @return: If an error is encountered which causes the descriptor to
-            no longer be valid, a C{Failure} should be returned.  Otherwise,
-            C{None}.
-        """
-    doRead = makeStatefulDispatcher("doRead", doRead)
-
-
-    def doWrite():
-        """
-        Some data can be written to this descriptor.
-
-        @return: If an error is encountered which causes the descriptor to
-            no longer be valid, a C{Failure} should be returned.  Otherwise,
-            C{None}.
-        """
-    doWrite = makeStatefulDispatcher("doWrite", doWrite)
-
-
     def connectionLost(self, reason):
         """
         The connection was lost.
@@ -70,6 +48,23 @@ class FileDescriptor(_LogOwner):
         connection closed it first.
         """
     connectionLost = makeStatefulDispatcher("connectionLost", connectionLost)
+
+
+
+class ReadDescriptor(Descriptor):
+    """
+    A {Descriptor} that supports read notifications.
+    """
+
+    def doRead(self):
+        """
+        Some data is available for reading on this descriptor.
+
+        @return: If an error is encountered which causes the descriptor to
+            no longer be valid, a C{Failure} should be returned.  Otherwise,
+            C{None}.
+        """
+    doRead = makeStatefulDispatcher("doRead", doRead)
 
 
     def stopReading(self):
@@ -86,20 +81,6 @@ class FileDescriptor(_LogOwner):
         self._reactor.removeReader(self)
 
 
-    def stopWriting(self):
-        """
-        Stop waiting for write notification.
-        """
-    stopWriting = makeStatefulDispatcher("stopWriting", stopWriting)
-
-
-    def _stopWriting_default(self):
-        """
-        Remove the file descriptor from the reactor's write set.
-        """
-        self._reactor.removeWriter(self)
-
-
     def startReading(self):
         """
         Start waiting for read notification.
@@ -112,17 +93,3 @@ class FileDescriptor(_LogOwner):
         Add file descriptor to reactor read set.
         """
         self._reactor.addReader(self)
-
-
-    def startWriting(self):
-        """
-        Start waiting for write notification.
-        """
-    startWriting = makeStatefulDispatcher("startWriting", startWriting)
-
-
-    def _startWriting_default(self):
-        """
-        Add file descriptor to reactor write set.
-        """
-        self._reactor.addWriter(self)
