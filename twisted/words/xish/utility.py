@@ -94,7 +94,7 @@ class CallbackList:
 
         @note: Exceptions raised by callbacks are trapped and logged. They will
                not propagate up to make sure other callbacks will still be
-               called, and the event dispatching allways succeeds.
+               called, and the event dispatching always succeeds.
 
         @param args: Positional arguments to the callable.
         @type args: C{list}
@@ -157,7 +157,7 @@ class EventDispatcher:
     observe an event, the observer is removed from the list of observers after
     the first observed event.
 
-    Obsevers can also prioritized, by providing an optional C{priority}
+    Observers can also be prioritized, by providing an optional C{priority}
     parameter to the L{addObserver} and L{addOnetimeObserver} methods. Higher
     priority observers are then called before lower priority observers.
 
