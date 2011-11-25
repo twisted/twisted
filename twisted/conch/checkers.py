@@ -15,9 +15,15 @@ else:
     import crypt
 
 try:
-    # get this from http://www.twistedmatrix.com/users/z3p/files/pyshadow-0.2.tar.gz
-    import shadow
-except:
+    # Python 2.5 got spwd to interface with shadow passwords
+    import spwd
+except ImportError:
+    spwd = None
+    try:
+        import shadow
+    except ImportError:
+        shadow = None
+else:
     shadow = None
 
 try:
@@ -38,45 +44,79 @@ from twisted.python.util import runAsEffectiveUser
 from twisted.python.filepath import FilePath
 
 
+
 def verifyCryptedPassword(crypted, pw):
-    if crypted[0] == '$': # md5_crypt encrypted
-        salt = '$1$' + crypted.split('$')[2]
+    return crypt.crypt(pw, crypted) == crypted
+
+
+
+def _pwdGetByName(username):
+    """
+    Look up a user in the /etc/passwd database using the pwd module.  If the
+    pwd module is not available, return None.
+
+    @param username: the username of the user to return the passwd database
+        information for.
+    """
+    if pwd is None:
+        return None
+    return pwd.getpwnam(username)
+
+
+
+def _shadowGetByName(username):
+    """
+    Look up a user in the /etc/shadow database using the spwd or shadow
+    modules.  If neither module is available, return None.
+
+    @param username: the username of the user to return the shadow database
+        information for.
+    """
+    if spwd is not None:
+        f = spwd.getspnam
+    elif shadow is not None:
+        f = shadow.getspnam
     else:
-        salt = crypted[:2]
-    return crypt.crypt(pw, salt) == crypted
+        return None
+    return runAsEffectiveUser(0, 0, f, username)
+
+
 
 class UNIXPasswordDatabase:
+    """
+    A checker which validates users out of the UNIX password databases, or
+    databases of a compatible format.
+
+    @ivar _getByNameFunctions: a C{list} of functions which are called in order
+        to valid a user.  The default value is such that the /etc/passwd
+        database will be tried first, followed by the /etc/shadow database.
+    """
     credentialInterfaces = IUsernamePassword,
     implements(ICredentialsChecker)
 
+
+    def __init__(self, getByNameFunctions=None):
+        if getByNameFunctions is None:
+            getByNameFunctions = [_pwdGetByName, _shadowGetByName]
+        self._getByNameFunctions = getByNameFunctions
+
+
     def requestAvatarId(self, credentials):
-        if pwd:
+        for func in self._getByNameFunctions:
             try:
-                cryptedPass = pwd.getpwnam(credentials.username)[1]
+                pwnam = func(credentials.username)
             except KeyError:
                 return defer.fail(UnauthorizedLogin("invalid username"))
             else:
-                if cryptedPass not in ['*', 'x'] and \
-                    verifyCryptedPassword(cryptedPass, credentials.password):
-                    return defer.succeed(credentials.username)
-        if shadow:
-            gid = os.getegid()
-            uid = os.geteuid()
-            os.setegid(0)
-            os.seteuid(0)
-            try:
-                shadowPass = shadow.getspnam(credentials.username)[1]
-            except KeyError:
-                os.setegid(gid)
-                os.seteuid(uid)
-                return defer.fail(UnauthorizedLogin("invalid username"))
-            os.setegid(gid)
-            os.seteuid(uid)
-            if verifyCryptedPassword(shadowPass, credentials.password):
-                return defer.succeed(credentials.username)
-            return defer.fail(UnauthorizedLogin("invalid password"))
-
+                if pwnam is not None:
+                    crypted = pwnam[1]
+                    if crypted == '':
+                        continue
+                    if verifyCryptedPassword(crypted, credentials.password):
+                        return defer.succeed(credentials.username)
+        # fallback
         return defer.fail(UnauthorizedLogin("unable to verify password"))
+
 
 
 class SSHPublicKeyDatabase:
@@ -84,9 +124,11 @@ class SSHPublicKeyDatabase:
     Checker that authenticates SSH public keys, based on public keys listed in
     authorized_keys and authorized_keys2 files in user .ssh/ directories.
     """
-
-    credentialInterfaces = ISSHPrivateKey,
     implements(ICredentialsChecker)
+
+    credentialInterfaces = (ISSHPrivateKey,)
+
+    _userdb = pwd
 
     def requestAvatarId(self, credentials):
         d = defer.maybeDeferred(self.checkKey, credentials)
@@ -146,7 +188,7 @@ class SSHPublicKeyDatabase:
 
         @return: A list of L{FilePath} instances to files with the authorized keys.
         """
-        pwent = pwd.getpwnam(credentials.username)
+        pwent = self._userdb.getpwnam(credentials.username)
         root = FilePath(pwent.pw_dir).child('.ssh')
         files = ['authorized_keys', 'authorized_keys2']
         return [root.child(f) for f in files]
@@ -158,7 +200,7 @@ class SSHPublicKeyDatabase:
         credentials.
         """
         uid, gid = os.geteuid(), os.getegid()
-        ouid, ogid = pwd.getpwnam(credentials.username)[2:4]
+        ouid, ogid = self._userdb.getpwnam(credentials.username)[2:4]
         for filepath in self.getAuthorizedKeysFiles(credentials):
             if not filepath.exists():
                 continue

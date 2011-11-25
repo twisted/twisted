@@ -7,7 +7,7 @@ L{twisted.python.fakepwd} provides a fake implementation of the L{pwd} API.
 """
 
 
-__all__ = ['UserDatabase']
+__all__ = ['UserDatabase', 'ShadowDatabase']
 
 
 class _UserRecord(object):
@@ -108,5 +108,112 @@ class UserDatabase(object):
     def getpwall(self):
         """
         Return a list of all user records.
+        """
+        return self._users
+
+
+
+class _ShadowRecord(object):
+    """
+    L{_ShadowRecord} holds the shadow user data for a single user in
+    L{ShadowDatabase}.  It corresponds to C{spwd.struct_spwd}.  See that class
+    for attribute documentation.
+    """
+    def __init__(self, username, password, lastChange, min, max, warn, inact,
+                 expire, flag):
+        self.sp_nam = username
+        self.sp_pwd = password
+        self.sp_lstchg = lastChange
+        self.sp_min = min
+        self.sp_max = max
+        self.sp_warn = warn
+        self.sp_inact = inact
+        self.sp_expire = expire
+        self.sp_flag = flag
+
+
+    def __len__(self):
+        return 9
+
+
+    def __getitem__(self, index):
+        return (
+            self.sp_nam, self.sp_pwd, self.sp_lstchg, self.sp_min,
+            self.sp_max, self.sp_warn, self.sp_inact, self.sp_expire,
+            self.sp_flag)[index]
+
+
+
+class ShadowDatabase(object):
+    """
+    L{ShadowDatabase} holds a shadow user database in memory and makes it
+    available via the same API as C{spwd}.
+
+    @ivar _users: A C{list} of L{_ShadowRecord} instances holding all user data
+        added to this database.
+
+    @since: 12.0
+    """
+    def __init__(self):
+        self._users = []
+
+
+    def addUser(self, username, password, lastChange, min, max, warn, inact,
+                expire, flag):
+        """
+        Add a new user record to this database.
+
+        @param username: The value for the C{sp_nam} field of the user record to
+            add.
+        @type username: C{str}
+
+        @param password: The value for the C{sp_pwd} field of the user record to
+            add.
+        @type password: C{str}
+
+        @param lastChange: The value for the C{sp_lstchg} field of the user
+            record to add.
+        @type lastChange: C{int}
+
+        @param min: The value for the C{sp_min} field of the user record to add.
+        @type min: C{int}
+
+        @param max: The value for the C{sp_max} field of the user record to add.
+        @type max: C{int}
+
+        @param warn: The value for the C{sp_warn} field of the user record to
+            add.
+        @type warn: C{int}
+
+        @param inact: The value for the C{sp_inact} field of the user record to
+            add.
+        @type inact: C{int}
+
+        @param expire: The value for the C{sp_expire} field of the user record
+            to add.
+        @type expire: C{int}
+
+        @param flag: The value for the C{sp_flag} field of the user record to
+            add.
+        @type flag: C{int}
+        """
+        self._users.append(_ShadowRecord(
+                username, password, lastChange,
+                min, max, warn, inact, expire, flag))
+
+
+    def getspnam(self, username):
+        """
+        Return the shadow user record corresponding to the given username.
+        """
+        for entry in self._users:
+            if entry.sp_nam == username:
+                return entry
+        raise KeyError
+
+
+    def getspall(self):
+        """
+        Return a list of all shadow user records.
         """
         return self._users
