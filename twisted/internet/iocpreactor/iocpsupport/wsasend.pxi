@@ -7,8 +7,10 @@ def send(long s, object buff, object obj, unsigned long flags = 0):
     cdef myOVERLAPPED *ov
     cdef WSABUF ws_buf
     cdef unsigned long bytes
+    cdef Py_ssize_t size
 
-    PyObject_AsReadBuffer(buff, <void **>&ws_buf.buf, <int *>&ws_buf.len)
+    PyObject_AsReadBuffer(buff, <void **>&ws_buf.buf, &size)
+    ws_buf.len = <DWORD>size
 
     ov = makeOV()
     if obj is not None:

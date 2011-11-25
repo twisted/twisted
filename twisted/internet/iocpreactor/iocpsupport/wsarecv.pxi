@@ -3,11 +3,12 @@
 
 
 def recv(long s, object bufflist, object obj, unsigned long flags = 0):
-    cdef int rc, buffcount, i, res
+    cdef int rc, res
     cdef myOVERLAPPED *ov
     cdef WSABUF *ws_buf
     cdef unsigned long bytes
     cdef PyObject **buffers
+    cdef Py_ssize_t i, size, buffcount
 
     bufflist = PySequence_Fast(bufflist, 'second argument needs to be a list')
     buffcount = PySequence_Fast_GET_SIZE(bufflist)
@@ -17,13 +18,14 @@ def recv(long s, object bufflist, object obj, unsigned long flags = 0):
 
     try:
         for i from 0 <= i < buffcount:
-            PyObject_AsWriteBuffer(<object>buffers[i], <void **>&ws_buf[i].buf, <int *>&ws_buf[i].len)
+            PyObject_AsWriteBuffer(<object>buffers[i], <void **>&ws_buf[i].buf, &size)
+            ws_buf[i].len = <DWORD>size
 
         ov = makeOV()
         if obj is not None:
             ov.obj = <PyObject *>obj
 
-        rc = WSARecv(s, ws_buf, buffcount, &bytes, &flags, <OVERLAPPED *>ov, NULL)
+        rc = WSARecv(s, ws_buf, <DWORD>buffcount, &bytes, &flags, <OVERLAPPED *>ov, NULL)
 
         if rc == SOCKET_ERROR:
             rc = WSAGetLastError()
@@ -42,10 +44,14 @@ def recvfrom(long s, object buff, object addr_buff, object addr_len_buff, object
     cdef unsigned long bytes
     cdef sockaddr *c_addr_buff
     cdef int *c_addr_len_buff
+    cdef Py_ssize_t size
 
-    PyObject_AsWriteBuffer(buff, <void **>&ws_buf.buf, <int *>&ws_buf.len)
-    PyObject_AsWriteBuffer(addr_buff, <void **>&c_addr_buff, &c_addr_buff_len)
-    PyObject_AsWriteBuffer(addr_len_buff, <void **>&c_addr_len_buff, &c_addr_len_buff_len)
+    PyObject_AsWriteBuffer(buff, <void **>&ws_buf.buf, &size)
+    ws_buf.len = <DWORD>size
+    PyObject_AsWriteBuffer(addr_buff, <void **>&c_addr_buff, &size)
+    c_addr_buff_len = <int>size
+    PyObject_AsWriteBuffer(addr_len_buff, <void **>&c_addr_len_buff, &size)
+    c_addr_len_buff_len = <int>size
 
     if c_addr_len_buff_len != sizeof(int):
         raise ValueError, 'length of address length buffer needs to be sizeof(int)'
