@@ -63,15 +63,22 @@ class Port(base._PortMixin, ReadDescriptor):
     """
     UDP port, listening for packets.
 
-    States can include:
+    The following internal states are possible:
 
-    - NOTLISTENING: a newly created port, that hasn't started listening on a
-      socket yet.
-    - LISTENING: the port is listening for datagrams.
-    - LISTENING_CONNECTED: the port is listening, and is connected to a
-      specific address.
-    - DISCONNECTING: stopListening() has been called.
-    - DISCONNECTED: the port has closed the socket and is no longer listening.
+      - NOTLISTENING: A newly created port, that hasn't started listening on a
+        socket yet.
+
+      - LISTENING: The port is listening for datagrams. This is entered from
+        the NOTLISTENING state.
+
+      - LISTENING_CONNECTED: The port is listening, and is connected to a
+        specific address. This is entered from the LISTENING state.
+
+      - DISCONNECTING: stopListening() has been called. This is entered from
+        LISTENING or LISTENING_CONNECTED states.
+
+      - DISCONNECTED: The port has closed the socket and is no longer
+        listening. This is entered from DISCONNECTING state.
     """
     implements(
         interfaces.IListeningPort, interfaces.IUDPTransport,
@@ -125,6 +132,7 @@ class Port(base._PortMixin, ReadDescriptor):
         server to begin listening on the specified port.
         """
 
+
     def _startListening_NOTLISTENING(self):
         self._bindSocket()
         self._connectToProtocol()
@@ -160,6 +168,7 @@ class Port(base._PortMixin, ReadDescriptor):
         """
         Called when my socket is ready for reading.
         """
+
 
     def _doRead_LISTENING(self):
         read = 0
@@ -198,6 +207,7 @@ class Port(base._PortMixin, ReadDescriptor):
         @param addr: A tuple of (I{stringified dotted-quad IP address},
             I{integer port number}); can be C{None} in connected mode.
         """
+
 
     def _write_LISTENING_CONNECTED(self, datagram, addr=None):
         try:
@@ -246,6 +256,7 @@ class Port(base._PortMixin, ReadDescriptor):
         'Connect' to remote server.
         """
 
+
     def _connect_LISTENING(self, host, port):
         if not abstract.isIPAddress(host):
             raise ValueError, "please pass only IP addresses, not domain names"
@@ -263,6 +274,7 @@ class Port(base._PortMixin, ReadDescriptor):
 
     def _stopListening_default(self):
         return None
+
 
     def _stopListening_LISTENING(self):
         self.d = defer.Deferred()
