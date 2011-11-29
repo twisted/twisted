@@ -35,16 +35,23 @@
 
     <h2>Virtual hosts and proxies</h2>
     <ul>
+	<li><a href="proxy.py">proxy.py</a> -
+	use <code>twisted.web.proxy.Proxy</code> to make the simplest
+	proxy</li>
+	<li><a href="logging-proxy.py">logging-proxy.py</a> - example of
+	subclassing the core classes of <code>twisted.web.proxy</code>
+	to log requests through a proxy</li>
+	<li><a href="reverse-proxy.py">reverse-proxy.py</a> - use
+	<code>twisted.web.proxy.ReverseProxyResource</code> to make
+	any HTTP request to the proxy port get applied to a specified
+	website</li>
 	<li><a href="rootscript.py">rootscript.py</a> - example use of
 	<code>twisted.web.vhost.NameVirtualHost</code></li>
 	<li><a href="web.py">web.py</a> - an example of both using the
-	<code>processors</code> attribute to set how certain file types 
-	are treated and using 
-	<code>twisted.web.vhost.VHostMonsterResource</code> to reverse 
+	<code>processors</code> attribute to set how certain file types
+	are treated and using
+	<code>twisted.web.vhost.VHostMonsterResource</code> to reverse
 	proxy</li>
-	<li><a href="proxy.py">proxy.py</a> - use 
-	<code>twisted.web.proxy</code> to make any HTTP request to the 
-	proxy port get applied to a specified website</li>
     </ul>
 
     <h2>.rpys and ResourceTemplate</h2>

@@ -201,6 +201,95 @@ arguments passed to the resource regardless of whether they used GET
 
 <img src="../img/web-session.png" />
 
+<h3>Proxies and reverse proxies</h3>
+<a name="proxies" />
+
+<p>A proxy is a general term for a server that functions as an intermediary
+between clients and other servers.</p>
+
+<p>Twisted supports two main proxy variants: a <code class="API"
+base="twisted.web.proxy">Proxy</code> and a <code class="API"
+base="twisted.web.proxy">ReverseProxy</code>.</p>
+
+<h4>Proxy</h4>
+
+<p>A proxy forwards requests made by a client to a destination server. Proxies
+typically sit on the internal network for a client or out on the internet, and
+have many uses, including caching, packet filtering, auditing, and circumventing
+local access restrictions to web content.</p>
+
+<p>Here is an example of a simple but complete web proxy:</p>
+
+<pre class="python">
+from twisted.web import proxy, http
+from twisted.internet import reactor
+
+class ProxyFactory(http.HTTPFactory):
+    def buildProtocol(self, addr):
+        return proxy.Proxy()
+
+reactor.listenTCP(8080, ProxyFactory())
+reactor.run()
+</pre>
+
+<p>With this proxy running, you can configure your web browser to use
+<code>localhost:8080</code> as a proxy. After doing so, when browsing the web
+all requests will go through this proxy.</p>
+
+<p><code class="API" base="twisted.web.proxy">Proxy</code> inherits
+from <code class="API" base="twisted.web">http.HTTPChannel</code>. Each client
+request to the proxy generates a <code class="API"
+base="twisted.web.proxy">ProxyRequest</code> from the proxy to the destination
+server on behalf of the client. <code>ProxyRequest</code> uses
+a <code class="API" base="twisted.web.proxy">ProxyClientFactory</code> to create
+an instance of the <code class="API" base="twisted.web.proxy">ProxyClient</code>
+protocol for the connection. <code>ProxyClient</code> inherits
+from <code class="API"
+base="twisted.web">http.HTTPClient</code>. Subclass <code>ProxyRequest</code> to
+customize the way requests are processed or logged.</p>
+
+<h4>ReverseProxyResource</h4>
+
+<p>A reverse proxy retrieves resources from other servers on behalf of a
+client. Reverse proxies typically sit inside the server's internal network and
+are used for caching, application firewalls, and load balancing.</p>
+
+<p>Here is an example of a basic reverse proxy:</p>
+
+<pre class="python">
+from twisted.internet import reactor
+from twisted.web import proxy, server
+
+site = server.Site(proxy.ReverseProxyResource('www.yahoo.com', 80, ''))
+reactor.listenTCP(8080, site)
+reactor.run()
+</pre>
+
+<p>With this reverse proxy running locally, you can
+visit <code>http://localhost:8080</code> in your web browser, and the reverse
+proxy will proxy your connection to
+<code>www.yahoo.com</code>.</p>
+
+<p>In this example we use <code base="twisted.web">server.Site</code> to serve
+a <code base="twisted.web.proxy">ReverseProxyResource</code> directly. There is
+also a <code>ReverseProxy</code> family of classes
+in <code>twisted.web.proxy</code> mirroring those of the <code>Proxy</code>
+family:</p>
+
+<p>Like <code>Proxy</code>, <code class="API"
+base="twisted.web.proxy">ReverseProxy</code> inherits
+from <code>http.HTTPChannel</code>. Each client request to the reverse proxy
+generates a <code class="API"
+base="twisted.web.proxy">ReverseProxyRequest</code> to the destination
+server. Like <code>ProxyRequest</code>, <code class="API"
+base="twisted.web.proxy">ReverseProxyRequest</code> uses a <code class="API"
+base="twisted.web.proxy">ProxyClientFactory</code> to create an instance of
+the <code class="API" base="twisted.web.proxy">ProxyClient</code> protocol for
+the connection.</p>
+
+<p>Additional examples of proxies and reverse proxies can be found in
+the <a href="../examples/index.html">Twisted web examples</a>.</p>
+
 <h2>Advanced Configuration</h2>
 
 <p>Non-trivial configurations of Twisted Web are achieved with Python
