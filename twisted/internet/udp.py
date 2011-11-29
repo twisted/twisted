@@ -51,13 +51,15 @@ else:
 from twisted.internet import base, defer, address
 from twisted.python import log, failure
 from twisted.internet import abstract, error, interfaces
+from twisted.internet._fd import ReadDescriptor
+
 
 
 NOTLISTENING, LISTENING, LISTENING_CONNECTED, DISCONNECTING, DISCONNECTED = (
     "NOTLISTENING, LISTENING, LISTENING_CONNECTED, DISCONNECTING, "
     "DISCONNECTED").split(", ")
 
-class Port(base.BasePort):
+class Port(base._PortMixin, ReadDescriptor):
     """
     UDP port, listening for packets.
 
@@ -91,7 +93,7 @@ class Port(base.BasePort):
         """
         if reactor is None:
             from twisted.internet import reactor
-        base.BasePort.__init__(self, reactor)
+        ReadDescriptor.__init__(self, reactor)
         self.port = port
         self.protocol = proto
         self.maxPacketSize = maxPacketSize

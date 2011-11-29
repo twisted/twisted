@@ -4,11 +4,9 @@
 
 
 """
-Various asynchronous TCP/IP classes.
+Various asynchronous Unix socket classes.
 
 End users shouldn't use this module directly - use the reactor APIs instead.
-
-Maintainer: Itamar Shtull-Trauring
 """
 
 # System imports
@@ -192,6 +190,8 @@ class DatagramPort(_UNIXPort, udp.Port):
     def __init__(self, addr, proto, maxPacketSize=8192, mode=0666, reactor=None):
         """Initialize with address to listen on.
         """
+        if reactor is None:
+            from twisted.internet import reactor
         udp.Port.__init__(self, addr, proto, maxPacketSize=maxPacketSize, reactor=reactor)
         self.mode = mode
 
@@ -218,9 +218,15 @@ class DatagramPort(_UNIXPort, udp.Port):
         self.connected = 1
         self.socket = skt
         self.fileno = self.socket.fileno
+        self._state = udp.LISTENING
 
-    def write(self, datagram, address):
-        """Write a datagram."""
+
+    def _write_LISTENING(self, datagram, address):
+        """
+        Write a datagram.
+        """
+        # We could just use base class implementation, except for the EAGAIN
+        # support (#2790 should solve this) and the IP address check.
         try:
             return self.socket.sendto(datagram, address)
         except socket.error, se:
@@ -236,26 +242,6 @@ class DatagramPort(_UNIXPort, udp.Port):
                 pass
             else:
                 raise
-
-    def connectionLost(self, reason=None):
-        """Cleans up my socket.
-        """
-        log.msg('(Port %s Closed)' % repr(self.port))
-        base.BasePort.connectionLost(self, reason)
-        if hasattr(self, "protocol"):
-            # we won't have attribute in ConnectedPort, in cases
-            # where there was an error in connection process
-            self.protocol.doStop()
-        self.connected = 0
-        self.socket.close()
-        del self.socket
-        del self.fileno
-        if hasattr(self, "d"):
-            self.d.callback(None)
-            del self.d
-
-    def setLogStr(self):
-        self.logstr = reflect.qual(self.protocol.__class__) + " (UDP)"
 
 
 
@@ -275,7 +261,12 @@ class ConnectedDatagramPort(DatagramPort):
         self.remoteaddr = addr
 
 
-    def startListening(self):
+    def _bindSocket(self):
+        DatagramPort._bindSocket(self)
+        self._state = udp.LISTENING_CONNECTED
+
+
+    def _startListening_NOTLISTENING(self):
         try:
             self._bindSocket()
             self.socket.connect(self.remoteaddr)
@@ -296,10 +287,12 @@ class ConnectedDatagramPort(DatagramPort):
         del self.protocol
 
 
-    def doRead(self):
+    def _doRead_LISTENING_CONNECTED(self):
         """
         Called when my socket is ready for reading.
         """
+        # We can't use base class implementation since datagramReceived is
+        # called here without an address.
         read = 0
         while read < self.maxThroughput:
             try:
@@ -318,10 +311,12 @@ class ConnectedDatagramPort(DatagramPort):
                 log.deferr()
 
 
-    def write(self, data):
+    def _write_LISTENING_CONNECTED(self, data):
         """
         Write a datagram.
         """
+        # We could just use base class implementation, except for the EAGAIN
+        # support (#2790 should solve this).
         try:
             return self.socket.send(data)
         except socket.error, se:

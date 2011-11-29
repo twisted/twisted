@@ -1073,13 +1073,10 @@ class BaseConnector(styles.Ephemeral):
 
 
 
-class BasePort(_fd.ReadDescriptor):
+class _PortMixin(object):
     """
-    Basic implementation of a ListeningPort.
-
-    Note: This does not actually implement IListeningPort.
+    Utility methods for port implementations.
     """
-
     addressFamily = None
     socketType = None
 
@@ -1098,6 +1095,15 @@ class BasePort(_fd.ReadDescriptor):
         This should never be called, but add it just in case.
         """
         raise RuntimeError("doWrite called on a %s" % reflect.qual(self.__class__))
+
+
+
+class BasePort(_PortMixin, abstract.FileDescriptor):
+    """
+    Basic implementation of a ListeningPort.
+
+    Note: This does not actually implement IListeningPort.
+    """
 
 
 

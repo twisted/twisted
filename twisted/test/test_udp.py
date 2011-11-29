@@ -455,6 +455,7 @@ class UDPTestCase(unittest.TestCase):
 
         p = udp.Port(0, Server())
         p.socket = fakeSocket()
+        p._state = udp.LISTENING
         p.write("test", ("<broadcast>", 1234))
 
         warnings = self.flushWarnings([self.test_NoWarningOnBroadcast])

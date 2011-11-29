@@ -81,6 +81,7 @@ class ErrorsTestCase(unittest.TestCase):
 
         protocol = KeepReads()
         port = udp.Port(None, protocol)
+        port._state = udp.LISTENING
 
         # Normal result, no errors
         port.socket = StringUDPSocket(
@@ -109,6 +110,7 @@ class ErrorsTestCase(unittest.TestCase):
         protocol.connectionRefused = lambda: 1/0
 
         port = udp.Port(None, protocol)
+        port._state = udp.LISTENING
 
         # Try an immediate "connection refused"
         port.socket = StringUDPSocket(["a", socket.error(-6000), "b",
@@ -139,7 +141,9 @@ class ErrorsTestCase(unittest.TestCase):
         port = udp.Port(None, protocol)
         port.socket = StringUDPSocket(["a", socket.error(-6000), "b",
                                        socket.error(EWOULDBLOCK)])
+        port._state = udp.LISTENING
         port.connect("127.0.0.1", 9999)
+        port._state = udp.LISTENING_CONNECTED
 
         # Read stops on error:
         port.doRead()
@@ -158,6 +162,7 @@ class ErrorsTestCase(unittest.TestCase):
         """
         protocol = KeepReads()
         port = udp.Port(None, protocol)
+        port._state = udp.LISTENING
 
         # Some good data, followed by an unknown error
         port.socket = StringUDPSocket(["good", socket.error(-1337)])
