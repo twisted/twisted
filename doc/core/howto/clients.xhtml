@@ -133,7 +133,7 @@ reactor.run()
     <code>Factory</code>, not a <code>ClientFactory</code>.  Even if you pass a
     <code>ClientFactory</code> to <code>endpoint.connect</code>, its
     <code>clientConnectionFailed</code> and <code>clientConnectionLost</code>
-    methods.</div>
+    methods will not be called.</div>
 
     <p>You may come across code using <code base="twisted.internet.protocol"
     class="API">ClientCreator</code>, an older API which is not as flexible as
