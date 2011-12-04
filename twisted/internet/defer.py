@@ -276,6 +276,9 @@ class Deferred:
         Add a pair of callbacks (success and error) to this L{Deferred}.
 
         These will be executed when the 'master' callback is run.
+
+        @return: C{self}.
+        @rtype: a L{Deferred}
         """
         assert callable(callback)
         assert errback == None or callable(errback)
@@ -341,6 +344,9 @@ class Deferred:
         being returned from a callback, it is possible to cause the call
         stack size limit to be exceeded by chaining many L{Deferred}s
         together with C{chainDeferred}.
+
+        @return: C{self}.
+        @rtype: a L{Deferred}
         """
         d._chainedTo = self
         return self.addCallbacks(d.callback, d.errback)
