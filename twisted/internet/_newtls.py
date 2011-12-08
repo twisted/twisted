@@ -71,6 +71,20 @@ class _BypassTLS(object):
         return self._base.loseConnection(self._connection, *args, **kwargs)
 
 
+    def registerProducer(self, producer, streaming):
+        """
+        Register a producer with the underlying connection.
+        """
+        return self._base.registerProducer(self._connection, producer, streaming)
+
+
+    def unregisterProducer(self):
+        """
+        Unregister a producer with the underlying connection.
+        """
+        return self._base.unregisterProducer(self._connection)
+
+
 
 def startTLS(transport, contextFactory, normal, bypass):
     """
@@ -114,6 +128,13 @@ def startTLS(transport, contextFactory, normal, bypass):
     else:
         client = not transport._tlsClientDefault
 
+    # If we have a producer, unregister it, and then re-register it below once
+    # we've switched to TLS mode, so it gets hooked up correctly:
+    producer, streaming = None, None
+    if transport.producer is not None:
+        producer, streaming = transport.producer, transport.streamingProducer
+        transport.unregisterProducer()
+
     tlsFactory = TLSMemoryBIOFactory(contextFactory, client, None)
     tlsProtocol = TLSMemoryBIOProtocol(tlsFactory, transport.protocol, False)
     transport.protocol = tlsProtocol
@@ -131,6 +152,10 @@ def startTLS(transport, contextFactory, normal, bypass):
     # Hook it up
     transport.protocol.makeConnection(_BypassTLS(bypass, transport))
 
+    # Restore producer if necessary:
+    if producer:
+        transport.registerProducer(producer, streaming)
+
 
 
 class ConnectionMixin(object):
@@ -141,28 +166,15 @@ class ConnectionMixin(object):
     @ivar TLS: A flag indicating whether TLS is currently in use on this
         transport.  This is not a good way for applications to check for TLS,
         instead use L{ISSLTransport.providedBy}.
-
-    @ivar _tlsWaiting: If TLS has been requested but the write buffer for
-        non-TLS data still needs to be flushed, this is set to a L{_TLSDelayed}
-        instance which will buffer data that must only be sent once TLS has been
-        started.
     """
     implements(ITLSTransport)
 
     TLS = False
-    _tlsWaiting = None
 
     def startTLS(self, ctx, normal=True):
         """
         @see: L{ITLSTransport.startTLS}
         """
-        if self.dataBuffer or self._tempDataBuffer:
-            # pre-TLS bytes are still being written.  Starting TLS now
-            # will do the wrong thing.  Instead, mark that we're trying
-            # to go into the TLS state.
-            self._tlsWaiting = _TLSDelayed([], ctx, normal)
-            return False
-
         startTLS(self, ctx, normal, FileDescriptor)
 
 
@@ -174,8 +186,6 @@ class ConnectionMixin(object):
         if self.TLS:
             if self.connected:
                 self.protocol.write(bytes)
-        elif self._tlsWaiting is not None:
-            self._tlsWaiting.bufferedData.append(bytes)
         else:
             FileDescriptor.write(self, bytes)
 
@@ -189,8 +199,6 @@ class ConnectionMixin(object):
         if self.TLS:
             if self.connected:
                 self.protocol.writeSequence(iovec)
-        elif self._tlsWaiting is not None:
-            self._tlsWaiting.bufferedData.extend(iovec)
         else:
             FileDescriptor.writeSequence(self, iovec)
 
@@ -208,21 +216,32 @@ class ConnectionMixin(object):
             FileDescriptor.loseConnection(self)
 
 
-    def doWrite(self):
+    def registerProducer(self, producer, streaming):
         """
-        Write out some data from the send buffer.
+        Register a producer.
 
-        If the buffer becomes empty and TLS has been requested but not yet
-        enabled, enable it.
+        If TLS is enabled, the TLS connection handles this.
         """
-        result = FileDescriptor.doWrite(self)
-        if self._tlsWaiting is not None:
-            if not self.dataBuffer and not self._tempDataBuffer:
-                waiting = self._tlsWaiting
-                self._tlsWaiting = None
-                self.startTLS(waiting.context, waiting.extra)
-                self.writeSequence(waiting.bufferedData)
-        return result
+        if self.TLS:
+            # Registering a producer before we're connected shouldn't be a
+            # problem. If we end up with a write(), that's already handled in
+            # the write() code above, and there are no other potential
+            # side-effects.
+            self.protocol.registerProducer(producer, streaming)
+        else:
+            FileDescriptor.registerProducer(self, producer, streaming)
+
+
+    def unregisterProducer(self):
+        """
+        Unregister a producer.
+
+        If TLS is enabled, the TLS connection handles this.
+        """
+        if self.TLS:
+            self.protocol.unregisterProducer()
+        else:
+            FileDescriptor.unregisterProducer(self)
 
 
 

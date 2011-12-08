@@ -1,0 +1,1 @@
+Prevent a rare situation involving TLS transports, where a producer may be erroneously left unpaused.
