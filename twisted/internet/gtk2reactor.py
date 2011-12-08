@@ -390,9 +390,9 @@ class PortableGtkReactor(_Gtk2SignalMixin, selectreactor.SelectReactor):
         if self._simtag is not None:
             gobject.source_remove(self._simtag)
         self.iterate()
-        timeout = min(self.timeout(), 0.1)
+        timeout = min(self.timeout(), 0.01)
         if timeout is None:
-            timeout = 0.1
+            timeout = 0.01
         # grumble
         self._simtag = gobject.timeout_add(int(timeout * 1010), self.simulate)
 
