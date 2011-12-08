@@ -265,6 +265,11 @@ class PosixReactorBase(_SignalReactorMixin, ReactorBase):
             self.removeWriter(selectable)
             selectable.connectionLost(failure.Failure(why))
 
+
+    # Callable that creates a waker, overrideable so that subclasses can
+    # substitute their own implementation:
+    _wakerFactory = _Waker
+
     def installWaker(self):
         """
         Install a `waker' to allow threads and signals to wake up the IO thread.
@@ -273,7 +278,7 @@ class PosixReactorBase(_SignalReactorMixin, ReactorBase):
         the reactor. On Windows we use a pair of sockets.
         """
         if not self.waker:
-            self.waker = _Waker(self)
+            self.waker = self._wakerFactory(self)
             self._internalReaders.add(self.waker)
             self.addReader(self.waker)
 

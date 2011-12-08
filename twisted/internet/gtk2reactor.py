@@ -88,9 +88,36 @@ class _Gtk2SignalMixin(object):
 
 
 
+class _Gtk2Waker(posixbase._UnixWaker):
+    """
+    Run scheduled events after waking up.
+    """
+
+    def doRead(self):
+        posixbase._UnixWaker.doRead(self)
+        self.reactor._simulate()
+
+
+
 class Gtk2Reactor(_Gtk2SignalMixin, posixbase.PosixReactorBase, posixbase._PollLikeMixin):
     """
     GTK+-2 event loop reactor.
+
+    Notification for I/O events (reads and writes on file descriptors) is done
+    by the the gobject-based event loop. File descriptors are registered with
+    gobject with the appropriate flags for read/write/disconnect notification.
+
+    Time-based events, the results of C{callLater} and C{callFromThread}, are
+    handled differently. Rather than registering each event with gobject, a
+    single gobject timeout is registered for the earliest scheduled event, the
+    output of C{reactor.timeout()}. For example, if there are timeouts in 1, 2
+    and 3.4 seconds, a single timeout is registered for 1 second in the
+    future. When this timeout is hit, C{_simulate} is called, which calls the
+    appropriate Twisted-level handlers, and a new timeout is added to gobject
+    by the C{_reschedule} method.
+
+    To handle C{callFromThread} events, we use a custom waker that calls
+    C{_simulate} whenever it wakes up.
 
     @ivar _sources: A dictionary mapping L{FileDescriptor} instances to gtk
         watch handles.
@@ -101,13 +128,17 @@ class Gtk2Reactor(_Gtk2SignalMixin, posixbase.PosixReactorBase, posixbase._PollL
     @ivar _writes: A set of L{FileDescriptor} instances currently monitored for
         writing.
 
-    @ivar _simtag: A gtk timeout handle for the next L{simulate} call.
+    @ivar _simtag: A gtk timeout handle for the next L{_simulate} call.
     """
     implements(IReactorFDSet)
 
     _POLL_DISCONNECTED = POLL_DISCONNECTED
     _POLL_IN = gobject.IO_IN
     _POLL_OUT = gobject.IO_OUT
+
+    # Install a waker that knows it needs to call C{_simulate} in order to run
+    # callbacks queued from a thread:
+    _wakerFactory = _Gtk2Waker
 
     def __init__(self, useGtk=True):
         self._simtag = None
@@ -151,6 +182,15 @@ class Gtk2Reactor(_Gtk2SignalMixin, posixbase.PosixReactorBase, posixbase._PollL
             return gobject.io_add_watch(source, condition, callback)
 
 
+    def _ioEventCallback(self, source, condition):
+        """
+        Called by event loop when an I/O event occurs.
+        """
+        log.callWithLogger(
+            source, self._doReadOrWrite, source, source, condition)
+        return 1 # 1=don't auto-remove the source
+
+
     def _add(self, source, primary, other, primaryFlag, otherFlag):
         """
         Add the given L{FileDescriptor} for monitoring either for reading or
@@ -164,7 +204,8 @@ class Gtk2Reactor(_Gtk2SignalMixin, posixbase.PosixReactorBase, posixbase._PollL
         if source in other:
             gobject.source_remove(self._sources[source])
             flags |= otherFlag
-        self._sources[source] = self.input_add(source, flags, self.callback)
+        self._sources[source] = self.input_add(
+            source, flags, self._ioEventCallback)
         primary.add(source)
 
 
@@ -215,7 +256,7 @@ class Gtk2Reactor(_Gtk2SignalMixin, posixbase.PosixReactorBase, posixbase._PollL
         primary.remove(source)
         if source in other:
             self._sources[source] = self.input_add(
-                source, flags, self.callback)
+                source, flags, self._ioEventCallback)
         else:
             self._sources.pop(source)
 
@@ -234,68 +275,80 @@ class Gtk2Reactor(_Gtk2SignalMixin, posixbase.PosixReactorBase, posixbase._PollL
         self._remove(writer, self._writes, self._reads, INFLAGS)
 
 
-    doIterationTimer = None
+    def iterate(self, delay=0):
+        """
+        One iteration of the event loop, for trial's use.
 
-    def doIterationTimeout(self, *args):
-        self.doIterationTimer = None
-        return 0 # auto-remove
-
-
-    def doIteration(self, delay):
-        # flush some pending events, return if there was something to do
-        # don't use the usual "while self.context.pending(): self.context.iteration()"
-        # idiom because lots of IO (in particular test_tcp's
-        # ProperlyCloseFilesTestCase) can keep us from ever exiting.
-        log.msg(channel='system', event='iteration', reactor=self)
-        if self.__pending():
-            self.__iteration(0)
-            return
-        # nothing to do, must delay
-        if delay == 0:
-            return # shouldn't delay, so just return
-        self.doIterationTimer = gobject.timeout_add(int(delay * 1000),
-                                                self.doIterationTimeout)
-        # This will either wake up from IO or from a timeout.
-        self.__iteration(1) # block
-        # note: with the .simulate timer below, delays > 0.1 will always be
-        # woken up by the .simulate timer
-        if self.doIterationTimer:
-            # if woken by IO, need to cancel the timer
-            gobject.source_remove(self.doIterationTimer)
-            self.doIterationTimer = None
+        This is not used for actual reactor runs.
+        """
+        self.runUntilCurrent()
+        while self.__pending():
+           self.__iteration(0)
 
 
     def crash(self):
+        """
+        Crash the reactor.
+        """
         posixbase.PosixReactorBase.crash(self)
         self.__crash()
 
 
+    def stop(self):
+        """
+        Stop the reactor.
+        """
+        posixbase.PosixReactorBase.stop(self)
+        # The base implementation only sets a flag, to ensure shutting down is
+        # not reentrant. Unfortunately, this flag is not meaningful to the
+        # gobject event loop. We therefore call wakeUp() to ensure the event
+        # loop will call back into Twisted once this iteration is done. This
+        # will result in self.runUntilCurrent() being called, where the stop
+        # flag will trigger the actual shutdown process, eventually calling
+        # crash() which will do the actual gobject event loop shutdown.
+        self.wakeUp()
+
+
     def run(self, installSignalHandlers=1):
+        """
+        Run the reactor.
+        """
+        self.callWhenRunning(self._reschedule)
         self.startRunning(installSignalHandlers=installSignalHandlers)
-        gobject.timeout_add(0, self.simulate)
         if self._started:
             self.__run()
 
 
-    def callback(self, source, condition):
-        log.callWithLogger(
-            source, self._doReadOrWrite, source, source, condition)
-        self.simulate() # fire Twisted timers
-        return 1 # 1=don't auto-remove the source
-
-
-    def simulate(self):
+    def callLater(self, *args, **kwargs):
         """
-        Run simulation loops and reschedule callbacks.
+        Schedule a C{DelayedCall}.
+        """
+        result = posixbase.PosixReactorBase.callLater(self, *args, **kwargs)
+        # Make sure we'll get woken up at correct time to handle this new
+        # scheduled call:
+        self._reschedule()
+        return result
+
+
+    def _reschedule(self):
+        """
+        Schedule a glib timeout for C{_simulate}.
         """
         if self._simtag is not None:
             gobject.source_remove(self._simtag)
+            self._simtag = None
+        timeout = self.timeout()
+        if timeout is not None:
+            self._simtag = gobject.timeout_add(int(timeout * 1000),
+                                               self._simulate)
+
+
+    def _simulate(self):
+        """
+        Run timers, and then reschedule glib timeout for next scheduled event.
+        """
         self.runUntilCurrent()
-        timeout = min(self.timeout(), 0.1)
-        if timeout is None:
-            timeout = 0.1
-        # grumble
-        self._simtag = gobject.timeout_add(int(timeout * 1010), self.simulate)
+        self._reschedule()
 
 
 

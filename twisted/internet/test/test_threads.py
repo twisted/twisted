@@ -8,7 +8,7 @@ Tests for implementations of L{IReactorThreads}.
 __metaclass__ = type
 
 from weakref import ref
-import gc
+import gc, threading
 
 from twisted.python.threadable import isInIOThread
 from twisted.internet.test.reactormixins import ReactorBuilder
@@ -102,6 +102,24 @@ class ThreadTestsBuilder(ReactorBuilder):
         # schedule this process for 30 seconds, then the test might fail even
         # if callFromThread is working.
         self.assertTrue(after - before < 30)
+
+
+    def test_callFromThread(self):
+        """
+        A function scheduled with L{IReactorThreads.callFromThread} invoked
+        from another thread is run in the reactor thread.
+        """
+        reactor = self.buildReactor()
+        result = []
+
+        def threadCall():
+            result.append(threading.currentThread())
+            reactor.stop()
+        reactor.callLater(0, reactor.callInThread,
+                          reactor.callFromThread, threadCall)
+        self.runReactor(reactor, 5)
+
+        self.assertEquals(result, [threading.currentThread()])
 
 
     def test_stopThreadPool(self):
