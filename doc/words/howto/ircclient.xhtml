@@ -24,8 +24,9 @@
 
     <p>
       The text formatting support in Twisted Words is based on the widely used
-      mIRC format which supports bold, underline, reverse video and colored
-      text; nesting these attributes is also supported.
+      <a href="http://www.mirc.com/">mIRC</a> format which supports bold,
+      underline, reverse video and colored text; nesting these attributes is
+      also supported.
     </p>
 
     <h3>
@@ -34,12 +35,15 @@
 
     <p>
       The API used for creating formatted text in the IRC client is almost the
-      same as that used by Twisted Insults. Text attributes are built up by
-      accessing and indexing attributes on a special module-level attribute,
-      <code class="API">twisted.words.protocols.irc.attributes</code>, multiple
-      values can be passed when indexing attributes to mix text with nested
-      text attributes. The resulting object can then be serialized to formatted
-      text, with <code class="API">twisted.words.protocols.irc.assembleFormattedText</code>,
+      same as that used by
+      Twisted <code class="API" base="twisted.conch">insults</code>.
+      Text attributes are built up by accessing and indexing attributes on
+      a special module-level attribute,
+      <code class="API">twisted.words.protocols.irc.attributes</code>,
+      multiple values can be passed when indexing attributes to mix text with
+      nested text attributes. The resulting object can then be serialized to
+      formatted text, with
+      <code class="API">twisted.words.protocols.irc.assembleFormattedText</code>,
       suitable for use with any of the IRC client messaging functions.
     </p>
 
@@ -137,8 +141,8 @@ A.fg.black[A.bg.green['Like a terminal!']]
     </h3>
 
     <p>
-      Since other IRC clients can, and do, format text it is logical that you
-      may want to parse this formatted text. 
+      Most IRC clients format text so it is logical that you may want to parse
+      this formatted text. 
       <code class="API">twisted.words.protocols.irc.parseFormattedText</code>
       will parse text into structured text attributes. It is worth noting that
       while feeding the output of <code>parseFormattedText</code> back to
@@ -152,7 +156,7 @@ A.fg.black[A.bg.green['Like a terminal!']]
 
     <p>
       In some cases, such as an automaton handling user input from IRC, it is
-      desirable to have all formatting stripped from text, this can be
+      desirable to have all formatting stripped from text. This can be
       accomplished with 
       <code class="API">twisted.words.protocols.irc.stripFormatting</code>.
     </p>

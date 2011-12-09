@@ -1,3 +1,25 @@
+# -*- test-case-name: twisted.python.test.test_textattributes -*-
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+This module provides some common functionality for the manipulation of
+character attributes.
+
+Defining the mechanism by which text containing character attributes is
+constructed begins by subclassing L{CharacterAttributesMixin}.
+
+Defining how a single character attribute is to be serialized begins by
+subclassing L{CharacterAttributeMixin}.
+
+Serializing a character attribute structure is done with L{flatten}.
+
+@see: L{twisted.conch.insults.helper.CharacterAttribute}
+@see: L{twisted.conch.insults.text.CharacterAttributes}
+@see: L{twisted.words.protocols.irc.CharacterAttribute}
+@see: L{twisted.words.protocols.irc.CharacterAttributes}
+"""
+
 from twisted.python.util import FancyEqMixin
 
 
