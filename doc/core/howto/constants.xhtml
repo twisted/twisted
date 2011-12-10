@@ -128,6 +128,127 @@ False
 >>>
   </pre>
 
-</body>
+  <h2>Constants With Values</h2>
 
+  <p>Constants with a particular associated value are supported by
+  the <code class="API" base="twisted.python.constants">Values</code> base
+  class.  Consider this example, in which some HTTP status code constants are
+  defined.
+  </p>
+
+  <pre class="python">
+from twisted.python.constants import ValueConstant, Values
+class STATUS(Values):
+    """
+    Constants representing various HTTP status codes.
+    """
+    OK = ValueConstant("200")
+    FOUND = ValueConstant("302")
+    NOT_FOUND = ValueConstant("404")
+  </pre>
+
+  <p>As with <code>Names</code>, constants are accessed as attributes of the
+  class object:</p>
+
+  <pre class="shell">
+>>> STATUS.OK
+&lt;STATUS=OK>
+>>> STATUS.FOUND
+&lt;STATUS=FOUND>
+>>>
+  </pre>
+
+  <p>Additionally, the values of the constants can be accessed using
+  the <code>value</code> attribute of one these objects:</p>
+
+  <pre class="shell">
+>>> STATUS.OK.value
+'200'
+>>>
+  </pre>
+
+  <p>And as with <code>Names</code>, constants can be looked up by name:</p>
+
+  <pre class="shell">
+>>> STATUS.lookupByName('NOT_FOUND')
+&lt;STATUS=NOT_FOUND>
+>>>
+  </pre>
+
+  <p>Constants on a <code>Values</code> subclass can also be looked up by
+  value:</p>
+
+  <pre class="shell">
+>>> STATUS.lookupByValue('404')
+&lt;STATUS=NOT_FOUND>
+>>> STATUS.lookupByValue('500')
+Traceback (most recent call last):
+  File "&lt;stdin>", line 1, in &lt;module>
+  File "twisted/python/constants.py", line 244, in lookupByValue
+      raise ValueError(value)
+ValueError: 500
+>>>
+  </pre>
+
+  <p>Multiple constants may have the same value.  If they do,
+  <code>lookupByValue</code> will find the one which is defined first.</p>
+
+  <p>Iteration is also supported:</p>
+
+  <pre class="shell">
+>>> list(STATUS.iterconstants())
+[&lt;STATUS=OK>, &lt;STATUS=FOUND>, &lt;STATUS=NOT_FOUND>]
+>>>
+  </pre>
+
+  <p>And constants can be compared for equality and identity:</p>
+
+  <pre class="shell">
+>>> STATUS.OK == STATUS.OK
+True
+>>> STATUS.OK is STATUS.OK
+True
+>>> STATUS.OK == STATUS.OK
+True
+>>> STATUS.OK is STATUS.NOT_FOUND
+False
+>>> STATUS.OK == STATUS.NOT_FOUND
+False
+>>>
+  </pre>
+
+  <p>And, as with <code>Names</code>, a subclass of <code>Values</code> can
+  define methods:</p>
+
+  <pre class="shell">
+from twisted.python.constants import ValueConstant, Values
+class STATUS(Values):
+    """
+    Constants representing various HTTP status codes.
+    """
+    OK = ValueConstant("200")
+    NO_CONTENT = ValueConstant("204")
+    NOT_MODIFIED = ValueConstant("304")
+    NOT_FOUND = ValueConstant("404")
+
+    @classmethod
+    def hasBody(cls, status):
+        """
+        Return True if the given status is associated with a response body,
+        False otherwise.
+        """
+        return status in (cls.NO_CONTENT, cls.NOT_MODIFIED)
+  </pre>
+
+  <p>This functionality can be used as any class methods are used:</p>
+
+  <pre class="shell">
+>>> STATUS.hasBody(STATUS.OK)
+True
+>>> STATUS.hasBody(STATUS.NO_CONTENT)
+False
+>>>
+  </pre>
+
+</body>
 </html>

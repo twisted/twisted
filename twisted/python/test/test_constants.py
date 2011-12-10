@@ -7,7 +7,7 @@ Unit tests for L{twisted.python.constants}.
 
 from twisted.trial.unittest import TestCase
 
-from twisted.python.constants import NamedConstant, Names
+from twisted.python.constants import NamedConstant, Names, ValueConstant, Values
 
 
 class NamedConstantTests(TestCase):
@@ -81,7 +81,25 @@ class NamedConstantTests(TestCase):
 
 
 
-class NamesTests(TestCase):
+class _ConstantsTestsMixin(object):
+    """
+    Mixin defining test helpers common to multiple types of constants
+    collections.
+    """
+    def _notInstantiableTest(self, name, cls):
+        """
+        Assert that an attempt to instantiate the constants class raises
+        C{TypeError}.
+
+        @param name: A C{str} giving the name of the constants collection.
+        @param cls: The constants class to test.
+        """
+        exc = self.assertRaises(TypeError, cls)
+        self.assertEqual(name + " may not be instantiated.", str(exc))
+
+
+
+class NamesTests(TestCase, _ConstantsTestsMixin):
     """
     Tests for L{twisted.python.constants.Names}, a base class for containers of
     related constaints.
@@ -107,11 +125,10 @@ class NamesTests(TestCase):
 
     def test_notInstantiable(self):
         """
-        A subclass of L{Names} raises L{TypeError} if an attempt is made to
+        A subclass of L{Names} raises C{TypeError} if an attempt is made to
         instantiate it.
         """
-        exc = self.assertRaises(TypeError, self.METHOD)
-        self.assertEqual("METHOD may not be instantiated.", str(exc))
+        self._notInstantiableTest("METHOD", self.METHOD)
 
 
     def test_symbolicAttributes(self):
@@ -200,7 +217,6 @@ class NamesTests(TestCase):
         self.assertIdentical(self.METHOD.DELETE, constants[3])
 
 
-
     def test_iterconstantsIdentity(self):
         """
         The constants returned from L{Names.iterconstants} are identical on each
@@ -222,4 +238,170 @@ class NamesTests(TestCase):
         first = self.METHOD._enumerants
         self.METHOD.GET # Side-effects!
         second = self.METHOD._enumerants
+        self.assertIdentical(first, second)
+
+
+
+class ValuesTests(TestCase, _ConstantsTestsMixin):
+    """
+    Tests for L{twisted.python.constants.Names}, a base class for containers of
+    related constaints with arbitrary values.
+    """
+    def setUp(self):
+        """
+        Create a fresh new L{Values} subclass for each unit test to use.  Since
+        L{Values} is stateful, re-using the same subclass across test methods
+        makes exercising all of the implementation code paths difficult.
+        """
+        class STATUS(Values):
+            OK = ValueConstant("200")
+            NOT_FOUND = ValueConstant("404")
+
+        self.STATUS = STATUS
+
+
+    def test_notInstantiable(self):
+        """
+        A subclass of L{Values} raises C{TypeError} if an attempt is made to
+        instantiate it.
+        """
+        self._notInstantiableTest("STATUS", self.STATUS)
+
+
+    def test_symbolicAttributes(self):
+        """
+        Each name associated with a L{ValueConstant} instance in the definition
+        of a L{Values} subclass is available as an attribute on the resulting
+        class.
+        """
+        self.assertTrue(hasattr(self.STATUS, "OK"))
+        self.assertTrue(hasattr(self.STATUS, "NOT_FOUND"))
+
+
+    def test_withoutOtherAttributes(self):
+        """
+        As usual, names not defined in the class scope of a L{Values}
+        subclass are not available as attributes on the resulting class.
+        """
+        self.assertFalse(hasattr(self.STATUS, "foo"))
+
+
+    def test_representation(self):
+        """
+        The string representation of a constant on a L{Values} subclass includes
+        the name of the L{Values} subclass and the name of the constant itself.
+        """
+        self.assertEqual("<STATUS=OK>", repr(self.STATUS.OK))
+
+
+    def test_lookupByName(self):
+        """
+        Constants can be looked up by name using L{Values.lookupByName}.
+        """
+        method = self.STATUS.lookupByName("OK")
+        self.assertIdentical(self.STATUS.OK, method)
+
+
+    def test_notLookupMissingByName(self):
+        """
+        Names not defined with a L{ValueConstant} instance cannot be looked up
+        using L{Values.lookupByName}.
+        """
+        self.assertRaises(ValueError, self.STATUS.lookupByName, "lookupByName")
+        self.assertRaises(ValueError, self.STATUS.lookupByName, "__init__")
+        self.assertRaises(ValueError, self.STATUS.lookupByName, "foo")
+
+
+    def test_lookupByValue(self):
+        """
+        Constants can be looked up by their associated value, defined by the
+        argument passed to L{ValueConstant}, using L{Values.lookupByValue}.
+        """
+        status = self.STATUS.lookupByValue("200")
+        self.assertIdentical(self.STATUS.OK, status)
+
+
+    def test_lookupDuplicateByValue(self):
+        """
+        If more than one constant is associated with a particular value,
+        L{Values.lookupByValue} returns whichever of them is defined first.
+        """
+        class TRANSPORT_MESSAGE(Values):
+            """
+            Message types supported by an SSH transport.
+            """
+            KEX_DH_GEX_REQUEST_OLD = ValueConstant(30)
+            KEXDH_INIT = ValueConstant(30)
+
+        self.assertIdentical(
+            TRANSPORT_MESSAGE.lookupByValue(30),
+            TRANSPORT_MESSAGE.KEX_DH_GEX_REQUEST_OLD)
+
+
+    def test_notLookupMissingByValue(self):
+        """
+        L{Values.lookupByValue} raises L{ValueError} when called with a value
+        with which no constant is associated.
+        """
+        self.assertRaises(ValueError, self.STATUS.lookupByValue, "OK")
+        self.assertRaises(ValueError, self.STATUS.lookupByValue, 200)
+        self.assertRaises(ValueError, self.STATUS.lookupByValue, "200.1")
+
+
+    def test_name(self):
+        """
+        The C{name} attribute of one of the constants gives that constant's
+        name.
+        """
+        self.assertEqual("OK", self.STATUS.OK.name)
+
+
+    def test_attributeIdentity(self):
+        """
+        Repeated access of an attribute associated with a L{ValueConstant} value
+        in a L{Values} subclass results in the same object.
+        """
+        self.assertIdentical(self.STATUS.OK, self.STATUS.OK)
+
+
+    def test_iterconstants(self):
+        """
+        L{Values.iterconstants} returns an iterator over all of the constants
+        defined in the class, in the order they were defined.
+        """
+        constants = list(self.STATUS.iterconstants())
+        self.assertEqual(
+            [self.STATUS.OK, self.STATUS.NOT_FOUND],
+            constants)
+
+
+    def test_attributeIterconstantsIdentity(self):
+        """
+        The constants returned from L{Values.iterconstants} are identical to the
+        constants accessible using attributes.
+        """
+        constants = list(self.STATUS.iterconstants())
+        self.assertIdentical(self.STATUS.OK, constants[0])
+        self.assertIdentical(self.STATUS.NOT_FOUND, constants[1])
+
+
+    def test_iterconstantsIdentity(self):
+        """
+        The constants returned from L{Values.iterconstants} are identical on
+        each call to that method.
+        """
+        constants = list(self.STATUS.iterconstants())
+        again = list(self.STATUS.iterconstants())
+        self.assertIdentical(again[0], constants[0])
+        self.assertIdentical(again[1], constants[1])
+
+
+    def test_initializedOnce(self):
+        """
+        L{Values._enumerants} is initialized once and its value re-used on
+        subsequent access.
+        """
+        first = self.STATUS._enumerants
+        self.STATUS.OK # Side-effects!
+        second = self.STATUS._enumerants
         self.assertIdentical(first, second)
