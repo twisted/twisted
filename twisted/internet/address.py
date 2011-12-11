@@ -13,7 +13,7 @@ from twisted.internet.interfaces import IAddress
 from twisted.python import util
 
 
-class IPv4Address(object, util.FancyEqMixin):
+class _IPAddress(object, util.FancyEqMixin):
     """
     Object representing an IPv4 socket endpoint.
 
@@ -27,21 +27,39 @@ class IPv4Address(object, util.FancyEqMixin):
 
     compareAttributes = ('type', 'host', 'port')
 
-    def __init__(self, type, host, port, _bwHack = None):
+    def __init__(self, type, host, port):
         assert type in ('TCP', 'UDP')
         self.type = type
         self.host = host
         self.port = port
-        if _bwHack is not None:
-            warnings.warn("twisted.internet.address.IPv4Address._bwHack is deprecated since Twisted 11.0",
-                    DeprecationWarning, stacklevel=2)
+
 
     def __repr__(self):
-        return 'IPv4Address(%s, %r, %d)' % (self.type, self.host, self.port)
+        return '%s(%s, %r, %d)' % (
+            self.__class__.__name__, self.type, self.host, self.port)
 
 
     def __hash__(self):
         return hash((self.type, self.host, self.port))
+
+
+
+class IPv4Address(_IPAddress):
+    """
+    Object representing an IPv4 socket endpoint.
+    """
+    def __init__(self, type, host, port, _bwHack=None):
+        _IPAddress.__init__(self, type, host, port)
+        if _bwHack is not None:
+            warnings.warn("twisted.internet.address.IPv4Address._bwHack is deprecated since Twisted 11.0",
+                    DeprecationWarning, stacklevel=2)
+
+
+
+class IPv6Address(_IPAddress):
+    """
+    Object representing an IPv6 socket endpoint.
+    """
 
 
 

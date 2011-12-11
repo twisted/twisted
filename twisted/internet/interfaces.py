@@ -250,7 +250,9 @@ class IReactorTCP(Interface):
 
         @param backlog: size of the listen queue
 
-        @param interface: the hostname to bind to, defaults to '' (all)
+        @param interface: The local IPv4 or IPv6 address to which to bind;
+            defaults to '', ie all IPv4 addresses.  To bind to all IPv4 and IPv6
+            addresses, you must call this method twice.
 
         @return: an object that provides L{IListeningPort}.
 
@@ -1523,12 +1525,12 @@ class ITCPTransport(ITransport):
 
     def getHost():
         """
-        Returns L{IPv4Address}.
+        Returns L{IPv4Address} or L{IPv6Address}.
         """
 
     def getPeer():
         """
-        Returns L{IPv4Address}.
+        Returns L{IPv4Address} or L{IPv6Address}.
         """
 
 

@@ -7,6 +7,8 @@
 Support for generic select()able objects.
 """
 
+from socket import AF_INET6, inet_pton, error
+
 from zope.interface import implements
 
 # Twisted Imports
@@ -468,4 +470,29 @@ def isIPAddress(addr):
     return False
 
 
-__all__ = ["FileDescriptor"]
+def isIPv6Address(addr):
+    """
+    Determine whether the given string represents an IPv6 address.
+
+    @param addr: A string which may or may not be the hex
+        representation of an IPv6 address.
+    @type addr: C{str}
+
+    @return: C{True} if C{addr} represents an IPv6 address, C{False}
+        otherwise.
+    @rtype: C{bool}
+    """
+    if '%' in addr:
+        addr = addr.split('%', 1)[0]
+    if not addr:
+        return False
+    try:
+        # This might be a native implementation or the one from
+        # twisted.python.compat.
+        inet_pton(AF_INET6, addr)
+    except (ValueError, error):
+        return False
+    return True
+
+
+__all__ = ["FileDescriptor", "isIPAddress", "isIPv6Address"]

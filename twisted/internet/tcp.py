@@ -494,6 +494,8 @@ class Server(_TLSServerMixin, Connection):
     """
     _base = Connection
 
+    _addressType = address.IPv4Address
+
     def __init__(self, sock, protocol, client, server, sessionno, reactor):
         """
         Server(sock, protocol, client, server, sessionno)
@@ -503,6 +505,8 @@ class Server(_TLSServerMixin, Connection):
         instance of Port, and a session number.
         """
         Connection.__init__(self, sock, protocol, reactor)
+        if len(client) != 2:
+            self._addressType = address.IPv6Address
         self.server = server
         self.client = client
         self.sessionno = sessionno
@@ -523,19 +527,24 @@ class Server(_TLSServerMixin, Connection):
         """
         return self.repstr
 
+
     def getHost(self):
-        """Returns an IPv4Address.
+        """
+        Returns an L{IPv4Address} or L{IPv6Address}.
 
         This indicates the server's address.
         """
-        return address.IPv4Address('TCP', *self.socket.getsockname())
+        host, port = self.socket.getsockname()[:2]
+        return self._addressType('TCP', host, port)
+
 
     def getPeer(self):
-        """Returns an IPv4Address.
+        """
+        Returns an L{IPv4Address} or L{IPv6Address}.
 
         This indicates the client's address.
         """
-        return address.IPv4Address('TCP', *self.client)
+        return self._addressType('TCP', *self.client[:2])
 
 
 
@@ -572,7 +581,6 @@ class Port(base.BasePort, _SocketCloser):
 
     implements(interfaces.IListeningPort)
 
-    addressFamily = socket.AF_INET
     socketType = socket.SOCK_STREAM
 
     transport = Server
@@ -586,6 +594,9 @@ class Port(base.BasePort, _SocketCloser):
     # value when we are actually listening.
     _realPortNumber = None
 
+    addressFamily = socket.AF_INET
+    _addressType = address.IPv4Address
+
     def __init__(self, port, factory, backlog=50, interface='', reactor=None):
         """Initialize with a numeric port to listen on.
         """
@@ -593,7 +604,11 @@ class Port(base.BasePort, _SocketCloser):
         self.port = port
         self.factory = factory
         self.backlog = backlog
+        if abstract.isIPv6Address(interface):
+            self.addressFamily = socket.AF_INET6
+            self._addressType = address.IPv6Address
         self.interface = interface
+
 
     def __repr__(self):
         if self._realPortNumber is not None:
@@ -617,7 +632,11 @@ class Port(base.BasePort, _SocketCloser):
         """
         try:
             skt = self.createInternetSocket()
-            skt.bind((self.interface, self.port))
+            if self.addressFamily == socket.AF_INET6:
+                addr = socket.getaddrinfo(self.interface, self.port)[0][4]
+            else:
+                addr = (self.interface, self.port)
+            skt.bind(addr)
         except socket.error, le:
             raise CannotListenError, (self.interface, self.port, le)
 
@@ -640,8 +659,9 @@ class Port(base.BasePort, _SocketCloser):
         self.startReading()
 
 
-    def _buildAddr(self, (host, port)):
-        return address._ServerFactoryIPv4Address('TCP', host, port)
+    def _buildAddr(self, address):
+        host, port = address[:2]
+        return self._addressType('TCP', host, port)
 
 
     def doRead(self):
@@ -763,12 +783,16 @@ class Port(base.BasePort, _SocketCloser):
         """
         return reflect.qual(self.factory.__class__)
 
-    def getHost(self):
-        """Returns an IPv4Address.
 
-        This indicates the server's address.
+    def getHost(self):
         """
-        return address.IPv4Address('TCP', *self.socket.getsockname())
+        Return an L{IPv4Address} or L{IPv6Address} indicating the listening
+        address of this port.
+        """
+        host, port = self.socket.getsockname()[:2]
+        return self._addressType('TCP', host, port)
+
+
 
 class Connector(base.BaseConnector):
     def __init__(self, host, port, factory, timeout, bindAddress, reactor=None):
