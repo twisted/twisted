@@ -6,7 +6,7 @@
 
 from zope.interface import implements, Interface
 
-import hmac, time, random
+import hmac, time, random, warnings
 from twisted.python.hashlib import md5
 from twisted.python.randbytes import secureRandom
 from twisted.cred._digest import calcResponse, calcHA1, calcHA2
@@ -404,6 +404,11 @@ class UsernameHashedPassword:
     def __init__(self, username, hashed):
         self.username = username
         self.hashed = hashed
+        warnings.warn(
+            "twisted.cred.credentials.UsernameHashedPassword was deprecated "
+            "in Twisted 12.0.0",
+            category=DeprecationWarning,
+            stacklevel=2)
 
     def checkPassword(self, password):
         return self.hashed == password

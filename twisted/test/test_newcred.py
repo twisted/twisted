@@ -1,4 +1,4 @@
-# Copyright (c) Twisted Matrix Laboratories.
+# Copyright (c) 2001-2011 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -11,7 +11,7 @@ from zope.interface import implements, Interface
 
 from twisted.trial import unittest
 from twisted.cred import portal, checkers, credentials, error
-from twisted.python import components
+from twisted.python import components, versions
 from twisted.internet import defer
 from twisted.internet.defer import deferredGenerator as dG, waitForDeferred as wFD
 
@@ -26,6 +26,7 @@ except ImportError:
     pamauth = None
 else:
     from twisted.cred import pamauth
+
 
 
 class ITestable(Interface):
@@ -170,6 +171,7 @@ class CramMD5CredentialsTestCase(unittest.TestCase):
         c = credentials.CramMD5Credentials()
         self.failIf(c.checkPassword('secret'))
 
+
 class OnDiskDatabaseTestCase(unittest.TestCase):
     users = [
         ('user1', 'pass1'),
@@ -214,19 +216,24 @@ class OnDiskDatabaseTestCase(unittest.TestCase):
         d.addCallback(self.assertEqual, [u for u, p in self.users])
         return d
 
-    def testRequestAvatarId_hashed(self):
+    def test_requestAvatarIdHashed(self):
+        """
+        L{twisted.cred.credentials.UsernameHashedPassword} is deprecated.
+        This test also validates that it does not, in fact, hash the password.
+        """
         dbfile = self.mktemp()
         db = checkers.FilePasswordDB(dbfile, caseSensitive=0)
         f = file(dbfile, 'w')
         for (u, p) in self.users:
             f.write('%s:%s\n' % (u, p))
         f.close()
-        creds = [credentials.UsernameHashedPassword(u, p) for u, p in self.users]
+        creds = [self.callDeprecated(versions.Version("Twisted", 12, 0, 0),
+                                     credentials.UsernameHashedPassword,
+                                     u, p) for (u, p) in self.users]
         d = defer.gatherResults(
             [defer.maybeDeferred(db.requestAvatarId, c) for c in creds])
         d.addCallback(self.assertEqual, [u for u, p in self.users])
         return d
-
 
 
 class HashedPasswordOnDiskDatabaseTestCase(unittest.TestCase):
@@ -273,11 +280,16 @@ class HashedPasswordOnDiskDatabaseTestCase(unittest.TestCase):
         d.addCallback(self._assertFailures, error.UnauthorizedLogin)
         return d
 
-    def testHashedCredentials(self):
-        hashedCreds = [credentials.UsernameHashedPassword(u, crypt(p, u[:2]))
-                       for u, p in self.users]
+    def test_hashedCredentials(self):
+        """
+        L{twisted.cred.credentials.UsernameHashedPassword} does not, in fact,
+        do any hashing, and we cannot login with crypt'd passwords.
+        """
+        creds = [self.callDeprecated(versions.Version("Twisted", 12, 0, 0),
+                                     credentials.UsernameHashedPassword,
+                                     u, p) for (u, p) in self.users]
         d = defer.DeferredList([self.port.login(c, None, ITestable)
-                                for c in hashedCreds], consumeErrors=True)
+                                for c in creds], consumeErrors=True)
         d.addCallback(self._assertFailures, error.UnhandledCredentials)
         return d
 
@@ -290,8 +302,8 @@ class HashedPasswordOnDiskDatabaseTestCase(unittest.TestCase):
     if crypt is None:
         skip = "crypt module not available"
 
-class PluggableAuthenticationModulesTest(unittest.TestCase):
 
+class PluggableAuthenticationModulesTest(unittest.TestCase):
     def setUp(self):
         """
         Replace L{pamauth.callIntoPAM} with a dummy implementation with
@@ -300,13 +312,11 @@ class PluggableAuthenticationModulesTest(unittest.TestCase):
         self._oldCallIntoPAM = pamauth.callIntoPAM
         pamauth.callIntoPAM = self.callIntoPAM
 
-
     def tearDown(self):
         """
         Restore the original value of L{pamauth.callIntoPAM}.
         """
         pamauth.callIntoPAM = self._oldCallIntoPAM
-
 
     def callIntoPAM(self, service, user, conv):
         if service != 'Twisted':
@@ -362,6 +372,7 @@ class PluggableAuthenticationModulesTest(unittest.TestCase):
     if not pamauth:
         skip = "Can't run without PyPAM"
 
+
 class CheckersMixin:
     def testPositive(self):
         for chk in self.getCheckers():
@@ -378,6 +389,7 @@ class CheckersMixin:
                 yield r
                 self.assertRaises(error.UnauthorizedLogin, r.getResult)
     testNegative = dG(testNegative)
+
 
 class HashlessFilePasswordDBMixin:
     credClass = credentials.UsernamePassword
@@ -425,8 +437,10 @@ class HashlessFilePasswordDBMixin:
             fObj.close()
             yield checkers.FilePasswordDB(fn, ',', 2, 4, False, cache=cache, hash=hashCheck)
 
+
 class LocallyHashedFilePasswordDBMixin(HashlessFilePasswordDBMixin):
     diskHash = staticmethod(lambda x: x.encode('hex'))
+
 
 class NetworkHashedFilePasswordDBMixin(HashlessFilePasswordDBMixin):
     networkHash = staticmethod(lambda x: x.encode('hex'))
@@ -434,11 +448,14 @@ class NetworkHashedFilePasswordDBMixin(HashlessFilePasswordDBMixin):
         def checkPassword(self, password):
             return self.hashed.decode('hex') == password
 
+
 class HashlessFilePasswordDBCheckerTestCase(HashlessFilePasswordDBMixin, CheckersMixin, unittest.TestCase):
     pass
 
+
 class LocallyHashedFilePasswordDBCheckerTestCase(LocallyHashedFilePasswordDBMixin, CheckersMixin, unittest.TestCase):
     pass
+
 
 class NetworkHashedFilePasswordDBCheckerTestCase(NetworkHashedFilePasswordDBMixin, CheckersMixin, unittest.TestCase):
     pass
