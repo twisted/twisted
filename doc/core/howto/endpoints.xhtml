@@ -128,7 +128,7 @@ keep waiting forever.  For example, a very simple 30-second timeout could be
 implemented like this:
 <pre class="python">
 attempt = myEndpoint.connect(myFactory)
-reactor.callback(30, attempt.cancel)
+reactor.callLater(30, attempt.cancel)
 </pre>
 </p>
 
