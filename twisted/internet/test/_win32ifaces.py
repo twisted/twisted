@@ -10,6 +10,50 @@ from ctypes import (
     WinDLL, byref, create_string_buffer, c_int, c_void_p,
     POINTER, Structure, cast, string_at)
 
+WS2_32 = WinDLL('ws2_32')
+
+SOCKET = c_int
+DWORD = c_int
+LPVOID = c_void_p
+LPSOCKADDR = c_void_p
+LPWSAPROTOCOL_INFO = c_void_p
+LPTSTR = c_void_p
+LPDWORD = c_void_p
+LPWSAOVERLAPPED = c_void_p
+LPWSAOVERLAPPED_COMPLETION_ROUTINE = c_void_p
+
+# http://msdn.microsoft.com/en-us/library/ms741621(v=VS.85).aspx
+# int WSAIoctl(
+#         __in   SOCKET s,
+#         __in   DWORD dwIoControlCode,
+#         __in   LPVOID lpvInBuffer,
+#         __in   DWORD cbInBuffer,
+#         __out  LPVOID lpvOutBuffer,
+#         __in   DWORD cbOutBuffer,
+#         __out  LPDWORD lpcbBytesReturned,
+#         __in   LPWSAOVERLAPPED lpOverlapped,
+#         __in   LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine
+#       );
+WSAIoctl = WS2_32.WSAIoctl
+WSAIoctl.argtypes = [
+    SOCKET, DWORD, LPVOID, DWORD, LPVOID, DWORD, LPDWORD,
+    LPWSAOVERLAPPED, LPWSAOVERLAPPED_COMPLETION_ROUTINE]
+WSAIoctl.restype = c_int
+
+# http://msdn.microsoft.com/en-us/library/ms741516(VS.85).aspx
+# INT WSAAPI WSAAddressToString(
+#         __in      LPSOCKADDR lpsaAddress,
+#         __in      DWORD dwAddressLength,
+#         __in_opt  LPWSAPROTOCOL_INFO lpProtocolInfo,
+#         __inout   LPTSTR lpszAddressString,
+#         __inout   LPDWORD lpdwAddressStringLength
+#       );
+WSAAddressToString = WS2_32.WSAAddressToStringA
+WSAAddressToString.argtypes = [
+    LPSOCKADDR, DWORD, LPWSAPROTOCOL_INFO, LPTSTR, LPDWORD]
+WSAAddressToString.restype = c_int
+
+
 SIO_ADDRESS_LIST_QUERY = 0x48000016
 WSAEFAULT = 10014
 
@@ -33,10 +77,6 @@ def win32GetLinkLocalIPv6Addresses():
     IPv6 addresses available on the system, as reported by
     I{WSAIoctl}/C{SIO_ADDRESS_LIST_QUERY}.
     """
-    ws2_32 = WinDLL('ws2_32')
-    WSAIoctl = ws2_32.WSAIoctl
-    WSAAddressToString = ws2_32.WSAAddressToStringA
-
     s = socket(AF_INET6, SOCK_STREAM)
     size = 4096
     retBytes = c_int()
@@ -47,7 +87,7 @@ def win32GetLinkLocalIPv6Addresses():
             SIO_ADDRESS_LIST_QUERY, 0, 0, buf, size, byref(retBytes), 0, 0)
 
         # WSAIoctl might fail with WSAEFAULT, which means there was not enough
-        # space in the buffer we have it.  There's no way to check the errno
+        # space in the buffer we gave it.  There's no way to check the errno
         # until Python 2.6, so we don't even try. :/ Maybe if retBytes is still
         # 0 another error happened, though.
         if ret and retBytes.value:
@@ -63,18 +103,17 @@ def win32GetLinkLocalIPv6Addresses():
     addrCount = addrList[0].iAddressCount
     addrList = cast(buf, POINTER(make_SAL(addrCount)))
 
-    # For some reason, the WSAAddressToString call doesn't succeed very often if
-    # this buffer is smaller (eg, 1024 bytes).  It's not clear why this larger
-    # buffer size fixes (or makes less frequent) the failure.
-    buf2 = create_string_buffer(1024 * 16)
+    addressStringBufLength = 1024
+    addressStringBuf = create_string_buffer(addressStringBufLength)
 
     retList = []
     for i in range(addrList[0].iAddressCount):
-        retBytes.value = 1024
+        retBytes.value = addressStringBufLength
         addr = addrList[0].Address[i]
         ret = WSAAddressToString(
-            addr.lpSockaddr, addr.iSockaddrLength, 0, buf2, byref(retBytes))
+            addr.lpSockaddr, addr.iSockaddrLength, 0, addressStringBuf,
+            byref(retBytes))
         if ret:
             raise RuntimeError("WSAAddressToString failure")
-        retList.append(string_at(buf2))
+        retList.append(string_at(addressStringBuf))
     return [addr for addr in retList if '%' in addr]
