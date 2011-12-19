@@ -25,6 +25,11 @@
       code, headers, and body.
     </p>
 
+    <p>
+      A number of higher-level features are also explained, including proxying,
+      automatic content encoding negotiation, and cookie handling.
+    </p>
+
     <h3>
       Prerequisites
     </h3>
@@ -401,6 +406,34 @@ if __name__ == "__main__":
       Storing cookies with CookieAgent
     </a>
 
+    <h3>Automatic Content Encoding Negotiation</h3>
+
+    <p>
+      <code class="API">twisted.web.client.ContentDecoderAgent</code> adds
+      support for sending <em>Accept-Encoding</em> request headers and
+      interpreting <em>Content-Encoding</em> response headers.  These headers
+      allow the server to encode the response body somehow, typically with some
+      compression scheme to save on transfer
+      costs.  <code>ContentDecoderAgent</code> provides this functionality as a
+      wrapper around an existing agent instance.  Together with one or more
+      decoder objects (such as
+      <code class="API">twisted.web.client.GzipDecoder</code>), this wrapper
+      automatically negotiates an encoding to use and decodes the response body
+      accordingly.  To application code using such an agent, there is no visible
+      difference in the data delivered.
+    </p>
+
+    <a href="listings/client/gzipdecoder.py" class="py-listing">
+      Requesting gzip encoded responses, with automatic decompression.
+    </a>
+
+    <p>
+      Implementing support for new content encodings is as simple as writing a
+      new class like <code>GzipDecoder</code> that can decode a response using
+      the new encoding.  As there are not many content encodings in widespread
+      use, gzip is the only encoding supported by Twisted itself.
+    </p>
+
     <h2>
       Conclusion
     </h2>
@@ -416,6 +449,9 @@ if __name__ == "__main__":
       </li>
       <li>
         How to access the response version, code, phrase, headers, and body.
+      </li>
+      <li>
+        How to store, send, and track cookies.
       </li>
       <li>
         How to control the streaming of the response body.
