@@ -1,6 +1,6 @@
 Introduction
 ------------
-Although it is a newcomer on the Secure Shell stage, Twisted.Conch has quickly
+Although it is a newcomer on the Secure Shell stage, Twisted Conch has quickly
 caught up with the two most popular free *nix implementations and the most 
 popular free Windows implementation in terms of functionality.  This rapid 
 development time, as well as the stability and other advantages, owes much to 
@@ -134,7 +134,7 @@ more work with applications.  Insults is becoming more powerful, and it will
 be interesting to see what it can be used for.  Also important are auditing of
 the code and increasing the speed.  These will make the code more useful in
 general, as well as improving security.  Other ideas include direct support for
-SFTP/SCP, support for a key agent, and interfacing with Twisted.Names to
+SFTP/SCP, support for a key agent, and interfacing with Twisted Names to
 support DNSSEC.
 
 Conclusion

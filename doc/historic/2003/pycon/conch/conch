@@ -3,7 +3,7 @@ from slides import Slide, Bullet, SubBullet, URL
 from twslides import Lecture
 
 lecture = Lecture(
-    "Twisted.Conch: SSH in Python",
+    "Twisted Conch: SSH in Python",
     Slide("Introduction",
     ),
     Slide("Other implementations (servers)",

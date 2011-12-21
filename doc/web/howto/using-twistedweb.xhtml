@@ -4,11 +4,11 @@
 
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-<title>Configuring and Using the Twisted.Web Server</title>
+<title>Configuring and Using the Twisted Web Server</title>
 </head>
 
 <body>
-<h1>Configuring and Using the Twisted.Web Server</h1>
+<h1>Configuring and Using the Twisted Web Server</h1>
 
 <h2>Twisted Web Development</h2><a name="development" />
 
@@ -38,7 +38,7 @@ the resource which represents the URL <code>/</code> on the site.</li>
 
 </ul>
 
-<p>The Twisted.Web server is started through the Twisted Daemonizer, as in:</p>
+<p>The Twisted Web server is started through the Twisted Daemonizer, as in:</p>
 
 <pre class="shell">
 % twistd web
@@ -522,7 +522,7 @@ started it in and running the command:</p>
 
 <h3>Serving Flat HTML</h3>
 
-<p> Twisted.Web serves flat HTML files just as it does any other flat file.  </p>
+<p> Twisted Web serves flat HTML files just as it does any other flat file.  </p>
 
 <a name="ResourceScripts" />
 <h3>Resource Scripts</h3>
@@ -596,7 +596,7 @@ not itself part of Twisted.
 <a name="SpreadableWebServers" />
 <h3>Spreadable Web Servers</h3>
 
-<p> One of the most interesting applications of Twisted.Web is the distributed webserver; multiple servers can all answer requests on the same port, using the <code class="API">twisted.spread</code> package for <q>spreadable</q> computing.  In two different directories, run the commands:  </p>
+<p> One of the most interesting applications of Twisted Web is the distributed webserver; multiple servers can all answer requests on the same port, using the <code class="API">twisted.spread</code> package for <q>spreadable</q> computing.  In two different directories, run the commands:  </p>
 
 <pre class="shell">
 % twistd web --user
@@ -729,7 +729,7 @@ which will be completely wrong when received by the client.</p>
 
 <p>While Apache has the ProxyPassReverse directive, it is really a hack
 and is nowhere near comprehensive enough. Instead, the recommended practice
-in case the internal web server is Twisted.Web is to use VHostMonster.</p>
+in case the internal web server is Twisted Web is to use VHostMonster.</p>
 
 <p>From the Twisted side, using VHostMonster is easy: just drop a file named
 (for example) <code>vhost.rpy</code> containing the following:</p>
@@ -761,7 +761,7 @@ ServerName example.com
 &lt;/VirtualHost&gt;
 </pre>
 
-<p>Here is an example for Twisted.Web's reverse proxy:</p>
+<p>Here is an example for Twisted Web's reverse proxy:</p>
 
 <pre class="python">
 from twisted.application import internet, service
