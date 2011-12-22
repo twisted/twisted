@@ -14,6 +14,27 @@ from twisted.web import html, resource
 
 
 def redirectTo(URL, request):
+    """
+    Generate a redirect to the given location.
+
+    @param URL: A C{str} giving the location to which to redirect.
+    @type URL: C{str}
+
+    @param request: The request object to use to generate the redirect.
+    @type request: L{IRequest<twisted.web.iweb.IRequest>} provider
+
+    @raise TypeError: If the type of C{URL} a C{unicode} instead of C{str}.
+
+    @return: A C{str} containing HTML which tries to convince the client agent
+        to visit the new location even if it doesn't respect the I{FOUND}
+        response code.  This is intended to be returned from a render method,
+        eg::
+
+            def render_GET(self, request):
+                return redirectTo("http://example.com/", request)
+    """
+    if isinstance(URL, unicode) :
+        raise TypeError("Unicode object not allowed as URL")
     request.setHeader("content-type", "text/html; charset=utf-8")
     request.redirect(URL)
     return """

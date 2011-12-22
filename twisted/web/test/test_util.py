@@ -73,4 +73,11 @@ class RedirectToTestCase(TestCase):
             request.responseHeaders.getRawHeaders('content-type'),
             ['text/html; charset=utf-8'])
 
-
+    def test_redirectToUnicodeURL(self) :
+        """
+        L{redirectTo} will raise TypeError if unicode object is passed in URL
+        """  
+        request = Request(DummyChannel(), True)
+        request.method = 'GET'
+        targetURL = u'http://target.example.com/4321'
+        self.assertRaises(TypeError, redirectTo, targetURL, request) 
