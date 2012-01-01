@@ -58,8 +58,9 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         Initialize epoll object, file descriptor tracking dictionaries, and the
         base class.
         """
-        # Create the poller we're going to use.  The 1024 here is just a hint
-        # to the kernel, it is not a hard maximum.
+        # Create the poller we're going to use.  The 1024 here is just a hint to
+        # the kernel, it is not a hard maximum.  After Linux 2.6.8, the size
+        # argument is completely ignored.
         self._poller = _epoll.epoll(1024)
         self._reads = {}
         self._writes = {}
