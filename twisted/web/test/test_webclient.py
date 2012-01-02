@@ -31,7 +31,7 @@ from twisted.internet.error import ConnectionRefusedError
 from twisted.internet.protocol import Protocol
 from twisted.internet.defer import Deferred, succeed
 from twisted.internet.endpoints import TCP4ClientEndpoint
-from twisted.web.client import FileBodyProducer, Request
+from twisted.web.client import FileBodyProducer, Request, StringBodyProducer
 from twisted.web.iweb import UNKNOWN_LENGTH, IBodyProducer, IResponse
 from twisted.web._newclient import HTTP11ClientProtocol, Response
 from twisted.web.error import SchemeNotSupported
@@ -1033,6 +1033,41 @@ class StubHTTPProtocol(Protocol):
         result = Deferred()
         self.requests.append((request, result))
         return result
+
+
+
+class StringConsumer(object):
+    """
+    Fake consumer that appends written data to a string
+    """
+    val = ''
+
+    def write(self, val):
+        self.val += val
+
+
+
+class StringBodyProducerTest(unittest.TestCase):
+    """
+    Tests for L{StringBodyProducer} which reads bytes from a string and writes
+    them to an L{IConsumer}
+    """
+
+    def test_startProducing(self):
+        stringvalue = 'test string value'
+        consumer = StringConsumer()
+        sbp = StringBodyProducer(stringvalue)
+        callbacks = []
+
+        def storeCallbackVal(val):
+            callbacks.append(val)
+
+        sbp.startProducing(consumer).addCallback(storeCallbackVal)
+
+        self.assertEqual(1, len(callbacks), "Deferred did not fire")
+        self.assertEqual(None, callbacks[0], "Deferred value should be None")
+        self.assertEqual(stringvalue, consumer.val,
+            "Did not write the correct string to the consumer")
 
 
 

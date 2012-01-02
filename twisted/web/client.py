@@ -6,7 +6,8 @@
 HTTP client.
 """
 
-import os, types
+import os
+import types
 from urlparse import urlunparse
 from urllib import splithost, splittype
 import zlib
@@ -24,6 +25,7 @@ from twisted.web import error
 from twisted.web.iweb import UNKNOWN_LENGTH, IBodyProducer, IResponse
 from twisted.web.http_headers import Headers
 from twisted.python.compat import set
+
 
 
 class PartialDownloadError(error.Error):
@@ -676,6 +678,42 @@ class _WebToNormalContextFactory(object):
         hostname and port number and return the resulting context object.
         """
         return self._webContext.getContext(self._hostname, self._port)
+
+
+
+class StringBodyProducer(object):
+    """
+    L{StringBodyProducer} produces bytes from a string and writes them all at
+    once to a consumer.
+
+    @ivar _bodyString: a string.
+
+    @since: 12.0.0
+    """
+    implements(IBodyProducer)
+
+    def __init__(self, bodyString=''):
+        self._bodyString = bodyString
+        self.length = len(bodyString)
+
+
+    def stopProducing(self):
+        """
+        Deferred is fired immediately when C{startProducing} is called, so
+        a call to C{stopProducing} does nothing
+        """
+        pass
+
+
+    def startProducing(self, consumer):
+        """
+        Return a L{Deferred} which fires immediately, since all the bytes of
+        the bodyString are written at once to the consumer.
+
+        @param consumer: Any L{IConsumer} provider
+        """
+        consumer.write(self._bodyString)
+        return defer.succeed(None)
 
 
 
