@@ -480,28 +480,4 @@ class ConnectionPool:
         self.__init__(self.dbapiName, *self.connargs, **self.connkw)
 
 
-
-# Common deprecation decorator used for all deprecations.
-_unreleasedVersion = Version("Twisted", 8, 0, 0)
-_unreleasedDeprecation = deprecated(_unreleasedVersion)
-
-
-
-def _safe(text):
-    """
-    Something really stupid that replaces quotes with escaped quotes.
-    """
-    return text.replace("'", "''").replace("\\", "\\\\")
-
-
-
-def safe(text):
-    """
-    Make a string safe to include in an SQL statement.
-    """
-    return _safe(text)
-
-safe = _unreleasedDeprecation(safe)
-
-
-__all__ = ['Transaction', 'ConnectionPool', 'safe']
+__all__ = ['Transaction', 'ConnectionPool']

@@ -11,9 +11,8 @@ from twisted.trial import unittest
 import os, stat
 import types
 
-from twisted.enterprise.adbapi import ConnectionPool, ConnectionLost, safe
+from twisted.enterprise.adbapi import ConnectionPool, ConnectionLost
 from twisted.enterprise.adbapi import Connection, Transaction
-from twisted.enterprise.adbapi import _unreleasedVersion
 from twisted.internet import reactor, defer, interfaces
 from twisted.python.failure import Failure
 
@@ -567,23 +566,6 @@ makeSQLTests(ADBAPITestBase, 'ADBAPITestCase', globals())
 # GadflyReconnectTestCase SQLiteReconnectTestCase PyPgSQLReconnectTestCase
 # PsycopgReconnectTestCase MySQLReconnectTestCase FirebirdReconnectTestCase
 makeSQLTests(ReconnectTestBase, 'ReconnectTestCase', globals())
-
-
-
-class DeprecationTestCase(unittest.TestCase):
-    """
-    Test deprecations in twisted.enterprise.adbapi
-    """
-
-    def test_safe(self):
-        """
-        Test deprecation of twisted.enterprise.adbapi.safe()
-        """
-        result = self.callDeprecated(_unreleasedVersion,
-                                     safe, "test'")
-
-        # make sure safe still behaves like the original
-        self.assertEqual(result, "test''")
 
 
 
