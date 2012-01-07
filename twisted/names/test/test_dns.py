@@ -372,6 +372,59 @@ class MessageTestCase(unittest.TestCase):
             dns.Message().lookupRecordType(65280), dns.UnknownRecord)
 
 
+    def test_nonAuthoritativeMessage(self):
+        """
+        The L{RRHeader} instances created by L{Message} from a non-authoritative
+        message are marked as not authoritative.
+        """
+        buf = StringIO()
+        answer = dns.RRHeader(payload=dns.Record_A('1.2.3.4', ttl=0))
+        answer.encode(buf)
+        message = dns.Message()
+        message.fromStr(
+            '\x01\x00' # Message ID
+            # answer bit, opCode nibble, auth bit, trunc bit, recursive bit
+            '\x00'
+            # recursion bit, empty bit, empty bit, empty bit, response code
+            # nibble
+            '\x00'
+            '\x00\x00' # number of queries
+            '\x00\x01' # number of answers
+            '\x00\x00' # number of authorities
+            '\x00\x00' # number of additionals
+            + buf.getvalue()
+            )
+        self.assertEqual(message.answers, [answer])
+        self.assertFalse(message.answers[0].auth)
+
+
+    def test_authoritativeMessage(self):
+        """
+        The L{RRHeader} instances created by L{Message} from an authoritative
+        message are marked as authoritative.
+        """
+        buf = StringIO()
+        answer = dns.RRHeader(payload=dns.Record_A('1.2.3.4', ttl=0))
+        answer.encode(buf)
+        message = dns.Message()
+        message.fromStr(
+            '\x01\x00' # Message ID
+            # answer bit, opCode nibble, auth bit, trunc bit, recursive bit
+            '\x04'
+            # recursion bit, empty bit, empty bit, empty bit, response code
+            # nibble
+            '\x00'
+            '\x00\x00' # number of queries
+            '\x00\x01' # number of answers
+            '\x00\x00' # number of authorities
+            '\x00\x00' # number of additionals
+            + buf.getvalue()
+            )
+        answer.auth = True
+        self.assertEqual(message.answers, [answer])
+        self.assertTrue(message.answers[0].auth)
+
+
 
 class TestController(object):
     """

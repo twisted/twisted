@@ -445,7 +445,9 @@ class RRHeader(tputil.FancyEqMixin):
     @ivar cls: The query class of the original request.
     @ivar ttl: The time-to-live for this record.
     @ivar payload: An object that implements the IEncodable interface
-    @ivar auth: Whether this header is authoritative or not.
+
+    @ivar auth: A C{bool} indicating whether this C{RRHeader} was parsed from an
+        authoritative message.
     """
 
     implements(IEncodable)
@@ -1635,7 +1637,7 @@ class Message:
 
     def parseRecords(self, list, num, strio):
         for i in range(num):
-            header = RRHeader()
+            header = RRHeader(auth=self.auth)
             try:
                 header.decode(strio)
             except EOFError:

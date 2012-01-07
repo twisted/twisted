@@ -1,0 +1,1 @@
+twisted.names.dns.Message now sets the `auth` flag on RRHeader instances it creates to reflect the authority of the message itself.
