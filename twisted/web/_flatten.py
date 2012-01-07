@@ -17,7 +17,7 @@ from twisted.web.error import UnfilledSlot, UnsupportedType, FlattenerError
 
 from twisted.web.iweb import IRenderable
 from twisted.web._stan import (
-    Tag, slot, voidElements, Comment, CDATA)
+    Tag, slot, voidElements, Comment, CDATA, CharRef)
 
 
 
@@ -179,6 +179,8 @@ def _flattenElement(request, root, slotData, renderFactory, inAttribute):
         for element in root:
             yield _flattenElement(request, element, slotData, renderFactory,
                     inAttribute)
+    elif isinstance(root, CharRef):
+        yield '&#%d;' % (root.ordinal,)
     elif isinstance(root, Deferred):
         yield root.addCallback(
             lambda result: (result, _flattenElement(request, result, slotData,

@@ -7,7 +7,7 @@ Tests for L{twisted.web._stan} portion of the L{twisted.web.template}
 implementation.
 """
 
-from twisted.web.template import Comment, CDATA, Tag
+from twisted.web.template import Comment, CDATA, CharRef, Tag
 from twisted.trial.unittest import TestCase
 
 def proto(*a, **kw):
@@ -129,3 +129,11 @@ class TestTag(TestCase):
         self.assertEqual(repr(CDATA(u"test data")),
                           "CDATA(u'test data')")
 
+
+    def test_charrefRepr(self):
+        """
+        L{CharRef.__repr__} returns a value which makes it easy to see what
+        character is referred to.
+        """
+        snowman = ord(u"\N{SNOWMAN}")
+        self.assertEqual(repr(CharRef(snowman)), "CharRef(9731)")

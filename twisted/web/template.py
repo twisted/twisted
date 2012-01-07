@@ -19,12 +19,18 @@ HTML rendering for twisted.web.
     L{AttributeError}.
 """
 
+__all__ = [
+    'TEMPLATE_NAMESPACE', 'VALID_HTML_TAG_NAMES', 'Element', 'TagLoader',
+    'XMLString', 'XMLFile', 'renderer', 'flatten', 'flattenString', 'tags',
+    'Comment', 'CDATA', 'Tag', 'slot', 'CharRef',
+    ]
+
 from zope.interface import implements
 
 from cStringIO import StringIO
 from xml.sax import make_parser, handler
 
-from twisted.web._stan import Tag, slot, Comment, CDATA
+from twisted.web._stan import Tag, slot, Comment, CDATA, CharRef
 
 TEMPLATE_NAMESPACE = 'http://twistedmatrix.com/ns/twisted.web.template/0.1'
 
@@ -446,9 +452,4 @@ tags = _TagFactory()
 
 from twisted.web._element import Element, renderer
 from twisted.web._flatten import flatten, flattenString
-
-__all__ = [
-    'TEMPLATE_NAMESPACE', 'VALID_HTML_TAG_NAMES', 'Element', 'TagLoader', 'renderer',
-    'flatten', 'flattenString', 'tags', 'Comment', 'CDATA', 'Tag', 'slot'
-]
 

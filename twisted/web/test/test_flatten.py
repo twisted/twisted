@@ -12,7 +12,7 @@ from twisted.internet.defer import succeed, gatherResults
 from twisted.web._stan import Tag
 from twisted.web._flatten import flattenString
 from twisted.web.error import UnfilledSlot, UnsupportedType, FlattenerError
-from twisted.web.template import tags, Comment, CDATA, slot
+from twisted.web.template import tags, Comment, CDATA, CharRef, slot
 from twisted.web.iweb import IRenderable
 from twisted.web.test._util import FlattenTestCase
 
@@ -129,6 +129,15 @@ class TestSerialization(FlattenTestCase):
             self.assertFlatteningRaises(
                 Tag('p', attributes={snowman: ''}), UnicodeEncodeError),
         ])
+
+
+    def test_serializeCharRef(self):
+        """
+        A character reference is flattened to a string using the I{&#NNNN;}
+        syntax.
+        """
+        ref = CharRef(ord(u"\N{SNOWMAN}"))
+        return self.assertFlattensTo(ref, "&#9731;")
 
 
     def test_serializeDeferred(self):
