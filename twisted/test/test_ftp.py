@@ -546,6 +546,39 @@ class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
         return d
 
 
+    def test_downloadFolder(self):
+        """
+        When RETR is called for a folder, it will fail complaining that
+        the path is a folder.
+        """
+        # Make a directory in the current working directory
+        self.dirPath.child('foo').createDirectory()
+        # Login
+        d = self._anonymousLogin()
+        d.addCallback(self._makeDataConnection)
+
+        def retrFolder(downloader):
+            downloader.transport.loseConnection()
+            deferred = self.client.queueStringCommand('RETR foo')
+            return deferred
+        d.addCallback(retrFolder)
+
+        def failOnSuccess(result):
+            raise AssertionError('Downloading a folder should not succeed.')
+        d.addCallback(failOnSuccess)
+
+        def checkError(failure):
+            failure.trap(ftp.CommandFailed)
+            self.assertEqual(
+                ['550 foo: is a directory'], failure.value.message)
+            current_errors = self.flushLoggedErrors()
+            self.assertEqual(
+                0, len(current_errors),
+                'No errors should be logged while downloading a folder.')
+        d.addErrback(checkError)
+        return d
+
+
     def test_NLSTEmpty(self):
         """
         NLST with no argument returns the directory listing for the current

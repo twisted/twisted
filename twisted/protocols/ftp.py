@@ -1027,6 +1027,17 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
 
 
     def ftp_RETR(self, path):
+        """
+        This command causes the content of a file to be sent over the data
+        transfer channel. If the path is to a folder, an error will be raised.
+
+        @type path: C{str}
+        @param path: The path to the file which should be transferred over the
+        data transfer channel.
+
+        @rtype: L{Deferred}
+        @return: a L{Deferred} which will be fired when the transfer is done.
+        """
         if self.dtpInstance is None:
             raise BadCmdSequenceError('PORT or PASV required before RETR')
 
@@ -1071,7 +1082,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             return d
 
         def ebOpened(err):
-            if not err.check(PermissionDeniedError, FileNotFoundError, IsNotADirectoryError):
+            if not err.check(PermissionDeniedError, FileNotFoundError, IsADirectoryError):
                 log.msg("Unexpected error attempting to open file for transmission:")
                 log.err(err)
             if err.check(FTPCmdError):
