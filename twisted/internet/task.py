@@ -36,13 +36,20 @@ class LoopingCall:
         something else, but it probably ought to be set *before*
         calling L{start}.
 
+    @type running: C{bool}
+    @ivar running: A flag which is C{True} while C{f} is scheduled to be called
+        (or is currently being called). It is set to C{True} when L{start} is
+        called and set to C{False} when L{stop} is called or if C{f} raises an
+        exception. In either case, it will be C{False} by the time the
+        C{Deferred} returned by L{start} fires its callback or errback.
+
     @type _expectNextCallAt: C{float}
     @ivar _expectNextCallAt: The time at which this instance most recently
         scheduled itself to run.
 
     @type _realLastTime: C{float}
-    @ivar _realLastTime: When counting skips, the time at which the skip counter
-        was last invoked.
+    @ivar _realLastTime: When counting skips, the time at which the skip
+        counter was last invoked.
 
     @type _runAtStart: C{bool}
     @ivar _runAtStart: A flag indicating whether the 'now' argument was passed
