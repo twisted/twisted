@@ -8,7 +8,7 @@ Tests for the command-line interfaces to conch.
 try:
     import pyasn1
 except ImportError:
-    pyasn1Skip =  "can't run w/o PyASN1"
+    pyasn1Skip =  "Cannot run without PyASN1"
 else:
     pyasn1Skip = None
 

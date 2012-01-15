@@ -21,7 +21,7 @@ if pyasn1 is not None and Crypto is not None:
     from twisted.conch.test import keydata
 else:
     if pyasn1 is None:
-        dependencySkip = "can't run w/o PyASN1"
+        dependencySkip = "Cannot run without PyASN1"
     elif Crypto is None:
         dependencySkip = "can't run w/o PyCrypto"
 
@@ -326,7 +326,7 @@ class TransportTestCase(unittest.TestCase):
         skip = "cannot run w/o PyCrypto"
 
     if pyasn1 is None:
-        skip = "cannot run w/o PyASN1"
+        skip = "Cannot run without PyASN1"
 
 
     def setUp(self):
@@ -1804,7 +1804,7 @@ class SSHCiphersTestCase(unittest.TestCase):
         skip = "cannot run w/o PyCrypto"
 
     if pyasn1 is None:
-        skip = "cannot run w/o PyASN1"
+        skip = "Cannot run without PyASN1"
 
 
     def test_init(self):
@@ -1913,7 +1913,7 @@ class CounterTestCase(unittest.TestCase):
         skip = "cannot run w/o PyCrypto"
 
     if pyasn1 is None:
-        skip = "cannot run w/o PyASN1"
+        skip = "Cannot run without PyASN1"
 
 
     def test_init(self):
@@ -1946,7 +1946,7 @@ class TransportLoopbackTestCase(unittest.TestCase):
         skip = "cannot run w/o PyCrypto"
 
     if pyasn1 is None:
-        skip = "cannot run w/o PyASN1"
+        skip = "Cannot run without PyASN1"
 
 
     def _runClientServer(self, mod):
@@ -2128,7 +2128,7 @@ class OldFactoryTestCase(unittest.TestCase):
         skip = "cannot run w/o PyCrypto"
 
     if pyasn1 is None:
-        skip = "cannot run w/o PyASN1"
+        skip = "Cannot run without PyASN1"
 
 
     def test_getPublicKeysWarning(self):

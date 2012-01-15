@@ -31,7 +31,7 @@ class HelpersTestCase(unittest.TestCase):
     if Crypto is None:
         skip = "cannot run w/o PyCrypto"
     if pyasn1 is None:
-        skip = "cannot run w/o/ PyASN1"
+        skip = "Cannot run without PyASN1"
 
     def setUp(self):
         self._secureRandom = randbytes.secureRandom
@@ -105,7 +105,7 @@ class KeyTestCase(unittest.TestCase):
     if Crypto is None:
         skip = "cannot run w/o PyCrypto"
     if pyasn1 is None:
-        skip = "cannot run w/o/ PyASN1"
+        skip = "Cannot run without PyASN1"
 
     def setUp(self):
         self.rsaObj = Crypto.PublicKey.RSA.construct((1L, 2L, 3L, 4L, 5L))

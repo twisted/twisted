@@ -536,7 +536,7 @@ class SSHProtocolTestCase(unittest.TestCase):
         skip = "can't run w/o PyCrypto"
 
     if not pyasn1:
-        skip = "can't run w/o PyASN1"
+        skip = "Cannot run without PyASN1"
 
     def _ourServerOurClientTest(self, name='session', **kwargs):
         """
@@ -825,7 +825,7 @@ class TestSSHFactory(unittest.TestCase):
         skip = "can't run w/o PyCrypto"
 
     if not pyasn1:
-        skip = "can't run w/o PyASN1"
+        skip = "Cannot run without PyASN1"
 
     def makeSSHFactory(self, primes=None):
         sshFactory = factory.SSHFactory()
@@ -886,7 +886,7 @@ class MPTestCase(unittest.TestCase):
         skip = "can't run w/o PyCrypto"
 
     if not pyasn1:
-        skip = "can't run w/o PyASN1"
+        skip = "Cannot run without PyASN1"
 
 
     def test_getMP(self):

@@ -266,7 +266,7 @@ class ConchServerSetupMixin:
         skip = "can't run w/o PyCrypto"
 
     if not pyasn1:
-        skip = "can't run w/o PyASN1"
+        skip = "Cannot run without PyASN1"
 
     realmFactory = staticmethod(lambda: ConchTestRealm('testuser'))
 

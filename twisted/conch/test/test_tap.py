@@ -43,7 +43,7 @@ class MakeServiceTest(TestCase):
         skip = "can't run w/o PyCrypto"
 
     if not pyasn1:
-        skip = "can't run w/o PyASN1"
+        skip = "Cannot run without PyASN1"
 
     if not unix:
         skip = "can't run on non-posix computers"
