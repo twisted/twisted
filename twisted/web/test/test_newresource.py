@@ -38,38 +38,34 @@ class ResponseTests(unittest.TestCase):
         self.assertEqual(response.body, None)
 
 
-    def test_setBodyString(self):
+    def test_setBody(self):
         """
-        Setting the body to a string will also set a content-length header.
+        Setting the body to a string will store it on the response.
         """
         response = Response()
         response.setBody("hello")
         self.assertEqual(response.body, "hello")
-        self.assertEqual(response.headers.getRawHeaders("content-length"), ["5"])
 
 
-    def test_setBodyProducerWithLength(self):
+    def test_setBodyProducer(self):
         """
-        Setting the body to a producer that has a length will also set a
-        content-length header.
+        Setting the body to a producer will store it on the body.
         """
         response = Response()
         producer = Producer(200)
         response.setBody(producer)
         self.assertIdentical(response.body, producer)
-        self.assertEqual(response.headers.getRawHeaders("content-length"), ["200"])
 
 
-    def test_setBodyProducerWithoutLength(self):
+    def test_cantSetBodyTwice(self):
         """
-        Setting the body to a producer that has an unknown length will not set
-        a content-length header.
+        Setting the body twice will fail.
         """
         response = Response()
-        producer = Producer(UNKNOWN_LENGTH)
-        response.setBody(producer)
-        self.assertIdentical(response.body, producer)
-        self.assertEqual(list(response.headers.getAllRawHeaders()), [])
+        response.setBody("hello")
+        exc = self.assertRaises(RuntimeError, response.setBody, "world")
+        self.assertEqual(exc.args[0], "Can't set body twice.")
+        self.assertEqual(response.body, "hello")
 
 
     def test_nonDefault(self):
@@ -82,6 +78,6 @@ class ResponseTests(unittest.TestCase):
         self.assertEqual(response.code, 700)
         # Headers should be copied:
         self.assertNotIdentical(response.headers, headers)
-        self.assertEqual(sorted(list(response.headers.getAllRawHeaders())),
-                         [("Content-Length", ["5"]), ("Test", ["value"])])
+        self.assertEqual(list(response.headers.getAllRawHeaders()),
+                         [("Test", ["value"])])
         self.assertEqual(response.body, "hello")

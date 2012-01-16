@@ -14,6 +14,54 @@ from twisted.web.http_headers import Headers
 from twisted.web.http import OK
 
 
+# A special object indicating the index part of a URL path. E.g. /foo/bar is
+# the path [u"foo", u"bar"], /foo/bar/ is [u"foo", u"bar", INDEX] and //foo/
+# is [INDEX, u"FOO"]:
+INDEX = object()
+
+
+class Path:
+    """
+    A URL path, a series of segments.
+
+    @ivar segmentName: The current segment's name, either a C{unicode} string
+        or the C{INDEX} constant.
+
+    @ivar _segments: C{tuple} of C{unicode} strings or C{INDEX} object.
+    """
+
+    def __init__(self, segments):
+        pass
+
+
+    def child(self):
+        """
+        Return the next child L{Path}, i.e. without the current top-level path
+        segment.
+
+        C{None} will be returned if no segments remain.
+        """
+
+
+    def traverse(self, resource):
+        """
+        Return an object comprehensible to the resource-traversal mechanism,
+        indicating that this path will be traversed by the given resource.
+        """
+
+
+
+class _TraversalStep(tuple):
+    """
+    A step in the traversal history for a path.
+
+    This will be created by L{Path.traverse}.
+    """
+
+    def  __new__(path, resource):
+        tuple.__new__(_TraversalStep, path, resource)
+
+
 
 class IResource(Interface):
     """
@@ -24,28 +72,49 @@ class IResource(Interface):
     mechanism for mapping URLs to content.
     """
 
-    def locateChild(request, traversal):
+    def traverseChild(request, path):
         """
-        Locate another object which can be adapted to IResource.
+        Locate another object which can handle the remaining path segments.
 
-        Either call C{traversal.consume()} one or more times to consume path
-        elements in the traversal, or C{traversal.replace()} to replace the
-        current resoure with a new resource in the traversal path.
-        
-        @return: Another L{IResource}, or a C{Deferred} which will fire with
-            on.  The object publishing machinery will continue on with the
-            specified resource and remaining segments in the traversal,
-            calling the appropriate method on the specified resource.
+        If this method will consume one or more path segments, return the
+        result of calling C{traverse} on the child path. C{traverse} should be
+        called with a L{IResource} provider that will handle the remaining
+        segments. You can also return a C{Deferred} that fires with the result
+        of C{traverse}.
+
+        To provide a resource that will handle the full given path, just
+        return the result of calling C{traverse} on the C{path} passed in to
+        this method.
         """
 
 
-    def renderHTTP(request, traversal):
+    def renderHTTP(request, traversalHistory):
         """
-        @param traversal: The traversal used to reach this resource.
-        
+        @param traversalHistory: A list of (path, resource) tuples.
+
         Return a L{Response} instance, or a C{Deferred} which will fire with a
         L{Response}. This response will be written to the web browser which
         initiated the request.
+        """
+
+
+class Traversal:
+    """
+    Traverse a path, finding the leaf L{IResource} that will render the
+    corresponding web entity.
+
+    @ivar history: a C{list} of (L{Path}, L{IResource}) tuples, the traversal
+        history.
+    """
+
+    def __init__(self, path, rootResource):
+        pass
+
+
+    def traverse(self):
+        """
+        Return a C{Deferred} that fires with a L{IResource} that can render
+        the entity indicated by the path.
         """
 
 
@@ -60,6 +129,8 @@ class Response:
         body. Should be set using L{Response.setBody} or via the initializer.
     """
 
+    body = None
+
     def __init__(self, code=OK, headers=None, body=None):
         self.code = code
         if headers is None:
@@ -67,49 +138,16 @@ class Response:
         else:
             headers = headers.copy()
         self.headers = headers
-        if body is None:
-            self.body = None
-        else:
+        if body is not None:
             self.setBody(body)
 
 
     def setBody(self, body):
         """
-        Set the body for the response.
-
-        The body can only be set once. If the body has a length, a
-        content-length header will be added.
+        Set the body for the response; this can only be done once.
 
         @param body: A C{str} or C{IBodyProducer}.
         """
-        if isinstance(body, str):
-            length = len(body)
-        else:
-            length = body.length
-        if length != UNKNOWN_LENGTH:
-            self.headers.addRawHeader("content-length", str(length))
+        if self.body is not None:
+            raise RuntimeError("Can't set body twice.")
         self.body = body
-
-
-
-class Resource:
-
-    def locateChild(self, request, traversal):
-        #pathElem = traversal.consume()
-        #return NewResource(pathElem)
-        #or
-        #traversal.replace(NewResource())
-        #return
-        pass
-
-
-class Traversal:
-
-    def __init__(self, iri):
-        # ...
-
-    def consume(self, encoding="UTF-8"):
-        """
-        Return next path segment. Encoding of None means return underlying
-        bytes of path segment.
-        """
