@@ -33,13 +33,26 @@ class TestBucket(TestBucketBase):
         fit = b.add(1000)
         self.assertEqual(100, fit)
 
-    def testBucketDrian(self):
+    def testBucketDrain(self):
         """Testing the bucket's drain rate."""
         b = SomeBucket()
         fit = b.add(1000)
         self.clock.set(10)
         fit = b.add(1000)
         self.assertEqual(20, fit)
+
+    def test_bucketEmpty(self):
+        """
+        L{htb.Bucket.drip} returns C{True} if the bucket is empty after that drip.
+        """
+        b = SomeBucket()
+        b.add(20)
+        self.clock.set(9)
+        empty = b.drip()
+        self.assertFalse(empty)
+        self.clock.set(10)
+        empty = b.drip()
+        self.assertTrue(empty)
 
 class TestBucketNesting(TestBucketBase):
     def setUp(self):

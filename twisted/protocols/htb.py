@@ -74,12 +74,13 @@ class Bucket:
         return allowable
 
     def drip(self):
-        """Let some of the bucket drain.
+        """
+        Let some of the bucket drain.
 
         How much of the bucket drains depends on how long it has been
         since I was last called.
 
-        @returns: True if I am now empty.
+        @returns: C{True} if the bucket is empty after this drip.
         @returntype: bool
         """
         if self.parentBucket is not None:
@@ -87,13 +88,12 @@ class Bucket:
 
         if self.rate is None:
             self.content = 0
-            return True
         else:
             now = time()
             deltaT = now - self.lastDrip
             self.content = long(max(0, self.content - deltaT * self.rate))
             self.lastDrip = now
-            return False
+        return self.content == 0
 
 
 class IBucketFilter(Interface):

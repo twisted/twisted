@@ -1,0 +1,1 @@
+twisted.protocols.htb.Bucket now empties properly with a non-zero drip rate.
