@@ -1136,6 +1136,52 @@ class TLSProducerTests(TestCase):
         self.assertTrue(verifyObject(IPushProducer, membrane))
 
 
+    def registerProducerAfterConnectionLost(self, streaming):
+        """
+        If a producer is registered after the transport has disconnected, the
+        producer is not used, and its stopProducing method is called.
+        """
+        clientProtocol, tlsProtocol = buildTLSProtocol()
+        clientProtocol.connectionLost = lambda reason: reason.trap(Error)
+
+        class Producer(object):
+            stopped = False
+
+            def resumeProducing(self):
+                return 1/0 # this should never be called
+
+            def stopProducing(self):
+                self.stopped = True
+
+        # Disconnect the transport:
+        tlsProtocol.connectionLost(Failure(ConnectionDone()))
+
+        # Register the producer; startProducing should not be called, but
+        # stopProducing will:
+        producer = Producer()
+        tlsProtocol.registerProducer(producer, False)
+        self.assertIdentical(tlsProtocol.transport.producer, None)
+        self.assertEqual(producer.stopped, True)
+
+
+    def test_streamingProducerAfterConnectionLost(self):
+        """
+        If a streaming producer is registered after the transport has
+        disconnected, the producer is not used, and its stopProducing method
+        is called.
+        """
+        self.registerProducerAfterConnectionLost(True)
+
+
+    def test_nonStreamingProducerAfterConnectionLost(self):
+        """
+        If a non-streaming producer is registered after the transport has
+        disconnected, the producer is not used, and its stopProducing method
+        is called.
+        """
+        self.registerProducerAfterConnectionLost(False)
+
+
 
 class NonStreamingProducer(object):
     """

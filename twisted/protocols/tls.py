@@ -538,6 +538,11 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
 
 
     def registerProducer(self, producer, streaming):
+        # If we've already disconnected, nothing to do here:
+        if self._lostTLSConnection:
+            producer.stopProducing()
+            return
+
         # If we received a non-streaming producer, wrap it so it becomes a
         # streaming producer:
         if not streaming:
