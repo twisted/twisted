@@ -151,6 +151,8 @@ class TLSMemoryBIOFactoryTests(TestCase):
         L{TLSMemoryBIOFactory.doStart} and L{TLSMemoryBIOFactory.doStop} do
         not log any messages.
         """
+        contextFactory = DefaultOpenSSLContextFactory(certPath, certPath)
+
         logs = []
         logger = logs.append
         log.addObserver(logger)
@@ -159,7 +161,7 @@ class TLSMemoryBIOFactoryTests(TestCase):
         # Disable logging on the wrapped factory:
         wrappedFactory.doStart = lambda: None
         wrappedFactory.doStop = lambda: None
-        factory = TLSMemoryBIOFactory(None, False, wrappedFactory)
+        factory = TLSMemoryBIOFactory(contextFactory, False, wrappedFactory)
         factory.doStart()
         factory.doStop()
         self.assertEqual(logs, [])
@@ -171,7 +173,8 @@ class TLSMemoryBIOFactoryTests(TestCase):
         with a short string (C{"TLS"}) indicating the wrapping, rather than its
         full class name.
         """
-        factory = TLSMemoryBIOFactory(None, False, ServerFactory())
+        contextFactory = DefaultOpenSSLContextFactory(certPath, certPath)
+        factory = TLSMemoryBIOFactory(contextFactory, False, ServerFactory())
         self.assertEqual("ServerFactory (TLS)", factory.logPrefix())
 
 
@@ -183,7 +186,8 @@ class TLSMemoryBIOFactoryTests(TestCase):
         class NoFactory(object):
             pass
 
-        factory = TLSMemoryBIOFactory(None, False, NoFactory())
+        contextFactory = DefaultOpenSSLContextFactory(certPath, certPath)
+        factory = TLSMemoryBIOFactory(contextFactory, False, NoFactory())
         self.assertEqual("NoFactory (TLS)", factory.logPrefix())
 
 

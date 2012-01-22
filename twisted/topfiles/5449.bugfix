@@ -1,0 +1,1 @@
+IReactorSSL and ITCPTransport.startTLS now synchronously propagate errors from the getContext method of context factories, instead of being capturing them and logging them as unhandled.

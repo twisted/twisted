@@ -24,7 +24,8 @@ from twisted.python.runtime import platform
 from twisted.internet.test.test_core import ObjectModelIntegrationMixin
 from twisted.internet.test.test_tcp import StreamTransportTestsMixin
 from twisted.internet.test.connectionmixins import ConnectionTestsMixin
-from twisted.internet.test.test_tcp import AbortConnectionMixin
+from twisted.internet.test.test_tcp import (
+    BrokenContextFactory, AbortConnectionMixin)
 
 try:
     from OpenSSL.crypto import FILETYPE_PEM
@@ -155,8 +156,31 @@ class StartTLSClientTestsMixin(TLSMixin, ReactorBuilder, ConnectionTestsMixin,
 
 
 
+class BadContextTestsMixin(object):
+    """
+    Mixin for L{ReactorBuilder} subclasses which defines a helper for testing
+    the handling of broken context factories.
+    """
+    def _testBadContext(self, useIt):
+        """
+        Assert that the exception raised by a broken context factory's
+        C{getContext} method is raised by some reactor method.  If it is not, an
+        exception will be raised to fail the test.
+
+        @param useIt: A two-argument callable which will be called with a
+            reactor and a broken context factory and which is expected to raise
+            the same exception as the broken context factory's C{getContext}
+            method.
+        """
+        reactor = self.buildReactor()
+        exc = self.assertRaises(
+            ValueError, useIt, reactor, BrokenContextFactory())
+        self.assertEqual(BrokenContextFactory.message, str(exc))
+
+
+
 class SSLClientTestsMixin(TLSMixin, ReactorBuilder, ContextGeneratingMixin,
-                          ConnectionTestsMixin):
+                          ConnectionTestsMixin, BadContextTestsMixin):
     """
     Mixin defining tests relating to L{ITLSTransport}.
     """
@@ -178,6 +202,18 @@ class SSLClientTestsMixin(TLSMixin, ReactorBuilder, ContextGeneratingMixin,
         return SSL4ClientEndpoint(
             reactor, '127.0.0.1', serverAddress.port,
             ClientContextFactory())
+
+
+    def test_badContext(self):
+        """
+        If the context factory passed to L{IReactorSSL.connectSSL} raises an
+        exception from its C{getContext} method, that exception is raised by
+        L{IReactorSSL.connectSSL}.
+        """
+        def useIt(reactor, contextFactory):
+            return reactor.connectSSL(
+                "127.0.0.1", 1234, ClientFactory(), contextFactory)
+        self._testBadContext(useIt)
 
 
     def test_disconnectAfterWriteAfterStartTLS(self):
@@ -257,7 +293,7 @@ class SSLClientTestsMixin(TLSMixin, ReactorBuilder, ContextGeneratingMixin,
 
 
 class TLSPortTestsBuilder(TLSMixin, ContextGeneratingMixin,
-                          ObjectModelIntegrationMixin,
+                          ObjectModelIntegrationMixin, BadContextTestsMixin,
                           StreamTransportTestsMixin, ReactorBuilder):
     """
     Tests for L{IReactorSSL.listenSSL}
@@ -281,6 +317,18 @@ class TLSPortTestsBuilder(TLSMixin, ContextGeneratingMixin,
         Get the expected connection lost message for a TLS port.
         """
         return "(TLS Port %s Closed)" % (port.getHost().port,)
+
+
+    def test_badContext(self):
+        """
+        If the context factory passed to L{IReactorSSL.listenSSL} raises an
+        exception from its C{getContext} method, that exception is raised by
+        L{IReactorSSL.listenSSL}.
+        """
+        def useIt(reactor, contextFactory):
+            return reactor.listenSSL(0, ServerFactory(), contextFactory)
+        self._testBadContext(useIt)
+
 
 
 globals().update(SSLClientTestsMixin.makeTestCaseClasses())

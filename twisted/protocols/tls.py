@@ -578,11 +578,15 @@ class TLSMemoryBIOFactory(WrappingFactory):
     protocol = TLSMemoryBIOProtocol
 
     noisy = False  # disable unnecessary logging.
-    
+
     def __init__(self, contextFactory, isClient, wrappedFactory):
         WrappingFactory.__init__(self, wrappedFactory)
         self._contextFactory = contextFactory
         self._isClient = isClient
+
+        # Force some parameter checking in pyOpenSSL.  It's better to fail now
+        # than after we've set up the transport.
+        contextFactory.getContext()
 
 
     def logPrefix(self):

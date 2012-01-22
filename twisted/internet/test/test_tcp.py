@@ -21,7 +21,8 @@ from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.error import DNSLookupError, ConnectionLost
 from twisted.internet.error import ConnectionDone, ConnectionAborted
 from twisted.internet.interfaces import (
-    ILoggingContext, IResolverSimple, IConnector, IReactorFDSet)
+    ILoggingContext, IResolverSimple, IConnector, IReactorFDSet,
+    ITLSTransport)
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.defer import (
     Deferred, DeferredList, succeed, fail, maybeDeferred, gatherResults)
@@ -111,6 +112,18 @@ def connect(client, (host, port)):
     else:
         address = (host, port)
     client.connect(address)
+
+
+
+class BrokenContextFactory(object):
+    """
+    A context factory with a broken C{getContext} method, for exercising the
+    error handling for such a case.
+    """
+    message = "Some path was wrong maybe"
+
+    def getContext(self):
+        raise ValueError(self.message)
 
 
 
@@ -617,6 +630,45 @@ class TCPClientTestsBuilder(ReactorBuilder, ConnectionTestsMixin):
         self.runReactor(reactor)
         # If the test failed, we logged an error already and trial
         # will catch it.
+
+
+    def test_badContext(self):
+        """
+        If the context factory passed to L{ITCPTransport.startTLS} raises an
+        exception from its C{getContext} method, that exception is raised by
+        L{ITCPTransport.startTLS}.
+        """
+        reactor = self.buildReactor()
+
+        brokenFactory = BrokenContextFactory()
+        exception = [None]
+
+        serverFactory = ServerFactory()
+        serverFactory.protocol = Protocol
+
+        port = reactor.listenTCP(0, serverFactory)
+        endpoint = self.clientEndpoint(reactor, port.getHost())
+
+        clientFactory = ClientFactory()
+        clientFactory.protocol = Protocol
+        connectDeferred = endpoint.connect(clientFactory)
+
+        def connected(protocol):
+            if not ITLSTransport.providedBy(protocol.transport):
+                exception[0] = "skip"
+            else:
+                exception[0] = self.assertRaises(
+                    ValueError, protocol.transport.startTLS, brokenFactory)
+
+        connectDeferred.addCallback(connected)
+        connectDeferred.addErrback(log.err, "Unexpected startTLS behavior")
+        connectDeferred.addCallback(lambda ign: reactor.stop())
+
+        self.runReactor(reactor)
+
+        if exception[0] == "skip":
+            raise SkipTest("Reactor does not support ITLSTransport")
+        self.assertEqual(BrokenContextFactory.message, str(exception[0]))
 
 
 
