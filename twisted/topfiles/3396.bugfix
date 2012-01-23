@@ -1,1 +1,0 @@
-UDP ports handle socket errors better on Windows.
