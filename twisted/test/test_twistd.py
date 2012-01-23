@@ -23,6 +23,7 @@ from zope.interface import implements
 from zope.interface.verify import verifyObject
 
 from twisted.trial import unittest
+from twisted.test.test_process import MockOS
 
 from twisted import plugin
 from twisted.application.service import IServiceMaker
@@ -34,6 +35,7 @@ from twisted.python.log import ILogObserver
 from twisted.python.versions import Version
 from twisted.python.components import Componentized
 from twisted.internet.defer import Deferred
+from twisted.internet.interfaces import IReactorDaemonize
 from twisted.python.fakepwd import UserDatabase
 
 try:
@@ -616,7 +618,7 @@ class UnixApplicationRunnerSetupEnvironmentTests(unittest.TestCase):
         self.runner = UnixApplicationRunner({})
 
 
-    def daemonize(self):
+    def daemonize(self, reactor, os):
         """
         Indicate that daemonization has happened and change the PID so that the
         value written to the pidfile can be tested in the daemonization case.
@@ -803,6 +805,76 @@ class UnixApplicationRunnerRemovePID(unittest.TestCase):
         errors = self.flushLoggedErrors(OSError)
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0].value.errno, errno.ENOENT)
+
+
+
+class FakeNonDaemonizingReactor(object):
+    """
+    A dummy reactor, providing C{beforeDaemonize} and C{afterDaemonize} methods,
+    but not announcing this, and logging whether the methods have been called.
+
+    @ivar _beforeDaemonizeCalled: if C{beforeDaemonize} has been called or not.
+    @type _beforeDaemonizeCalled: C{bool}
+    @ivar _afterDaemonizeCalled: if C{afterDaemonize} has been called or not.
+    @type _afterDaemonizeCalled: C{bool}
+    """
+
+    def __init__(self):
+        self._beforeDaemonizeCalled = False
+        self._afterDaemonizeCalled = False
+
+    def beforeDaemonize(self):
+        self._beforeDaemonizeCalled = True
+
+    def afterDaemonize(self):
+        self._afterDaemonizeCalled = True
+
+
+
+class FakeDaemonizingReactor(FakeNonDaemonizingReactor):
+    """
+    A dummy reactor, providing C{beforeDaemonize} and C{afterDaemonize} methods,
+    announcing this, and logging whether the methods have been called.
+    """
+
+    implements(IReactorDaemonize)
+
+
+
+class ReactorDaemonizationTests(unittest.TestCase):
+    """
+    Tests for L{_twistd_unix.daemonize} and L{IReactorDaemonize}.
+    """
+    if _twistd_unix is None:
+        skip = "twistd unix not available"
+
+
+    def test_daemonizationHooksCalled(self):
+        """
+        L{_twistd_unix.daemonize} indeed calls
+        L{IReactorDaemonize.beforeDaemonize} and
+        L{IReactorDaemonize.afterDaemonize} if the reactor implements
+        L{IReactorDaemonize}.
+        """
+        reactor = FakeDaemonizingReactor()
+        os = MockOS()
+        _twistd_unix.daemonize(reactor, os)
+        self.assertTrue(reactor._beforeDaemonizeCalled)
+        self.assertTrue(reactor._afterDaemonizeCalled)
+
+
+    def test_daemonizationHooksNotCalled(self):
+        """
+        L{_twistd_unix.daemonize} does NOT call
+        L{IReactorDaemonize.beforeDaemonize} or
+        L{IReactorDaemonize.afterDaemonize} if the reactor does NOT
+        implement L{IReactorDaemonize}.
+        """
+        reactor = FakeNonDaemonizingReactor()
+        os = MockOS()
+        _twistd_unix.daemonize(reactor, os)
+        self.assertFalse(reactor._beforeDaemonizeCalled)
+        self.assertFalse(reactor._afterDaemonizeCalled)
 
 
 

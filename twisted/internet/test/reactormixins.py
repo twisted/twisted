@@ -62,14 +62,16 @@ class ReactorBuilder:
     else:
         _reactors.extend([
                 "twisted.internet.glib2reactor.Glib2Reactor",
-                "twisted.internet.gtk2reactor.Gtk2Reactor",
-                "twisted.internet.kqreactor.KQueueReactor"])
+                "twisted.internet.gtk2reactor.Gtk2Reactor"])
         if platform.isMacOSX():
             _reactors.append("twisted.internet.cfreactor.CFReactor")
         else:
             _reactors.extend([
                     "twisted.internet.pollreactor.PollReactor",
-                    "twisted.internet.epollreactor.EPollReactor"])
+                    "twisted.internet.epollreactor.EPollReactor",
+                    # Support KQueue on non-OS-X POSIX platforms for now.
+                    "twisted.internet.kqreactor.KQueueReactor",
+                    ])
 
     reactorFactory = None
     originalHandler = None

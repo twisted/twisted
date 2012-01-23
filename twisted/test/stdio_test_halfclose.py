@@ -9,7 +9,7 @@ to test that IHalfCloseableProtocol.readConnectionLost works for process
 transports.
 """
 
-import sys
+import sys, _preamble
 
 from zope.interface import implements
 

@@ -9,7 +9,7 @@ to test that L{os.write} can be reliably used after
 L{twisted.internet.stdio.StandardIO} has finished.
 """
 
-import sys
+import sys, _preamble
 
 from twisted.internet.protocol import Protocol
 from twisted.internet.stdio import StandardIO

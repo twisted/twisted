@@ -286,7 +286,7 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
         reactor = self.buildReactor()
 
         name = reactor.__class__.__name__
-        if name in ('EPollReactor', 'CFReactor'):
+        if name in ('EPollReactor', 'KQueueReactor', 'CFReactor'):
             # Closing a file descriptor immediately removes it from the epoll
             # set without generating a notification.  That means epollreactor
             # will not call any methods on Victim after the close, so there's

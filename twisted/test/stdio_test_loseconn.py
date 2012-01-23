@@ -8,7 +8,7 @@ L{twisted.test.test_stdio.StandardInputOutputTestCase.test_loseConnection} to
 test that ITransport.loseConnection() works for process transports.
 """
 
-import sys
+import sys, _preamble
 
 from twisted.internet.error import ConnectionDone
 from twisted.internet import stdio, protocol

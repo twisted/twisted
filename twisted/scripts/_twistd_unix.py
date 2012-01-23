@@ -7,6 +7,7 @@ import os, errno, sys
 from twisted.python import log, syslog, logfile, usage
 from twisted.python.util import switchUID, uidFromString, gidFromString
 from twisted.application import app, service
+from twisted.internet.interfaces import IReactorDaemonize
 from twisted import copyright
 
 
@@ -155,8 +156,26 @@ class UnixAppLogger(app.AppLogger):
 
 
 
-def daemonize():
-    # See http://www.erlenstar.demon.co.uk/unix/faq_toc.html#TOC16
+def daemonize(reactor, os):
+    """
+    Daemonizes the application on Unix. This is done by the usual double
+    forking approach.
+
+    @see: U{http://code.activestate.com/recipes/278731/}
+    @see: W. Richard Stevens, "Advanced Programming in the Unix Environment",
+          1992, Addison-Wesley, ISBN 0-201-56317-7
+
+    @param reactor: The reactor in use.  If it provides L{IReactorDaemonize},
+        its daemonization-related callbacks will be invoked.
+
+    @param os: An object like the os module to use to perform the daemonization.
+    """
+
+    ## If the reactor requires hooks to be called for daemonization, call them.
+    ## Currently the only reactor which provides/needs that is KQueueReactor.
+    if IReactorDaemonize.providedBy(reactor):
+        reactor.beforeDaemonize()
+
     if os.fork():   # launch child and...
         os._exit(0) # kill off parent
     os.setsid()
@@ -170,6 +189,9 @@ def daemonize():
             if e.errno != errno.EBADF:
                 raise
     os.close(null)
+
+    if IReactorDaemonize.providedBy(reactor):
+        reactor.afterDaemonize()
 
 
 
@@ -265,7 +287,8 @@ class UnixApplicationRunner(app.ApplicationRunner):
         if umask is not None:
             os.umask(umask)
         if daemon:
-            daemonize()
+            from twisted.internet import reactor
+            daemonize(reactor, os)
         if pidfile:
             f = open(pidfile,'wb')
             f.write(str(os.getpid()))
