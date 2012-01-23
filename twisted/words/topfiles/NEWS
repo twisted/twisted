@@ -1,6 +1,19 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Words 12.0.0pre1 (2012-01-23)
+=====================================
+
+Improved Documentation
+----------------------
+ - twisted.words.im.basechat now has improved API documentation.
+   (#2458)
+
+Other
+-----
+ - #5401
+
+
 Twisted Words 11.1.0 (2011-11-15)
 =================================
 
