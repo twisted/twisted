@@ -102,45 +102,44 @@ class IResource(Interface):
     mechanism for mapping URLs to content.
     """
 
-    def traverseChild(request, path):
+    def traverse(request, path):
         """
         Locate another object which can handle the remaining path segments.
 
         If this method will consume one or more path segments, return the
-        result of calling C{traverse} on the child path. C{traverse} should be
-        called with a L{IResource} provider that will handle the remaining
-        segments. You can also return a C{Deferred} that fires with the result
-        of C{traverse}.
+        result of calling C{traverseUsing} on the child path. C{traverseUsing}
+        should be called with a L{IResource} provider that will handle the
+        remaining segments. You can also return a C{Deferred} that fires with
+        the result of C{traverseUsing}.
 
         Here's an example that consumes /YYYY/MM/DD URLs::
 
-            def traverseChild(self, request, path):
+            def traverse(self, request, path):
                 year = int(path.segmentName)
                 monthPath = path.child()
                 month = int(monthPath.segmentName)
                 dayPath = monthPath.child()
                 day = int(dayPath.segmentName)
-                return dayPath.traverse(DateResource(year, month, day))
+                return dayPath.traverseUsing(DateResource(year, month, day))
 
         To provide a resource that will handle the full given path, just
-        return the result of calling C{traverse} on the C{path} passed in to
-        this method.
+        return the result of calling C{traverseUsing} on the C{path} passed in
+        to this method. For example, here's an implementation that returns
+        different resources depending on some sort of authentication
+        mechanism::
 
-        For example, here's an implementation that returns different resources
-        depending on some sort of authentication mechanism::
-
-            def traverseChild(self, request, path):
+            def traverse(self, request, path):
                 if isAuthenticated(request):
                     resource = SecretResource()
                 else:
                     resource = PermissionDenied()
-                return path.traverse(resource)
+                return path.traverseUsing(resource)
 
         Finally, here's an example of consuming the whole path, regardless of
         its length::
 
-            def traverseChild(self, request, path):
-                return path.leaf().traverse(
+            def traverse(self, request, path):
+                return path.leaf().traverseUsing(
                     CustomURLDispatcher(path.segments))
         """
 
