@@ -4,10 +4,76 @@
 
 from zope.interface import implements
 from twisted.trial import unittest
-from twisted.web._newresource import Response
+from twisted.web._newresource import Response, Path, INDEX, _TraversalStep
 from twisted.web.http import OK
 from twisted.web.http_headers import Headers
 from twisted.web.iweb import IBodyProducer, UNKNOWN_LENGTH
+
+
+
+class PathTests(unittest.TestCase):
+    """
+    Tests for L{Path}.
+    """
+
+    def test_fromStringNoQuoting(self):
+        """
+        L{Path.fromString} parses paths without URL quoting into the
+        appropriate segments.
+        """
+        def getSegments(p):
+            return Path.fromString(p).segments
+        self.assertEqual(getSegments("/"), (INDEX,))
+        self.assertEqual(getSegments("/foo"), (u"foo",))
+        self.assertEqual(getSegments("/foo/"), (u"foo", INDEX))
+        self.assertEqual(getSegments("/foo/bar"), (u"foo", u"bar"))
+        self.assertEqual(getSegments("/foo//"), (u"foo", INDEX, INDEX))
+
+
+    def test_fromStringQuoting(self):
+        """
+        L{Path.fromString} can do URL unquoting.
+        """
+    test_fromStringQuoting.todo = "laters"
+
+
+    def test_leaf(self):
+        """
+        L{Path.leaf} returns a L{Path} with no segments.
+        """
+        l = Path.leaf()
+        self.assertIdentical(l.segmentName, None)
+        self.assertEqual(l.segments, ())
+
+    # XXX Test child() of leaf raises.
+
+    def test_segmentName(self):
+        """
+        The C{segmentName} attribute of L{Path} instances matches the first
+        segment in C{segments}.
+        """
+    test_segmentName.todo = "later"
+
+
+    def test_child(self):
+        """
+        L{Path.child} consumes one of the segments in the path.
+        """
+        p = Path.fromString("/foo/bar/baz")
+        child = p.child()
+        self.assertIsInstance(child, Path)
+        self.assertEqual(child.segments, ("bar", "baz"))
+
+
+    def test_traverseUsing(self):
+        """
+        L{Path.traverseUsing} returns a L{_TraversalStep}.
+        """
+        p = Path.fromString("/foo/bar/baz")
+        step = p.traverseUsing("resource")
+        self.assertIsInstance(step, _TraversalStep)
+        self.assertEqual(step, (p, "resource"))
+
 
 
 class Producer:

@@ -25,19 +25,41 @@ class Path:
     A URL path, a series of segments.
 
     @ivar segmentName: The current segment's name, either a C{unicode} string
-        or the C{INDEX} constant.
+        or the C{INDEX} constant. C{None} if this is a path with no segments,
+        i.e. all parent segments have been consumed.
 
     @ivar segments: C{tuple} of C{unicode} strings or C{INDEX} object.
     """
 
     def __init__(self, segments):
-        pass
+        self.segments = segments
+        if segments:
+            pass#self.segmentName = segments[0]
+        else:
+            self.segmentName = None
 
 
-    def leaf(self):
+    @classmethod
+    def fromString(klass, path, encoding="UTF-8"):
+        """
+        Create a L{Path} from its byte representation.
+        """
+        # XXX url decode
+        result = []
+        for p in path.split("/")[1:]:
+            p = p.decode(encoding)
+            if p == "":
+                p = INDEX
+            result.append(p)
+        return klass(tuple(result))
+
+
+    @classmethod
+    def leaf(klass):
         """
         Return a L{Path} that has no more segments left.
         """
+        return klass(())
 
 
     def child(self):
@@ -45,15 +67,17 @@ class Path:
         Return the next child L{Path}, i.e. without the current top-level path
         segment.
 
-        C{None} will be returned if no segments remain.
+        @raises Something: If this is a leaf path.
         """
+        return self.__class__(self.segments[1:])
 
 
-    def traverse(self, resource):
+    def traverseUsing(self, resource):
         """
         Return an object comprehensible to the resource-traversal mechanism,
         indicating that this path will be traversed by the given resource.
         """
+        return _TraversalStep(self, resource)
 
 
 
@@ -64,8 +88,8 @@ class _TraversalStep(tuple):
     This will be created by L{Path.traverse}.
     """
 
-    def  __new__(path, resource):
-        tuple.__new__(_TraversalStep, path, resource)
+    def  __new__(klass, path, resource):
+        return tuple.__new__(klass, (path, resource))
 
 
 
