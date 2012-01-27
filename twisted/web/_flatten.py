@@ -147,9 +147,7 @@ def _flattenElement(request, root, slotData, renderFactory, inAttribute):
             return
 
         if not root.tagName:
-            for element in _flattenElement(request, root.children, slotData,
-                                    renderFactory, False):
-                yield element
+            yield _flattenElement(request, root.children, slotData, renderFactory, False)
             return
 
         yield '<'
@@ -162,15 +160,11 @@ def _flattenElement(request, root, slotData, renderFactory, inAttribute):
             if isinstance(k, unicode):
                 k = k.encode('ascii')
             yield ' ' + k + '="'
-            for element in _flattenElement(request, v, slotData,
-                                    renderFactory, True):
-                yield element
+            yield _flattenElement(request, v, slotData, renderFactory, True)
             yield '"'
         if root.children or tagName not in voidElements:
             yield '>'
-            for element in _flattenElement(request, root.children,
-                                    slotData, renderFactory, False):
-                yield element
+            yield _flattenElement(request, root.children, slotData, renderFactory, False)
             yield '</' + tagName + '>'
         else:
             yield ' />'
