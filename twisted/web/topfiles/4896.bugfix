@@ -1,0 +1,1 @@
+twisted.web.util.formatFailure now quotes all data in its output to avoid it being mistakenly interpreted as markup.

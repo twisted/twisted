@@ -2,15 +2,27 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+"""
+An assortment of web server-related utilities.
+"""
+
+__all__ = [
+    "redirectTo", "Redirect", "ChildRedirector", "ParentRedirect",
+    "DeferredResource", "htmlIndent", "FailureElement", "formatFailure"]
 
 from cStringIO import StringIO
 import linecache
-import string, re
+import string
 import types
 
-from twisted.python import failure
+from twisted.python.filepath import FilePath
+from twisted.python.reflect import fullyQualifiedName
+from twisted.python.deprecate import deprecatedModuleAttribute
+from twisted.python.versions import Version
 
 from twisted.web import html, resource
+from twisted.web.template import (
+    TagLoader, XMLFile, Element, renderer, flattenString)
 
 
 def redirectTo(URL, request):
@@ -122,130 +134,7 @@ class DeferredResource(resource.Resource):
         return reason
 
 
-stylesheet = """
-<style type="text/css">
-    p.error {
-      color: red;
-      font-family: Verdana, Arial, helvetica, sans-serif;
-      font-weight: bold;
-    }
-
-    div {
-      font-family: Verdana, Arial, helvetica, sans-serif;
-    }
-
-    div.stackTrace {
-    }
-
-    div.frame {
-      padding: 1em;
-      background: white;
-      border-bottom: thin black dashed;
-    }
-
-    div.firstFrame {
-      padding: 1em;
-      background: white;
-      border-top: thin black dashed;
-      border-bottom: thin black dashed;
-    }
-
-    div.location {
-    }
-
-    div.snippet {
-      margin-bottom: 0.5em;
-      margin-left: 1em;
-      background: #FFFFDD;
-    }
-
-    div.snippetHighlightLine {
-      color: red;
-    }
-
-    span.code {
-      font-family: "Courier New", courier, monotype;
-    }
-
-    span.function {
-      font-weight: bold;
-      font-family: "Courier New", courier, monotype;
-    }
-
-    table.variables {
-      border-collapse: collapse;
-      margin-left: 1em;
-    }
-
-    td.varName {
-      vertical-align: top;
-      font-weight: bold;
-      padding-left: 0.5em;
-      padding-right: 0.5em;
-    }
-
-    td.varValue {
-      padding-left: 0.5em;
-      padding-right: 0.5em;
-    }
-
-    div.variables {
-      margin-bottom: 0.5em;
-    }
-
-    span.heading {
-      font-weight: bold;
-    }
-
-    div.dict {
-      background: #cccc99;
-      padding: 2px;
-      float: left;
-    }
-
-    td.dictKey {
-      background: #ffff99;
-      font-weight: bold;
-    }
-
-    td.dictValue {
-      background: #ffff99;
-    }
-
-    div.list {
-      background: #7777cc;
-      padding: 2px;
-      float: left;
-    }
-
-    div.listItem {
-      background: #9999ff;
-    }
-
-    div.instance {
-      background: #cc7777;
-      padding: 2px;
-      float: left;
-    }
-
-    span.instanceName {
-      font-weight: bold;
-      display: block;
-    }
-
-    span.instanceRepr {
-      background: #ff9999;
-      font-family: "Courier New", courier, monotype;
-    }
-
-    div.function {
-      background: orange;
-      font-weight: bold;
-      float: left;
-    }
-</style>
-"""
-
+stylesheet = ""
 
 def htmlrepr(x):
     return htmlReprTypes.get(type(x), htmlUnknown)(x)
@@ -315,95 +204,229 @@ def htmlIndent(snippetLine):
                    '\t', '&nbsp; &nbsp; &nbsp; &nbsp; ')
     return ret
 
-def formatFailure(myFailure):
 
-    exceptionHTML = """
-<p class="error">%s: %s</p>
-"""
 
-    frameHTML = """
-<div class="location">%s, line %s in <span class="function">%s</span></div>
-"""
+class _SourceLineElement(Element):
+    """
+    L{_SourceLineElement} is an L{IRenderable} which can render a single line of
+    source code.
 
-    snippetLineHTML = """
-<div class="snippetLine"><span class="lineno">%s</span><span class="code">%s</span></div>
-"""
+    @ivar number: A C{int} giving the line number of the source code to be
+        rendered.
+    @ivar source: A C{str} giving the source code to be rendered.
+    """
+    def __init__(self, loader, number, source):
+        Element.__init__(self, loader)
+        self.number = number
+        self.source = source
 
-    snippetHighlightLineHTML = """
-<div class="snippetHighlightLine"><span class="lineno">%s</span><span class="code">%s</span></div>
-"""
 
-    variableHTML = """
-<tr class="varRow"><td class="varName">%s</td><td class="varValue">%s</td></tr>
-"""
+    @renderer
+    def sourceLine(self, request, tag):
+        """
+        Render the line of source as a child of C{tag}.
+        """
+        return tag(self.source.replace('  ', u' \N{NO-BREAK SPACE}'))
 
-    if not isinstance(myFailure, failure.Failure):
-        return html.PRE(str(myFailure))
-    io = StringIO()
-    w = io.write
-    w(stylesheet)
-    w('<a href="#tbend">')
-    w(exceptionHTML % (html.escape(str(myFailure.type)),
-                       html.escape(str(myFailure.value))))
-    w('</a>')
-    w('<div class="stackTrace">')
-    first = 1
-    for method, filename, lineno, localVars, globalVars in myFailure.frames:
-        if filename == '<string>':
-            continue
-        if first:
-            w('<div class="firstFrame">')
-            first = 0
-        else:
-            w('<div class="frame">')
-        w(frameHTML % (filename, lineno, method))
 
-        w('<div class="snippet">')
-        textSnippet = ''
-        for snipLineNo in range(lineno-2, lineno+2):
-            snipLine = linecache.getline(filename, snipLineNo)
-            textSnippet += snipLine
-            snipLine = htmlIndent(snipLine)
-            if snipLineNo == lineno:
-                w(snippetHighlightLineHTML % (snipLineNo, snipLine))
+    @renderer
+    def lineNumber(self, request, tag):
+        """
+        Render the line number as a child of C{tag}.
+        """
+        return tag(str(self.number))
+
+
+
+class _SourceFragmentElement(Element):
+    """
+    L{_SourceFragmentElement} is an L{IRenderable} which can render several lines
+    of source code near the line number of a particular frame object.
+
+    @ivar frame: A L{Failure<twisted.python.failure.Failure>}-style frame object
+        for which to load a source line to render.  This is really a tuple
+        holding some information from a frame object.  See
+        L{Failure.frames<twisted.python.failure.Failure>} for specifics.
+    """
+    def __init__(self, loader, frame):
+        Element.__init__(self, loader)
+        self.frame = frame
+
+
+    def _getSourceLines(self):
+        """
+        Find the source line references by C{self.frame} and yield, in source
+        line order, it and the previous and following lines.
+
+        @return: A generator which yields two-tuples.  Each tuple gives a source
+            line number and the contents of that source line.
+        """
+        filename = self.frame[1]
+        lineNumber = self.frame[2]
+        for snipLineNumber in range(lineNumber - 1, lineNumber + 2):
+            yield (snipLineNumber,
+                   linecache.getline(filename, snipLineNumber).rstrip())
+
+
+    @renderer
+    def sourceLines(self, request, tag):
+        """
+        Render the source line indicated by C{self.frame} and several
+        surrounding lines.  The active line will be given a I{class} of
+        C{"snippetHighlightLine"}.  Other lines will be given a I{class} of
+        C{"snippetLine"}.
+        """
+        for (lineNumber, sourceLine) in self._getSourceLines():
+            newTag = tag.clone()
+            if lineNumber == self.frame[2]:
+                cssClass = "snippetHighlightLine"
             else:
-                w(snippetLineHTML % (snipLineNo, snipLine))
-        w('</div>')
-
-        # Instance variables
-        for name, var in localVars:
-            if name == 'self' and hasattr(var, '__dict__'):
-                usedVars = [ (key, value) for (key, value) in var.__dict__.items()
-                             if _hasSubstring('self.' + key, textSnippet) ]
-                if usedVars:
-                    w('<div class="variables"><b>Self</b>')
-                    w('<table class="variables">')
-                    for key, value in usedVars:
-                        w(variableHTML % (key, htmlrepr(value)))
-                    w('</table></div>')
-                break
-
-        # Local and global vars
-        for nm, varList in ('Locals', localVars), ('Globals', globalVars):
-            usedVars = [ (name, var) for (name, var) in varList
-                         if _hasSubstring(name, textSnippet) ]
-            if usedVars:
-                w('<div class="variables"><b>%s</b><table class="variables">' % nm)
-                for name, var in usedVars:
-                    w(variableHTML % (name, htmlrepr(var)))
-                w('</table></div>')
-
-        w('</div>') # frame
-    w('</div>') # stacktrace
-    w('<a name="tbend"> </a>')
-    w(exceptionHTML % (html.escape(str(myFailure.type)),
-                       html.escape(str(myFailure.value))))
-
-    return io.getvalue()
+                cssClass = "snippetLine"
+            loader = TagLoader(newTag(**{"class": cssClass}))
+            yield _SourceLineElement(loader, lineNumber, sourceLine)
 
 
 
-def _hasSubstring(key, text):
-    """I return True if key is part of text."""
-    escapedKey = re.escape(key)
-    return bool(re.search(r'\W' + escapedKey + r'\W', text))
+class _FrameElement(Element):
+    """
+    L{_FrameElement} is an L{IRenderable} which can render details about one
+    frame from a L{Failure<twisted.python.failure.Failure>}.
+
+    @ivar frame: A L{Failure<twisted.python.failure.Failure>}-style frame object
+        for which to load a source line to render.  This is really a tuple
+        holding some information from a frame object.  See
+        L{Failure.frames<twisted.python.failure.Failure>} for specifics.
+    """
+    def __init__(self, loader, frame):
+        Element.__init__(self, loader)
+        self.frame = frame
+
+
+    @renderer
+    def filename(self, request, tag):
+        """
+        Render the name of the file this frame references as a child of C{tag}.
+        """
+        return tag(self.frame[1])
+
+
+    @renderer
+    def lineNumber(self, request, tag):
+        """
+        Render the source line number this frame references as a child of
+        C{tag}.
+        """
+        return tag(str(self.frame[2]))
+
+
+    @renderer
+    def function(self, request, tag):
+        """
+        Render the function name this frame references as a child of C{tag}.
+        """
+        return tag(self.frame[0])
+
+
+    @renderer
+    def source(self, request, tag):
+        """
+        Render the source code surrounding the line this frame references,
+        replacing C{tag}.
+        """
+        return _SourceFragmentElement(TagLoader(tag), self.frame)
+
+
+
+class _StackElement(Element):
+    """
+    L{_StackElement} renders an L{IRenderable} which can render a list of frames.
+    """
+    def __init__(self, loader, stackFrames):
+        Element.__init__(self, loader)
+        self.stackFrames = stackFrames
+
+
+    @renderer
+    def frames(self, request, tag):
+        """
+        Render the list of frames in this L{_StackElement}, replacing C{tag}.
+        """
+        return [
+            _FrameElement(TagLoader(tag.clone()), frame)
+            for frame
+            in self.stackFrames]
+
+
+
+class FailureElement(Element):
+    """
+    L{FailureElement} is an L{IRenderable} which can render detailed information
+    about a L{Failure<twisted.python.failure.Failure>}.
+
+    @ivar failure: The L{Failure<twisted.python.failure.Failure>} instance which
+        will be rendered.
+
+    @since: 12.1
+    """
+    loader = XMLFile(FilePath(__file__).sibling('failure.xhtml').open())
+
+    def __init__(self, failure, loader=None):
+        Element.__init__(self, loader)
+        self.failure = failure
+
+
+    @renderer
+    def type(self, request, tag):
+        """
+        Render the exception type as a child of C{tag}.
+        """
+        return tag(fullyQualifiedName(self.failure.type))
+
+
+    @renderer
+    def value(self, request, tag):
+        """
+        Render the exception value as a child of C{tag}.
+        """
+        return tag(str(self.failure.value))
+
+
+    @renderer
+    def traceback(self, request, tag):
+        """
+        Render all the frames in the wrapped
+        L{Failure<twisted.python.failure.Failure>}'s traceback stack, replacing
+        C{tag}.
+        """
+        return _StackElement(TagLoader(tag), self.failure.frames)
+
+
+
+def formatFailure(myFailure):
+    """
+    Construct an HTML representation of the given failure.
+
+    Consider using L{FailureElement} instead.
+
+    @type myFailure: L{Failure<twisted.python.failure.Failure>}
+
+    @rtype: C{str}
+    @return: A string containing the HTML representation of the given failure.
+    """
+    result = []
+    flattenString(None, FailureElement(myFailure)).addBoth(result.append)
+    if isinstance(result[0], str):
+        # Ensure the result string is all ASCII, for compatibility with the
+        # default encoding expected by browsers.
+        return result[0].decode('utf-8').encode('ascii', 'xmlcharrefreplace')
+    result[0].raiseException()
+
+
+_twelveOne = Version("Twisted", 12, 1, 0)
+
+for name in ["htmlrepr", "saferepr", "htmlUnknown", "htmlString", "htmlList",
+             "htmlDict", "htmlInst", "htmlFunc", "htmlIndent", "htmlReprTypes",
+             "stylesheet"]:
+    deprecatedModuleAttribute(
+        _twelveOne, "See twisted.web.template.", __name__, name)
+del name
