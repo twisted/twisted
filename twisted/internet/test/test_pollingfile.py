@@ -36,4 +36,4 @@ class TestPollableWritePipe(TestCase):
 
 
 if _pollingfile is None:
-    TestPollableWritePipe.skip = "_pollingfile is only avalable under Windows."
+    TestPollableWritePipe.skip = "Test will run only on Windows."

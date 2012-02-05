@@ -124,7 +124,7 @@ class ErrorFormatingTestCase(TestCase):
                 errorTab[self.probeErrorCode])
 
     if platform.getType() != "win32":
-        test_fromEnvironment.skip = "This error lookup only works on Windows"
+        test_fromEnvironment.skip = "Test will run only on Windows."
 
 
     def test_correctLookups(self):
@@ -148,4 +148,4 @@ class ErrorFormatingTestCase(TestCase):
         self.assertIn(formatError(ECONNABORTED), acceptable)
 
     if platform.getType() != "win32":
-        test_correctLookups.skip = "This error lookup only works on Windows"
+        test_correctLookups.skip = "Test will run only on Windows."
