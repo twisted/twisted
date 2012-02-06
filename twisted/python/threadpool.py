@@ -2,11 +2,10 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
 """
-twisted.threadpool: a pool of threads to which we dispatch tasks.
+twisted.python.threadpool: a pool of threads to which we dispatch tasks.
 
-In most cases you can just use reactor.callInThread and friends
+In most cases you can just use C{reactor.callInThread} and friends
 instead of creating a thread pool directly.
 """
 
@@ -14,14 +13,12 @@ instead of creating a thread pool directly.
 import Queue
 import threading
 import copy
-import sys
-import warnings
-
 
 # Twisted Imports
 from twisted.python import log, context, failure
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.versions import Version
+
 
 WorkerStop = object()
 
@@ -100,18 +97,6 @@ class ThreadPool:
             self.startAWorker()
 
 
-    def dispatch(self, owner, func, *args, **kw):
-        """
-        DEPRECATED: use L{callInThread} instead.
-
-        Dispatch a function to be a run in a thread.
-        """
-        warnings.warn("dispatch() is deprecated since Twisted 8.0, "
-                      "use callInThread() instead",
-                      DeprecationWarning, stacklevel=2)
-        self.callInThread(func, *args, **kw)
-
-
     def callInThread(self, func, *args, **kw):
         """
         Call a callable object in a separate thread.
@@ -164,32 +149,6 @@ class ThreadPool:
             self._startSomeWorkers()
 
 
-    def _runWithCallback(self, callback, errback, func, args, kwargs):
-        try:
-            result = apply(func, args, kwargs)
-        except:
-            errback(sys.exc_info()[1])
-        else:
-            callback(result)
-
-
-    def dispatchWithCallback(self, owner, callback, errback, func, *args, **kw):
-        """
-        DEPRECATED: use L{twisted.internet.threads.deferToThread} instead.
-
-        Dispatch a function, returning the result to a callback function.
-
-        The callback function will be called in the thread - make sure it is
-        thread-safe.
-        """
-        warnings.warn("dispatchWithCallback() is deprecated since Twisted 8.0, "
-                      "use twisted.internet.threads.deferToThread() instead.",
-                      DeprecationWarning, stacklevel=2)
-        self.callInThread(
-            self._runWithCallback, callback, errback, func, args, kw
-        )
-
-
     def _worker(self):
         """
         Method used as target of the created threads: retrieve task to run
@@ -231,6 +190,7 @@ class ThreadPool:
             self.waiters.remove(ct)
 
         self.threads.remove(ct)
+
 
     def stop(self):
         """
