@@ -14,8 +14,6 @@ from twisted.web import static, server, vhost, twcgi, script
 root = static.File("static")
 root.processors = {
             '.cgi': twcgi.CGIScript,
-            '.php3': twcgi.PHP3Script,
-            '.php': twcgi.PHPScript,
             '.epy': script.PythonScript,
             '.rpy': script.ResourceScript,
 }

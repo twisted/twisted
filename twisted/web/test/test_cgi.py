@@ -268,36 +268,3 @@ class CGIProcessProtocolTests(unittest.TestCase):
         protocol.processEnded(failure.Failure(error.ProcessTerminated()))
         self.assertEqual(request.responseCode, INTERNAL_SERVER_ERROR)
 
-
-
-class CGIDeprecationTests(unittest.TestCase):
-    """
-    Tests for deprecations in L{twisted.web.twcgi}.
-    """
-
-    def test_PHP3ScriptIsDeprecated(self):
-        """
-        L{twcgi.PHP3Script} is deprecated.
-        """
-        twcgi.PHP3Script
-
-        warnings = self.flushWarnings([self.test_PHP3ScriptIsDeprecated])
-        self.assertEqual(len(warnings), 1)
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
-        self.assertIn("PHP3Script is deprecated. "
-                      "Use twisted.web.twcgi.FilteredScript instead.",
-                      warnings[0]['message'])
-
-
-    def test_PHPScriptIsDeprecated(self):
-        """
-        L{twcgi.PHPScript} is deprecated.
-        """
-        twcgi.PHPScript
-
-        warnings = self.flushWarnings([self.test_PHPScriptIsDeprecated])
-        self.assertEqual(len(warnings), 1)
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
-        self.assertIn("PHPScript is deprecated. "
-                      "Use twisted.web.twcgi.FilteredScript instead.",
-                      warnings[0]['message'])

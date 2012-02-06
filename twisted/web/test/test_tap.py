@@ -20,7 +20,7 @@ from twisted.web.static import Data, File
 from twisted.web.distrib import ResourcePublisher, UserDirectory
 from twisted.web.wsgi import WSGIResource
 from twisted.web.tap import Options, makePersonalServerFactory, makeService
-from twisted.web.twcgi import CGIScript, PHP3Script, PHPScript
+from twisted.web.twcgi import CGIScript
 from twisted.web.script import PythonScript
 
 
@@ -68,26 +68,6 @@ class ServiceTests(TestCase):
         path, root = self._pathOption()
         path.child("foo.cgi").setContent("")
         self.assertIsInstance(root.getChild("foo.cgi", None), CGIScript)
-
-
-    def test_php3Processor(self):
-        """
-        The I{--path} option creates a root resource which serves a
-        L{PHP3Script} instance for any child with the C{".php3"} extension.
-        """
-        path, root = self._pathOption()
-        path.child("foo.php3").setContent("")
-        self.assertIsInstance(root.getChild("foo.php3", None), PHP3Script)
-
-
-    def test_phpProcessor(self):
-        """
-        The I{--path} option creates a root resource which serves a
-        L{PHPScript} instance for any child with the C{".php"} extension.
-        """
-        path, root = self._pathOption()
-        path.child("foo.php").setContent("")
-        self.assertIsInstance(root.getChild("foo.php", None), PHPScript)
 
 
     def test_epyProcessor(self):

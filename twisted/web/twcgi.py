@@ -17,8 +17,6 @@ from twisted.web import http
 from twisted.internet import reactor, protocol
 from twisted.spread import pb
 from twisted.python import log, filepath
-from twisted.python.deprecate import deprecatedModuleAttribute
-from twisted.python.versions import Version
 from twisted.web import resource, server, static
 
 
@@ -41,6 +39,8 @@ class CGIDirectory(resource.Resource, filepath.FilePath):
         notFound = resource.NoResource(
             "CGI directories do not support directory listing.")
         return notFound.render(request)
+
+
 
 class CGIScript(resource.Resource):
     """
@@ -188,41 +188,6 @@ class FilteredScript(CGIScript):
         reactor.spawnProcess(p, self.filter,
                              [self.filter, self.filename] + qargs, env,
                              os.path.dirname(self.filename))
-
-
-
-class PHP3Script(FilteredScript):
-    """
-    L{PHP3Script} is deprecated. See L{FilteredScript} for how to create a
-    platform-specific configuration for the location of a PHP CGI interpreter.
-
-    I am a L{FilteredScript} that uses the default PHP3 command on most systems.
-    """
-    deprecatedModuleAttribute(
-        Version("Twisted", 10, 1, 0),
-        "PHP3Script is deprecated. Use twisted.web.twcgi.FilteredScript "
-        "instead.",
-        __name__, "PHP3Script")
-
-    filter = '/usr/bin/php3'
-
-
-
-class PHPScript(FilteredScript):
-    """
-    L{PHPScript} is deprecated. See L{FilteredScript} for how to create a
-    platform-specific configuration for the location of a PHP CGI interpreter.
-
-    I am a L{FilteredScript} that uses the PHP command on most systems.
-    Sometimes, PHP wants the path to itself as C{argv[0]}. This is that time.
-    """
-    deprecatedModuleAttribute(
-        Version("Twisted", 10, 1, 0),
-        "PHPScript is deprecated. Use twisted.web.twcgi.FilteredScript "
-        "instead.",
-        __name__, "PHPScript")
-
-    filter = '/usr/bin/php4'
 
 
 

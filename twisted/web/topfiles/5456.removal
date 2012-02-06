@@ -1,0 +1,1 @@
+PHP3Script and PHPScript were removed from twisted.web.twcgi, deprecated since 10.1. Use twcgi.FilteredScript instead.
