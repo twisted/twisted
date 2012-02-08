@@ -2506,18 +2506,25 @@ class ScriptTests(BuilderTestsMixin, StructureAssertingMixin, TestCase):
     def test_buildTarballsScript(self):
         """
         L{BuildTarballsScript.main} invokes L{buildAllTarballs} with
-        L{FilePath} instances representing the paths passed to it.
+        2 or 3 L{FilePath} instances representing the paths passed to it.
         """
         builds = []
-        def myBuilder(checkout, destination):
-            builds.append((checkout, destination))
+        def myBuilder(checkout, destination, template=None):
+            builds.append((checkout, destination, template))
         tarballBuilder = BuildTarballsScript()
         tarballBuilder.buildAllTarballs = myBuilder
 
         tarballBuilder.main(["checkoutDir", "destinationDir"])
         self.assertEqual(
             builds,
-            [(FilePath("checkoutDir"), FilePath("destinationDir"))])
+            [(FilePath("checkoutDir"), FilePath("destinationDir"), None)])
+
+        builds = []
+        tarballBuilder.main(["checkoutDir", "destinationDir", "templatePath"])
+        self.assertEqual(
+            builds,
+            [(FilePath("checkoutDir"), FilePath("destinationDir"),
+              FilePath("templatePath"))])
 
 
     def test_defaultBuildTarballsScriptBuilder(self):
@@ -2536,6 +2543,7 @@ class ScriptTests(BuilderTestsMixin, StructureAssertingMixin, TestCase):
         """
         tarballBuilder = BuildTarballsScript()
         self.assertRaises(SystemExit, tarballBuilder.main, [])
+        self.assertRaises(SystemExit, tarballBuilder.main, ["a", "b", "c", "d"])
 
 
     def test_badNumberOfArgumentsToBuildNews(self):

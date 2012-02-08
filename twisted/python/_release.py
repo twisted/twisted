@@ -947,7 +947,8 @@ class DistributionBuilder(object):
     """
     from twisted.python.dist import twisted_subprojects as subprojects
 
-    def __init__(self, rootDirectory, outputDirectory, apiBaseURL=None):
+    def __init__(self, rootDirectory, outputDirectory, templatePath=None,
+                 apiBaseURL=None):
         """
         Create a distribution builder.
 
@@ -958,6 +959,10 @@ class DistributionBuilder(object):
         @param outputDirectory: The directory in which to create the tarballs.
         @type outputDirectory: L{FilePath}
 
+        @param templatePath: Path to the template file that is used for the
+            howto documentation.
+        @type templatePath: L{FilePath}
+
         @type apiBaseURL: C{str} or C{NoneType}
         @param apiBaseURL: A format string which will be interpolated with the
             fully-qualified Python name for each API link.  For example, to
@@ -966,6 +971,7 @@ class DistributionBuilder(object):
         """
         self.rootDirectory = rootDirectory
         self.outputDirectory = outputDirectory
+        self.templatePath = templatePath
         self.apiBaseURL = apiBaseURL
         self.manBuilder = ManBuilder()
         self.docBuilder = DocBuilder()
@@ -985,14 +991,15 @@ class DistributionBuilder(object):
         @param howtoPath: The "resource path" as L{DocBuilder} describes it.
         @type howtoPath: L{FilePath}
         """
-        templatePath = self.rootDirectory.child("doc").child("core"
-            ).child("howto").child("template.tpl")
+        if self.templatePath is None:
+            self.templatePath = self.rootDirectory.descendant(
+                ["doc", "core", "howto", "template.tpl"])
         if path.basename() == "man":
             self.manBuilder.build(path)
         if path.isdir():
             try:
                 self.docBuilder.build(version, howtoPath, path,
-                    templatePath, self.apiBaseURL, True)
+                    self.templatePath, self.apiBaseURL, True)
             except NoDocumentsFound:
                 pass
 
@@ -1187,13 +1194,15 @@ class UncleanWorkingDirectory(Exception):
     """
 
 
+
 class NotWorkingDirectory(Exception):
     """
     Raised when a directory does not appear to be an SVN working directory.
     """
 
 
-def buildAllTarballs(checkout, destination):
+
+def buildAllTarballs(checkout, destination, templatePath=None):
     """
     Build complete tarballs (including documentation) for Twisted and all
     subprojects.
@@ -1206,10 +1215,13 @@ def buildAllTarballs(checkout, destination):
         will be exported.
     @type destination: L{FilePath}
     @param destination: The directory in which tarballs will be placed.
+    @type templatePath: L{FilePath}
+    @param templatePath: Location of the template file that is used for the
+        howto documentation.
 
-    @raise UncleanWorkingDirectory: if there are modifications to the
+    @raise UncleanWorkingDirectory: If there are modifications to the
         working directory of C{checkout}.
-    @raise NotWorkingDirectory: if the checkout path is not an SVN checkout.
+    @raise NotWorkingDirectory: If the C{checkout} path is not an SVN checkout.
     """
     if not checkout.child(".svn").exists():
         raise NotWorkingDirectory(
@@ -1218,7 +1230,7 @@ def buildAllTarballs(checkout, destination):
     if runCommand(["svn", "st", checkout.path]).strip():
         raise UncleanWorkingDirectory(
             "There are local modifications to the SVN checkout in %s."
-             % (checkout.path,))
+            % (checkout.path,))
 
     workPath = FilePath(mkdtemp())
     export = workPath.child("export")
@@ -1231,7 +1243,8 @@ def buildAllTarballs(checkout, destination):
         versionString)
     if not destination.exists():
         destination.createDirectory()
-    db = DistributionBuilder(export, destination, apiBaseURL=apiBaseURL)
+    db = DistributionBuilder(export, destination, templatePath=templatePath,
+        apiBaseURL=apiBaseURL)
 
     db.buildCore(versionString)
     for subproject in twisted_subprojects:
@@ -1295,14 +1308,23 @@ class BuildTarballsScript(object):
         """
         Build all release tarballs.
 
-        @type args: list of str
+        @type args: list of C{str}
         @param args: The command line arguments to process.  This must contain
-            two strings: the checkout directory and the destination directory.
+            at least two strings: the checkout directory and the destination
+            directory. An optional third string can be specified for the website
+            template file, used for building the howto documentation. If this
+            string isn't specified, the default template included in twisted
+            will be used.
         """
-        if len(args) != 2:
-            sys.exit("Must specify two arguments: "
-                     "Twisted checkout and destination path")
-        self.buildAllTarballs(FilePath(args[0]), FilePath(args[1]))
+        if len(args) < 2 or len(args) > 3:
+            sys.exit("Must specify at least two arguments: "
+                     "Twisted checkout and destination path. The optional third "
+                     "argument is the website template path.")
+        if len(args) == 2:
+            self.buildAllTarballs(FilePath(args[0]), FilePath(args[1]))
+        elif len(args) == 3:
+            self.buildAllTarballs(FilePath(args[0]), FilePath(args[1]),
+                                  FilePath(args[2]))
 
 
 
