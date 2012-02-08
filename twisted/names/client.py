@@ -236,10 +236,21 @@ class Resolver(common.ResolverBase):
 
 
     def connectionMade(self, protocol):
+        """
+        Called by associated L{dns.DNSProtocol} instances when they connect.
+        """
         self.connections.append(protocol)
         for (d, q, t) in self.pending:
             self.queryTCP(q, t).chainDeferred(d)
         del self.pending[:]
+
+
+    def connectionLost(self, protocol):
+        """
+        Called by associated L{dns.DNSProtocol} instances when they disconnect.
+        """
+        if protocol in self.connections:
+            self.connections.remove(protocol)
 
 
     def messageReceived(self, message, protocol, address = None):

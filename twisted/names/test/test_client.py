@@ -415,6 +415,21 @@ class ResolverTests(unittest.TestCase):
         return self.assertFailure(queryResult, ExpectedException)
 
 
+    def test_tcpDisconnectRemovesFromConnections(self):
+        """
+        When a TCP DNS protocol associated with a Resolver disconnects, it is
+        removed from the Resolver's connection list.
+        """
+        resolver = client.Resolver(servers=[('example.com', 53)])
+        protocol = resolver.factory.buildProtocol(None)
+        protocol.makeConnection(None)
+        self.assertIn(protocol, resolver.connections)
+
+        # Disconnecting should remove the protocol from the connection list:
+        protocol.connectionLost(None)
+        self.assertNotIn(protocol, resolver.connections)
+
+
 
 class ClientTestCase(unittest.TestCase):
 
