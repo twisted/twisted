@@ -35,7 +35,7 @@ from twisted.python._release import VERSION_OFFSET, DocBuilder, ManBuilder
 from twisted.python._release import NoDocumentsFound, filePathDelta
 from twisted.python._release import CommandFailed, BookBuilder
 from twisted.python._release import DistributionBuilder, APIBuilder
-from twisted.python._release import BuildAPIDocsScript
+from twisted.python._release import BuildAPIDocsScript, BuildDocsScript
 from twisted.python._release import buildAllTarballs, runCommand
 from twisted.python._release import UncleanWorkingDirectory, NotWorkingDirectory
 from twisted.python._release import ChangeVersionsScript, BuildTarballsScript
@@ -909,6 +909,31 @@ class DocBuilderTestCase(TestCase, BuilderTestsMixin):
         linkrel = self.builder.getLinkrel(FilePath("/foo/howto"),
                                           FilePath("/foo/examples/quotes"))
         self.assertEqual(linkrel, "../../howto/")
+
+
+    def test_docsBuilderScriptMainRequiresThreeArguments(self):
+        """
+        SystemExit is raised when the incorrect number of command line
+        arguments are passed to the main documentation building script.
+        """
+        script = BuildDocsScript()
+        self.assertRaises(SystemExit, script.main, [])
+        self.assertRaises(SystemExit, script.main, ["foo"])
+        self.assertRaises(SystemExit, script.main, ["foo", "bar"])
+        self.assertRaises(SystemExit, script.main, ["foo", "bar", "baz", "boo"])
+
+
+    def test_docsBuilderScriptMain(self):
+        """
+        The main documentation building script invokes the same code that
+        L{test_buildWithPolicy} tests.
+        """
+        script = BuildDocsScript()
+        calls = []
+        script.buildDocs = lambda a, b, c: calls.append((a, b, c))
+        script.main(["hello", "hi", "there"])
+        self.assertEqual(calls, [(FilePath("hello"), FilePath("hi"),
+            FilePath("there"))])
 
 
 
