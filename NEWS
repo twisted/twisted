@@ -1,8 +1,8 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
-Twisted Core 12.0.0pre1 (2012-01-23)
-====================================
+Twisted Core 12.0.0 (2012-02-10)
+================================
 
 Features
 --------
@@ -60,8 +60,8 @@ Other
    #5427, #5430, #5431, #5440, #5441
 
 
-Twisted Conch 12.0.0pre1 (2012-01-23)
-=====================================
+Twisted Conch 12.0.0 (2012-02-10)
+=================================
 
 Features
 --------
@@ -78,20 +78,20 @@ Other
  - #5225
 
 
-Twisted Lore 12.0.0pre1 (2012-01-23)
-====================================
+Twisted Lore 12.0.0 (2012-02-10)
+================================
 
 No significant changes have been made for this release.
 
 
-Twisted Mail 12.0.0pre1 (2012-01-23)
-====================================
+Twisted Mail 12.0.0 (2012-02-10)
+================================
 
 No significant changes have been made for this release.
 
 
-Twisted Names 12.0.0pre1 (2012-01-23)
-=====================================
+Twisted Names 12.0.0 (2012-02-10)
+=================================
 
 Bugfixes
 --------
@@ -100,26 +100,26 @@ Bugfixes
    itself. (#5421)
 
 
-Twisted News 12.0.0pre1 (2012-01-23)
-====================================
+Twisted News 12.0.0 (2012-02-10)
+================================
 
 No significant changes have been made for this release.
 
 
-Twisted Pair 12.0.0pre1 (2012-01-23)
-====================================
+Twisted Pair 12.0.0 (2012-02-10)
+================================
 
 No significant changes have been made for this release.
 
 
-Twisted Runner 12.0.0pre1 (2012-01-23)
-======================================
+Twisted Runner 12.0.0 (2012-02-10)
+==================================
 
 No significant changes have been made for this release.
 
 
-Twisted Web 12.0.0pre1 (2012-01-23)
-===================================
+Twisted Web 12.0.0 (2012-02-10)
+===============================
 
 Features
 --------
@@ -141,8 +141,8 @@ Other
  - #5404, #5438
 
 
-Twisted Words 12.0.0pre1 (2012-01-23)
-=====================================
+Twisted Words 12.0.0 (2012-02-10)
+=================================
 
 Improved Documentation
 ----------------------
