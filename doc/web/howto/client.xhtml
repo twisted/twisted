@@ -310,6 +310,108 @@ if __name__ == "__main__":
       context objects.
     </p>
 
+    <h3>HTTP Persistent Connection</h3>
+
+    <p>
+      HTTP persistent connections use the same TCP connection to send and
+      receive multiple HTTP requests/responses. This reduces latency and TCP
+      connection establishment overhead.
+    </p>
+
+    <p>
+      The constructor of <code class="API">twisted.web.client.Agent</code>
+      takes an optional parameter pool, which should be an instance
+      of <code class="API"
+      base="twisted.web.client">HTTPConnectionPool</code>, which will be used
+      to manage the connections.  If the pool is created with the
+      parameter <code>persistent</code> set to <code>True</code> (the
+      default), it will not close connections when the request is done, and
+      instead hold them in its cache to be re-used.
+    </p>
+
+    <p>
+      Here's an example which sends requests over a persistent connection:
+    </p>
+
+    <pre class="python">
+from twisted.internet import reactor
+from twisted.internet.defer import Deferred, DeferredList
+from twisted.internet.protocol import Protocol
+from twisted.web.client import Agent, HTTPConnectionPool
+
+class IgnoreBody(Protocol):
+    def __init__(self, deferred):
+        self.deferred = deferred
+
+    def dataReceived(self, bytes):
+        pass
+
+    def connectionLost(self, reason):
+        self.deferred.callback(None)
+
+
+def cbRequest(response):
+    print 'Response code:', response.code
+    finished = Deferred()
+    response.deliverBody(IgnoreBody(finished))
+    return finished
+
+pool = HTTPConnectionPool(reactor)
+agent = Agent(reactor, pool=pool)
+
+def requestGet(url):
+    d = agent.request('GET', url)
+    d.addCallback(cbRequest)
+    return d
+
+# Two requests to the same host:
+d = requestGet('http://localhost:8080/foo').addCallback(
+    lambda ign: requestGet("http://localhost:8080/bar"))
+def cbShutdown(ignored):
+    reactor.stop()
+d.addCallback(cbShutdown)
+
+reactor.run()
+    </pre>
+
+    <p>
+      Here, the two requests are to the same host, one after the each
+      other. In most cases, the same connection will be used for the second
+      request, instead of two different connections when using a
+      non-persistent pool.
+    </p>
+
+    <h3>Multiple Connections to the Same Server</h3>
+
+    <p>
+      <code class="API">twisted.web.client.HTTPConnectionPool</code> instances
+      have an attribute
+      called <code class="python">maxPersistentPerHost</code> which limits the
+      number of cached persistent connections to the same server. The default
+      value is 2.  This is effective only when the <code class="API"
+      base="twisted.web.client.HTTPConnectionPool">persistent</code> option is
+      True. You can change the value like bellow:
+    </p>
+
+    <pre class="python">
+from twisted.web.client import HTTPConnectionPool
+
+pool = HTTPConnectionPool(reactor, persistent=True)
+pool.maxPersistentPerHost = 1
+    </pre>
+
+    <p>
+      With the default value of 2, the pool keeps around two connections to
+      the same host at most. Eventually the cached persistent connections will
+      be closed, by default after 240 seconds; you can change this timeout
+      value with the <code class="python">cachedConnectionTimeout</code>
+      attribute of the pool. To force all connections to close use
+      the <code class="API"
+      base="twisted.web.client.HTTPConnectionPool">closeCachedConnections</code>
+      method.
+    </p>
+
+
     <h3>Following redirects</h3>
 
     <p>
@@ -455,6 +557,10 @@ if __name__ == "__main__":
       </li>
       <li>
         How to control the streaming of the response body.
+      </li>
+      <li>
+        How to enable the HTTP persistent connection, and control the
+        number of connections.
       </li>
     </ul>
   </body>

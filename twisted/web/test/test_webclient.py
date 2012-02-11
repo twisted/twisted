@@ -11,7 +11,7 @@ from errno import ENOSPC
 import zlib
 from StringIO import StringIO
 
-from urlparse import urlparse
+from urlparse import urlparse, urljoin
 
 from zope.interface.verify import verifyObject
 
@@ -27,11 +27,13 @@ from twisted.test.proto_helpers import StringTransport
 from twisted.test.proto_helpers import MemoryReactor
 from twisted.internet.address import IPv4Address
 from twisted.internet.task import Clock
-from twisted.internet.error import ConnectionRefusedError
-from twisted.internet.protocol import Protocol
+from twisted.internet.error import ConnectionRefusedError, ConnectionDone
+from twisted.internet.protocol import Protocol, Factory
 from twisted.internet.defer import Deferred, succeed
-from twisted.internet.endpoints import TCP4ClientEndpoint
-from twisted.web.client import FileBodyProducer, Request
+from twisted.internet.endpoints import TCP4ClientEndpoint, SSL4ClientEndpoint
+from twisted.web.client import FileBodyProducer, Request, HTTPConnectionPool
+from twisted.web.client import _WebToNormalContextFactory, _parse
+from twisted.web.client import WebClientContextFactory, _HTTP11ClientFactory
 from twisted.web.iweb import UNKNOWN_LENGTH, IBodyProducer, IResponse
 from twisted.web._newclient import HTTP11ClientProtocol, Response
 from twisted.web.error import SchemeNotSupported
@@ -148,6 +150,18 @@ class PayloadResource(resource.Resource):
             return "ERROR"
         return data
 
+
+class DelayResource(resource.Resource):
+
+    def __init__(self, seconds):
+        self.seconds = seconds
+
+    def render(self, request):
+        def response():
+            request.write('some bytes')
+            request.finish()
+        reactor.callLater(self.seconds, response)
+        return server.NOT_DONE_YET
 
 
 class BrokenDownloadResource(resource.Resource):
@@ -280,12 +294,31 @@ class HTTPPageGetterTests(unittest.TestCase):
             "some data")
 
 
+class GetBodyProtocol(Protocol):
+
+    def __init__(self, deferred):
+        self.deferred = deferred
+        self.buf = ''
+
+    def dataReceived(self, bytes):
+        self.buf += bytes
+
+    def connectionLost(self, reason):
+        self.deferred.callback(self.buf)
+
+
+def getBody(response):
+    d = defer.Deferred()
+    response.deliverBody(GetBodyProtocol(d))
+    return d
+
 
 class WebClientTestCase(unittest.TestCase):
     def _listen(self, site):
         return reactor.listenTCP(0, site, interface="127.0.0.1")
 
     def setUp(self):
+        self.agent = None # for twisted.web.client.Agent test
         self.cleanupServerConnections = 0
         name = self.mktemp()
         os.mkdir(name)
@@ -302,6 +335,8 @@ class WebClientTestCase(unittest.TestCase):
         r.putChild("payload", PayloadResource())
         r.putChild("broken", BrokenDownloadResource())
         r.putChild("cookiemirror", CookieMirrorResource())
+        r.putChild('delay1', DelayResource(1))
+        r.putChild('delay2', DelayResource(2))
 
         self.afterFoundGetCounter = CountingResource()
         r.putChild("afterFoundGetCounter", self.afterFoundGetCounter)
@@ -319,6 +354,11 @@ class WebClientTestCase(unittest.TestCase):
         self.portno = self.port.getHost().port
 
     def tearDown(self):
+        if self.agent:
+            # clean up connections for twisted.web.client.Agent test.
+            self.agent.closeCachedConnections()
+            self.agent = None
+
         # If the test indicated it might leave some server-side connections
         # around, clean them up.
         connections = self.wrapper.protocols.keys()
@@ -334,7 +374,8 @@ class WebClientTestCase(unittest.TestCase):
         return self.port.stopListening()
 
     def getURL(self, path):
-        return "http://127.0.0.1:%d/%s" % (self.portno, path)
+        host = "http://127.0.0.1:%d/" % self.portno
+        return urljoin(host, path)
 
     def testPayload(self):
         s = "0123456789" * 10
@@ -429,7 +470,6 @@ class WebClientTestCase(unittest.TestCase):
         d = client.getPage(self.getURL("file"), method="HEAD")
         d.addCallback(self.assertEqual, "")
         return d
-
 
 
     def test_getPageNotQuiteHEAD(self):
@@ -799,6 +839,8 @@ class WebClientSSLTestCase(WebClientTestCase):
         # The base class defines _cbFactoryInfo correctly for this
         return factory.deferred.addCallback(self._cbFactoryInfo, factory)
 
+
+
 class WebClientRedirectBetweenSSLandPlainText(unittest.TestCase):
     def getHTTPS(self, path):
         return "https://127.0.0.1:%d/%s" % (self.tlsPortno, path)
@@ -1022,6 +1064,7 @@ class StubHTTPProtocol(Protocol):
     """
     def __init__(self):
         self.requests = []
+        self.state = 'QUIESCENT'
 
 
     def request(self, request):
@@ -1285,8 +1328,8 @@ class FileBodyProducerTests(unittest.TestCase):
 
 class FakeReactorAndConnectMixin:
     """
-    A test mixin providing a testable C{Reactor} class and a dummy
-    C{Agent._connect} method.
+    A test mixin providing a testable C{Reactor} class and a dummy C{connect}
+    method which allows instances to pretend to be endpoints.
     """
 
     class Reactor(MemoryReactor, Clock):
@@ -1295,9 +1338,40 @@ class FakeReactorAndConnectMixin:
             Clock.__init__(self)
 
 
-    def _dummyConnect(self, scheme, host, port):
+    class StubEndpoint(object):
         """
-        Fake implementation of L{Agent._connect} which synchronously
+        Endpoint that wraps existing endpoint, substitutes StubHTTPProtocol, and
+        resulting protocol instances are attached to the given test case.
+        """
+
+        def __init__(self, endpoint, testCase):
+            self.endpoint = endpoint
+            self.testCase = testCase
+            self.factory = _HTTP11ClientFactory(lambda p: None)
+            self.protocol = StubHTTPProtocol()
+            self.factory.buildProtocol = lambda addr: self.protocol
+
+        def connect(self, ignoredFactory):
+            self.testCase.protocol = self.protocol
+            self.endpoint.connect(self.factory)
+            return succeed(self.protocol)
+
+
+    def buildAgentForWrapperTest(self, reactor):
+        """
+        Return an Agent suitable for use in tests that wrap the Agent and want
+        both a fake reactor and StubHTTPProtocol.
+        """
+        agent = client.Agent(reactor)
+        _oldGetEndpoint = agent._getEndpoint
+        agent._getEndpoint = lambda *args: (
+            self.StubEndpoint(_oldGetEndpoint(*args), self))
+        return agent
+
+
+    def connect(self, factory):
+        """
+        Fake implementation of an endpoint which synchronously
         succeeds with an instance of L{StubHTTPProtocol} for ease of
         testing.
         """
@@ -1305,6 +1379,303 @@ class FakeReactorAndConnectMixin:
         protocol.makeConnection(None)
         self.protocol = protocol
         return succeed(protocol)
+
+
+
+class DummyEndpoint(object):
+    """
+    An endpoint that uses a fake transport.
+    """
+
+    def connect(self, factory):
+        protocol = factory.buildProtocol(None)
+        protocol.makeConnection(StringTransport())
+        return succeed(protocol)
+
+
+
+class BadEndpoint(object):
+    """
+    An endpoint that shouldn't be called.
+    """
+
+    def connect(self, factory):
+        raise RuntimeError("This endpoint should not have been used.")
+
+
+class DummyFactory(Factory):
+    """
+    Create C{StubHTTPProtocol} instances.
+    """
+    def __init__(self, quiescentCallback):
+        pass
+
+    protocol = StubHTTPProtocol
+
+
+
+class HTTPConnectionPoolTests(unittest.TestCase, FakeReactorAndConnectMixin):
+    """
+    Tests for the L{HTTPConnectionPool} class.
+    """
+
+    def setUp(self):
+        self.fakeReactor = self.Reactor()
+        self.pool = HTTPConnectionPool(self.fakeReactor)
+        self.pool._factory = DummyFactory
+
+
+    def test_getReturnsNewIfCacheEmpty(self):
+        """
+        If there are no cached connections,
+        L{HTTPConnectionPool.getConnection} returns a new connection.
+        """
+        self.assertEqual(self.pool._connections, {})
+
+        def gotConnection(conn):
+            self.assertIsInstance(conn, StubHTTPProtocol)
+            # The new connection is not stored in the pool:
+            self.assertNotIn(conn, self.pool._connections.values())
+
+        unknownKey = 12245
+        d = self.pool.getConnection(unknownKey, DummyEndpoint())
+        return d.addCallback(gotConnection)
+
+
+    def test_putStartsTimeout(self):
+        """
+        If a connection is put back to the pool, a 240-sec timeout is started.
+
+        When the timeout hits, the connection is closed and removed from the
+        pool.
+        """
+        # We start out with one cached connection:
+        protocol = StubHTTPProtocol()
+        protocol.makeConnection(StringTransport())
+        self.pool._putConnection(("http", "example.com", 80), protocol)
+
+        # Connection is in pool, still not closed:
+        self.assertEqual(protocol.transport.disconnecting, False)
+        self.assertIn(protocol,
+                      self.pool._connections[("http", "example.com", 80)])
+
+        # Advance 239 seconds, still not closed:
+        self.fakeReactor.advance(239)
+        self.assertEqual(protocol.transport.disconnecting, False)
+        self.assertIn(protocol,
+                      self.pool._connections[("http", "example.com", 80)])
+        self.assertIn(protocol, self.pool._timeouts)
+
+        # Advance past 240 seconds, connection will be closed:
+        self.fakeReactor.advance(1.1)
+        self.assertEqual(protocol.transport.disconnecting, True)
+        self.assertNotIn(protocol,
+                         self.pool._connections[("http", "example.com", 80)])
+        self.assertNotIn(protocol, self.pool._timeouts)
+
+
+    def test_putExceedsMaxPersistent(self):
+        """
+        If an idle connection is put back in the cache and the max number of
+        persistent connections has been exceeded, one of the connections is
+        closed and removed from the cache.
+        """
+        pool = self.pool
+
+        # We start out with two cached connection, the max:
+        origCached = [StubHTTPProtocol(), StubHTTPProtocol()]
+        for p in origCached:
+            p.makeConnection(StringTransport())
+            pool._putConnection(("http", "example.com", 80), p)
+        self.assertEqual(pool._connections[("http", "example.com", 80)],
+                         origCached)
+        timeouts = pool._timeouts.copy()
+
+        # Now we add another one:
+        newProtocol = StubHTTPProtocol()
+        newProtocol.makeConnection(StringTransport())
+        pool._putConnection(("http", "example.com", 80), newProtocol)
+
+        # The oldest cached connections will be removed and disconnected:
+        newCached = pool._connections[("http", "example.com", 80)]
+        self.assertEqual(len(newCached), 2)
+        self.assertEqual(newCached, [origCached[1], newProtocol])
+        self.assertEqual([p.transport.disconnecting for p in newCached],
+                         [False, False])
+        self.assertEqual(origCached[0].transport.disconnecting, True)
+        self.assertTrue(timeouts[origCached[0]].cancelled)
+        self.assertNotIn(origCached[0], pool._timeouts)
+
+
+    def test_maxPersistentPerHost(self):
+        """
+        C{maxPersistentPerHost} is enforced per C{(scheme, host, port)}:
+        different keys have different max connections.
+        """
+        def addProtocol(scheme, host, port):
+            p = StubHTTPProtocol()
+            p.makeConnection(StringTransport())
+            self.pool._putConnection((scheme, host, port), p)
+            return p
+        persistent = []
+        persistent.append(addProtocol("http", "example.com", 80))
+        persistent.append(addProtocol("http", "example.com", 80))
+        addProtocol("https", "example.com", 443)
+        addProtocol("http", "www2.example.com", 80)
+
+        self.assertEqual(
+            self.pool._connections[("http", "example.com", 80)], persistent)
+        self.assertEqual(
+            len(self.pool._connections[("https", "example.com", 443)]), 1)
+        self.assertEqual(
+            len(self.pool._connections[("http", "www2.example.com", 80)]), 1)
+
+
+    def test_getCachedConnection(self):
+        """
+        Getting an address which has a cached connection returns the cached
+        connection, removes it from the cache and cancels its timeout.
+        """
+        # We start out with one cached connection:
+        protocol = StubHTTPProtocol()
+        protocol.makeConnection(StringTransport())
+        self.pool._putConnection(("http", "example.com", 80), protocol)
+
+        def gotConnection(conn):
+            # We got the cached connection:
+            self.assertIdentical(protocol, conn)
+            self.assertNotIn(
+                conn, self.pool._connections[("http", "example.com", 80)])
+            # And the timeout was cancelled:
+            self.fakeReactor.advance(241)
+            self.assertEqual(conn.transport.disconnecting, False)
+            self.assertNotIn(conn, self.pool._timeouts)
+
+        return self.pool.getConnection(("http", "example.com", 80),
+                                       BadEndpoint(),
+                                       ).addCallback(gotConnection)
+
+
+    def test_getSkipsDisconnected(self):
+        """
+        When getting connections out of the cache, disconnected connections
+        are removed and not returned.
+        """
+        pool = self.pool
+        key = ("http", "example.com", 80)
+
+        # We start out with two cached connection, the max:
+        origCached = [StubHTTPProtocol(), StubHTTPProtocol()]
+        for p in origCached:
+            p.makeConnection(StringTransport())
+            pool._putConnection(key, p)
+        self.assertEqual(pool._connections[key], origCached)
+
+        # We close the first one:
+        origCached[0].state = "DISCONNECTED"
+
+        # Now, when we retrive connections we should get the *second* one:
+        result = []
+        self.pool.getConnection(key,
+                                BadEndpoint()).addCallback(result.append)
+        self.assertIdentical(result[0], origCached[1])
+
+        # And both the disconnected and removed connections should be out of
+        # the cache:
+        self.assertEqual(pool._connections[key], [])
+        self.assertEqual(pool._timeouts, {})
+
+
+    def test_putNotQuiescent(self):
+        """
+        If a non-quiescent connection is put back in the cache, an error is
+        logged.
+        """
+        protocol = StubHTTPProtocol()
+        # By default state is QUIESCENT
+        self.assertEqual(protocol.state, "QUIESCENT")
+
+        protocol.state = "NOTQUIESCENT"
+        self.pool._putConnection(("http", "example.com", 80), protocol)
+        error, = self.flushLoggedErrors(RuntimeError)
+        self.assertEqual(
+            error.value.args[0],
+            "BUG: Non-quiescent protocol added to connection pool.")
+        self.assertIdentical(None, self.pool._connections.get(
+                ("http", "example.com", 80)))
+
+
+    def test_getUsesQuiescentCallback(self):
+        """
+        When L{HTTPConnectionPool.getConnection} connects, it returns a
+        C{Deferred} that fires with an instance of L{HTTP11ClientProtocol}
+        that has the correct quiescent callback attached. When this callback
+        is called the protocol is returned to the cache correctly, using the
+        right key.
+        """
+        class StringEndpoint(object):
+            def connect(self, factory):
+                p = factory.buildProtocol(None)
+                p.makeConnection(StringTransport())
+                return succeed(p)
+
+        pool = HTTPConnectionPool(self.fakeReactor, True)
+        result = []
+        key = "a key"
+        pool.getConnection(
+            key, StringEndpoint()).addCallback(
+            result.append)
+        protocol = result[0]
+        self.assertIsInstance(protocol, HTTP11ClientProtocol)
+
+        # Now that we have protocol instance, lets try to put it back in the
+        # pool:
+        protocol._state = "QUIESCENT"
+        protocol._quiescentCallback(protocol)
+
+        # If we try to retrive a connection to same destination again, we
+        # should get the same protocol, because it should've been added back
+        # to the pool:
+        result2 = []
+        pool.getConnection(
+            key, StringEndpoint()).addCallback(
+            result2.append)
+        self.assertIdentical(result2[0], protocol)
+
+
+    def test_closeCachedConnections(self):
+        """
+        L{HTTPConnectionPool.closeCachedConnections} closes all cached
+        connections and removes them from the cache. It returns a Deferred
+        that fires when they have all lost their connections.
+        """
+        persistent = []
+        def addProtocol(scheme, host, port):
+            p = HTTP11ClientProtocol()
+            p.makeConnection(StringTransport())
+            self.pool._putConnection((scheme, host, port), p)
+            persistent.append(p)
+        addProtocol("http", "example.com", 80)
+        addProtocol("http", "www2.example.com", 80)
+        doneDeferred = self.pool.closeCachedConnections()
+
+        # Connections have begun disconnecting:
+        for p in persistent:
+            self.assertEqual(p.transport.disconnecting, True)
+        self.assertEqual(self.pool._connections, {})
+        # All timeouts were cancelled and removed:
+        for dc in self.fakeReactor.getDelayedCalls():
+            self.assertEqual(dc.cancelled, True)
+        self.assertEqual(self.pool._timeouts, {})
+
+        # Returned Deferred fires when all connections have been closed:
+        result = []
+        doneDeferred.addCallback(result.append)
+        self.assertEqual(result, [])
+        persistent[0].connectionLost(Failure(ConnectionDone()))
+        self.assertEqual(result, [])
+        persistent[1].connectionLost(Failure(ConnectionDone()))
+        self.assertEqual(result, [None])
 
 
 
@@ -1331,6 +1702,87 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         self.reactor.advance(0)
 
 
+    def test_defaultPool(self):
+        """
+        If no pool is passed in, the L{Agent} creates a non-persistent pool.
+        """
+        agent = client.Agent(self.reactor)
+        self.assertIsInstance(agent._pool, HTTPConnectionPool)
+        self.assertEqual(agent._pool.persistent, False)
+        self.assertIdentical(agent._reactor, agent._pool._reactor)
+
+
+    def test_persistent(self):
+        """
+        If C{persistent} is set to C{True} on the L{HTTPConnectionPool} (the
+        default), C{Request}s are created with their C{persistent} flag set to
+        C{True}.
+        """
+        pool = HTTPConnectionPool(self.reactor)
+        endpoint = self.StubEndpoint(
+            TCP4ClientEndpoint(self.reactor, "127.0.0.1", 80), self)
+        agent = client.Agent(self.reactor, pool=pool)
+        agent._getEndpoint = lambda *args: self
+        agent.request("GET", "http://127.0.0.1")
+        self.assertEqual(self.protocol.requests[0][0].persistent, True)
+
+
+    def test_nonPersistent(self):
+        """
+        If C{persistent} is set to C{False} when creating the
+        L{HTTPConnectionPool}, C{Request}s are created with their
+        C{persistent} flag set to C{False}.
+
+        Elsewhere in the tests for the underlying HTTP code we ensure that
+        this will result in the disconnection of the HTTP protocol once the
+        request is done, so that the connection will not be returned to the
+        pool.
+        """
+        pool = HTTPConnectionPool(self.reactor, persistent=False)
+        endpoint = self.StubEndpoint(
+            TCP4ClientEndpoint(self.reactor, "127.0.0.1", 80), self)
+        agent = client.Agent(self.reactor, pool=pool)
+        agent._getEndpoint = lambda *args: self
+        agent.request("GET", "http://127.0.0.1")
+        self.assertEqual(self.protocol.requests[0][0].persistent, False)
+
+
+    def test_connectUsesConnectionPool(self):
+        """
+        When a connection is made by the Agent, it uses its pool's
+        C{getConnection} method to do so, with the endpoint returned by
+        C{self._getEndpoint}. The key used is C{(scheme, host, port)}.
+        """
+        endpoint = DummyEndpoint()
+        class MyAgent(client.Agent):
+            def _getEndpoint(this, scheme, host, port):
+                self.assertEqual((scheme, host, port),
+                                 ("http", "foo", 80))
+                return endpoint
+
+        class DummyPool(object):
+            connected = False
+            persistent = False
+            def getConnection(this, key, ep):
+                this.connected = True
+                self.assertEqual(ep, endpoint)
+                # This is the key the default Agent uses, others will have
+                # different keys:
+                self.assertEqual(key, ("http", "foo", 80))
+                return defer.succeed(StubHTTPProtocol())
+
+        pool = DummyPool()
+        agent = MyAgent(self.reactor, pool=pool)
+        self.assertIdentical(pool, agent._pool)
+
+        headers = http_headers.Headers()
+        headers.addRawHeader("host", "foo")
+        bodyProducer = object()
+        result = agent.request('GET', 'http://foo/',
+                               bodyProducer=bodyProducer, headers=headers)
+        self.assertEqual(agent._pool.connected, True)
+
+
     def test_unsupportedScheme(self):
         """
         L{Agent.request} returns a L{Deferred} which fails with
@@ -1348,62 +1800,42 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         the TCP connection attempt fails.
         """
         result = self.agent.request('GET', 'http://foo/')
-
         # Cause the connection to be refused
         host, port, factory = self.reactor.tcpClients.pop()[:3]
         factory.clientConnectionFailed(None, Failure(ConnectionRefusedError()))
         self.completeConnection()
-
         return self.assertFailure(result, ConnectionRefusedError)
 
 
     def test_connectHTTP(self):
         """
-        L{Agent._connect} uses C{connectTCP} to set up a connection to
-        a server when passed a scheme of C{'http'} and returns a
-        L{Deferred} which fires (when that connection is established)
-        with the protocol associated with that connection.
+        L{Agent._getEndpoint} return a C{TCP4ClientEndpoint} when passed a
+        scheme of C{'http'}.
         """
         expectedHost = 'example.com'
         expectedPort = 1234
-        d = self.agent._connect('http', expectedHost, expectedPort)
-        host, port, factory = self.reactor.tcpClients.pop()[:3]
-        self.assertEqual(host, expectedHost)
-        self.assertEqual(port, expectedPort)
-        protocol = factory.buildProtocol(IPv4Address('TCP', '10.0.0.1', port))
-        self.assertIsInstance(protocol, HTTP11ClientProtocol)
-        self.completeConnection()
-        d.addCallback(self.assertIdentical, protocol)
-        return d
+        endpoint = self.agent._getEndpoint('http', expectedHost, expectedPort)
+        self.assertEqual(endpoint._host, expectedHost)
+        self.assertEqual(endpoint._port, expectedPort)
+        self.assertIsInstance(endpoint, TCP4ClientEndpoint)
 
 
     def test_connectHTTPS(self):
         """
-        L{Agent._connect} uses C{connectSSL} to set up a connection to
-        a server when passed a scheme of C{'https'} and returns a
-        L{Deferred} which fires (when that connection is established)
-        with the protocol associated with that connection.
+        L{Agent._getEndpoint} return a C{SSL4ClientEndpoint} when passed a
+        scheme of C{'https'}.
         """
         expectedHost = 'example.com'
         expectedPort = 4321
-        d = self.agent._connect('https', expectedHost, expectedPort)
-        host, port, factory, contextFactory = self.reactor.sslClients.pop()[:4]
-        self.assertEqual(host, expectedHost)
-        self.assertEqual(port, expectedPort)
-        context = contextFactory.getContext()
-
-        # This is a pretty weak assertion.  It's true that the context must be
-        # an instance of OpenSSL.SSL.Context, Unfortunately these are pretty
-        # opaque and there's not much more than checking its type that we could
-        # do here.  It would be nice if the SSL APIs involved more testable (ie,
-        # inspectable) objects.
-        self.assertIsInstance(context, ContextType)
-
-        protocol = factory.buildProtocol(IPv4Address('TCP', '10.0.0.1', port))
-        self.assertIsInstance(protocol, HTTP11ClientProtocol)
-        self.completeConnection()
-        d.addCallback(self.assertIdentical, protocol)
-        return d
+        endpoint = self.agent._getEndpoint('https', expectedHost, expectedPort)
+        self.assertIsInstance(endpoint, SSL4ClientEndpoint)
+        self.assertEqual(endpoint._host, expectedHost)
+        self.assertEqual(endpoint._port, expectedPort)
+        self.assertIsInstance(endpoint._sslContextFactory,
+                              _WebToNormalContextFactory)
+        # Default context factory was used:
+        self.assertIsInstance(endpoint._sslContextFactory._webContext,
+                              WebClientContextFactory)
     if ssl is None:
         test_connectHTTPS.skip = "OpenSSL not present"
 
@@ -1427,16 +1859,102 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
                 return expectedContext
 
         agent = client.Agent(self.reactor, StubWebContextFactory())
-        d = agent._connect('https', expectedHost, expectedPort)
-        host, port, factory, contextFactory = self.reactor.sslClients.pop()[:4]
+        endpoint = agent._getEndpoint('https', expectedHost, expectedPort)
+        contextFactory = endpoint._sslContextFactory
         context = contextFactory.getContext()
         self.assertEqual(context, expectedContext)
         self.assertEqual(contextArgs, [(expectedHost, expectedPort)])
-        protocol = factory.buildProtocol(IPv4Address('TCP', '10.0.0.1', port))
-        self.assertIsInstance(protocol, HTTP11ClientProtocol)
-        self.completeConnection()
-        d.addCallback(self.assertIdentical, protocol)
-        return d
+
+
+    def test_hostProvided(self):
+        """
+        If C{None} is passed to L{Agent.request} for the C{headers} parameter,
+        a L{Headers} instance is created for the request and a I{Host} header
+        added to it.
+        """
+        self.agent._getEndpoint = lambda *args: self
+        self.agent.request(
+            'GET', 'http://example.com/foo?bar')
+
+        req, res = self.protocol.requests.pop()
+        self.assertEqual(req.headers.getRawHeaders('host'), ['example.com'])
+
+
+    def test_hostOverride(self):
+        """
+        If the headers passed to L{Agent.request} includes a value for the
+        I{Host} header, that value takes precedence over the one which would
+        otherwise be automatically provided.
+        """
+        headers = http_headers.Headers({'foo': ['bar'], 'host': ['quux']})
+        self.agent._getEndpoint = lambda *args: self
+        self.agent.request(
+            'GET', 'http://example.com/foo?bar', headers)
+
+        req, res = self.protocol.requests.pop()
+        self.assertEqual(req.headers.getRawHeaders('host'), ['quux'])
+
+
+    def test_headersUnmodified(self):
+        """
+        If a I{Host} header must be added to the request, the L{Headers}
+        instance passed to L{Agent.request} is not modified.
+        """
+        headers = http_headers.Headers()
+        self.agent._getEndpoint = lambda *args: self
+        self.agent.request(
+            'GET', 'http://example.com/foo', headers)
+
+        protocol = self.protocol
+
+        # The request should have been issued.
+        self.assertEqual(len(protocol.requests), 1)
+        # And the headers object passed in should not have changed.
+        self.assertEqual(headers, http_headers.Headers())
+
+
+    def test_hostValueStandardHTTP(self):
+        """
+        When passed a scheme of C{'http'} and a port of C{80},
+        L{Agent._computeHostValue} returns a string giving just
+        the host name passed to it.
+        """
+        self.assertEqual(
+            self.agent._computeHostValue('http', 'example.com', 80),
+            'example.com')
+
+
+    def test_hostValueNonStandardHTTP(self):
+        """
+        When passed a scheme of C{'http'} and a port other than C{80},
+        L{Agent._computeHostValue} returns a string giving the
+        host passed to it joined together with the port number by C{":"}.
+        """
+        self.assertEqual(
+            self.agent._computeHostValue('http', 'example.com', 54321),
+            'example.com:54321')
+
+
+    def test_hostValueStandardHTTPS(self):
+        """
+        When passed a scheme of C{'https'} and a port of C{443},
+        L{Agent._computeHostValue} returns a string giving just
+        the host name passed to it.
+        """
+        self.assertEqual(
+            self.agent._computeHostValue('https', 'example.com', 443),
+            'example.com')
+
+
+    def test_hostValueNonStandardHTTPS(self):
+        """
+        When passed a scheme of C{'https'} and a port other than C{443},
+        L{Agent._computeHostValue} returns a string giving the
+        host passed to it joined together with the port number by C{":"}.
+        """
+        self.assertEqual(
+            self.agent._computeHostValue('https', 'example.com', 54321),
+            'example.com:54321')
 
 
     def test_request(self):
@@ -1447,7 +1965,7 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         passed to it.  It returns a L{Deferred} which fires with an
         L{IResponse} from the server.
         """
-        self.agent._connect = self._dummyConnect
+        self.agent._getEndpoint = lambda *args: self
 
         headers = http_headers.Headers({'foo': ['bar']})
         # Just going to check the body for identity, so it doesn't need to be
@@ -1471,116 +1989,10 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         self.assertIdentical(req.bodyProducer, body)
 
 
-    def test_hostProvided(self):
-        """
-        If C{None} is passed to L{Agent.request} for the C{headers}
-        parameter, a L{Headers} instance is created for the request and a
-        I{Host} header added to it.
-        """
-        self.agent._connect = self._dummyConnect
-
-        self.agent.request('GET', 'http://example.com/foo')
-
-        protocol = self.protocol
-
-        # The request should have been issued with a host header based on
-        # the request URL.
-        self.assertEqual(len(protocol.requests), 1)
-        req, res = protocol.requests.pop()
-        self.assertEqual(req.headers.getRawHeaders('host'), ['example.com'])
-
-
-    def test_hostOverride(self):
-        """
-        If the headers passed to L{Agent.request} includes a value for the
-        I{Host} header, that value takes precedence over the one which would
-        otherwise be automatically provided.
-        """
-        self.agent._connect = self._dummyConnect
-
-        headers = http_headers.Headers({'foo': ['bar'], 'host': ['quux']})
-        body = object()
-        self.agent.request(
-            'GET', 'http://example.com/baz', headers, body)
-
-        protocol = self.protocol
-
-        # The request should have been issued with the host header specified
-        # above, not one based on the request URI.
-        self.assertEqual(len(protocol.requests), 1)
-        req, res = protocol.requests.pop()
-        self.assertEqual(req.headers.getRawHeaders('host'), ['quux'])
-
-
-    def test_headersUnmodified(self):
-        """
-        If a I{Host} header must be added to the request, the L{Headers}
-        instance passed to L{Agent.request} is not modified.
-        """
-        self.agent._connect = self._dummyConnect
-
-        headers = http_headers.Headers()
-        body = object()
-        self.agent.request(
-            'GET', 'http://example.com/foo', headers, body)
-
-        protocol = self.protocol
-
-        # The request should have been issued.
-        self.assertEqual(len(protocol.requests), 1)
-        # And the headers object passed in should not have changed.
-        self.assertEqual(headers, http_headers.Headers())
-
-
-    def test_hostValueStandardHTTP(self):
-        """
-        When passed a scheme of C{'http'} and a port of C{80},
-        L{Agent._computeHostValue} returns a string giving just the
-        host name passed to it.
-        """
-        self.assertEqual(
-            self.agent._computeHostValue('http', 'example.com', 80),
-            'example.com')
-
-
-    def test_hostValueNonStandardHTTP(self):
-        """
-        When passed a scheme of C{'http'} and a port other than C{80},
-        L{Agent._computeHostValue} returns a string giving the host
-        passed to it joined together with the port number by C{":"}.
-        """
-        self.assertEqual(
-            self.agent._computeHostValue('http', 'example.com', 54321),
-            'example.com:54321')
-
-
-    def test_hostValueStandardHTTPS(self):
-        """
-        When passed a scheme of C{'https'} and a port of C{443},
-        L{Agent._computeHostValue} returns a string giving just the
-        host name passed to it.
-        """
-        self.assertEqual(
-            self.agent._computeHostValue('https', 'example.com', 443),
-            'example.com')
-
-
-    def test_hostValueNonStandardHTTPS(self):
-        """
-        When passed a scheme of C{'https'} and a port other than
-        C{443}, L{Agent._computeHostValue} returns a string giving the
-        host passed to it joined together with the port number by
-        C{":"}.
-        """
-        self.assertEqual(
-            self.agent._computeHostValue('https', 'example.com', 54321),
-            'example.com:54321')
-
-
     def test_connectTimeout(self):
         """
         L{Agent} takes a C{connectTimeout} argument which is forwarded to the
-        following C{connectTCP} call.
+        following C{connectTCP} agent.
         """
         agent = client.Agent(self.reactor, connectTimeout=5)
         agent.request('GET', 'http://foo/')
@@ -1724,8 +2136,7 @@ class CookieAgentTests(unittest.TestCase, CookieTestsMixin,
         cookieJar = cookielib.CookieJar()
         self.assertEqual(list(cookieJar), [])
 
-        agent = client.Agent(self.reactor)
-        agent._connect = self._dummyConnect
+        agent = self.buildAgentForWrapperTest(self.reactor)
         cookieAgent = client.CookieAgent(agent, cookieJar)
         d = cookieAgent.request(
             'GET', 'http://example.com:1234/foo?bar')
@@ -1765,8 +2176,7 @@ class CookieAgentTests(unittest.TestCase, CookieTestsMixin,
         self.addCookies(cookieJar, uri, [cookie])
         self.assertEqual(len(list(cookieJar)), 1)
 
-        agent = client.Agent(self.reactor)
-        agent._connect = self._dummyConnect
+        agent = self.buildAgentForWrapperTest(self.reactor)
         cookieAgent = client.CookieAgent(agent, cookieJar)
         cookieAgent.request('GET', uri)
 
@@ -1786,8 +2196,7 @@ class CookieAgentTests(unittest.TestCase, CookieTestsMixin,
         self.addCookies(cookieJar, uri, [cookie])
         self.assertEqual(len(list(cookieJar)), 1)
 
-        agent = client.Agent(self.reactor)
-        agent._connect = self._dummyConnect
+        agent = self.buildAgentForWrapperTest(self.reactor)
         cookieAgent = client.CookieAgent(agent, cookieJar)
         cookieAgent.request('GET', uri)
 
@@ -1807,8 +2216,7 @@ class CookieAgentTests(unittest.TestCase, CookieTestsMixin,
         self.addCookies(cookieJar, uri, [cookie])
         self.assertEqual(len(list(cookieJar)), 1)
 
-        agent = client.Agent(self.reactor)
-        agent._connect = self._dummyConnect
+        agent = self.buildAgentForWrapperTest(self.reactor)
         cookieAgent = client.CookieAgent(agent, cookieJar)
         cookieAgent.request('GET', uri)
 
@@ -1828,8 +2236,7 @@ class CookieAgentTests(unittest.TestCase, CookieTestsMixin,
         self.addCookies(cookieJar, uri, [cookie])
         self.assertEqual(len(list(cookieJar)), 1)
 
-        agent = client.Agent(self.reactor)
-        agent._connect = self._dummyConnect
+        agent = self.buildAgentForWrapperTest(self.reactor)
         cookieAgent = client.CookieAgent(agent, cookieJar)
         cookieAgent.request('GET', uri)
 
@@ -1875,8 +2282,7 @@ class ContentDecoderAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         Create an L{Agent} wrapped around a fake reactor.
         """
         self.reactor = self.Reactor()
-        self.agent = client.Agent(self.reactor)
-        self.agent._connect = self._dummyConnect
+        self.agent = self.buildAgentForWrapperTest(self.reactor)
 
 
     def test_acceptHeaders(self):
@@ -2022,8 +2428,7 @@ class ContentDecoderAgentWithGzipTests(unittest.TestCase,
         Create an L{Agent} wrapped around a fake reactor.
         """
         self.reactor = self.Reactor()
-        agent = client.Agent(self.reactor)
-        agent._connect = self._dummyConnect
+        agent = self.buildAgentForWrapperTest(self.reactor)
         self.agent = client.ContentDecoderAgent(
             agent, [("gzip", client.GzipDecoder)])
 
@@ -2213,15 +2618,9 @@ class ProxyAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
     def setUp(self):
         self.reactor = self.Reactor()
         self.agent = client.ProxyAgent(
-            TCP4ClientEndpoint(self.reactor, "bar", 5678))
-        self._oldConnect = self.agent._connect
-        self.agent._connect = self._dummyConnect
-
-
-    def _dummyConnect(self, scheme, host, port):
-        self._oldConnect(scheme, host, port)
-        return FakeReactorAndConnectMixin._dummyConnect(
-            self, scheme, host, port)
+            TCP4ClientEndpoint(self.reactor, "bar", 5678), self.reactor)
+        oldEndpoint = self.agent._proxyEndpoint
+        self.agent._proxyEndpoint = self.StubEndpoint(oldEndpoint, self)
 
 
     def test_proxyRequest(self):
@@ -2258,6 +2657,41 @@ class ProxyAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         self.assertIdentical(req.bodyProducer, body)
 
 
+    def test_nonPersistent(self):
+        """
+        C{ProxyAgent} connections are not persistent by default.
+        """
+        self.assertEqual(self.agent._pool.persistent, False)
+
+
+    def test_connectUsesConnectionPool(self):
+        """
+        When a connection is made by the C{ProxyAgent}, it uses its pool's
+        C{getConnection} method to do so, with the endpoint it was constructed
+        with and a key of C{("http-proxy", endpoint)}.
+        """
+        endpoint = DummyEndpoint()
+        class DummyPool(object):
+            connected = False
+            persistent = False
+            def getConnection(this, key, ep):
+                this.connected = True
+                self.assertIdentical(ep, endpoint)
+                # The key is *not* tied to the final destination, but only to
+                # the address of the proxy, since that's where *we* are
+                # connecting:
+                self.assertEqual(key, ("http-proxy", endpoint))
+                return defer.succeed(StubHTTPProtocol())
+
+        pool = DummyPool()
+        agent = client.ProxyAgent(endpoint, self.reactor, pool=pool)
+        self.assertIdentical(pool, agent._pool)
+
+        headers = http_headers.Headers()
+        result = agent.request('GET', 'http://foo/')
+        self.assertEqual(agent._pool.connected, True)
+
+
 
 class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
     """
@@ -2266,16 +2700,8 @@ class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
 
     def setUp(self):
         self.reactor = self.Reactor()
-        agent = client.Agent(self.reactor)
-        self._oldConnect = agent._connect
-        agent._connect = self._dummyConnect
-        self.agent = client.RedirectAgent(agent)
-
-
-    def _dummyConnect(self, scheme, host, port):
-        self._oldConnect(scheme, host, port)
-        return FakeReactorAndConnectMixin._dummyConnect(
-            self, scheme, host, port)
+        self.agent = client.RedirectAgent(
+            self.buildAgentForWrapperTest(self.reactor))
 
 
     def test_noRedirect(self):
@@ -2422,9 +2848,7 @@ class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         deferred fires with L{ResponseFailed} error wrapping a
         L{InfiniteRedirection} exception.
         """
-        agent = client.Agent(self.reactor)
-        self._oldConnect = agent._connect
-        agent._connect = self._dummyConnect
+        agent = self.buildAgentForWrapperTest(self.reactor)
         redirectAgent = client.RedirectAgent(agent, 1)
 
         deferred = redirectAgent.request('GET', 'http://example.com/foo')
