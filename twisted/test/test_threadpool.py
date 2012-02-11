@@ -524,25 +524,3 @@ class RaceConditionTestCase(unittest.TestCase):
         loopDeferred.addCallback(cbLoop)
         submit(10)
         return loopDeferred
-
-
-
-class ThreadSafeListDeprecationTestCase(unittest.TestCase):
-    """
-    Test deprecation of threadpool.ThreadSafeList in twisted.python.threadpool
-    """
-
-    def test_threadSafeList(self):
-        """
-        Test deprecation of L{threadpool.ThreadSafeList}.
-        """
-        threadpool.ThreadSafeList()
-
-        warningsShown = self.flushWarnings([self.test_threadSafeList])
-        self.assertEqual(len(warningsShown), 1)
-        self.assertIdentical(warningsShown[0]['category'], DeprecationWarning)
-        self.assertEqual(
-            warningsShown[0]['message'],
-            "twisted.python.threadpool.ThreadSafeList was deprecated in "
-            "Twisted 10.1.0: This was an internal implementation detail of "
-            "support for Jython 2.1, which is now obsolete.")
