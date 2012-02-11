@@ -1,6 +1,16 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Names 12.0.0 (2012-02-10)
+=================================
+
+Bugfixes
+--------
+ - twisted.names.dns.Message now sets the `auth` flag on RRHeader
+   instances it creates to reflect the authority of the message
+   itself. (#5421)
+
+
 Twisted Names 11.1.0 (2011-11-15)
 =================================
 

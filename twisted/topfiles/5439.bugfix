@@ -1,1 +1,0 @@
-TLS transports now correctly handle producer registration after the connection has been lost.

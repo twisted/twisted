@@ -1,1 +1,0 @@
-When idle, the gtk2 and glib2 reactors no longer wake up 10 times a second.

@@ -1,6 +1,24 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Conch 12.0.0 (2012-02-10)
+=================================
+
+Features
+--------
+ - use Python shadow module for authentication if it's available
+   (#3242)
+
+Bugfixes
+--------
+ - twisted.conch.ssh.transport.messages no longer ends with with old
+   message IDs on platforms with differing dict() orderings (#5352)
+
+Other
+-----
+ - #5225
+
+
 Twisted Conch 11.1.0 (2011-11-15)
 =================================
 
