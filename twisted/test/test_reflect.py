@@ -765,6 +765,7 @@ class DeprecationTestCase(unittest.TestCase):
             reflect.macro, "test", __file__, "test = 1")
         self.assertEqual(result, 1)
 
+
     def test_allYourBase(self):
         """
         Test deprecation of L{reflect.allYourBase}.
@@ -772,6 +773,7 @@ class DeprecationTestCase(unittest.TestCase):
         self.callDeprecated(
             (Version("Twisted", 11, 0, 0), "inspect.getmro"),
             reflect.allYourBase, DeprecationTestCase)
+
 
     def test_accumulateBases(self):
         """
@@ -781,3 +783,94 @@ class DeprecationTestCase(unittest.TestCase):
         self.callDeprecated(
             (Version("Twisted", 11, 0, 0), "inspect.getmro"),
             reflect.accumulateBases, DeprecationTestCase, l, None)
+
+
+    def lookForDeprecationWarning(self, testMethod, attributeName, warningMsg):
+        """
+        Test deprecation of attribute 'reflect.attributeName' by calling
+        'reflect.testMethod' and verifying the warning message
+        'reflect.warningMsg'
+
+        @param testMethod: Name of the offending function to be used with
+            flushWarnings
+        @type testmethod: C{str}
+
+        @param attributeName: Name of attribute to be checked for deprecation
+        @type attributeName: C{str}
+
+        @param warningMsg: Deprecation warning message
+        @type warningMsg: C{str}
+        """
+        warningsShown = self.flushWarnings([testMethod])
+        self.assertEqual(len(warningsShown), 1)
+        self.assertIdentical(warningsShown[0]['category'], DeprecationWarning)
+        self.assertEqual(
+            warningsShown[0]['message'],
+            "twisted.python.reflect." + attributeName + " "
+            "was deprecated in Twisted 12.1.0: " + warningMsg + ".")
+
+
+    def test_settable(self):
+        """
+        Test deprecation of L{reflect.Settable}.
+        """
+        reflect.Settable()
+        self.lookForDeprecationWarning(
+            self.test_settable, "Settable",
+            "Settable is old and untested. Please write your own version of this "
+            "functionality if you need it")
+
+
+    def test_accessorType(self):
+        """
+        Test deprecation of L{reflect.AccessorType}.
+        """
+        reflect.AccessorType(' ', ( ), { })
+        self.lookForDeprecationWarning(
+            self.test_accessorType, "AccessorType",
+            "AccessorType is old and untested. Please write your own version of "
+            "this functionality if you need it")
+
+
+    def test_propertyAccessor(self):
+        """
+        Test deprecation of L{reflect.PropertyAccessor}.
+        """
+        reflect.PropertyAccessor()
+        self.lookForDeprecationWarning(
+            self.test_propertyAccessor, "PropertyAccessor",
+            "PropertyAccessor is old and untested. Please write your own "
+            "version of this functionality if you need it")
+
+
+    def test_accessor(self):
+        """
+        Test deprecation of L{reflect.Accessor}.
+        """
+        reflect.Accessor()
+        self.lookForDeprecationWarning(
+            self.test_accessor, "Accessor",
+            "Accessor is an implementation for Python 2.1 which is no longer "
+            "supported by Twisted")
+
+
+    def test_originalAccessor(self):
+        """
+        Test deprecation of L{reflect.OriginalAccessor}.
+        """
+        reflect.OriginalAccessor()
+        self.lookForDeprecationWarning(
+            self.test_originalAccessor, "OriginalAccessor",
+            "OriginalAccessor is a reference to class "
+            "twisted.python.reflect.Accessor which is deprecated")
+
+
+    def test_summer(self):
+        """
+        Test deprecation of L{reflect.Summer}.
+        """
+        reflect.Summer()
+        self.lookForDeprecationWarning(
+            self.test_summer, "Summer",
+            "Summer is a child class of twisted.python.reflect.Accessor which "
+            "is deprecated")

@@ -30,7 +30,7 @@ except ImportError:
     from StringIO import StringIO
 
 from twisted.python.util import unsignedID
-from twisted.python.deprecate import deprecated
+from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
 from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
 from twisted.python.versions import Version
 
@@ -44,6 +44,12 @@ class Settable:
     where you don't want to name a variable, but you do want to set
     some attributes; for example, C{X()(y=z,a=b)}.
     """
+
+    deprecatedModuleAttribute(
+        Version("Twisted", 12, 1, 0),
+        "Settable is old and untested. Please write your own version of this "
+        "functionality if you need it.", "twisted.python.reflect", "Settable")
+
     def __init__(self, **kw):
         self(**kw)
 
@@ -74,6 +80,12 @@ class AccessorType(type):
         __metaclass__ = AccessorType
 
     """
+
+    deprecatedModuleAttribute(
+        Version("Twisted", 12, 1, 0),
+        "AccessorType is old and untested. Please write your own version of "
+        "this functionality if you need it.", "twisted.python.reflect",
+        "AccessorType")
 
     def __init__(self, name, bases, d):
         type.__init__(self, name, bases, d)
@@ -138,6 +150,11 @@ class PropertyAccessor(object):
     # caused by it.
     #  -- itamar
 
+    deprecatedModuleAttribute(
+        Version("Twisted", 12, 1, 0),
+        "PropertyAccessor is old and untested. Please write your own version "
+        "of this functionality if you need it.", "twisted.python.reflect",
+        "PropertyAccessor")
     __metaclass__ = AccessorType
 
     def reallySet(self, k, v):
@@ -158,6 +175,11 @@ class Accessor:
 
     This implementation is for Python 2.1.
     """
+
+    deprecatedModuleAttribute(
+        Version("Twisted", 12, 1, 0),
+        "Accessor is an implementation for Python 2.1 which is no longer "
+        "supported by Twisted.", "twisted.python.reflect", "Accessor")
 
     def __setattr__(self, k,v):
         kstring='set_%s'%k
@@ -199,6 +221,10 @@ class Accessor:
 
 # just in case
 OriginalAccessor = Accessor
+deprecatedModuleAttribute(
+    Version("Twisted", 12, 1, 0),
+    "OriginalAccessor is a reference to class twisted.python.reflect.Accessor "
+    "which is deprecated.", "twisted.python.reflect", "OriginalAccessor")
 
 
 class Summer(Accessor):
@@ -213,6 +239,11 @@ class Summer(Accessor):
     always be incremented when the 'amount' member of self is
     incremented, similiarly for the debit versions.
     """
+
+    deprecatedModuleAttribute(
+        Version("Twisted", 12, 1, 0),
+        "Summer is a child class of twisted.python.reflect.Accessor which is " 
+        "deprecated.", "twisted.python.reflect", "Summer")
 
     def reallySet(self, k,v):
         "This method does the work."
