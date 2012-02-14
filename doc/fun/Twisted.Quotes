@@ -5814,3 +5814,14 @@ How do I use it?
 <dash> so a "mobile edition" of a website is a version for babies.
 <dash> hence the bright colors and large buttons
 %
+<fiorix> heeeelp
+<fiorix> twistd is rotating /dev/null
+<fiorix> how do I disable it
+<fiorix> -rw-rw-rw- 1 root root 440452 Feb 14 01:16 /dev/null.3
+<fiorix> crw-rw-rw- 1 root root   1, 3 Feb 14 00:55 /dev/null.4
+<fiorix> it's doing it on its own
+<teratorn> fiorix: ahahaha
+<fiorix> :)
+<fiorix> dont laugh help me! :)
+<teratorn> fiorix: I can't software is terrible
+%
