@@ -232,21 +232,42 @@ class UnauthorizedResourceTests(unittest.TestCase):
             resource.getChildWithDefault("bar", None), resource)
 
 
+    def _unauthorizedRenderTest(self, request):
+        """
+        Render L{UnauthorizedResource} for the given request object and verify
+        that the response code is I{Unauthorized} and that a I{WWW-Authenticate}
+        header is set in the response containing a challenge.
+        """
+        resource = UnauthorizedResource([
+                BasicCredentialFactory('example.com')])
+        request.render(resource)
+        self.assertEqual(request.responseCode, 401)
+        self.assertEqual(
+            request.responseHeaders.getRawHeaders('www-authenticate'),
+            ['basic realm="example.com"'])
+
+
     def test_render(self):
         """
         L{UnauthorizedResource} renders with a 401 response code and a
         I{WWW-Authenticate} header and puts a simple unauthorized message
         into the response body.
         """
-        resource = UnauthorizedResource([
-                BasicCredentialFactory('example.com')])
         request = DummyRequest([''])
-        request.render(resource)
-        self.assertEqual(request.responseCode, 401)
-        self.assertEqual(
-            request.responseHeaders.getRawHeaders('www-authenticate'),
-            ['basic realm="example.com"'])
-        self.assertEqual(request.written, ['Unauthorized'])
+        self._unauthorizedRenderTest(request)
+        self.assertEqual('Unauthorized', ''.join(request.written))
+
+
+    def test_renderHEAD(self):
+        """
+        The rendering behavior of L{UnauthorizedResource} for a I{HEAD} request
+        is like its handling of a I{GET} request, but no response body is
+        written.
+        """
+        request = DummyRequest([''])
+        request.method = 'HEAD'
+        self._unauthorizedRenderTest(request)
+        self.assertEqual('', ''.join(request.written))
 
 
     def test_renderQuotesRealm(self):
