@@ -1,10 +1,12 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+import sys, getpass
+
 from twisted.python import usage
 from twisted.application import app
 from twisted.persisted import sob
-import sys, getpass
+
 
 class ConvertOptions(usage.Options):
     synopsis = "Usage: tapconvert [options]"

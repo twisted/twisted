@@ -11,10 +11,17 @@ invoked directly from a shell.
 from twisted.python.versions import Version
 from twisted.python.deprecate import deprecatedModuleAttribute
 
+
 deprecatedModuleAttribute(
     Version("Twisted", 11, 1, 0),
     "Seek unzipping software outside of Twisted.",
     __name__,
     "tkunzip")
+
+deprecatedModuleAttribute(
+    Version("Twisted", 12, 1, 0),
+    "tapconvert has been deprecated.",
+    __name__,
+    "tapconvert")
 
 del Version, deprecatedModuleAttribute

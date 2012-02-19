@@ -147,6 +147,21 @@ class ScriptTests(TestCase, ScriptTestsMixin):
         self.assertEqual(1, len(warnings))
 
 
+    def test_deprecatedTapconvert(self):
+        """
+        The entire L{twisted.scripts.tapconvert} module is deprecated.
+        """
+        from twisted.scripts import tapconvert
+        warnings = self.flushWarnings(
+            offendingFunctions=[self.test_deprecatedTapconvert])
+        self.assertEqual(DeprecationWarning, warnings[0]['category'])
+        self.assertEqual(
+            "twisted.scripts.tapconvert was deprecated in Twisted 12.1.0: "
+            "tapconvert has been deprecated.",
+            warnings[0]['message'])
+        self.assertEqual(1, len(warnings))
+
+
 
 class ZshIntegrationTestCase(TestCase, ZshScriptTestMixin):
     """
