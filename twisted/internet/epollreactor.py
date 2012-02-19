@@ -17,8 +17,19 @@ from zope.interface import implements
 
 from twisted.internet.interfaces import IReactorFDSet
 
-from twisted.python import log, _epoll
+from twisted.python import log
 from twisted.internet import posixbase
+
+try:
+    # In Python 2.6+, select.epoll provides epoll functionality. Try to import
+    # it, and fall back to Twisted's own epoll wrapper if it isn't available
+    # for any reason.
+    from select import epoll
+except ImportError:
+    from twisted.python import _epoll
+else:
+    del epoll
+    import select as _epoll
 
 
 class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
@@ -49,9 +60,9 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
     implements(IReactorFDSet)
 
     # Attributes for _PollLikeMixin
-    _POLL_DISCONNECTED = (_epoll.HUP | _epoll.ERR)
-    _POLL_IN = _epoll.IN
-    _POLL_OUT = _epoll.OUT
+    _POLL_DISCONNECTED = (_epoll.EPOLLHUP | _epoll.EPOLLERR)
+    _POLL_IN = _epoll.EPOLLIN
+    _POLL_OUT = _epoll.EPOLLOUT
 
     def __init__(self):
         """
@@ -77,17 +88,17 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         """
         fd = xer.fileno()
         if fd not in primary:
-            cmd = _epoll.CTL_ADD
             flags = event
-            if fd in other:
-                flags |= antievent
-                cmd = _epoll.CTL_MOD
             # epoll_ctl can raise all kinds of IOErrors, and every one
             # indicates a bug either in the reactor or application-code.
             # Let them all through so someone sees a traceback and fixes
             # something.  We'll do the same thing for every other call to
             # this method in this file.
-            self._poller._control(cmd, fd, flags)
+            if fd in other:
+                flags |= antievent
+                self._poller.modify(fd, flags)
+            else:
+                self._poller.register(fd, flags)
 
             # Update our own tracking state *only* after the epoll call has
             # succeeded.  Otherwise we may get out of sync.
@@ -99,14 +110,14 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         """
         Add a FileDescriptor for notification of data available to read.
         """
-        self._add(reader, self._reads, self._writes, self._selectables, _epoll.IN, _epoll.OUT)
+        self._add(reader, self._reads, self._writes, self._selectables, _epoll.EPOLLIN, _epoll.EPOLLOUT)
 
 
     def addWriter(self, writer):
         """
         Add a FileDescriptor for notification of data available to write.
         """
-        self._add(writer, self._writes, self._reads, self._selectables, _epoll.OUT, _epoll.IN)
+        self._add(writer, self._writes, self._reads, self._selectables, _epoll.EPOLLOUT, _epoll.EPOLLIN)
 
 
     def _remove(self, xer, primary, other, selectables, event, antievent):
@@ -124,30 +135,29 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
             else:
                 return
         if fd in primary:
-            cmd = _epoll.CTL_DEL
-            flags = event
             if fd in other:
                 flags = antievent
-                cmd = _epoll.CTL_MOD
+                # See comment above modify call in _add.
+                self._poller.modify(fd, flags)
             else:
                 del selectables[fd]
+                # See comment above _control call in _add.
+                self._poller.unregister(fd)
             del primary[fd]
-            # See comment above _control call in _add.
-            self._poller._control(cmd, fd, flags)
 
 
     def removeReader(self, reader):
         """
         Remove a Selectable for notification of data available to read.
         """
-        self._remove(reader, self._reads, self._writes, self._selectables, _epoll.IN, _epoll.OUT)
+        self._remove(reader, self._reads, self._writes, self._selectables, _epoll.EPOLLIN, _epoll.EPOLLOUT)
 
 
     def removeWriter(self, writer):
         """
         Remove a Selectable for notification of data available to write.
         """
-        self._remove(writer, self._writes, self._reads, self._selectables, _epoll.OUT, _epoll.IN)
+        self._remove(writer, self._writes, self._reads, self._selectables, _epoll.EPOLLOUT, _epoll.EPOLLIN)
 
     def removeAll(self):
         """
@@ -171,15 +181,14 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         Poll the poller for new events.
         """
         if timeout is None:
-            timeout = 1
-        timeout = int(timeout * 1000) # convert seconds to milliseconds
+            timeout = -1  # Wait indefinitely.
 
         try:
             # Limit the number of events to the number of io objects we're
             # currently tracking (because that's maybe a good heuristic) and
             # the amount of time we block to the value specified by our
             # caller.
-            l = self._poller.wait(len(self._selectables), timeout)
+            l = self._poller.poll(timeout, len(self._selectables))
         except IOError, err:
             if err.errno == errno.EINTR:
                 return

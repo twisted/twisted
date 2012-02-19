@@ -80,7 +80,6 @@ class EPoll(unittest.TestCase):
         self.assertRaises(TypeError, _epoll.epoll, ())
         self.assertRaises(TypeError, _epoll.epoll, ['foo'])
         self.assertRaises(TypeError, _epoll.epoll, {})
-        self.assertRaises(TypeError, _epoll.epoll)
 
 
     def test_add(self):
