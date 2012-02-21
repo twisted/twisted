@@ -424,6 +424,34 @@ class FormattedTextTests(unittest.TestCase):
             A.normal)
 
 
+    def test_clearColorFormatting(self):
+        """
+        An empty color format specifier clears foreground and background
+        colors.
+        """
+        self.assertParsesTo(
+            '\x0301yay\x03reset',
+            A.normal[A.fg.black['yay'], 'reset'])
+        self.assertParsesTo(
+            '\x0301,02yay\x03reset',
+            A.normal[A.fg.black[A.bg.blue['yay']], 'reset'])
+
+
+    def test_resetFormatting(self):
+        """
+        A reset format specifier clears all formatting attributes.
+        """
+        self.assertParsesTo(
+            '\x02\x1fyay\x0freset',
+            A.normal[A.bold[A.underline['yay']], 'reset'])
+        self.assertParsesTo(
+            '\x0301yay\x0freset',
+            A.normal[A.fg.black['yay'], 'reset'])
+        self.assertParsesTo(
+            '\x0301,02yay\x0freset',
+            A.normal[A.fg.black[A.bg.blue['yay']], 'reset'])
+
+
     def test_stripFormatting(self):
         """
         Strip formatting codes from formatted text, leaving only the text parts.

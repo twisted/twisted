@@ -3142,6 +3142,7 @@ class _FormattingState(_CommandDispatcherMixin):
 
                 if formatName == 'off':
                     self._attrs = set()
+                    self.foreground = self.background = None
                 else:
                     self._attrs.symmetric_difference_update([formatName])
 
