@@ -353,16 +353,6 @@ class FormattedTextTests(unittest.TestCase):
             '\x0f\x0305,03hello\x0f\x0305 world\x0f\x16 yay')
 
 
-    def test_parseEmptyString(self):
-        """
-        Parsing an empty string results in an empty list of formatting
-        information.
-        """
-        self.assertEquals(
-            irc.parseFormattedText(''),
-            A.normal)
-
-
     def test_parseUnformattedText(self):
         """
         Parsing unformatted text results in text with attributes that
