@@ -147,7 +147,8 @@ A.fg.black[A.bg.green['Like a terminal!']]
       will parse text into structured text attributes. It is worth noting that
       while feeding the output of <code>parseFormattedText</code> back to
       <code>assembleFormattedText</code> will produce the same final result,
-      the actual structure of the parsed text will differ.
+      the actual structure of the parsed text will differ. Color codes are
+      mapped from 0 to 15, codes greater than 15 will begin to wrap around.
     </p>
 
     <h3>

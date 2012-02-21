@@ -3137,9 +3137,7 @@ class _FormattingState(_CommandDispatcherMixin):
             if formatName is None:
                 self._buffer += ch
             else:
-                if self._buffer:
-                    self.emit()
-
+                self.emit()
                 if formatName == 'off':
                     self._attrs = set()
                     self.foreground = self.background = None
@@ -3160,6 +3158,7 @@ class _FormattingState(_CommandDispatcherMixin):
             self._buffer += ch
         else:
             if self._buffer:
+                # Wrap around for color numbers higher than we support.
                 col = int(self._buffer) % len(_IRC_COLORS)
                 self.foreground = getattr(attributes.fg, _IRC_COLOR_NAMES[col])
             else:
@@ -3194,6 +3193,7 @@ class _FormattingState(_CommandDispatcherMixin):
             self._buffer += ch
         else:
             if self._buffer:
+                # Wrap around for color numbers higher than we support.
                 col = int(self._buffer) % len(_IRC_COLORS)
                 self.background = getattr(attributes.bg, _IRC_COLOR_NAMES[col])
                 self._buffer = ''
@@ -3207,6 +3207,8 @@ class _FormattingState(_CommandDispatcherMixin):
 def parseFormattedText(text):
     """
     Parse text containing IRC formatting codes into structured information.
+
+    Color codes are mapped from 0 to 15 and wrap around if greater than 15.
 
     @type text: C{str}
 
