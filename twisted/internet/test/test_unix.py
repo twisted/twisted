@@ -7,7 +7,6 @@ Tests for implementations of L{IReactorUNIX}.
 
 from stat import S_IMODE
 from os import stat
-from sys import platform
 from tempfile import mktemp
 
 try:
@@ -18,6 +17,7 @@ except ImportError:
 from zope.interface.verify import verifyObject
 
 from twisted.python.hashlib import md5
+from twisted.python.runtime import platform
 from twisted.internet.interfaces import IConnector
 from twisted.internet.address import UNIXAddress
 from twisted.internet.endpoints import UNIXServerEndpoint, UNIXClientEndpoint
@@ -107,7 +107,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         reactor = self.buildReactor()
         port = reactor.listenUNIX('\0' + path, ServerFactory())
         self.assertEqual(port.getHost(), UNIXAddress('\0' + path))
-    if not platform.startswith('linux'):
+    if not platform.isLinux():
         test_listenOnLinuxAbstractNamespace.skip = (
             'Abstract namespace UNIX sockets only supported on Linux.')
 
@@ -122,7 +122,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         connector = reactor.connectUNIX('\0' + path, ClientFactory())
         self.assertEqual(
             connector.getDestination(), UNIXAddress('\0' + path))
-    if not platform.startswith('linux'):
+    if not platform.isLinux():
         test_connectToLinuxAbstractNamespace.skip = (
             'Abstract namespace UNIX sockets only supported on Linux.')
 
@@ -153,7 +153,7 @@ class UNIXDatagramTestsBuilder(UNIXFamilyMixin, ReactorBuilder):
         reactor = self.buildReactor()
         port = reactor.listenUNIXDatagram('\0' + path, DatagramProtocol())
         self.assertEqual(port.getHost(), UNIXAddress('\0' + path))
-    if not platform.startswith('linux'):
+    if not platform.isLinux():
         test_listenOnLinuxAbstractNamespace.skip = (
             'Abstract namespace UNIX sockets only supported on Linux.')
 

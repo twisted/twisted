@@ -5,7 +5,7 @@
 Tests for runtime checks.
 """
 
-
+import sys
 
 from twisted.python.runtime import Platform
 from twisted.trial.unittest import TestCase
@@ -39,6 +39,16 @@ class PlatformTests(TestCase):
             self.assertEqual(platform.getType(), 'posix')
 
 
+    def test_isLinuxConsistency(self):
+        """
+        L{Platform.isLinux} can only return C{True} if L{Platform.getType}
+        returns C{'posix'} and L{sys.platform} starts with C{"linux"}.
+        """
+        platform = Platform()
+        if platform.isLinux():
+            self.assertTrue(sys.platform.startswith("linux"))
+
+
 
 class ForeignPlatformTests(TestCase):
     """
@@ -66,3 +76,16 @@ class ForeignPlatformTests(TestCase):
         self.assertTrue(Platform(None, 'darwin').isMacOSX())
         self.assertFalse(Platform(None, 'linux2').isMacOSX())
         self.assertFalse(Platform(None, 'win32').isMacOSX())
+
+
+    def test_isLinux(self):
+        """
+        If a system platform name is supplied to L{Platform}'s initializer, it
+        is used to determine the result of L{Platform.isLinux}, which returns
+        C{True} for values beginning with C{"linux"}, C{False} otherwise.
+        """
+        self.assertFalse(Platform(None, 'darwin').isLinux())
+        self.assertTrue(Platform(None, 'linux').isLinux())
+        self.assertTrue(Platform(None, 'linux2').isLinux())
+        self.assertTrue(Platform(None, 'linux3').isLinux())
+        self.assertFalse(Platform(None, 'win32').isLinux())

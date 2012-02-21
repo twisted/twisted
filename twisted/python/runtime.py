@@ -49,9 +49,11 @@ class Platform:
         """Do we know about this platform?"""
         return self.type != None
 
+
     def getType(self):
         """Return 'posix', 'win32' or 'java'"""
         return self.type
+
 
     def isMacOSX(self):
         """Check if current platform is Mac OS X.
@@ -60,6 +62,7 @@ class Platform:
         @rtype: C{bool}
         """
         return self._platform == "darwin"
+
 
     def isWinNT(self):
         """Are we running in Windows NT?"""
@@ -74,6 +77,7 @@ class Platform:
                 return 0
         # not windows NT
         return 0
+
 
     def isWindows(self):
         return self.getType() == 'win32'
@@ -90,6 +94,16 @@ class Platform:
             return sys.getwindowsversion()[0] == 6
         else:
             return False
+
+
+    def isLinux(self):
+        """
+        Check if current platform is Linux.
+
+        @return: C{True} if the current platform has been detected as Linux.
+        @rtype: C{bool}
+        """
+        return self._platform.startswith("linux")
 
 
     def supportsThreads(self):
