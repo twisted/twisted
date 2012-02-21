@@ -3158,7 +3158,8 @@ class _FormattingState(_CommandDispatcherMixin):
             self._buffer += ch
         else:
             if self._buffer:
-                # Wrap around for color numbers higher than we support.
+                # Wrap around for color numbers higher than we support, like
+                # most other IRC clients.
                 col = int(self._buffer) % len(_IRC_COLORS)
                 self.foreground = getattr(attributes.fg, _IRC_COLOR_NAMES[col])
             else:
@@ -3193,7 +3194,8 @@ class _FormattingState(_CommandDispatcherMixin):
             self._buffer += ch
         else:
             if self._buffer:
-                # Wrap around for color numbers higher than we support.
+                # Wrap around for color numbers higher than we support, like
+                # most other IRC clients.
                 col = int(self._buffer) % len(_IRC_COLORS)
                 self.background = getattr(attributes.bg, _IRC_COLOR_NAMES[col])
                 self._buffer = ''
