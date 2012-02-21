@@ -3232,6 +3232,9 @@ def assembleFormattedText(formatted):
     Currently handled formatting includes: bold, reverse, underline,
     mIRC color codes and the ability to remove all current formatting.
 
+    It is worth noting that assembled text will always begin with the control
+    code to disable other attributes for the sake of correctness.
+
     For example::
 
         from twisted.words.protocols.irc import attributes as A
