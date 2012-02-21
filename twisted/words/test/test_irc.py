@@ -206,7 +206,7 @@ class FormattedTextTests(unittest.TestCase):
     """
     Tests for parsing and assembling formatted IRC text.
     """
-    def assertParsesTo(self, text, expectedFormatted):
+    def assertAssembledEqually(self, text, expectedFormatted):
         """
         Assert that C{text} is parsed and assembled to the same value as what
         C{expectedFormatted} is assembled to.
@@ -233,7 +233,7 @@ class FormattedTextTests(unittest.TestCase):
         """
         An empty string parses to a I{normal} attribute with no text.
         """
-        self.assertParsesTo('', A.normal)
+        self.assertAssembledEqually('', A.normal)
 
 
     def test_assembleEmpty(self):
@@ -385,31 +385,31 @@ class FormattedTextTests(unittest.TestCase):
         must begin with a digit, otherwise processing falls back to unformatted
         text.
         """
-        self.assertParsesTo(
+        self.assertAssembledEqually(
             '\x031kinda valid',
             A.fg.black['kinda valid'])
-        self.assertParsesTo(
+        self.assertAssembledEqually(
             '\x03999,999kinda valid',
             A.fg.green['9,999kinda valid'])
-        self.assertParsesTo(
+        self.assertAssembledEqually(
             '\x031,2kinda valid',
             A.fg.black[A.bg.blue['kinda valid']])
-        self.assertParsesTo(
+        self.assertAssembledEqually(
             '\x031,999kinda valid',
             A.fg.black[A.bg.green['9kinda valid']])
-        self.assertParsesTo(
+        self.assertAssembledEqually(
             '\x031,242 is a special number',
             A.fg.black[A.bg.yellow['2 is a special number']])
-        self.assertParsesTo(
+        self.assertAssembledEqually(
             '\x03,02oops\x03',
             A.normal[',02oops'])
-        self.assertParsesTo(
+        self.assertAssembledEqually(
             '\x03wrong',
             A.normal['wrong'])
-        self.assertParsesTo(
+        self.assertAssembledEqually(
             '\x031,hello',
             A.fg.black['hello'])
-        self.assertParsesTo(
+        self.assertAssembledEqually(
             '\x03\x03',
             A.normal)
 
@@ -419,10 +419,10 @@ class FormattedTextTests(unittest.TestCase):
         An empty color format specifier clears foreground and background
         colors.
         """
-        self.assertParsesTo(
+        self.assertAssembledEqually(
             '\x0301yay\x03reset',
             A.normal[A.fg.black['yay'], 'reset'])
-        self.assertParsesTo(
+        self.assertAssembledEqually(
             '\x0301,02yay\x03reset',
             A.normal[A.fg.black[A.bg.blue['yay']], 'reset'])
 
@@ -431,13 +431,13 @@ class FormattedTextTests(unittest.TestCase):
         """
         A reset format specifier clears all formatting attributes.
         """
-        self.assertParsesTo(
+        self.assertAssembledEqually(
             '\x02\x1fyay\x0freset',
             A.normal[A.bold[A.underline['yay']], 'reset'])
-        self.assertParsesTo(
+        self.assertAssembledEqually(
             '\x0301yay\x0freset',
             A.normal[A.fg.black['yay'], 'reset'])
-        self.assertParsesTo(
+        self.assertAssembledEqually(
             '\x0301,02yay\x0freset',
             A.normal[A.fg.black[A.bg.blue['yay']], 'reset'])
 
