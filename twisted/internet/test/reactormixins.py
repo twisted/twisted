@@ -46,6 +46,7 @@ class ReactorBuilder:
     _reactors = [
         # Select works everywhere
         "twisted.internet.selectreactor.SelectReactor",
+        "twisted.internet.qtreactor.QtReactor",
         ]
 
     if platform.isWindows():

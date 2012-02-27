@@ -45,6 +45,7 @@
       <li><a href="#win32_wfmo">Win32</a></li>
       <li><a href="#cfreactor">CoreFoundation</a></li>
       <li><a href="#pyui">PyUI</a></li>
+      <li><a href="#qtreactor">Qt4</a></li>
     </ul>
 
     <p>When using applications that are runnable using <code>twistd</code>, e.g.
@@ -296,6 +297,21 @@ pyuisupport.install(args=(640, 480), kw={'renderer': 'gl'})
 
     <p>An example Twisted application that uses PyUI can be found in <code
     class="py-filename">doc/core/examples/pyuidemo.py</code>.</p>
+
+    <h3>QtReactor</h3><a name="qtreactor" />
+
+    <p>Twisted is integrated with Qt4 using the LGPL <a href="http://www.pyside.org">PySide</a> bindings.</p>
+
+<pre class="python">
+from PySide import QtGui
+
+app = QtGui.QApplication(sys.argv)
+from twisted.internet import qtreactor
+qtreactor.install()
+</pre>
+
+    <p>An example Twisted application that uses qtreactor can be found in <code
+    class="py-filename">doc/core/examples/qtdemo.py</code>.</p>
 
   </body>
 </html>
