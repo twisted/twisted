@@ -435,13 +435,19 @@ class BaseClient(_TLSClientMixin, Connection):
         self.stopWriting()
         self._connectDone()
 
-    def _connectDone(self):
-        self.protocol = self.connector.buildProtocol(self.getPeer())
-        self.connected = 1
+
+    def switchProtocol(self, protocol, data=""):
+        Connection.switchProtocol(self, protocol, data)
         logPrefix = self._getLogPrefix(self.protocol)
         self.logstr = "%s,client" % logPrefix
+
+
+    def _connectDone(self):
+        protocol = self.connector.buildProtocol(self.getPeer())
+        self.connected = 1
         self.startReading()
-        self.protocol.makeConnection(self)
+        self.switchProtocol(protocol)
+
 
     def connectionLost(self, reason):
         if not self.connected:
@@ -528,16 +534,20 @@ class Server(_TLSServerMixin, Connection):
         self.client = client
         self.sessionno = sessionno
         self.hostname = client[0]
+        self.startReading()
+        self.connected = 1
 
+
+    def switchProtocol(self, protocol, data=""):
+        Connection.switchProtocol(self, protocol, data)
         logPrefix = self._getLogPrefix(self.protocol)
         self.logstr = "%s,%s,%s" % (logPrefix,
-                                    sessionno,
+                                    self.sessionno,
                                     self.hostname)
         self.repstr = "<%s #%s on %s>" % (self.protocol.__class__.__name__,
                                           self.sessionno,
                                           self.server._realPortNumber)
-        self.startReading()
-        self.connected = 1
+
 
     def __repr__(self):
         """A string representation of this connection.
@@ -739,7 +749,7 @@ class Port(base.BasePort, _SocketCloser):
                 s = self.sessionno
                 self.sessionno = s+1
                 transport = self.transport(skt, protocol, addr, self, s, self.reactor)
-                protocol.makeConnection(transport)
+                transport.switchProtocol(protocol)
             else:
                 self.numberAccepts = self.numberAccepts+20
         except:
@@ -750,7 +760,8 @@ class Port(base.BasePort, _SocketCloser):
             # None if there is no SSL support.  In any case, all the
             # "except SSL.Error:" suite would probably do is log.deferr()
             # and return, so handling it here works just as well.
-            log.deferr()
+            log.err()
+
 
     def loseConnection(self, connDone=failure.Failure(main.CONNECTION_DONE)):
         """

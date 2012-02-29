@@ -31,7 +31,7 @@ from twisted.internet.protocol import ServerFactory, ClientFactory, Protocol
 from twisted.internet.interfaces import (
     IPushProducer, IPullProducer, IHalfCloseableProtocol)
 from twisted.internet.protocol import ClientCreator
-from twisted.internet.tcp import Connection, Server
+from twisted.internet.tcp import Connection, Server, Client
 
 from twisted.internet.test.connectionmixins import (
     LogObserverMixin, ConnectionTestsMixin, serverFactoryFor)
@@ -52,9 +52,9 @@ else:
     ipv6Skip = None
 
 try:
-    from twisted.internet.iocpreactor.tcp import Connection as IOCPConnection
+    from twisted.internet.iocpreactor.tcp import Client as IOCPClient, Server as IOCPServer
 except ImportError:
-    IOCPConnection = None
+    IOCPClient = None
 
 if platform.isWindows():
     from twisted.internet.test import _win32ifaces
@@ -2081,13 +2081,36 @@ class RecordingProtocol(Protocol):
 
 
 
+class DummyReactor(object):
+    """
+    Minimal fake reactor.
+    """
+
+    def doNothing(self, *args, **kwargs):
+        """
+        Do nothing.
+        """
+
+
+    addReader = callLater = removeReader = removeWriter = addWriter = doNothing
+
+
+    def resolve(self, addr):
+        return succeed("127.0.0.1")
+
+
+
 class SwitchableProtocolTests(TestCase):
     """
     Tests for the C{ISwitchableProtocol} interface.
     """
 
     def getConnection(self):
-        return Connection(socket.socket(), None) # XXX maybe do Server instead?
+        class Port:
+            _realPortNumber = 666
+        skt = socket.socket()
+        self.addCleanup(skt.close)
+        return Server(skt, None, ("127.0.0.1", 8000), Port(), 1, DummyReactor())
 
 
     def test_switchProtocol(self):
@@ -2132,29 +2155,54 @@ class SwitchableProtocolTests(TestCase):
 
     def test_logPrefix(self):
         """
-        Calling C{switchProtocol} changes the result of calling C{logPrefix} on the transport.
+        Calling C{switchProtocol} changes the result of calling C{logPrefix}
+        on the transport.
         """
+        class First(Protocol):
+            pass
+        class Second(Protocol):
+            pass
+
+        connection = self.getConnection()
+        connection.switchProtocol(First())
+        self.assertIn("First", connection.logPrefix())
+        connection.switchProtocol(Second())
+        self.assertNotIn("First", connection.logPrefix())
+        self.assertIn("Second", connection.logPrefix())
 
 
 
 class ClientSwitchableProtocolTests(SwitchableProtocolTests):
     """
-    Tests for the C{ISwitchableProtocol} interface on the L{BaseClient} class.
+    Tests for the C{ISwitchableProtocol} interface on the L{Client} class.
     """
 
     def getConnection(self):
-        pass
+        client = Client("127.0.0.1", "666", None, None, DummyReactor())
+        self.addCleanup(client.socket.close)
+        return client
 
 
-class IOCPSwitchableProtocolTests(SwitchableProtocolTests):
+
+class IOCPClientSwitchableProtocolTests(SwitchableProtocolTests):
     """
     Tests for the C{ISwitchableProtocol} interface on the IOCP reactor.
     """
 
     def getConnection(self):
-        return IOCPConnection(socket.socket(), None)
+        return IOCPClient(socket.socket(), None)
 
-# XXX and add IOCP Client
 
-if not IOCPConnection:
-    IOCPSwitchableProtocolTests.skip = "IOCP reactor not available"
+
+class IOCPServerSwitchableProtocolTests(SwitchableProtocolTests):
+    """
+    Tests for the C{ISwitchableProtocol} interface on the IOCP reactor.
+    """
+
+    def getConnection(self):
+        return IOCPServer(socket.socket(), None)
+
+
+if not IOCPClient:
+    IOCPClientSwitchableProtocolTests.skip = "IOCP reactor not available"
+    IOCPServerSwitchableProtocolTests.skip = "IOCP reactor not available"
