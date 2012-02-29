@@ -51,7 +51,10 @@ except socket.error, e:
 else:
     ipv6Skip = None
 
-
+try:
+    from twisted.internet.iocpreactor.tcp import Connection as IOCPConnection
+except ImportError:
+    IOCPConnection = None
 
 if platform.isWindows():
     from twisted.internet.test import _win32ifaces
@@ -2032,7 +2035,6 @@ class AbortConnectionMixin(object):
 
 
 
-
 class AbortConnectionTestCase(ReactorBuilder, AbortConnectionMixin):
     """
     TCP-specific L{AbortConnectionMixin} tests.
@@ -2054,3 +2056,105 @@ class AbortConnectionTestCase(ReactorBuilder, AbortConnectionMixin):
                                         serverport.getHost().port)
 
 globals().update(AbortConnectionTestCase.makeTestCaseClasses())
+
+
+
+class RecordingProtocol(Protocol):
+    """
+    A protocol that records what is called on it.
+    """
+
+    def __init__(self):
+        self.events = []
+
+
+    def connectionMade(self):
+        self.events.append("made")
+
+
+    def dataReceived(self, data):
+        self.events.append(("data", data))
+
+
+    def connectionLost(self, reason):
+        self.events.append(("lost", reason))
+
+
+
+class SwitchableProtocolTests(TestCase):
+    """
+    Tests for the C{ISwitchableProtocol} interface.
+    """
+
+    def getConnection(self):
+        return Connection(socket.socket(), None) # XXX maybe do Server instead?
+
+
+    def test_switchProtocol(self):
+        """
+        Calling C{switchProtocol} on a C{ISwitchableProtocol} provider swaps
+        out the old protocol and calls C{makeConnection} on the new protocol.
+        """
+        connection = self.getConnection()
+        protocol = RecordingProtocol()
+        connection.switchProtocol(protocol)
+        self.assertIdentical(protocol, connection.getProtocol())
+        self.assertEqual(protocol.events, ["made"])
+
+
+    def test_switchProtocolNoConnectionLost(self):
+        """
+        Calling C{switchProtocol} on a C{ISwitchableProtocol} provider does
+        not call C{connectionLost} on the old protocol.
+        """
+        connection = self.getConnection()
+        protocol = RecordingProtocol()
+        connection.switchProtocol(protocol)
+        another = RecordingProtocol()
+        connection.switchProtocol(another)
+        self.assertIdentical(another, connection.getProtocol())
+        self.assertEqual(another.events, ["made"])
+        self.assertEqual(protocol.events, ["made"])
+
+
+    def test_switchProtocolWithBytes(self):
+        """
+        Calling C{switchProtocol} with some bytes on a C{ISwitchableProtocol}
+        provider swaps out the old protocol, then calls C{makeConnection} and
+        finally C{dataReceived} on the new protocol.
+        """
+        connection = self.getConnection()
+        protocol = RecordingProtocol()
+        connection.switchProtocol(protocol, "hello")
+        self.assertIdentical(protocol, connection.getProtocol())
+        self.assertEqual(protocol.events, ["made", ("data", "hello")])
+
+
+    def test_logPrefix(self):
+        """
+        Calling C{switchProtocol} changes the result of calling C{logPrefix} on the transport.
+        """
+
+
+
+class ClientSwitchableProtocolTests(SwitchableProtocolTests):
+    """
+    Tests for the C{ISwitchableProtocol} interface on the L{BaseClient} class.
+    """
+
+    def getConnection(self):
+        pass
+
+
+class IOCPSwitchableProtocolTests(SwitchableProtocolTests):
+    """
+    Tests for the C{ISwitchableProtocol} interface on the IOCP reactor.
+    """
+
+    def getConnection(self):
+        return IOCPConnection(socket.socket(), None)
+
+# XXX and add IOCP Client
+
+if not IOCPConnection:
+    IOCPSwitchableProtocolTests.skip = "IOCP reactor not available"

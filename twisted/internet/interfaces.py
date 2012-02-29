@@ -1502,6 +1502,8 @@ class ITransport(Interface):
 class ISwitchableProtocol(Interface):
     """
     An object (likely a transport) that supports swapping out an attached protocol.
+
+    @since: 12.1
     """
 
     def getProtocol():
@@ -1520,6 +1522,10 @@ class ISwitchableProtocol(Interface):
         protocol. If non-empty bytes are passed in, C{dataReceived} will then
         be called on the protocol with these bytes (even if the protocol
         requests the transport stop reading).
+
+        C{connectionLost} will not be called on the protocol that was swapped
+        out, since its transport is still connected. Its up to the caller to
+        make sure this makes sense.
 
         @param protocol: An L{IProtocol} provider.
 

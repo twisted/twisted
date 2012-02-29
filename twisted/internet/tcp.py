@@ -174,6 +174,23 @@ class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser,
         self.protocol = protocol
 
 
+    def getProtocol(self):
+        """
+        Return the current protocol.
+        """
+        return self.protocol
+
+
+    def switchProtocol(self, protocol, data=""):
+        """
+        Switch to a new protocol.
+        """
+        self.protocol = protocol
+        self.protocol.makeConnection(self)
+        if data:
+            self.protocol.dataReceived(data)
+
+
     def getHandle(self):
         """Return the socket for this connection."""
         return self.socket
