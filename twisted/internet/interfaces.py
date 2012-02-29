@@ -1498,7 +1498,38 @@ class ITransport(Interface):
         """
 
 
-class ITCPTransport(ITransport):
+
+class ISwitchableProtocol(Interface):
+    """
+    An object (likely a transport) that supports swapping out an attached protocol.
+    """
+
+    def getProtocol():
+        """
+        Return the current protocol.
+
+        @rtype: L{IProtocol} provider, or None if no protocol is set.
+        """
+
+
+    def switchProtocol(protocol, data=""):
+        """
+        Switch the attached protocol to the new one that was passed in.
+
+        Given this object, C{makeConnection(this)} will be called on the
+        protocol. If non-empty bytes are passed in, C{dataReceived} will then
+        be called on the protocol with these bytes (even if the protocol
+        requests the transport stop reading).
+
+        @param protocol: An L{IProtocol} provider.
+
+        @param data: Optional bytes to pass to the protocol, presumably left
+            over from the previous protocol.
+        """
+
+
+
+class ITCPTransport(ITransport, ISwitchableProtocol):
     """
     A TCP based transport.
     """
