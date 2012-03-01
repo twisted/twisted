@@ -152,8 +152,32 @@ class _AbortingMixin(object):
 
 
 
+
+class _SwitchingMixin(object):
+    """
+    Common implementation of C{switchProtocol} and C{getProtocol}.
+    """
+
+    def getProtocol(self):
+        """
+        Return the current protocol.
+        """
+        return self.protocol
+
+
+    def switchProtocol(self, protocol, data=""):
+        """
+        Switch to a new protocol.
+        """
+        self.protocol = protocol
+        self.protocol.makeConnection(self)
+        if data:
+            self.protocol.dataReceived(data)
+
+
+
 class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser,
-                 _AbortingMixin):
+                 _AbortingMixin, _SwitchingMixin):
     """
     Superclass of all socket-based FileDescriptors.
 
@@ -172,23 +196,6 @@ class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser,
         self.socket.setblocking(0)
         self.fileno = skt.fileno
         self.protocol = protocol
-
-
-    def getProtocol(self):
-        """
-        Return the current protocol.
-        """
-        return self.protocol
-
-
-    def switchProtocol(self, protocol, data=""):
-        """
-        Switch to a new protocol.
-        """
-        self.protocol = protocol
-        self.protocol.makeConnection(self)
-        if data:
-            self.protocol.dataReceived(data)
 
 
     def getHandle(self):

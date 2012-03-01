@@ -2171,6 +2171,26 @@ class SwitchableProtocolTests(TestCase):
         self.assertIn("Second", connection.logPrefix())
 
 
+    def test_repr(self):
+        """
+        Calling C{switchProtocol} changes the result of calling C{repr}
+        on the transport.
+        """
+        class First(Protocol):
+            pass
+        class Second(Protocol):
+            pass
+
+        connection = self.getConnection()
+        connection.switchProtocol(First())
+        if "First" not in repr(connection):
+            raise SkipTest("This transport doesn't reflect the protocol in its repr()")
+        self.assertIn("First", repr(connection))
+        connection.switchProtocol(Second())
+        self.assertNotIn("First", repr(connection))
+        self.assertIn("Second", repr(connection))
+
+
 
 class ClientSwitchableProtocolTests(SwitchableProtocolTests):
     """
@@ -2190,7 +2210,7 @@ class IOCPClientSwitchableProtocolTests(SwitchableProtocolTests):
     """
 
     def getConnection(self):
-        return IOCPClient(socket.socket(), None)
+        return IOCPClient("127.0.0.1", 666, None, None, DummyReactor())
 
 
 
@@ -2200,7 +2220,8 @@ class IOCPServerSwitchableProtocolTests(SwitchableProtocolTests):
     """
 
     def getConnection(self):
-        return IOCPServer(socket.socket(), None)
+        return IOCPServer(skt, None, ("127.0.0.1", 8000), ("127.0.0.1", 666),
+                          1, DummyReactor())
 
 
 if not IOCPClient:

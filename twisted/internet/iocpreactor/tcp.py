@@ -12,7 +12,7 @@ from zope.interface import implements, classImplements
 from twisted.internet import interfaces, error, address, main, defer
 from twisted.internet.abstract import _LogOwner, isIPAddress, isIPv6Address
 from twisted.internet.tcp import _SocketCloser, Connector as TCPConnector
-from twisted.internet.tcp import _AbortingMixin
+from twisted.internet.tcp import _AbortingMixin, _SwitchingMixin
 from twisted.python import log, failure, reflect, util
 
 from twisted.internet.iocpreactor import iocpsupport as _iocp, abstract
@@ -34,7 +34,8 @@ connectExErrors = {
         ERROR_NETWORK_UNREACHABLE: errno.WSAENETUNREACH,
         }
 
-class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
+class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin,
+                 _SwitchingMixin):
     """
     @ivar TLS: C{False} to indicate the connection is in normal TCP mode,
         C{True} to indicate that TLS has been started and that operations must
@@ -309,11 +310,9 @@ class Client(Connection):
             self.socket.setsockopt(
                 socket.SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT,
                 struct.pack('P', self.socket.fileno()))
-            self.protocol = self.connector.buildProtocol(self.getPeer())
+            protocol = self.connector.buildProtocol(self.getPeer())
             self.connected = True
-            logPrefix = self._getLogPrefix(self.protocol)
-            self.logstr = logPrefix + ",client"
-            self.protocol.makeConnection(self)
+            self.switchProtocol(protocol)
             self.startReading()
 
 
@@ -329,6 +328,12 @@ class Client(Connection):
         rc = _iocp.connect(self.socket.fileno(), self.realAddress, evt)
         if rc and rc != ERROR_IO_PENDING:
             self.cbConnect(rc, 0, 0, evt)
+
+
+    def switchProtocol(self, protocol, data=""):
+        Connection.switchProtocol(self, protocol, data)
+        logPrefix = self._getLogPrefix(self.protocol)
+        self.logstr = logPrefix + ",client"
 
 
     def getHost(self):
@@ -391,12 +396,16 @@ class Server(Connection):
         self.serverAddr = serverAddr
         self.clientAddr = clientAddr
         self.sessionno = sessionno
+        self.connected = True
+        self.startReading()
+
+
+    def switchProtocol(self, protocol, data=""):
+        Connection.switchProtocol(self, protocol, data)
         logPrefix = self._getLogPrefix(self.protocol)
         self.logstr = "%s,%s,%s" % (logPrefix, sessionno, self.clientAddr.host)
         self.repstr = "<%s #%s on %s>" % (self.protocol.__class__.__name__,
                                           self.sessionno, self.serverAddr.port)
-        self.connected = True
-        self.startReading()
 
 
     def __repr__(self):
@@ -614,7 +623,7 @@ class Port(_SocketCloser, _LogOwner):
                         self._addressType('TCP', rAddr[0], rAddr[1]),
                         self._addressType('TCP', lAddr[0], lAddr[1]),
                         s, self.reactor)
-                protocol.makeConnection(transport)
+                transport.switchProtocol(protocol)
             return True
 
 
