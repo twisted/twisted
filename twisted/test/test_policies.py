@@ -12,7 +12,7 @@ from StringIO import StringIO
 from twisted.trial import unittest
 from twisted.test.proto_helpers import StringTransport
 from twisted.test.proto_helpers import StringTransportWithDisconnection
-
+from twisted.internet.test.test_tcp import SwitchableProtocolTests
 from twisted.internet import protocol, reactor, address, defer, task
 from twisted.protocols import policies
 
@@ -214,6 +214,20 @@ class WrapperTestCase(unittest.TestCase):
             address.IPv4Address('TCP', '127.0.0.1', 35))
         self.assertEqual("NoProtocol (ProtocolWrapper)",
                          protocol.logPrefix())
+
+
+
+class WrappedSwitchableProtocolTests(SwitchableProtocolTests):
+    """
+    Tests for the C{ISwitchableProtocol} interface on a L{WrapperProtocol}.
+    """
+
+    def getConnection(self):
+        server = Server()
+        factory = policies.WrappingFactory(server)
+        transport = policies.ProtocolWrapper(factory, protocol.Protocol())
+        transport.makeConnection(object())
+        return transport
 
 
 

@@ -73,6 +73,25 @@ class ProtocolWrapper(Protocol):
         self.wrappedProtocol.makeConnection(self)
 
 
+    # ISwitchableProtocol
+
+    def getProtocol(self):
+        """
+        Return current protocol.
+        """
+        return self.wrappedProtocol
+
+
+    def switchProtocol(self, protocol, data=""):
+        """
+        Switch to a new protocol.
+        """
+        self.wrappedProtocol = protocol
+        self.wrappedProtocol.makeConnection(self)
+        if data:
+            self.wrappedProtocol.dataReceived(data)
+
+
     # Transport relaying
 
     def write(self, data):
