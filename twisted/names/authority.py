@@ -9,11 +9,11 @@ Authoritative resolvers.
 import os
 import time
 
-from twisted.names import dns
+from twisted.names import dns, common
 from twisted.internet import defer
 from twisted.python import failure
 
-import common
+
 
 def getSerial(filename = '/tmp/twisted-names.serial'):
     """Return a monotonically increasing (across program runs) integer.
@@ -43,21 +43,6 @@ def getSerial(filename = '/tmp/twisted-names.serial'):
     return serial
 
 
-#class LookupCacherMixin(object):
-#    _cache = None
-#
-#    def _lookup(self, name, cls, type, timeout = 10):
-#        if not self._cache:
-#            self._cache = {}
-#            self._meth = super(LookupCacherMixin, self)._lookup
-#
-#        if self._cache.has_key((name, cls, type)):
-#            return self._cache[(name, cls, type)]
-#        else:
-#            r = self._meth(name, cls, type, timeout)
-#            self._cache[(name, cls, type)] = r
-#            return r
-
 
 class FileAuthority(common.ResolverBase):
     """An Authority that is loaded from a file."""
@@ -73,7 +58,7 @@ class FileAuthority(common.ResolverBase):
 
     def __setstate__(self, state):
         self.__dict__ = state
-#        print 'setstate ', self.soa
+
 
     def _lookup(self, name, cls, type, timeout = None):
         cnames = []
@@ -165,6 +150,7 @@ class FileAuthority(common.ResolverBase):
         return ans, auth, add
 
 
+
 class PySourceAuthority(FileAuthority):
     """A FileAuthority that is built up from Python source code."""
 
@@ -195,11 +181,14 @@ class PySourceAuthority(FileAuthority):
         return r
 
 
+
 class BindAuthority(FileAuthority):
-    """An Authority that loads BIND configuration files"""
+    """
+    An authority that loads BIND configuration files.
+    """
 
     def loadFile(self, filename):
-        self.origin = os.path.basename(filename) + '.' # XXX - this might suck
+        self.origin = os.path.basename(filename) + '.' # XXX - this sucks
         lines = open(filename).readlines()
         lines = self.stripComments(lines)
         lines = self.collapseContinuations(lines)
@@ -207,11 +196,8 @@ class BindAuthority(FileAuthority):
 
 
     def stripComments(self, lines):
-        return [
-            a.find(';') == -1 and a or a[:a.find(';')] for a in [
-                b.strip() for b in lines
-            ]
-        ]
+        # Leading whitespace is significant - don't strip it!
+        return [a.find(';') == -1 and a or a[:a.find(';')] for a in lines]
 
 
     def collapseContinuations(self, lines):
@@ -233,8 +219,13 @@ class BindAuthority(FileAuthority):
         lines = L
         L = []
         for line in lines:
-            L.append(line.split())
-        return filter(None, L)
+            if not line:
+                continue
+            if line[0] in [' ', '\t']:
+                L.append([''] + line.split())
+            else:
+                L.append(line.split())
+        return filter(lambda a:a and ''.join(a), L)
 
 
     def parseLines(self, lines):
@@ -242,30 +233,37 @@ class BindAuthority(FileAuthority):
         ORIGIN = self.origin
 
         self.records = {}
+        prevDomain = prevOwner = None
 
         for (line, index) in zip(lines, range(len(lines))):
             if line[0] == '$TTL':
                 TTL = dns.str2time(line[1])
             elif line[0] == '$ORIGIN':
                 ORIGIN = line[1]
-            elif line[0] == '$INCLUDE': # XXX - oh, fuck me
+            elif line[0] == '$INCLUDE':
                 raise NotImplementedError('$INCLUDE directive not implemented')
             elif line[0] == '$GENERATE':
                 raise NotImplementedError('$GENERATE directive not implemented')
             else:
-                self.parseRecordLine(ORIGIN, TTL, line)
+                prevOwner, prevDomain = self.parseRecordLine(ORIGIN,
+                                                             TTL,
+                                                             line,
+                                                             prevOwner,
+                                                             prevDomain)
 
 
     def addRecord(self, owner, ttl, type, domain, cls, rdata):
-        if not domain.endswith('.'):
+        if not domain:
+            domain = owner
+        elif not domain.endswith('.'):
             domain = domain + '.' + owner
-        else:
+        if domain.endswith('.'):
             domain = domain[:-1]
         f = getattr(self, 'class_%s' % cls, None)
         if f:
             f(ttl, type, domain, rdata)
         else:
-            raise NotImplementedError, "Record class %r not supported" % cls
+            raise NotImplementedError("Record class %r not supported" % (cls,))
 
 
     def class_IN(self, ttl, type, domain, rdata):
@@ -275,59 +273,42 @@ class BindAuthority(FileAuthority):
             r.ttl = ttl
             self.records.setdefault(domain.lower(), []).append(r)
 
-            print 'Adding IN Record', domain, ttl, r
             if type == 'SOA':
                 self.soa = (domain, r)
         else:
-            raise NotImplementedError, "Record type %r not supported" % type
+            raise NotImplementedError("Record type %r not supported" % (type,))
 
 
-    #
-    # This file ends here.  Read no further.
-    #
-    def parseRecordLine(self, origin, ttl, line):
-        MARKERS = dns.QUERY_CLASSES.values() + dns.QUERY_TYPES.values()
+    def parseRecordLine(self, origin, ttl, line, prevOwner=None, prevDomain=None):
+        """
+        Parse a Bind authority file line.
+        """
         cls = 'IN'
-        owner = origin
 
         if line[0] == '@':
-            line = line[1:]
             owner = origin
-#            print 'default owner'
-        elif not line[0].isdigit() and line[0] not in MARKERS:
-            owner = line[0]
-            line = line[1:]
-#            print 'owner is ', owner
-
-        if line[0].isdigit() or line[0] in MARKERS:
-            domain = owner
-            owner = origin
-#            print 'woops, owner is ', owner, ' domain is ', domain
+            domain = ''
+        elif not line[0]:
+            owner = prevOwner
+            domain = prevDomain
         else:
+            owner = prevOwner
             domain = line[0]
+
+        line = line[1:]
+
+        if line[0].isdigit():
+            ttl = int(line[0])
             line = line[1:]
-#            print 'domain is ', domain
 
         if line[0] in dns.QUERY_CLASSES.values():
             cls = line[0]
             line = line[1:]
-#            print 'cls is ', cls
-            if line[0].isdigit():
-                ttl = int(line[0])
-                line = line[1:]
-#                print 'ttl is ', ttl
-        elif line[0].isdigit():
-            ttl = int(line[0])
+
+        if line[0] in dns.QUERY_TYPES.values():
+            type = line[0]
             line = line[1:]
-#            print 'ttl is ', ttl
-            if line[0] in dns.QUERY_CLASSES.values():
-                cls = line[0]
-                line = line[1:]
-#                print 'cls is ', cls
 
-        type = line[0]
-#        print 'type is ', type
-        rdata = line[1:]
-#        print 'rdata is ', rdata
-
+        rdata = line
         self.addRecord(owner, ttl, type, domain, cls, rdata)
+        return owner, domain
