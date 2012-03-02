@@ -2229,8 +2229,8 @@ class IOCPServerSwitchableProtocolTests(SwitchableProtocolTests):
     def getConnection(self):
         skt = socket.socket()
         self.addCleanup(skt.close)
-        return IOCPServer(skt, None, IPv4Address("127.0.0.1", 8000),
-                          IPv4Address("127.0.0.1", 666),
+        return IOCPServer(skt, None, IPv4Address("TCP", "127.0.0.1", 8000),
+                          IPv4Address("TCP", "127.0.0.1", 666),
                           1, DummyReactor())
 
 
