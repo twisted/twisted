@@ -830,3 +830,168 @@ class NoInitialResponseTestCase(unittest.TestCase):
         messages.append(m)
         return self.assertFailure(
             resolver.getHostByName("fooby.com"), socket.gaierror)
+
+
+
+class BindAuthorityTestCase(unittest.TestCase):
+    """
+    Test L{twisted.names.authority.BindAuthority}'s handling of a bind format
+    zone file with dots at the end of a domain name.
+    """
+
+    def setUp(self):
+        """
+        Create a zone file with absolute names (i.e., that end with ".").
+        """
+        bindFormatZoneFile = """\
+; Check this "file" by copying the text below to a file
+; and using named-checkconf to check the syntax:
+; $ named-checkzone example-domain.com <filename>
+;
+$TTL 1W
+$ORIGIN         example-domain.com.
+@               IN SOA          example-domain.com.   admin.example-domain.com. (
+                                42              ; serial (d. adams)
+                                2D              ; refresh
+                                4H              ; retry
+                                6W              ; expiry
+                                1W )            ; minimum
+
+                IN NS           ns1.example-domain.com.
+                IN NS           ns2.example-domain.com.
+ns1             IN A            192.168.168.24
+ns2             IN A            192.168.1.24
+
+$TTL 3600	; 1 hour
+;delegate a subzone with 2 name servers
+sz                 NS           ns1.easyzone.com
+                   NS           ns2.easyzone.com
+
+ns1.easyzone.com    A           192.168.1.33
+ns2.easyzone.com    A           192.168.1.35
+
+demo1           IN A            192.168.168.25
+demo2           IN A            192.168.168.26
+
+$TTL 86400	; 1 day
+name1		   A           99.99.9.100
+                   A	       99.99.9.101
+name2		   A	       99.99.9.102
+                   A           99.99.9.103
+name3		   A           99.99.9.104
+                   A           99.99.9.105
+                   A           99.99.9.106
+                   A           99.99.9.107
+"""
+        self.tmpFilePath = self.mktemp()
+        fp = open(self.tmpFilePath, 'w')
+        fp.write(bindFormatZoneFile)
+        fp.close()
+
+
+    def test_lookupSOA(self):
+        """
+        Test that you can lookup an SOA record from the bind format zone file.
+        """
+        from twisted.names.authority import BindAuthority
+        bindAuthority = BindAuthority(self.tmpFilePath)
+
+        # Lookup example-domain.com SOA record:
+        d = bindAuthority.lookupAuthority('example-domain.com')
+        result = []
+        d.addCallback(result.append)
+        answer,authority,additional = result[0]
+        self.assertEqual(
+            answer[0],
+            dns.RRHeader('example-domain.com',
+                         type=dns.SOA, cls=dns.IN,
+                         ttl=604800, auth=True,
+                         payload=dns.Record_SOA(mname='example-domain.com.',
+                                                rname='admin.example-domain.com.',
+                                                serial=42,
+                                                refresh=2*24*60*60,
+                                                retry=4*60*60,
+                                                expire=6*7*24*60*60,
+                                                minimum=604800,
+                                                ttl=604800)))
+
+        self.assertEqual(authority, [])
+        self.assertEqual(additional, [])
+
+
+    def test_lookupA(self):
+        """
+        Test that you can lookup an A record from the bind format zone file.
+        """
+        from twisted.names.authority import BindAuthority
+        bindAuthority = BindAuthority(self.tmpFilePath)
+        d = bindAuthority.lookupAddress('demo1.example-domain.com')
+        result = []
+        d.addCallback(result.append)
+        answer, authority, additional = result[0]
+        self.assertEqual(answer[0], dns.RRHeader('demo1.example-domain.com',
+                         type=dns.A, cls=dns.IN, ttl=3600, auth=True,
+                         payload=dns.Record_A(address='192.168.168.25', ttl=3600)))
+        self.assertEqual(authority, [])
+        self.assertEqual(additional, [])
+
+
+    def test_lookupMultipleNSRRs(self):
+        """
+        Test that you get all the data associated with a zone that has
+        multiple NS RRs with no explicit name
+        """
+        from twisted.names.authority import BindAuthority
+        bindAuthority = BindAuthority(self.tmpFilePath)
+        d = bindAuthority.lookupNameservers('example-domain.com')
+        result = []
+        d.addCallback(result.append)
+        answer, authority, additional = result[0]
+        for i in range(2):
+            self.assertEqual(answer[i], dns.RRHeader('example-domain.com',
+                             type=dns.NS, cls=dns.IN, ttl=604800, auth=True,
+                             payload=dns.Record_NS(name='ns%d.example-domain.com.'%(i+1),
+                                                   ttl=604800)))
+        self.assertEqual(authority, [])
+        self.assertEqual(additional, [])
+
+
+    def test_lookupMultipleARRs(self):
+        """
+        Test that you get all the data associated with a domain that has
+        multiple RRs with only one named.
+        """
+        from twisted.names.authority import BindAuthority
+        bindAuthority = BindAuthority(self.tmpFilePath)
+        d = bindAuthority.lookupAddress('name3.example-domain.com')
+        result = []
+        d.addCallback(result.append)
+        answer, authority, additional = result[0]
+        for i in range(4):
+            self.assertEqual(answer[i], dns.RRHeader('name3.example-domain.com',
+                             type=dns.A, cls=dns.IN, ttl=86400, auth=True,
+                             payload=dns.Record_A(address='99.99.9.10%d'%(i+4),
+                                                  ttl=86400)))
+        self.assertEqual(authority, [])
+        self.assertEqual(additional, [])
+
+
+    def test_lookupSubZone(self):
+        """
+        Test that you get all the data associated with a domain that has
+        multiple RRs with only one named.
+        """
+        from twisted.names.authority import BindAuthority
+        bindAuthority = BindAuthority(self.tmpFilePath)
+        d = bindAuthority.lookupAddress('sz.example-domain.com')
+        result = []
+        d.addCallback(result.append)
+        answer, authority, additional = result[0]
+        self.assertEqual(answer, [])
+        for i in range(2):
+            self.assertEqual(authority[i], dns.RRHeader('sz.example-domain.com',
+                             type=dns.NS, cls=dns.IN, ttl=3600, auth=False,
+                             payload=dns.Record_NS(name='ns%d.easyzone.com'%(i+1),
+                                                   ttl=3600)))
+        self.assertEqual(additional, [])
+
