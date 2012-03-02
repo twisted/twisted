@@ -1,0 +1,1 @@
+twisted.internet.interfaces.ISwitchableProtocol is a new interface implemented TCP and SSL transports, allowing the protocol connected to a transport to be changed.
