@@ -331,9 +331,9 @@ class Client(Connection):
 
 
     def switchProtocol(self, protocol, data=""):
-        Connection.switchProtocol(self, protocol, data)
-        logPrefix = self._getLogPrefix(self.protocol)
+        logPrefix = self._getLogPrefix(protocol)
         self.logstr = logPrefix + ",client"
+        Connection.switchProtocol(self, protocol, data)
 
 
     def getHost(self):
@@ -401,19 +401,18 @@ class Server(Connection):
 
 
     def switchProtocol(self, protocol, data=""):
-        Connection.switchProtocol(self, protocol, data)
-        logPrefix = self._getLogPrefix(self.protocol)
+        logPrefix = self._getLogPrefix(protocol)
         self.logstr = "%s,%s,%s" % (logPrefix, self.sessionno,
                                     self.clientAddr.host)
-        self.repstr = "<%s #%s on %s>" % (self.protocol.__class__.__name__,
-                                          self.sessionno, self.serverAddr.port)
+        Connection.switchProtocol(self, protocol, data)
 
 
     def __repr__(self):
         """
         A string representation of this connection.
         """
-        return self.repstr
+        return "<%s #%s on %s>" % (self.protocol.__class__.__name__,
+                                   self.sessionno, self.serverAddr.port)
 
 
     def getHost(self):

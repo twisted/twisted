@@ -444,9 +444,9 @@ class BaseClient(_TLSClientMixin, Connection):
 
 
     def switchProtocol(self, protocol, data=""):
-        Connection.switchProtocol(self, protocol, data)
-        logPrefix = self._getLogPrefix(self.protocol)
+        logPrefix = self._getLogPrefix(protocol)
         self.logstr = "%s,client" % logPrefix
+        Connection.switchProtocol(self, protocol, data)
 
 
     def _connectDone(self):
@@ -462,6 +462,7 @@ class BaseClient(_TLSClientMixin, Connection):
         else:
             Connection.connectionLost(self, reason)
             self.connector.connectionLost(reason)
+
 
 
 class Client(BaseClient):
@@ -508,6 +509,7 @@ class Client(BaseClient):
         return s
 
 
+
 class Server(_TLSServerMixin, Connection):
     """
     Serverside socket-stream connection class.
@@ -546,20 +548,20 @@ class Server(_TLSServerMixin, Connection):
 
 
     def switchProtocol(self, protocol, data=""):
-        Connection.switchProtocol(self, protocol, data)
-        logPrefix = self._getLogPrefix(self.protocol)
+        logPrefix = self._getLogPrefix(protocol)
         self.logstr = "%s,%s,%s" % (logPrefix,
                                     self.sessionno,
                                     self.hostname)
-        self.repstr = "<%s #%s on %s>" % (self.protocol.__class__.__name__,
-                                          self.sessionno,
-                                          self.server._realPortNumber)
+        Connection.switchProtocol(self, protocol, data)
 
 
     def __repr__(self):
-        """A string representation of this connection.
         """
-        return self.repstr
+        A string representation of this connection.
+        """
+        return "<%s #%s on %s>" % (self.protocol.__class__.__name__,
+                                   self.sessionno,
+                                   self.server._realPortNumber)
 
 
     def getHost(self):

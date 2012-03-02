@@ -2093,10 +2093,15 @@ class DummyReactor(object):
 
 
     addReader = callLater = removeReader = removeWriter = addWriter = doNothing
+    addActiveHandle = doNothing
 
 
     def resolve(self, addr):
         return succeed("127.0.0.1")
+
+
+    def createSocket(self, addr, sock):
+        return socket.socket(addr, sock)
 
 
 
