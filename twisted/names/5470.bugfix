@@ -1,0 +1,1 @@
+twisted.names.authority.BindAuthority now correctly deals with repeated domain names and partial domain names.
