@@ -2210,7 +2210,9 @@ class IOCPClientSwitchableProtocolTests(SwitchableProtocolTests):
     """
 
     def getConnection(self):
-        return IOCPClient("127.0.0.1", 666, None, None, DummyReactor())
+        client = IOCPClient("127.0.0.1", 666, None, None, DummyReactor())
+        self.addCleanup(client.socket.close)
+        return client
 
 
 
@@ -2220,6 +2222,8 @@ class IOCPServerSwitchableProtocolTests(SwitchableProtocolTests):
     """
 
     def getConnection(self):
+        skt = socket.socket()
+        self.addCleanup(skt.close)
         return IOCPServer(skt, None, ("127.0.0.1", 8000), ("127.0.0.1", 666),
                           1, DummyReactor())
 

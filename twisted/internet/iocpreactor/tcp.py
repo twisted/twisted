@@ -403,7 +403,8 @@ class Server(Connection):
     def switchProtocol(self, protocol, data=""):
         Connection.switchProtocol(self, protocol, data)
         logPrefix = self._getLogPrefix(self.protocol)
-        self.logstr = "%s,%s,%s" % (logPrefix, sessionno, self.clientAddr.host)
+        self.logstr = "%s,%s,%s" % (logPrefix, self.sessionno,
+                                    self.clientAddr.host)
         self.repstr = "<%s #%s on %s>" % (self.protocol.__class__.__name__,
                                           self.sessionno, self.serverAddr.port)
 
