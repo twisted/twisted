@@ -7,10 +7,12 @@ Test cases for twisted.names.
 """
 
 import socket, operator, copy
+from StringIO import StringIO
 
 from twisted.trial import unittest
 
 from twisted.internet import reactor, defer, error
+from twisted.internet.task import Clock
 from twisted.internet.defer import succeed
 from twisted.names import client, server, common, authority, dns
 from twisted.python import failure
@@ -20,9 +22,12 @@ from twisted.names.error import DNSUnknownError
 from twisted.names.dns import EFORMAT, ESERVER, ENAME, ENOTIMP, EREFUSED
 from twisted.names.dns import Message
 from twisted.names.client import Resolver
-
+from twisted.names.secondary import (
+    SecondaryAuthorityService, SecondaryAuthority)
 from twisted.names.test.test_client import StubPort
+
 from twisted.python.compat import reduce
+from twisted.test.proto_helpers import StringTransport, MemoryReactor
 
 def justPayload(results):
     return [r.payload for r in results[0]]
@@ -830,3 +835,122 @@ class NoInitialResponseTestCase(unittest.TestCase):
         messages.append(m)
         return self.assertFailure(
             resolver.getHostByName("fooby.com"), socket.gaierror)
+
+
+
+class SecondaryAuthorityServiceTests(unittest.TestCase):
+    """
+    Tests for L{SecondaryAuthorityService}, a service which keeps one or more
+    authorities up to date by doing zone transfers from a master.
+    """
+
+    def test_constructAuthorityFromHost(self):
+        """
+        L{SecondaryAuthorityService} can be constructed with a C{str} giving a
+        master server address and several domains, causing the creation of a
+        secondary authority for each domain and that master server address and
+        the default DNS port.
+        """
+        primary = '192.168.1.2'
+        service = SecondaryAuthorityService(
+            primary, ['example.com', 'example.org'])
+        self.assertEqual(service.primary, primary)
+        self.assertEqual(service._port, 53)
+
+        self.assertEqual(service.domains[0].primary, primary)
+        self.assertEqual(service.domains[0]._port, 53)
+        self.assertEqual(service.domains[0].domain, 'example.com')
+
+        self.assertEqual(service.domains[1].primary, primary)
+        self.assertEqual(service.domains[1]._port, 53)
+        self.assertEqual(service.domains[1].domain, 'example.org')
+
+
+    def test_constructAuthorityFromHostAndPort(self):
+        """
+        L{SecondaryAuthorityService.fromServerAddressAndDomains} constructs a
+        new L{SecondaryAuthorityService} from a C{str} giving a master server
+        address and DNS port and several domains, causing the creation of a secondary
+        authority for each domain and that master server address and the given
+        DNS port.
+        """
+        primary = '192.168.1.3'
+        port = 5335
+        service = SecondaryAuthorityService.fromServerAddressAndDomains(
+            (primary, port), ['example.net', 'example.edu'])
+        self.assertEqual(service.primary, primary)
+        self.assertEqual(service._port, 5335)
+
+        self.assertEqual(service.domains[0].primary, primary)
+        self.assertEqual(service.domains[0]._port, port)
+        self.assertEqual(service.domains[0].domain, 'example.net')
+
+        self.assertEqual(service.domains[1].primary, primary)
+        self.assertEqual(service.domains[1]._port, port)
+        self.assertEqual(service.domains[1].domain, 'example.edu')
+
+
+
+class SecondaryAuthorityTests(unittest.TestCase):
+    """
+    L{twisted.names.secondary.SecondaryAuthority} correctly constructs objects
+    with a specified IP address and optionally specified DNS port.
+    """
+
+    def test_defaultPort(self):
+        """
+        When constructed using L{SecondaryAuthority.__init__}, the default port
+        of 53 is used.
+        """
+        secondary = SecondaryAuthority('192.168.1.1', 'inside.com')
+        self.assertEqual(secondary.primary, '192.168.1.1')
+        self.assertEqual(secondary._port, 53)
+        self.assertEqual(secondary.domain, 'inside.com')
+
+
+    def test_explicitPort(self):
+        """
+        When constructed using L{SecondaryAuthority.fromServerAddressAndDomain},
+        the specified port is used.
+        """
+        secondary = SecondaryAuthority.fromServerAddressAndDomain(
+            ('192.168.1.1', 5353), 'inside.com')
+        self.assertEqual(secondary.primary, '192.168.1.1')
+        self.assertEqual(secondary._port, 5353)
+        self.assertEqual(secondary.domain, 'inside.com')
+
+
+    def test_transfer(self):
+        """
+        An attempt is made to transfer the zone for the domain the
+        L{SecondaryAuthority} was constructed with from the server address it
+        was constructed with when L{SecondaryAuthority.transfer} is called.
+        """
+        class ClockMemoryReactor(Clock, MemoryReactor):
+            def __init__(self):
+                Clock.__init__(self)
+                MemoryReactor.__init__(self)
+
+        secondary = SecondaryAuthority.fromServerAddressAndDomain(
+            ('192.168.1.2', 1234), 'example.com')
+        secondary._reactor = reactor = ClockMemoryReactor()
+
+        secondary.transfer()
+
+        # Verify a connection attempt to the server address above
+        host, port, factory, timeout, bindAddress = reactor.tcpClients.pop(0)
+        self.assertEqual(host, '192.168.1.2')
+        self.assertEqual(port, 1234)
+
+        # See if a zone transfer query is issued.
+        proto = factory.buildProtocol((host, port))
+        transport = StringTransport()
+        proto.makeConnection(transport)
+
+        msg = Message()
+        # DNSProtocol.writeMessage length encodes the message by prepending a
+        # 2 byte message length to the buffered value.
+        msg.decode(StringIO(transport.value()[2:]))
+
+        self.assertEqual(
+            [dns.Query('example.com', dns.AXFR, dns.IN)], msg.queries)

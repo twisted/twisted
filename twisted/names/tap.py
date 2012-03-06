@@ -1,6 +1,6 @@
+# -*- test-case-name: twisted.names.test.test_tap -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 """
 Domain Name Server
@@ -65,8 +65,19 @@ class Options(usage.Options):
         """
         args = ip_domain.split('/', 1)
         if len(args) != 2:
-            raise usage.UsageError("Argument must be of the form IP/domain")
-        self.secondaries.append((args[0], [args[1]]))
+            raise usage.UsageError("Argument must be of the form IP[:port]/domain")
+        address = args[0].split(':')
+        if len(address) == 1:
+            address = (address[0], dns.PORT)
+        else:
+            try:
+                port = int(address[1])
+            except ValueError:
+                raise usage.UsageError(
+                    "Specify an integer port number, not %r" % (address[1],))
+            address = (address[0], port)
+        self.secondaries.append((address, [args[1]]))
+
 
     def opt_verbose(self):
         """Increment verbosity level"""
@@ -82,17 +93,18 @@ class Options(usage.Options):
         for f in self.zonefiles:
             try:
                 self.zones.append(authority.PySourceAuthority(f))
-            except Exception, e:
+            except Exception:
                 traceback.print_exc()
                 raise usage.UsageError("Invalid syntax in " + f)
         for f in self.bindfiles:
             try:
                 self.zones.append(authority.BindAuthority(f))
-            except Exception, e:
+            except Exception:
                 traceback.print_exc()
                 raise usage.UsageError("Invalid syntax in " + f)
         for f in self.secondaries:
-            self.svcs.append(secondary.SecondaryAuthorityService(*f))
+            svc = secondary.SecondaryAuthorityService.fromServerAddressAndDomains(*f)
+            self.svcs.append(svc)
             self.zones.append(self.svcs[-1].getAuthority())
         try:
             self['port'] = int(self['port'])
