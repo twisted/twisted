@@ -63,40 +63,6 @@ class C:
     zope.interface.implements(IFoo)
 </code>
 
-<h3>
-
-What about third party classes dependant on the old style of implements
-declarations?
-
-</h3>
-
-<p>
-Use <code class="API"
-base="twisted.python.components">backwardsCompatImplements</code> to fix this.
-</p>
-
-<code>
-twisted.python.components.backwardsCompatImplements(C)
-</code>
-
-<h3>What about using third party classes?</h3>
-
-<p>
-If you are using third party libraries that only declare __implements__, these
-objects should be made compatible with <code
-base="twisted.python.components">fixClassImplements</code>: </p>
-
-<code>
-# import o where o is some third party library
-from thirdparty.lib import o
-
-twisted.python.components.fixClassImplements(o.__class__)
-</code>
-
-<p>
-This will make sure that __implements__ declarations get converted to the new
-style of implements declarations.
-</p>
 
 <h2>Acknowledgements</h2>
 

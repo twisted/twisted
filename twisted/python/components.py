@@ -28,9 +28,6 @@ which allow access to only the parts of another class defined by a specified
 interface.
 """
 
-# system imports
-import warnings
-
 # zope3 imports
 from zope.interface import interface, declarations
 from zope.interface.adapter import AdapterRegistry
@@ -39,11 +36,6 @@ from zope.interface.adapter import AdapterRegistry
 from twisted.python import reflect
 from twisted.persisted import styles
 
-
-class ComponentsDeprecationWarning(DeprecationWarning):
-    """
-    Nothing emits this warning anymore.
-    """
 
 
 # Twisted's global adapter registry
@@ -141,27 +133,6 @@ def _removeHook(hook):
 
 # add global adapter lookup hook for our newly created registry
 _addHook(globalRegistry)
-
-
-## backwardsCompatImplements and fixClassImplements should probably stick around for another
-## release cycle. No harm doing so in any case.
-
-def backwardsCompatImplements(klass):
-    """DEPRECATED.
-
-    Does nothing. Previously handled backwards compat from a
-    zope.interface using class to a class wanting old twisted
-    components interface behaviors.
-    """
-    warnings.warn("components.backwardsCompatImplements doesn't do anything in Twisted 2.3, stop calling it.", ComponentsDeprecationWarning, stacklevel=2)
-
-def fixClassImplements(klass):
-    """DEPRECATED.
-
-    Does nothing. Previously converted class from __implements__ to
-    zope implementation.
-    """
-    warnings.warn("components.fixClassImplements doesn't do anything in Twisted 2.3, stop calling it.", ComponentsDeprecationWarning, stacklevel=2)
 
 
 def getRegistry():
@@ -461,12 +432,7 @@ class _ProxyDescriptor(object):
 
 __all__ = [
     # Sticking around:
-    "ComponentsDeprecationWarning",
     "registerAdapter", "getAdapterFactory",
     "Adapter", "Componentized", "ReprableComponentized", "getRegistry",
     "proxyForInterface",
-
-    # Deprecated:
-    "backwardsCompatImplements",
-    "fixClassImplements",
 ]
