@@ -2169,8 +2169,6 @@ class DistributionBuilderTest(DistributionBuilderTestBase):
         howtoInput, howtoOutput = self.getArbitraryLoreInputAndOutput("8.0.0")
         specInput, specOutput = self.getArbitraryLoreInputAndOutput(
             "8.0.0", prefix="../howto/")
-        upgradeInput, upgradeOutput = self.getArbitraryLoreInputAndOutput(
-            "8.0.0", prefix="../howto/")
         tutorialInput, tutorialOutput = self.getArbitraryLoreInputAndOutput(
             "8.0.0", prefix="../")
 
@@ -2192,7 +2190,6 @@ class DistributionBuilderTest(DistributionBuilderTestBase):
                                        "tutorial":
                                            {"index.xhtml": tutorialInput}},
                              "specifications": {"index.xhtml": specInput},
-                             "upgrades": {"index.xhtml": upgradeInput},
                              "examples": {"foo.py": "foo.py"},
                              "index.xhtml": indexInput},
                     "web": {"howto": {"index.xhtml": "webindex"}}},
@@ -2214,7 +2211,6 @@ class DistributionBuilderTest(DistributionBuilderTestBase):
                               "index.html": howtoOutput,
                               "tutorial": {"index.html": tutorialOutput}},
                     "specifications": {"index.html": specOutput},
-                    "upgrades": {"index.html": upgradeOutput},
                     "examples": {"foo.py": "foo.py"},
                     "index.html": indexOutput},
             "bin": {"twistd": "TWISTD"},
