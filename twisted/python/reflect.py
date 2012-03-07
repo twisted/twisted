@@ -60,7 +60,8 @@ class Settable:
 
 
 class AccessorType(type):
-    """Metaclass that generates properties automatically.
+    """
+    Metaclass that generates properties automatically.
 
     This is for Python 2.2 and up.
 
@@ -123,7 +124,8 @@ class AccessorType(type):
 
 
 class PropertyAccessor(object):
-    """A mixin class for Python 2.2 that uses AccessorType.
+    """
+    A mixin class for Python 2.2 that uses AccessorType.
 
     This provides compatability with the pre-2.2 Accessor mixin, up
     to a point.
@@ -276,7 +278,9 @@ class Summer(Accessor):
 
 
 class QueueMethod:
-    """ I represent a method that doesn't exist yet."""
+    """
+    I represent a method that doesn't exist yet.
+    """
     def __init__(self, name, calls):
         self.name = name
         self.calls = calls
@@ -325,7 +329,9 @@ def fullFuncName(func):
 
 
 def qual(clazz):
-    """Return full import path of a class."""
+    """
+    Return full import path of a class.
+    """
     return clazz.__module__ + '.' + clazz.__name__
 
 
@@ -339,8 +345,10 @@ def getcurrent(clazz):
 
 
 def getClass(obj):
-    """Return the class or type of object 'obj'.
-    Returns sensible result for oldstyle and newstyle instances and types."""
+    """
+    Return the class or type of object 'obj'.
+    Returns sensible result for oldstyle and newstyle instances and types.
+    """
     if hasattr(obj, '__class__'):
         return obj.__class__
     else:
@@ -366,7 +374,9 @@ def isinst(inst,clazz):
 
 
 def namedModule(name):
-    """Return a module given its name."""
+    """
+    Return a module given its name.
+    """
     topLevel = __import__(name)
     packages = name.split(".")[1:]
     m = topLevel
@@ -376,7 +386,8 @@ def namedModule(name):
 
 
 def namedObject(name):
-    """Get a fully named module-global object.
+    """
+    Get a fully named module-global object.
     """
     classSplit = name.split('.')
     module = namedModule('.'.join(classSplit[:-1]))
@@ -509,46 +520,6 @@ def namedAny(name):
 
 
 
-def macro(name, filename, source, **identifiers):
-    """macro(name, source, **identifiers)
-
-    This allows you to create macro-like behaviors in python.
-    """
-    if not identifiers.has_key('name'):
-        identifiers['name'] = name
-    source = source % identifiers
-    codeplace = "<%s (macro)>" % filename
-    code = compile(source, codeplace, 'exec')
-
-    # shield your eyes!
-    sm = sys.modules
-    tprm = "twisted.python.reflect.macros"
-    if not sm.has_key(tprm):
-        macros = types.ModuleType(tprm)
-        sm[tprm] = macros
-        macros.count = 0
-    macros = sm[tprm]
-    macros.count += 1
-    macroname = 'macro_' + str(macros.count)
-    tprmm = tprm + '.' + macroname
-    mymod = types.ModuleType(tprmm)
-    sys.modules[tprmm] = mymod
-    setattr(macros, macroname, mymod)
-    dict = mymod.__dict__
-
-    # Before we go on, I guess I should explain why I just did that.  Basically
-    # it's a gross hack to get epydoc to work right, but the general idea is
-    # that it will be a useful aid in debugging in _any_ app which expects
-    # sys.modules to have the same globals as some function.  For example, it
-    # would be useful if you were foolishly trying to pickle a wrapped function
-    # directly from a class that had been hooked.
-
-    exec code in dict, dict
-    return dict[name]
-macro = deprecated(Version("Twisted", 8, 2, 0))(macro)
-
-
-
 def _determineClass(x):
     try:
         return x.__class__
@@ -607,11 +578,12 @@ def safe_str(o):
 
 
 
-##the following were factored out of usage
+## the following were factored out of usage
 
 @deprecated(Version("Twisted", 11, 0, 0), "inspect.getmro")
 def allYourBase(classObj, baseClass=None):
-    """allYourBase(classObj, baseClass=None) -> list of all base
+    """
+    allYourBase(classObj, baseClass=None) -> list of all base
     classes that are subclasses of baseClass, unless it is None,
     in which case all bases will be added.
     """
@@ -633,7 +605,8 @@ def _accumulateBases(classObj, l, baseClass=None):
 
 
 def prefixedMethodNames(classObj, prefix):
-    """A list of method names with a given prefix in a given class.
+    """
+    A list of method names with a given prefix in a given class.
     """
     dct = {}
     addMethodNamesToDict(classObj, dct, prefix)
@@ -664,7 +637,8 @@ def addMethodNamesToDict(classObj, dict, prefix, baseClass=None):
 
 
 def prefixedMethods(obj, prefix=''):
-    """A list of methods with a given prefix on a given instance.
+    """
+    A list of methods with a given prefix on a given instance.
     """
     dct = {}
     accumulateMethods(obj, dct, prefix)
@@ -672,7 +646,8 @@ def prefixedMethods(obj, prefix=''):
 
 
 def accumulateMethods(obj, dict, prefix='', curClass=None):
-    """accumulateMethods(instance, dict, prefix)
+    """
+    accumulateMethods(instance, dict, prefix)
     I recurse through the bases of instance.__class__, and add methods
     beginning with 'prefix' to 'dict', in the form of
     {'methodname':*instance*method_object}.
@@ -691,7 +666,8 @@ def accumulateMethods(obj, dict, prefix='', curClass=None):
 
 
 def accumulateClassDict(classObj, attr, adict, baseClass=None):
-    """Accumulate all attributes of a given name in a class heirarchy into a single dictionary.
+    """
+    Accumulate all attributes of a given name in a class hierarchy into a single dictionary.
 
     Assuming all class attributes of this name are dictionaries.
     If any of the dictionaries being accumulated have the same key, the
@@ -700,23 +676,23 @@ def accumulateClassDict(classObj, attr, adict, baseClass=None):
 
     Ex::
 
-    | class Soy:
-    |   properties = {\"taste\": \"bland\"}
-    |
-    | class Plant:
-    |   properties = {\"colour\": \"green\"}
-    |
-    | class Seaweed(Plant):
-    |   pass
-    |
-    | class Lunch(Soy, Seaweed):
-    |   properties = {\"vegan\": 1 }
-    |
-    | dct = {}
-    |
-    | accumulateClassDict(Lunch, \"properties\", dct)
-    |
-    | print dct
+      class Soy:
+        properties = {\"taste\": \"bland\"}
+    
+      class Plant:
+        properties = {\"colour\": \"green\"}
+    
+      class Seaweed(Plant):
+        pass
+    
+      class Lunch(Soy, Seaweed):
+        properties = {\"vegan\": 1 }
+    
+      dct = {}
+    
+      accumulateClassDict(Lunch, \"properties\", dct)
+    
+      print dct
 
     {\"taste\": \"bland\", \"colour\": \"green\", \"vegan\": 1}
     """
@@ -727,7 +703,8 @@ def accumulateClassDict(classObj, attr, adict, baseClass=None):
 
 
 def accumulateClassList(classObj, attr, listObj, baseClass=None):
-    """Accumulate all attributes of a given name in a class heirarchy into a single list.
+    """
+    Accumulate all attributes of a given name in a class heirarchy into a single list.
 
     Assuming all class attributes of this name are lists.
     """
@@ -760,8 +737,9 @@ def findInstances(start, t):
 
 
 def objgrep(start, goal, eq=isLike, path='', paths=None, seen=None, showUnknowns=0, maxDepth=None):
-    '''An insanely CPU-intensive process for finding stuff.
-    '''
+    """
+    An insanely CPU-intensive process for finding stuff.
+    """
     if paths is None:
         paths = []
     if seen is None:
@@ -841,7 +819,7 @@ __all__ = [
     'QueueMethod', 'OriginalAccessor',
 
     'funcinfo', 'fullFuncName', 'qual', 'getcurrent', 'getClass', 'isinst',
-    'namedModule', 'namedObject', 'namedClass', 'namedAny', 'macro',
+    'namedModule', 'namedObject', 'namedClass', 'namedAny',
     'safe_repr', 'safe_str', 'allYourBase', 'accumulateBases',
     'prefixedMethodNames', 'addMethodNamesToDict', 'prefixedMethods',
     'accumulateClassDict', 'accumulateClassList', 'isSame', 'isLike',

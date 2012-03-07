@@ -757,18 +757,9 @@ class DeprecationTestCase(unittest.TestCase):
     Test deprecations in twisted.python.reflect
     """
 
-    def test_macro(self):
-        """
-        Test deprecation of L{reflect.macro}.
-        """
-        result = self.callDeprecated(Version("Twisted", 8, 2, 0),
-            reflect.macro, "test", __file__, "test = 1")
-        self.assertEqual(result, 1)
-
-
     def test_allYourBase(self):
         """
-        Test deprecation of L{reflect.allYourBase}.
+        Test deprecation of L{reflect.allYourBase}. See #5481 for removal.
         """
         self.callDeprecated(
             (Version("Twisted", 11, 0, 0), "inspect.getmro"),
@@ -777,7 +768,7 @@ class DeprecationTestCase(unittest.TestCase):
 
     def test_accumulateBases(self):
         """
-        Test deprecation of L{reflect.accumulateBases}.
+        Test deprecation of L{reflect.accumulateBases}. See #5481 for removal.
         """
         l = []
         self.callDeprecated(
