@@ -64,7 +64,6 @@ class AtLeastImportTestCase(unittest.TestCase):
         from twisted.python import log
         from twisted.python import reflect
         from twisted.python import usage
-        from twisted.python import otp
 
     def test_protocols(self):
         """
