@@ -119,20 +119,6 @@ class UtilTestCase(unittest.TestCase):
             "Group Name/GID conversion requires the grp module.")
 
 
-    def test_moduleMovedForSplitDeprecation(self):
-        """
-        Calling L{moduleMovedForSplit} results in a deprecation warning.
-        """
-        util.moduleMovedForSplit("foo", "bar", "baz", "quux", "corge", {})
-        warnings = self.flushWarnings(
-            offendingFunctions=[self.test_moduleMovedForSplitDeprecation])
-        self.assertEqual(
-            warnings[0]['message'],
-            "moduleMovedForSplit is deprecated since Twisted 9.0.")
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
-        self.assertEqual(len(warnings), 1)
-
-
 
 class SwitchUIDTest(unittest.TestCase):
     """
@@ -433,26 +419,6 @@ class SearchUpwardsTest(unittest.TestCase):
                                   dirs=['bar', 'bam'])
         expected=None
         self.assertEqual(actual, expected)
-
-class Foo:
-    def __init__(self, x):
-        self.x = x
-
-class DSU(unittest.TestCase):
-    """
-    Tests for L{util.dsu}
-    """
-    def test_dsu(self):
-        L = [Foo(x) for x in range(20, 9, -1)]
-        L2 = util.dsu(L, lambda o: o.x)
-        self.assertEqual(range(10, 21), [o.x for o in L2])
-
-
-    def test_deprecation(self):
-        self.assertWarns(DeprecationWarning,
-                         ("dsu is deprecated since Twisted 10.1. "
-                          "Use the built-in sorted() instead."),
-                         __file__, lambda: util.dsu([], lambda: 0))
 
 
 

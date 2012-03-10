@@ -2,7 +2,7 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import os, sys, hmac, errno, inspect, warnings
+import os, sys, errno, inspect, warnings
 import types
 try:
     import pwd, grp
@@ -317,11 +317,6 @@ def getPassword(prompt = 'Password: ', confirm = 0, forceTTY = 0,
             sys.stdin, sys.stdout = old
 
 
-def dict(*a, **k):
-    import __builtin__
-    warnings.warn('twisted.python.util.dict is deprecated.  Use __builtin__.dict instead')
-    return __builtin__.dict(*a, **k)
-
 def println(*a):
     sys.stdout.write(' '.join(map(str, a))+'\n')
 
@@ -332,18 +327,10 @@ def println(*a):
 def str_xor(s, b):
     return ''.join([chr(ord(c) ^ b) for c in s])
 
-def keyed_md5(secret, challenge):
-    """
-    Create the keyed MD5 string for the given secret and challenge.
-    """
-    warnings.warn(
-        "keyed_md5() is deprecated.  Use the stdlib module hmac instead.",
-        DeprecationWarning, stacklevel=2
-    )
-    return hmac.HMAC(secret, challenge).hexdigest()
 
 def makeStatBar(width, maxPosition, doneChar = '=', undoneChar = '-', currentChar = '>'):
-    """Creates a function that will return a string representing a progress bar.
+    """
+    Creates a function that will return a string representing a progress bar.
     """
     aValue = width / float(maxPosition)
     def statBar(position, force = 0, last = ['']):
@@ -368,8 +355,11 @@ def makeStatBar(width, maxPosition, doneChar = '=', undoneChar = '-', currentCha
 """ % (doneChar * 3, currentChar, undoneChar * 3, width, maxPosition, currentChar)
     return statBar
 
+
 def spewer(frame, s, ignored):
-    """A trace function for sys.settrace that prints every function or method call."""
+    """
+    A trace function for sys.settrace that prints every function or method call.
+    """
     from twisted.python import reflect
     if frame.f_locals.has_key('self'):
         se = frame.f_locals['self']
@@ -386,8 +376,10 @@ def spewer(frame, s, ignored):
             frame.f_code.co_filename,
             frame.f_lineno)
 
+
 def searchupwards(start, files=[], dirs=[]):
-    """Walk upwards from start, looking for a directory containing
+    """
+    Walk upwards from start, looking for a directory containing
     all files and directories given as arguments::
     >>> searchupwards('.', ['foo.txt'], ['bar', 'bam'])
 
@@ -447,18 +439,22 @@ class LineLog:
         """Empty the log"""
         self.log = [None]*self.size
 
+
 def raises(exception, f, *args, **kwargs):
-    """Determine whether the given call raises the given exception"""
+    """
+    Determine whether the given call raises the given exception.
+    """
     try:
         f(*args, **kwargs)
     except exception:
         return 1
     return 0
 
+
 class IntervalDifferential:
     """
     Given a list of intervals, generate the amount of time to sleep between
-    \"instants\".
+    "instants".
 
     For example, given 7, 11 and 13, the three (infinite) sequences::
 
@@ -488,6 +484,7 @@ class IntervalDifferential:
 
     def __iter__(self):
         return _IntervalDifferentialIterator(self.intervals, self.default)
+
 
 class _IntervalDifferentialIterator:
     def __init__(self, i, d):
@@ -529,7 +526,7 @@ class _IntervalDifferentialIterator:
 class FancyStrMixin:
     """
     Set showAttributes to a sequence of strings naming attributes, OR
-    sequences of (attributeName, displayName, formatCharacter)
+    sequences of C{(attributeName, displayName, formatCharacter)}.
     """
     showAttributes = ()
     def __str__(self):
@@ -563,19 +560,6 @@ class FancyEqMixin:
             return result
         return not result
 
-
-
-def dsu(list, key):
-    """
-    decorate-sort-undecorate (aka "Schwartzian transform")
-
-    DEPRECATED. Use the built-in C{sorted()} instead.
-    """
-    warnings.warn(("dsu is deprecated since Twisted 10.1. "
-        "Use the built-in sorted() instead."), DeprecationWarning, stacklevel=2)
-    L2 = [(key(e), i, e) for (i, e) in zip(range(len(list)), list)]
-    L2.sort()
-    return [e[2] for e in L2]
 
 
 try:
@@ -718,7 +702,9 @@ def switchUID(uid, gid, euid=False):
 
 
 class SubclassableCStringIO(object):
-    """A wrapper around cStringIO to allow for subclassing"""
+    """
+    A wrapper around cStringIO to allow for subclassing.
+    """
     __csio = None
 
     def __init__(self, *a, **kw):
@@ -767,15 +753,6 @@ class SubclassableCStringIO(object):
     def getvalue(self):
         return self.__csio.getvalue()
 
-def moduleMovedForSplit(origModuleName, newModuleName, moduleDesc,
-                        projectName, projectURL, globDict):
-    """
-    No-op function; only present for backwards compatibility.  There is no
-    reason to call this function.
-    """
-    warnings.warn(
-        "moduleMovedForSplit is deprecated since Twisted 9.0.",
-        DeprecationWarning, stacklevel=2)
 
 
 def untilConcludes(f, *a, **kw):
@@ -998,10 +975,9 @@ def runAsEffectiveUser(euid, egid, function, *args, **kwargs):
 
 __all__ = [
     "uniquify", "padTo", "getPluginDirs", "addPluginDir", "sibpath",
-    "getPassword", "dict", "println", "keyed_md5", "makeStatBar",
-    "OrderedDict", "InsensitiveDict", "spewer", "searchupwards", "LineLog",
+    "getPassword", "println", "makeStatBar", "OrderedDict",
+    "InsensitiveDict", "spewer", "searchupwards", "LineLog",
     "raises", "IntervalDifferential", "FancyStrMixin", "FancyEqMixin",
-    "dsu", "switchUID", "SubclassableCStringIO", "moduleMovedForSplit",
-    "unsignedID", "mergeFunctionMetadata", "nameToLabel", "uidFromString",
-    "gidFromString", "runAsEffectiveUser", "moduleMovedForSplit",
+    "switchUID", "SubclassableCStringIO", "unsignedID", "mergeFunctionMetadata",
+    "nameToLabel", "uidFromString", "gidFromString", "runAsEffectiveUser",
 ]
