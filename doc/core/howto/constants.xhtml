@@ -79,6 +79,7 @@ ValueError: __doc__
   <pre class="shell">
 >>> list(METHOD.iterconstants())
 [&lt;METHOD=GET>, &lt;METHOD=PUT>, &lt;METHOD=POST>, &lt;METHOD=DELETE>]
+>>>
   </pre>
 
   <p>And constants can also be compared, either for equality or identity:</p>
@@ -220,7 +221,7 @@ False
   <p>And, as with <code>Names</code>, a subclass of <code>Values</code> can
   define methods:</p>
 
-  <pre class="shell">
+  <pre class="python">
 from twisted.python.constants import ValueConstant, Values
 class STATUS(Values):
     """
@@ -250,5 +251,133 @@ False
 >>>
   </pre>
 
+  <h2>Constants As Flags</h2>
+
+  <p>Integers are often used as a simple set for constants.  The values for
+  these constants are assigned as powers of two so that bits in the integer can
+  be set to represent them.  Individual bits are often called <em>flags</em>.
+  <code class="API" base="twisted.python.constants">Flags</code> supports this
+  use-case, including allowing constants with particular bits to be set, for
+  interoperability with other tools.</p>
+
+  <p>POSIX filesystem access control is traditionally done using a bitvector
+  defining which users and groups may perform which operations on a file.  This
+  state might be represented using <code>Flags</code> as follows:</p>
+
+  <pre class="python">
+from twisted.python.constants import FlagConstant, Flags
+class Permission(Flags):
+    """
+    Constants representing user, group, and other access bits for reading,
+    writing, and execution.
+    """
+    OTHER_EXECUTE = FlagConstant()
+    OTHER_WRITE = FlagConstant()
+    OTHER_READ = FlagConstant()
+    GROUP_EXECUTE = FlagConstant()
+    GROUP_WRITE = FlagConstant()
+    GROUP_READ = FlagConstant()
+    USER_EXECUTE = FlagConstant()
+    USER_WRITE = FlagConstant()
+    USER_READ = FlagConstant()
+  </pre>
+
+  <p>
+    As for the previous types of constants, these can be accessed as attributes
+    of the class object:
+  </p>
+
+  <pre class="shell">
+>>> Permission.USER_READ
+&lt;Permission=USER_READ>
+>>> Permission.USER_WRITE
+&lt;Permission=USER_WRITE>
+>>> Permission.USER_EXECUTE
+&lt;Permission=USER_EXECUTE>
+>>>
+  </pre>
+
+  <p>These constant objects also have a <code>value</code> attribute giving
+  their integer value:</p>
+
+  <pre class="shell">
+>>> Permission.USER_READ.value
+256
+>>>
+  </pre>
+
+  <p>And these constants can be looked up by name or value:</p>
+
+  <pre class="shell">
+>>> Permission.lookupByName('USER_READ') is Permission.USER_READ
+True
+>>> Permission.lookupByValue(256) is Permission.USER_READ
+True
+>>>
+  </pre>
+
+  <p>Constants can also be combined using the logical operators <code>&</code>
+  (<em>and</em>), <code>|</code> (<em>or</em>), and <code>^</code>
+  (<em>exclusive or</em>).
+  </p>
+
+  <pre class="shell">
+>>> Permission.USER_READ | Permission.USER_WRITE
+&lt;Permission={USER_READ,USER_WRITE}>
+>>> (Permission.USER_READ | Permission.USER_WRITE) & Permission.USER_WRITE
+&lt;Permission=USER_WRITE>
+>>> (Permission.USER_READ | Permission.USER_WRITE) ^ Permission.USER_WRITE
+&lt;Permission=USER_READ>
+>>>
+  </pre>
+
+  <p>The unary operator <code>~</code> (<em>not</em>) is also defined:</p>
+
+  <pre class="shell">
+>>> ~Permission.USER_READ
+&lt;Permission={GROUP_EXECUTE,GROUP_READ,GROUP_WRITE,OTHER_EXECUTE,OTHER_READ,OTHER_WRITE,USER_EXECUTE,USER_WRITE}>
+>>>
+  </pre>
+
+  <p>Constants created using these operators also have a <code>value</code>
+  attribute.</p>
+
+  <pre class="shell">
+>>> (~Permission.USER_WRITE).value
+383
+>>>
+  </pre>
+
+  <p>
+    Note the care taken to ensure the <code>~</code> operator is applied first
+    and the <code>value</code>attribute is looked up second.
+  </p>
+
+  <p>A <code>Flags</code> subclass can also define methods, just as
+  a <code>Names</code> or <code>Values</code> subclass may.  For example,
+  <code>Permission</code> might benefit from a method to format a flag as a
+  string in the traditional style.  Consider this addition to that class:</p>
+
+  <pre class="python">
+from twisted.python import filepath
+from twisted.python.constants import FlagConstant, Flags
+class Permission(Flags):
+    ...
+
+    @classmethod
+    def format(cls, permissions):
+        """
+        Format permissions flags in the traditional 'rwxr-xr-x' style.
+        """
+        return filepath.Permissions(permissions.value).shorthand()
+  </pre>
+
+  <p>Use this like any other class method:</p>
+
+  <pre class="shell">
+>>> Permission.format(Permission.USER_READ | Permission.USER_WRITE | Permission.GROUP_READ | Permission.OTHER_READ)
+'rw-r--r--'
+>>>
+  </pre>
 </body>
 </html>
