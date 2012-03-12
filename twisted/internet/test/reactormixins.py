@@ -15,6 +15,7 @@ from twisted.python.runtime import platform
 from twisted.python.reflect import namedAny, fullyQualifiedName
 from twisted.python import log
 from twisted.python.failure import Failure
+from twisted.internet.interfaces import IReactorTime
 
 # Access private APIs.
 if platform.isWindows():
@@ -77,6 +78,8 @@ class ReactorBuilder:
                     "twisted.internet.kqreactor.KQueueReactor",
                     ])
 
+    _reactors = ["twisted.internet.epollstmreactor.EPollSTMReactor"]
+
     reactorFactory = None
     originalHandler = None
     requiredInterfaces = None
@@ -120,22 +123,28 @@ class ReactorBuilder:
         # branch that fixes it.
         #
         # -exarkun
-        reactor._uninstallHandler()
+        uninstallHandler = getattr(reactor, '_uninstallHandler', None)
+        if uninstallHandler is not None:
+            uninstallHandler()
+
         if getattr(reactor, '_internalReaders', None) is not None:
             for reader in reactor._internalReaders:
                 reactor.removeReader(reader)
                 reader.connectionLost(None)
             reactor._internalReaders.clear()
 
-        # Here's an extra thing unrelated to wakers but necessary for
-        # cleaning up after the reactors we make.  -exarkun
-        reactor.disconnectAll()
+        disconnectAll = getattr(reactor, 'disconnectAll', None)
+        if disconnectAll is not None:
+            # Here's an extra thing unrelated to wakers but necessary for
+            # cleaning up after the reactors we make.  -exarkun
+            disconnectAll()
 
-        # It would also be bad if any timed calls left over were allowed to
-        # run.
-        calls = reactor.getDelayedCalls()
-        for c in calls:
-            c.cancel()
+        if IReactorTime.providedBy(reactor):
+            # It would also be bad if any timed calls left over were allowed to
+            # run.
+            calls = reactor.getDelayedCalls()
+            for c in calls:
+                c.cancel()
 
 
     def buildReactor(self):

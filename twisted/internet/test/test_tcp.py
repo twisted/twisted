@@ -22,7 +22,7 @@ from twisted.internet.error import DNSLookupError, ConnectionLost
 from twisted.internet.error import ConnectionDone, ConnectionAborted
 from twisted.internet.interfaces import (
     ILoggingContext, IResolverSimple, IConnector, IReactorFDSet,
-    ITLSTransport)
+    ITLSTransport, IReactorTCP)
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.defer import (
     Deferred, DeferredList, succeed, fail, maybeDeferred, gatherResults)
@@ -416,6 +416,8 @@ class TCPClientTestsBuilder(ReactorBuilder, ConnectionTestsMixin):
     """
     Builder defining tests relating to L{IReactorTCP.connectTCP}.
     """
+    requiredInterfaces = (IReactorTCP,)
+
     def serverEndpoint(self, reactor):
         """
         Create a L{TCP4ServerEndpoint} listening on localhost on a
@@ -740,6 +742,8 @@ class TCPPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin,
     """
     Tests for L{IReactorTCP.listenTCP}
     """
+    requiredInterfaces = (IReactorTCP,)
+
     def getListeningPort(self, reactor, factory):
         """
         Get a TCP port from a reactor.
@@ -1064,6 +1068,8 @@ class TCPConnectionTestsBuilder(ReactorBuilder):
     """
     Builder defining tests relating to L{twisted.internet.tcp.Connection}.
     """
+    requiredInterfaces = (IReactorTCP,)
+
     def test_stopStartReading(self):
         """
         This test verifies transport socket read state after multiple
@@ -1213,6 +1219,8 @@ class WriteSequenceTests(ReactorBuilder):
     @ivar server: the listening server factory to be used in tests.
     @type server: L{MyServerFactory}
     """
+    requiredInterfaces = (IReactorTCP,)
+
     def setUp(self):
         server = MyServerFactory()
         server.protocolConnectionMade = Deferred()
@@ -2037,6 +2045,8 @@ class AbortConnectionTestCase(ReactorBuilder, AbortConnectionMixin):
     """
     TCP-specific L{AbortConnectionMixin} tests.
     """
+
+    requiredInterfaces = (IReactorTCP,)
 
     def listen(self, reactor, server):
         """

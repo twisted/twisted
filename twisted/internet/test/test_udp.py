@@ -16,7 +16,8 @@ from twisted.python import context
 from twisted.python.log import ILogContext, err
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.defer import Deferred, maybeDeferred
-from twisted.internet.interfaces import ILoggingContext, IListeningPort
+from twisted.internet.interfaces import (
+    ILoggingContext, IListeningPort, IReactorUDP)
 from twisted.internet.address import IPv4Address
 from twisted.internet.protocol import DatagramProtocol
 
@@ -133,6 +134,8 @@ class UDPServerTestsBuilder(ReactorBuilder, UDPPortMixin,
     """
     Builder defining tests relating to L{IReactorUDP.listenUDP}.
     """
+    requiredInterfaces = (IReactorUDP,)
+
     def test_interface(self):
         """
         L{IReactorUDP.listenUDP} returns an object providing L{IListeningPort}.

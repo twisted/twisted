@@ -63,6 +63,8 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
     """
     Builder defining tests relating to L{IReactorUNIX}.
     """
+    requiredInterfaces = (interfaces.IReactorUNIX,)
+
     def serverEndpoint(self, reactor):
         """
         Construct a UNIX server endpoint.
@@ -132,6 +134,8 @@ class UNIXDatagramTestsBuilder(UNIXFamilyMixin, ReactorBuilder):
     """
     Builder defining tests relating to L{IReactorUNIXDatagram}.
     """
+    requiredInterfaces = (interfaces.IReactorUNIXDatagram,)
+
     # There's no corresponding test_connectMode because the mode parameter to
     # connectUNIXDatagram has been completely ignored since that API was first
     # introduced.
@@ -164,7 +168,7 @@ class UNIXPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin,
     """
     Tests for L{IReactorUNIX.listenUnix}
     """
-    requiredInterfaces = [interfaces.IReactorUNIX]
+    requiredInterfaces = (interfaces.IReactorUNIX,)
 
     def getListeningPort(self, reactor, factory):
         """

@@ -125,6 +125,8 @@ class SystemEventTestsBuilder(ReactorBuilder):
         Signal handlers are installed in responsed to the C{"during"}
         C{"startup"}.
         """
+        raise NotImplementedError()
+
         reactor = self.buildReactor()
         phase = [None]
         def beforeStartup():
@@ -193,6 +195,8 @@ class SystemEventTestsBuilder(ReactorBuilder):
         exception does not prevent the remaining L{IFileDescriptor}s from
         having their C{connectionLost} method called.
         """
+        raise NotImplementedError()
+
         lostOK = [False]
 
         # Subclass FileDescriptor to get logPrefix
