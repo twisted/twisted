@@ -53,7 +53,8 @@ class TestPublicAPI(unittest.TestCase):
         """
         iat = getInvalidAuthType()
         self.assertRaises(strcred.InvalidAuthType, strcred.makeChecker, iat)
-        self.assertRaises(strcred.InvalidAuthType, strcred.findCheckerFactory, iat)
+        self.assertRaises(
+            strcred.InvalidAuthType, strcred.findCheckerFactory, iat)
 
 
     def test_invalidAuthType(self):
@@ -62,7 +63,8 @@ class TestPublicAPI(unittest.TestCase):
         """
         iat = getInvalidAuthType()
         self.assertRaises(strcred.InvalidAuthType, strcred.makeChecker, iat)
-        self.assertRaises(strcred.InvalidAuthType, strcred.findCheckerFactory, iat)
+        self.assertRaises(
+            strcred.InvalidAuthType, strcred.findCheckerFactory, iat)
 
 
 
@@ -337,6 +339,32 @@ class TestFileDBChecker(unittest.TestCase):
 
 
 
+class TestSSHChecker(unittest.TestCase):
+    """
+    Tests for the --auth=sshkey:... checker.  The majority of the tests for the
+    ssh public key database checker are in
+    L{twisted.conch.test.test_checkers.SSHPublicKeyDatabaseTestCase}.
+    """
+
+    try:
+        import Crypto
+        import pyasn1
+    except ImportError:
+        skip = "PyCrypto is not available"
+
+
+    def test_isChecker(self):
+        """
+        Verifies that strcred.makeChecker('sshkey') returns an object
+        that implements the L{ICredentialsChecker} interface.
+        """
+        sshChecker = strcred.makeChecker('sshkey')
+        self.assertTrue(checkers.ICredentialsChecker.providedBy(sshChecker))
+        self.assertIn(
+            credentials.ISSHPrivateKey, sshChecker.credentialInterfaces)
+
+
+
 class DummyOptions(usage.Options, strcred.AuthOptionMixin):
     """
     Simple options for testing L{strcred.AuthOptionMixin}.
@@ -502,7 +530,8 @@ class TestLimitingInterfaces(unittest.TestCase):
         self.filename = self.mktemp()
         file(self.filename, 'w').write('admin:asdf\nalice:foo\n')
         self.goodChecker = checkers.FilePasswordDB(self.filename)
-        self.badChecker = checkers.FilePasswordDB(self.filename, hash=self._hash)
+        self.badChecker = checkers.FilePasswordDB(
+            self.filename, hash=self._hash)
         self.anonChecker = checkers.AllowAnonymousAccess()
 
 
@@ -523,7 +552,8 @@ class TestLimitingInterfaces(unittest.TestCase):
         self.assertFalse(
             options.supportsInterface(credentials.IAnonymous))
         self.assertRaises(
-            strcred.UnsupportedInterfaces, options.addChecker, self.anonChecker)
+            strcred.UnsupportedInterfaces, options.addChecker,
+            self.anonChecker)
 
 
     def test_supportsAllInterfaces(self):
@@ -559,7 +589,8 @@ class TestLimitingInterfaces(unittest.TestCase):
         options.addChecker(self.goodChecker)
         iface = options.supportedInterfaces[0]
         # Test that we did get IUsernamePassword
-        self.assertIdentical(options['credInterfaces'][iface][0], self.goodChecker)
+        self.assertIdentical(
+            options['credInterfaces'][iface][0], self.goodChecker)
         self.assertIdentical(options['credCheckers'][0], self.goodChecker)
         # Test that we didn't get IUsernameHashedPassword
         self.assertEqual(len(options['credInterfaces'][iface]), 1)
@@ -624,4 +655,3 @@ class TestLimitingInterfaces(unittest.TestCase):
         self.assertRaises(SystemExit, options.parseOptions,
                           ['--help-auth-type', 'anonymous'])
         self.assertIn(strcred.notSupportedWarning, newStdout.getvalue())
-
