@@ -8,9 +8,8 @@
 Miscellany of text-munging functions.
 """
 
-import string, types
-
-from twisted.python import deprecate, versions
+import string
+import types
 
 
 def stringyString(object, indentation=''):
@@ -75,49 +74,6 @@ def endsInNewline(s):
     """Returns True if this string ends in a newline."""
     return (s[-len('\n'):] == '\n')
 
-
-
-deprecate.deprecatedModuleAttribute(
-    versions.Version("Twisted", 10, 2, 0),
-    "Please use inspect.getdoc instead.",
-    __name__, "docstringLStrip")
-
-
-
-def docstringLStrip(docstring):
-    """
-    Gets rid of unsightly lefthand docstring whitespace residue.
-
-    You'd think someone would have done this already, but apparently
-    not in 1.5.2.
-
-    BUT since we're all using Python 2.1 now, use L{inspect.getdoc}
-    instead.  I{This function should go away soon.}
-    """
-
-    if not docstring:
-        return docstring
-
-    docstring = string.replace(docstring, '\t', ' ' * 8)
-    lines = string.split(docstring,'\n')
-
-    leading = 0
-    for l in xrange(1,len(lines)):
-        line = lines[l]
-        if string.strip(line):
-            while 1:
-                if line[leading] == ' ':
-                    leading = leading + 1
-                else:
-                    break
-        if leading:
-            break
-
-    outlines = lines[0:1]
-    for l in xrange(1,len(lines)):
-        outlines.append(lines[l][leading:])
-
-    return string.join(outlines, '\n')
 
 def greedyWrap(inString, width=80):
     """Given a string and a column width, return a list of lines.
