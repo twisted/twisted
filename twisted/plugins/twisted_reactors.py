@@ -40,3 +40,7 @@ kqueue = Reactor(
 iocp = Reactor(
     'iocp', 'twisted.internet.iocpreactor',
     'Win32 IO Completion Ports-based reactor.')
+
+epollstm = Reactor(
+    'epoll-stm', 'twisted.internet.epollstmreactor',
+    'EPoll-based, STM-enhanced reactor.')
