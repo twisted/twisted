@@ -1547,20 +1547,3 @@ class UnixAppLoggerTestCase(unittest.TestCase):
 
 
 
-
-class DeprecationTests(unittest.TestCase):
-    """
-    Tests for deprecated features.
-    """
-
-    def test_initialLog(self):
-        """
-        L{app.initialLog} is deprecated.
-        """
-        logs = []
-        log.addObserver(logs.append)
-        self.addCleanup(log.removeObserver, logs.append)
-        self.callDeprecated(Version("Twisted", 8, 2, 0), app.initialLog)
-        self.assertEqual(len(logs), 2)
-        self.assertIn("starting up", logs[0]["message"][0])
-        self.assertIn("reactor class", logs[1]["message"][0])

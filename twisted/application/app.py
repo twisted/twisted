@@ -653,12 +653,6 @@ def run(runApp, ServerOptions):
 
 
 
-def initialLog():
-    AppLogger({})._initialLog()
-initialLog = deprecated(Version("Twisted", 8, 2, 0))(initialLog)
-
-
-
 def convertStyle(filein, typein, passphrase, fileout, typeout, encrypt):
     application = service.loadApplication(filein, typein, passphrase)
     sob.IPersistable(application).setStyle(typeout)
