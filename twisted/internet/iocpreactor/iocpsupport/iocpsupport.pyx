@@ -188,6 +188,9 @@ cdef class CompletionPort:
 
         rc = PostQueuedCompletionStatus(self.port, bytes, key, <OVERLAPPED *>ov)
         if not rc:
+            if ov:
+                Py_DECREF(obj)
+                PyMem_Free(ov)
             raise_error(0, 'PostQueuedCompletionStatus')
 
     def __del__(self):

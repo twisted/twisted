@@ -29,6 +29,7 @@ def connect(long s, object addr, object obj):
     if not rc:
         rc = WSAGetLastError()
         if rc != ERROR_IO_PENDING:
+            PyMem_Free(ov)
             return rc
 
     # operation is in progress

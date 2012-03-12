@@ -30,6 +30,7 @@ def recv(long s, object bufflist, object obj, unsigned long flags = 0):
         if rc == SOCKET_ERROR:
             rc = WSAGetLastError()
             if rc != ERROR_IO_PENDING:
+                PyMem_Free(ov)
                 return rc, 0
 
         Py_XINCREF(obj)
@@ -67,6 +68,7 @@ def recvfrom(long s, object buff, object addr_buff, object addr_len_buff, object
     if rc == SOCKET_ERROR:
         rc = WSAGetLastError()
         if rc != ERROR_IO_PENDING:
+            PyMem_Free(ov)
             return rc, 0
 
     Py_XINCREF(obj)
