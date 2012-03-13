@@ -5,7 +5,7 @@ class Calculation(object):
         try:
             return map(int, args)
         except ValueError:
-            raise TypeError("Coudln't coerce arguments to integers: %s" % args)
+            raise TypeError("Couldn't coerce arguments to integers: %s" % args)
 
     def add(self, a, b):
         a, b = self._make_ints(a, b)

@@ -22,9 +22,9 @@ referred to as Test-Driven Development
 Most Twisted code is tested using TDD.</p>
 
 <p>To gain a solid understanding of unit testing in Python, you should read
-the <a href="http://docs.python.org/lib/module-unittest.html">unittest --
+the <a href="http://docs.python.org/library/unittest.html">unittest --
 Unit testing framework chapter</a> of the <a
-href="http://docs.python.org/lib/lib.html">Python Library
+href="http://docs.python.org/library/index.html">Python Library
 Reference</a>. There is also a ton of information available online and in
 books.</p>
 
@@ -366,9 +366,9 @@ the <code class="python">RemoteCalculationFactory</code> class. It is in
  <code class="py-filename">calculus/remote_1.py</code> below. We
 call <code class="python">buildProtocol</code> to ask the factory to build us a
 protocol object that knows how to talk to our server.  We then make a fake
-network transport, an instance of <code class="API" base="twisted.test.proto_helpers">
-StringTransport</code> class (note that test packages are generally not part of
-Twisted's public API; <code class="API" base="twisted.test">proto_helpers</code> is an exception).  This fake
+network transport, an instance of <code class="python">twisted.test.proto_helpers.StringTransport</code>
+class (note that test packages are generally not part of Twisted's public API;
+<code class="python">twisted.test.proto_helpers</code> is an exception).  This fake
 transport is the key to the communications. It is used to emulate a network
 connection without a network. The address and port passed to <code>buildProtocol</code>
 are typically used by the factory to choose to immediately deny remote connections; since we're using a fake transport, we can choose any value that will be acceptable to the factory. In this case the factory just ignores the address, so we don't need to pick anything in particular.</p>
