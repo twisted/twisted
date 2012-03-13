@@ -1,0 +1,3 @@
+t.application.strports.parse and `factory` and `default` parameters in the
+various t.internet.endpoints._parse methods were deprecated since Twisted 10.2
+and have been removed.
