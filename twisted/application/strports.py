@@ -58,11 +58,10 @@ class _NullAddress(object):
 
 class _ListeningPortAdapter(object):
     """
-    An adapter to make a StreamServerEndpointService look like a listening
+    An adapter to make a L{StreamServerEndpointService} look like a listening
     port.
 
-    @ivar service: The L{twisted.application.service.IService} provider being
-        wrapped.
+    @ivar service: The L{StreamServerEndpointService} being wrapped.
 
     @ivar _wrappedPort: The L{twisted.internet.interfaces.IListeningPort}
         provider that came from the underlying endpoint, or C{None} if there is
