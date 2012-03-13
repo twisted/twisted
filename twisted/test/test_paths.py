@@ -15,6 +15,8 @@ from twisted.python.runtime import platform
 
 from twisted.trial import unittest
 
+from zope.interface.verify import verifyObject
+
 
 class AbstractFilePathTestCase(unittest.TestCase):
 
@@ -299,6 +301,14 @@ class ZipFilePathTestCase(AbstractFilePathTestCase):
         self.path = ZipArchive(self.cmn + '.zip')
         self.root = self.path
         self.all = [x.replace(self.cmn, self.cmn + '.zip') for x in self.all]
+
+
+    def test_verifyObject(self):
+        """
+        ZipPaths implement IFilePath.
+        """
+
+        self.assertTrue(verifyObject(filepath.IFilePath, self.path))
 
 
     def test_zipPathRepr(self):
@@ -644,6 +654,15 @@ class FilePathTestCase(AbstractFilePathTestCase):
     """
     Test various L{FilePath} path manipulations.
     """
+
+
+    def test_verifyObject(self):
+        """
+        FilePaths implement IFilePath.
+        """
+
+        self.assertTrue(verifyObject(filepath.IFilePath, self.path))
+
 
     def test_chmod(self):
         """

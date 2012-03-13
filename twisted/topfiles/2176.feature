@@ -1,0 +1,1 @@
+twisted.python.filepath now provides IFilePath, an interface for file path objects.

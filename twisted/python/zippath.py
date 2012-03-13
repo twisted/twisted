@@ -3,9 +3,7 @@
 # See LICENSE for details.
 
 """
-This module contains partial re-implementations of FilePath, pending some
-specification of formal interfaces it is a duck-typing attempt to emulate them
-for certain restricted uses.
+This module contains implementations of IFilePath for zip files.
 
 See the constructor for ZipArchive for use.
 """
@@ -27,7 +25,9 @@ else:
     _USE_ZIPFILE = False
     from twisted.python.zipstream import ChunkingZipFile
 
-from twisted.python.filepath import FilePath, _PathHelper
+from twisted.python.filepath import IFilePath, FilePath, AbstractFilePath
+
+from zope.interface import implements
 
 # using FilePath here exclusively rather than os to make sure that we don't do
 # anything OS-path-specific here.
@@ -36,10 +36,15 @@ ZIP_PATH_SEP = '/'              # In zipfiles, "/" is universally used as the
                                 # path separator, regardless of platform.
 
 
-class ZipPath(_PathHelper):
+class ZipPath(AbstractFilePath):
     """
     I represent a file or directory contained within a zip file.
     """
+
+    implements(IFilePath)
+
+    sep = ZIP_PATH_SEP
+
     def __init__(self, archive, pathInArchive):
         """
         Don't construct me directly.  Use ZipArchive.child().
@@ -136,15 +141,25 @@ class ZipPath(_PathHelper):
         # less meaningful here.
         return self.parent().path
 
-    def open(self):
+    def open(self, mode="r"):
         if _USE_ZIPFILE:
-            return self.archive.zipfile.open(self.pathInArchive)
+            return self.archive.zipfile.open(self.pathInArchive, mode=mode)
         else:
+            # XXX oh man, is this too much hax?
+            self.archive.zipfile.mode = mode
             return self.archive.zipfile.readfile(self.pathInArchive)
 
-    def restat(self):
+    def changed(self):
         pass
 
+    def getsize(self):
+        """
+        Retrieve this file's size.
+
+        @return: file size, in bytes
+        """
+
+        return self.archive.zipfile.NameToInfo[self.pathInArchive].file_size
 
     def getAccessTime(self):
         """
