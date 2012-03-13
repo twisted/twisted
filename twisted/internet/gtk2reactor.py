@@ -19,13 +19,15 @@ intended to be called directly.
 # System Imports
 import sys
 
-if 'gi' in sys.modules:
-    raise ImportError(
-        "Introspected and static glib/gtk bindings must not be mixed; can't "
-        "import gtk2reactor since gi module is already imported.")
+# Twisted Imports
+from twisted.internet import _glibbase
+from twisted.python import runtime
 
-# Disable gi imports to avoid potential problems.
-sys.modules['gi'] = None
+_glibbase.ensureNotImported(
+    ["gi"],
+    "Introspected and static glib/gtk bindings must not be mixed; can't "
+    "import gtk2reactor since gi module is already imported.",
+    preventImports=["gi"])
 
 try:
     if not hasattr(sys, 'frozen'):
@@ -42,9 +44,6 @@ if hasattr(gobject, "threads_init"):
     # glib-2.2.3) does not.
     gobject.threads_init()
 
-# Twisted Imports
-from twisted.internet import _glibbase
-from twisted.python import runtime
 
 
 class Gtk2Reactor(_glibbase.GlibReactorBase):

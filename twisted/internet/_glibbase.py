@@ -11,13 +11,41 @@ import gireactor or gtk3reactor for GObject Introspection based applications,
 or glib2reactor or gtk2reactor for applications using legacy static bindings.
 """
 
-import signal
+import signal, sys
 
 from twisted.internet import base, posixbase, selectreactor
 from twisted.internet.interfaces import IReactorFDSet
 from twisted.python import log, runtime
 from twisted.python.compat import set
 from zope.interface import implements
+
+
+def ensureNotImported(moduleNames, errorMessage, preventImports=[]):
+    """
+    Check whether the given modules were imported, and if requested, ensure
+    they will not be importable in the future.
+
+    @param moduleNames: A list of module names we make sure aren't imported.
+    @type moduleNames: C{list} of C{str}
+
+    @param preventImports: A list of module name whose future imports should
+        be prevented.
+    @type preventImports: C{list} of C{str}
+
+    @param errorMessage: Message to use when raising an C{ImportError}.
+    @type errorMessage: C{str}
+
+    @raises: C{ImportError} with given error message if a given module name
+        has already been imported.
+    """
+    for name in moduleNames:
+        if sys.modules.get(name) is not None:
+            raise ImportError(errorMessage)
+
+    # Disable module imports to avoid potential problems.
+    for name in preventImports:
+        sys.modules[name] = None
+
 
 
 class GlibSignalMixin(object):

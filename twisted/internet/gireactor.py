@@ -15,24 +15,21 @@ intended to be called directly.
 """
 
 import sys
+from twisted.internet import _glibbase
+from twisted.python import runtime
 
-if 'gobject' in sys.modules:
-    raise ImportError(
-        "Introspected and static glib/gtk bindings must not be mixed; can't "
-        "import gireactor since pygtk2 module is already imported.")
+# We can't immediately prevent imports, because that confuses some buggy code
+# in gi:
+_glibbase.ensureNotImported(
+    ['gobject' 'glib', 'gio', 'gtk'],
+    "Introspected and static glib/gtk bindings must not be mixed; can't "
+    "import gireactor since pygtk2 module is already imported.")
 
 from gi.repository import GLib
 GLib.threads_init()
 
-from twisted.internet import _glibbase
-from twisted.python import runtime
-
-# We need to override sys.modules with these to prevent imports.
-# This is required, as importing these can result in SEGFAULTs.
-sys.modules['glib'] = None
-sys.modules['gobject'] = None
-sys.modules['gio'] = None
-sys.modules['gtk'] = None
+_glibbase.ensureNotImported([], "",
+                            preventImports=['gobject' 'glib', 'gio', 'gtk'])
 
 
 

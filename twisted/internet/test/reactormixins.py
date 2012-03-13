@@ -56,17 +56,17 @@ class ReactorBuilder:
         # it's not _really_ worth it to support on other platforms,
         # since no one really wants to use it on other platforms.
         _reactors.extend([
+                "twisted.internet.gtk2reactor.PortableGtkReactor",
                 "twisted.internet.gireactor.PortableGIReactor",
                 "twisted.internet.gtk3reactor.PortableGtk3Reactor",
-                "twisted.internet.gtk2reactor.PortableGtkReactor",
                 "twisted.internet.win32eventreactor.Win32Reactor",
                 "twisted.internet.iocpreactor.reactor.IOCPReactor"])
     else:
         _reactors.extend([
-                "twisted.internet.gireactor.GIReactor",
-                "twisted.internet.gtk3reactor.Gtk3Reactor",
                 "twisted.internet.glib2reactor.Glib2Reactor",
-                "twisted.internet.gtk2reactor.Gtk2Reactor"])
+                "twisted.internet.gtk2reactor.Gtk2Reactor",
+                "twisted.internet.gireactor.GIReactor",
+                "twisted.internet.gtk3reactor.Gtk3Reactor"])
         if platform.isMacOSX():
             _reactors.append("twisted.internet.cfreactor.CFReactor")
         else:
