@@ -107,7 +107,7 @@ class _ListeningPortAdapter(object):
 
 
 
-def listen(description, factory):
+def listen(description, factory, reactor=None):
     """Listen on a port corresponding to a description
 
     @type description: C{str}
@@ -119,9 +119,9 @@ def listen(description, factory):
     See the documentation of the C{parse} function for description
     of the semantics of the arguments.
     """
-    theService = service(description, factory)
-    theService.startListening()
-    return _ListeningPortAdapter(theService)
+    port = _ListeningPortAdapter(service(description, factory, reactor))
+    port.startListening()
+    return port
 
 
 
