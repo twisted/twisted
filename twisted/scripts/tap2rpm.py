@@ -7,8 +7,9 @@ import subprocess
 import tempfile
 import tarfile
 from StringIO import StringIO
+import warnings
 
-from twisted.python import usage, log
+from twisted.python import usage, log, versions, deprecate
 
 
 #################################
@@ -36,48 +37,48 @@ logfile=/var/log/%(rpm_file)s.log
 #  check for required files
 if [ ! -x /usr/bin/twistd ]
 then
-	echo "$0: Aborting, no /usr/bin/twistd found"
-	exit 0
+        echo "$0: Aborting, no /usr/bin/twistd found"
+        exit 0
 fi
 if [ ! -r "$file" ]
 then
-	echo "$0: Aborting, no file $file found."
-	exit 0
+        echo "$0: Aborting, no file $file found."
+        exit 0
 fi
 
 #  set up run directory if necessary
 if [ ! -d "${rundir}" ]
 then
-	mkdir -p "${rundir}"
+        mkdir -p "${rundir}"
 fi
 
 
 case "$1" in
-	start)
-		echo -n "Starting %(rpm_file)s: twistd"
-		daemon twistd  \\
-				--pidfile=$pidfile \\
-				--rundir=$rundir \\
-				--%(twistd_option)s=$file \\
-				--logfile=$logfile
-		status %(rpm_file)s
-		;;
+        start)
+                echo -n "Starting %(rpm_file)s: twistd"
+                daemon twistd  \\
+                                --pidfile=$pidfile \\
+                                --rundir=$rundir \\
+                                --%(twistd_option)s=$file \\
+                                --logfile=$logfile
+                status %(rpm_file)s
+                ;;
 
-	stop)
-		echo -n "Stopping %(rpm_file)s: twistd"
-		kill `cat "${pidfile}"`
-		status %(rpm_file)s
-		;;
+        stop)
+                echo -n "Stopping %(rpm_file)s: twistd"
+                kill `cat "${pidfile}"`
+                status %(rpm_file)s
+                ;;
 
-	restart)
-		"${0}" stop
-		"${0}" start
-		;;
+        restart)
+                "${0}" stop
+                "${0}" start
+                ;;
 
     *)
-		echo "Usage: ${0} {start|stop|restart|}" >&2
-		exit 1
-		;;
+                echo "Usage: ${0} {start|stop|restart|}" >&2
+                exit 1
+                ;;
 esac
 
 exit 0
@@ -106,7 +107,7 @@ BuildArch:  noarch
 
 %%install
 [ ! -z "$RPM_BUILD_ROOT" -a "$RPM_BUILD_ROOT" != '/' ] \
-		&& rm -rf "$RPM_BUILD_ROOT"
+                && rm -rf "$RPM_BUILD_ROOT"
 mkdir -p "$RPM_BUILD_ROOT"/etc/twisted-taps
 mkdir -p "$RPM_BUILD_ROOT"/etc/init.d
 mkdir -p "$RPM_BUILD_ROOT"/var/lib/twisted-taps
@@ -115,7 +116,7 @@ cp "%(rpm_file)s.init" "$RPM_BUILD_ROOT"/etc/init.d/"%(rpm_file)s"
 
 %%clean
 [ ! -z "$RPM_BUILD_ROOT" -a "$RPM_BUILD_ROOT" != '/' ] \
-		&& rm -rf "$RPM_BUILD_ROOT"
+                && rm -rf "$RPM_BUILD_ROOT"
 
 %%post
 /sbin/chkconfig --add %(rpm_file)s
@@ -138,7 +139,7 @@ cp "%(rpm_file)s.init" "$RPM_BUILD_ROOT"/etc/init.d/"%(rpm_file)s"
 
 ###############################
 class MyOptions(usage.Options):
-    optFlags = [["unsigned", "u"], ['quiet', 'q']]
+    optFlags = [['quiet', 'q']]
     optParameters = [
                      ["tapfile", "t", "twistd.tap"],
                      ["maintainer", "m", "tap2rpm"],
@@ -176,6 +177,18 @@ class MyOptions(usage.Options):
         self['twistd_option'] = type_dict[self['type']]
         self['release-name'] = '%s-%s' % (self['rpmfile'], self['set-version'])
 
+
+    def opt_unsigned(self):
+        """
+        Generate an unsigned rather than a signed RPM. (DEPRECATED; unsigned
+        is the default)
+        """
+        msg = deprecate.getDeprecationWarningString(
+            self.opt_unsigned, versions.Version("Twisted", 12, 1, 0))
+        warnings.warn(msg, category=DeprecationWarning, stacklevel=2)
+
+    # Maintain the -u short flag
+    opt_u = opt_unsigned
 
 
 type_dict = {
