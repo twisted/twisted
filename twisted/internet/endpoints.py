@@ -728,7 +728,7 @@ def _parseServer(description, factory, default=None):
     parser = _serverParsers.get(endpointType)
     if parser is None:
         for plugin in getPlugins(IStreamServerEndpointStringParser):
-            if plugin.prefix == endpointType: 
+            if plugin.prefix == endpointType:
                 return (plugin, args[1:], kw)
         raise ValueError("Unknown endpoint type: '%s'" % (endpointType,))
     return (endpointType.upper(),) + parser(factory, *args[1:], **kw)
@@ -849,16 +849,32 @@ def quoteStringArgument(argument):
 
 
 
-def _parseClientTCP(**kwargs):
+def _parseClientTCP(*args, **kwargs):
     """
     Perform any argument value coercion necessary for TCP client parameters.
+
+    Valid positional arguments to this function are host and port.
 
     Valid keyword arguments to this function are all L{IReactorTCP.connectTCP}
     arguments.
 
     @return: The coerced values as a C{dict}.
     """
-    kwargs['port'] = int(kwargs['port'])
+
+    if len(args) == 2:
+        kwargs['port'] = int(args[1])
+        kwargs['host'] = args[0]
+    elif len(args) == 1:
+        if 'host' in kwargs:
+            kwargs['port'] = int(args[0])
+        else:
+            kwargs['host'] = args[0]
+
+    try:
+        kwargs['port'] = int(kwargs['port'])
+    except KeyError:
+        pass
+
     try:
         kwargs['timeout'] = int(kwargs['timeout'])
     except KeyError:
@@ -898,7 +914,7 @@ def _loadCAsFromDir(directoryPath):
 
 
 
-def _parseClientSSL(**kwargs):
+def _parseClientSSL(*args, **kwargs):
     """
     Perform any argument value coercion necessary for SSL client parameters.
 
@@ -907,7 +923,9 @@ def _parseClientSSL(**kwargs):
     of the certificate file) C{privateKey} (the path name of the private key
     associated with the certificate) are accepted and used to construct a
     context factory.
-    
+
+    Valid positional arguments to this function are host and port.
+
     @param caCertsDir: The one parameter which is not part of
         L{IReactorSSL.connectSSL}'s signature, this is a path name used to
         construct a list of certificate authority certificates.  The directory
@@ -919,7 +937,7 @@ def _parseClientSSL(**kwargs):
     @return: The coerced values as a C{dict}.
     """
     from twisted.internet import ssl
-    kwargs = _parseClientTCP(**kwargs)
+    kwargs = _parseClientTCP(*args, **kwargs)
     certKey = kwargs.pop('certKey', None)
     privateKey = kwargs.pop('privateKey', None)
     caCertsDir = kwargs.pop('caCertsDir', None)
@@ -983,19 +1001,27 @@ def clientFromString(reactor, description):
     Construct a client endpoint from a description string.
 
     Client description strings are much like server description strings,
-    although they take all of their arguments as keywords, since even the
-    simplest client endpoint (plain TCP) requires at least 2 arguments (host
-    and port) to construct.
+    although they take all of their arguments as keywords, aside from host and
+    port.
 
     You can create a TCP client endpoint with the 'host' and 'port' arguments,
     like so::
 
         clientFromString(reactor, "tcp:host=www.example.com:port=80")
 
+    or, without specifying host and port keywords::
+
+        clientFromString(reactor, "tcp:www.example.com:80")
+
+    Or you can specify only one or the other, as in the following 2 examples::
+
+        clientFromString(reactor, "tcp:host=www.example.com:80")
+        clientFromString(reactor, "tcp:www.example.com:port=80")
+
     or an SSL client endpoint with those arguments, plus the arguments used by
     the server SSL, for a client certificate::
 
-        clientFromString(reactor, "ssl:host=web.example.com:port=443:"
+        clientFromString(reactor, "ssl:web.example.com:443:"
                                   "privateKey=foo.pem:certKey=foo.pem")
 
     to specify your certificate trust roots, you can identify a directory with

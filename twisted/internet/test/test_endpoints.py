@@ -1126,6 +1126,53 @@ class ClientStringTests(unittest.TestCase):
         self.assertEqual(client._bindAddress, "10.0.0.2")
 
 
+    def test_tcpPositionalArgs(self):
+        """
+        When passed a TCP strports description using positional arguments,
+        L{endpointClient} returns a L{TCP4ClientEndpoint} instance initialized
+        with the values from the string.
+        """
+        reactor = object()
+        client = endpoints.clientFromString(
+            reactor,
+            "tcp:example.com:1234:timeout=7:bindAddress=10.0.0.2")
+        self.assertIsInstance(client, endpoints.TCP4ClientEndpoint)
+        self.assertIdentical(client._reactor, reactor)
+        self.assertEqual(client._host, "example.com")
+        self.assertEqual(client._port, 1234)
+        self.assertEqual(client._timeout, 7)
+        self.assertEqual(client._bindAddress, "10.0.0.2")
+
+
+    def test_tcpHostPositionalArg(self):
+        """
+        When passed a TCP strports description specifying host as a positional
+        argument, L{endpointClient} returns a L{TCP4ClientEndpoint} instance
+        initialized with the values from the string.
+        """
+        reactor = object()
+
+        client = endpoints.clientFromString(
+            reactor,
+            "tcp:example.com:port=1234:timeout=7:bindAddress=10.0.0.2")
+        self.assertEqual(client._host, "example.com")
+        self.assertEqual(client._port, 1234)
+
+
+    def test_tcpPortPositionalArg(self):
+        """
+        When passed a TCP strports description specifying port as a positional
+        argument, L{endpointClient} returns a L{TCP4ClientEndpoint} instance
+        initialized with the values from the string.
+        """
+        reactor = object()
+        client = endpoints.clientFromString(
+            reactor,
+            "tcp:host=example.com:1234:timeout=7:bindAddress=10.0.0.2")
+        self.assertEqual(client._host, "example.com")
+        self.assertEqual(client._port, 1234)
+
+
     def test_tcpDefaults(self):
         """
         A TCP strports description may omit I{timeout} or I{bindAddress} to
@@ -1240,6 +1287,28 @@ class SSLClientStringTests(unittest.TestCase):
         ]
         self.assertEqual([Certificate(x) for x in certOptions.caCerts],
                           expectedCerts)
+
+
+    def test_sslPositionalArgs(self):
+        """
+        When passed an SSL strports description, L{clientFromString} returns a
+        L{SSL4ClientEndpoint} instance initialized with the values from the
+        string.
+        """
+        reactor = object()
+        client = endpoints.clientFromString(
+            reactor,
+            "ssl:example.net:4321:privateKey=%s:"
+            "certKey=%s:bindAddress=10.0.0.3:timeout=3:caCertsDir=%s" %
+             (escapedPEMPathName,
+              escapedPEMPathName,
+              escapedCAsPathName))
+        self.assertIsInstance(client, endpoints.SSL4ClientEndpoint)
+        self.assertIdentical(client._reactor, reactor)
+        self.assertEqual(client._host, "example.net")
+        self.assertEqual(client._port, 4321)
+        self.assertEqual(client._timeout, 3)
+        self.assertEqual(client._bindAddress, "10.0.0.3")
 
 
     def test_unreadableCertificate(self):
