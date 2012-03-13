@@ -1,7 +1,7 @@
 
-from select import EPOLLIN, epoll
+from select import EPOLLET, EPOLLERR, EPOLLHUP, EPOLLIN, EPOLLOUT, EPOLLONESHOT, epoll
 from time import time
-from os import write, pipe
+from os import read, write, pipe, close
 
 import transaction
 
@@ -9,21 +9,30 @@ from zope.interface import implements
 
 import timerfd
 
-from twisted.internet.interfaces import IReactorCore
+from twisted.internet.interfaces import IReactorCore, IReactorFDSet, IHalfCloseableDescriptor
+from twisted.internet import error, fdesc
 
 from twisted.internet.main import installReactor
 from twisted.internet.base import _ThreePhaseEvent, ThreadedResolver
 from twisted.internet.abstract import isIPAddress
 from twisted.internet.defer import succeed
 from twisted.internet.task import Clock
-from twisted.internet.error import ReactorNotRunning, ReactorAlreadyRunning, ReactorNotRestartable
+from twisted.internet.error import (
+    ReactorNotRunning, ReactorAlreadyRunning, ReactorNotRestartable,
+    ConnectionLost, ConnectionDone, )
 from twisted.python.constants import NamedConstant, Names
+from twisted.python import failure
+
+from twisted.internet.posixbase import _PollLikeMixin
 
 class _StopReactor(Exception):
     pass
 
+
+
 class _CrashReactor(Exception):
     pass
+
 
 
 class _ReactorState(Names):
@@ -74,7 +83,6 @@ class _StateMachine(object):
         _ReactorState.READY: {
             _StateInputs.RUN: ReactorAlreadyRunning,
             _StateInputs.STARTUP_COMPLETE: RuntimeError,
-            # And _stopWritePipe here too
             _StateInputs.STOP: _ReactorState.STOPPING,
             _StateInputs.CRASH: _ReactorState.CRASHING,
             },
@@ -108,22 +116,114 @@ class _StateMachine(object):
             },
         }
 
+class _Waker(object):
+    # implements(IFileDescriptor)
 
-class EPollSTMReactor(Clock):
-    implements(IReactorCore)
+    def __init__(self, callback):
+        self._r, self._w = pipe()
+        for f in fdesc.setNonBlocking, fdesc._setCloseOnExec:
+            for d in self._w, self._r:
+                f(d)
+        self._callback = callback
+        print 'waker for', callback, 'is', self._r
+
+
+    def fileno(self):
+        return self._r
+
+
+    def wake(self):
+        try:
+            write(self._w, 'x')
+        except IOError, e:
+            if e.errno != EAGAIN:
+                raise
+
+
+    def doRead(self):
+        read(self._r, 1024)
+        self._callback()
+
+    def connectionLost(self, reason):
+        close(self._r)
+        close(self._w)
+
+
+class _TimerFD(object):
+    # implements(IFileDescriptor)
+
+    def __init__(self, callback):
+        self._timerfd = timerfd.create(
+            timerfd.CLOCK_MONOTONIC, timerfd.CLOEXEC | timerfd.NONBLOCK)
+        self._callback = callback
+
+
+    def _settimeout(self, delay):
+        offset = max(0.0000001, delay)
+        targetTime = timerfd.itimerspec(0, offset)
+        timerfd.settime(self._timerfd, 0, targetTime)
+
+
+    def fileno(self):
+        return self._timerfd
+
+
+    def doRead(self):
+        read(self._timerfd, 100000)
+        self._callback()
+
+
+    def connectionLost(self, reason):
+        close(self._timerfd)
+
+
+
+class _DescriptorState(object):
+    def __init__(self, reactor, fd, descr, flags):
+        self.reactor = reactor
+        self.fd = fd
+        self.descr = descr
+        self.kernelFlags = 0
+        self.logicalFlags = flags
+
+
+    def shot(self):
+        self.kernelFlags = 0
+
+
+    def register(self):
+        self.reactor._register(self.fd, self.logicalFlags)
+        self.kernelFlags = self.logicalFlags
+
+
+    def update(self):
+        if self.kernelFlags != self.logicalFlags:
+            self.reactor._modify(self.fd, self.logicalFlags)
+            self.kernelFlags = self.logicalFlags
+
+
+
+class EPollSTMReactor(_PollLikeMixin, Clock):
+    implements(IReactorCore, IReactorFDSet)
 
     def __init__(self):
         Clock.__init__(self)
         self._state = _ReactorState.STOPPED
         self.resolver = ThreadedResolver(self)
-        self._readers = {}
         self._eventTriggers = {}
-
+        # Tacos are delicious
+        self._descriptors = {}
+        self._working = set()
+        self._timer = None
+        self._stopWaker = None
+        self._normalWaker = None
 
     # IReactorCore
     @property
     def running(self):
-        return self._state in (_ReactorState.READY, _ReactorState.RUNNING)
+        # XXX The STOPPING case is not tested
+        return self._state in (
+            _ReactorState.READY, _ReactorState.RUNNING, _ReactorState.STOPPING)
 
 
     def run(self):
@@ -198,6 +298,76 @@ class EPollSTMReactor(Clock):
                 self._rescheduleDelayedCalls()
 
 
+    # IReactorFDSet
+    def _add(self, descr, op):
+        fd = descr.fileno()
+        try:
+            descriptor = self._descriptors[fd]
+        except KeyError:
+            descriptor = self._descriptors[fd] = _DescriptorState(
+                self, fd, descr, op)
+            descriptor.register()
+        else:
+            descriptor.logicalFlags |= op
+        if descriptor not in self._working:
+            descriptor.update()
+
+
+    def _remove(self, descr, op):
+        fd = descr.fileno()
+        try:
+            descriptor = self._descriptors[fd]
+        except KeyError:
+            for (probefd, probedescr) in self._descriptors.iteritems():
+                if descr is probedescr:
+                    del self._descriptors[probefd]
+                    break
+        else:
+            descriptor.logicalFlags &= ~op
+            if descriptor not in self._working:
+                descriptor.update()
+
+
+    def addReader(self, reader):
+        self._add(reader, EPOLLIN)
+
+
+    def removeReader(self, reader):
+        self._remove(reader, EPOLLIN)
+
+
+    def addWriter(self, writer):
+        self._add(writer, EPOLLOUT)
+
+
+    def removeWriter(self, writer):
+        self._remove(writer, EPOLLOUT)
+
+
+    def getReaders(self):
+        return [
+            d.descr for (fd, d)
+            in self._descriptors.iteritems()
+            if d.logicalFlags & EPOLLIN]
+
+
+    def getWriters(self):
+        return [
+            d.descr for (fd, d)
+            in self._descriptors.iteritems()
+            if d.logicalFlags & EPOLLOUT]
+
+
+    def removeAll(self):
+        result = []
+        for (fd, descr) in self._descriptors.items():
+            if descr.descr not in (self._timer, self._stopWaker, self._normalWaker):
+                self.removeReader(descr.descr)
+                self.removeWriter(descr.descr)
+                result.append(descr.descr)
+        return result
+
+
     # Implementation details
     def _reallyStartRunning(self):
         """
@@ -214,54 +384,105 @@ class EPollSTMReactor(Clock):
         transaction.add(self._doubleReallyPlusGoodRunningCease)
 
 
+    def _stopEPoll(self):
+        transaction.stop_epoll()
+        self._normalWaker.wake()
+
+
     def _doubleReallyPlusGoodRunningCease(self):
-        raise _StopReactor()
+        self._stopEPoll()
 
 
     def _addEPoll(self):
-        transaction.add_epoll(self._epoll, self._doReadOrWrite)
+        import pdb; pdb.set_trace()
+        transaction.add_epoll(self._epoll, self._epollCallback)
 
 
-    def _doReadOrWrite(self, fd, events):
-        self._readers[fd]()
+    _POLL_DISCONNECTED = EPOLLHUP | EPOLLERR
+    _POLL_IN = EPOLLIN
+    _POLL_OUT = EPOLLOUT
+
+    def _epollCallback(self, fd, events):
+        descriptor = self._descriptors[fd]
+        descriptor.shot()
+        fileno = descriptor.descr.fileno()
+
+        self._working.add(descriptor)
+        try:
+            self._doReadOrWrite(descriptor.descr, fd, events)
+        finally:
+            self._working.remove(descriptor)
+            if fileno in self._descriptors:
+                descriptor.update()
+
+
+    def _disconnectSelectable(self, selectable, why, isRead, faildict={
+        error.ConnectionDone: failure.Failure(error.ConnectionDone()),
+        error.ConnectionLost: failure.Failure(error.ConnectionLost())
+        }):
+        """
+        Utility function for disconnecting a selectable.
+
+        Supports half-close notification, isRead should be boolean indicating
+        whether error resulted from doRead().
+        """
+        self.removeReader(selectable)
+        f = faildict.get(why.__class__)
+        if f:
+            if (isRead and why.__class__ ==  error.ConnectionDone
+                and IHalfCloseableDescriptor.providedBy(selectable)):
+                selectable.readConnectionLost(f)
+            else:
+                self.removeWriter(selectable)
+                selectable.connectionLost(f)
+        else:
+            self.removeWriter(selectable)
+            selectable.connectionLost(failure.Failure(why))
 
 
     def _addExisting(self):
-        for r in self._readers:
-            self._epoll.register(r, EPOLLIN)
+        assert self._state is _ReactorState.RUNNING
+        for fd, descriptor in self._descriptors.iteritems():
+            descriptor.register()
+
+
+    def _register(self, fd, flags):
+        if self._state in (_ReactorState.RUNNING, _ReactorState.STOPPING):
+            self._epoll.register(fd, flags | EPOLLONESHOT)
+
+
+    def _modify(self, fd, flags):
+        if self._state in (_ReactorState.RUNNING, _ReactorState.STOPPING):
+            self._epoll.modify(fd, flags | EPOLLONESHOT)
 
 
     def _startupDelayedCalls(self):
-        self._timerfd = timerfd.create(
-            timerfd.CLOCK_MONOTONIC, timerfd.CLOEXEC | timerfd.NONBLOCK)
+        self._timer = _TimerFD(self._runUntilCurrent)
+        self.addReader(self._timer)
         self._rescheduleDelayedCalls()
-        self._addReader(self._timerfd, self._runUntilCurrent)
 
 
     def _rescheduleDelayedCalls(self):
         calls = self.getDelayedCalls()
         if calls:
-            offset = max(0.0000001, calls[0].getTime() - self.seconds())
-            targetTime = timerfd.itimerspec(0, offset)
-            timerfd.settime(self._timerfd, 0, targetTime)
+            self._timer._settimeout(calls[0].getTime() - self.seconds())
 
 
     def _startupControlPipes(self):
-        self._stopReadPipe, self._stopWritePipe = pipe()
-        self._addReader(self._stopReadPipe, self._endEPoll)
+        self._stopWaker = _Waker(self._endEPoll)
+        self.addReader(self._stopWaker)
+        self._normalWaker = _Waker(lambda: None)
+        self.addReader(self._normalWaker)
 
 
     def _endEPoll(self):
         if self._state is _ReactorState.STOPPING:
-            raise _StopReactor()
+            self._stopEPoll()
         elif self._state is _ReactorState.CRASHING:
-            raise _CrashReactor()
-
-
-    def _addReader(self, fd, handler):
-        self._readers[fd] = handler
-        if self._state is _ReactorState.RUNNING:
-            self._epoll.register(fd, EPOLLIN | EPOLLONESHOT)
+            self._stopEPoll()
+        else:
+            assert False, self._state
+        self._normalWaker.wake()
 
 
     def _runUntilCurrent(self):
@@ -273,7 +494,7 @@ class EPollSTMReactor(Clock):
     def _transition(self, input):
         oldState = self._state
         newState = _StateMachine.states[oldState][input]
-        # print 'Going from', oldState, 'to', newState, 'because', input
+        print 'Going from', oldState, 'to', newState, 'because', input
         try:
             isitsubclass = issubclass(newState, Exception)
         except TypeError:
@@ -294,18 +515,21 @@ class EPollSTMReactor(Clock):
         self._startupDelayedCalls()
 
         self.fireSystemEvent('startup')
+        # XXX THIS MUST BE PART OF THE STATE MACHINE
+        if self._state is not _ReactorState.STOPPING:
+            self._state = _ReactorState.RUNNING
         self._transition_READY_to_RUNNING()
 
     _transition_CRASHED_to_STARTING = _transition_STOPPED_to_STARTING
 
     def _transition_READY_to_STOPPING(self):
-        write(self._stopWritePipe, 'x')
+        self._stopWaker.wake()
 
     def _transition_READY_to_CRASHING(self):
-        write(self._stopWritePipe, 'x')
+        self._stopWaker.wake()
 
     def _transition_STARTING_to_STARTING(self):
-        write(self._stopWritePipe, 'x')
+        self._stopWaker.wake()
 
     def _transition_READY_to_RUNNING(self):
         self._epoll = epoll()
@@ -313,20 +537,18 @@ class EPollSTMReactor(Clock):
         self._addExisting()
         self._rescheduleDelayedCalls()
 
-        try:
-            transaction.run()
-        except _StopReactor:
+        transaction.run()
+        if self._state is _ReactorState.STOPPING:
             self.fireSystemEvent('shutdown')
-            try:
-                transaction.run()
-            except _StopReactor:
-                pass
+            transaction.run()
             self._state = _ReactorState.STOPPED_AND_RAN_ALREADY
-        except _CrashReactor:
+        elif self._state is _ReactorState.CRASHING:
             self._state = _ReactorState.CRASHED
+        else:
+            assert False, "what" + str(self._state)
 
     def _transition_RUNNING_to_STOPPING(self):
-        write(self._stopWritePipe, 'x')
+        self._stopWaker.wake()
 
     _transition_STARTING_to_STOPPING = _transition_RUNNING_to_STOPPING
     _transition_STARTING_to_CRASHING = _transition_RUNNING_to_STOPPING

@@ -594,7 +594,7 @@ class _PollLikeMixin(object):
                 # Any exception from application code gets logged and will
                 # cause us to disconnect the selectable.
                 why = sys.exc_info()[1]
-                log.err()
+                log.err(None, "WHAT IS IT")
         if why:
             self._disconnectSelectable(selectable, why, inRead)
 

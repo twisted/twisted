@@ -80,6 +80,7 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
         reactor, fd, server = self._simpleSetup()
 
         def removeAndStop():
+            print 'woo woo'
             reactor.removeReader(fd)
             reactor.stop()
         fd.doRead = removeAndStop
@@ -245,6 +246,8 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
         reactor = self.buildReactor()
 
         client, server = self._connectedPair()
+        print 'client', client.fileno()
+        print 'server', server.fileno()
 
         class DisappearingDescriptor(FileDescriptor):
             _fileno = server.fileno()
@@ -257,9 +260,11 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
             def doRead(self):
                 self._fileno = -1
                 self._received += server.recv(1)
+                print '_received', self._received
                 client.send('y')
 
             def connectionLost(self, reason):
+                print 'CONN LOST WHAT'
                 reactor.stop()
 
         descriptor = DisappearingDescriptor(reactor)
@@ -286,7 +291,7 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
         reactor = self.buildReactor()
 
         name = reactor.__class__.__name__
-        if name in ('EPollReactor', 'KQueueReactor', 'CFReactor'):
+        if name in ('EPollReactor', 'KQueueReactor', 'CFReactor', 'EPollSTMReactor'):
             # Closing a file descriptor immediately removes it from the epoll
             # set without generating a notification.  That means epollreactor
             # will not call any methods on Victim after the close, so there's
@@ -363,6 +368,7 @@ class RemovingDescriptor(object):
         self.insideReactor = False
         self.calls = []
         self.read, self.write = socketpair()
+        print 'RemovingDescriptor is', self.read.fileno()
 
 
     def start(self):
