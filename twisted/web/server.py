@@ -34,7 +34,20 @@ from twisted.web import util as webutil, resource
 from twisted.web.error import UnsupportedMethod
 from twisted.web.microdom import escape
 
+from twisted.python.versions import Version
+from twisted.python.deprecate import deprecatedModuleAttribute
+
 # backwards compatability
+deprecatedModuleAttribute(
+    Version("Twisted", 12, 1, 0),
+    "Please use twisted.web.http.datetimeToString instead",
+    "twisted.web.server",
+    "date_time_string")
+deprecatedModuleAttribute(
+    Version("Twisted", 12, 1, 0),
+    "Please use twisted.web.http.stringToDatetime instead",
+    "twisted.web.server",
+    "string_date_time")
 date_time_string = http.datetimeToString
 string_date_time = http.stringToDatetime
 
@@ -563,4 +576,3 @@ class Site(http.HTTPFactory):
 
 
 import html
-

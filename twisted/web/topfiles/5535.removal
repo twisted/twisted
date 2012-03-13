@@ -1,0 +1,3 @@
+twisted.web.server.date_time_string and twisted.web.server.string_date_time are
+now deprecated in favor of twisted.web.http.datetimeToString and twisted.web.
+http.stringToDatetime
