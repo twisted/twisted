@@ -31,12 +31,6 @@ Other desired features:
 """
 
 import time
-import types
-
-try:
-    import cStringIO as StringIO
-except:
-    import StringIO
 
 from twisted.protocols import basic
 from twisted.python import log
@@ -830,13 +824,6 @@ class NNTPServer(basic.LineReceiver):
 
 
     def _gotArticle(self, (index, id, article)):
-        if isinstance(article, types.StringType):
-            import warnings
-            warnings.warn(
-                "Returning the article as a string from `articleRequest' "
-                "is deprecated.  Return a file-like object instead."
-            )
-            article = StringIO.StringIO(article)
         self.currentIndex = index
         self.sendLine('220 %d %s article' % (index, id))
         s = basic.FileSender()
@@ -900,13 +887,6 @@ class NNTPServer(basic.LineReceiver):
 
 
     def _gotBody(self, (index, id, body)):
-        if isinstance(body, types.StringType):
-            import warnings
-            warnings.warn(
-                "Returning the article as a string from `articleRequest' "
-                "is deprecated.  Return a file-like object instead."
-            )
-            body = StringIO.StringIO(body)
         self.currentIndex = index
         self.sendLine('221 %d %s article retrieved' % (index, id))
         self.lastsent = ''
