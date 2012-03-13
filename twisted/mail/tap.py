@@ -240,6 +240,12 @@ class Options(usage.Options, strcred.AuthOptionMixin):
         if self['esmtp'] and self['hostname'] is None:
             raise usage.UsageError("--esmtp requires --hostname")
 
+        # If the --auth option was passed, this will be present -- otherwise,
+        # it won't be, which is also a perfectly valid state.
+        if 'credCheckers' in self:
+            for ch in self['credCheckers']:
+                self.service.smtpPortal.registerChecker(ch)
+
         if not self['disable-anonymous']:
             self.service.smtpPortal.registerChecker(checkers.AllowAnonymousAccess())
 

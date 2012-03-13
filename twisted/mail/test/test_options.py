@@ -187,6 +187,20 @@ class OptionsTestCase(TestCase):
         self.assertEqual("--esmtp requires --hostname", str(exc))
 
 
+    def test_auth(self):
+        """
+        Tests that the --auth option registers a checker.
+        """
+        options = Options()
+        options.parseOptions(['--auth', 'memory:admin:admin:bob:password'])
+        self.assertEqual(len(options['credCheckers']), 1)
+        checker = options['credCheckers'][0]
+        interfaces = checker.credentialInterfaces
+        registered_checkers = options.service.smtpPortal.checkers
+        for iface in interfaces:
+            self.assertEqual(checker, registered_checkers[iface])
+
+
 
 class SpyEndpoint(object):
     """
