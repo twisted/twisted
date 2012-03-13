@@ -949,7 +949,7 @@ class ParserTestCase(unittest.TestCase):
 
     def test_unknownType(self):
         """
-        L{strports.parse} raises C{ValueError} when given an unknown endpoint
+        L{_parseServer} raises C{ValueError} when given an unknown endpoint
         type.
         """
         self.assertRaises(ValueError, self.parse, "bogus-type:nothing")
