@@ -61,7 +61,7 @@ class _ListeningPortAdapter(object):
     An adapter to make a StreamServerEndpointService look like a listening
     port.
 
-    @ivar service: The L{twisted.internet.service.IService} provider being
+    @ivar service: The L{twisted.application.service.IService} provider being
         wrapped.
 
     @ivar _wrappedPort: The L{twisted.internet.interfaces.IListeningPort}
