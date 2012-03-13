@@ -19,7 +19,7 @@ DefaultProcessor = _LorePlugin(
 
 MathProcessor = _LorePlugin(
     "mlore",
-    "twsited.lore.lmath",
+    "twisted.lore.lmath",
     "Lore format with LaTeX formula")
 
 SlideProcessor = _LorePlugin(

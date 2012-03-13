@@ -9,8 +9,27 @@ from xml.dom.minidom import Element, Text
 
 from twisted.trial.unittest import TestCase
 from twisted.python.filepath import FilePath
+from twisted.lore.scripts.lore import IProcessor
+
+from twisted.plugin import getPlugins
 
 from twisted.lore.lmath import formulaeToImages
+
+
+class PluginTests(TestCase):
+    """
+    Tests for the plugin which lets L{twisted.lore.lmath} be used from the lore
+    command line tool.
+    """
+    def test_discoverable(self):
+        """
+        The plugin for L{twisted.lore.lmath} can be discovered by querying for
+        L{IProcessor} plugins.
+        """
+        plugins = getPlugins(IProcessor)
+        lmath = [p for p in plugins if p.name == "mlore"]
+        self.assertEqual(len(lmath), 1, "Did not find math lore plugin: %r" % (lmath,))
+
 
 
 class FormulaeTests(TestCase):
