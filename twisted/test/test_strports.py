@@ -8,44 +8,9 @@ Tests for L{twisted.application.strports}.
 from twisted.trial.unittest import TestCase
 from twisted.application import strports
 from twisted.application import internet
-from twisted.internet.test.test_endpoints import ParserTestCase
 from twisted.internet.protocol import Factory
-from twisted.internet.endpoints import TCP4ServerEndpoint, UNIXServerEndpoint
-
-
-
-class DeprecatedParseTestCase(ParserTestCase):
-    """
-    L{strports.parse} is deprecated.  It's an alias for a method that is now
-    private in L{twisted.internet.endpoints}.
-    """
-
-    def parse(self, *a, **kw):
-        result = strports.parse(*a, **kw)
-        warnings = self.flushWarnings([self.parse])
-        self.assertEqual(len(warnings), 1)
-        self.assertEqual(
-            warnings[0]['message'],
-            "twisted.application.strports.parse was deprecated "
-            "in Twisted 10.2.0: in favor of twisted.internet.endpoints.serverFromString")
-        return result
-
-
-    def test_simpleNumeric(self):
-        """
-        Base numeric ports should be parsed as TCP.
-        """
-        self.assertEqual(self.parse('80', self.f),
-                         ('TCP', (80, self.f), {'interface':'', 'backlog':50}))
-
-
-    def test_allKeywords(self):
-        """
-        A collection of keyword arguments with no prefixed type, like 'port=80',
-        will be parsed as keyword arguments to 'tcp'.
-        """
-        self.assertEqual(self.parse('port=80', self.f),
-                         ('TCP', (80, self.f), {'interface':'', 'backlog':50}))
+from twisted.internet.endpoints import TCP4ServerEndpoint
+from twisted.internet.test.test_endpoints import addFakePlugin
 
 
 
@@ -87,47 +52,64 @@ class ServiceTestCase(TestCase):
         self.assertIdentical(aService.endpoint._reactor, globalReactor)
 
 
-    def test_serviceDeprecatedDefault(self):
+
+class ListenTestCase(TestCase):
+    """
+    Tests for L{strports.listen}.
+    """
+
+    def setUp(self):
+        addFakePlugin(self)
+
+
+    def test_listen(self):
         """
-        L{strports.service} still accepts a 'default' argument, which will
-        affect the parsing of 'default' (i.e. 'not containing a colon')
-        endpoint descriptions, but this behavior is deprecated.
+        L{strports.listen} returns an L{IListeningPort} provider which wraps
+        the service produced from L{service}, using the same syntax as
+        L{endpoint.serverFromString}.
         """
-        svc = strports.service("8080", None, "unix")
-        self.assertIsInstance(svc.endpoint, UNIXServerEndpoint)
-        warnings = self.flushWarnings([self.test_serviceDeprecatedDefault])
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
-        self.assertEqual(
-            warnings[0]['message'],
-            "The 'default' parameter was deprecated in Twisted 10.2.0.  "
-            "Use qualified endpoint descriptions; for example, 'tcp:8080'.")
-        self.assertEqual(len(warnings), 1)
-
-        # Almost the same case, but slightly tricky - explicitly passing the old
-        # default value, None, also must trigger a deprecation warning.
-        svc = strports.service("tcp:8080", None, None)
-        self.assertIsInstance(svc.endpoint, TCP4ServerEndpoint)
-        warnings = self.flushWarnings([self.test_serviceDeprecatedDefault])
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
-        self.assertEqual(
-            warnings[0]['message'],
-            "The 'default' parameter was deprecated in Twisted 10.2.0.")
-        self.assertEqual(len(warnings), 1)
+        reactor = object()
+        aFactory = Factory()
+        port = strports.listen(
+            'fake:spam:eggs=spam', aFactory, reactor=reactor)
+        endpoint = port.service.endpoint
+        self.assertEqual(endpoint.args, (reactor, 'spam'))
+        self.assertEqual(endpoint.kwargs, {'eggs': 'spam'})
+        self.assertEqual(endpoint.listener.args, (aFactory,))
+        self.assertEqual(endpoint.listener.kwargs, {})
+        self.assertIdentical(endpoint.args[0], reactor)
+        self.assertIdentical(endpoint.listener.args[0], aFactory)
+        self.assertIdentical(port.service.factory, aFactory)
 
 
-    def test_serviceDeprecatedUnqualified(self):
+    def test_listenDefaultReactor(self):
         """
-        Unqualified strport descriptions, i.e. "8080", are deprecated.
+        L{strports.listen} will use the default reactor when none is provided
+        as an argument.
         """
-        svc = strports.service("8080", None)
-        self.assertIsInstance(svc.endpoint, TCP4ServerEndpoint)
-        warnings = self.flushWarnings(
-            [self.test_serviceDeprecatedUnqualified])
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
-        self.assertEqual(
-            warnings[0]['message'],
-            "Unqualified strport description passed to 'service'."
-            "Use qualified endpoint descriptions; for example, 'tcp:8080'.")
-        self.assertEqual(len(warnings), 1)
+        from twisted.internet import reactor as globalReactor
+        aFactory = Factory()
+        port = strports.listen("fake:spam", aFactory)
+        self.assertIdentical(port.service.endpoint.args[0], globalReactor)
 
 
+    def test_getHost(self):
+        """
+        The port provided by L{strports.listen} will give the same host as the
+        underlying endpoint's port.
+        """
+        aFactory = Factory()
+        port = strports.listen("fake:spam", aFactory)
+        self.assertIdentical(port.getHost(),
+                             port.service.endpoint.listener.getHost())
+
+
+    def test_defaultGetHost(self):
+        """
+        If the port provided by L{strports.listen} has stopped listening, its
+        getHost will give a L{_NullAddress}.
+        """
+        aFactory = Factory()
+        port = strports.listen("fake:spam", aFactory)
+        port.stopListening()
+        self.assertIsInstance(port.getHost(), strports._NullAddress)

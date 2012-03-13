@@ -11,7 +11,9 @@ from twisted.plugin import IPlugin
 from twisted.internet.interfaces import (IStreamClientEndpoint,
                                          IStreamServerEndpoint,
                                          IStreamClientEndpointStringParser,
-                                         IStreamServerEndpointStringParser)
+                                         IStreamServerEndpointStringParser,
+                                         IListeningPort)
+from twisted.internet import defer
 
 class PluginBase(object):
     implements(IPlugin)
@@ -57,6 +59,37 @@ class StreamClient(EndpointBase):
 class StreamServer(EndpointBase):
 
     implements(IStreamServerEndpoint)
+
+    listener = None
+
+    def listen(self, *a, **kw):
+        self.listener = ListeningPort(a, kw)
+        return defer.succeed(self.listener)
+
+
+
+class ListeningPort(object):
+
+    implements(IListeningPort)
+
+    def __init__(self, args, kwargs):
+        self.args = args
+        self.kwargs = kwargs
+        self.listening = False
+        self.host = object()
+
+
+    def startListening(self):
+        self.listening = True
+
+
+    def stopListening(self):
+        self.listening = False
+        return defer.succeed(None)
+
+
+    def getHost(self):
+        return self.host
 
 
 
