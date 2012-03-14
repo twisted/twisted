@@ -179,7 +179,6 @@ class SSHPublicKeyDatabaseTestCase(TestCase):
     Tests for L{SSHPublicKeyDatabase}.
     """
     skip = euidSkip or dependencySkip
-
     if not skip:
         pubKeyDatabaseType = checkers.SSHPublicKeyDatabase
 
@@ -376,7 +375,9 @@ class UNIXAccountPublicKeyCheckerTestCase(SSHPublicKeyDatabaseTestCase):
     Tests for L{UNIXAccountPublicKeyChecker}.  This should be almost
     completely backwards-compatible with L{SSHPublicKeyDatabase}
     """
-    pubKeyDatabaseType = checkers.UNIXAccountPublicKeyChecker
+    skip = euidSkip or dependencySkip
+    if not skip:
+        pubKeyDatabaseType = checkers.UNIXAccountPublicKeyChecker
 
 
 
