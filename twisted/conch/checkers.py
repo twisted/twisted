@@ -197,8 +197,12 @@ class UNIXAccountPublicKeyDatabase(BaseSSHPublickeyChecker):
     _userdb = pwd
 
     def validateKey(self, publicKey, credentials):
-        if self.checkKey(credentials):
-            return credentials.username
+        try:
+            if self.checkKey(credentials):
+                return credentials.username
+        except Exception, e:
+            log.msg(e)
+
         raise UnauthorizedLogin('invalid key')
 
 
