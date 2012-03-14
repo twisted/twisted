@@ -305,9 +305,26 @@ class ZipFilePathTestCase(AbstractFilePathTestCase):
 
     def test_verifyObject(self):
         """
-        ZipPaths implement IFilePath.
+        ZipArchives implement IFilePath.
         """
         self.assertTrue(verifyObject(filepath.IFilePath, self.path))
+
+
+    def test_verifyObjectInner(self):
+        """
+        ZipPaths implement IFilePath.
+        """
+        # Children of ZipArchives are ZipPaths.
+        kid = self.path.child("file1")
+        self.assertTrue(verifyObject(filepath.IFilePath, kid))
+
+
+    def test_zipPathGetSize(self):
+        """
+        ZipPaths have working getsize().
+        """
+        kid = self.path.child("file1")
+        self.assertEqual(kid.getsize(), len("file 1"))
 
 
     def test_zipPathRepr(self):
