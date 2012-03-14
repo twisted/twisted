@@ -150,6 +150,9 @@ class ZipPath(AbstractFilePath):
             self.archive.zipfile.mode = mode
             return self.archive.zipfile.readfile(self.pathInArchive)
 
+    def restat(self, reraise=True):
+        pass
+
     def changed(self):
         pass
 
