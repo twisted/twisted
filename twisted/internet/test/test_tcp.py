@@ -1194,7 +1194,6 @@ class TCPConnectionTestsBuilder(ReactorBuilder):
         factory = ServerFactory()
         factory.protocol = ListenerProtocol
         port = reactor.listenTCP(0, factory, interface="127.0.0.1")
-        self.addCleanup(port.stopListening)
 
         cc = TCP4ClientEndpoint(reactor, '127.0.0.1', port.getHost().port)
         cf = ClientFactory()
@@ -1252,11 +1251,9 @@ class WriteSequenceTests(ReactorBuilder):
         reactor = self.buildReactor()
 
         port = reactor.listenTCP(0, server)
-        self.addCleanup(port.stopListening)
 
         connector = reactor.connectTCP(
             "127.0.0.1", port.getHost().port, client)
-        self.addCleanup(connector.disconnect)
 
         def dataReceived(data):
             log.msg("data received: %r" % data)
@@ -1292,11 +1289,9 @@ class WriteSequenceTests(ReactorBuilder):
         reactor = self.buildReactor()
 
         port = reactor.listenTCP(0, server)
-        self.addCleanup(port.stopListening)
 
         connector = reactor.connectTCP(
             "127.0.0.1", port.getHost().port, client)
-        self.addCleanup(connector.disconnect)
 
         def serverConnected(proto):
             log.msg("server connected %s" % proto)
@@ -1325,11 +1320,9 @@ class WriteSequenceTests(ReactorBuilder):
         reactor = self.buildReactor()
 
         port = reactor.listenTCP(0, self.server)
-        self.addCleanup(port.stopListening)
 
         connector = reactor.connectTCP(
             "127.0.0.1", port.getHost().port, self.client)
-        self.addCleanup(connector.disconnect)
 
         # The following could probably all be much simpler, but for #5285.
 

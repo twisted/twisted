@@ -9,8 +9,8 @@ from zope.interface import implements
 
 import timerfd
 
-from twisted.internet.interfaces import IReactorCore, IReactorFDSet, IHalfCloseableDescriptor
-from twisted.internet import error, fdesc
+from twisted.internet.interfaces import IReactorCore, IReactorFDSet, IHalfCloseableDescriptor, IReactorTCP
+from twisted.internet import error, fdesc, tcp
 
 from twisted.internet.main import installReactor
 from twisted.internet.base import _ThreePhaseEvent, ThreadedResolver
@@ -216,7 +216,7 @@ class _DescriptorState(object):
 
 
 class EPollSTMReactor(_PollLikeMixin, Clock):
-    implements(IReactorCore, IReactorFDSet)
+    implements(IReactorCore, IReactorFDSet, IReactorTCP)
 
     def __init__(self):
         Clock.__init__(self)
@@ -314,35 +314,6 @@ class EPollSTMReactor(_PollLikeMixin, Clock):
 
 
     # IReactorFDSet
-    def _add(self, descr, op):
-        fd = descr.fileno()
-        try:
-            descriptor = self._descriptors[fd]
-        except KeyError:
-            descriptor = self._descriptors[fd] = _DescriptorState(
-                self, fd, descr, op)
-            descriptor.register()
-        else:
-            descriptor.logicalFlags |= op
-        if descriptor not in self._working:
-            descriptor.update()
-
-
-    def _remove(self, descr, op):
-        fd = descr.fileno()
-        try:
-            descriptor = self._descriptors[fd]
-        except KeyError:
-            for (probefd, probedescr) in self._descriptors.iteritems():
-                if descr is probedescr:
-                    del self._descriptors[probefd]
-                    break
-        else:
-            descriptor.logicalFlags &= ~op
-            if descriptor not in self._working:
-                descriptor.update()
-
-
     def addReader(self, reader):
         self._add(reader, EPOLLIN)
 
@@ -375,15 +346,66 @@ class EPollSTMReactor(_PollLikeMixin, Clock):
 
     def removeAll(self):
         result = []
+        internal = (self._timer, self._stopWaker, self._normalWaker)
         for (fd, descr) in self._descriptors.items():
-            if descr.descr not in (self._timer, self._stopWaker, self._normalWaker):
+            # XXX Maybe it's worth forgetting about these sometimes?
+            if descr.logicalFlags and descr.descr not in internal:
                 self.removeReader(descr.descr)
                 self.removeWriter(descr.descr)
                 result.append(descr.descr)
         return result
 
 
+    # IReactorTCP
+    def listenTCP(self, port, factory, backlog=50, interface=''):
+        """@see: twisted.internet.interfaces.IReactorTCP.listenTCP
+        """
+        p = tcp.Port(port, factory, backlog, interface, self)
+        p.startListening()
+        return p
+
+
+    def connectTCP(self, host, port, factory, timeout=30, bindAddress=None):
+        """@see: twisted.internet.interfaces.IReactorTCP.connectTCP
+        """
+        c = tcp.Connector(host, port, factory, timeout, bindAddress, self)
+        c.connect()
+        return c
+
+
     # Implementation details
+    @property
+    def _reads(self):
+        return self.getReaders()
+
+
+    def _add(self, descr, op):
+        fd = descr.fileno()
+        try:
+            descriptor = self._descriptors[fd]
+        except KeyError:
+            descriptor = self._descriptors[fd] = _DescriptorState(
+                self, fd, descr, op)
+            descriptor.register()
+        else:
+            descriptor.logicalFlags |= op
+        if descriptor not in self._working:
+            descriptor.update()
+
+
+    def _remove(self, descr, op):
+        fd = descr.fileno()
+        try:
+            descriptor = self._descriptors[fd]
+        except KeyError:
+            for (probefd, probedescr) in self._descriptors.iteritems():
+                if descr is probedescr:
+                    del self._descriptors[probefd]
+                    break
+        else:
+            descriptor.logicalFlags &= ~op
+            if descriptor not in self._working:
+                descriptor.update()
 
 
     def _transition_STARTING_to_READY(self):
