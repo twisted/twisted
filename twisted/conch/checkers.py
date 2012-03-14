@@ -130,8 +130,8 @@ class BaseSSHPublickeyChecker(object):
     credentialInterfaces = (ISSHPrivateKey,)
 
     def requestAvatarId(self, credentials):
-        d = self._getVerifiedKey(credentials)
-        d.addCallback(self._validateKey, credentials)
+        d = defer.maybeDeferred(self._getVerifiedKey, credentials)
+        d.addCallback(self.validateKey, credentials)
         return d
 
 
@@ -152,7 +152,7 @@ class BaseSSHPublickeyChecker(object):
         @return: A L{twisted.conch.ssh.keys.Key} representing the user's
             verified public key
         """
-        if not credentials.signature:
+        if not (credentials and credentials.signature):
             raise error.ValidPublicKey()
 
         try:
@@ -162,8 +162,8 @@ class BaseSSHPublickeyChecker(object):
         except:  # any error should be treated as a failed login
             log.err()
             raise UnauthorizedLogin('error while verifying key')
-        else:
-            raise UnauthorizedLogin("unable to verify key")
+
+        raise UnauthorizedLogin("unable to verify key")
 
 
     def validateKey(self, publicKey, credentials):
@@ -272,6 +272,7 @@ class SSHPublicKeyDatabase:
         d.addErrback(self._ebRequestAvatarId)
         return d
 
+
     def _cbRequestAvatarId(self, validKey, credentials):
         """
         Check whether the credentials themselves are valid, now that we know
@@ -302,7 +303,7 @@ class SSHPublicKeyDatabase:
                 pubKey = keys.Key.fromString(credentials.blob)
                 if pubKey.verify(credentials.signature, credentials.sigData):
                     return credentials.username
-            except: # any error should be treated as a failed login
+            except:  # any error should be treated as a failed login
                 log.err()
                 return failure.Failure(UnauthorizedLogin('error while verifying key'))
         return failure.Failure(UnauthorizedLogin("unable to verify key"))
@@ -358,11 +359,13 @@ class SSHPublicKeyDatabase:
                     continue
         return False
 
+
     def _ebRequestAvatarId(self, f):
         if not f.check(UnauthorizedLogin):
             log.msg(f)
             return failure.Failure(UnauthorizedLogin("unable to get avatar id"))
         return f
+
 
 
 class SSHProtocolChecker:
