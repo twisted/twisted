@@ -1,22 +1,9 @@
+# -*- test-case-name: twisted.web.test.test_websockets -*-
 # Copyright (c) 2011-2012 Oregon State University Open Source Lab
+#               2011-2012 Corbin Simpson
+#                    2012 Twisted Matrix Laboratories
 #
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to
-# deal in the Software without restriction, including without limitation the
-# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-# sell copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-#    The above copyright notice and this permission notice shall be included
-#    in all copies or substantial portions of the Software.
-#
-#    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-#    OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-#    MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-#    NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-#    DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-#    OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-#    USE OR OTHER DEALINGS IN THE SOFTWARE.
+# See LICENSE for details.
 
 """
 The WebSockets protocol (RFC 6455), provided as a resource which wraps a
@@ -236,7 +223,7 @@ class WebSocketsProtocol(ProtocolWrapper):
 
         try:
             frames, self.buf = parse_hybi07_frames(self.buf)
-        except WSException, wse:
+        except WSException:
             # Couldn't parse all the frames, something went wrong, let's bail.
             log.err()
             self.loseConnection()
@@ -262,7 +249,7 @@ class WebSocketsProtocol(ProtocolWrapper):
                 # 5.5.2 PINGs must be responded to with PONGs.
                 # 5.5.3 PONGs must contain the data that was sent with the
                 # provoking PING.
-                self.transport.write(make_hybi07_packet(data, opcode=PONG))
+                self.transport.write(make_hybi07_frame(data, opcode=PONG))
 
     def sendFrames(self):
         """
