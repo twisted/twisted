@@ -1392,27 +1392,10 @@ def suiteVisit(suite, visitor):
 class TestSuite(pyunit.TestSuite):
     """
     Extend the standard library's C{TestSuite} with support for the visitor
-    pattern and a consistently overrideable C{run} method.
+    pattern.
     """
 
     visit = suiteVisit
-
-    def __call__(self, result):
-        return self.run(result)
-
-
-    def run(self, result):
-        """
-        Call C{run} on every member of the suite.
-        """
-        # we implement this because Python 2.3 unittest defines this code
-        # in __call__, whereas 2.4 defines the code in run.
-        for test in self._tests:
-            if result.shouldStop:
-                break
-            test(result)
-        return result
-
 
 
 class TestDecorator(components.proxyForInterface(itrial.ITestCase,

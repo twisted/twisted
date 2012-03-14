@@ -55,20 +55,6 @@ def _stub_islink(path):
     return False
 
 
-def _stub_urandom(n):
-    """
-    Provide random data in versions of Python prior to 2.4.  This is an
-    effectively compatible replacement for 'os.urandom'.
-
-    @type n: L{int}
-    @param n: the number of bytes of data to return
-    @return: C{n} bytes of random data.
-    @rtype: str
-    """
-    randomData = [random.randrange(256) for n in xrange(n)]
-    return ''.join(map(chr, randomData))
-
-
 def _stub_armor(s):
     """
     ASCII-armor for random data.  This uses a hex encoding, although we will
@@ -78,7 +64,7 @@ def _stub_armor(s):
     return s.encode('hex')
 
 islink = getattr(os.path, 'islink', _stub_islink)
-randomBytes = getattr(os, 'urandom', _stub_urandom)
+randomBytes = os.urandom # Retained for historic usage.
 armor = getattr(base64, 'urlsafe_b64encode', _stub_armor)
 
 class IFilePath(Interface):
@@ -261,7 +247,7 @@ def _secureEnoughString():
     """
     Create a pseudorandom, 16-character string for use in secure filenames.
     """
-    return armor(sha1(randomBytes(64)).digest())[:16]
+    return armor(sha1(os.urandom(64)).digest())[:16]
 
 
 

@@ -720,9 +720,8 @@ class FileBodyProducer(object):
     """
     implements(IBodyProducer)
 
-    # Python 2.4 doesn't have these symbolic constants
-    _SEEK_SET = getattr(os, 'SEEK_SET', 0)
-    _SEEK_END = getattr(os, 'SEEK_END', 2)
+    _SEEK_SET = os.SEEK_SET
+    _SEEK_END = os.SEEK_END
 
     def __init__(self, inputFile, cooperator=task, readSize=2 ** 16):
         self._inputFile = inputFile

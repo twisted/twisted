@@ -575,15 +575,6 @@ class XMLRPCAllowNoneTestCase(SerializationConfigMixin, unittest.TestCase):
     value = None
 
 
-try:
-    xmlrpclib.loads(xmlrpclib.dumps(({}, {})), use_datetime=True)
-except TypeError:
-    _datetimeSupported = False
-else:
-    _datetimeSupported = True
-
-
-
 class XMLRPCUseDateTimeTestCase(SerializationConfigMixin, unittest.TestCase):
     """
     Tests for passing a C{datetime.datetime} instance when the C{useDateTime}
@@ -591,41 +582,6 @@ class XMLRPCUseDateTimeTestCase(SerializationConfigMixin, unittest.TestCase):
     """
     flagName = "useDateTime"
     value = datetime.datetime(2000, 12, 28, 3, 45, 59)
-
-    if not _datetimeSupported:
-        skip = (
-            "Available version of xmlrpclib does not support datetime "
-            "objects.")
-
-
-
-class XMLRPCDisableUseDateTimeTestCase(unittest.TestCase):
-    """
-    Tests for the C{useDateTime} flag on Python 2.4.
-    """
-    if _datetimeSupported:
-        skip = (
-            "Available version of xmlrpclib supports datetime objects.")
-
-    def test_cannotInitializeWithDateTime(self):
-        """
-        L{XMLRPC} raises L{RuntimeError} if passed C{True} for C{useDateTime}.
-        """
-        self.assertRaises(RuntimeError, XMLRPC, useDateTime=True)
-        self.assertRaises(
-            RuntimeError, Proxy, "http://localhost/", useDateTime=True)
-
-
-    def test_cannotSetDateTime(self):
-        """
-        Setting L{XMLRPC.useDateTime} to C{True} after initialization raises
-        L{RuntimeError}.
-        """
-        xmlrpc = XMLRPC(useDateTime=False)
-        self.assertRaises(RuntimeError, setattr, xmlrpc, "useDateTime", True)
-        proxy = Proxy("http://localhost/", useDateTime=False)
-        self.assertRaises(RuntimeError, setattr, proxy, "useDateTime", True)
-
 
 
 class XMLRPCTestAuthenticated(XMLRPCTestCase):

@@ -208,26 +208,15 @@ def suppress(action='ignore', **kwarg):
 
 def profiled(f, outputFile):
     def _(*args, **kwargs):
-        if sys.version_info[0:2] != (2, 4):
-            import profile
-            prof = profile.Profile()
-            try:
-                result = prof.runcall(f, *args, **kwargs)
-                prof.dump_stats(outputFile)
-            except SystemExit:
-                pass
-            prof.print_stats()
-            return result
-        else: # use hotshot, profile is broken in 2.4
-            import hotshot.stats
-            prof = hotshot.Profile(outputFile)
-            try:
-                return prof.runcall(f, *args, **kwargs)
-            finally:
-                stats = hotshot.stats.load(outputFile)
-                stats.strip_dirs()
-                stats.sort_stats('cum')   # 'time'
-                stats.print_stats(100)
+        import profile
+        prof = profile.Profile()
+        try:
+            result = prof.runcall(f, *args, **kwargs)
+            prof.dump_stats(outputFile)
+        except SystemExit:
+            pass
+        prof.print_stats()
+        return result
     return _
 
 

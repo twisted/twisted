@@ -175,9 +175,6 @@ class DeferredGeneratorTests(BaseDefgenTests, unittest.TestCase):
 
 
 
-## This has to be in a string so the new yield syntax doesn't cause a
-## syntax error in Python 2.4 and before.
-inlineCallbacksTestsSource = '''
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 class InlineCallbacksTests(BaseDefgenTests, unittest.TestCase):
@@ -295,15 +292,3 @@ class InlineCallbacksTests(BaseDefgenTests, unittest.TestCase):
 
         self.assertIn("inlineCallbacks",
             str(self.assertRaises(TypeError, _noYield)))
-
-'''
-
-if sys.version_info > (2, 5):
-    # Load tests
-    exec inlineCallbacksTestsSource
-else:
-    # Make a placeholder test case
-    class InlineCallbacksTests(unittest.TestCase):
-        skip = "defer.defgen doesn't run on python < 2.5."
-        def test_everything(self):
-            pass

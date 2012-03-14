@@ -2,7 +2,7 @@
 # See LICENSE for details.
 
 # this module is a trivial class with doctests and a __test__ attribute
-# to test trial's doctest support with python2.4
+# to test trial's doctest support.
 
 
 class Counter(object):

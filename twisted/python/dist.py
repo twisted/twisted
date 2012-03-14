@@ -360,7 +360,7 @@ def _checkCPython(sys=sys, platform=platform):
 
     On recent versions of Python, will use C{platform.python_implementation}.
     On 2.5, it will try to extract the implementation from sys.subversion. On
-    older versions (currently the only supported older version is 2.4), checks
+    older versions, checks
     if C{__pypy__} is in C{sys.modules}, since PyPy is the implementation we
     really care about. If it isn't, assumes CPython.
 
