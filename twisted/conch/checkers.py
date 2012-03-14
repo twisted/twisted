@@ -186,6 +186,8 @@ class InMemorySSHPublicKeyChecker(BaseSSHPublicKeyChecker):
     Checker that authenticates SSH public keys, based on public keys stored in
     a dictionary that it is initialized with.
 
+    @since: 12.1.0
+
     @ivar _keyDictionary: a C{dictionary} with usernames (C{string}) mapped to
         a C{list} of L{twisted.conch.ssh.keys.Key}s that are authorized
     """
@@ -218,6 +220,8 @@ class UNIXAccountPublicKeyChecker(BaseSSHPublicKeyChecker):
     UnauthorizedLogins are caught, logged, and a new UnauthorizedLogin raised
     with the message "unable to get avatar id" no matter what the reason for
     the unauthorized login.
+
+    @since: 12.1.0
     """
 
     _userdb = pwd
