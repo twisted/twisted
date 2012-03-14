@@ -1,0 +1,1 @@
+twisted.names.tap.makeService (thus also "twistd dns") now makes a DNS server which gives precedence to the hosts file from its configuration over the remote DNS servers from its configuration.

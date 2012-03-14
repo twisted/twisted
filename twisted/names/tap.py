@@ -112,16 +112,31 @@ class Options(usage.Options):
             raise usage.UsageError("Invalid port: %r" % (self['port'],))
 
 
-def makeService(config):
-    import client, cache, hosts
+def _buildResolvers(config):
+    """
+    Build DNS resolver instances in an order which leaves recursive
+    resolving as a last resort.
+
+    @type config: L{usage.Config} instance
+    @param config: Parsed command-line configuration
+
+    @return: Two-item tuple of a list of cache resovers and a list of client
+        resolvers
+    """
+    from twisted.names import client, cache, hosts
 
     ca, cl = [], []
     if config['cache']:
         ca.append(cache.CacheResolver(verbose=config['verbose']))
-    if config['recursive']:
-        cl.append(client.createResolver(resolvconf=config['resolv-conf']))
     if config['hosts-file']:
         cl.append(hosts.Resolver(file=config['hosts-file']))
+    if config['recursive']:
+        cl.append(client.createResolver(resolvconf=config['resolv-conf']))
+    return ca, cl
+
+
+def makeService(config):
+    ca, cl = _buildResolvers(config)
 
     f = server.DNSServerFactory(config.zones, ca, cl, config['verbose'])
     p = dns.DNSDatagramProtocol(f)
