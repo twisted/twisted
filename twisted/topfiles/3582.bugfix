@@ -1,0 +1,2 @@
+twisted.protocols.sip now has improved URI handling and parsing, and
+better tests
