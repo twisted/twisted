@@ -145,7 +145,8 @@ class ZipPath(AbstractFilePath):
         if _USE_ZIPFILE:
             return self.archive.zipfile.open(self.pathInArchive, mode=mode)
         else:
-            # XXX oh man, is this too much hax?
+            # Set the mode on the zip file and then open the file using the
+            # mode on the zip file. This is reliable, if a bit obtuse.
             self.archive.zipfile.mode = mode
             return self.archive.zipfile.readfile(self.pathInArchive)
 
