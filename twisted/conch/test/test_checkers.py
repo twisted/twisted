@@ -382,6 +382,8 @@ class BaseSSHPublicKeyCheckerTestCase(TestCase):
     Tests for L{BaseSSHPublicKeyChecker}.
     """
 
+    skip = dependencySkip
+
     def _goodValidateKey(self, *args, **kwargs):
         return self.username
 
@@ -479,6 +481,8 @@ class InMemorySSHPublicKeyCheckerTestCase(TestCase):
     """
     Tests for L{InMemorySSHPublicKeyChecker}.
     """
+
+    skip = dependencySkip
 
     def _getKeyPair(self, rsadsa):
         pubKeys = [getattr(keydata, 'public%s_openssh' % (rsadsa,))]
