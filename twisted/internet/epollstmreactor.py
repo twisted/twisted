@@ -36,19 +36,35 @@ class _CrashReactor(Exception):
 
 
 class _ReactorState(Names):
+    # First state
     STOPPED = NamedConstant()
+
+    # Entered after reactor.run()
     STARTING = NamedConstant()
+
+    # Entered after last before startup trigger - by DURING_STARTUP
     READY = NamedConstant()
+
+    # Entered after last during startup trigger - by STARTUP_COMPLETE
     RUNNING = NamedConstant()
+
+    # Entered after reactor.crash() - by CRASH
     CRASHING = NamedConstant()
+
+    # Entered after reactor.stop() - by STOP
     STOPPING = NamedConstant()
+
+    # Entered after event loop really stops due to stop
     STOPPED_AND_RAN_ALREADY = NamedConstant()
+
+    # Entered after event loop really stops due to crash
     CRASHED = NamedConstant()
 
 
 
 class _StateInputs(Names):
     RUN = NamedConstant()
+    DURING_STARTUP = NamedConstant()
     STARTUP_COMPLETE = NamedConstant()
     STOP = NamedConstant()
     CRASH = NamedConstant()
@@ -59,21 +75,19 @@ class _StateMachine(object):
     states = {
         _ReactorState.STOPPED: {
             _StateInputs.RUN: _ReactorState.STARTING,
-            _StateInputs.STARTUP_COMPLETE: RuntimeError,
             _StateInputs.STOP: ReactorNotRunning,
             _StateInputs.CRASH: ReactorNotRunning,
             },
 
         _ReactorState.CRASHED: {
             _StateInputs.RUN: _ReactorState.STARTING,
-            _StateInputs.STARTUP_COMPLETE: RuntimeError,
             _StateInputs.STOP: ReactorNotRunning,
             _StateInputs.CRASH: ReactorNotRunning,
             },
 
         _ReactorState.STARTING: {
             _StateInputs.RUN: ReactorAlreadyRunning,
-            _StateInputs.STARTUP_COMPLETE: _ReactorState.READY,
+            _StateInputs.DURING_STARTUP: _ReactorState.READY,
             _StateInputs.STOP: _ReactorState.STARTING,
             # XXX This is wrong, it'll go through normal reactor shutdown
             # but no unit tests fail
@@ -82,14 +96,13 @@ class _StateMachine(object):
 
         _ReactorState.READY: {
             _StateInputs.RUN: ReactorAlreadyRunning,
-            _StateInputs.STARTUP_COMPLETE: RuntimeError,
-            _StateInputs.STOP: _ReactorState.STOPPING,
+            _StateInputs.STARTUP_COMPLETE: _ReactorState.RUNNING,
+            _StateInputs.STOP: _ReactorState.READY,
             _StateInputs.CRASH: _ReactorState.CRASHING,
             },
 
         _ReactorState.RUNNING: {
             _StateInputs.RUN: ReactorAlreadyRunning,
-            _StateInputs.STARTUP_COMPLETE: RuntimeError,
             _StateInputs.STOP: _ReactorState.STOPPING,
             _StateInputs.CRASH: _ReactorState.CRASHING,
             },
@@ -97,7 +110,6 @@ class _StateMachine(object):
         _ReactorState.CRASHING: {
             _StateInputs.RUN: _ReactorState.CRASHING,
             _StateInputs.STARTUP_COMPLETE: _ReactorState.CRASHED,
-            _StateInputs.STOP: RuntimeError,
             _StateInputs.CRASH: _ReactorState.CRASHING,
             },
 
@@ -105,12 +117,10 @@ class _StateMachine(object):
             _StateInputs.RUN: ReactorNotRestartable,
             _StateInputs.STARTUP_COMPLETE: _ReactorState.STOPPING,
             _StateInputs.STOP: ReactorNotRunning,
-            _StateInputs.CRASH: RuntimeError,
             },
 
         _ReactorState.STOPPED_AND_RAN_ALREADY: {
             _StateInputs.RUN: ReactorNotRestartable,
-            _StateInputs.STARTUP_COMPLETE: RuntimeError,
             _StateInputs.STOP: ReactorNotRunning,
             _StateInputs.CRASH: ReactorNotRunning,
             },
@@ -141,8 +151,10 @@ class _Waker(object):
 
 
     def doRead(self):
+        print 'firing', self._callback
         read(self._r, 1024)
         self._callback()
+        print '------- did it'
 
     def connectionLost(self, reason):
         close(self._r)
@@ -234,7 +246,10 @@ class EPollSTMReactor(_PollLikeMixin, Clock):
         self._transition(_StateInputs.STOP)
 
 
+    _crashing = False
     def crash(self):
+        # XXX
+        self._crashing = True
         self._transition(_StateInputs.CRASH)
 
 
@@ -369,12 +384,6 @@ class EPollSTMReactor(_PollLikeMixin, Clock):
 
 
     # Implementation details
-    def _reallyStartRunning(self):
-        """
-        Method called to transition to the running state.  This should happen
-        in the I{during startup} event trigger phase.
-        """
-        self._transition(_StateInputs.STARTUP_COMPLETE)
 
 
     def _transition_STARTING_to_READY(self):
@@ -384,18 +393,12 @@ class EPollSTMReactor(_PollLikeMixin, Clock):
         transaction.add(self._doubleReallyPlusGoodRunningCease)
 
 
-    def _stopEPoll(self):
-        transaction.stop_epoll()
-        self._normalWaker.wake()
-
-
     def _doubleReallyPlusGoodRunningCease(self):
         self._stopEPoll()
 
 
     def _addEPoll(self):
-        import pdb; pdb.set_trace()
-        transaction.add_epoll(self._epoll, self._epollCallback)
+        self._stopEPoll = transaction.add_epoll(self._epoll, self._epollCallback)
 
 
     _POLL_DISCONNECTED = EPOLLHUP | EPOLLERR
@@ -441,7 +444,7 @@ class EPollSTMReactor(_PollLikeMixin, Clock):
 
 
     def _addExisting(self):
-        assert self._state is _ReactorState.RUNNING
+        assert self._state in (_ReactorState.RUNNING, _ReactorState.STOPPING), "state is %r" % (self._state)
         for fd, descriptor in self._descriptors.iteritems():
             descriptor.register()
 
@@ -476,12 +479,7 @@ class EPollSTMReactor(_PollLikeMixin, Clock):
 
 
     def _endEPoll(self):
-        if self._state is _ReactorState.STOPPING:
-            self._stopEPoll()
-        elif self._state is _ReactorState.CRASHING:
-            self._stopEPoll()
-        else:
-            assert False, self._state
+        self._stopEPoll()
         self._normalWaker.wake()
 
 
@@ -493,7 +491,12 @@ class EPollSTMReactor(_PollLikeMixin, Clock):
     # State transition magic
     def _transition(self, input):
         oldState = self._state
-        newState = _StateMachine.states[oldState][input]
+        try:
+            newState = _StateMachine.states[oldState][input]
+        except KeyError, e:
+            print 'illegal transition', oldState, input, e
+            raise
+
         print 'Going from', oldState, 'to', newState, 'because', input
         try:
             isitsubclass = issubclass(newState, Exception)
@@ -504,6 +507,8 @@ class EPollSTMReactor(_PollLikeMixin, Clock):
         self._state = newState
         getattr(self, '_transition_%s_to_%s' % (oldState.name, newState.name))()
 
+    def _reallyStartRunning(self):
+        self._transition(_StateInputs.DURING_STARTUP)
 
     def _transition_STOPPED_to_STARTING(self):
         self.addSystemEventTrigger(
@@ -515,15 +520,13 @@ class EPollSTMReactor(_PollLikeMixin, Clock):
         self._startupDelayedCalls()
 
         self.fireSystemEvent('startup')
-        # XXX THIS MUST BE PART OF THE STATE MACHINE
-        if self._state is not _ReactorState.STOPPING:
-            self._state = _ReactorState.RUNNING
-        self._transition_READY_to_RUNNING()
+        self._transition(_StateInputs.STARTUP_COMPLETE)
 
     _transition_CRASHED_to_STARTING = _transition_STOPPED_to_STARTING
 
-    def _transition_READY_to_STOPPING(self):
+    def _transition_READY_to_READY(self):
         self._stopWaker.wake()
+
 
     def _transition_READY_to_CRASHING(self):
         self._stopWaker.wake()
@@ -538,14 +541,22 @@ class EPollSTMReactor(_PollLikeMixin, Clock):
         self._rescheduleDelayedCalls()
 
         transaction.run()
-        if self._state is _ReactorState.STOPPING:
+        if self._crashing:
+            self._state = _ReactorState.CRASHED
+        else:
+            self._state = _ReactorState.STOPPING
             self.fireSystemEvent('shutdown')
             transaction.run()
             self._state = _ReactorState.STOPPED_AND_RAN_ALREADY
-        elif self._state is _ReactorState.CRASHING:
-            self._state = _ReactorState.CRASHED
-        else:
-            assert False, "what" + str(self._state)
+
+        # if self._state is _ReactorState.STOPPING:
+        #     self.fireSystemEvent('shutdown')
+        #     transaction.run()
+        #     self._state = _ReactorState.STOPPED_AND_RAN_ALREADY
+        # elif self._state is _ReactorState.CRASHING:
+        #     self._state = _ReactorState.CRASHED
+        # else:
+        #     assert False, "what" + str(self._state)
 
     def _transition_RUNNING_to_STOPPING(self):
         self._stopWaker.wake()
