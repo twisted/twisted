@@ -480,8 +480,6 @@ class URI:
         """
         Format this object's contents as a SIP URI.
         """
-
-    def toString(self):
         l = []; w = l.append
         w("sip:")
         if self.username != None:
@@ -513,8 +511,6 @@ class URI:
         """
         Format this object's contents as a SIP URI.
         """
-
-    def __str__(self):
         return self.toString()
 
 
