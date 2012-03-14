@@ -119,7 +119,7 @@ class UNIXPasswordDatabase:
 
 
 
-class BaseSSHPublickeyChecker(object):
+class BaseSSHPublicKeyChecker(object):
     """
     Base class for a checker that authenticates SSH public keys.
 
@@ -181,7 +181,33 @@ class BaseSSHPublickeyChecker(object):
 
 
 
-class UNIXAccountPublicKeyChecker(BaseSSHPublickeyChecker):
+class InMemorySSHPublicKeyChecker(BaseSSHPublicKeyChecker):
+    """
+    Checker that authenticates SSH public keys, based on public keys stored in
+    a dictionary that it is initialized with.
+
+    @ivar _keyDictionary: a C{dictionary} with usernames (C{string}) mapped to
+        a C{list} of L{twisted.conch.ssh.keys.Key}s that are authorized
+    """
+
+    def __init__(self, keyDictionary=None):
+        self.keyDictionary = keyDictionary or {}
+
+
+    def validateKey(self, publicKey, credentials):
+        try:
+            userkeys = self.keyDictionary.get(credentials.username, [])
+            for key in userkeys:
+                if key == publicKey:
+                    return credentials.username
+        except:  # assume any error is an invalid key
+            pass
+
+        raise UnauthorizedLogin('Invalid key')
+
+
+
+class UNIXAccountPublicKeyChecker(BaseSSHPublicKeyChecker):
     """
     Checker that authenticates SSH public keys, based on public keys listed in
     authorized_keys and authorized_keys2 files in user .ssh/ directories.
