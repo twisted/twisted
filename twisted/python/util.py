@@ -790,10 +790,10 @@ def unsignedID(obj):
     Return the id of an object as an unsigned number so that its hex
     representation makes sense.
 
-    This is mostly necessary in Python 2.4 which implements L{id} to sometimes 
-    return a negative value.  Python 2.3 shares this behavior, but also 
+    This is mostly necessary in Python 2.4 which implements L{id} to sometimes
+    return a negative value.  Python 2.3 shares this behavior, but also
     implements hex and the %x format specifier to represent negative values as
-    though they were positive ones, obscuring the behavior of L{id}.  Python 
+    though they were positive ones, obscuring the behavior of L{id}.  Python
     2.5's implementation of L{id} always returns positive values.
     """
     rval = _idFunction(obj)
