@@ -1,0 +1,1 @@
+twisted.words.protocols.irc.DccChatFactory.buildProtocol now returns the protocol object that it creates

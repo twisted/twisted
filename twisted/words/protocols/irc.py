@@ -2681,9 +2681,12 @@ class DccChatFactory(protocol.ClientFactory):
         self.client = client
         self.queryData = queryData
 
+
     def buildProtocol(self, addr):
         p = self.protocol(client=self.client, queryData=self.queryData)
         p.factory = self
+        return p
+
 
     def clientConnectionFailed(self, unused_connector, unused_reason):
         self.client.dcc_sessions.remove(self)

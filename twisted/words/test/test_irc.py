@@ -1879,3 +1879,20 @@ class ClientTests(TestCase):
         self.protocol.privmsg = privmsg
         self.protocol.irc_NOTICE(
             'spam', ['#greasyspooncafe', "I don't want any spam!"])
+
+
+
+class DccChatFactoryTests(unittest.TestCase):
+    """
+    Tests for L{DccChatFactory}
+    """
+    def test_buildProtocol(self):
+        """
+        An instance of the DccChat protocol is returned, which has the factory
+        property set to the factory which created it.
+        """
+        queryData = ('fromUser', None, None)
+        f = irc.DccChatFactory(None, queryData)
+        p = f.buildProtocol('127.0.0.1')
+        self.assertTrue(isinstance(p, irc.DccChat))
+        self.assertEqual(p.factory, f)
