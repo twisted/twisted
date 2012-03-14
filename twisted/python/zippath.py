@@ -102,12 +102,12 @@ class ZipPath(AbstractFilePath):
     # preauthChild = child
 
     def exists(self):
-        return self.isdir() or self.isfile()
+        return self.isDir() or self.isFile()
 
-    def isdir(self):
+    def isDir(self):
         return self.pathInArchive in self.archive.childmap
 
-    def isfile(self):
+    def isFile(self):
         return self.pathInArchive in self.archive.zipfile.NameToInfo
 
     def islink(self):
@@ -115,7 +115,7 @@ class ZipPath(AbstractFilePath):
 
     def listdir(self):
         if self.exists():
-            if self.isdir():
+            if self.isDir():
                 return self.archive.childmap[self.pathInArchive].keys()
             else:
                 raise OSError(errno.ENOTDIR, "Leaf zip entry listed")
@@ -156,7 +156,7 @@ class ZipPath(AbstractFilePath):
     def changed(self):
         pass
 
-    def getsize(self):
+    def getSize(self):
         """
         Retrieve this file's size.
 

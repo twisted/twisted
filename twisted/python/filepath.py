@@ -138,7 +138,7 @@ class IFilePath(Interface):
         Clear any cached information about the state of this path on disk.
         """
 
-    def getsize():
+    def getSize():
         """
         @return: the size of the file at this file path in bytes.
         @raise Exception: if the size cannot be obtained.
@@ -174,13 +174,13 @@ class IFilePath(Interface):
             otherwise.
         """
 
-    def isdir():
+    def isDir():
         """
         @return: C{True} if the file at this file path is a directory, C{False}
             otherwise.
         """
 
-    def isfile():
+    def isFile():
         """
         @return: C{True} if the file at this file path is a regular file,
             C{False} otherwise.
@@ -362,7 +362,7 @@ class AbstractFilePath(object):
         children in turn.  The optional argument C{descend} is a predicate that
         takes a FilePath, and determines whether or not that FilePath is
         traversed/descended into.  It will be called with each path for which
-        C{isdir} returns C{True}.  If C{descend} is not specified, all
+        C{isDir} returns C{True}.  If C{descend} is not specified, all
         directories will be traversed (including symbolic links which refer to
         directories).
 
@@ -372,7 +372,7 @@ class AbstractFilePath(object):
         @return: a generator yielding FilePath-like objects.
         """
         yield self
-        if self.isdir():
+        if self.isDir():
             for c in self.children():
                 # we should first see if it's what we want, then we
                 # can walk through the directory
@@ -476,6 +476,28 @@ class AbstractFilePath(object):
         Deprecated.  Use getStatusChangeTime instead.
         """
         return int(self.getStatusChangeTime())
+
+
+    # Pending deprecation in 12.1
+    def getsize(self):
+        """
+        Deprecated in favor of getSize.
+        """
+        return self.getSize()
+
+
+    def isdir(self):
+        """
+        Deprecated in favor of isDir.
+        """
+        return self.isDir()
+
+
+    def isfile(self):
+        """
+        Deprecated in favor of isFile.
+        """
+        return self.isFile()
 
 
 
@@ -609,7 +631,7 @@ class FilePath(AbstractFilePath):
         the last known status of the underlying file (or directory, as the case
         may be).  Trust me when I tell you that you do not want to use this
         attribute.  Instead, use the methods on L{FilePath} which give you
-        information about it, like C{getsize()}, C{isdir()},
+        information about it, like C{getSize()}, C{isDir()},
         C{getModificationTime()}, and so on.
     @type statinfo: C{int} or L{types.NoneType} or L{os.stat_result}
     """
@@ -824,7 +846,7 @@ class FilePath(AbstractFilePath):
         os.chmod(self.path, mode)
 
 
-    def getsize(self):
+    def getSize(self):
         st = self.statinfo
         if not st:
             self.restat()
@@ -1017,7 +1039,7 @@ class FilePath(AbstractFilePath):
                 return False
 
 
-    def isdir(self):
+    def isDir(self):
         """
         @return: C{True} if this L{FilePath} refers to a directory, C{False}
             otherwise.
@@ -1031,7 +1053,7 @@ class FilePath(AbstractFilePath):
         return S_ISDIR(st.st_mode)
 
 
-    def isfile(self):
+    def isFile(self):
         """
         @return: C{True} if this L{FilePath} points to a regular file (not a
             directory, socket, named pipe, etc), C{False} otherwise.
@@ -1145,7 +1167,7 @@ class FilePath(AbstractFilePath):
         C{self.path} is a directory, recursively remove all its children
         before removing the directory. If it's a file or link, just delete it.
         """
-        if self.isdir() and not self.islink():
+        if self.isDir() and not self.islink():
             for child in self.children():
                 child.remove()
             os.rmdir(self.path)
@@ -1364,13 +1386,13 @@ class FilePath(AbstractFilePath):
         # semantics of this code.  Right now the behavior of existent
         # destination symlinks is convenient, and quite possibly correct, but
         # its security properties need to be explained.
-        if self.isdir():
+        if self.isDir():
             if not destination.exists():
                 destination.createDirectory()
             for child in self.children():
                 destChild = destination.child(child.basename())
                 child.copyTo(destChild, followLinks)
-        elif self.isfile():
+        elif self.isFile():
             writefile = destination.open('w')
             try:
                 readfile = self.open()
