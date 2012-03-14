@@ -86,12 +86,12 @@ class IFilePath(Interface):
     File path object.
 
     A file path represents a location for a file-like-object and can be
-    organized into a hierarchy; a file path can can children which are
+    organized into a hierarchy; a file path can have children which are
     themselves file paths.
 
-    A file path has a name which unique identifies it in the context of its
-    parent (if it has one); a file path can not have two children with the same
-    name.  This name is referred to as the file path's "base name".
+    A file path has a name which uniquely identifies it in the context of its
+    parent, if it has one; a file path cannot have two children with the same
+    name. This unique name is referred to as the file path's "base name".
 
     A series of such names can be used to locate nested children of a file path;
     such a series is referred to as the child's "path", relative to the parent.
