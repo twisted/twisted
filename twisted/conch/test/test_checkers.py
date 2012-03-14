@@ -179,9 +179,10 @@ class SSHPublicKeyDatabaseTestCase(TestCase):
     Tests for L{SSHPublicKeyDatabase}.
     """
     skip = euidSkip or dependencySkip
+    pubKeyDatabaseType = checkers.SSHPublicKeyDatabase
 
     def setUp(self):
-        self.checker = checkers.SSHPublicKeyDatabase()
+        self.checker = self.pubKeyDatabaseType()
         self.key1 = base64.encodestring("foobar")
         self.key2 = base64.encodestring("eggspam")
         self.content = "t1 %s foo\nt2 %s egg\n" % (self.key1, self.key2)
@@ -300,7 +301,7 @@ class SSHPublicKeyDatabaseTestCase(TestCase):
         def _checkKey(ignored):
             return False
         self.patch(self.checker, 'checkKey', _checkKey)
-        d = self.checker.requestAvatarId(None);
+        d = self.checker.requestAvatarId(None)
         return self.assertFailure(d, UnauthorizedLogin)
 
 
@@ -336,6 +337,15 @@ class SSHPublicKeyDatabaseTestCase(TestCase):
             return failure
         d.addErrback(_verifyLoggedException)
         return self.assertFailure(d, UnauthorizedLogin)
+
+
+
+class UNIXAccountPublicKeyDatabaseTestCase(SSHPublicKeyDatabaseTestCase):
+    """
+    Tests for L{UNIXAccountPublicKeyDatabase}.  This should be almost
+    completely backwards-compatible with L{SSHPublicKeyDatabase}
+    """
+    pubKeyDatabaseType = checkers.UNIXAccountPublicKeyDatabase
 
 
 

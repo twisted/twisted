@@ -119,6 +119,142 @@ class UNIXPasswordDatabase:
 
 
 
+class BaseSSHPublickeyChecker(object):
+    """
+    Base class for a checker that authenticates SSH public keys.
+
+    @since: 12.1.0
+    """
+    implements(ICredentialsChecker)
+
+    credentialInterfaces = (ISSHPrivateKey,)
+
+    def requestAvatarId(self, credentials):
+        d = self._getVerifiedKey(credentials)
+        d.addCallback(self._validateKey, credentials)
+        return d
+
+
+    def _getVerifiedKey(self, credentials):
+        """
+        Verify the key provided by the user's credentials and produce a key
+        object from it.
+
+        @param credentials: The credentials offered by the user.
+        @type credentials: L{ISSHPrivateKey} provider
+
+        @raise UnauthorizedLogin: if the user provides an invalid signature.
+
+        @raise ValidPublicKey: if the key matches the user but the credentials
+            do not include a signature. See L{error.ValidPublicKey} for more
+            information.
+
+        @return: A L{twisted.conch.ssh.keys.Key} representing the user's
+            verified public key
+        """
+        if not credentials.signature:
+            raise error.ValidPublicKey()
+
+        try:
+            publicKey = keys.Key.fromString(credentials.blob)
+            if publicKey.verify(credentials.signature, credentials.sigData):
+                return publicKey
+        except:  # any error should be treated as a failed login
+            log.err()
+            raise UnauthorizedLogin('error while verifying key')
+        else:
+            raise UnauthorizedLogin("unable to verify key")
+
+
+    def validateKey(self, publicKey, credentials):
+        """
+        Determines whether if the public key is valid
+
+        @param publicKey: The (verified) public key offered by the user.
+        @type publicKey: L{twisted.conch.ssh.keys.Key}
+
+        @raise UnauthorizedLogin: if the key is invalid
+
+        @return: The user's username, if authentication was successful.
+        """
+        raise NotImplementedError
+
+
+
+class UNIXAccountPublicKeyDatabase(BaseSSHPublickeyChecker):
+    """
+    Checker that authenticates SSH public keys, based on public keys listed in
+    authorized_keys and authorized_keys2 files in user .ssh/ directories.
+
+    This is intended to be a replacement for SSHPublicKeyDatabase eventually,
+    so that more types of SSH public key databases can be implemented.  This is
+    not quite backwards-compatible, however.  In SSHPublicKeyDatabase, the
+    UnauthorizedLogins are caught, logged, and a new UnauthorizedLogin raised
+    with the message "unable to get avatar id" no matter what the reason for
+    the unauthorized login.
+    """
+
+    _userdb = pwd
+
+    def validateKey(self, publicKey, credentials):
+        if self.checkKey(credentials):
+            return credentials.username
+        raise UnauthorizedLogin('invalid key')
+
+
+    def getAuthorizedKeysFiles(self, credentials):
+        """
+        Return a list of L{FilePath} instances for I{authorized_keys} files
+        which might contain information about authorized keys for the given
+        credentials.
+
+        On OpenSSH servers, the default location of the file containing the
+        list of authorized public keys is
+        U{$HOME/.ssh/authorized_keys}.
+        <http://www.openbsd.org/cgi-bin/man.cgi?query=sshd_config>
+
+        I{$HOME/.ssh/authorized_keys2} is also returned, though it has been
+        U{deprecated by OpenSSH since
+        2001 <http://marc.info/?m=100508718416162>}.
+
+        @return: A list of L{FilePath} instances to files with the authorized keys.
+        """
+        pwent = self._userdb.getpwnam(credentials.username)
+        root = FilePath(pwent.pw_dir).child('.ssh')
+        files = ['authorized_keys', 'authorized_keys2']
+        return [root.child(f) for f in files]
+
+
+    def checkKey(self, credentials):
+        """
+        Retrieve files containing authorized keys and check against user
+        credentials.
+        """
+        uid, gid = os.geteuid(), os.getegid()
+        ouid, ogid = self._userdb.getpwnam(credentials.username)[2:4]
+        for filepath in self.getAuthorizedKeysFiles(credentials):
+            if not filepath.exists():
+                continue
+            try:
+                lines = filepath.open()
+            except IOError, e:
+                if e.errno == errno.EACCES:
+                    lines = runAsEffectiveUser(ouid, ogid, filepath.open)
+                else:
+                    raise
+            for l in lines:
+                l2 = l.split()
+                if len(l2) < 2:
+                    continue
+                try:
+                    if base64.decodestring(l2[1]) == credentials.blob:
+                        return True
+                except binascii.Error:
+                    continue
+        return False
+
+
+
 class SSHPublicKeyDatabase:
     """
     Checker that authenticates SSH public keys, based on public keys listed in
