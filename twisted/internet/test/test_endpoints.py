@@ -1245,7 +1245,7 @@ class ClientStringTests(unittest.TestCase):
         self.assertIsInstance(errors[1].value, TypeError)
 
 
-    def test_clientStringParsersWithReactorSucceeds(self):
+    def test_clientStringParsersWithReactorSucceed(self):
         """
         L{endpoints.clientFromString} will succeed when calling
         C{parseStreamClient} with a reactor argument.
@@ -1258,7 +1258,7 @@ class ClientStringTests(unittest.TestCase):
         self.assertEqual(clientEndpoint.kwargs, dict(dee='jay'))
 
 
-    def test_clientStringParsersWithoutReactorSucceeds(self):
+    def test_clientStringParsersWithoutReactorSucceed(self):
         """
         L{endpoints.clientFromString} will succeed with a deprecation warning
         when C{parseStreamClient} can't be called with a reactor argument, but
