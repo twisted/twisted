@@ -14,16 +14,9 @@ from twisted.conch.test.test_ssh import Crypto, pyasn1
 
 _reason = None
 if Crypto and pyasn1:
-    try:
-        from twisted.conch import unix
-        from twisted.conch.scripts import cftp
-        from twisted.conch.test.test_filetransfer import FileTransferForTestAvatar
-    except ImportError, e:
-        # Python 2.3 compatibility fix
-        sys.modules.pop("twisted.conch.unix", None)
-        unix = None
-        _reason = str(e)
-        del e
+    from twisted.conch import unix
+    from twisted.conch.scripts import cftp
+    from twisted.conch.test.test_filetransfer import FileTransferForTestAvatar
 else:
     unix = None
 

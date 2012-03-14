@@ -189,7 +189,7 @@ class PyUnitTestCase(object):
     DEPRECATED in Twisted 8.0.
 
     This class decorates the pyunit.TestCase class, mainly to work around the
-    differences between unittest in Python 2.3, 2.4, and 2.5. These
+    differences between unittest in Python 2.4, and 2.5. These
     differences are::
 
         - The way doctest unittests describe themselves
@@ -237,22 +237,6 @@ class PyUnitTestCase(object):
     def __getattr__(self, name):
         return getattr(self._test, name)
 
-
-
-class DocTestCase(PyUnitTestCase):
-    """
-    DEPRECATED in Twisted 8.0.
-    """
-
-    def id(self):
-        """
-        In Python 2.4, doctests have correct id() behaviour. In Python 2.3,
-        id() returns 'runit'.
-
-        Here we override id() so that at least it will always contain the
-        fully qualified Python name of the doctest.
-        """
-        return self._test.shortDescription()
 
 
 class TrialSuite(TestSuite):

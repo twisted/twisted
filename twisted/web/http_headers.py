@@ -78,19 +78,6 @@ class _DictHeaders(DictMixin):
         return dict(self.items())
 
 
-    # Python 2.3 DictMixin.setdefault is defined so as not to have a default
-    # for the value parameter.  This is necessary to make this setdefault look
-    # like dict.setdefault on Python 2.3. -exarkun
-    def setdefault(self, name, value=None):
-        """
-        Retrieve the last value for the given header name.  If there are no
-        values present for that header, set the value to C{value} and return
-        that instead.  Note that C{None} is the default for C{value} for
-        backwards compatibility, but header values may only be of type C{str}.
-        """
-        return DictMixin.setdefault(self, name, value)
-
-
     # The remaining methods are only for efficiency.  The same behavior
     # should remain even if they are removed.  For details, see
     # <http://docs.python.org/lib/module-UserDict.html>.

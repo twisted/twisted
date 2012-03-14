@@ -791,10 +791,8 @@ def unsignedID(obj):
     representation makes sense.
 
     This is mostly necessary in Python 2.4 which implements L{id} to sometimes
-    return a negative value.  Python 2.3 shares this behavior, but also
-    implements hex and the %x format specifier to represent negative values as
-    though they were positive ones, obscuring the behavior of L{id}.  Python
-    2.5's implementation of L{id} always returns positive values.
+    return a negative value.  Python 2.5's implementation of L{id} always
+    returns positive values.
     """
     rval = _idFunction(obj)
     if rval < 0:
@@ -807,9 +805,8 @@ def mergeFunctionMetadata(f, g):
     Overwrite C{g}'s name and docstring with values from C{f}.  Update
     C{g}'s instance dictionary with C{f}'s.
 
-    To use this function safely you must use the return value. In Python 2.3,
-    L{mergeFunctionMetadata} will create a new function. In later versions of
-    Python, C{g} will be mutated and returned.
+    To use this function safely you must use the return value. C{g} will
+    be mutated and returned.
 
     @return: A function that has C{g}'s behavior and metadata merged from
         C{f}.
@@ -817,13 +814,7 @@ def mergeFunctionMetadata(f, g):
     try:
         g.__name__ = f.__name__
     except TypeError:
-        try:
-            merged = types.FunctionType(
-                g.func_code, g.func_globals,
-                f.__name__, inspect.getargspec(g)[-1],
-                g.func_closure)
-        except TypeError:
-            pass
+        pass
     else:
         merged = g
     try:

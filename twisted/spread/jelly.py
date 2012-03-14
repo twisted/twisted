@@ -54,8 +54,7 @@ Instance Method: s.center, where s is an instance of UserString.UserString::
 The C{set} builtin and the C{sets.Set} class are serialized to the same
 thing, and unserialized to C{set} if available, else to C{sets.Set}. It means
 that there's a possibility of type switching in the serialization process. The
-solution is to always use C{set} if possible, and only use C{sets.Set} under
-Python 2.3; this can be accomplished by using L{twisted.python.compat.set}.
+solution is to always use C{set} if possible; this can be accomplished by using L{twisted.python.compat.set}.
 
 The same rule applies for C{frozenset} and C{sets.ImmutableSet}.
 
