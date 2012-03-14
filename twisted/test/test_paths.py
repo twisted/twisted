@@ -307,7 +307,6 @@ class ZipFilePathTestCase(AbstractFilePathTestCase):
         """
         ZipPaths implement IFilePath.
         """
-
         self.assertTrue(verifyObject(filepath.IFilePath, self.path))
 
 
@@ -660,7 +659,6 @@ class FilePathTestCase(AbstractFilePathTestCase):
         """
         FilePaths implement IFilePath.
         """
-
         self.assertTrue(verifyObject(filepath.IFilePath, self.path))
 
 
