@@ -375,12 +375,12 @@ class SSHPublicKeyDatabaseTestCase(TestCase):
 
 
 
-class UNIXAccountPublicKeyDatabaseTestCase(SSHPublicKeyDatabaseTestCase):
+class UNIXAccountPublicKeyCheckerTestCase(SSHPublicKeyDatabaseTestCase):
     """
-    Tests for L{UNIXAccountPublicKeyDatabase}.  This should be almost
+    Tests for L{UNIXAccountPublicKeyChecker}.  This should be almost
     completely backwards-compatible with L{SSHPublicKeyDatabase}
     """
-    pubKeyDatabaseType = checkers.UNIXAccountPublicKeyDatabase
+    pubKeyDatabaseType = checkers.UNIXAccountPublicKeyChecker
 
 
 

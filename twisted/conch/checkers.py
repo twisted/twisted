@@ -181,7 +181,7 @@ class BaseSSHPublickeyChecker(object):
 
 
 
-class UNIXAccountPublicKeyDatabase(BaseSSHPublickeyChecker):
+class UNIXAccountPublicKeyChecker(BaseSSHPublickeyChecker):
     """
     Checker that authenticates SSH public keys, based on public keys listed in
     authorized_keys and authorized_keys2 files in user .ssh/ directories.
@@ -221,7 +221,8 @@ class UNIXAccountPublicKeyDatabase(BaseSSHPublickeyChecker):
         U{deprecated by OpenSSH since
         2001 <http://marc.info/?m=100508718416162>}.
 
-        @return: A list of L{FilePath} instances to files with the authorized keys.
+        @return: A list of L{FilePath} instances to files with the authorized
+            keys.
         """
         pwent = self._userdb.getpwnam(credentials.username)
         root = FilePath(pwent.pw_dir).child('.ssh')
@@ -309,7 +310,8 @@ class SSHPublicKeyDatabase:
                     return credentials.username
             except:  # any error should be treated as a failed login
                 log.err()
-                return failure.Failure(UnauthorizedLogin('error while verifying key'))
+                return failure.Failure(
+                    UnauthorizedLogin('error while verifying key'))
         return failure.Failure(UnauthorizedLogin("unable to verify key"))
 
 
@@ -321,13 +323,15 @@ class SSHPublicKeyDatabase:
 
         On OpenSSH servers, the default location of the file containing the
         list of authorized public keys is
-        U{$HOME/.ssh/authorized_keys<http://www.openbsd.org/cgi-bin/man.cgi?query=sshd_config>}.
+        U{$HOME/.ssh/authorized_keys}.
+        <http://www.openbsd.org/cgi-bin/man.cgi?query=sshd_config>
 
         I{$HOME/.ssh/authorized_keys2} is also returned, though it has been
         U{deprecated by OpenSSH since
-        2001<http://marc.info/?m=100508718416162>}.
+        2001 <http://marc.info/?m=100508718416162>}.
 
-        @return: A list of L{FilePath} instances to files with the authorized keys.
+        @return: A list of L{FilePath} instances to files with the authorized
+            keys.
         """
         pwent = self._userdb.getpwnam(credentials.username)
         root = FilePath(pwent.pw_dir).child('.ssh')
