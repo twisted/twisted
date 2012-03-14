@@ -1208,13 +1208,14 @@ class ClientStringTests(unittest.TestCase):
             notAReactor, "cfake:alpha:beta:cee=dee:num=1")
         from twisted.plugins.fakeendpoint import fakeClient
         self.assertIdentical(clientEndpoint.parser, fakeClient)
-        self.assertEqual(clientEndpoint.args, ('alpha', 'beta'))
+        self.assertIdentical(clientEndpoint.args[0], notAReactor)
+        self.assertEqual(clientEndpoint.args[1:], ('alpha', 'beta'))
         self.assertEqual(clientEndpoint.kwargs, dict(cee='dee', num='1'))
 
 
     def test_unknownType(self):
         """
-        L{endpoints.serverFromString} raises C{ValueError} when given an
+        L{endpoints.clientFromString} raises C{ValueError} when given an
         unknown endpoint type.
         """
         value = self.assertRaises(
@@ -1224,6 +1225,62 @@ class ClientStringTests(unittest.TestCase):
         self.assertEqual(
             str(value),
             "Unknown endpoint type: 'ftl'")
+
+
+    def test_failingClientStringParsersFail(self):
+        """
+        L{endpoints.clientFromString} ultimately raises C{ValueError} when both
+        ways trying to call the underlying C{parseStreamClient} on a
+        L{IStreamClientEndpointStringParser} plugin fail.
+        """
+        addFakePlugin(self)
+        value = self.assertRaises(
+            ValueError, endpoints.clientFromString, None, 'fcfake')
+        self.assertEqual(
+            str(value),
+            "Unknown endpoint type: 'fcfake'")
+        errors = self.flushLoggedErrors()
+        self.assertEqual(len(errors), 2)
+        self.assertIsInstance(errors[0].value, TypeError)
+        self.assertIsInstance(errors[1].value, TypeError)
+
+
+    def test_clientStringParsersWithReactorSucceeds(self):
+        """
+        L{endpoints.clientFromString} will succeed when calling
+        C{parseStreamClient} with a reactor argument.
+        """
+        addFakePlugin(self)
+        notAReactor = object()
+        clientEndpoint = endpoints.clientFromString(
+            notAReactor, "crfake:dee=jay")
+        self.assertIdentical(clientEndpoint.args, notAReactor)
+        self.assertEqual(clientEndpoint.kwargs, dict(dee='jay'))
+
+
+    def test_clientStringParsersWithoutReactorSucceeds(self):
+        """
+        L{endpoints.clientFromString} will succeed with a deprecation warning
+        when C{parseStreamClient} can't be called with a reactor argument, but
+        can be called otherwise.
+        """
+        addFakePlugin(self)
+        notAReactor = object()
+        clientEndpoint = endpoints.clientFromString(
+            notAReactor, "c-rfake:jay=dee")
+        self.assertIdentical(clientEndpoint.args, None)
+        self.assertEqual(clientEndpoint.kwargs, {'jay': 'dee'})
+        from twisted.plugins.fakeendpoint import fakeClientWithoutReactor
+        warnings = self.flushWarnings(
+            [fakeClientWithoutReactor.parseStreamClient])
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        message = (
+            "Not accepting a reactor as the first argument to "
+            "parseStreamClient is deprecated since Twisted 12.1. The "
+            "parseStreamClient for 'c-rfake' should be updated so its first "
+            "argument is reactor.")
+        self.assertEqual(warnings[0]['message'], message)
+        self.assertEqual(len(warnings), 1)
 
 
 

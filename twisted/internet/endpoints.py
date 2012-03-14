@@ -19,6 +19,7 @@ from twisted.plugin import getPlugins
 from twisted.internet.interfaces import IStreamServerEndpointStringParser
 from twisted.internet.interfaces import IStreamClientEndpointStringParser
 from twisted.python.filepath import FilePath
+from twisted.python import deprecate, failure, log
 
 
 
@@ -993,7 +994,29 @@ def clientFromString(reactor, description):
     name = aname.upper()
     for plugin in getPlugins(IStreamClientEndpointStringParser):
         if plugin.prefix.upper() == name:
-            return plugin.parseStreamClient(*args, **kwargs)
+            try:
+                return plugin.parseStreamClient(reactor, *args, **kwargs)
+            # _Hopefully_ if a TypeError is raised then it was because of the
+            # reactor argument, and not something else.
+            except TypeError:
+                # Just in case, we'll save it to maybe log later.
+                f = failure.Failure()
+                try:
+                    endpoint = plugin.parseStreamClient(*args, **kwargs)
+                except TypeError:
+                    # Nope! This function is hosed.
+                    log.err(None,
+                            'failure in parseStreamClient for %r' % (aname,))
+                    log.err(f, 'original failure (called with reactor)')
+                else:
+                    deprecate.warnAboutFunction(
+                        plugin.parseStreamClient,
+                        "Not accepting a reactor as the first argument to "
+                        "parseStreamClient is deprecated since Twisted 12.1. "
+                        "The parseStreamClient for %r should be updated so "
+                        "its first argument is reactor." % (aname,))
+                    return endpoint
+
     if name not in _clientParsers:
         raise ValueError("Unknown endpoint type: %r" % (aname,))
     kwargs = _clientParsers[name](*args, **kwargs)

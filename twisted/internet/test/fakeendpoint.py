@@ -93,7 +93,36 @@ class ListeningPort(object):
 
 
 
+class FakeClientParserWithReactor(PluginBase):
+
+    implements(IStreamClientEndpointStringParser)
+
+    def parseStreamClient(self, reactor, **kw):
+        return StreamClient(self, reactor, kw)
+
+
+
+class FakeClientParserWithoutReactor(PluginBase):
+
+    implements(IStreamClientEndpointStringParser)
+
+    def parseStreamClient(self, **kw):
+        return StreamClient(self, None, kw)
+
+
+
+class FailingFakeClientParser(PluginBase):
+
+    implements(IStreamClientEndpointStringParser)
+
+    def parseStreamClient(self):
+        raise TypeError()
+
+
+
 # Instantiate plugin interface providers to register them.
 fake = FakeParser('fake')
 fakeClient = FakeClientParser('cfake')
-
+fakeClientWithReactor = FakeClientParserWithReactor('crfake')
+fakeClientWithoutReactor = FakeClientParserWithoutReactor('c-rfake')
+failingFakeClient = FailingFakeClientParser('fcfake')
