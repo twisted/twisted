@@ -239,6 +239,22 @@ class PyUnitTestCase(object):
 
 
 
+class DocTestCase(PyUnitTestCase):
+    """
+    DEPRECATED in Twisted 8.0.
+    """
+
+    def id(self):
+        """
+        In Python 2.4, doctests have correct id() behaviour. In Python 2.3,
+        id() returns 'runit'.
+
+        Here we override id() so that at least it will always contain the
+        fully qualified Python name of the doctest.
+        """
+        return self._test.shortDescription()
+
+
 class TrialSuite(TestSuite):
     """
     Suite to wrap around every single test in a C{trial} run. Used internally

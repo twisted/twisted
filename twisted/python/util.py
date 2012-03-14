@@ -2,8 +2,7 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import os, sys, errno, inspect, warnings
-import types
+import os, sys, errno, warnings
 try:
     import pwd, grp
 except ImportError:
@@ -815,14 +814,12 @@ def mergeFunctionMetadata(f, g):
         g.__name__ = f.__name__
     except TypeError:
         pass
-    else:
-        merged = g
+    merged = g
     try:
         merged.__doc__ = f.__doc__
     except (TypeError, AttributeError):
         pass
     try:
-        merged.__dict__.update(g.__dict__)
         merged.__dict__.update(f.__dict__)
     except (TypeError, AttributeError):
         pass

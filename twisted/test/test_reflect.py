@@ -218,9 +218,6 @@ class LookupsTestCase(unittest.TestCase):
             ZeroDivisionError,
             reflect.namedAny, "twisted.test.reflect_helper_ZDE")
         self.assertRaises(
-            ZeroDivisionError,
-            reflect.namedAny, "twisted.test.reflect_helper_ZDE")
-        self.assertRaises(
             ValueError,
             reflect.namedAny, "twisted.test.reflect_helper_VE")
         # Modules which themselves raise ImportError when imported should result in an ImportError
@@ -410,6 +407,20 @@ class ObjectGrep(unittest.TestCase):
         self.assertEqual(['[0]'], reflect.objgrep(d, a, reflect.isSame, maxDepth=1))
         self.assertEqual(['[0]', '[1][0]'], reflect.objgrep(d, a, reflect.isSame, maxDepth=2))
         self.assertEqual(['[0]', '[1][0]', '[1][1][0]'], reflect.objgrep(d, a, reflect.isSame, maxDepth=3))
+
+        def test_deque(self):
+            """
+            Test references search through a deque object.
+            """
+            o = object()
+            D = deque()
+            D.append(None)
+            D.append(o)
+
+            self.assertIn("[1]", reflect.objgrep(D, o, reflect.isSame))
+
+        if deque is None:
+            test_deque.skip = "Deque not available"
 
 
 class GetClass(unittest.TestCase):
