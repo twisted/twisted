@@ -179,7 +179,10 @@ class SSHPublicKeyDatabaseTestCase(TestCase):
     Tests for L{SSHPublicKeyDatabase}.
     """
     skip = euidSkip or dependencySkip
-    pubKeyDatabaseType = checkers.SSHPublicKeyDatabase
+
+    if not skip:
+        pubKeyDatabaseType = checkers.SSHPublicKeyDatabase
+
 
     def setUp(self):
         self.checker = self.pubKeyDatabaseType()
