@@ -85,18 +85,21 @@ class IFilePath(Interface):
     """
     File path object.
 
-    A file path represents a location for a file-like-object and can be
+    A file path represents a location for a file-like object and can be
     organized into a hierarchy; a file path can have children which are
     themselves file paths.
 
     A file path has a name which uniquely identifies it in the context of its
-    parent, if it has one; a file path cannot have two children with the same
-    name. This unique name is referred to as the file path's "base name".
+    parent, if it has one. This unique name is referred to as the file path's
+    "base name".
 
-    A series of such names can be used to locate nested children of a file path;
-    such a series is referred to as the child's "path", relative to the parent.
-    In this case, each name in the path is referred to as a "path segment"; the
-    child's base name is the segment in the path.
+    A series of base names can be used to locate nested children of a file
+    path; such a series is referred to as the child's "path", relative to the
+    parent. In this case, each name in the path is referred to as a "path
+    segment"; the child's base name is the segment in the path.
+
+    A file path cannot have two children with the same name, because base
+    names are unique.
 
     When representing a file path as a string, a "path separator" is used to
     delimit the path segments within the string.  For a file system path, that
@@ -126,7 +129,7 @@ class IFilePath(Interface):
     def open(mode="r"):
         """
         Opens this file path with the given mode.
-        @return: a file-like-object.
+        @return: a file-like object.
         @raise Exception: if this file path cannot be opened.
         """
 
