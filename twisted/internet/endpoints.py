@@ -993,7 +993,7 @@ def clientFromString(reactor, description):
     name = aname.upper()
     for plugin in getPlugins(IStreamClientEndpointStringParser):
         if plugin.prefix.upper() == name:
-            return plugin.parseStreamClient(reactor, *args, **kwargs)
+            return plugin.parseStreamClient(*args, **kwargs)
     if name not in _clientParsers:
         raise ValueError("Unknown endpoint type: %r" % (aname,))
     kwargs = _clientParsers[name](*args, **kwargs)

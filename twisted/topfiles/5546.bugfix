@@ -1,1 +1,0 @@
-IStreamClientEndpointStringParser.parseStreamClient now takes a reactor argument, correctly reflecting the docstring on t.i.endpoints.clientFromString.

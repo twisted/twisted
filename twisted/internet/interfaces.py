@@ -1912,14 +1912,11 @@ class IStreamClientEndpointStringParser(Interface):
     )
 
 
-    def parseStreamClient(reactor, *args, **kwargs):
+    def parseStreamClient(*args, **kwargs):
         """
         This method is invoked by L{endpoints.clientFromString}, if the type of
         endpoint matches the return value from this
         L{IStreamClientEndpointStringParser}'s C{prefix} method.
-
-        @param reactor: The reactor which was passed to
-            C{endpoints.clientFromString}.
 
         @param args: The string arguments, minus the endpoint type, in the
             endpoint description string, parsed according to the rules
