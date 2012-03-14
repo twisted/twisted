@@ -28,14 +28,12 @@ Content-Length: 4
 
 abcd""".replace("\n", "\r\n")
 
-
 # request, no content-length
 request2 = """INVITE sip:foo SIP/2.0
 From: mo
 To: joe
 
 1234""".replace("\n", "\r\n")
-
 
 # request, with garbage after
 request3 = """INVITE sip:foo SIP/2.0
@@ -46,7 +44,6 @@ Content-Length: 4
 1234
 
 lalalal""".replace("\n", "\r\n")
-
 
 # three requests
 request4 = """INVITE sip:foo SIP/2.0
@@ -66,7 +63,6 @@ Content-Length: 4
 
 1234""".replace("\n", "\r\n")
 
-
 # response, no content
 response1 = """SIP/2.0 200 OK
 From:  foo
@@ -74,7 +70,6 @@ To:bar
 Content-Length: 0
 
 """.replace("\n", "\r\n")
-
 
 # short header version
 request_short = """\
@@ -85,48 +80,15 @@ l: 4
 
 abcd""".replace("\n", "\r\n")
 
-
 request_natted = """\
 INVITE sip:foo SIP/2.0
 Via: SIP/2.0/UDP 10.0.0.1:5060;rport
 
 """.replace("\n", "\r\n")
 
-
-
 class TestRealm:
     def requestAvatar(self, avatarId, mind, *interfaces):
         return sip.IContact, None, lambda: None
-
-
-
-class TestHeaderCapitalize(unittest.TestCase):
-
-    def test_simpleHeaderCapitalized(self):
-        r = sip.Request("INVITE", "sip:foo")
-        r.addHeader("foo", "bar")
-        self.assertEqual(
-            r.toString(),
-            "INVITE sip:foo SIP/2.0\r\nFoo: bar\r\n\r\n")
-
-
-    def test_complexHeaderCapitalized(self):
-        r = sip.Request("INVITE", "sip:foo")
-        r.addHeader("foo-bar-baz", "quux")
-        self.assertEqual(
-            r.toString(),
-            "INVITE sip:foo SIP/2.0\r\nFoo-Bar-Baz: quux\r\n\r\n")
-
-
-    def test_specialCaseHeaderCapitalized(self):
-        r = sip.Request("INVITE", "sip:foo")
-        r.addHeader("www-authenticate", "foo")
-        self.assertEqual(
-            r.toString(),
-            "INVITE sip:foo SIP/2.0\r\nWWW-Authenticate: foo\r\n\r\n")
-
-
-
 
 class MessageParsingTestCase(unittest.TestCase):
     def setUp(self):
@@ -375,210 +337,41 @@ class ViaTestCase(unittest.TestCase):
 
 
 
-class URITestCase(unittest.TestCase):
-    """
-    Tests for L{sip.URI} and {sip.parseURL}.
-    """
+class URLTestCase(unittest.TestCase):
 
     def testRoundtrip(self):
         for url in [
             "sip:j.doe@big.com",
             "sip:j.doe:secret@big.com;transport=tcp",
-            "sip:j.doe@big.com?Subject=project",
+            "sip:j.doe@big.com?subject=project",
             "sip:example.com",
             ]:
             self.assertEqual(sip.parseURL(url).toString(), url)
 
-
-    def test_complex(self):
-        """
-        Test parsing and printing a URI with one of everything.
-        """
+    def testComplex(self):
         s = ("sip:user:pass@hosta:123;transport=udp;user=phone;method=foo;"
-             "ttl=12;maddr=1.2.3.4;blah;goo=bar?foo-baz=b&c=d")
+             "ttl=12;maddr=1.2.3.4;blah;goo=bar?a=b&c=d")
         url = sip.parseURL(s)
         for k, v in [("username", "user"), ("password", "pass"),
                      ("host", "hosta"), ("port", 123),
                      ("transport", "udp"), ("usertype", "phone"),
                      ("method", "foo"), ("ttl", 12),
-                     ("maddr", "1.2.3.4"), ("other", {"blah": "",
-                                                      "goo": "bar"}),
-                     ("headers", {"foo-baz": "b", "c": "d"})]:
+                     ("maddr", "1.2.3.4"), ("other", ["blah", "goo=bar"]),
+                     ("headers", {"a": "b", "c": "d"})]:
             self.assertEqual(getattr(url, k), v)
-        self.assertEquals(
-            str(url),
-            'sip:user:pass@hosta:123;user=phone;transport=udp;'
-            'ttl=12;maddr=1.2.3.4;method=foo;blah;goo=bar?C=d&Foo-Baz=b')
-
-
-    def test_headers(self):
-        """
-        SIP headers included in the URI are parsed correctly.
-        """
-
-        uris = ["sip:foo@bar.com?header=value",
-                "sip:foo@bar.com:5060?header=value",
-                "sip:foo@bar.com;method=invite?header=value"]
-        for uri in uris:
-            self.assertEquals(sip.parseURL(uri).headers,
-                              {"header": "value"})
-
-
-    def test_invalidScheme(self):
-        """
-        Attempts to parse unsupported URI schemes are rejected.
-        """
-        self.assertRaises(sip.SIPError, sip.parseURL, "http://example.com/")
-        self.assertRaises(sip.SIPError, sip.parseURL, "sips:bob@example.com")
-
-
-    def test_hash(self):
-        """
-        URIs are hashable.
-        """
-        s1 = ("sip:user:pass@hosta:123;transport=udp;user=phone;method=foo;"
-             "ttl=12;maddr=1.2.3.4;blah;goo=bar?foo-baz=b&c=d")
-        s2 = ("sip:user:pass@hostb:123;transport=udp;user=phone;method=foo;"
-             "ttl=12;maddr=1.2.3.4;blah;goo=bar?foo-baz=b&c=d")
-        s3 = ("sip:user:pass@hosta:123;transport=udp;user=voip;method=foo;"
-             "ttl=12;maddr=1.2.3.4;blah;goo=bar?foo-baz=b&c=d")
-        s4 = ("sip:user:pass@hosta:123;transport=udp;user=phone;method=foo;"
-             "ttl=16;maddr=1.2.3.4;blah;goo=bar?foo-baz=b&c=d")
-        s5 = ("sip:user:pass@hosta:123;transport=udp;user=phone;method=foo;"
-             "ttl=12;maddr=1.2.3.5;blah;goo=bar?foo-baz=b&c=d")
-        s6 = ("sip:user:pass@hosta:123;transport=udp;user=phone;method=foo;"
-             "ttl=12;maddr=1.2.3.4;blah;foo=bar?foo-baz=b&c=d")
-        s7 = ("sip:user:pass@hosta:123;transport=udp;user=phone;method=foo;"
-             "ttl=12;maddr=1.2.3.4;blah;goo=bar?foo-baz=b&c=e")
-        d = {
-            sip.URI("example.com"): -2,
-            sip.URI("example.com", "bob"): -1,
-            }
-        for i, s in enumerate([s1, s2, s3, s4, s5, s6, s7]):
-            d[sip.parseURL(s)] = i
-        self.assertEqual(d[sip.URI("example.com")], -2)
-        self.assertEqual(d[sip.URI("example.com", "bob")], -1)
-        for i, s in enumerate([s1, s2, s3, s4, s5, s6, s7]):
-            self.assertEqual(d[sip.parseURL(s)], i)
-
-
-    def test_escaping(self):
-        """
-        Percent-encoded characters are decoded and encoded correctly.
-        """
-        uriString = ("sip:sips%3Auser%40example.com:x%20x@example.net"
-                           ";m%65thod=foo%00baz?a%62c-foo=de%66")
-        uri = sip.parseURL(uriString)
-        self.assertEqual(uri.username, "sips:user@example.com")
-        self.assertEqual(uri.password, "x x")
-        self.assertEqual(uri.method, "foo\x00baz")
-        self.assertEqual(uri.headers, {"abc-foo": "def"})
-        self.assertEqual(uri.toString(),
-                         ("sip:sips%3Auser%40example.com:x%20x@example.net"
-                           ";method=foo%00baz?Abc-Foo=def"))
-
-
-    def test_equivalence(self):
-        """
-        All the URIs the RFC says are equivalent should compare equal.
-        """
-        def assertEquivalentURIs(l, r):
-            self.assertEqual(sip.parseURL(l), sip.parseURL(r))
-
-        assertEquivalentURIs("sip:%61lice@atlanta.com;transport=TCP",
-                             "sip:alice@AtLanTa.CoM;Transport=tcp")
-        assertEquivalentURIs("sip:carol@chicago.com",
-                             "sip:carol@chicago.com;newparam=5")
-        assertEquivalentURIs("sip:carol@chicago.com",
-                             "sip:carol@chicago.com;security=on")
-        assertEquivalentURIs("sip:carol@chicago.com;security=on",
-                             "sip:carol@chicago.com;newparam=5")
-        assertEquivalentURIs("sip:biloxi.com;transport=tcp;method=REGISTER?"
-                             "to=sip:bob%40biloxi.com",
-                             "sip:biloxi.com;method=REGISTER;transport=tcp?"
-                             "to=sip:bob%40biloxi.com")
-        assertEquivalentURIs("sip:alice@atlanta.com?subject=project%20x"
-                             "&priority=urgent",
-                             "sip:alice@atlanta.com?priority=urgent&"
-                             "subject=project%20x")
-
-
-    def test_nonequivalence(self):
-        """
-        Ensure that certain difference between similar URIs prevent them from
-        comparing equal.
-        """
-        def assertNonequivalent(l, r):
-            self.assertNotEqual(sip.parseURL(l), sip.parseURL(r))
-
-        assertNonequivalent("sip:carol@chicago.com;security=off",
-                            "sip:carol@chicago.com;security=on")
-        assertNonequivalent("SIP:ALICE@AtLanTa.CoM;Transport=udp",
-                            "sip:alice@AtLanTa.CoM;Transport=UDP")
-        assertNonequivalent("sip:bob@biloxi.com", "sip:bob@biloxi.com:5060")
-        assertNonequivalent("sip:bob@biloxi.com",
-                            "sip:bob@biloxi.com;transport=udp")
-        assertNonequivalent("sip:bob@biloxi.com",
-                            "sip:bob@biloxi.com:5060;transport=udp")
-        assertNonequivalent("sip:bob@biloxi.com",
-                            "sip:bob@biloxi.com:5060;transport=tcp")
-        assertNonequivalent("sip:carol@chicago.com",
-                            "sip:carol@chicago.com?Subject=next%20meeting")
-        assertNonequivalent("sip:bob@localhost", "sip:bob@127.0.0.1")
-
-    
-    def test_capitalization(self):
-        """
-        Ensure that parameters and headers are correctly treated as case-
-        insensitive (i.e. lowercase)
-        """
-        s1 = ("sip:user:pass@hosta:123;transport=udp;user=phone;method=foo;"
-             "ttl=12;maddr=1.2.3.4;blah;goo=bar?foo-baz=b&c=e")
-        s2 = ("sip:user:pass@hosta:123;transport=udp;user=phone;method=foo;"
-             "ttl=12;maddr=1.2.3.4;blah;Goo=bar?foo-baz=b&c=e")        
-        s3 = ("SIP:user:pass@hosta:123;transport=udp;user=phone;method=foo;"
-             "ttl=12;maddr=1.2.3.4;blah;goo=bar?fOo-baz=b&c=e")
-        self.assertEqual(sip.parseURL(s1), sip.parseURL(s2))
-        self.assertEqual(sip.parseURL(s2), sip.parseURL(s3))
-
 
 
 class ParseTestCase(unittest.TestCase):
 
     def testParseAddress(self):
-        """
-        Confirm that various names and addresses are parsed correctly.
-        """
         for address, name, urls, params in [
             ('"A. G. Bell" <sip:foo@example.com>',
              "A. G. Bell", "sip:foo@example.com", {}),
             ("Anon <sip:foo@example.com>", "Anon", "sip:foo@example.com", {}),
-            ('"A. G. Bell" <sip:foo@example.com>',
-             "A. G. Bell", "sip:foo@example.com", {}),
-            (' "A. G. Bell" <sip:foo@example.com>',
-             "A. G. Bell", "sip:foo@example.com", {}),
-            ('"Bell, A. G." <sip:bell@example.com>',
-             "Bell, A. G.", "sip:bell@example.com", {}),
-            ('" \\\\A. G. \\"Bell" <sip:foo@example.com>',
-             " \\A. G. \"Bell", "sip:foo@example.com", {}),
-            ('"\\x21A. G. Bell" <sip:foo@example.com>',
-             "x21A. G. Bell", "sip:foo@example.com", {}),
-            ("abcd1234-.!%*_+`'~ <sip:foo@example.com>",
-             "abcd1234-.!%*_+`'~", "sip:foo@example.com", {}),
-            ('"C\xc3\xa9sar" <sip:C%C3%A9sar@example.com>',
-             u'C\xe9sar', 'sip:C%C3%A9sar@example.com', {}),
-            ("Anon <sip:foo@example.com>",
-             "Anon", "sip:foo@example.com", {}),
             ("sip:foo@example.com", "", "sip:foo@example.com", {}),
             ("<sip:foo@example.com>", "", "sip:foo@example.com", {}),
-            ("foo <sip:foo@example.com>;tag=bar;foo=baz;boz",
-             "foo", "sip:foo@example.com", {"tag": "bar", "foo": "baz",
-                                            "boz": ""}),
-            ("sip:foo@example.com;tag=bar;foo=baz",
-             "", "sip:foo@example.com", {"tag": "bar", "foo": "baz"}),
-            # test the use of name.decode('utf8', 'replace')
-            ('"Invalid \xc3\x28" <sip:foo@example.com>',
-             u"Invalid \ufffd(", "sip:foo@example.com", {}),
+            ("foo <sip:foo@example.com>;tag=bar;foo=baz", "foo",
+             "sip:foo@example.com", {"tag": "bar", "foo": "baz"}),
             ]:
             gname, gurl, gparams = sip.parseAddress(address)
             self.assertEqual(name, gname)
@@ -586,19 +379,15 @@ class ParseTestCase(unittest.TestCase):
             self.assertEqual(gparams, params)
 
 
-
 class DummyLocator:
     implements(sip.ILocator)
     def getAddress(self, logicalURL):
         return defer.succeed(sip.URL("server.com", port=5060))
 
-
-
 class FailingLocator:
     implements(sip.ILocator)
     def getAddress(self, logicalURL):
         return defer.fail(LookupError())
-
 
 
 class ProxyTestCase(unittest.TestCase):

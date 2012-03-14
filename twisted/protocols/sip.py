@@ -9,25 +9,19 @@
 Documented in RFC 2543.
 [Superceded by 3261]
 
+
 This module contains a deprecated implementation of HTTP Digest authentication.
 See L{twisted.cred.credentials} and L{twisted.cred._digest} for its new home.
-
-Features required by RFC3261 missing from this module:
- * SIPS support
-
 """
 
 # system imports
 import socket, time, sys, random, warnings
-import urllib
-import re
 from zope.interface import implements, Interface
 
 # twisted imports
 from twisted.python import log, util
-from twisted.python.deprecate import deprecated, getDeprecationWarningString
+from twisted.python.deprecate import deprecated
 from twisted.python.versions import Version
-from twisted.python.compat import set
 from twisted.python.hashlib import md5
 from twisted.internet import protocol, defer, reactor
 
@@ -119,8 +113,6 @@ statusCodes = {
     606: "Not Acceptable",
 }
 
-
-
 specialCases = {
     'cseq': 'CSeq',
     'call-id': 'Call-ID',
@@ -128,36 +120,14 @@ specialCases = {
 }
 
 
-
-def headerCapitalize(h):
-    """
-    Return a version of the given header name that's capitalized in the
-    traditional fashion.
-
-    @param h: A SIP header name.
-    """
-    h = h.lower()
-    if h in specialCases:
-        return specialCases[h]
-    if '-' in h:
-        return '-'.join([bit.capitalize() for bit in h.split('-')])
-    return h.capitalize()
-
-
-
-@deprecated(Version("Twisted", 8, 2, 0))
 def dashCapitalize(s):
     ''' Capitalize a string, making sure to treat - as a word seperator '''
     return '-'.join([ x.capitalize() for x in s.split('-')])
-
-
 
 def unq(s):
     if s[0] == s[-1] == '"':
         return s[1:-1]
     return s
-
-
 
 def DigestCalcHA1(
     pszAlg,
@@ -235,35 +205,27 @@ class Via(object):
     See RFC 3261, sections 8.1.1.7, 18.2.2, and 20.42.
 
     @ivar transport: Network protocol used for this leg. (Probably either "TCP"
-        or "UDP".)
+    or "UDP".)
     @type transport: C{str}
-
     @ivar branch: Unique identifier for this request.
     @type branch: C{str}
-
     @ivar host: Hostname or IP for this leg.
     @type host: C{str}
-
     @ivar port: Port used for this leg.
     @type port C{int}, or None.
-
     @ivar rportRequested: Whether to request RFC 3581 client processing or not.
     @type rportRequested: C{bool}
-
     @ivar rportValue: Servers wishing to honor requests for RFC 3581 processing
-        should set this parameter to the source port the request was received
-        from.
+    should set this parameter to the source port the request was received
+    from.
     @type rportValue: C{int}, or None.
 
     @ivar ttl: Time-to-live for requests on multicast paths.
     @type ttl: C{int}, or None.
-
     @ivar maddr: The destination multicast address, if any.
     @type maddr: C{str}, or None.
-
     @ivar hidden: Obsolete in SIP 2.0.
     @type hidden: C{bool}
-
     @ivar otherParams: Any other parameters in the header.
     @type otherParams: C{dict}
     """
@@ -275,11 +237,11 @@ class Via(object):
         Set parameters of this Via header. All arguments correspond to
         attributes of the same name.
 
-        To maintain compatibility with old SIP code, the 'rport' argument is 
-        used to determine the values of C{rportRequested} and C{rportValue}. If
-        None, C{rportRequested} is set to True. (The deprecated method for 
-        doing this is to pass True.) If an integer, C{rportValue} is set to the
-        given value.
+        To maintain compatibility with old SIP
+        code, the 'rport' argument is used to determine the values of
+        C{rportRequested} and C{rportValue}. If None, C{rportRequested} is set
+        to True. (The deprecated method for doing this is to pass True.) If an
+        integer, C{rportValue} is set to the given value.
 
         Any arguments not explicitly named here are collected into the
         C{otherParams} dict.
@@ -407,57 +369,12 @@ def parseViaHeader(value):
     return Via(**result)
 
 
-class URI:
-    """
-    A SIP URI, as defined in RFC 3261, section 19.1.
-
-    @ivar host: A hostname or IP address.
-    @type host: C{str}
-
-    @ivar username: The identifier of a particular resource at the host being
-        addressed.
-    @type username: C{str}, or None.
-
-    @ivar password: A password associated with the username.
-    @type password: C{str}, or None.
-
-    @ivar port: The port number where the request is to be sent.
-    @type port: C{int}, or None.
-
-    @ivar transport: The transport mechanism to be used for sending SIP
-        messages.
-    @type transport: C{str}, or None.
-
-    @ivar usertype: The 'user' URI parameter. May be 'phone' or 'dialstring' -
-        see RFC 3261, 19.1.6., and RFC 4967.
-    @type usertype: C{str}, or None.
-
-    @ivar method: The SIP method to use when forming a request from this
-        URI. (INVITE, REGISTER, etc.)
-    @type method: C{str}, or None.
-    
-    @ivar ttl: Time-to-live for multicast requests. Used with C{maddr}.
-    @type ttl: C{int}, or None.
-
-    @ivar maddr: Server address to be contacted for this user. For use with
-        multicast requests.
-    @type maddr: C{str}, or None.
-
-    @ivar other: Any other URI parameters not specifically mentioned
-        here.
-    @type other: C{dict}, or None.
-
-    @ivar headers: Key-value pairs to be used as headers when forming
-        a request from this URI.
-    @type headers: C{dict}, or None.
-    """
+class URL:
+    """A SIP URL."""
 
     def __init__(self, host, username=None, password=None, port=None,
                  transport=None, usertype=None, method=None,
-                 ttl=None, maddr=None, other=None, headers=None):
-        """
-        Set parameters of this URI.
-        """
+                 ttl=None, maddr=None, tag=None, other=None, headers=None):
         self.username = username
         self.host = host
         self.password = password
@@ -465,10 +382,11 @@ class URI:
         self.transport = transport
         self.usertype = usertype
         self.method = method
+        self.tag = tag
         self.ttl = ttl
         self.maddr = maddr
         if other == None:
-            self.other = {}
+            self.other = []
         else:
             self.other = other
         if headers == None:
@@ -477,154 +395,44 @@ class URI:
             self.headers = headers
 
     def toString(self):
-        """
-        Format this object's contents as a SIP URI.
-        """
         l = []; w = l.append
         w("sip:")
         if self.username != None:
-            w(urllib.quote(self.username))
+            w(self.username)
             if self.password != None:
-                w(":%s" % (urllib.quote(self.password)))
+                w(":%s" % self.password)
             w("@")
         w(self.host)
         if self.port != None:
             w(":%d" % self.port)
         if self.usertype != None:
             w(";user=%s" % self.usertype)
-        for n in ("transport", "ttl", "maddr", "method"):
+        for n in ("transport", "ttl", "maddr", "method", "tag"):
             v = getattr(self, n)
             if v != None:
-                w(";%s=%s" % (urllib.quote(n), urllib.quote(str(v))))
-        for k, v in self.other.iteritems():
-            if v:
-                w(";%s=%s" % (urllib.quote(k), urllib.quote(v)))
-            else:
-                w(";%s" % k)
+                w(";%s=%s" % (n, v))
+        for v in self.other:
+            w(";%s" % v)
         if self.headers:
             w("?")
-            w("&".join([("%s=%s" % (headerCapitalize(h), urllib.quote(v)))
-                        for (h, v) in self.headers.items()]))
+            w("&".join([("%s=%s" % (specialCases.get(h) or dashCapitalize(h), v)) for (h, v) in self.headers.items()]))
         return "".join(l)
 
     def __str__(self):
-        """
-        Format this object's contents as a SIP URI.
-        """
         return self.toString()
 
-
     def __repr__(self):
-        """
-        Provide a debugging representation of this object.
-        """
-        return '<sip.URI %s>' % self.toString()
-
-
-    def __eq__(self, other):
-        """
-        Comparison for URI equivalence, as described in RFC 3261, section
-        19.1.4.
-        """
-        if not isinstance(other, URI):
-            return False
-
-        if self.username != other.username or self.password != other.password:
-            return False
-
-        if self.host.lower() != other.host.lower() or self.port != other.port:
-            return False
-
-        selfParams = set([p.lower() for p in self.other])
-        otherParams = set([p.lower() for p in other.other])
-        comparisonAttributes = ['usertype', 'method', 'ttl', 'maddr',
-                                'transport']
-        comparisonParams = [(name, self.other[name], other.other[name])
-                            for name in selfParams.intersection(otherParams)]
-        comparisonParams.extend([(name, getattr(self, name),
-                                  getattr(other, name))
-                                 for name in comparisonAttributes])
-        for param, left, right in comparisonParams:
-            if  left == right:
-                continue
-            # Check for case-insensitively equal strings
-            elif (hasattr(left, 'lower') and hasattr(right, 'lower') and
-                  left.lower() == right.lower()):
-                continue
-            else:
-                return False
-            
-        if self.headers != other.headers:
-            return False
-
-        return True
-
-
-    def __ne__(self, other):
-        """
-        Deal with Python's confusing equality model.
-        """
-        return not self.__eq__(other)
-
-
-    def __hash__(self):
-        """
-        Provide a hash value for this URI based on the most common contents.
-        """
-        # __eq__ compares on:
-        #  username
-        #  password
-        #  host (case-insensitive)
-        #  port
-        #  other params (case-insensitive)
-        #  usertype
-        #  method
-        #  ttl
-        #  maddr
-        #  transport
-        #  headers (case-insensitive)
-        cmp_params = [(x[0].lower(), x[1].lower()) for x in self.other.items()]
-        for attr in ['usertype', 'method', 'ttl', 'maddr', 'transport']:
-            value = getattr(self, attr, None)
-            if hasattr(value, 'lower'):
-                value = value.lower()
-            cmp_params.append((attr, value))
-        # headers are already lowercased
-        cmp_params.extend(self.headers.items())
-        fields = (self.username, self.password, self.host.lower(), self.port,
-                  tuple(cmp_params))
-        return hash(fields)
-
-
-
-#"URL" is the deprecated spelling of this class.
-URL = URI
-
+        return '<URL %s:%s@%s:%r/%s>' % (self.username, self.password, self.host, self.port, self.transport)
 
 
 def parseURL(url, host=None, port=None):
-    """
-    Parse string into URI object.
+    """Return string into URL object.
+
     URIs are of of form 'sip:user@example.com'.
-
-    @param url: A string representation of a SIP URI.
-
-    @param host: The host to use for the URI object returned, overriding the
-        value specified in the input.
-
-    @param port: The port to use for the URI object returned, overriding the
-        value specified in the input.
     """
     d = {}
-
-    def parseHeaders(headers):
-        d["headers"] = h = {}
-        for header in headers.split("&"):
-            k, v = header.split("=")
-            h[urllib.unquote(k.lower())] = urllib.unquote(v)
-
-    if not url[:4].lower() == "sip:":
-        raise SIPError(416, "Unsupported URI scheme: " + url[:4])
+    if not url.startswith("sip:"):
+        raise ValueError("unsupported scheme: " + url[:4])
     parts = url[4:].split(";")
     userdomain, params = parts[0], parts[1:]
     udparts = userdomain.split("@", 1)
@@ -632,52 +440,43 @@ def parseURL(url, host=None, port=None):
         userpass, hostport = udparts
         upparts = userpass.split(":", 1)
         if len(upparts) == 1:
-            d["username"] = urllib.unquote(upparts[0])
+            d["username"] = upparts[0]
         else:
-            d["username"] = urllib.unquote(upparts[0])
-            d["password"] = urllib.unquote(upparts[1])
+            d["username"] = upparts[0]
+            d["password"] = upparts[1]
     else:
         hostport = udparts[0]
     hpparts = hostport.split(":", 1)
-
     if len(hpparts) == 1:
-        if "?" in hpparts[0]:
-            _host, headers = hpparts[0].split("?", 1)
-            parseHeaders(headers)
-        else:
-            _host = hpparts[0]
-        d["host"] = _host
-    else:
-        if "?" in hpparts[1]:
-            _port, headers = hpparts[1].split("?", 1)
-            parseHeaders(headers)
-        else:
-            _port = hpparts[1]
         d["host"] = hpparts[0]
-        d["port"] = int(_port)
+    else:
+        d["host"] = hpparts[0]
+        d["port"] = int(hpparts[1])
     if host != None:
         d["host"] = host
     if port != None:
         d["port"] = port
     for p in params:
         if p == params[-1] and "?" in p:
+            d["headers"] = h = {}
             p, headers = p.split("?", 1)
-            parseHeaders(headers)
+            for header in headers.split("&"):
+                k, v = header.split("=")
+                h[k] = v
         nv = p.split("=", 1)
         if len(nv) == 1:
-            d.setdefault("other", {})[urllib.unquote(p.lower())] = ''
+            d.setdefault("other", []).append(p)
             continue
-        name, value = [urllib.unquote(x.lower()) for x in nv]
+        name, value = nv
         if name == "user":
             d["usertype"] = value
-        elif name in ("transport", "ttl", "maddr", "method"):
+        elif name in ("transport", "ttl", "maddr", "method", "tag"):
             if name == "ttl":
                 value = int(value)
             d[name] = value
         else:
-            d.setdefault("other", {})[name] = value
-    return URI(**d)
-
+            d.setdefault("other", []).append(p)
+    return URL(**d)
 
 
 def cleanRequestURL(url):
@@ -691,44 +490,12 @@ def cleanRequestURL(url):
 def parseAddress(address, host=None, port=None, clean=0):
     """Return (name, uri, params) for From/To/Contact header.
 
-    @param address: A string representation of a SIP address (A 'name-addr', as
-        defined in RFC 3261, section 25.1, plus parameters.)
-
-    @param host: The host to use for the URI object returned, overriding the
-        value specified in the input.
-    
-    @param port: The port to use for the URI object returned, overriding the
-        value specified in the input.
-
     @param clean: remove unnecessary info, usually for From and To headers.
-
-    Although many headers such as From can contain any valid URI, even those
-    with schemes other than 'sip', this function raises SIPError if the scheme
-    is not 'sip' because the upper layers do not support it.
     """
-    def splitParams(paramstring):
-        params = {}
-        paramstring = paramstring.strip()
-        if paramstring:
-            for l in paramstring.split(";"):
-                if not l:
-                    continue
-                x = l.split("=")
-                if len(x) > 1:
-                    params[x[0]] = x[1]
-                else:
-                    params [x[0]] = ''
-        return params
     address = address.strip()
     # simple 'sip:foo' case
-    if not '<' in address:
-        i = address.rfind(";tag=")
-        if i > -1:
-            params = splitParams(address[i:])
-            address = address[:i]
-        else:
-            params = {}
-        return u"", parseURL(address, host=host, port=port), params
+    if address.startswith("sip:"):
+        return "", parseURL(address, host=host, port=port), {}
     params = {}
     name, url = address.split("<", 1)
     name = name.strip()
@@ -736,18 +503,22 @@ def parseAddress(address, host=None, port=None, clean=0):
         name = name[1:]
     if name.endswith('"'):
         name = name[:-1]
-    name = re.sub(r'\\(.)', r'\1', name)
     url, paramstring = url.split(">", 1)
     url = parseURL(url, host=host, port=port)
-    params = splitParams(paramstring)
+    paramstring = paramstring.strip()
+    if paramstring:
+        for l in paramstring.split(";"):
+            if not l:
+                continue
+            k, v = l.split("=")
+            params[k] = v
     if clean:
         # rfc 2543 6.21
         url.ttl = None
         url.headers = {}
         url.transport = None
         url.maddr = None
-    return name.decode('utf8', 'replace'), url, params
-
+    return name, url, params
 
 
 class SIPError(Exception):
@@ -759,10 +530,8 @@ class SIPError(Exception):
         self.phrase = phrase
 
 
-
 class RegistrationError(SIPError):
     """Registration was not possible."""
-
 
 
 class Message:
@@ -794,7 +563,7 @@ class Message:
         s = "%s\r\n" % self._getHeaderLine()
         for n, vs in self.headers.items():
             for v in vs:
-                s += "%s: %s\r\n" % (headerCapitalize(n), v)
+                s += "%s: %s\r\n" % (specialCases.get(n) or dashCapitalize(n), v)
         s += "\r\n"
         s += self.body
         return s
@@ -843,8 +612,8 @@ class Response(Message):
 class MessagesParser(basic.LineReceiver):
     """A SIP messages parser.
 
-    Expects dataReceived, dataDone repeatedly, in that order.
-    Shouldn't be connected to actual transport.
+    Expects dataReceived, dataDone repeatedly,
+    in that order. Shouldn't be connected to actual transport.
     """
 
     version = "SIP/2.0"
@@ -1066,18 +835,14 @@ class Base(protocol.DatagramProtocol):
         raise NotImplementedError
 
 
-
 class IContact(Interface):
     """A user of a registrar or proxy"""
-
 
 
 class Registration:
     def __init__(self, secondsToExpiry, contactURL):
         self.secondsToExpiry = secondsToExpiry
         self.contactURL = contactURL
-
-
 
 class IRegistry(Interface):
     """Allows registration of logical->physical URL mapping."""
@@ -1088,20 +853,17 @@ class IRegistry(Interface):
         @return: Deferred of C{Registration} or failure with RegistrationError.
         """
 
-
     def unregisterAddress(domainURL, logicalURL, physicalURL):
         """Unregister the physical address of a logical URL.
 
         @return: Deferred of C{Registration} or failure with RegistrationError.
         """
 
-
     def getRegistrationInfo(logicalURL):
         """Get registration info for logical URL.
 
         @return: Deferred of C{Registration} object or failure of LookupError.
         """
-
 
 
 class ILocator(Interface):
@@ -1113,7 +875,6 @@ class ILocator(Interface):
         @param logicalURL: a logical C{URL}.
         @return: Deferred which becomes URL or fails with LookupError.
         """
-
 
 
 class Proxy(Base):
@@ -1133,11 +894,9 @@ class Proxy(Base):
         self.port = port
         Base.__init__(self)
 
-
     def getVia(self):
         """Return value of Via header for this proxy."""
         return Via(host=self.host, port=self.port)
-
 
     def handle_request(self, message, addr):
         # send immediate 100/trying message before processing
@@ -1157,7 +916,6 @@ class Proxy(Base):
                 d.addErrback(lambda e:
                     self.deliverResponse(self.responseFromRequest(e.code, message))
                 )
-
 
     def handle_request_default(self, message, (srcHost, srcPort)):
         """Default request handler.
@@ -1186,12 +944,10 @@ class Proxy(Base):
         d.addCallback(self.sendMessage, message)
         d.addErrback(self._cantForwardRequest, message)
 
-
     def _cantForwardRequest(self, error, message):
         error.trap(LookupError)
         del message.headers["via"][0] # this'll be us
         self.deliverResponse(self.responseFromRequest(404, message))
-
 
     def deliverResponse(self, responseMessage):
         """Deliver response.
@@ -1205,14 +961,12 @@ class Proxy(Base):
         destAddr = URL(host=host, port=port)
         self.sendMessage(destAddr, responseMessage)
 
-
     def responseFromRequest(self, code, request):
         """Create a response to a request message."""
         response = Response(code)
         for name in ("via", "to", "from", "call-id", "cseq"):
             response.headers[name] = request.headers.get(name, [])[:]
         return response
-
 
     def handle_response(self, message, addr):
         """Default response handler."""
@@ -1230,12 +984,9 @@ class Proxy(Base):
             return
         self.deliverResponse(message)
 
-
     def gotResponse(self, message, addr):
         """Called with responses that are addressed at this server."""
         pass
-
-
 
 class IAuthorizer(Interface):
     def getChallenge(peer):
@@ -1248,14 +999,11 @@ class IAuthorizer(Interface):
         @return: The challenge string
         """
 
-
     def decode(response):
         """Create a credentials object from the given response.
 
         @type response: C{str}
         """
-
-
 
 class BasicAuthorizer:
     """Authorizer for insecure Basic (base64-encoded plaintext) authentication.
@@ -1278,7 +1026,6 @@ class BasicAuthorizer:
 
     def getChallenge(self, peer):
         return None
-
 
     def decode(self, response):
         # At least one SIP client improperly pads its Base64 encoded messages
@@ -1303,13 +1050,14 @@ class DigestedCredentials(UsernameHashedPassword):
     """Yet Another Simple Digest-MD5 authentication scheme"""
 
     def __init__(self, username, fields, challenges):
-        msg = getDeprecationWarningString(DigestedCredentials, 
-                                          Version("Twisted", 9, 0, 0))
-        warnings.warn(msg, category=DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            "twisted.protocols.sip.DigestedCredentials was deprecated "
+            "in Twisted 9.0.0",
+            category=DeprecationWarning,
+            stacklevel=2)
         self.username = username
         self.fields = fields
         self.challenges = challenges
-
 
     def checkPassword(self, password):
         method = 'REGISTER'
@@ -1343,10 +1091,14 @@ class DigestAuthorizer:
     implements(IAuthorizer)
 
     def __init__(self):
-        msg = getDeprecationWarningString(DigestAuthorizer,
-                                          Version("Twisted", 9, 0, 0))
-        warnings.warn(msg, category=DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            "twisted.protocols.sip.DigestAuthorizer was deprecated "
+            "in Twisted 9.0.0",
+            category=DeprecationWarning,
+            stacklevel=2)
+
         self.outstanding = {}
+
 
 
     def generateNonce(self):
@@ -1354,10 +1106,8 @@ class DigestAuthorizer:
         c = '%d%d%d' % c
         return c
 
-
     def generateOpaque(self):
         return str(random.randrange(sys.maxint))
-
 
     def getChallenge(self, peer):
         c = self.generateNonce()
@@ -1369,7 +1119,6 @@ class DigestAuthorizer:
             'qop-options="auth"',
             'algorithm="MD5"',
         ))
-
 
     def decode(self, response):
         response = ' '.join(response.splitlines())
@@ -1383,7 +1132,6 @@ class DigestAuthorizer:
             return DigestedCredentials(username, auth, self.outstanding)
         except:
             raise SIPError(400)
-
 
 
 class RegisterProxy(Proxy):
@@ -1404,7 +1152,6 @@ class RegisterProxy(Proxy):
         if "digest" not in self.authorizers:
             self.authorizers["digest"] = DigestAuthorizer()
 
-
     def handle_ACK_request(self, message, (host, port)):
         # XXX
         # ACKs are a client's way of indicating they got the last message
@@ -1412,7 +1159,6 @@ class RegisterProxy(Proxy):
         # However, we should keep track of terminal messages and re-transmit
         # if no ACK is received.
         pass
-
 
     def handle_REGISTER_request(self, message, (host, port)):
         """Handle a registration request.
@@ -1428,7 +1174,6 @@ class RegisterProxy(Proxy):
                 return self.unauthorized(message, host, port)
             else:
                 return self.login(message, host, port)
-
 
     def unauthorized(self, message, host, port):
         m = self.responseFromRequest(401, message)
@@ -1463,16 +1208,13 @@ class RegisterProxy(Proxy):
         else:
             self.deliverResponse(self.responseFromRequest(501, message))
 
-
     def _cbLogin(self, (i, a, l), message, host, port):
         # It's stateless, matey.  What a joke.
         self.register(message, host, port)
 
-
     def _ebLogin(self, failure, message, host, port):
         failure.trap(cred.error.UnauthorizedLogin)
         self.unauthorized(message, host, port)
-
 
     def register(self, message, host, port):
         """Allow all users to register"""
@@ -1496,7 +1238,6 @@ class RegisterProxy(Proxy):
                 errbackArgs=(message,)
             )
 
-
     def _cbRegister(self, registration, message):
         response = self.responseFromRequest(200, message)
         if registration.contactURL != None:
@@ -1505,12 +1246,10 @@ class RegisterProxy(Proxy):
         response.addHeader("content-length", "0")
         self.deliverResponse(response)
 
-
     def _ebRegister(self, error, message):
         error.trap(RegistrationError, LookupError)
         # XXX return error message, and alter tests to deal with
         # this, currently tests assume no message sent on failure
-
 
     def unregister(self, message, toURL, contact):
         try:
@@ -1528,17 +1267,14 @@ class RegisterProxy(Proxy):
                     ).addErrback(self._ebUnregister, message
                     )
 
-
     def _cbUnregister(self, registration, message):
         msg = self.responseFromRequest(200, message)
         msg.headers.setdefault('contact', []).append(registration.contactURL.toString())
         msg.addHeader("expires", "0")
         self.deliverResponse(msg)
 
-
     def _ebUnregister(self, registration, message):
         pass
-
 
 
 class InMemoryRegistry:
@@ -1550,7 +1286,6 @@ class InMemoryRegistry:
         self.domain = domain # the domain we handle registration for
         self.users = {} # map username to (IDelayedCall for expiry, address URI)
 
-
     def getAddress(self, userURI):
         if userURI.host != self.domain:
             return defer.fail(LookupError("unknown domain"))
@@ -1559,7 +1294,6 @@ class InMemoryRegistry:
             return defer.succeed(url)
         else:
             return defer.fail(LookupError("no such user"))
-
 
     def getRegistrationInfo(self, userURI):
         if userURI.host != self.domain:
@@ -1570,7 +1304,6 @@ class InMemoryRegistry:
         else:
             return defer.fail(LookupError("no such user"))
 
-
     def _expireRegistration(self, username):
         try:
             dc, url = self.users[username]
@@ -1580,7 +1313,6 @@ class InMemoryRegistry:
             dc.cancel()
             del self.users[username]
         return defer.succeed(Registration(0, url))
-
 
     def registerAddress(self, domainURL, logicalURL, physicalURL):
         if domainURL.host != self.domain:
@@ -1597,7 +1329,6 @@ class InMemoryRegistry:
         log.msg("Registered %s at %s" % (logicalURL.toString(), physicalURL.toString()))
         self.users[logicalURL.username] = (dc, physicalURL)
         return defer.succeed(Registration(int(dc.getTime() - time.time()), physicalURL))
-
 
     def unregisterAddress(self, domainURL, logicalURL, physicalURL):
         return self._expireRegistration(logicalURL.username)
