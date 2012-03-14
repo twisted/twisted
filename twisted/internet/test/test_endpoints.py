@@ -1208,7 +1208,8 @@ class ClientStringTests(unittest.TestCase):
             notAReactor, "cfake:alpha:beta:cee=dee:num=1")
         from twisted.plugins.fakeendpoint import fakeClient
         self.assertIdentical(clientEndpoint.parser, fakeClient)
-        self.assertEqual(clientEndpoint.args, ('alpha', 'beta'))
+        self.assertIdentical(clientEndpoint.args[0], notAReactor)
+        self.assertEqual(clientEndpoint.args[1:], ('alpha', 'beta'))
         self.assertEqual(clientEndpoint.kwargs, dict(cee='dee', num='1'))
 
 
