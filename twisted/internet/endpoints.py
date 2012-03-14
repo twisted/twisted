@@ -19,7 +19,7 @@ from twisted.plugin import getPlugins
 from twisted.internet.interfaces import IStreamServerEndpointStringParser
 from twisted.internet.interfaces import IStreamClientEndpointStringParser
 from twisted.python.filepath import FilePath
-from twisted.python import deprecate, failure, log
+from twisted.python import deprecate, versions, failure, log
 
 
 
@@ -941,6 +941,45 @@ _clientParsers = {
 
 
 
+def _executeParseStreamClient(parseStreamClient, reactor, args, kwargs):
+    """
+    Run a C{parseStreamClient} method, trying to pass it the reactor.
+
+    This is the function that first tries calling C{parseStreamClient(reactor,
+    *args, **kwargs)} before falling back on trying C{parseStreamClient(*args,
+    **kwargs)} if the first raises a C{TypeError}.
+
+    @return: Either C{None} if both calls to C{parseStreamClient} fail, or the
+        return value of the first C{parseStreamClient} call to succeed.
+    """
+    try:
+        return parseStreamClient(reactor, *args, **kwargs)
+    # _Hopefully_ if a TypeError is raised then it was because of the reactor
+    # argument, and not something else.
+    except TypeError:
+        # Just in case, we'll save it to maybe log later.
+        f = failure.Failure()
+        try:
+            endpoint = parseStreamClient(*args, **kwargs)
+        except TypeError:
+            # Nope! This function is hosed.
+            log.err(None,
+                    'failure in parseStreamClient when called without reactor')
+            log.err(f, 'original failure (when called with reactor)')
+            return None
+        else:
+            warningFormat = (
+                'Not accepting a reactor as the first argument to '
+                'parseStreamClient is deprecated since %(version)s. %(fqpn)s '
+                'must be updated so its first argument is reactor.')
+            warningString = deprecate.getDeprecationWarningString(
+                parseStreamClient, versions.Version('Twisted', 12, 1, 0),
+                format=warningFormat)
+            deprecate.warnAboutFunction(parseStreamClient, warningString)
+            return endpoint
+
+
+
 def clientFromString(reactor, description):
     """
     Construct a client endpoint from a description string.
@@ -994,28 +1033,10 @@ def clientFromString(reactor, description):
     name = aname.upper()
     for plugin in getPlugins(IStreamClientEndpointStringParser):
         if plugin.prefix.upper() == name:
-            try:
-                return plugin.parseStreamClient(reactor, *args, **kwargs)
-            # _Hopefully_ if a TypeError is raised then it was because of the
-            # reactor argument, and not something else.
-            except TypeError:
-                # Just in case, we'll save it to maybe log later.
-                f = failure.Failure()
-                try:
-                    endpoint = plugin.parseStreamClient(*args, **kwargs)
-                except TypeError:
-                    # Nope! This function is hosed.
-                    log.err(None,
-                            'failure in parseStreamClient for %r' % (aname,))
-                    log.err(f, 'original failure (called with reactor)')
-                else:
-                    deprecate.warnAboutFunction(
-                        plugin.parseStreamClient,
-                        "Not accepting a reactor as the first argument to "
-                        "parseStreamClient is deprecated since Twisted 12.1. "
-                        "The parseStreamClient for %r should be updated so "
-                        "its first argument is reactor." % (aname,))
-                    return endpoint
+            endpoint = _executeParseStreamClient(
+                plugin.parseStreamClient, reactor, args, kwargs)
+            if endpoint is not None:
+                return endpoint
 
     if name not in _clientParsers:
         raise ValueError("Unknown endpoint type: %r" % (aname,))

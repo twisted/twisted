@@ -1275,10 +1275,11 @@ class ClientStringTests(unittest.TestCase):
             [fakeClientWithoutReactor.parseStreamClient])
         self.assertEqual(warnings[0]['category'], DeprecationWarning)
         message = (
-            "Not accepting a reactor as the first argument to "
-            "parseStreamClient is deprecated since Twisted 12.1. The "
-            "parseStreamClient for 'c-rfake' should be updated so its first "
-            "argument is reactor.")
+            'Not accepting a reactor as the first argument to '
+            'parseStreamClient is deprecated since Twisted 12.1.0. twisted.'
+            'plugins.fakeendpoint.FakeClientParserWithoutReactor.'
+            'parseStreamClient must be updated so its first argument is '
+            'reactor.')
         self.assertEqual(warnings[0]['message'], message)
         self.assertEqual(len(warnings), 1)
 
