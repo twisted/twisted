@@ -551,10 +551,6 @@ class HeaderDictTests(TestCase):
         self.assertEqual(headers.getRawHeaders("foo"), ["panda"])
         self.assertEqual(headers.getRawHeaders("bar"), ["marmot"])
 
-    if sys.version_info < (2, 4):
-        test_updateWithKeywords.skip = (
-            "Python 2.3 does not support keyword arguments to dict.update.")
-
 
     def test_setdefaultMissing(self):
         """

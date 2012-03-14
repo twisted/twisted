@@ -1073,8 +1073,8 @@ class SecurityOptions:
         SecurityOptions.allowInstances(klass, klass, ...): allow instances
         of the specified classes
 
-        This will also allow the 'instance', 'class' (renamed 'classobj' in
-        Python 2.3), and 'module' types, as well as basic types.
+        This will also allow the 'instance', 'class', 'classobj', and
+        'module' types, as well as basic types.
         """
         self.allowBasicTypes()
         self.allowTypes("instance", "class", "classobj", "module")
