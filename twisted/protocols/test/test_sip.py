@@ -3,7 +3,9 @@
 # See LICENSE for details.
 
 
-"""Session Initialization Protocol tests."""
+"""
+Tests for Session Initialization Protocol.
+"""
 
 from twisted.trial import unittest, util
 from twisted.protocols import sip
@@ -577,8 +579,8 @@ class ParseTestCase(unittest.TestCase):
             ("sip:foo@example.com;tag=bar;foo=baz",
              "", "sip:foo@example.com", {"tag": "bar", "foo": "baz"}),
             # test the use of name.decode('utf8', 'replace')
-            ('"Invalid \xc3\x28" <sip:foo@example.com>',
-             u"Invalid \ufffd(", "sip:foo@example.com", {}),
+            ('"Invalid \xc3" <sip:foo@example.com>',
+             u"Invalid \ufffd", "sip:foo@example.com", {}),
             ]:
             gname, gurl, gparams = sip.parseAddress(address)
             self.assertEqual(name, gname)
