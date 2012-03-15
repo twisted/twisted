@@ -8,10 +8,7 @@ Test cases for twisted.reflect module.
 import weakref, os
 from ihooks import ModuleImporter
 
-try:
-    from collections import deque
-except ImportError:
-    deque = None
+from collections import deque
 
 from twisted.trial import unittest
 from twisted.python import reflect, util
@@ -220,6 +217,9 @@ class LookupsTestCase(unittest.TestCase):
         self.assertRaises(
             ValueError,
             reflect.namedAny, "twisted.test.reflect_helper_VE")
+        self.assertRaises(
+            ZeroDivisionError,
+            reflect.namedAny, "twisted.test.reflect_helper_ZDE")
         # Modules which themselves raise ImportError when imported should result in an ImportError
         self.assertRaises(
             ImportError,
@@ -408,19 +408,17 @@ class ObjectGrep(unittest.TestCase):
         self.assertEqual(['[0]', '[1][0]'], reflect.objgrep(d, a, reflect.isSame, maxDepth=2))
         self.assertEqual(['[0]', '[1][0]', '[1][1][0]'], reflect.objgrep(d, a, reflect.isSame, maxDepth=3))
 
-        def test_deque(self):
-            """
-            Test references search through a deque object.
-            """
-            o = object()
-            D = deque()
-            D.append(None)
-            D.append(o)
+    def test_deque(self):
+        """
+        Test references search through a deque object.
+        """
+        o = object()
+        D = deque()
+        D.append(None)
+        D.append(o)
 
-            self.assertIn("[1]", reflect.objgrep(D, o, reflect.isSame))
+        self.assertIn("[1]", reflect.objgrep(D, o, reflect.isSame))
 
-        if deque is None:
-            test_deque.skip = "Deque not available"
 
 
 class GetClass(unittest.TestCase):
