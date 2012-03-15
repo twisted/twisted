@@ -1014,18 +1014,25 @@ class FilePath(AbstractFilePath):
                 return False
 
 
-    def isdir(self):
+    def _getStatMode(self):
         """
-        @return: C{True} if this L{FilePath} refers to a directory, C{False}
-            otherwise.
+        @return: mode of the cached stat result or zero on error.
         """
         st = self.statinfo
         if not st:
             self.restat(False)
             st = self.statinfo
             if not st:
-                return False
-        return S_ISDIR(st.st_mode)
+                return 0
+        return st.st_mode
+
+
+    def isdir(self):
+        """
+        @return: C{True} if this L{FilePath} refers to a directory, C{False}
+            otherwise.
+        """
+        return S_ISDIR(self._getStatMode())
 
 
     def isfile(self):
@@ -1033,13 +1040,7 @@ class FilePath(AbstractFilePath):
         @return: C{True} if this L{FilePath} points to a regular file (not a
             directory, socket, named pipe, etc), C{False} otherwise.
         """
-        st = self.statinfo
-        if not st:
-            self.restat(False)
-            st = self.statinfo
-            if not st:
-                return False
-        return S_ISREG(st.st_mode)
+        return S_ISREG(self._getStatMode())
 
 
     def isBlockDevice(self):
@@ -1050,13 +1051,7 @@ class FilePath(AbstractFilePath):
         @rtype: C{bool}
         @since: 11.1
         """
-        st = self.statinfo
-        if not st:
-            self.restat(False)
-            st = self.statinfo
-            if not st:
-                return False
-        return S_ISBLK(st.st_mode)
+        return S_ISBLK(self._getStatMode())
 
 
     def isSocket(self):
@@ -1067,13 +1062,7 @@ class FilePath(AbstractFilePath):
         @rtype: C{bool}
         @since: 11.1
         """
-        st = self.statinfo
-        if not st:
-            self.restat(False)
-            st = self.statinfo
-            if not st:
-                return False
-        return S_ISSOCK(st.st_mode)
+        return S_ISSOCK(self._getStatMode())
 
 
     def islink(self):
