@@ -35,6 +35,7 @@ from twisted.web._stan import Tag, slot, Comment, CDATA, CharRef
 TEMPLATE_NAMESPACE = 'http://twistedmatrix.com/ns/twisted.web.template/0.1'
 
 from twisted.web.iweb import ITemplateLoader
+from twisted.web.resource import Resource
 
 class _NSContext(object):
     """
@@ -447,6 +448,27 @@ class _TagFactory(object):
 
 
 tags = _TagFactory()
+
+
+
+class ElementResource(Resource):
+    """
+    A C{Resource} that renders an element.
+    """
+
+    isLeaf = True
+
+    def __init__(self, element):
+        Resource.__init__(self)
+        self.element = element
+
+    def render_GET(self, request):
+        element = self.element()
+        d = flatten(request, element, request.write)
+        d.addCallback(lambda none: request.finish())
+        # return NOT_DONE_YET
+        # Go read the definition of NOT_DONE_YET. For lulz.
+        return 1
 
 
 
