@@ -1,0 +1,3 @@
+twisted.internet.defer.inlineCallbacks, removed Python 2.4 warnings and examples as no longer supported.
+twisted.python.dist._checkCPython, removed Python 2.4 as only supported older version.
+twisted.trial.test.mockdoctest, Removed Python 2.4 reference.

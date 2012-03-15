@@ -1,0 +1,5 @@
+twisted.python.filepath.randomBytes, no longer falls back to _stub_urandom. Uses os.urandom at all times
+twisted.test.test_defgen, removed hack for preventing yield syntax from breaking test runner.
+twisted.trial.runner.DocTestCase, removed as deprecated since Twisted 8.0
+twisted.trial.unittest.TestSuite, removed over-rides to __call__ and run. No longer needed due to Python 2.4 support drop.
+twisted.trial.util.profiled, removed Python 2.4 hotshot hack. No longer required.
