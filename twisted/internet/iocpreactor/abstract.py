@@ -22,7 +22,7 @@ class FileHandle(_ConsumerMixin, _LogOwner):
     """
     File handle that can read and write asynchronously
     """
-    implements(interfaces.IProducer, interfaces.IConsumer,
+    implements(interfaces.IPushProducer, interfaces.IConsumer,
                interfaces.ITransport, interfaces.IHalfCloseableDescriptor)
     # read stuff
     maxReadBuffers = 16

@@ -155,7 +155,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
 
     SEND_LIMIT = 128*1024
 
-    implements(interfaces.IProducer, interfaces.IReadWriteDescriptor,
+    implements(interfaces.IPushProducer, interfaces.IReadWriteDescriptor,
                interfaces.IConsumer, interfaces.ITransport, interfaces.IHalfCloseableDescriptor)
 
     def __init__(self, reactor=None):

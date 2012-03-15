@@ -5,14 +5,17 @@
 Whitebox tests for L{twisted.internet.abstract.FileDescriptor}.
 """
 
+from zope.interface.verify import verifyClass
+
 from twisted.internet.abstract import FileDescriptor
+from twisted.internet.interfaces import IPushProducer
 from twisted.trial.unittest import TestCase
 
 
 
-class FileDescriptorWriteSequenceTests(TestCase):
+class FileDescriptorTests(TestCase):
     """
-    Tests for L{FileDescriptor.writeSequence}.
+    Tests for L{FileDescriptor}.
     """
     def test_writeWithUnicodeRaisesException(self):
         """
@@ -29,3 +32,10 @@ class FileDescriptorWriteSequenceTests(TestCase):
         fileDescriptor = FileDescriptor()
         self.assertRaises(
             TypeError, fileDescriptor.writeSequence, ['foo', u'bar', 'baz'])
+
+
+    def test_implementInterfaceIPushProducer(self):
+        """
+        L{FileDescriptor} should implement L{IPushProducer}.
+        """
+        self.assertTrue(verifyClass(IPushProducer, FileDescriptor))
