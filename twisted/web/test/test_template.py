@@ -19,10 +19,8 @@ from twisted.web.iweb import ITemplateLoader
 
 from twisted.web.error import MissingTemplateLoader, MissingRenderMethod
 
-from twisted.web.template import ElementResource
 from twisted.web._element import UnexposedMethodError
-from twisted.web.test._util import _render, FlattenTestCase
-from twisted.web.test.test_web import DummyRequest
+from twisted.web.test._util import FlattenTestCase
 
 class TagFactoryTests(TestCase):
     """
@@ -536,23 +534,3 @@ class TagLoaderTests(FlattenTestCase):
         """
         e = Element(self.loader)
         self.assertFlattensImmediately(e, '<i>test</i>')
-
-
-
-class TestElementResource(TestCase):
-
-    def setUp(self):
-        self.request = DummyRequest([""])
-        self.element = lambda: Element(loader=XMLString(
-        '<p xmlns:t="http://twistedmatrix.com/ns/twisted.web.template/0.1">'
-        'Hello, world.'
-        '</p>'))
-
-    def test_simpleRender(self):
-        resource = ElementResource(self.element)
-        d = _render(resource, self.request)
-        @d.addCallback
-        def check(none):
-            self.assertEqual("".join(self.request.written),
-                "<p>Hello, world.</p>")
-        return d
