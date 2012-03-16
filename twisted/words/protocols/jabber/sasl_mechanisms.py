@@ -21,7 +21,7 @@ class ISASLMechanism(Interface):
         Get the initial client response, if defined for this mechanism.
 
         @return: initial client response string.
-        @rtype: L{str}.
+        @rtype: C{str}.
         """
 
 
@@ -30,9 +30,9 @@ class ISASLMechanism(Interface):
         Get the response to a server challenge.
 
         @param challenge: server challenge.
-        @type challenge: L{str}.
+        @type challenge: C{str}.
         @return: client response.
-        @rtype: L{str}.
+        @rtype: C{str}.
         """
 
 
@@ -122,7 +122,7 @@ class DigestMD5(object):
         Splits the challenge into a dictionary of directives with values.
 
         @return: challenge directives and their values.
-        @rtype: L{dict} of L{str} to L{str}.
+        @rtype: C{dict} of C{str} to C{str}.
         """
         s = challenge
         paramDict = {}
@@ -166,9 +166,9 @@ class DigestMD5(object):
         @param directives: dictionary of directives (names to their values).
                            For certain directives, extra quotes are added, as
                            needed.
-        @type directives: L{dict} of L{str} to L{str}
+        @type directives: C{dict} of C{str} to C{str}
         @return: message string.
-        @rtype: L{str}.
+        @rtype: C{str}.
         """
 
         directive_list = []
@@ -189,7 +189,7 @@ class DigestMD5(object):
         Generate response-value.
 
         Creates a response to a challenge according to section 2.1.2.1 of
-        RFC 2831 using the L{charset}, L{realm} and L{nonce} directives
+        RFC 2831 using the C{charset}, C{realm} and C{nonce} directives
         from the challenge.
         """
 

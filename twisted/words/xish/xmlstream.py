@@ -125,16 +125,16 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
         """ Send data over the stream.
 
         Sends the given C{obj} over the connection. C{obj} may be instances of
-        L{domish.Element}, L{unicode} and L{str}. The first two will be
-        properly serialized and/or encoded. L{str} objects must be in UTF-8
+        L{domish.Element}, C{unicode} and C{str}. The first two will be
+        properly serialized and/or encoded. C{str} objects must be in UTF-8
         encoding.
 
         Note: because it is easy to make mistakes in maintaining a properly
-        encoded L{str} object, it is advised to use L{unicode} objects
+        encoded C{str} object, it is advised to use C{unicode} objects
         everywhere when dealing with XML Streams.
 
         @param obj: Object to be sent over the stream.
-        @type obj: L{domish.Element}, L{domish} or L{str}
+        @type obj: L{domish.Element}, L{domish} or C{str}
 
         """
         if domish.IElement.providedBy(obj):

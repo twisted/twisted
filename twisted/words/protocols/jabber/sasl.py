@@ -169,7 +169,7 @@ class SASLInitiatingInitializer(xmlstream.BaseFeatureInitiatingInitializer):
         sent along.
 
         @param data: initial client response.
-        @type data: L{str} or L{None}.
+        @type data: C{str} or C{None}.
         """
 
         auth = domish.Element((NS_XMPP_SASL, 'auth'))
@@ -184,7 +184,7 @@ class SASLInitiatingInitializer(xmlstream.BaseFeatureInitiatingInitializer):
         Send response to a challenge.
 
         @param data: client response.
-        @type data: L{str}.
+        @type data: C{str}.
         """
 
         response = domish.Element((NS_XMPP_SASL, 'response'))

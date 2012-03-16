@@ -27,7 +27,7 @@ if sys.version_info < (2,3,2):
 else:
     import stringprep
     # We require Unicode version 3.2. Python 2.5 and later provide this as
-    # a separate object. Before that the unicodedata module uses 3.2. 
+    # a separate object. Before that the unicodedata module uses 3.2.
     try:
         from unicodedata import ucd_3_2_0 as unicodedata
     except:
@@ -75,7 +75,7 @@ class MappingTableFromFunction:
         self.map = map_table_function
 
 class EmptyMappingTable:
-    
+
     implements(IMappingTable)
 
     def __init__(self, in_table_function):
@@ -133,7 +133,7 @@ class Profile:
         for c in string:
             if stringprep.in_table_a1(c):
                 raise UnicodeError, "Unassigned code point %s" % repr(c)
-    
+
     def check_bidirectionals(self, string):
         found_LCat = False
         found_RandALCat = False
@@ -157,21 +157,21 @@ class NamePrep:
 
     This class implements preparing internationalized domain names using the
     rules defined in RFC 3491, section 4 (Conversion operations).
-    
+
     We do not perform step 4 since we deal with unicode representations of
     domain names and do not convert from or to ASCII representations using
-    punycode encoding. When such a conversion is needed, the L{idna} standard
+    punycode encoding. When such a conversion is needed, the C{idna} standard
     library provides the C{ToUnicode()} and C{ToASCII()} functions. Note that
-    L{idna} itself assumes UseSTD3ASCIIRules to be false.
-    
+    C{idna} itself assumes UseSTD3ASCIIRules to be false.
+
     The following steps are performed by C{prepare()}:
-    
+
       - Split the domain name in labels at the dots (RFC 3490, 3.1)
       - Apply nameprep proper on each label (RFC 3491)
       - Enforce the restrictions on ASCII characters in host names by
         assuming STD3ASCIIRules to be true. (STD 3)
       - Rejoin the labels using the label separator U+002E (full stop).
-    
+
     """
 
     # Prohibited characters.
@@ -223,7 +223,7 @@ if crippled:
     resourceprep = Profile(normalize=False,
                            check_unassigneds=False,
                            check_bidi=False)
-   
+
 else:
     C_11 = LookupTableFromFunction(stringprep.in_table_c11)
     C_12 = LookupTableFromFunction(stringprep.in_table_c12)

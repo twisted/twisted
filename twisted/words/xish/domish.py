@@ -152,10 +152,10 @@ SerializerClass = _ListSerializer
 def escapeToXml(text, isattrib = 0):
     """ Escape text to proper XML form, per section 2.3 in the XML specification.
 
-    @type text: L{str}
+    @type text: C{str}
     @param text: Text to escape
 
-    @type isattrib: L{bool}
+    @type isattrib: C{bool}
     @param isattrib: Triggers escaping of characters necessary for use as
                      attribute values
     """
@@ -239,18 +239,18 @@ class IElement(Interface):
                              string. A value of C{0} only generates the
                              element's start tag. A value of C{1} yields a
                              complete serialization.
-        @type closeElement: L{int}
+        @type closeElement: C{int}
         @param defaultUri: Initial default namespace URI. This is most useful
                            for partial rendering, where the logical parent
                            element (of which the starttag was already
                            serialized) declares a default namespace that should
                            be inherited.
-        @type defaultUri: L{str}
+        @type defaultUri: C{str}
         @param prefixesInScope: list of prefixes that are assumed to be
                                 declared by ancestors.
-        @type prefixesInScope: L{list}
+        @type prefixesInScope: C{list}
         @return: (partial) serialized XML
-        @rtype: L{unicode}
+        @rtype: C{unicode}
         """
 
     def addElement(name, defaultUri = None, content = None):
@@ -259,16 +259,16 @@ class IElement(Interface):
         The new element is added to this element as a child, and will have
         this element as its parent.
 
-        @param name: element name. This can be either a L{unicode} object that
+        @param name: element name. This can be either a C{unicode} object that
                      contains the local name, or a tuple of (uri, local_name)
                      for a fully qualified name. In the former case,
                      the namespace URI is inherited from this element.
-        @type name: L{unicode} or L{tuple} of (L{unicode}, L{unicode})
+        @type name: C{unicode} or C{tuple} of (C{unicode}, C{unicode})
         @param defaultUri: default namespace URI for child elements. If
                            C{None}, this is inherited from this element.
-        @type defaultUri: L{unicode}
+        @type defaultUri: C{unicode}
         @param content: text contained by the new element.
-        @type content: L{unicode}
+        @type content: C{unicode}
         @return: the created element
         @rtype: object providing L{IElement}
         """
@@ -281,7 +281,7 @@ class IElement(Interface):
         L{IElement}.
 
         @param node: the child node.
-        @type node: L{unicode} or object implementing L{IElement}
+        @type node: C{unicode} or object implementing L{IElement}
         """
 
 class Element(object):
@@ -359,16 +359,16 @@ class Element(object):
     As, you can see, the <presence/> element is now in the empty namespace, not
     in the default namespace of the parent or the streams'.
 
-    @type uri: L{unicode} or None
+    @type uri: C{unicode} or None
     @ivar uri: URI of this Element's name
 
-    @type name: L{unicode}
+    @type name: C{unicode}
     @ivar name: Name of this Element
 
-    @type defaultUri: L{unicode} or None
+    @type defaultUri: C{unicode} or None
     @ivar defaultUri: URI this Element exists within
 
-    @type children: L{list}
+    @type children: C{list}
     @ivar children: List of child Elements and content
 
     @type parent: L{Element}
@@ -392,7 +392,7 @@ class Element(object):
         """
         @param qname: Tuple of (uri, name)
         @param defaultUri: The default URI of the element; defaults to the URI
-                           specified in L{qname}
+                           specified in C{qname}
         @param attribs: Dictionary of attributes
         @param localPrefixes: Dictionary of namespace declarations on this
                               element. The key is the prefix to bind the

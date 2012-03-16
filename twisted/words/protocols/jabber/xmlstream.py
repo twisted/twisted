@@ -105,10 +105,10 @@ class Authenticator:
         A stream is considered to have started when the start tag of the root
         element has been received.
 
-        This examines L{rootElement} to see if there is a version attribute.
+        This examines C{rootElement} to see if there is a version attribute.
         If absent, C{0.0} is assumed per RFC 3920. Subsequently, the
         minimum of the version from the received stream header and the
-        value stored in L{xmlstream} is taken and put back in {xmlstream}.
+        value stored in L{xmlstream} is taken and put back in L{xmlstream}.
 
         Extensions of this method can extract more information from the
         stream header and perform checks on them, optionally sending
@@ -214,7 +214,7 @@ class ConnectAuthenticator(Authenticator):
         Called by the XmlStream when the stream has started.
 
         This extends L{Authenticator.streamStarted} to extract further stream
-        headers from L{rootElement}, optionally wait for stream features being
+        headers from C{rootElement}, optionally wait for stream features being
         received and then call C{initializeStream}.
         """
 
@@ -266,7 +266,7 @@ class ListenAuthenticator(Authenticator):
         Called by the XmlStream when the stream has started.
 
         This extends L{Authenticator.streamStarted} to extract further
-        information from the stream headers from L{rootElement}.
+        information from the stream headers from C{rootElement}.
         """
         Authenticator.streamStarted(self, rootElement)
 
@@ -299,10 +299,10 @@ class BaseFeatureInitiatingInitializer(object):
     of the connection.
 
     @cvar feature: tuple of (uri, name) of the stream feature root element.
-    @type feature: tuple of (L{str}, L{str})
+    @type feature: tuple of (C{str}, C{str})
     @ivar required: whether the stream feature is required to be advertized
                     by the receiving entity.
-    @type required: L{bool}
+    @type required: C{bool}
     """
 
     implements(ijabber.IInitiatingInitializer)
@@ -320,7 +320,7 @@ class BaseFeatureInitiatingInitializer(object):
 
         Checks if the receiving entity advertizes the stream feature. If it
         does, the initialization is started. If it is not advertized, and the
-        C{required} instance variable is L{True}, it raises
+        C{required} instance variable is C{True}, it raises
         L{FeatureNotAdvertized}. Otherwise, the initialization silently
         succeeds.
         """
@@ -387,7 +387,7 @@ class TLSInitiatingInitializer(BaseFeatureInitiatingInitializer):
     of initializers, so a proper exception L{TLSRequired} can be raised.
 
     @cvar wanted: indicates if TLS negotiation is wanted.
-    @type wanted: L{bool}
+    @type wanted: C{bool}
     """
 
     feature = (NS_XMPP_TLS, 'starttls')
@@ -778,7 +778,7 @@ class IQ(domish.Element):
         @type xmlstream: L{xmlstream.XmlStream}
         @param xmlstream: XmlStream to use for transmission of this IQ
 
-        @type stanzaType: L{str}
+        @type stanzaType: C{str}
         @param stanzaType: IQ type identifier ('get' or 'set')
         """
         domish.Element.__init__(self, (None, "iq"))
@@ -947,7 +947,7 @@ class XMPPHandlerCollection(object):
     L{XMPPHandler} itself, so this is not recursive.
 
     @ivar handlers: List of protocol handlers.
-    @type handlers: L{list} of objects providing
+    @type handlers: C{list} of objects providing
                       L{IXMPPHandler}
     """
 
@@ -993,13 +993,13 @@ class StreamManager(XMPPHandlerCollection):
     @ivar xmlstream: currently managed XML stream
     @type xmlstream: L{XmlStream}
     @ivar logTraffic: if true, log all traffic.
-    @type logTraffic: L{bool}
+    @type logTraffic: C{bool}
     @ivar _initialized: Whether the stream represented by L{xmlstream} has
                         been initialized. This is used when caching outgoing
                         stanzas.
     @type _initialized: C{bool}
     @ivar _packetQueue: internal buffer of unsent data. See L{send} for details.
-    @type _packetQueue: L{list}
+    @type _packetQueue: C{list}
     """
 
     logTraffic = False

@@ -119,7 +119,7 @@ class IXMPPHandler(Interface):
         """
         The XML stream has been closed.
 
-        Subsequent use of L{parent.send} will result in data being queued
+        Subsequent use of C{parent.send} will result in data being queued
         until a new connection has been established.
 
         @type reason: L{twisted.python.failure.Failure}
@@ -170,7 +170,7 @@ class IService(Interface):
         Parent component has established a connection.
 
         At this point, authentication was succesful, and XML stanzas
-        can be exchanged over the XML stream L{xs}. This method can be used
+        can be exchanged over the XML stream C{xs}. This method can be used
         to setup observers for incoming stanzas.
 
         @param xs: XML Stream that represents the established connection.
@@ -193,7 +193,7 @@ class IService(Interface):
         transport.
 
         At this point, no traffic has been exchanged over the XML stream. This
-        method can be used to change properties of the XML Stream (in L{xs}),
+        method can be used to change properties of the XML Stream (in C{xs}),
         the service manager or it's authenticator prior to stream
         initialization (including authentication).
         """

@@ -3,7 +3,6 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from twisted.internet import defer
 from twisted.words.xish import domish, xpath, utility
 from twisted.words.protocols.jabber import xmlstream, sasl, error
 from twisted.words.protocols.jabber.jid import JID
@@ -37,7 +36,7 @@ class IQ(domish.Element):
         @type xmlstream: L{xmlstream.XmlStream}
         @param xmlstream: XmlStream to use for transmission of this IQ
 
-        @type type: L{str}
+        @type type: C{str}
         @param type: IQ type identifier ('get' or 'set')
         """
 
@@ -59,7 +58,7 @@ class IQ(domish.Element):
         Call this method to send this IQ request via the associated XmlStream.
 
         @param to: Jabber ID of the entity to send the request to
-        @type to: L{str}
+        @type to: C{str}
 
         @returns: Callback list for this IQ. Any callbacks added to this list
                   will be fired when the result comes back.
@@ -294,7 +293,7 @@ def XMPPClientFactory(jid, password):
     @param jid: Jabber ID to connect with.
     @type jid: L{jid.JID}
     @param password: password to authenticate with.
-    @type password: L{unicode}
+    @type password: C{unicode}
     @return: XML stream factory.
     @rtype: L{xmlstream.XmlStreamFactory}
     """
@@ -334,7 +333,7 @@ class XMPPAuthenticator(xmlstream.ConnectAuthenticator):
                variable.
     @type jid: L{jid.JID}
     @ivar password: password to be used during SASL authentication.
-    @type password: L{unicode}
+    @type password: C{unicode}
     """
 
     namespace = 'jabber:client'
