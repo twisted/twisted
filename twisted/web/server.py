@@ -310,10 +310,13 @@ class Request(pb.Copyable, http.Request, components.Componentized):
         """
         self.setETag(tag)
 
-    def view_setResponseCode(self, issuer, code):
-        """Remote version of setResponseCode; same interface.
+
+    def view_setResponseCode(self, issuer, code, message=None):
         """
-        self.setResponseCode(code)
+        Remote version of setResponseCode; same interface.
+        """
+        self.setResponseCode(code, message)
+
 
     def view_registerProducer(self, issuer, producer, streaming):
         """Remote version of registerProducer; same interface.

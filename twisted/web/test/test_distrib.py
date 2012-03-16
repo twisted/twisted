@@ -22,6 +22,7 @@ from twisted.spread.banana import SIZE_LIMIT
 from twisted.web import http, distrib, client, resource, static, server
 from twisted.web.test.test_web import DummyRequest
 from twisted.web.test._util import _render
+from twisted.test import proto_helpers
 
 
 class MySite(server.Site):
@@ -92,16 +93,14 @@ class DistribTest(unittest.TestCase):
         return d
 
 
-    def _requestTest(self, child, **kwargs):
+    def _setupDistribServer(self, child):
         """
-        Set up a resource on a distrib site using L{ResourcePublisher} and
-        then retrieve it from a L{ResourceSubscription} via an HTTP client.
+        Set up a resource on a distrib site using L{ResourcePublisher}.
 
         @param child: The resource to publish using distrib.
-        @param **kwargs: Extra keyword arguments to pass to L{getPage} when
-            requesting the resource.
 
-        @return: A L{Deferred} which fires with the result of the request.
+        @return: A tuple consisting of the host and port on which to contact
+            the created site.
         """
         distribRoot = resource.Resource()
         distribRoot.putChild("child", child)
@@ -120,9 +119,51 @@ class DistribTest(unittest.TestCase):
         self.addCleanup(mainPort.stopListening)
         mainAddr = mainPort.getHost()
 
+        return mainPort, mainAddr
+
+
+    def _requestTest(self, child, **kwargs):
+        """
+        Set up a resource on a distrib site using L{ResourcePublisher} and
+        then retrieve it from a L{ResourceSubscription} via an HTTP client.
+
+        @param child: The resource to publish using distrib.
+        @param **kwargs: Extra keyword arguments to pass to L{getPage} when
+            requesting the resource.
+
+        @return: A L{Deferred} which fires with the result of the request.
+        """
+        mainPort, mainAddr = self._setupDistribServer(child)
         return client.getPage("http://%s:%s/child" % (
             mainAddr.host, mainAddr.port), **kwargs)
 
+
+    def _requestAgentTest(self, child, **kwargs):
+        """
+        Set up a resource on a distrib site using L{ResourcePublisher} and
+        then retrieve it from a L{ResourceSubscription} via an HTTP client.
+
+        @param child: The resource to publish using distrib.
+        @param **kwargs: Extra keyword arguments to pass to L{Agent.request} when
+            requesting the resource.
+
+        @return: A L{Deferred} which fires with a tuple consisting of a
+            L{twisted.test.proto_helpers.AccumulatingProtocol} containing the
+            body of the response and an L{IResponse} with the response itself.
+        """
+        mainPort, mainAddr = self._setupDistribServer(child)
+
+        d = client.Agent(reactor).request("GET", "http://%s:%s/child" % (
+            mainAddr.host, mainAddr.port), **kwargs)
+
+        def cbCollectBody(response):
+            protocol = proto_helpers.AccumulatingProtocol()
+            response.deliverBody(protocol)
+            d = protocol.closedDeferred = defer.Deferred()
+            d.addCallback(lambda _: (protocol, response))
+            return d
+        d.addCallback(cbCollectBody)
+        return d
 
 
     def test_requestHeaders(self):
@@ -142,6 +183,44 @@ class DistribTest(unittest.TestCase):
             ReportRequestHeaders(), headers={'foo': 'bar'})
         def cbRequested(result):
             self.assertEqual(requestHeaders['Foo'], ['bar'])
+        request.addCallback(cbRequested)
+        return request
+
+
+    def test_requestResponseCode(self):
+        """
+        The response code can be set by the request object passed to a
+        distributed resource's C{render} method.
+        """
+        class SetResponseCode(resource.Resource):
+            def render(self, request):
+                request.setResponseCode(200)
+                return ""
+
+        request = self._requestAgentTest(SetResponseCode())
+        def cbRequested(result):
+            self.assertEqual(result[0].data, "")
+            self.assertEqual(result[1].code, 200)
+            self.assertEqual(result[1].phrase, "OK")
+        request.addCallback(cbRequested)
+        return request
+
+
+    def test_requestResponseCodeMessage(self):
+        """
+        The response code and message can be set by the request object passed to
+        a distributed resource's C{render} method.
+        """
+        class SetResponseCode(resource.Resource):
+            def render(self, request):
+                request.setResponseCode(200, "some-message")
+                return ""
+
+        request = self._requestAgentTest(SetResponseCode())
+        def cbRequested(result):
+            self.assertEqual(result[0].data, "")
+            self.assertEqual(result[1].code, 200)
+            self.assertEqual(result[1].phrase, "some-message")
         request.addCallback(cbRequested)
         return request
 
