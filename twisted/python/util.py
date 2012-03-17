@@ -804,8 +804,7 @@ def mergeFunctionMetadata(f, g):
     Overwrite C{g}'s name and docstring with values from C{f}.  Update
     C{g}'s instance dictionary with C{f}'s.
 
-    To use this function safely you must use the return value. C{g} will
-    be mutated and returned.
+    C{g} will be mutated and returned.
 
     @return: A function that has C{g}'s behavior and metadata merged from
         C{f}.
@@ -814,17 +813,16 @@ def mergeFunctionMetadata(f, g):
         g.__name__ = f.__name__
     except TypeError:
         pass
-    merged = g
     try:
-        merged.__doc__ = f.__doc__
+        g.__doc__ = f.__doc__
     except (TypeError, AttributeError):
         pass
     try:
-        merged.__dict__.update(f.__dict__)
+        g.__dict__.update(f.__dict__)
     except (TypeError, AttributeError):
         pass
-    merged.__module__ = f.__module__
-    return merged
+    g.__module__ = f.__module__
+    return g
 
 
 def nameToLabel(mname):
