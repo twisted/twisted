@@ -17,10 +17,14 @@ from twisted.web.template import (
     Element, TagLoader, renderer, tags, XMLFile, XMLString)
 from twisted.web.iweb import ITemplateLoader
 
-from twisted.web.error import MissingTemplateLoader, MissingRenderMethod
+from twisted.web.error import (FlattenerError, MissingTemplateLoader,
+    MissingRenderMethod)
 
+from twisted.web.template import renderElement
 from twisted.web._element import UnexposedMethodError
 from twisted.web.test._util import FlattenTestCase
+from twisted.web.test.test_web import DummyRequest
+from twisted.web.server import NOT_DONE_YET
 
 class TagFactoryTests(TestCase):
     """
@@ -534,3 +538,138 @@ class TagLoaderTests(FlattenTestCase):
         """
         e = Element(self.loader)
         self.assertFlattensImmediately(e, '<i>test</i>')
+
+
+
+class TestElement(Element):
+    """
+    An L{Element} that can be rendered successfully.
+    """
+    loader = XMLString(
+        '<p xmlns:t="http://twistedmatrix.com/ns/twisted.web.template/0.1">'
+        'Hello, world.'
+        '</p>')
+
+
+
+class TestFailureElement(Element):
+    """
+    An L{Element} that can be used in place of L{FailureElement} to verify
+    that L{renderElement} can render failures properly.
+    """
+    loader = XMLString(
+        '<p xmlns:t="http://twistedmatrix.com/ns/twisted.web.template/0.1">'
+        'I failed.'
+        '</p>')
+
+    def __init__(self, failure, loader=None):
+        self.failure = failure
+
+
+
+class FailingElement(Element):
+    """
+    An element that raises an exception when rendered.
+    """
+    def render(self, request):
+        a = 42
+        b = 0
+        return a / b
+
+
+
+class FakeSite(object):
+    """
+    A minimal L{Site} object that we can use to test displayTracebacks
+    """
+    displayTracebacks = False
+
+
+
+class TestRenderElement(TestCase):
+    """
+    Test L{renderElement}
+    """
+
+    def setUp(self):
+        """
+        Set up a common L{DummyRequest} and L{FakeSite}.
+        """
+        self.request = DummyRequest([""])
+        self.request.site = FakeSite()
+
+
+    def test_simpleRender(self):
+        """
+        L{renderElement} returns NOT_DONE_YET and eventually
+        writes the rendered L{Element} to the request before finishing the
+        request.
+        """
+        element = TestElement()
+
+        d = self.request.notifyFinish()
+
+        def check(_):
+            self.assertEqual(
+                "".join(self.request.written),
+                "<p>Hello, world.</p>")
+            self.assertTrue(self.request.finished)
+
+        d.addCallback(check)
+
+        self.assertIdentical(NOT_DONE_YET, renderElement(self.request, element))
+
+        return d
+
+
+    def test_simpleFailure(self):
+        """
+        L{renderElement} handles failures by writing a minimal
+        error message to the request and finishing it.
+        """
+        element = FailingElement()
+
+        d = self.request.notifyFinish()
+
+        def check(_):
+            flushed = self.flushLoggedErrors(FlattenerError)
+            self.assertEqual(len(flushed), 1)
+            self.assertEqual(
+                "".join(self.request.written),
+                ('<div style="font-size:800%;'
+                 'background-color:#FFF;'
+                 'color:#F00'
+                 '">An error occurred while rendering the response.</div>'))
+            self.assertTrue(self.request.finished)
+
+        d.addCallback(check)
+
+        self.assertIdentical(NOT_DONE_YET, renderElement(self.request, element))
+
+        return d
+
+
+    def test_simpleFailureWithTraceback(self):
+        """
+        L{renderElement} will render a traceback when rendering of
+        the element fails and our site is configured to display tracebacks.
+        """
+        self.request.site.displayTracebacks = True
+
+        element = FailingElement()
+
+        d = self.request.notifyFinish()
+
+        def check(_):
+            flushed = self.flushLoggedErrors(FlattenerError)
+            self.assertEqual(len(flushed), 1)
+            self.assertEqual(
+                "".join(self.request.written),
+                "<p>I failed.</p>")
+            self.assertTrue(self.request.finished)
+
+        d.addCallback(check)
+
+        renderElement(self.request, element, _failElement=TestFailureElement)
+
+        return d

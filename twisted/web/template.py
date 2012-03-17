@@ -22,7 +22,7 @@ HTML rendering for twisted.web.
 __all__ = [
     'TEMPLATE_NAMESPACE', 'VALID_HTML_TAG_NAMES', 'Element', 'TagLoader',
     'XMLString', 'XMLFile', 'renderer', 'flatten', 'flattenString', 'tags',
-    'Comment', 'CDATA', 'Tag', 'slot', 'CharRef',
+    'Comment', 'CDATA', 'Tag', 'slot', 'CharRef', 'renderElement'
     ]
 
 from zope.interface import implements
@@ -35,6 +35,17 @@ from twisted.web._stan import Tag, slot, Comment, CDATA, CharRef
 TEMPLATE_NAMESPACE = 'http://twistedmatrix.com/ns/twisted.web.template/0.1'
 
 from twisted.web.iweb import ITemplateLoader
+from twisted.python import log
+
+# Go read the definition of NOT_DONE_YET. For lulz. This is totally
+# equivalent. And this turns out to be necessary, because trying to import
+# NOT_DONE_YET in this module causes a circular import which we cannot escape
+# from. From which we cannot escape. Etc. glyph is okay with this solution for
+# now, and so am I, as long as this comment stays to explain to future
+# maintainers what it means. ~ C.
+#
+# See http://twistedmatrix.com/trac/ticket/5557 for progress on fixing this.
+NOT_DONE_YET = 1
 
 class _NSContext(object):
     """
@@ -450,6 +461,39 @@ tags = _TagFactory()
 
 
 
+def renderElement(request, element, _failElement=None):
+    """
+    Render an element or other C{IRenderable}.
+
+    @param request: The C{Request} being rendered to.
+    @param element: An C{IRenderable} which will be rendered.
+
+    @returns: NOT_DONE_YET
+
+    @since: 12.1
+    """
+    if _failElement is None:
+        _failElement = twisted.web.util.FailureElement
+
+    d = flatten(request, element, request.write)
+
+    def eb(failure):
+        log.err(failure, "An error occurred while rendering the response.")
+        if request.site.displayTracebacks:
+            return flatten(request, _failElement(failure), request.write)
+        else:
+            request.write(
+                ('<div style="font-size:800%;'
+                 'background-color:#FFF;'
+                 'color:#F00'
+                 '">An error occurred while rendering the response.</div>'))
+
+    d.addErrback(eb)
+    d.addBoth(lambda _: request.finish())
+    return NOT_DONE_YET
+
+
+
 from twisted.web._element import Element, renderer
 from twisted.web._flatten import flatten, flattenString
-
+import twisted.web.util
