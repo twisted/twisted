@@ -14,6 +14,19 @@ class TestRunners(unittest.TestCase):
     Tests for Twisted's doctest support.
     """
 
+    def test_id(self):
+        """
+        Check that the id() of the doctests' case object contains the FQPN of
+        the actual tests. We need this because id() has weird behaviour w/
+        doctest in Python 2.3.
+        """
+        loader = runner.TestLoader()
+        suite = loader.loadDoctests(mockdoctest)
+        idPrefix = 'twisted.trial.test.mockdoctest.Counter'
+        for test in suite._tests:
+            self.assertIn(idPrefix, itrial.ITestCase(test).id())
+
+
     def test_basicTrialIntegration(self):
         """
         L{loadDoctests} loads all of the doctests in the given module.
