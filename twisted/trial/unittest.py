@@ -1556,10 +1556,6 @@ def _iterateTests(testSuiteOrCase):
 
 
 
-iter(pyunit.TestSuite())
-
-
-
 class _SubTestCase(TestCase):
     def __init__(self):
         TestCase.__init__(self, 'run')
