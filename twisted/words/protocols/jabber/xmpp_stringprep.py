@@ -6,33 +6,14 @@
 import sys, warnings
 from zope.interface import Interface, implements
 
-if sys.version_info < (2,3,2):
-    import re
-
-    class IDNA:
-        dots = re.compile(u"[\u002E\u3002\uFF0E\uFF61]")
-        def nameprep(self, label):
-            return label.lower()
-
-    idna = IDNA()
-
-    crippled = True
-
-    warnings.warn("Accented and non-Western Jabber IDs will not be properly "
-                  "case-folded with this version of Python, resulting in "
-                  "incorrect protocol-level behavior.")
-
-else:
-    import stringprep
-    # We require Unicode version 3.2. Python 2.5 and later provide this as
-    # a separate object. Before that the unicodedata module uses 3.2. 
-    try:
-        from unicodedata import ucd_3_2_0 as unicodedata
-    except:
-        import unicodedata
-    from encodings import idna
-
-    crippled = False
+import stringprep
+# We require Unicode version 3.2. Python 2.5 and later provide this as
+# a separate object. Before that the unicodedata module uses 3.2. 
+try:
+    from unicodedata import ucd_3_2_0 as unicodedata
+except:
+    import unicodedata
+from encodings import idna
 
 del sys, warnings
 
@@ -209,43 +190,29 @@ class NamePrep:
             raise UnicodeError, "Invalid trailing hyphen-minus"
         return label
 
-if crippled:
-    case_map = MappingTableFromFunction(lambda c: c.lower())
-    nodeprep = Profile(mappings=[case_map],
-                       normalize=False,
-                       prohibiteds=[LookupTable([u' ', u'"', u'&', u"'", u'/',
-                                                 u':', u'<', u'>', u'@'])],
-                       check_unassigneds=False,
-                       check_bidi=False)
+C_11 = LookupTableFromFunction(stringprep.in_table_c11)
+C_12 = LookupTableFromFunction(stringprep.in_table_c12)
+C_21 = LookupTableFromFunction(stringprep.in_table_c21)
+C_22 = LookupTableFromFunction(stringprep.in_table_c22)
+C_3 = LookupTableFromFunction(stringprep.in_table_c3)
+C_4 = LookupTableFromFunction(stringprep.in_table_c4)
+C_5 = LookupTableFromFunction(stringprep.in_table_c5)
+C_6 = LookupTableFromFunction(stringprep.in_table_c6)
+C_7 = LookupTableFromFunction(stringprep.in_table_c7)
+C_8 = LookupTableFromFunction(stringprep.in_table_c8)
+C_9 = LookupTableFromFunction(stringprep.in_table_c9)
 
-    resourceprep = Profile(normalize=False,
-                           check_unassigneds=False,
-                           check_bidi=False)
-   
-else:
-    C_11 = LookupTableFromFunction(stringprep.in_table_c11)
-    C_12 = LookupTableFromFunction(stringprep.in_table_c12)
-    C_21 = LookupTableFromFunction(stringprep.in_table_c21)
-    C_22 = LookupTableFromFunction(stringprep.in_table_c22)
-    C_3 = LookupTableFromFunction(stringprep.in_table_c3)
-    C_4 = LookupTableFromFunction(stringprep.in_table_c4)
-    C_5 = LookupTableFromFunction(stringprep.in_table_c5)
-    C_6 = LookupTableFromFunction(stringprep.in_table_c6)
-    C_7 = LookupTableFromFunction(stringprep.in_table_c7)
-    C_8 = LookupTableFromFunction(stringprep.in_table_c8)
-    C_9 = LookupTableFromFunction(stringprep.in_table_c9)
+B_1 = EmptyMappingTable(stringprep.in_table_b1)
+B_2 = MappingTableFromFunction(stringprep.map_table_b2)
 
-    B_1 = EmptyMappingTable(stringprep.in_table_b1)
-    B_2 = MappingTableFromFunction(stringprep.map_table_b2)
+nodeprep = Profile(mappings=[B_1, B_2],
+                   prohibiteds=[C_11, C_12, C_21, C_22,
+                                C_3, C_4, C_5, C_6, C_7, C_8, C_9,
+                                LookupTable([u'"', u'&', u"'", u'/',
+                                             u':', u'<', u'>', u'@'])])
 
-    nodeprep = Profile(mappings=[B_1, B_2],
-                       prohibiteds=[C_11, C_12, C_21, C_22,
-                                    C_3, C_4, C_5, C_6, C_7, C_8, C_9,
-                                    LookupTable([u'"', u'&', u"'", u'/',
-                                                 u':', u'<', u'>', u'@'])])
-
-    resourceprep = Profile(mappings=[B_1,],
-                           prohibiteds=[C_12, C_21, C_22,
-                                        C_3, C_4, C_5, C_6, C_7, C_8, C_9])
+resourceprep = Profile(mappings=[B_1,],
+                       prohibiteds=[C_12, C_21, C_22,
+                                    C_3, C_4, C_5, C_6, C_7, C_8, C_9])
 
 nameprep = NamePrep()
