@@ -17,6 +17,8 @@ from zope.interface.verify import verifyObject
 
 from twisted.trial import unittest
 from twisted.web import server, static, client, error, util, resource, http_headers
+from twisted.web._newclient import RequestNotSent, RequestTransmissionFailed
+from twisted.web._newclient import ResponseNeverReceived, ResponseFailed
 from twisted.internet import reactor, defer, interfaces, task
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
@@ -25,14 +27,13 @@ from twisted.python.components import proxyForInterface
 from twisted.protocols.policies import WrappingFactory
 from twisted.test.proto_helpers import StringTransport
 from twisted.test.proto_helpers import MemoryReactor
-from twisted.internet.address import IPv4Address
 from twisted.internet.task import Clock
 from twisted.internet.error import ConnectionRefusedError, ConnectionDone
 from twisted.internet.protocol import Protocol, Factory
 from twisted.internet.defer import Deferred, succeed
 from twisted.internet.endpoints import TCP4ClientEndpoint, SSL4ClientEndpoint
 from twisted.web.client import FileBodyProducer, Request, HTTPConnectionPool
-from twisted.web.client import _WebToNormalContextFactory, _parse
+from twisted.web.client import _WebToNormalContextFactory
 from twisted.web.client import WebClientContextFactory, _HTTP11ClientFactory
 from twisted.web.iweb import UNKNOWN_LENGTH, IBodyProducer, IResponse
 from twisted.web._newclient import HTTP11ClientProtocol, Response
@@ -42,8 +43,7 @@ try:
     from twisted.internet import ssl
 except:
     ssl = None
-else:
-    from OpenSSL.SSL import ContextType
+
 
 
 class ExtendedRedirect(resource.Resource):
@@ -1423,6 +1423,8 @@ class HTTPConnectionPoolTests(unittest.TestCase, FakeReactorAndConnectMixin):
         self.fakeReactor = self.Reactor()
         self.pool = HTTPConnectionPool(self.fakeReactor)
         self.pool._factory = DummyFactory
+        # The retry code path is tested in HTTPConnectionPoolRetryTests:
+        self.pool.retryAutomatically = False
 
 
     def test_getReturnsNewIfCacheEmpty(self):
@@ -1556,6 +1558,28 @@ class HTTPConnectionPoolTests(unittest.TestCase, FakeReactorAndConnectMixin):
                                        ).addCallback(gotConnection)
 
 
+    def test_newConnection(self):
+        """
+        The pool's C{_newConnection} method constructs a new connection.
+        """
+        # We start out with one cached connection:
+        protocol = StubHTTPProtocol()
+        protocol.makeConnection(StringTransport())
+        key = 12245
+        self.pool._putConnection(key, protocol)
+
+        def gotConnection(newConnection):
+            # We got a new connection:
+            self.assertNotIdentical(protocol, newConnection)
+            # And the old connection is still there:
+            self.assertIn(protocol, self.pool._connections[key])
+            # While the new connection is not:
+            self.assertNotIn(newConnection, self.pool._connections.values())
+
+        d = self.pool._newConnection(key, DummyEndpoint())
+        return d.addCallback(gotConnection)
+
+
     def test_getSkipsDisconnected(self):
         """
         When getting connections out of the cache, disconnected connections
@@ -1620,6 +1644,7 @@ class HTTPConnectionPoolTests(unittest.TestCase, FakeReactorAndConnectMixin):
                 return succeed(p)
 
         pool = HTTPConnectionPool(self.fakeReactor, True)
+        pool.retryAutomatically = False
         result = []
         key = "a key"
         pool.getConnection(
@@ -1719,8 +1744,6 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         C{True}.
         """
         pool = HTTPConnectionPool(self.reactor)
-        endpoint = self.StubEndpoint(
-            TCP4ClientEndpoint(self.reactor, "127.0.0.1", 80), self)
         agent = client.Agent(self.reactor, pool=pool)
         agent._getEndpoint = lambda *args: self
         agent.request("GET", "http://127.0.0.1")
@@ -1739,8 +1762,6 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         pool.
         """
         pool = HTTPConnectionPool(self.reactor, persistent=False)
-        endpoint = self.StubEndpoint(
-            TCP4ClientEndpoint(self.reactor, "127.0.0.1", 80), self)
         agent = client.Agent(self.reactor, pool=pool)
         agent._getEndpoint = lambda *args: self
         agent.request("GET", "http://127.0.0.1")
@@ -1778,8 +1799,8 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         headers = http_headers.Headers()
         headers.addRawHeader("host", "foo")
         bodyProducer = object()
-        result = agent.request('GET', 'http://foo/',
-                               bodyProducer=bodyProducer, headers=headers)
+        agent.request('GET', 'http://foo/',
+                      bodyProducer=bodyProducer, headers=headers)
         self.assertEqual(agent._pool.connected, True)
 
 
@@ -2031,6 +2052,244 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         agent.request('GET', 'https://foo/')
         address = self.reactor.sslClients.pop()[5]
         self.assertEqual('192.168.0.1', address)
+
+
+
+class HTTPConnectionPoolRetryTests(unittest.TestCase, FakeReactorAndConnectMixin):
+    """
+    L{client.HTTPConnectionPool}, by using
+    L{client._RetryingHTTP11ClientProtocol}, supports retrying requests done
+    against previously cached connections.
+    """
+
+    def test_onlyRetryIdempotentMethods(self):
+        """
+        Only GET, HEAD, OPTIONS, TRACE, DELETE methods should cause a retry.
+        """
+        pool = client.HTTPConnectionPool(None)
+        connection = client._RetryingHTTP11ClientProtocol(None, pool)
+        self.assertTrue(connection._shouldRetry("GET", RequestNotSent(), None))
+        self.assertTrue(connection._shouldRetry("HEAD", RequestNotSent(), None))
+        self.assertTrue(connection._shouldRetry(
+                "OPTIONS", RequestNotSent(), None))
+        self.assertTrue(connection._shouldRetry(
+                "TRACE", RequestNotSent(), None))
+        self.assertTrue(connection._shouldRetry(
+                "DELETE", RequestNotSent(), None))
+        self.assertFalse(connection._shouldRetry(
+                "POST", RequestNotSent(), None))
+        self.assertFalse(connection._shouldRetry(
+                "MYMETHOD", RequestNotSent(), None))
+        # This will be covered by a different ticket, since we need support
+        #for resettable body producers:
+        # self.assertTrue(connection._doRetry("PUT", RequestNotSent(), None))
+
+
+    def test_onlyRetryIfNoResponseReceived(self):
+        """
+        Only L{RequestNotSent}, L{RequestTransmissionFailed} and
+        L{ResponseNeverReceived} exceptions should be a cause for retrying.
+        """
+        pool = client.HTTPConnectionPool(None)
+        connection = client._RetryingHTTP11ClientProtocol(None, pool)
+        self.assertTrue(connection._shouldRetry("GET", RequestNotSent(), None))
+        self.assertTrue(connection._shouldRetry(
+                "GET", RequestTransmissionFailed([]), None))
+        self.assertTrue(connection._shouldRetry(
+                "GET", ResponseNeverReceived([]),None))
+        self.assertFalse(connection._shouldRetry(
+                "GET", ResponseFailed([]), None))
+        self.assertFalse(connection._shouldRetry(
+                "GET", ConnectionRefusedError(), None))
+
+
+    def test_wrappedOnPersistentReturned(self):
+        """
+        If L{client.HTTPConnectionPool.getConnection} returns a previously
+        cached connection, it will get wrapped in a
+        L{client._RetryingHTTP11ClientProtocol}.
+        """
+        pool = client.HTTPConnectionPool(Clock())
+
+        # Add a connection to the cache:
+        protocol = StubHTTPProtocol()
+        protocol.makeConnection(StringTransport())
+        pool._putConnection(123, protocol)
+
+        # Retrieve it, it should come back wrapped in a
+        # _RetryingHTTP11ClientProtocol:
+        d = pool.getConnection(123, DummyEndpoint())
+
+        def gotConnection(connection):
+            self.assertIsInstance(connection,
+                                  client._RetryingHTTP11ClientProtocol)
+            self.assertIdentical(connection._clientProtocol, protocol)
+        return d.addCallback(gotConnection)
+
+
+    def test_notWrappedOnNewReturned(self):
+        """
+        If L{client.HTTPConnectionPool.getConnection} returns a new
+        connection, it will be returned as is.
+        """
+        pool = client.HTTPConnectionPool(None)
+        d = pool.getConnection(123, DummyEndpoint())
+
+        def gotConnection(connection):
+            # Don't want to use isinstance since potentially the wrapper might
+            # subclass it at some point:
+            self.assertIdentical(connection.__class__, HTTP11ClientProtocol)
+        return d.addCallback(gotConnection)
+
+
+    def retryAttempt(self, willWeRetry):
+        """
+        Fail a first request, possibly retrying depending on argument.
+        """
+        protocols = []
+        def newProtocol():
+            protocol = StubHTTPProtocol()
+            protocols.append(protocol)
+            return defer.succeed(protocol)
+
+        bodyProducer = object()
+        request = client.Request("FOO", "/", client.Headers(), bodyProducer,
+                                 persistent=True)
+        newProtocol()
+        protocol = protocols[0]
+        retrier = client._RetryingHTTP11ClientProtocol(protocol, newProtocol)
+
+        def _shouldRetry(m, e, bp):
+            self.assertEqual(m, "FOO")
+            self.assertIdentical(bp, bodyProducer)
+            self.assertIsInstance(e, (RequestNotSent, ResponseNeverReceived))
+            return willWeRetry
+        retrier._shouldRetry = _shouldRetry
+
+        d = retrier.request(request)
+
+        # So far, one request made:
+        self.assertEqual(len(protocols), 1)
+        self.assertEqual(len(protocols[0].requests), 1)
+
+        # Fail the first request:
+        protocol.requests[0][1].errback(RequestNotSent())
+        return d, protocols
+
+
+    def test_retryIfShouldRetryReturnsTrue(self):
+        """
+        L{client._RetryingHTTP11ClientProtocol} retries when
+        L{client._RetryingHTTP11ClientProtocol._shouldRetry} returns C{True}.
+        """
+        d, protocols = self.retryAttempt(True)
+        # We retried!
+        self.assertEqual(len(protocols), 2)
+        response = object()
+        protocols[1].requests[0][1].callback(response)
+        return d.addCallback(self.assertIdentical, response)
+
+
+    def test_dontRetryIfShouldRetryReturnsFalse(self):
+        """
+        L{client._RetryingHTTP11ClientProtocol} does not retry when
+        L{client._RetryingHTTP11ClientProtocol._shouldRetry} returns C{False}.
+        """
+        d, protocols = self.retryAttempt(False)
+        # We did not retry:
+        self.assertEqual(len(protocols), 1)
+        return self.assertFailure(d, RequestNotSent)
+
+
+    def test_onlyRetryWithoutBody(self):
+        """
+        L{_RetryingHTTP11ClientProtocol} only retries queries that don't have
+        a body.
+
+        This is an implementation restriction; if the restriction is fixed,
+        this test should be removed and PUT added to list of methods that
+        support retries.
+        """
+        pool = client.HTTPConnectionPool(None)
+        connection = client._RetryingHTTP11ClientProtocol(None, pool)
+        self.assertTrue(connection._shouldRetry("GET", RequestNotSent(), None))
+        self.assertFalse(connection._shouldRetry("GET", RequestNotSent(), object()))
+
+
+    def test_onlyRetryOnce(self):
+        """
+        If a L{client._RetryingHTTP11ClientProtocol} fails more than once on
+        an idempotent query before a response is received, it will not retry.
+        """
+        d, protocols = self.retryAttempt(True)
+        self.assertEqual(len(protocols), 2)
+        # Fail the second request too:
+        protocols[1].requests[0][1].errback(ResponseNeverReceived([]))
+        # We didn't retry again:
+        self.assertEqual(len(protocols), 2)
+        return self.assertFailure(d, ResponseNeverReceived)
+
+
+    def test_dontRetryIfRetryAutomaticallyFalse(self):
+        """
+        If L{HTTPConnectionPool.retryAutomatically} is set to C{False}, don't
+        wrap connections with retrying logic.
+        """
+        pool = client.HTTPConnectionPool(Clock())
+        pool.retryAutomatically = False
+
+        # Add a connection to the cache:
+        protocol = StubHTTPProtocol()
+        protocol.makeConnection(StringTransport())
+        pool._putConnection(123, protocol)
+
+        # Retrieve it, it should come back unwrapped:
+        d = pool.getConnection(123, DummyEndpoint())
+
+        def gotConnection(connection):
+            self.assertIdentical(connection, protocol)
+        return d.addCallback(gotConnection)
+
+
+    def test_retryWithNewConnection(self):
+        """
+        L{client.HTTPConnectionPool} creates
+        {client._RetryingHTTP11ClientProtocol} with a new connection factory
+        method that creates a new connection using the same key and endpoint
+        as the wrapped connection.
+        """
+        pool = client.HTTPConnectionPool(Clock())
+        key = 123
+        endpoint = DummyEndpoint()
+        newConnections = []
+
+        # Override the pool's _newConnection:
+        def newConnection(k, e):
+            newConnections.append((k, e))
+        pool._newConnection = newConnection
+
+        # Add a connection to the cache:
+        protocol = StubHTTPProtocol()
+        protocol.makeConnection(StringTransport())
+        pool._putConnection(key, protocol)
+
+        # Retrieve it, it should come back wrapped in a
+        # _RetryingHTTP11ClientProtocol:
+        d = pool.getConnection(key, endpoint)
+
+        def gotConnection(connection):
+            self.assertIsInstance(connection,
+                                  client._RetryingHTTP11ClientProtocol)
+            self.assertIdentical(connection._clientProtocol, protocol)
+            # Verify that the _newConnection method on retrying connection
+            # calls _newConnection on the pool:
+            self.assertEqual(newConnections, [])
+            connection._newConnection()
+            self.assertEqual(len(newConnections), 1)
+            self.assertEqual(newConnections[0][0], key)
+            self.assertIdentical(newConnections[0][1], endpoint)
+        return d.addCallback(gotConnection)
+
 
 
 
@@ -2687,8 +2946,7 @@ class ProxyAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         agent = client.ProxyAgent(endpoint, self.reactor, pool=pool)
         self.assertIdentical(pool, agent._pool)
 
-        headers = http_headers.Headers()
-        result = agent.request('GET', 'http://foo/')
+        agent.request('GET', 'http://foo/')
         self.assertEqual(agent._pool.connected, True)
 
 

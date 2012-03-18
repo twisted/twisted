@@ -13,7 +13,7 @@ from zope.interface.verify import verifyObject
 from twisted.python import log
 from twisted.python.failure import Failure
 from twisted.internet.interfaces import IConsumer, IPushProducer
-from twisted.internet.error import ConnectionDone
+from twisted.internet.error import ConnectionDone, ConnectionLost
 from twisted.internet.defer import Deferred, succeed, fail
 from twisted.internet.protocol import Protocol
 from twisted.trial.unittest import TestCase
@@ -24,7 +24,7 @@ from twisted.web._newclient import BadResponseVersion, ParseError, HTTP11ClientP
 from twisted.web._newclient import ChunkedEncoder, RequestGenerationFailed
 from twisted.web._newclient import RequestTransmissionFailed, ResponseFailed
 from twisted.web._newclient import WrongBodyLength, RequestNotSent
-from twisted.web._newclient import ConnectionAborted
+from twisted.web._newclient import ConnectionAborted, ResponseNeverReceived
 from twisted.web._newclient import BadHeaders, ResponseDone, PotentialDataLoss, ExcessWrite
 from twisted.web._newclient import TransportProxyProducer, LengthEnforcingConsumer, makeStatefulDispatcher
 from twisted.web.http_headers import Headers
@@ -777,6 +777,39 @@ class HTTPClientParserTests(TestCase):
         protocol.connectionLost(None)
 
         self.assertEqual(len(self.flushLoggedErrors(ArbitraryException)), 1)
+
+
+    def test_noResponseAtAll(self):
+        """
+        If no response at all was received and the connection is lost, the
+        resulting error is L{ResponseNeverReceived}.
+        """
+        protocol = HTTPClientParser(
+            Request('HEAD', '/', _boringHeaders, None),
+            lambda ign: None)
+        d = protocol._responseDeferred
+
+        protocol.makeConnection(StringTransport())
+        protocol.connectionLost(ConnectionLost())
+        return self.assertFailure(d, ResponseNeverReceived)
+
+
+    def test_someResponseButNotAll(self):
+        """
+        If a partial response was received and the connection is lost, the
+        resulting error is L{ResponseFailed}, but not
+        L{ResponseNeverReceived}.
+        """
+        protocol = HTTPClientParser(
+            Request('HEAD', '/', _boringHeaders, None),
+            lambda ign: None)
+        d = protocol._responseDeferred
+
+        protocol.makeConnection(StringTransport())
+        protocol.dataReceived('2')
+        protocol.connectionLost(ConnectionLost())
+        return self.assertFailure(d, ResponseFailed).addCallback(
+            self.assertIsInstance, ResponseFailed)
 
 
 

@@ -161,6 +161,14 @@ class ResponseFailed(_WrapperException):
         self.response = response
 
 
+
+class ResponseNeverReceived(ResponseFailed):
+    """
+    A L{ResponseFailed} that knows no response bytes at all have been received.
+    """
+
+
+
 class RequestNotSent(Exception):
     """
     L{RequestNotSent} indicates that an attempt was made to issue a request but
@@ -347,6 +355,8 @@ class HTTPClientParser(HTTPParser):
     @ivar _responseDeferred: A L{Deferred} which will be called back with the
         response when all headers in the response have been received.
         Thereafter, C{None}.
+
+    @ivar _everReceivedData: C{True} if any bytes have been received.
     """
     NO_BODY_CODES = set([NO_CONTENT, NOT_MODIFIED])
 
@@ -360,6 +370,15 @@ class HTTPClientParser(HTTPParser):
         self.request = request
         self.finisher = finisher
         self._responseDeferred = Deferred()
+        self._everReceivedData = False
+
+
+    def dataReceived(self, data):
+        """
+        Override so that we know if any response has been received.
+        """
+        self._everReceivedData = True
+        HTTPParser.dataReceived(self, data)
 
 
     def parseVersion(self, strversion):
@@ -513,7 +532,11 @@ class HTTPClientParser(HTTPParser):
                 # making things difficult.
                 log.err()
         elif self.state != DONE:
-            self._responseDeferred.errback(Failure(ResponseFailed([reason])))
+            if self._everReceivedData:
+                exceptionClass = ResponseFailed
+            else:
+                exceptionClass = ResponseNeverReceived
+            self._responseDeferred.errback(Failure(exceptionClass([reason])))
             del self._responseDeferred
 
 

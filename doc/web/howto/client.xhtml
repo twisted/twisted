@@ -412,6 +412,18 @@ pool.maxPersistentPerHost = 1
     </p>
 
 
+    <h4>Automatic Retries</h4>
+
+    <p>If a request fails without getting a response, and the request is
+    something that hopefully can be retried without having any side-effects
+    (e.g. a request with method GET), it will be retried automatically when
+    sending a request over a previously-cached persistent connection. You can
+    disable this behavior by setting <code class="API"
+    base="twisted.web.client.HTTPConnectionPool">retryAutomatically</code>
+    to <code>False</code>. Note that each request will only be retried
+    once.</p>
+
+
     <h3>Following redirects</h3>
 
     <p>

@@ -647,6 +647,8 @@ def downloadPage(url, file, contextFactory=None, *args, **kwargs):
 from twisted.web.error import SchemeNotSupported
 from twisted.web._newclient import Request, Response, HTTP11ClientProtocol
 from twisted.web._newclient import ResponseDone, ResponseFailed
+from twisted.web._newclient import RequestNotSent, RequestTransmissionFailed
+from twisted.web._newclient import ResponseNeverReceived
 
 try:
     from twisted.internet.ssl import ClientContextFactory
@@ -821,8 +823,64 @@ class _HTTP11ClientFactory(protocol.Factory):
     def __init__(self, quiescentCallback):
         self._quiescentCallback = quiescentCallback
 
+
     def buildProtocol(self, addr):
         return HTTP11ClientProtocol(self._quiescentCallback)
+
+
+
+class _RetryingHTTP11ClientProtocol(object):
+    """
+    A wrapper for L{HTTP11ClientProtocol} that automatically retries requests.
+
+    @ivar _clientProtocol: The underlying L{HTTP11ClientProtocol}.
+
+    @ivar _newConnection: A callable that creates a new connection for a
+        retry.
+    """
+
+    def __init__(self, clientProtocol, newConnection):
+        self._clientProtocol = clientProtocol
+        self._newConnection = newConnection
+
+
+    def _shouldRetry(self, method, exception, bodyProducer):
+        """
+        Indicate whether request should be retried.
+
+        Only returns C{True} if method is idempotent, no response was
+        received, and no body was sent. The latter requirement may be relaxed
+        in the future, and PUT added to approved method list.
+        """
+        if method not in ("GET", "HEAD", "OPTIONS", "DELETE", "TRACE"):
+            return False
+        if not isinstance(exception, (RequestNotSent, RequestTransmissionFailed,
+                                      ResponseNeverReceived)):
+            return False
+        if bodyProducer is not None:
+            return False
+        return True
+
+
+    def request(self, request):
+        """
+        Do a request, and retry once (with a new connection) it it fails in
+        a retryable manner.
+
+        @param request: A L{Request} instance that will be requested using the
+            wrapped protocol.
+        """
+        d = self._clientProtocol.request(request)
+
+        def failed(reason):
+            if self._shouldRetry(request.method, reason.value,
+                                 request.bodyProducer):
+                return self._newConnection().addCallback(
+                    lambda connection: connection.request(request))
+            else:
+                return reason
+        d.addErrback(failed)
+        return d
 
 
 
@@ -837,8 +895,12 @@ class HTTPConnectionPool(object):
     Connections are stored using keys, which should be chosen such that any
     connections stored under a given key can be used interchangeably.
 
+    Failed requests done using previously cached connections will be retried
+    once if they use an idempotent method (e.g. GET), in case the HTTP server
+    timed them out.
+
     @ivar persistent: Boolean indicating whether connections should be
-        persistent.
+        persistent. Connections are persistent by default.
 
     @ivar maxPersistentPerHost: The maximum number of cached persistent
         connections for a C{host:port} destination.
@@ -847,13 +909,16 @@ class HTTPConnectionPool(object):
     @ivar cachedConnectionTimeout: Number of seconds a cached persistent
         connection will stay open before disconnecting.
 
+    @ivar retryAutomatically: C{boolean} indicating whether idempotent
+        requests should be retried once if no response was received.
+
     @ivar _factory: The factory used to connect to the proxy.
 
     @ivar _connections: Map (scheme, host, port) to lists of
         L{HTTP11ClientProtocol} instances.
 
-    @ivar _timeouts: Map L{HTTP11ClientProtocol} instances to a C{IDelayedCall}
-        instance of their timeout.
+    @ivar _timeouts: Map L{HTTP11ClientProtocol} instances to a
+        C{IDelayedCall} instance of their timeout.
 
     @since: 12.1
     """
@@ -861,6 +926,7 @@ class HTTPConnectionPool(object):
     _factory = _HTTP11ClientFactory
     maxPersistentPerHost = 2
     cachedConnectionTimeout = 240
+    retryAutomatically = True
 
     def __init__(self, reactor, persistent=True):
         self._reactor = reactor
@@ -883,8 +949,14 @@ class HTTPConnectionPool(object):
         will be returned to this pool automatically. As such, only a single
         request should be sent using the returned connection.
 
-        @return: A C{Deferred} that will fire with L{HTTP11ClientProtocol}
-           that can be used to send a single HTTP request.
+        @param key: A unique key identifying connections that can be used
+            interchangeably.
+
+        @param endpoint: An endpoint that can be used to open a new connection
+            if no cached connection is available.
+
+        @return: A C{Deferred} that will fire with a L{HTTP11ClientProtocol}
+           (or a wrapper) that can be used to send a single HTTP request.
         """
         # Try to get cached version:
         connections = self._connections.get(key)
@@ -894,8 +966,21 @@ class HTTPConnectionPool(object):
             self._timeouts[connection].cancel()
             del self._timeouts[connection]
             if connection.state == "QUIESCENT":
+                if self.retryAutomatically:
+                    newConnection = lambda: self._newConnection(key, endpoint)
+                    connection = _RetryingHTTP11ClientProtocol(
+                        connection, newConnection)
                 return defer.succeed(connection)
 
+        return self._newConnection(key, endpoint)
+
+
+    def _newConnection(self, key, endpoint):
+        """
+        Create a new connection.
+
+        This implements the new connection code path for L{getConnection}.
+        """
         def quiescentCallback(protocol):
             self._putConnection(key, protocol)
         factory = self._factory(quiescentCallback)
