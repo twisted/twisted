@@ -7,10 +7,11 @@ Tests for L{twisted.names.tap}.
 
 from twisted.trial.unittest import TestCase
 from twisted.python.usage import UsageError
-from twisted.names.tap import Options
+from twisted.names.tap import Options, _buildResolvers
 from twisted.names.dns import PORT
 from twisted.names.secondary import SecondaryAuthorityService
-
+from twisted.names.resolve import ResolverChain
+from twisted.names.client import Resolver
 
 class OptionsTests(TestCase):
     """
@@ -75,3 +76,24 @@ class OptionsTests(TestCase):
         self.assertIsInstance(options.svcs[1], SecondaryAuthorityService)
         self.assertEqual(secondary.primary, '1.2.3.5')
         self.assertEqual(secondary._port, 5354)
+
+
+    def test_recursiveConfiguration(self):
+        """
+        Recursive DNS lookups, if enabled, should be a last-resort option.
+        Any other lookup method (cache, local lookup, etc.) should take
+        precedence over recursive lookups
+        """
+        options = Options()
+        options.parseOptions(['--hosts-file', 'hosts.txt', '--recursive'])
+        ca, cl = _buildResolvers(options)
+
+        # Extra cleanup, necessary on POSIX because client.Resolver doesn't know
+        # when to stop parsing resolv.conf.  See #NNN for improving this.
+        for x in cl:
+            if isinstance(x, ResolverChain):
+                recurser = x.resolvers[-1]
+                if isinstance(recurser, Resolver):
+                    recurser._parseCall.cancel()
+
+        self.assertIsInstance(cl[-1], ResolverChain)
