@@ -1,0 +1,1 @@
+gtk and glib reactors now run I/O and scheduled events with lower priority, to ensure the UI stays responsive.

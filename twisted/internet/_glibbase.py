@@ -164,11 +164,15 @@ class GlibReactorBase(GlibSignalMixin,
     def input_add(self, source, condition, callback):
         if hasattr(source, 'fileno'):
             # handle python objects
-            def wrapper(source, condition, real_s=source, real_cb=callback):
-                return real_cb(real_s, condition)
-            return self._glib.io_add_watch(source.fileno(), condition, wrapper)
+            def wrapper(ignored, condition):
+                return callback(source, condition)
+            fileno = source.fileno()
         else:
-            return self._glib.io_add_watch(source, condition, callback)
+            fileno = source
+            wrapper = callback
+        return self._glib.io_add_watch(
+            fileno, condition, wrapper,
+            priority=self._glib.PRIORITY_DEFAULT_IDLE)
 
 
     def _ioEventCallback(self, source, condition):
@@ -330,8 +334,9 @@ class GlibReactorBase(GlibSignalMixin,
             self._simtag = None
         timeout = self.timeout()
         if timeout is not None:
-            self._simtag = self._timeout_add(int(timeout * 1000),
-                                             self._simulate)
+            self._simtag = self._timeout_add(
+                int(timeout * 1000), self._simulate,
+                priority=self._glib.PRIORITY_DEFAULT_IDLE)
 
 
     def _simulate(self):
@@ -393,4 +398,6 @@ class PortableGlibReactorBase(GlibSignalMixin, selectreactor.SelectReactor):
         timeout = min(self.timeout(), 0.01)
         if timeout is None:
             timeout = 0.01
-        self._simtag = self._timeout_add(int(timeout * 1000), self.simulate)
+        self._simtag = self._timeout_add(
+            int(timeout * 1000), self.simulate,
+            priority=self._glib.PRIORITY_DEFAULT_IDLE)
