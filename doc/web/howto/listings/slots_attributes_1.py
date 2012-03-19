@@ -1,7 +1,8 @@
 from twisted.web.template import Element, renderer, XMLFile
+from twisted.python.filepath import FilePath
 
 class ExampleElement(Element):
-    loader = XMLFile('slots-attributes-1.xml')
+    loader = XMLFile(FilePath('slots-attributes-1.xml'))
 
     @renderer
     def person_profile(self, request, tag):

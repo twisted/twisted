@@ -1,0 +1,1 @@
+twisted.web.template.XMLFile's support for file objects and filenames is now deprecated.  Use the new support for FilePath objects.

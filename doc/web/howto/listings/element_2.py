@@ -1,7 +1,8 @@
 from twisted.web.template import Element, renderer, XMLFile, tags
+from twisted.python.filepath import FilePath
 
 class ExampleElement(Element):
-    loader = XMLFile('template-1.xml')
+    loader = XMLFile(FilePath('template-1.xml'))
 
     @renderer
     def header(self, request, tag):

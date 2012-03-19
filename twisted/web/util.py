@@ -19,6 +19,7 @@ from twisted.python.filepath import FilePath
 from twisted.python.reflect import fullyQualifiedName
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.versions import Version
+from twisted.python.modules import getModule
 
 from twisted.web import html, resource
 from twisted.web.template import (
@@ -368,7 +369,7 @@ class FailureElement(Element):
 
     @since: 12.1
     """
-    loader = XMLFile(FilePath(__file__).sibling('failure.xhtml').open())
+    loader = XMLFile(getModule(__name__).filePath.sibling("failure.xhtml"))
 
     def __init__(self, failure, loader=None):
         Element.__init__(self, loader)

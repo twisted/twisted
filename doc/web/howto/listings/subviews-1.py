@@ -1,8 +1,9 @@
 from twisted.web.template import (
     XMLFile, TagLoader, Element, renderer, flattenString)
+from twisted.python.filepath import FilePath
 
 class WidgetsElement(Element):
-    loader = XMLFile('subviews-1.xml')
+    loader = XMLFile(FilePath('subviews-1.xml'))
 
     widgetData = ['gadget', 'contraption', 'gizmo', 'doohickey']
 

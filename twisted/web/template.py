@@ -25,12 +25,14 @@ __all__ = [
     'Comment', 'CDATA', 'Tag', 'slot', 'CharRef', 'renderElement'
     ]
 
+import warnings
 from zope.interface import implements
 
 from cStringIO import StringIO
 from xml.sax import make_parser, handler
 
 from twisted.web._stan import Tag, slot, Comment, CDATA, CharRef
+from twisted.python.filepath import FilePath
 
 TEMPLATE_NAMESPACE = 'http://twistedmatrix.com/ns/twisted.web.template/0.1'
 
@@ -331,6 +333,9 @@ def _flatsaxParse(fl):
     Perform a SAX parse of an XML document with the _ToStan class.
 
     @param fl: The XML document to be parsed.
+    @type fl: A file object or filename.
+
+    @return: a C{list} of Stan objects.
     """
     parser = make_parser()
     parser.setFeature(handler.feature_validation, 0)
@@ -352,12 +357,16 @@ class TagLoader(object):
     """
     An L{ITemplateLoader} that loads existing L{IRenderable} providers.
 
+    @ivar tag: The object which will be loaded.
     @type tag: An L{IRenderable} provider.
-    @param tag: The object which will be loaded.
     """
     implements(ITemplateLoader)
 
     def __init__(self, tag):
+        """
+        @param tag: The object which will be loaded.
+        @type tag: An L{IRenderable} provider.
+        """
         self.tag = tag
 
 
@@ -365,23 +374,33 @@ class TagLoader(object):
         return [self.tag]
 
 
+
 class XMLString(object):
     """
     An L{ITemplateLoader} that loads and parses XML from a string.
 
-    @type s: C{string}
-    @param s: The string from which to load the XML.
+    @ivar _loadedTemplate: The loaded document.
+    @type _loadedTemplate: a C{list} of Stan objects.
     """
     implements(ITemplateLoader)
 
     def __init__(self, s):
         """
         Run the parser on a StringIO copy of the string.
+
+        @param s: The string from which to load the XML.
+        @type s: C{str}
         """
         self._loadedTemplate = _flatsaxParse(StringIO(s))
 
 
     def load(self):
+        """
+        Return the document.
+
+        @return: the loaded document.
+        @rtype: a C{list} of Stan objects.
+        """
         return self._loadedTemplate
 
 
@@ -390,23 +409,62 @@ class XMLFile(object):
     """
     An L{ITemplateLoader} that loads and parses XML from a file.
 
-    @type fobj: file object
-    @param fobj: The file object from which to load the XML.
+    @ivar _loadedTemplate: The loaded document, or C{None}, if not loaded.
+    @type _loadedTemplate: a C{list} of Stan objects, or C{None}.
+
+    @ivar _path: The L{FilePath}, file object, or filename that is being
+        loaded from.
     """
     implements(ITemplateLoader)
 
-    def __init__(self, fobj):
-        self._loadDoc = lambda: _flatsaxParse(fobj)
+    def __init__(self, path):
+        """
+        Run the parser on a file.
+
+        @param path: The file from which to load the XML.
+        @type path: L{FilePath}
+        """
+        if not isinstance(path, FilePath):
+            warnings.warn(
+                "Passing filenames or file objects to XMLFile is deprecated "
+                "since Twisted 12.1.  Pass a FilePath instead.",
+                category=DeprecationWarning, stacklevel=2)
         self._loadedTemplate = None
+        self._path = path
+
+
+    def _loadDoc(self):
+        """
+        Read and parse the XML.
+
+        @return: the loaded document.
+        @rtype: a C{list} of Stan objects.
+        """
+        if not isinstance(self._path, FilePath):
+            return _flatsaxParse(self._path)
+        else:
+            f = self._path.open('r')
+            try:
+                return _flatsaxParse(f)
+            finally:
+                f.close()
+
+
+    def __repr__(self):
+        return '<XMLFile of %r>' % (self._path,)
 
 
     def load(self):
         """
-        Load the document if it's not already loaded.
+        Return the document, first loading it if necessary.
+
+        @return: the loaded document.
+        @rtype: a C{list} of Stan objects.
         """
         if self._loadedTemplate is None:
             self._loadedTemplate = self._loadDoc()
         return self._loadedTemplate
+
 
 
 # Last updated October 2011, using W3Schools as a reference. Link:

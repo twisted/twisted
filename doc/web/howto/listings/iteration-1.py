@@ -1,7 +1,8 @@
 from twisted.web.template import Element, renderer, XMLFile, flattenString
+from twisted.python.filepath import FilePath
 
 class WidgetsElement(Element):
-    loader = XMLFile('iteration-1.xml')
+    loader = XMLFile(FilePath('iteration-1.xml'))
 
     widgetData = ['gadget', 'contraption', 'gizmo', 'doohickey']
 
