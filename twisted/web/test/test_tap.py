@@ -10,9 +10,10 @@ import os, stat
 from twisted.python.usage import UsageError
 from twisted.python.filepath import FilePath
 from twisted.internet.interfaces import IReactorUNIX
-from twisted.internet import reactor, endpoints
+from twisted.internet import reactor
 from twisted.python.threadpool import ThreadPool
 from twisted.trial.unittest import TestCase
+from twisted.application import strports
 
 from twisted.web.server import Site
 from twisted.web.static import Data, File
@@ -140,8 +141,8 @@ class ServiceTests(TestCase):
         path = os.path.expanduser(
             os.path.join('~', UserDirectory.userSocketName))
         self.assertEqual(
-            endpoints._parseServer(options['port'])[:2],
-            ('UNIX', (path,)))
+            strports.parse(options['port'], None)[:2],
+            ('UNIX', (path, None)))
 
     if not IReactorUNIX.providedBy(reactor):
         test_defaultPersonalPath.skip = (
@@ -156,8 +157,8 @@ class ServiceTests(TestCase):
         options = Options()
         options.parseOptions([])
         self.assertEqual(
-            endpoints._parseServer(options['port'])[:2],
-            ('TCP', (8080,)))
+            strports.parse(options['port'], None)[:2],
+            ('TCP', (8080, None)))
 
 
     def test_wsgi(self):

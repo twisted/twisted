@@ -9,15 +9,33 @@ Construct listening port services from a simple string description.
 @see: L{twisted.internet.endpoints.clientFromString}
 """
 
-from zope.interface import implements
+import warnings
 
-from twisted.internet.interfaces import IListeningPort, IAddress
 from twisted.internet import endpoints
+from twisted.python.deprecate import deprecatedModuleAttribute
+from twisted.python.versions import Version
 from twisted.application.internet import StreamServerEndpointService
 
 
 
-def service(description, factory, reactor=None):
+def parse(description, factory, default='tcp'):
+    """
+    This function is deprecated as of Twisted 10.2.
+
+    @see: L{twisted.internet.endpoints.server}
+    """
+    return endpoints._parseServer(description, factory, default)
+
+deprecatedModuleAttribute(
+    Version("Twisted", 10, 2, 0),
+    "in favor of twisted.internet.endpoints.serverFromString",
+    __name__, "parse")
+
+
+
+_DEFAULT = object()
+
+def service(description, factory, default=_DEFAULT, reactor=None):
     """
     Return the service corresponding to a description.
 
@@ -31,6 +49,11 @@ def service(description, factory, reactor=None):
 
     @type factory: L{twisted.internet.interfaces.IProtocolFactory}
 
+    @type default: C{str} or C{None}
+
+    @param default: Do not use this parameter.  It is deprecated since Twisted
+        10.2.0.
+
     @rtype: C{twisted.application.service.IService}
 
     @return: the service corresponding to a description of a reliable
@@ -40,77 +63,30 @@ def service(description, factory, reactor=None):
     """
     if reactor is None:
         from twisted.internet import reactor
+    if default is _DEFAULT:
+        default = None
+    else:
+        message = "The 'default' parameter was deprecated in Twisted 10.2.0."
+        if default is not None:
+            message += (
+                "  Use qualified endpoint descriptions; for example, "
+                "'tcp:%s'." % (description,))
+        warnings.warn(
+            message=message, category=DeprecationWarning, stacklevel=2)
     svc = StreamServerEndpointService(
-        endpoints.serverFromString(reactor, description), factory)
+        endpoints._serverFromStringLegacy(reactor, description, default),
+        factory)
     svc._raiseSynchronously = True
     return svc
 
 
 
-class _NullAddress(object):
-    """
-    An L{twisted.internet.interfaces.IAddress} provider which represents no
-    address.
-    """
-    implements(IAddress)
-
-
-
-class _ListeningPortAdapter(object):
-    """
-    An adapter to make a L{StreamServerEndpointService} look like a listening
-    port.
-
-    @ivar service: The L{StreamServerEndpointService} being wrapped.
-
-    @ivar _wrappedPort: The L{twisted.internet.interfaces.IListeningPort}
-        provider that came from the underlying endpoint, or C{None} if there is
-        no current port.
-    """
-    implements(IListeningPort)
-
-    def __init__(self, service):
-        self.service = service
-        self._wrappedPort = None
-
-
-    def startListening(self):
-        """
-        Start listening by starting the wrapped endpoint.
-        """
-        self.service.startService()
-        # Eventually, we'll have the actual listening port.
-        @self.service._waitingForPort.addCallback
-        def _cb(port):
-            self._wrappedPort = port
-            return port
-
-
-    def stopListening(self):
-        """
-        Stop listening by stopping the wrapped endpoint.
-        """
-        self._wrappedPort = None
-        return self.service.stopService()
-
-
-    def getHost(self):
-        """
-        Get the host the wrapped endpoint is listening on, if we're listening.
-        """
-        # In _most_ cases, listens are immediate and we'll have _wrappedPort as
-        # soon as startListening is called. Otherwise, we got nothin'.
-        if self._wrappedPort is None:
-            return _NullAddress()
-        return self._wrappedPort.getHost()
-
-
-
-def listen(description, factory, reactor=None):
+def listen(description, factory, default=None):
     """Listen on a port corresponding to a description
 
     @type description: C{str}
     @type factory: L{twisted.internet.interfaces.IProtocolFactory}
+    @type default: C{str} or C{None}
     @rtype: C{twisted.internet.interfaces.IListeningPort}
     @return: the port corresponding to a description of a reliable
     virtual circuit server.
@@ -118,10 +94,10 @@ def listen(description, factory, reactor=None):
     See the documentation of the C{parse} function for description
     of the semantics of the arguments.
     """
-    port = _ListeningPortAdapter(service(description, factory, reactor))
-    port.startListening()
-    return port
+    from twisted.internet import reactor
+    name, args, kw = parse(description, factory, default)
+    return getattr(reactor, 'listen'+name)(*args, **kw)
 
 
 
-__all__ = ['service', 'listen']
+__all__ = ['parse', 'service', 'listen']
