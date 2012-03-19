@@ -1,0 +1,1 @@
+twisted.news.nntp.NNTPServer now has additional test coverage and less redundant implementation code.
