@@ -121,10 +121,10 @@ class ProducerTestsMixin(ReactorBuilder, TLSMixin, ContextGeneratingMixin):
         done = Deferred()
         producer = FakeProducer()
 
-        serverFactory = protocol.ServerFactory
+        serverFactory = protocol.ServerFactory()
         serverFactory.protocol = protocol.Protocol
         reactor = self.buildReactor()
-        serverPort = reactor.listenSSL(0, protocol.ServerFactory(),
+        serverPort = reactor.listenSSL(0, serverFactory,
                                        self.getServerContext(),
                                        interface="127.0.0.1")
         self.addCleanup(serverPort.stopListening)
@@ -160,10 +160,10 @@ class ProducerTestsMixin(ReactorBuilder, TLSMixin, ContextGeneratingMixin):
             def connectionMade(self):
                 self.transport.startTLS(serverContext)
 
-        serverFactory = protocol.ServerFactory
+        serverFactory = protocol.ServerFactory()
         serverFactory.protocol = StartTLSProtocol
         reactor = self.buildReactor()
-        serverPort = reactor.listenTCP(0, protocol.ServerFactory(),
+        serverPort = reactor.listenTCP(0, serverFactory,
                                        interface="127.0.0.1")
         self.addCleanup(serverPort.stopListening)
 
@@ -219,9 +219,9 @@ class ProducerTestsMixin(ReactorBuilder, TLSMixin, ContextGeneratingMixin):
             def connectionLost(self, reason):
                 reactor.stop()
 
-        serverFactory = protocol.ServerFactory
+        serverFactory = protocol.ServerFactory()
         serverFactory.protocol = RegisterTLSProtocol
-        serverPort = reactor.listenTCP(0, protocol.ServerFactory(),
+        serverPort = reactor.listenTCP(0, serverFactory,
                                        interface="127.0.0.1")
         self.addCleanup(serverPort.stopListening)
 
