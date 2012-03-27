@@ -694,6 +694,7 @@ class TestRenderElement(TestCase):
         def check(_):
             self.assertEqual(
                 "".join(self.request.written),
+                "<!DOCTYPE html>\n"
                 "<p>Hello, world.</p>")
             self.assertTrue(self.request.finished)
 
@@ -718,7 +719,8 @@ class TestRenderElement(TestCase):
             self.assertEqual(len(flushed), 1)
             self.assertEqual(
                 "".join(self.request.written),
-                ('<div style="font-size:800%;'
+                ('<!DOCTYPE html>\n'
+                 '<div style="font-size:800%;'
                  'background-color:#FFF;'
                  'color:#F00'
                  '">An error occurred while rendering the response.</div>'))
@@ -747,11 +749,62 @@ class TestRenderElement(TestCase):
             self.assertEqual(len(flushed), 1)
             self.assertEqual(
                 "".join(self.request.written),
-                "<p>I failed.</p>")
+                "<!DOCTYPE html>\n<p>I failed.</p>")
             self.assertTrue(self.request.finished)
 
         d.addCallback(check)
 
         renderElement(self.request, element, _failElement=TestFailureElement)
+
+        return d
+
+
+    def test_nonDefaultDoctype(self):
+        """
+        L{renderElement} will write the doctype string specified by the
+        doctype keyword argument.
+        """
+
+        element = TestElement()
+
+        d = self.request.notifyFinish()
+
+        def check(_):
+            self.assertEqual(
+                "".join(self.request.written),
+                ('<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"'
+                 ' "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">\n'
+                 '<p>Hello, world.</p>'))
+
+        d.addCallback(check)
+
+        renderElement(
+            self.request,
+            element,
+            doctype=(
+                '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"'
+                ' "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">'))
+
+        return d
+
+
+    def test_noneDoctype(self):
+        """
+        L{renderElement} will not write out a doctype if the doctype keyword
+        argument is C{None}.
+        """
+
+        element = TestElement()
+
+        d = self.request.notifyFinish()
+
+        def check(_):
+            self.assertEqual(
+                "".join(self.request.written),
+                '<p>Hello, world.</p>')
+
+        d.addCallback(check)
+
+        renderElement(self.request, element, doctype=None)
 
         return d

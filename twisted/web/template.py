@@ -519,17 +519,26 @@ tags = _TagFactory()
 
 
 
-def renderElement(request, element, _failElement=None):
+def renderElement(request, element,
+                  doctype='<!DOCTYPE html>', _failElement=None):
     """
     Render an element or other C{IRenderable}.
 
     @param request: The C{Request} being rendered to.
     @param element: An C{IRenderable} which will be rendered.
+    @param doctype: A C{str} which will be written as the first line of
+        the request, or C{None} to disable writing of a doctype.  The C{string}
+        should not include a trailing newline and will default to the HTML5
+        doctype C{'<!DOCTYPE html>'}.
 
     @returns: NOT_DONE_YET
 
     @since: 12.1
     """
+    if doctype is not None:
+        request.write(doctype)
+        request.write('\n')
+
     if _failElement is None:
         _failElement = twisted.web.util.FailureElement
 
