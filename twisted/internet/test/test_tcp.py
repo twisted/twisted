@@ -2,7 +2,8 @@
 # See LICENSE for details.
 
 """
-Tests for implementations of L{IReactorTCP}.
+Tests for implementations of L{IReactorTCP} and the TCP parts of
+L{IReactorSocket}.
 """
 
 __metaclass__ = type
@@ -20,7 +21,7 @@ from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.error import ConnectionLost, UserError, ConnectionRefusedError
 from twisted.internet.error import ConnectionDone, ConnectionAborted
 from twisted.internet.interfaces import (
-    ILoggingContext, IConnector, IReactorFDSet)
+    ILoggingContext, IConnector, IReactorFDSet, IReactorSocket)
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.defer import (
     Deferred, DeferredList, maybeDeferred, gatherResults)
@@ -610,19 +611,58 @@ class StreamTransportTestsMixin(LogObserverMixin):
         self.assertFullyNewStyle(port)
 
 
-
-class TCPPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin,
-                          StreamTransportTestsMixin):
+class ListenTCPMixin(object):
     """
-    Tests for L{IReactorTCP.listenTCP}
+    Mixin which uses L{IReactorTCP.listenTCP} to hand out listening TCP ports.
     """
-    def getListeningPort(self, reactor, factory):
+    def getListeningPort(self, reactor, factory, port=0, interface=''):
         """
         Get a TCP port from a reactor.
         """
-        return reactor.listenTCP(0, factory)
+        return reactor.listenTCP(port, factory, interface=interface)
 
 
+
+class SocketTCPMixin(object):
+    """
+    Mixin which uses L{IReactorSocket.adoptStreamPort} to hand out listening TCP
+    ports.
+    """
+    def getListeningPort(self, reactor, factory, port=0, interface=''):
+        """
+        Get a TCP port from a reactor, wrapping an already-initialized file
+        descriptor.
+        """
+        if IReactorSocket.providedBy(reactor):
+            if ':' in interface:
+                domain = socket.AF_INET6
+                address = socket.getaddrinfo(interface, port)[0][4]
+            else:
+                domain = socket.AF_INET
+                address = (interface, port)
+            portSock = socket.socket(domain)
+            portSock.bind(address)
+            portSock.listen(3)
+            portSock.setblocking(False)
+            try:
+                return reactor.adoptStreamPort(
+                    portSock.fileno(), portSock.family, factory)
+            finally:
+                # The socket should still be open; fileno will raise if it is
+                # not.
+                portSock.fileno()
+                # Now clean it up, because the rest of the test does not need
+                # it.
+                portSock.close()
+        else:
+            raise SkipTest("Reactor does not provide IReactorSocket")
+
+
+
+class TCPPortTestsMixin(object):
+    """
+    Tests for L{IReactorTCP.listenTCP}
+    """
     def getExpectedStartListeningLogMessage(self, port, factory):
         """
         Get the message expected to be logged when a TCP port starts listening.
@@ -644,7 +684,7 @@ class TCPPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin,
         listening port listens on an IPv4 address.
         """
         reactor = self.buildReactor()
-        port = reactor.listenTCP(0, ServerFactory())
+        port = self.getListeningPort(reactor, ServerFactory())
         address = port.getHost()
         self.assertIsInstance(address, IPv4Address)
 
@@ -658,7 +698,8 @@ class TCPPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin,
         reactor = self.buildReactor()
         host, portNumber = findFreePort(
             family=socket.AF_INET6, interface='::1')[:2]
-        port = reactor.listenTCP(portNumber, ServerFactory(), interface=host)
+        port = self.getListeningPort(
+            reactor, ServerFactory(), portNumber, host)
         address = port.getHost()
         self.assertIsInstance(address, IPv6Address)
         self.assertEqual('::1', address.host)
@@ -676,7 +717,7 @@ class TCPPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin,
         """
         linkLocal = getLinkLocalIPv6Address()
         reactor = self.buildReactor()
-        port = reactor.listenTCP(0, ServerFactory(), interface=linkLocal)
+        port = self.getListeningPort(reactor, ServerFactory(), 0, linkLocal)
         address = port.getHost()
         self.assertIsInstance(address, IPv6Address)
         self.assertEqual(linkLocal, address.host)
@@ -710,7 +751,7 @@ class TCPPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin,
 
         factory = ObserveAddress()
         reactor = self.buildReactor()
-        port = reactor.listenTCP(0, factory, interface=interface)
+        port = self.getListeningPort(reactor, factory, 0, interface)
         client.setblocking(False)
         try:
             connect(client, (port.getHost().host, port.getHost().port))
@@ -792,7 +833,7 @@ class TCPPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin,
         reactor = self.buildReactor()
         factory = ServerFactory()
         factory.protocol = ObserveAddress
-        port = reactor.listenTCP(0, factory, interface=interface)
+        port = self.getListeningPort(reactor, factory, 0, interface)
         client.setblocking(False)
         try:
             connect(client, (port.getHost().host, port.getHost().port))
@@ -894,6 +935,20 @@ class TCPPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin,
             IPv6Address('TCP', *client.getsockname()[:2]), peerAddress)
     if ipv6Skip:
         test_serverGetPeerOnIPv6ScopeID.skip = ipv6Skip
+
+
+
+class TCPPortTestsBuilder(ReactorBuilder, ListenTCPMixin, TCPPortTestsMixin,
+                          ObjectModelIntegrationMixin,
+                          StreamTransportTestsMixin):
+    pass
+
+
+
+class TCPFDPortTestsBuilder(ReactorBuilder, SocketTCPMixin, TCPPortTestsMixin,
+                            ObjectModelIntegrationMixin,
+                            StreamTransportTestsMixin):
+    pass
 
 
 
@@ -1301,6 +1356,7 @@ class WriteSequenceTests(ReactorBuilder):
 globals().update(TCP4ClientTestsBuilder.makeTestCaseClasses())
 globals().update(TCP6ClientTestsBuilder.makeTestCaseClasses())
 globals().update(TCPPortTestsBuilder.makeTestCaseClasses())
+globals().update(TCPFDPortTestsBuilder.makeTestCaseClasses())
 globals().update(TCPConnectionTestsBuilder.makeTestCaseClasses())
 globals().update(TCP4ConnectorTestsBuilder.makeTestCaseClasses())
 globals().update(TCP6ConnectorTestsBuilder.makeTestCaseClasses())

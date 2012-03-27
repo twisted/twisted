@@ -397,6 +397,21 @@ class ConnectingCancelledError(Exception):
 
 
 
+class UnsupportedAddressFamily(Exception):
+    """
+    An attempt was made to use a socket with an address family (eg I{AF_INET},
+    I{AF_INET6}, etc) which is not supported by the reactor.
+    """
+
+
+
+class UnsupportedSocketType(Exception):
+    """
+    An attempt was made to use a socket of a type (eg I{SOCK_STREAM},
+    I{SOCK_DGRAM}, etc) which is not supported by the reactor.
+    """
+
+
 __all__ = [
     'BindError', 'CannotListenError', 'MulticastJoinError',
     'MessageLengthError', 'DNSLookupError', 'ConnectInProgressError',
@@ -409,4 +424,5 @@ __all__ = [
     'AlreadyCancelled', 'PotentialZombieWarning', 'ProcessDone',
     'ProcessTerminated', 'ProcessExitedAlready', 'NotConnectingError',
     'NotListeningError', 'ReactorNotRunning', 'ReactorAlreadyRunning',
-    'ReactorAlreadyInstalledError', 'ConnectingCancelledError']
+    'ReactorAlreadyInstalledError', 'ConnectingCancelledError',
+    'UnsupportedAddressFamily', 'UnsupportedSocketType']

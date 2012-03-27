@@ -822,6 +822,11 @@ class Port(base.BasePort, _SocketCloser):
         this port.  Normally this is C{"TCP"}, since this is a TCP port, but
         when the TLS implementation re-uses this class it overrides the value
         with C{"TLS"}.  Only used for logging.
+
+    @ivar _preexistingSocket: If not C{None}, a L{socket.socket} instance which
+        was created and initialized outside of the reactor and will be used to
+        listen for connections (instead of a new socket being created by this
+        L{Port}).
     """
 
     implements(interfaces.IListeningPort)
@@ -839,6 +844,10 @@ class Port(base.BasePort, _SocketCloser):
     # value when we are actually listening.
     _realPortNumber = None
 
+    # An externally initialized socket that we will use, rather than creating
+    # our own.
+    _preexistingSocket = None
+
     addressFamily = socket.AF_INET
     _addressType = address.IPv4Address
 
@@ -853,6 +862,30 @@ class Port(base.BasePort, _SocketCloser):
             self.addressFamily = socket.AF_INET6
             self._addressType = address.IPv6Address
         self.interface = interface
+
+
+    @classmethod
+    def _fromListeningDescriptor(cls, reactor, fd, addressFamily, factory):
+        """
+        Create a new L{Port} based on an existing listening I{SOCK_STREAM}
+        I{AF_INET} socket.
+
+        Arguments are the same as to L{Port.__init__}, except where noted.
+
+        @param fd: An integer file descriptor associated with a listening
+            socket.  The socket must be in non-blocking mode.  Any additional
+            attributes desired, such as I{FD_CLOEXEC}, must also be set already.
+
+        @param addressFamily: The address family (sometimes called I{domain}) of
+            the existing socket.  For example, L{socket.AF_INET}.
+
+        @return: A new instance of C{cls} wrapping the socket given by C{fd}.
+        """
+        port = socket.fromfd(fd, addressFamily, cls.socketType)
+        interface = port.getsockname()[0]
+        self = cls(None, factory, None, interface, reactor)
+        self._preexistingSocket = port
+        return self
 
 
     def __repr__(self):
@@ -875,15 +908,22 @@ class Port(base.BasePort, _SocketCloser):
         This is called on unserialization, and must be called after creating a
         server to begin listening on the specified port.
         """
-        try:
-            skt = self.createInternetSocket()
-            if self.addressFamily == socket.AF_INET6:
-                addr = _resolveIPv6(self.interface, self.port)
-            else:
-                addr = (self.interface, self.port)
-            skt.bind(addr)
-        except socket.error, le:
-            raise CannotListenError, (self.interface, self.port, le)
+        if self._preexistingSocket is None:
+            # Create a new socket and make it listen
+            try:
+                skt = self.createInternetSocket()
+                if self.addressFamily == socket.AF_INET6:
+                    addr = _resolveIPv6(self.interface, self.port)
+                else:
+                    addr = (self.interface, self.port)
+                skt.bind(addr)
+            except socket.error, le:
+                raise CannotListenError, (self.interface, self.port, le)
+            skt.listen(self.backlog)
+        else:
+            # Re-use the externally specified socket
+            skt = self._preexistingSocket
+            self._preexistingSocket = None
 
         # Make sure that if we listened on port 0, we update that to
         # reflect what the OS actually assigned us.
@@ -892,10 +932,9 @@ class Port(base.BasePort, _SocketCloser):
         log.msg("%s starting on %s" % (
                 self._getLogPrefix(self.factory), self._realPortNumber))
 
-        # The order of the next 6 lines is kind of bizarre.  If no one
+        # The order of the next 5 lines is kind of bizarre.  If no one
         # can explain it, perhaps we should re-arrange them.
         self.factory.doStart()
-        skt.listen(self.backlog)
         self.connected = True
         self.socket = skt
         self.fileno = self.socket.fileno

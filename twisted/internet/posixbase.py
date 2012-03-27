@@ -16,7 +16,8 @@ from zope.interface import implements, classImplements
 
 from twisted.python.compat import set
 from twisted.internet.interfaces import IReactorUNIX, IReactorUNIXDatagram
-from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorSSL, _IReactorArbitrary
+from twisted.internet.interfaces import (
+    IReactorTCP, IReactorUDP, IReactorSSL, _IReactorArbitrary, IReactorSocket)
 from twisted.internet.interfaces import IReactorProcess, IReactorMulticast
 from twisted.internet.interfaces import IHalfCloseableDescriptor
 from twisted.internet import error
@@ -427,6 +428,25 @@ class PosixReactorBase(_SignalReactorMixin, ReactorBase):
         return p
 
 
+    # IReactorSocket (but not on Windows)
+    def adoptStreamPort(self, fileDescriptor, addressFamily, factory):
+        """
+        Create a new L{IListeningPort} from an already-initialized socket.
+
+        This just dispatches to a suitable port implementation (eg from
+        L{IReactorTCP}, etc) based on the specified C{addressFamily}.
+
+        @see: L{twisted.internet.interfaces.IReactorSocket.adoptStreamPort}
+        """
+        if addressFamily not in (socket.AF_INET, socket.AF_INET6):
+            raise error.UnsupportedAddressFamily(addressFamily)
+
+        p = tcp.Port._fromListeningDescriptor(
+            self, fileDescriptor, addressFamily, factory)
+        p.startListening()
+        return p
+
+
     # IReactorTCP
 
     def listenTCP(self, port, factory, backlog=50, interface=''):
@@ -606,5 +626,7 @@ if unixEnabled:
     classImplements(PosixReactorBase, IReactorUNIX, IReactorUNIXDatagram)
 if processEnabled:
     classImplements(PosixReactorBase, IReactorProcess)
+if getattr(socket, 'fromfd', None) is not None:
+    classImplements(PosixReactorBase, IReactorSocket)
 
 __all__ = ["PosixReactorBase"]
