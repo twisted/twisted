@@ -1076,7 +1076,7 @@ class Connector(base.BaseConnector):
 
     def getDestination(self):
         """
-        @see L{twisted.internet.interfaces.IConnector.getDestination}.
+        @see: L{twisted.internet.interfaces.IConnector.getDestination}.
         """
         return self._addressType('TCP', self.host, self.port)
 
