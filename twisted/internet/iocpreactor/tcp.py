@@ -12,7 +12,7 @@ from zope.interface import implements, classImplements
 from twisted.internet import interfaces, error, address, main, defer
 from twisted.internet.abstract import _LogOwner, isIPAddress, isIPv6Address
 from twisted.internet.tcp import _SocketCloser, Connector as TCPConnector
-from twisted.internet.tcp import _AbortingMixin
+from twisted.internet.tcp import _AbortingMixin, _BaseBaseClient, _BaseTCPClient
 from twisted.python import log, failure, reflect, util
 
 from twisted.internet.iocpreactor import iocpsupport as _iocp, abstract
@@ -227,7 +227,7 @@ if _startTLS is not None:
 
 
 
-class Client(Connection):
+class Client(_BaseBaseClient, _BaseTCPClient, Connection):
     """
     @ivar _tlsClientDefault: Always C{True}, indicating that this is a client
         connection, and by default when TLS is negotiated this class will act as
@@ -237,67 +237,43 @@ class Client(Connection):
     socketType = socket.SOCK_STREAM
 
     _tlsClientDefault = True
+    _commonConnection = Connection
 
     def __init__(self, host, port, bindAddress, connector, reactor):
-        self.connector = connector
-        self.addr = (host, port)
-        self.reactor = reactor
         # ConnectEx documentation says socket _has_ to be bound
         if bindAddress is None:
             bindAddress = ('', 0)
-
-        try:
-            try:
-                skt = reactor.createSocket(self.addressFamily, self.socketType)
-            except socket.error, se:
-                raise error.ConnectBindError(se[0], se[1])
-            else:
-                try:
-                    skt.bind(bindAddress)
-                except socket.error, se:
-                    raise error.ConnectBindError(se[0], se[1])
-                self.socket = skt
-                Connection.__init__(self, skt, None, reactor)
-                reactor.callLater(0, self.resolveAddress)
-        except error.ConnectBindError, err:
-            reactor.callLater(0, self.failIfNotConnected, err)
+        self.reactor = reactor # createInternetSocket needs this
+        _BaseTCPClient.__init__(self, host, port, bindAddress, connector,
+                                reactor)
 
 
-    def resolveAddress(self):
-        if isIPAddress(self.addr[0]):
-            self._setRealAddress(self.addr[0])
-        else:
-            d = self.reactor.resolve(self.addr[0])
-            d.addCallbacks(self._setRealAddress, self.failIfNotConnected)
+    def createInternetSocket(self):
+        """
+        Create a socket registered with the IOCP reactor.
+
+        @see: L{_BaseTCPClient}
+        """
+        return self.reactor.createSocket(self.addressFamily, self.socketType)
 
 
-    def _setRealAddress(self, address):
-        self.realAddress = (address, self.addr[1])
-        self.doConnect()
+    def _collectSocketDetails(self):
+        """
+        Clean up potentially circular references to the socket and to its
+        C{getFileHandle} method.
+
+        @see: L{_BaseBaseClient}
+        """
+        del self.socket, self.getFileHandle
 
 
-    def failIfNotConnected(self, err):
-        if (self.connected or self.disconnected or
-            not hasattr(self, "connector")):
-            return
+    def _stopReadingAndWriting(self):
+        """
+        Remove the active handle from the reactor.
 
-        try:
-            self._closeSocket(True)
-        except AttributeError:
-            pass
-        else:
-            del self.socket, self.getFileHandle
+        @see: L{_BaseBaseClient}
+        """
         self.reactor.removeActiveHandle(self)
-
-        self.connector.connectionFailed(failure.Failure(err))
-        del self.connector
-
-
-    def stopConnecting(self):
-        """
-        Stop attempt to connect.
-        """
-        self.failIfNotConnected(error.UserError())
 
 
     def cbConnect(self, rc, bytes, evt):
@@ -328,39 +304,7 @@ class Client(Connection):
 
         rc = _iocp.connect(self.socket.fileno(), self.realAddress, evt)
         if rc and rc != ERROR_IO_PENDING:
-            self.cbConnect(rc, 0, 0, evt)
-
-
-    def getHost(self):
-        """
-        Returns an IPv4Address.
-
-        This indicates the address from which I am connecting.
-        """
-        return address.IPv4Address('TCP', *self.socket.getsockname())
-
-
-    def getPeer(self):
-        """
-        Returns an IPv4Address.
-
-        This indicates the address that I am connected to.
-        """
-        return address.IPv4Address('TCP', *self.realAddress)
-
-
-    def __repr__(self):
-        s = ('<%s to %s at %x>' %
-                (self.__class__, self.addr, util.unsignedID(self)))
-        return s
-
-
-    def connectionLost(self, reason):
-        if not self.connected:
-            self.failIfNotConnected(error.ConnectError(string=reason))
-        else:
-            Connection.connectionLost(self, reason)
-            self.connector.connectionLost(reason)
+            self.cbConnect(rc, 0, evt)
 
 
 

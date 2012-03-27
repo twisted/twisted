@@ -602,6 +602,10 @@ class ClientStartStopFactory(MyClientFactory):
     started = 0
     stopped = 0
 
+    def __init__(self, *a, **kw):
+        MyClientFactory.__init__(self, *a, **kw)
+        self.whenStopped = defer.Deferred()
+
     def startFactory(self):
         if self.started or self.stopped:
             raise RuntimeError
@@ -611,6 +615,7 @@ class ClientStartStopFactory(MyClientFactory):
         if not self.started or self.stopped:
             raise RuntimeError
         self.stopped = 1
+        self.whenStopped.callback(True)
 
 
 class FactoryTestCase(unittest.TestCase):
@@ -674,99 +679,6 @@ class FactoryTestCase(unittest.TestCase):
         reactor.connectTCP("127.0.0.1", portNumber, factory)
         self.assertTrue(factory.started)
         return loopUntil(lambda: factory.stopped)
-
-
-
-class ConnectorTestCase(unittest.TestCase):
-
-    def test_connectorIdentity(self):
-        """
-        L{IReactorTCP.connectTCP} returns an object which provides
-        L{IConnector}.  The destination of the connector is the address which
-        was passed to C{connectTCP}.  The same connector object is passed to
-        the factory's C{startedConnecting} method as to the factory's
-        C{clientConnectionLost} method.
-        """
-        serverFactory = ClosingFactory()
-        tcpPort = reactor.listenTCP(0, serverFactory, interface="127.0.0.1")
-        serverFactory.port = tcpPort
-        self.addCleanup(serverFactory.cleanUp)
-        portNumber = tcpPort.getHost().port
-
-        seenConnectors = []
-        seenFailures = []
-
-        clientFactory = ClientStartStopFactory()
-        clientFactory.clientConnectionLost = (
-            lambda connector, reason: (seenConnectors.append(connector),
-                                       seenFailures.append(reason)))
-        clientFactory.startedConnecting = seenConnectors.append
-
-        connector = reactor.connectTCP("127.0.0.1", portNumber, clientFactory)
-        self.assertTrue(interfaces.IConnector.providedBy(connector))
-        dest = connector.getDestination()
-        self.assertEqual(dest.type, "TCP")
-        self.assertEqual(dest.host, "127.0.0.1")
-        self.assertEqual(dest.port, portNumber)
-
-        d = loopUntil(lambda: clientFactory.stopped)
-        def clientFactoryStopped(ignored):
-            seenFailures[0].trap(error.ConnectionDone)
-            self.assertEqual(seenConnectors, [connector, connector])
-        d.addCallback(clientFactoryStopped)
-        return d
-
-
-    def test_userFail(self):
-        """
-        Calling L{IConnector.stopConnecting} in C{Factory.startedConnecting}
-        results in C{Factory.clientConnectionFailed} being called with
-        L{error.UserError} as the reason.
-        """
-        serverFactory = MyServerFactory()
-        tcpPort = reactor.listenTCP(0, serverFactory, interface="127.0.0.1")
-        self.addCleanup(tcpPort.stopListening)
-        portNumber = tcpPort.getHost().port
-
-        def startedConnecting(connector):
-            connector.stopConnecting()
-
-        clientFactory = ClientStartStopFactory()
-        clientFactory.startedConnecting = startedConnecting
-        reactor.connectTCP("127.0.0.1", portNumber, clientFactory)
-
-        d = loopUntil(lambda: clientFactory.stopped)
-        def check(ignored):
-            self.assertEqual(clientFactory.failed, 1)
-            clientFactory.reason.trap(error.UserError)
-        return d.addCallback(check)
-
-
-    def test_reconnect(self):
-        """
-        Calling L{IConnector.connect} in C{Factory.clientConnectionLost} causes
-        a new connection attempt to be made.
-        """
-        serverFactory = ClosingFactory()
-        tcpPort = reactor.listenTCP(0, serverFactory, interface="127.0.0.1")
-        serverFactory.port = tcpPort
-        self.addCleanup(serverFactory.cleanUp)
-        portNumber = tcpPort.getHost().port
-
-        clientFactory = MyClientFactory()
-
-        def clientConnectionLost(connector, reason):
-            connector.connect()
-        clientFactory.clientConnectionLost = clientConnectionLost
-        reactor.connectTCP("127.0.0.1", portNumber, clientFactory)
-
-        d = loopUntil(lambda: clientFactory.failed)
-        def reconnectFailed(ignored):
-            p = clientFactory.protocol
-            self.assertEqual((p.made, p.closed), (1, 1))
-            clientFactory.reason.trap(error.ConnectionRefusedError)
-            self.assertEqual(clientFactory.stopped, 1)
-        return d.addCallback(reconnectFailed)
 
 
 

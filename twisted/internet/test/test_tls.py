@@ -22,10 +22,10 @@ from twisted.trial.unittest import SkipTest
 from twisted.python.runtime import platform
 
 from twisted.internet.test.test_core import ObjectModelIntegrationMixin
-from twisted.internet.test.test_tcp import StreamTransportTestsMixin
-from twisted.internet.test.connectionmixins import ConnectionTestsMixin
 from twisted.internet.test.test_tcp import (
-    BrokenContextFactory, AbortConnectionMixin)
+    StreamTransportTestsMixin, AbortConnectionMixin)
+from twisted.internet.test.connectionmixins import ConnectionTestsMixin
+from twisted.internet.test.connectionmixins import BrokenContextFactory
 
 try:
     from OpenSSL.crypto import FILETYPE_PEM
