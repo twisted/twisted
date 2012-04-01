@@ -1410,12 +1410,6 @@ class Record_MX(tputil.FancyStrMixin, tputil.FancyEqMixin):
         self.name = Name()
         self.name.decode(strio)
 
-    def exchange(self):
-        warnings.warn("use Record_MX.name instead", DeprecationWarning, stacklevel=2)
-        return self.name
-
-    exchange = property(exchange)
-
     def __hash__(self):
         return hash((self.preference, self.name))
 
