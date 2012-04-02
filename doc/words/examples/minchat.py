@@ -5,14 +5,18 @@
 
 
 """
-A very simple twisted.im-based logbot.
+A very simple twisted.words.im-based logbot.
+
+To run the script:
+$ python minchat.py
 """
 
-from twisted.im import basechat, baseaccount
+from twisted.words.im import basechat, baseaccount, ircsupport
+
 
 # A list of account objects. We might as well create them at runtime, this is
 # supposed to be a Minimalist Implementation, after all.
-from twisted.im import ircsupport 
+
 accounts = [
     ircsupport.IRCAccount("IRC", 1,
         "Tooty",            # nickname
@@ -25,7 +29,8 @@ accounts = [
 
 
 class AccountManager (baseaccount.AccountManager):
-    """This class is a minimal implementation of the Acccount Manager.
+    """
+    This class is a minimal implementation of the Acccount Manager.
 
     Most implementations will show some screen that lets the user add and
     remove accounts, but we're not quite that sophisticated.
@@ -42,17 +47,20 @@ class AccountManager (baseaccount.AccountManager):
 
 
 class MinConversation(basechat.Conversation):
-    """This class is a minimal implementation of the abstract Conversation class.
+    """
+    This class is a minimal implementation of the abstract Conversation class.
 
     This is all you need to override to receive one-on-one messages.
     """
     def show(self):
-        """If you don't have a GUI, this is a no-op.
+        """
+        If you don't have a GUI, this is a no-op.
         """
         pass
     
     def hide(self):
-        """If you don't have a GUI, this is a no-op.
+        """
+        If you don't have a GUI, this is a no-op.
         """
         pass
     
@@ -65,17 +73,20 @@ class MinConversation(basechat.Conversation):
 
 
 class MinGroupConversation(basechat.GroupConversation):
-    """This class is a minimal implementation of the abstract GroupConversation class.
+    """
+    This class is a minimal implementation of the abstract GroupConversation class.
 
     This is all you need to override to listen in on a group conversaion.
     """
     def show(self):
-        """If you don't have a GUI, this is a no-op.
+        """
+        If you don't have a GUI, this is a no-op.
         """
         pass
 
     def hide(self):
-        """If you don't have a GUI, this is a no-op.
+        """
+        If you don't have a GUI, this is a no-op.
         """
         pass
 
@@ -98,9 +109,11 @@ class MinGroupConversation(basechat.GroupConversation):
     def memberLeft(self, member):
         basechat.GroupConversation.memberLeft(self, member)
         print "-!- %s left %s" % (member, self.group.name)
-    
+
+
 class MinChat(basechat.ChatUI):
-    """This class is a minimal implementation of the abstract ChatUI class.
+    """
+    This class is a minimal implementation of the abstract ChatUI class.
 
     There are only two methods that need overriding - and of those two, 
     the only change that needs to be made is the default value of the Class
@@ -117,6 +130,7 @@ class MinChat(basechat.ChatUI):
         stayHidden=0):
 
         return basechat.ChatUI.getConversation(self, person, Class, stayHidden)
+
 
 if __name__ == "__main__":
     from twisted.internet import reactor
