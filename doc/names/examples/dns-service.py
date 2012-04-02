@@ -5,6 +5,15 @@
 
 """
 Sample app to lookup SRV records in DNS.
+To run this script:
+$ python dns-service.py <service> <proto> <domain>
+where,
+service = the symbolic name of the desired service.
+proto = the transport protocol of the desired service; this is usually either TCP or UDP.
+domain =  the domain name for which this record is valid.
+e.g.:
+$ python dns-service.py sip udp yahoo.com
+$ python dns-service.py xmpp-client tcp gmail.com
 """
 
 from twisted.names import client
