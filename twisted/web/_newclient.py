@@ -562,7 +562,7 @@ class Request:
     @ivar bodyProducer: C{None} or an L{IBodyProducer} provider which
         produces the content body to send to the remote HTTP server.
 
-    @ivar persistent: Set to C{True} when you use HTTP persistent connecton.
+    @ivar persistent: Set to C{True} when you use HTTP persistent connection.
     @type persistent: Boolean
     """
     def __init__(self, method, uri, headers, bodyProducer, persistent=False):
@@ -1026,7 +1026,7 @@ class Response:
 
     def _bodyDataReceived_FINISHED(self, data):
         """
-        It is invalid for data to be delivered after the response bofdy has
+        It is invalid for data to be delivered after the response body has
         been delivered to a protocol.
         """
         raise RuntimeError("Cannot receive body data after protocol disconnected")
