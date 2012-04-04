@@ -412,6 +412,13 @@ class UnsupportedSocketType(Exception):
     """
 
 
+class AlreadyListened(Exception):
+    """
+    An attempt was made to listen on a file descriptor which can only be
+    listened on once.
+    """
+
+
 __all__ = [
     'BindError', 'CannotListenError', 'MulticastJoinError',
     'MessageLengthError', 'DNSLookupError', 'ConnectInProgressError',

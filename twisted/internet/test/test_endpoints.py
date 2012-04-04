@@ -7,7 +7,9 @@ L{twisted.internet.endpoints}.
 """
 
 from errno import EPERM
+from socket import AF_INET, AF_INET6
 from zope.interface import implements
+from zope.interface.verify import verifyObject
 
 from twisted.trial import unittest
 from twisted.internet import error, interfaces
@@ -16,6 +18,8 @@ from twisted.internet.address import IPv4Address, UNIXAddress
 from twisted.internet.protocol import ClientFactory, Protocol
 from twisted.test.proto_helpers import MemoryReactor, RaisingMemoryReactor
 from twisted.python.failure import Failure
+from twisted.python.systemd import ListenFDs
+from twisted.plugin import getPlugins
 
 from twisted import plugins
 from twisted.python.modules import getModule
@@ -294,11 +298,10 @@ class WrappingFactoryTests(unittest.TestCase):
 
 
 
-class EndpointTestCaseMixin(object):
+class ClientEndpointTestCaseMixin(object):
     """
-    Generic test methods to be mixed into all endpoint test classes.
+    Generic test methods to be mixed into all client endpoint test classes.
     """
-
     def retrieveConnectedFactory(self, reactor):
         """
         Retrieve a single factory that has connected using the given reactor.
@@ -400,6 +403,32 @@ class EndpointTestCaseMixin(object):
         self.assertEqual(failure.value.address, address)
 
 
+    def test_endpointConnectNonDefaultArgs(self):
+        """
+        The endpoint should pass it's connectArgs parameter to the reactor's
+        listen methods.
+        """
+        factory = object()
+
+        mreactor = MemoryReactor()
+
+        ep, expectedArgs, ignoredHost = self.createClientEndpoint(
+            mreactor, factory,
+            **self.connectArgs())
+
+        ep.connect(factory)
+
+        expectedClients = self.expectedClients(mreactor)
+
+        self.assertEqual(len(expectedClients), 1)
+        self.assertConnectArgs(expectedClients[0], expectedArgs)
+
+
+
+class ServerEndpointTestCaseMixin(object):
+    """
+    Generic test methods to be mixed into all client endpoint test classes.
+    """
     def test_endpointListenSuccess(self):
         """
         An endpoint can listen and returns a deferred that gets called back
@@ -449,27 +478,6 @@ class EndpointTestCaseMixin(object):
         self.assertEqual(receivedExceptions, [exception])
 
 
-    def test_endpointConnectNonDefaultArgs(self):
-        """
-        The endpoint should pass it's connectArgs parameter to the reactor's
-        listen methods.
-        """
-        factory = object()
-
-        mreactor = MemoryReactor()
-
-        ep, expectedArgs, ignoredHost = self.createClientEndpoint(
-            mreactor, factory,
-            **self.connectArgs())
-
-        ep.connect(factory)
-
-        expectedClients = self.expectedClients(mreactor)
-
-        self.assertEqual(len(expectedClients), 1)
-        self.assertConnectArgs(expectedClients[0], expectedArgs)
-
-
     def test_endpointListenNonDefaultArgs(self):
         """
         The endpoint should pass it's listenArgs parameter to the reactor's
@@ -491,8 +499,15 @@ class EndpointTestCaseMixin(object):
 
 
 
-class TCP4EndpointsTestCase(EndpointTestCaseMixin,
-                            unittest.TestCase):
+class EndpointTestCaseMixin(ServerEndpointTestCaseMixin,
+                            ClientEndpointTestCaseMixin):
+    """
+    Generic test methods to be mixed into all endpoint test classes.
+    """
+
+
+
+class TCP4EndpointsTestCase(EndpointTestCaseMixin, unittest.TestCase):
     """
     Tests for TCP Endpoints.
     """
@@ -1346,3 +1361,201 @@ class SSLClientStringTests(unittest.TestCase):
         self.assertEqual(certOptions.verify, False)
         ctx = certOptions.getContext()
         self.assertIsInstance(ctx, ContextType)
+
+
+
+class AdoptedStreamServerEndpointTestCase(ServerEndpointTestCaseMixin,
+                                          unittest.TestCase):
+    """
+    Tests for adopted socket-based stream server endpoints.
+    """
+    def _createStubbedAdoptedEndpoint(self, reactor, fileno, addressFamily):
+        """
+        Create an L{AdoptedStreamServerEndpoint} which may safely be used with
+        an invalid file descriptor.  This is convenient for a number of unit
+        tests.
+        """
+        e = endpoints.AdoptedStreamServerEndpoint(reactor, fileno, addressFamily)
+        # Stub out some syscalls which would fail, given our invalid file
+        # descriptor.
+        e._close = lambda fd: None
+        e._setNonBlocking = lambda fd: None
+        return e
+
+
+    def createServerEndpoint(self, reactor, factory):
+        """
+        Create a new L{AdoptedStreamServerEndpoint} for use by a test.
+
+        @return: A three-tuple:
+            - The endpoint
+            - A tuple of the arguments expected to be passed to the underlying
+              reactor method
+            - An IAddress object which will match the result of
+              L{IListeningPort.getHost} on the port returned by the endpoint.
+        """
+        fileno = 12
+        addressFamily = AF_INET
+        endpoint = self._createStubbedAdoptedEndpoint(
+            reactor, fileno, addressFamily)
+        # Magic numbers come from the implementation of MemoryReactor
+        address = IPv4Address("TCP", "0.0.0.0", 1234)
+        return (endpoint, (fileno, addressFamily, factory), address)
+
+
+    def expectedServers(self, reactor):
+        """
+        @return: The ports which were actually adopted by C{reactor} via calls
+            to its L{IReactorSocket.adoptStreamPort} implementation.
+        """
+        return reactor.adoptedPorts
+
+
+    def listenArgs(self):
+        """
+        @return: A C{dict} of additional keyword arguments to pass to the
+            C{createServerEndpoint}.
+        """
+        return {}
+
+
+    def test_singleUse(self):
+        """
+        L{AdoptedStreamServerEndpoint.listen} can only be used once.  The file
+        descriptor given is closed after the first use, and subsequent calls to
+        C{listen} return a L{Deferred} that fails with L{AlreadyListened}.
+        """
+        reactor = MemoryReactor()
+        endpoint = self._createStubbedAdoptedEndpoint(reactor, 13, AF_INET)
+        endpoint.listen(object())
+        d = self.assertFailure(endpoint.listen(object()), error.AlreadyListened)
+        def listenFailed(ignored):
+            self.assertEqual(1, len(reactor.adoptedPorts))
+        d.addCallback(listenFailed)
+        return d
+
+
+    def test_descriptionNonBlocking(self):
+        """
+        L{AdoptedStreamServerEndpoint.listen} sets the file description given to
+        it to non-blocking.
+        """
+        reactor = MemoryReactor()
+        endpoint = self._createStubbedAdoptedEndpoint(reactor, 13, AF_INET)
+        events = []
+        def setNonBlocking(fileno):
+            events.append(("setNonBlocking", fileno))
+        endpoint._setNonBlocking = setNonBlocking
+
+        d = endpoint.listen(object())
+        def listened(ignored):
+            self.assertEqual([("setNonBlocking", 13)], events)
+        d.addCallback(listened)
+        return d
+
+
+    def test_descriptorClosed(self):
+        """
+        L{AdoptedStreamServerEndpoint.listen} closes its file descriptor after
+        adding it to the reactor with L{IReactorSocket.adoptStreamPort}.
+        """
+        reactor = MemoryReactor()
+        endpoint = self._createStubbedAdoptedEndpoint(reactor, 13, AF_INET)
+        events = []
+        def close(fileno):
+            events.append(("close", fileno, len(reactor.adoptedPorts)))
+        endpoint._close = close
+
+        d = endpoint.listen(object())
+        def listened(ignored):
+            self.assertEqual([("close", 13, 1)], events)
+        d.addCallback(listened)
+        return d
+
+
+
+class SystemdEndpointPluginTests(unittest.TestCase):
+    """
+    Unit tests for the systemd stream server endpoint and endpoint string
+    description parser.
+
+    @see: U{systemd<http://www.freedesktop.org/wiki/Software/systemd>}
+    """
+
+    _parserClass = endpoints._SystemdParser
+
+    def test_pluginDiscovery(self):
+        """
+        L{endpoints._SystemdParser} is found as a plugin for
+        L{interfaces.IStreamServerEndpointStringParser} interface.
+        """
+        parsers = list(getPlugins(
+                interfaces.IStreamServerEndpointStringParser))
+        for p in parsers:
+            if isinstance(p, self._parserClass):
+                break
+        else:
+            self.fail("Did not find systemd parser in %r" % (parsers,))
+
+
+    def test_interface(self):
+        """
+        L{endpoints._SystemdParser} instances provide
+        L{interfaces.IStreamServerEndpointStringParser}.
+        """
+        parser = self._parserClass()
+        self.assertTrue(verifyObject(
+                interfaces.IStreamServerEndpointStringParser, parser))
+
+
+    def _parseStreamServerTest(self, addressFamily, addressFamilyString):
+        """
+        Helper for unit tests for L{endpoints._SystemdParser.parseStreamServer}
+        for different address families.
+
+        Handling of the address family given will be verify.  If there is a
+        problem a test-failing exception will be raised.
+
+        @param addressFamily: An address family constant, like L{socket.AF_INET}.
+
+        @param addressFamilyString: A string which should be recognized by the
+            parser as representing C{addressFamily}.
+        """
+        reactor = object()
+        descriptors = [5, 6, 7, 8, 9]
+        index = 3
+
+        parser = self._parserClass()
+        parser._sddaemon = ListenFDs(descriptors)
+
+        server = parser.parseStreamServer(
+            reactor, domain=addressFamilyString, index=str(index))
+        self.assertIdentical(server.reactor, reactor)
+        self.assertEqual(server.addressFamily, addressFamily)
+        self.assertEqual(server.fileno, descriptors[index])
+
+
+    def test_parseStreamServerINET(self):
+        """
+        IPv4 can be specified using the string C{"INET"}.
+        """
+        self._parseStreamServerTest(AF_INET, "INET")
+
+
+    def test_parseStreamServerINET6(self):
+        """
+        IPv6 can be specified using the string C{"INET6"}.
+        """
+        self._parseStreamServerTest(AF_INET6, "INET6")
+
+
+    def test_parseStreamServerUNIX(self):
+        """
+        A UNIX domain socket can be specified using the string C{"UNIX"}.
+        """
+        try:
+            from socket import AF_UNIX
+        except ImportError:
+            raise unittest.SkipTest("Platform lacks AF_UNIX support")
+        else:
+            self._parseStreamServerTest(AF_UNIX, "UNIX")

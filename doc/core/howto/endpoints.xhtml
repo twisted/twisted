@@ -177,5 +177,64 @@ class="API" base="twisted.internet.interfaces.IReactorTCP">listenTCP</code>,
 etc, directly. By accepting an arbitrary endpoint rather than requiring a
 specific reactor interface, you leave your application open to lots of
 interesting transport-layer extensibility for the future.</p>
+
+<h2>Endpoint Types Included With Twisted</h2>
+
+<p>The parser used by <code>clientFromString</code> and
+<code>serverFromString</code> is extensible via third-party plugins, so the
+endpoints available on your system depend on what packages you have installed.
+However, Twisted itself includes a set of basic endpoints that will always be
+available.</p>
+
+<h3>Clients</h3>
+
+<ul>
+  <li>TCP.  Supported arguments: host, port, timeout.  timeout is optional.  For
+  example, <code>tcp:host=twistedmatrix.com:port=80:timeout=15</code>.
+  </li>
+  <li>SSL.  All TCP arguments are supported, plus: certKey, privateKey,
+  caCertsDir.  certKey (optional) gives a filesystem path to a certificate (PEM
+  format).  privateKey (optional) gives a filesystem path to a a private key
+  (PEM format).  caCertsDir (optional) gives a filesystem path to a directory
+  containing trusted CA certificates to use to verify the server certificate.
+  For example,
+    <code>ssl:host=twistedmatrix.com:port=443:caCertsDir=/etc/ssl/certs</code>.
+  </li>
+  <li>UNIX.  Supported arguments: path, timeout, checkPID.  path gives a
+  filesystem path to a listening UNIX domain socket server.  checkPID (optional)
+  enables a check of the lock file Twisted-based UNIX domain socket servers use
+  to prove they are still running.  For
+  example, <code>unix:path=/var/run/web.sock</code>.
+  </li>
+</ul>
+
+<h3>Servers</h3>
+
+<ul>
+  <li>TCP.  Supported arguments: port, interface, backlog.  interface and
+  backlog are optional.  interface is an IP address to bind to.  For example,
+  <code>tcp:port=80:interface=192.168.1.1</code>.
+  </li>
+  <li>SSL.  All TCP arguments are supported, plus: certKey, privateKey, and
+  sslmethod.  certKey (optional, defaults to the value of privateKey) gives a
+  filesystem path to a certificate (PEM format).  privateKey gives a filesystem
+  path to a a private key (PEM format).  sslmethod indicates which SSL/TLS
+  version to use (a value like TLSv1_METHOD). For example,
+  <code>ssl:port=443:privateKey=/etc/ssl/server.pem:sslmethod=SSLv3_METHOD</code>.
+  </li>
+  <li>UNIX.  Supported arguments: address, mode, backlog, lockfile.  address
+  gives a filesystem path to listen on with a UNIX domain socket server.  mode
+  (optional) gives the filesystem permission/mode (in octal) to apply to that
+  socket.  lockfile enables use of a separate lock file to prove the server is
+  still running.  For example, <code>unix:address=/var/run/web.sock:lockfile=1</code>.
+  </li>
+  <li>systemd.  Supported arguments: domain, index.  domain indicates which
+  socket domain the inherited file descriptor belongs to (eg INET, INET6).
+  index indicates an offset into the array of file descriptors which have been
+  inherited from systemd.  For
+  example, <code>systemd:domain=INET6:index=3</code>.
+  </li>
+</ul>
+
 </body>
 </html>

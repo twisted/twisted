@@ -11,22 +11,25 @@ parsed by the L{clientFromString} and L{serverFromString} functions.
 @since: 10.1
 """
 
+import os, socket
+
 from zope.interface import implements, directlyProvides
 import warnings
 
-from twisted.internet import interfaces, defer, error
+from twisted.internet import interfaces, defer, error, fdesc
 from twisted.internet.protocol import ClientFactory, Protocol
-from twisted.plugin import getPlugins
+from twisted.plugin import IPlugin, getPlugins
 from twisted.internet.interfaces import IStreamServerEndpointStringParser
 from twisted.internet.interfaces import IStreamClientEndpointStringParser
 from twisted.python.filepath import FilePath
-
+from twisted.python.systemd import ListenFDs
 
 
 __all__ = ["clientFromString", "serverFromString",
            "TCP4ServerEndpoint", "TCP4ClientEndpoint",
            "UNIXServerEndpoint", "UNIXClientEndpoint",
-           "SSL4ServerEndpoint", "SSL4ClientEndpoint"]
+           "SSL4ServerEndpoint", "SSL4ClientEndpoint",
+           "AdoptedStreamServerEndpoint"]
 
 
 class _WrappingProtocol(Protocol):
@@ -497,6 +500,53 @@ class UNIXClientEndpoint(object):
 
 
 
+class AdoptedStreamServerEndpoint(object):
+    """
+    An endpoint for listening on a file descriptor initialized outside of
+    Twisted.
+
+    @ivar _used: A C{bool} indicating whether this endpoint has been used to
+        listen with a factory yet.  C{True} if so.
+    """
+    _close = os.close
+    _setNonBlocking = staticmethod(fdesc.setNonBlocking)
+
+    def __init__(self, reactor, fileno, addressFamily):
+        """
+        @param reactor: An L{IReactorSocket} provider.
+
+        @param fileno: An integer file descriptor corresponding to a listening
+            I{SOCK_STREAM} socket.
+
+        @param addressFamily: The address family of the socket given by
+            C{fileno}.
+        """
+        self.reactor = reactor
+        self.fileno = fileno
+        self.addressFamily = addressFamily
+        self._used = False
+
+
+    def listen(self, factory):
+        """
+        Implement L{IStreamServerEndpoint.listen} to start listening on, and
+        then close, C{self._fileno}.
+        """
+        if self._used:
+            return defer.fail(error.AlreadyListened())
+        self._used = True
+
+        try:
+            self._setNonBlocking(self.fileno)
+            port = self.reactor.adoptStreamPort(
+                self.fileno, self.addressFamily, factory)
+            self._close(self.fileno)
+        except:
+            return defer.fail()
+        return defer.succeed(port)
+
+
+
 def _parseTCP(factory, port, interface="", backlog=50):
     """
     Internal parser function for L{_parseServer} to convert the string
@@ -601,9 +651,62 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
     return ((int(port), factory, cf),
             {'interface': interface, 'backlog': int(backlog)})
 
+
+class _SystemdParser(object):
+    """
+    Stream server endpoint string parser for the I{systemd} endpoint type.
+
+    @ivar prefix: See L{IStreamClientEndpointStringParser.prefix}.
+
+    @ivar _sddaemon: A L{ListenFDs} instance used to translate an index into an
+        actual file descriptor.
+    """
+    implements(IPlugin, IStreamServerEndpointStringParser)
+
+    _sddaemon = ListenFDs.fromEnvironment()
+
+    prefix = "systemd"
+
+    def _parseServer(self, reactor, domain, index):
+        """
+        Internal parser function for L{_parseServer} to convert the string
+        arguments for a systemd server endpoint into structured arguments for
+        L{AdoptedStreamServerEndpoint}.
+
+        @param reactor: An L{IReactorSocket} provider.
+
+        @param domain: The domain (or address family) of the socket inherited
+            from systemd.  This is a string like C{"INET"} or C{"UNIX"}, ie the
+            name of an address family from the L{socket} module, without the
+            C{"AF_"} prefix.
+        @type domain: C{str}
+
+        @param index: An offset into the list of file descriptors inherited from
+            systemd.
+        @type index: C{str}
+
+        @return: A two-tuple of parsed positional arguments and parsed keyword
+            arguments (a tuple and a dictionary).  These can be used to
+            construct a L{AdoptedStreamServerEndpoint}.
+        """
+        index = int(index)
+        fileno = self._sddaemon.inheritedDescriptors()[index]
+        addressFamily = getattr(socket, 'AF_' + domain)
+        return AdoptedStreamServerEndpoint(reactor, fileno, addressFamily)
+
+
+    def parseStreamServer(self, reactor, *args, **kwargs):
+        # Delegate to another function with a sane signature.  This function has
+        # an insane signature to trick zope.interface into believing the
+        # interface is correctly implemented.
+        return self._parseServer(reactor, *args, **kwargs)
+
+
+
 _serverParsers = {"tcp": _parseTCP,
                   "unix": _parseUNIX,
-                  "ssl": _parseSSL}
+                  "ssl": _parseSSL,
+                  }
 
 _OP, _STRING = range(2)
 

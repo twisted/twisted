@@ -6,13 +6,15 @@
 Assorted functionality which is commonly useful when writing unit tests.
 """
 
+from socket import AF_INET, AF_INET6
 from StringIO import StringIO
 
 from zope.interface import implements
 
-from twisted.internet.interfaces import ITransport, IConsumer, IPushProducer,\
-    IConnector
-from twisted.internet.interfaces import IReactorTCP, IReactorSSL, IReactorUNIX
+from twisted.internet.interfaces import (
+    ITransport, IConsumer, IPushProducer, IConnector)
+from twisted.internet.interfaces import (
+    IReactorTCP, IReactorSSL, IReactorUNIX, IReactorSocket)
 from twisted.internet.interfaces import IListeningPort
 from twisted.protocols import basic
 from twisted.internet import protocol, error, address
@@ -380,8 +382,11 @@ class MemoryReactor(object):
     @ivar unixServers: a list that keeps track of server listen attempts (ie,
         calls to C{listenUNIX}).
     @type unixServers: C{list}
+
+    @ivar adoptedPorts: a list that keeps track of server listen attempts (ie,
+        calls to C{adoptStreamPort}).
     """
-    implements(IReactorTCP, IReactorSSL, IReactorUNIX)
+    implements(IReactorTCP, IReactorSSL, IReactorUNIX, IReactorSocket)
 
     def __init__(self):
         """
@@ -393,6 +398,23 @@ class MemoryReactor(object):
         self.sslServers = []
         self.unixClients = []
         self.unixServers = []
+        self.adoptedPorts = []
+
+
+    def adoptStreamPort(self, fileno, addressFamily, factory):
+        """
+        Fake L{IReactorSocket.adoptStreamPort}, that logs the call and returns
+        an L{IListeningPort}.
+        """
+        if addressFamily == AF_INET:
+            addr = IPv4Address('TCP', '0.0.0.0', 1234)
+        elif addressFamily == AF_INET6:
+            addr = IPv6Address('TCP', '::', 1234)
+        else:
+            raise UnsupportedAddressFamily()
+
+        self.adoptedPorts.append((fileno, addressFamily, factory))
+        return _FakePort(addr)
 
 
     def listenTCP(self, port, factory, backlog=50, interface=''):
@@ -463,7 +485,7 @@ class RaisingMemoryReactor(object):
     @ivar _listenException: An instance of an L{Exception}
     @ivar _connectException: An instance of an L{Exception}
     """
-    implements(IReactorTCP, IReactorSSL, IReactorUNIX)
+    implements(IReactorTCP, IReactorSSL, IReactorUNIX, IReactorSocket)
 
     def __init__(self, listenException=None, connectException=None):
         """
@@ -475,6 +497,14 @@ class RaisingMemoryReactor(object):
         """
         self._listenException = listenException
         self._connectException = connectException
+
+
+    def adoptStreamPort(self, fileno, addressFamily, factory):
+        """
+        Fake L{IReactorSocket.adoptStreamPort}, that raises
+        L{self._listenException}.
+        """
+        raise self._listenException
 
 
     def listenTCP(self, port, factory, backlog=50, interface=''):
