@@ -369,7 +369,7 @@ class KnownHostsDatabaseTests(TestCase):
             sampleHashedLine + otherSamplePlaintextLine +
             "\n# That was a blank line.\n"
             "This is just unparseable.\n"
-            "This also unparseable.\n")):
+            "|1|This also unparseable.\n")):
         """
         Return a sample hosts file, with keys for www.twistedmatrix.com and
         divmod.com present.
@@ -401,7 +401,7 @@ class KnownHostsDatabaseTests(TestCase):
                          "This is just unparseable.")
         self.assertIsInstance(hostsFile._entries[5], UnparsedEntry)
         self.assertEqual(hostsFile._entries[5].toString(),
-                         "This also unparseable.")
+                         "|1|This also unparseable.")
 
 
     def test_loadNonExistent(self):

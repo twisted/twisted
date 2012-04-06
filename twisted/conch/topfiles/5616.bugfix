@@ -1,0 +1,1 @@
+twisted.conch.client.knownhosts now handles errors encountered parsing hashed entries in a known hosts file.

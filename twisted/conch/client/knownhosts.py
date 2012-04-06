@@ -413,13 +413,13 @@ class KnownHostsFile(object):
         except IOError:
             return self
         for line in fp:
-            if line.startswith(HashedEntry.MAGIC):
-                entry = HashedEntry.fromString(line)
-            else:
-                try:
+            try:
+                if line.startswith(HashedEntry.MAGIC):
+                    entry = HashedEntry.fromString(line)
+                else:
                     entry = PlainEntry.fromString(line)
-                except (DecodeError, InvalidEntry, BadKeyError):
-                    entry = UnparsedEntry(line)
+            except (DecodeError, InvalidEntry, BadKeyError):
+                entry = UnparsedEntry(line)
             self._entries.append(entry)
         return self
 
