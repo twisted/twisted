@@ -51,8 +51,8 @@ def service(description, factory, default=_DEFAULT, reactor=None):
 
     @type default: C{str} or C{None}
 
-    @param default: Do not use this parameter.  It is deprecated since Twisted
-        10.2.0.
+    @param default: Do not use this parameter. It has been deprecated since
+        Twisted 10.2.0.
 
     @rtype: C{twisted.application.service.IService}
 
