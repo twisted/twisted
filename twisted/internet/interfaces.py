@@ -1289,7 +1289,7 @@ class IProducer(Interface):
 class IPushProducer(IProducer):
     """
     A push producer, also known as a streaming producer is expected to
-    produce (write to this consumer) data on a continous basis, unless
+    produce (write to this consumer) data on a continuous basis, unless
     it has been paused. A paused push producer will resume producing
     after its resumeProducing() method is called.   For a push producer
     which is not pauseable, these functions may be noops.
@@ -1455,7 +1455,7 @@ class IHalfCloseableProtocol(Interface):
         Notification of the read connection being closed.
 
         This indicates peer did half-close of write side. It is now
-        the responsiblity of the this protocol to call
+        the responsibility of the this protocol to call
         loseConnection().  In addition, the protocol MUST make sure a
         reference to it still exists (i.e. by doing a callLater with
         one of its methods, etc.)  as the reactor will only have a
