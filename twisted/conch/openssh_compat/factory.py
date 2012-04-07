@@ -4,7 +4,7 @@
 
 """
 Factory for reading openssh configuration files: public keys, private keys, and
-modile file.
+moduli file.
 """
 
 import os, errno
