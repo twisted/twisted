@@ -236,5 +236,81 @@ available.</p>
   </li>
 </ul>
 
+<h4>Using systemd Server Endpoint</h4>
+<p>Here is an example which demonstrates how to run a simple twisted
+  web server using systemd socket activation.</p>
+<ol>
+  <li>Create a systemd socket file.
+    This file configures systemd to listen on an IPv4 address
+    on port 8080.
+    <a href="listings/systemd/twistedweb.socket" class="listing">/etc/systemd/system/twistedweb.socket</a>
+  </li>
+
+  <li>Create a systemd service file.
+    This file contains:
+    <ol>
+      <li>a twistd command line: use the --nodaemon flag because systemd is
+	designed to supervise normal child processes. The index=0 argument
+	causes twisted to listen on the first file descriptor inherited from
+	systemd.</li>
+      <li>a process environment: in this example, twisted has been installed
+	with Combinator so the Combinator path is added to PYTHONPATH.</li>
+    </ol>
+    <a href="listings/systemd/twistedweb.service" class="listing">/etc/systemd/system/twistedweb.service</a>
+  </li>
+  <li>Reload systemd. This forces it to read the new configuration
+    files.
+    <pre class="shell">
+      $ sudo systemctl --system daemon-reload
+    </pre>
+  </li>
+  <li>Start systemd listening on the new port. Twisted will not start
+    until the first client connects
+    <pre class="shell">
+      $ sudo systemctl start twistedweb.socket
+      $ sudo netstat -lntp | grep 8080
+      tcp        0      0 127.0.0.1:8080              0.0.0.0:*                   LISTEN      1/init
+      $ ps -ef | grep twistd
+      richard   5815  4237  0 01:20 pts/5    00:00:00 grep --color=auto twistd
+      $
+    </pre>
+  </li>
+  <li>Connect to port 8080 using curl. Systemd will accept the
+    connection and launch twistd, passing it the listening socket.
+    <pre class="shell">
+      $ curl http://localhost:8080
+      $ sudo netstat -lntp | grep 8080
+      tcp        0      0 127.0.0.1:8080              0.0.0.0:*                   LISTEN      1/init
+      $ ps -ef | grep twistd
+      richard   5831     1  1 01:29 ?        00:00:00 python /home/richard/projects/Twisted/trunk/bin/twistd --nodaemon web --port systemd:domain=INET:index=0 --path .
+      richard   5836  4237  0 01:29 pts/5    00:00:00 grep --color=auto twistd
+      $
+    </pre>
+    <pre class="shell">
+      $ sudo tail -f /var/log/messages
+      Apr  7 01:29:06 zorin twistd[5831]: 2012-04-07 01:29:06+0100 [-] Log opened.
+      Apr  7 01:29:06 zorin twistd[5831]: 2012-04-07 01:29:06+0100 [-] twistd 12.0.0+r34099 (/usr/bin/python 2.7.2) starting up.
+      Apr  7 01:29:06 zorin twistd[5831]: 2012-04-07 01:29:06+0100 [-] reactor class: twisted.internet.pollreactor.PollReactor.
+      Apr  7 01:29:06 zorin twistd[5831]: 2012-04-07 01:29:06+0100 [-] Site starting on 8080
+      Apr  7 01:29:06 zorin twistd[5831]: 2012-04-07 01:29:06+0100 [-] Starting factory &lt;<span class="function-name">twisted.web.server.Site</span> instance at 0x1dac7e8&gt;
+      Apr  7 01:29:06 zorin twistd[5831]: 2012-04-07 01:29:06+0100 [HTTPChannel,0,127.0.0.1] 127.0.0.1 - - [07/Apr/2012:00:29:06 +0000] "GET / HTTP/1.1" 200 - "-" "curl/7.21.7 (x86_64-redhat-linux-gnu) libcurl/7.21.7 NSS/3.13.3.0 zlib/1.2.5 libidn/1.22 libssh2/1.2.7"
+    </pre>
+  </li>
+  <li>Kill the twistd process. Systemd will log a warning when the
+  twistd process is killed but will continue listening on port 8080.
+  It will immediately re-launch twistd when another client connects to
+  that port.
+
+    <pre class="shell">
+      $ kill -9 5831
+    </pre>
+
+    <pre class="shell">
+      $ sudo tail -f /var/log/messages
+      Apr  7 01:39:28 zorin systemd[1]: twistedweb.service: main process exited, code=killed, status=9
+      Apr  7 01:39:28 zorin systemd[1]: Unit twistedweb.service entered failed state.
+    </pre>
+  </li>
+</ol>
 </body>
 </html>
