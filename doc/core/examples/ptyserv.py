@@ -1,3 +1,16 @@
+# Copyright (c) Twisted Matrix Laboratories
+# See LICENSE for details
+
+"""
+A PTY server that spawns a shell upon connection.
+
+Run this example by typing in:
+> python ptyserv.py
+
+Telnet to the server once you start it by typing in: 
+> telnet localhost 5823
+"""
+
 from twisted.internet import reactor, protocol
 
 class FakeTelnet(protocol.Protocol):
