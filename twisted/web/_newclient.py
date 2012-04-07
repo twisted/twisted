@@ -563,7 +563,7 @@ class Request:
         produces the content body to send to the remote HTTP server.
 
     @ivar persistent: Set to C{True} when you use HTTP persistent connection.
-    @type persistent: Boolean
+    @type persistent: C{bool}
     """
     def __init__(self, method, uri, headers, bodyProducer, persistent=False):
         self.method = method
