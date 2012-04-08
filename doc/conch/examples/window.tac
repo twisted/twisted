@@ -1,8 +1,20 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-# You can run this .tac file directly with:
-#    twistd -ny window.tac
+"""
+Widgets demo.
+
+You can run this .tac file directly with:
+    twistd -ny window.tac
+
+Demonstrates various widgets or buttons, such as scrollable regions,
+drawable canvas, etc.
+
+This demo sets up two listening ports: one on 6022 which accepts ssh
+connections; one on 6023 which accepts telnet connections.  No login for the
+telnet server is required; for the ssh server, "username" is the username and
+"password" is the password.
+"""
 
 from __future__ import division
 
