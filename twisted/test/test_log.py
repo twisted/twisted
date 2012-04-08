@@ -5,7 +5,7 @@
 Tests for L{twisted.python.log}.
 """
 
-import os, sys, time, logging, warnings
+import os, sys, time, logging, warnings, calendar
 from cStringIO import StringIO
 
 from twisted.trial import unittest
@@ -391,9 +391,7 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
         Test the method of L{FileLogObserver} which turns a timestamp into a
         human-readable string.
         """
-        # There is no function in the time module which converts a UTC time
-        # tuple to a timestamp.
-        when = time.mktime((2001, 2, 3, 4, 5, 6, 7, 8, 0)) - time.timezone
+        when = calendar.timegm((2001, 2, 3, 4, 5, 6, 7, 8, 0))
 
         # Pretend to be in US/Eastern for a moment
         self.flo.getTimezoneOffset = lambda when: 18000
