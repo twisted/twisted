@@ -72,10 +72,14 @@ class ReactorBuilder:
         else:
             _reactors.extend([
                     "twisted.internet.pollreactor.PollReactor",
-                    "twisted.internet.epollreactor.EPollReactor",
-                    # Support KQueue on non-OS-X POSIX platforms for now.
-                    "twisted.internet.kqreactor.KQueueReactor",
-                    ])
+                    "twisted.internet.epollreactor.EPollReactor"])
+            if not platform.isLinux():
+                # Presumably Linux is not going to start supporting kqueue, so
+                # skip even trying this configuration.
+                _reactors.extend([
+                        # Support KQueue on non-OS-X POSIX platforms for now.
+                        "twisted.internet.kqreactor.KQueueReactor",
+                        ])
 
     reactorFactory = None
     originalHandler = None
