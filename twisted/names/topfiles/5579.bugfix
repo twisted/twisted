@@ -1,0 +1,1 @@
+twisted.name.cache.CacheResolver now makes sure TTLs on returned results are never negative.
