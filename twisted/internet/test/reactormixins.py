@@ -7,7 +7,7 @@ Tests for implementations of L{IReactorTime}.
 
 __metaclass__ = type
 
-import signal
+import os, signal, time
 
 from twisted.internet.defer import TimeoutError
 from twisted.trial.unittest import TestCase, SkipTest
@@ -103,11 +103,24 @@ class ReactorBuilder:
         if self.originalHandler is not None:
             signal.signal(signal.SIGCHLD, self.originalHandler)
         if process is not None:
+            begin = time.time()
             while process.reapProcessHandlers:
                 log.msg(
                     "ReactorBuilder.tearDown reaping some processes %r" % (
                         process.reapProcessHandlers,))
                 process.reapAllProcesses()
+
+                # The process should exit on its own.  However, if it
+                # doesn't, we're stuck in this loop forever.  To avoid
+                # hanging the test suite, eventually give the process some
+                # help exiting and move on.
+                time.sleep(0.001)
+                if time.time() - begin > 60:
+                    for pid in process.reapProcessHandlers:
+                        os.kill(pid, signal.SIGKILL)
+                    raise Exception(
+                        "Timeout waiting for child processes to exit: %r" % (
+                            process.reapProcessHandlers,))
 
 
     def unbuildReactor(self, reactor):
