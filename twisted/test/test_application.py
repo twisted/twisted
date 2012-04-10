@@ -584,7 +584,7 @@ class TestInternet2(unittest.TestCase):
         """
         reactor = MemoryReactor()
 
-        factory = object()
+        factory = protocol.ClientFactory()
         t = internet.TCPClient('127.0.0.1', 1234, factory, reactor=reactor)
         t.startService()
         self.assertEqual(
@@ -598,7 +598,7 @@ class TestInternet2(unittest.TestCase):
         """
         reactor = MemoryReactor()
 
-        factory = object()
+        factory = protocol.Factory()
         t = internet.TCPServer(1234, factory, reactor=reactor)
         t.startService()
         self.assertEqual(reactor.tcpServers.pop()[:2], (1234, factory))
@@ -614,7 +614,7 @@ class TestInternet2(unittest.TestCase):
         """
         reactor = MemoryReactor()
 
-        factory = object()
+        factory = protocol.ClientFactory()
         t = internet.TCPClient('127.0.0.1', 1234, factory, reactor=reactor)
         t.startService()
         self.assertEqual(

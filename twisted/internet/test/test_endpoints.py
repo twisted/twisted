@@ -115,7 +115,7 @@ class WrappingFactoryTests(unittest.TestCase):
         C{doStart} method, allowing application-specific setup and logging.
         """
         factory = ClientFactory()
-        wf = endpoints._WrappingFactory(factory, None)
+        wf = endpoints._WrappingFactory(factory)
         wf.doStart()
         self.assertEqual(1, factory.numPorts)
 
@@ -127,7 +127,7 @@ class WrappingFactoryTests(unittest.TestCase):
         """
         factory = ClientFactory()
         factory.numPorts = 3
-        wf = endpoints._WrappingFactory(factory, None)
+        wf = endpoints._WrappingFactory(factory)
         wf.doStop()
         self.assertEqual(2, factory.numPorts)
 
@@ -147,7 +147,7 @@ class WrappingFactoryTests(unittest.TestCase):
                 raise ValueError("My protocol is poorly defined.")
 
 
-        wf = endpoints._WrappingFactory(BogusFactory(), None)
+        wf = endpoints._WrappingFactory(BogusFactory())
 
         wf.buildProtocol(None)
 
@@ -165,7 +165,7 @@ class WrappingFactoryTests(unittest.TestCase):
         returned from the wrapped C{logPrefix} method is returned from
         L{_WrappingProtocol.logPrefix}.
         """
-        wf = endpoints._WrappingFactory(TestFactory(), None)
+        wf = endpoints._WrappingFactory(TestFactory())
         wp = wf.buildProtocol(None)
         self.assertEqual(wp.logPrefix(), "A Test Protocol")
 
@@ -179,7 +179,7 @@ class WrappingFactoryTests(unittest.TestCase):
             pass
         factory = TestFactory()
         factory.protocol = NoProtocol
-        wf = endpoints._WrappingFactory(factory, None)
+        wf = endpoints._WrappingFactory(factory)
         wp = wf.buildProtocol(None)
         self.assertEqual(wp.logPrefix(), "NoProtocol")
 
@@ -189,7 +189,7 @@ class WrappingFactoryTests(unittest.TestCase):
         The wrapped C{Protocol}'s C{dataReceived} will get called when our
         C{_WrappingProtocol}'s C{dataReceived} gets called.
         """
-        wf = endpoints._WrappingFactory(TestFactory(), None)
+        wf = endpoints._WrappingFactory(TestFactory())
         p = wf.buildProtocol(None)
         p.makeConnection(None)
 
@@ -205,7 +205,7 @@ class WrappingFactoryTests(unittest.TestCase):
         Our transport is properly hooked up to the wrappedProtocol when a
         connection is made.
         """
-        wf = endpoints._WrappingFactory(TestFactory(), None)
+        wf = endpoints._WrappingFactory(TestFactory())
         p = wf.buildProtocol(None)
 
         dummyTransport = object()
@@ -223,7 +223,7 @@ class WrappingFactoryTests(unittest.TestCase):
         L{_WrappingProtocol.connectionLost} is called.
         """
         tf = TestFactory()
-        wf = endpoints._WrappingFactory(tf, None)
+        wf = endpoints._WrappingFactory(tf)
         p = wf.buildProtocol(None)
 
         p.connectionLost("fail")
@@ -236,7 +236,7 @@ class WrappingFactoryTests(unittest.TestCase):
         Calls to L{_WrappingFactory.clientConnectionLost} should errback the
         L{_WrappingFactory._onConnection} L{Deferred}
         """
-        wf = endpoints._WrappingFactory(TestFactory(), None)
+        wf = endpoints._WrappingFactory(TestFactory())
         expectedFailure = Failure(error.ConnectError(string="fail"))
 
         wf.clientConnectionFailed(
@@ -394,6 +394,11 @@ class ClientEndpointTestCaseMixin(object):
         d.addErrback(checkFailure)
 
         d.cancel()
+        # When canceled, the connector will immediately notify its factory that
+        # the connection attempt has failed due to a UserError.
+        attemptFactory = self.retrieveConnectedFactory(mreactor)
+        attemptFactory.clientConnectionFailed(None, Failure(error.UserError()))
+        # This should be a feature of MemoryReactor: <http://tm.tl/5630>.
 
         self.assertEqual(len(receivedFailures), 1)
 

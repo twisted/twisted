@@ -306,7 +306,7 @@ class _FakeConnector(object):
     """
     A fake L{IConnector} that allows us to inspect if it has been told to stop
     connecting.
-    
+
     @ivar stoppedConnecting: has this connector's
         L{FakeConnector.stopConnecting} method been invoked yet?
 
@@ -432,7 +432,9 @@ class MemoryReactor(object):
         L{IConnector}.
         """
         self.tcpClients.append((host, port, factory, timeout, bindAddress))
-        return _FakeConnector(IPv4Address('TCP', host, port))
+        conn = _FakeConnector(IPv4Address('TCP', host, port))
+        factory.startedConnecting(conn)
+        return conn
 
 
     def listenSSL(self, port, factory, contextFactory,
@@ -454,7 +456,9 @@ class MemoryReactor(object):
         """
         self.sslClients.append((host, port, factory, contextFactory,
                                 timeout, bindAddress))
-        return _FakeConnector(IPv4Address('TCP', host, port))
+        conn = _FakeConnector(IPv4Address('TCP', host, port))
+        factory.startedConnecting(conn)
+        return conn
 
 
     def listenUNIX(self, address, factory,
@@ -473,7 +477,9 @@ class MemoryReactor(object):
         L{IConnector}.
         """
         self.unixClients.append((address, factory, timeout, checkPID))
-        return _FakeConnector(UNIXAddress(address))
+        conn = _FakeConnector(UNIXAddress(address))
+        factory.startedConnecting(conn)
+        return conn
 
 
 
