@@ -9,7 +9,7 @@ __metaclass__ = type
 
 from zope.interface import implements
 
-from twisted.internet.test.reactormixins import ReactorBuilder
+from twisted.internet.test.reactormixins import ReactorBuilder, EndpointCreator
 from twisted.internet.protocol import ServerFactory, ClientFactory, Protocol
 from twisted.internet.interfaces import (
     IReactorSSL, ITLSTransport, IStreamClientEndpoint)
@@ -121,22 +121,27 @@ class StartTLSClientEndpoint(object):
         immediately start TLS on it.  Return a L{Deferred} which fires with the
         protocol instance.
         """
-        d = self.wrapped.connect(factory)
-        def connected(protocol):
-            protocol.transport.startTLS(self.contextFactory)
-            return protocol
-        d.addCallback(connected)
-        return d
+        # This would be cleaner when we have ITransport.switchProtocol, which
+        # will be added with ticket #3204:
+        class WrapperFactory(ServerFactory):
+            def buildProtocol(wrapperSelf, addr):
+                protocol = factory.buildProtocol(addr)
+                def connectionMade(orig=protocol.connectionMade):
+                    protocol.transport.startTLS(self.contextFactory)
+                    orig()
+                protocol.connectionMade = connectionMade
+                return protocol
+
+        return self.wrapped.connect(WrapperFactory())
 
 
 
-class StartTLSClientTestsMixin(TLSMixin, ReactorBuilder, ConnectionTestsMixin,
-                               ContextGeneratingMixin):
+class StartTLSClientCreator(EndpointCreator, ContextGeneratingMixin):
     """
-    Tests for TLS connections established using L{ITLSTransport.startTLS} (as
-    opposed to L{IReactorSSL.connectSSL} or L{IReactorSSL.listenSSL}).
+    Create L{ITLSTransport.startTLS} endpoint for the client, and normal SSL
+    for server just because it's easier.
     """
-    def serverEndpoint(self, reactor):
+    def server(self, reactor):
         """
         Construct an SSL server endpoint.  This should be be constructing a TCP
         server endpoint which immediately calls C{startTLS} instead, but that
@@ -145,7 +150,7 @@ class StartTLSClientTestsMixin(TLSMixin, ReactorBuilder, ConnectionTestsMixin,
         return SSL4ServerEndpoint(reactor, 0, self.getServerContext())
 
 
-    def clientEndpoint(self, reactor, serverAddress):
+    def client(self, reactor, serverAddress):
         """
         Construct a TCP client endpoint wrapped to immediately start TLS.
         """
@@ -179,20 +184,27 @@ class BadContextTestsMixin(object):
 
 
 
-class SSLClientTestsMixin(TLSMixin, ReactorBuilder, ContextGeneratingMixin,
-                          ConnectionTestsMixin, BadContextTestsMixin):
+class StartTLSClientTestsMixin(TLSMixin, ReactorBuilder, ConnectionTestsMixin):
     """
-    Mixin defining tests relating to L{ITLSTransport}.
+    Tests for TLS connections established using L{ITLSTransport.startTLS} (as
+    opposed to L{IReactorSSL.connectSSL} or L{IReactorSSL.listenSSL}).
     """
+    endpoints = StartTLSClientCreator()
 
-    def serverEndpoint(self, reactor):
+
+
+class SSLCreator(EndpointCreator, ContextGeneratingMixin):
+    """
+    Create SSL endpoints.
+    """
+    def server(self, reactor):
         """
         Create an SSL server endpoint on a TCP/IP-stack allocated port.
         """
         return SSL4ServerEndpoint(reactor, 0, self.getServerContext())
 
 
-    def clientEndpoint(self, reactor, serverAddress):
+    def client(self, reactor, serverAddress):
         """
         Create an SSL client endpoint which will connect localhost on
         the port given by C{serverAddress}.
@@ -203,6 +215,13 @@ class SSLClientTestsMixin(TLSMixin, ReactorBuilder, ContextGeneratingMixin,
             reactor, '127.0.0.1', serverAddress.port,
             ClientContextFactory())
 
+
+class SSLClientTestsMixin(TLSMixin, ReactorBuilder, ContextGeneratingMixin,
+                          ConnectionTestsMixin, BadContextTestsMixin):
+    """
+    Mixin defining tests relating to L{ITLSTransport}.
+    """
+    endpoints = SSLCreator()
 
     def test_badContext(self):
         """
@@ -338,7 +357,11 @@ globals().update(TLSPortTestsBuilder().makeTestCaseClasses())
 
 
 class AbortSSLConnectionTest(ReactorBuilder, AbortConnectionMixin, ContextGeneratingMixin):
+    """
+    C{abortConnection} tests using SSL.
+    """
     requiredInterfaces = (IReactorSSL,)
+    endpoints = SSLCreator()
 
     def buildReactor(self):
         reactor = ReactorBuilder.buildReactor(self)
@@ -358,25 +381,6 @@ class AbortSSLConnectionTest(ReactorBuilder, AbortConnectionMixin, ContextGenera
     def setUp(self):
         if FILETYPE_PEM is None:
             raise SkipTest("OpenSSL not available.")
-        self.serverContext = self.getServerContext()
-        self.clientContext = self.getClientContext()
-        self.clientContext.method = self.serverContext.method
-
-
-    def listen(self, reactor, server):
-        """
-        Listen using SSL.
-        """
-        return reactor.listenSSL(
-            0, server, self.serverContext, interface="127.0.0.1")
-
-
-    def connect(self, clientcreator, serverport):
-        """
-        Connect using SSL.
-        """
-        return clientcreator.connectSSL(
-            serverport.getHost().host, serverport.getHost().port,
-            self.clientContext)
 
 globals().update(AbortSSLConnectionTest.makeTestCaseClasses())
+

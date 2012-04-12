@@ -24,7 +24,7 @@ from twisted.internet.endpoints import UNIXServerEndpoint, UNIXClientEndpoint
 from twisted.internet import interfaces
 from twisted.internet.protocol import (
     ServerFactory, ClientFactory, DatagramProtocol)
-from twisted.internet.test.reactormixins import ReactorBuilder
+from twisted.internet.test.reactormixins import ReactorBuilder, EndpointCreator
 from twisted.internet.test.test_core import ObjectModelIntegrationMixin
 from twisted.internet.test.test_tcp import StreamTransportTestsMixin
 from twisted.internet.test.connectionmixins import ConnectionTestsMixin
@@ -59,11 +59,12 @@ def _abstractPath(case):
     return md5(case.mktemp()).hexdigest()
 
 
-class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
+
+class UNIXCreator(EndpointCreator):
     """
-    Builder defining tests relating to L{IReactorUNIX}.
+    Create UNIX socket end points.
     """
-    def serverEndpoint(self, reactor):
+    def server(self, reactor):
         """
         Construct a UNIX server endpoint.
         """
@@ -72,12 +73,19 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         return UNIXServerEndpoint(reactor, path)
 
 
-    def clientEndpoint(self, reactor, serverAddress):
+    def client(self, reactor, serverAddress):
         """
         Construct a UNIX client endpoint.
         """
         return UNIXClientEndpoint(reactor, serverAddress.name)
 
+
+
+class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
+    """
+    Builder defining tests relating to L{IReactorUNIX}.
+    """
+    endpoints = UNIXCreator()
 
     def test_interface(self):
         """
