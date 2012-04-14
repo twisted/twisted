@@ -3,6 +3,14 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+"""
+Displays a frame with two buttons and a background image, using pyui library.
+
+Run this example by typing in:
+  python pyuidemo.py
+
+Select "Quit" button to exit demo.
+"""
 
 import pyui
 from twisted.internet import reactor, pyuisupport
