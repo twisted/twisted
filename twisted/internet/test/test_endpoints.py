@@ -1130,9 +1130,9 @@ class ClientStringTests(unittest.TestCase):
 
     def test_tcp(self):
         """
-        When passed a TCP strports description, L{endpointClient} returns a
-        L{TCP4ClientEndpoint} instance initialized with the values from the
-        string.
+        When passed a TCP strports description, L{endpoints.clientFromString}
+        returns a L{TCP4ClientEndpoint} instance initialized with the values
+        from the string.
         """
         reactor = object()
         client = endpoints.clientFromString(
@@ -1149,8 +1149,8 @@ class ClientStringTests(unittest.TestCase):
     def test_tcpPositionalArgs(self):
         """
         When passed a TCP strports description using positional arguments,
-        L{endpointClient} returns a L{TCP4ClientEndpoint} instance initialized
-        with the values from the string.
+        L{endpoints.clientFromString} returns a L{TCP4ClientEndpoint} instance
+        initialized with the values from the string.
         """
         reactor = object()
         client = endpoints.clientFromString(
@@ -1167,8 +1167,8 @@ class ClientStringTests(unittest.TestCase):
     def test_tcpHostPositionalArg(self):
         """
         When passed a TCP strports description specifying host as a positional
-        argument, L{endpointClient} returns a L{TCP4ClientEndpoint} instance
-        initialized with the values from the string.
+        argument, L{endpoints.clientFromString} returns a L{TCP4ClientEndpoint}
+        instance initialized with the values from the string.
         """
         reactor = object()
 
@@ -1182,8 +1182,8 @@ class ClientStringTests(unittest.TestCase):
     def test_tcpPortPositionalArg(self):
         """
         When passed a TCP strports description specifying port as a positional
-        argument, L{endpointClient} returns a L{TCP4ClientEndpoint} instance
-        initialized with the values from the string.
+        argument, L{endpoints.clientFromString} returns a L{TCP4ClientEndpoint}
+        instance initialized with the values from the string.
         """
         reactor = object()
         client = endpoints.clientFromString(
@@ -1208,9 +1208,9 @@ class ClientStringTests(unittest.TestCase):
 
     def test_unix(self):
         """
-        When passed a UNIX strports description, L{endpointClient} returns a
-        L{UNIXClientEndpoint} instance initialized with the values from the
-        string.
+        When passed a UNIX strports description, L{endpoints.clientFromString}
+        returns a L{UNIXClientEndpoint} instance initialized with the values
+        from the string.
         """
         reactor = object()
         client = endpoints.clientFromString(
@@ -1231,6 +1231,23 @@ class ClientStringTests(unittest.TestCase):
         client = endpoints.clientFromString(object(), "unix:path=/var/foo/bar")
         self.assertEqual(client._timeout, 30)
         self.assertEqual(client._checkPID, False)
+
+
+    def test_unixPathPositionalArg(self):
+        """
+        When passed a UNIX strports description specifying path as a positional
+        argument, L{endpoints.clientFromString} returns a L{UNIXClientEndpoint}
+        instance initialized with the values from the string.
+        """
+        reactor = object()
+        client = endpoints.clientFromString(
+            reactor,
+            "unix:/var/foo/bar:lockfile=1:timeout=9")
+        self.assertIsInstance(client, endpoints.UNIXClientEndpoint)
+        self.assertIdentical(client._reactor, reactor)
+        self.assertEqual(client._path, "/var/foo/bar")
+        self.assertEqual(client._timeout, 9)
+        self.assertEqual(client._checkPID, True)
 
 
     def test_typeFromPlugin(self):

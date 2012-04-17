@@ -1090,16 +1090,21 @@ def _parseClientSSL(*args, **kwargs):
 
 
 
-def _parseClientUNIX(**kwargs):
+def _parseClientUNIX(*args, **kwargs):
     """
     Perform any argument value coercion necessary for UNIX client parameters.
 
     Valid keyword arguments to this function are all L{IReactorUNIX.connectUNIX}
-    arguments except for C{checkPID}.  Instead, C{lockfile} is accepted and has
-    the same meaning.
+    keyword arguments except for C{checkPID}.  Instead, C{lockfile} is accepted
+    and has the same meaning.  Also C{path} is used instead of C{address}.
+    
+    Valid positional arguments to this function are C{path}.
 
     @return: The coerced values as a C{dict}.
     """
+    if len(args) == 1:
+        kwargs['path'] = args[0]
+
     try:
         kwargs['checkPID'] = bool(int(kwargs.pop('lockfile')))
     except KeyError:
@@ -1151,6 +1156,17 @@ def clientFromString(reactor, description):
 
         clientFromString(reactor, "ssl:host=web.example.com:port=443:"
                                   "caCertsDir=/etc/ssl/certs")
+    
+    You can create a UNIX client endpoint with the 'path' argument and optional
+    'lockfile' and 'timeout' arguments::
+    
+        clientFromString(reactor, "unix:path=/var/foo/bar:lockfile=1:timeout=9")
+    
+    or, with the path as a positional argument with or without optional
+    arguments as in the following 2 examples::
+    
+        clientFromString(reactor, "unix:/var/foo/bar")
+        clientFromString(reactor, "unix:/var/foo/bar:lockfile=1:timeout=9")
 
     This function is also extensible; new endpoint types may be registered as
     L{IStreamClientEndpointStringParser} plugins.  See that interface for more
