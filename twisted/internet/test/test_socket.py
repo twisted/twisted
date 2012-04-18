@@ -1,11 +1,14 @@
 
 import errno, socket
 
+from twisted.python.log import err
 from twisted.internet.interfaces import IReactorSocket
 from twisted.internet.error import (
     UnsupportedAddressFamily, UnsupportedSocketType)
 from twisted.internet.protocol import ServerFactory
-from twisted.internet.test.reactormixins import ReactorBuilder
+from twisted.internet.test.reactormixins import (
+    ReactorBuilder, needsRunningReactor)
+
 
 class AdoptStreamPortErrorsTestsBuilder(ReactorBuilder):
     """
@@ -53,6 +56,41 @@ class AdoptStreamPortErrorsTestsBuilder(ReactorBuilder):
         self.assertRaises(
             UnsupportedAddressFamily,
             reactor.adoptStreamPort, port.fileno(), arbitrary, ServerFactory())
+
+
+    def test_stopOnlyCloses(self):
+        """
+        When the L{IListeningPort} returned by L{IReactorSocket.adoptStreamPort}
+        is stopped using C{stopListening}, the underlying socket is closed but
+        not shutdown.  This allows another process which still has a reference
+        to it to continue accepting connections over it.
+        """
+        reactor = self.buildReactor()
+
+        portSocket = socket.socket()
+        self.addCleanup(portSocket.close)
+
+        portSocket.listen(1)
+        portSocket.setblocking(False)
+
+        # The file descriptor is duplicated by adoptStreamPort
+        port = reactor.adoptStreamPort(
+            portSocket.fileno(), portSocket.family, ServerFactory())
+        d = port.stopListening()
+        def stopped(ignored):
+            # Should still be possible to accept a connection on portSocket.  If
+            # it was shutdown, the exception would be EINVAL instead.
+            exc = self.assertRaises(socket.error, portSocket.accept)
+            self.assertEqual(exc.args[0], errno.EAGAIN)
+        d.addCallback(stopped)
+        d.addErrback(err, "Failed to accept on original port.")
+
+        needsRunningReactor(
+            reactor,
+            lambda: d.addCallback(lambda ignored: reactor.stop()))
+
+        reactor.run()
+
 
 
 globals().update(AdoptStreamPortErrorsTestsBuilder.makeTestCaseClasses())

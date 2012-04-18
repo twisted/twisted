@@ -112,7 +112,8 @@ class _SocketCloser(object):
         skt = self.socket
         try:
             if orderly:
-                getattr(skt, self._socketShutdownMethod)(2)
+                if self._socketShutdownMethod is not None:
+                    getattr(skt, self._socketShutdownMethod)(2)
             else:
                 # Set SO_LINGER to 1,0 which, by convention, causes a
                 # connection reset to be sent when close is called,
@@ -924,6 +925,8 @@ class Port(base.BasePort, _SocketCloser):
             # Re-use the externally specified socket
             skt = self._preexistingSocket
             self._preexistingSocket = None
+            # Avoid shutting it down at the end.
+            self._socketShutdownMethod = None
 
         # Make sure that if we listened on port 0, we update that to
         # reflect what the OS actually assigned us.
