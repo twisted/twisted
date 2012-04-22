@@ -2,6 +2,15 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+"""
+This example demonstrates how to make a simple http client.
+
+Usage:
+    httpclient.py <url>
+
+Don't forget the http:// when you type the web address!
+"""
+
 import sys
 from pprint import pprint
 
@@ -20,6 +29,9 @@ class WriteToStdout(Protocol):
         self.onConnLost = Deferred()
 
     def dataReceived(self, data):
+        """
+        Print out the html page received.
+        """
         print 'Got some:', data
 
     def connectionLost(self, reason):
@@ -31,11 +43,17 @@ class WriteToStdout(Protocol):
 
 
 def main(reactor, url):
+    """
+    We create a custom UserAgent and send a GET request to a web server.
+    """
     userAgent = 'Twisted/%s (httpclient.py)' % (version.short(),)
     agent = Agent(reactor)
     d = agent.request(
         'GET', url, Headers({'user-agent': [userAgent]}))
     def cbResponse(response):
+        """
+        Prints out the response returned by the web server.
+        """
         pprint(vars(response))
         proto = WriteToStdout()
         if response.length is not UNKNOWN_LENGTH:

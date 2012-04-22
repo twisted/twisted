@@ -1,10 +1,13 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-# 
-"""Example of publishing SOAP methods.
+"""
+This is an example of a simple SOAP server.
 
-Sample usage::
+Usage:
+    $ python soap.py
+
+An example session (assuming the server is running):
 
    >>> import SOAPpy
    >>> p = SOAPpy.SOAPProxy('http://localhost:8080/')
@@ -12,8 +15,8 @@ Sample usage::
    1
    >>> p.add(a=1, b=3)
    4
-   >>> p.echo([1, 2])
-   [1, 2]
+   >>> p.echo("Hello World")
+   'Hello World'
 
 """
 
@@ -22,7 +25,9 @@ from twisted.internet import reactor, defer
 
 
 class Example(soap.SOAPPublisher):
-    """Publish two methods, 'add' and 'echo'."""
+    """
+    It publishs two methods, 'add' and 'echo'.
+    """
 
     def soap_echo(self, x):
         return x
@@ -37,5 +42,3 @@ class Example(soap.SOAPPublisher):
 
 reactor.listenTCP(8080, server.Site(Example()))
 reactor.run()
-
-                  

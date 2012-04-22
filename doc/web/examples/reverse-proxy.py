@@ -1,11 +1,14 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-# Run this example with:
-#    python reverse-proxy.py
-#
-# Then visit http://localhost:8080 in your web browser. The reverse
-# proxy will proxy your connection to www.yahoo.com.
+"""
+This example demonstrates how to run a reverse proxy.
+
+Run this example with:
+    $ python reverse-proxy.py
+
+Then visit http://localhost:8080/ in your web browser.
+"""
 
 from twisted.internet import reactor
 from twisted.web import proxy, server

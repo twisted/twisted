@@ -1,9 +1,14 @@
-"""Example of an XML-RPC server in Twisted.
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
 
-To run the server, just run this file ("python xmlrpc.py").
+"""
+An example of an XML-RPC server in Twisted.
 
-An example session (assuming the server is running)::
-    
+Usage:
+    $ python xmlrpc.py
+
+An example session (assuming the server is running):
+
     >>> import xmlrpclib
     >>> s = xmlrpclib.Server('http://localhost:7080/')
     >>> s.echo("lala")
@@ -21,37 +26,45 @@ An example session (assuming the server is running)::
 
 from twisted.web import xmlrpc
 from twisted.internet import defer
-
-# This module is standard in Python 2.2, otherwise get it from
-#   http://www.pythonware.com/products/xmlrpc/
 import xmlrpclib
 
 
 class Echoer(xmlrpc.XMLRPC):
-    """An example object to be published.
-    
+    """
+    An example object to be published.
+
     Has five methods accessable by XML-RPC, 'echo', 'hello', 'defer',
     'defer_fail' and 'fail.
     """
-    
+
     def xmlrpc_echo(self, *args):
-        """Return all passed args."""
+        """
+        Return all passed args.
+        """
         return args
-    
+
     def xmlrpc_hello(self):
-        """Return 'hello, world'."""
+        """
+        Return 'hello, world'.
+        """
         return 'hello, world!'
-    
+
     def xmlrpc_defer(self):
-        """Show how xmlrpc methods can return Deferred."""
+        """
+        Show how xmlrpc methods can return Deferred.
+        """
         return defer.succeed("hello")
-    
+
     def xmlrpc_defer_fail(self):
-        """Show how xmlrpc methods can return failed Deferred."""
+        """
+        Show how xmlrpc methods can return failed Deferred.
+        """
         return defer.fail(12)
 
     def xmlrpc_fail(self):
-        """Show how we can return a failure code."""
+        """
+        Show how we can return a failure code.
+        """
         return xmlrpclib.Fault(7, "Out of cheese.")
 
 

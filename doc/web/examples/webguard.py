@@ -1,6 +1,16 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+"""
+This example shows how to make simple web authentication.
+
+To run the example:
+    $ python webguard.py
+
+When you visit http://127.0.0.1:8889/, the page will ask for an username &
+password. See the code in main() to get the correct username & password!
+"""
+
 import sys
 
 from zope.interface import implements

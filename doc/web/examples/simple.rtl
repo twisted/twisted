@@ -1,7 +1,16 @@
-# For this to work:
-# Configure your web server with 
-# --process=.rtl=twisted.web.script.ResourceTemplate
-# And make sure quixote is installed on your Python path.
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+This example demostrates how to render a page using a third-party template
+system.
+
+Usage:
+    $ twistd -n web --process=.rtl=twisted.web.script.ResourceTemplate --path /path/to/examples/
+
+And make sure Quixote is installed.
+"""
+
 from twisted.web.resource import Resource
 
 

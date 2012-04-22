@@ -1,7 +1,17 @@
-# This shows an example of a bare-bones distributed web
-# set up.
-# The "master" and "slave" parts will usually be in different files
-# -- they are here together only for brevity of illustration 
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+This shows an example of a bare-bones distributed web set up.  The "master" and
+"slave" parts will usually be in different files -- they are here together only
+for brevity of illustration.  In normal usage they would each run in a separate
+process.
+
+Usage:
+    $ python silly-web.py
+
+Then visit http://localhost:19988/.
+"""
 
 from twisted.internet import reactor, protocol
 from twisted.web import server, distrib, static

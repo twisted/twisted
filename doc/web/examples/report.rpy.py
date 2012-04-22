@@ -1,3 +1,18 @@
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+This example demostrates how to get host information from a request object.
+
+To test the script, rename the file to report.rpy, and move it to any directory,
+let's say /var/www/html/.
+
+Now, start your Twist web server:
+   $ twistd -n web --path /var/www/html/
+
+Then visit http://127.0.0.1:8080/report.rpy in your web browser.
+"""
+
 from twisted.web.resource import Resource
 
 
@@ -5,7 +20,8 @@ class ReportResource(Resource):
 
     def render_GET(self, request):
         path = request.path
-        _, host, port = request.getHost()
+        host = request.getHost().host
+        port = request.getHost().port
         url = request.prePathURL()
         uri = request.uri
         secure = (request.isSecure() and "securely") or "insecurely"

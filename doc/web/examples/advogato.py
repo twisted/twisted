@@ -1,17 +1,18 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-#
+"""
+This example demonstrates how to logon to a remote server and post a diary.
 
-'''
-Usage: 
-advogato.py <name> <diary entry file>
-'''
+Usage:
+    $ python advogato.py <name> <diary entry file>
+"""
+
+import sys
+from getpass import getpass
 
 from twisted.web.xmlrpc import Proxy
 from twisted.internet import reactor
-from getpass import getpass
-import sys
 
 class AddDiary:
 
