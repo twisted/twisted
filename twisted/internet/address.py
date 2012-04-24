@@ -105,7 +105,7 @@ class UNIXAddress(object, util.FancyEqMixin):
             check is done if the name attributes do not match.
             """
             res = super(UNIXAddress, self).__eq__(other)
-            if res == False:
+            if not res and self.name and other.name:
                 try:
                     return os.path.samefile(self.name, other.name)
                 except OSError:
@@ -118,6 +118,8 @@ class UNIXAddress(object, util.FancyEqMixin):
 
 
     def __hash__(self):
+        if self.name is None:
+            return hash((self.__class__, None))
         try:
             s1 = os.stat(self.name)
             return hash((s1.st_ino, s1.st_dev))

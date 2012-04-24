@@ -89,7 +89,10 @@ class AddressTestCaseMixin(object):
         when a different name is passed in
         """
         self.assertFalse(self.buildAddress() == self.buildDifferentAddress())
+        self.assertFalse(self.buildDifferentAddress() == self.buildAddress())
+
         self.assertTrue(self.buildAddress() != self.buildDifferentAddress())
+        self.assertTrue(self.buildDifferentAddress() != self.buildAddress())
 
 
     def assertDeprecations(self, testMethod, message):
@@ -131,10 +134,12 @@ class IPv4AddressTCPTestCase(unittest.TestCase, IPv4AddressTestCaseMixin):
         If a value is passed for the C{_bwHack} parameter to L{IPv4Address},
         a deprecation warning is emitted.
         """
+        # Construct this for warning side-effects, disregard the actual object.
+        IPv4Address("TCP", "127.0.0.3", 0, _bwHack="TCP")
+
         message = (
             "twisted.internet.address.IPv4Address._bwHack is deprecated "
             "since Twisted 11.0")
-        address = IPv4Address("TCP", "127.0.0.3", 0, _bwHack="TCP")
         return self.assertDeprecations(self.test_bwHackDeprecation, message)
 
 
@@ -161,10 +166,12 @@ class IPv4AddressUDPTestCase(unittest.TestCase, IPv4AddressTestCaseMixin):
         If a value is passed for the C{_bwHack} parameter to L{IPv4Address},
         a deprecation warning is emitted.
         """
+        # Construct this for warning side-effects, disregard the actual object.
+        IPv4Address("UDP", "127.0.0.3", 0, _bwHack="UDP")
+
         message = (
             "twisted.internet.address.IPv4Address._bwHack is deprecated "
             "since Twisted 11.0")
-        address = IPv4Address("UDP", "127.0.0.3", 0, _bwHack="UDP")
         return self.assertDeprecations(self.test_bwHackDeprecation, message)
 
 
@@ -201,6 +208,8 @@ class UNIXAddressTestCase(unittest.TestCase, AddressTestCaseMixin):
         os.symlink(os.path.abspath(self._socketAddress), linkName)
         self.assertTrue(
             UNIXAddress(self._socketAddress) == UNIXAddress(linkName))
+        self.assertTrue(
+            UNIXAddress(linkName) == UNIXAddress(self._socketAddress))
     test_comparisonOfLinkedFiles.skip = symlinkSkip
 
 
@@ -221,8 +230,63 @@ class UNIXAddressTestCase(unittest.TestCase, AddressTestCaseMixin):
         If a value is passed for the C{_bwHack} parameter to L{UNIXAddress},
         a deprecation warning is emitted.
         """
+        # Construct this for warning side-effects, disregard the actual object.
+        UNIXAddress(self.mktemp(), _bwHack='UNIX')
+
         message = (
             "twisted.internet.address.UNIXAddress._bwHack is deprecated "
             "since Twisted 11.0")
-        address = UNIXAddress(self.mktemp(), _bwHack='UNIX')
         return self.assertDeprecations(self.test_bwHackDeprecation, message)
+
+
+
+class EmptyUNIXAddressTestCase(unittest.TestCase, AddressTestCaseMixin):
+    """
+    Tests for L{UNIXAddress} operations involving a C{None} address.
+    """
+    addressArgSpec = (("name", "%r"),)
+
+    def setUp(self):
+        self._socketAddress = self.mktemp()
+
+
+    def buildAddress(self):
+        """
+        Create an arbitrary new L{UNIXAddress} instance.  A new instance is
+        created for each call, but always for the same address.
+        """
+        return UNIXAddress(self._socketAddress)
+
+
+    def buildDifferentAddress(self):
+        """
+        Like L{buildAddress}, but with a fixed address of C{None}.
+        """
+        return UNIXAddress(None)
+
+
+    def test_comparisonOfLinkedFiles(self):
+        """
+        A UNIXAddress referring to a C{None} address does not compare equal to a
+        UNIXAddress referring to a symlink.
+        """
+        linkName = self.mktemp()
+        self.fd = open(self._socketAddress, 'w')
+        os.symlink(os.path.abspath(self._socketAddress), linkName)
+        self.assertTrue(
+            UNIXAddress(self._socketAddress) != UNIXAddress(None))
+        self.assertTrue(
+            UNIXAddress(None) != UNIXAddress(self._socketAddress))
+    test_comparisonOfLinkedFiles.skip = symlinkSkip
+
+
+    def test_emptyHash(self):
+        """
+        C{__hash__} can be used to get a hash of an address, even one referring
+        to C{None} rather than a real path.
+        """
+        addr = self.buildDifferentAddress()
+        d = {addr: True}
+        self.assertTrue(d[self.buildDifferentAddress()])
+
+
