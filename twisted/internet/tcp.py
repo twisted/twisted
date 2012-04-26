@@ -92,7 +92,7 @@ from errno import errorcode
 from twisted.internet import base, address, fdesc
 from twisted.internet.task import deferLater
 from twisted.python import log, failure, reflect
-from twisted.python.util import unsignedID
+from twisted.python.util import unsignedID, untilConcludes
 from twisted.internet.error import CannotListenError
 from twisted.internet import abstract, main, interfaces, error
 
@@ -199,6 +199,11 @@ class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser,
                 return
             else:
                 return main.CONNECTION_LOST
+
+        return self._dataReceived(data)
+
+
+    def _dataReceived(self, data):
         if not data:
             return main.CONNECTION_DONE
         rval = self.protocol.dataReceived(data)
@@ -222,14 +227,14 @@ class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser,
         connection is lost, an exception is returned.  Otherwise, the number
         of bytes successfully written is returned.
         """
+        # Limit length of buffer to try to send, because some OSes are too
+        # stupid to do so themselves (ahem windows)
+        limitedData = buffer(data, 0, self.SEND_LIMIT)
+
         try:
-            # Limit length of buffer to try to send, because some OSes are too
-            # stupid to do so themselves (ahem windows)
-            return self.socket.send(buffer(data, 0, self.SEND_LIMIT))
+            return untilConcludes(self.socket.send, limitedData)
         except socket.error, se:
-            if se.args[0] == EINTR:
-                return self.writeSomeData(data)
-            elif se.args[0] in (EWOULDBLOCK, ENOBUFS):
+            if se.args[0] in (EWOULDBLOCK, ENOBUFS):
                 return 0
             else:
                 return main.CONNECTION_LOST

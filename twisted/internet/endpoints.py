@@ -55,9 +55,10 @@ class _WrappingProtocol(Protocol):
         self._connectedDeferred = connectedDeferred
         self._wrappedProtocol = wrappedProtocol
 
-        if interfaces.IHalfCloseableProtocol.providedBy(
-            self._wrappedProtocol):
-            directlyProvides(self, interfaces.IHalfCloseableProtocol)
+        for iface in [interfaces.IHalfCloseableProtocol,
+                      interfaces.IFileDescriptorReceiver]:
+            if iface.providedBy(self._wrappedProtocol):
+                directlyProvides(self, iface)
 
 
     def logPrefix(self):
@@ -83,6 +84,13 @@ class _WrappingProtocol(Protocol):
         Proxy C{dataReceived} calls to our C{self._wrappedProtocol}
         """
         return self._wrappedProtocol.dataReceived(data)
+
+
+    def fileDescriptorReceived(self, descriptor):
+        """
+        Proxy C{fileDescriptorReceived} calls to our C{self._wrappedProtocol}
+        """
+        return self._wrappedProtocol.fileDescriptorReceived(descriptor)
 
 
     def connectionLost(self, reason):

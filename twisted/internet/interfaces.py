@@ -1474,6 +1474,26 @@ class IHalfCloseableProtocol(Interface):
         """
 
 
+
+class IFileDescriptorReceiver(Interface):
+    """
+    Protocols may implement L{IFileDescriptorReceiver} to receive file
+    descriptors sent to them.  This is useful in conjunction with
+    L{IUNIXTransport}, which allows file descriptors to be sent between
+    processes on a single host.
+    """
+    def fileDescriptorReceived(descriptor):
+        """
+        Called when a file descriptor is received over the connection.
+
+        @param descriptor: The descriptor which was received.
+        @type descriptor: C{int}
+
+        @return: C{None}
+        """
+
+
+
 class IProtocolFactory(Interface):
     """
     Interface for protocol factories.
@@ -1630,6 +1650,34 @@ class ITCPTransport(ITransport):
         """
         Returns L{IPv4Address} or L{IPv6Address}.
         """
+
+
+
+class IUNIXTransport(ITransport):
+    """
+    Transport for stream-oriented unix domain connections.
+    """
+    def sendFileDescriptor(descriptor):
+        """
+        Send a duplicate of this (file, socket, pipe, etc) descriptor to the
+        other end of this connection.
+
+        The send is non-blocking and will be queued if it cannot be performed
+        immediately.  The send will be processed in order with respect to other
+        C{sendFileDescriptor} calls on this transport, but not necessarily with
+        respect to C{write} calls on this transport.  The send can only be
+        processed if there are also bytes in the normal connection-oriented send
+        buffer (ie, you must call C{write} at least as many times as you call
+        C{sendFileDescriptor}).
+
+        @param descriptor: An C{int} giving a valid file descriptor in this
+            process.  Note that a I{file descriptor} may actually refer to a
+            socket, a pipe, or anything else POSIX tries to treat in the same
+            way as a file.
+
+        @return: C{None}
+        """
+
 
 
 class ITLSTransport(ITCPTransport):

@@ -6,28 +6,46 @@ Tests for implementations of L{IReactorUNIX}.
 """
 
 from stat import S_IMODE
-from os import stat
+from os import stat, close
 from tempfile import mktemp
+from socket import AF_INET, SOCK_STREAM, socket
+from pprint import pformat
 
 try:
     from socket import AF_UNIX
 except ImportError:
     AF_UNIX = None
 
+from zope.interface import implements
 from zope.interface.verify import verifyObject
 
+from twisted.python.log import addObserver, removeObserver, err
+from twisted.python.failure import Failure
 from twisted.python.hashlib import md5
 from twisted.python.runtime import platform
-from twisted.internet.interfaces import IConnector
+from twisted.internet.interfaces import IConnector, IFileDescriptorReceiver
+from twisted.internet.error import ConnectionClosed, FileDescriptorOverrun
 from twisted.internet.address import UNIXAddress
 from twisted.internet.endpoints import UNIXServerEndpoint, UNIXClientEndpoint
+from twisted.internet.defer import Deferred, fail
+from twisted.internet.task import LoopingCall
 from twisted.internet import interfaces
 from twisted.internet.protocol import (
     ServerFactory, ClientFactory, DatagramProtocol)
 from twisted.internet.test.reactormixins import ReactorBuilder, EndpointCreator
 from twisted.internet.test.test_core import ObjectModelIntegrationMixin
 from twisted.internet.test.test_tcp import StreamTransportTestsMixin
+from twisted.internet.test.reactormixins import (
+    ConnectableProtocol, runProtocolsWithReactor)
 from twisted.internet.test.connectionmixins import ConnectionTestsMixin
+
+try:
+    from twisted.python import sendmsg
+except ImportError:
+    sendmsgSkip = (
+        "sendmsg extension unavailable, extended UNIX features disabled")
+else:
+    sendmsgSkip = None
 
 
 class UNIXFamilyMixin:
@@ -78,6 +96,111 @@ class UNIXCreator(EndpointCreator):
         Construct a UNIX client endpoint.
         """
         return UNIXClientEndpoint(reactor, serverAddress.name)
+
+
+
+class SendFileDescriptor(ConnectableProtocol):
+    """
+    L{SendFileDescriptorAndBytes} sends a file descriptor and optionally some
+    normal bytes and then closes its connection.
+
+    @ivar reason: The reason the connection was lost, after C{connectionLost}
+        is called.
+    """
+    reason = None
+
+    def __init__(self, fd, data):
+        """
+        @param fd: A C{int} giving a file descriptor to send over the
+            connection.
+
+        @param data: A C{str} giving data to send over the connection, or
+            C{None} if no data is to be sent.
+        """
+        self.fd = fd
+        self.data = data
+
+
+    def connectionMade(self):
+        """
+        Send C{self.fd} and, if it is not C{None}, C{self.data}.  Then close the
+        connection.
+        """
+        self.transport.sendFileDescriptor(self.fd)
+        if self.data:
+            self.transport.write(self.data)
+        self.transport.loseConnection()
+
+
+    def connectionLost(self, reason):
+        ConnectableProtocol.connectionLost(self, reason)
+        self.reason = reason
+
+
+
+class ReceiveFileDescriptor(ConnectableProtocol):
+    """
+    L{ReceiveFileDescriptor} provides an API for waiting for file descriptors to
+    be received.
+
+    @ivar reason: The reason the connection was lost, after C{connectionLost}
+        is called.
+
+    @ivar waiting: A L{Deferred} which fires with a file descriptor once one is
+        received, or with a failure if the connection is lost with no descriptor
+        arriving.
+    """
+    implements(IFileDescriptorReceiver)
+
+    reason = None
+    waiting = None
+
+    def waitForDescriptor(self):
+        """
+        Return a L{Deferred} which will fire with the next file descriptor
+        received, or with a failure if the connection is or has already been
+        lost.
+        """
+        if self.reason is None:
+            self.waiting = Deferred()
+            return self.waiting
+        else:
+            return fail(self.reason)
+
+
+    def fileDescriptorReceived(self, descriptor):
+        """
+        Fire the waiting Deferred, initialized by C{waitForDescriptor}, with the
+        file descriptor just received.
+        """
+        self.waiting.callback(descriptor)
+        self.waiting = None
+
+
+    def dataReceived(self, data):
+        """
+        Fail the waiting Deferred, if it has not already been fired by
+        C{fileDescriptorReceived}.  The bytes sent along with a file descriptor
+        are guaranteed to be delivered to the protocol's C{dataReceived} method
+        only after the file descriptor has been delivered to the protocol's
+        C{fileDescriptorReceived}.
+        """
+        if self.waiting is not None:
+            self.waiting.errback(Failure(Exception(
+                        "Received bytes (%r) before descriptor." % (data,))))
+            self.waiting = None
+
+
+    def connectionLost(self, reason):
+        """
+        Fail the waiting Deferred, initialized by C{waitForDescriptor}, if there
+        is one.
+        """
+        ConnectableProtocol.connectionLost(self, reason)
+        if self.waiting is not None:
+            self.waiting.errback(reason)
+            self.waiting = None
+        self.reason = reason
 
 
 
@@ -133,6 +256,234 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
     if not platform.isLinux():
         test_connectToLinuxAbstractNamespace.skip = (
             'Abstract namespace UNIX sockets only supported on Linux.')
+
+
+    def test_addresses(self):
+        """
+        A client's transport's C{getHost} and C{getPeer} return L{UNIXAddress}
+        instances which have the filesystem path of the host and peer ends of
+        the connection.
+        """
+        class SaveAddress(ConnectableProtocol):
+            def makeConnection(self, transport):
+                self.addresses = dict(
+                    host=transport.getHost(), peer=transport.getPeer())
+                transport.loseConnection()
+
+        server = SaveAddress()
+        client = SaveAddress()
+
+        runProtocolsWithReactor(self, server, client, self.endpoints)
+
+        self.assertEqual(server.addresses['host'], client.addresses['peer'])
+        self.assertEqual(server.addresses['peer'], client.addresses['host'])
+
+
+    def test_sendFileDescriptor(self):
+        """
+        L{IUNIXTransport.sendFileDescriptor} accepts an integer file descriptor
+        and sends a copy of it to the process reading from the connection.
+        """
+        from socket import fromfd
+
+        s = socket()
+        s.bind(('', 0))
+        server = SendFileDescriptor(s.fileno(), "junk")
+
+        client = ReceiveFileDescriptor()
+        d = client.waitForDescriptor()
+        def checkDescriptor(descriptor):
+            received = fromfd(descriptor, AF_INET, SOCK_STREAM)
+            # Thanks for the free dup, fromfd()
+            close(descriptor)
+
+            # If the sockets have the same local address, they're probably the
+            # same.
+            self.assertEqual(s.getsockname(), received.getsockname())
+
+            # But it would be cheating for them to be identified by the same
+            # file descriptor.  The point was to get a copy, as we might get if
+            # there were two processes involved here.
+            self.assertNotEqual(s.fileno(), received.fileno())
+        d.addCallback(checkDescriptor)
+        d.addErrback(err, "Sending file descriptor encountered a problem")
+        d.addBoth(lambda ignored: server.transport.loseConnection())
+
+        runProtocolsWithReactor(self, server, client, self.endpoints)
+    if sendmsgSkip is not None:
+        test_sendFileDescriptor.skip = sendmsgSkip
+
+
+    def test_sendFileDescriptorTriggersPauseProducing(self):
+        """
+        If a L{IUNIXTransport.sendFileDescriptor} call fills up the send buffer,
+        any registered producer is paused.
+        """
+        class DoesNotRead(ConnectableProtocol):
+            def connectionMade(self):
+                self.transport.pauseProducing()
+
+        class SendsManyFileDescriptors(ConnectableProtocol):
+            paused = False
+
+            def connectionMade(self):
+                self.socket = socket()
+                self.transport.registerProducer(self, True)
+                def sender():
+                    self.transport.sendFileDescriptor(self.socket.fileno())
+                    self.transport.write("x")
+                self.task = LoopingCall(sender)
+                self.task.clock = self.transport.reactor
+                self.task.start(0).addErrback(err, "Send loop failure")
+
+            def stopProducing(self):
+                self._disconnect()
+
+            def resumeProducing(self):
+                self._disconnect()
+
+            def pauseProducing(self):
+                self.paused = True
+                self.transport.unregisterProducer()
+                self._disconnect()
+
+            def _disconnect(self):
+                self.task.stop()
+                self.transport.abortConnection()
+                self.other.transport.abortConnection()
+
+        server = SendsManyFileDescriptors()
+        client = DoesNotRead()
+        server.other = client
+        runProtocolsWithReactor(self, server, client, self.endpoints)
+
+        self.assertTrue(
+            server.paused, "sendFileDescriptor producer was not paused")
+    if sendmsgSkip is not None:
+        test_sendFileDescriptorTriggersPauseProducing.skip = sendmsgSkip
+
+
+    def test_fileDescriptorOverrun(self):
+        """
+        If L{IUNIXTransport.sendFileDescriptor} is used to queue a greater
+        number of file descriptors than the number of bytes sent using
+        L{ITransport.write}, the connection is closed and the protocol connected
+        to the transport has its C{connectionLost} method called with a failure
+        wrapping L{FileDescriptorOverrun}.
+        """
+        cargo = socket()
+        server = SendFileDescriptor(cargo.fileno(), None)
+
+        client = ReceiveFileDescriptor()
+        d = self.assertFailure(
+            client.waitForDescriptor(), ConnectionClosed)
+        d.addErrback(
+            err, "Sending file descriptor encountered unexpected problem")
+        d.addBoth(lambda ignored: server.transport.loseConnection())
+
+        runProtocolsWithReactor(self, server, client, self.endpoints)
+
+        self.assertIsInstance(server.reason.value, FileDescriptorOverrun)
+    if sendmsgSkip is not None:
+        test_fileDescriptorOverrun.skip = sendmsgSkip
+
+
+    def test_avoidLeakingFileDescriptors(self):
+        """
+        If associated with a protocol which does not provide
+        L{IFileDescriptorReceiver}, file descriptors received by the
+        L{IUNIXTransport} implementation are closed and a warning is emitted.
+        """
+        # To verify this, establish a connection.  Send one end of the
+        # connection over the IUNIXTransport implementation.  After the copy
+        # should no longer exist, close the original.  If the opposite end of
+        # the connection decides the connection is closed, the copy does not
+        # exist.
+        from socket import socketpair
+        probeClient, probeServer = socketpair()
+
+        events = []
+        addObserver(events.append)
+        self.addCleanup(removeObserver, events.append)
+
+        class RecordEndpointAddresses(SendFileDescriptor):
+            def connectionMade(self):
+                self.hostAddress = self.transport.getHost()
+                self.peerAddress = self.transport.getPeer()
+                SendFileDescriptor.connectionMade(self)
+
+        server = RecordEndpointAddresses(probeClient.fileno(), "junk")
+        client = ConnectableProtocol()
+
+        runProtocolsWithReactor(self, server, client, self.endpoints)
+
+        # Get rid of the original reference to the socket.
+        probeClient.close()
+
+        # A non-blocking recv will return "" if the connection is closed, as
+        # desired.  If the connection has not been closed, because the duplicate
+        # file descriptor is still open, it will fail with EAGAIN instead.
+        probeServer.setblocking(False)
+        self.assertEqual("", probeServer.recv(1024))
+
+        # This is a surprising circumstance, so it should be logged.
+        format = (
+            "%(protocolName)s (on %(hostAddress)r) does not "
+            "provide IFileDescriptorReceiver; closing file "
+            "descriptor received (from %(peerAddress)r).")
+        clsName = "ConnectableProtocol"
+
+        # Reverse host and peer, since the log event is from the client
+        # perspective.
+        expectedEvent = dict(hostAddress=server.peerAddress,
+                             peerAddress=server.hostAddress,
+                             protocolName=clsName,
+                             format=format)
+
+        for logEvent in events:
+            for k, v in expectedEvent.iteritems():
+                if v != logEvent.get(k):
+                    break
+            else:
+                # No mismatches were found, stop looking at events
+                break
+        else:
+            # No fully matching events were found, fail the test.
+            self.fail(
+                "Expected event (%s) not found in logged events (%s)" % (
+                    expectedEvent, pformat(events,)))
+    if sendmsgSkip is not None:
+        test_avoidLeakingFileDescriptors.skip = sendmsgSkip
+
+
+    def test_descriptorDeliveredBeforeBytes(self):
+        """
+        L{IUNIXTransport.sendFileDescriptor} sends file descriptors before
+        L{ITransport.write} sends normal bytes.
+        """
+        class RecordEvents(ConnectableProtocol):
+            implements(IFileDescriptorReceiver)
+
+            def connectionMade(self):
+                ConnectableProtocol.connectionMade(self)
+                self.events = []
+
+            def fileDescriptorReceived(innerSelf, descriptor):
+                self.addCleanup(close, descriptor)
+                innerSelf.events.append(type(descriptor))
+
+            def dataReceived(self, data):
+                self.events.extend(data)
+
+        cargo = socket()
+        server = SendFileDescriptor(cargo.fileno(), "junk")
+        client = RecordEvents()
+
+        runProtocolsWithReactor(self, server, client, self.endpoints)
+
+        self.assertEqual([int, "j", "u", "n", "k"], client.events)
+    if sendmsgSkip is not None:
+        test_descriptorDeliveredBeforeBytes.skip = sendmsgSkip
 
 
 

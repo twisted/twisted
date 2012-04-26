@@ -12,11 +12,12 @@ from zope.interface import implements
 from zope.interface.verify import verifyObject
 
 from twisted.trial import unittest
-from twisted.internet import error, interfaces
+from twisted.internet import error, interfaces, defer
 from twisted.internet import endpoints
 from twisted.internet.address import IPv4Address, UNIXAddress
 from twisted.internet.protocol import ClientFactory, Protocol
-from twisted.test.proto_helpers import MemoryReactor, RaisingMemoryReactor
+from twisted.test.proto_helpers import (
+    MemoryReactor, RaisingMemoryReactor, StringTransport)
 from twisted.python.failure import Failure
 from twisted.python.systemd import ListenFDs
 from twisted.plugin import getPlugins
@@ -74,8 +75,14 @@ class TestProtocol(Protocol):
 
 class TestHalfCloseableProtocol(TestProtocol):
     """
-    A Protocol that implements L{IHalfCloseableProtocol} and records that
-    its C{readConnectionLost} and {writeConnectionLost} methods.
+    A Protocol that implements L{IHalfCloseableProtocol} and records whether its
+    C{readConnectionLost} and {writeConnectionLost} methods are called.
+
+    @ivar readLost: A C{bool} indicating whether C{readConnectionLost} has been
+        called.
+
+    @ivar writeLost: A C{bool} indicating whether C{writeConnectionLost} has
+        been called.
     """
     implements(interfaces.IHalfCloseableProtocol)
 
@@ -91,6 +98,26 @@ class TestHalfCloseableProtocol(TestProtocol):
 
     def writeConnectionLost(self):
         self.writeLost = True
+
+
+
+class TestFileDescriptorReceiverProtocol(TestProtocol):
+    """
+    A Protocol that implements L{IFileDescriptorReceiver} and records how its
+    C{fileDescriptorReceived} method is called.
+
+    @ivar receivedDescriptors: A C{list} containing all of the file descriptors
+        passed to C{fileDescriptorReceived} calls made on this instance.
+    """
+    implements(interfaces.IFileDescriptorReceiver)
+
+    def connectionMade(self):
+        TestProtocol.connectionMade(self)
+        self.receivedDescriptors = []
+
+
+    def fileDescriptorReceived(self, descriptor):
+        self.receivedDescriptors.append(descriptor)
 
 
 
@@ -252,10 +279,46 @@ class WrappingFactoryTests(unittest.TestCase):
         self.assertEqual(errors, [expectedFailure])
 
 
+    def test_wrappingProtocolFileDescriptorReceiver(self):
+        """
+        Our L{_WrappingProtocol} should be an L{IFileDescriptorReceiver} if the
+        wrapped protocol is.
+        """
+        connectedDeferred = None
+        applicationProtocol = TestFileDescriptorReceiverProtocol()
+        wrapper = endpoints._WrappingProtocol(
+            connectedDeferred, applicationProtocol)
+        self.assertTrue(interfaces.IFileDescriptorReceiver.providedBy(wrapper))
+        self.assertTrue(verifyObject(interfaces.IFileDescriptorReceiver, wrapper))
+
+
+    def test_wrappingProtocolNotFileDescriptorReceiver(self):
+        """
+        Our L{_WrappingProtocol} does not provide L{IHalfCloseableProtocol} if
+        the wrapped protocol doesn't.
+        """
+        tp = TestProtocol()
+        p = endpoints._WrappingProtocol(None, tp)
+        self.assertFalse(interfaces.IFileDescriptorReceiver.providedBy(p))
+
+
+    def test_wrappedProtocolFileDescriptorReceived(self):
+        """
+        L{_WrappingProtocol.fileDescriptorReceived} calls the wrapped protocol's
+        C{fileDescriptorReceived} method.
+        """
+        wrappedProtocol = TestFileDescriptorReceiverProtocol()
+        wrapper = endpoints._WrappingProtocol(
+            defer.Deferred(), wrappedProtocol)
+        wrapper.makeConnection(StringTransport())
+        wrapper.fileDescriptorReceived(42)
+        self.assertEqual(wrappedProtocol.receivedDescriptors, [42])
+
+
     def test_wrappingProtocolHalfCloseable(self):
         """
-        Our  L{_WrappingProtocol} should be an L{IHalfCloseableProtocol} if
-        the C{wrappedProtocol} is.
+        Our L{_WrappingProtocol} should be an L{IHalfCloseableProtocol} if the
+        C{wrappedProtocol} is.
         """
         cd = object()
         hcp = TestHalfCloseableProtocol()

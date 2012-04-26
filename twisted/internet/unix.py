@@ -12,8 +12,8 @@ Maintainer: Itamar Shtull-Trauring
 """
 
 # System imports
-import os, sys, stat, socket
-from errno import EINTR, EMSGSIZE, EAGAIN, EWOULDBLOCK, ECONNREFUSED
+import os, sys, stat, socket, struct
+from errno import EINTR, EMSGSIZE, EAGAIN, EWOULDBLOCK, ECONNREFUSED, ENOBUFS
 
 from zope.interface import implements, implementsOnly, implementedBy
 
@@ -21,20 +21,190 @@ if not hasattr(socket, 'AF_UNIX'):
     raise ImportError("UNIX sockets not supported on this platform")
 
 # Twisted imports
-from twisted.internet import base, tcp, udp, error, interfaces, protocol, address
+from twisted.internet import main, base, tcp, udp, error, interfaces, protocol, address
 from twisted.internet.error import CannotListenError
+from twisted.python.util import untilConcludes
 from twisted.python import lockfile, log, reflect, failure
 
+try:
+    from twisted.python import sendmsg
+except ImportError:
+    sendmsg = None
 
-class Server(tcp.Server):
+
+def _ancillaryDescriptor(fd):
+    """
+    Pack an integer into an ancillary data structure suitable for use with
+    L{sendmsg.send1msg}.
+    """
+    packed = struct.pack("i", fd)
+    return [(socket.SOL_SOCKET, sendmsg.SCM_RIGHTS, packed)]
+
+
+
+class _SendmsgMixin(object):
+    """
+    Mixin for stream-oriented UNIX transports which uses sendmsg and recvmsg to
+    offer additional functionality, such as copying file descriptors into other
+    processes.
+
+    @ivar _writeSomeDataBase: The class which provides the basic implementation
+        of C{writeSomeData}.  Ultimately this should be a subclass of
+        L{twisted.internet.abstract.FileDescriptor}.  Subclasses which mix in
+        L{_SendmsgMixin} must define this.
+
+    @ivar _sendmsgQueue: A C{list} of C{int} holding file descriptors which are
+        currently buffered before being sent.
+
+    @ivar _fileDescriptorBufferSize: An C{int} giving the maximum number of file
+        descriptors to accept and queue for sending before pausing the
+        registered producer, if there is one.
+    """
+    implements(interfaces.IUNIXTransport)
+
+    _writeSomeDataBase = None
+    _fileDescriptorBufferSize = 64
+
+    def __init__(self):
+        self._sendmsgQueue = []
+
+
+    def _isSendBufferFull(self):
+        """
+        Determine whether the user-space send buffer for this transport is full
+        or not.
+
+        This extends the base determination by adding consideration of how many
+        file descriptors need to be sent using L{sendmsg.send1msg}.  When there
+        are more than C{self._fileDescriptorBufferSize}, the buffer is
+        considered full.
+
+        @return: C{True} if it is full, C{False} otherwise.
+        """
+        # There must be some bytes in the normal send buffer, checked by
+        # _writeSomeDataBase._isSendBufferFull, in order to send file
+        # descriptors from _sendmsgQueue.  That means that the buffer will
+        # eventually be considered full even without this additional logic.
+        # However, since we send only one byte per file descriptor, having lots
+        # of elements in _sendmsgQueue incurs more overhead and perhaps slows
+        # things down.  Anyway, try this for now, maybe rethink it later.
+        return (
+            len(self._sendmsgQueue) > self._fileDescriptorBufferSize
+            or self._writeSomeDataBase._isSendBufferFull(self))
+
+
+    def sendFileDescriptor(self, fileno):
+        """
+        Queue the given file descriptor to be sent and start trying to send it.
+        """
+        self._sendmsgQueue.append(fileno)
+        self._maybePauseProducer()
+        self.startWriting()
+
+
+    def writeSomeData(self, data):
+        """
+        Send as much of C{data} as possible.  Also send any pending file
+        descriptors.
+        """
+        # Make it a programming error to send more file descriptors than you
+        # send regular bytes.  Otherwise, due to the limitation mentioned below,
+        # we could end up with file descriptors left, but no bytes to send with
+        # them, therefore no way to send those file descriptors.
+        if len(self._sendmsgQueue) > len(data):
+            return error.FileDescriptorOverrun()
+
+        # If there are file descriptors to send, try sending them first, using a
+        # little bit of data from the stream-oriented write buffer too.  It is
+        # not possible to send a file descriptor without sending some regular
+        # data.
+        index = 0
+        try:
+            while index < len(self._sendmsgQueue):
+                fd = self._sendmsgQueue[index]
+                try:
+                    untilConcludes(
+                        sendmsg.send1msg, self.socket.fileno(), data[index], 0,
+                        _ancillaryDescriptor(fd))
+                except socket.error, se:
+                    if se.args[0] in (EWOULDBLOCK, ENOBUFS):
+                        return index
+                    else:
+                        return main.CONNECTION_LOST
+                else:
+                    index += 1
+        finally:
+            del self._sendmsgQueue[:index]
+
+        # Hand the remaining data to the base implementation.  Avoid slicing in
+        # favor of a buffer, in case that happens to be any faster.
+        limitedData = buffer(data, index)
+        result = self._writeSomeDataBase.writeSomeData(self, limitedData)
+        try:
+            return index + result
+        except TypeError:
+            return result
+
+
+    def doRead(self):
+        """
+        Calls L{IFileDescriptorReceiver.fileDescriptorReceived} and
+        L{IProtocol.dataReceived} with all available data.
+
+        This reads up to C{self.bufferSize} bytes of data from its socket, then
+        dispatches the data to protocol callbacks to be handled.  If the
+        connection is not lost through an error in the underlying recvmsg(),
+        this function will return the result of the dataReceived call.
+        """
+        try:
+            data, flags, ancillary = untilConcludes(
+                sendmsg.recv1msg, self.socket.fileno(), 0, self.bufferSize)
+        except socket.error, se:
+            if se.args[0] == EWOULDBLOCK:
+                return
+            else:
+                return main.CONNECTION_LOST
+
+        if ancillary:
+            fd = struct.unpack('i', ancillary[0][2])[0]
+            if interfaces.IFileDescriptorReceiver.providedBy(self.protocol):
+                self.protocol.fileDescriptorReceived(fd)
+            else:
+                log.msg(
+                    format=(
+                        "%(protocolName)s (on %(hostAddress)r) does not "
+                        "provide IFileDescriptorReceiver; closing file "
+                        "descriptor received (from %(peerAddress)r)."),
+                    hostAddress=self.getHost(), peerAddress=self.getPeer(),
+                    protocolName=self._getLogPrefix(self.protocol),
+                    )
+                os.close(fd)
+
+        return self._dataReceived(data)
+
+if sendmsg is None:
+    class _SendmsgMixin(object):
+        """
+        Behaviorless placeholder used when L{twisted.python.sendmsg} is not
+        available, preventing L{IUNIXTransport} from being supported.
+        """
+
+
+
+class Server(_SendmsgMixin, tcp.Server):
+
+    _writeSomeDataBase = tcp.Server
+
     def __init__(self, sock, protocol, client, server, sessionno, reactor):
+        _SendmsgMixin.__init__(self)
         tcp.Server.__init__(self, sock, protocol, (client, None), server, sessionno, reactor)
+
 
     def getHost(self):
         return address.UNIXAddress(self.socket.getsockname())
 
     def getPeer(self):
-        return address.UNIXAddress(self.hostname)
+        return address.UNIXAddress(self.hostname or None)
 
 
 
@@ -149,12 +319,15 @@ class Port(_UNIXPort, tcp.Port):
 
 
 
-class Client(tcp.BaseClient):
+class Client(_SendmsgMixin, tcp.BaseClient):
     """A client for Unix sockets."""
     addressFamily = socket.AF_UNIX
     socketType = socket.SOCK_STREAM
 
+    _writeSomeDataBase = tcp.BaseClient
+
     def __init__(self, filename, connector, reactor=None, checkPID = 0):
+        _SendmsgMixin.__init__(self)
         self.connector = connector
         self.realAddress = self.addr = filename
         if checkPID and not lockfile.isLocked(filename + ".lock"):
