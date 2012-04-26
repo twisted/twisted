@@ -51,7 +51,7 @@ Wrap the C sendmsg(2) function for sending \"messages\" on a socket.\n\
     constants in the sendmsg(2) manual page.  By default no flags are set.\n\
 @type flags: C{int}\n\
 \n\
-@params ancillary: Extra data to send over the socket outside of the normal\n\
+@param ancillary: Extra data to send over the socket outside of the normal\n\
     datagram or stream mechanism.  By default no ancillary data is sent.\n\
 @type ancillary: C{list} of C{tuple} of C{int}, C{int}, and C{str}.\n\
 \n\
