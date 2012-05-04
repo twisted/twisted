@@ -178,6 +178,7 @@ import types, warnings
 from cStringIO import StringIO
 from struct import pack
 import decimal, datetime
+from itertools import count
 
 from zope.interface import Interface, implements
 
@@ -187,6 +188,7 @@ from twisted.python.reflect import accumulateClassDict
 from twisted.python.failure import Failure
 from twisted.python import log, filepath
 
+from twisted.internet.interfaces import IFileDescriptorReceiver
 from twisted.internet.main import CONNECTION_LOST
 from twisted.internet.error import PeerVerifyError, ConnectionLost
 from twisted.internet.error import ConnectionClosed
@@ -1473,6 +1475,74 @@ class AmpList(Argument):
                     objects, self.subargs, Box(), proto
                     ).serialize() for objects in inObject])
 
+
+
+class Descriptor(Integer):
+    """
+    Encode and decode file descriptors for exchange over a UNIX domain socket.
+
+    This argument type requires an AMP connection set up over an
+    L{IUNIXTransport<twisted.internet.interfaces.IUNIXTransport>} provider (for
+    example, the kind of connection created by
+    L{IReactorUNIX.connectUNIX<twisted.internet.interfaces.IReactorUNIX.connectUNIX>}
+    and L{UNIXClientEndpoint<twisted.internet.endpoints.UNIXClientEndpoint>}).
+
+    There is no correspondence between the integer value of the file descriptor
+    on the sending and receiving sides, therefore an alternate approach is taken
+    to matching up received descriptors with particular L{Descriptor}
+    parameters.  The argument is encoded to an ordinal (unique per connection)
+    for inclusion in the AMP command or response box.  The descriptor itself is
+    sent using
+    L{IUNIXTransport.sendFileDescriptor<twisted.internet.interfaces.IUNIXTransport.sendFileDescriptor>}.
+    The receiver uses the order in which file descriptors are received and the
+    ordinal value to come up with the received copy of the descriptor.
+    """
+    def fromStringProto(self, inString, proto):
+        """
+        Take a unique identifier associated with a file descriptor which must
+        have been received by now and use it to look up that descriptor in a
+        dictionary where they are kept.
+
+        @param inString: The base representation (as a byte string) of an
+            ordinal indicating which file descriptor corresponds to this usage
+            of this argument.
+        @type inString: C{str]
+
+        @param proto: The protocol used to receive this descriptor.  This
+            protocol must be connected via a transport providing
+            L{IUNIXTransport<twisted.internet.interfaces.IUNIXTransport>}.
+        @type proto: L{BinaryBoxProtocol}
+
+        @return: The file descriptor represented by C{inString}.
+        @rtype: C{int}
+        """
+        return proto._getDescriptor(int(inString))
+
+
+    def toStringProto(self, inObject, proto):
+        """
+        Send C{inObject}, an integer file descriptor, over C{proto}'s connection
+        and return a unique identifier which will allow the receiver to
+        associate the file descriptor with this argument.
+
+        @param inObject: A file descriptor to duplicate over an AMP connection
+            as the value for this argument.
+        @type inObject: C{int}
+
+        @param proto: The protocol which will be used to send this descriptor.
+            This protocol must be connected via a transport providing
+            L{IUNIXTransport<twisted.internet.interfaces.IUNIXTransport>}.
+
+        @return: A byte string which can be used by the receiver to reconstruct
+            the file descriptor.
+        @type: C{str}
+        """
+        identifier = proto._sendFileDescriptor(inObject)
+        outString = Integer.toStringProto(self, identifier, proto)
+        return outString
+
+
+
 class Command:
     """
     Subclass me to specify an AMP Command.
@@ -1929,9 +1999,61 @@ class ProtocolSwitchCommand(Command):
 
 
 
-class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver):
+class _DescriptorExchanger(object):
     """
-    A protocol for receving L{Box}es - key/value pairs - via length-prefixed
+    L{_DescriptorExchanger} is a mixin for L{BinaryBoxProtocol} which adds
+    support for receiving file descriptors, a feature offered by
+    L{IUNIXTransport<twisted.internet.interfaces.IUNIXTransport>}.
+
+    @ivar _descriptors: Temporary storage for all file descriptors received.
+        Values in this dictionary are the file descriptors (as integers).  Keys
+        in this dictionary are ordinals giving the order in which each
+        descriptor was received.  The ordering information is used to allow
+        L{Descriptor} to determine which is the correct descriptor for any
+        particular usage of that argument type.
+    @type _descriptors: C{dict}
+
+    @ivar _sendingDescriptorCounter: A no-argument callable which returns the
+        ordinals, starting from 0.  This is used to construct values for
+        C{_sendFileDescriptor}.
+
+    @ivar _receivingDescriptorCounter: A no-argument callable which returns the
+        ordinals, starting from 0.  This is used to construct values for
+        C{fileDescriptorReceived}.
+    """
+    implements(IFileDescriptorReceiver)
+
+    def __init__(self):
+        self._descriptors = {}
+        self._getDescriptor = self._descriptors.pop
+        self._sendingDescriptorCounter = count().next
+        self._receivingDescriptorCounter = count().next
+
+
+    def _sendFileDescriptor(self, descriptor):
+        """
+        Assign and return the next ordinal to the given descriptor after sending
+        the descriptor over this protocol's transport.
+        """
+        self.transport.sendFileDescriptor(descriptor)
+        return self._sendingDescriptorCounter()
+
+
+    def fileDescriptorReceived(self, descriptor):
+        """
+        Collect received file descriptors to be claimed later by L{Descriptor}.
+
+        @param descriptor: The received file descriptor.
+        @type descriptor: C{int}
+        """
+        self._descriptors[self._receivingDescriptorCounter()] = descriptor
+
+
+
+class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver,
+                        _DescriptorExchanger):
+    """
+    A protocol for receiving L{AmpBox}es - key/value pairs - via length-prefixed
     strings.  A box is composed of:
 
         - any number of key-value pairs, described by:
@@ -1958,7 +2080,7 @@ class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver):
         than allowed by the protocol was received.
 
     @ivar boxReceiver: an L{IBoxReceiver} provider, whose L{ampBoxReceived}
-    method will be invoked for each L{Box} that is received.
+    method will be invoked for each L{AmpBox} that is received.
     """
 
     implements(IBoxSender)
@@ -1977,6 +2099,7 @@ class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver):
     innerProtocolClientFactory = None
 
     def __init__(self, boxReceiver):
+        _DescriptorExchanger.__init__(self)
         self.boxReceiver = boxReceiver
 
 
