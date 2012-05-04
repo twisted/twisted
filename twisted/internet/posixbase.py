@@ -234,14 +234,11 @@ class _SIGCHLDWaker(_FDWaker):
 
 
 
-class PosixReactorBase(_SignalReactorMixin, ReactorBase):
-    """
-    A basis for reactors that use file descriptors.
 
-    @ivar _childWaker: C{None} or a reference to the L{_SIGCHLDWaker}
-        which is used to properly notice child process termination.
+class _DisconnectSelectableMixin(object):
     """
-    implements(_IReactorArbitrary, IReactorTCP, IReactorUDP, IReactorMulticast)
+    Mixin providing the C{_disconnectSelectable} method.
+    """
 
     def _disconnectSelectable(self, selectable, why, isRead, faildict={
         error.ConnectionDone: failure.Failure(error.ConnectionDone()),
@@ -266,6 +263,17 @@ class PosixReactorBase(_SignalReactorMixin, ReactorBase):
             self.removeWriter(selectable)
             selectable.connectionLost(failure.Failure(why))
 
+
+
+class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
+                       ReactorBase):
+    """
+    A basis for reactors that use file descriptors.
+
+    @ivar _childWaker: C{None} or a reference to the L{_SIGCHLDWaker}
+        which is used to properly notice child process termination.
+    """
+    implements(_IReactorArbitrary, IReactorTCP, IReactorUDP, IReactorMulticast)
 
     # Callable that creates a waker, overrideable so that subclasses can
     # substitute their own implementation:

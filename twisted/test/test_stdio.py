@@ -364,37 +364,8 @@ class StandardInputOutputTestCase(unittest.TestCase):
                 ''.join(map(str, range(howMany))))
         onConnLost.addCallback(cbLost)
         return onConnLost
-    if reactor.__class__.__name__ == 'EPollReactor':
-        test_normalFileStandardOut.skip = (
-            "epoll(7) does not support normal files.  See #4429.  "
-            "This should be a todo but technical limitations prevent "
-            "this.")
-    elif platform.isWindows():
+
+    if platform.isWindows():
         test_normalFileStandardOut.skip = (
             "StandardIO does not accept stdout as an argument to Windows.  "
             "Testing redirection to a file is therefore harder.")
-
-
-    def test_normalFileStandardOutGoodEpollError(self):
-        """
-        Using StandardIO with epollreactor with stdout redirected to a
-        normal file fails with a comprehensible error (until it is
-        supported, when #4429 is resolved).  See also #2259 and #3442.
-        """
-        path = filepath.FilePath(self.mktemp())
-        normal = path.open('w')
-        fd = normal.fileno()
-        self.addCleanup(normal.close)
-        exc = self.assertRaises(
-            RuntimeError,
-            stdio.StandardIO, protocol.Protocol(), stdout=fd)
-        
-        self.assertEqual(
-            str(exc),
-            "This reactor does not support this type of file descriptor (fd "
-            "%d, mode %d) (for example, epollreactor does not support normal "
-            "files.  See #4429)." % (fd, os.fstat(fd).st_mode))
-    if reactor.__class__.__name__ != 'EPollReactor':
-        test_normalFileStandardOutGoodEpollError.skip = (
-            "Only epollreactor is expected to fail with stdout redirected "
-            "to a normal file.")
