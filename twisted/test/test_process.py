@@ -1162,7 +1162,7 @@ class PosixProcessBase:
 
         # This script runs until we disconnect its transport.
         pythonExecutable = sys.executable
-        scriptPath = util.sibpath(__file__, "process_twisted.py")
+        scriptPath = util.sibpath(__file__, "process_echoer.py")
 
         class ErrorInProcessEnded(protocol.ProcessProtocol):
             """

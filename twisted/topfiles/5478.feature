@@ -1,0 +1,1 @@
+The epoll(7)-based reactor is now the default reactor on Linux.

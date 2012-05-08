@@ -16,8 +16,9 @@
     implementations are suited for different purposes and are
     designed to integrate better with particular platforms.</p>
 
-    <p>The <a href="#select">select()-based reactor</a> is Twisted's
-    cross-platform reactor.</p>
+    <p>The <a href="#epoll">epoll()-based reactor</a> is Twisted's default on
+    Linux. Other platforms use <a href="#poll">poll()</a>, or the most
+    cross-platform reactor, <a href="#select">select()</a>.</p>
 
     <p>Platform-specific reactor implementations exist for:</p>
 
