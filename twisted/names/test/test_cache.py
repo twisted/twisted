@@ -15,8 +15,38 @@ class Caching(unittest.TestCase):
 
     def test_lookup(self):
         c = cache.CacheResolver({
-            dns.Query(name='example.com', type=dns.MX, cls=dns.IN): (time.time(), ([], [], []))})
-        return c.lookupMailExchange('example.com').addCallback(self.assertEqual, ([], [], []))
+            dns.Query(name='example.com', type=dns.MX, cls=dns.IN):
+                (time.time(), ([], [], []))})
+        return c.lookupMailExchange('example.com').addCallback(
+            self.assertEqual, ([], [], []))
+
+
+    def test_constructorExpires(self):
+        """
+        Cache entries passed into L{cache.CacheResolver.__init__} get
+        cancelled just like entries added with cacheResult
+        """
+
+        r = ([dns.RRHeader("example.com", dns.A, dns.IN, 60,
+                           dns.Record_A("127.0.0.1", 60))],
+             [dns.RRHeader("example.com", dns.A, dns.IN, 50,
+                           dns.Record_A("127.0.0.1", 50))],
+             [dns.RRHeader("example.com", dns.A, dns.IN, 40,
+                           dns.Record_A("127.0.0.1", 40))])
+
+        clock = task.Clock()
+        query = dns.Query(name="example.com", type=dns.A, cls=dns.IN)
+
+        c = cache.CacheResolver({ query : (clock.seconds(), r)}, reactor=clock)
+
+        # 40 seconds is enough to expire the entry because expiration is based
+        # on the minimum TTL.
+        clock.advance(40)
+
+        self.assertNotIn(query, c.cache)
+
+        return self.assertFailure(
+            c.lookupAddress("example.com"), dns.DomainError)
 
 
     def test_normalLookup(self):
@@ -33,9 +63,8 @@ class Caching(unittest.TestCase):
 
         clock = task.Clock()
 
-        c = cache.CacheResolver({
-                dns.Query(name="example.com", type=dns.A, cls=dns.IN) :
-                    (clock.seconds(), r)}, reactor=clock)
+        c = cache.CacheResolver(reactor=clock)
+        c.cacheResult(dns.Query(name="example.com", type=dns.A, cls=dns.IN), r)
 
         clock.advance(1)
 
@@ -78,4 +107,3 @@ class Caching(unittest.TestCase):
             self.assertEquals(result[0][0].name.name, "example.com")
 
         return c.lookupAddress("example.com").addCallback(cbLookup)
-

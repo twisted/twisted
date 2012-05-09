@@ -1,0 +1,1 @@
+twisted.names.cache.CacheResolver entries added via the initializer are now timed out correctly.
