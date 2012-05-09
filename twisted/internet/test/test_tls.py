@@ -18,7 +18,7 @@ from twisted.internet.endpoints import (
     SSL4ServerEndpoint, SSL4ClientEndpoint, TCP4ClientEndpoint)
 from twisted.internet.error import ConnectionClosed
 from twisted.internet.task import Cooperator
-from twisted.trial.unittest import TestCase, SkipTest
+from twisted.trial.unittest import SkipTest
 from twisted.python.runtime import platform
 
 from twisted.internet.test.test_core import ObjectModelIntegrationMixin
@@ -384,23 +384,3 @@ class AbortSSLConnectionTest(ReactorBuilder, AbortConnectionMixin, ContextGenera
 
 globals().update(AbortSSLConnectionTest.makeTestCaseClasses())
 
-class OldTLSDeprecationTest(TestCase):
-    """
-    Tests for the deprecation of L{twisted.internet._oldtls}, the implementation
-    module for L{IReactorSSL} used when only an old version of pyOpenSSL is
-    available.
-    """
-    def test_warning(self):
-        """
-        The use of L{twisted.internet._oldtls} is deprecated, and emits a
-        L{DeprecationWarning}.
-        """
-        import OpenSSL
-        self.patch(OpenSSL, '__version__', '0.5')
-        import twisted.internet._oldtls
-        warnings = self.flushWarnings()
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
-        self.assertEqual(
-            warnings[0]['message'],
-            "Support for pyOpenSSL 0.5 is deprecated.  "
-            "Upgrade to pyOpenSSL 0.10 or newer.")

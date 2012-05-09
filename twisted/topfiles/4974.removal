@@ -1,1 +1,0 @@
-Support for pyOpenSSL 0.9 and older is now deprecated.  pyOpenSSL 0.10 or newer will soon be required in order to use Twisted's SSL features.
