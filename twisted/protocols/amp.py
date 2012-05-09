@@ -1506,7 +1506,7 @@ class Descriptor(Integer):
         @param inString: The base representation (as a byte string) of an
             ordinal indicating which file descriptor corresponds to this usage
             of this argument.
-        @type inString: C{str]
+        @type inString: C{str}
 
         @param proto: The protocol used to receive this descriptor.  This
             protocol must be connected via a transport providing
