@@ -17,7 +17,8 @@ __all__ = [
 
     'A', 'A6', 'AAAA', 'AFSDB', 'CNAME', 'DNAME', 'HINFO',
     'MAILA', 'MAILB', 'MB', 'MD', 'MF', 'MG', 'MINFO', 'MR', 'MX',
-    'NAPTR', 'NS', 'NULL', 'PTR', 'RP', 'SOA', 'SPF', 'SRV', 'TXT', 'WKS',
+    'NAPTR', 'NS', 'NULL', 'OPT', 'PTR', 'RP', 'SOA', 'SPF', 'SRV', 'TXT',
+    'WKS',
 
     'ANY', 'CH', 'CS', 'HS', 'IN',
 
@@ -28,8 +29,9 @@ __all__ = [
     'Record_A', 'Record_A6', 'Record_AAAA', 'Record_AFSDB', 'Record_CNAME',
     'Record_DNAME', 'Record_HINFO', 'Record_MB', 'Record_MD', 'Record_MF',
     'Record_MG', 'Record_MINFO', 'Record_MR', 'Record_MX', 'Record_NAPTR',
-    'Record_NS', 'Record_NULL', 'Record_PTR', 'Record_RP', 'Record_SOA',
-    'Record_SPF', 'Record_SRV', 'Record_TXT', 'Record_WKS', 'UnknownRecord',
+    'Record_NS', 'Record_NULL', 'Record_OPT', 'Record_PTR', 'Record_RP',
+    'Record_SOA', 'Record_SPF', 'Record_SRV', 'Record_TXT', 'Record_WKS',
+    'UnknownRecord',
 
     'QUERY_CLASSES', 'QUERY_TYPES', 'REV_CLASSES', 'REV_TYPES', 'EXT_QUERIES',
 
@@ -79,6 +81,7 @@ SRV = 33
 NAPTR = 35
 A6 = 38
 DNAME = 39
+OPT = 41
 SPF = 99
 
 QUERY_TYPES = {
@@ -108,6 +111,7 @@ QUERY_TYPES = {
     NAPTR: 'NAPTR',
     A6: 'A6',
     DNAME: 'DNAME',
+    OPT: 'OPT',
     SPF: 'SPF'
 }
 
@@ -434,7 +438,128 @@ class Query:
         return 'Query(%r, %r, %r)' % (str(self.name), self.type, self.cls)
 
 
-class RRHeader(tputil.FancyEqMixin):
+
+class OPTHeader(tputil.FancyEqMixin):
+    """
+    A OPT record header.
+
+    @cvar fmt: C{str} specifying the byte format of an OPT Header.
+
+    @ivar name: Root (0, 8-bits)
+    @ivar type: 41 (OPT Record)
+    @ivar payload: An object that implements the IEncodable interface
+    @ivar auth: Whether this header is authoritative or not.
+    
+    @since: 12.1
+    """
+
+    implements(IEncodable)
+
+    compareAttributes = ('name', 'type', 'payload', 'auth')
+
+    fmt = "!H"
+
+    name = None
+    type = None
+    payload = None
+
+    # OPTHeader _really_ has no ttl or rdlength, but the
+    # existence of the attributes is required.
+    ttl = None
+    rdlength = None
+
+    cachedResponse = None
+
+
+    def __init__(self, payload=None, auth=False):
+        """
+        @type name: C{str}
+        @param name: Root (0)
+
+        @type type: C{int}
+        @param type: Query type 41.
+
+        @type payload: An object implementing C{IEncodable}
+        @param payload: The OPT payload
+        """
+        assert (payload is None) or (payload.TYPE == OPT)
+
+        self.name = 0
+        self.type = OPT
+        self.payload = payload
+        self.auth = auth
+
+
+    def encode(self, strio, compDict=None):
+        """
+        Encode this OPT record header into proper format
+        
+        @type strio: file
+        @param strio: the byte representation of this OPTHeader will be written
+        to this file.
+        
+        @type compDict: dict
+        @param compDict: not used.
+        """
+        strio.write(struct.pack('!B', 0))
+        strio.write(struct.pack(self.fmt, self.type))
+        if self.payload:
+            prefix = strio.tell()
+            self.payload.encode(strio, compDict)
+            aft = strio.tell()
+            strio.seek(prefix - 2, 0)
+            strio.write(struct.pack('!H', aft - prefix))
+            strio.seek(aft, 0)
+
+
+    def decode(self, strio, length = None):
+        """
+        Decode a byte string into this OPTHeader.
+
+        @type strio: file
+        @param strio: Bytes will be read from this file until the full 
+        OPTHeader is decoded.
+        """
+        self.name.decode(strio)
+        l = struct.calcsize(self.fmt)
+        buff = readPrecisely(strio, l)
+        r = struct.unpack(self.fmt, buff)
+        self.type = r[0]
+
+
+    def isAuthoritative(self):
+        return self.auth
+
+
+    def __str__(self):
+        return '<OPT auth=%s>' % (self.auth and 'True' or 'False')
+
+
+    @classmethod
+    def _headerFactory(cls, strio, auth=False):
+        """
+        reads enough of the stream to figure out if what is there is
+        an OPTHeader or an RRHeader
+        """
+        beginPos = strio.tell()
+        name = Name()
+        name.decode(strio)
+        type = struct.unpack(cls.fmt, readPrecisely(strio, 2))[0]
+
+        if len(name.name) == 0 and type == OPT:
+            return cls()
+        else:
+            # back up to the beginning and try again
+            strio.seek(beginPos, 0)
+            rrh = RRHeader(auth=auth)
+            rrh.decode(strio)
+            return rrh
+
+    __repr__ = __str__
+
+
+
+class RRHeader(OPTHeader):
     """
     A resource record header.
 
@@ -1463,6 +1588,62 @@ class Record_TXT(tputil.FancyEqMixin, tputil.FancyStrMixin):
         return hash(tuple(self.data))
 
 
+
+class Record_OPT(tputil.FancyEqMixin, tputil.FancyStrMixin):
+    """
+    EDNS0 Option record.
+
+    @type payload_size: C{int}
+    @ivar payload_size: Specifies the max UDP Packet size (bytes) that your
+        network can handle.
+
+    @type dnssecOk: C{bool}
+    @ivar dnssecOk: Requests the server to send DNSSEC RRs and to do DNSSEC
+        validation (and set the AD bit if the response validates).
+
+    @type version: C{int}
+    @ivar version: The version of DNSSEC used. Currently only version 0
+        is defined.
+        
+    @since: 12.1
+    """
+    implements(IEncodable, IRecord)
+    TYPE = OPT
+    fmt = '!HBBHH'
+
+    fancybasename = 'OPT'
+    showAttributes = ('payload_size', ('flags', 'flags', '0x%x'), 'version')
+    compareAttributes = ('payload_size', 'flags', 'version')
+
+
+    def __init__(self, payload_size=512, dnssecOk=0, version=0, ttl=None):
+        self.payload_size = payload_size
+        self.version = version
+        self.flags = (dnssecOk & 1) << 15
+
+
+    def encode(self, strio, compDict = None):
+        OPTHeader().encode(strio)
+        strio.write(struct.pack('!H', self.payload_size))
+        strio.write(struct.pack('!B', 0)) # high order 0
+        strio.write(struct.pack('!B', self.version))
+        strio.write(struct.pack('!H', self.flags)) # DO(bit) + Z's
+        strio.write(struct.pack('!H', 0)) # Data length: 0
+
+
+    def decode(self, strio, length=None):
+        """
+        are OPT Records always 0 rdlength?
+        """
+        l = struct.calcsize(self.fmt)
+        buff = readPrecisely(strio, l)
+        r = struct.unpack(self.fmt, buff)
+        self.payload_size, z, self.version, self.flags, length = r
+        assert length == 0
+
+
+    def __hash__(self):
+        return hash((self.payload_size, self.version, self.flags))
 
 # This is a fallback record
 class UnknownRecord(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
