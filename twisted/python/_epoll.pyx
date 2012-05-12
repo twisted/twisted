@@ -44,7 +44,7 @@ cdef extern from "sys/epoll.h":
         c_EPOLLMSG "EPOLLMSG" = 0x400
         c_EPOLLERR "EPOLLERR" = 0x008
         c_EPOLLHUP "EPOLLHUP" = 0x010
-        c_EPOLLET "EPOLLET" = (1 << 31)
+        c_EPOLLET "(uint32_t)EPOLLET" = (1 << 31)
 
     ctypedef union epoll_data_t:
         void *ptr
@@ -140,7 +140,7 @@ cdef class epoll:
         """
         return self.fd
 
-    def register(self, int fd, int events):
+    def register(self, int fd, uint32_t events):
         """
         Add (register) a file descriptor to be monitored by self.
 
@@ -185,7 +185,7 @@ cdef class epoll:
         if result == -1:
             raise IOError(errno, strerror(errno))
 
-    def modify(self, int fd, int events):
+    def modify(self, int fd, uint32_t events):
         """
         Modify the modified state of a file descriptor monitored by self.
 
@@ -209,7 +209,7 @@ cdef class epoll:
         if result == -1:
             raise IOError(errno, strerror(errno))
 
-    def _control(self, int op, int fd, int events):
+    def _control(self, int op, int fd, uint32_t events):
         """
         Modify the monitored state of a particular file descriptor.
 
