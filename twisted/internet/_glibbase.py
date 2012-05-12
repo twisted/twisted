@@ -11,11 +11,11 @@ import gireactor or gtk3reactor for GObject Introspection based applications,
 or glib2reactor or gtk2reactor for applications using legacy static bindings.
 """
 
-import signal, sys
+import sys
 
 from twisted.internet import base, posixbase, selectreactor
 from twisted.internet.interfaces import IReactorFDSet
-from twisted.python import log, runtime
+from twisted.python import log
 from twisted.python.compat import set
 from zope.interface import implements
 
@@ -48,31 +48,6 @@ def ensureNotImported(moduleNames, errorMessage, preventImports=[]):
 
 
 
-class GlibSignalMixin(object):
-
-    if runtime.platformType == 'posix':
-
-        def _handleSignals(self):
-            # Let the base class do its thing, but pygtk is probably
-            # going to stomp on us so go beyond that and set up some
-            # signal handling which pygtk won't mess with.  This would
-            # be better done by letting this reactor select a
-            # different implementation of installHandler for
-            # _SIGCHLDWaker to use.  Then, at least, we could fall
-            # back to our extension module.  See #4286.
-            from twisted.internet.process import (
-                reapAllProcesses as _reapAllProcesses)
-            base._SignalReactorMixin._handleSignals(self)
-            signal.signal(signal.SIGCHLD,
-                          lambda *a: self.callFromThread(_reapAllProcesses))
-            if getattr(signal, "siginterrupt", None) is not None:
-                signal.siginterrupt(signal.SIGCHLD, False)
-            # Like the base, reap processes now in case a process
-            # exited before the handlers above were installed.
-            _reapAllProcesses()
-
-
-
 class GlibWaker(posixbase._UnixWaker):
     """
     Run scheduled events after waking up.
@@ -84,8 +59,7 @@ class GlibWaker(posixbase._UnixWaker):
 
 
 
-class GlibReactorBase(GlibSignalMixin,
-                      posixbase.PosixReactorBase, posixbase._PollLikeMixin):
+class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
     """
     Base class for GObject event loop reactors.
 
@@ -150,6 +124,16 @@ class GlibReactorBase(GlibSignalMixin,
             self.loop = self._glib.MainLoop()
             self._crash = lambda: self._glib.idle_add(self.loop.quit)
             self._run = self.loop.run
+
+
+    def _handleSignals(self):
+        # First, install SIGINT and friends:
+        base._SignalReactorMixin._handleSignals(self)
+        # Next, since certain versions of gtk will clobber our signal handler,
+        # set all signal handlers again after the event loop has started to
+        # ensure they're *really* set. We don't call this twice so we don't
+        # leak file descriptors created in the SIGCHLD initialization:
+        self.callLater(0, posixbase.PosixReactorBase._handleSignals, self)
 
 
     # The input_add function in pygtk1 checks for objects with a
@@ -348,7 +332,7 @@ class GlibReactorBase(GlibSignalMixin,
 
 
 
-class PortableGlibReactorBase(GlibSignalMixin, selectreactor.SelectReactor):
+class PortableGlibReactorBase(selectreactor.SelectReactor):
     """
     Base class for GObject event loop reactors that works on Windows.
 

@@ -134,15 +134,15 @@ class SystemEventTestsBuilder(ReactorBuilder):
         reactor.addSystemEventTrigger("before", "startup", beforeStartup)
         reactor.addSystemEventTrigger("after", "startup", afterStartup)
 
-        sawPhase = [None]
+        sawPhase = []
         def fakeSignal(signum, action):
-            sawPhase[0] = phase[0]
+            sawPhase.append(phase[0])
         self.patch(signal, 'signal', fakeSignal)
         reactor.callWhenRunning(reactor.stop)
         self.assertEqual(phase[0], None)
-        self.assertEqual(sawPhase[0], None)
+        self.assertEqual(sawPhase, [])
         self.runReactor(reactor)
-        self.assertEqual(sawPhase[0], "before")
+        self.assertIn("before", sawPhase)
         self.assertEqual(phase[0], "after")
 
 

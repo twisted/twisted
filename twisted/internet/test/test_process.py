@@ -384,6 +384,33 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         self.runReactor(reactor)
 
 
+    def test_timeleyProcessExited(self):
+        """
+        If a spawned process exits, C{processExited} will be called in a
+        timely manner.
+        """
+        reactor = self.buildReactor()
+
+        class ExitingProtocol(ProcessProtocol):
+            exited = False
+
+            def processExited(protoSelf, reason):
+                protoSelf.exited = True
+                reactor.stop()
+                self.assertEqual(reason.value.exitCode, 0)
+
+        protocol = ExitingProtocol()
+        reactor.callWhenRunning(
+            reactor.spawnProcess, protocol, sys.executable,
+            [sys.executable, "-c", "raise SystemExit(0)"],
+            usePTY=self.usePTY)
+
+        # This will timeout if processExited isn't called:
+        self.runReactor(reactor, timeout=30)
+        self.assertEqual(protocol.exited, True)
+
+
+
 class ProcessTestsBuilder(ProcessTestsBuilderBase):
     """
     Builder defining tests relating to L{IReactorProcess} for child processes

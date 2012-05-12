@@ -623,7 +623,8 @@ class ProcessProtocol(BaseProtocol):
 
     def processEnded(self, reason):
         """
-        This will be called when the subprocess is finished.
+        Called when the child process exits and all file descriptors
+        associated with it have been closed.
 
         @type reason: L{twisted.python.failure.Failure}
         """
