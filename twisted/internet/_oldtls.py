@@ -10,13 +10,14 @@ This implementation is undesirable because of the complexity of working with
 OpenSSL's non-blocking socket-based APIs (which this module probably does about
 99% correctly, but see #4455 for an example of a problem with it).
 
-Eventually, use of this module should emit a warning.  See #4974 and 5014.
+Support for older versions of pyOpenSSL is now deprecated and will be removed
+(see #5014).
 
 @see: L{twisted.internet._newtls}
 @since: 11.1
 """
 
-import os
+import os, warnings
 
 from twisted.python.runtime import platformType
 if platformType == 'win32':
@@ -28,7 +29,7 @@ else:
     from errno import EWOULDBLOCK
     from errno import ENOBUFS
 
-from OpenSSL import SSL
+from OpenSSL import SSL, __version__ as _sslversion
 
 from zope.interface import implements
 
@@ -38,6 +39,11 @@ from twisted.internet.abstract import FileDescriptor
 from twisted.internet.main import CONNECTION_DONE, CONNECTION_LOST
 from twisted.internet._ssl import _TLSDelayed
 
+warnings.warn(
+    "Support for pyOpenSSL %s is deprecated.  "
+    "Upgrade to pyOpenSSL 0.10 or newer." % (_sslversion,),
+    category=DeprecationWarning,
+    stacklevel=100)
 
 class _TLSMixin:
     _socketShutdownMethod = 'sock_shutdown'
