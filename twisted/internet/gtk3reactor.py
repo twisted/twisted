@@ -11,6 +11,11 @@ In order to use this support, simply do the following::
     from twisted.internet import gtk3reactor
     gtk3reactor.install()
 
+If you wish to use a GApplication, register it with the reactor::
+
+    from twisted.internet import reactor
+    reactor.registerGApplication(app)
+
 Then use twisted.internet APIs as usual.
 """
 

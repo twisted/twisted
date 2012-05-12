@@ -41,6 +41,7 @@
 
     <ul>
       <li><a href="#gtk">GTK+ 2.0</a></li>
+      <li><a href="#gtk3">GTK+ 3.0 and GObject Introspection</a></li>
       <li><a href="#tkinter">Tkinter</a></li>
       <li><a href="#wxpython">wxPython</a></li>
       <li><a href="#win32_wfmo">Win32</a></li>
@@ -199,6 +200,46 @@ from twisted.internet import glib2reactor # for non-GUI apps
 glib2reactor.install()
 
 from twisted.internet import reactor
+</pre>
+
+    <h3>GTK+ 3.0 and GObject Introspection</h3><a name="gtk3" />
+
+    <p>Twisted integrates with <a href="http://gtk.org">GTK+ 3</a> and GObject
+    through <a href="http://live.gnome.org/PyGObject">PyGObject's</a>
+    introspection using the <code>gtk3reactor</code>
+    and <code>gireactor</code> reactors.</p>
+
+<pre class="python">
+from twisted.internet import gtk3reactor
+gtk3reactor.install()
+
+from twisted.internet import reactor
+</pre>
+
+<pre class="python">
+from twisted.internet import gireactor # for non-GUI apps
+gireactor.install()
+
+from twisted.internet import reactor
+</pre>
+
+    <p>GLib 3.0 introduces the concept of <code>GApplication</code>, a class
+    that handles application uniqueness in a cross-platform way and provides
+    its own main loop. Its counterpart <code>GtkApplication</code> also
+    handles application lifetime with respect to open windows. Twisted
+    supports registering these objects with the event loop, which should be
+    done before running the reactor:</p>
+
+<pre class="python">
+from twisted.internet import gtk3reactor
+gtk3reactor.install()
+
+from gi.repository import Gtk
+app = Gtk.Application(...)
+
+from twisted import reactor
+reactor.registerGApplication(app)
+reactor.run()
 </pre>
 
     <h3>wxPython</h3><a name="wxpython" />

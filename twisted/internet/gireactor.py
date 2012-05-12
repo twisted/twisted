@@ -10,11 +10,16 @@ In order to use this support, simply do the following::
     from twisted.internet import gireactor
     gireactor.install()
 
-Then use twisted.internet APIs as usual.  The other methods here are not
-intended to be called directly.
+If you wish to use a GApplication, register it with the reactor::
+
+    from twisted.internet import reactor
+    reactor.registerGApplication(app)
+
+Then use twisted.internet APIs as usual.
 """
 
 import sys
+from twisted.internet.error import ReactorAlreadyRunning
 from twisted.internet import _glibbase
 from twisted.python import runtime
 
@@ -36,6 +41,9 @@ _glibbase.ensureNotImported([], "",
 class GIReactor(_glibbase.GlibReactorBase):
     """
     GObject-introspection event loop reactor.
+
+    @ivar _gapplication: A C{Gio.Application} instance that was registered
+        with C{registerGApplication}.
     """
     _POLL_DISCONNECTED = (GLib.IOCondition.HUP | GLib.IOCondition.ERR |
                           GLib.IOCondition.NVAL)
@@ -48,12 +56,44 @@ class GIReactor(_glibbase.GlibReactorBase):
     INFLAGS = _POLL_IN | _POLL_DISCONNECTED
     OUTFLAGS = _POLL_OUT | _POLL_DISCONNECTED
 
+    # By default no Application is registered:
+    _gapplication = None
+
+
     def __init__(self, useGtk=False):
         _gtk = None
         if useGtk is True:
             from gi.repository import Gtk as _gtk
 
         _glibbase.GlibReactorBase.__init__(self, GLib, _gtk, useGtk=useGtk)
+
+
+    def registerGApplication(self, app):
+        """
+        Register a C{Gio.Application} or C{Gtk.Application}, whose main loop
+        will be used instead of the default one.
+
+        We will C{hold} the application so it doesn't exit on its own. In
+        versions of C{python-gi} 3.2 and later, we exit the event loop using
+        the C{app.quit} method which overrides any holds. Older versions are
+        not supported.
+        """
+        if self._gapplication is not None:
+            raise RuntimeError(
+                "Can't register more than one application instance.")
+        if self._started:
+            raise ReactorAlreadyRunning(
+                "Can't register application after reactor was started.")
+        if not hasattr(app, "quit"):
+            raise RuntimeError("Application registration is not supported in"
+                               " versions of PyGObject prior to 3.2.")
+        self._gapplication = app
+        def run():
+            app.hold()
+            app.run(None)
+        self._run = run
+
+        self._crash = app.quit
 
 
 
@@ -68,6 +108,15 @@ class PortableGIReactor(_glibbase.PortableGlibReactorBase):
 
         _glibbase.PortableGlibReactorBase.__init__(self, GLib, _gtk,
                                                    useGtk=useGtk)
+
+
+    def registerGApplication(self, app):
+        """
+        Register a C{Gio.Application} or C{Gtk.Application}, whose main loop
+        will be used instead of the default one.
+        """
+        raise NotImplementedError("GApplication is not currently supported on Windows.")
+
 
 
 def install(useGtk=False):
