@@ -82,16 +82,9 @@
 
     <h3>Select()-based Reactor</h3><a name="select" />
 
-    <p>The <code>select</code> reactor is currently the default reactor on all
-    platforms. The following code will install it, if no other reactor has
-    been installed:</p>
-
-<pre class="python">
-from twisted.internet import reactor
-</pre>
-
-    <p>In the future, if another reactor becomes the default, but the
-    <code>select</code> reactor is desired, it may be installed via:</p>
+    <p>The <code>select</code> reactor is the default on platforms that don't
+    provide a better alternative that covers all use cases. If
+    the <code>select</code> reactor is desired, it may be installed via:</p>
 
 <pre class="python">
 from twisted.internet import selectreactor
