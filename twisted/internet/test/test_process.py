@@ -7,7 +7,7 @@ Tests for implementations of L{IReactorProcess}.
 
 __metaclass__ = type
 
-import os, sys, signal, threading
+import os, sys, signal, threading, time
 
 from twisted.trial.unittest import TestCase, SkipTest
 from twisted.internet.test.reactormixins import ReactorBuilder
@@ -384,18 +384,20 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         self.runReactor(reactor)
 
 
-    def test_timeleyProcessExited(self):
+    def test_timelyProcessExited(self):
         """
         If a spawned process exits, C{processExited} will be called in a
         timely manner.
         """
         reactor = self.buildReactor()
+        startTime = time.time()
 
         class ExitingProtocol(ProcessProtocol):
             exited = False
 
             def processExited(protoSelf, reason):
                 protoSelf.exited = True
+                protoSelf.exitTime = time.time()
                 reactor.stop()
                 self.assertEqual(reason.value.exitCode, 0)
 
@@ -406,8 +408,13 @@ class ProcessTestsBuilderBase(ReactorBuilder):
             usePTY=self.usePTY)
 
         # This will timeout if processExited isn't called:
-        self.runReactor(reactor, timeout=30)
+        self.runReactor(reactor, timeout=120)
         self.assertEqual(protocol.exited, True)
+        # 90 seconds is sufficiently less than the timeout that we know
+        # timeout wasn't responsible for process exiting, while still long
+        # enough to deal with test taking far too long to run because of
+        # e.g. OS scheduling:
+        self.assertTrue(protocol.exitTime - startTime < 90)
 
 
 
