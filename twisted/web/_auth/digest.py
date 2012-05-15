@@ -19,7 +19,7 @@ class DigestCredentialFactory(object):
     """
     implements(ICredentialFactory)
 
-    scheme = 'digest'
+    scheme = 'Digest'
 
     def __init__(self, algorithm, authenticationRealm):
         """

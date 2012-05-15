@@ -60,6 +60,14 @@ class BasicAuthTestsMixin:
                 self.__class__,))
 
 
+    def test_scheme(self):
+        """
+        L{basic.BasicCredentialFactory.scheme} matches the scheme defined in
+        the RFC.
+        """
+        self.assertEqual(self.credentialFactory.scheme, "Basic")
+
+
     def test_interface(self):
         """
         L{BasicCredentialFactory} implements L{ICredentialFactory}.
@@ -154,6 +162,14 @@ class DigestAuthTestCase(RequestMixin, unittest.TestCase):
         self.request = self.makeRequest()
 
 
+    def test_scheme(self):
+        """
+        L{digest.DigestCredentialFactory.scheme} matches the scheme defined in
+        the RFC.
+        """
+        self.assertEqual(self.credentialFactory.scheme, "Digest")
+
+
     def test_decode(self):
         """
         L{digest.DigestCredentialFactory.decode} calls the C{decode} method on
@@ -244,7 +260,7 @@ class UnauthorizedResourceTests(unittest.TestCase):
         self.assertEqual(request.responseCode, 401)
         self.assertEqual(
             request.responseHeaders.getRawHeaders('www-authenticate'),
-            ['basic realm="example.com"'])
+            ['Basic realm="example.com"'])
 
 
     def test_render(self):
@@ -282,7 +298,7 @@ class UnauthorizedResourceTests(unittest.TestCase):
         request.render(resource)
         self.assertEqual(
             request.responseHeaders.getRawHeaders('www-authenticate'),
-            ['basic realm="example\\\\\\"foo"'])
+            ['Basic realm="example\\\\\\"foo"'])
 
 
 
@@ -346,14 +362,14 @@ class HTTPAuthHeaderTests(unittest.TestCase):
             self.portal, self.credentialFactories)
 
 
-    def _authorizedBasicLogin(self, request):
+    def _authorizedBasicLogin(self, request, scheme="Basic"):
         """
         Add an I{basic authorization} header to the given request and then
         dispatch it, starting from C{self.wrapper} and returning the resulting
         L{IResource}.
         """
         authorization = b64encode(self.username + ':' + self.password)
-        request.headers['authorization'] = 'Basic ' + authorization
+        request.headers['authorization'] = '%s %s' % (scheme, authorization)
         return getChildForRequest(self.wrapper, request)
 
 
@@ -439,6 +455,25 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         return d
 
 
+    def renderAuthorized(self, scheme):
+        """
+        Resource traversal which terminates at an L{HTTPAuthSessionWrapper}
+        and includes sufficiently correct authentication headers results in
+        the L{IResource} avatar (not one of its children) retrieved from the
+        portal being rendered.
+        """
+        self.credentialFactories.append(BasicCredentialFactory('example.com'))
+        # Request it exactly, not any of its children.
+        request = self.makeRequest([])
+        child = self._authorizedBasicLogin(request, scheme)
+        d = request.notifyFinish()
+        def cbFinished(ignored):
+            self.assertEqual(request.written, [self.avatarContent])
+        d.addCallback(cbFinished)
+        request.render(child)
+        return d
+
+
     def test_renderAuthorized(self):
         """
         Resource traversal which terminates at an L{HTTPAuthSessionWrapper}
@@ -446,16 +481,18 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         L{IResource} avatar (not one of its children) retrieved from the
         portal being rendered.
         """
-        self.credentialFactories.append(BasicCredentialFactory('example.com'))
-        # Request it exactly, not any of its children.
-        request = self.makeRequest([])
-        child = self._authorizedBasicLogin(request)
-        d = request.notifyFinish()
-        def cbFinished(ignored):
-            self.assertEqual(request.written, [self.avatarContent])
-        d.addCallback(cbFinished)
-        request.render(child)
-        return d
+        return self.renderAuthorized("Basic")
+
+
+    def test_renderAuthorizedWrongCapitalizationScheme(self):
+        """
+        Resource traversal which terminates at an L{HTTPAuthSessionWrapper}
+        and includes authentication headers which have a scheme which is
+        correct other than its capitaliztion results in the L{IResource}
+        avatar (not one of its children) retrieved from the portal being
+        rendered.
+        """
+        return self.renderAuthorized("bASIC")
 
 
     def test_getChallengeCalledWithRequest(self):
@@ -571,7 +608,7 @@ class HTTPAuthHeaderTests(unittest.TestCase):
             pass
 
         class BadFactory(object):
-            scheme = 'bad'
+            scheme = 'Bad'
 
             def getChallenge(self, client):
                 return {}

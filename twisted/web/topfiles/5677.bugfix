@@ -1,0 +1,1 @@
+twisted.web's HTTP authentication support is now more RFC-compliant in its scheme output.

@@ -220,6 +220,7 @@ class HTTPAuthSessionWrapper(object):
         elements = header.split(' ')
         scheme = elements[0].lower()
         for fact in self._credentialFactories:
-            if fact.scheme == scheme:
+            # Be lenient in what we accept:
+            if fact.scheme.lower() == scheme:
                 return (fact, ' '.join(elements[1:]))
         return (None, None)

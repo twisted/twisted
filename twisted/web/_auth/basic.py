@@ -23,12 +23,12 @@ class BasicCredentialFactory(object):
     Credential Factory for HTTP Basic Authentication
 
     @type authenticationRealm: C{str}
-    @ivar authenticationRealm: The HTTP authentication realm which will be issued in
-        challenges.
+    @ivar authenticationRealm: The HTTP authentication realm which will be
+        issued in challenges.
     """
     implements(ICredentialFactory)
 
-    scheme = 'basic'
+    scheme = 'Basic'
 
     def __init__(self, authenticationRealm):
         self.authenticationRealm = authenticationRealm
