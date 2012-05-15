@@ -201,13 +201,14 @@ class TestProcessProtocol(protocol.ProcessProtocol):
         if childFD == 1:
             self.stages.append(2)
             if self.data != "abcd":
-                raise RuntimeError
+                raise RuntimeError(
+                    "Data was %r instead of 'abcd'" % (self.data,))
             self.transport.write("1234")
         elif childFD == 2:
             self.stages.append(3)
             if self.err != "1234":
-                print 'err != 1234: ' + repr(self.err)
-                raise RuntimeError()
+                raise RuntimeError(
+                    "Err was %r instead of '1234'" % (self.err,))
             self.transport.write("abcd")
             self.stages.append(4)
         elif childFD == 0:
