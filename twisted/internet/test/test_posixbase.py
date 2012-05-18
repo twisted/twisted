@@ -5,6 +5,8 @@
 Tests for L{twisted.internet.posixbase} and supporting code.
 """
 
+import errno, os
+
 from twisted.python.compat import set
 from twisted.trial.unittest import TestCase
 from twisted.internet.defer import Deferred
@@ -23,6 +25,10 @@ from twisted.internet import reactor
 from twisted.test.test_unix import ClientProto
 
 class TrivialReactor(PosixReactorBase):
+    """
+    L{TrivialReactor} is a reactor which can keep track of readers and
+    writers but not actually monitor them for events.
+    """
     def __init__(self):
         self._readers = {}
         self._writers = {}
@@ -45,16 +51,40 @@ class TrivialReactor(PosixReactorBase):
         del self._writers[writer]
 
 
+    def doIteration(self, timeout):
+        """
+        Iterate by doing nothing.
+        """
+
+
+    def removeAll(self):
+        """
+        No-op implementation of non-internal reader/writer removal.
+        This is only present because the reactor cannot be stopped if
+        the base implementation is not overridden.
+        """
+        return []
+
+
 
 class PosixReactorBaseTests(TestCase):
     """
     Tests for L{PosixReactorBase}.
     """
-
     def _checkWaker(self, reactor):
         self.assertIsInstance(reactor.waker, _Waker)
         self.assertIn(reactor.waker, reactor._internalReaders)
         self.assertIn(reactor.waker, reactor._readers)
+
+
+    def runInReactor(self, reactor, function):
+        def run():
+            try:
+                function()
+            except:
+                log.err(None, "Exception encountered running function in reactor")
+            reactor.stop()
+        reactor.callWhenRunning(function)
 
 
     def test_wakerIsInternalReader(self):
@@ -63,7 +93,25 @@ class PosixReactorBaseTests(TestCase):
         it to its internal readers set.
         """
         reactor = TrivialReactor()
-        self._checkWaker(reactor)
+        def check():
+            self._checkWaker(reactor)
+        self.runInReactor(reactor, check)
+
+
+    def test_wakerPipesClosed(self):
+        """
+        When L{PosixReactorBase} is stopped, it closes all of its
+        internal readers.
+        """
+        reactor = TrivialReactor()
+        readers = []
+        def save():
+            readers.extend([reader.fileno() for reader in reactor._internalReaders])
+        self.runInReactor(reactor, save)
+        self.assertFalse(reactor._internalReaders)
+        for fileno in readers:
+            err = self.assertRaises(OSError, os.fstat, fileno)
+            self.assertEquals(err.errno, errno.EBADF)
 
 
     def test_removeAllSkipsInternalReaders(self):
@@ -72,13 +120,15 @@ class PosixReactorBaseTests(TestCase):
         left alone by L{PosixReactorBase._removeAll}.
         """
         reactor = TrivialReactor()
-        extra = object()
-        reactor._internalReaders.add(extra)
-        reactor.addReader(extra)
-        reactor._removeAll(reactor._readers, reactor._writers)
-        self._checkWaker(reactor)
-        self.assertIn(extra, reactor._internalReaders)
-        self.assertIn(extra, reactor._readers)
+        def cleanup():
+            extra = object()
+            reactor._internalReaders.add(extra)
+            reactor.addReader(extra)
+            reactor._removeAll(reactor._readers, reactor._writers)
+            self._checkWaker(reactor)
+            self.assertIn(extra, reactor._internalReaders)
+            self.assertIn(extra, reactor._readers)
+        self.runInReactor(reactor, cleanup)
 
 
     def test_removeAllReturnsRemovedDescriptors(self):
@@ -87,15 +137,17 @@ class PosixReactorBaseTests(TestCase):
         L{IReadDescriptor} and L{IWriteDescriptor} objects.
         """
         reactor = TrivialReactor()
-        reader = object()
-        writer = object()
-        reactor.addReader(reader)
-        reactor.addWriter(writer)
-        removed = reactor._removeAll(
-            reactor._readers, reactor._writers)
-        self.assertEqual(set(removed), set([reader, writer]))
-        self.assertNotIn(reader, reactor._readers)
-        self.assertNotIn(writer, reactor._writers)
+        def remove():
+            reader = object()
+            writer = object()
+            reactor.addReader(reader)
+            reactor.addWriter(writer)
+            removed = reactor._removeAll(
+                reactor._readers, reactor._writers)
+            self.assertEqual(set(removed), set([reader, writer]))
+            self.assertNotIn(reader, reactor._readers)
+            self.assertNotIn(writer, reactor._writers)
+        self.runInReactor(reactor, remove)
 
 
     def test_IReactorArbitraryIsDeprecated(self):
@@ -209,6 +261,14 @@ class TimeoutReportReactor(PosixReactorBase):
         """
         Ignore the reader.  This is necessary because the waker will be
         added.  However, we won't actually monitor it for any events.
+        """
+
+
+    def removeReader(self, reader):
+        """
+        Ignore attempts to remove a reader.  This is necessary to
+        support (not) removing the waker which we ignored in
+        C{addReader}.
         """
 
 

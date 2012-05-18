@@ -312,6 +312,15 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
             # already).
             process.reapAllProcesses()
 
+
+    def _disconnectInternal(self):
+        if self._childWaker is not None:
+            self._childWaker.uninstall()
+            self._childWaker = None
+        ReactorBase._disconnectInternal(self)
+        self._childWaker = None
+
+
     def _uninstallHandler(self):
         """
         If a child waker was created and installed, uninstall it now.

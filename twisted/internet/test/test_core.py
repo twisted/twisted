@@ -10,7 +10,10 @@ __metaclass__ = type
 import signal
 import time
 import inspect
+import os
+import gc
 
+from twisted.trial.unittest import SkipTest
 from twisted.internet.abstract import FileDescriptor
 from twisted.internet.error import ReactorAlreadyRunning, ReactorNotRestartable
 from twisted.internet.defer import Deferred
@@ -136,7 +139,8 @@ class SystemEventTestsBuilder(ReactorBuilder):
 
         sawPhase = []
         def fakeSignal(signum, action):
-            sawPhase.append(phase[0])
+            if action != signal.SIG_DFL:
+                sawPhase.append(phase[0])
         self.patch(signal, 'signal', fakeSignal)
         reactor.callWhenRunning(reactor.stop)
         self.assertEqual(phase[0], None)
@@ -327,5 +331,35 @@ class SystemEventTestsBuilder(ReactorBuilder):
 
 
 
+class ResourceManagementTests(ReactorBuilder):
+    """
+    Verify creation and cleanup by the reactor of shared resources.
+    """
+
+    def enumerateFileDescriptors(self):
+        """
+        Return list of file descriptors for the current process.
+        """
+        return map(int, os.listdir('/proc/self/fd'))
+
+
+    def test_fileDescriptorsCleanedUp(self):
+        """
+        Any file descriptors created by running a reactor are destroyed by
+        the time C{reactor.run()} returns.
+        """
+        if not os.path.exists("/proc/self/fd"):
+            raise SkipTest("This test currently only supports Linux.")
+        before = self.enumerateFileDescriptors()
+        reactor = self.buildReactor()
+        reactor.callWhenRunning(reactor.stop)
+        self.runReactor(reactor)
+        gc.collect()
+        after = self.enumerateFileDescriptors()
+        self.assertEqual(before, after)
+
+
+
 globals().update(SystemEventTestsBuilder.makeTestCaseClasses())
 globals().update(ObjectModelIntegrationTest.makeTestCaseClasses())
+globals().update(ResourceManagementTests.makeTestCaseClasses())

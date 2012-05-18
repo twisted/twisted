@@ -489,10 +489,27 @@ class ReactorBase(object):
             'during', 'startup', self._reallyStartRunning)
         self.addSystemEventTrigger('during', 'shutdown', self.crash)
         self.addSystemEventTrigger('during', 'shutdown', self.disconnectAll)
+        self.addSystemEventTrigger('after', 'shutdown', self._disconnectInternal)
 
         if platform.supportsThreads():
             self._initThreads()
-        self.installWaker()
+
+
+    def _disconnectSelectables(self, selectables):
+        for reader in selectables:
+            self.removeReader(reader)
+            log.callWithLogger(
+                reader, reader.connectionLost,
+                failure.Failure(main.CONNECTION_LOST))
+
+
+    def _disconnectInternal(self):
+        """
+        Close all internal readers.
+        """
+        self._disconnectSelectables(self._internalReaders)
+        self._internalReaders = set()
+        self.waker = None
 
     # override in subclasses
 
@@ -615,11 +632,7 @@ class ReactorBase(object):
         """Disconnect every reader, and writer in the system.
         """
         selectables = self.removeAll()
-        for reader in selectables:
-            log.callWithLogger(reader,
-                               reader.connectionLost,
-                               failure.Failure(main.CONNECTION_LOST))
-
+        self._disconnectSelectables(selectables)
 
     def iterate(self, delay=0):
         """See twisted.internet.interfaces.IReactorCore.iterate.
@@ -691,6 +704,7 @@ class ReactorBase(object):
         in the I{during startup} event trigger phase.
         """
         self.running = True
+        self.installWaker()
 
     # IReactorTime
 
