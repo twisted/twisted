@@ -359,7 +359,7 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
             # currently tracking (because that's maybe a good heuristic) and
             # the amount of time we block to the value specified by our
             # caller.
-            l = self._poller.poll(timeout, len(self._selectables))
+            l = self._poller.poll(timeout, max(len(self._selectables), 10))
         except IOError, err:
             if err.errno == errno.EINTR:
                 return

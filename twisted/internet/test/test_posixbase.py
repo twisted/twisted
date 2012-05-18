@@ -84,7 +84,7 @@ class PosixReactorBaseTests(TestCase):
             except:
                 log.err(None, "Exception encountered running function in reactor")
             reactor.stop()
-        reactor.callWhenRunning(function)
+        reactor.callWhenRunning(run)
 
 
     def test_wakerIsInternalReader(self):
@@ -269,6 +269,12 @@ class TimeoutReportReactor(PosixReactorBase):
         Ignore attempts to remove a reader.  This is necessary to
         support (not) removing the waker which we ignored in
         C{addReader}.
+        """
+
+
+    def removeWriter(self, writer):
+        """
+        Ignore attempts to remove a writer.
         """
 
 

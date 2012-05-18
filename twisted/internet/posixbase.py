@@ -318,7 +318,6 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
             self._childWaker.uninstall()
             self._childWaker = None
         ReactorBase._disconnectInternal(self)
-        self._childWaker = None
 
 
     def _uninstallHandler(self):

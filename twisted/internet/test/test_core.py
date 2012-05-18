@@ -348,6 +348,8 @@ class ResourceManagementTests(ReactorBuilder):
         Any file descriptors created by running a reactor are destroyed by
         the time C{reactor.run()} returns.
         """
+        # FreeBSD enumeration only works in some cases, etc.; see
+        # twisted.internet.process._FDDetector.
         if not os.path.exists("/proc/self/fd"):
             raise SkipTest("This test currently only supports Linux.")
         before = self.enumerateFileDescriptors()

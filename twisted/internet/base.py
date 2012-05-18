@@ -496,8 +496,12 @@ class ReactorBase(object):
 
 
     def _disconnectSelectables(self, selectables):
+        """
+        Disconnect a given set of selectables.
+        """
         for reader in selectables:
             self.removeReader(reader)
+            self.removeWriter(reader)
             log.callWithLogger(
                 reader, reader.connectionLost,
                 failure.Failure(main.CONNECTION_LOST))
