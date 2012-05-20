@@ -320,23 +320,6 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
         ReactorBase._disconnectInternal(self)
 
 
-    def _uninstallHandler(self):
-        """
-        If a child waker was created and installed, uninstall it now.
-
-        Since this disables reactor functionality and is only called
-        when the reactor is stopping, it doesn't provide any directly
-        useful functionality, but the cleanup of reactor-related
-        process-global state that it does helps in unit tests
-        involving multiple reactors and is generally just a nice
-        thing.
-        """
-        # XXX This would probably be an alright place to put all of
-        # the cleanup code for all internal readers (here and in the
-        # base class, anyway).  See #3063 for that cleanup task.
-        if self._childWaker:
-            self._childWaker.uninstall()
-
     # IReactorProcess
 
     def spawnProcess(self, processProtocol, executable, args=(),

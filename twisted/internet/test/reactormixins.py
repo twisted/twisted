@@ -282,22 +282,6 @@ class ReactorBuilder:
         Clean up any resources which may have been allocated for the given
         reactor by its creation or by a test which used it.
         """
-        # Chris says:
-        #
-        # XXX These explicit calls to clean up the waker (and any other
-        # internal readers) should become obsolete when bug #3063 is
-        # fixed. -radix, 2008-02-29. Fortunately it should probably cause an
-        # error when bug #3063 is fixed, so it should be removed in the same
-        # branch that fixes it.
-        #
-        # -exarkun
-        reactor._uninstallHandler()
-        if getattr(reactor, '_internalReaders', None) is not None:
-            for reader in reactor._internalReaders:
-                reactor.removeReader(reader)
-                reader.connectionLost(None)
-            reactor._internalReaders.clear()
-
         # Here's an extra thing unrelated to wakers but necessary for
         # cleaning up after the reactors we make.  -exarkun
         reactor.disconnectAll()
