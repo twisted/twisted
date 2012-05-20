@@ -13,6 +13,7 @@ import inspect
 import os
 import gc
 
+from twisted.python import log
 from twisted.trial.unittest import SkipTest
 from twisted.internet.abstract import FileDescriptor
 from twisted.internet.error import ReactorAlreadyRunning, ReactorNotRestartable
@@ -352,12 +353,31 @@ class ResourceManagementTests(ReactorBuilder):
         # twisted.internet.process._FDDetector.
         if not os.path.exists("/proc/self/fd"):
             raise SkipTest("This test currently only supports Linux.")
+
+        # Some of the event loops may open file descriptors we have no control
+        # over, e.g. socket to connect to X. What we can control, however, is
+        # that we don't leak file descriptors each time we run the event loop;
+        # so, make sure we don't leak fds after the *first* time we run the
+        # event loop.
+        def runEventLoop():
+            reactor = self.buildReactor()
+            reactor.callWhenRunning(reactor.stop)
+            self.runReactor(reactor)
+            gc.collect()
+
+        runEventLoop()
         before = self.enumerateFileDescriptors()
-        reactor = self.buildReactor()
-        reactor.callWhenRunning(reactor.stop)
-        self.runReactor(reactor)
-        gc.collect()
+        runEventLoop()
+
         after = self.enumerateFileDescriptors()
+        if before != after:
+            log.msg("About to fail test, here's some debug info")
+            for fd in after:
+                path = "/proc/self/fd/" + str(fd)
+                if not os.path.exists(path):
+                    log.msg("Strangely, FD %s doesn't exist anymore" % (fd,))
+                else:
+                    log.msg("FD %s, %s" % (fd, os.readlink(path)))
         self.assertEqual(before, after)
 
 
