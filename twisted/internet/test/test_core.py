@@ -12,6 +12,7 @@ import time
 import inspect
 import os
 import gc
+import errno
 
 from twisted.python import log
 from twisted.trial.unittest import SkipTest
@@ -340,8 +341,25 @@ class ResourceManagementTests(ReactorBuilder):
     def enumerateFileDescriptors(self):
         """
         Return list of file descriptors for the current process.
+
+        Linux 3.2.0-24 (Ubuntu 12.04) has a fun bug where an fd shows up in
+        listdir from inside the process, but not externally, and the fd isn't
+        readable. So it looks like some sort of caching issue, it's not a real
+        fd. Thus, we ensure each listed fd *really* exists by attempting to
+        read it.
         """
-        return map(int, os.listdir('/proc/self/fd'))
+        fds = os.listdir('/proc/self/fd')
+        result = []
+        for fd in fds:
+            try:
+                os.readlink("/proc/self/fd/" + fd)
+            except OSError, e:
+                if e.args[0] == errno.ENOENT:
+                    log.msg("Triggered Linux bug with non-existent FDs")
+                    continue
+                raise
+            result.append(fd)
+        return map(int, result)
 
 
     def test_fileDescriptorsCleanedUp(self):
@@ -364,6 +382,7 @@ class ResourceManagementTests(ReactorBuilder):
             reactor.callWhenRunning(reactor.stop)
             self.runReactor(reactor)
             gc.collect()
+            gc.collect()
 
         runEventLoop()
         before = self.enumerateFileDescriptors()
@@ -371,13 +390,17 @@ class ResourceManagementTests(ReactorBuilder):
 
         after = self.enumerateFileDescriptors()
         if before != after:
-            log.msg("About to fail test, here's some debug info")
+            log.msg("About to fail test, here's some debug info:")
             for fd in after:
                 path = "/proc/self/fd/" + str(fd)
+                log.msg("FD %s, %s" % (fd, os.readlink(path)))
                 if not os.path.exists(path):
-                    log.msg("Strangely, FD %s doesn't exist anymore" % (fd,))
+                    log.msg("Strangely, FD %s doesn't exist anymore, let's run "
+                            "listdir again: %s" % (
+                            fd, os.listdir("/proc/self/fd")))
                 else:
-                    log.msg("FD %s, %s" % (fd, os.readlink(path)))
+                    pass
+
         self.assertEqual(before, after)
 
 

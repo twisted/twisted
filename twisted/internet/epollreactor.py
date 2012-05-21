@@ -218,6 +218,13 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         posixbase.PosixReactorBase.__init__(self)
 
 
+    def run(self):
+        posixbase.PosixReactorBase.run(self)
+        # Don't close poller if only crash() was called:
+        if self._stopped:
+            self._poller.close()
+
+
     def _add(self, xer, primary, other, selectables, event, antievent):
         """
         Private method for adding a descriptor from the event loop.
