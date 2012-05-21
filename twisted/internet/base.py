@@ -515,8 +515,8 @@ class ReactorBase(object):
         self._internalReaders = set()
         self.waker = None
 
-    # override in subclasses
 
+    # override in subclasses
     _lock = None
 
     def installWaker(self):
