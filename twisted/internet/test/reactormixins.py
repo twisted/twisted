@@ -282,8 +282,9 @@ class ReactorBuilder:
         Clean up any resources which may have been allocated for the given
         reactor by its creation or by a test which used it.
         """
-        # Here's an extra thing unrelated to wakers but necessary for
-        # cleaning up after the reactors we make.  -exarkun
+        # Technically this shouldn't be necessary, since reactor does this on
+        # shutdown, but do it again anyway in case someone e.g. decided to
+        # connectTCP in shutdown code:
         reactor.disconnectAll()
 
         # It would also be bad if any timed calls left over were allowed to
