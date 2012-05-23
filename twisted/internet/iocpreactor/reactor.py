@@ -136,6 +136,13 @@ class IOCPReactor(base._SignalReactorMixin, base.ReactorBase,
         pass
 
 
+    def _disconnectInternal(self):
+        """
+        Do nothing, since we don't install any wakers.
+        """
+        pass
+
+
     def wakeUp(self):
         self.port.postEvent(0, KEY_WAKEUP, None)
 
