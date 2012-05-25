@@ -500,8 +500,6 @@ class ReactorBase(object):
         Disconnect a given set of selectables.
         """
         for reader in selectables:
-            self.removeReader(reader)
-            self.removeWriter(reader)
             log.callWithLogger(
                 reader, reader.connectionLost,
                 failure.Failure(main.CONNECTION_LOST))
@@ -511,6 +509,8 @@ class ReactorBase(object):
         """
         Close all internal readers.
         """
+        for reader in self._internalReaders:
+            self.removeReader(reader)
         self._disconnectSelectables(self._internalReaders)
         self._internalReaders = set()
         self.waker = None
