@@ -46,7 +46,7 @@ class SMTPClientFactory(protocol.ClientFactory):
 
 def getMailExchange(host):
     def cbMX(mxRecord):
-        return str(mxRecord.exchange)
+        return str(mxRecord.name)
     return relaymanager.MXCalculator().getMX(host).addCallback(cbMX)
 
 def cbMailExchange(exchange):
