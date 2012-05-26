@@ -1,1 +1,0 @@
-The ability to pass a string article to NNTPServer._gotBody and NNTPServer._gotArticle in t.news.nntp has been deprecated for years and is now removed.

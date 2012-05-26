@@ -1,1 +1,0 @@
-twisted.python.runtime.platform.isLinux can be used to check if Twisted is running on Linux.

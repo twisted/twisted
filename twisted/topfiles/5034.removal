@@ -1,1 +1,0 @@
-backwardsCompatImplements and fixClassImplements are removed from twisted.python.components, deprecated in 2006.
