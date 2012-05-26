@@ -1,6 +1,28 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Conch 12.1.0pre1 (2012-05-26)
+=====================================
+
+Features
+--------
+ - twisted.conch.tap now supports cred plugins (#4753)
+
+Bugfixes
+--------
+ - twisted.conch.client.knownhosts now handles errors encountered
+   parsing hashed entries in a known hosts file. (#5616)
+
+Improved Documentation
+----------------------
+ - Conch examples window.tac and telnet_echo.tac now have better
+   explanations. (#5590)
+
+Other
+-----
+ - #5580
+
+
 Twisted Conch 12.0.0 (2012-02-10)
 =================================
 

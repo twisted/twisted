@@ -1,6 +1,21 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Words 12.1.0pre1 (2012-05-26)
+=====================================
+
+Bugfixes
+--------
+ - twisted.words.protocols.irc.DccChatFactory.buildProtocol now
+   returns the protocol object that it creates (#3179)
+ - twisted.words.im no longer offers an empty thread of a rewrite on
+   import. (#5598)
+
+Other
+-----
+ - #5555, #5595
+
+
 Twisted Words 12.0.0 (2012-02-10)
 =================================
 
