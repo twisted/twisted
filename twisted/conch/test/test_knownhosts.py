@@ -156,7 +156,8 @@ class PlainEntryTests(EntryTestsMixin, TestCase):
         """
         self.assertEqual(self.entry.toString(), self.plaintextLine.rstrip("\n"))
         multiHostEntry = PlainEntry.fromString(self.hostIPLine)
-        self.assertEqual(multiHostEntry.toString(), self.hostIPLine.rstrip("\n"))
+        self.assertEqual(multiHostEntry.toString(),
+                         self.hostIPLine.rstrip("\n"))
 
 
 
@@ -243,7 +244,8 @@ class UnparsedEntryTests(TestCase, EntryTestsMixin):
 
     def test_toString(self):
         """
-        L{UnparsedEntry.toString} returns its input string, sans trailing newline.
+        L{UnparsedEntry.toString} returns its input string, sans trailing
+        newline.
         """
         self.assertEqual("    This is a bogus entry.  ", self.entry.toString())
 
@@ -255,7 +257,7 @@ class ParseErrorTests(TestCase):
     of errors depending on misformattings of certain strings.  These tests make
     sure those errors are caught.  Since many of the ways that this can go
     wrong are in the lower-level APIs being invoked by the parsing logic,
-    several of these are integration tests with the L{base64} and
+    several of these are integration tests with the C{base64} and
     L{twisted.conch.ssh.keys} modules.
     """
 
@@ -326,7 +328,8 @@ class ParseErrorTests(TestCase):
         # Host hash not valid base64.
         self.assertRaises(
             BinasciiError, HashedEntry.fromString,
-            ' '.join([HashedEntry.MAGIC + b2a_base64("stuff").strip() + "|x", b, c]))
+            ' '.join([HashedEntry.MAGIC + b2a_base64("stuff").strip() + "|x",
+            b, c]))
         # Neither salt nor hash valid base64.
         self.assertRaises(
             BinasciiError, HashedEntry.fromString,
@@ -381,27 +384,80 @@ class KnownHostsDatabaseTests(TestCase):
         """
         Loading a L{KnownHostsFile} from a path with six entries in it will
         result in a L{KnownHostsFile} object with six L{IKnownHostEntry}
-        providers in it, each of the appropriate type.
+        providers in it.
         """
         hostsFile = self.loadSampleHostsFile()
         self.assertEqual(len(hostsFile._entries), 6)
+
+
+    def test_verifyHashedEntry(self):
+        """
+        Loading a L{KnownHostsFile} from a path containing a single valid
+        L{HashedEntry} entry will result in a L{KnownHostsFile} object
+        with one L{IKnownHostEntry} provider.
+        """
+        hostsFile = self.loadSampleHostsFile((sampleHashedLine))
         self.assertIsInstance(hostsFile._entries[0], HashedEntry)
         self.assertEqual(True, hostsFile._entries[0].matchesHost(
                 "www.twistedmatrix.com"))
-        self.assertIsInstance(hostsFile._entries[1], PlainEntry)
-        self.assertEqual(True, hostsFile._entries[1].matchesHost(
+
+
+    def test_verifyPlainEntry(self):
+        """
+        Loading a L{KnownHostsFile} from a path containing a single valid
+        L{PlainEntry} entry will result in a L{KnownHostsFile} object
+        with one L{IKnownHostEntry} provider.
+        """
+        hostsFile = self.loadSampleHostsFile((otherSamplePlaintextLine))
+        self.assertIsInstance(hostsFile._entries[0], PlainEntry)
+        self.assertEqual(True, hostsFile._entries[0].matchesHost(
                 "divmod.com"))
-        self.assertIsInstance(hostsFile._entries[2], UnparsedEntry)
-        self.assertEqual(hostsFile._entries[2].toString(), "")
-        self.assertIsInstance(hostsFile._entries[3], UnparsedEntry)
-        self.assertEqual(hostsFile._entries[3].toString(),
+
+
+    def test_verifyUnparsedEntry(self):
+        """
+        Loading a L{KnownHostsFile} from a path that only contains '\n' will
+        result in a L{KnownHostsFile} object containing a L{UnparsedEntry}
+        object.
+        """
+        hostsFile = self.loadSampleHostsFile(("\n"))
+        self.assertIsInstance(hostsFile._entries[0], UnparsedEntry)
+        self.assertEqual(hostsFile._entries[0].toString(), "")
+
+
+    def test_verifyUnparsedComment(self):
+        """
+        Loading a L{KnownHostsFile} from a path that contains a comment will
+        result in a L{KnownHostsFile} object containing a L{UnparsedEntry}
+        object.
+        """
+        hostsFile = self.loadSampleHostsFile(("# That was a blank line.\n"))
+        self.assertIsInstance(hostsFile._entries[0], UnparsedEntry)
+        self.assertEqual(hostsFile._entries[0].toString(),
                          "# That was a blank line.")
-        self.assertIsInstance(hostsFile._entries[4], UnparsedEntry)
-        self.assertEqual(hostsFile._entries[4].toString(),
+
+
+    def test_verifyUnparsableLine(self):
+        """
+        Loading a L{KnownHostsFile} from a path that contains an unparseable
+        line will be represented as an L{UnparsedEntry} instance.
+        """
+        hostsFile = self.loadSampleHostsFile(("This is just unparseable.\n"))
+        self.assertIsInstance(hostsFile._entries[0], UnparsedEntry)
+        self.assertEqual(hostsFile._entries[0].toString(),
                          "This is just unparseable.")
-        self.assertIsInstance(hostsFile._entries[5], UnparsedEntry)
-        self.assertEqual(hostsFile._entries[5].toString(),
-                         "|1|This also unparseable.")
+
+
+    def test_verifyUnparsableEncryptionMarker(self):
+        """
+        Loading a L{KnownHostsFile} from a path containing an unparseable line
+        that starts with an encryption marker will be represented as an
+        L{UnparsedEntry} instance.
+        """
+        hostsFile = self.loadSampleHostsFile(("|1|This is unparseable.\n"))
+        self.assertIsInstance(hostsFile._entries[0], UnparsedEntry)
+        self.assertEqual(hostsFile._entries[0].toString(),
+                         "|1|This is unparseable.")
 
 
     def test_loadNonExistent(self):
@@ -439,7 +495,8 @@ class KnownHostsDatabaseTests(TestCase):
         path = self.pathWithContent(sampleHashedLine +
                                     otherSamplePlaintextLine)
         knownHostsFile = KnownHostsFile.fromPath(path)
-        newEntry = knownHostsFile.addHostKey("some.example.com", Key.fromString(thirdSampleKey))
+        newEntry = knownHostsFile.addHostKey("some.example.com",
+            Key.fromString(thirdSampleKey))
         expectedContent = (
             sampleHashedLine +
             otherSamplePlaintextLine + HashedEntry.MAGIC +
@@ -478,7 +535,7 @@ class KnownHostsDatabaseTests(TestCase):
         """
         L{KnownHostsFile.hasHostKey} raises L{HostKeyChanged} if the host key
         is present, but different from the expected one.  The resulting
-        exception should have an offendingEntry indicating the given entry.
+        exception should have an C{offendingEntry} indicating the given entry.
         """
         hostsFile = self.loadSampleHostsFile()
         exception = self.assertRaises(
@@ -867,7 +924,8 @@ class DefaultAPITests(TestCase):
         self.patch(default, "_open", self.patchedOpen)
         self.hostsOption = self.mktemp()
         knownHostsFile = KnownHostsFile(FilePath(self.hostsOption))
-        knownHostsFile.addHostKey("exists.example.com", Key.fromString(sampleKey))
+        knownHostsFile.addHostKey("exists.example.com",
+            Key.fromString(sampleKey))
         knownHostsFile.addHostKey("4.3.2.1", Key.fromString(sampleKey))
         knownHostsFile.save()
         self.fakeTransport = FakeObject()
