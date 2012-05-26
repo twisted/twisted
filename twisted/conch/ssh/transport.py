@@ -21,12 +21,14 @@ from Crypto.Cipher import XOR
 
 # twisted imports
 from twisted.internet import protocol, defer
+
 from twisted.conch import error
 from twisted.python import log, randbytes
 from twisted.python.hashlib import md5, sha1
 
+
 # sibling imports
-from twisted.conch.ssh import keys
+from twisted.conch.ssh import address, keys
 from twisted.conch.ssh.common import NS, getNS, MP, getMP, _MPpow, ffs
 
 
@@ -63,8 +65,6 @@ def _generateX(random, bits):
         x = _getRandomNumber(random, bits)
         if 2 <= x <= (2 ** bits) - 2:
             return x
-
-
 
 class SSHTransportBase(protocol.Protocol):
     """
@@ -166,19 +166,19 @@ class SSHTransportBase(protocol.Protocol):
         the whole packet is available.
 
     @ivar _keyExchangeState: The current protocol state with respect to key
-        exchange.  This is either C{_KEY_EXCHANGE_NONE} if no key exchange is in
-        progress (and returns to this value after any key exchange completes),
-        C{_KEY_EXCHANGE_REQUESTED} if this side of the connection initiated a
-        key exchange, and C{_KEY_EXCHANGE_PROGRESSING} if the other side of the
-        connection initiated a key exchange.  C{_KEY_EXCHANGE_NONE} is the
-        initial value (however SSH connections begin with key exchange, so it
-        will quickly change to another state).
+        exchange.  This is either C{_KEY_EXCHANGE_NONE} if no key exchange is
+        in progress (and returns to this value after any key exchange
+        completqes), C{_KEY_EXCHANGE_REQUESTED} if this side of the connection
+        initiated a key exchange, and C{_KEY_EXCHANGE_PROGRESSING} if the other
+        side of the connection initiated a key exchange.  C{_KEY_EXCHANGE_NONE}
+        is the initial value (however SSH connections begin with key exchange,
+        so it will quickly change to another state).
 
     @ivar _blockedByKeyExchange: Whenever C{_keyExchangeState} is not
         C{_KEY_EXCHANGE_NONE}, this is a C{list} of pending messages which were
-        passed to L{sendPacket} but could not be sent because it is not legal to
-        send them while a key exchange is in progress.  When the key exchange
-        completes, another attempt is made to send these messages.
+        passed to L{sendPacket} but could not be sent because it is not legal
+        to send them while a key exchange is in progress.  When the key
+        exchange completes, another attempt is made to send these messages.
     """
 
 
@@ -282,8 +282,8 @@ class SSHTransportBase(protocol.Protocol):
 
     def _allowedKeyExchangeMessageType(self, messageType):
         """
-        Determine if the given message type may be sent while key exchange is in
-        progress.
+        Determine if the given message type may be sent while key exchange is
+        in progress.
 
         @param messageType: The type of message
         @type messageType: C{int}
@@ -305,9 +305,9 @@ class SSHTransportBase(protocol.Protocol):
 
     def sendPacket(self, messageType, payload):
         """
-        Sends a packet.  If it's been set up, compress the data, encrypt it, and
-        authenticate it before sending.  If key exchange is in progress and the
-        message is not part of key exchange, queue it to be sent later.
+        Sends a packet.  If it's been set up, compress the data, encrypt it,
+        and authenticate it before sending.  If key exchange is in progress and
+        the message is not part of key exchange, queue it to be sent later.
 
         @param messageType: The type of the packet; generally one of the
                             MSG_* values.
@@ -462,6 +462,28 @@ class SSHTransportBase(protocol.Protocol):
             log.msg("couldn't handle %s" % messageNum)
             log.msg(repr(payload))
             self.sendUnimplemented()
+
+    def getPeer(self):
+        """
+        Returns an L{SSHTransportAddress} corresponding to the other (peer)
+        side of this transport.
+
+        @return: L{SSHTransportAddress} for the peer
+        @rtype: L{SSHTransportAddress}
+        @since: 12.1
+        """
+        return address.SSHTransportAddress(self.transport.getPeer())
+
+    def getHost(self):
+        """
+        Returns an L{SSHTransportAddress} corresponding to the this side of
+        transport.
+
+        @return: L{SSHTransportAddress} for the peer
+        @rtype: L{SSHTransportAddress}
+        @since: 12.1
+        """
+        return address.SSHTransportAddress(self.transport.getHost())
 
 
     # Client-initiated rekeying looks like this:
@@ -862,10 +884,10 @@ class SSHServerTransport(SSHTransportBase):
         Called to handle the beginning of a diffie-hellman-group1-sha1 key
         exchange.
 
-        Unlike other message types, this is not dispatched automatically.  It is
-        called from C{ssh_KEX_DH_GEX_REQUEST_OLD} because an extra check is
-        required to determine if this is really a KEXDH_INIT message or if it is
-        a KEX_DH_GEX_REQUEST_OLD message.
+        Unlike other message types, this is not dispatched automatically.  It
+        is called from C{ssh_KEX_DH_GEX_REQUEST_OLD} because an extra check is
+        required to determine if this is really a KEXDH_INIT message or if it
+        is a KEX_DH_GEX_REQUEST_OLD message.
 
         The KEXDH_INIT (for diffie-hellman-group1-sha1 exchanges) payload::
 
@@ -1085,10 +1107,11 @@ class SSHClientTransport(SSHTransportBase):
         """
         Called to handle a reply to a diffie-hellman-group1-sha1 key exchange
         message (KEXDH_INIT).
-
-        Like the handler for I{KEXDH_INIT}, this message type has an overlapping
-        value.  This method is called from C{ssh_KEX_DH_GEX_GROUP} if that
-        method detects a diffie-hellman-group1-sha1 key exchange is in progress.
+        
+        Like the handler for I{KEXDH_INIT}, this message type has an
+        overlapping value.  This method is called from C{ssh_KEX_DH_GEX_GROUP}
+        if that method detects a diffie-hellman-group1-sha1 key exchange is in
+        progress.
 
         Payload::
 
