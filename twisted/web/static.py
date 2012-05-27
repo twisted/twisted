@@ -22,7 +22,6 @@ from twisted.web.util import redirectTo
 
 from twisted.python import components, filepath, log
 from twisted.internet import abstract, interfaces
-from twisted.spread import pb
 from twisted.persisted import styles
 from twisted.python.util import InsensitiveDict
 from twisted.python.runtime import platformType
@@ -829,56 +828,6 @@ class MultipleRangeStaticProducer(StaticProducer):
             self.request.unregisterProducer()
             self.request.finish()
             self.request = None
-
-
-class FileTransfer(pb.Viewable):
-    """
-    A class to represent the transfer of a file over the network.
-    """
-    request = None
-
-    def __init__(self, file, size, request):
-        warnings.warn(
-            "FileTransfer is deprecated since Twisted 9.0. "
-            "Use a subclass of StaticProducer instead.",
-            DeprecationWarning, stacklevel=2)
-        self.file = file
-        self.size = size
-        self.request = request
-        self.written = self.file.tell()
-        request.registerProducer(self, 0)
-
-    def resumeProducing(self):
-        if not self.request:
-            return
-        data = self.file.read(min(abstract.FileDescriptor.bufferSize, self.size - self.written))
-        if data:
-            self.written += len(data)
-            # this .write will spin the reactor, calling .doWrite and then
-            # .resumeProducing again, so be prepared for a re-entrant call
-            self.request.write(data)
-        if self.request and self.file.tell() == self.size:
-            self.request.unregisterProducer()
-            self.request.finish()
-            self.request = None
-
-    def pauseProducing(self):
-        pass
-
-    def stopProducing(self):
-        self.file.close()
-        self.request = None
-
-    # Remotely relay producer interface.
-
-    def view_resumeProducing(self, issuer):
-        self.resumeProducing()
-
-    def view_pauseProducing(self, issuer):
-        self.pauseProducing()
-
-    def view_stopProducing(self, issuer):
-        self.stopProducing()
 
 
 

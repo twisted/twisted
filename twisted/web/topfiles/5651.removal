@@ -1,0 +1,1 @@
+twisted.web.static.FileTransfer, deprecated since 9.0, is removed now. Use a subclass of StaticProducer instead.

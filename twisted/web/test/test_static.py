@@ -1484,22 +1484,3 @@ class DirectoryListerTest(TestCase):
         self.assertEqual(static.formatFileSize(1234000000), "1G")
         self.assertEqual(static.formatFileSize(1234567890000), "1149G")
 
-
-
-class TestFileTransferDeprecated(TestCase):
-    """
-    L{static.FileTransfer} is deprecated.
-    """
-
-    def test_deprecation(self):
-        """
-        Instantiation of L{FileTransfer} produces a deprecation warning.
-        """
-        static.FileTransfer(StringIO.StringIO(), 0, DummyRequest([]))
-        warnings = self.flushWarnings([self.test_deprecation])
-        self.assertEqual(len(warnings), 1)
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
-        self.assertEqual(
-            warnings[0]['message'],
-            'FileTransfer is deprecated since Twisted 9.0. '
-            'Use a subclass of StaticProducer instead.')
