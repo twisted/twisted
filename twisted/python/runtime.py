@@ -10,12 +10,14 @@ import time
 import imp
 
 
+
 def shortPythonVersion():
-    hv = sys.hexversion
-    major = (hv & 0xff000000L) >> 24
-    minor = (hv & 0x00ff0000L) >> 16
-    teeny = (hv & 0x0000ff00L) >> 8
-    return "%s.%s.%s" % (major,minor,teeny)
+    """
+    Returns the Python version as a dot-separated string.
+    """
+    return "%s.%s.%s" % sys.version_info[:3]
+
+
 
 knownPlatforms = {
     'nt': 'win32',
@@ -25,10 +27,14 @@ knownPlatforms = {
     'org.python.modules.os': 'java',
     }
 
+
+
 _timeFunctions = {
     #'win32': time.clock,
     'win32': time.time,
     }
+
+
 
 class Platform:
     """Gives us information about the platform we're running on"""
@@ -69,8 +75,9 @@ class Platform:
         if self.getType() == 'win32':
             import _winreg
             try:
-                k=_winreg.OpenKeyEx(_winreg.HKEY_LOCAL_MACHINE,
-                                    r'Software\Microsoft\Windows NT\CurrentVersion')
+                k = _winreg.OpenKeyEx(
+                        _winreg.HKEY_LOCAL_MACHINE,
+                        r'Software\Microsoft\Windows NT\CurrentVersion')
                 _winreg.QueryValueEx(k, 'SystemRoot')
                 return 1
             except WindowsError:

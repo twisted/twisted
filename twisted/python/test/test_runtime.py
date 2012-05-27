@@ -7,8 +7,23 @@ Tests for runtime checks.
 
 import sys
 
-from twisted.python.runtime import Platform
+from twisted.python.runtime import Platform, shortPythonVersion
 from twisted.trial.unittest import TestCase
+
+
+
+class PythonVersionTests(TestCase):
+    """
+    Tests the shortPythonVersion method.
+    """
+
+    def test_shortPythonVersion(self):
+        """
+        Verify if the Python version is returned correctly.
+        """
+        ver = shortPythonVersion().split('.')
+        for i in range(3):
+            self.assertEqual(int(ver[i]), sys.version_info[i])
 
 
 
