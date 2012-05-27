@@ -8,7 +8,7 @@ import sys, os, random, gc, time, warnings
 
 from twisted.internet import defer
 from twisted.application import app
-from twisted.python import usage, reflect, failure, versions, deprecate
+from twisted.python import usage, reflect, failure
 from twisted.python.filepath import FilePath
 from twisted import plugin
 from twisted.python.util import spewer
@@ -142,7 +142,6 @@ class Options(usage.Options, app.ReactorSelectionMixin):
         )
 
     fallbackReporter = reporter.TreeReporter
-    extra = None
     tracer = None
 
     def __init__(self):
@@ -234,21 +233,6 @@ class Options(usage.Options, app.ReactorSelectionMixin):
                 "tbformat must be 'plain', 'emacs', or 'cgitb'.")
 
 
-    def opt_extra(self, arg):
-        """
-        Add an extra argument.  (This is a hack necessary for interfacing with
-        emacs's `gud'.)  NOTE: This option is deprecated as of Twisted 11.0
-        """
-        warnings.warn(deprecate.getDeprecationWarningString(Options.opt_extra,
-                                                            versions.Version('Twisted', 11, 0, 0)),
-                      category=DeprecationWarning, stacklevel=2)
-
-        if self.extra is None:
-            self.extra = []
-        self.extra.append(arg)
-    opt_x = opt_extra
-
-
     def opt_recursionlimit(self, arg):
         """
         see sys.setrecursionlimit()
@@ -288,8 +272,6 @@ class Options(usage.Options, app.ReactorSelectionMixin):
 
     def parseArgs(self, *args):
         self['tests'].update(args)
-        if self.extra is not None:
-            self['tests'].update(self.extra)
 
 
     def _loadReporterByName(self, name):
