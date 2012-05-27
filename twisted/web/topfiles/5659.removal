@@ -1,0 +1,1 @@
+ErrorPage, NoResource and ForbiddenResource in twisted.web.error were deprecated since 9.0 and are removed now.

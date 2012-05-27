@@ -6,7 +6,7 @@
 Exception definitions for L{twisted.web}.
 """
 
-import operator, warnings
+import operator
 
 from twisted.web import http
 
@@ -216,47 +216,6 @@ class SchemeNotSupported(Exception):
 
 
 
-from twisted.web import resource as _resource
-
-class ErrorPage(_resource.ErrorPage):
-    """
-    Deprecated alias for L{twisted.web.resource.ErrorPage}.
-    """
-    def __init__(self, *args, **kwargs):
-        warnings.warn(
-            "twisted.web.error.ErrorPage is deprecated since Twisted 9.0.  "
-            "See twisted.web.resource.ErrorPage.", DeprecationWarning,
-            stacklevel=2)
-        _resource.ErrorPage.__init__(self, *args, **kwargs)
-
-
-
-class NoResource(_resource.NoResource):
-    """
-    Deprecated alias for L{twisted.web.resource.NoResource}.
-    """
-    def __init__(self, *args, **kwargs):
-        warnings.warn(
-            "twisted.web.error.NoResource is deprecated since Twisted 9.0.  "
-            "See twisted.web.resource.NoResource.", DeprecationWarning,
-            stacklevel=2)
-        _resource.NoResource.__init__(self, *args, **kwargs)
-
-
-
-class ForbiddenResource(_resource.ForbiddenResource):
-    """
-    Deprecated alias for L{twisted.web.resource.ForbiddenResource}.
-    """
-    def __init__(self, *args, **kwargs):
-        warnings.warn(
-            "twisted.web.error.ForbiddenResource is deprecated since Twisted "
-            "9.0.  See twisted.web.resource.ForbiddenResource.",
-            DeprecationWarning, stacklevel=2)
-        _resource.ForbiddenResource.__init__(self, *args, **kwargs)
-
-
-
 class RenderError(Exception):
     """
     Base exception class for all errors which can occur during template
@@ -415,8 +374,8 @@ class FlattenerError(Exception):
 
 
 __all__ = [
-    'Error', 'PageRedirect', 'InfiniteRedirection', 'ErrorPage', 'NoResource',
-    'ForbiddenResource', 'RenderError', 'MissingRenderMethod',
-    'MissingTemplateLoader', 'UnexposedMethodError', 'UnfilledSlot',
-    'UnsupportedType', 'FlattenerError', 'RedirectWithNoLocation'
+    'Error', 'PageRedirect', 'InfiniteRedirection', 'RenderError',
+    'MissingRenderMethod', 'MissingTemplateLoader', 'UnexposedMethodError',
+    'UnfilledSlot', 'UnsupportedType', 'FlattenerError',
+    'RedirectWithNoLocation'
 ]

@@ -6,7 +6,6 @@ Tests for L{twisted.web.resource}.
 """
 
 from twisted.trial.unittest import TestCase
-from twisted.web import error
 from twisted.web.http import NOT_FOUND, FORBIDDEN
 from twisted.web.resource import ErrorPage, NoResource, ForbiddenResource
 from twisted.web.test.test_web import DummyRequest
@@ -79,67 +78,3 @@ class ErrorPageTests(TestCase):
         page = self.forbiddenResource(detail)
         self._pageRenderingTest(page, FORBIDDEN, "Forbidden Resource", detail)
 
-
-
-class DeprecatedErrorPageTests(ErrorPageTests):
-    """
-    Tests for L{error.ErrorPage}, L{error.NoResource}, and
-    L{error.ForbiddenResource}.
-    """
-    def errorPage(self, *args):
-        return error.ErrorPage(*args)
-
-
-    def noResource(self, *args):
-        return error.NoResource(*args)
-
-
-    def forbiddenResource(self, *args):
-        return error.ForbiddenResource(*args)
-
-
-    def _assertWarning(self, name, offendingFunction):
-        warnings = self.flushWarnings([offendingFunction])
-        self.assertEqual(len(warnings), 1)
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
-        self.assertEqual(
-            warnings[0]['message'],
-            'twisted.web.error.%s is deprecated since Twisted 9.0.  '
-            'See twisted.web.resource.%s.' % (name, name))
-
-
-    def test_getChild(self):
-        """
-        Like L{ErrorPageTests.test_getChild}, but flush the deprecation warning
-        emitted by instantiating L{error.ErrorPage}.
-        """
-        ErrorPageTests.test_getChild(self)
-        self._assertWarning('ErrorPage', self.errorPage)
-
-
-    def test_errorPageRendering(self):
-        """
-        Like L{ErrorPageTests.test_errorPageRendering}, but flush the
-        deprecation warning emitted by instantiating L{error.ErrorPage}.
-        """
-        ErrorPageTests.test_errorPageRendering(self)
-        self._assertWarning('ErrorPage', self.errorPage)
-
-
-    def test_noResourceRendering(self):
-        """
-        Like L{ErrorPageTests.test_noResourceRendering}, but flush the
-        deprecation warning emitted by instantiating L{error.NoResource}.
-        """
-        ErrorPageTests.test_noResourceRendering(self)
-        self._assertWarning('NoResource', self.noResource)
-
-
-    def test_forbiddenResourceRendering(self):
-        """
-        Like L{ErrorPageTests.test_forbiddenResourceRendering}, but flush the
-        deprecation warning emitted by instantiating
-        L{error.ForbiddenResource}.
-        """
-        ErrorPageTests.test_forbiddenResourceRendering(self)
-        self._assertWarning('ForbiddenResource', self.forbiddenResource)
