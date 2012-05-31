@@ -1,9 +1,5 @@
-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-
-
-from __future__ import nested_scopes
 
 import gtk
 

@@ -1,4 +1,10 @@
-from __future__ import generators
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+Demonstration of how L{twisted.internet._threadedselect} might be used (this is
+not an example showing the best way to integrate Twisted with pygame).
+"""
 
 # import Twisted and install
 from twisted.internet import _threadedselect
@@ -71,7 +77,7 @@ def main():
             reactor.stop()
         elif event.type == KEYDOWN and event.key == K_ESCAPE:
             reactor.stop()
-                
+
     pygame.quit()
 
 if __name__ == '__main__':

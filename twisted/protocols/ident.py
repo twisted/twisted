@@ -4,11 +4,7 @@
 
 """
 Ident protocol implementation.
-
-@author: Jean-Paul Calderone
 """
-
-from __future__ import generators
 
 import struct
 

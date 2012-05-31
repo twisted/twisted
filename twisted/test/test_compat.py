@@ -80,11 +80,12 @@ class CompatTestCase(unittest.TestCase):
         self.assertEqual(lst1, lst2)
 
     def testIsinstance(self):
-        self.assert_(isinstance(u'hi', types.StringTypes))
-        self.assert_(isinstance(self, unittest.TestCase))
-        # I'm pretty sure it's impossible to implement this
-        # without replacing isinstance on 2.2 as well :(
-        # self.assert_(isinstance({}, dict))
+        """
+        The current object is an instance of
+        unittest.TestCase.
+        """
+        self.assertTrue(isinstance(self, unittest.TestCase))
+
 
     def testStrip(self):
         self.assertEqual(' x '.lstrip(' '), 'x ')

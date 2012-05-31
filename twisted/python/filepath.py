@@ -873,7 +873,7 @@ class FilePath(AbstractFilePath):
 
     def getInodeNumber(self):
         """
-        Retrieve the file serial number, also called inode number, which 
+        Retrieve the file serial number, also called inode number, which
         distinguishes this file from all other files on the same device.
 
         @raise: NotImplementedError if the platform is Windows, since the
@@ -1046,7 +1046,7 @@ class FilePath(AbstractFilePath):
         """
         Returns whether the underlying path is a block device.
 
-        @return: C{True} if it is a block device, C{False} otherwise 
+        @return: C{True} if it is a block device, C{False} otherwise
         @rtype: C{bool}
         @since: 11.1
         """
@@ -1063,7 +1063,7 @@ class FilePath(AbstractFilePath):
         """
         Returns whether the underlying path is a socket.
 
-        @return: C{True} if it is a socket, C{False} otherwise 
+        @return: C{True} if it is a socket, C{False} otherwise
         @rtype: C{bool}
         @since: 11.1
         """
@@ -1253,8 +1253,6 @@ class FilePath(AbstractFilePath):
             os.unlink(self.path)
         os.rename(sib.path, self.path)
 
-
-    # new in 2.2.0
 
     def __cmp__(self, other):
         if not isinstance(other, FilePath):

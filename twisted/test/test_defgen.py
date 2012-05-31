@@ -1,4 +1,9 @@
-from __future__ import generators, nested_scopes
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+Tests for L{twisted.internet.defer.deferredGenerator} and related APIs.
+"""
 
 import sys
 

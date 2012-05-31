@@ -1,4 +1,8 @@
-"""Example of doing arbitarily long calculations nicely in Twisted.
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+Example of doing arbitarily long calculations nicely in Twisted.
 
 This is also a simple demonstration of twisted.protocols.basic.LineReceiver.
 This example uses generators to do the calculation. It also tries to be
@@ -40,7 +44,7 @@ Multiplying zero numbers is a perfectly sensible operation, and the
 result is 1. In that, this example departs from doc/examples/longex.py,
 which errors out when trying to do this.
 """
-from __future__ import generators
+
 from twisted.protocols import basic
 from twisted.internet import defer, protocol
 

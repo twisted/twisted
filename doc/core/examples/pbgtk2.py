@@ -1,9 +1,6 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-from __future__ import nested_scopes
-
 from twisted.internet import gtk2reactor
 gtk2reactor.install()
 
@@ -67,7 +64,7 @@ class LoginDialog:
         reactor.connectTCP(host, port, client_factory)
         creds = UsernamePassword(userName, password)
         client_factory.login(creds).addCallbacks(self._cbGotPerspective, self._ebFailedLogin)
-        
+
         self.statusMsg("Contacting server...")
 
     def _cbGotPerspective(self, perspective):
@@ -80,7 +77,7 @@ class LoginDialog:
             text = str(reason.value)
         else:
             text = str(reason)
-            
+
         self.statusMsg(text)
         msg = gtk.MessageDialog(self._loginDialog,
                                 gtk.DIALOG_DESTROY_WITH_PARENT,
