@@ -1,8 +1,8 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
-Twisted Core 12.1.0pre1 (2012-05-26)
-====================================
+Twisted Core 12.1.0 (2012-06-02)
+================================
 
 Features
 --------
@@ -109,8 +109,8 @@ Other
    #5652, #5656, #5657, #5660, #5673
 
 
-Twisted Conch 12.1.0pre1 (2012-05-26)
-=====================================
+Twisted Conch 12.1.0 (2012-06-02)
+=================================
 
 Features
 --------
@@ -131,8 +131,8 @@ Other
  - #5580
 
 
-Twisted Lore 12.1.0pre1 (2012-05-26)
-====================================
+Twisted Lore 12.1.0 (2012-06-02)
+================================
 
 Bugfixes
 --------
@@ -140,8 +140,8 @@ Bugfixes
    associated with the correct implementation module. (#5326)
 
 
-Twisted Mail 12.1.0pre1 (2012-05-26)
-====================================
+Twisted Mail 12.1.0 (2012-06-02)
+================================
 
 Bugfixes
 --------
@@ -153,8 +153,8 @@ Other
  - #5686
 
 
-Twisted Names 12.1.0pre1 (2012-05-26)
-=====================================
+Twisted Names 12.1.0 (2012-06-02)
+=================================
 
 Features
 --------
@@ -186,8 +186,8 @@ Deprecations and Removals
    removed. (#4549)
 
 
-Twisted News 12.1.0pre1 (2012-05-26)
-====================================
+Twisted News 12.1.0 (2012-06-02)
+================================
 
 Bugfixes
 --------
@@ -201,14 +201,14 @@ Deprecations and Removals
    and is now removed. (#4548)
 
 
-Twisted Pair 12.1.0pre1 (2012-05-26)
-====================================
+Twisted Pair 12.1.0 (2012-06-02)
+================================
 
 No significant changes have been made for this release.
 
 
-Twisted Runner 12.1.0pre1 (2012-05-26)
-======================================
+Twisted Runner 12.1.0 (2012-06-02)
+==================================
 
 Deprecations and Removals
 -------------------------
@@ -217,8 +217,8 @@ Deprecations and Removals
    removed. (#5517)
 
 
-Twisted Web 12.1.0pre1 (2012-05-26)
-===================================
+Twisted Web 12.1.0 (2012-06-02)
+===============================
 
 Features
 --------
@@ -258,8 +258,8 @@ Other
  - #4966, #5460, #5490, #5591, #5602, #5609, #5612
 
 
-Twisted Words 12.1.0pre1 (2012-05-26)
-=====================================
+Twisted Words 12.1.0 (2012-06-02)
+=================================
 
 Bugfixes
 --------
