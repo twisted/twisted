@@ -1,6 +1,19 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Mail 12.1.0 (2012-06-02)
+================================
+
+Bugfixes
+--------
+ - twistd mail --auth, broken in 11.0, now correctly connects
+   authentication to the portal being used (#5219)
+
+Other
+-----
+ - #5686
+
+
 Twisted Mail 12.0.0 (2012-02-10)
 ================================
 

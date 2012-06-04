@@ -1,1 +1,0 @@
-twisted.names.dns.DNSProtocol instances no longer throw an exception when disconnecting.

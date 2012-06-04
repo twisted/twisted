@@ -1,6 +1,15 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Lore 12.1.0 (2012-06-02)
+================================
+
+Bugfixes
+--------
+ - twisted.plugins.twisted_lore's MathProcessor plugin is now
+   associated with the correct implementation module. (#5326)
+
+
 Twisted Lore 12.0.0 (2012-02-10)
 ================================
 

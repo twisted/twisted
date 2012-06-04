@@ -1,1 +1,0 @@
-twisted.web.client.Agent and ProxyAgent now support persistent connections.

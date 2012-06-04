@@ -1,1 +1,0 @@
-The epoll reactor now supports reading/writing to regular files on stdin/stdout.

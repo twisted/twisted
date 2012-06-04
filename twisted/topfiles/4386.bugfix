@@ -1,2 +1,0 @@
-twisted.internet.abstract.FileDescriptor implements twisted.internet.interfaces.IPushProducer instead of twisted.internet.interfaces.IProducer.
-twisted.internet.iocpreactor.abstract.FileHandle implements twisted.internet.interfaces.IPushProducer instead of twisted.internet.interfaces.IProducer.

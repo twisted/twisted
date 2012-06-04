@@ -1,2 +1,0 @@
-The 'unsigned' flag to twisted.scripts.tap2rpm.MyOptions is now deprecated.
-
