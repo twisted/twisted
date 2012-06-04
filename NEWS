@@ -265,7 +265,7 @@ Bugfixes
 --------
  - twisted.words.protocols.irc.DccChatFactory.buildProtocol now
    returns the protocol object that it creates (#3179)
- - twisted.words.im no longer offers an empty thread of a rewrite on
+ - twisted.words.im no longer offers an empty threat of a rewrite on
    import. (#5598)
 
 Other
