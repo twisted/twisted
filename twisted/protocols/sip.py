@@ -632,6 +632,7 @@ class MessagesParser(basic.LineReceiver):
         self.length = None # body length
         self.bodyReceived = 0 # how much of the body we received
         self.message = None
+        self.header = None
         self.setLineMode(remainingData)
 
     def invalidMessage(self):
@@ -699,24 +700,36 @@ class MessagesParser(basic.LineReceiver):
         else:
             assert self.state == "headers"
         if line:
-            # XXX support multi-line headers
-            try:
-                name, value = line.split(":", 1)
-            except ValueError:
-                self.invalidMessage()
-                return
-            self.message.addHeader(name, value.lstrip())
-            if name.lower() == "content-length":
+            # multiline header
+            if line.startswith(" ") or line.startswith("\t"):
+                name, value = self.header
+                self.header = name, (value + line.lstrip())
+            else:
+                # new header
+                if self.header:
+                    self.message.addHeader(*self.header)
+                    self.header = None
                 try:
-                    self.length = int(value.lstrip())
+                    name, value = line.split(":", 1)
                 except ValueError:
                     self.invalidMessage()
                     return
+                self.header = name, value.lstrip()
+                # XXX we assume content-length won't be multiline
+                if name.lower() == "content-length":
+                    try:
+                        self.length = int(value.lstrip())
+                    except ValueError:
+                        self.invalidMessage()
+                        return
         else:
             # CRLF, we now have message body until self.length bytes,
             # or if no length was given, until there is no more data
             # from the connection sending us data.
             self.state = "body"
+            if self.header:
+                self.message.addHeader(*self.header)
+                self.header = None
             if self.length == 0:
                 self.messageDone()
                 return

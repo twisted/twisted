@@ -1,0 +1,1 @@
+twisted.protocols.sip.MessageParser now handles multiline headers.

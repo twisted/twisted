@@ -86,6 +86,24 @@ Via: SIP/2.0/UDP 10.0.0.1:5060;rport
 
 """.replace("\n", "\r\n")
 
+# multiline headers (example from RFC 3621).
+response_multiline = """\
+SIP/2.0 200 OK
+Via: SIP/2.0/UDP server10.biloxi.com
+    ;branch=z9hG4bKnashds8;received=192.0.2.3
+Via: SIP/2.0/UDP bigbox3.site3.atlanta.com
+    ;branch=z9hG4bK77ef4c2312983.1;received=192.0.2.2
+Via: SIP/2.0/UDP pc33.atlanta.com
+    ;branch=z9hG4bK776asdhds ;received=192.0.2.1
+To: Bob <sip:bob@biloxi.com>;tag=a6c85cf
+From: Alice <sip:alice@atlanta.com>;tag=1928301774
+Call-ID: a84b4c76e66710@pc33.atlanta.com
+CSeq: 314159 INVITE
+Contact: <sip:bob@192.0.2.4>
+Content-Type: application/sdp
+Content-Length: 0
+\n""".replace("\n", "\r\n")
+
 class TestRealm:
     def requestAvatar(self, avatarId, mind, *interfaces):
         return sip.IContact, None, lambda: None
@@ -176,6 +194,30 @@ class MessageParsingTestCase(unittest.TestCase):
             {"from": ["foo"], "to": ["bar"], "content-length": ["0"]})
         self.assertEqual(m.body, "")
         self.assertEqual(m.finished, 1)
+
+
+    def test_multiLine(self):
+        """
+        A header may be split across multiple lines.  Subsequent lines begin
+        with C{" "} or C{"\\t"}.
+        """
+        l = self.l
+        self.feedMessage(response_multiline)
+        self.assertEquals(len(l), 1)
+        m = l[0]
+        self.assertEquals(
+            m.headers['via'][0],
+            "SIP/2.0/UDP server10.biloxi.com;"
+            "branch=z9hG4bKnashds8;received=192.0.2.3")
+        self.assertEquals(
+            m.headers['via'][1],
+            "SIP/2.0/UDP bigbox3.site3.atlanta.com;"
+            "branch=z9hG4bK77ef4c2312983.1;received=192.0.2.2")
+        self.assertEquals(
+            m.headers['via'][2],
+            "SIP/2.0/UDP pc33.atlanta.com;"
+            "branch=z9hG4bK776asdhds ;received=192.0.2.1")
+
 
 
 class MessageParsingTestCase2(MessageParsingTestCase):
