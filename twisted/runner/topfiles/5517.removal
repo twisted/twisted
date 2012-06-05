@@ -1,1 +1,0 @@
-ProcessMonitor.active, consistencyDelay, and consistency in twisted.runner.procmon were deprecated since 10.1 have been removed.

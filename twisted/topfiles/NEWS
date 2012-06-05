@@ -1,6 +1,114 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Core 12.1.0 (2012-06-02)
+================================
+
+Features
+--------
+ - The kqueue reactor has been revived. (#1918)
+ - twisted.python.filepath now provides IFilePath, an interface for
+   file path objects. (#2176)
+ - New gtk3 and gobject-introspection reactors have been added.
+   (#4558)
+ - gtk and glib reactors now run I/O and scheduled events with lower
+   priority, to ensure the UI stays responsive. (#5067)
+ - IReactorTCP.connectTCP() can now accept IPv6 address literals
+   (although not hostnames) in order to support connecting to IPv6
+   hosts. (#5085)
+ - twisted.internet.interfaces.IReactorSocket, a new interface, is now
+   supported by some reactors to listen on sockets set up by external
+   software (eg systemd or launchd). (#5248)
+ - twisted.internet.endpoints.clientFromString now also supports
+   strings in the form of tcp:example.com:80 and ssl:example.com:4321
+   (#5358)
+ - twisted.python.constants.Flags now provides a way to define
+   collections of flags for bitvector-type uses. (#5384)
+ - The epoll(7)-based reactor is now the default reactor on Linux.
+   (#5478)
+ - twisted.python.runtime.platform.isLinux can be used to check if
+   Twisted is running on Linux. (#5491)
+ - twisted.internet.endpoints.serverFromString now recognizes a
+   "systemd" endpoint type, for listening on a server port inherited
+   from systemd. (#5575)
+ - Connections created using twisted.internet.interfaces.IReactorUNIX
+   now support sending and receiving file descriptors between
+   different processes. (#5615)
+ - twisted.internet.endpoints.clientFromString now supports UNIX
+   client endpoint strings with the path argument specified like
+   "unix:/foo/bar" in addition to the old style, "unix:path=/foo/bar".
+   (#5640)
+ - twisted.protocols.amp.Descriptor is a new AMP argument type which
+   supports passing file descriptors as AMP command arguments over
+   UNIX connections. (#5650)
+
+Bugfixes
+--------
+ - twisted.internet.abstract.FileDescriptor implements
+   twisted.internet.interfaces.IPushProducer instead of
+   twisted.internet.interfaces.IProducer.
+   twisted.internet.iocpreactor.abstract.FileHandle implements
+   twisted.internet.interfaces.IPushProducer instead of
+   twisted.internet.interfaces.IProducer. (#4386)
+ - The epoll reactor now supports reading/writing to regular files on
+   stdin/stdout. (#4429)
+ - Calling .cancel() on any Twisted-provided client endpoint
+   (TCP4ClientEndpoint, UNIXClientEndpoint, SSL4ClientEndpoint) now
+   works as documented, rather than logging an AlreadyCalledError.
+   (#4710)
+ - A leak of OVERLAPPED structures in some IOCP error cases has been
+   fixed. (#5372)
+ - twisted.internet._pollingfile._PollableWritePipe now checks for
+   outgoing unicode data in write() and writeSequence() instead of
+   checkWork(). (#5412)
+
+Improved Documentation
+----------------------
+ - "Working from Twisted's Subversion repository" links to UQDS and
+   Combinator are now updated. (#5545)
+ - Added tkinterdemo.py, an example of Tkinter integration. (#5631)
+
+Deprecations and Removals
+-------------------------
+ - The 'unsigned' flag to twisted.scripts.tap2rpm.MyOptions is now
+   deprecated.  (#4086)
+ - Removed the unreachable _fileUrandom method from
+   twisted.python.randbytes.RandomFactory. (#4530)
+ - twisted.persisted.journal is removed, deprecated since Twisted
+   11.0. (#4805)
+ - Support for pyOpenSSL 0.9 and older is now deprecated.  pyOpenSSL
+   0.10 or newer will soon be required in order to use Twisted's SSL
+   features. (#4974)
+ - backwardsCompatImplements and fixClassImplements are removed from
+   twisted.python.components, deprecated in 2006. (#5034)
+ - twisted.python.reflect.macro was removed, deprecated since Twisted
+   8.2. (#5035)
+ - twisted.python.text.docstringLStrip, deprecated since Twisted
+   10.2.0, has been removed (#5036)
+ - Removed the deprecated dispatch and dispatchWithCallback methods
+   from twisted.python.threadpool.ThreadPool (deprecated since 8.0)
+   (#5037)
+ - twisted.scripts.tapconvert is now deprecated. (#5038)
+ - twisted.python.reflect's Settable, AccessorType, PropertyAccessor,
+   Accessor, OriginalAccessor and Summer are now deprecated.  (#5451)
+ - twisted.python.threadpool.ThreadSafeList (deprecated in 10.1) is
+   removed. (#5473)
+ - twisted.application.app.initialLog, deprecated since Twisted 8.2.0,
+   has been removed. (#5480)
+ - twisted.spread.refpath was deleted, deprecated since Twisted 9.0.
+   (#5482)
+ - twisted.python.otp, deprecated since 9.0, is removed. (#5493)
+ - Removed `dsu`, `moduleMovedForSplit`, and `dict` from
+   twisted.python.util (deprecated since 10.2) (#5516)
+
+Other
+-----
+ - #2723, #3114, #3398, #4388, #4489, #5055, #5116, #5242, #5380,
+   #5392, #5447, #5457, #5484, #5489, #5492, #5494, #5512, #5523,
+   #5558, #5572, #5583, #5593, #5620, #5621, #5623, #5625, #5637,
+   #5652, #5653, #5656, #5657, #5660, #5673
+
+
 Twisted Core 12.0.0 (2012-02-10)
 ================================
 

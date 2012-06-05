@@ -1,1 +1,0 @@
-Removed the deprecated dispatch and dispatchWithCallback methods from twisted.python.threadpool.ThreadPool (deprecated since 8.0)

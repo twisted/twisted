@@ -1,3 +1,0 @@
-Calling .cancel() on any Twisted-provided client endpoint (TCP4ClientEndpoint,
-UNIXClientEndpoint, SSL4ClientEndpoint) now works as documented, rather than
-logging an AlreadyCalledError.

@@ -1,6 +1,47 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Web 12.1.0 (2012-06-02)
+===============================
+
+Features
+--------
+ - twisted.web.client.Agent and ProxyAgent now support persistent
+   connections. (#3420)
+ - Added twisted.web.template.renderElement, a function which renders
+   an Element to a response. (#5395)
+ - twisted.web.client.HTTPConnectionPool now ensures that failed
+   queries on persistent connections are retried, when possible.
+   (#5479)
+ - twisted.web.template.XMLFile now supports FilePath objects. (#5509)
+ - twisted.web.template.renderElement takes a doctype keyword
+   argument, which will be written as the first line of the response,
+   defaulting to the HTML5 doctype. (#5560)
+
+Bugfixes
+--------
+ - twisted.web.util.formatFailure now quotes all data in its output to
+   avoid it being mistakenly interpreted as markup. (#4896)
+ - twisted.web.distrib now lets distributed servers set the response
+   message. (#5525)
+
+Deprecations and Removals
+-------------------------
+ - PHP3Script and PHPScript were removed from twisted.web.twcgi,
+   deprecated since 10.1. Use twcgi.FilteredScript instead. (#5456)
+ - twisted.web.template.XMLFile's support for file objects and
+   filenames is now deprecated.  Use the new support for FilePath
+   objects. (#5509)
+ - twisted.web.server.date_time_string and
+   twisted.web.server.string_date_time are now deprecated in favor of
+   twisted.web.http.datetimeToString and twisted.web.
+   http.stringToDatetime (#5535)
+
+Other
+-----
+ - #4966, #5460, #5490, #5591, #5602, #5609, #5612
+
+
 Twisted Web 12.0.0 (2012-02-10)
 ===============================
 

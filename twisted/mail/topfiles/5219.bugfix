@@ -1,1 +1,0 @@
-twistd mail --auth, broken in 11.0, now correctly connects authentication to the portal being used

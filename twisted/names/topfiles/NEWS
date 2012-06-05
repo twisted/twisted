@@ -1,6 +1,39 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Names 12.1.0 (2012-06-02)
+=================================
+
+Features
+--------
+ - "twistd dns" secondary server functionality and
+   twisted.names.secondary now support retrieving zone information
+   from a master running on a non-standard DNS port. (#5468)
+
+Bugfixes
+--------
+ - twisted.names.dns.DNSProtocol instances no longer throw an
+   exception when disconnecting. (#5471)
+ - twisted.names.tap.makeService (thus also "twistd dns") now makes a
+   DNS server which gives precedence to the hosts file from its
+   configuration over the remote DNS servers from its configuration.
+   (#5524)
+ - twisted.name.cache.CacheResolver now makes sure TTLs on returned
+   results are never negative. (#5579)
+ - twisted.names.cache.CacheResolver entries added via the initializer
+   are now timed out correctly. (#5638)
+
+Improved Documentation
+----------------------
+ - The examples now contain instructions on how to run them and
+   descriptions in the examples index. (#5588)
+
+Deprecations and Removals
+-------------------------
+ - The deprecated twisted.names.dns.Record_mx.exchange attribute was
+   removed. (#4549)
+
+
 Twisted Names 12.0.0 (2012-02-10)
 =================================
 

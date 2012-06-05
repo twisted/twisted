@@ -1,1 +1,0 @@
-twisted.internet._pollingfile._PollableWritePipe now checks for outgoing unicode data in write() and writeSequence() instead of checkWork().

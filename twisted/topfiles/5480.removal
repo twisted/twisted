@@ -1,1 +1,0 @@
-twisted.application.app.initialLog, deprecated since Twisted 8.2.0, has been removed.

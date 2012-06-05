@@ -1,1 +1,0 @@
-twisted.web.distrib now lets distributed servers set the response message.

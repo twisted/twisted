@@ -1,1 +1,0 @@
-A leak of OVERLAPPED structures in some IOCP error cases has been fixed.
