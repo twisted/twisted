@@ -1302,7 +1302,7 @@ class InMemoryRegistry:
     def getAddress(self, userURI):
         if userURI.host != self.domain:
             return defer.fail(LookupError("unknown domain"))
-        if self.users.has_key(userURI.username):
+        if userURI.username in self.users:
             dc, url = self.users[userURI.username]
             return defer.succeed(url)
         else:
@@ -1334,7 +1334,7 @@ class InMemoryRegistry:
         if logicalURL.host != self.domain:
             log.msg("Registration for domain we don't handle.")
             return defer.fail(RegistrationError(404))
-        if self.users.has_key(logicalURL.username):
+        if logicalURL.username in self.users:
             dc, old = self.users[logicalURL.username]
             dc.reset(3600)
         else:

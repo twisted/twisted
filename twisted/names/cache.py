@@ -97,7 +97,7 @@ class CacheResolver(common.ResolverBase):
 
         self.cache[query] = (cacheTime or self._reactor.seconds(), payload)
 
-        if self.cancel.has_key(query):
+        if query in self.cancel:
             self.cancel[query].cancel()
 
         s = list(payload[0]) + list(payload[1]) + list(payload[2])

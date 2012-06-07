@@ -36,7 +36,7 @@ class LogTest(unittest.TestCase):
         i = catcher.pop()
         self.assertEqual(i["message"][0], "test")
         self.assertEqual(i["testShouldCatch"], True)
-        self.failUnless(i.has_key("time"))
+        self.assertIn("time", i)
         self.assertEqual(len(catcher), 0)
 
 

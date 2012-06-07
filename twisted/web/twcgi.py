@@ -118,7 +118,7 @@ class CGIScript(resource.Resource):
             env[envname] = header
         # Propogate our environment
         for key, value in os.environ.items():
-            if not env.has_key(key):
+            if key not in env:
                 env[key] = value
         # And they're off!
         self.runProcess(env, request, qargs)

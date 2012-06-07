@@ -274,7 +274,7 @@ class IRC(protocol.Protocol):
                   " look like a command to me: %s" % command
 
         line = string.join([command] + list(parameter_list))
-        if prefix.has_key('prefix'):
+        if 'prefix' in prefix:
             line = ":%s %s" % (prefix['prefix'], line)
         self.sendLine(line)
 
@@ -2416,7 +2416,7 @@ class IRCClient(basic.LineReceiver):
         line = lowDequote(line)
         try:
             prefix, command, params = parsemsg(line)
-            if numeric_to_symbolic.has_key(command):
+            if command in numeric_to_symbolic:
                 command = numeric_to_symbolic[command]
             self.handleCommand(command, prefix, params)
         except IRCBadMessage:

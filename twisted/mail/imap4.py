@@ -4665,7 +4665,7 @@ class MemoryAccount(object):
     ##
     def addMailbox(self, name, mbox = None):
         name = name.upper()
-        if self.mailboxes.has_key(name):
+        if name in self.mailboxes:
             raise MailboxCollision, name
         if mbox is None:
             mbox = self._emptyMailbox(name, self.allocateID())
@@ -4715,14 +4715,14 @@ class MemoryAccount(object):
     def rename(self, oldname, newname):
         oldname = oldname.upper()
         newname = newname.upper()
-        if not self.mailboxes.has_key(oldname):
+        if oldname not in self.mailboxes:
             raise NoSuchMailbox, oldname
 
         inferiors = self._inferiorNames(oldname)
         inferiors = [(o, o.replace(oldname, newname, 1)) for o in inferiors]
 
         for (old, new) in inferiors:
-            if self.mailboxes.has_key(new):
+            if new in self.mailboxes:
                 raise MailboxCollision, new
 
         for (old, new) in inferiors:

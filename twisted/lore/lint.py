@@ -196,7 +196,7 @@ allowed = {'code': classes.has_key, 'span': span.has_key, 'div': div.has_key,
            'ol': lambda x: x=='toc', 'li': lambda x: x=='ignoretoc'}
 
 def getDefaultChecker():
-    return DefaultTagChecker(tags.has_key, allowed)
+    return DefaultTagChecker(tags.__contains__, allowed)
 
 def doFile(file, checker):
     doc = tree.parseFileAndReport(file)

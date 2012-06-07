@@ -12,7 +12,7 @@ def getIndexFilename():
 
 def addEntry(filename, anchor, text, reference):
     global entries
-    if not entries.has_key(text):
+    if text not in entries:
         entries[text] = []
     entries[text].append((filename, anchor, reference))
 

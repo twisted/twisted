@@ -43,7 +43,7 @@ class _ListSerializer:
         return u"".join(self.writelist)
 
     def getPrefix(self, uri):
-        if not self.prefixes.has_key(uri):
+        if uri not in self.prefixes:
             self.prefixes[uri] = "xn%d" % (self.prefixCounter)
             self.prefixCounter = self.prefixCounter + 1
         return self.prefixes[uri]
@@ -451,7 +451,7 @@ class Element(object):
 
     def hasAttribute(self, attrib):
         """ Determine if the specified attribute exists """
-        return self.attributes.has_key(self._dqa(attrib))
+        return self._dqa(attrib) in self.attributes
 
     def compareAttribute(self, attrib, value):
         """ Safely compare the value of an attribute against a provided value.

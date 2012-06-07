@@ -632,7 +632,7 @@ class FilePath(AbstractFilePath):
         returning everything else.
         """
         d = self.__dict__.copy()
-        if d.has_key('statinfo'):
+        if 'statinfo' in d:
             del d['statinfo']
         return d
 

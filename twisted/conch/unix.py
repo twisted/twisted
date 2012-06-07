@@ -303,11 +303,11 @@ class SFTPServerForUnixConchUser:
         NOTE: this function assumes it runs as the logged-in user:
         i.e. under _runAsUser()
         """
-        if attrs.has_key("uid") and attrs.has_key("gid"):
+        if "uid" in attrs and "gid" in attrs:
             os.chown(path, attrs["uid"], attrs["gid"])
-        if attrs.has_key("permissions"):
+        if "permissions" in attrs:
             os.chmod(path, attrs["permissions"])
-        if attrs.has_key("atime") and attrs.has_key("mtime"):
+        if "atime" in attrs and "mtime" in attrs:
             os.utime(path, (attrs["atime"], attrs["mtime"]))
 
     def _getAttrs(self, s):
@@ -399,7 +399,7 @@ class UnixSFTPFile:
             openFlags |= os.O_TRUNC
         if flags & FXF_EXCL == FXF_EXCL:
             openFlags |= os.O_EXCL
-        if attrs.has_key("permissions"):
+        if "permissions" in attrs:
             mode = attrs["permissions"]
             del attrs["permissions"]
         else:

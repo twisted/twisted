@@ -282,7 +282,7 @@ class Componentized(styles.Versioned):
         True on your adapter class.
         """
         k = reflect.qual(interface)
-        if self._adapterCache.has_key(k):
+        if k in self._adapterCache:
             return self._adapterCache[k]
         else:
             adapter = interface.__adapt__(self)

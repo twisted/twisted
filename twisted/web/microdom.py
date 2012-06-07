@@ -827,7 +827,7 @@ class MicroDOMParser(XMLParser):
             ksplit = k.split(':', 1)
             if len(ksplit) == 2:
                 pfx, tv = ksplit
-                if pfx != 'xml' and namespaces.has_key(pfx):
+                if pfx != 'xml' and pfx in namespaces:
                     attributes[namespaces[pfx], tv] = v
                     del attributes[k]
         el = Element(name, attributes, parent,

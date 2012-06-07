@@ -232,7 +232,7 @@ class PassportNexus(HTTPClient):
     def handleEndHeaders(self):
         if self.connected:
             self.transport.loseConnection()
-        if not self.headers.has_key('passporturls') or not self.headers['passporturls'].has_key('dalogin'):
+        if 'passporturls' not in self.headers or 'dalogin' not in self.headers['passporturls']:
             self.deferred.errback(failure.Failure(failure.DefaultException("Invalid Nexus Reply")))
         self.deferred.callback('https://' + self.headers['passporturls']['dalogin'])
 
@@ -275,7 +275,7 @@ class PassportLogin(HTTPClient):
             self.transport.loseConnection()
         authHeader = 'authentication-info'
         _interHeader = 'www-authenticate'
-        if self.headers.has_key(_interHeader):
+        if _interHeader in self.headers:
             authHeader = _interHeader
         try:
             info = self.headers[authHeader]
@@ -386,7 +386,7 @@ class MSNMessage:
 
     def hasHeader(self, header):
         """ check to see if the desired header exists """
-        return self.headers.has_key(header)
+        return header in self.headers
 
     def getMessage(self):
         """ return the message - not including headers """
@@ -602,7 +602,7 @@ class MSNEventBase(LineReceiver):
         Fire the callback for the given id
         if one exists and return 1, else return false
         """
-        if self.ids.has_key(id):
+        if id in self.ids:
             self.ids[id][0].callback(args)
             del self.ids[id]
             return 1

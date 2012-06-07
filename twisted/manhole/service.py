@@ -255,7 +255,7 @@ class Perspective(pb.Avatar):
         compatMessage = None
         for client in clients:
             try:
-                if not client.capabilities.has_key("Failure"):
+                if "Failure" not in client.capabilities:
                     if compatMessage is None:
                         compatMessage = origMessage[:]
                         for i in xrange(len(message)):

@@ -59,7 +59,8 @@ class InsensitiveDict:
     def has_key(self, key):
         """Case insensitive test whether 'key' exists."""
         k = self._lowerOrReturn(key)
-        return self.data.has_key(k)
+        return k in self.data
+
     __contains__=has_key
 
     def _doPreserve(self, key):
@@ -210,7 +211,8 @@ def uniquify(lst):
     dct = {}
     result = []
     for k in lst:
-        if not dct.has_key(k): result.append(k)
+        if k not in dct:
+            result.append(k)
         dct[k] = 1
     return result
 
