@@ -120,7 +120,7 @@ class DeferredGeneratorTests(BaseDefgenTests, unittest.TestCase):
 
     def _genBuggy(self):
         yield waitForDeferred(getThing())
-        1/0
+        1//0
     _genBuggy = deferredGenerator(_genBuggy)
 
 

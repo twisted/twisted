@@ -22,7 +22,7 @@ def determineDefaultFunctionName():
     compiled from interactive input or at the top-level of modules.
     """
     try:
-        1 / 0
+        1 // 0
     except:
         # The last frame is this function.  The second to last frame is this
         # function's caller, which is module-scope, which is what we want,

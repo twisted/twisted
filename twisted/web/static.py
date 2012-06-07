@@ -5,6 +5,7 @@
 """
 Static resources for L{twisted.web}.
 """
+from __future__ import division
 
 import os
 import warnings

@@ -2,7 +2,7 @@
 # See LICENSE for details.
 #
 # Maintainer: Jonathan Lange
-
+from __future__ import division
 
 import sys
 import traceback

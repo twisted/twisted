@@ -4,6 +4,7 @@
 """
 Tests for assertions provided by L{twisted.trial.unittest.TestCase}.
 """
+from __future__ import division
 
 import warnings
 from pprint import pformat

@@ -1,3 +1,5 @@
+from __future__ import division
+
 from twisted.trial import unittest
 from twisted.internet import defer
 

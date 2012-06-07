@@ -254,7 +254,7 @@ class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
                 headerend, delimiter = headerEnds[0]
                 self.headertext = text[:headerend]
                 # This is a final version of the header text.
-                linebreak = delimiter[:len(delimiter)/2]
+                linebreak = delimiter[:len(delimiter)//2]
                 headers = self.headertext.split(linebreak)
                 for header in headers:
                     br = header.find(': ')

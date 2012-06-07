@@ -6,7 +6,7 @@
 """
 Tests for L{twisted.trial.reporter}.
 """
-
+from __future__ import division
 
 import errno, sys, os, re, StringIO
 from inspect import getmro

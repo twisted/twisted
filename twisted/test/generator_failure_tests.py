@@ -4,6 +4,7 @@
 """
 Python 2.5+ test cases for failures thrown into generators.
 """
+from __future__ import division
 
 import sys
 import traceback

@@ -83,7 +83,7 @@ class LogTest(unittest.TestCase):
         L1 = []
         L2 = []
         def broken(events):
-            1 / 0
+            1 // 0
 
         for observer in [L1.append, broken, L2.append]:
             log.addObserver(observer)
@@ -258,13 +258,13 @@ class FakeFile(list):
 
 class EvilStr:
     def __str__(self):
-        1/0
+        1//0
 
 class EvilRepr:
     def __str__(self):
         return "Happy Evil Repr"
     def __repr__(self):
-        1/0
+        1//0
 
 class EvilReprStr(EvilStr, EvilRepr):
     pass

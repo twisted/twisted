@@ -476,7 +476,7 @@ class UtilityTest(TestCase):
         def chAndBreak():
             os.mkdir('releaseCh')
             os.chdir('releaseCh')
-            1/0
+            1//0
         self.assertRaises(ZeroDivisionError,
                           release.runChdirSafe, chAndBreak)
         self.assertEqual(cwd, os.getcwd())

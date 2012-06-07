@@ -655,7 +655,7 @@ class CommandDispatchTests(unittest.TestCase):
         self.sender.expectError()
 
         callResult = self.dispatcher.callRemote(Hello, hello='world')
-        callResult.addCallback(lambda result: 1 / 0)
+        callResult.addCallback(lambda result: 1 // 0)
 
         self.dispatcher.ampBoxReceived(amp.AmpBox({
                     'hello': "yay", 'print': "ignored", '_answer': "1"}))
@@ -671,7 +671,7 @@ class CommandDispatchTests(unittest.TestCase):
         self.sender.expectError()
 
         callResult = self.dispatcher.callRemote(Hello, hello='world')
-        callResult.addErrback(lambda result: 1 / 0)
+        callResult.addErrback(lambda result: 1 // 0)
 
         self.dispatcher.ampBoxReceived(amp.AmpBox({
                     '_error': '1', '_error_code': 'bugs',

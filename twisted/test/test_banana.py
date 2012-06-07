@@ -111,7 +111,7 @@ class BananaTestCase(unittest.TestCase):
         self.enc.sendEncoded(smallest)
         encoded = self.io.getvalue()
         self.io.truncate(0)
-        self.enc.setPrefixLimit(self.enc.prefixLimit / 2)
+        self.enc.setPrefixLimit(self.enc.prefixLimit // 2)
 
         self.assertRaises(banana.BananaError, self.enc.dataReceived, encoded)
 
@@ -139,7 +139,7 @@ class BananaTestCase(unittest.TestCase):
         self.enc.sendEncoded(largest)
         encoded = self.io.getvalue()
         self.io.truncate(0)
-        self.enc.setPrefixLimit(self.enc.prefixLimit / 2)
+        self.enc.setPrefixLimit(self.enc.prefixLimit // 2)
 
         self.assertRaises(banana.BananaError, self.enc.dataReceived, encoded)
 

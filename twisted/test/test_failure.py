@@ -4,6 +4,7 @@
 """
 Test cases for failure module.
 """
+from __future__ import division
 
 import re
 import sys

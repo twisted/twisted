@@ -1,6 +1,7 @@
 # -*- test-case-name: twisted.trial.test.test_tests -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
+from __future__ import division
 
 from twisted.trial import unittest, util
 from twisted.internet import reactor, protocol, defer

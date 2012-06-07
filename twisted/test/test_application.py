@@ -476,7 +476,7 @@ class TestInternet2(unittest.TestCase):
 
     def testBrokenTimer(self):
         d = defer.Deferred()
-        t = internet.TimerService(1, lambda: 1 / 0)
+        t = internet.TimerService(1, lambda: 1 // 0)
         oldFailed = t._failed
         def _failed(why):
             oldFailed(why)

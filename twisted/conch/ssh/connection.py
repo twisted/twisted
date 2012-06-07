@@ -235,7 +235,7 @@ class SSHConnection(service.SSHService):
             #packet = packet[:channel.localWindowLeft+4]
         data = common.getNS(packet[4:])[0]
         channel.localWindowLeft -= dataLength
-        if channel.localWindowLeft < channel.localWindowSize / 2:
+        if channel.localWindowLeft < channel.localWindowSize // 2:
             self.adjustWindow(channel, channel.localWindowSize - \
                                        channel.localWindowLeft)
             #log.msg('local window left: %s/%s' % (channel.localWindowLeft,
@@ -264,7 +264,7 @@ class SSHConnection(service.SSHService):
             return
         data = common.getNS(packet[8:])[0]
         channel.localWindowLeft -= dataLength
-        if channel.localWindowLeft < channel.localWindowSize / 2:
+        if channel.localWindowLeft < channel.localWindowSize // 2:
             self.adjustWindow(channel, channel.localWindowSize -
                                        channel.localWindowLeft)
         log.callWithLogger(channel, channel.extReceived, typeCode, data)

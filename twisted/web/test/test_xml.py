@@ -543,7 +543,7 @@ alert("I hate you");
             '\x80\x95\xb6[\xea0\xb90\xc80 \x00<\x00/\x00T\x00I\x00T\x00L\x00E'
             '\x00>\x00<\x00/\x00J\x00A\x00P\x00A\x00N\x00E\x00S\x00E\x00>\x00')
         def reverseBytes(s):
-            fmt = str(len(s) / 2) + 'H'
+            fmt = str(len(s) // 2) + 'H'
             return struct.pack('<' + fmt, *struct.unpack('>' + fmt, s))
         urd = microdom.parseString(reverseBytes(s.encode('UTF-16')))
         ud = microdom.parseString(s.encode('UTF-16'))

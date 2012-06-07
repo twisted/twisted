@@ -1576,7 +1576,7 @@ class ClientMsgTests(unittest.TestCase):
         """
         message = 'o' * (irc.MAX_COMMAND_LENGTH - 2)
         self.assertLongMessageSplitting(
-            message, 3, length=irc.MAX_COMMAND_LENGTH / 2)
+            message, 3, length=irc.MAX_COMMAND_LENGTH // 2)
 
 
     def test_newlinesBeforeLineBreaking(self):

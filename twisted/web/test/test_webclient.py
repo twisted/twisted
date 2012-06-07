@@ -1215,7 +1215,7 @@ class FileBodyProducerTests(unittest.TestCase):
         producer = FileBodyProducer(
             StringIO(expectedResult), self.cooperator, readSize)
         complete = producer.startProducing(consumer)
-        for i in range(len(expectedResult) / readSize + 1):
+        for i in range(len(expectedResult) // readSize + 1):
             self._scheduled.pop(0)()
         self.assertEqual([], self._scheduled)
         self.assertEqual(expectedResult, output.getvalue())
@@ -1233,7 +1233,7 @@ class FileBodyProducerTests(unittest.TestCase):
         producer = FileBodyProducer(inputFile, self.cooperator, readSize)
         consumer = FileConsumer(StringIO())
         producer.startProducing(consumer)
-        for i in range(len(inputBytes) / readSize + 2):
+        for i in range(len(inputBytes) // readSize + 2):
             self._scheduled.pop(0)()
         self.assertTrue(inputFile.closed)
 

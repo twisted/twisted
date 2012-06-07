@@ -275,7 +275,7 @@ class DeferredResultTestCase(unittest.TestCase):
         # alas, this test appears to flunk the default reactor too
 
         d = threads.deferToThread(lambda: None)
-        d.addCallback(lambda ign: threads.deferToThread(lambda: 1/0))
+        d.addCallback(lambda ign: threads.deferToThread(lambda: 1//0))
         return self.assertFailure(d, ZeroDivisionError)
 
 

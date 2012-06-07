@@ -232,7 +232,7 @@ a'''
             t = proto_helpers.StringIOWithoutClosing()
             a = LineTester()
             a.makeConnection(protocol.FileWrapper(t))
-            for i in range(len(self.buffer)/packet_size + 1):
+            for i in range(len(self.buffer) // packet_size + 1):
                 s = self.buffer[i*packet_size:(i+1)*packet_size]
                 a.dataReceived(s)
             self.assertEqual(self.output, a.received)
@@ -254,7 +254,7 @@ a'''
             clock = task.Clock()
             a = LineTester(clock)
             a.makeConnection(protocol.FileWrapper(t))
-            for i in range(len(self.pause_buf)/packet_size + 1):
+            for i in range(len(self.pause_buf) // packet_size + 1):
                 s = self.pause_buf[i*packet_size:(i+1)*packet_size]
                 a.dataReceived(s)
             self.assertEqual(self.pause_output1, a.received)
@@ -277,7 +277,7 @@ a'''
             clock = task.Clock()
             a = LineTester(clock)
             a.makeConnection(protocol.FileWrapper(t))
-            for i in range(len(self.rawpause_buf)/packet_size + 1):
+            for i in range(len(self.rawpause_buf) // packet_size + 1):
                 s = self.rawpause_buf[i*packet_size:(i+1)*packet_size]
                 a.dataReceived(s)
             self.assertEqual(self.rawpause_output1, a.received)
@@ -297,7 +297,7 @@ a'''
             t = proto_helpers.StringIOWithoutClosing()
             a = LineTester()
             a.makeConnection(protocol.FileWrapper(t))
-            for i in range(len(self.stop_buf)/packet_size + 1):
+            for i in range(len(self.stop_buf) // packet_size + 1):
                 s = self.stop_buf[i*packet_size:(i+1)*packet_size]
                 a.dataReceived(s)
             self.assertEqual(self.stop_output, a.received)
@@ -455,7 +455,7 @@ class NetstringReceiverTestCase(unittest.TestCase, LPTestCaseMixin):
             for s in self.strings:
                 a.sendString(s)
             out = t.value()
-            for i in range(len(out)/packet_size + 1):
+            for i in range(len(out) // packet_size + 1):
                 s = out[i*packet_size:(i+1)*packet_size]
                 if s:
                     a.dataReceived(s)

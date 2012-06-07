@@ -656,7 +656,7 @@ class FailingElement(Element):
     def render(self, request):
         a = 42
         b = 0
-        return a / b
+        return a // b
 
 
 

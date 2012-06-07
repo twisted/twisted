@@ -240,7 +240,7 @@ class DeferredTestCase(unittest.TestCase):
 
     def testCallbackErrors(self):
         l = []
-        d = defer.Deferred().addCallback(lambda _: 1 / 0).addErrback(l.append)
+        d = defer.Deferred().addCallback(lambda _: 1 // 0).addErrback(l.append)
         d.callback(1)
         self.assert_(isinstance(l[0].value, ZeroDivisionError))
         l = []
@@ -1098,7 +1098,7 @@ class FirstErrorTests(unittest.TestCase):
         compare equal to instances of other types.
         """
         try:
-            1 / 0
+            1 // 0
         except:
             firstFailure = failure.Failure()
 
@@ -1565,7 +1565,7 @@ class LogTestCase(unittest.TestCase):
         and its final result (the one not handled by any callback) is an
         exception, that exception will be logged immediately.
         """
-        defer.Deferred().addCallback(lambda x: 1 / 0).callback(1)
+        defer.Deferred().addCallback(lambda x: 1 // 0).callback(1)
         gc.collect()
         self._check()
 
@@ -1575,7 +1575,7 @@ class LogTestCase(unittest.TestCase):
         """
         def _subErrorLogWithInnerFrameRef():
             d = defer.Deferred()
-            d.addCallback(lambda x: 1 / 0)
+            d.addCallback(lambda x: 1 // 0)
             d.callback(1)
 
         _subErrorLogWithInnerFrameRef()
@@ -1588,7 +1588,7 @@ class LogTestCase(unittest.TestCase):
         """
         def _subErrorLogWithInnerFrameCycle():
             d = defer.Deferred()
-            d.addCallback(lambda x, d=d: 1 / 0)
+            d.addCallback(lambda x, d=d: 1 // 0)
             d._d = d
             d.callback(1)
 

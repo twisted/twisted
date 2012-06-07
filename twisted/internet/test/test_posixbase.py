@@ -188,7 +188,7 @@ class TCPPortTests(TestCase):
         """
         port = Port(12345, ServerFactory())
         port.connected = True
-        port.connectionLost = lambda reason: 1 / 0
+        port.connectionLost = lambda reason: 1 // 0
         return self.assertFailure(port.stopListening(), ZeroDivisionError)
 
 
