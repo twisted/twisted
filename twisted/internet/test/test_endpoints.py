@@ -14,7 +14,7 @@ from zope.interface.verify import verifyObject
 from twisted.trial import unittest
 from twisted.internet import error, interfaces, defer
 from twisted.internet import endpoints
-from twisted.internet.address import IPv4Address, UNIXAddress
+from twisted.internet.address import IPv4Address, IPv6Address, UNIXAddress
 from twisted.internet.protocol import ClientFactory, Protocol
 from twisted.test.proto_helpers import (
     MemoryReactor, RaisingMemoryReactor, StringTransport)
@@ -577,7 +577,7 @@ class EndpointTestCaseMixin(ServerEndpointTestCaseMixin,
 
 class TCP4EndpointsTestCase(EndpointTestCaseMixin, unittest.TestCase):
     """
-    Tests for TCP Endpoints.
+    Tests for TCP IPv4 Endpoints.
     """
 
     def expectedServers(self, reactor):
@@ -679,6 +679,53 @@ class TCP4EndpointsTestCase(EndpointTestCaseMixin, unittest.TestCase):
                 (address.host, address.port, clientFactory,
                  connectArgs.get('timeout', 30),
                  connectArgs.get('bindAddress', None)),
+                address)
+
+
+
+class TCP6EndpointsTestCase(ServerEndpointTestCaseMixin, unittest.TestCase):
+    """
+    Tests for TCP IPv6 Endpoints.
+    """
+
+    def expectedServers(self, reactor):
+        """
+        @return: List of calls to L{IReactorTCP.listenTCP}
+        """
+        return reactor.tcpServers
+
+
+    def listenArgs(self):
+        """
+        @return: C{dict} of keyword arguments to pass to listen
+        """
+        return {'backlog': 100, 'interface': '::1'}
+
+
+    def createServerEndpoint(self, reactor, factory, **listenArgs):
+        """
+        Create an L{TCP6ServerEndpoint} and return the values needed to verify
+        its behaviour.
+
+        @param reactor: A fake L{IReactorTCP} that L{TCP6ServerEndpoint} can
+            call L{IReactorTCP.listenTCP} on.
+        @param factory: The thing that we expect to be passed to our
+            L{IStreamServerEndpoint.listen} implementation.
+        @param listenArgs: Optional dictionary of arguments to
+            L{IReactorTCP.listenTCP}.
+        """
+        interface = listenArgs.get('interface', '::')
+        address = IPv6Address("TCP", interface, 0)
+
+        if listenArgs is None:
+            listenArgs = {}
+
+        return (endpoints.TCP6ServerEndpoint(reactor,
+                                             address.port,
+                                             **listenArgs),
+                (address.port, factory,
+                 listenArgs.get('backlog', 50),
+                 interface),
                 address)
 
 

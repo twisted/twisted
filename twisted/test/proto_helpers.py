@@ -16,10 +16,12 @@ from twisted.internet.interfaces import (
 from twisted.internet.interfaces import (
     IReactorTCP, IReactorSSL, IReactorUNIX, IReactorSocket)
 from twisted.internet.interfaces import IListeningPort
+from twisted.internet.abstract import isIPv6Address
+from twisted.internet.error import UnsupportedAddressFamily
 from twisted.protocols import basic
 from twisted.internet import protocol, error, address
 
-from twisted.internet.address import IPv4Address, UNIXAddress
+from twisted.internet.address import IPv4Address, UNIXAddress, IPv6Address
 
 
 class AccumulatingProtocol(protocol.Protocol):
@@ -423,7 +425,11 @@ class MemoryReactor(object):
         L{IListeningPort}.
         """
         self.tcpServers.append((port, factory, backlog, interface))
-        return _FakePort(IPv4Address('TCP', '0.0.0.0', port))
+        if isIPv6Address(interface):
+            address = IPv6Address('TCP', interface, port)
+        else:
+            address = IPv4Address('TCP', '0.0.0.0', port)
+        return _FakePort(address)
 
 
     def connectTCP(self, host, port, factory, timeout=30, bindAddress=None):
