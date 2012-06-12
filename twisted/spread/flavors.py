@@ -210,7 +210,7 @@ class ViewPoint(Referenceable):
         kw = broker.unserialize(kw, self.perspective)
         method = getattr(self.object, "view_%s" % message)
         try:
-            state = apply(method, (self.perspective,)+args, kw)
+            state = method(*(self.perspective,)+args, **kw)
         except TypeError:
             log.msg("%s didn't accept %s and %s" % (method, args, kw))
             raise
@@ -417,7 +417,7 @@ class RemoteCache(RemoteCopy, Serializable):
         kw = broker.unserialize(kw)
         method = getattr(self, "observe_%s" % message)
         try:
-            state = apply(method, args, kw)
+            state = method(*args, **kw)
         except TypeError:
             log.msg("%s didn't accept %s and %s" % (method, args, kw))
             raise

@@ -381,7 +381,7 @@ class AOTUnjellier:
             elif c is Copyreg:
                 loadfunc = reflect.namedObject(ao.loadfunc)
                 d = self.unjellyLater(ao.state).addCallback(
-                    lambda result, _l: apply(_l, result), loadfunc)
+                    lambda result, _l: _l(*result), loadfunc)
                 return d
 
         #Types
