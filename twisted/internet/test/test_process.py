@@ -384,7 +384,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         self.runReactor(reactor)
 
 
-    def test_timeleyProcessExited(self):
+    def test_timelyProcessExited(self):
         """
         If a spawned process exits, C{processExited} will be called in a
         timely manner.
