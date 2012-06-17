@@ -21,8 +21,6 @@ from twisted.mail.protocols import SSLContextFactory
 from twisted.internet import endpoints
 
 from twisted.python import usage
-from twisted.python import deprecate
-from twisted.python import versions
 
 from twisted.cred import checkers
 from twisted.cred import strcred
@@ -110,19 +108,6 @@ class Options(usage.Options, strcred.AuthOptionMixin):
         """
         self.addEndpoint('smtp', description)
     opt_s = opt_smtp
-
-
-    def opt_passwordfile(self, filename):
-        """
-        Specify a file containing username:password login info for authenticated
-        ESMTP connections. (DEPRECATED; see --help-auth instead)
-        """
-        ch = checkers.OnDiskUsernamePasswordDatabase(filename)
-        self.service.smtpPortal.registerChecker(ch)
-        msg = deprecate.getDeprecationWarningString(
-            self.opt_passwordfile, versions.Version('twisted.mail', 11, 0, 0))
-        warnings.warn(msg, category=DeprecationWarning, stacklevel=2)
-    opt_P = opt_passwordfile
 
 
     def opt_default(self):

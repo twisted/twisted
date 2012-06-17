@@ -10,7 +10,6 @@ from twisted.trial.unittest import TestCase
 from twisted.python.usage import UsageError
 from twisted.mail import protocols
 from twisted.mail.tap import Options, makeService
-from twisted.python import deprecate, versions
 from twisted.python.filepath import FilePath
 from twisted.internet import endpoints, defer
 
@@ -45,22 +44,6 @@ class OptionsTestCase(TestCase):
         Options().parseOptions([
             '--maildirdbmdomain', 'example.com=example.com',
             '--aliases', self.aliasFilename])
-
-
-    def testPasswordfileDeprecation(self):
-        """
-        Test that the --passwordfile option will emit a correct warning.
-        """
-        passwd = FilePath(self.mktemp())
-        passwd.setContent("")
-        options = Options()
-        options.opt_passwordfile(passwd.path)
-        warnings = self.flushWarnings([self.testPasswordfileDeprecation])
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
-        self.assertEqual(len(warnings), 1)
-        msg = deprecate.getDeprecationWarningString(options.opt_passwordfile,
-                             versions.Version('twisted.mail', 11, 0, 0))
-        self.assertEqual(warnings[0]['message'], msg)
 
 
     def test_barePort(self):
