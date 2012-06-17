@@ -646,6 +646,10 @@ def coiterate(iterator):
     Cooperatively iterate over the given iterator, dividing runtime between it
     and all other iterators which have been passed to this function and not yet
     exhausted.
+
+    @param iterator: the iterator to invoke.
+
+    @return: a Deferred that will fire when the iterator finishes.
     """
     return _theCooperator.coiterate(iterator)
 
