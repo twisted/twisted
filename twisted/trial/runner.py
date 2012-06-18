@@ -11,8 +11,7 @@ Maintainer: Jonathan Lange
 __all__ = [
     'TestSuite',
 
-    'DestructiveTestSuite', 'DocTestCase', 'DryRunVisitor',
-    'ErrorHolder', 'LoggedSuite', 'PyUnitTestCase',
+    'DestructiveTestSuite', 'DryRunVisitor', 'ErrorHolder', 'LoggedSuite',
     'TestHolder', 'TestLoader', 'TrialRunner', 'TrialSuite',
 
     'filenameToModule', 'isPackage', 'isPackageDirectory', 'isTestCase',
@@ -182,64 +181,6 @@ class LoggedSuite(TestSuite):
             result.addError(TestHolder(NOT_IN_TEST), error)
         observer.flushErrors()
 
-
-
-class PyUnitTestCase(object):
-    """
-    DEPRECATED in Twisted 8.0.
-
-    This class decorates the pyunit.TestCase class, mainly to work around the
-    differences between unittest in Python 2.3, 2.4, and 2.5. These
-    differences are::
-
-        - The way doctest unittests describe themselves
-        - Where the implementation of TestCase.run is (used to be in __call__)
-        - Where the test method name is kept (mangled-private or non-mangled
-          private variable)
-
-    It also implements visit, which we like.
-    """
-
-    def __init__(self, test):
-        warnings.warn("Deprecated in Twisted 8.0.",
-                      category=DeprecationWarning)
-        self._test = test
-        test.id = self.id
-
-    def id(self):
-        cls = self._test.__class__
-        tmn = getattr(self._test, '_TestCase__testMethodName', None)
-        if tmn is None:
-            # python2.5's 'unittest' module is more sensible; but different.
-            tmn = self._test._testMethodName
-        return (cls.__module__ + '.' + cls.__name__ + '.' +
-                tmn)
-
-    def __repr__(self):
-        return 'PyUnitTestCase<%r>'%(self.id(),)
-
-    def __call__(self, results):
-        return self._test(results)
-
-    def __getattr__(self, name):
-        return getattr(self._test, name)
-
-
-
-class DocTestCase(PyUnitTestCase):
-    """
-    DEPRECATED in Twisted 8.0.
-    """
-
-    def id(self):
-        """
-        In Python 2.4, doctests have correct id() behaviour. In Python 2.3,
-        id() returns 'runit'.
-
-        Here we override id() so that at least it will always contain the
-        fully qualified Python name of the doctest.
-        """
-        return self._test.shortDescription()
 
 
 class TrialSuite(TestSuite):
