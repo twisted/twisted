@@ -9,7 +9,7 @@ Maintainer: Jonathan Lange
 """
 
 __all__ = [
-    'suiteVisit', 'TestSuite',
+    'TestSuite',
 
     'DestructiveTestSuite', 'DocTestCase', 'DryRunVisitor',
     'ErrorHolder', 'LoggedSuite', 'PyUnitTestCase',
@@ -32,7 +32,7 @@ from twisted.trial.itrial import ITestCase
 from twisted.trial.reporter import UncleanWarningsReporterWrapper
 
 # These are imported so that they remain in the public API for t.trial.runner
-from twisted.trial.unittest import suiteVisit, TestSuite
+from twisted.trial.unittest import TestSuite
 
 from zope.interface import implements
 

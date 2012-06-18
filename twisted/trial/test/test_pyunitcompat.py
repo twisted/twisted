@@ -9,9 +9,7 @@ import traceback
 
 from zope.interface import implements
 
-from twisted.python import reflect
 from twisted.python.failure import Failure
-from twisted.trial import util
 from twisted.trial.unittest import TestCase, PyUnitResultAdapter
 from twisted.trial.itrial import IReporter, ITestCase
 from twisted.trial.test import erroneous
@@ -30,20 +28,6 @@ class TestPyUnitTestCase(TestCase):
     def setUp(self):
         self.original = self.PyUnitTest('test_pass')
         self.test = ITestCase(self.original)
-
-
-    def test_visit(self):
-        """
-        Trial assumes that test cases implement visit().
-        """
-        log = []
-        def visitor(test):
-            log.append(test)
-        self.test.visit(visitor)
-        self.assertEqual(log, [self.test])
-    test_visit.suppress = [
-        util.suppress(category=DeprecationWarning,
-                      message="Test visitors deprecated in Twisted 8.0")]
 
 
     def test_callable(self):
