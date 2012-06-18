@@ -221,19 +221,6 @@ class PyUnitTestCase(object):
     def __call__(self, results):
         return self._test(results)
 
-
-    def visit(self, visitor):
-        """
-        Call the given visitor with the original, standard library, test case
-        that C{self} wraps. See L{unittest.TestCase.visit}.
-
-        Deprecated in Twisted 8.0.
-        """
-        warnings.warn("Test visitors deprecated in Twisted 8.0",
-                      category=DeprecationWarning)
-        visitor(self._test)
-
-
     def __getattr__(self, name):
         return getattr(self._test, name)
 
@@ -400,13 +387,6 @@ class ErrorHolder(TestHolder):
         result.startTest(self)
         result.addError(self, self.error)
         result.stopTest(self)
-
-
-    def visit(self, visitor):
-        """
-        See L{unittest.TestCase.visit}.
-        """
-        visitor(self)
 
 
 
