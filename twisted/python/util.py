@@ -217,7 +217,8 @@ def uniquify(lst):
     return result
 
 def padTo(n, seq, default=None):
-    """Pads a sequence out to n elements,
+    """
+    Pads a sequence out to n elements,
 
     filling in with a default value if it is not long enough.
 
@@ -237,7 +238,11 @@ def padTo(n, seq, default=None):
 
     return blank
 
+
 def getPluginDirs():
+    warnings.warn(
+        "twisted.python.util.getPluginDirs is deprecated since Twisted 12.2.",
+        DeprecationWarning, stacklevel=2)
     import twisted
     systemPlugins = os.path.join(os.path.dirname(os.path.dirname(
                             os.path.abspath(twisted.__file__))), 'plugins')
@@ -246,13 +251,19 @@ def getPluginDirs():
     allPlugins = filter(os.path.isdir, [systemPlugins, userPlugins, confPlugins])
     return allPlugins
 
+
 def addPluginDir():
+    warnings.warn(
+        "twisted.python.util.addPluginDir is deprecated since Twisted 12.2.",
+        DeprecationWarning, stacklevel=2)
     sys.path.extend(getPluginDirs())
 
-def sibpath(path, sibling):
-    """Return the path to a sibling of a file in the filesystem.
 
-    This is useful in conjunction with the special __file__ attribute
+def sibpath(path, sibling):
+    """
+    Return the path to a sibling of a file in the filesystem.
+
+    This is useful in conjunction with the special C{__file__} attribute
     that Python provides for modules, so modules can load associated
     resource files.
     """
@@ -260,7 +271,9 @@ def sibpath(path, sibling):
 
 
 def _getpass(prompt):
-    """Helper to turn IOErrors into KeyboardInterrupts"""
+    """
+    Helper to turn IOErrors into KeyboardInterrupts.
+    """
     import getpass
     try:
         return getpass.getpass(prompt)

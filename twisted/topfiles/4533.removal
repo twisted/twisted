@@ -1,0 +1,1 @@
+addPluginDir and getPluginDirs in twisted.python.util are deprecated now.

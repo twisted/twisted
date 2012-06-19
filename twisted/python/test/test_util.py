@@ -890,3 +890,39 @@ class InitGroupsTests(unittest.TestCase):
 
     if util._c_initgroups is None:
         test_initgroupsInC.skip = "C initgroups not available"
+
+
+class DeprecationTests(unittest.TestCase):
+    """
+    Tests for deprecations in C{twisted.python.util}.
+    """
+    def test_getPluginDirs(self):
+        """
+        L{util.getPluginDirs} is deprecated.
+        """
+        util.getPluginDirs()
+        warnings = self.flushWarnings(offendingFunctions=[
+            self.test_getPluginDirs])
+        self.assertEqual(
+            warnings[0]['message'],
+            "twisted.python.util.getPluginDirs is deprecated since Twisted "
+            "12.2.")
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(len(warnings), 1)
+
+
+    def test_addPluginDir(self):
+        """
+        L{util.addPluginDir} is deprecated.
+        """
+        util.addPluginDir()
+        warnings = self.flushWarnings(offendingFunctions=[
+            self.test_addPluginDir])
+        self.assertEqual(
+            warnings[0]['message'],
+            "twisted.python.util.addPluginDir is deprecated since Twisted "
+            "12.2.")
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(len(warnings), 1)
+
+
