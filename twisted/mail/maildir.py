@@ -230,10 +230,10 @@ class _MaildirMailboxAppendMessageTask:
             try:
                 self.osrename(self.tmpname, newname)
                 break
-            except OSError, (err, estr):
+            except OSError as e:
                 import errno
                 # if the newname exists, retry with a new newname.
-                if err != errno.EEXIST:
+                if e.args[0] != errno.EEXIST:
                     self.fail()
                     newname = None
                     break

@@ -613,9 +613,9 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
 
         try:
             fileForReading = self.openForReading()
-        except IOError, e:
+        except IOError as e:
             import errno
-            if e[0] == errno.EACCES:
+            if e.args[0] == errno.EACCES:
                 return resource.ForbiddenResource().render(request)
             else:
                 raise
