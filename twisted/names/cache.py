@@ -68,11 +68,19 @@ class CacheResolver(common.ResolverBase):
             if self.verbose:
                 log.msg('Cache hit for ' + repr(name))
             diff = now - when
-            return defer.succeed((
-                [dns.RRHeader(str(r.name), r.type, r.cls, max(0, r.ttl - diff), r.payload) for r in ans],
-                [dns.RRHeader(str(r.name), r.type, r.cls, max(0, r.ttl - diff), r.payload) for r in auth],
-                [dns.RRHeader(str(r.name), r.type, r.cls, max(0, r.ttl - diff), r.payload) for r in add]
-            ))
+
+            try:
+                result = (
+                    [dns.RRHeader(str(r.name), r.type, r.cls, r.ttl - diff,
+                                  r.payload) for r in ans],
+                    [dns.RRHeader(str(r.name), r.type, r.cls, r.ttl - diff,
+                                  r.payload) for r in auth],
+                    [dns.RRHeader(str(r.name), r.type, r.cls, r.ttl - diff,
+                                  r.payload) for r in add])
+            except ValueError:
+                return defer.fail(failure.Failure(dns.DomainError(name)))
+            else:
+                return defer.succeed(result)
 
 
     def lookupAllRecords(self, name, timeout = None):

@@ -1483,3 +1483,19 @@ class EqualityTests(unittest.TestCase):
             dns.UnknownRecord('foo', ttl=10),
             dns.UnknownRecord('foo', ttl=10),
             dns.UnknownRecord('foo', ttl=100))
+
+
+
+class RRHeaderTests(unittest.TestCase):
+    """
+    Tests for L{twisted.names.dns.RRHeader}.
+    """
+
+    def test_negativeTTL(self):
+        """
+        Attempting to create a L{dns.RRHeader} instance with a negative TTL
+        causes L{ValueError} to be raised.
+        """
+        self.assertRaises(
+            ValueError, dns.RRHeader, "example.com", dns.A,
+            dns.IN, -1, dns.Record_A("127.0.0.1"))

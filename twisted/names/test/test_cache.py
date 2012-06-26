@@ -77,11 +77,36 @@ class Caching(unittest.TestCase):
         return c.lookupAddress("example.com").addCallback(cbLookup)
 
 
-    def test_negativeTTLLookup(self):
+    def test_cachedResultExpires(self):
         """
-        When the cache is queried exactly as the cached entry should expire
-        but before it has actually been cleared, the TTL will be 0, not
-        negative.
+        Once the TTL has been exceeded, the result is removed from the cache.
+        """
+        r = ([dns.RRHeader("example.com", dns.A, dns.IN, 60,
+                           dns.Record_A("127.0.0.1", 60))],
+             [dns.RRHeader("example.com", dns.A, dns.IN, 50,
+                           dns.Record_A("127.0.0.1", 50))],
+             [dns.RRHeader("example.com", dns.A, dns.IN, 40,
+                           dns.Record_A("127.0.0.1", 40))])
+
+        clock = task.Clock()
+
+        c = cache.CacheResolver(reactor=clock)
+        query = dns.Query(name="example.com", type=dns.A, cls=dns.IN)
+        c.cacheResult(query, r)
+
+        clock.advance(40)
+
+        self.assertNotIn(query, c.cache)
+
+        return self.assertFailure(
+            c.lookupAddress("example.com"), dns.DomainError)
+
+
+    def test_expiredTTLLookup(self):
+        """
+        When the cache is queried exactly as the cached entry should expire but
+        before it has actually been cleared, the cache does not return the
+        expired entry.
         """
         r = ([dns.RRHeader("example.com", dns.A, dns.IN, 60,
                            dns.Record_A("127.0.0.1", 60))],
@@ -100,10 +125,5 @@ class Caching(unittest.TestCase):
 
         clock.advance(60.1)
 
-        def cbLookup(result):
-            self.assertEquals(result[0][0].ttl, 0)
-            self.assertEquals(result[0][0].ttl, 0)
-            self.assertEquals(result[0][0].ttl, 0)
-            self.assertEquals(result[0][0].name.name, "example.com")
-
-        return c.lookupAddress("example.com").addCallback(cbLookup)
+        return self.assertFailure(
+            c.lookupAddress("example.com"), dns.DomainError)

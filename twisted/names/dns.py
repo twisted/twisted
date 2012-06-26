@@ -481,8 +481,13 @@ class RRHeader(tputil.FancyEqMixin):
 
         @type payload: An object implementing C{IEncodable}
         @param payload: A Query Type specific data object.
+
+        @raises ValueError: if the ttl is negative.
         """
         assert (payload is None) or isinstance(payload, UnknownRecord) or (payload.TYPE == type)
+
+        if ttl < 0:
+            raise ValueError("TTL cannot be negative")
 
         self.name = Name(name)
         self.type = type
