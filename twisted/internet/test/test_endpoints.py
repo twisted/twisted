@@ -5,7 +5,6 @@ Test the C{I...Endpoint} implementations that wrap the L{IReactorTCP},
 L{IReactorSSL}, and L{IReactorUNIX} interfaces found in
 L{twisted.internet.endpoints}.
 """
-
 from errno import EPERM
 from socket import AF_INET, AF_INET6
 from zope.interface import implements
@@ -25,6 +24,10 @@ from twisted.plugin import getPlugins
 from twisted import plugins
 from twisted.python.modules import getModule
 from twisted.python.filepath import FilePath
+
+from twisted.protocols import basic
+from twisted.internet import protocol, reactor, stdio
+from twisted.internet.stdio import PipeAddress
 
 pemPath = getModule("twisted.test").filePath.sibling("server.pem")
 casPath = getModule(__name__).filePath.sibling("fake_CAs")
@@ -572,6 +575,80 @@ class EndpointTestCaseMixin(ServerEndpointTestCaseMixin,
     """
     Generic test methods to be mixed into all endpoint test classes.
     """
+
+
+
+class StdioFactory(protocol.Factory):
+    protocol = basic.LineReceiver
+
+
+
+class StandardIOEndpointsTestCase(unittest.TestCase):
+    """
+    Tests for Standard I/O Endpoints
+    """
+    def setUp(self):
+        self.ep = endpoints.StandardIOEndpoint(reactor)
+
+
+    def test_standardIOInstance(self):
+        """
+        The endpoint creates an L{endpoints.StandardIO} instance.
+        """
+        self.d = self.ep.listen(StdioFactory())
+        def checkInstanceAndLoseConnection(stdioOb):
+            self.assertIsInstance(stdioOb, stdio.StandardIO)
+            stdioOb.loseConnection()
+        self.d.addCallback(checkInstanceAndLoseConnection)
+        return self.d
+
+
+    def test_reactor(self):
+        """
+        The reactor passed to the endpoint is set as its _reactor attribute.
+        """
+        self.assertEqual(self.ep._reactor, reactor)
+
+
+    def test_protocol(self):
+        """
+        The protocol used in the endpoint is a L{basic.LineReceiver} instance.
+        """
+        self.d = self.ep.listen(StdioFactory())
+        def checkProtocol(stdioOb):
+            from twisted.python.runtime import platform
+            if platform.isWindows():
+                self.assertIsInstance(stdioOb.proto, basic.LineReceiver)
+            else:
+                self.assertIsInstance(stdioOb.protocol, basic.LineReceiver)
+            stdioOb.loseConnection()
+        self.d.addCallback(checkProtocol)
+        return self.d
+
+
+    def test_address(self):
+        """
+        The address passed to the factory's buildProtocol in the endpoint 
+        should be a PipeAddress instance.
+        """
+        class TestAddrFactory(protocol.Factory):
+            protocol = basic.LineReceiver
+            _address = None
+            def buildProtocol(self, addr):
+                self._address = addr
+                p = self.protocol()
+                p.factory = self
+                return p
+            def getAddress(self):
+                return self._address
+
+        myFactory = TestAddrFactory()
+        self.d = self.ep.listen(myFactory)
+        def checkAddress(stdioOb):
+            self.assertIsInstance(myFactory.getAddress(), PipeAddress)
+            stdioOb.loseConnection()
+        self.d.addCallback(checkAddress)
+        return self.d
 
 
 

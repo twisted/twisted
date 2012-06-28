@@ -24,12 +24,15 @@ from twisted.internet.interfaces import IStreamClientEndpointStringParser
 from twisted.python.filepath import FilePath
 from twisted.python.systemd import ListenFDs
 
+from twisted.internet import stdio
+from twisted.internet.stdio import PipeAddress
 
 __all__ = ["clientFromString", "serverFromString",
            "TCP4ServerEndpoint", "TCP6ServerEndpoint",
            "TCP4ClientEndpoint", "UNIXServerEndpoint",
            "UNIXClientEndpoint", "SSL4ServerEndpoint",
-           "SSL4ClientEndpoint", "AdoptedStreamServerEndpoint"]
+           "SSL4ClientEndpoint", "AdoptedStreamServerEndpoint",
+           "StandardIOEndpoint"]
 
 
 class _WrappingProtocol(Protocol):
@@ -205,6 +208,28 @@ class _WrappingFactory(ClientFactory):
         """
         if not self._onConnection.called:
             self._onConnection.errback(reason)
+
+
+
+class StandardIOEndpoint(object):
+    """
+    A Standard Input/Output endpoint
+    """
+    implements(interfaces.IStreamServerEndpoint)
+
+    def __init__(self, reactor):
+        """
+        @param reactor: The reactor for the endpoint
+        """
+        self._reactor = reactor
+
+
+    def listen(self, stdioProtocolFactory):
+        """
+        Implement L{IStreamServerEndpoint.listen} to listen on stdin/stdout
+        """
+        return defer.execute(stdio.StandardIO,
+                             stdioProtocolFactory.buildProtocol(PipeAddress()))
 
 
 
