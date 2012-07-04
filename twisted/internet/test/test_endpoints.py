@@ -1768,3 +1768,48 @@ class SystemdEndpointPluginTests(unittest.TestCase):
             raise unittest.SkipTest("Platform lacks AF_UNIX support")
         else:
             self._parseStreamServerTest(AF_UNIX, "UNIX")
+
+
+
+class TCP6ServerEndpointPluginTests(unittest.TestCase):
+    """
+    Unit tests for the TCP IPv6 stream server endpoint string description parser.
+    """
+    _parserClass = endpoints._TCP6ServerParser
+
+    def test_pluginDiscovery(self):
+        """
+        L{endpoints._TCP6ServerParser} is found as a plugin for
+        L{interfaces.IStreamServerEndpointStringParser} interface.
+        """
+        parsers = list(getPlugins(
+                interfaces.IStreamServerEndpointStringParser))
+        for p in parsers:
+            if isinstance(p, self._parserClass):
+                break
+        else:
+            self.fail("Did not find TCP6ServerEndpoint parser in %r" % (parsers,))
+
+
+    def test_interface(self):
+        """
+        L{endpoints._TCP6ServerParser} instances provide
+        L{interfaces.IStreamServerEndpointStringParser}.
+        """
+        parser = self._parserClass()
+        self.assertTrue(verifyObject(
+                interfaces.IStreamServerEndpointStringParser, parser))
+
+
+    def test_stringDescription(self):
+        """
+        L{serverFromString} returns an L{TCP6ServerEndpoint} instance with a 'tcp6'
+        endpoint string description.
+        """
+        ep = endpoints.serverFromString(MemoryReactor(),
+            "tcp6:8080:backlog=12:interface=\:\:1")
+        self.assertIsInstance(ep, endpoints.TCP6ServerEndpoint)
+        self.assertIsInstance(ep._reactor, MemoryReactor)
+        self.assertEqual(ep._port, 8080)
+        self.assertEqual(ep._backlog, 12)
+        self.assertEqual(ep._interface, '::1')

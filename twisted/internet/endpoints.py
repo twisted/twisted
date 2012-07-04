@@ -683,6 +683,7 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
             {'interface': interface, 'backlog': int(backlog)})
 
 
+
 class _SystemdParser(object):
     """
     Stream server endpoint string parser for the I{systemd} endpoint type.
@@ -730,6 +731,44 @@ class _SystemdParser(object):
         # Delegate to another function with a sane signature.  This function has
         # an insane signature to trick zope.interface into believing the
         # interface is correctly implemented.
+        return self._parseServer(reactor, *args, **kwargs)
+
+
+
+class _TCP6ServerParser(object):
+    """
+    Stream server endpoint string parser for the TCP6ServerEndpoint type.
+
+    @ivar prefix: See L{IStreamClientEndpointStringParser.prefix}.
+    """
+    implements(IPlugin, IStreamServerEndpointStringParser)
+
+    prefix = "tcp6"     # Used in _parseServer to identify the plugin with the endpoint type
+
+    def _parseServer(self, reactor, port, backlog=50, interface='::'):
+        """
+        Internal parser function for L{_parseServer} to convert the string
+        arguments into structured arguments for the L{TCP6ServerEndpoint}
+
+        @param reactor: An L{IReactorTCP} provider.
+
+        @param port: The port number used for listening
+        @type port: int
+
+        @param backlog: Size of the listen queue
+        @type backlog: int
+
+        @param interface: The hostname to bind to
+        @type interface: str
+        """
+        port = int(port)
+        backlog = int(backlog)
+        return TCP6ServerEndpoint(reactor, port, backlog, interface)
+
+
+    def parseStreamServer(self, reactor, *args, **kwargs):
+        # Redirects to another function (self._parseServer), tricks zope.interface
+        # into believing the interface is correctly implemented.
         return self._parseServer(reactor, *args, **kwargs)
 
 
@@ -861,6 +900,8 @@ def _parseServer(description, factory, default=None):
     endpointType = args[0]
     parser = _serverParsers.get(endpointType)
     if parser is None:
+        # If the required parser is not found in _server, check if 
+        # a plugin exists for the endpointType
         for plugin in getPlugins(IStreamServerEndpointStringParser):
             if plugin.prefix == endpointType:
                 return (plugin, args[1:], kw)
