@@ -1812,6 +1812,18 @@ class ClientSSHTransportTestCase(ServerAndClientSSHTransportBaseCase,
         self.checkDisconnected()
 
 
+    def test_noPayloadSERVICE_ACCEPT(self):
+        """
+        Some commercial SSH servers don't send a payload with the
+        SERVICE_ACCEPT message.  Conch pretends that it got the correct
+        name of the service.
+        """
+        self.proto.instance = MockService()
+        self.proto.ssh_SERVICE_ACCEPT('') # no payload
+        self.assertTrue(self.proto.instance.started)
+        self.assertEquals(len(self.packets), 0) # not disconnected
+
+
 
 class SSHCiphersTestCase(unittest.TestCase):
     """

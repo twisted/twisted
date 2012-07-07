@@ -1277,11 +1277,14 @@ class SSHClientTransport(SSHTransportBase):
 
         Start the service we requested.
         """
-        name = getNS(packet)[0]
-        if name != self.instance.name:
-            self.sendDisconnect(
-                DISCONNECT_PROTOCOL_ERROR,
-                "received accept for service we did not request")
+        if packet == '':
+            log.msg('got SERVICE_ACCEPT without payload')
+        else:
+            name = getNS(packet)[0]
+            if name != self.instance.name:
+                self.sendDisconnect(
+                    DISCONNECT_PROTOCOL_ERROR,
+                    "received accept for service we did not request")
         self.setService(self.instance)
 
 

@@ -716,7 +716,11 @@ class Key(object):
         @type data: C{str}
         @rtype: C{bool}
         """
-        signatureType, signature = common.getNS(signature)
+        if len(signature) == 40:
+            # DSA key with no padding
+            signatureType, signature = 'ssh-dss', common.NS(signature)
+        else:
+            signatureType, signature = common.getNS(signature)
         if signatureType != self.sshType():
             return False
         if self.type() == 'RSA':
