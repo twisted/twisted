@@ -1,0 +1,2 @@
+twisted.internet.Process.signalProcess now catches ESRCH raised by os.kill call
+and raises ProcessExitedAlready instead.

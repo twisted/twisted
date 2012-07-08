@@ -337,7 +337,13 @@ class _BaseProcess(BaseProcess, object):
             signalID = getattr(signal, 'SIG%s' % (signalID,))
         if self.pid is None:
             raise ProcessExitedAlready()
-        os.kill(self.pid, signalID)
+        try:
+            os.kill(self.pid, signalID)
+        except OSError, e:
+            if e.errno == errno.ESRCH:
+                raise ProcessExitedAlready()
+            else:
+                raise
 
 
     def _resetSignalDisposition(self):

@@ -1255,7 +1255,7 @@ class MockOS(object):
     @ivar pipeCount: count the number of time that C{os.pipe} has been called.
     @type pipeCount: C{int}
 
-    @ivar raiseWaitPid: if set, subsequent calls to waitpid will raise an
+    @ivar raiseWaitPid: if set, subsequent calls to waitpid will raise
         the error specified.
     @type raiseWaitPid: C{None} or a class
 
@@ -1276,6 +1276,10 @@ class MockOS(object):
 
     @ivar path: the path returned by C{os.path.expanduser}.
     @type path: C{str}
+
+    @ivar raiseKill: if set, subsequent call to kill will raise the error
+        specified.
+    @type raiseKill: C{None} or an exception instance.
     """
     exited = False
     raiseExec = False
@@ -1287,6 +1291,7 @@ class MockOS(object):
     euid = 0
     egid = 0
     path = None
+    raiseKill = None
 
     def __init__(self):
         """
@@ -1535,11 +1540,22 @@ class MockOS(object):
         """
         return 0, 0, 1, 2
 
+
     def listdir(self, path):
         """
         Override C{os.listdir}, returning fake contents of '/dev/fd'
         """
         return "-1", "-2"
+
+
+    def kill(self, pid, signalID):
+        """
+        Override C{os.kill}: save the action and raise C{self.raiseKill} if
+        specified.
+        """
+        self.actions.append(('kill', pid, signalID))
+        if self.raiseKill is not None:
+            raise self.raiseKill
 
 
 
@@ -1978,6 +1994,69 @@ class MockProcessTestCase(unittest.TestCase):
              ('setregid', 1235, 1234), ('setreuid', 1237, 1236)])
 
 
+    def test_kill(self):
+        """
+        L{process.Process.signalProcess} calls C{os.kill} translating the given
+        signal string to the PID.
+        """
+        self.mockos.child = False
+        self.mockos.waitChild = (0, 0)
+        cmd = '/mock/ouch'
+        p = TrivialProcessProtocol(None)
+        proc = reactor.spawnProcess(p, cmd, ['ouch'], env=None, usePTY=False)
+        proc.signalProcess("KILL")
+        self.assertEqual(self.mockos.actions,
+            [('fork', False), 'waitpid', ('kill', 21, signal.SIGKILL)])
+
+
+    def test_killExited(self):
+        """
+        L{process.Process.signalProcess} raises L{error.ProcessExitedAlready}
+        if the process has exited.
+        """
+        self.mockos.child = False
+        cmd = '/mock/ouch'
+        p = TrivialProcessProtocol(None)
+        proc = reactor.spawnProcess(p, cmd, ['ouch'], env=None, usePTY=False)
+        # We didn't specify a waitpid value, so the waitpid call in
+        # registerReapProcessHandler has already reaped the process
+        self.assertRaises(error.ProcessExitedAlready,
+                          proc.signalProcess, "KILL")
+
+
+    def test_killExitedButNotDetected(self):
+        """
+        L{process.Process.signalProcess} raises L{error.ProcessExitedAlready}
+        if the process has exited but that twisted hasn't seen it (for example,
+        if the process has been waited outside of twisted): C{os.kill} then
+        raise C{OSError} with C{errno.ESRCH} as errno.
+        """
+        self.mockos.child = False
+        self.mockos.waitChild = (0, 0)
+        cmd = '/mock/ouch'
+        p = TrivialProcessProtocol(None)
+        proc = reactor.spawnProcess(p, cmd, ['ouch'], env=None, usePTY=False)
+        self.mockos.raiseKill = OSError(errno.ESRCH, "Not found")
+        self.assertRaises(error.ProcessExitedAlready,
+                          proc.signalProcess, "KILL")
+
+
+    def test_killErrorInKill(self):
+        """
+        L{process.Process.signalProcess} doesn't mask C{OSError} exceptions if
+        the errno is different from C{errno.ESRCH}.
+        """
+        self.mockos.child = False
+        self.mockos.waitChild = (0, 0)
+        cmd = '/mock/ouch'
+        p = TrivialProcessProtocol(None)
+        proc = reactor.spawnProcess(p, cmd, ['ouch'], env=None, usePTY=False)
+        self.mockos.raiseKill = OSError(errno.EINVAL, "Invalid signal")
+        err = self.assertRaises(OSError,
+                                proc.signalProcess, "KILL")
+        self.assertEquals(err.errno, errno.EINVAL)
+
+
 
 class PosixProcessTestCase(unittest.TestCase, PosixProcessBase):
     # add two non-pty test cases
@@ -1995,7 +2074,7 @@ class PosixProcessTestCase(unittest.TestCase, PosixProcessBase):
         p = Accumulator()
         d = p.endedDeferred = defer.Deferred()
         reactor.spawnProcess(p, cmd,
-                             [cmd, "-c", 
+                             [cmd, "-c",
                               "import sys; sys.stderr.write('%s')" % (value,)],
                              env=None, path="/tmp",
                              usePTY=self.usePTY)
@@ -2401,7 +2480,7 @@ class ClosingPipes(unittest.TestCase):
                 'import sys, os, time\n'
                 # Give the system a bit of time to notice the closed
                 # descriptor.  Another option would be to poll() for HUP
-                # instead of relying on an os.write to fail with SIGPIPE. 
+                # instead of relying on an os.write to fail with SIGPIPE.
                 # However, that wouldn't work on OS X (or Windows?).
                 'for i in range(1000):\n'
                 '    os.write(%d, "foo\\n")\n'

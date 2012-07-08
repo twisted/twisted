@@ -1772,8 +1772,10 @@ class IProcessTransport(ITransport):
           - an integer, where it represents a POSIX
               signal ID.
 
-        @raise twisted.internet.error.ProcessExitedAlready: The process has
-        already exited.
+        @raise twisted.internet.error.ProcessExitedAlready: If the process has
+            already exited.
+        @raise OSError: If the C{os.kill} call fails with an errno different
+            from C{ESRCH}.
         """
 
 
