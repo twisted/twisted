@@ -1399,24 +1399,68 @@ class _ChunkedTransferDecoder(object):
     @ivar length: Counter keeping track of how many more bytes in a chunk there
         are to receive.
 
-    @ivar state: One of C{'chunk-length'}, C{'trailer'}, C{'body'}, or
-        C{'finished'}.  For C{'chunk-length'}, data for the chunk length line
-        is currently being read.  For C{'trailer'}, the CR LF pair which
-        follows each chunk is being read.  For C{'body'}, the contents of a
-        chunk are being read.  For C{'finished'}, the last chunk has been
-        completely read and no more input is valid.
-
-    @ivar finish: A flag indicating that the last chunk has been started.  When
-        it finishes, the state will change to C{'finished'} and no more data
-        will be accepted.
+    @ivar state: One of C{'CHUNK_LENGTH'}, C{'CRLF'}, C{'TRAILER'},
+        C{'BODY'}, or C{'FINISHED'}.  For C{'CHUNK_LENGTH'}, data for the
+        chunk length line is currently being read.  For C{'CRLF'}, the CR LF
+        pair which follows each chunk is being read. For C{'TRAILER'}, the CR
+        LF pair which follows the terminal 0-length chunk is currently being
+        read. For C{'BODY'}, the contents of a chunk are being read. For
+        C{'FINISHED'}, the last chunk has been completely read and no more
+        input is valid.
     """
-    state = 'chunk-length'
-    finish = False
+    state = 'CHUNK_LENGTH'
 
     def __init__(self, dataCallback, finishCallback):
         self.dataCallback = dataCallback
         self.finishCallback = finishCallback
         self._buffer = ''
+
+    def _dataReceived_CHUNK_LENGTH(self, data):
+        if '\r\n' in data:
+            line, rest = data.split('\r\n', 1)
+            parts = line.split(';')
+            self.length = int(parts[0], 16)
+            if self.length == 0:
+                self.state = 'TRAILER'
+            else:
+                self.state = 'BODY'
+            return rest
+        else:
+            self._buffer = data
+            return ''
+
+    def _dataReceived_CRLF(self, data):
+        if data.startswith('\r\n'):
+            self.state = 'CHUNK_LENGTH'
+            return data[2:]
+        else:
+            self._buffer = data
+            return ''
+
+    def _dataReceived_TRAILER(self, data):
+        if data.startswith('\r\n'):
+            data = data[2:]
+            self.state = 'FINISHED'
+            self.finishCallback(data)
+        else:
+            self._buffer = data
+        return ''
+
+    def _dataReceived_BODY(self, data):
+        if len(data) >= self.length:
+            chunk, data = data[:self.length], data[self.length:]
+            self.dataCallback(chunk)
+            self.state = 'CRLF'
+            return data
+        elif len(data) < self.length:
+            self.length -= len(data)
+            self.dataCallback(data)
+            return ''
+
+    def _dataReceived_FINISHED(self, data):
+        raise RuntimeError(
+            "_ChunkedTransferDecoder.dataReceived called after last "
+            "chunk was processed")
 
 
     def dataReceived(self, data):
@@ -1427,45 +1471,7 @@ class _ChunkedTransferDecoder(object):
         data = self._buffer + data
         self._buffer = ''
         while data:
-            if self.state == 'chunk-length':
-                if '\r\n' in data:
-                    line, rest = data.split('\r\n', 1)
-                    parts = line.split(';')
-                    self.length = int(parts[0], 16)
-                    if self.length == 0:
-                        self.state = 'trailer'
-                        self.finish = True
-                    else:
-                        self.state = 'body'
-                    data = rest
-                else:
-                    self._buffer = data
-                    data = ''
-            elif self.state == 'trailer':
-                if data.startswith('\r\n'):
-                    data = data[2:]
-                    if self.finish:
-                        self.state = 'finished'
-                        self.finishCallback(data)
-                        data = ''
-                    else:
-                        self.state = 'chunk-length'
-                else:
-                    self._buffer = data
-                    data = ''
-            elif self.state == 'body':
-                if len(data) >= self.length:
-                    chunk, data = data[:self.length], data[self.length:]
-                    self.dataCallback(chunk)
-                    self.state = 'trailer'
-                elif len(data) < self.length:
-                    self.length -= len(data)
-                    self.dataCallback(data)
-                    data = ''
-            elif self.state == 'finished':
-                raise RuntimeError(
-                    "_ChunkedTransferDecoder.dataReceived called after last "
-                    "chunk was processed")
+            data = getattr(self, '_dataReceived_%s' % (self.state,))(data)
 
 
     def noMoreData(self):
@@ -1473,10 +1479,10 @@ class _ChunkedTransferDecoder(object):
         Verify that all data has been received.  If it has not been, raise
         L{_DataLoss}.
         """
-        if self.state != 'finished':
+        if self.state != 'FINISHED':
             raise _DataLoss(
                 "Chunked decoder in %r state, still expecting more data to "
-                "get to finished state." % (self.state,))
+                "get to 'FINISHED' state." % (self.state,))
 
 
 

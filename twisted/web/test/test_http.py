@@ -541,8 +541,8 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
         exc = self.assertRaises(_DataLoss, parser.noMoreData)
         self.assertEqual(
             str(exc),
-            "Chunked decoder in 'trailer' state, still expecting more data "
-            "to get to finished state.")
+            "Chunked decoder in 'TRAILER' state, still expecting more data "
+            "to get to 'FINISHED' state.")
 
 
     def test_finishedConnectionLose(self):
