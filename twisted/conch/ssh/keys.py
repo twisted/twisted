@@ -402,7 +402,7 @@ class Key(object):
         lines = ['<%s %s (%s bits)' % (self.type(),
             self.isPublic() and 'Public Key' or 'Private Key',
             self.keyObject.size())]
-        for k, v in self.data().items():
+        for k, v in sorted(self.data().items()):
             lines.append('attr %s:' % k)
             by = common.MP(v)[4:]
             while by:

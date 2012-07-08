@@ -484,15 +484,15 @@ SUrCyZXsNh6VXwjs3gKQ
         """
         self.assertEqual(repr(keys.Key(self.rsaObj)),
 """<RSA Private Key (0 bits)
-attr e:
-\t02
 attr d:
 \t03
+attr e:
+\t02
 attr n:
 \t01
-attr q:
-\t05
 attr p:
 \t04
+attr q:
+\t05
 attr u:
 \t04>""")
