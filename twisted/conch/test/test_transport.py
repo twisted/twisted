@@ -37,7 +37,7 @@ from twisted.trial import unittest
 from twisted.internet import defer
 from twisted.protocols import loopback
 from twisted.python import randbytes
-from twisted.python.reflect import qual
+from twisted.python.reflect import qual, getClass
 from twisted.python.hashlib import md5, sha1
 from twisted.conch.ssh import address, service, common
 from twisted.test import proto_helpers
@@ -1858,7 +1858,7 @@ class SSHCiphersTestCase(unittest.TestCase):
             if cipName == 'none':
                 self.assertIsInstance(cip, transport._DummyCipher)
             else:
-                self.assertTrue(str(cip).startswith('<' + modName))
+                self.assertTrue(getClass(cip).__name__.startswith(modName))
 
 
     def test_getMAC(self):
