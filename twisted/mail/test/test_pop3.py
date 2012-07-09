@@ -23,6 +23,7 @@ from twisted import internet
 from twisted.mail import pop3
 from twisted.protocols import loopback
 from twisted.python import failure
+from twisted.python.util import OrderedDict
 
 from twisted import cred
 import twisted.cred.portal
@@ -382,8 +383,9 @@ class AnotherPOP3TestCase(unittest.TestCase):
 
     def _cbTestAuthListing(self, ignored, client):
         self.failUnless(client.response[1].startswith('+OK'))
-        self.assertEqual(client.response[2:6],
-                          ["AUTH1", "SECONDAUTH", "AUTHLAST", "."])
+        self.assertEqual(sorted(client.response[2:5]),
+                         ["AUTH1", "AUTHLAST", "SECONDAUTH"])
+        self.assertEqual(client.response[5], ".")
 
     def testIllegalPASS(self):
         dummy = DummyPOP3()
@@ -423,7 +425,7 @@ class TestServerFactory:
     def cap_EXPIRE(self):
         return 60
 
-    challengers = {"SCHEME_1": None, "SCHEME_2": None}
+    challengers = OrderedDict([("SCHEME_1", None), ("SCHEME_2", None)])
 
     def cap_LOGIN_DELAY(self):
         return 120
