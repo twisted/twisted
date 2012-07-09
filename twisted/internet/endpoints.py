@@ -684,6 +684,33 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
 
 
 
+class _StandardIOParser(object):
+    """
+    Stream server endpoint string parser for the Standard I/O type.
+
+    @ivar prefix: See L{IStreamClientEndpointStringParser.prefix}.
+    """
+    implements(IPlugin, IStreamServerEndpointStringParser)
+
+    prefix = "stdio"
+
+    def _parseServer(self, reactor):
+        """
+        Internal parser function for L{_parseServer} to convert the string
+        arguments into structured arguments for the L{StandardIOEndpoint}
+
+        @param reactor: Reactor for the endpoint
+        """
+        return StandardIOEndpoint(reactor)
+
+
+    def parseStreamServer(self, reactor, *args, **kwargs):
+        # Redirects to another function (self._parseServer), tricks zope.interface
+        # into believing the interface is correctly implemented.
+        return self._parseServer(reactor)
+
+
+
 class _SystemdParser(object):
     """
     Stream server endpoint string parser for the I{systemd} endpoint type.

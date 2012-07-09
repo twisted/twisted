@@ -1805,7 +1805,7 @@ class TCP6ServerEndpointPluginTests(unittest.TestCase):
 
     def test_stringDescription(self):
         """
-        L{serverFromString} returns an L{TCP6ServerEndpoint} instance with a 'tcp6'
+        L{serverFromString} returns a L{TCP6ServerEndpoint} instance with a 'tcp6'
         endpoint string description.
         """
         ep = endpoints.serverFromString(MemoryReactor(),
@@ -1815,3 +1815,44 @@ class TCP6ServerEndpointPluginTests(unittest.TestCase):
         self.assertEqual(ep._port, 8080)
         self.assertEqual(ep._backlog, 12)
         self.assertEqual(ep._interface, '::1')
+
+
+
+class StandardIOEndpointPluginTests(unittest.TestCase):
+    """
+    Unit tests for the Standard I/O endpoint string description parser.
+    """
+    _parserClass = endpoints._StandardIOParser
+
+    def test_pluginDiscovery(self):
+        """
+        L{endpoints._StandardIOParser} is found as a plugin for
+        L{interfaces.IStreamServerEndpointStringParser} interface.
+        """
+        parsers = list(getPlugins(
+                interfaces.IStreamServerEndpointStringParser))
+        for p in parsers:
+            if isinstance(p, self._parserClass):
+                break
+        else:
+            self.fail("Did not find StandardIOEndpoint parser in %r" % (parsers,))
+
+
+    def test_interface(self):
+        """
+        L{endpoints._StandardIOParser} instances provide
+        L{interfaces.IStreamServerEndpointStringParser}.
+        """
+        parser = self._parserClass()
+        self.assertTrue(verifyObject(
+                interfaces.IStreamServerEndpointStringParser, parser))
+
+
+    def test_stringDescription(self):
+        """
+        L{serverFromString} returns a L{StandardIOEndpoint} instance with a 'stdio'
+        endpoint string description.
+        """
+        ep = endpoints.serverFromString(MemoryReactor(), "stdio:")
+        self.assertIsInstance(ep, endpoints.StandardIOEndpoint)
+        self.assertIsInstance(ep._reactor, MemoryReactor)
