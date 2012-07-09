@@ -183,7 +183,7 @@ class CompatTestCase(unittest.TestCase):
         """
         a = frozenset(['a', 'b'])
         self.assertRaises(AttributeError, getattr, a, "add")
-        self.assertEqual(list(a), ['a', 'b'])
+        self.assertEqual(sorted(a), ['a', 'b'])
 
         b = frozenset(['r', 's'])
         d = a.union(b)
