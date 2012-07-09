@@ -350,6 +350,8 @@ class Key(object):
         """
         if data.startswith('ssh-'):
             return 'public_openssh'
+        elif data.startswith('ecdsa-'):
+            return 'public_openssh'
         elif data.startswith('-----BEGIN'):
             return 'private_openssh'
         elif data.startswith('{'):

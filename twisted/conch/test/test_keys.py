@@ -137,13 +137,17 @@ class KeyTestCase(unittest.TestCase):
         correctly.
         """
         self.assertEqual(keys.Key._guessStringType(keydata.publicRSA_openssh),
-                'public_openssh')
+                         'public_openssh')
         self.assertEqual(keys.Key._guessStringType(keydata.publicDSA_openssh),
-                'public_openssh')
+                         'public_openssh')
+        self.assertEqual(keys.Key._guessStringType(keydata.publicECDSA_openssh),
+                         'public_openssh')
         self.assertEqual(keys.Key._guessStringType(
             keydata.privateRSA_openssh), 'private_openssh')
         self.assertEqual(keys.Key._guessStringType(
             keydata.privateDSA_openssh), 'private_openssh')
+        self.assertEqual(keys.Key._guessStringType(
+            keydata.privateECDSA_openssh), 'private_openssh')
         self.assertEqual(keys.Key._guessStringType(keydata.publicRSA_lsh),
                 'public_lsh')
         self.assertEqual(keys.Key._guessStringType(keydata.publicDSA_lsh),

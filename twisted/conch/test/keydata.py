@@ -80,6 +80,7 @@ ko/B3N2H7LnQrGV0GyrjeYocW/qZh/PCsY48JBFhlNQexn2mn44AJW3y5xgbhvKA
 hxvOXw8S0mjSasyofptzzQCtXxFLQigXbpQBltII+Ys=
 -----END RSA PRIVATE KEY-----"""
 
+
 publicRSA_lsh = ("{KDEwOnB1YmxpYy1rZXkoMTQ6cnNhLXBrY3MxLXNoYTEoMTpuOTc6AK8yc"
 "fDmDpyZs3+LXwRLy4vA1T6yd/3PZNiPwM+uH8Yx3/YpskSW4sbUIZR/ZXzY1CMfuC5qyR+UDUbB"
 "aaK3Bwyjk8E02C4eSpkabJZGB0Yr3CUpG4fwvgUd7rQ0ueeZlSkoMTplMTojKSkp}")
@@ -166,6 +167,23 @@ privateDSA_agentv3 = ("\x00\x00\x00\x07ssh-dss\x00\x00\x00A\x00\x86\xf0L\xe4"
 "\xdaB\xd2\x1e\x9e\xa1,\xac\xb2\xd9\xb8\xe7Ooa\xee\x16\x84,O\x97\x1d\xfa\xb6"
 "l\xcf_r@\xf1\xd8R\xceH\x82s\xcb\xcd\xd5\x99\x00\x00\x00\x15\x00\x97T\xeavi@"
 "\x1b\xf6\xf8\x9eu\\\x84h\x8e\xf6\xc3\x0b\xf0\xc3")
+
+privateECDSA_openssh = """-----BEGIN EC PRIVATE KEY-----
+Proc-Type: 4,ENCRYPTED
+DEK-Info: AES-128-CBC,832E294B07986DAC7FFE90BF70162BD5
+
+do95YJfgkIXkT/M1V0TKAxmxYmZSoUAx6sQOyyiqXg5odtHb3WULjrsTnKKq/ND4
+EwD8IRHO0R5H330vJe7cJPlRz2QBl62H41TKGFHq+Vz0sQZDPUX8hO5lIBfv0KLa
+4cR1RJtTiqKTMdHdsBMKHbUHycaBkGqprrR/Ni0M9XcOVEMNMxCquhW2wPY1LMcP
+0sFSGhJLndU0mDPU/o0Gi+r4nWYNdxaPUfVtDJk4oBA4Tkulzr4bISnyuj30DRkH
+bGwjNAx1a0PZhkqPbLnkHfNna6Of1WpyOflPQpOuJ0Q=
+-----END EC PRIVATE KEY-----"""
+
+publicECDSA_openssh = ("ecdsa-sha2-nistp521 AAAAE2VjZHNhLXNoYTItbmlzdHA1MjEAAA"
+                       "AIbmlzdHA1MjEAAACFBAFzJiZ0YITJ+GRkJMnulGV0FE11cjofxvm5"
+                       "grbe7FPigXWe/BZYCJp+wEjSiN1MWqOrLEn+KDa1wXHgV2L9yKSW3g"
+                       "CQC8BvaWifjk3n0ZdaVl2nUDZrIuf9gbMdOb2hh+uLYb7SwdsHieW5"
+                       "N6xmGogCBAjMqb9Fb67Tm4M0abJUY0XBLg== thijs@bubba")
 
 __all__ = ['DSAData', 'RSAData', 'privateDSA_agentv3', 'privateDSA_lsh',
         'privateDSA_openssh', 'privateRSA_agentv3', 'privateRSA_lsh',
