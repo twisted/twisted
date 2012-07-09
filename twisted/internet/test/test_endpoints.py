@@ -1509,8 +1509,10 @@ class SSLClientStringTests(unittest.TestCase):
                 [casPath.child("thing1.pem"), casPath.child("thing2.pem")]
             if x.basename().lower().endswith('.pem')
         ]
-        self.assertEqual([Certificate(x) for x in certOptions.caCerts],
-                          expectedCerts)
+        self.assertEqual(sorted((Certificate(x) for x in certOptions.caCerts),
+                                key=lambda cert: cert.digest()),
+                         sorted(expectedCerts,
+                                key=lambda cert: cert.digest()))
 
 
     def test_sslPositionalArgs(self):
