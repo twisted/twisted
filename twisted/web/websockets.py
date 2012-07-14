@@ -75,6 +75,8 @@ def make_accept(key):
 # Separated out to make unit testing a lot easier.
 # Frames are bonghits in newer WS versions, so helpers are appreciated.
 
+
+
 def mask(buf, key):
     """
     Mask or unmask a buffer of bytes with a masking key.
@@ -88,6 +90,8 @@ def mask(buf, key):
     for i, char in enumerate(buf):
         buf[i] = chr(ord(char) ^ key[i % 4])
     return "".join(buf)
+
+
 
 def make_hybi07_frame(buf, opcode=NORMAL):
     """
@@ -108,6 +112,8 @@ def make_hybi07_frame(buf, opcode=NORMAL):
     header = chr(0x80 | opcode_for_type[opcode])
     frame = "%s%s%s" % (header, length, buf)
     return frame
+
+
 
 def parse_hybi07_frames(buf):
     """
@@ -199,6 +205,8 @@ def parse_hybi07_frames(buf):
 
     return frames, buf[start:]
 
+
+
 class WebSocketsProtocol(ProtocolWrapper):
     """
     Protocol which wraps another protocol to provide a WebSockets transport
@@ -212,9 +220,11 @@ class WebSocketsProtocol(ProtocolWrapper):
         ProtocolWrapper.__init__(self, *args, **kwargs)
         self.pending_frames = []
 
+
     def connectionMade(self):
         ProtocolWrapper.connectionMade(self)
         log.msg("Opening connection with %s" % self.transport.getPeer())
+
 
     def parseFrames(self):
         """
@@ -251,6 +261,7 @@ class WebSocketsProtocol(ProtocolWrapper):
                 # provoking PING.
                 self.transport.write(make_hybi07_frame(data, opcode=PONG))
 
+
     def sendFrames(self):
         """
         Send all pending frames.
@@ -263,6 +274,7 @@ class WebSocketsProtocol(ProtocolWrapper):
             packet = make_hybi07_frame(frame)
             self.transport.write(packet)
         self.pending_frames = []
+
 
     def dataReceived(self, data):
         self.buf += data
@@ -277,6 +289,7 @@ class WebSocketsProtocol(ProtocolWrapper):
         if self.pending_frames:
             self.sendFrames()
 
+
     def write(self, data):
         """
         Write to the transport.
@@ -287,6 +300,7 @@ class WebSocketsProtocol(ProtocolWrapper):
         self.pending_frames.append(data)
         self.sendFrames()
 
+
     def writeSequence(self, data):
         """
         Write a sequence of data to the transport.
@@ -296,6 +310,7 @@ class WebSocketsProtocol(ProtocolWrapper):
 
         self.pending_frames.extend(data)
         self.sendFrames()
+
 
     def loseConnection(self):
         """
@@ -317,6 +332,8 @@ class WebSocketsProtocol(ProtocolWrapper):
 
             ProtocolWrapper.loseConnection(self)
 
+
+
 class WebSocketsFactory(WrappingFactory):
     """
     Factory which wraps another factory to provide WebSockets frames for all
@@ -327,6 +344,8 @@ class WebSocketsFactory(WrappingFactory):
     """
 
     protocol = WebSocketsProtocol
+
+
 
 class WebSocketsResource(object):
     """
@@ -346,11 +365,14 @@ class WebSocketsResource(object):
     def __init__(self, factory):
         self._factory = WebSocketsFactory(factory)
 
+
     def getChildWithDefault(self, name, request):
         return NoResource("No such child resource.")
 
+
     def putChild(self, path, child):
         pass
+
 
     def render(self, request):
         """
