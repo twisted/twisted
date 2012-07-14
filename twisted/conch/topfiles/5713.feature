@@ -1,0 +1,1 @@
+twisted.conch.unix.mkOpenFlags exposes functionality for converting conch file flags to os flags.
