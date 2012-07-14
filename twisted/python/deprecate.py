@@ -84,6 +84,9 @@ def _fullyQualifiedName(obj):
     elif inspect.ismethod(obj):
         className = _fullyQualifiedName(obj.im_class)
         return "%s.%s" % (className, name)
+    elif hasattr(obj, '__objclass__'):
+        objClassName = _fullyQualifiedName(obj.__objclass__)
+        return "%s.%s" % (objClassName, name)
     return name
 # Try to keep it looking like something in twisted.python.reflect.
 _fullyQualifiedName.__module__ = 'twisted.python.reflect'
@@ -203,11 +206,6 @@ def getDeprecationWarningString(callableThing, version, format=None,
         <twisted.python.deprecate.DEPRECATION_WARNING_FORMAT>} if C{None} is
         given
 
-    @param callableThing: A callable to be deprecated.
-
-    @param version: The L{twisted.python.versions.Version} that the callable
-        was deprecated in.
-
     @param replacement: what should be used in place of the callable. Either
         pass in a string, which will be inserted into the warning message,
         or a callable, which will be expanded to its full import path.
@@ -230,9 +228,6 @@ def deprecated(version, replacement=None):
         having been deprecated.  The decorated function will be annotated
         with this version, having it set as its C{deprecatedVersion}
         attribute.
-
-    @param version: the version that the callable was deprecated in.
-    @type version: L{twisted.python.versions.Version}
 
     @param replacement: what should be used in place of the callable. Either
         pass in a string, which will be inserted into the warning message,
@@ -505,7 +500,8 @@ def warnAboutFunction(offender, warningString):
     from L{warnings.warn} in that it is not limited to deprecating the behavior
     of a function currently on the call stack.
 
-    @param function: The function that is being deprecated.
+    @param offender: The function that is being deprecated.
+    @type offender: no-argument callable
 
     @param warningString: The string that should be emitted by this warning.
     @type warningString: C{str}
