@@ -378,27 +378,44 @@ class SFTPServerForUnixConchUser:
     def extendedRequest(self, extName, extData):
         raise NotImplementedError
 
+
+
+def mkOpenFlags(flags):
+    """
+    Convert SFTP-specific flags to flags suitable for use with C{os.open}.
+
+    @param flags: An ORing of the C{FXF_}-prefixed flags in
+        L{twisted.conch.ssh.filetransfer}.
+
+    @rtype: int
+    @return: An integer suitable for use as the flags argument to C{os.open}.
+    """
+    ret = os.O_RDONLY
+    if flags & FXF_WRITE == FXF_WRITE:
+        ret = os.O_WRONLY
+    if flags & FXF_WRITE == FXF_WRITE and flags & FXF_READ == FXF_READ:
+        ret = os.O_RDWR
+
+    mapping = {
+        FXF_APPEND: os.O_APPEND,
+        FXF_CREAT: os.O_CREAT,
+        FXF_TRUNC: os.O_TRUNC,
+        FXF_EXCL: os.O_EXCL,
+    }
+    for fxfFlag, osFlag in mapping.items():
+        if flags & fxfFlag == fxfFlag:
+            ret |= osFlag
+    return ret
+
+
+
 class UnixSFTPFile:
 
     interface.implements(ISFTPFile)
 
     def __init__(self, server, filename, flags, attrs):
         self.server = server
-        openFlags = 0
-        if flags & FXF_READ == FXF_READ and flags & FXF_WRITE == 0:
-            openFlags = os.O_RDONLY
-        if flags & FXF_WRITE == FXF_WRITE and flags & FXF_READ == 0:
-            openFlags = os.O_WRONLY
-        if flags & FXF_WRITE == FXF_WRITE and flags & FXF_READ == FXF_READ:
-            openFlags = os.O_RDWR
-        if flags & FXF_APPEND == FXF_APPEND:
-            openFlags |= os.O_APPEND
-        if flags & FXF_CREAT == FXF_CREAT:
-            openFlags |= os.O_CREAT
-        if flags & FXF_TRUNC == FXF_TRUNC:
-            openFlags |= os.O_TRUNC
-        if flags & FXF_EXCL == FXF_EXCL:
-            openFlags |= os.O_EXCL
+        openFlags = mkOpenFlags(flags)
         if "permissions" in attrs:
             mode = attrs["permissions"]
             del attrs["permissions"]
