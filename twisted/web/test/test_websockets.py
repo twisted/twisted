@@ -4,12 +4,20 @@ from twisted.web.websockets import (make_accept, mask, CLOSE, NORMAL, PING,
                                     PONG, make_hybi07_frame,
                                     parse_hybi07_frames)
 
+"""
+The WebSockets Protocol, according to RFC 6455
+(http://tools.ietf.org/html/rfc6455). When "RFC" is mentioned, it refers to
+this RFC. Some tests reference HyBi-10
+(http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-10) or
+HyBi-07 (http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-07),
+which are drafts of RFC 6455.
+"""
+
 class TestKeys(unittest.TestCase):
 
     def test_make_accept_rfc(self):
         """
-        Test ``make_accept()`` using the keys listed in the RFC for HyBi-07
-        through HyBi-10.
+        L{make_accept} makes responses according to the RFC.
         """
 
         key = "dGhlIHNhbXBsZSBub25jZQ=="
@@ -19,7 +27,7 @@ class TestKeys(unittest.TestCase):
 
     def test_make_accept_wikipedia(self):
         """
-        Test ``make_accept()`` using the keys listed on Wikipedia.
+        L{make_accept} makes responses according to Wikipedia.
         """
 
         key = "x3JJHMbDL1EzLkh9GBhXDw=="
@@ -36,11 +44,19 @@ class TestHyBi07Helpers(unittest.TestCase):
     """
 
     def test_mask_noop(self):
+        """
+        Blank keys perform a no-op mask.
+        """
+
         key = "\x00\x00\x00\x00"
         self.assertEqual(mask("Test", key), "Test")
 
 
     def test_mask_noop_long(self):
+        """
+        Blank keys perform a no-op mask regardless of the length of the input.
+        """
+
         key = "\x00\x00\x00\x00"
         self.assertEqual(mask("LongTest", key), "LongTest")
 
@@ -57,7 +73,7 @@ class TestHyBi07Helpers(unittest.TestCase):
 
     def test_mask_hello(self):
         """
-        From RFC 6455, 5.7.
+        A sample mask for "Hello" according to RFC 6455, 5.7.
         """
 
         key = "\x37\xfa\x21\x3d"
@@ -66,7 +82,7 @@ class TestHyBi07Helpers(unittest.TestCase):
 
     def test_parse_hybi07_unmasked_text(self):
         """
-        From HyBi-10, 4.7.
+        A sample unmasked frame of "Hello" from HyBi-10, 4.7.
         """
 
         frame = "\x81\x05Hello"
@@ -78,7 +94,7 @@ class TestHyBi07Helpers(unittest.TestCase):
 
     def test_parse_hybi07_masked_text(self):
         """
-        From HyBi-10, 4.7.
+        A sample masked frame of "Hello" from HyBi-10, 4.7.
         """
 
         frame = "\x81\x857\xfa!=\x7f\x9fMQX"
@@ -90,7 +106,7 @@ class TestHyBi07Helpers(unittest.TestCase):
 
     def test_parse_hybi07_unmasked_text_fragments(self):
         """
-        We don't care about fragments. We are totally unfazed.
+        Fragmented masked packets are handled.
 
         From HyBi-10, 4.7.
         """
@@ -105,6 +121,8 @@ class TestHyBi07Helpers(unittest.TestCase):
 
     def test_parse_hybi07_ping(self):
         """
+        Ping packets are decoded.
+
         From HyBi-10, 4.7.
         """
 
@@ -117,6 +135,8 @@ class TestHyBi07Helpers(unittest.TestCase):
 
     def test_parse_hybi07_pong(self):
         """
+        Pong packets are decoded.
+
         From HyBi-10, 4.7.
         """
 
@@ -129,8 +149,9 @@ class TestHyBi07Helpers(unittest.TestCase):
 
     def test_parse_hybi07_close_empty(self):
         """
-        A HyBi-07 close packet may have no body. In that case, it should use
-        the generic error code 1000, and have no reason.
+        A HyBi-07 close packet may have no body. In that case, it decodes with
+        the generic error code 1000, and has no particular justification or
+        error message.
         """
 
         frame = "\x88\x00"
@@ -155,6 +176,10 @@ class TestHyBi07Helpers(unittest.TestCase):
 
 
     def test_parse_hybi07_partial_no_length(self):
+        """
+        Partial frames are stored for later decoding.
+        """
+
         frame = "\x81"
         frames, buf = parse_hybi07_frames(frame)
         self.assertFalse(frames)
@@ -162,6 +187,11 @@ class TestHyBi07Helpers(unittest.TestCase):
 
 
     def test_parse_hybi07_partial_truncated_length_int(self):
+        """
+        Partial frames are stored for later decoding, even if they are cut on
+        length boundaries.
+        """
+
         frame = "\x81\xfe"
         frames, buf = parse_hybi07_frames(frame)
         self.assertFalse(frames)
@@ -169,6 +199,11 @@ class TestHyBi07Helpers(unittest.TestCase):
 
 
     def test_parse_hybi07_partial_truncated_length_double(self):
+        """
+        Partial frames are stored for later decoding, even if they are marked
+        as being extra-long.
+        """
+
         frame = "\x81\xff"
         frames, buf = parse_hybi07_frames(frame)
         self.assertFalse(frames)
@@ -176,6 +211,11 @@ class TestHyBi07Helpers(unittest.TestCase):
 
 
     def test_parse_hybi07_partial_no_data(self):
+        """
+        Partial frames with full headers but no data are stored for later
+        decoding.
+        """
+
         frame = "\x81\x05"
         frames, buf = parse_hybi07_frames(frame)
         self.assertFalse(frames)
@@ -183,6 +223,11 @@ class TestHyBi07Helpers(unittest.TestCase):
 
 
     def test_parse_hybi07_partial_truncated_data(self):
+        """
+        Partial frames with full headers and partial data are stored for later
+        decoding.
+        """
+
         frame = "\x81\x05Hel"
         frames, buf = parse_hybi07_frames(frame)
         self.assertFalse(frames)
@@ -190,6 +235,10 @@ class TestHyBi07Helpers(unittest.TestCase):
 
 
     def test_make_hybi07_hello(self):
+        """
+        L{make_hybi07_frame} makes valid HyBi-07 packets.
+        """
+
         frame = "\x81\x05Hello"
         buf = make_hybi07_frame("Hello")
         self.assertEqual(frame, buf)
