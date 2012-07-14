@@ -10,55 +10,66 @@ The WebSockets protocol (RFC 6455), provided as a resource which wraps a
 factory.
 """
 
+__all__ = ("WebSocketsResource",)
+
 from base64 import b64encode, b64decode
 from hashlib import sha1
 from struct import pack, unpack
 
 from twisted.protocols.policies import ProtocolWrapper, WrappingFactory
 from twisted.python import log
+from twisted.python.constants import NamedConstant, Names
 from twisted.web.error import NoResource
 from twisted.web.resource import IResource
 from twisted.web.server import NOT_DONE_YET
 from zope.interface import implements
 
-class WSException(Exception):
+class _WSException(Exception):
     """
-    Something stupid happened here.
-
-    If this class escapes txWS, then something stupid happened in multiple
-    places.
+    Internal exception for control flow inside the WebSockets frame parser.
     """
 
 # Control frame specifiers. Some versions of WS have control signals sent
 # in-band. Adorable, right?
 
-NORMAL, CLOSE, PING, PONG = range(4)
+class _CONTROLS(Names):
+    """
+    Control frame specifiers.
+    """
 
-opcode_types = {
-    0x0: NORMAL,
-    0x1: NORMAL,
-    0x2: NORMAL,
-    0x8: CLOSE,
-    0x9: PING,
-    0xa: PONG,
+    NORMAL = NamedConstant()
+    CLOSE = NamedConstant()
+    PING = NamedConstant()
+    PONG = NamedConstant()
+
+_opcode_types = {
+    0x0: _CONTROLS.NORMAL,
+    0x1: _CONTROLS.NORMAL,
+    0x2: _CONTROLS.NORMAL,
+    0x8: _CONTROLS.CLOSE,
+    0x9: _CONTROLS.PING,
+    0xa: _CONTROLS.PONG,
 }
 
-opcode_for_type = {
-    NORMAL: 0x1,
-    CLOSE: 0x8,
-    PING: 0x9,
-    PONG: 0xa,
+_opcode_for_type = {
+    _CONTROLS.NORMAL: 0x1,
+    _CONTROLS.CLOSE: 0x8,
+    _CONTROLS.PING: 0x9,
+    _CONTROLS.PONG: 0xa,
 }
 
-encoders = {
+_encoders = {
     "base64": b64encode,
 }
 
-decoders = {
+_decoders = {
     "base64": b64decode,
 }
 
 # Authentication for WS.
+
+# The GUID for WebSockets, from RFC 6455.
+_WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
 def make_accept(key):
     """
@@ -67,9 +78,7 @@ def make_accept(key):
     This dance is expected to somehow magically make WebSockets secure.
     """
 
-    guid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
-
-    return sha1("%s%s" % (key, guid)).digest().encode("base64").strip()
+    return sha1("%s%s" % (key, _WS_GUID)).digest().encode("base64").strip()
 
 # Frame helpers.
 # Separated out to make unit testing a lot easier.
@@ -93,7 +102,7 @@ def mask(buf, key):
 
 
 
-def make_hybi07_frame(buf, opcode=NORMAL):
+def make_hybi07_frame(buf, opcode=_CONTROLS.NORMAL):
     """
     Make a HyBi-07 frame.
 
@@ -109,7 +118,7 @@ def make_hybi07_frame(buf, opcode=NORMAL):
         length = chr(len(buf))
 
     # Always make a normal packet.
-    header = chr(0x80 | opcode_for_type[opcode])
+    header = chr(0x80 | _opcode_for_type[opcode])
     frame = "%s%s%s" % (header, length, buf)
     return frame
 
@@ -133,17 +142,17 @@ def parse_hybi07_frames(buf):
         header = ord(buf[start])
         if header & 0x70:
             # At least one of the reserved flags is set. Pork chop sandwiches!
-            raise WSException("Reserved flag in HyBi-07 frame (%d)" % header)
-            frames.append(("", CLOSE))
+            raise _WSException("Reserved flag in HyBi-07 frame (%d)" % header)
+            frames.append(("", _CONTROLS.CLOSE))
             return frames, buf
 
         # Get the opcode, and translate it to a local enum which we actually
         # care about.
         opcode = header & 0xf
         try:
-            opcode = opcode_types[opcode]
+            opcode = _opcode_types[opcode]
         except KeyError:
-            raise WSException("Unknown opcode %d in HyBi-07 frame" % opcode)
+            raise _WSException("Unknown opcode %d in HyBi-07 frame" % opcode)
 
         # Get the payload length and determine whether we need to look for an
         # extra length.
@@ -192,7 +201,7 @@ def parse_hybi07_frames(buf):
         if masked:
             data = mask(data, key)
 
-        if opcode == CLOSE:
+        if opcode == _CONTROLS.CLOSE:
             if len(data) >= 2:
                 # Gotta unpack the opcode and return usable data here.
                 data = unpack(">H", data[:2])[0], data[2:]
@@ -207,7 +216,7 @@ def parse_hybi07_frames(buf):
 
 
 
-class WebSocketsProtocol(ProtocolWrapper):
+class _WebSocketsProtocol(ProtocolWrapper):
     """
     Protocol which wraps another protocol to provide a WebSockets transport
     layer.
@@ -233,7 +242,7 @@ class WebSocketsProtocol(ProtocolWrapper):
 
         try:
             frames, self.buf = parse_hybi07_frames(self.buf)
-        except WSException:
+        except _WSException:
             # Couldn't parse all the frames, something went wrong, let's bail.
             log.err()
             self.loseConnection()
@@ -241,13 +250,13 @@ class WebSocketsProtocol(ProtocolWrapper):
 
         for frame in frames:
             opcode, data = frame
-            if opcode == NORMAL:
+            if opcode == _CONTROLS.NORMAL:
                 # Business as usual. Decode the frame, if we have a decoder.
                 if self.codec:
-                    data = decoders[self.codec](data)
+                    data = _decoders[self.codec](data)
                 # Pass the frame to the underlying protocol.
                 ProtocolWrapper.dataReceived(self, data)
-            elif opcode == CLOSE:
+            elif opcode == _CONTROLS.CLOSE:
                 # The other side wants us to close. I wonder why?
                 reason, text = data
                 log.msg("Closing connection: %r (%d)" % (text, reason))
@@ -255,11 +264,12 @@ class WebSocketsProtocol(ProtocolWrapper):
                 # Close the connection.
                 self.loseConnection()
                 return
-            elif opcode == PING:
+            elif opcode == _CONTROLS.PING:
                 # 5.5.2 PINGs must be responded to with PONGs.
                 # 5.5.3 PONGs must contain the data that was sent with the
                 # provoking PING.
-                self.transport.write(make_hybi07_frame(data, opcode=PONG))
+                self.transport.write(make_hybi07_frame(data,
+                    opcode=_CONTROLS.PONG))
 
 
     def sendFrames(self):
@@ -270,7 +280,7 @@ class WebSocketsProtocol(ProtocolWrapper):
         for frame in self.pending_frames:
             # Encode the frame before sending it.
             if self.codec:
-                frame = encoders[self.codec](frame)
+                frame = _encoders[self.codec](frame)
             packet = make_hybi07_frame(frame)
             self.transport.write(packet)
         self.pending_frames = []
@@ -327,14 +337,14 @@ class WebSocketsProtocol(ProtocolWrapper):
         # Send a closing frame. It's only polite. (And might keep the browser
         # from hanging.)
         if not self.disconnecting:
-            frame = make_hybi07_frame("", opcode=CLOSE)
+            frame = make_hybi07_frame("", opcode=_CONTROLS.CLOSE)
             self.transport.write(frame)
 
             ProtocolWrapper.loseConnection(self)
 
 
 
-class WebSocketsFactory(WrappingFactory):
+class _WebSocketsFactory(WrappingFactory):
     """
     Factory which wraps another factory to provide WebSockets frames for all
     of its protocols.
@@ -343,7 +353,7 @@ class WebSocketsFactory(WrappingFactory):
     WebSockets handshake; see C{WebSocketsResource}.
     """
 
-    protocol = WebSocketsProtocol
+    protocol = _WebSocketsProtocol
 
 
 
@@ -363,7 +373,7 @@ class WebSocketsResource(object):
     isLeaf = True
 
     def __init__(self, factory):
-        self._factory = WebSocketsFactory(factory)
+        self._factory = _WebSocketsFactory(factory)
 
 
     def getChildWithDefault(self, name, request):
@@ -429,7 +439,7 @@ class WebSocketsResource(object):
         codec = request.getHeader("Sec-WebSocket-Protocol")
 
         if codec:
-            if codec not in encoders or codec not in decoders:
+            if codec not in _encoders or codec not in _decoders:
                 log.msg("Codec %s is not implemented" % codec)
                 failed = True
 
@@ -473,5 +483,3 @@ class WebSocketsResource(object):
         protocol.makeConnection(transport)
 
         return NOT_DONE_YET
-
-__all__ = ("WebSocketsResource",)
