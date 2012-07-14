@@ -1,7 +1,7 @@
 from twisted.trial import unittest
 
-from twisted.web.websockets import (_CONTROLS, make_accept, mask,
-                                    make_hybi07_frame, parse_hybi07_frames)
+from twisted.web.websockets import (_CONTROLS, _make_accept, _mask,
+                                    _make_hybi07_frame, _parse_hybi07_frames)
 
 """
 The WebSockets Protocol, according to RFC 6455
@@ -16,22 +16,22 @@ class TestKeys(unittest.TestCase):
 
     def test_make_accept_rfc(self):
         """
-        L{make_accept} makes responses according to the RFC.
+        L{_make_accept} makes responses according to the RFC.
         """
 
         key = "dGhlIHNhbXBsZSBub25jZQ=="
 
-        self.assertEqual(make_accept(key), "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=")
+        self.assertEqual(_make_accept(key), "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=")
 
 
     def test_make_accept_wikipedia(self):
         """
-        L{make_accept} makes responses according to Wikipedia.
+        L{_make_accept} makes responses according to Wikipedia.
         """
 
         key = "x3JJHMbDL1EzLkh9GBhXDw=="
 
-        self.assertEqual(make_accept(key), "HSmrc0sMlYUkAGmm5OPpG2HaGWk=")
+        self.assertEqual(_make_accept(key), "HSmrc0sMlYUkAGmm5OPpG2HaGWk=")
 
 
 
@@ -48,7 +48,7 @@ class TestHyBi07Helpers(unittest.TestCase):
         """
 
         key = "\x00\x00\x00\x00"
-        self.assertEqual(mask("Test", key), "Test")
+        self.assertEqual(_mask("Test", key), "Test")
 
 
     def test_mask_noop_long(self):
@@ -57,7 +57,7 @@ class TestHyBi07Helpers(unittest.TestCase):
         """
 
         key = "\x00\x00\x00\x00"
-        self.assertEqual(mask("LongTest", key), "LongTest")
+        self.assertEqual(_mask("LongTest", key), "LongTest")
 
 
     def test_mask_noop_odd(self):
@@ -67,7 +67,7 @@ class TestHyBi07Helpers(unittest.TestCase):
         """
 
         key = "\x00\x00\x00\x00"
-        self.assertEqual(mask("LongestTest", key), "LongestTest")
+        self.assertEqual(_mask("LongestTest", key), "LongestTest")
 
 
     def test_mask_hello(self):
@@ -76,7 +76,7 @@ class TestHyBi07Helpers(unittest.TestCase):
         """
 
         key = "\x37\xfa\x21\x3d"
-        self.assertEqual(mask("Hello", key), "\x7f\x9f\x4d\x51\x58")
+        self.assertEqual(_mask("Hello", key), "\x7f\x9f\x4d\x51\x58")
 
 
     def test_parse_hybi07_unmasked_text(self):
@@ -85,7 +85,7 @@ class TestHyBi07Helpers(unittest.TestCase):
         """
 
         frame = "\x81\x05Hello"
-        frames, buf = parse_hybi07_frames(frame)
+        frames, buf = _parse_hybi07_frames(frame)
         self.assertEqual(len(frames), 1)
         self.assertEqual(frames[0], (_CONTROLS.NORMAL, "Hello"))
         self.assertEqual(buf, "")
@@ -97,7 +97,7 @@ class TestHyBi07Helpers(unittest.TestCase):
         """
 
         frame = "\x81\x857\xfa!=\x7f\x9fMQX"
-        frames, buf = parse_hybi07_frames(frame)
+        frames, buf = _parse_hybi07_frames(frame)
         self.assertEqual(len(frames), 1)
         self.assertEqual(frames[0], (_CONTROLS.NORMAL, "Hello"))
         self.assertEqual(buf, "")
@@ -111,7 +111,7 @@ class TestHyBi07Helpers(unittest.TestCase):
         """
 
         frame = "\x01\x03Hel\x80\x02lo"
-        frames, buf = parse_hybi07_frames(frame)
+        frames, buf = _parse_hybi07_frames(frame)
         self.assertEqual(len(frames), 2)
         self.assertEqual(frames[0], (_CONTROLS.NORMAL, "Hel"))
         self.assertEqual(frames[1], (_CONTROLS.NORMAL, "lo"))
@@ -126,7 +126,7 @@ class TestHyBi07Helpers(unittest.TestCase):
         """
 
         frame = "\x89\x05Hello"
-        frames, buf = parse_hybi07_frames(frame)
+        frames, buf = _parse_hybi07_frames(frame)
         self.assertEqual(len(frames), 1)
         self.assertEqual(frames[0], (_CONTROLS.PING, "Hello"))
         self.assertEqual(buf, "")
@@ -140,7 +140,7 @@ class TestHyBi07Helpers(unittest.TestCase):
         """
 
         frame = "\x8a\x05Hello"
-        frames, buf = parse_hybi07_frames(frame)
+        frames, buf = _parse_hybi07_frames(frame)
         self.assertEqual(len(frames), 1)
         self.assertEqual(frames[0], (_CONTROLS.PONG, "Hello"))
         self.assertEqual(buf, "")
@@ -154,7 +154,7 @@ class TestHyBi07Helpers(unittest.TestCase):
         """
 
         frame = "\x88\x00"
-        frames, buf = parse_hybi07_frames(frame)
+        frames, buf = _parse_hybi07_frames(frame)
         self.assertEqual(len(frames), 1)
         self.assertEqual(frames[0], (_CONTROLS.CLOSE, (1000, "No reason given")))
         self.assertEqual(buf, "")
@@ -168,7 +168,7 @@ class TestHyBi07Helpers(unittest.TestCase):
         """
 
         frame = "\x88\x0b\x03\xe8No reason"
-        frames, buf = parse_hybi07_frames(frame)
+        frames, buf = _parse_hybi07_frames(frame)
         self.assertEqual(len(frames), 1)
         self.assertEqual(frames[0], (_CONTROLS.CLOSE, (1000, "No reason")))
         self.assertEqual(buf, "")
@@ -180,7 +180,7 @@ class TestHyBi07Helpers(unittest.TestCase):
         """
 
         frame = "\x81"
-        frames, buf = parse_hybi07_frames(frame)
+        frames, buf = _parse_hybi07_frames(frame)
         self.assertEqual(len(frames), 0)
         self.assertEqual(buf, "\x81")
 
@@ -192,7 +192,7 @@ class TestHyBi07Helpers(unittest.TestCase):
         """
 
         frame = "\x81\xfe"
-        frames, buf = parse_hybi07_frames(frame)
+        frames, buf = _parse_hybi07_frames(frame)
         self.assertEqual(len(frames), 0)
         self.assertEqual(buf, "\x81\xfe")
 
@@ -204,7 +204,7 @@ class TestHyBi07Helpers(unittest.TestCase):
         """
 
         frame = "\x81\xff"
-        frames, buf = parse_hybi07_frames(frame)
+        frames, buf = _parse_hybi07_frames(frame)
         self.assertEqual(len(frames), 0)
         self.assertEqual(buf, "\x81\xff")
 
@@ -216,7 +216,7 @@ class TestHyBi07Helpers(unittest.TestCase):
         """
 
         frame = "\x81\x05"
-        frames, buf = parse_hybi07_frames(frame)
+        frames, buf = _parse_hybi07_frames(frame)
         self.assertEqual(len(frames), 0)
         self.assertEqual(buf, "\x81\x05")
 
@@ -228,16 +228,16 @@ class TestHyBi07Helpers(unittest.TestCase):
         """
 
         frame = "\x81\x05Hel"
-        frames, buf = parse_hybi07_frames(frame)
+        frames, buf = _parse_hybi07_frames(frame)
         self.assertEqual(len(frames), 0)
         self.assertEqual(buf, "\x81\x05Hel")
 
 
     def test_make_hybi07_hello(self):
         """
-        L{make_hybi07_frame} makes valid HyBi-07 packets.
+        L{_make_hybi07_frame} makes valid HyBi-07 packets.
         """
 
         frame = "\x81\x05Hello"
-        buf = make_hybi07_frame("Hello")
+        buf = _make_hybi07_frame("Hello")
         self.assertEqual(frame, buf)

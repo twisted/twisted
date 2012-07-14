@@ -71,11 +71,17 @@ _decoders = {
 # The GUID for WebSockets, from RFC 6455.
 _WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
-def make_accept(key):
+def _make_accept(key):
     """
     Create an "accept" response for a given key.
 
     This dance is expected to somehow magically make WebSockets secure.
+
+    @type key: C{str}
+    @param key: The key to respond to.
+
+    @rtype: C{str}
+    @return: An encoded response.
     """
 
     return sha1("%s%s" % (key, _WS_GUID)).digest().encode("base64").strip()
@@ -86,11 +92,18 @@ def make_accept(key):
 
 
 
-def mask(buf, key):
+def _mask(buf, key):
     """
     Mask or unmask a buffer of bytes with a masking key.
 
-    The key must be exactly four bytes long.
+    @type buf: C{str}
+    @param buf: A buffer of bytes.
+
+    @type key: C{str}
+    @param key: The masking key. Must be exactly four bytes.
+
+    @rtype: C{str}
+    @return: A masked buffer of bytes.
     """
 
     # This is super-secure, I promise~
@@ -102,12 +115,21 @@ def mask(buf, key):
 
 
 
-def make_hybi07_frame(buf, opcode=_CONTROLS.NORMAL):
+def _make_hybi07_frame(buf, _opcode=_CONTROLS.NORMAL):
     """
     Make a HyBi-07 frame.
 
     This function always creates unmasked frames, and attempts to use the
     smallest possible lengths.
+
+    @type buf: C{str}
+    @param buf: A buffer of bytes.
+
+    @type _opcode: C{_CONTROLS}
+    @param _opcode: Which type of frame to create.
+
+    @rtype: C{str}
+    @return: A packed frame.
     """
 
     if len(buf) > 0xffff:
@@ -118,15 +140,21 @@ def make_hybi07_frame(buf, opcode=_CONTROLS.NORMAL):
         length = chr(len(buf))
 
     # Always make a normal packet.
-    header = chr(0x80 | _opcode_for_type[opcode])
+    header = chr(0x80 | _opcode_for_type[_opcode])
     frame = "%s%s%s" % (header, length, buf)
     return frame
 
 
 
-def parse_hybi07_frames(buf):
+def _parse_hybi07_frames(buf):
     """
     Parse HyBi-07 frames in a highly compliant manner.
+
+    @type buf: C{str}
+    @param buf: A buffer of bytes.
+
+    @rtype: C{list}
+    @return: A list of frames.
     """
 
     start = 0
@@ -199,7 +227,7 @@ def parse_hybi07_frames(buf):
         data = buf[start + offset:start + offset + length]
 
         if masked:
-            data = mask(data, key)
+            data = _mask(data, key)
 
         if opcode == _CONTROLS.CLOSE:
             if len(data) >= 2:
@@ -227,7 +255,7 @@ class _WebSocketsProtocol(ProtocolWrapper):
 
     def __init__(self, *args, **kwargs):
         ProtocolWrapper.__init__(self, *args, **kwargs)
-        self.pending_frames = []
+        self._pending_frames = []
 
 
     def connectionMade(self):
@@ -241,7 +269,7 @@ class _WebSocketsProtocol(ProtocolWrapper):
         """
 
         try:
-            frames, self.buf = parse_hybi07_frames(self.buf)
+            frames, self.buf = _parse_hybi07_frames(self.buf)
         except _WSException:
             # Couldn't parse all the frames, something went wrong, let's bail.
             log.err()
@@ -268,8 +296,8 @@ class _WebSocketsProtocol(ProtocolWrapper):
                 # 5.5.2 PINGs must be responded to with PONGs.
                 # 5.5.3 PONGs must contain the data that was sent with the
                 # provoking PING.
-                self.transport.write(make_hybi07_frame(data,
-                    opcode=_CONTROLS.PONG))
+                self.transport.write(_make_hybi07_frame(data,
+                    _opcode=_CONTROLS.PONG))
 
 
     def sendFrames(self):
@@ -277,13 +305,13 @@ class _WebSocketsProtocol(ProtocolWrapper):
         Send all pending frames.
         """
 
-        for frame in self.pending_frames:
+        for frame in self._pending_frames:
             # Encode the frame before sending it.
             if self.codec:
                 frame = _encoders[self.codec](frame)
-            packet = make_hybi07_frame(frame)
+            packet = _make_hybi07_frame(frame)
             self.transport.write(packet)
-        self.pending_frames = []
+        self._pending_frames = []
 
 
     def dataReceived(self, data):
@@ -296,7 +324,7 @@ class _WebSocketsProtocol(ProtocolWrapper):
         # when they makeConnection() immediately, before our browser client
         # actually sends any data. In those cases, we need to manually kick
         # pending frames.
-        if self.pending_frames:
+        if self._pending_frames:
             self.sendFrames()
 
 
@@ -307,7 +335,7 @@ class _WebSocketsProtocol(ProtocolWrapper):
         This method will only be called by the underlying protocol.
         """
 
-        self.pending_frames.append(data)
+        self._pending_frames.append(data)
         self.sendFrames()
 
 
@@ -318,7 +346,7 @@ class _WebSocketsProtocol(ProtocolWrapper):
         This method will only be called by the underlying protocol.
         """
 
-        self.pending_frames.extend(data)
+        self._pending_frames.extend(data)
         self.sendFrames()
 
 
@@ -337,7 +365,7 @@ class _WebSocketsProtocol(ProtocolWrapper):
         # Send a closing frame. It's only polite. (And might keep the browser
         # from hanging.)
         if not self.disconnecting:
-            frame = make_hybi07_frame("", opcode=_CONTROLS.CLOSE)
+            frame = _make_hybi07_frame("", _opcode=_CONTROLS.CLOSE)
             self.transport.write(frame)
 
             ProtocolWrapper.loseConnection(self)
@@ -366,6 +394,8 @@ class WebSocketsResource(object):
 
     Due to unresolved questions of logistics, this resource cannot have
     children.
+
+    @since 12.2
     """
 
     implements(IResource)
@@ -456,7 +486,7 @@ class WebSocketsResource(object):
         # 4.2.2.5.3 Connection: Upgrade
         request.setHeader("Connection", "Upgrade")
         # 4.2.2.5.4 Response to the key challenge
-        request.setHeader("Sec-WebSocket-Accept", make_accept(key))
+        request.setHeader("Sec-WebSocket-Accept", _make_accept(key))
         # 4.2.2.5.5 Optional codec declaration
         if codec:
             request.setHeader("Sec-WebSocket-Protocol", codec)
