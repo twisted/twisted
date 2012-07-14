@@ -12,6 +12,7 @@ from twisted.mail import protocols
 from twisted.mail.tap import Options, makeService
 from twisted.python.filepath import FilePath
 from twisted.internet import endpoints, defer
+from twisted.python import util
 
 
 class OptionsTestCase(TestCase):
@@ -140,8 +141,7 @@ class OptionsTestCase(TestCase):
         The deprecated I{--pop3s} and I{--certificate} options set up a POP3 SSL
         server.
         """
-        cert = FilePath(self.mktemp())
-        cert.setContent("")
+        cert = FilePath(__file__).sibling("server.pem")
         options = Options()
         options.parseOptions(['--pop3s', '8995',
                               '--certificate', cert.path])

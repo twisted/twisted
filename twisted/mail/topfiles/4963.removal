@@ -1,0 +1,1 @@
+twisted.mail.protocols.SSLContextFactory is now deprecated.

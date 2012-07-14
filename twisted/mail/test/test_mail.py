@@ -2031,6 +2031,29 @@ class TestDomain:
             raise smtp.SMTPBadRcpt(user)
 
 
+
+class SSLContextFactoryTests(unittest.TestCase):
+    """
+    Tests for twisted.mail.protocols.SSLContextFactory.
+    """
+    def test_deprecation(self):
+        """
+        Accessing L{twisted.mail.protocols.SSLContextFactory} emits a
+        deprecation warning recommending the use of the more general SSL context
+        factory from L{twisted.internet.ssl}.
+        """
+        mail.protocols.SSLContextFactory
+        warningsShown = self.flushWarnings([self.test_deprecation])
+        self.assertEqual(len(warningsShown), 1)
+        self.assertIdentical(warningsShown[0]['category'], DeprecationWarning)
+        self.assertEqual(
+            warningsShown[0]['message'],
+            'twisted.mail.protocols.SSLContextFactory was deprecated in '
+            'Twisted 12.2.0: Use twisted.internet.ssl.'
+            'DefaultOpenSSLContextFactory instead.')
+
+
+
 from twisted.python.runtime import platformType
 import types
 if platformType != "posix":
