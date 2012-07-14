@@ -5,7 +5,7 @@
 
 
 """
-Simple IMAP4 client which displays the subjects of all messages in a 
+Simple IMAP4 client which displays the subjects of all messages in a
 particular mailbox.
 """
 
@@ -20,69 +20,94 @@ from twisted.protocols import basic
 from twisted.python import util
 from twisted.python import log
 
+
+
 class TrivialPrompter(basic.LineReceiver):
     from os import linesep as delimiter
 
     promptDeferred = None
-    
+
     def prompt(self, msg):
         assert self.promptDeferred is None
         self.display(msg)
         self.promptDeferred = defer.Deferred()
         return self.promptDeferred
-    
+
     def display(self, msg):
         self.transport.write(msg)
-    
-    def lineReceived(self, line):    
+
+    def lineReceived(self, line):
         if self.promptDeferred is None:
             return
         d, self.promptDeferred = self.promptDeferred, None
         d.callback(line)
 
+
+
 class SimpleIMAP4Client(imap4.IMAP4Client):
+    """
+    A client with callbacks for greeting messages from an IMAP server.
+    """
     greetDeferred = None
-    
+
     def serverGreeting(self, caps):
         self.serverCapabilities = caps
         if self.greetDeferred is not None:
             d, self.greetDeferred = self.greetDeferred, None
             d.callback(self)
 
+
+
 class SimpleIMAP4ClientFactory(protocol.ClientFactory):
     usedUp = False
 
     protocol = SimpleIMAP4Client
 
+
     def __init__(self, username, onConn):
         self.ctx = ssl.ClientContextFactory()
-        
+
         self.username = username
         self.onConn = onConn
 
+
     def buildProtocol(self, addr):
+        """
+        Initiate the protocol instance. Since we are building a simple IMAP
+        client, we don't bother checking what capabilities the server has. We
+        just add all the authenticators twisted.mail has.  Note: Gmail no
+        longer uses any of the methods below, it's been using XOAUTH since
+        2010.
+        """
         assert not self.usedUp
         self.usedUp = True
-        
+
         p = self.protocol(self.ctx)
         p.factory = self
         p.greetDeferred = self.onConn
 
-        auth = imap4.CramMD5ClientAuthenticator(self.username)
-        p.registerAuthenticator(auth)
-        
+        p.registerAuthenticator(imap4.PLAINAuthenticator(self.username))
+        p.registerAuthenticator(imap4.LOGINAuthenticator(self.username))
+        p.registerAuthenticator(
+                imap4.CramMD5ClientAuthenticator(self.username))
+
         return p
-    
+
+
     def clientConnectionFailed(self, connector, reason):
         d, self.onConn = self.onConn, None
         d.errback(reason)
 
-# Initial callback - invoked after the server sends us its greet message
+
+
 def cbServerGreeting(proto, username, password):
+    """
+    Initial callback - invoked after the server sends us its greet message.
+    """
     # Hook up stdio
     tp = TrivialPrompter()
     stdio.StandardIO(tp)
-    
+
     # And make it easily accessible
     proto.prompt = tp.prompt
     proto.display = tp.display
@@ -93,31 +118,47 @@ def cbServerGreeting(proto, username, password):
         ).addErrback(ebAuthentication, proto, username, password
         )
 
-# Fallback error-handler.  If anything goes wrong, log it and quit.
+
 def ebConnection(reason):
+    """
+    Fallback error-handler. If anything goes wrong, log it and quit.
+    """
     log.startLogging(sys.stdout)
     log.err(reason)
-    from twisted.internet import reactor
-    reactor.stop()
+    return reason
 
-# Callback after authentication has succeeded
+
 def cbAuthentication(result, proto):
-    # List a bunch of mailboxes
+    """
+    Callback after authentication has succeeded.
+
+    Lists a bunch of mailboxes.
+    """
     return proto.list("", "*"
         ).addCallback(cbMailboxList, proto
         )
 
-# Errback invoked when authentication fails
+
 def ebAuthentication(failure, proto, username, password):
-    # If it failed because no SASL mechanisms match, offer the user the choice
-    # of logging in insecurely.
+    """
+    Errback invoked when authentication fails.
+
+    If it failed because no SASL mechanisms match, offer the user the choice
+    of logging in insecurely.
+
+    If you are trying to connect to your Gmail account, you will be here!
+    """
     failure.trap(imap4.NoSupportedAuthentication)
-    return proto.prompt("No secure authentication available.  Login insecurely? (y/N) "
+    return proto.prompt(
+        "No secure authentication available. Login insecurely? (y/N) "
         ).addCallback(cbInsecureLogin, proto, username, password
         )
 
-# Callback for "insecure-login" prompt
+
 def cbInsecureLogin(result, proto, username, password):
+    """
+    Callback for "insecure-login" prompt.
+    """
     if result.lower() == "y":
         # If they said yes, do it.
         return proto.login(username, password
@@ -125,8 +166,11 @@ def cbInsecureLogin(result, proto, username, password):
             )
     return defer.fail(Exception("Login failed for security reasons."))
 
-# Callback invoked when a list of mailboxes has been retrieved
+
 def cbMailboxList(result, proto):
+    """
+    Callback invoked when a list of mailboxes has been retrieved.
+    """
     result = [e[2] for e in result]
     s = '\n'.join(['%d. %s' % (n + 1, m) for (n, m) in zip(range(len(result)), result)])
     if not s:
@@ -135,47 +179,75 @@ def cbMailboxList(result, proto):
         ).addCallback(cbPickMailbox, proto, result
         )
 
-# When the user selects a mailbox, "examine" it.
+
 def cbPickMailbox(result, proto, mboxes):
+    """
+    When the user selects a mailbox, "examine" it.
+    """
     mbox = mboxes[int(result or '1') - 1]
     return proto.examine(mbox
         ).addCallback(cbExamineMbox, proto
         )
 
-# Callback invoked when examine command completes.
+
 def cbExamineMbox(result, proto):
-    # Retrieve the subject header of every message on the mailbox.
+    """
+    Callback invoked when examine command completes.
+
+    Retrieve the subject header of every message in the mailbox.
+    """
     return proto.fetchSpecific('1:*',
                                headerType='HEADER.FIELDS',
-                               headerArgs=['SUBJECT']
+                               headerArgs=['SUBJECT'],
         ).addCallback(cbFetch, proto
         )
 
-# Finally, display headers.
+
 def cbFetch(result, proto):
-    keys = result.keys()
-    keys.sort()
-    for k in keys:
-        proto.display('%s %s' % (k, result[k][0][2]))
+    """
+    Finally, display headers.
+    """
+    if result:
+        keys = result.keys()
+        keys.sort()
+        for k in keys:
+            proto.display('%s %s' % (k, result[k][0][2]))
+    else:
+        print "Hey, an empty mailbox!"
+
     return proto.logout()
 
-PORT = 143
+
+def cbClose(result):
+    """
+    Close the connection when we finish everything.
+    """
+    from twisted.internet import reactor
+    reactor.stop()
+
 
 def main():
     hostname = raw_input('IMAP4 Server Hostname: ')
+    port = raw_input('IMAP4 Server Port (the default is 143, 993 uses SSL): ')
     username = raw_input('IMAP4 Username: ')
     password = util.getPassword('IMAP4 Password: ')
-    
+
     onConn = defer.Deferred(
         ).addCallback(cbServerGreeting, username, password
         ).addErrback(ebConnection
-        )
+        ).addBoth(cbClose)
 
     factory = SimpleIMAP4ClientFactory(username, onConn)
-    
+
     from twisted.internet import reactor
-    conn = reactor.connectTCP(hostname, PORT, factory)
+    if port == '993':
+        reactor.connectSSL(hostname, int(port), factory, ssl.ClientContextFactory())
+    else:
+        if not port:
+            port = 143
+        reactor.connectTCP(hostname, int(port), factory)
     reactor.run()
+
 
 if __name__ == '__main__':
     main()
