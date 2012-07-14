@@ -6,11 +6,15 @@ Tests for L{twisted.conch.unix}.
 """
 
 import os
-
-from twisted.conch.unix import mkOpenFlags
-from twisted.conch.ssh.filetransfer import (FXF_READ, FXF_WRITE, FXF_APPEND,
-                                            FXF_CREAT, FXF_TRUNC, FXF_EXCL)
+from twisted.python.runtime import platform
 from twisted.trial.unittest import TestCase
+if platform.getType() != "posix":
+    mkOpenFlags = None
+else:
+    from twisted.conch.unix import mkOpenFlags
+    from twisted.conch.ssh.filetransfer import (FXF_READ, FXF_WRITE, FXF_APPEND,
+                                                FXF_CREAT, FXF_TRUNC, FXF_EXCL)
+
 
 
 
@@ -19,6 +23,9 @@ class MkOpenFlagsTest(TestCase):
     L{twisted.conch.unix.mkOpenFlags} converts Conch constants into C{os}
     constants.
     """
+
+    if mkOpenFlags is None:
+        skip = "Unix tests only run on POSIX platforms."
 
     def _testFlag(self, flag, os_flag):
         """
