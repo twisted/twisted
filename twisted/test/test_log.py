@@ -504,7 +504,7 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
         self.assertIn("Hello!", fakeFile.getvalue())
         self.assertIsInstance(sys.stdout, log.StdioOnnaStick)
         self.assertEqual(sys.stdout.isError, False)
-        self.assertEqual(sys.stdout.encoding, 
+        self.assertEqual(sys.stdout.encoding,
                          origStdout.encoding or sys.getdefaultencoding())
         self.assertIsInstance(sys.stderr, log.StdioOnnaStick)
         self.assertEqual(sys.stderr.isError, True)
@@ -607,6 +607,15 @@ class PythonLoggingObserverTestCase(unittest.TestCase):
         self.lp.msg(message='', isError=False)
         self.assertEqual(self.out.getvalue(), '')
 
+    def test_extraEventDict(self):
+        """
+        Verify that extra eventDict data is passed to stdlib logging as extras.
+        """
+        self.hdlr.setFormatter(logging.Formatter(fmt="%(message)s %(foo)s"))
+        self.lp.msg("Hello World", foo="bar")
+
+        self.assertIn("Hello World", self.out.getvalue())
+        self.assertIn("bar", self.out.getvalue())
 
 class PythonLoggingIntegrationTestCase(unittest.TestCase):
     """
@@ -770,4 +779,3 @@ class StdioOnnaStickTestCase(unittest.TestCase):
                          [unicodeString.encode("utf-8"),
                           (u"Also, " + unicodeString).encode("utf-8"),
                           unicodeString.encode("utf-8")])
-

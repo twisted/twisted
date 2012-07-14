@@ -513,6 +513,7 @@ class PythonLoggingObserver(object):
     def emit(self, eventDict):
         """
         Receive a twisted log entry, format it and bridge it to python.
+        The event dict is passed along to the logging module using the extra keyword.
 
         By default the logging level used is info; log.err produces error
         level, and you can customize the level by using the C{logLevel} key::
@@ -529,7 +530,17 @@ class PythonLoggingObserver(object):
         text = textFromEventDict(eventDict)
         if text is None:
             return
-        self.logger.log(level, text)
+        del eventDict['message']
+        self.logger.log(level, text, extra=eventDict)
+
+        extraDict = eventDict.copy()
+        for key in extraDict.keys():
+            if key in ['asctime', 'created', 'filename', 'funcName',
+                       'levelname', 'levelno', 'lineno', 'module', 'msecs',
+                       'message', 'name', 'pathname', 'process', 'processName',
+                       'relativeCreated', 'thread', 'threadName']:
+                del extraDict[key]
+        self.logger.log(level, text, extra=extraDict)
 
     def start(self):
         """
@@ -703,4 +714,3 @@ try:
 except NameError:
     defaultObserver = DefaultObserver()
     defaultObserver.start()
-
