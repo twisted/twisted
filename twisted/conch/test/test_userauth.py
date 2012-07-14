@@ -37,7 +37,7 @@ except ImportError:
     class userauth:
         class SSHUserAuthClient:
             """
-            A stub class so that leter class definitions won't die.
+            A stub class so that later class definitions won't die.
             """
 else:
     from twisted.conch.ssh.common import NS
@@ -1064,6 +1064,8 @@ class LoopbackTestCase(unittest.TestCase):
 
 
 class ModuleInitializationTestCase(unittest.TestCase):
+    if keys is None:
+        skip = "cannot run w/o PyCrypto or PyASN1"
 
 
     def test_messages(self):
