@@ -1,6 +1,8 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from twisted.python.compat import execfile
+
 
 def getNumber(filename):
     return None
@@ -24,7 +26,7 @@ class Book:
         Index = self.Index
 
         if filename:
-            execfile(filename)
+            execfile(filename, globals())
 
     def getFiles(self):
         return [c[0] for c in self.chapters]

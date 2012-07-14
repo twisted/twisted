@@ -12,6 +12,7 @@ import time
 from twisted.names import dns
 from twisted.internet import defer
 from twisted.python import failure
+from twisted.python.compat import execfile
 
 import common
 

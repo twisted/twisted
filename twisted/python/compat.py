@@ -139,12 +139,12 @@ class tsafe(object):
                   'set_connect_state', 'set_accept_state',
                   'connect_ex', 'sendall'):
 
-            exec """def %s(self, *args):
+            exec("""def %s(self, *args):
                 self._lock.acquire()
                 try:
                     return apply(self._ssl_conn.%s, args)
                 finally:
-                    self._lock.release()\n""" % (f, f)
+                    self._lock.release()\n""" % (f, f))
 sys.modules['OpenSSL.tsafe'] = tsafe
 
 import operator
@@ -175,3 +175,34 @@ try:
     from functools import reduce
 except ImportError:
     reduce = reduce
+
+
+
+def execfile(filename, globals, locals=None):
+    """
+    Execute a Python script in the given namespaces.
+
+    Similar to the execfile builtin, but a namespace is mandatory, partly
+    because that's a sensible thing to require, and because otherwise we'd
+    have to do some frame hacking.
+
+    This is a compatibility implementation for Python 3 porting, to avoid the
+    use of the deprecated builtin C{execfile} function.
+    """
+    if locals is None:
+        locals = globals
+    fin = open(filename, "rbU")
+    try:
+        source = fin.read()
+    finally:
+        fin.close()
+    code = compile(source, filename, "exec")
+    exec(code, globals, locals)
+
+
+__all__ = [
+    "execfile",
+    "frozenset",
+    "reduce",
+    "set",
+    ]

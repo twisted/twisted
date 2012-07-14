@@ -15,6 +15,8 @@ import os
 import platform
 import sys
 
+from twisted.python.compat import execfile
+
 
 twisted_subprojects = ["conch", "lore", "mail", "names",
                        "news", "pair", "runner", "web",
@@ -206,6 +208,25 @@ def getDataFiles(dname, ignore=None, parent=None):
                                        os.path.join(directory, filename))
                             for filename in resultfiles]))
     return result
+
+
+def getExtensions():
+    """
+    Get all extensions from core and all subprojects.
+    """
+    extensions = []
+
+    if not sys.platform.startswith('java'):
+        for dir in os.listdir("twisted") + [""]:
+            topfiles = os.path.join("twisted", dir, "topfiles")
+            if os.path.isdir(topfiles):
+                ns = {}
+                setup_py = os.path.join(topfiles, "setup.py")
+                execfile(setup_py, ns, ns)
+                if "extensions" in ns:
+                    extensions.extend(ns["extensions"])
+
+    return extensions
 
 
 def getPackages(dname, pkgname=None, results=None, ignore=None, parent=None):

@@ -25,6 +25,7 @@ from subprocess import PIPE, STDOUT, Popen
 from twisted.python.versions import Version
 from twisted.python.filepath import FilePath
 from twisted.python.dist import twisted_subprojects
+from twisted.python.compat import execfile
 
 # This import is an example of why you shouldn't use this module unless you're
 # radix

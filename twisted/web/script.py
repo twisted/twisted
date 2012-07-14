@@ -14,6 +14,7 @@ except ImportError:
     import StringIO
 
 from twisted import copyright
+from twisted.python.compat import execfile
 from twisted.web import http, server, static, resource, html
 
 

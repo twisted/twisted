@@ -7,6 +7,8 @@ Tests for parts of our release automation system.
 
 
 import os
+import shutil
+import sys
 
 from distutils.core import Distribution
 
@@ -53,6 +55,106 @@ class SetupTest(TestCase):
         self.patch(os, "name", "nt")
         builder.prepare_extensions()
         self.assertEqual(ext.define_macros, [("whatever", 2), ("WIN32", 1)])
+
+
+class GetExtensionsTest(TestCase):
+    """
+    Tests for L{dist.getExtensions}.
+    """
+
+    setupTemplate = (
+        "from twisted.python.dist import ConditionalExtension\n"
+        "extensions = [\n"
+        "    ConditionalExtension(\n"
+        "        '%s', ['twisted/some/thing.c'],\n"
+        "        condition=lambda builder: True)\n"
+        "    ]\n")
+
+    def setUp(self):
+        self.basedir = FilePath(self.mktemp()).child("twisted")
+        self.basedir.makedirs()
+        self.addCleanup(os.chdir, os.getcwd())
+        os.chdir(self.basedir.parent().path)
+
+
+    def writeSetup(self, name, *path):
+        """
+        Write out a C{setup.py} file to a location determined by
+        L{self.basedir} and L{path}. L{self.setupTemplate} is used to
+        generate its contents.
+        """
+        outdir = self.basedir.descendant(path)
+        outdir.makedirs()
+        setup = outdir.child("setup.py")
+        setup.setContent(self.setupTemplate % (name,))
+
+
+    def writeEmptySetup(self, *path):
+        """
+        Write out an empty C{setup.py} file to a location determined by
+        L{self.basedir} and L{path}.
+        """
+        outdir = self.basedir.descendant(path)
+        outdir.makedirs()
+        outdir.child("setup.py").setContent("")
+
+
+    def assertExtensions(self, expected):
+        """
+        Assert that the given names match the (sorted) names of discovered
+        extensions.
+        """
+        extensions = dist.getExtensions()
+        names = [extension.name for extension in extensions]
+        self.assertEqual(sorted(names), expected)
+
+
+    def test_getExtensions(self):
+        """
+        Files named I{setup.py} in I{twisted/topfiles} and I{twisted/*/topfiles}
+        are executed with L{execfile} in order to discover the extensions they
+        declare.
+        """
+        self.writeSetup("twisted.transmutate", "topfiles")
+        self.writeSetup("twisted.tele.port", "tele", "topfiles")
+        self.assertExtensions(["twisted.tele.port", "twisted.transmutate"])
+
+
+    def test_getExtensionsTooDeep(self):
+        """
+        Files named I{setup.py} in I{topfiles} directories are not considered if
+        they are too deep in the directory hierarchy.
+        """
+        self.writeSetup("twisted.trans.mog.rify", "trans", "mog", "topfiles")
+        self.assertExtensions([])
+
+
+    def test_getExtensionsNotTopfiles(self):
+        """
+        The folder in which I{setup.py} is discovered must be called I{topfiles}
+        otherwise it is ignored.
+        """
+        self.writeSetup("twisted.metamorphosis", "notfiles")
+        self.assertExtensions([])
+
+
+    def test_getExtensionsNotSupportedOnJava(self):
+        """
+        Extensions are not supported on Java-based platforms.
+        """
+        self.addCleanup(setattr, sys, "platform", sys.platform)
+        sys.platform = "java"
+        self.writeSetup("twisted.sorcery", "topfiles")
+        self.assertExtensions([])
+
+
+    def test_getExtensionsExtensionsLocalIsOptional(self):
+        """
+        It is acceptable for extensions to not define the C{extensions} local
+        variable.
+        """
+        self.writeEmptySetup("twisted.necromancy", "topfiles")
+        self.assertExtensions([])
 
 
 
