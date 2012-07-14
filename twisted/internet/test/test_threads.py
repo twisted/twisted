@@ -13,12 +13,15 @@ import gc, threading
 from twisted.python.threadable import isInIOThread
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.python.threadpool import ThreadPool
+from twisted.internet.interfaces import IReactorThreads
 
 
 class ThreadTestsBuilder(ReactorBuilder):
     """
     Builder for defining tests relating to L{IReactorThreads}.
     """
+    requiredInterfaces = (IReactorThreads,)
+
     def test_getThreadPool(self):
         """
         C{reactor.getThreadPool()} returns an instance of L{ThreadPool} which

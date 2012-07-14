@@ -9,12 +9,15 @@ __metaclass__ = type
 
 from twisted.python.runtime import platform
 from twisted.internet.test.reactormixins import ReactorBuilder
+from twisted.internet.interfaces import IReactorTime
 
 
 class TimeTestsBuilder(ReactorBuilder):
     """
     Builder for defining tests relating to L{IReactorTime}.
     """
+    requiredInterfaces = (IReactorTime,)
+
     def test_delayedCallStopsReactor(self):
         """
         The reactor can be stopped by a delayed call.
@@ -30,6 +33,8 @@ class GlibTimeTestsBuilder(ReactorBuilder):
     Builder for defining tests relating to L{IReactorTime} for reactors based
     off glib.
     """
+    requiredInterfaces = (IReactorTime,)
+
     if platform.isWindows():
         _reactors = ["twisted.internet.gtk2reactor.PortableGtkReactor"]
     else:

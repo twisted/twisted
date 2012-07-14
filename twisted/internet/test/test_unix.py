@@ -23,7 +23,8 @@ from twisted.python.log import addObserver, removeObserver, err
 from twisted.python.failure import Failure
 from twisted.python.hashlib import md5
 from twisted.python.runtime import platform
-from twisted.internet.interfaces import IConnector, IFileDescriptorReceiver
+from twisted.internet.interfaces import (
+    IConnector, IFileDescriptorReceiver, IReactorUNIX)
 from twisted.internet.error import ConnectionClosed, FileDescriptorOverrun
 from twisted.internet.address import UNIXAddress
 from twisted.internet.endpoints import UNIXServerEndpoint, UNIXClientEndpoint
@@ -52,9 +53,6 @@ class UNIXFamilyMixin:
     """
     Test-helper defining mixin for things related to AF_UNIX sockets.
     """
-    if AF_UNIX is None:
-        skip = "Platform does not support AF_UNIX sockets"
-
     def _modeTest(self, methodName, path, factory):
         """
         Assert that the mode of the created unix socket is set to the mode
@@ -82,6 +80,8 @@ class UNIXCreator(EndpointCreator):
     """
     Create UNIX socket end points.
     """
+    requiredInterfaces = (interfaces.IReactorUNIX,)
+
     def server(self, reactor):
         """
         Construct a UNIX server endpoint.
@@ -208,6 +208,8 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
     """
     Builder defining tests relating to L{IReactorUNIX}.
     """
+    requiredInterfaces = (IReactorUNIX,)
+
     endpoints = UNIXCreator()
 
     def test_interface(self):
@@ -491,6 +493,8 @@ class UNIXDatagramTestsBuilder(UNIXFamilyMixin, ReactorBuilder):
     """
     Builder defining tests relating to L{IReactorUNIXDatagram}.
     """
+    requiredInterfaces = (interfaces.IReactorUNIXDatagram,)
+
     # There's no corresponding test_connectMode because the mode parameter to
     # connectUNIXDatagram has been completely ignored since that API was first
     # introduced.
@@ -523,7 +527,7 @@ class UNIXPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin,
     """
     Tests for L{IReactorUNIX.listenUnix}
     """
-    requiredInterfaces = [interfaces.IReactorUNIX]
+    requiredInterfaces = (interfaces.IReactorUNIX,)
 
     def getListeningPort(self, reactor, factory):
         """

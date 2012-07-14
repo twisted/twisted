@@ -23,7 +23,7 @@ from twisted.internet.test.reactormixins import runProtocolsWithReactor
 from twisted.internet.error import ConnectionLost, UserError, ConnectionRefusedError
 from twisted.internet.error import ConnectionDone, ConnectionAborted
 from twisted.internet.interfaces import (
-    ILoggingContext, IConnector, IReactorFDSet, IReactorSocket)
+    ILoggingContext, IConnector, IReactorFDSet, IReactorSocket, IReactorTCP)
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.defer import (
     Deferred, DeferredList, maybeDeferred, gatherResults)
@@ -362,10 +362,12 @@ class TCP6Creator(TCPCreator):
 
 
 class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
-                            TCPClientTestsMixin):
+                         TCPClientTestsMixin):
     """
     Base class for builders defining tests related to L{IReactorTCP.connectTCP}.
     """
+    requiredInterfaces = (IReactorTCP,)
+
     port = 1234
 
     @property
@@ -379,7 +381,8 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
 
 class TCP4ClientTestsBuilder(TCPClientTestsBase):
     """
-    Builder configured with IPv4 parameters for tests related to L{IReactorTCP.connectTCP}.
+    Builder configured with IPv4 parameters for tests related to
+    L{IReactorTCP.connectTCP}.
     """
     fakeDomainName = 'some-fake.domain.example.com'
     family = socket.AF_INET
@@ -391,15 +394,14 @@ class TCP4ClientTestsBuilder(TCPClientTestsBase):
 
 class TCP6ClientTestsBuilder(TCPClientTestsBase):
     """
-    Builder configured with IPv6 parameters for tests related to L{IReactorTCP.connectTCP}.
+    Builder configured with IPv6 parameters for tests related to
+    L{IReactorTCP.connectTCP}.
     """
-
     if ipv6Skip:
-        skip = "Platform does not support ipv6"
+        skip = ipv6Skip
 
     family = socket.AF_INET6
     addressClass = IPv6Address
-
 
     def setUp(self):
         # Only create this object here, so that it won't be created if tests
@@ -416,6 +418,10 @@ class TCP6ClientTestsBuilder(TCPClientTestsBase):
 
 
 class TCPConnectorTestsBuilder(ReactorBuilder):
+    """
+    Tests for the L{IConnector} provider returned by L{IReactorTCP.connectTCP}.
+    """
+    requiredInterfaces = (IReactorTCP,)
 
     def test_connectorIdentity(self):
         """
@@ -538,7 +544,7 @@ class TCP6ConnectorTestsBuilder(TCPConnectorTestsBuilder):
     addressClass = IPv6Address
 
     if ipv6Skip:
-        skip = "Platform does not support ipv6"
+        skip = ipv6Skip
 
     def setUp(self):
         self.interface = getLinkLocalIPv6Address()
@@ -677,6 +683,8 @@ class TCPPortTestsMixin(object):
     """
     Tests for L{IReactorTCP.listenTCP}
     """
+    requiredInterfaces = (IReactorTCP,)
+
     def getExpectedStartListeningLogMessage(self, port, factory):
         """
         Get the message expected to be logged when a TCP port starts listening.
@@ -1002,6 +1010,7 @@ class TCPConnectionTestsBuilder(ReactorBuilder):
     """
     Builder defining tests relating to L{twisted.internet.tcp.Connection}.
     """
+    requiredInterfaces = (IReactorTCP,)
 
     def test_stopStartReading(self):
         """
@@ -1133,6 +1142,8 @@ class WriteSequenceTests(ReactorBuilder):
     @ivar server: the listening server factory to be used in tests.
     @type server: L{MyServerFactory}
     """
+    requiredInterfaces = (IReactorTCP,)
+
     def setUp(self):
         server = MyServerFactory()
         server.protocolConnectionMade = Deferred()
@@ -1881,6 +1892,7 @@ class AbortConnectionTestCase(ReactorBuilder, AbortConnectionMixin):
     """
     TCP-specific L{AbortConnectionMixin} tests.
     """
+    requiredInterfaces = (IReactorTCP,)
 
     endpoints = TCPCreator()
 
@@ -1892,8 +1904,8 @@ class SimpleUtilityTestCase(TestCase):
     """
     Simple, direct tests for helpers within L{twisted.internet.tcp}.
     """
-
-    skip = ipv6Skip
+    if ipv6Skip:
+        skip = ipv6Skip
 
     def test_resolveNumericHost(self):
         """
@@ -1938,6 +1950,3 @@ class SimpleUtilityTestCase(TestCase):
         # but, luckily, IP presentation format and what it means to be a port
         # number are a little better specified.
         self.assertEqual(result[:2], ("::1", 2))
-
-
-
