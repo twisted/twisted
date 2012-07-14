@@ -448,6 +448,37 @@ class FTPServerTestCaseAdvancedClient(FTPServerTestCase):
         d2.addErrback(eb)
         return defer.gatherResults([d1, d2])
 
+    def test_RETRreadError(self):
+        """
+        Any errors during reading a file inside a RETR should be returned to
+        the client.
+        """
+        # Make a failing file reading.
+        class FailingFileReader(ftp._FileReader):
+            def send(self, consumer):
+                return defer.fail(ftp.IsADirectoryError("blah"))
+
+        def failingRETR(a, b):
+            return defer.succeed(FailingFileReader(None))
+
+        # Monkey patch the shell so it returns a file reader that will
+        # fail.
+        self.patch(ftp.FTPAnonymousShell, 'openForReading', failingRETR)
+
+        def check_response(failure):
+            self.flushLoggedErrors()
+            failure.trap(ftp.CommandFailed)
+            self.assertEqual(
+                failure.value.args[0][0],
+                "125 Data connection already open, starting transfer")
+            self.assertEqual(
+                failure.value.args[0][1],
+                "550 blah: is a directory")
+
+        proto = _BufferingProtocol()
+        d = self.client.retrieveFile('failing_file', proto)
+        d.addErrback(check_response)
+        return d
 
 
 class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):

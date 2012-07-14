@@ -1068,6 +1068,8 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         def ebSent(err):
             log.msg("Unexpected error attempting to transmit file to client:")
             log.err(err)
+            if err.check(FTPCmdError):
+                return err
             return (CNX_CLOSED_TXFR_ABORTED,)
 
         def cbOpened(file):

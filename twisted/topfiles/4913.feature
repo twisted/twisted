@@ -1,0 +1,1 @@
+If a FTPCmdError occurs during twisted.protocols.ftp.FTP.ftp_RETR sending the file (i.e. it is raised by the IReadFile.send method it invokes), then it will use that to return an error to the client rather than necessarily sending a 426 CNX_CLOSED_TXFR_ABORTED error.
