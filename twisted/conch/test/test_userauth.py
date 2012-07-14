@@ -1060,3 +1060,16 @@ class LoopbackTestCase(unittest.TestCase):
         def check(ignored):
             self.assertEqual(server.transport.service.name, 'TestService')
         return d.addCallback(check)
+
+
+
+class ModuleInitializationTestCase(unittest.TestCase):
+
+
+    def test_messages(self):
+        # Several message types have value 60, check that MSG_USERAUTH_PK_OK
+        # is always the one which is mapped.
+        self.assertEqual(userauth.SSHUserAuthServer.protocolMessages[60],
+                         'MSG_USERAUTH_PK_OK')
+        self.assertEqual(userauth.SSHUserAuthClient.protocolMessages[60],
+                         'MSG_USERAUTH_PK_OK')

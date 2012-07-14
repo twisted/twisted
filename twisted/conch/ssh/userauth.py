@@ -830,17 +830,19 @@ MSG_USERAUTH_REQUEST          = 50
 MSG_USERAUTH_FAILURE          = 51
 MSG_USERAUTH_SUCCESS          = 52
 MSG_USERAUTH_BANNER           = 53
-MSG_USERAUTH_PASSWD_CHANGEREQ = 60
-MSG_USERAUTH_INFO_REQUEST     = 60
 MSG_USERAUTH_INFO_RESPONSE    = 61
 MSG_USERAUTH_PK_OK            = 60
 
 messages = {}
 for k, v in locals().items():
     if k[:4]=='MSG_':
-        messages[v] = k # doesn't handle doubles
+        messages[v] = k
 
 SSHUserAuthServer.protocolMessages = messages
 SSHUserAuthClient.protocolMessages = messages
 del messages
 del v
+
+# Doubles, not included in the protocols' mappings
+MSG_USERAUTH_PASSWD_CHANGEREQ = 60
+MSG_USERAUTH_INFO_REQUEST     = 60
