@@ -587,27 +587,6 @@ class ConditionalTest(unittest.TestCase):
 
 
 
-
-from twisted.web import google
-class GoogleTestCase(unittest.TestCase):
-    def testCheckGoogle(self):
-        raise unittest.SkipTest("no violation of google ToS")
-        d = google.checkGoogle('site:www.twistedmatrix.com twisted')
-        d.addCallback(self.assertEqual, 'http://twistedmatrix.com/')
-        return d
-
-
-    def test_deprecated(self):
-        """
-        Google module is deprecated since Twisted 11.1.0
-        """
-        from twisted.web import google
-        warnings = self.flushWarnings(offendingFunctions=[self.test_deprecated])
-        self.assertEqual(len(warnings), 1)
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
-
-
-
 class RequestTests(unittest.TestCase):
     """
     Tests for the HTTP request class, L{server.Request}.
