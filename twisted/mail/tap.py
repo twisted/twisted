@@ -16,8 +16,6 @@ from twisted.mail import relay
 from twisted.mail import relaymanager
 from twisted.mail import alias
 
-from twisted.internet.ssl import DefaultOpenSSLContextFactory
-
 from twisted.internet import endpoints
 
 from twisted.python import usage
@@ -271,6 +269,7 @@ def _toEndpoint(description, certificate=None):
         category=DeprecationWarning, stacklevel=3)
 
     if certificate:
+        from twisted.internet.ssl import DefaultOpenSSLContextFactory
         ctx = DefaultOpenSSLContextFactory(certificate, certificate)
         return endpoints.SSL4ServerEndpoint(reactor, port, ctx)
     return endpoints.TCP4ServerEndpoint(reactor, port)

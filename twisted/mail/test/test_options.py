@@ -14,6 +14,13 @@ from twisted.python.filepath import FilePath
 from twisted.internet import endpoints, defer
 from twisted.python import util
 
+try:
+    import OpenSSL
+except ImportError, e:
+    sslSkip = str(e)
+else:
+    sslSkip = None
+
 
 class OptionsTestCase(TestCase):
     """
@@ -158,6 +165,8 @@ class OptionsTestCase(TestCase):
             warnings[0]['message'],
             "Specifying plain ports and/or a certificate is deprecated since "
             "Twisted 11.0; use endpoint descriptions instead.")
+    if sslSkip is not None:
+        test_pop3sBackwardCompatibility.skip = sslSkip
 
 
     def test_esmtpWithoutHostname(self):
