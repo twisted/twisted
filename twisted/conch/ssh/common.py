@@ -9,7 +9,7 @@ Common functions for the SSH classes.
 Maintainer: Paul Swartz
 """
 
-import struct, warnings
+import struct, warnings, __builtin__
 
 try:
     from Crypto import Util
@@ -107,7 +107,7 @@ def install():
         if type(x) in (long, int):
             x = mpz(x)
         return pyPow(x, y, z)
-    __builtins__['pow'] = _fastpow # evil evil
+    __builtin__.pow = _fastpow # evil evil
 
 try:
     import gmpy

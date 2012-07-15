@@ -1,0 +1,1 @@
+twisted.conch no longer relies on __builtins__ being a dict, which is a purely CPython implementation detail
