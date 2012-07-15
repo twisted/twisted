@@ -537,19 +537,13 @@ class _LogObserver(object):
     def _add(self):
         if self._added == 0:
             log.addObserver(self.gotEvent)
-            self._oldFE, log._flushErrors = (log._flushErrors, self.flushErrors)
-            self._oldIE, log._ignore = (log._ignore, self._ignoreErrors)
-            self._oldCI, log._clearIgnores = (log._clearIgnores,
-                                              self._clearIgnores)
         self._added += 1
+
 
     def _remove(self):
         self._added -= 1
         if self._added == 0:
             log.removeObserver(self.gotEvent)
-            log._flushErrors = self._oldFE
-            log._ignore = self._oldIE
-            log._clearIgnores = self._oldCI
 
 
     def _ignoreErrors(self, *errorTypes):
