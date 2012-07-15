@@ -519,6 +519,20 @@ class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
             self.assertEqual('', result)
         return d.addCallback(checkEmpty)
 
+    def testLISTWithBinLsFlags(self):
+        # Make some directories
+        os.mkdir(os.path.join(self.directory, 'foo'))
+        os.mkdir(os.path.join(self.directory, 'bar'))
+
+        # Login
+        d = self._anonymousLogin()
+
+        self._download('LIST -aL', chainDeferred=d)
+        def checkDownload(download):
+            # We expect 2 lines because there are two files in the root.
+            self.assertEqual(2, len(download[:-2].split('\r\n')))
+        return d.addCallback(checkDownload)
+
     def testTwoDirLIST(self):
         # Make some directories
         os.mkdir(os.path.join(self.directory, 'foo'))
