@@ -12,7 +12,7 @@ static int sigchld_pipe_fd = -1;
 
 static void got_signal(int sig) {
     int saved_errno = errno;
-    int ignored_result;
+    ssize_t ignored_result;
 
     /* write() errors are unhandled.  If the buffer is full, we don't
      * care.  What about other errors? */
