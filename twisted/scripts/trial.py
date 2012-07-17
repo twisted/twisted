@@ -162,8 +162,8 @@ class Options(usage.Options, app.ReactorSelectionMixin):
 
     def opt_coverage(self):
         """
-        Generate coverage information in the I{coverage} file in the
-        directory specified by the I{trial-temp} option.
+        Generate coverage information in the coverage file in the
+        directory specified by the temp-directory option.
         """
         import trace
         self.tracer = trace.Trace(count=1, trace=0)
