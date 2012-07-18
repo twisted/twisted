@@ -783,6 +783,24 @@ class AddDeferredTimeoutTests(unittest.TestCase):
         self.assertFalse(reactor.getDelayedCalls())
 
 
+    def test_noTimeoutIfCancel(self):
+        """
+        L{task.addDeferredTimeout} will not not cause a timeout if the
+        L{defer.Deferred}'s C{cancel()} method is called.
+        """
+        reactor = Clock()
+        result = []
+        d = defer.Deferred()
+        d.addErrback(result.append)
+
+        task.addDeferredTimeout(reactor, d, 10)
+        d.cancel()
+        self.assertIsInstance(result[0].value, defer.CancelledError)
+
+        # Timeout should have been cancelled:
+        self.assertFalse(reactor.getDelayedCalls())
+
+
     def test_timeout(self):
         """
         If the L{defer.Deferred} is not fired in time,
@@ -857,7 +875,21 @@ class AddDeferredTimeoutTests(unittest.TestCase):
         If L{task.addDeferredTimeout} is called multiple times, the custom
         exception used is the one specified by the timeout that was hit.
         """
-        1/0
+        reactor = Clock()
+        result = []
+        d = defer.Deferred()
+
+        customException = RuntimeError()
+        customException2 = ZeroDivisionError()
+        task.addDeferredTimeout(reactor, d, 10, customException)
+        # We want the second timeout to happen first, just to prove that it's
+        # time order that matters, not who got added first.
+        task.addDeferredTimeout(reactor, d, 1, customException2)
+        d.addErrback(result.append)
+
+        reactor.advance(1)
+        self.assertIdentical(result[0].value, customException2)
+
 
     def test_cancelStaysWithCorrectException(self):
         """
@@ -865,7 +897,17 @@ class AddDeferredTimeoutTests(unittest.TestCase):
         the L{defer.Deferred} will still have a C{defer.CancelledError}
         exception.
         """
-        1/0
+        reactor = Clock()
+        result = []
+        d = defer.Deferred()
+
+        customException = RuntimeError()
+        task.addDeferredTimeout(reactor, d, 10, customException)
+        d.addErrback(result.append)
+        d.cancel()
+
+        self.assertIsInstance(result[0].value, defer.CancelledError)
+
 
 
     # XXX maybe return IDelayedCall, which means we need to test that, and to

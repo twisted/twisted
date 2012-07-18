@@ -810,17 +810,28 @@ def addDeferredTimeout(reactor, deferred, timeout, exception=None):
         handled it. This only affects errbacks added after this function is
         called.
     """
-    callID = reactor.callLater(timeout, deferred.cancel)
+    # Schedule timeout, making sure we know when it happened:
+    timedOut = [] # This is used by convertException below
+    def timedOutCall():
+        timedOut.append(True)
+        deferred.cancel()
+    callID = reactor.callLater(timeout, timedOutCall)
+
+    # If Deferred has result, cancel the timeout:
     def cancelTimeout(result):
         if callID.active():
             callID.cancel()
         return result
     deferred.addBoth(cancelTimeout)
 
+    # If Deferred timed out and we have custom exception, use it:
     if exception is not None:
         def convertException(reason):
-            reason.trap(defer.CancelledError)
-            return Failure(exception)
+            if timedOut:
+                reason.trap(defer.CancelledError)
+                return Failure(exception)
+            else:
+                return reason
         deferred.addErrback(convertException)
 
 
