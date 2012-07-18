@@ -687,8 +687,8 @@ class DeferLaterTests(unittest.TestCase):
     """
     def test_callback(self):
         """
-        The L{Deferred} returned by L{task.deferLater} is called back after
-        the specified delay with the result of the function passed in.
+        The L{defer.Deferred} returned by L{task.deferLater} is called back
+        after the specified delay with the result of the function passed in.
         """
         results = []
         flag = object()
@@ -708,8 +708,8 @@ class DeferLaterTests(unittest.TestCase):
 
     def test_errback(self):
         """
-        The L{Deferred} returned by L{task.deferLater} is errbacked if the
-        supplied function raises an exception.
+        The L{defer.Deferred} returned by L{task.deferLater} is errbacked if
+        the supplied function raises an exception.
         """
         def callable():
             raise TestException()
@@ -722,8 +722,8 @@ class DeferLaterTests(unittest.TestCase):
 
     def test_cancel(self):
         """
-        The L{Deferred} returned by L{task.deferLater} can be
-        cancelled to prevent the call from actually being performed.
+        The L{defer.Deferred} returned by L{task.deferLater} can be cancelled
+        to prevent the call from actually being performed.
         """
         called = []
         clock = task.Clock()
@@ -737,3 +737,66 @@ class DeferLaterTests(unittest.TestCase):
         self.assertFailure(d, defer.CancelledError)
         d.addCallback(cbCancelled)
         return d
+
+
+class AddDeferredTimeoutTests(unittest.TestCase):
+    """
+    Tests for L{task.addDeferredTimeout}.
+    """
+
+    def test_noTimeoutIfCallback(self):
+        """
+        L{task.addDeferredTimeout} will not not cause a timeout if the
+        L{defer.Deferred}'s C{callback()} is called.
+        """
+        reactor = Clock()
+        cancelled = []
+        result = []
+        d = defer.Deferred(cancelled.append)
+        d.addCallback(result.append)
+
+        task.addDeferredTimeout(reactor, d, 10)
+        d.callback("success")
+        self.assertEqual(result, ["success"])
+        self.assertEqual(cancelled, [])
+        # Timeout should have been cancelled:
+        self.assertFalse(reactor.getDelayedCalls())
+
+
+    def test_noTimeoutIfErrback(self):
+        """
+        L{task.addDeferredTimeout} will not not cause a timeout if the
+        L{defer.Deferred}'s C{errback()} is called.
+        """
+        reactor = Clock()
+        cancelled = []
+        result = []
+        d = defer.Deferred(cancelled.append)
+        d.addErrback(result.append)
+
+        task.addDeferredTimeout(reactor, d, 10)
+        f = failure.Failure(RuntimeError())
+        d.errback(f)
+        self.assertEqual(result, [f])
+        self.assertEqual(cancelled, [])
+        # Timeout should have been cancelled:
+        self.assertFalse(reactor.getDelayedCalls())
+
+
+    def test_timeout(self):
+        """
+        If the L{defer.Deferred} is not fired in time,
+        L{task.addDeferredTimeout} will cancel it.
+        """
+        reactor = Clock()
+        cancelled = []
+        result = []
+        d = defer.Deferred(cancelled.append)
+        d.addErrback(result.append)
+
+        task.addDeferredTimeout(reactor, d, 10)
+        reactor.advance(10.1)
+        self.assertIsInstance(result[0].value, defer.CancelledError)
+        self.assertEqual(cancelled, [d])
+        self.assertFalse(reactor.getDelayedCalls())
+

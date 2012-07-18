@@ -782,6 +782,36 @@ def deferLater(clock, delay, callable, *args, **kw):
 
 
 
+def addDeferredTimeout(reactor, deferred, timeout):
+    """
+    Timeout a L{defer.Deferred} if it does not have a result available within
+    the given amount of time.
+
+    The timeout is aware only of callbacks and errbacks added up until the
+    point this function is called. If a callback function which returns a
+    L{defer.Deferred} is added after the timeout was set, the timeout will not
+    be aware of it. In particular, it will not be able to time it out if all
+    callbacks added before the timeout was added have fired, since it will
+    believe that the timeout is no longer necessary.
+
+    If the L{defer.Deferred} times out, it will be cancelled, so registering a
+    custom canceller is recommended.
+
+    @param reactor: A provider of L{twisted.internet.interfaces.IReactorTime},
+        typically the reactor, or a L{Clock} for testing.
+
+    @param deferred: The L{defer.Deferred} to time out.
+
+    @param timeout: The number of seconds before the timeout will happen.
+    """
+    callID = reactor.callLater(timeout, deferred.cancel)
+    def gotResult(result):
+        if callID.active():
+            callID.cancel()
+        return result
+    deferred.addBoth(gotResult)
+
+
 __all__ = [
     'LoopingCall',
 
@@ -790,4 +820,6 @@ __all__ = [
     'SchedulerStopped', 'Cooperator', 'coiterate',
 
     'deferLater',
+
+    'addDeferredTimeout',
     ]
