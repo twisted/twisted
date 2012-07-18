@@ -800,3 +800,73 @@ class AddDeferredTimeoutTests(unittest.TestCase):
         self.assertEqual(cancelled, [d])
         self.assertFalse(reactor.getDelayedCalls())
 
+
+    def test_callbackStack(self):
+        """
+        L{task.addDeferredTimeout} will not timeout the L{defer.Deferred} if
+        the callbacks that were added before it was called have fired, even if
+        later callbacks mean it's back in a waiting state.
+        """
+        original = defer.Deferred()
+        reactor = Clock()
+
+        # Add the initial timeout:
+        task.addDeferredTimeout(reactor, original, 1)
+
+        # Add another callback, waiting for another Deferred:
+        waiting = defer.Deferred()
+        original.addCallback(lambda ign: waiting)
+
+        # Add a second timeout:
+        task.addDeferredTimeout(reactor, original, 2)
+
+        # If we fire the original Deferred, this will cancel the first
+        # timeout, even though the Deferred is now waiting again for a second
+        # Deferred:
+        result = []
+        original.addBoth(result.append)
+        original.callback(1)
+        reactor.advance(1)
+        self.assertEqual(result, [])
+
+        # However, the 2nd timeout is still there:
+        reactor.advance(1)
+        self.assertEqual(len(result), 1)
+        self.assertIsInstance(result[0].value, defer.CancelledError)
+
+
+    def test_customException(self):
+        """
+        L{task.addDeferredTimeout} can specify a custom exception which will
+        be used if the timeout is hit.
+        """
+        reactor = Clock()
+        result = []
+        d = defer.Deferred()
+
+        customException = RuntimeError()
+        task.addDeferredTimeout(reactor, d, 10, customException)
+        d.addErrback(result.append)
+
+        reactor.advance(10)
+        self.assertIdentical(result[0].value, customException)
+
+
+    def test_multipleCustomExceptions(self):
+        """
+        If L{task.addDeferredTimeout} is called multiple times, the custom
+        exception used is the one specified by the timeout that was hit.
+        """
+        1/0
+
+    def test_cancelStaysWithCorrectException(self):
+        """
+        If L{task.addDeferredTimeout} specifies a custom exception, cancelling
+        the L{defer.Deferred} will still have a C{defer.CancelledError}
+        exception.
+        """
+        1/0
+
+
+    # XXX maybe return IDelayedCall, which means we need to test that, and to
+    # test that if it is cancelled nothing blows up.
