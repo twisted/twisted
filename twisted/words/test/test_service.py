@@ -416,7 +416,10 @@ class IRCProtocolTestCase(unittest.TestCase):
 
         self.assertEqual(response[1][0], 'realmname')
         self.assertEqual(response[1][1], '353')
-        self.assertEqual(response[1][2], ['otheruser', '=', '#somechannel', 'firstuser otheruser'])
+        self.assertIn(response[1][2], [
+                      ['otheruser', '=', '#somechannel', 'firstuser otheruser'],
+                      ['otheruser', '=', '#somechannel', 'otheruser firstuser'],
+                      ])
     testJoin = dG(testJoin)
 
 
