@@ -7,23 +7,6 @@ from twisted.names.srvconnect import SRVConnector
 from twisted.words.xish import domish
 from twisted.words.protocols.jabber import xmlstream, client, jid
 
-
-class XMPPClientConnector(SRVConnector):
-    def __init__(self, reactor, domain, factory):
-        SRVConnector.__init__(self, reactor, 'xmpp-client', domain, factory)
-
-
-    def pickServer(self):
-        host, port = SRVConnector.pickServer(self)
-
-        if not self.servers and not self.orderedServers:
-            # no SRV record, fall back..
-            port = 5222
-
-        return host, port
-
-
-
 class Client(object):
     def __init__(self, client_jid, secret):
         f = client.XMPPClientFactory(client_jid, secret)
@@ -31,7 +14,8 @@ class Client(object):
         f.addBootstrap(xmlstream.STREAM_END_EVENT, self.disconnected)
         f.addBootstrap(xmlstream.STREAM_AUTHD_EVENT, self.authenticated)
         f.addBootstrap(xmlstream.INIT_FAILED_EVENT, self.init_failed)
-        connector = XMPPClientConnector(reactor, client_jid.host, f)
+        connector = SRVConnector(reactor, 'xmpp-client', client_jid.host, f,
+                                 defaultPort=5222)
         connector.connect()
 
 
