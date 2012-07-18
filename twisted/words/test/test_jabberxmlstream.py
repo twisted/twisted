@@ -88,8 +88,10 @@ class IQTest(unittest.TestCase):
     def testSend(self):
         self.xmlstream.transport.clear()
         self.iq.send()
-        self.assertEqual("<iq type='get' id='%s'/>" % self.iq['id'],
-                          self.xmlstream.transport.value())
+        self.assertIn(self.xmlstream.transport.value(), [
+                      "<iq type='get' id='%s'/>" % self.iq['id'],
+                      "<iq id='%s' type='get'/>" % self.iq['id'],
+                      ])
 
 
     def testResultResponse(self):
