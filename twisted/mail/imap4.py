@@ -4817,14 +4817,13 @@ def unquote(s):
         return s[1:-1]
     return s
 
-def getBodyStructure(msg, extended=False):
-    # XXX - This does not properly handle multipart messages
-    # BODYSTRUCTURE is obscenely complex and criminally under-documented.
 
-    attrs = {}
-    headers = 'content-type', 'content-id', 'content-description', 'content-transfer-encoding'
-    headers = msg.getHeaders(False, *headers)
-    mm = headers.get('content-type')
+def _getContentType(msg):
+    """
+    Return a two-tuple of the main and subtype of the given message.
+    """
+    attrs = None
+    mm = msg.getHeaders(False, 'content-type').get('content-type', None)
     if mm:
         mm = ''.join(mm.splitlines())
         mimetype = mm.split(';')
@@ -4837,78 +4836,428 @@ def getBodyStructure(msg, extended=False):
                 major, minor = type
             else:
                 major = minor = None
-            attrs = dict([x.strip().lower().split('=', 1) for x in mimetype[1:]])
+            attrs = dict(x.strip().lower().split('=', 1) for x in mimetype[1:])
         else:
             major = minor = None
     else:
         major = minor = None
+    return major, minor, attrs
 
 
-    size = str(msg.getSize())
-    unquotedAttrs = [(k, unquote(v)) for (k, v) in attrs.iteritems()]
-    result = [
-        major, minor,                       # Main and Sub MIME types
-        unquotedAttrs,                      # content-type parameter list
-        headers.get('content-id'),
-        headers.get('content-description'),
-        headers.get('content-transfer-encoding'),
-        size,                               # Number of octets total
-    ]
 
-    if major is not None:
-        if major.lower() == 'text':
-            result.append(str(getLineCount(msg)))
-        elif (major.lower(), minor.lower()) == ('message', 'rfc822'):
-            contained = msg.getSubPart(0)
-            result.append(getEnvelope(contained))
-            result.append(getBodyStructure(contained, False))
-            result.append(str(getLineCount(contained)))
+def _getMessageStructure(message):
+    """
+    Construct an appropriate type of message structure object for the given
+    message object.
 
-    if not extended or major is None:
-        return result
+    @param message: A L{IMessagePart} provider
 
-    if major.lower() != 'multipart':
-        headers = 'content-md5', 'content-disposition', 'content-language'
-        headers = msg.getHeaders(False, *headers)
-        disp = headers.get('content-disposition')
+    @return: A L{_MessageStructure} instance of the most specific type available
+        for the given message, determined by inspecting the MIME type of the
+        message.
+    """
+    main, subtype, attrs = _getContentType(message)
+    if main is not None:
+        main = main.lower()
+    if subtype is not None:
+        subtype = subtype.lower()
+    if main == 'multipart':
+        return _MultipartMessageStructure(message, subtype, attrs)
+    elif (main, subtype) == ('message', 'rfc822'):
+        return _RFC822MessageStructure(message, main, subtype, attrs)
+    elif main == 'text':
+        return _TextMessageStructure(message, main, subtype, attrs)
+    else:
+        return _SinglepartMessageStructure(message, main, subtype, attrs)
 
-        # XXX - I dunno if this is really right
+
+
+class _MessageStructure(object):
+    """
+    L{_MessageStructure} is a helper base class for message structure classes
+    representing the structure of particular kinds of messages, as defined by
+    their MIME type.
+    """
+    def __init__(self, message, attrs):
+        """
+        @param message: An L{IMessagePart} provider which this structure object
+            reports on.
+
+        @param attrs: A C{dict} giving the parameters of the I{Content-Type}
+            header of the message.
+        """
+        self.message = message
+        self.attrs = attrs
+
+
+    def _disposition(self, disp):
+        """
+        Parse a I{Content-Disposition} header into a two-sequence of the
+        disposition and a flattened list of its parameters.
+
+        @return: C{None} if there is no disposition header value, a C{list} with
+            two elements otherwise.
+        """
         if disp:
             disp = disp.split('; ')
             if len(disp) == 1:
                 disp = (disp[0].lower(), None)
             elif len(disp) > 1:
-                disp = (disp[0].lower(), [x.split('=') for x in disp[1:]])
+                # XXX Poorly tested parser
+                params = [x for param in disp[1:] for x in param.split('=', 1)]
+                disp = [disp[0].lower(), params]
+            return disp
+        else:
+            return None
+
+
+    def _unquotedAttrs(self):
+        """
+        @return: The I{Content-Type} parameters, unquoted, as a flat list with
+            each Nth element giving a parameter name and N+1th element giving
+            the corresponding parameter value.
+        """
+        if self.attrs:
+            unquoted = [(k, unquote(v)) for (k, v) in self.attrs.iteritems()]
+            return [y for x in sorted(unquoted) for y in x]
+        return None
+
+
+
+class _SinglepartMessageStructure(_MessageStructure):
+    """
+    L{_SinglepartMessageStructure} represents the message structure of a
+    non-I{multipart/*} message.
+    """
+    _HEADERS = [
+        'content-id', 'content-description',
+        'content-transfer-encoding']
+
+    def __init__(self, message, main, subtype, attrs):
+        """
+        @param message: An L{IMessagePart} provider which this structure object
+            reports on.
+
+        @param main: A C{str} giving the main MIME type of the message (for
+            example, C{"text"}).
+
+        @param subtype: A C{str} giving the MIME subtype of the message (for
+            example, C{"plain"}).
+
+        @param attrs: A C{dict} giving the parameters of the I{Content-Type}
+            header of the message.
+        """
+        _MessageStructure.__init__(self, message, attrs)
+        self.main = main
+        self.subtype = subtype
+        self.attrs = attrs
+
+
+    def _basicFields(self):
+        """
+        Return a list of the basic fields for a single-part message.
+        """
+        headers = self.message.getHeaders(False, *self._HEADERS)
+
+        # Number of octets total
+        size = self.message.getSize()
+
+        major, minor = self.main, self.subtype
+
+        # content-type parameter list
+        unquotedAttrs = self._unquotedAttrs()
+
+        return [
+            major, minor, unquotedAttrs,
+            headers.get('content-id'),
+            headers.get('content-description'),
+            headers.get('content-transfer-encoding'),
+            size,
+            ]
+
+
+    def encode(self, extended):
+        """
+        Construct and return a list of the basic and extended fields for a
+        single-part message.  The list suitable to be encoded into a BODY or
+        BODYSTRUCTURE response.
+        """
+        result = self._basicFields()
+        if extended:
+            result.extend(self._extended())
+        return result
+
+
+    def _extended(self):
+        """
+        The extension data of a non-multipart body part are in the
+        following order:
+
+          1. body MD5
+
+             A string giving the body MD5 value as defined in [MD5].
+
+          2. body disposition
+
+             A parenthesized list with the same content and function as
+             the body disposition for a multipart body part.
+
+          3. body language
+
+             A string or parenthesized list giving the body language
+             value as defined in [LANGUAGE-TAGS].
+
+          4. body location
+
+             A string list giving the body content URI as defined in
+             [LOCATION].
+
+        """
+        result = []
+        headers = self.message.getHeaders(
+            False, 'content-md5', 'content-disposition',
+            'content-language', 'content-language')
 
         result.append(headers.get('content-md5'))
-        result.append(disp)
+        result.append(self._disposition(headers.get('content-disposition')))
         result.append(headers.get('content-language'))
-    else:
-        result = [result]
-        try:
-            i = 0
-            while True:
-                submsg = msg.getSubPart(i)
-                result.append(getBodyStructure(submsg))
+        result.append(headers.get('content-location'))
+
+        return result
+
+
+
+class _TextMessageStructure(_SinglepartMessageStructure):
+    """
+    L{_TextMessageStructure} represents the message structure of a I{text/*}
+    message.
+    """
+    def encode(self, extended):
+        """
+        A body type of type TEXT contains, immediately after the basic
+        fields, the size of the body in text lines.  Note that this
+        size is the size in its content transfer encoding and not the
+        resulting size after any decoding.
+        """
+        result = _SinglepartMessageStructure._basicFields(self)
+        result.append(getLineCount(self.message))
+        if extended:
+            result.extend(self._extended())
+        return result
+
+
+
+class _RFC822MessageStructure(_SinglepartMessageStructure):
+    """
+    L{_RFC822MessageStructure} represents the message structure of a
+    I{message/rfc822} message.
+    """
+    def encode(self, extended):
+        """
+        A body type of type MESSAGE and subtype RFC822 contains,
+        immediately after the basic fields, the envelope structure,
+        body structure, and size in text lines of the encapsulated
+        message.
+        """
+        result = _SinglepartMessageStructure.encode(self, extended)
+        contained = self.message.getSubPart(0)
+        result.append(getEnvelope(contained))
+        result.append(getBodyStructure(contained, False))
+        result.append(getLineCount(contained))
+        return result
+
+
+
+class _MultipartMessageStructure(_MessageStructure):
+    """
+    L{_MultipartMessageStructure} represents the message structure of a
+    I{multipart/*} message.
+    """
+    def __init__(self, message, subtype, attrs):
+        """
+        @param message: An L{IMessagePart} provider which this structure object
+            reports on.
+
+        @param subtype: A C{str} giving the MIME subtype of the message (for
+            example, C{"plain"}).
+
+        @param attrs: A C{dict} giving the parameters of the I{Content-Type}
+            header of the message.
+        """
+        _MessageStructure.__init__(self, message, attrs)
+        self.subtype = subtype
+
+
+    def _getParts(self):
+        """
+        Return an iterator over all of the sub-messages of this message.
+        """
+        i = 0
+        while True:
+            try:
+                part = self.message.getSubPart(i)
+            except IndexError:
+                break
+            else:
+                yield part
                 i += 1
-        except IndexError:
-            result.append(minor)
-            result.append(attrs.items())
 
-            # XXX - I dunno if this is really right
-            headers = msg.getHeaders(False, 'content-disposition', 'content-language')
-            disp = headers.get('content-disposition')
-            if disp:
-                disp = disp.split('; ')
-                if len(disp) == 1:
-                    disp = (disp[0].lower(), None)
-                elif len(disp) > 1:
-                    disp = (disp[0].lower(), [x.split('=') for x in disp[1:]])
 
-            result.append(disp)
-            result.append(headers.get('content-language'))
+    def encode(self, extended):
+        """
+        Encode each sub-message and added the additional I{multipart} fields.
+        """
+        result = [_getMessageStructure(p).encode(extended) for p in self._getParts()]
+        result.append(self.subtype)
+        if extended:
+            result.extend(self._extended())
+        return result
 
-    return result
+
+    def _extended(self):
+        """
+        The extension data of a multipart body part are in the following order:
+
+          1. body parameter parenthesized list
+               A parenthesized list of attribute/value pairs [e.g., ("foo"
+               "bar" "baz" "rag") where "bar" is the value of "foo", and
+               "rag" is the value of "baz"] as defined in [MIME-IMB].
+
+          2. body disposition
+               A parenthesized list, consisting of a disposition type
+               string, followed by a parenthesized list of disposition
+               attribute/value pairs as defined in [DISPOSITION].
+
+          3. body language
+               A string or parenthesized list giving the body language
+               value as defined in [LANGUAGE-TAGS].
+
+          4. body location
+               A string list giving the body content URI as defined in
+               [LOCATION].
+        """
+        result = []
+        headers = self.message.getHeaders(
+            False, 'content-language', 'content-location',
+            'content-disposition')
+
+        result.append(self._unquotedAttrs())
+        result.append(self._disposition(headers.get('content-disposition')))
+        result.append(headers.get('content-language', None))
+        result.append(headers.get('content-location', None))
+
+        return result
+
+
+
+def getBodyStructure(msg, extended=False):
+    """
+    RFC 3501, 7.4.2, BODYSTRUCTURE::
+
+      A parenthesized list that describes the [MIME-IMB] body structure of a
+      message.  This is computed by the server by parsing the [MIME-IMB] header
+      fields, defaulting various fields as necessary.
+
+        For example, a simple text message of 48 lines and 2279 octets can have
+        a body structure of: ("TEXT" "PLAIN" ("CHARSET" "US-ASCII") NIL NIL
+        "7BIT" 2279 48)
+
+    This is represented as::
+
+        ["TEXT", "PLAIN", ["CHARSET", "US-ASCII"], None, None, "7BIT", 2279, 48]
+
+    These basic fields are documented in the RFC as:
+
+      1. body type
+
+         A string giving the content media type name as defined in
+         [MIME-IMB].
+
+      2. body subtype
+
+         A string giving the content subtype name as defined in
+         [MIME-IMB].
+
+      3. body parameter parenthesized list
+
+         A parenthesized list of attribute/value pairs [e.g., ("foo"
+         "bar" "baz" "rag") where "bar" is the value of "foo" and
+         "rag" is the value of "baz"] as defined in [MIME-IMB].
+
+      4. body id
+
+         A string giving the content id as defined in [MIME-IMB].
+
+      5. body description
+
+         A string giving the content description as defined in
+         [MIME-IMB].
+
+      6. body encoding
+
+         A string giving the content transfer encoding as defined in
+         [MIME-IMB].
+
+      7. body size
+
+         A number giving the size of the body in octets.  Note that this size is
+         the size in its transfer encoding and not the resulting size after any
+         decoding.
+
+    Put another way, the body structure is a list of seven elements.  The
+    semantics of the elements of this list are:
+
+       1. Byte string giving the major MIME type
+       2. Byte string giving the minor MIME type
+       3. A list giving the Content-Type parameters of the message
+       4. A byte string giving the content identifier for the message part, or
+          None if it has no content identifier.
+       5. A byte string giving the content description for the message part, or
+          None if it has no content description.
+       6. A byte string giving the Content-Encoding of the message body
+       7. An integer giving the number of octets in the message body
+
+    The RFC goes on::
+
+        Multiple parts are indicated by parenthesis nesting.  Instead of a body
+        type as the first element of the parenthesized list, there is a sequence
+        of one or more nested body structures.  The second element of the
+        parenthesized list is the multipart subtype (mixed, digest, parallel,
+        alternative, etc.).
+
+        For example, a two part message consisting of a text and a
+        BASE64-encoded text attachment can have a body structure of: (("TEXT"
+        "PLAIN" ("CHARSET" "US-ASCII") NIL NIL "7BIT" 1152 23)("TEXT" "PLAIN"
+        ("CHARSET" "US-ASCII" "NAME" "cc.diff")
+        "<960723163407.20117h@cac.washington.edu>" "Compiler diff" "BASE64" 4554
+        73) "MIXED")
+
+    This is represented as::
+
+        [["TEXT", "PLAIN", ["CHARSET", "US-ASCII"], None, None, "7BIT", 1152,
+          23],
+         ["TEXT", "PLAIN", ["CHARSET", "US-ASCII", "NAME", "cc.diff"],
+          "<960723163407.20117h@cac.washington.edu>", "Compiler diff",
+          "BASE64", 4554, 73],
+         "MIXED"]
+
+    In other words, a list of N + 1 elements, where N is the number of parts in
+    the message.  The first N elements are structures as defined by the previous
+    section.  The last element is the minor MIME subtype of the multipart
+    message.
+
+    Additionally, the RFC describes extension data::
+
+        Extension data follows the multipart subtype.  Extension data is never
+        returned with the BODY fetch, but can be returned with a BODYSTRUCTURE
+        fetch.  Extension data, if present, MUST be in the defined order.
+
+    The C{extended} flag controls whether extension data might be returned with
+    the normal data.
+    """
+    return _getMessageStructure(msg).encode(extended)
+
+
 
 class IMessagePart(Interface):
     def getHeaders(negate, *names):

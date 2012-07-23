@@ -3276,7 +3276,7 @@ class FakeyMessage(util.FancyStrMixin):
     def __init__(self, headers, flags, date, body, uid, subpart):
         self.headers = headers
         self.flags = flags
-        self.body = StringIO(body)
+        self._body = body
         self.size = len(body)
         self.date = date
         self.uid = uid
@@ -3293,7 +3293,7 @@ class FakeyMessage(util.FancyStrMixin):
         return self.date
 
     def getBodyFile(self):
-        return self.body
+        return StringIO(self._body)
 
     def getSize(self):
         return self.size
@@ -3370,6 +3370,212 @@ class NewStoreTestCase(unittest.TestCase, IMAP4HelperMixin):
         msg.add(9)
         self.expectedArgs = ((msg, ['\\A', '\\B', 'C'], 0), {'uid': 0})
         return self._storeWork()
+
+
+
+class GetBodyStructureTests(unittest.TestCase):
+    """
+    Tests for L{imap4.getBodyStructure}, a helper for constructing a list which
+    directly corresponds to the wire information needed for a I{BODY} or
+    I{BODYSTRUCTURE} response.
+    """
+    def test_singlePart(self):
+        """
+        L{imap4.getBodyStructure} accepts a L{IMessagePart} provider and returns
+        a list giving the basic fields for the I{BODY} response for that
+        message.
+        """
+        body = 'hello, world'
+        major = 'image'
+        minor = 'jpeg'
+        charset = 'us-ascii'
+        identifier = 'some kind of id'
+        description = 'great justice'
+        encoding = 'maximum'
+        msg = FakeyMessage({
+                'content-type': '%s/%s; charset=%s; x=y' % (
+                    major, minor, charset),
+                'content-id': identifier,
+                'content-description': description,
+                'content-transfer-encoding': encoding,
+                }, (), '', body, 123, None)
+        structure = imap4.getBodyStructure(msg)
+        self.assertEqual(
+            [major, minor, ["charset", charset, 'x', 'y'], identifier,
+             description, encoding, len(body)],
+            structure)
+
+
+    def test_singlePartExtended(self):
+        """
+        L{imap4.getBodyStructure} returns a list giving the basic and extended
+        fields for a I{BODYSTRUCTURE} response if passed C{True} for the
+        C{extended} parameter.
+        """
+        body = 'hello, world'
+        major = 'image'
+        minor = 'jpeg'
+        charset = 'us-ascii'
+        identifier = 'some kind of id'
+        description = 'great justice'
+        encoding = 'maximum'
+        md5 = 'abcdefabcdef'
+        msg = FakeyMessage({
+                'content-type': '%s/%s; charset=%s; x=y' % (
+                    major, minor, charset),
+                'content-id': identifier,
+                'content-description': description,
+                'content-transfer-encoding': encoding,
+                'content-md5': md5,
+                'content-disposition': 'attachment; name=foo; size=bar',
+                'content-language': 'fr',
+                'content-location': 'France',
+                }, (), '', body, 123, None)
+        structure = imap4.getBodyStructure(msg, extended=True)
+        self.assertEqual(
+            [major, minor, ["charset", charset, 'x', 'y'], identifier,
+             description, encoding, len(body), md5,
+             ['attachment', ['name', 'foo', 'size', 'bar']], 'fr', 'France'],
+            structure)
+
+
+    def test_singlePartWithMissing(self):
+        """
+        For fields with no information contained in the message headers,
+        L{imap4.getBodyStructure} fills in C{None} values in its result.
+        """
+        major = 'image'
+        minor = 'jpeg'
+        body = 'hello, world'
+        msg = FakeyMessage({
+                'content-type': '%s/%s' % (major, minor),
+                }, (), '', body, 123, None)
+        structure = imap4.getBodyStructure(msg, extended=True)
+        self.assertEqual(
+            [major, minor, None, None, None, None, len(body), None, None,
+             None, None],
+            structure)
+
+
+    def test_textPart(self):
+        """
+        For a I{text/*} message, the number of lines in the message body are
+        included after the common single-part basic fields.
+        """
+        body = 'hello, world\nhow are you?\ngoodbye\n'
+        major = 'text'
+        minor = 'jpeg'
+        charset = 'us-ascii'
+        identifier = 'some kind of id'
+        description = 'great justice'
+        encoding = 'maximum'
+        msg = FakeyMessage({
+                'content-type': '%s/%s; charset=%s; x=y' % (
+                    major, minor, charset),
+                'content-id': identifier,
+                'content-description': description,
+                'content-transfer-encoding': encoding,
+                }, (), '', body, 123, None)
+        structure = imap4.getBodyStructure(msg)
+        self.assertEqual(
+            [major, minor, ["charset", charset, 'x', 'y'], identifier,
+             description, encoding, len(body), len(body.splitlines())],
+            structure)
+
+
+    def test_rfc822Message(self):
+        """
+        For a I{message/rfc822} message, the common basic fields are followed
+        by information about the contained message.
+        """
+        body = 'hello, world\nhow are you?\ngoodbye\n'
+        major = 'text'
+        minor = 'jpeg'
+        charset = 'us-ascii'
+        identifier = 'some kind of id'
+        description = 'great justice'
+        encoding = 'maximum'
+        msg = FakeyMessage({
+                'content-type': '%s/%s; charset=%s; x=y' % (
+                    major, minor, charset),
+                'from': 'Alice <alice@example.com>',
+                'to': 'Bob <bob@example.com>',
+                'content-id': identifier,
+                'content-description': description,
+                'content-transfer-encoding': encoding,
+                }, (), '', body, 123, None)
+
+        container = FakeyMessage({
+                'content-type': 'message/rfc822',
+                }, (), '', '', 123, [msg])
+
+        structure = imap4.getBodyStructure(container)
+        self.assertEqual(
+            ['message', 'rfc822', None, None, None, None, 0,
+             imap4.getEnvelope(msg), imap4.getBodyStructure(msg), 3],
+            structure)
+
+
+    def test_multiPart(self):
+        """
+        For a I{multipart/*} message, L{imap4.getBodyStructure} returns a list
+        containing the body structure information for each part of the message
+        followed by an element giving the MIME subtype of the message.
+        """
+        oneSubPart = FakeyMessage({
+                'content-type': 'image/jpeg; x=y',
+                'content-id': 'some kind of id',
+                'content-description': 'great justice',
+                'content-transfer-encoding': 'maximum',
+                }, (), '', 'hello world', 123, None)
+
+        anotherSubPart = FakeyMessage({
+                'content-type': 'text/plain; charset=us-ascii',
+                }, (), '', 'some stuff', 321, None)
+
+        container = FakeyMessage({
+                'content-type': 'multipart/related',
+                }, (), '', '', 555, [oneSubPart, anotherSubPart])
+
+        self.assertEqual(
+            [imap4.getBodyStructure(oneSubPart),
+             imap4.getBodyStructure(anotherSubPart),
+             'related'],
+            imap4.getBodyStructure(container))
+
+
+    def test_multiPartExtended(self):
+        """
+        When passed a I{multipart/*} message and C{True} for the C{extended}
+        argument, L{imap4.getBodyStructure} includes extended structure
+        information from the parts of the multipart message and extended
+        structure information about the multipart message itself.
+        """
+        oneSubPart = FakeyMessage({
+                'content-type': 'image/jpeg; x=y',
+                'content-id': 'some kind of id',
+                'content-description': 'great justice',
+                'content-transfer-encoding': 'maximum',
+                }, (), '', 'hello world', 123, None)
+
+        anotherSubPart = FakeyMessage({
+                'content-type': 'text/plain; charset=us-ascii',
+                }, (), '', 'some stuff', 321, None)
+
+        container = FakeyMessage({
+                'content-type': 'multipart/related; foo=bar',
+                'content-language': 'es',
+                'content-location': 'Spain',
+                'content-disposition': 'attachment; name=monkeys',
+                }, (), '', '', 555, [oneSubPart, anotherSubPart])
+
+        self.assertEqual(
+            [imap4.getBodyStructure(oneSubPart, extended=True),
+             imap4.getBodyStructure(anotherSubPart, extended=True),
+             'related', ['foo', 'bar'], ['attachment', ['name', 'monkeys']],
+             'es', 'Spain'],
+            imap4.getBodyStructure(container, extended=True))
+
 
 
 class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
@@ -3513,7 +3719,15 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
     def testFetchEnvelopeUID(self):
         return self.testFetchEnvelope(1)
 
-    def testFetchBodyStructure(self, uid=0):
+
+    def test_fetchBodyStructure(self, uid=0):
+        """
+        L{IMAP4Client.fetchBodyStructure} issues a I{FETCH BODYSTRUCTURE}
+        command and returns a Deferred which fires with a structure giving the
+        result of parsing the server's response.  The structure is a list
+        reflecting the parenthesized data sent by the server, as described by
+        RFC 3501, section 7.4.2.
+        """
         self.function = self.client.fetchBodyStructure
         self.messages = '3:9,10:*'
         self.msgObjs = [FakeyMessage({
@@ -3521,15 +3735,59 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
                 'content-id': 'this-is-the-content-id',
                 'content-description': 'describing-the-content-goes-here!',
                 'content-transfer-encoding': '8BIT',
+                'content-md5': 'abcdef123456',
+                'content-disposition': 'attachment; filename=monkeys',
+                'content-language': 'es',
+                'content-location': 'http://example.com/monkeys',
             }, (), '', 'Body\nText\nGoes\nHere\n', 919293, None)]
         self.expected = {0: {'BODYSTRUCTURE': [
-            'text', 'plain', [['name', 'thing'], ['key', 'value']],
+            'text', 'plain', ['key', 'value', 'name', 'thing'],
             'this-is-the-content-id', 'describing-the-content-goes-here!',
-            '8BIT', '20', '4', None, None, None]}}
+            '8BIT', '20', '4', 'abcdef123456',
+            ['attachment', ['filename', 'monkeys']], 'es',
+             'http://example.com/monkeys']}}
         return self._fetchWork(uid)
 
+
     def testFetchBodyStructureUID(self):
-        return self.testFetchBodyStructure(1)
+        """
+        If passed C{True} for the C{uid} argument, C{fetchBodyStructure} can
+        also issue a I{UID FETCH BODYSTRUCTURE} command.
+        """
+        return self.test_fetchBodyStructure(1)
+
+
+    def test_fetchBodyStructureMultipart(self, uid=0):
+        """
+        L{IMAP4Client.fetchBodyStructure} can also parse the response to a
+        I{FETCH BODYSTRUCTURE} command for a multipart message.
+        """
+        self.function = self.client.fetchBodyStructure
+        self.messages = '3:9,10:*'
+        innerMessage = FakeyMessage({
+                'content-type': 'text/plain; name=thing; key="value"',
+                'content-id': 'this-is-the-content-id',
+                'content-description': 'describing-the-content-goes-here!',
+                'content-transfer-encoding': '8BIT',
+                'content-language': 'fr',
+                'content-md5': '123456abcdef',
+                'content-disposition': 'inline',
+                'content-location': 'outer space',
+            }, (), '', 'Body\nText\nGoes\nHere\n', 919293, None)
+        self.msgObjs = [FakeyMessage({
+                'content-type': 'multipart/mixed; boundary="xyz"',
+                'content-language': 'en',
+                'content-location': 'nearby',
+            }, (), '', '', 919293, [innerMessage])]
+        self.expected = {0: {'BODYSTRUCTURE': [
+            ['text', 'plain', ['key', 'value', 'name', 'thing'],
+             'this-is-the-content-id', 'describing-the-content-goes-here!',
+             '8BIT', '20', '4', '123456abcdef', ['inline', None], 'fr',
+             'outer space'],
+            'mixed', ['boundary', 'xyz'], None, 'en', 'nearby'
+            ]}}
+        return self._fetchWork(uid)
+
 
     def testFetchSimplifiedBody(self, uid=0):
         self.function = self.client.fetchSimplifiedBody
@@ -3541,7 +3799,7 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
         )]
         self.expected = {0:
             {'BODY':
-                [None, None, [], None, None, None,
+                [None, None, None, None, None, None,
                     '12'
                 ]
             }
@@ -3559,7 +3817,7 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
             (), '', 'Yea whatever', 91825, None)]
         self.expected = {0:
             {'BODY':
-                ['text', 'plain', [], None, None, None,
+                ['text', 'plain', None, None, None, None,
                     '12', '1'
                 ]
             }
@@ -3581,10 +3839,10 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
         )]
         self.expected = {0:
             {'BODY':
-                ['message', 'rfc822', [], None, None, None,
+                ['message', 'rfc822', None, None, None, None,
                     '12', [None, None, [[None, None, None]],
                     [[None, None, None]], None, None, None,
-                    None, None, None], ['image', 'jpg', [],
+                    None, None, None], ['image', 'jpg', None,
                     None, None, None, '14'], '1'
                 ]
             }
@@ -3743,12 +4001,12 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
                 'INTERNALDATE': '25-Jul-2010 06:20:30 -0400',
                 'RFC822.SIZE': '6',
                 'ENVELOPE': [None, None, [[None, None, None]], [[None, None, None]], None, None, None, None, None, None],
-                'BODY': [None, None, [], None, None, None, '6']},
+                'BODY': [None, None, None, None, None, None, '6']},
             1: {'FLAGS': ['\\One', '\\Two', 'Three'],
                 'INTERNALDATE': '14-Apr-2003 19:43:44 -0400',
                 'RFC822.SIZE': '12',
                 'ENVELOPE': [None, None, [[None, None, None]], [[None, None, None]], None, None, None, None, None, None],
-                'BODY': [None, None, [], None, None, None, '12']},
+                'BODY': [None, None, None, None, None, None, '12']},
         }
         return self._fetchWork(uid)
 
