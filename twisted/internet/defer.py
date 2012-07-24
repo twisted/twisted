@@ -1047,7 +1047,7 @@ def _inlineCallbacks(result, g, deferred):
             # fell off the end, or "return" statement
             deferred.callback(None)
             return deferred
-        except _DefGen_Return, e:
+        except _DefGen_Return as e:
             # returnValue() was called; time to give a result to the original
             # Deferred.  First though, let's try to identify the potentially
             # confusing situation which results when returnValue() is
