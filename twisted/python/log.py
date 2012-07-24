@@ -615,7 +615,7 @@ class DefaultObserver:
 
 # Some more sibling imports, at the bottom and unqualified to avoid
 # unresolvable circularity
-from . import threadable, failure
+from twisted.python import threadable, failure
 threadable.synchronize(LogPublisher)
 
 
