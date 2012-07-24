@@ -2,6 +2,7 @@
 
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
+from __future__ import print_function
 
 
 import sys, os, random, gc, time, warnings
@@ -156,7 +157,7 @@ class Options(usage.Options, app.ReactorSelectionMixin):
         """
         coverdir = 'coverage'
         result = FilePath(self['temp-directory']).child(coverdir)
-        print "Setting coverage directory to %s." % (result.path,)
+        print("Setting coverage directory to %s." % (result.path,))
         return result
 
 
@@ -206,10 +207,10 @@ class Options(usage.Options, app.ReactorSelectionMixin):
         synopsis = ("Trial's output can be customized using plugins called "
                     "Reporters. You can\nselect any of the following "
                     "reporters using --reporter=<foo>\n")
-        print synopsis
+        print(synopsis)
         for p in plugin.getPlugins(itrial.IReporter):
-            print '   ', p.longOpt, '\t', p.description
-        print
+            print('   ', p.longOpt, '\t', p.description)
+        print()
         sys.exit(0)
 
 
@@ -322,7 +323,7 @@ def _getLoader(config):
         randomer = random.Random()
         randomer.seed(config['random'])
         loader.sorter = lambda x : randomer.random()
-        print 'Running tests shuffled with seed %d\n' % config['random']
+        print('Running tests shuffled with seed %d\n' % config['random'])
     if not config['until-failure']:
         loader.suiteFactory = runner.DestructiveTestSuite
     return loader
@@ -353,8 +354,8 @@ def run():
     config = Options()
     try:
         config.parseOptions()
-    except usage.error, ue:
-        raise SystemExit, "%s: %s" % (sys.argv[0], ue)
+    except usage.error as ue:
+        raise SystemExit("%s: %s" % (sys.argv[0], ue))
     _initialDebugSetup(config)
     trialRunner = _makeRunner(config)
     suite = _getSuite(config)
