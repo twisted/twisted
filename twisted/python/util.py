@@ -1,6 +1,7 @@
 # -*- test-case-name: twisted.python.test.test_util -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
+from __future__ import print_function
 
 import os, sys, errno, inspect, warnings
 import types
@@ -12,7 +13,6 @@ try:
     from os import setgroups, getgroups
 except ImportError:
     setgroups = getgroups = None
-from UserDict import UserDict
 
 
 class InsensitiveDict:
@@ -140,8 +140,8 @@ class InsensitiveDict:
                 return 0
         return len(self)==len(other)
 
-class OrderedDict(UserDict):
-    """A UserDict that preserves insert order whenever possible."""
+class OrderedDict(dict):
+    """A dict that preserves insert order whenever possible."""
     def __init__(self, dict=None, **kwargs):
         self._order = []
         self.data = {}
@@ -159,13 +159,13 @@ class OrderedDict(UserDict):
     def __setitem__(self, key, value):
         if not self.has_key(key):
             self._order.append(key)
-        UserDict.__setitem__(self, key, value)
+        dict.__setitem__(self, key, value)
 
     def copy(self):
         return self.__class__(self)
 
     def __delitem__(self, key):
-        UserDict.__delitem__(self, key)
+        dict.__delitem__(self, key)
         self._order.remove(key)
 
     def iteritems(self):
@@ -230,7 +230,7 @@ def padTo(n, seq, default=None):
     """
 
     if len(seq) > n:
-        raise ValueError, "%d elements is more than %d." % (len(seq), n)
+        raise ValueError("%d elements is more than %d." % (len(seq), n))
 
     blank = [default] * n
 
@@ -277,7 +277,7 @@ def _getpass(prompt):
     import getpass
     try:
         return getpass.getpass(prompt)
-    except IOError, e:
+    except IOError as e:
         if e.errno == errno.EINTR:
             raise KeyboardInterrupt
         raise
@@ -382,11 +382,11 @@ def spewer(frame, s, ignored):
             k = reflect.qual(se.__class__)
         else:
             k = reflect.qual(type(se))
-        print 'method %s of %s at %s' % (
+        print('method %s of %s at %s') % (
             frame.f_code.co_name, k, id(se)
         )
     else:
-        print 'function %s in %s, line %s' % (
+        print('function %s in %s, line %s') % (
             frame.f_code.co_name,
             frame.f_code.co_filename,
             frame.f_lineno)
@@ -535,7 +535,7 @@ class _IntervalDifferentialIterator:
                     if i[2] > index:
                         i[2] -= 1
                 return
-        raise ValueError, "Specified interval not in IntervalDifferential"
+        raise ValueError("Specified interval not in IntervalDifferential")
 
 
 class FancyStrMixin:
@@ -608,7 +608,7 @@ else:
                     del l[-1]
                 else:
                     raise
-            except OSError, e:
+            except OSError as e:
                 if e.errno == errno.EINVAL and len(l) > 1:
                     # This comes from the OS saying too many groups
                     del l[-1]
@@ -660,7 +660,7 @@ else:
                     break # No more groups, ignore any more
         try:
             _setgroups_until_success(l)
-        except OSError, e:
+        except OSError as e:
             # We might be able to remove this code now that we
             # don't try to setgid/setuid even when not asked to.
             if e.errno == errno.EPERM:
@@ -774,7 +774,7 @@ def untilConcludes(f, *a, **kw):
     while True:
         try:
             return f(*a, **kw)
-        except (IOError, OSError), e:
+        except (IOError, OSError) as e:
             if e.args[0] == errno.EINTR:
                 continue
             raise
@@ -799,7 +799,7 @@ def setIDFunction(idFunction):
 # A value about twice as large as any Python int, to which negative values
 # from id() will be added, moving them into a range which should begin just
 # above where positive values from id() leave off.
-_HUGEINT = (sys.maxint + 1L) * 2L
+_HUGEINT = (sys.maxsize + 1) * 2
 def unsignedID(obj):
     """
     Return the id of an object as an unsigned number so that its hex
