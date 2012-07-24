@@ -6,6 +6,7 @@
 Standardized versions of various cool and/or strange things that you can do
 with Python's reflection capabilities.
 """
+from __future__ import print_function
 
 import sys
 import os
@@ -25,7 +26,10 @@ RegexType = type(re.compile(""))
 
 
 try:
-    from cStringIO import StringIO
+    if sys.version_info[0] < 3:
+        from cStringIO import StringIO
+    else:
+        from io import StringIO
 except ImportError:
     from StringIO import StringIO
 
@@ -33,6 +37,7 @@ from twisted.python.util import unsignedID
 from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
 from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
 from twisted.python.versions import Version
+from twisted.python.compat import reraise
 
 
 
@@ -446,7 +451,7 @@ def _importAndCheckStack(importName):
                 execName = excTraceback.tb_frame.f_globals["__name__"]
                 if (execName is None or # python 2.4+, post-cleanup
                     execName == importName): # python 2.3, no cleanup
-                    raise excType, excValue, excTraceback
+                    reraise(excType, excValue, excTraceback)
                 excTraceback = excTraceback.tb_next
             raise _NoModuleFound()
     except:
@@ -780,7 +785,7 @@ def objgrep(start, goal, eq=isLike, path='', paths=None, seen=None, showUnknowns
                                    'member_descriptor', 'getset_descriptor')):
         pass
     elif showUnknowns:
-        print 'unknown type', type(start), start
+        print('unknown type', type(start), start)
     return paths
 
 
