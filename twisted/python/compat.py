@@ -14,6 +14,8 @@ the latest version of Python directly from your code, if possible.
 
 import sys, string, socket, struct
 
+PY3 = sys.version_info[0] == 3
+
 def inet_pton(af, addr):
     if af == socket.AF_INET:
         return socket.inet_aton(addr)
@@ -199,10 +201,26 @@ def execfile(filename, globals, locals=None):
     code = compile(source, filename, "exec")
     exec(code, globals, locals)
 
+if PY3:
+    def reraise(tp, value, tb=None):
+        """
+        Raises an exception, with a tracebook, in a way compatible with both
+        Python 2 and Python 3.
+
+        Copied from the "six" library.
+        """
+        if value.__traceback__ is not tb:
+            raise value.with_traceback(tb)
+        raise value
+else:
+    exec("""def reraise(tp, value, tb=None):
+        raise tp, value, tb""")
+
 
 __all__ = [
     "execfile",
     "frozenset",
     "reduce",
     "set",
+    "reraise",
     ]
