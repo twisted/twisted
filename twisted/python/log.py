@@ -615,7 +615,7 @@ class DefaultObserver:
 
 # Some more sibling imports, at the bottom and unqualified to avoid
 # unresolvable circularity
-import threadable, failure
+from . import threadable, failure
 threadable.synchronize(LogPublisher)
 
 
