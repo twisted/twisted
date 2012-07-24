@@ -92,7 +92,7 @@ class VersionsTest(unittest.TestCase):
         vb = Version("whatever", 1, 0, 0)
         self.assertTrue(va < vb)
         self.assertFalse(va > vb)
-        self.assertNotEquals(vb, va)
+        self.assertNotEqual(vb, va)
 
 
     def test_comparingPrereleases(self):
@@ -115,11 +115,22 @@ class VersionsTest(unittest.TestCase):
         self.assertEqual(_inf, _inf)
 
 
-    def testDontAllowBuggyComparisons(self):
+    def test_incomparableVersions(self):
+        """
+        Comparing versions raises L{IncomparableVersions} when the package
+        names differ.
+        """
         self.assertRaises(IncomparableVersions,
                           cmp,
                           Version("dummy", 1, 0, 0),
                           Version("dumym", 1, 0, 0))
+
+
+    def test_dontAllowOtherObjects(self):
+        """
+        Comparing versions when the other object is not a L{Version}.
+        """
+        self.assertEqual(cmp(Version("dummy", 1, 0, 0), "foo"), 1)
 
 
     def test_repr(self):
@@ -139,7 +150,6 @@ class VersionsTest(unittest.TestCase):
         self.assertEqual(repr(Version("dummy", 1, 2, 3, prerelease=4)),
                           "Version('dummy', 1, 2, 3, prerelease=4)")
 
-
     def test_str(self):
         """
         Calling C{str} on a version returns a human-readable string
@@ -157,7 +167,11 @@ class VersionsTest(unittest.TestCase):
                           "[dummy, version 1.0.0pre1]")
 
 
-    def testShort(self):
+    def test_shortVersion(self):
+        """
+        Calling C{short()} on a version returns a short x.x.x representation of
+        the version.
+        """
         self.assertEqual(Version('dummy', 1, 2, 3).short(), '1.2.3')
 
 
@@ -293,16 +307,16 @@ class FormatDiscoveryTests(unittest.TestCase):
         parsed.
         """
         self.checkSVNFormat("8", VERSION_8_ENTRIES, '22715')
-        
-    
+
+
     def test_detectVersion9(self):
         """
         Verify that version 9 format files will be properly detected and
         parsed.
         """
         self.checkSVNFormat("9", VERSION_9_ENTRIES, '22715')
-        
-        
+
+
     def test_detectVersion10(self):
         """
         Verify that version 10 format files will be properly detected and
@@ -316,8 +330,29 @@ class FormatDiscoveryTests(unittest.TestCase):
         self.assertEqual(self.getVersion()._getSVNVersion(), '22715')
 
 
+    def test_reprRevisionNumber(self):
+        """
+        Calling C{repr} on a version with an SVN version returns a human-readable
+        string representation of the version including the revision number.
+        """
+        self.svnEntries.child("entries").setContent(VERSION_10_ENTRIES)
+        self.assertEqual(repr(self.getVersion()),
+            "Version('twisted_python_versions_package', 1, 0, 0)  # (SVN r22715)")
+
+
     def test_detectUnknownVersion(self):
         """
-        Verify that a new version of SVN will result in the revision 'Unknown'.
+        Verify that a new and unknown version of SVN will result in the
+        revision 'Unknown'.
         """
-        self.checkSVNFormat("some-random-new-version", "ooga booga!", 'Unknown')
+        self.checkSVNFormat("some-random-new-version", "ooga booga!",
+            "Unknown")
+
+
+    def test_missingEntriesFile(self):
+        """
+        Verify that a version 4 format file with invalid entries will result
+        in the revision 'Unknown'.
+        """
+        self.checkSVNFormat("4", "foo", "Unknown")
+

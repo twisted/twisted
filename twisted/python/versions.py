@@ -11,6 +11,7 @@ See L{Version}.
 import sys, os
 
 
+
 class _inf(object):
     """
     An object that is bigger than all other objects.
@@ -30,16 +31,19 @@ class _inf(object):
 _inf = _inf()
 
 
+
 class IncomparableVersions(TypeError):
     """
     Two versions could not be compared.
     """
 
+
+
 class Version(object):
     """
     An object that represents a three-part version number.
 
-    If running from an svn checkout, include the revision number in
+    If running from an SVN checkout, include the revision number in
     the version string.
     """
     def __init__(self, package, major, minor, micro, prerelease=None):
@@ -65,7 +69,7 @@ class Version(object):
     def short(self):
         """
         Return a string in canonical short version format,
-        <major>.<minor>.<micro>[+rSVNVer].
+        C{<major>.<minor>.<micro>[+rSVNVer]}.
         """
         s = self.base()
         svnver = self._getSVNVersion()
@@ -76,7 +80,7 @@ class Version(object):
 
     def base(self):
         """
-        Like L{short}, but without the +rSVNVer.
+        Like L{short}, but without the C{+rSVNVer}.
         """
         if self.prerelease is None:
             pre = ""
@@ -197,7 +201,7 @@ class Version(object):
         format version from the 'format' file and parsing the entries file
         accordingly.
 
-        @return: None or string containing SVN Revision number.
+        @return: None or string containing SVN revision number.
         """
         mod = sys.modules.get(self.package)
         if mod:
@@ -209,7 +213,7 @@ class Version(object):
             formatFile = os.path.join(svn, 'format')
             if os.path.exists(formatFile):
                 # It looks like a less-than-version-10 working copy.
-                format = file(formatFile).read().strip()
+                format = open(formatFile, 'r').read().strip()
                 parser = getattr(self, '_parseSVNEntries_' + format, None)
             else:
                 # It looks like a version-10-or-greater working copy, which
@@ -220,7 +224,7 @@ class Version(object):
                 return 'Unknown'
 
             entriesFile = os.path.join(svn, 'entries')
-            entries = file(entriesFile)
+            entries = open(entriesFile, 'r')
             try:
                 try:
                     return parser(entries)
@@ -247,3 +251,4 @@ def getVersionString(version):
     """
     result = '%s %s' % (version.package, version.short())
     return result
+
