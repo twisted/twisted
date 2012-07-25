@@ -7,7 +7,6 @@ Tests for parts of our release automation system.
 
 
 import os
-import shutil
 import sys
 
 from distutils.core import Distribution
@@ -15,8 +14,10 @@ from distutils.core import Distribution
 from twisted.trial.unittest import TestCase
 
 from twisted.python import dist
-from twisted.python.dist import get_setup_args, ConditionalExtension
+from twisted.python.dist import (get_setup_args, ConditionalExtension,
+    build_scripts_twisted)
 from twisted.python.filepath import FilePath
+
 
 
 class SetupTest(TestCase):
@@ -55,6 +56,7 @@ class SetupTest(TestCase):
         self.patch(os, "name", "nt")
         builder.prepare_extensions()
         self.assertEqual(ext.define_macros, [("whatever", 2), ("WIN32", 1)])
+
 
 
 class GetExtensionsTest(TestCase):
@@ -195,6 +197,7 @@ version = versions.Version("twisted.blat", 9, 8, 10)
         self.assertEqual(dist.getVersion("blat", base=self.dirname), "9.8.10")
 
 
+
 class GetScriptsTest(TestCase):
     """
     Tests for L{dist.getScripts} which returns the scripts which should be
@@ -295,6 +298,110 @@ class GetScriptsTest(TestCase):
 
 
 
+class DummyCommand:
+    """
+    A fake Command.
+    """
+    def __init__(self, **kwargs):
+        for kw, val in kwargs.items():
+            setattr(self, kw, val)
+
+    def ensure_finalized(self):
+        pass
+
+
+
+class BuildScriptsTest(TestCase):
+    """
+    Tests for L{dist.build_scripts_twisted}.
+    """
+
+    def setUp(self):
+        self.source = FilePath(self.mktemp())
+        self.target = FilePath(self.mktemp())
+        self.source.makedirs()
+        self.addCleanup(os.chdir, os.getcwd())
+        os.chdir(self.source.path)
+
+
+    def buildScripts(self):
+        """
+        Write 3 types of scripts and run the L{build_scripts_twisted}
+        command.
+        """
+        self.writeScript(self.source, "script1",
+                          ("#! /usr/bin/env python2.7\n"
+                           "# bogus script w/ Python sh-bang\n"
+                           "pass\n"))
+
+        self.writeScript(self.source, "script2.py",
+                        ("#!/usr/bin/python\n"
+                         "# bogus script w/ Python sh-bang\n"
+                         "pass\n"))
+
+        self.writeScript(self.source, "shell.sh",
+                        ("#!/bin/sh\n"
+                         "# bogus shell script w/ sh-bang\n"
+                         "exit 0\n"))
+
+        expected = ['script1', 'script2.py', 'shell.sh']
+        cmd = self.getBuildScriptsCmd(self.target,
+                                     [self.source.child(fn).path
+                                      for fn in expected])
+        cmd.finalize_options()
+        cmd.run()
+
+        return self.target.listdir()
+
+
+    def getBuildScriptsCmd(self, target, scripts):
+        """
+        Create a distutils L{Distribution} with a L{DummyCommand} and wrap it
+        in L{build_scripts_twisted}.
+
+        @type target: L{FilePath}
+        """
+        dist = Distribution()
+        dist.scripts = scripts
+        dist.command_obj["build"] = DummyCommand(
+            build_scripts = target.path,
+            force = 1,
+            executable = sys.executable
+        )
+        return build_scripts_twisted(dist)
+
+
+    def writeScript(self, dir, name, text):
+        """
+        Write the script to disk.
+        """
+        with open(dir.child(name).path, "w") as f:
+            f.write(text)
+
+
+    def test_notWindows(self):
+        """
+        L{build_scripts_twisted} does not rename scripts on non-Windows
+        platforms.
+        """
+        self.patch(os, "name", "twisted")
+        built = self.buildScripts()
+        for name in ['script1', 'script2.py', 'shell.sh']:
+            self.assertTrue(name in built)
+
+
+    def test_windows(self):
+        """
+        L{build_scripts_twisted} renames scripts so they end with '.py' on
+        the Windows platform.
+        """
+        self.patch(os, "name", "nt")
+        built = self.buildScripts()
+        for name in ['script1.py', 'script2.py', 'shell.sh.py']:
+            self.assertTrue(name in built)
+
+
+
 class FakeModule(object):
     """
     A fake module, suitable for dependency injection in testing.
@@ -307,6 +414,7 @@ class FakeModule(object):
         @type attrs: C{dict} of C{str} (Python names) to objects
         """
         self._attrs = attrs
+
 
     def __getattr__(self, name):
         """

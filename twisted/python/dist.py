@@ -1,3 +1,7 @@
+# -*- test-case-name: twisted.python.test.test_dist -*-
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
+
 """
 Distutils convenience functionality.
 
@@ -282,26 +286,27 @@ def getScripts(projname, basedir=''):
 ## Helpers and distutil tweaks
 
 class build_scripts_twisted(build_scripts.build_scripts):
-    """Renames scripts so they end with '.py' on Windows."""
-
+    """
+    Renames scripts so they end with '.py' on Windows.
+    """
     def run(self):
         build_scripts.build_scripts.run(self)
         if not os.name == "nt":
             return
         for f in os.listdir(self.build_dir):
-            fpath=os.path.join(self.build_dir, f)
+            fpath = os.path.join(self.build_dir, f)
             if not fpath.endswith(".py"):
-                try:
-                    os.unlink(fpath + ".py")
-                except EnvironmentError, e:
-                    if e.args[1]=='No such file or directory':
-                        pass
-                os.rename(fpath, fpath + ".py")
+                pypath = fpath + ".py"
+                if os.path.exists(pypath):
+                    os.unlink(pypath)
+                os.rename(fpath, pypath)
 
 
 
 class install_data_twisted(install_data.install_data):
-    """I make sure data files are installed in the package directory."""
+    """
+    I make sure data files are installed in the package directory.
+    """
     def finalize_options(self):
         self.set_undefined_options('install',
             ('install_lib', 'install_dir')
