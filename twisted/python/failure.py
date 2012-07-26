@@ -10,16 +10,25 @@ Asynchronous-friendly error mechanism.
 
 See L{Failure}.
 """
+from __future__ import print_function
 
 # System Imports
 import sys
 import linecache
 import inspect
 import opcode
-from cStringIO import StringIO
 from inspect import getmro
 
+try:
+    if sys.version_info[0] < 3:
+        from cStringIO import StringIO
+    else:
+        from io import StringIO
+except ImportError:
+    from StringIO import StringIO
+
 from twisted.python import reflect
+from twisted.python.compat import reraise
 
 count = 0
 traceupLength = 4
@@ -367,7 +376,8 @@ class Failure:
         raise the original exception, preserving traceback
         information if available.
         """
-        raise self.type, self.value, self.tb
+        reraise(self.type, self.value, self.tb)
+        #raise self.type, self.value, self.tb
 
 
     def throwExceptionIntoGenerator(self, g):
@@ -405,7 +415,7 @@ class Failure:
         # the tracebacks) here when it is used is not that big a deal.
 
         # handle raiseException-originated exceptions
-        if lastFrame.f_code is cls.raiseException.func_code:
+        if lastFrame.f_code is cls.raiseException.__code__:
             return lastFrame.f_locals.get('self')
 
         # handle throwExceptionIntoGenerator-originated exceptions
@@ -426,7 +436,7 @@ class Failure:
         # second last item):
         if secondLastTb:
             frame = secondLastTb.tb_frame
-            if frame.f_code is cls.throwExceptionIntoGenerator.func_code:
+            if frame.f_code is cls.throwExceptionIntoGenerator.__code__:
                 return frame.f_locals.get('self')
 
         # if the exception was caught below the generator.throw
@@ -435,7 +445,7 @@ class Failure:
         # generator frame itself, thus its caller is
         # throwExceptionIntoGenerator).
         frame = tb.tb_frame.f_back
-        if frame and frame.f_code is cls.throwExceptionIntoGenerator.func_code:
+        if frame and frame.f_code is cls.throwExceptionIntoGenerator.__code__:
             return frame.f_locals.get('self')
 
     _findFailure = classmethod(_findFailure)
@@ -625,7 +635,7 @@ DO_POST_MORTEM = True
 
 def _debuginit(self, exc_value=None, exc_type=None, exc_tb=None,
                captureVars=False,
-               Failure__init__=Failure.__init__.im_func):
+               Failure__init__=Failure.__init__):
     """
     Initialize failure object, possibly spawning pdb.
     """
@@ -636,7 +646,7 @@ def _debuginit(self, exc_value=None, exc_type=None, exc_tb=None,
                 strrepr = str(exc[1])
             except:
                 strrepr = "broken str"
-            print "Jumping into debugger for post-mortem of exception '%s':" % (strrepr,)
+            print("Jumping into debugger for post-mortem of exception '%s':" % (strrepr,))
             import pdb
             pdb.post_mortem(exc[2])
     Failure__init__(self, exc_value, exc_type, exc_tb, captureVars)
