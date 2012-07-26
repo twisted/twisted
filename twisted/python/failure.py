@@ -533,7 +533,9 @@ class Failure:
             C{'verbose'}.
         """
         if file is None:
-            file = log.logerr
+            # import here to avoid circular imports
+            from twisted.python.log import logerr
+            file = logerr
         w = file.write
 
         if detail == 'verbose' and not self.captureVars:
@@ -644,7 +646,3 @@ def startDebugMode():
     """Enable debug hooks for Failures."""
     Failure.__init__ = _debuginit
 
-
-# Sibling imports - at the bottom and unqualified to avoid unresolvable
-# circularity
-import log
