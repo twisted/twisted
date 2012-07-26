@@ -6,7 +6,10 @@ Test cases for twisted.reflect module.
 """
 
 import weakref, os
-from ihooks import ModuleImporter
+try:
+    from ihooks import ModuleImporter
+except ImportError:
+    ModuleImporter = None
 
 try:
     from collections import deque
@@ -294,6 +297,9 @@ class ImportHooksLookupTests(LookupsTestCase):
     Runs all of the tests from L{LookupsTestCase} after installing a custom
     import hook.
     """
+    if ModuleImporter == None:
+        skip = "ihooks not available"
+
     def setUp(self):
         """
         Perturb the normal import behavior subtly by installing an import
