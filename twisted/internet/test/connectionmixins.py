@@ -11,21 +11,17 @@ import socket
 from gc import collect
 from weakref import ref
 
-from zope.interface import implements
 from zope.interface.verify import verifyObject
 
 from twisted.python import context, log
 from twisted.python.failure import Failure
 from twisted.python.runtime import platform
 from twisted.python.log import ILogContext, msg, err
-from twisted.internet.defer import Deferred, gatherResults, succeed, fail
-from twisted.internet.interfaces import (
-    IConnector, IResolverSimple, IReactorFDSet)
+from twisted.internet.defer import Deferred, gatherResults
+from twisted.internet.interfaces import IConnector, IReactorFDSet
 from twisted.internet.protocol import ClientFactory, Protocol, ServerFactory
 from twisted.test.test_tcp import ClosingProtocol
 from twisted.trial.unittest import SkipTest
-from twisted.internet.error import DNSLookupError
-from twisted.internet.interfaces import ITLSTransport
 from twisted.internet.test.reactormixins import ConnectableProtocol
 from twisted.internet.test.reactormixins import runProtocolsWithReactor
 from twisted.internet.test.reactormixins import needsRunningReactor
@@ -143,24 +139,6 @@ class Stop(ClientFactory):
         self.failReason = reason
         msg("Stop(CF) cCFailed: %s" % (reason.getErrorMessage(),))
         self.reactor.stop()
-
-
-
-class FakeResolver(object):
-    """
-    A resolver implementation based on a C{dict} mapping names to addresses.
-    """
-    implements(IResolverSimple)
-
-    def __init__(self, names):
-        self.names = names
-
-
-    def getHostByName(self, name, timeout):
-        try:
-            return succeed(self.names[name])
-        except KeyError:
-            return fail(DNSLookupError("FakeResolver couldn't find " + name))
 
 
 
@@ -331,57 +309,16 @@ class LogObserverMixin(object):
 
 
 
-class BrokenContextFactory(object):
+class StreamClientTestsMixin(object):
     """
-    A context factory with a broken C{getContext} method, for exercising the
-    error handling for such a case.
-    """
-    message = "Some path was wrong maybe"
-
-    def getContext(self):
-        raise ValueError(self.message)
-
-
-
-class TCPClientTestsMixin(object):
-    """
-    This mixin defines tests applicable to TCP client implementations.  Classes
-    which mix this in must provide all of the documented instance variables in
-    order to specify how the test works.  These are documented as instance
-    variables rather than declared as methods due to some peculiar inheritance
-    ordering concerns, but they are effectively abstract methods.
+    This mixin defines tests applicable to SOCK_STREAM client implementations.
 
     This must be mixed in to a L{ReactorBuilder
     <twisted.internet.test.reactormixins.ReactorBuilder>} subclass, as it
     depends on several of its methods.
 
-    @ivar endpoints: A L{twisted.internet.test.reactormixins.EndpointCreator}
-      instance.
-
-    @ivar interface: An IP address literal to locally bind a socket to as well
-        as to connect to.  This can be any valid interface for the local host.
-    @type interface: C{str}
-
-    @ivar port: An unused local listening port to listen on and connect to.
-        This will be used in conjunction with the C{interface}.  (Depending on
-        what they're testing, some tests will locate their own port with
-        L{findFreePort} instead.)
-    @type port: C{int}
-
-    @ivar family: an address family constant, such as L{socket.AF_INET},
-        L{socket.AF_INET6}, or L{socket.AF_UNIX}, which indicates the address
-        family of the transport type under test.
-    @type family: C{int}
-
-    @ivar addressClass: the L{twisted.internet.interfaces.IAddress} implementor
-        associated with the transport type under test.  Must also be a
-        3-argument callable which produces an instance of same.
-    @type addressClass: C{type}
-
-    @ivar fakeDomainName: A fake domain name to use, to simulate hostname
-        resolution and to distinguish between hostnames and IP addresses where
-        necessary.
-    @type fakeDomainName: C{str}
+    Then the methods C{connect} and C{listen} must defined, defining a client
+    and a server communicating with each other.
     """
 
     def test_interface(self):
@@ -389,8 +326,7 @@ class TCPClientTestsMixin(object):
         L{IReactorTCP.connectTCP} returns an object providing L{IConnector}.
         """
         reactor = self.buildReactor()
-        connector = reactor.connectTCP(self.interface, self.port,
-                                       ClientFactory())
+        connector = self.connect(reactor, ClientFactory())
         self.assertTrue(verifyObject(IConnector, connector))
 
 
@@ -399,59 +335,10 @@ class TCPClientTestsMixin(object):
         The reactor can be stopped by a client factory's
         C{clientConnectionFailed} method.
         """
-        host, port = findFreePort(self.interface, self.family)[:2]
         reactor = self.buildReactor()
         needsRunningReactor(
-            reactor, lambda: reactor.connectTCP(host, port, Stop(reactor)))
+            reactor, lambda: self.connect(reactor, Stop(reactor)))
         self.runReactor(reactor)
-
-
-    def test_addresses(self):
-        """
-        A client's transport's C{getHost} and C{getPeer} return L{IPv4Address}
-        instances which have the dotted-quad string form of the resolved
-        adddress of the local and remote endpoints of the connection
-        respectively as their C{host} attribute, not the hostname originally
-        passed in to L{connectTCP
-        <twisted.internet.interfaces.IReactorTCP.connectTCP>}, if a hostname
-        was used.
-        """
-        host, port = findFreePort(self.interface, self.family)[:2]
-        reactor = self.buildReactor()
-        fakeDomain = self.fakeDomainName
-        reactor.installResolver(FakeResolver({fakeDomain: self.interface}))
-
-        server = reactor.listenTCP(
-            0, serverFactoryFor(Protocol), interface=host)
-        serverAddress = server.getHost()
-
-        addresses = {'host': None, 'peer': None}
-        class CheckAddress(Protocol):
-            def makeConnection(self, transport):
-                addresses['host'] = transport.getHost()
-                addresses['peer'] = transport.getPeer()
-                reactor.stop()
-
-        clientFactory = Stop(reactor)
-        clientFactory.protocol = CheckAddress
-
-        def connectMe():
-            reactor.connectTCP(
-                fakeDomain, server.getHost().port, clientFactory,
-                bindAddress=(self.interface, port))
-        needsRunningReactor(reactor, connectMe)
-
-        self.runReactor(reactor)
-
-        if clientFactory.failReason:
-            self.fail(clientFactory.failReason.getTraceback())
-
-        self.assertEqual(
-            addresses['host'],
-            self.addressClass('TCP', self.interface, port))
-        self.assertEqual(
-            addresses['peer'],
-            self.addressClass('TCP', self.interface, serverAddress.port))
 
 
     def test_connectEvent(self):
@@ -462,11 +349,11 @@ class TCPClientTestsMixin(object):
         """
         reactor = self.buildReactor()
 
-        server = reactor.listenTCP(0, serverFactoryFor(Protocol),
-                                   interface=self.interface)
+        server = self.listen(reactor, serverFactoryFor(Protocol))
         connected = []
 
         class CheckConnection(Protocol):
+
             def connectionMade(self):
                 connected.append(self)
                 reactor.stop()
@@ -474,8 +361,8 @@ class TCPClientTestsMixin(object):
         clientFactory = Stop(reactor)
         clientFactory.protocol = CheckConnection
 
-        needsRunningReactor(reactor, lambda: reactor.connectTCP(
-            self.interface, server.getHost().port, clientFactory))
+        needsRunningReactor(
+            reactor, lambda: self.connect(reactor, clientFactory))
 
         reactor.run()
 
@@ -491,8 +378,7 @@ class TCPClientTestsMixin(object):
         transport were still connected.
         """
         reactor = self.buildReactor()
-        port = reactor.listenTCP(0, serverFactoryFor(ClosingProtocol),
-                                 interface=self.interface)
+        port = self.listen(reactor, serverFactoryFor(ClosingProtocol))
 
         finished = Deferred()
         finished.addErrback(log.err)
@@ -506,6 +392,7 @@ class TCPClientTestsMixin(object):
             connection, wait for the server to disconnect from us, and then
             unregister the producer.
             """
+
             def connectionMade(self):
                 log.msg("ClientProtocol.connectionMade")
                 self.transport.registerProducer(
@@ -524,7 +411,7 @@ class TCPClientTestsMixin(object):
 
         clientFactory = ClientFactory()
         clientFactory.protocol = ClientProtocol
-        reactor.connectTCP(self.interface, port.getHost().port, clientFactory)
+        self.connect(reactor, clientFactory)
         self.runReactor(reactor)
         self.assertFalse(writing[0],
                          "Transport was writing after unregisterProducer.")
@@ -553,8 +440,7 @@ class TCPClientTestsMixin(object):
             def resumeProducing(self):
                 log.msg("Producer.resumeProducing")
 
-        port = reactor.listenTCP(0, serverFactoryFor(Protocol),
-            interface=self.interface)
+        port = self.listen(reactor, serverFactoryFor(Protocol))
 
         finished = Deferred()
         finished.addErrback(log.err)
@@ -592,58 +478,7 @@ class TCPClientTestsMixin(object):
 
         clientFactory = ClientFactory()
         clientFactory.protocol = ClientProtocol
-        reactor.connectTCP(self.interface, port.getHost().port, clientFactory)
+        self.connect(reactor, clientFactory)
         self.runReactor(reactor)
         # If the test failed, we logged an error already and trial
         # will catch it.
-
-
-    def test_badContext(self):
-        """
-        If the context factory passed to L{ITCPTransport.startTLS} raises an
-        exception from its C{getContext} method, that exception is raised by
-        L{ITCPTransport.startTLS}.
-        """
-        reactor = self.buildReactor()
-
-        brokenFactory = BrokenContextFactory()
-        results = []
-
-        serverFactory = ServerFactory()
-        serverFactory.protocol = Protocol
-
-        port = reactor.listenTCP(0, serverFactory, interface=self.interface)
-        endpoint = self.endpoints.client(reactor, port.getHost())
-
-        clientFactory = ClientFactory()
-        clientFactory.protocol = Protocol
-        connectDeferred = endpoint.connect(clientFactory)
-
-        def connected(protocol):
-            if not ITLSTransport.providedBy(protocol.transport):
-                results.append("skip")
-            else:
-                results.append(self.assertRaises(ValueError,
-                                                 protocol.transport.startTLS,
-                                                 brokenFactory))
-
-        def connectFailed(failure):
-            results.append(failure)
-
-        def whenRun():
-            connectDeferred.addCallback(connected)
-            connectDeferred.addErrback(connectFailed)
-            connectDeferred.addBoth(lambda ign: reactor.stop())
-        needsRunningReactor(reactor, whenRun)
-
-        self.runReactor(reactor)
-
-        self.assertEqual(len(results), 1,
-                         "more than one callback result: %s" % (results,))
-
-        if isinstance(results[0], Failure):
-            # self.fail(Failure)
-            results[0].raiseException()
-        if results[0] == "skip":
-            raise SkipTest("Reactor does not support ITLSTransport")
-        self.assertEqual(BrokenContextFactory.message, str(results[0]))
