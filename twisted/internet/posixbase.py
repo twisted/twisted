@@ -437,6 +437,7 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
 
 
     # IReactorSocket (but not on Windows)
+
     def adoptStreamPort(self, fileDescriptor, addressFamily, factory):
         """
         Create a new L{IListeningPort} from an already-initialized socket.
@@ -453,6 +454,17 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
             self, fileDescriptor, addressFamily, factory)
         p.startListening()
         return p
+
+    def adoptStreamConnection(self, fileDescriptor, addressFamily, factory):
+        """
+        @see:
+            L{twisted.internet.interfaces.IReactorSocket.adoptStreamConnection}
+        """
+        if addressFamily not in (socket.AF_INET, socket.AF_INET6):
+            raise error.UnsupportedAddressFamily(addressFamily)
+
+        return tcp.Server._fromConnectedSocket(
+            fileDescriptor, addressFamily, factory, self)
 
 
     # IReactorTCP

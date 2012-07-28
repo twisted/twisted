@@ -767,16 +767,58 @@ class Server(_TLSServerMixin, Connection):
         self.logstr = "%s,%s,%s" % (logPrefix,
                                     sessionno,
                                     self.hostname)
-        self.repstr = "<%s #%s on %s>" % (self.protocol.__class__.__name__,
-                                          self.sessionno,
-                                          self.server._realPortNumber)
+        if self.server is not None:
+            self.repstr = "<%s #%s on %s>" % (self.protocol.__class__.__name__,
+                                              self.sessionno,
+                                              self.server._realPortNumber)
         self.startReading()
         self.connected = 1
 
     def __repr__(self):
-        """A string representation of this connection.
+        """
+        A string representation of this connection.
         """
         return self.repstr
+
+
+    @classmethod
+    def _fromConnectedSocket(cls, fileDescriptor, addressFamily, factory,
+                             reactor):
+        """
+        Create a new L{Server} based on an existing connected I{SOCK_STREAM}
+        socket.
+
+        Arguments are the same as to L{Server.__init__}, except where noted.
+
+        @param fileDescriptor: An integer file descriptor associated with a
+            connected socket.  The socket must be in non-blocking mode.  Any
+            additional attributes desired, such as I{FD_CLOEXEC}, must also be
+            set already.
+
+        @param addressFamily: The address family (sometimes called I{domain})
+            of the existing socket.  For example, L{socket.AF_INET}.
+
+        @return: A new instance of C{cls} wrapping the socket given by
+            C{fileDescriptor}.
+        """
+        addressType = address.IPv4Address
+        if addressFamily == socket.AF_INET6:
+            addressType = address.IPv6Address
+        skt = socket.fromfd(fileDescriptor, addressFamily, socket.SOCK_STREAM)
+        addr = skt.getpeername()
+        protocolAddr = addressType('TCP', addr[0], addr[1])
+        localPort = skt.getsockname()[1]
+
+        protocol = factory.buildProtocol(protocolAddr)
+        if protocol is None:
+            skt.close()
+            return
+
+        self = cls(skt, protocol, addr, None, addr[1], reactor)
+        self.repstr = "<%s #%s on %s>" % (
+            self.protocol.__class__.__name__, self.sessionno, localPort)
+        protocol.makeConnection(self)
+        return self
 
 
     def getHost(self):
@@ -874,7 +916,7 @@ class Port(base.BasePort, _SocketCloser):
     def _fromListeningDescriptor(cls, reactor, fd, addressFamily, factory):
         """
         Create a new L{Port} based on an existing listening I{SOCK_STREAM}
-        I{AF_INET} socket.
+        socket.
 
         Arguments are the same as to L{Port.__init__}, except where noted.
 
