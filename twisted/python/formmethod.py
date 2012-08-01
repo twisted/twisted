@@ -59,7 +59,7 @@ class Argument:
 
     def coerce(self, val):
         """Convert the value to the correct format."""
-        raise NotImplementedError, "implement in subclass"
+        raise NotImplementedError("implement in subclass")
 
 
 class String(Argument):
@@ -79,9 +79,9 @@ class String(Argument):
     def coerce(self, val):
         s = str(val)
         if len(s) < self.min:
-            raise InputError, "Value must be at least %s characters long" % self.min
+            raise InputError("Value must be at least %s characters long" % self.min)
         if self.max != None and len(s) > self.max:
-            raise InputError, "Value must be at most %s characters long" % self.max
+            raise InputError("Value must be at most %s characters long" % self.max)
         return str(val)
 
 
@@ -100,12 +100,12 @@ class VerifiedPassword(String):
     
     def coerce(self, vals):
         if len(vals) != 2 or vals[0] != vals[1]:
-            raise InputError, "Please enter the same password twice."
+            raise InputError("Please enter the same password twice.")
         s = str(vals[0])
         if len(s) < self.min:
-            raise InputError, "Value must be at least %s characters long" % self.min
+            raise InputError("Value must be at least %s characters long" % self.min)
         if self.max != None and len(s) > self.max:
-            raise InputError, "Value must be at most %s characters long" % self.max
+            raise InputError("Value must be at most %s characters long" % self.max)
         return s
 
 
@@ -137,7 +137,7 @@ class Integer(Argument):
         try:
             return int(val)
         except ValueError:
-            raise InputError, "%s is not valid, please enter a whole number, e.g. 10" % val
+            raise InputError("%s is not valid, please enter a whole number, e.g. 10" % val)
 
 
 class IntegerRange(Integer):
@@ -154,9 +154,9 @@ class IntegerRange(Integer):
         if self.allowNone and result == None:
             return result
         if result < self.min:
-            raise InputError, "Value %s is too small, it should be at least %s" % (result, self.min)
+            raise InputError("Value %s is too small, it should be at least %s" % (result, self.min))
         if result > self.max:
-            raise InputError, "Value %s is too large, it should be at most %s" % (result, self.max)
+            raise InputError("Value %s is too large, it should be at most %s" % (result, self.max))
         return result
 
 
@@ -181,7 +181,7 @@ class Float(Argument):
         try:
             return float(val)
         except ValueError:
-            raise InputError, "Invalid float: %s" % val
+            raise InputError("Invalid float: %s" % val)
 
 
 class Choice(Argument):
@@ -258,8 +258,8 @@ class Boolean(Argument):
 class File(Argument):
     def __init__(self, name, allowNone=1, shortDesc=None, longDesc=None,
                  hints=None):
-        self.allowNone = allowNone
-        Argument.__init__(self, name, None, shortDesc, longDesc, hints)
+        Argument.__init__(self, name, None, shortDesc, longDesc, hints,
+                          allowNone=allowNone)
 
     def coerce(self, file):
         if not file and self.allowNone:
@@ -267,7 +267,7 @@ class File(Argument):
         elif file:
             return file
         else:
-            raise InputError, "Invalid File"
+            raise InputError("Invalid File")
 
 def positiveInt(x):
     x = int(x)
@@ -294,18 +294,18 @@ class Date(Argument):
         try:
             year, month, day = map(positiveInt, args)
         except ValueError:
-            raise InputError, "Invalid date"
+            raise InputError("Invalid date")
         if (month, day) == (2, 29):
             if not calendar.isleap(year):
-                raise InputError, "%d was not a leap year" % year
+                raise InputError("%d was not a leap year" % year)
             else:
                 return year, month, day
         try:
             mdays = calendar.mdays[month]
         except IndexError:
-            raise InputError, "Invalid date"
+            raise InputError("Invalid date")
         if day > mdays:
-            raise InputError, "Invalid date"
+            raise InputError("Invalid date")
         return year, month, day
 
 
