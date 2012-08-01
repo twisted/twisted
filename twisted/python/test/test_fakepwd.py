@@ -99,7 +99,7 @@ class UserDatabaseTestsMixin:
         username, password, uid, gid, gecos, dir, shell = self.getExistingUserInfo()
         for entry in [db.getpwuid(uid), db.getpwnam(username), db.getpwall()[0]]:
             self.assertIsInstance(len(entry), int)
-            self.assertEquals(len(entry), 7)
+            self.assertEqual(len(entry), 7)
 
 
     def test_recordIndexable(self):
@@ -208,7 +208,7 @@ class PwdModuleTests(TestCase, UserDatabaseTestsMixin):
         found with C{getpwuid} and only cause trouble).
         """
         while True:
-            entry = self._users.next()
+            entry = next(self._users)
             uid = entry.pw_uid
             if uid not in self._uids:
                 self._uids.add(uid)
@@ -235,15 +235,15 @@ class ShadowDatabaseTestsMixin:
              flag) = self.getExistingUserInfo()
 
             entry = self.database.getspnam(username)
-            self.assertEquals(entry.sp_nam, username)
-            self.assertEquals(entry.sp_pwd, password)
-            self.assertEquals(entry.sp_lstchg, lastChange)
-            self.assertEquals(entry.sp_min, min)
-            self.assertEquals(entry.sp_max, max)
-            self.assertEquals(entry.sp_warn, warn)
-            self.assertEquals(entry.sp_inact, inact)
-            self.assertEquals(entry.sp_expire, expire)
-            self.assertEquals(entry.sp_flag, flag)
+            self.assertEqual(entry.sp_nam, username)
+            self.assertEqual(entry.sp_pwd, password)
+            self.assertEqual(entry.sp_lstchg, lastChange)
+            self.assertEqual(entry.sp_min, min)
+            self.assertEqual(entry.sp_max, max)
+            self.assertEqual(entry.sp_warn, warn)
+            self.assertEqual(entry.sp_inact, inact)
+            self.assertEqual(entry.sp_expire, expire)
+            self.assertEqual(entry.sp_flag, flag)
 
 
     def test_noSuchName(self):
@@ -263,7 +263,7 @@ class ShadowDatabaseTestsMixin:
         username = self.getExistingUserInfo()[0]
         for entry in [db.getspnam(username), db.getspall()[0]]:
             self.assertIsInstance(len(entry), int)
-            self.assertEquals(len(entry), 9)
+            self.assertEqual(len(entry), 9)
 
 
     def test_recordIndexable(self):
@@ -278,17 +278,17 @@ class ShadowDatabaseTestsMixin:
         (username, password, lastChange, min, max, warn, inact, expire,
          flag) = self.getExistingUserInfo()
         for entry in [db.getspnam(username), db.getspall()[0]]:
-            self.assertEquals(entry[0], username)
-            self.assertEquals(entry[1], password)
-            self.assertEquals(entry[2], lastChange)
-            self.assertEquals(entry[3], min)
-            self.assertEquals(entry[4], max)
-            self.assertEquals(entry[5], warn)
-            self.assertEquals(entry[6], inact)
-            self.assertEquals(entry[7], expire)
-            self.assertEquals(entry[8], flag)
+            self.assertEqual(entry[0], username)
+            self.assertEqual(entry[1], password)
+            self.assertEqual(entry[2], lastChange)
+            self.assertEqual(entry[3], min)
+            self.assertEqual(entry[4], max)
+            self.assertEqual(entry[5], warn)
+            self.assertEqual(entry[6], inact)
+            self.assertEqual(entry[7], expire)
+            self.assertEqual(entry[8], flag)
 
-            self.assertEquals(len(entry), len(list(entry)))
+            self.assertEqual(len(entry), len(list(entry)))
             self.assertRaises(IndexError, getitem, entry, 9)
 
 
@@ -349,15 +349,15 @@ class ShadowDatabaseTests(TestCase, ShadowDatabaseTestsMixin):
                    expire, flag)
 
         for [entry] in [[db.getspnam(username)], db.getspall()]:
-            self.assertEquals(entry.sp_nam, username)
-            self.assertEquals(entry.sp_pwd, password)
-            self.assertEquals(entry.sp_lstchg, lastChange)
-            self.assertEquals(entry.sp_min, min)
-            self.assertEquals(entry.sp_max, max)
-            self.assertEquals(entry.sp_warn, warn)
-            self.assertEquals(entry.sp_inact, inact)
-            self.assertEquals(entry.sp_expire, expire)
-            self.assertEquals(entry.sp_flag, flag)
+            self.assertEqual(entry.sp_nam, username)
+            self.assertEqual(entry.sp_pwd, password)
+            self.assertEqual(entry.sp_lstchg, lastChange)
+            self.assertEqual(entry.sp_min, min)
+            self.assertEqual(entry.sp_max, max)
+            self.assertEqual(entry.sp_warn, warn)
+            self.assertEqual(entry.sp_inact, inact)
+            self.assertEqual(entry.sp_expire, expire)
+            self.assertEqual(entry.sp_flag, flag)
 
 
 
@@ -382,5 +382,5 @@ class SPwdModuleTests(TestCase, ShadowDatabaseTestsMixin):
         """
         Read and return the next record from C{self._users}.
         """
-        return self._users.next()
+        return next(self._users)
 
