@@ -56,7 +56,6 @@ on event-based network programming and multiprotocol integration.
         scripts = scripts,
         data_files=getDataFiles('twisted'),
         classifiers=[
-            "Programming Language :: Python :: 2.5",
             "Programming Language :: Python :: 2.6",
             "Programming Language :: Python :: 2.7",
             ])
