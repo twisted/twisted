@@ -119,13 +119,13 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         The FQPN of a WSGI application object to serve as the root resource of
         the webserver.
         """
-        pool = threadpool.ThreadPool()
-        reactor.callWhenRunning(pool.start)
-        reactor.addSystemEventTrigger('after', 'shutdown', pool.stop)
         try:
             application = reflect.namedAny(name)
         except (AttributeError, ValueError):
             raise usage.UsageError("No such WSGI application: %r" % (name,))
+        pool = threadpool.ThreadPool()
+        reactor.callWhenRunning(pool.start)
+        reactor.addSystemEventTrigger('after', 'shutdown', pool.stop)
         self['root'] = wsgi.WSGIResource(reactor, pool, application)
 
 
