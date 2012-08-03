@@ -14,7 +14,6 @@ from twisted import plugin
 from twisted.python.util import spewer
 from twisted.python.compat import set
 from twisted.trial import runner, itrial, reporter
-from twisted.trial._dist.disttrial import DistTrialRunner
 
 
 # Yea, this is stupid.  Leave it for for command-line compatibility for a
@@ -94,12 +93,7 @@ def _reporterAction():
     return usage.CompleteList([p.longOpt for p in
                                plugin.getPlugins(itrial.IReporter)])
 
-
-
-class _BasicOptions(object):
-    """
-    Basic options shared between trial and its local workers.
-    """
+class Options(usage.Options, app.ReactorSelectionMixin):
     synopsis = """%s [options] [[file|package|module|TestCase|testmethod]...]
     """ % (os.path.basename(sys.argv[0]),)
 
@@ -107,18 +101,28 @@ class _BasicOptions(object):
                 "from modules, packages and files listed on the command line.")
 
     optFlags = [["help", "h"],
-                ["no-recurse", "N", "Don't recurse into packages"],
-                ['help-reporters', None,
-                 "Help on available output plugins (reporters)"],
                 ["rterrors", "e", "realtime errors, print out tracebacks as "
                  "soon as they occur"],
-                ["unclean-warnings", None,
-                 "Turn dirty reactor errors into warnings"],
+                ["debug", "b", "Run tests in the Python debugger. Will load "
+                 "'.pdbrc' from current directory if it exists."],
+                ["debug-stacktraces", "B", "Report Deferred creation and "
+                 "callback stack traces"],
+                ["nopm", None, "don't automatically jump into debugger for "
+                 "postmorteming of exceptions"],
+                ["dry-run", 'n', "do everything but run the tests"],
                 ["force-gc", None, "Have Trial run gc.collect() before and "
                  "after each test case."],
+                ["profile", None, "Run tests under the Python profiler"],
+                ["unclean-warnings", None,
+                 "Turn dirty reactor errors into warnings"],
+                ["until-failure", "u", "Repeat test until it fails"],
+                ["no-recurse", "N", "Don't recurse into packages"],
+                ['help-reporters', None,
+                 "Help on available output plugins (reporters)"]
                 ]
 
     optParameters = [
+        ["logfile", "l", "test.log", "log file name"],
         ["random", "z", None,
          "Run tests in random order using the specified seed"],
         ['temp-directory', None, '_trial_temp',
@@ -128,7 +132,8 @@ class _BasicOptions(object):
          'more info.']]
 
     compData = usage.Completions(
-        optActions={"reporter": _reporterAction,
+        optActions={"tbformat": usage.CompleteList(["plain", "emacs", "cgitb"]),
+                    "reporter": _reporterAction,
                     "logfile": usage.CompleteFiles(descr="log file name"),
                     "random": usage.Completer(descr="random seed")},
         extraActions=[usage.CompleteFiles(
@@ -163,12 +168,11 @@ class _BasicOptions(object):
         import trace
         self.tracer = trace.Trace(count=1, trace=0)
         sys.settrace(self.tracer.globaltrace)
-        self['coverage'] = True
 
 
     def opt_testmodule(self, filename):
         """
-        Filename to grep for test cases (-*- test-case-name).
+        Filename to grep for test cases (-*- test-case-name)
         """
         # If the filename passed to this parameter looks like a test module
         # we just add that to the test suite.
@@ -213,7 +217,6 @@ class _BasicOptions(object):
         """
         Disable the garbage collector
         """
-        self["disablegc"] = True
         gc.disable()
 
 
@@ -239,8 +242,6 @@ class _BasicOptions(object):
         except (TypeError, ValueError):
             raise usage.UsageError(
                 "argument to recursionlimit must be an integer")
-        else:
-            self["recursionlimit"] = int(arg)
 
 
     def opt_random(self, option):
@@ -261,7 +262,6 @@ class _BasicOptions(object):
         """
         Fake the lack of the specified modules, separated with commas.
         """
-        self["without-module"] = option
         for module in option.split(","):
             if module in sys.modules:
                 warnings.warn("Module '%s' already imported, "
@@ -289,98 +289,12 @@ class _BasicOptions(object):
         # application-defined plugins muck up reactor selecting by importing
         # t.i.reactor and causing the default to be installed.
         self['reporter'] = self._loadReporterByName(self['reporter'])
+
         if 'tbformat' not in self:
             self['tbformat'] = 'default'
-
-
-
-class Options(_BasicOptions, usage.Options, app.ReactorSelectionMixin):
-    """
-    Options to the trial command line tool.
-
-    @ivar _workerFlags: List of flags which are accepted by trial distributed
-        workers. This is used by C{_getWorkerArguments} to build the command
-        line arguments.
-    @type _workerFlags: C{list}
-
-    @ivar _workerParameters: List of parameter which are accepted by trial
-        distrubuted workers. This is used by C{_getWorkerArguments} to build
-        the command line arguments.
-    @type _workerParameters: C{list}
-    """
-
-    optFlags = [
-                ["debug", "b", "Run tests in the Python debugger. Will load "
-                 "'.pdbrc' from current directory if it exists."],
-                ["debug-stacktraces", "B", "Report Deferred creation and "
-                 "callback stack traces"],
-                ["nopm", None, "don't automatically jump into debugger for "
-                 "postmorteming of exceptions"],
-                ["dry-run", 'n', "do everything but run the tests"],
-                ["profile", None, "Run tests under the Python profiler"],
-                ["until-failure", "u", "Repeat test until it fails"],
-                ]
-
-    optParameters = [
-        ["logfile", "l", "test.log", "log file name"],
-        ["jobs", "j", None, "Number of local workers to run"]
-        ]
-
-    compData = usage.Completions(
-        optActions = {
-            "tbformat": usage.CompleteList(["plain", "emacs", "cgitb"]),
-            "reporter": _reporterAction,
-            },
-        )
-
-    _workerFlags = ["disablegc", "force-gc", "coverage"]
-    _workerParameters = ["recursionlimit", "reactor", "without-module"]
-
-    fallbackReporter = reporter.TreeReporter
-    extra = None
-    tracer = None
-
-
-    def opt_jobs(self, number):
-        """
-        Number of local workers to run, a strictly positive integer.
-        """
-        try:
-            number = int(number)
-        except ValueError:
-            raise usage.UsageError(
-                "Expecting integer argument to jobs, got '%s'" % number)
-        if number <= 0:
-            raise usage.UsageError(
-                "Argument to jobs must be a strictly positive integer")
-        self["jobs"] = number
-
-
-    def _getWorkerArguments(self):
-        """
-        Return a list of options to pass to distributed workers.
-        """
-        args = []
-        for option in self._workerFlags:
-            if self.get(option) is not None:
-                if self[option]:
-                    args.append("--%s" % (option,))
-        for option in self._workerParameters:
-            if self.get(option) is not None:
-                args.extend(["--%s" % (option,), str(self[option])])
-        return args
-
-
-    def postOptions(self):
-        _BasicOptions.postOptions(self)
-        if self['jobs']:
-            for option in ['debug', 'profile', 'debug-stacktraces']:
-                if self[option]:
-                    raise usage.UsageError(
-                        "You can't specify --%s when using --jobs" % option)
         if self['nopm']:
             if not self['debug']:
-                raise usage.UsageError("You must specify --debug when using "
+                raise usage.UsageError("you must specify --debug when using "
                                        "--nopm ")
             failure.DO_POST_MORTEM = False
 
@@ -416,34 +330,20 @@ def _getLoader(config):
 
 
 def _makeRunner(config):
-    """
-    Return a trial runner class set up with the parameters extracted from
-    C{config}.
-
-    @return: A trial runner instance.
-    @rtype: L{runner.TrialRunner} or L{DistTrialRunner} depending on the
-        configuration.
-    """
-    cls = runner.TrialRunner
-    args = {'reporterFactory': config['reporter'],
-            'tracebackFormat': config['tbformat'],
-            'realTimeErrors': config['rterrors'],
-            'uncleanWarnings': config['unclean-warnings'],
-            'logfile': config['logfile'],
-            'workingDirectory': config['temp-directory']}
+    mode = None
+    if config['debug']:
+        mode = runner.TrialRunner.DEBUG
     if config['dry-run']:
-        args['mode'] = runner.TrialRunner.DRY_RUN
-    elif config['jobs']:
-        cls = DistTrialRunner
-        args['workerNumber'] = config['jobs']
-        args['workerArguments'] = config._getWorkerArguments()
-    else:
-        if config['debug']:
-            args['mode'] = runner.TrialRunner.DEBUG
-        args['profile'] = config['profile']
-        args['forceGarbageCollection'] = config['force-gc']
-
-    return cls(**args)
+        mode = runner.TrialRunner.DRY_RUN
+    return runner.TrialRunner(config['reporter'],
+                              mode=mode,
+                              profile=config['profile'],
+                              logfile=config['logfile'],
+                              tracebackFormat=config['tbformat'],
+                              realTimeErrors=config['rterrors'],
+                              uncleanWarnings=config['unclean-warnings'],
+                              workingDirectory=config['temp-directory'],
+                              forceGarbageCollection=config['force-gc'])
 
 
 

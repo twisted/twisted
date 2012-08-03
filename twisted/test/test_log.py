@@ -504,16 +504,12 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
         self.assertIn("Hello!", fakeFile.getvalue())
         self.assertIsInstance(sys.stdout, log.StdioOnnaStick)
         self.assertEqual(sys.stdout.isError, False)
-        encoding = getattr(origStdout, "encoding", None)
-        if not encoding:
-            encoding = sys.getdefaultencoding()
-        self.assertEqual(sys.stdout.encoding, encoding)
+        self.assertEqual(sys.stdout.encoding, 
+                         origStdout.encoding or sys.getdefaultencoding())
         self.assertIsInstance(sys.stderr, log.StdioOnnaStick)
         self.assertEqual(sys.stderr.isError, True)
-        encoding = getattr(origStderr, "encoding", None)
-        if not encoding:
-            encoding = sys.getdefaultencoding()
-        self.assertEqual(sys.stderr.encoding, encoding)
+        self.assertEqual(sys.stderr.encoding,
+                         origStderr.encoding or sys.getdefaultencoding())
 
 
     def test_startLoggingTwice(self):
