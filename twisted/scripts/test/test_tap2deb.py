@@ -18,15 +18,10 @@ from twisted.trial.unittest import TestCase, SkipTest
 
 class TestTap2DEB(TestCase):
 
+    maintainer = "Jane Doe <janedoe@example.com>"
+
     def setUp(self):
-        self._checkForDebBuild()
-
-        self.maintainer = "Jane Doe <janedoe@example.com>"
-        self.basedir = FilePath(self.mktemp())
-        self.basedir.makedirs()
-        self.addCleanup(os.chdir, os.getcwd())
-        os.chdir(self.basedir.path)
-
+        return self._checkForDebBuild()
 
     def _checkForDebBuild(self):
         """
@@ -68,12 +63,17 @@ class TestTap2DEB(TestCase):
         """
         Running tap2deb should produce a bunch of files.
         """
+        basedir = FilePath(self.mktemp())
+        basedir.makedirs()
+        self.addCleanup(os.chdir, os.getcwd())
+        os.chdir(basedir.path)
+
         # make a temporary .tap file
         version = '1.0'
         tap_name = 'lemon'
-        tap_file = self.basedir.child("%s.tap" % tap_name)
+        tap_file = basedir.child("%s.tap" % tap_name)
         tap_file.setContent("# Dummy .tap file")
-        build_dir = self.basedir.child('.build')
+        build_dir = basedir.child('.build')
         input_dir = build_dir.child('twisted-%s-%s' % (tap_name, version))
         input_name = 'twisted-%s_%s' % (tap_name, version)
 
