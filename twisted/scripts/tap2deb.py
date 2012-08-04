@@ -1,11 +1,14 @@
+# -*- test-case-name: twisted.scripts.test.test_tap2deb -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-
-import sys, os, string, shutil
+import os
+import sys
+import shutil
+import subprocess
 
 from twisted.python import usage
+
 
 class MyOptions(usage.Options):
     optFlags = [["unsigned", "u"]]
@@ -27,47 +30,47 @@ class MyOptions(usage.Options):
 
     def postOptions(self):
         if not self["maintainer"]:
-            raise usage.UsageError, "maintainer must be specified."
+            raise usage.UsageError("maintainer must be specified.")
 
 
 type_dict = {
-'tap': 'file',
-'python': 'python',
-'source': 'source',
-'xml': 'xml',
+    'tap': 'file',
+    'python': 'python',
+    'source': 'source',
+    'xml': 'xml',
 }
 
+
+
 def save_to_file(file, text):
-    f = open(file, 'w')
-    f.write(text)
-    f.close()
+    with open(file, 'w') as f:
+        f.write(text)
 
 
-def run():
-
+def run(options=None):
     try:
         config = MyOptions()
-        config.parseOptions()
-    except usage.error, ue:
+        config.parseOptions(options)
+    except usage.error as ue:
         sys.exit("%s: %s" % (sys.argv[0], ue))
 
     tap_file = config['tapfile']
     base_tap_file = os.path.basename(config['tapfile'])
     protocol = (config['protocol'] or os.path.splitext(base_tap_file)[0])
-    deb_file = config['debfile'] or 'twisted-'+protocol
+    deb_file = config['debfile'] or 'twisted-' + protocol
     version = config['set-version']
     maintainer = config['maintainer']
     description = config['description'] or ('A Twisted-based server for %(protocol)s' %
                                             vars())
     long_description = config['long_description'] or 'Automatically created by tap2deb'
     twistd_option = type_dict[config['type']]
-    date = string.strip(os.popen('822-date').read())
+    date = os.popen('date -R').read().strip()
     directory = deb_file + '-' + version
     python_version = '%s.%s' % sys.version_info[:2]
 
     if os.path.exists(os.path.join('.build', directory)):
         os.system('rm -rf %s' % os.path.join('.build', directory))
-    os.makedirs(os.path.join('.build', directory, 'debian'))
+    os.makedirs(os.path.join('.build', directory, 'debian', 'source'))
 
     shutil.copy(tap_file, os.path.join('.build', directory))
 
@@ -192,6 +195,11 @@ Description: %(description)s
  %(long_description)s
 ''' % vars())
 
+    save_to_file(os.path.join('.build', directory, 'debian', 'compat'),
+    '''\
+7
+''' % vars())
+
     save_to_file(os.path.join('.build', directory, 'debian', 'copyright'),
     '''\
 This package was auto-debianized by %(maintainer)s on
@@ -214,6 +222,12 @@ etc/default
 var/lib/%(deb_file)s
 usr/share/doc/%(deb_file)s
 usr/share/%(deb_file)s
+''' % vars())
+
+    save_to_file(os.path.join('.build', directory, 'debian', 'source',
+                 'format'),
+    '''\
+3.0 (native)
 ''' % vars())
 
     save_to_file(os.path.join('.build', directory, 'debian', 'rules'),
@@ -274,8 +288,13 @@ binary: binary-indep binary-arch
     os.chmod(os.path.join('.build', directory, 'debian', 'rules'), 0755)
 
     os.chdir('.build/%(directory)s' % vars())
-    os.system('dpkg-buildpackage -rfakeroot'+ ['', ' -uc -us'][config['unsigned']])
 
-if __name__ == '__main__':
-    run()
+    args = ["dpkg-buildpackage", "-rfakeroot"]
+    if config['unsigned']:
+        args = args + ['-uc', '-us']
+
+    #  build deb
+    job = subprocess.Popen(args, stdout=subprocess.PIPE,
+                           stderr=subprocess.STDOUT)
+    stdout, _ = job.communicate()
 
