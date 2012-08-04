@@ -66,18 +66,37 @@ class TestTap2DEB(TestCase):
 
     def test_basicOperation(self):
         """
-        Calling tap2deb should produce a DEB and DSC file.
+        Running tap2deb should produce a bunch of files.
         """
         # make a temporary .tap file
-        tap = self.basedir.child("lemon.tap")
-        tap.setContent("# Dummy .tap file")
+        version = '1.0'
+        tap_name = 'lemon'
+        tap_file = self.basedir.child("%s.tap" % tap_name)
+        tap_file.setContent("# Dummy .tap file")
+        build_dir = self.basedir.child('.build')
+        input_dir = build_dir.child('twisted-%s-%s' % (tap_name, version))
+        input_name = 'twisted-%s_%s' % (tap_name, version)
 
         # run
-        args = ["--tapfile", tap.path, "--maintainer", self.maintainer]
+        args = ["--tapfile", tap_file.path, "--maintainer", self.maintainer]
         tap2deb.run(args)
 
-        build = tap.child('.build')
-        for name in ['twisted-twistd_1.0_all.deb',
-                     'twisted-twistd_1.0_all.dsc']:
-            self.assertTrue(build.child(name).exists)
+        # verify input files were created
+        self.assertEqual(len(input_dir.listdir()), 4)
+        self.assertTrue(input_dir.child('lemon.tap').exists())
+
+        debian_dir = input_dir.child('debian')
+        self.assertTrue(debian_dir.exists())
+        self.assertTrue(debian_dir.child('source').child('format').exists())
+
+        for name in ['README.Debian', 'conffiles', 'default', 'init.d',
+                     'postinst', 'prerm', 'postrm', 'changelog', 'control',
+                     'compat', 'copyright', 'dirs', 'rules']:
+            self.assertTrue(debian_dir.child(name).exists())
+
+        # verify 4 output files were created
+        output = build_dir.globChildren(output_name + "*")
+        self.assertEqual(len(output), 4)
+        for ext in ['.deb', '.dsc', '.tar.gz', '.changes']:
+            self.assertEqual(len(build_dir.globChildren('*' + ext)), 1)
 
