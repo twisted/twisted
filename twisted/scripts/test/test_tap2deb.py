@@ -95,7 +95,7 @@ class TestTap2DEB(TestCase):
             self.assertTrue(debian_dir.child(name).exists())
 
         # verify 4 output files were created
-        output = build_dir.globChildren(output_name + "*")
+        output = build_dir.globChildren(input_name + "*")
         self.assertEqual(len(output), 4)
         for ext in ['.deb', '.dsc', '.tar.gz', '.changes']:
             self.assertEqual(len(build_dir.globChildren('*' + ext)), 1)
