@@ -458,13 +458,14 @@ class HostnameEndpoint(object):
     def connect(self, protocolFactory):
         """
         """
-        try:
-            d = self._nameResolution(self._host)
-            d.addCallback(lambda result: result[0][4][0])
-            d.addCallback(self._resolvedHostConnect, protocolFactory)
-            return d
-        except socket.gaierror:
-            return fail(error.DNSLookupError("Couldn't find hostname"))
+        def errbackForGai(obj):
+            return defer.fail(error.DNSLookupError("Couldn't find hostname"))
+
+        d = self._nameResolution(self._host)
+        d.addErrback(errbackForGai)
+        d.addCallback(lambda result: result[0][4][0])
+        d.addCallback(self._resolvedHostConnect, protocolFactory)
+        return d
 
 
     def _nameResolution(self, host):
