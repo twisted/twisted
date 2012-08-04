@@ -1039,7 +1039,7 @@ class HostnameEndpointsOneIPv6Test(ClientEndpointTestCaseMixin,
     Tests for the hostname based endpoints.
     """
     def createClientEndpoint(self, reactor, clientFactory, **connectArgs):
-        address = IPv4Address("TCP", "1:2::3:4", 80)
+        address = IPv6Address("TCP", "1:2::3:4", 80)
         endpoint = endpoints.HostnameEndpoint(reactor, "ipv6.example.com",
                                            address.port, **connectArgs)
 

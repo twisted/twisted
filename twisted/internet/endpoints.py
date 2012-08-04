@@ -463,7 +463,7 @@ class HostnameEndpoint(object):
             d.addCallback(lambda result: result[0][4][0])
             d.addCallback(self._resolvedHostConnect, protocolFactory)
             return d
-        except KeyError:
+        except socket.gaierror:
             return fail(error.DNSLookupError("Couldn't find hostname"))
 
 
