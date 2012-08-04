@@ -1,3 +1,4 @@
+
 # -*- test-case-name: twisted.internet.test.test_endpoints -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
@@ -16,23 +17,24 @@ import os, socket
 from zope.interface import implements, directlyProvides
 import warnings
 
-from twisted.internet import interfaces, defer, error, fdesc
+from twisted.internet import interfaces, defer, error, fdesc, threads
 from twisted.internet.protocol import ClientFactory, Protocol
 from twisted.plugin import IPlugin, getPlugins
 from twisted.internet.interfaces import IStreamServerEndpointStringParser
 from twisted.internet.interfaces import IStreamClientEndpointStringParser
 from twisted.python.filepath import FilePath
 from twisted.python.systemd import ListenFDs
-
+from twisted.internet.abstract import isIPv6Address
 from twisted.internet import stdio
 from twisted.internet.stdio import PipeAddress
 
+
 __all__ = ["clientFromString", "serverFromString",
            "TCP4ServerEndpoint", "TCP6ServerEndpoint",
-           "TCP4ClientEndpoint", "UNIXServerEndpoint",
-           "UNIXClientEndpoint", "SSL4ServerEndpoint",
-           "SSL4ClientEndpoint", "AdoptedStreamServerEndpoint",
-           "StandardIOEndpoint"]
+           "TCP4ClientEndpoint", "TCP6ClientEndpoint",
+           "UNIXServerEndpoint", "UNIXClientEndpoint",
+           "SSL4ServerEndpoint", "SSL4ClientEndpoint",
+           "AdoptedStreamServerEndpoint", "StandardIOEndpoint"]
 
 
 class _WrappingProtocol(Protocol):
@@ -351,6 +353,77 @@ class TCP4ClientEndpoint(object):
             wf = _WrappingFactory(protocolFactory)
             self._reactor.connectTCP(
                 self._host, self._port, wf,
+                timeout=self._timeout, bindAddress=self._bindAddress)
+            return wf._onConnection
+        except:
+            return defer.fail()
+
+
+
+class TCP6ClientEndpoint(object):
+    """
+    TCP client endpoint with an IPv6 configuration.
+
+    @ivar _getaddrinfo: A hook used for testing name resolution.
+
+    @ivar _deferToThread: A hook used for testing deferToThread.
+
+    @ivar _GAI_ADDRESS: Index of the address portion in result of
+        getaddrinfo to be used.
+
+    @ivar _GAI_ADDRESS_HOST: Index of the actual host-address in the
+        5-tuple L{_GAI_ADDRESS}.
+    """
+    _getaddrinfo = socket.getaddrinfo
+    _deferToThread = threads.deferToThread
+    _GAI_ADDRESS = 4
+    _GAI_ADDRESS_HOST = 0
+
+    def __init__(self, reactor, host, port, timeout=30, bindAddress=None):
+        """
+        @param host: An IPv6 address literal or a hostname with an
+            IPv6 address
+
+        @see: L{twisted.internet.interfaces.IReactorTCP.connectTCP}
+        """
+        self._reactor = reactor
+        self._host = host
+        self._port = port
+        self._timeout = timeout
+        self._bindAddress = bindAddress
+
+
+    def connect(self, protocolFactory):
+        """
+        Implement L{IStreamClientEndpoint.connect} to connect via TCP,
+        once the hostname resolution is done.
+        """
+        if isIPv6Address(self._host):
+            d = self._resolvedHostConnect(self._host, protocolFactory)
+        else:
+            d = self._nameResolution(self._host)
+            d.addCallback(lambda result: result[0][self._GAI_ADDRESS]
+                          [self._GAI_ADDRESS_HOST])
+            d.addCallback(self._resolvedHostConnect, protocolFactory)
+        return d
+
+
+    def _nameResolution(self, host):
+        """
+        Resolve the hostname string into a tuple containig the host
+        IPv6 address.
+        """
+        return self._deferToThread(
+            self._getaddrinfo, host, 0, socket.AF_INET6)
+
+
+    def _resolvedHostConnect(self, resolvedHost, protocolFactory):
+        """
+        Connect to the server using the resolved hostname.
+        """
+        try:
+            wf = _WrappingFactory(protocolFactory)
+            self._reactor.connectTCP(resolvedHost, self._port, wf,
                 timeout=self._timeout, bindAddress=self._bindAddress)
             return wf._onConnection
         except:

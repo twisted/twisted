@@ -438,7 +438,10 @@ class MemoryReactor(object):
         L{IConnector}.
         """
         self.tcpClients.append((host, port, factory, timeout, bindAddress))
-        conn = _FakeConnector(IPv4Address('TCP', host, port))
+        if isIPv6Address(host):
+            conn = _FakeConnector(IPv6Address('TCP', host, port))
+        else:
+            conn = _FakeConnector(IPv4Address('TCP', host, port))
         factory.startedConnecting(conn)
         return conn
 
