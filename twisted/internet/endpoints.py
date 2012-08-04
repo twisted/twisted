@@ -431,6 +431,64 @@ class TCP6ClientEndpoint(object):
 
 
 
+class HostnameEndpoint(object):
+    """
+    A smart name based endpoint that connects to the faster one of IPv4
+    or IPv6 host address resolved.
+    """
+    implements(interfaces.IStreamClientEndpoint)
+    
+    _getaddrinfo = socket.getaddrinfo
+    _deferToThread = threads.deferToThread
+
+    def __init__(self, reactor, host, port, timeout=30, bindAddress=None):
+        """
+        @param host: An IPv6 address literal or a hostname with an
+            IPv6 address
+
+        @see: L{twisted.internet.interfaces.IReactorTCP.connectTCP}
+        """
+        self._reactor = reactor
+        self._host = host
+        self._port = port
+        self._timeout = timeout
+        self._bindAddress = bindAddress
+
+
+    def connect(self, protocolFactory):
+        """
+        """
+        try:
+            d = self._nameResolution(self._host)
+            d.addCallback(lambda result: result[0][4][0])
+            d.addCallback(self._resolvedHostConnect, protocolFactory)
+            return d
+        except KeyError:
+            return fail(error.DNSLookupError("Couldn't find hostname"))
+
+
+    def _nameResolution(self, host):
+        """
+        Resolve the hostname string into a tuple containig the host
+        address.
+        """
+        return self._deferToThread(self._getaddrinfo, host, 0)
+
+
+    def _resolvedHostConnect(self, resolvedHost, protocolFactory):
+        """
+        """
+        try:
+            wf = _WrappingFactory(protocolFactory)
+            self._reactor.connectTCP(
+                resolvedHost, self._port, wf,
+                timeout=self._timeout, bindAddress=self._bindAddress)
+            return wf._onConnection
+        except:
+            return defer.fail()
+
+
+
 class SSL4ServerEndpoint(object):
     """
     SSL secured TCP server endpoint with an IPv4 configuration.

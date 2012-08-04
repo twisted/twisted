@@ -970,6 +970,151 @@ class TCP6EndpointNameResolutionTestCase(ClientEndpointTestCaseMixin,
 
 
 
+class HostnameEndpointsOneIPv4Test(ClientEndpointTestCaseMixin,
+                                unittest.TestCase):
+    """
+    Tests for the hostname based endpoints.
+    """
+    def createClientEndpoint(self, reactor, clientFactory, **connectArgs):
+        address = IPv4Address("TCP", "1.2.3.4", 80)
+        endpoint = endpoints.HostnameEndpoint(reactor, "example.com",
+                                           address.port, **connectArgs)
+
+
+        def testNameResolution(host):
+            self.assertEqual("example.com", host)
+            data = [(AF_INET, SOCK_STREAM, IPPROTO_TCP, '', ('1.2.3.4', 0, 0, 0))]
+            return defer.succeed(data)
+
+        endpoint._nameResolution = testNameResolution
+
+        return (endpoint, (address.host, address.port, clientFactory,
+                connectArgs.get('timeout', 30),
+                connectArgs.get('bindAddress', None)),
+                address)
+
+
+    def expectedClients(self, reactor):
+        """
+        @return: List of calls to L{IReactorTCP.connectTCP}
+        """
+        return reactor.tcpClients
+
+
+    def assertConnectArgs(self, receivedArgs, expectedArgs):
+        """
+        Compare host, port, timeout, and bindAddress in C{receivedArgs}
+        to C{expectedArgs}.  We ignore the factory because we don't
+        only care what protocol comes out of the
+        C{IStreamClientEndpoint.connect} call.
+
+        @param receivedArgs: C{tuple} of (C{host}, C{port}, C{factory},
+            C{timeout}, C{bindAddress}) that was passed to
+            L{IReactorTCP.connectTCP}.
+        @param expectedArgs: C{tuple} of (C{host}, C{port}, C{factory},
+            C{timeout}, C{bindAddress}) that we expect to have been passed
+            to L{IReactorTCP.connectTCP}.
+        """
+        (host, port, ignoredFactory, timeout, bindAddress) = receivedArgs
+        (expectedHost, expectedPort, _ignoredFactory,
+         expectedTimeout, expectedBindAddress) = expectedArgs
+
+        self.assertEqual(host, expectedHost)
+        self.assertEqual(port, expectedPort)
+        self.assertEqual(timeout, expectedTimeout)
+        self.assertEqual(bindAddress, expectedBindAddress)
+
+
+    def connectArgs(self):
+        """
+        @return: C{dict} of keyword arguments to pass to connect.
+        """
+        return {'timeout': 10, 'bindAddress': ('localhost', 49595)}
+
+
+
+class HostnameEndpointsOneIPv6Test(ClientEndpointTestCaseMixin,
+                                unittest.TestCase):
+    """
+    Tests for the hostname based endpoints.
+    """
+    def createClientEndpoint(self, reactor, clientFactory, **connectArgs):
+        address = IPv4Address("TCP", "1:2::3:4", 80)
+        endpoint = endpoints.HostnameEndpoint(reactor, "ipv6.example.com",
+                                           address.port, **connectArgs)
+
+
+        def testNameResolution(host):
+            self.assertEqual("ipv6.example.com", host)
+            data = [(AF_INET6, SOCK_STREAM, IPPROTO_TCP, '', ('1:2::3:4', 0, 0, 0))]
+            return defer.succeed(data)
+
+        endpoint._nameResolution = testNameResolution
+
+        return (endpoint, (address.host, address.port, clientFactory,
+                connectArgs.get('timeout', 30),
+                connectArgs.get('bindAddress', None)),
+                address)
+
+
+    def expectedClients(self, reactor):
+        """
+        @return: List of calls to L{IReactorTCP.connectTCP}
+        """
+        return reactor.tcpClients
+
+
+    def assertConnectArgs(self, receivedArgs, expectedArgs):
+        """
+        Compare host, port, timeout, and bindAddress in C{receivedArgs}
+        to C{expectedArgs}.  We ignore the factory because we don't
+        only care what protocol comes out of the
+        C{IStreamClientEndpoint.connect} call.
+
+        @param receivedArgs: C{tuple} of (C{host}, C{port}, C{factory},
+            C{timeout}, C{bindAddress}) that was passed to
+            L{IReactorTCP.connectTCP}.
+        @param expectedArgs: C{tuple} of (C{host}, C{port}, C{factory},
+            C{timeout}, C{bindAddress}) that we expect to have been passed
+            to L{IReactorTCP.connectTCP}.
+        """
+        (host, port, ignoredFactory, timeout, bindAddress) = receivedArgs
+        (expectedHost, expectedPort, _ignoredFactory,
+         expectedTimeout, expectedBindAddress) = expectedArgs
+
+        self.assertEqual(host, expectedHost)
+        self.assertEqual(port, expectedPort)
+        self.assertEqual(timeout, expectedTimeout)
+        self.assertEqual(bindAddress, expectedBindAddress)
+
+
+    def connectArgs(self):
+        """
+        @return: C{dict} of keyword arguments to pass to connect.
+        """
+        return {'timeout': 10, 'bindAddress': ('localhost', 49595)}
+
+
+
+class HostnameEndpointsGAIFailureTest(unittest.TestCase):
+    """
+    Tests for the hostname based endpoints.
+    """
+    def test_failure(self):
+        endpoint = endpoints.HostnameEndpoint(reactor, "example.com", 80)
+
+        def testNameResolution(host):
+            self.assertEqual("example.com", host)
+            data = error.DNSLookupError("Problems")
+            return defer.fail(data)
+
+        endpoint._nameResolution = testNameResolution
+        clientFactory = object()
+        dConnect = endpoint.connect(clientFactory)
+        return self.assertFailure(dConnect, error.DNSLookupError)
+
+    
+
 class SSL4EndpointsTestCase(EndpointTestCaseMixin,
                             unittest.TestCase):
     """
