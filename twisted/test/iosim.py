@@ -182,8 +182,11 @@ def makeFakeServer(s):
     ft.protocol = s
     return ft
 
+
+
 class IOPump:
-    """Utility to pump data between clients and servers for protocol testing.
+    """
+    Utility to pump data between clients and servers for protocol testing.
 
     Perhaps this is a utility worthy of being in protocol.py?
     """
@@ -194,8 +197,10 @@ class IOPump:
         self.serverIO = serverIO
         self.debug = debug
 
+
     def flush(self, debug=False):
-        """Pump until there is no more input or output.
+        """
+        Pump until there is no more input or output.
 
         Returns whether any data was moved.
         """
@@ -211,23 +216,24 @@ class IOPump:
 
 
     def pump(self, debug=False):
-        """Move data back and forth.
+        """
+        Move data back and forth.
 
         Returns whether any data was moved.
         """
         if self.debug or debug:
-            print '-- GLUG --'
+            print('-- GLUG --')
         sData = self.serverIO.getOutBuffer()
         cData = self.clientIO.getOutBuffer()
         self.clientIO._checkProducer()
         self.serverIO._checkProducer()
         if self.debug or debug:
-            print '.'
+            print('.')
             # XXX slightly buggy in the face of incremental output
             if cData:
-                print 'C: '+repr(cData)
+                print('C: ' + repr(cData))
             if sData:
-                print 'S: '+repr(sData)
+                print('S: ' + repr(sData))
         if cData:
             self.serverIO.bufferReceived(cData)
         if sData:
@@ -237,14 +243,14 @@ class IOPump:
         if (self.serverIO.disconnecting and
             not self.serverIO.disconnected):
             if self.debug or debug:
-                print '* C'
+                print('* C')
             self.serverIO.disconnected = True
             self.clientIO.disconnecting = True
             self.clientIO.reportDisconnect()
             return True
         if self.clientIO.disconnecting and not self.clientIO.disconnected:
             if self.debug or debug:
-                print '* S'
+                print('* S')
             self.clientIO.disconnected = True
             self.serverIO.disconnecting = True
             self.serverIO.reportDisconnect()

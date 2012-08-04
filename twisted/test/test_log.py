@@ -5,6 +5,8 @@
 Tests for L{twisted.python.log}.
 """
 
+from __future__ import print_function
+
 import os, sys, time, logging, warnings, calendar
 from cStringIO import StringIO
 
@@ -737,8 +739,8 @@ class StdioOnnaStickTestCase(unittest.TestCase):
         oldStdout = sys.stdout
         sys.stdout = log.StdioOnnaStick()
         self.addCleanup(setattr, sys, "stdout", oldStdout)
-        print "This",
-        print "is a test"
+        print("This", end=' ')
+        print("is a test")
         self.assertEqual(self.getLogMessages(), ["This is a test"])
 
 
@@ -765,7 +767,7 @@ class StdioOnnaStickTestCase(unittest.TestCase):
         sys.stdout = stdio
         self.addCleanup(setattr, sys, "stdout", oldStdout)
         # This should go to the log, utf-8 encoded too:
-        print unicodeString
+        print(unicodeString)
         self.assertEqual(self.getLogMessages(),
                          [unicodeString.encode("utf-8"),
                           (u"Also, " + unicodeString).encode("utf-8"),

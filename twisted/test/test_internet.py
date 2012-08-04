@@ -1011,10 +1011,10 @@ class Foo:
     def start(self):
         reactor.resolve('localhost').addBoth(self.done)
     def done(self, res):
-        print 'done', res
+        print('done ' + res)
         reactor.stop()
     def failed(self):
-        print 'failed'
+        print('failed')
         self.timer = None
         reactor.stop()
 f = Foo()

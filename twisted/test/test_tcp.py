@@ -5,6 +5,8 @@
 Tests for implementations of L{IReactorTCP}.
 """
 
+from __future__ import print_function
+
 import socket, random, errno
 
 from zope.interface import implements
@@ -850,15 +852,17 @@ class WriterProtocol(protocol.Protocol):
         self.transport.writeSequence(seq)
         peer = self.transport.getPeer()
         if peer.type != "TCP":
-            print "getPeer returned non-TCP socket:", peer
+            print("getPeer returned non-TCP socket:", peer)
             self.factory.problem = 1
         us = self.transport.getHost()
         if us.type != "TCP":
-            print "getHost returned non-TCP socket:", us
+            print("getHost returned non-TCP socket:", us)
             self.factory.problem = 1
         self.factory.done = 1
 
         self.transport.loseConnection()
+
+
 
 class ReaderProtocol(protocol.Protocol):
     def dataReceived(self, data):

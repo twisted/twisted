@@ -5,6 +5,8 @@
 Test running processes.
 """
 
+from __future__ import print_function
+
 import gzip
 import os
 import sys
@@ -766,12 +768,15 @@ class TwoProcessProtocol(protocol.ProcessProtocol):
         self.finished = 1
         self.deferred.callback(None)
 
+
+
 class TestTwoProcessesBase:
     def setUp(self):
         self.processes = [None, None]
         self.pp = [None, None]
         self.done = 0
         self.verbose = 0
+
 
     def createProcesses(self, usePTY=0):
         exe = sys.executable
@@ -784,26 +789,33 @@ class TestTwoProcessesBase:
                                      usePTY=usePTY)
             self.processes[num] = p
 
+
     def close(self, num):
-        if self.verbose: print "closing stdin [%d]" % num
+        if self.verbose: print("closing stdin [%d]" % num)
         p = self.processes[num]
         pp = self.pp[num]
         self.failIf(pp.finished, "Process finished too early")
         p.loseConnection()
-        if self.verbose: print self.pp[0].finished, self.pp[1].finished
+        if self.verbose: print(self.pp[0].finished, self.pp[1].finished)
+
 
     def _onClose(self):
         return defer.gatherResults([ p.deferred for p in self.pp ])
 
-    def testClose(self):
-        if self.verbose: print "starting processes"
+
+    def test_close(self):
+        if self.verbose: print("starting processes")
         self.createProcesses()
         reactor.callLater(1, self.close, 0)
         reactor.callLater(2, self.close, 1)
         return self._onClose()
 
+
+
 class TestTwoProcessesNonPosix(TestTwoProcessesBase, unittest.TestCase):
     pass
+
+
 
 class TestTwoProcessesPosix(TestTwoProcessesBase, unittest.TestCase):
     def tearDown(self):
@@ -817,34 +829,39 @@ class TestTwoProcessesPosix(TestTwoProcessesBase, unittest.TestCase):
                     pass
         return self._onClose()
 
+
     def kill(self, num):
-        if self.verbose: print "kill [%d] with SIGTERM" % num
+        if self.verbose: print("kill [%d] with SIGTERM" % num)
         p = self.processes[num]
         pp = self.pp[num]
         self.failIf(pp.finished, "Process finished too early")
         os.kill(p.pid, signal.SIGTERM)
-        if self.verbose: print self.pp[0].finished, self.pp[1].finished
+        if self.verbose: print(self.pp[0].finished, self.pp[1].finished)
 
-    def testKill(self):
-        if self.verbose: print "starting processes"
+
+    def test_kill(self):
+        if self.verbose: print("starting processes")
         self.createProcesses(usePTY=0)
         reactor.callLater(1, self.kill, 0)
         reactor.callLater(2, self.kill, 1)
         return self._onClose()
 
-    def testClosePty(self):
-        if self.verbose: print "starting processes"
+    def test_closePty(self):
+        if self.verbose: print("starting processes")
         self.createProcesses(usePTY=1)
         reactor.callLater(1, self.close, 0)
         reactor.callLater(2, self.close, 1)
         return self._onClose()
 
-    def testKillPty(self):
-        if self.verbose: print "starting processes"
+
+    def test_killPty(self):
+        if self.verbose: print("starting processes")
         self.createProcesses(usePTY=1)
         reactor.callLater(1, self.kill, 0)
         reactor.callLater(2, self.kill, 1)
         return self._onClose()
+
+
 
 class FDChecker(protocol.ProcessProtocol):
     state = 0
