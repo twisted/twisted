@@ -2019,3 +2019,49 @@ class StandardIOEndpointPluginTests(unittest.TestCase):
         ep = endpoints.serverFromString(MemoryReactor(), "stdio:")
         self.assertIsInstance(ep, endpoints.StandardIOEndpoint)
         self.assertIsInstance(ep._reactor, MemoryReactor)
+
+
+
+class TCP6ClientEndpointPluginTests(unittest.TestCase):
+    """
+    Unit tests for the TCP IPv6 stream server endpoint string
+    description parser.
+    """
+    _parserClass = endpoints._TCP6ClientParser
+
+    def test_pluginDiscovery(self):
+        """
+        L{endpoints._TCP6ClientParser} is found a a plugin for
+        L{interfaces.IStreamClientEndpointStringParser} interface.
+        """
+        parsers = list(getPlugins(
+                interfaces.IStreamClientEndpointStringParser))
+        for p in parsers:
+            if isinstance(p, self._parserClass):
+                break
+        else:
+            self.fail("Did not find TCP6ClientEndpoint parser in %r" %
+                        (parsers,))
+
+    def test_interface(self):
+        """
+        L{endpoints._TCP6ClientParser} instances provide
+        L{interfaces.IStreamClientEndpointStringParser}.
+        """
+        parser = self._parserClass()
+        self.assertTrue(verifyObject(
+                interfaces.IStreamClientEndpointStringParser, parser))
+
+
+    def test_stringDescription(self):
+        """
+        L{clientFromString} returns a L{TCP6ClientEndpoint} instance
+        with a 'tcp6' endpoint string description.
+        """
+        ep = endpoints.clientFromString(MemoryReactor(),
+                "tcp6:ipv6.example.com:8080:timeout=50")
+        self.assertIsInstance(ep, endpoints.TCP6ClientEndpoint)
+        self.assertIsInstance(ep._reactor, MemoryReactor)
+        self.assertEqual(ep._host, 'ipv6.example.com')
+        self.assertEqual(ep._port, 8080)
+        self.assertEqual(ep._timeout, 50)
