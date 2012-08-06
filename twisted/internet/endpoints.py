@@ -464,28 +464,61 @@ class HostnameEndpoint(object):
             return TCP6ClientEndpoint(reactor, host, port, timeout, bindAddress)
         if isIPv4Address(host):
             return TCP4ClientEndpoint(reactor, host, port, timeout, bindAddress)
+        # TODO: Figure out a third default return.
 
 
     def connect(self, protocolFactory):
         """
         """
+        d = self._nameResolution(self._host)
+
         def errbackForGai(obj):
+            """
+            Errback for when L{_nameResolution} returns a Deferred
+            that fires with failure.
+            """
             return defer.fail(error.DNSLookupError("Couldn't find hostname"))
 
+        d.addErrback(errbackForGai)
+
+        @d.addCallback
         def getEndpoints(gaiResult):
+            """
+            This method matches the host address famliy with an endpoint
+            for every address returned by GAI.
+            """
             for family, socktype, proto, canonname, sockaddr in gaiResult:
                 if family in [AF_INET6, AF_INET]:
-                    yield endpointGenerator(self._reactor, self._host,
-                            self._port, self._timeout, self._bindAddress)
+                    yield endpointGenerator(self._reactor, sockaddr[0],
+                            sockaddr[1], self._timeout, self._bindAddress)
                     # Yields an endpoint for every address returned by GAI
                     # For now, will work for a maximum of two addresses:
                     # one IPv4 and one IPv6 address in the result.
 
-        d = self._nameResolution(self._host)
-        d.addErrback(errbackForGai)
-        d.addCallback(lambda result: result[0][4][0])
-        d.add
-        d.addCallback(self._resolvedHostConnect, protocolFactory)
+        @getEndpoints.addCallback
+        def attemptConnection(endpoints):
+            """
+            When L{getEndpoints} yields an endpoint, this method
+            attempts to connect it.
+            """
+            # The trial attempts for each endpoints, the recording of
+            # successful and failed attempts, and the algorithm to pick the
+            # winner endpoint goes here.
+            # Return a Deferred that fires with the endpoint that wins,
+            # or failures if none succeed.
+
+        def connectTheEndpointThatWins(endpoint, protocolFactory):
+            # TODO Pick a better name.
+            """
+            Call the endpoint's connect method to establish connection
+            """
+            return endpoint.connect(protocolFactory)
+
+#        d = self._nameResolution(self._host)
+#        d.addErrback(errbackForGai)
+#        d.addCallback(getEndpoints)
+
+        d.addCallback(connectTheEndpointThatWins, protocolFactory)
         return d
 
 
@@ -497,17 +530,17 @@ class HostnameEndpoint(object):
         return self._deferToThread(self._getaddrinfo, host, 0)
 
 
-    def _resolvedHostConnect(self, resolvedHost, protocolFactory):
-        """
-        """
-        try:
-            wf = _WrappingFactory(protocolFactory)
-            self._reactor.connectTCP(
-                resolvedHost, self._port, wf,
-                timeout=self._timeout, bindAddress=self._bindAddress)
-            return wf._onConnection
-        except:
-            return defer.fail()
+#    def _resolvedHostConnect(self, resolvedHost, protocolFactory):
+#        """
+#        """
+#        try:
+#            wf = _WrappingFactory(protocolFactory)
+#            self._reactor.connectTCP(
+#                resolvedHost, self._port, wf,
+#                timeout=self._timeout, bindAddress=self._bindAddress)
+#            return wf._onConnection
+#        except:
+#            return defer.fail()
 
 
 
