@@ -973,7 +973,8 @@ class TCP6EndpointNameResolutionTestCase(ClientEndpointTestCaseMixin,
 class HostnameEndpointsOneIPv4Test(ClientEndpointTestCaseMixin,
                                 unittest.TestCase):
     """
-    Tests for the hostname based endpoints.
+    Tests for the hostname based endpoints when GAI returns only one
+    (IPv4) address.
     """
     def createClientEndpoint(self, reactor, clientFactory, **connectArgs):
         address = IPv4Address("TCP", "1.2.3.4", 80)
@@ -1036,7 +1037,8 @@ class HostnameEndpointsOneIPv4Test(ClientEndpointTestCaseMixin,
 class HostnameEndpointsOneIPv6Test(ClientEndpointTestCaseMixin,
                                 unittest.TestCase):
     """
-    Tests for the hostname based endpoints.
+    Tests for the hostname based endpoints when GAI returns only one
+    (IPv6) address.
     """
     def createClientEndpoint(self, reactor, clientFactory, **connectArgs):
         address = IPv6Address("TCP", "1:2::3:4", 80)
@@ -1094,11 +1096,12 @@ class HostnameEndpointsOneIPv6Test(ClientEndpointTestCaseMixin,
         """
         return {'timeout': 10, 'bindAddress': ('localhost', 49595)}
 
+#TODO: Add a test to check deferToTHread as well.
 
 
 class HostnameEndpointsGAIFailureTest(unittest.TestCase):
     """
-    Tests for the hostname based endpoints.
+    Tests for the hostname based endpoints when GAI returns no address.
     """
     def test_failure(self):
         endpoint = endpoints.HostnameEndpoint(reactor, "example.com", 80)
@@ -1112,6 +1115,45 @@ class HostnameEndpointsGAIFailureTest(unittest.TestCase):
         clientFactory = object()
         dConnect = endpoint.connect(clientFactory)
         return self.assertFailure(dConnect, error.DNSLookupError)
+
+
+
+class HostnameEndpointsIPv4FastTest(unittest.TestCase):
+    """
+    Tests for the hostname based endpoints when gai returns an IPv4 and
+    an IPv6 address, and the connection to the IPv4 address takes less
+    time than the IPv6 address.
+    """
+    def setUp(self):
+        self.endpoint = endpoints.HostnameEndpoint(MemoryReactor(), "www.example.com", 80)
+
+
+    def test_IPv4IsFaster(self):
+        """
+        L{connectTheEndpointThatWins} receives a L{TCP4ClientEndpoint}.
+        """
+        resultEndpoint = []
+        clientFactory = object()
+        proto = object()
+
+        def nameResolution(host):
+            self.assertEqual("www.example.com", host)
+            data = [((AF_INET, SOCK_STREAM, IPPROTO_TCP, '',
+                ('1.2.3.4', 0, 0, 0)), AF_INET6, SOCK_STREAM, IPPROTO_TCP, '',
+                ('1:2::3:4', 0, 0, 0))]
+            return defer.succeed(data)
+
+        def connectFasterEndpoint(ep, protocolFactory):
+            resultEndpoint.append(ep)
+            return defer.succeed(proto)
+
+        self.endpoint._nameResolution = nameResolution
+        self.endpoint.connectTheEndpointThatWins = connectFasterEndpoint
+
+        d = self.endpoint.connect(clientFactory)
+        self.assertIsInstance(resultEndpoint.pop(),
+                endpoints.TCP4ClientEndpoint)
+        return d
 
 
 
