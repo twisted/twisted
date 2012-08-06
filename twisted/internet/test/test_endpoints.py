@@ -27,6 +27,7 @@ from twisted.python.filepath import FilePath
 from twisted.protocols import basic
 from twisted.internet import protocol, reactor, stdio
 from twisted.internet.stdio import PipeAddress
+from twisted.internet.task import Clock
 
 
 pemPath = getModule("twisted.test").filePath.sibling("server.pem")
@@ -1104,7 +1105,7 @@ class HostnameEndpointsGAIFailureTest(unittest.TestCase):
     Tests for the hostname based endpoints when GAI returns no address.
     """
     def test_failure(self):
-        endpoint = endpoints.HostnameEndpoint(reactor, "example.com", 80)
+        endpoint = endpoints.HostnameEndpoint(Clock(), "example.com", 80)
 
         def testNameResolution(host):
             self.assertEqual("example.com", host)
@@ -1125,7 +1126,8 @@ class HostnameEndpointsIPv4FastTest(unittest.TestCase):
     time than the IPv6 address.
     """
     def setUp(self):
-        self.endpoint = endpoints.HostnameEndpoint(MemoryReactor(), "www.example.com", 80)
+        self.endpoint = endpoints.HostnameEndpoint(Clock(),
+                "www.example.com", 80)
 
 
     def test_IPv4IsFaster(self):
@@ -1134,7 +1136,6 @@ class HostnameEndpointsIPv4FastTest(unittest.TestCase):
         """
         resultEndpoint = []
         clientFactory = object()
-        proto = object()
 
         def nameResolution(host):
             self.assertEqual("www.example.com", host)
@@ -1145,12 +1146,12 @@ class HostnameEndpointsIPv4FastTest(unittest.TestCase):
 
         def connectFasterEndpoint(ep, protocolFactory):
             resultEndpoint.append(ep)
-            return defer.succeed(proto)
+            return ep.connect(protocolFactory)
 
         self.endpoint._nameResolution = nameResolution
         self.endpoint.connectTheEndpointThatWins = connectFasterEndpoint
-
         d = self.endpoint.connect(clientFactory)
+
         self.assertIsInstance(resultEndpoint.pop(),
                 endpoints.TCP4ClientEndpoint)
         return d

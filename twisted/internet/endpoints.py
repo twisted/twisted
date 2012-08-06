@@ -507,7 +507,42 @@ class HostnameEndpoint(object):
             # winner endpoint goes here.
             # Return a Deferred that fires with the endpoint that wins,
             # or failures if none succeed.
-            return endpoints.next()
+
+            pending = []
+            endpointsListExhausted = []
+            successful = []
+            failures = []
+            winner = defer.Deferred()
+
+            def usedEndpointRemoval(connResult, connAttempt):
+                pending.remove(connAttempt)
+                return connResult
+
+            def afterConnectionAttempt(connResult):
+                successful.append(True)
+                winner.callback(connResult)
+
+            def connectFailed(reason):
+                failures.append(reason)
+
+
+            def iterateEndpoint():
+                try:
+                    endpoint = endpoints.next()
+                except StopIteration:
+                    # The list of endpoints ends.
+                    endpointsListExhausted.append(True)
+                else:
+                    dconn = endpoint.connect(protocolFactory)
+                    dconn.addBoth(usedEndpointRemoval, dconn)
+                    dconn.addCallback(afterConnectionAttempt)
+                    dconn.addCallback(connectFailed)
+
+                    pending.append(dconn)
+
+            self._reactor.callLater(0.3, iterateEndpoint)
+            return winner
+
 
 
         def connectTheEndpointThatWins(endpoint, protocolFactory):
