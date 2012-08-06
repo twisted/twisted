@@ -1113,7 +1113,7 @@ class HostnameEndpointsGAIFailureTest(unittest.TestCase):
         dConnect = endpoint.connect(clientFactory)
         return self.assertFailure(dConnect, error.DNSLookupError)
 
-    
+
 
 class SSL4EndpointsTestCase(EndpointTestCaseMixin,
                             unittest.TestCase):

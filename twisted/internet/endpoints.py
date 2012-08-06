@@ -437,7 +437,7 @@ class HostnameEndpoint(object):
     or IPv6 host address resolved.
     """
     implements(interfaces.IStreamClientEndpoint)
-    
+
     _getaddrinfo = socket.getaddrinfo
     _deferToThread = threads.deferToThread
 
@@ -455,15 +455,36 @@ class HostnameEndpoint(object):
         self._bindAddress = bindAddress
 
 
+    def endpointGenerator(self, reactor, host, port, timeout, bindAddress, protocolFactory):
+        """
+        Looks at the resolved host address, and creates the
+        corresponding endpoint.
+        """
+        if isIPv6Address(host):
+            return TCP6ClientEndpoint(reactor, host, port, timeout, bindAddress)
+        if isIPv4Address(host):
+            return TCP4ClientEndpoint(reactor, host, port, timeout, bindAddress)
+
+
     def connect(self, protocolFactory):
         """
         """
         def errbackForGai(obj):
             return defer.fail(error.DNSLookupError("Couldn't find hostname"))
 
+        def getEndpoints(gaiResult):
+            for family, socktype, proto, canonname, sockaddr in gaiResult:
+                if family in [AF_INET6, AF_INET]:
+                    yield endpointGenerator(self._reactor, self._host,
+                            self._port, self._timeout, self._bindAddress)
+                    # Yields an endpoint for every address returned by GAI
+                    # For now, will work for a maximum of two addresses:
+                    # one IPv4 and one IPv6 address in the result.
+
         d = self._nameResolution(self._host)
         d.addErrback(errbackForGai)
         d.addCallback(lambda result: result[0][4][0])
+        d.add
         d.addCallback(self._resolvedHostConnect, protocolFactory)
         return d
 
@@ -1059,7 +1080,7 @@ def _parseServer(description, factory, default=None):
     endpointType = args[0]
     parser = _serverParsers.get(endpointType)
     if parser is None:
-        # If the required parser is not found in _server, check if 
+        # If the required parser is not found in _server, check if
         # a plugin exists for the endpointType
         for plugin in getPlugins(IStreamServerEndpointStringParser):
             if plugin.prefix == endpointType:
@@ -1309,7 +1330,7 @@ def _parseClientUNIX(*args, **kwargs):
     Valid keyword arguments to this function are all L{IReactorUNIX.connectUNIX}
     keyword arguments except for C{checkPID}.  Instead, C{lockfile} is accepted
     and has the same meaning.  Also C{path} is used instead of C{address}.
-    
+
     Valid positional arguments to this function are C{path}.
 
     @return: The coerced values as a C{dict}.
@@ -1368,15 +1389,15 @@ def clientFromString(reactor, description):
 
         clientFromString(reactor, "ssl:host=web.example.com:port=443:"
                                   "caCertsDir=/etc/ssl/certs")
-    
+
     You can create a UNIX client endpoint with the 'path' argument and optional
     'lockfile' and 'timeout' arguments::
-    
+
         clientFromString(reactor, "unix:path=/var/foo/bar:lockfile=1:timeout=9")
-    
+
     or, with the path as a positional argument with or without optional
     arguments as in the following 2 examples::
-    
+
         clientFromString(reactor, "unix:/var/foo/bar")
         clientFromString(reactor, "unix:/var/foo/bar:lockfile=1:timeout=9")
 
