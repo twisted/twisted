@@ -27,6 +27,7 @@ from twisted.python.systemd import ListenFDs
 from twisted.internet.abstract import isIPv6Address
 from twisted.internet import stdio
 from twisted.internet.stdio import PipeAddress
+from socket import AF_INET6, AF_INET
 
 
 __all__ = ["clientFromString", "serverFromString",
@@ -455,17 +456,17 @@ class HostnameEndpoint(object):
         self._bindAddress = bindAddress
 
 
-    def endpointGenerator(self, reactor, host, port, timeout, bindAddress, protocolFactory):
+    def endpointGenerator(self, reactor, host, port, timeout, bindAddress):
         """
         Looks at the resolved host address, and creates the
         corresponding endpoint.
         """
         if isIPv6Address(host):
             return TCP6ClientEndpoint(reactor, host, port, timeout, bindAddress)
-        if isIPv4Address(host):
+        else:
             return TCP4ClientEndpoint(reactor, host, port, timeout, bindAddress)
-        # TODO: Figure out a third default return.
-
+        # TODO: Figure out a default return when the address is neither IPv6 nor
+        # IPv4
 
     def connect(self, protocolFactory):
         """
@@ -489,8 +490,8 @@ class HostnameEndpoint(object):
             """
             for family, socktype, proto, canonname, sockaddr in gaiResult:
                 if family in [AF_INET6, AF_INET]:
-                    yield endpointGenerator(self._reactor, sockaddr[0],
-                            sockaddr[1], self._timeout, self._bindAddress)
+                    yield self.endpointGenerator(self._reactor, sockaddr[0],
+                            self._port, self._timeout, self._bindAddress)
                     # Yields an endpoint for every address returned by GAI
                     # For now, will work for a maximum of two addresses:
                     # one IPv4 and one IPv6 address in the result.
@@ -506,6 +507,8 @@ class HostnameEndpoint(object):
             # winner endpoint goes here.
             # Return a Deferred that fires with the endpoint that wins,
             # or failures if none succeed.
+            return endpoints.next()
+
 
         def connectTheEndpointThatWins(endpoint, protocolFactory):
             # TODO Pick a better name.
