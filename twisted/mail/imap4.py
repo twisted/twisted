@@ -1417,18 +1417,18 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def do_SEARCH(self, tag, charset, query, uid=0):
         sm = ISearchableMailbox(self.mbox, None)
         if sm is not None:
-            maybeDeferred(sm.search, query, uid=uid).addCallbacks(
-                self.__cbSearch, self.__ebSearch,
-                (tag, self.mbox, uid), None, (tag,), None
-            )
+            maybeDeferred(sm.search, query, uid=uid
+                          ).addCallback(self.__cbSearch, tag, self.mbox, uid
+                          ).addErrback(self.__ebSearch, tag)
         else:
             # that's not the ideal way to get all messages, there should be a
             # method on mailboxes that gives you all of them
             s = parseIdList('1:*')
-            maybeDeferred(self.mbox.fetch, s, uid=uid).addCallbacks(
-                self.__cbManualSearch, self.__ebSearch,
-                (tag, self.mbox, query, uid), None, (tag,), None
-            )
+            maybeDeferred(self.mbox.fetch, s, uid=uid
+                          ).addCallback(self.__cbManualSearch,
+                                        tag, self.mbox, query, uid
+                          ).addErrback(self.__ebSearch, tag)
+
 
     select_SEARCH = (do_SEARCH, opt_charset, arg_searchkeys)
 
@@ -1559,15 +1559,18 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 messageSet = parseIdList(c, lastSequenceId)
                 return id in messageSet
             else:
-                f = getattr(self, 'search_' + c)
-                if f is not None:
-                    if c in self._requiresLastMessageInfo:
-                        result = f(query, id, msg, (lastSequenceId,
-                                                    lastMessageId))
-                    else:
-                        result = f(query, id, msg)
-                    if not result:
-                        return False
+                f = getattr(self, 'search_' + c, None)
+                if f is None:
+                    raise IllegalQueryError("Invalid search command %s" % c)
+
+                if c in self._requiresLastMessageInfo:
+                    result = f(query, id, msg, (lastSequenceId,
+                                                lastMessageId))
+                else:
+                    result = f(query, id, msg)
+
+                if not result:
+                    return False
         return True
 
     def search_ALL(self, query, id, msg):
@@ -5356,6 +5359,8 @@ class ISearchableMailbox(Interface):
         @return: A list of message sequence numbers or message UIDs which
         match the search criteria or a C{Deferred} whose callback will be
         invoked with such a list.
+
+        @raise IllegalQueryError: Raised when query is not valid.
         """
 
 class IMessageCopier(Interface):

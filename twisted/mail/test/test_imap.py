@@ -4209,6 +4209,40 @@ class DefaultSearchTestCase(IMAP4HelperMixin, unittest.TestCase):
         """
         return self._messageSetSearchTest('2:* 3', [3])
 
+    def test_searchInvalidCriteria(self):
+        """
+        If the search criteria is not a valid key, a NO result is returned to
+        the client (resulting in an error callback), and an IllegalQueryError is
+        logged on the server side.
+        """
+        queryTerms = 'FOO'
+        def search():
+            return self.client.search(queryTerms)
+
+        d = self.connected.addCallback(strip(search))
+        d = self.assertFailure(d, imap4.IMAP4Exception)
+
+        def errorReceived(results):
+            """
+            Verify that the server logs an IllegalQueryError and the
+            client raises an IMAP4Exception with 'Search failed:...'
+            """
+            self.client.transport.loseConnection()
+            self.server.transport.loseConnection()
+
+            # Check what the server logs
+            errors = self.flushLoggedErrors(imap4.IllegalQueryError)
+            self.assertEqual(len(errors), 1)
+
+            # Verify exception given to client has the correct message
+            self.assertEqual(
+                "SEARCH failed: Invalid search command FOO", str(results))
+
+        d.addCallback(errorReceived)
+        d.addErrback(self._ebGeneral)
+        self.loopback()
+        return d
+
 
 
 class FetchSearchStoreTestCase(unittest.TestCase, IMAP4HelperMixin):
@@ -4228,6 +4262,10 @@ class FetchSearchStoreTestCase(unittest.TestCase, IMAP4HelperMixin):
         self.client = SimpleClient(self.connected)
 
     def search(self, query, uid):
+        # Look for a specific bad query, so we can verify we handle it properly
+        if query == ['FOO']:
+            raise imap4.IllegalQueryError("FOO is not a valid search criteria")
+
         self.server_received_query = query
         self.server_received_uid = uid
         return self.expected
@@ -4320,6 +4358,43 @@ class FetchSearchStoreTestCase(unittest.TestCase, IMAP4HelperMixin):
 
         d = loopback.loopbackTCP(self.server, self.client, noisy=False)
         d.addCallback(check)
+        return d
+
+
+    def test_invalidTerm(self):
+        """
+        If, as part of a search, an ISearchableMailbox raises an
+        IllegalQueryError (e.g. due to invalid search criteria), client sees a
+        failure response, and an IllegalQueryError is logged on the server.
+        """
+        query = 'FOO'
+
+        def search():
+            return self.client.search(query)
+
+        d = self.connected.addCallback(strip(search))
+        d = self.assertFailure(d, imap4.IMAP4Exception)
+
+        def errorReceived(results):
+            """
+            Verify that the server logs an IllegalQueryError and the
+            client raises an IMAP4Exception with 'Search failed:...'
+            """
+            self.client.transport.loseConnection()
+            self.server.transport.loseConnection()
+
+            # Check what the server logs
+            errors = self.flushLoggedErrors(imap4.IllegalQueryError)
+            self.assertEqual(len(errors), 1)
+
+            # Verify exception given to client has the correct message
+            self.assertEqual(
+                "SEARCH failed: FOO is not a valid search criteria",
+                str(results))
+
+        d.addCallback(errorReceived)
+        d.addErrback(self._ebGeneral)
+        self.loopback()
         return d
 
 
