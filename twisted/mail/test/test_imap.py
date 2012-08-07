@@ -349,12 +349,19 @@ class IMAP4HelperTestCase(unittest.TestCase):
 
 
     def test_headerFormatter(self):
+        """
+        L{imap4._formatHeaders} accepts a C{dict} of header name/value pairs and
+        returns a string representing those headers in the standard multiline,
+        C{":"}-separated format.
+        """
         cases = [
             ({'Header1': 'Value1', 'Header2': 'Value2'}, 'Header2: Value2\r\nHeader1: Value1\r\n'),
         ]
 
-        for (input, output) in cases:
-            self.assertEqual(imap4._formatHeaders(input), output)
+        for (input, expected) in cases:
+            output = imap4._formatHeaders(input)
+            self.assertEqual(sorted(output.splitlines(True)),
+                             sorted(expected.splitlines(True)))
 
 
     def test_messageSet(self):
