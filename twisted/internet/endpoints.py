@@ -471,7 +471,7 @@ class HostnameEndpoint(object):
     def connect(self, protocolFactory):
         """
         """
-        d = self._nameResolution(self._host)
+#        d = self._nameResolution(self._host)
 
         def errbackForGai(obj):
             """
@@ -480,23 +480,23 @@ class HostnameEndpoint(object):
             """
             return defer.fail(error.DNSLookupError("Couldn't find hostname"))
 
-        d.addErrback(errbackForGai)
 
-        @d.addCallback
         def getEndpoints(gaiResult):
             """
             This method matches the host address famliy with an endpoint
             for every address returned by GAI.
             """
-            for family, socktype, proto, canonname, sockaddr in gaiResult:
-                if family in [AF_INET6, AF_INET]:
-                    yield self.endpointGenerator(self._reactor, sockaddr[0],
-                            self._port, self._timeout, self._bindAddress)
-                    # Yields an endpoint for every address returned by GAI
-                    # For now, will work for a maximum of two addresses:
-                    # one IPv4 and one IPv6 address in the result.
+            print "Running getEndpoints. Yay!"
+            for res in gaiResult:
+                for family, socktype, proto, canonname, sockaddr in res:
+                    if family in [AF_INET6, AF_INET]:
+                        yield self.endpointGenerator(self._reactor, sockaddr[0],
+                                self._port, self._timeout, self._bindAddress)
+                        # Yields an endpoint for every address returned by GAI
+                        # For now, will work for a maximum of two addresses:
+                        # one IPv4 and one IPv6 address in the result.
 
-        @getEndpoints.addCallback
+
         def attemptConnection(endpoints):
             """
             When L{getEndpoints} yields an endpoint, this method
@@ -514,20 +514,26 @@ class HostnameEndpoint(object):
             failures = []
             winner = defer.Deferred()
 
+            print "Running attemptConnection. Yay!"
+
             def usedEndpointRemoval(connResult, connAttempt):
+                print "Inside usedEndpointRemoval"
                 pending.remove(connAttempt)
                 return connResult
 
             def afterConnectionAttempt(connResult):
+                print "Inside afterConnectionAttempt"
                 successful.append(True)
                 winner.callback(connResult)
                 return None
 
             def connectFailed(reason):
+                print "Inside connectFailed"
                 failures.append(reason)
                 return None
 
             def iterateEndpoint():
+                print "Inside iterateEndpoint"
                 try:
                     endpoint = endpoints.next()
                 except StopIteration:
@@ -535,28 +541,21 @@ class HostnameEndpoint(object):
                     endpointsListExhausted.append(True)
                 else:
                     dconn = endpoint.connect(protocolFactory)
+
                     dconn.addBoth(usedEndpointRemoval, dconn)
                     dconn.addCallback(afterConnectionAttempt)
                     dconn.addCallback(connectFailed)
                     pending.append(dconn)
 
 #            self._reactor.callLater(0.3, iterateEndpoint)
+            iterateEndpoint()
+
             return winner
 
-
-
-        def connectTheEndpointThatWins(endpoint, protocolFactory):
-            # TODO Pick a better name.
-            """
-            Call the endpoint's connect method to establish connection
-            """
-            return endpoint.connect(protocolFactory)
-
-#        d = self._nameResolution(self._host)
-#        d.addErrback(errbackForGai)
-#        d.addCallback(getEndpoints)
-
-        d.addCallback(connectTheEndpointThatWins, protocolFactory)
+        d = self._nameResolution(self._host)
+        d.addErrback(errbackForGai)
+        d.addCallback(getEndpoints)
+        d.addCallback(attemptConnection)
         return d
 
 
