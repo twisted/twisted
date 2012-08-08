@@ -1,0 +1,1 @@
+unzip, unzipIter, and countZipFileEntries in twisted.python.zipstream (deprecated in Twisted 11.0) are removed now.
