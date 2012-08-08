@@ -1152,8 +1152,11 @@ class HostnameEndpointsIPv4FastTest(unittest.TestCase):
         self.endpoint.connectTheEndpointThatWins = connectFasterEndpoint
         d = self.endpoint.connect(clientFactory)
 
-        self.assertIsInstance(resultEndpoint.pop(),
+        def checkEndpoint(ep):
+            self.assertIsInstance(resultEndpoint.pop(),
                 endpoints.TCP4ClientEndpoint)
+
+        d.addCallback(checkEndpoint)
         return d
 
 

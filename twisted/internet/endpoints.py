@@ -521,10 +521,11 @@ class HostnameEndpoint(object):
             def afterConnectionAttempt(connResult):
                 successful.append(True)
                 winner.callback(connResult)
+                return None
 
             def connectFailed(reason):
                 failures.append(reason)
-
+                return None
 
             def iterateEndpoint():
                 try:
@@ -537,10 +538,9 @@ class HostnameEndpoint(object):
                     dconn.addBoth(usedEndpointRemoval, dconn)
                     dconn.addCallback(afterConnectionAttempt)
                     dconn.addCallback(connectFailed)
-
                     pending.append(dconn)
 
-            self._reactor.callLater(0.3, iterateEndpoint)
+#            self._reactor.callLater(0.3, iterateEndpoint)
             return winner
 
 
