@@ -517,7 +517,6 @@ class HostnameEndpoint(object):
 
             def usedEndpointRemoval(connResult, connAttempt):
                 print "Inside usedEndpointRemoval"
-                print "pending = ", pending
                 pending.remove(connAttempt)
                 return connResult
 
@@ -539,22 +538,19 @@ class HostnameEndpoint(object):
 
                 except StopIteration:
                     # The list of endpoints ends.
-                    print "I will NOT do pending.append!"
                     endpointsListExhausted.append(True)
 
                 else:
-                    print "I will do pending.append!"
                     dconn = endpoint.connect(protocolFactory)
-                    print "ep.connect = ", endpoint.connect(protocolFactory)
+                    pending.append(dconn)
+
                     dconn.addBoth(usedEndpointRemoval, dconn)
-                    print "I did pending.append", pending
                     dconn.addCallback(afterConnectionAttempt)
                     dconn.addCallback(connectFailed)
                     pending.append(dconn)
 
 #            self._reactor.callLater(0.3, iterateEndpoint)
             dcall = iterateEndpoint()
-
             return winner
 
         d = self._nameResolution(self._host)

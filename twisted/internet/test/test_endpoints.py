@@ -980,7 +980,7 @@ class HostnameEndpointsOneIPv4Test(ClientEndpointTestCaseMixin,
     """
     def createClientEndpoint(self, reactor, clientFactory, **connectArgs):
         address = IPv4Address("TCP", "1.2.3.4", 80)
-        endpoint = endpoints.HostnameEndpoint(MemoryReactorWithConnectorsAndTime(), "example.com",
+        endpoint = endpoints.HostnameEndpoint(reactor, "example.com",
                                            address.port, **connectArgs)
 
 
