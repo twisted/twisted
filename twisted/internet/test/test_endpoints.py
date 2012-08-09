@@ -28,6 +28,7 @@ from twisted.protocols import basic
 from twisted.internet import protocol, reactor, stdio
 from twisted.internet.stdio import PipeAddress
 from twisted.internet.task import Clock
+from twisted.internet.test.test_protocol import MemoryReactorWithConnectorsAndTime
 
 
 pemPath = getModule("twisted.test").filePath.sibling("server.pem")
@@ -979,7 +980,7 @@ class HostnameEndpointsOneIPv4Test(ClientEndpointTestCaseMixin,
     """
     def createClientEndpoint(self, reactor, clientFactory, **connectArgs):
         address = IPv4Address("TCP", "1.2.3.4", 80)
-        endpoint = endpoints.HostnameEndpoint(reactor, "example.com",
+        endpoint = endpoints.HostnameEndpoint(MemoryReactorWithConnectorsAndTime(), "example.com",
                                            address.port, **connectArgs)
 
 
@@ -1126,13 +1127,13 @@ class HostnameEndpointsIPv4FastTest(unittest.TestCase):
     time than the IPv6 address.
     """
     def setUp(self):
-        self.endpoint = endpoints.HostnameEndpoint(Clock(),
+        self.endpoint = endpoints.HostnameEndpoint(MemoryReactorWithConnectorsAndTime(),
                 "www.example.com", 80)
 
 
     def test_IPv4IsFaster(self):
         """
-        L{connectTheEndpointThatWins} receives a L{TCP4ClientEndpoint}.
+        L{.
         """
         resultEndpoint = []
         clientFactory = object()
@@ -1145,20 +1146,14 @@ class HostnameEndpointsIPv4FastTest(unittest.TestCase):
                 ('1:2::3:4', 0, 0, 0))]
             return defer.succeed(data)
 
-        def connectFasterEndpoint(ep, protocolFactory):
-            resultEndpoint.append(ep)
-            return ep.connect(protocolFactory)
-
         self.endpoint._nameResolution = nameResolution
-        self.endpoint.connectTheEndpointThatWins = connectFasterEndpoint
+#        self.endpoint. = connectFasterEndpoint
         d = self.endpoint.connect(clientFactory)
 
         def checkEndpoint(ep):
-            self.assertIsInstance(resultEndpoint.pop(),
-                endpoints.TCP4ClientEndpoint)
+            self.assertIsInstance(ep, endpoints.TCP4ClientEndpoint)
 
         d.addCallback(checkEndpoint)
-        return d
 
 
 

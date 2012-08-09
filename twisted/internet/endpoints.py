@@ -547,11 +547,10 @@ class HostnameEndpoint(object):
                     dconn = endpoint.connect(protocolFactory)
                     print "ep.connect = ", endpoint.connect(protocolFactory)
                     dconn.addBoth(usedEndpointRemoval, dconn)
-                    pending.append(dconn)
                     print "I did pending.append", pending
                     dconn.addCallback(afterConnectionAttempt)
                     dconn.addCallback(connectFailed)
-#                   pending.append(dconn)
+                    pending.append(dconn)
 
 #            self._reactor.callLater(0.3, iterateEndpoint)
             dcall = iterateEndpoint()
@@ -571,19 +570,6 @@ class HostnameEndpoint(object):
         address.
         """
         return self._deferToThread(self._getaddrinfo, host, 0)
-
-
-#    def _resolvedHostConnect(self, resolvedHost, protocolFactory):
-#        """
-#        """
-#        try:
-#            wf = _WrappingFactory(protocolFactory)
-#            self._reactor.connectTCP(
-#                resolvedHost, self._port, wf,
-#                timeout=self._timeout, bindAddress=self._bindAddress)
-#            return wf._onConnection
-#        except:
-#            return defer.fail()
 
 
 
