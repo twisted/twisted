@@ -1140,8 +1140,8 @@ class HostnameEndpointsIPv4FastTest(unittest.TestCase):
         def nameResolution(host):
             print "Running nameResolution."
             self.assertEqual("www.example.com", host)
-            data = [((AF_INET, SOCK_STREAM, IPPROTO_TCP, '',
-                ('1.2.3.4', 0, 0, 0)), AF_INET6, SOCK_STREAM, IPPROTO_TCP, '',
+            data = [(AF_INET, SOCK_STREAM, IPPROTO_TCP, '',
+                ('1.2.3.4', 0, 0, 0)), (AF_INET6, SOCK_STREAM, IPPROTO_TCP, '',
                 ('1:2::3:4', 0, 0, 0))]
             return defer.succeed(data)
 

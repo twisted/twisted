@@ -487,11 +487,10 @@ class HostnameEndpoint(object):
             for every address returned by GAI.
             """
             print "Running getEndpoints. Yay!"
-            for res in gaiResult:
-                for family, socktype, proto, canonname, sockaddr in res:
-                    if family in [AF_INET6, AF_INET]:
-                        yield self.endpointGenerator(self._reactor, sockaddr[0],
-                                self._port, self._timeout, self._bindAddress)
+            for family, socktype, proto, canonname, sockaddr in gaiResult:
+                if family in [AF_INET6, AF_INET]:
+                    yield self.endpointGenerator(self._reactor, sockaddr[0],
+                            self._port, self._timeout, self._bindAddress)
                         # Yields an endpoint for every address returned by GAI
                         # For now, will work for a maximum of two addresses:
                         # one IPv4 and one IPv6 address in the result.
@@ -518,6 +517,7 @@ class HostnameEndpoint(object):
 
             def usedEndpointRemoval(connResult, connAttempt):
                 print "Inside usedEndpointRemoval"
+                print "pending = ", pending
                 pending.remove(connAttempt)
                 return connResult
 
@@ -536,19 +536,26 @@ class HostnameEndpoint(object):
                 print "Inside iterateEndpoint"
                 try:
                     endpoint = endpoints.next()
-                except StopIteration:
-                    # The list of endpoints ends.
-                    endpointsListExhausted.append(True)
-                else:
                     dconn = endpoint.connect(protocolFactory)
-
-                    dconn.addBoth(usedEndpointRemoval, dconn)
-                    dconn.addCallback(afterConnectionAttempt)
-                    dconn.addCallback(connectFailed)
                     pending.append(dconn)
 
+                except StopIteration:
+                    # The list of endpoints ends.
+                    print "I will not dp pending.append!"
+                    endpointsListExhausted.append(True)
+                else:
+                    print "I will do pending.append!"
+       #             dconn = endpoint.connect(protocolFactory)
+
+                    dconn.addBoth(usedEndpointRemoval, dconn)
+#                    pending.append(dconn)
+                    print "I did pending.append", pending
+                    dconn.addCallback(afterConnectionAttempt)
+                    dconn.addCallback(connectFailed)
+#                   pending.append(dconn)
+
 #            self._reactor.callLater(0.3, iterateEndpoint)
-            iterateEndpoint()
+            dcall = iterateEndpoint()
 
             return winner
 
