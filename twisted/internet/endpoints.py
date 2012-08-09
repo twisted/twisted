@@ -536,19 +536,18 @@ class HostnameEndpoint(object):
                 print "Inside iterateEndpoint"
                 try:
                     endpoint = endpoints.next()
-                    dconn = endpoint.connect(protocolFactory)
-                    pending.append(dconn)
 
                 except StopIteration:
                     # The list of endpoints ends.
-                    print "I will not dp pending.append!"
+                    print "I will NOT do pending.append!"
                     endpointsListExhausted.append(True)
+
                 else:
                     print "I will do pending.append!"
-       #             dconn = endpoint.connect(protocolFactory)
-
+                    dconn = endpoint.connect(protocolFactory)
+                    print "ep.connect = ", endpoint.connect(protocolFactory)
                     dconn.addBoth(usedEndpointRemoval, dconn)
-#                    pending.append(dconn)
+                    pending.append(dconn)
                     print "I did pending.append", pending
                     dconn.addCallback(afterConnectionAttempt)
                     dconn.addCallback(connectFailed)
