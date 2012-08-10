@@ -3862,23 +3862,32 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
 
 
     def test_fetchSimplifiedBodyMultipart(self):
+        """
+        When fetch a slightly complex multi-part message like the one
+        below, C{IMAP4Client._parseFetchPairs} returns the correct
+        dictionary.
+        """
         self.function = self.client.fetchSimplifiedBody
         self.messages = '21'
         self.msgObjs = [
             FakeyMessage(
-                {'content-type': 'multipart/alternative'}, (), '',
-                'Irrelevant', 12345, [
+                {'content-type': 'multipart/mixed'}, (), '',
+                 'RootOf', 98765, [
                     FakeyMessage(
-                        {'content-type': 'text/plain'}, (), 'date',
-                        'Stuff', 54321,  None),
-                    FakeyMessage(
-                        {'content-type': 'text/html'}, (), 'date',
-                        'Things', 32415, None)])]
+                        {'content-type': 'multipart/alternative'}, (), '',
+                         'Irrelevant', 12345, [
+                             FakeyMessage(
+                                 {'content-type': 'text/plain'}, (), 'date',
+                                 'Stuff', 54321,  None),
+                             FakeyMessage(
+                                 {'content-type': 'text/html'}, (), 'date',
+                                 'Things', 32415, None)])])]
         self.expected = {
             0: {'BODY': [
-                    ['text', 'plain', [], None, None, None, '5', '1'],
-                    ['text', 'html', [], None, None, None, '6', '1'],
-                    'alternative']}}
+                    [['text', 'plain', None, None, None, None, '5', '1'],
+                     ['text', 'html', None, None, None, None, '6', '1'],
+                     'alternative'],
+                     'mixed']}}
 
         return self._fetchWork(False)
 

@@ -3601,6 +3601,11 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
                 raise IllegalServerResponse(
                     "Not enough arguments", fetchResponseList)
 
+            # Check if value contains multpart message.
+            multipart = False
+            if value and isinstance(value[0], list):
+                multipart = True
+
             # The parsed forms of responses like:
             #
             # BODY[] VALUE
@@ -3617,7 +3622,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             #
             # Here, check for these cases and grab as many extra elements as
             # necessary to retrieve the body information.
-            if key in ("BODY", "BODY.PEEK") and isinstance(value, list) and len(value) < 3:
+            if key in ("BODY", "BODY.PEEK") and isinstance(value, list) and len(value) < 3 and not multipart:
                 if len(value) < 2:
                     key = (key, tuple(value))
                 else:
