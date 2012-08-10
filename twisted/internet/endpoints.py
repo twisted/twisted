@@ -526,9 +526,14 @@ class HostnameEndpoint(object):
                 winner.callback(connResult)
                 return None
 
+            def almostDone():
+                if endpointsListExhausted and not pending and not successful:
+                    winner.errback(MultiFailure(errors))
+
             def connectFailed(reason):
                 print "Inside connectFailed"
                 failures.append(reason)
+                almostDone()
                 return None
 
             def iterateEndpoint():

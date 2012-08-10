@@ -30,6 +30,7 @@ from twisted.internet.stdio import PipeAddress
 from twisted.internet.task import Clock
 from twisted.internet.test.test_protocol import MemoryReactorWithConnectorsAndTime
 
+MemoryReactor = MemoryReactorWithConnectorsAndTime
 
 pemPath = getModule("twisted.test").filePath.sibling("server.pem")
 casPath = getModule(__name__).filePath.sibling("fake_CAs")
@@ -1098,7 +1099,7 @@ class HostnameEndpointsOneIPv6Test(ClientEndpointTestCaseMixin,
         """
         return {'timeout': 10, 'bindAddress': ('localhost', 49595)}
 
-#TODO: Add a test to check deferToTHread as well.
+#TODO: Add a test to check deferToThread as well.
 
 
 class HostnameEndpointsGAIFailureTest(unittest.TestCase):
