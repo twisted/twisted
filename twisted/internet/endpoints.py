@@ -527,9 +527,11 @@ class HostnameEndpoint(object):
                 return None
 
             def almostDone():
-                winner.errback(error.ConnectError("Connection Failed"))
                 if endpointsListExhausted and not pending and not successful:
-                    winner.errback(error.ConnectError("Connection Failed"))
+                    winner.errback(failures.pop())
+#                return defer.fail(error.ConnectError("Connection Failed"))
+
+                winner.errback(failures.pop())
 
             def connectFailed(reason):
                 print "Inside connectFailed"
