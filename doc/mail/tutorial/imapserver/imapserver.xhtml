@@ -1,0 +1,58 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Twisted Mail Tutorial: Building an IMAP Server</title>
+</head>
+
+<body>
+
+<h1>Twisted Mail Tutorial: Building an IMAP Server</h1>
+
+<p>twisted.protocols.imap4.IMAP4Server is written so that, in 
+most cases, it need not be subclassed.  The preferred way to 
+implement a server is to implement the interfaces IMAP4Server 
+depends on.</p>
+
+<p>The two required interfaces are IAccount and IMailbox, 
+both of which are defined in twisted.protocols.imap4. There 
+are several other optional interfaces as well. Ideally, 
+accounts and mailboxes are hooked up to an IMAP4Server 
+protocol instance via twisted.cred.</p>
+
+<p>Here is a brief example:</p>
+
+<pre>
+from twisted.cred import portal
+from twisted.protocols import imap4
+
+class Account:
+    __implements__ = (imap4.IAccount,)
+
+    # Actually implement the interface here
+
+def logout():
+    # Cleanup logic goes here
+
+class Realm:
+    __implements__ = (portal.IRealm,)
+
+    def requestAvatar(self, avatarID, mind, *interfaces):
+        if imap4.IAccount not in interfaces:
+            raise NotImplementedError
+        return imap4.IAccount, Account(avatarID), logout
+
+    p = portal.Portal(Realm())
+
+    # Contrive to have your ServerFactory's buildProtocol
+    # set the "portal" attribute of the IMAP4Server instance
+    # it creates to the `p' defined above.
+</pre>
+
+<p>For more information, refer to the cred and component 
+howtos available on the Twisted website.</p>
+
+</body>
+</html>
