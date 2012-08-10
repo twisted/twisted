@@ -1,58 +1,371 @@
 <?xml version="1.0"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-<title>Twisted Mail Tutorial: Building an IMAP Server</title>
+<title>Twisted Mail Tutorial: Building a Simple IMAP Server</title>
 </head>
 
 <body>
 
-<h1>Twisted Mail Tutorial: Building an IMAP Server</h1>
+<h1>Twisted Mail Tutorial: Building a Simple IMAP Server</h1>
 
-<p>twisted.protocols.imap4.IMAP4Server is written so that, in 
-most cases, it need not be subclassed.  The preferred way to 
-implement a server is to implement the interfaces IMAP4Server 
-depends on.</p>
+<h2>Introduction</h2>
 
-<p>The two required interfaces are IAccount and IMailbox, 
-both of which are defined in twisted.protocols.imap4. There 
-are several other optional interfaces as well. Ideally, 
-accounts and mailboxes are hooked up to an IMAP4Server 
-protocol instance via twisted.cred.</p>
+<p>By the end of the this tutorial, you will have a very simple IMAP server
+application. This tutorial will show you how to use the <code class="API">
+twisted.mail.imap4</code> to create an IMAP server. The <code class="API">
+twisted.mail.imap4.IMAP4Server</code> is the <code>Protocol</code>
+implementation of IMAP4rev1. The class implements all the IMAP4 commands
+specified in <a href="http://tools.ietf.org/html/rfc3501">RFC 3501</a>.
+"What am I supposed to do?" You might ask. Well, if you tried to read the RFC
+memo, you might notice that it doesn't care about how/where you actually store
+the user account information and the implemenatation of mailboxes. That's where
+you come into the game!</p>
 
-<p>Here is a brief example:</p>
+<p>Twisted heavily relies on <code>zope.inferface</code>, you don't have to
+be an expert on zope.interface in order to build our server. All you need
+know for now is whenever you see an class starts with <code>I</code>, it's
+an interface which has a bunch of methods without any implementation - It
+merely tells you what methods you need to write if you want to implement
+the interface. When you see a line of code like <code>implements(IRealm)
+</code>, you should know that you need to write all the methods specified
+by the interface <code>IRealm</code>. If you are want to know more about
+interfaces, <a href="../../../core/howto/components.html">this tutorial</a>
+covers it up nicely.</p>
 
-<pre>
-from twisted.cred import portal
-from twisted.protocols import imap4
+<p>In this tutorial, we will build our server on top of the skeleton laid
+out in the next section. We will implement some interfaces - in an extremely
+simple way. Hopefully, by the end of the tutorial, you will know what to do if
+you want to write a real-world IMAP4 server.</p>
 
-class Account:
-    __implements__ = (imap4.IAccount,)
 
-    # Actually implement the interface here
+<h2>The Skeleton of Our Server</h2>
 
-def logout():
-    # Cleanup logic goes here
+<p>If you did any Twisted programming, you will know that each application
+will have a reactor, some protocols and factories. There is no exception for
+our IMAP server, but, as I already mentioned above, we will need more than
+the protocol in order to have a working server. Below is the skeleton of our
+application:</p>
 
-class Realm:
-    __implements__ = (portal.IRealm,)
+<pre class="python">
+from twisted.mail import imap4
+from twisted.internet import reactor, defer, protocol
+from zope.interface import implements
+from twisted.cred.portal import IRealm
+from twisted.cred.portal import Portal
+from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
 
-    def requestAvatar(self, avatarID, mind, *interfaces):
-        if imap4.IAccount not in interfaces:
-            raise NotImplementedError
-        return imap4.IAccount, Account(avatarID), logout
 
-    p = portal.Portal(Realm())
+class SimpleMailbox:
+    implements(imap4.IMailboxInfo, imap4.IMailbox, imap4.ICloseableMailbox)
+    pass
 
-    # Contrive to have your ServerFactory's buildProtocol
-    # set the "portal" attribute of the IMAP4Server instance
-    # it creates to the `p' defined above.
+
+class Account(imap4.MemoryAccount):
+    pass
+
+
+class MailUserRealm(object):
+    implements(IRealm)
+    pass
+
+
+class IMAPServerProtocol(imap4.IMAP4Server):
+    pass
+
+
+class IMAPFactory(protocol.Factory):
+    pass
+
+
+if __name__ == "__main__":
+    portal = Portal(MailUserRealm())
+    checker = InMemoryUsernamePasswordDatabaseDontUse()
+    checker.addUser("testuser", "password")
+    portal.registerChecker(checker)
+
+    factory = IMAPFactory()
+    factory.portal = portal
+
+    reactor.listenTCP(1143, factory)
+    print "IMAP Server is Listening on TCP 1143..."
+    reactor.run()
 </pre>
 
-<p>For more information, refer to the cred and component 
-howtos available on the Twisted website.</p>
+<p>As you can see, our server will be listening at TCP port 1143. We created a
+<code>portal</code> which will handle the user login process. The <code>
+checker</code> is how we store and check the user credential. In this case,
+everything is going to be stored in the memory, as the name points out,
+it's not recommended to be used in the real world.server. Please check
+this tutorial for further information about implementing
+<a href="../../../core/howto/cred.html">authentication system</a>.</p>
 
+<p>Account class inherits from <code class="API">imap4.MemoryAccount</code>,
+which in fact is an implementation of <code class="API">imap4.IAccount</code>
+interface.</p>
+
+<p>Let's start to fill in the missing pieces.</p>
+
+<h2>The Mailbox</h2>
+
+<p>The first part of the server we will build is the implementation of
+<code class="API">imap4.IMailbox</code>, which has methods for managing
+messages and getting information about the mailbox. In the following
+example, we will implement a couple of related interface at the same time.
+can guess, manages messages. For this tutorial, we will implement a dead simple
+mailbox: all messages will be in the memory, and in a Python list!</p>
+
+<p>In the following example, we will implement two mailbox related
+interfaces. You can implement as many interfaces as you want, just be
+logical and make sure you cover all the methods.</p>
+
+<pre class="python">
+class SimpleMailbox:
+    implements(imap4.IMailbox, imap4.ICloseableMailbox)
+
+    flags = ('\\Seen', '\\Answered', '\\Flagged',
+             '\\Deleted', '\\Draft', '\\Recent', 'List')
+    messages = []
+    mUID = 0 
+    rw = 1 
+    closed = False
+
+    def __init__(self):
+        self.listeners = []
+        self.addListener = self.listeners.append
+        self.removeListener = self.listeners.remove
+
+    def getFlags(self):
+        return self.flags
+
+    def getHierarchicalDelimiter(self):
+        return '/'
+
+    def getUIDValidity(self):
+        pass
+
+    def getUIDNext(self):
+        pass
+
+    def getUID(self, message):
+        pass
+
+    def getMessageCount(self):
+        return 9
+
+    def getRecentCount(self):
+        pass
+
+    def getUnseenCount(self):
+        return 4
+
+    def isWriteable(self):
+        pass
+
+    def destroy(self):
+        pass
+
+    def requestStatus(self, names):
+        r = {}
+        if 'MESSAGES' in names:
+            r['MESSAGES'] = self.getMessageCount()
+        if 'UNSEEN' in names:
+            r['UNSEEN'] = self.getUnseenCount()
+        return defer.succeed(r)
+
+    def addListener(self, listener):
+        pass
+
+    def removeListener(self, listener):
+        pass
+
+    def addMessage(self, message, flags, date = None):
+        pass
+
+    def expunge(self):
+        pass
+
+    def fetch(self, messages, uid = False):
+        pass
+
+    def store(self, messages, flags, mode, uid):
+        pass
+
+    def close(self):
+        self.closed = True
+</pre>
+
+<p>We put a lot of <code>pass</code> in the class methods - We only
+implemented the methods that were needed in this example: our client
+will request how many messages and unseen messages in our mailbox. We
+didn't add any actual messages, so we simple returned some static
+numbers. When you design your own mailbox, you might want to implement
+all the class methods listed above - fully. To know the purposes of
+those methods, feel free to consult the API of <code class="API">
+imap4.IMailbox</code> and
+<code class="API">imap4.ICloseableMailbox</code>.</p>
+
+<h2>Account</h2>
+
+<p>Our account management is also the mailbox manager. The
+<code class="API">imap4.IAccount</code> interface defines an user account,
+and provides access to the user's mailboxes.
+<code class="API">imap4.MemoryAccount</code>, as a simple implementation
+of <code>IAccount</code>, provides methods for selecting, listing, creating,
+deleting, renaming and subscribing to mailboxes. All the mailboxes are
+simple in a Python <code>list</code>.</p>
+
+<pre class="python">
+class Account(imap4.MemoryAccount):
+    mailboxFactory = SimpleMailbox
+
+    def __init__(self, name):
+        imap4.MemoryAccount.__init__(self, name)
+        # let's create a default mailbox for an user
+        if 'Index' not in self.mailboxes:
+            self.create("Inbox")
+
+    def _emptyMailbox(self, name, id):
+        return self.mailboxFactory()
+</pre>
+
+<p>Here, we overwrite the default init method to include a default
+mailbox 'Index'. We also added our <code>SimpleMailbox</code> as
+<code>mailboxFactory</code>.</p>
+
+<h2>The Realm</h2>
+
+<p>As I already mentioned, IMAP4 protocol itself doesn't care how you
+authenticate an user. You already saw that we use the module
+<code class="API">Cred</code> to authenticate our <code>testuser</code>.
+It's time to define our realm, actually, there is only method we need to
+implement.</p>
+
+<pre class="python">
+class MailUserRealm(object):
+    implements(IRealm)
+
+    avatarInterfaces = {
+        imap4.IAccount: Account,
+    }
+
+    def requestAvatar(self, avatarId, mind, *interfaces):
+        for requestedInterface in interfaces:
+            if self.avatarInterfaces.has_key(requestedInterface):
+                # return an instance of the correct class
+                avatarClass = self.avatarInterfaces[requestedInterface]
+                avatar = avatarClass("testuser")
+                # null logout function: take no arguments and do nothing
+                logout = lambda: None
+                return defer.succeed((requestedInterface, avatar, logout))
+
+        # none of the requested interfaces was supported
+        raise KeyError("None of the requested interfaces is supported")
+</pre>
+
+<p>We defines a dictionary called <code>avatarInterfaces</code>, which maps
+the <code class="API">imap4.IAccount</code> interface to our <code>Account
+</code> class. When <code>requestAvatar</code> is called, <code>MailUserRealm
+</code> tried to find the correct Account instance for the <code>
+testuser</code>. The <code>avatarInterfaces</code> is not necessary,
+we have it here to ensure it finds the correct <code>Account</code>
+instance.</p>
+
+<h2>The IMAP Server Protocol and Factory</h2>
+
+<p>Now, onto the IMAP4 protocol implementation. Twisted already did most
+of the job for us, all we have to is to use it! First thing we need to do
+is to pass the <code>portal</code> to our class. Second thing we will do
+is to add a <code>debug</code> variable so we could see the communication
+between the client and the server.</p>
+
+
+<pre class="python">
+class IMAPServerProtocol(imap4.IMAP4Server):
+    "Subclass of imap4.IMAP4Server that adds debugging."
+    debug = True
+
+
+    def __init__(self, portal, *args, **kw):
+        imap4.IMAP4Server.__init__(self, *args, **kw)
+        self.portal = portal
+        self.timeoutTest = False
+
+
+    def lineReceived(self, line):
+        if self.debug:
+            print "CLIENT:", line
+        imap4.IMAP4Server.lineReceived(self, line)
+
+
+    def sendLine(self, line):
+        imap4.IMAP4Server.sendLine(self, line)
+        if self.debug:
+            print "SERVER:", line
+</pre>
+
+
+<p>The factory class will be really simple too, all we need to do is passing
+<code>portal</code> to the <code>protocol</code>:</p>
+
+<pre class="python">
+class IMAPFactory(protocol.Factory):
+    protocol = IMAPServerProtocol
+    portal = None # placeholder
+
+    def buildProtocol(self, address):
+        p = self.protocol(self.portal)
+        p.factory = self
+        return p
+</pre>
+
+<h2>Finally, Let's connect!</h2>
+
+<p>Now, let's see the <a href="imapserver.py">server</a> and
+<a href="imapclient.py">client</a> in action! Start the server in a
+terminal and the client in another: </p>
+
+<pre class="shell">
+$ python imapserver.py                        
+IMAP Server is Listening on TCP 1143...
+SERVER: * OK [CAPABILITY IMAP4rev1 IDLE NAMESPACE] Twisted IMAP4rev1 Ready
+CLIENT: 0001 LOGIN "testuser" "password"
+SERVER: 0001 OK LOGIN succeeded
+CLIENT: 0002 LIST "" "*"
+SERVER: * LIST (\Seen \Answered \Flagged \Deleted \Draft \Recent List) "/" "INBOX"
+SERVER: 0002 OK LIST completed
+CLIENT: 0003 STATUS INBOX (MESSAGES UNSEEN)
+SERVER: * STATUS INBOX (MESSAGES 9 UNSEEN 4)
+SERVER: 0003 OK STATUS complete
+CLIENT: 0004 LOGOUT
+SERVER: * BYE Nice talking to you
+SERVER: 0004 OK LOGOUT successful
+</pre>
+
+<pre class="shell">
+$ python imapclient.py              
+IMAP4 Server Hostname: localhost
+IMAP4 Server Port (the default is 143): 1143
+IMAP4 Username: testuser
+IMAP4 Password: 
+No secure authentication available. Login insecurely? (y/N) y
+1. INBOX
+Which mailbox? [1] 1
+You have 9 messages (4 unseen)!
+</pre>
+
+<p>So, in our client, we login as <code>testuser</code> and ask for a list the
+mailboxes of the user. Then, we select the <b>INBOX</b> and the server
+outputs the fake number. The client will terminate itself
+after getting the server feedback about the mailbox status.
+As for the server, you need to manually shut it down by issuing
+<code>^C</code>, otherwise, it will keep listening on port 1143.</p>
+
+<p>I hope you enjoyed the tutorial. By now, you should know the basic about
+how to use Twisted to create an IMAP server. I know there are still a <b>lot
+</b>to do if you want to develop a fully featured IMAP server, but at least
+you know where to start now.</p>
 </body>
 </html>
