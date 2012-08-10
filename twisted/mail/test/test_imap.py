@@ -3860,6 +3860,29 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
     def testFetchSimplifiedBodyRFC822UID(self):
         return self.testFetchSimplifiedBodyRFC822(1)
 
+
+    def test_fetchSimplifiedBodyMultipart(self):
+        self.function = self.client.fetchSimplifiedBody
+        self.messages = '21'
+        self.msgObjs = [
+            FakeyMessage(
+                {'content-type': 'multipart/alternative'}, (), '',
+                'Irrelevant', 12345, [
+                    FakeyMessage(
+                        {'content-type': 'text/plain'}, (), 'date',
+                        'Stuff', 54321,  None),
+                    FakeyMessage(
+                        {'content-type': 'text/html'}, (), 'date',
+                        'Things', 32415, None)])]
+        self.expected = {
+            0: {'BODY': [
+                    ['text', 'plain', [], None, None, None, '5', '1'],
+                    ['text', 'html', [], None, None, None, '6', '1'],
+                    'alternative']}}
+
+        return self._fetchWork(False)
+
+
     def testFetchMessage(self, uid=0):
         self.function = self.client.fetchMessage
         self.messages = '1,3,7,10101'
