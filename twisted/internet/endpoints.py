@@ -527,8 +527,9 @@ class HostnameEndpoint(object):
                 return None
 
             def almostDone():
+                winner.errback(error.ConnectError("Connection Failed"))
                 if endpointsListExhausted and not pending and not successful:
-                    winner.errback(MultiFailure(errors))
+                    winner.errback(error.ConnectError("Connection Failed"))
 
             def connectFailed(reason):
                 print "Inside connectFailed"
@@ -548,10 +549,9 @@ class HostnameEndpoint(object):
                 else:
                     dconn = endpoint.connect(protocolFactory)
                     pending.append(dconn)
-
                     dconn.addBoth(usedEndpointRemoval, dconn)
                     dconn.addCallback(afterConnectionAttempt)
-                    dconn.addCallback(connectFailed)
+                    dconn.addErrback(connectFailed)
                     pending.append(dconn)
 
 #            self._reactor.callLater(0.3, iterateEndpoint)
