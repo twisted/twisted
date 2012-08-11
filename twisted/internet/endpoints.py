@@ -486,7 +486,7 @@ class HostnameEndpoint(object):
             This method matches the host address famliy with an endpoint
             for every address returned by GAI.
             """
-            print "Running getEndpoints. Yay!"
+#            print "Running getEndpoints. Yay!"
             for family, socktype, proto, canonname, sockaddr in gaiResult:
                 if family in [AF_INET6, AF_INET]:
                     yield self.endpointGenerator(self._reactor, sockaddr[0],
@@ -511,7 +511,7 @@ class HostnameEndpoint(object):
             endpointsListExhausted = []
             successful = []
             failures = []
-            winner = defer.Deferred()
+            winner = defer.Deferred(canceller=self.canceller)
 
             print "Running attemptConnection. Yay!"
 
@@ -527,7 +527,9 @@ class HostnameEndpoint(object):
                 return None
 
             def almostDone():
+                print "Inside almostDone", failures[0]
                 if endpointsListExhausted and not pending and not successful:
+                    print "inside almostDone's if"
                     winner.errback(failures.pop())
 #                return defer.fail(error.ConnectError("Connection Failed"))
 
@@ -535,6 +537,7 @@ class HostnameEndpoint(object):
 
             def connectFailed(reason):
                 print "Inside connectFailed"
+                print "The reason is:::", reason
                 failures.append(reason)
                 almostDone()
                 return None
@@ -559,12 +562,23 @@ class HostnameEndpoint(object):
 #            self._reactor.callLater(0.3, iterateEndpoint)
             dcall = iterateEndpoint()
             return winner
+        try:
+            d = self._nameResolution(self._host)
+            d.addErrback(errbackForGai)
+            d.addCallback(getEndpoints)
+            d.addCallback(attemptConnection)
+#            d.errback(error.ConnectingCancelledError("The connection was cancelled"))
+            return d
+        except:
+            return defer.fail(error.ConnectingCancelledError("The connection was cancelled"))
 
-        d = self._nameResolution(self._host)
-        d.addErrback(errbackForGai)
-        d.addCallback(getEndpoints)
-        d.addCallback(attemptConnection)
-        return d
+    def canceller(self, deferred):
+
+        deferred.errback(error.ConnectingCancelledError("The connection was cancelled"))
+
+#        TODO: stopConnecting()
+
+
 
 
     def _nameResolution(self, host):
