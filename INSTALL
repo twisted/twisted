@@ -2,7 +2,7 @@ Requirements
 
   Python 2.6 or 2.7.
 
-  Zope Interfaces 3.3.0 or better (http://pypi.python.org/pypi/zope.interface)
+  Zope Interface 3.6.0 or better (http://pypi.python.org/pypi/zope.interface)
 
   pyOpenSSL (<http://launchpad.net/pyopenssl>) is required for any SSL APIs.  On
   Windows, version 0.10 or newer is required.  pyOpenSSL 0.10 or newer is also
