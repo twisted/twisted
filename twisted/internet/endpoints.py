@@ -471,7 +471,7 @@ class HostnameEndpoint(object):
     def connect(self, protocolFactory):
         """
         """
-#        d = self._nameResolution(self._host)
+        wf = _WrappingFactory(protocolFactory)
 
         def errbackForGai(obj):
             """
@@ -496,6 +496,7 @@ class HostnameEndpoint(object):
                         # one IPv4 and one IPv6 address in the result.
 
 
+
         def attemptConnection(endpoints):
             """
             When L{getEndpoints} yields an endpoint, this method
@@ -511,23 +512,29 @@ class HostnameEndpoint(object):
             endpointsListExhausted = []
             successful = []
             failures = []
-            winner = defer.Deferred(canceller=self.canceller)
 
-            print "Running attemptConnection. Yay!"
+#           def _canceller(d):
+ #              d.errback(error.ConnectingCancelledError())
+  #             d.cancel()
+
+            winner = defer.Deferred(canceller=wf._canceller)
+
+#            print "Running attemptConnection. Yay!"
+
 
             def usedEndpointRemoval(connResult, connAttempt):
-                print "Inside usedEndpointRemoval"
+ #               print "Inside usedEndpointRemoval"
                 pending.remove(connAttempt)
                 return connResult
 
             def afterConnectionAttempt(connResult):
-                print "Inside afterConnectionAttempt"
+#                print "Inside afterConnectionAttempt"
                 successful.append(True)
                 winner.callback(connResult)
                 return None
 
             def almostDone():
-                print "Inside almostDone", failures[0]
+ #               print "Inside almostDone", failures[0]
                 if endpointsListExhausted and not pending and not successful:
                     print "inside almostDone's if"
                     winner.errback(failures.pop())
@@ -536,14 +543,14 @@ class HostnameEndpoint(object):
                 winner.errback(failures.pop())
 
             def connectFailed(reason):
-                print "Inside connectFailed"
-                print "The reason is:::", reason
+  #              print "Inside connectFailed"
+   #             print "The reason is:::", reason
                 failures.append(reason)
                 almostDone()
                 return None
 
             def iterateEndpoint():
-                print "Inside iterateEndpoint"
+    #            print "Inside iterateEndpoint"
                 try:
                     endpoint = endpoints.next()
 
@@ -552,7 +559,7 @@ class HostnameEndpoint(object):
                     endpointsListExhausted.append(True)
 
                 else:
-                    dconn = endpoint.connect(protocolFactory)
+                    dconn = endpoint.connect(wf)
                     pending.append(dconn)
                     dconn.addBoth(usedEndpointRemoval, dconn)
                     dconn.addCallback(afterConnectionAttempt)
@@ -560,7 +567,7 @@ class HostnameEndpoint(object):
                     pending.append(dconn)
 
 #            self._reactor.callLater(0.3, iterateEndpoint)
-            dcall = iterateEndpoint()
+            iterateEndpoint()
             return winner
         try:
             d = self._nameResolution(self._host)
@@ -572,9 +579,9 @@ class HostnameEndpoint(object):
         except:
             return defer.fail(error.ConnectingCancelledError("The connection was cancelled"))
 
-    def canceller(self, deferred):
+#    def canceller(self, deferred):
 
-        deferred.errback(error.ConnectingCancelledError("The connection was cancelled"))
+ #       deferred.errback(error.ConnectingCancelledError("The connection was cancelled"))
 
 #        TODO: stopConnecting()
 
