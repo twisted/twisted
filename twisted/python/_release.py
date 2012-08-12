@@ -1049,7 +1049,8 @@ class DistributionBuilder(object):
                                                       submodule.basename()))
 
         for docDir in self.rootDirectory.child("doc").children():
-            tarball.add(docDir.path, buildPath("doc", docDir.basename()))
+            if docDir.basename() != "historic":
+                tarball.add(docDir.path, buildPath("doc", docDir.basename()))
 
         for toplevel in self.rootDirectory.children():
             if not toplevel.isdir():

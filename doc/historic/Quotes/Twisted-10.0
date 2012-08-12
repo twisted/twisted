@@ -1,0 +1,8 @@
+<radix> but I don't think anyone else has time and/or knowledge to try to build a karmic package at the moment.
+<jldupont> radix: hmm.... somewhat strange... single point of failure for you guys...
+<idnar> look on the bright side
+<idnar> it's a single point of success
+%
+<vatts> wvd, it used to work before (as i said) and i didn't change anything :s
+<exarkun> vatts: Denial is only very rarely a useful debugging technique.
+%

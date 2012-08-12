@@ -2055,6 +2055,40 @@ class DistributionBuilderTest(DistributionBuilderTestBase):
         self.assertExtractedStructure(outputFile, outStructure)
 
 
+    def test_excluded(self):
+        """
+        bin/admin and doc/historic are excluded from the Twisted tarball.
+        """
+        structure = {
+            "bin": {"admin": {"blah": "ADMIN"},
+                    "twistd": "TWISTD"},
+            "twisted":
+                {"web":
+                     {"__init__.py": "import WEB",
+                      "topfiles": {"setup.py": "import WEBINSTALL",
+                                   "README": "WEB!"}},
+                 },
+            "doc": {"historic": {"hello": "there"},
+                    "other": "contents",
+                    },
+            }
+
+        outStructure = {
+            "bin": {"twistd": "TWISTD"},
+            "twisted":
+                {"web":
+                     {"__init__.py": "import WEB",
+                      "topfiles": {"setup.py": "import WEBINSTALL",
+                                   "README": "WEB!"}},
+                 },
+            "doc": {"other": "contents"},
+            }
+
+        self.createStructure(self.rootDir, structure)
+        outputFile = self.builder.buildTwisted("10.0.0")
+        self.assertExtractedStructure(outputFile, outStructure)
+
+
     def test_subProjectLayout(self):
         """
         The subproject tarball includes files like so:
