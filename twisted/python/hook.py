@@ -32,11 +32,8 @@ but post-hooks will only be called if the pre-hooks do not raise any exceptions
 values and exception status of the main method will be propogated (assuming
 none of the hooks raise an exception).  Hooks will be executed in the order in
 which they are added.
-
 """
 
-# System Imports
-import string
 
 ### Public Interface
 
@@ -98,8 +95,10 @@ _ORIG = '__hook_orig_%s_%s_%s__'
 
 
 def _XXX(k,n,s):
-    "string manipulation garbage"
-    x = s % (string.replace(k.__module__,'.','_'), k.__name__, n)
+    """
+    String manipulation garbage.
+    """
+    x = s % (k.__module__.replace('.', '_'), k.__name__, n)
     return x
 
 def PRE(k,n):

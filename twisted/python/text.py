@@ -3,12 +3,10 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
 """
 Miscellany of text-munging functions.
 """
 
-import string
 import types
 
 
@@ -16,12 +14,12 @@ def stringyString(object, indentation=''):
     """
     Expansive string formatting for sequence types.
 
-    list.__str__ and dict.__str__ use repr() to display their
+    C{list.__str__} and C{dict.__str__} use C{repr()} to display their
     elements.  This function also turns these sequence types
-    into strings, but uses str() on their elements instead.
+    into strings, but uses C{str()} on their elements instead.
 
-    Sequence elements are also displayed on seperate lines,
-    and nested sequences have nested indentation.
+    Sequence elements are also displayed on seperate lines, and nested
+    sequences have nested indentation.
     """
     braces = ''
     sl = []
@@ -47,10 +45,10 @@ def stringyString(object, indentation=''):
 
         for element in object:
             element = stringyString(element, indentation + ' ')
-            sl.append(string.rstrip(element) + ',')
+            sl.append(element.rstrip() + ',')
     else:
-        sl[:] = map(lambda s, i=indentation: i+s,
-                    string.split(str(object),'\n'))
+        sl[:] = map(lambda s, i=indentation: i + s,
+                   str(object).split('\n'))
 
     if not sl:
         sl.append(indentation)
@@ -59,24 +57,31 @@ def stringyString(object, indentation=''):
         sl[0] = indentation + braces[0] + sl[0][len(indentation) + 1:]
         sl[-1] = sl[-1] + braces[-1]
 
-    s = string.join(sl, "\n")
+    s = "\n".join(sl)
 
     if isMultiline(s) and not endsInNewline(s):
         s = s + '\n'
 
     return s
 
+
 def isMultiline(s):
-    """Returns True if this string has a newline in it."""
-    return (string.find(s, '\n') != -1)
+    """
+    Returns C{True} if this string has a newline in it.
+    """
+    return (s.find('\n') != -1)
+
 
 def endsInNewline(s):
-    """Returns True if this string ends in a newline."""
+    """
+    Returns C{True} if this string ends in a newline.
+    """
     return (s[-len('\n'):] == '\n')
 
 
 def greedyWrap(inString, width=80):
-    """Given a string and a column width, return a list of lines.
+    """
+    Given a string and a column width, return a list of lines.
 
     Caveat: I'm use a stupid greedy word-wrapping
     algorythm.  I won't put two spaces at the end
@@ -88,11 +93,11 @@ def greedyWrap(inString, width=80):
 
     #eww, evil hacks to allow paragraphs delimited by two \ns :(
     if inString.find('\n\n') >= 0:
-        paragraphs = string.split(inString, '\n\n')
+        paragraphs = inString.split('\n\n')
         for para in paragraphs:
             outLines.extend(greedyWrap(para, width) + [''])
         return outLines
-    inWords = string.split(inString)
+    inWords = inString.split()
 
     column = 0
     ptr_line = 0
@@ -108,13 +113,13 @@ def greedyWrap(inString, width=80):
                 # We've gone too far, stop the line one word back.
                 ptr_line = ptr_line - 1
             (l, inWords) = (inWords[0:ptr_line], inWords[ptr_line:])
-            outLines.append(string.join(l,' '))
+            outLines.append(' '.join(l))
 
             ptr_line = 0
             column = 0
         elif not (len(inWords) > ptr_line):
             # Clean up the last bit.
-            outLines.append(string.join(inWords, ' '))
+            outLines.append(' '.join(inWords))
             del inWords[:]
         else:
             # Space
@@ -126,12 +131,14 @@ def greedyWrap(inString, width=80):
 
 wordWrap = greedyWrap
 
+
 def removeLeadingBlanks(lines):
     ret = []
     for line in lines:
         if ret or line.strip():
             ret.append(line)
     return ret
+
 
 def removeLeadingTrailingBlanks(s):
     lines = removeLeadingBlanks(s.split('\n'))
@@ -140,14 +147,16 @@ def removeLeadingTrailingBlanks(s):
     lines.reverse()
     return '\n'.join(lines)+'\n'
 
-def splitQuoted(s):
-    """Like string.split, but don't break substrings inside quotes.
 
-    >>> splitQuoted('the \"hairy monkey\" likes pie')
+def splitQuoted(s):
+    """
+    Like a string split, but don't break substrings inside quotes.
+
+    >>> splitQuoted('the "hairy monkey" likes pie')
     ['the', 'hairy monkey', 'likes', 'pie']
 
-    Another one of those \"someone must have a better solution for
-    this\" things.  This implementation is a VERY DUMB hack done too
+    Another one of those "someone must have a better solution for
+    this" things.  This implementation is a VERY DUMB hack done too
     quickly.
     """
     out = []
@@ -173,8 +182,11 @@ def splitQuoted(s):
 
     return out
 
+
 def strFile(p, f, caseSensitive=True):
-    """Find whether string p occurs in a read()able object f
+    """
+    Find whether string C{p} occurs in a read()able object C{f}.
+
     @rtype: C{bool}
     """
     buf = ""

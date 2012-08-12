@@ -1,11 +1,14 @@
-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+"""
+Tests for L{twisted.python.text}.
+"""
+
+from cStringIO import StringIO
 
 from twisted.trial import unittest
 from twisted.python import text
-from cStringIO import StringIO
 
 
 sampleText = \
@@ -19,20 +22,21 @@ science.
            --  Auguste Comte, Philosophie Positive, Paris, 1838
 """
 
-lineWidth = 72
-
-def set_lineWidth(n):
-    global lineWidth
-    lineWidth = n
 
 class WrapTest(unittest.TestCase):
+    """
+    Tests for L{text.greedyWrap}.
+    """
     def setUp(self):
+        self.lineWidth = 72
         self.sampleSplitText = sampleText.split()
+        self.output = text.wordWrap(sampleText, self.lineWidth)
 
-        self.output = text.wordWrap(sampleText, lineWidth)
 
     def test_wordCount(self):
-        """Compare the number of words."""
+        """
+        Compare the number of words.
+        """
         words = []
         for line in self.output:
             words.extend(line.split())
@@ -41,9 +45,11 @@ class WrapTest(unittest.TestCase):
 
         self.assertEqual(wordCount, sampleTextWordCount)
 
-    def test_wordMatch(self):
-        """Compare the lists of words."""
 
+    def test_wordMatch(self):
+        """
+        Compare the lists of words.
+        """
         words = []
         for line in self.output:
             words.extend(line.split())
@@ -52,27 +58,106 @@ class WrapTest(unittest.TestCase):
         # rather too long lists.
         self.failUnless(self.sampleSplitText == words)
 
+
     def test_lineLength(self):
-        """Check the length of the lines."""
+        """
+        Check the length of the lines.
+        """
         failures = []
         for line in self.output:
-            if not len(line) <= lineWidth:
+            if not len(line) <= self.lineWidth:
                 failures.append(len(line))
 
         if failures:
             self.fail("%d of %d lines were too long.\n"
                       "%d < %s" % (len(failures), len(self.output),
-                                   lineWidth, failures))
+                                   self.lineWidth, failures))
+
+    def test_doubleNewline(self):
+        """
+        Allow paragraphs delimited by two \ns.
+        """
+        sampleText = "et\n\nphone\nhome."
+        result = text.wordWrap(sampleText, self.lineWidth)
+        self.assertEqual(result, ["et", "", "phone home.", ""]) 
+
+
+
+class LineTest(unittest.TestCase):
+    """
+    Tests for L{isMultiline} and L{endsInNewline}.
+    """
+    def test_isMultiline(self):
+        """
+        L{text.isMultiline} returns C{True} if the string has a newline in it.
+        """
+        s = 'This code\n "breaks."'
+        m = text.isMultiline(s)
+        self.assertTrue(m)
+
+        s = 'This code does not "break."'
+        m = text.isMultiline(s)
+        self.assertFalse(m)
+
+
+    def test_endsInNewline(self):
+        """
+        L{text.endsInNewline} returns C{True} if the string ends in a newline.
+        """
+        s = 'newline\n'
+        m = text.endsInNewline(s)
+        self.assertTrue(m)
+
+        s = 'oldline'
+        m = text.endsInNewline(s)
+        self.assertFalse(m)
+
+
+
+class StringyStringTest(unittest.TestCase):
+    """
+    Tests for L{text.stringyString}.
+    """
+    def test_tuple(self):
+        """
+        Tuple elements are displayed on separate lines.
+        """
+        s = ('a', 'b')
+        m = text.stringyString(s)
+        self.assertEqual(m, '(a,\n b,)\n')
+
+
+    def test_dict(self):
+        """
+        Dicts elements are displayed using C{str()}.
+        """
+        s = {'a': 0}
+        m = text.stringyString(s)
+        self.assertEqual(m, '{a: 0}')
+
+
+    def test_list(self):
+        """
+        List elements are displayed on separate lines using C{str()}.
+        """
+        s = ['a', 'b']
+        m = text.stringyString(s)
+        self.assertEqual(m, '[a,\n b,]\n')
+
 
 
 class SplitTest(unittest.TestCase):
-    """Tests for text.splitQuoted()"""
-
+    """
+    Tests for L{text.splitQuoted}.
+    """
     def test_oneWord(self):
-        """Splitting strings with one-word phrases."""
+        """
+        Splitting strings with one-word phrases.
+        """
         s = 'This code "works."'
         r = text.splitQuoted(s)
         self.assertEqual(['This', 'code', 'works.'], r)
+
 
     def test_multiWord(self):
         s = 'The "hairy monkey" likes pie.'
@@ -91,6 +176,8 @@ class SplitTest(unittest.TestCase):
     #    s = r"One\ Phrase"
     #    r = text.splitQuoted(s)
     #    self.assertEqual(["One Phrase"], r)
+
+
 
 class StrFileTest(unittest.TestCase):
     def setUp(self):
@@ -153,6 +240,3 @@ class StrFileTest(unittest.TestCase):
     def test_insensitive(self):
         self.assertEqual(True, text.strFile("ThIs is A test STRING", self.io, False))
 
-
-
-testCases = [WrapTest, SplitTest, StrFileTest]
