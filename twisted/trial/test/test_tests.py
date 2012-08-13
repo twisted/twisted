@@ -91,6 +91,9 @@ class TestSuccess(unittest.TestCase):
 
 
 class TestSkipMethods(unittest.TestCase, ResultsTestMixin):
+    """
+    Test the method skipping features of L{twisted.trial.unittest.TestCase}.
+    """
     class SkippingTests(unittest.TestCase):
         def test_skip1(self):
             raise unittest.SkipTest('skip1')
@@ -120,19 +123,35 @@ class TestSkipMethods(unittest.TestCase, ResultsTestMixin):
         self.assertCount(3)
 
     def test_results(self):
+        """
+        Running a suite in which all methods are individually set to skip
+        produces a successful result with no recorded errors or failures, all
+        the skipped methods recorded as skips, and no methods recorded as
+        successes.
+        """
         self.suite(self.reporter)
-        self.failUnless(self.reporter.wasSuccessful())
+        self.assertTrue(self.reporter.wasSuccessful())
         self.assertEqual(self.reporter.errors, [])
         self.assertEqual(self.reporter.failures, [])
         self.assertEqual(len(self.reporter.skips), 3)
+        self.assertEqual(self.reporter.successes, 0)
+
 
     def test_setUp(self):
+        """
+        Running a suite in which all methods are skipped by C{setUp} raising
+        L{SkipTest} produces a successful result with no recorded errors or
+        failures, all skipped methods recorded as skips, and no methods recorded
+        as successes.
+        """
         self.loadSuite(TestSkipMethods.SkippingSetUp)
         self.suite(self.reporter)
-        self.failUnless(self.reporter.wasSuccessful())
+        self.assertTrue(self.reporter.wasSuccessful())
         self.assertEqual(self.reporter.errors, [])
         self.assertEqual(self.reporter.failures, [])
         self.assertEqual(len(self.reporter.skips), 2)
+        self.assertEqual(self.reporter.successes, 0)
+
 
     def test_reasons(self):
         self.suite(self.reporter)
@@ -144,6 +163,9 @@ class TestSkipMethods(unittest.TestCase, ResultsTestMixin):
 
 
 class TestSkipClasses(unittest.TestCase, ResultsTestMixin):
+    """
+    Test the class skipping features of L{twisted.trial.unittest.TestCase}.
+    """
     class SkippedClass(unittest.TestCase):
         skip = 'class'
         def setUp(self):
@@ -182,14 +204,16 @@ class TestSkipClasses(unittest.TestCase, ResultsTestMixin):
     def test_results(self):
         """
         Skipped test methods don't cause C{wasSuccessful} to return C{False},
-        nor do they contribute to the C{errors} or C{failures} of the reporter.
-        They do, however, add elements to the reporter's C{skips} list.
+        nor do they contribute to the C{errors} or C{failures} of the reporter,
+        or to the count of successes.  They do, however, add elements to the
+        reporter's C{skips} list.
         """
         self.suite(self.reporter)
-        self.failUnless(self.reporter.wasSuccessful())
+        self.assertTrue(self.reporter.wasSuccessful())
         self.assertEqual(self.reporter.errors, [])
         self.assertEqual(self.reporter.failures, [])
         self.assertEqual(len(self.reporter.skips), 4)
+        self.assertEqual(self.reporter.successes, 0)
 
 
     def test_reasons(self):
@@ -206,6 +230,10 @@ class TestSkipClasses(unittest.TestCase, ResultsTestMixin):
 
 
 class TestTodo(unittest.TestCase, ResultsTestMixin):
+    """
+    Tests for the individual test method I{expected failure} features of
+    L{twisted.trial.unittest.TestCase}.
+    """
     class TodoTests(unittest.TestCase):
         def test_todo1(self):
             self.fail("deliberate failure")
@@ -226,13 +254,23 @@ class TestTodo(unittest.TestCase, ResultsTestMixin):
         self.assertCount(3)
 
     def test_results(self):
+        """
+        Running a suite in which all methods are individually marked as expected
+        to fail produces a successful result with no recorded errors, failures,
+        or skips, all methods which fail and were expected to fail recorded as
+        C{expectedFailures}, and all methods which pass but which were expected
+        to fail recorded as C{unexpectedSuccesses}.  Additionally, no tests are
+        recorded as successes.
+        """
         self.suite(self.reporter)
-        self.failUnless(self.reporter.wasSuccessful())
+        self.assertTrue(self.reporter.wasSuccessful())
         self.assertEqual(self.reporter.errors, [])
         self.assertEqual(self.reporter.failures, [])
         self.assertEqual(self.reporter.skips, [])
         self.assertEqual(len(self.reporter.expectedFailures), 2)
         self.assertEqual(len(self.reporter.unexpectedSuccesses), 1)
+        self.assertEqual(self.reporter.successes, 0)
+
 
     def test_expectedFailures(self):
         self.suite(self.reporter)
@@ -240,6 +278,7 @@ class TestTodo(unittest.TestCase, ResultsTestMixin):
         reasonsGiven = [ r.reason
                          for t, e, r in self.reporter.expectedFailures ]
         self.assertEqual(expectedReasons, reasonsGiven)
+
 
     def test_unexpectedSuccesses(self):
         self.suite(self.reporter)
@@ -249,7 +288,12 @@ class TestTodo(unittest.TestCase, ResultsTestMixin):
         self.assertEqual(expectedReasons, reasonsGiven)
 
 
+
 class TestTodoClass(unittest.TestCase, ResultsTestMixin):
+    """
+    Tests for the class-wide I{expected failure} features of
+    L{twisted.trial.unittest.TestCase}.
+    """
     class TodoClass(unittest.TestCase):
         def test_todo1(self):
             pass
@@ -270,13 +314,23 @@ class TestTodoClass(unittest.TestCase, ResultsTestMixin):
         self.assertCount(4)
 
     def test_results(self):
+        """
+        Running a suite in which an entire class is marked as expected to fail
+        produces a successful result with no recorded errors, failures, or
+        skips, all methods which fail and were expected to fail recorded as
+        C{expectedFailures}, and all methods which pass but which were expected
+        to fail recorded as C{unexpectedSuccesses}.  Additionally, no tests are
+        recorded as successes.
+        """
         self.suite(self.reporter)
-        self.failUnless(self.reporter.wasSuccessful())
+        self.assertTrue(self.reporter.wasSuccessful())
         self.assertEqual(self.reporter.errors, [])
         self.assertEqual(self.reporter.failures, [])
         self.assertEqual(self.reporter.skips, [])
         self.assertEqual(len(self.reporter.expectedFailures), 2)
         self.assertEqual(len(self.reporter.unexpectedSuccesses), 2)
+        self.assertEqual(self.reporter.successes, 0)
+
 
     def test_expectedFailures(self):
         self.suite(self.reporter)
@@ -293,7 +347,13 @@ class TestTodoClass(unittest.TestCase, ResultsTestMixin):
         self.assertEqual(expectedReasons, reasonsGiven)
 
 
+
 class TestStrictTodo(unittest.TestCase, ResultsTestMixin):
+    """
+    Tests for the I{expected failure} features of
+    L{twisted.trial.unittest.TestCase} in which the exact failure which is
+    expected is indicated.
+    """
     class Todos(unittest.TestCase):
         def test_todo1(self):
             raise RuntimeError, "expected failure"
@@ -329,14 +389,22 @@ class TestStrictTodo(unittest.TestCase, ResultsTestMixin):
     def test_counting(self):
         self.assertCount(7)
 
+
     def test_results(self):
+        """
+        A test method which is marked as expected to fail with a particular
+        exception is only counted as an expected failure if it does fail with
+        that exception, not if it fails with some other exception.
+        """
         self.suite(self.reporter)
-        self.failIf(self.reporter.wasSuccessful())
+        self.assertFalse(self.reporter.wasSuccessful())
         self.assertEqual(len(self.reporter.errors), 2)
         self.assertEqual(len(self.reporter.failures), 1)
         self.assertEqual(len(self.reporter.expectedFailures), 3)
         self.assertEqual(len(self.reporter.unexpectedSuccesses), 1)
+        self.assertEqual(self.reporter.successes, 0)
         self.assertEqual(self.reporter.skips, [])
+
 
     def test_expectedFailures(self):
         self.suite(self.reporter)
@@ -344,6 +412,7 @@ class TestStrictTodo(unittest.TestCase, ResultsTestMixin):
         reasonsGotten = [ r.reason
                           for t, e, r in self.reporter.expectedFailures ]
         self.assertEqual(expectedReasons, reasonsGotten)
+
 
     def test_unexpectedSuccesses(self):
         self.suite(self.reporter)
@@ -354,7 +423,11 @@ class TestStrictTodo(unittest.TestCase, ResultsTestMixin):
 
 
 
-class TestCleanup(unittest.TestCase):
+class TestReactorCleanup(unittest.TestCase):
+    """
+    Tests for cleanup and reporting of reactor event sources left behind by test
+    methods.
+    """
 
     def setUp(self):
         self.result = reporter.Reporter(StringIO.StringIO())
@@ -402,30 +475,33 @@ class FixtureTest(unittest.TestCase):
         self.loader = runner.TestLoader()
 
 
-    def testBrokenSetUp(self):
+    def test_brokenSetUp(self):
         """
         When setUp fails, the error is recorded in the result object.
         """
         self.loader.loadClass(erroneous.TestFailureInSetUp).run(self.reporter)
-        self.assert_(len(self.reporter.errors) > 0)
-        self.assert_(isinstance(self.reporter.errors[0][1].value,
-                                erroneous.FoolishError))
+        self.assertTrue(len(self.reporter.errors) > 0)
+        self.assertIsInstance(
+            self.reporter.errors[0][1].value, erroneous.FoolishError)
 
 
-    def testBrokenTearDown(self):
+    def test_brokenTearDown(self):
         """
         When tearDown fails, the error is recorded in the result object.
         """
         suite = self.loader.loadClass(erroneous.TestFailureInTearDown)
         suite.run(self.reporter)
         errors = self.reporter.errors
-        self.assert_(len(errors) > 0)
-        self.assert_(isinstance(errors[0][1].value, erroneous.FoolishError))
+        self.assertTrue(len(errors) > 0)
+        self.assertIsInstance(errors[0][1].value, erroneous.FoolishError)
 
 
 
 class SuppressionTest(unittest.TestCase):
-
+    """
+    Tests for the warning suppression features of
+    L{twisted.trial.unittest.TestCase}.
+    """
     def runTests(self, suite):
         suite.run(reporter.TestResult())
 
@@ -452,9 +528,9 @@ class SuppressionTest(unittest.TestCase):
 
     def test_suppressClass(self):
         """
-        A suppression set on a L{TestCase} subclass prevents warnings emitted
-        by any test methods defined on that class which match the suppression
-        from being emitted.
+        A suppression set on a L{SynchronousTestCase} subclass prevents warnings
+        emitted by any test methods defined on that class which match the
+        suppression from being emitted.
         """
         self.runTests(self.loader.loadMethod(
             suppression.TestSuppression.testSuppressClass))
@@ -753,8 +829,6 @@ class TestSuiteClearing(unittest.TestCase):
     """
     Tests for our extension that allows us to clear out a L{TestSuite}.
     """
-
-
     def test_clearSuite(self):
         """
         Calling L{unittest._clearSuite} on a populated L{TestSuite} removes
@@ -790,8 +864,6 @@ class TestTestDecorator(unittest.TestCase):
     """
     Tests for our test decoration features.
     """
-
-
     def assertTestsEqual(self, observed, expected):
         """
         Assert that the given decorated tests are equal.
@@ -947,12 +1019,11 @@ class TestTestDecorator(unittest.TestCase):
             runner.DestructiveTestSuite([unittest.TestDecorator(test)]))
 
 
+
 class TestMonkeyPatchSupport(unittest.TestCase):
     """
     Tests for the patch() helper method in L{unittest.TestCase}.
     """
-
-
     def setUp(self):
         self.originalValue = 'original'
         self.patchedValue = 'patched'
@@ -1018,7 +1089,6 @@ class TestIterateTests(unittest.TestCase):
     L{_iterateTests} returns a list of all test cases in a test suite or test
     case.
     """
-
     def test_iterateTestCase(self):
         """
         L{_iterateTests} on a single test case returns a list containing that
