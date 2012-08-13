@@ -1,13 +1,21 @@
-# Copyright (c) 2001-2011 Twisted Matrix Laboratories.
-# See LICENSE for details
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
 
 """
 Tests for assertions provided by L{twisted.trial.unittest.TestCase}.
+
+L{TestFailureTests} demonstrates that L{TestCase.fail} works, so that is the
+only method on C{twisted.trial.unittest.TestCase} that is initially assumed to
+work.  The test classes are arranged so that the methods demonstrated to work
+earlier in the file are used by those later in the file (even though the runner
+will probably not run the tests in this order).
 """
+
 from __future__ import division
 
 import warnings
 from pprint import pformat
+import unittest as pyunit
 
 from twisted.python import reflect, failure
 from twisted.python.deprecate import deprecated, getVersionString
@@ -28,63 +36,215 @@ class MockEquality(object):
         return self.name[0] == other.name[0]
 
 
-class TestAssertions(unittest.TestCase):
+class TestFailureTests(pyunit.TestCase):
     """
-    Tests for TestCase's assertion methods.  That is, failUnless*,
-    failIf*, assert*.
+    Tests for the most basic functionality of L{TestCase}, for failing tests.
+
+    This class contains tests to demonstrate that L{TestCase.fail} can be used
+    to fail a test, and that that failure is reflected in the test result
+    object.  This should be sufficient functionality so that further tests can
+    be built on L{twisted.trial.unittest.TestCase} instead of
+    L{unittest.TestCase}.  This depends on L{unittest.TestCase} working.
+    """
+    class FailingTest(unittest.TestCase):
+        def test_fails(self):
+            self.fail("This test fails.")
+
+
+    def setUp(self):
+        """
+        Load a suite of one test which can be used to exercise the failure
+        handling behavior.
+        """
+        components = [
+            __name__, self.__class__.__name__, self.FailingTest.__name__]
+        self.loader = pyunit.TestLoader()
+        self.suite = self.loader.loadTestsFromName(".".join(components))
+        self.test = list(self.suite)[0]
+
+
+    def test_fail(self):
+        """
+        L{TestCase.fail} raises L{TestCase.failureException} with the given
+        argument.
+        """
+        try:
+            self.test.fail("failed")
+        except self.test.failureException as result:
+            self.assertEqual("failed", str(result))
+        else:
+            self.fail(
+                "TestCase.fail method did not raise TestCase.failureException")
+
+
+    def test_failingExceptionFails(self):
+        """
+        When a test method raises L{TestCase.failureException}, the test is
+        marked as having failed on the L{TestResult}.
+        """
+        result = pyunit.TestResult()
+        self.suite.run(result)
+        self.failIf(result.wasSuccessful())
+        self.assertEqual(result.errors, [])
+        self.assertEqual(len(result.failures), 1)
+        self.assertEqual(result.failures[0][0], self.test)
+
+
+
+class AssertFalseTests(unittest.TestCase):
+    """
+    Tests for L{TestCase}'s C{assertFalse} and C{failIf} assertion methods.
+
+    This is pretty paranoid.  Still, a certain paranoia is healthy if you
+    are testing a unit testing framework.
+
+    @note: As of 11.2, C{assertFalse} is preferred over C{failIf}.
+    """
+    def _assertFalseFalse(self, method):
+        """
+        Perform the positive case test for C{failIf} or C{assertFalse}.
+
+        @param method: The test method to test.
+        """
+        for notTrue in [0, 0.0, False, None, (), []]:
+            result = method(notTrue, "failed on %r" % (notTrue,))
+            if result != notTrue:
+                self.fail("Did not return argument %r" % (notTrue,))
+
+
+    def _assertFalseTrue(self, method):
+        """
+        Perform the negative case test for C{failIf} or C{assertFalse}.
+
+        @param method: The test method to test.
+        """
+        for true in [1, True, 'cat', [1,2], (3,4)]:
+            try:
+                method(true, "failed on %r" % (true,))
+            except self.failureException, e:
+                if str(e) != "failed on %r" % (true,):
+                    self.fail("Raised incorrect exception on %r: %r" % (true, e))
+            else:
+                self.fail("Call to failIf(%r) didn't fail" % (true,))
+
+
+    def test_failIfFalse(self):
+        """
+        L{TestCase.failIf} returns its argument if its argument is not
+        considered true.
+        """
+        self._assertFalseFalse(self.failIf)
+
+
+    def test_assertFalseFalse(self):
+        """
+        L{TestCase.assertFalse} returns its argument if its argument is not
+        considered true.
+        """
+        self._assertFalseFalse(self.assertFalse)
+
+
+    def test_failIfTrue(self):
+        """
+        L{TestCase.failIf} raises L{TestCase.failureException} if its argument
+        is considered true.
+        """
+        self._assertFalseTrue(self.failIf)
+
+
+    def test_assertFalseTrue(self):
+        """
+        L{TestCase.assertFalse} raises L{TestCase.failureException} if its
+        argument is considered true.
+        """
+        self._assertFalseTrue(self.assertFalse)
+
+
+
+class AssertTrueTests(unittest.TestCase):
+    """
+    Tests for L{TestCase}'s C{assertTrue} and C{failUnless} assertion methods.
+
+    This is pretty paranoid.  Still, a certain paranoia is healthy if you
+    are testing a unit testing framework.
+
+    @note: As of 11.2, C{assertTrue} is preferred over C{failUnless}.
+    """
+    def _assertTrueFalse(self, method):
+        """
+        Perform the negative case test for C{assertTrue} and C{failUnless}.
+
+        @param method: The test method to test.
+        """
+        for notTrue in [0, 0.0, False, None, (), []]:
+            try:
+                method(notTrue, "failed on %r" % (notTrue,))
+            except self.failureException, e:
+                if str(e) != "failed on %r" % (notTrue,):
+                    self.fail(
+                        "Raised incorrect exception on %r: %r" % (notTrue, e))
+            else:
+                self.fail(
+                    "Call to %s(%r) didn't fail" % (method.__name__, notTrue,))
+
+
+    def _assertTrueTrue(self, method):
+        """
+        Perform the positive case test for C{assertTrue} and C{failUnless}.
+
+        @param method: The test method to test.
+        """
+        for true in [1, True, 'cat', [1,2], (3,4)]:
+            result = method(true, "failed on %r" % (true,))
+            if result != true:
+                self.fail("Did not return argument %r" % (true,))
+
+
+    def test_assertTrueFalse(self):
+        """
+        L{TestCase.assertTrue} raises L{TestCase.failureException} if its
+        argument is not considered true.
+        """
+        self._assertTrueFalse(self.assertTrue)
+
+
+    def test_failUnlessFalse(self):
+        """
+        L{TestCase.failUnless} raises L{TestCase.failureException} if its
+        argument is not considered true.
+        """
+        self._assertTrueFalse(self.failUnless)
+
+
+    def test_assertTrueTrue(self):
+        """
+        L{TestCase.assertTrue} returns its argument if its argument is
+        considered true.
+        """
+        self._assertTrueTrue(self.assertTrue)
+
+
+    def test_failUnlessTrue(self):
+        """
+        L{TestCase.failUnless} returns its argument if its argument is
+        considered true.
+        """
+        self._assertTrueTrue(self.failUnless)
+
+
+
+class TestSynchronousAssertions(unittest.TestCase):
+    """
+    Tests for L{TestCase}'s synchronous assertion methods.  That is,
+    failUnless*, failIf*, assert* (except those covered by other more specific
+    test classes).
 
     Note: As of 11.2, assertEqual is preferred over the failUnlessEqual(s)
     variants.  Tests have been modified to reflect this preference.
 
-    This is pretty paranoid.  Still, a certain paranoia is healthy if you
-    are testing a unit testing framework.
+    This is pretty paranoid.  Still, a certain paranoia is healthy if you are
+    testing a unit testing framework.
     """
-
-    class FailingTest(unittest.TestCase):
-        def test_fails(self):
-            raise self.failureException()
-
-    def testFail(self):
-        try:
-            self.fail("failed")
-        except self.failureException, e:
-            if not str(e) == 'failed':
-                raise self.failureException("Exception had msg %s instead of %s"
-                                            % str(e), 'failed')
-        else:
-            raise self.failureException("Call to self.fail() didn't fail test")
-
-    def test_failingException_fails(self):
-        test = runner.TestLoader().loadClass(TestAssertions.FailingTest)
-        result = reporter.TestResult()
-        test.run(result)
-        self.failIf(result.wasSuccessful())
-        self.assertEqual(result.errors, [])
-        self.assertEqual(len(result.failures), 1)
-
-    def test_failIf(self):
-        for notTrue in [0, 0.0, False, None, (), []]:
-            self.failIf(notTrue, "failed on %r" % (notTrue,))
-        for true in [1, True, 'cat', [1,2], (3,4)]:
-            try:
-                self.failIf(true, "failed on %r" % (true,))
-            except self.failureException, e:
-                self.assertEqual(str(e), "failed on %r" % (true,))
-            else:
-                self.fail("Call to failIf(%r) didn't fail" % (true,))
-
-    def test_failUnless(self):
-        for notTrue in [0, 0.0, False, None, (), []]:
-            try:
-                self.failUnless(notTrue, "failed on %r" % (notTrue,))
-            except self.failureException, e:
-                self.assertEqual(str(e), "failed on %r" % (notTrue,))
-            else:
-                self.fail("Call to failUnless(%r) didn't fail" % (notTrue,))
-        for true in [1, True, 'cat', [1,2], (3,4)]:
-            self.failUnless(true, "failed on %r" % (true,))
-
-
     def _testEqualPair(self, first, second):
         x = self.assertEqual(first, second)
         if x != first:
@@ -226,6 +386,28 @@ class TestAssertions(unittest.TestCase):
         # test when __ne__ is not defined
         self.failIfEqual(x, z, "__ne__ not defined, so not equal")
 
+
+    def test_failIfIdenticalPositive(self):
+        """
+        C{failIfIdentical} returns its first argument if its first and second
+        arguments are not the same object.
+        """
+        x = object()
+        y = object()
+        result = self.failIfIdentical(x, y)
+        self.assertEqual(x, result)
+
+
+    def test_failIfIdenticalNegative(self):
+        """
+        C{failIfIdentical} raises C{failureException} if its first and second
+        arguments are the same object.
+        """
+        x = object()
+        self.failUnlessRaises(self.failureException,
+                              self.failIfIdentical, x, x)
+
+
     def test_failUnlessIdentical(self):
         x, y, z = [1], [1], [2]
         ret = self.failUnlessIdentical(x, x)
@@ -297,9 +479,122 @@ class TestAssertions(unittest.TestCase):
         self.failUnlessRaises(self.failureException,
                               self.failIfSubstring, x, z)
 
+
+    def test_assertIsInstance(self):
+        """
+        Test a true condition of assertIsInstance.
+        """
+        A = type('A', (object,), {})
+        a = A()
+        self.assertIsInstance(a, A)
+
+
+    def test_assertIsInstanceMultipleClasses(self):
+        """
+        Test a true condition of assertIsInstance with multiple classes.
+        """
+        A = type('A', (object,), {})
+        B = type('B', (object,), {})
+        a = A()
+        self.assertIsInstance(a, (A, B))
+
+
+    def test_assertIsInstanceError(self):
+        """
+        Test an error with assertIsInstance.
+        """
+        A = type('A', (object,), {})
+        B = type('B', (object,), {})
+        a = A()
+        self.assertRaises(self.failureException, self.assertIsInstance, a, B)
+
+
+    def test_assertIsInstanceErrorMultipleClasses(self):
+        """
+        Test an error with assertIsInstance and multiple classes.
+        """
+        A = type('A', (object,), {})
+        B = type('B', (object,), {})
+        C = type('C', (object,), {})
+        a = A()
+        self.assertRaises(self.failureException, self.assertIsInstance, a, (B, C))
+
+
+    def test_assertIsInstanceCustomMessage(self):
+        """
+        If L{TestCase.assertIsInstance} is passed a custom message as its 3rd
+        argument, the message is included in the failure exception raised when
+        the assertion fails.
+        """
+        exc = self.assertRaises(
+            self.failureException,
+            self.assertIsInstance, 3, str, "Silly assertion")
+        self.assertIn("Silly assertion", str(exc))
+
+
+    def test_assertNotIsInstance(self):
+        """
+        Test a true condition of assertNotIsInstance.
+        """
+        A = type('A', (object,), {})
+        B = type('B', (object,), {})
+        a = A()
+        self.assertNotIsInstance(a, B)
+
+
+    def test_assertNotIsInstanceMultipleClasses(self):
+        """
+        Test a true condition of assertNotIsInstance and multiple classes.
+        """
+        A = type('A', (object,), {})
+        B = type('B', (object,), {})
+        C = type('C', (object,), {})
+        a = A()
+        self.assertNotIsInstance(a, (B, C))
+
+
+    def test_assertNotIsInstanceError(self):
+        """
+        Test an error with assertNotIsInstance.
+        """
+        A = type('A', (object,), {})
+        a = A()
+        error = self.assertRaises(self.failureException,
+                                  self.assertNotIsInstance, a, A)
+        self.assertEqual(str(error), "%r is an instance of %s" % (a, A))
+
+
+    def test_assertNotIsInstanceErrorMultipleClasses(self):
+        """
+        Test an error with assertNotIsInstance and multiple classes.
+        """
+        A = type('A', (object,), {})
+        B = type('B', (object,), {})
+        a = A()
+        self.assertRaises(self.failureException, self.assertNotIsInstance, a, (A, B))
+
+
+    def test_assertDictEqual(self):
+        """
+        L{twisted.trial.unittest.TestCase} supports the C{assertDictEqual}
+        method inherited from the standard library in Python 2.7.
+        """
+        self.assertDictEqual({'a': 1}, {'a': 1})
+    if getattr(unittest.TestCase, 'assertDictEqual', None) is None:
+        test_assertDictEqual.skip = (
+            "assertDictEqual is not available on this version of Python")
+
+
+
+class TestAsynchronousAssertions(unittest.TestCase):
+    """
+    Tests for L{TestCase}'s asynchronous assertion methods.  That is,
+    assertFailure.
+    """
     def test_assertFailure(self):
         d = defer.maybeDeferred(lambda: 1/0)
         return self.assertFailure(d, ZeroDivisionError)
+
 
     def test_assertFailure_wrongException(self):
         d = defer.maybeDeferred(lambda: 1/0)
@@ -308,12 +603,14 @@ class TestAssertions(unittest.TestCase):
                        lambda x: x.trap(self.failureException))
         return d
 
+
     def test_assertFailure_noException(self):
         d = defer.succeed(None)
         self.assertFailure(d, ZeroDivisionError)
         d.addCallbacks(lambda x: self.fail('Should have failed'),
                        lambda x: x.trap(self.failureException))
         return d
+
 
     def test_assertFailure_moreInfo(self):
         """
@@ -329,11 +626,13 @@ class TestAssertions(unittest.TestCase):
         d.addErrback(self._checkInfo, f)
         return d
 
+
     def _checkInfo(self, assertionFailure, f):
         assert assertionFailure.check(self.failureException)
         output = assertionFailure.getErrorMessage()
         self.assertIn(f.getErrorMessage(), output)
         self.assertIn(f.getBriefTraceback(), output)
+
 
     def test_assertFailure_masked(self):
         """
@@ -356,6 +655,7 @@ class TestAssertions(unittest.TestCase):
         self.assertEqual(1, len(result.failures))
 
 
+class WarningAssertionTests(unittest.TestCase):
     def test_assertWarns(self):
         """
         Test basic assertWarns report.
@@ -548,106 +848,6 @@ class TestAssertions(unittest.TestCase):
         self.assertWarns(TheWarning, "bar", __file__, f, "bar")
         [warning] = self.flushWarnings([f])
         self.assertEqual(warning['message'], "foo")
-
-
-    def test_assertIsInstance(self):
-        """
-        Test a true condition of assertIsInstance.
-        """
-        A = type('A', (object,), {})
-        a = A()
-        self.assertIsInstance(a, A)
-
-    def test_assertIsInstanceMultipleClasses(self):
-        """
-        Test a true condition of assertIsInstance with multiple classes.
-        """
-        A = type('A', (object,), {})
-        B = type('B', (object,), {})
-        a = A()
-        self.assertIsInstance(a, (A, B))
-
-    def test_assertIsInstanceError(self):
-        """
-        Test an error with assertIsInstance.
-        """
-        A = type('A', (object,), {})
-        B = type('B', (object,), {})
-        a = A()
-        self.assertRaises(self.failureException, self.assertIsInstance, a, B)
-
-    def test_assertIsInstanceErrorMultipleClasses(self):
-        """
-        Test an error with assertIsInstance and multiple classes.
-        """
-        A = type('A', (object,), {})
-        B = type('B', (object,), {})
-        C = type('C', (object,), {})
-        a = A()
-        self.assertRaises(self.failureException, self.assertIsInstance, a, (B, C))
-
-
-    def test_assertIsInstanceCustomMessage(self):
-        """
-        If L{TestCase.assertIsInstance} is passed a custom message as its 3rd
-        argument, the message is included in the failure exception raised when
-        the assertion fails.
-        """
-        exc = self.assertRaises(
-            self.failureException,
-            self.assertIsInstance, 3, str, "Silly assertion")
-        self.assertIn("Silly assertion", str(exc))
-
-
-    def test_assertNotIsInstance(self):
-        """
-        Test a true condition of assertNotIsInstance.
-        """
-        A = type('A', (object,), {})
-        B = type('B', (object,), {})
-        a = A()
-        self.assertNotIsInstance(a, B)
-
-    def test_assertNotIsInstanceMultipleClasses(self):
-        """
-        Test a true condition of assertNotIsInstance and multiple classes.
-        """
-        A = type('A', (object,), {})
-        B = type('B', (object,), {})
-        C = type('C', (object,), {})
-        a = A()
-        self.assertNotIsInstance(a, (B, C))
-
-    def test_assertNotIsInstanceError(self):
-        """
-        Test an error with assertNotIsInstance.
-        """
-        A = type('A', (object,), {})
-        a = A()
-        error = self.assertRaises(self.failureException,
-                                  self.assertNotIsInstance, a, A)
-        self.assertEqual(str(error), "%r is an instance of %s" % (a, A))
-
-
-    def test_assertNotIsInstanceErrorMultipleClasses(self):
-        """
-        Test an error with assertNotIsInstance and multiple classes.
-        """
-        A = type('A', (object,), {})
-        B = type('B', (object,), {})
-        a = A()
-        self.assertRaises(self.failureException, self.assertNotIsInstance, a, (A, B))
-
-
-    def test_assertDictEqual(self):
-        """
-        L{twisted.trial.unittest.TestCase} supports the C{assertDictEqual}
-        method inherited from the standard library in Python 2.7.
-        """
-        self.assertDictEqual({'a': 1}, {'a': 1})
-    if getattr(unittest.TestCase, 'assertDictEqual', None) is None:
-        test_assertDictEqual.skip = (
-            "assertDictEqual is not available on this version of Python")
 
 
 
