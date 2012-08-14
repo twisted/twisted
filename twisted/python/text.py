@@ -7,8 +7,6 @@
 Miscellany of text-munging functions.
 """
 
-import types
-
 
 def stringyString(object, indentation=''):
     """
@@ -24,7 +22,7 @@ def stringyString(object, indentation=''):
     braces = ''
     sl = []
 
-    if type(object) is types.DictType:
+    if type(object) is dict:
         braces = '{}'
         for key, value in object.items():
             value = stringyString(value, indentation + '   ')
@@ -37,8 +35,8 @@ def stringyString(object, indentation=''):
                 sl.append("%s %s: %s" % (indentation, key,
                                          value[len(indentation) + 3:]))
 
-    elif type(object) in (types.TupleType, types.ListType):
-        if type(object) is types.TupleType:
+    elif type(object) is tuple or type(object) is list:
+        if type(object) is tuple:
             braces = '()'
         else:
             braces = '[]'
