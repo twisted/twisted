@@ -876,8 +876,26 @@ class _TCP6ServerParser(object):
 class _TCP6ClientParser(object):
     """
     Client stream endpoint string parser for L{TCP6ClientEndpoint}.
-    """
 
+    @ivar prefix: See L{IStreamClientEndpointStringParser.prefix}.
+    """
+    implements(IPlugin, IStreamClientEndpointStringParser)
+
+    prefix = "tcp6"
+
+    def _parseClient(self, reactor, host, port, timeout=30, bindAddress=None):
+        """
+        Internal parser function.
+        @see: L{endpoints.TCP6ClientEndpoint}.
+        """
+        port = int(port)
+        timeout = int(timeout)
+        return TCP6ClientEndpoint(reactor, host, port, timeout, bindAddress)
+
+    def parseStreamClient(self, reactor, *args, **kwargs):
+        # Redirects to (self._parseClient), tricks zope.interface into
+        # believing the interface is correctly implemented.
+        return self._parseClient(reactor, *args, **kwargs)
 
 
 
