@@ -1994,6 +1994,7 @@ class StandardIOEndpointPluginTests(unittest.TestCase):
         """
         parsers = list(getPlugins(
                 interfaces.IStreamServerEndpointStringParser))
+        print parsers
         for p in parsers:
             if isinstance(p, self._parserClass):
                 break
@@ -2031,11 +2032,12 @@ class TCP6ClientEndpointPluginTests(unittest.TestCase):
 
     def test_pluginDiscovery(self):
         """
-        L{endpoints._TCP6ClientParser} is found a a plugin for
+        L{endpoints._TCP6ClientParser} is found as a plugin for
         L{interfaces.IStreamClientEndpointStringParser} interface.
         """
         parsers = list(getPlugins(
                 interfaces.IStreamClientEndpointStringParser))
+        print parsers
         for p in parsers:
             if isinstance(p, self._parserClass):
                 break

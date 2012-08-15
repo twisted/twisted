@@ -892,10 +892,10 @@ class _TCP6ClientParser(object):
         timeout = int(timeout)
         return TCP6ClientEndpoint(reactor, host, port, timeout, bindAddress)
 
-    def parseStreamClient(self, reactor, *args, **kwargs):
+    def parseStreamClient(self, *args, **kwargs):
         # Redirects to (self._parseClient), tricks zope.interface into
         # believing the interface is correctly implemented.
-        return self._parseClient(reactor, *args, **kwargs)
+        return self._parseClient(*args, **kwargs)
 
 
 
