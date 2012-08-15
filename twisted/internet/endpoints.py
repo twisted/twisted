@@ -883,13 +883,14 @@ class _TCP6ClientParser(object):
 
     prefix = "tcp6"
 
-    def _parseClient(self, reactor, host, port, timeout=30, bindAddress=None):
+    def _parseClient(self, host, port, timeout=30, bindAddress=None):
         """
         Internal parser function.
         @see: L{endpoints.TCP6ClientEndpoint}.
         """
         port = int(port)
         timeout = int(timeout)
+        from twisted.internet import reactor
         return TCP6ClientEndpoint(reactor, host, port, timeout, bindAddress)
 
     def parseStreamClient(self, *args, **kwargs):

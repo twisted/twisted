@@ -1994,7 +1994,6 @@ class StandardIOEndpointPluginTests(unittest.TestCase):
         """
         parsers = list(getPlugins(
                 interfaces.IStreamServerEndpointStringParser))
-        print parsers
         for p in parsers:
             if isinstance(p, self._parserClass):
                 break
@@ -2037,7 +2036,6 @@ class TCP6ClientEndpointPluginTests(unittest.TestCase):
         """
         parsers = list(getPlugins(
                 interfaces.IStreamClientEndpointStringParser))
-        print parsers
         for p in parsers:
             if isinstance(p, self._parserClass):
                 break
@@ -2062,8 +2060,10 @@ class TCP6ClientEndpointPluginTests(unittest.TestCase):
         """
         ep = endpoints.clientFromString(MemoryReactor(),
                 "tcp6:ipv6.example.com:8080:timeout=50")
+                # Can actually pass anything here as the reactor, wouldn't
+                # matter (See #5870)
         self.assertIsInstance(ep, endpoints.TCP6ClientEndpoint)
-        self.assertIsInstance(ep._reactor, MemoryReactor)
+        self.assertEqual(ep._reactor, reactor)
         self.assertEqual(ep._host, 'ipv6.example.com')
         self.assertEqual(ep._port, 8080)
         self.assertEqual(ep._timeout, 50)
