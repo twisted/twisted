@@ -1,0 +1,18 @@
+#!/usr/bin/env python3.3
+
+"""
+This program is intended to run Twisted's test suite under Python 3. As such,
+it should go away once Twisted has been fully ported to Python 3. It is only
+intended to be used from a Twisted checkout, and implementation can and will
+change at any time.
+"""
+
+import sys, os, unittest
+
+# Make sure checkout's code is used:
+twistedPath = os.path.abspath(os.path.dirname(os.path.dirname(sys.argv[0])))
+sys.path.insert(0, twistedPath)
+
+from _twistedpython3 import testModules
+unittest.main(module=None, argv=["run-python3-tests", "-v"] + testModules)
+
