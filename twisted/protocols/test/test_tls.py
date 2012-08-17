@@ -6,6 +6,7 @@ Tests for L{twisted.protocols.tls}.
 """
 
 from zope.interface.verify import verifyObject
+from zope.interface import Interface, directlyProvides
 
 try:
     from twisted.protocols.tls import TLSMemoryBIOProtocol, TLSMemoryBIOFactory
@@ -206,6 +207,30 @@ class TLSMemoryBIOTests(TestCase):
         proto = TLSMemoryBIOProtocol(None, None)
         self.assertTrue(ISSLTransport.providedBy(proto))
         self.assertTrue(ISystemHandle.providedBy(proto))
+
+
+    def test_wrappedProtocolInterfaces(self):
+        """
+        L{TLSMemoryBIOProtocol} instances provide the interfaces provided by
+        the transport they wrap.
+        """
+        class ITransport(Interface):
+            pass
+
+        class MyTransport(object):
+            def write(self, bytes):
+                pass
+
+        clientFactory = ClientFactory()
+        contextFactory = ClientContextFactory()
+        wrapperFactory = TLSMemoryBIOFactory(
+            contextFactory, True, clientFactory)
+
+        transport = MyTransport()
+        directlyProvides(transport, ITransport)
+        tlsProtocol = TLSMemoryBIOProtocol(wrapperFactory, Protocol())
+        tlsProtocol.makeConnection(transport)
+        self.assertTrue(ITransport.providedBy(tlsProtocol))
 
 
     def test_getHandle(self):

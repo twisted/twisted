@@ -46,7 +46,7 @@ except TypeError, e:
         raise
     raise ImportError("twisted.protocols.tls requires pyOpenSSL 0.10 or newer.")
 
-from zope.interface import implements
+from zope.interface import implements, providedBy, directlyProvides
 
 from twisted.python.failure import Failure
 from twisted.python import log
@@ -297,6 +297,10 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         else:
             self._tlsConnection.set_accept_state()
         self._appSendBuffer = []
+
+        # Add interfaces provided by the transport we are wrapping:
+        for interface in providedBy(transport):
+            directlyProvides(self, interface)
 
         # Intentionally skip ProtocolWrapper.makeConnection - it might call
         # wrappedProtocol.makeConnection, which we want to make conditional.
