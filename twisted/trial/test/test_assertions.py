@@ -2,13 +2,14 @@
 # See LICENSE for details.
 
 """
-Tests for assertions provided by L{twisted.trial.unittest.TestCase}.
+Tests for assertions provided by C{SynchronousTestCase} and C{TestCase},
+provided by L{twisted.trial.unittest}.
 
-L{TestFailureTests} demonstrates that L{TestCase.fail} works, so that is the
-only method on C{twisted.trial.unittest.TestCase} that is initially assumed to
-work.  The test classes are arranged so that the methods demonstrated to work
-earlier in the file are used by those later in the file (even though the runner
-will probably not run the tests in this order).
+L{TestFailureTests} demonstrates that L{SynchronousTestCase.fail} works, so that
+is the only method on C{twisted.trial.unittest.SynchronousTestCase} that is
+initially assumed to work.  The test classes are arranged so that the methods
+demonstrated to work earlier in the file are used by those later in the file
+(even though the runner will probably not run the tests in this order).
 """
 
 from __future__ import division
@@ -38,15 +39,16 @@ class MockEquality(object):
 
 class TestFailureTests(pyunit.TestCase):
     """
-    Tests for the most basic functionality of L{TestCase}, for failing tests.
+    Tests for the most basic functionality of L{SynchronousTestCase}, for
+    failing tests.
 
-    This class contains tests to demonstrate that L{TestCase.fail} can be used
-    to fail a test, and that that failure is reflected in the test result
-    object.  This should be sufficient functionality so that further tests can
-    be built on L{twisted.trial.unittest.TestCase} instead of
+    This class contains tests to demonstrate that L{SynchronousTestCase.fail}
+    can be used to fail a test, and that that failure is reflected in the test
+    result object.  This should be sufficient functionality so that further
+    tests can be built on L{SynchronousTestCase} instead of
     L{unittest.TestCase}.  This depends on L{unittest.TestCase} working.
     """
-    class FailingTest(unittest.TestCase):
+    class FailingTest(unittest.SynchronousTestCase):
         def test_fails(self):
             self.fail("This test fails.")
 
@@ -65,8 +67,8 @@ class TestFailureTests(pyunit.TestCase):
 
     def test_fail(self):
         """
-        L{TestCase.fail} raises L{TestCase.failureException} with the given
-        argument.
+        L{SynchronousTestCase.fail} raises
+        L{SynchronousTestCase.failureException} with the given argument.
         """
         try:
             self.test.fail("failed")
@@ -74,12 +76,13 @@ class TestFailureTests(pyunit.TestCase):
             self.assertEqual("failed", str(result))
         else:
             self.fail(
-                "TestCase.fail method did not raise TestCase.failureException")
+                "SynchronousTestCase.fail method did not raise "
+                "SynchronousTestCase.failureException")
 
 
     def test_failingExceptionFails(self):
         """
-        When a test method raises L{TestCase.failureException}, the test is
+        When a test method raises L{SynchronousTestCase.failureException}, the test is
         marked as having failed on the L{TestResult}.
         """
         result = pyunit.TestResult()
@@ -91,9 +94,10 @@ class TestFailureTests(pyunit.TestCase):
 
 
 
-class AssertFalseTests(unittest.TestCase):
+class AssertFalseTests(unittest.SynchronousTestCase):
     """
-    Tests for L{TestCase}'s C{assertFalse} and C{failIf} assertion methods.
+    Tests for L{SynchronousTestCase}'s C{assertFalse} and C{failIf} assertion
+    methods.
 
     This is pretty paranoid.  Still, a certain paranoia is healthy if you
     are testing a unit testing framework.
@@ -130,40 +134,43 @@ class AssertFalseTests(unittest.TestCase):
 
     def test_failIfFalse(self):
         """
-        L{TestCase.failIf} returns its argument if its argument is not
-        considered true.
+        L{SynchronousTestCase.failIf} returns its argument if its argument is
+        not considered true.
         """
         self._assertFalseFalse(self.failIf)
 
 
     def test_assertFalseFalse(self):
         """
-        L{TestCase.assertFalse} returns its argument if its argument is not
-        considered true.
+        L{SynchronousTestCase.assertFalse} returns its argument if its argument
+        is not considered true.
         """
         self._assertFalseFalse(self.assertFalse)
 
 
     def test_failIfTrue(self):
         """
-        L{TestCase.failIf} raises L{TestCase.failureException} if its argument
-        is considered true.
+        L{SynchronousTestCase.failIf} raises
+        L{SynchronousTestCase.failureException} if its argument is considered
+        true.
         """
         self._assertFalseTrue(self.failIf)
 
 
     def test_assertFalseTrue(self):
         """
-        L{TestCase.assertFalse} raises L{TestCase.failureException} if its
-        argument is considered true.
+        L{SynchronousTestCase.assertFalse} raises
+        L{SynchronousTestCase.failureException} if its argument is considered
+        true.
         """
         self._assertFalseTrue(self.assertFalse)
 
 
 
-class AssertTrueTests(unittest.TestCase):
+class AssertTrueTests(unittest.SynchronousTestCase):
     """
-    Tests for L{TestCase}'s C{assertTrue} and C{failUnless} assertion methods.
+    Tests for L{SynchronousTestCase}'s C{assertTrue} and C{failUnless} assertion
+    methods.
 
     This is pretty paranoid.  Still, a certain paranoia is healthy if you
     are testing a unit testing framework.
@@ -202,42 +209,43 @@ class AssertTrueTests(unittest.TestCase):
 
     def test_assertTrueFalse(self):
         """
-        L{TestCase.assertTrue} raises L{TestCase.failureException} if its
-        argument is not considered true.
+        L{SynchronousTestCase.assertTrue} raises
+        L{SynchronousTestCase.failureException} if its argument is not
+        considered true.
         """
         self._assertTrueFalse(self.assertTrue)
 
 
     def test_failUnlessFalse(self):
         """
-        L{TestCase.failUnless} raises L{TestCase.failureException} if its
-        argument is not considered true.
+        L{SynchronousTestCase.failUnless} raises
+        L{SynchronousTestCase.failureException} if its argument is not
+        considered true.
         """
         self._assertTrueFalse(self.failUnless)
 
 
     def test_assertTrueTrue(self):
         """
-        L{TestCase.assertTrue} returns its argument if its argument is
-        considered true.
+        L{SynchronousTestCase.assertTrue} returns its argument if its argument
+        is considered true.
         """
         self._assertTrueTrue(self.assertTrue)
 
 
     def test_failUnlessTrue(self):
         """
-        L{TestCase.failUnless} returns its argument if its argument is
-        considered true.
+        L{SynchronousTestCase.failUnless} returns its argument if its argument
+        is considered true.
         """
         self._assertTrueTrue(self.failUnless)
 
 
 
-class TestSynchronousAssertions(unittest.TestCase):
+class TestSynchronousAssertions(unittest.SynchronousTestCase):
     """
-    Tests for L{TestCase}'s synchronous assertion methods.  That is,
-    failUnless*, failIf*, assert* (except those covered by other more specific
-    test classes).
+    Tests for L{SynchronousTestCase}'s assertion methods.  That is, failUnless*,
+    failIf*, assert* (not covered by other more specific test classes).
 
     Note: As of 11.2, assertEqual is preferred over the failUnlessEqual(s)
     variants.  Tests have been modified to reflect this preference.
@@ -580,7 +588,7 @@ class TestSynchronousAssertions(unittest.TestCase):
         method inherited from the standard library in Python 2.7.
         """
         self.assertDictEqual({'a': 1}, {'a': 1})
-    if getattr(unittest.TestCase, 'assertDictEqual', None) is None:
+    if getattr(unittest.SynchronousTestCase, 'assertDictEqual', None) is None:
         test_assertDictEqual.skip = (
             "assertDictEqual is not available on this version of Python")
 
@@ -588,8 +596,8 @@ class TestSynchronousAssertions(unittest.TestCase):
 
 class TestAsynchronousAssertions(unittest.TestCase):
     """
-    Tests for L{TestCase}'s asynchronous assertion methods.  That is,
-    assertFailure.
+    Tests for L{TestCase}'s asynchronous extensions to L{SynchronousTestCase}.
+    That is, assertFailure.
     """
     def test_assertFailure(self):
         d = defer.maybeDeferred(lambda: 1/0)
@@ -655,7 +663,7 @@ class TestAsynchronousAssertions(unittest.TestCase):
         self.assertEqual(1, len(result.failures))
 
 
-class WarningAssertionTests(unittest.TestCase):
+class WarningAssertionTests(unittest.SynchronousTestCase):
     def test_assertWarns(self):
         """
         Test basic assertWarns report.
@@ -851,7 +859,7 @@ class WarningAssertionTests(unittest.TestCase):
 
 
 
-class TestAssertionNames(unittest.TestCase):
+class TestAssertionNames(unittest.SynchronousTestCase):
     """
     Tests for consistency of naming within TestCase assertion methods
     """
@@ -880,8 +888,8 @@ class TestAssertionNames(unittest.TestCase):
 
 
     def test_failIf_matches_assertNot(self):
-        asserts = reflect.prefixedMethods(unittest.TestCase, 'assertNot')
-        failIfs = reflect.prefixedMethods(unittest.TestCase, 'failIf')
+        asserts = reflect.prefixedMethods(unittest.SynchronousTestCase, 'assertNot')
+        failIfs = reflect.prefixedMethods(unittest.SynchronousTestCase, 'failIf')
         self.assertEqual(sorted(asserts, key=self._name),
                              sorted(failIfs, key=self._name))
 
@@ -899,9 +907,9 @@ class TestAssertionNames(unittest.TestCase):
                 self.assertEqual(value, getattr(self, name[:-1]))
 
 
-class TestCallDeprecated(unittest.TestCase):
+class TestCallDeprecated(unittest.SynchronousTestCase):
     """
-    Test use of the L{TestCase.callDeprecated} method with version objects.
+    Test use of the L{SynchronousTestCase.callDeprecated} method with version objects.
     """
 
     version = Version('Twisted', 8, 0, 0)

@@ -121,7 +121,8 @@ class TestErrorReporting(StringTest):
         reported in the output stream with the I{ERROR} tag along with a summary
         of what error was reported and the ID of the test.
         """
-        suite = self.loader.loadClass(erroneous.TestFailureInSetUp)
+        cls = erroneous.SynchronousTestFailureInSetUp
+        suite = self.loader.loadClass(cls)
         output = self.getOutput(suite).splitlines()
         match = [
             self.doubleSeparator,
@@ -132,7 +133,7 @@ class TestErrorReporting(StringTest):
                        r'.I am a broken setUp method.$'),
             ('twisted.trial.test.erroneous.FoolishError: '
              'I am a broken setUp method'),
-            'twisted.trial.test.erroneous.TestFailureInSetUp.test_noop']
+            '%s.%s.test_noop' % (cls.__module__, cls.__name__)]
         self.stringComparison(match, output)
 
 

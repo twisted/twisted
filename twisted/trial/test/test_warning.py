@@ -9,15 +9,15 @@ import sys, warnings
 from StringIO import StringIO
 
 from twisted.python.filepath import FilePath
-from twisted.trial.unittest import (TestCase, _collectWarnings,
-                                    _setWarningRegistryToNone)
+from twisted.trial.unittest import (
+    SynchronousTestCase, _collectWarnings, _setWarningRegistryToNone)
 from twisted.trial.reporter import TestResult
 
 class Mask(object):
     """
-    Hide a L{TestCase} definition from trial's automatic discovery mechanism.
+    Hide a test case definition from trial's automatic discovery mechanism.
     """
-    class MockTests(TestCase):
+    class MockTests(SynchronousTestCase):
         """
         A test case which is used by L{FlushWarningsTests} to verify behavior
         which cannot be verified by code inside a single test method.
@@ -41,9 +41,9 @@ class Mask(object):
 
 
 
-class FlushWarningsTests(TestCase):
+class FlushWarningsTests(SynchronousTestCase):
     """
-    Tests for L{TestCase.flushWarnings}, an API for examining the warnings
+    Tests for C{flushWarnings}, an API for examining the warnings
     emitted so far in a test.
     """
 
@@ -69,16 +69,16 @@ class FlushWarningsTests(TestCase):
 
     def test_none(self):
         """
-        If no warnings are emitted by a test, L{TestCase.flushWarnings} returns
-        an empty list.
+        If no warnings are emitted by a test, C{flushWarnings} returns an empty
+        list.
         """
         self.assertEqual(self.flushWarnings(), [])
 
 
     def test_several(self):
         """
-        If several warnings are emitted by a test, L{TestCase.flushWarnings}
-        returns a list containing all of them.
+        If several warnings are emitted by a test, C{flushWarnings} returns a
+        list containing all of them.
         """
         firstMessage = "first warning message"
         firstCategory = UserWarning
@@ -97,7 +97,7 @@ class FlushWarningsTests(TestCase):
     def test_repeated(self):
         """
         The same warning triggered twice from the same place is included twice
-        in the list returned by L{TestCase.flushWarnings}.
+        in the list returned by C{flushWarnings}.
         """
         message = "the message"
         category = RuntimeWarning
@@ -111,8 +111,8 @@ class FlushWarningsTests(TestCase):
 
     def test_cleared(self):
         """
-        After a particular warning event has been returned by
-        L{TestCase.flushWarnings}, it is not returned by subsequent calls.
+        After a particular warning event has been returned by C{flushWarnings},
+        it is not returned by subsequent calls.
         """
         message = "the message"
         category = RuntimeWarning
@@ -209,8 +209,8 @@ class FlushWarningsTests(TestCase):
 
     def test_multipleFlushes(self):
         """
-        Any warnings emitted after a call to L{TestCase.flushWarnings} can be
-        flushed by another call to L{TestCase.flushWarnings}.
+        Any warnings emitted after a call to C{flushWarnings} can be flushed by
+        another call to C{flushWarnings}.
         """
         warnings.warn("first message")
         self.assertEqual(len(self.flushWarnings()), 1)
@@ -220,7 +220,7 @@ class FlushWarningsTests(TestCase):
 
     def test_filterOnOffendingFunction(self):
         """
-        The list returned by L{TestCase.flushWarnings} includes only those
+        The list returned by C{flushWarnings} includes only those
         warnings which refer to the source of the function passed as the value
         for C{offendingFunction}, if a value is passed for that parameter.
         """
@@ -262,9 +262,9 @@ class FlushWarningsTests(TestCase):
 
     def test_invalidFilter(self):
         """
-        If an object which is neither a function nor a method is included in
-        the C{offendingFunctions} list, L{TestCase.flushWarnings} raises
-        L{ValueError}.  Such a call flushes no warnings.
+        If an object which is neither a function nor a method is included in the
+        C{offendingFunctions} list, C{flushWarnings} raises L{ValueError}.  Such
+        a call flushes no warnings.
         """
         warnings.warn("oh no")
         self.assertRaises(ValueError, self.flushWarnings, [None])
@@ -346,7 +346,7 @@ class FakeWarning(Warning):
 
 
 
-class CollectWarningsTests(TestCase):
+class CollectWarningsTests(SynchronousTestCase):
     """
     Tests for L{_collectWarnings}.
     """

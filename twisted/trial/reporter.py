@@ -472,7 +472,14 @@ class Reporter(TestResult):
 
 
     def _trimFrames(self, frames):
-        # when a method fails synchronously, the stack looks like this:
+        # when a SynchronousTestCase method fails synchronously, the stack looks
+        # like this:
+        # [0]: SynchronousTestCase._run
+        # [1]:  utils.runWithWarningsSuppressed
+        # [2:-2]: code in the test method which failed
+        # [-1]: unittst.fail
+
+        # when a TestCase method fails synchronously, the stack looks like this:
         #  [0]: defer.maybeDeferred()
         #  [1]: utils.runWithWarningsSuppressed()
         #  [2:-2]: code in the test method which failed
@@ -486,8 +493,8 @@ class Reporter(TestResult):
         #  [-1]: unittest.fail
 
         # as a result, we want to trim either [maybeDeferred,runWWS] or
-        # [Deferred._runCallbacks] from the front, and trim the
-        # [unittest.fail] from the end.
+        # [Deferred._runCallbacks] or [SynchronousTestCase._run] from the front,
+        # and trim the [unittest.fail] from the end.
 
         # There is also another case, when the test method is badly defined and
         # contains extra arguments.
@@ -497,15 +504,20 @@ class Reporter(TestResult):
         if len(frames) < 2:
             return newFrames
 
-        first = newFrames[0]
-        second = newFrames[1]
-        if (first[0] == "maybeDeferred"
-            and os.path.splitext(os.path.basename(first[1]))[0] == 'defer'
-            and second[0] == "runWithWarningsSuppressed"
-            and os.path.splitext(os.path.basename(second[1]))[0] == 'utils'):
+        firstMethod = newFrames[0][0]
+        firstFile = os.path.splitext(os.path.basename(newFrames[0][1]))[0]
+
+        secondMethod = newFrames[1][0]
+        secondFile = os.path.splitext(os.path.basename(newFrames[1][1]))[0]
+
+        supp = ("runWithWarningsSuppressed", "utils")
+        syncCase = (("_run", "unittest"), supp)
+        asyncCase = (("maybeDeferred", "defer"), supp)
+
+        twoFrames = ((firstMethod, firstFile), (secondMethod, secondFile))
+        if twoFrames in [syncCase, asyncCase]:
             newFrames = newFrames[2:]
-        elif (first[0] == "_runCallbacks"
-              and os.path.splitext(os.path.basename(first[1]))[0] == 'defer'):
+        elif (firstMethod, firstFile) == ("_runCallbacks", "defer"):
             newFrames = newFrames[1:]
 
         if not newFrames:

@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.trial.test.test_tests -*-
+# -*- test-case-name: twisted.trial.test -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -16,7 +16,8 @@ from dis import findlinestarts as _findlinestarts
 
 from twisted.internet import defer, utils
 from twisted.python import components, failure, log, monkey
-from twisted.python.deprecate import getDeprecationWarningString
+from twisted.python.deprecate import (
+    getDeprecationWarningString, warnAboutFunction)
 
 from twisted.trial import itrial, reporter, util
 
@@ -606,22 +607,23 @@ _logObserver = _LogObserver()
 
 _wait_is_running = []
 
-class TestCase(_Assertions):
+
+class SynchronousTestCase(_Assertions):
     """
     A unit test. The atom of the unit testing universe.
 
-    This class extends C{unittest.TestCase} from the standard library. The
-    main feature is the ability to return C{Deferred}s from tests and fixture
-    methods and to have the suite wait for those C{Deferred}s to fire.
+    This class extends C{unittest.TestCase} from the standard library.  A number
+    of convenient testing helpers are added, including logging and warning
+    integration, monkey-patching support, and more.
 
-    To write a unit test, subclass C{TestCase} and define a method (say,
-    'test_foo') on the subclass. To run the test, instantiate your subclass
-    with the name of the method, and call L{run} on the instance, passing a
-    L{TestResult} object.
+    To write a unit test, subclass C{SynchronousTestCase} and define a method
+    (say, 'test_foo') on the subclass. To run the test, instantiate your
+    subclass with the name of the method, and call L{run} on the instance,
+    passing a L{TestResult} object.
 
-    The C{trial} script will automatically find any C{TestCase} subclasses
-    defined in modules beginning with 'test_' and construct test cases for all
-    methods beginning with 'test'.
+    The C{trial} script will automatically find any C{SynchronousTestCase}
+    subclasses defined in modules beginning with 'test_' and construct test
+    cases for all methods beginning with 'test'.
 
     If an error is logged during the test run, the test will fail with an
     error. See L{log.err}.
@@ -636,40 +638,27 @@ class TestCase(_Assertions):
     reported to the result object as 'skipped' (if the C{TestResult} supports
     skipping).
 
-    @ivar suppress: C{None} or a list of tuples of C{(args, kwargs)} to be
-    passed to C{warnings.filterwarnings}. Use these to suppress warnings
-    raised in a test. Useful for testing deprecated code. See also
-    L{util.suppress}.
-
-    @ivar timeout: A real number of seconds. If set, the test will
-    raise an error if it takes longer than C{timeout} seconds.
-    If not set, util.DEFAULT_TIMEOUT_DURATION is used.
-
     @ivar todo: C{None}, a string or a tuple of C{(errors, reason)} where
     C{errors} is either an exception class or an iterable of exception
     classes, and C{reason} is a string. See L{Todo} or L{makeTodo} for more
     information.
-    """
 
-    implements(itrial.ITestCase)
+    @ivar suppress: C{None} or a list of tuples of C{(args, kwargs)} to be
+    passed to C{warnings.filterwarnings}. Use these to suppress warnings
+    raised in a test. Useful for testing deprecated code. See also
+    L{util.suppress}.
+    """
     failureException = FailTest
 
     def __init__(self, methodName='runTest'):
-        """
-        Construct an asynchronous test case for C{methodName}.
-
-        @param methodName: The name of a method on C{self}. This method should
-        be a unit test. That is, it should be a short method that calls some of
-        the assert* methods. If C{methodName} is unspecified, L{runTest} will
-        be used as the test method. This is mostly useful for testing Trial.
-        """
-        super(TestCase, self).__init__(methodName)
+        super(SynchronousTestCase, self).__init__(methodName)
+        self._passed = False
+        self._cleanups = []
         self._testMethodName = methodName
         testMethod = getattr(self, methodName)
         self._parents = [testMethod, self]
         self._parents.extend(util.getPythonContainers(testMethod))
-        self._passed = False
-        self._cleanups = []
+
 
     if sys.version_info >= (2, 6):
         # Override the comparison defined by the base TestCase which considers
@@ -689,187 +678,122 @@ class TestCase(_Assertions):
             return self is not other
 
 
-    def _run(self, methodName, result):
-        from twisted.internet import reactor
-        timeout = self.getTimeout()
-        def onTimeout(d):
-            e = defer.TimeoutError("%r (%s) still running at %s secs"
-                % (self, methodName, timeout))
-            f = failure.Failure(e)
-            # try to errback the deferred that the test returns (for no gorram
-            # reason) (see issue1005 and test_errorPropagation in
-            # test_deferred)
-            try:
-                d.errback(f)
-            except defer.AlreadyCalledError:
-                # if the deferred has been called already but the *back chain
-                # is still unfinished, crash the reactor and report timeout
-                # error ourself.
-                reactor.crash()
-                self._timedOut = True # see self._wait
-                todo = self.getTodo()
-                if todo is not None and todo.expected(f):
-                    result.addExpectedFailure(self, f, todo)
-                else:
-                    result.addError(self, f)
-        onTimeout = utils.suppressWarnings(
-            onTimeout, util.suppress(category=DeprecationWarning))
-        method = getattr(self, methodName)
-        d = defer.maybeDeferred(utils.runWithWarningsSuppressed,
-                                self.getSuppress(), method)
-        call = reactor.callLater(timeout, onTimeout, d)
-        d.addBoth(lambda x : call.active() and call.cancel() or x)
-        return d
-
     def shortDescription(self):
-        desc = super(TestCase, self).shortDescription()
+        desc = super(SynchronousTestCase, self).shortDescription()
         if desc is None:
             return self._testMethodName
         return desc
 
-    def __call__(self, *args, **kwargs):
-        return self.run(*args, **kwargs)
 
-    def deferSetUp(self, ignored, result):
-        d = self._run('setUp', result)
-        d.addCallbacks(self.deferTestMethod, self._ebDeferSetUp,
-                       callbackArgs=(result,),
-                       errbackArgs=(result,))
-        return d
+    def getSkip(self):
+        """
+        Return the skip reason set on this test, if any is set. Checks on the
+        instance first, then the class, then the module, then packages. As
+        soon as it finds something with a C{skip} attribute, returns that.
+        Returns C{None} if it cannot find anything. See L{TestCase} docstring
+        for more details.
+        """
+        return util.acquireAttribute(self._parents, 'skip', None)
 
-    def _ebDeferSetUp(self, failure, result):
-        if failure.check(SkipTest):
-            result.addSkip(self, self._getReason(failure))
+
+    def getTodo(self):
+        """
+        Return a L{Todo} object if the test is marked todo. Checks on the
+        instance first, then the class, then the module, then packages. As
+        soon as it finds something with a C{todo} attribute, returns that.
+        Returns C{None} if it cannot find anything. See L{TestCase} docstring
+        for more details.
+        """
+        todo = util.acquireAttribute(self._parents, 'todo', None)
+        if todo is None:
+            return None
+        return makeTodo(todo)
+
+
+    def runTest(self):
+        """
+        If no C{methodName} argument is passed to the constructor, L{run} will
+        treat this method as the thing with the actual test inside.
+        """
+
+
+    def run(self, result):
+        """
+        Run the test case, storing the results in C{result}.
+
+        First runs C{setUp} on self, then runs the test method (defined in the
+        constructor), then runs C{tearDown}.  As with the standard library
+        L{unittest.TestCase}, the return value of these methods is disregarded.
+        In particular, returning a L{Deferred} has no special additional
+        consequences.
+
+        @param result: A L{TestResult} object.
+        """
+        log.msg("--> %s <--" % (self.id()))
+        new_result = itrial.IReporter(result, None)
+        if new_result is None:
+            result = PyUnitResultAdapter(result)
         else:
-            result.addError(self, failure)
-            if failure.check(KeyboardInterrupt):
-                result.stop()
-        return self.deferRunCleanups(None, result)
+            result = new_result
+        result.startTest(self)
+        if self.getSkip(): # don't run test methods that are marked as .skip
+            result.addSkip(self, self.getSkip())
+            result.stopTest(self)
+            return
 
-    def deferTestMethod(self, ignored, result):
-        d = self._run(self._testMethodName, result)
-        d.addCallbacks(self._cbDeferTestMethod, self._ebDeferTestMethod,
-                       callbackArgs=(result,),
-                       errbackArgs=(result,))
-        d.addBoth(self.deferRunCleanups, result)
-        d.addBoth(self.deferTearDown, result)
-        return d
-
-    def _cbDeferTestMethod(self, ignored, result):
-        if self.getTodo() is not None:
-            result.addUnexpectedSuccess(self, self.getTodo())
-        else:
-            self._passed = True
-        return ignored
-
-    def _ebDeferTestMethod(self, f, result):
-        todo = self.getTodo()
-        if todo is not None and todo.expected(f):
-            result.addExpectedFailure(self, f, todo)
-        elif f.check(self.failureException, FailTest):
-            result.addFailure(self, f)
-        elif f.check(KeyboardInterrupt):
-            result.addError(self, f)
-            result.stop()
-        elif f.check(SkipTest):
-            result.addSkip(self, self._getReason(f))
-        else:
-            result.addError(self, f)
-
-    def deferTearDown(self, ignored, result):
-        d = self._run('tearDown', result)
-        d.addErrback(self._ebDeferTearDown, result)
-        return d
-
-    def _ebDeferTearDown(self, failure, result):
-        result.addError(self, failure)
-        if failure.check(KeyboardInterrupt):
-            result.stop()
         self._passed = False
+        self._warnings = []
 
-    def deferRunCleanups(self, ignored, result):
+        self._installObserver()
+        # All the code inside _runFixturesAndTest will be run such that warnings
+        # emitted by it will be collected and retrievable by flushWarnings.
+        _collectWarnings(self._warnings.append, self._runFixturesAndTest, result)
+
+        # Any collected warnings which the test method didn't flush get
+        # re-emitted so they'll be logged or show up on stdout or whatever.
+        for w in self.flushWarnings():
+            try:
+                warnings.warn_explicit(**w)
+            except:
+                result.addError(self, failure.Failure())
+
+        result.stopTest(self)
+
+
+    def addCleanup(self, f, *args, **kwargs):
         """
-        Run any scheduled cleanups and report errors (if any to the result
-        object.
+        Add the given function to a list of functions to be called after the
+        test has run, but before C{tearDown}.
+
+        Functions will be run in reverse order of being added. This helps
+        ensure that tear down complements set up.
+
+        As with all aspects of L{SynchronousTestCase}, Deferreds are not
+        supported in cleanup functions.
         """
-        d = self._runCleanups()
-        d.addCallback(self._cbDeferRunCleanups, result)
-        return d
+        self._cleanups.append((f, args, kwargs))
 
-    def _cbDeferRunCleanups(self, cleanupResults, result):
-        for flag, failure in cleanupResults:
-            if flag == defer.FAILURE:
-                result.addError(self, failure)
-                if failure.check(KeyboardInterrupt):
-                    result.stop()
-                self._passed = False
 
-    def _cleanUp(self, result):
-        try:
-            clean = util._Janitor(self, result).postCaseCleanup()
-            if not clean:
-                self._passed = False
-        except:
-            result.addError(self, failure.Failure())
-            self._passed = False
-        for error in self._observer.getErrors():
-            result.addError(self, error)
-            self._passed = False
-        self.flushLoggedErrors()
-        self._removeObserver()
-        if self._passed:
-            result.addSuccess(self)
-
-    def _classCleanUp(self, result):
-        try:
-            util._Janitor(self, result).postClassCleanup()
-        except:
-            result.addError(self, failure.Failure())
-
-    def _makeReactorMethod(self, name):
+    def patch(self, obj, attribute, value):
         """
-        Create a method which wraps the reactor method C{name}. The new
-        method issues a deprecation warning and calls the original.
+        Monkey patch an object for the duration of the test.
+
+        The monkey patch will be reverted at the end of the test using the
+        L{addCleanup} mechanism.
+
+        The L{MonkeyPatcher} is returned so that users can restore and
+        re-apply the monkey patch within their tests.
+
+        @param obj: The object to monkey patch.
+        @param attribute: The name of the attribute to change.
+        @param value: The value to set the attribute to.
+        @return: A L{monkey.MonkeyPatcher} object.
         """
-        def _(*a, **kw):
-            warnings.warn("reactor.%s cannot be used inside unit tests. "
-                          "In the future, using %s will fail the test and may "
-                          "crash or hang the test run."
-                          % (name, name),
-                          stacklevel=2, category=DeprecationWarning)
-            return self._reactorMethods[name](*a, **kw)
-        return _
+        monkeyPatch = monkey.MonkeyPatcher((obj, attribute, value))
+        monkeyPatch.patch()
+        self.addCleanup(monkeyPatch.restore)
+        return monkeyPatch
 
-    def _deprecateReactor(self, reactor):
-        """
-        Deprecate C{iterate}, C{crash} and C{stop} on C{reactor}. That is,
-        each method is wrapped in a function that issues a deprecation
-        warning, then calls the original.
-
-        @param reactor: The Twisted reactor.
-        """
-        self._reactorMethods = {}
-        for name in ['crash', 'iterate', 'stop']:
-            self._reactorMethods[name] = getattr(reactor, name)
-            setattr(reactor, name, self._makeReactorMethod(name))
-
-    def _undeprecateReactor(self, reactor):
-        """
-        Restore the deprecated reactor methods. Undoes what
-        L{_deprecateReactor} did.
-
-        @param reactor: The Twisted reactor.
-        """
-        for name, method in self._reactorMethods.iteritems():
-            setattr(reactor, name, method)
-        self._reactorMethods = {}
-
-    def _installObserver(self):
-        self._observer = _logObserver
-        self._observer._add()
-
-    def _removeObserver(self):
-        self._observer._remove()
 
     def flushLoggedErrors(self, *errorTypes):
         """
@@ -897,10 +821,11 @@ class TestCase(_Assertions):
             All warnings include a filename and source line number; if these
             parts of a warning point to a source line which is part of a
             function, then the warning I{points} to that function.
-        @type offendingFunctions: L{NoneType} or L{list} of functions or methods.
+        @type offendingFunctions: C{NoneType} or L{list} of functions or methods.
 
         @raise ValueError: If C{offendingFunctions} is not C{None} and includes
-            an object which is not a L{FunctionType} or L{MethodType} instance.
+            an object which is not a L{types.FunctionType} or
+            L{types.MethodType} instance.
 
         @return: A C{list}, each element of which is a C{dict} giving
             information about one warning which was flushed by this call.  The
@@ -967,20 +892,6 @@ class TestCase(_Assertions):
             for w in toFlush]
 
 
-    def addCleanup(self, f, *args, **kwargs):
-        """
-        Add the given function to a list of functions to be called after the
-        test has run, but before C{tearDown}.
-
-        Functions will be run in reverse order of being added. This helps
-        ensure that tear down complements set up.
-
-        The function C{f} may return a Deferred. If so, C{TestCase} will wait
-        until the Deferred has fired before proceeding to the next function.
-        """
-        self._cleanups.append((f, args, kwargs))
-
-
     def callDeprecated(self, version, f, *args, **kwargs):
         """
         Call a function that should have been deprecated at a specific version
@@ -1033,6 +944,362 @@ class TestCase(_Assertions):
         return result
 
 
+    def mktemp(self):
+        """
+        Returns a unique name that may be used as either a temporary directory
+        or filename.
+
+        @note: you must call os.mkdir on the value returned from this method if
+            you wish to use it as a directory!
+        """
+        MAX_FILENAME = 32 # some platforms limit lengths of filenames
+        base = os.path.join(self.__class__.__module__[:MAX_FILENAME],
+                            self.__class__.__name__[:MAX_FILENAME],
+                            self._testMethodName[:MAX_FILENAME])
+        if not os.path.exists(base):
+            os.makedirs(base)
+        dirname = tempfile.mkdtemp('', '', base)
+        return os.path.join(dirname, 'temp')
+
+
+    def _getSuppress(self):
+        """
+        Returns any warning suppressions set for this test. Checks on the
+        instance first, then the class, then the module, then packages. As
+        soon as it finds something with a C{suppress} attribute, returns that.
+        Returns any empty list (i.e. suppress no warnings) if it cannot find
+        anything. See L{TestCase} docstring for more details.
+        """
+        return util.acquireAttribute(self._parents, 'suppress', [])
+
+
+    def _getSkipReason(self, method, skip):
+        """
+        Return the reason to use for skipping a test method.
+
+        @param method: The method which produced the skip.
+        @param skip: A L{SkipTest} instance raised by C{method}.
+        """
+        if len(skip.args) > 0:
+            return skip.args[0]
+
+        warnAboutFunction(
+            method,
+            "Do not raise unittest.SkipTest with no arguments! Give a reason "
+            "for skipping tests!")
+        return skip
+
+
+    def _run(self, suppress, todo, method, result):
+        """
+        Run a single method, either a test method or fixture.
+
+        @param suppress: Any warnings to suppress, as defined by the C{suppress}
+            attribute on this method, test case, or the module it is defined in.
+
+        @param todo: Any expected failure or failures, as defined by the C{todo}
+            attribute on this method, test case, or the module it is defined in.
+
+        @param method: The method to run.
+
+        @param result: The TestResult instance to which to report results.
+
+        @return: C{True} if the method fails and no further method/fixture calls
+            should be made, C{False} otherwise.
+        """
+        try:
+            # XXX runWithWarningsSuppressed is from twisted.internet, involves
+            # Deferreds, we need a synchronous-only version probably.
+            utils.runWithWarningsSuppressed(suppress, method)
+        except SkipTest as e:
+            result.addSkip(self, self._getSkipReason(method, e))
+        except:
+            reason = failure.Failure()
+            if todo is None or not todo.expected(reason):
+                if reason.check(self.failureException):
+                    addResult = result.addFailure
+                else:
+                    addResult = result.addError
+                addResult(self, reason)
+            else:
+                result.addExpectedFailure(self, reason, todo)
+        else:
+            return False
+        return True
+
+
+    def _runFixturesAndTest(self, result):
+        """
+        Run C{setUp}, a test method, test cleanups, and C{tearDown}.
+
+        @param result: The TestResult instance to which to report results.
+        """
+        suppress = self._getSuppress()
+        try:
+            if self._run(suppress, None, self.setUp, result):
+                return
+
+            todo = self.getTodo()
+            method = getattr(self, self._testMethodName)
+            if self._run(suppress, todo, method, result):
+                return
+        finally:
+            self._runCleanups(result)
+
+        if todo:
+            result.addUnexpectedSuccess(self, todo)
+
+        if self._run(suppress, None, self.tearDown, result):
+            return
+
+        passed = True
+        for error in self._observer.getErrors():
+            result.addError(self, error)
+            passed = False
+        self._observer.flushErrors()
+        self._removeObserver()
+
+        if passed and not todo:
+            result.addSuccess(self)
+
+
+    def _runCleanups(self, result):
+        """
+        Synchronously run any cleanups which have been added.
+        """
+        while len(self._cleanups) > 0:
+            f, args, kwargs = self._cleanups.pop()
+            try:
+                f(*args, **kwargs)
+            except:
+                f = failure.Failure()
+                result.addError(self, f)
+
+
+    def _installObserver(self):
+        self._observer = _logObserver
+        self._observer._add()
+
+
+    def _removeObserver(self):
+        self._observer._remove()
+
+
+
+class TestCase(SynchronousTestCase):
+    """
+    A unit test. The atom of the unit testing universe.
+
+    This class extends L{SynchronousTestCase} which extends C{unittest.TestCase}
+    from the standard library. The main feature is the ability to return
+    C{Deferred}s from tests and fixture methods and to have the suite wait for
+    those C{Deferred}s to fire.
+
+    @ivar timeout: A real number of seconds. If set, the test will
+    raise an error if it takes longer than C{timeout} seconds.
+    If not set, util.DEFAULT_TIMEOUT_DURATION is used.
+    """
+    implements(itrial.ITestCase)
+
+    def __init__(self, methodName='runTest'):
+        """
+        Construct an asynchronous test case for C{methodName}.
+
+        @param methodName: The name of a method on C{self}. This method should
+        be a unit test. That is, it should be a short method that calls some of
+        the assert* methods. If C{methodName} is unspecified, L{runTest} will
+        be used as the test method. This is mostly useful for testing Trial.
+        """
+        super(TestCase, self).__init__(methodName)
+
+
+    def _run(self, methodName, result):
+        from twisted.internet import reactor
+        timeout = self.getTimeout()
+        def onTimeout(d):
+            e = defer.TimeoutError("%r (%s) still running at %s secs"
+                % (self, methodName, timeout))
+            f = failure.Failure(e)
+            # try to errback the deferred that the test returns (for no gorram
+            # reason) (see issue1005 and test_errorPropagation in
+            # test_deferred)
+            try:
+                d.errback(f)
+            except defer.AlreadyCalledError:
+                # if the deferred has been called already but the *back chain
+                # is still unfinished, crash the reactor and report timeout
+                # error ourself.
+                reactor.crash()
+                self._timedOut = True # see self._wait
+                todo = self.getTodo()
+                if todo is not None and todo.expected(f):
+                    result.addExpectedFailure(self, f, todo)
+                else:
+                    result.addError(self, f)
+        onTimeout = utils.suppressWarnings(
+            onTimeout, util.suppress(category=DeprecationWarning))
+        method = getattr(self, methodName)
+        d = defer.maybeDeferred(
+            utils.runWithWarningsSuppressed, self._getSuppress(), method)
+        call = reactor.callLater(timeout, onTimeout, d)
+        d.addBoth(lambda x : call.active() and call.cancel() or x)
+        return d
+
+
+    def __call__(self, *args, **kwargs):
+        return self.run(*args, **kwargs)
+
+
+    def deferSetUp(self, ignored, result):
+        d = self._run('setUp', result)
+        d.addCallbacks(self.deferTestMethod, self._ebDeferSetUp,
+                       callbackArgs=(result,),
+                       errbackArgs=(result,))
+        return d
+
+
+    def _ebDeferSetUp(self, failure, result):
+        if failure.check(SkipTest):
+            result.addSkip(self, self._getSkipReason(self.setUp, failure.value))
+        else:
+            result.addError(self, failure)
+            if failure.check(KeyboardInterrupt):
+                result.stop()
+        return self.deferRunCleanups(None, result)
+
+
+    def deferTestMethod(self, ignored, result):
+        d = self._run(self._testMethodName, result)
+        d.addCallbacks(self._cbDeferTestMethod, self._ebDeferTestMethod,
+                       callbackArgs=(result,),
+                       errbackArgs=(result,))
+        d.addBoth(self.deferRunCleanups, result)
+        d.addBoth(self.deferTearDown, result)
+        return d
+
+
+    def _cbDeferTestMethod(self, ignored, result):
+        if self.getTodo() is not None:
+            result.addUnexpectedSuccess(self, self.getTodo())
+        else:
+            self._passed = True
+        return ignored
+
+
+    def _ebDeferTestMethod(self, f, result):
+        todo = self.getTodo()
+        if todo is not None and todo.expected(f):
+            result.addExpectedFailure(self, f, todo)
+        elif f.check(self.failureException, FailTest):
+            result.addFailure(self, f)
+        elif f.check(KeyboardInterrupt):
+            result.addError(self, f)
+            result.stop()
+        elif f.check(SkipTest):
+            result.addSkip(
+                self,
+                self._getSkipReason(getattr(self, self._testMethodName), f.value))
+        else:
+            result.addError(self, f)
+
+
+    def deferTearDown(self, ignored, result):
+        d = self._run('tearDown', result)
+        d.addErrback(self._ebDeferTearDown, result)
+        return d
+
+
+    def _ebDeferTearDown(self, failure, result):
+        result.addError(self, failure)
+        if failure.check(KeyboardInterrupt):
+            result.stop()
+        self._passed = False
+
+
+    def deferRunCleanups(self, ignored, result):
+        """
+        Run any scheduled cleanups and report errors (if any to the result
+        object.
+        """
+        d = self._runCleanups()
+        d.addCallback(self._cbDeferRunCleanups, result)
+        return d
+
+
+    def _cbDeferRunCleanups(self, cleanupResults, result):
+        for flag, failure in cleanupResults:
+            if flag == defer.FAILURE:
+                result.addError(self, failure)
+                if failure.check(KeyboardInterrupt):
+                    result.stop()
+                self._passed = False
+
+
+    def _cleanUp(self, result):
+        try:
+            clean = util._Janitor(self, result).postCaseCleanup()
+            if not clean:
+                self._passed = False
+        except:
+            result.addError(self, failure.Failure())
+            self._passed = False
+        for error in self._observer.getErrors():
+            result.addError(self, error)
+            self._passed = False
+        self.flushLoggedErrors()
+        self._removeObserver()
+        if self._passed:
+            result.addSuccess(self)
+
+
+    def _classCleanUp(self, result):
+        try:
+            util._Janitor(self, result).postClassCleanup()
+        except:
+            result.addError(self, failure.Failure())
+
+
+    def _makeReactorMethod(self, name):
+        """
+        Create a method which wraps the reactor method C{name}. The new
+        method issues a deprecation warning and calls the original.
+        """
+        def _(*a, **kw):
+            warnings.warn("reactor.%s cannot be used inside unit tests. "
+                          "In the future, using %s will fail the test and may "
+                          "crash or hang the test run."
+                          % (name, name),
+                          stacklevel=2, category=DeprecationWarning)
+            return self._reactorMethods[name](*a, **kw)
+        return _
+
+
+    def _deprecateReactor(self, reactor):
+        """
+        Deprecate C{iterate}, C{crash} and C{stop} on C{reactor}. That is,
+        each method is wrapped in a function that issues a deprecation
+        warning, then calls the original.
+
+        @param reactor: The Twisted reactor.
+        """
+        self._reactorMethods = {}
+        for name in ['crash', 'iterate', 'stop']:
+            self._reactorMethods[name] = getattr(reactor, name)
+            setattr(reactor, name, self._makeReactorMethod(name))
+
+
+    def _undeprecateReactor(self, reactor):
+        """
+        Restore the deprecated reactor methods. Undoes what
+        L{_deprecateReactor} did.
+
+        @param reactor: The Twisted reactor.
+        """
+        for name, method in self._reactorMethods.iteritems():
+            setattr(reactor, name, method)
+        self._reactorMethods = {}
+
+
     def _runCleanups(self):
         """
         Run the cleanups added with L{addCleanup} in order.
@@ -1048,120 +1315,41 @@ class TestCase(_Assertions):
         return util._runSequentially(callables)
 
 
-    def patch(self, obj, attribute, value):
+    def _runFixturesAndTest(self, result):
         """
-        Monkey patch an object for the duration of the test.
-
-        The monkey patch will be reverted at the end of the test using the
-        L{addCleanup} mechanism.
-
-        The L{MonkeyPatcher} is returned so that users can restore and
-        re-apply the monkey patch within their tests.
-
-        @param obj: The object to monkey patch.
-        @param attribute: The name of the attribute to change.
-        @param value: The value to set the attribute to.
-        @return: A L{monkey.MonkeyPatcher} object.
-        """
-        monkeyPatch = monkey.MonkeyPatcher((obj, attribute, value))
-        monkeyPatch.patch()
-        self.addCleanup(monkeyPatch.restore)
-        return monkeyPatch
-
-
-    def runTest(self):
-        """
-        If no C{methodName} argument is passed to the constructor, L{run} will
-        treat this method as the thing with the actual test inside.
-        """
-
-
-    def run(self, result):
-        """
-        Run the test case, storing the results in C{result}.
-
-        First runs C{setUp} on self, then runs the test method (defined in the
-        constructor), then runs C{tearDown}. Any of these may return
-        L{Deferred}s. After they complete, does some reactor cleanup.
+        Really run C{setUp}, the test method, and C{tearDown}.  Any of these may
+        return L{Deferred}s. After they complete, do some reactor cleanup.
 
         @param result: A L{TestResult} object.
         """
-        log.msg("--> %s <--" % (self.id()))
         from twisted.internet import reactor
-        new_result = itrial.IReporter(result, None)
-        if new_result is None:
-            result = PyUnitResultAdapter(result)
-        else:
-            result = new_result
+        self._deprecateReactor(reactor)
         self._timedOut = False
-        result.startTest(self)
-        if self.getSkip(): # don't run test methods that are marked as .skip
-            result.addSkip(self, self.getSkip())
-            result.stopTest(self)
-            return
-        self._installObserver()
-
-        # All the code inside runThunk will be run such that warnings emitted
-        # by it will be collected and retrievable by flushWarnings.
-        def runThunk():
-            self._passed = False
-            self._deprecateReactor(reactor)
+        try:
+            d = self.deferSetUp(None, result)
             try:
-                d = self.deferSetUp(None, result)
-                try:
-                    self._wait(d)
-                finally:
-                    self._cleanUp(result)
-                    self._classCleanUp(result)
+                self._wait(d)
             finally:
-                self._undeprecateReactor(reactor)
-
-        self._warnings = []
-        _collectWarnings(self._warnings.append, runThunk)
-
-        # Any collected warnings which the test method didn't flush get
-        # re-emitted so they'll be logged or show up on stdout or whatever.
-        for w in self.flushWarnings():
-            try:
-                warnings.warn_explicit(**w)
-            except:
-                result.addError(self, failure.Failure())
-
-        result.stopTest(self)
+                self._cleanUp(result)
+                self._classCleanUp(result)
+        finally:
+            self._undeprecateReactor(reactor)
 
 
-    def _getReason(self, f):
-        if len(f.value.args) > 0:
-            reason = f.value.args[0]
-        else:
-            warnings.warn(("Do not raise unittest.SkipTest with no "
-                           "arguments! Give a reason for skipping tests!"),
-                          stacklevel=2)
-            reason = f
-        return reason
-
-    def getSkip(self):
+    def addCleanup(self, f, *args, **kwargs):
         """
-        Return the skip reason set on this test, if any is set. Checks on the
-        instance first, then the class, then the module, then packages. As
-        soon as it finds something with a C{skip} attribute, returns that.
-        Returns C{None} if it cannot find anything. See L{TestCase} docstring
-        for more details.
-        """
-        return util.acquireAttribute(self._parents, 'skip', None)
+        Extend the base cleanup feature with support for cleanup functions which
+        return Deferreds.
 
-    def getTodo(self):
+        If the function C{f} returns a Deferred, C{TestCase} will wait until the
+        Deferred has fired before proceeding to the next function.
         """
-        Return a L{Todo} object if the test is marked todo. Checks on the
-        instance first, then the class, then the module, then packages. As
-        soon as it finds something with a C{todo} attribute, returns that.
-        Returns C{None} if it cannot find anything. See L{TestCase} docstring
-        for more details.
-        """
-        todo = util.acquireAttribute(self._parents, 'todo', None)
-        if todo is None:
-            return None
-        return makeTodo(todo)
+        return super(TestCase, self).addCleanup(f, *args, **kwargs)
+
+
+    def getSuppress(self):
+        return self._getSuppress()
+
 
     def getTimeout(self):
         """
@@ -1184,16 +1372,6 @@ class TestCase(_Assertions):
                           category=DeprecationWarning)
             return util.DEFAULT_TIMEOUT_DURATION
 
-    def getSuppress(self):
-        """
-        Returns any warning suppressions set for this test. Checks on the
-        instance first, then the class, then the module, then packages. As
-        soon as it finds something with a C{suppress} attribute, returns that.
-        Returns any empty list (i.e. suppress no warnings) if it cannot find
-        anything. See L{TestCase} docstring for more details.
-        """
-        return util.acquireAttribute(self._parents, 'suppress', [])
-
 
     def visit(self, visitor):
         """
@@ -1210,22 +1388,6 @@ class TestCase(_Assertions):
                       category=DeprecationWarning)
         visitor(self)
 
-
-    def mktemp(self):
-        """Returns a unique name that may be used as either a temporary
-        directory or filename.
-
-        @note: you must call os.mkdir on the value returned from this
-               method if you wish to use it as a directory!
-        """
-        MAX_FILENAME = 32 # some platforms limit lengths of filenames
-        base = os.path.join(self.__class__.__module__[:MAX_FILENAME],
-                            self.__class__.__name__[:MAX_FILENAME],
-                            self._testMethodName[:MAX_FILENAME])
-        if not os.path.exists(base):
-            os.makedirs(base)
-        dirname = tempfile.mkdtemp('', '', base)
-        return os.path.join(dirname, 'temp')
 
     def _wait(self, d, running=_wait_is_running):
         """Take a Deferred that only ever callbacks. Block until it happens.
@@ -1288,6 +1450,7 @@ class TestCase(_Assertions):
         finally:
             results = None
             running.pop()
+
 
 
 class UnsupportedTrialFeature(Exception):
@@ -1609,6 +1772,7 @@ _assertions = ['fail', 'failUnlessEqual', 'failIfEqual', 'failIfEquals',
 
 for methodName in _assertions:
     globals()[methodName] = _deprecate(methodName)
+del methodName
 
 
-__all__ = ['TestCase', 'FailTest', 'SkipTest']
+__all__ = ['SynchronousTestCase', 'TestCase', 'FailTest', 'SkipTest']
