@@ -1,6 +1,29 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Conch 12.2.0pre1 (2012-08-18)
+=====================================
+
+Features
+--------
+ - twisted.conch.ssh.transport.SSHTransport now returns an
+   SSHTransportAddress from the getPeer() and getHost() methods.
+   (#2997)
+
+Bugfixes
+--------
+ - twisted.conch now supports commercial SSH implementations which
+   don't comply with the IETF standard (#1902)
+ - twisted.conch.ssh.userauth now works correctly with hash
+   randomization enabled. (#5776)
+ - twisted.conch no longer relies on __builtins__ being a dict, which
+   is a purely CPython implementation detail (#5779)
+
+Other
+-----
+ - #5496, #5617, #5700, #5748, #5777
+
+
 Twisted Conch 12.1.0 (2012-06-02)
 =================================
 

@@ -1,6 +1,26 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Mail 12.2.0pre1 (2012-08-18)
+====================================
+
+Bugfixes
+--------
+ - twisted.mail.imap4.IMAP4Server will now generate an error response
+   when it receives an illegal SEARCH term from a client. (#4080)
+ - twisted.mail.imap4 now serves BODYSTRUCTURE responses which provide
+   more information and conform to the IMAP4 RFC more closely. (#5763)
+
+Deprecations and Removals
+-------------------------
+ - twisted.mail.protocols.SSLContextFactory is now deprecated. (#4963)
+ - The --passwordfile option to twistd mail is now removed. (#5541)
+
+Other
+-----
+ - #5697, #5750, #5751, #5783
+
+
 Twisted Mail 12.1.0 (2012-06-02)
 ================================
 

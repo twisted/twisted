@@ -1,6 +1,23 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Web 12.2.0pre1 (2012-08-18)
+===================================
+
+Deprecations and Removals
+-------------------------
+ - twisted.web.static.FileTransfer, deprecated since 9.0, is removed
+   now. Use a subclass of StaticProducer instead. (#5651)
+ - ErrorPage, NoResource and ForbiddenResource in twisted.web.error
+   were deprecated since 9.0 and are removed now. (#5659)
+ - twisted.web.google, deprecated since Twisted 11.1, is removed now.
+   (#5768)
+
+Other
+-----
+ - #5665
+
+
 Twisted Web 12.1.0 (2012-06-02)
 ===============================
 
