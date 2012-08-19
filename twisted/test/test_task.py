@@ -909,6 +909,21 @@ class AddDeferredTimeoutTests(unittest.TestCase):
         self.assertIsInstance(result[0].value, defer.CancelledError)
 
 
+    def test_cancelReturnedDelayedCall(self):
+        """
+        L{task.addDeferredTimeout} returns the C{IDelayedCall} for the
+        scheduled timeout, allowing the caller to cancel the timeout manually.
+        """
+        reactor = Clock()
+        result = []
+        d = defer.Deferred()
+        d.addCallback(result.append)
 
-    # XXX maybe return IDelayedCall, which means we need to test that, and to
-    # test that if it is cancelled nothing blows up.
+        delayedCall = task.addDeferredTimeout(reactor, d, 10)
+        self.assertTrue(interfaces.IDelayedCall.providedBy(delayedCall))
+
+        # If we cancel delayedCall, timeout is no longer active:
+        delayedCall.cancel()
+        reactor.advance(11)
+        d.callback(u"success")
+        self.assertEqual(result, [u"success"])

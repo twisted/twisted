@@ -834,6 +834,8 @@ def addDeferredTimeout(reactor, deferred, timeout, exception=None):
                 return reason
         deferred.addErrback(convertException)
 
+    return callID
+
 
 
 __all__ = [
