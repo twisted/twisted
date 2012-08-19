@@ -108,6 +108,17 @@ class MakeServiceTest(TestCase):
         self.assertEqual(len(self.options['credCheckers']), 1)
 
 
+    def test_multipleAuthAdded(self):
+        """
+        Multiple C{--auth} command-line options will add all checkers specified
+        to the list ofcheckers, and there should only be the specified auth
+        checkers (no default checkers).
+        """
+        self.options.parseOptions(['--auth', 'file:' + self.filename,
+                                   '--auth', 'memory:testuser:testpassword'])
+        self.assertEqual(len(self.options['credCheckers']), 2)
+
+
     def test_authFailure(self):
         """
         The checker created by the C{--auth} command-line option returns a

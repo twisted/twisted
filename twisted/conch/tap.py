@@ -51,14 +51,19 @@ class Options(usage.Options, strcred.AuthOptionMixin):
         if pamauth is not None:
             super(Options, self).addChecker(
                 checkers.PluggableAuthenticationModulesChecker())
+        self._usingDefaultAuth = True
 
 
     def addChecker(self, checker):
         """
-        If addChecker is called, clear out the default checkers first
+        Add the checker specified.  If any checkers are added, the default
+        checkers are automatically cleared and the only checkers will be the
+        specified one(s).
         """
-        self['credCheckers'] = []
-        self['credInterfaces'] = {}
+        if self._usingDefaultAuth:
+            self['credCheckers'] = []
+            self['credInterfaces'] = {}
+            self._usingDefaultAuth = False
         super(Options, self).addChecker(checker)
 
 
