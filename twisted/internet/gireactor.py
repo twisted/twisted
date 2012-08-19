@@ -18,23 +18,55 @@ If you wish to use a GApplication, register it with the reactor::
 Then use twisted.internet APIs as usual.
 """
 
-import sys
+from twisted.python.modules import theSystemPath
 from twisted.internet.error import ReactorAlreadyRunning
 from twisted.internet import _glibbase
 from twisted.python import runtime
 
-# We can't immediately prevent imports, because that confuses some buggy code
-# in gi:
-_glibbase.ensureNotImported(
-    ['gobject' 'glib', 'gio', 'gtk'],
-    "Introspected and static glib/gtk bindings must not be mixed; can't "
-    "import gireactor since pygtk2 module is already imported.")
+# Modules that we want to ensure aren't imported if we're on older versions of
+# GI:
+_PYGTK_MODULES = ['gobject', 'glib', 'gio', 'gtk']
 
-from gi.repository import GLib
-GLib.threads_init()
+def _oldGiInit():
+    """
+    Make sure pygtk and gi aren't loaded at the same time, and import Glib if
+    possible.
+    """
+    # We can't immediately prevent imports, because that confuses some buggy
+    # code in gi:
+    _glibbase.ensureNotImported(
+        _PYGTK_MODULES,
+        "Introspected and static glib/gtk bindings must not be mixed; can't "
+        "import gireactor since pygtk2 module is already imported.")
 
-_glibbase.ensureNotImported([], "",
-                            preventImports=['gobject' 'glib', 'gio', 'gtk'])
+    global GLib
+    from gi.repository import GLib
+    if getattr(GLib, "threads_init", None) is not None:
+        GLib.threads_init()
+
+    _glibbase.ensureNotImported([], "",
+                                preventImports=_PYGTK_MODULES)
+
+
+try:
+    theSystemPath["gi.pygtkcompat"]
+except KeyError:
+    # Older versions of gi don't have compatability layer, so just enforce no
+    # imports of pygtk and gi at same time:
+    _oldGiInit()
+else:
+    # Newer version of gi, so we can try to initialize compatibility layer; if
+    # real pygtk was already imported we'll get ImportError at this point
+    # rather than segfault, so unconditional import is fine.
+    import gi.pygtkcompat
+    gi.pygtkcompat.enable()
+    # At this point importing gobject will get you gi version, and importing
+    # e.g. gtk will either fail in non-segfaulty way or use gi version if user
+    # does gi.pygtkcompat.enable_gtk(). So, no need to prevent imports of
+    # old school pygtk modules.
+    from gi.repository import GLib
+    if getattr(GLib, "threads_init", None) is not None:
+        GLib.threads_init()
 
 
 

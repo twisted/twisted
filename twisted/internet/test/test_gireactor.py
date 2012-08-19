@@ -5,19 +5,24 @@
 GI/GTK3 reactor tests.
 """
 
+import sys, os
 try:
     from twisted.internet import gireactor, gtk3reactor
     from gi.repository import Gtk, Gio
 except ImportError:
     gireactor = None
 
+from twisted.python.util import sibpath
+from twisted.internet.defer import Deferred
 from twisted.internet.error import ReactorAlreadyRunning
+from twisted.internet import reactor
+from twisted.internet.protocol import ProcessProtocol
 from twisted.trial.unittest import TestCase, SkipTest
 from twisted.internet.test.reactormixins import ReactorBuilder
 
 
 
-class GtkApplicationRegistration(ReactorBuilder, TestCase):
+class GApplicationRegistration(ReactorBuilder, TestCase):
     """
     GtkApplication and GApplication are supported by
     L{twisted.internet.gtk3reactor} and L{twisted.internet.gireactor}.
@@ -150,3 +155,53 @@ class GtkApplicationRegistration(ReactorBuilder, TestCase):
                                     reactor.registerGApplication, app2)
         self.assertEqual(exc.args[0],
                          "Can't register more than one application instance.")
+
+
+
+class PygtkCompatibilityTests(TestCase):
+    """
+    pygtk imports are either prevented, or a compatiblity layer is used if
+    possible.
+    """
+
+    if gireactor is None:
+        skip = "gtk3/gi not importable"
+
+
+    def test_noCompatibilityLayer(self):
+        """
+        If no compatiblity layer is present, imports of gobject and friends
+        are disallowed.
+
+        We do this by running a process where we make sure gi.pygtkcompat
+        isn't present.
+        """
+        result = Deferred()
+        class Stdout(ProcessProtocol):
+            data = ""
+
+            def errReceived(self, err):
+                print err
+
+            def outReceived(self, data):
+                self.data += data
+
+            def processExited(self, reason):
+                result.callback(self.data)
+
+        path = sibpath(__file__, "process_gireactornocompat.py")
+        reactor.spawnProcess(Stdout(), sys.executable, [sys.executable, path],
+                             env=os.environ)
+        result.addCallback(self.assertEqual, "success")
+        return result
+
+
+    def test_compatibilityLayer(self):
+        """
+        If compatiblity layer is present, importing gobject uses the gi
+        compatibility layer.
+        """
+        if "gi.pygtkcompat" not in sys.modules:
+            raise SkipTest("This version of gi doesn't include pygtkcompat.")
+        import gobject
+        self.assertTrue(gobject.__name__.startswith("gi."))

@@ -1,0 +1,1 @@
+gireactor now works with certain older versions of gi that are missing the threads_init() function.

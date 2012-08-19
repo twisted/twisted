@@ -1,0 +1,1 @@
+gireactor and gtk3reactor no longer prevent gi.pygtkcompat from working, and likewise can load if gi.pygtkcompat has previously been enabled.
