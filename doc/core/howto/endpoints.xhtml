@@ -114,7 +114,7 @@ become bored and wander off. If this happens, and your code decides, for
 whatever reason, that you've been waiting for the connection too long, you
 can call <code class="API" base="twisted.internet.defer">Deferred.cancel</code>
 on the <code>Deferred</code> returned from <code class="API"
-base="twisted.internet.interfaces.IClientStreamEndpoint">connect</code>, and the
+base="twisted.internet.interfaces.IStreamClientEndpoint">connect</code>, and the
 underlying machinery should give up on the connection. This should cause the
 <code>Deferred</code> to errback, usually with <code class="API"
 base="twisted.internet.defer">CancelledError</code>; although you should
@@ -211,9 +211,14 @@ available.</p>
 <h3>Servers</h3>
 
 <ul>
-  <li>TCP.  Supported arguments: port, interface, backlog.  interface and
-  backlog are optional.  interface is an IP address to bind to.  For example,
+  <li>TCP (IPv4).  Supported arguments: port, interface, backlog.  interface and
+  backlog are optional.  interface is an IP address (belonging to the IPv4
+  address family) to bind to.  For example,
   <code>tcp:port=80:interface=192.168.1.1</code>.
+  </li>
+  <li>TCP (IPv6).  All TCP arguments are supported, with interface taking an
+  IPv6 address literal instead.  For example,
+  <code>tcp6:port=80:interface=2001\:0DB8\:f00e\:eb00\:\:1</code>.
   </li>
   <li>SSL.  All TCP arguments are supported, plus: certKey, privateKey, and
   sslmethod.  certKey (optional, defaults to the value of privateKey) gives a
