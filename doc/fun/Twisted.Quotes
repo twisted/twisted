@@ -34,3 +34,8 @@
 <exarkun> it would be _ridiculous_ to make each docstring into a multipart document
 <exarkun> although that might be a good approach to localization
 %
+<PenguinOfDoom> yeah twisted should get on with the times
+<PenguinOfDoom> the rest of the world has been writing unicode to sockets for years!
+%
+<PenguinOfDoom> If I were the king of a private island, I'd declare my timezone to be UTC+pi and send a postcard to pytz maintainers with the word "checkmate" on it
+%
