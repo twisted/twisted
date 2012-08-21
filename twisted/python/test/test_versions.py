@@ -2,6 +2,7 @@
 # See LICENSE for details.
 
 import sys
+import operator
 from cStringIO import StringIO
 
 from twisted.python.versions import getVersionString, IncomparableVersions
@@ -66,22 +67,13 @@ class VersionsTest(unittest.TestCase):
         """
         va = Version("dummy", 1, 0, 0)
         vb = Version("dummy", 0, 1, 0)
-        self.failUnless(va > vb)
-        self.failUnless(vb < va)
-        self.failUnless(va >= vb)
-        self.failUnless(vb <= va)
-        self.failUnless(va != vb)
-        self.failUnless(vb == Version("dummy", 0, 1, 0))
-        self.failUnless(vb == vb)
-
-        # BREAK IT DOWN@!!
-        self.failIf(va < vb)
-        self.failIf(vb > va)
-        self.failIf(va <= vb)
-        self.failIf(vb >= va)
-        self.failIf(va == vb)
-        self.failIf(vb != Version("dummy", 0, 1, 0))
-        self.failIf(vb != vb)
+        self.assertTrue(va > vb)
+        self.assertTrue(vb < va)
+        self.assertTrue(va >= vb)
+        self.assertTrue(vb <= va)
+        self.assertTrue(va != vb)
+        self.assertTrue(vb == Version("dummy", 0, 1, 0))
+        self.assertTrue(vb == vb)
 
 
     def test_comparingPrereleasesWithReleases(self):
@@ -102,8 +94,12 @@ class VersionsTest(unittest.TestCase):
         va = Version("whatever", 1, 0, 0, prerelease=1)
         vb = Version("whatever", 1, 0, 0, prerelease=2)
         self.assertTrue(va < vb)
-        self.assertFalse(va > vb)
-        self.assertNotEqual(va, vb)
+        self.assertTrue(vb > va)
+        self.assertTrue(va <= vb)
+        self.assertTrue(vb >= va)
+        self.assertTrue(va != vb)
+        self.assertTrue(vb == Version("whatever", 1, 0, 0, prerelease=2))
+        self.assertTrue(va == va)
 
 
     def test_infComparison(self):
@@ -115,11 +111,24 @@ class VersionsTest(unittest.TestCase):
         self.assertEqual(_inf, _inf)
 
 
-    def testDontAllowBuggyComparisons(self):
+    def test_disallowBuggyComparisons(self):
+        """
+        The package names of the Version objects need to be the same,
+        """
         self.assertRaises(IncomparableVersions,
-                          cmp,
+                          operator.eq,
                           Version("dummy", 1, 0, 0),
                           Version("dumym", 1, 0, 0))
+
+
+    def test_notImplementedComparisons(self):
+        """
+        Comparing a L{Version} to some other object type results in
+        C{NotImplemented}.
+        """
+        va = Version("dummy", 1, 0, 0)
+        vb = ("dummy", 1, 0, 0) # a tuple is not a Version object
+        self.assertEqual(va.__cmp__(vb), NotImplemented)
 
 
     def test_repr(self):
@@ -177,8 +186,8 @@ class VersionsTest(unittest.TestCase):
         version = Version("dummy", 1, 0, 0)
         self.assertEqual(
             version._parseSVNEntries_8(StringIO(VERSION_8_ENTRIES)), '22715')
-        
-        
+
+
     def test_goodSVNEntries_9(self):
         """
         Version should be able to parse an SVN format 9 entries file.
@@ -186,8 +195,8 @@ class VersionsTest(unittest.TestCase):
         version = Version("dummy", 1, 0, 0)
         self.assertEqual(
             version._parseSVNEntries_9(StringIO(VERSION_9_ENTRIES)), '22715')
-        
-        
+
+
     def test_goodSVNEntriesTenPlus(self):
         """
         Version should be able to parse an SVN format 10 entries file.
@@ -293,16 +302,16 @@ class FormatDiscoveryTests(unittest.TestCase):
         parsed.
         """
         self.checkSVNFormat("8", VERSION_8_ENTRIES, '22715')
-        
-    
+
+
     def test_detectVersion9(self):
         """
         Verify that version 9 format files will be properly detected and
         parsed.
         """
         self.checkSVNFormat("9", VERSION_9_ENTRIES, '22715')
-        
-        
+
+
     def test_detectVersion10(self):
         """
         Verify that version 10 format files will be properly detected and

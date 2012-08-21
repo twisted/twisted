@@ -9,8 +9,9 @@ See L{Version}.
 """
 
 import sys, os
+from twisted.python.compat import cmp, comparable
 
-
+@comparable
 class _inf(object):
     """
     An object that is bigger than all other objects.
@@ -30,11 +31,15 @@ class _inf(object):
 _inf = _inf()
 
 
+
 class IncomparableVersions(TypeError):
     """
     Two versions could not be compared.
     """
 
+
+
+@comparable
 class Version(object):
     """
     An object that represents a three-part version number.
