@@ -16,9 +16,11 @@ del sys
 
 # Ensure compat gets imported
 from twisted.python import compat
-del compat
 
 # setup version
-from twisted._version import version
-__version__ = version.short()
+# temporarily disabled for Python 3; will be re-enabled in ticket #5886:
+if not compat._PY3:
+    from twisted._version import version
+    __version__ = version.short()
 
+del compat

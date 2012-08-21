@@ -15,13 +15,19 @@ from __future__ import division
 
 # A list of modules that have been ported, e.g. "twisted.python.versions"; a
 # package name (e.g. "twisted.python") indicates the corresponding __init__.py
-# file has been ported (e.g. "twisted/python/__init__.py").
+# file has been ported (e.g. "twisted/python/__init__.py"). To reduce merge
+# conflicts, add new lines in alphabetical sort.
 modules = [
-    # "twisted" depends on twisted.python.compat and twisted._versions
+    "twisted",
+    "twisted.python",
+    "twisted.python.compat",
+    "twisted.test",
     ]
 
 
 # A list of test modules that have been ported, e.g
-# "twisted.python.test.test_versions".
+# "twisted.python.test.test_versions". To reduce merge conflicts, add new
+# lines in alphabetical sort.
 testModules = [
+    "twisted.test.test_compat",
     ]

@@ -12,7 +12,17 @@ This is mainly for use of internal Twisted code. We encourage you to use
 the latest version of Python directly from your code, if possible.
 """
 
+from __future__ import division
+
 import sys, string, socket, struct
+
+
+if sys.version_info < (3, 0):
+    _PY3 = False
+else:
+    _PY3 = True
+
+
 
 def inet_pton(af, addr):
     if af == socket.AF_INET:
@@ -105,7 +115,17 @@ except (AttributeError, NameError, socket.error):
     socket.inet_pton = inet_pton
     socket.inet_ntop = inet_ntop
 
+
 adict = dict
+
+
+
+if _PY3:
+    # These are actually useless in Python 2 as well, but we need to go
+    # through deprecation process there (ticket #5895):
+    del adict, inet_pton, inet_ntop
+
+
 
 # OpenSSL/__init__.py imports OpenSSL.tsafe.  OpenSSL/tsafe.py imports
 # threading.  threading imports thread.  All to make this stupid threadsafe
@@ -147,16 +167,6 @@ class tsafe(object):
                     self._lock.release()\n""" % (f, f))
 sys.modules['OpenSSL.tsafe'] = tsafe
 
-import operator
-try:
-    operator.attrgetter
-except AttributeError:
-    class attrgetter(object):
-        def __init__(self, name):
-            self.name = name
-        def __call__(self, obj):
-            return getattr(obj, self.name)
-    operator.attrgetter = attrgetter
 
 
 try:
