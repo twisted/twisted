@@ -1,0 +1,1 @@
+Fixed a bug where twisted.python.sendmsg would sometimes fail with obscure errors including "Message too long" or "Invalid argument" on some 64-bit platforms.

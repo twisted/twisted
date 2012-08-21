@@ -169,7 +169,7 @@ static PyObject *sendmsg_sendmsg(PyObject *self, PyObject *args, PyObject *keywd
 
     int fd;
     int flags = 0;
-    Py_ssize_t sendmsg_result;
+    Py_ssize_t sendmsg_result, iovec_length;
     struct msghdr message_header;
     struct iovec iov[1];
     PyObject *ancillary = NULL;
@@ -183,11 +183,13 @@ static PyObject *sendmsg_sendmsg(PyObject *self, PyObject *args, PyObject *keywd
             args, keywds, "it#|iO:sendmsg", kwlist,
             &fd,
             &iov[0].iov_base,
-            &iov[0].iov_len,
+            &iovec_length,
             &flags,
             &ancillary)) {
         return NULL;
     }
+
+    iov[0].iov_len = iovec_length;
 
     message_header.msg_name = NULL;
     message_header.msg_namelen = 0;
@@ -284,7 +286,8 @@ static PyObject *sendmsg_sendmsg(PyObject *self, PyObject *args, PyObject *keywd
         /* Unpack the tuples into the control message. */
         struct cmsghdr *control_message = CMSG_FIRSTHDR(&message_header);
         while ( (item = PyIter_Next(iterator)) ) {
-            int data_len, type, level;
+            int type, level;
+            Py_ssize_t data_len;
             size_t data_size;
             unsigned char *data, *cmsg_data;
 
@@ -307,7 +310,7 @@ static PyObject *sendmsg_sendmsg(PyObject *self, PyObject *args, PyObject *keywd
 
             if (data_size > SOCKLEN_MAX) {
                 PyErr_Format(PyExc_OverflowError,
-                             "CMSG_LEN(%d) > SOCKLEN_MAX", data_len);
+                             "CMSG_LEN(%zd) > SOCKLEN_MAX", data_len);
                 goto finished;
             }
 
