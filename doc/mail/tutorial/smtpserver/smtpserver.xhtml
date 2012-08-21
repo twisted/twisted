@@ -1,0 +1,496 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Twisted Mail Tutorial: Building a Simple ESMTP Server</title>
+</head>
+
+<body>
+
+<h1>Twisted Mail Tutorial: Building a Simple ESMTP Server</h1>
+
+<h2>Introduction</h2>
+
+<p>This tutorial will show you how to use the <code class="API">
+twisted.mail.smtp</code> to create an ESMTP server. ESMTP stands for
+Extended (or Enhanced) SMTP. You don't need to know the details about it
+in order to build a simple server, after all, <code>twisted</code> already
+takes care of the protocol implementation. Just remember that you will want
+to use the enhanced version for your SMTP server! By the end of this tutorial,
+you will have a very simple inbound ESMTP server application which save emails
+sent by a SMTP client to files. For this tutorial, <code>twistd</code> will be
+used to launch the application. <code>telnet</code> will be used to act as a
+SMTP client.</p>
+
+<h2>SMTP Server 1</h2>
+
+<p>Let's start by creating <a href="smtpserver-1.tac">the most
+minimal <code>.tac</code> file</a> possible.</p>
+
+<pre class="python">
+from twisted.application import service
+
+application = service.Application("SMTP Server Tutorial")
+</pre>
+
+<p>In order for <code>twistd</code> to launch our application, we use the
+<code>Application</code> function from
+<code class="API">twisted.application.service</code>
+to create a new <em>application service</em>. An <em>application service</em>
+simply acts as a central object on which to store certain kinds of deployment
+configuration. <code>"SMTP Server Tutorial"</code> is the name of our server.
+A name is required for each <code>twistd</code> application.</p>
+
+<p>Now we now have enough of a <code>.tac</code> file to pass to
+<code>twistd</code>. If we run <a href="smtpserver-1.tac">smtpserver-1.tac</a>
+using the <code>twistd</code> command line:</p>
+
+<pre class="shell">
+twistd -ny smtpserver-1.tac
+</pre>
+
+<p>we are rewarded with the following output:</p>
+
+<pre class="shell">
+$ twistd -ny smtpserver-1.tac
+12:06:57+0400 [-] Log opened.
+12:06:57+0400 [-] using set_wakeup_fd
+12:06:57+0400 [-] twistd 12.1.0 (/usr/bin/python2.7 2.7.3) starting up.
+12:06:57+0400 [-] reactor class: twisted.internet.epollreactor.EPollReactor.
+</pre>
+
+<p>It worked, but, the server is doing absolutely nothing at the moment. It's
+not even listening at any port. We can shutdown it by issuing
+<code>^C</code>:</p>
+
+<pre class="shell">
+12:07:00+0400 [-] Received SIGINT, shutting down.
+12:07:00+0400 [-] Main loop terminated.
+12:07:00+0400 [-] Server Shut Down.
+</pre>
+
+
+<h2>SMTP Server 2</h2>
+
+<p>Now we get the idea of how to run a <code>twistd</code> application.
+Let's make some TCP connections in the <a href="smtpserver-2.tac">second
+version</a>. First, we need to import a few more things:</p>
+
+<pre class="python">
+from twisted.application import internet
+from twisted.internet import protocol
+</pre>
+
+<p>The <code class="API">twisted.application.internet</code> is
+another <em>application service</em> module. We will use it to
+create TCP connections. The <code class="API">twisted.internet.protocol</code>
+provides base implementations of many of the core Twisted concepts, such
+as <em>factories</em> and <em>protocols</em>.</p>
+
+<p>The next line of <a href="smtpserver-2.tac">smtpserver-2.tac</a>
+instantiates a new <em>server factory</em>.</p>
+
+<pre class="python">
+smtpServerFactory = protocol.ServerFactory()
+</pre>
+
+<p><em>Server factories</em> are responsible for
+constructing <em>protocol instances</em> whenever connections are
+established.</p>
+
+<p>Now that we have a server factory, we'll need to hook it up to the
+network somehow. The next line of <code>smtpserver-2.tac</code> does
+just that:</p>
+
+<pre class="python">
+smtpServerService = internet.TCPServer(2025, smtpServerFactory)
+</pre>
+
+<p>The <code>internet.TCPServer</code> creates a TCP server on port
+2025. The second argument is the <em>server factory</em> instance we just
+created. Whenever there is a connection, <code>internet.TCPServer</code>
+associates the TCP connection with a protocol instance and then listens to
+the next connection.</p>
+
+<p>We can run <code>smtpserver-2.tac</code> the same way we ran
+<code>smtpserver-1.tac</code>:</p>
+
+<pre class="shell">
+$ twistd -ny smtpserver-2.tac
+12:20:23+0400 [-] Log opened.
+12:20:23+0400 [-] using set_wakeup_fd
+12:20:23+0400 [-] twistd 12.1.0 (/usr/bin/python2.7 2.7.3) starting up.
+12:20:23+0400 [-] reactor class: twisted.internet.epollreactor.EPollReactor.
+12:20:23+0400 [-] ServerFactory starting on 2025
+12:20:23+0400 [-] Starting factory &lt;twisted.internet.protocol.ServerFactory
+                             instance at 0x1fcda70&gt;
+</pre>
+
+<p>The server now listens on port 2025. Let's fire up <code>telnet</code>, and
+see what happens when we try to connect to the server:</p>
+
+<pre class="shell">
+$ telnet localhost 2025
+Trying 127.0.0.1...
+Connected to localhost.
+Escape character is '^]'.
+Connection closed by foreign host.
+</pre>
+
+<p>Oops, we get exceptions! </p>
+
+<pre class="shell">
+12:25:55+0400 [twisted.internet.protocol.ServerFactory] Unhandled Error
+        Traceback (most recent call last):
+          File "twisted/python/log.py", line 69, in callWithContext
+            return context.call({ILogContext: newCtx}, func, *args, **kw)
+          File "twisted/python/context.py", line 118, in callWithContext
+            return self.currentContext().callWithContext(ctx, func, *args, **kw)
+          File "twisted/python/context.py", line 81, in callWithContext
+            return func(*args,**kw)
+          File "twisted/internet/posixbase.py", line 614, in _doReadOrWrite
+            why = selectable.doRead()
+        --- &lt;exception caught here&gt; ---
+          File "twisted/internet/tcp.py", line 1010, in doRead
+            protocol = self.factory.buildProtocol(self._buildAddr(addr))
+          File "twisted/internet/protocol.py", line 104, in buildProtocol
+            p = self.protocol()
+        exceptions.TypeError: 'NoneType' object is not callable
+
+12:24:14+0400 [-] Received SIGINT, shutting down.
+12:24:14+0400 [-] (TCP Port 2025 Closed)
+12:24:14+0400 [-] Stopping factory &lt;twisted.internet.protocol.ServerFactory
+                  instance at 0x1fcda70&gt;
+12:24:14+0400 [-] Main loop terminated.
+12:24:14+0400 [-] Server Shut Down.
+</pre>
+
+<p>Obviously, we are missing something here. We didn't specify a
+<em>protocol class</em> for the factory to use.  We'll do that in the next
+example.</p>
+
+
+<h2>SMTP Server 3</h2>
+
+<p>In the previous example, we ran into a problem because we didn't
+set up our <em>server factory's</em> <em>protocol</em> attribute.
+<code>ServerFactory.buildProtocol</code> is the method responsible for
+creating a <em>protocol instance</em>. The default implementation calls
+the factory's <code>protocol</code> attribute, adds itself as an attribute
+named <code>factory</code> to the resulting instance, and returns it. In <a
+href="smtpserver-3.tac">smtpserver-3.tac</a>, we'll correct the
+oversight that caused the traceback in smtpserver-2.tac:</p>
+
+<pre class="python">
+smtpServerFactory.protocol = protocol.Protocol
+</pre>
+
+<p>Running this version of the server, we will get an exception free
+server when a connection is established, although the server
+will do nothing. It simply discards all the input and never produces
+any output. Let's improve this in the next example.</p>
+
+
+<h2>SMTP Server 4</h2>
+
+<p>In <a href="smtpserver-4.tac">smtpserver-4.tac</a>, we will begin
+to use Twisted's ESMTP protocol implementation for the first time.
+We'll swap out the <code class="API">twisted.internet.protocol.Protocol</code>
+in favor of <code class="API">twisted.mail.smtp.ESMTP</code>.</p>
+
+<p>First thing first, let's add a new import:</p>
+
+<pre class="python">
+from twisted.mail import smtp
+</pre>
+
+<p>Next, we remove a line we added in smtpserver-3.tac:</p>
+
+<pre class="python">
+smtpServerFactory.protocol = protocol.Protocol
+</pre>
+
+<p>Let's add a similar one in its place:</p>
+
+<pre class="python">
+smtpServerFactory.protocol = smtp.ESMTP
+</pre>
+
+<p>Our server factory is now using a protocol implementation which behaves
+as an ESMTP server. Let's see what happens when we try to run this
+version.</p>
+
+<p>The output of <code>twistd -ny smtpserver-4.tac</code> is pretty
+much the same as the output of previous examples. But, if you connect it with
+<code>telnet</code>, you will get the following output (Lines start with
+<code>server </code> is what we get from the server application; lines start with
+<code>client</code> are the stuff we type in):</p>
+
+<pre class="shell">
+$ telnet localhost 2025
+telnet: Trying 127.0.0.1...
+telnet: Connected to localhost.
+telnet: Escape character is '^]'.
+server: 220 localhost NO UCE NO UBE NO RELAY PROBES ESMTP
+client: EHLO localhost
+server: 250 localhost Hello 127.0.0.1, nice to meet you
+client: MAIL FROM: &lt;alice@example.com&gt;
+server: 550 Cannot receive from specified address &lt;alice@example.com&gt;: Sender not acceptable
+client: QUIT
+221 See you later
+Connection closed by foreign host.
+</pre>
+
+<p>In the telnet session, we greeted our server and got our reply. As you
+can see, we can't send emails yet. When we specified a sender via
+<code>MAIL FROM</code> command, we got a 'Sender not acceptable' feedback.
+Let's solve this problem in the next example.</p>
+
+<h2>SMTP Server 5</h2>
+
+<p>In order to have the server to 'send' messages, we will define a new class,
+TutorialESMTP, and override three class methods in example <a href="
+smtpserver-5.tac">smtpserver-5.tac</a>.</p>
+
+<pre class="python">
+class TutorialESMTP(smtp.ESMTP):
+    counter = 0
+
+    def validateTo(self, user):
+        fileName = 'tutorial-smtp.' + str(self.counter)
+        self.counter += 1
+        return lambda: FileMessage(file(fileName, 'w'))
+
+    def validateFrom(self, helo, origin):
+        return origin
+
+    def receivedHeader(self, helo, origin, recipients):
+        return 'Received: Tutorially.'
+</pre>
+
+<p>In <code>TutorialESMTP</code>, we set up a <code>counter</code> attribute
+to track the number of messages the server receives. <code>validateTo</code>
+method returns a lamda function that returns an <code>IMessage</code> object:
+</p>
+
+<pre class="python">
+import os
+from zope.interface import implements
+
+class FileMessage(object):
+    implements(smtp.IMessage)
+
+    def __init__(self, fileObj):
+        self.fileObj = fileObj
+
+    def lineReceived(self, line):
+        self.fileObj.write(line + '\n')
+
+    def eomReceived(self):
+        self.fileObj.close()
+        return defer.succeed(None)
+
+    def connectionLost(self):
+        self.fileObj.close()
+        os.remove(self.fileObj.name)
+</pre>
+
+<p>The <code>FileMessage</code> is the implementation of
+<code class="API">twisted.mail.smtp.IMessage</code> interface, which
+defines how to deal with the messages the server receives. In this
+example, we simply write them to a file object.</p>
+
+<p>Let's go back to the <code>TutorialESMTP</code> class. Since we
+don't have any authentication system set up for the server, we simply
+made <code>validateFrom</code> method to accept any email address as a
+sender. We also overrode the <code>receivedHeader</code> method, you
+will see why in the example <code>smtpserver-7.tac</code>.</p>
+
+<p>Now, let's see the server in action: run the server as usual,
+and fire up <code>telnet</code> to get the conversation going: </p>
+
+<pre class="shell">
+$ telnet localhost 2025
+telnet: Trying 127.0.0.1...
+telnet: Connected to localhost.
+telnet: Escape character is '^]'.
+server: 220 localhost NO UCE NO UBE NO RELAY PROBES ESMTP
+client: EHLO localhost
+server: 250 localhost Hello 127.0.0.1, nice to meet you
+client: MAIL FROM: &lt;tom@example.com&gt;
+server: 250 Sender address accepted
+client: RCPT to: &lt;alice@argonemyth.com&gt;
+server: 250 Recipient address accepted
+client: DATA
+server: 354 Continue
+client: From: tom@example.com
+client: To: alice@argonemyth.com
+client: Subject: Test message to Alice
+client:
+client: This is a test message.
+client: .
+server: 250 Delivery in progress
+client: From: alice@example.com
+client: To: tom@argonemyth.com
+client: Subject: Test message to Tom
+client:
+client: This is a test message.
+client: .
+server: 250 Delivery in progress
+client: QUIT
+server: 221 See you later
+telnet: Connection closed by foreign host.
+</pre>
+
+<p>We sent two emails to the server during the <code>telnet</code> session.
+If you check the directory that has <code>smtpserver-5.tac</code>, you will
+see two new files, <em>tutorial-smtp.0</em> and <em>tutorial-smtp.1</em>.
+Those two files contain our custom <em>Received header</em> and
+the messages we just send via <code>telnet</code>.</p>
+
+<p>If you check the original implementation of those three methods we
+overrode, you will notice that they all check for an attribute called
+<code>delivery</code>. It turns out that the <code>smtp.ESMTP</code> delegates
+the delivery job to an object of <code class="API">
+twisted.mail.smtp.ESMTP.IMessageDelivery</code> interface. Doing so will make
+the server more flexible and modular. You will see the benefit in our final
+example. Starting from the next example, we will do a little bit code
+refactoring!</p>
+
+
+<h2>SMTP Server 6</h2>
+
+<p>In example <a href="smtpserver-6.tac">smtpserver-6.tac</a>, we will simply
+create a standard <code>factory</code> class:</p>
+
+<pre class="python">
+class TutorialESMTPFactory(protocol.ServerFactory):
+    protocol = TutorialESMTP
+
+    def buildProtocol(self, addr):
+        p = self.protocol()
+        p.factory = self
+        return p
+</pre>
+
+<p>We are not going to use this factory in this example. We will do that in
+example <code>smtpserver-7.tac</code></p>
+
+
+<h2>SMTP Server 7</h2>
+
+<p>It's time to do the refactoring that we mentioned before in
+<a href="smtpserver-7.tac">smtpserver-7.tac</a>. We will remove
+class <code>TutorialESMTP</code> and move those three methods into a new class,
+let's call it <code>TutorialDelivery</code>, which will be our implementation
+of the <code>smtp.IMessageDelivery</code> interface.</p>
+
+<pre class="python">
+class TutorialDelivery(object):
+    implements(smtp.IMessageDelivery)
+    counter = 0
+
+    def validateTo(self, user):
+        fileName = 'tutorial-smtp.' + str(self.counter)
+        self.counter += 1
+        return lambda: FileMessage(file(fileName, 'w'))
+
+    def validateFrom(self, helo, origin):
+        return origin
+
+    def receivedHeader(self, helo, origin, recipients):
+        return 'Received: Tutorially.'
+</pre>
+
+<p>Now, let's add the new "delivery guy" to the <code>buildProtocol</code>
+method in <code>TutorialESMTPFactory</code> class:</p>
+
+<pre class="python">
+        p.delivery = TutorialDelivery()
+</pre>
+
+<p>Now, each time an ESMTP protocol got instantiated, a <code>TutorialDelivery
+</code> would be passed as the <code>delivery</code> attribute.</p>
+
+<p>All things are set, we will now use the new factory. Swap the following
+lines:</p>
+
+<pre class="python">
+smtpServerFactory = protocol.ServerFactory()
+smtpServerFactory.protocol = TutorialESMTP
+</pre>
+
+<p>With:</p>
+<pre class="python">
+smtpServerFactory = TutorialESMTPFactory()
+</pre>
+
+<p>Example <a href="smtpserver-7.tac">smtpserver-7.tac</a> does the same
+thing as <a href="smtpserver-5.tac">smtpserver-5.tac</a>, but in a much
+cleaner and flexible way. If you wish to change the way you validate senders
+or construct a different receive headers, you don't have to touch the code in
+<code>smtp.ESMTP</code> at all. We will make a final improvement in our next
+example.</p>
+
+<h2>SMTP Server 8</h2>
+
+<p>In example <code>smtpserver-7.tac</code>, we gave each protocol instance
+a <code>smtp.IMessageDelivery</code> object, which will be shared throughout
+the connection. What exactly does this mean? Imagining you send a 8MB
+email to Alice and then a 300KB email to Tom over the same connection. Tom
+would get the email after the server sends out the email to Alice. This is not
+very <em>asynchronous</em>! Is there a way to make it more efficient? In fact,
+there is. <code>Twisted</code> comes with an interface called <code>
+smtp.IMessageDeliveryFactory</code>. The implementation of the interface should
+return a <code>smtp.IMessageDelivery</code> object. The <code>smtp.ESMTP</code>
+instance will use a different <code>smtp.IMessageDelivery</code> object for
+each message the server receives. Let's build our final example <a href="smtpserver-8.tac
+">smtpserver-8.tac</a>.</p>
+
+<pre class="python">
+class TutorialDeliveryFactory(object):
+    implements(smtp.IMessageDeliveryFactory)
+
+    def getMessageDelivery(self):
+        return TutorialDelivery()
+</pre>
+
+<p>Did you see the resemblance between <code>getMessageDelivery</code>
+and <code>buildProtocol</code> method in the normal <code>twisted factory
+</code> class? Now, let's pass the <code>delivery factory</code> to the <code>
+buildProtocol</code> method in <code>TutorialESMTPFactory</code>.</p>
+
+<p>Wave the following line goodbye:</p>
+
+<pre class="python">
+p.delivery = TutorialDelivery()
+</pre>
+
+And use the following code instead:
+
+<pre class="python">
+p.deliveryFactory = TutorialDeliveryFactory()
+</pre>
+
+<p>Feel free to test the server with <code>telnet</code> now: each time you
+send a new message, the counter will start from zero. So, unless you are sending
+the same message to multiple recipients, only <em>tutorial-smtp.0</em> will be
+created. I hope you appreciate the extra effort we made in example
+<a href="smtpserver-7.tac">smtpserver-7.tac</a>, as we just made the server
+better without touch the core part of ESMTP protocol implementation!</p>
+
+<h2>Conclusion</h2>
+
+<p>I hope you enjoyed the tutorial and learned the basic of how to make an
+ESMTP server. This tutorial didn't show you how to handle outbound emails.
+If you wish to do so, among many other details, you will need to supply an
+<a href="../../../core/howto/cred.html">authentication system</a>, a way to
+find other SMTP servers on the network when you implement <code>smtp.
+IMessageDeliveryFor</code> interface...To me, the most fun part is to deal
+with inbound messages. With <code>Twisted</code>, it's really simple to craft
+whatever weird ESMTP server that you have in mind.</p>
+
+</body>
+</html>
