@@ -188,10 +188,7 @@ class _Assertions(pyunit.TestCase, object):
     """
     Replaces many of the built-in TestCase assertions. In general, these
     assertions provide better error messages and are easier to use in
-    callbacks. Also provides new assertions such as L{failUnlessFailure}.
-
-    Although the tests are defined as 'failIf*' and 'failUnless*', they can
-    also be called as 'assertNot*' and 'assert*'.
+    callbacks. Also provides new assertions such as L{assertFailure}.
     """
 
     def fail(self, msg=None):
@@ -203,7 +200,8 @@ class _Assertions(pyunit.TestCase, object):
         """
         raise self.failureException(msg)
 
-    def failIf(self, condition, msg=None):
+
+    def assertFalse(self, condition, msg=None):
         """
         Fail the test if C{condition} evaluates to True.
 
@@ -212,9 +210,10 @@ class _Assertions(pyunit.TestCase, object):
         if condition:
             raise self.failureException(msg)
         return condition
-    assertNot = assertFalse = failUnlessFalse = failIf
+    assertNot = failUnlessFalse = failIf = assertFalse
 
-    def failUnless(self, condition, msg=None):
+
+    def assertTrue(self, condition, msg=None):
         """
         Fail the test if C{condition} evaluates to False.
 
@@ -223,9 +222,10 @@ class _Assertions(pyunit.TestCase, object):
         if not condition:
             raise self.failureException(msg)
         return condition
-    assert_ = assertTrue = failUnlessTrue = failUnless
+    assert_ = failUnlessTrue = failUnless = assertTrue
 
-    def failUnlessRaises(self, exception, f, *args, **kwargs):
+
+    def assertRaises(self, exception, f, *args, **kwargs):
         """
         Fail the test unless calling the function C{f} with the given
         C{args} and C{kwargs} raises C{exception}. The failure will report
@@ -251,7 +251,7 @@ class _Assertions(pyunit.TestCase, object):
         else:
             raise self.failureException('%s not raised (%r returned)'
                                         % (exception.__name__, result))
-    assertRaises = failUnlessRaises
+    failUnlessRaises = assertRaises
 
 
     def assertEqual(self, first, second, msg=''):
@@ -273,7 +273,7 @@ class _Assertions(pyunit.TestCase, object):
     failUnlessEqual = failUnlessEquals = assertEquals = assertEqual
 
 
-    def failUnlessIdentical(self, first, second, msg=None):
+    def assertIdentical(self, first, second, msg=None):
         """
         Fail the test if C{first} is not C{second}.  This is an
         obect-identity-equality test, not an object equality
@@ -285,9 +285,10 @@ class _Assertions(pyunit.TestCase, object):
         if first is not second:
             raise self.failureException(msg or '%r is not %r' % (first, second))
         return first
-    assertIdentical = failUnlessIdentical
+    failUnlessIdentical = assertIdentical
 
-    def failIfIdentical(self, first, second, msg=None):
+
+    def assertNotIdentical(self, first, second, msg=None):
         """
         Fail the test if C{first} is C{second}.  This is an
         obect-identity-equality test, not an object equality
@@ -299,9 +300,10 @@ class _Assertions(pyunit.TestCase, object):
         if first is second:
             raise self.failureException(msg or '%r is %r' % (first, second))
         return first
-    assertNotIdentical = failIfIdentical
+    failIfIdentical = assertNotIdentical
 
-    def failIfEqual(self, first, second, msg=None):
+
+    def assertNotEqual(self, first, second, msg=None):
         """
         Fail the test if C{first} == C{second}.
 
@@ -311,9 +313,10 @@ class _Assertions(pyunit.TestCase, object):
         if not first != second:
             raise self.failureException(msg or '%r == %r' % (first, second))
         return first
-    assertNotEqual = assertNotEquals = failIfEquals = failIfEqual
+    assertNotEquals = failIfEquals = failIfEqual = assertNotEqual
 
-    def failUnlessIn(self, containee, container, msg=None):
+
+    def assertIn(self, containee, container, msg=None):
         """
         Fail the test if C{containee} is not found in C{container}.
 
@@ -327,9 +330,10 @@ class _Assertions(pyunit.TestCase, object):
             raise self.failureException(msg or "%r not in %r"
                                         % (containee, container))
         return containee
-    assertIn = failUnlessIn
+    failUnlessIn = assertIn
 
-    def failIfIn(self, containee, container, msg=None):
+
+    def assertNotIn(self, containee, container, msg=None):
         """
         Fail the test if C{containee} is found in C{container}.
 
@@ -343,9 +347,10 @@ class _Assertions(pyunit.TestCase, object):
             raise self.failureException(msg or "%r in %r"
                                         % (containee, container))
         return containee
-    assertNotIn = failIfIn
+    failIfIn = assertNotIn
 
-    def failIfAlmostEqual(self, first, second, places=7, msg=None):
+
+    def assertNotAlmostEqual(self, first, second, places=7, msg=None):
         """
         Fail if the two objects are equal as determined by their
         difference rounded to the given number of decimal places
@@ -361,10 +366,11 @@ class _Assertions(pyunit.TestCase, object):
             raise self.failureException(msg or '%r == %r within %r places'
                                         % (first, second, places))
         return first
-    assertNotAlmostEqual = assertNotAlmostEquals = failIfAlmostEqual
-    failIfAlmostEquals = failIfAlmostEqual
+    assertNotAlmostEquals = failIfAlmostEqual = assertNotAlmostEqual
+    failIfAlmostEquals = assertNotAlmostEqual
 
-    def failUnlessAlmostEqual(self, first, second, places=7, msg=None):
+
+    def assertAlmostEqual(self, first, second, places=7, msg=None):
         """
         Fail if the two objects are unequal as determined by their
         difference rounded to the given number of decimal places
@@ -380,10 +386,11 @@ class _Assertions(pyunit.TestCase, object):
             raise self.failureException(msg or '%r != %r within %r places'
                                         % (first, second, places))
         return first
-    assertAlmostEqual = assertAlmostEquals = failUnlessAlmostEqual
-    failUnlessAlmostEquals = failUnlessAlmostEqual
+    assertAlmostEquals = failUnlessAlmostEqual = assertAlmostEqual
+    failUnlessAlmostEquals = assertAlmostEqual
 
-    def failUnlessApproximates(self, first, second, tolerance, msg=None):
+
+    def assertApproximates(self, first, second, tolerance, msg=None):
         """
         Fail if C{first} - C{second} > C{tolerance}
 
@@ -393,9 +400,10 @@ class _Assertions(pyunit.TestCase, object):
         if abs(first - second) > tolerance:
             raise self.failureException(msg or "%s ~== %s" % (first, second))
         return first
-    assertApproximates = failUnlessApproximates
+    failUnlessApproximates = assertApproximates
 
-    def failUnlessFailure(self, deferred, *expectedFailures):
+
+    def assertFailure(self, deferred, *expectedFailures):
         """
         Fail if C{deferred} does not errback with one of C{expectedFailures}.
         Returns the original Deferred with callbacks added. You will need
@@ -413,24 +421,27 @@ class _Assertions(pyunit.TestCase, object):
                           % (expectedFailures, str(failure)))
                 raise self.failureException(output)
         return deferred.addCallbacks(_cb, _eb)
-    assertFailure = failUnlessFailure
+    failUnlessFailure = assertFailure
 
-    def failUnlessSubstring(self, substring, astring, msg=None):
+
+    def assertSubstring(self, substring, astring, msg=None):
         """
         Fail if C{substring} does not exist within C{astring}.
         """
         return self.failUnlessIn(substring, astring, msg)
-    assertSubstring = failUnlessSubstring
+    failUnlessSubstring = assertSubstring
 
-    def failIfSubstring(self, substring, astring, msg=None):
+
+    def assertNotSubstring(self, substring, astring, msg=None):
         """
         Fail if C{astring} contains C{substring}.
         """
         return self.failIfIn(substring, astring, msg)
-    assertNotSubstring = failIfSubstring
+    failIfSubstring = assertNotSubstring
 
-    def failUnlessWarns(self, category, message, filename, f,
-                       *args, **kwargs):
+
+    def assertWarns(self, category, message, filename, f,
+                    *args, **kwargs):
         """
         Fail if the given function doesn't generate the specified warning when
         called. It calls the function, checks the warning, and forwards the
@@ -471,9 +482,10 @@ class _Assertions(pyunit.TestCase, object):
         # self.assertEqual(lineno, xxx)
 
         return result
-    assertWarns = failUnlessWarns
+    failUnlessWarns = assertWarns
 
-    def failUnlessIsInstance(self, instance, classOrTuple, message=None):
+
+    def assertIsInstance(self, instance, classOrTuple, message=None):
         """
         Fail if C{instance} is not an instance of the given class or of
         one of the given classes.
@@ -495,12 +507,13 @@ class _Assertions(pyunit.TestCase, object):
                 suffix = ": " + message
             self.fail("%r is not an instance of %s%s" % (
                     instance, classOrTuple, suffix))
-    assertIsInstance = failUnlessIsInstance
+    failUnlessIsInstance = assertIsInstance
 
-    def failIfIsInstance(self, instance, classOrTuple):
+
+    def assertNotIsInstance(self, instance, classOrTuple):
         """
-        Fail if C{instance} is not an instance of the given class or of
-        one of the given classes.
+        Fail if C{instance} is an instance of the given class or of one of the
+        given classes.
 
         @param instance: the object to test the type (first argument of the
             C{isinstance} call).
@@ -511,7 +524,8 @@ class _Assertions(pyunit.TestCase, object):
         """
         if isinstance(instance, classOrTuple):
             self.fail("%r is an instance of %s" % (instance, classOrTuple))
-    assertNotIsInstance = failIfIsInstance
+    failIfIsInstance = assertNotIsInstance
+
 
 
 class _LogObserver(object):
