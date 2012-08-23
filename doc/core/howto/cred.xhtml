@@ -423,7 +423,7 @@ class SpecialCheckerFactory(object):
     # This will be called once per command-line.
     def generateChecker(self, argstring=""):
         argdict = dict((x.split('=') for x in argstring.split(':')))
-        return SpecialChecker(**dict)
+        return SpecialChecker(**argdict)
 
 # We need to instantiate our class for the plugin to work.
 theSpecialCheckerFactory = SpecialCheckerFactory()
