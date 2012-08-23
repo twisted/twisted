@@ -9,7 +9,7 @@ from twisted.trial import itrial, runner, unittest, reporter
 from twisted.trial.test import mockdoctest
 
 
-class TestRunners(unittest.TestCase):
+class TestRunners(unittest.SynchronousTestCase):
     """
     Tests for Twisted's doctest support.
     """

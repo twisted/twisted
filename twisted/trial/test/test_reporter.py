@@ -45,7 +45,7 @@ class BrokenStream(object):
         raise IOError(errno.EINTR, "Interrupted flush")
 
 
-class StringTest(unittest.TestCase):
+class StringTest(unittest.SynchronousTestCase):
     def stringComparison(self, expect, output):
         output = filter(None, output)
         self.failUnless(len(expect) <= len(output),
@@ -67,7 +67,7 @@ class StringTest(unittest.TestCase):
                                 % (exp,))
 
 
-class TestTestResult(unittest.TestCase):
+class TestTestResult(unittest.SynchronousTestCase):
     def setUp(self):
         self.result = reporter.TestResult()
 
@@ -228,7 +228,7 @@ class TestUncleanWarningWrapperErrorReporting(TestErrorReporting):
 
 
 
-class TracebackHandling(unittest.TestCase):
+class TracebackHandling(unittest.SynchronousTestCase):
     def getErrorFrames(self, test):
         stream = StringIO.StringIO()
         result = reporter.Reporter(stream)
@@ -320,7 +320,7 @@ exceptions.TypeError: iterable argument required
         self.assertEqual(self.f.frames, frames)
 
 
-class PyunitTestNames(unittest.TestCase):
+class PyunitTestNames(unittest.SynchronousTestCase):
     def setUp(self):
         self.stream = StringIO.StringIO()
         self.test = sample.PyunitTest('test_foo')
@@ -391,7 +391,7 @@ class PyunitTestNames(unittest.TestCase):
 
 
 
-class TestDirtyReactor(unittest.TestCase):
+class TestDirtyReactor(unittest.SynchronousTestCase):
     """
     The trial script has an option to treat L{DirtyReactorAggregateError}s as
     warnings, as a migration tool for test authors. It causes a wrapper to be
@@ -462,7 +462,7 @@ class TestDirtyReactor(unittest.TestCase):
 
 
 
-class TrialTestNames(unittest.TestCase):
+class TrialTestNames(unittest.SynchronousTestCase):
 
     def setUp(self):
         self.stream = StringIO.StringIO()
@@ -493,7 +493,7 @@ class TrialTestNames(unittest.TestCase):
         self.assertEqual(output, "test_foo")
 
 
-class TestSkip(unittest.TestCase):
+class TestSkip(unittest.SynchronousTestCase):
     """
     Tests for L{reporter.Reporter}'s handling of skips.
     """
@@ -586,7 +586,7 @@ class UncleanWarningSkipTest(TestSkip):
 
 
 
-class TodoTest(unittest.TestCase):
+class TodoTest(unittest.SynchronousTestCase):
     """
     Tests for L{reporter.Reporter}'s handling of todos.
     """
@@ -736,7 +736,7 @@ class MockColorizer:
 
 
 
-class TestTreeReporter(unittest.TestCase):
+class TestTreeReporter(unittest.SynchronousTestCase):
     def setUp(self):
         self.test = sample.FooTest('test_foo')
         self.stream = StringIO.StringIO()
@@ -884,7 +884,7 @@ class TestTreeReporter(unittest.TestCase):
 
 
 
-class TestReporterInterface(unittest.TestCase):
+class TestReporterInterface(unittest.SynchronousTestCase):
     """
     Tests for the bare interface of a trial reporter.
 
@@ -1151,7 +1151,7 @@ class TestReporter(TestReporterInterface):
 
 
 
-class TestSafeStream(unittest.TestCase):
+class TestSafeStream(unittest.SynchronousTestCase):
     def test_safe(self):
         """
         Test that L{reporter.SafeStream} successfully write to its original
@@ -1376,7 +1376,7 @@ class TestSubunitReporter(TestReporterInterface):
 
 
 
-class TestSubunitReporterNotInstalled(unittest.TestCase):
+class TestSubunitReporterNotInstalled(unittest.SynchronousTestCase):
     """
     Test behaviour when the subunit reporter is not installed.
     """
@@ -1430,7 +1430,7 @@ class LoggingReporter(reporter.Reporter):
 
 
 
-class TestAdaptedReporter(unittest.TestCase):
+class TestAdaptedReporter(unittest.SynchronousTestCase):
     """
     L{reporter._AdaptedReporter} is a reporter wrapper that wraps all of the
     tests it receives before passing them on to the original reporter.
@@ -1541,7 +1541,7 @@ class FakeStream(object):
 
 
 
-class AnsiColorizerTests(unittest.TestCase):
+class AnsiColorizerTests(unittest.SynchronousTestCase):
     """
     Tests for L{reporter._AnsiColorizer}.
     """

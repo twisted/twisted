@@ -4,7 +4,7 @@ from twisted.trial import unittest
 testModule = """
 from twisted.trial import unittest
 
-class FooTest(unittest.TestCase):
+class FooTest(unittest.SynchronousTestCase):
     def testFoo(self):
         pass
 """
@@ -21,7 +21,7 @@ Do NOT change the names the tests in this module.
 import unittest as pyunit
 from twisted.trial import unittest
 
-class FooTest(unittest.TestCase):
+class FooTest(unittest.SynchronousTestCase):
     def test_foo(self):
         pass
 
@@ -42,7 +42,7 @@ class NotATest(object):
         pass
 
 
-class AlphabetTest(unittest.TestCase):
+class AlphabetTest(unittest.SynchronousTestCase):
     def test_a(self):
         pass
 
@@ -62,19 +62,19 @@ Do NOT change the names the tests in this module.
 from twisted.trial import unittest
 
 class X(object):
-    
+
     def test_foo(self):
         pass
 
-class A(unittest.TestCase, X):
+class A(unittest.SynchronousTestCase, X):
     pass
 
-class B(unittest.TestCase, X):
+class B(unittest.SynchronousTestCase, X):
     pass
 
 """
 
-class PackageTest(unittest.TestCase):
+class PackageTest(unittest.SynchronousTestCase):
     files = [
         ('badpackage/__init__.py', 'frotz\n'),
         ('badpackage/test_module.py', ''),
@@ -95,6 +95,7 @@ class PackageTest(unittest.TestCase):
         ('inheritancepackage/test_x.py', testInheritanceSample),
         ]
 
+
     def _toModuleName(self, filename):
         name = os.path.splitext(filename)[0]
         segs = name.split('/')
@@ -102,8 +103,10 @@ class PackageTest(unittest.TestCase):
             segs = segs[:-1]
         return '.'.join(segs)
 
+
     def getModules(self):
         return map(self._toModuleName, zip(*self.files)[0])
+
 
     def cleanUpModules(self):
         modules = self.getModules()
@@ -115,6 +118,7 @@ class PackageTest(unittest.TestCase):
             except KeyError:
                 pass
 
+
     def createFiles(self, files, parentDir='.'):
         for filename, contents in self.files:
             filename = os.path.join(parentDir, filename)
@@ -123,10 +127,12 @@ class PackageTest(unittest.TestCase):
             fd.write(contents)
             fd.close()
 
+
     def _createDirectory(self, filename):
         directory = os.path.dirname(filename)
         if not os.path.exists(directory):
             os.makedirs(directory)
+
 
     def setUp(self, parentDir=None):
         if parentDir is None:
@@ -134,8 +140,11 @@ class PackageTest(unittest.TestCase):
         self.parent = parentDir
         self.createFiles(self.files, parentDir)
 
+
     def tearDown(self):
         self.cleanUpModules()
+
+
 
 class SysPathManglingTest(PackageTest):
     def setUp(self, parent=None):
@@ -147,9 +156,11 @@ class SysPathManglingTest(PackageTest):
         self.newPath.append(self.parent)
         self.mangleSysPath(self.newPath)
 
+
     def tearDown(self):
         PackageTest.tearDown(self)
         self.mangleSysPath(self.oldPath)
+
 
     def mangleSysPath(self, pathVar):
         sys.path[:] = pathVar

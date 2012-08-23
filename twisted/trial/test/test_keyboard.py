@@ -1,9 +1,17 @@
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+Tests for interrupting tests with Control-C.
+"""
+
 import StringIO
+
 from twisted.trial import unittest
 from twisted.trial import reporter, runner
 
 
-class TrialTest(unittest.TestCase):
+class TrialTest(unittest.SynchronousTestCase):
     def setUp(self):
         self.output = StringIO.StringIO()
         self.reporter = reporter.TestResult()
@@ -14,10 +22,10 @@ class TestInterruptInTest(TrialTest):
     class InterruptedTest(unittest.TestCase):
         def test_02_raiseInterrupt(self):
             raise KeyboardInterrupt
-        
+
         def test_01_doNothing(self):
             pass
-        
+
         def test_03_doNothing(self):
             TestInterruptInTest.test_03_doNothing_run = True
 
@@ -30,7 +38,7 @@ class TestInterruptInTest(TrialTest):
         self.assertEqual(3, self.suite.countTestCases())
         self.assertEqual(0, self.reporter.testsRun)
         self.failIf(self.reporter.shouldStop)
-        
+
     def test_interruptInTest(self):
         runner.TrialSuite([self.suite]).run(self.reporter)
         self.failUnless(self.reporter.shouldStop)
@@ -41,7 +49,7 @@ class TestInterruptInTest(TrialTest):
 
 class TestInterruptInSetUp(TrialTest):
     testsRun = 0
-    
+
     class InterruptedTest(unittest.TestCase):
         def setUp(self):
             if TestInterruptInSetUp.testsRun > 0:
@@ -109,5 +117,3 @@ class TestInterruptInTearDown(TrialTest):
         self.failUnless(self.reporter.shouldStop)
         self.failIf(TestInterruptInTearDown.test_02_run,
                     "test_02 ran")
-
-

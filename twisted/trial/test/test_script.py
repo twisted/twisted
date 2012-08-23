@@ -23,7 +23,7 @@ def sibpath(filename):
 
 
 
-class ForceGarbageCollection(unittest.TestCase):
+class ForceGarbageCollection(unittest.SynchronousTestCase):
     """
     Tests for the --force-gc option.
     """
@@ -83,7 +83,7 @@ class ForceGarbageCollection(unittest.TestCase):
 
 
 
-class TestSuiteUsed(unittest.TestCase):
+class TestSuiteUsed(unittest.SynchronousTestCase):
     """
     Check the category of tests suite used by the loader.
     """
@@ -114,7 +114,7 @@ class TestSuiteUsed(unittest.TestCase):
 
 
 
-class TestModuleTest(unittest.TestCase):
+class TestModuleTest(unittest.SynchronousTestCase):
     def setUp(self):
         self.config = trial.Options()
 
@@ -312,7 +312,7 @@ class TestModuleTest(unittest.TestCase):
                         "%r should *not* be a test file" % (filename,))
 
 
-class WithoutModuleTests(unittest.TestCase):
+class WithoutModuleTests(unittest.SynchronousTestCase):
     """
     Test the C{without-module} flag.
     """
@@ -393,7 +393,7 @@ class WithoutModuleTests(unittest.TestCase):
 
 
 
-class CoverageTests(unittest.TestCase):
+class CoverageTests(unittest.SynchronousTestCase):
     """
     Tests for the I{coverage} option.
     """

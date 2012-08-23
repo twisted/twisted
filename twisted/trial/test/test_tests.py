@@ -524,7 +524,7 @@ class AsynchronousStrictTodoTests(StrictTodoMixin, unittest.TestCase):
 
 
 
-class TestReactorCleanup(unittest.TestCase):
+class TestReactorCleanup(unittest.SynchronousTestCase):
     """
     Tests for cleanup and reporting of reactor event sources left behind by test
     methods.
@@ -785,7 +785,7 @@ class GCMixin:
     garbage collection. I'm used to test whether gc.collect gets called.
     """
 
-    class BasicTest(unittest.TestCase):
+    class BasicTest(unittest.SynchronousTestCase):
         def setUp(self):
             self._log('setUp')
         def test_foo(self):
@@ -793,7 +793,7 @@ class GCMixin:
         def tearDown(self):
             self._log('tearDown')
 
-    class ClassTest(unittest.TestCase):
+    class ClassTest(unittest.SynchronousTestCase):
         def test_1(self):
             self._log('test1')
         def test_2(self):
@@ -846,7 +846,7 @@ class TestGarbageCollection(GCMixin, unittest.SynchronousTestCase):
 
 
 
-class TestUnhandledDeferred(unittest.TestCase):
+class TestUnhandledDeferred(unittest.SynchronousTestCase):
 
     def setUp(self):
         from twisted.trial.test import weird

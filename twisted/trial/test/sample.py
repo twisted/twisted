@@ -9,7 +9,7 @@ from twisted.python.util import mergeFunctionMetadata
 
 
 
-class FooTest(unittest.TestCase):
+class FooTest(unittest.SynchronousTestCase):
 
 
     def test_foo(self):
@@ -42,7 +42,7 @@ def goodDecorator(fn):
 
 
 
-class DecorationTest(unittest.TestCase):
+class DecorationTest(unittest.SynchronousTestCase):
     def test_badDecorator(self):
         """
         This test method is decorated in a way that gives it a confusing name
@@ -93,7 +93,7 @@ class NotATest(object):
 
 
 
-class AlphabetTest(unittest.TestCase):
+class AlphabetTest(unittest.SynchronousTestCase):
 
 
     def test_a(self):

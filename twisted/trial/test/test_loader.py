@@ -9,6 +9,8 @@ import os
 import shutil
 import sys
 
+import unittest as pyunit
+
 from twisted.python import util
 from twisted.python.hashlib import md5
 from twisted.trial.test import packages
@@ -396,7 +398,7 @@ class LoaderTest(packages.SysPathManglingTest):
         represented by a different instances of the L{TestCase} they are
         defined on.
         """
-        class DistinctInstances(unittest.TestCase):
+        class DistinctInstances(pyunit.TestCase):
             def test_1(self):
                 self.first = 'test1Run'
 
