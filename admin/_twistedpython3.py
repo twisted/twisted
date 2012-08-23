@@ -21,6 +21,7 @@ modules = [
     "twisted",
     "twisted.python",
     "twisted.python.compat",
+    "twisted.python.monkey",
     "twisted.test",
     ]
 
@@ -30,4 +31,5 @@ modules = [
 # lines in alphabetical sort.
 testModules = [
     "twisted.test.test_compat",
+    "twisted.test.test_monkey",
     ]

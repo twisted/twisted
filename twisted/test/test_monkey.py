@@ -5,7 +5,10 @@
 Tests for L{twisted.python.monkey}.
 """
 
-from twisted.trial import unittest
+from __future__ import division, absolute_import
+
+# Switch back to SynchronousTestCase as part of #5885:
+import unittest
 from twisted.python.monkey import MonkeyPatcher
 
 
@@ -14,6 +17,7 @@ class TestObj:
         self.foo = 'foo value'
         self.bar = 'bar value'
         self.baz = 'baz value'
+
 
 
 class MonkeyPatcherTest(unittest.TestCase):
