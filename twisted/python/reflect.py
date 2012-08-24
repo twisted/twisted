@@ -34,6 +34,7 @@ from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
 from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
 from twisted.python.versions import Version
 
+from twisted.python._reflectpy3 import prefixedMethods, accumulateMethods
 
 
 class Settable:
@@ -636,35 +637,6 @@ def addMethodNamesToDict(classObj, dict, prefix, baseClass=None):
                 dict[optName] = 1
 
 
-def prefixedMethods(obj, prefix=''):
-    """
-    A list of methods with a given prefix on a given instance.
-    """
-    dct = {}
-    accumulateMethods(obj, dct, prefix)
-    return dct.values()
-
-
-def accumulateMethods(obj, dict, prefix='', curClass=None):
-    """
-    accumulateMethods(instance, dict, prefix)
-    I recurse through the bases of instance.__class__, and add methods
-    beginning with 'prefix' to 'dict', in the form of
-    {'methodname':*instance*method_object}.
-    """
-    if not curClass:
-        curClass = obj.__class__
-    for base in curClass.__bases__:
-        accumulateMethods(obj, dict, prefix, base)
-
-    for name, method in curClass.__dict__.items():
-        optName = name[len(prefix):]
-        if ((type(method) is types.FunctionType)
-            and (name[:len(prefix)] == prefix)
-            and (len(optName))):
-            dict[optName] = getattr(obj, name)
-
-
 def accumulateClassDict(classObj, attr, adict, baseClass=None):
     """
     Accumulate all attributes of a given name in a class hierarchy into a single dictionary.
@@ -822,6 +794,7 @@ __all__ = [
     'namedModule', 'namedObject', 'namedClass', 'namedAny',
     'safe_repr', 'safe_str', 'allYourBase', 'accumulateBases',
     'prefixedMethodNames', 'addMethodNamesToDict', 'prefixedMethods',
+    'accumulateMethods',
     'accumulateClassDict', 'accumulateClassList', 'isSame', 'isLike',
     'modgrep', 'isOfType', 'findInstances', 'objgrep', 'filenameToModuleName',
     'fullyQualifiedName']

@@ -22,6 +22,7 @@ modules = [
     "twisted.python",
     "twisted.python.compat",
     "twisted.python.monkey",
+    "twisted.python._reflectpy3",
     "twisted.test",
     ]
 
@@ -30,6 +31,7 @@ modules = [
 # "twisted.python.test.test_versions". To reduce merge conflicts, add new
 # lines in alphabetical sort.
 testModules = [
+    "twisted.python.test.test_reflectpy3",
     "twisted.test.test_compat",
     "twisted.test.test_monkey",
     ]
