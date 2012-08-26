@@ -34,6 +34,7 @@ from twisted.internet.protocol import ServerFactory, ClientFactory, Protocol
 from twisted.internet.interfaces import (
     IPushProducer, IPullProducer, IHalfCloseableProtocol)
 from twisted.internet.tcp import Connection, Server, _resolveIPv6
+from twisted.internet.task import LoopingCall
 
 from twisted.internet.test.connectionmixins import (
     LogObserverMixin, ConnectionTestsMixin, TCPClientTestsMixin, findFreePort)
@@ -1826,6 +1827,12 @@ class ResumeThrowsClient(ProducerAbortingClient):
     Call abortConnection() and throw exception from resumeProducing().
     """
 
+    def connectionMade(self):
+        ProducerAbortingClient.connectionMade(self)
+        self._lc = LoopingCall(self.transport.write, "hello" * 64000)
+        self._lc.start(0.001)
+
+
     def resumeProducing(self):
         if not self.inRegisterProducer:
             self.transport.abortConnection()
@@ -1833,6 +1840,7 @@ class ResumeThrowsClient(ProducerAbortingClient):
 
 
     def connectionLost(self, reason):
+        self._lc.stop()
         # Base class assertion about stopProducing being called isn't valid;
         # if the we blew up in resumeProducing, consumers are justified in
         # giving up on the producer and not calling stopProducing.
