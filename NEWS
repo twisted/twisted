@@ -1,8 +1,8 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
-Twisted Core 12.2.0pre1 (2012-08-18)
-====================================
+Twisted Core 12.2.0 (2012-08-26)
+================================
 
 Features
 --------
@@ -70,8 +70,8 @@ Other
    #5830, #5857, #5858, #5859, #5869
 
 
-Twisted Conch 12.2.0pre1 (2012-08-18)
-=====================================
+Twisted Conch 12.2.0 (2012-08-26)
+=================================
 
 Features
 --------
@@ -93,14 +93,14 @@ Other
  - #5496, #5617, #5700, #5748, #5777
 
 
-Twisted Lore 12.2.0pre1 (2012-08-18)
-====================================
+Twisted Lore 12.2.0 (2012-08-26)
+================================
 
 No significant changes have been made for this release.
 
 
-Twisted Mail 12.2.0pre1 (2012-08-18)
-====================================
+Twisted Mail 12.2.0 (2012-08-26)
+================================
 
 Bugfixes
 --------
@@ -119,8 +119,8 @@ Other
  - #5697, #5750, #5751, #5783
 
 
-Twisted Names 12.2.0pre1 (2012-08-18)
-=====================================
+Twisted Names 12.2.0 (2012-08-26)
+=================================
 
 Features
 --------
@@ -132,26 +132,26 @@ Other
  - #5647
 
 
-Twisted News 12.2.0pre1 (2012-08-18)
-====================================
+Twisted News 12.2.0 (2012-08-26)
+================================
 
 No significant changes have been made for this release.
 
 
-Twisted Pair 12.2.0pre1 (2012-08-18)
-====================================
+Twisted Pair 12.2.0 (2012-08-26)
+================================
 
 No significant changes have been made for this release.
 
 
-Twisted Runner 12.2.0pre1 (2012-08-18)
-======================================
+Twisted Runner 12.2.0 (2012-08-26)
+==================================
 
 No significant changes have been made for this release.
 
 
-Twisted Web 12.2.0pre1 (2012-08-18)
-===================================
+Twisted Web 12.2.0 (2012-08-26)
+===============================
 
 Deprecations and Removals
 -------------------------
@@ -167,8 +167,8 @@ Other
  - #5665
 
 
-Twisted Words 12.2.0pre1 (2012-08-18)
-=====================================
+Twisted Words 12.2.0 (2012-08-26)
+=================================
 
 No significant changes have been made for this release.
 
