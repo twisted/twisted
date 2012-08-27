@@ -19,7 +19,7 @@ from twisted.python.filepath import FilePath
 from twisted.python.reflect import namedAny
 
 from twisted.python.test.modules_helpers import TwistedModulesTestCase
-from twisted.test.test_paths import zipit
+from twisted.python.test.test_zippath import zipit
 
 
 
