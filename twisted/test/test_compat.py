@@ -15,7 +15,8 @@ import tempfile, socket, sys
 import unittest
 
 from twisted.python.compat import set, frozenset, reduce, execfile, _PY3
-from twisted.python.compat import comparable, cmp
+from twisted.python.compat import comparable, cmp, nativeString
+from twisted.python.compat import unicode as unicodeCompat
 
 
 
@@ -397,3 +398,101 @@ class CmpTests(unittest.TestCase):
         """
         self.assertEqual(cmp(0.1, 2.3), -1)
         self.assertEqual(cmp(b"a", b"d"), -1)
+
+
+
+class StringTests(unittest.TestCase):
+    """
+    Compatability functions and types for strings.
+    """
+    # This can be deleted when we switch back to trial.  #5885.
+    def assertIsInstance(self, instance, classOrTuple, message=None):
+        """
+        Fail if C{instance} is not an instance of the given class or of
+        one of the given classes.
+
+        @param instance: the object to test the type (first argument of the
+            C{isinstance} call).
+        @type instance: any.
+        @param classOrTuple: the class or classes to test against (second
+            argument of the C{isinstance} call).
+        @type classOrTuple: class, type, or tuple.
+
+        @param message: Custom text to include in the exception text if the
+            assertion fails.
+        """
+        if not isinstance(instance, classOrTuple):
+            if message is None:
+                suffix = ""
+            else:
+                suffix = ": " + message
+            self.fail("%r is not an instance of %s%s" % (
+                    instance, classOrTuple, suffix))
+
+
+    def assertNativeString(self, original, expected):
+        """
+        Raise an exception indicating a failed test if the output of
+        C{nativeString(original)} is unequal to the expected string, or is not
+        a native string.
+        """
+        self.assertEqual(nativeString(original), expected)
+        self.assertIsInstance(nativeString(original), str)
+
+
+    def test_nonASCIIBytesToString(self):
+        """
+        C{nativeString} raises a C{UnicodeError} if input bytes are not ASCII
+        decodable.
+        """
+        self.assertRaises(UnicodeError, nativeString, b"\xFF")
+
+
+    def test_nonASCIIUnicodeToString(self):
+        """
+        C{nativeString} raises a C{UnicodeError} if input Unicode is not ASCII
+        encodable.
+        """
+        self.assertRaises(UnicodeError, nativeString, u"\u1234")
+
+
+    def test_bytesToString(self):
+        """
+        C{nativeString} converts bytes to the native string format, assuming
+        an ASCII encoding if applicable.
+        """
+        self.assertNativeString(b"hello", "hello")
+
+
+    def test_unicodeToString(self):
+        """
+        C{nativeString} converts unicode to the native string format, assuming
+        an ASCII encoding if applicable.
+        """
+        self.assertNativeString(u"Good day", "Good day")
+
+
+    def test_stringToString(self):
+        """
+        C{nativeString} leaves native strings as native strings.
+        """
+        self.assertNativeString("Hello!", "Hello!")
+
+
+    def test_unexpectedType(self):
+        """
+        C{nativeString} raises a C{TypeError} if given an object that is not a
+        string of some sort.
+        """
+        self.assertRaises(TypeError, nativeString, 1)
+
+
+    def test_unicode(self):
+        """
+        C{compat.unicode} is C{str} on Python 3, C{unicode} on Python 2.
+        """
+        if _PY3:
+            expected = str
+        else:
+            expected = unicode
+        self.assertTrue(unicodeCompat is expected)
