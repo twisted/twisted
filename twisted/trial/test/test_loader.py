@@ -498,12 +498,12 @@ class LoaderTest(packages.SysPathManglingTest):
         suite1 = self.loader.loadByNames(methods)
         suite2 = runner.TestSuite(map(self.loader.loadByName, methods))
         self.assertSuitesEqual(suite1, suite2)
-
+        
 
 
 class ZipLoadingTest(LoaderTest):
     def setUp(self):
-        from twisted.python.test.test_zippath import zipit
+        from twisted.test.test_paths import zipit
         LoaderTest.setUp(self)
         zipit(self.parent, self.parent+'.zip')
         self.parent += '.zip'

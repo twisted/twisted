@@ -10,9 +10,6 @@ features.
 
 This is mainly for use of internal Twisted code. We encourage you to use
 the latest version of Python directly from your code, if possible.
-
-@var unicode: The type of Unicode strings, C{unicode} on Python 2 and C{str}
-    on Python 3.
 """
 
 from __future__ import division
@@ -296,39 +293,6 @@ def comparable(klass):
 
 
 
-if _PY3:
-    unicode = str
-else:
-    unicode = unicode
-
-
-
-def nativeString(s):
-    """
-    Convert C{bytes} or C{unicode} to the native C{str} type, using ASCII
-    encoding if conversion is necessary.
-
-    @raise UnicodeError: The input string is not ASCII encodable/decodable.
-    @raise TypeError: The input is neither C{bytes} nor C{unicode}.
-    """
-    if not isinstance(s, (bytes, unicode)):
-        raise TypeError("%r is neither bytes nor unicode" % s)
-    if _PY3:
-        if isinstance(s, bytes):
-            return s.decode("ascii")
-        else:
-            # Ensure we're limited to ASCII subset:
-            s.encode("ascii")
-    else:
-        if isinstance(s, unicode):
-            return s.encode("ascii")
-        else:
-            # Ensure we're limited to ASCII subset:
-            s.decode("ascii")
-    return s
-
-
-
 __all__ = [
     "execfile",
     "frozenset",
@@ -336,6 +300,4 @@ __all__ = [
     "set",
     "cmp",
     "comparable",
-    "nativeString",
-    "unicode",
     ]

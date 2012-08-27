@@ -14,8 +14,6 @@ except ImportError:
     setgroups = getgroups = None
 from UserDict import UserDict
 
-from twisted.python._utilpy3 import FancyEqMixin
-
 
 class InsensitiveDict:
     """Dictionary, that has case-insensitive keys.
@@ -556,6 +554,26 @@ class FancyStrMixin:
         r.append('>')
         return ''.join(r)
     __repr__ = __str__
+
+
+
+class FancyEqMixin:
+    compareAttributes = ()
+    def __eq__(self, other):
+        if not self.compareAttributes:
+            return self is other
+        if isinstance(self, other.__class__):
+            return (
+                [getattr(self, name) for name in self.compareAttributes] ==
+                [getattr(other, name) for name in self.compareAttributes])
+        return NotImplemented
+
+
+    def __ne__(self, other):
+        result = self.__eq__(other)
+        if result is NotImplemented:
+            return result
+        return not result
 
 
 

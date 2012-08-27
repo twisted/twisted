@@ -6,13 +6,10 @@
 Object-oriented filesystem path representation.
 """
 
-from __future__ import division, absolute_import
-
 import os
 import errno
 import random
 import base64
-from hashlib import sha1
 
 from os.path import isabs, exists, normpath, abspath, splitext
 from os.path import basename, dirname
@@ -25,21 +22,21 @@ from stat import S_IRUSR, S_IWUSR, S_IXUSR
 from stat import S_IRGRP, S_IWGRP, S_IXGRP
 from stat import S_IROTH, S_IWOTH, S_IXOTH
 
-from zope.interface import Interface, Attribute, implementer
 
 # Please keep this as light as possible on other Twisted imports; many, many
 # things import this module, and it would be good if it could easily be
 # modified for inclusion in the standard library.  --glyph
 
-from twisted.python.compat import comparable, cmp, _PY3
 from twisted.python.runtime import platform
+from twisted.python.hashlib import sha1
 
 from twisted.python.win32 import ERROR_FILE_NOT_FOUND, ERROR_PATH_NOT_FOUND
 from twisted.python.win32 import ERROR_INVALID_NAME, ERROR_DIRECTORY, O_BINARY
 from twisted.python.win32 import WindowsError
 
-from twisted.python._utilpy3 import FancyEqMixin
+from twisted.python.util import FancyEqMixin
 
+from zope.interface import Interface, Attribute, implements
 
 _CREATE_FLAGS = (os.O_EXCL |
                  os.O_CREAT |
@@ -69,7 +66,7 @@ def _stub_urandom(n):
     @rtype: str
     """
     randomData = [random.randrange(256) for n in xrange(n)]
-    return b''.join(map(chr, randomData))
+    return ''.join(map(chr, randomData))
 
 
 def _stub_armor(s):
@@ -263,8 +260,6 @@ class _WindowsUnlistableError(UnlistableError, WindowsError):
 def _secureEnoughString():
     """
     Create a pseudorandom, 16-character string for use in secure filenames.
-
-    @rtype: C{bytes}
     """
     return armor(sha1(randomBytes(64)).digest())[:16]
 
@@ -319,7 +314,7 @@ class AbstractFilePath(object):
         """
         try:
             subnames = self.listdir()
-        except WindowsError as winErrObj:
+        except WindowsError, winErrObj:
             # WindowsError is an OSError subclass, so if not for this clause
             # the OSError clause below would be handling these.  Windows error
             # codes aren't the same as POSIX error codes, so we need to handle
@@ -349,7 +344,7 @@ class AbstractFilePath(object):
                                 ERROR_DIRECTORY):
                 raise
             raise _WindowsUnlistableError(winErrObj)
-        except OSError as ose:
+        except OSError, ose:
             if ose.errno not in (errno.ENOENT, errno.ENOTDIR):
                 # Other possible errors here, according to linux manpages:
                 # EACCES, EMIFLE, ENFILE, ENOMEM.  None of these seem like the
@@ -570,8 +565,6 @@ class Permissions(FancyEqMixin, object):
 
 
 
-@comparable
-@implementer(IFilePath)
 class FilePath(AbstractFilePath):
     """
     I am a path on the filesystem that only permits 'downwards' access.
@@ -596,13 +589,11 @@ class FilePath(AbstractFilePath):
     Greater-than-second precision is only available in Windows on Python2.5 and
     later.
 
-    On both Python 2 and Python 3, paths can only be bytes.
-
     @type alwaysCreate: C{bool}
     @ivar alwaysCreate: When opening this file, only succeed if the file does
         not already exist.
 
-    @type path: C{bytes}
+    @type path: C{str}
     @ivar path: The path from which 'downward' traversal is permitted.
 
     @ivar statinfo: The currently cached status information about the file on
@@ -620,10 +611,12 @@ class FilePath(AbstractFilePath):
     @type statinfo: C{int} or L{types.NoneType} or L{os.stat_result}
     """
 
+    implements(IFilePath)
+
     statinfo = None
     path = None
 
-    sep = slash.encode("ascii")
+    sep = slash
 
     def __init__(self, path, alwaysCreate=False):
         """
@@ -651,12 +644,12 @@ class FilePath(AbstractFilePath):
 
         @param path: The base name of the new L{FilePath}.  If this contains
             directory separators or parent references it will be rejected.
-        @type path: C{bytes}
+        @type path: C{str}
 
         @raise InsecurePath: If the result of combining this path with C{path}
             would result in a path which is not a direct child of this path.
         """
-        if platform.isWindows() and path.count(b":"):
+        if platform.isWindows() and path.count(":"):
             # Catch paths like C:blah that don't have a slash
             raise InsecurePath("%r contains a colon." % (path,))
         norm = normpath(path)
@@ -710,8 +703,8 @@ class FilePath(AbstractFilePath):
         for ext in exts:
             if not ext and self.exists():
                 return self
-            if ext == b'*':
-                basedot = basename(p) + b'.'
+            if ext == '*':
+                basedot = basename(p)+'.'
                 for fn in listdir(dirname(p)):
                     if fn.startswith(basedot):
                         return self.clonePath(joinpath(dirname(p), fn))
@@ -886,7 +879,7 @@ class FilePath(AbstractFilePath):
         @raise: NotImplementedError if the platform is Windows, since the
                 inode number would be a dummy value for all files in Windows
         @return: a number representing the file serial number
-        @rtype: C{int}
+        @rtype: C{long}
         @since: 11.0
         """
         if platform.isWindows():
@@ -896,7 +889,7 @@ class FilePath(AbstractFilePath):
         if not st:
             self.restat()
             st = self.statinfo
-        return st.st_ino
+        return long(st.st_ino)
 
 
     def getDevice(self):
@@ -909,7 +902,7 @@ class FilePath(AbstractFilePath):
                 device number would be 0 for all partitions on a Windows
                 platform
         @return: a number representing the device
-        @rtype: C{int}
+        @rtype: C{long}
         @since: 11.0
         """
         if platform.isWindows():
@@ -919,7 +912,7 @@ class FilePath(AbstractFilePath):
         if not st:
             self.restat()
             st = self.statinfo
-        return st.st_dev
+        return long(st.st_dev)
 
 
     def getNumberOfHardLinks(self):
@@ -944,7 +937,7 @@ class FilePath(AbstractFilePath):
         if not st:
             self.restat()
             st = self.statinfo
-        return st.st_nlink
+        return int(st.st_nlink)
 
 
     def getUserID(self):
@@ -964,7 +957,7 @@ class FilePath(AbstractFilePath):
         if not st:
             self.restat()
             st = self.statinfo
-        return st.st_uid
+        return int(st.st_uid)
 
 
     def getGroupID(self):
@@ -984,7 +977,7 @@ class FilePath(AbstractFilePath):
         if not st:
             self.restat()
             st = self.statinfo
-        return st.st_gid
+        return int(st.st_gid)
 
 
     def getPermissions(self):
@@ -1105,7 +1098,7 @@ class FilePath(AbstractFilePath):
         """
         List the base names of the direct children of this L{FilePath}.
 
-        @return: a C{list} of C{bytes} giving the names of the contents of the
+        @return: a C{list} of C{str} giving the names of the contents of the
             directory this L{FilePath} refers to.  These names are relative to
             this L{FilePath}.
 
@@ -1173,7 +1166,7 @@ class FilePath(AbstractFilePath):
         pattern.
         """
         import glob
-        path = self.path[-1] == b'/' and self.path + pattern or self.sep.join([self.path, pattern])
+        path = self.path[-1] == '/' and self.path + pattern or self.sep.join([self.path, pattern])
         return map(self.clonePath, glob.glob(path))
 
 
@@ -1181,7 +1174,7 @@ class FilePath(AbstractFilePath):
         """
         @return: The final component of the L{FilePath}'s path (Everything after
             the final path separator).
-        @rtype: C{bytes}
+        @rtype: C{str}
         """
         return basename(self.path)
 
@@ -1190,7 +1183,7 @@ class FilePath(AbstractFilePath):
         """
         @return: All of the components of the L{FilePath}'s path except the last
             one (everything up to the final path separator).
-        @rtype: C{bytes}
+        @rtype: C{str}
         """
         return dirname(self.path)
 
@@ -1203,7 +1196,7 @@ class FilePath(AbstractFilePath):
         return self.clonePath(self.dirname())
 
 
-    def setContent(self, content, ext=b'.new'):
+    def setContent(self, content, ext='.new'):
         """
         Replace the file at this path with a new file that contains the given
         bytes, trying to avoid data-loss in the meanwhile.
@@ -1241,14 +1234,14 @@ class FilePath(AbstractFilePath):
 
         @param content: The desired contents of the file at this path.
 
-        @type content: L{bytes}
+        @type content: L{str}
 
         @param ext: An extension to append to the temporary filename used to
             store the bytes while they are being written.  This can be used to
             make sure that temporary files can be identified by their suffix,
             for cleanup in case of crashes.
 
-        @type ext: C{bytes}
+        @type ext: C{str}
         """
         sib = self.temporarySibling(ext)
         f = sib.open('w')
@@ -1295,7 +1288,7 @@ class FilePath(AbstractFilePath):
         return os.fdopen(fdint, 'w+b')
 
 
-    def temporarySibling(self, extension=b""):
+    def temporarySibling(self, extension=""):
         """
         Construct a path referring to a sibling of this path.
 
@@ -1308,7 +1301,7 @@ class FilePath(AbstractFilePath):
             that if you want an extension with a '.' you must include the '.'
             yourself.)
 
-        @type extension: C{bytes}
+        @type extension: C{str}
 
         @return: a path object with the given extension suffix, C{alwaysCreate}
             set to True.
@@ -1421,7 +1414,7 @@ class FilePath(AbstractFilePath):
         """
         try:
             os.rename(self.path, destination.path)
-        except OSError as ose:
+        except OSError, ose:
             if ose.errno == errno.EXDEV:
                 # man 2 rename, ubuntu linux 5.10 "breezy":
 
