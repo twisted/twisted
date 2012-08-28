@@ -19,6 +19,7 @@ from twisted.conch.ssh import keys
 from twisted.python import filepath, log, usage, randbytes
 
 
+
 class GeneralOptions(usage.Options):
     synopsis = """Usage:    ckeygen [options]
  """
@@ -39,6 +40,8 @@ class GeneralOptions(usage.Options):
 
     compData = usage.Completions(
         optActions={"type": usage.CompleteList(["rsa", "dsa"])})
+
+
 
 def run():
     options = GeneralOptions()
@@ -67,6 +70,8 @@ def run():
         options.opt_help()
         sys.exit(1)
 
+
+
 def handleError():
     from twisted.python import failure
     global exitStatus
@@ -75,17 +80,22 @@ def handleError():
     reactor.stop()
     raise
 
+
+
 def generateRSAkey(options):
     from Crypto.PublicKey import RSA
     print 'Generating public/private rsa key pair.'
     key = RSA.generate(int(options['bits']), randbytes.secureRandom)
     _saveKey(key, options)
 
+
+
 def generateDSAkey(options):
     from Crypto.PublicKey import DSA
     print 'Generating public/private dsa key pair.'
     key = DSA.generate(int(options['bits']), randbytes.secureRandom)
     _saveKey(key, options)
+
 
 
 def printFingerprint(options):
@@ -104,6 +114,7 @@ def printFingerprint(options):
             os.path.basename(options['filename']))
     except:
         sys.exit('bad key')
+
 
 
 def changePassPhrase(options):
@@ -133,21 +144,20 @@ def changePassPhrase(options):
     print 'Your identification has been saved with the new passphrase.'
 
 
+
 def displayPublicKey(options):
     if not options['filename']:
         filename = os.path.expanduser('~/.ssh/id_rsa')
         options['filename'] = raw_input('Enter file in which the key is (%s): ' % filename)
     try:
         key = keys.Key.fromFile(options['filename']).keyObject
-    except keys.BadKeyError, e:
-        if e.args[0] != 'encrypted key with no passphrase':
-            raise
-        else:
-            if not options['pass']:
-                options['pass'] = getpass.getpass('Enter passphrase: ')
-            key = keys.Key.fromFile(
-                options['filename'], passphrase = options['pass']).keyObject
-    print keys.Key(key).public().toString()
+    except keys.EncryptedKeyError, e:
+        if not options.get('pass'):
+            options['pass'] = getpass.getpass('Enter passphrase: ')
+        key = keys.Key.fromFile(
+            options['filename'], passphrase = options['pass']).keyObject
+    print keys.Key(key).public().toString('openssh')
+
 
 
 def _saveKey(key, options):
@@ -185,6 +195,7 @@ def _saveKey(key, options):
     print 'The key fingerprint is:'
     print keyObj.fingerprint()
 
+
+
 if __name__ == '__main__':
     run()
-

@@ -5,6 +5,7 @@
 Tests for L{twisted.conch.scripts.ckeygen}.
 """
 
+import getpass
 import sys
 from StringIO import StringIO
 
@@ -14,12 +15,14 @@ try:
 except ImportError:
     skip = "PyCrypto and pyasn1 required for twisted.conch.scripts.ckeygen."
 else:
-    from twisted.conch.ssh.keys import Key
-    from twisted.conch.scripts.ckeygen import printFingerprint, _saveKey
+    from twisted.conch.ssh.keys import Key, BadKeyError
+    from twisted.conch.scripts.ckeygen import (
+        displayPublicKey, printFingerprint, _saveKey)
 
 from twisted.python.filepath import FilePath
 from twisted.trial.unittest import TestCase
-from twisted.conch.test.keydata import publicRSA_openssh, privateRSA_openssh
+from twisted.conch.test.keydata import (
+    publicRSA_openssh, privateRSA_openssh, privateRSA_openssh_encrypted)
 
 
 
@@ -78,3 +81,54 @@ class KeyGenTests(TestCase):
             Key.fromString(base.child('id_rsa.pub').getContent()),
             key.public())
 
+
+    def test_displayPublicKey(self):
+        """
+        L{displayPublicKey} prints out the public key associated with a given
+        private key.
+        """
+        filename = self.mktemp()
+        FilePath(filename).setContent(privateRSA_openssh)
+        displayPublicKey({'filename': filename})
+        self.assertEqual(
+            self.stdout.getvalue().strip('\n'),
+            publicRSA_openssh.strip(' comment'))
+
+
+    def test_displayPublicKeyEncrypted(self):
+        """
+        L{displayPublicKey} prints out the public key associated with a given
+        private key using the given passphrase when it's encrypted.
+        """
+        filename = self.mktemp()
+        FilePath(filename).setContent(privateRSA_openssh_encrypted)
+        displayPublicKey({'filename': filename, 'pass': 'encrypted'})
+        self.assertEqual(
+            self.stdout.getvalue().strip('\n'),
+            publicRSA_openssh.strip(' comment'))
+
+
+    def test_displayPublicKeyEncryptedPassphrasePrompt(self):
+        """
+        L{displayPublicKey} prints out the public key associated with a given
+        private key, asking for the passphrase when it's encrypted.
+        """
+        filename = self.mktemp()
+        FilePath(filename).setContent(privateRSA_openssh_encrypted)
+        self.patch(getpass, 'getpass', lambda x: 'encrypted')
+        displayPublicKey({'filename': filename})
+        self.assertEqual(
+            self.stdout.getvalue().strip('\n'),
+            publicRSA_openssh.strip(' comment'))
+
+
+    def test_displayPublicKeyWrongPassphrase(self):
+        """
+        L{displayPublicKey} fails with a L{BadKeyError} when trying to decrypt
+        an encrypted key with the wrong password.
+        """
+        filename = self.mktemp()
+        FilePath(filename).setContent(privateRSA_openssh_encrypted)
+        self.assertRaises(
+            BadKeyError, displayPublicKey,
+            {'filename': filename, 'pass': 'wrong'})
