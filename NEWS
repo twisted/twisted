@@ -7,6 +7,8 @@ Twisted Core 12.2.0 (2012-08-26)
 Starting with the release after 12.2, Twisted will begin requiring
 zope.interface 3.6 (as part of Python 3 support).
 
+This is the last Twisted release supporting Python 2.6 on Windows.
+
 Features
 --------
  - twisted.protocols.sip.MessageParser now handles multiline headers.
