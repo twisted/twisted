@@ -6,9 +6,9 @@
 Tests for L{twisted.python.compat}.
 """
 
-from __future__ import division
+from __future__ import division, absolute_import
 
-import tempfile, socket, sys
+import tempfile, socket, sys, traceback
 
 # We will replace stdlib TestCase with SynchronousTestCase as part of ticket
 # #5885:
@@ -17,7 +17,7 @@ import unittest
 from twisted.python.compat import set, frozenset, reduce, execfile, _PY3
 from twisted.python.compat import comparable, cmp, nativeString
 from twisted.python.compat import unicode as unicodeCompat
-
+from twisted.python.compat import reraise
 
 
 class CompatTestCase(unittest.TestCase):
@@ -496,3 +496,51 @@ class StringTests(unittest.TestCase):
         else:
             expected = unicode
         self.assertTrue(unicodeCompat is expected)
+
+
+
+class ReraiseTests(unittest.TestCase):
+    """
+    L{reraise} re-raises exceptions on both Python 2 and Python 3.
+    """
+
+    def test_reraiseWithNone(self):
+        """
+        Calling L{reraise} with an exception instance and a traceback of
+        C{None} re-raises it with a new traceback.
+        """
+        try:
+            1/0
+        except:
+            typ, value, tb = sys.exc_info()
+        try:
+            reraise(value, None)
+        except:
+            typ2, value2, tb2 = sys.exc_info()
+            self.assertEqual(typ2, ZeroDivisionError)
+            self.assertTrue(value is value2)
+            self.assertNotEqual(traceback.format_tb(tb)[-1],
+                                traceback.format_tb(tb2)[-1])
+        else:
+            self.fail("The exception was not raised.")
+
+
+    def test_reraiseWithTraceback(self):
+        """
+        Calling L{reraise} with an exception instance and a traceback
+        re-raises the exception with the given traceback.
+        """
+        try:
+            1/0
+        except:
+            typ, value, tb = sys.exc_info()
+        try:
+            reraise(value, tb)
+        except:
+            typ2, value2, tb2 = sys.exc_info()
+            self.assertEqual(typ2, ZeroDivisionError)
+            self.assertTrue(value is value2)
+            self.assertEqual(traceback.format_tb(tb)[-1],
+                             traceback.format_tb(tb2)[-1])
+        else:
+            self.fail("The exception was not raised.")

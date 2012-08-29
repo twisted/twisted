@@ -329,7 +329,28 @@ def nativeString(s):
 
 
 
+if _PY3:
+    def reraise(exception, traceback):
+        raise exception.with_traceback(traceback)
+else:
+    exec("""def reraise(exception, traceback):
+        raise exception.__class__, exception, traceback""")
+
+reraise.__doc__ = """
+Re-raise an exception, with an optional traceback, in a way that is compatible
+with both Python 2 and Python 3.
+
+Note that on Python 3, re-raised exceptions will be mutated, with their
+C{__traceback__} attribute being set.
+
+@param exception: The exception instance.
+@param traceback: The traceback to use, or C{None} indicating a new traceback.
+"""
+
+
+
 __all__ = [
+    "reraise",
     "execfile",
     "frozenset",
     "reduce",

@@ -8,10 +8,13 @@ Python 3.
 
 from __future__ import division, absolute_import
 
+import os
+
 # Switch to SynchronousTestCase as part of #5885:
 from unittest import TestCase
 
 from twisted.python._reflectpy3 import accumulateMethods, prefixedMethods
+from twisted.python import _reflectpy3 as reflect
 
 
 class Base(object):
@@ -116,3 +119,256 @@ class PrefixedMethodsTests(TestCase):
         x = Separate()
         output = prefixedMethods(x, 'good_')
         self.assertEqual([x.good_method], output)
+
+
+
+class Summer(object):
+    """
+    A class we look up as part of the LookupsTestCase.
+    """
+    def reallySet(self):
+        """
+        Do something.
+        """
+
+
+
+class LookupsTestCase(TestCase):
+    """
+    Tests for L{namedClass}, L{namedModule}, and L{namedAny}.
+    """
+
+    # Remove as part of  #5885:
+    def assertIdentical(self, a, b):
+        """
+        Assert that the two given parameters are the same object.
+        """
+        self.assertTrue(a is b)
+
+
+    # Remove as part of  #5885:
+    def assertRaises(self, exception, f, *args, **kwargs):
+        """
+        Fail the test unless calling the function C{f} with the given
+        C{args} and C{kwargs} raises C{exception}. The failure will report
+        the traceback and call stack of the unexpected exception.
+
+        @param exception: exception type that is to be expected
+        @param f: the function to call
+
+        @return: The raised exception instance, if it is of the given type.
+        @raise self.failureException: Raised if the function call does
+            not raise an exception or if it raises an exception of a
+            different type.
+        """
+        import sys
+        try:
+            result = f(*args, **kwargs)
+        except exception as inst:
+            return inst
+        except:
+            raise self.failureException('%s raised instead of %s'
+                                        % (sys.exc_info()[0],
+                                           exception.__name__))
+        else:
+            raise self.failureException('%s not raised (%r returned)'
+                                        % (exception.__name__, result))
+
+
+    def test_namedClassLookup(self):
+        """
+        L{namedClass} should return the class object for the name it is passed.
+        """
+        self.assertIdentical(
+            reflect.namedClass("twisted.python.test.test_reflectpy3.Summer"),
+            Summer)
+
+
+    def test_namedModuleLookup(self):
+        """
+        L{namedModule} should return the module object for the name it is
+        passed.
+        """
+        from twisted.python import monkey
+        self.assertIdentical(
+            reflect.namedModule("twisted.python.monkey"), monkey)
+
+
+    def test_namedAnyPackageLookup(self):
+        """
+        L{namedAny} should return the package object for the name it is passed.
+        """
+        import twisted.python
+        self.assertIdentical(
+            reflect.namedAny("twisted.python"), twisted.python)
+
+    def test_namedAnyModuleLookup(self):
+        """
+        L{namedAny} should return the module object for the name it is passed.
+        """
+        from twisted.python import monkey
+        self.assertIdentical(
+            reflect.namedAny("twisted.python.monkey"), monkey)
+
+
+    def test_namedAnyClassLookup(self):
+        """
+        L{namedAny} should return the class object for the name it is passed.
+        """
+        self.assertIdentical(
+            reflect.namedAny("twisted.python.test.test_reflectpy3.Summer"), Summer)
+
+
+    def test_namedAnyAttributeLookup(self):
+        """
+        L{namedAny} should return the object an attribute of a non-module,
+        non-package object is bound to for the name it is passed.
+        """
+        # Note - not assertEqual because unbound method lookup creates a new
+        # object every time.  This is a foolishness of Python's object
+        # implementation, not a bug in Twisted.
+        self.assertEqual(
+            reflect.namedAny("twisted.python.test.test_reflectpy3.Summer.reallySet"),
+            Summer.reallySet)
+
+
+    def test_namedAnySecondAttributeLookup(self):
+        """
+        L{namedAny} should return the object an attribute of an object which
+        itself was an attribute of a non-module, non-package object is bound to
+        for the name it is passed.
+        """
+        self.assertIdentical(
+            reflect.namedAny(
+                "twisted.python.test.test_reflectpy3.Summer.reallySet.__doc__"),
+            Summer.reallySet.__doc__)
+
+
+    def test_importExceptions(self):
+        """
+        Exceptions raised by modules which L{namedAny} causes to be imported
+        should pass through L{namedAny} to the caller.
+        """
+        self.assertRaises(
+            ZeroDivisionError,
+            reflect.namedAny, "twisted.test.reflect_helper_ZDE")
+        # Make sure that this behavior is *consistent* for 2.3, where there is
+        # no post-failed-import cleanup
+        self.assertRaises(
+            ZeroDivisionError,
+            reflect.namedAny, "twisted.test.reflect_helper_ZDE")
+        self.assertRaises(
+            ValueError,
+            reflect.namedAny, "twisted.test.reflect_helper_VE")
+        # Modules which themselves raise ImportError when imported should result in an ImportError
+        self.assertRaises(
+            ImportError,
+            reflect.namedAny, "twisted.test.reflect_helper_IE")
+
+
+    def test_attributeExceptions(self):
+        """
+        If segments on the end of a fully-qualified Python name represents
+        attributes which aren't actually present on the object represented by
+        the earlier segments, L{namedAny} should raise an L{AttributeError}.
+        """
+        self.assertRaises(
+            AttributeError,
+            reflect.namedAny, "twisted.nosuchmoduleintheworld")
+        # ImportError behaves somewhat differently between "import
+        # extant.nonextant" and "import extant.nonextant.nonextant", so test
+        # the latter as well.
+        self.assertRaises(
+            AttributeError,
+            reflect.namedAny, "twisted.nosuch.modulein.theworld")
+        self.assertRaises(
+            AttributeError,
+            reflect.namedAny,
+            "twisted.python.test.test_reflectpy3.Summer.nosuchattribute")
+
+
+    def test_invalidNames(self):
+        """
+        Passing a name which isn't a fully-qualified Python name to L{namedAny}
+        should result in one of the following exceptions:
+        - L{InvalidName}: the name is not a dot-separated list of Python objects
+        - L{ObjectNotFound}: the object doesn't exist
+        - L{ModuleNotFound}: the object doesn't exist and there is only one
+          component in the name
+        """
+        err = self.assertRaises(reflect.ModuleNotFound, reflect.namedAny,
+                                'nosuchmoduleintheworld')
+        self.assertEqual(str(err), "No module named 'nosuchmoduleintheworld'")
+
+        # This is a dot-separated list, but it isn't valid!
+        err = self.assertRaises(reflect.ObjectNotFound, reflect.namedAny,
+                                "@#$@(#.!@(#!@#")
+        self.assertEqual(str(err), "'@#$@(#.!@(#!@#' does not name an object")
+
+        err = self.assertRaises(reflect.ObjectNotFound, reflect.namedAny,
+                                "tcelfer.nohtyp.detsiwt")
+        self.assertEqual(
+            str(err),
+            "'tcelfer.nohtyp.detsiwt' does not name an object")
+
+        err = self.assertRaises(reflect.InvalidName, reflect.namedAny, '')
+        self.assertEqual(str(err), 'Empty module name')
+
+        for invalidName in ['.twisted', 'twisted.', 'twisted..python']:
+            err = self.assertRaises(
+                reflect.InvalidName, reflect.namedAny, invalidName)
+            self.assertEqual(
+                str(err),
+                "name must be a string giving a '.'-separated list of Python "
+                "identifiers, not %r" % (invalidName,))
+
+
+
+class FilenameToModule(TestCase):
+    """
+    Test L{filenameToModuleName} detection.
+    """
+
+    # Switch to using self.mktemp() as part of #5885, if we can figure out
+    # bytes vs. unicode:
+    def setUp(self):
+        import tempfile
+        self.path = os.path.join(tempfile.mktemp(), "fakepackage", "test")
+        os.makedirs(self.path)
+        with open(os.path.join(self.path, "__init__.py"), "w") as f:
+            f.write("")
+        with open(os.path.join(os.path.dirname(self.path), "__init__.py"),
+                  "w") as f:
+            f.write("")
+
+
+    def test_directory(self):
+        """
+        L{filenameToModuleName} returns the correct module (a package) given a
+        directory.
+        """
+        module = reflect.filenameToModuleName(self.path)
+        self.assertEqual(module, 'fakepackage.test')
+        module = reflect.filenameToModuleName(self.path + os.path.sep)
+        self.assertEqual(module, 'fakepackage.test')
+
+
+    def test_file(self):
+        """
+        L{filenameToModuleName} returns the correct module given the path to
+        its file.
+        """
+        module = reflect.filenameToModuleName(
+            os.path.join(self.path, 'test_reflect.py'))
+        self.assertEqual(module, 'fakepackage.test.test_reflect')
+
+
+    def test_bytes(self):
+        """
+        L{filenameToModuleName} returns the correct module given a C{bytes}
+        path to its file.
+        """
+        module = reflect.filenameToModuleName(
+            os.path.join(self.path.encode("utf-8"), b'test_reflect.py'))
+        # Module names are always native string:
+        self.assertEqual(module, 'fakepackage.test.test_reflect')
