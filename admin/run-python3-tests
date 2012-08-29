@@ -13,6 +13,10 @@ import sys, os, unittest
 twistedPath = os.path.abspath(os.path.dirname(os.path.dirname(sys.argv[0])))
 sys.path.insert(0, twistedPath)
 
-from _twistedpython3 import testModules
+if sys.argv[1:]:
+    testModules = sys.argv[1:]
+else:
+    from _twistedpython3 import testModules
+
 unittest.main(module=None, argv=["run-python3-tests", "-v"] + testModules)
 

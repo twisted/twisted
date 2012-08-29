@@ -27,6 +27,7 @@ modules = [
     # filepaths depends on twisted.python.win32 and twisted.python.runtime,
     # which haven't yet been ported, but work well enough to be imported:
     "twisted.python.filepath",
+    "twisted.python.versions",
     "twisted.test",
     ]
 
@@ -37,6 +38,7 @@ modules = [
 testModules = [
     "twisted.python.test.test_reflectpy3",
     "twisted.python.test.test_utilpy3",
+    "twisted.python.test.test_versions",
     "twisted.test.test_compat",
     "twisted.test.test_monkey",
     "twisted.test.test_paths",
