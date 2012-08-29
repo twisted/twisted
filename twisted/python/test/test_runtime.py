@@ -5,10 +5,19 @@
 Tests for runtime checks.
 """
 
+from __future__ import division, absolute_import
+
 import sys
 
+from unittest import TestCase
+
 from twisted.python.runtime import Platform, shortPythonVersion
-from twisted.trial.unittest import TestCase
+## from twisted.trial.unittest import TestCase
+
+# TODO: Once trial is ported to Python 3.x these tests should start using it
+# again. Until then, use the standard Python unittesting framework.  To do
+# this, uncomment the line above that imports TestCase from trial, and delete
+# the line that imports TestCase from unittest (as part of ticket #5885).
 
 
 
@@ -62,6 +71,34 @@ class PlatformTests(TestCase):
         platform = Platform()
         if platform.isLinux():
             self.assertTrue(sys.platform.startswith("linux"))
+
+
+    def test_isWinNT(self):
+        """
+        L{Platform.isWinNT} can return only C{0} or C{1} and can not return C{1}
+        if L{Platform.getType} is not C{"win32"}.
+        """
+        platform = Platform()
+        isWinNT = platform.isWinNT()
+        self.assertTrue(isWinNT in (0, 1))
+        if platform.getType() != "win32":
+            self.assertEqual(isWinNT, 0)
+
+
+    def test_supportsThreads(self):
+        """
+        L{Platform.supportsThreads} returns C{True} if threads can be created in
+        this runtime, C{False} otherwise.
+        """
+        # It's difficult to test both cases of this without faking the threading
+        # module.  Perhaps an adequate test is to just test the behavior with
+        # the current runtime, whatever that happens to be.
+        try:
+            import threading
+        except ImportError:
+            self.assertFalse(Platform().supportsThreads())
+        else:
+            self.assertTrue(Platform().supportsThreads())
 
 
 

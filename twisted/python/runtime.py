@@ -2,12 +2,22 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import division, absolute_import
 
 # System imports
 import os
 import sys
 import time
 import imp
+
+from twisted.python import compat
+
+if compat._PY3:
+    _winregModule = "winreg"
+    _threadModule = "_thread"
+else:
+    _winregModule = "_winreg"
+    _threadModule = "thread"
 
 
 
@@ -73,12 +83,12 @@ class Platform:
     def isWinNT(self):
         """Are we running in Windows NT?"""
         if self.getType() == 'win32':
-            import _winreg
+            winreg = __import__(_winregModule)
             try:
-                k = _winreg.OpenKeyEx(
-                        _winreg.HKEY_LOCAL_MACHINE,
+                k = winreg.OpenKeyEx(
+                        winreg.HKEY_LOCAL_MACHINE,
                         r'Software\Microsoft\Windows NT\CurrentVersion')
-                _winreg.QueryValueEx(k, 'SystemRoot')
+                winreg.QueryValueEx(k, 'SystemRoot')
                 return 1
             except WindowsError:
                 return 0
@@ -117,7 +127,7 @@ class Platform:
         """Can threads be created?
         """
         try:
-            return imp.find_module('thread')[0] is None
+            return imp.find_module(_threadModule)[0] is None
         except ImportError:
             return False
 

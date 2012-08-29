@@ -24,10 +24,11 @@ modules = [
     "twisted.python.monkey",
     "twisted.python._reflectpy3",
     "twisted.python._utilpy3",
-    # filepaths depends on twisted.python.win32 and twisted.python.runtime,
-    # which haven't yet been ported, but work well enough to be imported:
+    # filepaths depends on twisted.python.win32 which hasn't yet been ported,
+    # but works well enough to be imported:
     "twisted.python.filepath",
     "twisted.python.versions",
+    "twisted.python.runtime",
     "twisted.test",
     ]
 
@@ -37,6 +38,7 @@ modules = [
 # lines in alphabetical sort.
 testModules = [
     "twisted.python.test.test_reflectpy3",
+    "twisted.python.test.test_runtime",
     "twisted.python.test.test_utilpy3",
     "twisted.python.test.test_versions",
     "twisted.test.test_compat",
