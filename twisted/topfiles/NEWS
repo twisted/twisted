@@ -17,7 +17,7 @@ Features
    error. (#4913)
  - twisted.internet.interfaces.IReactorSocket.adoptStreamConnection is
    implemented by some reactors as a way to add an existing
-   established connectiong to them. (#5570)
+   established connection to them. (#5570)
  - twisted.internet.endpoints now provides TCP6ServerEndpoint, an IPv6
    TCP server endpoint. (#5694)
  - twisted.internet.endpoints now provides TCP6ClientEndpoint, an IPv6
@@ -1125,7 +1125,7 @@ Features
 Fixes
 -----
  - TLS Session Tickets are now disabled by default, allowing connections to
-   certain servers which hang when an empty session ticket is received (like 
+   certain servers which hang when an empty session ticket is received (like
    GTalk) (#3463)
  - twisted.enterprise.adbapi.ConnectionPool's noisy attribute now defaults to
    False, as documented (#1806)
@@ -1579,7 +1579,7 @@ Features
 Fixes
 -----
 
- - Many trial fixes, as usual 
+ - Many trial fixes, as usual
  - All API documentation is now correctly formatted as epytext (#1545)
  - twisted.python.filepath.FilePath.__repr__ is safer.
  - Fix trial's "until-failure" mode. (#1453)
@@ -1670,7 +1670,7 @@ Fixes
 -----
  - FTP client and server improvements
  - Trial improvements: The code is now much simpler, and more stable.
- - twisted.protocols.basic.FileSender now works with empty files 
+ - twisted.protocols.basic.FileSender now works with empty files
  - Twisted should now be much more usable on Pythons without thread support.
  - minor improvements to process code in win32eventreactor
  - twistd -y (--python) now implies -o (--nosave). [539]
@@ -1751,7 +1751,7 @@ Miscellaneous features/fixes
 
  - More correct daemonization in twistd.
  - twisted.python.log: do not close the log because of invalid format string.
- - Disabled automatic import of cBanana. 
+ - Disabled automatic import of cBanana.
  - Boolean support for twisted.persisted.marmalade.
  - Refactor of plugin and application HOWTO documentation
  - Async HOWTO expanded greatly.

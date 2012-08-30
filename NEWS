@@ -22,7 +22,7 @@ Features
    error. (#4913)
  - twisted.internet.interfaces.IReactorSocket.adoptStreamConnection is
    implemented by some reactors as a way to add an existing
-   established connectiong to them. (#5570)
+   established connection to them. (#5570)
  - twisted.internet.endpoints now provides TCP6ServerEndpoint, an IPv6
    TCP server endpoint. (#5694)
  - twisted.internet.endpoints now provides TCP6ClientEndpoint, an IPv6
