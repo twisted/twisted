@@ -46,11 +46,11 @@ Improved Documentation
 
 Deprecations and Removals
 -------------------------
+ - Python 2.5 is no longer supported. (#5553)
  - The --extra option of trial, deprecated since 11.0, is removed now.
    (#3374)
  - addPluginDir and getPluginDirs in twisted.python.util are
    deprecated now. (#4533)
- - Python 2.5 is no longer supported. (#5553)
  - twisted.trial.runner.DocTestCase, deprecated in Twisted 8.0, has
    been removed. (#5554)
  - startKeepingErrors, flushErrors, ignoreErrors, and clearIgnores in
