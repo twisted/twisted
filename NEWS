@@ -45,10 +45,6 @@ Bugfixes
    >= 0.10) now provides the interfaces already provided by the
    underlying transport. (#5182)
 
-Improved Documentation
-----------------------
- -  (#5632)
-
 Deprecations and Removals
 -------------------------
  - Python 2.5 is no longer supported. (#5553)
@@ -72,7 +68,7 @@ Other
  - #4244, #4532, #4930, #4999, #5129, #5138, #5385, #5521, #5655,
    #5674, #5679, #5687, #5688, #5689, #5692, #5707, #5734, #5736,
    #5745, #5746, #5747, #5749, #5784, #5816, #5817, #5818, #5819,
-   #5830, #5857, #5858, #5859, #5869
+   #5830, #5857, #5858, #5859, #5869, #5632
 
 
 Twisted Conch 12.2.0 (2012-08-26)
