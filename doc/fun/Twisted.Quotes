@@ -1,0 +1,13 @@
+<exarkun> urls don't need to be edited.  they're inserted or deleted, not edited.
+<exarkun> so we should just put long ones in as is
+<exarkun> or, clearly, we could replace them with CID scheme URLs.
+<glyph> exarkun: I look forward to the policy document explaining how to integrate multipart MIME into docstrings
+<exarkun> glyph: no no, we should replace the download tarball with a multipart mime document
+<exarkun> it would be _ridiculous_ to make each docstring into a multipart document
+<exarkun> although that might be a good approach to localization
+%
+<PenguinOfDoom> yeah twisted should get on with the times
+<PenguinOfDoom> the rest of the world has been writing unicode to sockets for years!
+%
+<PenguinOfDoom> If I were the king of a private island, I'd declare my timezone to be UTC+pi and send a postcard to pytz maintainers with the word "checkmate" on it
+%
