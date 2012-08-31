@@ -15,6 +15,11 @@ from unittest import TestCase
 
 from twisted.python._reflectpy3 import accumulateMethods, prefixedMethods
 from twisted.python import _reflectpy3 as reflect
+# After twisted.python.reflect is fully ported to Python 3, import
+# fullyQualifiedName from there instead, to test the actual public interface
+# instead of this implementation detail.  See #5929.
+from twisted.python._deprecatepy3 import (
+    _fullyQualifiedName as fullyQualifiedName)
 
 
 class Base(object):
@@ -372,3 +377,73 @@ class FilenameToModule(TestCase):
             os.path.join(self.path.encode("utf-8"), b'test_reflect.py'))
         # Module names are always native string:
         self.assertEqual(module, 'fakepackage.test.test_reflect')
+
+
+
+class FullyQualifiedNameTests(TestCase):
+    """
+    Test for L{fullyQualifiedName}.
+    """
+
+    def _checkFullyQualifiedName(self, obj, expected):
+        """
+        Helper to check that fully qualified name of C{obj} results to
+        C{expected}.
+        """
+        self.assertEqual(fullyQualifiedName(obj), expected)
+
+
+    def test_package(self):
+        """
+        L{fullyQualifiedName} returns the full name of a package and a
+        subpackage.
+        """
+        import twisted
+        self._checkFullyQualifiedName(twisted, 'twisted')
+        import twisted.python
+        self._checkFullyQualifiedName(twisted.python, 'twisted.python')
+
+
+    def test_module(self):
+        """
+        L{fullyQualifiedName} returns the name of a module inside a a package.
+        """
+        import twisted.python.compat
+        self._checkFullyQualifiedName(
+            twisted.python.compat,'twisted.python.compat')
+
+
+    def test_class(self):
+        """
+        L{fullyQualifiedName} returns the name of a class and its module.
+        """
+        self._checkFullyQualifiedName(
+            FullyQualifiedNameTests, '%s.FullyQualifiedNameTests' % (__name__,))
+
+
+    def test_function(self):
+        """
+        L{fullyQualifiedName} returns the name of a function inside its module.
+        """
+        self._checkFullyQualifiedName(
+            fullyQualifiedName, "twisted.python.reflect.fullyQualifiedName")
+
+
+    def test_boundMethod(self):
+        """
+        L{fullyQualifiedName} returns the name of a bound method inside its
+        class and its module.
+        """
+        self._checkFullyQualifiedName(
+            self.test_boundMethod,
+            "%s.%s.test_boundMethod" % (__name__, self.__class__.__name__))
+
+
+    def test_unboundMethod(self):
+        """
+        L{fullyQualifiedName} returns the name of an unbound method inside its
+        class and its module.
+        """
+        self._checkFullyQualifiedName(
+            self.__class__.test_unboundMethod,
+            "%s.%s.test_unboundMethod" % (__name__, self.__class__.__name__))

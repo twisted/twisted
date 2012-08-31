@@ -27,6 +27,7 @@ modules = [
     # filepaths depends on twisted.python.win32 which hasn't yet been ported,
     # but works well enough to be imported:
     "twisted.python.filepath",
+    "twisted.python._deprecatepy3",
     "twisted.python.versions",
     "twisted.python.runtime",
     "twisted.test",
@@ -37,6 +38,7 @@ modules = [
 # "twisted.python.test.test_versions". To reduce merge conflicts, add new
 # lines in alphabetical sort.
 testModules = [
+    "twisted.python.test.test_deprecatepy3",
     "twisted.python.test.test_reflectpy3",
     "twisted.python.test.test_runtime",
     "twisted.python.test.test_utilpy3",

@@ -30,7 +30,7 @@ except ImportError:
 
 from twisted.python.util import unsignedID
 from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
-from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
+from twisted.python._deprecatepy3 import _fullyQualifiedName as fullyQualifiedName
 from twisted.python.versions import Version
 
 from twisted.python._reflectpy3 import prefixedMethods, accumulateMethods

@@ -19,8 +19,8 @@ from pprint import pformat
 import unittest as pyunit
 
 from twisted.python import reflect, failure
-from twisted.python.deprecate import deprecated, getVersionString
-from twisted.python.versions import Version
+from twisted.python.deprecate import deprecated
+from twisted.python.versions import Version, getVersionString
 from twisted.internet import defer
 from twisted.trial import unittest, runner, reporter
 
