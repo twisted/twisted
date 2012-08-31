@@ -5,8 +5,16 @@
 Tests for the subset of L{twisted.python.util} which has been ported to Python 3.
 """
 
+from __future__ import division, absolute_import
+
+import sys
+
+from twisted.python.compat import _PY3
 # Replace with trial as part of #5885:
-import unittest
+if _PY3:
+    from unittest import TestCase
+else:
+    from twisted.trial.unittest import SynchronousTestCase as TestCase
 
 from twisted.python import _utilpy3 as util
 
@@ -68,7 +76,7 @@ class EqualToNothing(object):
 
 
 
-class EqualityTests(unittest.TestCase):
+class EqualityTests(TestCase):
     """
     Tests for L{FancyEqMixin}.
     """
@@ -170,3 +178,67 @@ class EqualityTests(unittest.TestCase):
         """
         self.assertFalse(Record(1, 2) != EqualToEverything())
         self.assertTrue(Record(1, 2) != EqualToNothing())
+
+
+
+class UnsignedIDTests(TestCase):
+    """
+    Tests for L{util.unsignedID} and L{util.setIDFunction}.
+    """
+
+    # Remove in #5885:
+    def assertIdentical(self, a, b):
+        """
+        Assert the two arguments are the same object.
+        """
+        self.assertTrue(a is b)
+
+
+    def setUp(self):
+        """
+        Save the value of L{util._idFunction} and arrange for it to be restored
+        after the test runs.
+        """
+        self.addCleanup(setattr, util, '_idFunction', util._idFunction)
+
+
+    def test_setIDFunction(self):
+        """
+        L{util.setIDFunction} returns the last value passed to it.
+        """
+        value = object()
+        previous = util.setIDFunction(value)
+        result = util.setIDFunction(previous)
+        self.assertIdentical(value, result)
+
+
+    def test_unsignedID(self):
+        """
+        L{util.unsignedID} uses the function passed to L{util.setIDFunction} to
+        determine the unique integer id of an object and then adjusts it to be
+        positive if necessary.
+        """
+        foo = object()
+        bar = object()
+
+        # A fake object identity mapping
+        objects = {foo: 17, bar: -73}
+        def fakeId(obj):
+            return objects[obj]
+
+        util.setIDFunction(fakeId)
+
+        self.assertEqual(util.unsignedID(foo), 17)
+        self.assertEqual(util.unsignedID(bar), (sys.maxsize + 1) * 2 - 73)
+
+
+    def test_defaultIDFunction(self):
+        """
+        L{util.unsignedID} uses the built in L{id} by default.
+        """
+        obj = object()
+        idValue = id(obj)
+        if idValue < 0:
+            idValue += (sys.maxsize + 1) * 2
+
+        self.assertEqual(util.unsignedID(obj), idValue)

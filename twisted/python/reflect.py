@@ -28,7 +28,7 @@ try:
 except ImportError:
     from StringIO import StringIO
 
-from twisted.python.util import unsignedID
+from twisted.python._utilpy3 import unsignedID
 from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
 from twisted.python._deprecatepy3 import _fullyQualifiedName as fullyQualifiedName
 from twisted.python.versions import Version
@@ -38,6 +38,7 @@ from twisted.python._reflectpy3 import namedModule, namedObject, namedClass
 from twisted.python._reflectpy3 import InvalidName, ModuleNotFound
 from twisted.python._reflectpy3 import ObjectNotFound, namedAny
 from twisted.python._reflectpy3 import filenameToModuleName
+from twisted.python._reflectpy3 import qual, safe_str, safe_repr
 
 class Settable:
     """
@@ -331,12 +332,6 @@ def fullFuncName(func):
     return qualName
 
 
-def qual(clazz):
-    """
-    Return full import path of a class.
-    """
-    return clazz.__module__ + '.' + clazz.__name__
-
 
 def getcurrent(clazz):
     assert type(clazz) == types.ClassType, 'must be a class...'
@@ -374,64 +369,6 @@ def isinst(inst,clazz):
             return IS
     else:
         return ISNT
-
-
-
-def _determineClass(x):
-    try:
-        return x.__class__
-    except:
-        return type(x)
-
-
-
-def _determineClassName(x):
-    c = _determineClass(x)
-    try:
-        return c.__name__
-    except:
-        try:
-            return str(c)
-        except:
-            return '<BROKEN CLASS AT 0x%x>' % unsignedID(c)
-
-
-
-def _safeFormat(formatter, o):
-    """
-    Helper function for L{safe_repr} and L{safe_str}.
-    """
-    try:
-        return formatter(o)
-    except:
-        io = StringIO()
-        traceback.print_exc(file=io)
-        className = _determineClassName(o)
-        tbValue = io.getvalue()
-        return "<%s instance at 0x%x with %s error:\n %s>" % (
-            className, unsignedID(o), formatter.__name__, tbValue)
-
-
-
-def safe_repr(o):
-    """
-    safe_repr(anything) -> string
-
-    Returns a string representation of an object, or a string containing a
-    traceback, if that object's __repr__ raised an exception.
-    """
-    return _safeFormat(repr, o)
-
-
-
-def safe_str(o):
-    """
-    safe_str(anything) -> string
-
-    Returns a string representation of an object, or a string containing a
-    traceback, if that object's __str__ raised an exception.
-    """
-    return _safeFormat(str, o)
 
 
 

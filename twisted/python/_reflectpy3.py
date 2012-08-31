@@ -8,9 +8,16 @@ Reflection APIs which have been ported to Python 3.
 
 from __future__ import division, absolute_import
 
-import types, sys, os
+import types, sys, os, traceback
+from twisted.python.compat import reraise, nativeString, _PY3
 
-from twisted.python.compat import reraise, nativeString
+if _PY3:
+    from io import StringIO
+else:
+    from io import BytesIO as StringIO
+
+from twisted.python._utilpy3 import unsignedID
+
 
 def prefixedMethods(obj, prefix=''):
     """
@@ -223,3 +230,69 @@ def filenameToModuleName(fn):
         else:
             break
     return modName
+
+
+
+def qual(clazz):
+    """
+    Return full import path of a class.
+    """
+    return clazz.__module__ + '.' + clazz.__name__
+
+
+
+def _determineClass(x):
+    try:
+        return x.__class__
+    except:
+        return type(x)
+
+
+def _determineClassName(x):
+    c = _determineClass(x)
+    try:
+        return c.__name__
+    except:
+        try:
+            return str(c)
+        except:
+            return '<BROKEN CLASS AT 0x%x>' % unsignedID(c)
+
+
+def _safeFormat(formatter, o):
+    """
+    Helper function for L{safe_repr} and L{safe_str}.
+    """
+    try:
+        return formatter(o)
+    except:
+        io = StringIO()
+        traceback.print_exc(file=io)
+        className = _determineClassName(o)
+        tbValue = io.getvalue()
+        return "<%s instance at 0x%x with %s error:\n %s>" % (
+            className, unsignedID(o), formatter.__name__, tbValue)
+
+
+def safe_repr(o):
+    """
+    Returns a string representation of an object, or a string containing a
+    traceback, if that object's __repr__ raised an exception.
+
+    @param o: Any object.
+
+    @rtype: C{str}
+    """
+    return _safeFormat(repr, o)
+
+
+def safe_str(o):
+    """
+    Returns a string representation of an object, or a string containing a
+    traceback, if that object's __str__ raised an exception.
+
+    @param o: Any object.
+
+    @rtype: C{str}
+    """
+    return _safeFormat(str, o)
