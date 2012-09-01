@@ -1,1 +1,0 @@
-TLSMemoryBIOProtocol (and therefore all SSL transports if pyOpenSSL >= 0.10) now provides the interfaces already provided by the underlying transport.

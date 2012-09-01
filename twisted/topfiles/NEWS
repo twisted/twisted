@@ -1,6 +1,71 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Core 12.2.0 (2012-08-26)
+================================
+
+Features
+--------
+ - twisted.protocols.sip.MessageParser now handles multiline headers.
+   (#2198)
+ - twisted.internet.endpoints now provides StandardIOEndpoint, a
+   Standard I/O endpoint. (#4697)
+ - If a FTPCmdError occurs during twisted.protocols.ftp.FTP.ftp_RETR
+   sending the file (i.e. it is raised by the IReadFile.send method it
+   invokes), then it will use that to return an error to the client
+   rather than necessarily sending a 426 CNX_CLOSED_TXFR_ABORTED
+   error. (#4913)
+ - twisted.internet.interfaces.IReactorSocket.adoptStreamConnection is
+   implemented by some reactors as a way to add an existing
+   established connection to them. (#5570)
+ - twisted.internet.endpoints now provides TCP6ServerEndpoint, an IPv6
+   TCP server endpoint. (#5694)
+ - twisted.internet.endpoints now provides TCP6ClientEndpoint, an IPv6
+   TCP client endpoint. (#5695)
+ - twisted.internet.endpoints.serverFromString, the endpoint string
+   description feature, can now be used to create IPv6 TCP servers.
+   (#5699)
+ - twisted.internet.endpoints.serverFromString, the endpoint string
+   description feature, can now be used to create servers that run on
+   Standard I/O. (#5729)
+ - twisted.trial.unittest now offers SynchronousTestCase, a test case
+   base class that provides usability improvements but not reactor-
+   based testing features. (#5853)
+
+Bugfixes
+--------
+ - twisted.internet.Process.signalProcess now catches ESRCH raised by
+   os.kill call and raises ProcessExitedAlready instead. (#2420)
+ - TLSMemoryBIOProtocol (and therefore all SSL transports if pyOpenSSL
+   >= 0.10) now provides the interfaces already provided by the
+   underlying transport. (#5182)
+
+Deprecations and Removals
+-------------------------
+ - Python 2.5 is no longer supported. (#5553)
+ - The --extra option of trial, deprecated since 11.0, is removed now.
+   (#3374)
+ - addPluginDir and getPluginDirs in twisted.python.util are
+   deprecated now. (#4533)
+ - twisted.trial.runner.DocTestCase, deprecated in Twisted 8.0, has
+   been removed. (#5554)
+ - startKeepingErrors, flushErrors, ignoreErrors, and clearIgnores in
+   twisted.python.log (deprecated since Twisted 2.5) are removed now.
+   (#5765)
+ - unzip, unzipIter, and countZipFileEntries in
+   twisted.python.zipstream (deprecated in Twisted 11.0) are removed
+   now. (#5766)
+ - twisted.test.time_helpers, deprecated since Twisted 10.0, has been
+   removed. (#5820)
+
+Other
+-----
+ - #4244, #4532, #4930, #4999, #5129, #5138, #5385, #5521, #5655,
+   #5674, #5679, #5687, #5688, #5689, #5692, #5707, #5734, #5736,
+   #5745, #5746, #5747, #5749, #5784, #5816, #5817, #5818, #5819,
+   #5830, #5857, #5858, #5859, #5869, #5632
+
+
 Twisted Core 12.1.0 (2012-06-02)
 ================================
 
@@ -1056,7 +1121,7 @@ Features
 Fixes
 -----
  - TLS Session Tickets are now disabled by default, allowing connections to
-   certain servers which hang when an empty session ticket is received (like 
+   certain servers which hang when an empty session ticket is received (like
    GTalk) (#3463)
  - twisted.enterprise.adbapi.ConnectionPool's noisy attribute now defaults to
    False, as documented (#1806)
@@ -1510,7 +1575,7 @@ Features
 Fixes
 -----
 
- - Many trial fixes, as usual 
+ - Many trial fixes, as usual
  - All API documentation is now correctly formatted as epytext (#1545)
  - twisted.python.filepath.FilePath.__repr__ is safer.
  - Fix trial's "until-failure" mode. (#1453)
@@ -1601,7 +1666,7 @@ Fixes
 -----
  - FTP client and server improvements
  - Trial improvements: The code is now much simpler, and more stable.
- - twisted.protocols.basic.FileSender now works with empty files 
+ - twisted.protocols.basic.FileSender now works with empty files
  - Twisted should now be much more usable on Pythons without thread support.
  - minor improvements to process code in win32eventreactor
  - twistd -y (--python) now implies -o (--nosave). [539]
@@ -1682,7 +1747,7 @@ Miscellaneous features/fixes
 
  - More correct daemonization in twistd.
  - twisted.python.log: do not close the log because of invalid format string.
- - Disabled automatic import of cBanana. 
+ - Disabled automatic import of cBanana.
  - Boolean support for twisted.persisted.marmalade.
  - Refactor of plugin and application HOWTO documentation
  - Async HOWTO expanded greatly.

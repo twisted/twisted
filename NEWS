@@ -1,6 +1,183 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Core 12.2.0 (2012-08-26)
+================================
+
+Starting with the release after 12.2, Twisted will begin requiring
+zope.interface 3.6 (as part of Python 3 support).
+
+This is the last Twisted release supporting Python 2.6 on Windows.
+
+Features
+--------
+ - twisted.protocols.sip.MessageParser now handles multiline headers.
+   (#2198)
+ - twisted.internet.endpoints now provides StandardIOEndpoint, a
+   Standard I/O endpoint. (#4697)
+ - If a FTPCmdError occurs during twisted.protocols.ftp.FTP.ftp_RETR
+   sending the file (i.e. it is raised by the IReadFile.send method it
+   invokes), then it will use that to return an error to the client
+   rather than necessarily sending a 426 CNX_CLOSED_TXFR_ABORTED
+   error. (#4913)
+ - twisted.internet.interfaces.IReactorSocket.adoptStreamConnection is
+   implemented by some reactors as a way to add an existing
+   established connection to them. (#5570)
+ - twisted.internet.endpoints now provides TCP6ServerEndpoint, an IPv6
+   TCP server endpoint. (#5694)
+ - twisted.internet.endpoints now provides TCP6ClientEndpoint, an IPv6
+   TCP client endpoint. (#5695)
+ - twisted.internet.endpoints.serverFromString, the endpoint string
+   description feature, can now be used to create IPv6 TCP servers.
+   (#5699)
+ - twisted.internet.endpoints.serverFromString, the endpoint string
+   description feature, can now be used to create servers that run on
+   Standard I/O. (#5729)
+ - twisted.trial.unittest now offers SynchronousTestCase, a test case
+   base class that provides usability improvements but not reactor-
+   based testing features. (#5853)
+
+Bugfixes
+--------
+ - twisted.internet.Process.signalProcess now catches ESRCH raised by
+   os.kill call and raises ProcessExitedAlready instead. (#2420)
+ - TLSMemoryBIOProtocol (and therefore all SSL transports if pyOpenSSL
+   >= 0.10) now provides the interfaces already provided by the
+   underlying transport. (#5182)
+
+Deprecations and Removals
+-------------------------
+ - Python 2.5 is no longer supported. (#5553)
+ - The --extra option of trial, deprecated since 11.0, is removed now.
+   (#3374)
+ - addPluginDir and getPluginDirs in twisted.python.util are
+   deprecated now. (#4533)
+ - twisted.trial.runner.DocTestCase, deprecated in Twisted 8.0, has
+   been removed. (#5554)
+ - startKeepingErrors, flushErrors, ignoreErrors, and clearIgnores in
+   twisted.python.log (deprecated since Twisted 2.5) are removed now.
+   (#5765)
+ - unzip, unzipIter, and countZipFileEntries in
+   twisted.python.zipstream (deprecated in Twisted 11.0) are removed
+   now. (#5766)
+ - twisted.test.time_helpers, deprecated since Twisted 10.0, has been
+   removed. (#5820)
+
+Other
+-----
+ - #4244, #4532, #4930, #4999, #5129, #5138, #5385, #5521, #5655,
+   #5674, #5679, #5687, #5688, #5689, #5692, #5707, #5734, #5736,
+   #5745, #5746, #5747, #5749, #5784, #5816, #5817, #5818, #5819,
+   #5830, #5857, #5858, #5859, #5869, #5632
+
+
+Twisted Conch 12.2.0 (2012-08-26)
+=================================
+
+Features
+--------
+ - twisted.conch.ssh.transport.SSHTransport now returns an
+   SSHTransportAddress from the getPeer() and getHost() methods.
+   (#2997)
+
+Bugfixes
+--------
+ - twisted.conch now supports commercial SSH implementations which
+   don't comply with the IETF standard (#1902)
+ - twisted.conch.ssh.userauth now works correctly with hash
+   randomization enabled. (#5776)
+ - twisted.conch no longer relies on __builtins__ being a dict, which
+   is a purely CPython implementation detail (#5779)
+
+Other
+-----
+ - #5496, #5617, #5700, #5748, #5777
+
+
+Twisted Lore 12.2.0 (2012-08-26)
+================================
+
+No significant changes have been made for this release.
+
+
+Twisted Mail 12.2.0 (2012-08-26)
+================================
+
+Bugfixes
+--------
+ - twisted.mail.imap4.IMAP4Server will now generate an error response
+   when it receives an illegal SEARCH term from a client. (#4080)
+ - twisted.mail.imap4 now serves BODYSTRUCTURE responses which provide
+   more information and conform to the IMAP4 RFC more closely. (#5763)
+
+Deprecations and Removals
+-------------------------
+ - twisted.mail.protocols.SSLContextFactory is now deprecated. (#4963)
+ - The --passwordfile option to twistd mail is now removed. (#5541)
+
+Other
+-----
+ - #5697, #5750, #5751, #5783
+
+
+Twisted Names 12.2.0 (2012-08-26)
+=================================
+
+Features
+--------
+ - twisted.names.srvconnect.SRVConnector now takes a default port to
+   use when SRV lookup fails. (#3456)
+
+Other
+-----
+ - #5647
+
+
+Twisted News 12.2.0 (2012-08-26)
+================================
+
+No significant changes have been made for this release.
+
+
+Twisted Pair 12.2.0 (2012-08-26)
+================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 12.2.0 (2012-08-26)
+==================================
+
+No significant changes have been made for this release.
+
+
+Twisted Web 12.2.0 (2012-08-26)
+===============================
+
+Deprecations and Removals
+-------------------------
+ - twisted.web.static.FileTransfer, deprecated since 9.0, is removed
+   now. Use a subclass of StaticProducer instead. (#5651)
+ - ErrorPage, NoResource and ForbiddenResource in twisted.web.error
+   were deprecated since 9.0 and are removed now. (#5659)
+ - twisted.web.google, deprecated since Twisted 11.1, is removed now.
+   (#5768)
+
+Other
+-----
+ - #5665
+
+
+Twisted Words 12.2.0 (2012-08-26)
+=================================
+
+No significant changes have been made for this release.
+
+Other
+-----
+ - #5752, #5753
+
+
 Twisted Core 12.1.0 (2012-06-02)
 ================================
 
@@ -2204,7 +2381,7 @@ Fixes
    received (#3812)
  - SASL PLAIN credentials generated by the IMAP4 protocol implementations
    (client and server) should now be RFC-compliant (#3939)
- - Searching for a set of sequences using the IMAP4 "SEARCH" command should 
+ - Searching for a set of sequences using the IMAP4 "SEARCH" command should
    now work on the IMAP4 server protocol implementation. This at least improves
    support for the Pine mail client (#1977)
 
@@ -2305,7 +2482,7 @@ Fixes
    XMLRPC support in all supported versions of Python, and errors during error
    serialization will no longer hang a twisted.web XMLRPC response (#2446)
  - request.content should now always be seeked to the beginning when
-   request.process is called, so application code should never need to seek 
+   request.process is called, so application code should never need to seek
    back manually (#3585)
  - Fetching a child of static.File with a double-slash in the URL (such as
    "example//foo.html") should now return a 404 instead of a traceback and

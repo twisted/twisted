@@ -1,1 +1,0 @@
-startKeepingErrors, flushErrors, ignoreErrors, and clearIgnores in twisted.python.log (deprecated since Twisted 2.5) are removed now.
