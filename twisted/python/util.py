@@ -14,7 +14,7 @@ except ImportError:
     setgroups = getgroups = None
 from UserDict import UserDict
 
-from twisted.python._utilpy3 import FancyEqMixin, setIDFunction, unsignedID
+from twisted.python._utilpy3 import FancyEqMixin, setIDFunction, unsignedID, untilConcludes
 
 
 class InsensitiveDict:
@@ -752,17 +752,6 @@ class SubclassableCStringIO(object):
 
 
 
-def untilConcludes(f, *a, **kw):
-    while True:
-        try:
-            return f(*a, **kw)
-        except (IOError, OSError), e:
-            if e.args[0] == errno.EINTR:
-                continue
-            raise
-
-
-
 def mergeFunctionMetadata(f, g):
     """
     Overwrite C{g}'s name and docstring with values from C{f}.  Update
@@ -941,4 +930,5 @@ __all__ = [
     "raises", "IntervalDifferential", "FancyStrMixin", "FancyEqMixin",
     "switchUID", "SubclassableCStringIO", "unsignedID", "mergeFunctionMetadata",
     "nameToLabel", "uidFromString", "gidFromString", "runAsEffectiveUser",
-]
+    "untilConcludes",
+    ]

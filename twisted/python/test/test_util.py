@@ -43,23 +43,6 @@ class UtilTestCase(unittest.TestCase):
         else:
             raise unittest.FailTest, "util.raises didn't raise when it should have"
 
-    def testUninterruptably(self):
-        def f(a, b):
-            self.calls += 1
-            exc = self.exceptions.pop()
-            if exc is not None:
-                raise exc(errno.EINTR, "Interrupted system call!")
-            return a + b
-
-        self.exceptions = [None]
-        self.calls = 0
-        self.assertEqual(util.untilConcludes(f, 1, 2), 3)
-        self.assertEqual(self.calls, 1)
-
-        self.exceptions = [None, OSError, IOError]
-        self.calls = 0
-        self.assertEqual(util.untilConcludes(f, 2, 3), 5)
-        self.assertEqual(self.calls, 3)
 
     def testNameToLabel(self):
         """

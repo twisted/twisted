@@ -7,7 +7,7 @@ Tests for the subset of L{twisted.python.util} which has been ported to Python 3
 
 from __future__ import division, absolute_import
 
-import sys
+import sys, errno
 
 from twisted.python.compat import _PY3
 # Replace with trial as part of #5885:
@@ -242,3 +242,34 @@ class UnsignedIDTests(TestCase):
             idValue += (sys.maxsize + 1) * 2
 
         self.assertEqual(util.unsignedID(obj), idValue)
+
+
+
+class UntilConcludesTests(TestCase):
+    """
+    Tests for L{untilConcludes}, an C{EINTR} helper.
+    """
+    def test_uninterruptably(self):
+        """
+        L{untilConcludes} calls the function passed to it until the function
+        does not raise either L{OSError} or L{IOError} with C{errno} of
+        C{EINTR}.  It otherwise completes with the same result as the function
+        passed to it.
+        """
+        def f(a, b):
+            self.calls += 1
+            exc = self.exceptions.pop()
+            if exc is not None:
+                raise exc(errno.EINTR, "Interrupted system call!")
+            return a + b
+
+        self.exceptions = [None]
+        self.calls = 0
+        self.assertEqual(util.untilConcludes(f, 1, 2), 3)
+        self.assertEqual(self.calls, 1)
+
+        self.exceptions = [None, OSError, IOError]
+        self.calls = 0
+        self.assertEqual(util.untilConcludes(f, 2, 3), 5)
+        self.assertEqual(self.calls, 3)
+
