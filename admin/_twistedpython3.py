@@ -29,6 +29,7 @@ modules = [
     # but works well enough to be imported:
     "twisted.python.filepath",
     "twisted.python._deprecatepy3",
+    "twisted.python.threadable",
     "twisted.python.versions",
     "twisted.python.runtime",
     "twisted.test",
@@ -48,4 +49,5 @@ testModules = [
     "twisted.test.test_context",
     "twisted.test.test_monkey",
     "twisted.test.test_paths",
+    "twisted.test.test_threadable",
     ]
