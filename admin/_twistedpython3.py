@@ -21,6 +21,7 @@ modules = [
     "twisted",
     "twisted.python",
     "twisted.python.compat",
+    "twisted.python.context",
     "twisted.python.monkey",
     "twisted.python._reflectpy3",
     "twisted.python._utilpy3",
@@ -44,6 +45,7 @@ testModules = [
     "twisted.python.test.test_utilpy3",
     "twisted.python.test.test_versions",
     "twisted.test.test_compat",
+    "twisted.test.test_context",
     "twisted.test.test_monkey",
     "twisted.test.test_paths",
     ]
