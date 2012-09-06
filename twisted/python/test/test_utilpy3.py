@@ -7,7 +7,7 @@ Tests for the subset of L{twisted.python.util} which has been ported to Python 3
 
 from __future__ import division, absolute_import
 
-import sys, errno
+import sys, errno, warnings
 
 from twisted.python.compat import _PY3
 # Replace with trial as part of #5885:
@@ -273,3 +273,61 @@ class UntilConcludesTests(TestCase):
         self.assertEqual(util.untilConcludes(f, 2, 3), 5)
         self.assertEqual(self.calls, 3)
 
+
+
+class SuppressedWarningsTests(TestCase):
+    """
+    Tests for L{util.runWithWarningsSuppressed}.
+    """
+
+    def setUp(self):
+        self.warnings = []
+        self.originalshow = warnings.showwarning
+        warnings.showwarning = lambda *a, **kw: self.warnings.append(a[0])
+
+
+    def tearDown(self):
+        warnings.showwarning = self.originalshow
+
+
+    def test_runWithWarningsSuppressedFiltered(self):
+        """
+        Warnings from the function called by C{runWithWarningsSuppressed} are
+        suppressed if they match the passed in filter.
+        """
+        filters = [(("ignore", ".*foo.*"), {}),
+                   (("ignore", ".*bar.*"), {})]
+        util.runWithWarningsSuppressed(filters, warnings.warn, "ignore foo")
+        util.runWithWarningsSuppressed(filters, warnings.warn, "ignore bar")
+        self.assertEqual(self.warnings, [])
+
+
+    def test_runWithWarningsSuppressedUnfiltered(self):
+        """
+        Warnings from the function called by C{runWithWarningsSuppressed} are
+        not suppressed if they do not match the passed in filter.
+        """
+        filters = [(("ignore", ".*foo.*"), {}),
+                   (("ignore", ".*bar.*"), {})]
+        util.runWithWarningsSuppressed(filters, warnings.warn, "don't ignore")
+        self.assertEqual([w.args[0] for w in self.warnings], ["don't ignore"])
+
+
+    def test_passThrough(self):
+        """
+        C{runWithWarningsSuppressed} returns the result of the function it
+        called.
+        """
+        self.assertEqual(util.runWithWarningsSuppressed([], lambda: 4), 4)
+
+
+    def test_noSideEffects(self):
+        """
+        Once C{runWithWarningsSuppressed} has returned, it no longer
+        suppresses warnings.
+        """
+        filters = [(("ignore", ".*foo.*"), {}),
+                   (("ignore", ".*bar.*"), {})]
+        util.runWithWarningsSuppressed(filters, lambda: None)
+        warnings.warn("ignore foo")
+        self.assertEqual([w.args[0] for w in self.warnings], ["ignore foo"])

@@ -14,7 +14,8 @@ except ImportError:
     setgroups = getgroups = None
 from UserDict import UserDict
 
-from twisted.python._utilpy3 import FancyEqMixin, setIDFunction, unsignedID, untilConcludes
+from twisted.python._utilpy3 import (FancyEqMixin, setIDFunction, unsignedID,
+                                     untilConcludes, runWithWarningsSuppressed)
 
 
 class InsensitiveDict:
@@ -931,4 +932,5 @@ __all__ = [
     "switchUID", "SubclassableCStringIO", "unsignedID", "mergeFunctionMetadata",
     "nameToLabel", "uidFromString", "gidFromString", "runAsEffectiveUser",
     "untilConcludes",
+    "runWithWarningsSuppressed",
     ]
