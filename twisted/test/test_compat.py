@@ -17,7 +17,7 @@ import unittest
 from twisted.python.compat import set, frozenset, reduce, execfile, _PY3
 from twisted.python.compat import comparable, cmp, nativeString
 from twisted.python.compat import unicode as unicodeCompat
-from twisted.python.compat import reraise
+from twisted.python.compat import reraise, NativeStringIO
 
 
 class CompatTestCase(unittest.TestCase):
@@ -496,6 +496,17 @@ class StringTests(unittest.TestCase):
         else:
             expected = unicode
         self.assertTrue(unicodeCompat is expected)
+
+
+    def test_nativeStringIO(self):
+        """
+        L{NativeStringIO} is a file-like object that stores native strings in
+        memory.
+        """
+        f = NativeStringIO()
+        f.write("hello")
+        f.write(" there")
+        self.assertEqual(f.getvalue(), "hello there")
 
 
 

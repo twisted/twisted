@@ -11,15 +11,21 @@ Asynchronous-friendly error mechanism.
 See L{Failure}.
 """
 
+from __future__ import division, absolute_import
+
 # System Imports
 import sys
 import linecache
 import inspect
 import opcode
-from cStringIO import StringIO
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from io import StringIO
 from inspect import getmro
 
-from twisted.python import reflect
+from twisted.python.compat import unicode, _PY3
+from twisted.python import _reflectpy3 as reflect
 
 count = 0
 traceupLength = 4
@@ -362,12 +368,21 @@ class Failure:
         return None
 
 
-    def raiseException(self):
+    # It would be nice to use twisted.python.compat.reraise, but that breaks
+    # the stack exploration in _findFailure; possibly this can be fixed in
+    # #5931.
+    if _PY3:
+        def raiseException(self):
+            raise self.value.with_traceback(self.tb)
+    else:
+        exec("""def raiseException(self):
+    raise self.type, self.value, self.tb""")
+
+    raiseException.__doc__ = (
         """
         raise the original exception, preserving traceback
         information if available.
-        """
-        raise self.type, self.value, self.tb
+        """)
 
 
     def throwExceptionIntoGenerator(self, g):
@@ -386,6 +401,8 @@ class Failure:
         """
         Find the failure that represents the exception currently in context.
         """
+        if _PY3:
+            return # Delete these two lines in ticket #5931
         tb = sys.exc_info()[-1]
         if not tb:
             return
@@ -533,6 +550,7 @@ class Failure:
             C{'verbose'}.
         """
         if file is None:
+            from twisted.python import log
             file = log.logerr
         w = file.write
 
@@ -623,7 +641,7 @@ DO_POST_MORTEM = True
 
 def _debuginit(self, exc_value=None, exc_type=None, exc_tb=None,
                captureVars=False,
-               Failure__init__=Failure.__init__.im_func):
+               Failure__init__=Failure.__init__):
     """
     Initialize failure object, possibly spawning pdb.
     """
@@ -634,7 +652,7 @@ def _debuginit(self, exc_value=None, exc_type=None, exc_tb=None,
                 strrepr = str(exc[1])
             except:
                 strrepr = "broken str"
-            print "Jumping into debugger for post-mortem of exception '%s':" % (strrepr,)
+            print("Jumping into debugger for post-mortem of exception '%s':" % (strrepr,))
             import pdb
             pdb.post_mortem(exc[2])
     Failure__init__(self, exc_value, exc_type, exc_tb, captureVars)
@@ -643,8 +661,3 @@ def _debuginit(self, exc_value=None, exc_type=None, exc_tb=None,
 def startDebugMode():
     """Enable debug hooks for Failures."""
     Failure.__init__ = _debuginit
-
-
-# Sibling imports - at the bottom and unqualified to avoid unresolvable
-# circularity
-import log

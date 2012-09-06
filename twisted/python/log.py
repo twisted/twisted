@@ -6,7 +6,7 @@
 Logging and metrics infrastructure.
 """
 
-from __future__ import division
+from __future__ import division, absolute_import
 
 import sys
 import time
@@ -16,8 +16,12 @@ import logging
 
 from zope.interface import Interface
 
-from twisted.python import util, context, reflect
-
+from twisted.python.compat import unicode, _PY3
+from twisted.python import context
+from twisted.python import _reflectpy3 as reflect
+from twisted.python import _utilpy3 as util
+from twisted.python import failure
+from twisted.python.threadable import synchronize
 
 
 class ILogContext:
@@ -153,6 +157,7 @@ class Logger:
         return '-'
 
 
+
 class LogPublisher:
     """
     Class for singleton log message publishing.
@@ -184,23 +189,23 @@ class LogPublisher:
         """
         Log a new message.
 
-        For example::
+        The message should be a native string, i.e. bytes on Python 2 and
+        Unicode on Python 3. For compatibility with both use the native string
+        syntax, for example::
 
         >>> log.msg('Hello, world.')
 
-        In particular, you MUST avoid the forms::
+        You MUST avoid passing in Unicode on Python 2, and the form::
 
-        >>> log.msg(u'Hello, world.')
         >>> log.msg('Hello ', 'world.')
 
-        These forms work (sometimes) by accident and will be disabled
-        entirely in the future.
+        This form only works (sometimes) by accident.
         """
         actualEventDict = (context.get(ILogContext) or {}).copy()
         actualEventDict.update(kw)
         actualEventDict['message'] = message
         actualEventDict['time'] = time.time()
-        for i in xrange(len(self.observers) - 1, -1, -1):
+        for i in range(len(self.observers) - 1, -1, -1):
             try:
                 self.observers[i](actualEventDict)
             except KeyboardInterrupt:
@@ -259,6 +264,7 @@ class LogPublisher:
             else:
                 _oldshowwarning(message, category, filename, lineno, file, line)
 
+synchronize(LogPublisher)
 
 
 
@@ -270,6 +276,7 @@ except NameError:
     removeObserver = theLogPublisher.removeObserver
     msg = theLogPublisher.msg
     showwarning = theLogPublisher.showwarning
+
 
 
 def _safeFormat(fmtString, fmtDict):
@@ -487,7 +494,7 @@ class StdioOnnaStick:
             encoding = sys.getdefaultencoding()
         self.encoding = encoding
         self.buf = ''
-
+  
     def close(self):
         pass
 
@@ -506,7 +513,7 @@ class StdioOnnaStick:
     tell = read
 
     def write(self, data):
-        if isinstance(data, unicode):
+        if not _PY3 and isinstance(data, unicode):
             data = data.encode(self.encoding)
         d = (self.buf + data).split('\n')
         self.buf = d[-1]
@@ -516,7 +523,7 @@ class StdioOnnaStick:
 
     def writelines(self, lines):
         for line in lines:
-            if isinstance(line, unicode):
+            if not _PY3 and isinstance(line, unicode):
                 line = line.encode(self.encoding)
             msg(line, printed=1, isError=self.isError)
 
@@ -612,11 +619,6 @@ class DefaultObserver:
     def stop(self):
         removeObserver(self._emit)
 
-
-# Some more sibling imports, at the bottom and unqualified to avoid
-# unresolvable circularity
-import threadable, failure
-threadable.synchronize(LogPublisher)
 
 
 try:

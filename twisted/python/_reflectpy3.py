@@ -9,12 +9,7 @@ Reflection APIs which have been ported to Python 3.
 from __future__ import division, absolute_import
 
 import types, sys, os, traceback
-from twisted.python.compat import reraise, nativeString, _PY3
-
-if _PY3:
-    from io import StringIO
-else:
-    from io import BytesIO as StringIO
+from twisted.python.compat import reraise, nativeString, NativeStringIO
 
 from twisted.python._utilpy3 import unsignedID
 
@@ -266,7 +261,7 @@ def _safeFormat(formatter, o):
     try:
         return formatter(o)
     except:
-        io = StringIO()
+        io = NativeStringIO()
         traceback.print_exc(file=io)
         className = _determineClassName(o)
         tbValue = io.getvalue()

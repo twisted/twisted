@@ -13,6 +13,9 @@ the latest version of Python directly from your code, if possible.
 
 @var unicode: The type of Unicode strings, C{unicode} on Python 2 and C{str}
     on Python 3.
+
+@var NativeStringIO: An in-memory file-like object that operates on the native
+    string type (bytes in Python 2, unicode in Python 3).
 """
 
 from __future__ import division
@@ -349,6 +352,13 @@ C{__traceback__} attribute being set.
 
 
 
+if _PY3:
+    from io import StringIO as NativeStringIO
+else:
+    from io import BytesIO as NativeStringIO
+
+
+
 __all__ = [
     "reraise",
     "execfile",
@@ -358,5 +368,6 @@ __all__ = [
     "cmp",
     "comparable",
     "nativeString",
+    "NativeStringIO",
     "unicode",
     ]
