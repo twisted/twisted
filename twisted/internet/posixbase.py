@@ -17,7 +17,7 @@ from zope.interface import implements, classImplements
 from twisted.python.compat import set
 from twisted.internet.interfaces import IReactorUNIX, IReactorUNIXDatagram
 from twisted.internet.interfaces import (
-    IReactorTCP, IReactorUDP, IReactorSSL, _IReactorArbitrary, IReactorSocket)
+    IReactorTCP, IReactorUDP, IReactorSSL, IReactorSocket)
 from twisted.internet.interfaces import IReactorProcess, IReactorMulticast
 from twisted.internet.interfaces import IHalfCloseableDescriptor
 from twisted.internet import error
@@ -273,7 +273,7 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
     @ivar _childWaker: C{None} or a reference to the L{_SIGCHLDWaker}
         which is used to properly notice child process termination.
     """
-    implements(_IReactorArbitrary, IReactorTCP, IReactorUDP, IReactorMulticast)
+    implements(IReactorTCP, IReactorUDP, IReactorMulticast)
 
     # Callable that creates a waker, overrideable so that subclasses can
     # substitute their own implementation:
@@ -516,31 +516,6 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
             return p
         else:
             assert False, "SSL support is not present"
-
-
-    # IReactorArbitrary
-    def listenWith(self, portType, *args, **kw):
-        warnings.warn(
-            "listenWith is deprecated since Twisted 10.1.  "
-            "See IReactorFDSet.",
-            category=DeprecationWarning,
-            stacklevel=2)
-        kw['reactor'] = self
-        p = portType(*args, **kw)
-        p.startListening()
-        return p
-
-
-    def connectWith(self, connectorType, *args, **kw):
-        warnings.warn(
-            "connectWith is deprecated since Twisted 10.1.  "
-            "See IReactorFDSet.",
-            category=DeprecationWarning,
-            stacklevel=2)
-        kw['reactor'] = self
-        c = connectorType(*args, **kw)
-        c.connect()
-        return c
 
 
     def _removeAll(self, readers, writers):

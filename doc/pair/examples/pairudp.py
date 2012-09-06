@@ -16,6 +16,6 @@ p_ip.addProto(17, p_udp)
 p_eth = ethernet.EthernetProtocol()
 p_eth.addProto(0x800, p_ip)
 
-reactor.listenWith(tuntap.TuntapPort,
-                   interface='tap0', proto=p_eth, reactor=reactor)
+port = tuntap.TuntapPort(interface='tap0', proto=p_eth, reactor=reactor)
+port.startListening()
 reactor.run()

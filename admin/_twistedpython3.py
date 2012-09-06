@@ -19,6 +19,8 @@ from __future__ import division
 # conflicts, add new lines in alphabetical sort.
 modules = [
     "twisted",
+    "twisted.internet",
+    "twisted.internet.interfaces",
     "twisted.python",
     "twisted.python.compat",
     "twisted.python.context",

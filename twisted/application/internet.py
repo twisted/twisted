@@ -191,13 +191,13 @@ _doc={
 'Client':
 """Connect to %(tran)s
 
-Call reactor.connect%(method)s when the service starts, with the
+Call reactor.connect%(tran)s when the service starts, with the
 arguments given to the constructor.
 """,
 'Server':
 """Serve %(tran)s clients
 
-Call reactor.listen%(method)s when the service starts, with the
+Call reactor.listen%(tran)s when the service starts, with the
 arguments given to the constructor. When the service stops,
 stop listening. See twisted.internet.interfaces for documentation
 on arguments to the reactor method.
@@ -210,53 +210,10 @@ for tran in 'TCP UNIX SSL UDP UNIXDatagram Multicast'.split():
         if tran == "Multicast" and side == "Client":
             continue
         base = globals()['_Abstract'+side]
-        method = {'Generic': 'With'}.get(tran, tran)
-        doc = _doc[side]%vars()
+        doc = _doc[side] % vars()
         klass = types.ClassType(tran+side, (base,),
-                                {'method': method, '__doc__': doc})
+                                {'method': tran, '__doc__': doc})
         globals()[tran+side] = klass
-
-
-
-class GenericServer(_AbstractServer):
-    """
-    Serve Generic clients
-
-    Call reactor.listenWith when the service starts, with the arguments given to
-    the constructor. When the service stops, stop listening. See
-    twisted.internet.interfaces for documentation on arguments to the reactor
-    method.
-
-    This service is deprecated (because reactor.listenWith is deprecated).
-    """
-    method = 'With'
-
-    def __init__(self, *args, **kwargs):
-        warnings.warn(
-            'GenericServer was deprecated in Twisted 10.1.',
-            category=DeprecationWarning,
-            stacklevel=2)
-        _AbstractServer.__init__(self, *args, **kwargs)
-
-
-
-class GenericClient(_AbstractClient):
-    """
-    Connect to Generic.
-
-    Call reactor.connectWith when the service starts, with the arguments given
-    to the constructor.
-
-    This service is deprecated (because reactor.connectWith is deprecated).
-    """
-    method = 'With'
-
-    def __init__(self, *args, **kwargs):
-        warnings.warn(
-            'GenericClient was deprecated in Twisted 10.1.',
-            category=DeprecationWarning,
-            stacklevel=2)
-        _AbstractClient.__init__(self, *args, **kwargs)
 
 
 
@@ -404,5 +361,5 @@ class StreamServerEndpointService(service.Service, object):
 __all__ = (['TimerService', 'CooperatorService', 'MulticastServer',
             'StreamServerEndpointService'] +
            [tran+side
-            for tran in 'Generic TCP UNIX SSL UDP UNIXDatagram'.split()
+            for tran in 'TCP UNIX SSL UDP UNIXDatagram'.split()
             for side in 'Server Client'.split()])
