@@ -12,7 +12,7 @@ import StringIO
 import traceback
 import pdb
 
-from twisted.trial import unittest, util
+from twisted.trial import unittest
 
 from twisted.python import failure
 
@@ -183,48 +183,13 @@ class FailureTestCase(unittest.TestCase):
     testLackOfTB.todo = "the traceback is not preserved, exarkun said he'll try to fix this! god knows how"
 
 
-    _stringException = "bugger off"
-    def _getStringFailure(self):
-        try:
-            raise self._stringException
-        except:
-            f = failure.Failure()
-        return f
-
-
-    def test_raiseStringExceptions(self):
-        # String exceptions used to totally bugged f.raiseException
-        f = self._getStringFailure()
-        try:
-            f.raiseException()
-        except:
-            self.assertEqual(sys.exc_info()[0], self._stringException)
-        else:
-            raise AssertionError("Should have raised")
-    test_raiseStringExceptions.suppress = [
-        util.suppress(message='raising a string exception is deprecated')]
-
-
-    def test_printStringExceptions(self):
+    def test_stringExceptionConstruction(self):
         """
-        L{Failure.printTraceback} should write out stack and exception
-        information, even for string exceptions.
+        Constructing a C{Failure} with a string as its exception value raises
+        a C{TypeError}, as this is no longer supported as of Python 2.6.
         """
-        failure = self._getStringFailure()
-        output = StringIO.StringIO()
-        failure.printTraceback(file=output)
-        lines = output.getvalue().splitlines()
-        # The last line should be the value of the raised string
-        self.assertEqual(lines[-1], self._stringException)
-
-    test_printStringExceptions.suppress = [
-        util.suppress(message='raising a string exception is deprecated')]
-
-    if sys.version_info[:2] >= (2, 6):
-        skipMsg = ("String exceptions aren't supported anymore starting "
-                   "Python 2.6")
-        test_raiseStringExceptions.skip = skipMsg
-        test_printStringExceptions.skip = skipMsg
+        exc = self.assertRaises(TypeError, failure.Failure, "ono!")
+        self.assertIn("Strings are not supported by Failure", str(exc))
 
 
     def testConstructionFails(self):

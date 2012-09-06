@@ -24,7 +24,7 @@ except ImportError:
     from io import StringIO
 from inspect import getmro
 
-from twisted.python.compat import unicode, _PY3
+from twisted.python.compat import _PY3
 from twisted.python import _reflectpy3 as reflect
 
 count = 0
@@ -204,13 +204,8 @@ class Failure:
         self.type = self.value = tb = None
         self.captureVars = captureVars
 
-        #strings Exceptions/Failures are bad, mmkay?
-        if isinstance(exc_value, (str, unicode)) and exc_type is None:
-            import warnings
-            warnings.warn(
-                "Don't pass strings (like %r) to failure.Failure (replacing with a DefaultException)." %
-                exc_value, DeprecationWarning, stacklevel=2)
-            exc_value = DefaultException(exc_value)
+        if isinstance(exc_value, str) and exc_type is None:
+            raise TypeError("Strings are not supported by Failure")
 
         stackOffset = 0
 
@@ -591,16 +586,9 @@ class Failure:
 
         # postamble, if any
         if not detail == 'brief':
-            # Unfortunately, self.type will not be a class object if this
-            # Failure was created implicitly from a string exception.
-            # qual() doesn't make any sense on a string, so check for this
-            # case here and just write out the string if that's what we
-            # have.
-            if isinstance(self.type, (str, unicode)):
-                w(self.type + "\n")
-            else:
-                w("%s: %s\n" % (reflect.qual(self.type),
-                                reflect.safe_str(self.value)))
+            w("%s: %s\n" % (reflect.qual(self.type),
+                            reflect.safe_str(self.value)))
+
         # chaining
         if isinstance(self.value, Failure):
             # TODO: indentation for chained failures?
