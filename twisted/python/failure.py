@@ -18,13 +18,9 @@ import sys
 import linecache
 import inspect
 import opcode
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from io import StringIO
 from inspect import getmro
 
-from twisted.python.compat import _PY3
+from twisted.python.compat import _PY3, NativeStringIO as StringIO
 from twisted.python import _reflectpy3 as reflect
 
 count = 0
@@ -232,11 +228,8 @@ class Failure:
         if tb is None:
             if exc_tb:
                 tb = exc_tb
-#             else:
-#                 log.msg("Erf, %r created with no traceback, %s %s." % (
-#                     repr(self), repr(exc_value), repr(exc_type)))
-#                 for s in traceback.format_stack():
-#                     log.msg(s)
+            elif _PY3:
+                tb = self.value.__traceback__
 
         frames = self.frames = []
         stack = self.stack = []
@@ -302,8 +295,8 @@ class Failure:
                 for d in globalz, localz:
                     if "__builtins__" in d:
                         del d["__builtins__"]
-                localz = localz.items()
-                globalz = globalz.items()
+                localz = list(localz.items())
+                globalz = list(globalz.items())
             else:
                 localz = globalz = ()
             frames.append((
@@ -316,7 +309,7 @@ class Failure:
             tb = tb.tb_next
         if inspect.isclass(self.type) and issubclass(self.type, Exception):
             parentCs = getmro(self.type)
-            self.parents = map(reflect.qual, parentCs)
+            self.parents = list(map(reflect.qual, parentCs))
         else:
             self.parents = [self.type]
 
@@ -337,14 +330,18 @@ class Failure:
                 elif r == Eggs:
                     print 'Eggs did it!'
 
-        If the failure is not a Spam or an Eggs, then the Failure
-        will be 'passed on' to the next errback.
+        If the failure is not a Spam or an Eggs, then the Failure will be
+        'passed on' to the next errback. In Python 2 the Failure will be
+        raised; in Python 3 the underlying exception will be re-raised.
 
         @type errorTypes: L{Exception}
         """
         error = self.check(*errorTypes)
         if not error:
-            raise self
+            if _PY3:
+                self.raiseException()
+            else:
+                raise self
         return error
 
     def check(self, *errorTypes):
@@ -396,8 +393,6 @@ class Failure:
         """
         Find the failure that represents the exception currently in context.
         """
-        if _PY3:
-            return # Delete these two lines in ticket #5931
         tb = sys.exc_info()[-1]
         if not tb:
             return
@@ -417,7 +412,7 @@ class Failure:
         # the tracebacks) here when it is used is not that big a deal.
 
         # handle raiseException-originated exceptions
-        if lastFrame.f_code is cls.raiseException.func_code:
+        if lastFrame.f_code is cls.raiseException.__code__:
             return lastFrame.f_locals.get('self')
 
         # handle throwExceptionIntoGenerator-originated exceptions
@@ -438,7 +433,7 @@ class Failure:
         # second last item):
         if secondLastTb:
             frame = secondLastTb.tb_frame
-            if frame.f_code is cls.throwExceptionIntoGenerator.func_code:
+            if frame.f_code is cls.throwExceptionIntoGenerator.__code__:
                 return frame.f_locals.get('self')
 
         # if the exception was caught below the generator.throw
@@ -447,7 +442,7 @@ class Failure:
         # generator frame itself, thus its caller is
         # throwExceptionIntoGenerator).
         frame = tb.tb_frame.f_back
-        if frame and frame.f_code is cls.throwExceptionIntoGenerator.func_code:
+        if frame and frame.f_code is cls.throwExceptionIntoGenerator.__code__:
             return frame.f_locals.get('self')
 
     _findFailure = classmethod(_findFailure)

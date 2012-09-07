@@ -125,6 +125,7 @@ class LogTest(unittest.TestCase, FlushLoggedMixin):
 
             # The broken observer should have caused this to be logged.
             excs = self.flushLoggedErrors(ZeroDivisionError)
+            del self.catcher[:]
             self.assertEqual(len(excs), 1)
 
             # Both other observers should have seen the message.

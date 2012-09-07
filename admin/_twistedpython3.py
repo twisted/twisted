@@ -25,6 +25,7 @@ modules = [
     "twisted.python.compat",
     "twisted.python.context",
     "twisted.python._deprecatepy3",
+    "twisted.python.failure",
     # filepaths depends on twisted.python.win32 which hasn't yet been ported,
     # but works well enough to be imported:
     "twisted.python.filepath",
@@ -52,6 +53,7 @@ testModules = [
     "twisted.python.test.test_versions",
     "twisted.test.test_compat",
     "twisted.test.test_context",
+    "twisted.test.test_failure",
     "twisted.test.test_log",
     "twisted.test.test_monkey",
     "twisted.test.test_paths",
