@@ -320,7 +320,4 @@ def warnAboutFunction(offender, warningString):
         registry=globals.setdefault("__warningregistry__", {}),
         module_globals=None)
 
-    if sys.version_info[:2] < (2, 5):
-        kwargs.pop('module_globals')
-
     warn_explicit(warningString, **kwargs)
