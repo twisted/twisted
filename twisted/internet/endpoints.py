@@ -615,6 +615,8 @@ class AdoptedStreamServerEndpoint(object):
     @ivar _used: A C{bool} indicating whether this endpoint has been used to
         listen with a factory yet.  C{True} if so.
     """
+    implements(interfaces.IStreamServerEndpoint)
+
     _close = os.close
     _setNonBlocking = staticmethod(fdesc.setNonBlocking)
 

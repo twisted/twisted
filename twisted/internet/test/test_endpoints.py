@@ -509,6 +509,16 @@ class ServerEndpointTestCaseMixin(object):
     """
     Generic test methods to be mixed into all client endpoint test classes.
     """
+    def test_interface(self):
+        """
+        The endpoint provides L{interfaces.IStreamServerEndpoint}.
+        """
+        factory = object()
+        ep, ignoredArgs, ignoredDest = self.createServerEndpoint(
+                MemoryReactor(), factory)
+        self.assertTrue(verifyObject(interfaces.IStreamServerEndpoint, ep))
+
+
     def test_endpointListenSuccess(self):
         """
         An endpoint can listen and returns a deferred that gets called back
