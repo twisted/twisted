@@ -88,11 +88,12 @@ class KeyGenTests(TestCase):
         private key.
         """
         filename = self.mktemp()
+        pubKey = Key.fromString(publicRSA_openssh)
         FilePath(filename).setContent(privateRSA_openssh)
         displayPublicKey({'filename': filename})
         self.assertEqual(
             self.stdout.getvalue().strip('\n'),
-            publicRSA_openssh.strip(' comment'))
+            pubKey.toString('openssh'))
 
 
     def test_displayPublicKeyEncrypted(self):
@@ -101,11 +102,12 @@ class KeyGenTests(TestCase):
         private key using the given passphrase when it's encrypted.
         """
         filename = self.mktemp()
+        pubKey = Key.fromString(publicRSA_openssh)
         FilePath(filename).setContent(privateRSA_openssh_encrypted)
         displayPublicKey({'filename': filename, 'pass': 'encrypted'})
         self.assertEqual(
             self.stdout.getvalue().strip('\n'),
-            publicRSA_openssh.strip(' comment'))
+            pubKey.toString('openssh'))
 
 
     def test_displayPublicKeyEncryptedPassphrasePrompt(self):
@@ -114,12 +116,13 @@ class KeyGenTests(TestCase):
         private key, asking for the passphrase when it's encrypted.
         """
         filename = self.mktemp()
+        pubKey = Key.fromString(publicRSA_openssh)
         FilePath(filename).setContent(privateRSA_openssh_encrypted)
         self.patch(getpass, 'getpass', lambda x: 'encrypted')
         displayPublicKey({'filename': filename})
         self.assertEqual(
             self.stdout.getvalue().strip('\n'),
-            publicRSA_openssh.strip(' comment'))
+            pubKey.toString('openssh'))
 
 
     def test_displayPublicKeyWrongPassphrase(self):
