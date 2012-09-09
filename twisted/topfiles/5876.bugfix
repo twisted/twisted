@@ -1,0 +1,1 @@
+twisted.internet.endpoints.TCP6ClientEndpoint now provides twisted.internet.interfaces.IStreamClientEndpoint

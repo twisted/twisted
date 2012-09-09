@@ -374,6 +374,8 @@ class TCP6ClientEndpoint(object):
     @ivar _GAI_ADDRESS_HOST: Index of the actual host-address in the
         5-tuple L{_GAI_ADDRESS}.
     """
+    implements(interfaces.IStreamClientEndpoint)
+
     _getaddrinfo = socket.getaddrinfo
     _deferToThread = threads.deferToThread
     _GAI_ADDRESS = 4
@@ -1000,7 +1002,7 @@ def _parseServer(description, factory, default=None):
     endpointType = args[0]
     parser = _serverParsers.get(endpointType)
     if parser is None:
-        # If the required parser is not found in _server, check if 
+        # If the required parser is not found in _server, check if
         # a plugin exists for the endpointType
         for plugin in getPlugins(IStreamServerEndpointStringParser):
             if plugin.prefix == endpointType:
@@ -1250,7 +1252,7 @@ def _parseClientUNIX(*args, **kwargs):
     Valid keyword arguments to this function are all L{IReactorUNIX.connectUNIX}
     keyword arguments except for C{checkPID}.  Instead, C{lockfile} is accepted
     and has the same meaning.  Also C{path} is used instead of C{address}.
-    
+
     Valid positional arguments to this function are C{path}.
 
     @return: The coerced values as a C{dict}.
@@ -1309,15 +1311,15 @@ def clientFromString(reactor, description):
 
         clientFromString(reactor, "ssl:host=web.example.com:port=443:"
                                   "caCertsDir=/etc/ssl/certs")
-    
+
     You can create a UNIX client endpoint with the 'path' argument and optional
     'lockfile' and 'timeout' arguments::
-    
+
         clientFromString(reactor, "unix:path=/var/foo/bar:lockfile=1:timeout=9")
-    
+
     or, with the path as a positional argument with or without optional
     arguments as in the following 2 examples::
-    
+
         clientFromString(reactor, "unix:/var/foo/bar")
         clientFromString(reactor, "unix:/var/foo/bar:lockfile=1:timeout=9")
 

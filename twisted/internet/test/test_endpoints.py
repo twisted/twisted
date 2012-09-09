@@ -368,6 +368,15 @@ class ClientEndpointTestCaseMixin(object):
     """
     Generic test methods to be mixed into all client endpoint test classes.
     """
+    def test_interface(self):
+        """
+        The endpoint provides L{interfaces.IStreamClientEndpoint}
+        """
+        clientFactory = object()
+        ep, ignoredArgs, address = self.createClientEndpoint(MemoryReactor(), clientFactory)
+        self.assertTrue(verifyObject(interfaces.IStreamClientEndpoint, ep))
+
+
     def retrieveConnectedFactory(self, reactor):
         """
         Retrieve a single factory that has connected using the given reactor.
