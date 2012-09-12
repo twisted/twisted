@@ -9,7 +9,9 @@ includes test methods for a certain feature.  The mixin is inherited from twice,
 once by a class also inheriting from SynchronousTestCase and once from a class
 inheriting from TestCase.  These two subclasses are named like
 I{SynchronousFooTests} and I{AsynchronousFooTests}, where I{Foo} is related to
-the name of the mixin.
+the name of the mixin.  Sometimes the mixin is defined in another module, along
+with the synchronous subclass.  The mixin is imported into this module to define
+the asynchronous subclass.
 
 This pattern allows the same tests to be applied to the two base test case
 classes trial provides, ensuring their behavior is the same.
@@ -23,9 +25,9 @@ import gc, StringIO, sys, weakref
 
 from twisted.internet import defer, reactor
 from twisted.trial import unittest, runner, reporter, util
-from twisted.trial.test import erroneous, suppression
+from twisted.trial.test import erroneous
 from twisted.trial.test.test_reporter import LoggingReporter
-
+from twisted.trial.test.test_suppression import SuppressionMixin
 
 class ResultsTestMixin(object):
     """
@@ -618,152 +620,6 @@ class AsynchronousFixtureTest(FixtureMixin, unittest.TestCase):
     from twisted.trial.test.erroneous import (
         AsynchronousTestFailureInSetUp as TestFailureInSetUp,
         AsynchronousTestFailureInTearDown as TestFailureInTearDown)
-
-
-
-class SuppressionMixin(object):
-    """
-    Tests for the warning suppression features of
-    L{twisted.trial.unittest.SynchronousTestCase}.
-    """
-    def runTests(self, suite):
-        suite.run(reporter.TestResult())
-
-
-    def setUp(self):
-        self.loader = runner.TestLoader()
-
-
-    def _assertWarnings(self, warnings, which):
-        """
-        Assert that a certain number of warnings with certain messages were
-        emitted in a certain order.
-
-        @param warnings: A list of emitted warnings, as returned by
-            C{flushWarnings}.
-
-        @param which: A list of strings giving warning messages that should
-            appear in C{warnings}.
-
-        @raise self.failureException: If the warning messages given by C{which}
-            do not match the messages in the warning information in C{warnings},
-            or if they do not appear in the same order.
-        """
-        self.assertEqual(
-            [warning['message'] for warning in warnings],
-            which)
-
-
-    def test_setUpSuppression(self):
-        """
-        Suppressions defined by the test method being run are applied to any
-        warnings emitted while running the C{setUp} fixture.
-        """
-        self.runTests(
-            self.loader.loadMethod(
-                self.TestSetUpSuppression.testSuppressMethod))
-        warningsShown = self.flushWarnings([
-                self.TestSetUpSuppression._emit])
-        self._assertWarnings(
-            warningsShown,
-            [suppression.CLASS_WARNING_MSG, suppression.MODULE_WARNING_MSG,
-             suppression.CLASS_WARNING_MSG, suppression.MODULE_WARNING_MSG])
-
-
-    def test_tearDownSuppression(self):
-        """
-        Suppressions defined by the test method being run are applied to any
-        warnings emitted while running the C{tearDown} fixture.
-        """
-        self.runTests(
-            self.loader.loadMethod(
-                self.TestTearDownSuppression.testSuppressMethod))
-        warningsShown = self.flushWarnings([
-                self.TestTearDownSuppression._emit])
-        self._assertWarnings(
-            warningsShown,
-            [suppression.CLASS_WARNING_MSG, suppression.MODULE_WARNING_MSG,
-             suppression.CLASS_WARNING_MSG, suppression.MODULE_WARNING_MSG])
-
-
-    def test_suppressMethod(self):
-        """
-        A suppression set on a test method prevents warnings emitted by that
-        test method which the suppression matches from being emitted.
-        """
-        self.runTests(self.loader.loadMethod(
-            self.TestSuppression.testSuppressMethod))
-        warningsShown = self.flushWarnings([
-                self.TestSuppression._emit])
-        self._assertWarnings(
-            warningsShown,
-            [suppression.CLASS_WARNING_MSG, suppression.MODULE_WARNING_MSG])
-
-
-    def test_suppressClass(self):
-        """
-        A suppression set on a L{SynchronousTestCase} subclass prevents warnings
-        emitted by any test methods defined on that class which match the
-        suppression from being emitted.
-        """
-        self.runTests(self.loader.loadMethod(
-            self.TestSuppression.testSuppressClass))
-        warningsShown = self.flushWarnings([
-                self.TestSuppression._emit])
-        self.assertEqual(
-            warningsShown[0]['message'], suppression.METHOD_WARNING_MSG)
-        self.assertEqual(
-            warningsShown[1]['message'], suppression.MODULE_WARNING_MSG)
-        self.assertEqual(len(warningsShown), 2)
-
-
-    def test_suppressModule(self):
-        """
-        A suppression set on a module prevents warnings emitted by any test
-        mewthods defined in that module which match the suppression from being
-        emitted.
-        """
-        self.runTests(self.loader.loadMethod(
-            self.TestSuppression2.testSuppressModule))
-        warningsShown = self.flushWarnings([
-                self.TestSuppression._emit])
-        self.assertEqual(
-            warningsShown[0]['message'], suppression.METHOD_WARNING_MSG)
-        self.assertEqual(
-            warningsShown[1]['message'], suppression.CLASS_WARNING_MSG)
-        self.assertEqual(len(warningsShown), 2)
-
-
-    def test_overrideSuppressClass(self):
-        """
-        The suppression set on a test method completely overrides a suppression
-        with wider scope; if it does not match a warning emitted by that test
-        method, the warning is emitted, even if a wider suppression matches.
-        """
-        case = self.loader.loadMethod(
-            self.TestSuppression.testOverrideSuppressClass)
-        self.runTests(case)
-        warningsShown = self.flushWarnings([
-                self.TestSuppression._emit])
-        self.assertEqual(
-            warningsShown[0]['message'], suppression.METHOD_WARNING_MSG)
-        self.assertEqual(
-            warningsShown[1]['message'], suppression.CLASS_WARNING_MSG)
-        self.assertEqual(
-            warningsShown[2]['message'], suppression.MODULE_WARNING_MSG)
-        self.assertEqual(len(warningsShown), 3)
-
-
-
-class SynchronousSuppressionTest(SuppressionMixin, unittest.SynchronousTestCase):
-    """
-    See module docstring.
-    """
-    from twisted.trial.test.suppression import (
-        SynchronousTestSetUpSuppression as TestSetUpSuppression,
-        SynchronousTestTearDownSuppression as TestTearDownSuppression,
-        SynchronousTestSuppression as TestSuppression,
-        SynchronousTestSuppression2 as TestSuppression2)
 
 
 

@@ -12,7 +12,8 @@ this code is arranged.
 
 import warnings
 
-from twisted.trial import unittest, util
+from twisted.python.compat import _PY3
+from twisted.trial import unittest, _utilpy3 as util
 
 
 
@@ -52,29 +53,9 @@ class SuppressionMixin(EmitMixin):
 
 
 
-class SynchronousTestSuppression(SuppressionMixin, unittest.SynchronousTestCase):
-    pass
-
-
-
-class AsynchronousTestSuppression(SuppressionMixin, unittest.TestCase):
-    pass
-
-
-
 class SetUpSuppressionMixin(object):
     def setUp(self):
         self._emit()
-
-
-
-class SynchronousTestSetUpSuppression(SetUpSuppressionMixin, SynchronousTestSuppression):
-    pass
-
-
-
-class AsynchronousTestSetUpSuppression(SetUpSuppressionMixin, AsynchronousTestSuppression):
-    pass
 
 
 
@@ -84,19 +65,27 @@ class TearDownSuppressionMixin(object):
 
 
 
-class SynchronousTestTearDownSuppression(TearDownSuppressionMixin, SynchronousTestSuppression):
-    pass
-
-
-
-class AsynchronousTestTearDownSuppression(TearDownSuppressionMixin, AsynchronousTestSuppression):
-    pass
-
-
-
 class TestSuppression2Mixin(EmitMixin):
     def testSuppressModule(self):
         self._emit()
+
+
+
+suppress = [util.suppress(message=MODULE_WARNING_MSG)]
+
+
+class SynchronousTestSuppression(SuppressionMixin, unittest.SynchronousTestCase):
+    pass
+
+
+
+class SynchronousTestSetUpSuppression(SetUpSuppressionMixin, SynchronousTestSuppression):
+    pass
+
+
+
+class SynchronousTestTearDownSuppression(TearDownSuppressionMixin, SynchronousTestSuppression):
+    pass
 
 
 
@@ -105,8 +94,21 @@ class SynchronousTestSuppression2(TestSuppression2Mixin, unittest.SynchronousTes
 
 
 
-class AsynchronousTestSuppression2(TestSuppression2Mixin, unittest.TestCase):
-    pass
+if not _PY3:
+    class AsynchronousTestSuppression(SuppressionMixin, unittest.TestCase):
+        pass
 
 
-suppress = [util.suppress(message=MODULE_WARNING_MSG)]
+
+    class AsynchronousTestSetUpSuppression(SetUpSuppressionMixin, AsynchronousTestSuppression):
+        pass
+
+
+
+    class AsynchronousTestTearDownSuppression(TearDownSuppressionMixin, AsynchronousTestSuppression):
+        pass
+
+
+
+    class AsynchronousTestSuppression2(TestSuppression2Mixin, unittest.TestCase):
+        pass

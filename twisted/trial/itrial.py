@@ -7,6 +7,8 @@ Interfaces for Trial.
 Maintainer: Jonathan Lange
 """
 
+from __future__ import division, absolute_import
+
 import zope.interface as zi
 from zope.interface import Attribute
 

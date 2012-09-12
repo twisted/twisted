@@ -75,6 +75,15 @@ class TestIntrospection(SynchronousTestCase):
         expected = [suppression.SynchronousTestSuppression2, suppression]
         for a, b in zip(parents, expected):
             self.assertEqual(a, b)
+        # Also, the function is deprecated.
+        warnings = self.flushWarnings([self.test_containers])
+        self.assertEqual(DeprecationWarning, warnings[0]['category'])
+        self.assertEqual(
+            "twisted.trial.util.getPythonContainers was deprecated in "
+            "Twisted 12.3.0: This function never worked correctly.  "
+            "Implement lookup on your own.",
+            warnings[0]['message'])
+        self.assertEqual(1, len(warnings))
 
 
 

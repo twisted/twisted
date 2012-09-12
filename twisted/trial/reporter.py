@@ -475,26 +475,26 @@ class Reporter(TestResult):
         # when a SynchronousTestCase method fails synchronously, the stack looks
         # like this:
         # [0]: SynchronousTestCase._run
-        # [1]:  utils.runWithWarningsSuppressed
+        # [1]:  _utilpy3.runWithWarningsSuppressed
         # [2:-2]: code in the test method which failed
-        # [-1]: unittst.fail
+        # [-1]: _synctest.fail
 
         # when a TestCase method fails synchronously, the stack looks like this:
         #  [0]: defer.maybeDeferred()
         #  [1]: utils.runWithWarningsSuppressed()
         #  [2:-2]: code in the test method which failed
-        #  [-1]: unittest.fail
+        #  [-1]: _synctest.fail
 
         # when a method fails inside a Deferred (i.e., when the test method
         # returns a Deferred, and that Deferred's errback fires), the stack
         # captured inside the resulting Failure looks like this:
         #  [0]: defer.Deferred._runCallbacks
         #  [1:-2]: code in the testmethod which failed
-        #  [-1]: unittest.fail
+        #  [-1]: _synctest.fail
 
         # as a result, we want to trim either [maybeDeferred,runWWS] or
-        # [Deferred._runCallbacks] or [SynchronousTestCase._run] from the front,
-        # and trim the [unittest.fail] from the end.
+        # [Deferred._runCallbacks] or [SynchronousTestCase._run,runWWS] from the
+        # front, and trim the [unittest.fail] from the end.
 
         # There is also another case, when the test method is badly defined and
         # contains extra arguments.
@@ -510,9 +510,8 @@ class Reporter(TestResult):
         secondMethod = newFrames[1][0]
         secondFile = os.path.splitext(os.path.basename(newFrames[1][1]))[0]
 
-        supp = ("runWithWarningsSuppressed", "utils")
-        syncCase = (("_run", "unittest"), supp)
-        asyncCase = (("maybeDeferred", "defer"), supp)
+        syncCase = (("_run", "_synctest"), ("runWithWarningsSuppressed", "_utilpy3"))
+        asyncCase = (("maybeDeferred", "defer"), ("runWithWarningsSuppressed", "utils"))
 
         twoFrames = ((firstMethod, firstFile), (secondMethod, secondFile))
         if twoFrames in [syncCase, asyncCase]:
@@ -526,7 +525,7 @@ class Reporter(TestResult):
 
         last = newFrames[-1]
         if (last[0].startswith('fail')
-            and os.path.splitext(os.path.basename(last[1]))[0] == 'unittest'):
+            and os.path.splitext(os.path.basename(last[1]))[0] == '_synctest'):
             newFrames = newFrames[:-1]
 
         return newFrames

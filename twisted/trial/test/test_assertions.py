@@ -12,29 +12,38 @@ demonstrated to work earlier in the file are used by those later in the file
 (even though the runner will probably not run the tests in this order).
 """
 
-from __future__ import division
+from __future__ import division, absolute_import
 
 import warnings
 from pprint import pformat
 import unittest as pyunit
 
-from twisted.python import reflect, failure
+from twisted.python._utilpy3 import FancyEqMixin
+from twisted.python._reflectpy3 import prefixedMethods, accumulateMethods
 from twisted.python.deprecate import deprecated
 from twisted.python.versions import Version, getVersionString
-from twisted.internet import defer
-from twisted.trial import unittest, runner, reporter
+from twisted.trial import unittest
 
-class MockEquality(object):
+class MockEquality(FancyEqMixin, object):
+    compareAttributes = ("name",)
+
     def __init__(self, name):
         self.name = name
+
 
     def __repr__(self):
         return "MockEquality(%s)" % (self.name,)
 
-    def __eq__(self, other):
-        if not hasattr(other, 'name'):
-            raise ValueError("%r not comparable to %r" % (other, self))
-        return self.name[0] == other.name[0]
+
+class ComparisonError(object):
+    """
+    An object which raises exceptions from its comparison methods.
+    """
+    def _error(self, other):
+        raise ValueError("Comparison is broken")
+
+    __eq__ = __ne__ = _error
+
 
 
 class TestFailureTests(pyunit.TestCase):
@@ -125,7 +134,7 @@ class AssertFalseTests(unittest.SynchronousTestCase):
         for true in [1, True, 'cat', [1,2], (3,4)]:
             try:
                 method(true, "failed on %r" % (true,))
-            except self.failureException, e:
+            except self.failureException as e:
                 if str(e) != "failed on %r" % (true,):
                     self.fail("Raised incorrect exception on %r: %r" % (true, e))
             else:
@@ -186,7 +195,7 @@ class AssertTrueTests(unittest.SynchronousTestCase):
         for notTrue in [0, 0.0, False, None, (), []]:
             try:
                 method(notTrue, "failed on %r" % (notTrue,))
-            except self.failureException, e:
+            except self.failureException as e:
                 if str(e) != "failed on %r" % (notTrue,):
                     self.fail(
                         "Raised incorrect exception on %r: %r" % (notTrue, e))
@@ -262,7 +271,7 @@ class TestSynchronousAssertions(unittest.SynchronousTestCase):
     def _testUnequalPair(self, first, second):
         try:
             self.assertEqual(first, second)
-        except self.failureException, e:
+        except self.failureException as e:
             expected = 'not equal:\na = %s\nb = %s\n' % (
                 pformat(first), pformat(second))
             if str(e) != expected:
@@ -282,7 +291,7 @@ class TestSynchronousAssertions(unittest.SynchronousTestCase):
     def test_assertEqual_custom(self):
         x = MockEquality('first')
         y = MockEquality('second')
-        z = MockEquality('fecund')
+        z = MockEquality('first')
         self._testEqualPair(x, x)
         self._testEqualPair(x, z)
         self._testUnequalPair(x, y)
@@ -313,8 +322,8 @@ class TestSynchronousAssertions(unittest.SynchronousTestCase):
 
 
     def test_assertEqual_incomparable(self):
-        apple = MockEquality('apple')
-        orange = ['orange']
+        apple = ComparisonError()
+        orange = ["orange"]
         try:
             self.assertEqual(apple, orange)
         except self.failureException:
@@ -329,6 +338,7 @@ class TestSynchronousAssertions(unittest.SynchronousTestCase):
 
     def _raiseError(self, error):
         raise error
+
 
     def test_failUnlessRaises_expected(self):
         x = self.failUnlessRaises(ValueError, self._raiseError, ValueError)
@@ -348,14 +358,16 @@ class TestSynchronousAssertions(unittest.SynchronousTestCase):
         else:
             self.fail("Expected exception wasn't raised. Should have failed")
 
+
     def test_failUnlessRaises_noException(self):
         try:
             self.failUnlessRaises(ValueError, lambda : None)
-        except self.failureException, e:
+        except self.failureException as e:
             self.assertEqual(str(e),
                                  'ValueError not raised (None returned)')
         else:
             self.fail("Exception not raised. Should have failed")
+
 
     def test_failUnlessRaises_failureException(self):
         x = self.failUnlessRaises(self.failureException, self._raiseError,
@@ -372,6 +384,7 @@ class TestSynchronousAssertions(unittest.SynchronousTestCase):
         else:
             self.fail("Should have raised exception")
 
+
     def test_failIfEqual_basic(self):
         x, y, z = [1], [2], [1]
         ret = self.failIfEqual(x, y)
@@ -382,6 +395,7 @@ class TestSynchronousAssertions(unittest.SynchronousTestCase):
         self.failUnlessRaises(self.failureException,
                               self.failIfEqual, x, z)
 
+
     def test_failIfEqual_customEq(self):
         x = MockEquality('first')
         y = MockEquality('second')
@@ -391,8 +405,7 @@ class TestSynchronousAssertions(unittest.SynchronousTestCase):
                              "failIfEqual should return first parameter")
         self.failUnlessRaises(self.failureException,
                               self.failIfEqual, x, x)
-        # test when __ne__ is not defined
-        self.failIfEqual(x, z, "__ne__ not defined, so not equal")
+        self.failIfEqual(x, z, "__ne__ should make these not equal")
 
 
     def test_failIfIdenticalPositive(self):
@@ -438,6 +451,7 @@ class TestSynchronousAssertions(unittest.SynchronousTestCase):
         self.failUnlessRaises(self.failureException,
                               self.failUnlessApproximates, x, y, 0.1)
 
+
     def test_failUnlessAlmostEqual(self):
         precision = 5
         x = 8.000001
@@ -449,6 +463,7 @@ class TestSynchronousAssertions(unittest.SynchronousTestCase):
                              "first parameter (%r, %r)" % (ret, x))
         self.failUnlessRaises(self.failureException,
                               self.failUnlessAlmostEqual, x, y, precision)
+
 
     def test_failIfAlmostEqual(self):
         precision = 5
@@ -463,6 +478,7 @@ class TestSynchronousAssertions(unittest.SynchronousTestCase):
         self.failUnlessRaises(self.failureException,
                               self.failIfAlmostEqual, x, z, precision)
 
+
     def test_failUnlessSubstring(self):
         x = "cat"
         y = "the dog sat"
@@ -474,6 +490,7 @@ class TestSynchronousAssertions(unittest.SynchronousTestCase):
                               self.failUnlessSubstring, x, y)
         self.failUnlessRaises(self.failureException,
                               self.failUnlessSubstring, z, x)
+
 
     def test_failIfSubstring(self):
         x = "cat"
@@ -592,75 +609,6 @@ class TestSynchronousAssertions(unittest.SynchronousTestCase):
         test_assertDictEqual.skip = (
             "assertDictEqual is not available on this version of Python")
 
-
-
-class TestAsynchronousAssertions(unittest.TestCase):
-    """
-    Tests for L{TestCase}'s asynchronous extensions to L{SynchronousTestCase}.
-    That is, assertFailure.
-    """
-    def test_assertFailure(self):
-        d = defer.maybeDeferred(lambda: 1/0)
-        return self.assertFailure(d, ZeroDivisionError)
-
-
-    def test_assertFailure_wrongException(self):
-        d = defer.maybeDeferred(lambda: 1/0)
-        self.assertFailure(d, OverflowError)
-        d.addCallbacks(lambda x: self.fail('Should have failed'),
-                       lambda x: x.trap(self.failureException))
-        return d
-
-
-    def test_assertFailure_noException(self):
-        d = defer.succeed(None)
-        self.assertFailure(d, ZeroDivisionError)
-        d.addCallbacks(lambda x: self.fail('Should have failed'),
-                       lambda x: x.trap(self.failureException))
-        return d
-
-
-    def test_assertFailure_moreInfo(self):
-        """
-        In the case of assertFailure failing, check that we get lots of
-        information about the exception that was raised.
-        """
-        try:
-            1/0
-        except ZeroDivisionError:
-            f = failure.Failure()
-            d = defer.fail(f)
-        d = self.assertFailure(d, RuntimeError)
-        d.addErrback(self._checkInfo, f)
-        return d
-
-
-    def _checkInfo(self, assertionFailure, f):
-        assert assertionFailure.check(self.failureException)
-        output = assertionFailure.getErrorMessage()
-        self.assertIn(f.getErrorMessage(), output)
-        self.assertIn(f.getBriefTraceback(), output)
-
-
-    def test_assertFailure_masked(self):
-        """
-        A single wrong assertFailure should fail the whole test.
-        """
-        class ExampleFailure(Exception):
-            pass
-
-        class TC(unittest.TestCase):
-            failureException = ExampleFailure
-            def test_assertFailure(self):
-                d = defer.maybeDeferred(lambda: 1/0)
-                self.assertFailure(d, OverflowError)
-                self.assertFailure(d, ZeroDivisionError)
-                return d
-
-        test = TC('test_assertFailure')
-        result = reporter.TestResult()
-        test.run(result)
-        self.assertEqual(1, len(result.failures))
 
 
 class WarningAssertionTests(unittest.SynchronousTestCase):
@@ -865,7 +813,7 @@ class TestAssertionNames(unittest.SynchronousTestCase):
     """
     def _getAsserts(self):
         dct = {}
-        reflect.accumulateMethods(self, dct, 'assert')
+        accumulateMethods(self, dct, 'assert')
         return [ dct[k] for k in dct if not k.startswith('Not') and k != '_' ]
 
     def _name(self, x):
@@ -882,14 +830,14 @@ class TestAssertionNames(unittest.SynchronousTestCase):
         corresponding I{failUnless}-prefixed methods.
         """
         asserts = set(self._getAsserts())
-        failUnlesses = set(reflect.prefixedMethods(self, 'failUnless'))
+        failUnlesses = set(prefixedMethods(self, 'failUnless'))
         self.assertEqual(
             failUnlesses, asserts.intersection(failUnlesses))
 
 
     def test_failIf_matches_assertNot(self):
-        asserts = reflect.prefixedMethods(unittest.SynchronousTestCase, 'assertNot')
-        failIfs = reflect.prefixedMethods(unittest.SynchronousTestCase, 'failIf')
+        asserts = prefixedMethods(unittest.SynchronousTestCase, 'assertNot')
+        failIfs = prefixedMethods(unittest.SynchronousTestCase, 'failIf')
         self.assertEqual(sorted(asserts, key=self._name),
                              sorted(failIfs, key=self._name))
 

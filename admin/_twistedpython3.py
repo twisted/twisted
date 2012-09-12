@@ -38,6 +38,13 @@ modules = [
     "twisted.python._utilpy3",
     "twisted.python.versions",
     "twisted.test",
+    "twisted.trial",
+    "twisted.trial.itrial",
+    "twisted.trial._synctest",
+    "twisted.trial.test",
+    "twisted.trial.test.suppression",
+    "twisted.trial.unittest",
+    "twisted.trial._utilpy3",
     "twisted._version",
     ]
 
@@ -58,4 +65,8 @@ testModules = [
     "twisted.test.test_monkey",
     "twisted.test.test_paths",
     "twisted.test.test_threadable",
+    "twisted.trial.test.test_assertions",
+    "twisted.trial.test.test_suppression",
+    "twisted.trial.test.test_utilpy3",
+    "twisted.trial.test.test_warning",
     ]

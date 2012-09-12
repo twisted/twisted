@@ -12,6 +12,9 @@ nothing here in this module for you to use unless you are maintaining Trial.
 
 Any non-Trial Twisted code that uses this module will be shot.
 
+@var DEFAULT_TIMEOUT_DURATION: The default timeout which will be applied to
+    asynchronous (ie, Deferred-returning) test methods, in seconds.
+
 Maintainer: Jonathan Lange
 """
 
@@ -23,6 +26,11 @@ from twisted.python.failure import Failure
 from twisted.python import deprecate, versions
 from twisted.python.lockfile import FilesystemLock
 from twisted.python.filepath import FilePath
+
+from twisted.trial._utilpy3 import (
+    excInfoOrFailureToExcInfo, suppress, acquireAttribute)
+
+__all__ = ['excInfoOrFailureToExcInfo', 'suppress', 'acquireAttribute']
 
 DEFAULT_TIMEOUT = object()
 DEFAULT_TIMEOUT_DURATION = 120.0
@@ -165,47 +173,6 @@ class _Janitor(object):
         return selectableStrings
 
 
-def excInfoOrFailureToExcInfo(err):
-    """
-    Coerce a Failure to an _exc_info, if err is a Failure.
-
-    @param err: Either a tuple such as returned by L{sys.exc_info} or a
-        L{Failure} object.
-    @return: A tuple like the one returned by L{sys.exc_info}. e.g.
-        C{exception_type, exception_object, traceback_object}.
-    """
-    if isinstance(err, Failure):
-        # Unwrap the Failure into a exc_info tuple.
-        err = (err.type, err.value, err.getTracebackObject())
-    return err
-
-
-def suppress(action='ignore', **kwarg):
-    """
-    Sets up the .suppress tuple properly, pass options to this method as you
-    would the stdlib warnings.filterwarnings()
-
-    So, to use this with a .suppress magic attribute you would do the
-    following:
-
-      >>> from twisted.trial import unittest, util
-      >>> import warnings
-      >>>
-      >>> class TestFoo(unittest.TestCase):
-      ...     def testFooBar(self):
-      ...         warnings.warn("i am deprecated", DeprecationWarning)
-      ...     testFooBar.suppress = [util.suppress(message='i am deprecated')]
-      ...
-      >>>
-
-    Note that as with the todo and timeout attributes: the module level
-    attribute acts as a default for the class attribute which acts as a default
-    for the method attribute. The suppress attribute can be overridden at any
-    level by specifying C{.suppress = []}
-    """
-    return ((action,), kwarg)
-
-
 def profiled(f, outputFile):
     def _(*args, **kwargs):
         if sys.version_info[0:2] != (2, 4):
@@ -245,19 +212,10 @@ def getPythonContainers(meth):
         moduleName = getattr(module, '__module__', None)
     return containers
 
-
-_DEFAULT = object()
-def acquireAttribute(objects, attr, default=_DEFAULT):
-    """Go through the list 'objects' sequentially until we find one which has
-    attribute 'attr', then return the value of that attribute.  If not found,
-    return 'default' if set, otherwise, raise AttributeError. """
-    for obj in objects:
-        if hasattr(obj, attr):
-            return getattr(obj, attr)
-    if default is not _DEFAULT:
-        return default
-    raise AttributeError('attribute %r not found in %r' % (attr, objects))
-
+deprecate.deprecatedModuleAttribute(
+    versions.Version("Twisted", 12, 3, 0),
+    "This function never worked correctly.  Implement lookup on your own.",
+    __name__, "getPythonContainers")
 
 
 deprecate.deprecatedModuleAttribute(
@@ -425,6 +383,3 @@ def _unusedTestDirectory(base):
                 counter += 1
             else:
                 raise _WorkingDirectoryBusy()
-
-
-__all__ = ['excInfoOrFailureToExcInfo', 'suppress']

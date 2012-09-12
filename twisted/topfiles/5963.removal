@@ -1,0 +1,1 @@
+assertTrue, assertEqual, and the other free-functions in twisted.trial.unittest for writing assertions, deprecated since prior to Twisted 2.3, have been removed.

@@ -10,11 +10,7 @@ from __future__ import division, absolute_import
 import sys, errno, warnings
 
 from twisted.python.compat import _PY3
-# Replace with trial as part of #5885:
-if _PY3:
-    from unittest import TestCase
-else:
-    from twisted.trial.unittest import SynchronousTestCase as TestCase
+from twisted.trial.unittest import SynchronousTestCase as TestCase
 
 from twisted.python import _utilpy3 as util
 
@@ -279,17 +275,6 @@ class SuppressedWarningsTests(TestCase):
     """
     Tests for L{util.runWithWarningsSuppressed}.
     """
-
-    def setUp(self):
-        self.warnings = []
-        self.originalshow = warnings.showwarning
-        warnings.showwarning = lambda *a, **kw: self.warnings.append(a[0])
-
-
-    def tearDown(self):
-        warnings.showwarning = self.originalshow
-
-
     def test_runWithWarningsSuppressedFiltered(self):
         """
         Warnings from the function called by C{runWithWarningsSuppressed} are
@@ -299,7 +284,7 @@ class SuppressedWarningsTests(TestCase):
                    (("ignore", ".*bar.*"), {})]
         util.runWithWarningsSuppressed(filters, warnings.warn, "ignore foo")
         util.runWithWarningsSuppressed(filters, warnings.warn, "ignore bar")
-        self.assertEqual(self.warnings, [])
+        self.assertEqual([], self.flushWarnings())
 
 
     def test_runWithWarningsSuppressedUnfiltered(self):
@@ -310,7 +295,8 @@ class SuppressedWarningsTests(TestCase):
         filters = [(("ignore", ".*foo.*"), {}),
                    (("ignore", ".*bar.*"), {})]
         util.runWithWarningsSuppressed(filters, warnings.warn, "don't ignore")
-        self.assertEqual([w.args[0] for w in self.warnings], ["don't ignore"])
+        self.assertEqual(
+            ["don't ignore"], [w['message'] for w in self.flushWarnings()])
 
 
     def test_passThrough(self):
@@ -330,4 +316,5 @@ class SuppressedWarningsTests(TestCase):
                    (("ignore", ".*bar.*"), {})]
         util.runWithWarningsSuppressed(filters, lambda: None)
         warnings.warn("ignore foo")
-        self.assertEqual([w.args[0] for w in self.warnings], ["ignore foo"])
+        self.assertEqual(
+            ["ignore foo"], [w['message'] for w in self.flushWarnings()])
