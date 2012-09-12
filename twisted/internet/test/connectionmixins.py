@@ -26,8 +26,6 @@ from twisted.test.test_tcp import ClosingProtocol
 from twisted.trial.unittest import SkipTest
 from twisted.internet.error import DNSLookupError
 from twisted.internet.interfaces import ITLSTransport
-from twisted.internet.test.reactormixins import ConnectableProtocol
-from twisted.internet.test.reactormixins import runProtocolsWithReactor
 from twisted.internet.test.reactormixins import needsRunningReactor
 
 
@@ -70,6 +68,133 @@ def findFreePort(interface='127.0.0.1', family=socket.AF_INET,
         return probe.getsockname()
     finally:
         probe.close()
+
+
+
+class ConnectableProtocol(Protocol):
+    """
+    A protocol to be used with L{runProtocolsWithReactor}.
+
+    The protocol and its pair should eventually disconnect from each other.
+
+    @ivar reactor: The reactor used in this test.
+
+    @ivar disconnectReason: The L{Failure} passed to C{connectionLost}.
+
+    @ivar _done: A L{Deferred} which will be fired when the connection is
+        lost.
+    """
+
+    disconnectReason = None
+
+    def _setAttributes(self, reactor, done):
+        """
+        Set attributes on the protocol that are known only externally; this
+        will be called by L{runProtocolsWithReactor} when this protocol is
+        instantiated.
+
+        @param reactor: The reactor used in this test.
+
+        @param done: A L{Deferred} which will be fired when the connection is
+           lost.
+        """
+        self.reactor = reactor
+        self._done = done
+
+
+    def connectionLost(self, reason):
+        self.disconnectReason = reason
+        self._done.callback(None)
+        del self._done
+
+
+
+class EndpointCreator:
+    """
+    Create client and server endpoints that know how to connect to each other.
+    """
+
+    def server(self, reactor):
+        """
+        Return an object providing C{IStreamServerEndpoint} for use in creating
+        a server to use to establish the connection type to be tested.
+        """
+        raise NotImplementedError()
+
+
+    def client(self, reactor, serverAddress):
+        """
+        Return an object providing C{IStreamClientEndpoint} for use in creating
+        a client to use to establish the connection type to be tested.
+        """
+        raise NotImplementedError()
+
+
+
+class _SingleProtocolFactory(ClientFactory):
+    """
+    Factory to be used by L{runProtocolsWithReactor}.
+
+    It always returns the same protocol (i.e. is intended for only a single connection).
+    """
+
+    def __init__(self, protocol):
+        self._protocol = protocol
+
+
+    def buildProtocol(self, addr):
+        return self._protocol
+
+
+
+def runProtocolsWithReactor(reactorBuilder, serverProtocol, clientProtocol,
+                            endpointCreator):
+    """
+    Connect two protocols using endpoints and a new reactor instance.
+
+    A new reactor will be created and run, with the client and server protocol
+    instances connected to each other using the given endpoint creator. The
+    protocols should run through some set of tests, then disconnect; when both
+    have disconnected the reactor will be stopped and the function will
+    return.
+
+    @param reactorBuilder: A L{ReactorBuilder} instance.
+
+    @param serverProtocol: A L{ConnectableProtocol} that will be the server.
+
+    @param clientProtocol: A L{ConnectableProtocol} that will be the client.
+
+    @param endpointCreator: An instance of L{EndpointCreator}.
+
+    @return: The reactor run by this test.
+    """
+    reactor = reactorBuilder.buildReactor()
+    serverProtocol._setAttributes(reactor, Deferred())
+    clientProtocol._setAttributes(reactor, Deferred())
+    serverFactory = _SingleProtocolFactory(serverProtocol)
+    clientFactory = _SingleProtocolFactory(clientProtocol)
+
+    # Listen on a port:
+    serverEndpoint = endpointCreator.server(reactor)
+    d = serverEndpoint.listen(serverFactory)
+
+    # Connect to the port:
+    def gotPort(p):
+        clientEndpoint = endpointCreator.client(
+            reactor, p.getHost())
+        return clientEndpoint.connect(clientFactory)
+    d.addCallback(gotPort)
+
+    # Stop reactor when both connections are lost:
+    def failed(result):
+        log.err(result, "Connection setup failed.")
+    disconnected = gatherResults([serverProtocol._done, clientProtocol._done])
+    d.addCallback(lambda _: disconnected)
+    d.addErrback(failed)
+    d.addCallback(lambda _: needsRunningReactor(reactor, reactor.stop))
+
+    reactorBuilder.runReactor(reactor)
+    return reactor
 
 
 

@@ -2,26 +2,52 @@
 # See LICENSE for details.
 
 """
-Tests for implementations of L{IReactorTime}.
+Utilities for unit testing reactor implementations.
+
+The main feature of this module is L{ReactorBuilder}, a base class for use when
+writing interface/blackbox tests for reactor implementations.  Test case classes
+for reactor features should subclass L{ReactorBuilder} instead of
+L{SynchronousTestCase}.  All of the features of L{SynchronousTestCase} will be
+available.  Additionally, the tests will automatically be applied to all
+available reactor implementations.
 """
+
+from __future__ import division, absolute_import
 
 __metaclass__ = type
 
+__all__ = ['TestTimeoutError', 'ReactorBuilder', 'needsRunningReactor']
+
 import os, signal, time
 
-from twisted.internet.defer import TimeoutError, Deferred, gatherResults
-from twisted.internet.protocol import ClientFactory, Protocol
-from twisted.trial.unittest import TestCase, SkipTest
+from twisted.python.compat import _PY3
+from twisted.trial.unittest import SynchronousTestCase, SkipTest
+from twisted.trial._utilpy3 import DEFAULT_TIMEOUT_DURATION, acquireAttribute
 from twisted.python.runtime import platform
-from twisted.python.reflect import namedAny, fullyQualifiedName
+from twisted.python._reflectpy3 import namedAny
+from twisted.python._deprecatepy3 import _fullyQualifiedName as fullyQualifiedName
+
 from twisted.python import log
 from twisted.python.failure import Failure
+
 
 # Access private APIs.
 if platform.isWindows():
     process = None
+elif _PY3:
+    # Enable this on Python 3 when twisted.internet.process is ported.
+    # See #5968.
+    process = None
 else:
     from twisted.internet import process
+
+
+
+class TestTimeoutError(Exception):
+    """
+    The reactor was still running after the timeout period elapsed in
+    L{ReactorBuilder.runReactor}.
+    """
 
 
 
@@ -50,138 +76,12 @@ def needsRunningReactor(reactor, thunk):
 
 
 
-class ConnectableProtocol(Protocol):
-    """
-    A protocol to be used with L{runProtocolsWithReactor}.
-
-    The protocol and its pair should eventually disconnect from each other.
-
-    @ivar reactor: The reactor used in this test.
-
-    @ivar disconnectReason: The L{Failure} passed to C{connectionLost}.
-
-    @ivar _done: A L{Deferred} which will be fired when the connection is
-        lost.
-    """
-
-    disconnectReason = None
-
-    def _setAttributes(self, reactor, done):
-        """
-        Set attributes on the protocol that are known only externally; this
-        will be called by L{runProtocolsWithReactor} when this protocol is
-        instantiated.
-
-        @param reactor: The reactor used in this test.
-
-        @param done: A L{Deferred} which will be fired when the connection is
-           lost.
-        """
-        self.reactor = reactor
-        self._done = done
-
-
-    def connectionLost(self, reason):
-        self.disconnectReason = reason
-        self._done.callback(None)
-        del self._done
-
-
-
-class EndpointCreator:
-    """
-    Create client and server endpoints that know how to connect to each other.
-    """
-
-    def server(self, reactor):
-        """
-        Return an object providing C{IStreamServerEndpoint} for use in creating
-        a server to use to establish the connection type to be tested.
-        """
-        raise NotImplementedError()
-
-
-    def client(self, reactor, serverAddress):
-        """
-        Return an object providing C{IStreamClientEndpoint} for use in creating
-        a client to use to establish the connection type to be tested.
-        """
-        raise NotImplementedError()
-
-
-
-class _SingleProtocolFactory(ClientFactory):
-    """
-    Factory to be used by L{runProtocolsWithReactor}.
-
-    It always returns the same protocol (i.e. is intended for only a single connection).
-    """
-
-    def __init__(self, protocol):
-        self._protocol = protocol
-
-
-    def buildProtocol(self, addr):
-        return self._protocol
-
-
-
-def runProtocolsWithReactor(reactorBuilder, serverProtocol, clientProtocol,
-                            endpointCreator):
-    """
-    Connect two protocols using endpoints and a new reactor instance.
-
-    A new reactor will be created and run, with the client and server protocol
-    instances connected to each other using the given endpoint creator. The
-    protocols should run through some set of tests, then disconnect; when both
-    have disconnected the reactor will be stopped and the function will
-    return.
-
-    @param reactorBuilder: A L{ReactorBuilder} instance.
-
-    @param serverProtocol: A L{ConnectableProtocol} that will be the server.
-
-    @param clientProtocol: A L{ConnectableProtocol} that will be the client.
-
-    @param endpointCreator: An instance of L{EndpointCreator}.
-
-    @return: The reactor run by this test.
-    """
-    reactor = reactorBuilder.buildReactor()
-    serverProtocol._setAttributes(reactor, Deferred())
-    clientProtocol._setAttributes(reactor, Deferred())
-    serverFactory = _SingleProtocolFactory(serverProtocol)
-    clientFactory = _SingleProtocolFactory(clientProtocol)
-
-    # Listen on a port:
-    serverEndpoint = endpointCreator.server(reactor)
-    d = serverEndpoint.listen(serverFactory)
-
-    # Connect to the port:
-    def gotPort(p):
-        clientEndpoint = endpointCreator.client(
-            reactor, p.getHost())
-        return clientEndpoint.connect(clientFactory)
-    d.addCallback(gotPort)
-
-    # Stop reactor when both connections are lost:
-    def failed(result):
-        log.err(result, "Connection setup failed.")
-    disconnected = gatherResults([serverProtocol._done, clientProtocol._done])
-    d.addCallback(lambda _: disconnected)
-    d.addErrback(failed)
-    d.addCallback(lambda _: needsRunningReactor(reactor, reactor.stop))
-
-    reactorBuilder.runReactor(reactor)
-    return reactor
-
-
-
 class ReactorBuilder:
     """
-    L{TestCase} mixin which provides a reactor-creation API.  This mixin
-    defines C{setUp} and C{tearDown}, so mix it in before L{TestCase} or call
-    its methods from the overridden ones in the subclass.
+    L{SynchronousTestCase} mixin which provides a reactor-creation API.  This
+    mixin defines C{setUp} and C{tearDown}, so mix it in before
+    L{SynchronousTestCase} or call its methods from the overridden ones in the
+    subclass.
 
     @cvar skippedReactors: A dict mapping FQPN strings of reactors for
         which the tests defined by this class will be skipped to strings
@@ -194,7 +94,7 @@ class ReactorBuilder:
     @ivar originalHandler: The SIGCHLD handler which was installed when setUp
         ran and which will be re-installed when tearDown runs.
     @ivar _reactors: A list of FQPN strings giving the reactors for which
-        TestCases will be created.
+        L{SynchronousTestCase}s will be created.
     """
 
     _reactors = [
@@ -339,9 +239,9 @@ class ReactorBuilder:
             raise SkipTest(Failure().getErrorMessage())
         else:
             if self.requiredInterfaces is not None:
-                missing = filter(
-                     lambda required: not required.providedBy(reactor),
-                     self.requiredInterfaces)
+                missing = [
+                    required for required in self.requiredInterfaces
+                    if not required.providedBy(reactor)]
                 if missing:
                     self.unbuildReactor(reactor)
                     raise SkipTest("%s does not provide %s" % (
@@ -349,6 +249,15 @@ class ReactorBuilder:
                         ",".join([fullyQualifiedName(x) for x in missing])))
         self.addCleanup(self.unbuildReactor, reactor)
         return reactor
+
+
+    def getTimeout(self):
+        """
+        Determine how long to run the test before considering it failed.
+
+        @return: A C{int} or C{float} giving a number of seconds.
+        """
+        return acquireAttribute(self._parents, 'timeout', DEFAULT_TIMEOUT_DURATION)
 
 
     def runReactor(self, reactor, timeout=None):
@@ -365,8 +274,8 @@ class ReactorBuilder:
             Trial will be used.  This depends on the L{IReactorTime}
             implementation of C{reactor} for correct operation.
 
-        @raise TimeoutError: If the reactor is still running after C{timeout}
-            seconds.
+        @raise TestTimeoutError: If the reactor is still running after
+            C{timeout} seconds.
         """
         if timeout is None:
             timeout = self.getTimeout()
@@ -379,20 +288,20 @@ class ReactorBuilder:
         reactor.callLater(timeout, stop)
         reactor.run()
         if timedOut:
-            raise TimeoutError(
+            raise TestTimeoutError(
                 "reactor still running after %s seconds" % (timeout,))
 
 
     def makeTestCaseClasses(cls):
         """
-        Create a L{TestCase} subclass which mixes in C{cls} for each known
-        reactor and return a dict mapping their names to them.
+        Create a L{SynchronousTestCase} subclass which mixes in C{cls} for each
+        known reactor and return a dict mapping their names to them.
         """
         classes = {}
         for reactor in cls._reactors:
             shortReactorName = reactor.split(".")[-1]
             name = (cls.__name__ + "." + shortReactorName).replace(".", "_")
-            class testcase(cls, TestCase):
+            class testcase(cls, SynchronousTestCase):
                 __module__ = cls.__module__
                 if reactor in cls.skippedReactors:
                     skip = cls.skippedReactors[reactor]
@@ -404,6 +313,3 @@ class ReactorBuilder:
             classes[testcase.__name__] = testcase
         return classes
     makeTestCaseClasses = classmethod(makeTestCaseClasses)
-
-
-__all__ = ['ReactorBuilder']

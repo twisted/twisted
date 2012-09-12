@@ -21,6 +21,8 @@ modules = [
     "twisted",
     "twisted.internet",
     "twisted.internet.interfaces",
+    "twisted.internet.test",
+    "twisted.internet.test.reactormixins",
     "twisted.python",
     "twisted.python.compat",
     "twisted.python.context",

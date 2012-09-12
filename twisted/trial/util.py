@@ -28,12 +28,15 @@ from twisted.python.lockfile import FilesystemLock
 from twisted.python.filepath import FilePath
 
 from twisted.trial._utilpy3 import (
+    DEFAULT_TIMEOUT_DURATION,
     excInfoOrFailureToExcInfo, suppress, acquireAttribute)
 
-__all__ = ['excInfoOrFailureToExcInfo', 'suppress', 'acquireAttribute']
+__all__ = [
+    'DEFAULT_TIMEOUT_DURATION',
+
+    'excInfoOrFailureToExcInfo', 'suppress', 'acquireAttribute']
 
 DEFAULT_TIMEOUT = object()
-DEFAULT_TIMEOUT_DURATION = 120.0
 
 
 

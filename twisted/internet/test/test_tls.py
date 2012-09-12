@@ -11,7 +11,7 @@ import sys, operator
 
 from zope.interface import implements
 
-from twisted.internet.test.reactormixins import ReactorBuilder, EndpointCreator
+from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.protocol import ServerFactory, ClientFactory, Protocol
 from twisted.internet.interfaces import (
     IReactorSSL, ITLSTransport, IStreamClientEndpoint)
@@ -26,8 +26,8 @@ from twisted.python.runtime import platform
 from twisted.internet.test.test_core import ObjectModelIntegrationMixin
 from twisted.internet.test.test_tcp import (
     StreamTransportTestsMixin, AbortConnectionMixin)
-from twisted.internet.test.connectionmixins import ConnectionTestsMixin
-from twisted.internet.test.connectionmixins import BrokenContextFactory
+from twisted.internet.test.connectionmixins import (
+    EndpointCreator, ConnectionTestsMixin, BrokenContextFactory)
 
 try:
     from OpenSSL.crypto import FILETYPE_PEM

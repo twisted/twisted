@@ -33,12 +33,12 @@ from twisted.internet.task import LoopingCall
 from twisted.internet import interfaces
 from twisted.internet.protocol import (
     ServerFactory, ClientFactory, DatagramProtocol)
-from twisted.internet.test.reactormixins import ReactorBuilder, EndpointCreator
+from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.test.test_core import ObjectModelIntegrationMixin
 from twisted.internet.test.test_tcp import StreamTransportTestsMixin
-from twisted.internet.test.reactormixins import (
-    ConnectableProtocol, runProtocolsWithReactor)
-from twisted.internet.test.connectionmixins import ConnectionTestsMixin
+from twisted.internet.test.connectionmixins import (
+    EndpointCreator, ConnectableProtocol, runProtocolsWithReactor,
+    ConnectionTestsMixin)
 
 try:
     from twisted.python import sendmsg
@@ -377,14 +377,15 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         server = SendFileDescriptor(cargo.fileno(), None)
 
         client = ReceiveFileDescriptor()
-        d = self.assertFailure(
-            client.waitForDescriptor(), ConnectionClosed)
-        d.addErrback(
-            err, "Sending file descriptor encountered unexpected problem")
+        result = []
+        d = client.waitForDescriptor()
+        d.addBoth(result.append)
         d.addBoth(lambda ignored: server.transport.loseConnection())
 
         runProtocolsWithReactor(self, server, client, self.endpoints)
 
+        self.assertIsInstance(result[0], Failure)
+        result[0].trap(ConnectionClosed)
         self.assertIsInstance(server.reason.value, FileDescriptorOverrun)
     if sendmsgSkip is not None:
         test_fileDescriptorOverrun.skip = sendmsgSkip

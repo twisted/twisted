@@ -17,9 +17,7 @@ from twisted.python.failure import Failure
 from twisted.python import log
 
 from twisted.trial.unittest import SkipTest, TestCase
-from twisted.internet.test.reactormixins import ReactorBuilder, EndpointCreator
-from twisted.internet.test.reactormixins import ConnectableProtocol
-from twisted.internet.test.reactormixins import runProtocolsWithReactor
+from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.error import (
     ConnectionLost, UserError, ConnectionRefusedError, ConnectionDone,
     ConnectionAborted)
@@ -36,7 +34,8 @@ from twisted.internet.interfaces import (
 from twisted.internet.tcp import Connection, Server, _resolveIPv6
 
 from twisted.internet.test.connectionmixins import (
-    LogObserverMixin, ConnectionTestsMixin, TCPClientTestsMixin, findFreePort)
+    LogObserverMixin, ConnectionTestsMixin, TCPClientTestsMixin, findFreePort,
+    ConnectableProtocol, EndpointCreator, runProtocolsWithReactor)
 from twisted.internet.test.test_core import ObjectModelIntegrationMixin
 from twisted.test.test_tcp import MyClientFactory, MyServerFactory
 from twisted.test.test_tcp import ClosingFactory, ClientStartStopFactory

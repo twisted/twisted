@@ -10,6 +10,7 @@ from __future__ import division, absolute_import
 
 from twisted.python.failure import Failure
 
+DEFAULT_TIMEOUT_DURATION = 120.0
 
 _DEFAULT = object()
 def acquireAttribute(objects, attr, default=_DEFAULT):
