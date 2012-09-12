@@ -12,6 +12,7 @@ import traceback
 import pdb
 
 from twisted.python.compat import NativeStringIO, _PY3
+from twisted.internet import defer
 
 # Fix in #5885:
 if _PY3:
@@ -332,8 +333,21 @@ class FailureTestCase(TestCase):
         f = failure.Failure(exception)
         self.assertIdentical(f.tb, tb)
 
+
+    def test_cleanFailureRemovesTracebackInPython3(self):
+        """
+        L{failure.Failure.cleanFailure} sets the C{__traceback__} attribute of
+        the exception to C{None} in Python 3.
+        """
+        f = getDivisionFailure()
+        self.assertNotEqual(f.tb, None)
+        self.assertIdentical(f.value.__traceback__, f.tb)
+        f.cleanFailure()
+        self.assertIdentical(f.value.__traceback__, None)
+
     if not _PY3:
         test_tracebackFromExceptionInPython3.skip = "Python 3 only."
+        test_cleanFailureRemovesTracebackInPython3.skip = "Python 3 only."
 
 
 
@@ -644,14 +658,11 @@ class ExtendedGeneratorTests(TestCase):
     Tests C{failure.Failure} support for generator features added in Python 2.5
     """
 
-    # Re-enable on Python 3, and move import to top of module, as part of
-    # #5947:
     def test_inlineCallbacksTracebacks(self):
         """
         inlineCallbacks that re-raise tracebacks into their deferred
-        should not lose their tracebacsk.
+        should not lose their tracebacks.
         """
-        from twisted.internet import defer
         f = getDivisionFailure()
         d = defer.Deferred()
         try:
@@ -673,8 +684,6 @@ class ExtendedGeneratorTests(TestCase):
             traceback.extract_tb(newFailure.getTracebackObject())[-1][-1],
             "1/0"
         )
-    if _PY3:
-        del test_inlineCallbacksTracebacks
 
 
     def _throwIntoGenerator(self, f, g):
@@ -762,13 +771,16 @@ class ExtendedGeneratorTests(TestCase):
         self.assertEqual(newFailures[0].getTraceback(), f.getTraceback())
 
     if _PY3:
+        test_inlineCallbacksTracebacks.todo = (
+            "Python 3 support to be fixed in #5949")
         test_findFailureInGenerator.todo = (
             "Python 3 support to be fixed in #5949")
         test_failureConstructionFindsOriginalFailure.todo = (
             "Python 3 support to be fixed in #5949")
-        # Remove these two lines in #5885:
+        # Remove these three lines in #5885:
         del test_findFailureInGenerator
         del test_failureConstructionFindsOriginalFailure
+        del test_inlineCallbacksTracebacks
 
 
     def test_ambiguousFailureInGenerator(self):

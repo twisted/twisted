@@ -20,6 +20,7 @@ from __future__ import division
 modules = [
     "twisted",
     "twisted.internet",
+    "twisted.internet.defer",
     "twisted.internet.interfaces",
     "twisted.internet.test",
     "twisted.internet.test.reactormixins",
@@ -62,6 +63,7 @@ testModules = [
     "twisted.python.test.test_versions",
     "twisted.test.test_compat",
     "twisted.test.test_context",
+    "twisted.test.test_defer",
     "twisted.test.test_failure",
     "twisted.test.test_log",
     "twisted.test.test_monkey",

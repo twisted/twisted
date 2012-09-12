@@ -485,10 +485,18 @@ class Failure:
         c['pickled'] = 1
         return c
 
+
     def cleanFailure(self):
-        """Remove references to other objects, replacing them with strings.
+        """
+        Remove references to other objects, replacing them with strings.
+
+        On Python 3, this will also set the C{__traceback__} attribute of the
+        exception instance to C{None}.
         """
         self.__dict__ = self.__getstate__()
+        if _PY3:
+            self.value.__traceback__ = None
+
 
     def getTracebackObject(self):
         """
