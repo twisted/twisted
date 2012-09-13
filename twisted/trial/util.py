@@ -12,10 +12,10 @@ nothing here in this module for you to use unless you are maintaining Trial.
 
 Any non-Trial Twisted code that uses this module will be shot.
 
+Maintainer: Jonathan Lange
+
 @var DEFAULT_TIMEOUT_DURATION: The default timeout which will be applied to
     asynchronous (ie, Deferred-returning) test methods, in seconds.
-
-Maintainer: Jonathan Lange
 """
 
 import traceback, sys
