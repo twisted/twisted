@@ -1,12 +1,15 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import division, absolute_import
 
+import socket, errno
 from twisted.trial import unittest
 from twisted.internet import error
-import socket
+from twisted.python.runtime import platformType
 
-class TestStringification(unittest.TestCase):
+
+class TestStringification(unittest.SynchronousTestCase):
     """Test that the exceptions have useful stringifications.
     """
 
@@ -110,6 +113,9 @@ class TestStringification(unittest.TestCase):
         ("Tried to cancel an already-cancelled event.",
          error.AlreadyCancelled),
 
+        ("Tried to cancel an already-cancelled event: x 2.",
+         error.AlreadyCancelled, ["x", "2"]),
+
         ("A process has ended without apparent errors: process finished with exit code 0.",
          error.ProcessDone,
          [None]),
@@ -130,9 +136,14 @@ class TestStringification(unittest.TestCase):
         ("The Connector was not connecting when it was asked to stop connecting.",
          error.NotConnectingError),
 
+        ("The Connector was not connecting when it was asked to stop connecting: x 13.",
+         error.NotConnectingError, ["x", "13"]),
+
         ("The Port was not listening when it was asked to stop listening.",
          error.NotListeningError),
 
+        ("The Port was not listening when it was asked to stop listening: a 12.",
+         error.NotListeningError, ["a", "12"]),
         ]
 
     def testThemAll(self):
@@ -168,3 +179,73 @@ class TestStringification(unittest.TestCase):
         self.assertTrue(issubclass(error.ConnectionDone,
                                    error.ConnectionClosed))
 
+
+    def test_connectingCancelledError(self):
+        """
+        L{error.ConnectingCancelledError} has an C{address} attribute.
+        """
+        address = object()
+        e = error.ConnectingCancelledError(address)
+        self.assertIdentical(e.address, address)
+
+
+
+class GetConnectErrorTests(unittest.SynchronousTestCase):
+    """
+    Given an exception instance thrown by C{socket.connect},
+    L{error.getConnectError} returns the appropriate high-level Twisted
+    exception instance.
+    """
+
+    def assertErrnoException(self, errno, expectedClass):
+        """
+        When called with a tuple with the given errno,
+        L{error.getConnectError} returns an exception which is an instance of
+        the expected class.
+        """
+        e = (errno, "lalala")
+        result = error.getConnectError(e)
+        self.assertCorrectException(errno, "lalala", result, expectedClass)
+
+
+    def assertCorrectException(self, errno, message, result, expectedClass):
+        """
+        The given result of L{error.getConnectError} has the given attributes
+        (C{osError} and C{args}), and is an instance of the given class.
+        """
+
+        # Want exact class match, not inherited classes, so no isinstance():
+        self.assertEqual(result.__class__, expectedClass)
+        self.assertEqual(result.osError, errno)
+        self.assertEqual(result.args, (message,))
+
+
+    def test_errno(self):
+        """
+        L{error.getConnectError} converts based on errno for C{socket.error}.
+        """
+        self.assertErrnoException(errno.ENETUNREACH, error.NoRouteError)
+        self.assertErrnoException(errno.ECONNREFUSED, error.ConnectionRefusedError)
+        self.assertErrnoException(errno.ETIMEDOUT, error.TCPTimedOutError)
+        if platformType == "win32":
+            self.assertErrnoException(errno.WSAECONNREFUSED, error.ConnectionRefusedError)
+            self.assertErrnoException(errno.WSAENETUNREACH, error.NoRouteError)
+
+
+    def test_gaierror(self):
+        """
+        L{error.getConnectError} converts to a L{error.UnknownHostError} given
+        a C{socket.gaierror} instance.
+        """
+        result = error.getConnectError(socket.gaierror(12, "hello"))
+        self.assertCorrectException(12, "hello", result, error.UnknownHostError)
+
+
+    def test_nonTuple(self):
+        """
+        L{error.getConnectError} converts to a L{error.ConnectError} given
+        an argument that cannot be unpacked.
+        """
+        e = Exception()
+        result = error.getConnectError(e)
+        self.assertCorrectException(None, e, result, error.ConnectError)

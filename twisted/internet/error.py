@@ -5,6 +5,8 @@
 Exceptions and errors for use in twisted.internet modules.
 """
 
+from __future__ import division, absolute_import
+
 import socket
 
 from twisted.python import deprecate
@@ -188,13 +190,18 @@ except ImportError:
 
 def getConnectError(e):
     """Given a socket exception, return connection error."""
+    if isinstance(e, Exception):
+        args = e.args
+    else:
+        args = e
     try:
-        number, string = e
+        number, string = args
     except ValueError:
         return ConnectError(string=e)
 
     if hasattr(socket, 'gaierror') and isinstance(e, socket.gaierror):
-        # only works in 2.2
+        # Only works in 2.2 in newer. Really that means always; #5978 covers
+        # this and other wierdnesses in this function.
         klass = UnknownHostError
     else:
         klass = errnoMapping.get(number, ConnectError)
