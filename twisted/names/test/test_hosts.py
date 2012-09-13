@@ -63,9 +63,9 @@ class SearchHostsFileTests(TestCase):
         """
         hosts = FilePath(self.mktemp())
         hosts.setContent(
-            "127.0.1.1	helmut.example.org	helmut\n"
+            "127.0.1.1\thelmut.example.org\thelmut\n"
             "# a comment\n"
-            "::1     localhost ip6-localhost ip6-loopback\n")
+            "::1 localhost ip6-localhost ip6-loopback\n")
         self.assertEqual(searchFileFor(hosts.path, 'helmut'), '127.0.1.1')
         self.assertEqual(
             searchFileFor(hosts.path, 'helmut.example.org'), '127.0.1.1')

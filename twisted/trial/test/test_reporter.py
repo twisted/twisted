@@ -845,8 +845,8 @@ class TestTreeReporter(unittest.SynchronousTestCase):
             extra = sample.FooTest('test_bar')
             self.result.addError(extra, sys.exc_info())
         self.result.done()
-	grouped = self.result._groupResults(
-	    self.result.errors, self.result._formatFailureTraceback)
+        grouped = self.result._groupResults(
+            self.result.errors, self.result._formatFailureTraceback)
         self.assertEqual(grouped[0][1], [self, self.test])
         self.assertEqual(grouped[1][1], [extra])
 

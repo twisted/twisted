@@ -115,14 +115,14 @@ case "$1" in
                           --rundir=$rundir \
                           --%(twistd_option)s=$file \
                           --logfile=$logfile
-        echo "."	
+        echo "."
     ;;
 
     stop)
         echo -n "Stopping %(deb_file)s: twistd"
         start-stop-daemon --stop --quiet  \
             --pidfile $pidfile
-        echo "."	
+        echo "."
     ;;
 
     restart)
@@ -264,7 +264,7 @@ binary-indep: build install
 	dh_md5sums
 	dh_builddeb
 
-source diff:                                                                  
+source diff:
 	@echo >&2 'source and diff are obsolete - use dpkg-source -b'; false
 
 binary: binary-indep binary-arch
