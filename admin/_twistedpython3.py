@@ -20,6 +20,7 @@ from __future__ import division
 modules = [
     "twisted",
     "twisted.internet",
+    "twisted.internet.address",
     "twisted.internet.defer",
     "twisted.internet.error",
     "twisted.internet.interfaces",
@@ -61,6 +62,7 @@ modules = [
 # "twisted.python.test.test_versions". To reduce merge conflicts, add new
 # lines in alphabetical sort.
 testModules = [
+    "twisted.internet.test.test_address",
     "twisted.internet.test.test_main",
     "twisted.python.test.test_components",
     "twisted.python.test.test_deprecatepy3",

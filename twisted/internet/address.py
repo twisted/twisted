@@ -5,15 +5,18 @@
 Address objects for network connections.
 """
 
+from __future__ import division, absolute_import
+
 import warnings, os
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.internet.interfaces import IAddress
-from twisted.python import util
+from twisted.python._utilpy3 import FancyEqMixin
 
 
-class _IPAddress(object, util.FancyEqMixin):
+@implementer(IAddress)
+class _IPAddress(FancyEqMixin, object):
     """
     An L{_IPAddress} represents the address of an IP socket endpoint, providing
     common behavior for IPv4 and IPv6.
@@ -28,8 +31,6 @@ class _IPAddress(object, util.FancyEqMixin):
     @ivar port: An integer representing the port number.
     @type port: C{int}
     """
-
-    implements(IAddress)
 
     compareAttributes = ('type', 'host', 'port')
 
@@ -79,15 +80,14 @@ class IPv6Address(_IPAddress):
 
 
 
-class UNIXAddress(object, util.FancyEqMixin):
+@implementer(IAddress)
+class UNIXAddress(FancyEqMixin, object):
     """
     Object representing a UNIX socket endpoint.
 
     @ivar name: The filename associated with this socket.
     @type name: C{str}
     """
-
-    implements(IAddress)
 
     compareAttributes = ('name', )
 
@@ -101,7 +101,7 @@ class UNIXAddress(object, util.FancyEqMixin):
     if getattr(os.path, 'samefile', None) is not None:
         def __eq__(self, other):
             """
-            overriding L{util.FancyEqMixin} to ensure the os level samefile
+            Overriding C{FancyEqMixin} to ensure the os level samefile
             check is done if the name attributes do not match.
             """
             res = super(UNIXAddress, self).__eq__(other)
