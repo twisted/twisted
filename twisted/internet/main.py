@@ -8,14 +8,16 @@ Backwards compatibility, and utility functions.
 
 In general, this module should not be used, other than by reactor authors
 who need to use the 'installReactor' method.
-
-Maintainer: Itamar Shtull-Trauring
 """
 
-import error
+from __future__ import division, absolute_import
+
+from twisted.internet import error
 
 CONNECTION_DONE = error.ConnectionDone('Connection done')
 CONNECTION_LOST = error.ConnectionLost('Connection lost')
+
+
 
 def installReactor(reactor):
     """

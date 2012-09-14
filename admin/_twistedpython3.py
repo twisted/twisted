@@ -23,6 +23,7 @@ modules = [
     "twisted.internet.defer",
     "twisted.internet.error",
     "twisted.internet.interfaces",
+    "twisted.internet.main",
     "twisted.internet.test",
     "twisted.internet.test.reactormixins",
     "twisted.python",
@@ -58,6 +59,7 @@ modules = [
 # "twisted.python.test.test_versions". To reduce merge conflicts, add new
 # lines in alphabetical sort.
 testModules = [
+    "twisted.internet.test.test_main",
     "twisted.python.test.test_deprecatepy3",
     "twisted.python.test.test_reflectpy3",
     "twisted.python.test.test_runtime",
