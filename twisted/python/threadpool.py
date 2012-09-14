@@ -9,7 +9,12 @@ In most cases you can just use C{reactor.callInThread} and friends
 instead of creating a thread pool directly.
 """
 
-import Queue
+from __future__ import division, absolute_import
+
+try:
+    from Queue import Queue
+except ImportError:
+    from queue import Queue
 import threading
 import copy
 
@@ -47,7 +52,7 @@ class ThreadPool:
         """
         assert minthreads >= 0, 'minimum is negative'
         assert minthreads <= maxthreads, 'minimum is greater than maximum'
-        self.q = Queue.Queue(0)
+        self.q = Queue(0)
         self.min = minthreads
         self.max = maxthreads
         self.name = name
