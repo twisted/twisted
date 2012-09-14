@@ -71,6 +71,7 @@ testModules = [
     "twisted.test.test_monkey",
     "twisted.test.test_paths",
     "twisted.test.test_threadable",
+    "twisted.test.test_twisted",
     "twisted.trial.test.test_assertions",
     "twisted.trial.test.test_suppression",
     "twisted.trial.test.test_utilpy3",

@@ -8,11 +8,42 @@
 Twisted: The Framework Of Your Internet.
 """
 
-# Ensure the user is running the version of python we require.
-import sys
-if not hasattr(sys, "version_info") or sys.version_info < (2, 6):
-    raise RuntimeError("Twisted requires Python 2.6 or later.")
-del sys
+def _checkRequirements():
+    # Don't allow the user to run a version of Python we don't support.
+    import sys
+
+    version = getattr(sys, "version_info", (0,))
+    if version < (2, 6):
+        raise ImportError("Twisted requires Python 2.6 or later.")
+    if version < (3, 0):
+        required = "3.6.0"
+    else:
+        required = "4.0.0"
+
+    # Don't allow the user to run with a version of zope.interface we don't
+    # support.
+    required = "Twisted requires zope.interface %s or later" % (required,)
+    try:
+        from zope import interface
+    except ImportError:
+        # It isn't installed.
+        raise ImportError(required + ": no module named zope.interface.")
+    except:
+        # It is installed but not compatible with this version of Python.
+        raise ImportError(required + ".")
+    try:
+        # Try using the API that we need, which only works right with
+        # zope.interface 3.6 (or 4.0 on Python 3)
+        class IDummy(interface.Interface):
+            pass
+        @interface.implementer(IDummy)
+        class Dummy(object):
+            pass
+    except TypeError:
+        # It is installed but not compatible with this version of Python.
+        raise ImportError(required + ".")
+
+_checkRequirements()
 
 # Ensure compat gets imported
 from twisted.python import compat
