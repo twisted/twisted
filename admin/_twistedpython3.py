@@ -28,6 +28,7 @@ modules = [
     "twisted.internet.test.reactormixins",
     "twisted.python",
     "twisted.python.compat",
+    "twisted.python.components",
     "twisted.python.context",
     "twisted.python._deprecatepy3",
     "twisted.python.failure",
@@ -60,6 +61,7 @@ modules = [
 # lines in alphabetical sort.
 testModules = [
     "twisted.internet.test.test_main",
+    "twisted.python.test.test_components",
     "twisted.python.test.test_deprecatepy3",
     "twisted.python.test.test_reflectpy3",
     "twisted.python.test.test_runtime",

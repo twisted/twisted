@@ -21,20 +21,22 @@ you need is in the top-level of the zope.interface package, e.g.::
    print IFoo.providedBy(Foo()) # True
 
 L{twisted.python.components.registerAdapter} from this module may be used to
-add to Twisted's global adapter registry. 
+add to Twisted's global adapter registry.
 
 L{twisted.python.components.proxyForInterface} is a factory for classes
 which allow access to only the parts of another class defined by a specified
 interface.
 """
 
+from __future__ import division, absolute_import
+
 # zope3 imports
 from zope.interface import interface, declarations
 from zope.interface.adapter import AdapterRegistry
 
 # twisted imports
-from twisted.python import reflect
-from twisted.persisted import styles
+from twisted.python.compat import NativeStringIO
+from twisted.python import _reflectpy3 as reflect
 
 
 
@@ -187,7 +189,7 @@ class Adapter:
         return self.original.isuper(iface, adapter)
 
 
-class Componentized(styles.Versioned):
+class Componentized:
     """I am a mixin to allow you to be adapted in various ways persistently.
 
     I define a list of persistent adapters.  This is to allow adapter classes
@@ -208,6 +210,10 @@ class Componentized(styles.Versioned):
         return getAdapterFactory(klass, interfaceClass, default)
 
     def setAdapter(self, interfaceClass, adapterClass):
+        """
+        Cache a provider for the given interface, by adapting C{self} using
+        the given adapter class.
+        """
         self.setComponent(interfaceClass, adapterClass(self))
 
     def addAdapter(self, adapterClass, ignoreClass=0):
@@ -222,6 +228,7 @@ class Componentized(styles.Versioned):
 
     def setComponent(self, interfaceClass, component):
         """
+        Cache a provider of the given interface.
         """
         self._adapterCache[reflect.qual(interfaceClass)] = component
 
@@ -259,7 +266,7 @@ class Componentized(styles.Versioned):
         @return: a list of the interfaces that were removed.
         """
         l = []
-        for k, v in self._adapterCache.items():
+        for k, v in list(self._adapterCache.items()):
             if v is component:
                 del self._adapterCache[k]
                 l.append(reflect.namedObject(k))
@@ -307,9 +314,8 @@ class ReprableComponentized(Componentized):
         Componentized.__init__(self)
 
     def __repr__(self):
-        from cStringIO import StringIO
         from pprint import pprint
-        sio = StringIO()
+        sio = NativeStringIO()
         pprint(self._adapterCache, sio)
         return sio.getvalue()
 
@@ -431,7 +437,6 @@ class _ProxyDescriptor(object):
 
 
 __all__ = [
-    # Sticking around:
     "registerAdapter", "getAdapterFactory",
     "Adapter", "Componentized", "ReprableComponentized", "getRegistry",
     "proxyForInterface",
