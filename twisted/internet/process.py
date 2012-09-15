@@ -983,27 +983,37 @@ class PTYProcess(abstract.FileDescriptor, _BaseProcess):
             log.err()
         registerReapProcessHandler(self.pid, self)
 
+
     def _setupChild(self, masterfd, slavefd):
         """
-        Setup child process after fork() but before exec().
+        Set up child process after C{fork()} but before C{exec()}.
+
+        This involves:
+
+            - closing C{masterfd}, since it is not used in the subprocess
+
+            - creating a new session with C{os.setsid}
+
+            - changing the controlling terminal of the process (and the new
+              session) to point at C{slavefd}
+
+            - duplicating C{slavefd} to standard input, output, and error
+
+            - closing all other open file descriptors (according to
+              L{_listOpenFDs})
+
+            - re-setting all signal handlers to C{SIG_DFL}
+
+        @param masterfd: The master end of a PTY file descriptors opened with
+            C{openpty}.
+        @type masterfd: L{int}
+
+        @param slavefd: The slave end of a PTY opened with C{openpty}.
+        @type slavefd: L{int}
         """
         os.close(masterfd)
-        if hasattr(termios, 'TIOCNOTTY'):
-            try:
-                fd = os.open("/dev/tty", os.O_RDWR | os.O_NOCTTY)
-            except OSError:
-                pass
-            else:
-                try:
-                    fcntl.ioctl(fd, termios.TIOCNOTTY, '')
-                except:
-                    pass
-                os.close(fd)
-
         os.setsid()
-
-        if hasattr(termios, 'TIOCSCTTY'):
-            fcntl.ioctl(slavefd, termios.TIOCSCTTY, '')
+        fcntl.ioctl(slavefd, termios.TIOCSCTTY, '')
 
         for fd in range(3):
             if fd != slavefd:
