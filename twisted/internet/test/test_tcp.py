@@ -1322,23 +1322,24 @@ class TCPTransportServerAddressTestMixin(object):
 
         def connected(protocols):
             client, server, port = protocols
+            try:
+                self.assertEqual(
+                    "<AccumulatingProtocol #%s on %s>" %
+                        (server.transport.sessionno, port.getHost().port),
+                    str(server.transport))
 
-            self.assertEqual(
-                "<AccumulatingProtocol #%s on %s>" %
-                    (server.transport.sessionno, port.getHost().port),
-                str(server.transport))
+                self.assertEqual(
+                    "AccumulatingProtocol,%s,%s" %
+                        (server.transport.sessionno, interface),
+                    server.transport.logstr)
 
-            self.assertEqual(
-                "AccumulatingProtocol,%s,%s" %
-                    (server.transport.sessionno, interface),
-                server.transport.logstr)
-
-            [peerAddress] = server.factory.peerAddresses
-            self.assertIsInstance(peerAddress, adressClass)
-            self.assertEqual('TCP', peerAddress.type)
-            self.assertEqual(interface, peerAddress.host)
-
-            server.transport.loseConnection()
+                [peerAddress] = server.factory.peerAddresses
+                self.assertIsInstance(peerAddress, adressClass)
+                self.assertEqual('TCP', peerAddress.type)
+                self.assertEqual(interface, peerAddress.host)
+            finally:
+                # Be certain to drop the connection so the test completes.
+                server.transport.loseConnection()
 
         reactor = self.buildReactor()
         d = self.getConnectedClientAndServer(reactor, interface, addressFamily)
