@@ -8,39 +8,10 @@ Tests for L{twisted.internet.main}.
 from __future__ import division, absolute_import
 
 from twisted.trial import unittest
-import twisted.internet
 from twisted.internet.error import ReactorAlreadyInstalledError
 from twisted.internet.main import installReactor
-from twisted.test.test_twisted import SetAsideModule
 
-class NoReactor(SetAsideModule):
-    """
-    Context manager that uninstalls the reactor, if any.
-    """
-
-    def __init__(self):
-        SetAsideModule.__init__(self, "twisted.internet.reactor")
-
-
-    def __enter__(self):
-        SetAsideModule.__enter__(self)
-        if "twisted.internet.reactor" in self.modules:
-            del twisted.internet.reactor
-
-
-    def __exit__(self, excType, excValue, traceback):
-        SetAsideModule.__exit__(self, excType, excValue, traceback)
-        # Clean up 'reactor' attribute that may have been set on
-        # twisted.internet:
-        reactor = self.modules.get("twisted.internet.reactor", None)
-        if reactor is not None:
-            twisted.internet.reactor = reactor
-        else:
-            try:
-                del twisted.internet.reactor
-            except AttributeError:
-                pass
-
+from twisted.internet.test.modulehelpers import NoReactor
 
 
 class InstallReactorTests(unittest.SynchronousTestCase):

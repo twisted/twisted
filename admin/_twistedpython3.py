@@ -27,6 +27,7 @@ modules = [
     "twisted.internet.fdesc",
     "twisted.internet.main",
     "twisted.internet.test",
+    "twisted.internet.test.modulehelpers",
     "twisted.internet.test.reactormixins",
     "twisted.python",
     "twisted.python.compat",

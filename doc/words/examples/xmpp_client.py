@@ -1,22 +1,29 @@
+#!/usr/bin/python
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 import sys
-from twisted.internet import reactor
+
+from twisted.internet.defer import Deferred
+from twisted.internet.task import react
 from twisted.names.srvconnect import SRVConnector
 from twisted.words.xish import domish
-from twisted.words.protocols.jabber import xmlstream, client, jid
+from twisted.words.protocols.jabber import xmlstream, client
+from twisted.words.protocols.jabber.jid import JID
+
 
 class Client(object):
-    def __init__(self, client_jid, secret):
-        f = client.XMPPClientFactory(client_jid, secret)
+    def __init__(self, reactor, jid, secret):
+        self.reactor = reactor
+        f = client.XMPPClientFactory(jid, secret)
         f.addBootstrap(xmlstream.STREAM_CONNECTED_EVENT, self.connected)
         f.addBootstrap(xmlstream.STREAM_END_EVENT, self.disconnected)
         f.addBootstrap(xmlstream.STREAM_AUTHD_EVENT, self.authenticated)
         f.addBootstrap(xmlstream.INIT_FAILED_EVENT, self.init_failed)
-        connector = SRVConnector(reactor, 'xmpp-client', client_jid.host, f,
-                                 defaultPort=5222)
+        connector = SRVConnector(
+            reactor, 'xmpp-client', jid.host, f, defaultPort=5222)
         connector.connect()
+        self.finished = Deferred()
 
 
     def rawDataIn(self, buf):
@@ -40,7 +47,7 @@ class Client(object):
     def disconnected(self, xs):
         print 'Disconnected.'
 
-        reactor.stop()
+        self.finished.callback(None)
 
 
     def authenticated(self, xs):
@@ -49,7 +56,7 @@ class Client(object):
         presence = domish.Element((None, 'presence'))
         xs.send(presence)
 
-        reactor.callLater(5, xs.sendFooter)
+        self.reactor.callLater(5, xs.sendFooter)
 
 
     def init_failed(self, failure):
@@ -59,8 +66,18 @@ class Client(object):
         self.xmlstream.sendFooter()
 
 
-client_jid = jid.JID(sys.argv[1])
-secret = sys.argv[2]
-c = Client(client_jid, secret)
 
-reactor.run()
+def main(reactor, jid, secret):
+    """
+    Connect to the given Jabber ID and return a L{Deferred} which will be
+    called back when the connection is over.
+
+    @param reactor: The reactor to use for the connection.
+    @param jid: A L{JID} to connect to.
+    @param secret: A C{str}
+    """
+    return Client(reactor, JID(jid), secret).finished
+
+
+if __name__ == '__main__':
+    react(main, sys.argv[1:])
