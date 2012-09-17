@@ -246,7 +246,14 @@ class TrialSuite(TestSuite):
     what context they are run in.
     """
 
-    def __init__(self, tests=()):
+    def __init__(self, tests=(), forceGarbageCollection=False):
+        if forceGarbageCollection:
+            newTests = []
+            for test in tests:
+                test = unittest.decorate(
+                    test, unittest._ForceGarbageCollectionDecorator)
+                newTests.append(test)
+            tests = newTests
         suite = LoggedSuite(tests)
         super(TrialSuite, self).__init__([suite])
 
@@ -787,13 +794,10 @@ class TrialRunner(object):
         Run the test or suite and return a result object.
         """
         test = unittest.decorate(test, ITestCase)
-        if self._forceGarbageCollection:
-            test = unittest.decorate(
-                test, unittest._ForceGarbageCollectionDecorator)
-        return self._runWithoutDecoration(test)
+        return self._runWithoutDecoration(test, self._forceGarbageCollection)
 
 
-    def _runWithoutDecoration(self, test):
+    def _runWithoutDecoration(self, test, forceGarbageCollection=False):
         """
         Private helper that runs the given test but doesn't decorate it.
         """
@@ -801,7 +805,7 @@ class TrialRunner(object):
         # decorate the suite with reactor cleanup and log starting
         # This should move out of the runner and be presumed to be
         # present
-        suite = TrialSuite([test])
+        suite = TrialSuite([test], forceGarbageCollection)
         startTime = time.time()
         if self.mode == self.DRY_RUN:
             for single in unittest._iterateTests(suite):

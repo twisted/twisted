@@ -2,7 +2,7 @@
 .SH NAME
 trial \- run unit tests
 .SH SYNOPSIS
-\fBtrial\fR [ \fIoptions\fR ] [ \fIfile\fR | \fIpackage\fR | \fImodule\fR | \fITestCase\fR | \fItestmethod\fR ] ... 
+\fBtrial\fR [ \fIoptions\fR ] [ \fIfile\fR | \fIpackage\fR | \fImodule\fR | \fITestCase\fR | \fItestmethod\fR ] ...
 .PP
 \fBtrial --help\fR | \fB-h\fR
 .SH DESCRIPTION
@@ -58,13 +58,17 @@ for some reason the test succeeded. These are marked "SUCCESS!?!" in
 the normal test output.
 .SH OPTIONS
 .TP
+\fB-j\fR, \fB--jobs\fR \fInumber\fR
+Set the number of process workers to run. It conflicts with the debug and
+profile options.
+.TP
 \fB-b\fR, \fB--debug\fR
 Run the tests in the Python debugger. Also does post-mortem
 debugging on exceptions. Will load `.pdbrc' from current directory if
 it exists.
 .TP
 \fB-B\fR, \fB--debug-stacktraces\fR
-Report Deferred creation and callback stack traces
+Report Deferred creation and callback stack traces.
 .TP
 \fB--coverage\fR
 Generate coverage information in the `coverage' subdirectory of the trial temp
@@ -97,7 +101,7 @@ tests slightly more deterministic, which might help debugging in extreme
 circumstances.
 .TP
 \fB-e\fR, \fB--rterrors\fR
-Print tracebacks to standard output as soon as they occur
+Print tracebacks to standard output as soon as they occur.
 .TP
 \fB--force-gc\fR
 Run gc.collect() before and after each test case. This can be used to
@@ -137,10 +141,10 @@ Run tests under the Python profiler.
 \fB-r\fR, \fB--reactor\fR \fIreactor\fR
 Choose which reactor to use.  See --help-reactors for a list.
 .TP
-\fB--recursionlimit\fR
-Set Python's recursion limit. See sys.setrecursionlimit()
+\fB--recursionlimit \fIlimit\fR
+Set Python's recursion limit. See sys.setrecursionlimit().
 .TP
-\fB--reporter\fR
+\fB--reporter \fIreporter\fR
 Select the reporter to use for trial's output.  Use the --help-reporters
 option to see a list of valid reporters.
 .TP
@@ -153,7 +157,7 @@ Format to display tracebacks with. Acceptable values are `default', `brief'
 and `verbose'. `brief' produces tracebacks that play nicely with Emacs' GUD.
 .TP
 \fB--temp-directory\fR \fIdirectory\fR
-WARNING: Do not use this options unless you know what you are doing. 
+WARNING: Do not use this option unless you know what you are doing.
 By default, trial creates a directory called _trial_temp under the current
 working directory.  When trial runs, it first \fIdeletes\fR this directory,
 then creates it, then changes into the directory to run the tests. The log
@@ -183,7 +187,7 @@ Simulate the lack of the specified comma-separated list of modules. This makes
 it look like the modules are not present in the system, causing tests to check
 the behavior for that configuration.
 .TP
-\fB-z\fR, \fB--random\fR [\fIseed\fR]
+\fB-z\fR, \fB--random\fR \fIseed\fR
 Run the tests in random order using the specified seed.
 .PP
 .SH SEE ALSO
