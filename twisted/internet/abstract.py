@@ -2,18 +2,33 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
 """
 Support for generic select()able objects.
 """
 
+from __future__ import division, absolute_import
+
 from socket import AF_INET6, inet_pton, error
 
-from zope.interface import implements
+from zope.interface import implementer
 
 # Twisted Imports
-from twisted.python import reflect, failure
+from twisted.python.compat import _PY3, unicode
+from twisted.python import _reflectpy3 as reflect, failure
 from twisted.internet import interfaces, main
+
+if _PY3:
+    def _concatenate(bObj, offset, bArray):
+        # Python 3 lacks the buffer() builtin and the other primitives don't
+        # help in this case.  Just do the copy.  Perhaps later these buffers can
+        # be joined and FileDescriptor can use writev().  Or perhaps bytearrays
+        # would help.
+        return bObj[offset:] + b"".join(bArray)
+else:
+    def _concatenate(bObj, offset, bArray):
+        # Avoid one extra string copy by using a buffer to limit what we include
+        # in the result.
+        return buffer(bObj, offset) + b"".join(bArray)
 
 
 class _ConsumerMixin(object):
@@ -107,13 +122,13 @@ class _ConsumerMixin(object):
 
 
 
+@implementer(interfaces.ILoggingContext)
 class _LogOwner(object):
     """
     Mixin to help implement L{interfaces.ILoggingContext} for transports which
     have a protocol, the log prefix of which should also appear in the
     transport's log prefix.
     """
-    implements(interfaces.ILoggingContext)
 
     def _getLogPrefix(self, applicationObject):
         """
@@ -138,8 +153,13 @@ class _LogOwner(object):
 
 
 
+@implementer(
+    interfaces.IPushProducer, interfaces.IReadWriteDescriptor,
+    interfaces.IConsumer, interfaces.ITransport,
+    interfaces.IHalfCloseableDescriptor)
 class FileDescriptor(_ConsumerMixin, _LogOwner):
-    """An object which can be operated on by select().
+    """
+    An object which can be operated on by select().
 
     This is an abstract superclass of all objects which may be notified when
     they are readable or writable; e.g. they have a file-descriptor that is
@@ -150,13 +170,10 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
     disconnecting = 0
     _writeDisconnecting = False
     _writeDisconnected = False
-    dataBuffer = ""
+    dataBuffer = b""
     offset = 0
 
     SEND_LIMIT = 128*1024
-
-    implements(interfaces.IPushProducer, interfaces.IReadWriteDescriptor,
-               interfaces.IConsumer, interfaces.ITransport, interfaces.IHalfCloseableDescriptor)
 
     def __init__(self, reactor=None):
         if not reactor:
@@ -213,16 +230,16 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         """
         Called when data can be written.
 
-        A result that is true (which will be a negative number or an
-        exception instance) indicates that the connection was lost. A false
-        result implies the connection is still there; a result of 0
-        indicates no write was done, and a result of None indicates that a
-        write was done.
+        @return: C{None} on success, an exception or a negative integer on
+            failure.
+
+        @see: L{twisted.internet.interfaces.IWriteDescriptor.doWrite}.
         """
         if len(self.dataBuffer) - self.offset < self.SEND_LIMIT:
             # If there is currently less than SEND_LIMIT bytes left to send
             # in the string, extend it with the array data.
-            self.dataBuffer = buffer(self.dataBuffer, self.offset) + "".join(self._tempDataBuffer)
+            self.dataBuffer = _concatenate(
+                self.dataBuffer, self.offset, self._tempDataBuffer)
             self.offset = 0
             self._tempDataBuffer = []
             self._tempDataLen = 0
@@ -239,14 +256,10 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         # although it may be worth deprecating and removing at some point.
         if l < 0 or isinstance(l, Exception):
             return l
-        if l == 0 and self.dataBuffer:
-            result = 0
-        else:
-            result = None
         self.offset += l
         # If there is nothing left to send,
         if self.offset == len(self.dataBuffer) and not self._tempDataLen:
-            self.dataBuffer = ""
+            self.dataBuffer = b""
             self.offset = 0
             # stop writing.
             self.stopWriting()
@@ -268,7 +281,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
                 self._writeDisconnected = True
                 result = self._closeWriteConnection()
                 return result
-        return result
+        return None
 
     def _postLoseConnection(self):
         """Called after a loseConnection(), when all data has been written.

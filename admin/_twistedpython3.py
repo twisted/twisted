@@ -11,7 +11,7 @@ run-python3-tests uses this, and in the future it may be used by setup.py and
 pydoctor.
 """
 
-from __future__ import division
+from __future__ import division, absolute_import
 
 # A list of modules that have been ported, e.g. "twisted.python.versions"; a
 # package name (e.g. "twisted.python") indicates the corresponding __init__.py
@@ -63,7 +63,9 @@ modules = [
 # "twisted.python.test.test_versions". To reduce merge conflicts, add new
 # lines in alphabetical sort.
 testModules = [
+    "twisted.internet.test.test_abstract",
     "twisted.internet.test.test_address",
+    "twisted.internet.test.test_filedescriptor",
     "twisted.internet.test.test_main",
     "twisted.python.test.test_components",
     "twisted.python.test.test_deprecatepy3",
