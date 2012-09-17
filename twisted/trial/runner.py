@@ -342,7 +342,7 @@ class TestHolder(object):
         This test is just a placeholder. Run the test successfully.
 
         @param result: The C{TestResult} to store the results in.
-        @type result: L{twisted.trial.itrial.ITestResult}.
+        @type result: L{twisted.trial.itrial.IReporter}.
         """
         result.startTest(self)
         result.addSuccess(self)
@@ -386,7 +386,7 @@ class ErrorHolder(TestHolder):
         Run the test, reporting the error.
 
         @param result: The C{TestResult} to store the results in.
-        @type result: L{twisted.trial.itrial.ITestResult}.
+        @type result: L{twisted.trial.itrial.IReporter}.
         """
         result.startTest(self)
         result.addError(self, self.error)

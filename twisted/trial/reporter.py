@@ -8,7 +8,8 @@
 Defines classes that handle the results of tests.
 """
 
-import sys, os
+import sys
+import os
 import time
 import warnings
 
@@ -387,7 +388,7 @@ class Reporter(TestResult):
 
     def addFailure(self, test, fail):
         """
-        Called when a test fails. If L{realtime} is set, then it prints the
+        Called when a test fails. If C{realtime} is set, then it prints the
         error to the stream.
 
         @param test: L{ITestCase} that failed.
@@ -401,7 +402,7 @@ class Reporter(TestResult):
 
     def addError(self, test, error):
         """
-        Called when a test raises an error. If L{realtime} is set, then it
+        Called when a test raises an error. If C{realtime} is set, then it
         prints the error to the stream.
 
         @param test: L{ITestCase} that raised the error.
@@ -668,8 +669,8 @@ class Reporter(TestResult):
         tests that were run and how long it took to run them (not including
         load time).
 
-        Expects that L{_printErrors}, L{_writeln}, L{_write}, L{_printSummary}
-        and L{_separator} are all implemented.
+        Expects that C{_printErrors}, C{_writeln}, C{_write}, C{_printSummary}
+        and C{_separator} are all implemented.
         """
         if self._publisher is not None:
             self._publisher.removeObserver(self._observeWarnings)

@@ -109,7 +109,7 @@ class DistTrialRunner(object):
 
         @param protocols: An iterable of C{ProcessProtocol} instances.
 
-        @arguments: Extra arguments passed to the processes.
+        @param arguments: Extra arguments passed to the processes.
         """
         workertrialPath = theSystemPath[
             'twisted.trial._dist.workertrial'].filePath.path

@@ -45,7 +45,8 @@ class DirtyReactorAggregateError(Exception):
     Passed to L{twisted.trial.itrial.IReporter.addError} when the reactor is
     left in an unclean state after a test.
 
-    @ivar delayedCalls: The L{DelayedCall} objects which weren't cleaned up.
+    @ivar delayedCalls: The L{DelayedCall<twisted.internet.base.DelayedCall>}
+        objects which weren't cleaned up.
     @ivar selectables: The selectables which weren't cleaned up.
     """
 
@@ -93,7 +94,7 @@ class _Janitor(object):
     def postCaseCleanup(self):
         """
         Called by L{unittest.TestCase} after a test to catch any logged errors
-        or pending L{DelayedCall}s.
+        or pending L{DelayedCall<twisted.internet.base.DelayedCall>}s.
         """
         calls = self._cleanPending()
         if calls:
@@ -107,7 +108,8 @@ class _Janitor(object):
         """
         Called by L{unittest.TestCase} after the last test in a C{TestCase}
         subclass. Ensures the reactor is clean by murdering the threadpool,
-        catching any pending L{DelayedCall}s, open sockets etc.
+        catching any pending
+        L{DelayedCall<twisted.internet.base.DelayedCall>}s, open sockets etc.
         """
         selectables = self._cleanReactor()
         calls = self._cleanPending()
@@ -314,7 +316,7 @@ def _removeSafely(path):
     Safely remove a path, recursively.
 
     If C{path} does not contain a node named C{_trial_marker}, a
-    L{_NoTrialmarker} exception is raised and the path is not removed.
+    L{_NoTrialMarker} exception is raised and the path is not removed.
     """
     if not path.child('_trial_marker').exists():
         raise _NoTrialMarker(
