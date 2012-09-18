@@ -11,3 +11,5 @@
 %
 <PenguinOfDoom> If I were the king of a private island, I'd declare my timezone to be UTC+pi and send a postcard to pytz maintainers with the word "checkmate" on it
 %
+<ivan> well, it is possible to debug a Twisted program, and judging by #python, not really possible to debug a threaded program
+%
