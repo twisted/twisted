@@ -11,7 +11,7 @@ from time import sleep
 import sys, select, socket
 from errno import EINTR, EBADF
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.internet.interfaces import IReactorFDSet
 from twisted.internet import posixbase
@@ -50,6 +50,7 @@ else:
     _extraBase = _ThreadedWin32EventsMixin
 
 
+@implementer(IReactorFDSet)
 class SelectReactor(posixbase.PosixReactorBase, _extraBase):
     """
     A select() based reactor - runs on all POSIX platforms and on Win32.
@@ -62,7 +63,6 @@ class SelectReactor(posixbase.PosixReactorBase, _extraBase):
         arbitrary values (this is essentially a set).  Keys in this dictionary
         will be checked for writability.
     """
-    implements(IReactorFDSet)
 
     def __init__(self):
         """
@@ -84,7 +84,7 @@ class SelectReactor(posixbase.PosixReactorBase, _extraBase):
             for selectable in selList:
                 try:
                     select.select([selectable], [selectable], [selectable], 0)
-                except Exception, e:
+                except Exception as e:
                     log.msg("bad descriptor %s" % selectable)
                     self._disconnectSelectable(selectable, e, False)
                 else:
@@ -112,7 +112,7 @@ class SelectReactor(posixbase.PosixReactorBase, _extraBase):
             log.err()
             self._preenDescriptors()
             return
-        except (select.error, socket.error, IOError), se:
+        except (select.error, socket.error, IOError) as se:
             # select(2) encountered an error, perhaps while calling the fileno()
             # method of a socket.  (Python 2.6 socket.error is an IOError
             # subclass, but on Python 2.5 and earlier it is not.)

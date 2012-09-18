@@ -7,7 +7,7 @@ Very basic functionality for a Reactor implementation.
 """
 
 import socket # needed only for sync-dns
-from zope.interface import implements, classImplements
+from zope.interface import implementer, classImplements
 
 import sys
 import warnings
@@ -16,24 +16,23 @@ from heapq import heappush, heappop, heapify
 import traceback
 
 from twisted.python.compat import set
-from twisted.python.util import unsignedID
+from twisted.python._utilpy3 import unsignedID
 from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorThreads
 from twisted.internet.interfaces import IResolverSimple, IReactorPluggableResolver
 from twisted.internet.interfaces import IConnector, IDelayedCall
 from twisted.internet import fdesc, main, error, abstract, defer, threads
-from twisted.python import log, failure, reflect
+from twisted.python import log, failure, _reflectpy3 as reflect
 from twisted.python.runtime import seconds as runtimeSeconds, platform
 from twisted.internet.defer import Deferred, DeferredList
-from twisted.persisted import styles
 
 # This import is for side-effects!  Even if you don't see any code using it
 # in this module, don't delete it.
 from twisted.python import threadable
 
 
-class DelayedCall(styles.Ephemeral):
+@implementer(IDelayedCall)
+class DelayedCall:
 
-    implements(IDelayedCall)
     # enable .debug to record creator call stack, and it will be logged if
     # an exception occurs while the function is being run
     debug = False
@@ -206,6 +205,7 @@ class DelayedCall(styles.Ephemeral):
 
 
 
+@implementer(IResolverSimple)
 class ThreadedResolver(object):
     """
     L{ThreadedResolver} uses a reactor, a threadpool, and
@@ -217,7 +217,6 @@ class ThreadedResolver(object):
         L{socket.gethostbyname} and the I/O thread of which the result will be
         delivered.
     """
-    implements(IResolverSimple)
 
     def __init__(self, reactor):
         self.reactor = reactor
@@ -274,8 +273,8 @@ class ThreadedResolver(object):
 
 
 
+@implementer(IResolverSimple)
 class BlockingResolver:
-    implements(IResolverSimple)
 
     def getHostByName(self, name, timeout = (1, 3, 11, 45)):
         try:
@@ -429,6 +428,7 @@ class _ThreePhaseEvent(object):
 
 
 
+@implementer(IReactorCore, IReactorTime, IReactorPluggableResolver)
 class ReactorBase(object):
     """
     Default base class for Reactors.
@@ -457,7 +457,6 @@ class ReactorBase(object):
         register the thread it is running in as the I/O thread when it starts.
         If C{True}, registration will be done, otherwise it will not be.
     """
-    implements(IReactorCore, IReactorTime, IReactorPluggableResolver)
 
     _registerAsIOThread = True
 
@@ -988,14 +987,12 @@ if platform.supportsThreads():
     classImplements(ReactorBase, IReactorThreads)
 
 
-class BaseConnector(styles.Ephemeral):
+@implementer(IConnector)
+class BaseConnector:
     """Basic implementation of connector.
 
     State can be: "connecting", "connected", "disconnected"
     """
-
-    implements(IConnector)
-
     timeoutID = None
     factoryStarted = 0
 
@@ -1015,7 +1012,7 @@ class BaseConnector(styles.Ephemeral):
     def connect(self):
         """Start connection to remote server."""
         if self.state != "disconnected":
-            raise RuntimeError, "can't connect in this state"
+            raise RuntimeError("can't connect in this state")
 
         self.state = "connecting"
         if not self.factoryStarted:
@@ -1029,7 +1026,7 @@ class BaseConnector(styles.Ephemeral):
     def stopConnecting(self):
         """Stop attempting to connect."""
         if self.state != "connecting":
-            raise error.NotConnectingError, "we're not trying to connect"
+            raise error.NotConnectingError("we're not trying to connect")
 
         self.state = "disconnected"
         self.transport.failIfNotConnected(error.UserError())
@@ -1091,7 +1088,8 @@ class BasePort(abstract.FileDescriptor):
 
     def doWrite(self):
         """Raises a RuntimeError"""
-        raise RuntimeError, "doWrite called on a %s" % reflect.qual(self.__class__)
+        raise RuntimeError(
+            "doWrite called on a %s" % reflect.qual(self.__class__))
 
 
 

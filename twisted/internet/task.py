@@ -10,9 +10,10 @@ __metaclass__ = type
 
 import time
 
-from zope.interface import implements
+from zope.interface import implementer
 
-from twisted.python import reflect, log
+from twisted.python import log
+from twisted.python import _reflectpy3 as reflect
 from twisted.python.failure import Failure
 
 from twisted.internet import base, defer
@@ -666,13 +667,13 @@ def cooperate(iterator):
 
 
 
+@implementer(IReactorTime)
 class Clock:
     """
     Provide a deterministic, easily-controlled implementation of
     L{IReactorTime.callLater}.  This is commonly useful for writing
     deterministic unit tests for code which schedules events using this API.
     """
-    implements(IReactorTime)
 
     rightNow = 0.0
 

@@ -13,7 +13,7 @@ listeners or connectors are added)::
 
 import errno
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.internet.interfaces import IReactorFDSet
 
@@ -33,6 +33,7 @@ else:
 
 
 
+@implementer(IReactorFDSet)
 class _ContinuousPolling(posixbase._PollLikeMixin,
                          posixbase._DisconnectSelectableMixin):
     """
@@ -56,7 +57,6 @@ class _ContinuousPolling(posixbase._PollLikeMixin,
     @ivar _writers: A C{set} of C{FileDescriptor} objects that should be
         written to.
     """
-    implements(IReactorFDSet)
 
     # Attributes for _PollLikeMixin
     _POLL_DISCONNECTED = 1
@@ -166,6 +166,7 @@ class _ContinuousPolling(posixbase._PollLikeMixin,
 
 
 
+@implementer(IReactorFDSet)
 class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
     """
     A reactor that uses epoll(7).
@@ -195,7 +196,6 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         file descriptors (e.g. filesytem files) that are not supported by
         C{epoll(7)}.
     """
-    implements(IReactorFDSet)
 
     # Attributes for _PollLikeMixin
     _POLL_DISCONNECTED = (_epoll.EPOLLHUP | _epoll.EPOLLERR)
@@ -252,7 +252,7 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         try:
             self._add(reader, self._reads, self._writes, self._selectables,
                       _epoll.EPOLLIN, _epoll.EPOLLOUT)
-        except IOError, e:
+        except IOError as e:
             if e.errno == errno.EPERM:
                 # epoll(7) doesn't support certain file descriptors,
                 # e.g. filesystem files, so for those we just poll
@@ -269,7 +269,7 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         try:
             self._add(writer, self._writes, self._reads, self._selectables,
                       _epoll.EPOLLOUT, _epoll.EPOLLIN)
-        except IOError, e:
+        except IOError as e:
             if e.errno == errno.EPERM:
                 # epoll(7) doesn't support certain file descriptors,
                 # e.g. filesystem files, so for those we just poll
@@ -360,7 +360,7 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
             # the amount of time we block to the value specified by our
             # caller.
             l = self._poller.poll(timeout, len(self._selectables))
-        except IOError, err:
+        except IOError as err:
             if err.errno == errno.EINTR:
                 return
             # See epoll_wait(2) for documentation on the other conditions

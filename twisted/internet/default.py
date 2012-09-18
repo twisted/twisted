@@ -9,6 +9,8 @@ Depending on a specific application's needs, some other reactor may in
 fact be better.
 """
 
+from __future__ import division, absolute_import
+
 __all__ = ["install"]
 
 from twisted.python.runtime import platform
@@ -24,14 +26,12 @@ def _getInstallFunction(platform):
     @return: A zero-argument callable which will install the selected
         reactor.
     """
-    # Linux: epoll(7) is the fault, since it scales well.
+    # Linux: epoll(7) is the default, since it scales well.
     #
-    # OS X: poll(2) is not exposed by Python because it doesn't
-    # support all file descriptors (in particular, lack of PTY support
-    # is a problem) -- see <http://bugs.python.org/issue5154>. kqueue
-    # reactor is being rewritten (see
-    # <http://twistedmatrix.com/trac/ticket/1918>), and also has same
-    # restriction as poll(2) as far PTY support goes.
+    # OS X: poll(2) is not exposed by Python because it doesn't support all
+    # file descriptors (in particular, lack of PTY support is a problem) --
+    # see <http://bugs.python.org/issue5154>. kqueue has the same restrictions
+    # as poll(2) as far PTY support goes.
     #
     # Windows: IOCP should eventually be default, but still has some serious
     # bugs, e.g. <http://twistedmatrix.com/trac/ticket/4667>.

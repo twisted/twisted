@@ -41,7 +41,7 @@ from OpenSSL.SSL import TLSv1_METHOD, Context, Connection
 
 try:
     Connection(Context(TLSv1_METHOD), None)
-except TypeError, e:
+except TypeError as e:
     if str(e) != "argument must be an int, or have a fileno() method.":
         raise
     raise ImportError("twisted.protocols.tls requires pyOpenSSL 0.10 or newer.")
@@ -365,7 +365,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
                 # Passing in None means the user protocol's connnectionLost
                 # will get called with reason from underlying transport:
                 self._tlsShutdownFinished(None)
-            except Error, e:
+            except Error as e:
                 # Something went pretty wrong.  For example, this might be a
                 # handshake failure (because there were no shared ciphers, because
                 # a certificate failed to verify, etc).  TLS can no longer proceed.
