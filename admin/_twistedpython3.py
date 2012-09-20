@@ -89,6 +89,7 @@ testModules = [
     "twisted.test.test_twisted",
     "twisted.test.test_threadpool",
     "twisted.trial.test.test_assertions",
+    "twisted.trial.test.test_pyunitcompat",
     "twisted.trial.test.test_suppression",
     "twisted.trial.test.test_utilpy3",
     "twisted.trial.test.test_warning",

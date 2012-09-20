@@ -1,0 +1,1 @@
+Python's unittest runner now understands skips in trial-based test cases.
