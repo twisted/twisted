@@ -630,8 +630,9 @@ class RealZopeInterfaceTests(TestCase, ZopeInterfaceTestsMixin):
                     "Cannot determine system version of zope.interface: %s" % (
                         e,))
             installed = pkg.version
-            versionTuple = tuple(int(part) for part in installed.split('.'))
-            if versionTuple[:len(version)] == version:
+            versionTuple = tuple(
+                int(part) for part in installed.split('.')[:len(version)])
+            if versionTuple == version:
                 pass
             else:
                 raise SkipTest("Mismatched system version of zope.interface")
