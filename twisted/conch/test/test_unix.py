@@ -5,9 +5,18 @@
 Tests L{twisted.conch.unix}
 """
 
-import pwd
+try:
+    import pwd
+except:
+    pwd = None
+    skip = "can't run on non-posix computers"
 
-from twisted.conch import unix
+try:
+    from twisted.conch import unix
+except:
+    unix = None
+    skip = "can't run on non-posix computers"
+
 from twisted.cred.checkers import ANONYMOUS
 from twisted.trial.unittest import TestCase
 
