@@ -573,7 +573,7 @@ class Request:
         self.persistent = persistent
 
 
-    def _writeHeaders(self, transport, TEorCL):
+    def _writeHeaders(self, transport, bodyFramingHeader):
         hosts = self.headers.getRawHeaders('host', ())
         if len(hosts) != 1:
             raise BadHeaders("Exactly one Host header required")
@@ -586,20 +586,18 @@ class Request:
             '%s %s HTTP/1.1\r\n' % (self.method, self.uri))
         if not self.persistent:
             requestLines.append('Connection: close\r\n')
-        if TEorCL is not None:
-            requestLines.append(TEorCL)
+        if bodyFramingHeader is not None:
+            requestLines.append(bodyFramingHeader)
         for name, values in self.headers.getAllRawHeaders():
             requestLines.extend(['%s: %s\r\n' % (name, v) for v in values])
         requestLines.append('\r\n')
         transport.writeSequence(requestLines)
 
-
-    def _writeToChunked(self, transport):
+    def _writeBodyToChunked(self, transport):
         """
-        Write this request to the given transport using chunked
+        Write this request's body to the given transport using chunked
         transfer-encoding to frame the body.
         """
-        self._writeHeaders(transport, 'Transfer-Encoding: chunked\r\n')
         encoder = ChunkedEncoder(transport)
         encoder.registerProducer(self.bodyProducer, True)
         d = self.bodyProducer.startProducing(encoder)
@@ -618,14 +616,11 @@ class Request:
         return d
 
 
-    def _writeToContentLength(self, transport):
+    def _writeBodyToContentLength(self, transport):
         """
-        Write this request to the given transport using content-length to frame
-        the body.
+        Write this request's body to the given transport using content-length
+        to frame the body.
         """
-        self._writeHeaders(
-            transport,
-            'Content-Length: %d\r\n' % (self.bodyProducer.length,))
 
         # This Deferred is used to signal an error in the data written to the
         # encoder below.  It can only errback and it will only do so before too
@@ -737,13 +732,41 @@ class Request:
             been completely written to the transport or with a L{Failure} if
             there is any problem generating the request bytes.
         """
+        self._writeHeadersTo(transport)
+        return self._writeBodyTo(transport)
+
+    def _writeHeadersTo(self, transport):
+        """
+        Format this L{Request}'s headers as HTTP/1.1 and write them
+        to the given transport.
+        """
+        bodyFramingHeader = None
+        if self.bodyProducer is not None:
+           if self.bodyProducer.length is UNKNOWN_LENGTH:
+               bodyFramingHeader = 'Transfer-Encoding: chunked\r\n'
+           else:
+               bodyFramingHeader = 'Content-Length: %d\r\n' % (
+                       self.bodyProducer.length,)
+
+        self._writeHeaders(transport, bodyFramingHeader)
+
+    def _writeBodyTo(self, transport):
+        """
+        Write this L{Request}'s body to the given transport, framing it
+        according to the given headers('Transport-Encoding' or
+        'Content-Length').
+
+        @return: A L{Deferred} which fires with C{None} when the request has
+            been completely written the transport or with a L{Failure} if there
+            is any problem generating the request body bytes. If bodyProducer
+            is None the returned L{Deferred} is already fired.
+        """
         if self.bodyProducer is not None:
             if self.bodyProducer.length is UNKNOWN_LENGTH:
-                return self._writeToChunked(transport)
+                return self._writeBodyToChunked(transport)
             else:
-                return self._writeToContentLength(transport)
+                return self._writeBodyToContentLength(transport)
         else:
-            self._writeHeaders(transport, None)
             return succeed(None)
 
 
@@ -1186,15 +1209,42 @@ class TransportProxyProducer:
             self._producer.pauseProducing()
 
 
+class DiscardWithDeferred(Protocol):
+    """
+    A L{Protocol} that discards all received data and that fires a L{Deferred}
+    when all data has been received.
+
+    @ivar finishedDeferred: L{Deferred} which fires with C{None} when all data
+        has been received and with L{Failure} on error.
+
+    """
+
+    def __init__(self):
+        self.finishedDeferred = Deferred()
+
+    def dataReceived(self, data):
+        pass
+
+    def connectionLost(self, reason):
+        if reason.type == ResponseDone:
+            self.finishedDeferred.callback(None)
+        else:
+            self.finishedDeferred.errback(reason)
+
+
+TIMEOUT_100_CONTINUE = 1
+
 
 class HTTP11ClientProtocol(Protocol):
     """
     L{HTTP11ClientProtocol} is an implementation of the HTTP 1.1 client
-    protocol.  It supports as few features as possible.
+    protocol. It supports as few features as possible.
 
     @ivar _parser: After a request is issued, the L{HTTPClientParser} to
         which received data making up the response to that request is
         delivered.
+
+    @ivar _reactor: The reactor used for eventual callLater calls.
 
     @ivar _finishedRequest: After a request is issued, the L{Deferred} which
         will fire when a L{Response} object corresponding to that request is
@@ -1216,6 +1266,32 @@ class HTTP11ClientProtocol(Protocol):
         received.  This is eventually chained with C{_finishedRequest}, but
         only in certain cases to avoid double firing that Deferred.
 
+    @ivar _responseBodyDeferred: After a request is issued, the L{Deferred}
+        that fires when the C{_parser} has done parsing the entire L{Response},
+        including body, with the data that came after the current L{Response}.
+        This can be used to set another C{_parser} but usually this decision
+        is done on C{_responseDeferred}'s callback.
+
+    @ivar _forcedRequestBody: True if we had an 100-Continue L{Request} whose
+        body was forcefully written to the transport because the server
+        did not respond in time with a L{Response} (possibly because of a
+        buggy server that doesn't implement expectations correctly).
+
+    @ivar _firstResponseTimer: A L{Delayed} that fires after
+        TIMEOUT_100_CONTINUE seconds and forcefully sends the L{Request} body
+        to the server.
+
+    @ivar _firstResponseDeferred: A L{Deferred} that fires with the first
+        L{Response} to an 100-Continue L{Request}. This may be an 100-Continue
+        response or a response with a final status. It may fire in the
+        WAITING_100_CONTINUE_RESPONSE, TRANSMITTING or WAITING states.
+
+    @ivar _firstResponseBodyDeferred: A L{Deferred} that fires when the body
+        of the first L{Response} to an 100-Continue L{Request} has been
+        successfully parsed. It signals that we can start sending the
+        L{Request} body. It fires in the WAITING_100_CONTINUE_RESPONSE_BODY,
+        TRANSMITTING and WAITING states.
+
     @ivar _state: Indicates what state this L{HTTP11ClientProtocol} instance
         is in with respect to transmission of a request and reception of a
         response.  This may be one of the following strings:
@@ -1236,6 +1312,13 @@ class HTTP11ClientProtocol(Protocol):
           - GENERATION_FAILED: There was an error while the request.  The
             request was not fully sent to the network.
 
+          - WAITING_100_CONTINUE_RESPONSE: We're waiting for a L{Response} to a
+            L{Request} that expects 100-Continue.
+
+          - WAITING_100_CONTINUE_RESPONSE_BODY: Got an 100 Continue
+            L{Response} and we're discarding its body before sending the
+            L{Request}.
+
           - WAITING: The request was fully sent to the network.  The
             instance is now waiting for the response to be fully received.
 
@@ -1255,7 +1338,14 @@ class HTTP11ClientProtocol(Protocol):
     _responseDeferred = None
 
 
-    def __init__(self, quiescentCallback=lambda c: None):
+    def __init__(self, quiescentCallback=lambda c: None, reactor=None):
+        """
+        Initialize this L{HTTP11ClientProtocol}. Optionally a reactor can be
+        given. Otherwise use the global reactor.
+        """
+        if reactor is None:
+            from twisted.internet import reactor
+        self._reactor = reactor
         self._quiescentCallback = quiescentCallback
         self._abortDeferreds = []
 
@@ -1284,24 +1374,30 @@ class HTTP11ClientProtocol(Protocol):
             may errback with L{RequestNotSent} if it is not possible to send
             any more requests using this L{HTTP11ClientProtocol}.
         """
+
         if self._state != 'QUIESCENT':
             return fail(RequestNotSent())
 
-        self._state = 'TRANSMITTING'
-        _requestDeferred = maybeDeferred(request.writeTo, self.transport)
+        if request.headers.hasHeader('expect'):
+            _expectations = request.headers.getRawHeaders('expect')
+            _expects100Continue = '100-continue' in [x.lower() for x in
+                                                     _expectations]
+        else:
+            _expects100Continue = False
+
         self._finishedRequest = Deferred()
 
-        # Keep track of the Request object in case we need to call stopWriting
-        # on it.
         self._currentRequest = request
 
-        self._transportProxy = TransportProxyProducer(self.transport)
-        self._parser = HTTPClientParser(request, self._finishResponse)
-        self._parser.makeConnection(self._transportProxy)
-        self._responseDeferred = self._parser._responseDeferred
+        if _expects100Continue:
+            self._handle100ContinueRequest(request)
+        else:
+            self._handleRequest(request)
 
         def cbRequestWrotten(ignored):
-            if self._state == 'TRANSMITTING':
+            if self._state in ['TRANSMITTING',
+                               'WAITING_100_CONTINUE_RESPONSE',
+                               'WAITING_100_CONTINUE_RESPONSE_BODY']:
                 self._state = 'WAITING'
                 self._responseDeferred.chainDeferred(self._finishedRequest)
 
@@ -1315,7 +1411,9 @@ class HTTP11ClientProtocol(Protocol):
                 log.err(err, 'Error writing request, but not in valid state '
                              'to finalize request: %s' % self._state)
 
-        _requestDeferred.addCallbacks(cbRequestWrotten, ebRequestWriting)
+        self._requestDeferred.addCallbacks(cbRequestWrotten, ebRequestWriting)
+
+        self._responseBodyDeferred.addCallback(self._finishResponse)
 
         return self._finishedRequest
 
@@ -1336,7 +1434,8 @@ class HTTP11ClientProtocol(Protocol):
         # Currently the rest parameter is ignored. Don't forget to use it if
         # we ever add support for pipelining. And maybe check what trailers
         # mean.
-        if self._state == 'WAITING':
+        if self._state in ['WAITING',
+                'WAITING_100_CONTINUE_RESPONSE']:
             self._state = 'QUIESCENT'
         else:
             # The server sent the entire response before we could send the
@@ -1369,9 +1468,276 @@ class HTTP11ClientProtocol(Protocol):
                 log.err()
                 self.transport.loseConnection()
             self._disconnectParser(reason)
+            self._cleanupRequest()
 
 
     _finishResponse_TRANSMITTING = _finishResponse_WAITING
+    _finishResponse_WAITING_100_CONTINUE_RESPONSE = _finishResponse_WAITING
+
+    def _handleRequest(self, request):
+        """
+        Send a non-100-Continue-expecting L{Request} to the transport.
+
+        @param request: The L{Request} to be sent.
+
+        """
+        self._state = 'TRANSMITTING'
+        self._requestDeferred = maybeDeferred(request.writeTo, self.transport)
+        (self._responseDeferred,
+             self._responseBodyDeferred) = self._setupParser(request)
+
+
+    def _handle100ContinueRequest(self, request):
+        """
+        Send an 100-Continue L{Request} to the transport.
+
+        @param request: The L{Request} to be sent.
+        """
+        request._writeHeadersTo(self.transport)
+        self._state = 'WAITING_100_CONTINUE_RESPONSE'
+        self._forcedRequestBody = False
+        self._requestDeferred = Deferred()
+        self._responseDeferred = Deferred()
+        self._responseBodyDeferred = Deferred()
+        (self._firstResponseDeferred,
+             self._firstResponseBodyDeferred) = self._setupParser(request)
+        self._firstResponseTimer = self._reactor.callLater(
+            TIMEOUT_100_CONTINUE,
+            self._forceRequestBody)
+
+        self._firstResponseDeferred.addCallbacks(
+            self._handleFirstResponse, self._handle100ContinueError)
+
+
+    def _handleFirstResponse(self, response):
+        """
+        Handle the first L{Response} to an 100-Continue L{Request}. This may
+        be an 100-Continue or a final status L{Response}. If it is an 100
+        response, consume it's body and then send the L{Request} body, else
+        forward the response to the user by means of self._finishedRequest.
+
+        @param response: The L{Response} to the current L{Request}.
+        """
+        # This may be inactive if this is a response that came after the timer
+        # fired.
+        if self._firstResponseTimer.active():
+            self._firstResponseTimer.cancel()
+
+        if self._state == 'WAITING_100_CONTINUE_RESPONSE':
+
+            if response.code == 100:
+                self._state = 'WAITING_100_CONTINUE_RESPONSE_BODY'
+                self._discardResponseBody(response,
+                    self._handleFirstResponseBody,
+                    self._handle100ContinueError)
+            else:
+                # We're done with this request.
+                self._requestDeferred.callback(None)
+                self._forwardFirstResponse(response)
+
+        else:
+
+            if self._forcedRequestBody and response.code == 100:
+                # Late arrival, eat it.
+                self._discardResponseBody(response,
+                    self._handleFirstResponseBody,
+                    self._handle100ContinueError)
+
+            else:
+                # A late response that isn't 100-Continue; could be from a
+                # server that doesn't implement expectations correctly.
+                self._forcedRequestBody = False
+                self._forwardFirstResponse(response)
+
+
+    def _forwardFirstResponse(self, response):
+        """
+        Forward a L{Response} and its body to the caller.
+
+        @param response: The L{Response} to be forwarded.
+        """
+
+        # Save this since it may get cleaned up in _finishResponse
+        responseDeferred = self._responseDeferred
+        self._firstResponseBodyDeferred.chainDeferred(
+                self._responseBodyDeferred)
+        responseDeferred.callback(response)
+
+
+    def _handleFirstResponseBody(self, rest):
+        """
+        The body of the first L{Response} to the current 100-Continue
+        L{Request} has been parsed. If the L{Response} wasn't an 100-Continue
+        forward to self._responseBodyDeferred. Otherwise create a new parser
+        for the second L{Response}.
+
+        @param rest: Data that wasn't parsed by the parser because it came
+            after the L{Response}. If we reload the parser, initialize it
+            with this data.
+        """
+        # We've just done discarding an 100-Continue response's body. Might
+        # be because we're waiting to send the request body or it might be
+        # that we've ignored a late response.
+
+        self._forcedRequestBody = False
+
+        if self._state == 'WAITING_100_CONTINUE_RESPONSE_BODY':
+            self._state = 'TRANSMITTING'
+
+            # Send the request body.
+
+            _requestBodyDeferred = maybeDeferred(
+                self._currentRequest._writeBodyTo,
+                self.transport)
+
+            _requestBodyDeferred.chainDeferred(self._requestDeferred)
+
+        # In both cases create a new parser.
+
+        self._disconnectParser(None)
+
+        (_secondResponseDeferred, _secondResponseBodyDeferred) =\
+            self._setupParser(self._currentRequest, data=rest)
+
+        _secondResponseDeferred.chainDeferred(self._responseDeferred)
+        _secondResponseBodyDeferred.chainDeferred(self._responseBodyDeferred)
+
+
+    def _discardResponseBody(self, response, callback, errback):
+        """
+        Discard a L{Response}'s body and call callback when done and errback
+        on error.
+
+        @param response: L{Response} that needs to be discarded.
+        @param callback: function to be called when done.
+        @param errback: function to be called on error
+        """
+        discarder = DiscardWithDeferred()
+
+        # We use discarder.finishedDeferred to catch body parsing
+        # errors and self._firstResponseBodyDeferred to catch success.
+
+        discarder.finishedDeferred.addErrback(errback)
+
+        response.deliverBody(discarder)
+
+        self._firstResponseBodyDeferred.addCallback(callback)
+
+
+    def _forceRequestBody(self):
+        """
+        Send the current L{Request} body even though we were expecting an
+        100 or final status L{Response}. It may just be a broken server that
+        doesn't implement correctly expectations.
+        """
+        self._state = 'TRANSMITTING'
+
+        self._forcedRequestBody = True
+
+        _requestBodyDeferred = maybeDeferred(self._currentRequest._writeBodyTo,
+            self.transport)
+
+        _requestBodyDeferred.chainDeferred(self._requestDeferred)
+
+
+    def _setupParser(self, request, data=''):
+        """
+        Setup a L{HTTPClientParser} for a L{Response} to a L{Request}. If this
+        is not the first parser associated with this protocol, call
+        L{HTTP11ClientProtocol._disconnectParser} first. Pass the given C{data}
+        to the newly created parser.
+
+        @param request: L{Request} waiting for a L{Response}.
+        @param data: Data to initialize the L{HTTPClientParser} with.
+        """
+        self._transportProxy = TransportProxyProducer(self.transport)
+
+        _responseBodyDeferred = Deferred()
+
+        def cbOnBodyFinish(rest):
+            _responseBodyDeferred.callback(rest)
+
+        self._parser = HTTPClientParser(request, cbOnBodyFinish)
+
+        self._parser.makeConnection(self._transportProxy)
+
+        # Grab this before passing data, since it might disappear if data is a
+        # complete response.
+
+        _responseDeferred = self._parser._responseDeferred
+
+        self._parser.dataReceived(data)
+
+        return (_responseDeferred, _responseBodyDeferred)
+
+
+    def _cleanupOn100ContinueError(self):
+        """
+        State-dependent cleanup on parsing errors while handling an
+        100-Continue-expecting L{Request}.
+        """
+    _cleanupOn100ContinueError = makeStatefulDispatcher(
+            'cleanupOn100ContinueError', _cleanupOn100ContinueError)
+
+
+    def _cleanupOn100ContinueError_WAITING_100_CONTINUE_RESPONSE(self):
+        """
+        The L{Request} body no sent yet. Fire self._requestDeferred because
+        we've basically finished dealing with this L{Request}. Also, this
+        forwards the L{Failure} to the user.
+        """
+        self._requestDeferred.callback(None)
+
+
+    def _cleanupOn100ContinueError_WAITING_100_CONTINUE_RESPONSE_BODY(self):
+        """
+        The L{Request} body no sent yet. Fire self._requestDeferred because
+        we've basically finished dealing with this L{Request}. Also, this
+        forwards the L{Failure} to the user.
+        """
+        self._requestDeferred.callback(None)
+
+
+    def _cleanupOn100ContinueError_TRANSMITTING(self):
+        """
+        We're currently sending the L{Request} body. The error will be sent to
+        the user after the body has been sent. No cleanup needed.
+        """
+
+
+    def _cleanupOn100ContinueError_WAITING(self):
+        """
+        No cleanup needed.
+        """
+
+
+    def _handle100ContinueError(self, err):
+        """
+        Handle any L{Failure} that could occur while handling a L{Request} that
+        expects 100-Continue. These are errors on parsing the first response
+        and the first response's body and can occur in the
+        WAITING_100_CONTINUE_RESPONSE/WAITING_100_CONTINUE_RESPONSE_BODY if
+        the server supports expectations or TRANSMITTING/WAITING if the
+        L{Request} body was sent after TIMEOUT_100_CONTINUE. Depending on
+        the current state some cleanup needs to be performed and the L{Failure}
+        is forwarded to self._responseDeferred.
+
+        @param err: L{Failure} to be forwarded.
+        """
+        self._cleanupOn100ContinueError()
+        self._responseDeferred.errback(err)
+
+
+    def _cleanupRequest(self):
+        """
+        Clean up the L{HTTP11ClientProtocol}'s state after a L{Request} has
+        been done with.
+        """
+        self._currentRequest = None
+        self._finishedRequest = None
+        self._responseDeferred = None
+        self._firstResponseDeferred = None
+        self._firstResponseBodyDeferred = None
 
 
     def _disconnectParser(self, reason):
@@ -1384,9 +1750,6 @@ class HTTP11ClientProtocol(Protocol):
         if self._parser is not None:
             parser = self._parser
             self._parser = None
-            self._currentRequest = None
-            self._finishedRequest = None
-            self._responseDeferred = None
 
             # The parser is no longer allowed to do anything to the real
             # transport.  Stop proxying from the parser's transport to the real
@@ -1486,6 +1849,24 @@ class HTTP11ClientProtocol(Protocol):
         for d in self._abortDeferreds:
             d.callback(None)
         self._abortDeferreds = []
+
+
+    def _connectionLost_WAITING_100_CONTINUE_RESPONSE(self, reason):
+        """
+        Disconnect the parser so that it can propagate the event and move to
+        the C{'CONNECTION_LOST'} state.
+        """
+        self._disconnectParser(reason)
+        self._state = 'CONNECTION_LOST'
+
+
+    def _connectionLost_WAITING_100_CONTINUE_RESPONSE_BODY(self, reason):
+        """
+        Disconnect the parser so that it can propagate the event and move to
+        the C{'CONNECTION_LOST'} state.
+        """
+        self._disconnectParser(reason)
+        self._state = 'CONNECTION_LOST'
 
 
     def abort(self):

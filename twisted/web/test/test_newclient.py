@@ -7,6 +7,8 @@ Tests for L{twisted.web._newclient}.
 
 __metaclass__ = type
 
+from StringIO import StringIO
+
 from zope.interface import implements
 from zope.interface.verify import verifyObject
 
@@ -16,6 +18,7 @@ from twisted.internet.interfaces import IConsumer, IPushProducer
 from twisted.internet.error import ConnectionDone, ConnectionLost
 from twisted.internet.defer import Deferred, succeed, fail
 from twisted.internet.protocol import Protocol
+from twisted.internet.task import Clock, Cooperator
 from twisted.trial.unittest import TestCase
 from twisted.test.proto_helpers import StringTransport, AccumulatingProtocol
 from twisted.web._newclient import UNKNOWN_LENGTH, STATUS, HEADER, BODY, DONE
@@ -27,9 +30,11 @@ from twisted.web._newclient import WrongBodyLength, RequestNotSent
 from twisted.web._newclient import ConnectionAborted, ResponseNeverReceived
 from twisted.web._newclient import BadHeaders, ResponseDone, PotentialDataLoss, ExcessWrite
 from twisted.web._newclient import TransportProxyProducer, LengthEnforcingConsumer, makeStatefulDispatcher
+from twisted.web._newclient import TIMEOUT_100_CONTINUE
 from twisted.web.http_headers import Headers
 from twisted.web.http import _DataLoss
 from twisted.web.iweb import IBodyProducer, IResponse
+from twisted.web.client import FileBodyProducer
 
 
 
@@ -827,6 +832,7 @@ class SlowRequest:
     method = 'GET'
     stopped = False
     persistent = False
+    headers = Headers()
 
     def writeTo(self, transport):
         self.finished = Deferred()
@@ -846,6 +852,7 @@ class SimpleRequest:
     L{Request} with no body producer.
     """
     persistent = False
+    headers = Headers()
 
     def writeTo(self, transport):
         transport.write('SOME BYTES')
@@ -863,7 +870,8 @@ class HTTP11ClientProtocolTests(TestCase):
         Create an L{HTTP11ClientProtocol} connected to a fake transport.
         """
         self.transport = StringTransport()
-        self.protocol = HTTP11ClientProtocol()
+        self.clock = Clock()
+        self.protocol = HTTP11ClientProtocol(reactor=self.clock)
         self.protocol.makeConnection(self.transport)
 
 
@@ -916,6 +924,7 @@ class HTTP11ClientProtocolTests(TestCase):
         """
         class BrokenRequest:
             persistent = False
+            headers = Headers()
             def writeTo(self, transport):
                 return fail(ArbitraryException())
 
@@ -939,6 +948,7 @@ class HTTP11ClientProtocolTests(TestCase):
         """
         class BrokenRequest:
             persistent = False
+            headers = Headers()
             def writeTo(self, transport):
                 raise ArbitraryException()
 
@@ -1565,6 +1575,365 @@ class HTTP11ClientProtocolTests(TestCase):
         self.assertEqual(len(errors), 1)
         self.assertTrue(transport.disconnecting)
 
+
+    def _send100ContinueRequest(self, body, persistent=False):
+        """
+        Send a L{Request} that expects 100-Continue with the given body.
+        """
+        def _immediateScheduler(x):
+            return succeed(x())
+
+        cooperator = Cooperator(scheduler=_immediateScheduler, started=False)
+        producer = FileBodyProducer(StringIO(body), cooperator=cooperator)
+
+        headers = Headers({'host': ['example.com'], 'expect': ['100-Continue']})
+
+        d = self.protocol.request(Request('POST', '/foo', headers, producer,
+            persistent=persistent))
+
+        self.transport.clear()
+
+        cooperator.start()
+
+        self.assertEqual(self.transport.value(), '')
+
+        return d
+
+
+    def test_expect100ContinueGetFinalStatus(self):
+        """
+        When we expect 100-Continue and get a final status L{Response} we don't
+        send the L{Request} body and return the first L{Response} to the user.
+        """
+        d = self._send100ContinueRequest('x' * 10)
+
+        def cbResponse(response):
+            self.assertEqual(response.code, 200)
+
+        d.addCallback(cbResponse)
+
+        self.protocol.dataReceived(
+            "HTTP/1.1 200 OK\r\n"
+            "Content-length: 0\r\n"
+            "\r\n")
+
+        self.assertEqual(self.transport.value(), '')
+
+        return d
+
+
+    def test_expect100ContinueGet100Continue(self):
+        """
+        When we expect 100-Continue and get an 100-Continue L{Response} we send
+        the L{Request} body and return the second L{Response} to the user.
+        """
+        d = self._send100ContinueRequest('x' * 10)
+
+        def cbResponse(response):
+            self.assertEqual(response.code, 200)
+
+        d.addCallback(cbResponse)
+
+        self.protocol.dataReceived(
+            "HTTP/1.1 100 Continue\r\n"
+            "Content-Length: 3\r\n"
+            "\r\n"
+            "123")
+
+        self.protocol.dataReceived(
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Length: 0\r\n"
+            "\r\n")
+
+        self.assertEqual(self.transport.value(), 'x' * 10)
+
+        return d
+
+
+    def test_expect100ContinueGet100ContinueBackToBack(self):
+        """
+        When we expect 100-Continue and we get 2 response back to back (100 and
+        final status) we should act as if they came separately.
+        """
+        d = self._send100ContinueRequest('x' * 10)
+
+        def cbResponse(response):
+            self.assertEqual(response.code, 200)
+
+        d.addCallback(cbResponse)
+
+        self.protocol.dataReceived(
+            "HTTP/1.1 100 Continue\r\n"
+            "Content-Length: 3\r\n"
+            "\r\n"
+            "123"
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Length: 0\r\n"
+            "\r\n")
+
+        self.assertEqual(self.transport.value(), 'x' * 10)
+
+        return d
+
+
+    def test_expect100ContinueServerBroken(self):
+        """
+        When we expect 100-Continue and the server is broken and waits for the
+        L{Request} body we wait for a limited amount and then send the body.
+        """
+        d = self._send100ContinueRequest('x' * 10)
+
+        def cbResponse(response):
+            self.assertEqual(response.code, 200)
+
+        d.addCallback(cbResponse)
+
+        self.clock.advance(TIMEOUT_100_CONTINUE + 1)
+
+        self.assertEqual(self.transport.value(), 'x' * 10)
+
+        self.protocol.dataReceived(
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Length: 0\r\n"
+            "\r\n")
+
+        return d
+
+
+    def test_expect100ContinueTimerFiresLate100ContinueResponse(self):
+        """
+        When we expect 100-Continue and the server is slow and sends an
+        100-Continue after we sent the body we consume the 100-Continue
+        L{Response} and return the second L{Response} to the user.
+        """
+        d = self._send100ContinueRequest('x' * 10)
+
+        def cbResponse(response):
+            self.assertEqual(response.code, 200)
+
+        d.addCallback(cbResponse)
+
+        self.clock.advance(TIMEOUT_100_CONTINUE + 1)
+
+        self.assertEqual(self.transport.value(), 'x' * 10)
+
+        self.protocol.dataReceived(
+            "HTTP/1.1 100 Continue\r\n"
+            "Content-length: 3\r\n"
+            "\r\n"
+            "123")
+
+        self.protocol.dataReceived(
+            "HTTP/1.1 200 OK\r\n"
+            "Content-length: 0\r\n"
+            "\r\n")
+
+        return d
+
+
+    _garbageResponse = "unparseable garbage goes here\r\n"
+
+
+    def test_expect100ContinueBrokenFirstResponse(self):
+        """
+        When we expect 100-Continue and the first L{Response} is broken, return
+        the error to the user.
+        """
+        d = self._send100ContinueRequest('x' * 10)
+
+        self.protocol.dataReceived(self._garbageResponse)
+
+        self.assertEqual(self.transport.value(), '')
+
+        return assertResponseFailed(self, d, [ParseError])
+
+
+    def test_expect100ContinueBrokenFirstResponseChunkedBody(self):
+        """
+        When we expect 100-Continue and the 100-Continue L{Response} has a
+        chunked body and it is broken, return the error to the user.
+        """
+        d = self._send100ContinueRequest('x' * 10)
+
+        self.protocol.dataReceived(
+            "HTTP/1.1 100 Continue\r\n"
+            "Transfer-Encoding: chunked\r\n"
+            "\r\n")
+
+        self.protocol.dataReceived("3\r\nzzz\r\n")
+        self.protocol.dataReceived("3\r\nzzz\r\nzzz\r\n") #incorrect chunk
+
+        self.assertEqual(self.transport.value(), '')
+
+        return assertResponseFailed(self, d, [ValueError, _DataLoss])
+
+
+    def test_expect100ContinueBrokenSecondResponse(self):
+        """
+        When we expect 100-Continue and the 100-Continue L{Response} is ok but
+        the second L{Response} is broken, return the error to the user.
+        """
+        d = self._send100ContinueRequest('x' * 10)
+
+        self.protocol.dataReceived(
+            "HTTP/1.1 100 Continue\r\n"
+            "Content-length: 3\r\n"
+            "\r\n"
+            "123")
+
+        self.protocol.dataReceived(self._garbageResponse)
+
+        self.assertEqual(self.transport.value(), 'x' * 10)
+
+        return assertResponseFailed(self, d, [ParseError])
+
+
+    def _setupForQuiescent(self):
+        self.quiescentResult = []
+
+        def callback(p):
+            self.assertEqual(p, self.protocol)
+            self.assertEqual(p.state, "QUIESCENT")
+            self.quiescentResult.append(p)
+
+        self.transport = StringTransport()
+        self.clock = Clock()
+        self.protocol = HTTP11ClientProtocol(callback, reactor=self.clock)
+        self.protocol.makeConnection(self.transport)
+
+
+    def _checkQuiescentCalled(self, requestDeferred, body=''):
+        # Headers done, but still no quiescent callback:
+        self.assertEqual(self.quiescentResult, [])
+
+        result = []
+        requestDeferred.addCallback(result.append)
+        response = result[0]
+
+        # When response body is done (i.e. connectionLost is called), note the
+        # fact in quiescentResult:
+        bodyProtocol = AccumulatingProtocol()
+        bodyProtocol.closedDeferred = Deferred()
+        bodyProtocol.closedDeferred.addCallback(
+            lambda ign: self.quiescentResult.append("response done"))
+
+        response.deliverBody(bodyProtocol)
+        self.protocol.dataReceived(body)
+        bodyProtocol.closedReason.trap(ResponseDone)
+        # Quiescent callback called *before* self.protocol handling the response
+        # body gets its connectionLost called:
+        self.assertEqual(self.quiescentResult, [self.protocol, "response done"])
+
+        # Make sure everything was cleaned up:
+        self.assertEqual(self.protocol._parser, None)
+        self.assertEqual(self.protocol._finishedRequest, None)
+        self.assertEqual(self.protocol._currentRequest, None)
+        self.assertEqual(self.protocol._transportProxy, None)
+        self.assertEqual(self.protocol._responseDeferred, None)
+
+
+    def test_expect100ContinueGot100ContinueQuiescentCallbackCalled(self):
+        """
+        We have a persistent connection and we expect 100-Continue. When we
+        get an 100-Continue L{Response} the quiescent callback needs to be
+        called.
+        """
+        self._setupForQuiescent()
+
+        d = self._send100ContinueRequest('x' * 10, persistent=True)
+
+        def cbResponse(response):
+            self.assertEqual(response.code, 200)
+            return response
+
+        d.addCallback(cbResponse)
+
+        self.protocol.dataReceived(
+            "HTTP/1.1 100 Continue\r\n"
+            "Content-Length: 3\r\n"
+            "\r\n"
+            "123")
+
+        self.protocol.dataReceived(
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Length: 3\r\n"
+            "\r\n")
+
+        self._checkQuiescentCalled(d, body="abc")
+
+        self.assertEqual(self.transport.value(), 'x' * 10)
+
+        return d
+
+
+    def test_expect100ContinueGotFinalStatusQuiescentCallbackCalled(self):
+        """
+        We have a persistent connection and we expect 100-Continue. When we
+        get a L{Response} with a final status the quiescent callback needs to
+        be called.
+        """
+        self._setupForQuiescent()
+
+        d = self._send100ContinueRequest('x' * 10, persistent=True)
+
+        def cbResponse(response):
+            self.assertEqual(response.code, 200)
+            return response
+
+        d.addCallback(cbResponse)
+
+        self.protocol.dataReceived(
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Length: 3\r\n"
+            "\r\n")
+
+        self._checkQuiescentCalled(d, body='abc')
+
+        self.assertEqual(self.transport.value(), '')
+
+        return d
+
+    
+    def test_expect100ContinueConnectionLostWhileWaitingFirstResponse(self):
+        """
+        When we expect 100-Continue and we get disconnected while waiting for
+        the first L{Response}, the L{Deferred} return by request() must errback
+        a ResponseFailed wrapping the underlying failure.
+        """
+        d = self._send100ContinueRequest('x' * 10)
+
+        self.assertEqual(self.transport.value(), '')
+
+        self.protocol.connectionLost(Failure(ArbitraryException()))
+
+        self.assertEqual(self.protocol._state, 'CONNECTION_LOST')
+
+        return assertResponseFailed(
+            self, d, [ArbitraryException])
+
+
+    def test_expect100ContinueConnectionLostWhileWaitingFirstResponseBody(self):
+        """
+        When we expect 100-Continue and we get an 100-Continue L{Response}
+        and we get disconnected while waiting for its body, the L{Deferred}
+        returned by request() must errback a ResponseFailed wrapping the
+        underlying failure.
+        """
+        d = self._send100ContinueRequest('x' * 10)
+
+        self.assertEqual(self.transport.value(), '')
+
+        self.protocol.dataReceived(
+            "HTTP/1.1 100 Continue\r\n"
+            "Content-length: 10\r\n"
+            "\r\n")
+
+        self.protocol.connectionLost(Failure(ArbitraryException()))
+
+        self.assertEqual(self.protocol._state, 'CONNECTION_LOST')
+
+        return assertResponseFailed(
+            self, d, [ArbitraryException, _DataLoss])
 
 
 class StringProducer:
