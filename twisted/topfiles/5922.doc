@@ -1,0 +1,1 @@
+twisted.mail.tap now documents example usage in it's longdesc output for the 'mail' plugin

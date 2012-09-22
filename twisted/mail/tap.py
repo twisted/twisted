@@ -66,7 +66,31 @@ class Options(usage.Options, strcred.AuthOptionMixin):
                                "certificate" : usage.CompleteFiles("*.pem")}
                    )
 
-    longdesc = "This creates a mail.tap file that can be used by twistd."
+    longdesc = """
+    An SMTP / POP3 email server plugin for twistd.
+
+    Examples:
+
+    1. SMTP and POP server
+
+    twistd mail --maildirdbmdomain=example.com=/tmp/example.com
+    --user=joe=password
+
+    Starts an SMTP server that only accepts emails to joe@example.com and saves
+    them to /tmp/example.com.
+
+    Also starts a POP mail server which will allow a client to log in using
+    username: joe@example.com and password: password and collect any email that
+    has been saved in /tmp/example.com.  
+
+    2. SMTP relay
+
+    twistd mail --relay=/tmp/mail_queue
+
+    Starts an SMTP server that accepts emails to any email address and relays
+    them to an appropriate remote SMTP server. Queued emails will be
+    temporarily stored in /tmp/mail_queue.
+    """
 
     def __init__(self):
         usage.Options.__init__(self)
@@ -118,7 +142,11 @@ class Options(usage.Options, strcred.AuthOptionMixin):
 
 
     def opt_maildirdbmdomain(self, domain):
-        """generate an SMTP/POP3 virtual domain which saves to \"path\"
+        """Generate an SMTP/POP3 virtual domain. This option requires
+        an argument of the form 'NAME=PATH' where NAME is the DNS
+        Domain Name for which email will be accepted and where PATH is
+        a the filesystem path to a Maildir folder. [Example:
+        'example.com=/tmp/example.com']
         """
         try:
             name, path = domain.split('=')
