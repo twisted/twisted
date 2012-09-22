@@ -203,44 +203,64 @@ class FTPAnonymousTestCase(FTPServerTestCase):
             chainDeferred=d)
 
 
-
 class BasicFTPServerTestCase(FTPServerTestCase):
     def testNotLoggedInReply(self):
-        """When not logged in, all commands other than USER and PASS should
-        get NOT_LOGGED_IN errors.
         """
-        commandList = ['CDUP', 'CWD', 'LIST', 'MODE', 'PASV',
-                       'PWD', 'RETR', 'STRU', 'SYST', 'TYPE']
+        When not logged in, most commands other than USER and PASS should
+        get NOT_LOGGED_IN errors, but some can be called before USER and PASS.
+        """
+        loginRequiredCommandList = ['CDUP', 'CWD', 'LIST', 'MODE', 'PASV',
+            'PWD', 'RETR', 'STRU', 'SYST', 'TYPE']
+        loginNotRequiredCommandList = ['FEAT']
 
         # Issue commands, check responses
-        def checkResponse(exception):
+        def checkFailResponse(exception, command):
             failureResponseLines = exception.args[0]
             self.failUnless(failureResponseLines[-1].startswith("530"),
-                            "Response didn't start with 530: %r"
-                            % (failureResponseLines[-1],))
+                            "%s - Response didn't start with 530: %r"
+                            % (command, failureResponseLines[-1],))
+
+        def checkPassResponse(result, command):
+            result = result[0]
+            self.failIf(result.startswith("530"),
+                            "%s - Response start with 530: %r"
+                            % (command, result,))
+
         deferreds = []
-        for command in commandList:
+        for command in loginRequiredCommandList:
             deferred = self.client.queueStringCommand(command)
             self.assertFailure(deferred, ftp.CommandFailed)
-            deferred.addCallback(checkResponse)
+            deferred.addCallback(checkFailResponse, command)
             deferreds.append(deferred)
+
+        for command in loginNotRequiredCommandList:
+            deferred = self.client.queueStringCommand(command)
+            deferred.addCallback(checkPassResponse, command)
+            deferreds.append(deferred)
+
         return defer.DeferredList(deferreds, fireOnOneErrback=True)
 
     def testPASSBeforeUSER(self):
-        """Issuing PASS before USER should give an error."""
+        """
+        Issuing PASS before USER should give an error.
+        """
         return self.assertCommandFailed(
             'PASS foo',
             ["503 Incorrect sequence of commands: "
              "USER required before PASS"])
 
     def testNoParamsForUSER(self):
-        """Issuing USER without a username is a syntax error."""
+        """
+        Issuing USER without a username is a syntax error.
+        """
         return self.assertCommandFailed(
             'USER',
             ['500 Syntax error: USER requires an argument.'])
 
     def testNoParamsForPASS(self):
-        """Issuing PASS without a password is a syntax error."""
+        """
+        Issuing PASS without a password is a syntax error.
+        """
         d = self.client.queueStringCommand('USER foo')
         return self.assertCommandFailed(
             'PASS',
@@ -251,7 +271,9 @@ class BasicFTPServerTestCase(FTPServerTestCase):
         return self._anonymousLogin()
 
     def testQuit(self):
-        """Issuing QUIT should return a 221 message."""
+        """
+        Issuing QUIT should return a 221 message.
+        """
         d = self._anonymousLogin()
         return self.assertCommandResponse(
             'QUIT',
@@ -462,7 +484,34 @@ class BasicFTPServerTestCase(FTPServerTestCase):
         protocol = self.factory.buildProtocol(None)
         self.assertEqual(portRange, protocol.wrappedProtocol.passivePortRange)
 
+    def testFEAT(self):
+        """
+        When the server receives 'FEAT', it should report the list of supported
+        features. (Additionally, ensure that the server reports various
+        particular features that are supported by all Twisted FTP servers.)
+        """
+        d = self.client.queueStringCommand('FEAT')
+        def gotResponse(responseLines):
+            self.assertEqual('211-Features:', responseLines[0])
+            self.assertTrue(' MDTM' in responseLines)
+            self.assertTrue(' PASV' in responseLines)
+            self.assertTrue(' TYPE A;I' in responseLines)
+            self.assertTrue(' SIZE' in responseLines)
+            self.assertEqual('211 End', responseLines[-1])
+        return d.addCallback(gotResponse)
 
+    def testOPTS(self):
+        """
+        When the server receives 'OPTS something', it should report
+        that the FTP server does not support the option called 'something'.
+        """
+        d = self._anonymousLogin()
+        self.assertCommandFailed(
+            'OPTS something',
+            ["502 Option 'something' not implemented."],
+            chainDeferred=d,
+            )
+        return d
 
 class FTPServerTestCaseAdvancedClient(FTPServerTestCase):
     """

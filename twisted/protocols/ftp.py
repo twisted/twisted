@@ -45,7 +45,8 @@ CMD_OK                                  = "200.1"
 TYPE_SET_OK                             = "200.2"
 ENTERING_PORT_MODE                      = "200.3"
 CMD_NOT_IMPLMNTD_SUPERFLUOUS            = "202"
-SYS_STATUS_OR_HELP_REPLY                = "211"
+SYS_STATUS_OR_HELP_REPLY                = "211.1"
+FEAT_OK                                 = '211.2'
 DIR_STATUS                              = "212"
 FILE_STATUS                             = "213"
 HELP_MSG                                = "214"
@@ -80,7 +81,8 @@ REQ_ACTN_ABRTD_INSUFF_STORAGE           = "452"
 
 SYNTAX_ERR                              = "500"
 SYNTAX_ERR_IN_ARGS                      = "501"
-CMD_NOT_IMPLMNTD                        = "502"
+CMD_NOT_IMPLMNTD                        = "502.1"
+OPTS_NOT_IMPLEMENTED                    = '502.2'
 BAD_CMD_SEQ                             = "503"
 CMD_NOT_IMPLMNTD_FOR_PARAM              = "504"
 NOT_LOGGED_IN                           = "530.1"     # v1 of code 530 - please log in
@@ -111,6 +113,7 @@ RESPONSE = {
     ENTERING_PORT_MODE:                 '200 PORT OK',
     CMD_NOT_IMPLMNTD_SUPERFLUOUS:       '202 Command not implemented, superfluous at this site',
     SYS_STATUS_OR_HELP_REPLY:           '211 System status reply',
+    FEAT_OK:                            ['211-Features:','211 End'],
     DIR_STATUS:                         '212 %s',
     FILE_STATUS:                        '213 %s',
     HELP_MSG:                           '214 help: %s',
@@ -151,6 +154,7 @@ RESPONSE = {
     SYNTAX_ERR:                         "500 Syntax error: %s",
     SYNTAX_ERR_IN_ARGS:                 '501 syntax error in argument(s) %s.',
     CMD_NOT_IMPLMNTD:                   "502 Command '%s' not implemented",
+    OPTS_NOT_IMPLEMENTED:               "502 Option '%s' not implemented.",
     BAD_CMD_SEQ:                        '503 Incorrect sequence of commands: %s',
     CMD_NOT_IMPLMNTD_FOR_PARAM:         "504 Not implemented for parameter '%s'.",
     NOT_LOGGED_IN:                      '530 Please login with USER and PASS.',
@@ -504,7 +508,9 @@ class DTPFactory(protocol.ClientFactory):
 
     # -- class variables --
     def __init__(self, pi, peerHost=None, reactor=None):
-        """Constructor
+        """
+        Constructor
+
         @param pi: this factory's protocol interpreter
         @param peerHost: if peerCheck is True, this is the tuple that the
             generated instance will use to perform security checks
@@ -657,6 +663,8 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
     dtpPort = None
     dtpInstance = None
     binary = True
+    PUBLIC_COMMANDS = ['FEAT', 'QUIT']
+    FEATURES = ['FEAT', 'MDTM', 'PASV', 'SIZE', 'TYPE A;I']
 
     passivePortRange = xrange(0, 1)
 
@@ -731,9 +739,19 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
 
 
     def processCommand(self, cmd, *params):
+
+        def call_ftp_command(command):
+            method = getattr(self, "ftp_" + command, None)
+            if method is not None:
+                return method(*params)
+            return defer.fail(CmdNotImplementedError(command))
+
         cmd = cmd.upper()
 
-        if self.state == self.UNAUTH:
+        if cmd in self.PUBLIC_COMMANDS:
+            return call_ftp_command(cmd)
+
+        elif self.state == self.UNAUTH:
             if cmd == 'USER':
                 return self.ftp_USER(*params)
             elif cmd == 'PASS':
@@ -748,10 +766,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
                 return BAD_CMD_SEQ, "PASS required after USER"
 
         elif self.state == self.AUTHED:
-            method = getattr(self, "ftp_" + cmd, None)
-            if method is not None:
-                return method(*params)
-            return defer.fail(CmdNotImplementedError(cmd))
+            return call_ftp_command(cmd)
 
         elif self.state == self.RENAMING:
             if cmd == 'RNTO':
@@ -829,7 +844,8 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
 
 
     def ftp_PASV(self):
-        """Request for a passive connection
+        """
+        Request for a passive connection
 
         from the rfc::
 
@@ -1166,6 +1182,31 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
 
 
     def ftp_SIZE(self, path):
+        """
+        File SIZE
+
+        The FTP command, SIZE OF FILE (SIZE), is used to obtain the transfer
+        size of a file from the server-FTP process.  This is the exact number
+        of octets (8 bit bytes) that would be transmitted over the data
+        connection should that file be transmitted.  This value will change
+        depending on the current STRUcture, MODE, and TYPE of the data
+        connection or of a data connection that would be created were one
+        created now.  Thus, the result of the SIZE command is dependent on
+        the currently established STRU, MODE, and TYPE parameters.
+
+        The SIZE command returns how many octets would be transferred if the
+        file were to be transferred using the current transfer structure,
+        mode, and type.  This command is normally used in conjunction with
+        the RESTART (REST) command when STORing a file to a remote server in
+        STREAM mode, to determine the restart point.  The server-PI might
+        need to read the partially transferred file, do any appropriate
+        conversion, and count the number of octets that would be generated
+        when sending the file in order to correctly respond to this command.
+        Estimates of the file transfer size MUST NOT be returned; only
+        precise information is acceptable.
+
+        http://tools.ietf.org/html/rfc3659
+        """
         try:
             newsegs = toSegments(self.workingDirectory, path)
         except InvalidPath:
@@ -1178,6 +1219,18 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
 
 
     def ftp_MDTM(self, path):
+        """
+        File Modification Time (MDTM)
+
+        The FTP command, MODIFICATION TIME (MDTM), can be used to determine
+        when a file in the server NVFS was last modified.  This command has
+        existed in many FTP servers for many years, as an adjunct to the REST
+        command for STREAM mode, thus is widely available.  However, where
+        supported, the "modify" fact that can be provided in the result from
+        the new MLST command is recommended as a superior alternative.
+
+        http://tools.ietf.org/html/rfc3659
+        """
         try:
             newsegs = toSegments(self.workingDirectory, path)
         except InvalidPath:
@@ -1190,6 +1243,18 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
 
 
     def ftp_TYPE(self, type):
+        """
+        REPRESENTATION TYPE (TYPE)
+
+        The argument specifies the representation type as described
+        in the Section on Data Representation and Storage.  Several
+        types take a second parameter.  The first parameter is
+        denoted by a single Telnet character, as is the second
+        Format parameter for ASCII and EBCDIC; the second parameter
+        for local byte is a decimal integer to indicate Bytesize.
+        The parameters are separated by a <SP> (Space, ASCII code
+        32).
+        """
         p = type.upper()
         if p:
             f = getattr(self, 'type_' + p[0], None)
@@ -1282,14 +1347,33 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         return self.shell.rename(fromsegs, tosegs).addCallback(lambda ign: (REQ_FILE_ACTN_COMPLETED_OK,))
 
 
+    def ftp_FEAT(self):
+        """
+        Advertise the features supported by the server.
+
+        http://tools.ietf.org/html/rfc2389
+        """
+        self.sendLine(RESPONSE[FEAT_OK][0])
+        for feature in self.FEATURES:
+            self.sendLine(' ' + feature)
+        self.sendLine(RESPONSE[FEAT_OK][1])
+
+    def ftp_OPTS(self, option):
+        """
+        Handle OPTS command.
+
+        http://tools.ietf.org/html/draft-ietf-ftpext-utf-8-option-00
+        """
+        return self.reply(OPTS_NOT_IMPLEMENTED, option)
+
     def ftp_QUIT(self):
         self.reply(GOODBYE_MSG)
         self.transport.loseConnection()
         self.disconnected = True
 
-
     def cleanupDTP(self):
-        """call when DTP connection exits
+        """
+        Call when DTP connection exits
         """
         log.msg('cleanupDTP', debug=True)
 
@@ -1531,7 +1615,8 @@ class IWriteFile(Interface):
         """
 
 def _getgroups(uid):
-    """Return the primary and supplementary groups for the given UID.
+    """
+    Return the primary and supplementary groups for the given UID.
 
     @type uid: C{int}
     """
@@ -2117,7 +2202,8 @@ class SenderProtocol(protocol.Protocol):
 
 
 def decodeHostPort(line):
-    """Decode an FTP response specifying a host and port.
+    """
+    Decode an FTP response specifying a host and port.
 
     @return: a 2-tuple of (host, port).
     """
@@ -2140,7 +2226,8 @@ def _unwrapFirstError(failure):
     return failure.value.subFailure
 
 class FTPDataPortFactory(protocol.ServerFactory):
-    """Factory for data connections that use the PORT command
+    """
+    Factory for data connections that use the PORT command
 
     (i.e. "active" transfers)
     """
@@ -2847,7 +2934,8 @@ class FTPClient(FTPClientBasic):
 
 
 class FTPFileListProtocol(basic.LineReceiver):
-    """Parser for standard FTP file listings
+    """
+    Parser for standard FTP file listings
 
     This is the evil required to match::
 
@@ -2893,7 +2981,8 @@ class FTPFileListProtocol(basic.LineReceiver):
             self.addFile(d)
 
     def parseDirectoryLine(self, line):
-        """Return a dictionary of fields, or None if line cannot be parsed.
+        """
+        Return a dictionary of fields, or None if line cannot be parsed.
 
         @param line: line of text expected to contain a directory entry
         @type line: str
@@ -2913,7 +3002,8 @@ class FTPFileListProtocol(basic.LineReceiver):
             return d
 
     def addFile(self, info):
-        """Append file information dictionary to the list of known files.
+        """
+        Append file information dictionary to the list of known files.
 
         Subclasses can override or extend this method to handle file
         information differently without affecting the parsing of data
@@ -2926,7 +3016,8 @@ class FTPFileListProtocol(basic.LineReceiver):
         self.files.append(info)
 
     def unknownLine(self, line):
-        """Deal with received lines which could not be parsed as file
+        """
+        Deal with received lines which could not be parsed as file
         information.
 
         Subclasses can override this to perform any special processing
@@ -2938,7 +3029,8 @@ class FTPFileListProtocol(basic.LineReceiver):
         pass
 
 def parsePWDResponse(response):
-    """Returns the path from a response to a PWD command.
+    """
+    Returns the path from a response to a PWD command.
 
     Responses typically look like::
 
