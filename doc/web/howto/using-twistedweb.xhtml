@@ -192,6 +192,42 @@ arguments passed to the resource regardless of whether they used GET
 
 </p>
 
+<h3>Request encoders</h3>
+
+<p>
+  When using a <code class="API" base="twisted.web.server">Site</code>, one can
+  specify a list of
+  <code class="API" base="twisted.web.iweb">IRequestEncoderFactory</code> which
+  may return <code class="API" base="twisted.web.iweb">IRequestEncoder</code>
+  to encode the requests. The encoder factories are called when the
+  <code>Site</code> receives a request and potentially return an encoder. By
+  default twisted provides
+  <code class="API" base="twisted.web.server">GzipEncoderFactory</code> which
+  manages standard gzip compression. You can use it this way:
+</p>
+
+<pre class="python">
+from twisted.web import server, resource
+from twisted.internet import reactor
+
+class Simple(resource.Resource):
+    isLeaf = True
+    def render_GET(self, request):
+        return "&lt;html&gt;Hello, world!&lt;/html&gt;"
+
+site = server.Site(Simple(), encoders=[server.GzipEncoderFactory()])
+reactor.listenTCP(8080, site)
+reactor.run()
+</pre>
+
+<p>
+  You can create your own encoders (using compress or bzip2 for example) by
+  implementing the mentioned interfaces and then pass it to your
+  <code>Site</code>. Note that only encoder can be used per request: the first
+  encode factory returning an object will be used, so the order in which they
+  are specified matters.
+</p>
+
 <h3>Session</h3>
 <a name="sessions" />
 

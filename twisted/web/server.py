@@ -16,6 +16,7 @@ import types
 import copy
 import os
 from urllib import quote
+import zlib
 
 from zope.interface import implements
 
@@ -44,7 +45,8 @@ __all__ = [
     'Session',
     'Site',
     'version',
-    'NOT_DONE_YET'
+    'NOT_DONE_YET',
+    'GzipEncoderFactory'
 ]
 
 
@@ -90,6 +92,7 @@ class Request(pb.Copyable, http.Request, components.Componentized):
     appRootURL = None
     __pychecker__ = 'unusednames=issuer'
     _inFakeHead = False
+    _encoder = None
 
     def __init__(self, *args, **kw):
         http.Request.__init__(self, *args, **kw)
@@ -119,14 +122,19 @@ class Request(pb.Copyable, http.Request, components.Componentized):
     # HTML generation helpers
 
     def sibLink(self, name):
-        "Return the text that links to a sibling of the requested resource."
+        """
+        Return the text that links to a sibling of the requested resource.
+        """
         if self.postpath:
             return (len(self.postpath)*"../") + name
         else:
             return name
 
+
     def childLink(self, name):
-        "Return the text that links to a child of the requested resource."
+        """
+        Return the text that links to a child of the requested resource.
+        """
         lpp = len(self.postpath)
         if lpp > 1:
             return ((lpp-1)*"../") + name
@@ -138,8 +146,11 @@ class Request(pb.Copyable, http.Request, components.Componentized):
             else:
                 return name
 
+
     def process(self):
-        "Process a request."
+        """
+        Process a request.
+        """
 
         # get site from channel
         self.site = self.channel.site
@@ -151,11 +162,19 @@ class Request(pb.Copyable, http.Request, components.Componentized):
         # Resource Identification
         self.prepath = []
         self.postpath = map(unquote, string.split(self.path[1:], '/'))
+
+        if self.site.encoders:
+            for encoderFactory in self.site.encoders:
+                encoder = encoderFactory.encoderForRequest(self)
+                if encoder is not None:
+                    self._encoder = encoder
+                    break
         try:
             resrc = self.site.getResourceFor(self)
             self.render(resrc)
         except:
             self.processingFailed(failure.Failure())
+
 
     def write(self, data):
         """
@@ -178,7 +197,20 @@ class Request(pb.Copyable, http.Request, components.Componentized):
         # multiple times.  It will only actually change the responseHeaders once
         # though, so it's still okay.
         if not self._inFakeHead:
+            if self._encoder:
+                data = self._encoder.encode(data)
             http.Request.write(self, data)
+
+
+    def finish(self):
+        """
+        Override C{http.Request.finish} for possible encoding.
+        """
+        if self._encoder:
+            data = self._encoder.finish()
+            if data:
+                http.Request.write(self, data)
+        return http.Request.finish(self)
 
 
     def render(self, resrc):
@@ -388,6 +420,83 @@ class Request(pb.Copyable, http.Request, components.Componentized):
         return self.appRootURL
 
 
+
+class GzipEncoderFactory(object):
+    """
+    @cvar compressLevel: The compression level used by the compressor, default
+        to 9 (highest).
+
+    @since: 12.3
+    """
+    implements(iweb._IRequestEncoderFactory)
+
+    compressLevel = 9
+
+    def encoderForRequest(self, request):
+        """
+        Check the headers if the client accepts gzip encoding, and encodes the
+        request if so.
+        """
+        acceptHeaders = request.requestHeaders.getRawHeaders(
+            'accept-encoding', [])
+        supported = ','.join(acceptHeaders).split(',')
+        if 'gzip' in supported:
+            encoding = request.responseHeaders.getRawHeaders(
+                'content-encoding')
+            if encoding:
+                encoding = '%s,gzip' % ','.join(encoding)
+            else:
+                encoding = 'gzip'
+
+            request.responseHeaders.setRawHeaders('content-encoding',
+                                                  [encoding])
+            return _GzipEncoder(self.compressLevel, request)
+
+
+
+class _GzipEncoder(object):
+    """
+    An encoder which supports gzip.
+
+    @ivar _zlibCompressor: The zlib compressor instance used to compress the
+        stream.
+
+    @ivar _request: A reference to the originating request.
+
+    @since: 12.3
+    """
+    implements(iweb._IRequestEncoder)
+
+    _zlibCompressor = None
+
+    def __init__(self, compressLevel, request):
+        self._zlibCompressor = zlib.compressobj(
+            compressLevel, zlib.DEFLATED, 16 + zlib.MAX_WBITS)
+        self._request = request
+
+
+    def encode(self, data):
+        """
+        Write to the request, automatically compressing data on the fly.
+        """
+        if not self._request.startedWriting:
+            # Remove the content-length header, we can't honor it
+            # because we compress on the fly.
+            self._request.responseHeaders.removeHeader('content-length')
+        return self._zlibCompressor.compress(data)
+
+
+    def finish(self):
+        """
+        Finish handling the request request, flushing any data from the zlib
+        buffer.
+        """
+        remain = self._zlibCompressor.flush()
+        self._zlibCompressor = None
+        return remain
+
+
+
 class _RemoteProducerWrapper:
     def __init__(self, remote):
         self.resumeProducing = remote.remoteMethod("resumeProducing")
@@ -500,6 +609,12 @@ class Site(http.HTTPFactory):
         rendered pages. Default to C{True}.
     @ivar sessionFactory: factory for sessions objects. Default to L{Session}.
     @ivar sessionCheckTime: Deprecated.  See L{Session.sessionTimeout} instead.
+    @ivar encoders: Optionally, a list of L{iweb._IRequestEncoderFactory}
+        returning L{iweb._IRequestEncoder}that may transform the data passed to
+        L{Request.write}. The list must be sorted in order of priority: the
+        first encoder factory handling the request will prevent the others from
+        doing the same.
+    @type encoders: C{list} or C{NoneType}.
     """
     counter = 0
     requestFactory = Request
@@ -507,13 +622,15 @@ class Site(http.HTTPFactory):
     sessionFactory = Session
     sessionCheckTime = 1800
 
-    def __init__(self, resource, logPath=None, timeout=60*60*12):
+    def __init__(self, resource, logPath=None, timeout=60*60*12,
+                 encoders=None):
         """
         Initialize.
         """
         http.HTTPFactory.__init__(self, logPath=logPath, timeout=timeout)
         self.sessions = {}
         self.resource = resource
+        self.encoders = encoders
 
     def _openLogFile(self, path):
         from twisted.python import logfile

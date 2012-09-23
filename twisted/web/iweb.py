@@ -517,10 +517,57 @@ class IResponse(Interface):
 
 
 
+class _IRequestEncoder(Interface):
+    """
+    An object encoding data passed to L{IRequest.write}, for example for
+    compression purpose.
+
+    @since: 12.3
+    """
+
+    def encode(data):
+        """
+        Encode the data given and return the result.
+
+        @param data: The content to encode.
+        @type data: C{str}
+
+        @return: The encoded data.
+        @rtype: C{str}
+        """
+
+
+    def finish():
+        """
+        Callback called when the request is closing.
+
+        @return: If necessary, the pending data accumulated from previous
+            C{encode} calls.
+        @rtype: C{str}
+        """
+
+
+
+class _IRequestEncoderFactory(Interface):
+    """
+    A factory for returing L{_IRequestEncoder} instances.
+
+    @since: 12.3
+    """
+
+    def encoderForRequest(request):
+        """
+        If applicable, returns a L{_IRequestEncoder} instance which will encode
+        the request.
+        """
+
+
+
 UNKNOWN_LENGTH = u"twisted.web.iweb.UNKNOWN_LENGTH"
 
 __all__ = [
     "IUsernameDigestHash", "ICredentialFactory", "IRequest",
-    "IBodyProducer", "IRenderable", "IResponse",
+    "IBodyProducer", "IRenderable", "IResponse", "_IRequestEncoder",
+    "_IRequestEncoderFactory",
 
     "UNKNOWN_LENGTH"]
