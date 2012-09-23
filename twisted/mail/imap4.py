@@ -5829,6 +5829,8 @@ class _FetchParser:
         s = self.remaining + s
         try:
             while s or self.state:
+                if not self.state:
+                    raise IllegalClientResponse("Invalid Argument")
                 # print 'Entering state_' + self.state[-1] + ' with', repr(s)
                 state = self.state.pop()
                 try:

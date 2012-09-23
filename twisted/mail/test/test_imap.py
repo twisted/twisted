@@ -4827,3 +4827,36 @@ if ClientTLSContext is None:
 elif interfaces.IReactorSSL(reactor, None) is None:
     for case in (TLSTestCase,):
         case.skip = "Reactor doesn't support SSL"
+
+
+
+class IMAP4ServerFetchTestCase(unittest.TestCase):
+    """
+    This test case is for the FETCH tests that require
+    a C{StringTransport}.
+    """
+
+    def setUp(self):
+        self.transport = StringTransport()
+        self.server = imap4.IMAP4Server()
+        self.server.state = 'select'
+        self.server.makeConnection(self.transport)
+
+
+    def test_fetchWithPartialValidArgument(self):
+        """
+        If by any chance, extra bytes got appended at the end of of an valid
+        FETCH arguments, the client should get a BAD - arguments invalid
+        response.
+
+        See U{RFC 3501<http://tools.ietf.org/html/rfc3501#section-6.4.5>},
+        section 6.4.5,
+        """
+        # We need to clear out the welcome message.
+        self.transport.clear()
+        # Let's send out the faulty command.
+        self.server.dataReceived("0001 FETCH 1 FULLL\r\n")
+        expected = "0001 BAD Illegal syntax: Invalid Argument\r\n"
+        self.assertEqual(self.transport.value(), expected)
+        self.transport.clear()
+        self.server.connectionLost(error.ConnectionDone("Connection closed"))
