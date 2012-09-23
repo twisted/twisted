@@ -8,14 +8,37 @@ threading, dispatching events, and more.
 
 The default reactor depends on the platform and will be installed if this
 module is imported without another reactor being explicitly installed
-beforehand. Regardless of which reactor is installed, importing this module is
-the correct way to get a reference to it.
+beforehand. Importing this module will get a reference to whichever reactor
+is installed.
 
-New application code should prefer to pass and accept the reactor as a
-parameter where it is needed, rather than relying on being able to import this
-module to get a reference.  This simplifies unit testing and may make it easier
-to one day support multiple reactors (as a performance enhancement), though
-this is not currently possible.
+The recommended way to get references to the reactor is to pass and accept the
+reactor as a parameter where it is needed, and to import the reactor only at
+the root of the application.  This simplifies unit testing and may make it
+easier to one day support multiple reactors (as a performance enhancement),
+though this is not currently possible.
+
+For example, if the library code is::
+
+    def do_something_later(*args, reactor=None, **kwargs):
+        reactor.callLater(5, do_something, *args, **kwargs)
+
+And the application or plugin code has something like::
+
+    def makeService(options):
+        import reactor
+        ...
+        do_something_later("something", reactor=reactor)
+
+Then the `do_something_later` function can then be tested by passing a
+L{IReactorTime<twisted.internet.interfaces.IReactorTime>} provider, instead of
+a reactor (see L{twisted.internet.task.Clock}).  If the library code imported
+the reactor instead of accepting it as an argument, then the reactor may need
+to be monkey-patched with a mocked version when tested.
+
+Also, the fewer places the reactor is imported in one location, the easier it
+is to debug "reactor already installed" errors, which can happen if `twistd`
+is run with a specified reactor, and the application code imports the reactor
+too early.
 
 @see: L{IReactorCore<twisted.internet.interfaces.IReactorCore>}
 @see: L{IReactorTime<twisted.internet.interfaces.IReactorTime>}
