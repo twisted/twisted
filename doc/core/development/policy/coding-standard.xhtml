@@ -259,11 +259,16 @@ def foo(x):
     code in question is to be used in a system where this is a
     requirement (such as Zope).</p>
 
-    <p>Docstrings should be indented to the level of the code they
-    are documenting.</p>
+    <ul>
+        <li>Docstrings should be triple-quoted.</li>
+        <li>Indentation should be the same as the level of code being
+        documented.</li>
+        <li>Triple-doublequotes (") should be used in preference to
+        triple-singlequotes, unless it is hard.</li>
+        <li>The opening and closing should be on a line by itself.</li>
+    </ul>
 
-    <p>Docstrings should be triple-quoted. The opening and the closing of the
-    docstrings should be on a line by themselves. For example:
+    <p>For example:
 <pre class="python">
 class Ninja(object):
     """
@@ -280,10 +285,6 @@ class Ninja(object):
     documentation is available in the
     <a href="http://epydoc.sourceforge.net/manual-epytext.html"
     >Epytext Markup Language documentation</a>.</p>
-
-    <p>Additionally, to accommodate emacs users, single quotes of the type of
-    the docstring's triple-quote should be escaped. This will prevent font-lock from
-    accidentally fontifying large portions of the file as a string.</p>
 
     <p>For example,</p>
 <pre class="python">
@@ -309,7 +310,7 @@ def foo2bar(f):
             return b
 
     """
-    # Optionally, actual code can go here.
+    # actual code can goes here.
 </pre>
 
     <h2>Comments</h2>
