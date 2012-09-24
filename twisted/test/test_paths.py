@@ -8,7 +8,7 @@ Test cases covering L{twisted.python.filepath}.
 from __future__ import division, absolute_import
 
 import os, time, pickle, errno, stat
-import tempfile, contextlib
+import contextlib
 from pprint import pformat
 
 from twisted.python.compat import set, _PY3
@@ -16,54 +16,24 @@ from twisted.python.win32 import WindowsError, ERROR_DIRECTORY
 from twisted.python import filepath
 from twisted.python.runtime import platform
 
-if _PY3:
-    # Switch all the way to trial as part of #5885:
-    from unittest import SkipTest, TestCase
-else:
-    # Use SynchronousTestCase on Python 2.x because of the complicated helpers
-    # it provides that these tests use.
-    from twisted.trial.unittest import SkipTest, SynchronousTestCase as TestCase
+from twisted.trial.unittest import SkipTest, SynchronousTestCase as TestCase
 
 from zope.interface.verify import verifyObject
 
 
-class TestCase(TestCase):
+class BytesTestCase(TestCase):
     """
-    We haven't ported unittest to Python 3.3 yet; once we can subclass from
-    SynchronousTestCase we can replace this class with that (see ticket
-    #5885). Meanwhile, we reimplement some code for bootstrapping purposes.
+    Override default method implementations to support byte paths.
     """
-
     def mktemp(self):
-        return tempfile.mktemp(dir='.').encode("utf-8")
-
-
-    def patch(self, obj, attribute, value):
-        from twisted.python import monkey
-        monkeyPatch = monkey.MonkeyPatcher((obj, attribute, value))
-        monkeyPatch.patch()
-        self.addCleanup(monkeyPatch.restore)
-        return monkeyPatch
-
-
-    def assertRaises(self, exception, f, *args, **kwargs):
-        import sys
-        try:
-            result = f(*args, **kwargs)
-        except exception as inst:
-            return inst
-        except:
-            raise self.failureException('%s raised instead of %s:\n %s'
-                                        % (sys.exc_info()[0],
-                                           exception.__name__,
-                                           sys.exc_info()[2]))
-        else:
-            raise self.failureException('%s not raised (%r returned)'
-                                        % (exception.__name__, result))
+        """
+        Return a temporary path, encoded as bytes.
+        """
+        return TestCase.mktemp(self).encode("utf-8")
 
 
 
-class AbstractFilePathTestCase(TestCase):
+class AbstractFilePathTestCase(BytesTestCase):
 
     f1content = b"file 1"
     f2content = b"file 2"
@@ -283,7 +253,7 @@ class FakeWindowsPath(filepath.FilePath):
 
 
 
-class ListingCompatibilityTests(TestCase):
+class ListingCompatibilityTests(BytesTestCase):
     """
     These tests verify compatibility with legacy behavior of directory listing.
     """
@@ -452,7 +422,7 @@ class ExplodingFilePath(filepath.FilePath):
 
 
 
-class PermissionsTestCase(TestCase):
+class PermissionsTestCase(BytesTestCase):
     """
     Test Permissions and RWX classes
     """
@@ -897,7 +867,7 @@ class FilePathTestCase(AbstractFilePathTestCase):
 
     if platform.getType() != 'win32':
         testInsecureWin32.skip = "Test will run only on Windows."
-        del testInsecureWin32 # Remove as part of #5885
+
 
     def testInsecureWin32Whacky(self):
         """
@@ -912,7 +882,7 @@ class FilePathTestCase(AbstractFilePathTestCase):
 
     if platform.getType() != 'win32':
         testInsecureWin32Whacky.skip = "Test will run only on Windows."
-        del testInsecureWin32Whacky # Remove as part of #5885
+
 
     def testComparison(self):
         self.assertEqual(filepath.FilePath(b'a'),
@@ -1537,6 +1507,4 @@ class FilePathTestCase(AbstractFilePathTestCase):
     else:
         test_statinfoBitsNotImplementedInWindows.skip = "Test will run only on Windows."
         test_getPermissions_Windows.skip = "Test will run only on Windows."
-        # Remove as part of #5885:
-        del test_statinfoBitsNotImplementedInWindows
-        del test_getPermissions_Windows
+

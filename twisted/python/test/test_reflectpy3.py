@@ -10,12 +10,7 @@ from __future__ import division, absolute_import
 
 import os
 
-from twisted.python.compat import _PY3
-# Replace with trial as part of #5885:
-if _PY3:
-    from unittest import TestCase
-else:
-    from twisted.trial.unittest import SynchronousTestCase as TestCase
+from twisted.trial.unittest import SynchronousTestCase as TestCase
 
 from twisted.python._reflectpy3 import accumulateMethods, prefixedMethods
 from twisted.python import _reflectpy3 as reflect
@@ -148,43 +143,6 @@ class LookupsTestCase(TestCase):
     """
     Tests for L{namedClass}, L{namedModule}, and L{namedAny}.
     """
-
-    # Remove as part of  #5885:
-    def assertIdentical(self, a, b):
-        """
-        Assert that the two given parameters are the same object.
-        """
-        self.assertTrue(a is b)
-
-
-    # Remove as part of  #5885:
-    def assertRaises(self, exception, f, *args, **kwargs):
-        """
-        Fail the test unless calling the function C{f} with the given
-        C{args} and C{kwargs} raises C{exception}. The failure will report
-        the traceback and call stack of the unexpected exception.
-
-        @param exception: exception type that is to be expected
-        @param f: the function to call
-
-        @return: The raised exception instance, if it is of the given type.
-        @raise self.failureException: Raised if the function call does
-            not raise an exception or if it raises an exception of a
-            different type.
-        """
-        import sys
-        try:
-            result = f(*args, **kwargs)
-        except exception as inst:
-            return inst
-        except:
-            raise self.failureException('%s raised instead of %s'
-                                        % (sys.exc_info()[0],
-                                           exception.__name__))
-        else:
-            raise self.failureException('%s not raised (%r returned)'
-                                        % (exception.__name__, result))
-
 
     def test_namedClassLookup(self):
         """
@@ -546,11 +504,8 @@ class FilenameToModule(TestCase):
     Test L{filenameToModuleName} detection.
     """
 
-    # Switch to using self.mktemp() as part of #5885, if we can figure out
-    # bytes vs. unicode:
     def setUp(self):
-        import tempfile
-        self.path = os.path.join(tempfile.mktemp(), "fakepackage", "test")
+        self.path = os.path.join(self.mktemp(), "fakepackage", "test")
         os.makedirs(self.path)
         with open(os.path.join(self.path, "__init__.py"), "w") as f:
             f.write("")

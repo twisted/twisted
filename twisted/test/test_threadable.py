@@ -17,12 +17,7 @@ else:
     threadingSkip = None
 
 from twisted.python.compat import _PY3
-
-if _PY3:
-    # Switch to SynchronousTestCase when #5885 is resolved.
-    import unittest
-else:
-    from twisted.trial import unittest
+from twisted.trial import unittest
 
 from twisted.python import threadable
 
@@ -40,7 +35,7 @@ class TestObject:
 
 threadable.synchronize(TestObject)
 
-class SynchronizationTestCase(unittest.TestCase):
+class SynchronizationTestCase(unittest.SynchronousTestCase):
     def setUp(self):
         """
         Reduce the CPython check interval so that thread switches happen much
@@ -106,12 +101,9 @@ class SynchronizationTestCase(unittest.TestCase):
         if errors:
             raise unittest.FailTest(errors)
 
-    # stdlib unittest is missing skip support, re-enable these skips after #5885
     if threadingSkip is not None:
         testThreadedSynchronization.skip = threadingSkip
         test_isInIOThread.skip = threadingSkip
-        del testThreadedSynchronization
-        del test_isInIOThread
 
 
     def testUnthreadedSynchronization(self):
@@ -121,7 +113,7 @@ class SynchronizationTestCase(unittest.TestCase):
 
 
 
-class SerializationTestCase(unittest.TestCase):
+class SerializationTestCase(unittest.SynchronousTestCase):
     def testPickling(self):
         lock = threadable.XLock()
         lockType = type(lock)
@@ -129,10 +121,8 @@ class SerializationTestCase(unittest.TestCase):
         newLock = pickle.loads(lockPickle)
         self.assertTrue(isinstance(newLock, lockType))
 
-    # stdlib unittest is missing skip support, re-enable these skips after #5885
     if threadingSkip is not None:
         testPickling.skip = threadingSkip
-        del testPickling
 
 
     def testUnpickling(self):

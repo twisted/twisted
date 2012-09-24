@@ -9,19 +9,12 @@ from __future__ import division, absolute_import
 
 import sys
 
-from unittest import TestCase
+from twisted.trial.unittest import SynchronousTestCase
 
 from twisted.python.runtime import Platform, shortPythonVersion
-## from twisted.trial.unittest import TestCase
-
-# TODO: Once trial is ported to Python 3.x these tests should start using it
-# again. Until then, use the standard Python unittesting framework.  To do
-# this, uncomment the line above that imports TestCase from trial, and delete
-# the line that imports TestCase from unittest (as part of ticket #5885).
 
 
-
-class PythonVersionTests(TestCase):
+class PythonVersionTests(SynchronousTestCase):
     """
     Tests the shortPythonVersion method.
     """
@@ -36,7 +29,7 @@ class PythonVersionTests(TestCase):
 
 
 
-class PlatformTests(TestCase):
+class PlatformTests(SynchronousTestCase):
     """
     Tests for the default L{Platform} initializer.
     """
@@ -102,7 +95,7 @@ class PlatformTests(TestCase):
 
 
 
-class ForeignPlatformTests(TestCase):
+class ForeignPlatformTests(SynchronousTestCase):
     """
     Tests for L{Platform} based overridden initializer values.
     """

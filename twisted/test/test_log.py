@@ -11,11 +11,8 @@ from twisted.python.compat import _PY3, NativeStringIO as StringIO
 
 import os, sys, time, logging, warnings, calendar
 
-# Fix in #5885:
-if _PY3:
-    import unittest
-else:
-    from twisted.trial import unittest
+
+from twisted.trial import unittest
 
 from twisted.python import log, failure
 
@@ -27,27 +24,8 @@ class FakeWarning(Warning):
     """
 
 
-# Remove in #5885
-class FlushLoggedMixin:
-    """
-    Implement flushLoggedErrors if we're stuck with pyunit.
-    """
 
-    if _PY3:
-        def flushLoggedErrors(self, *errorTypes):
-            errors = [d['failure'] for d in self.catcher if 'failure' in d]
-            if errorTypes:
-                flushed = []
-                for f in errors:
-                    if f.check(*errorTypes):
-                        flushed.append(f)
-            else:
-                flushed = errors
-            return flushed
-
-
-
-class LogTest(unittest.TestCase, FlushLoggedMixin):
+class LogTest(unittest.SynchronousTestCase):
 
     def setUp(self):
         self.catcher = []
@@ -338,7 +316,7 @@ class LogPublisherTestCaseMixin:
 
 
 
-class LogPublisherTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
+class LogPublisherTestCase(LogPublisherTestCaseMixin, unittest.SynchronousTestCase):
     def testSingleString(self):
         self.lp.msg("Hello, world.")
         self.assertEqual(len(self.out), 1)
@@ -371,17 +349,10 @@ class LogPublisherTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
 
 
 
-class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
+class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.SynchronousTestCase):
     """
     Tests for L{log.FileObserver}.
     """
-    # Remove in #5885
-    def assertIdentical(self, a, b):
-        """
-        Assert the two parameters are the same object.
-        """
-        self.assertTrue(a is b)
-
 
     def test_getTimezoneOffset(self):
         """
@@ -540,15 +511,24 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
         self.assertEqual(len(self.out), 0)
 
 
+    def _startLoggingCleanup(self):
+        """
+        Cleanup after a startLogging() call that mutates the hell out of some
+        global state.
+        """
+        origShowwarnings = log._oldshowwarning
+        self.addCleanup(setattr, log, "_oldshowwarning", origShowwarnings)
+        self.addCleanup(setattr, sys, 'stdout', sys.stdout)
+        self.addCleanup(setattr, sys, 'stderr', sys.stderr)
+
     def test_startLogging(self):
         """
         startLogging() installs FileLogObserver and overrides sys.stdout and
         sys.stderr.
         """
-        # When done with test, reset stdout and stderr to current values:
         origStdout, origStderr = sys.stdout, sys.stderr
-        self.addCleanup(setattr, sys, 'stdout', sys.stdout)
-        self.addCleanup(setattr, sys, 'stderr', sys.stderr)
+        self._startLoggingCleanup()
+        # When done with test, reset stdout and stderr to current values:
         fakeFile = StringIO()
         observer = log.startLogging(fakeFile)
         self.addCleanup(observer.stop)
@@ -574,12 +554,11 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
         started twice. See http://twistedmatrix.com/trac/ticket/3289 for more
         information.
         """
+        self._startLoggingCleanup()
         # The bug is particular to the way that the t.p.log 'global' function
         # handle stdout. If we use our own stream, the error doesn't occur. If
         # we use our own LogPublisher, the error doesn't occur.
         sys.stdout = StringIO()
-        self.addCleanup(setattr, sys, 'stdout', sys.stdout)
-        self.addCleanup(setattr, sys, 'stderr', sys.stderr)
 
         def showError(eventDict):
             if eventDict['isError']:
@@ -596,7 +575,7 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
         self.assertIdentical(sys.stdout, fakeStdout)
 
 
-class PythonLoggingObserverTestCase(unittest.TestCase):
+class PythonLoggingObserverTestCase(unittest.SynchronousTestCase):
     """
     Test the bridge with python logging module.
     """
@@ -665,7 +644,7 @@ class PythonLoggingObserverTestCase(unittest.TestCase):
         self.assertEqual(self.out.getvalue(), '')
 
 
-class PythonLoggingIntegrationTestCase(unittest.TestCase):
+class PythonLoggingIntegrationTestCase(unittest.SynchronousTestCase):
     """
     Test integration of python logging bridge.
     """
@@ -710,7 +689,7 @@ class PythonLoggingIntegrationTestCase(unittest.TestCase):
 
 
 
-class DefaultObserverTestCase(unittest.TestCase, FlushLoggedMixin):
+class DefaultObserverTestCase(unittest.SynchronousTestCase):
     """
     Test the default observer.
     """
@@ -739,7 +718,7 @@ class DefaultObserverTestCase(unittest.TestCase, FlushLoggedMixin):
 
 
 
-class StdioOnnaStickTestCase(unittest.TestCase):
+class StdioOnnaStickTestCase(unittest.SynchronousTestCase):
     """
     StdioOnnaStick should act like the normal sys.stdout object.
     """

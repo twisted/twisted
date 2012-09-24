@@ -8,19 +8,18 @@ Tests for L{twisted.python.compat}.
 
 from __future__ import division, absolute_import
 
-import tempfile, socket, sys, traceback
+import socket, sys, traceback
 
-# We will replace stdlib TestCase with SynchronousTestCase as part of ticket
-# #5885:
-import unittest
+from twisted.trial import unittest
 
 from twisted.python.compat import set, frozenset, reduce, execfile, _PY3
 from twisted.python.compat import comparable, cmp, nativeString
 from twisted.python.compat import unicode as unicodeCompat
 from twisted.python.compat import reraise, NativeStringIO
+from twisted.python.filepath import FilePath
 
 
-class CompatTestCase(unittest.TestCase):
+class CompatTestCase(unittest.SynchronousTestCase):
     """
     Various utility functions in C{twisted.python.compat} provide same
     functionality as modern Python variants.
@@ -75,7 +74,7 @@ class CompatTestCase(unittest.TestCase):
 
 
 
-class IPv6Tests(unittest.TestCase):
+class IPv6Tests(unittest.SynchronousTestCase):
     """
     C{inet_pton} and C{inet_ntop} implementations support IPv6.
     """
@@ -129,31 +128,15 @@ class IPv6Tests(unittest.TestCase):
                         '1.2.3.4']:
             self.assertRaises(ValueError, f, badaddr)
 
-# No skip support until SynchronousTestCase is available; ticket #5885 will
-# involve switching this to using skipping. Ticket #5895 covers deprecating
-# the tested functions, since they are no longer needed anywhere.
 if _PY3:
-    del IPv6Tests
+    IPv6Tests.skip = "These tests are only relevant to old versions of Python"
 
 
 
-class ExecfileCompatTestCase(unittest.TestCase):
+class ExecfileCompatTestCase(unittest.SynchronousTestCase):
     """
     Tests for the Python 3-friendly L{execfile} implementation.
     """
-
-    # We haven't ported FilePath to Python 3.3 yet; once we do, we can change
-    # this class back to using FilePath (see ticket #5884).
-    class FakeFilePath(object):
-        def __init__(self, path):
-            self.path = path
-
-
-    # We haven't ported unittest to Python 3.3 yet; once we can subclass from
-    # SynchronousTestCase we can delete this (see ticket #5885).
-    def mktemp(self):
-        return tempfile.mktemp()
-
 
     def writeScript(self, content):
         """
@@ -163,7 +146,7 @@ class ExecfileCompatTestCase(unittest.TestCase):
         path = self.mktemp()
         with open(path, "wb") as f:
             f.write(content.encode("ascii"))
-        return self.FakeFilePath(path)
+        return FilePath(path.encode("utf-8"))
 
 
     def test_execfileGlobals(self):
@@ -202,7 +185,7 @@ class ExecfileCompatTestCase(unittest.TestCase):
 
 
 
-class PY3Tests(unittest.TestCase):
+class PY3Tests(unittest.SynchronousTestCase):
     """
     Identification of Python 2 vs. Python 3.
     """
@@ -240,7 +223,7 @@ class Comparable(object):
 
 
 
-class ComparableTests(unittest.TestCase):
+class ComparableTests(unittest.SynchronousTestCase):
     """
     L{comparable} decorated classes emulate Python 2's C{__cmp__} semantics.
     """
@@ -304,7 +287,7 @@ class ComparableTests(unittest.TestCase):
 
 
 
-class Python3ComparableTests(unittest.TestCase):
+class Python3ComparableTests(unittest.SynchronousTestCase):
     """
     Python 3-specific functionality of C{comparable}.
     """
@@ -364,13 +347,12 @@ class Python3ComparableTests(unittest.TestCase):
 
 if not _PY3:
     # On Python 2, we just use __cmp__ directly, so checking detailed
-    # comparison methods doesn't makes sense; this should be replaced with
-    # skip as part of ticket #5885.
-    del Python3ComparableTests
+    # comparison methods doesn't makes sense.
+    Python3ComparableTests.skip = "Python 3 only."
 
 
 
-class CmpTests(unittest.TestCase):
+class CmpTests(unittest.SynchronousTestCase):
     """
     L{cmp} should behave like the built-in Python 2 C{cmp}.
     """
@@ -401,34 +383,10 @@ class CmpTests(unittest.TestCase):
 
 
 
-class StringTests(unittest.TestCase):
+class StringTests(unittest.SynchronousTestCase):
     """
-    Compatability functions and types for strings.
+    Compatibility functions and types for strings.
     """
-    # This can be deleted when we switch back to trial.  #5885.
-    def assertIsInstance(self, instance, classOrTuple, message=None):
-        """
-        Fail if C{instance} is not an instance of the given class or of
-        one of the given classes.
-
-        @param instance: the object to test the type (first argument of the
-            C{isinstance} call).
-        @type instance: any.
-        @param classOrTuple: the class or classes to test against (second
-            argument of the C{isinstance} call).
-        @type classOrTuple: class, type, or tuple.
-
-        @param message: Custom text to include in the exception text if the
-            assertion fails.
-        """
-        if not isinstance(instance, classOrTuple):
-            if message is None:
-                suffix = ""
-            else:
-                suffix = ": " + message
-            self.fail("%r is not an instance of %s%s" % (
-                    instance, classOrTuple, suffix))
-
 
     def assertNativeString(self, original, expected):
         """
@@ -510,7 +468,7 @@ class StringTests(unittest.TestCase):
 
 
 
-class ReraiseTests(unittest.TestCase):
+class ReraiseTests(unittest.SynchronousTestCase):
     """
     L{reraise} re-raises exceptions on both Python 2 and Python 3.
     """

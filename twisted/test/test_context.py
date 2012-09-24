@@ -7,16 +7,11 @@ Tests for L{twisted.python.context}.
 
 from __future__ import division, absolute_import
 
-# Switch back to trial for #5885
-from twisted.python.compat import _PY3
-if _PY3:
-    from unittest import TestCase
-else:
-    from twisted.trial.unittest import TestCase
+from twisted.trial.unittest import SynchronousTestCase
 
 from twisted.python import context
 
-class ContextTest(TestCase):
+class ContextTest(SynchronousTestCase):
     """
     Tests for the module-scope APIs for L{twisted.python.context}.
     """

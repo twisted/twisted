@@ -10,8 +10,7 @@ from __future__ import division, absolute_import
 
 from warnings import simplefilter, catch_warnings
 
-# Switch this to trial/SynchronousTestCase for #5885
-from unittest import TestCase
+from twisted.trial.unittest import SynchronousTestCase
 
 from twisted.python.versions import Version
 from twisted.python._deprecatepy3 import (
@@ -38,7 +37,7 @@ def dummyReplacementMethod():
 
 
 
-class TestDeprecationWarnings(TestCase):
+class TestDeprecationWarnings(SynchronousTestCase):
     def test_getDeprecationWarningString(self):
         """
         L{getDeprecationWarningString} returns a string that tells us that a
@@ -208,7 +207,7 @@ class TestDeprecationWarnings(TestCase):
 
 
 
-class TestAppendToDocstring(TestCase):
+class TestAppendToDocstring(SynchronousTestCase):
     """
     Test the _appendToDocstring function.
 

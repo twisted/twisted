@@ -9,15 +9,13 @@ from __future__ import division, absolute_import
 
 import sys
 import operator
-import tempfile
 from io import BytesIO
 
 from twisted.python.versions import getVersionString, IncomparableVersions
 from twisted.python.versions import Version, _inf
 from twisted.python.filepath import FilePath
 
-# Switch to SynchronousTestCase as part of #5885:
-from unittest import TestCase
+from twisted.trial.unittest import SynchronousTestCase as TestCase
 
 
 VERSION_4_ENTRIES = b"""\
@@ -252,8 +250,7 @@ class FormatDiscoveryTests(TestCase):
     Tests which discover the parsing method based on the imported module name.
     """
     def mktemp(self):
-        # Can be removed when switching to SynchronousTestCase - #5885
-        return tempfile.mktemp().encode("utf-8")
+        return TestCase.mktemp(self).encode("utf-8")
 
 
     def setUp(self):

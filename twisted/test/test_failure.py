@@ -14,11 +14,7 @@ import pdb
 from twisted.python.compat import NativeStringIO, _PY3
 from twisted.internet import defer
 
-# Fix in #5885:
-if _PY3:
-    from unittest import TestCase
-else:
-    from twisted.trial.unittest import TestCase
+from twisted.trial.unittest import SynchronousTestCase
 
 from twisted.python import failure
 
@@ -42,44 +38,7 @@ def getDivisionFailure(*args, **kwargs):
     return f
 
 
-class FailureTestCase(TestCase):
-
-    # Remove as part of  #5885:
-    def assertRaises(self, exception, f, *args, **kwargs):
-        """
-        Fail the test unless calling the function C{f} with the given
-        C{args} and C{kwargs} raises C{exception}. The failure will report
-        the traceback and call stack of the unexpected exception.
-
-        @param exception: exception type that is to be expected
-        @param f: the function to call
-
-        @return: The raised exception instance, if it is of the given type.
-        @raise self.failureException: Raised if the function call does
-            not raise an exception or if it raises an exception of a
-            different type.
-        """
-        import sys
-        try:
-            result = f(*args, **kwargs)
-        except exception as inst:
-            return inst
-        except:
-            raise self.failureException('%s raised instead of %s'
-                                        % (sys.exc_info()[0],
-                                           exception.__name__))
-        else:
-            raise self.failureException('%s not raised (%r returned)'
-                                        % (exception.__name__, result))
-
-
-    # Remove in #5885:
-    def assertIdentical(self, a, b):
-        """
-        Assert the two parameters are the same object.
-        """
-        self.assertTrue(a is b)
-
+class FailureTestCase(SynchronousTestCase):
 
     def testFailAndTrap(self):
         """Trapping a failure."""
@@ -240,7 +199,7 @@ class FailureTestCase(TestCase):
 
     testLackOfTB.todo = "the traceback is not preserved, exarkun said he'll try to fix this! god knows how"
     if _PY3:
-        del testLackOfTB # fix in #5885
+        del testLackOfTB # fix in ticket #6008
 
 
     def test_stringExceptionConstruction(self):
@@ -381,7 +340,7 @@ class BrokenExceptionType(Exception, object):
 
 
 
-class GetTracebackTests(TestCase):
+class GetTracebackTests(SynchronousTestCase):
     """
     Tests for L{Failure.getTraceback}.
     """
@@ -456,7 +415,7 @@ class GetTracebackTests(TestCase):
 
 
 
-class FindFailureTests(TestCase):
+class FindFailureTests(SynchronousTestCase):
     """
     Tests for functionality related to L{Failure._findFailure}.
     """
@@ -535,11 +494,10 @@ class FindFailureTests(TestCase):
     if raiser is None:
         skipMsg = "raiser extension not available"
         test_failureConstructionWithMungedStackSucceeds.skip = skipMsg
-        if _PY3:
-            del test_failureConstructionWithMungedStackSucceeds # fix in #5885
 
 
-class TestFormattableTraceback(TestCase):
+
+class TestFormattableTraceback(SynchronousTestCase):
     """
     Whitebox tests that show that L{failure._Traceback} constructs objects that
     can be used by L{traceback.extract_tb}.
@@ -577,7 +535,7 @@ class TestFormattableTraceback(TestCase):
 
 
 
-class TestFrameAttributes(TestCase):
+class TestFrameAttributes(SynchronousTestCase):
     """
     _Frame objects should possess some basic attributes that qualify them as
     fake python Frame objects.
@@ -596,7 +554,7 @@ class TestFrameAttributes(TestCase):
 
 
 
-class TestDebugMode(TestCase):
+class TestDebugMode(SynchronousTestCase):
     """
     Failure's debug mode should allow jumping into the debugger.
     """
@@ -653,7 +611,7 @@ class TestDebugMode(TestCase):
 
 
 
-class ExtendedGeneratorTests(TestCase):
+class ExtendedGeneratorTests(SynchronousTestCase):
     """
     Tests C{failure.Failure} support for generator features added in Python 2.5
     """
@@ -777,7 +735,7 @@ class ExtendedGeneratorTests(TestCase):
             "Python 3 support to be fixed in #5949")
         test_failureConstructionFindsOriginalFailure.todo = (
             "Python 3 support to be fixed in #5949")
-        # Remove these three lines in #5885:
+        # Remove these three lines in #6008:
         del test_findFailureInGenerator
         del test_failureConstructionFindsOriginalFailure
         del test_inlineCallbacksTracebacks

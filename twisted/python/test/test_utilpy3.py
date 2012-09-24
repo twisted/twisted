@@ -9,7 +9,6 @@ from __future__ import division, absolute_import
 
 import sys, errno, warnings
 
-from twisted.python.compat import _PY3
 from twisted.trial.unittest import SynchronousTestCase as TestCase
 
 from twisted.python import _utilpy3 as util
@@ -181,14 +180,6 @@ class UnsignedIDTests(TestCase):
     """
     Tests for L{util.unsignedID} and L{util.setIDFunction}.
     """
-
-    # Remove in #5885:
-    def assertIdentical(self, a, b):
-        """
-        Assert the two arguments are the same object.
-        """
-        self.assertTrue(a is b)
-
 
     def setUp(self):
         """

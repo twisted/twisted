@@ -7,8 +7,7 @@ Tests for L{twisted.python.monkey}.
 
 from __future__ import division, absolute_import
 
-# Switch back to SynchronousTestCase as part of #5885:
-import unittest
+from twisted.trial import unittest
 from twisted.python.monkey import MonkeyPatcher
 
 
@@ -20,7 +19,7 @@ class TestObj:
 
 
 
-class MonkeyPatcherTest(unittest.TestCase):
+class MonkeyPatcherTest(unittest.SynchronousTestCase):
     """
     Tests for L{MonkeyPatcher} monkey-patching class.
     """
