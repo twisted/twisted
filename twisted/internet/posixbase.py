@@ -92,7 +92,7 @@ class _SocketWaker(log.Logger):
         """Send a byte to my connection.
         """
         try:
-            util.untilConcludes(self.w.send, b'x')
+            util.untilConcludes(self.w.send, 'x')
         except socket.error as e:
             if e.args[0] != errno.WSAEWOULDBLOCK:
                 raise
@@ -177,7 +177,7 @@ class _UnixWaker(_FDWaker):
         # between EINTR (try again) and EAGAIN (do nothing).
         if self.o is not None:
             try:
-                util.untilConcludes(os.write, self.o, b'x')
+                util.untilConcludes(os.write, self.o, 'x')
             except OSError as e:
                 # XXX There is no unit test for raising the exception
                 # for other errnos. See #4285.
@@ -297,7 +297,7 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
         handling SIGCHLD to know when to try to reap child processes.
         """
         _SignalReactorMixin._handleSignals(self)
-        if platformType == 'posix' and processEnabled:
+        if platformType == 'posix':
             if not self._childWaker:
                 self._childWaker = _SIGCHLDWaker(self)
                 self._internalReaders.add(self._childWaker)

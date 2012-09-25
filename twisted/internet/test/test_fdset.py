@@ -9,9 +9,8 @@ __metaclass__ = type
 
 import os, socket, traceback
 
-from zope.interface import implementer
+from zope.interface import implements
 
-from twisted.python.compat import _PY3
 from twisted.python.runtime import platform
 from twisted.trial.unittest import SkipTest
 from twisted.internet.interfaces import IReactorFDSet, IReadDescriptor
@@ -20,11 +19,7 @@ from twisted.internet.test.reactormixins import ReactorBuilder
 
 # twisted.internet.tcp nicely defines some names with proper values on
 # several different platforms.
-if _PY3:
-    # Get rid of this special import in ticket #6002
-    from errno import EINPROGRESS, EWOULDBLOCK
-else:
-    from twisted.internet.tcp import EINPROGRESS, EWOULDBLOCK
+from twisted.internet.tcp import EINPROGRESS, EWOULDBLOCK
 
 
 def socketpair():
@@ -37,7 +32,7 @@ def socketpair():
             client.setblocking(False)
             try:
                 client.connect(('127.0.0.1', serverSocket.getsockname()[1]))
-            except socket.error as e:
+            except socket.error, e:
                 if e.args[0] not in (EINPROGRESS, EWOULDBLOCK):
                     raise
             server, addr = serverSocket.accept()
@@ -89,7 +84,7 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
             reactor.stop()
         fd.doRead = removeAndStop
         reactor.addReader(fd)
-        server.sendall(b'x')
+        server.sendall('x')
 
         # The reactor will only stop if it calls fd.doRead.
         self.runReactor(reactor)
@@ -110,7 +105,7 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
 
         reactor.addReader(fd)
         reactor.removeReader(fd)
-        server.sendall(b'x')
+        server.sendall('x')
 
         # Give the reactor two timed event passes to notice that there's I/O
         # (if it is incorrectly watching for I/O).
@@ -213,7 +208,7 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
         fd.doRead = lambda: self.fail("doRead should not be called")
         fd.doWrite = lambda: self.fail("doWrite should not be called")
 
-        server.sendall(b'x')
+        server.sendall('x')
 
         reactor.addReader(fd)
         reactor.addWriter(fd)
@@ -254,7 +249,7 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
         class DisappearingDescriptor(FileDescriptor):
             _fileno = server.fileno()
 
-            _received = b""
+            _received = ""
 
             def fileno(self):
                 return self._fileno
@@ -262,16 +257,16 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
             def doRead(self):
                 self._fileno = -1
                 self._received += server.recv(1)
-                client.send(b'y')
+                client.send('y')
 
             def connectionLost(self, reason):
                 reactor.stop()
 
         descriptor = DisappearingDescriptor(reactor)
         reactor.addReader(descriptor)
-        client.send(b'x')
+        client.send('x')
         self.runReactor(reactor)
-        self.assertEqual(descriptor._received, b"x")
+        self.assertEqual(descriptor._received, "x")
 
 
     def test_lostFileDescriptor(self):
@@ -334,7 +329,7 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
             fileno = server.fileno()
             server.close()
             os.dup2(newS.fileno(), fileno)
-            newC.send(b"x")
+            newC.send("x")
         reactor.callLater(0, messItUp)
 
         self.runReactor(reactor)
@@ -347,30 +342,7 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
             "Cannot duplicate socket filenos on Windows")
 
 
-    def test_connectionLostOnShutdown(self):
-        """
-        Any file descriptors added to the reactor have their C{connectionLost}
-        called when C{reactor.stop} is called.
-        """
-        reactor = self.buildReactor()
 
-        client, server = self._connectedPair()
-
-        fd1 = FileDescriptor(reactor)
-        fd1.fileno = client.fileno
-        fd2 = FileDescriptor(reactor)
-        fd2.fileno = server.fileno
-        reactor.addReader(fd1)
-        reactor.addWriter(fd2)
-
-        reactor.callWhenRunning(reactor.stop)
-        self.runReactor(reactor)
-        self.assertTrue(fd1.disconnected)
-        self.assertTrue(fd2.disconnected)
-
-
-
-@implementer(IReadDescriptor)
 class RemovingDescriptor(object):
     """
     A read descriptor which removes itself from the reactor as soon as it
@@ -383,6 +355,7 @@ class RemovingDescriptor(object):
     @ivar calls: A list of the bottom of the call stack for any call to
         C{fileno} when C{insideReactor} is false.
     """
+    implements(IReadDescriptor)
 
 
     def __init__(self, reactor):
@@ -395,7 +368,7 @@ class RemovingDescriptor(object):
     def start(self):
         self.insideReactor = True
         self.reactor.addReader(self)
-        self.write.send(b'a')
+        self.write.send('a')
 
 
     def logPrefix(self):
@@ -406,8 +379,6 @@ class RemovingDescriptor(object):
         self.reactor.removeReader(self)
         self.insideReactor = False
         self.reactor.stop()
-        self.read.close()
-        self.write.close()
 
 
     def fileno(self):
@@ -417,9 +388,7 @@ class RemovingDescriptor(object):
 
 
     def connectionLost(self, reason):
-        # Ideally we'd close the descriptors here... but actually
-        # connectionLost is never called because we remove ourselves from the
-        # reactor before it stops.
         pass
+
 
 globals().update(ReactorFDSetTestsBuilder.makeTestCaseClasses())

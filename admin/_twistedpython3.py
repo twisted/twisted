@@ -68,7 +68,6 @@ testModules = [
     "twisted.internet.test.test_abstract",
     "twisted.internet.test.test_address",
     "twisted.internet.test.test_default",
-    "twisted.internet.test.test_fdset",
     "twisted.internet.test.test_filedescriptor",
     "twisted.internet.test.test_main",
     "twisted.python.test.test_components",
