@@ -75,8 +75,8 @@ class SelectReactor(posixbase.PosixReactorBase, _extraBase):
 
     def _preenDescriptors(self):
         log.msg("Malformed file descriptor found.  Preening lists.")
-        readers = self._reads.keys()
-        writers = self._writes.keys()
+        readers = list(self._reads.keys())
+        writers = list(self._writes.keys())
         self._reads.clear()
         self._writes.clear()
         for selDict, selList in ((self._reads, readers),
@@ -185,11 +185,11 @@ class SelectReactor(posixbase.PosixReactorBase, _extraBase):
 
 
     def getReaders(self):
-        return self._reads.keys()
+        return list(self._reads.keys())
 
 
     def getWriters(self):
-        return self._writes.keys()
+        return list(self._writes.keys())
 
 
 
