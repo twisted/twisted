@@ -73,6 +73,7 @@ testModules = [
     "twisted.internet.test.test_filedescriptor",
     "twisted.internet.test.test_main",
     "twisted.internet.test.test_sigchld",
+    "twisted.internet.test.test_threads",
     "twisted.python.test.test_components",
     "twisted.python.test.test_deprecatepy3",
     "twisted.python.test.test_reflectpy3",

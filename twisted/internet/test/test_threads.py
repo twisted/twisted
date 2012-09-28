@@ -5,6 +5,8 @@
 Tests for implementations of L{IReactorThreads}.
 """
 
+from __future__ import division, absolute_import
+
 __metaclass__ = type
 
 from weakref import ref
