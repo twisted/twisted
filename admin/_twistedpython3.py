@@ -74,6 +74,8 @@ testModules = [
     "twisted.internet.test.test_main",
     "twisted.internet.test.test_sigchld",
     "twisted.internet.test.test_threads",
+    "twisted.internet.test.test_udp",
+    "twisted.internet.test.test_udp_internals",
     "twisted.python.test.test_components",
     "twisted.python.test.test_deprecatepy3",
     "twisted.python.test.test_reflectpy3",

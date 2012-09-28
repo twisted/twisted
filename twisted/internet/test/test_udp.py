@@ -5,11 +5,13 @@
 Tests for implementations of L{IReactorUDP}.
 """
 
+from __future__ import division, absolute_import
+
 __metaclass__ = type
 
 from socket import SOCK_DGRAM
 
-from zope.interface import implements
+from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
 from twisted.python import context
@@ -21,8 +23,8 @@ from twisted.internet.interfaces import (
 from twisted.internet.address import IPv4Address
 from twisted.internet.protocol import DatagramProtocol
 
-from twisted.internet.test.test_tcp import findFreePort
-from twisted.internet.test.connectionmixins import LogObserverMixin
+from twisted.internet.test.connectionmixins import (LogObserverMixin,
+                                                    findFreePort)
 
 
 class UDPPortMixin(object):
@@ -59,11 +61,13 @@ class DatagramTransportTestsMixin(LogObserverMixin):
         """
         loggedMessages = self.observe()
         reactor = self.buildReactor()
+
+        @implementer(ILoggingContext)
         class SomeProtocol(DatagramProtocol):
-            implements(ILoggingContext)
             def logPrefix(self):
                 return "Crazy Protocol"
         protocol = SomeProtocol()
+
         p = self.getListeningPort(reactor, protocol)
         expectedMessage = self.getExpectedStartListeningLogMessage(
             p, "Crazy Protocol")
@@ -190,7 +194,7 @@ class UDPServerTestsBuilder(ReactorBuilder, UDPPortMixin,
         d.addErrback(err)
         d.addCallback(lambda ignored: reactor.stop())
 
-        port.write("some bytes", ('127.0.0.1', address.port))
+        port.write(b"some bytes", ('127.0.0.1', address.port))
         self.runReactor(reactor)
 
 

@@ -21,7 +21,7 @@ import operator
 import struct
 import warnings
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.python.runtime import platformType
 if platformType == 'win32':
@@ -51,13 +51,13 @@ from twisted.python import log, failure
 from twisted.internet import abstract, error, interfaces
 
 
+@implementer(
+    interfaces.IListeningPort, interfaces.IUDPTransport,
+    interfaces.ISystemHandle)
 class Port(base.BasePort):
     """
     UDP port, listening for packets.
     """
-    implements(
-        interfaces.IListeningPort, interfaces.IUDPTransport,
-        interfaces.ISystemHandle)
 
     addressFamily = socket.AF_INET
     socketType = socket.SOCK_DGRAM
@@ -105,8 +105,8 @@ class Port(base.BasePort):
         try:
             skt = self.createInternetSocket()
             skt.bind((self.interface, self.port))
-        except socket.error, le:
-            raise error.CannotListenError, (self.interface, self.port, le)
+        except socket.error as le:
+            raise error.CannotListenError(self.interface, self.port, le)
 
         # Make sure that if we listened on port 0, we update that to
         # reflect what the OS actually assigned us.
@@ -132,7 +132,7 @@ class Port(base.BasePort):
         while read < self.maxThroughput:
             try:
                 data, addr = self.socket.recvfrom(self.maxPacketSize)
-            except socket.error, se:
+            except socket.error as se:
                 no = se.args[0]
                 if no in _sockErrReadIgnore:
                     return
@@ -165,12 +165,12 @@ class Port(base.BasePort):
             assert addr in (None, self._connectedAddr)
             try:
                 return self.socket.send(datagram)
-            except socket.error, se:
+            except socket.error as se:
                 no = se.args[0]
                 if no == EINTR:
                     return self.write(datagram)
                 elif no == EMSGSIZE:
-                    raise error.MessageLengthError, "message too long"
+                    raise error.MessageLengthError("message too long")
                 elif no == ECONNREFUSED:
                     self.protocol.connectionRefused()
                 else:
@@ -182,12 +182,12 @@ class Port(base.BasePort):
                               DeprecationWarning, stacklevel=2)
             try:
                 return self.socket.sendto(datagram, addr)
-            except socket.error, se:
+            except socket.error as se:
                 no = se.args[0]
                 if no == EINTR:
                     return self.write(datagram, addr)
                 elif no == EMSGSIZE:
-                    raise error.MessageLengthError, "message too long"
+                    raise error.MessageLengthError("message too long")
                 elif no == ECONNREFUSED:
                     # in non-connected UDP ECONNREFUSED is platform dependent, I
                     # think and the info is not necessarily useful. Nevertheless
@@ -204,9 +204,9 @@ class Port(base.BasePort):
         'Connect' to remote server.
         """
         if self._connectedAddr:
-            raise RuntimeError, "already connected, reconnecting is not currently supported (talk to itamar if you want this)"
+            raise RuntimeError("already connected, reconnecting is not currently supported")
         if not abstract.isIPAddress(host):
-            raise ValueError, "please pass only IP addresses, not domain names"
+            raise ValueError("please pass only IP addresses, not domain names")
         self._connectedAddr = (host, port)
         self.socket.connect((host, port))
 
@@ -316,7 +316,7 @@ class MulticastMixin:
             cmd = socket.IP_DROP_MEMBERSHIP
         try:
             self.socket.setsockopt(socket.IPPROTO_IP, cmd, addr + interface)
-        except socket.error, e:
+        except socket.error as e:
             return failure.Failure(error.MulticastJoinError(addr, interface, *e.args))
 
     def leaveGroup(self, addr, interface=""):
@@ -324,12 +324,11 @@ class MulticastMixin:
         return self.reactor.resolve(addr).addCallback(self._joinAddr1, interface, 0)
 
 
+@implementer(interfaces.IMulticastTransport)
 class MulticastPort(MulticastMixin, Port):
     """
     UDP Port that supports multicasting.
     """
-
-    implements(interfaces.IMulticastTransport)
 
     def __init__(self, port, proto, interface='', maxPacketSize=8192, reactor=None, listenMultiple=False):
         """

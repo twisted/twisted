@@ -12,13 +12,14 @@ Maintainer: Itamar Shtull-Trauring
 """
 
 import random
-from zope.interface import implements
+from zope.interface import implementer
 
 # Twisted Imports
 from twisted.python import log, failure, components
 from twisted.internet import interfaces, error, defer
 
 
+@implementer(interfaces.IProtocolFactory, interfaces.ILoggingContext)
 class Factory:
     """
     This is a factory which produces protocols.
@@ -26,8 +27,6 @@ class Factory:
     By default, buildProtocol will create a protocol of the class given in
     self.protocol.
     """
-
-    implements(interfaces.IProtocolFactory, interfaces.ILoggingContext)
 
     # put a subclass of Protocol here:
     protocol = None
@@ -476,6 +475,7 @@ connectionDone=failure.Failure(error.ConnectionDone())
 connectionDone.cleanFailure()
 
 
+@implementer(interfaces.IProtocol, interfaces.ILoggingContext)
 class Protocol(BaseProtocol):
     """
     This is the base class for streaming connection-oriented protocols.
@@ -493,7 +493,6 @@ class Protocol(BaseProtocol):
     Some subclasses exist already to help you write common types of protocols:
     see the L{twisted.protocols.basic} module for a few of them.
     """
-    implements(interfaces.IProtocol, interfaces.ILoggingContext)
 
     def logPrefix(self):
         """
@@ -527,8 +526,8 @@ class Protocol(BaseProtocol):
         """
 
 
+@implementer(interfaces.IConsumer)
 class ProtocolToConsumerAdapter(components.Adapter):
-    implements(interfaces.IConsumer)
 
     def write(self, data):
         self.original.dataReceived(data)
@@ -542,8 +541,8 @@ class ProtocolToConsumerAdapter(components.Adapter):
 components.registerAdapter(ProtocolToConsumerAdapter, interfaces.IProtocol,
                            interfaces.IConsumer)
 
+@implementer(interfaces.IProtocol)
 class ConsumerToProtocolAdapter(components.Adapter):
-    implements(interfaces.IProtocol)
 
     def dataReceived(self, data):
         self.original.write(data)
@@ -560,12 +559,12 @@ class ConsumerToProtocolAdapter(components.Adapter):
 components.registerAdapter(ConsumerToProtocolAdapter, interfaces.IConsumer,
                            interfaces.IProtocol)
 
+@implementer(interfaces.IProcessProtocol)
 class ProcessProtocol(BaseProtocol):
     """
     Base process protocol implementation which does simple dispatching for
     stdin, stdout, and stderr file descriptors.
     """
-    implements(interfaces.IProcessProtocol)
 
     def childDataReceived(self, childFD, data):
         if childFD == 1:
@@ -699,6 +698,7 @@ class AbstractDatagramProtocol:
         """
 
 
+@implementer(interfaces.ILoggingContext)
 class DatagramProtocol(AbstractDatagramProtocol):
     """
     Protocol for datagram-oriented transport, e.g. UDP.
@@ -708,7 +708,6 @@ class DatagramProtocol(AbstractDatagramProtocol):
     @ivar transport: The transport with which this protocol is associated,
         if it is associated with one.
     """
-    implements(interfaces.ILoggingContext)
 
     def logPrefix(self):
         """
@@ -746,14 +745,13 @@ class ConnectedDatagramProtocol(DatagramProtocol):
 
 
 
+@implementer(interfaces.ITransport)
 class FileWrapper:
     """A wrapper around a file-like object to make it behave as a Transport.
 
     This doesn't actually stream the file to the attached protocol,
     and is thus useful mainly as a utility for debugging protocols.
     """
-
-    implements(interfaces.ITransport)
 
     closed = 0
     disconnecting = 0

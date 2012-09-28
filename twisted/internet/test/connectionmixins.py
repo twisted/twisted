@@ -11,7 +11,7 @@ import socket
 from gc import collect
 from weakref import ref
 
-from zope.interface import implements
+from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
 from twisted.python import context, log
@@ -22,7 +22,6 @@ from twisted.internet.defer import Deferred, gatherResults, succeed, fail
 from twisted.internet.interfaces import (
     IConnector, IResolverSimple, IReactorFDSet)
 from twisted.internet.protocol import ClientFactory, Protocol, ServerFactory
-from twisted.test.test_tcp import ClosingProtocol
 from twisted.trial.unittest import SkipTest
 from twisted.internet.error import DNSLookupError
 from twisted.internet.interfaces import ITLSTransport
@@ -271,11 +270,11 @@ class Stop(ClientFactory):
 
 
 
+@implementer(IResolverSimple)
 class FakeResolver(object):
     """
     A resolver implementation based on a C{dict} mapping names to addresses.
     """
-    implements(IResolverSimple)
 
     def __init__(self, names):
         self.names = names
@@ -616,6 +615,9 @@ class TCPClientTestsMixin(object):
         transport were still connected.
         """
         reactor = self.buildReactor()
+        # Move back up to top-level once test_tcp is ported to Python 3
+        # (ticket #6002):
+        from twisted.test.test_tcp import ClosingProtocol
         port = reactor.listenTCP(0, serverFactoryFor(ClosingProtocol),
                                  interface=self.interface)
 

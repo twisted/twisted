@@ -5,6 +5,8 @@
 Tests for the internal implementation details of L{twisted.internet.udp}.
 """
 
+from __future__ import division, absolute_import
+
 import socket
 
 from twisted.trial import unittest
@@ -65,7 +67,7 @@ class KeepReads(DatagramProtocol):
 
 
 
-class ErrorsTestCase(unittest.TestCase):
+class ErrorsTestCase(unittest.SynchronousTestCase):
     """
     Error handling tests for C{udp.Port}.
     """
@@ -84,13 +86,13 @@ class ErrorsTestCase(unittest.TestCase):
 
         # Normal result, no errors
         port.socket = StringUDPSocket(
-            ["result", "123", socket.error(-7000), "456",
+            [b"result", b"123", socket.error(-7000), b"456",
              socket.error(-7000)])
         port.doRead()
         # Read stops on error:
-        self.assertEqual(protocol.reads, ["result", "123"])
+        self.assertEqual(protocol.reads, [b"result", b"123"])
         port.doRead()
-        self.assertEqual(protocol.reads, ["result", "123", "456"])
+        self.assertEqual(protocol.reads, [b"result", b"123", b"456"])
 
 
     def test_readImmediateError(self):
@@ -111,14 +113,14 @@ class ErrorsTestCase(unittest.TestCase):
         port = udp.Port(None, protocol)
 
         # Try an immediate "connection refused"
-        port.socket = StringUDPSocket(["a", socket.error(-6000), "b",
+        port.socket = StringUDPSocket([b"a", socket.error(-6000), b"b",
                                        socket.error(EWOULDBLOCK)])
         port.doRead()
         # Read stops on error:
-        self.assertEqual(protocol.reads, ["a"])
+        self.assertEqual(protocol.reads, [b"a"])
         # Read again:
         port.doRead()
-        self.assertEqual(protocol.reads, ["a", "b"])
+        self.assertEqual(protocol.reads, [b"a", b"b"])
 
 
     def test_connectedReadImmediateError(self):
@@ -137,18 +139,18 @@ class ErrorsTestCase(unittest.TestCase):
         protocol.connectionRefused = lambda: refused.append(True)
 
         port = udp.Port(None, protocol)
-        port.socket = StringUDPSocket(["a", socket.error(-6000), "b",
+        port.socket = StringUDPSocket([b"a", socket.error(-6000), b"b",
                                        socket.error(EWOULDBLOCK)])
         port.connect("127.0.0.1", 9999)
 
         # Read stops on error:
         port.doRead()
-        self.assertEqual(protocol.reads, ["a"])
+        self.assertEqual(protocol.reads, [b"a"])
         self.assertEqual(refused, [True])
 
         # Read again:
         port.doRead()
-        self.assertEqual(protocol.reads, ["a", "b"])
+        self.assertEqual(protocol.reads, [b"a", b"b"])
         self.assertEqual(refused, [True])
 
 
@@ -160,6 +162,6 @@ class ErrorsTestCase(unittest.TestCase):
         port = udp.Port(None, protocol)
 
         # Some good data, followed by an unknown error
-        port.socket = StringUDPSocket(["good", socket.error(-1337)])
+        port.socket = StringUDPSocket([b"good", socket.error(-1337)])
         self.assertRaises(socket.error, port.doRead)
-        self.assertEqual(protocol.reads, ["good"])
+        self.assertEqual(protocol.reads, [b"good"])
