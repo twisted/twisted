@@ -42,9 +42,6 @@ extensions = [
     Extension("twisted.python.sendmsg",
               sources=["twisted/python/sendmsg.c"],
               condition=lambda _: sys.platform != "win32"),
-    Extension("twisted.internet._sigchld",
-              ["twisted/internet/_sigchld.c"],
-              condition=lambda _: sys.platform != "win32"),
 ]
 
 # Figure out which plugins to include: all plugins except subproject ones

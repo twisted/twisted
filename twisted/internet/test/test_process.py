@@ -13,14 +13,13 @@ from twisted.trial.unittest import TestCase, SkipTest
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.python.compat import set
 from twisted.python.log import msg, err
-from twisted.python.runtime import platform
+from twisted.python.runtime import platform, platformType
 from twisted.python.filepath import FilePath
 from twisted.internet import utils
 from twisted.internet.interfaces import IReactorProcess, IProcessTransport
 from twisted.internet.defer import Deferred, succeed
 from twisted.internet.protocol import ProcessProtocol
 from twisted.internet.error import ProcessDone, ProcessTerminated
-from twisted.internet import _signals
 
 
 
@@ -305,20 +304,6 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         sometimes fail with EINTR.
         """
         reactor = self.buildReactor()
-
-        # XXX Since pygobject/pygtk wants to use signal.set_wakeup_fd,
-        # we aren't actually providing this functionality on the glib2
-        # or gtk2 reactors yet.  See #4286 for the possibility of
-        # improving this.
-        skippedReactors = ["Glib2Reactor", "Gtk2Reactor", "PortableGtkReactor"]
-        hasSigInterrupt = getattr(signal, "siginterrupt", None) is not None
-        reactorClassName = reactor.__class__.__name__
-        if reactorClassName in skippedReactors and not hasSigInterrupt:
-            raise SkipTest(
-                "%s is not supported without siginterrupt" % reactorClassName)
-        if _signals.installHandler.__name__  == "_installHandlerUsingSignal":
-            raise SkipTest("_signals._installHandlerUsingSignal doesn't support this feature")
-
         result = []
 
         def f():
@@ -345,10 +330,6 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         (file descriptor 3 is also reported as open, because of the call to
         'os.listdir()').
         """
-        from twisted.python.runtime import platformType
-        if platformType != "posix":
-            raise SkipTest("Test only applies to POSIX platforms")
-
         here = FilePath(__file__)
         top = here.parent().parent().parent().parent()
         source = (
@@ -382,6 +363,9 @@ class ProcessTestsBuilderBase(ReactorBuilder):
             [sys.executable, "-Wignore", "-c", "\n".join(source)],
             usePTY=self.usePTY)
         self.runReactor(reactor)
+
+    if platformType != "posix":
+        test_openFileDescriptors.skip = "Test only applies to POSIX platforms"
 
 
     def test_timelyProcessExited(self):

@@ -28,6 +28,7 @@ modules = [
     "twisted.internet.fdesc",
     "twisted.internet.main",
     "twisted.internet.reactor", # don't expect it to work yet, though!
+    "twisted.internet._signals",
     "twisted.internet.test",
     "twisted.internet.test.modulehelpers",
     "twisted.internet.test.reactormixins",
@@ -71,6 +72,7 @@ testModules = [
     "twisted.internet.test.test_fdset",
     "twisted.internet.test.test_filedescriptor",
     "twisted.internet.test.test_main",
+    "twisted.internet.test.test_sigchld",
     "twisted.python.test.test_components",
     "twisted.python.test.test_deprecatepy3",
     "twisted.python.test.test_reflectpy3",
