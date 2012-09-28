@@ -2682,7 +2682,6 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         except binascii.Error:
             self.sendLine('*')
             raise IllegalServerResponse(rest)
-            self.transport.loseConnection()
         else:
             auth = self.authenticators[scheme]
             chal = auth.challengeResponse(secret, chal)

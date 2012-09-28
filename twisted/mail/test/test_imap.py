@@ -2457,6 +2457,36 @@ class HandCraftedTestCase(IMAP4HelperMixin, unittest.TestCase):
             ).addCallback(test)
 
 
+    def test_authenticationChallengeDecodingException(self):
+        """
+        When decoding a base64 encoded authentication message from the server,
+        decoding errors are logged and then the client closes the connection.
+        """
+        transport = StringTransportWithDisconnection()
+        protocol = imap4.IMAP4Client()
+        transport.protocol = protocol
+
+        protocol.makeConnection(transport)
+        protocol.lineReceived(
+            '* OK [CAPABILITY IMAP4rev1 IDLE NAMESPACE AUTH=CRAM-MD5] '
+            'Twisted IMAP4rev1 Ready')
+        cAuth = imap4.CramMD5ClientAuthenticator('testuser')
+        protocol.registerAuthenticator(cAuth)
+
+        d = protocol.authenticate('secret')
+        # Should really be something describing the base64 decode error.  See
+        # #6021.
+        self.assertFailure(d, error.ConnectionDone)
+
+        protocol.dataReceived('+ Something bad! and bad\r\n')
+
+        # This should not really be logged.  See #6021.
+        logged = self.flushLoggedErrors(imap4.IllegalServerResponse)
+        self.assertEqual(len(logged), 1)
+        self.assertEqual(logged[0].value.args[0], "Something bad! and bad")
+        return d
+
+
 
 class PreauthIMAP4ClientMixin:
     """
