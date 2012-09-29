@@ -25,9 +25,10 @@ from twisted.python import _utilpy3 as util
 
 class Base(object):
     """
-    A no-op class which can be used to verify the behavior of method-discovering
-    APIs.
+    A no-op class which can be used to verify the behavior of
+    method-discovering APIs.
     """
+
     def method(self):
         """
         A no-op method which can be discovered.
@@ -46,6 +47,7 @@ class Separate(object):
     """
     A no-op class with methods with differing prefixes.
     """
+
     def good_method(self):
         """
         A no-op method which a matching prefix to be discovered.
@@ -64,9 +66,10 @@ class AccumulateMethodsTests(TestCase):
     Tests for L{accumulateMethods} which finds methods on a class hierarchy and
     adds them to a dictionary.
     """
+
     def test_ownClass(self):
         """
-        If x is and instance of Base} and Base defines a method named method,
+        If x is and instance of Base and Base defines a method named method,
         L{accumulateMethods} adds an item to the given dictionary with
         C{"method"} as the key and a bound method object for Base.method value.
         """
@@ -91,9 +94,9 @@ class AccumulateMethodsTests(TestCase):
 
     def test_prefix(self):
         """
-        If a prefix is given, L{accumulateMethods} limits its results to methods
-        beginning with that prefix.  Keys in the resulting dictionary also have
-        the prefix removed from them.
+        If a prefix is given, L{accumulateMethods} limits its results to
+        methods beginning with that prefix.  Keys in the resulting dictionary
+        also have the prefix removed from them.
         """
         x = Separate()
         output = {}
@@ -107,6 +110,7 @@ class PrefixedMethodsTests(TestCase):
     Tests for L{prefixedMethods} which finds methods on a class hierarchy and
     adds them to a dictionary.
     """
+
     def test_onlyObject(self):
         """
         L{prefixedMethods} returns a list of the methods discovered on an
@@ -119,8 +123,8 @@ class PrefixedMethodsTests(TestCase):
 
     def test_prefix(self):
         """
-        If a prefix is given, L{prefixedMethods} returns only methods named with
-        that prefix.
+        If a prefix is given, L{prefixedMethods} returns only methods named
+        with that prefix.
         """
         x = Separate()
         output = prefixedMethods(x, 'good_')
@@ -132,6 +136,7 @@ class Summer(object):
     """
     A class we look up as part of the LookupsTestCase.
     """
+
     def reallySet(self):
         """
         Do something.
@@ -171,6 +176,7 @@ class LookupsTestCase(TestCase):
         self.assertIdentical(
             reflect.namedAny("twisted.python"), twisted.python)
 
+
     def test_namedAnyModuleLookup(self):
         """
         L{namedAny} should return the module object for the name it is passed.
@@ -185,7 +191,8 @@ class LookupsTestCase(TestCase):
         L{namedAny} should return the class object for the name it is passed.
         """
         self.assertIdentical(
-            reflect.namedAny("twisted.python.test.test_reflectpy3.Summer"), Summer)
+            reflect.namedAny("twisted.python.test.test_reflectpy3.Summer"),
+            Summer)
 
 
     def test_namedAnyAttributeLookup(self):
@@ -197,7 +204,8 @@ class LookupsTestCase(TestCase):
         # object every time.  This is a foolishness of Python's object
         # implementation, not a bug in Twisted.
         self.assertEqual(
-            reflect.namedAny("twisted.python.test.test_reflectpy3.Summer.reallySet"),
+            reflect.namedAny(
+                "twisted.python.test.test_reflectpy3.Summer.reallySet"),
             Summer.reallySet)
 
 
@@ -209,7 +217,8 @@ class LookupsTestCase(TestCase):
         """
         self.assertIdentical(
             reflect.namedAny(
-                "twisted.python.test.test_reflectpy3.Summer.reallySet.__doc__"),
+                "twisted.python.test.test_reflectpy3."
+                "Summer.reallySet.__doc__"),
             Summer.reallySet.__doc__)
 
 
@@ -229,7 +238,8 @@ class LookupsTestCase(TestCase):
         self.assertRaises(
             ValueError,
             reflect.namedAny, "twisted.test.reflect_helper_VE")
-        # Modules which themselves raise ImportError when imported should result in an ImportError
+        # Modules which themselves raise ImportError when imported should
+        # result in an ImportError
         self.assertRaises(
             ImportError,
             reflect.namedAny, "twisted.test.reflect_helper_IE")
@@ -260,10 +270,11 @@ class LookupsTestCase(TestCase):
         """
         Passing a name which isn't a fully-qualified Python name to L{namedAny}
         should result in one of the following exceptions:
-        - L{InvalidName}: the name is not a dot-separated list of Python objects
-        - L{ObjectNotFound}: the object doesn't exist
-        - L{ModuleNotFound}: the object doesn't exist and there is only one
-          component in the name
+         - L{InvalidName}: the name is not a dot-separated list of Python
+           objects
+         - L{ObjectNotFound}: the object doesn't exist
+         - L{ModuleNotFound}: the object doesn't exist and there is only one
+           component in the name
         """
         err = self.assertRaises(reflect.ModuleNotFound, reflect.namedAny,
                                 'nosuchmoduleintheworld')
@@ -292,6 +303,7 @@ class LookupsTestCase(TestCase):
                 "identifiers, not %r" % (invalidName,))
 
 
+
 class Breakable(object):
 
     breakRepr = False
@@ -302,6 +314,7 @@ class Breakable(object):
             raise RuntimeError("str!")
         else:
             return '<Breakable>'
+
 
     def __repr__(self):
         if self.breakRepr:
@@ -577,7 +590,7 @@ class FullyQualifiedNameTests(TestCase):
         """
         import twisted.python.compat
         self._checkFullyQualifiedName(
-            twisted.python.compat,'twisted.python.compat')
+            twisted.python.compat, 'twisted.python.compat')
 
 
     def test_class(self):
@@ -585,7 +598,8 @@ class FullyQualifiedNameTests(TestCase):
         L{fullyQualifiedName} returns the name of a class and its module.
         """
         self._checkFullyQualifiedName(
-            FullyQualifiedNameTests, '%s.FullyQualifiedNameTests' % (__name__,))
+            FullyQualifiedNameTests,
+            '%s.FullyQualifiedNameTests' % (__name__,))
 
 
     def test_function(self):
