@@ -1253,7 +1253,7 @@ class TestSafeStream(unittest.SynchronousTestCase):
         exc = self.assertRaises(IOError, safe._runSafely, broken.write, "Hello")
         self.assertEqual(exc.args[0], errno.ENOSPC)
 
-    if runtime.platformType == "windows":
+    if runtime.platformType == "win32":
         test_ENOSPCNotWindowsPipe.skip = "This tests non-Windows platforms."
     else:
         test_ENOSPCWindowsPipe.skip = "This tests Windows only."
