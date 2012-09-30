@@ -1,7 +1,5 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-#
-# Maintainer: Jonathan Lange
 
 """
 Tests for L{twisted.trial.reporter}.
@@ -12,7 +10,7 @@ import errno, sys, os, re, StringIO
 from inspect import getmro
 
 from twisted.internet.utils import suppressWarnings
-from twisted.python import log
+from twisted.python import log, runtime
 from twisted.python.failure import Failure
 from twisted.trial import itrial, unittest, runner, reporter, util
 from twisted.trial.reporter import UncleanWarningsReporterWrapper
@@ -29,20 +27,28 @@ class BrokenStream(object):
     written = False
     flushed = False
 
-    def __init__(self, fObj):
+    def __init__(self, fObj, error=IOError(errno.EINTR, "Interrupted write")):
         self.fObj = fObj
+        self.error = error
+
 
     def write(self, s):
         if self.written:
             return self.fObj.write(s)
         self.written = True
-        raise IOError(errno.EINTR, "Interrupted write")
+        raise self.error
+
 
     def flush(self):
         if self.flushed:
             return self.fObj.flush()
         self.flushed = True
-        raise IOError(errno.EINTR, "Interrupted flush")
+        raise self.error
+
+
+    def fileno(self):
+        return 99999
+
 
 
 class StringTest(unittest.SynchronousTestCase):
@@ -1152,16 +1158,119 @@ class TestReporter(TestReporterInterface):
 
 
 class TestSafeStream(unittest.SynchronousTestCase):
-    def test_safe(self):
+    """
+    Tests for L{reporter.SafeStream}.
+    """
+
+    def test_write(self):
         """
-        Test that L{reporter.SafeStream} successfully write to its original
-        stream even if an interrupt happens during the write.
+        L{reporter.SafeStream.write} calls the C{write} method of the underlying
+        stream using C{_runSafely}.
+        """
+        stream = StringIO.StringIO()
+        safe = reporter.SafeStream(stream)
+        called = []
+        def _runSafely(f, *args, **kwargs):
+            called.append(True)
+            return f(*args, **kwargs)
+        safe._runSafely = _runSafely
+        safe.write("hello")
+        self.assertEqual(stream.getvalue(), "hello")
+        self.assertEqual(called, [True])
+
+
+    def test_flush(self):
+        """
+        L{reporter.SafeStream.flush} calls the C{flush} method of the underlying
+        stream using C{_runSafely}.
         """
         stream = StringIO.StringIO()
         broken = BrokenStream(stream)
         safe = reporter.SafeStream(broken)
-        safe.write("Hello")
+        called = []
+        orig = safe._runSafely
+        def _runSafely(f, *args, **kwargs):
+            called.append(True)
+            return orig(f, *args, **kwargs)
+        safe._runSafely = _runSafely
+        safe.flush()
+        self.assertTrue(broken.flushed)
+        self.assertEqual(called, [True])
+
+
+    def test_isFile(self):
+        """
+        L{reporter.SafeStream._isFile} returns C{True} only if the given file
+        descriptor is a filesystem file.
+        """
+        r, w = os.pipe()
+        self.assertFalse(reporter.SafeStream._isFile(w))
+        os.close(r)
+        os.close(w)
+        with open(self.mktemp(), "wb") as f:
+            self.assertTrue(reporter.SafeStream._isFile(f.fileno()))
+
+
+    def test_runSafelyEINTR(self):
+        """
+        L{reporter.SafeStream._runSafely} successfully calls a method to its
+        original stream.
+
+        That is, if an EINTR interrupt happens during the method call, it will
+        be called again.
+        """
+        stream = StringIO.StringIO()
+        broken = BrokenStream(stream)
+        safe = reporter.SafeStream(broken)
+        safe._runSafely(broken.write, "Hello")
         self.assertEqual(stream.getvalue(), "Hello")
+
+
+    def test_ENOSPCWindowsPipe(self):
+        """
+        L{reporter.SafeStream._runSafely} will retry if ENOSPC is thrown on
+        Windows for an operation on a stream connected to something that isn't
+        a filesystem file.
+        """
+        stream = StringIO.StringIO()
+        broken = BrokenStream(stream, IOError(errno.ENOSPC))
+        safe = reporter.SafeStream(broken)
+        safe._isFile = lambda fd: False
+        safe._runSafely(broken.write, "Hello")
+        self.assertEqual(stream.getvalue(), "Hello")
+
+
+    def test_ENOSPCNotWindowsPipe(self):
+        """
+        L{reporter.SafeStream._runSafely} will not retry if ENOSPC is thrown
+        on a non-Windows platform for an operation on a stream connected to
+        something that isn't a filesystem file.
+        """
+        stream = StringIO.StringIO()
+        broken = BrokenStream(stream, IOError(errno.ENOSPC))
+        safe = reporter.SafeStream(broken)
+        safe._isFile = lambda fd: False
+        exc = self.assertRaises(IOError, safe._runSafely, broken.write, "Hello")
+        self.assertEqual(exc.args[0], errno.ENOSPC)
+
+    if runtime.platformType == "windows":
+        test_ENOSPCNotWindowsPipe.skip = "This tests non-Windows platforms."
+    else:
+        test_ENOSPCWindowsPipe.skip = "This tests Windows only."
+
+
+    def test_ENOSPCFile(self):
+        """
+        L{reporter.SafeStream._runSafely} will not retry if ENOSPC is thrown on
+        an operation on a stream connected to a filesystem file.
+        """
+        stream = StringIO.StringIO()
+        broken = BrokenStream(stream, IOError(errno.ENOSPC))
+        safe = reporter.SafeStream(broken)
+        safe._isFile = lambda fd: True
+        exc = self.assertRaises(IOError, safe._runSafely, broken.write, "Hello")
+        self.assertEqual(exc.args[0], errno.ENOSPC)
+
 
 
 

@@ -1,8 +1,6 @@
 # -*- test-case-name: twisted.trial.test.test_reporter -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-#
-# Maintainer: Jonathan Lange
 
 """
 Defines classes that handle the results of tests.
@@ -10,11 +8,13 @@ Defines classes that handle the results of tests.
 
 import sys
 import os
+import stat
+import errno
 import time
 import warnings
 
 from twisted.python.compat import set
-from twisted.python import reflect, log
+from twisted.python import reflect, log, runtime
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
 from twisted.python.util import OrderedDict, untilConcludes
@@ -39,16 +39,59 @@ class SafeStream(object):
     """
     Wraps a stream object so that all C{write} calls are wrapped in
     L{untilConcludes}.
+
+    Additionaly, C{ENOSPC} will also cause retries on Windows, unless we're
+    talking to a filesystem file.
     """
 
     def __init__(self, original):
         self.original = original
 
+
     def __getattr__(self, name):
         return getattr(self.original, name)
 
+
+    @staticmethod
+    def _isFile(fd):
+        """
+        Return whether or not the given file descriptor is a filesystem file.
+        """
+        return stat.S_ISREG(os.fstat(fd).st_mode)
+
+
+    def _runSafely(self, f, *a, **kw):
+        """
+        Call a function on the underlying stream, while handling transient
+        errors by retrying.
+
+        The handled errors are C{EINTR}, which is handled on all platforms,
+        and ENOSPC on Windows when dealing with a non-filesystem stream.
+        """
+        if runtime.platformType != "windows" or self._isFile(f.fileno()):
+            return untilConcludes(f, *a, **kw)
+
+        while True:
+            try:
+                return untilConcludes(f, *a, **kw)
+            except IOError as e:
+                if e.args[0] != errno.ENOSPC:
+                    raise
+
+
+    def flush(self, *a, **kw):
+        """
+        Flush the underlying stream, while handling any transient errors.
+        """
+        return self._runSafely(self.original.flush, *a, **kw)
+
+
     def write(self, *a, **kw):
-        return untilConcludes(self.original.write, *a, **kw)
+        """
+        Write to the underlying stream, while handling any transient errors.
+        """
+        return self._runSafely(self.original.write, *a, **kw)
+
 
 
 class TestResult(pyunit.TestResult, object):
