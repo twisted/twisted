@@ -1,0 +1,1 @@
+gtk2reactor now works again on FreeBSD, and perhaps other platforms that were broken by gi interactions.

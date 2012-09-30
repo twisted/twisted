@@ -23,11 +23,16 @@ import sys
 from twisted.internet import _glibbase
 from twisted.python import runtime
 
-_glibbase.ensureNotImported(
-    ["gi"],
-    "Introspected and static glib/gtk bindings must not be mixed; can't "
-    "import gtk2reactor since gi module is already imported.",
-    preventImports=["gi"])
+# Certain old versions of pygtk and gi crash if imported at the same
+# time. This is a problem when running Twisted's unit tests, since they will
+# attempt to run both gtk2 and gtk3/gi tests. However, gireactor makes sure
+# that if we are in such an old version, and gireactor was imported,
+# gtk2reactor will not be importable. So we don't *need* to enforce that here
+# as well; whichever is imported first will still win. Moreover, additional
+# enforcement in this module is unnecessary in modern versions, and downright
+# problematic in certain versions where for some reason importing gtk also
+# imports some subset of gi. So we do nothing here, relying on gireactor to
+# prevent the crash.
 
 try:
     if not hasattr(sys, 'frozen'):
