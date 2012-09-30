@@ -1,1 +1,1 @@
-trial's reporter should no longer fail with ENOSPC when writing to a non-blocking pipe, in particular when running under Buildbot.
+trial's reporter should no longer fail with ENOSPC on Windows when writing to a non-blocking pipe, in particular when running under Buildbot.
