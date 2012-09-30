@@ -68,7 +68,7 @@ class SafeStream(object):
         The handled errors are C{EINTR}, which is handled on all platforms,
         and C{ENOSPC} on Windows when dealing with a non-filesystem stream.
         """
-        if runtime.platformType != "windows" or self._isFile(f.fileno()):
+        if runtime.platformType != "win32" or self._isFile(f.fileno()):
             return untilConcludes(f, *a, **kw)
 
         while True:
