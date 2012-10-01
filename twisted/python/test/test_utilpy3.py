@@ -266,6 +266,8 @@ class SuppressedWarningsTests(TestCase):
     """
     Tests for L{util.runWithWarningsSuppressed}.
     """
+    runWithWarningsSuppressed = staticmethod(util.runWithWarningsSuppressed)
+
     def test_runWithWarningsSuppressedFiltered(self):
         """
         Warnings from the function called by C{runWithWarningsSuppressed} are
@@ -273,8 +275,8 @@ class SuppressedWarningsTests(TestCase):
         """
         filters = [(("ignore", ".*foo.*"), {}),
                    (("ignore", ".*bar.*"), {})]
-        util.runWithWarningsSuppressed(filters, warnings.warn, "ignore foo")
-        util.runWithWarningsSuppressed(filters, warnings.warn, "ignore bar")
+        self.runWithWarningsSuppressed(filters, warnings.warn, "ignore foo")
+        self.runWithWarningsSuppressed(filters, warnings.warn, "ignore bar")
         self.assertEqual([], self.flushWarnings())
 
 
@@ -285,7 +287,7 @@ class SuppressedWarningsTests(TestCase):
         """
         filters = [(("ignore", ".*foo.*"), {}),
                    (("ignore", ".*bar.*"), {})]
-        util.runWithWarningsSuppressed(filters, warnings.warn, "don't ignore")
+        self.runWithWarningsSuppressed(filters, warnings.warn, "don't ignore")
         self.assertEqual(
             ["don't ignore"], [w['message'] for w in self.flushWarnings()])
 
@@ -295,7 +297,7 @@ class SuppressedWarningsTests(TestCase):
         C{runWithWarningsSuppressed} returns the result of the function it
         called.
         """
-        self.assertEqual(util.runWithWarningsSuppressed([], lambda: 4), 4)
+        self.assertEqual(self.runWithWarningsSuppressed([], lambda: 4), 4)
 
 
     def test_noSideEffects(self):
@@ -305,7 +307,7 @@ class SuppressedWarningsTests(TestCase):
         """
         filters = [(("ignore", ".*foo.*"), {}),
                    (("ignore", ".*bar.*"), {})]
-        util.runWithWarningsSuppressed(filters, lambda: None)
+        self.runWithWarningsSuppressed(filters, lambda: None)
         warnings.warn("ignore foo")
         self.assertEqual(
             ["ignore foo"], [w['message'] for w in self.flushWarnings()])

@@ -194,6 +194,13 @@ class TestErrorReporting(StringTest):
             self.doubleSeparator,
             '[FAIL]',
             'Traceback (most recent call last):',
+            # Some irrelevant trial implementation details leak into the traceback:
+            re.compile(r'^\s+File .*$'),
+            re.compile(r'^\s+.*$'),
+            re.compile(r'^\s+File .*$'),
+            re.compile(r'^\s+.*$'),
+            re.compile(r'^\s+File .*$'),
+            re.compile(r'^\s+.*$'),
             re.compile(r'^\s+File .*erroneous\.py., line \d+, in '
                        'testHiddenException$'),
             re.compile(r'^\s+self\.fail\("Deliberate failure to mask the '

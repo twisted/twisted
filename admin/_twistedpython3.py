@@ -32,6 +32,7 @@ modules = [
     "twisted.internet.test",
     "twisted.internet.test.modulehelpers",
     "twisted.internet.test.reactormixins",
+    "twisted.internet._utilspy3",
     "twisted.python",
     "twisted.python.compat",
     "twisted.python.components",
@@ -56,7 +57,9 @@ modules = [
     "twisted.trial._synctest",
     "twisted.trial.test",
     "twisted.trial.test.suppression",
+    "twisted.trial.test.packages",
     "twisted.trial.unittest",
+    "twisted.trial.util",
     "twisted.trial._utilpy3",
     "twisted._version",
     ]
@@ -76,6 +79,7 @@ testModules = [
     "twisted.internet.test.test_threads",
     "twisted.internet.test.test_udp",
     "twisted.internet.test.test_udp_internals",
+    "twisted.internet.test.test_utilspy3",
     "twisted.python.test.test_components",
     "twisted.python.test.test_deprecatepy3",
     "twisted.python.test.test_reflectpy3",
@@ -98,5 +102,6 @@ testModules = [
     "twisted.trial.test.test_pyunitcompat",
     "twisted.trial.test.test_suppression",
     "twisted.trial.test.test_utilpy3",
+    "twisted.trial.test.test_util",
     "twisted.trial.test.test_warning",
     ]

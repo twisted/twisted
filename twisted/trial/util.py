@@ -18,13 +18,15 @@ Maintainer: Jonathan Lange
     asynchronous (ie, Deferred-returning) test methods, in seconds.
 """
 
+from __future__ import division, absolute_import, print_function
+
 import traceback, sys
 from random import randrange
 
-from twisted.internet import defer, utils, interfaces
+from twisted.python.compat import _PY3, reraise
+from twisted.internet import defer, _utilspy3 as utils, interfaces
 from twisted.python.failure import Failure
 from twisted.python import deprecate, versions
-from twisted.python.lockfile import FilesystemLock
 from twisted.python.filepath import FilePath
 
 from twisted.trial._utilpy3 import (
@@ -146,7 +148,7 @@ class _Janitor(object):
                 delayedString = str(p)
                 p.cancel()
             else:
-                print "WEIRDNESS! pending timed call not active!"
+                print("WEIRDNESS! pending timed call not active!")
             delayedCallStrings.append(delayedString)
         return delayedCallStrings
     _cleanPending = utils.suppressWarnings(
@@ -178,6 +180,8 @@ class _Janitor(object):
         return selectableStrings
 
 
+# This should be deleted, and replaced with twisted.application's code; see
+# #6016:
 def profiled(f, outputFile):
     def _(*args, **kwargs):
         if sys.version_info[0:2] != (2, 4):
@@ -259,7 +263,7 @@ def findObject(name):
                 except KeyError:
                     # Python 2.4 has fixed this.  Yay!
                     pass
-                raise exc_info[0], exc_info[1], exc_info[2]
+                reraise(exc_info[1], exc_info[2])
             moduleNames.pop()
     obj = topLevelPackage
     for n in names[1:]:
@@ -318,19 +322,20 @@ def _removeSafely(path):
     If C{path} does not contain a node named C{_trial_marker}, a
     L{_NoTrialMarker} exception is raised and the path is not removed.
     """
-    if not path.child('_trial_marker').exists():
+    if not path.child(b'_trial_marker').exists():
         raise _NoTrialMarker(
             '%r is not a trial temporary path, refusing to remove it'
             % (path,))
     try:
         path.remove()
-    except OSError, e:
+    except OSError as e:
         print ("could not remove %r, caught OSError [Errno %s]: %s"
                % (path, e.errno, e.strerror))
         try:
-            newPath = FilePath('_trial_temp_old%s' % (randrange(1000000),))
+            newPath = FilePath(b'_trial_temp_old' +
+                               str(randrange(10000000)).encode("utf-8"))
             path.moveTo(newPath)
-        except OSError, e:
+        except OSError as e:
             print ("could not rename path, caught OSError [Errno %s]: %s"
                    % (e.errno,e.strerror))
             raise
@@ -359,10 +364,12 @@ def _unusedTestDirectory(base):
 
     @return: A two-tuple.  The first element is a L{FilePath} representing the
         directory which was found and created.  The second element is a locked
-        L{FilesystemLock}.  Another call to C{_unusedTestDirectory} will not be
-        able to reused the the same name until the lock is released, either
-        explicitly or by this process exiting.
+        L{FilesystemLock<twisted.python.lockfile.FilesystemLock>}.  Another
+        call to C{_unusedTestDirectory} will not be able to reused the the
+        same name until the lock is released, either explicitly or by this
+        process exiting.
     """
+    from twisted.python.lockfile import FilesystemLock
     counter = 0
     while True:
         if counter:
@@ -388,3 +395,7 @@ def _unusedTestDirectory(base):
                 counter += 1
             else:
                 raise _WorkingDirectoryBusy()
+
+# Remove this, and move lockfile import, after ticket #5960 is resolved:
+if _PY3:
+    del _unusedTestDirectory

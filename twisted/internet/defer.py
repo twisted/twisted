@@ -893,7 +893,7 @@ def _deferGenerator(g, deferred):
 
     while 1:
         try:
-            result = g.next()
+            result = next(g)
         except StopIteration:
             deferred.callback(result)
             return deferred

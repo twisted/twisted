@@ -1,3 +1,13 @@
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
+#
+
+"""
+Classes and functions used by L{twisted.trial.test.test_util}.
+"""
+
+from __future__ import division, absolute_import
+
 import sys, os
 from twisted.trial import unittest
 
@@ -105,7 +115,10 @@ class PackageTest(unittest.SynchronousTestCase):
 
 
     def getModules(self):
-        return map(self._toModuleName, zip(*self.files)[0])
+        """
+        Return matching module names for files listed in C{self.files}.
+        """
+        return [self._toModuleName(filename) for (filename, code) in self.files]
 
 
     def cleanUpModules(self):
