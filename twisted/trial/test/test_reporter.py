@@ -1266,8 +1266,10 @@ class TestSafeStream(unittest.SynchronousTestCase):
         """
         stream = StringIO.StringIO()
         broken = BrokenStream(stream, IOError(errno.ENOSPC))
-        safe = reporter.SafeStream(broken)
-        safe._isFile = lambda fd: True
+        class AlwaysFile(reporter.SafeStream):
+            def _isFile(self, fd):
+                return True
+        safe = AlwaysFile(broken)
         exc = self.assertRaises(IOError, safe._runSafely, broken.write, "Hello")
         self.assertEqual(exc.args[0], errno.ENOSPC)
 
