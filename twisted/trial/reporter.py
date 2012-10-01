@@ -60,7 +60,10 @@ class SafeStream(object):
         """
         Return whether or not the given file descriptor is a filesystem file.
         """
-        return stat.S_ISREG(os.fstat(fd).st_mode)
+        try:
+            return stat.S_ISREG(os.fstat(fd).st_mode)
+        except OSError:
+            return False
 
 
     def _runSafely(self, f, *a, **kw):
