@@ -46,6 +46,8 @@ class SafeStream(object):
 
     def __init__(self, original):
         self.original = original
+        self._catchEINTR = (runtime.platformType == "win32" and
+                            not self._isFile(self.original.fileno()))
 
 
     def __getattr__(self, name):
@@ -68,7 +70,7 @@ class SafeStream(object):
         The handled errors are C{EINTR}, which is handled on all platforms,
         and C{ENOSPC} on Windows when dealing with a non-filesystem stream.
         """
-        if runtime.platformType != "win32" or self._isFile(f.fileno()):
+        if not self._catchEINTR:
             return untilConcludes(f, *a, **kw)
 
         while True:
