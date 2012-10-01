@@ -47,6 +47,7 @@ class SafeStream(object):
     def __init__(self, original):
         self.original = original
         self._catchEINTR = (runtime.platformType == "win32" and
+                            getattr(self.original, "fileno", None) and
                             not self._isFile(self.original.fileno()))
 
 
