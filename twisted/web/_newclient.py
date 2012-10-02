@@ -453,6 +453,7 @@ class HTTPClientParser(HTTPParser):
             or self.request.method == 'HEAD'):
             self.response.length = 0
             self._finished(self.clearLineBuffer())
+            self.response._bodyDataFinished()
         else:
             transferEncodingHeaders = self.connHeaders.getRawHeaders(
                 'transfer-encoding')
