@@ -13,16 +13,16 @@
 
 <h2>Introduction</h2>
 
-<p>This tutorial will show you how to use the <code class="API">
-twisted.mail.smtp</code> to create an ESMTP server. ESMTP stands for
-Extended (or Enhanced) SMTP. You don't need to know the details about it
-in order to build a simple server, after all, <code>twisted</code> already
-takes care of the protocol implementation. Just remember that you will want
-to use the enhanced version for your SMTP server! By the end of this tutorial,
-you will have a very simple inbound ESMTP server application which save emails
-sent by a SMTP client to files. For this tutorial, <code>twistd</code> will be
-used to launch the application. <code>telnet</code> will be used to act as a
-SMTP client.</p>
+<p>This tutorial will show you how to use the
+<code class="API">twisted.mail.smtp</code> module to create an ESMTP server.
+ESMTP stands for Extended (or Enhanced) SMTP. You don't need to know the
+details about it in order to build a simple server, after all,
+<code>twisted</code> already takes care of the protocol implementation. Just
+remember that you will want to use the enhanced version for your SMTP server!
+By the end of this tutorial, you will have a very simple inbound ESMTP server
+application which saves emails sent by a SMTP client to files. For this
+tutorial, <code>twistd</code> will be used to launch the application.
+<code>telnet</code> will be used to act as a SMTP client.</p>
 
 <h2>SMTP Server 1</h2>
 
@@ -62,7 +62,7 @@ $ twistd -ny smtpserver-1.tac
 </pre>
 
 <p>It worked, but, the server is doing absolutely nothing at the moment. It's
-not even listening at any port. We can shutdown it by issuing
+not even listening on any port. We can shutdown it by issuing
 <code>^C</code>:</p>
 
 <pre class="shell">
@@ -158,7 +158,14 @@ Connection closed by foreign host.
           File "twisted/internet/protocol.py", line 104, in buildProtocol
             p = self.protocol()
         exceptions.TypeError: 'NoneType' object is not callable
+</pre>
 
+<p>Obviously, we are missing something here. We didn't specify a
+<em>protocol class</em> for the factory to use.  We'll do that in the next
+example. As for now, let's shut down the server by issuing <code>^C</code>:
+</p>
+
+<pre class="shell">
 12:24:14+0400 [-] Received SIGINT, shutting down.
 12:24:14+0400 [-] (TCP Port 2025 Closed)
 12:24:14+0400 [-] Stopping factory &lt;twisted.internet.protocol.ServerFactory
@@ -166,10 +173,6 @@ Connection closed by foreign host.
 12:24:14+0400 [-] Main loop terminated.
 12:24:14+0400 [-] Server Shut Down.
 </pre>
-
-<p>Obviously, we are missing something here. We didn't specify a
-<em>protocol class</em> for the factory to use.  We'll do that in the next
-example.</p>
 
 
 <h2>SMTP Server 3</h2>
@@ -224,9 +227,10 @@ version.</p>
 
 <p>The output of <code>twistd -ny smtpserver-4.tac</code> is pretty
 much the same as the output of previous examples. But, if you connect it with
-<code>telnet</code>, you will get the following output (Lines start with
-<code>server </code> is what we get from the server application; lines start with
-<code>client</code> are the stuff we type in):</p>
+<code>telnet</code>, you will get the following output (Lines starting with
+<code>server </code> is what we get from the server application; lines
+starting with <code>client</code> are the commands we enter at the telnet
+prompt):</p>
 
 <pre class="shell">
 $ telnet localhost 2025
@@ -250,9 +254,9 @@ Let's solve this problem in the next example.</p>
 
 <h2>SMTP Server 5</h2>
 
-<p>In order to have the server to 'send' messages, we will define a new class,
-TutorialESMTP, and override three class methods in example <a href="
-smtpserver-5.tac">smtpserver-5.tac</a>.</p>
+<p>To make the server 'send' messages, we will define a new class,
+<code>TutorialESMTP</code>, and override three class methods in example
+<a href="smtpserver-5.tac">smtpserver-5.tac</a>.</p>
 
 <pre class="python">
 class TutorialESMTP(smtp.ESMTP):
@@ -271,9 +275,9 @@ class TutorialESMTP(smtp.ESMTP):
 </pre>
 
 <p>In <code>TutorialESMTP</code>, we set up a <code>counter</code> attribute
-to track the number of messages the server receives. <code>validateTo</code>
-method returns a lamda function that returns an <code>IMessage</code> object:
-</p>
+to track the number of messages the server receives. The
+<code>validateTo</code> method returns a lamda function that returns an
+<code>IMessage</code> object:</p>
 
 <pre class="python">
 import os
@@ -304,7 +308,7 @@ example, we simply write them to a file object.</p>
 
 <p>Let's go back to the <code>TutorialESMTP</code> class. Since we
 don't have any authentication system set up for the server, we simply
-made <code>validateFrom</code> method to accept any email address as a
+made the <code>validateFrom</code> method to accept any email address as a
 sender. We also overrode the <code>receivedHeader</code> method, you
 will see why in the example <code>smtpserver-7.tac</code>.</p>
 
@@ -321,7 +325,7 @@ client: EHLO localhost
 server: 250 localhost Hello 127.0.0.1, nice to meet you
 client: MAIL FROM: &lt;tom@example.com&gt;
 server: 250 Sender address accepted
-client: RCPT to: &lt;alice@argonemyth.com&gt;
+client: RCPT to: &lt;alice@example.com&gt;
 server: 250 Recipient address accepted
 client: DATA
 server: 354 Continue
@@ -332,6 +336,12 @@ client:
 client: This is a test message.
 client: .
 server: 250 Delivery in progress
+client: MAIL FROM: &lt;alice@example.com&gt;
+server: 250 Sender address accepted
+client: RCPT to: &lt;tom@example.com&gt;
+server: 250 Recipient address accepted
+client: DATA
+server: 354 Continue
 client: From: alice@example.com
 client: To: tom@argonemyth.com
 client: Subject: Test message to Tom
