@@ -1,0 +1,1 @@
+Response.deliverBody now calls connectionLost on the body protocol for responses with no body, such as 204, 304 and HEAD requests.
