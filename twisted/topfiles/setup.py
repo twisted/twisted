@@ -37,12 +37,17 @@ extensions = [
               libraries=["ws2_32"],
               condition=lambda _: _isCPython and sys.platform == "win32"),
 
-    Extension("twisted.python._initgroups",
-              ["twisted/python/_initgroups.c"]),
     Extension("twisted.python.sendmsg",
               sources=["twisted/python/sendmsg.c"],
               condition=lambda _: sys.platform != "win32"),
 ]
+
+if sys.version_info[:2] <= (2, 6):
+    extensions.append(
+        Extension(
+            "twisted.python._initgroups",
+            ["twisted/python/_initgroups.c"]))
+
 
 # Figure out which plugins to include: all plugins except subproject ones
 subProjectsPlugins = ['twisted_%s.py' % subProject

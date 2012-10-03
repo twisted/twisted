@@ -95,6 +95,7 @@ testModules = [
     "twisted.test.test_log",
     "twisted.test.test_monkey",
     "twisted.test.test_paths",
+    "twisted.test.test_setup",
     "twisted.test.test_threadable",
     "twisted.test.test_twisted",
     "twisted.test.test_threadpool",
