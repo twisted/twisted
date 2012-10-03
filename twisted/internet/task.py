@@ -697,7 +697,7 @@ class Clock:
         """
         Sort the pending calls according to the time they are scheduled.
         """
-        self.calls.sort(lambda a, b: cmp(a.getTime(), b.getTime()))
+        self.calls.sort(key=lambda a: a.getTime())
 
 
     def callLater(self, when, what, *a, **kw):

@@ -1,30 +1,46 @@
-# -*- test-case-name: twisted.test.test_protocols -*-
+# -*- test-case-name: twisted.protocols.test.test_basic -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
 """
 Basic protocols, such as line-oriented, netstring, and int prefixed strings.
-
-Maintainer: Itamar Shtull-Trauring
 """
+
+from __future__ import absolute_import, division
 
 # System imports
 import re
 from struct import pack, unpack, calcsize
-import warnings
-import cStringIO
+from io import BytesIO
 import math
 
-from zope.interface import implements
+from zope.interface import implementer
 
 # Twisted imports
+from twisted.python.compat import _PY3
 from twisted.internet import protocol, defer, interfaces, error
 from twisted.python import log, deprecate, versions
 
 
+# Unfortunately we cannot use regular string formatting on Python 3; see
+# http://bugs.python.org/issue3982 for details.
+if _PY3:
+    def _formatNetstring(data):
+        return b''.join([str(len(data)).encode("ascii"), b':', data, b','])
+else:
+    def _formatNetstring(data):
+        return b'%d:%s,' % (len(data), data)
+_formatNetstring.__doc__ = """
+Convert some C{bytes} into netstring format.
+
+@param data: C{bytes} that will be reformatted.
+"""
+
+
+
 LENGTH, DATA, COMMA = range(3)
-NUMBER = re.compile('(\d*)(:?)')
+NUMBER = re.compile(b'(\d*)(:?)')
 
 deprecatedSince = versions.Version("Twisted", 10, 2, 0)
 message = "NetstringReceiver parser state is private."
@@ -46,7 +62,6 @@ class IncompleteNetstring(Exception):
     """
     Not enough data to complete a netstring.
     """
-
 
 
 class NetstringReceiver(protocol.Protocol):
@@ -73,9 +88,9 @@ class NetstringReceiver(protocol.Protocol):
     @type MAX_LENGTH: C{int}
 
     @ivar _LENGTH: A pattern describing all strings that contain a netstring
-        length specification. Examples for length specifications are '0:',
-        '12:', and '179:'. '007:' is no valid length specification, since
-        leading zeros are not allowed.
+        length specification. Examples for length specifications are C{b'0:'},
+        C{b'12:'}, and C{b'179:'}. C{b'007:'} is not a valid length
+        specification, since leading zeros are not allowed.
     @type _LENGTH: C{re.Match}
 
     @ivar _LENGTH_PREFIX: A pattern describing all strings that contain
@@ -106,16 +121,16 @@ class NetstringReceiver(protocol.Protocol):
 
     @ivar _payload: Holds the payload portion of a netstring including the
         trailing comma
-    @type _payload: C{cStringIO.StringIO}
+    @type _payload: C{BytesIO}
 
     @ivar _expectedPayloadSize: Holds the payload size plus one for the trailing
         comma.
     @type _expectedPayloadSize: C{int}
     """
     MAX_LENGTH = 99999
-    _LENGTH = re.compile('(0|[1-9]\d*)(:)')
+    _LENGTH = re.compile(b'(0|[1-9]\d*)(:)')
 
-    _LENGTH_PREFIX = re.compile('(0|[1-9]\d*)$')
+    _LENGTH_PREFIX = re.compile(b'(0|[1-9]\d*)$')
 
     # Some error information for NetstringParseError instances.
     _MISSING_LENGTH = ("The received netstring does not start with a "
@@ -126,9 +141,6 @@ class NetstringReceiver(protocol.Protocol):
     _TOO_LONG = ("The received netstring is longer than the maximum %s "
                           "specified by self.MAX_LENGTH")
     _MISSING_COMMA = "The received netstring is not terminated by a comma."
-    _DATA_SUPPORT_DEPRECATED = ("Data passed to sendString() must be a string. "
-                               "Non-string support is deprecated since "
-                               "Twisted 10.0")
 
     # The following constants are used for determining if the NetstringReceiver
     # is parsing the length portion of a netstring, or the payload.
@@ -139,9 +151,9 @@ class NetstringReceiver(protocol.Protocol):
         Initializes the protocol.
         """
         protocol.Protocol.makeConnection(self, transport)
-        self._remainingData = ""
+        self._remainingData = b""
         self._currentPayloadSize = 0
-        self._payload = cStringIO.StringIO()
+        self._payload = BytesIO()
         self._state = self._PARSING_LENGTH
         self._expectedPayloadSize = 0
         self.brokenPeer = 0
@@ -156,12 +168,9 @@ class NetstringReceiver(protocol.Protocol):
 
         @param string: The string to send.  The necessary framing (length
             prefix, etc) will be added.
-        @type string: C{str}
+        @type string: C{bytes}
         """
-        if not isinstance(string, str):
-            warnings.warn(self._DATA_SUPPORT_DEPRECATED, DeprecationWarning, 2)
-            string = str(string)
-        self.transport.write('%d:%s,' % (len(string), string))
+        self.transport.write(_formatNetstring(string))
 
 
     def dataReceived(self, data):
@@ -173,7 +182,7 @@ class NetstringReceiver(protocol.Protocol):
 
         @param data: A chunk of data representing a (possibly partial)
             netstring
-        @type data: C{str}
+        @type data: C{bytes}
         """
         self._remainingData += data
         while self._remainingData:
@@ -192,7 +201,7 @@ class NetstringReceiver(protocol.Protocol):
 
         @param string: The complete string which was received with all
             framing (length prefix, etc) removed.
-        @type string: C{str}
+        @type string: C{bytes}
 
         @raise NotImplementedError: because the method has to be implemented
             by the child class.
@@ -292,7 +301,7 @@ class NetstringReceiver(protocol.Protocol):
             C{self.MAX_LENGTH}.
         @param lengthAsString: A chunk of data starting with a length
             specification
-        @type lengthAsString: C{str}
+        @type lengthAsString: C{bytes}
         @return: The length of the netstring
         @rtype: C{int}
         """
@@ -373,7 +382,7 @@ class NetstringReceiver(protocol.Protocol):
         else:
             self._payload.write(self._remainingData)
             self._currentPayloadSize += len(self._remainingData)
-            self._remainingData = ""
+            self._remainingData = b""
 
 
     def _payloadComplete(self):
@@ -406,7 +415,7 @@ class NetstringReceiver(protocol.Protocol):
         @raise NetstringParseError: if the last payload character is
             anything but a comma.
         """
-        if self._payload.getvalue()[-1] != ",":
+        if self._payload.getvalue()[-1:] != b",":
             raise NetstringParseError(self._MISSING_COMMA)
 
 
@@ -427,13 +436,13 @@ class LineOnlyReceiver(protocol.Protocol):
     cases that raw mode is known to be unnecessary.
 
     @cvar delimiter: The line-ending delimiter to use. By default this is
-                     '\\r\\n'.
+                     C{b'\\r\\n'}.
     @cvar MAX_LENGTH: The maximum length of a line to allow (If a
                       sent line is longer than this, the connection is dropped).
                       Default is 16384.
     """
-    _buffer = ''
-    delimiter = '\r\n'
+    _buffer = b''
+    delimiter = b'\r\n'
     MAX_LENGTH = 16384
 
     def dataReceived(self, data):
@@ -462,7 +471,7 @@ class LineOnlyReceiver(protocol.Protocol):
         Override this for when each line is received.
 
         @param line: The line which was received with the delimiter removed.
-        @type line: C{str}
+        @type line: C{bytes}
         """
         raise NotImplementedError
 
@@ -472,7 +481,7 @@ class LineOnlyReceiver(protocol.Protocol):
         Sends a line to the other end of the connection.
 
         @param line: The line to send, not including the delimiter.
-        @type line: C{str}
+        @type line: C{bytes}
         """
         return self.transport.writeSequence((line, self.delimiter))
 
@@ -497,7 +506,7 @@ class _PauseableMixin:
     def resumeProducing(self):
         self.paused = False
         self.transport.resumeProducing()
-        self.dataReceived('')
+        self.dataReceived(b'')
 
 
     def stopProducing(self):
@@ -518,14 +527,14 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
     This is useful for line-oriented protocols such as IRC, HTTP, POP, etc.
 
     @cvar delimiter: The line-ending delimiter to use. By default this is
-                     '\\r\\n'.
+                     C{b'\\r\\n'}.
     @cvar MAX_LENGTH: The maximum length of a line to allow (If a
                       sent line is longer than this, the connection is dropped).
                       Default is 16384.
     """
     line_mode = 1
-    __buffer = ''
-    delimiter = '\r\n'
+    __buffer = b''
+    delimiter = b'\r\n'
     MAX_LENGTH = 16384
 
     def clearLineBuffer(self):
@@ -533,10 +542,10 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
         Clear buffered data.
 
         @return: All of the cleared buffered data.
-        @rtype: C{str}
+        @rtype: C{bytes}
         """
         b = self.__buffer
-        self.__buffer = ""
+        self.__buffer = b""
         return b
 
 
@@ -552,14 +561,14 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
                 line, self.__buffer = self.__buffer.split(self.delimiter, 1)
             except ValueError:
                 if len(self.__buffer) > self.MAX_LENGTH:
-                    line, self.__buffer = self.__buffer, ''
+                    line, self.__buffer = self.__buffer, b''
                     return self.lineLengthExceeded(line)
                 break
             else:
                 linelength = len(line)
                 if linelength > self.MAX_LENGTH:
                     exceeded = line + self.__buffer
-                    self.__buffer = ''
+                    self.__buffer = b''
                     return self.lineLengthExceeded(exceeded)
                 why = self.lineReceived(line)
                 if why or self.transport and self.transport.disconnecting:
@@ -567,12 +576,12 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
         else:
             if not self.paused:
                 data=self.__buffer
-                self.__buffer=''
+                self.__buffer = b''
                 if data:
                     return self.rawDataReceived(data)
 
 
-    def setLineMode(self, extra=''):
+    def setLineMode(self, extra=b''):
         """
         Sets the line-mode of this receiver.
 
@@ -610,7 +619,7 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
         Override this for when each line is received.
 
         @param line: The line which was received with the delimiter removed.
-        @type line: C{str}
+        @type line: C{bytes}
         """
         raise NotImplementedError
 
@@ -620,7 +629,7 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
         Sends a line to the other end of the connection.
 
         @param line: The line to send, not including the delimiter.
-        @type line: C{str}
+        @type line: C{bytes}
         """
         return self.transport.write(line + self.delimiter)
 
@@ -692,7 +701,7 @@ class IntNStringReceiver(protocol.Protocol, _PauseableMixin):
     """
 
     MAX_LENGTH = 99999
-    _unprocessed = ""
+    _unprocessed = b""
     _compatibilityOffset = 0
 
     # Backwards compatibility support for applications which directly touch the
@@ -705,7 +714,7 @@ class IntNStringReceiver(protocol.Protocol, _PauseableMixin):
 
         @param string: The complete string which was received with all
             framing (length prefix, etc) removed.
-        @type string: C{str}
+        @type string: C{bytes}
         """
         raise NotImplementedError
 
@@ -778,7 +787,7 @@ class IntNStringReceiver(protocol.Protocol, _PauseableMixin):
 
         @param string: The string to send.  The necessary framing (length
             prefix, etc) will be added.
-        @type string: C{str}
+        @type string: C{bytes}
         """
         if len(string) >= 2 ** (8 * self.prefixLength):
             raise StringTooLongError(
@@ -867,6 +876,7 @@ class StatefulStringProtocol:
 
 
 
+@implementer(interfaces.IProducer)
 class FileSender:
     """
     A producer that sends the contents of a file to a consumer.
@@ -875,7 +885,6 @@ class FileSender:
     file-like object, read its contents, and write them out to the network,
     optionally performing some transformation on the bytes in between.
     """
-    implements(interfaces.IProducer)
 
     CHUNK_SIZE = 2 ** 14
 
@@ -937,3 +946,7 @@ class FileSender:
             self.deferred.errback(
                 Exception("Consumer asked us to stop producing"))
             self.deferred = None
+
+if _PY3:
+    # Add it back as part of ticket #6026:
+    del FileSender
