@@ -15,7 +15,7 @@ from twisted.trial import unittest
 from twisted.python.compat import set, frozenset, reduce, execfile, _PY3
 from twisted.python.compat import comparable, cmp, nativeString
 from twisted.python.compat import unicode as unicodeCompat
-from twisted.python.compat import reraise, NativeStringIO
+from twisted.python.compat import reraise, NativeStringIO, iterbytes
 from twisted.python.filepath import FilePath
 
 
@@ -513,3 +513,20 @@ class ReraiseTests(unittest.SynchronousTestCase):
                              traceback.format_tb(tb2)[-1])
         else:
             self.fail("The exception was not raised.")
+
+
+
+class Python3BytesTests(unittest.SynchronousTestCase):
+    """
+    Tests for L{iterbytes}.
+    """
+
+    def test_iteration(self):
+        """
+        When L{iterbytes} is called with a bytestring, the returned object
+        can be iterated over, resulting in the individual bytes of the
+        bytestring.
+        """
+        input = b"abcd"
+        result = list(iterbytes(input))
+        self.assertEqual(result, [b'a', b'b', b'c', b'd'])

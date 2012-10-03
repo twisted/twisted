@@ -317,6 +317,24 @@ else:
 
 
 
+if _PY3:
+    def iterbytes(originalBytes):
+        for i in range(len(originalBytes)):
+            yield originalBytes[i:i+1]
+else:
+    def iterbytes(originalBytes):
+        return originalBytes
+iterbytes.__doc__ = """
+Return an iterable wrapper for a C{bytes} object that provides the behavior of
+iterating over C{bytes} on Python 2.
+
+In particular, the results of iteration are the individual bytes (rather than
+integers as on Python 3).
+
+@param originalBytes: A C{bytes} object that will be wrapped.
+"""
+
+
 __all__ = [
     "reraise",
     "execfile",
@@ -328,4 +346,5 @@ __all__ = [
     "nativeString",
     "NativeStringIO",
     "unicode",
+    "iterbytes",
     ]
