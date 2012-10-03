@@ -10,7 +10,6 @@ with Python's reflection capabilities.
 import sys
 import types
 import pickle
-import traceback
 import weakref
 import re
 import warnings
@@ -30,7 +29,7 @@ except ImportError:
 
 from twisted.python._utilpy3 import unsignedID
 from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
-from twisted.python._deprecatepy3 import _fullyQualifiedName as fullyQualifiedName
+from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
 from twisted.python.versions import Version
 
 from twisted.python._reflectpy3 import prefixedMethods, accumulateMethods

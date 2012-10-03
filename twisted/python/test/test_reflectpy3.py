@@ -17,8 +17,7 @@ from twisted.python import _reflectpy3 as reflect
 # After twisted.python.reflect is fully ported to Python 3, import
 # fullyQualifiedName from there instead, to test the actual public interface
 # instead of this implementation detail.  See #5929.
-from twisted.python._deprecatepy3 import (
-    _fullyQualifiedName as fullyQualifiedName)
+from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
 from twisted.python import _utilpy3 as util
 
 
