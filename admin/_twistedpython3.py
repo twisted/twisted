@@ -61,7 +61,6 @@ modules = [
     "twisted.trial.test.packages",
     "twisted.trial.unittest",
     "twisted.trial.util",
-    "twisted.trial._utilpy3",
     "twisted._version",
     ]
 
@@ -103,7 +102,6 @@ testModules = [
     "twisted.trial.test.test_assertions",
     "twisted.trial.test.test_pyunitcompat",
     "twisted.trial.test.test_suppression",
-    "twisted.trial.test.test_utilpy3",
     "twisted.trial.test.test_util",
     "twisted.trial.test.test_warning",
     ]

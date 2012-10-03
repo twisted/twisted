@@ -13,7 +13,7 @@ this code is arranged.
 import warnings
 
 from twisted.python.compat import _PY3
-from twisted.trial import unittest, _utilpy3 as util
+from twisted.trial import unittest, util
 
 
 

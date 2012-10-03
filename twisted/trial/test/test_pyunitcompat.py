@@ -10,7 +10,7 @@ from zope.interface import implementer
 
 from twisted.python.compat import _PY3
 from twisted.python.failure import Failure
-from twisted.trial import _utilpy3 as util
+from twisted.trial import util
 from twisted.trial.unittest import SynchronousTestCase, PyUnitResultAdapter
 from twisted.trial.itrial import IReporter, ITestCase
 

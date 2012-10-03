@@ -20,7 +20,7 @@ from twisted.python._utilpy3 import runWithWarningsSuppressed
 from twisted.python.deprecate import (
     getDeprecationWarningString, warnAboutFunction)
 
-from twisted.trial import itrial, _utilpy3 as util
+from twisted.trial import itrial, util
 
 import unittest as pyunit
 
