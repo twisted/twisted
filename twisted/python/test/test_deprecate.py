@@ -15,7 +15,7 @@ from twisted.python.versions import Version
 from twisted.python.filepath import FilePath
 
 from twisted.python.test import deprecatedattributes
-from twisted.python.test.modules_helpers import TwistedModulesTestCase
+from twisted.python.test.modules_helpers import TwistedModulesMixin
 
 from twisted.trial.unittest import TestCase
 
@@ -226,7 +226,7 @@ class DeprecatedAttributeTests(TestCase):
 
 
 
-class ImportedModuleAttributeTests(TwistedModulesTestCase):
+class ImportedModuleAttributeTests(TwistedModulesMixin, TestCase):
     """
     Tests for L{deprecatedModuleAttribute} which involve loading a module via
     'import'.

@@ -47,6 +47,7 @@ modules = [
     "twisted.python._reflectpy3",
     "twisted.python.runtime",
     "twisted.python.test",
+    "twisted.python.test.modules_helpers",
     "twisted.python.threadable",
     "twisted.python.threadpool",
     "twisted.python._utilpy3",

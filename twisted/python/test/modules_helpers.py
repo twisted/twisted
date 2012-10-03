@@ -2,29 +2,22 @@
 # See LICENSE for details.
 
 """
-Facilities for helping test code which interacts with L{twisted.python.modules},
-or uses Python's own module system to load code.
+Facilities for helping test code which interacts with Python's module system
+to load code.
 """
+
+from __future__ import division, absolute_import
 
 import sys
 
-from twisted.trial.unittest import TestCase
-from twisted.python import modules
 from twisted.python.filepath import FilePath
 
-class TwistedModulesTestCase(TestCase):
 
-    def findByIteration(self, modname, where=modules, importPackages=False):
-        """
-        You don't ever actually want to do this, so it's not in the public API, but
-        sometimes we want to compare the result of an iterative call with a
-        lookup call and make sure they're the same for test purposes.
-        """
-        for modinfo in where.walkModules(importPackages=importPackages):
-            if modinfo.name == modname:
-                return modinfo
-        self.fail("Unable to find module %r through iteration." % (modname,))
-
+class TwistedModulesMixin:
+    """
+    A mixin for C{twisted.trial.unittest.SynchronousTestCase} providing useful
+    methods for manipulating Python's module system.
+    """
 
     def replaceSysPath(self, sysPath):
         """
@@ -50,15 +43,17 @@ class TwistedModulesTestCase(TestCase):
         sys.modules.update(sysModules)
 
 
-    def pathEntryWithOnePackage(self, pkgname="test_package"):
+    def pathEntryWithOnePackage(self, pkgname=b"test_package"):
         """
         Generate a L{FilePath} with one package, named C{pkgname}, on it, and
         return the L{FilePath} of the path entry.
         """
-        entry = FilePath(self.mktemp())
-        pkg = entry.child("test_package")
+        # Remove utf-8 encode and bytes for path segments when Filepath
+        # supports Unicode paths on Python 3 (#2366, #4736, #5203).
+        entry = FilePath(self.mktemp().encode("utf-8"))
+        pkg = entry.child(b"test_package")
         pkg.makedirs()
-        pkg.child("__init__.py").setContent("")
+        pkg.child(b"__init__.py").setContent(b"")
         return entry
 
 
