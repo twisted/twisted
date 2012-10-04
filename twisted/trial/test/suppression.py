@@ -10,6 +10,8 @@ See the L{twisted.trial.test.test_tests} module docstring for details about how
 this code is arranged.
 """
 
+from __future__ import division, absolute_import
+
 import warnings
 
 from twisted.python.compat import _PY3
@@ -94,21 +96,20 @@ class SynchronousTestSuppression2(TestSuppression2Mixin, unittest.SynchronousTes
 
 
 
-if not _PY3:
-    class AsynchronousTestSuppression(SuppressionMixin, unittest.TestCase):
-        pass
+class AsynchronousTestSuppression(SuppressionMixin, unittest.TestCase):
+    pass
 
 
 
-    class AsynchronousTestSetUpSuppression(SetUpSuppressionMixin, AsynchronousTestSuppression):
-        pass
+class AsynchronousTestSetUpSuppression(SetUpSuppressionMixin, AsynchronousTestSuppression):
+    pass
 
 
 
-    class AsynchronousTestTearDownSuppression(TearDownSuppressionMixin, AsynchronousTestSuppression):
-        pass
+class AsynchronousTestTearDownSuppression(TearDownSuppressionMixin, AsynchronousTestSuppression):
+    pass
 
 
 
-    class AsynchronousTestSuppression2(TestSuppression2Mixin, unittest.TestCase):
-        pass
+class AsynchronousTestSuppression2(TestSuppression2Mixin, unittest.TestCase):
+    pass

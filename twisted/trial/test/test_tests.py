@@ -21,13 +21,23 @@ is intentionally only provided by TestCase, not SynchronousTestCase, is excepted
 of course.
 """
 
-import gc, StringIO, sys, weakref
+from __future__ import division, absolute_import
 
+import gc, sys, weakref
+import unittest as pyunit
+
+from twisted.python.compat import _PY3, NativeStringIO
 from twisted.internet import defer, reactor
-from twisted.trial import unittest, runner, reporter, util
+from twisted.trial import unittest, reporter, util
+if not _PY3:
+    from twisted.trial import runner
 from twisted.trial.test import erroneous
-from twisted.trial.test.test_reporter import LoggingReporter
 from twisted.trial.test.test_suppression import SuppressionMixin
+
+
+# Skip messages that are used in multiple places:
+_PY3PORTNEEDED = "Requires runner and/or reporter to be ported (#5964, #5965)"
+
 
 class ResultsTestMixin(object):
     """
@@ -38,8 +48,8 @@ class ResultsTestMixin(object):
         Load tests from the given test case class and create a new reporter to
         use for running it.
         """
-        self.loader = runner.TestLoader()
-        self.suite = self.loader.loadClass(suite)
+        self.loader = pyunit.TestLoader()
+        self.suite = self.loader.loadTestsFromTestCase(suite)
         self.reporter = reporter.TestResult()
 
 
@@ -532,8 +542,11 @@ class TestReactorCleanup(unittest.SynchronousTestCase):
     methods.
     """
 
+    if _PY3:
+        skip = _PY3PORTNEEDED
+
     def setUp(self):
-        self.result = reporter.Reporter(StringIO.StringIO())
+        self.result = reporter.Reporter(NativeStringIO())
         self.loader = runner.TestLoader()
 
 
@@ -575,14 +588,14 @@ class FixtureMixin(object):
 
     def setUp(self):
         self.reporter = reporter.Reporter()
-        self.loader = runner.TestLoader()
+        self.loader = pyunit.TestLoader()
 
 
     def test_brokenSetUp(self):
         """
         When setUp fails, the error is recorded in the result object.
         """
-        suite = self.loader.loadClass(self.TestFailureInSetUp)
+        suite = self.loader.loadTestsFromTestCase(self.TestFailureInSetUp)
         suite.run(self.reporter)
         self.assertTrue(len(self.reporter.errors) > 0)
         self.assertIsInstance(
@@ -594,7 +607,7 @@ class FixtureMixin(object):
         """
         When tearDown fails, the error is recorded in the result object.
         """
-        suite = self.loader.loadClass(self.TestFailureInTearDown)
+        suite = self.loader.loadTestsFromTestCase(self.TestFailureInTearDown)
         suite.run(self.reporter)
         errors = self.reporter.errors
         self.assertTrue(len(errors) > 0)
@@ -640,6 +653,9 @@ class GCMixin:
     I provide a few mock tests that log setUp, tearDown, test execution and
     garbage collection. I'm used to test whether gc.collect gets called.
     """
+
+    if _PY3:
+        skip = _PY3PORTNEEDED
 
     class BasicTest(unittest.SynchronousTestCase):
         def setUp(self):
@@ -703,6 +719,9 @@ class TestGarbageCollection(GCMixin, unittest.SynchronousTestCase):
 
 
 class TestUnhandledDeferred(unittest.SynchronousTestCase):
+
+    if _PY3:
+        skip = _PY3PORTNEEDED
 
     def setUp(self):
         from twisted.trial.test import weird
@@ -874,6 +893,9 @@ class SuiteClearingMixin(object):
     """
     Tests for our extension that allows us to clear out a L{TestSuite}.
     """
+    if _PY3:
+        skip = _PY3PORTNEEDED
+
     def test_clearSuite(self):
         """
         Calling L{unittest._clearSuite} on a populated L{TestSuite} removes
@@ -925,6 +947,9 @@ class TestDecoratorMixin(object):
     """
     Tests for our test decoration features.
     """
+    if _PY3:
+        skip = _PY3PORTNEEDED
+
     def assertTestsEqual(self, observed, expected):
         """
         Assert that the given decorated tests are equal.
@@ -963,6 +988,8 @@ class TestDecoratorMixin(object):
         """
         test = self.TestCase()
         decoratedTest = unittest.TestDecorator(test)
+        # Move to top in ticket #5964:
+        from twisted.trial.test.test_reporter import LoggingReporter
         result = LoggingReporter()
         decoratedTest.run(result)
         self.assertTestsEqual(result.test, decoratedTest)
@@ -978,6 +1005,8 @@ class TestDecoratorMixin(object):
         """
         test = self.TestCase()
         decoratedTest = unittest.TestDecorator(test)
+        # Move to top in ticket #5964:
+        from twisted.trial.test.test_reporter import LoggingReporter
         result = LoggingReporter()
         decoratedTest(result)
         self.assertTestsEqual(result.test, decoratedTest)
@@ -1182,6 +1211,9 @@ class IterateTestsMixin(object):
     L{_iterateTests} returns a list of all test cases in a test suite or test
     case.
     """
+    if _PY3:
+        skip = _PY3PORTNEEDED
+
     def test_iterateTestCase(self):
         """
         L{_iterateTests} on a single test case returns a list containing that

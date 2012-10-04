@@ -5,6 +5,8 @@
 Tests for Deferred handling by L{twisted.trial.unittest.TestCase}.
 """
 
+from __future__ import division, absolute_import
+
 from twisted.trial import unittest
 from twisted.internet import defer, threads, reactor
 

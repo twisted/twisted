@@ -7,9 +7,11 @@ Tests for async assertions provided by C{twisted.trial.unittest.TestCase}.
 
 from __future__ import division, absolute_import
 
+import unittest as pyunit
+
 from twisted.python import failure
 from twisted.internet import defer
-from twisted.trial import unittest, reporter
+from twisted.trial import unittest
 
 
 class TestAsynchronousAssertions(unittest.TestCase):
@@ -76,6 +78,6 @@ class TestAsynchronousAssertions(unittest.TestCase):
                 return d
 
         test = TC('test_assertFailure')
-        result = reporter.TestResult()
+        result = pyunit.TestResult()
         test.run(result)
         self.assertEqual(1, len(result.failures))

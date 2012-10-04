@@ -8,25 +8,31 @@
 Defines classes that handle the results of tests.
 """
 
+from __future__ import division, absolute_import
+
 import sys
 import os
 import time
 import warnings
+import unittest as pyunit
+
+from zope.interface import implementer
 
 from twisted.python.compat import set
-from twisted.python import reflect, log
+from twisted.python import _reflectpy3 as reflect, log
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
-from twisted.python.util import OrderedDict, untilConcludes
+from twisted.python._utilpy3 import untilConcludes
+try:
+    from collections import OrderedDict
+except ImportError:
+    from twisted.python.util import OrderedDict
 from twisted.trial import itrial, util
 
 try:
     from subunit import TestProtocolClient
 except ImportError:
     TestProtocolClient = None
-from zope.interface import implements
-
-pyunit = __import__('unittest')
 
 
 class BrokenTestCaseWarning(Warning):
@@ -38,7 +44,7 @@ class BrokenTestCaseWarning(Warning):
 class SafeStream(object):
     """
     Wraps a stream object so that all C{write} calls are wrapped in
-    L{untilConcludes}.
+    L{untilConcludes<twisted.python.util.untilConcludes>}.
     """
 
     def __init__(self, original):
@@ -51,6 +57,8 @@ class SafeStream(object):
         return untilConcludes(self.original.write, *a, **kw)
 
 
+
+@implementer(itrial.IReporter)
 class TestResult(pyunit.TestResult, object):
     """
     Accumulates the results of several L{twisted.trial.unittest.TestCase}s.
@@ -58,7 +66,6 @@ class TestResult(pyunit.TestResult, object):
     @ivar successes: count the number of successes achieved by the test run.
     @type successes: C{int}
     """
-    implements(itrial.IReporter)
 
     def __init__(self):
         super(TestResult, self).__init__()
@@ -194,6 +201,7 @@ class TestResult(pyunit.TestResult, object):
 
 
 
+@implementer(itrial.IReporter)
 class TestResultDecorator(proxyForInterface(itrial.IReporter,
                                             "_originalReporter")):
     """
@@ -203,16 +211,14 @@ class TestResultDecorator(proxyForInterface(itrial.IReporter,
     @type _originalReporter: A provider of L{itrial.IReporter}
     """
 
-    implements(itrial.IReporter)
 
 
-
+@implementer(itrial.IReporter)
 class UncleanWarningsReporterWrapper(TestResultDecorator):
     """
     A wrapper for a reporter that converts L{util.DirtyReactorAggregateError}s
     to warnings.
     """
-    implements(itrial.IReporter)
 
     def addError(self, test, error):
         """
@@ -300,6 +306,7 @@ class _AdaptedReporter(TestResultDecorator):
 
 
 
+@implementer(itrial.IReporter)
 class Reporter(TestResult):
     """
     A basic L{TestResult} with support for writing to a stream.
@@ -318,8 +325,6 @@ class Reporter(TestResult):
         events.
     @type _publisher: L{LogPublisher} (or another type sufficiently similar)
     """
-
-    implements(itrial.IReporter)
 
     _separator = '-' * 79
     _doubleSeparator = '=' * 79
@@ -931,6 +936,7 @@ class _NullColorizer(object):
 
 
 
+@implementer(itrial.IReporter)
 class SubunitReporter(object):
     """
     Reports test output via Subunit.
@@ -942,8 +948,6 @@ class SubunitReporter(object):
 
     @since: 10.0
     """
-    implements(itrial.IReporter)
-
 
     def __init__(self, stream=sys.stdout, tbformat='default',
                  realtime=False, publisher=None):
@@ -1170,7 +1174,7 @@ class TreeReporter(Reporter):
         if len(segments) == 0:
             return segments
         segments = [
-            seg for seg in '.'.join(segments[:-1]), segments[-1]
+            seg for seg in ('.'.join(segments[:-1]), segments[-1])
             if len(seg) > 0]
         return segments
 

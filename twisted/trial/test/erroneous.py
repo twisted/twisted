@@ -10,7 +10,7 @@ See the L{twisted.trial.test.test_tests} module docstring for details about how
 this code is arranged.
 """
 
-from __future__ import division
+from __future__ import division, absolute_import
 
 from twisted.trial import unittest, util
 from twisted.internet import reactor, protocol, defer
@@ -23,7 +23,7 @@ class FoolishError(Exception):
 
 class FailureInSetUpMixin(object):
     def setUp(self):
-        raise FoolishError, "I am a broken setUp method"
+        raise FoolishError("I am a broken setUp method")
 
     def test_noop(self):
         pass
@@ -44,7 +44,7 @@ class AsynchronousTestFailureInSetUp(
 
 class FailureInTearDownMixin(object):
     def tearDown(self):
-        raise FoolishError, "I am a broken tearDown method"
+        raise FoolishError("I am a broken tearDown method")
 
     def test_noop(self):
         pass
@@ -136,7 +136,7 @@ class DelayedCall(unittest.TestCase):
 class ReactorCleanupTests(unittest.TestCase):
     def test_leftoverPendingCalls(self):
         def _():
-            print 'foo!'
+            print('foo!')
         reactor.callLater(10000.0, _)
 
 class SocketOpenTest(unittest.TestCase):

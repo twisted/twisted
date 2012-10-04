@@ -129,8 +129,8 @@ class TestErrorReporting(StringTest):
             '[ERROR]',
             'Traceback (most recent call last):',
             re.compile(r'^\s+File .*erroneous\.py., line \d+, in setUp$'),
-            re.compile(r'^\s+raise FoolishError, '
-                       r'.I am a broken setUp method.$'),
+            re.compile(r'^\s+raise FoolishError.'
+                       r'.I am a broken setUp method..$'),
             ('twisted.trial.test.erroneous.FoolishError: '
              'I am a broken setUp method'),
             '%s.%s.test_noop' % (cls.__module__, cls.__name__)]

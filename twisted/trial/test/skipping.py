@@ -11,6 +11,8 @@ See the L{twisted.trial.test.test_tests} module docstring for details about how
 this code is arranged.
 """
 
+from __future__ import division, absolute_import
+
 from twisted.trial.unittest import (
     SynchronousTestCase, TestCase, SkipTest, FailTest)
 

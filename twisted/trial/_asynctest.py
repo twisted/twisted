@@ -8,23 +8,25 @@ Things likely to be used by writers of unit tests.
 Maintainer: Jonathan Lange
 """
 
+from __future__ import division, absolute_import
 
-import doctest
-import warnings, gc
+import warnings
 
-from twisted.internet import defer, utils
-from twisted.python import components, failure
+from zope.interface import implementer
 
-from twisted.trial import itrial, reporter, util
+# We can't import reactor at module-level because this code runs before trial
+# installs a user-specified reactor, installing the default reactor and
+# breaking reactor installation. See also #6047.
+from twisted.internet import defer, _utilspy3 as utils
+from twisted.python import failure
+
+from twisted.trial import itrial, util
 from twisted.trial._synctest import (
-    FailTest, SkipTest, SynchronousTestCase, _logObserver)
-
-pyunit = __import__('unittest')
-
-from zope.interface import implements
+    FailTest, SkipTest, SynchronousTestCase)
 
 _wait_is_running = []
 
+@implementer(itrial.ITestCase)
 class TestCase(SynchronousTestCase):
     """
     A unit test. The atom of the unit testing universe.
@@ -39,7 +41,6 @@ class TestCase(SynchronousTestCase):
     raise an error if it takes longer than C{timeout} seconds.
     If not set, util.DEFAULT_TIMEOUT_DURATION is used.
     """
-    implements(itrial.ITestCase)
 
     def __init__(self, methodName='runTest'):
         """
@@ -257,7 +258,7 @@ class TestCase(SynchronousTestCase):
 
         @param reactor: The Twisted reactor.
         """
-        for name, method in self._reactorMethods.iteritems():
+        for name, method in self._reactorMethods.items():
             setattr(reactor, name, method)
         self._reactorMethods = {}
 
@@ -354,10 +355,10 @@ class TestCase(SynchronousTestCase):
     def _wait(self, d, running=_wait_is_running):
         """Take a Deferred that only ever callbacks. Block until it happens.
         """
-        from twisted.internet import reactor
         if running:
             raise RuntimeError("_wait is not reentrant")
 
+        from twisted.internet import reactor
         results = []
         def append(any):
             if results is not None:
@@ -412,221 +413,3 @@ class TestCase(SynchronousTestCase):
         finally:
             results = None
             running.pop()
-
-
-
-def suiteVisit(suite, visitor):
-    """
-    Visit each test in C{suite} with C{visitor}.
-
-    Deprecated in Twisted 8.0.
-
-    @param visitor: A callable which takes a single argument, the L{TestCase}
-    instance to visit.
-    @return: None
-    """
-    warnings.warn("Test visitors deprecated in Twisted 8.0",
-                  category=DeprecationWarning)
-    for case in suite._tests:
-        visit = getattr(case, 'visit', None)
-        if visit is not None:
-            visit(visitor)
-        elif isinstance(case, pyunit.TestCase):
-            case = itrial.ITestCase(case)
-            case.visit(visitor)
-        elif isinstance(case, pyunit.TestSuite):
-            suiteVisit(case, visitor)
-        else:
-            case.visit(visitor)
-
-
-
-class TestSuite(pyunit.TestSuite):
-    """
-    Extend the standard library's C{TestSuite} with support for the visitor
-    pattern and a consistently overrideable C{run} method.
-    """
-
-    visit = suiteVisit
-
-    def __call__(self, result):
-        return self.run(result)
-
-
-    def run(self, result):
-        """
-        Call C{run} on every member of the suite.
-        """
-        # we implement this because Python 2.3 unittest defines this code
-        # in __call__, whereas 2.4 defines the code in run.
-        for test in self._tests:
-            if result.shouldStop:
-                break
-            test(result)
-        return result
-
-
-
-class TestDecorator(components.proxyForInterface(itrial.ITestCase,
-                                                 "_originalTest")):
-    """
-    Decorator for test cases.
-
-    @param _originalTest: The wrapped instance of test.
-    @type _originalTest: A provider of L{itrial.ITestCase}
-    """
-
-    implements(itrial.ITestCase)
-
-
-    def __call__(self, result):
-        """
-        Run the unit test.
-
-        @param result: A TestResult object.
-        """
-        return self.run(result)
-
-
-    def run(self, result):
-        """
-        Run the unit test.
-
-        @param result: A TestResult object.
-        """
-        return self._originalTest.run(
-            reporter._AdaptedReporter(result, self.__class__))
-
-
-
-def _clearSuite(suite):
-    """
-    Clear all tests from C{suite}.
-
-    This messes with the internals of C{suite}. In particular, it assumes that
-    the suite keeps all of its tests in a list in an instance variable called
-    C{_tests}.
-    """
-    suite._tests = []
-
-
-def decorate(test, decorator):
-    """
-    Decorate all test cases in C{test} with C{decorator}.
-
-    C{test} can be a test case or a test suite. If it is a test suite, then the
-    structure of the suite is preserved.
-
-    L{decorate} tries to preserve the class of the test suites it finds, but
-    assumes the presence of the C{_tests} attribute on the suite.
-
-    @param test: The C{TestCase} or C{TestSuite} to decorate.
-
-    @param decorator: A unary callable used to decorate C{TestCase}s.
-
-    @return: A decorated C{TestCase} or a C{TestSuite} containing decorated
-        C{TestCase}s.
-    """
-
-    try:
-        tests = iter(test)
-    except TypeError:
-        return decorator(test)
-
-    # At this point, we know that 'test' is a test suite.
-    _clearSuite(test)
-
-    for case in tests:
-        test.addTest(decorate(case, decorator))
-    return test
-
-
-
-class _PyUnitTestCaseAdapter(TestDecorator):
-    """
-    Adapt from pyunit.TestCase to ITestCase.
-    """
-
-
-    def visit(self, visitor):
-        """
-        Deprecated in Twisted 8.0.
-        """
-        warnings.warn("Test visitors deprecated in Twisted 8.0",
-                      category=DeprecationWarning)
-        visitor(self)
-
-
-
-class _BrokenIDTestCaseAdapter(_PyUnitTestCaseAdapter):
-    """
-    Adapter for pyunit-style C{TestCase} subclasses that have undesirable id()
-    methods. That is L{unittest.FunctionTestCase} and L{unittest.DocTestCase}.
-    """
-
-    def id(self):
-        """
-        Return the fully-qualified Python name of the doctest.
-        """
-        testID = self._originalTest.shortDescription()
-        if testID is not None:
-            return testID
-        return self._originalTest.id()
-
-
-
-class _ForceGarbageCollectionDecorator(TestDecorator):
-    """
-    Forces garbage collection to be run before and after the test. Any errors
-    logged during the post-test collection are added to the test result as
-    errors.
-    """
-
-    def run(self, result):
-        gc.collect()
-        TestDecorator.run(self, result)
-        _logObserver._add()
-        gc.collect()
-        for error in _logObserver.getErrors():
-            result.addError(self, error)
-        _logObserver.flushErrors()
-        _logObserver._remove()
-
-
-components.registerAdapter(
-    _PyUnitTestCaseAdapter, pyunit.TestCase, itrial.ITestCase)
-
-
-components.registerAdapter(
-    _BrokenIDTestCaseAdapter, pyunit.FunctionTestCase, itrial.ITestCase)
-
-
-_docTestCase = getattr(doctest, 'DocTestCase', None)
-if _docTestCase:
-    components.registerAdapter(
-        _BrokenIDTestCaseAdapter, _docTestCase, itrial.ITestCase)
-
-
-def _iterateTests(testSuiteOrCase):
-    """
-    Iterate through all of the test cases in C{testSuiteOrCase}.
-    """
-    try:
-        suite = iter(testSuiteOrCase)
-    except TypeError:
-        yield testSuiteOrCase
-    else:
-        for test in suite:
-            for subtest in _iterateTests(test):
-                yield subtest
-
-
-
-# Support for Python 2.3
-try:
-    iter(pyunit.TestSuite())
-except TypeError:
-    # Python 2.3's TestSuite doesn't support iteration. Let's monkey patch it!
-    def __iter__(self):
-        return iter(self._tests)
-    pyunit.TestSuite.__iter__ = __iter__

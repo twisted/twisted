@@ -12,14 +12,15 @@ from __future__ import division, absolute_import
 from twisted.trial._synctest import (
     FailTest, SkipTest, SynchronousTestCase, PyUnitResultAdapter, Todo,
     makeTodo)
+from twisted.trial._asynctest import TestCase
 
 from twisted.python.compat import _PY3
 
 if not _PY3:
-    from twisted.trial._asynctest import (
-        TestSuite, TestCase, TestDecorator, suiteVisit,
+    from twisted.trial._asyncrunner import (
+        TestSuite, TestDecorator, suiteVisit,
         decorate)
-    from twisted.trial._asynctest import (
+    from twisted.trial._asyncrunner import (
         _ForceGarbageCollectionDecorator, _iterateTests, _clearSuite)
 
 # Further obscure the origins of these objects, to reduce surprise (and this is
