@@ -25,5 +25,32 @@
     base="twisted.python.failure">Failure</code>) in Python 2. In Python 3,
     the wrapped exception will be re-raised.</p>
 
+    <h2>Byte Strings and Text Strings</h2>
+
+    <p>Several APIs which on Python 2 accepted or produced byte strings
+    (instances of <code>str</code>, sometimes just called <em>bytes</em>) have
+    changed to accept or produce text strings (instances of <code>str</code>,
+    sometimes just called <em>text</em> or <em>unicode</em>) on Python 3.</p>
+
+    <p>From <code>twisted.internet.address</code>, the <code>IPv4Address</code>
+    and <code>IPv6Address</code> classes have had two attributes change from
+    byte strings to text strings: <code>type</code> and <code>host</code>.</p>
+
+    <p><code>twisted.python.log</code> has shifted significantly towards text
+    strings from byte strings.  Logging events, particular those produced by a
+    call like <code>msg("foo")</code>, must now be text strings.  Consequently,
+    on Python 3, event dictionaries passed to log observes will contain text
+    strings where they previously contained byte strings.</p>
+
+    <p><code>twisted.python.runtime.platformType</code> and the return value
+    from <code>twisted.python.runtime.Platform.getType</code> are now both text
+    strings.</p>
+
+    <p><code>twisted.python.filepath.FilePath</code> has <em>not</em> changed.
+    It supports only byte strings.  This will probably require applications to
+    update their usage of <code>FilePath</code>, at least to pass explicit byte
+    string literals rather than "native" string literals (which are text on
+    Python 3).</p>
+
   </body>
 </html>
