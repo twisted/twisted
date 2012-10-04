@@ -6,6 +6,8 @@ This module contains tests for L{twisted.internet.task.Cooperator} and
 related functionality.
 """
 
+from __future__ import division, absolute_import
+
 from twisted.internet import reactor, defer, task
 from twisted.trial import unittest
 
@@ -207,7 +209,7 @@ class TestCooperator(unittest.TestCase):
         c._tick()
         c.stop()
         self.failUnless(_TPF.stopped)
-        self.assertEqual(output, range(10))
+        self.assertEqual(output, list(range(10)))
 
 
     def testCallbackReCoiterate(self):

@@ -29,6 +29,7 @@ modules = [
     "twisted.internet.main",
     "twisted.internet.reactor", # don't expect it to work yet, though!
     "twisted.internet._signals",
+    "twisted.internet.task",
     "twisted.internet.test",
     "twisted.internet.test.modulehelpers",
     "twisted.internet.test.reactormixins",
@@ -99,6 +100,7 @@ testModules = [
     "twisted.python.test.test_versions",
     "twisted.test.test_compat",
     "twisted.test.test_context",
+    "twisted.test.test_cooperator",
     "twisted.test.test_defer",
     "twisted.test.test_error",
     "twisted.test.test_failure",
@@ -107,6 +109,7 @@ testModules = [
     "twisted.test.test_monkey",
     "twisted.test.test_paths",
     "twisted.test.test_setup",
+    "twisted.test.test_task",
     "twisted.test.test_threadable",
     "twisted.test.test_twisted",
     "twisted.test.test_threadpool",

@@ -5,6 +5,8 @@
 Tests for L{twisted.internet.task}.
 """
 
+from __future__ import division, absolute_import
+
 from twisted.python.compat import set
 
 from twisted.trial import unittest
@@ -545,6 +547,23 @@ class LoopTestCase(unittest.TestCase):
         self.assertEqual(ran, [])
         c.advance(1)
         self.assertEqual(ran, [None])
+
+
+    def test_reprFunction(self):
+        """
+        L{LoopingCall.__repr__} includes the wrapped function's name.
+        """
+        self.assertEqual(repr(task.LoopingCall(installReactor, 1, key=2)),
+                         "LoopingCall<None>(installReactor, *(1,), **{'key': 2})")
+
+
+    def test_reprMethod(self):
+        """
+        L{LoopingCall.__repr__} includes the wrapped method's full name.
+        """
+        self.assertEqual(
+            repr(task.LoopingCall(TestableLoopingCall.__init__)),
+            "LoopingCall<None>(TestableLoopingCall.__init__, *(), **{})")
 
 
 

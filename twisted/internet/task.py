@@ -6,6 +6,8 @@
 Scheduling utility methods and classes.
 """
 
+from __future__ import division, absolute_import
+
 __metaclass__ = type
 
 import time
@@ -240,8 +242,10 @@ class LoopingCall:
 
 
     def __repr__(self):
-        if hasattr(self.f, 'func_name'):
-            func = self.f.func_name
+        if hasattr(self.f, '__qualname__'):
+            func = self.f.__qualname__
+        elif hasattr(self.f, '__name__'):
+            func = self.f.__name__
             if hasattr(self.f, 'im_class'):
                 func = self.f.im_class.__name__ + '.' + func
         else:
@@ -475,7 +479,7 @@ class CooperativeTask(object):
         pausing if the result was a L{defer.Deferred}.
         """
         try:
-            result = self._iterator.next()
+            result = next(self._iterator)
         except StopIteration:
             self._completeWith(TaskDone(), self._iterator)
         except:
