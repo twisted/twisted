@@ -15,7 +15,8 @@ except ImportError:
 from UserDict import UserDict
 
 from twisted.python._utilpy3 import (FancyEqMixin, setIDFunction, unsignedID,
-                                     untilConcludes, runWithWarningsSuppressed)
+                                     untilConcludes, runWithWarningsSuppressed,
+                                     FancyStrMixin)
 
 
 class InsensitiveDict:
@@ -539,24 +540,6 @@ class _IntervalDifferentialIterator:
                         i[2] -= 1
                 return
         raise ValueError, "Specified interval not in IntervalDifferential"
-
-
-class FancyStrMixin:
-    """
-    Set showAttributes to a sequence of strings naming attributes, OR
-    sequences of C{(attributeName, displayName, formatCharacter)}.
-    """
-    showAttributes = ()
-    def __str__(self):
-        r = ['<', hasattr(self, 'fancybasename') and self.fancybasename or self.__class__.__name__]
-        for attr in self.showAttributes:
-            if isinstance(attr, str):
-                r.append(' %s=%r' % (attr, getattr(self, attr)))
-            else:
-                r.append((' %s=' + attr[2]) % (attr[1], getattr(self, attr[0])))
-        r.append('>')
-        return ''.join(r)
-    __repr__ = __str__
 
 
 

@@ -122,3 +122,37 @@ def runWithWarningsSuppressed(suppressedWarnings, f, *args, **kwargs):
         for a, kw in suppressedWarnings:
             warnings.filterwarnings(*a, **kw)
         return f(*args, **kwargs)
+
+
+
+class FancyStrMixin:
+    """
+    Mixin providing a flexible implementation of C{__str__}.
+
+    C{__str__} output will begin with the name of the class, or the contents
+    of the attribute C{fancybasename} if it set.
+
+    The body of C{__str__} can be controlled by overriding C{showAttributes}
+    in a subclass.  Set C{showAttributes} to a sequence of strings naming
+    attributes, or sequences of C{(attributeName, displayName,
+    formatCharacter)}. In the latter case, the attribute is looked up using
+    C{attributeName}, but the output uses C{displayName} instead, and renders
+    the value of the attribute using C{formatCharacter}, e.g. C{"%.3f"} might
+    be used for a float.
+    """
+    # Override in subclasses:
+    showAttributes = ()
+
+
+    def __str__(self):
+        r = ['<', (hasattr(self, 'fancybasename') and self.fancybasename)
+             or self.__class__.__name__]
+        for attr in self.showAttributes:
+            if isinstance(attr, str):
+                r.append(' %s=%r' % (attr, getattr(self, attr)))
+            else:
+                r.append((' %s=' + attr[2]) % (attr[1], getattr(self, attr[0])))
+        r.append('>')
+        return ''.join(r)
+
+    __repr__ = __str__
