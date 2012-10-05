@@ -15,7 +15,7 @@ from twisted.trial import unittest
 from twisted.python.compat import set, frozenset, reduce, execfile, _PY3
 from twisted.python.compat import comparable, cmp, nativeString
 from twisted.python.compat import unicode as unicodeCompat
-from twisted.python.compat import reraise, NativeStringIO, iterbytes
+from twisted.python.compat import reraise, NativeStringIO, iterbytes, intToBytes
 from twisted.python.filepath import FilePath
 
 
@@ -518,7 +518,7 @@ class ReraiseTests(unittest.SynchronousTestCase):
 
 class Python3BytesTests(unittest.SynchronousTestCase):
     """
-    Tests for L{iterbytes}.
+    Tests for L{iterbytes}, L{intToBytes}.
     """
 
     def test_iteration(self):
@@ -530,3 +530,11 @@ class Python3BytesTests(unittest.SynchronousTestCase):
         input = b"abcd"
         result = list(iterbytes(input))
         self.assertEqual(result, [b'a', b'b', b'c', b'd'])
+
+
+    def test_intToBytes(self):
+        """
+        When L{intToBytes} is called with an integer, the result is an
+        ASCII-encoded string representation of the number.
+        """
+        self.assertEqual(intToBytes(213), b"213")

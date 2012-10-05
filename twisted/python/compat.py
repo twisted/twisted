@@ -317,13 +317,25 @@ else:
 
 
 
+# Functions for dealing with Python 3's bytes type, which is somewhat
+# different than Python 2's:
 if _PY3:
     def iterbytes(originalBytes):
         for i in range(len(originalBytes)):
             yield originalBytes[i:i+1]
+
+
+    def intToBytes(i):
+        return ("%d" % i).encode("ascii")
 else:
     def iterbytes(originalBytes):
         return originalBytes
+
+
+    def intToBytes(i):
+        return b"%d" % i
+
+
 iterbytes.__doc__ = """
 Return an iterable wrapper for a C{bytes} object that provides the behavior of
 iterating over C{bytes} on Python 2.
@@ -332,6 +344,16 @@ In particular, the results of iteration are the individual bytes (rather than
 integers as on Python 3).
 
 @param originalBytes: A C{bytes} object that will be wrapped.
+"""
+
+intToBytes.__doc__ = """
+Convert the given integer into C{bytes}, as ASCII-encoded Arab numeral.
+
+In other words, this is equivalent to calling C{bytes} in Python 2 on an
+integer.
+
+@param i: The C{int} to convert to C{bytes}.
+@rtype: C{bytes}
 """
 
 
@@ -347,4 +369,5 @@ __all__ = [
     "NativeStringIO",
     "unicode",
     "iterbytes",
+    "intToBytes",
     ]
