@@ -5,6 +5,8 @@
 Test cases for L{twisted.python.randbytes}.
 """
 
+from __future__ import division, absolute_import
+
 import os
 
 from twisted.trial import unittest
@@ -50,7 +52,7 @@ class SecureRandomTestCase(SecureRandomTestCaseBase, unittest.TestCase):
 
 
 class ConditionalSecureRandomTestCase(SecureRandomTestCaseBase,
-                                      unittest.TestCase):
+                                      unittest.SynchronousTestCase):
     """
     Test random sources one by one, then remove it to.
     """
@@ -97,7 +99,7 @@ class ConditionalSecureRandomTestCase(SecureRandomTestCaseBase,
 
 
 
-class RandomTestCaseBase(SecureRandomTestCaseBase, unittest.TestCase):
+class RandomTestCaseBase(SecureRandomTestCaseBase, unittest.SynchronousTestCase):
     """
     'Normal' random test cases.
     """
