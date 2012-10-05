@@ -36,7 +36,6 @@ class FancyEqMixin:
         return not result
 
 
-
 _idFunction = id
 
 def setIDFunction(idFunction):
@@ -130,15 +129,17 @@ class FancyStrMixin:
     Mixin providing a flexible implementation of C{__str__}.
 
     C{__str__} output will begin with the name of the class, or the contents
-    of the attribute C{fancybasename} if it set.
+    of the attribute C{fancybasename} if it is set.
 
-    The body of C{__str__} can be controlled by overriding C{showAttributes}
-    in a subclass.  Set C{showAttributes} to a sequence of strings naming
-    attributes, or sequences of C{(attributeName, displayName,
-    formatCharacter)}. In the latter case, the attribute is looked up using
-    C{attributeName}, but the output uses C{displayName} instead, and renders
-    the value of the attribute using C{formatCharacter}, e.g. C{"%.3f"} might
-    be used for a float.
+    The body of C{__str__} can be controlled by overriding C{showAttributes} in
+    a subclass.  Set C{showAttributes} to a sequence of strings naming
+    attributes, or sequences of C{(attributeName, callable)}, or sequences of
+    C{(attributeName, displayName, formatCharacter)}. In the second case, the
+    callable is passed the value of the attribute and its return value used in
+    the output of C{__str__}.  In the final case, the attribute is looked up
+    using C{attributeName}, but the output uses C{displayName} instead, and
+    renders the value of the attribute using C{formatCharacter}, e.g. C{"%.3f"}
+    might be used for a float.
     """
     # Override in subclasses:
     showAttributes = ()
@@ -150,6 +151,8 @@ class FancyStrMixin:
         for attr in self.showAttributes:
             if isinstance(attr, str):
                 r.append(' %s=%r' % (attr, getattr(self, attr)))
+            elif len(attr) == 2:
+                r.append((' %s=' % (attr[0],)) + attr[1](getattr(self, attr[0])))
             else:
                 r.append((' %s=' + attr[2]) % (attr[1], getattr(self, attr[0])))
         r.append('>')
