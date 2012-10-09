@@ -6,6 +6,8 @@
 Base functionality useful to various parts of Twisted Names.
 """
 
+from __future__ import division, absolute_import
+
 import socket
 
 from twisted.names import dns
@@ -16,13 +18,17 @@ from twisted.names.error import DNSUnknownError
 from twisted.internet import defer, error
 from twisted.python import failure
 
+# Helpers for indexing the three-tuples that get thrown around by this code a
+# lot.
+_ANS, _AUTH, _ADD = range(3)
+
 EMPTY_RESULT = (), (), ()
 
 class ResolverBase:
     """
-    L{ResolverBase} is a base class for L{IResolver} implementations which
-    deals with a lot of the boilerplate of implementing all of the lookup
-    methods.
+    L{ResolverBase} is a base class for implementations of
+    L{IResolver<twisted.internet.interfaces.IResolver>} which deals with a lot
+    of the boilerplate of implementing all of the lookup methods.
 
     @cvar _errormap: A C{dict} mapping DNS protocol failure response codes
         to exception classes which will be used to represent those failures.
@@ -52,11 +58,30 @@ class ResolverBase:
         return self._errormap.get(responseCode, DNSUnknownError)
 
 
-    def query(self, query, timeout = None):
+    def query(self, query, timeout=None):
+        """
+        Dispatch C{query} to the method which can handle its type.
+
+        @param query: The DNS query being issued, to which a response is to be
+            generated.
+        @type query: L{twisted.names.dns.Query}
+
+        @return: A L{Deferred} which fires with a three-tuple of lists of
+            L{twisted.names.dns.RRHeader} instances.  The first element of the
+            tuple gives answers.  The second element of the tuple gives
+            authorities.  The third element of the tuple gives additional
+            information.  The L{Deferred} may instead fail with one of the
+            exceptions defined in L{twisted.names.error} or with
+            C{NotImplementedError}.
+        """
         try:
-            return self.typeToMethod[query.type](str(query.name), timeout)
-        except KeyError, e:
-            return defer.fail(failure.Failure(NotImplementedError(str(self.__class__) + " " + str(query.type))))
+            method = self.typeToMethod[query.type]
+        except KeyError:
+            return defer.fail(failure.Failure(NotImplementedError(
+                        str(self.__class__) + " " + str(query.type))))
+        else:
+            return defer.maybeDeferred(method, query.name.name, timeout)
+
 
     def _lookup(self, name, cls, type, timeout):
         return defer.fail(NotImplementedError("ResolverBase._lookup"))
@@ -210,7 +235,8 @@ class ResolverBase:
             ).addCallback(self._cbRecords, name, effort
             )
 
-    def _cbRecords(self, (ans, auth, add), name, effort):
+    def _cbRecords(self, records, name, effort):
+        (ans, auth, add) = records
         result = extractRecord(self, dns.Name(name), ans + auth + add, effort)
         if not result:
             raise error.DNSLookupError(name)
@@ -246,8 +272,11 @@ def extractRecord(resolver, name, answers, level=10):
             r = client.Resolver(servers=[(str(r.payload.name), dns.PORT)])
             return r.lookupAddress(str(name)
                 ).addCallback(
-                    lambda (ans, auth, add):
-                        extractRecord(r, name, ans + auth + add, level - 1))
+                    lambda records: extractRecord(
+                        r, name,
+                        records[_ANS] + records[_AUTH] + records[_ADD],
+                        level - 1))
+
 
 
 typeToMethod = {

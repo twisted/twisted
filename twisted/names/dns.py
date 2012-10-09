@@ -1616,6 +1616,10 @@ class Message:
     """
     L{Message} contains all the information represented by a single
     DNS request or response.
+
+    @ivar rCode: A response code, used to indicate success or failure in a
+        message which is a response from a server to a client request.
+    @type rCode: C{0 <= int < 16}
     """
     headerFmt = "!H2B4H"
     headerSize = struct.calcsize(headerFmt)
