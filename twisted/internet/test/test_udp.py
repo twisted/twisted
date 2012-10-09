@@ -198,4 +198,21 @@ class UDPServerTestsBuilder(ReactorBuilder, UDPPortMixin,
         self.runReactor(reactor)
 
 
+    def test_str(self):
+        """
+        C{str()} on the listening port object includes the port number.
+        """
+        reactor = self.buildReactor()
+        port = reactor.listenUDP(0, DatagramProtocol())
+        self.assertIn(str(port.getHost().port), str(port))
+
+
+    def test_repr(self):
+        """
+        C{repr()} on the listening port object includes the port number.
+        """
+        reactor = self.buildReactor()
+        port = reactor.listenUDP(0, DatagramProtocol())
+        self.assertIn(repr(port.getHost().port), str(port))
+
 globals().update(UDPServerTestsBuilder.makeTestCaseClasses())

@@ -15,6 +15,8 @@ Please do not use this module directly.
     module) representing socket errors that indicate connection refused.
 """
 
+from __future__ import division, absolute_import
+
 # System Imports
 import socket
 import operator

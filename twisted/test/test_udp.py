@@ -6,8 +6,11 @@
 Tests for implementations of L{IReactorUDP} and L{IReactorMulticast}.
 """
 
+from __future__ import division, absolute_import
+
 from twisted.trial import unittest
 
+from twisted.python.compat import intToBytes
 from twisted.internet.defer import Deferred, gatherResults, maybeDeferred
 from twisted.internet import protocol, reactor, error, defer, interfaces, udp
 from twisted.python import runtime
@@ -215,12 +218,12 @@ class UDPTestCase(unittest.TestCase):
             sAddr = server.transport.getHost()
 
             serverSend = client.packetReceived = defer.Deferred()
-            server.transport.write("hello", (cAddr.host, cAddr.port))
+            server.transport.write(b"hello", (cAddr.host, cAddr.port))
 
             clientWrites = [
-                ("a",),
-                ("b", None),
-                ("c", (sAddr.host, sAddr.port))]
+                (b"a",),
+                (b"b", None),
+                (b"c", (sAddr.host, sAddr.port))]
 
             def cbClientSend(ignored):
                 if clientWrites:
@@ -244,13 +247,13 @@ class UDPTestCase(unittest.TestCase):
             sAddr = server.transport.getHost()
             self.assertEqual(
                 client.packets,
-                [("hello", (sAddr.host, sAddr.port))])
+                [(b"hello", (sAddr.host, sAddr.port))])
             clientAddr = (cAddr.host, cAddr.port)
             self.assertEqual(
                 server.packets,
-                [("a", clientAddr),
-                 ("b", clientAddr),
-                 ("c", clientAddr)])
+                [(b"a", clientAddr),
+                 (b"b", clientAddr),
+                 (b"c", clientAddr)])
 
         d.addCallback(cbSendsFinished)
 
@@ -288,8 +291,8 @@ class UDPTestCase(unittest.TestCase):
             client.transport.connect("127.0.0.1", 80)
 
             for i in range(10):
-                client.transport.write(str(i))
-                server.transport.write(str(i), ("127.0.0.1", 80))
+                client.transport.write(intToBytes(i))
+                server.transport.write(intToBytes(i), ("127.0.0.1", 80))
 
             return self.assertFailure(
                 connectionRefused,
@@ -363,7 +366,7 @@ class UDPTestCase(unittest.TestCase):
         # stub out the socket with a fake one which could be made to behave in
         # whatever way the test desires.  Unfortunately, this is hard because
         # of differences in various reactor implementations.
-        attempts = range(60)
+        attempts = list(range(60))
         succeededAttempts = []
 
         def makeAttempt():
@@ -381,7 +384,7 @@ class UDPTestCase(unittest.TestCase):
 
             self.failIfIdentical(client.transport, None, "UDP Protocol lost its transport")
 
-            packet = str(attempts.pop(0))
+            packet = intToBytes(attempts.pop(0))
             packetDeferred = defer.Deferred()
             client.setDeferred(packetDeferred)
             client.transport.write(packet, (addr.host, addr.port))
@@ -425,22 +428,6 @@ class UDPTestCase(unittest.TestCase):
         return finalDeferred
 
 
-    def test_portRepr(self):
-        """
-        The port number being listened on can be found in the string
-        returned from calling repr() on L{twisted.internet.udp.Port}.
-        """
-        client = GoodClient()
-        p = reactor.listenUDP(0, client)
-        portNo = str(p.getHost().port)
-        self.failIf(repr(p).find(portNo) == -1)
-        def stoppedListening(ign):
-            self.failIf(repr(p).find(portNo) != -1)
-        d = defer.maybeDeferred(p.stopListening)
-        d.addCallback(stoppedListening)
-        return d
-
-
     def test_NoWarningOnBroadcast(self):
         """
         C{'<broadcast>'} is an alternative way to say C{'255.255.255.255'}
@@ -455,7 +442,7 @@ class UDPTestCase(unittest.TestCase):
 
         p = udp.Port(0, Server())
         p.socket = fakeSocket()
-        p.write("test", ("<broadcast>", 1234))
+        p.write(b"test", ("<broadcast>", 1234))
 
         warnings = self.flushWarnings([self.test_NoWarningOnBroadcast])
         self.assertEqual(len(warnings), 0)
@@ -505,7 +492,7 @@ class ReactorShutdownInteraction(unittest.TestCase):
             # another, stricter test.)
             self.flushLoggedErrors()
         finished.addCallback(flushErrors)
-        self.server.transport.write('\0' * 64, ('127.0.0.1',
+        self.server.transport.write(b'\0' * 64, ('127.0.0.1',
                                     self.server.transport.getHost().port))
         return finished
 
@@ -547,7 +534,7 @@ class MulticastTestCase(unittest.TestCase):
 
         def cbJoined(ignored):
             d = self.server.packetReceived = Deferred()
-            self.server.transport.write("hello", ("225.0.0.250", addr.port))
+            self.server.transport.write(b"hello", ("225.0.0.250", addr.port))
             return d
         joined.addCallback(cbJoined)
 
@@ -555,7 +542,7 @@ class MulticastTestCase(unittest.TestCase):
             self.assertEqual(len(self.server.packets), 1)
             self.server.transport.setLoopbackMode(0)
             self.assertEqual(self.server.transport.getLoopbackMode(), 0)
-            self.server.transport.write("hello", ("225.0.0.250", addr.port))
+            self.server.transport.write(b"hello", ("225.0.0.250", addr.port))
 
             # This is fairly lame.
             d = Deferred()
@@ -639,12 +626,12 @@ class MulticastTestCase(unittest.TestCase):
 
         def cbJoined(ignored):
             d = self.server.packetReceived = Deferred()
-            c.transport.write("hello world", ("225.0.0.250", addr.port))
+            c.transport.write(b"hello world", ("225.0.0.250", addr.port))
             return d
         joined.addCallback(cbJoined)
 
         def cbPacket(ignored):
-            self.assertEqual(self.server.packets[0][0], "hello world")
+            self.assertEqual(self.server.packets[0][0], b"hello world")
         joined.addCallback(cbPacket)
 
         def cleanup(passthrough):
@@ -680,13 +667,13 @@ class MulticastTestCase(unittest.TestCase):
         def serverJoined(ignored):
             d1 = firstClient.packetReceived = Deferred()
             d2 = secondClient.packetReceived = Deferred()
-            firstClient.transport.write("hello world", (theGroup, portno))
+            firstClient.transport.write(b"hello world", (theGroup, portno))
             return gatherResults([d1, d2])
         joined.addCallback(serverJoined)
 
         def gotPackets(ignored):
-            self.assertEqual(firstClient.packets[0][0], "hello world")
-            self.assertEqual(secondClient.packets[0][0], "hello world")
+            self.assertEqual(firstClient.packets[0][0], b"hello world")
+            self.assertEqual(secondClient.packets[0][0], b"hello world")
         joined.addCallback(gotPackets)
 
         def cleanup(passthrough):

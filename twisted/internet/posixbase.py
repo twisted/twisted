@@ -20,7 +20,7 @@ from twisted.internet.interfaces import (
     IReactorTCP, IReactorUDP, IReactorSSL, IReactorSocket)
 from twisted.internet.interfaces import IReactorProcess, IReactorMulticast
 from twisted.internet.interfaces import IHalfCloseableDescriptor
-from twisted.internet import error
+from twisted.internet import error, udp
 
 from twisted.python import log, failure, _utilpy3 as util
 from twisted.python.runtime import platformType, platform
@@ -369,8 +369,6 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
 
         @returns: object conforming to L{IListeningPort}.
         """
-        # Move back to top-level as part of ticket #6003:
-        from twisted.internet import udp
         p = udp.Port(port, protocol, interface, maxPacketSize, self)
         p.startListening()
         return p
@@ -384,8 +382,6 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
 
         @returns: object conforming to IListeningPort.
         """
-        # Move back to top-level as part of ticket #6003:
-        from twisted.internet import udp
         p = udp.MulticastPort(port, protocol, interface, maxPacketSize, self, listenMultiple)
         p.startListening()
         return p
