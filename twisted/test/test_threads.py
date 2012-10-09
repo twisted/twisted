@@ -6,13 +6,18 @@
 Test methods in twisted.internet.threads and reactor thread APIs.
 """
 
+from __future__ import division, absolute_import
+
 import sys, os, time
 
 from twisted.trial import unittest
 
+from twisted.python.compat import _PY3
 from twisted.internet import reactor, defer, interfaces, threads, protocol, error
 from twisted.python import failure, threadable, log, threadpool
 
+if _PY3:
+    xrange = range
 
 
 class ReactorThreadsTestCase(unittest.TestCase):
@@ -117,7 +122,7 @@ class ReactorThreadsTestCase(unittest.TestCase):
             def threadedFunc():
                 try:
                     r = threads.blockingCallFromThread(reactor, reactorFunc)
-                except Exception, e:
+                except Exception as e:
                     errors.append(e)
                 else:
                     results.append(r)
@@ -220,13 +225,16 @@ class DeferredResultTestCase(unittest.TestCase):
         reactor.suggestThreadPoolSize(0)
 
 
-    def testCallMultiple(self):
+    def test_callMultiple(self):
+        """
+        L{threads.callMultipleInThread} calls multiple functions in a thread.
+        """
         L = []
         N = 10
         d = defer.Deferred()
 
         def finished():
-            self.assertEqual(L, range(N))
+            self.assertEqual(L, list(range(N)))
             d.callback(None)
 
         threads.callMultipleInThread([
@@ -328,13 +336,13 @@ import %(reactor)s
 from twisted.internet import reactor
 
 def threadedCall():
-    print 'threaded call'
+    print('threaded call')
 
 reactor.callInThread(threadedCall)
 
 # Spin very briefly to try to give the thread a chance to run, if it
 # is going to.  Is there a better way to achieve this behavior?
-for i in xrange(100):
+for i in range(100):
     time.sleep(0.0)
 """
 
@@ -377,7 +385,8 @@ class StartupBehaviorTestCase(unittest.TestCase):
         progfile.write(_callBeforeStartupProgram % {'reactor': reactor.__module__})
         progfile.close()
 
-        def programFinished((out, err, reason)):
+        def programFinished(result):
+            (out, err, reason) = result
             if reason.check(error.ProcessTerminated):
                 self.fail("Process did not exit cleanly (out: %s err: %s)" % (out, err))
 
