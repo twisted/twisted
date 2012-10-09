@@ -82,6 +82,9 @@ modules = [
     "twisted.trial.unittest",
     "twisted.trial.util",
     "twisted._version",
+    "twisted.web",
+    "twisted.web.http_headers",
+    "twisted.web.test",
     ]
 
 
@@ -140,4 +143,5 @@ testModules = [
     "twisted.trial.test.test_tests",
     "twisted.trial.test.test_util",
     "twisted.trial.test.test_warning",
+    "twisted.web.test.test_http_headers",
     ]
