@@ -27,6 +27,7 @@ modules = [
     "twisted.internet.interfaces",
     "twisted.internet.fdesc",
     "twisted.internet.main",
+    "twisted.internet.protocol",
     "twisted.internet.reactor", # don't expect it to work yet, though!
     "twisted.internet._signals",
     "twisted.internet.task",
@@ -93,6 +94,7 @@ testModules = [
     "twisted.internet.test.test_filedescriptor",
     "twisted.internet.test.test_inlinecb",
     "twisted.internet.test.test_main",
+    "twisted.internet.test.test_protocol",
     "twisted.internet.test.test_sigchld",
     "twisted.internet.test.test_threads",
     "twisted.internet.test.test_udp",
@@ -112,6 +114,7 @@ testModules = [
     "twisted.test.test_defer",
     "twisted.test.test_defgen",
     "twisted.test.test_error",
+    "twisted.test.test_factories",
     "twisted.test.test_failure",
     "twisted.test.test_fdesc",
     "twisted.test.test_log",

@@ -7,14 +7,13 @@ Standard implementations of Twisted protocol-related interfaces.
 
 Start here if you are looking to write a new protocol implementation for
 Twisted.  The Protocol class contains some introductory material.
-
-Maintainer: Itamar Shtull-Trauring
 """
+
+from __future__ import division, absolute_import
 
 import random
 from zope.interface import implementer
 
-# Twisted Imports
 from twisted.python import log, failure, components
 from twisted.internet import interfaces, error, defer
 

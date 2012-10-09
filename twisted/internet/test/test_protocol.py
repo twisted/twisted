@@ -5,12 +5,18 @@
 Tests for L{twisted.internet.protocol}.
 """
 
+from __future__ import division, absolute_import
+
 from zope.interface.verify import verifyObject
+from zope.interface import implementer
 
 from twisted.python.failure import Failure
-from twisted.internet.interfaces import IProtocol, ILoggingContext
+from twisted.internet.interfaces import (IProtocol, ILoggingContext,
+                                         IProtocolFactory, IConsumer)
 from twisted.internet.defer import CancelledError
-from twisted.internet.protocol import Protocol, ClientCreator
+from twisted.internet.protocol import (
+    Protocol, ClientCreator, Factory, ProtocolToConsumerAdapter,
+    ConsumerToProtocolAdapter)
 from twisted.internet.task import Clock
 from twisted.trial.unittest import TestCase
 from twisted.test.proto_helpers import MemoryReactor, StringTransport
@@ -335,6 +341,7 @@ class ClientCreatorTests(TestCase):
         return self._cancelConnectFailedTimeoutTest(connect)
 
 
+
 class ProtocolTests(TestCase):
     """
     Tests for L{twisted.internet.protocol.Protocol}.
@@ -355,3 +362,96 @@ class ProtocolTests(TestCase):
         class SomeThing(Protocol):
             pass
         self.assertEqual("SomeThing", SomeThing().logPrefix())
+
+
+    def test_makeConnection(self):
+        """
+        L{Protocol.makeConnection} sets the given transport on itself, and
+        then calls C{connectionMade}.
+        """
+        result = []
+        class SomeProtocol(Protocol):
+            def connectionMade(self):
+                result.append(self.transport)
+
+        transport = object()
+        protocol = SomeProtocol()
+        protocol.makeConnection(transport)
+        self.assertEqual(result, [transport])
+
+
+
+class FactoryTests(TestCase):
+    """
+    Tests for L{protocol.Factory}.
+    """
+    def test_interfaces(self):
+        """
+        L{Factory} instances provide both L{IProtocolFactory} and
+        L{ILoggingContext}.
+        """
+        factory = Factory()
+        self.assertTrue(verifyObject(IProtocolFactory, factory))
+        self.assertTrue(verifyObject(ILoggingContext, factory))
+
+
+    def test_logPrefix(self):
+        """
+        L{Factory.logPrefix} returns the name of the factory class.
+        """
+        class SomeKindOfFactory(Factory):
+            pass
+
+        self.assertEqual("SomeKindOfFactory", SomeKindOfFactory().logPrefix())
+
+
+    def test_defaultBuildProtocol(self):
+        """
+        L{Factory.buildProtocol} by default constructs a protocol by
+        calling its C{protocol} attribute, and attaches the factory to the
+        result.
+        """
+        class SomeProtocol(Protocol):
+            pass
+        f = Factory()
+        f.protocol = SomeProtocol
+        protocol = f.buildProtocol(None)
+        self.assertIsInstance(protocol, SomeProtocol)
+        self.assertIdentical(protocol.factory, f)
+
+
+
+class AdapterTests(TestCase):
+    """
+    Tests for L{ProtocolToConsumerAdapter} and L{ConsumerToProtocolAdapter}.
+    """
+    def test_protocolToConsumer(self):
+        """
+        L{IProtocol} providers can be adapted to L{IConsumer} providers using
+        L{ProtocolToConsumerAdapter}.
+        """
+        result = []
+        p = Protocol()
+        p.dataReceived = result.append
+        consumer = IConsumer(p)
+        consumer.write(b"hello")
+        self.assertEqual(result, [b"hello"])
+        self.assertIsInstance(consumer, ProtocolToConsumerAdapter)
+
+
+    def test_consumerToProtocol(self):
+        """
+        L{IConsumer} providers can be adapted to L{IProtocol} providers using
+        L{ProtocolToConsumerAdapter}.
+        """
+        result = []
+        @implementer(IConsumer)
+        class Consumer(object):
+            def write(self, d):
+                result.append(d)
+
+        c = Consumer()
+        protocol = IProtocol(c)
+        protocol.dataReceived(b"hello")
+        self.assertEqual(result, [b"hello"])
+        self.assertIsInstance(protocol, ConsumerToProtocolAdapter)

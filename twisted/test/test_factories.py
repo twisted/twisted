@@ -5,55 +5,14 @@
 Test code for basic Factory classes.
 """
 
+from __future__ import division, absolute_import
+
 import pickle
 
 from twisted.trial.unittest import TestCase
 
-from twisted.internet import reactor, defer
 from twisted.internet.task import Clock
-from twisted.internet.protocol import Factory, ReconnectingClientFactory
-from twisted.protocols.basic import Int16StringReceiver
-
-
-
-class In(Int16StringReceiver):
-    def __init__(self):
-        self.msgs = {}
-
-    def connectionMade(self):
-        self.factory.connections += 1
-
-    def stringReceived(self, msg):
-        n, msg = pickle.loads(msg)
-        self.msgs[n] = msg
-        self.sendString(pickle.dumps(n))
-
-    def connectionLost(self, reason):
-        self.factory.allMessages.append(self.msgs)
-        if len(self.factory.allMessages) >= self.factory.goal:
-            self.factory.d.callback(None)
-
-
-
-class Out(Int16StringReceiver):
-    msgs = dict([(x, 'X' * x) for x in range(10)])
-
-    def __init__(self):
-        self.msgs = Out.msgs.copy()
-
-    def connectionMade(self):
-        for i in self.msgs.keys():
-            self.sendString(pickle.dumps( (i, self.msgs[i])))
-
-    def stringReceived(self, msg):
-        n = pickle.loads(msg)
-        del self.msgs[n]
-        if not self.msgs:
-            self.transport.loseConnection()
-            self.factory.howManyTimes -= 1
-            if self.factory.howManyTimes <= 0:
-                self.factory.stopTrying()
-
+from twisted.internet.protocol import ReconnectingClientFactory, Protocol
 
 
 class FakeConnector(object):
@@ -75,37 +34,26 @@ class ReconnectingFactoryTestCase(TestCase):
     Tests for L{ReconnectingClientFactory}.
     """
 
-    def testStopTrying(self):
-        f = Factory()
-        f.protocol = In
-        f.connections = 0
-        f.allMessages = []
-        f.goal = 2
-        f.d = defer.Deferred()
+    def test_stopTryingWhenConnected(self):
+        """
+        If a L{ReconnectingClientFactory} has C{stopTrying} called while it is
+        connected, it does not subsequently attempt to reconnect if the
+        connection is later lost.
+        """
+        class NoConnectConnector(object):
+            def stopConnecting(self):
+                raise RuntimeError("Shouldn't be called, we're connected.")
+            def connect(self):
+                raise RuntimeError("Shouldn't be reconnecting.")
 
         c = ReconnectingClientFactory()
-        c.initialDelay = c.delay = 0.2
-        c.protocol = Out
-        c.howManyTimes = 2
-
-        port = reactor.listenTCP(0, f)
-        self.addCleanup(port.stopListening)
-        PORT = port.getHost().port
-        reactor.connectTCP('127.0.0.1', PORT, c)
-
-        f.d.addCallback(self._testStopTrying_1, f, c)
-        return f.d
-    testStopTrying.timeout = 10
-
-
-    def _testStopTrying_1(self, res, f, c):
-        self.assertEqual(len(f.allMessages), 2,
-                          "not enough messages -- %s" % f.allMessages)
-        self.assertEqual(f.connections, 2,
-                          "Number of successful connections incorrect %d" %
-                          f.connections)
-        self.assertEqual(f.allMessages, [Out.msgs] * 2)
-        self.failIf(c.continueTrying, "stopTrying never called or ineffective")
+        c.protocol = Protocol
+        # Let's pretend we've connected:
+        c.buildProtocol(None)
+        # Now we stop trying, then disconnect:
+        c.stopTrying()
+        c.clientConnectionLost(NoConnectConnector(), None)
+        self.assertFalse(c.continueTrying)
 
 
     def test_stopTryingDoesNotReconnect(self):
