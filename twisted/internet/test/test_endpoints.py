@@ -653,8 +653,6 @@ class StandardIOEndpointsTestCase(unittest.TestCase):
         self.d.addCallback(checkAddress)
         return self.d
 
-
-
 class TCP4EndpointsTestCase(EndpointTestCaseMixin, unittest.TestCase):
     """
     Tests for TCP IPv4 Endpoints.
@@ -1164,22 +1162,18 @@ class HostnameEndpointsIPv4FastTest(unittest.TestCase):
             data = [(AF_INET, SOCK_STREAM, IPPROTO_TCP, '',
                 ('1.2.3.4', 0, 0, 0)), (AF_INET6, SOCK_STREAM, IPPROTO_TCP, '',
                 ('1:2::3:4', 0, 0, 0))]
-
-            print "inside nameResolution" #TODEL
             return defer.succeed(data)
 
         self.endpoint._nameResolution = nameResolution
-#        self.endpoint. = connectFasterEndpoint
         d = self.endpoint.connect(clientFactory)
         factory = self.mreactor.tcpClients[0][2]
         factory._onConnection.callback(proto)
 
-        def checkFamily(p):
-            print "checking..."
+        def checkAddress(p):
+            self.assertEqual(self.mreactor.tcpClients[0][0], '1.2.3.4')
             return p
-            # Check the transport and see if it's connected to the IPv4 host address.
 
-        d.addCallback(checkFamily)   # Check the connected protocol returned by the endpoint.
+        d.addCallback(checkAddress)
 
 
 #_______________________________________________________________________________________________________
