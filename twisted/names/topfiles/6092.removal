@@ -1,0 +1,1 @@
+twisted.names.hosts.Resolver is no longer a `twisted.persisted.styles.Versioned` subclass.
