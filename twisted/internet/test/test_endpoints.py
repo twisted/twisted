@@ -30,7 +30,7 @@ from twisted.internet.stdio import PipeAddress
 from twisted.internet.task import Clock
 from twisted.internet.test.test_protocol import MemoryReactorWithConnectorsAndTime
 
-MemoryReactor = MemoryReactorWithConnectorsAndTime
+MemoryReactor = MemoryReactorWithConnectorsAndTime   # This is mostly for HostnameEndpoints
 
 pemPath = getModule("twisted.test").filePath.sibling("server.pem")
 casPath = getModule(__name__).filePath.sibling("fake_CAs")
@@ -972,6 +972,9 @@ class TCP6EndpointNameResolutionTestCase(ClientEndpointTestCaseMixin,
             [(fakegetaddrinfo, ("ipv6.example.com", 0, AF_INET6), {})], calls)
 
 
+#_________________________________________________________________________________________________
+# Begin testing HostnameEndpoint
+
 
 class HostnameEndpointsOneIPv4Test(ClientEndpointTestCaseMixin,
                                 unittest.TestCase):
@@ -1105,10 +1108,15 @@ class HostnameEndpointsOneIPv6Test(ClientEndpointTestCaseMixin,
         """
         return {'timeout': 10, 'bindAddress': ('localhost', 49595)}
 
-#TODO: Add a test to check deferToThread as well.
+
+    #TODO: Add a test to check deferToThread as well.
+
+
     def test_endpointConnectingCancelled(self):
         pass
         #TODO: Make this work
+
+
 
 class HostnameEndpointsGAIFailureTest(unittest.TestCase):
     """
@@ -1128,6 +1136,8 @@ class HostnameEndpointsGAIFailureTest(unittest.TestCase):
         return self.assertFailure(dConnect, error.DNSLookupError)
 
 
+#________________________WIP_______________________________________________
+
 
 class HostnameEndpointsIPv4FastTest(unittest.TestCase):
     """
@@ -1136,13 +1146,13 @@ class HostnameEndpointsIPv4FastTest(unittest.TestCase):
     time than the IPv6 address.
     """
     def setUp(self):
-        self.endpoint = endpoints.HostnameEndpoint(MemoryReactorWithConnectorsAndTime(),
-                "www.example.com", 80)
+        self.endpoint = endpoints.HostnameEndpoint(
+                MemoryReactorWithConnectorsAndTime(), "www.example.com", 80)
 
 
     def test_IPv4IsFaster(self):
         """
-        L{.
+        The endpoint returns a connection to the IPv4 address.
         """
         resultEndpoint = []
         clientFactory = protocol.Factory()
@@ -1152,6 +1162,8 @@ class HostnameEndpointsIPv4FastTest(unittest.TestCase):
             data = [(AF_INET, SOCK_STREAM, IPPROTO_TCP, '',
                 ('1.2.3.4', 0, 0, 0)), (AF_INET6, SOCK_STREAM, IPPROTO_TCP, '',
                 ('1:2::3:4', 0, 0, 0))]
+
+            print "inside nameResolution" #TODEL
             return defer.succeed(data)
 
         self.endpoint._nameResolution = nameResolution
@@ -1160,11 +1172,13 @@ class HostnameEndpointsIPv4FastTest(unittest.TestCase):
 
         def checkFamily(proto):
             print "checking..."
-            # Check the transport and det if it's connected to the IPv4 host address.
+            # Check the transport and see if it's connected to the IPv4 host address.
 
-        d.addBoth(checkFamily)
+        d.addBoth(checkFamily)   # Check the connected protocol returned by the endpoint.
+        # FIXME: checkFamily is never called.
 
 
+#_______________________________________________________________________________________________________
 
 class SSL4EndpointsTestCase(EndpointTestCaseMixin,
                             unittest.TestCase):

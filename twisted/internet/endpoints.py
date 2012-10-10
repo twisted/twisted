@@ -468,10 +468,13 @@ class HostnameEndpoint(object):
         # TODO: Figure out a default return when the address is neither IPv6 nor
         # IPv4
 
+
     def connect(self, protocolFactory):
         """
+        Attempts a connection to each address returned by gai, and
+        returns a connection that is the fastest.
         """
-        wf = _WrappingFactory(protocolFactory)
+        wf = protocolFactory             #_WrappingFactory(protocolFactory)
 
         def errbackForGai(obj):
             """
@@ -486,7 +489,7 @@ class HostnameEndpoint(object):
             This method matches the host address famliy with an endpoint
             for every address returned by GAI.
             """
-#            print "Running getEndpoints. Yay!"
+#            print "Running getEndpoints."
             for family, socktype, proto, canonname, sockaddr in gaiResult:
                 if family in [AF_INET6, AF_INET]:
                     yield self.endpointGenerator(self._reactor, sockaddr[0],
@@ -506,7 +509,7 @@ class HostnameEndpoint(object):
             # successful and failed attempts, and the algorithm to pick the
             # winner endpoint goes here.
             # Return a Deferred that fires with the endpoint that wins,
-            # or failures if none succeed.
+            # or `failures` if none succeed.
 
             pending = []
             endpointsListExhausted = []
@@ -517,9 +520,9 @@ class HostnameEndpoint(object):
  #              d.errback(error.ConnectingCancelledError())
   #             d.cancel()
 
-            winner = defer.Deferred(canceller=wf._canceller)
+            winner = defer.Deferred()    #canceller=wf._canceller)
 
-#            print "Running attemptConnection. Yay!"
+#            print "Running attemptConnection."
 
 
             def usedEndpointRemoval(connResult, connAttempt):
@@ -544,7 +547,7 @@ class HostnameEndpoint(object):
 
             def connectFailed(reason):
   #              print "Inside connectFailed"
-   #             print "The reason is:::", reason
+  #              print "The reason is:::", reason
                 failures.append(reason)
                 almostDone()
                 return None
@@ -568,24 +571,26 @@ class HostnameEndpoint(object):
 
 #            self._reactor.callLater(0.3, iterateEndpoint)
             iterateEndpoint()
-            return winner
+            print "Return from attemptConnection"
+            return winner  # attemptConnection's return
+
         try:
             d = self._nameResolution(self._host)
             d.addErrback(errbackForGai)
             d.addCallback(getEndpoints)
             d.addCallback(attemptConnection)
 #            d.errback(error.ConnectingCancelledError("The connection was cancelled"))
+            print "Returning the fastest connection now.."
             return d
         except:
             return defer.fail(error.ConnectingCancelledError("The connection was cancelled"))
+
 
 #    def canceller(self, deferred):
 
  #       deferred.errback(error.ConnectingCancelledError("The connection was cancelled"))
 
 #        TODO: stopConnecting()
-
-
 
 
     def _nameResolution(self, host):
