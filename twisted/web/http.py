@@ -1583,7 +1583,13 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         header = header.lower()
         data = data.strip()
         if header == 'content-length':
-            self.length = int(data)
+            try:
+                self.length = int(data)
+            except ValueError:
+                self.transport.write("HTTP/1.1 400 Bad Request\r\n\r\n")
+                self.length = None
+                self.transport.loseConnection()
+                return
             self._transferDecoder = _IdentityTransferDecoder(
                 self.length, self.requests[-1].handleContentChunk, self._finishRequestBody)
         elif header == 'transfer-encoding' and data.lower() == 'chunked':

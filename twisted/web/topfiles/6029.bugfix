@@ -1,0 +1,2 @@
+twisted.web.http.HTTPChannel.headerReceived now catches the error if the
+Content-Length header is not an integer and return a 400 Bad Request response.

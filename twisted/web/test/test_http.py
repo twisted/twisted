@@ -6,7 +6,7 @@ Test HTTP support.
 """
 
 from urlparse import urlparse, urlunsplit, clear_cache
-import random, urllib, cgi
+import random, cgi
 
 from twisted.python.compat import set
 from twisted.python.failure import Failure
@@ -693,6 +693,20 @@ class ParsingTestCase(unittest.TestCase):
             "HTTP/1.1 400 Bad Request\r\n\r\n")
 
 
+    def test_invalidHeaders(self):
+        """
+        If a Content-Length header with a non-integer value is received, a 400
+        (Bad Request) response is sent to the client and the connection is
+        closed.
+        """
+        requestLines = ["GET / HTTP/1.0", "Content-Length: x", "", ""]
+        channel = self.runRequest("\n".join(requestLines), http.Request, 0)
+        self.assertEqual(
+            channel.transport.value(),
+            "HTTP/1.1 400 Bad Request\r\n\r\n")
+        self.assertTrue(channel.transport.disconnecting)
+
+
     def test_headerLimitPerRequest(self):
         """
         L{HTTPChannel} enforces the limit of C{HTTPChannel.maxHeaders} per
@@ -864,7 +878,7 @@ Hello,
                 # The tempfile API used to create content returns an
                 # instance of a different type depending on what platform
                 # we're running on.  The point here is to verify that the
-                # request body is in a file that's on the filesystem. 
+                # request body is in a file that's on the filesystem.
                 # Having a fileno method that returns an int is a somewhat
                 # close approximation of this. -exarkun
                 testcase.assertIsInstance(self.content.fileno(), int)
@@ -1442,7 +1456,6 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         called results in a L{RuntimeError} being raised.
         """
         channel = DummyChannel()
-        transport = channel.transport
         req = http.Request(channel, False)
         req.connectionLost(Failure(ConnectionLost("The end.")))
         self.assertRaises(RuntimeError, req.finish)
