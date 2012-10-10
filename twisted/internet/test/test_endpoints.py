@@ -1176,6 +1176,47 @@ class HostnameEndpointsIPv4FastTest(unittest.TestCase):
         d.addCallback(checkAddress)
 
 
+
+class HostnameEndpointsIPv6FastTest(unittest.TestCase):
+    """
+    Tests for the hostname based endpoints when gai returns an IPv4 and
+    an IPv6 address, and the connection to the IPv6 address takes less
+    time than the IPv4 address.
+    """
+    def setUp(self):
+        self.mreactor = MemoryReactor()
+        self.endpoint = endpoints.HostnameEndpoint(self.mreactor, "www.example.com",
+                80)
+
+
+    def test_IPv6IsFaster(self):
+        """
+        The endpoint returns a connection to the IPv6 address.
+        """
+        resultEndpoint = []
+        clientFactory = protocol.Factory()
+        proto = object()
+
+        def nameResolution(host):
+            self.assertEqual("www.example.com", host)
+            data = [(AF_INET, SOCK_STREAM, IPPROTO_TCP, '',
+                ('1.2.3.4', 0, 0, 0)), (AF_INET6, SOCK_STREAM, IPPROTO_TCP, '',
+                ('1:2::3:4', 0, 0, 0))]
+            return defer.succeed(data)
+
+        self.endpoint._nameResolution = nameResolution
+        d = self.endpoint.connect(clientFactory)
+        print self.mreactor.tcpClients
+        factory = self.mreactor.tcpClients[0][2]
+        factory._onConnection.callback(proto)
+
+        def checkAddress(p):
+            self.assertEqual(self.mreactor.tcpClients[0][0], '1:2::3:4')
+            return p
+
+        d.addCallback(checkAddress)
+
+
 #_______________________________________________________________________________________________________
 
 class SSL4EndpointsTestCase(EndpointTestCaseMixin,

@@ -547,7 +547,7 @@ class HostnameEndpoint(object):
 
             def connectFailed(reason):
   #              print "Inside connectFailed"
-  #              print "The reason is:::", reason
+  #              print "The reason is:", reason
                 failures.append(reason)
                 almostDone()
                 return None
