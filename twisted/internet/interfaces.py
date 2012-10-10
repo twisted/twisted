@@ -76,12 +76,6 @@ class IResolverSimple(Interface):
         """
 
 class IResolver(IResolverSimple):
-    def lookupRecord(name, cls, type, timeout = 10):
-        """
-        Lookup the records associated with the given name
-        that are of the given type and in the given class.
-        """
-
     def query(query, timeout = 10):
         """
         Interpret and dispatch a query object to the appropriate
