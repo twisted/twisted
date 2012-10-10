@@ -526,7 +526,7 @@ class HostnameEndpoint(object):
 
 
             def usedEndpointRemoval(connResult, connAttempt):
- #               print "Inside usedEndpointRemoval"
+                print "Inside usedEndpointRemoval"
                 pending.remove(connAttempt)
                 return connResult
 

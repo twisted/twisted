@@ -1146,8 +1146,9 @@ class HostnameEndpointsIPv4FastTest(unittest.TestCase):
     time than the IPv6 address.
     """
     def setUp(self):
-        self.endpoint = endpoints.HostnameEndpoint(
-                MemoryReactorWithConnectorsAndTime(), "www.example.com", 80)
+        self.mreactor = MemoryReactor()
+        self.endpoint = endpoints.HostnameEndpoint(self.mreactor, "www.example.com",
+                80)
 
 
     def test_IPv4IsFaster(self):
@@ -1156,6 +1157,7 @@ class HostnameEndpointsIPv4FastTest(unittest.TestCase):
         """
         resultEndpoint = []
         clientFactory = protocol.Factory()
+        proto = object()
 
         def nameResolution(host):
             self.assertEqual("www.example.com", host)
@@ -1169,13 +1171,15 @@ class HostnameEndpointsIPv4FastTest(unittest.TestCase):
         self.endpoint._nameResolution = nameResolution
 #        self.endpoint. = connectFasterEndpoint
         d = self.endpoint.connect(clientFactory)
+        factory = self.mreactor.tcpClients[0][2]
+        factory._onConnection.callback(proto)
 
-        def checkFamily(proto):
+        def checkFamily(p):
             print "checking..."
+            return p
             # Check the transport and see if it's connected to the IPv4 host address.
 
-        d.addBoth(checkFamily)   # Check the connected protocol returned by the endpoint.
-        # FIXME: checkFamily is never called.
+        d.addCallback(checkFamily)   # Check the connected protocol returned by the endpoint.
 
 
 #_______________________________________________________________________________________________________
