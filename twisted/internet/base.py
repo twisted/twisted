@@ -1,10 +1,12 @@
-# -*- test-case-name: twisted.test.test_internet -*-
+# -*- test-case-name: twisted.test.test_internet,twisted.internet.test.test_core -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
 Very basic functionality for a Reactor implementation.
 """
+
+from __future__ import division, absolute_import
 
 import socket # needed only for sync-dns
 from zope.interface import implementer, classImplements
@@ -174,7 +176,11 @@ class DelayedCall:
         if self._str is not None:
             return self._str
         if hasattr(self, 'func'):
-            if hasattr(self.func, 'func_name'):
+            # This code should be replaced by a utility function in reflect;
+            # see ticket #6066:
+            if hasattr(self.func, '__qualname__'):
+                func = self.func.__qualname__
+            elif hasattr(self.func, '__name__'):
                 func = self.func.func_name
                 if hasattr(self.func, 'im_class'):
                     func = self.func.im_class.__name__ + '.' + func
@@ -194,7 +200,7 @@ class DelayedCall:
                 if self.kw:
                     L.append(", ")
             if self.kw:
-                L.append(", ".join(['%s=%s' % (k, reflect.safe_repr(v)) for (k, v) in self.kw.iteritems()]))
+                L.append(", ".join(['%s=%s' % (k, reflect.safe_repr(v)) for (k, v) in self.kw.items()]))
             L.append(")")
 
         if self.debug:

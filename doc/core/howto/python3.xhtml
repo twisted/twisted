@@ -52,6 +52,9 @@
     string literals rather than "native" string literals (which are text on
     Python 3).</p>
 
+    <p><code>reactor.addSystemEventTrigger</code> arguments that were
+    previously byte strings are now native strings.</p>
+
     <p><code>twisted.names.dns</code> deals with strings with a wide range of
     meanings, often several for each DNS record type.  Most of these strings
     have remained as byte strings, which will probably require application
@@ -61,6 +64,5 @@
     example, <code>Record_A</code>'s <code>address</code> parameter) is now a
     text string.  Additionally, time-to-live (ttl) values given as strings must
     now be given as text strings.</p>
-
   </body>
 </html>

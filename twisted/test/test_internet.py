@@ -5,10 +5,13 @@
 Tests for lots of functionality provided by L{twisted.internet}.
 """
 
+from __future__ import division, absolute_import
+
 import os
 import sys
 import time
 
+from twisted.python.compat import _PY3
 from twisted.trial import unittest
 from twisted.internet import reactor, protocol, error, abstract, defer
 from twisted.internet import interfaces, base
@@ -21,8 +24,9 @@ if ssl and not ssl.supported:
     ssl = None
 
 from twisted.internet.defer import Deferred, maybeDeferred
-from twisted.python import util, runtime
-
+from twisted.python import runtime
+if not _PY3:
+    from twisted.python import util
 
 
 class ThreePhaseEventTests(unittest.TestCase):
@@ -1062,7 +1066,8 @@ class Resolve(unittest.TestCase):
 
         reactor.spawnProcess(helperProto, sys.executable, ("python", "-u", helperPath), env)
 
-        def cbFinished((reason, output, error)):
+        def cbFinished(result):
+            (reason, output, error) = result
             # If the output is "done 127.0.0.1\n" we don't really care what
             # else happened.
             output = ''.join(output)
@@ -1110,7 +1115,7 @@ class CallFromThreadTestCase(unittest.TestCase):
             if self.counter == 100:
                 self.deferred.callback(True)
 
-        for i in xrange(100):
+        for i in range(100):
             self.schedule(addAndMaybeFinish)
 
         return self.deferred
@@ -1285,6 +1290,13 @@ class TestProducer(unittest.TestCase):
 
 
     def _dontPausePullConsumerTest(self, methodName):
+        """
+        Pull consumers don't get their C{pauseProducing} method called if the
+        descriptor buffer fills up.
+
+        @param _methodName: Either 'write', or 'writeSequence', indicating
+            which transport method to write data to.
+        """
         descriptor = SillyDescriptor()
         producer = DummyProducer()
         descriptor.registerProducer(producer, streaming=False)
@@ -1293,7 +1305,10 @@ class TestProducer(unittest.TestCase):
 
         # Fill up the descriptor's write buffer so we can observe whether or
         # not it pauses its producer in that case.
-        getattr(descriptor, methodName)('1234')
+        if methodName == "writeSequence":
+            descriptor.writeSequence([b'1', b'2', b'3', b'4'])
+        else:
+            descriptor.write(b'1234')
 
         self.assertEqual(producer.events, [])
 
@@ -1321,12 +1336,16 @@ class TestProducer(unittest.TestCase):
 
     def _reentrantStreamingProducerTest(self, methodName):
         descriptor = SillyDescriptor()
-        producer = ReentrantProducer(descriptor, methodName, 'spam')
+        if methodName == "writeSequence":
+            data = [b's', b'p', b'am']
+        else:
+            data = b"spam"
+        producer = ReentrantProducer(descriptor, methodName, data)
         descriptor.registerProducer(producer, streaming=True)
 
         # Start things off by filling up the descriptor's buffer so it will
         # pause its producer.
-        getattr(descriptor, methodName)('spam')
+        getattr(descriptor, methodName)(data)
 
         # Sanity check - make sure that worked.
         self.assertEqual(producer.events, ['pause'])
@@ -1370,6 +1389,10 @@ class TestProducer(unittest.TestCase):
 
 
 class PortStringification(unittest.TestCase):
+    if _PY3:
+        skip = ("Rewrite these as better tests in better locations as part of "
+                "#6002, #6003 and the Python 3 SSL port.")
+
     if interfaces.IReactorTCP(reactor, None) is not None:
         def testTCP(self):
             p = reactor.listenTCP(0, protocol.ServerFactory())

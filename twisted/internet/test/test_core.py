@@ -5,6 +5,8 @@
 Tests for implementations of L{IReactorCore}.
 """
 
+from __future__ import division, absolute_import
+
 __metaclass__ = type
 
 import signal
