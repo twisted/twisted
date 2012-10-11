@@ -7,7 +7,7 @@ Test cases for Twisted.names' root resolver.
 
 from random import randrange
 
-from zope.interface import implements
+from zope.interface import implementer
 from zope.interface.verify import verifyClass
 
 from twisted.python.log import msg
@@ -19,11 +19,31 @@ from twisted.internet.address import IPv4Address
 from twisted.internet.interfaces import IReactorUDP, IUDPTransport
 from twisted.names.root import Resolver, lookupNameservers, lookupAddress
 from twisted.names.root import extractAuthority, discoverAuthority, retry
-from twisted.names.dns import IN, HS, A, NS, CNAME, OK, ENAME, Record_CNAME
-from twisted.names.dns import Query, Message, RRHeader, Record_A, Record_NS
+from twisted.names.dns import (
+    IN, HS, A, NS, CNAME, OK, ENAME, Record_CNAME,
+    Name, Query, Message, RRHeader, Record_A, Record_NS)
 from twisted.names.error import DNSNameError, ResolverError
 
 
+def getOnePayload(results):
+    """
+    From the result of a L{Deferred} returned by L{IResolver.lookupAddress},
+    return the payload of the first record in the answer section.
+    """
+    ans, auth, add = results
+    return ans[0].payload
+
+
+def getOneAddress(results):
+    """
+    From the result of a L{Deferred} returned by L{IResolver.lookupAddress},
+    return the first IPv4 address from the answer section.
+    """
+    return getOnePayload(results).dottedQuad()
+
+
+
+@implementer(IUDPTransport)
 class MemoryDatagramTransport(object):
     """
     This L{IUDPTransport} implementation enforces the usual connection rules
@@ -40,8 +60,6 @@ class MemoryDatagramTransport(object):
     @ivar _maxPacketSize: An C{int} giving the maximum length of a datagram
         which will be successfully handled by C{write}.
     """
-    implements(IUDPTransport)
-
     def __init__(self, host, protocol, maxPacketSize):
         self._host = host
         self._protocol = protocol
@@ -91,6 +109,7 @@ verifyClass(IUDPTransport, MemoryDatagramTransport)
 
 
 
+@implementer(IReactorUDP)
 class MemoryReactor(Clock):
     """
     An L{IReactorTime} and L{IReactorUDP} provider.
@@ -102,8 +121,6 @@ class MemoryReactor(Clock):
     @ivar udpPorts: A C{dict} mapping port numbers to instances of
         L{MemoryDatagramTransport}.
     """
-    implements(IReactorUDP)
-
     def __init__(self):
         Clock.__init__(self)
         self.udpPorts = {}
@@ -146,7 +163,7 @@ class RootResolverTests(TestCase):
         reactor = MemoryReactor()
         resolver = Resolver([], reactor=reactor)
         d = resolver._query(
-            Query('foo.example.com', A, IN), [('1.1.2.3', 1053)], (30,),
+            Query(b'foo.example.com', A, IN), [('1.1.2.3', 1053)], (30,),
             filter)
 
         # A UDP port should have been started.
@@ -159,7 +176,7 @@ class RootResolverTests(TestCase):
         msg.fromStr(packet)
 
         # It should be a query with the parameters used above.
-        self.assertEqual(msg.queries, [Query('foo.example.com', A, IN)])
+        self.assertEqual(msg.queries, [Query(b'foo.example.com', A, IN)])
         self.assertEqual(msg.answers, [])
         self.assertEqual(msg.authority, [])
         self.assertEqual(msg.additional, [])
@@ -171,7 +188,7 @@ class RootResolverTests(TestCase):
         # Once a reply is received, the Deferred should fire.
         del msg.queries[:]
         msg.answer = 1
-        msg.answers.append(RRHeader('foo.example.com', payload=Record_A('5.8.13.21')))
+        msg.answers.append(RRHeader(b'foo.example.com', payload=Record_A('5.8.13.21')))
         transport._protocol.datagramReceived(msg.toStr(), ('1.1.2.3', 1053))
         return response[0]
 
@@ -186,7 +203,7 @@ class RootResolverTests(TestCase):
         answer, authority, additional = self._queryTest(True)
         self.assertEqual(
             answer,
-            [RRHeader('foo.example.com', payload=Record_A('5.8.13.21', ttl=0))])
+            [RRHeader(b'foo.example.com', payload=Record_A('5.8.13.21', ttl=0))])
         self.assertEqual(authority, [])
         self.assertEqual(additional, [])
 
@@ -202,7 +219,7 @@ class RootResolverTests(TestCase):
         self.assertEqual(message.queries, [])
         self.assertEqual(
             message.answers,
-            [RRHeader('foo.example.com', payload=Record_A('5.8.13.21', ttl=0))])
+            [RRHeader(b'foo.example.com', payload=Record_A('5.8.13.21', ttl=0))])
         self.assertEqual(message.authority, [])
         self.assertEqual(message.additional, [])
 
@@ -253,7 +270,7 @@ class RootResolverTests(TestCase):
                     server = serverResponses[addr]
                 except KeyError:
                     continue
-                records = server[str(query.name), query.type]
+                records = server[query.name.name, query.type]
                 return succeed(self._respond(**records))
         resolver._query = query
         return resolver
@@ -268,20 +285,20 @@ class RootResolverTests(TestCase):
         """
         servers = {
             ('1.1.2.3', 53): {
-                ('foo.example.com', A): {
-                    'authority': [('foo.example.com', Record_NS('ns1.example.com'))],
-                    'additional': [('ns1.example.com', Record_A('34.55.89.144'))],
+                (b'foo.example.com', A): {
+                    'authority': [(b'foo.example.com', Record_NS(b'ns1.example.com'))],
+                    'additional': [(b'ns1.example.com', Record_A('34.55.89.144'))],
                     },
                 },
             ('34.55.89.144', 53): {
-                ('foo.example.com', A): {
-                    'answers': [('foo.example.com', Record_A('10.0.0.1'))],
+                (b'foo.example.com', A): {
+                    'answers': [(b'foo.example.com', Record_A('10.0.0.1'))],
                     }
                 },
             }
         resolver = self._getResolver(servers)
-        d = resolver.lookupAddress('foo.example.com')
-        d.addCallback(lambda (ans, auth, add): ans[0].payload.dottedQuad())
+        d = resolver.lookupAddress(b'foo.example.com')
+        d.addCallback(getOneAddress)
         d.addCallback(self.assertEqual, '10.0.0.1')
         return d
 
@@ -310,7 +327,7 @@ class RootResolverTests(TestCase):
         }
         resolver = self._getResolver(servers)
         d = resolver.lookupAddress('foo.example.com')
-        d.addCallback(lambda (ans, auth, add): ans[0].payload)
+        d.addCallback(getOnePayload)
         d.addCallback(self.assertEqual, Record_A('10.0.0.3'))
         return d
 
@@ -322,23 +339,23 @@ class RootResolverTests(TestCase):
         """
         servers = {
             ('1.1.2.3', 53): {
-                ('foo.example.com', A): {
-                    'authority': [('foo.example.com', Record_NS('ns1.example.org'))],
+                (b'foo.example.com', A): {
+                    'authority': [(b'foo.example.com', Record_NS(b'ns1.example.org'))],
                     # Conspicuous lack of an additional section naming ns1.example.com
                     },
-                ('ns1.example.org', A): {
-                    'answers': [('ns1.example.org', Record_A('10.0.0.1'))],
+                (b'ns1.example.org', A): {
+                    'answers': [(b'ns1.example.org', Record_A('10.0.0.1'))],
                     },
                 },
             ('10.0.0.1', 53): {
-                ('foo.example.com', A): {
-                    'answers': [('foo.example.com', Record_A('10.0.0.2'))],
+                (b'foo.example.com', A): {
+                    'answers': [(b'foo.example.com', Record_A('10.0.0.2'))],
                     },
                 },
             }
         resolver = self._getResolver(servers)
-        d = resolver.lookupAddress('foo.example.com')
-        d.addCallback(lambda (ans, auth, add): ans[0].payload.dottedQuad())
+        d = resolver.lookupAddress(b'foo.example.com')
+        d.addCallback(getOneAddress)
         d.addCallback(self.assertEqual, '10.0.0.2')
         return d
 
@@ -350,13 +367,13 @@ class RootResolverTests(TestCase):
         """
         servers = {
             ('1.1.2.3', 53): {
-                ('foo.example.com', A): {
+                (b'foo.example.com', A): {
                     'rCode': ENAME,
                     },
                 },
             }
         resolver = self._getResolver(servers)
-        d = resolver.lookupAddress('foo.example.com')
+        d = resolver.lookupAddress(b'foo.example.com')
         return self.assertFailure(d, DNSNameError)
 
 
@@ -425,18 +442,21 @@ class RootResolverTests(TestCase):
         """
         servers = {
             ('1.1.2.3', 53): {
-                ('example.com', A): {
+                (b'example.com', A): {
                     'rCode': ENAME,
                     },
-                ('example.com', NS): {
-                    'answers': [('example.com', Record_NS('ns1.example.com'))],
+                (b'example.com', NS): {
+                    'answers': [(b'example.com', Record_NS(b'ns1.example.com'))],
                     },
                 },
             }
         resolver = self._getResolver(servers)
-        d = resolver.lookupNameservers('example.com')
-        d.addCallback(lambda (ans, auth, add): str(ans[0].payload.name))
-        d.addCallback(self.assertEqual, 'ns1.example.com')
+        d = resolver.lookupNameservers(b'example.com')
+        def getOneName(results):
+            ans, auth, add = results
+            return ans[0].payload.name
+        d.addCallback(getOneName)
+        d.addCallback(self.assertEqual, Name(b'ns1.example.com'))
         return d
 
 
@@ -447,19 +467,19 @@ class RootResolverTests(TestCase):
         """
         servers = {
             ('1.1.2.3', 53): {
-                ('example.com', A): {
-                    'answers': [('example.com', Record_CNAME('example.net')),
-                                ('example.net', Record_A('10.0.0.7'))],
+                (b'example.com', A): {
+                    'answers': [(b'example.com', Record_CNAME(b'example.net')),
+                                (b'example.net', Record_A('10.0.0.7'))],
                     },
                 },
             }
         resolver = self._getResolver(servers)
-        d = resolver.lookupAddress('example.com')
-        d.addCallback(lambda (ans, auth, add): ans)
+        d = resolver.lookupAddress(b'example.com')
+        d.addCallback(lambda results: results[0]) # Get the answer section
         d.addCallback(
             self.assertEqual,
-            [RRHeader('example.com', CNAME, payload=Record_CNAME('example.net')),
-             RRHeader('example.net', A, payload=Record_A('10.0.0.7'))])
+            [RRHeader(b'example.com', CNAME, payload=Record_CNAME(b'example.net')),
+             RRHeader(b'example.net', A, payload=Record_A('10.0.0.7'))])
         return d
 
 
@@ -481,7 +501,7 @@ class RootResolverTests(TestCase):
         }
         resolver = self._getResolver(servers)
         d = resolver.lookupAddress('example.com')
-        d.addCallback(lambda (ans, auth, add): ans)
+        d.addCallback(lambda results: results[0]) # Get the answer section
         d.addCallback(
             self.assertEqual,
             [RRHeader('example.com', CNAME, payload=Record_CNAME('example.net')),
@@ -552,7 +572,7 @@ class RootResolverTests(TestCase):
 
         succeeder = self._getResolver(servers, 4)
         succeedD = succeeder.lookupAddress('example.com')
-        succeedD.addCallback(lambda (ans, auth, add): ans[0].payload)
+        succeedD.addCallback(getOnePayload)
         succeedD.addCallback(self.assertEqual, Record_A('10.0.0.4'))
 
         return gatherResults([failD, succeedD])

@@ -230,7 +230,8 @@ class Resolver(common.ResolverBase):
                         self._roots(), timeout, queriesLeft)
                     # We also want to include the CNAME in the ultimate result,
                     # otherwise this will be pretty confusing.
-                    def cbResolved((answers, authority, additional)):
+                    def cbResolved(results):
+                        answers, authority, additional = results
                         answers.insert(0, previous)
                         return (answers, authority, additional)
                     d.addCallback(cbResolved)
@@ -252,13 +253,13 @@ class Resolver(common.ResolverBase):
         addresses = {}
         for rr in response.additional:
             if rr.type == dns.A:
-                addresses[str(rr.name)] = rr.payload.dottedQuad()
+                addresses[rr.name.name] = rr.payload.dottedQuad()
 
         hints = []
         traps = []
         for rr in response.authority:
             if rr.type == dns.NS:
-                ns = str(rr.payload.name)
+                ns = rr.payload.name.name
                 if ns in addresses:
                     hints.append((addresses[ns], dns.PORT))
                 else:
@@ -268,9 +269,10 @@ class Resolver(common.ResolverBase):
                 query, hints, timeout, queriesLeft)
         elif traps:
             d = self.lookupAddress(traps[0], timeout)
-            d.addCallback(
-                lambda (answers, authority, additional):
-                    answers[0].payload.dottedQuad())
+            def getOneAddress(results):
+                answers, authority, additional = results
+                return answers[0].payload.dottedQuad()
+            d.addCallback(getOneAddress)
             d.addCallback(
                 lambda hint: self._discoverAuthority(
                     query, [(hint, dns.PORT)], timeout, queriesLeft - 1))

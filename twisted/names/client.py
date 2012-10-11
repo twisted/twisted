@@ -14,24 +14,24 @@ return an C{IResolver}.
 
 Future plans: Proper nameserver acquisition on Windows/MacOS,
 better caching, respect timeouts
-
-@author: Jp Calderone
 """
 
 import os
 import errno
 import warnings
 
-from zope.interface import implements
+from zope.interface import implementer
 
 # Twisted imports
+from twisted.python.compat import nativeString
 from twisted.python.runtime import platform
+from twisted.python.filepath import FilePath
 from twisted.internet import error, defer, protocol, interfaces
 from twisted.python import log, failure
-from twisted.python.deprecate import getWarningMethod
 from twisted.names import dns, common
 
 
+implementer(interfaces.IResolver)
 class Resolver(common.ResolverBase):
     """
     @ivar _waiting: A C{dict} mapping tuple keys of query name/type/class to
@@ -46,8 +46,6 @@ class Resolver(common.ResolverBase):
         L{IReactorTime} which will be used to set up network resources and
         track timeouts.
     """
-    implements(interfaces.IResolver)
-
     index = 0
     timeout = None
 
@@ -60,16 +58,6 @@ class Resolver(common.ResolverBase):
     resolv = None
     _lastResolvTime = None
     _resolvReadInterval = 60
-
-    def _getProtocol(self):
-        getWarningMethod()(
-            "Resolver.protocol is deprecated; use Resolver.queryUDP instead.",
-            PendingDeprecationWarning,
-            stacklevel=0)
-        self.protocol = dns.DNSDatagramProtocol(self)
-        return self.protocol
-    protocol = property(_getProtocol)
-
 
     def __init__(self, resolv=None, servers=None, timeout=(1, 3, 11, 45), reactor=None):
         """
@@ -117,7 +105,7 @@ class Resolver(common.ResolverBase):
         self.resolv = resolv
 
         if not len(self.servers) and not resolv:
-            raise ValueError, "No nameservers specified"
+            raise ValueError("No nameservers specified")
 
         self.factory = DNSClientFactory(self, timeout)
         self.factory.noisy = 0   # Be quiet by default
@@ -148,8 +136,8 @@ class Resolver(common.ResolverBase):
             return
 
         try:
-            resolvConf = file(self.resolv)
-        except IOError, e:
+            resolvConf = FilePath(self.resolv).open()
+        except IOError as e:
             if e.errno == errno.ENOENT:
                 # Missing resolv.conf is treated the same as an empty resolv.conf
                 self.parseConfig(())
@@ -171,21 +159,18 @@ class Resolver(common.ResolverBase):
         servers = []
         for L in resolvConf:
             L = L.strip()
-            if L.startswith('nameserver'):
-                resolver = (L.split()[1], dns.PORT)
+            if L.startswith(b'nameserver'):
+                resolver = (nativeString(L.split()[1]), dns.PORT)
                 servers.append(resolver)
                 log.msg("Resolver added %r to server list" % (resolver,))
-            elif L.startswith('domain'):
+            elif L.startswith(b'domain'):
                 try:
                     self.domain = L.split()[1]
                 except IndexError:
-                    self.domain = ''
+                    self.domain = b''
                 self.search = None
-            elif L.startswith('search'):
-                try:
-                    self.search = L.split()[1:]
-                except IndexError:
-                    self.search = ''
+            elif L.startswith(b'search'):
+                self.search = L.split()[1:]
                 self.domain = None
         if not servers:
             servers.append(('127.0.0.1', dns.PORT))
@@ -217,14 +202,6 @@ class Resolver(common.ResolverBase):
         Return a new L{DNSDatagramProtocol} bound to a randomly selected port
         number.
         """
-        if 'protocol' in self.__dict__:
-            # Some code previously asked for or set the deprecated `protocol`
-            # attribute, so it probably expects that object to be used for
-            # queries.  Give it back and skip the super awesome source port
-            # randomization logic.  This is actually a really good reason to
-            # remove this deprecated backward compatibility as soon as
-            # possible. -exarkun
-            return self.protocol
         proto = dns.DNSDatagramProtocol(self)
         while True:
             try:
@@ -551,9 +528,9 @@ def createResolver(servers=None, resolvconf=None, hosts=None):
     from twisted.names import resolve, cache, root, hosts as hostsModule
     if platform.getType() == 'posix':
         if resolvconf is None:
-            resolvconf = '/etc/resolv.conf'
+            resolvconf = b'/etc/resolv.conf'
         if hosts is None:
-            hosts = '/etc/hosts'
+            hosts = b'/etc/hosts'
         theResolver = Resolver(resolvconf, servers)
         hostResolver = hostsModule.Resolver(hosts)
     else:

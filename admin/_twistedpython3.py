@@ -41,10 +41,14 @@ modules = [
     "twisted.internet._utilspy3",
     "twisted.names",
     "twisted.names.cache",
+    # Client semi-depends on twisted.names.root, but only on Windows really.
+    # twisted.names.root is unported, but it imports at least.
+    "twisted.names.client",
     "twisted.names.common",
     "twisted.names.dns",
     "twisted.names.error",
     "twisted.names.hosts",
+    "twisted.names.resolve",
     "twisted.names.test",
     "twisted.protocols",
     "twisted.protocols.basic",
@@ -114,6 +118,7 @@ testModules = [
     "twisted.internet.test.test_udp_internals",
     "twisted.internet.test.test_utilspy3",
     "twisted.names.test.test_cache",
+    "twisted.names.test.test_client",
     "twisted.names.test.test_common",
     "twisted.names.test.test_dns",
     "twisted.names.test.test_hosts",

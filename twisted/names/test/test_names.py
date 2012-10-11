@@ -16,15 +16,10 @@ from twisted.internet.task import Clock
 from twisted.internet.defer import succeed
 from twisted.names import client, server, common, authority, dns
 from twisted.python import failure
-from twisted.names.error import DNSFormatError, DNSServerError, DNSNameError
-from twisted.names.error import DNSNotImplementedError, DNSQueryRefusedError
-from twisted.names.error import DNSUnknownError
-from twisted.names.dns import EFORMAT, ESERVER, ENAME, ENOTIMP, EREFUSED
 from twisted.names.dns import Message
 from twisted.names.client import Resolver
 from twisted.names.secondary import (
     SecondaryAuthorityService, SecondaryAuthority)
-from twisted.names.test.test_client import StubPort
 
 from twisted.python.compat import reduce
 from twisted.test.proto_helpers import StringTransport, MemoryReactor
@@ -571,57 +566,7 @@ class AXFRTest(unittest.TestCase):
             self.controller.messageReceived(m, None)
         self.assertEqual(self.results, self.records)
 
-class FakeDNSDatagramProtocol(object):
-    def __init__(self):
-        self.queries = []
-        self.transport = StubPort()
 
-    def query(self, address, queries, timeout=10, id=None):
-        self.queries.append((address, queries, timeout, id))
-        return defer.fail(dns.DNSQueryTimeoutError(queries))
-
-    def removeResend(self, id):
-        # Ignore this for the time being.
-        pass
-
-class RetryLogic(unittest.TestCase):
-    testServers = [
-        '1.2.3.4',
-        '4.3.2.1',
-        'a.b.c.d',
-        'z.y.x.w']
-
-    def testRoundRobinBackoff(self):
-        addrs = [(x, 53) for x in self.testServers]
-        r = client.Resolver(resolv=None, servers=addrs)
-        r.protocol = proto = FakeDNSDatagramProtocol()
-        return r.lookupAddress("foo.example.com"
-            ).addCallback(self._cbRoundRobinBackoff
-            ).addErrback(self._ebRoundRobinBackoff, proto
-            )
-
-    def _cbRoundRobinBackoff(self, result):
-        raise unittest.FailTest("Lookup address succeeded, should have timed out")
-
-    def _ebRoundRobinBackoff(self, failure, fakeProto):
-        failure.trap(defer.TimeoutError)
-
-        # Assert that each server is tried with a particular timeout
-        # before the timeout is increased and the attempts are repeated.
-
-        for t in (1, 3, 11, 45):
-            tries = fakeProto.queries[:len(self.testServers)]
-            del fakeProto.queries[:len(self.testServers)]
-
-            tries.sort()
-            expected = list(self.testServers)
-            expected.sort()
-
-            for ((addr, query, timeout, id), expectedAddr) in zip(tries, expected):
-                self.assertEqual(addr, (expectedAddr, 53))
-                self.assertEqual(timeout, t)
-
-        self.failIf(fakeProto.queries)
 
 class ResolvConfHandling(unittest.TestCase):
     def testMissing(self):
@@ -637,90 +582,6 @@ class ResolvConfHandling(unittest.TestCase):
         r = client.Resolver(resolv=resolvConf)
         self.assertEqual(r.dynServers, [('127.0.0.1', 53)])
         r._parseCall.cancel()
-
-
-
-class FilterAnswersTests(unittest.TestCase):
-    """
-    Test L{twisted.names.client.Resolver.filterAnswers}'s handling of various
-    error conditions it might encounter.
-    """
-    def setUp(self):
-        # Create a resolver pointed at an invalid server - we won't be hitting
-        # the network in any of these tests.
-        self.resolver = Resolver(servers=[('0.0.0.0', 0)])
-
-
-    def test_truncatedMessage(self):
-        """
-        Test that a truncated message results in an equivalent request made via
-        TCP.
-        """
-        m = Message(trunc=True)
-        m.addQuery('example.com')
-
-        def queryTCP(queries):
-            self.assertEqual(queries, m.queries)
-            response = Message()
-            response.answers = ['answer']
-            response.authority = ['authority']
-            response.additional = ['additional']
-            return succeed(response)
-        self.resolver.queryTCP = queryTCP
-        d = self.resolver.filterAnswers(m)
-        d.addCallback(
-            self.assertEqual, (['answer'], ['authority'], ['additional']))
-        return d
-
-
-    def _rcodeTest(self, rcode, exc):
-        m = Message(rCode=rcode)
-        err = self.resolver.filterAnswers(m)
-        err.trap(exc)
-
-
-    def test_formatError(self):
-        """
-        Test that a message with a result code of C{EFORMAT} results in a
-        failure wrapped around L{DNSFormatError}.
-        """
-        return self._rcodeTest(EFORMAT, DNSFormatError)
-
-
-    def test_serverError(self):
-        """
-        Like L{test_formatError} but for C{ESERVER}/L{DNSServerError}.
-        """
-        return self._rcodeTest(ESERVER, DNSServerError)
-
-
-    def test_nameError(self):
-        """
-        Like L{test_formatError} but for C{ENAME}/L{DNSNameError}.
-        """
-        return self._rcodeTest(ENAME, DNSNameError)
-
-
-    def test_notImplementedError(self):
-        """
-        Like L{test_formatError} but for C{ENOTIMP}/L{DNSNotImplementedError}.
-        """
-        return self._rcodeTest(ENOTIMP, DNSNotImplementedError)
-
-
-    def test_refusedError(self):
-        """
-        Like L{test_formatError} but for C{EREFUSED}/L{DNSQueryRefusedError}.
-        """
-        return self._rcodeTest(EREFUSED, DNSQueryRefusedError)
-
-
-    def test_refusedErrorUnknown(self):
-        """
-        Like L{test_formatError} but for an unrecognized error code and
-        L{DNSUnknownError}.
-        """
-        return self._rcodeTest(EREFUSED + 1, DNSUnknownError)
 
 
 

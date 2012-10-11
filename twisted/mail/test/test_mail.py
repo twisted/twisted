@@ -1043,8 +1043,6 @@ def tearDownDNS(self):
     dl = []
     dl.append(defer.maybeDeferred(self.port.stopListening))
     dl.append(defer.maybeDeferred(self.udpPort.stopListening))
-    if self.resolver.protocol.transport is not None:
-        dl.append(defer.maybeDeferred(self.resolver.protocol.transport.stopListening))
     try:
         self.resolver._parseCall.cancel()
     except:
