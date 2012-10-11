@@ -75,6 +75,7 @@ modules = [
     "twisted.python.threadpool",
     "twisted.python._utilpy3",
     "twisted.python.versions",
+    "twisted.python.win32",
     "twisted.test",
     "twisted.test.proto_helpers",
     "twisted.trial",

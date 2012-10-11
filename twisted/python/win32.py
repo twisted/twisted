@@ -11,6 +11,8 @@ See also twisted.python.shortcut.
     may safely be OR'ed into a mask for os.open.
 """
 
+from __future__ import division, absolute_import
+
 import re
 import os
 
