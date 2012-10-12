@@ -581,8 +581,8 @@ class HostnameEndpoint(object):
                     dconn.addErrback(connectFailed)
                     pending.append(dconn)
 
-#            self._reactor.callLater(0.3, iterateEndpoint)
-            iterateEndpoint()
+            self._reactor.callLater(0.3, iterateEndpoint)
+#            iterateEndpoint()
             print "Return from attemptConnection"
             return winner  # attemptConnection's return
 
