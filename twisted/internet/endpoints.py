@@ -456,15 +456,15 @@ class HostnameEndpoint(object):
         self._bindAddress = bindAddress
 
 
-    def endpointGenerator(self, reactor, host, port, timeout, bindAddress):
-        """
-        Looks at the resolved host address, and creates the
-        corresponding endpoint.
-        """
-        if isIPv6Address(host):
-            return TCP6ClientEndpoint(reactor, host, port, timeout, bindAddress)
-        else:
-            return TCP4ClientEndpoint(reactor, host, port, timeout, bindAddress)
+#    def endpointGenerator(self, reactor, host, port, timeout, bindAddress):
+#        """
+#        Looks at the resolved host address, and creates the
+#        corresponding endpoint.
+#        """
+#        if isIPv6Address(host):
+#            return TCP6ClientEndpoint(reactor, host, port, timeout, bindAddress)
+#        else:
+#            return TCP4ClientEndpoint(reactor, host, port, timeout, bindAddress)
         # TODO: Figure out a default return when the address is neither IPv6 nor
         # IPv4
 
@@ -491,12 +491,20 @@ class HostnameEndpoint(object):
             """
 #            print "Running getEndpoints."
             for family, socktype, proto, canonname, sockaddr in gaiResult:
-                if family in [AF_INET6, AF_INET]:
-                    yield self.endpointGenerator(self._reactor, sockaddr[0],
+                if family in [AF_INET6]:
+                    yield TCP6ClientEndpoint(self._reactor, sockaddr[0],
+                            self._port, self._timeout, self._bindAddress)
+                elif family in [AF_INET]:
+                    yield TCP4ClientEndpoint(self._reactor, sockaddr[0],
                             self._port, self._timeout, self._bindAddress)
                         # Yields an endpoint for every address returned by GAI
                         # For now, will work for a maximum of two addresses:
                         # one IPv4 and one IPv6 address in the result.
+
+        # TODO: Figure out a default return when the address is neither IPv6 nor
+        # IPv4
+
+
 
 
 
