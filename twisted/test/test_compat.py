@@ -14,7 +14,7 @@ from twisted.trial import unittest
 
 from twisted.python.compat import set, frozenset, reduce, execfile, _PY3
 from twisted.python.compat import comparable, cmp, nativeString
-from twisted.python.compat import unicode as unicodeCompat
+from twisted.python.compat import unicode as unicodeCompat, lazyByteSlice
 from twisted.python.compat import reraise, NativeStringIO, iterbytes, intToBytes
 from twisted.python.filepath import FilePath
 
@@ -518,7 +518,7 @@ class ReraiseTests(unittest.SynchronousTestCase):
 
 class Python3BytesTests(unittest.SynchronousTestCase):
     """
-    Tests for L{iterbytes}, L{intToBytes}.
+    Tests for L{iterbytes}, L{intToBytes}, L{lazyByteSlice}.
     """
 
     def test_iteration(self):
@@ -538,3 +538,31 @@ class Python3BytesTests(unittest.SynchronousTestCase):
         ASCII-encoded string representation of the number.
         """
         self.assertEqual(intToBytes(213), b"213")
+
+
+    def test_lazyByteSliceNoOffset(self):
+        """
+        L{lazyByteSlice} called with some bytes returns a semantically equal version
+        of these bytes.
+        """
+        data = b'123XYZ'
+        self.assertEqual(bytes(lazyByteSlice(data)), data)
+
+
+    def test_lazyByteSliceOffset(self):
+        """
+        L{lazyByteSlice} called with some bytes and an offset returns a semantically
+        equal version of these bytes starting at the given offset.
+        """
+        data = b'123XYZ'
+        self.assertEqual(bytes(lazyByteSlice(data, 2)), data[2:])
+
+
+    def test_lazyByteSliceOffsetAndLength(self):
+        """
+        L{lazyByteSlice} called with some bytes, an offset and a length returns a
+        semantically equal version of these bytes starting at the given
+        offset, up to the given length.
+        """
+        data = b'123XYZ'
+        self.assertEqual(bytes(lazyByteSlice(data, 2, 3)), data[2:5])

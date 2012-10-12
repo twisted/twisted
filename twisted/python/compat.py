@@ -327,6 +327,30 @@ if _PY3:
 
     def intToBytes(i):
         return ("%d" % i).encode("ascii")
+
+
+    # Ideally we would use memoryview, but it has a number of differences from
+    # the Python 2 buffer() that make that impractical
+    # (http://bugs.python.org/issue15945, incompatiblity with pyOpenSSL due to
+    # PyArg_ParseTuple differences.)
+    def lazyByteSlice(object, offset=0, size=None):
+        """
+        Return a copy of the given bytes-like object.
+
+        If an offset is given, the copy starts at that offset. If a size is
+        given, the copy will only be of that length.
+
+        @param object: C{bytes} to be copied.
+
+        @param offset: C{int}, starting index of copy.
+
+        @param size: Optional, if an C{int} is given limit the length of copy
+            to this size.
+        """
+        if size is None:
+            return object[offset:]
+        else:
+            return object[offset:(offset + size)]
 else:
     def iterbytes(originalBytes):
         return originalBytes
@@ -335,6 +359,8 @@ else:
     def intToBytes(i):
         return b"%d" % i
 
+
+    lazyByteSlice = buffer
 
 iterbytes.__doc__ = """
 Return an iterable wrapper for a C{bytes} object that provides the behavior of
@@ -370,4 +396,5 @@ __all__ = [
     "unicode",
     "iterbytes",
     "intToBytes",
+    "lazyByteSlice",
     ]
