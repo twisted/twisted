@@ -504,8 +504,12 @@ class HostnameEndpoint(object):
         # TODO: Figure out a default return when the address is neither IPv6 nor
         # IPv4
 
-
-
+        def testGetEndpoints(endpoints):
+            print "inside testGetEndpoints. The result from getEndpoints is:"
+            print endpoints
+            for ep in endpoints:
+                print ep
+            return endpoints
 
 
         def attemptConnection(endpoints):
@@ -586,6 +590,7 @@ class HostnameEndpoint(object):
             d = self._nameResolution(self._host)
             d.addErrback(errbackForGai)
             d.addCallback(getEndpoints)
+            d.addCallback(testGetEndpoints)
             d.addCallback(attemptConnection)
 #            d.errback(error.ConnectingCancelledError("The connection was cancelled"))
             print "Returning the fastest connection now.."
