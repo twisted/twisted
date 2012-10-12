@@ -484,12 +484,12 @@ class HostnameEndpoint(object):
             return defer.fail(error.DNSLookupError("Couldn't find hostname"))
 
 
-        def endpoints(gaiResult):
+        def _endpoints(gaiResult):
             """
             This method matches the host address famliy with an endpoint
             for every address returned by GAI.
             """
-#            print "Running endpoints."
+#            print "Running _endpoints."
             for family, socktype, proto, canonname, sockaddr in gaiResult:
                 if family in [AF_INET6]:
                     yield TCP6ClientEndpoint(self._reactor, sockaddr[0],
@@ -505,7 +505,7 @@ class HostnameEndpoint(object):
         # IPv4
 
         def testGetEndpoints(endpoints):
-            print "inside testGetEndpoints. The result from endpoints is:"
+            print "inside testGetEndpoints. The result from _endpoints is:"
             print endpoints
             for ep in endpoints:
                 print ep
@@ -589,7 +589,7 @@ class HostnameEndpoint(object):
         try:
             d = self._nameResolution(self._host)
             d.addErrback(errbackForGai)
-            d.addCallback(endpoints)
+            d.addCallback(_endpoints)
 #            d.addCallback(testGetEndpoints)
             d.addCallback(attemptConnection)
 #            d.errback(error.ConnectingCancelledError("The connection was cancelled"))
