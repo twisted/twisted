@@ -14,6 +14,38 @@ from twisted.python.compat import reraise, nativeString, NativeStringIO
 from twisted.python._utilpy3 import unsignedID
 
 
+def prefixedMethodNames(classObj, prefix):
+    """
+    A list of method names with a given prefix in a given class.
+    """
+    dct = {}
+    addMethodNamesToDict(classObj, dct, prefix)
+    return list(dct.keys())
+
+
+def addMethodNamesToDict(classObj, dict, prefix, baseClass=None):
+    """
+    addMethodNamesToDict(classObj, dict, prefix, baseClass=None) -> dict
+    this goes through 'classObj' (and its bases) and puts method names
+    starting with 'prefix' in 'dict' with a value of 1. if baseClass isn't
+    None, methods will only be added if classObj is-a baseClass
+
+    If the class in question has the methods 'prefix_methodname' and
+    'prefix_methodname2', the resulting dict should look something like:
+    {"methodname": 1, "methodname2": 1}.
+    """
+    for base in classObj.__bases__:
+        addMethodNamesToDict(base, dict, prefix, baseClass)
+
+    if baseClass is None or baseClass in classObj.__bases__:
+        for name, method in classObj.__dict__.items():
+            optName = name[len(prefix):]
+            if ((type(method) is types.FunctionType)
+                and (name[:len(prefix)] == prefix)
+                and (len(optName))):
+                dict[optName] = 1
+
+
 def prefixedMethods(obj, prefix=''):
     """
     A list of methods with a given prefix on a given instance.

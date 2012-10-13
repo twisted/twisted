@@ -12,7 +12,9 @@ import os
 
 from twisted.trial.unittest import SynchronousTestCase as TestCase
 
-from twisted.python._reflectpy3 import accumulateMethods, prefixedMethods
+from twisted.python._reflectpy3 import (
+    accumulateMethods, prefixedMethods, prefixedMethodNames,
+    addMethodNamesToDict)
 from twisted.python import _reflectpy3 as reflect
 # After twisted.python.reflect is fully ported to Python 3, import
 # fullyQualifiedName from there instead, to test the actual public interface
@@ -128,6 +130,51 @@ class PrefixedMethodsTests(TestCase):
         x = Separate()
         output = prefixedMethods(x, 'good_')
         self.assertEqual([x.good_method], output)
+
+
+
+class PrefixedMethodNamesTests(TestCase):
+    """
+    Tests for L{prefixedMethodNames}.
+    """
+    def test_method(self):
+        """
+        L{prefixedMethodNames} returns a list including methods with the given
+        prefix defined on the class passed to it.
+        """
+        self.assertEqual(["method"], prefixedMethodNames(Separate, "good_"))
+
+
+    def test_inheritedMethod(self):
+        """
+        L{prefixedMethodNames} returns a list included methods with the given
+        prefix defined on base classes of the class passed to it.
+        """
+        class Child(Separate):
+            pass
+        self.assertEqual(["method"], prefixedMethodNames(Child, "good_"))
+
+
+
+class AddMethodNamesToDictTests(TestCase):
+    """
+    Tests for L{addMethodNamesToDict}.
+    """
+    def test_baseClass(self):
+        """
+        If C{baseClass} is passed to L{addMethodNamesToDict}, only methods which
+        are a subclass of C{baseClass} are added to the result dictionary.
+        """
+        class Alternate(object):
+            pass
+
+        class Child(Separate, Alternate):
+            def good_alternate(self):
+                pass
+
+        result = {}
+        addMethodNamesToDict(Child, result, 'good_', Alternate)
+        self.assertEqual({'alternate': 1}, result)
 
 
 
