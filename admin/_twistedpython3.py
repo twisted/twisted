@@ -93,8 +93,14 @@ modules = [
     "twisted.trial.util",
     "twisted._version",
     "twisted.web",
+    # twisted.web.resource depends on twisted.web.error, so it is sorta ported,
+    # but its tests are not yet ported, so it probably doesn't completely work.
+    "twisted.web.error",
     "twisted.web.http_headers",
+    "twisted.web.resource",
+    "twisted.web._responses",
     "twisted.web.test",
+    "twisted.web.test.requesthelper",
     ]
 
 
@@ -162,4 +168,5 @@ testModules = [
     "twisted.trial.test.test_util",
     "twisted.trial.test.test_warning",
     "twisted.web.test.test_http_headers",
+    "twisted.web.test.test_resource",
     ]

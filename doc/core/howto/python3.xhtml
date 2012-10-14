@@ -64,5 +64,14 @@
     example, <code>Record_A</code>'s <code>address</code> parameter) is now a
     text string.  Additionally, time-to-live (ttl) values given as strings must
     now be given as text strings.</p>
+
+    <p><code>twisted.web.resource.IResource</code> continues to deal with URLs
+    and all URL-derived values as byte strings.</p>
+
+    <p><code>twisted.web.resource.ErrorPage</code> has several string attributes
+    (<code>template</code>, <code>brief</code>, and <code>detail</code>) which
+    were previously byte strings.  On Python 3 only, these must now be text
+    strings.</p>
+
   </body>
 </html>
