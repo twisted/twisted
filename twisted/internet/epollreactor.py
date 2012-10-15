@@ -11,6 +11,8 @@ listeners or connectors are added)::
     epollreactor.install()
 """
 
+from __future__ import division, absolute_import
+
 import errno
 
 from zope.interface import implementer

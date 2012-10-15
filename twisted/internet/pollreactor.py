@@ -11,6 +11,8 @@ listeners or connectors are added)::
     pollreactor.install()
 """
 
+from __future__ import division, absolute_import
+
 # System imports
 import errno
 from select import error as SelectError, poll
