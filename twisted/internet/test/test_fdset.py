@@ -11,7 +11,6 @@ import os, socket, traceback
 
 from zope.interface import implementer
 
-from twisted.python.compat import _PY3
 from twisted.python.runtime import platform
 from twisted.trial.unittest import SkipTest
 from twisted.internet.interfaces import IReactorFDSet, IReadDescriptor
@@ -20,11 +19,7 @@ from twisted.internet.test.reactormixins import ReactorBuilder
 
 # twisted.internet.tcp nicely defines some names with proper values on
 # several different platforms.
-if _PY3:
-    # Get rid of this special import in ticket #6002
-    from errno import EINPROGRESS, EWOULDBLOCK
-else:
-    from twisted.internet.tcp import EINPROGRESS, EWOULDBLOCK
+from twisted.internet.tcp import EINPROGRESS, EWOULDBLOCK
 
 
 def socketpair():

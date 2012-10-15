@@ -20,7 +20,7 @@ from twisted.internet.interfaces import (
     IReactorTCP, IReactorUDP, IReactorSSL, IReactorSocket)
 from twisted.internet.interfaces import IReactorProcess, IReactorMulticast
 from twisted.internet.interfaces import IHalfCloseableDescriptor
-from twisted.internet import error, udp
+from twisted.internet import error, udp, tcp
 
 from twisted.python import log, failure, _utilpy3 as util
 from twisted.python.runtime import platformType, platform
@@ -462,8 +462,6 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
         if addressFamily not in (socket.AF_INET, socket.AF_INET6):
             raise error.UnsupportedAddressFamily(addressFamily)
 
-        # Move back to top-level as part of ticket #6002:
-        from twisted.internet import tcp
         p = tcp.Port._fromListeningDescriptor(
             self, fileDescriptor, addressFamily, factory)
         p.startListening()
@@ -477,8 +475,6 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
         if addressFamily not in (socket.AF_INET, socket.AF_INET6):
             raise error.UnsupportedAddressFamily(addressFamily)
 
-        # Move back to top-level as part of ticket #6002:
-        from twisted.internet import tcp
         return tcp.Server._fromConnectedSocket(
             fileDescriptor, addressFamily, factory, self)
 
@@ -488,8 +484,6 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
     def listenTCP(self, port, factory, backlog=50, interface=''):
         """@see: twisted.internet.interfaces.IReactorTCP.listenTCP
         """
-        # Move back to top-level as part of ticket #6002:
-        from twisted.internet import tcp
         p = tcp.Port(port, factory, backlog, interface, self)
         p.startListening()
         return p
@@ -497,8 +491,6 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
     def connectTCP(self, host, port, factory, timeout=30, bindAddress=None):
         """@see: twisted.internet.interfaces.IReactorTCP.connectTCP
         """
-        # Move back to top-level as part of ticket #6002:
-        from twisted.internet import tcp
         c = tcp.Connector(host, port, factory, timeout, bindAddress, self)
         c.connect()
         return c

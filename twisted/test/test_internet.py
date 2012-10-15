@@ -1389,10 +1389,6 @@ class TestProducer(unittest.TestCase):
 
 
 class PortStringification(unittest.TestCase):
-    if _PY3:
-        skip = ("Rewrite these as better tests in better locations as part of "
-                "#6002, #6003 and the Python 3 SSL port.")
-
     if interfaces.IReactorTCP(reactor, None) is not None:
         def testTCP(self):
             p = reactor.listenTCP(0, protocol.ServerFactory())
@@ -1417,3 +1413,7 @@ class PortStringification(unittest.TestCase):
             self.assertNotEqual(str(p).find(str(portNo)), -1,
                                 "%d not found in %s" % (portNo, p))
             return p.stopListening()
+
+        if _PY3:
+            testSSL.skip = ("Re-enable once the Python 3 SSL port is done.")
+

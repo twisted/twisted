@@ -407,9 +407,6 @@ class ThrottlingTestCase(unittest.TestCase):
         wrapTServer.deferred.addCallback(_cleanup)
         return wrapTServer.deferred
 
-    if _PY3:
-        test_limit.skip = "Re-enable in #6002"
-
 
     def test_writeLimit(self):
         """

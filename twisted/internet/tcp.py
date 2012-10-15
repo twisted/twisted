@@ -8,6 +8,7 @@ Various asynchronous TCP/IP classes.
 End users shouldn't use this module directly - use the reactor APIs instead.
 """
 
+from __future__ import division, absolute_import
 
 # System Imports
 import types
@@ -16,8 +17,9 @@ import sys
 import operator
 import struct
 
-from zope.interface import implements
+from zope.interface import implementer
 
+from twisted.python.compat import _PY3, lazyByteSlice
 from twisted.python.runtime import platformType
 from twisted.python import versions, deprecate
 
@@ -30,6 +32,9 @@ try:
         ServerMixin as _TLSServerMixin)
 except ImportError:
     try:
+        if _PY3:
+            # We're never going to port the old SSL code to Python 3:
+            raise
         # Try to get the socket BIO based startTLS implementation, available in
         # all pyOpenSSL versions
         from twisted.internet._oldtls import (
@@ -91,13 +96,20 @@ from errno import errorcode
 # Twisted Imports
 from twisted.internet import base, address, fdesc
 from twisted.internet.task import deferLater
-from twisted.python import log, failure, reflect
-from twisted.python.util import unsignedID, untilConcludes
+from twisted.python import log, failure, _reflectpy3 as reflect
+from twisted.python._utilpy3 import unsignedID, untilConcludes
 from twisted.internet.error import CannotListenError
 from twisted.internet import abstract, main, interfaces, error
 
 # Not all platforms have, or support, this flag.
 _AI_NUMERICSERV = getattr(socket, "AI_NUMERICSERV", 0)
+
+
+# The type for service names passed to socket.getservbyname:
+if _PY3:
+    _portNameType = str
+else:
+    _portNameType = types.StringTypes
 
 
 
@@ -157,6 +169,7 @@ class _AbortingMixin(object):
 
 
 
+@implementer(interfaces.ITCPTransport, interfaces.ISystemHandle)
 class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser,
                  _AbortingMixin):
     """
@@ -168,7 +181,6 @@ class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser,
     @ivar logstr: prefix used when logging events related to this connection.
     @type logstr: C{str}
     """
-    implements(interfaces.ITCPTransport, interfaces.ISystemHandle)
 
 
     def __init__(self, skt, protocol, reactor=None):
@@ -194,7 +206,7 @@ class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser,
         """
         try:
             data = self.socket.recv(self.bufferSize)
-        except socket.error, se:
+        except socket.error as se:
             if se.args[0] == EWOULDBLOCK:
                 return
             else:
@@ -229,11 +241,11 @@ class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser,
         """
         # Limit length of buffer to try to send, because some OSes are too
         # stupid to do so themselves (ahem windows)
-        limitedData = buffer(data, 0, self.SEND_LIMIT)
+        limitedData = lazyByteSlice(data, 0, self.SEND_LIMIT)
 
         try:
             return untilConcludes(self.socket.send, limitedData)
-        except socket.error, se:
+        except socket.error as se:
             if se.args[0] in (EWOULDBLOCK, ENOBUFS):
                 return 0
             else:
@@ -555,7 +567,7 @@ class BaseClient(_BaseBaseClient, _TLSClientMixin, Connection):
         # cleaned up some day, though.
         try:
             connectResult = self.socket.connect_ex(self.realAddress)
-        except socket.error, se:
+        except socket.error as se:
             connectResult = se.args[0]
         if connectResult:
             if connectResult == EISCONN:
@@ -678,7 +690,7 @@ class _BaseTCPClient(object):
             self._requiresResolution = True
         try:
             skt = self.createInternetSocket()
-        except socket.error, se:
+        except socket.error as se:
             err = error.ConnectBindError(se.args[0], se.args[1])
             whenDone = None
         if whenDone and bindAddress is not None:
@@ -688,7 +700,7 @@ class _BaseTCPClient(object):
                 else:
                     bindinfo = bindAddress
                 skt.bind(bindinfo)
-            except socket.error, se:
+            except socket.error as se:
                 err = error.ConnectBindError(se.args[0], se.args[1])
                 whenDone = None
         self._finishInit(whenDone, skt, err, reactor)
@@ -841,6 +853,7 @@ class Server(_TLSServerMixin, Connection):
 
 
 
+@implementer(interfaces.IListeningPort)
 class Port(base.BasePort, _SocketCloser):
     """
     A TCP server port, listening for connections.
@@ -876,8 +889,6 @@ class Port(base.BasePort, _SocketCloser):
         listen for connections (instead of a new socket being created by this
         L{Port}).
     """
-
-    implements(interfaces.IListeningPort)
 
     socketType = socket.SOCK_STREAM
 
@@ -965,8 +976,8 @@ class Port(base.BasePort, _SocketCloser):
                 else:
                     addr = (self.interface, self.port)
                 skt.bind(addr)
-            except socket.error, le:
-                raise CannotListenError, (self.interface, self.port, le)
+            except socket.error as le:
+                raise CannotListenError(self.interface, self.port, le)
             skt.listen(self.backlog)
         else:
             # Re-use the externally specified socket
@@ -1018,7 +1029,7 @@ class Port(base.BasePort, _SocketCloser):
                     return
                 try:
                     skt, addr = self.socket.accept()
-                except socket.error, e:
+                except socket.error as e:
                     if e.args[0] in (EWOULDBLOCK, EAGAIN):
                         self.numberAccepts = i
                         break
@@ -1141,10 +1152,10 @@ class Connector(base.BaseConnector):
     _addressType = address.IPv4Address
 
     def __init__(self, host, port, factory, timeout, bindAddress, reactor=None):
-        if isinstance(port, types.StringTypes):
+        if isinstance(port, _portNameType):
             try:
                 port = socket.getservbyname(port, 'tcp')
-            except socket.error, e:
+            except socket.error as e:
                 raise error.ServiceNameUnknownError(string="%s (%r)" % (e, port))
         self.host, self.port = host, port
         if abstract.isIPv6Address(host):

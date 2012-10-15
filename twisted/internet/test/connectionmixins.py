@@ -26,6 +26,7 @@ from twisted.trial.unittest import SkipTest
 from twisted.internet.error import DNSLookupError
 from twisted.internet.interfaces import ITLSTransport
 from twisted.internet.test.reactormixins import needsRunningReactor
+from twisted.test.test_tcp import ClosingProtocol
 
 
 
@@ -615,9 +616,6 @@ class TCPClientTestsMixin(object):
         transport were still connected.
         """
         reactor = self.buildReactor()
-        # Move back up to top-level once test_tcp is ported to Python 3
-        # (ticket #6002):
-        from twisted.test.test_tcp import ClosingProtocol
         port = reactor.listenTCP(0, serverFactoryFor(ClosingProtocol),
                                  interface=self.interface)
 

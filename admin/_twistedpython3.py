@@ -33,6 +33,7 @@ modules = [
     "twisted.internet.reactor", # don't expect it to work yet, though!
     "twisted.internet._signals",
     "twisted.internet.task",
+    "twisted.internet.tcp",
     "twisted.internet.test",
     "twisted.internet.test.modulehelpers",
     "twisted.internet.test.reactormixins",
@@ -153,6 +154,8 @@ testModules = [
     "twisted.test.test_randbytes",
     "twisted.test.test_setup",
     "twisted.test.test_task",
+    "twisted.test.test_tcp",
+    "twisted.test.test_tcp_internals",
     "twisted.test.test_threadable",
     "twisted.test.test_threads",
     "twisted.test.test_twisted",

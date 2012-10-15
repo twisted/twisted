@@ -5,6 +5,8 @@
 Whitebox tests for TCP APIs.
 """
 
+from __future__ import division, absolute_import
+
 import errno, socket, os
 
 try:
@@ -12,6 +14,7 @@ try:
 except ImportError:
     resource = None
 
+from twisted.python.compat import _PY3
 from twisted.trial.unittest import TestCase
 
 from twisted.python import log
@@ -26,6 +29,9 @@ class PlatformAssumptionsTestCase(TestCase):
     """
     Test assumptions about platform behaviors.
     """
+    if _PY3:
+        skip = "Port when Python 3 supports twisted.internet.process (#5987)"
+
     socketLimit = 8192
 
     def setUp(self):
@@ -86,7 +92,7 @@ class PlatformAssumptionsTestCase(TestCase):
         for i in xrange(self.socketLimit):
             try:
                 self.socket()
-            except socket.error, e:
+            except socket.error as e:
                 if e.args[0] in (EMFILE, ENOBUFS):
                     # The desired state has been achieved.
                     break
