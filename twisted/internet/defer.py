@@ -1097,6 +1097,35 @@ def _inlineCallbacks(result, g, deferred):
             return deferred
 
         if isinstance(result, Deferred):
+            def extendErrbackStack(r):
+                """
+                A failure was yielded by the generator, so for the failure's
+                traceback to be useful insert the current yield line into the
+                stack of frames.
+                """
+                f = g.gi_frame
+
+                # The following code is lifted almost straight from
+                # twisted.python.failure.Failure.__init__()
+                localz = f.f_locals.copy()
+                if f.f_locals is f.f_globals:
+                    globalz = {}
+                else:
+                    globalz = f.f_globals.copy()
+                for d in globalz, localz:
+                    if d.has_key("__builtins__"):
+                        del d["__builtins__"]
+
+                r.frames.insert(0, [
+                    f.f_code.co_name,
+                    f.f_code.co_filename,
+                    f.f_lineno,
+                    localz.items(),
+                    globalz.items(),
+                    ])
+                return r
+            result.addErrback(extendErrbackStack)
+
             # a deferred was yielded, get the result.
             def gotResult(r):
                 if waiting[0]:

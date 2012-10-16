@@ -13,6 +13,7 @@ from __future__ import division, absolute_import
 
 from twisted.trial.unittest import TestCase
 from twisted.internet.defer import Deferred, returnValue, inlineCallbacks
+from twisted.python.failure import Failure
 
 class NonLocalExitTests(TestCase):
     """
@@ -87,4 +88,36 @@ class NonLocalExitTests(TestCase):
         cause.callback(1)
         self.assertMistakenMethodWarning(results)
 
+
+class FrameStackTests(TestCase):
+    def test_failureContainsCallingFrames(self):
+        """
+        When L{inlineCallbacks} yields a failure, it should add itself to the
+        failure's frames so that the traceback is more useful.
+        """
+        @inlineCallbacks
+        def inline1():
+            yield 1/0
+
+        @inlineCallbacks
+        def inline2():
+            yield inline1()
+
+        @inlineCallbacks
+        def inline3():
+            yield inline2()
+
+        d = inline3()
+        results = []
+        d.addBoth(results.append)
+
+        failure = results[0]
+        self.assertIsInstance(failure, Failure)
+
+        functionNames = []
+        for funcName, filename, lineno, localVars, globalVars in failure.frames:
+            functionNames.append(funcName)
+        self.assertIn('inline1', functionNames)
+        self.assertIn('inline2', functionNames)
+        self.assertIn('inline3', functionNames)
 
