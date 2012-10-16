@@ -163,14 +163,12 @@ class Request(pb.Copyable, http.Request, components.Componentized):
         self.prepath = []
         self.postpath = map(unquote, string.split(self.path[1:], '/'))
 
-        if self.site.encoders:
-            for encoderFactory in self.site.encoders:
-                encoder = encoderFactory.encoderForRequest(self)
-                if encoder is not None:
-                    self._encoder = encoder
-                    break
         try:
             resrc = self.site.getResourceFor(self)
+            if resource._IEncodingResource.providedBy(resrc):
+                encoder = resrc.getEncoder(self)
+                if encoder is not None:
+                    self._encoder = encoder
             self.render(resrc)
         except:
             self.processingFailed(failure.Failure())
@@ -609,12 +607,6 @@ class Site(http.HTTPFactory):
         rendered pages. Default to C{True}.
     @ivar sessionFactory: factory for sessions objects. Default to L{Session}.
     @ivar sessionCheckTime: Deprecated.  See L{Session.sessionTimeout} instead.
-    @ivar encoders: Optionally, a list of L{iweb._IRequestEncoderFactory}
-        returning L{iweb._IRequestEncoder}that may transform the data passed to
-        L{Request.write}. The list must be sorted in order of priority: the
-        first encoder factory handling the request will prevent the others from
-        doing the same.
-    @type encoders: C{list} or C{NoneType}.
     """
     counter = 0
     requestFactory = Request
@@ -622,15 +614,13 @@ class Site(http.HTTPFactory):
     sessionFactory = Session
     sessionCheckTime = 1800
 
-    def __init__(self, resource, logPath=None, timeout=60*60*12,
-                 encoders=None):
+    def __init__(self, resource, logPath=None, timeout=60*60*12):
         """
         Initialize.
         """
         http.HTTPFactory.__init__(self, logPath=logPath, timeout=timeout)
         self.sessions = {}
         self.resource = resource
-        self.encoders = encoders
 
     def _openLogFile(self, path):
         from twisted.python import logfile

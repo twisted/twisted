@@ -10,7 +10,8 @@ from __future__ import division, absolute_import
 
 __all__ = [
     'IResource', 'getChildForRequest',
-    'Resource', 'ErrorPage', 'NoResource', 'ForbiddenResource']
+    'Resource', 'ErrorPage', 'NoResource', 'ForbiddenResource',
+    'EncodingResourceWrapper']
 
 import warnings
 
@@ -18,9 +19,11 @@ from zope.interface import Attribute, Interface, implementer
 
 from twisted.python.compat import nativeString, unicode
 from twisted.python._reflectpy3 import prefixedMethodNames
+from twisted.python.components import proxyForInterface
 
 from twisted.web._responses import FORBIDDEN, NOT_FOUND
 from twisted.web.error import UnsupportedMethod
+
 
 
 class IResource(Interface):
@@ -100,18 +103,19 @@ def getChildForRequest(resource, request):
 @implementer(IResource)
 class Resource:
     """
-    I define a web-accessible resource.
+    Define a web-accessible resource.
 
-    I serve 2 main purposes; one is to provide a standard representation for
-    what HTTP specification calls an 'entity', and the other is to provide an
-    abstract directory structure for URL retrieval.
+    This serves 2 main purposes; one is to provide a standard representation
+    for what HTTP specification calls an 'entity', and the other is to provide
+    an abstract directory structure for URL retrieval.
     """
     entityType = IResource
 
     server = None
 
     def __init__(self):
-        """Initialize.
+        """
+        Initialize.
         """
         self.children = {}
 
@@ -346,3 +350,56 @@ class ForbiddenResource(ErrorPage):
     """
     def __init__(self, message="Sorry, resource is forbidden."):
         ErrorPage.__init__(self, FORBIDDEN, "Forbidden Resource", message)
+
+
+
+class _IEncodingResource(Interface):
+    """
+    A resource which knows about L{_IRequestEncoderFactory}.
+
+    @since: 12.3
+    """
+
+    def getEncoder(request):
+        """
+        Parse the request and return an encoder if applicable, using
+        L{_IRequestEncoderFactory.encoderForRequest}.
+
+        @return: A L{_IRequestEncoder}, or C{None}.
+        """
+
+
+
+@implementer(_IEncodingResource)
+class EncodingResourceWrapper(proxyForInterface(IResource)):
+    """
+    Wrap a L{IResource}, potentially applying an encoding to the response body
+    generated.
+
+    Note that the returned children resources won't be wrapped, so you have to
+    explicitly wrap them if you want the encoding to be applied.
+
+    @ivar encoders: A list of
+        L{_IRequestEncoderFactory<twisted.web.iweb._IRequestEncoderFactory>}
+        returning L{_IRequestEncoder<twisted.web.iweb._IRequestEncoder>} that
+        may transform the data passed to C{Request.write}. The list must be
+        sorted in order of priority: the first encoder factory handling the
+        request will prevent the others from doing the same.
+    @type encoders: C{list}.
+
+    @since: 12.3
+    """
+
+    def __init__(self, original, encoders):
+        super(EncodingResourceWrapper, self).__init__(original)
+        self._encoders = encoders
+
+
+    def getEncoder(self, request):
+        """
+        Browser the list of encoders looking for one applicable encoder.
+        """
+        for encoderFactory in self._encoders:
+            encoder = encoderFactory.encoderForRequest(request)
+            if encoder is not None:
+                return encoder

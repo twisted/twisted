@@ -485,9 +485,10 @@ class GzipEncoderTests(unittest.TestCase):
 
     def setUp(self):
         self.channel = DummyChannel()
-        self.channel.site.resource.putChild(
-            "foo", Data("Some data", "text/plain"))
-        self.channel.site.encoders = [server.GzipEncoderFactory()]
+        staticResource = Data("Some data", "text/plain")
+        wrapped = resource.EncodingResourceWrapper(
+            staticResource, [server.GzipEncoderFactory()])
+        self.channel.site.resource.putChild("foo", wrapped)
 
 
     def test_interfaces(self):
