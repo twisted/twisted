@@ -351,6 +351,12 @@ if _PY3:
             return object[offset:]
         else:
             return object[offset:(offset + size)]
+
+
+    def networkString(s):
+        if not isinstance(s, unicode):
+            raise TypeError("Can only convert text to bytes on Python 3")
+        return s.encode('ascii')
 else:
     def iterbytes(originalBytes):
         return originalBytes
@@ -361,6 +367,13 @@ else:
 
 
     lazyByteSlice = buffer
+
+    def networkString(s):
+        if not isinstance(s, str):
+            raise TypeError("Can only pass-through bytes on Python 2")
+        # Ensure we're limited to ASCII subset:
+        s.decode('ascii')
+        return s
 
 iterbytes.__doc__ = """
 Return an iterable wrapper for a C{bytes} object that provides the behavior of
@@ -382,6 +395,24 @@ integer.
 @rtype: C{bytes}
 """
 
+networkString.__doc__ = """
+Convert the native string type to C{bytes} if it is not already C{bytes} using
+ASCII encoding if conversion is necessary.
+
+This is useful for sending text-like bytes that are constructed using string
+interpolation.  For example, this is safe on Python 2 and Python 3:
+
+    networkString("Hello %d" % (n,))
+
+@param s: A native string to convert to bytes if necessary.
+@type s: C{str}
+
+@raise UnicodeError: The input string is not ASCII encodable/decodable.
+@raise TypeError: The input is neither C{bytes} nor C{unicode}.
+
+@rtype: C{bytes}
+"""
+
 
 __all__ = [
     "reraise",
@@ -393,6 +424,7 @@ __all__ = [
     "comparable",
     "nativeString",
     "NativeStringIO",
+    "networkString",
     "unicode",
     "iterbytes",
     "intToBytes",

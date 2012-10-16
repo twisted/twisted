@@ -13,7 +13,7 @@ import socket, sys, traceback
 from twisted.trial import unittest
 
 from twisted.python.compat import set, frozenset, reduce, execfile, _PY3
-from twisted.python.compat import comparable, cmp, nativeString
+from twisted.python.compat import comparable, cmp, nativeString, networkString
 from twisted.python.compat import unicode as unicodeCompat, lazyByteSlice
 from twisted.python.compat import reraise, NativeStringIO, iterbytes, intToBytes
 from twisted.python.filepath import FilePath
@@ -465,6 +465,61 @@ class StringTests(unittest.SynchronousTestCase):
         f.write("hello")
         f.write(" there")
         self.assertEqual(f.getvalue(), "hello there")
+
+
+
+class NetworkStringTests(unittest.SynchronousTestCase):
+    """
+    Tests for L{networkString}.
+    """
+    def test_bytes(self):
+        """
+        L{networkString} returns a C{bytes} object passed to it unmodified.
+        """
+        self.assertEqual(b"foo", networkString(b"foo"))
+
+
+    def test_bytesOutOfRange(self):
+        """
+        L{networkString} raises C{UnicodeError} if passed a C{bytes} instance
+        containing bytes not used by ASCII.
+        """
+        self.assertRaises(
+            UnicodeError, networkString, u"\N{SNOWMAN}".encode('utf-8'))
+    if _PY3:
+        test_bytes.skip = test_bytesOutOfRange.skip = (
+            "Bytes behavior of networkString only provided on Python 2.")
+
+    def test_unicode(self):
+        """
+        L{networkString} returns a C{unicode} object passed to it encoded into a
+        C{bytes} instance.
+        """
+        self.assertEqual(b"foo", networkString(u"foo"))
+
+
+    def test_unicodeOutOfRange(self):
+        """
+        L{networkString} raises L{UnicodeError} if passed a C{unicode} instance
+        containing characters not encodable in ASCII.
+        """
+        self.assertRaises(
+            UnicodeError, networkString, u"\N{SNOWMAN}")
+    if not _PY3:
+        test_unicode.skip = test_unicodeOutOfRange.skip = (
+            "Unicode behavior of networkString only provided on Python 3.")
+
+
+    def test_nonString(self):
+        """
+        L{networkString} raises L{TypeError} if passed a non-string object or
+        the wrong type of string object.
+        """
+        self.assertRaises(TypeError, networkString, object())
+        if _PY3:
+            self.assertRaises(TypeError, networkString, b"bytes")
+        else:
+            self.assertRaises(TypeError, networkString, u"text")
 
 
 
