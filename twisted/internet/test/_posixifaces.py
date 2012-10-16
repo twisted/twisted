@@ -5,6 +5,8 @@
 POSIX implementation of local network interface enumeration.
 """
 
+from __future__ import division, absolute_import
+
 import sys, socket
 
 from socket import AF_INET, AF_INET6, inet_ntop
@@ -12,6 +14,19 @@ from ctypes import (
     CDLL, POINTER, Structure, c_char_p, c_ushort, c_int,
     c_uint32, c_uint8, c_void_p, c_ubyte, pointer, cast)
 from ctypes.util import find_library
+
+from twisted.python.compat import _PY3, nativeString
+
+if _PY3:
+    # Once #6070 is implemented, this can be replaced with the implementation
+    # from that ticket:
+    def chr(i):
+        """
+        Python 3 implementation of Python 2 chr(), i.e. convert an integer to
+        corresponding byte.
+        """
+        return bytes([i])
+
 
 libc = CDLL(find_library("c"))
 
@@ -106,7 +121,7 @@ def _interfaces():
                     addr = None
 
                 if addr:
-                    packed = ''.join(map(chr, addr[0].sin_addr.in_addr[:]))
+                    packed = b''.join(map(chr, addr[0].sin_addr.in_addr[:]))
                     results.append((
                             ifaddrs[0].ifa_name,
                             family,
@@ -126,6 +141,8 @@ def posixGetLinkLocalIPv6Addresses():
     """
     retList = []
     for (interface, family, address) in _interfaces():
+        interface = nativeString(interface)
+        address = nativeString(address)
         if family == socket.AF_INET6 and address.startswith('fe80:'):
             retList.append('%s%%%s' % (address, interface))
     return retList

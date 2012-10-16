@@ -254,7 +254,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         # < 0, but the documentation for writeSomeData used to claim negative
         # integers meant connection lost.  Keep supporting this here,
         # although it may be worth deprecating and removing at some point.
-        if l < 0 or isinstance(l, Exception):
+        if isinstance(l, Exception) or l < 0:
             return l
         self.offset += l
         # If there is nothing left to send,

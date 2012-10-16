@@ -6,6 +6,8 @@
 Various helpers for tests for connection-oriented transports.
 """
 
+from __future__ import division, absolute_import
+
 import socket
 
 from gc import collect
@@ -250,7 +252,7 @@ class _SimplePullProducer(object):
 
     def resumeProducing(self):
         log.msg("Producer.resumeProducing")
-        self.consumer.write('x')
+        self.consumer.write(b'x')
 
 
 
@@ -337,17 +339,17 @@ class ConnectionTestsMixin(object):
                 self.system = None
 
             def connectionMade(self):
-                self.transport.write("a")
+                self.transport.write(b"a")
 
             def logPrefix(self):
                 return self._prefix
 
             def dataReceived(self, bytes):
                 self.system = context.get(ILogContext)["system"]
-                self.transport.write("b")
+                self.transport.write(b"b")
                 # Only close connection if both sides have received data, so
                 # that both sides have system set.
-                if "b" in bytes:
+                if b"b" in bytes:
                     self.transport.loseConnection()
 
         client = CustomLogPrefixProtocol("Custom Client")
@@ -379,13 +381,13 @@ class ConnectionTestsMixin(object):
             client = endpoint.connect(factoryFor(protocol))
             def write(proto):
                 msg("About to write to %r" % (proto,))
-                proto.transport.write('x')
+                proto.transport.write(b'x')
             client.addCallbacks(write, lostConnectionDeferred.errback)
 
             def disconnected(proto):
                 msg("%r disconnected" % (proto,))
-                proto.transport.write("some bytes to get lost")
-                proto.transport.writeSequence(["some", "more"])
+                proto.transport.write(b"some bytes to get lost")
+                proto.transport.writeSequence([b"some", b"more"])
                 finished.append(True)
 
             lostConnectionDeferred.addCallback(disconnected)
