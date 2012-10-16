@@ -5,22 +5,29 @@
 Tests for L{twisted.internet.posixbase} and supporting code.
 """
 
-from twisted.python.compat import set
+from __future__ import division, absolute_import
+
+from twisted.python.compat import set, _PY3
 from twisted.trial.unittest import TestCase
 from twisted.internet.defer import Deferred
 from twisted.internet.posixbase import PosixReactorBase, _Waker
 from twisted.internet.protocol import ServerFactory
 
-
 skipSockets = None
-try:
-    from twisted.internet import unix
-except ImportError:
-    skipSockets = "Platform does not support AF_UNIX sockets"
+if _PY3:
+    skipSockets = "Re-enable when Python 3 port supports AF_UNIX"
+else:
+    try:
+        from twisted.internet import unix
+        from twisted.test.test_unix import ClientProto
+    except ImportError:
+        skipSockets = "Platform does not support AF_UNIX sockets"
 
 from twisted.internet.tcp import Port
 from twisted.internet import reactor
-from twisted.test.test_unix import ClientProto
+
+
+
 
 class TrivialReactor(PosixReactorBase):
     def __init__(self):
