@@ -23,42 +23,19 @@ def main(args):
     """
     if os.path.exists('twisted'):
         sys.path.insert(0, '.')
-    from twisted import copyright
-    from twisted.python.dist import getDataFiles, getExtensions, getScripts, \
-        getPackages, setup, twisted_subprojects
+    from twisted.python.dist import (
+        STATIC_PACKAGE_METADATA, getDataFiles, getExtensions, getAllScripts,
+        getPackages, setup)
 
-    # "" is included because core scripts are directly in bin/
-    projects = [''] + [x for x in os.listdir('bin')
-                       if os.path.isdir(os.path.join("bin", x))
-                       and x in twisted_subprojects]
-
-    scripts = []
-    for i in projects:
-        scripts.extend(getScripts(i))
+    scripts = getAllScripts()
 
     setup_args = dict(
-        # metadata
-        name="Twisted",
-        version=copyright.version,
-        description="An asynchronous networking framework written in Python",
-        author="Twisted Matrix Laboratories",
-        author_email="twisted-python@twistedmatrix.com",
-        maintainer="Glyph Lefkowitz",
-        maintainer_email="glyph@twistedmatrix.com",
-        url="http://twistedmatrix.com/",
-        license="MIT",
-        long_description="""\
-An extensible framework for Python programming, with special focus
-on event-based network programming and multiprotocol integration.
-""",
-        packages = getPackages('twisted'),
-        conditionalExtensions = getExtensions(),
-        scripts = scripts,
+        packages=getPackages('twisted'),
+        conditionalExtensions=getExtensions(),
+        scripts=scripts,
         data_files=getDataFiles('twisted'),
-        classifiers=[
-            "Programming Language :: Python :: 2.6",
-            "Programming Language :: Python :: 2.7",
-            ])
+        **STATIC_PACKAGE_METADATA
+        )
 
     if 'setuptools' in sys.modules:
         from pkg_resources import parse_requirements

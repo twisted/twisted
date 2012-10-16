@@ -5,6 +5,8 @@
 Copyright information for Twisted.
 """
 
+from __future__ import division, absolute_import
+
 from twisted import __version__ as version, version as longversion
 
 longversion = str(longversion)
@@ -36,4 +38,4 @@ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-''' % copyright
+''' % (copyright,)

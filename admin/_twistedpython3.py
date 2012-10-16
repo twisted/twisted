@@ -19,6 +19,7 @@ from __future__ import division, absolute_import
 # conflicts, add new lines in alphabetical sort.
 modules = [
     "twisted",
+    "twisted.copyright",
     "twisted.internet",
     "twisted.internet.address",
     "twisted.internet.base",
@@ -57,6 +58,7 @@ modules = [
     "twisted.names.hosts",
     "twisted.names.resolve",
     "twisted.names.test",
+    "twisted.names._version",
     "twisted.protocols",
     "twisted.protocols.basic",
     "twisted.protocols.policies",
@@ -108,6 +110,7 @@ modules = [
     "twisted.web._responses",
     "twisted.web.test",
     "twisted.web.test.requesthelper",
+    "twisted.web._version",
     ]
 
 
@@ -181,4 +184,19 @@ testModules = [
     "twisted.trial.test.test_warning",
     "twisted.web.test.test_http_headers",
     "twisted.web.test.test_resource",
+    ]
+
+# A list of any other modules which are needed by any of the modules in the
+# other two lists, but which themselves have not actually been properly ported
+# to Python 3.  These modules might work well enough to satisfy some of the
+# requirements of the modules that depend on them, but cannot be considered
+# generally usable otherwise.
+almostModules = [
+    "twisted.internet.abstract",
+    "twisted.names.root",
+    "twisted.python.dist",
+    "twisted.test.reflect_helper_IE",
+    "twisted.test.reflect_helper_VE",
+    "twisted.test.reflect_helper_ZDE",
+    "twisted.trial.reporter",
     ]
