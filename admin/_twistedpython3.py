@@ -160,6 +160,7 @@ testModules = [
     "twisted.test.test_fdesc",
     "twisted.test.test_internet",
     "twisted.test.test_log",
+    "twisted.test.test_loopback",
     "twisted.test.test_monkey",
     "twisted.test.test_paths",
     "twisted.test.test_policies",
@@ -194,6 +195,7 @@ testModules = [
 almostModules = [
     "twisted.internet.abstract",
     "twisted.names.root",
+    "twisted.protocols.loopback",
     "twisted.python.dist",
     "twisted.test.reflect_helper_IE",
     "twisted.test.reflect_helper_VE",
