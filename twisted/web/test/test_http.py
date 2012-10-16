@@ -69,19 +69,26 @@ class ResponseTestMixin(object):
         """
         Assert that the C{responses} matches the C{expected} responses.
 
-        @type responses: C{str}
+        @type responses: C{bytes}
         @param responses: The bytes sent in response to one or more requests.
 
-        @type expected: C{list} of C{tuple} of C{str}
+        @type expected: C{list} of C{tuple} of C{bytes}
         @param expected: The expected values for the responses.  Each tuple
-            element of the list represents one response.  Each string element
-            of the tuple is a full header line without delimiter, except for
-            the last element which gives the full response body.
+            element of the list represents one response.  Each byte string
+            element of the tuple is a full header line without delimiter, except
+            for the last element which gives the full response body.
         """
         for response in expected:
             expectedHeaders, expectedContent = response[:-1], response[-1]
-            headers, rest = responses.split('\r\n\r\n', 1)
+            # Intentionally avoid mutating the inputs here.
+            expectedStatus = expectedHeaders[0]
+            expectedHeaders = expectedHeaders[1:]
+
+            headers, rest = responses.split(b'\r\n\r\n', 1)
             headers = headers.splitlines()
+            status = headers.pop(0)
+
+            self.assertEqual(expectedStatus, status)
             self.assertEqual(set(headers), set(expectedHeaders))
             content = rest[:len(expectedContent)]
             responses = rest[len(expectedContent):]
@@ -1574,7 +1581,7 @@ class MultilineHeadersTestCase(unittest.TestCase):
 
 
 
-class Expect100ContinueServerTests(unittest.TestCase):
+class Expect100ContinueServerTests(unittest.TestCase, ResponseTestMixin):
     """
     Test that the HTTP server handles 'Expect: 100-continue' header correctly.
 
@@ -1593,19 +1600,21 @@ class Expect100ContinueServerTests(unittest.TestCase):
         channel = http.HTTPChannel()
         channel.requestFactory = DummyHTTPHandler
         channel.makeConnection(transport)
-        channel.dataReceived("GET / HTTP/1.0\r\n")
-        channel.dataReceived("Host: www.example.com\r\n")
-        channel.dataReceived("Content-Length: 3\r\n")
-        channel.dataReceived("Expect: 100-continue\r\n")
-        channel.dataReceived("\r\n")
-        self.assertEqual(transport.value(), "")
-        channel.dataReceived("abc")
-        self.assertEqual(transport.value(),
-                         "HTTP/1.0 200 OK\r\n"
-                         "Command: GET\r\n"
-                         "Content-Length: 13\r\n"
-                         "Version: HTTP/1.0\r\n"
-                         "Request: /\r\n\r\n'''\n3\nabc'''\n")
+        channel.dataReceived(b"GET / HTTP/1.0\r\n")
+        channel.dataReceived(b"Host: www.example.com\r\n")
+        channel.dataReceived(b"Content-Length: 3\r\n")
+        channel.dataReceived(b"Expect: 100-continue\r\n")
+        channel.dataReceived(b"\r\n")
+        self.assertEqual(transport.value(), b"")
+        channel.dataReceived(b"abc")
+        self.assertResponseEquals(
+            transport.value(),
+            [(b"HTTP/1.0 200 OK",
+              b"Command: GET",
+              b"Content-Length: 13",
+              b"Version: HTTP/1.0",
+              b"Request: /",
+              b"'''\n3\nabc'''\n")])
 
 
     def test_expect100ContinueHeader(self):
@@ -1619,25 +1628,30 @@ class Expect100ContinueServerTests(unittest.TestCase):
         channel = http.HTTPChannel()
         channel.requestFactory = DummyHTTPHandler
         channel.makeConnection(transport)
-        channel.dataReceived("GET / HTTP/1.1\r\n")
-        channel.dataReceived("Host: www.example.com\r\n")
-        channel.dataReceived("Expect: 100-continue\r\n")
-        channel.dataReceived("Content-Length: 3\r\n")
+        channel.dataReceived(b"GET / HTTP/1.1\r\n")
+        channel.dataReceived(b"Host: www.example.com\r\n")
+        channel.dataReceived(b"Expect: 100-continue\r\n")
+        channel.dataReceived(b"Content-Length: 3\r\n")
         # The 100 continue response is not sent until all headers are
         # received:
-        self.assertEqual(transport.value(), "")
-        channel.dataReceived("\r\n")
+        self.assertEqual(transport.value(), b"")
+        channel.dataReceived(b"\r\n")
         # The 100 continue response is sent *before* the body is even
         # received:
-        self.assertEqual(transport.value(), "HTTP/1.1 100 Continue\r\n\r\n")
-        channel.dataReceived("abc")
-        self.assertEqual(transport.value(),
-                         "HTTP/1.1 100 Continue\r\n\r\n"
-                         "HTTP/1.1 200 OK\r\n"
-                         "Command: GET\r\n"
-                         "Content-Length: 13\r\n"
-                         "Version: HTTP/1.1\r\n"
-                         "Request: /\r\n\r\n'''\n3\nabc'''\n")
+        self.assertEqual(transport.value(), b"HTTP/1.1 100 Continue\r\n\r\n")
+        channel.dataReceived(b"abc")
+        response = transport.value()
+        self.assertTrue(
+            response.startswith(b"HTTP/1.1 100 Continue\r\n\r\n"))
+        response = response[len(b"HTTP/1.1 100 Continue\r\n\r\n"):]
+        self.assertResponseEquals(
+            response,
+            [(b"HTTP/1.1 200 OK",
+              b"Command: GET",
+              b"Content-Length: 13",
+              b"Version: HTTP/1.1",
+              b"Request: /",
+              b"'''\n3\nabc'''\n")])
 
 
     def test_expect100ContinueWithPipelining(self):
@@ -1651,26 +1665,30 @@ class Expect100ContinueServerTests(unittest.TestCase):
         channel.requestFactory = DummyHTTPHandler
         channel.makeConnection(transport)
         channel.dataReceived(
-            "GET / HTTP/1.1\r\n"
-            "Host: www.example.com\r\n"
-            "Expect: 100-continue\r\n"
-            "Content-Length: 3\r\n"
-            "\r\nabc"
-            "POST /foo HTTP/1.1\r\n"
-            "Host: www.example.com\r\n"
-            "Content-Length: 4\r\n"
-            "\r\ndefg")
-        self.assertEqual(transport.value(),
-                         "HTTP/1.1 100 Continue\r\n\r\n"
-                         "HTTP/1.1 200 OK\r\n"
-                         "Command: GET\r\n"
-                         "Content-Length: 13\r\n"
-                         "Version: HTTP/1.1\r\n"
-                         "Request: /\r\n\r\n"
-                         "'''\n3\nabc'''\n"
-                         "HTTP/1.1 200 OK\r\n"
-                         "Command: POST\r\n"
-                         "Content-Length: 14\r\n"
-                         "Version: HTTP/1.1\r\n"
-                         "Request: /foo\r\n\r\n"
-                         "'''\n4\ndefg'''\n")
+            b"GET / HTTP/1.1\r\n"
+            b"Host: www.example.com\r\n"
+            b"Expect: 100-continue\r\n"
+            b"Content-Length: 3\r\n"
+            b"\r\nabc"
+            b"POST /foo HTTP/1.1\r\n"
+            b"Host: www.example.com\r\n"
+            b"Content-Length: 4\r\n"
+            b"\r\ndefg")
+        response = transport.value()
+        self.assertTrue(
+            response.startswith(b"HTTP/1.1 100 Continue\r\n\r\n"))
+        response = response[len(b"HTTP/1.1 100 Continue\r\n\r\n"):]
+        self.assertResponseEquals(
+            response,
+            [(b"HTTP/1.1 200 OK",
+              b"Command: GET",
+              b"Content-Length: 13",
+              b"Version: HTTP/1.1",
+              b"Request: /",
+              b"'''\n3\nabc'''\n"),
+             (b"HTTP/1.1 200 OK",
+              b"Command: POST",
+              b"Content-Length: 14",
+              b"Version: HTTP/1.1",
+              b"Request: /foo",
+              b"'''\n4\ndefg'''\n")])
