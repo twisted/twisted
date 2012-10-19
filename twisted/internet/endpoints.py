@@ -28,6 +28,7 @@ from twisted.internet.abstract import isIPv6Address
 from twisted.internet import stdio
 from twisted.internet.stdio import PipeAddress
 from socket import AF_INET6, AF_INET
+from twisted.internet.task import LoopingCall
 
 
 __all__ = ["clientFromString", "serverFromString",
@@ -572,6 +573,9 @@ class HostnameEndpoint(object):
                 except StopIteration:
                     # The list of endpoints ends.
                     endpointsListExhausted.append(True)
+                    lc.stop()
+                    almostDone()
+
 
                 else:
                     dconn = endpoint.connect(wf)
@@ -581,8 +585,12 @@ class HostnameEndpoint(object):
                     dconn.addErrback(connectFailed)
                     pending.append(dconn)
 
-            self._reactor.callLater(0.3, iterateEndpoint)
 #            iterateEndpoint()
+#            self._reactor.callLater(0.3, iterateEndpoint)
+#            iterateEndpoint()
+            lc = LoopingCall(iterateEndpoint)
+            lc.clock = self._reactor
+            lc.start(0.0)
             print "Return from attemptConnection"
             return winner  # attemptConnection's return
 
@@ -590,7 +598,7 @@ class HostnameEndpoint(object):
             d = self._nameResolution(self._host)
             d.addErrback(errbackForGai)
             d.addCallback(_endpoints)
-#            d.addCallback(testGetEndpoints)
+ #           d.addCallback(testGetEndpoints)
             d.addCallback(attemptConnection)
 #            d.errback(error.ConnectingCancelledError("The connection was cancelled"))
             print "Returning the fastest connection now.."

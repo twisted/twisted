@@ -1055,7 +1055,7 @@ class HostnameEndpointsOneIPv6Test(ClientEndpointTestCaseMixin,
     def createClientEndpoint(self, reactor, clientFactory, **connectArgs):
         address = IPv6Address("TCP", "1:2::3:4", 80)
         clock = Clock()
-        reactor.callLater = clock.callLater
+#        reactor.callLater = clock.callLater
         endpoint = endpoints.HostnameEndpoint(reactor, "ipv6.example.com",
                                            address.port, **connectArgs)
 
