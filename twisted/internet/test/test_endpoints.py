@@ -982,8 +982,8 @@ class HostnameEndpointsOneIPv4Test(ClientEndpointTestCaseMixin,
     """
     def createClientEndpoint(self, reactor, clientFactory, **connectArgs):
         address = IPv4Address("TCP", "1.2.3.4", 80)
-        clock = Clock()
-        reactor.callLater = clock.callLater
+#        clock = Clock()
+#        reactor.callLater = clock.callLater
         endpoint = endpoints.HostnameEndpoint(reactor, "example.com",
                                            address.port, **connectArgs)
 
@@ -1054,7 +1054,7 @@ class HostnameEndpointsOneIPv6Test(ClientEndpointTestCaseMixin,
     """
     def createClientEndpoint(self, reactor, clientFactory, **connectArgs):
         address = IPv6Address("TCP", "1:2::3:4", 80)
-        clock = Clock()
+#        clock = Clock()
 #        reactor.callLater = clock.callLater
         endpoint = endpoints.HostnameEndpoint(reactor, "ipv6.example.com",
                                            address.port, **connectArgs)
@@ -1148,8 +1148,8 @@ class HostnameEndpointsIPv4FastTest(unittest.TestCase):
     time than the IPv6 address.
     """
     def setUp(self):
-        self.clock = Clock()
-        self.endpoint = endpoints.HostnameEndpoint(self.clock,
+        self.mreactor = MemoryReactor()
+        self.endpoint = endpoints.HostnameEndpoint(self.mreactor,
                 "www.example.com", 80)
 
 
