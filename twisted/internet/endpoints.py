@@ -475,8 +475,9 @@ class HostnameEndpoint(object):
         Attempts a connection to each address returned by gai, and
         returns a connection that is the fastest.
         """
-        wf = protocolFactory             #_WrappingFactory(protocolFactory)
+        wf = protocolFactory             # _WrappingFactory(protocolFactory)
 
+        # TODO: Fix almostDone()
         def errbackForGai(obj):
             """
             Errback for when L{_nameResolution} returns a Deferred
@@ -560,7 +561,7 @@ class HostnameEndpoint(object):
                     winner.errback(failures.pop())
 #                return defer.fail(error.ConnectError("Connection Failed"))
                 winner.errback(failures.pop())
-                    #FIXME
+                    # FIXME
 
             def connectFailed(reason):
   #              print "Inside connectFailed"

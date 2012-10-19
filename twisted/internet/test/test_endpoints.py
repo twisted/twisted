@@ -973,6 +973,8 @@ class TCP6EndpointNameResolutionTestCase(ClientEndpointTestCaseMixin,
 #_________________________________________________________________________________________________
 # Begin testing HostnameEndpoint
 
+# TODO: Fix fake reactor issues.
+
 
 class HostnameEndpointsOneIPv4Test(ClientEndpointTestCaseMixin,
                                 unittest.TestCase):
@@ -1042,7 +1044,7 @@ class HostnameEndpointsOneIPv4Test(ClientEndpointTestCaseMixin,
 
     def test_endpointConnectingCancelled(self):
         pass
-        #TODO: Make this work
+        # TODO: Make this work
 
 
 
@@ -1111,12 +1113,12 @@ class HostnameEndpointsOneIPv6Test(ClientEndpointTestCaseMixin,
         return {'timeout': 10, 'bindAddress': ('localhost', 49595)}
 
 
-    #TODO: Add a test to check deferToThread as well.
+    # TODO: Add a test to check deferToThread as well.
 
 
     def test_endpointConnectingCancelled(self):
         pass
-        #TODO: Make this work
+        # TODO: Make this work
 
 
 
