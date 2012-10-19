@@ -545,7 +545,11 @@ class HostnameEndpoint(object):
 
             def afterConnectionAttempt(connResult):
 #                print "Inside afterConnectionAttempt"
+                if lc.running:
+                    lc.stop()
                 successful.append(True)
+                for p in pending:
+                    p.cancel()
                 winner.callback(connResult)
                 return None
 
@@ -574,12 +578,12 @@ class HostnameEndpoint(object):
                     # The list of endpoints ends.
                     endpointsListExhausted.append(True)
                     lc.stop()
-                    almostDone()
+#                    almostDone()
 
 
                 else:
                     dconn = endpoint.connect(wf)
-                    pending.append(dconn)
+#                    pending.append(dconn)
                     dconn.addBoth(usedEndpointRemoval, dconn)
                     dconn.addCallback(afterConnectionAttempt)
                     dconn.addErrback(connectFailed)
