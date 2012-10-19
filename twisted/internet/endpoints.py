@@ -548,7 +548,7 @@ class HostnameEndpoint(object):
                 if lc.running:
                     lc.stop()
                 successful.append(True)
-                for p in pending:
+                for p in pending[::]:
                     p.cancel()
                 winner.callback(connResult)
                 return None
@@ -559,8 +559,8 @@ class HostnameEndpoint(object):
                     print "inside almostDone's if"
                     winner.errback(failures.pop())
 #                return defer.fail(error.ConnectError("Connection Failed"))
-
                 winner.errback(failures.pop())
+                    #FIXME
 
             def connectFailed(reason):
   #              print "Inside connectFailed"
@@ -573,21 +573,18 @@ class HostnameEndpoint(object):
     #            print "Inside iterateEndpoint"
                 try:
                     endpoint = endpoints.next()
-
                 except StopIteration:
                     # The list of endpoints ends.
                     endpointsListExhausted.append(True)
                     lc.stop()
-#                    almostDone()
-
-
+                    almostDone()
                 else:
                     dconn = endpoint.connect(wf)
-#                    pending.append(dconn)
+                    pending.append(dconn)
                     dconn.addBoth(usedEndpointRemoval, dconn)
                     dconn.addCallback(afterConnectionAttempt)
                     dconn.addErrback(connectFailed)
-                    pending.append(dconn)
+#                    pending.append(dconn)
 
 #            iterateEndpoint()
 #            self._reactor.callLater(0.3, iterateEndpoint)
