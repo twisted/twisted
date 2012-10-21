@@ -1430,8 +1430,87 @@ class _ChunkedTransferDecoder(object):
                 "get to 'FINISHED' state." % (self.state,))
 
 
+class HTTPServerProtocol(ParserProtocol):
+    grammar = BootOMetaGrammar("""
+# RFC 2396
+alpha = anything:x ?(x.isalpha())
+digit = anything:x ?(x.isdigit())
+alphanum = alpha | digit
 
-class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
+scheme = alpha (alpha | digit | "+" | "-" | ".")*
+reserved = ';' | '/' | '?' | ':' | '@' | '&' | '=' | '+' | '$' | ','
+unreserved = alphanum | mark
+mark = '-' | '_' | '.' | '!' | '~' | '*' | '\'' | '(' | ')'
+escaped = '%' hex hex
+hex = digit | 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'a' | 'b' | 'c' | 'd' | 'e' | 'f'
+userinfo = (unreserved | escaped | ";" | ":" | "&" | "=" | "+" | "$" | ",")*
+hostport = host (':' port)?
+
+host = hostname | IPv4address
+hostname = (domainlabel '.')* toplabel '.'?
+domainlabel = alphanum | alphanum (alphanum | '-')* alphanum
+toplabel = alpha | alpha (alphanum | '-')* alphanum
+IPv4Address = digit+ '.' digit+ '.' digit+ '.' digit+
+port = digit*
+
+server = ((userinfo '@')? hostport)?
+reg_name = (unreserved | escaped | '$' | ',' | ';' | ':' | '@' | '&' | '=' | '+')+
+
+authority = server | reg_name
+
+net_path = '/' '/' authority abs_path?
+path_segments = segment ('/' segment)*
+segment = pchar* (';' param)*
+param = pchar*
+pchar = unreserved | escaped | ':' | '@' | '&' | '=' | '+' | '$' | ','
+
+abs_path = '/' path_segments
+uric = reserved | unreserved | escaped
+query = uric*
+hier_part = (net_path | abs_path) ('?' query)?
+
+absoluteURI = scheme ":" ( hier_part | opaque_part )
+
+# RFC 2616
+CR = '\r'
+LF = '\n'
+CRLF = CR LF
+SP = ' '
+HT = '\t'
+LWS = CRLF? ( SP | HT )+
+separators = '(' | ')' | '<' | '>' | '@' | ',' | ';' | ':' | '\' | '"' | '/' | '[' | ']' | '?' | '=' | '{' | '}' | SP | HT
+CTL = anything:x ?(ord(x) < 32 or ord(x) == 127)
+token = ~(separators | CTL)
+DIGIT = digit # Re-use definition from RFC 2396
+HTTP-Version = 'HTTP' '/' <DIGIT+ '.' DIGIT+>:version
+
+Method = token # XXX Some actual methods are defined
+
+Request-URI = '*' | absoluteURI | abs_path | authority
+
+Request-Line = <Method> ' ' <Request-URI> ' ' HTTP-Version CRLF
+
+HTTP-message = <Request> # | <Response>
+
+field-name = token
+field-value = ( field-content | LWS )*
+
+XXX What the heck
+field-content = <the OCTETs making up the field-value
+                        and consisting of either *TEXT or combinations
+                        of token, separators, and quoted-string>
+
+Header = field-name ':' field-value?
+
+Request = <Request-Line> <Header> CRLF <message-body>?
+
+""").parseGrammar('Parser')
+
+    def getInitialRule(self):
+        return 'Request'
+
+
+class HTTPChannel():
     """
     A receiver for HTTP requests.
 
@@ -1439,7 +1518,6 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         L{_ChunkedTransferDecoder} if the request body uses the I{chunked}
         Transfer-Encoding.
     """
-
     maxHeaders = 500 # max number of headers allowed per request
 
     length = 0
