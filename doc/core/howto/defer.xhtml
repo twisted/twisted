@@ -115,10 +115,16 @@ class Getter:
         the callback chain by checking for expected results and
         choosing whether to fire the callback or errback chain
         """
+        if self.d is None:
+            print "Nowhere to put results"
+            return
+
+        d = self.d
+        self.d = None
         if x % 2 == 0:
-            self.d.callback(x*3)
+            d.callback(x*3)
         else:
-            self.d.errback(ValueError("You used an odd number!"))
+            d.errback(ValueError("You used an odd number!"))
 
     def _toHTML(self, r):
         """
@@ -169,6 +175,22 @@ d.addErrback(printError)
 reactor.callLater(4, reactor.stop)
 reactor.run()
 </pre>
+
+<p>
+  <div class="note">Pay particular attention to the handling of
+  <code>self.d</code> in the <code>gotResults</code> method.  Before the
+  <code>Deferred</code> is fired with a result or an error, the attribute is
+  set to <code>None</code> so that the <code>Getter</code> instance no longer
+  has a reference to the <code>Deferred</code> about to be fired.  This has
+  several benefits.  First, it avoids any chance <code>Getter.gotResults</code>
+  will accidentally fire the same <code>Deferred</code> more than once (which
+  would result in an <code>AlreadyCalledError</code> exception).  Second, it
+  allows a callback on that <code>Deferred</code> to call
+  <code>Getter.getDummyData</code> (which sets a new value for the
+  <code>d</code> attribute) without causing problems.  Third, it makes the
+  Python garbage collector's job easier by eliminating a reference cycle.
+  </div>
+</p>
 
 <h3>Visual Explanation</h3>
 
