@@ -419,6 +419,125 @@ Now <code>isValidUser</code> could be either <code>synchronousIsValidUser</code>
 a Deferred, see <a href="gendefer.xhtml">Generating Deferreds</a> for more
 information.</p>
 
+<h2>Cancellation</h2>
+
+<h3>Motivation</h3>
+
+<p>A Deferred may take any amount of time to be called back; in fact, it may
+never be called back.  Your users may not be that patient.  Since all actions
+taken when the Deferred completes are in your application or library's callback
+code, you always have the option of simply disregarding the result when you
+receive it, if it's been too long.  However, while you're ignoring it, the
+underlying operation represented by that Deferred is still chugging along in the
+background, possibly consuming resources such as CPU time, memory, network
+bandwidth and maybe even disk space.  So, when the user has closed the window,
+hit the cancel button, disconnected from your server or sent a "stop" network
+message, you will want to announce your indifference to the result of that
+operation so that the originator of the Deferred can clean everything up and
+free those resources to be put to better use.</p>
+
+<h3>Cancellation for Applications which Consume Deferreds</h3>
+
+<p>Here's a simple example.  You're connecting to an external host with an <a
+href="endpoints.xhtml">endpoint</a>, but that host is really slow.  You want to
+put a "cancel" button into your application to terminate the connection attempt,
+so the user can try connecting to a different host instead.  Here's a simple
+sketch of such an application, with the actual user interface left as an
+exercise for the reader:</p>
+
+<pre class="python">
+def startConnecting(someEndpoint):
+    def connected(it):
+        "Do something useful when connected."
+    return someEndpoint.connect(myFactory).addCallback(connected)
+# ...
+connectionAttempt = startConnecting(endpoint)
+def cancelClicked():
+    connectionAttempt.cancel()
+</pre>
+
+<p>Obviously (I hope), startConnecting is meant to be called by some UI element
+that lets the user choose what host to connect to and then constructs an
+appropriate endpoint (perhaps using <code
+class="api">twisted.internet.endpoints.clientFromString</code>).  Then, a cancel
+button, or similar, is hooked up to the <code>cancelClicked</code>.</p>
+
+<p>When <code>connectionAttempt.cancel</code> is invoked, that will:</p>
+<ol>
+    <li>cause the underlying connection operation to be terminated, if it is still ongoing</li>
+    <li>cause the connectionAttempt Deferred to be completed, one way or another, in a timely manner</li>
+    <li><em>likely</em> cause the connectionAttempt Deferred to be errbacked with <code class="API">CancelledError</code></li>
+</ol>
+
+<p>You may notice that that set of consequences is very heavily qualified.
+Although cancellation indicates the calling API's <em>desire</em> for the
+underlying operation to be stopped, the underlying operation cannot necessarily
+react immediately.  Even in this very simple example, there is already one thing
+that might not be interruptable: platform-native name resolution blocks, and
+therefore needs to be executed in a thread; the connection operation can't be
+cancelled if it's stuck waiting for a name to be resolved in this manner.  So,
+the Deferred that you are cancelling may not callback or errback right away.</p>
+
+<p>A Deferred may wait upon another Deferred at any point in its callback chain
+(see "Handling...asynchronous results", above).  There's no way for a particular
+point in the callback chain to know if everything is finished.  Since multiple
+layers of the callback chain may wish to cancel the same Deferred, any layer may
+call <code>.cancel()</code> at any time. The <code>.cancel()</code> method never
+raises any exception or returns any value; you may call it repeatedly, even on a
+Deferred which has already fired, or which has no remaining callbacks.</p>
+
+<p>The main reason for all these qualifications, aside from specific examples,
+is that anyone who instantiates a Deferred may supply it with a cancellation
+function; that function can do absolutely anything that it wants to.  Ideally,
+anything it does will be in the service of stopping the operation your
+requested, but there's no way to guarantee any exact behavior across all
+Deferreds that might be cancelled; it really depends what created the Deferred
+in the first place and what operation it's waiting for.</p>
+
+<h3>Creating a Deferred which supports cancellation</h3>
+
+<h4>Default Behavior</h4>
+
+<p>This section might as well be empty, because all Deferreds support
+cancellation.  However, they support a very rudimentary form of cancellation
+which doesn't free any resources.</p>
+
+<p>Consider this example of a Deferred which is ignorant of cancellation:</p>
+<pre class="python">
+operation = Deferred()
+def x(result):
+    print("Hooray, a result:" + repr(x))
+operation.addCallback(x)
+# ...
+def operationDone():
+    operation.callback("completed")
+</pre>
+
+<p>A caller of an API that receives <code>operation</code> may call
+<code>cancel</code> on it.  Since <code>operation</code> does not have a
+cancellation function, one of two things will happen.</p>
+
+<ol> <li>If <code>operationDone</code> has been called, and the operation has
+completed, nothing much will change.  <code>operation</code> will still have a
+result, and there are no more callbacks, so there's no observable change in
+behavior.</li>
+
+<li>If <code>operationDone</code> has <em>not</em> yet been invoked, then
+<code>operation</code> will be immediately errbacked with a
+<code>CancelledError</code>.
+
+However, once it's cancelled, there's no way to tell <code>operationDone</code>
+not to run; it will eventually call <code>operation.callback</code> later.  In
+normal operation, issuing <code>callback</code> on a <code>Deferred</code> that
+has already called back results in an <code>AlreadyCalledError</code>, and this
+would cause an ugly traceback that could not be caught.  Therefore,
+<code>.callback</code> can be invoked exactly once, causing a no-op, on a
+<code>Deferred</code> which has been cancelled but has no canceller.  If you
+call it multiple times, you will still get an <code>AlreadyCalledError</code>
+exception.</li> </ol>
+
+<h4>Actually cancelling things: customizing the canceller</h4>
+
 <a name="deferredlist" />
 <h2>DeferredList</h2>
 
