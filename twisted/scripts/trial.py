@@ -4,7 +4,7 @@
 # See LICENSE for details.
 
 
-import sys, os, random, gc, time, warnings
+import sys, os, random, gc, pdb, time, warnings
 
 from twisted.internet import defer
 from twisted.application import app
@@ -309,8 +309,9 @@ class Options(_BasicOptions, usage.Options, app.ReactorSelectionMixin):
     """
 
     optFlags = [
-                ["debug", "b", "Run tests in the Python debugger. Will load "
-                 "'.pdbrc' from current directory if it exists."],
+                ["debug", "b", "Run tests in a debugger. If that debugger is "
+                 "pdb, will load '.pdbrc' from current directory if it exists."
+                ],
                 ["debug-stacktraces", "B", "Report Deferred creation and "
                  "callback stack traces"],
                 ["nopm", None, "don't automatically jump into debugger for "
@@ -321,6 +322,8 @@ class Options(_BasicOptions, usage.Options, app.ReactorSelectionMixin):
                 ]
 
     optParameters = [
+        ["debugger", None, "pdb", "the fully qualified name of a debugger to "
+         "use if --debug is passed"],
         ["logfile", "l", "test.log", "log file name"],
         ["jobs", "j", None, "Number of local workers to run"]
         ]
@@ -413,6 +416,38 @@ def _getLoader(config):
     return loader
 
 
+def _wrappedPdb():
+    """
+    Wrap an instance of C{pdb.Pdb} with readline support and load any .rcs.
+
+    """
+
+    dbg = pdb.Pdb()
+    try:
+        import readline
+    except ImportError:
+        print "readline module not available"
+        sys.exc_clear()
+    for path in ('.pdbrc', 'pdbrc'):
+        if os.path.exists(path):
+            try:
+                rcFile = file(path, 'r')
+            except IOError:
+                sys.exc_clear()
+            else:
+                dbg.rcLines.extend(rcFile.readlines())
+    return dbg
+
+
+class _DebuggerNotFound(Exception):
+    """
+    A debugger import failed.
+
+    Used to allow translating these errors into usage error messages.
+
+    """
+
+
 
 def _makeRunner(config):
     """
@@ -440,6 +475,17 @@ def _makeRunner(config):
     else:
         if config['debug']:
             args['mode'] = runner.TrialRunner.DEBUG
+            debugger = config['debugger']
+
+            if debugger != 'pdb':
+                try:
+                    args['debugger'] = reflect.namedAny(debugger)
+                except reflect.ModuleNotFound:
+                    raise _DebuggerNotFound(
+                        '%r debugger could not be found.' % (debugger,))
+            else:
+                args['debugger'] = _wrappedPdb()
+
         args['profile'] = config['profile']
         args['forceGarbageCollection'] = config['force-gc']
 
@@ -456,7 +502,12 @@ def run():
     except usage.error, ue:
         raise SystemExit, "%s: %s" % (sys.argv[0], ue)
     _initialDebugSetup(config)
-    trialRunner = _makeRunner(config)
+
+    try:
+        trialRunner = _makeRunner(config)
+    except _DebuggerNotFound as e:
+        raise SystemExit('%s: %s' % (sys.argv[0], str(e)))
+
     suite = _getSuite(config)
     if config['until-failure']:
         test_result = trialRunner.runUntilFailure(suite)
@@ -468,4 +519,3 @@ def run():
         results.write_results(show_missing=1, summary=False,
                               coverdir=config.coverdir().path)
     sys.exit(not test_result.wasSuccessful())
-

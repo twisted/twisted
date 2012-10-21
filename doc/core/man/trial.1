@@ -63,9 +63,9 @@ Set the number of process workers to run. It conflicts with the debug and
 profile options.
 .TP
 \fB-b\fR, \fB--debug\fR
-Run the tests in the Python debugger. Also does post-mortem
-debugging on exceptions. Will load `.pdbrc' from current directory if
-it exists.
+Run the tests in a debugger. If that debugger is 'pdb' (which is the default if
+unspecified), a `.pdbrc' will be loaded from the current directory if it
+exists. Also does post-mortem debugging on exceptions.
 .TP
 \fB-B\fR, \fB--debug-stacktraces\fR
 Report Deferred creation and callback stack traces.
@@ -89,6 +89,11 @@ in the course of the test suite.
 Note that this functionality uses Python's sys.settrace() function, so tests
 that call sys.settrace() themselves are likely to break trial's coverage
 functionality.
+.TP
+\fB--debugger\fR
+Specifies the debugger to use when the --debug option is passed. The argument
+should be the fully qualified name of an object that implements the same
+interface as the standard library's `pdb'.
 .TP
 \fB--disablegc\fR
 Disable the garbage collector for the duration of the test run. As each test is

@@ -19,7 +19,6 @@ __all__ = [
     'name', 'samefile', 'NOT_IN_TEST',
     ]
 
-import pdb
 import os, types, warnings, sys, inspect, imp
 import doctest, time
 
@@ -705,24 +704,6 @@ class TrialRunner(object):
     DEBUG = 'debug'
     DRY_RUN = 'dry-run'
 
-    def _getDebugger(self):
-        dbg = pdb.Pdb()
-        try:
-            import readline
-        except ImportError:
-            print "readline module not available"
-            sys.exc_clear()
-        for path in ('.pdbrc', 'pdbrc'):
-            if os.path.exists(path):
-                try:
-                    rcFile = file(path, 'r')
-                except IOError:
-                    sys.exc_clear()
-                else:
-                    dbg.rcLines.extend(rcFile.readlines())
-        return dbg
-
-
     def _setUpTestdir(self):
         self._tearDownLogFile()
         currentDir = os.getcwd()
@@ -754,7 +735,8 @@ class TrialRunner(object):
                  realTimeErrors=False,
                  uncleanWarnings=False,
                  workingDirectory=None,
-                 forceGarbageCollection=False):
+                 forceGarbageCollection=False,
+                 debugger=None):
         self.reporterFactory = reporterFactory
         self.logfile = logfile
         self.mode = mode
@@ -767,6 +749,7 @@ class TrialRunner(object):
         self._logFileObserver = None
         self._logFileObject = None
         self._forceGarbageCollection = forceGarbageCollection
+        self.debugger = debugger
         if profile:
             self.run = util.profiled(self.run, 'profile.data')
 
@@ -814,9 +797,7 @@ class TrialRunner(object):
                 result.stopTest(single)
         else:
             if self.mode == self.DEBUG:
-                # open question - should this be self.debug() instead.
-                debugger = self._getDebugger()
-                run = lambda: debugger.runcall(suite.run, result)
+                run = lambda: self.debugger.runcall(suite.run, result)
             else:
                 run = lambda: suite.run(result)
 

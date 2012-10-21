@@ -5,7 +5,7 @@
 # Author: Robert Collins
 
 
-import StringIO, os, sys
+import StringIO, os, pdb, sys
 from zope.interface import implements
 from zope.interface.verify import verifyObject
 
@@ -488,19 +488,79 @@ class TestRunner(unittest.SynchronousTestCase):
         self.assertEqual(self.standardReport, result._calls)
 
 
-    def test_runner_debug(self):
+    def runSampleSuite(self, my_runner):
+        loader = runner.TestLoader()
+        suite = loader.loadByName('twisted.trial.test.sample', True)
+        return my_runner.run(suite)
+
+
+    def test_runnerDebug(self):
+        """
+        Trial uses its debugger if the `--debug` option is passed.
+        """
         self.parseOptions(['--reporter', 'capturing',
                            '--debug', 'twisted.trial.test.sample'])
         my_runner = self.getRunner()
-        debugger = CapturingDebugger()
-        def get_debugger():
-            return debugger
-        my_runner._getDebugger = get_debugger
-        loader = runner.TestLoader()
-        suite = loader.loadByName('twisted.trial.test.sample', True)
-        result = my_runner.run(suite)
+        debugger = my_runner.debugger = CapturingDebugger()
+        result = self.runSampleSuite(my_runner)
         self.assertEqual(self.standardReport, result._calls)
         self.assertEqual(['runcall'], debugger._calls)
+
+
+    def test_runnerDebuggerDefaultsToPdb(self):
+        """
+        Trial uses pdb if no debugger is specified by `--debugger`
+        """
+        self.parseOptions(['--debug', 'twisted.trial.test.sample'])
+
+        self.runcall_called = False
+        def runcall(pdb, suite, result):
+            self.runcall_called = True
+        self.patch(pdb.Pdb, "runcall", runcall)
+
+        self.runSampleSuite(self.getRunner())
+
+        self.assertTrue(self.runcall_called)
+
+
+    def test_runnerDebuggerWithExplicitlyPassedPdb(self):
+        """
+        Trial uses pdb if pdb is passed explicity to the `--debugger` arg.
+        """
+        self.parseOptions([
+            '--reporter', 'capturing',
+            '--debugger', 'pdb',
+            '--debug', 'twisted.trial.test.sample',
+        ])
+
+        self.runcall_called = False
+        def runcall(pdb, suite, result):
+            self.runcall_called = True
+        self.patch(pdb.Pdb, "runcall", runcall)
+
+        self.runSampleSuite(self.getRunner())
+
+        self.assertTrue(self.runcall_called)
+
+
+    cdebugger = CapturingDebugger()
+
+
+    def test_runnerDebugger(self):
+        """
+        Trial uses specified debugger if the debugger is available.
+        """
+        self.parseOptions([
+            '--reporter', 'capturing',
+            '--debugger',
+            'twisted.trial.test.test_runner.TestRunner.cdebugger',
+            '--debug',
+            'twisted.trial.test.sample',
+        ])
+        my_runner = self.getRunner()
+        result = self.runSampleSuite(my_runner)
+        self.assertEqual(self.standardReport, result._calls)
+        self.assertEqual(['runcall'], my_runner.debugger._calls)
 
 
 

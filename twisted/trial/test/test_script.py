@@ -549,3 +549,48 @@ class MakeRunnerTestCase(unittest.TestCase):
         runner = trial._makeRunner(options)
         self.assertIsInstance(runner, TrialRunner)
         self.assertEqual(TrialRunner.DRY_RUN, runner.mode)
+
+
+    def test_DebuggerNotFound(self):
+        namedAny = trial.reflect.namedAny
+
+        def namedAnyExceptdoNotFind(fqn):
+            if fqn == "doNotFind":
+                raise trial.reflect.ModuleNotFound(fqn)
+            return namedAny(fqn)
+
+        self.patch(trial.reflect, "namedAny", namedAnyExceptdoNotFind)
+
+        options = trial.Options()
+        options.parseOptions(["--debug", "--debugger", "doNotFind"])
+
+        self.assertRaises(trial._DebuggerNotFound, trial._makeRunner, options)
+
+
+class TestRun(unittest.TestCase):
+    """
+    Tests for the L{run} function.
+    """
+
+    def setUp(self):
+        # don't re-parse cmdline options, because if --reactor was passed to
+        # the test run trial will try to restart the (already running) reactor
+        self.patch(trial.Options, "parseOptions", lambda self: None)
+
+
+    def test_debuggerNotFound(self):
+        """
+        When a debugger is not found, an error message is printed to the user.
+
+        """
+
+        def _makeRunner(*args, **kwargs):
+            raise trial._DebuggerNotFound('foo')
+        self.patch(trial, "_makeRunner", _makeRunner)
+
+        try:
+            trial.run()
+        except SystemExit as e:
+            self.assertIn("foo", str(e))
+        else:
+            self.fail("Should have exited due to non-existent debugger!")

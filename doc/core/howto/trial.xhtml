@@ -623,6 +623,29 @@ changes nothing to our class.</p>
 
 <a href="listings/trial/calculus/client_3.py" class="py-listing">client_3.py</a>
 
+<h2>Dropping into a debugger</h2>
+
+<p>In the course of writing and running your tests, it is often helpful to
+employ the use of a debugger. This can be particularly helpful in tracking down
+where the source of a troublesome bug is in your code. Python's standard library
+includes a debugger in the form of the
+<a href="http://docs.python.org/library/pdb.html">pdb</a> module.
+Running your tests with <code class="python">pdb</code> is as simple as invoking
+twisted with the <code class="shell">--debug</code> option, which will start
+<code class="python">pdb</code> at the beginning of the execution of your test
+suite.</p>
+
+<p>Trial also provides a <code class="shell">--debugger</code> option which can
+run your test suite using another debugger instead. To specify a debugger other
+than <code class="python">pdb</code>, pass in the fully-qualified name of an
+object that provides the same interface as <code class="python">pdb</code>.
+Most third-party debuggers tend to implement an interface similar to
+<code class="python">pdb</code>, or at least provide a wrapper object that
+does. For example, invoking trial with the line
+<code class="shell">trial --debug --debugger pudb</code> will open the
+<a href="http://pypi.python.org/pypi/pudb">PuDB</a> debugger instead, provided
+it is properly installed.</p>
+
 <h2>Code coverage</h2>
 
 <p>Code coverage is one of the aspects of software testing that shows how much
