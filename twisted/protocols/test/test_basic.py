@@ -7,6 +7,7 @@ Test cases for L{twisted.protocols.basic}.
 
 from __future__ import division, absolute_import
 
+import sys
 import struct
 
 from twisted.python.compat import _PY3, iterbytes
@@ -16,6 +17,34 @@ from twisted.internet import protocol, error, task
 from twisted.test import proto_helpers
 
 _PY3NEWSTYLESKIP = "All classes are new style on Python 3."
+
+
+
+class FlippingLineTester(basic.LineReceiver):
+    """
+    A line receiver that flips between line and raw data modes after one byte.
+    """
+
+    delimiter = b'\n'
+
+    def __init__(self):
+        self.lines = []
+
+
+    def lineReceived(self, line):
+        """
+        Set the mode to raw.
+        """
+        self.lines.append(line)
+        self.setRawMode()
+
+
+    def rawDataReceived(self, data):
+        """
+        Set the mode back to line.
+        """
+        self.setLineMode(data[1:])
+
 
 
 class LineTester(basic.LineReceiver):
@@ -142,7 +171,7 @@ a'''
               b'len 20', b'foo 123', b'0123456789\n012345678',
               b'len 0', b'foo 5', b'', b'67890', b'len 1', b'a']
 
-    def testBuffer(self):
+    def test_buffer(self):
         """
         Test buffering for different packet size, checking received matches
         expected data.
@@ -152,15 +181,15 @@ a'''
             a = LineTester()
             a.makeConnection(protocol.FileWrapper(t))
             for i in range(len(self.buffer) // packet_size + 1):
-                s = self.buffer[i*packet_size:(i+1)*packet_size]
+                s = self.buffer[i * packet_size:(i + 1) * packet_size]
                 a.dataReceived(s)
             self.assertEqual(self.output, a.received)
 
 
-    pause_buf = b'twiddle1\ntwiddle2\npause\ntwiddle3\n'
+    pauseBuf = b'twiddle1\ntwiddle2\npause\ntwiddle3\n'
 
-    pause_output1 = [b'twiddle1', b'twiddle2', b'pause']
-    pause_output2 = pause_output1+[b'twiddle3']
+    pauseOutput1 = [b'twiddle1', b'twiddle2', b'pause']
+    pauseOutput2 = pauseOutput1 + [b'twiddle3']
 
 
     def test_pausing(self):
@@ -173,17 +202,17 @@ a'''
             clock = task.Clock()
             a = LineTester(clock)
             a.makeConnection(protocol.FileWrapper(t))
-            for i in range(len(self.pause_buf) // packet_size + 1):
-                s = self.pause_buf[i*packet_size:(i+1)*packet_size]
+            for i in range(len(self.pauseBuf) // packet_size + 1):
+                s = self.pauseBuf[i * packet_size:(i + 1) * packet_size]
                 a.dataReceived(s)
-            self.assertEqual(self.pause_output1, a.received)
+            self.assertEqual(self.pauseOutput1, a.received)
             clock.advance(0)
-            self.assertEqual(self.pause_output2, a.received)
+            self.assertEqual(self.pauseOutput2, a.received)
 
-    rawpause_buf = b'twiddle1\ntwiddle2\nlen 5\nrawpause\n12345twiddle3\n'
+    rawpauseBuf = b'twiddle1\ntwiddle2\nlen 5\nrawpause\n12345twiddle3\n'
 
-    rawpause_output1 = [b'twiddle1', b'twiddle2', b'len 5', b'rawpause', b'']
-    rawpause_output2 = [b'twiddle1', b'twiddle2', b'len 5', b'rawpause',
+    rawpauseOutput1 = [b'twiddle1', b'twiddle2', b'len 5', b'rawpause', b'']
+    rawpauseOutput2 = [b'twiddle1', b'twiddle2', b'len 5', b'rawpause',
                         b'12345', b'twiddle3']
 
 
@@ -196,12 +225,12 @@ a'''
             clock = task.Clock()
             a = LineTester(clock)
             a.makeConnection(protocol.FileWrapper(t))
-            for i in range(len(self.rawpause_buf) // packet_size + 1):
-                s = self.rawpause_buf[i*packet_size:(i+1)*packet_size]
+            for i in range(len(self.rawpauseBuf) // packet_size + 1):
+                s = self.rawpauseBuf[i * packet_size:(i + 1) * packet_size]
                 a.dataReceived(s)
-            self.assertEqual(self.rawpause_output1, a.received)
+            self.assertEqual(self.rawpauseOutput1, a.received)
             clock.advance(0)
-            self.assertEqual(self.rawpause_output2, a.received)
+            self.assertEqual(self.rawpauseOutput2, a.received)
 
     stop_buf = b'twiddle1\ntwiddle2\nstop\nmore\nstuff\n'
 
@@ -217,7 +246,7 @@ a'''
             a = LineTester()
             a.makeConnection(protocol.FileWrapper(t))
             for i in range(len(self.stop_buf) // packet_size + 1):
-                s = self.stop_buf[i*packet_size:(i+1)*packet_size]
+                s = self.stop_buf[i * packet_size:(i + 1) * packet_size]
                 a.dataReceived(s)
             self.assertEqual(self.stop_output, a.received)
 
@@ -256,6 +285,56 @@ a'''
         self.assertEqual(protocol.rest, b'')
 
 
+    def test_stackRecursion(self):
+        """
+        Test switching modes many times on the same data.
+        """
+        proto = FlippingLineTester()
+        transport = proto_helpers.StringIOWithoutClosing()
+        proto.makeConnection(protocol.FileWrapper(transport))
+        limit = sys.getrecursionlimit()
+        proto.dataReceived(b'x\nx' * limit)
+        self.assertEqual(b'x' * limit, b''.join(proto.lines))
+
+
+    def test_maximumLineLength(self):
+        """
+        C{LineReceiver} disconnects the transport if it receives a line longer
+        than its C{MAX_LENGTH}.
+        """
+        proto = basic.LineReceiver()
+        transport = proto_helpers.StringTransport()
+        proto.makeConnection(transport)
+        proto.dataReceived(b'x' * (proto.MAX_LENGTH + 1) + b'\r\nr')
+        self.assertTrue(transport.disconnecting)
+
+
+    def test_maximumLineLengthRemaining(self):
+        """
+        C{LineReceiver} disconnects the transport it if receives a non-finished
+        line longer than its C{MAX_LENGTH}.
+        """
+        proto = basic.LineReceiver()
+        transport = proto_helpers.StringTransport()
+        proto.makeConnection(transport)
+        proto.dataReceived(b'x' * (proto.MAX_LENGTH + 1))
+        self.assertTrue(transport.disconnecting)
+
+
+    def test_rawDataError(self):
+        """
+        C{LineReceiver.dataReceived} forwards errors returned by
+        C{rawDataReceived}.
+        """
+        proto = basic.LineReceiver()
+        proto.rawDataReceived = lambda data: RuntimeError("oops")
+        transport = proto_helpers.StringTransport()
+        proto.makeConnection(transport)
+        proto.setRawMode()
+        why = proto.dataReceived(b'data')
+        self.assertIsInstance(why, RuntimeError)
+
+
 
 class LineOnlyReceiverTestCase(unittest.SynchronousTestCase):
     """
@@ -286,7 +365,7 @@ class LineOnlyReceiverTestCase(unittest.SynchronousTestCase):
         t = proto_helpers.StringTransport()
         a = LineOnlyTester()
         a.makeConnection(t)
-        res = a.dataReceived(b'x'*200)
+        res = a.dataReceived(b'x' * 200)
         self.assertIsInstance(res, error.ConnectionLost)
 
 
@@ -349,7 +428,7 @@ class LPTestCaseMixin:
 class NetstringReceiverTestCase(unittest.SynchronousTestCase, LPTestCaseMixin):
 
     strings = [b'hello', b'world', b'how', b'are', b'you123', b':today',
-               b"a"*515]
+               b"a" * 515]
 
     illegalStrings = [
         b'9999999999999999999999', b'abc', b'4:abcde',
@@ -376,7 +455,7 @@ class NetstringReceiverTestCase(unittest.SynchronousTestCase, LPTestCaseMixin):
                 a.sendString(s)
             out = t.value()
             for i in range(len(out) // packet_size + 1):
-                s = out[i*packet_size:(i+1)*packet_size]
+                s = out[i * packet_size:(i + 1) * packet_size]
                 if s:
                     a.dataReceived(s)
             self.assertEqual(a.received, self.strings)
@@ -836,7 +915,7 @@ class Int16TestCase(unittest.SynchronousTestCase, IntNTestCaseMixin, RecvdAttrib
         Send too much data: that should cause an error.
         """
         r = self.getProtocol()
-        tooSend = b"b" * (2**(r.prefixLength*8) + 1)
+        tooSend = b"b" * (2**(r.prefixLength * 8) + 1)
         self.assertRaises(AssertionError, r.sendString, tooSend)
 
 
@@ -895,7 +974,7 @@ class Int8TestCase(unittest.SynchronousTestCase, IntNTestCaseMixin, RecvdAttribu
         Send too much data: that should cause an error.
         """
         r = self.getProtocol()
-        tooSend = b"b" * (2**(r.prefixLength*8) + 1)
+        tooSend = b"b" * (2**(r.prefixLength * 8) + 1)
         self.assertRaises(AssertionError, r.sendString, tooSend)
 
 

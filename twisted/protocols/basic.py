@@ -533,7 +533,8 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
                       Default is 16384.
     """
     line_mode = 1
-    __buffer = b''
+    _buffer = b''
+    _busyReceiving = False
     delimiter = b'\r\n'
     MAX_LENGTH = 16384
 
@@ -544,8 +545,7 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
         @return: All of the cleared buffered data.
         @rtype: C{bytes}
         """
-        b = self.__buffer
-        self.__buffer = b""
+        b, self._buffer = self._buffer, b""
         return b
 
 
@@ -555,30 +555,41 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
         Translates bytes into lines, and calls lineReceived (or
         rawDataReceived, depending on mode.)
         """
-        self.__buffer = self.__buffer+data
-        while self.line_mode and not self.paused:
-            try:
-                line, self.__buffer = self.__buffer.split(self.delimiter, 1)
-            except ValueError:
-                if len(self.__buffer) > self.MAX_LENGTH:
-                    line, self.__buffer = self.__buffer, b''
-                    return self.lineLengthExceeded(line)
-                break
-            else:
-                linelength = len(line)
-                if linelength > self.MAX_LENGTH:
-                    exceeded = line + self.__buffer
-                    self.__buffer = b''
-                    return self.lineLengthExceeded(exceeded)
-                why = self.lineReceived(line)
-                if why or self.transport and self.transport.disconnecting:
-                    return why
-        else:
-            if not self.paused:
-                data=self.__buffer
-                self.__buffer = b''
-                if data:
-                    return self.rawDataReceived(data)
+        if self._busyReceiving:
+            self._buffer += data
+            return
+
+        try:
+            self._busyReceiving = True
+            self._buffer += data
+            while self._buffer and not self.paused:
+                if self.line_mode:
+                    try:
+                        line, self._buffer = self._buffer.split(
+                            self.delimiter, 1)
+                    except ValueError:
+                        if len(self._buffer) > self.MAX_LENGTH:
+                            line, self._buffer = self._buffer, b''
+                            return self.lineLengthExceeded(line)
+                        return
+                    else:
+                        lineLength = len(line)
+                        if lineLength > self.MAX_LENGTH:
+                            exceeded = line + self._buffer
+                            self._buffer = b''
+                            return self.lineLengthExceeded(exceeded)
+                        why = self.lineReceived(line)
+                        if (why or self.transport and
+                            self.transport.disconnecting):
+                            return why
+                else:
+                    data = self._buffer
+                    self._buffer = b''
+                    why = self.rawDataReceived(data)
+                    if why:
+                        return why
+        finally:
+            self._busyReceiving = False
 
 
     def setLineMode(self, extra=b''):
