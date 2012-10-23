@@ -49,8 +49,6 @@ modules = [
     "twisted.internet._utilspy3",
     "twisted.names",
     "twisted.names.cache",
-    # Client semi-depends on twisted.names.root, but only on Windows really.
-    # twisted.names.root is unported, but it imports at least.
     "twisted.names.client",
     "twisted.names.common",
     "twisted.names.dns",
@@ -63,14 +61,13 @@ modules = [
     "twisted.protocols.basic",
     "twisted.protocols.policies",
     "twisted.protocols.test",
+    "twisted.protocols.tls",
     "twisted.python",
     "twisted.python.compat",
     "twisted.python.components",
     "twisted.python.context",
     "twisted.python.deprecate",
     "twisted.python.failure",
-    # filepaths depends on twisted.python.win32 which hasn't yet been ported,
-    # but works well enough to be imported:
     "twisted.python.filepath",
     "twisted.python.log",
     "twisted.python.monkey",
@@ -84,7 +81,6 @@ modules = [
     "twisted.python.threadpool",
     "twisted.python._utilpy3",
     "twisted.python.versions",
-    "twisted.python.win32",
     "twisted.test",
     "twisted.test.proto_helpers",
     "twisted.trial",
@@ -102,9 +98,6 @@ modules = [
     "twisted.trial.util",
     "twisted._version",
     "twisted.web",
-    # twisted.web.resource depends on twisted.web.error, so it is sorta ported,
-    # but its tests are not yet ported, so it probably doesn't completely work.
-    "twisted.web.error",
     "twisted.web.http_headers",
     "twisted.web.resource",
     "twisted.web._responses",
@@ -143,6 +136,7 @@ testModules = [
     "twisted.names.test.test_dns",
     "twisted.names.test.test_hosts",
     "twisted.protocols.test.test_basic",
+    "twisted.protocols.test.test_tls",
     "twisted.python.test.test_components",
     "twisted.python.test.test_deprecate",
     "twisted.python.test.test_reflectpy3",
@@ -193,12 +187,25 @@ testModules = [
 # requirements of the modules that depend on them, but cannot be considered
 # generally usable otherwise.
 almostModules = [
+    # To be ported soon:
     "twisted.internet.abstract",
+    # twisted.names.client semi-depends on twisted.names.root, but only on
+    # Windows really:
     "twisted.names.root",
+    # Missing test coverage:
     "twisted.protocols.loopback",
+    # Minimally used by setup3.py:
     "twisted.python.dist",
+    # twisted.python.filepath depends on twisted.python.win32, but on Linux it
+    # only really needs to import:
+    "twisted.python.win32",
     "twisted.test.reflect_helper_IE",
     "twisted.test.reflect_helper_VE",
     "twisted.test.reflect_helper_ZDE",
+    # Required by some of the ported trial tests:
     "twisted.trial.reporter",
+    # twisted.web.resource depends on twisted.web.error, so it is sorta
+    # ported, but its tests are not yet ported, so it probably doesn't
+    # completely work.
+    "twisted.web.error",
     ]

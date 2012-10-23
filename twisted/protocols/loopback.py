@@ -133,7 +133,7 @@ def collapsingPumpPolicy(queue, target):
             break
         bytes.append(chunk)
     if bytes:
-        target.dataReceived(''.join(bytes))
+        target.dataReceived(b''.join(bytes))
 
 
 

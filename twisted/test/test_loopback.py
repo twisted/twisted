@@ -389,13 +389,13 @@ class LoopbackAsyncTestCase(LoopbackTestCaseMixin, unittest.TestCase):
         client = Protocol()
         client.dataReceived = bytes.append
         queue = loopback._LoopbackQueue()
-        queue.put("foo")
-        queue.put("bar")
+        queue.put(b"foo")
+        queue.put(b"bar")
         queue.put(None)
 
         loopback.identityPumpPolicy(queue, client)
 
-        self.assertEqual(bytes, ["foo", "bar"])
+        self.assertEqual(bytes, [b"foo", b"bar"])
 
 
     def test_collapsingPumpPolicy(self):
@@ -408,13 +408,13 @@ class LoopbackAsyncTestCase(LoopbackTestCaseMixin, unittest.TestCase):
         client = Protocol()
         client.dataReceived = bytes.append
         queue = loopback._LoopbackQueue()
-        queue.put("foo")
-        queue.put("bar")
+        queue.put(b"foo")
+        queue.put(b"bar")
         queue.put(None)
 
         loopback.collapsingPumpPolicy(queue, client)
 
-        self.assertEqual(bytes, ["foobar"])
+        self.assertEqual(bytes, [b"foobar"])
 
 
 

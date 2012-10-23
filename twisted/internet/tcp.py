@@ -24,6 +24,8 @@ from twisted.python.runtime import platformType
 from twisted.python import versions, deprecate
 
 try:
+    if _PY3:
+        raise ImportError("Re-enable in #6140 when _newtls is ported to Python 3.")
     # Try to get the memory BIO based startTLS implementation, available since
     # pyOpenSSL 0.10
     from twisted.internet._newtls import (

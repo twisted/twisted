@@ -14,6 +14,7 @@ import socket, errno
 
 from zope.interface import implementer
 
+from twisted.python.compat import _PY3
 from twisted.python.runtime import platform
 from twisted.python.failure import Failure
 from twisted.python import log
@@ -47,8 +48,12 @@ try:
 except ImportError:
     useSSL = False
 else:
-    from twisted.internet.ssl import ClientContextFactory
-    useSSL = True
+    if _PY3:
+        # Re-enable in ticket #6142:
+        useSSL = False
+    else:
+        from twisted.internet.ssl import ClientContextFactory
+        useSSL = True
 
 try:
     socket.socket(socket.AF_INET6, socket.SOCK_STREAM).close()
