@@ -37,6 +37,7 @@ from twisted.python.compat import set
 from twisted.internet.interfaces import IConsumer, IPushProducer
 from twisted.internet.error import ConnectionDone
 from twisted.internet.defer import Deferred, succeed, fail, maybeDeferred
+from twisted.internet.defer import CancelledError
 from twisted.internet.protocol import Protocol
 from twisted.protocols.basic import LineReceiver
 from twisted.web.iweb import UNKNOWN_LENGTH, IResponse
@@ -644,8 +645,11 @@ class Request:
 
         def combine(consuming, producing):
             # This Deferred is returned and will be fired when the first of
-            # consuming or producing fires.
-            ultimate = Deferred()
+            # consuming or producing fires. If it's cancelled, forward that
+            # cancellation to the producer.
+            def cancelConsuming(ign):
+                finishedProducing.cancel()
+            ultimate = Deferred(cancelConsuming)
 
             # Keep track of what has happened so far.  This initially
             # contains None, then an integer uniquely identifying what
@@ -1289,7 +1293,16 @@ class HTTP11ClientProtocol(Protocol):
 
         self._state = 'TRANSMITTING'
         _requestDeferred = maybeDeferred(request.writeTo, self.transport)
-        self._finishedRequest = Deferred()
+
+        def cancelRequest(ign):
+            # Explicitly cancel the request's deferred if it's still trying to
+            # write when this request is cancelled.
+            if self._state in (
+                    'TRANSMITTING', 'TRANSMITTING_AFTER_RECEIVING_RESPONSE'):
+                _requestDeferred.cancel()
+            else:
+                self._giveUp(Failure(CancelledError()))
+        self._finishedRequest = Deferred(cancelRequest)
 
         # Keep track of the Request object in case we need to call stopWriting
         # on it.
