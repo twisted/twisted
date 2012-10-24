@@ -380,3 +380,27 @@ class FancyStrMixinTests(TestCase):
             second = "hello"
         obj = Foo()
         self.assertEqual(str(obj), repr(obj))
+
+
+
+class NameToLabelTests(TestCase):
+    """
+    Tests for L{nameToLabel}.
+    """
+
+    def test_nameToLabel(self):
+        """
+        Test the various kinds of inputs L{nameToLabel} supports.
+        """
+        nameData = [
+            ('f', 'F'),
+            ('fo', 'Fo'),
+            ('foo', 'Foo'),
+            ('fooBar', 'Foo Bar'),
+            ('fooBarBaz', 'Foo Bar Baz'),
+            ]
+        for inp, out in nameData:
+            got = util.nameToLabel(inp)
+            self.assertEqual(
+                got, out,
+                "nameToLabel(%r) == %r != %r" % (inp, got, out))

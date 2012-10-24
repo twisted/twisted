@@ -16,7 +16,7 @@ from UserDict import UserDict
 
 from twisted.python._utilpy3 import (FancyEqMixin, setIDFunction, unsignedID,
                                      untilConcludes, runWithWarningsSuppressed,
-                                     FancyStrMixin)
+                                     FancyStrMixin, nameToLabel)
 
 
 class InsensitiveDict:
@@ -776,52 +776,6 @@ def mergeFunctionMetadata(f, g):
         pass
     merged.__module__ = f.__module__
     return merged
-
-
-def nameToLabel(mname):
-    """
-    Convert a string like a variable name into a slightly more human-friendly
-    string with spaces and capitalized letters.
-
-    @type mname: C{str}
-    @param mname: The name to convert to a label.  This must be a string
-    which could be used as a Python identifier.  Strings which do not take
-    this form will result in unpredictable behavior.
-
-    @rtype: C{str}
-    """
-    labelList = []
-    word = ''
-    lastWasUpper = False
-    for letter in mname:
-        if letter.isupper() == lastWasUpper:
-            # Continuing a word.
-            word += letter
-        else:
-            # breaking a word OR beginning a word
-            if lastWasUpper:
-                # could be either
-                if len(word) == 1:
-                    # keep going
-                    word += letter
-                else:
-                    # acronym
-                    # we're processing the lowercase letter after the acronym-then-capital
-                    lastWord = word[:-1]
-                    firstLetter = word[-1]
-                    labelList.append(lastWord)
-                    word = firstLetter + letter
-            else:
-                # definitely breaking: lower to upper
-                labelList.append(word)
-                word = letter
-        lastWasUpper = letter.isupper()
-    if labelList:
-        labelList[0] = labelList[0].capitalize()
-    else:
-        return mname.capitalize()
-    labelList.append(word)
-    return ' '.join(labelList)
 
 
 

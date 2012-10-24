@@ -44,24 +44,6 @@ class UtilTestCase(unittest.TestCase):
             raise unittest.FailTest, "util.raises didn't raise when it should have"
 
 
-    def testNameToLabel(self):
-        """
-        Test the various kinds of inputs L{nameToLabel} supports.
-        """
-        nameData = [
-            ('f', 'F'),
-            ('fo', 'Fo'),
-            ('foo', 'Foo'),
-            ('fooBar', 'Foo Bar'),
-            ('fooBarBaz', 'Foo Bar Baz'),
-            ]
-        for inp, out in nameData:
-            got = util.nameToLabel(inp)
-            self.assertEqual(
-                got, out,
-                "nameToLabel(%r) == %r != %r" % (inp, got, out))
-
-
     def test_uidFromNumericString(self):
         """
         When L{uidFromString} is called with a base-ten string representation
