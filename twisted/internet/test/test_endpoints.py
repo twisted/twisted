@@ -1166,11 +1166,12 @@ class MemoryReactorForIPv6(MemoryReactor):
     def connectTCP(self, *a, **kw):
         print "in the reactor::::", a[0]
         if a[0] == "1.2.3.4":
-            return error.ConnectError()
-        MemoryReactor.connectTCP(self, *a, **kw)
-        connector = MemoryConnector()
-        self.connectors.append(connector)
-        return connector
+            raise error.ConnectError()
+        else:
+            MemoryReactor.connectTCP(self, *a, **kw)
+            connector = MemoryConnector()
+            self.connectors.append(connector)
+            return connector
 
 
 class HostnameEndpointsIPv4FastTest(unittest.TestCase):
