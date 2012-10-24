@@ -1046,6 +1046,10 @@ class HostnameEndpointsOneIPv4Test(ClientEndpointTestCaseMixin,
         pass
         # TODO: Make this work
 
+    def test_endpointConnectFailure(self):
+        pass
+        # FIXME: Issues with RaisingMemoryReactor
+
 
 
 class HostnameEndpointsOneIPv6Test(ClientEndpointTestCaseMixin,
@@ -1119,6 +1123,12 @@ class HostnameEndpointsOneIPv6Test(ClientEndpointTestCaseMixin,
     def test_endpointConnectingCancelled(self):
         pass
         # TODO: Make this work
+
+
+    def test_endpointConnectFailure(self):
+        pass
+        # FIXME: Issues with RaisingMemoryReactor
+
 
 
 
