@@ -17,12 +17,28 @@ except ImportError:
 else:
     from twisted.conch.ssh.keys import Key, BadKeyError
     from twisted.conch.scripts.ckeygen import (
-        displayPublicKey, printFingerprint, _saveKey)
+        changePassPhrase, displayPublicKey, printFingerprint, _saveKey)
 
 from twisted.python.filepath import FilePath
 from twisted.trial.unittest import TestCase
 from twisted.conch.test.keydata import (
     publicRSA_openssh, privateRSA_openssh, privateRSA_openssh_encrypted)
+
+
+
+def _make_getpass(*passphrases):
+    """
+    Return a callable to patch C{getpass.getpass}.  Yields a passphrase each
+    time called. Use case is to provide an old, then new passphrase(s) as if
+    requested interactively.
+    """
+    def _getpass():
+        yield None
+        for phrase in passphrases:
+            yield phrase
+    getpass = _getpass()
+    next(getpass)
+    return getpass.send
 
 
 
@@ -135,3 +151,65 @@ class KeyGenTests(TestCase):
         self.assertRaises(
             BadKeyError, displayPublicKey,
             {'filename': filename, 'pass': 'wrong'})
+
+
+    def test_changePassphrase(self):
+        """
+        L{changePassPhrase} allows a user to change the passphrase of a
+        private key interactively.
+        """
+        oldNewConfirm = _make_getpass('encrypted', 'newpass', 'newpass')
+        self.patch(getpass, 'getpass', oldNewConfirm)
+
+        filename = self.mktemp()
+        FilePath(filename).setContent(privateRSA_openssh_encrypted)
+
+        changePassPhrase({'filename': filename})
+        self.assertEqual(
+            self.stdout.getvalue().strip('\n'),
+            'Your identification has been saved with the new passphrase.')
+
+
+    def test_changePassphraseWithOld(self):
+        """
+        L{changePassPhrase} allows a user to change the passphrase of a
+        private key, providing the old passphrase and prompting for new one.
+        """
+        newConfirm = _make_getpass('newpass', 'newpass')
+        self.patch(getpass, 'getpass', newConfirm)
+
+        filename = self.mktemp()
+        FilePath(filename).setContent(privateRSA_openssh_encrypted)
+
+        changePassPhrase({'filename': filename, 'pass': 'encrypted'})
+        self.assertEqual(
+            self.stdout.getvalue().strip('\n'),
+            'Your identification has been saved with the new passphrase.')
+
+
+    def test_changePassphraseWithBoth(self):
+        """
+        L{changePassPhrase} allows a user to change the passphrase of a private
+        key by providing both old and new passphrases without prompting.
+        """
+        filename = self.mktemp()
+        FilePath(filename).setContent(privateRSA_openssh_encrypted)
+
+        changePassPhrase(
+            {'filename': filename, 'pass': 'encrypted',
+             'newpass': 'newencrypt'})
+        self.assertEqual(
+            self.stdout.getvalue().strip('\n'),
+            'Your identification has been saved with the new passphrase.')
+
+
+    def test_changePassphraseWrongPassphrase(self):
+        """
+        L{changePassPhrase} allows a user to change the passphrase of a
+        private key. It should exit if passed an invalid old passphrase.
+        """
+        filename = self.mktemp()
+        FilePath(filename).setContent(privateRSA_openssh_encrypted)
+        self.assertRaises(SystemExit,
+                          changePassPhrase,
+                          {'filename': filename, 'pass': 'wrong'})

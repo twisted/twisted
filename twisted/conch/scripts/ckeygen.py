@@ -118,20 +118,26 @@ def printFingerprint(options):
 
 
 def changePassPhrase(options):
-    if not options['filename']:
+    if not options.get('filename'):
         filename = os.path.expanduser('~/.ssh/id_rsa')
         options['filename'] = raw_input('Enter file in which the key is (%s): ' % filename)
     try:
         key = keys.Key.fromFile(options['filename']).keyObject
-    except keys.BadKeyError, e:
-        if e.args[0] != 'encrypted key with no passphrase':
-            raise
-        else:
-            if not options['pass']:
-                options['pass'] = getpass.getpass('Enter old passphrase: ')
+    except keys.EncryptedKeyError, e:
+        # Raised if password not supplied for an encrypted key
+        if not options.get('pass'):
+            options['pass'] = getpass.getpass('Enter old passphrase: ')
+        try:
             key = keys.Key.fromFile(
-                options['filename'], passphrase = options['pass']).keyObject
-    if not options['newpass']:
+                options['filename'], passphrase=options['pass']).keyObject
+        except keys.BadKeyError, e:
+            sys.exit('Could not change passphrase: Old passphrase error')
+        except keys.EncryptedKeyError, e:
+            sys.exit('Could not change passphrase: %s' % (e,))
+    except keys.BadKeyError, e:
+        sys.exit('Could not change passphrase: %s' % (e,))
+
+    if not options.get('newpass'):
         while 1:
             p1 = getpass.getpass('Enter new passphrase (empty for no passphrase): ')
             p2 = getpass.getpass('Enter same passphrase again: ')
@@ -139,9 +145,21 @@ def changePassPhrase(options):
                 break
             print 'Passphrases do not match.  Try again.'
         options['newpass'] = p1
-    open(options['filename'], 'w').write(
-        keys.Key(key).toString(passphrase=options['newpass']))
-    print 'Your identification has been saved with the new passphrase.'
+
+    try:
+        newkeydata = keys.Key(key).toString('openssh', extra=options['newpass'])
+    except Exception, e:
+        sys.exit('Could not change passphrase: %s' % (e,))
+    else:
+        open(options['filename'], 'w').write(newkeydata)
+
+    try:
+        newkey = keys.Key.fromFile(
+            options['filename'], passphrase=options['newpass']).keyObject
+    except (keys.EncryptedKeyError, keys.BadKeyError), e:
+        sys.exit('Could not change passphrase: %s' % (e,))
+    else:
+        print 'Your identification has been saved with the new passphrase.'
 
 
 
@@ -151,7 +169,7 @@ def displayPublicKey(options):
         options['filename'] = raw_input('Enter file in which the key is (%s): ' % filename)
     try:
         key = keys.Key.fromFile(options['filename']).keyObject
-    except keys.EncryptedKeyError, e:
+    except keys.EncryptedKeyError:
         if not options.get('pass'):
             options['pass'] = getpass.getpass('Enter passphrase: ')
         key = keys.Key.fromFile(
