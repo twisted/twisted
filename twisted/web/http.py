@@ -106,7 +106,7 @@ def urlparse(url):
     """
     Parse an URL into six components.
 
-    This is similar to L{urlparse.urlparse}, but rejects C{unicode} input
+    This is similar to C{urlparse.urlparse}, but rejects C{unicode} input
     and always produces C{str} output.
 
     @type url: C{str}
@@ -1240,6 +1240,16 @@ class PotentialDataLoss(Exception):
 
 
 
+class _MalformedChunkedDataError(Exception):
+    """
+    C{_ChunkedTranferDecoder} raises L{_MalformedChunkedDataError} from its
+    C{dataReceived} method when it encounters malformed data. This exception
+    indicates a client-side error. If this exception is raised, the connection
+    should be dropped with a 400 error.
+    """
+
+
+
 class _IdentityTransferDecoder(object):
     """
     Protocol for accumulating bytes up to a specified length.  This handles the
@@ -1364,7 +1374,11 @@ class _ChunkedTransferDecoder(object):
         if '\r\n' in data:
             line, rest = data.split('\r\n', 1)
             parts = line.split(';')
-            self.length = int(parts[0], 16)
+            try:
+                self.length = int(parts[0], 16)
+            except ValueError:
+                raise _MalformedChunkedDataError(
+                    "Chunk-size must be an integer.")
             if self.length == 0:
                 self.state = 'TRAILER'
             else:
@@ -1574,9 +1588,14 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         req = self.requests[-1]
         req.requestReceived(command, path, version)
 
+
     def rawDataReceived(self, data):
         self.resetTimeout()
-        self._transferDecoder.dataReceived(data)
+        try:
+            self._transferDecoder.dataReceived(data)
+        except _MalformedChunkedDataError:
+            self.transport.write("HTTP/1.1 400 Bad Request\r\n\r\n")
+            self.transport.loseConnection()
 
 
     def allHeadersReceived(self):
@@ -1671,10 +1690,10 @@ class HTTPFactory(protocol.ServerFactory):
 
     @ivar _logDateTime: A cached datetime string for log messages, updated by
         C{_logDateTimeCall}.
-    @type _logDateTime: L{str}
+    @type _logDateTime: C{str}
 
-    @ivar _logDateTimeCall: A delayed call for the next update to the cached log
-        datetime string.
+    @ivar _logDateTimeCall: A delayed call for the next update to the cached
+        log datetime string.
     @type _logDateTimeCall: L{IDelayedCall} provided
     """
 

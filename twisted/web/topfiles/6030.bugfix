@@ -1,0 +1,2 @@
+twisted.web.http.HTTPChannel now drops the connection and issues a 400 error
+upon receipt of a chunk-encoding encoded request with a bad chunk-length field.

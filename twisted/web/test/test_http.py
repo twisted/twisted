@@ -370,7 +370,7 @@ class IdentityTransferEncodingTests(TestCase):
     def test_rejectDataAfterFinished(self):
         """
         If data is passed to L{_IdentityTransferDecoder.dataReceived} after the
-        finish callback has been invoked, L{RuntimeError} is raised.
+        finish callback has been invoked, C{RuntimeError} is raised.
         """
         failures = []
         def finish(bytes):
@@ -530,7 +530,7 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
 
     def test_afterFinished(self):
         """
-        L{_ChunkedTransferDecoder.dataReceived} raises L{RuntimeError} if it
+        L{_ChunkedTransferDecoder.dataReceived} raises C{RuntimeError} if it
         is called after it has seen the last chunk.
         """
         p = http._ChunkedTransferDecoder(None, lambda bytes: None)
@@ -899,6 +899,37 @@ Hello,
 
         self.runRequest(httpRequest, MyRequest)
 
+    def test_malformed_chunkedEncoding(self):
+        """
+        If a request uses the I{chunked} transfer encoding, but provides an
+        invalid chunk length value, the request fails with a 400 error.
+        """
+        # See test_chunkedEncoding for the correct form of this request.
+        httpRequest = '''\
+GET / HTTP/1.0
+Content-Type: text/plain
+Transfer-Encoding: chunked
+
+MALFORMED_LINE_THIS_SHOULD_BE_'6'
+Hello,
+14
+ spam,eggs spam spam
+0
+
+'''
+        didRequest = []
+
+        class MyRequest(http.Request):
+
+            def process(self):
+                # This request should fail, so this should never be called.
+                didRequest.append(True)
+
+        channel = self.runRequest(httpRequest, MyRequest, success=False)
+        self.assertFalse(didRequest, "Request.process called")
+        self.assertEqual(
+            channel.transport.value(),
+            "HTTP/1.1 400 Bad Request\r\n\r\n")
 
 
 class QueryArgumentsTestCase(unittest.TestCase):
@@ -916,7 +947,7 @@ class QueryArgumentsTestCase(unittest.TestCase):
     def test_urlparse(self):
         """
         For a given URL, L{http.urlparse} should behave the same as
-        L{urlparse}, except it should always return C{str}, never C{unicode}.
+        C{urlparse}, except it should always return C{str}, never C{unicode}.
         """
         def urls():
             for scheme in ('http', 'https'):
