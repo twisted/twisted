@@ -139,13 +139,14 @@ def _makeFrame(buf, _opcode=_CONTROLS.NORMAL):
     @rtype: C{str}
     @return: A packed frame.
     """
+    bufferLength = len(buf)
 
-    if len(buf) > 0xffff:
-        length = "\x7f%s" % pack(">Q", len(buf))
-    elif len(buf) > 0x7d:
-        length = "\x7e%s" % pack(">H", len(buf))
+    if bufferLength > 0xffff:
+        length = "\x7f%s" % pack(">Q", bufferLength)
+    elif bufferLength > 0x7d:
+        length = "\x7e%s" % pack(">H", bufferLength)
     else:
-        length = chr(len(buf))
+        length = chr(bufferLength)
 
     # Always make a normal packet.
     header = chr(0x80 | _opcode_for_type[_opcode])
@@ -179,8 +180,6 @@ def _parseFrames(buf):
         if header & 0x70:
             # At least one of the reserved flags is set. Pork chop sandwiches!
             raise _WSException("Reserved flag in frame (%d)" % header)
-            frames.append(("", _CONTROLS.CLOSE))
-            return frames, buf
 
         # Get the opcode, and translate it to a local enum which we actually
         # care about.

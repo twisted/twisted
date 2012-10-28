@@ -13,7 +13,7 @@ which are drafts of RFC 6455.
 from twisted.trial.unittest import TestCase
 
 from twisted.web.websockets import (
-    _CONTROLS, _makeAccept, _mask, _makeFrame, _parseFrames)
+    _CONTROLS, _makeAccept, _mask, _makeFrame, _parseFrames, _WSException)
 
 
 
@@ -201,6 +201,26 @@ class TestFrameHelpers(TestCase):
         frames, buf = _parseFrames(frame)
         self.assertEqual(len(frames), 0)
         self.assertEqual(buf, "\x81\x05Hel")
+
+
+    def test_parseReservedFlag(self):
+        """
+        L{_parseFrames} raises a L[_WSException} error when the header uses a
+        reserved flag.
+        """
+        frame = "\x72\x05"
+        error = self.assertRaises(_WSException, _parseFrames, frame)
+        self.assertEqual("Reserved flag in frame (114)", str(error))
+
+
+    def test_parseUnknownOpcode(self):
+        """
+        L{_parseFrames} raises a L{_WSException} error when the error uses an
+        unknown opcode.
+        """
+        frame = "\x8f\x05"
+        error = self.assertRaises(_WSException, _parseFrames, frame)
+        self.assertEqual("Unknown opcode 15 in frame", str(error))
 
 
     def test_makeHello(self):
