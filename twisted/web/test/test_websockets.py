@@ -71,6 +71,28 @@ class TestFrameHelpers(TestCase):
         self.assertEqual(buf, "")
 
 
+    def test_parseUnmaskedLargeText(self):
+        """
+        L{_parseFrames} handles frame with text longer than 125 bytes.
+        """
+        frame = "\x81\x7e\x00\xc8" + "x" * 200
+        frames, buf = _parseFrames(frame)
+        self.assertEqual(len(frames), 1)
+        self.assertEqual(frames[0], (_CONTROLS.NORMAL, "x" * 200))
+        self.assertEqual(buf, "")
+
+
+    def test_parseUnmaskedHugeText(self):
+        """
+        L{_parseFrames} handles frame with text longer than 64 kB.
+        """
+        frame = "\x81\x7f\x00\x00\x00\x00\x00\x01\x86\xa0" + "x" * 100000
+        frames, buf = _parseFrames(frame)
+        self.assertEqual(len(frames), 1)
+        self.assertEqual(frames[0], (_CONTROLS.NORMAL, "x" * 100000))
+        self.assertEqual(buf, "")
+
+
     def test_parseMaskedText(self):
         """
         A sample masked frame of "Hello" from HyBi-10, 4.7.
@@ -80,6 +102,17 @@ class TestFrameHelpers(TestCase):
         self.assertEqual(len(frames), 1)
         self.assertEqual(frames[0], (_CONTROLS.NORMAL, "Hello"))
         self.assertEqual(buf, "")
+
+
+    def test_parseMaskedPartialText(self):
+        """
+        L{_parseFrames} stops parsing if a masked frame isn't long enough to
+        contain the length of the text.
+        """
+        frame = "\x81\x827\xfa"
+        frames, buf = _parseFrames(frame)
+        self.assertEqual(len(frames), 0)
+        self.assertEqual(buf, "\x81\x827\xfa")
 
 
     def test_parseUnmaskedTextFragments(self):
@@ -245,7 +278,7 @@ class TestFrameHelpers(TestCase):
     def test_makeHugeFrame(self):
         """
         L{_makeFrame} prefixes the payload by the length on 8 bytes if the
-        payload is more than 64 kb.
+        payload is more than 64 kB.
         """
         frame = "\x81\x7f\x00\x00\x00\x00\x00\x01\x86\xa0" + "x" * 100000
         buf = _makeFrame("x" * 100000)

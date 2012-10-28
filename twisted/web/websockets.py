@@ -223,6 +223,8 @@ def _parseFrames(buf):
 
         if masked:
             if len(buf) - (start + offset) < 4:
+                # This is not strictly necessary, but it's more explicit so
+                # that we don't create an invalid key.
                 break
 
             key = buf[start + offset:start + offset + 4]
