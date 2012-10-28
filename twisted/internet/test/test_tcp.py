@@ -361,8 +361,73 @@ class TCP6Creator(TCPCreator):
 
 
 
+class TCPTransportTestsMixin(object):
+    """
+    Tests for functionality which is provided by any TCP transport (IPv4, IPv6,
+    client, server).
+    """
+    def test_largeSendBuffer(self):
+        """
+        Bytes written to a transport are sent reliably and in order even when
+        the local send buffer fills up because writes are done more quickly than
+        the network can accept them.
+        """
+        class LargeProtocol(ConnectableProtocol):
+            dataLen = 0
+
+            def dataReceived(self,data):
+                self.transport.write(data)
+                self.dataLen += len(data)
+
+        class LargeClientProtocol(ConnectableProtocol):
+            dataBuffer = b''
+
+            def connectionMade(self):
+                self.reactor.callLater(
+                    1, self.transport.write, smallChunk * ops)
+                self.checkd = None
+
+            def dataReceived(self,data):
+                self.dataBuffer += data
+                if not self.checkd:
+                    self.checkd = self.reactor.callLater(1, self.extraCheck)
+
+            def connectionLost(self, reason):
+                if self.checkd:
+                    self.checkd.cancel()
+                    self.checkd = None
+                ConnectableProtocol.connectionLost(self, reason)
+
+            def extraCheck(self):
+                if len(self.dataBuffer) == totalLen:
+                    self.normal = True
+                    self.transport.loseConnection()
+                elif len(self.dataBuffer) > totalLen:
+                    self.normal = False
+                    self.transport.loseConnection()
+                else:
+                    pass
+                self.checkd = None
+
+        smallChunk = b'X'
+        smallLen = len(smallChunk)
+        ops = 2 * 1024 * 1024
+        totalLen = smallLen * ops
+
+        server = LargeProtocol()
+        client = LargeClientProtocol()
+        reactor = runProtocolsWithReactor(
+            self, server, client, self.endpoints)
+
+        self.assertTrue(
+            client.normal,
+            "client received data is abnormal "
+            "(%d != %d)" % (len(client.dataBuffer), totalLen))
+
+
+
 class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
-                            TCPClientTestsMixin):
+                            TCPClientTestsMixin, TCPTransportTestsMixin):
     """
     Base class for builders defining tests related to L{IReactorTCP.connectTCP}.
     """
