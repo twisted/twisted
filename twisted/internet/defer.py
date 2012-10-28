@@ -571,10 +571,10 @@ class Deferred:
                             current.pause()
                             if current.result is current:
                                 warnings.warn(
-                                    "Callback %s returned the same Deferred it "
-                                    "was attached to; this breaks the callback "
-                                    "chain and will raise an exception in "
-                                    "the future." % (callback),
+                                    "Callback %s returned the same Deferred "
+                                    "it was attached to; this breaks the "
+                                    "callback chain and will raise an "
+                                    "exception in the future." % (callback),
                                     DeprecationWarning,
                                     stacklevel=4)
                             current._chainedTo = current.result
