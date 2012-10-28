@@ -1,7 +1,7 @@
 # -*- test-case-name: twisted.web.test.test_websockets -*-
 # Copyright (c) 2011-2012 Oregon State University Open Source Lab
 #               2011-2012 Corbin Simpson
-#                    2012 Twisted Matrix Laboratories
+#                         Twisted Matrix Laboratories
 #
 # See LICENSE for details.
 
@@ -16,18 +16,23 @@ from base64 import b64encode, b64decode
 from hashlib import sha1
 from struct import pack, unpack
 
+from zope.interface import implementer
+
 from twisted.protocols.policies import ProtocolWrapper, WrappingFactory
 from twisted.python import log
 from twisted.python.constants import NamedConstant, Names
 from twisted.web.error import NoResource
 from twisted.web.resource import IResource
 from twisted.web.server import NOT_DONE_YET
-from zope.interface import implements
+
+
 
 class _WSException(Exception):
     """
     Internal exception for control flow inside the WebSockets frame parser.
     """
+
+
 
 # Control frame specifiers. Some versions of WS have control signals sent
 # in-band. Adorable, right?
@@ -71,7 +76,9 @@ _decoders = {
 # The GUID for WebSockets, from RFC 6455.
 _WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
-def _make_accept(key):
+
+
+def _makeAccept(key):
     """
     Create an "accept" response for a given key.
 
@@ -83,8 +90,9 @@ def _make_accept(key):
     @rtype: C{str}
     @return: An encoded response.
     """
-
     return sha1("%s%s" % (key, _WS_GUID)).digest().encode("base64").strip()
+
+
 
 # Frame helpers.
 # Separated out to make unit testing a lot easier.
@@ -115,9 +123,9 @@ def _mask(buf, key):
 
 
 
-def _make_hybi07_frame(buf, _opcode=_CONTROLS.NORMAL):
+def _makeFrame(buf, _opcode=_CONTROLS.NORMAL):
     """
-    Make a HyBi-07 frame.
+    Make a frame.
 
     This function always creates unmasked frames, and attempts to use the
     smallest possible lengths.
@@ -146,9 +154,9 @@ def _make_hybi07_frame(buf, _opcode=_CONTROLS.NORMAL):
 
 
 
-def _parse_hybi07_frames(buf):
+def _parseFrames(buf):
     """
-    Parse HyBi-07 frames in a highly compliant manner.
+    Parse frames in a highly compliant manner.
 
     @type buf: C{str}
     @param buf: A buffer of bytes.
@@ -170,7 +178,7 @@ def _parse_hybi07_frames(buf):
         header = ord(buf[start])
         if header & 0x70:
             # At least one of the reserved flags is set. Pork chop sandwiches!
-            raise _WSException("Reserved flag in HyBi-07 frame (%d)" % header)
+            raise _WSException("Reserved flag in frame (%d)" % header)
             frames.append(("", _CONTROLS.CLOSE))
             return frames, buf
 
@@ -180,7 +188,7 @@ def _parse_hybi07_frames(buf):
         try:
             opcode = _opcode_types[opcode]
         except KeyError:
-            raise _WSException("Unknown opcode %d in HyBi-07 frame" % opcode)
+            raise _WSException("Unknown opcode %d in frame" % opcode)
 
         # Get the payload length and determine whether we need to look for an
         # extra length.
@@ -269,7 +277,7 @@ class _WebSocketsProtocol(ProtocolWrapper):
         """
 
         try:
-            frames, self.buf = _parse_hybi07_frames(self.buf)
+            frames, self.buf = _parseFrames(self.buf)
         except _WSException:
             # Couldn't parse all the frames, something went wrong, let's bail.
             log.err()
@@ -296,8 +304,7 @@ class _WebSocketsProtocol(ProtocolWrapper):
                 # 5.5.2 PINGs must be responded to with PONGs.
                 # 5.5.3 PONGs must contain the data that was sent with the
                 # provoking PING.
-                self.transport.write(_make_hybi07_frame(data,
-                    _opcode=_CONTROLS.PONG))
+                self.transport.write(_makeFrame(data, _opcode=_CONTROLS.PONG))
 
 
     def sendFrames(self):
@@ -309,7 +316,7 @@ class _WebSocketsProtocol(ProtocolWrapper):
             # Encode the frame before sending it.
             if self.codec:
                 frame = _encoders[self.codec](frame)
-            packet = _make_hybi07_frame(frame)
+            packet = _makeFrame(frame)
             self.transport.write(packet)
         self._pending_frames = []
 
@@ -365,7 +372,7 @@ class _WebSocketsProtocol(ProtocolWrapper):
         # Send a closing frame. It's only polite. (And might keep the browser
         # from hanging.)
         if not self.disconnecting:
-            frame = _make_hybi07_frame("", _opcode=_CONTROLS.CLOSE)
+            frame = _makeFrame("", _opcode=_CONTROLS.CLOSE)
             self.transport.write(frame)
 
             ProtocolWrapper.loseConnection(self)
@@ -385,6 +392,7 @@ class _WebSocketsFactory(WrappingFactory):
 
 
 
+@implementer(IResource)
 class WebSocketsResource(object):
     """
     A resource for serving a protocol through WebSockets.
@@ -395,10 +403,8 @@ class WebSocketsResource(object):
     Due to unresolved questions of logistics, this resource cannot have
     children.
 
-    @since 12.2
+    @since 12.3
     """
-
-    implements(IResource)
 
     isLeaf = True
 
@@ -421,7 +427,6 @@ class WebSocketsResource(object):
         We're not actually rendering a request. We are secretly going to
         handle a WebSockets connection instead.
         """
-
         # If we fail at all, we're gonna fail with 400 and no response.
         # You might want to pop open the RFC and read along.
         failed = False
@@ -486,7 +491,7 @@ class WebSocketsResource(object):
         # 4.2.2.5.3 Connection: Upgrade
         request.setHeader("Connection", "Upgrade")
         # 4.2.2.5.4 Response to the key challenge
-        request.setHeader("Sec-WebSocket-Accept", _make_accept(key))
+        request.setHeader("Sec-WebSocket-Accept", _makeAccept(key))
         # 4.2.2.5.5 Optional codec declaration
         if codec:
             request.setHeader("Sec-WebSocket-Protocol", codec)

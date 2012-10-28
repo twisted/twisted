@@ -23,86 +23,16 @@ used to provide WebSockets services.</p>
 factory, exposing that factory as a resource in a Web server, and can be used
 anywhere a normal <code>Resource</code> can be used.</p>
 
-<p>The following example creates a <code>Site</code> which responds to all requests with a WebSockets connection, which serves an <code>EchoProtocol</code>.</p>
+<p>The following example creates a <code>Site</code> which responds to all
+requests with a WebSockets connection, which serves an
+<code>EchoProtocol</code>.</p>
 
-<pre class="python">
-from twisted.internet.protocol import Factory
-from twisted.protocols.wire import Echo
-from twisted.web.server import Site
-from twisted.web.websockets import WebSocketsResource
-
-class EchoFactory(Factory):
-    protocol = Echo
-
-if __name__ == '__main__':
-    from twisted.internet import reactor
-    resource = WebSocketsResource(EchoFactory())
-    reactor.listenTCP(7080, Site(resource))
-    reactor.run()
-</pre>
+<a href="listings/websockets_echo.py" class="py-listing">websockets_echo.py</a>
 
 <p>After we run this command, we can connect with a client and send commands
 to the server:</p>
 
-<pre class="html">
-&lt;!DOCTYPE html&gt;
-&lt;meta charset=&quot;utf-8&quot; /&gt;
-&lt;title&gt;WebSocket Test&lt;/title&gt;
-&lt;script language=&quot;javascript&quot; type=&quot;text/javascript&quot;&gt;
-    var wsUri = &quot;ws://localhost:5600/&quot;;
-    var output;
-    var websocket;
-
-    function init() {
-        output = document.getElementById(&quot;output&quot;);
-        testWebSocket();
-    }
-
-    function testWebSocket() {
-        websocket = new WebSocket(wsUri);
-        websocket.onopen = function(evt) { onOpen(evt) };
-        websocket.onclose = function(evt) { onClose(evt) };
-        websocket.onmessage = function(evt) { onMessage(evt) };
-        websocket.onerror = function(evt) { onError(evt) };
-    }
-
-    function onOpen(evt) {
-        writeToScreen(&quot;CONNECTED&quot;);
-        doSend(&quot;WebSocket rocks&quot;);
-    }
-
-    function onClose(evt) {
-        writeToScreen(&quot;DISCONNECTED&quot;);
-    }
-
-    function onMessage(evt) {
-        writeToScreen(&apos;&lt;span style=&quot;color: blue;&quot;&gt;RESPONSE: &apos; + evt.data+&apos;&lt;/span&gt;&apos;);
-        websocket.close();
-    }
-
-    function onError(evt) {
-        writeToScreen(&apos;&lt;span style=&quot;color: red;&quot;&gt;ERROR:&lt;/span&gt; &apos; + evt.data);
-    }
-
-    function doSend(message) {
-        writeToScreen(&quot;SENT: &quot; + message); 
-        websocket.send(message);
-    }
-
-    function writeToScreen(message) {
-        var pre = document.createElement(&quot;p&quot;);
-        pre.style.wordWrap = &quot;break-word&quot;;
-        pre.innerHTML = message;
-        output.appendChild(pre);
-    }
-
-    window.addEventListener(&quot;load&quot;, init, false);
-
-&lt;/script&gt;
-&lt;h2&gt;WebSocket Test&lt;/h2&gt;
-&lt;div id=&quot;output&quot;&gt;&lt;/div&gt;
-&lt;/html&gt; 
-</pre>
+<a href="listings/websockets_echo.html" class="html-listing">websockets_echo.html</a>
 
 <p>This simple WebSockets client should have no problem connecting to the
 example server.</p>
