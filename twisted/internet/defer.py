@@ -35,6 +35,7 @@ class AlreadyCalledError(Exception):
     pass
 
 
+
 class CancelledError(Exception):
     """
     This error is raised by default when a L{Deferred} is cancelled.
@@ -46,6 +47,7 @@ class TimeoutError(Exception):
     This exception is deprecated.  It is used only by the deprecated
     L{Deferred.setTimeout} method.
     """
+
 
 
 
@@ -567,6 +569,14 @@ class Deferred:
                         if resultResult is _NO_RESULT or isinstance(resultResult, Deferred) or current.result.paused:
                             # Nope, it didn't.  Pause and chain.
                             current.pause()
+                            if current.result is current:
+                                warnings.warn(
+                                    "Callback %s returned the same Deferred it "
+                                    "was attached to; this breaks the callback "
+                                    "chain and will raise an exception in "
+                                    "the future." % (callback),
+                                    DeprecationWarning,
+                                    stacklevel=4)
                             current._chainedTo = current.result
                             # Note: current.result has no result, so it's not
                             # running its callbacks right now.  Therefore we can
