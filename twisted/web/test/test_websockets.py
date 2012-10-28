@@ -210,3 +210,23 @@ class TestFrameHelpers(TestCase):
         frame = "\x81\x05Hello"
         buf = _makeFrame("Hello")
         self.assertEqual(frame, buf)
+
+
+    def test_makeLargeFrame(self):
+        """
+        L{_makeFrame} prefixes the payload by the length on 2 bytes if the
+        payload is more than 125 bytes.
+        """
+        frame = "\x81\x7e\x00\xc8" + "x" * 200
+        buf = _makeFrame("x" * 200)
+        self.assertEqual(frame, buf)
+
+
+    def test_makeHugeFrame(self):
+        """
+        L{_makeFrame} prefixes the payload by the length on 8 bytes if the
+        payload is more than 64 kb.
+        """
+        frame = "\x81\x7f\x00\x00\x00\x00\x00\x01\x86\xa0" + "x" * 100000
+        buf = _makeFrame("x" * 100000)
+        self.assertEqual(frame, buf)
