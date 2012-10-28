@@ -900,7 +900,8 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.assertEqual(len(warnings), 1)
         warning = warnings[0]
         self.assertEqual(warning['category'], DeprecationWarning)
-        pattern = "Callback <function circularCallback at 0x\\w+> returned the same Deferred it was attached to"
+        pattern = ("Callback <function circularCallback at 0x\\w+> returned "
+                   "the same Deferred it was attached to")
         self.assertTrue(re.search(pattern, warning['message']))
 
 
