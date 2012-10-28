@@ -170,7 +170,7 @@ class Failure:
     _yieldOpcode = chr(opcode.opmap["YIELD_VALUE"])
 
     def __init__(self, exc_value=None, exc_type=None, exc_tb=None,
-                 captureVars=False):
+                 captureVars=False, history=None):
         """
         Initialize me with an explanation of the error.
 
@@ -199,6 +199,7 @@ class Failure:
         self.count = count
         self.type = self.value = tb = None
         self.captureVars = captureVars
+        self._history = history
 
         if isinstance(exc_value, str) and exc_type is None:
             raise TypeError("Strings are not supported by Failure")
@@ -559,6 +560,17 @@ class Failure:
             formatDetail = 'verbose-vars-not-captured'
         else:
             formatDetail = detail
+
+        def fmtHistory(history, prefix=""):
+            for el in history:
+                if isinstance(el, list):
+                    fmtHistory(el, prefix=prefix + "->  ")
+                else:
+                    w(prefix)
+                    w("[callback: %s, args: %s, kwargs: %s]\n" % el[2:])
+
+        if self._history is not None:
+            fmtHistory(self._history.getHistory())
 
         # Preamble
         if detail == 'verbose':

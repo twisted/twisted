@@ -2028,3 +2028,200 @@ if not _PY3:
             self.clock.advance(1)
 
             return d
+
+
+
+class HistoryTests(unittest.TestCase):
+    """
+    Tests for the history-tracking debug modes.
+    """
+
+    def setUp(self):
+        defer.setDebugging(defer.DEBUG)
+
+
+    def tearDown(self):
+        defer.setDebugging(False)
+
+
+    def assertHistory(self, historyItem, deferred, callback,
+                      args=None, kwargs=None):
+        """
+        Check that a L{_DeferredHistoryItem} is made up of the provided data.
+        """
+        if args is None:
+            args = ()
+        if kwargs is None:
+            kwargs = {}
+        self.assertEquals(historyItem.deferred, deferred)
+        self.assertEquals(historyItem.callback, callback)
+        self.assertEquals(historyItem.args, args)
+        self.assertEquals(historyItem.kwargs, kwargs)
+
+
+    def test_simpleHistory(self):
+        """
+        L{Deferred._history} contains a history of the callbacks executed on
+        that Deferred.
+        """
+        def cb1(r):
+            pass
+        def cb2(r):
+            1 / 0
+        d = defer.Deferred()
+        d.addCallback(cb1)
+        d.addCallback(cb2)
+        d.callback("result")
+        history = d._history.getHistory()
+        self.assertEquals(len(history), 2)
+        self.assertHistory(history[0], d, cb1)
+        self.assertHistory(history[1], d, cb2)
+
+
+    def test_nestedHistory(self):
+        """
+        Callbacks executed on a Deferred which is returned from a Deferred
+        callback are represented in the outer Deferred's history as
+        aL{_DeferredHistoryItem} whose C{deferred} attribute is set to the
+        inner Deferred.
+        """
+        first = defer.Deferred()
+        second = defer.Deferred()
+        def cb1(r):
+            def nestedCB(r):
+                return r
+            second.addCallback(nestedCB)
+            return nested
+        first.addCallback(cb1)
+        second.callback(5)
+        first.callback("result")
+        history = first._history.getHistory()
+        print first._history.formatHistory()
+        self.assertEquals(len(history), 2)
+        self.assertHistory(history[0], first, cb1)
+        self.assertHistory(history[1], second, cb2)
+
+
+    # def test_formatCallbackHistory(self):
+    #     """
+    #     The callback history is included above the traceback in Failures that
+    #     are produced from a failing Deferred.
+    #     """
+    #     def cb1(r):
+    #         pass
+    #     def cb2(r):
+    #         1 / 0
+    #     d = defer.Deferred()
+    #     d.addCallback(cb1).addCallback(cb2)
+    #     d.callback("result")
+    #     error = []
+    #     d.addErrback(error.append)
+    #     tb = error[0].getTraceback().splitlines()
+    #     print error[0].getTraceback()
+    #     self.assertCallbackLine(tb[0], "cb1")
+    #     self.assertCallbackLine(tb[1], "cb2")
+    #     self.assertEquals(tb[3], "Traceback (most recent call last):")
+
+    # def test_synchronousChained(self):
+    #     """
+    #     This does NOT exercise the iterative chaining support in Deferred.
+    #     """
+    #     first = defer.Deferred()
+    #     second = defer.Deferred()
+        
+    #     def cb1(r):
+    #         def nestedCB(r):
+    #             r
+    #         nested = defer.Deferred()
+    #         nested.addCallback(nestedCB)
+    #         nested.callback(5)
+    #         return nested
+    #     def cb2(r):
+    #         1 / 0
+    #     d = defer.Deferred()
+    #     d.addCallback(cb1).addCallback(cb2)
+    #     d.callback("result")
+    #     error = []
+    #     d.addErrback(error.append)
+    #     tb = error[0].getTraceback().splitlines()
+    #     self.assertCallbackLine(tb[0], "cb1")
+    #     self.assertCallbackLine(tb[1], "nestedCB", indent=1)
+    #     self.assertCallbackLine(tb[2], "cb2")
+    #     self.assertEquals(tb[4], "Traceback (most recent call last):")
+
+    # def test_synchronousChainedChained(self):
+    #     def cb1(r):
+    #         def nestedCB(r):
+    #             def nestedNestedCB(r):
+    #                 pass
+    #             nestedNested = defer.Deferred()
+    #             nestedNested.addCallback(nestedNestedCB)
+    #             nestedNested.callback(6)
+    #             return nestedNested
+    #         nested = defer.Deferred()
+    #         nested.addCallback(nestedCB)
+    #         nested.callback(5)
+    #         return nested
+    #     def cb2(r):
+    #         1 / 0
+    #     d = defer.Deferred()
+    #     d.addCallback(cb1).addCallback(cb2)
+    #     d.callback("result")
+    #     error = []
+    #     d.addErrback(error.append)
+    #     tb = error[0].getTraceback().splitlines()
+    #     self.assertCallbackLine(tb[0], "cb1")
+    #     self.assertCallbackLine(tb[1], "nestedCB", indent=1)
+    #     self.assertCallbackLine(tb[2], "nestedNestedCB", indent=2)
+    #     self.assertCallbackLine(tb[3], "cb2")
+    #     self.assertEquals(tb[5], "Traceback (most recent call last):")
+
+    # def test_iterativelyChained(self):
+    #     first = defer.Deferred(label="first")
+    #     second = defer.Deferred(label="second")
+    #     def cb1(r):
+    #         def nestedCB(r):
+    #             return r
+    #         return second.addCallback(nestedCB)
+    #     def cb2(r):
+    #         1 / 0
+    #     first.addCallback(cb1)
+    #     first.addCallback(cb2)
+    #     first.callback(1)
+    #     second.callback(3)
+    #     error = []
+    #     first.addErrback(error.append)
+    #     tb = error[0].getTraceback().splitlines()
+    #     self.assertCallbackLine(tb[0], "cb1")
+    #     self.assertCallbackLine(tb[1], "nestedCB", indent=1)
+    #     self.assertCallbackLine(tb[2], "cb2")
+    #     self.assertEquals(tb[4], "Traceback (most recent call last):")
+
+    # def test_iterativelyChainedWeirdCase(self):
+    #     first = defer.Deferred(label="first")
+    #     second = defer.Deferred(label="second")
+    #     def cb1(r):
+    #         def nestedCB(r):
+    #             return r
+    #         return second.addCallback(nestedCB)
+    #     def cb2(r):
+    #         1 / 0
+    #     first.addCallback(cb1)
+
+    #     def what(r):
+    #         print "WHAT IS WHAT?", r
+    #         return 5555
+    #     second.addCallback(what)
+
+    #     first.addCallback(cb2)
+    #     first.callback(1)
+    #     second.callback(3)
+    #     error = []
+    #     first.addErrback(error.append)
+    #     tb = error[0].getTraceback().splitlines()
+    #     print error[0].getTraceback()
+    #     self.assertCallbackLine(tb[0], "cb1")
+    #     self.assertCallbackLine(tb[1], "nestedCB", indent=1)
+    #     self.assertCallbackLine(tb[2], "cb2")
+    #     self.assertEquals(tb[4], "Traceback (most recent call last):")
+

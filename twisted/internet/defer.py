@@ -14,10 +14,15 @@ Maintainer: Glyph Lefkowitz
 @var _CONTINUE: A marker left in L{Deferred.callbacks} to indicate a Deferred
     chain.  Always accompanied by a Deferred instance in the args tuple pointing
     at the Deferred which is chained to the Deferred which has this marker.
+
+@var DEBUG:
+@var DEBUG_HISTORY_LOCATIONS:
+@var DEBUG_HISTORY_CALLSTACKS:
 """
 
 from __future__ import division, absolute_import
 
+import time
 import traceback
 import types
 import warnings
@@ -35,6 +40,7 @@ class AlreadyCalledError(Exception):
     pass
 
 
+
 class CancelledError(Exception):
     """
     This error is raised by default when a L{Deferred} is cancelled.
@@ -45,6 +51,14 @@ class TimeoutError(Exception):
     """
     This exception is deprecated.  It is used only by the deprecated
     L{Deferred.setTimeout} method.
+    """
+
+
+
+class CircularDeferredChainError(Exception):
+    """
+    This error is raised when a Deferred is returned from its own callback,
+    [directly or indirectly]. -XXX RADIX
     """
 
 
@@ -157,15 +171,27 @@ def passthru(arg):
     return arg
 
 
+DEBUG = 1
+DEBUG_HISTORY_LOCATIONS = 2
+DEBUG_HISTORY_CALLSTACKS = 3
 
-def setDebugging(on):
-    """
-    Enable or disable L{Deferred} debugging.
 
-    When debugging is on, the call stacks from creation and invocation are
-    recorded, and added to any L{AlreadyCalledErrors} we raise.
+def setDebugging(level):
     """
-    Deferred.debug=bool(on)
+    Set the level of L{Deferred} debugging.
+
+    The following values are respected:
+      - DEBUG (or True): Basic debugging support. Enables history for Deferreds
+        and stores callstacks for creation and initial callback.
+      - DEBUG_HISTORY_LOCATIONS: Stores the filename/lineno of L{addCallbacks}
+        calls with the history.
+      - DEBUG_HISTORY_CALLSTACKS: Stores the callstack of L{addCallbacks} calls
+        with the history.
+      - 0 or False: Disable debugging.
+    """
+    if level and level not in (DEBUG, DEBUG_HISTORY_LOCATIONS, DEBUG_HISTORY_CALLSTACKS):
+        level = DEBUG
+    Deferred.debug = level
 
 
 
@@ -238,11 +264,11 @@ class Deferred:
 
     # Keep this class attribute for now, for compatibility with code that
     # sets it directly.
-    debug = False
+    debug = 0
 
     _chainedTo = None
 
-    def __init__(self, canceller=None):
+    def __init__(self, canceller=None, label=None):
         """
         Initialize a L{Deferred}.
 
@@ -266,11 +292,13 @@ class Deferred:
         @type canceller: a 1-argument callable which takes a L{Deferred}. The
             return result is ignored.
         """
+        self._label = label
         self.callbacks = []
         self._canceller = canceller
         if self.debug:
             self._debugInfo = DebugInfo()
             self._debugInfo.creator = traceback.format_stack()[:-1]
+        self._history = _DeferredHistory()
 
 
     def addCallbacks(self, callback, errback=None,
@@ -552,21 +580,28 @@ class Deferred:
                 try:
                     current._runningCallbacks = True
                     try:
+                        historyItem = None
+                        if self.debug > 0:
+                            historyItem = current._history.addHistoryItem(current, callback, args, kw)
                         current.result = callback(current.result, *args, **kw)
                     finally:
                         current._runningCallbacks = False
                 except:
                     # Including full frame information in the Failure is quite
                     # expensive, so we avoid it unless self.debug is set.
-                    current.result = failure.Failure(captureVars=self.debug)
+                    # Should I actually copy self._history here, or pass the original? It actually makes a difference!
+                    current.result = failure.Failure(captureVars=self.debug, history=current._history)
                 else:
                     if isinstance(current.result, Deferred):
                         # The result is another Deferred.  If it has a result,
                         # we can take it and keep going.
+                        # Is it possible for current.result.history to be modified AFTER this line? PROBABLY!
                         resultResult = getattr(current.result, 'result', _NO_RESULT)
                         if resultResult is _NO_RESULT or isinstance(resultResult, Deferred) or current.result.paused:
                             # Nope, it didn't.  Pause and chain.
                             current.pause()
+                            if current.result is current:
+                                raise CircularDeferredChainError("OMG F YOU")
                             current._chainedTo = current.result
                             # Note: current.result has no result, so it's not
                             # running its callbacks right now.  Therefore we can
@@ -582,6 +617,8 @@ class Deferred:
                                 current.result._debugInfo.failResult = None
                             current.result = resultResult
 
+                if historyItem is not None:
+                    historyItem.setResult(current.result)
             if finished:
                 # As much of the callback chain - perhaps all of it - as can be
                 # processed right now has been.  The current Deferred is waiting on
@@ -618,7 +655,10 @@ class Deferred:
             result = ''
         else:
             result = ' current result: %r' % (result,)
-        return "<%s at %s%s>" % (cname, myID, result)
+        label = ""
+        if self._label is not None:
+            label = " label=%s" % (self._label,)
+        return "<%s at %s%s%s>" % (cname, myID, label, result)
     __repr__ = __str__
 
 
@@ -709,6 +749,49 @@ class FirstError(Exception):
                 (other.index, other.subFailure))
         return -1
 
+
+
+class _DeferredHistoryItem(object):
+    def __init__(self, invocationTime, deferred, callback, args, kwargs):
+        self.invocationTime = invocationTime
+        self.deferred = deferred
+        self.callback = callback
+        self.args = args
+        self.kwargs = kwargs
+        self.result = None
+
+    def setResult(self, result):
+        self.result = result
+
+
+
+class _DeferredHistory(object):
+    """
+    A debug representation of a Deferred's callbacks.
+
+    @ivar _history: List of (parentDeferred, call, args, kwargs).
+    """
+
+    def __init__(self):
+        self._history = []
+
+    def getHistory(self):
+        return self._history
+
+    def addHistoryItem(self, deferred, call, args, kwargs):
+        result = _DeferredHistoryItem(time.time(), deferred, call, args, kwargs)
+        self._history.append(result)
+        return result
+
+    def mergeHistory(self, history):
+        for item in history.getHistory():
+            self._history.append(item)
+
+    def formatHistory(self):
+        s = ""
+        for item in self._history:
+            s += "[%s %s %s]\n" % (item.callback, item.args, item.kwargs)
+        return s
 
 
 class DeferredList(Deferred):
