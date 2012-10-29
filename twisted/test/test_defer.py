@@ -2081,9 +2081,9 @@ class HistoryTests(unittest.TestCase):
     def test_nestedHistory(self):
         """
         Callbacks executed on a Deferred which is returned from a Deferred
-        callback are represented in the outer Deferred's history as
-        aL{_DeferredHistoryItem} whose C{deferred} attribute is set to the
-        inner Deferred.
+        callback are represented in the outer Deferred's history as a
+        L{_DeferredHistoryItem} whose C{deferred} attribute is set to the inner
+        Deferred.
         """
         first = defer.Deferred()
         second = defer.Deferred()

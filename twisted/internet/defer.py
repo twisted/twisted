@@ -595,7 +595,8 @@ class Deferred:
                     if isinstance(current.result, Deferred):
                         # The result is another Deferred.  If it has a result,
                         # we can take it and keep going.
-                        # Is it possible for current.result.history to be modified AFTER this line? PROBABLY!
+                        # Is it possible for current.result.history to be
+                        # modified AFTER this line? PROBABLY!
                         resultResult = getattr(current.result, 'result', _NO_RESULT)
                         if resultResult is _NO_RESULT or isinstance(resultResult, Deferred) or current.result.paused:
                             # Nope, it didn't.  Pause and chain.
@@ -617,8 +618,8 @@ class Deferred:
                                 current.result._debugInfo.failResult = None
                             current.result = resultResult
 
-                if historyItem is not None:
-                    historyItem.setResult(current.result)
+                # if historyItem is not None:
+                #     historyItem.setResult(current.result)
             if finished:
                 # As much of the callback chain - perhaps all of it - as can be
                 # processed right now has been.  The current Deferred is waiting on
@@ -752,6 +753,12 @@ class FirstError(Exception):
 
 
 class _DeferredHistoryItem(object):
+    """
+    @ivar deferred: The L{Deferred} on which this history item occured.
+    @ivar callback: The callback that was invoked.
+    @ivar result: The result of the callback (not necessarily available until
+        the callback returns).
+    """
     def __init__(self, invocationTime, deferred, callback, args, kwargs):
         self.invocationTime = invocationTime
         self.deferred = deferred
@@ -769,7 +776,14 @@ class _DeferredHistory(object):
     """
     A debug representation of a Deferred's callbacks.
 
-    @ivar _history: List of (parentDeferred, call, args, kwargs).
+    @ivar _history: List of L{_DeferredHistoryItem}.
+
+    [SUCCESS: cb1("first-result") -> "bar"]
+    [SUCCESS: cb2("bar") -> Deferred:
+        [innercb1("inner-result") -> "baz"]
+     -> "baz"]
+    [SUCCESS: cb3("baz") -> Failure]
+    [FAILURE: err(Failure)]
     """
 
     def __init__(self):
