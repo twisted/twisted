@@ -1243,12 +1243,13 @@ class HostnameEndpointsIPv6FastTest(unittest.TestCase):
 
         self.endpoint._nameResolution = nameResolution
         d = self.endpoint.connect(clientFactory)
+        self.mreactor.advance(0.0)
         print self.mreactor.tcpClients
         factory = self.mreactor.tcpClients[0][2]
         factory._onConnection.callback(proto)
 
         def checkAddress(p):
-            self.assertEqual(self.mreactor.tcpClients[0][0], '1:2::3:4')
+            self.assertEqual(self.mreactor.tcpClients[1][0], '1:2::3:4')
             return p
 
         d.addCallback(checkAddress)

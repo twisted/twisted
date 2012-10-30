@@ -560,7 +560,7 @@ class HostnameEndpoint(object):
                     print "inside almostDone's if"
                     winner.errback(failures.pop())
 #                return defer.fail(error.ConnectError("Connection Failed"))
-                winner.errback(failures.pop())
+#                winner.errback(failures.pop())
                     # FIXME
 
             def connectFailed(reason):
