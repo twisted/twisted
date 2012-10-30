@@ -178,6 +178,7 @@ testModules = [
     "twisted.trial.test.test_tests",
     "twisted.trial.test.test_util",
     "twisted.trial.test.test_warning",
+    "twisted.web.test.test_http",
     "twisted.web.test.test_http_headers",
     "twisted.web.test.test_resource",
     ]
@@ -211,4 +212,8 @@ almostModules = [
     # ported, but its tests are not yet ported, so it probably doesn't
     # completely work.
     "twisted.web.error",
+    # This module has a lot of missing test coverage.  What tests it has pass,
+    # but it needs a lot more.  It was ported only enough to make the client
+    # work.
+    "twisted.web.http",
     ]

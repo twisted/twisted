@@ -882,12 +882,6 @@ class WebClientRedirectBetweenSSLandPlainText(unittest.TestCase):
             ).addCallback(self.assertEqual, "FOUND IT!"
             )
 
-class FakeTransport:
-    disconnecting = False
-    def __init__(self):
-        self.data = []
-    def write(self, stuff):
-        self.data.append(stuff)
 
 class CookieTestCase(unittest.TestCase):
     def _listen(self, site):
@@ -932,8 +926,8 @@ class CookieTestCase(unittest.TestCase):
     def testCookieHeaderParsing(self):
         factory = client.HTTPClientFactory('http://foo.example.com/')
         proto = factory.buildProtocol('127.42.42.42')
-        proto.transport = FakeTransport()
-        proto.connectionMade()
+        transport = StringTransport()
+        proto.makeConnection(transport)
         for line in [
             '200 Ok',
             'Squash: yes',
@@ -946,11 +940,11 @@ class CookieTestCase(unittest.TestCase):
             'more body',
             ]:
             proto.dataReceived(line + '\r\n')
-        self.assertEqual(proto.transport.data,
-                          ['GET / HTTP/1.0\r\n',
-                           'Host: foo.example.com\r\n',
-                           'User-Agent: Twisted PageGetter\r\n',
-                           '\r\n'])
+        self.assertEqual(transport.value(),
+                         'GET / HTTP/1.0\r\n'
+                         'Host: foo.example.com\r\n'
+                         'User-Agent: Twisted PageGetter\r\n'
+                         '\r\n')
         self.assertEqual(factory.cookies,
                           {
             'CUSTOMER': 'WILE_E_COYOTE',
