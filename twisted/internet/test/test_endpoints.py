@@ -1221,7 +1221,7 @@ class HostnameEndpointsIPv6FastTest(unittest.TestCase):
     time than the IPv4 address.
     """
     def setUp(self):
-        self.mreactor = MemoryReactorForIPv6()
+        self.mreactor = MemoryReactor()
         self.endpoint = endpoints.HostnameEndpoint(self.mreactor, "www.example.com",
                 80)
 

@@ -592,7 +592,7 @@ class HostnameEndpoint(object):
 #            iterateEndpoint()
             lc = LoopingCall(iterateEndpoint)
             lc.clock = self._reactor
-            lc.start(0.3)
+            lc.start(0.0)
             print "Return from attemptConnection"
             return winner  # attemptConnection's return
 
