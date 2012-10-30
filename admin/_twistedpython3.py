@@ -160,6 +160,7 @@ testModules = [
     "twisted.test.test_policies",
     "twisted.test.test_randbytes",
     "twisted.test.test_setup",
+    "twisted.test.test_sslverify",
     "twisted.test.test_task",
     "twisted.test.test_tcp",
     "twisted.test.test_tcp_internals",
@@ -189,6 +190,8 @@ testModules = [
 almostModules = [
     # To be ported soon:
     "twisted.internet.abstract",
+    # Missing test coverage, see #6156:
+    "twisted.internet._sslverify",
     # twisted.names.client semi-depends on twisted.names.root, but only on
     # Windows really:
     "twisted.names.root",

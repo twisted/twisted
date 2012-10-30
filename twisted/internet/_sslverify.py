@@ -2,19 +2,27 @@
 # Copyright (c) 2005 Divmod, Inc.
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-# Copyright (c) 2005-2008 Twisted Matrix Laboratories.
+
+from __future__ import division, absolute_import
 
 import itertools
+from hashlib import md5
+
 from OpenSSL import SSL, crypto
 
-from twisted.python import reflect, util
-from twisted.python.hashlib import md5
+from twisted.python.compat import nativeString, networkString
+from twisted.python import _reflectpy3 as reflect, _utilpy3 as util
 from twisted.internet.defer import Deferred
 from twisted.internet.error import VerifyError, CertificateError
 
-# Private - shared between all OpenSSLCertificateOptions, counts up to provide
-# a unique session id for each context
-_sessionCounter = itertools.count().next
+def _sessionCounter(counter=itertools.count()):
+    """
+    Private - shared between all OpenSSLCertificateOptions, counts up to
+    provide a unique session id for each context.
+    """
+    return next(counter)
+
+
 
 _x509names = {
     'CN': 'commonName',
@@ -38,6 +46,7 @@ _x509names = {
     'emailAddress': 'emailAddress'}
 
 
+
 class DistinguishedName(dict):
     """
     Identify and describe an entity.
@@ -53,16 +62,41 @@ class DistinguishedName(dict):
         stateOrProvinceName (ST)
         countryName (C)
         emailAddress
+
+    A L{DistinguishedName} should be constructed using keyword arguments whose
+    keys can be any of the field names above (as a native string), and the
+    values are either Unicode text which is encodable to ASCII, or C{bytes}
+    limited to the ASCII subset. Any fields passed to the constructor will be
+    set as attributes, accessable using both their extended name and their
+    shortened acronym. The attribute values will be the ASCII-encoded
+    bytes. For example::
+
+        >>> dn = DistinguishedName(commonName=b'www.example.com',
+                                   C='US')
+        >>> dn.C
+        b'US'
+        >>> dn.countryName
+        b'US'
+        >>> hasattr(dn, "organizationName")
+        False
+
+    L{DistinguishedName} instances can also be used as dictionaries; the keys
+    are extended name of the fields::
+
+        >>> dn.keys()
+        ['countryName', 'commonName']
+        >>> dn['countryName']
+        b'US'
+
     """
     __slots__ = ()
 
     def __init__(self, **kw):
-        for k, v in kw.iteritems():
+        for k, v in kw.items():
             setattr(self, k, v)
 
 
     def _copyFrom(self, x509name):
-        d = {}
         for name in _x509names:
             value = getattr(x509name, name, None)
             if value is not None:
@@ -70,8 +104,8 @@ class DistinguishedName(dict):
 
 
     def _copyInto(self, x509name):
-        for k, v in self.iteritems():
-            setattr(x509name, k, v)
+        for k, v in self.items():
+            setattr(x509name, k, nativeString(v))
 
 
     def __repr__(self):
@@ -86,29 +120,30 @@ class DistinguishedName(dict):
 
 
     def __setattr__(self, attr, value):
-        assert type(attr) is str
-        if not attr in _x509names:
+        if attr not in _x509names:
             raise AttributeError("%s is not a valid OpenSSL X509 name field" % (attr,))
         realAttr = _x509names[attr]
-        value = value.encode('ascii')
-        assert type(value) is str
+        if not isinstance(value, bytes):
+            value = value.encode("ascii")
         self[realAttr] = value
 
 
     def inspect(self):
         """
         Return a multi-line, human-readable representation of this DN.
+
+        @rtype: C{str}
         """
         l = []
         lablen = 0
         def uniqueValues(mapping):
-            return set(mapping.itervalues())
+            return set(mapping.values())
         for k in sorted(uniqueValues(_x509names)):
             label = util.nameToLabel(k)
             lablen = max(len(label), lablen)
             v = getattr(self, k, None)
             if v is not None:
-                l.append((label, v))
+                l.append((label, nativeString(v)))
         lablen += 2
         for n, (label, attr) in enumerate(l):
             l[n] = (label.rjust(lablen)+': '+ attr)
@@ -273,7 +308,7 @@ class Certificate(CertBase):
                           '\nIssuer:',
                           self.getIssuer().inspect(),
                           '\nSerial Number: %d' % self.serialNumber(),
-                          'Digest: %s' % self.digest()])
+                          'Digest: %s' % nativeString(self.digest())])
 
 
     def inspect(self):
@@ -740,7 +775,9 @@ class OpenSSLCertificateOptions(object):
             ctx.set_options(self._OP_ALL)
 
         if self.enableSessions:
-            sessionName = md5("%s-%d" % (reflect.qual(self.__class__), _sessionCounter())).hexdigest()
+            name = "%s-%d" % (reflect.qual(self.__class__), _sessionCounter())
+            sessionName = md5(networkString(name)).hexdigest()
+
             ctx.set_session_id(sessionName)
 
         if not self.enableSessionTickets:

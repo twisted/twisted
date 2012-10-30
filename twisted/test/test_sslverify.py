@@ -6,6 +6,8 @@
 Tests for L{twisted.internet._sslverify}.
 """
 
+from __future__ import division, absolute_import
+
 import itertools
 
 try:
@@ -16,10 +18,9 @@ try:
 except ImportError:
     pass
 
+from twisted.python.compat import nativeString
 from twisted.trial import unittest
 from twisted.internet import protocol, defer, reactor
-from twisted.python.reflect import objgrep, isSame
-from twisted.python import log
 
 from twisted.internet.error import CertificateError, ConnectionLost
 from twisted.internet import interfaces
@@ -70,7 +71,14 @@ A_PEER_CERTIFICATE_PEM = """
 
 
 
-counter = itertools.count().next
+def counter(counter=itertools.count()):
+    """
+    Each time we're called, return the next integer in the natural numbers.
+    """
+    return next(counter)
+
+
+
 def makeCertificate(**kw):
     keypair = PKey()
     keypair.generate_key(TYPE_RSA, 512)
@@ -80,7 +88,7 @@ def makeCertificate(**kw):
     certificate.gmtime_adj_notAfter(60 * 60 * 24 * 365) # One year
     for xname in certificate.get_issuer(), certificate.get_subject():
         for (k, v) in kw.items():
-            setattr(xname, k, v)
+            setattr(xname, k, nativeString(v))
 
     certificate.set_serial_number(counter())
     certificate.set_pubkey(keypair)
@@ -102,7 +110,7 @@ class DataCallbackProtocol(protocol.Protocol):
             d.errback(reason)
 
 class WritingProtocol(protocol.Protocol):
-    byte = 'x'
+    byte = b'x'
     def connectionMade(self):
         self.transport.write(self.byte)
 
@@ -124,11 +132,11 @@ class OpenSSLOptions(unittest.TestCase):
         Create class variables of client and server certificates.
         """
         self.sKey, self.sCert = makeCertificate(
-            O="Server Test Certificate",
-            CN="server")
+            O=b"Server Test Certificate",
+            CN=b"server")
         self.cKey, self.cCert = makeCertificate(
-            O="Client Test Certificate",
-            CN="client")
+            O=b"Client Test Certificate",
+            CN=b"client")
 
     def tearDown(self):
         if self.serverPort is not None:
@@ -172,27 +180,27 @@ class OpenSSLOptions(unittest.TestCase):
         complete names.
         """
         self.assertEqual(
-                sslverify.DN(CN='a', OU='hello'),
-                sslverify.DistinguishedName(commonName='a',
-                                            organizationalUnitName='hello'))
+                sslverify.DN(CN=b'a', OU=b'hello'),
+                sslverify.DistinguishedName(commonName=b'a',
+                                            organizationalUnitName=b'hello'))
         self.assertNotEquals(
-                sslverify.DN(CN='a', OU='hello'),
-                sslverify.DN(CN='a', OU='hello', emailAddress='xxx'))
-        dn = sslverify.DN(CN='abcdefg')
-        self.assertRaises(AttributeError, setattr, dn, 'Cn', 'x')
+                sslverify.DN(CN=b'a', OU=b'hello'),
+                sslverify.DN(CN=b'a', OU=b'hello', emailAddress=b'xxx'))
+        dn = sslverify.DN(CN=b'abcdefg')
+        self.assertRaises(AttributeError, setattr, dn, 'Cn', b'x')
         self.assertEqual(dn.CN, dn.commonName)
-        dn.CN = 'bcdefga'
+        dn.CN = b'bcdefga'
         self.assertEqual(dn.CN, dn.commonName)
 
 
     def testInspectDistinguishedName(self):
-        n = sslverify.DN(commonName='common name',
-                         organizationName='organization name',
-                         organizationalUnitName='organizational unit name',
-                         localityName='locality name',
-                         stateOrProvinceName='state or province name',
-                         countryName='country name',
-                         emailAddress='email address')
+        n = sslverify.DN(commonName=b'common name',
+                         organizationName=b'organization name',
+                         organizationalUnitName=b'organizational unit name',
+                         localityName=b'locality name',
+                         stateOrProvinceName=b'state or province name',
+                         countryName=b'country name',
+                         emailAddress=b'email address')
         s = n.inspect()
         for k in [
             'common name',
@@ -207,7 +215,7 @@ class OpenSSLOptions(unittest.TestCase):
 
 
     def testInspectDistinguishedNameWithoutAllFields(self):
-        n = sslverify.DN(localityName='locality name')
+        n = sslverify.DN(localityName=b'locality name')
         s = n.inspect()
         for k in [
             'common name',
@@ -272,11 +280,10 @@ class OpenSSLOptions(unittest.TestCase):
             fixBrokenPeers=True,
             enableSessionTickets=True)
         context = firstOpts.getContext()
+        self.assertIdentical(context, firstOpts._context)
+        self.assertNotIdentical(context, None)
         state = firstOpts.__getstate__()
-
-        # The context shouldn't be in the state to serialize
-        self.failIf(objgrep(state, context, isSame),
-                    objgrep(state, context, isSame))
+        self.assertNotIn("_context", state)
 
         opts = sslverify.OpenSSLCertificateOptions()
         opts.__setstate__(state)
@@ -327,6 +334,7 @@ class OpenSSLOptions(unittest.TestCase):
         return onData.addCallback(
             lambda result: self.assertEqual(result, WritingProtocol.byte))
 
+
     def test_refusedAnonymousClientConnection(self):
         """
         Check that anonymous connections are refused when certificates are
@@ -346,8 +354,8 @@ class OpenSSLOptions(unittest.TestCase):
                                consumeErrors=True)
 
 
-        def afterLost(((cSuccess, cResult), (sSuccess, sResult))):
-
+        def afterLost(result):
+            ((cSuccess, cResult), (sSuccess, sResult)) = result
             self.failIf(cSuccess)
             self.failIf(sSuccess)
             # Win32 fails to report the SSL Error, and report a connection lost
@@ -375,8 +383,8 @@ class OpenSSLOptions(unittest.TestCase):
 
         d = defer.DeferredList([onClientLost, onServerLost],
                                consumeErrors=True)
-        def afterLost(((cSuccess, cResult), (sSuccess, sResult))):
-
+        def afterLost(result):
+            ((cSuccess, cResult), (sSuccess, sResult)) = result
             self.failIf(cSuccess)
             self.failIf(sSuccess)
 
