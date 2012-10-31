@@ -48,6 +48,14 @@ class TimeoutError(Exception):
     """
 
 
+class DeferredAlreadyMergedError(Exception):
+    """
+    Raised when attempting to add a callback or errback to a Deferred that has
+    previously been returned from another Deferred's callback and fired. The
+    Deferred is in an invalid state at that point.
+    """
+
+
 
 def logError(err):
     log.err(err)
@@ -224,6 +232,10 @@ class Deferred:
 
     @ivar _chainedTo: If this Deferred is waiting for the result of another
         Deferred, this is a reference to the other Deferred.  Otherwise, C{None}.
+
+    @ivar _chainMerged: If this Deferred was an inner chained deferred of
+        another Deferred, and the chain has been "merged" into the other
+        already, then it will be True.
     """
 
     called = False
@@ -268,6 +280,7 @@ class Deferred:
         """
         self.callbacks = []
         self._canceller = canceller
+        self._chainMerged = False
         if self.debug:
             self._debugInfo = DebugInfo()
             self._debugInfo.creator = traceback.format_stack()[:-1]
@@ -284,6 +297,9 @@ class Deferred:
         @return: C{self}.
         @rtype: a L{Deferred}
         """
+        if self._chainMerged:
+            raise DeferredAlreadyMergedError(
+                "This Deferred has already been merged into another Deferred.")
         assert callable(callback)
         assert errback == None or callable(errback)
         cbs = ((callback, callbackArgs, callbackKeywords),
@@ -539,6 +555,7 @@ class Deferred:
                     chainee = args[0]
                     chainee.result = current.result
                     current.result = None
+                    current._chainMerged = True
                     # Making sure to update _debugInfo
                     if current._debugInfo is not None:
                         current._debugInfo.failResult = None
@@ -577,6 +594,7 @@ class Deferred:
                         else:
                             # Yep, it did.  Steal it.
                             current.result.result = None
+                            current.result._chainMerged = True
                             # Make sure _debugInfo's failure state is updated.
                             if current.result._debugInfo is not None:
                                 current.result._debugInfo.failResult = None

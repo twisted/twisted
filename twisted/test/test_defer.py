@@ -59,6 +59,38 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
     def _errback(self, *args, **kw):
         self.errbackResults = args, kw
 
+
+    def test_addingCallbackToInnerAfterChainMergedSynchronously(self):
+        """
+        Adding a callback to a deferred that has already been returned from
+        another Deferred's callback and fired will raise an
+        L{DeferredAlreadyMergedError}.
+        """
+        outer = defer.Deferred()
+        inner = defer.Deferred()
+        outer.addCallback(lambda r: inner)
+        inner.callback(None)
+        outer.callback(None)
+        self.assertRaises(defer.DeferredAlreadyMergedError,
+                          inner.addCallback, lambda x: x)
+
+
+    def test_addingCallbackToInnerAfterChainMergedAsynchronously(self):
+        """
+        Adding a callback to a deferred that has already been returned from
+        another Deferred's callback and fired (after it was returned) will
+        raise an L{DeferredAlreadyMergedError.}
+        """
+        outer = defer.Deferred()
+        inner = defer.Deferred()
+        outer.addCallback(lambda r: inner)
+        # The callback order is different from the Synchronous test.
+        outer.callback(None)
+        inner.callback(None)
+        self.assertRaises(defer.DeferredAlreadyMergedError,
+                          inner.addCallback, lambda x: x)
+
+
     def testCallbackWithoutArgs(self):
         deferred = defer.Deferred()
         deferred.addCallback(self._callback)
@@ -324,9 +356,8 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         first.callback(None)
         first.pause()
         second.callback(None)
-        result = []
-        second.addCallback(result.append)
-        self.assertEqual(result, [None])
+        self.assertRaises(defer.DeferredAlreadyMergedError,
+                          second.addCallback, lambda ign: None)
 
 
     def test_gatherResults(self):
@@ -446,7 +477,8 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         outer.addCallback(cb)
         inner.callback('orange')
         outer.addCallback(results.append)
-        inner.addErrback(failures.append)
+        self.assertRaises(defer.DeferredAlreadyMergedError,
+                          inner.addErrback, lambda ign: None)
         outer.addErrback(failures.append)
         self.assertEqual([], failures)
         self.assertEqual(
@@ -609,11 +641,11 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         second.addCallback(lambda ign: first)
         second.callback(None)
 
+        self.assertRaises(defer.DeferredAlreadyMergedError,
+                          first.addCallback, lambda ign: None)
         results = []
-        first.addCallback(results.append)
-        self.assertIdentical(results[0], None)
         second.addCallback(results.append)
-        self.assertIdentical(results[1], result)
+        self.assertIdentical(results[0], result)
 
 
     def test_asynchronousImplicitChain(self):
@@ -654,9 +686,8 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         second = defer.Deferred()
         second.addCallback(lambda ign, first=first: first)
         second.callback(None)
-        firstResult = []
-        first.addCallback(firstResult.append)
-        self.assertIdentical(firstResult[0], None)
+        self.assertRaises(defer.DeferredAlreadyMergedError,
+                          first.addCallback, lambda ign: None)
         self.assertImmediateFailure(second, RuntimeError)
 
 
@@ -768,7 +799,8 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         inner.callback('orange')
 
         # Make sure there are no errors.
-        inner.addErrback(failures.append)
+        self.assertRaises(defer.DeferredAlreadyMergedError,
+                          inner.addErrback, lambda ign: None)
         outer.addErrback(failures.append)
         self.assertEqual(
             [], failures, "Got errbacks but wasn't expecting any.")
@@ -834,10 +866,8 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
 
         # Make sure there are no errors.
         outer.addErrback(failures.append)
-        inner.addErrback(failures.append)
-        self.assertEqual(
-            [], failures, "Got errbacks but wasn't expecting any.")
-
+        self.assertRaises(defer.DeferredAlreadyMergedError,
+                          inner.addErrback, lambda ign: None)
         self.assertEqual(
             results,
             [('start-of-cb', 'outer'),
@@ -984,9 +1014,8 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         second.callback(None)
         first.callback(None)
         third.callback(None)
-        L = []
-        second.addCallback(L.append)
-        self.assertEqual(L, [None])
+        self.assertRaises(defer.DeferredAlreadyMergedError,
+                          second.addCallback, lambda ign: None)
 
 
     def test_errbackWithNoArgsNoDebug(self):

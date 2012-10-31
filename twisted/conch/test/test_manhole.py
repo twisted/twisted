@@ -247,7 +247,10 @@ class ManholeLoopbackMixin:
             self._testwrite(manhole.CTRL_BACKSLASH)
 
             d = self.recvlineClient.onDisconnection
-            return self.assertFailure(d, error.ConnectionDone)
+            newd = defer.Deferred()
+            d.addCallback(newd.callback)
+            d.addErrback(newd.errback)
+            return self.assertFailure(newd, error.ConnectionDone)
 
         def gotClearedLine(ign):
             self._assertBuffer(
