@@ -54,8 +54,8 @@ class SetWakeupSIGCHLDTests(SynchronousTestCase):
         self.oldFD = installHandler(-1)
 
         if self.signalModuleHandler is not None and self.oldFD != -1:
-            msg("SIGCHLD setup issue: %r %r" % (self.signalModuleHandler, self.oldFD))
-            raise RuntimeError("You used some signal APIs wrong!  Try again.")
+            msg("Previous test didn't clean up after its SIGCHLD setup: %r %r"
+                % (self.signalModuleHandler, self.oldFD))
 
 
     def tearDown(self):

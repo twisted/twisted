@@ -53,7 +53,9 @@ def installHandler(fd):
     if fd == -1:
         signal.signal(signal.SIGCHLD, signal.SIG_DFL)
     else:
-        signal.signal(signal.SIGCHLD, lambda *args: None)
+        def noopSignalHandler(*args):
+            pass
+        signal.signal(signal.SIGCHLD, noopSignalHandler)
         signal.siginterrupt(signal.SIGCHLD, False)
     return signal.set_wakeup_fd(fd)
 
