@@ -2036,6 +2036,50 @@ class HistoryTests(unittest.TestCase):
     Tests for the history-tracking debug modes.
     """
 
+
+    def test_itemFormat(self):
+        """
+        Simple L{_DeferredHistoryItem} objects can be formatted.
+        """
+        item = defer._DeferredHistoryItem("foo")
+        self.assertEqual(item.cbname, "foo")
+        self.assertEqual(item.format(), "[foo]")
+
+
+    def test_historyFormat(self):
+        """
+        L{_DeferredHistory} objects format by formatting all of their items.
+        """
+        history = defer._DeferredHistory()
+        history.addItem(defer._DeferredHistoryItem("item1"))
+        history.addItem(defer._DeferredHistoryItem("item2"))
+        self.assertEqual(history.format(),
+                         "[item1]\n" +
+                         "[item2]")
+
+
+    def test_itemWithChain(self):
+        """
+        L{_DeferredHistoryItem} objects with inner chains will include the
+        chain in the format.
+        """
+        item = defer._DeferredHistoryItem("foo")
+        subHistory = defer._DeferredHistory()
+        subHistory.addItem(defer._DeferredHistoryItem("sub1"))
+        subHistory.addItem(defer._DeferredHistoryItem("sub2"))
+        item.setChain(subHistory)
+
+        self.assertEqual(
+            item.format(),
+            "[foo -> Deferred:\n" +
+            "    [sub1]\n" +
+            "    [sub2]]")
+
+
+
+class DeferredHistoryIntegrationTests(unittest.TestCase):
+
+
     def setUp(self):
         defer.setDebugging(defer.DEBUG)
 
@@ -2044,62 +2088,85 @@ class HistoryTests(unittest.TestCase):
         defer.setDebugging(False)
 
 
-    def assertHistory(self, historyItem, deferred, callback,
-                      args=None, kwargs=None):
+    def assertHistory(self, history, expected):
         """
-        Check that a L{_DeferredHistoryItem} is made up of the provided data.
+        self.assertHistory(
+            history,
+            [{"name": "cb1"},
+             {"name": "cb2",
+              "chain": [
+                  {"name": "cb3"}]}]
+            )
         """
-        if args is None:
-            args = ()
-        if kwargs is None:
-            kwargs = {}
-        self.assertEquals(historyItem.deferred, deferred)
-        self.assertEquals(historyItem.callback, callback)
-        self.assertEquals(historyItem.args, args)
-        self.assertEquals(historyItem.kwargs, kwargs)
+        for item, expectedItem in zip(history.items, expected):
+            name = expectedItem["name"]
+            self.assertEqual(item.cbname, name)
+            if item.innerChain and "chain" not in expectedItem:
+                self.fail("Item %s had a chain that wasn't expected" % (name,))
+            if "chain" in expectedItem and item.innerChain is None:
+                self.fail("Expected item %s to have a chain but it didn't" % (name,))
+            if "chain" in expectedItem and item.innerChain is not None:
+                self.assertHistory(item.innerChain, expectedItem["chain"])
 
 
     def test_simpleHistory(self):
         """
-        L{Deferred._history} contains a history of the callbacks executed on
+        L{Deferred.getHistory} returns a history of the callbacks executed on
         that Deferred.
         """
         def cb1(r):
             pass
         def cb2(r):
-            1 / 0
+            pass
         d = defer.Deferred()
         d.addCallback(cb1)
         d.addCallback(cb2)
         d.callback("result")
-        history = d._history.getHistory()
-        self.assertEquals(len(history), 2)
-        self.assertHistory(history[0], d, cb1)
-        self.assertHistory(history[1], d, cb2)
-
+        history = d.getHistory()
+        self.assertHistory(history, [{"name": "cb1"}, {"name": "cb2"}])
 
     def test_nestedHistory(self):
         """
         Callbacks executed on a Deferred which is returned from a Deferred
-        callback are represented in the outer Deferred's history as a
-        L{_DeferredHistoryItem} whose C{deferred} attribute is set to the inner
-        Deferred.
+        callback are represented.
         """
-        first = defer.Deferred()
-        second = defer.Deferred()
+        outer = defer.Deferred()
+        inner = defer.Deferred()
         def cb1(r):
             def nestedCB(r):
                 return r
-            second.addCallback(nestedCB)
-            return nested
-        first.addCallback(cb1)
-        second.callback(5)
-        first.callback("result")
-        history = first._history.getHistory()
-        print first._history.formatHistory()
-        self.assertEquals(len(history), 2)
-        self.assertHistory(history[0], first, cb1)
-        self.assertHistory(history[1], second, cb2)
+            inner.addCallback(nestedCB)
+            return inner
+        def cb2(r):
+            pass
+        outer.addCallback(cb1)
+        outer.addCallback(cb2)
+        inner.callback(5)
+        outer.callback("result")
+        history = outer.getHistory()
+        self.assertHistory(
+            history,
+            [{"name": "cb1",
+              "chain": [{"name": "nestedCB"}]},
+             {"name": "cb2"}])
+
+    def test_nestedHistoryUpdatedAfterFurtherCallbacksAdded(self):
+        outer = defer.Deferred()
+        inner = defer.Deferred()
+        def cb1(r):
+            def nestedCB(r):
+                return r
+            inner.addCallback(nestedCB)
+            return inner
+        outer.addCallback(cb1)
+        inner.callback(5)
+        outer.callback("result")
+        history = outer.getHistory()
+
+        def inner2(r):
+            pass
+        inner.addCallback()
+        
 
 
     # def test_formatCallbackHistory(self):

@@ -55,14 +55,6 @@ class TimeoutError(Exception):
 
 
 
-class CircularDeferredChainError(Exception):
-    """
-    This error is raised when a Deferred is returned from its own callback,
-    [directly or indirectly]. -XXX RADIX
-    """
-
-
-
 def logError(err):
     log.err(err)
     return err
@@ -299,6 +291,13 @@ class Deferred:
             self._debugInfo = DebugInfo()
             self._debugInfo.creator = traceback.format_stack()[:-1]
         self._history = _DeferredHistory()
+
+
+    def getHistory(self):
+        """
+        Get the history associated with this Deferred.
+        """
+        return self._history
 
 
     def addCallbacks(self, callback, errback=None,
@@ -582,7 +581,8 @@ class Deferred:
                     try:
                         historyItem = None
                         if self.debug > 0:
-                            historyItem = current._history.addHistoryItem(current, callback, args, kw)
+                            historyItem = _DeferredHistoryItem(callback.__name__)
+                            current._history.addItem(historyItem)
                         current.result = callback(current.result, *args, **kw)
                     finally:
                         current._runningCallbacks = False
@@ -590,9 +590,11 @@ class Deferred:
                     # Including full frame information in the Failure is quite
                     # expensive, so we avoid it unless self.debug is set.
                     # Should I actually copy self._history here, or pass the original? It actually makes a difference!
-                    current.result = failure.Failure(captureVars=self.debug, history=current._history)
+                    current.result = failure.Failure(captureVars=self.debug)
                 else:
                     if isinstance(current.result, Deferred):
+                        if historyItem is not None:
+                            historyItem.setChain(current.result.getHistory())
                         # The result is another Deferred.  If it has a result,
                         # we can take it and keep going.
                         # Is it possible for current.result.history to be
@@ -601,8 +603,6 @@ class Deferred:
                         if resultResult is _NO_RESULT or isinstance(resultResult, Deferred) or current.result.paused:
                             # Nope, it didn't.  Pause and chain.
                             current.pause()
-                            if current.result is current:
-                                raise CircularDeferredChainError("OMG F YOU")
                             current._chainedTo = current.result
                             # Note: current.result has no result, so it's not
                             # running its callbacks right now.  Therefore we can
@@ -752,60 +752,36 @@ class FirstError(Exception):
 
 
 
-class _DeferredHistoryItem(object):
-    """
-    @ivar deferred: The L{Deferred} on which this history item occured.
-    @ivar callback: The callback that was invoked.
-    @ivar result: The result of the callback (not necessarily available until
-        the callback returns).
-    """
-    def __init__(self, invocationTime, deferred, callback, args, kwargs):
-        self.invocationTime = invocationTime
-        self.deferred = deferred
-        self.callback = callback
-        self.args = args
-        self.kwargs = kwargs
-        self.result = None
-
-    def setResult(self, result):
-        self.result = result
-
-
-
 class _DeferredHistory(object):
     """
-    A debug representation of a Deferred's callbacks.
-
-    @ivar _history: List of L{_DeferredHistoryItem}.
-
-    [SUCCESS: cb1("first-result") -> "bar"]
-    [SUCCESS: cb2("bar") -> Deferred:
-        [innercb1("inner-result") -> "baz"]
-     -> "baz"]
-    [SUCCESS: cb3("baz") -> Failure]
-    [FAILURE: err(Failure)]
+    [cb]
     """
-
     def __init__(self):
-        self._history = []
+        self.items = []
 
-    def getHistory(self):
-        return self._history
+    def addItem(self, item):
+        self.items.append(item)
 
-    def addHistoryItem(self, deferred, call, args, kwargs):
-        result = _DeferredHistoryItem(time.time(), deferred, call, args, kwargs)
-        self._history.append(result)
-        return result
+    def format(self, prefix=""):
+        return '\n'.join(prefix + item.format() for item in self.items)
 
-    def mergeHistory(self, history):
-        for item in history.getHistory():
-            self._history.append(item)
 
-    def formatHistory(self):
-        s = ""
-        for item in self._history:
-            s += "[%s %s %s]\n" % (item.callback, item.args, item.kwargs)
-        return s
+
+class _DeferredHistoryItem(object):
+    def __init__(self, cbname):
+        self.cbname = cbname
+        self.innerChain = None
+
+    def setChain(self, chain):
+        self.innerChain = chain
+
+    def format(self):
+        if self.innerChain:
+            innerFormat = self.innerChain.format(prefix="    ")
+            return "[%s -> Deferred:\n%s]" % (self.cbname, innerFormat)
+        else:
+            return "[%s]" % (self.cbname,)
+
 
 
 class DeferredList(Deferred):
