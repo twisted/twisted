@@ -224,6 +224,10 @@ class Deferred:
 
     @ivar _chainedTo: If this Deferred is waiting for the result of another
         Deferred, this is a reference to the other Deferred.  Otherwise, C{None}.
+
+    @ivar _chainMerged: If this Deferred was an inner chained deferred of
+        another Deferred, and the chain has been "merged" into the other
+        already, then it will be True.
     """
 
     called = False
@@ -268,6 +272,7 @@ class Deferred:
         """
         self.callbacks = []
         self._canceller = canceller
+        self._chainMerged = False
         if self.debug:
             self._debugInfo = DebugInfo()
             self._debugInfo.creator = traceback.format_stack()[:-1]
@@ -275,7 +280,7 @@ class Deferred:
 
     def addCallbacks(self, callback, errback=None,
                      callbackArgs=None, callbackKeywords=None,
-                     errbackArgs=None, errbackKeywords=None):
+                     errbackArgs=None, errbackKeywords=None, _utilityWrapped=False):
         """
         Add a pair of callbacks (success and error) to this L{Deferred}.
 
@@ -284,6 +289,16 @@ class Deferred:
         @return: C{self}.
         @rtype: a L{Deferred}
         """
+        if self._chainMerged:
+            if _utilityWrapped:
+                stacklevel = 3
+            else:
+                stacklevel = 2
+            warnings.warn(
+                "Adding a callback to a Deferred that has already been chained "
+                "into another Deferred. The result will always be None.",
+                DeprecationWarning,
+                stacklevel=stacklevel)
         assert callable(callback)
         assert errback == None or callable(errback)
         cbs = ((callback, callbackArgs, callbackKeywords),
@@ -302,7 +317,8 @@ class Deferred:
         See L{addCallbacks}.
         """
         return self.addCallbacks(callback, callbackArgs=args,
-                                 callbackKeywords=kw)
+                                 callbackKeywords=kw,
+                                 _utilityWrapped=True)
 
 
     def addErrback(self, errback, *args, **kw):
@@ -313,7 +329,8 @@ class Deferred:
         """
         return self.addCallbacks(passthru, errback,
                                  errbackArgs=args,
-                                 errbackKeywords=kw)
+                                 errbackKeywords=kw,
+                                 _utilityWrapped=True)
 
 
     def addBoth(self, callback, *args, **kw):
@@ -325,7 +342,8 @@ class Deferred:
         """
         return self.addCallbacks(callback, callback,
                                  callbackArgs=args, errbackArgs=args,
-                                 callbackKeywords=kw, errbackKeywords=kw)
+                                 callbackKeywords=kw, errbackKeywords=kw,
+                                 _utilityWrapped=True)
 
 
     def chainDeferred(self, d):
@@ -539,6 +557,7 @@ class Deferred:
                     chainee = args[0]
                     chainee.result = current.result
                     current.result = None
+                    current._chainMerged = True
                     # Making sure to update _debugInfo
                     if current._debugInfo is not None:
                         current._debugInfo.failResult = None
@@ -577,6 +596,7 @@ class Deferred:
                         else:
                             # Yep, it did.  Steal it.
                             current.result.result = None
+                            current.result._chainMerged = True
                             # Make sure _debugInfo's failure state is updated.
                             if current.result._debugInfo is not None:
                                 current.result._debugInfo.failResult = None

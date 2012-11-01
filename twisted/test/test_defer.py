@@ -59,6 +59,110 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
     def _errback(self, *args, **kw):
         self.errbackResults = args, kw
 
+
+    def test_addingCallbackToInnerAfterChainMergedSynchronously(self):
+        """
+        Adding a callback to a deferred that has already been returned from
+        another Deferred's callback and fired will emit a DeprecationWarning.
+        """
+        outer = defer.Deferred()
+        inner = defer.Deferred()
+        outer.addCallback(lambda r: inner)
+        inner.callback(None)
+        outer.callback(None)
+        inner.addCallback(lambda x: x)
+        warnings = self.flushWarnings(
+            [self.test_addingCallbackToInnerAfterChainMergedSynchronously])
+        self.assertEqual(1, len(warnings))
+        self.assertEqual(
+            warnings[0]['message'],
+            'Adding a callback to a Deferred that has already been '
+            'chained into another Deferred. The result will always be None.')
+
+
+    def test_addingErrbackToInnerAfterChainMergedSynchronously(self):
+        """
+        Adding a callback to a deferred that has already been returned from
+        another Deferred's callback and fired will emit a DeprecationWarning.
+        """
+        outer = defer.Deferred()
+        inner = defer.Deferred()
+        outer.addCallback(lambda r: inner)
+        inner.callback(None)
+        outer.callback(None)
+        inner.addErrback(lambda x: x)
+        warnings = self.flushWarnings(
+            [self.test_addingErrbackToInnerAfterChainMergedSynchronously])
+        self.assertEqual(1, len(warnings))
+        self.assertEqual(
+            warnings[0]['message'],
+            'Adding a callback to a Deferred that has already been '
+            'chained into another Deferred. The result will always be None.')
+
+
+    def test_addingCallbacksToInnerAfterChainMergedSynchronously(self):
+        """
+        Adding a callback to a deferred that has already been returned from
+        another Deferred's callback and fired will emit a DeprecationWarning.
+        """
+        outer = defer.Deferred()
+        inner = defer.Deferred()
+        outer.addCallback(lambda r: inner)
+        inner.callback(None)
+        outer.callback(None)
+        inner.addCallbacks(lambda x: x, lambda x: x)
+        warnings = self.flushWarnings(
+            [self.test_addingCallbacksToInnerAfterChainMergedSynchronously])
+        self.assertEqual(1, len(warnings))
+        self.assertEqual(
+            warnings[0]['message'],
+            'Adding a callback to a Deferred that has already been '
+            'chained into another Deferred. The result will always be None.')
+
+
+    def test_addingBothToInnerAfterChainMergedSynchronously(self):
+        """
+        Adding a callback to a deferred that has already been returned from
+        another Deferred's callback and fired will emit a DeprecationWarning.
+        """
+        outer = defer.Deferred()
+        inner = defer.Deferred()
+        outer.addCallback(lambda r: inner)
+        inner.callback(None)
+        outer.callback(None)
+        inner.addBoth(lambda x: x)
+        warnings = self.flushWarnings(
+            [self.test_addingBothToInnerAfterChainMergedSynchronously])
+        self.assertEqual(1, len(warnings))
+        self.assertEqual(
+            warnings[0]['message'],
+            'Adding a callback to a Deferred that has already been '
+            'chained into another Deferred. The result will always be None.')
+
+
+    def test_addingCallbackToInnerAfterChainMergedAsynchronously(self):
+        """
+        Adding a callback to a deferred that has already been returned from
+        another Deferred's callback and fired (after it was returned) will
+        raise an L{DeferredAlreadyMergedError.}
+        """
+        outer = defer.Deferred()
+        inner = defer.Deferred()
+        outer.addCallback(lambda r: inner)
+        # The callback order is different from the Synchronous test.
+        outer.callback(None)
+        inner.callback(None)
+
+        inner.addCallback(lambda x: x)
+        warnings = self.flushWarnings(
+            [self.test_addingCallbackToInnerAfterChainMergedAsynchronously])
+        self.assertEqual(1, len(warnings))
+        self.assertEqual(
+            warnings[0]['message'],
+            'Adding a callback to a Deferred that has already been '
+            'chained into another Deferred. The result will always be None.')
+
+
     def testCallbackWithoutArgs(self):
         deferred = defer.Deferred()
         deferred.addCallback(self._callback)
