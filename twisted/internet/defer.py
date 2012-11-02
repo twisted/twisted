@@ -225,11 +225,10 @@ class Deferred:
     @ivar _chainedTo: If this Deferred is waiting for the result of another
         Deferred, this is a reference to the other Deferred.  Otherwise, C{None}.
 
-    @ivar _chainMerged: If this Deferred was returned from another Deferred's
-        callback, it is called "merged". _chainMerged is True when a Deferred
-        has been merged. This is used to determine if we should emit warnings
-        when callbacks are run after merging.
-
+    @ivar _chained: If this Deferred has been returned from a callback of
+        another Deferred, this will be True. If a Deferred is chained, it
+        shouldn't have any more callbacks added to it. This is used to know
+        when to emit warnings.
     """
 
     called = False
@@ -274,7 +273,7 @@ class Deferred:
         """
         self.callbacks = []
         self._canceller = canceller
-        self._chainMerged = False
+        self._chained = False
         if self.debug:
             self._debugInfo = DebugInfo()
             self._debugInfo.creator = traceback.format_stack()[:-1]
@@ -291,7 +290,7 @@ class Deferred:
         @return: C{self}.
         @rtype: a L{Deferred}
         """
-        if self._chainMerged:
+        if self._chained:
             if _utilityWrapped:
                 stacklevel = 3
             else:
@@ -497,17 +496,6 @@ class Deferred:
                 (_CONTINUE, (self,), None))
 
 
-    def _chainMerge(self, deferred):
-        """
-        Do the bookkeeping necessary to "merge" a chained deferred into
-        another.
-        """
-        deferred.result = None
-        deferred._chainMerged = True
-        if deferred._debugInfo is not None:
-            deferred._debugInfo.failResult = None
-
-
     def _runCallbacks(self):
         """
         Run the chain of callbacks once a result is available.
@@ -548,13 +536,6 @@ class Deferred:
         while chain:
             current = chain[-1]
 
-            if current._chainMerged:
-                warnings.warn(
-                    "Running callbacks on a Deferred that has already been merged "
-                    "into another Deferred; the result has been lost.",
-                    DeprecationWarning)
-
-
             if current.paused:
                 # This Deferred isn't going to produce a result at all.  All the
                 # Deferreds up the chain waiting on it will just have to...
@@ -576,7 +557,11 @@ class Deferred:
                     # forget about that result ourselves.
                     chainee = args[0]
                     chainee.result = current.result
-                    self._chainMerge(current)
+                    current.result = None
+
+                    # Making sure to update _debugInfo
+                    if current._debugInfo is not None:
+                        current._debugInfo.failResult = None
                     chainee.paused -= 1
                     chain.append(chainee)
                     # Delay cleaning this Deferred and popping it from the chain
@@ -596,8 +581,11 @@ class Deferred:
                     current.result = failure.Failure(captureVars=self.debug)
                 else:
                     if isinstance(current.result, Deferred):
-                        # The result is another Deferred.  If it has a result,
-                        # we can take it and keep going.
+                        # The result is another Deferred.
+                        # Mark it as chained so that any further callbacks
+                        # attached will emit a warning.
+                        current.result._chained = True
+                        # If it has a result, we can take it and keep going.
                         resultResult = getattr(current.result, 'result', _NO_RESULT)
                         if resultResult is _NO_RESULT or isinstance(resultResult, Deferred) or current.result.paused:
                             # Nope, it didn't.  Pause and chain.
@@ -611,7 +599,10 @@ class Deferred:
                             break
                         else:
                             # Yep, it did.  Steal it.
-                            self._chainMerge(current.result)
+                            current.result.result = None
+                            # Make sure _debugInfo's failure state is updated.
+                            if current.result._debugInfo is not None:
+                                current.result._debugInfo.failResult = None
                             current.result = resultResult
 
             if finished:

@@ -60,6 +60,17 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.errbackResults = args, kw
 
 
+    def _assertChainedDeprecation(self, testCaseMethod):
+        warnings = self.flushWarnings(
+            [testCaseMethod])
+        self.assertEqual(1, len(warnings))
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(
+            warnings[0]['message'],
+            'Adding a callback to a Deferred that has already been '
+            'chained into another Deferred. The result will always be None.')
+
+
     def test_addingCallbackToInnerAfterChainMergedSynchronously(self):
         """
         Adding a callback to a deferred that has already been returned from
@@ -68,17 +79,10 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         outer = defer.Deferred()
         inner = defer.Deferred()
         outer.addCallback(lambda r: inner)
-        inner.callback(None)
         outer.callback(None)
         inner.addCallback(lambda x: x)
-        warnings = self.flushWarnings(
-            [self.test_addingCallbackToInnerAfterChainMergedSynchronously])
-        self.assertEqual(1, len(warnings))
-        self.assertEqual(
-            warnings[0]['message'],
-            'Adding a callback to a Deferred that has already been '
-            'chained into another Deferred. The result will always be None.')
-
+        self._assertChainedDeprecation(
+            self.test_addingCallbackToInnerAfterChainMergedSynchronously)
 
     def test_addingErrbackToInnerAfterChainMergedSynchronously(self):
         """
@@ -88,16 +92,10 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         outer = defer.Deferred()
         inner = defer.Deferred()
         outer.addCallback(lambda r: inner)
-        inner.callback(None)
         outer.callback(None)
         inner.addErrback(lambda x: x)
-        warnings = self.flushWarnings(
-            [self.test_addingErrbackToInnerAfterChainMergedSynchronously])
-        self.assertEqual(1, len(warnings))
-        self.assertEqual(
-            warnings[0]['message'],
-            'Adding a callback to a Deferred that has already been '
-            'chained into another Deferred. The result will always be None.')
+        self._assertChainedDeprecation(
+            self.test_addingErrbackToInnerAfterChainMergedSynchronously)
 
 
     def test_addingCallbacksToInnerAfterChainMergedSynchronously(self):
@@ -108,16 +106,10 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         outer = defer.Deferred()
         inner = defer.Deferred()
         outer.addCallback(lambda r: inner)
-        inner.callback(None)
         outer.callback(None)
         inner.addCallbacks(lambda x: x, lambda x: x)
-        warnings = self.flushWarnings(
-            [self.test_addingCallbacksToInnerAfterChainMergedSynchronously])
-        self.assertEqual(1, len(warnings))
-        self.assertEqual(
-            warnings[0]['message'],
-            'Adding a callback to a Deferred that has already been '
-            'chained into another Deferred. The result will always be None.')
+        self._assertChainedDeprecation(
+            self.test_addingCallbacksToInnerAfterChainMergedSynchronously)
 
 
     def test_addingBothToInnerAfterChainMergedSynchronously(self):
@@ -128,16 +120,10 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         outer = defer.Deferred()
         inner = defer.Deferred()
         outer.addCallback(lambda r: inner)
-        inner.callback(None)
         outer.callback(None)
         inner.addBoth(lambda x: x)
-        warnings = self.flushWarnings(
-            [self.test_addingBothToInnerAfterChainMergedSynchronously])
-        self.assertEqual(1, len(warnings))
-        self.assertEqual(
-            warnings[0]['message'],
-            'Adding a callback to a Deferred that has already been '
-            'chained into another Deferred. The result will always be None.')
+        self._assertChainedDeprecation(
+            self.test_addingBothToInnerAfterChainMergedSynchronously)
 
 
     def test_addingCallbackToInnerAfterChainMergedAsynchronously(self):
@@ -151,16 +137,9 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         outer.addCallback(lambda r: inner)
         # The callback order is different from the Synchronous test.
         outer.callback(None)
-        inner.callback(None)
-
         inner.addCallback(lambda x: x)
-        warnings = self.flushWarnings(
-            [self.test_addingCallbackToInnerAfterChainMergedAsynchronously])
-        self.assertEqual(1, len(warnings))
-        self.assertEqual(
-            warnings[0]['message'],
-            'Adding a callback to a Deferred that has already been '
-            'chained into another Deferred. The result will always be None.')
+        self._assertChainedDeprecation(
+            self.test_addingCallbackToInnerAfterChainMergedAsynchronously)
 
 
     def testCallbackWithoutArgs(self):
@@ -432,6 +411,11 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         second.addCallback(result.append)
         self.assertEqual(result, [None])
 
+        # This tests deprecated behavior (None as the result of an
+        # already-chained Deferred):
+        self._assertChainedDeprecation(
+            self.test_pausedDeferredChained)
+
 
     def test_gatherResults(self):
         # test successful list of deferreds
@@ -559,6 +543,11 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
              ('firstCallback', 'inner'),
              ('secondCallback', 'orange'),
              'orangeorange'])
+
+        # This tests deprecated behavior (None as the result of an
+        # already-chained Deferred):
+        self._assertChainedDeprecation(
+            self.test_innerCallbacksPreserved)
 
 
     def test_continueCallbackNotFirst(self):
@@ -719,6 +708,11 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         second.addCallback(results.append)
         self.assertIdentical(results[1], result)
 
+        # This tests deprecated behavior (None as the result of an
+        # already-chained Deferred):
+        self._assertChainedDeprecation(
+            self.test_synchronousImplicitChain)
+
 
     def test_asynchronousImplicitChain(self):
         """
@@ -746,6 +740,11 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.assertEqual(firstResult, [None])
         self.assertEqual(secondResult, [result])
 
+        # This tests deprecated behavior (None as the result of an
+        # already-chained Deferred):
+        self._assertChainedDeprecation(
+            self.test_asynchronousImplicitChain)
+
 
     def test_synchronousImplicitErrorChain(self):
         """
@@ -762,6 +761,11 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         first.addCallback(firstResult.append)
         self.assertIdentical(firstResult[0], None)
         self.assertImmediateFailure(second, RuntimeError)
+
+        # This tests deprecated behavior (None as the result of an
+        # already-chained Deferred):
+        self._assertChainedDeprecation(
+            self.test_synchronousImplicitErrorChain)
 
 
     def test_asynchronousImplicitErrorChain(self):
@@ -792,6 +796,11 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.assertTrue(secondError[0].check(RuntimeError))
         self.assertEqual(firstResult, [None])
         self.assertEqual(len(secondResult), 1)
+
+        # This tests deprecated behavior (None as the result of an
+        # already-chained Deferred):
+        self._assertChainedDeprecation(
+            self.test_asynchronousImplicitErrorChain)
 
 
     def test_doubleAsynchronousImplicitChaining(self):
@@ -884,6 +893,11 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
              ('secondCallback', 'orange'),
              'orangeorange'])
 
+        # This tests deprecated behavior (None as the result of an
+        # already-chained Deferred):
+        self._assertChainedDeprecation(
+            self.test_nestedAsynchronousChainedDeferreds)
+
 
     def test_nestedAsynchronousChainedDeferredsWithExtraCallbacks(self):
         """
@@ -948,6 +962,11 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
              ('firstCallback', 'inner'),
              ('secondCallback', ['withers']),
              ['withers', 'withers']])
+
+        # This tests deprecated behavior (None as the result of an
+        # already-chained Deferred):
+        self._assertChainedDeprecation(
+            self.test_nestedAsynchronousChainedDeferredsWithExtraCallbacks)
 
 
     def test_chainDeferredRecordsExplicitChain(self):
@@ -1091,6 +1110,11 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         L = []
         second.addCallback(L.append)
         self.assertEqual(L, [None])
+
+        # This tests deprecated behavior (None as the result of an
+        # already-chained Deferred):
+        self._assertChainedDeprecation(
+            self.test_resultOfDeferredResultOfDeferredOfFiredDeferredCalled)
 
 
     def test_errbackWithNoArgsNoDebug(self):
