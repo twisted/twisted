@@ -2125,6 +2125,7 @@ class DeferredHistoryIntegrationTests(unittest.TestCase):
         history = d.getHistory()
         self.assertHistory(history, [{"name": "cb1"}, {"name": "cb2"}])
 
+
     def test_nestedHistory(self):
         """
         Callbacks executed on a Deferred which is returned from a Deferred
@@ -2149,24 +2150,6 @@ class DeferredHistoryIntegrationTests(unittest.TestCase):
             [{"name": "cb1",
               "chain": [{"name": "nestedCB"}]},
              {"name": "cb2"}])
-
-    def test_nestedHistoryUpdatedAfterFurtherCallbacksAdded(self):
-        outer = defer.Deferred()
-        inner = defer.Deferred()
-        def cb1(r):
-            def nestedCB(r):
-                return r
-            inner.addCallback(nestedCB)
-            return inner
-        outer.addCallback(cb1)
-        inner.callback(5)
-        outer.callback("result")
-        history = outer.getHistory()
-
-        def inner2(r):
-            pass
-        inner.addCallback()
-        
 
 
     # def test_formatCallbackHistory(self):
