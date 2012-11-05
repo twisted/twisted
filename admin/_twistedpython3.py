@@ -21,6 +21,7 @@ modules = [
     "twisted",
     "twisted.copyright",
     "twisted.internet",
+    "twisted.internet.abstract",
     "twisted.internet.address",
     "twisted.internet.base",
     "twisted.internet.default",
@@ -143,6 +144,7 @@ testModules = [
     "twisted.python.test.test_runtime",
     "twisted.python.test.test_utilpy3",
     "twisted.python.test.test_versions",
+    "twisted.test.test_abstract",
     "twisted.test.test_compat",
     "twisted.test.test_context",
     "twisted.test.test_cooperator",
@@ -189,8 +191,6 @@ testModules = [
 # requirements of the modules that depend on them, but cannot be considered
 # generally usable otherwise.
 almostModules = [
-    # To be ported soon:
-    "twisted.internet.abstract",
     # Missing test coverage, see #6156:
     "twisted.internet._sslverify",
     # twisted.names.client semi-depends on twisted.names.root, but only on
