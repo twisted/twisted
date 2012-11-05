@@ -531,7 +531,7 @@ class StdioOnnaStick:
 try:
     _oldshowwarning
 except NameError:
-    _oldshowwarning = warnings.showwarning
+    _oldshowwarning = None
 
 
 def startLogging(file, *a, **kw):

@@ -204,6 +204,12 @@ class LogTest(unittest.SynchronousTestCase):
         L{twisted.python.log.showwarning} passes warnings with an explicit file
         target on to the underlying Python warning system.
         """
+        # log.showwarning depends on _oldshowwarning being set, which only
+        # happens in startLogging(), which doesn't happen if you're not
+        # running under trial. So this test only passes by accident of runner
+        # environment.
+        if log._oldshowwarning is None:
+            raise unittest.SkipTest("Currently this test only runs under trial.")
         message = "another unique message"
         category = FakeWarning
         filename = "warning-filename.py"
@@ -573,6 +579,23 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.SynchronousTestCa
         fakeStdout = sys.stdout
         observer = log.startLogging(sys.stdout)
         self.assertIdentical(sys.stdout, fakeStdout)
+
+
+    def test_startLoggingOverridesWarning(self):
+        """
+        startLogging() overrides global C{warnings.showwarning} such that
+        warnings go to Twisted log observers.
+        """
+        self._startLoggingCleanup()
+        # Ugggh, pretend we're starting from newly imported module:
+        log._oldshowwarning = None
+        fakeFile = StringIO()
+        observer = log.startLogging(fakeFile)
+        self.addCleanup(observer.stop)
+        warnings.warn("hello!")
+        output = fakeFile.getvalue()
+        self.assertIn("UserWarning: hello!", output)
+
 
 
 class PythonLoggingObserverTestCase(unittest.SynchronousTestCase):
