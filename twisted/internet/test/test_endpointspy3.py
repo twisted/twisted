@@ -11,12 +11,28 @@ from zope.interface.verify import verifyObject
 
 from twisted.trial import unittest
 from twisted.python.failure import Failure
+from twisted.python.filepath import FilePath
 from twisted.test.proto_helpers import (
     MemoryReactor, RaisingMemoryReactor, StringTransport)
 from twisted.internet.protocol import ClientFactory, Protocol
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet import (_endpointspy3 as endpoints, error, defer,
                               interfaces, reactor)
+
+from twisted.test import __file__ as testInitPath
+pemPath = FilePath(testInitPath.encode("utf-8")).sibling(b"server.pem")
+
+try:
+    from twisted.test.test_sslverify import makeCertificate
+    from twisted.internet.ssl import (CertificateOptions, Certificate,
+                                      PrivateCertificate)
+    testCertificate = Certificate.loadPEM(pemPath.getContent())
+    testPrivateCertificate = PrivateCertificate.loadPEM(pemPath.getContent())
+
+    skipSSL = False
+except ImportError:
+    skipSSL = "OpenSSL is required to construct SSL Endpoints"
+
 
 class TestProtocol(Protocol):
     """
@@ -883,3 +899,138 @@ class TCP6EndpointNameResolutionTestCase(ClientEndpointTestCaseMixin,
         endpoint.connect(TestFactory())
         self.assertEqual(
             [(fakegetaddrinfo, ("ipv6.example.com", 0, AF_INET6), {})], calls)
+
+
+
+class SSL4EndpointsTestCase(EndpointTestCaseMixin,
+                            unittest.TestCase):
+    """
+    Tests for SSL Endpoints.
+    """
+    if skipSSL:
+        skip = skipSSL
+
+    def expectedServers(self, reactor):
+        """
+        @return: List of calls to L{IReactorSSL.listenSSL}
+        """
+        return reactor.sslServers
+
+
+    def expectedClients(self, reactor):
+        """
+        @return: List of calls to L{IReactorSSL.connectSSL}
+        """
+        return reactor.sslClients
+
+
+    def assertConnectArgs(self, receivedArgs, expectedArgs):
+        """
+        Compare host, port, contextFactory, timeout, and bindAddress in
+        C{receivedArgs} to C{expectedArgs}.  We ignore the factory because we
+        don't only care what protocol comes out of the
+        C{IStreamClientEndpoint.connect} call.
+
+        @param receivedArgs: C{tuple} of (C{host}, C{port}, C{factory},
+            C{contextFactory}, C{timeout}, C{bindAddress}) that was passed to
+            L{IReactorSSL.connectSSL}.
+        @param expectedArgs: C{tuple} of (C{host}, C{port}, C{factory},
+            C{contextFactory}, C{timeout}, C{bindAddress}) that we expect to
+            have been passed to L{IReactorSSL.connectSSL}.
+        """
+        (host, port, ignoredFactory, contextFactory, timeout,
+         bindAddress) = receivedArgs
+
+        (expectedHost, expectedPort, _ignoredFactory, expectedContextFactory,
+         expectedTimeout, expectedBindAddress) = expectedArgs
+
+        self.assertEqual(host, expectedHost)
+        self.assertEqual(port, expectedPort)
+        self.assertEqual(contextFactory, expectedContextFactory)
+        self.assertEqual(timeout, expectedTimeout)
+        self.assertEqual(bindAddress, expectedBindAddress)
+
+
+    def connectArgs(self):
+        """
+        @return: C{dict} of keyword arguments to pass to connect.
+        """
+        return {'timeout': 10, 'bindAddress': ('localhost', 49595)}
+
+
+    def listenArgs(self):
+        """
+        @return: C{dict} of keyword arguments to pass to listen
+        """
+        return {'backlog': 100, 'interface': '127.0.0.1'}
+
+
+    def setUp(self):
+        """
+        Set up client and server SSL contexts for use later.
+        """
+        self.sKey, self.sCert = makeCertificate(
+            O="Server Test Certificate",
+            CN="server")
+        self.cKey, self.cCert = makeCertificate(
+            O="Client Test Certificate",
+            CN="client")
+        self.serverSSLContext = CertificateOptions(
+            privateKey=self.sKey,
+            certificate=self.sCert,
+            requireCertificate=False)
+        self.clientSSLContext = CertificateOptions(
+            requireCertificate=False)
+
+
+    def createServerEndpoint(self, reactor, factory, **listenArgs):
+        """
+        Create an L{SSL4ServerEndpoint} and return the tools to verify its
+        behaviour.
+
+        @param factory: The thing that we expect to be passed to our
+            L{IStreamServerEndpoint.listen} implementation.
+        @param reactor: A fake L{IReactorSSL} that L{SSL4ServerEndpoint} can
+            call L{IReactorSSL.listenSSL} on.
+        @param listenArgs: Optional dictionary of arguments to
+            L{IReactorSSL.listenSSL}.
+        """
+        address = IPv4Address("TCP", "0.0.0.0", 0)
+
+        return (endpoints.SSL4ServerEndpoint(reactor,
+                                             address.port,
+                                             self.serverSSLContext,
+                                             **listenArgs),
+                (address.port, factory, self.serverSSLContext,
+                 listenArgs.get('backlog', 50),
+                 listenArgs.get('interface', '')),
+                address)
+
+
+    def createClientEndpoint(self, reactor, clientFactory, **connectArgs):
+        """
+        Create an L{SSL4ClientEndpoint} and return the values needed to verify
+        its behaviour.
+
+        @param reactor: A fake L{IReactorSSL} that L{SSL4ClientEndpoint} can
+            call L{IReactorSSL.connectSSL} on.
+        @param clientFactory: The thing that we expect to be passed to our
+            L{IStreamClientEndpoint.connect} implementation.
+        @param connectArgs: Optional dictionary of arguments to
+            L{IReactorSSL.connectSSL}
+        """
+        address = IPv4Address("TCP", "localhost", 80)
+
+        if connectArgs is None:
+            connectArgs = {}
+
+        return (endpoints.SSL4ClientEndpoint(reactor,
+                                             address.host,
+                                             address.port,
+                                             self.clientSSLContext,
+                                             **connectArgs),
+                (address.host, address.port, clientFactory,
+                 self.clientSSLContext,
+                 connectArgs.get('timeout', 30),
+                 connectArgs.get('bindAddress', None)),
+                address)

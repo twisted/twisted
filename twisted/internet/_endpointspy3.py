@@ -386,3 +386,98 @@ class TCP6ClientEndpoint(object):
             return wf._onConnection
         except:
             return defer.fail()
+
+
+
+@implementer(interfaces.IStreamServerEndpoint)
+class SSL4ServerEndpoint(object):
+    """
+    SSL secured TCP server endpoint with an IPv4 configuration.
+    """
+
+    def __init__(self, reactor, port, sslContextFactory,
+                 backlog=50, interface=''):
+        """
+        @param reactor: An L{IReactorSSL} provider.
+
+        @param port: The port number used for listening
+        @type port: int
+
+        @param sslContextFactory: An instance of
+            L{twisted.internet.ssl.ContextFactory}.
+
+        @param backlog: Size of the listen queue
+        @type backlog: int
+
+        @param interface: The hostname to bind to, defaults to '' (all)
+        @type interface: str
+        """
+        self._reactor = reactor
+        self._port = port
+        self._sslContextFactory = sslContextFactory
+        self._backlog = backlog
+        self._interface = interface
+
+
+    def listen(self, protocolFactory):
+        """
+        Implement L{IStreamServerEndpoint.listen} to listen for SSL on a
+        TCP socket.
+        """
+        return defer.execute(self._reactor.listenSSL, self._port,
+                             protocolFactory,
+                             contextFactory=self._sslContextFactory,
+                             backlog=self._backlog,
+                             interface=self._interface)
+
+
+
+@implementer(interfaces.IStreamClientEndpoint)
+class SSL4ClientEndpoint(object):
+    """
+    SSL secured TCP client endpoint with an IPv4 configuration
+    """
+
+    def __init__(self, reactor, host, port, sslContextFactory,
+                 timeout=30, bindAddress=None):
+        """
+        @param reactor: An L{IReactorSSL} provider.
+
+        @param host: A hostname, used when connecting
+        @type host: str
+
+        @param port: The port number, used when connecting
+        @type port: int
+
+        @param sslContextFactory: SSL Configuration information as an instance
+            of L{twisted.internet.ssl.ContextFactory}.
+
+        @param timeout: Number of seconds to wait before assuming the
+            connection has failed.
+        @type timeout: int
+
+        @param bindAddress: A (host, port) tuple of local address to bind to,
+            or None.
+        @type bindAddress: tuple
+        """
+        self._reactor = reactor
+        self._host = host
+        self._port = port
+        self._sslContextFactory = sslContextFactory
+        self._timeout = timeout
+        self._bindAddress = bindAddress
+
+
+    def connect(self, protocolFactory):
+        """
+        Implement L{IStreamClientEndpoint.connect} to connect with SSL over
+        TCP.
+        """
+        try:
+            wf = _WrappingFactory(protocolFactory)
+            self._reactor.connectSSL(
+                self._host, self._port, wf, self._sslContextFactory,
+                timeout=self._timeout, bindAddress=self._bindAddress)
+            return wf._onConnection
+        except:
+            return defer.fail()
