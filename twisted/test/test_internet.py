@@ -17,8 +17,6 @@ from twisted.internet import reactor, protocol, error, abstract, defer
 from twisted.internet import interfaces, base
 
 try:
-    if _PY3:
-        raise ImportError("Re-enable in ticket #6142")
     from twisted.internet import ssl
 except ImportError:
     ssl = None

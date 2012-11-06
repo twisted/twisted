@@ -4,12 +4,13 @@
 """
 Tests for twisted SSL support.
 """
+from __future__ import division, absolute_import
 
+from twisted.python.filepath import FilePath
 from twisted.trial import unittest
 from twisted.internet import protocol, reactor, interfaces, defer
 from twisted.internet.error import ConnectionDone
 from twisted.protocols import basic
-from twisted.python import util
 from twisted.python.runtime import platform
 from twisted.test.test_tcp import ProperlyCloseFilesMixin
 
@@ -18,7 +19,7 @@ import os, errno
 try:
     from OpenSSL import SSL, crypto
     from twisted.internet import ssl
-    from twisted.test.ssl_helpers import ClientTLSContext
+    from twisted.test.ssl_helpers import ClientTLSContext, certPath
 except ImportError:
     def _noSSL():
         # ugh, make pyflakes happy.
@@ -33,9 +34,6 @@ except ImportError:
     # Assuming SSL exists, we're using old version in reactor (i.e. non-protocol)
     newTLS = None
 
-certPath = util.sibpath(__file__, "server.pem")
-
-
 
 class UnintelligentProtocol(basic.LineReceiver):
     """
@@ -43,19 +41,19 @@ class UnintelligentProtocol(basic.LineReceiver):
     @type deferred: L{defer.Deferred}
 
     @cvar pretext: text sent before TLS is set up.
-    @type pretext: C{str}
+    @type pretext: C{bytes}
 
     @cvar posttext: text sent after TLS is set up.
-    @type posttext: C{str}
+    @type posttext: C{bytes}
     """
     pretext = [
-        "first line",
-        "last thing before tls starts",
-        "STARTTLS"]
+        b"first line",
+        b"last thing before tls starts",
+        b"STARTTLS"]
 
     posttext = [
-        "first thing after tls started",
-        "last thing ever"]
+        b"first thing after tls started",
+        b"last thing ever"]
 
     def __init__(self):
         self.deferred = defer.Deferred()
@@ -67,7 +65,7 @@ class UnintelligentProtocol(basic.LineReceiver):
 
 
     def lineReceived(self, line):
-        if line == "READY":
+        if line == b"READY":
             self.transport.startTLS(ClientTLSContext(), self.factory.client)
             for l in self.posttext:
                 self.sendLine(l)
@@ -99,17 +97,17 @@ class LineCollector(basic.LineReceiver):
 
 
     def connectionMade(self):
-        self.factory.rawdata = ''
+        self.factory.rawdata = b''
         self.factory.lines = []
 
 
     def lineReceived(self, line):
         self.factory.lines.append(line)
-        if line == 'STARTTLS':
+        if line == b'STARTTLS':
             if self.fillBuffer:
                 for x in range(500):
-                    self.sendLine('X' * 1000)
-            self.sendLine('READY')
+                    self.sendLine(b'X' * 1000)
+            self.sendLine(b'READY')
             if self.doTLS:
                 ctx = ServerTLSContext(
                     privateKeyFileName=certPath,
@@ -136,7 +134,7 @@ class SingleLineServerProtocol(protocol.Protocol):
     """
 
     def connectionMade(self):
-        self.transport.write("+OK <some crap>\r\n")
+        self.transport.write(b"+OK <some crap>\r\n")
         self.transport.getPeerCertificate()
 
 
@@ -215,10 +213,8 @@ def generateCertificateFiles(basename, organization, organizationalUnit):
         ('key', pkey, crypto.dump_privatekey),
         ('req', req, crypto.dump_certificate_request),
         ('cert', cert, crypto.dump_certificate)]:
-        fName = os.extsep.join((basename, ext))
-        fObj = file(fName, 'w')
-        fObj.write(dumpFunc(crypto.FILETYPE_PEM, obj))
-        fObj.close()
+        fName = os.extsep.join((basename, ext)).encode("utf-8")
+        FilePath(fName).setContent(dumpFunc(crypto.FILETYPE_PEM, obj))
 
 
 
@@ -285,7 +281,7 @@ class StolenTCPTestCase(ProperlyCloseFilesMixin, unittest.TestCase):
         """
         Create an SSL server with a certificate using L{IReactorSSL.listenSSL}.
         """
-        cert = ssl.PrivateCertificate.loadPEM(file(certPath).read())
+        cert = ssl.PrivateCertificate.loadPEM(FilePath(certPath).getContent())
         contextFactory = cert.options()
         return reactor.listenSSL(
             portNumber, factory, contextFactory, interface=address)
@@ -484,7 +480,7 @@ class BufferingTestCase(unittest.TestCase):
         reactor.connectSSL('127.0.0.1', port.getHost().port, client, cCTX)
 
         return clientProto.deferred.addCallback(
-            self.assertEqual, "+OK <some crap>\r\n")
+            self.assertEqual, b"+OK <some crap>\r\n")
 
 
 
@@ -523,19 +519,24 @@ class ConnectionLostTestCase(unittest.TestCase, ContextGeneratingMixin):
         disconnected.
         """
         class CloseAfterHandshake(protocol.Protocol):
+            gotData = False
+
             def __init__(self):
                 self.done = defer.Deferred()
 
             def connectionMade(self):
-                self.transport.write("a")
+                self.transport.write(b"a")
 
             def dataReceived(self, data):
                 # If we got data, handshake is over:
+                self.gotData = True
                 self.transport.loseConnection()
 
-            def connectionLost(self2, reason):
-                self2.done.errback(reason)
-                del self2.done
+            def connectionLost(self, reason):
+                if not self.gotData:
+                    reason = RuntimeError("We never received the data!")
+                self.done.errback(reason)
+                del self.done
 
         org = "twisted.test.test_ssl"
         self.setupServerAndClient(

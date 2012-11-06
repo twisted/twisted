@@ -48,12 +48,8 @@ try:
 except ImportError:
     useSSL = False
 else:
-    if _PY3:
-        # Re-enable in ticket #6142:
-        useSSL = False
-    else:
-        from twisted.internet.ssl import ClientContextFactory
-        useSSL = True
+    from twisted.internet.ssl import ClientContextFactory
+    useSSL = True
 
 try:
     socket.socket(socket.AF_INET6, socket.SOCK_STREAM).close()

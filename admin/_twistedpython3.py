@@ -38,6 +38,7 @@ modules = [
     "twisted.internet.reactor",
     "twisted.internet.selectreactor",
     "twisted.internet._signals",
+    "twisted.internet.ssl",
     "twisted.internet.task",
     "twisted.internet.tcp",
     "twisted.internet.test",
@@ -84,6 +85,7 @@ modules = [
     "twisted.python.versions",
     "twisted.test",
     "twisted.test.proto_helpers",
+    "twisted.test.ssl_helpers",
     "twisted.trial",
     "twisted.trial._asynctest",
     "twisted.trial.itrial",
@@ -162,6 +164,7 @@ testModules = [
     "twisted.test.test_policies",
     "twisted.test.test_randbytes",
     "twisted.test.test_setup",
+    "twisted.test.test_ssl",
     "twisted.test.test_sslverify",
     "twisted.test.test_task",
     "twisted.test.test_tcp",
@@ -191,6 +194,8 @@ testModules = [
 # requirements of the modules that depend on them, but cannot be considered
 # generally usable otherwise.
 almostModules = [
+    # To be fully ported as part of #6140:
+    "twisted.internet._newtls",
     # Missing test coverage, see #6156:
     "twisted.internet._sslverify",
     # twisted.names.client semi-depends on twisted.names.root, but only on
