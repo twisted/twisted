@@ -589,7 +589,6 @@ class Deferred:
                 except:
                     # Including full frame information in the Failure is quite
                     # expensive, so we avoid it unless self.debug is set.
-                    # Should I actually copy self._history here, or pass the original? It actually makes a difference!
                     current.result = failure.Failure(captureVars=self.debug)
                 else:
                     if isinstance(current.result, Deferred):
@@ -597,8 +596,6 @@ class Deferred:
                             historyItem.setChain(current.result.getHistory())
                         # The result is another Deferred.  If it has a result,
                         # we can take it and keep going.
-                        # Is it possible for current.result.history to be
-                        # modified AFTER this line? PROBABLY!
                         resultResult = getattr(current.result, 'result', _NO_RESULT)
                         if resultResult is _NO_RESULT or isinstance(resultResult, Deferred) or current.result.paused:
                             # Nope, it didn't.  Pause and chain.
@@ -618,8 +615,6 @@ class Deferred:
                                 current.result._debugInfo.failResult = None
                             current.result = resultResult
 
-                # if historyItem is not None:
-                #     historyItem.setResult(current.result)
             if finished:
                 # As much of the callback chain - perhaps all of it - as can be
                 # processed right now has been.  The current Deferred is waiting on
