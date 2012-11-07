@@ -5,18 +5,21 @@
 Tests for implementations of L{ITLSTransport}.
 """
 
+from __future__ import division, absolute_import
+
 __metaclass__ = type
 
 import sys, operator
 
-from zope.interface import implements
+from zope.interface import implementer
 
+from twisted.python.compat import _PY3
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.protocol import ServerFactory, ClientFactory, Protocol
 from twisted.internet.interfaces import (
     IReactorSSL, ITLSTransport, IStreamClientEndpoint)
 from twisted.internet.defer import Deferred, DeferredList
-from twisted.internet.endpoints import (
+from twisted.internet._endpointspy3 import (
     SSL4ServerEndpoint, SSL4ClientEndpoint, TCP4ClientEndpoint)
 from twisted.internet.error import ConnectionClosed
 from twisted.internet.task import Cooperator
@@ -100,6 +103,7 @@ class ContextGeneratingMixin(object):
 
 
 
+@implementer(IStreamClientEndpoint)
 class StartTLSClientEndpoint(object):
     """
     An endpoint which wraps another one and adds a TLS layer immediately when
@@ -110,7 +114,6 @@ class StartTLSClientEndpoint(object):
 
     @ivar contextFactory: A L{ContextFactory} to use to do TLS.
     """
-    implements(IStreamClientEndpoint)
 
     def __init__(self, wrapped, contextFactory):
         self.wrapped = wrapped
@@ -258,14 +261,14 @@ class SSLClientTestsMixin(TLSMixin, ReactorBuilder, ContextGeneratingMixin,
                 self.transport.startTLS(self.factory.context)
                 # Force TLS to really get negotiated.  If nobody talks, nothing
                 # will happen.
-                self.transport.write("x")
+                self.transport.write(b"x")
 
             def dataReceived(self, data):
                 # Stuff some bytes into the socket.  This mostly has the effect
                 # of causing the next write to fail with ENOTCONN or EPIPE.
                 # With the pyOpenSSL implementation of ITLSTransport, the error
                 # is swallowed outside of the control of Twisted.
-                self.transport.write("y")
+                self.transport.write(b"y")
                 # Now close the connection, which requires a TLS close alert to
                 # be sent.
                 self.transport.loseConnection()
@@ -392,6 +395,9 @@ class OldTLSDeprecationTest(TestCase):
     module for L{IReactorSSL} used when only an old version of pyOpenSSL is
     available.
     """
+    if _PY3:
+        skip = "_oldtls not supported on Python 3."
+
     def test_warning(self):
         """
         The use of L{twisted.internet._oldtls} is deprecated, and emits a

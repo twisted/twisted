@@ -130,6 +130,7 @@ testModules = [
     "twisted.internet.test.test_sigchld",
     "twisted.internet.test.test_tcp",
     "twisted.internet.test.test_threads",
+    "twisted.internet.test.test_tls",
     "twisted.internet.test.test_udp",
     "twisted.internet.test.test_udp_internals",
     "twisted.internet.test.test_utilspy3",
