@@ -457,19 +457,6 @@ class HostnameEndpoint(object):
         self._bindAddress = bindAddress
 
 
-#    def endpointGenerator(self, reactor, host, port, timeout, bindAddress):
-#        """
-#        Looks at the resolved host address, and creates the
-#        corresponding endpoint.
-#        """
-#        if isIPv6Address(host):
-#            return TCP6ClientEndpoint(reactor, host, port, timeout, bindAddress)
-#        else:
-#            return TCP4ClientEndpoint(reactor, host, port, timeout, bindAddress)
-        # TODO: Figure out a default return when the address is neither IPv6 nor
-        # IPv4
-
-
     def connect(self, protocolFactory):
         """
         Attempts a connection to each address returned by gai, and
@@ -530,10 +517,6 @@ class HostnameEndpoint(object):
             successful = []
             failures = []
 
-#           def _canceller(d):
-#               d.errback(error.ConnectingCancelledError())
-#               d.cancel()
-
             winner = defer.Deferred()    #canceller=wf._canceller)
 
 #            print "Running attemptConnection."
@@ -559,8 +542,7 @@ class HostnameEndpoint(object):
                 if endpointsListExhausted and not pending and not successful:
                     print "inside almostDone's if"
                     winner.errback(failures.pop())
-#                return defer.fail(error.ConnectError("Connection Failed"))
-#                winner.errback(failures.pop())
+#                return defer.fail(error.ConnectError("Connection Failed")
                     # FIXME
 
             def connectFailed(reason):
@@ -585,11 +567,7 @@ class HostnameEndpoint(object):
                     dconn.addBoth(usedEndpointRemoval, dconn)
                     dconn.addCallback(afterConnectionAttempt)
                     dconn.addErrback(connectFailed)
-#                    pending.append(dconn)
 
-#            iterateEndpoint()
-#            self._reactor.callLater(0.3, iterateEndpoint)
-#            iterateEndpoint()
             lc = LoopingCall(iterateEndpoint)
             lc.clock = self._reactor
             lc.start(0.0)
@@ -600,20 +578,11 @@ class HostnameEndpoint(object):
             d = self._nameResolution(self._host)
             d.addErrback(errbackForGai)
             d.addCallback(_endpoints)
- #           d.addCallback(testGetEndpoints)
             d.addCallback(attemptConnection)
-#            d.errback(error.ConnectingCancelledError("The connection was cancelled"))
             print "Returning the fastest connection now.."
             return d
         except:
             return defer.fail(error.ConnectingCancelledError("The connection was cancelled"))
-
-
-#    def canceller(self, deferred):
-
- #       deferred.errback(error.ConnectingCancelledError("The connection was cancelled"))
-
-#        TODO: stopConnecting()
 
 
     def _nameResolution(self, host):
