@@ -1230,17 +1230,16 @@ class HostnameEndpointsIPv6FastTest(unittest.TestCase):
     """
     def setUp(self):
         self.mreactor = MemoryReactor()
-        self.endpoint = endpoints.HostnameEndpoint(self.mreactor, "www.example.com",
-                80)
+        self.endpoint = endpoints.HostnameEndpoint(self.mreactor,
+                "www.example.com", 80)
 
 
     def test_IPv6IsFaster(self):
         """
         The endpoint returns a connection to the IPv6 address.
         """
-        resultEndpoint = []
         clientFactory = protocol.Factory()
-        proto = object()
+        clientFactory.protocol = protocol.Protocol
 
         def nameResolution(host):
             self.assertEqual("www.example.com", host)
@@ -1251,17 +1250,34 @@ class HostnameEndpointsIPv6FastTest(unittest.TestCase):
 
         self.endpoint._nameResolution = nameResolution
         d = self.endpoint.connect(clientFactory)
+        results = []
+        d.addCallback(results.append)
+
         self.mreactor.advance(0.0)
         print self.mreactor.tcpClients
-        factory = self.mreactor.tcpClients[0][2]
-        factory._onConnection.callback(proto)
 
-        def checkAddress(p):
-            self.assertEqual(self.mreactor.tcpClients[1][0], '1:2::3:4')
-            return p
+        (host, port, factory, timeout, bindAddress) = self.mreactor.tcpClients[1]
 
-        d.addCallback(checkAddress)
 
+        # IPv6 ought to be the second attempt, since nameResolution (standing in
+        # for GAI here) returned it second.
+        self.assertEqual(host, '1:2::3:4')
+        self.assertEqual(port, 80)
+
+        # The IPv6 attempt succeeds.
+        proto = factory.buildProtocol((host, port))
+        fakeTransport = object()
+
+        # We haven't established the connection yet...
+        self.assertEqual(results, [])
+
+        # Establish the connection.
+        proto.makeConnection(fakeTransport)
+
+        # Now, the Deferred should have fired, with the protocol constructed
+        # from the above.
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].factory, clientFactory)
 
 #_______________________________________________________________________________________________________
 
