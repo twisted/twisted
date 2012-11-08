@@ -1143,7 +1143,7 @@ class HostnameEndpointsGAIFailureTest(unittest.TestCase):
         return self.assertFailure(dConnect, error.DNSLookupError)
 
 
-#________________________WIP_______________________________________________
+#________________________________________________________________________
 
 from twisted.internet.test.test_protocol import MemoryConnector
 
@@ -1202,22 +1202,23 @@ class HostnameEndpointsIPv4FastTest(unittest.TestCase):
 
         # IPv4 ought to be the first attempt, since nameResolution (standing in
         # for GAI here) returned it first.
-        self.assertEquals(host, '1.2.3.4')
-        self.assertEquals(port, 80)
+        self.assertEqual(host, '1.2.3.4')
+        self.assertEqual(port, 80)
 
         # The IPv4 attempt succeeds.
         proto = factory.buildProtocol((host, port))
         fakeTransport = object()
 
         # We haven't established the connection yet...
-        self.assertEquals(results, [])
+        self.assertEqual(results, [])
 
         # Establish the connection.
         proto.makeConnection(fakeTransport)
 
         # Now, the Deferred should have fired, with the protocol constructed
         # from the above.
-        self.assertEquals(len(results), 1)
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].factory, clientFactory)
 
 
 
