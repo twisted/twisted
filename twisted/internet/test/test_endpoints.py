@@ -973,9 +973,6 @@ class TCP6EndpointNameResolutionTestCase(ClientEndpointTestCaseMixin,
 #_________________________________________________________________________________________________
 # Begin testing HostnameEndpoint
 
-# TODO: Fix fake reactor issues.
-
-
 class HostnameEndpointsOneIPv4Test(ClientEndpointTestCaseMixin,
                                 unittest.TestCase):
     """
@@ -984,8 +981,6 @@ class HostnameEndpointsOneIPv4Test(ClientEndpointTestCaseMixin,
     """
     def createClientEndpoint(self, reactor, clientFactory, **connectArgs):
         address = IPv4Address("TCP", "1.2.3.4", 80)
-#        clock = Clock()
-#        reactor.callLater = clock.callLater
         endpoint = endpoints.HostnameEndpoint(reactor, "example.com",
                                            address.port, **connectArgs)
 
@@ -1060,8 +1055,6 @@ class HostnameEndpointsOneIPv6Test(ClientEndpointTestCaseMixin,
     """
     def createClientEndpoint(self, reactor, clientFactory, **connectArgs):
         address = IPv6Address("TCP", "1:2::3:4", 80)
-#        clock = Clock()
-#        reactor.callLater = clock.callLater
         endpoint = endpoints.HostnameEndpoint(reactor, "ipv6.example.com",
                                            address.port, **connectArgs)
 
