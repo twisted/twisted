@@ -1253,7 +1253,7 @@ class HostnameEndpointsIPv6FastTest(unittest.TestCase):
         results = []
         d.addCallback(results.append)
 
-        self.mreactor.advance(0.0)
+        self.mreactor.advance(0.3)
         print self.mreactor.tcpClients
 
         (host, port, factory, timeout, bindAddress) = self.mreactor.tcpClients[1]

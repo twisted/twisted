@@ -464,7 +464,6 @@ class HostnameEndpoint(object):
         """
         wf = protocolFactory             # _WrappingFactory(protocolFactory)
 
-        # TODO: Fix almostDone()
         def errbackForGai(obj):
             """
             Errback for when L{_nameResolution} returns a Deferred
@@ -570,7 +569,7 @@ class HostnameEndpoint(object):
 
             lc = LoopingCall(iterateEndpoint)
             lc.clock = self._reactor
-            lc.start(0.0)
+            lc.start(0.3)
             print "Return from attemptConnection"
             return winner  # attemptConnection's return
 
