@@ -1183,27 +1183,41 @@ class HostnameEndpointsIPv4FastTest(unittest.TestCase):
         """
         The endpoint returns a connection to the IPv4 address.
         """
-        resultEndpoint = []
         clientFactory = protocol.Factory()
-        proto = object()
+        clientFactory.protocol = protocol.Protocol
 
         def nameResolution(host):
             self.assertEqual("www.example.com", host)
-            data = [(AF_INET, SOCK_STREAM, IPPROTO_TCP, '',
-                ('1.2.3.4', 0, 0, 0)), (AF_INET6, SOCK_STREAM, IPPROTO_TCP, '',
-                ('1:2::3:4', 0, 0, 0))]
+            data = [
+                (AF_INET, SOCK_STREAM, IPPROTO_TCP, '', ('1.2.3.4', 0, 0, 0)),
+                (AF_INET6, SOCK_STREAM, IPPROTO_TCP, '', ('1:2::3:4', 0, 0, 0))
+            ]
             return defer.succeed(data)
 
         self.endpoint._nameResolution = nameResolution
         d = self.endpoint.connect(clientFactory)
-        factory = self.mreactor.tcpClients[0][2]
-        factory._onConnection.callback(proto)
+        results = []
+        d.addCallback(results.append)
+        (host, port, factory, timeout, bindAddress) = self.mreactor.tcpClients[0]
 
-        def checkAddress(p):
-            self.assertEqual(self.mreactor.tcpClients[0][0], '1.2.3.4')
-            return p
+        # IPv4 ought to be the first attempt, since nameResolution (standing in
+        # for GAI here) returned it first.
+        self.assertEquals(host, '1.2.3.4')
+        self.assertEquals(port, 80)
 
-        d.addCallback(checkAddress)
+        # The IPv4 attempt succeeds.
+        proto = factory.buildProtocol((host, port))
+        fakeTransport = object()
+
+        # We haven't established the connection yet...
+        self.assertEquals(results, [])
+
+        # Establish the connection.
+        proto.makeConnection(fakeTransport)
+
+        # Now, the Deferred should have fired, with the protocol constructed
+        # from the above.
+        self.assertEquals(len(results), 1)
 
 
 
