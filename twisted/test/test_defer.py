@@ -2061,7 +2061,7 @@ class HistoryTests(unittest.TestCase):
     def test_itemWithChain(self):
         """
         L{_DeferredHistoryItem} objects with inner chains will include the
-        chain in the format.
+        chain, indented, in the format.
         """
         item = defer._DeferredHistoryItem("foo")
         subHistory = defer._DeferredHistory()
@@ -2074,6 +2074,29 @@ class HistoryTests(unittest.TestCase):
             "[foo -> Deferred:\n" +
             "    [sub1]\n" +
             "    [sub2]]")
+
+
+    def test_successiveChains(self):
+        """
+        Multiple levels of chains get more and more indented.
+        """
+        item = defer._DeferredHistoryItem("foo")
+        subHistory = defer._DeferredHistory()
+        item.setChain(subHistory)
+
+        subHistory.addItem(defer._DeferredHistoryItem("sub1"))
+        sub2 = defer._DeferredHistoryItem("sub2")
+        subHistory.addItem(sub2)
+        subSubHistory = defer._DeferredHistory()
+        subSubHistory.addItem(defer._DeferredHistoryItem("subsub1"))
+        sub2.setChain(subSubHistory)
+
+        self.assertEqual(
+            item.format(),
+            "[foo -> Deferred:\n" +
+            "    [sub1]\n" +
+            "    [sub2 -> Deferred:\n" +
+            "        [subsub1]]]")
 
 
 

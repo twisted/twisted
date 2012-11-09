@@ -561,16 +561,9 @@ class Failure:
         else:
             formatDetail = detail
 
-        def fmtHistory(history, prefix=""):
-            for el in history:
-                if isinstance(el, list):
-                    fmtHistory(el, prefix=prefix + "->  ")
-                else:
-                    w(prefix)
-                    w("[callback: %s, args: %s, kwargs: %s]\n" % el[2:])
-
         if self._history is not None:
-            fmtHistory(self._history.getHistory())
+            w(self._history.format())
+            w('\n')
 
         # Preamble
         if detail == 'verbose':

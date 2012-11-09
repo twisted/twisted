@@ -589,7 +589,7 @@ class Deferred:
                 except:
                     # Including full frame information in the Failure is quite
                     # expensive, so we avoid it unless self.debug is set.
-                    current.result = failure.Failure(captureVars=self.debug)
+                    current.result = failure.Failure(captureVars=self.debug, history=self.getHistory())
                 else:
                     if isinstance(current.result, Deferred):
                         if historyItem is not None:
@@ -758,7 +758,7 @@ class _DeferredHistory(object):
         self.items.append(item)
 
     def format(self, prefix=""):
-        return '\n'.join(prefix + item.format() for item in self.items)
+        return '\n'.join(prefix + item.format(prefix) for item in self.items)
 
 
 
@@ -770,9 +770,9 @@ class _DeferredHistoryItem(object):
     def setChain(self, chain):
         self.innerChain = chain
 
-    def format(self):
+    def format(self, prefix=""):
         if self.innerChain:
-            innerFormat = self.innerChain.format(prefix="    ")
+            innerFormat = self.innerChain.format(prefix=prefix+"    ")
             return "[%s -> Deferred:\n%s]" % (self.cbname, innerFormat)
         else:
             return "[%s]" % (self.cbname,)
