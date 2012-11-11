@@ -472,6 +472,85 @@ class BasicFTPServerTestCase(FTPServerTestCase):
                           self.serverProtocol.getDTPPort,
                           protocol.Factory())
 
+    def _startDataConnection(self):
+        """
+        Prepare data transport protocol to look like it was created by
+        a previous call to PASV or PORT
+        """
+        self.serverProtocol.dtpFactory = ftp.DTPFactory(self.serverProtocol)
+        self.serverProtocol.dtpFactory.buildProtocol('ignore_address')
+
+        self.serverProtocol.dtpPort = self.serverProtocol.listenFactory(
+            6000, self.serverProtocol.dtpFactory)
+
+        dtpTransport = proto_helpers.StringTransportWithDisconnection()
+        dtpTransport.protocol = ftp.DTP()
+        self.serverProtocol.dtpInstance.transport = dtpTransport
+
+
+    def test_LISTWithoutDataChannel(self):
+        """
+        Calling LIST without prior setup of data connection will result in a
+        incorrect sequence of commands error.
+        """
+        d = self._anonymousLogin()
+        self.assertCommandFailed(
+            'LIST .',
+            ["503 Incorrect sequence of commands: "
+             "PORT or PASV required before LIST"],
+            chainDeferred=d)
+        return d
+
+
+    def test_LISTTimeout(self):
+        """
+        LIST will timeout if setting up the DTP instance will take to long.
+        """
+        # Set timeout to a very small value to not slow down tests.
+        self.factory.timeOut = 0.01
+
+        d = self._anonymousLogin()
+        self._startDataConnection()
+
+        self.assertCommandFailed(
+            'LIST .',
+            ["425 Data channel initialization timed out."],
+            chainDeferred=d)
+        return d
+
+
+    def test_NLSTWithoutDataChannel(self):
+        """
+        Calling NLST without prior setup of data connection will result in a
+        incorrect sequence of commands error.
+        """
+        d = self._anonymousLogin()
+        self.assertCommandFailed(
+            'NLST .',
+            ["503 Incorrect sequence of commands: "
+             "PORT or PASV required before NLST"],
+            chainDeferred=d)
+        return d
+
+
+    def test_NLSTTimeout(self):
+        """
+        NLST will timeout if setting up the DTP instance will take to long,
+        but NLST will not return any error.
+        """
+        self.factory.timeOut = 0.01
+
+        d = self._anonymousLogin()
+        self._startDataConnection()
+
+        # Set timeout to a very small value to not slow down tests.
+        self.assertCommandResponse(
+            'NLST .',
+            ["226 Transfer Complete."],
+            chainDeferred=d)
+        return d
+
+
 
     def test_portRangeInheritedFromFactory(self):
         """
