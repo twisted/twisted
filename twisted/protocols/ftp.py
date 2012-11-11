@@ -25,7 +25,7 @@ from zope.interface import Interface, implements
 
 # Twisted Imports
 from twisted import copyright
-from twisted.internet import defer, error, interfaces, protocol, reactor, task
+from twisted.internet import reactor, interfaces, protocol, error, defer, task
 from twisted.protocols import basic, policies
 
 from twisted.python import log, failure, filepath
@@ -795,7 +795,8 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
 
 
     def _checkDataTransportStarted(self, command):
-        """Checks that data transport is ready.
+        """
+        Checks that data transport is ready.
 
         If data transport was not requested using PORT, PASV etc it raises
         L{BadCmdSequenceError}.
@@ -803,6 +804,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         if self.dtpInstance is None:
             raise BadCmdSequenceError(
                 'PORT or PASV required before %s' % (command,))
+
 
     def ftp_USER(self, username):
         """
@@ -1038,6 +1040,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         d.addErrback(listErr)
         return d
 
+
     def _cbWaitDTPConnectionWithTimeout(self, result):
         """
         Helper callback that waits for DTP instance to be connected.
@@ -1067,6 +1070,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         self.dtpFactory.deferred.addErrback(ebDTPTimeout)
 
         return self.dtpFactory.deferred
+
 
     def ftp_CWD(self, path):
         try:
