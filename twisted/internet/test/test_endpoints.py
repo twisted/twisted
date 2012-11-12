@@ -1146,11 +1146,10 @@ class HostnameEndpointsGAIFailureTest(unittest.TestCase):
 #________________________________________________________________________
 
 
-class HostnameEndpointsIPv4FastTest(unittest.TestCase):
+class HostnameEndpointsFasterConnectionTest(unittest.TestCase):
     """
     Tests for the hostname based endpoints when gai returns an IPv4 and
-    an IPv6 address, and the connection to the IPv4 address takes less
-    time than the IPv6 address.
+    an IPv6 address, and one connection takes less time than the other.
     """
     def setUp(self):
         self.mreactor = MemoryReactor()
@@ -1201,18 +1200,6 @@ class HostnameEndpointsIPv4FastTest(unittest.TestCase):
 
 
 
-class HostnameEndpointsIPv6FastTest(unittest.TestCase):
-    """
-    Tests for the hostname based endpoints when gai returns an IPv4 and
-    an IPv6 address, and the connection to the IPv6 address takes less
-    time than the IPv4 address.
-    """
-    def setUp(self):
-        self.mreactor = MemoryReactor()
-        self.endpoint = endpoints.HostnameEndpoint(self.mreactor,
-                "www.example.com", 80)
-
-
     def test_IPv6IsFaster(self):
         """
         The endpoint returns a connection to the IPv6 address.
@@ -1257,6 +1244,7 @@ class HostnameEndpointsIPv6FastTest(unittest.TestCase):
         # from the above.
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0].factory, clientFactory)
+
 
 #_______________________________________________________________________________________________________
 

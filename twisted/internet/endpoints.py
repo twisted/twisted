@@ -516,6 +516,7 @@ class HostnameEndpoint(object):
 
             def usedEndpointRemoval(connResult, connAttempt):
                 print "Inside usedEndpointRemoval"
+                print "Pending = ", pending
                 pending.remove(connAttempt)
                 return connResult
 
@@ -524,7 +525,7 @@ class HostnameEndpoint(object):
                 if lc.running:
                     lc.stop()
                 successful.append(True)
-                for p in pending[::]:
+                for p in pending[:]:
                     p.cancel()
                 winner.callback(connResult)
                 return None
