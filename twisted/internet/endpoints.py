@@ -492,13 +492,6 @@ class HostnameEndpoint(object):
         # TODO: Figure out a default return when the address is neither IPv6 nor
         # IPv4
 
-        def testGetEndpoints(endpoints):
-            print "inside testGetEndpoints. The result from _endpoints is:"
-            print endpoints
-            for ep in endpoints:
-                print ep
-            return endpoints
-
 
         def attemptConnection(endpoints):
             """
