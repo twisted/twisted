@@ -1259,8 +1259,7 @@ class HostnameEndpointsFasterConnectionTestCase(unittest.TestCase):
         proto.makeConnection(fakeTransport)
 
         # Now, the pending IPv4 connection should have been cancelled.
-        # TODO: Check the list of pending connections.
-
+        self.assertEqual(True, self.mreactor.tcpClients[0][2]._connector.stoppedConnecting)
 #_______________________________________________________________________________________________________
 
 class SSL4EndpointsTestCase(EndpointTestCaseMixin,
