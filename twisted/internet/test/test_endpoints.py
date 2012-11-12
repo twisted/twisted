@@ -973,7 +973,7 @@ class TCP6EndpointNameResolutionTestCase(ClientEndpointTestCaseMixin,
 #_________________________________________________________________________________________________
 # Begin testing HostnameEndpoint
 
-class HostnameEndpointsOneIPv4Test(ClientEndpointTestCaseMixin,
+class HostnameEndpointsOneIPv4TestCase(ClientEndpointTestCaseMixin,
                                 unittest.TestCase):
     """
     Tests for the hostname based endpoints when GAI returns only one
@@ -1047,7 +1047,7 @@ class HostnameEndpointsOneIPv4Test(ClientEndpointTestCaseMixin,
 
 
 
-class HostnameEndpointsOneIPv6Test(ClientEndpointTestCaseMixin,
+class HostnameEndpointsOneIPv6TestCase(ClientEndpointTestCaseMixin,
                                 unittest.TestCase):
     """
     Tests for the hostname based endpoints when GAI returns only one
@@ -1125,7 +1125,7 @@ class HostnameEndpointsOneIPv6Test(ClientEndpointTestCaseMixin,
 
 
 
-class HostnameEndpointsGAIFailureTest(unittest.TestCase):
+class HostnameEndpointsGAIFailureTestCase(unittest.TestCase):
     """
     Tests for the hostname based endpoints when GAI returns no address.
     """
@@ -1146,7 +1146,7 @@ class HostnameEndpointsGAIFailureTest(unittest.TestCase):
 #________________________________________________________________________
 
 
-class HostnameEndpointsFasterConnectionTest(unittest.TestCase):
+class HostnameEndpointsFasterConnectionTestCase(unittest.TestCase):
     """
     Tests for the hostname based endpoints when gai returns an IPv4 and
     an IPv6 address, and one connection takes less time than the other.
@@ -1155,14 +1155,6 @@ class HostnameEndpointsFasterConnectionTest(unittest.TestCase):
         self.mreactor = MemoryReactor()
         self.endpoint = endpoints.HostnameEndpoint(self.mreactor,
                 "www.example.com", 80)
-
-
-    def test_IPv4IsFaster(self):
-        """
-        The endpoint returns a connection to the IPv4 address.
-        """
-        clientFactory = protocol.Factory()
-        clientFactory.protocol = protocol.Protocol
 
         def nameResolution(host):
             self.assertEqual("www.example.com", host)
@@ -1173,6 +1165,15 @@ class HostnameEndpointsFasterConnectionTest(unittest.TestCase):
             return defer.succeed(data)
 
         self.endpoint._nameResolution = nameResolution
+
+
+    def test_IPv4IsFaster(self):
+        """
+        The endpoint returns a connection to the IPv4 address.
+        """
+        clientFactory = protocol.Factory()
+        clientFactory.protocol = protocol.Protocol
+
         d = self.endpoint.connect(clientFactory)
         results = []
         d.addCallback(results.append)
@@ -1207,14 +1208,6 @@ class HostnameEndpointsFasterConnectionTest(unittest.TestCase):
         clientFactory = protocol.Factory()
         clientFactory.protocol = protocol.Protocol
 
-        def nameResolution(host):
-            self.assertEqual("www.example.com", host)
-            data = [(AF_INET, SOCK_STREAM, IPPROTO_TCP, '',
-                ('1.2.3.4', 0, 0, 0)), (AF_INET6, SOCK_STREAM, IPPROTO_TCP, '',
-                ('1:2::3:4', 0, 0, 0))]
-            return defer.succeed(data)
-
-        self.endpoint._nameResolution = nameResolution
         d = self.endpoint.connect(clientFactory)
         results = []
         d.addCallback(results.append)
@@ -1244,6 +1237,12 @@ class HostnameEndpointsFasterConnectionTest(unittest.TestCase):
         # from the above.
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0].factory, clientFactory)
+
+
+    def test_OtherConnectionsCancelled(self):
+        pass
+
+
 
 
 #_______________________________________________________________________________________________________
