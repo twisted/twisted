@@ -1145,27 +1145,6 @@ class HostnameEndpointsGAIFailureTest(unittest.TestCase):
 
 #________________________________________________________________________
 
-from twisted.internet.test.test_protocol import MemoryConnector
-
-class MemoryReactorForIPv6(MemoryReactor):
-    """
-    If the host address is IPv6, connectTCP works.
-    """
-    def __init__(self):
-        MemoryReactor.__init__(self)
-        Clock.__init__(self)
-        self.connectors = []
-
-    def connectTCP(self, *a, **kw):
-        print "in the reactor::::", a[0]
-        if a[0] == "1.2.3.4":
-            raise error.ConnectError()
-        else:
-            MemoryReactor.connectTCP(self, *a, **kw)
-            connector = MemoryConnector()
-            self.connectors.append(connector)
-            return connector
-
 
 class HostnameEndpointsIPv4FastTest(unittest.TestCase):
     """
