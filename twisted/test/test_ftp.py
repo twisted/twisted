@@ -1044,6 +1044,48 @@ class FTPFileListingTests(unittest.TestCase):
                             'incorrect unparsable lines: %s' % repr(others))
         return self.getFilesForLines(['ABC', 'not a file']).addCallback(check)
 
+    def test_filenameWithUnescapedSpace(self):
+        '''
+        Will parse filenames and linktargets containing unescaped
+        space characters.
+        '''
+        line1 = 'drw-r--r--   2 root     other        531 Jan  9  2003 A B'
+        line2 = (
+            'lrw-r--r--   1 root     other          1 Jan 29 03:26 '
+            'B A -> D C/A B'
+            )
+
+        def check((files, others)):
+            self.assertEqual([], others, 'unexpected others entries')
+            self.assertEqual(
+                'A B', files[0]['filename'], 'misparsed filename')
+            self.assertEqual(
+                'B A', files[1]['filename'], 'misparsed filename')
+            self.assertEqual(
+                'D C/A B', files[1]['linktarget'], 'misparsed linktarget')
+        return self.getFilesForLines([line1, line2]).addCallback(check)
+
+    def test_filenameWithEscapedSpace(self):
+        '''
+        Will parse filenames and linktargets containing escaped
+        space characters.
+        '''
+        line1 = 'drw-r--r--   2 root     other        531 Jan  9  2003 A\ B'
+        line2 = (
+            'lrw-r--r--   1 root     other          1 Jan 29 03:26 '
+            'B A -> D\ C/A B'
+            )
+
+        def check((files, others)):
+            self.assertEqual([], others, 'unexpected others entries')
+            self.assertEqual(
+                'A B', files[0]['filename'], 'misparsed filename')
+            self.assertEqual(
+                'B A', files[1]['filename'], 'misparsed filename')
+            self.assertEqual(
+                'D C/A B', files[1]['linktarget'], 'misparsed linktarget')
+        return self.getFilesForLines([line1, line2]).addCallback(check)
+
     def testYear(self):
         # This example derived from bug description in issue 514.
         fileList = ftp.FTPFileListProtocol()

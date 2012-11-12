@@ -2960,12 +2960,24 @@ class FTPFileListProtocol(basic.LineReceiver):
     date.  Check U{http://cr.yp.to/ftp.html} if you really want to try to parse
     it.
 
+    It also matches the following::
+        -rw-r--r--   1 root     other        531 Jan 29 03:26 I HAVE\ SPACE
+           - filename:   e.g. 'I HAVE SPACE'
+
+        -rw-r--r--   1 root     other        531 Jan 29 03:26 LINK -> TARGET
+           - filename:   e.g. 'LINK'
+           - linktarget: e.g. 'TARGET'
+
+        -rw-r--r--   1 root     other        531 Jan 29 03:26 N S -> L S
+           - filename:   e.g. 'N S'
+           - linktarget: e.g. 'L S'
+
     @ivar files: list of dicts describing the files in this listing
     """
     fileLinePattern = re.compile(
         r'^(?P<filetype>.)(?P<perms>.{9})\s+(?P<nlinks>\d*)\s*'
         r'(?P<owner>\S+)\s+(?P<group>\S+)\s+(?P<size>\d+)\s+'
-        r'(?P<date>...\s+\d+\s+[\d:]+)\s+(?P<filename>([^ ]|\\ )*?)'
+        r'(?P<date>...\s+\d+\s+[\d:]+)\s+(?P<filename>.{1,}?)'
         r'( -> (?P<linktarget>[^\r]*))?\r?$'
     )
     delimiter = '\n'
