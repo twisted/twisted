@@ -1213,10 +1213,7 @@ class HostnameEndpointsFasterConnectionTestCase(unittest.TestCase):
         d.addCallback(results.append)
 
         self.mreactor.advance(0.3)
-        print self.mreactor.tcpClients
-
         (host, port, factory, timeout, bindAddress) = self.mreactor.tcpClients[1]
-
 
         # IPv6 ought to be the second attempt, since nameResolution (standing in
         # for GAI here) returned it second.
@@ -1240,10 +1237,29 @@ class HostnameEndpointsFasterConnectionTestCase(unittest.TestCase):
 
 
     def test_OtherConnectionsCancelled(self):
-        pass
+        """"
+        Once the endpoint returns a succesful connection, all the
+        other pending connections are cancelled.
+        """
+        clientFactory = protocol.Factory()
+        clientFactory.protocol = protocol.Protocol
 
+        d = self.endpoint.connect(clientFactory)
+        results = []
+        d.addCallback(results.append)
 
+        self.mreactor.advance(0.3)
+        (host, port, factory, timeout, bindAddress) = self.mreactor.tcpClients[1]
 
+        # The IPv6 attempt succeeds.
+        proto = factory.buildProtocol((host, port))
+        fakeTransport = object()
+
+        # Establish the connection.
+        proto.makeConnection(fakeTransport)
+
+        # Now, the pending IPv4 connection should have been cancelled.
+        # TODO: Check the list of pending connections.
 
 #_______________________________________________________________________________________________________
 

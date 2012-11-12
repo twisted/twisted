@@ -525,8 +525,8 @@ class HostnameEndpoint(object):
                 if lc.running:
                     lc.stop()
                 successful.append(True)
-                for p in pending[:]:
-                    p.cancel()
+#                for p in pending[:]:
+#                    p.cancel()
                 winner.callback(connResult)
                 return None
 
