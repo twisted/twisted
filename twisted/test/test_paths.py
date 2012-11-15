@@ -561,7 +561,7 @@ class PermissionsTestCase(BytesTestCase):
         for u in range(0, 8):
             for g in range(0, 8):
                 for o in range(0, 8):
-                    perm = filepath.Permissions(eval("0o%d%d%d" % (u, g, o)))
+                    perm = filepath.Permissions(int("0o%d%d%d" % (u, g, o), 8))
                     self.assertEqual(perm.shorthand(),
                                       ''.join(x.shorthand() for x in (
                                           perm.user, perm.group, perm.other)))
