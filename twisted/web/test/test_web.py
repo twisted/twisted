@@ -5,23 +5,39 @@
 Tests for various parts of L{twisted.web}.
 """
 
-from cStringIO import StringIO
 import zlib
 
-from zope.interface import implements
+from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
+from twisted.python.compat import (_PY3, networkString,
+                                   NativeStringIO as StringIO)
 from twisted.trial import unittest
 from twisted.internet import reactor
 from twisted.internet.address import IPv4Address
-from twisted.internet.defer import Deferred
-from twisted.web import server, resource, util
-from twisted.internet import defer, interfaces, task
-from twisted.web import iweb, http, http_headers, error
-from twisted.web.static import Data
+from twisted.web import server, resource
+from twisted.internet import task
+from twisted.web import iweb, http, error
 from twisted.python import log
 
 from twisted.web.test.requesthelper import DummyChannel, DummyRequest
+
+# Remove this in #6177, when static is ported to Python 3:
+if _PY3:
+    class Data(resource.Resource):
+        def __init__(self, data, type):
+            resource.Resource.__init__(self)
+            self.data = data
+            self.type = type
+
+
+        def render_GET(self, request):
+            request.setHeader(b"content-type", self.type)
+            request.setHeader(b"content-length",
+                              networkString(str(len(self.data))))
+            return self.data
+else:
+    from twisted.web.static import Data
 
 
 class ResourceTestCase(unittest.TestCase):
@@ -44,27 +60,27 @@ class SimpleResource(resource.Resource):
     def render(self, request):
         if self._contentType is not None:
             request.responseHeaders.setRawHeaders(
-                "content-type", [self._contentType])
+                b"content-type", [self._contentType])
 
         if http.CACHED in (request.setLastModified(10),
-                           request.setETag('MatchingTag')):
-            return ''
+                           request.setETag(b'MatchingTag')):
+            return b''
         else:
-            return "correct"
+            return b"correct"
 
 
 class SiteTest(unittest.TestCase):
     def test_simplestSite(self):
         """
-        L{Site.getResourceFor} returns the C{""} child of the root resource it
+        L{Site.getResourceFor} returns the C{b""} child of the root resource it
         is constructed with when processing a request for I{/}.
         """
         sres1 = SimpleResource()
         sres2 = SimpleResource()
-        sres1.putChild("",sres2)
+        sres1.putChild(b"",sres2)
         site = server.Site(sres1)
         self.assertIdentical(
-            site.getResourceFor(DummyRequest([''])),
+            site.getResourceFor(DummyRequest([b''])),
             sres2, "Got the wrong resource.")
 
 
@@ -79,7 +95,7 @@ class SessionTest(unittest.TestCase):
         controlled clock.
         """
         self.clock = task.Clock()
-        self.uid = 'unique'
+        self.uid = b'unique'
         self.site = server.Site(resource.Resource())
         self.session = server.Session(self.site, self.uid, self.clock)
         self.site.sessions[self.uid] = self.session
@@ -90,7 +106,7 @@ class SessionTest(unittest.TestCase):
         If not value is passed to L{server.Session.__init__}, the global
         reactor is used.
         """
-        session = server.Session(server.Site(resource.Resource()), '123')
+        session = server.Session(server.Site(resource.Resource()), b'123')
         self.assertIdentical(session._reactor, reactor)
 
 
@@ -208,18 +224,18 @@ class SessionTest(unittest.TestCase):
 #      no body
 
 def httpBody(whole):
-    return whole.split('\r\n\r\n', 1)[1]
+    return whole.split(b'\r\n\r\n', 1)[1]
 
 def httpHeader(whole, key):
     key = key.lower()
-    headers = whole.split('\r\n\r\n', 1)[0]
-    for header in headers.split('\r\n'):
+    headers = whole.split(b'\r\n\r\n', 1)[0]
+    for header in headers.split(b'\r\n'):
         if header.lower().startswith(key):
-            return header.split(':', 1)[1].strip()
+            return header.split(b':', 1)[1].strip()
     return None
 
 def httpCode(whole):
-    l1 = whole.split('\r\n', 1)[0]
+    l1 = whole.split(b'\r\n', 1)[0]
     return int(l1.split()[1])
 
 class ConditionalTest(unittest.TestCase):
@@ -228,8 +244,8 @@ class ConditionalTest(unittest.TestCase):
     """
     def setUp(self):
         self.resrc = SimpleResource()
-        self.resrc.putChild('', self.resrc)
-        self.resrc.putChild('with-content-type', SimpleResource('image/jpeg'))
+        self.resrc.putChild(b'', self.resrc)
+        self.resrc.putChild(b'with-content-type', SimpleResource(b'image/jpeg'))
         self.site = server.Site(self.resrc)
         self.site.logFile = log.logfile
 
@@ -255,15 +271,15 @@ class ConditionalTest(unittest.TestCase):
         returned.
         """
         if modifiedSince is not None:
-            validator = "If-Modified-Since: " + modifiedSince
+            validator = b"If-Modified-Since: " + modifiedSince
         else:
-            validator = "If-Not-Match: " + etag
-        for line in ["GET / HTTP/1.1", validator, ""]:
+            validator = b"If-Not-Match: " + etag
+        for line in [b"GET / HTTP/1.1", validator, b""]:
             self.channel.lineReceived(line)
         result = self.transport.getvalue()
         self.assertEqual(httpCode(result), http.OK)
-        self.assertEqual(httpBody(result), "correct")
-        self.assertEqual(httpHeader(result, "Content-Type"), "text/html")
+        self.assertEqual(httpBody(result), b"correct")
+        self.assertEqual(httpHeader(result, b"Content-Type"), b"text/html")
 
 
     def test_modified(self):
@@ -283,16 +299,16 @@ class ConditionalTest(unittest.TestCase):
         resource, a 304 response is returned along with an empty response body
         and no Content-Type header if the application does not set one.
         """
-        for line in ["GET / HTTP/1.1",
-                     "If-Modified-Since: " + http.datetimeToString(100), ""]:
+        for line in [b"GET / HTTP/1.1",
+                     b"If-Modified-Since: " + http.datetimeToString(100), b""]:
             self.channel.lineReceived(line)
         result = self.transport.getvalue()
         self.assertEqual(httpCode(result), http.NOT_MODIFIED)
-        self.assertEqual(httpBody(result), "")
+        self.assertEqual(httpBody(result), b"")
         # Since there SHOULD NOT (RFC 2616, section 10.3.5) be any
         # entity-headers, the Content-Type is not set if the application does
         # not explicitly set it.
-        self.assertEqual(httpHeader(result, "Content-Type"), None)
+        self.assertEqual(httpHeader(result, b"Content-Type"), None)
 
 
     def test_invalidTimestamp(self):
@@ -302,7 +318,7 @@ class ConditionalTest(unittest.TestCase):
         and a normal 200 response is returned with a response body
         containing the resource.
         """
-        self._modifiedTest(modifiedSince="like, maybe a week ago, I guess?")
+        self._modifiedTest(modifiedSince=b"like, maybe a week ago, I guess?")
 
 
     def test_invalidTimestampYear(self):
@@ -312,7 +328,7 @@ class ConditionalTest(unittest.TestCase):
         header is treated as not having been present and a normal 200
         response is returned with a response body containing the resource.
         """
-        self._modifiedTest(modifiedSince="Thu, 01 Jan blah 00:00:10 GMT")
+        self._modifiedTest(modifiedSince=b"Thu, 01 Jan blah 00:00:10 GMT")
 
 
     def test_invalidTimestampTooLongAgo(self):
@@ -322,7 +338,7 @@ class ConditionalTest(unittest.TestCase):
         having been present and a normal 200 response is returned with a
         response body containing the resource.
         """
-        self._modifiedTest(modifiedSince="Thu, 01 Jan 1899 00:00:10 GMT")
+        self._modifiedTest(modifiedSince=b"Thu, 01 Jan 1899 00:00:10 GMT")
 
 
     def test_invalidTimestampMonth(self):
@@ -333,7 +349,7 @@ class ConditionalTest(unittest.TestCase):
         and a normal 200 response is returned with a response body
         containing the resource.
         """
-        self._modifiedTest(modifiedSince="Thu, 01 Blah 1970 00:00:10 GMT")
+        self._modifiedTest(modifiedSince=b"Thu, 01 Blah 1970 00:00:10 GMT")
 
 
     def test_etagMatchedNot(self):
@@ -343,7 +359,7 @@ class ConditionalTest(unittest.TestCase):
         having been present and a normal 200 response is returned with a
         response body containing the resource.
         """
-        self._modifiedTest(etag="unmatchedTag")
+        self._modifiedTest(etag=b"unmatchedTag")
 
 
     def test_etagMatched(self):
@@ -352,12 +368,12 @@ class ConditionalTest(unittest.TestCase):
         current ETag of the requested resource, a 304 response is returned along
         with an empty response body.
         """
-        for line in ["GET / HTTP/1.1", "If-None-Match: MatchingTag", ""]:
+        for line in [b"GET / HTTP/1.1", b"If-None-Match: MatchingTag", b""]:
             self.channel.lineReceived(line)
         result = self.transport.getvalue()
-        self.assertEqual(httpHeader(result, "ETag"), "MatchingTag")
+        self.assertEqual(httpHeader(result, b"ETag"), b"MatchingTag")
         self.assertEqual(httpCode(result), http.NOT_MODIFIED)
-        self.assertEqual(httpBody(result), "")
+        self.assertEqual(httpBody(result), b"")
 
 
     def test_unmodifiedWithContentType(self):
@@ -369,13 +385,13 @@ class ConditionalTest(unittest.TestCase):
         section 10.3.5.  It will only be present if the application explicitly
         sets it.
         """
-        for line in ["GET /with-content-type HTTP/1.1",
-                     "If-None-Match: MatchingTag", ""]:
+        for line in [b"GET /with-content-type HTTP/1.1",
+                     b"If-None-Match: MatchingTag", b""]:
             self.channel.lineReceived(line)
         result = self.transport.getvalue()
         self.assertEqual(httpCode(result), http.NOT_MODIFIED)
-        self.assertEqual(httpBody(result), "")
-        self.assertEqual(httpHeader(result, "Content-Type"), "image/jpeg")
+        self.assertEqual(httpBody(result), b"")
+        self.assertEqual(httpHeader(result, b"Content-Type"), b"image/jpeg")
 
 
 
@@ -395,76 +411,76 @@ class RequestTests(unittest.TestCase):
     def testChildLink(self):
         request = server.Request(DummyChannel(), 1)
         request.gotLength(0)
-        request.requestReceived('GET', '/foo/bar', 'HTTP/1.0')
-        self.assertEqual(request.childLink('baz'), 'bar/baz')
+        request.requestReceived(b'GET', b'/foo/bar', b'HTTP/1.0')
+        self.assertEqual(request.childLink(b'baz'), b'bar/baz')
         request = server.Request(DummyChannel(), 1)
         request.gotLength(0)
-        request.requestReceived('GET', '/foo/bar/', 'HTTP/1.0')
-        self.assertEqual(request.childLink('baz'), 'baz')
+        request.requestReceived(b'GET', b'/foo/bar/', b'HTTP/1.0')
+        self.assertEqual(request.childLink(b'baz'), b'baz')
 
     def testPrePathURLSimple(self):
         request = server.Request(DummyChannel(), 1)
         request.gotLength(0)
-        request.requestReceived('GET', '/foo/bar', 'HTTP/1.0')
-        request.setHost('example.com', 80)
-        self.assertEqual(request.prePathURL(), 'http://example.com/foo/bar')
+        request.requestReceived(b'GET', b'/foo/bar', b'HTTP/1.0')
+        request.setHost(b'example.com', 80)
+        self.assertEqual(request.prePathURL(), b'http://example.com/foo/bar')
 
     def testPrePathURLNonDefault(self):
         d = DummyChannel()
         d.transport.port = 81
         request = server.Request(d, 1)
-        request.setHost('example.com', 81)
+        request.setHost(b'example.com', 81)
         request.gotLength(0)
-        request.requestReceived('GET', '/foo/bar', 'HTTP/1.0')
-        self.assertEqual(request.prePathURL(), 'http://example.com:81/foo/bar')
+        request.requestReceived(b'GET', b'/foo/bar', b'HTTP/1.0')
+        self.assertEqual(request.prePathURL(), b'http://example.com:81/foo/bar')
 
     def testPrePathURLSSLPort(self):
         d = DummyChannel()
         d.transport.port = 443
         request = server.Request(d, 1)
-        request.setHost('example.com', 443)
+        request.setHost(b'example.com', 443)
         request.gotLength(0)
-        request.requestReceived('GET', '/foo/bar', 'HTTP/1.0')
-        self.assertEqual(request.prePathURL(), 'http://example.com:443/foo/bar')
+        request.requestReceived(b'GET', b'/foo/bar', b'HTTP/1.0')
+        self.assertEqual(request.prePathURL(), b'http://example.com:443/foo/bar')
 
     def testPrePathURLSSLPortAndSSL(self):
         d = DummyChannel()
         d.transport = DummyChannel.SSL()
         d.transport.port = 443
         request = server.Request(d, 1)
-        request.setHost('example.com', 443)
+        request.setHost(b'example.com', 443)
         request.gotLength(0)
-        request.requestReceived('GET', '/foo/bar', 'HTTP/1.0')
-        self.assertEqual(request.prePathURL(), 'https://example.com/foo/bar')
+        request.requestReceived(b'GET', b'/foo/bar', b'HTTP/1.0')
+        self.assertEqual(request.prePathURL(), b'https://example.com/foo/bar')
 
     def testPrePathURLHTTPPortAndSSL(self):
         d = DummyChannel()
         d.transport = DummyChannel.SSL()
         d.transport.port = 80
         request = server.Request(d, 1)
-        request.setHost('example.com', 80)
+        request.setHost(b'example.com', 80)
         request.gotLength(0)
-        request.requestReceived('GET', '/foo/bar', 'HTTP/1.0')
-        self.assertEqual(request.prePathURL(), 'https://example.com:80/foo/bar')
+        request.requestReceived(b'GET', b'/foo/bar', b'HTTP/1.0')
+        self.assertEqual(request.prePathURL(), b'https://example.com:80/foo/bar')
 
     def testPrePathURLSSLNonDefault(self):
         d = DummyChannel()
         d.transport = DummyChannel.SSL()
         d.transport.port = 81
         request = server.Request(d, 1)
-        request.setHost('example.com', 81)
+        request.setHost(b'example.com', 81)
         request.gotLength(0)
-        request.requestReceived('GET', '/foo/bar', 'HTTP/1.0')
-        self.assertEqual(request.prePathURL(), 'https://example.com:81/foo/bar')
+        request.requestReceived(b'GET', b'/foo/bar', b'HTTP/1.0')
+        self.assertEqual(request.prePathURL(), b'https://example.com:81/foo/bar')
 
     def testPrePathURLSetSSLHost(self):
         d = DummyChannel()
         d.transport.port = 81
         request = server.Request(d, 1)
-        request.setHost('foo.com', 81, 1)
+        request.setHost(b'foo.com', 81, 1)
         request.gotLength(0)
-        request.requestReceived('GET', '/foo/bar', 'HTTP/1.0')
-        self.assertEqual(request.prePathURL(), 'https://foo.com:81/foo/bar')
+        request.requestReceived(b'GET', b'/foo/bar', b'HTTP/1.0')
+        self.assertEqual(request.prePathURL(), b'https://foo.com:81/foo/bar')
 
 
     def test_prePathURLQuoting(self):
@@ -474,21 +490,24 @@ class RequestTests(unittest.TestCase):
         """
         d = DummyChannel()
         request = server.Request(d, 1)
-        request.setHost('example.com', 80)
+        request.setHost(b'example.com', 80)
         request.gotLength(0)
-        request.requestReceived('GET', '/foo%2Fbar', 'HTTP/1.0')
-        self.assertEqual(request.prePathURL(), 'http://example.com/foo%2Fbar')
+        request.requestReceived(b'GET', b'/foo%2Fbar', b'HTTP/1.0')
+        self.assertEqual(request.prePathURL(), b'http://example.com/foo%2Fbar')
 
 
 
 class GzipEncoderTests(unittest.TestCase):
 
+    if _PY3:
+        skip = "GzipEncoder not ported to Python 3 yet."
+
     def setUp(self):
         self.channel = DummyChannel()
-        staticResource = Data("Some data", "text/plain")
+        staticResource = Data(b"Some data", b"text/plain")
         wrapped = resource.EncodingResourceWrapper(
             staticResource, [server.GzipEncoderFactory()])
-        self.channel.site.resource.putChild("foo", wrapped)
+        self.channel.site.resource.putChild(b"foo", wrapped)
 
 
     def test_interfaces(self):
@@ -500,8 +519,8 @@ class GzipEncoderTests(unittest.TestCase):
         """
         request = server.Request(self.channel, False)
         request.gotLength(0)
-        request.requestHeaders.setRawHeaders("Accept-Encoding",
-                                             ["gzip,deflate"])
+        request.requestHeaders.setRawHeaders(b"Accept-Encoding",
+                                             [b"gzip,deflate"])
         factory = server.GzipEncoderFactory()
         self.assertTrue(verifyObject(iweb._IRequestEncoderFactory, factory))
 
@@ -516,14 +535,14 @@ class GzipEncoderTests(unittest.TestCase):
         """
         request = server.Request(self.channel, False)
         request.gotLength(0)
-        request.requestHeaders.setRawHeaders("Accept-Encoding",
-                                             ["gzip,deflate"])
-        request.requestReceived('GET', '/foo', 'HTTP/1.0')
+        request.requestHeaders.setRawHeaders(b"Accept-Encoding",
+                                             [b"gzip,deflate"])
+        request.requestReceived(b'GET', b'/foo', b'HTTP/1.0')
         data = self.channel.transport.written.getvalue()
-        self.assertNotIn("Content-Length", data)
-        self.assertIn("Content-Encoding: gzip\r\n", data)
-        body = data[data.find("\r\n\r\n") + 4:]
-        self.assertEqual("Some data",
+        self.assertNotIn(b"Content-Length", data)
+        self.assertIn(b"Content-Encoding: gzip\r\n", data)
+        body = data[data.find(b"\r\n\r\n") + 4:]
+        self.assertEqual(b"Some data",
                           zlib.decompress(body, 16 + zlib.MAX_WBITS))
 
 
@@ -534,14 +553,14 @@ class GzipEncoderTests(unittest.TestCase):
         """
         request = server.Request(self.channel, False)
         request.gotLength(0)
-        request.requestHeaders.setRawHeaders("Accept-Encoding",
-                                             ["foo,bar"])
-        request.requestReceived('GET', '/foo', 'HTTP/1.0')
+        request.requestHeaders.setRawHeaders(b"Accept-Encoding",
+                                             [b"foo,bar"])
+        request.requestReceived(b'GET', b'/foo', b'HTTP/1.0')
         data = self.channel.transport.written.getvalue()
-        self.assertIn("Content-Length", data)
-        self.assertNotIn("Content-Encoding: gzip\r\n", data)
-        body = data[data.find("\r\n\r\n") + 4:]
-        self.assertEqual("Some data", body)
+        self.assertIn(b"Content-Length", data)
+        self.assertNotIn(b"Content-Encoding: gzip\r\n", data)
+        body = data[data.find(b"\r\n\r\n") + 4:]
+        self.assertEqual(b"Some data", body)
 
 
     def test_multipleAccept(self):
@@ -552,14 +571,14 @@ class GzipEncoderTests(unittest.TestCase):
         """
         request = server.Request(self.channel, False)
         request.gotLength(0)
-        request.requestHeaders.setRawHeaders("Accept-Encoding",
-                                             ["deflate", "gzip"])
-        request.requestReceived('GET', '/foo', 'HTTP/1.0')
+        request.requestHeaders.setRawHeaders(b"Accept-Encoding",
+                                             [b"deflate", b"gzip"])
+        request.requestReceived(b'GET', b'/foo', b'HTTP/1.0')
         data = self.channel.transport.written.getvalue()
-        self.assertNotIn("Content-Length", data)
-        self.assertIn("Content-Encoding: gzip\r\n", data)
-        body = data[data.find("\r\n\r\n") + 4:]
-        self.assertEqual("Some data",
+        self.assertNotIn(b"Content-Length", data)
+        self.assertIn(b"Content-Encoding: gzip\r\n", data)
+        body = data[data.find(b"\r\n\r\n") + 4:]
+        self.assertEqual(b"Some data",
                          zlib.decompress(body, 16 + zlib.MAX_WBITS))
 
 
@@ -570,16 +589,16 @@ class GzipEncoderTests(unittest.TestCase):
         """
         request = server.Request(self.channel, False)
         request.gotLength(0)
-        request.requestHeaders.setRawHeaders("Accept-Encoding",
-                                             ["deflate", "gzip"])
-        request.responseHeaders.setRawHeaders("Content-Encoding",
-                                             ["deflate"])
-        request.requestReceived('GET', '/foo', 'HTTP/1.0')
+        request.requestHeaders.setRawHeaders(b"Accept-Encoding",
+                                             [b"deflate", b"gzip"])
+        request.responseHeaders.setRawHeaders(b"Content-Encoding",
+                                             [b"deflate"])
+        request.requestReceived(b'GET', b'/foo', b'HTTP/1.0')
         data = self.channel.transport.written.getvalue()
-        self.assertNotIn("Content-Length", data)
-        self.assertIn("Content-Encoding: deflate,gzip\r\n", data)
-        body = data[data.find("\r\n\r\n") + 4:]
-        self.assertEqual("Some data",
+        self.assertNotIn(b"Content-Length", data)
+        self.assertIn(b"Content-Encoding: deflate,gzip\r\n", data)
+        body = data[data.find(b"\r\n\r\n") + 4:]
+        self.assertEqual(b"Some data",
                          zlib.decompress(body, 16 + zlib.MAX_WBITS))
 
 
@@ -591,16 +610,16 @@ class GzipEncoderTests(unittest.TestCase):
         """
         request = server.Request(self.channel, False)
         request.gotLength(0)
-        request.requestHeaders.setRawHeaders("Accept-Encoding",
-                                             ["deflate", "gzip"])
-        request.responseHeaders.setRawHeaders("Content-Encoding",
-                                             ["foo", "bar"])
-        request.requestReceived('GET', '/foo', 'HTTP/1.0')
+        request.requestHeaders.setRawHeaders(b"Accept-Encoding",
+                                             [b"deflate", b"gzip"])
+        request.responseHeaders.setRawHeaders(b"Content-Encoding",
+                                             [b"foo", b"bar"])
+        request.requestReceived(b'GET', b'/foo', b'HTTP/1.0')
         data = self.channel.transport.written.getvalue()
-        self.assertNotIn("Content-Length", data)
-        self.assertIn("Content-Encoding: foo,bar,gzip\r\n", data)
-        body = data[data.find("\r\n\r\n") + 4:]
-        self.assertEqual("Some data",
+        self.assertNotIn(b"Content-Length", data)
+        self.assertIn(b"Content-Encoding: foo,bar,gzip\r\n", data)
+        body = data[data.find(b"\r\n\r\n") + 4:]
+        self.assertEqual(b"Some data",
                          zlib.decompress(body, 16 + zlib.MAX_WBITS))
 
 
@@ -623,46 +642,46 @@ class RememberURLTest(unittest.TestCase):
         r = resource.Resource()
         r.isLeaf=0
         rr = RootResource()
-        r.putChild('foo', rr)
-        rr.putChild('', rr)
-        rr.putChild('bar', resource.Resource())
+        r.putChild(b'foo', rr)
+        rr.putChild(b'', rr)
+        rr.putChild(b'bar', resource.Resource())
         chan = self.createServer(r)
-        for url in ['/foo/', '/foo/bar', '/foo/bar/baz', '/foo/bar/']:
+        for url in [b'/foo/', b'/foo/bar', b'/foo/bar/baz', b'/foo/bar/']:
             request = server.Request(chan, 1)
-            request.setHost('example.com', 81)
+            request.setHost(b'example.com', 81)
             request.gotLength(0)
-            request.requestReceived('GET', url, 'HTTP/1.0')
-            self.assertEqual(request.getRootURL(), "http://example.com/foo")
+            request.requestReceived(b'GET', url, b'HTTP/1.0')
+            self.assertEqual(request.getRootURL(), b"http://example.com/foo")
 
     def testRoot(self):
         rr = RootResource()
-        rr.putChild('', rr)
-        rr.putChild('bar', resource.Resource())
+        rr.putChild(b'', rr)
+        rr.putChild(b'bar', resource.Resource())
         chan = self.createServer(rr)
-        for url in ['/', '/bar', '/bar/baz', '/bar/']:
+        for url in [b'/', b'/bar', b'/bar/baz', b'/bar/']:
             request = server.Request(chan, 1)
-            request.setHost('example.com', 81)
+            request.setHost(b'example.com', 81)
             request.gotLength(0)
-            request.requestReceived('GET', url, 'HTTP/1.0')
-            self.assertEqual(request.getRootURL(), "http://example.com/")
+            request.requestReceived(b'GET', url, b'HTTP/1.0')
+            self.assertEqual(request.getRootURL(), b"http://example.com/")
 
 
 class NewRenderResource(resource.Resource):
     def render_GET(self, request):
-        return "hi hi"
+        return b"hi hi"
 
     def render_HEH(self, request):
-        return "ho ho"
+        return b"ho ho"
 
 
 
+@implementer(resource.IResource)
 class HeadlessResource(object):
     """
     A resource that implements GET but not HEAD.
     """
-    implements(resource.IResource)
 
-    allowedMethods = ["GET"]
+    allowedMethods = [b"GET"]
 
     def render(self, request):
         """
@@ -671,9 +690,8 @@ class HeadlessResource(object):
         self.request = request
         if request.method not in self.allowedMethods:
             raise error.UnsupportedMethod(self.allowedMethods)
-        self.request.write("some data")
+        self.request.write(b"some data")
         return server.NOT_DONE_YET
-
 
 
 
@@ -690,36 +708,36 @@ class NewRenderTestCase(unittest.TestCase):
         d = DummyChannel()
         if resource is None:
             resource = NewRenderResource()
-        d.site.resource.putChild('newrender', resource)
+        d.site.resource.putChild(b'newrender', resource)
         d.transport.port = 81
         request = server.Request(d, 1)
-        request.setHost('example.com', 81)
+        request.setHost(b'example.com', 81)
         request.gotLength(0)
         return request
 
     def testGoodMethods(self):
         req = self._getReq()
-        req.requestReceived('GET', '/newrender', 'HTTP/1.0')
-        self.assertEqual(req.transport.getvalue().splitlines()[-1], 'hi hi')
+        req.requestReceived(b'GET', b'/newrender', b'HTTP/1.0')
+        self.assertEqual(req.transport.getvalue().splitlines()[-1], b'hi hi')
 
         req = self._getReq()
-        req.requestReceived('HEH', '/newrender', 'HTTP/1.0')
-        self.assertEqual(req.transport.getvalue().splitlines()[-1], 'ho ho')
+        req.requestReceived(b'HEH', b'/newrender', b'HTTP/1.0')
+        self.assertEqual(req.transport.getvalue().splitlines()[-1], b'ho ho')
 
     def testBadMethods(self):
         req = self._getReq()
-        req.requestReceived('CONNECT', '/newrender', 'HTTP/1.0')
+        req.requestReceived(b'CONNECT', b'/newrender', b'HTTP/1.0')
         self.assertEqual(req.code, 501)
 
         req = self._getReq()
-        req.requestReceived('hlalauguG', '/newrender', 'HTTP/1.0')
+        req.requestReceived(b'hlalauguG', b'/newrender', b'HTTP/1.0')
         self.assertEqual(req.code, 501)
 
     def testImplicitHead(self):
         req = self._getReq()
-        req.requestReceived('HEAD', '/newrender', 'HTTP/1.0')
+        req.requestReceived(b'HEAD', b'/newrender', b'HTTP/1.0')
         self.assertEqual(req.code, 200)
-        self.assertEqual(-1, req.transport.getvalue().find('hi hi'))
+        self.assertEqual(-1, req.transport.getvalue().find(b'hi hi'))
 
 
     def test_unsupportedHead(self):
@@ -729,10 +747,10 @@ class NewRenderTestCase(unittest.TestCase):
         """
         resource = HeadlessResource()
         req = self._getReq(resource)
-        req.requestReceived("HEAD", "/newrender", "HTTP/1.0")
-        headers, body = req.transport.getvalue().split('\r\n\r\n')
+        req.requestReceived(b"HEAD", b"/newrender", b"HTTP/1.0")
+        headers, body = req.transport.getvalue().split(b'\r\n\r\n')
         self.assertEqual(req.code, 200)
-        self.assertEqual(body, '')
+        self.assertEqual(body, b'')
 
 
 
@@ -758,16 +776,18 @@ class AllowedMethodsTest(unittest.TestCase):
     default should the subclass not provide the method.
     """
 
+    if _PY3:
+        skip = "Allowed methods functionality not ported to Python 3."
 
     def _getReq(self):
         """
         Generate a dummy request for use by C{_computeAllowedMethod} tests.
         """
         d = DummyChannel()
-        d.site.resource.putChild('gettableresource', GettableResource())
+        d.site.resource.putChild(b'gettableresource', GettableResource())
         d.transport.port = 81
         request = server.Request(d, 1)
-        request.setHost('example.com', 81)
+        request.setHost(b'example.com', 81)
         request.gotLength(0)
         return request
 
@@ -783,7 +803,7 @@ class AllowedMethodsTest(unittest.TestCase):
         res = GettableResource()
         allowedMethods = resource._computeAllowedMethods(res)
         self.assertEqual(set(allowedMethods),
-                          set(['GET', 'HEAD', 'fred_render_ethel']))
+                          set([b'GET', b'HEAD', b'fred_render_ethel']))
 
 
     def test_notAllowed(self):
@@ -795,11 +815,11 @@ class AllowedMethodsTest(unittest.TestCase):
         'Allow' header.
         """
         req = self._getReq()
-        req.requestReceived('POST', '/gettableresource', 'HTTP/1.0')
+        req.requestReceived(b'POST', b'/gettableresource', b'HTTP/1.0')
         self.assertEqual(req.code, 405)
         self.assertEqual(
-            set(req.responseHeaders.getRawHeaders('allow')[0].split(", ")),
-            set(['GET', 'HEAD','fred_render_ethel'])
+            set(req.responseHeaders.getRawHeaders(b'allow')[0].split(b", ")),
+            set([b'GET', b'HEAD', b'fred_render_ethel'])
         )
 
 
@@ -811,12 +831,12 @@ class AllowedMethodsTest(unittest.TestCase):
         trusted.
         """
         req = self._getReq()
-        req.requestReceived('POST', '/gettableresource?'
-                            'value=<script>bad', 'HTTP/1.0')
+        req.requestReceived(b'POST', b'/gettableresource?'
+                            b'value=<script>bad', b'HTTP/1.0')
         self.assertEqual(req.code, 405)
         renderedPage = req.transport.getvalue()
-        self.assertNotIn("<script>bad", renderedPage)
-        self.assertIn('&lt;script&gt;bad', renderedPage)
+        self.assertNotIn(b"<script>bad", renderedPage)
+        self.assertIn(b'&lt;script&gt;bad', renderedPage)
 
 
     def test_notImplementedQuoting(self):
@@ -827,62 +847,19 @@ class AllowedMethodsTest(unittest.TestCase):
         necessarily be trusted.
         """
         req = self._getReq()
-        req.requestReceived('<style>bad', '/gettableresource', 'HTTP/1.0')
+        req.requestReceived(b'<style>bad', b'/gettableresource', b'HTTP/1.0')
         self.assertEqual(req.code, 501)
         renderedPage = req.transport.getvalue()
-        self.assertNotIn("<style>bad", renderedPage)
-        self.assertIn('&lt;style&gt;bad', renderedPage)
-
-
-
-class SDResource(resource.Resource):
-    def __init__(self,default):
-        self.default = default
-
-
-    def getChildWithDefault(self, name, request):
-        d = defer.succeed(self.default)
-        resource = util.DeferredResource(d)
-        return resource.getChildWithDefault(name, request)
-
-
-
-class DeferredResourceTests(unittest.TestCase):
-    """
-    Tests for L{DeferredResource}.
-    """
-
-    def testDeferredResource(self):
-        r = resource.Resource()
-        r.isLeaf = 1
-        s = SDResource(r)
-        d = DummyRequest(['foo', 'bar', 'baz'])
-        resource.getChildForRequest(s, d)
-        self.assertEqual(d.postpath, ['bar', 'baz'])
-
-
-    def test_render(self):
-        """
-        L{DeferredResource} uses the request object's C{render} method to
-        render the resource which is the result of the L{Deferred} being
-        handled.
-        """
-        rendered = []
-        request = DummyRequest([])
-        request.render = rendered.append
-
-        result = resource.Resource()
-        deferredResource = util.DeferredResource(defer.succeed(result))
-        deferredResource.render(request)
-        self.assertEqual(rendered, [result])
+        self.assertNotIn(b"<style>bad", renderedPage)
+        self.assertIn(b'&lt;style&gt;bad', renderedPage)
 
 
 
 class DummyRequestForLogTest(DummyRequest):
-    uri = '/dummy' # parent class uri has "http://", which doesn't really happen
+    uri = b'/dummy' # parent class uri has "http://", which doesn't really happen
     code = 123
 
-    clientproto = 'HTTP/1.0'
+    clientproto = b'HTTP/1.0'
     sentLength = None
     client = IPv4Address('TCP', '1.2.3.4', 12345)
 

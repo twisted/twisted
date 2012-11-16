@@ -187,6 +187,7 @@ testModules = [
     "twisted.web.test.test_http",
     "twisted.web.test.test_http_headers",
     "twisted.web.test.test_resource",
+    "twisted.web.test.test_web",
     ]
 
 # A list of any other modules which are needed by any of the modules in the
@@ -218,8 +219,15 @@ almostModules = [
     # ported, but its tests are not yet ported, so it probably doesn't
     # completely work.
     "twisted.web.error",
+    # Required by twisted.web.server, no actual code here:
+    "twisted.web.iweb",
+    # Required by twisted.web.server for an error handling case:
+    "twisted.web.html",
     # This module has a lot of missing test coverage.  What tests it has pass,
     # but it needs a lot more.  It was ported only enough to make the client
     # work.
     "twisted.web.http",
+    # GzipEncoder and allowed methods functionality not ported, no doubt
+    # missing lots of test coverage:
+    "twisted.web.server",
     ]

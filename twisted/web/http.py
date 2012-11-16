@@ -74,7 +74,8 @@ except ImportError:
 from zope.interface import implementer
 
 # twisted imports
-from twisted.python.compat import _PY3, unicode, intToBytes, networkString
+from twisted.python.compat import (_PY3, unicode, intToBytes, networkString,
+                                   nativeString)
 from twisted.internet import interfaces, reactor, protocol, address
 from twisted.internet.defer import Deferred
 from twisted.protocols import policies, basic
@@ -239,9 +240,9 @@ def stringToDatetime(dateString):
     """
     Convert an HTTP date string (one of three formats) to seconds since epoch.
 
-    @type dataString: C{bytes}
+    @type dateString: C{bytes}
     """
-    parts = dateString.split()
+    parts = nativeString(dateString).split()
 
     if not parts[0][0:3].lower() in weekdayname_lower:
         # Weekday is stupid. Might have been omitted.
@@ -351,7 +352,7 @@ class StringTransport:
     def __init__(self):
         self.s = StringIO()
     def writeSequence(self, seq):
-        self.s.write(''.join(seq))
+        self.s.write(b''.join(seq))
     def __getattr__(self, attr):
         return getattr(self.__dict__['s'], attr)
 
@@ -920,7 +921,7 @@ class Request:
                 self.chunked = 1
 
             if self.lastModified is not None:
-                if self.responseHeaders.hasHeader('last-modified'):
+                if self.responseHeaders.hasHeader(b'last-modified'):
                     log.msg("Warning: last-modified specified both in"
                             " header list and lastModified attribute.")
                 else:
@@ -929,21 +930,21 @@ class Request:
                         [datetimeToString(self.lastModified)])
 
             if self.etag is not None:
-                self.responseHeaders.setRawHeaders('ETag', [self.etag])
+                self.responseHeaders.setRawHeaders(b'ETag', [self.etag])
 
             for name, values in self.responseHeaders.getAllRawHeaders():
                 for value in values:
                     l.extend([name, b": ", value, b"\r\n"])
 
             for cookie in self.cookies:
-                l.append('%s: %s\r\n' % ("Set-Cookie", cookie))
+                l.append(networkString('Set-Cookie: %s\r\n' % (cookie,)))
 
             l.append(b"\r\n")
 
             self.transport.writeSequence(l)
 
             # if this is a "HEAD" request, we shouldn't return any data
-            if self.method == "HEAD":
+            if self.method == b"HEAD":
                 self.write = lambda data: None
                 return
 
@@ -1019,7 +1020,7 @@ class Request:
         The request should have finish() called after this.
         """
         self.setResponseCode(FOUND)
-        self.setHeader("location", url)
+        self.setHeader(b"location", url)
 
 
     def setLastModified(self, when):
@@ -1043,13 +1044,13 @@ class Request:
         """
         # time.time() may be a float, but the HTTP-date strings are
         # only good for whole seconds.
-        when = long(math.ceil(when))
+        when = int(math.ceil(when))
         if (not self.lastModified) or (self.lastModified < when):
             self.lastModified = when
 
-        modifiedSince = self.getHeader('if-modified-since')
+        modifiedSince = self.getHeader(b'if-modified-since')
         if modifiedSince:
-            firstPart = modifiedSince.split(';', 1)[0]
+            firstPart = modifiedSince.split(b';', 1)[0]
             try:
                 modifiedSince = stringToDatetime(firstPart)
             except ValueError:
@@ -1081,11 +1082,11 @@ class Request:
         if etag:
             self.etag = etag
 
-        tags = self.getHeader("if-none-match")
+        tags = self.getHeader(b"if-none-match")
         if tags:
             tags = tags.split()
-            if (etag in tags) or ('*' in tags):
-                self.setResponseCode(((self.method in ("HEAD", "GET"))
+            if (etag in tags) or (b'*' in tags):
+                self.setResponseCode(((self.method in (b"HEAD", b"GET"))
                                       and NOT_MODIFIED)
                                      or PRECONDITION_FAILED)
                 return CACHED
@@ -1114,14 +1115,14 @@ class Request:
         host we are listening on if the header is unavailable.
 
         @returns: the requested hostname
-        @rtype: C{str}
+        @rtype: C{bytes}
         """
         # XXX This method probably has no unit tests.  I changed it a ton and
         # nothing failed.
-        host = self.getHeader('host')
+        host = self.getHeader(b'host')
         if host:
-            return host.split(':', 1)[0]
-        return self.getHost().host
+            return host.split(b':', 1)[0]
+        return networkString(self.getHost().host)
 
 
     def getHost(self):
@@ -1839,6 +1840,10 @@ class HTTPFactory(protocol.ServerFactory):
     def _escape(self, s):
         # pain in the ass. Return a string like python repr, but always
         # escaped as if surrounding quotes were "".
+        try:
+            s = nativeString(s)
+        except UnicodeError:
+            pass
         r = repr(s)
         if r[0] == "'":
             return r[1:-1].replace('"', '\\"').replace("\\'", "'")

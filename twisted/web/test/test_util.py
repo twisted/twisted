@@ -7,18 +7,19 @@ Tests for L{twisted.web.util}.
 
 from twisted.python.failure import Failure
 from twisted.trial.unittest import TestCase
+from twisted.internet import defer
 from twisted.web import util
 from twisted.web.error import FlattenerError
 from twisted.web.util import (
     redirectTo, _SourceLineElement,
     _SourceFragmentElement, _FrameElement, _StackElement,
-    FailureElement, formatFailure)
+    FailureElement, formatFailure, DeferredResource)
 
 from twisted.web.http import FOUND
 from twisted.web.server import Request
 from twisted.web.template import TagLoader, flattenString, tags
-
-from twisted.web.test.test_web import DummyChannel
+from twisted.web import resource
+from twisted.web.test.requesthelper import DummyChannel, DummyRequest
 
 
 class RedirectToTestCase(TestCase):
@@ -378,3 +379,46 @@ class DeprecatedHTMLHelpers(TestCase):
         L{twisted.web.util.stylesheet} is deprecated.
         """
         self._htmlHelperDeprecationTest("stylesheet")
+
+
+
+class SDResource(resource.Resource):
+    def __init__(self,default):
+        self.default = default
+
+
+    def getChildWithDefault(self, name, request):
+        d = defer.succeed(self.default)
+        resource = util.DeferredResource(d)
+        return resource.getChildWithDefault(name, request)
+
+
+
+class DeferredResourceTests(TestCase):
+    """
+    Tests for L{DeferredResource}.
+    """
+
+    def testDeferredResource(self):
+        r = resource.Resource()
+        r.isLeaf = 1
+        s = SDResource(r)
+        d = DummyRequest(['foo', 'bar', 'baz'])
+        resource.getChildForRequest(s, d)
+        self.assertEqual(d.postpath, ['bar', 'baz'])
+
+
+    def test_render(self):
+        """
+        L{DeferredResource} uses the request object's C{render} method to
+        render the resource which is the result of the L{Deferred} being
+        handled.
+        """
+        rendered = []
+        request = DummyRequest([])
+        request.render = rendered.append
+
+        result = resource.Resource()
+        deferredResource = DeferredResource(defer.succeed(result))
+        deferredResource.render(request)
+        self.assertEqual(rendered, [result])

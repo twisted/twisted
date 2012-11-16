@@ -12,8 +12,11 @@ Interface definitions for L{twisted.web}.
 
 from zope.interface import Interface, Attribute
 
+from twisted.python.compat import _PY3
 from twisted.internet.interfaces import IPushProducer
-from twisted.cred.credentials import IUsernameDigestHash
+if not _PY3:
+    # Re-enable when cred is ported to Python 3. Fix as part of #6176:
+    from twisted.cred.credentials import IUsernameDigestHash
 
 
 class IRequest(Interface):

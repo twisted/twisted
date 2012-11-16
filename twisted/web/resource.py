@@ -124,16 +124,16 @@ class Resource:
     ### Abstract Collection Interface
 
     def listStaticNames(self):
-        return self.children.keys()
+        return list(self.children.keys())
 
     def listStaticEntities(self):
-        return self.children.items()
+        return list(self.children.items())
 
     def listNames(self):
-        return self.listStaticNames() + self.listDynamicNames()
+        return list(self.listStaticNames()) + self.listDynamicNames()
 
     def listEntities(self):
-        return self.listStaticEntities() + self.listDynamicEntities()
+        return list(self.listStaticEntities()) + self.listDynamicEntities()
 
     def listDynamicNames(self):
         return []

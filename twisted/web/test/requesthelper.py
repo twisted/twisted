@@ -13,29 +13,14 @@ from io import BytesIO
 
 from zope.interface import implementer
 
-from twisted.python.compat import _PY3
 from twisted.internet.defer import Deferred
 from twisted.internet.address import IPv4Address
 from twisted.internet.interfaces import ISSLTransport
 
 from twisted.web.http_headers import Headers
 from twisted.web.resource import Resource
+from twisted.web.server import NOT_DONE_YET, Session, Site
 
-
-if _PY3:
-    # Once twisted.web.server is ported, change this back to an import.  See
-    # #NNNN.
-    NOT_DONE_YET = 1
-
-    # Get rid of this when sessions are ported.  See #NNNN.
-    class Session(object):
-        """
-        Dummy placeholder until Sessions are ported.
-        """
-        def __init__(self, *args):
-            pass
-else:
-    from twisted.web.server import NOT_DONE_YET, Session, Site
 
 class DummyChannel:
     class TCP:
@@ -72,10 +57,7 @@ class DummyChannel:
     class SSL(TCP):
         pass
 
-    if _PY3:
-        site = object()
-    else:
-        site = Site(Resource())
+    site = Site(Resource())
 
     def __init__(self):
         self.transport = self.TCP()
@@ -142,11 +124,11 @@ class DummyRequest(object):
         """
         Retrieve the value of a request header.
 
-        @type name: C{str}
+        @type name: C{bytes}
         @param name: The name of the request header for which to retrieve the
             value.  Header names are compared case-insensitively.
 
-        @rtype: C{str} or L{NoneType}
+        @rtype: C{bytes} or L{NoneType}
         @return: The value of the specified request header.
         """
         return self.headers.get(name.lower(), None)
@@ -186,6 +168,8 @@ class DummyRequest(object):
 
 
     def write(self, data):
+        if not isinstance(data, bytes):
+            raise TypeError("write() only accepts bytes")
         self.written.append(data)
 
     def notifyFinish(self):
