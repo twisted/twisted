@@ -970,7 +970,7 @@ class FilePath(AbstractFilePath):
     def getPermissions(self):
         """
         Returns the permissions of the file.  Should also work on Windows,
-        however, those permissions may not what is expected in Windows.
+        however, those permissions may not be what is expected in Windows.
 
         @return: the permissions for the file
         @rtype: L{Permissions}
