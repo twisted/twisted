@@ -283,36 +283,6 @@ class OrderedDictTest(unittest.TestCase):
         d = util.OrderedDict(((1,1),(3,3),(2,2),(0,0)))
         self.assertEqual(repr(d), "{1: 1, 3: 3, 2: 2, 0: 0}")
 
-class InsensitiveDictTest(unittest.TestCase):
-    def testPreserve(self):
-        InsensitiveDict=util.InsensitiveDict
-        dct=InsensitiveDict({'Foo':'bar', 1:2, 'fnz':{1:2}}, preserve=1)
-        self.assertEqual(dct['fnz'], {1:2})
-        self.assertEqual(dct['foo'], 'bar')
-        self.assertEqual(dct.copy(), dct)
-        self.assertEqual(dct['foo'], dct.get('Foo'))
-        assert 1 in dct and 'foo' in dct
-        self.assertEqual(eval(repr(dct)), dct)
-        keys=['Foo', 'fnz', 1]
-        for x in keys:
-            assert x in dct.keys()
-            assert (x, dct[x]) in dct.items()
-        self.assertEqual(len(keys), len(dct))
-        del dct[1]
-        del dct['foo']
-
-    def testNoPreserve(self):
-        InsensitiveDict=util.InsensitiveDict
-        dct=InsensitiveDict({'Foo':'bar', 1:2, 'fnz':{1:2}}, preserve=0)
-        keys=['foo', 'fnz', 1]
-        for x in keys:
-            assert x in dct.keys()
-            assert (x, dct[x]) in dct.items()
-        self.assertEqual(len(keys), len(dct))
-        del dct[1]
-        del dct['foo']
-
-
 
 
 class PasswordTestingProcessProtocol(ProcessProtocol):

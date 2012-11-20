@@ -404,3 +404,70 @@ class NameToLabelTests(TestCase):
             self.assertEqual(
                 got, out,
                 "nameToLabel(%r) == %r != %r" % (inp, got, out))
+
+
+
+class InsensitiveDictTest(TestCase):
+    """
+    Tests for L{util.InsensitiveDict}.
+    """
+
+    def test_preserve(self):
+        """
+        L{util.InsensitiveDict} preserves the case of keys if constructed with
+        C{preserve=True}.
+        """
+        dct = util.InsensitiveDict({'Foo':'bar', 1:2, 'fnz':{1:2}}, preserve=1)
+        self.assertEqual(dct['fnz'], {1:2})
+        self.assertEqual(dct['foo'], 'bar')
+        self.assertEqual(dct.copy(), dct)
+        self.assertEqual(dct['foo'], dct.get('Foo'))
+        self.assertIn(1, dct)
+        self.assertIn('foo', dct)
+        # Make eval() work, urrrrgh:
+        InsensitiveDict = util.InsensitiveDict
+        self.assertEqual(eval(repr(dct)), dct)
+        keys=['Foo', 'fnz', 1]
+        for x in keys:
+            self.assertIn(x, dct.keys())
+            self.assertIn((x, dct[x]), dct.items())
+        self.assertEqual(len(keys), len(dct))
+        del dct[1]
+        del dct['foo']
+        self.assertEqual(dct.keys(), ['fnz'])
+
+
+    def test_noPreserve(self):
+        """
+        L{util.InsensitiveDict} does not preserves the case of keys if
+        constructed with C{preserve=False}.
+        """
+        dct = util.InsensitiveDict({'Foo':'bar', 1:2, 'fnz':{1:2}}, preserve=0)
+        keys=['foo', 'fnz', 1]
+        for x in keys:
+            self.assertIn(x, dct.keys())
+            self.assertIn((x, dct[x]), dct.items())
+        self.assertEqual(len(keys), len(dct))
+        del dct[1]
+        del dct['foo']
+        self.assertEqual(dct.keys(), ['fnz'])
+
+
+    def test_unicode(self):
+        """
+        Unicode keys are case insensitive.
+        """
+        d = util.InsensitiveDict(preserve=False)
+        d[u"Foo"] = 1
+        self.assertEqual(d[u"FOO"], 1)
+        self.assertEqual(d.keys(), [u"foo"])
+
+
+    def test_bytes(self):
+        """
+        Bytes keys are case insensitive.
+        """
+        d = util.InsensitiveDict(preserve=False)
+        d[b"Foo"] = 1
+        self.assertEqual(d[b"FOO"], 1)
+        self.assertEqual(d.keys(), [b"foo"])
