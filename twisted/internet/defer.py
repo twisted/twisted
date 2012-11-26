@@ -367,6 +367,15 @@ class Deferred:
         callback (or errback) returns another L{Deferred}, this L{Deferred}
         will be chained to it (and further callbacks will not run until that
         L{Deferred} has a result).
+
+        An instance of L{Deferred} may only have either L{callback} or
+        L{errback} called on it, and only once.
+
+        @param result: The object which will be passed to the first callback
+            added to this L{Deferred} (via L{addCallback}).
+
+        @raise AlreadyCalledError: If L{callback} or L{errback} has already been
+            called on this L{Deferred}.
         """
         assert not isinstance(result, Deferred)
         self._startRunCallbacks(result)
@@ -389,6 +398,18 @@ class Deferred:
 
         Passing a string as `fail' is deprecated, and will be punished with
         a warning message.
+
+        An instance of L{Deferred} may only have either L{callback} or
+        L{errback} called on it, and only once.
+
+        @param fail: The L{Failure} object which will be passed to the first
+            errback added to this L{Deferred} (via L{addErrback}).
+            Alternatively, a L{Exception} instance from which a L{Failure} will
+            be constructed (with no traceback) or C{None} to create a L{Failure}
+            instance from the current exception state (with a traceback).
+
+        @raise AlreadyCalledError: If L{callback} or L{errback} has already been
+            called on this L{Deferred}.
 
         @raise NoCurrentExceptionError: If C{fail} is C{None} but there is
             no current exception state.
