@@ -9,6 +9,20 @@ This is the basic server-side protocol implementation used by the Twisted
 Web server.  It can parse HTTP 1.0 requests and supports many HTTP 1.1
 features as well.  Additionally, some functionality implemented here is
 also useful for HTTP clients (such as the chunked encoding parser).
+
+@var CACHED: A marker value to be returned from cache-related request methods to
+    indicate to the caller that a cached response will be usable and no response
+    body should be generated.
+
+@var NOT_MODIFIED: An HTTP response code indicating that a requested
+    pre-condition (for example, the condition represented by an
+    I{If-Modified-Since} header is present in the request) has succeeded.  This
+    indicates a response body cached by the client can be used.
+
+@var PRECONDITION_FAILED: An HTTP response code indicating that a requested
+    pre-condition (for example, the condition represented by an I{If-None-Match}
+    header is present in the request) has failed.  This should typically
+    indicate that the server has not taken the requested action.
 """
 
 from __future__ import division, absolute_import

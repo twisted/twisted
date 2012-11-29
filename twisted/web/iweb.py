@@ -103,7 +103,7 @@ class IRequest(Interface):
         """
         Get my originally requesting transport's host.
 
-        @return: An L{IAddress}.
+        @return: An L{IAddress<twisted.internet.interfaces.IAddress>}.
         """
 
 
@@ -113,7 +113,7 @@ class IRequest(Interface):
 
         @returns: the client IP address or C{None} if the request was submitted
             over a transport where IP addresses do not make sense.
-        @rtype: C{str} or L{NoneType}
+        @rtype: L{str} or C{NoneType}
         """
 
 
@@ -124,7 +124,7 @@ class IRequest(Interface):
 
         This method is B{deprecated}.  See L{getClientIP} instead.
 
-        @rtype: L{NoneType} or L{str}
+        @rtype: C{NoneType} or L{str}
         @return: The canonical hostname of the client, as determined by
             performing a name lookup on the IP address of the client.
         """
@@ -267,15 +267,15 @@ class IRequest(Interface):
         value.
 
         If I am a conditional request, I may modify my response code to
-        L{NOT_MODIFIED} if appropriate for the time given.
+        L{NOT_MODIFIED<http.NOT_MODIFIED>} if appropriate for the time given.
 
         @param when: The last time the resource being returned was modified, in
             seconds since the epoch.
-        @type when: C{int}, C{long} or C{float}
+        @type when: L{int}, L{long} or L{float}
 
-        @return: If I am a C{If-Modified-Since} conditional request and the
-            time given is not newer than the condition, I return
-            L{http.CACHED<CACHED>} to indicate that you should write no body.
+        @return: If I am a C{If-Modified-Since} conditional request and the time
+            given is not newer than the condition, I return
+            L{CACHED<http.CACHED>} to indicate that you should write no body.
             Otherwise, I return a false value.
         """
 
@@ -284,17 +284,19 @@ class IRequest(Interface):
         """
         Set an C{entity tag} for the outgoing response.
 
-        That's "entity tag" as in the HTTP/1.1 C{ETag} header, "used for
+        That's "entity tag" as in the HTTP/1.1 I{ETag} header, "used for
         comparing two or more entities from the same requested resource."
 
         If I am a conditional request, I may modify my response code to
-        L{NOT_MODIFIED} or L{PRECONDITION_FAILED}, if appropriate for the tag
-        given.
+        L{NOT_MODIFIED<http.NOT_MODIFIED>} or
+        L{PRECONDITION_FAILED<http.PRECONDITION_FAILED>}, if appropriate for the
+        tag given.
 
         @param etag: The entity tag for the resource being returned.
         @type etag: C{str}
+
         @return: If I am a C{If-None-Match} conditional request and the tag
-            matches one in the request, I return L{http.CACHED<CACHED>} to
+            matches one in the request, I return L{CACHED<http.CACHED>} to
             indicate that you should write no body.  Otherwise, I return a
             false value.
         """
@@ -322,9 +324,10 @@ class ICredentialFactory(Interface):
     """
     A credential factory defines a way to generate a particular kind of
     authentication challenge and a way to interpret the responses to these
-    challenges.  It creates L{ICredentials} providers from responses.  These
-    objects will be used with L{twisted.cred} to authenticate an authorize
-    requests.
+    challenges.  It creates
+    L{ICredentials<twisted.cred.credentials.ICredentials>} providers from
+    responses.  These objects will be used with L{twisted.cred} to authenticate
+    an authorize requests.
     """
     scheme = Attribute(
         "A C{str} giving the name of the authentication scheme with which "
@@ -367,19 +370,21 @@ class ICredentialFactory(Interface):
 class IBodyProducer(IPushProducer):
     """
     Objects which provide L{IBodyProducer} write bytes to an object which
-    provides L{IConsumer} by calling its C{write} method repeatedly.
+    provides L{IConsumer<twisted.internet.interfaces.IConsumer>} by calling its
+    C{write} method repeatedly.
 
-    L{IBodyProducer} providers may start producing as soon as they have
-    an L{IConsumer} provider.  That is, they should not wait for a
-    C{resumeProducing} call to begin writing data.
+    L{IBodyProducer} providers may start producing as soon as they have an
+    L{IConsumer<twisted.internet.interfaces.IConsumer>} provider.  That is, they
+    should not wait for a C{resumeProducing} call to begin writing data.
 
-    L{IConsumer.unregisterProducer} must not be called.  Instead, the
-    L{Deferred} returned from C{startProducing} must be fired when all bytes
-    have been written.
+    L{IConsumer.unregisterProducer<twisted.internet.interfaces.IConsumer.unregisterProducer>}
+    must not be called.  Instead, the
+    L{Deferred<twisted.internet.defer.Deferred>} returned from C{startProducing}
+    must be fired when all bytes have been written.
 
-    L{IConsumer.write} may synchronously invoke any of C{pauseProducing},
-    C{resumeProducing}, or C{stopProducing}.  These methods must be implemented
-    with this in mind.
+    L{IConsumer.write<twisted.internet.interfaces.IConsumer.write>} may
+    synchronously invoke any of C{pauseProducing}, C{resumeProducing}, or
+    C{stopProducing}.  These methods must be implemented with this in mind.
 
     @since: 9.0
     """
@@ -400,18 +405,22 @@ class IBodyProducer(IPushProducer):
 
     def startProducing(consumer):
         """
-        Start producing to the given L{IConsumer} provider.
+        Start producing to the given
+        L{IConsumer<twisted.internet.interfaces.IConsumer>} provider.
 
-        @return: A L{Deferred} which fires with C{None} when all bytes have
-            been produced or with a L{Failure} if there is any problem before
-            all bytes have been produced.
+        @return: A L{Deferred<twisted.internet.defer.Deferred>} which fires with
+            C{None} when all bytes have been produced or with a
+            L{Failure<twisted.python.failure.Failure>} if there is any problem
+            before all bytes have been produced.
         """
 
 
     def stopProducing():
         """
-        In addition to the standard behavior of L{IProducer.stopProducing}
-        (stop producing data), make sure the L{Deferred} returned by
+        In addition to the standard behavior of
+        L{IProducer.stopProducing<twisted.internet.interfaces.IProducer.stopProducing>}
+        (stop producing data), make sure the
+        L{Deferred<twisted.internet.defer.Deferred>} returned by
         C{startProducing} is never fired.
         """
 
@@ -441,7 +450,7 @@ class IRenderable(Interface):
         """
         Get the document for this L{IRenderable}.
 
-        @type request: L{IRequest} provider or L{NoneType}
+        @type request: L{IRequest} provider or C{NoneType}
         @param request: The request in response to which this method is being
             invoked.
 
@@ -499,7 +508,8 @@ class IResponse(Interface):
 
     def deliverBody(protocol):
         """
-        Register an L{IProtocol} provider to receive the response body.
+        Register an L{IProtocol<twisted.internet.interfaces.IProtocol>} provider
+        to receive the response body.
 
         The protocol will be connected to a transport which provides
         L{IPushProducer}.  The protocol's C{connectionLost} method will be
