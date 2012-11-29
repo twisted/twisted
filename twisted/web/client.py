@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.web.test.test_webclient -*-
+# -*- test-case-name: twisted.web.test.test_webclient,twisted.web.test.test_agent -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -6,21 +6,32 @@
 HTTP client.
 """
 
+from __future__ import division, absolute_import
+
 import os, types
-from urlparse import urlunparse
-from urllib import splithost, splittype
+try:
+    from urlparse import urlunparse
+    from urllib import splithost, splittype
+except ImportError:
+    from urllib.parse import splithost, splittype
+    from urllib.parse import urlunparse as _urlunparse
+
+    def urlunparse(parts):
+        result = _urlunparse(tuple([p.decode("charmap") for p in parts]))
+        return result.encode("charmap")
 import zlib
 
-from zope.interface import implements
+from zope.interface import implementer
 
+from twisted.python.compat import _PY3, nativeString, intToBytes
 from twisted.python import log
 from twisted.python.failure import Failure
 from twisted.web import http
 from twisted.internet import defer, protocol, task, reactor
 from twisted.internet.interfaces import IProtocol
-from twisted.internet.endpoints import TCP4ClientEndpoint, SSL4ClientEndpoint
+from twisted.internet._endpointspy3 import TCP4ClientEndpoint, SSL4ClientEndpoint
 from twisted.python import failure
-from twisted.python.util import InsensitiveDict
+from twisted.python._utilpy3 import InsensitiveDict
 from twisted.python.components import proxyForInterface
 from twisted.web import error
 from twisted.web.iweb import UNKNOWN_LENGTH, IBodyProducer, IResponse
@@ -58,34 +69,34 @@ class HTTPPageGetter(http.HTTPClient):
 
     _completelyDone = True
 
-    _specialHeaders = set(('host', 'user-agent', 'cookie', 'content-length'))
+    _specialHeaders = set((b'host', b'user-agent', b'cookie', b'content-length'))
 
     def connectionMade(self):
-        method = getattr(self.factory, 'method', 'GET')
+        method = getattr(self.factory, 'method', b'GET')
         self.sendCommand(method, self.factory.path)
-        if self.factory.scheme == 'http' and self.factory.port != 80:
-            host = '%s:%s' % (self.factory.host, self.factory.port)
-        elif self.factory.scheme == 'https' and self.factory.port != 443:
-            host = '%s:%s' % (self.factory.host, self.factory.port)
+        if self.factory.scheme == b'http' and self.factory.port != 80:
+            host = self.factory.host + b':' + intToBytes(self.factory.port)
+        elif self.factory.scheme == b'https' and self.factory.port != 443:
+            host = self.factory.host + b':' + intToBytes(self.factory.port)
         else:
             host = self.factory.host
-        self.sendHeader('Host', self.factory.headers.get("host", host))
-        self.sendHeader('User-Agent', self.factory.agent)
+        self.sendHeader(b'Host', self.factory.headers.get(b"host", host))
+        self.sendHeader(b'User-Agent', self.factory.agent)
         data = getattr(self.factory, 'postdata', None)
         if data is not None:
-            self.sendHeader("Content-Length", str(len(data)))
+            self.sendHeader(b"Content-Length", intToBytes(len(data)))
 
         cookieData = []
         for (key, value) in self.factory.headers.items():
             if key.lower() not in self._specialHeaders:
                 # we calculated it on our own
                 self.sendHeader(key, value)
-            if key.lower() == 'cookie':
+            if key.lower() == b'cookie':
                 cookieData.append(value)
         for cookie, cookval in self.factory.cookies.items():
-            cookieData.append('%s=%s' % (cookie, cookval))
+            cookieData.append(cookie + b'=' + cookval)
         if cookieData:
-            self.sendHeader('Cookie', '; '.join(cookieData))
+            self.sendHeader(b'Cookie', b'; '.join(cookieData))
         self.endHeaders()
         self.headers = {}
 
@@ -113,7 +124,8 @@ class HTTPPageGetter(http.HTTPClient):
 
     def handleEndHeaders(self):
         self.factory.gotHeaders(self.headers)
-        m = getattr(self, 'handleStatus_'+self.status, self.handleStatusDefault)
+        m = getattr(self, 'handleStatus_' + nativeString(self.status),
+                    self.handleStatusDefault)
         m()
 
     def handleStatus_200(self):
@@ -126,7 +138,7 @@ class HTTPPageGetter(http.HTTPClient):
         self.failed = 1
 
     def handleStatus_301(self):
-        l = self.headers.get('location')
+        l = self.headers.get(b'location')
         if not l:
             self.handleStatusDefault()
             return
@@ -149,13 +161,15 @@ class HTTPPageGetter(http.HTTPClient):
             self._completelyDone = False
             self.factory.setURL(url)
 
-            if self.factory.scheme == 'https':
+            if self.factory.scheme == b'https':
                 from twisted.internet import ssl
                 contextFactory = ssl.ClientContextFactory()
-                reactor.connectSSL(self.factory.host, self.factory.port,
+                reactor.connectSSL(nativeString(self.factory.host),
+                                   self.factory.port,
                                    self.factory, contextFactory)
             else:
-                reactor.connectTCP(self.factory.host, self.factory.port,
+                reactor.connectTCP(nativeString(self.factory.host),
+                                   self.factory.port,
                                    self.factory)
         else:
             self.handleStatusDefault()
@@ -174,7 +188,7 @@ class HTTPPageGetter(http.HTTPClient):
 
 
     def handleStatus_303(self):
-        self.factory.method = 'GET'
+        self.factory.method = b'GET'
         self.handleStatus_301()
 
 
@@ -201,10 +215,10 @@ class HTTPPageGetter(http.HTTPClient):
                 failure.Failure(
                     error.Error(
                         self.status, self.message, response)))
-        if self.factory.method == 'HEAD':
+        if self.factory.method == b'HEAD':
             # Callback with empty string, since there is never a response
             # body for HEAD requests.
-            self.factory.page('')
+            self.factory.page(b'')
         elif self.length != None and self.length != 0:
             self.factory.noPage(failure.Failure(
                 PartialDownloadError(self.status, self.message, response)))
@@ -262,20 +276,20 @@ class HTTPClientFactory(protocol.ClientFactory):
           been retrieved. Once this is fired, the ivars `status', `version',
           and `message' will be set.
 
-    @type status: str
+    @type status: bytes
     @ivar status: The status of the response.
 
-    @type version: str
+    @type version: bytes
     @ivar version: The version of the response.
 
-    @type message: str
+    @type message: bytes
     @ivar message: The text message returned with the status.
 
     @type response_headers: dict
     @ivar response_headers: The headers that were specified in the
           response from the server.
 
-    @type method: str
+    @type method: bytes
     @ivar method: The HTTP method to use in the request.  This should be one of
         OPTIONS, GET, HEAD, POST, PUT, DELETE, TRACE, or CONNECT (case
         matters).  Other values may be specified if the server being contacted
@@ -304,12 +318,12 @@ class HTTPClientFactory(protocol.ClientFactory):
 
     url = None
     scheme = None
-    host = ''
+    host = b''
     port = None
     path = None
 
-    def __init__(self, url, method='GET', postdata=None, headers=None,
-                 agent="Twisted PageGetter", timeout=0, cookies=None,
+    def __init__(self, url, method=b'GET', postdata=None, headers=None,
+                 agent=b"Twisted PageGetter", timeout=0, cookies=None,
                  followRedirect=True, redirectLimit=20,
                  afterFoundGet=False):
         self.followRedirect = followRedirect
@@ -326,9 +340,10 @@ class HTTPClientFactory(protocol.ClientFactory):
         else:
             self.headers = InsensitiveDict()
         if postdata is not None:
-            self.headers.setdefault('Content-Length', len(postdata))
+            self.headers.setdefault(b'Content-Length',
+                                    intToBytes(len(postdata)))
             # just in case a broken http/1.1 decides to keep connection alive
-            self.headers.setdefault("connection", "close")
+            self.headers.setdefault(b"connection", b"close")
         self.postdata = postdata
         self.method = method
 
@@ -381,12 +396,12 @@ class HTTPClientFactory(protocol.ClientFactory):
 
     def gotHeaders(self, headers):
         self.response_headers = headers
-        if 'set-cookie' in headers:
-            for cookie in headers['set-cookie']:
-                cookparts = cookie.split(';')
+        if b'set-cookie' in headers:
+            for cookie in headers[b'set-cookie']:
+                cookparts = cookie.split(b';')
                 cook = cookparts[0]
                 cook.lstrip()
-                k, v = cook.split('=', 1)
+                k, v = cook.split(b'=', 1)
                 self.cookies[k.lstrip()] = v.lstrip()
 
     def gotStatus(self, version, status, message):
@@ -476,7 +491,7 @@ class HTTPDownloader(HTTPClientFactory):
         @param partialContent: tells us if the download is partial download we requested.
         """
         if partialContent and not self.requestedPartial:
-            raise ValueError, "we shouldn't get partial content response if we didn't want it!"
+            raise ValueError("we shouldn't get partial content response if we didn't want it!")
         if self.waiting:
             try:
                 if not self.file:
@@ -545,7 +560,7 @@ def _parse(url, defaultPort=None):
     """
     Split the given URL into the scheme, host, port, and path.
 
-    @type url: C{str}
+    @type url: C{bytes}
     @param url: An URL to parse.
 
     @type defaultPort: C{int} or C{None}
@@ -553,29 +568,29 @@ def _parse(url, defaultPort=None):
     not include one.
 
     @return: A four-tuple of the scheme, host, port, and path of the URL.  All
-    of these are C{str} instances except for port, which is an C{int}.
+    of these are C{bytes} instances except for port, which is an C{int}.
     """
     url = url.strip()
     parsed = http.urlparse(url)
     scheme = parsed[0]
-    path = urlunparse(('', '') + parsed[2:])
+    path = urlunparse((b'', b'') + parsed[2:])
 
     if defaultPort is None:
-        if scheme == 'https':
+        if scheme == b'https':
             defaultPort = 443
         else:
             defaultPort = 80
 
     host, port = parsed[1], defaultPort
-    if ':' in host:
-        host, port = host.split(':')
+    if b':' in host:
+        host, port = host.split(b':')
         try:
             port = int(port)
         except ValueError:
             port = defaultPort
 
-    if path == '':
-        path = '/'
+    if path == b'':
+        path = b'/'
 
     return _URL(scheme, host, port, path)
 
@@ -598,13 +613,13 @@ def _makeGetterFactory(url, factoryFactory, contextFactory=None,
     """
     scheme, host, port, path = _parse(url)
     factory = factoryFactory(url, *args, **kwargs)
-    if scheme == 'https':
+    if scheme == b'https':
         from twisted.internet import ssl
         if contextFactory is None:
             contextFactory = ssl.ClientContextFactory()
-        reactor.connectSSL(host, port, factory, contextFactory)
+        reactor.connectSSL(nativeString(host), port, factory, contextFactory)
     else:
-        reactor.connectTCP(host, port, factory)
+        reactor.connectTCP(nativeString(host), port, factory)
     return factory
 
 
@@ -645,10 +660,11 @@ def downloadPage(url, file, contextFactory=None, *args, **kwargs):
 # feature equivalent.
 
 from twisted.web.error import SchemeNotSupported
-from twisted.web._newclient import Request, Response, HTTP11ClientProtocol
-from twisted.web._newclient import ResponseDone, ResponseFailed
-from twisted.web._newclient import RequestNotSent, RequestTransmissionFailed
-from twisted.web._newclient import ResponseNeverReceived
+if not _PY3:
+    from twisted.web._newclient import Request, Response, HTTP11ClientProtocol
+    from twisted.web._newclient import ResponseDone, ResponseFailed
+    from twisted.web._newclient import RequestNotSent, RequestTransmissionFailed
+    from twisted.web._newclient import ResponseNeverReceived
 
 try:
     from twisted.internet.ssl import ClientContextFactory
@@ -699,6 +715,7 @@ class _WebToNormalContextFactory(object):
 
 
 
+@implementer(IBodyProducer)
 class FileBodyProducer(object):
     """
     L{FileBodyProducer} produces bytes from an input file object incrementally
@@ -720,7 +737,6 @@ class FileBodyProducer(object):
 
     @ivar _readSize: The number of bytes to read from C{_inputFile} at a time.
     """
-    implements(IBodyProducer)
 
     # Python 2.4 doesn't have these symbolic constants
     _SEEK_SET = getattr(os, 'SEEK_SET', 0)

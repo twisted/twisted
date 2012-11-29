@@ -376,12 +376,12 @@ class HTTPClient(basic.LineReceiver):
     @type __buffer: A C{StringIO} object.
 
     @ivar _header: Part or all of an HTTP request header.
-    @type _header: C{str}
+    @type _header: C{bytes}
     """
     length = None
     firstLine = True
     __buffer = None
-    _header = ""
+    _header = b""
 
     def sendCommand(self, command, path):
         self.transport.writeSequence([command, b' ', path, b' HTTP/1.0\r\n'])
@@ -433,7 +433,7 @@ class HTTPClient(basic.LineReceiver):
             self.handleStatus(version, status, message)
             return
         if not line:
-            if self._header != "":
+            if self._header != b"":
                 # Only extract headers if there are any
                 self.extractHeader(self._header)
             self.__buffer = StringIO()
@@ -500,7 +500,7 @@ class HTTPClient(basic.LineReceiver):
             data, rest = data[:self.length], data[self.length:]
             self.length -= len(data)
         else:
-            rest = ''
+            rest = b''
         self.handleResponsePart(data)
         if self.length == 0:
             self.handleResponseEnd()

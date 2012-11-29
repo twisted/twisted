@@ -15,7 +15,6 @@ __all__ = [
     'RedirectWithNoLocation',
     ]
 
-import operator
 from collections import Sequence
 
 from twisted.web._responses import RESPONSES
@@ -31,7 +30,7 @@ class Error(Exception):
     @type message: C{str}
     @param message: A short error message, for example "NOT FOUND".
 
-    @type response: C{str}
+    @type response: C{bytes}
     @ivar response: A complete HTML document for an error page.
     """
     def __init__(self, code, message=None, response=None):
@@ -41,12 +40,12 @@ class Error(Exception):
         @type code: C{str}
         @param code: Refers to an HTTP status code, for example
             C{http.NOT_FOUND}. If no C{message} is given, C{code} is mapped to a
-            descriptive string that is used instead.
+            descriptive bytestring that is used instead.
 
         @type message: C{str}
         @param message: A short error message, for example "NOT FOUND".
 
-        @type response: C{str}
+        @type response: C{bytes}
         @param response: A complete HTML document for an error page.
         """
         if not message:
@@ -65,7 +64,7 @@ class Error(Exception):
 
 
     def __str__(self):
-        return '%s %s' % (self[0], self[1])
+        return '%s %s' % (self.status, self.message)
 
 
 

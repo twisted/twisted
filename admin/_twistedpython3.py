@@ -184,6 +184,8 @@ testModules = [
     "twisted.trial.test.test_tests",
     "twisted.trial.test.test_util",
     "twisted.trial.test.test_warning",
+    # downloadPage tests weren't ported:
+    "twisted.web.test.test_webclient",
     "twisted.web.test.test_http",
     "twisted.web.test.test_http_headers",
     "twisted.web.test.test_resource",
@@ -215,6 +217,8 @@ almostModules = [
     "twisted.test.reflect_helper_ZDE",
     # Required by some of the ported trial tests:
     "twisted.trial.reporter",
+    # Agent code and downloadPage aren't ported, test coverage isn't complete:
+    "twisted.web.client",
     # twisted.web.resource depends on twisted.web.error, so it is sorta
     # ported, but its tests are not yet ported, so it probably doesn't
     # completely work.
