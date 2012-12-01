@@ -48,6 +48,11 @@ class IRequest(Interface):
         "A L{http_headers.Headers} instance giving all received HTTP request "
         "headers.")
 
+    content = Attribute(
+        "A file-like object giving the request body.  This may be a file on "
+        "disk, a C{StringIO}, or some other type.  The implementation is free "
+        "to decide on a per-request basis.")
+
     headers = Attribute(
         "Backwards-compatibility access to C{responseHeaders}.  Use"
         "C{responseHeaders} instead.  C{headers} behaves mostly like a "

@@ -1,0 +1,1 @@
+twisted.web.iweb.IRequest now documents its `content` attribute and a new "web in 60 seconds" howto demonstrates its use.
