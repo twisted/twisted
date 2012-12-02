@@ -28,14 +28,15 @@ from twisted.internet.stdio import PipeAddress
 from twisted.internet._endpointspy3 import (
     _WrappingFactory, TCP4ServerEndpoint, TCP6ServerEndpoint,
     TCP4ClientEndpoint, TCP6ClientEndpoint, SSL4ClientEndpoint,
-    SSL4ServerEndpoint)
+    SSL4ServerEndpoint, connectProtocol)
 
 __all__ = ["clientFromString", "serverFromString",
            "TCP4ServerEndpoint", "TCP6ServerEndpoint",
            "TCP4ClientEndpoint", "TCP6ClientEndpoint",
            "UNIXServerEndpoint", "UNIXClientEndpoint",
            "SSL4ServerEndpoint", "SSL4ClientEndpoint",
-           "AdoptedStreamServerEndpoint", "StandardIOEndpoint"]
+           "AdoptedStreamServerEndpoint", "StandardIOEndpoint",
+           "connectProtocol"]
 
 
 
