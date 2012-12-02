@@ -129,8 +129,22 @@ reactor.run()
 
     <p>You may come across code using <code base="twisted.internet.protocol"
     class="API">ClientCreator</code>, an older API which is not as flexible as
-    the endpoint API. In general, the endpoint API should be preferred in new
-    code, as it lets the caller select the method of connecting.</p>
+    the endpoint API.  Rather than calling <code>connect</code> on an endpoint,
+    such code will look like this:</p>
+
+    <pre class="python">
+from twisted.internet.protocol import ClientCreator
+
+...
+
+creator = ClientCreator(reactor, Greeter)
+d = creator.connectTCP("localhost", 1234)
+d.addCallback(gotProtocol)
+reactor.run()
+    </pre>
+
+    <p>In general, the endpoint API should be preferred in new code, as it lets
+    the caller select the method of connecting.</p>
 
     <h2>ClientFactory</h2>
 
