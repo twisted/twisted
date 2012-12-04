@@ -6,13 +6,12 @@ Support for Linux ethernet and IP tunnel devices.
 """
 
 import os, errno, struct, warnings
-from collections import deque
 
 from zope.interface import implementer
 
 from twisted.python.constants import Flags, FlagConstant
-from twisted.python import log, reflect, components
-from twisted.internet import base, fdesc, error, task, interfaces, defer
+from twisted.python import log
+from twisted.internet import base, error, task, interfaces, defer
 from twisted.pair import ethernet, raw
 
 IFNAMSIZ = 16
