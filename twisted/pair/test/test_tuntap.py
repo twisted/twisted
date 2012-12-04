@@ -143,6 +143,7 @@ def privileged(f):
 
 
 class FakeSpecial(object):
+
     _counter = 8192
 
     OPERATIONS = [
@@ -150,12 +151,12 @@ class FakeSpecial(object):
         'setCloseOnExec']
 
     def __init__(self):
-        self._tunnels = {}
+        self._openFiles = {}
         self.permissions = set(['open', 'ioctl'])
 
 
     def getTunnel(self, port):
-        return self._tunnels[port.fileno()]
+        return self._openFiles[port.fileno()]
 
 
     @privileged
@@ -163,28 +164,28 @@ class FakeSpecial(object):
         if name == b"/dev/net/tun" and mode == os.O_RDWR:
             fd = self._counter
             self._counter += 1
-            self._tunnels[fd] = Tunnel(mode)
+            self._openFiles[fd] = Tunnel(mode)
             return fd
         raise OSError(ENOSYS)
 
 
     def read(self, fd, limit):
         try:
-            return self._tunnels[fd].read(limit)
+            return self._openFiles[fd].read(limit)
         except KeyError:
             raise IOError(EBADF, "Bad file descriptor")
 
 
     def write(self, fd, data):
         try:
-            return self._tunnels[fd].write(data)
+            return self._openFiles[fd].write(data)
         except KeyError:
             raise IOError(EBADF, "Bad file descriptor")
 
 
     def close(self, fd):
         try:
-            del self._tunnels[fd]
+            del self._openFiles[fd]
         except KeyError:
             raise IOError(EBADF, "Bad file descriptor")
 
@@ -192,7 +193,7 @@ class FakeSpecial(object):
     @privileged
     def ioctl(self, fd, request, args):
         try:
-            tunnel = self._tunnels[fd]
+            tunnel = self._openFiles[fd]
         except KeyError:
             raise IOError(EBADF, "Bad file descriptor")
 
@@ -208,7 +209,7 @@ class FakeSpecial(object):
 
     def setNonBlocking(self, fd):
         try:
-            tunnel = self._tunnels[fd]
+            tunnel = self._openFiles[fd]
         except KeyError:
             raise IOError(EBADF, "Bad file descriptor")
         tunnel.blocking = False
@@ -216,14 +217,14 @@ class FakeSpecial(object):
 
     def setCloseOnExec(self, fd):
         try:
-            tunnel = self._tunnels[fd]
+            tunnel = self._openFiles[fd]
         except KeyError:
             raise IOError(EBADF, "Bad file descriptor")
         tunnel.closeOnExec = True
 
 
     def sendUDP(self, datagram, address):
-        self._tunnels.values()[0].readBuffer.append(datagram)
+        self._openFiles.values()[0].readBuffer.append(datagram)
 
 
     def receiveUDP(self, host, port):
@@ -237,7 +238,7 @@ class _FakePort(object):
 
 
     def recv(self, nbytes):
-        return self._device._tunnels.values()[0].writeBuffer.popleft()[:nbytes]
+        return self._device._openFiles.values()[0].writeBuffer.popleft()[:nbytes]
 
 
 
@@ -492,7 +493,7 @@ class TunnelTestsMixin(object):
         self._stopPort(self.port)
 
         self.assertFalse(self.port.connected)
-        self.assertNotIn(fileno, self.device._tunnels)
+        self.assertNotIn(fileno, self.device._openFiles)
 
 
     def test_stopListeningStopsProtocol(self):
