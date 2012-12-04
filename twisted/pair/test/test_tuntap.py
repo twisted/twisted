@@ -589,7 +589,7 @@ class TunnelTestsMixin(object):
         self._stopsReadingTest(Tunnel.EWOULDBLOCK_STYLE)
 
 
-    def test_ewouldblockStopsReading(self):
+    def test_eintrblockStopsReading(self):
         """
         Once L{TuntapPort.doRead} encounters an I{EINTR} errno from a C{read}
         call, it returns.
