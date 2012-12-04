@@ -19,8 +19,21 @@ If you wish to use a GApplication, register it with the reactor::
 Then use twisted.internet APIs as usual.
 """
 
+import os
+
 from twisted.internet import gireactor
 from twisted.python import runtime
+
+# Newer versions of gtk3/pygoject raise a RuntimeError, or just break in a
+# confusing manner, if the program is not running under X11.  We therefore try
+# to fail in a more reasonable manner, and check for $DISPLAY as a reasonable
+# approximation of availability of X11. This is somewhat over-aggressive,
+# since some older versions of gtk3/pygobject do work with missing $DISPLAY,
+# but it's too hard to figure out which, so we always require it.
+if (runtime.platform.getType() == 'posix' and
+    not runtime.platform.isMacOSX() and not os.environ.get("DISPLAY")):
+    raise ImportError(
+        "Gtk3 requires X11, and no DISPLAY environment variable is set")
 
 
 class Gtk3Reactor(gireactor.GIReactor):
