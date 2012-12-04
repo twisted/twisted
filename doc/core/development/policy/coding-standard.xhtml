@@ -251,8 +251,44 @@ def foo(x):
 
     <h2>Docstrings</h2>
 
-    <p>Docstrings should always be used to describe the
-    purpose of methods, functions, classes, and modules.</p>
+    <p>Docstrings should always be used to describe the purpose of methods,
+    functions, classes, and modules.  Moreover, all methods, functions, classes,
+    and modules must have docstrings.  In addition to documenting the purpose of
+    the object, the docstring must document all of parameters or attributes of
+    the object.</p>
+
+    <p>When documenting a class with one or more attributes which are
+    initialized directly from the value of a <code>__init__</code> argument by
+    the same name (or differing only in that the attribute is private), it is
+    sufficient to document the <code>__init__</code> parameter (in
+    the <code>__init__</code> docstring).  For example:</p>
+
+<pre class="python">
+class Ninja(object):
+    """
+    @ivar speed: See L{__init__}
+    @ivar _stealth: See C{stealth} parameter of L{__init__}
+    """
+    def __init__(self, speed, stealth):
+        """
+        @param speed: The maximum rate at which this ninja can travel (m/s)
+        @type speed: C{int} or C{float}
+
+        @param stealth: This ninja's ability to avoid being noticed in its
+            activities, as a percentage modifier.
+        @type: C{int}
+        """
+        self.speed = speed
+        self._stealth = stealth
+</pre>
+
+    <p>It is not necessary to have a second copy of the documentation for the
+    attribute in the class docstring, only a reference to the method
+    (typically <code class="python">__init__</code> which does document the
+    attribute's meaning.  Of course, if there is any interesting additional
+    behavior about the attribute that does not apply to
+    the <code class="python">__init__</code> argument, that behavior should be
+    documented in the class docstring.</p>
 
     <p>Docstrings are <em>never</em> to be used to provide semantic
     information about an object; this rule may be violated if the
