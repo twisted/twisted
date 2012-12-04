@@ -543,7 +543,7 @@ class TunnelTestsMixin(object):
         self.assertNotIn(port, self.reactor.getReaders())
         # An unfortunate implementation detail
         self.clock.advance(0)
-        self.assertIdentical(None, self.resultNow(stopped))
+        self.assertIdentical(None, self.successResultOf(stopped))
 
 
     def test_stopListeningStopsReading(self):
@@ -576,7 +576,7 @@ class TunnelTestsMixin(object):
         immediately if it is called when the port is not listening.
         """
         stopped = self.port.stopListening()
-        self.assertIdentical(None, self.resultNow(stopped))
+        self.assertIdentical(None, self.successResultOf(stopped))
 
 
     def test_multipleStopListening(self):
@@ -584,8 +584,8 @@ class TunnelTestsMixin(object):
         first = self.port.stopListening()
         second = self.port.stopListening()
         self.clock.advance(0)
-        self.assertIdentical(None, self.resultNow(first))
-        self.assertIdentical(None, self.resultNow(second))
+        self.assertIdentical(None, self.successResultOf(first))
+        self.assertIdentical(None, self.successResultOf(second))
 
 
     def test_loseConnection(self):
