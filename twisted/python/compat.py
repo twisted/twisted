@@ -359,7 +359,7 @@ if _PY3:
         return s.encode('ascii')
 else:
     def iterbytes(originalBytes):
-        return originalBytes
+        return iter(originalBytes)
 
 
     def intToBytes(i):

@@ -25,14 +25,12 @@ class IEthernetProtocol(Interface):
 
 class EthernetHeader:
     def __init__(self, data):
-
         (self.dest, self.source, self.proto) \
                     = struct.unpack("!6s6sH", data[:6+6+2])
 
 class EthernetProtocol(protocol.AbstractDatagramProtocol):
-
     implements(IEthernetProtocol)
-    
+
     def __init__(self):
         self.etherProtos = {}
 
@@ -47,9 +45,9 @@ class EthernetProtocol(protocol.AbstractDatagramProtocol):
         self.etherProtos[num].append(proto)
 
     def datagramReceived(self, data, partial=0):
-        header = EthernetHeader(data[:14])
+        header = EthernetHeader(data[4:18])
         for proto in self.etherProtos.get(header.proto, ()):
-            proto.datagramReceived(data=data[14:],
+            proto.datagramReceived(data=data[18:],
                                    partial=partial,
                                    dest=header.dest,
                                    source=header.source,
