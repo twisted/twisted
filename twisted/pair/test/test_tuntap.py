@@ -87,6 +87,13 @@ class CompositeReactor(object):
 
 
 class Tunnel(object):
+    """
+    @cvar _DEVICE_NAME: A C{bytes} string representing the conventional
+        filesystem entry for the tunnel factory character special device.
+    """
+    _DEVICE_NAME = b"/dev/net/tun"
+
+
     # Between POSIX and Python, there are 4 combinations.  Here are two, at least.
     EAGAIN_STYLE = IOError(EAGAIN, "Resource temporarily unavailable")
     EWOULDBLOCK_STYLE = OSError(EWOULDBLOCK, "Operation would block")
@@ -151,6 +158,7 @@ class FakeSpecial(object):
         'setCloseOnExec']
 
     def __init__(self):
+        self._devices = {}
         self._openFiles = {}
         self.permissions = set(['open', 'ioctl'])
 
@@ -161,10 +169,10 @@ class FakeSpecial(object):
 
     @privileged
     def open(self, name, mode):
-        if name == b"/dev/net/tun" and mode == os.O_RDWR:
+        if name in self._devices:
             fd = self._counter
             self._counter += 1
-            self._openFiles[fd] = Tunnel(mode)
+            self._openFiles[fd] = self._devices[name](mode)
             return fd
         raise OSError(ENOSYS)
 
@@ -347,7 +355,9 @@ class TunnelDeviceTestsMixin(object):
 
 class FakeDeviceTests(TunnelDeviceTestsMixin, SynchronousTestCase):
     def device(self):
-        return FakeSpecial()
+        special = FakeSpecial()
+        special._devices[Tunnel._DEVICE_NAME] = Tunnel
+        return special
 
 
 
@@ -413,6 +423,7 @@ class TunnelTestsMixin(object):
     def setUp(self):
         self.name = b"tun0"
         self.device = FakeSpecial()
+        self.device._devices[Tunnel._DEVICE_NAME] = Tunnel
         self.protocol = self.factory.buildProtocol(None)
         self.clock = Clock()
         self.reactor = CompositeReactor([self.clock, ReactorFDSet()])
