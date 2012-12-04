@@ -5,6 +5,8 @@
 GI/GTK3 reactor tests.
 """
 
+from __future__ import division, absolute_import
+
 import sys, os
 try:
     from twisted.internet import gireactor
@@ -22,7 +24,7 @@ else:
     else:
         from gi.repository import Gtk
 
-from twisted.python.util import sibpath
+from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
 from twisted.internet.defer import Deferred
 from twisted.internet.error import ReactorAlreadyRunning
@@ -30,6 +32,7 @@ from twisted.internet.protocol import ProcessProtocol
 from twisted.trial.unittest import TestCase, SkipTest
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.test.test_twisted import SetAsideModule
+from twisted.internet.interfaces import IReactorProcess
 
 # Skip all tests if gi is unavailable:
 if gireactor is None:
@@ -186,12 +189,16 @@ class PygtkCompatibilityTests(TestCase):
         We do this by running a process where we make sure gi.pygtkcompat
         isn't present.
         """
+        from twisted.internet import reactor
+        if not IReactorProcess.providedBy(reactor):
+            raise SkipTest("No process support available in this reactor.")
+
         result = Deferred()
         class Stdout(ProcessProtocol):
-            data = ""
+            data = b""
 
             def errReceived(self, err):
-                print err
+                print(err)
 
             def outReceived(self, data):
                 self.data += data
@@ -199,11 +206,11 @@ class PygtkCompatibilityTests(TestCase):
             def processExited(self, reason):
                 result.callback(self.data)
 
-        path = sibpath(__file__, "process_gireactornocompat.py")
-        from twisted.internet import reactor
+        path = FilePath(__file__.encode("utf-8")).sibling(
+            b"process_gireactornocompat.py").path
         reactor.spawnProcess(Stdout(), sys.executable, [sys.executable, path],
                              env=os.environ)
-        result.addCallback(self.assertEqual, "success")
+        result.addCallback(self.assertEqual, b"success")
         return result
 
 

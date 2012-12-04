@@ -5,6 +5,8 @@
 Tests for twisted.internet.glibbase.
 """
 
+from __future__ import division, absolute_import
+
 import sys
 from twisted.trial.unittest import TestCase
 from twisted.internet._glibbase import ensureNotImported

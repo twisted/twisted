@@ -16,12 +16,31 @@ If you wish to use a GApplication, register it with the reactor::
     reactor.registerGApplication(app)
 
 Then use twisted.internet APIs as usual.
+
+On Python 3, pygobject v3.4 or later is required.
 """
 
-from twisted.python.modules import theSystemPath
+from __future__ import division, absolute_import
+
+from twisted.python.compat import _PY3
 from twisted.internet.error import ReactorAlreadyRunning
 from twisted.internet import _glibbase
 from twisted.python import runtime
+
+if _PY3:
+    # We require a sufficiently new version of pygobject, so always exists:
+    _pygtkcompatPresent = True
+else:
+    # We can't just try to import gi.pygtkcompat, because that would import
+    # gi, and the goal here is to not import gi in cases where that would
+    # cause segfault.
+    from twisted.python.modules import theSystemPath
+    _pygtkcompatPresent = True
+    try:
+        theSystemPath["gi.pygtkcompat"]
+    except KeyError:
+        _pygtkcompatPresent = False
+
 
 # Modules that we want to ensure aren't imported if we're on older versions of
 # GI:
@@ -48,9 +67,7 @@ def _oldGiInit():
                                 preventImports=_PYGTK_MODULES)
 
 
-try:
-    theSystemPath["gi.pygtkcompat"]
-except KeyError:
+if not _pygtkcompatPresent:
     # Older versions of gi don't have compatability layer, so just enforce no
     # imports of pygtk and gi at same time:
     _oldGiInit()
