@@ -29,7 +29,7 @@ from twisted.internet.error import CannotListenError
 from twisted.pair.raw import IRawPacketProtocol
 from twisted.pair.ethernet import EthernetProtocol
 from twisted.pair.tuntap import (
-    TUNSETIFF, IFNAMSIZ, TunnelType, TunnelAddress, TuntapPort, MemoryTunnel)
+    TUNSETIFF, IFNAMSIZ, TunnelType, TunnelAddress, TuntapPort)
 
 
 @implementer(IReactorFDSet)
@@ -83,71 +83,6 @@ class CompositeReactor(object):
                 seen.add(i)
                 for m in i.names():
                     setattr(self, m, getattr(p, m))
-
-
-
-class TunDeviceTestsMixin(object):
-    """
-    Define tests for a Linux I{tun} device, to be mixed in to a test case.
-    """
-    def open(self, contents=None):
-        """
-        Open and return a non-blocking Linux I{tun} device, or at least an
-        object that behaves remarkably like one.
-
-        @param contents: A byte string to make available to be read from the
-            device, or C{None} if no bytes are to be made available to be read
-            from it.
-        @type contents: C{bytes} or C{NoneType}
-        """
-        raise NotImplementedError("Override in subclass")
-
-
-    def test_recv(self):
-        """
-        The C{recv} method of the device accepts an integer and returns an IP
-        datagram as a byte string.
-        """
-        expected = b"hello, world"
-        device = self.open(contents=expected)
-        data = device.recv(1024)
-        self.assertEqual(expected, data)
-
-
-    def test_recvLimit(self):
-        """
-        The C{recv} method of the device returns no more bytes than specified by
-        the integer passed to it.
-        """
-        expected = b"hello, world"
-        limit = 3
-        device = self.open(contents=expected)
-        data = device.recv(limit)
-        self.assertEqual(expected[:limit], data)
-
-
-    def test_recvWouldBlock(self):
-        """
-        In non-blocking mode, if there are no bytes available to be read, the
-        C{recv} method of the device raises L{IOError} with an I{errno} of
-        C{EAGAIN}.
-        """
-        device = self.open()
-        exc = self.assertRaises(IOError, device.recv, 1024)
-        self.assertEqual(exc.errno, EAGAIN)
-
-
-
-class MemoryEthernetTunnelTests(SynchronousTestCase, TunDeviceTestsMixin):
-    def open(self, contents=None):
-        """
-        Create a L{MemoryTunnel} and deliver C{contents} to it before returning
-        it.
-        """
-        left, right = MemoryTunnel.pair()
-        if contents:
-            right.send(contents)
-        return left
 
 
 
