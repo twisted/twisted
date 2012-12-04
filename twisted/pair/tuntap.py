@@ -56,45 +56,6 @@ class TunnelAddress(object):
 
 
 
-class MemoryTunnel(object):
-    """
-    An in-memory only implementation of a tunnel device.
-    """
-    @classmethod
-    def pair(cls):
-        left = MemoryTunnel()
-        right = MemoryTunnel()
-        left.connectTo(right)
-        right.connectTo(left)
-        return left, right
-
-
-    def __init__(self):
-        self._buffer = deque()
-
-
-    def connectTo(self, tunnel):
-        self._peer = tunnel
-
-
-    def send(self, datagram):
-        self._peer._receive(datagram)
-
-
-    def recv(self, limit):
-        try:
-            datagram = self._buffer.popleft()
-        except IndexError:
-            raise IOError(errno.EAGAIN, "Resource temporarily unavailable")
-        else:
-            return datagram[:limit]
-
-
-    def _receive(self, datagram):
-        self._buffer.append(datagram)
-
-
-
 class TuntapPort(base.BasePort):
     """
     A Port that reads and writes packets from/to a TUN/TAP-device.
