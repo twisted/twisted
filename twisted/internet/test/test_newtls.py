@@ -5,6 +5,8 @@
 Tests for L{twisted.internet._newtls}.
 """
 
+from __future__ import division, absolute_import
+
 from twisted.trial import unittest
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.test.connectionmixins import (

@@ -35,6 +35,7 @@ modules = [
     "twisted.internet._glibbase",
     "twisted.internet.gtk3reactor",
     "twisted.internet.main",
+    "twisted.internet._newtls",
     "twisted.internet.posixbase",
     "twisted.internet.protocol",
     "twisted.internet.pollreactor",
@@ -130,6 +131,7 @@ testModules = [
     "twisted.internet.test.test_gireactor",
     "twisted.internet.test.test_glibbase",
     "twisted.internet.test.test_main",
+    "twisted.internet.test.test_newtls",
     "twisted.internet.test.test_posixbase",
     "twisted.internet.test.test_protocol",
     "twisted.internet.test.test_sigchld",
@@ -203,8 +205,6 @@ testModules = [
 # requirements of the modules that depend on them, but cannot be considered
 # generally usable otherwise.
 almostModules = [
-    # To be fully ported as part of #6140:
-    "twisted.internet._newtls",
     # Missing test coverage, see #6156:
     "twisted.internet._sslverify",
     # twisted.names.client semi-depends on twisted.names.root, but only on
