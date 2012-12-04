@@ -20,32 +20,31 @@ class ClientCalculationTestCase(unittest.TestCase):
         d = getattr(self.proto, operation)(a, b)
         self.assertEqual(self.tr.value(), '%s %d %d\r\n' % (operation, a, b))
         self.tr.clear()
-        d.addCallback(self.assertEqual, expected)
         self.proto.dataReceived("%d\r\n" % (expected,))
-        return d
+        self.assertEqual(expected, self.successResultOf(d))
 
 
     def test_add(self):
-        return self._test('add', 7, 6, 13)
+        self._test('add', 7, 6, 13)
 
 
     def test_subtract(self):
-        return self._test('subtract', 82, 78, 4)
+        self._test('subtract', 82, 78, 4)
 
 
     def test_multiply(self):
-        return self._test('multiply', 2, 8, 16)
+        self._test('multiply', 2, 8, 16)
 
 
     def test_divide(self):
-        return self._test('divide', 14, 3, 4)
+        self._test('divide', 14, 3, 4)
 
 
     def test_timeout(self):
         d = self.proto.add(9, 4)
         self.assertEqual(self.tr.value(), 'add 9 4\r\n')
         self.clock.advance(self.proto.timeOut)
-        return self.assertFailure(d, ClientTimeoutError)
+        self.failureResultOf(d).trap(ClientTimeoutError)
 
 
     def test_timeoutConnectionLost(self):
@@ -60,4 +59,5 @@ class ClientCalculationTestCase(unittest.TestCase):
 
         def check(ignore):
             self.assertEqual(called, [True])
-        return self.assertFailure(d, ClientTimeoutError).addCallback(check)
+        self.failureResultOf(d).trap(ClientTimeoutError)
+        self.assertEqual(called, [True])

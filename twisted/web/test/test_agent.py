@@ -15,7 +15,7 @@ from twisted.trial import unittest
 from twisted.web import client, error, http_headers
 from twisted.web._newclient import RequestNotSent, RequestTransmissionFailed
 from twisted.web._newclient import ResponseNeverReceived, ResponseFailed
-from twisted.internet import reactor, defer, interfaces, task
+from twisted.internet import defer, task
 from twisted.python.failure import Failure
 from twisted.python.components import proxyForInterface
 from twisted.test.proto_helpers import StringTransport
@@ -99,42 +99,6 @@ class FileBodyProducerTests(unittest.TestCase):
     Tests for the L{FileBodyProducer} which reads bytes from a file and writes
     them to an L{IConsumer}.
     """
-    _NO_RESULT = object()
-
-    def _resultNow(self, deferred):
-        """
-        Return the current result of C{deferred} if it is not a failure.  If it
-        has no result, return C{self._NO_RESULT}.  If it is a failure, raise an
-        exception.
-        """
-        result = []
-        failure = []
-        deferred.addCallbacks(result.append, failure.append)
-        if len(result) == 1:
-            return result[0]
-        elif len(failure) == 1:
-            raise Exception(
-                "Deferred had failure instead of success: %r" % (failure[0],))
-        return self._NO_RESULT
-
-
-    def _failureNow(self, deferred):
-        """
-        Return the current result of C{deferred} if it is a failure.  If it has
-        no result, return C{self._NO_RESULT}.  If it is not a failure, raise an
-        exception.
-        """
-        result = []
-        failure = []
-        deferred.addCallbacks(result.append, failure.append)
-        if len(result) == 1:
-            raise Exception(
-                "Deferred had success instead of failure: %r" % (result[0],))
-        elif len(failure) == 1:
-            return failure[0]
-        return self._NO_RESULT
-
-
     def _termination(self):
         """
         This method can be used as the C{terminationPredicateFactory} for a
@@ -224,7 +188,7 @@ class FileBodyProducerTests(unittest.TestCase):
             self._scheduled.pop(0)()
         self.assertEqual([], self._scheduled)
         self.assertEqual(expectedResult, output.getvalue())
-        self.assertEqual(None, self._resultNow(complete))
+        self.assertEqual(None, self.successResultOf(complete))
 
 
     def test_inputClosedAtEOF(self):
@@ -256,7 +220,7 @@ class FileBodyProducerTests(unittest.TestCase):
         producer = FileBodyProducer(BrokenFile(), self.cooperator)
         complete = producer.startProducing(FileConsumer(StringIO()))
         self._scheduled.pop(0)()
-        self._failureNow(complete).trap(IOError)
+        self.failureResultOf(complete).trap(IOError)
 
 
     def test_stopProducing(self):
@@ -278,7 +242,7 @@ class FileBodyProducerTests(unittest.TestCase):
         self.assertTrue(inputFile.closed)
         self._scheduled.pop(0)()
         self.assertEqual("", output.getvalue())
-        self.assertIdentical(self._NO_RESULT, self._resultNow(complete))
+        self.assertNoResult(complete)
 
 
     def test_pauseProducing(self):
@@ -306,7 +270,7 @@ class FileBodyProducerTests(unittest.TestCase):
         # Since the producer is paused, no new data should be here.
         self.assertEqual(output.getvalue(), expectedResult[:5])
         self.assertEqual([], self._scheduled)
-        self.assertIdentical(self._NO_RESULT, self._resultNow(complete))
+        self.assertNoResult(complete)
 
 
     def test_resumeProducing(self):
@@ -626,9 +590,9 @@ class HTTPConnectionPoolTests(unittest.TestCase, FakeReactorAndConnectMixin):
 
         protocol.state = "NOTQUIESCENT"
         self.pool._putConnection(("http", "example.com", 80), protocol)
-        error, = self.flushLoggedErrors(RuntimeError)
+        exc, = self.flushLoggedErrors(RuntimeError)
         self.assertEqual(
-            error.value.args[0],
+            exc.value.args[0],
             "BUG: Non-quiescent protocol added to connection pool.")
         self.assertIdentical(None, self.pool._connections.get(
                 ("http", "example.com", 80)))

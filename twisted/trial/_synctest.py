@@ -591,6 +591,99 @@ class _Assertions(pyunit.TestCase, object):
     failIfIsInstance = assertNotIsInstance
 
 
+    def successResultOf(self, deferred):
+        """
+        Return the current success result of C{deferred} or raise
+        C{self.failException}.
+
+        @param deferred: A L{Deferred<twisted.internet.defer.Deferred>} which
+            has a success result.  This means
+            L{Deferred.callback<twisted.internet.defer.Deferred.callback>} or
+            L{Deferred.errback<twisted.internet.defer.Deferred.errback>} has
+            been called on it and it has reached the end of its callback chain
+            and the last callback or errback returned a non-L{failure.Failure}.
+        @type deferred: L{Deferred<twisted.internet.defer.Deferred>}
+
+        @raise SynchronousTestCase.failureException: If the
+            L{Deferred<twisted.internet.defer.Deferred>} has no result or has a
+            failure result.
+
+        @return: The result of C{deferred}.
+        """
+        result = []
+        deferred.addBoth(result.append)
+        if not result:
+            self.fail(
+                "Success result expected on %r, found no result instead" % (
+                    deferred,))
+        elif isinstance(result[0], failure.Failure):
+            self.fail(
+                "Success result expected on %r, "
+                "found failure result (%r) instead" % (deferred, result[0]))
+        else:
+            return result[0]
+
+
+    def failureResultOf(self, deferred):
+        """
+        Return the current failure result of C{deferred} or raise
+        C{self.failException}.
+
+        @param deferred: A L{Deferred<twisted.internet.defer.Deferred>} which
+            has a failure result.  This means
+            L{Deferred.callback<twisted.internet.defer.Deferred.callback>} or
+            L{Deferred.errback<twisted.internet.defer.Deferred.errback>} has
+            been called on it and it has reached the end of its callback chain
+            and the last callback or errback raised an exception or returned a
+            L{failure.Failure}.
+        @type deferred: L{Deferred<twisted.internet.defer.Deferred>}
+
+        @raise SynchronousTestCase.failureException: If the
+            L{Deferred<twisted.internet.defer.Deferred>} has no result or has a
+            success result.
+
+        @return: The failure result of C{deferred}.
+        @rtype: L{failure.Failure}
+        """
+        result = []
+        deferred.addBoth(result.append)
+        if not result:
+            self.fail(
+                "Failure result expected on %r, found no result instead" % (
+                    deferred,))
+        elif not isinstance(result[0], failure.Failure):
+            self.fail(
+                "Failure result expected on %r, "
+                "found success result (%r) instead" % (deferred, result[0]))
+        else:
+            return result[0]
+
+
+
+    def assertNoResult(self, deferred):
+        """
+        Assert that C{deferred} does not have a result at this point.
+
+        @param deferred: A L{Deferred<twisted.internet.defer.Deferred>} without
+            a result.  This means that neither
+            L{Deferred.callback<twisted.internet.defer.Deferred.callback>} nor
+            L{Deferred.errback<twisted.internet.defer.Deferred.errback>} has
+            been called, or that the
+            L{Deferred<twisted.internet.defer.Deferred>} is waiting on another
+            L{Deferred<twisted.internet.defer.Deferred>} for a result.
+        @type deferred: L{Deferred<twisted.internet.defer.Deferred>}
+
+        @raise SynchronousTestCase.failureException: If the
+            L{Deferred<twisted.internet.defer.Deferred>} has a result.
+        """
+        result = []
+        deferred.addBoth(result.append)
+        if result:
+            self.fail(
+                "No result expected on %r, found %r instead" % (
+                    deferred, result[0]))
+
+
 
 class _LogObserver(object):
     """

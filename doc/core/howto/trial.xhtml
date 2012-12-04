@@ -453,7 +453,9 @@ that we don't use a client factory. We're lazy, and it's not very useful in
 the client part, so we instantiate the protocol directly.</p>
 
 <p>Incidentally, we have introduced a very important concept here: the tests
-now return a Deferred object, and the assertion is done in a callback. The
+now return a Deferred object, and the assertion is done in a callback. When
+a test returns a Deferred, the reactor is run until the Deferred fires and
+its callbacks run.  The
 important thing to do here is to <strong>not forget to return the
 Deferred</strong>. If you do, your tests will pass even if nothing is asserted.
 That's also why it's important to make tests fail first: if your tests pass
@@ -623,6 +625,46 @@ class, that does almost everything we want. The great thing is that it almost
 changes nothing to our class.</p>
 
 <a href="listings/trial/calculus/client_3.py" class="py-listing">client_3.py</a>
+
+<h2>Testing Deferreds without the reactor</h2>
+
+<p>Above we learned about returning Deferreds from test methods in order to make
+assertions about their results, or side-effects that only happen after they
+fire.  This can be useful, but we don't actually need the feature in this
+example.  Because we were careful to use <code class="python">Clock</code>, we
+don't need the global reactor to run in our tests.  Instead of returning the
+Deferred with a callback attached to it which performs the necessary assertions,
+we can use a testing helper,
+ <code class="API" base="twisted.trial.unittest.SynchronousTestCase">successResultOf</code> (and
+the corresponding error-case helper
+ <code class="API" base="twisted.trial.unittest.SynchronousTestCase">failureResultOf</code>), to
+extract its result and make assertions against it directly.  Compared to
+returning a Deferred, this avoids the problem of forgetting to return the
+Deferred, improves the stack trace reported when the assertion fails, and avoids
+the complexity of using global reactor (which, for example, may then require
+cleanup).</p>
+
+<a href="listings/trial/calculus/test/test_client_4.py" class="py-listing">test_client_4.py</a>
+
+<p>This version of the code makes the same assertions, but no longer returns any
+Deferreds from any test methods.  Instead of making assertions about the result
+of the Deferred in a callback, it makes the assertions as soon as
+it <em>knows</em> the Deferred is supposed to have a result (in
+the <code>_test</code> method and in <code>test_timeout</code>
+and <code>test_timeoutConnectionLost</code>).  The possibility
+of <em>knowing</em> exactly when a Deferred is supposed to have a test is what
+makes <code>successResultOf</code> useful in unit testing, but prevents it from being
+applicable to non-testing purposes.</p>
+
+<p><code>successResultOf</code> will raise an exception (failing the test) if
+the <code>Deferred</code> passed to it does not have a result, or has a failure
+result.  Similarly, <code>failureResultOf</code> will raise an exception (also
+failing the test) if the <code>Deferred</code> passed to it does not have a
+result, or has a success result.  There is a third helper method for testing the
+final case,
+ <code class="API" base="twisted.trial.unittest.SynchronousTestCase">assertNoResult</code>,
+which only raises an exception (failing the test) if the <code>Deferred</code> passed
+to it <em>has</em> a result (either success or failure).</p>
 
 <h2>Dropping into a debugger</h2>
 

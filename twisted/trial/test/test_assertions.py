@@ -22,7 +22,9 @@ from twisted.python._utilpy3 import FancyEqMixin
 from twisted.python._reflectpy3 import prefixedMethods, accumulateMethods
 from twisted.python.deprecate import deprecated
 from twisted.python.versions import Version, getVersionString
+from twisted.python.failure import Failure
 from twisted.trial import unittest
+from twisted.internet.defer import Deferred, fail, succeed
 
 class MockEquality(FancyEqMixin, object):
     compareAttributes = ("name",)
@@ -804,6 +806,106 @@ class WarningAssertionTests(unittest.SynchronousTestCase):
         self.assertWarns(TheWarning, "bar", __file__, f, "bar")
         [warning] = self.flushWarnings([f])
         self.assertEqual(warning['message'], "foo")
+
+
+
+class TestResultOfAssertions(unittest.SynchronousTestCase):
+    """
+    Tests for L{SynchronousTestCase.successResultOf},
+    L{SynchronousTestCase.failureResultOf}, and
+    L{SynchronousTestCase.assertNoResult}.
+    """
+    result = object()
+    failure = Failure(Exception("Bad times"))
+
+    def test_withoutSuccessResult(self):
+        """
+        L{SynchronousTestCase.successResultOf} raises
+        L{SynchronousTestCase.failureException} when called with a L{Deferred}
+        with no current result.
+        """
+        self.assertRaises(
+            self.failureException, self.successResultOf, Deferred())
+
+
+    def test_successResultOfWithFailure(self):
+        """
+        L{SynchronousTestCase.successResultOf} raises
+        L{SynchronousTestCase.failureException} when called with a L{Deferred}
+        with a failure result.
+        """
+        self.assertRaises(
+            self.failureException, self.successResultOf, fail(self.failure))
+
+
+    def test_withoutFailureResult(self):
+        """
+        L{SynchronousTestCase.failureResultOf} raises
+        L{SynchronousTestCase.failureException} when called with a L{Deferred}
+        with no current result.
+        """
+        self.assertRaises(
+            self.failureException, self.failureResultOf, Deferred())
+
+
+    def test_failureResultOfWithSuccess(self):
+        """
+        L{SynchronousTestCase.failureResultOf} raises
+        L{SynchronousTestCase.failureException} when called with a L{Deferred}
+        with a success result.
+        """
+        self.assertRaises(
+            self.failureException, self.failureResultOf, succeed(self.result))
+
+
+    def test_withSuccessResult(self):
+        """
+        When passed a L{Deferred} which currently has a result (ie,
+        L{Deferred.addCallback} would cause the added callback to be called
+        before C{addCallback} returns), L{SynchronousTestCase.successResultOf}
+        returns that result.
+        """
+        self.assertIdentical(
+            self.result, self.successResultOf(succeed(self.result)))
+
+
+    def test_withFailureResult(self):
+        """
+        When passed a L{Deferred} which currently has a L{Failure} result (ie,
+        L{Deferred.addErrback} would cause the added errback to be called before
+        C{addErrback} returns), L{SynchronousTestCase.failureResultOf} returns
+        that L{Failure}.
+        """
+        self.assertIdentical(
+            self.failure, self.failureResultOf(fail(self.failure)))
+
+
+    def test_assertNoResultSuccess(self):
+        """
+        When passed a L{Deferred} which currently has a success result (see
+        L{test_withSuccessResult}), L{SynchronousTestCase.assertNoResult} raises
+        L{SynchronousTestCase.failureException}.
+        """
+        self.assertRaises(
+            self.failureException, self.assertNoResult, succeed(self.result))
+
+
+    def test_assertNoResultFailure(self):
+        """
+        When passed a L{Deferred} which currently has a failure result (see
+        L{test_withFailureResult}), L{SynchronousTestCase.assertNoResult} raises
+        L{SynchronousTestCase.failureException}.
+        """
+        self.assertRaises(
+            self.failureException, self.assertNoResult, fail(self.failure))
+
+
+    def test_assertNoResult(self):
+        """
+        When passed a L{Deferred} with no current result,
+        L{SynchronousTestCase.assertNoResult} raises no exception.
+        """
+        self.assertNoResult(Deferred())
 
 
 
