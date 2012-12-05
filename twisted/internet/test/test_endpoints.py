@@ -12,7 +12,7 @@ from zope.interface.verify import verifyObject
 from twisted.trial import unittest
 from twisted.internet import error, interfaces
 from twisted.internet import endpoints
-from twisted.internet.address import IPv4Address, UNIXAddress
+from twisted.internet.address import IPv4Address, UNIXAddress, SerialAddress
 from twisted.test.proto_helpers import MemoryReactor
 from twisted.python.systemd import ListenFDs
 from twisted.plugin import getPlugins
@@ -26,6 +26,11 @@ from twisted.internet.stdio import PipeAddress
 from twisted.internet.test.test_endpointspy3 import (
     EndpointTestCaseMixin, ServerEndpointTestCaseMixin, skipSSL,
     pemPath)
+
+try:
+    from twisted.internet import serialport
+except ImportError:
+    serialport = None
 
 casPath = getModule(__name__).filePath.sibling("fake_CAs")
 escapedPEMPathName = endpoints.quoteStringArgument(pemPath.path)
@@ -54,7 +59,7 @@ class StandardIOEndpointsTestCase(unittest.TestCase):
 
     def test_standardIOInstance(self):
         """
-        The endpoint creates an L{endpoints.StandardIO} instance.
+        The endpoint creates an L{stdio.StandardIO} instance.
         """
         self.d = self.ep.listen(StdioFactory())
         def checkInstanceAndLoseConnection(stdioOb):
@@ -110,6 +115,210 @@ class StandardIOEndpointsTestCase(unittest.TestCase):
             stdioOb.loseConnection()
         self.d.addCallback(checkAddress)
         return self.d
+
+
+
+class SerialFactory(StdioFactory):
+    pass
+
+
+
+class SerialPortEndpointsTestCase(unittest.TestCase):
+    """
+    Tests for Serial Port Endpoints
+    """
+    if serialport is None:
+        skip = "Serial port support is not available."
+    else:
+    # Expected values of the endpoint attributes
+        deviceNameOrPortNumber = '/dev/ttyS0'
+        baudrate = 4800
+        bytesize = serialport.SEVENBITS
+        parity = serialport.PARITY_EVEN
+        stopbits = serialport.STOPBITS_TWO
+        timeout = 3
+        xonxoff = True
+        rtscts = True
+        expectedArgs = [(deviceNameOrPortNumber, baudrate, bytesize, parity,
+            stopbits, timeout, xonxoff, rtscts)]
+
+
+    def setUp(self):
+        self.ep = endpoints.SerialPortEndpoint(self.deviceNameOrPortNumber,
+                                reactor, self.baudrate, self.bytesize,
+                                self.parity, self.stopbits, self.timeout,
+                                self.xonxoff, self.rtscts)
+
+
+    def test_constructorDefaultArgs(self):
+        """
+        The parameters passed to the endpoints are stored in it, while
+        the optional arguments get their respective default values.
+        """
+        endpoint = endpoints.SerialPortEndpoint('/dev/ttyS0', reactor)
+        self.assertEqual(endpoint._reactor, reactor)
+        self.assertEqual(endpoint._baudrate, 9600)
+        self.assertEqual(endpoint._bytesize, serialport.EIGHTBITS)
+        self.assertEqual(endpoint._parity, serialport.PARITY_NONE)
+        self.assertEqual(endpoint._stopbits, serialport.STOPBITS_ONE)
+        self.assertEqual(endpoint._timeout, 0)
+        self.assertEqual(endpoint._xonxoff, False)
+        self.assertEqual(endpoint._rtscts, False)
+
+
+    def test_serialPortInstanceParameters(self):
+        """
+        The endpoint creates a L{serialport.SerialPort} instance and
+        passes the required arguments to its constructor.
+        """
+        portArgs = []
+        class _DummySerialPort(object):
+            def __init__(self, protocol, deviceNameOrPortNumber, reactor,
+                         baudrate, bytesize, parity, stopbits, timeout,
+                         xonxoff, rtscts):
+                self.protocol = protocol
+                self.protocol.makeConnection(self)
+                portArgs.append((deviceNameOrPortNumber, baudrate, bytesize,
+                    parity, stopbits, timeout, xonxoff, rtscts))
+
+        self.patch(serialport, 'SerialPort', _DummySerialPort)
+        d = self.ep.connect(SerialFactory())
+
+        def checkArgs(proto):
+            self.assertIsInstance(proto, basic.LineReceiver)
+            self.assertIsInstance(proto.transport, serialport.SerialPort)
+            self.assertEqual(self.expectedArgs, portArgs)
+
+        d.addCallback(checkArgs)
+        return d
+
+
+    def test_xonxoff(self):
+        """
+        The value of xonxoff that is stored in the endpoint is passed
+        on to the L{SerialPort} instance.
+        """
+        endpoint = endpoints.SerialPortEndpoint(self.deviceNameOrPortNumber,
+                                reactor, self.baudrate, self.bytesize,
+                                self.parity, self.stopbits, self.timeout,
+                                self.xonxoff) # Pass default value for rtscts
+        xonxoffVal = []
+        class _DummySerialPort(object):
+            def __init__(self, protocol, deviceNameOrPortNumber, reactor,
+                         baudrate, bytesize, parity, stopbits, timeout,
+                         xonxoff, rtscts):
+                xonxoffVal.append(xonxoff)
+
+        self.patch(serialport, 'SerialPort', _DummySerialPort)
+        d = endpoint.connect(SerialFactory())
+
+        def checkArg(proto):
+            self.assertEqual(xonxoffVal.pop(), self.xonxoff)
+
+        d.addCallback(checkArg)
+        return d
+
+
+    def test_rtscts(self):
+        """
+        The value of rtscts stored in the endpoint is passed on to the
+        L{SerialPort} instance.
+        """
+        endpoint = endpoints.SerialPortEndpoint(self.deviceNameOrPortNumber,
+                                reactor, self.baudrate, self.bytesize,
+                                self.parity, self.stopbits, self.timeout,
+                                False, self.rtscts)
+        rtsctsVal = []
+        class _DummySerialPort(object):
+            def __init__(self, protocol, deviceNameOrPortNumber, reactor,
+                         baudrate, bytesize, parity, stopbits, timeout,
+                         xonxoff, rtscts):
+                rtsctsVal.append(rtscts)
+
+        self.patch(serialport, 'SerialPort', _DummySerialPort)
+        d = endpoint.connect(SerialFactory())
+
+        def checkArg(proto):
+            self.assertEqual(rtsctsVal.pop(), self.rtscts)
+
+        d.addCallback(checkArg)
+        return d
+
+
+    def test_address(self):
+        """
+        The address passed to the factory's buildProtocol in the
+        endpoint is a SerialAddress instance.
+        """
+        class TestAddrFactory(protocol.Factory):
+            protocol = basic.LineReceiver
+            _address = None
+            def buildProtocol(self, addr):
+                self._address = addr
+                p = self.protocol()
+                p.factory = self
+                return p
+            def getAddress(self):
+                return self._address
+
+        f = TestAddrFactory()
+
+        class _DummySerialPort(object):
+            def __init__(self, protocol, deviceNameOrPortNumber, reactor,
+                         baudrate, bytesize, parity, stopbits, timeout,
+                         xonxoff, rtscts):
+                self.protocol = protocol
+                self.protocol.makeConnection(self)
+
+        self.patch(serialport, 'SerialPort', _DummySerialPort)
+        d = self.ep.connect(f)
+
+        def checkAddress(proto):
+            self.assertIsInstance(f.getAddress(), SerialAddress)
+
+        d.addCallback(checkAddress)
+        return d
+
+
+    def test_connectFailure(self):
+        """
+        In case of failure, L{SerialPortEndpoint.connect} returns a
+        Deferred that fails.
+        """
+        class _DummySerialPortThatFails(object):
+            def __init__(self, *args):
+                raise Exception
+
+        receivedExceptions = []
+        self.patch(serialport, 'SerialPort', _DummySerialPortThatFails)
+        d = self.ep.connect(SerialFactory())
+
+        def checkFailure(failure):
+            receivedExceptions.append(failure.value)
+
+        d.addErrback(checkFailure)
+        self.assertEqual(len(receivedExceptions), 1)
+        self.assertIsInstance(receivedExceptions.pop(), Exception)
+
+
+    def test_buildProtocolFailure(self):
+        """
+        In case of failure, L{SerialPortEndpoint.connect} returns a
+        Deferred that fires with a failure.
+        """
+        class FailingSerialFactory(SerialFactory):
+            def buildProtocol(self, addr):
+                raise Exception
+
+        receivedExceptions = []
+        d = self.ep.connect(FailingSerialFactory())
+
+        def checkFailure(failure):
+            receivedExceptions.append(failure.value)
+
+        d.addErrback(checkFailure)
+        self.assertEqual(len(receivedExceptions), 1)
+        self.assertIsInstance(receivedExceptions.pop(), Exception)
 
 
 

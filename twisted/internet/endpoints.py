@@ -24,6 +24,7 @@ from twisted.python.filepath import FilePath
 from twisted.python.systemd import ListenFDs
 from twisted.internet import stdio
 from twisted.internet.stdio import PipeAddress
+from twisted.internet.address import SerialAddress
 
 from twisted.internet._endpointspy3 import (
     _WrappingFactory, TCP4ServerEndpoint, TCP6ServerEndpoint,
@@ -35,7 +36,8 @@ __all__ = ["clientFromString", "serverFromString",
            "TCP4ClientEndpoint", "TCP6ClientEndpoint",
            "UNIXServerEndpoint", "UNIXClientEndpoint",
            "SSL4ServerEndpoint", "SSL4ClientEndpoint",
-           "AdoptedStreamServerEndpoint", "StandardIOEndpoint"]
+           "AdoptedStreamServerEndpoint", "StandardIOEndpoint",
+           "SerialPortEndpoint"]
 
 
 
@@ -58,6 +60,59 @@ class StandardIOEndpoint(object):
         """
         return defer.execute(stdio.StandardIO,
                              stdioProtocolFactory.buildProtocol(PipeAddress()))
+
+
+
+class SerialPortEndpoint(object):
+    """
+    A Serial Port endpoint.
+    """
+    try:
+        from twisted.internet.serialport import (
+            EIGHTBITS, PARITY_NONE, STOPBITS_ONE)
+    except ImportError:
+        EIGHTBITS = None
+        PARITY_NONE = None
+        STOPBITS_ONE = None
+
+    implements(interfaces.IStreamClientEndpoint)
+
+    def __init__(self, deviceNameOrPortNumber, reactor,
+                 baudrate=9600, bytesize=EIGHTBITS,
+                 parity=PARITY_NONE, stopbits=STOPBITS_ONE,
+                 timeout=0, xonxoff=False, rtscts=False):
+        """
+        @see: L{serialport.SerialPort}
+        """
+        self._deviceNameOrPortNumber = deviceNameOrPortNumber
+        self._reactor = reactor
+        self._baudrate = baudrate
+        self._bytesize = bytesize
+        self._parity = parity
+        self._stopbits = stopbits
+        self._timeout = timeout
+        self._xonxoff = xonxoff
+        self._rtscts = rtscts
+
+
+    def connect(self, serialFactory):
+        """
+        Implement L{IStreamClientEndpoint.connect} to connect to serial ports
+
+        @param serialFactory: The protocol factory which will build protocols
+            for connections to this service.
+        @type serialFactory: L{twisted.internet.interfaces.IProtocolFactory}
+        """
+        try:
+            from twisted.internet import serialport
+            proto = serialFactory.buildProtocol(SerialAddress())
+            serialport.SerialPort(proto, self._deviceNameOrPortNumber,
+                    self._reactor, self._baudrate, self._bytesize,
+                    self._parity, self._stopbits, self._timeout,
+                    self._xonxoff, self._rtscts)
+            return defer.succeed(proto)
+        except:
+            return defer.fail()
 
 
 
