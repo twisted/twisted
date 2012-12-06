@@ -34,6 +34,13 @@ from twisted.pair.tuntap import (
 
 @implementer(IReactorFDSet)
 class ReactorFDSet(object):
+    """
+    An implementation of L{IReactorFDSet} which only keeps track of which
+    descriptors have been registered for reading and writing.
+
+    This implementation isn't actually capable of determining readability or
+    writeability and generates no events for the descriptors registered with it.
+    """
     def __init__(self):
         self._readers = set()
         self._writers = set()
@@ -73,13 +80,31 @@ verifyObject(IReactorFDSet, ReactorFDSet())
 
 
 
-class CompositeReactor(object):
+class Composite(object):
+    """
+    A helper to compose other objects based on their declared (zope.interface)
+    interfaces.
+
+    This is used here to create a reactor from separate implementations of
+    different reactor interfaces - for example, from L{Clock} and
+    L{ReactorFDSet} to create a reactor which provides L{IReactorTime} and
+    L{IReactorFDSet}.
+    """
     def __init__(self, parts):
+        """
+        @param parts: An iterable of the objects to compose.  The methods of
+            these objects which are part of any interface the objects declare
+            they provide will be made methods of C{self}.  (Non-method
+            attributes are not supported.)
+
+        @raise ValueError: If an interface is provided by more than one of the
+            objects in C{parts}.
+        """
         seen = set()
         for p in parts:
             for i in providedBy(p):
                 if i in seen:
-                    raise ValueError("Redundant part")
+                    raise ValueError("More than one part provides %r" % (i,))
                 seen.add(i)
                 for m in i.names():
                     setattr(self, m, getattr(p, m))
@@ -88,8 +113,9 @@ class CompositeReactor(object):
 
 class Tunnel(object):
     """
-    @cvar _DEVICE_NAME: A C{bytes} string representing the conventional
-        filesystem entry for the tunnel factory character special device.
+    @cvar _DEVICE_NAME: A string representing the conventional filesystem entry
+        for the tunnel factory character special device.
+    @type _DEVICE_NAME: C{bytes}
     """
     _DEVICE_NAME = b"/dev/net/tun"
 
@@ -122,7 +148,7 @@ class Tunnel(object):
         if self.readBuffer:
             return self.readBuffer.popleft()[:limit]
         elif self.blocking:
-            raise OSError(ENOSYS)
+            raise OSError(ENOSYS, "Function not implemented")
         else:
             raise self.nonBlockingExceptionStyle
 
@@ -149,13 +175,17 @@ def privileged(f):
     return g
 
 
-class FakeSpecial(object):
-
+class MemoryIOSystem(object):
+    """
+    An in-memory implementation of basic I/O primitives, useful in the context
+    of unit testing as a drop-in replacement for parts of the C{os} module.
+    """
     _counter = 8192
 
     OPERATIONS = [
-        'open', 'read', 'write', 'ioctl', 'close', 'setNonBlocking',
-        'setCloseOnExec']
+        'open', 'read', 'write', 'ioctl', 'close',
+        # TODO One^WTwo of these things are not like the others
+        'setNonBlocking', 'setCloseOnExec']
 
     def __init__(self):
         self._devices = {}
@@ -355,7 +385,7 @@ class TunnelDeviceTestsMixin(object):
 
 class FakeDeviceTests(TunnelDeviceTestsMixin, SynchronousTestCase):
     def device(self):
-        special = FakeSpecial()
+        special = MemoryIOSystem()
         special._devices[Tunnel._DEVICE_NAME] = Tunnel
         return special
 
@@ -422,12 +452,14 @@ class RealDeviceTests(TunnelDeviceTestsMixin, SynchronousTestCase):
 class TunnelTestsMixin(object):
     def setUp(self):
         self.name = b"tun0"
-        self.device = FakeSpecial()
+        self.device = MemoryIOSystem()
         self.device._devices[Tunnel._DEVICE_NAME] = Tunnel
-        self.protocol = self.factory.buildProtocol(None)
+        self.protocol = self.factory.buildProtocol(TunnelAddress(self.TUNNEL_TYPE, self.name))
         self.clock = Clock()
-        self.reactor = CompositeReactor([self.clock, ReactorFDSet()])
+        self.reactor = Composite([self.clock, ReactorFDSet()])
         self.port = TuntapPort(self.name, self.protocol, reactor=self.reactor)
+
+        # TODO Would be nice if this setup were a method of the device?
         for name in self.device.OPERATIONS:
             setattr(self.port, '_' + name, getattr(self.device, name))
 
