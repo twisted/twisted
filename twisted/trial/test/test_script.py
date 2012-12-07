@@ -600,7 +600,7 @@ class TestRun(unittest.TestCase):
 class TestArgumentOrderTests(unittest.TestCase):
     def setUp(self):
         self.config = trial.Options()
-        self.loader = runner.TestLoader()
+        self.loader = TestLoader()
 
     def test_preserveArgumentOrder(self):
         """
@@ -619,7 +619,7 @@ class TestArgumentOrderTests(unittest.TestCase):
         suite = trial._getSuite(self.config)
         names = testNames(suite)
 
-        expectedSuite = runner.TestSuite(map(self.loader.loadByName, tests))
+        expectedSuite = TestSuite(map(self.loader.loadByName, tests))
         expectedNames = testNames(expectedSuite)
 
         self.assertEqual(names, expectedNames)
