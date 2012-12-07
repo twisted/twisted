@@ -594,3 +594,32 @@ class TestRun(unittest.TestCase):
             self.assertIn("foo", str(e))
         else:
             self.fail("Should have exited due to non-existent debugger!")
+
+
+
+class TestArgumentOrderTests(unittest.TestCase):
+    def setUp(self):
+        self.config = trial.Options()
+        self.loader = runner.TestLoader()
+
+    def test_preserveArgumentOrder(self):
+        """
+        Multiple tests passed on the command line are not reordered.
+
+        """
+
+        tests = [
+            "twisted.manhole.test.test_explorer",
+            "twisted.conch.test.test_conch",
+            "twisted.internet.test.test_default",
+            "twisted.test.test_abstract",
+        ]
+        self.config.parseOptions(tests)
+
+        suite = trial._getSuite(self.config)
+        names = testNames(suite)
+
+        expectedSuite = runner.TestSuite(map(self.loader.loadByName, tests))
+        expectedNames = testNames(expectedSuite)
+
+        self.assertEqual(names, expectedNames)
