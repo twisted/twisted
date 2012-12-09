@@ -948,6 +948,13 @@ class Request:
 
             for name, values in self.responseHeaders.getAllRawHeaders():
                 for value in values:
+                    if not isinstance(value, bytes):
+                        warnings.warn(
+                            "Passing non-bytes header values is deprecated "
+                            "since Twisted 12.3. Pass only bytes instead.",
+                            category=DeprecationWarning, stacklevel=2)
+                        # Backward compatible cast for non-bytes values
+                        value = networkString('%s' % (value,))
                     l.extend([name, b": ", value, b"\r\n"])
 
             for cookie in self.cookies:

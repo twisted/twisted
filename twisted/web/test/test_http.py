@@ -1345,6 +1345,37 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
               b"Hello")])
 
 
+    def test_nonByteHeaderValue(self):
+        """
+        L{http.Request.write} casts non-bytes header value to bytes
+        transparently.
+        """
+        req = http.Request(DummyChannel(), None)
+        trans = StringTransport()
+
+        req.transport = trans
+
+        req.setResponseCode(200)
+        req.clientproto = b"HTTP/1.0"
+        req.responseHeaders.setRawHeaders(b"test", [10])
+        req.write(b'Hello')
+
+        self.assertResponseEquals(
+            trans.value(),
+            [(b"HTTP/1.0 200 OK",
+              b"Test: 10",
+              b"Hello")])
+
+        warnings = self.flushWarnings(
+            offendingFunctions=[self.test_nonByteHeaderValue])
+        self.assertEqual(1, len(warnings))
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(
+            warnings[0]['message'],
+            "Passing non-bytes header values is deprecated since "
+            "Twisted 12.3. Pass only bytes instead.")
+
+
     def test_firstWriteHTTP11Chunked(self):
         """
         For an HTTP 1.1 request, L{http.Request.write} sends an HTTP 1.1
