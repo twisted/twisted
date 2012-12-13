@@ -20,7 +20,6 @@ from zope.interface.verify import verifyObject
 
 from twisted.python.reflect import fullyQualifiedName
 from twisted.python.compat import iterbytes
-from twisted.internet.fdesc import setNonBlocking
 from twisted.internet.interfaces import IAddress, IReactorFDSet
 from twisted.internet.protocol import AbstractDatagramProtocol, Factory
 from twisted.internet.task import Clock
@@ -132,16 +131,28 @@ class Tunnel(object):
 
     SEND_BUFFER_SIZE = 1024
 
-    def __init__(self, fileMode):
-        self.fileMode = fileMode
-        self.closeOnExec = False
-        self.blocking = True
+    def __init__(self, system, openFlags, fileMode):
+        self.system = system
+
+        # Drop fileMode on the floor - evidence and logic suggest it is
+        # irrelevant with respect to /dev/net/tun
+        self.openFlags = openFlags
         self.tunnelMode = None
         self.requestedName = None
         self.name = None
         self.readBuffer = deque()
         self.writeBuffer = deque()
         self.pendingSignals = deque()
+
+
+    @property
+    def blocking(self):
+        return not (self.openFlags & self.system.O_NONBLOCK)
+
+
+    @property
+    def closeOnExec(self):
+        return self.openFlags & self.system.O_CLOEXEC
 
 
     def read(self, limit):
@@ -175,17 +186,31 @@ def privileged(f):
     return g
 
 
+
 class MemoryIOSystem(object):
     """
     An in-memory implementation of basic I/O primitives, useful in the context
     of unit testing as a drop-in replacement for parts of the C{os} module.
+
+    @cvar OPERATIONS:
+
+    @ivar _devices:
+    @ivar _openFiles:
+    @ivar permissions:
+
+    @ivar _counter:
     """
     _counter = 8192
 
+    O_RDWR = 1 << 0
+    O_NONBLOCK = 1 << 1
+    O_CLOEXEC = 1 << 2
+
     OPERATIONS = [
         'open', 'read', 'write', 'ioctl', 'close',
-        # TODO One^WTwo of these things are not like the others
-        'setNonBlocking', 'setCloseOnExec']
+
+        'O_RDWR', 'O_NONBLOCK', 'O_CLOEXEC',
+        ]
 
     def __init__(self):
         self._devices = {}
@@ -198,13 +223,28 @@ class MemoryIOSystem(object):
 
 
     @privileged
-    def open(self, name, mode):
+    def open(self, name, flags, mode=None):
+        """
+        A replacement for C{os.open}.  This initializes state in this
+        L{MemoryIOSystem} which will be reflected in the behavior of the other
+        file descriptor-related methods (eg L{MemoryIOSystem.read},
+        L{MemoryIOSystem.write}, etc).
+
+        @param name: A string giving the name of the file to open.
+        @type name: C{bytes}
+
+        @param flags: The flags with which to open the file.
+        @type flags: C{int}
+
+        @param mode: The mode with which to open the file.
+        @type mode: C{int}
+        """
         if name in self._devices:
             fd = self._counter
             self._counter += 1
-            self._openFiles[fd] = self._devices[name](mode)
+            self._openFiles[fd] = self._devices[name](self, flags, mode)
             return fd
-        raise OSError(ENOSYS)
+        raise OSError(ENOSYS, "Function not implemented")
 
 
     def read(self, fd, limit):
@@ -245,22 +285,6 @@ class MemoryIOSystem(object):
         return struct.pack('%dsH' % (IFNAMSIZ,), tunnel.name, mode)
 
 
-    def setNonBlocking(self, fd):
-        try:
-            tunnel = self._openFiles[fd]
-        except KeyError:
-            raise IOError(EBADF, "Bad file descriptor")
-        tunnel.blocking = False
-
-
-    def setCloseOnExec(self, fd):
-        try:
-            tunnel = self._openFiles[fd]
-        except KeyError:
-            raise IOError(EBADF, "Bad file descriptor")
-        tunnel.closeOnExec = True
-
-
     def sendUDP(self, datagram, address):
         self._openFiles.values()[0].readBuffer.append(datagram)
 
@@ -271,24 +295,28 @@ class MemoryIOSystem(object):
 
 
 class _FakePort(object):
-    def __init__(self, device):
-        self._device = device
+    def __init__(self, system):
+        self._system = system
 
 
     def recv(self, nbytes):
-        return self._device._openFiles.values()[0].writeBuffer.popleft()[:nbytes]
+        return self._system._openFiles.values()[0].writeBuffer.popleft()[:nbytes]
 
 
 
 class TunnelDeviceTestsMixin(object):
     def setUp(self):
         self.device = self.device()
-        self.fileno = self.device.open(b"/dev/net/tun", os.O_RDWR)
+        self.fileno = self.device.open(b"/dev/net/tun", os.O_RDWR | os.O_NONBLOCK)
         self.addCleanup(self.device.close, self.fileno)
-        self.device.setNonBlocking(self.fileno)
         config = struct.pack(
             "%dsH" % (IFNAMSIZ,), "tap-twistedtest", TunnelType.TAP.value)
         self.device.ioctl(self.fileno, TUNSETIFF, config)
+
+
+    def test_readEBADF(self):
+        exc = self.assertRaises(OSError, self.device.read, -1, 1024)
+        self.assertEqual(EBADF, exc.errno)
 
 
     def test_receive(self):
@@ -385,9 +413,9 @@ class TunnelDeviceTestsMixin(object):
 
 class FakeDeviceTests(TunnelDeviceTestsMixin, SynchronousTestCase):
     def device(self):
-        special = MemoryIOSystem()
-        special._devices[Tunnel._DEVICE_NAME] = Tunnel
-        return special
+        system = MemoryIOSystem()
+        system._devices[Tunnel._DEVICE_NAME] = Tunnel
+        return system
 
 
 
@@ -397,8 +425,6 @@ class RealSpecial(object):
     write = staticmethod(os.write)
     close = staticmethod(os.close)
     ioctl = staticmethod(fcntl.ioctl)
-
-    setNonBlocking = staticmethod(setNonBlocking)
 
     def sendUDP(self, datagram, address):
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -469,9 +495,11 @@ class TunnelTestsMixin(object):
         L{TuntapPort.startListening} opens the tunnel factory character special
         device C{"/dev/net/tun"} and configures it as a I{tun} tunnel.
         """
+        dev = self.device
         self.port.startListening()
         tunnel = self.device.getTunnel(self.port)
-        self.assertEqual(os.O_RDWR, tunnel.fileMode)
+        self.assertEqual(
+            dev.O_RDWR | dev.O_CLOEXEC | dev.O_NONBLOCK, tunnel.openFlags)
         self.assertEqual(
             b"tun0" + "\x00" * (IFNAMSIZ - len(b"tun0")), tunnel.requestedName)
         self.assertEqual(tunnel.name, self.port.interface)

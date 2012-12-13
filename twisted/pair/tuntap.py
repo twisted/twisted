@@ -72,11 +72,14 @@ class TuntapPort(base.BasePort):
     _close = staticmethod(_close)
     _ioctl = staticmethod(_ioctl)
 
-    from twisted.internet.fdesc import (
-        setNonBlocking as _setNonBlocking, _setCloseOnExec)
+    from os import O_RDWR as _O_RDWR, O_NONBLOCK as _O_NONBLOCK
 
-    _setNonBlocking = staticmethod(_setNonBlocking)
-    _setCloseOnExec = staticmethod(_setCloseOnExec)
+    # Introduced in Python 3.x
+    try:
+        from os import O_CLOEXEC as _O_CLOEXEC
+    except ImportError:
+        # Ubuntu 12.04, /usr/include/x86_64-linux-gnu/bits/fcntl.h
+        _O_CLOEXEC = 0o2000000
 
     maxThroughput = 256 * 1024 # max bytes we read in one eventloop iteration
 
@@ -120,8 +123,9 @@ class TuntapPort(base.BasePort):
 
 
     def _openTunnel(self, name, mode):
+        flags = self._O_RDWR | self._O_CLOEXEC | self._O_NONBLOCK
         config = struct.pack("%dsH" % (IFNAMSIZ,), name, mode.value)
-        fileno = self._open(TUN_KO_PATH, os.O_RDWR)
+        fileno = self._open(TUN_KO_PATH, flags)
         result = self._ioctl(fileno, TUNSETIFF, config)
         return fileno, result[:IFNAMSIZ].strip('\x00')
 
@@ -132,9 +136,6 @@ class TuntapPort(base.BasePort):
             fileno, interface = self._openTunnel(self.interface, self._mode)
         except (IOError, OSError) as e:
             raise error.CannotListenError(None, self.interface, e)
-
-        self._setNonBlocking(fileno)
-        self._setCloseOnExec(fileno)
 
         self.interface = interface
         self._fileno = fileno
