@@ -251,21 +251,21 @@ class MemoryIOSystem(object):
         try:
             return self._openFiles[fd].read(limit)
         except KeyError:
-            raise IOError(EBADF, "Bad file descriptor")
+            raise OSError(EBADF, "Bad file descriptor")
 
 
     def write(self, fd, data):
         try:
             return self._openFiles[fd].write(data)
         except KeyError:
-            raise IOError(EBADF, "Bad file descriptor")
+            raise OSError(EBADF, "Bad file descriptor")
 
 
     def close(self, fd):
         try:
             del self._openFiles[fd]
         except KeyError:
-            raise IOError(EBADF, "Bad file descriptor")
+            raise OSError(EBADF, "Bad file descriptor")
 
 
     @privileged
@@ -314,8 +314,34 @@ class TunnelDeviceTestsMixin(object):
         self.device.ioctl(self.fileno, TUNSETIFF, config)
 
 
+    def _invalidFileDescriptor(self):
+        fd = self.device.open(b"/dev/net/tun", os.O_RDWR)
+        self.device.close(fd)
+        return fd
+
+
     def test_readEBADF(self):
-        exc = self.assertRaises(OSError, self.device.read, -1, 1024)
+        fd = self._invalidFileDescriptor()
+        exc = self.assertRaises(OSError, self.device.read, fd, 1024)
+        self.assertEqual(EBADF, exc.errno)
+
+
+    def test_writeEBADF(self):
+        fd = self._invalidFileDescriptor()
+        exc = self.assertRaises(OSError, self.device.write, fd, b"bytes")
+        self.assertEqual(EBADF, exc.errno)
+
+
+    def test_closeEBADF(self):
+        fd = self._invalidFileDescriptor()
+        exc = self.assertRaises(OSError, self.device.close, fd)
+        self.assertEqual(EBADF, exc.errno)
+
+
+    def test_ioctlEBADF(self):
+        fd = self._invalidFileDescriptor()
+        exc = self.assertRaises(
+            IOError, self.device.ioctl, fd, TUNSETIFF, b"tap0")
         self.assertEqual(EBADF, exc.errno)
 
 
