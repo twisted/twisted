@@ -1,4 +1,8 @@
 Twisted Pair 12.2.0
 
-Twisted Pair depends on Twisted Core.  For TUN/TAP access, python-eunuchs
-(<http://pypi.python.org/pypi/python-eunuchs/0.0.0>) is also required.
+Twisted Pair depends on Twisted Core.
+
+To be able to run the Twisted Pair test suite as an unprivileged user, you need
+to create a tunnel device.  This is done with the ip(8) command.  For details,
+see twisted/pair/test/test_tuntap.py - in particular, the comments the
+implementation of `RealDeviceTests.device`.
