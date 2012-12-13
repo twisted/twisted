@@ -10,6 +10,7 @@ from __future__ import division, absolute_import
 
 __metaclass__ = type
 
+import sys
 import time
 
 from zope.interface import implementer
@@ -20,6 +21,7 @@ from twisted.python.failure import Failure
 
 from twisted.internet import base, defer
 from twisted.internet.interfaces import IReactorTime
+from twisted.internet.error import ReactorNotRunning
 
 
 class LoopingCall:
@@ -336,7 +338,7 @@ class CooperativeTask(object):
     paused, resumed, and stopped.  It can also have its completion (or
     termination) monitored.
 
-    @see: L{CooperativeTask.cooperate}
+    @see: L{Cooperator.cooperate}
 
     @ivar _iterator: the iterator to iterate when this L{CooperativeTask} is
         asked to do work.
@@ -347,21 +349,21 @@ class CooperativeTask(object):
     @ivar _deferreds: the list of L{defer.Deferred}s to fire when this task
         completes, fails, or finishes.
 
-    @type _deferreds: L{list}
+    @type _deferreds: C{list}
 
     @type _cooperator: L{Cooperator}
 
     @ivar _pauseCount: the number of times that this L{CooperativeTask} has
         been paused; if 0, it is running.
 
-    @type _pauseCount: L{int}
+    @type _pauseCount: C{int}
 
     @ivar _completionState: The completion-state of this L{CooperativeTask}.
         C{None} if the task is not yet completed, an instance of L{TaskStopped}
         if C{stop} was called to stop this task early, of L{TaskFailed} if the
         application code in the iterator raised an exception which caused it to
         terminate, and of L{TaskDone} if it terminated normally via raising
-        L{StopIteration}.
+        C{StopIteration}.
 
     @type _completionState: L{TaskFinished}
     """
@@ -386,7 +388,7 @@ class CooperativeTask(object):
 
         @return: a L{defer.Deferred} that fires with the C{iterator} that this
             L{CooperativeTask} was created with when the iterator has been
-            exhausted (i.e. its C{next} method has raised L{StopIteration}), or
+            exhausted (i.e. its C{next} method has raised C{StopIteration}), or
             fails with the exception raised by C{next} if it raises some other
             exception.
 
@@ -797,6 +799,9 @@ def react(main, argv, _reactor=None):
       - Take care to call C{reactor.stop} once and only once, and at the right
         time.
       - Log any failures from the C{Deferred} returned by C{main}.
+      - Exit the application when done, with exit code 0 in case of success and
+        1 in case of failure. If C{main} fails with a C{SystemExit} error, the
+        code returned is used.
 
     @param main: A callable which returns a L{Deferred}.  It should take as
         many arguments as there are elements in the list C{argv}.
@@ -805,18 +810,41 @@ def react(main, argv, _reactor=None):
 
     @param _reactor: An implementation detail to allow easier unit testing.  Do
         not supply this parameter.
+
+    @since: 12.3
     """
     if _reactor is None:
         from twisted.internet import reactor as _reactor
+    finished = main(_reactor, *argv)
+    codes = [0]
+
     stopping = []
     _reactor.addSystemEventTrigger('before', 'shutdown', stopping.append, True)
-    finished = main(_reactor, *argv)
-    finished.addErrback(log.err, "main function encountered error")
-    def cbFinish(ignored):
-        if not stopping:
-            _reactor.callWhenRunning(_reactor.stop)
-    finished.addCallback(cbFinish)
+
+    def stop(result, stopReactor):
+        if stopReactor:
+            try:
+                _reactor.stop()
+            except ReactorNotRunning:
+                pass
+
+        if isinstance(result, Failure):
+            if result.check(SystemExit) is not None:
+                code = result.value.code
+            else:
+                log.err(result, "main function encountered error")
+                code = 1
+            codes[0] = code
+
+    def cbFinish(result):
+        if stopping:
+            stop(result, False)
+        else:
+            _reactor.callWhenRunning(stop, result, True)
+
+    finished.addBoth(cbFinish)
     _reactor.run()
+    sys.exit(codes[0])
 
 
 __all__ = [
