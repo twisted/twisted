@@ -345,6 +345,14 @@ class TunnelDeviceTestsMixin(object):
         self.assertEqual(EBADF, exc.errno)
 
 
+    def test_ioctlESOME(self):
+        # Try to invent an unsupported request
+        request = 0xDEADBEEF
+        exc = self.assertRaises(
+            IOError, self.device.ioctl, self.fileno, request, b"garbage")
+        self.assertEqual(EINVAL, exc.errno)
+
+
     def test_receive(self):
         key = randrange(2 ** 64)
         message = "hello world:%d" % (key,)
