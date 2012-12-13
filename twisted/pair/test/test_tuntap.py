@@ -315,38 +315,70 @@ class TunnelDeviceTestsMixin(object):
 
 
     def _invalidFileDescriptor(self):
+        """
+        Return an integer which is not a valid file descriptor at the time of
+        this call.  After any future system call which allocates a new file
+        descriptor, there is no guarantee the returned file descriptor will
+        still be invalid.
+        """
         fd = self.device.open(b"/dev/net/tun", os.O_RDWR)
         self.device.close(fd)
         return fd
 
 
     def test_readEBADF(self):
+        """
+        The device's C{read} implementation raises L{OSError} with an errno of
+        C{EBADF} when called on a file descriptor which is not valid (ie, which
+        has no associated file description).
+        """
         fd = self._invalidFileDescriptor()
         exc = self.assertRaises(OSError, self.device.read, fd, 1024)
         self.assertEqual(EBADF, exc.errno)
 
 
     def test_writeEBADF(self):
+        """
+        The device's C{write} implementation raises L{OSError} with an errno of
+        C{EBADF} when called on a file descriptor which is not valid (ie, which
+        has no associated file description).
+        """
         fd = self._invalidFileDescriptor()
         exc = self.assertRaises(OSError, self.device.write, fd, b"bytes")
         self.assertEqual(EBADF, exc.errno)
 
 
     def test_closeEBADF(self):
+        """
+        The device's C{close} implementation raises L{OSError} with an errno of
+        C{EBADF} when called on a file descriptor which is not valid (ie, which
+        has no associated file description).
+        """
         fd = self._invalidFileDescriptor()
         exc = self.assertRaises(OSError, self.device.close, fd)
         self.assertEqual(EBADF, exc.errno)
 
 
     def test_ioctlEBADF(self):
+        """
+        The device's C{ioctl} implementation raises L{OSError} with an errno of
+        C{EBADF} when called on a file descriptor which is not valid (ie, which
+        has no associated file description).
+        """
         fd = self._invalidFileDescriptor()
         exc = self.assertRaises(
             IOError, self.device.ioctl, fd, TUNSETIFF, b"tap0")
         self.assertEqual(EBADF, exc.errno)
 
 
-    def test_ioctlESOME(self):
-        # Try to invent an unsupported request
+    def test_ioctlEINVAL(self):
+        """
+        The device's C{ioctl} implementation raises L{IOError} with an errno of
+        C{EINVAL} when called with a request (second argument) which is not a
+        supported operation.
+        """
+        # Try to invent an unsupported request.  Hopefully this isn't a real
+        # request on any system.
         request = 0xDEADBEEF
         exc = self.assertRaises(
             IOError, self.device.ioctl, self.fileno, request, b"garbage")
