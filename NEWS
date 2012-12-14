@@ -36,7 +36,7 @@ Bugfixes
    stack recursion depth when the line and data mode is switched many
    times. (#3050)
  - twisted.protocols.ftp.FTPFileListProtocol fixed to support files
-   with space characters in their name.  (#4986)
+   with space characters in their name. (#4986)
  - gireactor and gtk3reactor no longer prevent gi.pygtkcompat from
    working, and likewise can load if gi.pygtkcompat has previously
    been enabled. (#5676)
@@ -182,7 +182,7 @@ Features
 --------
  - twisted.web.server.Site now supports an encoders argument to encode
    request content, twisted.web.server.GzipEncoderFactory being the
-   first one provided.  (#104)
+   first one provided. (#104)
 
 Bugfixes
 --------
@@ -192,7 +192,6 @@ Bugfixes
  - twisted.web.http.HTTPChannel now drops the connection and issues a
    400 error upon receipt of a chunk-encoding encoded request with a
    bad chunk-length field. (#6030)
- -  (#6205)
 
 Improved Documentation
 ----------------------
@@ -202,7 +201,7 @@ Improved Documentation
 Other
 -----
  - #5882, #5883, #5887, #5920, #6031, #6077, #6078, #6079, #6080,
-   #6110, #6113, #6196
+   #6110, #6113, #6196, #6205
 
 
 Twisted Words 12.3.0pre1 (2012-12-14)
