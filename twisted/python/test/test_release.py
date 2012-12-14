@@ -1527,6 +1527,8 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
     """
     Tests for L{NewsBuilder}.
     """
+    skip = svnSkip
+
     def setUp(self):
         """
         Create a fake project and stuff some basic structure and content into
