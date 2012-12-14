@@ -1,1 +1,0 @@
-twisted.internet.test.test_sigchld no longer incorrectly fails when run after certain other tests.

@@ -1,1 +1,0 @@
-Ports, connectors, wakers and other reactor-related types no longer log a nice warning when they are erroneously pickled. Pickling of such objects continues to be unsupported.

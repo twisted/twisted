@@ -1,1 +1,0 @@
-Passing multiple --auth arguments to conch now correctly adds all the specified checkers to the conch server

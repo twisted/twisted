@@ -1,1 +1,0 @@
-twisted.internet.interfaces.IReactorArbitrary and twisted.application.internet.GenericServer and GenericClient, deprecated since Twisted 10.1, have been removed.

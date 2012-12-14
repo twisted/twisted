@@ -1,2 +1,0 @@
-ckeygen --showpub now uses OPENSSH as default display, instead of breaking
-because no display type was passed.

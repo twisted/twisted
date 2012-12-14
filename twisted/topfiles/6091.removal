@@ -1,1 +1,0 @@
-The lookupRecord method of twisted.internet.interfaces.IResolver, never implemented or called by Twisted, has been removed.
