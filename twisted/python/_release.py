@@ -635,8 +635,7 @@ class NewsBuilder(object):
         _BUGFIX: "Bugfixes",
         _DOC: "Improved Documentation",
         _REMOVAL: "Deprecations and Removals",
-        _MISC: "Other",
-        }
+        _MISC: "Other"}
 
     _NO_CHANGES = "No significant changes have been made for this release.\n"
 
@@ -672,8 +671,8 @@ class NewsBuilder(object):
             base, ext = os.path.splitext(child.basename())
             if ext == ticketType:
                 results.append((
-                        int(base),
-                        ' '.join(child.getContent().splitlines())))
+                    int(base),
+                    ' '.join(child.getContent().splitlines())))
         results.sort()
         return results
 
@@ -799,6 +798,12 @@ class NewsBuilder(object):
         newNews.write(oldNews)
         newNews.close()
         output.sibling('NEWS.new').moveTo(output)
+
+        ticketTypes = self._headings.keys()
+        for child in path.children():
+            base, ext = os.path.splitext(child.basename())
+            if ext in ticketTypes:
+                runCommand(["svn", "rm", child.path])
 
 
     def _getNewsName(self, project):

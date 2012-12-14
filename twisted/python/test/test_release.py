@@ -9,9 +9,12 @@ only ever performed on Linux.
 """
 
 
+import glob
 import warnings
 import operator
-import os, sys, signal
+import os
+import sys
+import signal
 from StringIO import StringIO
 import tarfile
 from xml.dom import minidom as dom
@@ -1532,8 +1535,10 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         self.builder = NewsBuilder()
         self.project = FilePath(self.mktemp())
         self.project.createDirectory()
+
         self.existingText = 'Here is stuff which was present previously.\n'
-        self.createStructure(self.project, {
+        self.createStructure(
+            self.project, {
                 'NEWS': self.existingText,
                 '5.feature': 'We now support the web.\n',
                 '12.feature': 'The widget is more robust.\n',
@@ -1551,6 +1556,24 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
                 '35.misc': '',
                 '40.doc': 'foo.bar.Baz.quux',
                 '41.doc': 'writing Foo servers'})
+
+
+    def svnCommit(self, project=None):
+        """
+        Make the C{project} directory a valid subversion directory with all
+        files committed.
+        """
+        if project is None:
+            project = self.project
+        repositoryPath = self.mktemp()
+        repository = FilePath(repositoryPath)
+
+        runCommand(["svnadmin", "create", repository.path])
+        runCommand(["svn", "checkout", "file://" + repository.path,
+                    project.path])
+
+        runCommand(["svn", "add"] + glob.glob(project.path + "/*"))
+        runCommand(["svn", "commit", project.path, "-m", "yay"])
 
 
     def test_today(self):
@@ -1696,6 +1719,7 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         L{NewsBuilder.build} updates a NEWS file with new features based on the
         I{<ticket>.feature} files found in the directory specified.
         """
+        self.svnCommit()
         self.builder.build(
             self.project, self.project.child('NEWS'),
             "Super Awesometastic 32.16")
@@ -1742,8 +1766,7 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         """
         project = FilePath(self.mktemp()).child("twisted")
         project.makedirs()
-        self.createStructure(project, {
-                'NEWS': self.existingText })
+        self.createStructure(project, {'NEWS': self.existingText })
 
         self.builder.build(
             project, project.child('NEWS'),
@@ -1770,6 +1793,7 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
             '\n'
             'Blah blah other stuff.\n')
 
+        self.svnCommit()
         self.builder.build(self.project, news, "Super Awesometastic 32.16")
 
         self.assertEqual(
@@ -1818,6 +1842,7 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
             if ticket.splitext()[1] in ('.feature', '.misc', '.doc'):
                 ticket.remove()
 
+        self.svnCommit()
         self.builder.build(
             self.project, self.project.child('NEWS'),
             'Some Thing 1.2')
@@ -1848,6 +1873,7 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         feature('5').copyTo(feature('15'))
         feature('5').copyTo(feature('16'))
 
+        self.svnCommit()
         self.builder.build(
             self.project, self.project.child('NEWS'),
             'Project Name 5.0')
@@ -1888,7 +1914,8 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         """
         project = FilePath(self.mktemp()).child("twisted")
         project.makedirs()
-        self.createStructure(project, {
+        self.createStructure(
+            project, {
                 'NEWS': 'Old boring stuff from the past.\n',
                 '_version.py': genVersion("twisted", 1, 2, 3),
                 'topfiles': {
@@ -1899,8 +1926,7 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
                     '_version.py': genVersion("twisted.conch", 3, 4, 5),
                     'topfiles': {
                         'NEWS': 'Old conch news.\n',
-                        '7.bugfix': 'Fixed that bug.\n'}},
-                })
+                        '7.bugfix': 'Fixed that bug.\n'}}})
         return project
 
 
@@ -1948,6 +1974,7 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         builder = NewsBuilder()
         builder._today = lambda: '2009-12-01'
         project = self.createFakeTwistedProject()
+        self.svnCommit(project)
         builder.buildAll(project)
         newVersion = Version('TEMPLATE', 7, 7, 14)
         coreNews = project.child('topfiles').child('NEWS')
@@ -1968,6 +1995,25 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
             ' - #5\n\n\n')
         self.assertEqual(
             expectedCore + 'Old core news.\n', coreNews.getContent())
+
+
+    def test_removeNEWSfragments(self):
+        """
+        L{NewsBuilder.build} removes all the NEWS fragments after the build
+        process, using the C{svn} C{rm} command.
+        """
+        # Create another random file to make sure it's not removed
+        self.project.child("README").setContent("README")
+        self.svnCommit()
+        self.builder.build(
+            self.project, self.project.child('NEWS'),
+            "Super Awesometastic 32.16")
+        # The .svn directory, the NEWS and README files are remaining
+        self.assertEqual(3, len(self.project.children()))
+        output = runCommand(["svn", "status", self.project.path])
+        removed = [line for line in output.splitlines()
+                   if line.startswith("D ")]
+        self.assertEqual(10, len(removed))
 
 
 
