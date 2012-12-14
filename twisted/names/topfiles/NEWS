@@ -1,6 +1,21 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Names 12.3.0pre1 (2012-12-14)
+=====================================
+
+Deprecations and Removals
+-------------------------
+ - The `protocol` attribute of twisted.names.client.Resolver,
+   deprecated since Twisted 8.2, has been removed. (#6045)
+ - twisted.names.hosts.Resolver is no longer a
+   `twisted.persisted.styles.Versioned` subclass. (#6092)
+
+Other
+-----
+ - #5594, #6056, #6057, #6058, #6059, #6093
+
+
 Twisted Names 12.2.0 (2012-08-26)
 =================================
 

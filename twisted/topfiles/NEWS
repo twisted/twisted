@@ -1,6 +1,109 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Core 12.3.0pre1 (2012-12-14)
+====================================
+
+Features
+--------
+ - The new -j flag to trial provides a trial runner supporting
+   multiple worker processes on the local machine, for parallel
+   testing. (#1784)
+ - twisted.internet.task.react, a new function, provides a simple API
+   for running the reactor until a single asynchronous function
+   completes. (#3270)
+ - twisted.protocols.ftp.FTP now handles FEAT and OPTS commands.
+   (#4515)
+ - trial now supports specifying a debugger other than pdb with the
+   --debugger command line flag. (#5794)
+ - twisted.python.util.runWithWarningsSuppressed has been added; it
+   runs a function with specified warning filters. (#5950)
+ - Python's unittest runner now understands skips in trial-based test
+   cases. (#6006)
+ - The setup3.py script is now provided to provisionally support
+   building and installing an experimental, incomplete version of
+   Twisted in a Python 3 environment. (#6040)
+ - twisted.python.util.FancyStrMixin now supports arbitrary callables
+   to format attribute values. (#6063)
+ - Several new methods of twisted.trial.unittest.SynchronousTestCase
+   -- `successResultOf`, `failureResultOf`, and `assertNoResult` -
+   have been added to make testing `Deferred`-using code easier.
+   (#6105)
+
+Bugfixes
+--------
+ - twisted.protocols.basic.LineReceiver now does not hit the maximum
+   stack recursion depth when the line and data mode is switched many
+   times. (#3050)
+ - twisted.protocols.ftp.FTPFileListProtocol fixed to support files
+   with space characters in their name.  (#4986)
+ - gireactor and gtk3reactor no longer prevent gi.pygtkcompat from
+   working, and likewise can load if gi.pygtkcompat has previously
+   been enabled. (#5676)
+ - gtk2reactor now works again on FreeBSD, and perhaps other platforms
+   that were broken by gi interactions. (#5737)
+ - gireactor now works with certain older versions of gi that are
+   missing the threads_init() function. (#5790)
+ - Fixed a bug where twisted.python.sendmsg would sometimes fail with
+   obscure errors including "Message too long" or "Invalid argument"
+   on some 64-bit platforms. (#5867)
+ - twisted.internet.endpoints.TCP6ClientEndpoint now provides
+   twisted.internet.interfaces.IStreamClientEndpoint (#5876)
+ - twisted.internet.endpoints.AdoptedStreamServerEndpoint now provides
+   twisted.internet.interfaces.IStreamServerEndpoint. (#5878)
+ - Spawning subprocesses with PTYs now works on OS X 10.8. (#5880)
+ - twisted.internet.test.test_sigchld no longer incorrectly fails when
+   run after certain other tests. (#6161)
+ - twisted.internet.test.test_gireactor no longer fails when using
+   pygobject 3.4 and gtk 3.6 when X11 is unavailable. (#6170)
+
+Improved Documentation
+----------------------
+ - The endpoint howto now lists TCP IPv6 server endpoint in the list
+   of endpoints included with Twisted. (#5741)
+ - twisted.mail.tap now documents example usage in it's longdesc
+   output for the 'mail' plugin (#5922)
+
+Deprecations and Removals
+-------------------------
+ - The minimum required version of zope.interface is now 3.6.0.
+   (#5683)
+ - twisted.internet.interfaces.IReactorArbitrary and
+   twisted.application.internet.GenericServer and GenericClient,
+   deprecated since Twisted 10.1, have been removed. (#5943)
+ - twisted.internet.interfaces.IFinishableConsumer, deprecated since
+   Twisted 11.1, has been removed. (#5944)
+ - twisted.python.failure has removed all support for string
+   exceptions. (#5948)
+ - assertTrue, assertEqual, and the other free-functions in
+   twisted.trial.unittest for writing assertions, deprecated since
+   prior to Twisted 2.3, have been removed. (#5963)
+ - Ports, connectors, wakers and other reactor-related types no longer
+   log a nice warning when they are erroneously pickled. Pickling of
+   such objects continues to be unsupported. (#5979)
+ - twisted.python.components.Componentized no longer inherits from
+   Versioned. (#5983)
+ - twisted.protocols.basic.NetstringReceiver.sendString no longer
+   accepts objects other than bytes; the removed behavior was
+   deprecated in Twisted 10.0. (#6025)
+ - The lookupRecord method of twisted.internet.interfaces.IResolver,
+   never implemented or called by Twisted, has been removed. (#6091)
+
+Other
+-----
+ - #4286, #4920, #5627, #5785, #5860, #5865, #5873, #5874, #5877,
+   #5879, #5884, #5885, #5886, #5891, #5896, #5897, #5899, #5900,
+   #5901, #5903, #5906, #5908, #5912, #5913, #5914, #5916, #5917,
+   #5931, #5932, #5933, #5934, #5935, #5939, #5942, #5947, #5956,
+   #5959, #5967, #5969, #5970, #5972, #5973, #5974, #5975, #5980,
+   #5985, #5986, #5990, #5995, #6002, #6003, #6005, #6007, #6009,
+   #6010, #6018, #6019, #6022, #6023, #6033, #6036, #6039, #6041,
+   #6043, #6052, #6053, #6054, #6055, #6060, #6061, #6065, #6067,
+   #6068, #6069, #6084, #6087, #6088, #6097, #6099, #6100, #6103,
+   #6109, #6114, #6139, #6140, #6141, #6142, #6157, #6158, #6159,
+   #6163, #6172, #6182, #6190, #6194, #6204
+
+
 Twisted Core 12.2.0 (2012-08-26)
 ================================
 
