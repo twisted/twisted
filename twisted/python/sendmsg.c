@@ -16,6 +16,12 @@ typedef int Py_ssize_t;
 #include <sys/socket.h>
 #include <signal.h>
 
+#include <sys/param.h>
+
+#ifdef BSD
+#include <sys/uio.h>
+#endif
+
 /*
  * As per
  * <http://pubs.opengroup.org/onlinepubs/007904875/basedefs/sys/socket.h.html
