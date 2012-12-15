@@ -45,9 +45,9 @@ class EthernetProtocol(protocol.AbstractDatagramProtocol):
         self.etherProtos[num].append(proto)
 
     def datagramReceived(self, data, partial=0):
-        header = EthernetHeader(data[4:18])
+        header = EthernetHeader(data[:14])
         for proto in self.etherProtos.get(header.proto, ()):
-            proto.datagramReceived(data=data[18:],
+            proto.datagramReceived(data=data[14:],
                                    partial=partial,
                                    dest=header.dest,
                                    source=header.source,
