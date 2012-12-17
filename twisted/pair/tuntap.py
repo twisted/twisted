@@ -16,9 +16,11 @@ from twisted.pair import ethernet, raw
 
 IFNAMSIZ = 16
 TUNSETIFF = 0x400454ca
+TUNGETIFF = 0x800454d2
 TUN_KO_PATH = b"/dev/net/tun"
 
 class TunnelType(Flags):
+    # XXX these are the kernel internal names I think
     TUN = FlagConstant(1)
     TAP = FlagConstant(2)
 
@@ -32,6 +34,7 @@ class TunnelType(Flags):
 
 
 class TunnelFlags(Flags):
+    # XXX Should have TUN and TAP constants here and use them
     IFF_NO_PI = FlagConstant(0x1000)
     IFF_ONE_QUEUE = FlagConstant(0x2000)
     IFF_VNET_HDR = FlagConstant(0x4000)
@@ -133,8 +136,8 @@ class TuntapPort(base.BasePort):
     def _bindSocket(self):
         log.msg("%s starting on %s"%(self.protocol.__class__, self.interface))
         try:
-            # XXX No test coverage for the use of TUN_NO_PI
-            fileno, interface = self._openTunnel(self.interface, self._mode | TunnelType.TUN_NO_PI)
+            # XXX No test coverage for the use of TUN_NO_PI - which does not even work
+            fileno, interface = self._openTunnel(self.interface, self._mode | TunnelFlags.IFF_NO_PI)
         except (IOError, OSError) as e:
             raise error.CannotListenError(None, self.interface, e)
 

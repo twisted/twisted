@@ -28,7 +28,7 @@ from twisted.internet.error import CannotListenError
 from twisted.pair.raw import IRawPacketProtocol
 from twisted.pair.ethernet import EthernetProtocol
 from twisted.pair.tuntap import (
-    TUNSETIFF, IFNAMSIZ, TunnelType, TunnelAddress, TuntapPort)
+    TUNSETIFF, TUNGETIFF, IFNAMSIZ, TunnelType, TunnelFlags, TunnelAddress, TuntapPort)
 
 
 @implementer(IReactorFDSet)
@@ -286,7 +286,18 @@ class MemoryIOSystem(object):
 
 
     def sendUDP(self, datagram, address):
-        self._openFiles.values()[0].readBuffer.append(datagram)
+        # Just make up some random thing
+        srcIP = '10.1.2.3'
+        srcPort = 21345
+
+        self._openFiles.values()[0].readBuffer.append(
+            _ethernet(
+                src='\x00' * 6, dst='\xff' * 6, protocol=IPv4,
+                payload=_ip(
+                    src=srcIP, dst=address[0], payload=_udp(
+                        src=srcPort, dst=address[1], payload=datagram))))
+
+        return (srcIP, srcPort)
 
 
     def receiveUDP(self, host, port):
@@ -300,7 +311,63 @@ class _FakePort(object):
 
 
     def recv(self, nbytes):
-        return self._system._openFiles.values()[0].writeBuffer.popleft()[:nbytes]
+        data = self._system._openFiles.values()[0].writeBuffer.popleft()[:nbytes]
+        frame = data[4:]
+        ip = frame[14:]
+        udp = ip[20:]
+        payload = udp[8:]
+        return payload[:nbytes]
+
+
+
+def H(n):
+    return struct.pack('>H', n)
+
+IPv4 = 0x0800
+
+def _ethernet(src, dst, protocol, payload):
+    return dst + src + H(protocol) + payload
+
+
+def _ip(src, dst, payload):
+    ipHeader = (
+        '\x45'                     # version and header length, 4 bits each
+        '\x00'                     # differentiated services field
+        + H(20 + len(payload)) # total length
+        + '\x00\x01\x00\x00@\x11'
+        + H(0)                     # checksum
+                                   # source address
+        + socket.inet_pton(socket.AF_INET, src)
+                                   # destination address
+        + socket.inet_pton(socket.AF_INET, dst))
+
+    # Total all of the 16-bit integers in the header
+    checksumStep1 = sum(struct.unpack('!10H', ipHeader))
+    # Pull off the carry
+    carry = checksumStep1 >> 16
+    # And add it to what was left over
+    checksumStep2 = (checksumStep1 & 0xFFFF) + carry
+    # Compute the one's complement sum
+    checksumStep3 = checksumStep2 ^ 0xFFFF
+
+    # Reconstruct the IP header including the correct checksum so the
+    # platform IP stack, if there is one involved in this test, doesn't drop
+    # it on the floor as garbage.
+    ipHeader = (
+        ipHeader[:10] +
+        struct.pack('!H', checksumStep3) +
+        ipHeader[12:])
+
+    return ipHeader + payload
+
+
+def _udp(src, dst, payload):
+    udpHeader = (
+        H(src)                  # source port
+        + H(dst)                # destination port
+        + H(len(payload) + 8)   # length
+        + H(0))                 # checksum
+    return udpHeader + payload
 
 
 
@@ -310,7 +377,7 @@ class TunnelDeviceTestsMixin(object):
         self.fileno = self.device.open(b"/dev/net/tun", os.O_RDWR | os.O_NONBLOCK)
         self.addCleanup(self.device.close, self.fileno)
         config = struct.pack(
-            "%dsH" % (IFNAMSIZ,), "tap-twistedtest", TunnelType.TAP.value)
+            "%dsH" % (IFNAMSIZ,), self._TUNNEL_DEVICE, TunnelType.TAP.value)
         self.device.ioctl(self.fileno, TUNSETIFF, config)
 
 
@@ -386,12 +453,32 @@ class TunnelDeviceTestsMixin(object):
 
 
     def test_receive(self):
-        key = randrange(2 ** 64)
-        message = "hello world:%d" % (key,)
+        from twisted.internet.protocol import DatagramProtocol
+        from twisted.pair.rawudp import RawUDPProtocol
+        from twisted.pair.ip import IPProtocol
+        from twisted.pair.ethernet import EthernetProtocol
+
+        datagrams = []
+        receiver = DatagramProtocol()
+        def capture(*args):
+            datagrams.append(args)
+        receiver.datagramReceived = capture
+
+        udp = RawUDPProtocol()
+        udp.addProto(12345, receiver)
+
+        ip = IPProtocol()
+        ip.addProto(17, udp)
+
+        ether = EthernetProtocol()
+        ether.addProto(0x800, ip)
 
         found = False
         for i in range(100):
-            self.device.sendUDP(message, ("10.0.0.2", 12345))
+            key = randrange(2 ** 64)
+            message = "hello world:%d" % (key,)
+            source = self.device.sendUDP(message, (self._TUNNEL_REMOTE, 12345))
+
             for j in range(100):
                 try:
                     packet = self.device.read(self.fileno, 1024)
@@ -400,9 +487,11 @@ class TunnelDeviceTestsMixin(object):
                         break
                     raise
                 else:
-                    if message in packet:
+                    ether.datagramReceived(packet)
+                    if (message, source) in datagrams:
                         found = True
                         break
+                    del datagrams[:]
             if found:
                 break
 
@@ -411,73 +500,35 @@ class TunnelDeviceTestsMixin(object):
 
 
     def test_send(self):
-        key = randrange(2 ** 64)
+        protocol = IPv4
+        key = 1234567 # randrange(2 ** 64)
         message = "hello world:%d" % (key,)
 
-        port = self.device.receiveUDP('10.0.0.1', 12345)
-        def H(n):
-            return struct.pack('>H', n)
+        port = self.device.receiveUDP(self._TUNNEL_LOCAL, 12345)
 
-        ethernetHeader = (
-            '\xff\xff\xff\xff\xff\xff' # destination address - broadcast
-            '\x00\x00\x00\x00\x00\x00' # source address - null :/
-            '\x08\x00'                 # type - IPv4
-            )
+        packet = _ethernet(
+            src='\x00\x00\x00\x00\x00\x00', dst='\xff\xff\xff\xff\xff\xff',
+            protocol=protocol,
+            payload=_ip(
+                src=self._TUNNEL_REMOTE, dst=self._TUNNEL_LOCAL,
+                payload=_udp(
+                    src=50000, dst=12345, payload=message)))
 
-        ipHeader = (
-            '\x45'                     # version and header length, 4 bits each
-            '\x00'                     # differentiated services field
-            + H(20 + len(message) + 8) # total length
-            + '\x00\x01\x00\x00@\x11'
-            + H(0)                     # checksum
-                                       # source address
-            + socket.inet_pton(socket.AF_INET, '10.0.0.2')
-                                       # destination address
-            + socket.inet_pton(socket.AF_INET, '10.0.0.1'))
+        print repr(packet)
 
-        # Total all of the 16-bit integers in the header
-        checksumStep1 = sum(struct.unpack('!10H', ipHeader))
-        # Pull off the carry
-        carry = checksumStep1 >> 16
-        # And add it to what was left over
-        checksumStep2 = (checksumStep1 & 0xFFFF) + carry
-        # Compute the one's complement sum
-        checksumStep3 = checksumStep2 ^ 0xFFFF
-
-        # Reconstruct the IP header including the correct checksum so the
-        # platform IP stack, if there is one involved in this test, doesn't drop
-        # it on the floor as garbage.
-        ipHeader = (
-            ipHeader[:10] +
-            struct.pack('!H', checksumStep3) +
-            ipHeader[12:])
-
-        udpHeader = (
-            H(50000)                 # source port
-            + H(12345)               # destination port
-            + H(len(message) + 8)    # length
-            + H(0))                  # checksum
-
-        packet = (
-            # Some extra bytes, not clear what they're for.
-            '\x00\x00\x00\x00'
-            + ethernetHeader
-            + ipHeader
-            + udpHeader
-            + message)
-
-        self.device.write(self.fileno, packet)
+        flags = 0
+        self.device.write(self.fileno, H(flags) + H(protocol) + packet)
 
         packet = port.recv(1024)
-        # FakeDevice doesn't understand ethernet, ip, or udp.  It just hands us
-        # the whole ethernet frame.  Pretty buggy, but we can work around it by
-        # just looking at the end.  RealDevice will only hand us the UDP
-        # payload, which will also work here.
-        self.assertEqual(message, packet[-len(message):])
+        self.assertEqual(message, packet)
 
 
 
 class FakeDeviceTests(TunnelDeviceTestsMixin, SynchronousTestCase):
+    _TUNNEL_DEVICE = "tap-twistedtest"
+    _TUNNEL_LOCAL = "10.2.0.1"
+    _TUNNEL_REMOTE = "10.2.0.2"
+
     def device(self):
         system = MemoryIOSystem()
         system._devices[Tunnel._DEVICE_NAME] = Tunnel
@@ -496,6 +547,7 @@ class RealSpecial(object):
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.bind(('10.0.0.1', 0))
         s.sendto(datagram, address)
+        return s.getsockname()
 
 
     def receiveUDP(self, host, port):
@@ -506,7 +558,7 @@ class RealSpecial(object):
 
 
 
-class RealDeviceTests(TunnelDeviceTestsMixin, SynchronousTestCase):
+class RealDeviceTestsMixin(object):
     def device(self):
         # Create a tap-style tunnel device.  Ethernet frames come out of this
         # and ethernet frames must be put into it.  Grant access to it to an
@@ -538,6 +590,19 @@ class RealDeviceTests(TunnelDeviceTestsMixin, SynchronousTestCase):
         #         ip tuntap del dev tap-twistedtest mode tap
         #
         return RealSpecial()
+
+
+class RealDeviceWithProtocolInformationTests(RealDeviceTestsMixin, TunnelDeviceTestsMixin, SynchronousTestCase):
+    _TUNNEL_DEVICE = "tap-twtest-pi"
+    _TUNNEL_LOCAL = "10.1.0.1"
+    _TUNNEL_REMOTE = "10.1.0.2"
+
+
+
+class RealDeviceWithoutProtocolInformationTests(RealDeviceTestsMixin, TunnelDeviceTestsMixin, SynchronousTestCase):
+    _TUNNEL_DEVICE = "tap-twtest"
+    _TUNNEL_LOCAL = "10.0.0.1"
+    _TUNNEL_REMOTE = "10.0.0.2"
 
 
 
