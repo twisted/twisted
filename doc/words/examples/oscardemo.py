@@ -3,6 +3,14 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+"""
+A very simple example of C{twisted.words.protocols.oscar} code
+
+To run the script:
+
+    $ python oscardemo.py
+"""
+
 from twisted.words.protocols import oscar
 from twisted.internet import protocol, reactor
 import getpass

@@ -1,6 +1,14 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+"""
+A very simple Twisted Jabber client
+
+To run the script:
+
+    $ python jabber_client.py
+"""
+
 # Originally written by Darryl Vandorp
 # http://randomthoughts.vandorp.ca/
 

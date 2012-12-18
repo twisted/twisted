@@ -4,9 +4,9 @@
 # See LICENSE for details.
 
 """
-This is an example of integrating curses with the twisted underlying    
-select loop. Most of what is in this is insignificant -- the main piece 
-of interest is the 'CursesStdIO' class.                                 
+This is an example of integrating curses with the twisted underlying
+select loop. Most of what is in this is insignificant -- the main piece
+of interest is the 'CursesStdIO' class.
 
 This class acts as file-descriptor 0, and is scheduled with the twisted
 select loop via reactor.addReader (once the curses class extends it
@@ -15,6 +15,11 @@ input-oriented curses calls (ie. getch()) should be executed within this
 block.
 
 Remember to call nodelay(1) in curses, to make getch() non-blocking.
+
+To run the script::
+
+    $ python cursesclient.py
+
 """
 
 # System Imports

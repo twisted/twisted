@@ -10,6 +10,11 @@ This connects to a server (host/port specified by argv[1]/argv[2]),
 authenticates with a username and password (given by argv[3] and argv[4]),
 joins a group (argv[5]) sends a simple message, leaves the group, and quits
 the server.
+
+To run the script:
+
+    $ python pb_client.py <host> <port> <username> <password> <group>
+
 """
 
 import sys

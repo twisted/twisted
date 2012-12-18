@@ -13,7 +13,7 @@ from twisted.python import log
 import sys, getpass
 
 """
-This example connects to the MSN chat service and
+This simple example connects to the MSN chat service and
 prints out information about all the users on your
 contact list (both online and offline).
 
@@ -21,6 +21,10 @@ The main aim of this example is to demonstrate
 the connection process.
 
 @author Samuel Jordan
+
+To run the script::
+
+    $ python msn_example.py
 """
 
 

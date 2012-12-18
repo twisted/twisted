@@ -2,6 +2,13 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+"""
+A very simple twisted xmpp-client (Jabber ID)
+
+To run the script:
+$ python xmpp_client.py <jid> <secret>
+"""
+
 import sys
 
 from twisted.internet.defer import Deferred
