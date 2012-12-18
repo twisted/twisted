@@ -457,6 +457,12 @@ class IMailboxListener(Interface):
         C{None}.
         """
 
+# Some constants to help define what an atom is and is not
+_SP = ' '
+_CTL = ''.join(chr(ch) for ch in range(0x21) + range(0x80, 0x100))
+_nonAtomChars = r'(){%*"\]' + _SP + _CTL
+_atomChars = ''.join(chr(ch) for ch in range(0x100) if chr(ch) not in _nonAtomChars)
+
 class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     """
     Protocol implementation for an IMAP4rev1 server.
@@ -724,7 +730,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         return d or (arg, rest)
 
     # ATOM: Any CHAR except ( ) { % * " \ ] CTL SP (CHAR is 7bit)
-    atomre = re.compile(r'(?P<atom>[^\](){%*"\\\x00-\x20\x80-\xff]+)( (?P<rest>.*$)|$)')
+    atomre = re.compile(r'(?P<atom>[%s]+)( (?P<rest>.*$)|$)' % (re.escape(_atomChars),))
 
     def arg_atom(self, line):
         """
@@ -3983,7 +3989,7 @@ _SIMPLE_BOOL = (
 )
 
 _NO_QUOTES = (
-    'LARGER', 'SMALLER', 'UID', 'KEYWORD', 'UNKEYWORD'
+    'LARGER', 'SMALLER', 'UID'
 )
 
 def Query(sorted=0, **kwarg):
@@ -4107,10 +4113,11 @@ def Query(sorted=0, **kwarg):
         elif k == 'HEADER':
             cmd.extend([k, v[0], '"%s"' % (v[1],)])
         elif k == 'KEYWORD' or k == 'UNKEYWORD':
-           # Strip the following characters:
-           # ( ) < > [ ] : ; @ \ , . " CTL SP
-           cmd.extend([k, '%s' %
-               (re.sub('[\\\\()<>\[\]:;@,."\\\x00-\x20\x80-\xff]', '', v),)])
+            # Discard anything that does not fit into an "atom".  Perhaps turn
+            # the case where this actually removes bytes from the value into a
+            # warning and then an error, eventually.
+            v = string.translate(v, string.maketrans('', ''), _nonAtomChars)
+            cmd.extend([k, v])
         elif k not in _NO_QUOTES:
            cmd.extend([k, '"%s"' % (v,)])
         else:
