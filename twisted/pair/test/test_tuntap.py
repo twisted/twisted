@@ -487,7 +487,9 @@ class TunnelDeviceTestsMixin(object):
                         break
                     raise
                 else:
-                    ether.datagramReceived(packet)
+                    # XXX Slice off the four bytes of flag/proto prefix that always
+                    # seem to be there.  Why can't I get this to work any other way?
+                    ether.datagramReceived(packet[4:])
                     if (message, source) in datagrams:
                         found = True
                         break
