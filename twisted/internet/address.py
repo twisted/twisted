@@ -9,7 +9,7 @@ from __future__ import division, absolute_import
 
 import warnings, os
 
-from zope.interface import implements, implementer
+from zope.interface import implementer
 
 from twisted.internet.interfaces import IAddress
 from twisted.python._utilpy3 import FancyEqMixin
@@ -79,12 +79,11 @@ class IPv6Address(_IPAddress):
     """
 
 
-
+@implementer(IAddress)
 class SerialAddress(object):
     """
     An L{interfaces.IAddress} provider for serial port connections.
     """
-    implements(IAddress)
 
 
 
