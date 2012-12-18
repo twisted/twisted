@@ -799,6 +799,87 @@ class IMAP4HelperTestCase(unittest.TestCase):
             self.assertEqual(query, expected)
 
 
+    def test_queryKeywordFlag(self):
+        """
+        When passed the C{keyward} argument, L{imap4.Query} returns an
+        C{atom} that consists of one or more non-special characters.
+
+        @see: Atom U{http://tools.ietf.org/html/rfc2822#section-3.2.4}
+        @see: Specials U{http://tools.ietf.org/html/rfc2822#section-3.2.1}
+        @see: U{http://tools.ietf.org/html/rfc3501#section-9}
+        @see: U{http://tools.ietf.org/html/rfc3501#section-6.4.4}
+
+        List of the invalid characters:
+        ( ) < > [ ] : ; @ \ , . " CTL SP
+        """
+        #inputs = [ imap4.Query(keyword='t"\w(iste{%d]-m)a{* il]@]google.com') ]
+        inputs = [ imap4.Query(keyword='t"\w(is<t,e[d])> :@ro;ck.s') ]
+
+        # Let's insert all the CTL characters
+        for i in range(33):
+            inputs.append(
+                imap4.Query(keyword='twisted'+ chr(i) + 'rocks')
+            )
+
+        expected = '(KEYWORD twistedrocks)'
+
+        for query in inputs:
+            self.assertEqual(query, expected)
+
+
+    def test_queryUnkeywordFlag(self):
+        """
+        When passed the C{unkeyward} argument, L{imap4.Query} returns an
+        C{atom} that consists of one or more non-special characters.
+
+        @see: Atom U{http://tools.ietf.org/html/rfc2822#section-3.2.4}
+        @see: Specials U{http://tools.ietf.org/html/rfc2822#section-3.2.1}
+        @see: U{http://tools.ietf.org/html/rfc3501#section-9}
+        @see: U{http://tools.ietf.org/html/rfc3501#section-6.4.4}
+
+        List of the invalid characters:
+        ( ) < > [ ] : ; @ \ , . " CTL SP
+        """
+        inputs = [ imap4.Query(unkeyword='t"\w(is<t,e[d])> :@ro;ck.s') ]
+
+        # Let's insert all the CTL characters
+        for i in range(33):
+            inputs.append(
+                imap4.Query(unkeyword='twisted'+ chr(i) + 'rocks')
+            )
+
+        expected = '(UNKEYWORD twistedrocks)'
+
+        for query in inputs:
+            self.assertEqual(query, expected)
+
+
+    def test_queryKeywordFlagWithQuotes(self):
+        """
+        When passed the C{keyward} argument, L{imap4.Query} should return
+        an unquoted string.
+
+        @see: U{http://tools.ietf.org/html/rfc3501#section-9}
+        @see: U{http://tools.ietf.org/html/rfc3501#section-6.4.4}
+        """
+        query = imap4.Query(keyword='twisted')
+        expected = '(KEYWORD twisted)'
+        self.assertEqual(query, expected)
+
+
+    def test_queryUnkeywordFlagWithQuotes(self):
+        """
+        When passed the C{Unkeyward} argument, L{imap4.Query} should return
+        an unquoted string.
+
+        @see: U{http://tools.ietf.org/html/rfc3501#section-9}
+        @see: U{http://tools.ietf.org/html/rfc3501#section-6.4.4}
+        """
+        query = imap4.Query(unkeyword='twisted')
+        expected = '(UNKEYWORD twisted)'
+        self.assertEqual(query, expected)
+
+
     def test_invalidIdListParser(self):
         """
         Trying to parse an invalid representation of a sequence range raises an

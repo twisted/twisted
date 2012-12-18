@@ -3983,7 +3983,7 @@ _SIMPLE_BOOL = (
 )
 
 _NO_QUOTES = (
-    'LARGER', 'SMALLER', 'UID'
+    'LARGER', 'SMALLER', 'UID', 'KEYWORD', 'UNKEYWORD'
 )
 
 def Query(sorted=0, **kwarg):
@@ -4106,6 +4106,11 @@ def Query(sorted=0, **kwarg):
            cmd.append(k)
         elif k == 'HEADER':
             cmd.extend([k, v[0], '"%s"' % (v[1],)])
+        elif k == 'KEYWORD' or k == 'UNKEYWORD':
+           # Strip the following characters:
+           # ( ) < > [ ] : ; @ \ , . " CTL SP
+           cmd.extend([k, '%s' %
+               (re.sub('[\\\\()<>\[\]:;@,."\\\x00-\x20\x80-\xff]', '', v),)])
         elif k not in _NO_QUOTES:
            cmd.extend([k, '"%s"' % (v,)])
         else:
