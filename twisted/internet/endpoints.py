@@ -13,7 +13,7 @@ parsed by the L{clientFromString} and L{serverFromString} functions.
 
 import os, socket
 
-from zope.interface import implements
+from zope.interface import implements, implementer
 import warnings
 
 from twisted.internet import interfaces, defer, error, fdesc
@@ -62,7 +62,7 @@ class StandardIOEndpoint(object):
                              stdioProtocolFactory.buildProtocol(PipeAddress()))
 
 
-
+@implementer(interfaces.IStreamClientEndpoint)
 class SerialPortEndpoint(object):
     """
     A Serial Port endpoint.
@@ -74,8 +74,6 @@ class SerialPortEndpoint(object):
         EIGHTBITS = None
         PARITY_NONE = None
         STOPBITS_ONE = None
-
-    implements(interfaces.IStreamClientEndpoint)
 
     def __init__(self, deviceNameOrPortNumber, reactor,
                  baudrate=9600, bytesize=EIGHTBITS,
