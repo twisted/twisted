@@ -244,17 +244,8 @@ class LoopingCall:
 
 
     def __repr__(self):
-        if hasattr(self.f, '__qualname__'):
-            func = self.f.__qualname__
-        elif hasattr(self.f, '__name__'):
-            func = self.f.__name__
-            if hasattr(self.f, 'im_class'):
-                func = self.f.im_class.__name__ + '.' + func
-        else:
-            func = reflect.safe_repr(self.f)
-
         return 'LoopingCall<%r>(%s, *%s, **%s)' % (
-            self.interval, func, reflect.safe_repr(self.a),
+            self.interval, reflect.getFunctionName(self.f), reflect.safe_repr(self.a),
             reflect.safe_repr(self.kw))
 
 

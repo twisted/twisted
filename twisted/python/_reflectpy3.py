@@ -286,6 +286,27 @@ def _determineClassName(x):
             return '<BROKEN CLASS AT 0x%x>' % unsignedID(c)
 
 
+def getFunctionName(function):
+    """
+    Return the name of the given function or method.
+
+    In the case of methods, the class will be included in the result.
+
+    @param function: A callable of some sort.
+
+    @return: The function's name, as a C{sr}.
+    """
+    if hasattr(function , '__qualname__'):
+        func = function.__qualname__
+    elif hasattr(function, '__name__'):
+        func = function.func_name
+        if hasattr(function, 'im_class'):
+            func = function.im_class.__name__ + '.' + func
+    else:
+        func = safe_repr(function)
+    return func
+
+
 def _safeFormat(formatter, o):
     """
     Helper function for L{safe_repr} and L{safe_str}.

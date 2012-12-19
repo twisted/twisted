@@ -176,16 +176,7 @@ class DelayedCall:
         if self._str is not None:
             return self._str
         if hasattr(self, 'func'):
-            # This code should be replaced by a utility function in reflect;
-            # see ticket #6066:
-            if hasattr(self.func, '__qualname__'):
-                func = self.func.__qualname__
-            elif hasattr(self.func, '__name__'):
-                func = self.func.func_name
-                if hasattr(self.func, 'im_class'):
-                    func = self.func.im_class.__name__ + '.' + func
-            else:
-                func = reflect.safe_repr(self.func)
+            func = reflect.getFunctionName(self.func)
         else:
             func = None
 

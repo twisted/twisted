@@ -38,7 +38,7 @@ from twisted.python._reflectpy3 import (
 from twisted.python._reflectpy3 import namedModule, namedObject, namedClass
 from twisted.python._reflectpy3 import InvalidName, ModuleNotFound
 from twisted.python._reflectpy3 import ObjectNotFound, namedAny
-from twisted.python._reflectpy3 import filenameToModuleName
+from twisted.python._reflectpy3 import filenameToModuleName, getFunctionName
 from twisted.python._reflectpy3 import qual, safe_str, safe_repr
 
 class Settable:
@@ -249,7 +249,7 @@ class Summer(Accessor):
 
     deprecatedModuleAttribute(
         Version("Twisted", 12, 1, 0),
-        "Summer is a child class of twisted.python.reflect.Accessor which is " 
+        "Summer is a child class of twisted.python.reflect.Accessor which is "
         "deprecated.", "twisted.python.reflect", "Summer")
 
     def reallySet(self, k,v):
@@ -412,20 +412,20 @@ def accumulateClassDict(classObj, attr, adict, baseClass=None):
 
       class Soy:
         properties = {\"taste\": \"bland\"}
-    
+
       class Plant:
         properties = {\"colour\": \"green\"}
-    
+
       class Seaweed(Plant):
         pass
-    
+
       class Lunch(Soy, Seaweed):
         properties = {\"vegan\": 1 }
-    
+
       dct = {}
-    
+
       accumulateClassDict(Lunch, \"properties\", dct)
-    
+
       print dct
 
     {\"taste\": \"bland\", \"colour\": \"green\", \"vegan\": 1}
@@ -534,4 +534,4 @@ __all__ = [
     'accumulateMethods',
     'accumulateClassDict', 'accumulateClassList', 'isSame', 'isLike',
     'modgrep', 'isOfType', 'findInstances', 'objgrep', 'filenameToModuleName',
-    'fullyQualifiedName']
+    'fullyQualifiedName', 'getFunctionName']

@@ -350,6 +350,40 @@ class LookupsTestCase(TestCase):
 
 
 
+class GetFunctionNameTestCase(TestCase):
+    """
+    Tests for L{getFunctionName}.
+    """
+
+    def test_function(self):
+        """
+        L{reflect.getFunctionName} returns the name of the given function.
+        """
+        self.assertEqual(
+            reflect.getFunctionName(reflect.getFunctionName),
+            "getFunctionName")
+
+
+    def test_memberFunction(self):
+        """
+        L{reflect.getFunctionName} includes the class name when called with a method.
+        """
+        self.assertEqual(
+            reflect.getFunctionName(self.test_memberFunction),
+            "GetFunctionNameTestCase.test_memberFunction")
+
+
+    def test_safeRepr(self):
+        """
+        L{reflect.getFunctionName} falls back to L{reflect.safe_repr} if the
+        given object is not a function.
+        """
+        self.assertEqual(reflect.getFunctionName(45), "45")
+        self.patch(reflect, "safe_repr", lambda o: "result")
+        self.assertEqual(reflect.getFunctionName(45), "result")
+
+
+
 class Breakable(object):
 
     breakRepr = False
