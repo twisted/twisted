@@ -1,0 +1,1 @@
+twited.python.reflect.getFunctionName provides a safe, informative way to get the name of a function.
