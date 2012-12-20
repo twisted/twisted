@@ -472,6 +472,43 @@ class ThreadPoolTestCase(unittest.SynchronousTestCase):
             tp.stop()
 
 
+    def test_workerState(self):
+        """
+        As the worker receives and completes work it should transition between
+        the working/waiting states.
+        """
+        pool = threadpool.ThreadPool(0,1)
+        pool.start()
+        self.addCleanup(pool.stop)
+
+        # sanity check
+        self.assertEqual(pool.workers, 0)
+        self.assertEqual(len(pool.waiters), 0)
+        self.assertEqual(len(pool.working), 0)
+
+        # fire up a worker and give it some 'work'
+        thread_working = threading.Event()
+        thread_finish = threading.Event()
+
+        def _thread():
+            thread_working.set()
+            thread_finish.wait()
+
+        pool.callInThread(_thread)
+        thread_working.wait()
+        self.assertEqual(pool.workers, 1)
+        self.assertEqual(len(pool.waiters), 0)
+        self.assertEqual(len(pool.working), 1)
+
+        # finish work, and spin until state changes
+        thread_finish.set()
+        while not len(pool.waiters):
+            time.sleep(0.0005)
+
+        # make sure state changed correctly
+        self.assertEqual(len(pool.waiters), 1)
+        self.assertEqual(len(pool.working), 0)
+
 
 class RaceConditionTestCase(unittest.SynchronousTestCase):
 

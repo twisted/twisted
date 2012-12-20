@@ -15,6 +15,7 @@ try:
     from Queue import Queue
 except ImportError:
     from queue import Queue
+import contextlib
 import threading
 import copy
 
@@ -155,33 +156,44 @@ class ThreadPool:
             self._startSomeWorkers()
 
 
+    @contextlib.contextmanager
+    def _workerState(self, state_list):
+        """
+        Manages adding and removing this worker from a list of workers
+        in a particular state.
+
+        @param state_list: the list managing workers in this state
+        """
+        ct = self.currentThread()
+        state_list.append(ct)
+        yield
+        state_list.remove(ct)
+
+
     def _worker(self):
         """
         Method used as target of the created threads: retrieve a task to run
         from the threadpool, run it, and proceed to the next task until
         threadpool is stopped.
         """
-        ct = self.currentThread()
         o = self.q.get()
         while o is not WorkerStop:
-            self.working.append(ct)
-            ctx, function, args, kwargs, onResult = o
-            del o
+            with self._workerState(self.working):
+                ctx, function, args, kwargs, onResult = o
+                del o
 
-            try:
-                result = context.call(ctx, function, *args, **kwargs)
-                success = True
-            except:
-                success = False
-                if onResult is None:
-                    context.call(ctx, log.err)
-                    result = None
-                else:
-                    result = failure.Failure()
+                try:
+                    result = context.call(ctx, function, *args, **kwargs)
+                    success = True
+                except:
+                    success = False
+                    if onResult is None:
+                        context.call(ctx, log.err)
+                        result = None
+                    else:
+                        result = failure.Failure()
 
-            del function, args, kwargs
-
-            self.working.remove(ct)
+                del function, args, kwargs
 
             if onResult is not None:
                 try:
@@ -191,10 +203,10 @@ class ThreadPool:
 
             del ctx, onResult, result
 
-            self.waiters.append(ct)
-            o = self.q.get()
-            self.waiters.remove(ct)
+            with self._workerState(self.waiters):
+                o = self.q.get()
 
+        ct = self.currentThread()
         self.threads.remove(ct)
 
 
