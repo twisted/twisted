@@ -56,6 +56,8 @@ Bugfixes
    run after certain other tests. (#6161)
  - twisted.internet.test.test_gireactor no longer fails when using
    pygobject 3.4 and gtk 3.6 when X11 is unavailable. (#6170)
+ - twisted/python/sendmsg.c no longer fails to build on OpenBSD.
+   (#5907)
 
 Improved Documentation
 ----------------------
@@ -101,7 +103,7 @@ Other
    #6043, #6052, #6053, #6054, #6055, #6060, #6061, #6065, #6067,
    #6068, #6069, #6084, #6087, #6088, #6097, #6099, #6100, #6103,
    #6109, #6114, #6139, #6140, #6141, #6142, #6157, #6158, #6159,
-   #6163, #6172, #6182, #6190, #6194, #6204
+   #6163, #6172, #6182, #6190, #6194, #6204, #6209
 
 
 Twisted Core 12.2.0 (2012-08-26)
