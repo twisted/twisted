@@ -290,8 +290,8 @@ class RequirementsTests(TestCase):
         package is not installed.
         """
         with SetAsideModule("zope"):
-            # Create a minimal module to represent the zope namespace package, but
-            # don't give it an "interface" attribute.
+            # Create a minimal module to represent the zope namespace package,
+            # but don't give it an "interface" attribute.
             sys.modules["zope"] = ModuleType("zope")
             with self.assertRaises(ImportError) as raised:
                 _checkRequirements()
@@ -299,6 +299,45 @@ class RequirementsTests(TestCase):
                 "Twisted requires zope.interface %d.%d.%d or later: no module "
                 "named zope.interface." % self.supportedZopeInterfaceVersion,
                 str(raised.exception))
+
+
+    def test_setupNoCheckRequirements(self):
+        """
+        L{_checkRequirements} doesn't check for C{zope.interface} compliance
+        when C{setuptools._TWISTED_NO_CHECK_REQUIREMENTS} is set.
+        """
+        with SetAsideModule("setuptools"):
+            setuptools = ModuleType("setuptools")
+            setuptools._TWISTED_NO_CHECK_REQUIREMENTS = True
+            sys.modules["setuptools"] = setuptools
+            with SetAsideModule("zope"):
+                sys.modules["zope"] = None
+                _checkRequirements()
+
+
+    def test_setupCheckRequirements(self):
+        """
+        L{_checkRequirements} checks for C{zope.interface} compliance when
+        C{setuptools} is imported but the C{_TWISTED_NO_CHECK_REQUIREMENTS} is
+        not set.
+        """
+        with SetAsideModule("setuptools"):
+            sys.modules["setuptools"] = ModuleType("setuptools")
+            with SetAsideModule("zope"):
+                sys.modules["zope"] = None
+                self.assertRaises(ImportError, _checkRequirements)
+
+
+    def test_noSetupCheckRequirements(self):
+        """
+        L{_checkRequirements} checks for C{zope.interface} compliance when
+        C{setuptools} is not imported.
+        """
+        with SetAsideModule("setuptools"):
+            sys.modules["setuptools"] = None
+            with SetAsideModule("zope"):
+                sys.modules["zope"] = None
+                self.assertRaises(ImportError, _checkRequirements)
 
 
     if _PY3:

@@ -20,6 +20,13 @@ def _checkRequirements():
     else:
         required = "4.0.0"
 
+    if ("setuptools" in sys.modules and
+        getattr(sys.modules["setuptools"],
+                "_TWISTED_NO_CHECK_REQUIREMENTS", None) is not None):
+        # Skip requirement checks, setuptools ought to take care of installing
+        # the dependencies.
+        return
+
     # Don't allow the user to run with a version of zope.interface we don't
     # support.
     required = "Twisted requires zope.interface %s or later" % (required,)

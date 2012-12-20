@@ -13,7 +13,8 @@ try:
 except ImportError:
     pass
 
-import sys, os
+import os
+import sys
 
 
 def main(args):
@@ -23,23 +24,12 @@ def main(args):
     """
     if os.path.exists('twisted'):
         sys.path.insert(0, '.')
-    from twisted.python.dist import (
-        STATIC_PACKAGE_METADATA, getDataFiles, getExtensions, getAllScripts,
-        getPackages, setup)
 
-    scripts = getAllScripts()
-
-    setup_args = dict(
-        packages=getPackages('twisted'),
-        conditionalExtensions=getExtensions(),
-        scripts=scripts,
-        data_files=getDataFiles('twisted'),
-        **STATIC_PACKAGE_METADATA
-        )
+    setup_args = {}
 
     if 'setuptools' in sys.modules:
         from pkg_resources import parse_requirements
-        requirements = ["zope.interface"]
+        requirements = ["zope.interface >= 3.6.0"]
         try:
             list(parse_requirements(requirements))
         except:
@@ -49,8 +39,23 @@ dependency resolution is disabled.
 """)
         else:
             setup_args['install_requires'] = requirements
+            setuptools._TWISTED_NO_CHECK_REQUIREMENTS = True
         setup_args['include_package_data'] = True
         setup_args['zip_safe'] = False
+
+    from twisted.python.dist import (
+        STATIC_PACKAGE_METADATA, getDataFiles, getExtensions, getAllScripts,
+        getPackages, setup)
+
+    scripts = getAllScripts()
+
+    setup_args.update(dict(
+        packages=getPackages('twisted'),
+        conditionalExtensions=getExtensions(),
+        scripts=scripts,
+        data_files=getDataFiles('twisted'),
+        **STATIC_PACKAGE_METADATA))
+
     setup(**setup_args)
 
 
@@ -59,4 +64,3 @@ if __name__ == "__main__":
         main(sys.argv[1:])
     except KeyboardInterrupt:
         sys.exit(1)
-
