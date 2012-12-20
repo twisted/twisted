@@ -1,7 +1,7 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
-Twisted Core 12.3.0pre1 (2012-12-14)
+Twisted Core 12.3.0pre2 (2012-12-20)
 ====================================
 
 Features
@@ -104,7 +104,7 @@ Other
    #6163, #6172, #6182, #6190, #6194, #6204
 
 
-Twisted Conch 12.3.0pre1 (2012-12-14)
+Twisted Conch 12.3.0pre2 (2012-12-20)
 =====================================
 
 Bugfixes
@@ -122,13 +122,13 @@ Other
  - #5923
 
 
-Twisted Lore 12.3.0pre1 (2012-12-14)
+Twisted Lore 12.3.0pre2 (2012-12-20)
 ====================================
 
 No significant changes have been made for this release.
 
 
-Twisted Mail 12.3.0pre1 (2012-12-14)
+Twisted Mail 12.3.0pre2 (2012-12-20)
 ====================================
 
 Bugfixes
@@ -142,7 +142,7 @@ Other
  - #3751
 
 
-Twisted Names 12.3.0pre1 (2012-12-14)
+Twisted Names 12.3.0pre2 (2012-12-20)
 =====================================
 
 Deprecations and Removals
@@ -157,25 +157,25 @@ Other
  - #5594, #6056, #6057, #6058, #6059, #6093
 
 
-Twisted News 12.3.0pre1 (2012-12-14)
+Twisted News 12.3.0pre2 (2012-12-20)
 ====================================
 
 No significant changes have been made for this release.
 
 
-Twisted Pair 12.3.0pre1 (2012-12-14)
+Twisted Pair 12.3.0pre2 (2012-12-20)
 ====================================
 
 No significant changes have been made for this release.
 
 
-Twisted Runner 12.3.0pre1 (2012-12-14)
+Twisted Runner 12.3.0pre2 (2012-12-20)
 ======================================
 
 No significant changes have been made for this release.
 
 
-Twisted Web 12.3.0pre1 (2012-12-14)
+Twisted Web 12.3.0pre2 (2012-12-20)
 ===================================
 
 Features
@@ -204,7 +204,7 @@ Other
    #6110, #6113, #6196, #6205
 
 
-Twisted Words 12.3.0pre1 (2012-12-14)
+Twisted Words 12.3.0pre2 (2012-12-20)
 =====================================
 
 No significant changes have been made for this release.
