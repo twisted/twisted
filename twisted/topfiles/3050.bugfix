@@ -1,2 +1,0 @@
-twisted.protocols.basic.LineReceiver now does not hit the maximum stack
-recursion depth when the line and data mode is switched many times.

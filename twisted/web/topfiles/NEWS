@@ -1,6 +1,35 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Web 12.3.0pre1 (2012-12-14)
+===================================
+
+Features
+--------
+ - twisted.web.server.Site now supports an encoders argument to encode
+   request content, twisted.web.server.GzipEncoderFactory being the
+   first one provided. (#104)
+
+Bugfixes
+--------
+ - twisted.web.http.HTTPChannel.headerReceived now catches the error
+   if the Content-Length header is not an integer and return a 400 Bad
+   Request response. (#6029)
+ - twisted.web.http.HTTPChannel now drops the connection and issues a
+   400 error upon receipt of a chunk-encoding encoded request with a
+   bad chunk-length field. (#6030)
+
+Improved Documentation
+----------------------
+ - twisted.web.iweb.IRequest now documents its `content` attribute and
+   a new "web in 60 seconds" howto demonstrates its use. (#6181)
+
+Other
+-----
+ - #5882, #5883, #5887, #5920, #6031, #6077, #6078, #6079, #6080,
+   #6110, #6113, #6196, #6205
+
+
 Twisted Web 12.2.0 (2012-08-26)
 ===============================
 

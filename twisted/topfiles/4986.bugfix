@@ -1,2 +1,0 @@
-twisted.protocols.ftp.FTPFileListProtocol fixed to support files with space characters in their name.
-

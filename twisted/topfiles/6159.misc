@@ -1,2 +1,0 @@
-twisted.internet.task.react now exists the python process on completion, with
-exit code 0 in case of success and 1 in case of failure.

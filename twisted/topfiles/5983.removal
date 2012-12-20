@@ -1,1 +1,0 @@
-twisted.python.components.Componentized no longer inherits from Versioned.

@@ -1,1 +1,0 @@
-The `protocol` attribute of twisted.names.client.Resolver, deprecated since Twisted 8.2, has been removed.
