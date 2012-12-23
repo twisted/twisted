@@ -11,7 +11,9 @@ only ever performed on Linux.
 
 import warnings
 import operator
-import os, sys, signal
+import os
+import sys
+import signal
 from StringIO import StringIO
 import tarfile
 from xml.dom import minidom as dom
@@ -25,21 +27,14 @@ from twisted.python.procutils import which
 from twisted.python import release
 from twisted.python.filepath import FilePath
 from twisted.python.versions import Version
-from twisted.python._release import _changeVersionInFile, getNextVersion
-from twisted.python._release import findTwistedProjects, replaceInFile
-from twisted.python._release import replaceProjectVersion
-from twisted.python._release import updateTwistedVersionInformation, Project
-from twisted.python._release import generateVersionFileData
-from twisted.python._release import changeAllProjectVersions
-from twisted.python._release import VERSION_OFFSET, DocBuilder, ManBuilder
-from twisted.python._release import NoDocumentsFound, filePathDelta
-from twisted.python._release import CommandFailed, BookBuilder
-from twisted.python._release import DistributionBuilder, APIBuilder
-from twisted.python._release import BuildAPIDocsScript
-from twisted.python._release import buildAllTarballs, runCommand
-from twisted.python._release import UncleanWorkingDirectory, NotWorkingDirectory
-from twisted.python._release import ChangeVersionsScript, BuildTarballsScript
-from twisted.python._release import NewsBuilder
+from twisted.python._release import (
+    _changeVersionInFile, getNextVersion, findTwistedProjects, replaceInFile,
+    replaceProjectVersion, Project, generateVersionFileData,
+    changeAllProjectVersions, VERSION_OFFSET, DocBuilder, ManBuilder,
+    NoDocumentsFound, filePathDelta, CommandFailed, BookBuilder,
+    DistributionBuilder, APIBuilder, BuildAPIDocsScript, buildAllTarballs,
+    runCommand, UncleanWorkingDirectory, NotWorkingDirectory,
+    ChangeVersionsScript, BuildTarballsScript, NewsBuilder)
 
 if os.name != 'posix':
     skip = "Release toolchain only supported on POSIX."
@@ -94,8 +89,9 @@ def genVersion(*args, **kwargs):
 
 class StructureAssertingMixin(object):
     """
-    A mixin for L{TestCase} subclasses which provides some methods for asserting
-    the structure and contents of directories and files on the filesystem.
+    A mixin for L{TestCase} subclasses which provides some methods for
+    asserting the structure and contents of directories and files on the
+    filesystem.
     """
     def createStructure(self, root, dirDict):
         """
@@ -203,8 +199,8 @@ class ChangeVersionTest(TestCase, StructureAssertingMixin):
         now = date.today()
         major = now.year - VERSION_OFFSET
         version = Version("twisted", major, 9, 0)
-        self.assertEqual(getNextVersion(version, now=now),
-                          Version("twisted", major, 10, 0))
+        self.assertEqual(getNextVersion(version, False, False, now),
+                         Version("twisted", major, 10, 0))
 
 
     def test_getNextVersionAfterYearChange(self):
@@ -215,8 +211,74 @@ class ChangeVersionTest(TestCase, StructureAssertingMixin):
         now = date.today()
         major = now.year - VERSION_OFFSET
         version = Version("twisted", major - 1, 9, 0)
-        self.assertEqual(getNextVersion(version, now=now),
-                          Version("twisted", major, 0, 0))
+        self.assertEqual(getNextVersion(version, False, False, now),
+                         Version("twisted", major, 0, 0))
+
+
+    def test_getNextVersionPreRelease(self):
+        """
+        L{getNextVersion} updates the major to the current year, and resets the
+        minor when creating a pre-release.
+        """
+        now = date.today()
+        major = now.year - VERSION_OFFSET
+        version = Version("twisted", 3, 9, 0)
+        self.assertEqual(getNextVersion(version, True, False, now),
+                         Version("twisted", major, 0, 0, 1))
+
+
+    def test_getNextVersionFinalRelease(self):
+        """
+        L{getNextVersion} resets the pre-release count when making a final
+        release after a pre-release.
+        """
+        now = date.today()
+        version = Version("twisted", 3, 9, 0, 1)
+        self.assertEqual(getNextVersion(version, False, False, now),
+                         Version("twisted", 3, 9, 0))
+
+
+    def test_getNextVersionNextPreRelease(self):
+        """
+        L{getNextVersion} just increments the pre-release number when operating
+        on a pre-release.
+        """
+        now = date.today()
+        version = Version("twisted", 3, 9, 1, 1)
+        self.assertEqual(getNextVersion(version, True, False, now),
+                         Version("twisted", 3, 9, 1, 2))
+
+
+    def test_getNextVersionPatchRelease(self):
+        """
+        L{getNextVersion} sets the micro number when creating a patch release.
+        """
+        now = date.today()
+        version = Version("twisted", 3, 9, 0)
+        self.assertEqual(getNextVersion(version, False, True, now),
+                         Version("twisted", 3, 9, 1))
+
+
+    def test_getNextVersionNextPatchRelease(self):
+        """
+        L{getNextVersion} just increments the micro number when creating a
+        patch release.
+        """
+        now = date.today()
+        version = Version("twisted", 3, 9, 1)
+        self.assertEqual(getNextVersion(version, False, True, now),
+                         Version("twisted", 3, 9, 2))
+
+
+    def test_getNextVersionNextPatchPreRelease(self):
+        """
+        L{getNextVersion} updates both the micro version and the pre-release
+        count when making a patch pre-release.
+        """
+        now = date.today()
+        version = Version("twisted", 3, 9, 1)
+        self.assertEqual(getNextVersion(version, True, True, now),
+                         Version("twisted", 3, 9, 2, 1))
 
 
     def test_changeVersionInFile(self):
@@ -251,27 +313,24 @@ class ChangeVersionTest(TestCase, StructureAssertingMixin):
             "twisted": {
                 "topfiles": {
                     "README": "Hi this is 1.0.0"},
-                "_version.py":
-                    genVersion("twisted", 1, 0, 0),
+                "_version.py": genVersion("twisted", 1, 0, 0),
                 "web": {
                     "topfiles": {
                         "README": "Hi this is 1.0.0"},
-                    "_version.py": genVersion("twisted.web", 1, 0, 0)
-                    }}}
+                    "_version.py": genVersion("twisted.web", 1, 0, 0)}}}
         self.createStructure(root, structure)
-        changeAllProjectVersions(root, Version("lol", 1, 0, 2))
+        releaseDate = date(2010, 1, 1)
+        changeAllProjectVersions(root, False, False, releaseDate)
         outStructure = {
-            "README": "Hi this is 1.0.2.",
+            "README": "Hi this is 10.0.0.",
             "twisted": {
                 "topfiles": {
-                    "README": "Hi this is 1.0.2"},
-                "_version.py":
-                    genVersion("twisted", 1, 0, 2),
+                    "README": "Hi this is 10.0.0"},
+                "_version.py": genVersion("twisted", 10, 0, 0),
                 "web": {
                     "topfiles": {
-                        "README": "Hi this is 1.0.2"},
-                    "_version.py": genVersion("twisted.web", 1, 0, 2),
-                    }}}
+                        "README": "Hi this is 10.0.0"},
+                    "_version.py": genVersion("twisted.web", 10, 0, 0)}}}
         self.assertStructure(root, outStructure)
 
 
@@ -297,38 +356,34 @@ class ChangeVersionTest(TestCase, StructureAssertingMixin):
                 "topfiles": {
                     "README": "Hi this is 1.0.0",
                     "NEWS": coreNews},
-                "_version.py":
-                    genVersion("twisted", 1, 0, 0),
+                "_version.py": genVersion("twisted", 1, 0, 0),
                 "web": {
                     "topfiles": {
                         "README": "Hi this is 1.0.0pre1",
                         "NEWS": webNews},
-                    "_version.py": genVersion("twisted.web", 1, 0, 0, 1)
-                    }}}
+                    "_version.py": genVersion("twisted.web", 1, 0, 0, 1)}}}
         self.createStructure(root, structure)
-        changeAllProjectVersions(root, Version("lol", 1, 0, 2), '2010-01-01')
-        coreNews = (
-            "Twisted Core 1.0.0 (2009-12-25)\n"
-            "===============================\n"
-            "\n")
-        webNews = ("Twisted Web 1.0.2 (2010-01-01)\n"
+        releaseDate = date(2010, 1, 1)
+        changeAllProjectVersions(root, False, False, releaseDate)
+        coreNews = ("Twisted Core 1.0.0 (2009-12-25)\n"
+                    "===============================\n"
+                    "\n")
+        webNews = ("Twisted Web 1.0.0 (2010-01-01)\n"
                    "==============================\n"
                    "\n")
         outStructure = {
-            "README": "Hi this is 1.0.2.",
+            "README": "Hi this is 10.0.0.",
             "NEWS": coreNews + webNews,
             "twisted": {
                 "topfiles": {
-                    "README": "Hi this is 1.0.2",
+                    "README": "Hi this is 10.0.0",
                     "NEWS": coreNews},
-                "_version.py":
-                    genVersion("twisted", 1, 0, 2),
+                "_version.py": genVersion("twisted", 10, 0, 0),
                 "web": {
                     "topfiles": {
-                        "README": "Hi this is 1.0.2",
+                        "README": "Hi this is 1.0.0",
                         "NEWS": webNews},
-                    "_version.py": genVersion("twisted.web", 1, 0, 2),
-                    }}}
+                    "_version.py": genVersion("twisted.web", 1, 0, 0)}}}
         self.assertStructure(root, outStructure)
 
 
@@ -437,29 +492,6 @@ class ProjectTest(TestCase):
              Project(baseDirectory.child('foo').child('bar'))])
 
 
-    def test_updateTwistedVersionInformation(self):
-        """
-        Update Twisted version information in the top-level project and all of
-        the subprojects.
-        """
-        baseDirectory = FilePath(self.mktemp())
-        baseDirectory.createDirectory()
-        now = date.today()
-
-        projectName = 'foo'
-        oldVersion = Version(projectName, 2, 5, 0)
-        newVersion = getNextVersion(oldVersion, now=now)
-
-        project = self.makeProject(oldVersion, baseDirectory)
-
-        updateTwistedVersionInformation(baseDirectory, now=now)
-
-        self.assertEqual(project.getVersion(), newVersion)
-        self.assertEqual(
-            project.directory.child('topfiles').child('README').getContent(),
-            newVersion.base())
-
-
 
 class UtilityTest(TestCase):
     """
@@ -473,10 +505,12 @@ class UtilityTest(TestCase):
         raised.
         """
         cwd = os.getcwd()
+
         def chAndBreak():
             os.mkdir('releaseCh')
             os.chdir('releaseCh')
-            1//0
+            1 // 0
+
         self.assertRaises(ZeroDivisionError,
                           release.runChdirSafe, chAndBreak)
         self.assertEqual(cwd, os.getcwd())
@@ -1184,14 +1218,14 @@ class BookBuilderTests(TestCase, BuilderTestsMixin):
         """
         builder = BookBuilder()
         self.assertEqual(
-                builder.run([
-                    sys.executable, '-c',
-                    'import sys; '
-                    'sys.stdout.write("hi\\n"); '
-                    'sys.stdout.flush(); '
-                    'sys.stderr.write("bye\\n"); '
-                    'sys.stderr.flush()']),
-                "hi\nbye\n")
+            builder.run([
+                sys.executable, '-c',
+                'import sys; '
+                'sys.stdout.write("hi\\n"); '
+                'sys.stdout.flush(); '
+                'sys.stderr.write("bye\\n"); '
+                'sys.stderr.flush()']),
+            "hi\nbye\n")
 
 
     def test_runFailed(self):
@@ -1217,8 +1251,8 @@ class BookBuilderTests(TestCase, BuilderTestsMixin):
         exc = self.assertRaises(
             CommandFailed, builder.run,
             [sys.executable, '-c',
-            'import sys; print "hi"; sys.stdout.flush(); '
-            'import os; os.kill(os.getpid(), 9)'])
+             'import sys; print "hi"; sys.stdout.flush(); '
+             'import os; os.kill(os.getpid(), 9)'])
         self.assertEqual(exc.exitSignal, 9)
         self.assertEqual(exc.exitStatus, None)
         self.assertEqual(exc.output, "hi\n")
@@ -1301,8 +1335,8 @@ class BookBuilderTests(TestCase, BuilderTestsMixin):
     def _setupTeXSections(self, sections):
         for texSectionNumber in sections:
             texPath = self.howtoDir.child("%d.tex" % (texSectionNumber,))
-            texPath.setContent(self.getArbitraryOutput(
-                    "1.2.3", texSectionNumber))
+            texPath.setContent(
+                self.getArbitraryOutput("1.2.3", texSectionNumber))
 
 
     def _setupTeXBook(self, sections):
@@ -1339,7 +1373,8 @@ class BookBuilderTests(TestCase, BuilderTestsMixin):
         succeeds.
         """
         # Make it long.
-        self.howtoDir = self.howtoDir.child("x" * 128).child("x" * 128).child("x" * 128)
+        self.howtoDir = self.howtoDir.child(
+            "x" * 128).child("x" * 128).child("x" * 128)
         self.howtoDir.makedirs()
 
         # This will use the above long path.
@@ -1485,8 +1520,8 @@ class FilePathDeltaTest(TestCase):
         L{filePathDelta} can create a simple relative path to a child path.
         """
         self.assertEqual(filePathDelta(FilePath("/foo/bar"),
-                                        FilePath("/foo/bar/baz")),
-                          ["baz"])
+                                       FilePath("/foo/bar/baz")),
+                         ["baz"])
 
 
     def test_filePathDeltaSiblingDir(self):
@@ -1495,8 +1530,8 @@ class FilePathDeltaTest(TestCase):
         siblings.
         """
         self.assertEqual(filePathDelta(FilePath("/foo/bar"),
-                                        FilePath("/foo/baz")),
-                          ["..", "baz"])
+                                       FilePath("/foo/baz")),
+                         ["..", "baz"])
 
 
     def test_filePathNoCommonElements(self):
@@ -1505,8 +1540,8 @@ class FilePathDeltaTest(TestCase):
         for maximum portability.
         """
         self.assertEqual(filePathDelta(FilePath("/foo/bar"),
-                                        FilePath("/baz/quux")),
-                          ["..", "..", "baz", "quux"])
+                                       FilePath("/baz/quux")),
+                         ["..", "..", "baz", "quux"])
 
 
     def test_filePathDeltaSimilarEndElements(self):
@@ -1515,8 +1550,8 @@ class FilePathDeltaTest(TestCase):
         comparing 2 paths, but stops at the first difference.
         """
         self.assertEqual(filePathDelta(FilePath("/foo/bar/bar/spam"),
-                                        FilePath("/foo/bar/baz/spam")),
-                          ["..", "..", "baz", "spam"])
+                                       FilePath("/foo/bar/baz/spam")),
+                         ["..", "..", "baz", "spam"])
 
 
 
@@ -1533,7 +1568,8 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         self.project = FilePath(self.mktemp())
         self.project.createDirectory()
         self.existingText = 'Here is stuff which was present previously.\n'
-        self.createStructure(self.project, {
+        self.createStructure(
+            self.project, {
                 'NEWS': self.existingText,
                 '5.feature': 'We now support the web.\n',
                 '12.feature': 'The widget is more robust.\n',
@@ -1742,8 +1778,7 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         """
         project = FilePath(self.mktemp()).child("twisted")
         project.makedirs()
-        self.createStructure(project, {
-                'NEWS': self.existingText })
+        self.createStructure(project, {'NEWS': self.existingText})
 
         self.builder.build(
             project, project.child('NEWS'),
@@ -1888,7 +1923,8 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         """
         project = FilePath(self.mktemp()).child("twisted")
         project.makedirs()
-        self.createStructure(project, {
+        self.createStructure(
+            project, {
                 'NEWS': 'Old boring stuff from the past.\n',
                 '_version.py': genVersion("twisted", 1, 2, 3),
                 'topfiles': {
@@ -1899,8 +1935,7 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
                     '_version.py': genVersion("twisted.conch", 3, 4, 5),
                     'topfiles': {
                         'NEWS': 'Old conch news.\n',
-                        '7.bugfix': 'Fixed that bug.\n'}},
-                })
+                        '7.bugfix': 'Fixed that bug.\n'}}})
         return project
 
 
@@ -1916,7 +1951,7 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         builds = []
         builder = NewsBuilder()
         builder.build = lambda path, output, header: builds.append((
-                path, output, header))
+            path, output, header))
         builder._today = lambda: '2009-12-01'
 
         project = self.createFakeTwistedProject()
@@ -1972,7 +2007,7 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
 
 
 class DistributionBuilderTestBase(BuilderTestsMixin, StructureAssertingMixin,
-                                   TestCase):
+                                  TestCase):
     """
     Base for tests of L{DistributionBuilder}.
     """
@@ -2012,14 +2047,14 @@ class DistributionBuilderTest(DistributionBuilderTestBase):
             "setup.py": "import toplevel",
             "bin": {"web": {"websetroot": "SET ROOT"},
                     "twistd": "TWISTD"},
-            "twisted":
-                {"web":
-                     {"__init__.py": "import WEB",
-                      "topfiles": {"setup.py": "import WEBINSTALL",
-                                   "README": "WEB!"}},
-                 "words": {"__init__.py": "import WORDS"},
-                 "plugins": {"twisted_web.py": "import WEBPLUG",
-                             "twisted_words.py": "import WORDPLUG"}},
+            "twisted": {
+                "web": {
+                    "__init__.py": "import WEB",
+                    "topfiles": {"setup.py": "import WEBINSTALL",
+                                 "README": "WEB!"}},
+                "words": {"__init__.py": "import WORDS"},
+                "plugins": {"twisted_web.py": "import WEBPLUG",
+                            "twisted_words.py": "import WORDPLUG"}},
             "doc": {"web": {"howto": {"index.xhtml": loreInput},
                             "man": {"websetroot.1": manInput2}},
                     "core": {"howto": {"template.tpl": self.template},
@@ -2033,13 +2068,13 @@ class DistributionBuilderTest(DistributionBuilderTestBase):
             "setup.py": "import toplevel",
             "bin": {"web": {"websetroot": "SET ROOT"},
                     "twistd": "TWISTD"},
-            "twisted":
-                {"web": {"__init__.py": "import WEB",
-                         "topfiles": {"setup.py": "import WEBINSTALL",
-                                      "README": "WEB!"}},
-                 "words": {"__init__.py": "import WORDS"},
-                 "plugins": {"twisted_web.py": "import WEBPLUG",
-                             "twisted_words.py": "import WORDPLUG"}},
+            "twisted": {
+                "web": {"__init__.py": "import WEB",
+                        "topfiles": {"setup.py": "import WEBINSTALL",
+                                     "README": "WEB!"}},
+                "words": {"__init__.py": "import WORDS"},
+                "plugins": {"twisted_web.py": "import WEBPLUG",
+                            "twisted_words.py": "import WORDPLUG"}},
             "doc": {"web": {"howto": {"index.html": loreOutput},
                             "man": {"websetroot.1": manInput2,
                                     "websetroot-man.html": manOutput2}},
@@ -2062,27 +2097,22 @@ class DistributionBuilderTest(DistributionBuilderTestBase):
         structure = {
             "bin": {"admin": {"blah": "ADMIN"},
                     "twistd": "TWISTD"},
-            "twisted":
-                {"web":
-                     {"__init__.py": "import WEB",
-                      "topfiles": {"setup.py": "import WEBINSTALL",
-                                   "README": "WEB!"}},
-                 },
+            "twisted": {
+                "web": {
+                    "__init__.py": "import WEB",
+                    "topfiles": {"setup.py": "import WEBINSTALL",
+                                 "README": "WEB!"}}},
             "doc": {"historic": {"hello": "there"},
-                    "other": "contents",
-                    },
-            }
+                    "other": "contents"}}
 
         outStructure = {
             "bin": {"twistd": "TWISTD"},
-            "twisted":
-                {"web":
-                     {"__init__.py": "import WEB",
-                      "topfiles": {"setup.py": "import WEBINSTALL",
-                                   "README": "WEB!"}},
-                 },
-            "doc": {"other": "contents"},
-            }
+            "twisted": {
+                "web": {
+                    "__init__.py": "import WEB",
+                    "topfiles": {"setup.py": "import WEBINSTALL",
+                                 "README": "WEB!"}}},
+            "doc": {"other": "contents"}}
 
         self.createStructure(self.rootDir, structure)
         outputFile = self.builder.buildTwisted("10.0.0")
@@ -2108,14 +2138,14 @@ class DistributionBuilderTest(DistributionBuilderTestBase):
             "setup.py": "import toplevel",
             "bin": {"web": {"websetroot": "SET ROOT"},
                     "words": {"im": "#!im"}},
-            "twisted":
-                {"web":
-                     {"__init__.py": "import WEB",
-                      "topfiles": {"setup.py": "import WEBINSTALL",
-                                   "README": "WEB!"}},
-                 "words": {"__init__.py": "import WORDS"},
-                 "plugins": {"twisted_web.py": "import WEBPLUG",
-                             "twisted_words.py": "import WORDPLUG"}}}
+            "twisted": {
+                "web": {
+                    "__init__.py": "import WEB",
+                    "topfiles": {"setup.py": "import WEBINSTALL",
+                                 "README": "WEB!"}},
+                "words": {"__init__.py": "import WORDS"},
+                "plugins": {"twisted_web.py": "import WEBPLUG",
+                            "twisted_words.py": "import WORDPLUG"}}}
 
         outStructure = {
             "README": "WEB!",
@@ -2139,10 +2169,10 @@ class DistributionBuilderTest(DistributionBuilderTestBase):
         structure = {
             "LICENSE": "copyright!",
             "bin": {},
-            "twisted":
-                {"web": {"__init__.py": "import WEB",
-                         "topfiles": {"setup.py": "import WEBINSTALL"}},
-                 "plugins": {}}}
+            "twisted": {
+                "web": {"__init__.py": "import WEB",
+                        "topfiles": {"setup.py": "import WEBINSTALL"}},
+                "plugins": {}}}
 
         outStructure = {
             "setup.py": "import WEBINSTALL",
@@ -2170,9 +2200,7 @@ class DistributionBuilderTest(DistributionBuilderTestBase):
                                 "topfiles": {"setup.py": "import WEBINST"}}},
             "doc": {"web": {"howto": {"index.xhtml": loreInput},
                             "man": {"twistd.1": manInput}},
-                    "core": {"howto": {"template.tpl": self.template}}
-                    }
-            }
+                    "core": {"howto": {"template.tpl": self.template}}}}
 
         outStructure = {
             "LICENSE": "copyright!",
@@ -2221,15 +2249,14 @@ class DistributionBuilderTest(DistributionBuilderTestBase):
                                      "README": "core readme"}},
             "doc": {"core": {"howto": {"template.tpl": self.template,
                                        "index.xhtml": howtoInput,
-                                       "tutorial":
-                                           {"index.xhtml": tutorialInput}},
+                                       "tutorial": {
+                                           "index.xhtml": tutorialInput}},
                              "specifications": {"index.xhtml": specInput},
                              "examples": {"foo.py": "foo.py"},
                              "index.xhtml": indexInput},
                     "web": {"howto": {"index.xhtml": "webindex"}}},
             "bin": {"twistd": "TWISTD",
-                    "web": {"websetroot": "websetroot"}}
-            }
+                    "web": {"websetroot": "websetroot"}}}
 
         outStructure = {
             "LICENSE": "copyright!",
@@ -2247,8 +2274,7 @@ class DistributionBuilderTest(DistributionBuilderTestBase):
                     "specifications": {"index.html": specOutput},
                     "examples": {"foo.py": "foo.py"},
                     "index.html": indexOutput},
-            "bin": {"twistd": "TWISTD"},
-            }
+            "bin": {"twistd": "TWISTD"}}
 
         self.createStructure(self.rootDir, structure)
         outputFile = self.builder.buildCore("8.0.0")
@@ -2270,9 +2296,7 @@ class DistributionBuilderTest(DistributionBuilderTestBase):
             "twisted": {"web": {"__init__.py": "import WEB",
                                 "topfiles": {"setup.py": "import WEBINST"}}},
             "doc": {"web": {"howto": {"index.xhtml": loreInput}},
-                    "core": {"howto": {"template.tpl": self.template}}
-                    }
-            }
+                    "core": {"howto": {"template.tpl": self.template}}}}
 
         outStructure = {
             "LICENSE": "copyright!",
@@ -2329,20 +2353,17 @@ class BuildAllTarballsTest(DistributionBuilderTestBase):
             "setup.py": "import toplevel",
             "bin": {"words": {"im": "import im"},
                     "twistd": "TWISTD"},
-            "twisted":
-                {
-                    "topfiles": {"setup.py": "import TOPINSTALL",
-                                 "README": "CORE!"},
-                    "_version.py": genVersion("twisted", 1, 2, 0),
-                    "words": {"__init__.py": "import WORDS",
-                              "_version.py":
-                                  genVersion("twisted.words", 1, 2, 0),
-                              "topfiles": {"setup.py": "import WORDSINSTALL",
-                                           "README": "WORDS!"},
-                              },
-                    "plugins": {"twisted_web.py": "import WEBPLUG",
-                                "twisted_words.py": "import WORDPLUG",
-                                "twisted_yay.py": "import YAY"}},
+            "twisted": {
+                "topfiles": {"setup.py": "import TOPINSTALL",
+                             "README": "CORE!"},
+                "_version.py": genVersion("twisted", 1, 2, 0),
+                "words": {"__init__.py": "import WORDS",
+                          "_version.py": genVersion("twisted.words", 1, 2, 0),
+                          "topfiles": {"setup.py": "import WORDSINSTALL",
+                                       "README": "WORDS!"}},
+                "plugins": {"twisted_web.py": "import WEBPLUG",
+                            "twisted_words.py": "import WORDPLUG",
+                            "twisted_yay.py": "import YAY"}},
             "doc": {"core": {"howto": {"template.tpl": self.template},
                              "index.xhtml": coreIndexInput}}}
 
@@ -2353,20 +2374,17 @@ class BuildAllTarballsTest(DistributionBuilderTestBase):
             "setup.py": "import toplevel",
             "bin": {"twistd": "TWISTD",
                     "words": {"im": "import im"}},
-            "twisted":
-                {
-                    "topfiles": {"setup.py": "import TOPINSTALL",
-                                 "README": "CORE!"},
-                    "_version.py": genVersion("twisted", 1, 2, 0),
-                    "words": {"__init__.py": "import WORDS",
-                              "_version.py":
-                                  genVersion("twisted.words", 1, 2, 0),
-                              "topfiles": {"setup.py": "import WORDSINSTALL",
-                                           "README": "WORDS!"},
-                              },
-                    "plugins": {"twisted_web.py": "import WEBPLUG",
-                                "twisted_words.py": "import WORDPLUG",
-                                "twisted_yay.py": "import YAY"}},
+            "twisted": {
+                "topfiles": {"setup.py": "import TOPINSTALL",
+                             "README": "CORE!"},
+                "_version.py": genVersion("twisted", 1, 2, 0),
+                "words": {"__init__.py": "import WORDS",
+                          "_version.py": genVersion("twisted.words", 1, 2, 0),
+                          "topfiles": {"setup.py": "import WORDSINSTALL",
+                                       "README": "WORDS!"}},
+                "plugins": {"twisted_web.py": "import WEBPLUG",
+                            "twisted_words.py": "import WORDPLUG",
+                            "twisted_yay.py": "import YAY"}},
             "doc": {"core": {"howto": {"template.tpl": self.template},
                              "index.html": coreIndexOutput}}}
 
@@ -2386,13 +2404,10 @@ class BuildAllTarballsTest(DistributionBuilderTestBase):
             "LICENSE": "copyright!",
             "setup.py": "import WORDSINSTALL",
             "bin": {"im": "import im"},
-            "twisted":
-                {
-                    "words": {"__init__.py": "import WORDS",
-                              "_version.py":
-                                  genVersion("twisted.words", 1, 2, 0),
-                              },
-                    "plugins": {"twisted_words.py": "import WORDPLUG"}}}
+            "twisted": {
+                "words": {"__init__.py": "import WORDS",
+                          "_version.py": genVersion("twisted.words", 1, 2, 0)},
+                "plugins": {"twisted_words.py": "import WORDPLUG"}}}
 
         self.createStructure(checkout, structure)
         childs = [x.path for x in checkout.children()]
@@ -2457,26 +2472,28 @@ class ScriptTests(BuilderTestsMixin, StructureAssertingMixin, TestCase):
     Tests for the release script functionality.
     """
 
-    def _testVersionChanging(self, major, minor, micro, prerelease=None):
+    def _testVersionChanging(self, prerelease, patch):
         """
         Check that L{ChangeVersionsScript.main} calls the version-changing
         function with the appropriate version data and filesystem path.
         """
         versionUpdates = []
-        def myVersionChanger(sourceTree, versionTemplate):
-            versionUpdates.append((sourceTree, versionTemplate))
+
+        def myVersionChanger(sourceTree, prerelease, patch):
+            versionUpdates.append((sourceTree, prerelease, patch))
+
         versionChanger = ChangeVersionsScript()
         versionChanger.changeAllProjectVersions = myVersionChanger
-        version = "%d.%d.%d" % (major, minor, micro)
-        if prerelease is not None:
-            version += "pre%d" % (prerelease,)
-        versionChanger.main([version])
+        args = []
+        if prerelease:
+            args.append("--prerelease")
+        if patch:
+            args.append("--patch")
+        versionChanger.main(args)
         self.assertEqual(len(versionUpdates), 1)
         self.assertEqual(versionUpdates[0][0], FilePath("."))
-        self.assertEqual(versionUpdates[0][1].major, major)
-        self.assertEqual(versionUpdates[0][1].minor, minor)
-        self.assertEqual(versionUpdates[0][1].micro, micro)
-        self.assertEqual(versionUpdates[0][1].prerelease, prerelease)
+        self.assertEqual(versionUpdates[0][1], prerelease)
+        self.assertEqual(versionUpdates[0][2], patch)
 
 
     def test_changeVersions(self):
@@ -2484,14 +2501,21 @@ class ScriptTests(BuilderTestsMixin, StructureAssertingMixin, TestCase):
         L{ChangeVersionsScript.main} changes version numbers for all Twisted
         projects.
         """
-        self._testVersionChanging(8, 2, 3)
+        self._testVersionChanging(False, False)
 
 
     def test_changeVersionsWithPrerelease(self):
         """
-        A prerelease can be specified to L{changeVersionsScript}.
+        A prerelease can be created with L{changeVersionsScript}.
         """
-        self._testVersionChanging(9, 2, 7, 38)
+        self._testVersionChanging(True, False)
+
+
+    def test_changeVersionsWithPatch(self):
+        """
+        A patch release can be created with L{changeVersionsScript}.
+        """
+        self._testVersionChanging(False, True)
 
 
     def test_defaultChangeVersionsVersionChanger(self):
@@ -2501,16 +2525,16 @@ class ScriptTests(BuilderTestsMixin, StructureAssertingMixin, TestCase):
         """
         versionChanger = ChangeVersionsScript()
         self.assertEqual(versionChanger.changeAllProjectVersions,
-                          changeAllProjectVersions)
+                         changeAllProjectVersions)
 
 
     def test_badNumberOfArgumentsToChangeVersionsScript(self):
         """
-        L{changeVersionsScript} raises SystemExit when the wrong number of
-        arguments are passed.
+        L{changeVersionsScript} raises SystemExit when the wrong arguments are
+        passed.
         """
         versionChanger = ChangeVersionsScript()
-        self.assertRaises(SystemExit, versionChanger.main, [])
+        self.assertRaises(SystemExit, versionChanger.main, ["12.3.0"])
 
 
     def test_tooManyDotsToChangeVersionsScript(self):
@@ -2539,8 +2563,10 @@ class ScriptTests(BuilderTestsMixin, StructureAssertingMixin, TestCase):
         2 or 3 L{FilePath} instances representing the paths passed to it.
         """
         builds = []
+
         def myBuilder(checkout, destination, template=None):
             builds.append((checkout, destination, template))
+
         tarballBuilder = BuildTarballsScript()
         tarballBuilder.buildAllTarballs = myBuilder
 
@@ -2573,7 +2599,8 @@ class ScriptTests(BuilderTestsMixin, StructureAssertingMixin, TestCase):
         """
         tarballBuilder = BuildTarballsScript()
         self.assertRaises(SystemExit, tarballBuilder.main, [])
-        self.assertRaises(SystemExit, tarballBuilder.main, ["a", "b", "c", "d"])
+        self.assertRaises(SystemExit, tarballBuilder.main,
+                          ["a", "b", "c", "d"])
 
 
     def test_badNumberOfArgumentsToBuildNews(self):
