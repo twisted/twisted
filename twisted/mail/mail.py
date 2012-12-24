@@ -3,7 +3,8 @@
 # See LICENSE for details.
 
 
-"""Mail support for twisted python.
+"""
+Mail support for twisted python.
 """
 
 # Twisted imports
@@ -11,9 +12,7 @@ from twisted.internet import defer
 from twisted.application import service, internet
 from twisted.python import util
 from twisted.python import log
-
-from twisted import cred
-import twisted.cred.portal
+from twisted.cred.portal import Portal
 
 # Sibling imports
 from twisted.mail import protocols, smtp
@@ -24,8 +23,9 @@ from zope.interface import implements, Interface
 
 
 class DomainWithDefaultDict:
-    '''Simulate a dictionary with a default value for non-existing keys.
-    '''
+    """
+    Simulate a dictionary with a default value for non-existing keys.
+    """
     def __init__(self, domains, default):
         self.domains = domains
         self.default = default
@@ -115,7 +115,9 @@ class DomainWithDefaultDict:
         return self.domains.setdefault(key, default)
 
 class IDomain(Interface):
-    """An email domain."""
+    """
+    An email domain.
+    """
 
     def exists(user):
         """
@@ -135,21 +137,20 @@ class IDomain(Interface):
         """
 
     def addUser(user, password):
-        """Add a username/password to this domain."""
-
-    def startMessage(user):
-        """Create and return a new message to be delivered to the given user.
-
-        DEPRECATED.  Implement validateTo() correctly instead.
+        """
+        Add a username/password to this domain.
         """
 
     def getCredentialsCheckers():
-        """Return a list of ICredentialsChecker implementors for this domain.
+        """
+        Return a list of ICredentialsChecker implementors for this domain.
         """
 
 class IAliasableDomain(IDomain):
+
     def setAliasGroup(aliases):
-        """Set the group of defined aliases for this domain
+        """
+        Set the group of defined aliases for this domain
 
         @type aliases: C{dict}
         @param aliases: Mapping of domain names to objects implementing
@@ -179,7 +180,8 @@ class IAliasableDomain(IDomain):
         """
 
 class BounceDomain:
-    """A domain in which no user exists.
+    """
+    A domain in which no user exists.
 
     This can be used to block off certain domains.
     """
@@ -207,7 +209,9 @@ class BounceDomain:
 
 
 class FileMessage:
-    """A file we can write an email too."""
+    """
+    A file we can write an email too.
+    """
 
     implements(smtp.IMessage)
 
@@ -230,7 +234,9 @@ class FileMessage:
 
 
 class MailService(service.MultiService):
-    """An email service."""
+    """
+    An email service.
+    """
 
     queue = None
     domains = None
@@ -246,7 +252,7 @@ class MailService(service.MultiService):
 
         self.monitor = FileMonitoringService()
         self.monitor.setServiceParent(self)
-        self.smtpPortal = cred.portal.Portal(self)
+        self.smtpPortal = Portal(self)
 
     def getPOP3Factory(self):
         return protocols.POP3Factory(self)
@@ -258,7 +264,7 @@ class MailService(service.MultiService):
         return protocols.ESMTPFactory(self, self.smtpPortal)
 
     def addDomain(self, name, domain):
-        portal = cred.portal.Portal(domain)
+        portal = Portal(domain)
         map(portal.registerChecker, domain.getCredentialsCheckers())
         self.domains[name] = domain
         self.portals[name] = portal
@@ -266,7 +272,9 @@ class MailService(service.MultiService):
             domain.setAliasGroup(self.aliases)
 
     def setQueue(self, queue):
-        """Set the queue for outgoing emails."""
+        """
+        Set the queue for outgoing emails.
+        """
         self.queue = queue
 
     def requestAvatar(self, avatarId, mind, *interfaces):
