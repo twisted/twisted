@@ -492,3 +492,23 @@ class PythonPathTestCase(TestCase):
             "(PEP 302 violation - check your local configuration).")
         self.assertEqual(len(warnings), 1)
         self.assertEqual(thisModule.name, __name__)
+
+
+    def test_containsModule(self):
+        """
+        L{PythonPath} implements the C{in} operator so that when it is the
+        right-hand argument and the name of a module which exists on that
+        L{PythonPath} is the left-hand argument, the result is C{True}.
+        """
+        thePath = modules.PythonPath()
+        self.assertIn('os', thePath)
+
+
+    def test_doesntContainModule(self):
+        """
+        L{PythonPath} implements the C{in} operator so that when it is the
+        right-hand argument and the name of a module which does not exist on
+        that L{PythonPath} is the left-hand argument, the result is C{False}.
+        """
+        thePath = modules.PythonPath()
+        self.assertNotIn('bogusModule', thePath)

@@ -709,6 +709,20 @@ class PythonPath:
         raise KeyError(modname)
 
 
+    def __contains__(self, module):
+        """
+        Check to see whether or not a module exists on my import path.
+
+        @param module: The name of the module to look for on my import path.
+        @type module: C{str}
+        """
+        try:
+            self.__getitem__(module)
+            return True
+        except KeyError:
+            return False
+
+
     def __repr__(self):
         """
         Display my sysPath and moduleDict in a string representation.
