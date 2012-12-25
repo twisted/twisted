@@ -7,14 +7,13 @@ Tests for L{twisted.python.log}.
 
 from __future__ import division, absolute_import, print_function
 
+import os, sys, time, logging, warnings, datetime, calendar
+
 from twisted.python.compat import _PY3, NativeStringIO as StringIO
-
-import os, sys, time, logging, warnings, calendar
-
 
 from twisted.trial import unittest
 
-from twisted.python import log, failure
+from twisted.python import log, failure, util
 
 
 class FakeWarning(Warning):
@@ -355,10 +354,63 @@ class LogPublisherTestCase(LogPublisherTestCaseMixin, unittest.SynchronousTestCa
 
 
 
+def timezoneChangingTest(method):
+    """
+    Decorator for tests that want to change the local timezone.
+
+    It skips the test on platforms that don't support timezone changes and
+    ensures that the old timezone is restored after the test is run.
+    """
+    if getattr(time, 'tzset', None) is None:
+        method.skip = ("Platform cannot change timezone, cannot verify "
+                       "correct offsets in well-known timezones.")
+        return method
+
+    def wrapperMethod(self):
+        originalTimezone = os.environ.get('TZ', None)
+        try:
+            method(self)
+        finally:
+            if originalTimezone is None:
+                del os.environ['TZ']
+            else:
+                os.environ['TZ'] = originalTimezone
+            time.tzset()
+
+    return util.mergeFunctionMetadata(method, wrapperMethod)
+
+
+
 class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.SynchronousTestCase):
     """
-    Tests for L{log.FileObserver}.
+    Tests for L{twisted.python.log.FileLogObserver}.
     """
+
+    def setTimezone(self, timezone):
+        """
+        Change the system's timezone, by changing the C{TZ} environment
+        variable to the C{timezone} zoneinfo database file.
+
+        This method should only be called from tests decorated with
+        L{timezoneChangingTest}.
+        """
+        os.environ['TZ'] = timezone
+        time.tzset()
+
+
+    def assertFormat(self, format, when, expected):
+        """
+        Assert that when L{FileLogObserver.timeFormat} equals C{format},
+        and L{FileLogObserver.formatTime} is called with C{when}, a string
+        equal to C{expected} is returned.
+        """
+        oldFormat = self.flo.timeFormat
+        self.flo.timeFormat = format
+        try:
+            self.assertEqual(self.flo.formatTime(when), expected)
+        finally:
+            self.flo.timeFormat = oldFormat
+
 
     def test_getTimezoneOffset(self):
         """
@@ -372,47 +424,97 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.SynchronousTestCa
         localStandardTuple = (2007, 1, 31, 0, 0, 0, 2, 31, 0)
         utcStandardTimestamp = time.mktime(localStandardTuple)
 
-        originalTimezone = os.environ.get('TZ', None)
-        try:
-            # Test something west of UTC
-            os.environ['TZ'] = 'America/New_York'
-            time.tzset()
-            self.assertEqual(
-                self.flo.getTimezoneOffset(utcDaylightTimestamp),
-                14400)
-            self.assertEqual(
-                self.flo.getTimezoneOffset(utcStandardTimestamp),
-                18000)
+        # Test something west of UTC
+        self.setTimezone('America/New_York')
+        self.assertEqual(
+            self.flo.getTimezoneOffset(utcDaylightTimestamp),
+            14400)
+        self.assertEqual(
+            self.flo.getTimezoneOffset(utcStandardTimestamp),
+            18000)
 
-            # Test something east of UTC
-            os.environ['TZ'] = 'Europe/Berlin'
-            time.tzset()
-            self.assertEqual(
-                self.flo.getTimezoneOffset(utcDaylightTimestamp),
-                -7200)
-            self.assertEqual(
-                self.flo.getTimezoneOffset(utcStandardTimestamp),
-                -3600)
+        # Test something east of UTC
+        self.setTimezone('Europe/Berlin')
+        self.assertEqual(
+            self.flo.getTimezoneOffset(utcDaylightTimestamp),
+            -7200)
+        self.assertEqual(
+            self.flo.getTimezoneOffset(utcStandardTimestamp),
+            -3600)
 
-            # Test a timezone that doesn't have DST
-            os.environ['TZ'] = 'Africa/Johannesburg'
-            time.tzset()
-            self.assertEqual(
-                self.flo.getTimezoneOffset(utcDaylightTimestamp),
-                -7200)
-            self.assertEqual(
-                self.flo.getTimezoneOffset(utcStandardTimestamp),
-                -7200)
-        finally:
-            if originalTimezone is None:
-                del os.environ['TZ']
-            else:
-                os.environ['TZ'] = originalTimezone
-            time.tzset()
-    if getattr(time, 'tzset', None) is None:
-        test_getTimezoneOffset.skip = (
-            "Platform cannot change timezone, cannot verify correct offsets "
-            "in well-known timezones.")
+        # Test a timezone that doesn't have DST
+        self.setTimezone('Africa/Johannesburg')
+        self.assertEqual(
+            self.flo.getTimezoneOffset(utcDaylightTimestamp),
+            -7200)
+        self.assertEqual(
+            self.flo.getTimezoneOffset(utcStandardTimestamp),
+            -7200)
+    test_getTimezoneOffset = timezoneChangingTest(test_getTimezoneOffset)
+
+
+    def test_defaultTimezoneInfo(self):
+        """
+        Test the default implementation of L{FileLogObserver.getTimezoneInfo}.
+
+        The C{datetime.tzinfo} object returned by C{getTimezoneInfo} should
+        report the correct UTC offset and name for the local timezone. We test
+        it by changing the local timezone and formatting a few timestamps with
+        a custom format string.
+        """
+        localDaylightTuple = (2006, 6, 30, 0, 0, 0, 4, 181, 1)
+        utcDaylightTimestamp = time.mktime(localDaylightTuple)
+        localStandardTuple = (2007, 1, 31, 0, 0, 0, 2, 31, 0)
+        utcStandardTimestamp = time.mktime(localStandardTuple)
+        dstChangeTuple = (2001, 3, 25, 3, 15, 0, 6, 84, 1)
+        dstChangeTimestamp = time.mktime(dstChangeTuple)
+
+        # Test something west of UTC
+        self.setTimezone('America/New_York')
+        self.assertFormat("%z", utcDaylightTimestamp, "-0400")
+        self.assertFormat("%Z", utcDaylightTimestamp, "EDT")
+        self.assertFormat("%z", utcStandardTimestamp, "-0500")
+        self.assertFormat("%Z", utcStandardTimestamp, "EST")
+
+        # Test something east of UTC
+        self.setTimezone('Europe/Berlin')
+        self.assertFormat("%z", utcDaylightTimestamp, "+0200")
+        self.assertFormat("%Z", utcDaylightTimestamp, "CEST")
+        self.assertFormat("%z", utcStandardTimestamp, "+0100")
+        self.assertFormat("%Z", utcStandardTimestamp, "CET")
+        self.assertFormat("%z", dstChangeTimestamp, "+0200")
+        self.assertFormat("%Z", dstChangeTimestamp, "CEST")
+
+        # Test a timezone that doesn't have DST
+        self.setTimezone('Africa/Johannesburg')
+        self.assertFormat("%z", utcDaylightTimestamp, "+0200")
+        self.assertFormat("%Z", utcDaylightTimestamp, "SAST")
+        self.assertFormat("%z", utcStandardTimestamp, "+0200")
+        self.assertFormat("%Z", utcStandardTimestamp, "SAST")
+    test_defaultTimezoneInfo = timezoneChangingTest(test_defaultTimezoneInfo)
+
+
+    def test_customTimezoneInfo(self):
+        """
+        Test that the time logged by L{FileLogObserver} respects the desired
+        local time, as specified by L{FileLogObserver.getTimezoneInfo}.
+        """
+        class SouthTarawaInfo(datetime.tzinfo):
+            """
+            A fictional timezone.
+            """
+            def utcoffset(self, dt):
+                return datetime.timedelta(hours=11, minutes=32)
+
+            def dst(self, dt):
+                return datetime.timedelta(0)
+
+            def tzname(self, dt):
+                return "KCT"
+
+        when = time.mktime((2000, 1, 1, 0, 0, 0, 5, 1, 0)) - time.timezone
+        self.flo.timezoneInfo = SouthTarawaInfo()
+        self.assertFormat(None, when, "2000-01-01 11:32:00+1132")
 
 
     def test_timeFormatting(self):
@@ -457,6 +559,22 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.SynchronousTestCa
         # thinks the local timezone is.
         self.flo.timeFormat = '%Y %m'
         self.assertEqual(self.flo.formatTime(when), '2001 02')
+    test_timeFormatting.skip = "formatTime now ignores getTimezoneOffset"
+
+
+    def test_microsecondFormatting(self):
+        """
+        Test formatting with microsecond precision. Only works on
+        Python 2.6 or newer.
+        """
+        # one day, to make sure that we don't underflow because of utcoffset,
+        # plus 0.5, which is an 'exact' float and should not introduce any
+        # rounding errors.
+        when = 24 * 60 * 60 + 0.5
+        self.assertFormat("%f", when, "500000")
+    if sys.version_info < (2, 6):
+        test_microsecondFormatting.skip = ("%f format code for strftime is "
+                                           "only available in Python 2.6")
 
 
     def test_loggingAnObjectWithBroken__str__(self):
