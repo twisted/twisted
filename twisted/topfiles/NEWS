@@ -18,15 +18,15 @@ Features
    --debugger command line flag. (#5794)
  - twisted.python.util.runWithWarningsSuppressed has been added; it
    runs a function with specified warning filters. (#5950)
- - Python's unittest runner now understands skips in trial-based test
-   cases. (#6006)
+ - trial's skipping feature is now implemented in a way compatible with the
+   standard library unittest's runner. (#6006)
  - The setup3.py script is now provided to provisionally support
    building and installing an experimental, incomplete version of
    Twisted in a Python 3 environment. (#6040)
  - twisted.python.util.FancyStrMixin now supports arbitrary callables
    to format attribute values. (#6063)
  - Several new methods of twisted.trial.unittest.SynchronousTestCase
-   -- `successResultOf`, `failureResultOf`, and `assertNoResult` -
+   - `successResultOf`, `failureResultOf`, and `assertNoResult` -
    have been added to make testing `Deferred`-using code easier.
    (#6105)
 
@@ -63,8 +63,6 @@ Improved Documentation
 ----------------------
  - The endpoint howto now lists TCP IPv6 server endpoint in the list
    of endpoints included with Twisted. (#5741)
- - twisted.mail.tap now documents example usage in it's longdesc
-   output for the 'mail' plugin (#5922)
 
 Deprecations and Removals
 -------------------------

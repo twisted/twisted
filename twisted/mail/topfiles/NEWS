@@ -10,6 +10,11 @@ Bugfixes
    IllegalClientResponse("Invalid Argument") when protocol encounters
    extra bytes at the end of a valid FETCH command. (#4000)
 
+Improved Documentation
+----------------------
+ - twisted.mail.tap now documents example usage in its longdesc
+   output for the 'mail' plugin (#5922)
+
 Other
 -----
  - #3751
