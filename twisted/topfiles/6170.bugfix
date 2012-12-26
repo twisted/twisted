@@ -1,1 +1,0 @@
-twisted.internet.test.test_gireactor no longer fails when using pygobject 3.4 and gtk 3.6 when X11 is unavailable.

@@ -1,1 +1,0 @@
-twisted.mail.imap4._FetchParser now raises IllegalClientResponse("Invalid Argument") when protocol encounters extra bytes at the end of a valid FETCH command.

@@ -1,1 +1,0 @@
-twisted.protocols.basic.NetstringReceiver.sendString no longer accepts objects other than bytes; the removed behavior was deprecated in Twisted 10.0.

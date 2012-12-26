@@ -1,6 +1,25 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Mail 12.3.0 (2012-12-20)
+================================
+
+Bugfixes
+--------
+ - twisted.mail.imap4._FetchParser now raises
+   IllegalClientResponse("Invalid Argument") when protocol encounters
+   extra bytes at the end of a valid FETCH command. (#4000)
+
+Improved Documentation
+----------------------
+ - twisted.mail.tap now documents example usage in its longdesc
+   output for the 'mail' plugin (#5922)
+
+Other
+-----
+ - #3751
+
+
 Twisted Mail 12.2.0 (2012-08-26)
 ================================
 

@@ -1,2 +1,0 @@
-ckeygen --showpub catches EncryptedKeyError instead of BadKeyError to detect
-that a key needs to be decrypted with a passphrase.
