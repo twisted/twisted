@@ -19,7 +19,7 @@ from twisted.internet import protocol
 from twisted.internet import defer
 from twisted.internet import error
 from twisted.internet import reactor
-from twisted.internet.interfaces import ITLSTransport
+from twisted.internet.interfaces import ITLSTransport, ISSLTransport
 from twisted.python import log
 from twisted.python import util
 
@@ -1244,7 +1244,6 @@ class ESMTPClient(SMTPClient):
         self.authenticators = []
         self.secret = secret
         self.context = contextFactory
-        self.tlsMode = False
 
 
     def esmtpEHLORequired(self, code=-1, resp=None):
@@ -1307,7 +1306,13 @@ class ESMTPClient(SMTPClient):
 
         self.sendLine('EHLO ' + self.identity)
 
+
     def esmtpState_serverConfig(self, code, resp):
+        """
+        Handle a positive response to the I{EHLO} command by parsing the
+        capabilities in the server's response and then taking the most
+        appropriate next step towards entering a mail transaction.
+        """
         items = {}
         for line in resp.splitlines():
             e = line.split(None, 1)
@@ -1316,28 +1321,57 @@ class ESMTPClient(SMTPClient):
             else:
                 items[e[0]] = None
 
-        if self.tlsMode:
-            self.authenticate(code, resp, items)
-        else:
-            self.tryTLS(code, resp, items)
+        self.tryTLS(code, resp, items)
+
 
     def tryTLS(self, code, resp, items):
+        """
+        Take a necessary step towards being able to begin a mail transaction.
+
+        The step may be to ask the server to being a TLS session.  If TLS is
+        already in use or not necessary and not available then the step may be
+        to authenticate with the server.  If TLS is necessary and not available,
+        fail the mail transmission attempt.
+
+        This is an internal helper method.
+
+        @param code: The server status code from the most recently received
+            server message.
+        @type code: L{int}
+
+        @param resp: The server status response from the most recently received
+            server message.
+        @type resp: L{bytes}
+
+        @param items: A mapping of ESMTP extensions offered by the server.  Keys
+            are extension identifiers and values are the associated values.
+        @type items: L{dict} mapping L{bytes} to L{bytes}
+
+        @return: C{None}
+        """
+        sslTransport = ISSLTransport.providedBy(self.transport)
+
         if self.context and 'STARTTLS' in items:
             self._expected = [220]
             self._okresponse = self.esmtpState_starttls
             self._failresponse = self.esmtpTLSFailed
             self.sendLine('STARTTLS')
-        elif self.requireTransportSecurity:
-            self.tlsMode = False
+        elif self.requireTransportSecurity and not sslTransport:
             self.esmtpTLSRequired()
         else:
-            self.tlsMode = False
             self.authenticate(code, resp, items)
 
+
     def esmtpState_starttls(self, code, resp):
+        """
+        Handle a positive response to the I{STARTTLS} command by starting a new
+        TLS session on C{self.transport}.
+
+        Upon success, re-handshake with the server to discover what capabilities
+        it has when TLS is in use.
+        """
         try:
             self.transport.startTLS(self.context)
-            self.tlsMode = True
         except:
             log.err()
             self.esmtpTLSFailed(451)
@@ -1345,6 +1379,7 @@ class ESMTPClient(SMTPClient):
         # Send another EHLO once TLS has been started to
         # get the TLS / AUTH schemes. Some servers only allow AUTH in TLS mode.
         self.esmtpState_ehlo(code, resp)
+
 
     def authenticate(self, code, resp, items):
         if self.secret and items.get('AUTH'):

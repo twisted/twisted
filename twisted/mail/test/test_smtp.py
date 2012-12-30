@@ -5,7 +5,7 @@
 Test cases for twisted.mail.smtp module.
 """
 
-from zope.interface import implements
+from zope.interface import implements, directlyProvides
 
 from twisted.python.util import LineLog
 from twisted.trial import unittest, util
@@ -32,7 +32,9 @@ from twisted.mail import imap4
 try:
     from twisted.test.ssl_helpers import ClientTLSContext, ServerTLSContext
 except ImportError:
-    ClientTLSContext = ServerTLSContext = None
+    sslSkip = "OpenSSL not present"
+else:
+    sslSkip = None
 
 import re
 
@@ -277,16 +279,16 @@ class SMTPClientTestCase(unittest.TestCase, LoopbackMixin):
         L{smtp.SMTPClient.timeoutConnection} calls the C{sendError} hook with a
         fatal L{SMTPTimeoutError} with the current line log.
         """
-        error = []
+        errors = []
         client = MySMTPClient()
-        client.sendError = error.append
+        client.sendError = errors.append
         client.makeConnection(StringTransport())
         client.lineReceived("220 hello")
         client.timeoutConnection()
-        self.assertIsInstance(error[0], smtp.SMTPTimeoutError)
-        self.assertTrue(error[0].isFatal)
+        self.assertIsInstance(errors[0], smtp.SMTPTimeoutError)
+        self.assertTrue(errors[0].isFatal)
         self.assertEqual(
-            str(error[0]),
+            str(errors[0]),
             "Timeout waiting for SMTP server response\n"
             "<<< 220 hello\n"
             ">>> HELO foo.baz\n")
@@ -728,7 +730,12 @@ class NoticeTLSClient(MyESMTPClient):
         MyESMTPClient.esmtpState_starttls(self, code, resp)
         self.tls = True
 
+
+
 class TLSTestCase(unittest.TestCase, LoopbackMixin):
+    if sslSkip is not None:
+        skip = sslSkip
+
     def testTLS(self):
         clientCTX = ClientTLSContext()
         serverCTX = ServerTLSContext()
@@ -742,13 +749,11 @@ class TLSTestCase(unittest.TestCase, LoopbackMixin):
 
         return self.loopback(server, client).addCallback(check)
 
-if ClientTLSContext is None:
-    for case in (TLSTestCase,):
-        case.skip = "OpenSSL not present"
-
 if not interfaces.IReactorSSL.providedBy(reactor):
     for case in (TLSTestCase,):
         case.skip = "Reactor doesn't support SSL"
+
+
 
 class EmptyLineTestCase(unittest.TestCase):
     def test_emptyLineSyntaxError(self):
@@ -1518,3 +1523,91 @@ class SenderMixinSentMailTests(unittest.TestCase):
         client.sentMail(199, "Test response", 1, addresses, client.log)
 
         return onDone
+
+
+
+class SSLTestCase(unittest.TestCase):
+    """
+    Tests for the TLS negotiation done by L{smtp.ESMTPClient}.
+    """
+    if sslSkip is not None:
+        skip = sslSkip
+
+    SERVER_GREETING = "220 localhost NO UCE NO UBE NO RELAY PROBES ESMTP\r\n"
+    EHLO_RESPONSE = "250-localhost Hello 127.0.0.1, nice to meet you\r\n"
+
+    def setUp(self):
+        self.clientProtocol = smtp.ESMTPClient(
+            "testpassword", ClientTLSContext(), "testuser")
+        self.clientProtocol.requireTransportSecurity = True
+        self.clientProtocol.getMailFrom = lambda: "test@example.org"
+
+
+    def test_requireTransportSecurityOverSSL(self):
+        """
+        When C{requireTransportSecurity} is C{True} and the client is connected
+        over an SSL transport, mail may be delivered.
+        """
+        transport = StringTransport()
+        directlyProvides(transport, interfaces.ISSLTransport)
+        self.clientProtocol.makeConnection(transport)
+
+        # Get the handshake out of the way
+        self.clientProtocol.dataReceived(self.SERVER_GREETING)
+        transport.clear()
+
+        # Tell the client about the server's capabilities
+        self.clientProtocol.dataReceived(
+            self.EHLO_RESPONSE +
+            "250 AUTH LOGIN\r\n")
+
+        # The client should now try to send a message - without first trying to
+        # negotiate TLS, since the transport is already secure.
+        self.assertEqual(
+            "MAIL FROM:<test@example.org>\r\n",
+            transport.value())
+
+
+    def test_requireTransportSecurityTLSOffered(self):
+        """
+        When C{requireTransportSecurity} is C{True} and the client is connected
+        over a non-SSL transport, if the server offers the I{STARTTLS}
+        extension, it is used before mail is delivered.
+        """
+        transport = StringTransport()
+        self.clientProtocol.makeConnection(transport)
+
+        # Get the handshake out of the way
+        self.clientProtocol.dataReceived(self.SERVER_GREETING)
+        transport.clear()
+
+        # Tell the client about the server's capabilities - including STARTTLS
+        self.clientProtocol.dataReceived(
+            self.EHLO_RESPONSE +
+            "250-AUTH LOGIN\r\n"
+            "250 STARTTLS\r\n")
+
+        # The client should try to start TLS before sending the message.
+        self.assertEqual("STARTTLS\r\n", transport.value())
+
+
+    def test_requireTransportSecurityTLSNotOffered(self):
+        """
+        When C{requireTransportSecurity} is C{True} and the client is connected
+        over a non-SSL transport, if the server does not offer the I{STARTTLS}
+        extension, mail is not delivered.
+        """
+        transport = StringTransport()
+        self.clientProtocol.makeConnection(transport)
+
+        # Get the handshake out of the way
+        self.clientProtocol.dataReceived(self.SERVER_GREETING)
+        transport.clear()
+
+        # Tell the client about the server's capabilities - excluding STARTTLS
+        self.clientProtocol.dataReceived(
+            self.EHLO_RESPONSE +
+            "250 AUTH LOGIN\r\n")
+
+        # The client give up
+        self.assertEqual("QUIT\r\n", transport.value())
