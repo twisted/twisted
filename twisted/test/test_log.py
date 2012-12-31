@@ -459,6 +459,15 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.SynchronousTestCa
         self.assertEqual(self.flo.formatTime(when), '2001 02')
 
 
+    def test_microsecondTimestampFormatting(self):
+        """
+        L{FileLogObserver.formatTime} supports a value of C{timeFormat} which
+        includes C{"%f"}, a L{datetime}-only format specifier for microseconds.
+        """
+        self.flo.timeFormat = '%f'
+        self.assertEqual("600000", self.flo.formatTime(12345.6))
+
+
     def test_loggingAnObjectWithBroken__str__(self):
         #HELLO, MCFLY
         self.lp.msg(EvilStr())

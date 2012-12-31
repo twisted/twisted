@@ -351,6 +351,7 @@ class FileLogObserver:
         self.write = f.write
         self.flush = f.flush
 
+
     def getTimezoneOffset(self, when):
         """
         Return the current local timezone offset from UTC.
@@ -365,6 +366,7 @@ class FileLogObserver:
         offset = datetime.utcfromtimestamp(when) - datetime.fromtimestamp(when)
         return offset.days * (60 * 60 * 24) + offset.seconds
 
+
     def formatTime(self, when):
         """
         Format the given UTC value as a string representing that time in the
@@ -373,7 +375,7 @@ class FileLogObserver:
         By default it's formatted as a ISO8601-like string (ISO8601 date and
         ISO8601 time separated by a space). It can be customized using the
         C{timeFormat} attribute, which will be used as input for the underlying
-        C{time.strftime} call.
+        L{datetime.datetime.strftime} call.
 
         @type when: C{int}
         @param when: POSIX (ie, UTC) timestamp for which to find the offset.
@@ -381,7 +383,7 @@ class FileLogObserver:
         @rtype: C{str}
         """
         if self.timeFormat is not None:
-            return time.strftime(self.timeFormat, time.localtime(when))
+            return datetime.fromtimestamp(when).strftime(self.timeFormat)
 
         tzOffset = -self.getTimezoneOffset(when)
         when = datetime.utcfromtimestamp(when + tzOffset)
