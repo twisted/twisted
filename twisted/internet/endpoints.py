@@ -256,14 +256,14 @@ class StandardIOEndpoint(object):
 
 @implementer(interfaces.ITransport)
 class _ProcessEndpointTransport(proxyForInterface(
-                                    interfaces.IProcessTransport, '_process')):
+        interfaces.IProcessTransport, '_process')):
     """
-    An L{ITransport} provider for the L{IProtocol} instance
-    passed to the process endpoint.
-    @param _process: An active process transport which will be used
-           by write methods on this object to write data to a child
-           process.
-    @type _process: L{interfaces.IProcessTransport}
+    An L{ITransport} provider for the L{IProtocol} instance passed to the
+    process endpoint.
+
+    @ivar _process: An active process transport which will be used by write
+        methods on this object to write data to a child process.
+    @type _process: L{interfaces.IProcessTransport} provider
     """
     def write(self, data):
         """
@@ -285,13 +285,16 @@ class _WrapIProtocol(ProcessProtocol):
     """
     An L{IProcessProtocol} provider that wraps an L{IProtocol}.
 
+    @ivar transport: A L{_ProcessEndpointTransport} that is hooked to the
+        wrapped L{IProtocol} provider.
+
     @see: L{protocol.ProcessProtocol}
     """
 
     def __init__(self, proto, executable, errFlag):
         """
         @param proto: An L{IProtocol} provider.
-        @param errFlag: A constand belonging to L{StandardErrorBehavior}
+        @param errFlag: A constant belonging to L{StandardErrorBehavior}
             that determines if stderr is logged or dropped.
         @param executable: The file name (full path) to spawn.
         """
@@ -302,12 +305,10 @@ class _WrapIProtocol(ProcessProtocol):
 
     def makeConnection(self, process):
         """
-        Call L{IProtocol} provider's makeConnection method with an
-            ITransport provider.
+        Call L{IProtocol} provider's makeConnection method with an L{ITransport}
+        provider.
 
         @param process: An L{IProcessTransport} provider.
-        @ivar transport: A L{_ProcessEndpointTransport} provider that
-            is hooked to the L{IProtocol} provider.
         """
         self.transport = _ProcessEndpointTransport(process)
         return self.protocol.makeConnection(self.transport)
@@ -315,25 +316,27 @@ class _WrapIProtocol(ProcessProtocol):
 
     def childDataReceived(self, childFD, data):
         """
-        This is called with data from the process's stdout or stderr
-        pipes. It checks the status of the errFlag to setermine if
-        stderr should be logged (default) or dropped.
+        This is called with data from the process's stdout or stderr pipes. It
+        checks the status of the errFlag to setermine if stderr should be logged
+        (default) or dropped.
         """
         if childFD == 1:
             return self.protocol.dataReceived(data)
         elif childFD == 2 and self.errFlag == StandardErrorBehavior.LOG:
-            log.msg(format = "Process %(executable)r wrote stderr unhandled by\
-%(protocol)s: %(data)s", executable = self.executable, protocol = self.protocol,
-                data = data)
+            log.msg(
+                format=
+                "Process %(executable)r wrote stderr unhandled by "
+                "%(protocol)s: %(data)s",
+                executable=self.executable, protocol=self.protocol,
+                data=data)
 
 
     def processEnded(self, reason):
         """
-        @see: L{ProcessProtocol.processEnded}
+        If the process ends with L{error.ProcessDone}, this method calls the
+        L{IProtocol} provider's L{connectionLost} with a L{error.ConnectionDone}
 
-        If the process ends with L{error.ProcessDone}, this method
-        calls the L{IProtocol} provider's L{connectionLost} with a
-        L{error.ConnectionDone}
+        @see: L{ProcessProtocol.processEnded}
         """
         if (reason.check(error.ProcessDone) == error.ProcessDone) and (
                 reason.value.status == 0):
@@ -357,8 +360,7 @@ class ProcessEndpoint(object):
     """
     An endpoint for child processes
 
-    @ivar _spawnProcess: A hook used for testing the spawning of
-            child process.
+    @ivar _spawnProcess: A hook used for testing the spawning of child process.
     """
     def __init__(self, reactor, executable, args=(), env={}, path=None,
                  uid=None, gid=None, usePTY=0, childFDs=None,
@@ -384,13 +386,11 @@ class ProcessEndpoint(object):
 
     def connect(self, protocolFactory):
         """
-        Implement L{IStreamClientEndpoint.connect} to launch a child
-        process and connect it to a protocol created by
-        C{protocolFactory}.
+        Implement L{IStreamClientEndpoint.connect} to launch a child process and
+        connect it to a protocol created by C{protocolFactory}.
 
-        @param protocolFactory: A factory for an L{IProtocol} provider
-            which will be notified of all events related to the created
-            process.
+        @param protocolFactory: A factory for an L{IProtocol} provider which
+            will be notified of all events related to the created process.
         """
         proto = protocolFactory.buildProtocol(ProcessAddress())
         try:
