@@ -29,7 +29,7 @@ from twisted.python.failure import Failure
 from twisted.web import http
 from twisted.internet import defer, protocol, task, reactor
 from twisted.internet.interfaces import IProtocol
-from twisted.internet._endpointspy3 import TCP4ClientEndpoint, SSL4ClientEndpoint
+from twisted.internet.endpoints import TCP4ClientEndpoint, SSL4ClientEndpoint
 from twisted.python import failure
 from twisted.python._utilpy3 import InsensitiveDict
 from twisted.python.components import proxyForInterface

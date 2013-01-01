@@ -29,8 +29,7 @@ from twisted.internet.interfaces import (
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.defer import (
     Deferred, DeferredList, maybeDeferred, gatherResults)
-from twisted.internet._endpointspy3 import (
-    TCP4ServerEndpoint, TCP4ClientEndpoint)
+from twisted.internet.endpoints import TCP4ServerEndpoint, TCP4ClientEndpoint
 from twisted.internet.protocol import ServerFactory, ClientFactory, Protocol
 from twisted.internet.interfaces import (
     IPushProducer, IPullProducer, IHalfCloseableProtocol)

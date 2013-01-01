@@ -19,7 +19,7 @@ from twisted.internet.protocol import ServerFactory, ClientFactory, Protocol
 from twisted.internet.interfaces import (
     IReactorSSL, ITLSTransport, IStreamClientEndpoint)
 from twisted.internet.defer import Deferred, DeferredList
-from twisted.internet._endpointspy3 import (
+from twisted.internet.endpoints import (
     SSL4ServerEndpoint, SSL4ClientEndpoint, TCP4ClientEndpoint)
 from twisted.internet.error import ConnectionClosed
 from twisted.internet.task import Cooperator
