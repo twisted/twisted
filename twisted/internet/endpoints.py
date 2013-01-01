@@ -258,7 +258,7 @@ class StandardIOEndpoint(object):
 
 @implementer(interfaces.ITransport)
 class _ProcessEndpointTransport(proxyForInterface(
-        interfaces.IProcessTransport, '_process')):
+                                interfaces.IProcessTransport, '_process')):
     """
     An L{ITransport} provider for the L{IProtocol} instance passed to the
     process endpoint.
