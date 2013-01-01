@@ -702,6 +702,7 @@ class StubApplicationProtocol(protocol.Protocol):
 
 
 
+@implementer(interfaces.IProcessTransport)
 class MemoryProcessTransport(object):
     """
     A fake L{IProcessTransport} provider to be used in tests.
@@ -709,8 +710,6 @@ class MemoryProcessTransport(object):
     @ivar dataList: A list to which data is appended in writeToChild.
         Acts as the child's stdin for testing.
     """
-    implements(interfaces.IProcessTransport)
-
     def __init__(self):
         self.dataList = []
 
@@ -733,12 +732,11 @@ class MemoryProcessTransport(object):
 
 
 
+@implementer(interfaces.IReactorProcess)
 class MemoryProcessReactor(object):
     """
     A fake L{IReactorProcess} provider to be used in tests.
     """
-    implements(interfaces.IReactorProcess)
-
     def spawnProcess(self, processProtocol, executable, args=(), env={},
                      path=None, uid=None, gid=None, usePTY=0, childFDs=None):
         """

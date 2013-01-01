@@ -254,6 +254,7 @@ class StandardIOEndpoint(object):
 
 
 
+@implementer(interfaces.ITransport)
 class _ProcessEndpointTransport(proxyForInterface(
                                     interfaces.IProcessTransport, '_process')):
     """
@@ -264,8 +265,6 @@ class _ProcessEndpointTransport(proxyForInterface(
            process.
     @type _process: L{interfaces.IProcessTransport}
     """
-    implements(interfaces.ITransport)
-
     def write(self, data):
         """
         Write to the child process's standard input.
@@ -353,6 +352,7 @@ class StandardErrorBehavior(Names):
 
 
 
+@implementer(interfaces.IStreamClientEndpoint)
 class ProcessEndpoint(object):
     """
     An endpoint for child processes
@@ -360,8 +360,6 @@ class ProcessEndpoint(object):
     @ivar _spawnProcess: A hook used for testing the spawning of
             child process.
     """
-    implements(interfaces.IStreamClientEndpoint)
-
     def __init__(self, reactor, executable, args=(), env={}, path=None,
                  uid=None, gid=None, usePTY=0, childFDs=None,
                  errFlag=StandardErrorBehavior.LOG):
