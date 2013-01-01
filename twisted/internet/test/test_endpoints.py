@@ -17,17 +17,18 @@ from zope.interface.verify import verifyObject
 from twisted.python.compat import _PY3
 from twisted.trial import unittest
 from twisted.internet import error, interfaces, defer
-from twisted.internet import endpoints
-from twisted.internet.address import IPv4Address, IPv6Address, UNIXAddress
+from twisted.internet import endpoints, protocol, reactor, stdio
+from twisted.internet.address import IPv4Address, IPv6Address, UNIXAddress, ProcessAddress
 from twisted.internet.protocol import ClientFactory, Protocol
 from twisted.test.proto_helpers import (
     MemoryReactor, RaisingMemoryReactor, StringTransport)
 from twisted.python.failure import Failure
 from twisted.python.systemd import ListenFDs
-
 from twisted.python.filepath import FilePath
 from twisted.protocols import basic
 from twisted.internet import protocol, reactor
+from twisted.python import log
+from twisted.internet.endpoints import StandardErrorBehavior
 
 from twisted.test import __file__ as testInitPath
 pemPath = FilePath(testInitPath.encode("utf-8")).sibling(b"server.pem")
@@ -139,7 +140,6 @@ class TestFactory(ClientFactory):
     two deferreds which are called back when my protocol connects and
     disconnects.
     """
-
     protocol = TestProtocol
 
 
@@ -655,25 +655,459 @@ class StandardIOEndpointsTestCase(unittest.TestCase):
     def test_address(self):
         """
         The address passed to the factory's buildProtocol in the endpoint
-        should be a PipeAddress instance.
+        is a PipeAddress instance.
         """
         class TestAddrFactory(protocol.Factory):
             protocol = basic.LineReceiver
             _address = None
+
             def buildProtocol(self, addr):
                 self._address = addr
                 p = self.protocol()
                 p.factory = self
                 return p
+
             def getAddress(self):
                 return self._address
 
         myFactory = TestAddrFactory()
         self.d = self.ep.listen(myFactory)
+
         def checkAddress(stdioOb):
             self.assertIsInstance(myFactory.getAddress(), PipeAddress)
             stdioOb.loseConnection()
+
         self.d.addCallback(checkAddress)
+        return self.d
+
+
+
+class StubApplicationProtocol(protocol.Protocol):
+    """
+    An L{IProtocol} provider.
+    """
+    def dataReceived(self, data):
+        """
+        @param data: The data received by the protocol.
+        @type data: str
+        """
+        self.data = data
+
+
+    def connectionLost(self, reason):
+        """
+        @type reason: L{twisted.python.failure.Failure}
+        """
+        self.reason = reason
+
+
+
+class MemoryProcessTransport(object):
+    """
+    A fake L{IProcessTransport} provider to be used in tests.
+
+    @ivar dataList: A list to which data is appended in writeToChild.
+        Acts as the child's stdin for testing.
+    """
+    implements(interfaces.IProcessTransport)
+
+    def __init__(self):
+        self.dataList = []
+
+
+    def writeToChild(self, childFD, data):
+        if childFD == 0:
+            self.dataList.append(data)
+
+
+    def loseConnection(self):
+        self.loseConnectionFlag = True
+
+
+    def getPeer(self):
+        return ProcessAddress()
+
+
+    def getHost(self):
+        return ProcessAddress()
+
+
+
+class MemoryProcessReactor(object):
+    """
+    A fake L{IReactorProcess} provider to be used in tests.
+    """
+    implements(interfaces.IReactorProcess)
+
+    def spawnProcess(self, processProtocol, executable, args=(), env={},
+                     path=None, uid=None, gid=None, usePTY=0, childFDs=None):
+        """
+        @ivar processProtocol: Stores the protocol passed to the
+            reactor.
+        @return: An L{IProcessTransport} provider.
+        """
+        self.processProtocol = processProtocol
+        self.processTransport = MemoryProcessTransport
+        self.processProtocol.makeConnection(self.processTransport)
+        return self.processTransport
+
+
+
+class ProcessEndpointsTestCase(unittest.TestCase):
+    """
+    Tests for child process endpoints.
+    """
+    def setUp(self):
+        self.ep = endpoints.ProcessEndpoint(MemoryProcessReactor(),
+                                            '/bin/executable')
+        self.f = protocol.Factory()
+        self.f.protocol = StubApplicationProtocol
+
+
+    def test_constructorDefaults(self):
+        """
+        Default values are set for the optional parameters in the endpoint.
+        """
+        self.assertIsInstance(self.ep._reactor, MemoryProcessReactor)
+        self.assertEqual(self.ep._executable, '/bin/executable')
+        self.assertEqual(self.ep._args, ())
+        self.assertEqual(self.ep._env, {})
+        self.assertEqual(self.ep._path, None)
+        self.assertEqual(self.ep._uid, None)
+        self.assertEqual(self.ep._gid, None)
+        self.assertEqual(self.ep._usePTY, 0)
+        self.assertEqual(self.ep._childFDs, None)
+        self.assertEqual(self.ep._errFlag, StandardErrorBehavior.LOG)
+
+
+    def test_constructorNonDefaults(self):
+        """
+        The parameters passed to the endpoint are stored in it.
+        """
+        environ = {'HOME': None}
+        self.ep = endpoints.ProcessEndpoint(MemoryProcessReactor(), '/bin/executable',
+            ['/bin/executable'], {'HOME': environ['HOME']},
+            '/runProcessHere/', 1, 2, True, {3:'w', 4:'r', 5:'r'}, StandardErrorBehavior.DROP)
+
+        self.assertIsInstance(self.ep._reactor, MemoryProcessReactor)
+        self.assertEqual(self.ep._executable, '/bin/executable')
+        self.assertEqual(self.ep._args, ['/bin/executable'])
+        self.assertEqual(self.ep._env, {'HOME': environ['HOME']})
+        self.assertEqual(self.ep._path, '/runProcessHere/')
+        self.assertEqual(self.ep._uid, 1)
+        self.assertEqual(self.ep._gid, 2)
+        self.assertEqual(self.ep._usePTY, True)
+        self.assertEqual(self.ep._childFDs, {3:'w', 4:'r', 5:'r'})
+        self.assertEqual(self.ep._errFlag, StandardErrorBehavior.DROP)
+
+
+    def test_errFlag(self):
+        """
+        The endpoint's errFlag stores a constant from
+        L{endpoints.StandardErrorBehavior}
+        """
+        self.assertTrue(self.ep._errFlag in StandardErrorBehavior.iterconstants())
+
+
+    def test_wrappedProtocol(self):
+        """
+        The wrapper function _WrapIProtocol gives an IProcessProtocol
+        implementation that wraps over an IProtocol.
+        """
+        self.d = self.ep.connect(self.f)
+        wpp = self.ep._reactor.processProtocol
+        self.assertIsInstance(wpp, endpoints._WrapIProtocol)
+        return self.d
+
+
+    def test_spawnProcess(self):
+        """
+        The parameters for spawnProcess stored in the endpoint are
+        passed when the endpoint's connect method is invoked.
+        """
+        environ = {'HOME': None}
+        def testSpawnProcess(pp, executable, args, env, path,
+                             uid, gid, usePTY, childFDs):
+            self.assertIsInstance(pp, endpoints._WrapIProtocol)
+            self.assertEqual(executable, self.ep._executable)
+            self.assertEqual(args, self.ep._args)
+            self.assertEqual(env, self.ep._env)
+            self.assertEqual(path, self.ep._path)
+            self.assertEqual(uid, self.ep._uid)
+            self.assertEqual(gid, self.ep._gid)
+            self.assertEqual(usePTY, self.ep._usePTY)
+            self.assertEqual(childFDs, self.ep._childFDs)
+
+        self.ep = endpoints.ProcessEndpoint(reactor, '/bin/executable',
+            ['/bin/executable'], {'HOME': environ['HOME']},
+            '/runProcessHere/', 1, 2, True, {3:'w', 4:'r', 5:'r'})
+        self.ep._spawnProcess = testSpawnProcess
+        self.d = self.ep.connect(self.f)
+        return self.d
+
+
+    def test_processAddress(self):
+        """
+        The address passed to the factory's buildProtocol in the endpoint
+        is a ProcessAddress instance.
+        """
+        class TestAddrFactory(protocol.Factory):
+            protocol = StubApplicationProtocol
+            _address = None
+
+            def buildProtocol(self, addr):
+                self._address = addr
+                p = self.protocol()
+                p.factory = self
+                return p
+
+            def getAddress(self):
+                return self._address
+
+        myFactory = TestAddrFactory()
+        self.d = self.ep.connect(myFactory)
+
+        def checkAddress(proto):
+            self.assertIsInstance(myFactory.getAddress(), ProcessAddress)
+
+        self.d.addCallback(checkAddress)
+        return self.d
+
+
+    def test_connect(self):
+        """
+        L{ProcessEndpoint.connect} returns a Deferred with the
+        connected protocol
+        """
+        self.d = self.ep.connect(self.f)
+
+        def checkProto(proto):
+            self.assertIsInstance(proto, StubApplicationProtocol)
+
+        self.d.addCallback(checkProto)
+        return self.d
+
+
+    def test_connectFailure(self):
+        """
+        In case of failure, L{ProcessEndpoint.connect} returns a
+        Deferred that fails.
+        """
+        def testSpawnProcess(pp, executable, args, env, path,
+                             uid, gid, usePTY, childFDs):
+            raise Exception
+
+        receivedExceptions = []
+        self.ep._spawnProcess = testSpawnProcess
+        d = self.ep.connect(self.f)
+
+        def checkFailure(f):
+            receivedExceptions.append(f.value)
+
+        d.addErrback(checkFailure)
+
+        self.assertEqual(len(receivedExceptions), 1)
+        self.assertIsInstance(receivedExceptions.pop(), Exception)
+
+
+
+class ProcessEndpointTransportTests(unittest.TestCase):
+    """
+    Test the behaviour of the implementation detail
+    L{endpoints._ProcessEndpointTransport}.
+    """
+    def setUp(self):
+        self.process = MemoryProcessTransport()
+        self.endpointTransport = endpoints._ProcessEndpointTransport(
+            self.process)
+
+
+    def test_constructor(self):
+        """
+        The L{_ProcessEndpointTransport} instance stores the process
+        passed to it.
+        """
+        self.assertEqual(self.endpointTransport._process, self.process)
+
+
+    def test_writeSequence(self):
+        """
+        The writeSequence method of L{_ProcessEndpointTransport} writes
+        a list of string passed to it to the transport's stdin.
+        """
+
+        self.endpointTransport.writeSequence(['test1','test2', 'test3'])
+        self.assertEqual(self.process.dataList, ['test1','test2', 'test3'])
+
+
+    def test_write(self):
+        """
+        The write method of L{_ProcessEndpointTransport} writes a
+        string of data passed to it to the child process's stdin.
+        """
+        self.endpointTransport.write('test')
+        self.assertEqual(self.process.dataList.pop(), 'test')
+
+
+    def test_loseConnection(self):
+        """
+        A call to the loseConnection method of a
+        L{_ProcessEndpointTransport} instance returns a call to the
+        process transport's loseConnection.
+        """
+        self.endpointTransport.loseConnection()
+        self.assertEqual(self.process.loseConnectionFlag, True)
+
+
+    def test_getHost(self):
+        """
+        A call to the getHost method of a L{_ProcessEndpointTransport}
+        instance calls the process transport's getHost.
+        """
+        self.assertIsInstance(self.endpointTransport.getHost(), ProcessAddress)
+
+
+    def test_getPeer(self):
+        """
+        A call to the getPeer method of a L{_ProcessEndpointTransport}
+        instance calls the process transport's getPeer.
+        """
+        self.assertIsInstance(self.endpointTransport.getPeer(), ProcessAddress)
+
+
+
+class WrappedIProtocolTests(unittest.TestCase):
+    """
+    Test the behaviour of the implementation detail C{_WrapIProtocol}.
+    """
+    def setUp(self):
+        self.ep = endpoints.ProcessEndpoint(MemoryProcessReactor(), '/bin/executable')
+        self.eventLog = None
+        self.f = protocol.Factory()
+        self.f.protocol = StubApplicationProtocol
+
+
+    def test_constructor(self):
+        """
+        Stores an L{IProtocol} provider and the flag to log/drop stderr
+        """
+        self.d = self.ep.connect(self.f)
+        wpp = self.ep._reactor.processProtocol
+        self.assertIsInstance(wpp.protocol, StubApplicationProtocol)
+        self.assertEqual(wpp.errFlag, self.ep._errFlag)
+
+
+    def test_makeConnection(self):
+        """
+        Our process transport is properly hooked up to the
+        wrappedIProtocol when a connection is made.
+        """
+        self.d = self.ep.connect(self.f)
+        wpp = self.ep._reactor.processProtocol
+        # The protocol passed to the reactor
+
+        def checkMakeConnection(process):
+            self.assertEqual(wpp.protocol.transport,
+                wpp.transport)
+
+        self.d.addCallback(checkMakeConnection)
+        return self.d
+
+
+    def _stdLog(self, eventDict):
+        """
+        A log observer.
+        """
+        self.eventLog = eventDict
+
+
+    def test_logStderr(self):
+        """
+        When the _errFlag is set to L{StandardErrorBehavior.LOG},
+        L{endpoints._WrapIProtocol} logs stderr (in childDataReceived).
+        """
+        self.d = self.ep.connect(self.f)
+        wpp = self.ep._reactor.processProtocol
+        log.addObserver(self._stdLog)
+        self.addCleanup(log.removeObserver, self._stdLog)
+
+        def checkStderr(process):
+            wpp.childDataReceived(2, 'stderr1')
+            self.assertEqual(self.eventLog['executable'], wpp.executable)
+            self.assertEqual(self.eventLog['data'], 'stderr1')
+            self.assertEqual(self.eventLog['protocol'], wpp.protocol)
+
+        self.d.addCallback(checkStderr)
+        return self.d
+
+
+    def test_stderrSkip(self):
+        """
+        When the _errFlag is set to L{StandardErrorBehavior.DROP},
+        L{endpoints._WrapIProtocol} ignores stderr.
+        """
+        self.ep._errFlag = StandardErrorBehavior.DROP
+        self.d = self.ep.connect(self.f)
+        wpp = self.ep._reactor.processProtocol
+        log.addObserver(self._stdLog)
+        self.addCleanup(log.removeObserver, self._stdLog)
+
+        def checkStderrSkip(process):
+            wpp.childDataReceived(2, 'stderr2')
+            self.assertEqual(self.eventLog, None)
+
+        self.d.addCallback(checkStderrSkip)
+        return self.d
+
+
+    def test_stdout(self):
+        """
+        In childDataReceived of L{_WrappedIProtocol} instance, the
+        protocol's dataReceived is called when stdout is generated.
+        """
+        self.d = self.ep.connect(self.f)
+        wpp = self.ep._reactor.processProtocol
+
+        def checkStdout(process):
+            wpp.childDataReceived(1, 'stdout')
+            self.assertEqual(wpp.protocol.data, 'stdout')
+
+        self.d.addCallback(checkStdout)
+        return self.d
+
+
+    def test_processDone(self):
+        """
+        L{error.ProcessDone} with status=0 is turned into a clean
+        disconnect type, i.e. L{error.ConnectionDone}.
+        """
+        self.d = self.ep.connect(self.f)
+        wpp = self.ep._reactor.processProtocol
+
+        def checkProcessDone(obj):
+            wpp.processEnded(Failure(error.ProcessDone(0)))
+            self.assertEqual(
+                wpp.protocol.reason.check(error.ConnectionDone),
+                error.ConnectionDone)
+
+        self.d.addCallback(checkProcessDone)
+        return self.d
+
+
+    def test_processEnded(self):
+        """
+        Exceptions other than L{error.ProcessDone} with status=0 pass
+        through directly in processEnded.
+        """
+        self.d = self.ep.connect(self.f)
+        wpp = self.ep._reactor.processProtocol
+
+        def checkProcessEnded(obj):
+            wpp.processEnded(Failure(error.ProcessTerminated()))
+            self.assertEqual(wpp.protocol.reason.check(error.ConnectionLost),
+                             error.ConnectionLost)
+
+        self.d.addCallback(checkProcessEnded)
         return self.d
 
 
