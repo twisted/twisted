@@ -292,13 +292,7 @@ class SerialPortEndpointsTestCase(unittest.TestCase):
         receivedExceptions = []
         self.patch(serialport, 'SerialPort', _DummySerialPortThatFails)
         d = self.ep.connect(SerialFactory())
-
-        def checkFailure(failure):
-            receivedExceptions.append(failure.value)
-
-        d.addErrback(checkFailure)
-        self.assertEqual(len(receivedExceptions), 1)
-        self.assertIsInstance(receivedExceptions.pop(), Exception)
+        self.assertIsInstance(self.failureResultOf(d).value, Exception)
 
 
     def test_buildProtocolFailure(self):
