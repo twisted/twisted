@@ -743,7 +743,7 @@ class MemoryProcessReactor(object):
         @return: An L{IProcessTransport} provider.
         """
         self.processProtocol = processProtocol
-        self.processTransport = MemoryProcessTransport
+        self.processTransport = object()
         self.processProtocol.makeConnection(self.processTransport)
         return self.processTransport
 

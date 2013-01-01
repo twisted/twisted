@@ -351,6 +351,8 @@ class _WrapIProtocol(ProcessProtocol):
 class StandardErrorBehavior(Names):
     """
     Constants used in ProcessEndpoint to decide what to do with stderr.
+    @cvar LOG: Indicates that stderr is to be logged.
+    @cvar DROP: Indicates that stderr is to be dropped (and not logged).
     """
     LOG = NamedConstant()
     DROP = NamedConstant()
