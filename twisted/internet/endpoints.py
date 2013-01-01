@@ -287,8 +287,8 @@ class _WrapIProtocol(ProcessProtocol):
     """
     An L{IProcessProtocol} provider that wraps an L{IProtocol}.
 
-    @ivar transport: A L{_ProcessEndpointTransport} that is hooked to the
-        wrapped L{IProtocol} provider.
+    @ivar transport: A L{_ProcessEndpointTransport} provider that is hooked to
+        the wrapped L{IProtocol} provider.
 
     @see: L{protocol.ProcessProtocol}
     """

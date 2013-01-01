@@ -17,7 +17,7 @@ from zope.interface.verify import verifyObject
 from twisted.python.compat import _PY3
 from twisted.trial import unittest
 from twisted.internet import error, interfaces, defer
-from twisted.internet import endpoints, protocol, reactor, stdio
+from twisted.internet import endpoints, protocol, reactor
 from twisted.internet.address import IPv4Address, IPv6Address, UNIXAddress, ProcessAddress
 from twisted.internet.protocol import ClientFactory, Protocol
 from twisted.test.proto_helpers import (
@@ -26,7 +26,6 @@ from twisted.python.failure import Failure
 from twisted.python.systemd import ListenFDs
 from twisted.python.filepath import FilePath
 from twisted.protocols import basic
-from twisted.internet import protocol, reactor
 from twisted.python import log
 from twisted.internet.endpoints import StandardErrorBehavior
 
@@ -707,8 +706,8 @@ class MemoryProcessTransport(object):
     """
     A fake L{IProcessTransport} provider to be used in tests.
 
-    @ivar dataList: A list to which data is appended in writeToChild.
-        Acts as the child's stdin for testing.
+    @ivar dataList: A list to which data is appended in writeToChild. Acts as
+        the child's stdin for testing.
     """
     def __init__(self):
         self.dataList = []
@@ -740,8 +739,7 @@ class MemoryProcessReactor(object):
     def spawnProcess(self, processProtocol, executable, args=(), env={},
                      path=None, uid=None, gid=None, usePTY=0, childFDs=None):
         """
-        @ivar processProtocol: Stores the protocol passed to the
-            reactor.
+        @ivar processProtocol: Stores the protocol passed to the reactor.
         @return: An L{IProcessTransport} provider.
         """
         self.processProtocol = processProtocol
@@ -820,8 +818,8 @@ class ProcessEndpointsTestCase(unittest.TestCase):
 
     def test_spawnProcess(self):
         """
-        The parameters for spawnProcess stored in the endpoint are
-        passed when the endpoint's connect method is invoked.
+        The parameters for spawnProcess stored in the endpoint are passed when
+        the endpoint's connect method is invoked.
         """
         environ = {'HOME': None}
         def testSpawnProcess(pp, executable, args, env, path,
@@ -846,8 +844,8 @@ class ProcessEndpointsTestCase(unittest.TestCase):
 
     def test_processAddress(self):
         """
-        The address passed to the factory's buildProtocol in the endpoint
-        is a ProcessAddress instance.
+        The address passed to the factory's buildProtocol in the endpoint is a
+        ProcessAddress instance.
         """
         class TestAddrFactory(protocol.Factory):
             protocol = StubApplicationProtocol
@@ -874,8 +872,8 @@ class ProcessEndpointsTestCase(unittest.TestCase):
 
     def test_connect(self):
         """
-        L{ProcessEndpoint.connect} returns a Deferred with the
-        connected protocol
+        L{ProcessEndpoint.connect} returns a Deferred with the connected
+        protocol.
         """
         self.d = self.ep.connect(self.f)
 
@@ -888,8 +886,8 @@ class ProcessEndpointsTestCase(unittest.TestCase):
 
     def test_connectFailure(self):
         """
-        In case of failure, L{ProcessEndpoint.connect} returns a
-        Deferred that fails.
+        In case of failure, L{ProcessEndpoint.connect} returns a Deferred that
+        fails.
         """
         def testSpawnProcess(pp, executable, args, env, path,
                              uid, gid, usePTY, childFDs):
@@ -922,16 +920,16 @@ class ProcessEndpointTransportTests(unittest.TestCase):
 
     def test_constructor(self):
         """
-        The L{_ProcessEndpointTransport} instance stores the process
-        passed to it.
+        The L{_ProcessEndpointTransport} instance stores the process passed to
+        it.
         """
         self.assertEqual(self.endpointTransport._process, self.process)
 
 
     def test_writeSequence(self):
         """
-        The writeSequence method of L{_ProcessEndpointTransport} writes
-        a list of string passed to it to the transport's stdin.
+        The writeSequence method of L{_ProcessEndpointTransport} writes a list
+        of string passed to it to the transport's stdin.
         """
 
         self.endpointTransport.writeSequence(['test1','test2', 'test3'])
@@ -940,8 +938,8 @@ class ProcessEndpointTransportTests(unittest.TestCase):
 
     def test_write(self):
         """
-        The write method of L{_ProcessEndpointTransport} writes a
-        string of data passed to it to the child process's stdin.
+        The write method of L{_ProcessEndpointTransport} writes a string of data
+        passed to it to the child process's stdin.
         """
         self.endpointTransport.write('test')
         self.assertEqual(self.process.dataList.pop(), 'test')
@@ -949,9 +947,8 @@ class ProcessEndpointTransportTests(unittest.TestCase):
 
     def test_loseConnection(self):
         """
-        A call to the loseConnection method of a
-        L{_ProcessEndpointTransport} instance returns a call to the
-        process transport's loseConnection.
+        A call to the loseConnection method of a L{_ProcessEndpointTransport}
+        instance returns a call to the process transport's loseConnection.
         """
         self.endpointTransport.loseConnection()
         self.assertEqual(self.process.loseConnectionFlag, True)
@@ -959,16 +956,16 @@ class ProcessEndpointTransportTests(unittest.TestCase):
 
     def test_getHost(self):
         """
-        A call to the getHost method of a L{_ProcessEndpointTransport}
-        instance calls the process transport's getHost.
+        A call to the getHost method of a L{_ProcessEndpointTransport} instance
+        calls the process transport's getHost.
         """
         self.assertIsInstance(self.endpointTransport.getHost(), ProcessAddress)
 
 
     def test_getPeer(self):
         """
-        A call to the getPeer method of a L{_ProcessEndpointTransport}
-        instance calls the process transport's getPeer.
+        A call to the getPeer method of a L{_ProcessEndpointTransport} instance
+        calls the process transport's getPeer.
         """
         self.assertIsInstance(self.endpointTransport.getPeer(), ProcessAddress)
 
@@ -979,7 +976,8 @@ class WrappedIProtocolTests(unittest.TestCase):
     Test the behaviour of the implementation detail C{_WrapIProtocol}.
     """
     def setUp(self):
-        self.ep = endpoints.ProcessEndpoint(MemoryProcessReactor(), '/bin/executable')
+        self.ep = endpoints.ProcessEndpoint(MemoryProcessReactor(),
+                '/bin/executable')
         self.eventLog = None
         self.f = protocol.Factory()
         self.f.protocol = StubApplicationProtocol
@@ -997,8 +995,8 @@ class WrappedIProtocolTests(unittest.TestCase):
 
     def test_makeConnection(self):
         """
-        Our process transport is properly hooked up to the
-        wrappedIProtocol when a connection is made.
+        Our process transport is properly hooked up to the wrappedIProtocol when
+        a connection is made.
         """
         self.d = self.ep.connect(self.f)
         wpp = self.ep._reactor.processProtocol
@@ -1060,8 +1058,8 @@ class WrappedIProtocolTests(unittest.TestCase):
 
     def test_stdout(self):
         """
-        In childDataReceived of L{_WrappedIProtocol} instance, the
-        protocol's dataReceived is called when stdout is generated.
+        In childDataReceived of L{_WrappedIProtocol} instance, the protocol's
+        dataReceived is called when stdout is generated.
         """
         self.d = self.ep.connect(self.f)
         wpp = self.ep._reactor.processProtocol
@@ -1076,8 +1074,8 @@ class WrappedIProtocolTests(unittest.TestCase):
 
     def test_processDone(self):
         """
-        L{error.ProcessDone} with status=0 is turned into a clean
-        disconnect type, i.e. L{error.ConnectionDone}.
+        L{error.ProcessDone} with status=0 is turned into a clean disconnect
+        type, i.e. L{error.ConnectionDone}.
         """
         self.d = self.ep.connect(self.f)
         wpp = self.ep._reactor.processProtocol
@@ -1094,8 +1092,8 @@ class WrappedIProtocolTests(unittest.TestCase):
 
     def test_processEnded(self):
         """
-        Exceptions other than L{error.ProcessDone} with status=0 pass
-        through directly in processEnded.
+        Exceptions other than L{error.ProcessDone} with status=0 pass through
+        directly in processEnded.
         """
         self.d = self.ep.connect(self.f)
         wpp = self.ep._reactor.processProtocol
