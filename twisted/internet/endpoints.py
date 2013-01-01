@@ -30,17 +30,19 @@ from twisted.internet.abstract import isIPv6Address
 from twisted.python.failure import Failure
 from twisted.python import log
 from twisted.internet.address import ProcessAddress
-from twisted.python.constants import NamedConstant, Names
 from twisted.python.components import proxyForInterface
 
 if not _PY3:
     from twisted.plugin import IPlugin, getPlugins
     from twisted.internet import stdio
     from twisted.internet.stdio import PipeAddress
+    from twisted.python.constants import NamedConstant, Names
 else:
     from zope.interface import Interface
     class IPlugin(Interface):
         pass
+    NamedConstant = object()
+    Names = object()
 
 __all__ = ["clientFromString", "serverFromString",
            "TCP4ServerEndpoint", "TCP6ServerEndpoint",
