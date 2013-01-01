@@ -41,8 +41,8 @@ else:
     from zope.interface import Interface
     class IPlugin(Interface):
         pass
-    NamedConstant = object()
-    Names = object()
+    NamedConstant = object
+    Names = object
 
 __all__ = ["clientFromString", "serverFromString",
            "TCP4ServerEndpoint", "TCP6ServerEndpoint",
