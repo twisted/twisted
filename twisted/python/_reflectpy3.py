@@ -11,7 +11,7 @@ from __future__ import division, absolute_import
 import types, sys, os, traceback
 from twisted.python.compat import reraise, nativeString, NativeStringIO
 
-from twisted.python._utilpy3 import unsignedID
+from twisted.python.util import unsignedID
 
 
 def prefixedMethodNames(classObj, prefix):

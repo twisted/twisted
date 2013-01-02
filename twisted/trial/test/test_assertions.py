@@ -18,7 +18,7 @@ import warnings
 from pprint import pformat
 import unittest as pyunit
 
-from twisted.python._utilpy3 import FancyEqMixin
+from twisted.python.util import FancyEqMixin
 from twisted.python._reflectpy3 import prefixedMethods, accumulateMethods
 from twisted.python.deprecate import deprecated
 from twisted.python.versions import Version, getVersionString

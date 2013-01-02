@@ -23,7 +23,7 @@ from twisted.internet.interfaces import IReactorProcess, IReactorMulticast
 from twisted.internet.interfaces import IHalfCloseableDescriptor
 from twisted.internet import error, udp, tcp
 
-from twisted.python import log, failure, _utilpy3 as util
+from twisted.python import log, failure, util
 from twisted.python.runtime import platformType, platform
 
 from twisted.internet.base import ReactorBase, _SignalReactorMixin

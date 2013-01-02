@@ -12,7 +12,7 @@ import warnings, os
 from zope.interface import implementer
 
 from twisted.internet.interfaces import IAddress
-from twisted.python._utilpy3 import FancyEqMixin
+from twisted.python.util import FancyEqMixin
 
 
 @implementer(IAddress)

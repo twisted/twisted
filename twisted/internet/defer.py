@@ -27,7 +27,7 @@ from functools import wraps
 # Twisted imports
 from twisted.python.compat import _PY3, comparable, cmp
 from twisted.python import log, failure
-from twisted.python._utilpy3 import unsignedID
+from twisted.python.util import unsignedID
 
 
 

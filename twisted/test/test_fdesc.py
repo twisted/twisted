@@ -15,7 +15,7 @@ except ImportError:
 else:
     from twisted.internet import fdesc
 
-from twisted.python._utilpy3 import untilConcludes
+from twisted.python.util import untilConcludes
 from twisted.trial import unittest
 
 

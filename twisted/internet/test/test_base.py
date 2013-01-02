@@ -14,7 +14,7 @@ except ImportError:
 from zope.interface import implementer
 
 from twisted.python.threadpool import ThreadPool
-from twisted.python._utilpy3 import setIDFunction
+from twisted.python.util import setIDFunction
 from twisted.internet.interfaces import IReactorTime, IReactorThreads
 from twisted.internet.error import DNSLookupError
 from twisted.internet.base import ThreadedResolver, DelayedCall

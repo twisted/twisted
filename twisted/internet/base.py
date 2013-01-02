@@ -18,7 +18,7 @@ from heapq import heappush, heappop, heapify
 import traceback
 
 from twisted.python.compat import set
-from twisted.python._utilpy3 import unsignedID
+from twisted.python.util import unsignedID
 from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorThreads
 from twisted.internet.interfaces import IResolverSimple, IReactorPluggableResolver
 from twisted.internet.interfaces import IConnector, IDelayedCall

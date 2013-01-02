@@ -97,7 +97,7 @@ from errno import errorcode
 from twisted.internet import base, address, fdesc
 from twisted.internet.task import deferLater
 from twisted.python import log, failure, _reflectpy3 as reflect
-from twisted.python._utilpy3 import unsignedID, untilConcludes
+from twisted.python.util import unsignedID, untilConcludes
 from twisted.internet.error import CannotListenError
 from twisted.internet import abstract, main, interfaces, error
 

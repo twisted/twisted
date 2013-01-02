@@ -12,7 +12,7 @@ import warnings
 from twisted.trial import unittest
 from twisted.internet import _utilspy3 as utils
 from twisted.internet.defer import Deferred
-from twisted.python.test.test_utilpy3 import SuppressedWarningsTests
+from twisted.python.test.test_util import SuppressedWarningsTests
 
 class SuppressWarningsTests(unittest.SynchronousTestCase):
     """

@@ -11,7 +11,7 @@ from hashlib import md5
 from OpenSSL import SSL, crypto
 
 from twisted.python.compat import nativeString, networkString
-from twisted.python import _reflectpy3 as reflect, _utilpy3 as util
+from twisted.python import _reflectpy3 as reflect, util
 from twisted.internet.defer import Deferred
 from twisted.internet.error import VerifyError, CertificateError
 

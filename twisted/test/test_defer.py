@@ -13,7 +13,7 @@ from twisted.python.compat import _PY3
 from twisted.trial import unittest
 from twisted.internet import defer
 from twisted.python import failure, log
-from twisted.python._utilpy3 import unsignedID
+from twisted.python.util import unsignedID
 
 class GenericError(Exception):
     pass

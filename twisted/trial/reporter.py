@@ -22,7 +22,7 @@ from twisted.python.compat import set
 from twisted.python import _reflectpy3 as reflect, log
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
-from twisted.python._utilpy3 import untilConcludes
+from twisted.python.util import untilConcludes
 try:
     from collections import OrderedDict
 except ImportError:
@@ -481,7 +481,7 @@ class Reporter(TestResult):
         # when a SynchronousTestCase method fails synchronously, the stack looks
         # like this:
         # [0]: SynchronousTestCase._run
-        # [1]:  _utilpy3.runWithWarningsSuppressed
+        # [1]:  twisted.python.util.runWithWarningsSuppressed
         # [2:-2]: code in the test method which failed
         # [-1]: _synctest.fail
 
@@ -516,7 +516,7 @@ class Reporter(TestResult):
         secondMethod = newFrames[1][0]
         secondFile = os.path.splitext(os.path.basename(newFrames[1][1]))[0]
 
-        syncCase = (("_run", "_synctest"), ("runWithWarningsSuppressed", "_utilpy3"))
+        syncCase = (("_run", "_synctest"), ("runWithWarningsSuppressed", "util"))
         asyncCase = (("maybeDeferred", "defer"), ("runWithWarningsSuppressed", "utils"))
 
         twoFrames = ((firstMethod, firstFile), (secondMethod, secondFile))

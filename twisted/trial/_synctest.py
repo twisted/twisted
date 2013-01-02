@@ -16,7 +16,7 @@ from pprint import pformat
 from dis import findlinestarts as _findlinestarts
 
 from twisted.python import failure, log, monkey
-from twisted.python._utilpy3 import runWithWarningsSuppressed
+from twisted.python.util import runWithWarningsSuppressed
 from twisted.python.deprecate import (
     getDeprecationWarningString, warnAboutFunction)
 

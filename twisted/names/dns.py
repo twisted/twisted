@@ -59,7 +59,7 @@ from zope.interface import implementer, Interface, Attribute
 from twisted.internet import protocol, defer
 from twisted.internet.error import CannotListenError
 from twisted.python import log, failure
-from twisted.python import _utilpy3 as tputil
+from twisted.python import util as tputil
 from twisted.python import randbytes
 from twisted.python.compat import _PY3, unicode, comparable, cmp, nativeString
 

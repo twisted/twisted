@@ -20,7 +20,7 @@ from twisted.python import _reflectpy3 as reflect
 # fullyQualifiedName from there instead, to test the actual public interface
 # instead of this implementation detail.  See #5929.
 from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
-from twisted.python import _utilpy3 as util
+from twisted.python import util
 
 
 

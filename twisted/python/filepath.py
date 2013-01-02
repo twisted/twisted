@@ -37,7 +37,7 @@ from twisted.python.win32 import ERROR_FILE_NOT_FOUND, ERROR_PATH_NOT_FOUND
 from twisted.python.win32 import ERROR_INVALID_NAME, ERROR_DIRECTORY, O_BINARY
 from twisted.python.win32 import WindowsError
 
-from twisted.python._utilpy3 import FancyEqMixin
+from twisted.python.util import FancyEqMixin
 
 
 _CREATE_FLAGS = (os.O_EXCL |
