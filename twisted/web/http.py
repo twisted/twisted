@@ -1731,19 +1731,17 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         else:
             tokens = []
 
-        # HTTP 1.0 persistent connection support is currently disabled,
-        # since we need a way to disable pipelining. HTTP 1.0 can't do
-        # pipelining since we can't know in advance if we'll have a
-        # content-length header, if we don't have the header we need to close the
-        # connection. In HTTP 1.1 this is not an issue since we use chunked
-        # encoding if content-length is not available.
+        # Once any HTTP 0.9 or HTTP 1.0 request is received, the connection is
+        # no longer allowed to be persistent.  At this point in processing the
+        # request, we don't yet know if it will be possible to set a
+        # Content-Length in the response.  If it is not, then the connection
+        # will have to be closed to end an HTTP 0.9 or HTTP 1.0 response.
 
-        #if version == "HTTP/1.0":
-        #    if 'keep-alive' in tokens:
-        #        request.setHeader('connection', 'Keep-Alive')
-        #        return 1
-        #    else:
-        #        return 0
+        # If the checkPersistence call happened later, after the Content-Length
+        # has been determined (or determined not to be set), it would probably
+        # be possible to have persistent connections with HTTP 0.9 and HTTP 1.0.
+        # This may not be worth the effort, though.  Just use HTTP 1.1, okay?
+
         if version == b"HTTP/1.1":
             if b'close' in tokens:
                 request.responseHeaders.setRawHeaders(b'connection', [b'close'])

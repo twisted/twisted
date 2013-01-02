@@ -293,35 +293,65 @@ def _prequest(**headers):
     Make a request with the given request headers for the persistence tests.
     """
     request = http.Request(DummyChannel(), None)
-    for k, v in headers.items():
-        request.requestHeaders.setRawHeaders(networkString(k), v)
+    for headerName, v in headers.items():
+        request.requestHeaders.setRawHeaders(networkString(headerName), v)
     return request
+
 
 
 class PersistenceTestCase(unittest.TestCase):
     """
     Tests for persistent HTTP connections.
     """
-
-    ptests = [
-        # (_prequest(connection=[b"Keep-Alive"]), b"HTTP/1.0", 1, {b'connection' : [b'Keep-Alive']}),
-        (_prequest(), b"HTTP/1.0", 0, {b'connection': None}),
-        (_prequest(connection=[b"close"]), b"HTTP/1.1", 0,
-         {b'connection' : [b'close']}),
-        (_prequest(), b"HTTP/1.1", 1, {b'connection': None}),
-        (_prequest(), b"HTTP/0.9", 0, {b'connection': None}),
-        ]
+    def setUp(self):
+        self.channel = http.HTTPChannel()
+        self.request = _prequest()
 
 
-    def testAlgorithm(self):
-        c = http.HTTPChannel()
-        for req, version, correctResult, resultHeaders in self.ptests:
-            result = c.checkPersistence(req, version)
-            self.assertEqual(result, correctResult)
-            for header in resultHeaders:
-                self.assertEqual(
-                    req.responseHeaders.getRawHeaders(header, None),
-                    resultHeaders[header])
+    def test_http09(self):
+        """
+        After being used for an I{HTTP/0.9} request, the L{HTTPChannel} is not
+        persistent.
+        """
+        persist = self.channel.checkPersistence(self.request, b"HTTP/0.9")
+        self.assertFalse(persist)
+        self.assertEqual(
+            [], list(self.request.responseHeaders.getAllRawHeaders()))
+
+
+    def test_http10(self):
+        """
+        After being used for an I{HTTP/1.0} request, the L{HTTPChannel} is not
+        persistent.
+        """
+        persist = self.channel.checkPersistence(self.request, b"HTTP/1.0")
+        self.assertFalse(persist)
+        self.assertEqual(
+            [], list(self.request.responseHeaders.getAllRawHeaders()))
+
+
+    def test_http11(self):
+        """
+        After being used for an I{HTTP/1.1} request, the L{HTTPChannel} is
+        persistent.
+        """
+        persist = self.channel.checkPersistence(self.request, b"HTTP/1.1")
+        self.assertTrue(persist)
+        self.assertEqual(
+            [], list(self.request.responseHeaders.getAllRawHeaders()))
+
+
+    def test_http11Close(self):
+        """
+        After being used for an I{HTTP/1.1} request with a I{Connection: Close}
+        header, the L{HTTPChannel} is not persistent.
+        """
+        request = _prequest(connection=[b"close"])
+        persist = self.channel.checkPersistence(request, b"HTTP/1.1")
+        self.assertFalse(persist)
+        self.assertEqual(
+            [(b"Connection", [b"close"])],
+            list(request.responseHeaders.getAllRawHeaders()))
 
 
 
