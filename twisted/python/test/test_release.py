@@ -1769,6 +1769,7 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         project = FilePath(self.mktemp()).child("twisted")
         project.makedirs()
         self.createStructure(project, {'NEWS': self.existingText })
+        self.svnCommit(project)
 
         self.builder.build(
             project, project.child('NEWS'),
@@ -2016,6 +2017,16 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         removed = [line for line in output.splitlines()
                    if line.startswith("D ")]
         self.assertEqual(10, len(removed))
+
+
+    def test_checkSVN(self):
+        """
+        L{NewsBuilder.build} raises L{NotWorkingDirectory} when the given path
+        is not a SVN checkout.
+        """
+        self.assertRaises(
+            NotWorkingDirectory, self.builder.build, self.project,
+            self.project.child('NEWS'), "Super Awesometastic 32.16")
 
 
 

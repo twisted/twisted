@@ -111,6 +111,7 @@ def getNextVersion(version, now=None):
     return Version(version.package, major, minor, 0)
 
 
+
 def changeAllProjectVersions(root, versionTemplate, today=None):
     """
     Change the version of all projects (including core and all subprojects).
@@ -157,7 +158,6 @@ def changeAllProjectVersions(root, versionTemplate, today=None):
                 oldVersion, newVersion, root.child('README').path)
 
         project.updateVersion(newVersion)
-
 
 
 
@@ -234,6 +234,7 @@ def updateTwistedVersionInformation(baseDirectory, now):
         project.updateVersion(getNextVersion(project.getVersion(), now=now))
 
 
+
 def generateVersionFileData(version):
     """
     Generate the data to be placed into a _version.py file.
@@ -250,6 +251,7 @@ from twisted.python import versions
 version = versions.Version(%r, %s, %s, %s%s)
 ''' % (version.package, version.major, version.minor, version.micro, prerelease)
     return data
+
 
 
 def replaceProjectVersion(filename, newversion):
@@ -761,7 +763,9 @@ class NewsBuilder(object):
     def build(self, path, output, header):
         """
         Load all of the change information from the given directory and write
-        it out to the given output file.
+        it out to the given output file. Once done, all the change information
+        files are removed from version control, thus requiring to make the
+        build in a SVN directory.
 
         @param path: A directory (probably a I{topfiles} directory) containing
             change information in the form of <ticket>.<change type> files.
@@ -772,7 +776,16 @@ class NewsBuilder(object):
 
         @param header: The top-level header to use when writing the news.
         @type header: L{str}
+
+        @raise NotWorkingDirectory: If the C{path} is not an SVN checkout.
         """
+        try:
+            runCommand(["svn", "info", path.path])
+        except CommandFailed:
+            raise NotWorkingDirectory(
+                "%s does not appear to be an SVN working directory."
+                % (path.path,))
+
         changes = []
         for part in (self._FEATURE, self._BUGFIX, self._DOC, self._REMOVAL):
             tickets = self._findChanges(path, part)
