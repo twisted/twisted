@@ -3601,11 +3601,6 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
                 raise IllegalServerResponse(
                     "Not enough arguments", fetchResponseList)
 
-            # Check if value contains multpart message.
-            multipart = False
-            if value and isinstance(value[0], list):
-                multipart = True
-
             # The parsed forms of responses like:
             #
             # BODY[] VALUE
@@ -3620,9 +3615,36 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             # ["BODY", ["HEADER.FIELDS", ["SUBJECT"]], VALUE]
             # ["BODY", ["HEADER.FIELDS", ["SUBJECT"]], "<N.M>", VALUE]
             #
-            # Here, check for these cases and grab as many extra elements as
-            # necessary to retrieve the body information.
-            if key in ("BODY", "BODY.PEEK") and isinstance(value, list) and len(value) < 3 and not multipart:
+            # Additionally, BODY responses for multipart messages are
+            # represented as:
+            #
+            #    ["BODY", VALUE]
+            #
+            # with list as the type of VALUE and the type of VALUE[0].
+
+
+            if key not in ("BODY", "BODY.PEEK"):
+                # Only BODY (and by extension, BODY.PEEK) responses can have
+                # body sections.
+                hasSection = False
+            elif not isinstance(value, list):
+                # A BODY section is always represented as a list.  Any non-list
+                # is not a BODY section.
+                hasSection = False
+            elif len(value) >= 3:
+                # The list representing a BODY section has at most two elements.
+                hasSection = False
+            elif value and isinstance(value[0], list):
+                # A list containing a list represents the body structure of a
+                # multipart message, instead.
+                hasSection = False
+            else:
+                # Otherwise it must have a BODY section to examine.
+                hasSection = True
+
+            # If it has a BODY section, grab some extra elements and shuffle
+            # around the shape of the key a little bit.
+            if hasSection:
                 if len(value) < 2:
                     key = (key, tuple(value))
                 else:
