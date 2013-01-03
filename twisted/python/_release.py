@@ -26,6 +26,7 @@ from twisted.python.versions import Version
 from twisted.python.filepath import FilePath
 from twisted.python.dist import twisted_subprojects
 from twisted.python.compat import execfile
+from twisted.python.usage import Options, UsageError
 
 # This import is an example of why you shouldn't use this module unless you're
 # radix
@@ -61,6 +62,7 @@ def runCommand(args):
     return stdout
 
 
+
 class CommandFailed(Exception):
     """
     Raised when a child process exits unsuccessfully.
@@ -91,28 +93,48 @@ def _changeVersionInFile(old, new, filename):
 
 
 
-def getNextVersion(version, now=None):
+def getNextVersion(version, prerelease, patch, today):
     """
     Calculate the version number for a new release of Twisted based on
     the previous version number.
 
     @param version: The previous version number.
-    @param now: (optional) The current date.
+
+    @type prerelease: C{bool}
+    @param prerelease:
+
+    @type patch: C{bool}
+    @param patch:
+
+    @type today: C{datetime}
+    @param today: The current date.
     """
-    # XXX: This has no way of incrementing the patch number. Currently, we
-    # don't need it. See bug 2915. Jonathan Lange, 2007-11-20.
-    if now is None:
-        now = date.today()
-    major = now.year - VERSION_OFFSET
+    micro = 0
+    major = today.year - VERSION_OFFSET
     if major != version.major:
         minor = 0
     else:
         minor = version.minor + 1
-    return Version(version.package, major, minor, 0)
+
+    if patch:
+        micro = version.micro + 1
+        major = version.major
+        minor = version.minor
+
+    newPrerelease = None
+    if version.prerelease is not None:
+        major = version.major
+        minor = version.minor
+        micro = version.micro
+        if prerelease:
+            newPrerelease = version.prerelease + 1
+    elif prerelease:
+        newPrerelease = 1
+    return Version(version.package, major, minor, micro, newPrerelease)
 
 
 
-def changeAllProjectVersions(root, versionTemplate, today=None):
+def changeAllProjectVersions(root, prerelease, patch, today=None):
     """
     Change the version of all projects (including core and all subprojects).
 
@@ -121,34 +143,35 @@ def changeAllProjectVersions(root, versionTemplate, today=None):
 
     @type root: L{FilePath}
     @param root: The root of the Twisted source tree.
-    @type versionTemplate: L{Version}
-    @param versionTemplate: The version of all projects.  The name will be
-        replaced for each respective project.
-    @type today: C{str}
-    @param today: A YYYY-MM-DD formatted string. If not provided, defaults to
-        the current day, according to the system clock.
+
+    @type prerelease: C{bool}
+    @param prerelease:
+
+    @type patch: C{bool}
+    @param patch:
+
+    @type today: C{datetime}
+    @param today: Defaults to the current day, according to the system clock.
     """
     if not today:
-        today = date.today().strftime('%Y-%m-%d')
+        today = date.today()
+    formattedToday = today.strftime('%Y-%m-%d')
     for project in findTwistedProjects(root):
         if project.directory.basename() == "twisted":
             packageName = "twisted"
         else:
             packageName = "twisted." + project.directory.basename()
         oldVersion = project.getVersion()
-        newVersion = Version(packageName, versionTemplate.major,
-                             versionTemplate.minor, versionTemplate.micro,
-                             prerelease=versionTemplate.prerelease)
-
+        newVersion = getNextVersion(oldVersion, prerelease, patch, today)
         if oldVersion.prerelease:
             builder = NewsBuilder()
             builder._changeNewsVersion(
                 root.child("NEWS"), builder._getNewsName(project),
-                oldVersion, newVersion, today)
+                oldVersion, newVersion, formattedToday)
             builder._changeNewsVersion(
                 project.directory.child("topfiles").child("NEWS"),
                 builder._getNewsName(project), oldVersion, newVersion,
-                today)
+                formattedToday)
 
         # The placement of the top-level README with respect to other files (eg
         # _version.py) is sufficiently different from the others that we just
@@ -220,20 +243,6 @@ def findTwistedProjects(baseDirectory):
 
 
 
-def updateTwistedVersionInformation(baseDirectory, now):
-    """
-    Update the version information for Twisted and all subprojects to the
-    date-based version number.
-
-    @param baseDirectory: Where to look for Twisted. If None, the function
-        infers the information from C{twisted.__file__}.
-    @param now: The current date (as L{datetime.date}). If None, it defaults
-        to today.
-    """
-    for project in findTwistedProjects(baseDirectory):
-        project.updateVersion(getNextVersion(project.getVersion(), now=now))
-
-
 
 def generateVersionFileData(version):
     """
@@ -249,7 +258,8 @@ def generateVersionFileData(version):
 # This is an auto-generated file. Do not edit it.
 from twisted.python import versions
 version = versions.Version(%r, %s, %s, %s%s)
-''' % (version.package, version.major, version.minor, version.micro, prerelease)
+''' % (version.package, version.major, version.minor, version.micro,
+       prerelease)
     return data
 
 
@@ -275,17 +285,17 @@ def replaceInFile(filename, oldToNew):
     """
     I replace the text `oldstr' with `newstr' in `filename' using science.
     """
-    os.rename(filename, filename+'.bak')
-    f = open(filename+'.bak')
+    os.rename(filename, filename + '.bak')
+    f = open(filename + '.bak')
     d = f.read()
     f.close()
-    for k,v in oldToNew.items():
+    for k, v in oldToNew.items():
         d = d.replace(k, v)
     f = open(filename + '.new', 'w')
     f.write(d)
     f.close()
-    os.rename(filename+'.new', filename)
-    os.unlink(filename+'.bak')
+    os.rename(filename + '.new', filename)
+    os.unlink(filename + '.bak')
 
 
 
@@ -356,7 +366,8 @@ class DocBuilder(LoreBuilderMixin):
         inputFiles = docDir.globChildren("*.xhtml")
         filenames = [x.path for x in inputFiles]
         if not filenames:
-            raise NoDocumentsFound("No input documents found in %s" % (docDir,))
+            raise NoDocumentsFound(
+                "No input documents found in %s" % (docDir,))
         if apiBaseURL is not None:
             arguments = ["--config", "baseurl=" + apiBaseURL]
         else:
@@ -554,8 +565,8 @@ class BookBuilder(LoreBuilderMixin):
 
                 # What I tell you three times is true!
                 # The first two invocations of latex on the book file allows it
-                # correctly create page numbers for in-text references.  Why this is
-                # the case, I could not tell you. -exarkun
+                # correctly create page numbers for in-text references.  Why
+                # this is the case, I could not tell you. -exarkun
                 for i in range(3):
                     self.run(texToDVI)
 
@@ -729,7 +740,7 @@ class NewsBuilder(object):
         fileObj.write(header + '\n' + '-' * len(header) + '\n')
         for (description, relatedTickets) in reverse:
             ticketList = ', '.join([
-                    '#' + str(ticket) for ticket in relatedTickets])
+                '#' + str(ticket) for ticket in relatedTickets])
             entry = ' - %s (%s)' % (description, ticketList)
             entry = textwrap.fill(entry, subsequent_indent='   ')
             fileObj.write(entry + '\n')
@@ -924,7 +935,8 @@ class NewsBuilder(object):
         @type args: C{list} of C{str}
         """
         if len(args) != 1:
-            sys.exit("Must specify one argument: the path to the Twisted checkout")
+            sys.exit("Must specify one argument: the path to the "
+                     "Twisted checkout")
         self.buildAll(FilePath(args[0]))
 
 
@@ -1017,8 +1029,9 @@ class DistributionBuilder(object):
             self.manBuilder.build(path)
         if path.isdir():
             try:
-                self.docBuilder.build(version, howtoPath, path,
-                    self.templatePath, self.apiBaseURL, True)
+                self.docBuilder.build(
+                    version, howtoPath, path, self.templatePath,
+                    self.apiBaseURL, True)
             except NoDocumentsFound:
                 pass
 
@@ -1048,8 +1061,8 @@ class DistributionBuilder(object):
             for subProjectDir in docPath.children():
                 if subProjectDir.isdir():
                     for child in subProjectDir.walk():
-                        self._buildDocInDir(child, version,
-                            subProjectDir.child("howto"))
+                        self._buildDocInDir(
+                            child, version, subProjectDir.child("howto"))
 
         for binthing in self.rootDirectory.child("bin").children():
             # bin/admin should not be included.
@@ -1113,7 +1126,8 @@ class DistributionBuilder(object):
             if path.basename() == "plugins":
                 for plugin in path.children():
                     for subproject in self.subprojects:
-                        if plugin.basename() == "twisted_%s.py" % (subproject,):
+                        if (plugin.basename() ==
+                                "twisted_%s.py" % (subproject,)):
                             break
                     else:
                         tarball.add(plugin.path,
@@ -1264,7 +1278,7 @@ def buildAllTarballs(checkout, destination, templatePath=None):
     if not destination.exists():
         destination.createDirectory()
     db = DistributionBuilder(export, destination, templatePath=templatePath,
-        apiBaseURL=apiBaseURL)
+                             apiBaseURL=apiBaseURL)
 
     db.buildCore(versionString)
     for subproject in twisted_subprojects:
@@ -1273,6 +1287,13 @@ def buildAllTarballs(checkout, destination, templatePath=None):
 
     db.buildTwisted(versionString)
     workPath.remove()
+
+
+
+class ChangeVersionsScriptOptions(Options):
+    optFlags = [["prerelease", None, "Change to the next prerelease"],
+                ["patch", None, "Make a patch version"]]
+
 
 
 class ChangeVersionsScript(object):
@@ -1290,31 +1311,15 @@ class ChangeVersionsScript(object):
         @param args: List of command line arguments.  This should only
             contain the version number.
         """
-        version_format = (
-            "Version should be in a form kind of like '1.2.3[pre4]'")
-        if len(args) != 1:
-            sys.exit("Must specify exactly one argument to change-versions")
-        version = args[0]
+        options = ChangeVersionsScriptOptions()
+
         try:
-            major, minor, micro_and_pre = version.split(".")
-        except ValueError:
-            raise SystemExit(version_format)
-        if "pre" in micro_and_pre:
-            micro, pre = micro_and_pre.split("pre")
-        else:
-            micro = micro_and_pre
-            pre = None
-        try:
-            major = int(major)
-            minor = int(minor)
-            micro = int(micro)
-            if pre is not None:
-                pre = int(pre)
-        except ValueError:
-            raise SystemExit(version_format)
-        version_template = Version("Whatever",
-                                   major, minor, micro, prerelease=pre)
-        self.changeAllProjectVersions(FilePath("."), version_template)
+            options.parseOptions(args)
+        except UsageError as e:
+            raise SystemExit(e)
+
+        self.changeAllProjectVersions(FilePath("."), options["prerelease"],
+                                      options["patch"])
 
 
 
@@ -1331,15 +1336,15 @@ class BuildTarballsScript(object):
         @type args: list of C{str}
         @param args: The command line arguments to process.  This must contain
             at least two strings: the checkout directory and the destination
-            directory. An optional third string can be specified for the website
-            template file, used for building the howto documentation. If this
-            string isn't specified, the default template included in twisted
-            will be used.
+            directory. An optional third string can be specified for the
+            website template file, used for building the howto documentation.
+            If this string isn't specified, the default template included in
+            twisted will be used.
         """
         if len(args) < 2 or len(args) > 3:
             sys.exit("Must specify at least two arguments: "
-                     "Twisted checkout and destination path. The optional third "
-                     "argument is the website template path.")
+                     "Twisted checkout and destination path. The optional "
+                     "third argument is the website template path.")
         if len(args) == 2:
             self.buildAllTarballs(FilePath(args[0]), FilePath(args[1]))
         elif len(args) == 3:
