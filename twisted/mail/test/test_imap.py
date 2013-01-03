@@ -3863,31 +3863,48 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
 
     def test_fetchSimplifiedBodyMultipart(self):
         """
-        When fetch a slightly complex multi-part message like the one
-        below, C{IMAP4Client._parseFetchPairs} returns the correct
-        dictionary.
+        L{IMAP4Client.fetchSimplifiedBody} returns a dictionary mapping message
+        sequence numbers to fetch responses for the corresponding messages.  In
+        particular, for a multipart message, the value in the dictionary maps
+        the string C{"BODY"} to a list giving the body structure information for
+        that message, in the form of a list of subpart body structure
+        information followed by the subtype of the message (eg C{"alternative"}
+        for a I{multipart/alternative} message).  This structure is self-similar
+        in the case where a subpart is itself multipart.
         """
         self.function = self.client.fetchSimplifiedBody
         self.messages = '21'
-        self.msgObjs = [
+
+        # A couple non-multipart messages to use as the inner-most payload
+        singles = [
             FakeyMessage(
-                {'content-type': 'multipart/mixed'}, (), '',
-                 'RootOf', 98765, [
-                    FakeyMessage(
-                        {'content-type': 'multipart/alternative'}, (), '',
-                         'Irrelevant', 12345, [
-                             FakeyMessage(
-                                 {'content-type': 'text/plain'}, (), 'date',
-                                 'Stuff', 54321,  None),
-                             FakeyMessage(
-                                 {'content-type': 'text/html'}, (), 'date',
-                                 'Things', 32415, None)])])]
+                {'content-type': 'text/plain'},
+                (), 'date', 'Stuff', 54321,  None),
+            FakeyMessage(
+                {'content-type': 'text/html'},
+                (), 'date', 'Things', 32415, None)]
+
+        # A multipart/alternative message containing the above non-multipart
+        # messages.  This will be the payload of the outer-most message.
+        alternative = FakeyMessage(
+            {'content-type': 'multipart/alternative'},
+            (), '', 'Irrelevant', 12345, singles)
+
+        # The outer-most message, also with a multipart type, containing just
+        # the single middle message.
+        mixed = FakeyMessage(
+            # The message is multipart/mixed
+            {'content-type': 'multipart/mixed'},
+            (), '', 'RootOf', 98765, [alternative])
+
+        self.msgObjs = [mixed]
+
         self.expected = {
             0: {'BODY': [
                     [['text', 'plain', None, None, None, None, '5', '1'],
                      ['text', 'html', None, None, None, None, '6', '1'],
                      'alternative'],
-                     'mixed']}}
+                    'mixed']}}
 
         return self._fetchWork(False)
 
