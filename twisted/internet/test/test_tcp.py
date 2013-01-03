@@ -384,9 +384,14 @@ class TCPTransportTestsMixin(object):
 
             def connectionMade(self):
                 self.reactor.callLater(
-                    1, self.transport.write, smallChunk * ops)
+                    1, self.writeData)
                 self.checkd = None
-
+                
+            def writeData(self):
+                for i in range(0, repBlocks):
+                    self.transport.write(smallChunk*ops)
+                self.checkd = None
+                
             def dataReceived(self,data):
                 self.dataBuffer += data
                 if not self.checkd:
@@ -411,8 +416,9 @@ class TCPTransportTestsMixin(object):
 
         smallChunk = b'X'
         smallLen = len(smallChunk)
-        ops = 2 * 1024 * 1024
-        totalLen = smallLen * ops
+        ops = 260000
+        repBlocks = 100
+        totalLen = smallLen * ops * repBlocks
 
         server = LargeProtocol()
         client = LargeClientProtocol()
