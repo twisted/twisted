@@ -21,7 +21,6 @@ from zope.interface import implementer
 from twisted.protocols.policies import ProtocolWrapper, WrappingFactory
 from twisted.python import log
 from twisted.python.constants import NamedConstant, Names
-from twisted.web.error import NoResource
 from twisted.web.resource import IResource
 from twisted.web.server import NOT_DONE_YET
 
@@ -384,7 +383,7 @@ class WebSocketsResource(object):
     Due to unresolved questions of logistics, this resource cannot have
     children.
 
-    @since 12.3
+    @since: 13.0
     """
     isLeaf = True
 
@@ -393,11 +392,23 @@ class WebSocketsResource(object):
 
 
     def getChildWithDefault(self, name, request):
-        return NoResource("No such child resource.")
+        """
+        Reject attempts to retrieve a child resource.  All path segments beyond
+        the one which refers to this resource are handled by the WebSocket
+        connection.
+        """
+        raise RuntimeError(
+            "Cannot get IResource children from WebsocketsResourceTest")
 
 
     def putChild(self, path, child):
-        pass
+        """
+        Reject attempts to add a child resource to this resource.  The
+        WebSocket connection handles all path segments beneath this resource,
+        so L{IResource} children can never be found.
+        """
+        raise RuntimeError(
+            "Cannot put IResource children under WebSocketsResource")
 
 
     def render(self, request):
@@ -462,6 +473,13 @@ class WebSocketsResource(object):
             request.setResponseCode(400)
             return ""
 
+        # Create the protocol. This could fail, in which case we deliver an
+        # error status. Status 502 was decreed by glyph; blame him.
+        protocol = self._factory.buildProtocol(request.transport.getPeer())
+        if not protocol.wrappedProtocol:
+            request.setResponseCode(502)
+            return ""
+
         # We are going to finish this handshake. We will return a valid status
         # code.
         # 4.2.2.5.1 101 Switching Protocols
@@ -475,13 +493,6 @@ class WebSocketsResource(object):
         # 4.2.2.5.5 Optional codec declaration
         if codec:
             request.setHeader("Sec-WebSocket-Protocol", codec)
-
-        # Create the protocol. This could fail, in which case we deliver an
-        # error status. Status 502 was decreed by glyph; blame him.
-        protocol = self._factory.buildProtocol(request.transport.getPeer())
-        if not protocol:
-            request.setResponseCode(502)
-            return ""
         if codec:
             protocol.codec = codec
 

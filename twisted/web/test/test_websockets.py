@@ -18,11 +18,11 @@ from twisted.internet.protocol import Factory, Protocol
 from twisted.python import log
 from twisted.test.proto_helpers import StringTransportWithDisconnection
 
-from twisted.web.resource import IResource
+from twisted.web.resource import IResource, Resource
 from twisted.web.server import NOT_DONE_YET
 from twisted.web.websockets import (
     _CONTROLS, _makeAccept, _mask, _makeFrame, _parseFrames, _WSException,
-    _WebSocketsFactory, WebSocketsResource)
+    _WebSocketsFactory, WebSocketsResource, _WebSocketsProtocol)
 from twisted.web.test.test_web import DummyRequest
 
 
@@ -414,6 +414,36 @@ class WebsocketsResourceTest(TestCase):
         self.resource = WebSocketsResource(factory)
 
 
+    def assertRequestFail(self, request):
+        """
+        Helper method checking that the provided C{request} fails with a I{400}
+        request code, without data or headers.
+        """
+        result = self.resource.render(request)
+        self.assertEqual("", result)
+        self.assertEqual({}, request.outgoingHeaders)
+        self.assertEqual([], request.written)
+        self.assertEqual(400, request.responseCode)
+
+
+    def test_getChildWithDefault(self):
+        """
+        L{WebSocketsResource.getChildWithDefault} raises a C{RuntimeError} when
+        called.
+        """
+        self.assertRaises(
+            RuntimeError, self.resource.getChildWithDefault, "foo",
+            DummyRequest("/"))
+
+
+    def test_putChild(self):
+        """
+        L{WebSocketsResource.putChild} raises C{RuntimeError} when called.
+        """
+        self.assertRaises(
+            RuntimeError, self.resource.putChild, "foo", Resource())
+
+
     def test_IResource(self):
         """
         L{WebSocketsResource} implements L{IResource}.
@@ -426,10 +456,12 @@ class WebsocketsResourceTest(TestCase):
         When rendering a request, L{WebSocketsResource}, checks the C{Upgrade},
         C{Connection} and C{Sec-WebSocket-Version} headers, and use the
         C{Sec-WebSocket-Key} header to generate a C{Sec-WebSocket-Accept}
-        value.
+        value. It creates a L{_WebSocketsProtocol} instance connected to the
+        protocol provided by the user factory.
         """
         request = DummyRequest("/")
-        request.transport = StringTransportWithDisconnection()
+        transport = StringTransportWithDisconnection()
+        request.transport = transport
         request.headers.update({
             "upgrade": "Websocket",
             "connection": "Upgrade",
@@ -443,3 +475,182 @@ class WebsocketsResourceTest(TestCase):
              "sec-websocket-accept": "oYBv54i42V5dw6KnZqOFroecUTc="},
             request.outgoingHeaders)
         self.assertEqual([""], request.written)
+        self.assertEqual(101, request.responseCode)
+        self.assertIdentical(None, request.transport)
+        self.assertIsInstance(transport.protocol, _WebSocketsProtocol)
+        self.assertIsInstance(transport.protocol.wrappedProtocol, SavingEcho)
+        self.assertIdentical(None, transport.protocol.codec)
+
+
+    def test_renderCodec(self):
+        """
+        If a codec is specified via the C{Sec-WebSocket-Protocol} header,
+        L{WebSocketsResource} forwards in the request headers, and sets the
+        protocol codec attribute with the value.
+        """
+        request = DummyRequest("/")
+        transport = StringTransportWithDisconnection()
+        request.transport = transport
+        request.headers.update({
+            "upgrade": "Websocket",
+            "connection": "Upgrade",
+            "sec-websocket-key": "secure",
+            "sec-websocket-version": "13",
+            "sec-websocket-protocol": "base64"})
+        result = self.resource.render(request)
+        self.assertEqual(NOT_DONE_YET, result)
+        self.assertEqual(
+            {"connection": "Upgrade",
+             "upgrade": "WebSocket",
+             "sec-websocket-protocol": "base64",
+             "sec-websocket-accept": "oYBv54i42V5dw6KnZqOFroecUTc="},
+            request.outgoingHeaders)
+        self.assertEqual([""], request.written)
+        self.assertEqual(101, request.responseCode)
+        self.assertEqual("base64", transport.protocol.codec)
+
+
+    def test_renderWrongUpgrade(self):
+        """
+        If the C{Upgrade} header contains an invalid value,
+        L{WebSocketsResource} returns a failed request.
+        """
+        request = DummyRequest("/")
+        request.headers.update({
+            "upgrade": "wrong",
+            "connection": "Upgrade",
+            "sec-websocket-key": "secure",
+            "sec-websocket-version": "13"})
+        self.assertRequestFail(request)
+
+
+    def test_renderNoUpgrade(self):
+        """
+        If the C{Upgrade} header is not set, L{WebSocketsResource} returns a
+        failed request.
+        """
+        request = DummyRequest("/")
+        request.headers.update({
+            "connection": "Upgrade",
+            "sec-websocket-key": "secure",
+            "sec-websocket-version": "13"})
+        self.assertRequestFail(request)
+
+
+    def test_renderPOST(self):
+        """
+        If the method is not C{GET}, L{WebSocketsResource} returns a failed
+        request.
+        """
+        request = DummyRequest("/")
+        request.method = "POST"
+        request.headers.update({
+            "upgrade": "Websocket",
+            "connection": "Upgrade",
+            "sec-websocket-key": "secure",
+            "sec-websocket-version": "13"})
+        self.assertRequestFail(request)
+
+
+    def test_renderWrongConnection(self):
+        """
+        If the C{Connection} header contains an invalid value,
+        L{WebSocketsResource} returns a failed request.
+        """
+        request = DummyRequest("/")
+        request.headers.update({
+            "upgrade": "Websocket",
+            "connection": "Wrong",
+            "sec-websocket-key": "secure",
+            "sec-websocket-version": "13"})
+        self.assertRequestFail(request)
+
+
+    def test_renderNoConnection(self):
+        """
+        If the C{Connection} header is not set, L{WebSocketsResource} returns a
+        failed request.
+        """
+        request = DummyRequest("/")
+        request.headers.update({
+            "upgrade": "Websocket",
+            "sec-websocket-key": "secure",
+            "sec-websocket-version": "13"})
+        self.assertRequestFail(request)
+
+
+    def test_renderNoKey(self):
+        """
+        If the C{Sec-WebSocket-Key} header is not set, L{WebSocketsResource}
+        returns a failed request.
+        """
+        request = DummyRequest("/")
+        request.headers.update({
+            "upgrade": "Websocket",
+            "connection": "Upgrade",
+            "sec-websocket-version": "13"})
+        self.assertRequestFail(request)
+
+
+    def test_renderWrongVersion(self):
+        """
+        If the value of the C{Sec-WebSocket-Version} is not 13,
+        L{WebSocketsResource} returns a failed request.
+        """
+        request = DummyRequest("/")
+        request.headers.update({
+            "upgrade": "Websocket",
+            "connection": "Upgrade",
+            "sec-websocket-key": "secure",
+            "sec-websocket-version": "11"})
+        result = self.resource.render(request)
+        self.assertEqual("", result)
+        self.assertEqual({"sec-websocket-version": "13"},
+                         request.outgoingHeaders)
+        self.assertEqual([], request.written)
+        self.assertEqual(400, request.responseCode)
+
+
+    def test_renderUnknownCodec(self):
+        """
+        If the codec passed to C{Sec-WebSocket-Protocol} is unknown,
+        L{WebSocketsResource} returns a failed request.
+        """
+        loggedMessages = []
+
+        def logMsg(eventDict):
+            loggedMessages.append(log.textFromEventDict(eventDict))
+
+        log.addObserver(logMsg)
+
+        request = DummyRequest("/")
+        request.headers.update({
+            "upgrade": "Websocket",
+            "connection": "Upgrade",
+            "sec-websocket-key": "secure",
+            "sec-websocket-version": "13",
+            "sec-websocket-protocol": "rot26"})
+
+        self.assertRequestFail(request)
+
+        self.assertEqual(["Codec rot26 is not implemented"], loggedMessages)
+
+
+    def test_renderNoProtocol(self):
+        """
+        If the underlying factory doesn't return any protocol,
+        L{WebSocketsResource} returns a failed request with a C{502} code.
+        """
+        request = DummyRequest("/")
+        request.transport = StringTransportWithDisconnection()
+        self.echoProtocol = None
+        request.headers.update({
+            "upgrade": "Websocket",
+            "connection": "Upgrade",
+            "sec-websocket-key": "secure",
+            "sec-websocket-version": "13"})
+        result = self.resource.render(request)
+        self.assertEqual("", result)
+        self.assertEqual({}, request.outgoingHeaders)
+        self.assertEqual([], request.written)
+        self.assertEqual(502, request.responseCode)
