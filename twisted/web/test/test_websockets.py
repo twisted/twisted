@@ -10,15 +10,20 @@ HyBi-07 (http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-07),
 which are drafts of RFC 6455.
 """
 
+from zope.interface.verify import verifyObject
+
 from twisted.trial.unittest import TestCase
 
 from twisted.internet.protocol import Factory, Protocol
 from twisted.python import log
 from twisted.test.proto_helpers import StringTransportWithDisconnection
 
+from twisted.web.resource import IResource
+from twisted.web.server import NOT_DONE_YET
 from twisted.web.websockets import (
     _CONTROLS, _makeAccept, _mask, _makeFrame, _parseFrames, _WSException,
-    _WebSocketsFactory)
+    _WebSocketsFactory, WebSocketsResource)
+from twisted.web.test.test_web import DummyRequest
 
 
 
@@ -391,3 +396,50 @@ class WebsocketsProtocolTest(TestCase):
         self.assertFalse(self.transport.connected)
         [error] = self.flushLoggedErrors(_WSException)
         self.assertEqual("Reserved flag in frame (114)", str(error.value))
+
+
+
+class WebsocketsResourceTest(TestCase):
+
+    def setUp(self):
+
+        class SavingEchoFactory(Factory):
+
+            def buildProtocol(oself, addr):
+                return self.echoProtocol
+
+        factory = SavingEchoFactory()
+        self.echoProtocol = SavingEcho()
+
+        self.resource = WebSocketsResource(factory)
+
+
+    def test_IResource(self):
+        """
+        L{WebSocketsResource} implements L{IResource}.
+        """
+        self.assertTrue(verifyObject(IResource, self.resource))
+
+
+    def test_render(self):
+        """
+        When rendering a request, L{WebSocketsResource}, checks the C{Upgrade},
+        C{Connection} and C{Sec-WebSocket-Version} headers, and use the
+        C{Sec-WebSocket-Key} header to generate a C{Sec-WebSocket-Accept}
+        value.
+        """
+        request = DummyRequest("/")
+        request.transport = StringTransportWithDisconnection()
+        request.headers.update({
+            "upgrade": "Websocket",
+            "connection": "Upgrade",
+            "sec-websocket-key": "secure",
+            "sec-websocket-version": "13"})
+        result = self.resource.render(request)
+        self.assertEqual(NOT_DONE_YET, result)
+        self.assertEqual(
+            {"connection": "Upgrade",
+             "upgrade": "WebSocket",
+             "sec-websocket-accept": "oYBv54i42V5dw6KnZqOFroecUTc="},
+            request.outgoingHeaders)
+        self.assertEqual([""], request.written)

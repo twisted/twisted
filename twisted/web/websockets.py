@@ -10,7 +10,7 @@ The WebSockets protocol (RFC 6455), provided as a resource which wraps a
 factory.
 """
 
-__all__ = ("WebSocketsResource",)
+__all__ = ["WebSocketsResource"]
 
 from base64 import b64encode, b64decode
 from hashlib import sha1
