@@ -294,8 +294,11 @@ class ResolverTests(unittest.TestCase):
         """
         handle = FilePath(self.mktemp())
         resolvConf = handle.open(mode='w+')
-        client.Resolver(servers=["example.com", 53], resolv='/etc/resolv.conf',
-                        reactor=Clock(), openFile=lambda path: resolvConf)
+        class StubResolver(client.Resolver):
+            def _openFile(self, name):
+                return resolvConf
+        StubResolver(servers=["example.com", 53], resolv='/etc/resolv.conf',
+                     reactor=Clock())
         self.assertTrue(resolvConf.closed)
 
 

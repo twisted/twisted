@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.names.test.test_names -*-
+# -*- test-case-name: twisted.names.test.test_names,twisted.names.test.test_client -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -44,6 +44,11 @@ class Resolver(common.ResolverBase):
     @ivar _reactor: A provider of L{IReactorTCP}, L{IReactorUDP}, and
         L{IReactorTime} which will be used to set up network resources and
         track timeouts.
+
+    @ivar _openFile: The callable to be used to open the C{/etc/resolv.conf}
+        file.  By default, L{open}.
+    @type _openFile: callable, taking (filename:L{str}) returning file-like
+        object.
     """
     index = 0
     timeout = None
@@ -57,9 +62,10 @@ class Resolver(common.ResolverBase):
     resolv = None
     _lastResolvTime = None
     _resolvReadInterval = 60
+    _openFile = staticmethod(open)
 
     def __init__(self, resolv=None, servers=None, timeout=(1, 3, 11, 45),
-                 reactor=None, openFile=open):
+                 reactor=None):
         """
         Construct a resolver which will query domain name servers listed in the
         C{resolv.conf(5)}-format file given by C{resolv} as well as those in
@@ -88,14 +94,8 @@ class Resolver(common.ResolverBase):
             global reactor will be used.
 
         @raise ValueError: Raised if no nameserver addresses can be found.
-
-        @param openFile: The callable to be used to open the
-            C{/etc/resolv.conf} file.  By default, L{open}.
-        @type openFile: callable, taking (filename:L{str}) returning file-like
-            object.
         """
         common.ResolverBase.__init__(self)
-        self._openFile = openFile
 
         if reactor is None:
             from twisted.internet import reactor
