@@ -47,6 +47,7 @@ class _CONTROLS(Names):
     PING = NamedConstant()
     PONG = NamedConstant()
 
+
 _opcode_types = {
     0x0: _CONTROLS.NORMAL,
     0x1: _CONTROLS.NORMAL,
@@ -55,14 +56,17 @@ _opcode_types = {
     0x9: _CONTROLS.PING,
     0xa: _CONTROLS.PONG}
 
+
 _opcode_for_type = {
     _CONTROLS.NORMAL: 0x1,
     _CONTROLS.CLOSE: 0x8,
     _CONTROLS.PING: 0x9,
     _CONTROLS.PONG: 0xa}
 
+
 _encoders = {
     "base64": b64encode}
+
 
 _decoders = {
     "base64": b64decode}
@@ -253,30 +257,29 @@ class _WebSocketsProtocol(ProtocolWrapper):
     Protocol which wraps another protocol to provide a WebSockets transport
     layer.
     """
-    buf = ""
+    _buffer = None
     codec = None
-
-    def __init__(self, *args, **kwargs):
-        ProtocolWrapper.__init__(self, *args, **kwargs)
-        self._pendingFrames = []
 
 
     def connectionMade(self):
         ProtocolWrapper.connectionMade(self)
         log.msg("Opening connection with %s" % self.transport.getPeer())
+        self._buffer = []
 
 
-    def parseFrames(self):
+    def _parseFrames(self):
         """
         Find frames in incoming data and pass them to the underlying protocol.
         """
         try:
-            frames, self.buf = _parseFrames(self.buf)
+            frames, rest = _parseFrames("".join(self._buffer))
         except _WSException:
             # Couldn't parse all the frames, something went wrong, let's bail.
             log.err()
             self.loseConnection()
             return
+
+        self._buffer[:] = [rest]
 
         for frame in frames:
             opcode, data = frame
@@ -301,31 +304,22 @@ class _WebSocketsProtocol(ProtocolWrapper):
                 self.transport.write(_makeFrame(data, _opcode=_CONTROLS.PONG))
 
 
-    def sendFrames(self):
+    def _sendFrames(self, frames):
         """
         Send all pending frames.
         """
-        for frame in self._pendingFrames:
+        for frame in frames:
             # Encode the frame before sending it.
             if self.codec:
                 frame = _encoders[self.codec](frame)
             packet = _makeFrame(frame)
             self.transport.write(packet)
-        self._pendingFrames = []
 
 
     def dataReceived(self, data):
-        self.buf += data
+        self._buffer.append(data)
 
-        self.parseFrames()
-
-        # Kick any pending frames. This is needed because frames might have
-        # started piling up early; we can get write()s from our protocol above
-        # when they makeConnection() immediately, before our browser client
-        # actually sends any data. In those cases, we need to manually kick
-        # pending frames.
-        if self._pendingFrames:
-            self.sendFrames()
+        self._parseFrames()
 
 
     def write(self, data):
@@ -334,8 +328,7 @@ class _WebSocketsProtocol(ProtocolWrapper):
 
         This method will only be called by the underlying protocol.
         """
-        self._pendingFrames.append(data)
-        self.sendFrames()
+        self._sendFrames([data])
 
 
     def writeSequence(self, data):
@@ -344,8 +337,7 @@ class _WebSocketsProtocol(ProtocolWrapper):
 
         This method will only be called by the underlying protocol.
         """
-        self._pendingFrames.extend(data)
-        self.sendFrames()
+        self._sendFrames(data)
 
 
     def loseConnection(self):
