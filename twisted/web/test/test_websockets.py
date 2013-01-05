@@ -334,6 +334,15 @@ class WebsocketsProtocolTest(TestCase):
         self.assertEqual(["Hello"], self.echoProtocol.received)
 
 
+    def test_writeSequence(self):
+        """
+        C{_WebSocketsProtocol.writeSequence} allows sending several frames at
+        once.
+        """
+        self.echoProtocol.transport.writeSequence(["Hello", "world"])
+        self.assertEqual("\x81\x05Hello\x81\x05world", self.transport.value())
+
+
     def test_frameReceivedWithCodec(self):
         """
         A codec can be specified with the C{_WebSocketsProtocol}, in which case
