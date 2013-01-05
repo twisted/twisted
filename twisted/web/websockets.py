@@ -53,23 +53,19 @@ _opcode_types = {
     0x2: _CONTROLS.NORMAL,
     0x8: _CONTROLS.CLOSE,
     0x9: _CONTROLS.PING,
-    0xa: _CONTROLS.PONG,
-}
+    0xa: _CONTROLS.PONG}
 
 _opcode_for_type = {
     _CONTROLS.NORMAL: 0x1,
     _CONTROLS.CLOSE: 0x8,
     _CONTROLS.PING: 0x9,
-    _CONTROLS.PONG: 0xa,
-}
+    _CONTROLS.PONG: 0xa}
 
 _encoders = {
-    "base64": b64encode,
-}
+    "base64": b64encode}
 
 _decoders = {
-    "base64": b64decode,
-}
+    "base64": b64decode}
 
 # Authentication for WS.
 
@@ -165,7 +161,6 @@ def _parseFrames(buf):
     @rtype: C{list}
     @return: A list of frames.
     """
-
     start = 0
     frames = []
 
@@ -258,13 +253,12 @@ class _WebSocketsProtocol(ProtocolWrapper):
     Protocol which wraps another protocol to provide a WebSockets transport
     layer.
     """
-
     buf = ""
     codec = None
 
     def __init__(self, *args, **kwargs):
         ProtocolWrapper.__init__(self, *args, **kwargs)
-        self._pending_frames = []
+        self._pendingFrames = []
 
 
     def connectionMade(self):
@@ -276,7 +270,6 @@ class _WebSocketsProtocol(ProtocolWrapper):
         """
         Find frames in incoming data and pass them to the underlying protocol.
         """
-
         try:
             frames, self.buf = _parseFrames(self.buf)
         except _WSException:
@@ -312,14 +305,13 @@ class _WebSocketsProtocol(ProtocolWrapper):
         """
         Send all pending frames.
         """
-
-        for frame in self._pending_frames:
+        for frame in self._pendingFrames:
             # Encode the frame before sending it.
             if self.codec:
                 frame = _encoders[self.codec](frame)
             packet = _makeFrame(frame)
             self.transport.write(packet)
-        self._pending_frames = []
+        self._pendingFrames = []
 
 
     def dataReceived(self, data):
@@ -332,7 +324,7 @@ class _WebSocketsProtocol(ProtocolWrapper):
         # when they makeConnection() immediately, before our browser client
         # actually sends any data. In those cases, we need to manually kick
         # pending frames.
-        if self._pending_frames:
+        if self._pendingFrames:
             self.sendFrames()
 
 
@@ -342,8 +334,7 @@ class _WebSocketsProtocol(ProtocolWrapper):
 
         This method will only be called by the underlying protocol.
         """
-
-        self._pending_frames.append(data)
+        self._pendingFrames.append(data)
         self.sendFrames()
 
 
@@ -353,8 +344,7 @@ class _WebSocketsProtocol(ProtocolWrapper):
 
         This method will only be called by the underlying protocol.
         """
-
-        self._pending_frames.extend(data)
+        self._pendingFrames.extend(data)
         self.sendFrames()
 
 
@@ -369,7 +359,6 @@ class _WebSocketsProtocol(ProtocolWrapper):
         should, according to the spec, be a simple acknowledgement, it
         shouldn't be a problem.
         """
-
         # Send a closing frame. It's only polite. (And might keep the browser
         # from hanging.)
         if not self.disconnecting:
@@ -388,7 +377,6 @@ class _WebSocketsFactory(WrappingFactory):
     This factory does not provide the HTTP headers required to perform a
     WebSockets handshake; see C{WebSocketsResource}.
     """
-
     protocol = _WebSocketsProtocol
 
 
@@ -406,7 +394,6 @@ class WebSocketsResource(object):
 
     @since 12.3
     """
-
     isLeaf = True
 
     def __init__(self, factory):

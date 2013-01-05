@@ -12,8 +12,13 @@ which are drafts of RFC 6455.
 
 from twisted.trial.unittest import TestCase
 
+from twisted.internet.protocol import Factory, Protocol
+from twisted.python import log
+from twisted.test.proto_helpers import StringTransportWithDisconnection
+
 from twisted.web.websockets import (
-    _CONTROLS, _makeAccept, _mask, _makeFrame, _parseFrames, _WSException)
+    _CONTROLS, _makeAccept, _mask, _makeFrame, _parseFrames, _WSException,
+    _WebSocketsFactory)
 
 
 
@@ -283,3 +288,97 @@ class TestFrameHelpers(TestCase):
         frame = "\x81\x7f\x00\x00\x00\x00\x00\x01\x86\xa0" + "x" * 100000
         buf = _makeFrame("x" * 100000)
         self.assertEqual(frame, buf)
+
+
+
+class SavingEcho(Protocol):
+    """
+    A test protocol saving the data received and sending it back.
+    """
+
+    def connectionMade(self):
+        self.received = []
+
+
+    def dataReceived(self, data):
+        self.received.append(data)
+        self.transport.write(data)
+
+
+
+class WebsocketsProtocolTest(TestCase):
+
+    def setUp(self):
+
+        class SavingEchoFactory(Factory):
+
+            def buildProtocol(oself, addr):
+                return self.echoProtocol
+
+        factory = SavingEchoFactory()
+        self.echoProtocol = SavingEcho()
+        self.factory = _WebSocketsFactory(factory)
+        self.protocol = self.factory.buildProtocol(None)
+        self.transport = StringTransportWithDisconnection()
+        self.protocol.makeConnection(self.transport)
+        self.transport.protocol = self.protocol
+
+
+    def test_frameReceived(self):
+        """
+        C{_WebSocketsProtocol.dataReceived} translates bytes into frames, and
+        then write it back encoded into frames.
+        """
+        self.protocol.dataReceived("\x81\x05Hello")
+        self.assertEqual("\x81\x05Hello", self.transport.value())
+        self.assertEqual(["Hello"], self.echoProtocol.received)
+
+
+    def test_frameReceivedWithCodec(self):
+        """
+        A codec can be specified with the C{_WebSocketsProtocol}, in which case
+        the data received and sent is encoded with it.
+        """
+        self.protocol.codec = "base64"
+        self.protocol.dataReceived("\x81\x08SGVsbG8=")
+        self.assertEqual("\x81\x08SGVsbG8=", self.transport.value())
+        self.assertEqual(["Hello"], self.echoProtocol.received)
+
+
+    def test_ping(self):
+        """
+        When a C{PING} frame is received, the frame is resent with a C{PONG},
+        but the application protocol doesn't receive any data.
+        """
+        self.protocol.dataReceived("\x89\x05Hello")
+        self.assertEqual("\x8a\x05Hello", self.transport.value())
+        self.assertEqual([], self.echoProtocol.received)
+
+
+    def test_close(self):
+        """
+        When a C{CLOSE} frame is received, the protocol closes the connection
+        and logs a message.
+        """
+        loggedMessages = []
+
+        def logConnectionLostMsg(eventDict):
+            loggedMessages.append(log.textFromEventDict(eventDict))
+
+        log.addObserver(logConnectionLostMsg)
+
+        self.protocol.dataReceived("\x88\x00")
+        self.assertFalse(self.transport.connected)
+        self.assertEqual(["Closing connection: 'No reason given' (1000)"],
+                         loggedMessages)
+
+
+    def test_invalidFrame(self):
+        """
+        If an invalid frame is received, C{_WebSocketsProtocol} closes the
+        connection and logs an error.
+        """
+        self.protocol.dataReceived("\x72\x05")
+        self.assertFalse(self.transport.connected)
+        [error] = self.flushLoggedErrors(_WSException)
+        self.assertEqual("Reserved flag in frame (114)", str(error.value))
