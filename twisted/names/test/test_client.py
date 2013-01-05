@@ -290,7 +290,9 @@ class ResolverTests(unittest.TestCase):
 
     def test_closesResolvConf(self):
         """
-        Ensures that L{client.Resolver} closes the resolvConf file when done.
+        As part of its constructor, C{StubResolver} opens C{/etc/resolv.conf};
+        then, explicitly closes it and does not count on the GC to do so for
+        it.
         """
         handle = FilePath(self.mktemp())
         resolvConf = handle.open(mode='w+')
