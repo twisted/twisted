@@ -294,13 +294,8 @@ class ResolverTests(unittest.TestCase):
         """
         handle = FilePath(self.mktemp())
         resolvConf = handle.open(mode='w+')
-        self.addCleanup(handle.remove)
-
-        _openFile = lambda self, path: resolvConf
-        self.patch(client.Resolver, '_openFile', _openFile)
         client.Resolver(servers=["example.com", 53], resolv='/etc/resolv.conf',
-            reactor=Clock())
-
+                        reactor=Clock(), openFile=lambda path: resolvConf)
         self.assertTrue(resolvConf.closed)
 
 
