@@ -130,13 +130,21 @@ class Resolver(common.ResolverBase):
         self.maybeParseConfig()
 
 
+    def _openFile(self, path):
+        """
+        Wrapper used for opening files in the class, exists primarily for unit
+        testing purposes.
+        """
+        return FilePath(path).open()
+
+
     def maybeParseConfig(self):
         if self.resolv is None:
             # Don't try to parse it, don't set up a call loop
             return
 
         try:
-            resolvConf = FilePath(self.resolv).open()
+            resolvConf = self._openFile(self.resolv)
         except IOError as e:
             if e.errno == errno.ENOENT:
                 # Missing resolv.conf is treated the same as an empty resolv.conf
@@ -149,6 +157,7 @@ class Resolver(common.ResolverBase):
                 log.msg('%s changed, reparsing' % (self.resolv,))
                 self._lastResolvTime = mtime
                 self.parseConfig(resolvConf)
+            resolvConf.close()
 
         # Check again in a little while
         self._parseCall = self._reactor.callLater(

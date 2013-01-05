@@ -11,6 +11,7 @@ from zope.interface.verify import verifyObject
 
 from twisted.python.compat import set
 from twisted.python import failure
+from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
 
 from twisted.internet import defer
@@ -285,6 +286,22 @@ class ResolverTests(unittest.TestCase):
         """
         resolver = client.Resolver(resolv=self.mktemp(), reactor=Clock())
         self.assertEqual([("127.0.0.1", 53)], resolver.dynServers)
+
+
+    def test_closesResolvConf(self):
+        """
+        Ensures that L{client.Resolver} closes the resolvConf file when done.
+        """
+        handle = FilePath(self.mktemp())
+        resolvConf = handle.open(mode='w+')
+        self.addCleanup(handle.remove)
+
+        _openFile = lambda self, path: resolvConf
+        self.patch(client.Resolver, '_openFile', _openFile)
+        client.Resolver(servers=["example.com", 53], resolv='/etc/resolv.conf',
+            reactor=Clock())
+
+        self.assertTrue(resolvConf.closed)
 
 
     def test_domainEmptyArgument(self):
