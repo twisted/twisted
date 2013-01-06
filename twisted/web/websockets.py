@@ -1,7 +1,7 @@
 # -*- test-case-name: twisted.web.test.test_websockets -*-
-# Copyright (c) 2011-2012 Oregon State University Open Source Lab
+# Copyright (c) Twisted Matrix Laboratories.
+#               2011-2012 Oregon State University Open Source Lab
 #               2011-2012 Corbin Simpson
-#                         Twisted Matrix Laboratories
 #
 # See LICENSE for details.
 
@@ -47,7 +47,7 @@ class _CONTROLS(Names):
     PONG = NamedConstant()
 
 
-_opcode_types = {
+_opcodeTypes = {
     0x0: _CONTROLS.NORMAL,
     0x1: _CONTROLS.NORMAL,
     0x2: _CONTROLS.NORMAL,
@@ -56,7 +56,7 @@ _opcode_types = {
     0xa: _CONTROLS.PONG}
 
 
-_opcode_for_type = {
+_opcodeForType = {
     _CONTROLS.NORMAL: 0x1,
     _CONTROLS.CLOSE: 0x8,
     _CONTROLS.PING: 0x9,
@@ -148,7 +148,7 @@ def _makeFrame(buf, _opcode=_CONTROLS.NORMAL):
         length = chr(bufferLength)
 
     # Always make a normal packet.
-    header = chr(0x80 | _opcode_for_type[_opcode])
+    header = chr(0x80 | _opcodeForType[_opcode])
     frame = "%s%s%s" % (header, length, buf)
     return frame
 
@@ -183,7 +183,7 @@ def _parseFrames(buf):
         # care about.
         opcode = header & 0xf
         try:
-            opcode = _opcode_types[opcode]
+            opcode = _opcodeTypes[opcode]
         except KeyError:
             raise _WSException("Unknown opcode %d in frame" % opcode)
 
@@ -261,6 +261,9 @@ class _WebSocketsProtocol(ProtocolWrapper):
 
 
     def connectionMade(self):
+        """
+        Log the new connection and initialize the buffer list.
+        """
         ProtocolWrapper.connectionMade(self)
         log.msg("Opening connection with %s" % self.transport.getPeer())
         self._buffer = []
@@ -306,6 +309,9 @@ class _WebSocketsProtocol(ProtocolWrapper):
     def _sendFrames(self, frames):
         """
         Send all pending frames.
+
+        @param frames: A list of byte strings to send.
+        @type frames: C{list}
         """
         for frame in frames:
             # Encode the frame before sending it.
@@ -316,6 +322,9 @@ class _WebSocketsProtocol(ProtocolWrapper):
 
 
     def dataReceived(self, data):
+        """
+        Append the data to the buffer list and parse the whole.
+        """
         self._buffer.append(data)
 
         self._parseFrames()
@@ -417,6 +426,8 @@ class WebSocketsResource(object):
 
         We're not actually rendering a request. We are secretly going to
         handle a WebSockets connection instead.
+
+        @return: a strinf if the request fails, otherwise C{NOT_DONE_YET}.
         """
         # If we fail at all, we're gonna fail with 400 and no response.
         # You might want to pop open the RFC and read along.

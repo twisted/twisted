@@ -29,6 +29,9 @@ from twisted.web.test.test_web import DummyRequest
 
 
 class TestFrameHelpers(TestCase):
+    """
+    Test functions helping building and parsing WebSockets frames.
+    """
 
     def test_makeAcceptRFC(self):
         """
@@ -419,6 +422,9 @@ class WebsocketsResourceTest(TestCase):
         """
         Helper method checking that the provided C{request} fails with a I{400}
         request code, without data or headers.
+
+        @param request: The request to render.
+        @type request: L{DummyRequest}
         """
         result = self.resource.render(request)
         self.assertEqual("", result)
