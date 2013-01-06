@@ -505,7 +505,11 @@ class WebSocketsResource(object):
 
         # Connect the transport to our factory, and make things go. We need to
         # do some stupid stuff here; see #3204, which could fix it.
-        transport.protocol = protocol
+        if request.isSecure():
+            # Secure connections wrap in TLSMemoryBIOProtocol too.
+            transport.protocol.wrappedProtocol = protocol
+        else:
+            transport.protocol = protocol
         protocol.makeConnection(transport)
 
         return NOT_DONE_YET

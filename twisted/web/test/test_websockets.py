@@ -17,6 +17,7 @@ from twisted.trial.unittest import TestCase
 from twisted.internet.protocol import Factory, Protocol
 from twisted.python import log
 from twisted.test.proto_helpers import StringTransportWithDisconnection
+from twisted.protocols.tls import TLSMemoryBIOProtocol
 
 from twisted.web.resource import IResource, Resource
 from twisted.web.server import NOT_DONE_YET
@@ -462,6 +463,7 @@ class WebsocketsResourceTest(TestCase):
         request = DummyRequest("/")
         transport = StringTransportWithDisconnection()
         request.transport = transport
+        request.isSecure = lambda: False
         request.headers.update({
             "upgrade": "Websocket",
             "connection": "Upgrade",
@@ -491,6 +493,7 @@ class WebsocketsResourceTest(TestCase):
         request = DummyRequest("/")
         transport = StringTransportWithDisconnection()
         request.transport = transport
+        request.isSecure = lambda: False
         request.headers.update({
             "upgrade": "Websocket",
             "connection": "Upgrade",
@@ -654,3 +657,35 @@ class WebsocketsResourceTest(TestCase):
         self.assertEqual({}, request.outgoingHeaders)
         self.assertEqual([], request.written)
         self.assertEqual(502, request.responseCode)
+
+
+    def test_renderSecureRequest(self):
+        """
+        When the rendered request is over HTTPS, L{WebSocketsResource} wraps
+        the protocol of the L{TLSMemoryBIOProtocol} instance.
+        """
+        request = DummyRequest("/")
+        transport = StringTransportWithDisconnection()
+        secureProtocol = TLSMemoryBIOProtocol(Factory(), Protocol())
+        transport.protocol = secureProtocol
+        request.transport = transport
+        request.isSecure = lambda: True
+        request.headers.update({
+            "upgrade": "Websocket",
+            "connection": "Upgrade",
+            "sec-websocket-key": "secure",
+            "sec-websocket-version": "13"})
+        result = self.resource.render(request)
+        self.assertEqual(NOT_DONE_YET, result)
+        self.assertEqual(
+            {"connection": "Upgrade",
+             "upgrade": "WebSocket",
+             "sec-websocket-accept": "oYBv54i42V5dw6KnZqOFroecUTc="},
+            request.outgoingHeaders)
+        self.assertEqual([""], request.written)
+        self.assertEqual(101, request.responseCode)
+        self.assertIdentical(None, request.transport)
+        self.assertIsInstance(
+            transport.protocol.wrappedProtocol, _WebSocketsProtocol)
+        self.assertIsInstance(
+            transport.protocol.wrappedProtocol.wrappedProtocol, SavingEcho)
