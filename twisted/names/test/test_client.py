@@ -11,6 +11,7 @@ from zope.interface.verify import verifyObject
 
 from twisted.python.compat import set
 from twisted.python import failure
+from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
 
 from twisted.internet import defer
@@ -285,6 +286,22 @@ class ResolverTests(unittest.TestCase):
         """
         resolver = client.Resolver(resolv=self.mktemp(), reactor=Clock())
         self.assertEqual([("127.0.0.1", 53)], resolver.dynServers)
+
+
+    def test_closesResolvConf(self):
+        """
+        As part of its constructor, C{StubResolver} opens C{/etc/resolv.conf};
+        then, explicitly closes it and does not count on the GC to do so for
+        it.
+        """
+        handle = FilePath(self.mktemp())
+        resolvConf = handle.open(mode='w+')
+        class StubResolver(client.Resolver):
+            def _openFile(self, name):
+                return resolvConf
+        StubResolver(servers=["example.com", 53], resolv='/etc/resolv.conf',
+                     reactor=Clock())
+        self.assertTrue(resolvConf.closed)
 
 
     def test_domainEmptyArgument(self):
