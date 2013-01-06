@@ -325,7 +325,7 @@ class HTTPClientFactory(protocol.ClientFactory):
     def __init__(self, url, method=b'GET', postdata=None, headers=None,
                  agent=b"Twisted PageGetter", timeout=0, cookies=None,
                  followRedirect=True, redirectLimit=20,
-                 afterFoundGet=False):
+                 afterFoundGet=False, canceller=None):
         self.followRedirect = followRedirect
         self.redirectLimit = redirectLimit
         self._redirectCount = 0
@@ -351,7 +351,7 @@ class HTTPClientFactory(protocol.ClientFactory):
 
         self.waiting = 1
         self._disconnectedDeferred = defer.Deferred()
-        self.deferred = defer.Deferred()
+        self.deferred = defer.Deferred(canceller)
         # Make sure the first callback on the result Deferred pauses the
         # callback chain until the request connection is closed.
         self.deferred.addBoth(self._waitForDisconnect)
@@ -423,12 +423,10 @@ class HTTPClientFactory(protocol.ClientFactory):
         result has yet been provided to the result Deferred, provide the
         connection failure reason as an error result.
         """
-        if self.waiting:
-            self.waiting = 0
-            # If the connection attempt failed, there is nothing more to
-            # disconnect, so just fire that Deferred now.
-            self._disconnectedDeferred.callback(None)
-            self.deferred.errback(reason)
+        self.noPage(reason)
+        # If the connection attempt failed, there is nothing more to
+        # disconnect, so just fire that Deferred now.
+        self._disconnectedDeferred.callback(None)
 
 
 
@@ -442,7 +440,8 @@ class HTTPDownloader(HTTPClientFactory):
                  method='GET', postdata=None, headers=None,
                  agent="Twisted client", supportPartial=0,
                  timeout=0, cookies=None, followRedirect=1,
-                 redirectLimit=20, afterFoundGet=False):
+                 redirectLimit=20, afterFoundGet=False,
+                 canceller=None):
         self.requestedPartial = 0
         if isinstance(fileOrName, types.StringTypes):
             self.fileName = fileOrName
@@ -460,7 +459,7 @@ class HTTPDownloader(HTTPClientFactory):
             self, url, method=method, postdata=postdata, headers=headers,
             agent=agent, timeout=timeout, cookies=cookies,
             followRedirect=followRedirect, redirectLimit=redirectLimit,
-            afterFoundGet=afterFoundGet)
+            afterFoundGet=afterFoundGet, canceller=canceller)
 
 
     def gotHeaders(self, headers):
@@ -611,15 +610,19 @@ def _makeGetterFactory(url, factoryFactory, contextFactory=None,
 
     @return: The factory created by C{factoryFactory}
     """
+    def cancel(d):
+        factory.noPage(defer.CancelledError())
+        connector.disconnect()
     scheme, host, port, path = _parse(url)
     factory = factoryFactory(url, *args, **kwargs)
     if scheme == b'https':
         from twisted.internet import ssl
         if contextFactory is None:
             contextFactory = ssl.ClientContextFactory()
-        reactor.connectSSL(nativeString(host), port, factory, contextFactory)
+        connector = reactor.connectSSL(nativeString(host), port, factory,
+                                       contextFactory)
     else:
-        reactor.connectTCP(nativeString(host), port, factory)
+        connector = reactor.connectTCP(nativeString(host), port, factory)
     return factory
 
 
@@ -629,6 +632,10 @@ def getPage(url, contextFactory=None, *args, **kwargs):
 
     Download a page. Return a deferred, which will callback with a
     page (as a string) or errback with a description of the error.
+
+    If the deferred is cancelled before the request completes, the
+    connection is closed and the deferred will fire with a
+    L{defer.CancelledError}.
 
     See L{HTTPClientFactory} to see what extra arguments can be passed.
     """
@@ -643,9 +650,16 @@ def downloadPage(url, file, contextFactory=None, *args, **kwargs):
     """
     Download a web page to a file.
 
+    Download a page. Return a deferred, which will callback with None
+    or errback with a description of the error.
+
+    If the deferred is cancelled before the request completes, the
+    connection is closed and the deferred will fire with a
+    L{defer.CancelledError}.
+
     @param file: path to file on filesystem, or file-like object.
 
-    See HTTPDownloader to see what extra args can be passed.
+    See L{HTTPDownloader} to see what extra args can be passed.
     """
     factoryFactory = lambda url, *a, **kw: HTTPDownloader(url, file, *a, **kw)
     return _makeGetterFactory(

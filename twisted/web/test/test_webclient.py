@@ -505,6 +505,43 @@ class WebClientTestCase(unittest.TestCase):
             defer.TimeoutError)
 
 
+    def test_getPageCancelImmediately(self):
+        """
+        Call L{getPage} and cancel it before it has chance to try to
+        connect to the server. The L{Deferred} returned by L{getPage}
+        fails with L{defer.CancelledError}.
+        """
+        d = client.getPage(self.getURL("wait"), timeout=10)
+        d.cancel()
+        return self.assertFailure(d, defer.CancelledError)
+
+
+    def test_getPageCancelLater(self):
+        """
+        Call L{getPage} and cancel it after it has connected to the server,
+        but before it was able to deliver the results. The L{Deferred}
+        returned by L{getPage} fails with L{defer.CancelledError}.
+        """
+        d = client.getPage(self.getURL("wait"), timeout=10)
+        reactor.callLater(0.01, d.cancel)
+        return self.assertFailure(d, defer.CancelledError)
+
+
+    def test_getPageCancelAfter(self):
+        """
+        Call L{getPage} and attempt to cancel it after it has delivered
+        the results. The cancellation is ignored and the L{Deferred}
+        returned by L{getPage} is called back with the page contents.
+        """
+        d = client.getPage(self.getURL("file"))
+        def cancelRequest(content):
+            d.cancel()
+            return content
+        d.addCallback(cancelRequest)
+        d.addCallback(self.assertEqual, "0123456789")
+        return d
+
+
     def testDownloadPage(self):
         downloads = []
         downloadData = [(b"file", self.mktemp(), b"0123456789"),
