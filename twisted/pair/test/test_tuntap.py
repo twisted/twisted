@@ -18,6 +18,11 @@ from itertools import cycle
 from zope.interface import implementer, providedBy
 from zope.interface.verify import verifyObject
 
+from twisted.internet.protocol import DatagramProtocol
+from twisted.pair.rawudp import RawUDPProtocol
+from twisted.pair.ip import IPProtocol
+from twisted.pair.ethernet import EthernetProtocol
+
 from twisted.python.reflect import fullyQualifiedName
 from twisted.python.compat import iterbytes
 from twisted.internet.interfaces import IAddress, IReactorFDSet
@@ -300,23 +305,43 @@ class MemoryIOSystem(object):
         return (srcIP, srcPort)
 
 
-    def receiveUDP(self, host, port):
-        return _FakePort(self)
+    def receiveUDP(self, fileno, host, port):
+        return _FakePort(self, fileno)
 
 
 
 class _FakePort(object):
-    def __init__(self, system):
+    def __init__(self, system, fileno):
         self._system = system
+        self._fileno = fileno
 
 
     def recv(self, nbytes):
-        data = self._system._openFiles.values()[0].writeBuffer.popleft()[:nbytes]
-        frame = data[4:]
-        ip = frame[14:]
-        udp = ip[20:]
-        payload = udp[8:]
-        return payload[:nbytes]
+        data = self._system._openFiles[self._fileno].writeBuffer.popleft()
+
+        datagrams = []
+        receiver = DatagramProtocol()
+        def capture(datagram, address):
+            datagrams.append(datagram)
+        receiver.datagramReceived = capture
+
+        udp = RawUDPProtocol()
+        udp.addProto(12345, receiver)
+
+        ip = IPProtocol()
+        ip.addProto(17, udp)
+
+        if self._system._openFiles[self._fileno].tunnelMode == TunnelType.TAP.value:
+            ether = EthernetProtocol()
+            ether.addProto(0x800, ip)
+            datagramReceived = ether.datagramReceived
+        else:
+            datagramReceived = lambda data: ip.datagramReceived(
+                data, None, None, None, None)
+
+        datagramReceived(data[4:])
+        return datagrams[0][:nbytes]
+
 
 
 
@@ -371,13 +396,77 @@ def _udp(src, dst, payload):
 
 
 
+class TapMixin(object):
+    _TUNNEL_TYPE = staticmethod(TunnelType.TAP)
+
+    def encapsulate(self, payload):
+        return _ethernet(
+            src='\x00\x00\x00\x00\x00\x00', dst='\xff\xff\xff\xff\xff\xff',
+            protocol=IPv4,
+            payload=_ip(
+                src=self._TUNNEL_REMOTE, dst=self._TUNNEL_LOCAL,
+                payload=_udp(
+                    src=50000, dst=12345, payload=payload)))
+
+
+    def parser(self):
+        datagrams = []
+        receiver = DatagramProtocol()
+        def capture(*args):
+            datagrams.append(args)
+        receiver.datagramReceived = capture
+
+        udp = RawUDPProtocol()
+        udp.addProto(12345, receiver)
+
+        ip = IPProtocol()
+        ip.addProto(17, udp)
+
+        ether = EthernetProtocol()
+        ether.addProto(0x800, ip)
+
+        return datagrams, ether.datagramReceived
+
+
+
+class TunMixin(object):
+    _TUNNEL_TYPE = staticmethod(TunnelType.TUN)
+
+
+    def encapsulate(self, payload):
+        return _ip(
+            src=self._TUNNEL_REMOTE, dst=self._TUNNEL_LOCAL,
+            payload=_udp(
+                src=50000, dst=12345, payload=payload))
+
+
+    def parser(self):
+        datagrams = []
+        receiver = DatagramProtocol()
+        def capture(*args):
+            datagrams.append(args)
+        receiver.datagramReceived = capture
+
+        udp = RawUDPProtocol()
+        udp.addProto(12345, receiver)
+
+        ip = IPProtocol()
+        ip.addProto(17, udp)
+
+        def parse(data):
+            return ip.datagramReceived(data[4:], False, None, None, None)
+
+        return datagrams, parse
+
+
+
 class TunnelDeviceTestsMixin(object):
     def setUp(self):
         self.device = self.device()
         self.fileno = self.device.open(b"/dev/net/tun", os.O_RDWR | os.O_NONBLOCK)
         self.addCleanup(self.device.close, self.fileno)
         config = struct.pack(
-            "%dsH" % (IFNAMSIZ,), self._TUNNEL_DEVICE, TunnelType.TAP.value)
+            "%dsH" % (IFNAMSIZ,), self._TUNNEL_DEVICE, self._TUNNEL_TYPE.value)
         self.device.ioctl(self.fileno, TUNSETIFF, config)
 
 
@@ -453,25 +542,7 @@ class TunnelDeviceTestsMixin(object):
 
 
     def test_receive(self):
-        from twisted.internet.protocol import DatagramProtocol
-        from twisted.pair.rawudp import RawUDPProtocol
-        from twisted.pair.ip import IPProtocol
-        from twisted.pair.ethernet import EthernetProtocol
-
-        datagrams = []
-        receiver = DatagramProtocol()
-        def capture(*args):
-            datagrams.append(args)
-        receiver.datagramReceived = capture
-
-        udp = RawUDPProtocol()
-        udp.addProto(12345, receiver)
-
-        ip = IPProtocol()
-        ip.addProto(17, udp)
-
-        ether = EthernetProtocol()
-        ether.addProto(0x800, ip)
+        datagrams, parse = self.parser()
 
         found = False
         for i in range(100):
@@ -489,7 +560,7 @@ class TunnelDeviceTestsMixin(object):
                 else:
                     # XXX Slice off the four bytes of flag/proto prefix that always
                     # seem to be there.  Why can't I get this to work any other way?
-                    ether.datagramReceived(packet[4:])
+                    parse(packet[4:])
                     if (message, source) in datagrams:
                         found = True
                         break
@@ -506,17 +577,9 @@ class TunnelDeviceTestsMixin(object):
         key = 1234567 # randrange(2 ** 64)
         message = "hello world:%d" % (key,)
 
-        port = self.device.receiveUDP(self._TUNNEL_LOCAL, 12345)
+        port = self.device.receiveUDP(self.fileno, self._TUNNEL_LOCAL, 12345)
 
-        packet = _ethernet(
-            src='\x00\x00\x00\x00\x00\x00', dst='\xff\xff\xff\xff\xff\xff',
-            protocol=protocol,
-            payload=_ip(
-                src=self._TUNNEL_REMOTE, dst=self._TUNNEL_LOCAL,
-                payload=_udp(
-                    src=50000, dst=12345, payload=message)))
-
-        print repr(packet)
+        packet = self.encapsulate(message)
 
         flags = 0
         self.device.write(self.fileno, H(flags) + H(protocol) + packet)
@@ -526,7 +589,7 @@ class TunnelDeviceTestsMixin(object):
 
 
 
-class FakeDeviceTests(TunnelDeviceTestsMixin, SynchronousTestCase):
+class FakeDeviceTestsMixin(object):
     _TUNNEL_DEVICE = "tap-twistedtest"
     _TUNNEL_LOCAL = "10.2.0.1"
     _TUNNEL_REMOTE = "10.2.0.2"
@@ -536,6 +599,14 @@ class FakeDeviceTests(TunnelDeviceTestsMixin, SynchronousTestCase):
         system._devices[Tunnel._DEVICE_NAME] = Tunnel
         return system
 
+
+
+class FakeTapDeviceTests(TapMixin, FakeDeviceTestsMixin, TunnelDeviceTestsMixin, SynchronousTestCase):
+    pass
+
+
+class FakeTunDeviceTests(TunMixin, FakeDeviceTestsMixin, TunnelDeviceTestsMixin, SynchronousTestCase):
+    pass
 
 
 class RealSpecial(object):
@@ -552,7 +623,7 @@ class RealSpecial(object):
         return s.getsockname()
 
 
-    def receiveUDP(self, host, port):
+    def receiveUDP(self, fileno, host, port):
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         # s.setblocking(False)
         s.bind((host, port))
@@ -594,14 +665,16 @@ class RealDeviceTestsMixin(object):
         return RealSpecial()
 
 
-class RealDeviceWithProtocolInformationTests(RealDeviceTestsMixin, TunnelDeviceTestsMixin, SynchronousTestCase):
+class RealDeviceWithProtocolInformationTests(TapMixin, RealDeviceTestsMixin, TunnelDeviceTestsMixin, SynchronousTestCase):
+    _TUNNEL_TYPE = staticmethod(TunnelType.TAP)
     _TUNNEL_DEVICE = "tap-twtest-pi"
     _TUNNEL_LOCAL = "10.1.0.1"
     _TUNNEL_REMOTE = "10.1.0.2"
 
 
 
-class RealDeviceWithoutProtocolInformationTests(RealDeviceTestsMixin, TunnelDeviceTestsMixin, SynchronousTestCase):
+class RealDeviceWithoutProtocolInformationTests(TapMixin, RealDeviceTestsMixin, TunnelDeviceTestsMixin, SynchronousTestCase):
+    _TUNNEL_TYPE = staticmethod(TunnelType.TAP)
     _TUNNEL_DEVICE = "tap-twtest"
     _TUNNEL_LOCAL = "10.0.0.1"
     _TUNNEL_REMOTE = "10.0.0.2"
