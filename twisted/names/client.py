@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.names.test.test_client -*-
+# -*- test-case-name: twisted.names.test.test_names -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -25,6 +25,7 @@ from zope.interface import implementer
 # Twisted imports
 from twisted.python.compat import nativeString
 from twisted.python.runtime import platform
+from twisted.python.filepath import FilePath
 from twisted.internet import error, defer, protocol, interfaces
 from twisted.python import log, failure
 from twisted.names import dns, common
@@ -44,11 +45,6 @@ class Resolver(common.ResolverBase):
     @ivar _reactor: A provider of L{IReactorTCP}, L{IReactorUDP}, and
         L{IReactorTime} which will be used to set up network resources and
         track timeouts.
-
-    @ivar _openFile: The callable to be used to open the C{/etc/resolv.conf}
-        file.  By default, L{open}.
-    @type _openFile: callable, taking (filename:L{str}) returning file-like
-        object.
     """
     index = 0
     timeout = None
@@ -62,16 +58,14 @@ class Resolver(common.ResolverBase):
     resolv = None
     _lastResolvTime = None
     _resolvReadInterval = 60
-    _openFile = staticmethod(open)
 
-    def __init__(self, resolv=None, servers=None, timeout=(1, 3, 11, 45),
-                 reactor=None):
+    def __init__(self, resolv=None, servers=None, timeout=(1, 3, 11, 45), reactor=None):
         """
-        Construct a resolver which will query domain name servers listed in the
-        C{resolv.conf(5)}-format file given by C{resolv} as well as those in
-        the given C{servers} list.  Servers are queried in a round-robin
-        fashion.  If given, C{resolv} is periodically checked for modification
-        and re-parsed if it is noticed to have changed.
+        Construct a resolver which will query domain name servers listed in
+        the C{resolv.conf(5)}-format file given by C{resolv} as well as
+        those in the given C{servers} list.  Servers are queried in a
+        round-robin fashion.  If given, C{resolv} is periodically checked
+        for modification and re-parsed if it is noticed to have changed.
 
         @type servers: C{list} of C{(str, int)} or C{None}
         @param servers: If not None, interpreted as a list of (host, port)
@@ -134,6 +128,14 @@ class Resolver(common.ResolverBase):
     def __setstate__(self, state):
         self.__dict__.update(state)
         self.maybeParseConfig()
+
+
+    def _openFile(self, path):
+        """
+        Wrapper used for opening files in the class, exists primarily for unit
+        testing purposes.
+        """
+        return FilePath(path).open()
 
 
     def maybeParseConfig(self):
