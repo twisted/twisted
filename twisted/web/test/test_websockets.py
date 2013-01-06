@@ -17,7 +17,7 @@ from twisted.trial.unittest import TestCase
 from twisted.internet.protocol import Factory, Protocol
 from twisted.python import log
 from twisted.test.proto_helpers import StringTransportWithDisconnection
-from twisted.protocols.tls import TLSMemoryBIOProtocol
+from twisted.protocols.policies import ProtocolWrapper
 
 from twisted.web.resource import IResource, Resource
 from twisted.web.server import NOT_DONE_YET
@@ -662,11 +662,11 @@ class WebsocketsResourceTest(TestCase):
     def test_renderSecureRequest(self):
         """
         When the rendered request is over HTTPS, L{WebSocketsResource} wraps
-        the protocol of the L{TLSMemoryBIOProtocol} instance.
+        the protocol of the C{TLSMemoryBIOProtocol} instance.
         """
         request = DummyRequest("/")
         transport = StringTransportWithDisconnection()
-        secureProtocol = TLSMemoryBIOProtocol(Factory(), Protocol())
+        secureProtocol = ProtocolWrapper(Factory(), Protocol())
         transport.protocol = secureProtocol
         request.transport = transport
         request.isSecure = lambda: True
