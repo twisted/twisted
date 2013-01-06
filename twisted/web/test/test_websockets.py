@@ -249,7 +249,7 @@ class TestFrameHelpers(TestCase):
 
     def test_parseReservedFlag(self):
         """
-        L{_parseFrames} raises a L[_WSException} error when the header uses a
+        L{_parseFrames} raises a L{_WSException} error when the header uses a
         reserved flag.
         """
         frame = "\x72\x05"
