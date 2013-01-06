@@ -472,7 +472,7 @@ class ThreadPoolTestCase(unittest.SynchronousTestCase):
             tp.stop()
 
 
-    def test_workerState(self):
+    def test_workerStateTransition(self):
         """
         As the worker receives and completes work it should transition between
         the working/waiting states.
@@ -487,27 +487,51 @@ class ThreadPoolTestCase(unittest.SynchronousTestCase):
         self.assertEqual(len(pool.working), 0)
 
         # fire up a worker and give it some 'work'
-        thread_working = threading.Event()
-        thread_finish = threading.Event()
+        threadWorking = threading.Event()
+        threadFinish = threading.Event()
 
         def _thread():
-            thread_working.set()
-            thread_finish.wait()
+            threadWorking.set()
+            threadFinish.wait()
 
         pool.callInThread(_thread)
-        thread_working.wait()
+        threadWorking.wait()
         self.assertEqual(pool.workers, 1)
         self.assertEqual(len(pool.waiters), 0)
         self.assertEqual(len(pool.working), 1)
 
         # finish work, and spin until state changes
-        thread_finish.set()
+        threadFinish.set()
         while not len(pool.waiters):
             time.sleep(0.0005)
 
         # make sure state changed correctly
         self.assertEqual(len(pool.waiters), 1)
         self.assertEqual(len(pool.working), 0)
+
+
+    def test_workerState(self):
+        """
+        Upon entering a _workerState block the threads unique identifier
+        should be added to a stateList, and removed upon exiting the block.
+        """
+        pool = threadpool.ThreadPool()
+        workerThread = object()
+        stateList = []
+        with pool._workerState(stateList, workerThread):
+            self.assertIn(workerThread, stateList)
+        self.assertNotIn(workerThread, stateList)
+
+        # raise an exception instead of running out to test exception state
+        try:
+            with pool._workerState(stateList, workerThread):
+                self.assertIn(workerThread, stateList)
+                raise Exception()
+        except:
+            pass
+        else:
+            self.fail("_workerState shouldn't be consuming exceptions")
+        self.assertNotIn(workerThread, stateList)
 
 
 class RaceConditionTestCase(unittest.SynchronousTestCase):

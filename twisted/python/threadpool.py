@@ -157,17 +157,21 @@ class ThreadPool:
 
 
     @contextlib.contextmanager
-    def _workerState(self, state_list):
+    def _workerState(self, stateList, workerThread):
         """
         Manages adding and removing this worker from a list of workers
         in a particular state.
 
-        @param state_list: the list managing workers in this state
+        @param stateList: the list managing workers in this state
+
+        @param workerThread: the thread the worker is running in, used to
+            represent the worker in stateList
         """
-        ct = self.currentThread()
-        state_list.append(ct)
-        yield
-        state_list.remove(ct)
+        stateList.append(workerThread)
+        try:
+            yield
+        finally:
+            stateList.remove(workerThread)
 
 
     def _worker(self):
@@ -176,9 +180,10 @@ class ThreadPool:
         from the threadpool, run it, and proceed to the next task until
         threadpool is stopped.
         """
+        ct = self.currentThread()
         o = self.q.get()
         while o is not WorkerStop:
-            with self._workerState(self.working):
+            with self._workerState(self.working, ct):
                 ctx, function, args, kwargs, onResult = o
                 del o
 
@@ -203,10 +208,9 @@ class ThreadPool:
 
             del ctx, onResult, result
 
-            with self._workerState(self.waiters):
+            with self._workerState(self.waiters, ct):
                 o = self.q.get()
 
-        ct = self.currentThread()
         self.threads.remove(ct)
 
 
