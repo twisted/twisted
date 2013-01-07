@@ -1548,12 +1548,12 @@ class GrammarTests(unittest.TestCase):
 
     def test_helo(self):
         parse = self.grammar("HELO example.com\r\n")
-        self.assertEqual("example.com", parse.helo())
+        self.assertEqual(("HELO", "example.com"), parse.helo())
 
 
     def test_ehloDomain(self):
         parse = self.grammar("EHLO example.com\r\n")
-        self.assertEqual("example.com", parse.ehlo())
+        self.assertEqual(("EHLO", "example.com"), parse.ehlo())
 
 
     def test_ipv4AddressLiteral(self):
@@ -1568,4 +1568,154 @@ class GrammarTests(unittest.TestCase):
 
     def test_ehloAddressLiteral(self):
         parse = self.grammar("EHLO [1.2.3.4]\r\n")
-        self.assertEqual("[1.2.3.4]", parse.ehlo())
+        self.assertEqual(("EHLO", "[1.2.3.4]"), parse.ehlo())
+
+
+    def test_noop(self):
+        parse = self.grammar("NOOP\r\n")
+        self.assertEqual(("NOOP", ""), parse.noop())
+
+
+    def test_noopArgument(self):
+        parse = self.grammar("NOOP kittens\r\n")
+        self.assertEqual(("NOOP", "kittens"), parse.noop())
+
+
+    def test_help(self):
+        parse = self.grammar("HELP\r\n")
+        self.assertEqual(("HELP", ""), parse.help())
+
+
+    def test_helpArgument(self):
+        parse = self.grammar("HELP kittens\r\n")
+        self.assertEqual(("HELP", "kittens"), parse.help())
+
+
+    def test_expn(self):
+        parse = self.grammar("EXPN users@example.com\r\n")
+        self.assertEqual(("EXPN", "users@example.com"), parse.expn())
+
+
+    def test_vrfy(self):
+        parse = self.grammar("VRFY users@example.com\r\n")
+        self.assertEqual(("VRFY", "users@example.com"), parse.vrfy())
+
+
+    def test_atom(self):
+        atom = "abc123!#$%*'*+-/=?^_`{|}"
+        parse = self.grammar(atom)
+        self.assertEqual(atom, parse.atom())
+
+
+    def test_dot_string(self):
+        parse = self.grammar("foo.bar.baz")
+        self.assertEqual("foo.bar.baz", parse.dot_string())
+
+
+    def test_mailboxDomain(self):
+        parse = self.grammar("alice@example.com")
+        self.assertEqual("alice@example.com", parse.mailbox())
+
+
+    def test_mailboxLiteral(self):
+        parse = self.grammar("alice@[1.2.3.4]")
+        self.assertEqual("alice@[1.2.3.4]", parse.mailbox())
+
+
+    def test_path(self):
+        parse = self.grammar("<alice@example.com>")
+        self.assertEqual("<alice@example.com>", parse.path())
+
+
+    def test_reverse_path(self):
+        parse = self.grammar("<alice@example.com>")
+        self.assertEqual("<alice@example.com>", parse.reverse_path())
+
+
+    def test_empty_reverse_path(self):
+        parse = self.grammar("<>")
+        self.assertEqual("<>", parse.reverse_path())
+
+
+    def test_mailfrom(self):
+        parse = self.grammar("MAIL FROM:<alice@example.com>\r\n")
+        self.assertEqual(("MAIL FROM", "<alice@example.com>", None), parse.mailfrom())
+
+
+    def test_esmtp_keyword(self):
+        parse = self.grammar("foo")
+        self.assertEqual("foo", parse.esmtp_keyword())
+
+
+    def test_esmtp_param(self):
+        parse = self.grammar("foo")
+        self.assertEqual(("foo", None), parse.esmtp_param())
+
+
+    def test_esmtp_param_with_value(self):
+        parse = self.grammar("foo=bar")
+        self.assertEqual(("foo", "bar"), parse.esmtp_param())
+
+
+    def test_mail_parameters(self):
+        parse = self.grammar("foo=bar baz=quux corge")
+        self.assertEqual(
+            [("foo", "bar"), ("baz", "quux"), ("corge", None)],
+            parse.mail_parameters())
+
+
+    def test_mailfrom_parameters(self):
+        parse = self.grammar("MAIL FROM:<alice@example.com> foo=bar baz\r\n")
+        self.assertEqual(
+            ("MAIL FROM", "<alice@example.com>", [("foo", "bar"), ("baz", None)]),
+            parse.mailfrom())
+
+
+
+class NewSMTPTests(unittest.TestCase):
+    def setUp(self):
+        self.ip = "1.2.3.4"
+        self.protocol = smtp.SMTP()
+        self.transport = StringTransport(
+            hostAddress=address.IPv4Address('TCP', self.ip, 25))
+
+
+    def test_makeConnection(self):
+        """
+        L{SMTP} sends a server greeting when it is connected to a transport.
+        """
+        self.protocol.makeConnection(self.transport)
+        self.assertEqual(
+            "220 [%s] Server ready\r\n" % (self.ip,), self.transport.value())
+
+
+    def test_heloResponse(self):
+        """
+        L{SMTP} sends a I{250} response to a I{HELO} command.
+        """
+        self.protocol.makeConnection(self.transport)
+        self.transport.clear()
+        self.protocol.dataReceived(b"HELO mail.example.com\r\n")
+        self.assertEqual("250 Okay\r\n", self.transport.value())
+
+
+    def test_ehloResponse(self):
+        """
+        L{SMTP} sends a I{250} response and a list of server capabilities to a
+        I{EHLO} command.
+        """
+        self.protocol.makeConnection(self.transport)
+        self.transport.clear()
+        self.protocol.dataReceived(b"EHLO mail.example.com\r\n")
+        self.assertEqual("250 Okay\r\n", self.transport.value())
+
+
+    def test_badCommandSequence(self):
+        """
+        L{SMTP} sends a I{503} response to a command which is not allowed in the
+        current state of the connection.
+        """
+        self.protocol.makeConnection(self.transport)
+        self.transport.clear()
+        self.protocol.dataReceived(b"MAIL FROM:<alice@example.com>\r\n")
+        self.assertEqual("503 Bad sequence of commands\r\n", self.transport.value())

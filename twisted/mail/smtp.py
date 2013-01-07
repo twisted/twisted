@@ -503,6 +503,9 @@ class IMessage(Interface):
 
 grammar = """
 
+any = :x ?(ord(x) not in [10, 13]) -> x
+string = any+
+
 alpha = :x ?(x.isalpha()) -> x
 digit = :x ?(x.isdigit()) -> x
 
@@ -521,36 +524,84 @@ ipv4_address_literal = Snum ('.'  Snum){3}
 ipv6_address_literal = 'x' # implement me
 general_address_literal = 'x' # implement me
 
-address_literal = <'[' (ipv4_address_literal | ipv6_address_literal | general_address_literal) ']'>
+address_literal = <'[' (
+    ipv4_address_literal | ipv6_address_literal | general_address_literal) ']'>
 
-helo = 'H' 'E' 'L' 'O' ' ' <domain>:x newline -> x
-ehlo = 'E' 'H' 'L' 'O' ' ' <(domain | address_literal)>:x newline -> x
+helo = 'H' 'E' 'L' 'O' ' ' <domain>:x newline -> ('HELO', x)
+ehlo = 'E' 'H' 'L' 'O' ' ' <(domain | address_literal)>:x newline -> ('EHLO', x)
 
-initial = (<helo> | <ehlo>)
+noop = <'N' 'O' 'O' 'P'>:command <(' ' string)?>:string newline -> (command, string[1:])
+help = <'H' 'E' 'L' 'P'>:command <(' ' string)?>:string newline -> (command, string[1:])
+expn = <'E' 'X' 'P' 'N'>:command ' ' <string>:string newline -> (command, string)
+vrfy = <'V' 'R' 'F' 'Y'>:command ' ' <string>:string newline -> (command, string)
+rset = <'R' 'S' 'E' 'T'>
 
+atext =
+    let_dig | '!' | '#' | '$' | '%' | '*' | '\'' | '*' | '+' | '-' | '/' |
+    '=' | '?' | '^' | '_' | '`' | '{' | '|' | '}'
+
+atom = <atext+>
+dot_string = <atom ('.' atom)*>
+
+# quoted_string = DQUOTE *QcontentSMTP DQUOTE
+
+local_part = dot_string # | quoted_string
+mailbox = <local_part '@' (domain | address_literal)>
+
+at_domain = '@' domain
+a_d_l = at_domain (',' at_domain)*
+
+path = <'<' (a_d_l ':')? mailbox '>'>
+reverse_path = <path | ('<' '>')>
+
+esmtp_value = let_dig (let_dig | '-')*
+esmtp_keyword = <(:x ?(33 <= ord(x) <= 60 or 62 <= ord(x) <= 126))+>
+esmtp_param = <esmtp_keyword>:keyword
+    <('=' esmtp_value)?>:value -> (keyword, value[1:] or None)
+mail_parameters = esmtp_param:p (' ' esmtp_param)*:p2 -> [p] + p2
+
+mailfrom = 'M' 'A' 'I' 'L' ' ' 'F' 'R' 'O' 'M' ':'
+    reverse_path:reverse_path (' ' mail_parameters)?:mail_parameters
+    newline -> ('MAIL FROM', reverse_path, mail_parameters or None)
+rcptto =
+data =
+
+command = helo | ehlo | noop | help | expn | vrfy | rset | mailfrom | rcptto | data
+data = line
 """
 
 class SMTP(ParserProtocol):
     """
     SMTP server-side protocol.
     """
-
     grammar = BootOMetaGrammar(grammar).parseGrammar("Parser")
 
     def getInitialRule(self):
-        return 'initial'
+        return 'command'
 
 
-    def dataReceived_initial(self, data):
-        print 'initial', data
+    def makeConnection(self, transport):
+        ParserProtocol.makeConnection(self, transport)
+        self.transport.write(
+            "220 [%s] Server ready\r\n" % (self.transport.getHost().host,))
+        self._allowedCommands = ['HELO', 'EHLO']
 
-    def dataReceived_helo(self, domain):
-        print 'Got HELO', repr(domain)
+
+    def dataReceived_command(self, (command, argument)):
+        if command in self._allowedCommands:
+            return getattr(self, "command_" + command)(argument)
+        else:
+            self.transport.write("503 Bad sequence of commands\r\n")
+            return "command"
 
 
-    def dataReceived_ehlo(self, domain):
-        print 'Got EHLO', repr(domain)
+    def command_HELO(self, domain):
+        self.transport.write("250 Okay\r\n")
+        self._allowedCommands = [
+            'NOOP', 'HELP', 'EXPN', 'VRFY', 'RSET', 'MAIL FROM', 'QUIT']
+        return "command"
 
+    command_EHLO = command_HELO
 
 
 
