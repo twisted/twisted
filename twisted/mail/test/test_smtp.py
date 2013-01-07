@@ -5,7 +5,7 @@
 Test cases for twisted.mail.smtp module.
 """
 
-from zope.interface import implements
+from zope.interface import implements, implementer
 
 from twisted.python.util import LineLog
 from twisted.trial import unittest, util
@@ -1671,6 +1671,24 @@ class GrammarTests(unittest.TestCase):
             parse.mailfrom())
 
 
+    def test_rcpt_parameters(self):
+        parse = self.grammar("foo=bar baz=quux corge")
+        self.assertEqual(
+            [("foo", "bar"), ("baz", "quux"), ("corge", None)],
+            parse.rcpt_parameters())
+
+
+    def test_forward_path(self):
+        parse = self.grammar("<alice@example.com>")
+        self.assertEqual("<alice@example.com>", parse.forward_path())
+
+
+    def test_rcptto(self):
+        parse = self.grammar("RCPT TO:<alice@example.com>\r\n")
+        self.assertEqual(
+            ("RCPT TO", "<alice@example.com>", None), parse.rcptto())
+
+
 
 class NewSMTPTests(unittest.TestCase):
     def setUp(self):
@@ -1689,7 +1707,7 @@ class NewSMTPTests(unittest.TestCase):
             "220 [%s] Server ready\r\n" % (self.ip,), self.transport.value())
 
 
-    def test_heloResponse(self):
+    def test_helo(self):
         """
         L{SMTP} sends a I{250} response to a I{HELO} command.
         """
@@ -1699,7 +1717,7 @@ class NewSMTPTests(unittest.TestCase):
         self.assertEqual("250 Okay\r\n", self.transport.value())
 
 
-    def test_ehloResponse(self):
+    def test_ehlo(self):
         """
         L{SMTP} sends a I{250} response and a list of server capabilities to a
         I{EHLO} command.
@@ -1719,3 +1737,75 @@ class NewSMTPTests(unittest.TestCase):
         self.transport.clear()
         self.protocol.dataReceived(b"MAIL FROM:<alice@example.com>\r\n")
         self.assertEqual("503 Bad sequence of commands\r\n", self.transport.value())
+
+
+    def test_noop(self):
+        """
+        L{SMTP} sends a I{250} response to a I{NOOP} command.
+        """
+        self.protocol.makeConnection(self.transport)
+        self.transport.clear()
+        self.protocol.dataReceived(b"NOOP\r\n")
+        self.assertEqual("250 Okay\r\n", transport.value())
+
+
+    def test_help(self):
+        """
+        L{SMTP} sends a I{211} response to a I{HELP} command.
+        """
+        self.protocol.makeConnection(self.transport)
+        self.transport.clear()
+        self.protocol.dataReceived(b"HELP\r\n")
+        self.assertEqual("211 See RFC 5321\r\n", transport.value())
+
+
+    def test_mailfrom(self):
+        """
+        L{SMTP} sends a I{250} response to a I{MAIL FROM} command.
+        """
+        delivery = self.protocol.delivery = Permissive()
+
+        self.protocol.makeConnection(self.transport)
+        self.protocol.dataReceived(b"EHLO mail.example.com\r\n")
+        self.transport.clear()
+        self.protocol.dataReceived(b"MAIL FROM:<alice@example.com>\r\n")
+        self.assertEqual("250 Okay\r\n")
+
+        self.assertEqual("alice@example.com", delivery.sender)
+
+
+    def test_rcptto(self):
+        """
+        L{SMTP} sends a I{250} response to a I{RCPT TO} command.
+        """
+        delivery = self.protocol.delivery = Permissive()
+
+        self.protocol.makeConnection(self.transport)
+        self.protocol.dataReceived(b"EHLO mail.example.com\r\n")
+        self.transport.clear()
+        self.protocol.dataReceived(b"MAIL FROM:<alice@example.com>\r\n")
+        self.assertEqual("250 Okay\r\n")
+
+        self.protocol.dataReceived(b"RCPT TO:<bob@example.com>\r\n")
+        self.protocol.dataReceived(b"RCPT TO:<carol@example.com>\r\n")
+
+        self.assertEqual(
+            ["bob@example.com", "carol@example.com"], delivery.recipients)
+
+
+
+@implementer(smtp.IMessageDelivery)
+class Permissive(object):
+    def __init__(self):
+        self.recipients = []
+
+
+    def validateFrom(self, helo, origin):
+        self.domain = helo
+        self.sender = origin
+        return origin
+
+
+    def validateTo(self, user):
+        self.recipients.append(user)
+        return lambda: None

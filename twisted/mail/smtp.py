@@ -553,17 +553,22 @@ a_d_l = at_domain (',' at_domain)*
 
 path = <'<' (a_d_l ':')? mailbox '>'>
 reverse_path = <path | ('<' '>')>
+forward_path = path
 
 esmtp_value = let_dig (let_dig | '-')*
 esmtp_keyword = <(:x ?(33 <= ord(x) <= 60 or 62 <= ord(x) <= 126))+>
 esmtp_param = <esmtp_keyword>:keyword
     <('=' esmtp_value)?>:value -> (keyword, value[1:] or None)
 mail_parameters = esmtp_param:p (' ' esmtp_param)*:p2 -> [p] + p2
+rcpt_parameters = mail_parameters
 
 mailfrom = 'M' 'A' 'I' 'L' ' ' 'F' 'R' 'O' 'M' ':'
     reverse_path:reverse_path (' ' mail_parameters)?:mail_parameters
     newline -> ('MAIL FROM', reverse_path, mail_parameters or None)
-rcptto =
+rcptto = 'R' 'C' 'P' 'T' ' ' 'T' 'O' ':'
+    forward_path:forward_path (' ' rcpt_parameters)?:rcpt_parameters
+    newline -> ('RCPT TO', forward_path, rcpt_parameters or None)
+
 data =
 
 command = helo | ehlo | noop | help | expn | vrfy | rset | mailfrom | rcptto | data
@@ -588,20 +593,43 @@ class SMTP(ParserProtocol):
 
 
     def dataReceived_command(self, (command, argument)):
+        rule = None
         if command in self._allowedCommands:
-            return getattr(self, "command_" + command)(argument)
+            rule = getattr(self, "command_" + command)(argument)
         else:
             self.transport.write("503 Bad sequence of commands\r\n")
-            return "command"
+        return rule or "command"
 
 
     def command_HELO(self, domain):
         self.transport.write("250 Okay\r\n")
         self._allowedCommands = [
             'NOOP', 'HELP', 'EXPN', 'VRFY', 'RSET', 'MAIL FROM', 'QUIT']
-        return "command"
-
     command_EHLO = command_HELO
+
+
+    def command_NOOP(self, argument):
+        self.transport.write("250 Okay\r\n")
+
+
+    def command_HELP(self, argument):
+        self.transport.write("211 See RFC 5321\r\n")
+
+
+    def command_MAIL_FROM(self, argument):
+        self.transport.write("250 Okay\r\n")
+        self._allowedCommands = ['RCPT TO']
+
+
+    def command_RCPT_TO(self, argument):
+        self.transport.write("250 Okay\r\n")
+        self._allowedCommands = ['DATA']
+
+
+    def command_DATA(self, argument):
+        self.transport.write("250 Okay\r\n")
+        return "data"
+
 
 
 
