@@ -26,6 +26,10 @@ from twisted.python import util
 from twisted import cred
 from twisted.python.runtime import platform
 
+from ometa.protocol import ParserProtocol
+from ometa.boot import BootOMetaGrammar
+from parsley import makeGrammar
+
 try:
     from cStringIO import StringIO
 except ImportError:
@@ -497,8 +501,61 @@ class IMessage(Interface):
         semantics should be to discard the message
         """
 
-class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
-    """SMTP server-side protocol."""
+grammar = """
+
+alpha = :x ?(x.isalpha()) -> x
+digit = :x ?(x.isdigit()) -> x
+
+let_dig = alpha | digit
+
+ldh_dig = let_dig | '-'
+ldh_str =  <(ldh_dig ~~ldh_dig)* let_dig>
+
+newline = '\r' '\n'
+
+sub_domain = let_dig ldh_str?
+domain = sub_domain ('.' sub_domain)+
+
+Snum = digit{1,3}
+ipv4_address_literal = Snum ('.'  Snum){3}
+ipv6_address_literal = 'x' # implement me
+general_address_literal = 'x' # implement me
+
+address_literal = <'[' (ipv4_address_literal | ipv6_address_literal | general_address_literal) ']'>
+
+helo = 'H' 'E' 'L' 'O' ' ' <domain>:x newline -> x
+ehlo = 'E' 'H' 'L' 'O' ' ' <(domain | address_literal)>:x newline -> x
+
+initial = (<helo> | <ehlo>)
+
+"""
+
+class SMTP(ParserProtocol):
+    """
+    SMTP server-side protocol.
+    """
+
+    grammar = BootOMetaGrammar(grammar).parseGrammar("Parser")
+
+    def getInitialRule(self):
+        return 'initial'
+
+
+    def dataReceived_initial(self, data):
+        print 'initial', data
+
+    def dataReceived_helo(self, domain):
+        print 'Got HELO', repr(domain)
+
+
+    def dataReceived_ehlo(self, domain):
+        print 'Got EHLO', repr(domain)
+
+
+
+
+class OldSMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
+
 
     timeout = 600
     host = DNSNAME

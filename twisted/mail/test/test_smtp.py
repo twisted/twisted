@@ -1518,3 +1518,54 @@ class SenderMixinSentMailTests(unittest.TestCase):
         client.sentMail(199, "Test response", 1, addresses, client.log)
 
         return onDone
+
+
+
+class GrammarTests(unittest.TestCase):
+    grammar = staticmethod(smtp.makeGrammar(smtp.grammar, {}))
+
+    def test_alpha(self):
+        parse = self.grammar("x")
+        self.assertEqual("x", parse.alpha())
+
+
+    def test_digit(self):
+        parse = self.grammar("3")
+        self.assertEqual("3", parse.digit())
+
+
+    def test_let_dig(self):
+        parse = self.grammar("a")
+        self.assertEqual("a", parse.let_dig())
+        parse = self.grammar("1")
+        self.assertEqual("1", parse.let_dig())
+
+
+    def test_ldh_str(self):
+        parse = self.grammar("example")
+        self.assertEqual("example", parse.ldh_str())
+
+
+    def test_helo(self):
+        parse = self.grammar("HELO example.com\r\n")
+        self.assertEqual("example.com", parse.helo())
+
+
+    def test_ehloDomain(self):
+        parse = self.grammar("EHLO example.com\r\n")
+        self.assertEqual("example.com", parse.ehlo())
+
+
+    def test_ipv4AddressLiteral(self):
+        parse = self.grammar("[1.2.3.4]")
+        self.assertEqual("[1.2.3.4]", parse.address_literal())
+
+
+    def test_ipv6AddressLiteral(self):
+        parse = self.grammar("[::1]")
+        self.assertEqual("[::1]", parse.address_literal())
+    test_ipv6AddressLiteral.todo = "implement me"
+
+    def test_ehloAddressLiteral(self):
+        parse = self.grammar("EHLO [1.2.3.4]\r\n")
+        self.assertEqual("[1.2.3.4]", parse.ehlo())

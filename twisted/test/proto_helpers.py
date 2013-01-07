@@ -202,6 +202,10 @@ class StringTransport:
         self.disconnecting = True
 
 
+    def abortConnection(self):
+        pass
+
+
     def getPeer(self):
         if self.peerAddr is None:
             return address.IPv4Address('TCP', '192.168.1.1', 54321)
