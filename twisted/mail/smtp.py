@@ -604,6 +604,7 @@ class SMTP(ParserProtocol):
 
 
     def command_HELO(self, domain):
+        self._domain = domain
         self.transport.write("250 Okay\r\n")
         self._allowedCommands = [
             'NOOP', 'HELP', 'EXPN', 'VRFY', 'RSET', 'MAIL FROM', 'QUIT']
@@ -619,11 +620,13 @@ class SMTP(ParserProtocol):
 
 
     def command_MAIL_FROM(self, argument):
+        self.delivery.validateFrom(self._domain, argument)
         self.transport.write("250 Okay\r\n")
         self._allowedCommands = ['RCPT TO']
 
 
     def command_RCPT_TO(self, argument):
+        self.delivery.validateTo(argument)
         self.transport.write("250 Okay\r\n")
         self._allowedCommands = ['DATA']
 
