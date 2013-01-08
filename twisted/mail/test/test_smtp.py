@@ -1797,6 +1797,7 @@ class NewSMTPTests(unittest.TestCase):
 @implementer(smtp.IMessageDelivery)
 class Permissive(object):
     def __init__(self):
+        self.sender = None
         self.recipients = []
 
 

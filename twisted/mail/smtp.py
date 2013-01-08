@@ -527,11 +527,11 @@ general_address_literal = 'x' # implement me
 address_literal = <'[' (
     ipv4_address_literal | ipv6_address_literal | general_address_literal) ']'>
 
-helo = 'H' 'E' 'L' 'O' ' ' <domain>:x newline -> ('HELO', x)
+helo = 'H' 'E' 'L' 'O' ' ' <domain>:domain newline -> ('HELO', domain)
 ehlo = 'E' 'H' 'L' 'O' ' ' <(domain | address_literal)>:x newline -> ('EHLO', x)
 
-noop = <'N' 'O' 'O' 'P'>:command (' ' string)?:string newline -> (command, string)
-help = <'H' 'E' 'L' 'P'>:command (' ' string)?:string newline -> (command, string)
+noop = 'N' 'O' 'O' 'P' (' ' string)?:string newline -> ("NOOP", string)
+help = 'H' 'E' 'L' 'P' (' ' string)?:string newline -> ("HELP", string)
 expn = <'E' 'X' 'P' 'N'>:command ' ' string:string newline -> (command, string)
 vrfy = <'V' 'R' 'F' 'Y'>:command ' ' string:string newline -> (command, string)
 rset = <'R' 'S' 'E' 'T'>
@@ -589,13 +589,14 @@ class SMTP(ParserProtocol):
         ParserProtocol.makeConnection(self, transport)
         self.transport.write(
             "220 [%s] Server ready\r\n" % (self.transport.getHost().host,))
-        self._allowedCommands = ['HELO', 'EHLO']
+        self._allowedCommands = ["HELO", "EHLO", "NOOP", "HELP"]
 
 
     def dataReceived_command(self, stuff):
-        command = stuff[0].replace(' ', '_')
+        command = stuff[0]
         rule = None
         if command in self._allowedCommands:
+            command = command.replace(' ', '_')
             rule = getattr(self, "command_" + command)(stuff[1:])
         else:
             self.transport.write("503 Bad sequence of commands\r\n")
