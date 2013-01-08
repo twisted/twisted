@@ -504,7 +504,7 @@ class IMessage(Interface):
 grammar = """
 
 any = :x ?(ord(x) not in [10, 13]) -> x
-string = any+
+string = <any+>
 
 alpha = :x ?(x.isalpha()) -> x
 digit = :x ?(x.isdigit()) -> x
@@ -530,10 +530,10 @@ address_literal = <'[' (
 helo = 'H' 'E' 'L' 'O' ' ' <domain>:x newline -> ('HELO', x)
 ehlo = 'E' 'H' 'L' 'O' ' ' <(domain | address_literal)>:x newline -> ('EHLO', x)
 
-noop = <'N' 'O' 'O' 'P'>:command <(' ' string)?>:string newline -> (command, string[1:])
-help = <'H' 'E' 'L' 'P'>:command <(' ' string)?>:string newline -> (command, string[1:])
-expn = <'E' 'X' 'P' 'N'>:command ' ' <string>:string newline -> (command, string)
-vrfy = <'V' 'R' 'F' 'Y'>:command ' ' <string>:string newline -> (command, string)
+noop = <'N' 'O' 'O' 'P'>:command (' ' string)?:string newline -> (command, string)
+help = <'H' 'E' 'L' 'P'>:command (' ' string)?:string newline -> (command, string)
+expn = <'E' 'X' 'P' 'N'>:command ' ' string:string newline -> (command, string)
+vrfy = <'V' 'R' 'F' 'Y'>:command ' ' string:string newline -> (command, string)
 rset = <'R' 'S' 'E' 'T'>
 
 atext =
@@ -592,10 +592,11 @@ class SMTP(ParserProtocol):
         self._allowedCommands = ['HELO', 'EHLO']
 
 
-    def dataReceived_command(self, (command, argument)):
+    def dataReceived_command(self, stuff):
+        command = stuff[0].replace(' ', '_')
         rule = None
         if command in self._allowedCommands:
-            rule = getattr(self, "command_" + command)(argument)
+            rule = getattr(self, "command_" + command)(stuff[1:])
         else:
             self.transport.write("503 Bad sequence of commands\r\n")
         return rule or "command"

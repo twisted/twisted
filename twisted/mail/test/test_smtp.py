@@ -1573,7 +1573,7 @@ class GrammarTests(unittest.TestCase):
 
     def test_noop(self):
         parse = self.grammar("NOOP\r\n")
-        self.assertEqual(("NOOP", ""), parse.noop())
+        self.assertEqual(("NOOP", None), parse.noop())
 
 
     def test_noopArgument(self):
@@ -1583,7 +1583,7 @@ class GrammarTests(unittest.TestCase):
 
     def test_help(self):
         parse = self.grammar("HELP\r\n")
-        self.assertEqual(("HELP", ""), parse.help())
+        self.assertEqual(("HELP", None), parse.help())
 
 
     def test_helpArgument(self):
@@ -1746,7 +1746,7 @@ class NewSMTPTests(unittest.TestCase):
         self.protocol.makeConnection(self.transport)
         self.transport.clear()
         self.protocol.dataReceived(b"NOOP\r\n")
-        self.assertEqual("250 Okay\r\n", transport.value())
+        self.assertEqual("250 Okay\r\n", self.transport.value())
 
 
     def test_help(self):
@@ -1756,7 +1756,7 @@ class NewSMTPTests(unittest.TestCase):
         self.protocol.makeConnection(self.transport)
         self.transport.clear()
         self.protocol.dataReceived(b"HELP\r\n")
-        self.assertEqual("211 See RFC 5321\r\n", transport.value())
+        self.assertEqual("211 See RFC 5321\r\n", self.transport.value())
 
 
     def test_mailfrom(self):
@@ -1769,7 +1769,7 @@ class NewSMTPTests(unittest.TestCase):
         self.protocol.dataReceived(b"EHLO mail.example.com\r\n")
         self.transport.clear()
         self.protocol.dataReceived(b"MAIL FROM:<alice@example.com>\r\n")
-        self.assertEqual("250 Okay\r\n")
+        self.assertEqual("250 Okay\r\n", self.transport.value())
 
         self.assertEqual("alice@example.com", delivery.sender)
 
@@ -1784,7 +1784,7 @@ class NewSMTPTests(unittest.TestCase):
         self.protocol.dataReceived(b"EHLO mail.example.com\r\n")
         self.transport.clear()
         self.protocol.dataReceived(b"MAIL FROM:<alice@example.com>\r\n")
-        self.assertEqual("250 Okay\r\n")
+        self.assertEqual("250 Okay\r\n", self.transport.value())
 
         self.protocol.dataReceived(b"RCPT TO:<bob@example.com>\r\n")
         self.protocol.dataReceived(b"RCPT TO:<carol@example.com>\r\n")
