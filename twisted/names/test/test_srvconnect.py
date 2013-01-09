@@ -167,3 +167,29 @@ class SRVConnectorTest(unittest.TestCase):
         self.assertNotIdentical(None, self.factory.reason)
         self.factory.reason.trap(DNSLookupError)
         self.assertEqual(self.reactor.tcpClients, [])
+
+
+    def test_unicodeDomainWarning(self):
+        """
+        Passing in a unicode domain is deprecated.
+        """
+        self.connector = srvconnect.SRVConnector(self.reactor, 'xmpp-client',
+                                                 u'example.org', self.factory)
+        warnings = self.flushWarnings()
+        warning = warnings[0]
+        self.assertEqual(DeprecationWarning, warning['category'])
+        self.assertEqual("Domain argument to "
+                         "twisted.names.srvconnect.SRVConnector "
+                         "should be bytes, not unicode.",
+                         warning['message'])
+        self.assertIsInstance(self.connector.domain, bytes)
+        self.assertEqual(b'example.org', self.connector.domain)
+
+
+    def test_unicodeDomainNonASCII(self):
+        """
+        Passing in a non-ASCII unicode domain raises a UnicodeEncodeError.
+        """
+        self.assertRaises(UnicodeEncodeError, srvconnect.SRVConnector,
+                          self.reactor, 'xmpp-client',
+                          u'\u00e9chec.example.org', self.factory)

@@ -3,6 +3,7 @@
 # See LICENSE for details.
 
 import random
+import warnings
 
 from zope.interface import implements
 
@@ -10,7 +11,7 @@ from twisted.internet import error, interfaces
 
 from twisted.names import client, dns
 from twisted.names.error import DNSNameError
-from twisted.python.compat import reduce
+from twisted.python.compat import reduce, unicode
 
 class _SRVConnector_ClientFactoryWrapper:
     def __init__(self, connector, wrappedFactory):
@@ -43,6 +44,10 @@ class SRVConnector:
                  defaultPort=None,
                  ):
         """
+        @ivar domain: The domain to connect to. Note that this is expected to
+            be an ASCII byte string since Twisted 12.3.0. IDN domain names have
+            to be encoded. See L{encodings.idna} for details.
+        @type domain: L{str}
         @ivar defaultPort: Optional default port number to be used when SRV
             lookup fails and the service name is unknown. This should be the
             port number associated with the service name as defined by the IANA
@@ -51,6 +56,13 @@ class SRVConnector:
         """
         self.reactor = reactor
         self.service = service
+        if isinstance(domain, unicode):
+            warnings.warn(
+                "Domain argument to twisted.names.srvconnect.SRVConnector "
+                "should be bytes, not unicode, since Twisted 12.3.0",
+                category=DeprecationWarning,
+                stacklevel=2)
+            domain = domain.encode('ascii')
         self.domain = domain
         self.factory = factory
 
