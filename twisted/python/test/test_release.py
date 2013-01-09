@@ -2351,16 +2351,6 @@ class BuildAllTarballsTest(DistributionBuilderTestBase):
     """
     skip = svnSkip
 
-    def setUp(self):
-        self.oldHandler = signal.signal(signal.SIGCHLD, signal.SIG_DFL)
-        DistributionBuilderTestBase.setUp(self)
-
-
-    def tearDown(self):
-        signal.signal(signal.SIGCHLD, self.oldHandler)
-        DistributionBuilderTestBase.tearDown(self)
-
-
     def test_buildAllTarballs(self):
         """
         L{buildAllTarballs} builds tarballs for Twisted and all of its
