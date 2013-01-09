@@ -8,6 +8,7 @@ Base functionality useful to various parts of Twisted Names.
 
 from __future__ import division, absolute_import
 
+from encodings import idna
 import socket
 
 from twisted.names import dns
@@ -305,3 +306,28 @@ typeToMethod = {
     dns.AXFR:         'lookupZone',
     dns.ALL_RECORDS:  'lookupAllRecords',
 }
+
+
+
+def prepareIDNName(name):
+    """
+    Encode a unicode IDN Domain Name into its ACE equivalent.
+
+    This will encode the domain labels, separated by allowed dot code points,
+    to their ASCII Compatible Encoding (ACE) equivalent, using punycode. The
+    result is an ASCII byte string of the encoded labels, separated by the
+    standard full stop.
+    """
+    result = []
+    labels = idna.dots.split(name)
+
+    if labels and len(labels[-1]) == 0:
+        trailing_dot = b'.'
+        del labels[-1]
+    else:
+        trailing_dot = b''
+
+    for label in labels:
+        result.append(idna.ToASCII(label))
+
+    return b'.'.join(result) + trailing_dot
