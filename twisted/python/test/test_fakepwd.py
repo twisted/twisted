@@ -22,6 +22,35 @@ from twisted.trial.unittest import TestCase
 from twisted.python.fakepwd import UserDatabase, ShadowDatabase
 from twisted.python.compat import set
 
+SYSTEM_UID_MAX = 999
+
+def findInvalidUID():
+    """
+    By convention, UIDs less than 1000 are reserved for the system.  A system
+    which allocated every single one of those UIDs would likely have practical
+    problems with allocating new ones, so let's assume that we'll be able to
+    find one.  (If we don't, this will wrap around to negative values and
+    I{eventually} find something.)
+
+    @return: a user ID which does not exist on the local system.  Or, on
+        systems without a L{pwd} module, return C{SYSTEM_UID_MAX}.
+    """
+    guess = SYSTEM_UID_MAX
+    if pwd is not None:
+        while True:
+            try:
+                pwd.getpwuid(guess)
+            except KeyError:
+                break
+            else:
+                guess -= 1
+    return guess
+
+
+
+INVALID_UID = findInvalidUID()
+
+
 
 class UserDatabaseTestsMixin:
     """
@@ -53,10 +82,10 @@ class UserDatabaseTestsMixin:
 
     def test_noSuchUID(self):
         """
-        I{getpwuid} raises L{KeyError} or L{OverflowError} when passed a uid
-        which does not exist in the user database.
+        I{getpwuid} raises L{KeyError} when passed a uid which does not exist
+        in the user database.
         """
-        self.assertRaises((KeyError, OverflowError), self.database.getpwuid, -13)
+        self.assertRaises(KeyError, self.database.getpwuid, INVALID_UID)
 
 
     def test_getpwnam(self):
@@ -134,7 +163,7 @@ class UserDatabaseTests(TestCase, UserDatabaseTestsMixin):
         Create a L{UserDatabase} with no user data in it.
         """
         self.database = UserDatabase()
-        self._counter = 0
+        self._counter = SYSTEM_UID_MAX + 1
 
 
     def getExistingUserInfo(self):
