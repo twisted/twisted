@@ -53,10 +53,10 @@ class UserDatabaseTestsMixin:
 
     def test_noSuchUID(self):
         """
-        I{getpwuid} raises L{KeyError} when passed a uid which does not exist
-        in the user database.
+        I{getpwuid} raises L{KeyError} or L{OverflowError} when passed a uid
+        which does not exist in the user database.
         """
-        self.assertRaises(KeyError, self.database.getpwuid, -13)
+        self.assertRaises((KeyError, OverflowError), self.database.getpwuid, -13)
 
 
     def test_getpwnam(self):
