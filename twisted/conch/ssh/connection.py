@@ -307,7 +307,7 @@ class SSHConnection(service.SSHService):
         other side wants a reply, add callbacks which will send the
         reply.
         """
-        localChannel = struct.unpack('>L', packet[: 4])[0]
+        localChannel = struct.unpack('>L', packet[:4])[0]
         requestType, rest = common.getNS(packet[4:])
         wantReply = ord(rest[0])
         channel = self.channels[localChannel]

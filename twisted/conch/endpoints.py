@@ -35,8 +35,17 @@ class _CommandChannel(SSHChannel):
 
 
     def channelOpen(self, ignored):
-        pass
-        # self.conn.sendRequest(self, 'exec', NS(self._command))
+        command = self.conn.sendRequest(
+            self, 'exec', NS(self._command), wantReply=True)
+        command.addCallbacks(self._execSuccess, self._execFailure)
+
+
+    def _execFailure(self, reason):
+        self._commandConnected.errback(reason)
+
+
+    def _execSuccess(self, result):
+        print 'yay', result
         # self._protocol = self._protocolFactory.buildProtocol(None)
         # self._protocol.makeConnection(self)
 

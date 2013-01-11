@@ -19,6 +19,7 @@ from twisted.conch.ssh.factory import SSHFactory
 from twisted.conch.ssh.userauth import SSHUserAuthServer
 from twisted.conch.ssh.connection import SSHConnection
 from twisted.conch.ssh.keys import Key
+from twisted.conch.ssh.channel import SSHChannel
 
 from twisted.internet.task import Clock
 from twisted.test.proto_helpers import StringTransport
@@ -29,10 +30,19 @@ from twisted.conch.avatar import ConchUser
 from twisted.conch.endpoints import AuthenticationFailed, SSHCommandEndpoint
 
 
+class BrokenExecSession(SSHChannel):
+    def request_exec(self, data):
+        return 0
+
 
 class TrivialRealm(object):
+    def __init__(self):
+        self.channelLookup = {}
+
     def requestAvatar(self, avatarId, mind, *interfaces):
-        return (IConchUser, ConchUser(), lambda: None)
+        avatar = ConchUser()
+        avatar.channelLookup = self.channelLookup
+        return (IConchUser, avatar, lambda: None)
 
 
 
@@ -97,7 +107,8 @@ class SSHCommandEndpointTests(TestCase):
         self.user = b"user"
         self.password = b"password"
         self.reactor = Clock()
-        self.portal = Portal(TrivialRealm())
+        self.realm = TrivialRealm()
+        self.portal = Portal(self.realm)
         self.passwdDB = InMemoryUsernamePasswordDatabaseDontUse()
         self.passwdDB.addUser(self.user, self.password)
         self.portal.registerChecker(self.passwdDB)
@@ -207,6 +218,26 @@ class SSHCommandEndpointTests(TestCase):
         f.trap(ConchError)
         self.assertEqual('unknown channel', f.value.value)
 
+
+
+    def test_execFailure(self):
+        self.realm.channelLookup[b'session'] = BrokenExecSession
+        sshServer = SpyClientEndpoint()
+        endpoint = SSHCommandEndpoint(
+            sshServer, self.user, b"/bin/ls -l", password=self.password)
+
+        factory = Factory()
+        factory.protocol = Protocol
+        connected = endpoint.connect(factory)
+
+        server, client, pump = self.connectedServerAndClient(
+            self.factory, sshServer.factory)
+
+        sshServer.result.callback(client)
+
+        f = self.failureResultOf(connected)
+        f.trap(ConchError)
+        self.assertEqual('channel request failed', f.value.value)
 
 
     def test_connect(self):
