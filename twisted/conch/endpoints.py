@@ -20,6 +20,14 @@ class AuthenticationFailed(Exception):
 
 
 
+class SSHCommandAddress(object):
+    def __init__(self, server, username, command):
+        self.server = server
+        self.username = username
+        self.command = command
+
+
+
 class _CommandChannel(SSHChannel):
     name = 'session'
 
@@ -45,14 +53,17 @@ class _CommandChannel(SSHChannel):
 
 
     def _execSuccess(self, result):
-        print 'yay', result
-        # self._protocol = self._protocolFactory.buildProtocol(None)
-        # self._protocol.makeConnection(self)
+        self._protocol = self._protocolFactory.buildProtocol(
+            SSHCommandAddress(
+                self.conn.transport.transport.getHost(),
+                self.conn.transport.factory.username,
+                self.conn.transport.factory.command))
+        self._protocol.makeConnection(self)
+        self._commandConnected.callback(self._protocol)
 
 
     def dataReceived(self, bytes):
-        pass
-        # self._protocol.dataReceived(bytes)
+        self._protocol.dataReceived(bytes)
 
 
     def closed(self):

@@ -27,12 +27,19 @@ from twisted.test.iosim import connectedServerAndClient
 from twisted.conch.test.keydata import publicRSA_openssh, privateRSA_openssh
 from twisted.conch.avatar import ConchUser
 
-from twisted.conch.endpoints import AuthenticationFailed, SSHCommandEndpoint
+from twisted.conch.endpoints import AuthenticationFailed, SSHCommandAddress, SSHCommandEndpoint
 
 
 class BrokenExecSession(SSHChannel):
     def request_exec(self, data):
         return 0
+
+
+
+class WorkingExecSession(SSHChannel):
+    def request_exec(self, data):
+        return 1
+
 
 
 class TrivialRealm(object):
@@ -43,6 +50,15 @@ class TrivialRealm(object):
         avatar = ConchUser()
         avatar.channelLookup = self.channelLookup
         return (IConchUser, avatar, lambda: None)
+
+
+
+class AddressSpyFactory(Factory):
+    address = None
+
+    def buildProtocol(self, address):
+        self.address = address
+        return Factory.buildProtocol(self, address)
 
 
 
@@ -240,21 +256,83 @@ class SSHCommandEndpointTests(TestCase):
         self.assertEqual('channel request failed', f.value.value)
 
 
-    def test_connect(self):
+    def test_buildProtocol(self):
         """
-        L{SSHCommandEndpoint} establishes an SSH connection, creates a channel
-        in it, runs a command in that channel, and directs output from that
-        command to a protocol and output from the protocol to the command.
+        Once the necessary SSH actions have completed successfully,
+        L{SSHCommandEndpoint.connect} uses the factory passed to it to
+        construct a protocol instance by calling its C{buildProtocol} method
+        with an address object representing the SSH connection and command
+        executed.
         """
+        self.realm.channelLookup[b'session'] = WorkingExecSession
         sshServer = SpyClientEndpoint()
-        endpoint = SSHCommandEndpoint(sshServer, self.user, b"/bin/ls -l")
-        factory = Factory()
-        factory.protocol = Protocol
-        d = endpoint.connect(factory)
+        endpoint = SSHCommandEndpoint(
+            sshServer, self.user, b"/bin/ls -l", password=self.password)
 
-        client, server, pump = self.connectedServerAndClient(
+        factory = AddressSpyFactory()
+        factory.protocol = Protocol
+        connected = endpoint.connect(factory)
+
+        server, client, pump = self.connectedServerAndClient(
             self.factory, sshServer.factory)
 
-        print d
-        print d.result
-        print d.result.transport
+        sshServer.result.callback(client)
+
+        self.assertIsInstance(factory.address, SSHCommandAddress)
+        self.assertEqual(factory.address.server, server.transport.getHost())
+        self.assertEqual(factory.address.username, self.user)
+        self.assertEqual(factory.address.command, b"/bin/ls -l")
+
+
+    def test_makeConnection(self):
+        """
+        L{SSHCommandEndpoint} establishes an SSH connection, creates a channel
+        in it, runs a command in that channel, and uses the protocol's
+        C{makeConnection} to associate it with a protocol representing that
+        command's stdin and stdout.
+        """
+        self.realm.channelLookup[b'session'] = WorkingExecSession
+        sshServer = SpyClientEndpoint()
+        endpoint = SSHCommandEndpoint(
+            sshServer, self.user, b"/bin/ls -l", password=self.password)
+
+        factory = Factory()
+        factory.protocol = Protocol
+        connected = endpoint.connect(factory)
+
+        server, client, pump = self.connectedServerAndClient(
+            self.factory, sshServer.factory)
+
+        sshServer.result.callback(client)
+
+        protocol = self.successResultOf(connected)
+        self.assertNotIdentical(None, protocol.transport)
+
+
+    def test_dataReceived(self):
+        """
+        After establishing the connection, when the command on the SSH server
+        produces output, it is delivered to the protocol's C{dataReceived}
+        method.
+        """
+        self.realm.channelLookup[b'session'] = WorkingExecSession
+        sshServer = SpyClientEndpoint()
+        endpoint = SSHCommandEndpoint(
+            sshServer, self.user, b"/bin/ls -l", password=self.password)
+
+        factory = Factory()
+        factory.protocol = Protocol
+        connected = endpoint.connect(factory)
+
+        server, client, pump = self.connectedServerAndClient(
+            self.factory, sshServer.factory)
+
+        sshServer.result.callback(client)
+
+        protocol = self.successResultOf(connected)
+        dataReceived = []
+        protocol.dataReceived = dataReceived.append
+
+        server.service.channels[0].write(b"hello, world")
+        pump.pump()
+        self.assertEqual(b"hello, world", b"".join(dataReceived))
