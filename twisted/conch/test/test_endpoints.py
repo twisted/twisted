@@ -364,3 +364,31 @@ class SSHCommandEndpointTests(TestCase):
         server.service.channels[0].loseConnection()
         pump.pump()
         connectionLost[0].trap(ConnectionDone)
+
+
+    def test_write(self):
+        """
+        The transport connected to the protocol has a C{write} method which
+        sends bytes to the input of the command executing on the SSH server.
+        """
+        self.realm.channelLookup[b'session'] = WorkingExecSession
+        sshServer = SpyClientEndpoint()
+        endpoint = SSHCommandEndpoint(
+            sshServer, self.user, b"/bin/ls -l", password=self.password)
+
+        factory = Factory()
+        factory.protocol = Protocol
+        connected = endpoint.connect(factory)
+
+        server, client, pump = self.connectedServerAndClient(
+            self.factory, sshServer.factory)
+
+        sshServer.result.callback(client)
+
+        protocol = self.successResultOf(connected)
+
+        dataReceived = []
+        server.service.channels[0].dataReceived = dataReceived.append
+        protocol.transport.write(b"hello, world")
+        pump.pump()
+        self.assertEqual(b"hello, world", b"".join(dataReceived))
