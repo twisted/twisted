@@ -44,8 +44,8 @@ class SSHConnection(service.SSHService):
         self.channels = {} # local channel ID -> subclass of SSHChannel
         self.channelsToRemoteChannel = {} # subclass of SSHChannel ->
                                           # remote channel ID
-        self.deferreds = {"global": []} # local channel -> list of deferreds 
-                            # for pending requests or 'global' -> list of 
+        self.deferreds = {"global": []} # local channel -> list of deferreds
+                            # for pending requests or 'global' -> list of
                             # deferreds for global requests
         self.transport = None # gets set later
 
@@ -144,8 +144,7 @@ class SSHConnection(service.SSHService):
                     channel.localMaxPacket)+channel.specificData)
             log.callWithLogger(channel, channel.channelOpen, packet)
         except Exception, e:
-            log.msg('channel open failed')
-            log.err(e)
+            log.err(e, 'channel open failed')
             if isinstance(e, error.ConchError):
                 textualInfo, reason = e.args
                 if isinstance(textualInfo, (int, long)):

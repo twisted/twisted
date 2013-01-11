@@ -3,17 +3,68 @@
 from zope.interface import implementer
 
 from twisted.python.failure import Failure
+from twisted.internet.error import ConnectionDone
 from twisted.internet.interfaces import IStreamClientEndpoint
 from twisted.internet.protocol import Factory
 from twisted.internet.defer import Deferred, succeed
 
+from twisted.conch.ssh.common import NS
 from twisted.conch.ssh.transport import SSHClientTransport
 from twisted.conch.ssh.connection import SSHConnection
 from twisted.conch.ssh.userauth import SSHUserAuthClient
+from twisted.conch.ssh.channel import SSHChannel
 
 
 class AuthenticationFailed(Exception):
     pass
+
+
+
+class _CommandChannel(SSHChannel):
+    name = 'session'
+
+    def __init__(self, command, protocolFactory, commandConnected):
+        SSHChannel.__init__(self)
+        self._command = command
+        self._protocolFactory = protocolFactory
+        self._commandConnected = commandConnected
+
+
+    def openFailed(self, reason):
+        self._commandConnected.errback(reason)
+
+
+    def channelOpen(self, ignored):
+        pass
+        # self.conn.sendRequest(self, 'exec', NS(self._command))
+        # self._protocol = self._protocolFactory.buildProtocol(None)
+        # self._protocol.makeConnection(self)
+
+
+    def dataReceived(self, bytes):
+        pass
+        # self._protocol.dataReceived(bytes)
+
+
+    def closed(self):
+        pass
+        # self._protocol.connectionLost(
+        #     Failure(ConnectionDone("ssh channel closed")))
+
+
+
+class _CommandConnection(SSHConnection):
+    def __init__(self, command, protocolFactory, commandConnected):
+        SSHConnection.__init__(self)
+        self._command = command
+        self._protocolFactory = protocolFactory
+        self._commandConnected = commandConnected
+
+
+    def serviceStarted(self):
+        channel = _CommandChannel(
+            self._command, self._protocolFactory, self._commandConnected)
+        self.openChannel(channel)
 
 
 
@@ -25,8 +76,14 @@ class UserAuth(SSHUserAuthClient):
         return succeed(self.password)
 
 
+    def ssh_USERAUTH_SUCCESS(self, packet):
+        self.transport._state = b'CHANNELLING'
+        return SSHUserAuthClient.ssh_USERAUTH_SUCCESS(self, packet)
+
+
+
 class _CommandTransport(SSHClientTransport):
-    _state = b'SECURING' # -> b'AUTHENTICATING' -> b'READY'
+    _state = b'SECURING' # -> b'AUTHENTICATING' -> b'CHANNELLING' -> b'RUNNING'
 
     def verifyHostKey(self, hostKey, fingerprint):
         # XXX Should actually verify something, and add tests for this failing
@@ -35,23 +92,22 @@ class _CommandTransport(SSHClientTransport):
 
     def connectionSecure(self):
         self._state = b'AUTHENTICATING'
-        # command = _CommandConnection(
-        #     self.factory.command,
-        #     self.factory.commandProtocolFactory,
-        #     self.factory.commandConnected)
-        user = b'alice'
-        command = SSHConnection()
-        userauth = UserAuth(user, command)
-        userauth.password = b'password'
+        command = _CommandConnection(
+            self.factory.command,
+            self.factory.commandProtocolFactory,
+            self.factory.commandConnected)
+        userauth = UserAuth(self.factory.username, command)
+        userauth.password = self.factory.password
         self.requestService(userauth)
 
 
     def connectionLost(self, reason):
-        if self._state == b'READY':
+        if self._state == b'RUNNING':
             return
-
         if self._state == b'AUTHENTICATING':
             reason = Failure(AuthenticationFailed("Doh"))
+        elif self._state == b'CHANNELLING':
+            reason = Failure(ChannelOpenFailed("What"))
         self.factory.commandConnected.errback(reason)
 
 
@@ -101,6 +157,8 @@ class SSHCommandEndpoint(object):
         """
         factory = Factory()
         factory.protocol = _CommandTransport
+        factory.username = self.username
+        factory.password = self.password
         factory.command = self.command
         factory.commandProtocolFactory = protocolFactory
         factory.commandConnected = Deferred()

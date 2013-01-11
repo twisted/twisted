@@ -13,23 +13,26 @@ from twisted.internet.error import ConnectionDone, ConnectionRefusedError
 from twisted.cred.portal import Portal
 from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
 
+from twisted.conch.interfaces import IConchUser
+from twisted.conch.error import ConchError
 from twisted.conch.ssh.factory import SSHFactory
 from twisted.conch.ssh.userauth import SSHUserAuthServer
 from twisted.conch.ssh.connection import SSHConnection
 from twisted.conch.ssh.keys import Key
-from twisted.conch.error import ConchError
 
 from twisted.internet.task import Clock
 from twisted.test.proto_helpers import StringTransport
 from twisted.test.iosim import connectedServerAndClient
 from twisted.conch.test.keydata import publicRSA_openssh, privateRSA_openssh
+from twisted.conch.avatar import ConchUser
 
 from twisted.conch.endpoints import AuthenticationFailed, SSHCommandEndpoint
 
 
-class NullRealm(object):
+
+class TrivialRealm(object):
     def requestAvatar(self, avatarId, mind, *interfaces):
-        raise NotImplementedError("NullRealm cannot create avatars")
+        return (IConchUser, ConchUser(), lambda: None)
 
 
 
@@ -94,7 +97,7 @@ class SSHCommandEndpointTests(TestCase):
         self.user = b"user"
         self.password = b"password"
         self.reactor = Clock()
-        self.portal = Portal(NullRealm())
+        self.portal = Portal(TrivialRealm())
         self.passwdDB = InMemoryUsernamePasswordDatabaseDontUse()
         self.passwdDB.addUser(self.user, self.password)
         self.portal.registerChecker(self.passwdDB)
@@ -193,6 +196,16 @@ class SSHCommandEndpointTests(TestCase):
 
         sshServer.result.callback(client)
 
+        # The server logs the channel open failure - this is expected.
+        errors = self.flushLoggedErrors(ConchError)
+        self.assertIn(
+            'unknown channel', (errors[0].value.data, errors[0].value.value))
+        self.assertEqual(1, len(errors))
+
+        # Now deal with the results on the endpoint side.
+        f = self.failureResultOf(connected)
+        f.trap(ConchError)
+        self.assertEqual('unknown channel', f.value.value)
 
 
 
