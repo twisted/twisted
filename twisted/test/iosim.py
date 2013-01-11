@@ -66,6 +66,10 @@ class FakeTransport:
             self.isServer and 'S' or 'C', self.serial,
             self.protocol.__class__.__name__)
 
+    def logPrefix(self):
+        return "fake transport"
+
+
     def write(self, data):
         if self.tls is not None:
             self.tlsbuf.append(data)
