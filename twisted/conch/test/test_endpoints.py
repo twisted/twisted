@@ -336,3 +336,31 @@ class SSHCommandEndpointTests(TestCase):
         server.service.channels[0].write(b"hello, world")
         pump.pump()
         self.assertEqual(b"hello, world", b"".join(dataReceived))
+
+
+    def test_connectionLost(self):
+        """
+        When the command closes the channel, the protocol's C{connectionLost}
+        method is called.
+        """
+        self.realm.channelLookup[b'session'] = WorkingExecSession
+        sshServer = SpyClientEndpoint()
+        endpoint = SSHCommandEndpoint(
+            sshServer, self.user, b"/bin/ls -l", password=self.password)
+
+        factory = Factory()
+        factory.protocol = Protocol
+        connected = endpoint.connect(factory)
+
+        server, client, pump = self.connectedServerAndClient(
+            self.factory, sshServer.factory)
+
+        sshServer.result.callback(client)
+
+        protocol = self.successResultOf(connected)
+        connectionLost = []
+        protocol.connectionLost= connectionLost.append
+
+        server.service.channels[0].loseConnection()
+        pump.pump()
+        connectionLost[0].trap(ConnectionDone)
