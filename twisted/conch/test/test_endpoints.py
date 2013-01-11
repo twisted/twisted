@@ -208,6 +208,8 @@ class SSHCommandEndpointTests(TestCase):
         # XXX Should assert something specific about the arguments of the
         # exception
 
+        self.assertTrue(client.transport.disconnecting)
+
 
     def test_channelOpenFailure(self):
         sshServer = SpyClientEndpoint()
@@ -234,6 +236,7 @@ class SSHCommandEndpointTests(TestCase):
         f.trap(ConchError)
         self.assertEqual('unknown channel', f.value.value)
 
+        self.assertTrue(client.transport.disconnecting)
 
 
     def test_execFailure(self):
@@ -254,6 +257,8 @@ class SSHCommandEndpointTests(TestCase):
         f = self.failureResultOf(connected)
         f.trap(ConchError)
         self.assertEqual('channel request failed', f.value.value)
+
+        self.assertTrue(client.transport.disconnecting)
 
 
     def test_buildProtocol(self):
@@ -396,8 +401,9 @@ class SSHCommandEndpointTests(TestCase):
 
     def test_loseConnection(self):
         """
-        The transport connected to the protocol has a C{loseConnection} method which
-        causes the channel in which the command is running to close.
+        The transport connected to the protocol has a C{loseConnection} method
+        which causes the channel in which the command is running to close and
+        the overall connection to be closed.
         """
         self.realm.channelLookup[b'session'] = WorkingExecSession
         sshServer = SpyClientEndpoint()
@@ -417,4 +423,5 @@ class SSHCommandEndpointTests(TestCase):
         closed = []
         server.service.channels[0].closed = lambda: closed.append(True)
         protocol.transport.loseConnection()
+        pump.pump()
         self.assertEqual([True], closed)

@@ -109,8 +109,16 @@ class _CommandTransport(SSHClientTransport):
         return succeed(True)
 
 
+    def _disconnect(self, passthrough):
+        self.transport.loseConnection()
+        return passthrough
+
+
     def connectionSecure(self):
         self._state = b'AUTHENTICATING'
+
+        self.factory.commandConnected.addErrback(self._disconnect)
+
         command = _CommandConnection(
             self.factory.command,
             self.factory.commandProtocolFactory,
@@ -121,12 +129,12 @@ class _CommandTransport(SSHClientTransport):
 
 
     def connectionLost(self, reason):
-        if self._state == b'RUNNING':
+        if self._state == b'RUNNING' or self.factory.commandConnected is None:
             return
         if self._state == b'AUTHENTICATING':
             reason = Failure(AuthenticationFailed("Doh"))
-        elif self._state == b'CHANNELLING':
-            reason = Failure(ChannelOpenFailed("What"))
+        # elif self._state == b'CHANNELLING':
+        #     reason = Failure(ChannelOpenFailed("What"))
         self.factory.commandConnected.errback(reason)
 
 
@@ -181,8 +189,13 @@ class SSHCommandEndpoint(object):
         factory.command = self.command
         factory.commandProtocolFactory = protocolFactory
         factory.commandConnected = Deferred()
+        factory.commandConnected.addBoth(self._clearConnected, factory)
 
         d = self.sshClient.connect(factory)
         d.addErrback(factory.commandConnected.errback)
         return factory.commandConnected
 
+
+    def _clearConnected(self, passthrough, factory):
+        factory.commandConnected = None
+        return passthrough
