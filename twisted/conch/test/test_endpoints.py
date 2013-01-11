@@ -392,3 +392,29 @@ class SSHCommandEndpointTests(TestCase):
         protocol.transport.write(b"hello, world")
         pump.pump()
         self.assertEqual(b"hello, world", b"".join(dataReceived))
+
+
+    def test_loseConnection(self):
+        """
+        The transport connected to the protocol has a C{loseConnection} method which
+        causes the channel in which the command is running to close.
+        """
+        self.realm.channelLookup[b'session'] = WorkingExecSession
+        sshServer = SpyClientEndpoint()
+        endpoint = SSHCommandEndpoint(
+            sshServer, self.user, b"/bin/ls -l", password=self.password)
+
+        factory = Factory()
+        factory.protocol = Protocol
+        connected = endpoint.connect(factory)
+
+        server, client, pump = self.connectedServerAndClient(
+            self.factory, sshServer.factory)
+
+        sshServer.result.callback(client)
+
+        protocol = self.successResultOf(connected)
+        closed = []
+        server.service.channels[0].closed = lambda: closed.append(True)
+        protocol.transport.loseConnection()
+        self.assertEqual([True], closed)
