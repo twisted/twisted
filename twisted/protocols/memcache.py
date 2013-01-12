@@ -25,6 +25,8 @@ See U{http://code.sixapart.com/svn/memcached/trunk/server/doc/protocol.txt} for
 more information about the protocol.
 """
 
+import struct
+
 try:
     from collections import deque
 except ImportError:
@@ -36,6 +38,7 @@ except ImportError:
 from twisted.protocols.basic import LineReceiver
 from twisted.protocols.policies import TimeoutMixin
 from twisted.internet.defer import Deferred, fail, TimeoutError
+from twisted.internet.protocol import Protocol
 from twisted.python import log
 
 
@@ -754,5 +757,309 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
 
 
 
+class MemCacheBinaryProtocol(Protocol, TimeoutMixin):
+    """
+    """
+
+    _headerFormat = "!BBhBBhiiq"
+
+    OPCODE_MAPPING = {
+        0: "get",
+        1: "set",
+        2: "add",
+        3: "replace",
+        4: "delete",
+        5: "increment",
+        6: "decrement",
+        7: "quit",
+        8: "flush",
+        9: "noop",
+        14: "append",
+        15: "prepend",
+        16: "stat",
+    }
+
+    def __init__(self, timeOut=60):
+        """
+        Create the protocol.
+
+        @param timeOut: the timeout to wait before detecting that the
+            connection is dead and close it. It's expressed in seconds.
+        @type timeOut: C{int}
+        """
+        self._current = deque()
+        self.persistentTimeOut = self.timeOut = timeOut
+        self._buffer = []
+        self._bufferLength = 0
+
+
+    def dataReceived(self, data):
+        """
+        """
+        self.resetTimeout()
+        self._buffer.append(data)
+        self._bufferLength += len(data)
+        while self._bufferLength >= 24:
+            data = "".join(self._buffer)
+            if data[0] != "\x81":
+                raise ValueError("Wrong magic byte: '%s'" % (data[0],))
+            _, opcode, keyLength, extraLength, _, status, totalLength, _, cas = (
+                struct.unpack(self._headerFormat, data[:24]))
+            if self._bufferLength < 24 + totalLength:
+                self._buffer[:] = [data]
+                return
+            self._buffer[:] = [data[24 + totalLength:]]
+            self._bufferLength -= 24 + totalLength
+
+            cmd = getattr(self, "cmd_%s" % self.OPCODE_MAPPING[opcode])
+            extra = data[24:24 + extraLength]
+            key = data[24 + extraLength:24 + extraLength + keyLength]
+            value = data[24 + extraLength + keyLength: 24 + totalLength]
+            cmd(status, cas, extra, key, value)
+
+
+    def cmd_get(self, status, cas, extra, key, value):
+        """
+        """
+        if extra:
+            flags = struct.unpack("!i", extra)[0]
+        else:
+            flags = 0
+        cmd = self._current.popleft()
+        if status:
+            cmd.fail(ServerError(value))
+        else:
+            cmd.success((flags, value))
+
+
+    def cmd_set(self, status, cas, extra, key, value):
+        """
+        """
+        cmd = self._current.popleft()
+        if status:
+            cmd.fail(servererror(value))
+        else:
+            cmd.success(cas)
+
+
+    cmd_add = cmd_set
+
+
+    cmd_replace = cmd_set
+
+
+    def cmd_delete(self, status, cas, extra, key, value):
+        """
+        """
+        cmd = self._current.popleft()
+        if status:
+            cmd.fail(ServerError(value))
+        else:
+            cmd.success(True)
+
+
+    def cmd_increment(self, status, cas, extra, key, value):
+        """
+        """
+        cmd = self._current.popleft()
+        if status:
+            cmd.fail(ServerError(value))
+        else:
+            cmd.success((cas, struct.unpack("!q", value)[0]))
+
+
+    cmd_decrement = cmd_increment
+
+
+    cmd_flush = cmd_delete
+
+
+    cmd_noop = cmd_delete
+
+
+    cmd_append = cmd_delete
+
+
+    cmd_prepend = cmd_delete
+
+
+    cmd_quit = cmd_delete
+
+
+    def cmd_stat(self, status, cas, extra, key, value):
+        cmd = self._current[0]
+        if status:
+            self._current.popleft()
+            cmd.fail(ServerError(value))
+        else:
+            if cmd.key:
+                cmd.success(value)
+            else:
+                if not value and not key:
+                    cmd.success(cmd.values)
+                else:
+                    cmd.values[key] = value
+
+
+    def timeoutConnection(self):
+        """
+        Close the connection in case of timeout.
+        """
+        while self._current:
+            cmd = self._current.popleft()
+            cmd.fail(TimeoutError("Connection timeout"))
+        self.transport.loseConnection()
+
+
+    def _send(self, opcode, key, value="", extra="", cas=0):
+        """
+        """
+        if not self._current:
+           self.setTimeout(self.persistentTimeOut)
+        keyLength = len(key)
+        extraLength = len(extra)
+        header = struct.pack(self._headerFormat, 128, opcode, keyLength,
+            extraLength, 0, 0, extraLength + keyLength + len(value), 0, cas)
+        cmd = "%s%s%s%s" % (header, extra, key, value)
+        self.transport.write(cmd)
+
+
+    def _buildCommand(self, opcode, **kwargs):
+        """
+        """
+        cmdObj = Command(opcode, **kwargs)
+        self._current.append(cmdObj)
+        return cmdObj._deferred
+
+
+    def get(self, key, withIdentifier=False):
+        """
+        """
+        self._send(0, key)
+        return self._buildCommand(0, key=key)
+
+
+    def stat(self, key=""):
+        """
+        """
+        self._send(16, key)
+        return self._buildCommand(16, key=key, values={})
+
+
+    def set(self, key, value, flags=0, expireTime=0, quiet=False, cas=0):
+        """
+        """
+        extra = struct.pack("!ii", flags, expireTime)
+        if quiet:
+            self._send(17, key, value, extra=extra, cas=cas)
+        else:
+            self._send(1, key, value, extra=extra, cas=cas)
+            return self._buildCommand(1, key=key)
+
+
+    def add(self, key, value, flags=0, expireTime=0, quiet=False):
+        """
+        """
+        extra = struct.pack("!ii", flags, expireTime)
+        if quiet:
+            self._send(18, key, value, extra=extra)
+        else:
+            self._send(2, key, value, extra=extra)
+            return self._buildCommand(2, key=key)
+
+
+    def replace(self, key, value, flags=0, expireTime=0, quiet=False, cas=0):
+        """
+        """
+        extra = struct.pack("!ii", flags, expireTime)
+        if quiet:
+            self._send(19, key, value, extra=extra, cas=cas)
+        else:
+            self._send(3, key, value, extra=extra, cas=cas)
+            return self._buildCommand(3, key=key)
+
+
+    def delete(self, key, quiet=False):
+        """
+        """
+        if quiet:
+            self._send(20, key)
+        else:
+            self._send(4, key)
+            return self._buildCommand(4, key=key)
+
+
+    def increment(self, key, value=1, initialValue=0, expireTime=0,
+                  quiet=False):
+        """
+        """
+        extra = struct.pack("!qqi", value, initialValue, expireTime)
+        if quiet:
+            self._send(21, key, extra=extra)
+        else:
+            self._send(5, key, extra=extra)
+            return self._buildCommand(5, key=key)
+
+
+    def decrement(self, key, value=1, initialValue=0, expireTime=0,
+                  quiet=False):
+        """
+        """
+        extra = struct.pack("!qqi", value, initialValue, expireTime)
+        if quiet:
+            self._send(22, key, extra=extra)
+        else:
+            self._send(6, key, extra=extra)
+            return self._buildCommand(6, key=key)
+
+
+    def flush(self, expireTime=0, quiet=False):
+        """
+        """
+        if quiet:
+            self._send(24, "", extra=struct.pack("!i", expireTime))
+        else:
+            self._send(8, "", extra=struct.pack("!i", expireTime))
+            return self._buildCommand(8)
+
+
+    def noop(self):
+        """
+        """
+        self._send(9, "")
+        return self._buildCommand(9)
+
+
+    def quit(self, quiet=False):
+        """
+        """
+        if quiet:
+            self._send(23, "")
+        else:
+            self._send(7, "")
+            return self._buildCommand(7)
+
+
+    def append(self, key, value, quiet=False):
+        """
+        """
+        if quiet:
+            self._send(25, key, value)
+        else:
+            self._send(14, key, value)
+            return self._buildCommand(14, key=key)
+
+
+    def prepend(self, key, value, quiet=False):
+        """
+        """
+        if quiet:
+            self._send(26, key, value)
+        else:
+            self._send(15, key, value)
+            return self._buildCommand(15, key=key)
+
+
+
 __all__ = ["MemCacheProtocol", "DEFAULT_PORT", "NoSuchCommand", "ClientError",
-           "ServerError"]
+           "ServerError", "MemCacheBinaryProtocol"]
