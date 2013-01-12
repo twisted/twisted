@@ -8,6 +8,7 @@ from twisted.internet.interfaces import IStreamClientEndpoint
 from twisted.internet.protocol import Factory
 from twisted.internet.defer import Deferred, succeed
 
+from twisted.conch.ssh.keys import Key
 from twisted.conch.ssh.common import NS
 from twisted.conch.ssh.transport import SSHClientTransport
 from twisted.conch.ssh.connection import SSHConnection
@@ -102,11 +103,31 @@ class UserAuth(SSHUserAuthClient):
 
 
 class _CommandTransport(SSHClientTransport):
-    _state = b'SECURING' # -> b'AUTHENTICATING' -> b'CHANNELLING' -> b'RUNNING'
+    _state = b'STARTING' # -> b'SECURING' -> b'AUTHENTICATING' -> b'CHANNELLING' -> b'RUNNING'
+
+    _hostKeyFailure = None
 
     def verifyHostKey(self, hostKey, fingerprint):
-        # XXX Should actually verify something, and add tests for this failing
-        return succeed(True)
+        try:
+            hostname = self.factory.sshClient.host
+        except AttributeError:
+            hostname = "monkey"
+
+        try:
+            ip = self.transport.getPeer().host
+        except AttributeError:
+            ip = "0.0.0.0"
+
+        self._state = b'SECURING'
+        d = self.factory.knownHosts.verifyHostKey(
+            self.factory.ui, hostname, ip, Key.fromString(hostKey))
+        d.addErrback(self._saveHostKeyFailure)
+        return d
+
+
+    def _saveHostKeyFailure(self, reason):
+        self._hostKeyFailure = reason
+        return reason
 
 
     def _disconnect(self, passthrough):
@@ -131,7 +152,9 @@ class _CommandTransport(SSHClientTransport):
     def connectionLost(self, reason):
         if self._state == b'RUNNING' or self.factory.commandConnected is None:
             return
-        if self._state == b'AUTHENTICATING':
+        if self._state == b'SECURING' and self._hostKeyFailure is not None:
+            reason = self._hostKeyFailure
+        elif self._state == b'AUTHENTICATING':
             reason = Failure(AuthenticationFailed("Doh"))
         # elif self._state == b'CHANNELLING':
         #     reason = Failure(ChannelOpenFailed("What"))
@@ -143,7 +166,7 @@ class _CommandTransport(SSHClientTransport):
 class SSHCommandEndpoint(object):
     """
     """
-    def __init__(self, sshClient, username, command, password=None):
+    def __init__(self, sshClient, username, command, password=None, knownHosts=None, ui=None):
         """
         @param sshClient: An L{IStreamClientEndpoint} to use to establish a
             connection to the SSH server.
@@ -160,11 +183,21 @@ class SSHCommandEndpoint(object):
             server, if password authentication is to be attempted (otherwise
             C{None}).
         @type password: L{bytes} or L{NoneType}
+
+        @param knownHosts: The currently known host keys, used to check the
+            host key presented by the server we actually connect to.
+        @type knownHosts: L{KnownHostsKey}
+
+        @param ui: An object for interacting with users to make decisions about
+            whether to accept the server host keys.
+        @type ui: L{ConsoleUI}
         """
         self.sshClient = sshClient
         self.username = username
         self.command = command
         self.password = password
+        self.knownHosts = knownHosts
+        self.ui = ui
 
 
     def connect(self, protocolFactory):
@@ -186,6 +219,8 @@ class SSHCommandEndpoint(object):
         factory.protocol = _CommandTransport
         factory.username = self.username
         factory.password = self.password
+        factory.knownHosts = self.knownHosts
+        factory.ui = self.ui
         factory.command = self.command
         factory.commandProtocolFactory = protocolFactory
         factory.commandConnected = Deferred()

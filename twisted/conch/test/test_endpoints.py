@@ -3,23 +3,25 @@ from functools import partial
 from zope.interface.verify import verifyObject
 from zope.interface import implementer
 
+from twisted.python.filepath import FilePath
 from twisted.python.failure import Failure
 from twisted.trial.unittest import TestCase
 from twisted.internet.interfaces import IStreamClientEndpoint
 from twisted.internet.protocol import Factory, Protocol
-from twisted.internet.defer import Deferred
+from twisted.internet.defer import Deferred, succeed
 from twisted.internet.error import ConnectionDone, ConnectionRefusedError
 
 from twisted.cred.portal import Portal
 from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
 
 from twisted.conch.interfaces import IConchUser
-from twisted.conch.error import ConchError
+from twisted.conch.error import ConchError, UserRejectedKey
 from twisted.conch.ssh.factory import SSHFactory
 from twisted.conch.ssh.userauth import SSHUserAuthServer
 from twisted.conch.ssh.connection import SSHConnection
 from twisted.conch.ssh.keys import Key
 from twisted.conch.ssh.channel import SSHChannel
+from twisted.conch.client.knownhosts import KnownHostsFile
 
 from twisted.internet.task import Clock
 from twisted.test.proto_helpers import StringTransport
@@ -59,6 +61,20 @@ class AddressSpyFactory(Factory):
     def buildProtocol(self, address):
         self.address = address
         return Factory.buildProtocol(self, address)
+
+
+
+class FixedResponseUI(object):
+    def __init__(self, result):
+        self.result = result
+
+
+    def prompt(self, text):
+        return succeed(self.result)
+
+
+    def warn(self, text):
+        pass
 
 
 
@@ -134,6 +150,13 @@ class SSHCommandEndpointTests(TestCase):
         self.factory.doStart()
         self.addCleanup(self.factory.doStop)
 
+        # Make the server's host key available to be verified by the client.
+        self.hostKeyPath = FilePath(self.mktemp())
+        self.knownHosts = KnownHostsFile(self.hostKeyPath)
+        self.knownHosts.addHostKey(
+            b"monkey", self.factory.publicKeys['ssh-rsa'])
+        self.knownHosts.save()
+
 
     def connectedServerAndClient(self, serverFactory, clientFactory):
         client, server, pump = connectedServerAndClient(
@@ -153,7 +176,9 @@ class SSHCommandEndpointTests(TestCase):
 
     def test_connectionFailed(self):
         sshServer = SpyClientEndpoint()
-        endpoint = SSHCommandEndpoint(sshServer, b"dummy user", b"/bin/ls -l")
+        endpoint = SSHCommandEndpoint(
+            sshServer, b"dummy user", b"/bin/ls -l",
+            knownHosts=self.knownHosts, ui=FixedResponseUI(False))
         factory = Factory()
         factory.protocol = Protocol
         d = endpoint.connect(factory)
@@ -165,7 +190,9 @@ class SSHCommandEndpointTests(TestCase):
 
     def test_connectionClosedBeforeSecure(self):
         sshServer = SpyClientEndpoint()
-        endpoint = SSHCommandEndpoint(sshServer, b"dummy user", b"/bin/ls -l")
+        endpoint = SSHCommandEndpoint(
+            sshServer, b"dummy user", b"/bin/ls -l",
+            knownHosts=self.knownHosts, ui=FixedResponseUI(False))
 
         factory = Factory()
         factory.protocol = Protocol
@@ -181,10 +208,30 @@ class SSHCommandEndpointTests(TestCase):
         self.failureResultOf(d).trap(Exception) # TODO Be more specific
 
 
+    def test_hostKeyCheckFailure(self):
+        sshServer = SpyClientEndpoint()
+        endpoint = SSHCommandEndpoint(
+            sshServer, b"dummy user", b"/bin/ls -l",
+            knownHosts=KnownHostsFile(self.mktemp()), ui=FixedResponseUI(False))
+
+        factory = Factory()
+        factory.protocol = Protocol
+        connected = endpoint.connect(factory)
+
+        server, client, pump = self.connectedServerAndClient(
+            self.factory, sshServer.factory)
+
+        sshServer.result.callback(client)
+
+        f = self.failureResultOf(connected)
+        f.trap(UserRejectedKey)
+
+
     def test_authenticationFailure(self):
         sshServer = SpyClientEndpoint()
         endpoint = SSHCommandEndpoint(
-            sshServer, b"dummy user", b"/bin/ls -l", b"dummy password")
+            sshServer, b"dummy user", b"/bin/ls -l", b"dummy password",
+            knownHosts=self.knownHosts, ui=FixedResponseUI(False))
 
         factory = Factory()
         factory.protocol = Protocol
@@ -214,7 +261,8 @@ class SSHCommandEndpointTests(TestCase):
     def test_channelOpenFailure(self):
         sshServer = SpyClientEndpoint()
         endpoint = SSHCommandEndpoint(
-            sshServer, self.user, b"/bin/ls -l", password=self.password)
+            sshServer, self.user, b"/bin/ls -l", password=self.password,
+            knownHosts=self.knownHosts, ui=FixedResponseUI(False))
 
         factory = Factory()
         factory.protocol = Protocol
@@ -243,7 +291,8 @@ class SSHCommandEndpointTests(TestCase):
         self.realm.channelLookup[b'session'] = BrokenExecSession
         sshServer = SpyClientEndpoint()
         endpoint = SSHCommandEndpoint(
-            sshServer, self.user, b"/bin/ls -l", password=self.password)
+            sshServer, self.user, b"/bin/ls -l", password=self.password,
+            knownHosts=self.knownHosts, ui=FixedResponseUI(False))
 
         factory = Factory()
         factory.protocol = Protocol
@@ -272,7 +321,8 @@ class SSHCommandEndpointTests(TestCase):
         self.realm.channelLookup[b'session'] = WorkingExecSession
         sshServer = SpyClientEndpoint()
         endpoint = SSHCommandEndpoint(
-            sshServer, self.user, b"/bin/ls -l", password=self.password)
+            sshServer, self.user, b"/bin/ls -l", password=self.password,
+            knownHosts=self.knownHosts, ui=FixedResponseUI(False))
 
         factory = AddressSpyFactory()
         factory.protocol = Protocol
@@ -299,7 +349,8 @@ class SSHCommandEndpointTests(TestCase):
         self.realm.channelLookup[b'session'] = WorkingExecSession
         sshServer = SpyClientEndpoint()
         endpoint = SSHCommandEndpoint(
-            sshServer, self.user, b"/bin/ls -l", password=self.password)
+            sshServer, self.user, b"/bin/ls -l", password=self.password,
+            knownHosts=self.knownHosts, ui=FixedResponseUI(False))
 
         factory = Factory()
         factory.protocol = Protocol
@@ -323,7 +374,8 @@ class SSHCommandEndpointTests(TestCase):
         self.realm.channelLookup[b'session'] = WorkingExecSession
         sshServer = SpyClientEndpoint()
         endpoint = SSHCommandEndpoint(
-            sshServer, self.user, b"/bin/ls -l", password=self.password)
+            sshServer, self.user, b"/bin/ls -l", password=self.password,
+            knownHosts=self.knownHosts, ui=FixedResponseUI(False))
 
         factory = Factory()
         factory.protocol = Protocol
@@ -351,7 +403,8 @@ class SSHCommandEndpointTests(TestCase):
         self.realm.channelLookup[b'session'] = WorkingExecSession
         sshServer = SpyClientEndpoint()
         endpoint = SSHCommandEndpoint(
-            sshServer, self.user, b"/bin/ls -l", password=self.password)
+            sshServer, self.user, b"/bin/ls -l", password=self.password,
+            knownHosts=self.knownHosts, ui=FixedResponseUI(False))
 
         factory = Factory()
         factory.protocol = Protocol
@@ -379,7 +432,8 @@ class SSHCommandEndpointTests(TestCase):
         self.realm.channelLookup[b'session'] = WorkingExecSession
         sshServer = SpyClientEndpoint()
         endpoint = SSHCommandEndpoint(
-            sshServer, self.user, b"/bin/ls -l", password=self.password)
+            sshServer, self.user, b"/bin/ls -l", password=self.password,
+            knownHosts=self.knownHosts, ui=FixedResponseUI(False))
 
         factory = Factory()
         factory.protocol = Protocol
@@ -407,7 +461,8 @@ class SSHCommandEndpointTests(TestCase):
         self.realm.channelLookup[b'session'] = WorkingExecSession
         sshServer = SpyClientEndpoint()
         endpoint = SSHCommandEndpoint(
-            sshServer, self.user, b"/bin/ls -l", password=self.password)
+            sshServer, self.user, b"/bin/ls -l", password=self.password,
+            knownHosts=self.knownHosts, ui=FixedResponseUI(False))
 
         factory = Factory()
         factory.protocol = Protocol
@@ -436,7 +491,8 @@ class SSHCommandEndpointTests(TestCase):
         self.realm.channelLookup[b'session'] = WorkingExecSession
         sshServer = SpyClientEndpoint()
         endpoint = SSHCommandEndpoint(
-            sshServer, self.user, b"/bin/ls -l", password=self.password)
+            sshServer, self.user, b"/bin/ls -l", password=self.password,
+            knownHosts=self.knownHosts, ui=FixedResponseUI(False))
 
         factory = Factory()
         factory.protocol = Protocol
