@@ -562,6 +562,7 @@ class Failure:
             formatDetail = detail
 
         if self._history is not None:
+            w("Deferred History:\n")
             w(self._history.format())
             w('\n')
 

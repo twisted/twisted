@@ -749,7 +749,7 @@ class FirstError(Exception):
 
 class _DeferredHistory(object):
     """
-    [cb]
+    A history of callbacks that have been executed on a L{Deferred}.
     """
     def __init__(self):
         self.items = []
@@ -763,6 +763,9 @@ class _DeferredHistory(object):
 
 
 class _DeferredHistoryItem(object):
+    """
+    A representation of the act of executing a callback on a L{Deferred}.
+    """
     def __init__(self, cbname):
         self.cbname = cbname
         self.innerChain = None
