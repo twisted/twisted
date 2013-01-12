@@ -20,19 +20,11 @@ To connect to a server, create a factory for L{MemCacheProtocol}::
 
 All the operations of the memcache protocol are present, but
 L{MemCacheProtocol.set} and L{MemCacheProtocol.get} are the more important.
-
-See U{http://code.sixapart.com/svn/memcached/trunk/server/doc/protocol.txt} for
-more information about the protocol.
 """
 
 import struct
 
-try:
-    from collections import deque
-except ImportError:
-    class deque(list):
-        def popleft(self):
-            return self.pop(0)
+from collections import deque
 
 
 from twisted.protocols.basic import LineReceiver
@@ -657,8 +649,10 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
             return fail(RuntimeError("not connected"))
         for key in keys:
             if not isinstance(key, str):
-                return fail(ClientError(
-                    "Invalid type for key: %s, expecting a string" % (type(key),)))
+                return fail(
+                    ClientError(
+                        "Invalid type for key: %s, expecting a "
+                        "string" % (type(key),)))
             if len(key) > self.MAX_KEY_LENGTH:
                 return fail(ClientError("Key too long"))
         if withIdentifier:
@@ -803,18 +797,18 @@ class MemCacheBinaryProtocol(Protocol, TimeoutMixin):
             data = "".join(self._buffer)
             if data[0] != "\x81":
                 raise ValueError("Wrong magic byte: '%s'" % (data[0],))
-            _, opcode, keyLength, extraLength, _, status, totalLength, _, cas = (
+            _, opcode, keyLength, extraLength, _, status, length, _, cas = (
                 struct.unpack(self._headerFormat, data[:24]))
-            if self._bufferLength < 24 + totalLength:
+            if self._bufferLength < 24 + length:
                 self._buffer[:] = [data]
                 return
-            self._buffer[:] = [data[24 + totalLength:]]
-            self._bufferLength -= 24 + totalLength
+            self._buffer[:] = [data[24 + length:]]
+            self._bufferLength -= 24 + length
 
             cmd = getattr(self, "cmd_%s" % self.OPCODE_MAPPING[opcode])
             extra = data[24:24 + extraLength]
             key = data[24 + extraLength:24 + extraLength + keyLength]
-            value = data[24 + extraLength + keyLength: 24 + totalLength]
+            value = data[24 + extraLength + keyLength: 24 + length]
             cmd(status, cas, extra, key, value)
 
 
@@ -837,7 +831,7 @@ class MemCacheBinaryProtocol(Protocol, TimeoutMixin):
         """
         cmd = self._current.popleft()
         if status:
-            cmd.fail(servererror(value))
+            cmd.fail(ServerError(value))
         else:
             cmd.success(cas)
 
@@ -915,11 +909,12 @@ class MemCacheBinaryProtocol(Protocol, TimeoutMixin):
         """
         """
         if not self._current:
-           self.setTimeout(self.persistentTimeOut)
+            self.setTimeout(self.persistentTimeOut)
         keyLength = len(key)
         extraLength = len(extra)
-        header = struct.pack(self._headerFormat, 128, opcode, keyLength,
-            extraLength, 0, 0, extraLength + keyLength + len(value), 0, cas)
+        header = struct.pack(
+            self._headerFormat, 128, opcode, keyLength, extraLength, 0, 0,
+            extraLength + keyLength + len(value), 0, cas)
         cmd = "%s%s%s%s" % (header, extra, key, value)
         self.transport.write(cmd)
 
