@@ -1,3 +1,10 @@
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+Tests for L{twisted.conch.endpoints}.
+"""
+
 from functools import partial
 
 from zope.interface.verify import verifyObject
