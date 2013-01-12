@@ -5,10 +5,8 @@
 Tests for L{twisted.conch.endpoints}.
 """
 
-from functools import partial
-
 from zope.interface.verify import verifyObject
-from zope.interface import implementer
+from zope.interface import implementer, providedBy
 
 from twisted.python.filepath import FilePath
 from twisted.python.failure import Failure
@@ -17,6 +15,7 @@ from twisted.internet.interfaces import IStreamClientEndpoint
 from twisted.internet.protocol import Factory, Protocol
 from twisted.internet.defer import Deferred, succeed
 from twisted.internet.error import ConnectionDone, ConnectionRefusedError
+from twisted.internet.address import IPv4Address
 
 from twisted.cred.portal import Portal
 from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
@@ -31,8 +30,8 @@ from twisted.conch.ssh.channel import SSHChannel
 from twisted.conch.client.knownhosts import KnownHostsFile
 
 from twisted.internet.task import Clock
-from twisted.test.proto_helpers import StringTransport
-from twisted.test.iosim import connectedServerAndClient
+from twisted.test.proto_helpers import StringTransport, MemoryReactor
+from twisted.test.iosim import FakeTransport, connect
 from twisted.conch.test.keydata import publicRSA_openssh, privateRSA_openssh
 from twisted.conch.avatar import ConchUser
 
@@ -132,6 +131,37 @@ class SpyClientEndpoint(object):
 
 
 
+class Composite(object):
+    """
+    A helper to compose other objects based on their declared (zope.interface)
+    interfaces.
+
+    This is used here to create a reactor from separate implementations of
+    different reactor interfaces - for example, from L{Clock} and
+    L{ReactorFDSet} to create a reactor which provides L{IReactorTime} and
+    L{IReactorFDSet}.
+    """
+    def __init__(self, parts):
+        """
+        @param parts: An iterable of the objects to compose.  The methods of
+            these objects which are part of any interface the objects declare
+            they provide will be made methods of C{self}.  (Non-method
+            attributes are not supported.)
+
+        @raise ValueError: If an interface is provided by more than one of the
+            objects in C{parts}.
+        """
+        seen = set()
+        for p in parts:
+            for i in providedBy(p):
+                if i in seen:
+                    raise ValueError("More than one part provides %r" % (i,))
+                seen.add(i)
+                for m in i.names():
+                    setattr(self, m, getattr(p, m))
+
+
+
 class SSHCommandEndpointTests(TestCase):
     """
     Tests for L{SSHCommandEndpoint}, an L{IStreamClientEndpoint}
@@ -143,9 +173,13 @@ class SSHCommandEndpointTests(TestCase):
         Configure an SSH server with password authentication enabled for a
         well-known (to the tests) account.
         """
+        self.hostname = b"ssh.example.com"
+        self.port = 42022
         self.user = b"user"
         self.password = b"password"
-        self.reactor = Clock()
+        self.clock = Clock()
+        self.memory = MemoryReactor()
+        self.reactor = Composite([self.clock, self.memory])
         self.realm = TrivialRealm()
         self.portal = Portal(self.realm)
         self.passwdDB = InMemoryUsernamePasswordDatabaseDontUse()
@@ -166,49 +200,90 @@ class SSHCommandEndpointTests(TestCase):
 
 
     def connectedServerAndClient(self, serverFactory, clientFactory):
-        client, server, pump = connectedServerAndClient(
-            partial(serverFactory.buildProtocol, None),
-            partial(clientFactory.buildProtocol, None),
-        )
-        return server, client, pump
+        clientAddress = IPv4Address("TCP", "10.0.0.1", 12345)
+        serverAddress = IPv4Address("TCP", "192.168.100.200", 54321)
+
+        clientProtocol = clientFactory.buildProtocol(None)
+        serverProtocol = serverFactory.buildProtocol(None)
+
+        clientTransport = FakeTransport(
+            clientProtocol, isServer=False, hostAddress=clientAddress,
+            peerAddress=serverAddress)
+        serverTransport = FakeTransport(
+            serverProtocol, isServer=True, hostAddress=serverAddress,
+            peerAddress=clientAddress)
+
+        pump = connect(serverProtocol, serverTransport, clientProtocol, clientTransport)
+        return serverProtocol, clientProtocol, pump
 
 
     def test_interface(self):
         """
         L{SSHCommandEndpoint} instances provide L{IStreamClientEndpoint}.
         """
-        endpoint = SSHCommandEndpoint(object(), b"dummy user", b"dummy command")
+        endpoint = SSHCommandEndpoint(
+            self.reactor, self.hostname, self.port,
+            b"dummy command", b"dummy user")
         self.assertTrue(verifyObject(IStreamClientEndpoint, endpoint))
 
 
-    def test_connectionFailed(self):
-        sshServer = SpyClientEndpoint()
+    def test_destination(self):
+        """
+        L{SSHCommandEndpoint} uses the L{IReactorTCP} passed to it to attempt a
+        connection to the host/port address also passed to it.
+        """
         endpoint = SSHCommandEndpoint(
-            sshServer, b"dummy user", b"/bin/ls -l",
-            knownHosts=self.knownHosts, ui=FixedResponseUI(False))
+            self.reactor, self.hostname, self.port, b"/bin/ls -l",
+            b"dummy user", knownHosts=self.knownHosts,
+            ui=FixedResponseUI(False))
+        factory = Factory()
+        factory.protocol = Protocol
+        endpoint.connect(factory)
+
+        host, port, factory, timeout, bindAddress = self.memory.tcpClients[0]
+        self.assertEqual(self.hostname, host)
+        self.assertEqual(self.port, port)
+        self.assertEqual(1, len(self.memory.tcpClients))
+
+
+    def test_connectionFailed(self):
+        endpoint = SSHCommandEndpoint(
+            self.reactor, self.hostname, self.port, b"/bin/ls -l",
+            b"dummy user", knownHosts=self.knownHosts,
+            ui=FixedResponseUI(False))
         factory = Factory()
         factory.protocol = Protocol
         d = endpoint.connect(factory)
 
-        sshServer.result.errback(Failure(ConnectionRefusedError()))
+        factory = self.memory.tcpClients[0][2]
+        factory.clientConnectionFailed(None, Failure(ConnectionRefusedError()))
 
         self.failureResultOf(d).trap(ConnectionRefusedError)
 
 
+    def getConnectionProtocol(self):
+        factory = self.memory.tcpClients[0][2]
+        return factory.buildProtocol(None)
+
+
+    def completeConnection(self, transport):
+        protocol = self.getConnectionProtocol()
+        protocol.makeConnection(transport)
+        return protocol
+
+
     def test_connectionClosedBeforeSecure(self):
-        sshServer = SpyClientEndpoint()
         endpoint = SSHCommandEndpoint(
-            sshServer, b"dummy user", b"/bin/ls -l",
-            knownHosts=self.knownHosts, ui=FixedResponseUI(False))
+            self.reactor, self.hostname, self.port, b"/bin/ls -l",
+            b"dummy user", knownHosts=self.knownHosts,
+            ui=FixedResponseUI(False))
 
         factory = Factory()
         factory.protocol = Protocol
         d = endpoint.connect(factory)
 
         transport = StringTransport()
-        client = sshServer.factory.buildProtocol(None)
-        client.makeConnection(transport)
-        sshServer.result.callback(client)
+        client = self.completeConnection(transport)
 
         client.connectionLost(Failure(ConnectionDone()))
 
@@ -216,43 +291,41 @@ class SSHCommandEndpointTests(TestCase):
 
 
     def test_hostKeyCheckFailure(self):
-        sshServer = SpyClientEndpoint()
+        # get rid of "monkeys" from test and implementation
+        1/0
         endpoint = SSHCommandEndpoint(
-            sshServer, b"dummy user", b"/bin/ls -l",
-            knownHosts=KnownHostsFile(self.mktemp()), ui=FixedResponseUI(False))
+            self.reactor, self.hostname, self.port, b"/bin/ls -l",
+            b"dummy user", knownHosts=KnownHostsFile(self.mktemp()),
+            ui=FixedResponseUI(False))
 
         factory = Factory()
         factory.protocol = Protocol
         connected = endpoint.connect(factory)
 
         server, client, pump = self.connectedServerAndClient(
-            self.factory, sshServer.factory)
-
-        sshServer.result.callback(client)
+            self.factory, self.memory.tcpClients[0][2])
 
         f = self.failureResultOf(connected)
         f.trap(UserRejectedKey)
 
 
     def test_authenticationFailure(self):
-        sshServer = SpyClientEndpoint()
         endpoint = SSHCommandEndpoint(
-            sshServer, b"dummy user", b"/bin/ls -l", b"dummy password",
-            knownHosts=self.knownHosts, ui=FixedResponseUI(False))
+            self.reactor, self.hostname, self.port, b"/bin/ls -l",
+            b"dummy user",  b"dummy password", knownHosts=self.knownHosts,
+            ui=FixedResponseUI(False))
 
         factory = Factory()
         factory.protocol = Protocol
         connected = endpoint.connect(factory)
 
         server, client, pump = self.connectedServerAndClient(
-            self.factory, sshServer.factory)
-
-        sshServer.result.callback(client)
+            self.factory, self.memory.tcpClients[0][2])
 
         # For security, the server delays password authentication failure
         # response.  Advance the simulation clock so the client sees the
         # failure.
-        self.reactor.advance(server.service.passwordDelay)
+        self.clock.advance(server.service.passwordDelay)
 
         # Let the failure response traverse the "network"
         pump.flush()
@@ -266,19 +339,17 @@ class SSHCommandEndpointTests(TestCase):
 
 
     def test_channelOpenFailure(self):
-        sshServer = SpyClientEndpoint()
         endpoint = SSHCommandEndpoint(
-            sshServer, self.user, b"/bin/ls -l", password=self.password,
-            knownHosts=self.knownHosts, ui=FixedResponseUI(False))
+            self.reactor, self.hostname, self.port, b"/bin/ls -l", self.user,
+            password=self.password, knownHosts=self.knownHosts,
+            ui=FixedResponseUI(False))
 
         factory = Factory()
         factory.protocol = Protocol
         connected = endpoint.connect(factory)
 
         server, client, pump = self.connectedServerAndClient(
-            self.factory, sshServer.factory)
-
-        sshServer.result.callback(client)
+            self.factory, self.memory.tcpClients[0][2])
 
         # The server logs the channel open failure - this is expected.
         errors = self.flushLoggedErrors(ConchError)
@@ -296,19 +367,17 @@ class SSHCommandEndpointTests(TestCase):
 
     def test_execFailure(self):
         self.realm.channelLookup[b'session'] = BrokenExecSession
-        sshServer = SpyClientEndpoint()
         endpoint = SSHCommandEndpoint(
-            sshServer, self.user, b"/bin/ls -l", password=self.password,
-            knownHosts=self.knownHosts, ui=FixedResponseUI(False))
+            self.reactor, self.hostname, self.port, b"/bin/ls -l", self.user,
+            password=self.password, knownHosts=self.knownHosts,
+            ui=FixedResponseUI(False))
 
         factory = Factory()
         factory.protocol = Protocol
         connected = endpoint.connect(factory)
 
         server, client, pump = self.connectedServerAndClient(
-            self.factory, sshServer.factory)
-
-        sshServer.result.callback(client)
+            self.factory, self.memory.tcpClients[0][2])
 
         f = self.failureResultOf(connected)
         f.trap(ConchError)
@@ -326,24 +395,22 @@ class SSHCommandEndpointTests(TestCase):
         executed.
         """
         self.realm.channelLookup[b'session'] = WorkingExecSession
-        sshServer = SpyClientEndpoint()
         endpoint = SSHCommandEndpoint(
-            sshServer, self.user, b"/bin/ls -l", password=self.password,
-            knownHosts=self.knownHosts, ui=FixedResponseUI(False))
+            self.reactor, self.hostname, self.port, b"/bin/ls -l", self.user,
+            password=self.password, knownHosts=self.knownHosts,
+            ui=FixedResponseUI(False))
 
         factory = AddressSpyFactory()
         factory.protocol = Protocol
-        connected = endpoint.connect(factory)
+        endpoint.connect(factory)
 
         server, client, pump = self.connectedServerAndClient(
-            self.factory, sshServer.factory)
-
-        sshServer.result.callback(client)
+            self.factory, self.memory.tcpClients[0][2])
 
         self.assertIsInstance(factory.address, SSHCommandAddress)
-        self.assertEqual(factory.address.server, server.transport.getHost())
-        self.assertEqual(factory.address.username, self.user)
-        self.assertEqual(factory.address.command, b"/bin/ls -l")
+        self.assertEqual(server.transport.getHost(), factory.address.server)
+        self.assertEqual(self.user, factory.address.username)
+        self.assertEqual(b"/bin/ls -l", factory.address.command)
 
 
     def test_makeConnection(self):
@@ -354,19 +421,17 @@ class SSHCommandEndpointTests(TestCase):
         command's stdin and stdout.
         """
         self.realm.channelLookup[b'session'] = WorkingExecSession
-        sshServer = SpyClientEndpoint()
         endpoint = SSHCommandEndpoint(
-            sshServer, self.user, b"/bin/ls -l", password=self.password,
-            knownHosts=self.knownHosts, ui=FixedResponseUI(False))
+            self.reactor, self.hostname, self.port, b"/bin/ls -l", self.user,
+            password=self.password, knownHosts=self.knownHosts,
+            ui=FixedResponseUI(False))
 
         factory = Factory()
         factory.protocol = Protocol
         connected = endpoint.connect(factory)
 
         server, client, pump = self.connectedServerAndClient(
-            self.factory, sshServer.factory)
-
-        sshServer.result.callback(client)
+            self.factory, self.memory.tcpClients[0][2])
 
         protocol = self.successResultOf(connected)
         self.assertNotIdentical(None, protocol.transport)
@@ -379,19 +444,17 @@ class SSHCommandEndpointTests(TestCase):
         method.
         """
         self.realm.channelLookup[b'session'] = WorkingExecSession
-        sshServer = SpyClientEndpoint()
         endpoint = SSHCommandEndpoint(
-            sshServer, self.user, b"/bin/ls -l", password=self.password,
-            knownHosts=self.knownHosts, ui=FixedResponseUI(False))
+            self.reactor, self.hostname, self.port, b"/bin/ls -l", self.user,
+            password=self.password, knownHosts=self.knownHosts,
+            ui=FixedResponseUI(False))
 
         factory = Factory()
         factory.protocol = Protocol
         connected = endpoint.connect(factory)
 
         server, client, pump = self.connectedServerAndClient(
-            self.factory, sshServer.factory)
-
-        sshServer.result.callback(client)
+            self.factory, self.memory.tcpClients[0][2])
 
         protocol = self.successResultOf(connected)
         dataReceived = []
@@ -408,19 +471,17 @@ class SSHCommandEndpointTests(TestCase):
         method is called.
         """
         self.realm.channelLookup[b'session'] = WorkingExecSession
-        sshServer = SpyClientEndpoint()
         endpoint = SSHCommandEndpoint(
-            sshServer, self.user, b"/bin/ls -l", password=self.password,
-            knownHosts=self.knownHosts, ui=FixedResponseUI(False))
+            self.reactor, self.hostname, self.port, b"/bin/ls -l", self.user,
+            password=self.password, knownHosts=self.knownHosts,
+            ui=FixedResponseUI(False))
 
         factory = Factory()
         factory.protocol = Protocol
         connected = endpoint.connect(factory)
 
         server, client, pump = self.connectedServerAndClient(
-            self.factory, sshServer.factory)
-
-        sshServer.result.callback(client)
+            self.factory, self.memory.tcpClients[0][2])
 
         protocol = self.successResultOf(connected)
         connectionLost = []
@@ -437,19 +498,17 @@ class SSHCommandEndpointTests(TestCase):
         sends bytes to the input of the command executing on the SSH server.
         """
         self.realm.channelLookup[b'session'] = WorkingExecSession
-        sshServer = SpyClientEndpoint()
         endpoint = SSHCommandEndpoint(
-            sshServer, self.user, b"/bin/ls -l", password=self.password,
-            knownHosts=self.knownHosts, ui=FixedResponseUI(False))
+            self.reactor, self.hostname, self.port, b"/bin/ls -l", self.user,
+            password=self.password, knownHosts=self.knownHosts,
+            ui=FixedResponseUI(False))
 
         factory = Factory()
         factory.protocol = Protocol
         connected = endpoint.connect(factory)
 
         server, client, pump = self.connectedServerAndClient(
-            self.factory, sshServer.factory)
-
-        sshServer.result.callback(client)
+            self.factory, self.memory.tcpClients[0][2])
 
         protocol = self.successResultOf(connected)
 
@@ -466,19 +525,17 @@ class SSHCommandEndpointTests(TestCase):
         sends bytes to the input of the command executing on the SSH server.
         """
         self.realm.channelLookup[b'session'] = WorkingExecSession
-        sshServer = SpyClientEndpoint()
         endpoint = SSHCommandEndpoint(
-            sshServer, self.user, b"/bin/ls -l", password=self.password,
-            knownHosts=self.knownHosts, ui=FixedResponseUI(False))
+            self.reactor, self.hostname, self.port, b"/bin/ls -l", self.user,
+            password=self.password, knownHosts=self.knownHosts,
+            ui=FixedResponseUI(False))
 
         factory = Factory()
         factory.protocol = Protocol
         connected = endpoint.connect(factory)
 
         server, client, pump = self.connectedServerAndClient(
-            self.factory, sshServer.factory)
-
-        sshServer.result.callback(client)
+            self.factory, self.memory.tcpClients[0][2])
 
         protocol = self.successResultOf(connected)
 
@@ -496,19 +553,17 @@ class SSHCommandEndpointTests(TestCase):
         the overall connection to be closed.
         """
         self.realm.channelLookup[b'session'] = WorkingExecSession
-        sshServer = SpyClientEndpoint()
         endpoint = SSHCommandEndpoint(
-            sshServer, self.user, b"/bin/ls -l", password=self.password,
-            knownHosts=self.knownHosts, ui=FixedResponseUI(False))
+            self.reactor, self.hostname, self.port, b"/bin/ls -l", self.user,
+            password=self.password, knownHosts=self.knownHosts,
+            ui=FixedResponseUI(False))
 
         factory = Factory()
         factory.protocol = Protocol
         connected = endpoint.connect(factory)
 
         server, client, pump = self.connectedServerAndClient(
-            self.factory, sshServer.factory)
-
-        sshServer.result.callback(client)
+            self.factory, self.memory.tcpClients[0][2])
 
         protocol = self.successResultOf(connected)
         closed = []

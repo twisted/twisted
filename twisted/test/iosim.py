@@ -38,6 +38,12 @@ class TLSNegotiation:
             tpt.loseConnection()
 
 
+
+class FakeAddress(object):
+    implements(interfaces.IAddress)
+
+
+
 class FakeTransport:
     """
     A wrapper around a file-like object to make it behave as a Transport.
@@ -57,9 +63,17 @@ class FakeTransport:
     streamingProducer = 0
     tls = None
 
-    def __init__(self):
+    def __init__(self, protocol, isServer, hostAddress=None, peerAddress=None):
+        self.protocol = protocol
+        self.isServer = isServer
         self.stream = []
         self.serial = self._nextserial()
+        if hostAddress is None:
+            hostAddress = FakeAddress()
+        self.hostAddress = hostAddress
+        if peerAddress is None:
+            peerAddress = FakeAddress()
+        self.peerAddress = peerAddress
 
     def __repr__(self):
         return 'FakeTransport<%s,%s,%s>' % (
@@ -113,11 +127,10 @@ class FakeTransport:
 
     def getPeer(self):
         # XXX: According to ITransport, this should return an IAddress!
-        return 'file', 'file'
+        return self.peerAddress
 
     def getHost(self):
-        # XXX: According to ITransport, this should return an IAddress!
-        return 'file'
+        return self.hostAddress
 
     def resumeProducing(self):
         # Never sends data anyways
@@ -175,16 +188,12 @@ class FakeTransport:
 
 
 def makeFakeClient(c):
-    ft = FakeTransport()
-    ft.isServer = False
-    ft.protocol = c
-    return ft
+    return FakeTransport(c, isServer=False)
 
-def makeFakeServer(s):
-    ft = FakeTransport()
-    ft.isServer = True
-    ft.protocol = s
-    return ft
+
+def makeFakeServer(s, **kwargs):
+    return FakeTransport(s, isServer=True)
+
 
 class IOPump:
     """Utility to pump data between clients and servers for protocol testing.
@@ -256,6 +265,17 @@ class IOPump:
         return False
 
 
+
+def connect(serverProtocol, serverTransport, clientProtocol, clientTransport, debug=False):
+    serverProtocol.makeConnection(serverTransport)
+    clientProtocol.makeConnection(clientTransport)
+    pump = IOPump(clientProtocol, serverProtocol, clientTransport, serverTransport, debug)
+    # kick off server greeting, etc
+    pump.flush()
+    return pump
+
+
+
 def connectedServerAndClient(ServerClass, ClientClass,
                              clientTransportFactory=makeFakeClient,
                              serverTransportFactory=makeFakeServer,
@@ -266,9 +286,4 @@ def connectedServerAndClient(ServerClass, ClientClass,
     s = ServerClass()
     cio = clientTransportFactory(c)
     sio = serverTransportFactory(s)
-    c.makeConnection(cio)
-    s.makeConnection(sio)
-    pump = IOPump(c, s, cio, sio, debug)
-    # kick off server greeting, etc
-    pump.flush()
-    return c, s, pump
+    return c, s, connect(s, sio, c, cio, debug)

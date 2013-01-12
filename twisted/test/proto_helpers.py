@@ -425,6 +425,10 @@ class MemoryReactor(object):
         return _FakePort(addr)
 
 
+    def adoptStreamConnection(fileDescriptor, addressFamily, factory):
+        raise NotImplementedError()
+
+
     def listenTCP(self, port, factory, backlog=50, interface=''):
         """
         Fake L{reactor.listenTCP}, that logs the call and returns an

@@ -15,6 +15,7 @@ from twisted.internet.error import ConnectionDone
 from twisted.internet.interfaces import IStreamClientEndpoint
 from twisted.internet.protocol import Factory
 from twisted.internet.defer import Deferred, succeed
+from twisted.internet.endpoints import TCP4ClientEndpoint
 
 from twisted.conch.ssh.keys import Key
 from twisted.conch.ssh.common import NS
@@ -25,12 +26,22 @@ from twisted.conch.ssh.channel import SSHChannel
 
 
 class AuthenticationFailed(Exception):
-    pass
+    """
+    An SSH session could not be established because authentication was not
+    successful.
+    """
 
 
 
 class SSHCommandAddress(object):
     def __init__(self, server, username, command):
+        """
+        @param server: The address of the SSH server on which the command is
+            running.
+        @type server: L{IAddress} provider
+
+        @param username:
+        """
         self.server = server
         self.username = username
         self.command = command
@@ -64,7 +75,7 @@ class _CommandChannel(SSHChannel):
     def _execSuccess(self, result):
         self._protocol = self._protocolFactory.buildProtocol(
             SSHCommandAddress(
-                self.conn.transport.transport.getHost(),
+                self.conn.transport.transport.getPeer(),
                 self.conn.transport.factory.username,
                 self.conn.transport.factory.command))
         self._protocol.makeConnection(self)
@@ -174,18 +185,23 @@ class _CommandTransport(SSHClientTransport):
 class SSHCommandEndpoint(object):
     """
     """
-    def __init__(self, sshClient, username, command, password=None, knownHosts=None, ui=None):
+    def __init__(self, reactor, hostname, port, command, username, password=None, knownHosts=None, ui=None):
         """
-        @param sshClient: An L{IStreamClientEndpoint} to use to establish a
-            connection to the SSH server.
-        @type sshClient: L{IStreamClientEndpoint} provider
+        @param reactor: The reactor to use to establish the connection.
+        @type reactor: L{IReactorTCP} provider
+
+        @param hostname: The hostname of the SSH server.
+        @type hostname: L{bytes}
+
+        @param port: The port number of the SSH server.
+        @type port: L{int}
+
+        @param command: The command line to execute on the SSH server.
+        @type command: L{bytes}
 
         @param username: The username with which to authenticate to the SSH
             server.
         @type username: L{bytes}
-
-        @param command: The command line to execute on the SSH server.
-        @type command: L{bytes}
 
         @param password: The password with which to authenticate to the SSH
             server, if password authentication is to be attempted (otherwise
@@ -200,9 +216,11 @@ class SSHCommandEndpoint(object):
             whether to accept the server host keys.
         @type ui: L{ConsoleUI}
         """
-        self.sshClient = sshClient
-        self.username = username
+        self.reactor = reactor
+        self.hostname = hostname
+        self.port = port
         self.command = command
+        self.username = username
         self.password = password
         self.knownHosts = knownHosts
         self.ui = ui
@@ -225,6 +243,7 @@ class SSHCommandEndpoint(object):
         """
         factory = Factory()
         factory.protocol = _CommandTransport
+        factory.hostname = self.hostname
         factory.username = self.username
         factory.password = self.password
         factory.knownHosts = self.knownHosts
@@ -234,7 +253,9 @@ class SSHCommandEndpoint(object):
         factory.commandConnected = Deferred()
         factory.commandConnected.addBoth(self._clearConnected, factory)
 
-        d = self.sshClient.connect(factory)
+        sshClient = TCP4ClientEndpoint(self.reactor, self.hostname, self.port)
+
+        d = sshClient.connect(factory)
         d.addErrback(factory.commandConnected.errback)
         return factory.commandConnected
 
