@@ -278,7 +278,7 @@ class MemCacheTestCase(CommandMixin, TestCase):
     def test_invalidGetResponse(self):
         """
         If the value returned doesn't match the expected key of the current
-        C{get} command, an error is raised in L{MemCacheProtocol.dataReceived}.
+        C{get} command, an error is raised by L{MemCacheProtocol}.
         """
         self.proto.get("foo")
         s = "spamegg"
@@ -290,8 +290,8 @@ class MemCacheTestCase(CommandMixin, TestCase):
     def test_invalidMultipleGetResponse(self):
         """
         If the value returned doesn't match one the expected keys of the
-        current multiple C{get} command, an error is raised error in
-        L{MemCacheProtocol.dataReceived}.
+        current multiple C{get} command, an error is raised error by
+        L{MemCacheProtocol}.
         """
         self.proto.getMultiple(["foo", "bar"])
         s = "spamegg"
@@ -744,11 +744,24 @@ class MemCacheBinaryTestCase(TestCase):
         self.assertEqual(self.transport.value(), send)
 
 
+    def test_wrongMagicByte(self):
+        """
+        L{MemCacheBinaryProtocol.dataReceived} fails with a C{RuntimeError} if
+        the response doesn't start with the protocol magic byte.
+        """
+        self.proto.get("foo")
+        error = self.assertRaises(
+            RuntimeError, self.proto.dataReceived,
+            "\x82\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03"
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00bar")
+        self.assertEqual("Wrong magic byte: '\\x82'", str(error))
+
+
     def test_get(self):
         """
-        L{MemCacheProtocol.get} should return a L{Deferred} which is
-        called back with the value and the flag associated with the given key
-        if the server returns a successful result.
+        L{MemCacheBinaryProtocol.get} returns a L{Deferred} which is called
+        back with the value and the flag associated with the given key if the
+        server returns a successful result.
         """
         return self.assertCommandResult(
             self.proto.get("foo"),
@@ -757,6 +770,45 @@ class MemCacheBinaryTestCase(TestCase):
             "\x81\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03"
             "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00bar",
             (0, "bar"))
+
+
+    def test_getExtra(self):
+        """
+        """
+        d = self.proto.get("foo")
+        d.addCallback(self.assertEqual, (9, "bar"))
+        self.proto.dataReceived(
+            "\x81\x00\x00\x00\x04\x00\x00\x00\x00\x00\x00\x07"
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+            "\x00\x00\x00\x09bar")
+        return d
+
+
+    def test_getWithStatus(self):
+        """
+        """
+        d = self.proto.get("foo")
+
+        def check(error):
+            self.assertEqual("oops", str(error))
+
+        self.assertFailure(d, ServerError).addCallback(check)
+        self.proto.dataReceived(
+            "\x81\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x04"
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00oops")
+        return d
+
+
+    def test_bufferGet(self):
+        """
+        """
+        d = self.proto.get("foo")
+        d.addCallback(self.assertEqual, (0, "bar"))
+        self.proto.dataReceived(
+            "\x81\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03"
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00b")
+        self.proto.dataReceived("ar")
+        return d
 
 
     def test_set(self):
@@ -769,6 +821,20 @@ class MemCacheBinaryTestCase(TestCase):
             "foobar",
             "\x81\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
             "\x00\x00\x00\x00\x00\x00\x00\x03", 3)
+
+
+    def test_setWithStatus(self):
+        """
+        """
+        d = self.proto.set("foo", "bar")
+
+        def check(error):
+            self.assertEqual("oops", str(error))
+
+        self.assertFailure(d, ServerError).addCallback(check)
+        self.proto.dataReceived(
+            "\x81\x01\x00\x00\x00\x00\x00\x01\x00\x00\x00\x04\x00\x00\x00\x00"
+            "\x00\x00\x00\x00\x00\x00\x00\x00oops")
 
 
     def test_quietSet(self):
@@ -836,6 +902,7 @@ class MemCacheBinaryTestCase(TestCase):
             "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
             True)
 
+
     def test_quietDelete(self):
         """
         """
@@ -856,6 +923,20 @@ class MemCacheBinaryTestCase(TestCase):
             "\x81\x05\x00\x00\x00\x00\x00\x00\x00\x00\x00\x08\x00\x00\x00\x00"
             "\x00\x00\x00\x00\x00\x00\x00\x05\x00\x00\x00\x00\x00\x00\x00\x00",
             (5, 0))
+
+
+    def test_incrementWithStatus(self):
+        """
+        """
+        d = self.proto.set("foo", "bar")
+
+        def check(error):
+            self.assertEqual("oops", str(error))
+
+        self.assertFailure(d, ServerError).addCallback(check)
+        self.proto.dataReceived(
+            "\x81\x05\x00\x00\x00\x00\x00\x01\x00\x00\x00\x04\x00\x00\x00\x00"
+            "\x00\x00\x00\x00\x00\x00\x00\x00oops")
 
 
     def test_quietIncrement(self):
@@ -985,23 +1066,25 @@ class MemCacheBinaryTestCase(TestCase):
             "\x00\x00\x00\x00\x00\x00\x00\x00foobar")
 
 
-    def test_stat(self):
+    def test_stats(self):
         """
         """
         return self.assertCommandResult(
-            self.proto.stat("pid"),
+            self.proto.stats("pid"),
             "\x80\x10\x00\x03\x00\x00\x00\x00\x00\x00\x00\x03"
             "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00pid",
             "\x81\x10\x00\x03\x00\x00\x00\x00\x00\x00\x00\x06"
-            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00pidbar",
-            "bar")
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00pid007"
+            "\x81\x10\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
+            {"pid": "007"})
 
 
     def test_statAllKeys(self):
         """
         """
         return self.assertCommandResult(
-            self.proto.stat(),
+            self.proto.stats(),
             "\x80\x10\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
             "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
             "\x81\x10\x00\x03\x00\x00\x00\x00\x00\x00\x00\x06"
@@ -1011,6 +1094,23 @@ class MemCacheBinaryTestCase(TestCase):
             "\x81\x10\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
             "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
             {"pid": "007", "mem": "123"})
+
+
+    def test_statsThenGet(self):
+        """
+        """
+        d1 = self.proto.stats()
+        d1.addCallback(self.assertEqual, {"pid": "007"})
+        d2 = self.proto.get("foo")
+        d2.addCallback(self.assertEqual, (0, "bar"))
+        self.proto.dataReceived(
+            "\x81\x10\x00\x03\x00\x00\x00\x00\x00\x00\x00\x06"
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00pid007"
+            "\x81\x10\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+            "\x81\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03"
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00bar")
+        return gatherResults([d1, d2])
 
 
     def test_timeOut(self):

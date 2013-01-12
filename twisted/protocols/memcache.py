@@ -374,13 +374,13 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         Increment the value of C{key} by given value (default to 1).
         C{key} must be consistent with an int. Return the new value.
 
-        @param key: the key to modify.
+        @param key: The key to modify.
         @type key: C{str}
 
-        @param val: the value to increment.
+        @param val: The value to increment.
         @type val: C{int}
 
-        @return: a deferred with will be called back with the new value
+        @return: A deferred with will be called back with the new value
             associated with the key (after the increment).
         @rtype: L{Deferred}
         """
@@ -393,13 +393,13 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         C{key} must be consistent with an int. Return the new value, coerced to
         0 if negative.
 
-        @param key: the key to modify.
+        @param key: The key to modify.
         @type key: C{str}
 
-        @param val: the value to decrement.
+        @param val: The value to decrement.
         @type val: C{int}
 
-        @return: a deferred with will be called back with the new value
+        @return: A deferred with will be called back with the new value
             associated with the key (after the decrement).
         @rtype: L{Deferred}
         """
@@ -428,20 +428,20 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         """
         Replace the given C{key}. It must already exist in the server.
 
-        @param key: the key to replace.
+        @param key: The key to replace.
         @type key: C{str}
 
-        @param val: the new value associated with the key.
+        @param val: The new value associated with the key.
         @type val: C{str}
 
-        @param flags: the flags to store with the key.
+        @param flags: The flags to store with the key.
         @type flags: C{int}
 
-        @param expireTime: if different from 0, the relative time in seconds
+        @param expireTime: If different from 0, the relative time in seconds
             when the key will be deleted from the store.
         @type expireTime: C{int}
 
-        @return: a deferred that will fire with C{True} if the operation has
+        @return: A deferred that will fire with C{True} if the operation has
             succeeded, and C{False} with the key didn't previously exist.
         @rtype: L{Deferred}
         """
@@ -452,20 +452,20 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         """
         Add the given C{key}. It must not exist in the server.
 
-        @param key: the key to add.
+        @param key: The key to add.
         @type key: C{str}
 
-        @param val: the value associated with the key.
+        @param val: The value associated with the key.
         @type val: C{str}
 
-        @param flags: the flags to store with the key.
+        @param flags: The flags to store with the key.
         @type flags: C{int}
 
-        @param expireTime: if different from 0, the relative time in seconds
+        @param expireTime: If different from 0, the relative time in seconds
             when the key will be deleted from the store.
         @type expireTime: C{int}
 
-        @return: a deferred that will fire with C{True} if the operation has
+        @return: A deferred that will fire with C{True} if the operation has
             succeeded, and C{False} with the key already exists.
         @rtype: L{Deferred}
         """
@@ -678,9 +678,9 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
             with the I{stats} command.  The interpretation of this value by
             the server is left undefined by the memcache protocol
             specification.
-        @type arg: L{NoneType} or L{str}
+        @type arg: C{NoneType} or C{str}
 
-        @return: a deferred that will fire with a C{dict} of the available
+        @return: A deferred that will fire with a C{dict} of the available
             statistics.
         @rtype: L{Deferred}
         """
@@ -700,7 +700,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         """
         Get the version of the server.
 
-        @return: a deferred that will fire with the string value of the
+        @return: A deferred that will fire with the string value of the
             version.
         @rtype: L{Deferred}
         """
@@ -716,10 +716,10 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         """
         Delete an existing C{key}.
 
-        @param key: the key to delete.
+        @param key: The key to delete.
         @type key: C{str}
 
-        @return: a deferred that will be called back with C{True} if the key
+        @return: A deferred that will be called back with C{True} if the key
             was successfully deleted, or C{False} if not.
         @rtype: L{Deferred}
         """
@@ -738,7 +738,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         """
         Flush all cached values.
 
-        @return: a deferred that will be called back with C{True} when the
+        @return: A deferred that will be called back with C{True} when the
             operation has succeeded.
         @rtype: L{Deferred}
         """
@@ -753,11 +753,32 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
 
 class MemCacheBinaryProtocol(Protocol, TimeoutMixin):
     """
+    MemCache binary protocol: connect to a memcached server to store/retrieve
+    values.
+
+    @cvar _headerFormat: struct format of the protocol header.
+    @type _headerFormat: C{str}
+
+    @cvar _OPCODE_MAPPING: map of protocol key to method suffix.
+    @type _OPCODE_MAPPING: C{dict}
+
+    @ivar persistentTimeOut: the timeout period used to wait for a response.
+    @type persistentTimeOut: C{int}
+
+    @ivar _current: current list of requests waiting for an answer from the
+        server.
+    @type _current: C{deque} of L{Command}
+
+    @ivar _buffer: current buffer of data, used to store temporary data.
+    @type _buffer: C{list}
+
+    @ivar _bufferLength: the total amount of bytes in C{_buffer}.
+    @type _bufferLength: C{int}
     """
 
     _headerFormat = "!BBhBBhiiq"
 
-    OPCODE_MAPPING = {
+    _OPCODE_MAPPING = {
         0: "get",
         1: "set",
         2: "add",
@@ -770,8 +791,8 @@ class MemCacheBinaryProtocol(Protocol, TimeoutMixin):
         9: "noop",
         14: "append",
         15: "prepend",
-        16: "stat",
-    }
+        16: "stat"}
+
 
     def __init__(self, timeOut=60):
         """
@@ -789,6 +810,7 @@ class MemCacheBinaryProtocol(Protocol, TimeoutMixin):
 
     def dataReceived(self, data):
         """
+        Handle data, dispatching decoded content to C{_cmd_*} methods.
         """
         self.resetTimeout()
         self._buffer.append(data)
@@ -796,7 +818,7 @@ class MemCacheBinaryProtocol(Protocol, TimeoutMixin):
         while self._bufferLength >= 24:
             data = "".join(self._buffer)
             if data[0] != "\x81":
-                raise ValueError("Wrong magic byte: '%s'" % (data[0],))
+                raise RuntimeError("Wrong magic byte: %r" % (data[0],))
             _, opcode, keyLength, extraLength, _, status, length, _, cas = (
                 struct.unpack(self._headerFormat, data[:24]))
             if self._bufferLength < 24 + length:
@@ -805,14 +827,20 @@ class MemCacheBinaryProtocol(Protocol, TimeoutMixin):
             self._buffer[:] = [data[24 + length:]]
             self._bufferLength -= 24 + length
 
-            cmd = getattr(self, "cmd_%s" % self.OPCODE_MAPPING[opcode])
             extra = data[24:24 + extraLength]
             key = data[24 + extraLength:24 + extraLength + keyLength]
             value = data[24 + extraLength + keyLength: 24 + length]
-            cmd(status, cas, extra, key, value)
+
+            if status:
+                cmd = self._current.popleft()
+                cmd.fail(ServerError(value))
+            else:
+                method = getattr(
+                    self, "_cmd_%s" % (self._OPCODE_MAPPING[opcode],))
+                method(cas, extra, key, value)
 
 
-    def cmd_get(self, status, cas, extra, key, value):
+    def _cmd_get(self, cas, extra, key, value):
         """
         """
         if extra:
@@ -820,79 +848,63 @@ class MemCacheBinaryProtocol(Protocol, TimeoutMixin):
         else:
             flags = 0
         cmd = self._current.popleft()
-        if status:
-            cmd.fail(ServerError(value))
-        else:
-            cmd.success((flags, value))
+        cmd.success((flags, value))
 
 
-    def cmd_set(self, status, cas, extra, key, value):
+    def _cmd_set(self, cas, extra, key, value):
         """
         """
         cmd = self._current.popleft()
-        if status:
-            cmd.fail(ServerError(value))
-        else:
-            cmd.success(cas)
+        cmd.success(cas)
 
 
-    cmd_add = cmd_set
+    _cmd_add = _cmd_set
 
 
-    cmd_replace = cmd_set
+    _cmd_replace = _cmd_set
 
 
-    def cmd_delete(self, status, cas, extra, key, value):
+    def _cmd_delete(self, cas, extra, key, value):
         """
         """
         cmd = self._current.popleft()
-        if status:
-            cmd.fail(ServerError(value))
-        else:
-            cmd.success(True)
+        cmd.success(True)
 
 
-    def cmd_increment(self, status, cas, extra, key, value):
+    def _cmd_increment(self, cas, extra, key, value):
         """
         """
         cmd = self._current.popleft()
-        if status:
-            cmd.fail(ServerError(value))
-        else:
-            cmd.success((cas, struct.unpack("!q", value)[0]))
+        cmd.success((cas, struct.unpack("!q", value)[0]))
 
 
-    cmd_decrement = cmd_increment
+    _cmd_decrement = _cmd_increment
 
 
-    cmd_flush = cmd_delete
+    _cmd_flush = _cmd_delete
 
 
-    cmd_noop = cmd_delete
+    _cmd_noop = _cmd_delete
 
 
-    cmd_append = cmd_delete
+    _cmd_append = _cmd_delete
 
 
-    cmd_prepend = cmd_delete
+    _cmd_prepend = _cmd_delete
 
 
-    cmd_quit = cmd_delete
+    _cmd_quit = _cmd_delete
 
 
-    def cmd_stat(self, status, cas, extra, key, value):
+    def _cmd_stat(self, cas, extra, key, value):
+        """
+        """
         cmd = self._current[0]
-        if status:
+        if not value and not key:
             self._current.popleft()
-            cmd.fail(ServerError(value))
+            cmd.success(cmd.values)
         else:
-            if cmd.key:
-                cmd.success(value)
-            else:
-                if not value and not key:
-                    cmd.success(cmd.values)
-                else:
-                    cmd.values[key] = value
+            cmd.values[key] = value
 
 
     def timeoutConnection(self):
@@ -927,22 +939,62 @@ class MemCacheBinaryProtocol(Protocol, TimeoutMixin):
         return cmdObj._deferred
 
 
-    def get(self, key, withIdentifier=False):
+    def get(self, key):
         """
+        Get the value associated with the given C{key}.
+
+        @param key: The key to retrieve.
+        @type key: C{str}
+
+        @return: A deferred that will fire with the tuple (flags, value).
+        @rtype: L{Deferred}
         """
         self._send(0, key)
         return self._buildCommand(0, key=key)
 
 
-    def stat(self, key=""):
+    def stats(self, arg=""):
         """
+        Get some stats from the server. It will be available as a dict.
+
+        @param arg: An optional additional string which will be sent along
+            with the I{stats} command.
+        @type arg: C{str}
+
+        @return: A deferred that will fire with a C{dict} of the available
+            statistics.
+        @rtype: L{Deferred}
         """
-        self._send(16, key)
-        return self._buildCommand(16, key=key, values={})
+        self._send(16, arg)
+        return self._buildCommand(16, values={})
 
 
     def set(self, key, value, flags=0, expireTime=0, quiet=False, cas=0):
         """
+        Set the given C{key}.
+
+        @param key: The key to set.
+        @type key: C{str}
+
+        @param value: The value associated with the key.
+        @type value: C{str}
+
+        @param flags: The flags to store with the key.
+        @type flags: C{int}
+
+        @param expireTime: If different from 0, the relative time in seconds
+            when the key will be deleted from the store.
+        @type expireTime: C{int}
+
+        @param quiet: If C{True}, don't wait for a response.
+        @type quiet: C{bool}
+
+        @param cas: Unique 64-bit value returned by previous call.
+        @type cas: C{int}
+
+        @return: A deferred that will fire with the C{cas} value if the
+            operation has succeeded, or nothing if C{quiet} is set.
+        @rtype: L{Deferred} or C{NoneType}
         """
         extra = struct.pack("!ii", flags, expireTime)
         if quiet:
@@ -954,6 +1006,27 @@ class MemCacheBinaryProtocol(Protocol, TimeoutMixin):
 
     def add(self, key, value, flags=0, expireTime=0, quiet=False):
         """
+        Add the given C{key}. It must not exist in the server.
+
+        @param key: The key to add.
+        @type key: C{str}
+
+        @param value: The value associated with the key.
+        @type value: C{str}
+
+        @param flags: The flags to store with the key.
+        @type flags: C{int}
+
+        @param expireTime: If different from 0, the relative time in seconds
+            when the key will be deleted from the store.
+        @type expireTime: C{int}
+
+        @param quiet: If C{True}, don't wait for a response.
+        @type quiet: C{bool}
+
+        @return: A deferred that will fire with the C{cas} value if the
+            operation has succeeded, or nothing if C{quiet} is set.
+        @rtype: L{Deferred} or C{NoneType}
         """
         extra = struct.pack("!ii", flags, expireTime)
         if quiet:
@@ -965,6 +1038,30 @@ class MemCacheBinaryProtocol(Protocol, TimeoutMixin):
 
     def replace(self, key, value, flags=0, expireTime=0, quiet=False, cas=0):
         """
+        Replace the given C{key}. It must already exist in the server.
+
+        @param key: The key to replace.
+        @type key: C{str}
+
+        @param value: The new value associated with the key.
+        @type value: C{str}
+
+        @param flags: The flags to store with the key.
+        @type flags: C{int}
+
+        @param expireTime: If different from 0, the relative time in seconds
+            when the key will be deleted from the store.
+        @type expireTime: C{int}
+
+        @param quiet: If C{True}, don't wait for a response.
+        @type quiet: C{bool}
+
+        @param cas: Unique 64-bit value returned by previous call.
+        @type cas: C{int}
+
+        @return: A deferred that will fire with the C{cas} value if the
+            operation has succeeded, or nothing if C{quiet} is set.
+        @rtype: L{Deferred} or C{NoneType}
         """
         extra = struct.pack("!ii", flags, expireTime)
         if quiet:
@@ -976,6 +1073,17 @@ class MemCacheBinaryProtocol(Protocol, TimeoutMixin):
 
     def delete(self, key, quiet=False):
         """
+        Delete an existing C{key}.
+
+        @param key: The key to delete.
+        @type key: C{str}
+
+        @param quiet: If C{True}, don't wait for a response.
+        @type quiet: C{bool}
+
+        @return: A deferred that will be called back with C{True} if the key
+            was successfully deleted, or nothing if C{quiet} is set.
+        @rtype: L{Deferred} or C{NoneType}
         """
         if quiet:
             self._send(20, key)
@@ -987,6 +1095,30 @@ class MemCacheBinaryProtocol(Protocol, TimeoutMixin):
     def increment(self, key, value=1, initialValue=0, expireTime=0,
                   quiet=False):
         """
+        Increment the value of C{key} by given value (default to 1).
+        C{key} must be consistent with an int. Return the new value.
+
+        @param key: The key to modify.
+        @type key: C{str}
+
+        @param value: The value to increment.
+        @type value: C{int}
+
+        @param initialValue: The starting point of the increment, if the value
+            doesn't exist yet.
+        @type initialValue: C{int}
+
+        @param expireTime: If different from 0, the relative time in seconds
+            when the key will be deleted from the store.
+        @type expireTime: C{int}
+
+        @param quiet: If C{True}, don't wait for a response.
+        @type quiet: C{bool}
+
+        @return: A deferred with will be called back with the C{cas} value and
+            the new value associated with the key (after the increment), or
+            nothing if C{quiet} is set.
+        @rtype: L{Deferred} or C{NoneType}
         """
         extra = struct.pack("!qqi", value, initialValue, expireTime)
         if quiet:
@@ -999,6 +1131,27 @@ class MemCacheBinaryProtocol(Protocol, TimeoutMixin):
     def decrement(self, key, value=1, initialValue=0, expireTime=0,
                   quiet=False):
         """
+        Decrement the value of C{key} by given value (default to 1).
+        C{key} must be consistent with an int. Return the new value, coerced to
+        0 if negative.
+
+        @param key: The key to modify.
+        @type key: C{str}
+
+        @param value: The value to decrement.
+        @type value: C{int}
+
+        @param initialValue: The starting point of the decrement, if the value
+            doesn't exist yet.
+        @type initialValue: C{int}
+
+        @param quiet: If C{True}, don't wait for a response.
+        @type quiet: C{bool}
+
+        @return: A deferred with will be called back with the C{cas} value and
+            the new value associated with the key (after the decrement), or
+            nothing if C{quiet} is set.
+        @rtype: L{Deferred} or C{NoneType}
         """
         extra = struct.pack("!qqi", value, initialValue, expireTime)
         if quiet:
@@ -1010,6 +1163,18 @@ class MemCacheBinaryProtocol(Protocol, TimeoutMixin):
 
     def flush(self, expireTime=0, quiet=False):
         """
+        Flush all cached values.
+
+        @param expireTime: If speficified, the time in the future when the
+            flush should happen.
+        @type expireTime: C{int}
+
+        @param quiet: If C{True}, don't wait for a response.
+        @type quiet: C{bool}
+
+        @return: A deferred that will be called back with C{True} when the
+            operation has succeeded, or nothing if C{quiet} is set.
+        @rtype: L{Deferred} or C{NoneType}
         """
         if quiet:
             self._send(24, "", extra=struct.pack("!i", expireTime))
@@ -1020,6 +1185,10 @@ class MemCacheBinaryProtocol(Protocol, TimeoutMixin):
 
     def noop(self):
         """
+        Set a noop command, used as a keepalive.
+
+        @return: A deferred that will be called back with C{True}.
+        @rtype: L{Deferred}.
         """
         self._send(9, "")
         return self._buildCommand(9)
@@ -1027,6 +1196,14 @@ class MemCacheBinaryProtocol(Protocol, TimeoutMixin):
 
     def quit(self, quiet=False):
         """
+        Close the connection to the server.
+
+        @param quiet: If C{True}, don't wait for a response.
+        @type quiet: C{bool}
+
+        @return: A deferred that will be called back with C{True}, or nothing
+            if C{quiet} is set.
+        @rtype: L{Deferred} or C{NoneType}
         """
         if quiet:
             self._send(23, "")
@@ -1037,6 +1214,21 @@ class MemCacheBinaryProtocol(Protocol, TimeoutMixin):
 
     def append(self, key, value, quiet=False):
         """
+        Append given data to the value of an existing key.
+
+        @param key: The key to modify.
+        @type key: C{str}
+
+        @param value: The value to append to the current value associated with
+            the key.
+        @type value: C{str}
+
+        @param quiet: If C{True}, don't wait for a response.
+        @type quiet: C{bool}
+
+        @return: A deferred that will fire with C{True} if the operation has
+            succeeded, or nothing if C{quiet} is set.
+        @rtype: L{Deferred} or C{NoneType}
         """
         if quiet:
             self._send(25, key, value)
@@ -1047,6 +1239,21 @@ class MemCacheBinaryProtocol(Protocol, TimeoutMixin):
 
     def prepend(self, key, value, quiet=False):
         """
+        Prepend given data to the value of an existing key.
+
+        @param key: The key to modify.
+        @type key: C{str}
+
+        @param value: The value to prepend to the current value associated with
+            the key.
+        @type value: C{str}
+
+        @param quiet: If C{True}, don't wait for a response.
+        @type quiet: C{bool}
+
+        @return: A deferred that will fire with C{True} if the operation has
+            succeeded, or nothing if C{quiet} is set.
+        @rtype: L{Deferred} or C{NoneType}
         """
         if quiet:
             self._send(26, key, value)
