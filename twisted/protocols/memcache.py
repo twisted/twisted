@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_memcache -*-
+# -*- test-case-name: twisted.protocols.test.test_memcache -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
