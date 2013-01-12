@@ -79,6 +79,7 @@ class IPv6Address(_IPAddress):
     """
 
 
+
 @implementer(IAddress)
 class SerialAddress(object):
     """

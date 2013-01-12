@@ -62,6 +62,7 @@ class StandardIOEndpoint(object):
                              stdioProtocolFactory.buildProtocol(PipeAddress()))
 
 
+
 @implementer(interfaces.IStreamClientEndpoint)
 class SerialPortEndpoint(object):
     """
@@ -78,6 +79,7 @@ class SerialPortEndpoint(object):
         EIGHTBITS = None
         PARITY_NONE = None
         STOPBITS_ONE = None
+
 
     def __init__(self, deviceNameOrPortNumber, reactor,
                  baudrate=9600, bytesize=EIGHTBITS,
