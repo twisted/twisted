@@ -66,10 +66,14 @@ class StandardIOEndpoint(object):
 class SerialPortEndpoint(object):
     """
     A Serial Port endpoint.
+
+    @ivar _serialport: A hook used for testing availability of serial port
+        support.
     """
     try:
         from twisted.internet.serialport import (
             EIGHTBITS, PARITY_NONE, STOPBITS_ONE)
+        from twisted.internet import serialport as _serialport
     except ImportError:
         EIGHTBITS = None
         PARITY_NONE = None
@@ -102,13 +106,15 @@ class SerialPortEndpoint(object):
         @type serialFactory: L{twisted.internet.interfaces.IProtocolFactory}
         """
         try:
-            from twisted.internet import serialport
-            proto = serialFactory.buildProtocol(SerialAddress())
-            serialport.SerialPort(proto, self._deviceNameOrPortNumber,
-                    self._reactor, self._baudrate, self._bytesize,
-                    self._parity, self._stopbits, self._timeout,
-                    self._xonxoff, self._rtscts)
-            return defer.succeed(proto)
+            if self._serialport == None:
+                raise ImportError
+            else:
+                proto = serialFactory.buildProtocol(SerialAddress())
+                self._serialport.SerialPort(proto, self._deviceNameOrPortNumber,
+                        self._reactor, self._baudrate, self._bytesize,
+                        self._parity, self._stopbits, self._timeout,
+                        self._xonxoff, self._rtscts)
+                return defer.succeed(proto)
         except:
             return defer.fail()
 

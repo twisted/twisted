@@ -123,6 +123,22 @@ class SerialFactory(StdioFactory):
 
 
 
+class SerialPortEndpointFailureTestCase(unittest.TestCase):
+    """
+    Test Case for Serial Port Endpoints when serial port support is not
+    available.
+    """
+    def test_importError(self):
+        """
+        Serial port support is not available, i.e., pyserial is not installed.
+        """
+        endpoint = endpoints.SerialPortEndpoint('/dev/ttyS0', reactor)
+        endpoint._serialport = None
+        d = endpoint.connect(SerialFactory())
+        self.assertIsInstance(self.failureResultOf(d).value, ImportError)
+
+
+
 class SerialPortEndpointsTestCase(unittest.TestCase):
     """
     Tests for Serial Port Endpoints
