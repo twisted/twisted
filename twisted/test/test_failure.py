@@ -74,6 +74,7 @@ class FailureTestCase(SynchronousTestCase):
         else:
             self.fail("Exception was not re-raised.")
 
+
     def test_history(self):
         """
         If a C{history} argument is passed to L{Failure}, it will be included
@@ -87,6 +88,7 @@ class FailureTestCase(SynchronousTestCase):
             f = failure.Failure(history=dh)
         output = f.getTraceback()
         self.assertStartsWith(output, "Deferred History:\n[cb]\nTraceback")
+
 
     def assertStartsWith(self, s, prefix):
         """
