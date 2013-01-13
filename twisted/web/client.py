@@ -28,6 +28,7 @@ from twisted.python import log
 from twisted.python.failure import Failure
 from twisted.web import http
 from twisted.internet import defer, protocol, task, reactor
+from twisted.internet.error import ConnectionDone
 from twisted.internet.interfaces import IProtocol
 from twisted.internet.endpoints import TCP4ClientEndpoint, SSL4ClientEndpoint
 from twisted.python import failure
@@ -664,7 +665,7 @@ if not _PY3:
     from twisted.web._newclient import Request, Response, HTTP11ClientProtocol
     from twisted.web._newclient import ResponseDone, ResponseFailed
     from twisted.web._newclient import RequestNotSent, RequestTransmissionFailed
-    from twisted.web._newclient import ResponseNeverReceived
+    from twisted.web._newclient import ResponseNeverReceived, PotentialDataLoss
 
 try:
     from twisted.internet.ssl import ClientContextFactory
@@ -1611,15 +1612,23 @@ class RedirectAgent(object):
 
 class _GetBodyProtocol(protocol.Protocol):
 
-    def __init__(self, deferred):
+    def __init__(self, status, message, deferred):
         self.deferred = deferred
+        self.status = status
+        self.message = message
         self.buf = ''
 
     def dataReceived(self, bytes):
         self.buf += bytes
 
     def connectionLost(self, reason):
-        self.deferred.callback(self.buf)
+        if reason.check(ConnectionDone):
+            self.deferred.callback(self.buf)
+        elif reason.check(PotentialDataLoss):
+            self.deferred.errback(
+                PartialDownloadError(self.status, self.message, self.buf))
+        else:
+            self.deferred.errback(reason)
 
 
 
@@ -1636,7 +1645,7 @@ def getBody(response):
     @return: A L{Deferred} which will fire with the body of the response.
     """
     d = defer.Deferred()
-    response.deliverBody(_GetBodyProtocol(d))
+    response.deliverBody(_GetBodyProtocol(response.code, response.phrase, d))
     return d
 
 

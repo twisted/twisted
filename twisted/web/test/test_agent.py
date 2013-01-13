@@ -15,6 +15,7 @@ from twisted.trial import unittest
 from twisted.web import client, error, http_headers
 from twisted.web._newclient import RequestNotSent, RequestTransmissionFailed
 from twisted.web._newclient import ResponseNeverReceived, ResponseFailed
+from twisted.web._newclient import PotentialDataLoss
 from twisted.internet import defer, task
 from twisted.python.failure import Failure
 from twisted.python.components import proxyForInterface
@@ -2090,13 +2091,19 @@ class GetBodyTests(unittest.TestCase):
     Tests for L{client.getBody}
     """
 
+
     class FakeResponse(object):
         """
         Fake L{IResponse} for testing getBody, that just captures the protocol
         passed to deliverBody.
         """
+
+        code = 200
+        phrase = "OK"
+
         def deliverBody(self, protocol):
             self.protocol = protocol
+
 
     def test_simple(self):
         response = self.FakeResponse()
@@ -2105,3 +2112,21 @@ class GetBodyTests(unittest.TestCase):
         response.protocol.dataReceived("second")
         response.protocol.connectionLost(Failure(ConnectionDone()))
         self.assertEqual(self.successResultOf(d), "firstsecond")
+
+
+    def test_withPotentialDataLoss(self):
+        response = self.FakeResponse()
+        d = client.getBody(response)
+        response.protocol.dataReceived("first")
+        response.protocol.connectionLost(Failure(PotentialDataLoss()))
+        failure = self.failureResultOf(d)
+        failure.trap(client.PartialDownloadError)
+        self.assertEqual({
+                'status': failure.value.status,
+                'message': failure.value.message,
+                'body': failure.value.response,
+            }, {
+                'status': 200,
+                'message': 'OK',
+                'body': 'first',
+            })
