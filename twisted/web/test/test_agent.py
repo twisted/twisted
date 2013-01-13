@@ -2082,3 +2082,26 @@ class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
             self.assertEqual(302, fail.response.code)
 
         return deferred.addCallback(checkFailure)
+
+
+
+class GetBodyTests(unittest.TestCase):
+    """
+    Tests for L{client.getBody}
+    """
+
+    class FakeResponse(object):
+        """
+        Fake L{IResponse} for testing getBody, that just captures the protocol
+        passed to deliverBody.
+        """
+        def deliverBody(self, protocol):
+            self.protocol = protocol
+
+    def test_simple(self):
+        response = self.FakeResponse()
+        d = client.getBody(response)
+        response.protocol.dataReceived("first")
+        response.protocol.dataReceived("second")
+        response.protocol.connectionLost(Failure(ConnectionDone()))
+        self.assertEqual(self.successResultOf(d), "firstsecond")
