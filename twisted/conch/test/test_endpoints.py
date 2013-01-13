@@ -21,7 +21,7 @@ from twisted.cred.portal import Portal
 from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
 
 from twisted.conch.interfaces import IConchUser
-from twisted.conch.error import ConchError, UserRejectedKey
+from twisted.conch.error import ConchError, UserRejectedKey, HostKeyChanged
 from twisted.conch.ssh.factory import SSHFactory
 from twisted.conch.ssh.userauth import SSHUserAuthServer
 from twisted.conch.ssh.connection import SSHConnection
@@ -32,7 +32,8 @@ from twisted.conch.client.knownhosts import KnownHostsFile
 from twisted.internet.task import Clock
 from twisted.test.proto_helpers import StringTransport, MemoryReactor
 from twisted.test.iosim import FakeTransport, connect
-from twisted.conch.test.keydata import publicRSA_openssh, privateRSA_openssh
+from twisted.conch.test.keydata import (
+    publicRSA_openssh, privateRSA_openssh, privateDSA_openssh)
 from twisted.conch.avatar import ConchUser
 
 from twisted.conch.endpoints import AuthenticationFailed, SSHCommandAddress, SSHCommandEndpoint
@@ -269,7 +270,13 @@ class SSHCommandEndpointTests(TestCase):
         self.failureResultOf(d).trap(ConnectionRefusedError)
 
 
-    def test_hostKeyCheckFailure(self):
+    def test_userRejectedHostKey(self):
+        """
+        If the L{KnownHostsFile} instance used to construct
+        L{SSHCommandEndpoint} rejects the SSH public key presented by the
+        server, the L{Deferred} returned by L{SSHCommandEndpoint.connect} fires
+        with a L{Failure} wrapping L{UserRejectedKey}.
+        """
         endpoint = SSHCommandEndpoint(
             self.reactor, self.hostname, self.port, b"/bin/ls -l",
             b"dummy user", knownHosts=KnownHostsFile(self.mktemp()),
@@ -284,6 +291,39 @@ class SSHCommandEndpointTests(TestCase):
 
         f = self.failureResultOf(connected)
         f.trap(UserRejectedKey)
+
+
+    def test_mismatchedHostKey(self):
+        """
+        If the SSH public key presented by the SSH server does not match the
+        previously remembered key, as reported by the L{KnownHostsFile}
+        instance use to construct the endpoint, for that server, the
+        L{Deferred} returned by L{SSHCommandEndpoint.connect} fires with a
+        L{Failure} wrapping L{HostKeyChanged}.
+        """
+        differentKey = Key.fromString(privateDSA_openssh).public()
+        knownHosts = KnownHostsFile(self.mktemp())
+        knownHosts.addHostKey(self.serverAddress.host, differentKey)
+        knownHosts.addHostKey(self.hostname, differentKey)
+
+        # The UI may answer true to any questions asked of it; they should
+        # make no difference, since a *mismatched* key is not even optionally
+        # allowed to complete a connection.
+        ui = FixedResponseUI(True)
+
+        endpoint = SSHCommandEndpoint(
+            self.reactor, self.hostname, self.port, b"/bin/ls -l",
+            b"dummy user", b"dummy password", knownHosts=knownHosts, ui=ui)
+
+        factory = Factory()
+        factory.protocol = Protocol
+        connected = endpoint.connect(factory)
+
+        server, client, pump = self.connectedServerAndClient(
+            self.factory, self.memory.tcpClients[0][2])
+
+        f = self.failureResultOf(connected)
+        f.trap(HostKeyChanged)
 
 
     def test_connectionClosedBeforeSecure(self):
