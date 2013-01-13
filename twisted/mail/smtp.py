@@ -370,7 +370,8 @@ class Address:
                           (?:"[^"]*" # quoted string
                           |\\. # backslash-escaped characted
                           |''' + atom + r''' # atom character
-                          )+|.) # or any single character''',re.X)
+                          )+|.) # or any single character
+                        ''',re.X)
     atomre = re.compile(atom) # match any one atom character
 
     def __init__(self, addr, defaultDomain=None):
@@ -537,7 +538,7 @@ vrfy = <'V' 'R' 'F' 'Y'>:command ' ' string:string newline -> (command, string)
 rset = <'R' 'S' 'E' 'T'>
 
 atext =
-    let_dig | '!' | '#' | '$' | '%' | '*' | '\'' | '*' | '+' | '-' | '/' |
+    let_dig | '!' | '#' | '$' | '%' | '*' | "'" | '+' | '-' | '/' |
     '=' | '?' | '^' | '_' | '`' | '{' | '|' | '}'
 
 atom = <atext+>
@@ -1125,7 +1126,7 @@ class SMTPFactory(protocol.ServerFactory):
 class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
     """
     SMTP client for sending emails.
-    
+
     After the client has connected to the SMTP server, it repeatedly calls
     L{SMTPClient.getMailFrom}, L{SMTPClient.getMailTo} and
     L{SMTPClient.getMailData} and uses this information to send an email.
@@ -1790,7 +1791,7 @@ class SenderMixin:
 
 class SMTPSender(SenderMixin, SMTPClient):
     """
-    SMTP protocol that sends a single email based on information it 
+    SMTP protocol that sends a single email based on information it
     gets from its factory, a L{SMTPSenderFactory}.
     """
 
