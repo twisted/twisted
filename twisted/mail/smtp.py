@@ -621,15 +621,19 @@ class SMTP(ParserProtocol):
 
 
     def command_MAIL_FROM(self, argument):
-        self.delivery.validateFrom(self._domain, argument)
+        path, params = argument
+        # Strip the <> off the ends
+        self.delivery.validateFrom(self._domain, path[1:-1])
         self.transport.write("250 Okay\r\n")
         self._allowedCommands = ['RCPT TO']
 
 
     def command_RCPT_TO(self, argument):
-        self.delivery.validateTo(argument)
+        path, params = argument
+        # Strip the <> off the ends
+        self.delivery.validateTo(path[1:-1])
         self.transport.write("250 Okay\r\n")
-        self._allowedCommands = ['DATA']
+        self._allowedCommands = ['RCPT TO', 'DATA']
 
 
     def command_DATA(self, argument):
