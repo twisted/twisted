@@ -1608,9 +1608,42 @@ class RedirectAgent(object):
 
 
 
+
+class _GetBodyProtocol(protocol.Protocol):
+
+    def __init__(self, deferred):
+        self.deferred = deferred
+        self.buf = ''
+
+    def dataReceived(self, bytes):
+        self.buf += bytes
+
+    def connectionLost(self, reason):
+        self.deferred.callback(self.buf)
+
+
+
+def getBody(response):
+    """
+    Get the body of an {IResponse} and return it as a byte string.
+
+    This is a helper function, for clients that don't want to incrementally
+    recieve the body of an HTTP response. 
+
+    @type response: L{IResponse}
+    @param response: An HTTP response
+    
+    @return: A L{Deferred} which will fire with the body of the response.
+    """
+    d = defer.Deferred()
+    response.deliverBody(_GetBodyProtocol(d))
+    return d
+
+
+
 __all__ = [
     'PartialDownloadError', 'HTTPPageGetter', 'HTTPPageDownloader',
     'HTTPClientFactory', 'HTTPDownloader', 'getPage', 'downloadPage',
     'ResponseDone', 'Response', 'ResponseFailed', 'Agent', 'CookieAgent',
     'ProxyAgent', 'ContentDecoderAgent', 'GzipDecoder', 'RedirectAgent',
-    'HTTPConnectionPool']
+    'HTTPConnectionPool', 'getBody' ]

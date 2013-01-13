@@ -38,25 +38,6 @@ except:
     ssl = None
 
 
-class GetBodyProtocol(Protocol):
-
-    def __init__(self, deferred):
-        self.deferred = deferred
-        self.buf = ''
-
-    def dataReceived(self, bytes):
-        self.buf += bytes
-
-    def connectionLost(self, reason):
-        self.deferred.callback(self.buf)
-
-
-def getBody(response):
-    d = defer.Deferred()
-    response.deliverBody(GetBodyProtocol(d))
-    return d
-
-
 
 class StubHTTPProtocol(Protocol):
     """
