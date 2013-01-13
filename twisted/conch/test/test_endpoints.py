@@ -191,29 +191,32 @@ class SSHCommandEndpointTests(TestCase):
         self.factory.doStart()
         self.addCleanup(self.factory.doStop)
 
+        self.clientAddress = IPv4Address("TCP", "10.0.0.1", 12345)
+        self.serverAddress = IPv4Address("TCP", "192.168.100.200", 54321)
+
         # Make the server's host key available to be verified by the client.
         self.hostKeyPath = FilePath(self.mktemp())
         self.knownHosts = KnownHostsFile(self.hostKeyPath)
         self.knownHosts.addHostKey(
-            b"monkey", self.factory.publicKeys['ssh-rsa'])
+            self.hostname, self.factory.publicKeys['ssh-rsa'])
+        self.knownHosts.addHostKey(
+            self.serverAddress.host, self.factory.publicKeys['ssh-rsa'])
         self.knownHosts.save()
 
 
     def connectedServerAndClient(self, serverFactory, clientFactory):
-        clientAddress = IPv4Address("TCP", "10.0.0.1", 12345)
-        serverAddress = IPv4Address("TCP", "192.168.100.200", 54321)
-
         clientProtocol = clientFactory.buildProtocol(None)
         serverProtocol = serverFactory.buildProtocol(None)
 
         clientTransport = FakeTransport(
-            clientProtocol, isServer=False, hostAddress=clientAddress,
-            peerAddress=serverAddress)
+            clientProtocol, isServer=False, hostAddress=self.clientAddress,
+            peerAddress=self.serverAddress)
         serverTransport = FakeTransport(
-            serverProtocol, isServer=True, hostAddress=serverAddress,
-            peerAddress=clientAddress)
+            serverProtocol, isServer=True, hostAddress=self.serverAddress,
+            peerAddress=self.clientAddress)
 
-        pump = connect(serverProtocol, serverTransport, clientProtocol, clientTransport)
+        pump = connect(
+            serverProtocol, serverTransport, clientProtocol, clientTransport)
         return serverProtocol, clientProtocol, pump
 
 
@@ -291,8 +294,6 @@ class SSHCommandEndpointTests(TestCase):
 
 
     def test_hostKeyCheckFailure(self):
-        # get rid of "monkeys" from test and implementation
-        1/0
         endpoint = SSHCommandEndpoint(
             self.reactor, self.hostname, self.port, b"/bin/ls -l",
             b"dummy user", knownHosts=KnownHostsFile(self.mktemp()),

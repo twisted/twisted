@@ -127,15 +127,8 @@ class _CommandTransport(SSHClientTransport):
     _hostKeyFailure = None
 
     def verifyHostKey(self, hostKey, fingerprint):
-        try:
-            hostname = self.factory.sshClient.host
-        except AttributeError:
-            hostname = "monkey"
-
-        try:
-            ip = self.transport.getPeer().host
-        except AttributeError:
-            ip = "0.0.0.0"
+        hostname = self.factory.hostname
+        ip = self.transport.getPeer().host
 
         self._state = b'SECURING'
         d = self.factory.knownHosts.verifyHostKey(
