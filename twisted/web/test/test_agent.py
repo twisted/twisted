@@ -23,6 +23,7 @@ from twisted.test.proto_helpers import StringTransport
 from twisted.test.proto_helpers import MemoryReactor
 from twisted.internet.task import Clock
 from twisted.internet.error import ConnectionRefusedError, ConnectionDone
+from twisted.internet.error import ConnectionLost
 from twisted.internet.protocol import Protocol, Factory
 from twisted.internet.defer import Deferred, succeed
 from twisted.internet.endpoints import TCP4ClientEndpoint, SSL4ClientEndpoint
@@ -2130,3 +2131,11 @@ class GetBodyTests(unittest.TestCase):
                 'message': 'OK',
                 'body': 'first',
             })
+
+
+    def test_withConnectionLost(self):
+        response = self.FakeResponse()
+        d = client.getBody(response)
+        response.protocol.dataReceived("first")
+        response.protocol.connectionLost(Failure(ConnectionLost()))
+        self.failureResultOf(d).trap(ConnectionLost)
