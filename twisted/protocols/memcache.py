@@ -65,11 +65,11 @@ class Command(object):
     Wrap a client action into an object, that holds the values used in the
     protocol.
 
-    @ivar _deferred: the L{Deferred} object that will be fired when the result
+    @ivar _deferred: The L{Deferred} object that will be fired when the result
         arrives.
     @type _deferred: L{Deferred}
 
-    @ivar command: name of the command sent to the server.
+    @ivar command: Name of the command sent to the server.
     @type command: C{str}
     """
 
@@ -77,10 +77,10 @@ class Command(object):
         """
         Create a command.
 
-        @param command: the name of the command.
+        @param command: The name of the command.
         @type command: C{str}
 
-        @param kwargs: this values will be stored as attributes of the object
+        @param kwargs: This values will be stored as attributes of the object
             for future use
         """
         self.command = command
@@ -108,25 +108,25 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
     """
     MemCache protocol: connect to a memcached server to store/retrieve values.
 
-    @ivar persistentTimeOut: the timeout period used to wait for a response.
+    @ivar persistentTimeOut: The timeout period used to wait for a response.
     @type persistentTimeOut: C{int}
 
-    @ivar _current: current list of requests waiting for an answer from the
+    @ivar _current: Current list of requests waiting for an answer from the
         server.
     @type _current: C{deque} of L{Command}
 
-    @ivar _lenExpected: amount of data expected in raw mode, when reading for
+    @ivar _lenExpected: Amount of data expected in raw mode, when reading for
         a value.
     @type _lenExpected: C{int}
 
-    @ivar _getBuffer: current buffer of data, used to store temporary data
+    @ivar _getBuffer: Current buffer of data, used to store temporary data
         when reading in raw mode.
     @type _getBuffer: C{list}
 
-    @ivar _bufferLength: the total amount of bytes in C{_getBuffer}.
+    @ivar _bufferLength: The total amount of bytes in C{_getBuffer}.
     @type _bufferLength: C{int}
 
-    @ivar _disconnected: indicate if the connectionLost has been called or not.
+    @ivar _disconnected: Indicate if the connectionLost has been called or not.
     @type _disconnected: C{bool}
     """
     MAX_KEY_LENGTH = 250
@@ -136,7 +136,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         """
         Create the protocol.
 
-        @param timeOut: the timeout to wait before detecting that the
+        @param timeOut: The timeout to wait before detecting that the
             connection is dead and close it. It's expressed in seconds.
         @type timeOut: C{int}
         """
@@ -476,20 +476,20 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         """
         Set the given C{key}.
 
-        @param key: the key to set.
+        @param key: The key to set.
         @type key: C{str}
 
-        @param val: the value associated with the key.
+        @param val: The value associated with the key.
         @type val: C{str}
 
-        @param flags: the flags to store with the key.
+        @param flags: The flags to store with the key.
         @type flags: C{int}
 
-        @param expireTime: if different from 0, the relative time in seconds
+        @param expireTime: If different from 0, the relative time in seconds
             when the key will be deleted from the store.
         @type expireTime: C{int}
 
-        @return: a deferred that will fire with C{True} if the operation has
+        @return: A deferred that will fire with C{True} if the operation has
             succeeded.
         @rtype: L{Deferred}
         """
@@ -756,23 +756,23 @@ class MemCacheBinaryProtocol(Protocol, TimeoutMixin):
     MemCache binary protocol: connect to a memcached server to store/retrieve
     values.
 
-    @cvar _headerFormat: struct format of the protocol header.
+    @cvar _headerFormat: Struct format of the protocol header.
     @type _headerFormat: C{str}
 
-    @cvar _OPCODE_MAPPING: map of protocol key to method suffix.
+    @cvar _OPCODE_MAPPING: Map of protocol key to method suffix.
     @type _OPCODE_MAPPING: C{dict}
 
-    @ivar persistentTimeOut: the timeout period used to wait for a response.
+    @ivar persistentTimeOut: The timeout period used to wait for a response.
     @type persistentTimeOut: C{int}
 
-    @ivar _current: current list of requests waiting for an answer from the
+    @ivar _current: Current list of requests waiting for an answer from the
         server.
     @type _current: C{deque} of L{Command}
 
-    @ivar _buffer: current buffer of data, used to store temporary data.
+    @ivar _buffer: Current buffer of data, used to store temporary data.
     @type _buffer: C{list}
 
-    @ivar _bufferLength: the total amount of bytes in C{_buffer}.
+    @ivar _bufferLength: The total amount of bytes in C{_buffer}.
     @type _bufferLength: C{int}
     """
 
@@ -798,7 +798,7 @@ class MemCacheBinaryProtocol(Protocol, TimeoutMixin):
         """
         Create the protocol.
 
-        @param timeOut: the timeout to wait before detecting that the
+        @param timeOut: The timeout to wait before detecting that the
             connection is dead and close it. It's expressed in seconds.
         @type timeOut: C{int}
         """
@@ -842,6 +842,8 @@ class MemCacheBinaryProtocol(Protocol, TimeoutMixin):
 
     def _cmd_get(self, cas, extra, key, value):
         """
+        On C{get} responses, read C{extra} data as flags and fire the
+        command L{Deferred} with the tuple (flags, value).
         """
         if extra:
             flags = struct.unpack("!i", extra)[0]
@@ -853,6 +855,8 @@ class MemCacheBinaryProtocol(Protocol, TimeoutMixin):
 
     def _cmd_set(self, cas, extra, key, value):
         """
+        On C{set} responses, fire the command L{Deferred} with the C{cas}
+        value.
         """
         cmd = self._current.popleft()
         cmd.success(cas)
@@ -866,6 +870,7 @@ class MemCacheBinaryProtocol(Protocol, TimeoutMixin):
 
     def _cmd_delete(self, cas, extra, key, value):
         """
+        On C{delete} response, fire the command L{Deferred} with C{True}.
         """
         cmd = self._current.popleft()
         cmd.success(True)
@@ -873,6 +878,8 @@ class MemCacheBinaryProtocol(Protocol, TimeoutMixin):
 
     def _cmd_increment(self, cas, extra, key, value):
         """
+        On C{increment} responses, fire the command L{Deferred} with the tuple
+        (cas, value) where value is unpacked as an integer.
         """
         cmd = self._current.popleft()
         cmd.success((cas, struct.unpack("!q", value)[0]))
@@ -898,6 +905,8 @@ class MemCacheBinaryProtocol(Protocol, TimeoutMixin):
 
     def _cmd_stat(self, cas, extra, key, value):
         """
+        On C{stat} responses, accumulate key/value pairs until we get an empty
+        response and then fire the command L{Deferred} with the C{dict}.
         """
         cmd = self._current[0]
         if not value and not key:
@@ -919,6 +928,7 @@ class MemCacheBinaryProtocol(Protocol, TimeoutMixin):
 
     def _send(self, opcode, key, value="", extra="", cas=0):
         """
+        Send a command, creating the request header and then appending data.
         """
         if not self._current:
             self.setTimeout(self.persistentTimeOut)
@@ -933,6 +943,8 @@ class MemCacheBinaryProtocol(Protocol, TimeoutMixin):
 
     def _buildCommand(self, opcode, **kwargs):
         """
+        Create a L{Command} object for a command call, appending the list of
+        current commands and return the command L{Deferred}.
         """
         cmdObj = Command(opcode, **kwargs)
         self._current.append(cmdObj)
@@ -1185,7 +1197,7 @@ class MemCacheBinaryProtocol(Protocol, TimeoutMixin):
 
     def noop(self):
         """
-        Set a noop command, used as a keepalive.
+        Send a noop command, used as a keepalive.
 
         @return: A deferred that will be called back with C{True}.
         @rtype: L{Deferred}.

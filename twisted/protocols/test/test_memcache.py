@@ -739,6 +739,14 @@ class MemCacheBinaryTestCase(TestCase):
 
     def assertCommandResultQuiet(self, result, send):
         """
+        Assert method checking what's sent by a command call, and that it
+        returns C{None}.
+
+        @param result: the expected result.
+        @type result: C{any}
+
+        @param send: the expected data to be sent.
+        @type send: C{str}
         """
         self.assertIdentical(result, None)
         self.assertEqual(self.transport.value(), send)
@@ -774,6 +782,8 @@ class MemCacheBinaryTestCase(TestCase):
 
     def test_getExtra(self):
         """
+        L{MemCacheBinaryProtocol.get} can receive extra data with is passed as
+        the returned flag.
         """
         d = self.proto.get("foo")
         d.addCallback(self.assertEqual, (9, "bar"))
@@ -786,6 +796,8 @@ class MemCacheBinaryTestCase(TestCase):
 
     def test_getWithStatus(self):
         """
+        If the response of a L{MemCacheBinaryProtocol.get} contains a C{status}
+        value, the call fails with a L{ServerError}.
         """
         d = self.proto.get("foo")
 
@@ -801,6 +813,8 @@ class MemCacheBinaryTestCase(TestCase):
 
     def test_bufferGet(self):
         """
+        L{MemCacheBinaryProtocol.dataReceived} handles data sent in separate
+        frames.
         """
         d = self.proto.get("foo")
         d.addCallback(self.assertEqual, (0, "bar"))
@@ -813,6 +827,8 @@ class MemCacheBinaryTestCase(TestCase):
 
     def test_set(self):
         """
+        L{MemCacheBinaryProtocol.set} returns a L{Deferred} which is called
+        back with the C{cas} value associated with the key/value pair.
         """
         return self.assertCommandResult(
             self.proto.set("foo", "bar"),
@@ -825,6 +841,8 @@ class MemCacheBinaryTestCase(TestCase):
 
     def test_setWithStatus(self):
         """
+        If the response of a L{MemCacheBinaryProtocol.set} contains a C{status}
+        value, the call fails with a L{ServerError}.
         """
         d = self.proto.set("foo", "bar")
 
@@ -839,6 +857,8 @@ class MemCacheBinaryTestCase(TestCase):
 
     def test_quietSet(self):
         """
+        L{MemCacheBinaryProtocol.set} doesn't return anything if C{quiet} is
+        specified, and send a different opcode from regular C{set}.
         """
         return self.assertCommandResultQuiet(
             self.proto.set("foo", "bar", quiet=True),
@@ -849,6 +869,8 @@ class MemCacheBinaryTestCase(TestCase):
 
     def test_add(self):
         """
+        L{MemCacheBinaryProtocol.add} returns a L{Deferred} which is called
+        back with the C{cas} value associated with the key/value pair.
         """
         return self.assertCommandResult(
             self.proto.add("foo", "bar"),
@@ -861,6 +883,8 @@ class MemCacheBinaryTestCase(TestCase):
 
     def test_quietAdd(self):
         """
+        L{MemCacheBinaryProtocol.add} doesn't return anything if C{quiet} is
+        specified, and send a different opcode from regular C{add}.
         """
         return self.assertCommandResultQuiet(
             self.proto.add("foo", "bar", quiet=True),
@@ -871,6 +895,8 @@ class MemCacheBinaryTestCase(TestCase):
 
     def test_replace(self):
         """
+        L{MemCacheBinaryProtocol.replace} returns a L{Deferred} which is called
+        back with the C{cas} value associated with the key/value pair.
         """
         return self.assertCommandResult(
             self.proto.replace("foo", "bar"),
@@ -883,6 +909,8 @@ class MemCacheBinaryTestCase(TestCase):
 
     def test_quietReplace(self):
         """
+        L{MemCacheBinaryProtocol.replace} doesn't return anything if C{quiet}
+        is specified, and send a different opcode from regular C{add}.
         """
         return self.assertCommandResultQuiet(
             self.proto.replace("foo", "bar", quiet=True),
@@ -893,6 +921,8 @@ class MemCacheBinaryTestCase(TestCase):
 
     def test_delete(self):
         """
+        L{MemCacheBinaryProtocol.delete} returns a L{Deferred} which is called
+        back with C{True} if the delete has been successful.
         """
         return self.assertCommandResult(
             self.proto.delete("foo"),
@@ -905,6 +935,8 @@ class MemCacheBinaryTestCase(TestCase):
 
     def test_quietDelete(self):
         """
+        L{MemCacheBinaryProtocol.delete} doesn't return anything if C{quiet}
+        is specified, and send a different opcode from regular C{delete}.
         """
         return self.assertCommandResultQuiet(
             self.proto.delete("foo", quiet=True),
@@ -914,6 +946,8 @@ class MemCacheBinaryTestCase(TestCase):
 
     def test_increment(self):
         """
+        L{MemCacheBinaryProtocol.increment} returns a L{Deferred} which is
+        called back with the C{cas} value and the value after the increment.
         """
         return self.assertCommandResult(
             self.proto.increment("foo"),
@@ -927,6 +961,8 @@ class MemCacheBinaryTestCase(TestCase):
 
     def test_incrementWithStatus(self):
         """
+        If the response of a L{MemCacheBinaryProtocol.increment} contains a
+        C{status} value, the call fails with a L{ServerError}.
         """
         d = self.proto.set("foo", "bar")
 
@@ -941,6 +977,8 @@ class MemCacheBinaryTestCase(TestCase):
 
     def test_quietIncrement(self):
         """
+        L{MemCacheBinaryProtocol.increment} doesn't return anything if C{quiet}
+        is specified, and send a different opcode from regular C{increment}.
         """
         return self.assertCommandResultQuiet(
             self.proto.increment("foo", quiet=True),
@@ -951,6 +989,8 @@ class MemCacheBinaryTestCase(TestCase):
 
     def test_decrement(self):
         """
+        L{MemCacheBinaryProtocol.decrement} returns a L{Deferred} which is
+        called back with the C{cas} value and the value after the decrement.
         """
         return self.assertCommandResult(
             self.proto.decrement("foo"),
@@ -964,6 +1004,8 @@ class MemCacheBinaryTestCase(TestCase):
 
     def test_quietDecrement(self):
         """
+        L{MemCacheBinaryProtocol.decrement} doesn't return anything if C{quiet}
+        is specified, and send a different opcode from regular C{decrement}.
         """
         return self.assertCommandResultQuiet(
             self.proto.decrement("foo", quiet=True),
@@ -974,6 +1016,8 @@ class MemCacheBinaryTestCase(TestCase):
 
     def test_flush(self):
         """
+        L{MemCacheBinaryProtocol.flush} returns a L{Deferred} which is called
+        back with C{True} if the call succeeds.
         """
         return self.assertCommandResult(
             self.proto.flush(),
@@ -986,6 +1030,8 @@ class MemCacheBinaryTestCase(TestCase):
 
     def test_quietFlush(self):
         """
+        L{MemCacheBinaryProtocol.flush} doesn't return anything if C{quiet} is
+        specified, and send a different opcode from regular C{flush}.
         """
         return self.assertCommandResultQuiet(
             self.proto.flush(quiet=True),
@@ -995,6 +1041,8 @@ class MemCacheBinaryTestCase(TestCase):
 
     def test_noop(self):
         """
+        L{MemCacheBinaryProtocol.noop} returns a L{Deferred} which is called
+        back with C{True} if the call succeeds.
         """
         return self.assertCommandResult(
             self.proto.noop(),
@@ -1007,18 +1055,21 @@ class MemCacheBinaryTestCase(TestCase):
 
     def test_quit(self):
         """
+        L{MemCacheBinaryProtocol.quit} returns a L{Deferred} which is called
+        back with C{True} if the call succeeds.
         """
         return self.assertCommandResult(
             self.proto.quit(),
             "\x80\x07\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
             "\x00\x00\x00\x00\x00\x00\x00\x00",
             "\x81\x07\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
-            "\x00\x00\x00\x00\x00\x00\x00\x00",
-            True)
+            "\x00\x00\x00\x00\x00\x00\x00\x00", True)
 
 
     def test_quietQuit(self):
         """
+        L{MemCacheBinaryProtocol.quit} doesn't return anything if C{quiet} is
+        specified, and send a different opcode from regular C{quit}.
         """
         return self.assertCommandResultQuiet(
             self.proto.quit(quiet=True),
@@ -1028,6 +1079,8 @@ class MemCacheBinaryTestCase(TestCase):
 
     def test_append(self):
         """
+        L{MemCacheBinaryProtocol.append} returns a L{Deferred} which is called
+        back with C{True} if the call succeeds.
         """
         return self.assertCommandResult(
             self.proto.append("foo", "bar"),
@@ -1039,6 +1092,8 @@ class MemCacheBinaryTestCase(TestCase):
 
     def test_quietAppend(self):
         """
+        L{MemCacheBinaryProtocol.append} doesn't return anything if C{quiet}
+        is specified, and send a different opcode from regular C{append}.
         """
         return self.assertCommandResultQuiet(
             self.proto.append("foo", "bar", quiet=True),
@@ -1048,6 +1103,8 @@ class MemCacheBinaryTestCase(TestCase):
 
     def test_prepend(self):
         """
+        L{MemCacheBinaryProtocol.prepend} returns a L{Deferred} which is called
+        back with C{True} if the call succeeds.
         """
         return self.assertCommandResult(
             self.proto.prepend("foo", "bar"),
@@ -1059,6 +1116,8 @@ class MemCacheBinaryTestCase(TestCase):
 
     def test_quietPrepend(self):
         """
+        L{MemCacheBinaryProtocol.prepend} doesn't return anything if C{quiet}
+        is specified, and send a different opcode from regular C{prepend}.
         """
         return self.assertCommandResultQuiet(
             self.proto.prepend("foo", "bar", quiet=True),
@@ -1068,6 +1127,8 @@ class MemCacheBinaryTestCase(TestCase):
 
     def test_stats(self):
         """
+        L{MemCacheBinaryProtocol.stats} returns a L{Deferred} which is called
+        back with a C{dict} of available statistics for the given C{key}.
         """
         return self.assertCommandResult(
             self.proto.stats("pid"),
@@ -1082,6 +1143,9 @@ class MemCacheBinaryTestCase(TestCase):
 
     def test_statAllKeys(self):
         """
+        L{MemCacheBinaryProtocol.stats} returns a L{Deferred} which is called
+        back with a C{dict} of all available statistics if no C{key} is
+        specified.
         """
         return self.assertCommandResult(
             self.proto.stats(),
@@ -1098,6 +1162,9 @@ class MemCacheBinaryTestCase(TestCase):
 
     def test_statsThenGet(self):
         """
+        L{MemCacheBinaryProtocol.stats} accumulates several frames of data
+        before firing the command L{Deferred}: this test is here to make sure
+        that a following command is called back properly.
         """
         d1 = self.proto.stats()
         d1.addCallback(self.assertEqual, {"pid": "007"})
@@ -1115,6 +1182,8 @@ class MemCacheBinaryTestCase(TestCase):
 
     def test_timeOut(self):
         """
+        L{MemCacheBinaryProtocol} makes L{Deferred}s returned by commands fail
+        with L{TimeoutError} if the timeout is reached before a response.
         """
         d1 = self.proto.get("foo")
         d2 = self.proto.get("bar")
