@@ -14,7 +14,6 @@ import warnings
 import operator
 import os
 import sys
-import signal
 from StringIO import StringIO
 import tarfile
 from xml.dom import minidom as dom
@@ -1159,11 +1158,6 @@ class BookBuilderTests(TestCase, BuilderTestsMixin):
         self.docCounter = 0
         self.howtoDir = FilePath(self.mktemp())
         self.howtoDir.makedirs()
-        self.oldHandler = signal.signal(signal.SIGCHLD, signal.SIG_DFL)
-
-
-    def tearDown(self):
-        signal.signal(signal.SIGCHLD, self.oldHandler)
 
 
     def getArbitraryOutput(self, version, counter, prefix="", apiBaseURL=None):
@@ -2350,16 +2344,6 @@ class BuildAllTarballsTest(DistributionBuilderTestBase):
     Tests for L{DistributionBuilder.buildAllTarballs}.
     """
     skip = svnSkip
-
-    def setUp(self):
-        self.oldHandler = signal.signal(signal.SIGCHLD, signal.SIG_DFL)
-        DistributionBuilderTestBase.setUp(self)
-
-
-    def tearDown(self):
-        signal.signal(signal.SIGCHLD, self.oldHandler)
-        DistributionBuilderTestBase.tearDown(self)
-
 
     def test_buildAllTarballs(self):
         """
