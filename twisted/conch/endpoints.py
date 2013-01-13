@@ -87,6 +87,7 @@ class _CommandChannel(SSHChannel):
 
 
     def closed(self):
+        self.conn.transport.loseConnection()
         self._protocol.connectionLost(
             Failure(ConnectionDone("ssh channel closed")))
 

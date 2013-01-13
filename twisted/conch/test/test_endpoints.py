@@ -250,6 +250,11 @@ class SSHCommandEndpointTests(TestCase):
 
 
     def test_connectionFailed(self):
+        """
+        If a connection cannot be established, the L{Deferred} returned by
+        L{SSHCommandEndpoint.connect} fires with a L{Failure} the reason for
+        the connection setup failure.
+        """
         endpoint = SSHCommandEndpoint(
             self.reactor, self.hostname, self.port, b"/bin/ls -l",
             b"dummy user", knownHosts=self.knownHosts,
@@ -262,35 +267,6 @@ class SSHCommandEndpointTests(TestCase):
         factory.clientConnectionFailed(None, Failure(ConnectionRefusedError()))
 
         self.failureResultOf(d).trap(ConnectionRefusedError)
-
-
-    def getConnectionProtocol(self):
-        factory = self.memory.tcpClients[0][2]
-        return factory.buildProtocol(None)
-
-
-    def completeConnection(self, transport):
-        protocol = self.getConnectionProtocol()
-        protocol.makeConnection(transport)
-        return protocol
-
-
-    def test_connectionClosedBeforeSecure(self):
-        endpoint = SSHCommandEndpoint(
-            self.reactor, self.hostname, self.port, b"/bin/ls -l",
-            b"dummy user", knownHosts=self.knownHosts,
-            ui=FixedResponseUI(False))
-
-        factory = Factory()
-        factory.protocol = Protocol
-        d = endpoint.connect(factory)
-
-        transport = StringTransport()
-        client = self.completeConnection(transport)
-
-        client.connectionLost(Failure(ConnectionDone()))
-
-        self.failureResultOf(d).trap(Exception) # TODO Be more specific
 
 
     def test_hostKeyCheckFailure(self):
@@ -310,7 +286,39 @@ class SSHCommandEndpointTests(TestCase):
         f.trap(UserRejectedKey)
 
 
+    def test_connectionClosedBeforeSecure(self):
+        """
+        If the connection closes at any point before the SSH transport layer
+        has finished key exchange (ie, gotten to the point where we may attempt
+        to authenticate), the L{Deferred} returned by
+        L{SSHCommandEndpoint.connect} fires with a L{Failure} wrapping the
+        reason for the lost connection.
+        """
+        endpoint = SSHCommandEndpoint(
+            self.reactor, self.hostname, self.port, b"/bin/ls -l",
+            b"dummy user", knownHosts=self.knownHosts,
+            ui=FixedResponseUI(False))
+
+        factory = Factory()
+        factory.protocol = Protocol
+        d = endpoint.connect(factory)
+
+        transport = StringTransport()
+        factory = self.memory.tcpClients[0][2]
+        client= factory.buildProtocol(None)
+        client.makeConnection(transport)
+
+        client.connectionLost(Failure(ConnectionDone()))
+        self.failureResultOf(d).trap(ConnectionDone)
+
+
     def test_authenticationFailure(self):
+        """
+        If the SSH server rejects the credentials presented during
+        authentication, the L{Deferred} returned by
+        L{SSHCommandEndpoint.connect} fires with a L{Failure} wrapping
+        L{AuthenticationFailed}.
+        """
         endpoint = SSHCommandEndpoint(
             self.reactor, self.hostname, self.port, b"/bin/ls -l",
             b"dummy user",  b"dummy password", knownHosts=self.knownHosts,
@@ -336,10 +344,17 @@ class SSHCommandEndpointTests(TestCase):
         # XXX Should assert something specific about the arguments of the
         # exception
 
+        # Nothing useful can be done with the connection at this point, so the
+        # endpoint should close it.
         self.assertTrue(client.transport.disconnecting)
 
 
     def test_channelOpenFailure(self):
+        """
+        If a channel cannot be opened on the authenticated SSH connection, the
+        L{Deferred} returned by L{SSHCommandEndpoint.connect} fires with a
+        L{Failure} wrapping the reason given by the server.
+        """
         endpoint = SSHCommandEndpoint(
             self.reactor, self.hostname, self.port, b"/bin/ls -l", self.user,
             password=self.password, knownHosts=self.knownHosts,
@@ -363,10 +378,17 @@ class SSHCommandEndpointTests(TestCase):
         f.trap(ConchError)
         self.assertEqual('unknown channel', f.value.value)
 
+        # Nothing useful can be done with the connection at this point, so the
+        # endpoint should close it.
         self.assertTrue(client.transport.disconnecting)
 
 
     def test_execFailure(self):
+        """
+        If execution of the command fails, the L{Deferred} returned by
+        L{SSHCommandEndpoint.connect} fires with a L{Failure} wrapping the
+        reason given by the server.
+        """
         self.realm.channelLookup[b'session'] = BrokenExecSession
         endpoint = SSHCommandEndpoint(
             self.reactor, self.hostname, self.port, b"/bin/ls -l", self.user,
@@ -384,6 +406,8 @@ class SSHCommandEndpointTests(TestCase):
         f.trap(ConchError)
         self.assertEqual('channel request failed', f.value.value)
 
+        # Nothing useful can be done with the connection at this point, so the
+        # endpoint should close it.
         self.assertTrue(client.transport.disconnecting)
 
 
@@ -492,6 +516,10 @@ class SSHCommandEndpointTests(TestCase):
         pump.pump()
         connectionLost[0].trap(ConnectionDone)
 
+        # Nothing useful can be done with the connection at this point, so the
+        # endpoint should close it.
+        self.assertTrue(client.transport.disconnecting)
+
 
     def test_write(self):
         """
@@ -572,3 +600,12 @@ class SSHCommandEndpointTests(TestCase):
         protocol.transport.loseConnection()
         pump.pump()
         self.assertEqual([True], closed)
+
+        # Let the last bit of network traffic flow.  This lets the server's
+        # close acknowledgement through, at which point the client can close
+        # the overall SSH connection.
+        pump.pump()
+
+        # Nothing useful can be done with the connection at this point, so the
+        # endpoint should close it.
+        self.assertTrue(client.transport.disconnecting)
