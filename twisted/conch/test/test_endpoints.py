@@ -5,6 +5,8 @@
 Tests for L{twisted.conch.endpoints}.
 """
 
+from os.path import expanduser
+
 from zope.interface.verify import verifyObject
 from zope.interface import implementer, providedBy
 
@@ -324,6 +326,17 @@ class SSHCommandEndpointTests(TestCase):
 
         f = self.failureResultOf(connected)
         f.trap(HostKeyChanged)
+
+
+    def test_defaultKnownHosts(self):
+        """
+        By default, A L{KnownHostsFile} pointed at I{${HOME}/.ssh/known_hosts}
+        is used to initialize L{SSHCommandEndpoint}.
+        """
+        endpoint = SSHCommandEndpoint(
+            self.reactor, self.hostname, self.port, b"/bin/ls -l", self.user)
+        self.assertIsInstance(endpoint.knownHosts, KnownHostsFile)
+        self.assertEqual(expanduser("~/.ssh/config"))
 
 
     def test_connectionClosedBeforeSecure(self):
