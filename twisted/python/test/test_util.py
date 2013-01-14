@@ -104,8 +104,16 @@ class NameToLabelTests(unittest.TestCase):
             ('f', 'F'),
             ('fo', 'Fo'),
             ('foo', 'Foo'),
+            ('F', 'F'),
+            ('FO', 'FO'),
+            ('FOO', 'FOO'),
             ('fooBar', 'Foo Bar'),
             ('fooBarBaz', 'Foo Bar Baz'),
+            ('FooBar', 'Foo Bar'),
+            ('FooBarBaz', 'Foo Bar Baz'),
+            ('FOObar', 'FOO Bar'),
+            ('fooBAR', 'Foo BAR'),
+            ('rmswaveRMSWAVErmswaveRMSWAVE', 'Rmswave RMSWAVE Rmswave RMSWAVE'),
             ]
         for inp, out in nameData:
             got = util.nameToLabel(inp)
