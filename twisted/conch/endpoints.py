@@ -8,8 +8,11 @@ Endpoint implementations of various SSH interactions.
 
 __all__ = ['AuthenticationFailed', 'SSHCommandAddress', 'SSHCommandEndpoint']
 
+from os.path import expanduser
+
 from zope.interface import implementer
 
+from twisted.python.filepath import FilePath
 from twisted.python.failure import Failure
 from twisted.internet.error import ConnectionDone
 from twisted.internet.interfaces import IStreamClientEndpoint
@@ -23,7 +26,7 @@ from twisted.conch.ssh.transport import SSHClientTransport
 from twisted.conch.ssh.connection import SSHConnection
 from twisted.conch.ssh.userauth import SSHUserAuthClient
 from twisted.conch.ssh.channel import SSHChannel
-
+from twisted.conch.client.knownhosts import KnownHostsFile
 
 class AuthenticationFailed(Exception):
     """
@@ -179,6 +182,17 @@ class _CommandTransport(SSHClientTransport):
 class SSHCommandEndpoint(object):
     """
     """
+    _KNOWN_HOSTS = "~/.ssh/known_hosts"
+
+    @classmethod
+    def _knownHosts(cls):
+        """
+        Create and return a L{KnownHostsFile} instance pointed at the user's
+        personal I{known hosts} file.
+        """
+        return KnownHostsFile.fromPath(FilePath(expanduser(cls._KNOWN_HOSTS)))
+
+
     def __init__(self, reactor, hostname, port, command, username, password=None, knownHosts=None, ui=None):
         """
         @param reactor: The reactor to use to establish the connection.
@@ -216,8 +230,11 @@ class SSHCommandEndpoint(object):
         self.command = command
         self.username = username
         self.password = password
+        if knownHosts is None:
+            knownHosts = self._knownHosts()
         self.knownHosts = knownHosts
         self.ui = ui
+
 
 
     def connect(self, protocolFactory):

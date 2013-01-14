@@ -5,7 +5,7 @@
 Tests for L{twisted.conch.endpoints}.
 """
 
-from os.path import expanduser
+from os import environ
 
 from zope.interface.verify import verifyObject
 from zope.interface import implementer, providedBy
@@ -330,13 +330,14 @@ class SSHCommandEndpointTests(TestCase):
 
     def test_defaultKnownHosts(self):
         """
-        By default, A L{KnownHostsFile} pointed at I{${HOME}/.ssh/known_hosts}
-        is used to initialize L{SSHCommandEndpoint}.
+        L{SSHCommandEndpoint._knownHosts} is used to create a L{KnownHostsFile}
+        if one is not passed to the initializer.
         """
+        result = object()
+        self.patch(SSHCommandEndpoint, "_knownHosts", lambda cls: result)
         endpoint = SSHCommandEndpoint(
             self.reactor, self.hostname, self.port, b"/bin/ls -l", self.user)
-        self.assertIsInstance(endpoint.knownHosts, KnownHostsFile)
-        self.assertEqual(expanduser("~/.ssh/config"))
+        self.assertIdentical(result, endpoint.knownHosts)
 
 
     def test_connectionClosedBeforeSecure(self):
@@ -662,3 +663,34 @@ class SSHCommandEndpointTests(TestCase):
         # Nothing useful can be done with the connection at this point, so the
         # endpoint should close it.
         self.assertTrue(client.transport.disconnecting)
+
+
+
+class KnownHostsTests(TestCase):
+    """
+    Tests for L{SSHCommandEndpoint} behaviors related to I{known_hosts} file
+    handling.
+    """
+    def test_defaultPath(self):
+        """
+        The default I{known_hosts} path is I{~/.ssh/known_hosts}.
+        """
+        self.assertEqual("~/.ssh/known_hosts", SSHCommandEndpoint._KNOWN_HOSTS)
+
+
+    def test_readExisting(self):
+        """
+        Existing entries in the I{known_hosts} file are reflected by the
+        L{KnownHostsFile} created by L{SSHCommandEndpoint} when none is
+        supplied to it.
+        """
+        key = CommandFactory.publicKeys['ssh-rsa']
+        path = FilePath(self.mktemp())
+        knownHosts = KnownHostsFile(path)
+        knownHosts.addHostKey("127.0.0.1", key)
+        knownHosts.save()
+
+        self.patch(SSHCommandEndpoint, "_KNOWN_HOSTS", path.path.replace(environ["HOME"], "~"))
+
+        loaded = SSHCommandEndpoint._knownHosts()
+        self.assertTrue(loaded.hasHostKey("127.0.0.1", key))
