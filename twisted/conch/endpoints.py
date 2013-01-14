@@ -113,7 +113,19 @@ class _CommandConnection(SSHConnection):
 
 class UserAuth(SSHUserAuthClient):
     password = None
-    key = None
+    keys = None
+
+    def getPublicKey(self):
+        if self.keys:
+            self.key = self.keys.pop(0)
+        else:
+            self.key = None
+        return self.key.public()
+
+
+    def getPrivateKey(self):
+        return succeed(self.key)
+
 
     def getPassword(self):
         return succeed(self.password)
@@ -162,6 +174,8 @@ class _CommandTransport(SSHClientTransport):
             self.factory.commandConnected)
         userauth = UserAuth(self.factory.username, command)
         userauth.password = self.factory.password
+        if self.factory.keys:
+            userauth.keys = list(self.factory.keys)
         self.requestService(userauth)
 
 
@@ -193,7 +207,7 @@ class SSHCommandEndpoint(object):
         return KnownHostsFile.fromPath(FilePath(expanduser(cls._KNOWN_HOSTS)))
 
 
-    def __init__(self, reactor, hostname, port, command, username, password=None, knownHosts=None, ui=None):
+    def __init__(self, reactor, hostname, port, command, username, keys=None, password=None, knownHosts=None, ui=None):
         """
         @param reactor: The reactor to use to establish the connection.
         @type reactor: L{IReactorTCP} provider
@@ -210,6 +224,10 @@ class SSHCommandEndpoint(object):
         @param username: The username with which to authenticate to the SSH
             server.
         @type username: L{bytes}
+
+        @param keys: Private keys with which to authenticate to the SSH server,
+            if key authentication is to be attempted (otherwise C{None}).
+        @type keys: L{list} of L{Key}
 
         @param password: The password with which to authenticate to the SSH
             server, if password authentication is to be attempted (otherwise
@@ -229,6 +247,7 @@ class SSHCommandEndpoint(object):
         self.port = port
         self.command = command
         self.username = username
+        self.keys = keys
         self.password = password
         if knownHosts is None:
             knownHosts = self._knownHosts()
@@ -256,6 +275,7 @@ class SSHCommandEndpoint(object):
         factory.protocol = _CommandTransport
         factory.hostname = self.hostname
         factory.username = self.username
+        factory.keys = self.keys
         factory.password = self.password
         factory.knownHosts = self.knownHosts
         factory.ui = self.ui

@@ -30,7 +30,9 @@ from twisted.conch.ssh.connection import SSHConnection
 from twisted.conch.ssh.keys import Key
 from twisted.conch.ssh.channel import SSHChannel
 from twisted.conch.client.knownhosts import KnownHostsFile
+from twisted.conch.checkers import SSHPublicKeyDatabase
 
+from twisted.python.fakepwd import UserDatabase
 from twisted.internet.task import Clock
 from twisted.test.proto_helpers import StringTransport, MemoryReactor
 from twisted.test.iosim import FakeTransport, connect
@@ -315,7 +317,8 @@ class SSHCommandEndpointTests(TestCase):
 
         endpoint = SSHCommandEndpoint(
             self.reactor, self.hostname, self.port, b"/bin/ls -l",
-            b"dummy user", b"dummy password", knownHosts=knownHosts, ui=ui)
+            b"dummy user", password=b"dummy password", knownHosts=knownHosts,
+            ui=ui)
 
         factory = Factory()
         factory.protocol = Protocol
@@ -375,8 +378,8 @@ class SSHCommandEndpointTests(TestCase):
         """
         endpoint = SSHCommandEndpoint(
             self.reactor, self.hostname, self.port, b"/bin/ls -l",
-            b"dummy user",  b"dummy password", knownHosts=self.knownHosts,
-            ui=FixedResponseUI(False))
+            b"dummy user",  password=b"dummy password",
+            knownHosts=self.knownHosts, ui=FixedResponseUI(False))
 
         factory = Factory()
         factory.protocol = Protocol
@@ -663,6 +666,43 @@ class SSHCommandEndpointTests(TestCase):
         # Nothing useful can be done with the connection at this point, so the
         # endpoint should close it.
         self.assertTrue(client.transport.disconnecting)
+
+
+    def test_publicKeyAuthentication(self):
+        """
+        If L{SSHCommandEndpoint} is initialized with any private keys, it will
+        try to use them to authenticate with the SSH server.
+        """
+        key = Key.fromString(privateDSA_openssh)
+        username = self.user
+        authorizedKeys = FilePath(self.mktemp())
+        authorizedKeys.setContent(key.public().toString("OPENSSH"))
+
+        class X(SSHPublicKeyDatabase):
+            def getAuthorizedKeysFiles(self, credentials):
+                if credentials.username == username:
+                    return [authorizedKeys]
+                return []
+
+        checker = X()
+        checker._userdb = UserDatabase()
+        checker._userdb.addUser(username, b"garbage", 123, 456, None, None, None)
+        self.portal.registerChecker(checker)
+
+        self.realm.channelLookup[b'session'] = WorkingExecSession
+        endpoint = SSHCommandEndpoint(
+            self.reactor, self.hostname, self.port, b"/bin/ls -l", self.user,
+            keys=[key], knownHosts=self.knownHosts, ui=FixedResponseUI(False))
+
+        factory = Factory()
+        factory.protocol = Protocol
+        connected = endpoint.connect(factory)
+
+        server, client, pump = self.connectedServerAndClient(
+            self.factory, self.memory.tcpClients[0][2])
+
+        protocol = self.successResultOf(connected)
+        self.assertNotIdentical(None, protocol.transport)
 
 
 

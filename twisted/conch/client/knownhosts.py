@@ -402,10 +402,16 @@ class KnownHostsFile(object):
 
     def fromPath(cls, path):
         """
-        @param path: A path object to use for both reading contents from and
-        later saving to.
+        Create a new L{KnownHostsFile}, potentially reading existing known
+        hosts information from the given file.
 
+        @param path: A path object to use for both reading contents from and
+            later saving to.  If no file exists at this path, it is not an
+            error; a L{KnownHostsFile} with no entries is returned.
         @type path: L{FilePath}
+
+        @return: A L{KnownHostsFile} initialized with entries from C{path}.
+        @rtype: L{KnownHostsFile}
         """
         self = cls(path)
         try:
