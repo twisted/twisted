@@ -138,8 +138,8 @@ class Resolver(common.ResolverBase):
 
     def lookupIPV6Address(self, name, timeout=None):
         """
-        Read any IPv4 addresses from C{self.file} and return them as L{Record_A}
-        instances.
+        Read any IPv6 addresses from C{self.file} and return them as
+        L{Record_AAAA} instances.
         """
         return self._respond(name, self._aaaaRecords(name))
 
