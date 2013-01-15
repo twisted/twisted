@@ -157,6 +157,7 @@ class Tube(object):
         Deliver the given item to this L{Tube}'s C{drain} attribute, if it has
         yet been set by L{flowingFrom}.
         """
+        self.pauseFlow()
         self._delivered = True
         if self.drain is None:
             self._pendingOutput.append(item)
