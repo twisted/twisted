@@ -47,9 +47,13 @@ def _extractCommon(string):
     """
     Extract common elements of base64 keys from an entry in a hosts file.
 
-    @return: a 4-tuple of hostname data (L{str}), ssh key type (L{str}), key
-    (L{Key}), and comment (L{str} or L{None}).  The hostname data is simply the
-    beginning of the line up to the first occurrence of whitespace.
+    @param string: A known hosts file entry (a single line).
+    @type string: L{bytes}
+
+    @return: a 4-tuple of hostname data (L{bytes}), ssh key type (L{bytes}), key
+        (L{Key}), and comment (L{bytes} or L{None}).  The hostname data is
+        simply the beginning of the line up to the first occurrence of
+        whitespace.
     """
     elements = string.split(None, 2)
     if len(elements) != 3:
