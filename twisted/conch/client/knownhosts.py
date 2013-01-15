@@ -219,6 +219,10 @@ class UnparsedEntry(object):
     def toString(self):
         """
         Returns the input line, without its newline if one was given.
+
+        @return: The string representation of this entry, almost exactly as was
+            used to initialize this entry but without a trailing newline.
+        @rtype: L{bytes}
         """
         return self._string.rstrip("\n")
 
@@ -271,15 +275,22 @@ class HashedEntry(_BaseEntry):
         Load a hashed entry from a string representing a line in a known_hosts
         file.
 
+        @param string: A complete single line from a I{known_hosts} file,
+            formatted as defined by OpenSSH.
+        @type string: L{bytes}
+
         @raise DecodeError: if the key, the hostname, or the is not valid
-        encoded as valid base64
+            encoded as valid base64
 
         @raise InvalidEntry: if the entry does not have the right number of
-        elements and is therefore invalid, or the host/hash portion contains
-        more items than just the host and hash.
+            elements and is therefore invalid, or the host/hash portion contains
+            more items than just the host and hash.
 
         @raise BadKeyError: if the key, once decoded from base64, is not
-        actually an SSH key.
+            actually an SSH key.
+
+        @return: The newly created L{HashedEntry} instance, initialized with the
+            information from C{string}.
         """
         stuff, keyType, key, comment = _extractCommon(string)
         saltAndHash = stuff[len(cls.MAGIC):].split("|")
@@ -297,6 +308,14 @@ class HashedEntry(_BaseEntry):
         """
         Implement L{IKnownHostEntry.matchesHost} to compare the hash of the
         input to the stored hash.
+
+        @param hostname: A hostname or IP address literal to check against this
+            entry.
+        @type hostname: L{bytes}
+
+        @return: C{True} if this entry is for the given hostname or IP address,
+            C{False} otherwise.
+        @rtype: L{bool}
         """
         return (_hmacedString(self._hostSalt, hostname) == self._hostHash)
 
@@ -305,6 +324,10 @@ class HashedEntry(_BaseEntry):
         """
         Implement L{IKnownHostEntry.toString} by base64-encoding the salt, host
         hash, and key.
+
+        @return: The string representation of this entry, with the hostname part
+            hashed.
+        @rtype: L{bytes}
         """
         fields = [self.MAGIC + '|'.join([_b64encode(self._hostSalt),
                                          _b64encode(self._hostHash)]),
@@ -337,13 +360,20 @@ class KnownHostsFile(object):
 
     def hasHostKey(self, hostname, key):
         """
-        @return: True if the given hostname and key are present in this file,
-        False if they are not.
+        Check for an entry with matching hostname and key.
 
+        @param hostname: A hostname or IP address literal to check for.
+        @type hostname: L{bytes}
+
+        @param key: The public key to check for.
+        @type key: L{Key}
+
+        @return: C{True} if the given hostname and key are present in this file,
+            C{False} if they are not.
         @rtype: L{bool}
 
         @raise HostKeyChanged: if the host key found for the given hostname
-        does not match the given key.
+            does not match the given key.
         """
         for lineidx, entry in enumerate(self._entries):
             if entry.matchesHost(hostname):
@@ -407,10 +437,18 @@ class KnownHostsFile(object):
         """
         Add a new L{HashedEntry} to the key database.
 
+        @param hostname: A hostname or IP address literal to associate with the
+            new entry.
+        @type hostname: L{bytes}
+
+        @param key: The public key to associate with the new entry.
+        @type key: L{Key}
+
         Note that you still need to call L{KnownHostsFile.save} if you wish
         these changes to be persisted.
 
-        @return: the L{HashedEntry} that was added.
+        @return: The L{HashedEntry} that was added.
+        @type: L{HashedEntry}
         """
         salt = secureRandom(20)
         keyType = "ssh-" + key.type().lower()
