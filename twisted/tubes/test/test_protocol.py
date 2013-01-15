@@ -72,7 +72,6 @@ class FlowingAdapterTests(TestCase, ResultProducingMixin):
         ff = FakeFount()
         self.adapter.flowingFrom(ff)
         self.assertIdentical(self.adapter.fount, ff)
-        self.assertEquals(ff.flowIsStarted, True)
 
 
 

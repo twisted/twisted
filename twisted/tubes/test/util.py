@@ -133,15 +133,10 @@ class FakeFount(object):
     outputType = IFakeOutput
 
     flowIsPaused = False
-    flowIsStarted = False
 
     def flowTo(self, drain):
         self.drain = drain
         return self.drain.flowingFrom(self)
-
-
-    def startFlow(self):
-        self.flowIsStarted = True
 
 
     def pauseFlow(self):

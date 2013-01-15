@@ -47,7 +47,6 @@ class TubeTest(TestCase):
         L{Tube.flowTo} will immediately have its L{IDrain.flowingFrom} called.
         """
         self.ff.flowTo(self.tube)
-        self.assertEquals(self.ff.flowIsStarted, False)
         self.tube.flowTo(self.fd)
         self.assertIdentical(self.fd.fount, self.tube)
 
@@ -149,27 +148,6 @@ class TubeTest(TestCase):
             inputType = IFakeInput
         self.tube.valve = V()
         self.failUnlessRaises(TypeError, self.ff.flowTo, self.tube)
-
-
-    def test_relayStartFlow(self):
-        """
-        L{Tube.startFlow} will relay the call to its fount.
-        """
-        self.ff.flowTo(self.tube)
-        self.tube.startFlow()
-        self.assertEquals(self.ff.flowIsStarted, True)
-
-
-    def test_startFlowBeforeFountAssigned(self):
-        """
-        L{Tube.startFlow} will relay the call to its fount even if it doesn't
-        know who its fount is yet; when it's assigned it will call
-        L{IFount.startFlow}.
-        """
-        self.tube.startFlow()
-        self.assertEquals(self.ff.flowIsStarted, False)
-        self.ff.flowTo(self.tube)
-        self.assertEquals(self.ff.flowIsStarted, True)
 
 
     def test_flowToValue(self):

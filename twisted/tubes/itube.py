@@ -54,19 +54,6 @@ class IFount(Interface):
         """
 
 
-    def startFlow():
-        """
-        A fount is created un-started; it must be told to start flowing before
-        any data will be delivered.
-
-        The idiomatic use of a fount will hopefully be something like
-        C{fount.flowTo(...).flowTo(...).flowTo(terminal)}.  It's conceivable
-        that the terminal hookup might not happen immediately, and I don't want
-        every intermediary tube saying to pause its fount just in case it's not
-        terminal drain hook everything up.
-        """
-
-
     def pauseFlow():
         """
         Momentarily pause delivering items to the currently active drain, until
@@ -85,13 +72,6 @@ class IFount(Interface):
         Return a boolean: is this fount currently delivering output?  This means
         that it is started, it isn't paused, and it isn't ended (although it may
         be I{ending}).
-        """
-
-
-    def isStarted():
-        """
-        Return a boolean: has this L{IFount} been started?  Note that an
-        L{IFount} may have been started, then stopped.
         """
 
 

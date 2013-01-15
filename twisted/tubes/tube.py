@@ -30,17 +30,9 @@ class Tube(object):
 
     @ivar _currentlyPaused: is this L{Tube} currently paused?  Boolean: C{True}
         if paused, C{False} if not.  This variable tracks whether this L{Tube}
-        has invoked L{pauseFlow} on I{its} C{fount} attribute, so it may only be
-        set if the fount has also been set (by calling
+        has invoked L{pauseFlow} on I{its} C{fount} attribute, so it may only
+        be set if the fount has also been set (by calling
         C{otherFount.flowTo(thisTube)}).
-
-    @ivar _startWhenFlowingFrom: if this L{Tube} is hooked up to an L{IDrain}
-        I{before} it is hooked up to an L{IFount}, that drain may ask it to
-        C{startFlow} in advance of actually having anywhere to get a flow from.
-        This C{bool} tracks whether this L{Tube}'s C{startFlow} has been called,
-        which in means in turn that it will immediately call C{startFlow} on the
-        upstream L{IFount} when it gets hooked up by
-        C{otherFount.flowTo(thisTube)}.
     """
 
     implements(IDrain, IFount)
@@ -49,7 +41,6 @@ class Tube(object):
     drain = None
 
     _currentlyPaused = False
-    _startWhenFlowingFrom = False
     _delivered = False
     _valve = None
 
@@ -95,8 +86,6 @@ class Tube(object):
         if ot is not None and it is not None and not it.isOrExtends(ot):
             raise TypeError()
         self.fount = fount
-        if self._startWhenFlowingFrom:
-            fount.startFlow()
         return self
 
 
@@ -122,16 +111,6 @@ class Tube(object):
         else:
             self._currentlyPaused = True
             self.fount.pauseFlow()
-
-
-    def startFlow(self):
-        """
-        Start flowing (initial unpause).
-        """
-        if self.fount is not None:
-            self.fount.startFlow()
-        else:
-            self._startWhenFlowingFrom = True
 
 
     def resumeFlow(self):

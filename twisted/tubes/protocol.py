@@ -26,7 +26,6 @@ class ProtocolDrain(object):
         self.fount = fount
         # The transport is ready to receive data, so let's immediately indicate
         # that.
-        fount.startFlow()
 
 
     def receive(self, item):
@@ -84,15 +83,6 @@ class ProtocolFount(object):
             self.drain.receive(chunk)
 
 
-    _flowStarted = False
-    def startFlow(self):
-        """
-        Start flowing.
-        """
-        self._flowStarted = True
-        self.transport.resumeProducing()
-
-
     _flowPaused = False
     def pauseFlow(self):
         """
@@ -117,14 +107,6 @@ class ProtocolFount(object):
         return (
             self._flowStarted and not self._flowEnded and not self._flowPaused
         )
-
-
-    def isStarted(self):
-        """
-        Is this fount currently started?  (Has C{startFlow} been called, in
-        other words.)
-        """
-        return self._flowStarted
 
 
     def isEnded(self):
@@ -192,7 +174,6 @@ class ProtocolPlumbing(Protocol, ProtocolDrain, ProtocolFount):
         The connection was established.  We don't want to deliver any data yet,
         maybe?
         """
-        self.transport.pauseProducing() # see IFount.startFlow doc above
         self._createdStuff(self, self)
         #self._drainImpl = ProtocolDrain(self)
         #self._fountImpl = ProtocolFount(self)
