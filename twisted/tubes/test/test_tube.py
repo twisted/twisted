@@ -178,6 +178,22 @@ class TubeTest(TestCase):
         self.assertEquals(self.fd.received, ["hi"])
 
 
+    def test_deliverWithoutDownstreamPauses(self):
+        """
+        L{Tube.deliver} on a tube with an upstream L{IFount} but no downstream
+        L{IDrain} will pause its L{IFount}.  This is because the L{Tube} has to
+        buffer everything downstream, and it doesn't want to buffer infinitely;
+        if it has nowhere to deliver onward to, then it issues a pause.  Note
+        also that this happens when data is delivered via the L{Tube} and
+        I{not} when data arrives via the L{Tube}'s C{receive} method, since
+        C{receive} delivers onwards to the L{Valve} immediately, and does not
+        require any buffering.
+        """
+        self.ff.flowTo(self.tube)
+        self.tube.deliver("abc")
+        self.assertEquals(self.ff.flowIsPaused, True)
+
+
     def test_receiveCallsValveReceived(self):
         """
         L{Tube.receive} will deliver its input to L{IValve.received} on its
