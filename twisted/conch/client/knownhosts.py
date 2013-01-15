@@ -424,12 +424,13 @@ class KnownHostsFile(object):
                         return response
                     else:
                         raise UserRejectedKey()
-                return ui.prompt(
+                proceed = ui.prompt(
                     "The authenticity of host '%s (%s)' "
                     "can't be established.\n"
                     "RSA key fingerprint is %s.\n"
                     "Are you sure you want to continue connecting (yes/no)? " %
-                    (hostname, ip, key.fingerprint())).addCallback(promptResponse)
+                    (hostname, ip, key.fingerprint()))
+                return proceed.addCallback(promptResponse)
         return hhk.addCallback(gotHasKey)
 
 
@@ -506,12 +507,13 @@ class ConsoleUI(object):
     """
     A UI object that can ask true/false questions and post notifications on the
     console, to be used during key verification.
-
-    @ivar opener: a no-argument callable which should open a console file-like
-    object to be used for reading and writing.
     """
-
     def __init__(self, opener):
+        """
+        @param opener: A no-argument callable which should open a console
+            binary-mode file-like object to be used for reading and writing.
+            This initializes the C{opener} attribute.
+        """
         self.opener = opener
 
 
@@ -520,9 +522,13 @@ class ConsoleUI(object):
         Write the given text as a prompt to the console output, then read a
         result from the console input.
 
+        @param text: Something to present to a user to solicit a yes or no
+            response.
+        @type text: L{bytes}
+
         @return: a L{Deferred} which fires with L{True} when the user answers
-        'yes' and L{False} when the user answers 'no'.  It may errback if there
-        were any I/O errors.
+            'yes' and L{False} when the user answers 'no'.  It may errback if
+            there were any I/O errors.
         """
         d = defer.succeed(None)
         def body(ignored):
@@ -545,6 +551,9 @@ class ConsoleUI(object):
         """
         Notify the user (non-interactively) of the provided text, by writing it
         to the console.
+
+        @param text: Some information the user is to be made aware of.
+        @type text: L{bytes}
         """
         try:
             f = self.opener()
