@@ -96,9 +96,12 @@ class _BaseEntry(object):
         """
         Check to see if this entry matches a given key object.
 
+        @param keyObject: A public key object to check.
         @type keyObject: L{Key}
 
-        @rtype: bool
+        @return: C{True} if this entry's key matches C{keyObject}, C{False}
+            otherwise.
+        @rtype: L{bool}
         """
         return self.publicKey == keyObject
 
@@ -154,9 +157,13 @@ class PlainEntry(_BaseEntry):
         """
         Check to see if this entry matches a given hostname.
 
+        @param hostname: A hostname or IP address literal to check against this
+            entry.
         @type hostname: L{str}
 
-        @rtype: bool
+        @return: C{True} if this entry is for the given hostname or IP address,
+            C{False} otherwise.
+        @rtype: L{bool}
         """
         return hostname in self._hostnames
 
@@ -165,6 +172,10 @@ class PlainEntry(_BaseEntry):
         """
         Implement L{IKnownHostEntry.toString} by recording the comma-separated
         hostnames, key type, and base-64 encoded key.
+
+        @return: The string representation of this entry, with unhashed hostname
+            information.
+        @rtype: L{bytes}
         """
         fields = [','.join(self._hostnames),
                   self.keyType,
@@ -172,6 +183,7 @@ class PlainEntry(_BaseEntry):
         if self.comment is not None:
             fields.append(self.comment)
         return ' '.join(fields)
+
 
 
 class UnparsedEntry(object):
@@ -215,6 +227,15 @@ class UnparsedEntry(object):
 def _hmacedString(key, string):
     """
     Return the SHA-1 HMAC hash of the given key and string.
+
+    @param key: The HMAC key.
+    @type key: L{bytes}
+
+    @param string: The string to be hashed.
+    @type string: L{bytes}
+
+    @return: The keyed hash value.
+    @rtype: L{bytes}
     """
     hash = hmac.HMAC(key, digestmod=sha1)
     hash.update(string)
@@ -440,6 +461,7 @@ class KnownHostsFile(object):
         return self
 
     fromPath = classmethod(fromPath)
+
 
 
 class ConsoleUI(object):
