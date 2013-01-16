@@ -15,6 +15,8 @@ try:
 except ImportError:
     setgroups = getgroups = None
 
+from twisted.python.deprecate import deprecated
+from twisted.python.versions import Version
 from twisted.python.compat import _PY3, unicode
 if _PY3:
     UserDict = object
@@ -838,6 +840,7 @@ def untilConcludes(f, *a, **kw):
 
 _idFunction = id
 
+@deprecated(Version("Twisted", 13, 0, 0))
 def setIDFunction(idFunction):
     """
     Change the function used by L{unsignedID} to determine the integer id value
@@ -857,6 +860,8 @@ def setIDFunction(idFunction):
 # from id() will be added, moving them into a range which should begin just
 # above where positive values from id() leave off.
 _HUGEINT = (sys.maxsize + 1) * 2
+
+@deprecated(Version("Twisted", 13, 0, 0), "builtin id")
 def unsignedID(obj):
     """
     Return the id of an object as an unsigned number so that its hex

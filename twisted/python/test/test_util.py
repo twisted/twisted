@@ -19,6 +19,7 @@ from twisted.trial import unittest
 
 from twisted.python.compat import _PY3
 from twisted.python import util
+from twisted.python.versions import Version
 from twisted.internet import reactor
 from twisted.internet.interfaces import IReactorProcess
 from twisted.internet.protocol import ProcessProtocol
@@ -864,6 +865,15 @@ class UnsignedIDTests(unittest.TestCase):
         self.assertIdentical(value, result)
 
 
+    def test_setIDFunctionDeprecated(self):
+        """
+        L{util.setIDFunction} is deprecated.
+        """
+        self.callDeprecated(
+            (Version("Twisted", 13, 0, 0)),
+            util.setIDFunction, UnsignedIDTests)
+
+
     def test_unsignedID(self):
         """
         L{util.unsignedID} uses the function passed to L{util.setIDFunction} to
@@ -882,6 +892,15 @@ class UnsignedIDTests(unittest.TestCase):
 
         self.assertEqual(util.unsignedID(foo), 17)
         self.assertEqual(util.unsignedID(bar), (sys.maxsize + 1) * 2 - 73)
+
+
+    def test_unsignedIDDeprecated(self):
+        """
+        L{util.unsignedID} is deprecated, use the builtin C{id} instead.
+        """
+        self.callDeprecated(
+            (Version("Twisted", 13, 0, 0), "builtin id"),
+            util.unsignedID, UnsignedIDTests)
 
 
     def test_defaultIDFunction(self):

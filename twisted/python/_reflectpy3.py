@@ -9,9 +9,8 @@ Reflection APIs which have been ported to Python 3.
 from __future__ import division, absolute_import
 
 import types, sys, os, traceback
-from twisted.python.compat import reraise, nativeString, NativeStringIO
 
-from twisted.python.util import unsignedID
+from twisted.python.compat import reraise, nativeString, NativeStringIO
 
 
 def prefixedMethodNames(classObj, prefix):
@@ -345,7 +344,7 @@ def _determineClassName(x):
         try:
             return str(c)
         except:
-            return '<BROKEN CLASS AT 0x%x>' % unsignedID(c)
+            return '<BROKEN CLASS AT 0x%x>' % id(c)
 
 
 
@@ -361,7 +360,7 @@ def _safeFormat(formatter, o):
         className = _determineClassName(o)
         tbValue = io.getvalue()
         return "<%s instance at 0x%x with %s error:\n %s>" % (
-            className, unsignedID(o), formatter.__name__, tbValue)
+            className, id(o), formatter.__name__, tbValue)
 
 
 

@@ -14,7 +14,6 @@ except ImportError:
 from zope.interface import implementer
 
 from twisted.python.threadpool import ThreadPool
-from twisted.python.util import setIDFunction
 from twisted.internet.interfaces import IReactorTime, IReactorThreads
 from twisted.internet.error import DNSLookupError
 from twisted.internet.base import ThreadedResolver, DelayedCall
@@ -195,16 +194,10 @@ class DelayedCallTests(TestCase):
         the function to be called, and the function arguments.
         """
         dc = DelayedCall(12, nothing, (3, ), {"A": 5}, None, None, lambda: 1.5)
-        ids = {dc: 200}
-        def fakeID(obj):
-            try:
-                return ids[obj]
-            except (TypeError, KeyError):
-                return id(obj)
-        self.addCleanup(setIDFunction, setIDFunction(fakeID))
         self.assertEqual(
             str(dc),
-            "<DelayedCall 0xc8 [10.5s] called=0 cancelled=0 nothing(3, A=5)>")
+            "<DelayedCall 0x%x [10.5s] called=0 cancelled=0 nothing(3, A=5)>" % (
+            id(dc)))
 
 
     def test_lt(self):

@@ -18,7 +18,6 @@ from heapq import heappush, heappop, heapify
 import traceback
 
 from twisted.python.compat import set
-from twisted.python.util import unsignedID
 from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorThreads
 from twisted.internet.interfaces import IResolverSimple, IReactorPluggableResolver
 from twisted.internet.interfaces import IConnector, IDelayedCall
@@ -191,7 +190,7 @@ class DelayedCall:
 
         now = self.seconds()
         L = ["<DelayedCall 0x%x [%ss] called=%s cancelled=%s" % (
-                unsignedID(self), self.time - now, self.called,
+                id(self), self.time - now, self.called,
                 self.cancelled)]
         if func is not None:
             L.extend((" ", func, "("))
