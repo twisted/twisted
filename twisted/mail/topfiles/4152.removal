@@ -1,0 +1,1 @@
+protocols.DomainSMTP and protocols.DomainESMTP, deprecated since 2003, are removed now.

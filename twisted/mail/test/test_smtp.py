@@ -8,7 +8,8 @@ Test cases for twisted.mail.smtp module.
 from zope.interface import implements, directlyProvides
 
 from twisted.python.util import LineLog
-from twisted.trial import unittest, util
+from twisted.python.compat import NativeStringIO as StringIO
+from twisted.trial import unittest
 from twisted.protocols import basic, loopback
 from twisted.mail import smtp
 from twisted.internet import defer, protocol, reactor, interfaces
@@ -37,15 +38,6 @@ else:
     sslSkip = None
 
 import re
-
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
-
-
-def spameater(*spam, **eggs):
-    return None
 
 
 
@@ -125,49 +117,6 @@ class DummyDomain(object):
 
 
 
-class SMTPTestCase(unittest.TestCase):
-
-    messages = [('foo@bar.com', ['foo@baz.com', 'qux@baz.com'], '''\
-Subject: urgent\015
-\015
-Someone set up us the bomb!\015
-''')]
-
-    mbox = {'foo': ['Subject: urgent\n\nSomeone set up us the bomb!\n']}
-
-    def setUp(self):
-        """
-        Create an in-memory mail domain to which messages may be delivered by
-        tests and create a factory and transport to do the delivering.
-        """
-        self.factory = smtp.SMTPFactory()
-        self.factory.domains = {}
-        self.factory.domains['baz.com'] = DummyDomain(['foo'])
-        self.transport = StringTransport()
-
-
-    def testMessages(self):
-        from twisted.mail import protocols
-        protocol =  protocols.DomainSMTP()
-        protocol.service = self.factory
-        protocol.factory = self.factory
-        protocol.receivedHeader = spameater
-        protocol.makeConnection(self.transport)
-        protocol.lineReceived('HELO yyy.com')
-        for message in self.messages:
-            protocol.lineReceived('MAIL FROM:<%s>' % message[0])
-            for target in message[1]:
-                protocol.lineReceived('RCPT TO:<%s>' % target)
-            protocol.lineReceived('DATA')
-            protocol.dataReceived(message[2])
-            protocol.lineReceived('.')
-        protocol.lineReceived('QUIT')
-        if self.mbox != self.factory.domains['baz.com'].messages:
-            raise AssertionError(self.factory.domains['baz.com'].messages)
-        protocol.setTimeout(None)
-
-    testMessages.suppress = [util.suppress(message='DomainSMTP', category=DeprecationWarning)]
-
 mail = '''\
 Subject: hello
 
@@ -213,33 +162,19 @@ class MySMTPClient(MyClient, smtp.SMTPClient):
         smtp.SMTPClient.__init__(self, 'foo.baz')
         MyClient.__init__(self, messageInfo)
 
+
+
 class MyESMTPClient(MyClient, smtp.ESMTPClient):
     def __init__(self, secret = '', contextFactory = None):
         smtp.ESMTPClient.__init__(self, secret, contextFactory, 'foo.baz')
         MyClient.__init__(self)
 
+
+
 class LoopbackMixin:
     def loopback(self, server, client):
         return loopback.loopbackTCP(server, client)
 
-class LoopbackTestCase(LoopbackMixin):
-    def testMessages(self):
-        factory = smtp.SMTPFactory()
-        factory.domains = {}
-        factory.domains['foo.bar'] = DummyDomain(['moshez'])
-        from twisted.mail.protocols import DomainSMTP
-        protocol =  DomainSMTP()
-        protocol.service = factory
-        protocol.factory = factory
-        clientProtocol = self.clientClass()
-        return self.loopback(protocol, clientProtocol)
-    testMessages.suppress = [util.suppress(message='DomainSMTP', category=DeprecationWarning)]
-
-class LoopbackSMTPTestCase(LoopbackTestCase, unittest.TestCase):
-    clientClass = MySMTPClient
-
-class LoopbackESMTPTestCase(LoopbackTestCase, unittest.TestCase):
-    clientClass = MyESMTPClient
 
 
 class FakeSMTPServer(basic.LineReceiver):

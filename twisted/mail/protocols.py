@@ -80,31 +80,6 @@ class SMTPDomainDelivery(DomainDeliveryBase):
 class ESMTPDomainDelivery(DomainDeliveryBase):
     protocolName = 'esmtp'
 
-class DomainSMTP(SMTPDomainDelivery, smtp.SMTP):
-    service = user = None
-
-    def __init__(self, *args, **kw):
-        import warnings
-        warnings.warn(
-            "DomainSMTP is deprecated.  Use IMessageDelivery objects instead.",
-            DeprecationWarning, stacklevel=2,
-        )
-        smtp.SMTP.__init__(self, *args, **kw)
-        if self.delivery is None:
-            self.delivery = self
-
-class DomainESMTP(ESMTPDomainDelivery, smtp.ESMTP):
-    service = user = None
-
-    def __init__(self, *args, **kw):
-        import warnings
-        warnings.warn(
-            "DomainESMTP is deprecated.  Use IMessageDelivery objects instead.",
-            DeprecationWarning, stacklevel=2,
-        )
-        smtp.ESMTP.__init__(self, *args, **kw)
-        if self.delivery is None:
-            self.delivery = self
 
 class SMTPFactory(smtp.SMTPFactory):
     """A protocol factory for SMTP."""
