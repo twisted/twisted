@@ -146,8 +146,10 @@ class BounceTestCase(unittest.TestCase):
     def setUp(self):
         self.domain = mail.mail.BounceDomain()
 
+
     def testExists(self):
         self.assertRaises(smtp.AddressError, self.domain.exists, "any user")
+
 
     def testRelay(self):
         self.assertEqual(
@@ -155,12 +157,12 @@ class BounceTestCase(unittest.TestCase):
             False
         )
 
-    def testMessage(self):
-        self.assertRaises(NotImplementedError, self.domain.startMessage, "whomever")
 
     def testAddUser(self):
         self.domain.addUser("bob", "password")
         self.assertRaises(smtp.SMTPBadRcpt, self.domain.exists, "bob")
+
+
 
 class FileMessageTestCase(unittest.TestCase):
     def setUp(self):
@@ -807,13 +809,23 @@ class VirtualPOP3TestCase(unittest.TestCase):
             self.P.authenticateUserPASS('user', 'wrong password'),
             cred.error.UnauthorizedLogin)
 
+
+
 class empty(smtp.User):
     def __init__(self):
         pass
 
+
+
 class RelayTestCase(unittest.TestCase):
+    def setUp(self):
+        self.tmpdir = self.mktemp()
+        os.mkdir(self.tmpdir)
+
+
     def testExists(self):
         service = mail.mail.MailService()
+        service.setQueue(mail.relaymanager.Queue(self.tmpdir))
         domain = mail.relay.DomainQueuer(service)
 
         doRelay = [
@@ -845,6 +857,8 @@ class RelayTestCase(unittest.TestCase):
             user.dest = 'who@cares'
 
             self.assertRaises(smtp.SMTPBadRcpt, domain.exists, user)
+
+
 
 class RelayerTestCase(unittest.TestCase):
     def setUp(self):

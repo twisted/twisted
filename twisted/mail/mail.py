@@ -114,6 +114,8 @@ class DomainWithDefaultDict:
     def setdefault(self, key, default):
         return self.domains.setdefault(key, default)
 
+
+
 class IDomain(Interface):
     """
     An email domain.
@@ -123,7 +125,7 @@ class IDomain(Interface):
         """
         Check whether or not the specified user exists in this domain.
 
-        @type user: C{twisted.protocols.smtp.User}
+        @type user: L{smtp.User}
         @param user: The user to check
 
         @rtype: No-argument callable
@@ -132,7 +134,7 @@ class IDomain(Interface):
         This will be called and the returned object used to deliver the
         message when it arrives.
 
-        @raise twisted.protocols.smtp.SMTPBadRcpt: Raised if the given
+        @raise twisted.mail.smtp.SMTPBadRcpt: Raised if the given
         user does not exist in this domain.
         """
 
@@ -161,7 +163,7 @@ class IAliasableDomain(IDomain):
         """
         Check whether or not the specified user exists in this domain.
 
-        @type user: C{twisted.protocols.smtp.User}
+        @type user: L{smtp.User}
         @param user: The user to check
 
         @type memo: C{dict}
@@ -175,7 +177,7 @@ class IAliasableDomain(IDomain):
         This will be called and the returned object used to deliver the
         message when it arrives.
 
-        @raise twisted.protocols.smtp.SMTPBadRcpt: Raised if the given
+        @raise twisted.mail.smtp.SMTPBadRcpt: Raised if the given
         user does not exist in this domain.
         """
 
@@ -191,18 +193,14 @@ class BounceDomain:
     def exists(self, user):
         raise smtp.SMTPBadRcpt(user)
 
+
     def willRelay(self, user, protocol):
         return False
+
 
     def addUser(self, user, password):
         pass
 
-    def startMessage(self, user):
-        """
-        No code should ever call this function.
-        """
-        raise NotImplementedError(
-                "No code should ever call this method for any reason")
 
     def getCredentialsCheckers(self):
         return []

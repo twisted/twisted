@@ -2,8 +2,9 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-"""Support for relaying mail for twisted.mail"""
+"""
+Support for relaying mail for L{twisted.mail}.
+"""
 
 from twisted.mail import smtp
 from twisted.python import log
@@ -16,45 +17,55 @@ try:
 except ImportError:
     import pickle
 
+
 class DomainQueuer:
-    """An SMTP domain which add messages to a queue intended for relaying."""
+    """
+    An SMTP domain which add messages to a queue intended for relaying.
+    """
 
     def __init__(self, service, authenticated=False):
         self.service = service
         self.authed = authenticated
 
-    def exists(self, user):
-        """Check whether we will relay
 
-        Call overridable willRelay method
+    def exists(self, user):
+        """
+        Check whether we will relay.
+
+        Calls overridable L{willRelay} method.
+
+        @raise smtp.SMTPBadRcpt: Raised if the given C{user} will not relay.
         """
         if self.willRelay(user.dest, user.protocol):
             # The most cursor form of verification of the addresses
             orig = filter(None, str(user.orig).split('@', 1))
             dest = filter(None, str(user.dest).split('@', 1))
             if len(orig) == 2 and len(dest) == 2:
-                return lambda: self.startMessage(user)
+                # add envelope to queue and returns ISMTPMessage
+                queue = self.service.queue
+                envelopeFile, smtpMessage = queue.createNewMessage()
+                try:
+                    log.msg('Queueing mail %r -> %r' % (str(user.orig),
+                        str(user.dest)))
+                    pickle.dump([str(user.orig), str(user.dest)], envelopeFile)
+                finally:
+                    envelopeFile.close()
+                return lambda: smtpMessage
         raise smtp.SMTPBadRcpt(user)
 
+
     def willRelay(self, address, protocol):
-        """Check whether we agree to relay
+        """
+        Check whether we agree to relay.
 
         The default is to relay for all connections over UNIX
         sockets and all connections from localhost.
         """
         peer = protocol.transport.getPeer()
-        return self.authed or isinstance(peer, UNIXAddress) or peer.host == '127.0.0.1'
+        return (self.authed or isinstance(peer, UNIXAddress) or
+            peer.host == '127.0.0.1')
 
-    def startMessage(self, user):
-        """Add envelope to queue and returns ISMTPMessage."""
-        queue = self.service.queue
-        envelopeFile, smtpMessage = queue.createNewMessage()
-        try:
-            log.msg('Queueing mail %r -> %r' % (str(user.orig), str(user.dest)))
-            pickle.dump([str(user.orig), str(user.dest)], envelopeFile)
-        finally:
-            envelopeFile.close()
-        return smtpMessage
+
 
 class RelayerMixin:
 
