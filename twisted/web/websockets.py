@@ -429,6 +429,7 @@ class WebSocketsResource(object):
 
         @return: a strinf if the request fails, otherwise C{NOT_DONE_YET}.
         """
+        request.defaultContentType = None
         # If we fail at all, we're gonna fail with 400 and no response.
         # You might want to pop open the RFC and read along.
         failed = False

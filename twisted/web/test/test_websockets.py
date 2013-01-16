@@ -20,11 +20,11 @@ from twisted.test.proto_helpers import StringTransportWithDisconnection
 from twisted.protocols.policies import ProtocolWrapper
 
 from twisted.web.resource import IResource, Resource
-from twisted.web.server import NOT_DONE_YET
+from twisted.web.server import NOT_DONE_YET, Request
 from twisted.web.websockets import (
     _CONTROLS, _makeAccept, _mask, _makeFrame, _parseFrames, _WSException,
     _WebSocketsFactory, WebSocketsResource, _WebSocketsProtocol)
-from twisted.web.test.test_web import DummyRequest
+from twisted.web.test.test_web import DummyRequest, DummyChannel
 
 
 
@@ -695,3 +695,37 @@ class WebsocketsResourceTest(TestCase):
             transport.protocol.wrappedProtocol, _WebSocketsProtocol)
         self.assertIsInstance(
             transport.protocol.wrappedProtocol.wrappedProtocol, SavingEcho)
+
+
+    def test_renderRealRequest(self):
+        """
+        The request managed by L{WebSocketsResource.render} doesn't contain
+        unnecessary HTTP headers like I{Content-Type} or I{Transfer-Encoding}.
+        """
+        channel = DummyChannel()
+        channel.transport = StringTransportWithDisconnection()
+        request = Request(channel, False)
+        headers = {
+            "upgrade": "Websocket",
+            "connection": "Upgrade",
+            "sec-websocket-key": "secure",
+            "sec-websocket-version": "13"}
+        for key, value in headers.items():
+            request.requestHeaders.setRawHeaders(key, [value])
+        request.method = "GET"
+        request.clientproto = "HTTP/1.1"
+        result = self.resource.render(request)
+        self.assertEqual(NOT_DONE_YET, result)
+        self.assertEqual(
+            [("Connection", ["Upgrade"]),
+             ("Upgrade", ["WebSocket"]),
+             ("Sec-Websocket-Accept", ["oYBv54i42V5dw6KnZqOFroecUTc="])],
+            list(request.responseHeaders.getAllRawHeaders()))
+        self.assertEqual(
+            "HTTP/1.1 101 Switching Protocols\r\n"
+            "Connection: Upgrade\r\n"
+            "Upgrade: WebSocket\r\n"
+            "Sec-Websocket-Accept: oYBv54i42V5dw6KnZqOFroecUTc=\r\n\r\n",
+            channel.transport.value())
+        self.assertEqual(101, request.code)
+        self.assertIdentical(None, request.transport)

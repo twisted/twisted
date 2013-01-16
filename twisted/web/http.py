@@ -907,8 +907,9 @@ class Request:
             # chunked mode, so that we can support pipelining in
             # persistent connections.
             if ((version == "HTTP/1.1") and
-                (self.responseHeaders.getRawHeaders('content-length') is None) and
-                self.method != "HEAD" and self.code not in NO_BODY_CODES):
+                self.responseHeaders.getRawHeaders('content-length') is None
+                and self.method != "HEAD" and
+                self.code not in NO_BODY_CODES + (SWITCHING,)):
                 l.append("%s: %s\r\n" % ('Transfer-Encoding', 'chunked'))
                 self.chunked = 1
 
