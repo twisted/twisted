@@ -1369,7 +1369,7 @@ class AMPTest(unittest.TestCase):
         is set.
         """
         a = amp.AMP()
-        self.assertEqual(repr(a), "<AMP at 0x%x>" % id(a))
+        self.assertEqual(repr(a), "<AMP at 0x%x>" % (id(a),))
 
 
     def test_simpleSSLRepr(self):

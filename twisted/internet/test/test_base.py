@@ -196,8 +196,8 @@ class DelayedCallTests(TestCase):
         dc = DelayedCall(12, nothing, (3, ), {"A": 5}, None, None, lambda: 1.5)
         self.assertEqual(
             str(dc),
-            "<DelayedCall 0x%x [10.5s] called=0 cancelled=0 nothing(3, A=5)>" % (
-            id(dc)))
+            "<DelayedCall 0x%x [10.5s] called=0 cancelled=0 nothing(3, A=5)>"
+                % (id(dc),))
 
 
     def test_lt(self):
