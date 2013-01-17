@@ -858,7 +858,7 @@ def _getDeprecationSuppression(f):
         'action': 'ignore',
         'category': DeprecationWarning,
         'message': '%s was deprecated' %
-            (reflect.fullyQualifiedName(f),)
+            (fullyQualifiedName(f),)
         })
 
 
