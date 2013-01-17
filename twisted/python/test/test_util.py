@@ -28,7 +28,7 @@ from twisted.internet.error import ProcessDone
 
 if _PY3:
     MockOS = None
-    from twisted.python.deprecate import _fullyQualifiedName, fullyQualifiedName
+    from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
 else:
     from twisted.test.test_process import MockOS
     from twisted.python.reflect import fullyQualifiedName
