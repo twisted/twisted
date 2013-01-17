@@ -16,6 +16,7 @@ except ImportError:
     pwd = grp = None
 
 from twisted.trial import unittest
+from twisted.trial.util import suppress as SUPPRESS
 
 from twisted.python.compat import _PY3
 from twisted.python import util
@@ -854,12 +855,9 @@ def _getDeprecationSuppression(f):
 
     @return: tuple to add to C{suppress} attribute
     """
-    return ((), {
-        'action': 'ignore',
-        'category': DeprecationWarning,
-        'message': '%s was deprecated' %
-            (fullyQualifiedName(f),)
-        })
+    return SUPPRESS(
+        category=DeprecationWarning,
+        message='%s was deprecated' % (fullyQualifiedName(f),))
 
 
 
