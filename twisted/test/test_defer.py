@@ -892,9 +892,9 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         representation of the internal Python ID.
         """
         d = defer.Deferred()
-        address = hex(id(d))
+        address = id(d)
         self.assertEqual(
-            repr(d), '<Deferred at %s>' % (address,))
+            repr(d), '<Deferred at 0x%x>' % (address,))
 
 
     def test_reprWithResult(self):
@@ -905,8 +905,8 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         d = defer.Deferred()
         d.callback('orange')
         self.assertEqual(
-            repr(d), "<Deferred at %s current result: 'orange'>" % (
-                hex(id(d))))
+            repr(d), "<Deferred at 0x%x current result: 'orange'>" % (
+                id(d),))
 
 
     def test_reprWithChaining(self):
@@ -919,8 +919,8 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         b = defer.Deferred()
         b.chainDeferred(a)
         self.assertEqual(
-            repr(a), "<Deferred at %s waiting on Deferred at %s>" % (
-                hex(id(a)), hex(id(b))))
+            repr(a), "<Deferred at 0x%x waiting on Deferred at 0x%x>" % (
+                id(a), id(b)))
 
 
     def test_boundedStackDepth(self):

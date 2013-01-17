@@ -445,7 +445,7 @@ class SafeRepr(TestCase):
             breakRepr = True
 
         xRepr = reflect.safe_repr(X)
-        self.assertIn(hex(id(X)), xRepr)
+        self.assertIn('0x%x' % (id(X),), xRepr)
 
 
     def test_brokenClassStr(self):
