@@ -18,7 +18,7 @@ except ImportError:
 from twisted.trial import unittest
 
 from twisted.python.compat import _PY3
-from twisted.python import util, reflect
+from twisted.python import util
 from twisted.python.versions import Version
 from twisted.internet import reactor
 from twisted.internet.interfaces import IReactorProcess
@@ -28,8 +28,10 @@ from twisted.internet.error import ProcessDone
 
 if _PY3:
     MockOS = None
+    from twisted.python.deprecate import _fullyQualifiedName, fullyQualifiedName
 else:
     from twisted.test.test_process import MockOS
+    from twisted.python.reflect import fullyQualifiedName
 
 
 
