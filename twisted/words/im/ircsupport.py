@@ -103,11 +103,13 @@ class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
     def connectionMade(self):
         # XXX: Why do I duplicate code in IRCClient.register?
         try:
-            if self.account.password:
-                self.sendLine("PASS :%s" % self.account.password)
-            self.setNick(self.account.username)
-            self.sendLine("USER %s foo bar :Twisted-IM user" % (
-                self.account.username,))
+            self.performLogin = True
+            self.nickname = self.account.username
+            self.password = self.account.password
+            self.realname = "Twisted-IM user"
+
+            irc.IRCClient.connectionMade(self)
+
             for channel in self.account.channels:
                 self.joinGroup(channel)
             self.account._isOnline=1
