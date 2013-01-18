@@ -150,7 +150,7 @@ class TestModuleTest(unittest.SynchronousTestCase):
         """
         self.config.opt_testmodule(sibpath('moduletest.py'))
         self.assertSuitesEqual(trial._getSuite(self.config),
-                               ['twisted.trial.test.test_test_visitor'])
+                               ['twisted.trial.test.test_log'])
 
     def test_testmoduleTwice(self):
         """
@@ -160,7 +160,7 @@ class TestModuleTest(unittest.SynchronousTestCase):
         self.config.opt_testmodule(sibpath('moduletest.py'))
         self.config.opt_testmodule(sibpath('moduletest.py'))
         self.assertSuitesEqual(trial._getSuite(self.config),
-                               ['twisted.trial.test.test_test_visitor'])
+                               ['twisted.trial.test.test_log'])
 
     def test_testmoduleOnSourceAndTarget(self):
         """
@@ -169,9 +169,9 @@ class TestModuleTest(unittest.SynchronousTestCase):
         added once.
         """
         self.config.opt_testmodule(sibpath('moduletest.py'))
-        self.config.opt_testmodule(sibpath('test_test_visitor.py'))
+        self.config.opt_testmodule(sibpath('test_log.py'))
         self.assertSuitesEqual(trial._getSuite(self.config),
-                               ['twisted.trial.test.test_test_visitor'])
+                               ['twisted.trial.test.test_log'])
 
     def test_testmoduleOnSelfModule(self):
         """
@@ -189,7 +189,7 @@ class TestModuleTest(unittest.SynchronousTestCase):
         """
         self.config.opt_testmodule(sibpath('scripttest.py'))
         self.assertSuitesEqual(trial._getSuite(self.config),
-                               ['twisted.trial.test.test_test_visitor',
+                               ['twisted.trial.test.test_log',
                                 'twisted.trial.test.test_class'])
 
     def test_testmoduleOnNonexistentFile(self):
@@ -278,7 +278,7 @@ class TestModuleTest(unittest.SynchronousTestCase):
     def test_variablesFromFile(self):
         localVars = trial.loadLocalVariables(sibpath('moduletest.py'))
         self.assertEqual({'test-case-name':
-                              'twisted.trial.test.test_test_visitor'},
+                              'twisted.trial.test.test_log'},
                              localVars)
 
     def test_noVariablesInFile(self):
@@ -288,13 +288,13 @@ class TestModuleTest(unittest.SynchronousTestCase):
     def test_variablesFromScript(self):
         localVars = trial.loadLocalVariables(sibpath('scripttest.py'))
         self.assertEqual(
-            {'test-case-name': ('twisted.trial.test.test_test_visitor,'
+            {'test-case-name': ('twisted.trial.test.test_log,'
                                 'twisted.trial.test.test_class')},
             localVars)
 
     def test_getTestModules(self):
         modules = trial.getTestModules(sibpath('moduletest.py'))
-        self.assertEqual(modules, ['twisted.trial.test.test_test_visitor'])
+        self.assertEqual(modules, ['twisted.trial.test.test_log'])
 
     def test_getTestModules_noVars(self):
         modules = trial.getTestModules(sibpath('novars.py'))
@@ -303,7 +303,7 @@ class TestModuleTest(unittest.SynchronousTestCase):
     def test_getTestModules_multiple(self):
         modules = trial.getTestModules(sibpath('scripttest.py'))
         self.assertEqual(set(modules),
-                             set(['twisted.trial.test.test_test_visitor',
+                             set(['twisted.trial.test.test_log',
                                   'twisted.trial.test.test_class']))
 
     def test_looksLikeTestModule(self):

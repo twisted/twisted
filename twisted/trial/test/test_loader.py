@@ -473,7 +473,7 @@ class LoaderTest(packages.SysPathManglingTest):
         """
         Check that loadByNames ignores duplicate names
         """
-        module = 'twisted.trial.test.test_test_visitor'
+        module = 'twisted.trial.test.test_log'
         suite1 = self.loader.loadByNames([module, module], True)
         suite2 = self.loader.loadByName(module, True)
         self.assertSuitesEqual(suite1, suite2)

@@ -336,22 +336,6 @@ class TestCase(SynchronousTestCase):
             return util.DEFAULT_TIMEOUT_DURATION
 
 
-    def visit(self, visitor):
-        """
-        Visit this test case. Call C{visitor} with C{self} as a parameter.
-
-        Deprecated in Twisted 8.0.
-
-        @param visitor: A callable which expects a single parameter: a test
-        case.
-
-        @return: None
-        """
-        warnings.warn("Test visitors deprecated in Twisted 8.0",
-                      category=DeprecationWarning)
-        visitor(self)
-
-
     def _wait(self, d, running=_wait_is_running):
         """Take a Deferred that only ever callbacks. Block until it happens.
         """
