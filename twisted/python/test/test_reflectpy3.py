@@ -437,24 +437,15 @@ class SafeRepr(TestCase):
         reflect.safe_repr(X())
 
 
-    def test_unsignedID(self):
+    def test_brokenReprIncludesID(self):
         """
-        L{unsignedID} is used to print ID of the object in case of error, not
-        standard ID value which can be negative.
+        C{id} is used to print the ID of the object in case of an error.
         """
         class X(BTBase):
             breakRepr = True
 
-        ids = {X: 100}
-        def fakeID(obj):
-            try:
-                return ids[obj]
-            except (TypeError, KeyError):
-                return id(obj)
-        self.addCleanup(util.setIDFunction, util.setIDFunction(fakeID))
-
         xRepr = reflect.safe_repr(X)
-        self.assertIn("0x64", xRepr)
+        self.assertIn('0x%x' % (id(X),), xRepr)
 
 
     def test_brokenClassStr(self):

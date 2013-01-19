@@ -27,7 +27,6 @@ from functools import wraps
 # Twisted imports
 from twisted.python.compat import _PY3, comparable, cmp
 from twisted.python import log, failure
-from twisted.python.util import unsignedID
 
 
 
@@ -632,14 +631,14 @@ class Deferred:
         """
         cname = self.__class__.__name__
         result = getattr(self, 'result', _NO_RESULT)
-        myID = hex(unsignedID(self))
+        myID = id(self)
         if self._chainedTo is not None:
-            result = ' waiting on Deferred at %s' % (hex(unsignedID(self._chainedTo)),)
+            result = ' waiting on Deferred at 0x%x' % (id(self._chainedTo),)
         elif result is _NO_RESULT:
             result = ''
         else:
             result = ' current result: %r' % (result,)
-        return "<%s at %s%s>" % (cname, myID, result)
+        return "<%s at 0x%x%s>" % (cname, myID, result)
     __repr__ = __str__
 
 
