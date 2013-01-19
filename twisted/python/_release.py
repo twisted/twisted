@@ -17,7 +17,7 @@ from datetime import date
 import re
 import sys
 import os
-from tempfile import mkdtemp
+from tempfile import mkdtemp, mkstemp
 import tarfile
 
 from subprocess import PIPE, STDOUT, Popen
@@ -1071,8 +1071,25 @@ class DistributionBuilder(object):
                 tarball.add(docDir.path, buildPath("doc", docDir.basename()))
 
         for toplevel in self.rootDirectory.children():
-            if not toplevel.isdir():
+            if not toplevel.isdir() and toplevel.basename() != "setup3.py":
                 tarball.add(toplevel.path, buildPath(toplevel.basename()))
+
+        # Generate and add a setup3.py
+        admin = self.rootDirectory.child("admin")
+        setup3 = admin.child("_setup3_template").getContent()
+        modules3 = admin.child("_twistedpython3.py").getContent()
+        ported = {}
+        exec modules3 in ported
+        modules3 = (ported['modules'] + ported['testModules'] +
+                    ported['almostModules'])
+        modules3 = ", ".join("\"%s\"" % module for module in modules3)
+        setup3 = setup3.replace("#MODULES#", modules3)
+        fd, tempFile = mkstemp()
+        os.close(fd)
+        tempFile = FilePath(tempFile)
+        tempFile.setContent(setup3)
+
+        tarball.add(tempFile.path, buildPath("setup3.py"))
 
         tarball.close()
 

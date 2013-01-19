@@ -2065,6 +2065,10 @@ class DistributionBuilderTest(DistributionBuilderTestBase):
             "setup.py": "import toplevel",
             "bin": {"web": {"websetroot": "SET ROOT"},
                     "twistd": "TWISTD"},
+            "admin": {"_setup3_template": "foo = #MODULES#",
+                      "_twistedpython3.py": "modules = ['mod1']; "
+                                            "testModules = ['mod2']; "
+                                            "almostModules = ['mod3']"},
             "twisted":
                 {"web":
                      {"__init__.py": "import WEB",
@@ -2084,6 +2088,7 @@ class DistributionBuilderTest(DistributionBuilderTestBase):
             "unrelated": "x",
             "LICENSE": "copyright!",
             "setup.py": "import toplevel",
+            "setup3.py": "foo = \"mod1\", \"mod2\", \"mod3\"",
             "bin": {"web": {"websetroot": "SET ROOT"},
                     "twistd": "TWISTD"},
             "twisted":
@@ -2115,6 +2120,10 @@ class DistributionBuilderTest(DistributionBuilderTestBase):
         structure = {
             "bin": {"admin": {"blah": "ADMIN"},
                     "twistd": "TWISTD"},
+            "admin": {"_setup3_template": "foo = #MODULES#",
+                      "_twistedpython3.py": "modules = ['mod1']; "
+                                            "testModules = ['mod2']; "
+                                            "almostModules = ['mod3']"},
             "twisted":
                 {"web":
                      {"__init__.py": "import WEB",
@@ -2128,6 +2137,7 @@ class DistributionBuilderTest(DistributionBuilderTestBase):
 
         outStructure = {
             "bin": {"twistd": "TWISTD"},
+            "setup3.py": "foo = \"mod1\", \"mod2\", \"mod3\"",
             "twisted":
                 {"web":
                      {"__init__.py": "import WEB",
@@ -2372,6 +2382,10 @@ class BuildAllTarballsTest(DistributionBuilderTestBase):
             "setup.py": "import toplevel",
             "bin": {"words": {"im": "import im"},
                     "twistd": "TWISTD"},
+            "admin": {"_setup3_template": "foo = #MODULES#",
+                      "_twistedpython3.py": "modules = ['mod1']; "
+                                            "testModules = ['mod2']; "
+                                            "almostModules = ['mod3']"},
             "twisted":
                 {
                     "topfiles": {"setup.py": "import TOPINSTALL",
@@ -2394,6 +2408,7 @@ class BuildAllTarballsTest(DistributionBuilderTestBase):
             "unrelated": "x",
             "LICENSE": "copyright!",
             "setup.py": "import toplevel",
+            "setup3.py": "foo = \"mod1\", \"mod2\", \"mod3\"",
             "bin": {"twistd": "TWISTD",
                     "words": {"im": "import im"}},
             "twisted":
