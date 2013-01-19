@@ -579,17 +579,17 @@ class TCPClientTestsMixin(object):
         transportRepr = "<%s to %s at %x>" % (
             transportData['instance'].__class__,
             transportData['instance'].addr,
-            id(transportData['instance'])
-        )
+            id(transportData['instance']))
+
         self.assertEqual({
-            'host': transportData['host'],
-            'peer': transportData['peer'],
-            'repr': repr(transportData['instance']),
-            }, {
-            'host': hostAddress,
-            'peer': peerAddress,
-            'repr': transportRepr,
-            })
+                'host': transportData['host'],
+                'peer': transportData['peer'],
+                'repr': repr(transportData['instance']),
+                }, {
+                'host': hostAddress,
+                'peer': peerAddress,
+                'repr': transportRepr,
+                })
 
 
     def test_connectEvent(self):

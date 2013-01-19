@@ -2,13 +2,12 @@
 # See LICENSE for details.
 
 """
-Test cases for L{twisted.internet.defer} module.
+Test cases for L{twisted.internet.defer}.
 """
 
 from __future__ import division, absolute_import
 
-import gc
-import traceback
+import gc, traceback
 
 from twisted.python.compat import _PY3
 from twisted.trial import unittest

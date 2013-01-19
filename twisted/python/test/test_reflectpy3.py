@@ -437,7 +437,7 @@ class SafeRepr(TestCase):
         reflect.safe_repr(X())
 
 
-    def test_classIDStr(self):
+    def test_brokenReprIncludesID(self):
         """
         C{id} is used to print the ID of the object in case of an error.
         """
