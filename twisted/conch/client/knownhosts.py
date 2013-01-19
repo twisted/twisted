@@ -54,6 +54,7 @@ def _extractCommon(string):
         (L{Key}), and comment (L{bytes} or L{None}).  The hostname data is
         simply the beginning of the line up to the first occurrence of
         whitespace.
+    @rtype: L{tuple}
     """
     elements = string.split(None, 2)
     if len(elements) != 3:
@@ -400,9 +401,8 @@ class KnownHostsFile(object):
         @param key: The public key of the server.
 
         @return: a L{Deferred} that fires with True when the key has been
-        verified, or fires with an errback when the key either cannot be
-        verified or has changed.
-
+            verified, or fires with an errback when the key either cannot be
+            verified or has changed.
         @rtype: L{Deferred}
         """
         hhk = defer.maybeDeferred(self.hasHostKey, hostname, key)
@@ -438,6 +438,9 @@ class KnownHostsFile(object):
         """
         Add a new L{HashedEntry} to the key database.
 
+        Note that you still need to call L{KnownHostsFile.save} if you wish
+        these changes to be persisted.
+
         @param hostname: A hostname or IP address literal to associate with the
             new entry.
         @type hostname: L{bytes}
@@ -445,11 +448,8 @@ class KnownHostsFile(object):
         @param key: The public key to associate with the new entry.
         @type key: L{Key}
 
-        Note that you still need to call L{KnownHostsFile.save} if you wish
-        these changes to be persisted.
-
         @return: The L{HashedEntry} that was added.
-        @type: L{HashedEntry}
+        @rtype: L{HashedEntry}
         """
         salt = secureRandom(20)
         keyType = "ssh-" + key.type().lower()
