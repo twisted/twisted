@@ -1,0 +1,2 @@
+The setup3.py file included in release tarballs is now generated to not require
+the admin directory.
