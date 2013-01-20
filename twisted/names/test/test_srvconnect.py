@@ -175,12 +175,14 @@ class SRVConnectorTest(unittest.TestCase):
         """
         self.connector = srvconnect.SRVConnector(self.reactor, 'xmpp-client',
                                                  u'example.org', self.factory)
-        warnings = self.flushWarnings()
+        warnings = self.flushWarnings([self.test_unicodeDomainWarning])
+        self.assertEqual(1, len(warnings))
         warning = warnings[0]
         self.assertEqual(DeprecationWarning, warning['category'])
         self.assertEqual("Domain argument to "
                          "twisted.names.srvconnect.SRVConnector "
-                         "should be bytes, not unicode.",
+                         "should be bytes, not unicode, "
+                         "since Twisted 12.3.0",
                          warning['message'])
         self.assertIsInstance(self.connector.domain, bytes)
         self.assertEqual(b'example.org', self.connector.domain)
