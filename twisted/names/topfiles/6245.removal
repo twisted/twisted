@@ -1,0 +1,2 @@
+Passing twisted.names.srvconnect a unicode domain is deprecated, following a
+change in Twisted 12.3.0 enforcing domain names to be byte strings.
