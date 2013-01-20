@@ -1653,6 +1653,15 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         self.assertRaises(RuntimeError, req.finish)
 
 
+    def test_noLongerQueuedRaisesError(self):
+        """
+        Calling L{Request.noLongerQueued} for an object that is not queued
+        results in a L{RuntimeError} being raised.
+        """
+        request = http.Request(DummyChannel(), False)
+        self.assertRaises(RuntimeError, request.noLongerQueued)
+
+
 
 class MultilineHeadersTestCase(unittest.TestCase):
     """
