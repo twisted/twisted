@@ -1116,9 +1116,8 @@ class SynchronousTestCase(_Assertions):
         Create a new path name which can be used for a new file or directory.
 
         The result is a relative path that is guaranteed to be unique within the
-        current working directory.  Create every directory between the current
-        working directory and the last one if necessary.  Do not create the last
-        directory/file.
+        current working directory.  The parent of the path will exist, but the
+        path will not.
 
         For a temporary directory call os.mkdir on the path.  For a temporary
         file just create the file (e.g. by opening the path for writing and then
