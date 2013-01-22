@@ -224,6 +224,37 @@ def errnoToFailure(e, path):
         return defer.fail()
 
 
+def _isGlobbingExpression(segments=None):
+    """
+    Helper for checking if a FTPShell `segments` contains a wildcard Unix
+    expression.
+
+    Only filename globbing is supported.
+    This means that wildcards can only be presents in the last element of
+    `segments`.
+
+    @type  segments: C{list}
+    @param segments: List of path elements as used by the FTP server protocol.
+
+    @rtype: Boolean
+    @return: True if `segments` contains a globbing expression.
+    """
+    if not segments:
+        return False
+
+    # To check that something is a glob expression, we convert it to
+    # Regular Expression. If the result is the same as the original expression
+    # then it contains no globbing expression.
+    globCandidate = segments[-1]
+    # A set of default regex rules is added to all strings.
+    emtpyTranslations = fnmatch.translate('')
+    globTranslations = fnmatch.translate(globCandidate)
+
+    if globCandidate + emtpyTranslations == globTranslations:
+        return False
+    else:
+        return True
+
 
 class FTPCmdError(Exception):
     """
@@ -962,10 +993,14 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         except InvalidPath:
             return defer.fail(FileNotFoundError(path))
 
-        def cbList(results):
+        def cbList(results, glob=None):
             """
             Send, line by line, each file in the directory listing, and then
             close the connection.
+
+            If `glob` is not None, the result will be filtered using
+            Unix shell-style wildcards
+            (http://docs.python.org/2/library/fnmatch.html).
 
             @type results: A C{list} of C{tuple}. The first element of each
                 C{tuple} is a C{str} and the second element is a C{list}.
@@ -977,14 +1012,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             """
             self.reply(DATA_CNX_ALREADY_OPEN_START_XFR)
             for (name, ignored) in results:
-                self.dtpInstance.sendLine(name)
-            self.dtpInstance.transport.loseConnection()
-            return (TXFR_COMPLETE_OK,)
-
-        def cbGlob(results):
-            self.reply(DATA_CNX_ALREADY_OPEN_START_XFR)
-            for (name, ignored) in results:
-                if fnmatch.fnmatch(name, segments[-1]):
+                if not glob or (glob and fnmatch.fnmatch(name, glob)):
                     self.dtpInstance.sendLine(name)
             self.dtpInstance.transport.loseConnection()
             return (TXFR_COMPLETE_OK,)
@@ -1006,17 +1034,17 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             self.dtpInstance.transport.loseConnection()
             return (TXFR_COMPLETE_OK,)
 
-        # XXX This globbing may be incomplete: see #4181
-        if segments and (
-            '*' in segments[-1] or '?' in segments[-1] or
-            ('[' in segments[-1] and ']' in segments[-1])):
-            d = self.shell.list(segments[:-1])
-            d.addCallback(cbGlob)
+        if _isGlobbingExpression(segments):
+            # Remove globbing expression from path
+            # and keep to be used for filtering.
+            glob = segments.pop()
         else:
-            d = self.shell.list(segments)
-            d.addCallback(cbList)
-            # self.shell.list will generate an error if the path is invalid
-            d.addErrback(listErr)
+            glob = None
+
+        d = self.shell.list(segments)
+        d.addCallback(cbList, glob)
+        # self.shell.list will generate an error if the path is invalid
+        d.addErrback(listErr)
         return d
 
 
