@@ -826,6 +826,26 @@ class FTPServerPortDataConnectionTestCase(FTPServerPasvDataConnectionTestCase):
         return d.addCallback(gotPortNum)
 
 
+    def test_nlstGlobbing(self):
+        """
+        When Unix shell globbing is used with NLST only files matching the
+        pattern will be returned.
+        """
+        self.dirPath.child('test.txt').touch()
+        self.dirPath.child('ceva.txt').touch()
+        self.dirPath.child('no.match').touch()
+        d = self._anonymousLogin()
+
+        self._download('NLST *.txt', chainDeferred=d)
+
+        def checkDownload(download):
+            filenames = download[:-2].split('\r\n')
+            filenames.sort()
+            self.assertEqual(['ceva.txt', 'test.txt'], filenames)
+
+        return d.addCallback(checkDownload)
+
+
 
 class DTPFactoryTests(unittest.TestCase):
     """
@@ -2328,6 +2348,44 @@ class PathHandling(unittest.TestCase):
 
         for inp in ['../..', '../../', '../a/../..']:
             self.assertRaises(ftp.InvalidPath, ftp.toSegments, ['x'], inp)
+
+
+
+class IsGlobbingExpressionTests(unittest.TestCase):
+    """
+    Tests for _isGlobbingExpression utility function.
+    """
+
+    def test_isGlobbingExpressionEmptySegments(self):
+        """
+        _isGlobbingExpression will return False for None, or empty
+        segments.
+        """
+        self.assertFalse(ftp._isGlobbingExpression())
+        self.assertFalse(ftp._isGlobbingExpression([]))
+        self.assertFalse(ftp._isGlobbingExpression(None))
+
+
+    def test_isGlobbingExpressionNoGlob(self):
+        """
+        _isGlobbingExpression will return False for plain segments.
+
+        Also, it only checks the last segment part (filename) and will not
+        check the path name.
+        """
+        self.assertFalse(ftp._isGlobbingExpression(['ignore', 'expr']))
+        self.assertFalse(ftp._isGlobbingExpression(['*.txt', 'expr']))
+
+
+    def test_isGlobbingExpressionGlob(self):
+        """
+        _isGlobbingExpression will return True for segments which contains
+        globbing characters in the last segment part (filename).
+        """
+        self.assertTrue(ftp._isGlobbingExpression(['ignore', '*.txt']))
+        self.assertTrue(ftp._isGlobbingExpression(['ignore', '[a-b].txt']))
+        self.assertTrue(ftp._isGlobbingExpression(['ignore', 'fil?.txt']))
+
 
 
 class BaseFTPRealmTests(unittest.TestCase):
