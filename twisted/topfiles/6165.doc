@@ -1,0 +1,1 @@
+twisted.trial.unittest.SynchronousTestCase.mktemp now makes clear that it creates a path that is unique within the current working directory.

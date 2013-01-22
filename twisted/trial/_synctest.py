@@ -1113,11 +1113,16 @@ class SynchronousTestCase(_Assertions):
 
     def mktemp(self):
         """
-        Returns a unique name that may be used as either a temporary directory
-        or filename.
+        Return a relative path that is guaranteed to be unique within the
+        current working directory. Create every directory between the current
+        working directory and the last one if necessary. Do not create the
+        last directory/file.
 
-        @note: you must call os.mkdir on the value returned from this method if
-            you wish to use it as a directory!
+        For a temporary directory call os.mkdir on the path, for a temporary
+        file, just create the file (e.g. by opening the path for writing and
+        then closing it).
+
+        Trial will delete the temporary directories and files automatically.
 
         @return: C{str}
         """
