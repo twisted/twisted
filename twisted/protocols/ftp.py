@@ -993,22 +993,23 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         except InvalidPath:
             return defer.fail(FileNotFoundError(path))
 
-        def cbList(results, glob=None):
+        def cbList(results, glob):
             """
-            Send, line by line, each file in the directory listing, and then
-            close the connection.
-
-            If `glob` is not None, the result will be filtered using
-            Unix shell-style wildcards
-            (http://docs.python.org/2/library/fnmatch.html).
+            Send, line by line, each matching file in the directory listing, and
+            then close the connection.
 
             @type results: A C{list} of C{tuple}. The first element of each
                 C{tuple} is a C{str} and the second element is a C{list}.
             @param results: The names of the files in the directory.
 
-            @rtype: C{tuple}
+            @param glob: A shell-style glob through which to filter results (see
+                U{http://docs.python.org/2/library/fnmatch.html}), or C{None}
+                for no filtering.
+            @type glob: L{str} or L{NoneType}
+
             @return: A C{tuple} containing the status code for a successful
                 transfer.
+            @rtype: C{tuple}
             """
             self.reply(DATA_CNX_ALREADY_OPEN_START_XFR)
             for (name, ignored) in results:
@@ -1027,9 +1028,9 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
                 occurred while trying to list the contents of a nonexistent
                 directory.
 
-            @rtype: C{tuple}
             @returns: A C{tuple} containing the status code for a successful
                 transfer.
+            @rtype: C{tuple}
             """
             self.dtpInstance.transport.loseConnection()
             return (TXFR_COMPLETE_OK,)

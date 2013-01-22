@@ -825,10 +825,11 @@ class FTPServerPortDataConnectionTestCase(FTPServerPasvDataConnectionTestCase):
                 ["425 Can't open data connection."])
         return d.addCallback(gotPortNum)
 
-    def test_NLSTGlobbing(self):
+
+    def test_nlstGlobbing(self):
         """
-        When Unix shell globbing is used with NLST only files matching
-        the pattern will be returned.
+        When Unix shell globbing is used with NLST only files matching the
+        pattern will be returned.
         """
         self.dirPath.child('test.txt').touch()
         self.dirPath.child('ceva.txt').touch()
@@ -843,6 +844,7 @@ class FTPServerPortDataConnectionTestCase(FTPServerPasvDataConnectionTestCase):
             self.assertEqual(['ceva.txt', 'test.txt'], filenames)
 
         return d.addCallback(checkDownload)
+
 
 
 class DTPFactoryTests(unittest.TestCase):
