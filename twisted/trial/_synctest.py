@@ -1113,18 +1113,19 @@ class SynchronousTestCase(_Assertions):
 
     def mktemp(self):
         """
-        Return a relative path that is guaranteed to be unique within the
-        current working directory. Create every directory between the current
-        working directory and the last one if necessary. Do not create the
-        last directory/file.
+        Create a new path name which can be used for a new file or directory.
 
-        For a temporary directory call os.mkdir on the path, for a temporary
-        file, just create the file (e.g. by opening the path for writing and
-        then closing it).
+        The result is a relative path that is guaranteed to be unique within the
+        current working directory.  Create every directory between the current
+        working directory and the last one if necessary.  Do not create the last
+        directory/file.
 
-        Trial will delete the temporary directories and files automatically.
+        For a temporary directory call os.mkdir on the path.  For a temporary
+        file just create the file (e.g. by opening the path for writing and then
+        closing it).
 
-        @return: C{str}
+        @return: The newly created path
+        @rtype: C{str}
         """
         MAX_FILENAME = 32 # some platforms limit lengths of filenames
         base = os.path.join(self.__class__.__module__[:MAX_FILENAME],
