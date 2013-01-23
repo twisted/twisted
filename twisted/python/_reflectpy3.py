@@ -200,21 +200,15 @@ def _importAndCheckStack(importName):
     @raise _NoModuleFound: if no module was found.
     """
     try:
-        try:
-            return __import__(importName)
-        except ImportError:
-            excType, excValue, excTraceback = sys.exc_info()
-            while excTraceback:
-                execName = excTraceback.tb_frame.f_globals["__name__"]
-                if (execName is None or # python 2.4+, post-cleanup
-                    execName == importName): # python 2.3, no cleanup
-                    reraise(excValue, excTraceback)
-                excTraceback = excTraceback.tb_next
-            raise _NoModuleFound()
-    except:
-        # Necessary for cleaning up modules in 2.3.
-        sys.modules.pop(importName, None)
-        raise
+        return __import__(importName)
+    except ImportError:
+        excType, excValue, excTraceback = sys.exc_info()
+        while excTraceback:
+            execName = excTraceback.tb_frame.f_globals["__name__"]
+            if execName is None:
+                reraise(excValue, excTraceback)
+            excTraceback = excTraceback.tb_next
+        raise _NoModuleFound()
 
 
 
