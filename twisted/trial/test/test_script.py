@@ -598,6 +598,11 @@ class TestRun(unittest.TestCase):
 
 
 class TestArgumentOrderTests(unittest.TestCase):
+    """
+    Tests for the order-preserving behavior on provided command-line tests.
+
+    """
+
     def setUp(self):
         self.config = trial.Options()
         self.loader = TestLoader()
@@ -605,14 +610,11 @@ class TestArgumentOrderTests(unittest.TestCase):
     def test_preserveArgumentOrder(self):
         """
         Multiple tests passed on the command line are not reordered.
-
         """
-
         tests = [
-            "twisted.manhole.test.test_explorer",
-            "twisted.conch.test.test_conch",
-            "twisted.internet.test.test_default",
-            "twisted.test.test_abstract",
+            "twisted.trial.test.test_tests",
+            "twisted.trial.test.test_assertions",
+            "twisted.trial.test.test_deferreds",
         ]
         self.config.parseOptions(tests)
 
