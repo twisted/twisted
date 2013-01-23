@@ -433,6 +433,14 @@ class TCP6ClientEndpoint(object):
 
 
 
+class MultiFailure(Exception):
+
+    def __init__(self, failures):
+        super(MultiFailure, self).__init__("Failure with multiple causes.")
+        self.failures = failures
+
+
+
 class HostnameEndpoint(object):
     """
     A smart name based endpoint that connects to the faster one of IPv4
@@ -519,7 +527,7 @@ class HostnameEndpoint(object):
                 return connResult
 
             def afterConnectionAttempt(connResult):
-#                print "Inside afterConnectionAttempt"
+                print "Inside afterConnectionAttempt"
                 if lc.running:
                     lc.stop()
                 successful.append(True)
@@ -529,16 +537,29 @@ class HostnameEndpoint(object):
                 return None
 
             def almostDone():
- #               print "Inside almostDone", failures[0]
-                if endpointsListExhausted and not pending and not successful:
+#                print "Inside almostDone", failures[0]
+#                if endpointsListExhausted:
+#                    print "endpointsListExhausted is true"
+
+#                if endpointsListExhausted and not pending and not successful:
+                if not pending and not successful:
                     print "inside almostDone's if"
-                    winner.errback(failures.pop())
+                    winner.errback(MultiFailure(failures))
+                    # because nothing else seemed to work, trying out this from CalendarServer's GAIEndpoint
+
+
+#                    winner.errback(failures.pop())
+#                    def checkWinner(obj):
+#                        print obj
+#                        return obj
+#                    winner.errback(checkWinner)
+
 #                return defer.fail(error.ConnectError("Connection Failed")
                     # FIXME
 
             def connectFailed(reason):
-  #              print "Inside connectFailed"
-  #              print "The reason is:", reason
+                print "Inside connectFailed"
+                print "The reason is:", reason
                 failures.append(reason)
                 almostDone()
                 return None
