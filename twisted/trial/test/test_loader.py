@@ -479,6 +479,22 @@ class LoaderTest(packages.SysPathManglingTest):
         self.assertSuitesEqual(suite1, suite2)
 
 
+    def test_loadByNamesPreservesOrder(self):
+        """
+        L{TestLoader.loadByNames} preserves the order of tests provided to it.
+        """
+        modules = [
+            "inheritancepackage.test_x.A.test_foo",
+            "twisted.trial.test.sample",
+            "goodpackage",
+            "twisted.trial.test.test_test_visitor",
+            "twisted.trial.test.sample.FooTest",
+            "package.test_module"]
+        suite1 = self.loader.loadByNames(modules)
+        suite2 = runner.TestSuite(map(self.loader.loadByName, modules))
+        self.assertEqual(testNames(suite1), testNames(suite2))
+
+
     def test_loadDifferentNames(self):
         """
         Check that loadByNames loads all the names that it is given

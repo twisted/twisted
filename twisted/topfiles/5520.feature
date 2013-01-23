@@ -1,0 +1,1 @@
+trial now deterministically runs tests in the order in which they were specified on the command line, instead of quasi-randomly according to dictionary key ordering.
