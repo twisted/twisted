@@ -4,11 +4,11 @@
 
 from __future__ import division, absolute_import
 
-# System imports
 import os
 import sys
 import time
 import imp
+import warnings
 
 from twisted.python import compat
 
@@ -81,7 +81,20 @@ class Platform:
 
 
     def isWinNT(self):
-        """Are we running in Windows NT?"""
+        """
+        Are we running in Windows NT?
+
+        This is deprecated and always returns C{True} on win32 because
+        Twisted only supports Windows NT-derived platforms at this point.
+
+        @return: C{True} if the current platform has been detected as
+            Windows NT.
+        @rtype: C{bool}
+        """
+        warnings.warn(
+                "twisted.python.runtime.Platform.isWinNT was deprecated in "
+                "Twisted 13.0. Use Platform.isWindows instead.",
+                DeprecationWarning, stacklevel=2)
         if self.getType() == 'win32':
             winreg = __import__(_winregModule)
             try:
@@ -89,14 +102,21 @@ class Platform:
                         winreg.HKEY_LOCAL_MACHINE,
                         r'Software\Microsoft\Windows NT\CurrentVersion')
                 winreg.QueryValueEx(k, 'SystemRoot')
-                return 1
+                return True
             except WindowsError:
-                return 0
+                return False
         # not windows NT
-        return 0
+        return False
 
 
     def isWindows(self):
+        """
+        Are we running in Windows?
+
+        @return: C{True} if the current platform has been detected as
+            Windows.
+        @rtype: C{bool}
+        """
         return self.getType() == 'win32'
 
 

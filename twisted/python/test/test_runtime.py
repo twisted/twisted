@@ -68,14 +68,29 @@ class PlatformTests(SynchronousTestCase):
 
     def test_isWinNT(self):
         """
-        L{Platform.isWinNT} can return only C{0} or C{1} and can not return C{1}
-        if L{Platform.getType} is not C{"win32"}.
+        L{Platform.isWinNT} can return only C{False} or C{True} and can not
+        return C{True} if L{Platform.getType} is not C{"win32"}.
         """
         platform = Platform()
         isWinNT = platform.isWinNT()
-        self.assertTrue(isWinNT in (0, 1))
+        self.assertTrue(isWinNT in (False, True))
         if platform.getType() != "win32":
-            self.assertEqual(isWinNT, 0)
+            self.assertEqual(isWinNT, False)
+
+
+    def test_isWinNTDeprecated(self):
+        """
+        L{Platform.isWinNT} is deprecated in favor of L{platform.isWindows}.
+        """
+        platform = Platform()
+        result = platform.isWinNT()
+        warnings = self.flushWarnings([self.test_isWinNTDeprecated])
+        self.assertEqual(len(warnings), 1)
+        self.assertEqual(
+            warnings[0]['message'],
+            "twisted.python.runtime.Platform.isWinNT was deprecated in "
+            "Twisted 13.0. Use Platform.isWindows instead.")
+        return result
 
 
     def test_supportsThreads(self):
