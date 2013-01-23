@@ -663,13 +663,16 @@ class TestLoader(object):
         to same value and collapse to one test unexpectedly if using simpler
         means: e.g. set().
         """
-        entries = []
+        seen = set()
         for thing in things:
             if isinstance(thing, types.MethodType):
-                entries.append((thing, thing.im_class))
+                thing = (thing, thing.im_class)
             else:
-                entries.append((thing,))
-        return [entry[0] for entry in set(entries)]
+                thing = (thing,)
+
+            if thing not in seen:
+                yield thing[0]
+                seen.add(thing)
 
 
 
