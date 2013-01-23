@@ -1037,8 +1037,8 @@ class HostnameEndpointsOneIPv4TestCase(ClientEndpointTestCaseMixin,
 
 
 
-    def test_endpointConnectingCancelled(self):
-        pass
+#    def test_endpointConnectingCancelled(self):
+#        pass
         # TODO: Make this work
 
     def test_endpointConnectFailure(self):
