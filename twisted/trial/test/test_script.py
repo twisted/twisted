@@ -600,12 +600,12 @@ class TestRun(unittest.TestCase):
 class TestArgumentOrderTests(unittest.TestCase):
     """
     Tests for the order-preserving behavior on provided command-line tests.
-
     """
 
     def setUp(self):
         self.config = trial.Options()
         self.loader = TestLoader()
+
 
     def test_preserveArgumentOrder(self):
         """
@@ -615,7 +615,7 @@ class TestArgumentOrderTests(unittest.TestCase):
             "twisted.trial.test.test_tests",
             "twisted.trial.test.test_assertions",
             "twisted.trial.test.test_deferreds",
-        ]
+            ]
         self.config.parseOptions(tests)
 
         suite = trial._getSuite(self.config)
