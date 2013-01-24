@@ -436,6 +436,7 @@ class TCP6ClientEndpoint(object):
 class MultiFailure(Exception):
 
     def __init__(self, failures):
+        print "inside MulitFailure.__init__"
         super(MultiFailure, self).__init__("Failure with multiple causes.")
         self.failures = failures
 
@@ -463,6 +464,16 @@ class HostnameEndpoint(object):
         self._port = port
         self._timeout = timeout
         self._bindAddress = bindAddress
+        
+
+
+    def _canceller(self, d):
+        print "Inside canceller"
+        d.errback(error.ConnectingCancelledError("The connection was cancelled"))
+
+        # TODO: stopConnecting(), or cancel the deferred firing with the TCP endpoint
+
+
 
 
     def connect(self, protocolFactory):
@@ -516,7 +527,7 @@ class HostnameEndpoint(object):
             endpointsListExhausted = []
             successful = []
             failures = []
-            winner = defer.Deferred()    #canceller=wf._canceller)
+            winner = defer.Deferred(canceller=self._canceller)
 
 #            print "Running attemptConnection."
 
@@ -542,9 +553,10 @@ class HostnameEndpoint(object):
 #                    print "endpointsListExhausted is true"
 
 #                if endpointsListExhausted and not pending and not successful:
-                if not pending and not successful:
-                    print "inside almostDone's if"
+                if endpointsListExhausted and not pending and not successful:
+                    print "inside almostDone's if", winner, ", ", failures
                     winner.errback(MultiFailure(failures))
+                    print "winner = ", winner
                     # because nothing else seemed to work, trying out this from CalendarServer's GAIEndpoint
 
 
@@ -561,6 +573,7 @@ class HostnameEndpoint(object):
                 print "Inside connectFailed"
                 print "The reason is:", reason
                 failures.append(reason)
+                print "Winner = ", winner
                 almostDone()
                 return None
 

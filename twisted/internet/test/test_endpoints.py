@@ -1036,6 +1036,44 @@ class HostnameEndpointsOneIPv4TestCase(ClientEndpointTestCaseMixin,
         return {'timeout': 10, 'bindAddress': ('localhost', 49595)}
 
 
+    def test_endpointConnectingCancelled(self):
+        """
+        Calling L{Deferred.cancel} on the L{Deferred} returned from
+        L{IStreamClientEndpoint.connect} is errbacked with an expected
+        L{ConnectingCancelledError} exception.
+        """
+        mreactor = MemoryReactor()
+
+        clientFactory = object()
+
+        ep, ignoredArgs, address = self.createClientEndpoint(
+            mreactor, clientFactory)
+
+        d = ep.connect(clientFactory)
+        print "inside the test, the deferred has: ", d
+
+        receivedFailures = []
+
+        def checkFailure(f):
+            receivedFailures.append(f)
+            
+
+        d.addErrback(checkFailure)
+
+        d.cancel()
+        # When canceled, the connector will immediately notify its factory that
+        # the connection attempt has failed due to a UserError.
+        attemptFactory = self.retrieveConnectedFactory(mreactor)
+        attemptFactory.clientConnectionFailed(None, Failure(error.UserError()))
+        # This should be a feature of MemoryReactor: <http://tm.tl/5630>.
+
+        self.assertEqual(len(receivedFailures), 1)
+
+        failure = receivedFailures[0]
+
+        self.assertIsInstance(failure.value, error.ConnectingCancelledError)
+        self.assertEqual(failure.value.address, address)
+
 
 #    def test_endpointConnectingCancelled(self):
 #        pass
