@@ -799,6 +799,83 @@ class IMAP4HelperTestCase(unittest.TestCase):
             self.assertEqual(query, expected)
 
 
+    def test_queryKeywordFlagWithQuotes(self):
+        """
+        When passed the C{keyword} argument, L{imap4.Query} returns an unquoted
+        string.
+
+        @see: U{http://tools.ietf.org/html/rfc3501#section-9}
+        @see: U{http://tools.ietf.org/html/rfc3501#section-6.4.4}
+        """
+        query = imap4.Query(keyword='twisted')
+        self.assertEqual('(KEYWORD twisted)', query)
+
+
+    def test_queryUnkeywordFlagWithQuotes(self):
+        """
+        When passed the C{unkeyword} argument, L{imap4.Query} returns an
+        unquoted string.
+
+        @see: U{http://tools.ietf.org/html/rfc3501#section-9}
+        @see: U{http://tools.ietf.org/html/rfc3501#section-6.4.4}
+        """
+        query = imap4.Query(unkeyword='twisted')
+        self.assertEqual('(UNKEYWORD twisted)', query)
+
+
+    def _keywordFilteringTest(self, keyword):
+        """
+        Helper to implement tests for value filtering of KEYWORD and UNKEYWORD
+        queries.
+
+        @param keyword: A native string giving the name of the L{imap4.Query}
+            keyword argument to test.
+        """
+        # Check all the printable exclusions
+        self.assertEqual(
+            '(%s twistedrocks)' % (keyword.upper(),),
+            imap4.Query(**{keyword: r'twisted (){%*"\] rocks'}))
+
+        # Check all the non-printable exclusions
+        self.assertEqual(
+            '(%s twistedrocks)' % (keyword.upper(),),
+            imap4.Query(**{
+                    keyword: 'twisted %s rocks' % (
+                    ''.join(chr(ch) for ch in range(33)),)}))
+
+
+    def test_queryKeywordFlag(self):
+        """
+        When passed the C{keyword} argument, L{imap4.Query} returns an
+        C{atom} that consists of one or more non-special characters.
+
+        List of the invalid characters:
+
+            ( ) { % * " \ ] CTL SP
+
+        @see: U{ABNF definition of CTL and SP<https://tools.ietf.org/html/rfc2234>}
+        @see: U{IMAP4 grammar<http://tools.ietf.org/html/rfc3501#section-9>}
+        @see: U{IMAP4 SEARCH specification<http://tools.ietf.org/html/rfc3501#section-6.4.4>}
+        """
+        self._keywordFilteringTest("keyword")
+
+
+    def test_queryUnkeywordFlag(self):
+        """
+        When passed the C{unkeyword} argument, L{imap4.Query} returns an
+        C{atom} that consists of one or more non-special characters.
+
+        List of the invalid characters:
+
+            ( ) { % * " \ ] CTL SP
+
+        @see: U{ABNF definition of CTL and SP<https://tools.ietf.org/html/rfc2234>}
+        @see: U{IMAP4 grammar<http://tools.ietf.org/html/rfc3501#section-9>}
+        @see: U{IMAP4 SEARCH specification<http://tools.ietf.org/html/rfc3501#section-6.4.4>}
+        """
+        self._keywordFilteringTest("unkeyword")
+
+
     def test_invalidIdListParser(self):
         """
         Trying to parse an invalid representation of a sequence range raises an
