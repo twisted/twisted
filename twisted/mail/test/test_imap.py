@@ -849,14 +849,13 @@ class IMAP4HelperTestCase(unittest.TestCase):
         When passed the C{keyword} argument, L{imap4.Query} returns an
         C{atom} that consists of one or more non-special characters.
 
-        @see: Atom U{http://tools.ietf.org/html/rfc2822#section-3.2.4}
-        @see: Specials U{http://tools.ietf.org/html/rfc2822#section-3.2.1}
-        @see: U{http://tools.ietf.org/html/rfc3501#section-9}
-        @see: U{http://tools.ietf.org/html/rfc3501#section-6.4.4}
-
         List of the invalid characters:
 
             ( ) { % * " \ ] CTL SP
+
+        @see: U{ABNF definition of CTL and SP<https://tools.ietf.org/html/rfc2234>}
+        @see: U{IMAP4 grammar<http://tools.ietf.org/html/rfc3501#section-9>}
+        @see: U{IMAP4 SEARCH specification<http://tools.ietf.org/html/rfc3501#section-6.4.4>}
         """
         self._keywordFilteringTest("keyword")
 
@@ -866,14 +865,13 @@ class IMAP4HelperTestCase(unittest.TestCase):
         When passed the C{unkeyword} argument, L{imap4.Query} returns an
         C{atom} that consists of one or more non-special characters.
 
-        @see: Atom U{http://tools.ietf.org/html/rfc2822#section-3.2.4}
-        @see: Specials U{http://tools.ietf.org/html/rfc2822#section-3.2.1}
-        @see: U{http://tools.ietf.org/html/rfc3501#section-9}
-        @see: U{http://tools.ietf.org/html/rfc3501#section-6.4.4}
-
         List of the invalid characters:
 
             ( ) { % * " \ ] CTL SP
+
+        @see: U{ABNF definition of CTL and SP<https://tools.ietf.org/html/rfc2234>}
+        @see: U{IMAP4 grammar<http://tools.ietf.org/html/rfc3501#section-9>}
+        @see: U{IMAP4 SEARCH specification<http://tools.ietf.org/html/rfc3501#section-6.4.4>}
         """
         self._keywordFilteringTest("unkeyword")
 

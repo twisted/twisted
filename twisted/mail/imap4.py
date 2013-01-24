@@ -457,10 +457,18 @@ class IMailboxListener(Interface):
         C{None}.
         """
 
-# Some constants to help define what an atom is and is not
+# Some constants to help define what an atom is and is not - see the grammar
+# section of the IMAP4 RFC - <https://tools.ietf.org/html/rfc3501#section-9>.
+# Some definitions (SP, CTL, DQUOTE) are also from the ABNF RFC -
+# <https://tools.ietf.org/html/rfc2234>.
 _SP = ' '
 _CTL = ''.join(chr(ch) for ch in range(0x21) + range(0x80, 0x100))
+
+# It is easier to define ATOM-CHAR in terms of what it does not match than in
+# terms of what it does match.
 _nonAtomChars = r'(){%*"\]' + _SP + _CTL
+
+# This is all the bytes that match the ATOM-CHAR from the grammar in the RFC.
 _atomChars = ''.join(chr(ch) for ch in range(0x100) if chr(ch) not in _nonAtomChars)
 
 class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
@@ -4115,7 +4123,7 @@ def Query(sorted=0, **kwarg):
         elif k == 'KEYWORD' or k == 'UNKEYWORD':
             # Discard anything that does not fit into an "atom".  Perhaps turn
             # the case where this actually removes bytes from the value into a
-            # warning and then an error, eventually.
+            # warning and then an error, eventually.  See #6277.
             v = string.translate(v, string.maketrans('', ''), _nonAtomChars)
             cmd.extend([k, v])
         elif k not in _NO_QUOTES:
