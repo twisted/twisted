@@ -468,7 +468,7 @@ class HostnameEndpoint(object):
 
 
     def _canceller(self, d):
-        print "Inside canceller"
+        print "Inside canceller", d
         d.errback(error.ConnectingCancelledError("The connection was cancelled"))
 
         # TODO: stopConnecting(), or cancel the deferred firing with the TCP endpoint
@@ -607,7 +607,7 @@ class HostnameEndpoint(object):
             print "Returning the fastest connection now.."
             return d
         except:
-            return defer.fail(error.ConnectingCancelledError("The connection was cancelled"))
+            return defer.fail()
 
 
     def _nameResolution(self, host):
