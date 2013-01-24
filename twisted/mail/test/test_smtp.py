@@ -1689,6 +1689,25 @@ class GrammarTests(unittest.TestCase):
             ("RCPT TO", "<alice@example.com>", None), parse.rcptto())
 
 
+    def test_data(self):
+        parse = self.grammar("DATA\r\n")
+        self.assertEqual("DATA", parse.data())
+
+
+    def test_message_line(self):
+        parse = self.grammar("hello world\r\n")
+        self.assertEqual("hello world", parse.message_line())
+
+
+    def test_message_end(self):
+        parse = self.grammar(".\r\n")
+        self.assertEqual(None, parse.message_line())
+
+
+    def test_escaped_dot(self):
+        parse = self.grammar("..\r\n")
+        self.assertEqual(".", parse.message_line())
+
 
 class NewSMTPTests(unittest.TestCase):
     def setUp(self):
@@ -1782,16 +1801,82 @@ class NewSMTPTests(unittest.TestCase):
 
         self.protocol.makeConnection(self.transport)
         self.protocol.dataReceived(b"EHLO mail.example.com\r\n")
-        self.transport.clear()
         self.protocol.dataReceived(b"MAIL FROM:<alice@example.com>\r\n")
-        self.assertEqual("250 Okay\r\n", self.transport.value())
+        self.transport.clear()
 
         self.protocol.dataReceived(b"RCPT TO:<bob@example.com>\r\n")
+        self.assertEqual("250 Okay\r\n", self.transport.value())
+        self.transport.clear()
         self.protocol.dataReceived(b"RCPT TO:<carol@example.com>\r\n")
+        self.assertEqual("250 Okay\r\n", self.transport.value())
 
         self.assertEqual(
             ["bob@example.com", "carol@example.com"], delivery.recipients)
 
+
+    def test_data(self):
+        """
+        L{SMTP} sends a I{250} response to a I{DATA} command.
+        """
+        delivery = self.protocol.delivery = Permissive()
+
+        self.protocol.makeConnection(self.transport)
+        self.protocol.dataReceived(b"EHLO mail.example.com\r\n")
+        self.protocol.dataReceived(b"MAIL FROM:<alice@example.com>\r\n")
+        self.protocol.dataReceived(b"RCPT TO:<bob@example.com>\r\n")
+        self.transport.clear()
+        self.protocol.dataReceived(b"DATA\r\n")
+        self.assertEqual("250 Okay\r\n", self.transport.value())
+
+
+    def test_message(self):
+        """
+        The L{IMessage} created by L{SMTP.delivery} has message lines, received
+        after a I{DATA} command, delivered to it.
+        """
+        delivery = self.protocol.delivery = Permissive()
+
+        self.protocol.makeConnection(self.transport)
+        self.protocol.dataReceived(b"EHLO mail.example.com\r\n")
+        self.protocol.dataReceived(b"MAIL FROM:<alice@example.com>\r\n")
+        self.protocol.dataReceived(b"RCPT TO:<bob@example.com>\r\n")
+        self.protocol.dataReceived(b"DATA\r\n")
+        self.transport.clear()
+
+        self.protocol.dataReceived(b"first line\r\n")
+        self.protocol.dataReceived(b"second line\r\n")
+        self.protocol.dataReceived(b"third line\r\n")
+        self.assertEqual("", self.transport.value())
+
+        self.protocol.dataReceived(b".\r\n")
+        self.assertEqual("250 Okay\r\n", self.transport.value())
+
+        message = delivery.messages[0]
+        self.assertEqual(
+            [b"first line", b"second line", b"third line"],
+            message.lines)
+        self.assertTrue(message.ended)
+
+
+
+@implementer(smtp.IMessage)
+class Recorder(object):
+    def __init__(self):
+        self.lines = []
+        self.ended = False
+
+
+    def lineReceived(self, line):
+        self.lines.append(line)
+
+
+    def eomReceived(self):
+        self.ended = True
+        return defer.succeed(None)
+
+
+    def connectionLost(self):
+        self.lines = None
 
 
 @implementer(smtp.IMessageDelivery)
@@ -1799,6 +1884,7 @@ class Permissive(object):
     def __init__(self):
         self.sender = None
         self.recipients = []
+        self.messages = []
 
 
     def validateFrom(self, helo, origin):
@@ -1809,4 +1895,6 @@ class Permissive(object):
 
     def validateTo(self, user):
         self.recipients.append(user)
-        return lambda: None
+        message = Recorder()
+        self.messages.append(message)
+        return lambda: message

@@ -533,9 +533,9 @@ ehlo = 'E' 'H' 'L' 'O' ' ' <(domain | address_literal)>:x newline -> ('EHLO', x)
 
 noop = 'N' 'O' 'O' 'P' (' ' string)?:string newline -> ("NOOP", string)
 help = 'H' 'E' 'L' 'P' (' ' string)?:string newline -> ("HELP", string)
-expn = <'E' 'X' 'P' 'N'>:command ' ' string:string newline -> (command, string)
-vrfy = <'V' 'R' 'F' 'Y'>:command ' ' string:string newline -> (command, string)
-rset = <'R' 'S' 'E' 'T'>
+expn = 'E' 'X' 'P' 'N' ' ' string:string newline -> ("EXPN", string)
+vrfy = 'V' 'R' 'F' 'Y' ' ' string:string newline -> ("VRFY", string)
+rset = 'R' 'S' 'E' 'T' -> ("RSET",)
 
 atext =
     let_dig | '!' | '#' | '$' | '%' | '*' | "'" | '+' | '-' | '/' |
@@ -570,159 +570,11 @@ rcptto = 'R' 'C' 'P' 'T' ' ' 'T' 'O' ':'
     forward_path:forward_path (' ' rcpt_parameters)?:rcpt_parameters
     newline -> ('RCPT TO', forward_path, rcpt_parameters or None)
 
+data = 'D' 'A' 'T' 'A' newline -> ("DATA",)
+
 command = helo | ehlo | noop | help | expn | vrfy | rset | mailfrom | rcptto | data
-data = line
+message_line = '.'? string?:string newline -> string
 """
-
-from twisted.python.constants import Names, NamedConstant
-
-class SMTPStates(Names):
-    # The connection is established.  The server has not yet sent the initial
-    # 220 (or anything else).  The client has not yet spoke (the server speaks
-    # first).
-    CONNECTED = NamedConstant()
-
-    # The connection is being closed, but is not yet actually be closed.
-    DISCONNECTING = NamedConstant()
-
-    # The server has sent the initial 220.
-    SERVER_GREETED = NamedConstant()
-
-    # A greeting handshake has completed and no further state has been
-    # accumulated (eg, no message transaction has begun).
-    READY = NamedConstant()
-
-    # "MAIL FROM" has been used to specify the sender.  Recipient information is
-    # now awaited.
-    RECEIVED_SENDER = NamedConstant()
-
-    # Everything has completed.  No further inputs allowed nor outputs produced.
-    # This state cannot be exited.
-    DONE = NamedConstant()
-
-
-
-class SMTPInputs(Names):
-    # The connection has been lost.  No further inputs will arrive.
-    CLIENT_DISCONNECTED = NamedConstant()
-
-    # The connection has been idle waiting for input from the client for too
-    # long.
-    IDLE_TIMEOUT = NamedConstant()
-
-    # An attempt to close the connection has taken longer than allowed.
-    DISCONNECT_TIMEOUT = NamedConstant()
-
-    # The necessary delay between connection and when it is appropriate to send
-    # the initial 220 has elapsed.  The delay is configuration, it may be 0
-    # (unsurprisingly) or a greater value.  A delay here has some minor spam
-    # deterrence properties.
-    GREETING_DELAY_INTERVAL_PASSED = NamedConstant()
-
-    # The server is not presently capable of providing the smtp service.
-    SERVICE_UNAVAILABLE = NamedConstant()
-
-    # The client has sent a HELO
-    CLIENT_HELO = NamedConstant()
-
-    # The client has sent a EHLO
-    CLIENT_EHLO = NamedConstant()
-
-    # The client has sent a MAIL FROM
-    CLIENT_MAIL_FROM = NamedConstant()
-
-
-
-class SMTPOutputs(Names):
-    # Output with no meaning, probably associated with a transition to the DONE
-    # state.
-    NULL = NamedConstant()
-
-    # The connection is to be closed cleanly.
-    LOSE_CONNECTION = NamedConstant()
-
-    # The initial 220 is to be sent to the client.
-    SERVER_GREETING = NamedConstant()
-
-    # An initial 554 should be sent to the client and the connection closed.
-    SERVICE_UNAVAILABLE = NamedConstant()
-
-    # Send a response to a HELO command
-    HELO_RESPONSE = NamedConstant()
-
-    # Send a response to an EHLO command
-    EHLO_RESPONSE = NamedConstant()
-
-
-
-class _State(object):
-    def __init__(self, output, nextState):
-        self.output = output
-        self.nextState = nextState
-
-
-
-class SMTPStateMachine(object):
-    transitions = {
-        SMTPStates.CONNECTED: {
-            SMTPInputs.CLIENT_DISCONNECTED:
-                _State(SMTPOutputs.NULL, SMTPStates.DONE),
-            SMTPInputs.IDLE_TIMEOUT:
-                _State(SMTPOutputs.LOSE_CONNECTION, SMTPStates.DISCONNECTING),
-
-            SMTPInputs.GREETING_DELAY_INTERVAL_PASSED:
-                _State(SMTPOutputs.SERVER_GREETING, SMTPStates.SERVER_GREETED),
-            SMTPInputs.SERVICE_UNAVAILABLE:
-                _State(SMTPOutputs.SERVICE_UNAVAILABLE, SMTPStates.DISCONNECTING),
-            },
-
-        SMTPStates.DISCONNECTING: {
-            SMTPInputs.DISCONNECT_TIMEOUT:
-                _State(SMTPOutputs.ABORT_CONNECTION, SMTPStates.DISCONNECTED),
-            SMTPInputs.CLIENT_DISCONNECTED:
-                _State(SMTPOutputs.NULL, SMTPStates.DONE),
-            },
-
-        SMTPStates.SERVER_GREETED: {
-            SMTPInputs.CLIENT_DISCONNECTED:
-                _State(SMTPOutputs.NULL, SMTPStates.DONE),
-            SMTPInputs.IDLE_TIMEOUT:
-                _State(SMTPOutputs.LOSE_CONNECTION, SMTPStates.DISCONNECTING),
-
-            SMTPInputs.CLIENT_HELO:
-                _State(SMTPOutputs.HELO_RESPONSE, SMTPStates.READY),
-            SMTPInputs.CLIENT_EHLO:
-                _State(SMTPOutputs.EHLO_RESPONSE, SMTPStates.READY),
-            },
-
-        SMTPStates.READY: {
-            SMTPInputs.CLIENT_DISCONNECTED:
-                _State(SMTPOutputs.NULL, SMTPStates.DONE),
-            SMTPInputs.IDLE_TIMEOUT:
-                _State(SMTPOutputs.LOSE_CONNECTION, SMTPStates.DISCONNECTING),
-
-            SMTPInputs.CLIENT_MAIL_FROM:
-                _State(SMTPOutputs.MAIL_FROM_RESPONSE, SMTPStates.RECEIVED_SENDER),
-            # TODO
-            # SMTPInputs.CLIENT_RSET: None,
-            # SMTPInputs.CLIENT_NOOP: None,
-            # SMTPInputs.CLIENT_QUIT: None,
-            # SMTPInputs.CLIENT_VRFY: None,
-            },
-
-        SMTPStates.RECEIVED_SENDER: {
-            SMTPInputs.CLIENT_DISCONNECTED:
-                _State(SMTPOutputs.NULL, SMTPStates.DONE),
-            SMTPInputs.IDLE_TIMEOUT:
-                _State(SMTPOutputs.LOSE_CONNECTION, SMTPStates.DISCONNECTING),
-
-            SMTPInputs.
-
-
-        }
-
-
-
 
 class SMTP(ParserProtocol):
     """
@@ -748,7 +600,9 @@ class SMTP(ParserProtocol):
             command = command.replace(' ', '_')
             rule = getattr(self, "command_" + command)(stuff[1:])
         else:
-            self.transport.write("503 Bad sequence of commands\r\n")
+            self.transport.write(
+                "503 Bad sequence of commands (command=%r allowed=%r)\r\n" % (
+                    command, self._allowedCommands,))
         return rule or "command"
 
 
@@ -779,15 +633,23 @@ class SMTP(ParserProtocol):
     def command_RCPT_TO(self, argument):
         path, params = argument
         # Strip the <> off the ends
-        self.delivery.validateTo(path[1:-1])
+        self.message = self.delivery.validateTo(path[1:-1])()
         self.transport.write("250 Okay\r\n")
         self._allowedCommands = ['RCPT TO', 'DATA']
 
 
     def command_DATA(self, argument):
         self.transport.write("250 Okay\r\n")
-        return "data"
+        return "message_line"
 
+
+    def dataReceived_message_line(self, line):
+        if line is None:
+            self.message.eomReceived()
+            self.transport.write("250 Okay\r\n")
+        else:
+            self.message.lineReceived(line)
+        return "message_line"
 
 
 
