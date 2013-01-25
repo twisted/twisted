@@ -28,7 +28,7 @@ from twisted.internet import reactor
 from twisted.internet import interfaces
 from twisted.internet.task import Clock
 from twisted.trial import unittest
-from twisted.python import util
+from twisted.python import util, log
 from twisted.python import failure
 
 from twisted import cred
@@ -1118,21 +1118,27 @@ class IMAP4HelperMixin:
         theAccount.mboxType = SimpleMailbox
         SimpleServer.theAccount = theAccount
 
+
     def tearDown(self):
         del self.server
         del self.client
         del self.connected
 
+
     def _cbStopClient(self, ignore):
         self.client.transport.loseConnection()
+
 
     def _ebGeneral(self, failure):
         self.client.transport.loseConnection()
         self.server.transport.loseConnection()
-        failure.raiseException()
+        log.err(failure, "Problem with %r" % (self.function,))
+
 
     def loopback(self):
         return loopback.loopbackAsync(self.server, self.client)
+
+
 
 class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
     def testCapability(self):
