@@ -1026,19 +1026,6 @@ class SMTPServerTestCase(unittest.TestCase):
     Test various behaviors of L{twisted.mail.smtp.SMTP} and
     L{twisted.mail.smtp.ESMTP}.
     """
-    def testSMTPGreetingHost(self, serverClass=smtp.SMTP):
-        """
-        Test that the specified hostname shows up in the SMTP server's
-        greeting.
-        """
-        s = serverClass()
-        s.host = "example.com"
-        t = StringTransport()
-        s.makeConnection(t)
-        s.connectionLost(error.ConnectionDone())
-        self.assertIn("example.com", t.value())
-
-
     def testSMTPGreetingNotExtended(self):
         """
         Test that the string "ESMTP" does not appear in the SMTP server's
@@ -1601,6 +1588,11 @@ class GrammarTests(unittest.TestCase):
         self.assertEqual(("VRFY", "users@example.com"), parse.vrfy())
 
 
+    def test_rset(self):
+        parse = self.grammar("RSET\r\n")
+        self.assertEqual(("RSET",), parse.rset())
+
+
     def test_atom(self):
         atom = "abc123!#$%*'*+-/=?^_`{|}"
         parse = self.grammar(atom)
@@ -1682,7 +1674,6 @@ class GrammarTests(unittest.TestCase):
         parse = self.grammar("<alice@example.com>")
         self.assertEqual("<alice@example.com>", parse.forward_path())
 
-
     def test_rcptto(self):
         parse = self.grammar("RCPT TO:<alice@example.com>\r\n")
         self.assertEqual(
@@ -1691,7 +1682,35 @@ class GrammarTests(unittest.TestCase):
 
     def test_data(self):
         parse = self.grammar("DATA\r\n")
-        self.assertEqual("DATA", parse.data())
+        self.assertEqual(("DATA",), parse.data())
+
+
+    def test_bad_command(self):
+        parse = self.grammar("MADE up garbage\r\n")
+        self.assertEqual((None,), parse.bad_command())
+
+
+    def test_commands(self):
+        commands = [
+            ("HELO", "HELO example.com"),
+            ("EHLO", "EHLO example.com"),
+            ("NOOP", "NOOP"),
+            ("HELP", "HELP"),
+            ("EXPN", "EXPN alice@example.com"),
+            ("VRFY", "VRFY alice@example.com"),
+            ("RSET", "RSET"),
+            ("MAIL FROM", "MAIL FROM:<alice@example.com>"),
+            ("RCPT TO", "RCPT TO:<alice@example.com>"),
+            ("DATA", "DATA"),
+            (None, "RANDOM JUNK"),
+            ]
+
+        for (expected, pattern) in commands:
+            parse = self.grammar(pattern + "\r\n")
+            self.assertEqual(
+                expected, parse.command()[0],
+                "Parsing %r should have produced token %r" % (
+                    pattern, expected))
 
 
     def test_message_line(self):
@@ -1709,6 +1728,7 @@ class GrammarTests(unittest.TestCase):
         self.assertEqual(".", parse.message_line())
 
 
+
 class NewSMTPTests(unittest.TestCase):
     def setUp(self):
         self.ip = "1.2.3.4"
@@ -1719,11 +1739,22 @@ class NewSMTPTests(unittest.TestCase):
 
     def test_makeConnection(self):
         """
-        L{SMTP} sends a server greeting when it is connected to a transport.
+        L{SMTP} sends a server greeting, including its own address, when it is
+        connected to a transport.
         """
         self.protocol.makeConnection(self.transport)
         self.assertEqual(
             "220 [%s] Server ready\r\n" % (self.ip,), self.transport.value())
+
+
+    def test_unparseable(self):
+        """
+        L{SMTP} sends a I{500} response to any command it cannot parse.
+        """
+        self.protocol.makeConnection(self.transport)
+        self.transport.clear()
+        self.protocol.dataReceived(b"FOO bar\r\n")
+        self.assertEqual(b"500 Error: bad syntax\r\n", self.transport.value())
 
 
     def test_helo(self):

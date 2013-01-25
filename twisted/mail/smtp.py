@@ -535,7 +535,7 @@ noop = 'N' 'O' 'O' 'P' (' ' string)?:string newline -> ("NOOP", string)
 help = 'H' 'E' 'L' 'P' (' ' string)?:string newline -> ("HELP", string)
 expn = 'E' 'X' 'P' 'N' ' ' string:string newline -> ("EXPN", string)
 vrfy = 'V' 'R' 'F' 'Y' ' ' string:string newline -> ("VRFY", string)
-rset = 'R' 'S' 'E' 'T' -> ("RSET",)
+rset = 'R' 'S' 'E' 'T' newline -> ("RSET",)
 
 atext =
     let_dig | '!' | '#' | '$' | '%' | '*' | "'" | '+' | '-' | '/' |
@@ -572,7 +572,8 @@ rcptto = 'R' 'C' 'P' 'T' ' ' 'T' 'O' ':'
 
 data = 'D' 'A' 'T' 'A' newline -> ("DATA",)
 
-command = helo | ehlo | noop | help | expn | vrfy | rset | mailfrom | rcptto | data
+bad_command = string? newline -> (None,)
+command = helo | ehlo | noop | help | expn | vrfy | rset | mailfrom | rcptto | data | bad_command
 message_line = '.'? string?:string newline -> string
 """
 
@@ -596,7 +597,9 @@ class SMTP(ParserProtocol):
     def dataReceived_command(self, stuff):
         command = stuff[0]
         rule = None
-        if command in self._allowedCommands:
+        if command is None:
+            self.transport.write("500 Error: bad syntax\r\n")
+        elif command in self._allowedCommands:
             command = command.replace(' ', '_')
             rule = getattr(self, "command_" + command)(stuff[1:])
         else:
