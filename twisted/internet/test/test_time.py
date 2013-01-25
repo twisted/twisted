@@ -66,6 +66,11 @@ class TimeTestsBuilder(ReactorBuilder):
         # and cause the reactor to stop.
         reactor.run()
 
+        # The reactor almost surely stopped before the delayed call
+        # fired... right?
+        self.assertTrue(delayedCall.active())
+        self.assertIn(delayedCall, reactor.getDelayedCalls())
+
 
 
 class GlibTimeTestsBuilder(ReactorBuilder):
