@@ -753,7 +753,16 @@ class ReactorBase(object):
                 heappush(self._pendingTimedCalls, call)
         self._newTimedCalls = []
 
+
     def timeout(self):
+        """
+        Determine the longest time the reactor may sleep (waiting on I/O
+        notification, perhaps) before it must wake up to service a time-related
+        event.
+
+        @return: The maximum number of seconds the reactor may sleep.
+        @rtype: L{float}
+        """
         # insert new delayed calls to make sure to include them in timeout value
         self._insertNewDelayedCalls()
 
