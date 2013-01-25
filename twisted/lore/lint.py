@@ -130,11 +130,11 @@ class DefaultTagChecker(TagChecker):
                     text = '\n'.join(lines) + '\n'
                     try:
                         parser.suite(text)
-                    except SyntaxError:
+                    except parserErrors:
                         # Pretend the "..." idiom is syntactically valid
                         text = text.replace("...","'...'")
                         parser.suite(text)
-                except SyntaxError as e:
+                except parserErrors as e:
                     self._reportError(filename, node,
                                       'invalid python code:' + str(e))
 
