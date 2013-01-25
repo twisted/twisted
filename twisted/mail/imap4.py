@@ -3644,7 +3644,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
                 # A BODY section is always represented as a list.  Any non-list
                 # is not a BODY section.
                 hasSection = False
-            elif len(value) >= 3:
+            elif len(value) > 2:
                 # The list representing a BODY section has at most two elements.
                 hasSection = False
             elif value and isinstance(value[0], list):
