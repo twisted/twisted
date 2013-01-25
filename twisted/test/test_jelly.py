@@ -6,11 +6,7 @@ Test cases for L{jelly} object serialization.
 """
 
 import datetime
-
-try:
-    import decimal
-except ImportError:
-    decimal = None
+import decimal
 
 from twisted.spread import jelly, pb
 from twisted.python.compat import set, frozenset
@@ -277,26 +273,6 @@ class JellyTestCase(unittest.TestCase):
         self.assertEqual(output, expected)
 
 
-    def test_decimalMissing(self):
-        """
-        If decimal is unavailable on the unjelly side, L{jelly.unjelly} should
-        gracefully return L{jelly.Unpersistable} objects.
-        """
-        self.patch(jelly, 'decimal', None)
-        output = jelly.unjelly(self.decimalData)
-        self.assertEqual(len(output), 4)
-        for i in range(4):
-            self.assertIsInstance(output[i], jelly.Unpersistable)
-        self.assertEqual(output[0].reason,
-            "Could not unpersist decimal: 9.95")
-        self.assertEqual(output[1].reason,
-            "Could not unpersist decimal: 0")
-        self.assertEqual(output[2].reason,
-            "Could not unpersist decimal: 123456")
-        self.assertEqual(output[3].reason,
-            "Could not unpersist decimal: -78.901")
-
-
     def test_decimalSecurity(self):
         """
         By default, C{decimal} objects should be allowed by
@@ -305,12 +281,6 @@ class JellyTestCase(unittest.TestCase):
         """
         inputList = [decimal.Decimal('9.95')]
         self._testSecurity(inputList, "decimal")
-
-    if decimal is None:
-        skipReason = "decimal not available"
-        test_decimal.skip = skipReason
-        test_decimalUnjelly.skip = skipReason
-        test_decimalSecurity.skip = skipReason
 
 
     def test_set(self):
@@ -355,41 +325,6 @@ class JellyTestCase(unittest.TestCase):
         """
         inputList = [frozenset([1, 2, 3])]
         self._testSecurity(inputList, "frozenset")
-
-
-    def test_oldSets(self):
-        """
-        Test jellying C{sets.Set}: it should serialize to the same thing as
-        C{set} jelly, and be unjellied as C{set} if available.
-        """
-        inputList = [jelly._sets.Set([1, 2, 3])]
-        inputJelly = jelly.jelly(inputList)
-        self.assertEqual(inputJelly, jelly.jelly([set([1, 2, 3])]))
-        output = jelly.unjelly(inputJelly)
-        # Even if the class is different, it should coerce to the same list
-        self.assertEqual(list(inputList[0]), list(output[0]))
-        if set is jelly._sets.Set:
-            self.assertIsInstance(output[0], jelly._sets.Set)
-        else:
-            self.assertIsInstance(output[0], set)
-
-
-    def test_oldImmutableSets(self):
-        """
-        Test jellying C{sets.ImmutableSet}: it should serialize to the same
-        thing as C{frozenset} jelly, and be unjellied as C{frozenset} if
-        available.
-        """
-        inputList = [jelly._sets.ImmutableSet([1, 2, 3])]
-        inputJelly = jelly.jelly(inputList)
-        self.assertEqual(inputJelly, jelly.jelly([frozenset([1, 2, 3])]))
-        output = jelly.unjelly(inputJelly)
-        # Even if the class is different, it should coerce to the same list
-        self.assertEqual(list(inputList[0]), list(output[0]))
-        if frozenset is jelly._sets.ImmutableSet:
-            self.assertIsInstance(output[0], jelly._sets.ImmutableSet)
-        else:
-            self.assertIsInstance(output[0], frozenset)
 
 
     def test_simple(self):

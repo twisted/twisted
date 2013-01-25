@@ -313,9 +313,6 @@ class TestMergeFunctionMetadata(unittest.TestCase):
         self.assertEqual(baz.__name__, foo.__name__)
 
 
-
-
-
     def test_instanceDictionaryIsMerged(self):
         """
         Merging C{foo} into C{bar} returns a function with C{bar}'s

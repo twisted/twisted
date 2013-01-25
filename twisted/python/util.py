@@ -882,7 +882,7 @@ def unsignedID(obj):
 def mergeFunctionMetadata(f, g):
     """
     Overwrite C{g}'s name and docstring with values from C{f}.  Update
-    C{g}'s instance dictionary with C{f}'s. 
+    C{g}'s instance dictionary with C{f}'s.
 
     @return: A function that has C{g}'s behavior and metadata merged from
         C{f}.
