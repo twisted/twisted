@@ -1,0 +1,1 @@
+twisted.mail.imap4.IMAP4Client can now interpret the BODYSTRUCTURE response for multipart/* messages.
