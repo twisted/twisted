@@ -760,7 +760,12 @@ class ReactorBase(object):
         if not self._pendingTimedCalls:
             return None
 
-        return max(0, self._pendingTimedCalls[0].time - self.seconds())
+        delay = self._pendingTimedCalls[0].time - self.seconds()
+        longest = 2147483 # 2 ** 31 / 1000
+
+        # Don't let the delay be in the past (negative) or exceed a plausible
+        # maximum (platform-imposed) interval.
+        return max(0, min(longest, delay))
 
 
     def runUntilCurrent(self):
