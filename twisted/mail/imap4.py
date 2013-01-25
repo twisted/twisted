@@ -3634,7 +3634,8 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             #    ["BODY", VALUE]
             #
             # with list as the type of VALUE and the type of VALUE[0].
-
+            #
+            # See #6281 for ideas on how this might be improved.
 
             if key not in ("BODY", "BODY.PEEK"):
                 # Only BODY (and by extension, BODY.PEEK) responses can have
