@@ -4877,7 +4877,7 @@ def _getContentType(msg):
         mm = ''.join(mm.splitlines())
         mimetype = mm.split(';')
         if mimetype:
-            type = mimetype[0].lower().split('/', 1)
+            type = mimetype[0].split('/', 1)
             if len(type) == 1:
                 major = type[0]
                 minor = None
