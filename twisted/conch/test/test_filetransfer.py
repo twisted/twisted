@@ -1,7 +1,10 @@
 # -*- test-case-name: twisted.conch.test.test_filetransfer -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE file for details.
 
+"""
+Tests for L{twisted.conch.ssh.filetransfer}.
+"""
 
 import os
 import re
