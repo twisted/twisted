@@ -73,6 +73,16 @@ class TestSerialization(FlattenTestCase):
         return self.assertFlattensTo(tag, '<img src="foo" name="bar" />')
 
 
+    def test_serializedAttributeWithSanitization(self):
+        """
+        Attribute values containing C{"<"}, C{">"}, C{"&"}, or C{'"'} have
+        C{"&lt;"}, C{"&gt;"}, C{"&amp;"}, or C{"&quot;"} substituted for those
+        bytes in the serialized output.
+        """
+        return self.assertFlattensTo(
+            tags.img(src="<>&\""),'<img src="&lt;&gt;&amp;&quot;" />')
+
+
     def test_serializeComment(self):
         """
         Test that comments are correctly flattened and escaped.
