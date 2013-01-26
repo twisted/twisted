@@ -15,7 +15,7 @@
   This document introduces <code base="twisted.internet.defer"
   class="API">Deferred</code>s, Twisted's preferred mechanism for controlling
   the flow of asynchronous code.  Don't worry if you don't know what that means
-  yet, as the rest of this document sets out to explain exactly that.
+  yet&emdash;that's why you are here! 
 </p>
 
 <p>
@@ -266,27 +266,26 @@ d.addCallback(lambda ignored: pod.launch())
   <code class="python">d.addCallback</code> replaces <q>new line</q>.
 </p>
 
-<h2>A catalog of failures</h2>
-
 <p>
-  Of course, programs generally consist of more than two lines, and exceptions
-  add a delicate and pleasing spice to the whole experience.
+  Of course, programs generally consist of more than two lines, and we still 
+  don't know how to deal with failure.
 </p>
+
+<h2>Getting it right: The failure cases</h2>
 
 <p>
   In what follows, we are going to take each way of expressing order of
-  operations in Python using sequences of lines
-  and <code class="python">try</code>/<code class="python">except</code> and
-  translate them into an equivalent built with <code class="API"
-  base="twisted.internet.defer">Deferred</code>.
+  operations in normal Python (using lines of code and and 
+  <code class="python">try</code>/<code class="python">except</code>) and
+  translate them into an equivalent code built with <code class="API"
+  base="twisted.internet.defer">Deferred</code> objects.
 </p>
 
 <p>
   This is going to be a bit painstaking, but if you want to really understand
   how to use <code class="API" base="twisted.internet.defer">Deferred</code>s
-  and how to understand and maintain code that uses <code class="API"
-  base="twisted.internet.defer">Deferred</code>s, it is worth understanding
-  each of these examples.
+  and maintain code that uses them, it is worth understanding each of example
+  below.
 </p>
 
 <h3>One thing, then another, then another</h3>
