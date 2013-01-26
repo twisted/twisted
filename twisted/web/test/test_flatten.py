@@ -103,6 +103,22 @@ class TestSerialization(FlattenTestCase):
             tags.img(src=tags.a('<>&"')), '<img src="&lt;a&gt;&lt;&gt;&amp;&quot;&lt;/a&gt;" />')
 
 
+    def test_serializedAttributeWithTagWithAttribute(self):
+        """
+        Similar to L{test_serializedAttributeWithTag}, but for the additional
+        complexity where the tag which is the attribute value itself has an
+        attribute value which contains bytes which require substitution.
+        """
+        # Is this really the best behavior for this case?
+        value = '<>&"'
+        escapedValue = '&lt;&gt;&amp;&quot;'
+        a = "<a href=" + escapedValue + " />"
+        escapedA = a.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;')
+        return self.assertFlattensTo(
+            tags.img(src=tags.a(href=value)),
+            '<img src="' + escapedA + '" />')
+
+
     def test_serializeComment(self):
         """
         Test that comments are correctly flattened and escaped.
