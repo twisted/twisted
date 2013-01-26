@@ -17,6 +17,16 @@ from twisted.web.iweb import IRenderable
 from twisted.web.test._util import FlattenTestCase
 
 
+class OrderedAttributes(object):
+    def __init__(self, attributes):
+        self.attributes = attributes
+
+
+    def iteritems(self):
+        return self.attributes[:]
+
+
+
 class TestSerialization(FlattenTestCase):
     """
     Tests for flattening various things.
@@ -42,9 +52,25 @@ class TestSerialization(FlattenTestCase):
 
     def test_serializeSelfClosingTags(self):
         """
-        Test that some tags are normally written out as self-closing tags.
+        The serialized form of a self-closing tag is C{'<tagName />'}.
         """
-        return self.assertFlattensTo(tags.img(src='test'), '<img src="test" />')
+        return self.assertFlattensTo(tags.img(), '<img />')
+
+
+    def test_serializeAttribute(self):
+        """
+        The serialized form of attribute I{a} with value I{b} is C{'a="b"'}.
+        """
+        return self.assertFlattensTo(tags.img(src='foo'), '<img src="foo" />')
+
+
+    def test_serializedMultipleAttributes(self):
+        """
+        Multiple attributes are separated by a single space in their serialized form.
+        """
+        tag = tags.img()
+        tag.attributes = OrderedAttributes([("src", "foo"), ("name", "bar")])
+        return self.assertFlattensTo(tag, '<img src="foo" name="bar" />')
 
 
     def test_serializeComment(self):
