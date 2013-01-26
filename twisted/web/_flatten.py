@@ -147,7 +147,8 @@ def _flattenElement(request, root, slotData, renderFactory, inAttribute):
             return
 
         if not root.tagName:
-            yield _flattenElement(request, root.children, slotData, renderFactory, False)
+            yield _flattenElement(request, root.children, slotData,
+                                  renderFactory, inAttribute)
             return
 
         yield '<'
