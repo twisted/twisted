@@ -83,6 +83,16 @@ class TestSerialization(FlattenTestCase):
             tags.img(src="<>&\""),'<img src="&lt;&gt;&amp;&quot;" />')
 
 
+    def test_serializedAttributeWithTransparentTag(self):
+        """
+        Attribute values which are supplied via the value of an I{transparent}
+        tag have the same subsitution rules to them as values supplied
+        directly.
+        """
+        return self.assertFlattensTo(
+            tags.img(src=tags.transparent('<>&"')), '<img src="&lt;&gt;&amp;&quot;" />')
+
+
     def test_serializeComment(self):
         """
         Test that comments are correctly flattened and escaped.
