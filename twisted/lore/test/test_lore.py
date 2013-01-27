@@ -37,8 +37,6 @@ from xml.dom import minidom as dom
 from twisted.trial import unittest
 from twisted.python.filepath import FilePath
 
-from twisted.test.testutils import _XMLAssertionMixin
-
 from twisted.lore import tree, process, indexer, numberer, htmlbook, default
 from twisted.lore.default import factory
 from twisted.lore.latex import LatexSpitter
@@ -1134,7 +1132,7 @@ class XMLParsingTests(unittest.TestCase):
 
 
 
-class XMLSerializationTests(unittest.TestCase, _XMLAssertionMixin):
+class XMLSerializationTests(unittest.TestCase, XMLAssertionMixin):
     """
     Tests for L{tree._writeDocument}.
     """
