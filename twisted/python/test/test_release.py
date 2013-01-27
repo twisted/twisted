@@ -41,6 +41,7 @@ from twisted.python._release import BuildAPIDocsScript
 from twisted.python._release import buildAllTarballs, runCommand
 from twisted.python._release import UncleanWorkingDirectory, NotWorkingDirectory
 from twisted.python._release import ChangeVersionsScript, BuildTarballsScript
+from twisted.test.testutils import XMLAssertionMixin
 from twisted.python._release import NewsBuilder
 
 if os.name != 'posix':
@@ -539,7 +540,7 @@ class VersionWritingTest(TestCase):
 
 
 
-class BuilderTestsMixin(object):
+class BuilderTestsMixin(XMLAssertionMixin):
     """
     A mixin class which provides various methods for creating sample Lore input
     and output.
@@ -568,15 +569,6 @@ class BuilderTestsMixin(object):
         Initialize the doc counter which ensures documents are unique.
         """
         self.docCounter = 0
-
-
-    def assertXMLEqual(self, first, second):
-        """
-        Verify that two strings represent the same XML document.
-        """
-        self.assertEqual(
-            dom.parseString(first).toxml(),
-            dom.parseString(second).toxml())
 
 
     def getArbitraryOutput(self, version, counter, prefix="", apiBaseURL="%s"):

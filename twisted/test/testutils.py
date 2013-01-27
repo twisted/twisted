@@ -1,5 +1,6 @@
 from cStringIO import StringIO
 from twisted.internet.protocol import FileWrapper
+from xml.dom import minidom as dom
 
 class IOPump:
     """Utility to pump data between clients and servers for protocol testing.
@@ -53,3 +54,20 @@ def returnConnected(server, client):
     # Uh...
     pump.flush()
     return pump
+
+
+
+class XMLAssertionMixin(object):
+    """
+    Test mixin defining a method for comparing serialized XML documents.
+    """
+
+    def assertXMLEqual(self, first, second):
+        """
+        Verify that two strings represent the same XML document.
+        """
+        self.assertEqual(
+            dom.parseString(first).toxml(),
+            dom.parseString(second).toxml())
+
+
