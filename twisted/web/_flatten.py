@@ -47,7 +47,7 @@ def escapedAttribute(something):
     @param something: A generator that yields bytes and other generators, as
         returned by L{_flattenElement}.
 
-    @return: the same type as L{_flattenElement} returns, with all the bytes
+    @return: The same type as L{_flattenElement} returns, with all the bytes
         encoded for representation within an attribute.
     """
     if isinstance(something, (unicode, bytes)):
@@ -123,7 +123,7 @@ def _flattenElement(request, root, slotData, renderFactory, inAttribute):
     @param slotData: A C{list} of C{dict} mapping C{str} slot names to data
         with which those slots will be replaced.
 
-    @param renderFactory: If not C{None}, An object that provides
+    @param renderFactory: If not C{None}, an object that provides
         L{IRenderable}.
 
     @param inAttribute: A flag which indicates that this C{root} is the I{top
