@@ -199,8 +199,9 @@ def _flattenElement(request, root, slotData, renderFactory, inAttribute):
         yield '&#%d;' % (root.ordinal,)
     elif isinstance(root, Deferred):
         yield root.addCallback(
-            lambda result: (result, _flattenElement(request, result, slotData,
-                                                    renderFactory, inAttribute)))
+            lambda result:
+            (result, _flattenElement(request, result, slotData, renderFactory,
+                                     inAttribute)))
     elif IRenderable.providedBy(root):
         result = root.render(request)
         yield _flattenElement(request, result, slotData, root, inAttribute)
