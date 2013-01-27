@@ -112,8 +112,9 @@ class TestSerialization(FlattenTestCase):
         # Is this really the best behavior for this case?
         value = '<>&"'
         escapedValue = '&lt;&gt;&amp;&quot;'
-        a = "<a href=" + escapedValue + " />"
-        escapedA = a.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;')
+        a = '<a href="' + escapedValue + '"></a>'
+        escapedA = (a.replace('&', '&amp;').replace('<', '&lt;')
+                     .replace('>', '&gt;').replace('"', '&quot;'))
         return self.assertFlattensTo(
             tags.img(src=tags.a(href=value)),
             '<img src="' + escapedA + '" />')

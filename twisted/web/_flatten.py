@@ -21,19 +21,15 @@ from twisted.web._stan import (
 
 
 
-def escapedData(data, inAttribute):
+def escapedData(data):
     """
     Escape a string for inclusion in a document.
 
     @type data: C{str} or C{unicode}
     @param data: The string to escape.
 
-    @type inAttribute: C{bool}
-    @param inAttribute: A flag which, if set, indicates that the string should
-        be quoted for use as the value of an XML tag value.
-
     @rtype: C{str}
-    @return: The quoted form of C{data}. If C{data} is unicode, return a utf-8
+    @return: The quoted form of C{data}.  If C{data} is unicode, return a utf-8
         encoded string.
     """
     if isinstance(data, unicode):
@@ -41,9 +37,28 @@ def escapedData(data, inAttribute):
     data = data.replace('&', '&amp;'
         ).replace('<', '&lt;'
         ).replace('>', '&gt;')
-    if inAttribute:
-        data = data.replace('"', '&quot;')
     return data
+
+
+
+def escapedAttribute(something):
+    """
+    Wrap the output of the serialization process to quote it for the top level.
+
+    @param something: A generator that yields bytes and other generators, as
+        returned by L{_flattenElement}.
+
+    @return: the same type as L{_flattenElement} returns, with all the bytes
+        encoded for representation within an attribute.
+    """
+    if isinstance(something, (unicode, bytes)):
+        data = escapedData(something)
+        data = data.replace('"', '&quot;')
+        yield data
+    else:
+        for item in something:
+            yield escapedAttribute(item)
+
 
 
 def escapedCDATA(data):
@@ -96,8 +111,8 @@ def _getSlotValue(name, slotData, default=None):
 
 def _flattenElement(request, root, slotData, renderFactory, inAttribute):
     """
-    Make C{root} slightly more flat by yielding all its immediate contents 
-    as strings, deferreds or generators that are recursive calls to itself.
+    Make C{root} slightly more flat by yielding all its immediate contents as
+    strings, deferreds or generators that are recursive calls to itself.
 
     @param request: A request object which will be passed to
         L{IRenderable.render}.
@@ -109,18 +124,23 @@ def _flattenElement(request, root, slotData, renderFactory, inAttribute):
     @param slotData: A C{list} of C{dict} mapping C{str} slot names to data
         with which those slots will be replaced.
 
-    @param renderFactory: If not C{None}, An object that provides L{IRenderable}.
+    @param renderFactory: If not C{None}, An object that provides
+        L{IRenderable}.
 
-    @param inAttribute: A flag which, if set, indicates that C{str} and
-        C{unicode} instances encountered must be quoted as for XML tag
-        attribute values.
+    @param inAttribute: A flag which indicates that this C{root} is the I{top
+        level} of an HTML attribute and therefore strings should not be quoted,
+        because quoting will be handled by the L{escapedAttribute} generator
+        decorator.
 
     @return: An iterator which yields C{str}, L{Deferred}, and more iterators
         of the same type.
     """
 
     if isinstance(root, (str, unicode)):
-        yield escapedData(root, inAttribute)
+        if inAttribute:
+            yield root
+        else:
+            yield escapedData(root)
     elif isinstance(root, slot):
         slotValue = _getSlotValue(root.name, slotData, root.default)
         yield _flattenElement(request, slotValue, slotData, renderFactory,
@@ -142,7 +162,7 @@ def _flattenElement(request, root, slotData, renderFactory, inAttribute):
             renderMethod = renderFactory.lookupRenderMethod(rendererName)
             result = renderMethod(request, rootClone)
             yield _flattenElement(request, result, slotData, renderFactory,
-                    False)
+                                  inAttribute)
             slotData.pop()
             return
 
@@ -161,11 +181,13 @@ def _flattenElement(request, root, slotData, renderFactory, inAttribute):
             if isinstance(k, unicode):
                 k = k.encode('ascii')
             yield ' ' + k + '="'
-            yield _flattenElement(request, v, slotData, renderFactory, True)
+            yield escapedAttribute((_flattenElement(request, v, slotData,
+                                                    renderFactory, True)))
             yield '"'
         if root.children or tagName not in voidElements:
             yield '>'
-            yield _flattenElement(request, root.children, slotData, renderFactory, False)
+            yield _flattenElement(request, root.children, slotData,
+                                  renderFactory, inAttribute)
             yield '</' + tagName + '>'
         else:
             yield ' />'
@@ -173,13 +195,13 @@ def _flattenElement(request, root, slotData, renderFactory, inAttribute):
     elif isinstance(root, (tuple, list, GeneratorType)):
         for element in root:
             yield _flattenElement(request, element, slotData, renderFactory,
-                    inAttribute)
+                                  inAttribute)
     elif isinstance(root, CharRef):
         yield '&#%d;' % (root.ordinal,)
     elif isinstance(root, Deferred):
         yield root.addCallback(
             lambda result: (result, _flattenElement(request, result, slotData,
-                                             renderFactory, inAttribute)))
+                                                    renderFactory, inAttribute)))
     elif IRenderable.providedBy(root):
         result = root.render(request)
         yield _flattenElement(request, result, slotData, root, inAttribute)
