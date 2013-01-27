@@ -83,7 +83,8 @@ class TestSerialization(FlattenTestCase, XMLAssertionMixin):
         """
         The serialized form of attribute I{a} with value I{b} is C{'a="b"'}.
         """
-        return self.assertFlattensTo(tags.img(src='foo'), '<img src="foo" />')
+        self.assertFlattensImmediately(tags.img(src='foo'),
+                                       '<img src="foo" />')
 
 
     def test_serializedMultipleAttributes(self):
@@ -92,7 +93,7 @@ class TestSerialization(FlattenTestCase, XMLAssertionMixin):
         """
         tag = tags.img()
         tag.attributes = OrderedAttributes([("src", "foo"), ("name", "bar")])
-        return self.assertFlattensTo(tag, '<img src="foo" name="bar" />')
+        self.assertFlattensImmediately(tag, '<img src="foo" name="bar" />')
 
 
     def test_serializedAttributeWithSanitization(self):
@@ -101,8 +102,8 @@ class TestSerialization(FlattenTestCase, XMLAssertionMixin):
         C{"&lt;"}, C{"&gt;"}, C{"&amp;"}, or C{"&quot;"} substituted for those
         bytes in the serialized output.
         """
-        return self.assertFlattensTo(
-            tags.img(src="<>&\""),'<img src="&lt;&gt;&amp;&quot;" />')
+        self.assertFlattensImmediately(
+            tags.img(src="<>&\""), '<img src="&lt;&gt;&amp;&quot;" />')
 
 
     def test_serializedAttributeWithTransparentTag(self):
@@ -111,9 +112,8 @@ class TestSerialization(FlattenTestCase, XMLAssertionMixin):
         tag have the same subsitution rules to them as values supplied
         directly.
         """
-        return self.assertFlattensTo(
-            tags.img(src=tags.transparent('<>&"')),
-            '<img src="&lt;&gt;&amp;&quot;" />')
+        self.assertFlattensImmediately(tags.img(src=tags.transparent('<>&"')),
+                                       '<img src="&lt;&gt;&amp;&quot;" />')
 
 
     def test_serializedAttributeWithTag(self):
