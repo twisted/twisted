@@ -20,14 +20,18 @@ from twisted.web._stan import (
 
 
 
-def escapedData(data):
+def escapeForContent(data):
     """
-    Escape a string for inclusion in a document.
+    Escape some character or UTF-8 byte data for inclusion in an HTML or XML
+    document, by replacing metacharacters (C{&<>}) with their entity
+    equivalents (C{&amp;&lt;&gt;}).
 
-    @type data: C{str} or C{unicode}
+    This is used as an input to L{_flattenElement}'s C{dataEscaper} parameter.
+
+    @type data: C{bytes} or C{unicode}
     @param data: The string to escape.
 
-    @rtype: C{str}
+    @rtype: C{bytes}
     @return: The quoted form of C{data}.  If C{data} is unicode, return a utf-8
         encoded string.
     """
@@ -40,23 +44,81 @@ def escapedData(data):
 
 
 
-def escapedAttribute(something):
+def attributeEscapingDoneOutside(data):
     """
-    Wrap the output of the serialization process to quote it for the top level.
+    Escape some character or UTF-8 byte data for inclusion in the top level of
+    an attribute.  L{attributeEscapingDoneOutside} actually passes the data
+    through unchanged, because L{flattenWithAttributeEscaping} handles the
+    quoting of the text within attributes outside the generator returned by
+    L{_flattenElement}; this is used as the C{dataEscaper} argument to that
+    L{_flattenElement} call so that that generator does not redundantly escape
+    its text output.
 
-    @param something: A generator that yields bytes and other generators, as
-        returned by L{_flattenElement}.
+    @type data: C{bytes} or C{unicode}
+    @param data: The string to escape.
+
+    @return: The string, unchanged, except for encoding.
+    @rtype: C{bytes}
+    """
+    if isinstance(data, unicode):
+        raise RuntimeError("untested, obviously")
+    return data
+
+
+
+def flattenWithAttributeEscaping(subFlatten):
+    """
+    Decorate the generator returned by L{_flattenElement} so that its output is
+    properly quoted for inclusion within an XML attribute value.
+
+    If a L{Tag} C{x} is flattened within the context of the contents of another
+    L{Tag} C{y}, the metacharacters for C{y} should be passed through
+    unchanged, but the textual content of C{y} should be quoted.  For example:
+    C{<y><x>&amp;</x></y>}.  That is the default behavior of L{_flattenElement}
+    when L{escapeForContent} is passed as the C{dataEscaper}.
+
+    However, when a L{Tag} C{x} is flattened within the context of an
+    I{attribute} of another L{Tag} C{y}, then the metacharacters for C{y}
+    should be quoted so that it might be parsed.  In the DOM itself, this is
+    not a valid thing to do, but given that renderers and slots may be freely
+    moved around in a L{twisted.web.template} template, it is a condition which
+    may arise in a document and must be handled in a way which produces valid
+    output.  So, for example, you should be able to get C{<y attr="&lt;x /&gt;"
+    />}.  This should also be true for other XML/HTML meta-constructs such as
+    comments and CDATA, so if you were to serialize a L{Comment} in an
+    attribute you should get C{<y attr="&lt;-- comment --&gt;" />}.  Therefore
+    in order to capture these meta-characters, the attribute generator from
+    L{_flattenElement} context is wrapped with an
+    L{flattenWithAttributeEscaping}.
+
+    Because I{all} characters serialized in the context of an attribute are
+    quoted before they are yielded by the generator returned by
+    L{flattenWithAttributeEscaping}, on the "outside" of the L{_flattenElement}
+    call, the L{_flattenElement} generator therefore no longer needs to quote
+    text that appears directly within the attribute itself.
+
+    The final case, and hopefully the much more common one as compared to
+    serializing L{Tag} and arbitrary L{IRenderable} objects within an
+    attribute, is to serialize a simple string, and those should be passed
+    through for L{flattenWithAttributeEscaping} to quote without applying a
+    second, redundant level of quoting.
+
+    @param subFlatten: A value that may be yielded by L{_flattenElement};
+        either an iterable yielding L{bytes} (or more iterables), or bytes
+        itself.
+    @type subFlatten: L{bytes} or C{iterable}
 
     @return: The same type as L{_flattenElement} returns, with all the bytes
         encoded for representation within an attribute.
+    @rtype: the same type as the C{subFlatten} argument
     """
-    if isinstance(something, (unicode, bytes)):
-        data = escapedData(something)
+    if isinstance(subFlatten, bytes):
+        data = escapeForContent(subFlatten)
         data = data.replace('"', '&quot;')
         yield data
     else:
-        for item in something:
-            yield escapedAttribute(item)
+        for item in subFlatten:
+            yield flattenWithAttributeEscaping(item)
 
 
 
@@ -108,7 +170,7 @@ def _getSlotValue(name, slotData, default=None):
         raise UnfilledSlot(name)
 
 
-def _flattenElement(request, root, slotData, renderFactory, inAttribute):
+def _flattenElement(request, root, slotData, renderFactory, dataEscaper):
     """
     Make C{root} slightly more flat by yielding all its immediate contents as
     strings, deferreds or generators that are recursive calls to itself.
@@ -126,24 +188,23 @@ def _flattenElement(request, root, slotData, renderFactory, inAttribute):
     @param renderFactory: If not C{None}, an object that provides
         L{IRenderable}.
 
-    @param inAttribute: A flag which indicates that this C{root} is the I{top
-        level} of an HTML attribute and therefore strings should not be quoted,
-        because quoting will be handled by the L{escapedAttribute} generator
-        decorator.
+    @param dataEscaper: A 1-argument callable which takes L{bytes} or
+        L{unicode} and returns L{bytes}, quoted as appropriate for the
+        rendering context.  This is really only one of two values:
+        L{attributeEscapingDoneOutside} or L{escapeForContent}, depending on whether
+        the rendering context is within an attribute or not.  See the
+        explanation in L{flattenWithAttributeEscaping}.
 
     @return: An iterator which yields C{str}, L{Deferred}, and more iterators
         of the same type.
     """
-
-    if isinstance(root, (str, unicode)):
-        if inAttribute:
-            yield root
-        else:
-            yield escapedData(root)
+    wrongHardcodedDataEscaper = escapeForContent
+    if isinstance(root, (bytes, unicode)):
+        yield dataEscaper(root)
     elif isinstance(root, slot):
         slotValue = _getSlotValue(root.name, slotData, root.default)
         yield _flattenElement(request, slotValue, slotData, renderFactory,
-                inAttribute)
+                              wrongHardcodedDataEscaper)
     elif isinstance(root, CDATA):
         yield '<![CDATA['
         yield escapedCDATA(root.data)
@@ -161,13 +222,13 @@ def _flattenElement(request, root, slotData, renderFactory, inAttribute):
             renderMethod = renderFactory.lookupRenderMethod(rendererName)
             result = renderMethod(request, rootClone)
             yield _flattenElement(request, result, slotData, renderFactory,
-                                  inAttribute)
+                                  wrongHardcodedDataEscaper)
             slotData.pop()
             return
 
         if not root.tagName:
             yield _flattenElement(request, root.children, slotData,
-                                  renderFactory, inAttribute)
+                                  renderFactory, dataEscaper)
             return
 
         yield '<'
@@ -180,13 +241,22 @@ def _flattenElement(request, root, slotData, renderFactory, inAttribute):
             if isinstance(k, unicode):
                 k = k.encode('ascii')
             yield ' ' + k + '="'
-            yield escapedAttribute(
-                _flattenElement(request, v, slotData, renderFactory, True))
+            # Serialize the contents of the attribute, wrapping the results of
+            # that serialization so that _everything_ is quoted.
+            yield flattenWithAttributeEscaping(
+                _flattenElement(request, v, slotData, renderFactory,
+                                attributeEscapingDoneOutside))
             yield '"'
         if root.children or tagName not in voidElements:
             yield '>'
+            # Regardless of whether we're in an attribute or not, switch back to
+            # the escapeForContent dataEscaper.  The contents of a tag must be
+            # quoted no matter what; in the top-level document, just so they're
+            # valid, and if they're within an attribute, they have to be quoted
+            # so that after applying the *un*-quoting required to re-parse the
+            # tag within the attribute, all the quoting is still correct.
             yield _flattenElement(request, root.children, slotData,
-                                  renderFactory, False)
+                                  renderFactory, escapeForContent)
             yield '</' + tagName + '>'
         else:
             yield ' />'
@@ -194,17 +264,18 @@ def _flattenElement(request, root, slotData, renderFactory, inAttribute):
     elif isinstance(root, (tuple, list, GeneratorType)):
         for element in root:
             yield _flattenElement(request, element, slotData, renderFactory,
-                                  inAttribute)
+                                  dataEscaper)
     elif isinstance(root, CharRef):
         yield '&#%d;' % (root.ordinal,)
     elif isinstance(root, Deferred):
         yield root.addCallback(
             lambda result:
             (result, _flattenElement(request, result, slotData, renderFactory,
-                                     inAttribute)))
+                                     wrongHardcodedDataEscaper)))
     elif IRenderable.providedBy(root):
         result = root.render(request)
-        yield _flattenElement(request, result, slotData, root, inAttribute)
+        yield _flattenElement(request, result, slotData, root,
+                              wrongHardcodedDataEscaper)
     else:
         raise UnsupportedType(root)
 
@@ -226,7 +297,7 @@ def _flattenTree(request, root):
         flattening C{root}.  The returned iterator must not be iterated again
         until the L{Deferred} is called back.
     """
-    stack = [_flattenElement(request, root, [], None, False)]
+    stack = [_flattenElement(request, root, [], None, escapeForContent)]
     while stack:
         try:
             # In Python 2.5, after an exception, a generator's gi_frame is
