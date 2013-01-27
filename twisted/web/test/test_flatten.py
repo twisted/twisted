@@ -1,6 +1,10 @@
-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
+
+"""
+Tests for the flattening portion of L{twisted.web.template}, implemented in
+L{twisted.web._flatten}.
+"""
 
 import sys
 import traceback
@@ -21,12 +25,27 @@ from twisted.web.test._util import FlattenTestCase
 
 
 class OrderedAttributes(object):
+    """
+    An L{OrderedAttributes} is a stand-in for the L{Tag.attributes} dictionary
+    that orders things in a deterministic order.  It doesn't do any sorting, so
+    whatever order the attributes are passed in, they will be returned.
+
+    @ivar attributes: The result of a L{dict.items} call.
+    @type attributes: C{list} of 2-C{tuples}
+    """
+
     def __init__(self, attributes):
         self.attributes = attributes
 
 
     def iteritems(self):
-        return self.attributes[:]
+        """
+        Like L{dict.iteritems}.
+
+        @return: an iterator
+        @rtype: list iterator
+        """
+        return iter(self.attributes)
 
 
 

@@ -5,7 +5,6 @@
 """
 Context-free flattener/serializer for rendering Python objects, possibly
 complex or arbitrarily nested, as strings.
-
 """
 
 from cStringIO import StringIO
