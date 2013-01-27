@@ -187,7 +187,7 @@ def _flattenElement(request, root, slotData, renderFactory, inAttribute):
         if root.children or tagName not in voidElements:
             yield '>'
             yield _flattenElement(request, root.children, slotData,
-                                  renderFactory, inAttribute)
+                                  renderFactory, False)
             yield '</' + tagName + '>'
         else:
             yield ' />'
