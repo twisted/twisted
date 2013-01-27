@@ -5,6 +5,8 @@
 import sys
 import traceback
 
+from xml.etree.cElementTree import XML
+
 from zope.interface import implements
 
 from twisted.trial.unittest import TestCase
@@ -14,6 +16,7 @@ from twisted.web._flatten import flattenString
 from twisted.web.error import UnfilledSlot, UnsupportedType, FlattenerError
 from twisted.web.template import tags, Comment, CDATA, CharRef, slot
 from twisted.web.iweb import IRenderable
+from twisted.test.testutils import XMLAssertionMixin
 from twisted.web.test._util import FlattenTestCase
 
 
@@ -27,7 +30,7 @@ class OrderedAttributes(object):
 
 
 
-class TestSerialization(FlattenTestCase):
+class TestSerialization(FlattenTestCase, XMLAssertionMixin):
     """
     Tests for flattening various things.
     """
@@ -90,17 +93,29 @@ class TestSerialization(FlattenTestCase):
         directly.
         """
         return self.assertFlattensTo(
-            tags.img(src=tags.transparent('<>&"')), '<img src="&lt;&gt;&amp;&quot;" />')
+            tags.img(src=tags.transparent('<>&"')),
+            '<img src="&lt;&gt;&amp;&quot;" />')
 
 
     def test_serializedAttributeWithTag(self):
         """
-        Attribute values which are supplied via the value of a normal tag have
-        the same subsitution rules to them as values supplied directly.
+        L{Tag} objects which are serialized within the context of an attribute
+        are serialized such that the text content of the attribute may be
+        parsed to retrieve the tag.
         """
-        # Is this really the best behavior for this case?
-        return self.assertFlattensTo(
-            tags.img(src=tags.a('<>&"')), '<img src="&lt;a&gt;&lt;&gt;&amp;&quot;&lt;/a&gt;" />')
+        innerTag = tags.a('<>&"')
+        outerTag = tags.img(src=innerTag)
+        outer = self.successResultOf(flattenString(None, outerTag))
+        inner = self.successResultOf(flattenString(None, innerTag))
+        self.assertEquals(
+            outer,
+            '<img src="&lt;a&gt;&amp;lt;&amp;gt;&amp;amp;&quot;&lt;/a&gt;" />')
+
+        # Since the above quoting is somewhat tricky, validate it by making sure
+        # that the main use-case for tag-within-attribute is supported here: if
+        # we serialize a tag, it is quoted *such that it can be parsed out again
+        # as a tag*.
+        self.assertXMLEqual(XML(outer).attrib['src'], inner)
 
 
     def test_serializedAttributeWithTagWithAttribute(self):
@@ -115,9 +130,8 @@ class TestSerialization(FlattenTestCase):
         a = '<a href="' + escapedValue + '"></a>'
         escapedA = (a.replace('&', '&amp;').replace('<', '&lt;')
                      .replace('>', '&gt;').replace('"', '&quot;'))
-        return self.assertFlattensTo(
-            tags.img(src=tags.a(href=value)),
-            '<img src="' + escapedA + '" />')
+        self.assertFlattensImmediately(tags.img(src=tags.a(href=value)),
+                                       '<img src="' + escapedA + '" />')
 
 
     def test_serializeComment(self):
