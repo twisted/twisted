@@ -60,11 +60,19 @@ def returnConnected(server, client):
 class XMLAssertionMixin(object):
     """
     Test mixin defining a method for comparing serialized XML documents.
+
+    Must be mixed in to a L{test case<unittest.TestCase>}.
     """
 
     def assertXMLEqual(self, first, second):
         """
         Verify that two strings represent the same XML document.
+
+        @param first: An XML string.
+        @type first: L{bytes}
+
+        @param second: An XML string that should match C{first}.
+        @type second: L{bytes}
         """
         self.assertEqual(
             dom.parseString(first).toxml(),
