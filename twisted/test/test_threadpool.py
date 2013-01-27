@@ -12,7 +12,6 @@ import pickle, time, weakref, gc, threading
 from twisted.python.compat import _PY3
 from twisted.trial import unittest
 from twisted.python import threadpool, threadable, failure, context
-from twisted.internet.defer import Deferred
 
 #
 # See the end of this module for the remainder of the imports.
