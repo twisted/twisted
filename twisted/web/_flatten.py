@@ -180,8 +180,8 @@ def _flattenElement(request, root, slotData, renderFactory, inAttribute):
             if isinstance(k, unicode):
                 k = k.encode('ascii')
             yield ' ' + k + '="'
-            yield escapedAttribute((_flattenElement(request, v, slotData,
-                                                    renderFactory, True)))
+            yield escapedAttribute(
+                _flattenElement(request, v, slotData, renderFactory, True))
             yield '"'
         if root.children or tagName not in voidElements:
             yield '>'
