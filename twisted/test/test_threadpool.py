@@ -534,6 +534,7 @@ class ThreadPoolTestCase(unittest.SynchronousTestCase):
         self.assertNotIn(workerThread, stateList)
 
 
+
 class RaceConditionTestCase(unittest.SynchronousTestCase):
 
     def getTimeout(self):
