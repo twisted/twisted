@@ -5,7 +5,7 @@ import re
 import os
 
 from twisted.trial import unittest
-from twisted.internet.address import IPv4Address, UNIXAddress
+from twisted.internet.address import IPv4Address, UNIXAddress, HostnameAddress
 
 try:
     os.symlink
@@ -109,6 +109,24 @@ class AddressTestCaseMixin(object):
 
 class IPv4AddressTestCaseMixin(AddressTestCaseMixin):
     addressArgSpec = (("type", "%s"), ("host", "%r"), ("port", "%d"))
+
+
+
+class HostnameAddressTestCase(unittest.TestCase, AddressTestCaseMixin):
+    addressArgSpec = (("hostname", "%s"), ("port", "%d"))
+
+    def buildAddress(self):
+        """
+        Create an arbitrary new L{HostnameAddress} instance.
+        """
+        return HostnameAddress("example.com", 0)
+
+
+    def buildDifferentAddress(self):
+        """
+        Like L{buildAddress}, but with a different hostname.
+        """
+        return HostnameAddress("example.net", 0)
 
 
 

@@ -7,7 +7,7 @@ Address objects for network connections.
 
 import warnings, os
 
-from zope.interface import implements
+from zope.interface import implements, implementer
 
 from twisted.internet.interfaces import IAddress
 from twisted.python import util
@@ -76,6 +76,34 @@ class IPv6Address(_IPAddress):
         IPv6 address; for example, "::1".
     @type host: C{str}
     """
+
+
+
+@implementer(IAddress)
+class HostnameAddress(object, util.FancyEqMixin):
+    """
+    A L{HostnameAddress} represents the address of a L{HostnameEndpoint}.
+
+    @ivar hostname: A hostname string; for example, "example.com".
+    @type hostname: C{str}
+
+    @ivar port: An integer representing the port number.
+    @type port: C{int}
+    """
+    compareAttributes = ('hostname','port')
+
+    def __init__(self, hostname, port):
+        self.hostname = hostname
+        self.port = port
+
+
+    def __repr__(self):
+        return '%s(%s, %d)' % (
+            self.__class__.__name__, self.hostname, self.port)
+
+
+    def __hash__(self):
+        return hash((self.hostname, self.port))
 
 
 
