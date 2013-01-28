@@ -11,7 +11,7 @@ import traceback
 
 from xml.etree.cElementTree import XML
 
-from zope.interface import implements
+from zope.interface import implements, implementer
 
 from twisted.trial.unittest import TestCase
 from twisted.internet.defer import succeed, gatherResults
@@ -153,6 +153,22 @@ class TestSerialization(FlattenTestCase, XMLAssertionMixin):
         self.assertFlattensImmediately(
             WithRenderer(),
             '<img src="&lt;&gt;&amp;&quot;" />')
+
+
+    def test_serializedAttributeWithRenderable(self):
+        """
+        Like L{test_serializedAttributeWithTransparentTag}, but when the
+        attribute is a provider of L{IRenderable} rather than a transparent
+        tag.
+        """
+        @implementer(IRenderable)
+        class Arbitrary(object):
+            def render(self, request):
+                return '<>&"'
+        self.assertFlattensImmediately(
+            tags.img(src=Arbitrary()),
+            '<img src="&lt;&gt;&amp;&quot;" />'
+        )
 
 
     def test_serializedAttributeWithTag(self, wrapTag=passthru):
