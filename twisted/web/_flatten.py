@@ -224,7 +224,7 @@ def _flattenElement(request, root, slotData, renderFactory, dataEscaper):
             renderMethod = renderFactory.lookupRenderMethod(rendererName)
             result = renderMethod(request, rootClone)
             yield _flattenElement(request, result, slotData, renderFactory,
-                                  wrongHardcodedDataEscaper)
+                                  dataEscaper)
             slotData.pop()
             return
 
