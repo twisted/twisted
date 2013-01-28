@@ -992,7 +992,7 @@ class HostnameEndpointsOneIPv4TestCase(ClientEndpointTestCaseMixin,
 
         endpoint._nameResolution = testNameResolution
 
-        return (endpoint, (address.hostname, address.port, clientFactory,
+        return (endpoint, ('1.2.3.4', address.port, clientFactory,
                 connectArgs.get('timeout', 30),
                 connectArgs.get('bindAddress', None)),
                 address)
@@ -1023,9 +1023,7 @@ class HostnameEndpointsOneIPv4TestCase(ClientEndpointTestCaseMixin,
         (expectedHost, expectedPort, _ignoredFactory,
          expectedTimeout, expectedBindAddress) = expectedArgs
 
-#        print "received = ", receivedArgs, "expected = ", expectedArgs
-
-#        self.assertEqual(host, expectedHost)
+        self.assertEqual(host, expectedHost)
         self.assertEqual(port, expectedPort)
         self.assertEqual(timeout, expectedTimeout)
         self.assertEqual(bindAddress, expectedBindAddress)
@@ -1051,7 +1049,7 @@ class HostnameEndpointsOneIPv6TestCase(ClientEndpointTestCaseMixin,
     (IPv6) address.
     """
     def createClientEndpoint(self, reactor, clientFactory, **connectArgs):
-        address = IPv6Address("TCP", "1:2::3:4", 80)
+        address = HostnameAddress("ipv6.example.com", 80)
         endpoint = endpoints.HostnameEndpoint(reactor, "ipv6.example.com",
                                            address.port, **connectArgs)
 
@@ -1063,7 +1061,7 @@ class HostnameEndpointsOneIPv6TestCase(ClientEndpointTestCaseMixin,
 
         endpoint._nameResolution = testNameResolution
 
-        return (endpoint, (address.host, address.port, clientFactory,
+        return (endpoint, ('1:2::3:4', address.port, clientFactory,
                 connectArgs.get('timeout', 30),
                 connectArgs.get('bindAddress', None)),
                 address)
@@ -1108,11 +1106,6 @@ class HostnameEndpointsOneIPv6TestCase(ClientEndpointTestCaseMixin,
 
 
     # TODO: Add a test to check deferToThread as well.
-
-
-    def test_endpointConnectingCancelled(self):
-        pass
-        # TODO: Make this work
 
 
     def test_endpointConnectFailure(self):
