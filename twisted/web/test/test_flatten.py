@@ -181,7 +181,7 @@ class TestSerialization(FlattenTestCase, XMLAssertionMixin):
         outerTag = tags.img(src=wrapTag(innerTag))
         outer = self.successResultOf(flattenString(None, outerTag))
         inner = self.successResultOf(flattenString(None, innerTag))
-        self.assertEquals(
+        self.assertEqual(
             outer,
             '<img src="&lt;a&gt;&amp;lt;&amp;gt;&amp;amp;&quot;&lt;/a&gt;" />')
 
