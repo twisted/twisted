@@ -117,14 +117,14 @@ class TestSerialization(FlattenTestCase, XMLAssertionMixin):
                                        '<img src="&lt;&gt;&amp;&quot;" />')
 
 
-    def test_serializedAttributeWithTag(self):
+    def test_serializedAttributeWithTag(self, wrapTag=lambda t: t):
         """
         L{Tag} objects which are serialized within the context of an attribute
         are serialized such that the text content of the attribute may be
         parsed to retrieve the tag.
         """
         innerTag = tags.a('<>&"')
-        outerTag = tags.img(src=innerTag)
+        outerTag = tags.img(src=wrapTag(innerTag))
         outer = self.successResultOf(flattenString(None, outerTag))
         inner = self.successResultOf(flattenString(None, innerTag))
         self.assertEquals(
@@ -136,6 +136,15 @@ class TestSerialization(FlattenTestCase, XMLAssertionMixin):
         # we serialize a tag, it is quoted *such that it can be parsed out again
         # as a tag*.
         self.assertXMLEqual(XML(outer).attrib['src'], inner)
+
+
+    def test_serializedAttributeWithDeferredTag(self):
+        """
+        Like L{test_serializedAttributeWithTag}, but when the L{Tag} is in a
+        L{Deferred}.
+        """
+        self.test_serializedAttributeWithTag(succeed)
+
 
 
     def test_serializedAttributeWithTagWithAttribute(self):
