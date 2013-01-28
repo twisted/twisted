@@ -27,10 +27,7 @@ import time
 
 import email.utils
 
-try:
-    import cStringIO as StringIO
-except:
-    import StringIO
+from io import StringIO
 
 from zope.interface import implementer
 
@@ -5475,12 +5472,17 @@ def parseTime(s):
             (d['year'], d['mon'], d['day'], 0, 0, 0, -1, -1, -1)
         )
 
+# we need to cast Python >=3.3 memoryview to chars (from unsigned bytes), but
+# cast is absent in previous versions: thus, the lambda returns the
+# memoryview instance while ignoring the format
+memory_cast = getattr(memoryview, "cast", lambda *x: x[0])
+
 def modified_base64(s):
     s_utf7 = s.encode('utf-7')
-    return s_utf7[1:-1].replace('/', ',')
+    return s_utf7[1:-1].replace(b'/', b',')
 
 def modified_unbase64(s):
-    s_utf7 = '+' + s.replace(',', '/') + '-'
+    s_utf7 = b'+' + s.replace(b',', b'/') + b'-'
     return s_utf7.decode('utf-7')
 
 def encoder(s, errors=None):
@@ -5493,33 +5495,35 @@ def encoder(s, errors=None):
 
     @param errors: Policy for handling encoding errors.  Currently ignored.
 
-    @return: C{tuple} of a C{str} giving the encoded bytes and an C{int}
+    @return: C{tuple} of a C{bytes} giving the encoded bytes and an C{int}
         giving the number of code units consumed from the input.
     """
-    r = []
+    r = bytearray()
     _in = []
+    valid_chars = set(map(chr, range(0x20,0x7f))) - {"&"}
     for c in s:
-        if ord(c) in (range(0x20, 0x26) + range(0x27, 0x7f)):
+        if c in valid_chars:
             if _in:
-                r.extend(['&', modified_base64(''.join(_in)), '-'])
+                r += b'&' + modified_base64(''.join(_in)) + b'-'
                 del _in[:]
-            r.append(str(c))
+            r.append(ord(c))
         elif c == '&':
             if _in:
-                r.extend(['&', modified_base64(''.join(_in)), '-'])
+                r += b'&' + modified_base64(''.join(_in)) + b'-'
                 del _in[:]
-            r.append('&-')
+            r += b'&-'
         else:
             _in.append(c)
     if _in:
-        r.extend(['&', modified_base64(''.join(_in)), '-'])
-    return (''.join(r), len(s))
+        r.extend(b'&' + modified_base64(''.join(_in)) + b'-')
+    return (bytes(r), len(s))
+
 
 def decoder(s, errors=None):
     """
-    Decode the given C{str} using the IMAP4 specific variation of UTF-7.
+    Decode the given C{bytes} using the IMAP4 specific variation of UTF-7.
 
-    @type s: C{str}
+    @type s: C{bytes}
     @param s: The bytes to decode.
 
     @param errors: Policy for handling decoding errors.  Currently ignored.
@@ -5530,21 +5534,22 @@ def decoder(s, errors=None):
     """
     r = []
     decode = []
+    s = memory_cast(s, 'c')
     for c in s:
-        if c == '&' and not decode:
+        if c == b'&' and not decode:
             decode.append('&')
-        elif c == '-' and decode:
+        elif c == b'-' and decode:
             if len(decode) == 1:
                 r.append('&')
             else:
-                r.append(modified_unbase64(''.join(decode[1:])))
+                r.append(modified_unbase64(b''.join(decode[1:])))
             decode = []
         elif decode:
             decode.append(c)
         else:
-            r.append(c)
+            r.append(c.decode())
     if decode:
-        r.append(modified_unbase64(''.join(decode[1:])))
+        r.append(modified_unbase64(b''.join(decode[1:])))
     return (''.join(r), len(s))
 
 class StreamReader(codecs.StreamReader):
