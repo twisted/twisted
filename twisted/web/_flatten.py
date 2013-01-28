@@ -206,7 +206,7 @@ def _flattenElement(request, root, slotData, renderFactory, dataEscaper):
     elif isinstance(root, slot):
         slotValue = _getSlotValue(root.name, slotData, root.default)
         yield _flattenElement(request, slotValue, slotData, renderFactory,
-                              wrongHardcodedDataEscaper)
+                              dataEscaper)
     elif isinstance(root, CDATA):
         yield '<![CDATA['
         yield escapedCDATA(root.data)
