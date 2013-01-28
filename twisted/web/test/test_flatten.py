@@ -117,6 +117,15 @@ class TestSerialization(FlattenTestCase, XMLAssertionMixin):
         self.test_serializedAttributeWithSanitization(succeed)
 
 
+    def test_serializedAttributeWithSlotWithSanitization(self):
+        """
+        Like L{test_serializedAttributeWithSanitization} but with a slot.
+        """
+        self.assertFlattensImmediately(
+            tags.img(src=slot("stuff")).fillSlots(stuff="<>&\""),
+            '<img src="&lt;&gt;&amp;&quot;" />')
+
+
     def test_serializedAttributeWithTransparentTag(self):
         """
         Attribute values which are supplied via the value of an I{transparent}
