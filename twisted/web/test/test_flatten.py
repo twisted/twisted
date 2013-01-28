@@ -15,10 +15,9 @@ from zope.interface import implements, implementer
 
 from twisted.trial.unittest import TestCase
 from twisted.internet.defer import succeed, gatherResults
-from twisted.web._stan import Tag
 from twisted.web._flatten import flattenString
 from twisted.web.error import UnfilledSlot, UnsupportedType, FlattenerError
-from twisted.web.template import tags, Comment, CDATA, CharRef, slot
+from twisted.web.template import tags, Tag, Comment, CDATA, CharRef, slot
 from twisted.web.iweb import IRenderable
 from twisted.test.testutils import XMLAssertionMixin
 from twisted.web.test._util import FlattenTestCase
@@ -32,7 +31,7 @@ class OrderedAttributes(object):
     that orders things in a deterministic order.  It doesn't do any sorting, so
     whatever order the attributes are passed in, they will be returned.
 
-    @ivar attributes: The result of a L{dict.items} call.
+    @ivar attributes: The result of a C{dict.items} call.
     @type attributes: C{list} of 2-C{tuples}
     """
 
@@ -42,7 +41,7 @@ class OrderedAttributes(object):
 
     def iteritems(self):
         """
-        Like L{dict.iteritems}.
+        Like C{dict.iteritems}.
 
         @return: an iterator
         @rtype: list iterator
@@ -112,7 +111,8 @@ class TestSerialization(FlattenTestCase, XMLAssertionMixin):
     def test_serializedDeferredAttributeWithSanitization(self):
         """
         Like L{test_serializedAttributeWithSanitization}, but when the contents
-        of the attribute are in a L{Deferred}.
+        of the attribute are in a L{Deferred
+        <twisted.internet.defer.Deferred>}.
         """
         self.test_serializedAttributeWithSanitization(succeed)
 
@@ -195,7 +195,7 @@ class TestSerialization(FlattenTestCase, XMLAssertionMixin):
     def test_serializedAttributeWithDeferredTag(self):
         """
         Like L{test_serializedAttributeWithTag}, but when the L{Tag} is in a
-        L{Deferred}.
+        L{Deferred <twisted.internet.defer.Deferred>}.
         """
         self.test_serializedAttributeWithTag(succeed)
 
