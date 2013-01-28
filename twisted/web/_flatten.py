@@ -200,12 +200,15 @@ def _flattenElement(request, root, slotData, renderFactory, dataEscaper):
     @return: An iterator which yields C{str}, L{Deferred}, and more iterators
         of the same type.
     """
+    def keepGoing(newRoot, dataEscaper=dataEscaper,
+                  renderFactory=renderFactory):
+        return _flattenElement(request, newRoot, slotData, renderFactory,
+                               dataEscaper)
     if isinstance(root, (bytes, unicode)):
         yield dataEscaper(root)
     elif isinstance(root, slot):
         slotValue = _getSlotValue(root.name, slotData, root.default)
-        yield _flattenElement(request, slotValue, slotData, renderFactory,
-                              dataEscaper)
+        yield keepGoing(slotValue)
     elif isinstance(root, CDATA):
         yield '<![CDATA['
         yield escapedCDATA(root.data)
@@ -222,14 +225,12 @@ def _flattenElement(request, root, slotData, renderFactory, dataEscaper):
             rootClone.render = None
             renderMethod = renderFactory.lookupRenderMethod(rendererName)
             result = renderMethod(request, rootClone)
-            yield _flattenElement(request, result, slotData, renderFactory,
-                                  dataEscaper)
+            yield keepGoing(result)
             slotData.pop()
             return
 
         if not root.tagName:
-            yield _flattenElement(request, root.children, slotData,
-                                  renderFactory, dataEscaper)
+            yield keepGoing(root.children)
             return
 
         yield '<'
@@ -244,9 +245,8 @@ def _flattenElement(request, root, slotData, renderFactory, dataEscaper):
             yield ' ' + k + '="'
             # Serialize the contents of the attribute, wrapping the results of
             # that serialization so that _everything_ is quoted.
-            yield flattenWithAttributeEscaping(
-                _flattenElement(request, v, slotData, renderFactory,
-                                attributeEscapingDoneOutside))
+            attribute = keepGoing(v, attributeEscapingDoneOutside)
+            yield flattenWithAttributeEscaping(attribute)
             yield '"'
         if root.children or tagName not in voidElements:
             yield '>'
@@ -256,27 +256,21 @@ def _flattenElement(request, root, slotData, renderFactory, dataEscaper):
             # valid, and if they're within an attribute, they have to be quoted
             # so that after applying the *un*-quoting required to re-parse the
             # tag within the attribute, all the quoting is still correct.
-            yield _flattenElement(request, root.children, slotData,
-                                  renderFactory, escapeForContent)
+            yield keepGoing(root.children, escapeForContent)
             yield '</' + tagName + '>'
         else:
             yield ' />'
 
     elif isinstance(root, (tuple, list, GeneratorType)):
         for element in root:
-            yield _flattenElement(request, element, slotData, renderFactory,
-                                  dataEscaper)
+            yield keepGoing(element)
     elif isinstance(root, CharRef):
         yield '&#%d;' % (root.ordinal,)
     elif isinstance(root, Deferred):
-        yield root.addCallback(
-            lambda result:
-            (result, _flattenElement(request, result, slotData, renderFactory,
-                                     dataEscaper)))
+        yield root.addCallback(lambda result: (result, keepGoing(result)))
     elif IRenderable.providedBy(root):
         result = root.render(request)
-        yield _flattenElement(request, result, slotData, root,
-                              dataEscaper)
+        yield keepGoing(result, renderFactory=root)
     else:
         raise UnsupportedType(root)
 
