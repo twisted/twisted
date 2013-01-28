@@ -29,6 +29,7 @@ from twisted.internet import stdio
 from twisted.internet.stdio import PipeAddress
 from socket import AF_INET6, AF_INET
 from twisted.internet.task import LoopingCall
+from twisted.internet.address import HostnameAddress
 
 
 __all__ = ["clientFromString", "serverFromString",
@@ -433,15 +434,6 @@ class TCP6ClientEndpoint(object):
 
 
 
-class MultiFailure(Exception):
-
-    def __init__(self, failures):
-        print "inside MulitFailure.__init__"
-        super(MultiFailure, self).__init__("Failure with multiple causes.")
-        self.failures = failures
-
-
-
 class HostnameEndpoint(object):
     """
     A smart name based endpoint that connects to the faster one of IPv4
@@ -464,16 +456,20 @@ class HostnameEndpoint(object):
         self._port = port
         self._timeout = timeout
         self._bindAddress = bindAddress
-        
 
 
     def _canceller(self, d):
-        print "Inside canceller", d
-        d.errback(error.ConnectingCancelledError("The connection was cancelled"))
+        """
+        The outgoing connection attempt was cancelled.  Fail that L{Deferred}
+        with an L{error.ConnectingCancelledError}.
 
-        # TODO: stopConnecting(), or cancel the deferred firing with the TCP endpoint
+        @param d: The L{Deferred <defer.Deferred>} that was cancelled;
+        @type d: L{Deferred <defer.Deferred>}
 
-
+        @return: C{None}
+        """
+        d.errback(error.ConnectingCancelledError(
+            HostnameAddress(self._host, self._port)))
 
 
     def connect(self, protocolFactory):
@@ -549,31 +545,16 @@ class HostnameEndpoint(object):
 
             def almostDone():
 #                print "Inside almostDone", failures[0]
-#                if endpointsListExhausted:
-#                    print "endpointsListExhausted is true"
-
-#                if endpointsListExhausted and not pending and not successful:
                 if endpointsListExhausted and not pending and not successful:
-                    print "inside almostDone's if", winner, ", ", failures
-                    winner.errback(MultiFailure(failures))
-                    print "winner = ", winner
-                    # because nothing else seemed to work, trying out this from CalendarServer's GAIEndpoint
+                    print "inside almostDone's if"
+                    winner.errback(failures.pop())
 
-
-#                    winner.errback(failures.pop())
-#                    def checkWinner(obj):
-#                        print obj
-#                        return obj
-#                    winner.errback(checkWinner)
-
-#                return defer.fail(error.ConnectError("Connection Failed")
-                    # FIXME
 
             def connectFailed(reason):
                 print "Inside connectFailed"
-                print "The reason is:", reason
+#                print "The reason is:", reason
                 failures.append(reason)
-                print "Winner = ", winner
+#                print "Winner = ", winner
                 almostDone()
                 return None
 
