@@ -18,7 +18,7 @@ from twisted.internet.defer import succeed, gatherResults
 from twisted.web._flatten import flattenString
 from twisted.web.error import UnfilledSlot, UnsupportedType, FlattenerError
 from twisted.web.template import tags, Tag, Comment, CDATA, CharRef, slot
-from twisted.web.iweb import IRenderable
+from twisted.web.iweb import IRenderable, ITemplateLoader
 from twisted.test.testutils import XMLAssertionMixin
 from twisted.web.test._util import FlattenTestCase
 from twisted.internet.defer import passthru
@@ -102,6 +102,11 @@ class TestSerialization(FlattenTestCase, XMLAssertionMixin):
         Attribute values containing C{"<"}, C{">"}, C{"&"}, or C{'"'} have
         C{"&lt;"}, C{"&gt;"}, C{"&amp;"}, or C{"&quot;"} substituted for those
         bytes in the serialized output.
+
+        @param wrapData: A 1-argument callable that wraps around the
+            attribute's value so other tests can customize it.
+        @param wrapData: callable taking L{bytes} and returning something
+            flattenable
         """
         self.assertFlattensImmediately(
             tags.img(src=wrapData("<>&\"")),
@@ -142,13 +147,18 @@ class TestSerialization(FlattenTestCase, XMLAssertionMixin):
         attribute is rendered by a renderer on an element.
         """
         from twisted.web.template import Element, renderer
+        @implementer(ITemplateLoader)
+        class Loader(object):
+            "Stub loader that loads a document."
+            def load(self):
+                "Load an <img src='something'> document."
+                return tags.img(src=tags.transparent(render="stuff"))
         class WithRenderer(Element):
-            class loader(object):
-                @staticmethod
-                def load():
-                    return tags.img(src=tags.transparent(render="stuff"))
+            "Stub L{Element} that has a renderer."
+            loader = Loader()
             @renderer
             def stuff(self, request, tag):
+                "Render some text that requires quoting."
                 return '<>&"'
         self.assertFlattensImmediately(
             WithRenderer(),
@@ -164,6 +174,7 @@ class TestSerialization(FlattenTestCase, XMLAssertionMixin):
         @implementer(IRenderable)
         class Arbitrary(object):
             def render(self, request):
+                "Render some text that requires quoting."
                 return '<>&"'
         self.assertFlattensImmediately(
             tags.img(src=Arbitrary()),
@@ -176,6 +187,11 @@ class TestSerialization(FlattenTestCase, XMLAssertionMixin):
         L{Tag} objects which are serialized within the context of an attribute
         are serialized such that the text content of the attribute may be
         parsed to retrieve the tag.
+
+        @param wrapData: A 1-argument callable that wraps around the
+            attribute's value so other tests can customize it.
+        @param wrapData: callable taking L{Tag} and returning something
+            flattenable
         """
         innerTag = tags.a('<>&"')
         outerTag = tags.img(src=wrapTag(innerTag))
