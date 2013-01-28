@@ -513,6 +513,8 @@ class ConsoleUI(object):
         @param opener: A no-argument callable which should open a console
             binary-mode file-like object to be used for reading and writing.
             This initializes the C{opener} attribute.
+        @type opener: callable taking no arguments and returning a read/write
+            file-like object
         """
         self.opener = opener
 
