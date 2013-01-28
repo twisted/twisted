@@ -22,6 +22,7 @@ from twisted.web.template import tags, Comment, CDATA, CharRef, slot
 from twisted.web.iweb import IRenderable
 from twisted.test.testutils import XMLAssertionMixin
 from twisted.web.test._util import FlattenTestCase
+from twisted.internet.defer import passthru
 
 
 
@@ -97,14 +98,23 @@ class TestSerialization(FlattenTestCase, XMLAssertionMixin):
         self.assertFlattensImmediately(tag, '<img src="foo" name="bar" />')
 
 
-    def test_serializedAttributeWithSanitization(self):
+    def test_serializedAttributeWithSanitization(self, wrapData=passthru):
         """
         Attribute values containing C{"<"}, C{">"}, C{"&"}, or C{'"'} have
         C{"&lt;"}, C{"&gt;"}, C{"&amp;"}, or C{"&quot;"} substituted for those
         bytes in the serialized output.
         """
         self.assertFlattensImmediately(
-            tags.img(src="<>&\""), '<img src="&lt;&gt;&amp;&quot;" />')
+            tags.img(src=wrapData("<>&\"")),
+            '<img src="&lt;&gt;&amp;&quot;" />')
+
+
+    def test_serializedDeferredAttributeWithSanitization(self):
+        """
+        Like L{test_serializedAttributeWithSanitization}, but when the contents
+        of the attribute are in a L{Deferred}.
+        """
+        self.test_serializedAttributeWithSanitization(succeed)
 
 
     def test_serializedAttributeWithTransparentTag(self):
@@ -117,7 +127,7 @@ class TestSerialization(FlattenTestCase, XMLAssertionMixin):
                                        '<img src="&lt;&gt;&amp;&quot;" />')
 
 
-    def test_serializedAttributeWithTag(self, wrapTag=lambda t: t):
+    def test_serializedAttributeWithTag(self, wrapTag=passthru):
         """
         L{Tag} objects which are serialized within the context of an attribute
         are serialized such that the text content of the attribute may be
