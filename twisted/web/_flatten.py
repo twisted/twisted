@@ -66,7 +66,7 @@ def attributeEscapingDoneOutside(data):
 
 
 
-def flattenWithAttributeEscaping(subFlatten):
+def flattenWithAttributeEscaping(root):
     """
     Decorate the generator returned by L{_flattenElement} so that its output is
     properly quoted for inclusion within an XML attribute value.
@@ -103,22 +103,24 @@ def flattenWithAttributeEscaping(subFlatten):
     through for L{flattenWithAttributeEscaping} to quote without applying a
     second, redundant level of quoting.
 
-    @param subFlatten: A value that may be yielded by L{_flattenElement};
+    @param root: A value that may be yielded by L{_flattenElement};
         either an iterable yielding L{bytes} (or more iterables), or bytes
         itself.
-    @type subFlatten: L{bytes} or C{iterable}
+    @type root: L{bytes} or C{iterable}
 
     @return: The same type as L{_flattenElement} returns, with all the bytes
         encoded for representation within an attribute.
     @rtype: the same type as the C{subFlatten} argument
     """
-    if isinstance(subFlatten, bytes):
-        data = escapeForContent(subFlatten)
-        data = data.replace('"', '&quot;')
-        yield data
+    if isinstance(root, bytes):
+        root = escapeForContent(root)
+        root = root.replace('"', '&quot;')
+        yield root
+    elif isinstance(root, Deferred):
+        yield root.addCallback(flattenWithAttributeEscaping)
     else:
-        for item in subFlatten:
-            yield flattenWithAttributeEscaping(item)
+        for subroot in root:
+            yield flattenWithAttributeEscaping(subroot)
 
 
 
