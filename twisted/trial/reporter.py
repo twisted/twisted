@@ -516,12 +516,16 @@ class Reporter(TestResult):
         secondMethod = newFrames[1][0]
         secondFile = os.path.splitext(os.path.basename(newFrames[1][1]))[0]
 
-        syncCase = (("_run", "_synctest"), ("runWithWarningsSuppressed", "util"))
-        asyncCase = (("maybeDeferred", "defer"), ("runWithWarningsSuppressed", "utils"))
+        syncCase = (("_run", "_synctest"),
+                    ("runWithWarningsSuppressed", "util"))
+        asyncCase = (("maybeDeferred", "defer"),
+                     ("runWithWarningsSuppressed", "_utilspy3"))
 
         twoFrames = ((firstMethod, firstFile), (secondMethod, secondFile))
-        if twoFrames in [syncCase, asyncCase]:
+        if twoFrames == syncCase:
             newFrames = newFrames[2:]
+        elif twoFrames == asyncCase:
+            newFrames = newFrames[3:]
         elif (firstMethod, firstFile) == ("_runCallbacks", "defer"):
             newFrames = newFrames[1:]
 

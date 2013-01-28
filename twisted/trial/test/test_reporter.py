@@ -194,13 +194,6 @@ class TestErrorReporting(StringTest):
             self.doubleSeparator,
             '[FAIL]',
             'Traceback (most recent call last):',
-            # Some irrelevant trial implementation details leak into the traceback:
-            re.compile(r'^\s+File .*$'),
-            re.compile(r'^\s+.*$'),
-            re.compile(r'^\s+File .*$'),
-            re.compile(r'^\s+.*$'),
-            re.compile(r'^\s+File .*$'),
-            re.compile(r'^\s+.*$'),
             re.compile(r'^\s+File .*erroneous\.py., line \d+, in '
                        'testHiddenException$'),
             re.compile(r'^\s+self\.fail\("Deliberate failure to mask the '
@@ -216,8 +209,7 @@ class TestErrorReporting(StringTest):
             re.compile('^\s+File .*erroneous\.py", line \d+, in go'),
             re.compile('^\s+raise RuntimeError\(self.hiddenExceptionMsg\)'),
             'exceptions.RuntimeError: something blew up',
-            'twisted.trial.test.erroneous.DelayedCall.testHiddenException',
-            ]
+            'twisted.trial.test.erroneous.DelayedCall.testHiddenException']
         self.stringComparison(match, output)
 
 
@@ -236,13 +228,14 @@ class TestUncleanWarningWrapperErrorReporting(TestErrorReporting):
 
 
 class TracebackHandling(unittest.SynchronousTestCase):
+
     def getErrorFrames(self, test):
         stream = StringIO.StringIO()
         result = reporter.Reporter(stream)
         test.run(result)
         bads = result.failures + result.errors
-        assert len(bads) == 1
-        assert bads[0][0] == test
+        self.assertEqual(len(bads), 1)
+        self.assertEqual(bads[0][0], test)
         return result._trimFrames(bads[0][1].frames)
 
     def checkFrames(self, observedFrames, expectedFrames):
@@ -268,7 +261,7 @@ class TracebackHandling(unittest.SynchronousTestCase):
                           ('subroutine', 'twisted/trial/test/erroneous')])
 
     def test_deferred(self):
-        test = erroneous.TestFailureInDeferredChain('test_fail')
+        test = erroneous.TestAsynchronousFail('test_fail')
         frames = self.getErrorFrames(test)
         self.checkFrames(frames,
                          [('_later', 'twisted/trial/test/erroneous')])
@@ -280,6 +273,17 @@ class TracebackHandling(unittest.SynchronousTestCase):
     def test_oneFrame(self):
         result = reporter.Reporter(None)
         self.assertEqual(['fake frame'], result._trimFrames(['fake frame']))
+
+    def test_exception(self):
+        """
+        C{_trimFrames} removes traces of C{runWithWarningsSuppressed} from
+        C{_utilspy3} when a synchronous exception happens in an asynchronous
+        test.
+        """
+        test = erroneous.TestAsynchronousFail('test_exception')
+        frames = self.getErrorFrames(test)
+        self.checkFrames(frames,
+                         [('test_exception', 'twisted/trial/test/erroneous')])
 
 
 class FormatFailures(StringTest):
