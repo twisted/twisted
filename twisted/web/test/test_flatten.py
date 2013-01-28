@@ -146,7 +146,6 @@ class TestSerialization(FlattenTestCase, XMLAssertionMixin):
         self.test_serializedAttributeWithTag(succeed)
 
 
-
     def test_serializedAttributeWithTagWithAttribute(self):
         """
         Similar to L{test_serializedAttributeWithTag}, but for the additional
