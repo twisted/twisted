@@ -71,23 +71,25 @@ def flattenWithAttributeEscaping(root):
     Decorate the generator returned by L{_flattenElement} so that its output is
     properly quoted for inclusion within an XML attribute value.
 
-    If a L{Tag} C{x} is flattened within the context of the contents of another
-    L{Tag} C{y}, the metacharacters for C{y} should be passed through
-    unchanged, but the textual content of C{y} should be quoted.  For example:
-    C{<y><x>&amp;</x></y>}.  That is the default behavior of L{_flattenElement}
-    when L{escapeForContent} is passed as the C{dataEscaper}.
+    If a L{Tag <twisted.web.template.Tag>} C{x} is flattened within the context
+    of the contents of another L{Tag <twisted.web.template.Tag>} C{y}, the
+    metacharacters for C{y} should be passed through unchanged, but the textual
+    content of C{y} should be quoted.  For example: C{<y><x>&amp;</x></y>}.
+    That is the default behavior of L{_flattenElement} when L{escapeForContent}
+    is passed as the C{dataEscaper}.
 
-    However, when a L{Tag} C{x} is flattened within the context of an
-    I{attribute} of another L{Tag} C{y}, then the metacharacters for C{y}
-    should be quoted so that it might be parsed.  In the DOM itself, this is
-    not a valid thing to do, but given that renderers and slots may be freely
-    moved around in a L{twisted.web.template} template, it is a condition which
-    may arise in a document and must be handled in a way which produces valid
-    output.  So, for example, you should be able to get C{<y attr="&lt;x /&gt;"
-    />}.  This should also be true for other XML/HTML meta-constructs such as
-    comments and CDATA, so if you were to serialize a L{Comment} in an
-    attribute you should get C{<y attr="&lt;-- comment --&gt;" />}.  Therefore
-    in order to capture these meta-characters, the attribute generator from
+    However, when a L{Tag <twisted.web.template.Tag>} C{x} is flattened within
+    the context of an I{attribute} of another L{Tag <twisted.web.template.Tag>}
+    C{y}, then the metacharacters for C{y} should be quoted so that it might be
+    parsed.  In the DOM itself, this is not a valid thing to do, but given that
+    renderers and slots may be freely moved around in a L{twisted.web.template}
+    template, it is a condition which may arise in a document and must be
+    handled in a way which produces valid output.  So, for example, you should
+    be able to get C{<y attr="&lt;x /&gt;" />}.  This should also be true for
+    other XML/HTML meta-constructs such as comments and CDATA, so if you were
+    to serialize a L{comment <twisted.web.template.Comment>} in an attribute
+    you should get C{<y attr="&lt;-- comment --&gt;" />}.  Therefore in order
+    to capture these meta-characters, the attribute generator from
     L{_flattenElement} context is wrapped with an
     L{flattenWithAttributeEscaping}.
 
@@ -98,14 +100,13 @@ def flattenWithAttributeEscaping(root):
     text that appears directly within the attribute itself.
 
     The final case, and hopefully the much more common one as compared to
-    serializing L{Tag} and arbitrary L{IRenderable} objects within an
-    attribute, is to serialize a simple string, and those should be passed
-    through for L{flattenWithAttributeEscaping} to quote without applying a
-    second, redundant level of quoting.
+    serializing L{Tag <twisted.web.template.Tag>} and arbitrary L{IRenderable}
+    objects within an attribute, is to serialize a simple string, and those
+    should be passed through for L{flattenWithAttributeEscaping} to quote
+    without applying a second, redundant level of quoting.
 
-    @param root: A value that may be yielded by L{_flattenElement};
-        either an iterable yielding L{bytes} (or more iterables), or bytes
-        itself.
+    @param root: A value that may be yielded by L{_flattenElement}; either an
+        iterable yielding L{bytes} (or more iterables), or bytes itself.
     @type root: L{bytes} or C{iterable}
 
     @return: The same type as L{_flattenElement} returns, with all the bytes
@@ -184,8 +185,9 @@ def _flattenElement(request, root, slotData, renderFactory, dataEscaper):
         L{IRenderable.render}.
 
     @param root: An object to be made flatter.  This may be of type C{unicode},
-        C{str}, L{slot}, L{Tag}, L{URL}, L{tuple}, L{list}, L{GeneratorType},
-        L{Deferred}, or an object that implements L{IRenderable}.
+        C{str}, L{slot}, L{Tag <twisted.web.template.Tag>}, L{URL}, L{tuple},
+        L{list}, L{GeneratorType}, L{Deferred}, or an object that implements
+        L{IRenderable}.
 
     @param slotData: A C{list} of C{dict} mapping C{str} slot names to data
         with which those slots will be replaced.
@@ -196,8 +198,8 @@ def _flattenElement(request, root, slotData, renderFactory, dataEscaper):
     @param dataEscaper: A 1-argument callable which takes L{bytes} or
         L{unicode} and returns L{bytes}, quoted as appropriate for the
         rendering context.  This is really only one of two values:
-        L{attributeEscapingDoneOutside} or L{escapeForContent}, depending on whether
-        the rendering context is within an attribute or not.  See the
+        L{attributeEscapingDoneOutside} or L{escapeForContent}, depending on
+        whether the rendering context is within an attribute or not.  See the
         explanation in L{flattenWithAttributeEscaping}.
 
     @return: An iterator which yields C{str}, L{Deferred}, and more iterators
@@ -281,15 +283,15 @@ def _flattenElement(request, root, slotData, renderFactory, dataEscaper):
 
 def _flattenTree(request, root):
     """
-    Make C{root} into an iterable of C{str} and L{Deferred} by doing a
-    depth first traversal of the tree.
+    Make C{root} into an iterable of C{str} and L{Deferred} by doing a depth
+    first traversal of the tree.
 
     @param request: A request object which will be passed to
         L{IRenderable.render}.
 
     @param root: An object to be made flatter.  This may be of type C{unicode},
-        C{str}, L{slot}, L{Tag}, L{tuple}, L{list}, L{GeneratorType},
-        L{Deferred}, or something providing L{IRenderable}.
+        C{str}, L{slot}, L{Tag <twisted.web.template.Tag>}, L{tuple}, L{list},
+        L{GeneratorType}, L{Deferred}, or something providing L{IRenderable}.
 
     @return: An iterator which yields objects of type C{str} and L{Deferred}.
         A L{Deferred} is only yielded when one is encountered in the process of
@@ -374,15 +376,16 @@ def flatten(request, root, write):
         method of any L{IRenderable} provider which is encountered.
 
     @param root: An object to be made flatter.  This may be of type C{unicode},
-        C{str}, L{slot}, L{Tag}, L{tuple}, L{list}, L{GeneratorType},
-        L{Deferred}, or something that provides L{IRenderable}.
+        C{str}, L{slot}, L{Tag <twisted.web.template.Tag>}, L{tuple}, L{list},
+        L{GeneratorType}, L{Deferred}, or something that provides
+        L{IRenderable}.
 
-    @param write: A callable which will be invoked with each C{str}
-        produced by flattening C{root}.
+    @param write: A callable which will be invoked with each C{str} produced by
+        flattening C{root}.
 
-    @return: A L{Deferred} which will be called back when C{root} has
-        been completely flattened into C{write} or which will be errbacked if
-        an unexpected exception occurs.
+    @return: A L{Deferred} which will be called back when C{root} has been
+        completely flattened into C{write} or which will be errbacked if an
+        unexpected exception occurs.
     """
     result = Deferred()
     state = _flattenTree(request, root)
