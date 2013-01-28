@@ -136,6 +136,25 @@ class TestSerialization(FlattenTestCase, XMLAssertionMixin):
                                        '<img src="&lt;&gt;&amp;&quot;" />')
 
 
+    def test_serializedAttributeWithTransparentTagWithRenderer(self):
+        """
+        Like L{test_serializedAttributeWithTransparentTag}, but when the
+        attribute is rendered by a renderer on an element.
+        """
+        from twisted.web.template import Element, renderer
+        class WithRenderer(Element):
+            class loader(object):
+                @staticmethod
+                def load():
+                    return tags.img(src=tags.transparent(render="stuff"))
+            @renderer
+            def stuff(self, request, tag):
+                return '<>&"'
+        self.assertFlattensImmediately(
+            WithRenderer(),
+            '<img src="&lt;&gt;&amp;&quot;" />')
+
+
     def test_serializedAttributeWithTag(self, wrapTag=passthru):
         """
         L{Tag} objects which are serialized within the context of an attribute
