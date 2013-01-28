@@ -200,7 +200,6 @@ def _flattenElement(request, root, slotData, renderFactory, dataEscaper):
     @return: An iterator which yields C{str}, L{Deferred}, and more iterators
         of the same type.
     """
-    wrongHardcodedDataEscaper = escapeForContent
     if isinstance(root, (bytes, unicode)):
         yield dataEscaper(root)
     elif isinstance(root, slot):
