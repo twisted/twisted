@@ -4,29 +4,28 @@
 # See LICENSE for details.
 
 """
-Prints the results of an Address record lookup, Mail-Exchanger record
-lookup, and Nameserver record lookup for the given hostname for a
-given hostname.
+USAGE: python testdns.py DOMAINNAME
 
-To run this script:
-$ python testdns.py <hostname>
-e.g.:
-$ python testdns.py www.google.com
+Print the Address records, Mail-Exchanger records and the Nameserver
+records for the given domain name. eg
+
+ python testdns.py google.com
 """
 import sys
 
-from twisted.names import client
-from twisted.internet import defer, reactor
-from twisted.names import dns, error
+from twisted.internet import defer
+from twisted.internet.task import react
+from twisted.names import client, dns, error
 
 
-r = client.Resolver('/etc/resolv.conf')
-
-
-def formatResult(a, heading):
-    answer, authority, additional = a
+def formatRecords(records, heading):
+    """
+    Extract only the answer records and return them as a neatly
+    formatted string beneath the given heading.
+    """
+    answers, authority, additional = records
     lines = ['# ' + heading]
-    for a in answer:
+    for a in answers:
         line = [
             a.name,
             dns.QUERY_CLASSES.get(a.cls, 'UNKNOWN (%d)' % (a.cls,)),
@@ -36,33 +35,48 @@ def formatResult(a, heading):
     return '\n'.join(line for line in lines)
 
 
-def printError(f):
-    f.trap(defer.FirstError)
-    f = f.value.subFailure
-    f.trap(error.DomainError)
-    print f.value.__class__.__name__, f.value.message.queries
+def printResults(results, domainname):
+    """
+    Print the formatted results for each DNS record type.
+    """
+    sys.stdout.write('# Domain Summary for %r\n' % (domainname,))
+    sys.stdout.write('\n\n'.join(results) + '\n')
 
 
-def printResults(res):
-    for r in res:
-        print r
-        print
+def printError(failure, domainname):
+    """
+    Print a friendly error message if the hostname could not be
+    resolved.
+    """
+    failure.trap(defer.FirstError)
+    failure = failure.value.subFailure
+    failure.trap(error.DNSNameError)
+    sys.stderr.write('ERROR: domain name not found %r\n' % (domainname,))
+
+
+def main(reactor, *argv):
+    try:
+        domainname = argv[0]
+    except IndexError:
+        sys.stderr.write(
+            __doc__.lstrip() + '\n'
+            'ERROR: missing DOMAINNAME argument\n')
+        raise SystemExit(1)
+
+    r = client.Resolver('/etc/resolv.conf')
+    d = defer.gatherResults([
+            r.lookupAddress(domainname).addCallback(
+                formatRecords, 'Addresses'),
+            r.lookupMailExchange(domainname).addCallback(
+                formatRecords, 'Mail Exchangers'),
+            r.lookupNameservers(domainname).addCallback(
+                formatRecords, 'Nameservers'),
+            ], consumeErrors=True)
+
+    d.addCallback(printResults, domainname)
+    d.addErrback(printError, domainname)
+    return d
 
 
 if __name__ == '__main__':
-    domainname = sys.argv[1]
-
-    d = defer.gatherResults([
-            r.lookupAddress(domainname).addCallback(
-                formatResult, 'Addresses'),
-            r.lookupMailExchange(domainname).addCallback(
-                formatResult, 'Mail Exchangers'),
-            r.lookupNameservers(domainname).addCallback(
-                formatResult, 'Nameservers'),
-            ], consumeErrors=True)
-
-    d.addCallbacks(printResults, printError)
-
-    d.addBoth(lambda ign: reactor.stop())
-
-    reactor.run()
+    react(main, sys.argv[1:])
