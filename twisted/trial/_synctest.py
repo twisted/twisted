@@ -617,7 +617,6 @@ class _Assertions(pyunit.TestCase, object):
                 "Success result expected on %r, found no result instead" % (
                     deferred,))
         elif isinstance(result[0], failure.Failure):
-            log.err(result[0])
             self.fail(
                 "Success result expected on %r, "
                 "found failure result (%r) instead" % (deferred, result[0]))
