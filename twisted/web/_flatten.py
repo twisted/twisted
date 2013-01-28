@@ -61,7 +61,7 @@ def attributeEscapingDoneOutside(data):
     @rtype: C{bytes}
     """
     if isinstance(data, unicode):
-        raise RuntimeError("untested, obviously")
+        return data.encode("utf-8")
     return data
 
 
