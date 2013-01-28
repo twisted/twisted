@@ -277,7 +277,7 @@ def _flattenElement(request, root, slotData, renderFactory, dataEscaper):
     elif IRenderable.providedBy(root):
         result = root.render(request)
         yield _flattenElement(request, result, slotData, root,
-                              wrongHardcodedDataEscaper)
+                              dataEscaper)
     else:
         raise UnsupportedType(root)
 
