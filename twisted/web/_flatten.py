@@ -140,6 +140,7 @@ def escapedCDATA(data):
     return data.replace(']]>', ']]]]><![CDATA[>')
 
 
+
 def escapedComment(data):
     """
     Escape a comment for inclusion in a document.
@@ -159,6 +160,7 @@ def escapedComment(data):
     return data
 
 
+
 def _getSlotValue(name, slotData, default=None):
     """
     Find the value of the named slot in the given stack of slot data.
@@ -170,6 +172,7 @@ def _getSlotValue(name, slotData, default=None):
         if default is not None:
             return default
         raise UnfilledSlot(name)
+
 
 
 def _flattenElement(request, root, slotData, renderFactory, dataEscaper):
@@ -275,6 +278,7 @@ def _flattenElement(request, root, slotData, renderFactory, dataEscaper):
         raise UnsupportedType(root)
 
 
+
 def _flattenTree(request, root):
     """
     Make C{root} into an iterable of C{str} and L{Deferred} by doing a
@@ -357,6 +361,7 @@ def _writeFlattenedData(state, write, result):
         break
 
 
+
 def flatten(request, root, write):
     """
     Incrementally write out a string representation of C{root} using C{write}.
@@ -383,6 +388,7 @@ def flatten(request, root, write):
     state = _flattenTree(request, root)
     _writeFlattenedData(state, write, result)
     return result
+
 
 
 def flattenString(request, root):
