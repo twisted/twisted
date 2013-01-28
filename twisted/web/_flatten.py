@@ -273,7 +273,7 @@ def _flattenElement(request, root, slotData, renderFactory, dataEscaper):
         yield root.addCallback(
             lambda result:
             (result, _flattenElement(request, result, slotData, renderFactory,
-                                     wrongHardcodedDataEscaper)))
+                                     dataEscaper)))
     elif IRenderable.providedBy(root):
         result = root.render(request)
         yield _flattenElement(request, result, slotData, root,
