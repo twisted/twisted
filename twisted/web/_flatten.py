@@ -73,25 +73,26 @@ def flattenWithAttributeEscaping(root):
 
     If a L{Tag <twisted.web.template.Tag>} C{x} is flattened within the context
     of the contents of another L{Tag <twisted.web.template.Tag>} C{y}, the
-    metacharacters for C{y} should be passed through unchanged, but the textual
-    content of C{y} should be quoted.  For example: C{<y><x>&amp;</x></y>}.
-    That is the default behavior of L{_flattenElement} when L{escapeForContent}
-    is passed as the C{dataEscaper}.
+    metacharacters (C{<>&"}) delimiting C{x} should be passed through
+    unchanged, but the textual content of C{x} should still be quoted, as
+    usual.  For example: C{<y><x>&amp;</x></y>}.  That is the default behavior
+    of L{_flattenElement} when L{escapeForContent} is passed as the
+    C{dataEscaper}.
 
     However, when a L{Tag <twisted.web.template.Tag>} C{x} is flattened within
     the context of an I{attribute} of another L{Tag <twisted.web.template.Tag>}
-    C{y}, then the metacharacters for C{y} should be quoted so that it might be
-    parsed.  In the DOM itself, this is not a valid thing to do, but given that
-    renderers and slots may be freely moved around in a L{twisted.web.template}
-    template, it is a condition which may arise in a document and must be
-    handled in a way which produces valid output.  So, for example, you should
-    be able to get C{<y attr="&lt;x /&gt;" />}.  This should also be true for
-    other XML/HTML meta-constructs such as comments and CDATA, so if you were
-    to serialize a L{comment <twisted.web.template.Comment>} in an attribute
-    you should get C{<y attr="&lt;-- comment --&gt;" />}.  Therefore in order
-    to capture these meta-characters, the attribute generator from
-    L{_flattenElement} context is wrapped with an
-    L{flattenWithAttributeEscaping}.
+    C{y}, then the metacharacters delimiting C{x} should be quoted so that it
+    can be parsed from the attribute's value.  In the DOM itself, this is not a
+    valid thing to do, but given that renderers and slots may be freely moved
+    around in a L{twisted.web.template} template, it is a condition which may
+    arise in a document and must be handled in a way which produces valid
+    output.  So, for example, you should be able to get C{<y attr="&lt;x /&gt;"
+    />}.  This should also be true for other XML/HTML meta-constructs such as
+    comments and CDATA, so if you were to serialize a L{comment
+    <twisted.web.template.Comment>} in an attribute you should get C{<y
+    attr="&lt;-- comment --&gt;" />}.  Therefore in order to capture these
+    meta-characters, the attribute generator from L{_flattenElement} context is
+    wrapped with an L{flattenWithAttributeEscaping}.
 
     Because I{all} characters serialized in the context of an attribute are
     quoted before they are yielded by the generator returned by
