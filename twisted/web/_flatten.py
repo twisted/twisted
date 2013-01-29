@@ -384,13 +384,13 @@ def flatten(request, root, write):
     @param request: A request object which will be passed to the C{render}
         method of any L{IRenderable} provider which is encountered.
 
-    @param root: An object to be made flatter.  This may be of type C{unicode},
-        C{str}, L{slot}, L{Tag <twisted.web.template.Tag>}, L{tuple}, L{list},
-        L{GeneratorType}, L{Deferred}, or something that provides
+    @param root: An object to be made flatter.  This may be of type L{unicode},
+        L{bytes}, L{slot}, L{Tag <twisted.web.template.Tag>}, L{tuple},
+        L{list}, L{GeneratorType}, L{Deferred}, or something that provides
         L{IRenderable}.
 
-    @param write: A callable which will be invoked with each C{str} produced by
-        flattening C{root}.
+    @param write: A callable which will be invoked with each L{bytes} produced
+        by flattening C{root}.
 
     @return: A L{Deferred} which will be called back when C{root} has been
         completely flattened into C{write} or which will be errbacked if an
