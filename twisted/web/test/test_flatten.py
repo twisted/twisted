@@ -9,7 +9,7 @@ L{twisted.web._flatten}.
 import sys
 import traceback
 
-from xml.etree.cElementTree import XML
+from xml.etree.cElementTree import XML, tostring
 
 from zope.interface import implements, implementer
 
@@ -243,13 +243,15 @@ class TestSerialization(FlattenTestCase, XMLAssertionMixin):
         complexity where the tag which is the attribute value itself has an
         attribute value which contains bytes which require substitution.
         """
-        value = '<>&"'
-        escapedValue = '&lt;&gt;&amp;&quot;'
-        a = '<a href="' + escapedValue + '"></a>'
-        escapedA = (a.replace('&', '&amp;').replace('<', '&lt;')
-                     .replace('>', '&gt;').replace('"', '&quot;'))
-        self.assertFlattensImmediately(tags.img(src=tags.a(href=value)),
-                                       '<img src="' + escapedA + '" />')
+        flattened = self.assertFlattensImmediately(
+            tags.img(src=tags.a(href='<>&"')),
+            '<img src="&lt;a href='
+            '&quot;&amp;lt;&amp;gt;&amp;amp;&amp;quot;&quot;&gt;'
+            '&lt;/a&gt;" />')
+
+        # As in checkTagAttributeSerialization, belt-and-suspenders:
+        self.assertXMLEqual(XML(flattened).attrib['src'],
+                            '<a href="&lt;&gt;&amp;&quot;"></a>')
 
 
     def test_serializeComment(self):
