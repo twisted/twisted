@@ -14,12 +14,14 @@ from xml.etree.cElementTree import XML
 from zope.interface import implements, implementer
 
 from twisted.trial.unittest import TestCase
+from twisted.test.testutils import XMLAssertionMixin
+
 from twisted.internet.defer import succeed, gatherResults
+from twisted.web.iweb import IRenderable, ITemplateLoader
 from twisted.web._flatten import flattenString
 from twisted.web.error import UnfilledSlot, UnsupportedType, FlattenerError
 from twisted.web.template import tags, Tag, Comment, CDATA, CharRef, slot
-from twisted.web.iweb import IRenderable, ITemplateLoader
-from twisted.test.testutils import XMLAssertionMixin
+from twisted.web.template import Element, renderer
 from twisted.web.test._util import FlattenTestCase
 from twisted.internet.defer import passthru
 
@@ -161,7 +163,6 @@ class TestSerialization(FlattenTestCase, XMLAssertionMixin):
         Like L{test_serializedAttributeWithTransparentTag}, but when the
         attribute is rendered by a renderer on an element.
         """
-        from twisted.web.template import Element, renderer
         @implementer(ITemplateLoader)
         class Loader(object):
             "Stub loader that loads a document."
