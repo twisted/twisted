@@ -263,12 +263,13 @@ def _flattenElement(request, root, slotData, renderFactory, dataEscaper):
             yield '"'
         if root.children or tagName not in voidElements:
             yield '>'
-            # Regardless of whether we're in an attribute or not, switch back to
-            # the escapeForContent dataEscaper.  The contents of a tag must be
-            # quoted no matter what; in the top-level document, just so they're
-            # valid, and if they're within an attribute, they have to be quoted
-            # so that after applying the *un*-quoting required to re-parse the
-            # tag within the attribute, all the quoting is still correct.
+            # Regardless of whether we're in an attribute or not, switch back
+            # to the escapeForContent dataEscaper.  The contents of a tag must
+            # be quoted no matter what; in the top-level document, just so
+            # they're valid, and if they're within an attribute, they have to
+            # be quoted so that after applying the *un*-quoting required to re-
+            # parse the tag within the attribute, all the quoting is still
+            # correct.
             yield keepGoing(root.children, escapeForContent)
             yield '</' + tagName + '>'
         else:
