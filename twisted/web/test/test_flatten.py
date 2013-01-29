@@ -199,9 +199,9 @@ class TestSerialization(FlattenTestCase, XMLAssertionMixin):
         Common implementation of L{test_serializedAttributeWithTag} and
         L{test_serializedAttributeWithDeferredTag}.
 
-        @param wrapData: A 1-argument callable that wraps around the
-            attribute's value so other tests can customize it.
-        @param wrapData: callable taking L{Tag} and returning something
+        @param wrapTag: A 1-argument callable that wraps around the attribute's
+            value so other tests can customize it.
+        @param wrapTag: callable taking L{Tag} and returning something
             flattenable
         """
         innerTag = tags.a('<>&"')
