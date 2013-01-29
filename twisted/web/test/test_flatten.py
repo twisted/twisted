@@ -90,27 +90,41 @@ class TestSerialization(FlattenTestCase, XMLAssertionMixin):
 
     def test_serializedMultipleAttributes(self):
         """
-        Multiple attributes are separated by a single space in their serialized form.
+        Multiple attributes are separated by a single space in their serialized
+        form.
         """
         tag = tags.img()
         tag.attributes = OrderedAttributes([("src", "foo"), ("name", "bar")])
         self.assertFlattensImmediately(tag, '<img src="foo" name="bar" />')
 
 
-    def test_serializedAttributeWithSanitization(self, wrapData=passthru):
+    def checkAttributeSanitization(self, wrapData, wrapTag):
         """
-        Attribute values containing C{"<"}, C{">"}, C{"&"}, or C{'"'} have
-        C{"&lt;"}, C{"&gt;"}, C{"&amp;"}, or C{"&quot;"} substituted for those
-        bytes in the serialized output.
+        Common implementation of L{test_serializedAttributeWithSanitization}
+        and L{test_serializedDeferredAttributeWithSanitization},
+        L{test_serializedAttributeWithTransparentTag}.
 
         @param wrapData: A 1-argument callable that wraps around the
             attribute's value so other tests can customize it.
         @param wrapData: callable taking L{bytes} and returning something
             flattenable
+
+        @param wrapTag: A 1-argument callable that wraps around the outer tag
+            so other tests can customize it.
+        @type wrapTag: callable taking L{Tag} and returning L{Tag}.
         """
         self.assertFlattensImmediately(
-            tags.img(src=wrapData("<>&\"")),
+            wrapTag(tags.img(src=wrapData("<>&\""))),
             '<img src="&lt;&gt;&amp;&quot;" />')
+
+
+    def test_serializedAttributeWithSanitization(self):
+        """
+        Attribute values containing C{"<"}, C{">"}, C{"&"}, or C{'"'} have
+        C{"&lt;"}, C{"&gt;"}, C{"&amp;"}, or C{"&quot;"} substituted for those
+        bytes in the serialized output.
+        """
+        self.checkAttributeSanitization(passthru, passthru)
 
 
     def test_serializedDeferredAttributeWithSanitization(self):
@@ -119,26 +133,27 @@ class TestSerialization(FlattenTestCase, XMLAssertionMixin):
         of the attribute are in a L{Deferred
         <twisted.internet.defer.Deferred>}.
         """
-        self.test_serializedAttributeWithSanitization(succeed)
+        self.checkAttributeSanitization(succeed, passthru)
 
 
     def test_serializedAttributeWithSlotWithSanitization(self):
         """
         Like L{test_serializedAttributeWithSanitization} but with a slot.
         """
-        self.assertFlattensImmediately(
-            tags.img(src=slot("stuff")).fillSlots(stuff="<>&\""),
-            '<img src="&lt;&gt;&amp;&quot;" />')
+        toss = []
+        self.checkAttributeSanitization(
+            lambda value: toss.append(value) or slot("stuff"),
+            lambda tag: tag.fillSlots(stuff=toss.pop())
+        )
 
 
     def test_serializedAttributeWithTransparentTag(self):
         """
-        Attribute values which are supplied via the value of an I{transparent}
+        Attribute values which are supplied via the value of a C{t:transparent}
         tag have the same subsitution rules to them as values supplied
         directly.
         """
-        self.assertFlattensImmediately(tags.img(src=tags.transparent('<>&"')),
-                                       '<img src="&lt;&gt;&amp;&quot;" />')
+        self.checkAttributeSanitization(tags.transparent, passthru)
 
 
     def test_serializedAttributeWithTransparentTagWithRenderer(self):
@@ -173,20 +188,18 @@ class TestSerialization(FlattenTestCase, XMLAssertionMixin):
         """
         @implementer(IRenderable)
         class Arbitrary(object):
+            def __init__(self, value):
+                self.value = value
             def render(self, request):
                 "Render some text that requires quoting."
                 return '<>&"'
-        self.assertFlattensImmediately(
-            tags.img(src=Arbitrary()),
-            '<img src="&lt;&gt;&amp;&quot;" />'
-        )
+        self.checkAttributeSanitization(Arbitrary, passthru)
 
 
-    def test_serializedAttributeWithTag(self, wrapTag=passthru):
+    def checkTagAttributeSerialization(self, wrapTag):
         """
-        L{Tag} objects which are serialized within the context of an attribute
-        are serialized such that the text content of the attribute may be
-        parsed to retrieve the tag.
+        Common implementation of L{test_serializedAttributeWithTag} and
+        L{test_serializedAttributeWithDeferredTag}.
 
         @param wrapData: A 1-argument callable that wraps around the
             attribute's value so other tests can customize it.
@@ -208,12 +221,21 @@ class TestSerialization(FlattenTestCase, XMLAssertionMixin):
         self.assertXMLEqual(XML(outer).attrib['src'], inner)
 
 
+    def test_serializedAttributeWithTag(self):
+        """
+        L{Tag} objects which are serialized within the context of an attribute
+        are serialized such that the text content of the attribute may be
+        parsed to retrieve the tag.
+        """
+        self.checkTagAttributeSerialization(passthru)
+
+
     def test_serializedAttributeWithDeferredTag(self):
         """
         Like L{test_serializedAttributeWithTag}, but when the L{Tag} is in a
         L{Deferred <twisted.internet.defer.Deferred>}.
         """
-        self.test_serializedAttributeWithTag(succeed)
+        self.checkTagAttributeSerialization(succeed)
 
 
     def test_serializedAttributeWithTagWithAttribute(self):
@@ -222,7 +244,6 @@ class TestSerialization(FlattenTestCase, XMLAssertionMixin):
         complexity where the tag which is the attribute value itself has an
         attribute value which contains bytes which require substitution.
         """
-        # Is this really the best behavior for this case?
         value = '<>&"'
         escapedValue = '&lt;&gt;&amp;&quot;'
         a = '<a href="' + escapedValue + '"></a>'
