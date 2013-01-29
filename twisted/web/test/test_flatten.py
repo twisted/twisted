@@ -190,7 +190,6 @@ class TestSerialization(FlattenTestCase, XMLAssertionMixin):
             def __init__(self, value):
                 self.value = value
             def render(self, request):
-                "Render some text that requires quoting."
                 return self.value
         self.checkAttributeSanitization(Arbitrary, passthru)
 
