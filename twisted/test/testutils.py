@@ -1,9 +1,22 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+"""
+I{Private} test utilities for use throughout Twisted's test suite.  Unlike
+C{proto_helpers}, this is no exception to the
+don't-use-it-outside-Twisted-we-won't-maintain-compatibility rule!
+
+@note: Maintainers be aware: things in this module should be gradually promoted
+    to more full-featured test helpers and exposed as public API as your
+    maintenance time permits.  In order to be public API though, they need
+    their own test cases.
+"""
+
 from cStringIO import StringIO
-from twisted.internet.protocol import FileWrapper
+
 from xml.dom import minidom as dom
+
+from twisted.internet.protocol import FileWrapper
 
 class IOPump:
     """Utility to pump data between clients and servers for protocol testing.
