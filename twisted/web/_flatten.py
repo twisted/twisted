@@ -291,17 +291,18 @@ def _flattenElement(request, root, slotData, renderFactory, dataEscaper):
 
 def _flattenTree(request, root):
     """
-    Make C{root} into an iterable of C{str} and L{Deferred} by doing a depth
+    Make C{root} into an iterable of L{bytes} and L{Deferred} by doing a depth
     first traversal of the tree.
 
     @param request: A request object which will be passed to
         L{IRenderable.render}.
 
     @param root: An object to be made flatter.  This may be of type C{unicode},
-        C{str}, L{slot}, L{Tag <twisted.web.template.Tag>}, L{tuple}, L{list},
-        L{GeneratorType}, L{Deferred}, or something providing L{IRenderable}.
+        L{bytes}, L{slot}, L{Tag <twisted.web.template.Tag>}, L{tuple},
+        L{list}, L{GeneratorType}, L{Deferred}, or something providing
+        L{IRenderable}.
 
-    @return: An iterator which yields objects of type C{str} and L{Deferred}.
+    @return: An iterator which yields objects of type L{bytes} and L{Deferred}.
         A L{Deferred} is only yielded when one is encountered in the process of
         flattening C{root}.  The returned iterator must not be iterated again
         until the L{Deferred} is called back.
