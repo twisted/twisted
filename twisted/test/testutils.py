@@ -1,3 +1,6 @@
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
+
 from cStringIO import StringIO
 from twisted.internet.protocol import FileWrapper
 from xml.dom import minidom as dom
