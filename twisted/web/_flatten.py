@@ -203,7 +203,14 @@ def _flattenElement(request, root, slotData, renderFactory, dataEscaper):
         whether the rendering context is within an attribute or not.  See the
         explanation in L{flattenWithAttributeEscaping}.
 
-    @return: An iterator which yields C{str}, L{Deferred}, and more iterators
+    @return: An iterator that eventually yields L{bytes} that should be written
+        to the output.  However it may also yield other iterators or
+        L{Deferred}s; if it yields another iterator, the caller will iterate
+        it; if it yields a L{Deferred}, the result of that L{Deferred} will
+        either be L{bytes}, in which case it's written, or another generator,
+        in which case it is iterated.  See L{_flattenTree} for the trampoline
+        that consumes said values.
+    @rtype: An iterator which yields L{bytes}, L{Deferred}, and more iterators
         of the same type.
     """
     def keepGoing(newRoot, dataEscaper=dataEscaper,
