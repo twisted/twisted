@@ -18,6 +18,40 @@ that the passwords and commands were sent in the clear. To solve this
 problem, the SSH protocol was created. Twisted Conch implements the
 second version of this protocol.</p>
 
+    <h2>Using an SSH Command Endpoint</h2>
+
+    <p>
+      If your objective is to execute a command on a remote host over an SSH
+      connection, then the easiest approach may be to
+      use <code class="API">twisted.conch.endpoints.SSHCommandEndpoint</code>.
+      If you haven't used endpoints before, first take a look
+      at <a href="../../core/howto/endpoints.xhtml">the endpoint howto</a> to
+      get an idea of how endpoints work in general.
+    </p>
+
+    <p>
+      Conch provides an endpoint implementation which establishes an SSH
+      connection, performs necessary authentication, opens a channel, and
+      launches a command in that channel.  It then associates the output of that
+      command with the input of a protocol you supply, and associates output
+      from that protocol with input the input of that command.  Effectively,
+      this lets you ignore most of the complexity of SSH and just interact with
+      a remote process as though it were any other stream-oriented connection -
+      such as TCP or SSL.
+    </p>
+
+    <p>
+      Using the <code>SSHCommandEndpoint</code> is about as simple as using any
+      other stream-oriented client endpoint.  Just create the endpoint defining
+      where the SSH server to connect to is and a factory defining what kind of
+      protocol to use to interact with the command and let them get to work
+      using the endpoint's <code>connect</code> method.
+    </p>
+
+    <a href="listings/echoclient_ssh.py" class="py-listing">
+      Bounce some bytes off an SSH-based echo server
+    </a>
+
     <h2>Writing a client</h2>
 
 <p>Writing a client with Conch involves sub-classing 4 classes: <code
