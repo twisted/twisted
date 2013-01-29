@@ -16,14 +16,15 @@ from zope.interface import implements, implementer
 from twisted.trial.unittest import TestCase
 from twisted.test.testutils import XMLAssertionMixin
 
-from twisted.internet.defer import succeed, gatherResults
-from twisted.web.iweb import IRenderable, ITemplateLoader
-from twisted.web._flatten import flattenString
+from twisted.internet.defer import passthru, succeed, gatherResults
+
+from twisted.web.iweb import IRenderable
 from twisted.web.error import UnfilledSlot, UnsupportedType, FlattenerError
+
 from twisted.web.template import tags, Tag, Comment, CDATA, CharRef, slot
-from twisted.web.template import Element, renderer
+from twisted.web.template import Element, renderer, TagLoader, flattenString
+
 from twisted.web.test._util import FlattenTestCase
-from twisted.internet.defer import passthru
 
 
 
@@ -163,22 +164,19 @@ class TestSerialization(FlattenTestCase, XMLAssertionMixin):
         Like L{test_serializedAttributeWithTransparentTag}, but when the
         attribute is rendered by a renderer on an element.
         """
-        @implementer(ITemplateLoader)
-        class Loader(object):
-            "Stub loader that loads a document."
-            def load(self):
-                "Load an <img src='something'> document."
-                return tags.img(src=tags.transparent(render="stuff"))
         class WithRenderer(Element):
-            "Stub L{Element} that has a renderer."
-            loader = Loader()
+            def __init__(self, value, loader):
+                self.value = value
+                super(WithRenderer, self).__init__(loader)
             @renderer
             def stuff(self, request, tag):
-                "Render some text that requires quoting."
-                return '<>&"'
-        self.assertFlattensImmediately(
-            WithRenderer(),
-            '<img src="&lt;&gt;&amp;&quot;" />')
+                return self.value
+        toss = []
+        self.checkAttributeSanitization(
+            lambda value: toss.append(value) or
+                          tags.transparent(render="stuff"),
+            lambda tag: WithRenderer(toss.pop(), TagLoader(tag))
+        )
 
 
     def test_serializedAttributeWithRenderable(self):
@@ -193,7 +191,7 @@ class TestSerialization(FlattenTestCase, XMLAssertionMixin):
                 self.value = value
             def render(self, request):
                 "Render some text that requires quoting."
-                return '<>&"'
+                return self.value
         self.checkAttributeSanitization(Arbitrary, passthru)
 
 
