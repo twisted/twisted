@@ -31,8 +31,8 @@ class OrderedAttributes(object):
     that orders things in a deterministic order.  It doesn't do any sorting, so
     whatever order the attributes are passed in, they will be returned.
 
-    @ivar attributes: The result of a C{dict.items} call.
-    @type attributes: C{list} of 2-C{tuples}
+    @ivar attributes: The result of a L{dict}C{.items} call.
+    @type attributes: L{list} of 2-L{tuples}
     """
 
     def __init__(self, attributes):
@@ -41,7 +41,7 @@ class OrderedAttributes(object):
 
     def iteritems(self):
         """
-        Like C{dict.iteritems}.
+        Like L{dict}C{.iteritems}.
 
         @return: an iterator
         @rtype: list iterator
