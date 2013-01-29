@@ -207,11 +207,11 @@ class TestSerialization(FlattenTestCase, XMLAssertionMixin):
         """
         innerTag = tags.a('<>&"')
         outerTag = tags.img(src=wrapTag(innerTag))
-        outer = self.successResultOf(flattenString(None, outerTag))
-        inner = self.successResultOf(flattenString(None, innerTag))
-        self.assertEqual(
-            outer,
+        outer = self.assertFlattensImmediately(
+            outerTag,
             '<img src="&lt;a&gt;&amp;lt;&amp;gt;&amp;amp;&quot;&lt;/a&gt;" />')
+        inner = self.assertFlattensImmediately(
+            innerTag, '<a>&lt;&gt;&amp;"</a>')
 
         # Since the above quoting is somewhat tricky, validate it by making sure
         # that the main use-case for tag-within-attribute is supported here: if
