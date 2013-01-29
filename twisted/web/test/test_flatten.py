@@ -9,7 +9,7 @@ L{twisted.web._flatten}.
 import sys
 import traceback
 
-from xml.etree.cElementTree import XML, tostring
+from xml.etree.cElementTree import XML
 
 from zope.interface import implements, implementer
 
