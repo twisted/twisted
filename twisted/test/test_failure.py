@@ -89,6 +89,11 @@ class FailureTestCase(SynchronousTestCase):
     def assertStartsWith(self, s, prefix):
         """
         Assert that L{s} starts with a particular L{prefix}.
+
+        @param s: The input string.
+        @type s: L{str}
+        @param prefix: The string that L{s} should start with.
+        @type prefix: L{str}
         """
         self.assertTrue(s.startswith(prefix),
                         '%r is not the start of %r' % (prefix, s))
@@ -97,6 +102,11 @@ class FailureTestCase(SynchronousTestCase):
     def assertEndsWith(self, s, suffix):
         """
         Assert that L{s} end with a particular L{suffix}.
+
+        @param s: The input string.
+        @type s: L{str}
+        @param suffix: The string that L{s} should end with.
+        @type suffix: L{str}
         """
         self.assertTrue(s.endswith(suffix),
                         '%r is not the end of %r' % (suffix, s))
@@ -105,6 +115,13 @@ class FailureTestCase(SynchronousTestCase):
     def assertCorrectTraceback(self, tb, prefix, suffix):
         """
         Assert that L{tb} contains a particular L{prefix} and L{suffix}.
+
+        @param tb: The input string.
+        @type tb: L{str}
+        @param prefix: The string that L{tb} should start with.
+        @type prefix: L{str}
+        @param suffix: The string that L{tb} should end with.
+        @type suffix: L{str}
         """
         self.assertStartsWith(tb, prefix)
         self.assertEndsWith(tb, suffix)
@@ -192,7 +209,8 @@ class FailureTestCase(SynchronousTestCase):
         for method, filename, lineno, localVars, globalVars in f.frames:
             stack += '  File "%s", line %s, in %s\n' % (filename, lineno,
                                                         method)
-            stack += '    %s\n' % linecache.getline(filename, lineno).strip()
+            stack += '    %s\n' % (linecache.getline(
+                                   filename, lineno).strip(),)
 
         self.assertCorrectTraceback(tb,
             "Traceback (most recent call last):",
