@@ -11,6 +11,7 @@ An implementation of the OpenSSH known_hosts database.
 from binascii import Error as DecodeError, b2a_base64
 import hmac
 import sys
+import itertools
 
 from zope.interface import implements
 
@@ -24,6 +25,7 @@ else:
 from twisted.internet import defer
 
 from twisted.python import log
+from twisted.python.util import FancyEqMixin
 from twisted.conch.interfaces import IKnownHostEntry
 from twisted.conch.error import HostKeyChanged, UserRejectedKey, InvalidEntry
 from twisted.conch.ssh.keys import Key, BadKeyError
@@ -248,7 +250,7 @@ def _hmacedString(key, string):
 
 
 
-class HashedEntry(_BaseEntry):
+class HashedEntry(_BaseEntry, FancyEqMixin):
     """
     A L{HashedEntry} is a representation of an entry in a known_hosts file
     where the hostname has been hashed and salted.
@@ -264,6 +266,9 @@ class HashedEntry(_BaseEntry):
     implements(IKnownHostEntry)
 
     MAGIC = '|1|'
+
+    compareAttributes = (
+        "_hostSalt", "_hostHash", "keyType", "publicKey", "comment")
 
     def __init__(self, hostSalt, hostHash, keyType, publicKey, comment):
         self._hostSalt = hostSalt
@@ -344,9 +349,10 @@ class KnownHostsFile(object):
     """
     A structured representation of an OpenSSH-format ~/.ssh/known_hosts file.
 
-    @ivar _entries: a list of L{IKnownHostEntry} providers.
+    @ivar _added: A list of L{IKnownHostEntry} providers which have been added
+        to this instance in memory but not yet saved.
 
-    @ivar _savePath: the L{FilePath} to save new entries to.
+    @ivar _savePath: The L{FilePath} to save new entries to.
     """
 
     def __init__(self, savePath):
@@ -355,8 +361,30 @@ class KnownHostsFile(object):
 
         You want to use L{KnownHostsFile.fromPath} to parse one of these.
         """
-        self._entries = []
+        self._added = []
         self._savePath = savePath
+
+
+    def __iter__(self):
+        try:
+            fp = self._savePath.open()
+        except IOError:
+            return
+        try:
+            for line in fp:
+                try:
+                    if line.startswith(HashedEntry.MAGIC):
+                        entry = HashedEntry.fromString(line)
+                    else:
+                        entry = PlainEntry.fromString(line)
+                except (DecodeError, InvalidEntry, BadKeyError):
+                    entry = UnparsedEntry(line)
+                yield entry
+        finally:
+            fp.close()
+
+        for entry in self._added:
+            yield entry
 
 
     def hasHostKey(self, hostname, key):
@@ -376,7 +404,7 @@ class KnownHostsFile(object):
         @raise HostKeyChanged: if the host key found for the given hostname
             does not match the given key.
         """
-        for lineidx, entry in enumerate(self._entries):
+        for lineidx, entry in enumerate(self):
             if entry.matchesHost(hostname):
                 if entry.matchesKey(key):
                     return True
@@ -455,7 +483,7 @@ class KnownHostsFile(object):
         keyType = "ssh-" + key.type().lower()
         entry = HashedEntry(salt, _hmacedString(salt, hostname),
                             keyType, key, None)
-        self._entries.append(entry)
+        self._added.append(entry)
         return entry
 
 
@@ -466,8 +494,10 @@ class KnownHostsFile(object):
         p = self._savePath.parent()
         if not p.isdir():
             p.makedirs()
-        self._savePath.setContent('\n'.join(
-                [entry.toString() for entry in self._entries]) + "\n")
+        with self._savePath.open("a") as hostsFileObj:
+            hostsFileObj.write(
+                '\n'.join([entry.toString() for entry in self._added]) + "\n")
+
 
 
     def fromPath(cls, path):
@@ -483,21 +513,7 @@ class KnownHostsFile(object):
         @return: A L{KnownHostsFile} initialized with entries from C{path}.
         @rtype: L{KnownHostsFile}
         """
-        self = cls(path)
-        try:
-            fp = path.open()
-        except IOError:
-            return self
-        for line in fp:
-            try:
-                if line.startswith(HashedEntry.MAGIC):
-                    entry = HashedEntry.fromString(line)
-                else:
-                    entry = PlainEntry.fromString(line)
-            except (DecodeError, InvalidEntry, BadKeyError):
-                entry = UnparsedEntry(line)
-            self._entries.append(entry)
-        return self
+        return cls(path)
 
     fromPath = classmethod(fromPath)
 

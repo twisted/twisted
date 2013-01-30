@@ -26,6 +26,7 @@ from twisted.trial.unittest import TestCase
 from twisted.internet.defer import Deferred
 from twisted.conch.interfaces import IKnownHostEntry
 from twisted.conch.error import HostKeyChanged, UserRejectedKey, InvalidEntry
+from twisted.test.testutils import ComparisonTestsMixin
 
 
 sampleEncodedKey = (
@@ -65,7 +66,6 @@ sampleHostIPLine = (
 sampleHashedLine = (
     "|1|gJbSEPBG9ZSBoZpHNtZBD1bHKBA=|bQv+0Xa0dByrwkA1EB0E7Xop/Fo= ssh-rsa " +
     sampleEncodedKey + "\n")
-
 
 
 class EntryTestsMixin:
@@ -171,7 +171,7 @@ class PlainTextWithCommentTests(PlainEntryTests):
 
 
 
-class HashedEntryTests(EntryTestsMixin, TestCase):
+class HashedEntryTests(EntryTestsMixin, ComparisonTestsMixin, TestCase):
     """
     Tests for L{HashedEntry}.
 
@@ -196,6 +196,58 @@ class HashedEntryTests(EntryTestsMixin, TestCase):
         for the entry, sans the newline.
         """
         self.assertEqual(self.entry.toString(), self.hashedLine.rstrip("\n"))
+
+
+    def test_equality(self):
+        """
+        Two L{HashedEntry} instances compare equal if and only if they represent
+        the same host and key in exactly the same way: the host salt, host hash,
+        public key type, public key, and comment fields must all be equal.
+        """
+        hostSalt = "gJbSEPBG9ZSBoZpHNtZBD1bHKBA"
+        hostHash = "bQv+0Xa0dByrwkA1EB0E7Xop/Fo"
+        publicKey = Key.fromString(sampleKey)
+        comment = "hello, world"
+
+        entry = HashedEntry(
+            hostSalt, hostHash, publicKey.type(), publicKey, comment)
+        duplicate = HashedEntry(
+            hostSalt, hostHash, publicKey.type(), publicKey, comment)
+
+        # Vary the host salt
+        self.assertNormalEqualityImplementation(
+            entry, duplicate,
+            HashedEntry(
+                hostSalt[::-1], hostHash, publicKey.type(), publicKey,
+                comment))
+
+        # Vary the host hash
+        self.assertNormalEqualityImplementation(
+            entry, duplicate,
+            HashedEntry(
+                hostSalt, hostHash[::-1], publicKey.type(), publicKey,
+                comment))
+
+        # Vary the key type
+        self.assertNormalEqualityImplementation(
+            entry, duplicate,
+            HashedEntry(
+                hostSalt, hostHash, publicKey.type()[::-1], publicKey,
+                comment))
+
+        # Vary the key
+        self.assertNormalEqualityImplementation(
+            entry, duplicate,
+            HashedEntry(
+                hostSalt, hostHash, publicKey.type(),
+                Key.fromString(otherSampleKey), comment))
+
+        # Vary the comment
+        self.assertNormalEqualityImplementation(
+            entry, duplicate,
+            HashedEntry(
+                hostSalt, hostHash, publicKey.type(), publicKey,
+                comment[::-1]))
 
 
 
@@ -387,7 +439,7 @@ class KnownHostsDatabaseTests(TestCase):
         providers in it.
         """
         hostsFile = self.loadSampleHostsFile()
-        self.assertEqual(len(hostsFile._entries), 6)
+        self.assertEqual(6, len(list(hostsFile)))
 
 
     def test_verifyHashedEntry(self):
@@ -397,9 +449,10 @@ class KnownHostsDatabaseTests(TestCase):
         with one L{IKnownHostEntry} provider.
         """
         hostsFile = self.loadSampleHostsFile((sampleHashedLine))
-        self.assertIsInstance(hostsFile._entries[0], HashedEntry)
-        self.assertEqual(True, hostsFile._entries[0].matchesHost(
-                "www.twistedmatrix.com"))
+        entries = list(hostsFile)
+        self.assertIsInstance(entries[0], HashedEntry)
+        self.assertEqual(True, entries[0].matchesHost("www.twistedmatrix.com"))
+        self.assertEqual(1, len(entries))
 
 
     def test_verifyPlainEntry(self):
@@ -409,9 +462,10 @@ class KnownHostsDatabaseTests(TestCase):
         with one L{IKnownHostEntry} provider.
         """
         hostsFile = self.loadSampleHostsFile((otherSamplePlaintextLine))
-        self.assertIsInstance(hostsFile._entries[0], PlainEntry)
-        self.assertEqual(True, hostsFile._entries[0].matchesHost(
-                "divmod.com"))
+        entries = list(hostsFile)
+        self.assertIsInstance(entries[0], PlainEntry)
+        self.assertEqual(True, entries[0].matchesHost("divmod.com"))
+        self.assertEqual(1, len(entries))
 
 
     def test_verifyUnparsedEntry(self):
@@ -421,8 +475,10 @@ class KnownHostsDatabaseTests(TestCase):
         object.
         """
         hostsFile = self.loadSampleHostsFile(("\n"))
-        self.assertIsInstance(hostsFile._entries[0], UnparsedEntry)
-        self.assertEqual(hostsFile._entries[0].toString(), "")
+        entries = list(hostsFile)
+        self.assertIsInstance(entries[0], UnparsedEntry)
+        self.assertEqual(entries[0].toString(), "")
+        self.assertEqual(1, len(entries))
 
 
     def test_verifyUnparsedComment(self):
@@ -432,9 +488,9 @@ class KnownHostsDatabaseTests(TestCase):
         object.
         """
         hostsFile = self.loadSampleHostsFile(("# That was a blank line.\n"))
-        self.assertIsInstance(hostsFile._entries[0], UnparsedEntry)
-        self.assertEqual(hostsFile._entries[0].toString(),
-                         "# That was a blank line.")
+        entries = list(hostsFile)
+        self.assertIsInstance(entries[0], UnparsedEntry)
+        self.assertEqual(entries[0].toString(), "# That was a blank line.")
 
 
     def test_verifyUnparsableLine(self):
@@ -443,9 +499,10 @@ class KnownHostsDatabaseTests(TestCase):
         line will be represented as an L{UnparsedEntry} instance.
         """
         hostsFile = self.loadSampleHostsFile(("This is just unparseable.\n"))
-        self.assertIsInstance(hostsFile._entries[0], UnparsedEntry)
-        self.assertEqual(hostsFile._entries[0].toString(),
-                         "This is just unparseable.")
+        entries = list(hostsFile)
+        self.assertIsInstance(entries[0], UnparsedEntry)
+        self.assertEqual(entries[0].toString(), "This is just unparseable.")
+        self.assertEqual(1, len(entries))
 
 
     def test_verifyUnparsableEncryptionMarker(self):
@@ -455,9 +512,10 @@ class KnownHostsDatabaseTests(TestCase):
         L{UnparsedEntry} instance.
         """
         hostsFile = self.loadSampleHostsFile(("|1|This is unparseable.\n"))
-        self.assertIsInstance(hostsFile._entries[0], UnparsedEntry)
-        self.assertEqual(hostsFile._entries[0].toString(),
-                         "|1|This is unparseable.")
+        entries = list(hostsFile)
+        self.assertIsInstance(entries[0], UnparsedEntry)
+        self.assertEqual(entries[0].toString(), "|1|This is unparseable.")
+        self.assertEqual(1, len(entries))
 
 
     def test_loadNonExistent(self):
@@ -467,7 +525,8 @@ class KnownHostsDatabaseTests(TestCase):
         """
         pn = self.mktemp()
         knownHostsFile = KnownHostsFile.fromPath(FilePath(pn))
-        self.assertEqual([], list(knownHostsFile._entries))
+        entries = list(knownHostsFile)
+        self.assertEqual([], entries)
         self.assertEqual(False, FilePath(pn).exists())
         knownHostsFile.save()
         self.assertEqual(True, FilePath(pn).exists())
@@ -583,10 +642,11 @@ class KnownHostsDatabaseTests(TestCase):
         exception should have an C{offendingEntry} indicating the given entry.
         """
         hostsFile = self.loadSampleHostsFile()
+        entries = list(hostsFile)
         exception = self.assertRaises(
             HostKeyChanged, hostsFile.hasHostKey,
             "www.twistedmatrix.com", Key.fromString(otherSampleKey))
-        self.assertEqual(exception.offendingEntry, hostsFile._entries[0])
+        self.assertEqual(exception.offendingEntry, entries[0])
         self.assertEqual(exception.lineno, 1)
         self.assertEqual(exception.path, hostsFile._savePath)
 

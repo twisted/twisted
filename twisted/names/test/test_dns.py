@@ -12,6 +12,7 @@ from io import BytesIO
 
 import struct
 
+
 from twisted.python.failure import Failure
 from twisted.internet import address, task
 from twisted.internet.error import CannotListenError, ConnectionDone
@@ -19,6 +20,7 @@ from twisted.trial import unittest
 from twisted.names import dns
 
 from twisted.test import proto_helpers
+from twistes.test.testutils import ComparisonTestsMixin
 
 RECORD_TYPES = [
     dns.Record_NS, dns.Record_MD, dns.Record_MF, dns.Record_CNAME,
@@ -1159,58 +1161,13 @@ class ReprTests(unittest.TestCase):
 
 
 
-class _Equal(object):
-    """
-    A class the instances of which are equal to anything and everything.
-    """
-    def __eq__(self, other):
-        return True
-
-
-    def __ne__(self, other):
-        return False
-
-
-
-class _NotEqual(object):
-    """
-    A class the instances of which are equal to nothing.
-    """
-    def __eq__(self, other):
-        return False
-
-
-    def __ne__(self, other):
-        return True
-
-
-
-class EqualityTests(unittest.TestCase):
+class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
     """
     Tests for the equality and non-equality behavior of record classes.
     """
     def _equalityTest(self, firstValueOne, secondValueOne, valueTwo):
-        """
-        Assert that C{firstValueOne} is equal to C{secondValueOne} but not
-        equal to C{valueOne} and that it defines equality cooperatively with
-        other types it doesn't know about.
-        """
-        # This doesn't use assertEqual and assertNotEqual because the exact
-        # operator those functions use is not very well defined.  The point
-        # of these assertions is to check the results of the use of specific
-        # operators (precisely to ensure that using different permutations
-        # (eg "x == y" or "not (x != y)") which should yield the same results
-        # actually does yield the same result). -exarkun
-        self.assertTrue(firstValueOne == firstValueOne)
-        self.assertTrue(firstValueOne == secondValueOne)
-        self.assertFalse(firstValueOne == valueTwo)
-        self.assertFalse(firstValueOne != firstValueOne)
-        self.assertFalse(firstValueOne != secondValueOne)
-        self.assertTrue(firstValueOne != valueTwo)
-        self.assertTrue(firstValueOne == _Equal())
-        self.assertFalse(firstValueOne != _Equal())
-        self.assertFalse(firstValueOne == _NotEqual())
-        self.assertTrue(firstValueOne != _NotEqual())
+        return self.assertNormalEqualityImplementation(
+            firstValueOne, secondValueOne, valueTwo)
 
 
     def test_charstr(self):
