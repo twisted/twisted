@@ -489,7 +489,7 @@ class KnownHostsDatabaseTests(TestCase):
 
     def test_savingAddsEntry(self):
         """
-        L{KnownHostsFile.save()} will write out a new file with any entries
+        L{KnownHostsFile.save} will write out a new file with any entries
         that have been added.
         """
         path = self.pathWithContent(sampleHashedLine +
@@ -509,6 +509,36 @@ class KnownHostsDatabaseTests(TestCase):
         self.assertEqual(3, expectedContent.count("\n"))
         knownHostsFile.save()
         self.assertEqual(expectedContent, path.getContent())
+
+
+    def test_savingsPreservesExisting(self):
+        """
+        L{KnownHostsFile.save} will not overwrite existing entries in its save
+        path, even if they were only added after the L{KnownHostsFile} instance
+        was initialized.
+        """
+        # Start off with one host/key pair in the file
+        path = self.pathWithContent(sampleHashedLine)
+        knownHosts = KnownHostsFile.fromPath(path)
+
+        # After initializing the KnownHostsFile instance, add a second host/key
+        # pair to the file directly - without the instance's help or knowledge.
+        with path.open("a") as hostsFileObj:
+            hostsFileObj.write(otherSamplePlaintextLine)
+
+        # Add a third host/key pair using the KnownHostsFile instance
+        key = Key.fromString(thirdSampleKey)
+        knownHosts.addHostKey("brandnew.example.com", key)
+        knownHosts.save()
+
+        # Check that all three host/key pairs are present.
+        knownHosts = KnownHostsFile.fromPath(path)
+        self.assertEqual([True, True, True], [
+                knownHosts.hasHostKey(
+                    "www.twistedmatrix.com", Key.fromString(sampleKey)),
+                knownHosts.hasHostKey(
+                    "divmod.com", Key.fromString(otherSampleKey)),
+                knownHosts.hasHostKey("brandnew.example.com", key)])
 
 
     def test_hasPresentKey(self):
@@ -538,7 +568,7 @@ class KnownHostsDatabaseTests(TestCase):
         after the L{KnownHostsFile} instance is initialized.
         """
         key = Key.fromString(sampleKey)
-        entry = PlainEntry("brandnew.example.com", key.sshType(), key, "")
+        entry = PlainEntry(["brandnew.example.com"], key.sshType(), key, "")
         hostsFile = self.loadSampleHostsFile()
         with hostsFile._savePath.open("a") as hostsFileObj:
             hostsFileObj.write(entry.toString() + "\n")
