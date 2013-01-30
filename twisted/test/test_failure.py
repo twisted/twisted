@@ -2,8 +2,9 @@
 # See LICENSE for details.
 
 """
-Test cases for failure module.
+Test cases for the L{twisted.python.failure} module.
 """
+
 from __future__ import division, absolute_import
 
 import re
@@ -12,16 +13,17 @@ import traceback
 import pdb
 
 from twisted.python.compat import NativeStringIO, _PY3
+from twisted.python import failure
 from twisted.internet import defer
 
 from twisted.trial.unittest import SynchronousTestCase
 
-from twisted.python import failure
 
 try:
     from twisted.test import raiser
 except ImportError:
     raiser = None
+
 
 
 def getDivisionFailure(*args, **kwargs):
@@ -39,9 +41,14 @@ def getDivisionFailure(*args, **kwargs):
 
 
 class FailureTestCase(SynchronousTestCase):
+    """
+    Tests for L{failure.Failure}.
+    """
 
-    def testFailAndTrap(self):
-        """Trapping a failure."""
+    def test_failAndTrap(self):
+        """
+        Trapping a L{Failure}.
+        """
         try:
             raise NotImplementedError('test')
         except:
@@ -52,7 +59,9 @@ class FailureTestCase(SynchronousTestCase):
 
 
     def test_notTrapped(self):
-        """Making sure trap doesn't trap what it shouldn't."""
+        """
+        Making sure L{trap} doesn't trap what it shouldn't.
+        """
         exception = ValueError()
         try:
             raise exception
@@ -77,94 +86,177 @@ class FailureTestCase(SynchronousTestCase):
 
     def assertStartsWith(self, s, prefix):
         """
-        Assert that s starts with a particular prefix.
+        Assert that L{s} starts with a particular L{prefix}.
         """
         self.assertTrue(s.startswith(prefix),
                         '%r is not the start of %r' % (prefix, s))
 
 
-    def test_printingSmokeTest(self):
+    def assertEndsWith(self, s, suffix):
         """
-        None of the print* methods fail when called.
+        Assert that L{s} end with a particular L{suffix}.
         """
+        self.assertTrue(s.endswith(suffix),
+                        '%r is not the end of %r' % (suffix, s))
+
+
+    def assertCorrectTraceback(self, tb, prefix, suffix):
+        """
+        Assert that L{tb} contains a particular L{prefix} and L{suffix}.
+        """
+        self.assertStartsWith(tb, prefix)
+        self.assertIn("\n--- <exception caught here> ---\n", tb)
+        self.assertEndsWith(tb, suffix)
+
+
+    def assertDetailedTraceback(self, captureVars=False, cleanFailure=False):
+        """
+        Assert that L{printDetailedTraceback} produces a detailed traceback.
+
+        @param captureVars: Enables L{Failure.captureVars}.
+        @type captureVars: L{bool}
+        @param cleanFailure:
+        @type cleanFailure: L{bool}
+        """
+        if captureVars:
+            exampleLocalVar = 'xyz'
+
+        f = getDivisionFailure(captureVars=captureVars)
+        out = NativeStringIO()
+        if cleanFailure:
+            f.cleanFailure()
+        f.printDetailedTraceback(out)
+
+        tb = out.getvalue()
+        start = "*--- Failure #%s ---\n" % f.count
+        if cleanFailure:
+            start = "*--- Failure #%s (pickled) ---\n" % f.count
+
+        self.assertCorrectTraceback(tb, start,
+            "\nexceptions.ZeroDivisionError: division by zero\n*--- End of "
+            "Failure #%s ---\n" % f.count)
+
+        # Variables are printed on lines with 2 leading spaces.
+        linesWithVars = [line for line in tb.splitlines()
+                             if line.startswith('  ')]
+
+        if captureVars:
+            self.assertNotEqual(None, re.search('exampleLocalVar.*xyz', tb))
+            self.assertNotEqual([], linesWithVars)
+        else:
+            self.assertEqual([], linesWithVars)
+            self.assertIn('Capture of Locals and Globals disabled', tb)
+
+
+    def assertBriefTraceback(self, captureVars=False):
+        """
+        Assert that L{printBriefTraceback} produces a brief traceback.
+
+        @param captureVars: Enables L{Failure.captureVars}.
+        @type captureVars: L{bool}
+        """
+        if captureVars:
+            exampleLocalVar = 'abcde'
+
         f = getDivisionFailure()
         out = NativeStringIO()
-        f.printDetailedTraceback(out)
-        self.assertStartsWith(out.getvalue(), '*--- Failure')
-        out = NativeStringIO()
         f.printBriefTraceback(out)
-        self.assertStartsWith(out.getvalue(), 'Traceback')
+        tb = out.getvalue()
+
+        self.assertCorrectTraceback(tb,
+            "Traceback: <type 'exceptions.ZeroDivisionError'>: division by "
+            "zero\n",
+            ":%s:getDivisionFailure\n" % f.tb.tb_lineno)
+
+        if captureVars:
+            self.assertEqual(None, re.search('exampleLocalVar.*abcde', tb))
+
+
+    def assertDefaultTraceback(self, captureVars=False, cleanFailure=False):
+        """
+        Assert that L{printTraceback} produces traceback.
+
+        @param captureVars: Enables L{Failure.captureVars}.
+        @type captureVars: L{bool}
+        """
+        if captureVars:
+            exampleLocalVar = 'xyzzy'
+
+        f = getDivisionFailure(captureVars=captureVars)
+        if cleanFailure:
+            f.cleanFailure()
         out = NativeStringIO()
         f.printTraceback(out)
-        self.assertStartsWith(out.getvalue(), 'Traceback')
+        tb = out.getvalue()
+
+        self.assertCorrectTraceback(tb,
+            "Traceback (most recent call last):\n  File ",
+            "line %s, in getDivisionFailure\n    1/0\n"
+            "exceptions.ZeroDivisionError: division by zero\n" % f.tb.tb_lineno
+        )
+        if captureVars:
+            self.assertEqual(None, re.search('exampleLocalVar.*xyzzy', tb))
 
 
-    def test_printingCapturedVarsSmokeTest(self):
+    def test_printDetailedTraceback(self):
         """
-        None of the print* methods fail when called on a L{Failure} constructed
-        with C{captureVars=True}.
-
-        Local variables on the stack can be seen in the detailed traceback.
+        L{printDetailedTraceback} returns a detailed traceback including the
+        L{Failure}'s count.
         """
-        exampleLocalVar = 'xyzzy'
-        f = getDivisionFailure(captureVars=True)
-        out = NativeStringIO()
-        f.printDetailedTraceback(out)
-        self.assertStartsWith(out.getvalue(), '*--- Failure')
-        self.assertNotEqual(None, re.search('exampleLocalVar.*xyzzy',
-                                            out.getvalue()))
-        out = NativeStringIO()
-        f.printBriefTraceback(out)
-        self.assertStartsWith(out.getvalue(), 'Traceback')
-        out = NativeStringIO()
-        f.printTraceback(out)
-        self.assertStartsWith(out.getvalue(), 'Traceback')
+        self.assertDetailedTraceback()
 
 
-    def test_printingCapturedVarsCleanedSmokeTest(self):
+    def test_printBriefTraceback(self):
+        """
+        L{printBriefTraceback} returns a brief traceback.
+        """
+        self.assertBriefTraceback()
+
+
+    def test_printTraceback(self):
+        """
+        L{printTraceback} returns a traceback.
+        """
+        self.assertDefaultTraceback()
+
+
+    def test_printDetailedTracebackCapturedVars(self):
+        """
+        L{printDetailedTraceback} captures the locals and globals for its
+        stack frames and adds them to the traceback, when called on a
+        L{Failure} constructed with C{captureVars=True}.
+        """
+        self.assertDetailedTraceback(captureVars=True)
+
+
+    def test_printBriefTracebackCapturedVars(self):
+        """
+        L{printBriefTraceback} returns a brief traceback when called on a
+        L{Failure} constructed with C{captureVars=True}.
+
+        Local variables on the stack can not be seen in the resulting
+        traceback.
+        """
+        self.assertBriefTraceback(captureVars=True)
+
+
+    def test_printTracebackCapturedVars(self):
+        """
+        L{printTraceback} returns a traceback when called on a L{Failure}
+        constructed with C{captureVars=True}.
+
+        Local variables on the stack can not be seen in the resulting
+        traceback.
+        """
+        self.assertDefaultTraceback(captureVars=True)
+
+
+    def test_printDetailedTracebackCapturedVarsCleaned(self):
         """
         C{printDetailedTraceback} includes information about local variables on
         the stack after C{cleanFailure} has been called.
         """
-        exampleLocalVar = 'xyzzy'
-        f = getDivisionFailure(captureVars=True)
-        f.cleanFailure()
-        out = NativeStringIO()
-        f.printDetailedTraceback(out)
-        self.assertNotEqual(None, re.search('exampleLocalVar.*xyzzy',
-                                            out.getvalue()))
-
-
-    def test_printingNoVars(self):
-        """
-        Calling C{Failure()} with no arguments does not capture any locals or
-        globals, so L{printDetailedTraceback} cannot show them in its output.
-        """
-        out = NativeStringIO()
-        f = getDivisionFailure()
-        f.printDetailedTraceback(out)
-        # There should be no variables in the detailed output.  Variables are
-        # printed on lines with 2 leading spaces.
-        linesWithVars = [line for line in out.getvalue().splitlines()
-                         if line.startswith('  ')]
-        self.assertEqual([], linesWithVars)
-        self.assertIn(
-            'Capture of Locals and Globals disabled', out.getvalue())
-
-
-    def test_printingCaptureVars(self):
-        """
-        Calling C{Failure(captureVars=True)} captures the locals and globals
-        for its stack frames, so L{printDetailedTraceback} will show them in
-        its output.
-        """
-        out = NativeStringIO()
-        f = getDivisionFailure(captureVars=True)
-        f.printDetailedTraceback(out)
-        # Variables are printed on lines with 2 leading spaces.
-        linesWithVars = [line for line in out.getvalue().splitlines()
-                         if line.startswith('  ')]
-        self.assertNotEqual([], linesWithVars)
+        self.assertDetailedTraceback(captureVars=True, cleanFailure=True)
 
 
     def testExplictPass(self):
