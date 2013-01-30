@@ -11,8 +11,10 @@ import re
 import sys
 import traceback
 import pdb
+import linecache
 
 from twisted.python.compat import NativeStringIO, _PY3
+from twisted.python import _reflectpy3 as reflect
 from twisted.python import failure
 from twisted.internet import defer
 
@@ -105,7 +107,6 @@ class FailureTestCase(SynchronousTestCase):
         Assert that L{tb} contains a particular L{prefix} and L{suffix}.
         """
         self.assertStartsWith(tb, prefix)
-        self.assertIn("\n--- <exception caught here> ---\n", tb)
         self.assertEndsWith(tb, suffix)
 
 
@@ -115,7 +116,7 @@ class FailureTestCase(SynchronousTestCase):
 
         @param captureVars: Enables L{Failure.captureVars}.
         @type captureVars: L{bool}
-        @param cleanFailure:
+        @param cleanFailure: Enables L{Failure.cleanFailure}.
         @type cleanFailure: L{bool}
         """
         if captureVars:
@@ -128,13 +129,11 @@ class FailureTestCase(SynchronousTestCase):
         f.printDetailedTraceback(out)
 
         tb = out.getvalue()
-        start = "*--- Failure #%s ---\n" % f.count
-        if cleanFailure:
-            start = "*--- Failure #%s (pickled) ---\n" % f.count
-
-        self.assertCorrectTraceback(tb, start,
-            "\nexceptions.ZeroDivisionError: division by zero\n*--- End of "
-            "Failure #%s ---\n" % f.count)
+        start = "*--- Failure #%d%s---\n" % (f.count,
+            (f.pickled and ' (pickled) ') or ' ')
+        end = "%s: %s\n*--- End of Failure #%s ---\n" % (reflect.qual(f.type),
+            reflect.safe_str(f.value), f.count)
+        self.assertCorrectTraceback(tb, start, end)
 
         # Variables are printed on lines with 2 leading spaces.
         linesWithVars = [line for line in tb.splitlines()
@@ -145,7 +144,8 @@ class FailureTestCase(SynchronousTestCase):
             self.assertNotEqual([], linesWithVars)
         else:
             self.assertEqual([], linesWithVars)
-            self.assertIn('Capture of Locals and Globals disabled', tb)
+            self.assertIn(' [Capture of Locals and Globals disabled (use '
+                'captureVars=True)]\n', tb)
 
 
     def assertBriefTraceback(self, captureVars=False):
@@ -162,17 +162,19 @@ class FailureTestCase(SynchronousTestCase):
         out = NativeStringIO()
         f.printBriefTraceback(out)
         tb = out.getvalue()
+        stack = ''
+        for method, filename, lineno, localVars, globalVars in f.frames:
+            stack += '%s:%s:%s\n' % (filename, lineno, method)
 
         self.assertCorrectTraceback(tb,
-            "Traceback: <type 'exceptions.ZeroDivisionError'>: division by "
-            "zero\n",
-            ":%s:getDivisionFailure\n" % f.tb.tb_lineno)
+            "Traceback",
+            "%s\n%s" % (failure.EXCEPTION_CAUGHT_HERE, stack))
 
         if captureVars:
             self.assertEqual(None, re.search('exampleLocalVar.*abcde', tb))
 
 
-    def assertDefaultTraceback(self, captureVars=False, cleanFailure=False):
+    def assertDefaultTraceback(self, captureVars=False):
         """
         Assert that L{printTraceback} produces traceback.
 
@@ -183,17 +185,20 @@ class FailureTestCase(SynchronousTestCase):
             exampleLocalVar = 'xyzzy'
 
         f = getDivisionFailure(captureVars=captureVars)
-        if cleanFailure:
-            f.cleanFailure()
         out = NativeStringIO()
         f.printTraceback(out)
         tb = out.getvalue()
+        stack = ''
+        for method, filename, lineno, localVars, globalVars in f.frames:
+            stack += '  File "%s", line %s, in %s\n' % (filename, lineno,
+                                                        method)
+            stack += '    %s\n' % linecache.getline(filename, lineno).strip()
 
         self.assertCorrectTraceback(tb,
-            "Traceback (most recent call last):\n  File ",
-            "line %s, in getDivisionFailure\n    1/0\n"
-            "exceptions.ZeroDivisionError: division by zero\n" % f.tb.tb_lineno
-        )
+            "Traceback (most recent call last):",
+            "%s\n%s%s: %s\n" % (failure.EXCEPTION_CAUGHT_HERE, stack,
+            reflect.qual(f.type), reflect.safe_str(f.value)))
+
         if captureVars:
             self.assertEqual(None, re.search('exampleLocalVar.*xyzzy', tb))
 
@@ -257,6 +262,15 @@ class FailureTestCase(SynchronousTestCase):
         the stack after C{cleanFailure} has been called.
         """
         self.assertDetailedTraceback(captureVars=True, cleanFailure=True)
+
+
+    def test_invalidFormatFramesDetail(self):
+        """
+        L{failure.format_frames} raises a L{ValueError} if the supplied C{detail} level
+        is unknown.
+        """
+        self.assertRaises(ValueError, failure.format_frames, None, None,
+            detail='noisia')
 
 
     def testExplictPass(self):
