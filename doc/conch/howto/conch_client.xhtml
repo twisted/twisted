@@ -53,11 +53,11 @@ second version of this protocol.</p>
     </a>
 
     <p>
-      For completeness, this example includes a lot of code for loading private
-      keys, reading (and possibly updating) existing <em>known_hosts</em> files,
-      and parsing command line options.  Focus on the latter half of
-      the <code>main</code> function to see the code that is most directly
-      responsible for actually doing the necessary SSH connection
+      For completeness, this example includes a lot of code to support different
+      styles of authentication, reading (and possibly updating) existing
+      <em>known_hosts</em> files, and parsing command line options.  Focus on
+      the latter half of the <code>main</code> function to see the code that is
+      most directly responsible for actually doing the necessary SSH connection
       setup.  <code>SSHCommandEndpoint</code> accepts quite a few options, since
       there is a lot of flexibility in SSH and many possible different server
       configurations, but once the endpoint object itself is created, its use is
