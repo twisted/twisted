@@ -531,6 +531,21 @@ class KnownHostsDatabaseTests(TestCase):
                 "non-existent.example.com", Key.fromString(sampleKey)))
 
 
+    def test_hasLaterAddedKey(self):
+        """
+        L{KnownHostsFile.hasHostKey} returns C{True} when a key for the given
+        hostname is present in the file, even if it is only added to the file
+        after the L{KnownHostsFile} instance is initialized.
+        """
+        key = Key.fromString(sampleKey)
+        entry = PlainEntry("brandnew.example.com", key.sshType(), key, "")
+        hostsFile = self.loadSampleHostsFile()
+        with hostsFile._savePath.open("a") as hostsFileObj:
+            hostsFileObj.write(entry.toString() + "\n")
+        self.assertEqual(
+            True, hostsFile.hasHostKey("brandnew.example.com", key))
+
+
     def test_hasKeyMismatch(self):
         """
         L{KnownHostsFile.hasHostKey} raises L{HostKeyChanged} if the host key
