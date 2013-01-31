@@ -432,6 +432,45 @@ class KnownHostsDatabaseTests(TestCase):
         return KnownHostsFile.fromPath(self.pathWithContent(content))
 
 
+    def test_defaultInitializerIgnoresExisting(self):
+        """
+        The default initializer for L{KnownHostsFile} disregards any existing
+        contents in the save path.
+        """
+        hostsFile = KnownHostsFile(self.pathWithContent(sampleHashedLine))
+        self.assertEqual([], list(hostsFile.iterentries()))
+
+
+    def test_defaultInitializerClobbersExisting(self):
+        """
+        After using the default initializer for L{KnownHostsFile}, the first use
+        of L{KnownHostsFile.save} overwrites any existing contents in the save
+        path.
+        """
+        hostsFile = KnownHostsFile(self.pathWithContent(sampleHashedLine))
+        entry = hostsFile.addHostKey(
+            "www.example.com", Key.fromString(otherSampleKey))
+        hostsFile.save()
+        self.assertEqual([entry], list(hostsFile.iterentries()))
+
+
+    def test_saveResetsClobberState(self):
+        """
+        After L{KnownHostsFile.save} is used once with an instance initialized
+        by the default initializer, contents of the save path are respected and
+        preserved.
+        """
+        hostsFile = KnownHostsFile(self.pathWithContent(sampleHashedLine))
+        preSave = hostsFile.addHostKey(
+            "www.example.com", Key.fromString(otherSampleKey))
+        hostsFile.save()
+        postSave = hostsFile.addHostKey(
+            "another.example.com", Key.fromString(thirdSampleKey))
+        hostsFile.save()
+
+        self.assertEqual([preSave, postSave], list(hostsFile.iterentries()))
+
+
     def test_loadFromPath(self):
         """
         Loading a L{KnownHostsFile} from a path with six entries in it will

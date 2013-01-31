@@ -363,6 +363,7 @@ class KnownHostsFile(object):
         """
         self._added = []
         self._savePath = savePath
+        self._clobber = True
 
 
     def iterentries(self):
@@ -376,6 +377,9 @@ class KnownHostsFile(object):
         """
         for entry in self._added:
             yield entry
+
+        if self._clobber:
+            return
 
         try:
             fp = self._savePath.open()
@@ -503,11 +507,18 @@ class KnownHostsFile(object):
         p = self._savePath.parent()
         if not p.isdir():
             p.makedirs()
-        with self._savePath.open("a") as hostsFileObj:
+
+        if self._clobber:
+            mode = "w"
+        else:
+            mode = "a"
+
+        with self._savePath.open(mode) as hostsFileObj:
             if self._added:
                 hostsFileObj.write(
                     '\n'.join([entry.toString() for entry in self._added]) + "\n")
                 self._added = []
+        self._clobber = False
 
 
     def fromPath(cls, path):
@@ -523,7 +534,9 @@ class KnownHostsFile(object):
         @return: A L{KnownHostsFile} initialized with entries from C{path}.
         @rtype: L{KnownHostsFile}
         """
-        return cls(path)
+        knownHosts = cls(path)
+        knownHosts._clobber = False
+        return knownHosts
 
     fromPath = classmethod(fromPath)
 
