@@ -1681,6 +1681,253 @@ class DeferredTestCaseII(unittest.SynchronousTestCase):
         self.failUnless(self.callbackRan, "Callback was never run.")
 
 
+class DeferredDebugTestCase(unittest.TestCase):
+    """
+    Test that L{defer.DebugInfo} is properly filled in on various scenarios 
+    on the L{defer.Deferred}.
+    """
+
+    def test_dumpDebugInfoFilledFailure1(self):
+        """
+        Test for when L{defer.setDebugging} is True before creation of the 
+        L{defer.Deferred} and errback is called.
+        """
+        defer.setDebugging(True)
+        d = defer.Deferred()
+        self.failIfEqual(d._debugInfo.creator,None)
+        creator = d._debugInfo.creator
+        try:
+            raise ValueError("ZOMG")
+        except:
+            d.errback()
+        self.failIfEqual(d._debugInfo.creator, None)
+        self.assertEqual(creator, d._debugInfo.creator)
+        self.assertEqual(type(d._debugInfo.failResult.value),ValueError)
+        d.addErrback(lambda e: 0)
+        defer.setDebugging(False)
+
+
+    def test_dumpDebugInfoFilledFailure2(self):
+        """
+        Test for when L{defer.setDebugging} is True after creation of the 
+        L{defer.Deferred} and after errback is called.
+        """
+        defer.setDebugging(False)
+        d = defer.Deferred()
+        self.assertEqual(None, d._debugInfo)
+        defer.setDebugging(True)
+        try:
+            raise ValueError("ZOMG")
+        except:
+            d.errback()
+        self.failIf(hasattr(d._debugInfo, 'creator'))
+        self.assertEqual(type(d._debugInfo.failResult.value),ValueError)
+        d.addErrback(lambda e: 0)
+        defer.setDebugging(False)
+
+
+    def test_dumpDebugInfoFilledFailure3(self):
+        """
+        Test for when L{defer.setDebugging} is True after creation of the 
+        L{defer.Deferred} and before errback is called.
+        """
+        defer.setDebugging(False)
+        d = defer.Deferred()
+        self.assertEqual(None, d._debugInfo)
+        try:
+            raise ValueError("ZOMG")
+        except:
+            d.errback()
+        self.assertEqual(type(d._debugInfo.failResult.value),ValueError)
+        defer.setDebugging(True)
+        self.assertEqual(type(d._debugInfo.failResult.value),ValueError)
+        d.addErrback(lambda e: 0)
+        defer.setDebugging(False)
+
+
+    def test_dumpDebugInfoFilledSucceed1(self):
+        """
+        Test for when L{defer.setDebugging} is True before creation of the 
+        L{defer.Deferred} and callback is called.
+        """
+        defer.setDebugging(True)
+        d = defer.Deferred()
+        self.failIfEquals(d._debugInfo.creator,None)
+        creator = d._debugInfo.creator
+        try:
+            raise ValueError("ZOMG")
+        except:
+            d.callback(3)
+        self.failIfEquals(d._debugInfo.creator, None)
+        self.assertEquals(creator, d._debugInfo.creator)
+        self.assertEquals(d._debugInfo.failResult, None)
+        d.addErrback(lambda e: 0)
+        defer.setDebugging(False)
+
+
+    def test_dumpDebugInfoFilledSucceed2(self):
+        """
+        Test for when L{defer.setDebugging} is True after creation of the 
+        L{defer.Deferred} and before callback is called.
+        """
+        defer.setDebugging(False)
+        d = defer.Deferred()
+        self.assertEquals(None, d._debugInfo)
+        defer.setDebugging(True)
+        try:
+            raise ValueError("ZOMG")
+        except:
+            d.callback(3)
+        self.failIf(hasattr(d._debugInfo, 'creator'))
+        self.assertEquals(d._debugInfo.failResult, None)
+        d.addErrback(lambda e: 0)
+        defer.setDebugging(False)
+
+
+    def test_dumpDebugInfoFilledSucceed3(self):
+        """
+        Test for when L{defer.setDebugging} is True after creation of the 
+        L{defer.Deferred} and after callback is called.
+        """
+        defer.setDebugging(False)
+        d = defer.Deferred()
+        self.assertEquals(None, d._debugInfo)
+        try:
+            raise ValueError("ZOMG")
+        except:
+            d.callback(3)
+        self.assertEquals(d._debugInfo, None)
+        defer.setDebugging(True)
+        self.assertEquals(d._debugInfo, None)
+        d.addErrback(lambda e: 0)
+        defer.setDebugging(False)
+
+    def test_dumpDebugInfoFilledFailureNoErrback1(self):
+        """
+        Test for when L{defer.setDebugging} is True before creation of the 
+        L{defer.Deferred} and errback is called.
+        """
+        defer.setDebugging(True)
+        d = defer.Deferred()
+        self.failIfEqual(d._debugInfo.creator,None)
+        creator = d._debugInfo.creator
+        try:
+            raise ValueError("ZOMG")
+        except:
+            d.errback()
+        self.failIfEquals(d._debugInfo.creator, None)
+        self.assertEquals(creator, d._debugInfo.creator)
+        self.assertEquals(type(d._debugInfo.failResult.value),ValueError)
+        del d._debugInfo
+        gc.collect()
+        self.assertEquals(len(self.flushLoggedErrors(ValueError)), 1)
+        defer.setDebugging(False)
+
+
+    def test_dumpDebugInfoFilledFailureNoErrback2(self):
+        """
+        Test for when L{defer.setDebugging} is True after creation of the 
+        L{defer.Deferred} and after errback is called.
+        """
+        defer.setDebugging(False)
+        d = defer.Deferred()
+        self.assertEqual(None, d._debugInfo)
+        defer.setDebugging(True)
+        try:
+            raise ValueError("ZOMG")
+        except:
+            d.errback()
+        self.failIf(hasattr(d._debugInfo, 'creator'))
+        self.assertEqual(type(d._debugInfo.failResult.value),ValueError)
+        del d._debugInfo
+        gc.collect()
+        self.assertEquals(len(self.flushLoggedErrors(ValueError)), 1)
+        defer.setDebugging(False)
+
+
+    def test_dumpDebugInfoFilledFailureNoErrback3(self):
+        """
+        Test for when L{defer.setDebugging} is True after creation of the 
+        L{defer.Deferred} and before errback is called.
+        """
+        defer.setDebugging(False)
+        d = defer.Deferred()
+        self.assertEqual(None, d._debugInfo)
+        try:
+            raise ValueError("ZOMG")
+        except:
+            d.errback()
+        self.assertEqual(type(d._debugInfo.failResult.value),ValueError)
+        defer.setDebugging(True)
+        self.assertEqual(type(d._debugInfo.failResult.value),ValueError)
+        del d._debugInfo
+        gc.collect()
+        self.assertEquals(len(self.flushLoggedErrors(ValueError)), 1)
+        defer.setDebugging(False)
+
+
+    def test_dumpDebugInfoFilledSucceedNoErrback1(self):
+        """
+        Test for when L{defer.setDebugging} is True before creation of the 
+        L{defer.Deferred} and callback is called.
+        """
+        defer.setDebugging(True)
+        d = defer.Deferred()
+        self.failIfEquals(d._debugInfo.creator,None)
+        creator = d._debugInfo.creator
+        try:
+            raise ValueError("ZOMG")
+        except:
+            d.callback(3)
+        self.failIfEquals(d._debugInfo.creator, None)
+        self.assertEquals(creator, d._debugInfo.creator)
+        self.assertEquals(d._debugInfo.failResult, None)
+        del d._debugInfo
+        gc.collect()
+        self.assertEquals(len(self.flushLoggedErrors(ValueError)), 0)
+        defer.setDebugging(False)
+
+
+    def test_dumpDebugInfoFilledSucceedNoErrback2(self):
+        """
+        Test for when L{defer.setDebugging} is True after creation of the 
+        L{defer.Deferred} and before callback is called.
+        """
+        defer.setDebugging(False)
+        d = defer.Deferred()
+        self.assertEquals(None, d._debugInfo)
+        defer.setDebugging(True)
+        try:
+            raise ValueError("ZOMG")
+        except:
+            d.callback(3)
+        self.failIf(hasattr(d._debugInfo, 'creator'))
+        self.assertEquals(d._debugInfo.failResult, None)
+        del d._debugInfo
+        gc.collect()
+        self.assertEquals(len(self.flushLoggedErrors(ValueError)), 0)
+        defer.setDebugging(False)
+
+
+    def test_dumpDebugInfoFilledSucceedNoErrback3(self):
+        """
+        Test for when L{defer.setDebugging} is True after creation of the 
+        L{defer.Deferred} and after callback is called.
+        """
+        defer.setDebugging(False)
+        d = defer.Deferred()
+        self.assertEquals(None, d._debugInfo)
+        try:
+            raise ValueError("ZOMG")
+        except:
+            d.callback(3)
+        self.assertEquals(d._debugInfo, None)
+        defer.setDebugging(True)
+        self.assertEquals(d._debugInfo, None)
+        self.assertEquals(len(self.flushLoggedErrors(ValueError)), 0)
+        defer.setDebugging(False)
+
+
 
 class OtherPrimitives(unittest.SynchronousTestCase, ImmediateFailureMixin):
     def _incr(self, result):
