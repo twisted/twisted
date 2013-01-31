@@ -352,6 +352,13 @@ class KnownHostsFile(object):
     @ivar _added: A list of L{IKnownHostEntry} providers which have been added
         to this instance in memory but not yet saved.
 
+    @ivar _clobber: A flag indicating whether the current contents of the save
+        path will be disregarded and potentially overwritten or not.  If
+        C{True}, this will be done.  If C{False}, entries in the save path will
+        be read and new entries will be saved by appending rather than
+        overwriting.
+    @type _clobber: L{bool}
+
     @ivar _savePath: The L{FilePath} to save new entries to.
     """
 
