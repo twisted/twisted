@@ -359,14 +359,18 @@ class KnownHostsFile(object):
         overwriting.
     @type _clobber: L{bool}
 
-    @ivar _savePath: The L{FilePath} to save new entries to.
+    @ivar _savePath: See C{savePath} parameter of L{__init__}.
     """
 
     def __init__(self, savePath):
         """
         Create a new, empty KnownHostsFile.
 
-        You want to use L{KnownHostsFile.fromPath} to parse one of these.
+        Unless you want to erase the current contents of C{savePath}, you want
+        to use L{KnownHostsFile.fromPath} instead.
+
+        @param savePath: The L{FilePath} to which to save new entries.
+        @type savePath: L{FilePath}
         """
         self._added = []
         self._savePath = savePath
