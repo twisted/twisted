@@ -365,7 +365,15 @@ class KnownHostsFile(object):
         self._savePath = savePath
 
 
-    def __iter__(self):
+    def iterentries(self):
+        """
+        Iterate over the host entries in this file.
+
+        @return: An iterable the elements of which provide L{IKnownHostEntry}.
+            There is an element for each entry in the file as well as an element
+            for each added but not yet saved entry.
+        @rtype: iterable of L{IKnownHostEntry} providers
+        """
         try:
             fp = self._savePath.open()
         except IOError:
@@ -404,7 +412,7 @@ class KnownHostsFile(object):
         @raise HostKeyChanged: if the host key found for the given hostname
             does not match the given key.
         """
-        for lineidx, entry in enumerate(self):
+        for lineidx, entry in enumerate(self.iterentries()):
             if entry.matchesHost(hostname):
                 if entry.matchesKey(key):
                     return True

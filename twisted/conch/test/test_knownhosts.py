@@ -439,7 +439,7 @@ class KnownHostsDatabaseTests(TestCase):
         providers in it.
         """
         hostsFile = self.loadSampleHostsFile()
-        self.assertEqual(6, len(list(hostsFile)))
+        self.assertEqual(6, len(list(hostsFile.iterentries())))
 
 
     def test_verifyHashedEntry(self):
@@ -449,7 +449,7 @@ class KnownHostsDatabaseTests(TestCase):
         with one L{IKnownHostEntry} provider.
         """
         hostsFile = self.loadSampleHostsFile((sampleHashedLine))
-        entries = list(hostsFile)
+        entries = list(hostsFile.iterentries())
         self.assertIsInstance(entries[0], HashedEntry)
         self.assertEqual(True, entries[0].matchesHost("www.twistedmatrix.com"))
         self.assertEqual(1, len(entries))
@@ -462,7 +462,7 @@ class KnownHostsDatabaseTests(TestCase):
         with one L{IKnownHostEntry} provider.
         """
         hostsFile = self.loadSampleHostsFile((otherSamplePlaintextLine))
-        entries = list(hostsFile)
+        entries = list(hostsFile.iterentries())
         self.assertIsInstance(entries[0], PlainEntry)
         self.assertEqual(True, entries[0].matchesHost("divmod.com"))
         self.assertEqual(1, len(entries))
@@ -475,7 +475,7 @@ class KnownHostsDatabaseTests(TestCase):
         object.
         """
         hostsFile = self.loadSampleHostsFile(("\n"))
-        entries = list(hostsFile)
+        entries = list(hostsFile.iterentries())
         self.assertIsInstance(entries[0], UnparsedEntry)
         self.assertEqual(entries[0].toString(), "")
         self.assertEqual(1, len(entries))
@@ -488,7 +488,7 @@ class KnownHostsDatabaseTests(TestCase):
         object.
         """
         hostsFile = self.loadSampleHostsFile(("# That was a blank line.\n"))
-        entries = list(hostsFile)
+        entries = list(hostsFile.iterentries())
         self.assertIsInstance(entries[0], UnparsedEntry)
         self.assertEqual(entries[0].toString(), "# That was a blank line.")
 
@@ -499,7 +499,7 @@ class KnownHostsDatabaseTests(TestCase):
         line will be represented as an L{UnparsedEntry} instance.
         """
         hostsFile = self.loadSampleHostsFile(("This is just unparseable.\n"))
-        entries = list(hostsFile)
+        entries = list(hostsFile.iterentries())
         self.assertIsInstance(entries[0], UnparsedEntry)
         self.assertEqual(entries[0].toString(), "This is just unparseable.")
         self.assertEqual(1, len(entries))
@@ -512,7 +512,7 @@ class KnownHostsDatabaseTests(TestCase):
         L{UnparsedEntry} instance.
         """
         hostsFile = self.loadSampleHostsFile(("|1|This is unparseable.\n"))
-        entries = list(hostsFile)
+        entries = list(hostsFile.iterentries())
         self.assertIsInstance(entries[0], UnparsedEntry)
         self.assertEqual(entries[0].toString(), "|1|This is unparseable.")
         self.assertEqual(1, len(entries))
@@ -525,7 +525,7 @@ class KnownHostsDatabaseTests(TestCase):
         """
         pn = self.mktemp()
         knownHostsFile = KnownHostsFile.fromPath(FilePath(pn))
-        entries = list(knownHostsFile)
+        entries = list(knownHostsFile.iterentries())
         self.assertEqual([], entries)
         self.assertEqual(False, FilePath(pn).exists())
         knownHostsFile.save()
@@ -642,7 +642,7 @@ class KnownHostsDatabaseTests(TestCase):
         exception should have an C{offendingEntry} indicating the given entry.
         """
         hostsFile = self.loadSampleHostsFile()
-        entries = list(hostsFile)
+        entries = list(hostsFile.iterentries())
         exception = self.assertRaises(
             HostKeyChanged, hostsFile.hasHostKey,
             "www.twistedmatrix.com", Key.fromString(otherSampleKey))
