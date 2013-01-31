@@ -27,6 +27,7 @@ import time
 
 import email.utils
 
+from itertools import chain
 from io import StringIO
 
 from zope.interface import implementer
@@ -410,7 +411,7 @@ class Command:
 # Some definitions (SP, CTL, DQUOTE) are also from the ABNF RFC -
 # <https://tools.ietf.org/html/rfc2234>.
 _SP = ' '
-_CTL = ''.join(chr(ch) for ch in range(0x21) + range(0x80, 0x100))
+_CTL = ''.join(chr(ch) for ch in chain(range(0x21), range(0x80, 0x100)))
 
 # It is easier to define ATOM-CHAR in terms of what it does not match than in
 # terms of what it does match.
@@ -5534,7 +5535,7 @@ def decoder(s, errors=None):
     """
     r = []
     decode = []
-    s = memory_cast(s, 'c')
+    s = memory_cast(memoryview(s), 'c')
     for c in s:
         if c == b'&' and not decode:
             decode.append('&')

@@ -7,16 +7,14 @@
 Test case for twisted.mail.imap4
 """
 
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
+from io import StringIO, BytesIO
 
 import codecs
 import locale
 import os
 import types
 
+from itertools import chain
 from collections import OrderedDict
 
 from zope.interface import implementer
@@ -62,12 +60,12 @@ def sortNest(l):
 
 class IMAP4UTF7Tests(unittest.TestCase):
     tests = [
-        [u'Hello world', 'Hello world'],
-        [u'Hello & world', 'Hello &- world'],
-        [u'Hello\xffworld', 'Hello&AP8-world'],
-        [u'\xff\xfe\xfd\xfc', '&AP8A,gD9APw-'],
+        [u'Hello world', b'Hello world'],
+        [u'Hello & world', b'Hello &- world'],
+        [u'Hello\xffworld', b'Hello&AP8-world'],
+        [u'\xff\xfe\xfd\xfc', b'&AP8A,gD9APw-'],
         [u'~peter/mail/\u65e5\u672c\u8a9e/\u53f0\u5317',
-         '~peter/mail/&ZeVnLIqe-/&U,BTFw-'], # example from RFC 2060
+         b'~peter/mail/&ZeVnLIqe-/&U,BTFw-'], # example from RFC 2060
     ]
 
     def test_encodeWithErrors(self):
@@ -84,9 +82,9 @@ class IMAP4UTF7Tests(unittest.TestCase):
 
     def test_decodeWithErrors(self):
         """
-        Similar to L{test_encodeWithErrors}, but for C{str.decode}.
+        Similar to L{test_encodeWithErrors}, but for C{bytes.decode}.
         """
-        bytes = 'Hello world'
+        bytes = b'Hello world'
         self.assertEqual(
             bytes.decode('imap4-utf-7', 'strict'),
             bytes.decode('imap4-utf-7'))
@@ -97,7 +95,7 @@ class IMAP4UTF7Tests(unittest.TestCase):
         C{codecs.getreader('imap4-utf-7')} returns the I{imap4-utf-7} stream
         reader class.
         """
-        reader = codecs.getreader('imap4-utf-7')(StringIO('Hello&AP8-world'))
+        reader = codecs.getreader('imap4-utf-7')(BytesIO(b'Hello&AP8-world'))
         self.assertEqual(reader.read(), u'Hello\xffworld')
 
 
@@ -106,10 +104,10 @@ class IMAP4UTF7Tests(unittest.TestCase):
         C{codecs.getwriter('imap4-utf-7')} returns the I{imap4-utf-7} stream
         writer class.
         """
-        output = StringIO()
+        output = BytesIO()
         writer = codecs.getwriter('imap4-utf-7')(output)
         writer.write(u'Hello\xffworld')
-        self.assertEqual(output.getvalue(), 'Hello&AP8-world')
+        self.assertEqual(output.getvalue(), b'Hello&AP8-world')
 
 
     def test_encode(self):
@@ -136,11 +134,12 @@ class IMAP4UTF7Tests(unittest.TestCase):
         characters which are in ASCII using the corresponding ASCII byte.
         """
         # All printables represent themselves
-        for o in range(0x20, 0x26) + range(0x27, 0x7f):
-            self.assertEqual(chr(o), chr(o).encode('imap4-utf-7'))
-            self.assertEqual(chr(o), chr(o).decode('imap4-utf-7'))
-        self.assertEqual('&'.encode('imap4-utf-7'), '&-')
-        self.assertEqual('&-'.decode('imap4-utf-7'), '&')
+        for o in chain(range(0x20, 0x26), range(0x27, 0x7f)):
+            charbyte = chr(o).encode()
+            self.assertEqual(charbyte, chr(o).encode('imap4-utf-7'))
+            self.assertEqual(chr(o), charbyte.decode('imap4-utf-7'))
+        self.assertEqual(u'&'.encode('imap4-utf-7'), b'&-')
+        self.assertEqual(b'&-'.decode('imap4-utf-7'), u'&')
 
 
 
