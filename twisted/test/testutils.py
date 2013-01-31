@@ -12,7 +12,7 @@ don't-use-it-outside-Twisted-we-won't-maintain-compatibility rule!
     their own test cases.
 """
 
-from cStringIO import StringIO
+from io import BytesIO
 
 from xml.dom import minidom as dom
 
@@ -60,8 +60,8 @@ class IOPump:
 def returnConnected(server, client):
     """Take two Protocol instances and connect them.
     """
-    cio = StringIO()
-    sio = StringIO()
+    cio = BytesIO()
+    sio = BytesIO()
     client.makeConnection(FileWrapper(cio))
     server.makeConnection(FileWrapper(sio))
     pump = IOPump(client, server, cio, sio)
