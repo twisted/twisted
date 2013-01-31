@@ -20,7 +20,7 @@ from twisted.trial import unittest
 from twisted.names import dns
 
 from twisted.test import proto_helpers
-from twistes.test.testutils import ComparisonTestsMixin
+from twisted.test.testutils import ComparisonTestsMixin
 
 RECORD_TYPES = [
     dns.Record_NS, dns.Record_MD, dns.Record_MF, dns.Record_CNAME,
