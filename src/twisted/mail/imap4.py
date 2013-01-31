@@ -27,10 +27,7 @@ import time
 
 import email.utils
 
-try:
-    import cStringIO as StringIO
-except:
-    import StringIO
+from io import StringIO, BytesIO
 
 from zope.interface import implementer
 
@@ -40,6 +37,7 @@ from twisted.internet import defer
 from twisted.internet import error
 from twisted.internet.defer import maybeDeferred
 from twisted.python import log, text
+from twisted.python.compat import unicode, intTypes
 from twisted.internet import interfaces
 
 from twisted.cred import credentials
@@ -220,7 +218,7 @@ class MessageSet(object):
 
             oldl, oldh = l, h
 
-        self.ranges = filter(None, self.ranges)
+        self.ranges = [v for v in self.ranges if v]
 
 
     def __contains__(self, value):
@@ -323,7 +321,7 @@ class LiteralFile:
         if size > self._memoryFileLimit:
             self.data = tempfile.TemporaryFile()
         else:
-            self.data = StringIO.StringIO()
+            self.data = BytesIO()
 
     def write(self, data):
         self.size -= len(data)
@@ -491,7 +489,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         self._queuedAsync = []
 
     def capabilities(self):
-        cap = {'AUTH': self.challengers.keys()}
+        cap = {'AUTH': list(self.challengers.keys())}
         if self.ctx and self.canStartTLS:
             if not self.startedTLS and interfaces.ISSLTransport(self.transport, None) is None:
                 cap['LOGINDISABLED'] = None
@@ -880,7 +878,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def listCapabilities(self):
         caps = ['IMAP4rev1']
-        for c, v in self.capabilities().iteritems():
+        for c, v in self.capabilities().items():
             if v is None:
                 caps.append(c)
             elif len(v):
@@ -1269,9 +1267,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     select_STATUS = auth_STATUS
 
     def __cbStatus(self, status, tag, box):
-        line = ' '.join(['%s %s' % x for x in status.iteritems()])
-        self.sendUntaggedResponse('STATUS %s (%s)' % (box, line))
-        self.sendPositiveResponse(tag, 'STATUS complete')
+        line = ' '.join(['%s %s' % x for x in status.items()])
+        self.sendUntaggedResponse(('STATUS %s (%s)' % (box, line)).encode("imap4-utf-7"))
+        self.sendPositiveResponse(tag, b'STATUS complete')
 
     def __ebStatus(self, failure, tag, box):
         self.sendBadResponse(tag, 'STATUS %s failed: %s' % (box, str(failure.value)))
@@ -1402,9 +1400,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def __cbSearch(self, result, tag, mbox, uid):
         if uid:
             result = map(mbox.getUID, result)
-        ids = ' '.join([str(i) for i in result])
-        self.sendUntaggedResponse('SEARCH ' + ids)
-        self.sendPositiveResponse(tag, 'SEARCH completed')
+        ids = ' '.join([unicode(i) for i in result]).encode()
+        self.sendUntaggedResponse(b'SEARCH ' + ids)
+        self.sendPositiveResponse(tag, b'SEARCH completed')
 
 
     def __cbManualSearch(self, result, tag, mbox, query, uid,
@@ -1821,7 +1819,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if self.blocked is None:
             self.blocked = []
         try:
-            id, msg = results.next()
+            id, msg = next(results)
         except StopIteration:
             # The idle timeout was suspended while we delivered results,
             # restore it now.
@@ -2029,7 +2027,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def __cbStore(self, result, tag, mbox, uid, silent):
         if result and not silent:
-              for (k, v) in result.iteritems():
+              for (k, v) in result.items():
                   if uid:
                       uidstr = ' UID %d' % mbox.getUID(k)
                   else:
@@ -2131,7 +2129,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self.sendUntaggedResponse(message='[READ-ONLY]', async=True)
 
     def flagsChanged(self, newFlags):
-        for (mId, flags) in newFlags.iteritems():
+        for (mId, flags) in newFlags.items():
             msg = '%d FETCH (FLAGS (%s))' % (mId, ' '.join(flags))
             self.sendUntaggedResponse(msg, async=True)
 
@@ -2253,7 +2251,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         if self.tags is not None:
             tags = self.tags
             self.tags = None
-            for cmd in tags.itervalues():
+            for cmd in tags.values():
                 if cmd is not None and cmd.defer is not None:
                     cmd.defer.errback(reason)
 
@@ -2333,7 +2331,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         if octets > self._memoryFileLimit:
             return tempfile.TemporaryFile()
         else:
-            return StringIO.StringIO()
+            return BytesIO()
 
     def makeTag(self):
         tag = '%0.4X' % self.tagID
@@ -2611,13 +2609,13 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         if self.startedTLS:
             return defer.fail(NoSupportedAuthentication(
-                auths, self.authenticators.keys()))
+                auths, list(self.authenticators.keys())))
         else:
             def ebStartTLS(err):
                 err.trap(IMAP4Exception)
                 # We couldn't negotiate TLS for some reason
                 return defer.fail(NoSupportedAuthentication(
-                    auths, self.authenticators.keys()))
+                    auths, list(self.authenticators.keys())))
 
             d = self.startTLS()
             d.addErrback(ebStartTLS)
@@ -2645,7 +2643,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
                               self.__cbContinueAuth, scheme,
                               secret)
                 return self.sendCommand(cmd)
-        raise NoSupportedAuthentication(auths, self.authenticators.keys())
+        raise NoSupportedAuthentication(auths, list(self.authenticators.keys()))
 
 
     def login(self, username, password):
@@ -3546,12 +3544,12 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         responseParts = iter(fetchResponseList)
         while True:
             try:
-                key = responseParts.next()
+                key = next(responseParts)
             except StopIteration:
                 break
 
             try:
-                value = responseParts.next()
+                value = next(responseParts)
             except StopIteration:
                 raise IllegalServerResponse(
                     "Not enough arguments", fetchResponseList)
@@ -3606,7 +3604,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
                 else:
                     key = (key, (value[0], tuple(value[1])))
                 try:
-                    value = responseParts.next()
+                    value = next(responseParts)
                 except StopIteration:
                     raise IllegalServerResponse(
                         "Not enough arguments", fetchResponseList)
@@ -3621,7 +3619,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
                     else:
                         key = key + (value,)
                         try:
-                            value = responseParts.next()
+                            value = next(responseParts)
                         except StopIteration:
                             raise IllegalServerResponse(
                                 "Not enough arguments", fetchResponseList)
@@ -3642,7 +3640,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
                     info[id][0].extend(parts[2])
 
         results = {}
-        for (messageId, values) in info.iteritems():
+        for (messageId, values) in info.items():
             mapping = self._parseFetchPairs(values[0])
             results.setdefault(messageId, {}).update(mapping)
 
@@ -3761,9 +3759,10 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             del terms['rfc822header']
             terms['rfc822.header'] = True
 
-        cmd = '%s (%s)' % (messages, ' '.join([s.upper() for s in terms.keys()]))
+        parts = [s.upper() for s in terms.keys()]
+        cmd = '%s (%s)' % (messages, ' '.join(parts))
         d = self.sendCommand(Command(fetch, cmd, wantResponse=('FETCH',)))
-        d.addCallback(self._cbFetch, map(str.upper, terms.keys()), True)
+        d.addCallback(self._cbFetch, parts, True)
         return d
 
     def setFlags(self, messages, flags, silent=1, uid=0):
@@ -4080,7 +4079,7 @@ def Query(sorted=0, **kwarg):
     @return: The formatted query string
     """
     cmd = []
-    keys = kwarg.keys()
+    keys = list(kwarg.keys())
     if sorted:
         keys.sort()
     for k in keys:
@@ -4221,7 +4220,7 @@ def collapseStrings(results):
         0: lambda e: splitQuoted(''.join(e)),
         1: lambda e: [''.join([i[0] for i in e])]
     }
-    for (i, c, isList) in zip(range(len(results)), results, listsList):
+    for i, (c, isList) in enumerate(zip(results, listsList)):
         if isList:
             if begun is not None:
                 copy.extend(splitOn(results[begun:i], pred, tran))
@@ -4349,7 +4348,7 @@ def collapseNestedLists(items):
     for i in items:
         if i is None:
             pieces.extend([' ', 'NIL'])
-        elif isinstance(i, (DontQuoteMe, int, long)):
+        elif isinstance(i, (DontQuoteMe, intTypes)):
             pieces.extend([' ', str(i)])
         elif isinstance(i, (str, unicode)):
             if _needsLiteral(i):
@@ -4394,7 +4393,7 @@ class MemoryAccount(object):
         return 1
 
     def create(self, pathspec):
-        paths = filter(None, pathspec.split('/'))
+        paths = [p for p in pathspec.split('/') if p]
         for accum in range(1, len(paths)):
             try:
                 self.addMailbox('/'.join(paths[:accum]))
@@ -4639,7 +4638,7 @@ class _MessageStructure(object):
             the corresponding parameter value.
         """
         if self.attrs:
-            unquoted = [(k, unquote(v)) for (k, v) in self.attrs.iteritems()]
+            unquoted = [(k, unquote(v)) for (k, v) in self.attrs.items()]
             return [y for x in sorted(unquoted) for y in x]
         return None
 
@@ -5009,7 +5008,7 @@ def iterateInReactor(i):
     d = defer.Deferred()
     def go(last):
         try:
-            r = i.next()
+            r = next(i)
         except StopIteration:
             d.callback(last)
         except:
@@ -5384,7 +5383,7 @@ class _FetchParser:
             raise Exception("Header list must end with )")
 
         headers = s[1:end].split()
-        self.pending_body.header.fields = map(str.upper, headers)
+        self.pending_body.header.fields = [h.upper() for h in headers]
         return end + 1
 
     def state_maybe_partial(self, s):
