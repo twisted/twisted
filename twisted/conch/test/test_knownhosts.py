@@ -442,6 +442,16 @@ class KnownHostsDatabaseTests(TestCase):
         self.assertEqual(6, len(list(hostsFile.iterentries())))
 
 
+    def test_iterentriesUnsaved(self):
+        """
+        If the save path for a L{KnownHostsFile} does not exist,
+        L{KnownHostsFile.iterentries} still returns added but unsaved entries.
+        """
+        hostsFile = KnownHostsFile(FilePath(self.mktemp()))
+        hostsFile.addHostKey("www.example.com", Key.fromString(sampleKey))
+        self.assertEqual(1, len(list(hostsFile.iterentries())))
+
+
     def test_verifyHashedEntry(self):
         """
         Loading a L{KnownHostsFile} from a path containing a single valid

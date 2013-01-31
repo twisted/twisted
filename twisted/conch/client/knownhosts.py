@@ -374,10 +374,14 @@ class KnownHostsFile(object):
             for each added but not yet saved entry.
         @rtype: iterable of L{IKnownHostEntry} providers
         """
+        for entry in self._added:
+            yield entry
+
         try:
             fp = self._savePath.open()
         except IOError:
             return
+
         try:
             for line in fp:
                 try:
@@ -390,9 +394,6 @@ class KnownHostsFile(object):
                 yield entry
         finally:
             fp.close()
-
-        for entry in self._added:
-            yield entry
 
 
     def hasHostKey(self, hostname, key):
