@@ -456,6 +456,7 @@ class HostnameEndpoint(object):
         self._port = port
         self._timeout = timeout
         self._bindAddress = bindAddress
+        self.pending = []
 
 
     def _canceller(self, d):
@@ -463,13 +464,16 @@ class HostnameEndpoint(object):
         The outgoing connection attempt was cancelled.  Fail that L{Deferred}
         with an L{error.ConnectingCancelledError}.
 
-        @param d: The L{Deferred <defer.Deferred>} that was cancelled;
+        @param d: The L{Deferred <defer.Deferred>} that was cancelled
         @type d: L{Deferred <defer.Deferred>}
 
         @return: C{None}
         """
         d.errback(error.ConnectingCancelledError(
             HostnameAddress(self._host, self._port)))
+
+        for p in self.pending[:]:   # Cancel all pending connections
+            p.cancel()
 
 
     def connect(self, protocolFactory):
@@ -519,7 +523,7 @@ class HostnameEndpoint(object):
             # Return a Deferred that fires with the endpoint that wins,
             # or `failures` if none succeed.
 
-            pending = []
+      #      pending = []
             endpointsListExhausted = []
             successful = []
             failures = []
@@ -530,7 +534,7 @@ class HostnameEndpoint(object):
 
             def usedEndpointRemoval(connResult, connAttempt):
                 print "Inside usedEndpointRemoval"
-                pending.remove(connAttempt)
+                self.pending.remove(connAttempt)
                 return connResult
 
             def afterConnectionAttempt(connResult):
@@ -538,14 +542,14 @@ class HostnameEndpoint(object):
                 if lc.running:
                     lc.stop()
                 successful.append(True)
-                for p in pending[:]:
+                for p in self.pending[:]:
                     p.cancel()
                 winner.callback(connResult)
                 return None
 
             def almostDone():
 #                print "Inside almostDone", failures[0]
-                if endpointsListExhausted and not pending and not successful:
+                if endpointsListExhausted and not self.pending and not successful:
                     print "inside almostDone's if"
                     winner.errback(failures.pop())
 
@@ -569,7 +573,7 @@ class HostnameEndpoint(object):
                     almostDone()
                 else:
                     dconn = endpoint.connect(wf)
-                    pending.append(dconn)
+                    self.pending.append(dconn)
                     dconn.addBoth(usedEndpointRemoval, dconn)
                     dconn.addCallback(afterConnectionAttempt)
                     dconn.addErrback(connectFailed)
