@@ -580,6 +580,22 @@ class KnownHostsDatabaseTests(TestCase):
         self.assertEqual(expectedContent, path.getContent())
 
 
+    def test_savingAvoidsDuplication(self):
+        """
+        L{KnownHostsFile.save} only writes new entries to the save path, not
+        entries which were added and already written by a previous call to
+        C{save}.
+        """
+        path = FilePath(self.mktemp())
+        knownHosts = KnownHostsFile(path)
+        entry = knownHosts.addHostKey("some.example.com", Key.fromString(sampleKey))
+        knownHosts.save()
+        knownHosts.save()
+
+        knownHosts = KnownHostsFile.fromPath(path)
+        self.assertEqual([entry], list(knownHosts.iterentries()))
+
+
     def test_savingsPreservesExisting(self):
         """
         L{KnownHostsFile.save} will not overwrite existing entries in its save

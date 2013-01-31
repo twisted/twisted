@@ -504,9 +504,10 @@ class KnownHostsFile(object):
         if not p.isdir():
             p.makedirs()
         with self._savePath.open("a") as hostsFileObj:
-            hostsFileObj.write(
-                '\n'.join([entry.toString() for entry in self._added]) + "\n")
-
+            if self._added:
+                hostsFileObj.write(
+                    '\n'.join([entry.toString() for entry in self._added]) + "\n")
+                self._added = []
 
 
     def fromPath(cls, path):
