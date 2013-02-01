@@ -672,6 +672,30 @@ class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
             self.assertEqual('', download)
         return d.addCallback(checkDownload)
 
+
+    def test_LISTUnicode(self):
+        """
+        LIST will receive Unicode filenames for IFTPShell.list, and will
+        encode them using UTF-8.
+        """
+        # Login
+        d = self._anonymousLogin()
+
+        def pachedList(me, segments, attributes):
+            return defer.succeed([(
+                u'my resum\xe9', (0, 1, 0777, 0, 0, 'user', 'group'))])
+        self.patch(ftp.FTPAnonymousShell, 'list', pachedList)
+
+        self._download('LIST something', chainDeferred=d)
+
+        def checkDownload(download):
+            self.assertEqual(
+                'drwxrwxrwx   0 user      group                   '
+                '0 Jan 01  1970 my resum\xc3\xa9\r\n',
+                download)
+        return d.addCallback(checkDownload)
+
+
     def testManyLargeDownloads(self):
         # Login
         d = self._anonymousLogin()
@@ -756,6 +780,25 @@ class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
         return d.addCallback(checkDownload)
 
 
+    def test_NLSTUnicode(self):
+        """
+        NLST will receive Unicode filenames for IFTPShell.list, and will
+        encode them using UTF-8.
+        """
+        # Login
+        d = self._anonymousLogin()
+
+        def pachedList(me, segments):
+            return defer.succeed([(u'my resum\xe9', None)])
+        self.patch(ftp.FTPAnonymousShell, 'list', pachedList)
+
+        self._download('NLST something', chainDeferred=d)
+
+        def checkDownload(download):
+            self.assertEqual('my resum\xc3\xa9\r\n', download)
+        return d.addCallback(checkDownload)
+
+
     def test_NLSTOnPathToFile(self):
         """
         NLST on an existent file returns only the path to that file.
@@ -767,6 +810,7 @@ class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
         self.dirPath.child('test.txt').touch()
 
         self._download('NLST test.txt', chainDeferred=d)
+
         def checkDownload(download):
             filenames = download[:-2].split('\r\n')
             self.assertEqual(['test.txt'], filenames)
@@ -980,6 +1024,66 @@ class DTPFactoryTests(unittest.TestCase):
         # Give the Deferred to trial so it can make sure it did what we
         # expected.
         return d
+
+
+class DTPTests(unittest.TestCase):
+    """
+    Tests for L{ftp.DTP}.
+
+    The DTP instances in these tests are generated using
+    DTPFactory.buildProtocol()
+    """
+
+    def setUp(self):
+        """
+        Create a fake protocol interpreter, a L{ftp.DTPFactory} instance,
+        and dummy transport to help with tests.
+        """
+        self.reactor = task.Clock()
+
+        class ProtocolInterpreter(object):
+            dtpInstance = None
+
+        self.protocolInterpreter = ProtocolInterpreter()
+        self.factory = ftp.DTPFactory(
+            self.protocolInterpreter, None, self.reactor)
+        self.transport = proto_helpers.StringTransportWithDisconnection()
+
+
+    def test_sendLine_newline(self):
+        """
+        Whend sending a line, the newline delimiter will be autoamtically
+        added.
+        """
+        dtp_instance = self.factory.buildProtocol(None)
+        dtp_instance.makeConnection(self.transport)
+        line_content = 'line content'
+
+        dtp_instance.sendLine(line_content)
+
+        data_sent = self.transport.value()
+        self.assertEqual(line_content + '\r\n', data_sent)
+
+
+    def test_sendLine_unicode(self):
+        """
+        When sending an unicode line, it will be converted to str and
+        a warning is raised.
+        """
+        dtp_instance = self.factory.buildProtocol(None)
+        dtp_instance.makeConnection(self.transport)
+        line_content = u'my resum\xe9'
+
+        self.assertWarns(
+            UserWarning,
+            "Unicode date received. "
+                "Encoded to UTF-8. Please send only alreay encoded data.",
+            ftp.__file__,
+            dtp_instance.sendLine, line_content)
+
+        data_sent = self.transport.value()
+        self.assertTrue(isinstance(data_sent, str))
+        self.assertEqual(line_content.encode('utf-8') + '\r\n', data_sent)
 
 
 

@@ -417,6 +417,21 @@ class DTP(object, protocol.Protocol):
             self._onConnLost.callback(None)
 
     def sendLine(self, line):
+        """
+        Send a line to data channel.
+
+        @type  line: I{str} or I{unicdoe}
+        @param line: The line to be sent.
+
+        If line is I{unicode}, it will be converted to I{str}.
+        """
+        if isinstance(line, unicode):
+            warnings.warn(
+                "Unicode date received. Encoded to UTF-8. "
+                "Please send only alreay encoded data.",
+                category=UserWarning)
+            line = line.encode('utf-8')
+
         self.transport.write(line + '\r\n')
 
 
@@ -951,7 +966,9 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         def gotListing(results):
             self.reply(DATA_CNX_ALREADY_OPEN_START_XFR)
             for (name, attrs) in results:
-                self.dtpInstance.sendListResponse(name, attrs)
+                # IFTPShell returns Unicode file names.
+                name_encoded = name.encode('utf-8')
+                self.dtpInstance.sendListResponse(name_encoded, attrs)
             self.dtpInstance.transport.loseConnection()
             return (TXFR_COMPLETE_OK,)
 
@@ -1014,7 +1031,9 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             self.reply(DATA_CNX_ALREADY_OPEN_START_XFR)
             for (name, ignored) in results:
                 if not glob or (glob and fnmatch.fnmatch(name, glob)):
-                    self.dtpInstance.sendLine(name)
+                    # IFTPShell returns Unicode file names.
+                    name_encoded = name.encode('utf-8')
+                    self.dtpInstance.sendLine(name_encoded)
             self.dtpInstance.transport.loseConnection()
             return (TXFR_COMPLETE_OK,)
 
