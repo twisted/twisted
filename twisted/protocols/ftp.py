@@ -25,6 +25,7 @@ from zope.interface import Interface, implements
 
 # Twisted Imports
 from twisted import copyright
+from twisted.python.deprecate import warnAboutFunction
 from twisted.internet import reactor, interfaces, protocol, error, defer
 from twisted.protocols import basic, policies
 
@@ -420,16 +421,14 @@ class DTP(object, protocol.Protocol):
         """
         Send a line to data channel.
 
-        @type  line: I{str} or I{unicdoe}
         @param line: The line to be sent.
-
-        If line is I{unicode}, it will be converted to I{str}.
+        @type line: L{bytes}
         """
         if isinstance(line, unicode):
             warnings.warn(
-                "Unicode date received. Encoded to UTF-8. "
-                "Please send only alreay encoded data.",
-                category=UserWarning)
+                "Passing unicode to DTP.sendLine is deprecated since "
+                "Twisted 13.0.  Pass only byte strings.",
+                category=DeprecationWarning, stacklevel=2)
             line = line.encode('utf-8')
 
         self.transport.write(line + '\r\n')
@@ -937,6 +936,29 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         return self.dtpFactory.deferred.addCallbacks(connected, connFailed)
 
 
+    def _checkListResult(self, name):
+        """
+        Inspect an element from the list returned by an L{IFTPShell.list}
+        implementation to make sure it is of the correct type and issue a
+        warning if not.
+
+        @param name: The name of a file, as returned by L{IFTPShell.list}.
+        @type name: L{bytes} or L{unicode}
+
+        @return: Either C{name} or the UTF-8 encoded form of it, if it is
+            L{unicode}.
+        @rtype: L{bytes}
+        """
+        if isinstance(name, unicode):
+            return name.encode('utf-8')
+        warnAboutFunction(
+            self.shell.list,
+            "Support for returning byte strings from "
+            "IFTPShell.list is deprecated since Twisted "
+            "13.0.  Return unicode strings only.")
+        return name
+
+
     def ftp_LIST(self, path=''):
         """ This command causes a list to be sent from the server to the
         passive DTP.  If the pathname specifies a directory or other
@@ -966,9 +988,8 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         def gotListing(results):
             self.reply(DATA_CNX_ALREADY_OPEN_START_XFR)
             for (name, attrs) in results:
-                # IFTPShell returns Unicode file names.
-                name_encoded = name.encode('utf-8')
-                self.dtpInstance.sendListResponse(name_encoded, attrs)
+                name = self._checkListResult(name)
+                self.dtpInstance.sendListResponse(name, attrs)
             self.dtpInstance.transport.loseConnection()
             return (TXFR_COMPLETE_OK,)
 
@@ -1031,9 +1052,8 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             self.reply(DATA_CNX_ALREADY_OPEN_START_XFR)
             for (name, ignored) in results:
                 if not glob or (glob and fnmatch.fnmatch(name, glob)):
-                    # IFTPShell returns Unicode file names.
-                    name_encoded = name.encode('utf-8')
-                    self.dtpInstance.sendLine(name_encoded)
+                    name = self._checkListResult(name)
+                    self.dtpInstance.sendLine(name)
             self.dtpInstance.transport.loseConnection()
             return (TXFR_COMPLETE_OK,)
 

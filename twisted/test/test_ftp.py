@@ -673,27 +673,99 @@ class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
         return d.addCallback(checkDownload)
 
 
-    def test_LISTUnicode(self):
+    def _listTestHelper(self, command, listOutput, expectedOutput):
         """
-        LIST will receive Unicode filenames for IFTPShell.list, and will
-        encode them using UTF-8.
+        Exercise handling by the implementation of I{LIST} or I{NLST} of certain
+        return values and types from an L{IFTPShell.list} implementation.
+
+        This will issue C{command} and assert that if the L{IFTPShell.list}
+        implementation includes C{listOutput} as one of the file entries then
+        the result given to the client is matches C{expectedOutput}.
+
+        @param command: Either C{b"LIST"} or C{b"NLST"}
+        @type command: L{bytes}
+
+        @param listOutput: A value suitable to be used as an element of the list
+            returned by L{IFTPShell.list}.  Vary the values and types of the
+            contents to exercise different code paths in the server's handling
+            of this result.
+
+        @param expectedOutput: A line of output to expect as a result of
+            C{listOutput} being transformed into a response to the command
+            issued.
+        @type expectedOutput: L{bytes}
+
+        @return: A L{Deferred} which fires when the test is done, either with an
+            L{Failure} if the test failed or with a function object if it
+            succeeds.  The function object is the function which implements
+            L{IFTPShell.list} (and is useful to make assertions about what
+            warnings might have been emitted).
+        @rtype: L{Deferred}
         """
         # Login
         d = self._anonymousLogin()
 
-        def pachedList(me, segments, attributes):
-            return defer.succeed([(
-                u'my resum\xe9', (0, 1, 0777, 0, 0, 'user', 'group'))])
-        self.patch(ftp.FTPAnonymousShell, 'list', pachedList)
+        def patchedList(segments, keys=()):
+            return defer.succeed([listOutput])
 
-        self._download('LIST something', chainDeferred=d)
+        def loggedIn(result):
+            self.serverProtocol.shell.list = patchedList
+            return result
+        d.addCallback(loggedIn)
+
+        self._download('%s something' % (command,), chainDeferred=d)
 
         def checkDownload(download):
-            self.assertEqual(
-                'drwxrwxrwx   0 user      group                   '
-                '0 Jan 01  1970 my resum\xc3\xa9\r\n',
-                download)
+            self.assertEqual(expectedOutput, download)
+            return patchedList
+
         return d.addCallback(checkDownload)
+
+
+    def test_LISTUnicode(self):
+        """
+        Unicode filenames returned from L{IFTPShell.list} are encoded using
+        UTF-8 before being sent with the response.
+        """
+        return self._listTestHelper(
+            "LIST",
+            (u'my resum\xe9', (0, 1, 0777, 0, 0, 'user', 'group')),
+            'drwxrwxrwx   0 user      group                   '
+            '0 Jan 01  1970 my resum\xc3\xa9\r\n')
+
+
+    def _deprecatedListTestHelper(self, command, expectedOutput):
+        """
+        Like L{_listTestHelper}, but with an additional assertion that a warning
+        is emitted telling application developers to return C{unicode} from
+        L{IFTPShell.list} implementations, not L{bytes}.
+        """
+        d = self._listTestHelper(
+            command,
+            ('my resum\xc3\xa9', (0, 1, 0777, 0, 0, 'user', 'group')),
+            expectedOutput)
+
+        def checkDeprecation(offendingFunction):
+            warnings = self.flushWarnings([offendingFunction])
+            self.assertEqual(warnings[0]['category'], DeprecationWarning)
+            self.assertEqual(
+                warnings[0]['message'],
+                "Support for returning byte strings from IFTPShell.list "
+                "is deprecated since Twisted 13.0.  Return unicode strings "
+                "only.")
+            self.assertEqual(1, len(warnings))
+        return d.addCallback(checkDeprecation)
+
+
+    def test_LISTNonASCIIBytes(self):
+        """
+        Support for returning byte strings from L{IFTPShell.list} is deprecated
+        and doing so results in a warning, but in the filename being sent as-is.
+        """
+        return self._deprecatedListTestHelper(
+            "LIST",
+            'drwxrwxrwx   0 user      group                   '
+            '0 Jan 01  1970 my resum\xc3\xa9\r\n')
 
 
     def testManyLargeDownloads(self):
@@ -785,18 +857,20 @@ class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
         NLST will receive Unicode filenames for IFTPShell.list, and will
         encode them using UTF-8.
         """
-        # Login
-        d = self._anonymousLogin()
+        return self._listTestHelper(
+            "NLST",
+            (u'my resum\xe9', (0, 1, 0777, 0, 0, 'user', 'group')),
+            'my resum\xc3\xa9\r\n')
 
-        def pachedList(me, segments):
-            return defer.succeed([(u'my resum\xe9', None)])
-        self.patch(ftp.FTPAnonymousShell, 'list', pachedList)
 
-        self._download('NLST something', chainDeferred=d)
-
-        def checkDownload(download):
-            self.assertEqual('my resum\xc3\xa9\r\n', download)
-        return d.addCallback(checkDownload)
+    def test_NLSTNonASCIIBytes(self):
+        """
+        Support for returning byte strings from L{IFTPShell.list} is deprecated
+        and doing so results in a warning, but in the filename being sent as-is.
+        """
+        return self._deprecatedListTestHelper(
+            "NLST",
+            'my resum\xc3\xa9\r\n')
 
 
     def test_NLSTOnPathToFile(self):
@@ -1050,40 +1124,40 @@ class DTPTests(unittest.TestCase):
         self.transport = proto_helpers.StringTransportWithDisconnection()
 
 
-    def test_sendLine_newline(self):
+    def test_sendLineNewline(self):
         """
-        Whend sending a line, the newline delimiter will be autoamtically
-        added.
+        L{ftp.DTP.sendLine} writes the line passed to it plus a line delimiter
+        to its transport.
         """
-        dtp_instance = self.factory.buildProtocol(None)
-        dtp_instance.makeConnection(self.transport)
-        line_content = 'line content'
+        dtpInstance = self.factory.buildProtocol(None)
+        dtpInstance.makeConnection(self.transport)
+        lineContent = 'line content'
 
-        dtp_instance.sendLine(line_content)
+        dtpInstance.sendLine(lineContent)
 
-        data_sent = self.transport.value()
-        self.assertEqual(line_content + '\r\n', data_sent)
+        dataSent = self.transport.value()
+        self.assertEqual(lineContent + '\r\n', dataSent)
 
 
-    def test_sendLine_unicode(self):
+    def test_sendLineUnicode(self):
         """
-        When sending an unicode line, it will be converted to str and
-        a warning is raised.
+        L{ftp.DTP.sendLine} notices unicode lines, encodes them to strings using
+        UTF-8, and emits a warning to not send unicode strings.
         """
-        dtp_instance = self.factory.buildProtocol(None)
-        dtp_instance.makeConnection(self.transport)
-        line_content = u'my resum\xe9'
+        dtpInstance = self.factory.buildProtocol(None)
+        dtpInstance.makeConnection(self.transport)
+        lineContent = u'my resum\xe9'
 
         self.assertWarns(
-            UserWarning,
-            "Unicode date received. "
-                "Encoded to UTF-8. Please send only alreay encoded data.",
-            ftp.__file__,
-            dtp_instance.sendLine, line_content)
+            DeprecationWarning,
+            "Passing unicode to DTP.sendLine is deprecated since "
+            "Twisted 13.0.  Pass only byte strings.",
+            __file__,
+            lambda: dtpInstance.sendLine(lineContent))
 
-        data_sent = self.transport.value()
-        self.assertTrue(isinstance(data_sent, str))
-        self.assertEqual(line_content.encode('utf-8') + '\r\n', data_sent)
+        dataSent = self.transport.value()
+        self.assertIsInstance(dataSent, bytes)
+        self.assertEqual(lineContent.encode('utf-8') + b'\r\n', dataSent)
 
 
 
