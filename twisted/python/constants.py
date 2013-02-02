@@ -95,10 +95,10 @@ class _ConstantsContainerType(type):
             value = cls._constantFactory(enumerant, descriptor)
             descriptor._realize(cls, enumerant, value)
             enumerants[enumerant] = descriptor
-        # Replace the _enumerants descriptor with the result so future
-        # access will go directly to the values.  The _enumerantsInitialized
-        # flag is still necessary because NamedConstant.__get__ may also
-        # call this method.
+
+        # Save the dictionary which contains *only* constants (distinct from any
+        # other attributes the application may have given the container) where
+        # the class can use it later (eg for lookupByName).
         cls._enumerants = enumerants
 
         return cls
