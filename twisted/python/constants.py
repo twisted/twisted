@@ -59,7 +59,27 @@ class _Constant(object):
 
 
 class _ConstantsContainerType(type):
+    """
+    L{_ConstantsContainerType} is a metaclass for creating constants container classes.
+    """
     def __new__(self, name, bases, attributes):
+        """
+        Create a new constants container class.
+
+        If C{attributes} does not include a C{"_constantType"} key, the new
+        class will not be initialized as a constants container and it will
+        behave as a normal class.
+
+        @param name: The name of the container class.
+        @type name: L{str}
+
+        @param bases: A tuple of the base classes for the new container class.
+        @type bases: L{tuple} of L{_ConstantsContainerType} instances
+
+        @param attributes: The attributes of the new container class, including
+            any constants it is to contain.
+        @type attributes: L{dict}
+        """
         cls = super(_ConstantsContainerType, self).__new__(self, name, bases, attributes)
 
         if cls._constantType is None:
@@ -69,8 +89,8 @@ class _ConstantsContainerType(type):
         for (name, descriptor) in attributes.iteritems():
             if isinstance(descriptor, cls._constantType):
                 constants.append((descriptor._index, name, descriptor))
-        enumerants = {}
         constants.sort()
+        enumerants = {}
         for (index, enumerant, descriptor) in constants:
             value = cls._constantFactory(enumerant, descriptor)
             descriptor._realize(cls, enumerant, value)
@@ -112,6 +132,7 @@ class _ConstantsContainer(object):
         raise TypeError("%s may not be instantiated." % (cls.__name__,))
 
 
+    @classmethod
     def _constantFactory(cls, name, descriptor):
         """
         Construct the value for a new constant to add to this container.
@@ -122,9 +143,9 @@ class _ConstantsContainer(object):
             so return a meaningless dummy value.
         """
         return _unspecified
-    _constantFactory = classmethod(_constantFactory)
 
 
+    @classmethod
     def lookupByName(cls, name):
         """
         Retrieve a constant by its name or raise a C{ValueError} if there is no
@@ -141,9 +162,9 @@ class _ConstantsContainer(object):
         if name in cls._enumerants:
             return getattr(cls, name)
         raise ValueError(name)
-    lookupByName = classmethod(lookupByName)
 
 
+    @classmethod
     def iterconstants(cls):
         """
         Iteration over a L{Names} subclass results in all of the constants it
@@ -155,7 +176,6 @@ class _ConstantsContainer(object):
         constants = cls._enumerants.values()
         constants.sort(key=lambda descriptor: descriptor._index)
         return iter(constants)
-    iterconstants = classmethod(iterconstants)
 
 
 
@@ -201,6 +221,7 @@ class Values(_ConstantsContainer):
     """
     _constantType = ValueConstant
 
+    @classmethod
     def lookupByValue(cls, value):
         """
         Retrieve a constant by its value or raise a C{ValueError} if there is no
@@ -217,7 +238,6 @@ class Values(_ConstantsContainer):
             if constant.value == value:
                 return constant
         raise ValueError(value)
-    lookupByValue = classmethod(lookupByValue)
 
 
 
@@ -334,6 +354,7 @@ class Flags(Values):
 
     _value = 1
 
+    @classmethod
     def _constantFactory(cls, name, descriptor):
         """
         For L{FlagConstant} instances with no explicitly defined value, assign
@@ -346,4 +367,3 @@ class Flags(Values):
             value = descriptor.value
             cls._value = value << 1
         return value
-    _constantFactory = classmethod(_constantFactory)
