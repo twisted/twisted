@@ -33,14 +33,6 @@ class _Constant(object):
         self._index = _constantOrder()
 
 
-    def __get__(self, oself, cls):
-        """
-        Ensure this constant has been initialized before returning it.
-        """
-        cls._initializeEnumerants()
-        return self
-
-
     def __repr__(self):
         """
         Return text identifying both which constant this is and which collection
@@ -66,19 +58,30 @@ class _Constant(object):
 
 
 
-class _EnumerantsInitializer(object):
-    """
-    L{_EnumerantsInitializer} is a descriptor used to initialize a cache of
-    objects representing named constants for a particular L{_ConstantsContainer}
-    subclass.
-    """
-    def __get__(self, oself, cls):
-        """
-        Trigger the initialization of the enumerants cache on C{cls} and then
-        return it.
-        """
-        cls._initializeEnumerants()
-        return cls._enumerants
+class _ConstantsContainerType(type):
+    def __new__(self, name, bases, attributes):
+        cls = super(_ConstantsContainerType, self).__new__(self, name, bases, attributes)
+
+        if cls._constantType is None:
+            return cls
+
+        constants = []
+        for (name, descriptor) in attributes.iteritems():
+            if isinstance(descriptor, cls._constantType):
+                constants.append((descriptor._index, name, descriptor))
+        enumerants = {}
+        constants.sort()
+        for (index, enumerant, descriptor) in constants:
+            value = cls._constantFactory(enumerant, descriptor)
+            descriptor._realize(cls, enumerant, value)
+            enumerants[enumerant] = descriptor
+        # Replace the _enumerants descriptor with the result so future
+        # access will go directly to the values.  The _enumerantsInitialized
+        # flag is still necessary because NamedConstant.__get__ may also
+        # call this method.
+        cls._enumerants = enumerants
+
+        return cls
 
 
 
@@ -91,18 +94,13 @@ class _ConstantsContainer(object):
     @cvar _constantType: Specified by a L{_ConstantsContainer} subclass to
         specify the type of constants allowed by that subclass.
 
-    @cvar _enumerantsInitialized: A C{bool} tracking whether C{_enumerants} has
-        been initialized yet or not.
-
     @cvar _enumerants: A C{dict} mapping the names of constants (eg
         L{NamedConstant} instances) found in the class definition to those
-        instances.  This is initialized via the L{_EnumerantsInitializer}
-        descriptor the first time it is accessed.
+        instances.
     """
-    _constantType = None
+    __metaclass__ = _ConstantsContainerType
 
-    _enumerantsInitialized = False
-    _enumerants = _EnumerantsInitializer()
+    _constantType = None
 
     def __new__(cls):
         """
@@ -112,32 +110,6 @@ class _ConstantsContainer(object):
         The class object itself is used directly.
         """
         raise TypeError("%s may not be instantiated." % (cls.__name__,))
-
-
-    def _initializeEnumerants(cls):
-        """
-        Find all of the L{NamedConstant} instances in the definition of C{cls},
-        initialize them with constant values, and build a mapping from their
-        names to them to attach to C{cls}.
-        """
-        if not cls._enumerantsInitialized:
-            constants = []
-            for (name, descriptor) in cls.__dict__.iteritems():
-                if isinstance(descriptor, cls._constantType):
-                    constants.append((descriptor._index, name, descriptor))
-            enumerants = {}
-            constants.sort()
-            for (index, enumerant, descriptor) in constants:
-                value = cls._constantFactory(enumerant, descriptor)
-                descriptor._realize(cls, enumerant, value)
-                enumerants[enumerant] = descriptor
-            # Replace the _enumerants descriptor with the result so future
-            # access will go directly to the values.  The _enumerantsInitialized
-            # flag is still necessary because NamedConstant.__get__ may also
-            # call this method.
-            cls._enumerants = enumerants
-            cls._enumerantsInitialized = True
-    _initializeEnumerants = classmethod(_initializeEnumerants)
 
 
     def _constantFactory(cls, name, descriptor):
