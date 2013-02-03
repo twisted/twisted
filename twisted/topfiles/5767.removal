@@ -1,2 +1,2 @@
 twisted.python.zshcomp deprecated since 11.1.0 has now been removed.
-Completion is now handled by twisted.python.usage.
+Shell tab-completion is now handled by twisted.python.usage.
