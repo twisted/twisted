@@ -972,6 +972,17 @@ class TCP6EndpointNameResolutionTestCase(ClientEndpointTestCaseMixin,
 
 #_________________________________________________________________________________________________
 # Begin testing HostnameEndpoint
+class RaisingMemoryReactorWithClock(RaisingMemoryReactor, Clock):
+    """
+    An extention of L{RaisingMemoryReactor} with L{task.Clock}.
+    """
+    def __init__(self, listenException=None, connectException=None):
+        Clock.__init__(self)
+        self._listenException = listenException
+        self._connectException = connectException
+        print "initialized reactor"
+
+
 
 class HostnameEndpointsOneIPv4TestCase(ClientEndpointTestCaseMixin,
                                 unittest.TestCase):
@@ -983,7 +994,6 @@ class HostnameEndpointsOneIPv4TestCase(ClientEndpointTestCaseMixin,
         address = HostnameAddress("example.com", 80)
         endpoint = endpoints.HostnameEndpoint(reactor, "example.com",
                                            address.port, **connectArgs)
-
 
         def testNameResolution(host):
             self.assertEqual("example.com", host)
@@ -1073,7 +1083,37 @@ class HostnameEndpointsOneIPv4TestCase(ClientEndpointTestCaseMixin,
 
 
     def test_endpointConnectFailure(self):
-        pass
+        """
+        If an endpoint tries to connect to a non-listening port it gets
+        a C{ConnectError} failure.
+        """
+        expectedError = error.ConnectError(string="Connection Failed")
+
+        mreactor = RaisingMemoryReactorWithClock(connectException=expectedError)
+        print "!!", mreactor, mreactor._connectException
+
+        clientFactory = object()
+
+        ep, ignoredArgs, ignoredDest = self.createClientEndpoint(
+            mreactor, clientFactory)
+        print "!!", ep._reactor
+        d = ep.connect(clientFactory)  # something's not right here
+
+        receivedExceptions = []
+
+        def checkFailure(f):
+            print "inside checkfailure", f
+            receivedExceptions.append(f.value)
+
+        d.addErrback(checkFailure)
+
+        self.assertEqual(receivedExceptions, [expectedError])
+
+
+
+
+#    def test_endpointConnectFailure(self):
+#        pass
         # FIXME: Issues with RaisingMemoryReactor
 
 
