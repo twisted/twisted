@@ -2028,3 +2028,41 @@ if not _PY3:
             self.clock.advance(1)
 
             return d
+
+
+
+class TestHelper(unittest.TestCase):
+    """
+    Tests for L{defer.helper}.
+    """
+
+    def test_wrappedName(self):
+        """
+        The function returned by L{defer.helper} has the same name as the
+        function passed to it.
+        """
+        def test():
+            pass
+        self.assertEqual(defer.helper(test).__name__, 'test')
+
+    def test_wrapperCallsFunction(self):
+        """
+        Calling the function returned by L{defer.helper} calls the wrapped
+        function.
+        """
+        result = []
+        wrapped = defer.helper(result.append)
+        wrapped(5)
+        wrapped(6)
+        self.assertEqual(result, [5, 6])
+
+    def test_wrapperReturnsFirstArgument(self):
+        """
+        The return value of the function returned by L{defer.helper} is the
+        first argument passed to it.
+        """
+        def test(a, b, c):
+            return (b,c)
+        wrapped = defer.helper(test)
+        self.assertEqual(wrapped(1, 2, 3), 1)
+        self.assertEqual(wrapped(1, b=2, c=3), 1)
