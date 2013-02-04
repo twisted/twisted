@@ -152,10 +152,10 @@ def timeout(deferred):
 
 
 
-def passthru(*args, **kwargs):
-    if len(args) > 1:
-        args[1](args[0], *args[2:], **kwargs)
-    return args[0]
+def passthru(_result, f=None, *args, **kwargs):
+    if f:
+        f(_result, *args, **kwargs)
+    return _result
 
 
 
