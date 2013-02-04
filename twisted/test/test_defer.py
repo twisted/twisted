@@ -2031,38 +2031,52 @@ if not _PY3:
 
 
 
-class TestHelper(unittest.TestCase):
+class TestPassthru(unittest.TestCase):
     """
-    Tests for L{defer.helper}.
+    Tests for L{defer.passthru}.
     """
 
-    def test_wrappedName(self):
+    def test_withoutFunction(self):
         """
-        The function returned by L{defer.helper} has the same name as the
-        function passed to it.
+        When L{defer.passthru} is called with a single argument returns it.
         """
-        def test():
-            pass
-        self.assertEqual(defer.helper(test).__name__, 'test')
+        marker = object()
+        self.assertEqual(defer.passthru(marker), marker)
 
-    def test_wrapperCallsFunction(self):
+    def test_callsFunction(self):
         """
-        Calling the function returned by L{defer.helper} calls the wrapped
-        function.
+        When L{defer.passthru} is called with two arguments calls the seconad
+        argument with the first argument.
         """
         result = []
-        wrapped = defer.helper(result.append)
-        wrapped(5)
-        wrapped(6)
+        defer.passthru(5, result.append)
+        defer.passthru(6, result.append)
         self.assertEqual(result, [5, 6])
 
-    def test_wrapperReturnsFirstArgument(self):
+    def test_returnsFirstArgument(self):
         """
-        The return value of the function returned by L{defer.helper} is the
-        first argument passed to it.
+        When L{defer.passthru} is called it returns its first argument.
         """
         def test(a, b, c):
             return (b,c)
-        wrapped = defer.helper(test)
-        self.assertEqual(wrapped(1, 2, 3), 1)
-        self.assertEqual(wrapped(1, b=2, c=3), 1)
+        self.assertEqual(defer.passthru(1, test, 2, 3), 1)
+        self.assertEqual(defer.passthru(1, test, b=2, c=3), 1)
+
+    def test_passesExtraArguments(self):
+        """
+        When L{defer.passthru} is called with more than two arguments,
+        the additional arguments are passed to the called function.
+        """
+        result = []
+        def test(arg, *args, **kwargs):
+            result.append((arg,args,kwargs))
+        defer.passthru(5, test, 6, 7, a='a', b='b')
+        self.assertEqual(result, [(5, (6, 7), {'a': 'a', 'b': 'b'})])
+
+    def test_functionRaisesException(self):
+        """
+        When L{defer.passthru} is passed a function that raises an exception,
+        it propagates that exception.
+        """
+        self.assertRaises(ZeroDivisionError, defer.passthru,
+                1, lambda r: 1/0)

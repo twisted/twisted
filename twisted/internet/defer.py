@@ -152,31 +152,10 @@ def timeout(deferred):
 
 
 
-def passthru(arg):
-    return arg
-
-
-
-def helper(f):
-    """
-    Wraps a function to ignore the return value and instead return the first argument.
-
-    The function is meant to be used when adding a function to a L{Deferred}
-    callback chain, when the result of the function should be ignored, and
-    instead the result of the deferred propagated.
-
-    @type f: L{callable}
-    @param f: function to wrap
-
-    @rtype: L{callable}
-    @return: A function which calls L{f} with the passed arguments, and then returns thr
-    first argument.
-    """
-    @wraps(f)
-    def cb(*args, **kwargs):
-        f(*args, **kwargs)
-        return args[0]
-    return cb
+def passthru(*args, **kwargs):
+    if len(args) > 1:
+        args[1](args[0], *args[2:], **kwargs)
+    return args[0]
 
 
 
