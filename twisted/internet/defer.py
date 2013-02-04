@@ -152,9 +152,20 @@ def timeout(deferred):
 
 
 
-def passthru(_result, f=None, *args, **kwargs):
-    if f:
-        f(_result, *args, **kwargs)
+def passthru(_result, _f=None, *args, **kwargs):
+    """
+    Returns first argument, possibly after calling a function.
+
+    If C{_f} is provided, then if is called like C{_f(_result, *args, **kwargs)}.
+
+    @param _result: Value to return
+
+    @param _f: Function to call.
+
+    @return: the first argument
+    """
+    if _f:
+        _f(_result, *args, **kwargs)
     return _result
 
 
