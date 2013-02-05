@@ -286,21 +286,36 @@ class TestCooperator(unittest.TestCase):
         self.assertEqual(calls[0].cancelled, False)
         self.assertEqual(coop._delayedCall, calls[0])
 
-    def test_running(self):
+
+    def test_runningWhenNotStarted(self):
         """
         L{Cooperator.running} reports C{False} if the L{Cooperator}
-        has not been started or has been stopped.
+        has not been started.
         """
         c = task.Cooperator(started=False)
         self.assertEqual(c.running(), False)
 
+
+    def test_runningWhenRunning(self):
+        """
+        L{Cooperator.running} reports C{True} when the L{Cooperator}
+        is running.
+        """
+        c = task.Cooperator(started=False)
         c.start()
+        self.addCleanup(c.stop)
         self.assertEqual(c.running(), True)
 
+
+    def test_runningWhenStopped(self):
+        """
+        L{Cooperator.running} reports C{False} after the L{Cooperator}
+        has been stopped.
+        """
+        c = task.Cooperator(started=False)
+        c.start()
         c.stop()
         self.assertEqual(c.running(), False)
-
-
 
 
 
