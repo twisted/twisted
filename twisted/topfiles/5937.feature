@@ -1,1 +1,1 @@
-Cooperator.running can be used to determin the current cooperator status.
+Cooperator.running can be used to determine the current cooperator status.

@@ -288,8 +288,7 @@ class TestCooperator(unittest.TestCase):
 
     def test_running(self):
         """
-        Test if L{Cooperator.running} reports the correct status.
-        L{Cooperator.running} should report C{False} if the L{Cooperator}
+        L{Cooperator.running} reports C{False} if the L{Cooperator}
         has not been started or has been stopped.
         """
         c = task.Cooperator(started=False)
