@@ -1092,11 +1092,8 @@ class FileSenderTestCase(unittest.TestCase):
         sender.resumeProducing()
         sender.stopProducing()
 
-        def check(result):
-            self.assertEqual(b"t", result)
-            self.assertEqual(b"Test content", recipient.getvalue())
-
-        return d.addCallback(check)
+        self.assertEqual(b"t", self.successResultOf(d))
+        self.assertEqual(b"Test content", recipient.getvalue())
 
 
     def test_transferMultipleChunks(self):
@@ -1115,11 +1112,8 @@ class FileSenderTestCase(unittest.TestCase):
             sender.resumeProducing()
         sender.stopProducing()
 
-        def check(result):
-            self.assertEqual(b"t", result)
-            self.assertEqual(b"Test content", recipient.getvalue())
-
-        return d.addCallback(check)
+        self.assertEqual(b"t", self.successResultOf(d))
+        self.assertEqual(b"Test content", recipient.getvalue())
 
 
     def test_transferWithTransform(self):
@@ -1141,11 +1135,8 @@ class FileSenderTestCase(unittest.TestCase):
         sender.resumeProducing()
         sender.stopProducing()
 
-        def check(result):
-            self.assertEqual(b"T", result)
-            self.assertEqual(b"tEST CONTENT", recipient.getvalue())
-
-        return d.addCallback(check)
+        self.assertEqual(b"T", self.successResultOf(d))
+        self.assertEqual(b"tEST CONTENT", recipient.getvalue())
 
 
     def test_abortedTransfer(self):
@@ -1163,9 +1154,7 @@ class FileSenderTestCase(unittest.TestCase):
         # Abort the transfer right away
         sender.stopProducing()
 
-        def check(exception):
-            self.assertIsInstance(exception, Exception)
-            self.assertEqual("Consumer asked us to stop producing",
-                             str(exception))
-
-        return self.assertFailure(d, Exception).addCallback(check)
+        failure = self.failureResultOf(d)
+        failure.trap(Exception)
+        self.assertEqual("Consumer asked us to stop producing",
+                         str(failure.value))
