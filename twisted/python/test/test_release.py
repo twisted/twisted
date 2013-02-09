@@ -633,7 +633,8 @@ class BuilderTestsMixin(object):
 <?xml version="1.0"?><html>
     <head><title>Yo:Hi! Title: %(count)d</title></head>
     <body>
-    <div class="content">Hi! %(count)d<div class="API"><a href="%(foobarLink)s" title="foobar">foobar</a></div></div>
+    <div class="content">Hi! %(count)d<div class="API">\
+<a href="%(foobarLink)s" title="foobar">foobar</a></div></div>
     <a href="%(prefix)sindex.html">Index</a>
     <span class="version">Version: %(version)s</span>
     </body>
@@ -693,9 +694,9 @@ manhole \- Connect to a Twisted Manhole service
 .SH SYNOPSIS
 .B manhole
 .SH DESCRIPTION
-manhole is a GTK interface to Twisted Manhole services. You can execute python
-code as if at an interactive Python console inside a running Twisted process
-with this."""
+manhole is a GTK interface to Twisted Manhole services. You can execute
+python code as if at an interactive Python console inside a running Twisted
+process with this."""
 
 
     def getArbitraryManLoreOutput(self):
@@ -724,9 +725,9 @@ with this."""
 
 <h2>DESCRIPTION</h2>
 
-<p>manhole is a GTK interface to Twisted Manhole services. You can execute python
-code as if at an interactive Python console inside a running Twisted process
-with this.</p>
+<p>manhole is a GTK interface to Twisted Manhole services. You can execute
+python code as if at an interactive Python console inside a running Twisted
+process with this.</p>
 
 </body>
 </html>
@@ -763,9 +764,9 @@ with this.</p>
 
 <h2>DESCRIPTION<a name="auto2"/></h2>
 
-<p>manhole is a GTK interface to Twisted Manhole services. You can execute python
-code as if at an interactive Python console inside a running Twisted process
-with this.</p>
+<p>manhole is a GTK interface to Twisted Manhole services. You can execute
+python code as if at an interactive Python console inside a running Twisted
+process with this.</p>
 
 </div>
     <a href="%(prefix)sindex.html">Index</a>
@@ -987,7 +988,8 @@ class APIBuilderTestCase(TestCase):
         outputPath.makedirs()
 
         builder = APIBuilder()
-        builder.build(projectName, projectURL, sourceURL, inputPath, outputPath)
+        builder.build(projectName, projectURL, sourceURL, inputPath,
+                      outputPath)
 
         indexPath = outputPath.child("index.html")
         self.assertTrue(
@@ -1173,9 +1175,9 @@ class ManBuilderTestCase(TestCase, BuilderTestsMixin):
 
 <h2>DESCRIPTION<a name="auto2"/></h2>
 
-<p>manhole is a GTK interface to Twisted Manhole services. You can execute python
-code as if at an interactive Python console inside a running Twisted process
-with this.</p>
+<p>manhole is a GTK interface to Twisted Manhole services. You can execute
+python code as if at an interactive Python console inside a running Twisted
+process with this.</p>
 
 </div>
     <a href="index.html">Index</a>
@@ -1710,7 +1712,8 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
             "Features\n"
             "--------\n"
             " - Great stuff. (#3)\n"
-            " - Very long line which goes on and on and on, seemingly without end\n"
+            " - Very long line which goes on and on and on, seemingly "
+            "without end\n"
             "   until suddenly without warning it does end. (#17)\n"
             "\n")
 
@@ -1730,7 +1733,8 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
             output.getvalue(),
             "Other\n"
             "-----\n"
-            " - #2, #5, #8, #11, #14, #17, #20, #23, #26, #29, #32, #35, #38, #41,\n"
+            " - #2, #5, #8, #11, #14, #17, #20, #23, #26, #29, #32, #35, "
+            "#38, #41,\n"
             "   #44, #47\n"
             "\n")
 
@@ -1754,10 +1758,13 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
             '--------\n'
             ' - We now support the web. (#5)\n'
             ' - The widget is more robust. (#12)\n'
-            ' - A very long feature which takes many words to describe with any\n'
-            '   accuracy was introduced so that the line wrapping behavior of the\n'
+            ' - A very long feature which takes many words to describe '
+            'with any\n'
+            '   accuracy was introduced so that the line wrapping behavior '
+            'of the\n'
             '   news generating code could be verified. (#15)\n'
-            ' - A simpler feature described on multiple lines was added. (#16)\n'
+            ' - A simpler feature described on multiple lines was '
+            'added. (#16)\n'
             '\n'
             'Bugfixes\n'
             '--------\n'
@@ -1827,10 +1834,13 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
             '--------\n'
             ' - We now support the web. (#5)\n'
             ' - The widget is more robust. (#12)\n'
-            ' - A very long feature which takes many words to describe with any\n'
-            '   accuracy was introduced so that the line wrapping behavior of the\n'
+            ' - A very long feature which takes many words to describe '
+            'with any\n'
+            '   accuracy was introduced so that the line wrapping behavior '
+            'of the\n'
             '   news generating code could be verified. (#15)\n'
-            ' - A simpler feature described on multiple lines was added. (#16)\n'
+            ' - A simpler feature described on multiple lines was '
+            'added. (#16)\n'
             '\n'
             'Bugfixes\n'
             '--------\n'
