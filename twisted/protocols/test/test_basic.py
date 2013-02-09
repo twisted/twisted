@@ -9,11 +9,16 @@ from __future__ import division, absolute_import
 
 import sys
 import struct
+from io import BytesIO
+
+from zope.interface.verify import verifyObject
 
 from twisted.python.compat import _PY3, iterbytes
+from twisted.python.filepath import FilePath
 from twisted.trial import unittest
 from twisted.protocols import basic
 from twisted.internet import protocol, error, task
+from twisted.internet.interfaces import IProducer
 from twisted.test import proto_helpers
 
 _PY3NEWSTYLESKIP = "All classes are new style on Python 3."
@@ -1059,3 +1064,108 @@ class ProducerTestCase(unittest.SynchronousTestCase):
         self.assertEqual(t.data, [b'hello, world', b'hello', b'world', b'goodbye'])
         self.failIf(t.paused)
         self.failIf(p.paused)
+
+
+
+class FileSenderTestCase(unittest.TestCase):
+
+    def test_interface(self):
+        """
+        L{basic.FileSender} implements the L{IPullProducer} interface.
+        """
+        sender = basic.FileSender()
+        self.assertTrue(verifyObject(IProducer, sender))
+
+
+    def test_transfer(self):
+        """
+        L{basic.FileSender} sends the content of the given file using a
+        C{IConsumer} interface via C{beginFileTransfer}. It returns a
+        L{Deferred} which fires with the last byte sent.
+        """
+        source = BytesIO(b"Test content")
+        recipient = BytesIO()
+        consumer = protocol.FileWrapper(recipient)
+        sender = basic.FileSender()
+        d = sender.beginFileTransfer(source, consumer)
+        # Call resume once to finish the producing
+        sender.resumeProducing()
+        sender.stopProducing()
+
+        def check(result):
+            self.assertEqual(b"t", result)
+            self.assertEqual(b"Test content", recipient.getvalue())
+
+        return d.addCallback(check)
+
+
+    def test_transferMultipleChunks(self):
+        """
+        L{basic.FileSender} reads at most C{CHUNK_SIZE} every time it resumes
+        producing.
+        """
+        source = BytesIO(b"Test content")
+        recipient = BytesIO()
+        consumer = protocol.FileWrapper(recipient)
+        sender = basic.FileSender()
+        sender.CHUNK_SIZE = 4
+        d = sender.beginFileTransfer(source, consumer)
+        # Call resume once per chunk
+        for i in xrange(3):
+            sender.resumeProducing()
+        sender.stopProducing()
+
+        def check(result):
+            self.assertEqual(b"t", result)
+            self.assertEqual(b"Test content", recipient.getvalue())
+
+        return d.addCallback(check)
+
+
+    def test_transferWithTransform(self):
+        """
+        L{basic.FileSender.beginFileTransfer} takes a C{transform} argument
+        which allows to manipulate the data on the fly.
+        """
+
+        def transform(chunk):
+            return chunk.swapcase()
+
+        source = BytesIO(b"Test content")
+        recipient = BytesIO()
+
+        consumer = protocol.FileWrapper(recipient)
+        sender = basic.FileSender()
+        d = sender.beginFileTransfer(source, consumer, transform)
+        # Call resume once to finish the producing
+        sender.resumeProducing()
+        sender.stopProducing()
+
+        def check(result):
+            self.assertEqual(b"T", result)
+            self.assertEqual(b"tEST CONTENT", recipient.getvalue())
+
+        return d.addCallback(check)
+
+
+    def test_abortedTransfer(self):
+        """
+        The C{Deferred} returned by L{basic.FileSender.beginFileTransfer} fails
+        with an C{Exception} if C{stopProducing} when the transfer is not
+        complete.
+        """
+        source = BytesIO(b"Test content")
+        recipient = BytesIO()
+
+        consumer = protocol.FileWrapper(recipient)
+        sender = basic.FileSender()
+        d = sender.beginFileTransfer(source, consumer)
+        # Abort the transfer right away
+        sender.stopProducing()
+
+        def check(exception):
+            self.assertIsInstance(exception, Exception)
+            self.assertEqual("Consumer asked us to stop producing",
+                             str(exception))
+
+        return self.assertFailure(d, Exception).addCallback(check)
