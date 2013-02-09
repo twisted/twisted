@@ -1067,6 +1067,9 @@ class ProducerTestCase(unittest.SynchronousTestCase):
 
 
 class FileSenderTestCase(unittest.TestCase):
+    """
+    Tests for L{basic.FileSender}.
+    """
 
     def test_interface(self):
         """
