@@ -902,7 +902,7 @@ class FileSender:
     lastSent = ''
     deferred = None
 
-    def beginFileTransfer(self, file, consumer, transform = None):
+    def beginFileTransfer(self, file, consumer, transform=None):
         """
         Begin transferring a file
 
@@ -945,7 +945,7 @@ class FileSender:
         if self.transform:
             chunk = self.transform(chunk)
         self.consumer.write(chunk)
-        self.lastSent = chunk[-1]
+        self.lastSent = chunk[-1:]
 
 
     def pauseProducing(self):
@@ -957,7 +957,3 @@ class FileSender:
             self.deferred.errback(
                 Exception("Consumer asked us to stop producing"))
             self.deferred = None
-
-if _PY3:
-    # Add it back as part of ticket #6026:
-    del FileSender

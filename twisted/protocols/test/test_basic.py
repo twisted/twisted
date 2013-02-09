@@ -9,11 +9,15 @@ from __future__ import division, absolute_import
 
 import sys
 import struct
+from io import BytesIO
+
+from zope.interface.verify import verifyObject
 
 from twisted.python.compat import _PY3, iterbytes
 from twisted.trial import unittest
 from twisted.protocols import basic
 from twisted.internet import protocol, error, task
+from twisted.internet.interfaces import IProducer
 from twisted.test import proto_helpers
 
 _PY3NEWSTYLESKIP = "All classes are new style on Python 3."
@@ -1059,3 +1063,113 @@ class ProducerTestCase(unittest.SynchronousTestCase):
         self.assertEqual(t.data, [b'hello, world', b'hello', b'world', b'goodbye'])
         self.failIf(t.paused)
         self.failIf(p.paused)
+
+
+
+class FileSenderTestCase(unittest.TestCase):
+    """
+    Tests for L{basic.FileSender}.
+    """
+
+    def test_interface(self):
+        """
+        L{basic.FileSender} implements the L{IPullProducer} interface.
+        """
+        sender = basic.FileSender()
+        self.assertTrue(verifyObject(IProducer, sender))
+
+
+    def test_producerRegistered(self):
+        """
+        When L{basic.FileSender.beginFileTransfer} is called, it registers
+        itself with provided consumer, as a non-streaming producer.
+        """
+        source = BytesIO(b"Test content")
+        consumer = proto_helpers.StringTransport()
+        sender = basic.FileSender()
+        sender.beginFileTransfer(source, consumer)
+        self.assertEqual(consumer.producer, sender)
+        self.assertFalse(consumer.streaming)
+
+
+    def test_transfer(self):
+        """
+        L{basic.FileSender} sends the content of the given file using a
+        C{IConsumer} interface via C{beginFileTransfer}. It returns a
+        L{Deferred} which fires with the last byte sent.
+        """
+        source = BytesIO(b"Test content")
+        consumer = proto_helpers.StringTransport()
+        sender = basic.FileSender()
+        d = sender.beginFileTransfer(source, consumer)
+        sender.resumeProducing()
+        # resumeProducing only finishes after trying to read at eof
+        sender.resumeProducing()
+        self.assertEqual(consumer.producer, None)
+
+        self.assertEqual(b"t", self.successResultOf(d))
+        self.assertEqual(b"Test content", consumer.value())
+
+
+    def test_transferMultipleChunks(self):
+        """
+        L{basic.FileSender} reads at most C{CHUNK_SIZE} every time it resumes
+        producing.
+        """
+        source = BytesIO(b"Test content")
+        consumer = proto_helpers.StringTransport()
+        sender = basic.FileSender()
+        sender.CHUNK_SIZE = 4
+        d = sender.beginFileTransfer(source, consumer)
+        # Ideally we would assertNoResult(d) here, but <http://tm.tl/6291>
+        sender.resumeProducing()
+        self.assertEqual(b"Test", consumer.value())
+        sender.resumeProducing()
+        self.assertEqual(b"Test con", consumer.value())
+        sender.resumeProducing()
+        self.assertEqual(b"Test content", consumer.value())
+        # resumeProducing only finishes after trying to read at eof
+        sender.resumeProducing()
+
+        self.assertEqual(b"t", self.successResultOf(d))
+        self.assertEqual(b"Test content", consumer.value())
+
+
+    def test_transferWithTransform(self):
+        """
+        L{basic.FileSender.beginFileTransfer} takes a C{transform} argument
+        which allows to manipulate the data on the fly.
+        """
+
+        def transform(chunk):
+            return chunk.swapcase()
+
+        source = BytesIO(b"Test content")
+        consumer = proto_helpers.StringTransport()
+        sender = basic.FileSender()
+        d = sender.beginFileTransfer(source, consumer, transform)
+        sender.resumeProducing()
+        # resumeProducing only finishes after trying to read at eof
+        sender.resumeProducing()
+
+        self.assertEqual(b"T", self.successResultOf(d))
+        self.assertEqual(b"tEST CONTENT", consumer.value())
+
+
+    def test_abortedTransfer(self):
+        """
+        The C{Deferred} returned by L{basic.FileSender.beginFileTransfer} fails
+        with an C{Exception} if C{stopProducing} when the transfer is not
+        complete.
+        """
+        source = BytesIO(b"Test content")
+        consumer = proto_helpers.StringTransport()
+        sender = basic.FileSender()
+        d = sender.beginFileTransfer(source, consumer)
+        # Abort the transfer right away
+        sender.stopProducing()
+
+        failure = self.failureResultOf(d)
+        failure.trap(Exception)
+        self.assertEqual("Consumer asked us to stop producing",
+                         str(failure.value))
