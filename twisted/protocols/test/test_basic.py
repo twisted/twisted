@@ -1083,16 +1083,16 @@ class FileSenderTestCase(unittest.TestCase):
         L{Deferred} which fires with the last byte sent.
         """
         source = BytesIO(b"Test content")
-        recipient = BytesIO()
-        consumer = protocol.FileWrapper(recipient)
+        consumer = proto_helpers.StringTransport()
         sender = basic.FileSender()
         d = sender.beginFileTransfer(source, consumer)
-        # Call resume once to finish the producing
+        # Call resume twice to finish the producing
+        sender.resumeProducing()
         sender.resumeProducing()
         sender.stopProducing()
 
         self.assertEqual(b"t", self.successResultOf(d))
-        self.assertEqual(b"Test content", recipient.getvalue())
+        self.assertEqual(b"Test content", consumer.value())
 
 
     def test_transferMultipleChunks(self):
@@ -1101,18 +1101,17 @@ class FileSenderTestCase(unittest.TestCase):
         producing.
         """
         source = BytesIO(b"Test content")
-        recipient = BytesIO()
-        consumer = protocol.FileWrapper(recipient)
+        consumer = proto_helpers.StringTransport()
         sender = basic.FileSender()
         sender.CHUNK_SIZE = 4
         d = sender.beginFileTransfer(source, consumer)
         # Call resume once per chunk
-        for i in range(3):
+        for i in range(4):
             sender.resumeProducing()
         sender.stopProducing()
 
         self.assertEqual(b"t", self.successResultOf(d))
-        self.assertEqual(b"Test content", recipient.getvalue())
+        self.assertEqual(b"Test content", consumer.value())
 
 
     def test_transferWithTransform(self):
@@ -1125,17 +1124,16 @@ class FileSenderTestCase(unittest.TestCase):
             return chunk.swapcase()
 
         source = BytesIO(b"Test content")
-        recipient = BytesIO()
-
-        consumer = protocol.FileWrapper(recipient)
+        consumer = proto_helpers.StringTransport()
         sender = basic.FileSender()
         d = sender.beginFileTransfer(source, consumer, transform)
-        # Call resume once to finish the producing
+        # Call resume twice to finish the producing
+        sender.resumeProducing()
         sender.resumeProducing()
         sender.stopProducing()
 
         self.assertEqual(b"T", self.successResultOf(d))
-        self.assertEqual(b"tEST CONTENT", recipient.getvalue())
+        self.assertEqual(b"tEST CONTENT", consumer.value())
 
 
     def test_abortedTransfer(self):
@@ -1145,9 +1143,7 @@ class FileSenderTestCase(unittest.TestCase):
         complete.
         """
         source = BytesIO(b"Test content")
-        recipient = BytesIO()
-
-        consumer = protocol.FileWrapper(recipient)
+        consumer = proto_helpers.StringTransport()
         sender = basic.FileSender()
         d = sender.beginFileTransfer(source, consumer)
         # Abort the transfer right away
