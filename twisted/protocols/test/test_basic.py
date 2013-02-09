@@ -14,7 +14,6 @@ from io import BytesIO
 from zope.interface.verify import verifyObject
 
 from twisted.python.compat import _PY3, iterbytes
-from twisted.python.filepath import FilePath
 from twisted.trial import unittest
 from twisted.protocols import basic
 from twisted.internet import protocol, error, task
@@ -1108,7 +1107,7 @@ class FileSenderTestCase(unittest.TestCase):
         sender.CHUNK_SIZE = 4
         d = sender.beginFileTransfer(source, consumer)
         # Call resume once per chunk
-        for i in xrange(3):
+        for i in range(3):
             sender.resumeProducing()
         sender.stopProducing()
 
