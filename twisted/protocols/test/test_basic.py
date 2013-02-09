@@ -1076,6 +1076,19 @@ class FileSenderTestCase(unittest.TestCase):
         self.assertTrue(verifyObject(IProducer, sender))
 
 
+    def test_producerRegistered(self):
+        """
+        When L{basic.FileSender.beginFileTransfer} is called, it registers
+        itself with provided consumer, as a non-streaming producer.
+        """
+        source = BytesIO(b"Test content")
+        consumer = proto_helpers.StringTransport()
+        sender = basic.FileSender()
+        sender.beginFileTransfer(source, consumer)
+        self.assertEqual(consumer.producer, sender)
+        self.assertFalse(consumer.streaming)
+
+
     def test_transfer(self):
         """
         L{basic.FileSender} sends the content of the given file using a
@@ -1086,10 +1099,10 @@ class FileSenderTestCase(unittest.TestCase):
         consumer = proto_helpers.StringTransport()
         sender = basic.FileSender()
         d = sender.beginFileTransfer(source, consumer)
-        # Call resume twice to finish the producing
         sender.resumeProducing()
+        # resumeProducing only finishes after trying to read at eof
         sender.resumeProducing()
-        sender.stopProducing()
+        self.assertEqual(consumer.producer, None)
 
         self.assertEqual(b"t", self.successResultOf(d))
         self.assertEqual(b"Test content", consumer.value())
@@ -1105,10 +1118,15 @@ class FileSenderTestCase(unittest.TestCase):
         sender = basic.FileSender()
         sender.CHUNK_SIZE = 4
         d = sender.beginFileTransfer(source, consumer)
-        # Call resume once per chunk
-        for i in range(4):
-            sender.resumeProducing()
-        sender.stopProducing()
+        # Ideally we would assertNoResult(d) here, but <http://tm.tl/6291>
+        sender.resumeProducing()
+        self.assertEqual(b"Test", consumer.value())
+        sender.resumeProducing()
+        self.assertEqual(b"Test con", consumer.value())
+        sender.resumeProducing()
+        self.assertEqual(b"Test content", consumer.value())
+        # resumeProducing only finishes after trying to read at eof
+        sender.resumeProducing()
 
         self.assertEqual(b"t", self.successResultOf(d))
         self.assertEqual(b"Test content", consumer.value())
@@ -1127,10 +1145,9 @@ class FileSenderTestCase(unittest.TestCase):
         consumer = proto_helpers.StringTransport()
         sender = basic.FileSender()
         d = sender.beginFileTransfer(source, consumer, transform)
-        # Call resume twice to finish the producing
         sender.resumeProducing()
+        # resumeProducing only finishes after trying to read at eof
         sender.resumeProducing()
-        sender.stopProducing()
 
         self.assertEqual(b"T", self.successResultOf(d))
         self.assertEqual(b"tEST CONTENT", consumer.value())
