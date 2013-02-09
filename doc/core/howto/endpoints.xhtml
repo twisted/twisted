@@ -132,6 +132,18 @@ reactor.callLater(30, attempt.cancel)
 </pre>
 </p>
 
+<div class="note">If you've used <code>ClientFactory</code> before,
+keep in mind that the <code>connect</code> method takes a
+<code>Factory</code>, not a <code>ClientFactory</code>.  Even if you pass a
+<code>ClientFactory</code> to <code>endpoint.connect</code>, its
+<code>clientConnectionFailed</code> and <code>clientConnectionLost</code>
+methods will not be called.</div>
+
+<p>For simple cases, <code class="API"
+base="twisted.internet.endpoints">connectProtocol</code> connects a protocol
+instance to an endpoint, removing the necessity for a factory. See
+the <a href="clients.xhtml">client documentation</a> for more details.</p>
+
 <h2>Maximizing the Return on your Endpoint Investment</h2>
 
 <p>Directly constructing an endpoint in your application is rarely the

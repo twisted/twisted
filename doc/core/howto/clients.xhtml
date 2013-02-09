@@ -81,23 +81,21 @@ class WelcomeMessage(Protocol):
 
     <h2>Simple, single-use clients</h2>
 
-    <p>In many cases, the protocol only needs to connect to the server once, and
-    the code just wants to get a connected instance of the protocol. In those
-    cases <code class="API">twisted.internet.endpoints</code> provides the
-    appropriate API.</p>
+    <p>In many cases, the protocol only needs to connect to the server once,
+    and the code just wants to get a connected instance of the protocol. In
+    those cases <code class="API">twisted.internet.endpoints</code> provides
+    the appropriate API, and in particular <code class="API"
+    base="twisted.internet.endpoints">connectProtocol</code> which takes a
+    protocol instance rather than a factory.</p>
 
     <pre class="python">
 from twisted.internet import reactor
-from twisted.internet.protocol import Factory, Protocol
-from twisted.internet.endpoints import TCP4ClientEndpoint
+from twisted.internet.protocol import Protocol
+from twisted.internet.endpoints import TCP4ClientEndpoint, connectProtocol
 
 class Greeter(Protocol):
     def sendMessage(self, msg):
         self.transport.write("MESSAGE %s\n" % msg)
-
-class GreeterFactory(Factory):
-    def buildProtocol(self, addr):
-        return Greeter()
 
 def gotProtocol(p):
     p.sendMessage("Hello")
@@ -105,35 +103,29 @@ def gotProtocol(p):
     reactor.callLater(2, p.transport.loseConnection)
 
 point = TCP4ClientEndpoint(reactor, "localhost", 1234)
-d = point.connect(GreeterFactory())
+d = connectProtocol(point, Greeter())
 d.addCallback(gotProtocol)
 reactor.run()
     </pre>
 
     <p>Regardless of the type of client endpoint, the way to set up a new
-    connection is simply to call the <code>connect</code> method on it and pass
-    in a factory.  This means it's easy to change the mechanism you're using to
-    connect, without changing the rest of your program.  For example, to run
-    the greeter example over SSL, the only change required is to instantiate an
+    connection is simply pass it to <code class="API"
+    base="twisted.internet.endpoints">connectProtocol</code> along with a
+    protocol instance.  This means it's easy to change the mechanism you're
+    using to connect, without changing the rest of your program.  For example,
+    to run the greeter example over SSL, the only change required is to
+    instantiate an
     <code class="API"
     base="twisted.internet.endpoints">SSL4ClientEndpoint</code> instead of a
     <code>TCP4ClientEndpoint</code>.  To take advantage of this, functions and
     methods which initiates a new connection should generally accept an
     endpoint as an argument and let the caller construct it, rather than taking
-    arguments like 'host' and 'port' and constructing its own before calling
-    <code>connect</code>.</p>
+    arguments like 'host' and 'port' and constructing its own.</p>
 
     <p>For more information on different ways you can make outgoing connections
     to different types of endpoints, as well as parsing strings into endpoints,
     see <a href="endpoints.xhtml">the documentation for the endpoints
     API</a>.</p>
-
-    <div class="note">If you've used <code>ClientFactory</code> before,
-    make sure you remember that the <code>connect</code> method takes a
-    <code>Factory</code>, not a <code>ClientFactory</code>.  Even if you pass a
-    <code>ClientFactory</code> to <code>endpoint.connect</code>, its
-    <code>clientConnectionFailed</code> and <code>clientConnectionLost</code>
-    methods will not be called.</div>
 
     <p>You may come across code using <code base="twisted.internet.protocol"
     class="API">ClientCreator</code>, an older API which is not as flexible as

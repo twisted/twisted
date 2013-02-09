@@ -1,0 +1,1 @@
+twisted.internet.endpoints.connectProtocol allows connecting to a client endpoint using only a protocol instance, rather than requiring a factory.
