@@ -481,24 +481,3 @@ class SSL4ClientEndpoint(object):
             return wf._onConnection
         except:
             return defer.fail()
-
-
-
-def connectProtocol(endpoint, protocol):
-    """
-    Connect a protocol instance to an endpoint.
-
-    This allows using a client endpoint without having to create a factory.
-
-    @param endpoint: A client endpoint to connect to.
-
-    @param protocol: A protocol instance.
-
-    @return: The result of calling C{connect} on the endpoint, i.e. a
-    L{Deferred} that will fire with the protocol when connected, or an
-    appropriate error.
-    """
-    class OneShotFactory(Factory):
-        def buildProtocol(self, addr):
-            return protocol
-    return endpoint.connect(OneShotFactory())

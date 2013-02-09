@@ -23,6 +23,7 @@ from twisted.python.filepath import FilePath
 from twisted.protocols import basic
 from twisted.internet import protocol, reactor, stdio
 from twisted.internet.stdio import PipeAddress
+from twisted.internet.defer import Deferred
 from twisted.internet.test.test_endpointspy3 import (
     EndpointTestCaseMixin, ServerEndpointTestCaseMixin, skipSSL,
     pemPath)
@@ -1027,3 +1028,39 @@ class StandardIOEndpointPluginTests(unittest.TestCase):
         ep = endpoints.serverFromString(MemoryReactor(), "stdio:")
         self.assertIsInstance(ep, endpoints.StandardIOEndpoint)
         self.assertIsInstance(ep._reactor, MemoryReactor)
+
+
+
+class ConnectProtocolTests(unittest.TestCase):
+    """
+    Tests for C{connectProtocol}.
+    """
+    def test_connectProtocolCreatesFactory(self):
+        """
+        C{endpoints.connectProtocol} calls the given endpoint's C{connect()}
+        method with a factory that will build the given protocol.
+        """
+        result = []
+        class Endpoint:
+            def connect(self, factory):
+                result.append(factory.buildProtocol(None))
+
+        endpoint = Endpoint()
+        protocol = object()
+        endpoints.connectProtocol(endpoint, protocol)
+        self.assertEqual(result, [protocol])
+
+
+    def test_connectProtocolReturnsConnectResult(self):
+        """
+        C{endpoints.connectProtocol} returns the result of calling the given
+        endpoint's C{connect()} method.
+        """
+        result = Deferred()
+        class Endpoint:
+            def connect(self, protocol):
+                return result
+
+        endpoint = Endpoint()
+        self.assertIdentical(result,
+                             endpoints.connectProtocol(endpoint, object()))

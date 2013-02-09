@@ -24,11 +24,12 @@ from twisted.python.filepath import FilePath
 from twisted.python.systemd import ListenFDs
 from twisted.internet import stdio
 from twisted.internet.stdio import PipeAddress
+from twisted.internet.protocol import Factory
 
 from twisted.internet._endpointspy3 import (
     _WrappingFactory, TCP4ServerEndpoint, TCP6ServerEndpoint,
     TCP4ClientEndpoint, TCP6ClientEndpoint, SSL4ClientEndpoint,
-    SSL4ServerEndpoint, connectProtocol)
+    SSL4ServerEndpoint)
 
 __all__ = ["clientFromString", "serverFromString",
            "TCP4ServerEndpoint", "TCP6ServerEndpoint",
@@ -883,3 +884,24 @@ def clientFromString(reactor, description):
         raise ValueError("Unknown endpoint type: %r" % (aname,))
     kwargs = _clientParsers[name](*args, **kwargs)
     return _endpointClientFactories[name](reactor, **kwargs)
+
+
+
+def connectProtocol(endpoint, protocol):
+    """
+    Connect a protocol instance to an endpoint.
+
+    This allows using a client endpoint without having to create a factory.
+
+    @param endpoint: A client endpoint to connect to.
+
+    @param protocol: A protocol instance.
+
+    @return: The result of calling C{connect} on the endpoint, i.e. a
+    L{Deferred} that will fire with the protocol when connected, or an
+    appropriate error.
+    """
+    class OneShotFactory(Factory):
+        def buildProtocol(self, addr):
+            return protocol
+    return endpoint.connect(OneShotFactory())
