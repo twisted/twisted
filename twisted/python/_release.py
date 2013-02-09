@@ -101,10 +101,13 @@ def getNextVersion(version, prerelease, patch, today):
     @param version: The previous version number.
 
     @type prerelease: C{bool}
-    @param prerelease:
+    @param prerelease: If C{True}, make the next version a pre-release one. If
+        C{version} is a pre-release, it increments the pre-release counter,
+        otherwise create a new version with prerelease set to 1.
 
     @type patch: C{bool}
-    @param patch:
+    @param patch: If C{True}, make the next version a patch release. It
+        increments the micro counter.
 
     @type today: C{datetime}
     @param today: The current date.
@@ -1274,6 +1277,9 @@ def buildAllTarballs(checkout, destination, templatePath=None):
 
 
 class ChangeVersionsScriptOptions(Options):
+    """
+    Options for L{ChangeVersionsScript}.
+    """
     optFlags = [["prerelease", None, "Change to the next prerelease"],
                 ["patch", None, "Make a patch version"]]
 
