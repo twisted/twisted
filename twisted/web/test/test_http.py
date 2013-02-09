@@ -1662,6 +1662,70 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         self.assertRaises(RuntimeError, request.noLongerQueued)
 
 
+    def test_noLongerQueuedRegistersPullProducer(self):
+        """
+        L{Request.noLongerQueued} registers a pull producer with transport if
+        there is a producer.
+        """
+        request = http.Request(DummyChannel(), True)
+        request.producer = DummyProducer()
+        request.streamingProducer = False
+        request.write(b"Hello")
+        request.noLongerQueued()
+        self.assertEqual([(request.producer, False)], request.transport.producers)
+
+
+    def test_noLongerQueuedRegistersPushProducer(self):
+        """
+        L{Request.noLongerQueued} registers a push producer with transport if
+        there is a producer.
+        """
+        request = http.Request(DummyChannel(), True)
+        request.producer = DummyProducer()
+        request.streamingProducer = True
+        request.write(b"Hello")
+        request.noLongerQueued()
+        self.assertEqual([(request.producer, True)], request.transport.producers)
+
+
+    def test_noLongerQueuedRegistersNoProducer(self):
+        """
+        L{Request.noLongerQueued} does not registers producer with transport if
+        there is no producer.
+        """
+        request = http.Request(DummyChannel(), True)
+        request.write(b"Hello")
+        request.noLongerQueued()
+        self.assertEqual([], request.transport.producers)
+
+
+    def test_noLongerQueuedCleanupIfFinished(self):
+        """
+        L{Request.noLongerQueued} calls L{Request._cleanup()} if it has
+        finished. This is done by checking that the content attribute is
+        deleted.
+        """
+        request = http.Request(DummyChannel(), True)
+        request.content = b"Hello"
+        request.gotLength(1000001)
+        request.finished = 1
+        request.noLongerQueued()
+        self.assertIdentical(None, request.content)
+
+
+    def test_noLongerQueuedWriteIfData(self):
+        """
+        L{Request.noLongerQueued} writes data to the transport if and only if
+        data is present. L{Request.noLongerQueued} sets the transport to the
+        underlying channel transport(default = TCP) which doesn't have a
+        getvalue method.
+        """
+        request = http.Request(DummyChannel(), True)
+        request.write(b"Hello")
+        request.noLongerQueued()
+        self.assertIdentical(None, getattr(request.transport,"getvalue", None))
+
+
 
 class MultilineHeadersTestCase(unittest.TestCase):
     """
