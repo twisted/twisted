@@ -2056,15 +2056,18 @@ class ConnectProtocolTests(unittest.TestCase):
         C{endpoints.connectProtocol} calls the given endpoint's C{connect()}
         method with a factory that will build the given protocol.
         """
-        result = []
-        class Endpoint:
-            def connect(self, factory):
-                result.append(factory.buildProtocol(None))
+        reactor = MemoryReactor()
+        endpoint = endpoints.TCP4ClientEndpoint(reactor, "127.0.0.1", 0)
+        theProtocol = object()
+        endpoints.connectProtocol(endpoint, theProtocol)
 
-        endpoint = Endpoint()
-        protocol = object()
-        endpoints.connectProtocol(endpoint, protocol)
-        self.assertEqual(result, [protocol])
+        # A TCP connection was made via the given endpoint:
+        self.assertEqual(len(reactor.tcpClients), 1)
+        # TCP4ClientEndpoint uses a _WrapperFactory around the underlying
+        # factory, so we need to unwrap it:
+        factory = reactor.tcpClients[0][2]._wrappedFactory
+        self.assertIsInstance(factory, protocol.Factory)
+        self.assertIdentical(factory.buildProtocol(None), theProtocol)
 
 
     def test_connectProtocolReturnsConnectResult(self):
@@ -2074,7 +2077,7 @@ class ConnectProtocolTests(unittest.TestCase):
         """
         result = Deferred()
         class Endpoint:
-            def connect(self, protocol):
+            def connect(self, factory):
                 return result
 
         endpoint = Endpoint()
