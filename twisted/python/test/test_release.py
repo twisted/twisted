@@ -200,8 +200,9 @@ class ChangeVersionTest(TestCase, StructureAssertingMixin):
         now = date.today()
         major = now.year - VERSION_OFFSET
         version = Version("twisted", major, 9, 0)
-        self.assertEqual(getNextVersion(version, False, False, now),
-                         Version("twisted", major, 10, 0))
+        self.assertEqual(
+            getNextVersion(version, prerelease=False, patch=False, today=now),
+            Version("twisted", major, 10, 0))
 
 
     def test_getNextVersionAfterYearChange(self):
@@ -212,8 +213,9 @@ class ChangeVersionTest(TestCase, StructureAssertingMixin):
         now = date.today()
         major = now.year - VERSION_OFFSET
         version = Version("twisted", major - 1, 9, 0)
-        self.assertEqual(getNextVersion(version, False, False, now),
-                         Version("twisted", major, 0, 0))
+        self.assertEqual(
+            getNextVersion(version, prerelease=False, patch=False, today=now),
+            Version("twisted", major, 0, 0))
 
 
     def test_getNextVersionPreRelease(self):
@@ -224,8 +226,9 @@ class ChangeVersionTest(TestCase, StructureAssertingMixin):
         now = date.today()
         major = now.year - VERSION_OFFSET
         version = Version("twisted", 3, 9, 0)
-        self.assertEqual(getNextVersion(version, True, False, now),
-                         Version("twisted", major, 0, 0, 1))
+        self.assertEqual(
+            getNextVersion(version, prerelease=True, patch=False, today=now),
+            Version("twisted", major, 0, 0, 1))
 
 
     def test_getNextVersionFinalRelease(self):
@@ -235,8 +238,9 @@ class ChangeVersionTest(TestCase, StructureAssertingMixin):
         """
         now = date.today()
         version = Version("twisted", 3, 9, 0, 1)
-        self.assertEqual(getNextVersion(version, False, False, now),
-                         Version("twisted", 3, 9, 0))
+        self.assertEqual(
+            getNextVersion(version, prerelease=False, patch=False, today=now),
+            Version("twisted", 3, 9, 0))
 
 
     def test_getNextVersionNextPreRelease(self):
@@ -246,8 +250,9 @@ class ChangeVersionTest(TestCase, StructureAssertingMixin):
         """
         now = date.today()
         version = Version("twisted", 3, 9, 1, 1)
-        self.assertEqual(getNextVersion(version, True, False, now),
-                         Version("twisted", 3, 9, 1, 2))
+        self.assertEqual(
+            getNextVersion(version, prerelease=True, patch=False, today=now),
+            Version("twisted", 3, 9, 1, 2))
 
 
     def test_getNextVersionPatchRelease(self):
@@ -256,8 +261,9 @@ class ChangeVersionTest(TestCase, StructureAssertingMixin):
         """
         now = date.today()
         version = Version("twisted", 3, 9, 0)
-        self.assertEqual(getNextVersion(version, False, True, now),
-                         Version("twisted", 3, 9, 1))
+        self.assertEqual(
+            getNextVersion(version, prerelease=False, patch=True, today=now),
+            Version("twisted", 3, 9, 1))
 
 
     def test_getNextVersionNextPatchRelease(self):
@@ -267,8 +273,9 @@ class ChangeVersionTest(TestCase, StructureAssertingMixin):
         """
         now = date.today()
         version = Version("twisted", 3, 9, 1)
-        self.assertEqual(getNextVersion(version, False, True, now),
-                         Version("twisted", 3, 9, 2))
+        self.assertEqual(
+            getNextVersion(version, prerelease=False, patch=True, today=now),
+            Version("twisted", 3, 9, 2))
 
 
     def test_getNextVersionNextPatchPreRelease(self):
@@ -278,8 +285,9 @@ class ChangeVersionTest(TestCase, StructureAssertingMixin):
         """
         now = date.today()
         version = Version("twisted", 3, 9, 1)
-        self.assertEqual(getNextVersion(version, True, True, now),
-                         Version("twisted", 3, 9, 2, 1))
+        self.assertEqual(
+            getNextVersion(version, prerelease=True, patch=True, today=now),
+            Version("twisted", 3, 9, 2, 1))
 
 
     def test_changeVersionInFile(self):
