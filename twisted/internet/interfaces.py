@@ -1617,6 +1617,30 @@ class ITCPTransport(ITransport):
 
 
 
+class IWriteFileTransport(Interface):
+    """
+    A transport object supporting sending files over it, possibly in an
+    optimized fashion.
+
+    @since: 12.3
+    """
+
+    def writeFile(fileObject):
+        """
+        Write a file over this transport, possibly using a zero-copy send if
+        available, otherwise a standard producer.
+
+        @param fileObject: A file object to be written on the socket. It needs
+            to be opened fo reading, and at the position where the sending
+            should happen.
+        @type fileObject: C{file}
+
+        @return: a C{Deferred} that fires when the whole file is sent.
+        @rtype: L{Deferred<twisted.internet.defer.Deferred>}
+        """
+
+
+
 class IUNIXTransport(ITransport):
     """
     Transport for stream-oriented unix domain connections.

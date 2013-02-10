@@ -31,6 +31,11 @@ else:
         return buffer(bObj, offset) + b"".join(bArray)
 
 
+
+_SendfileMarker = Exception()
+
+
+
 class _ConsumerMixin(object):
     """
     L{IConsumer} implementations can mix this in to get C{registerProducer} and
@@ -173,7 +178,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
     dataBuffer = b""
     offset = 0
 
-    SEND_LIMIT = 128*1024
+    SEND_LIMIT = 128 * 1024
 
     def __init__(self, reactor=None):
         if not reactor:
@@ -181,10 +186,12 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         self.reactor = reactor
         self._tempDataBuffer = [] # will be added to dataBuffer in doWrite
         self._tempDataLen = 0
+        self._pendingSendFile = []
 
 
     def connectionLost(self, reason):
-        """The connection was lost.
+        """
+        The connection was lost.
 
         This is called when the connection on a selectable object has been
         lost.  It will be called whether the connection was closed explicitly,
@@ -235,33 +242,61 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
 
         @see: L{twisted.internet.interfaces.IWriteDescriptor.doWrite}.
         """
-        if len(self.dataBuffer) - self.offset < self.SEND_LIMIT:
-            # If there is currently less than SEND_LIMIT bytes left to send
-            # in the string, extend it with the array data.
-            self.dataBuffer = _concatenate(
-                self.dataBuffer, self.offset, self._tempDataBuffer)
-            self.offset = 0
-            self._tempDataBuffer = []
-            self._tempDataLen = 0
+        result = None
 
-        # Send as much data as you can.
-        if self.offset:
-            l = self.writeSomeData(lazyByteSlice(self.dataBuffer, self.offset))
+        if (self._pendingSendFile and
+            self._tempDataBuffer[0] is _SendfileMarker):
+            sfi = self._pendingSendFile[0]
+            result = sfi.doSendfile(self)
+            if sfi.done() or isinstance(result, Exception):
+                # Transfer is finished or some errors happened
+                self._pendingSendFile.pop(0)
+                self._tempDataBuffer.pop(0)
+                if result is _SendfileMarker:
+                    # There was an error, but we're handling it and fallback to
+                    # traditional writes
+                    result = None
         else:
-            l = self.writeSomeData(self.dataBuffer)
+            if len(self.dataBuffer) - self.offset < self.SEND_LIMIT:
+                # If there is currently less than SEND_LIMIT bytes left to send
+                # in the string, extend it with the array data.
+                if self._pendingSendFile:
+                    # If a senfile call is interleaved with data, let's split
+                    # the data from it.
+                    idx = self._tempDataBuffer.index(_SendfileMarker)
+                    tempBuffer = b"".join(self._tempDataBuffer[:idx])
+                    self.dataBuffer = _concatenate(
+                        self.dataBuffer, self.offset, tempBuffer)
+                    self._tempDataBuffer = self._tempDataBuffer[idx:]
+                    self._tempDataLen -= len(tempBuffer)
+                else:
+                    self.dataBuffer = _concatenate(
+                        self.dataBuffer, self.offset, self._tempDataBuffer)
+                    self._tempDataBuffer = []
+                    self._tempDataLen = 0
+                self.offset = 0
 
-        # There is no writeSomeData implementation in Twisted which returns
-        # < 0, but the documentation for writeSomeData used to claim negative
-        # integers meant connection lost.  Keep supporting this here,
-        # although it may be worth deprecating and removing at some point.
-        if isinstance(l, Exception) or l < 0:
-            return l
-        self.offset += l
+            # Send as much data as you can.
+            if self.offset:
+                l = self.writeSomeData(lazyByteSlice(self.dataBuffer, self.offset))
+            else:
+                l = self.writeSomeData(self.dataBuffer)
+
+            # There is no writeSomeData implementation in Twisted which returns
+            # < 0, but the documentation for writeSomeData used to claim
+            # negative integers meant connection lost.  Keep supporting this
+            # here, although it may be worth deprecating and removing at some
+            # point.
+            if isinstance(l, Exception) or l < 0:
+                return l
+            self.offset += l
+
         # If there is nothing left to send,
-        if self.offset == len(self.dataBuffer) and not self._tempDataLen:
+        if (self.offset == len(self.dataBuffer) and not self._tempDataLen
+            and not self._pendingSendFile):
             self.dataBuffer = b""
             self.offset = 0
-            # stop writing.
+            # Stop writing.
             self.stopWriting()
             # If I've got a producer who is supposed to supply me with data,
             if self.producer is not None and ((not self.streamingProducer)
@@ -281,10 +316,13 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
                 self._writeDisconnected = True
                 result = self._closeWriteConnection()
                 return result
-        return None
+
+        return result
+
 
     def _postLoseConnection(self):
-        """Called after a loseConnection(), when all data has been written.
+        """
+        Called after a loseConnection(), when all data has been written.
 
         Whatever this returns is then returned by doWrite.
         """
@@ -332,7 +370,8 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
 
 
     def write(self, data):
-        """Reliably write some data.
+        """
+        Reliably write some data.
 
         The data is buffered until the underlying file descriptor is ready
         for writing. If there is more than C{self.bufferSize} data in the
@@ -374,6 +413,20 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         self._tempDataBuffer.extend(iovec)
         for i in iovec:
             self._tempDataLen += len(i)
+        self._maybePauseProducer()
+        self.startWriting()
+
+
+    def _sendfile(self, sfi):
+        """
+        Internal implementation for starting sendfile.
+
+        @param sfi: an object providing by C{doSendfile}.
+        """
+        if not self.connected or self._writeDisconnected:
+            return
+        self._pendingSendFile.append(sfi)
+        self._tempDataBuffer.append(_SendfileMarker)
         self._maybePauseProducer()
         self.startWriting()
 

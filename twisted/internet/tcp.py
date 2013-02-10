@@ -100,6 +100,7 @@ from twisted.python import log, failure, _reflectpy3 as reflect
 from twisted.python.util import untilConcludes
 from twisted.internet.error import CannotListenError
 from twisted.internet import abstract, main, interfaces, error
+from twisted.internet._sendfile import sendfile, SendfileInfo
 
 # Not all platforms have, or support, this flag.
 _AI_NUMERICSERV = getattr(socket, "AI_NUMERICSERV", 0)
@@ -169,7 +170,8 @@ class _AbortingMixin(object):
 
 
 
-@implementer(interfaces.ITCPTransport, interfaces.ISystemHandle)
+@implementer(interfaces.ITCPTransport, interfaces.ISystemHandle,
+             interfaces.IWriteFileTransport)
 class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser,
                  _AbortingMixin):
     """
@@ -181,7 +183,6 @@ class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser,
     @ivar logstr: prefix used when logging events related to this connection.
     @type logstr: C{str}
     """
-
 
     def __init__(self, skt, protocol, reactor=None):
         abstract.FileDescriptor.__init__(self, reactor=reactor)
@@ -229,6 +230,27 @@ class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser,
                 format=warningFormat)
             deprecate.warnAboutFunction(offender, warningString)
         return rval
+
+
+    def writeFile(self, fileObject):
+        """
+        Send the file over the wire, using the sendfile(2) system call if
+        available, or fallback on standard producer.
+        """
+        sfi = SendfileInfo(fileObject)
+
+        def fallback(ign):
+            from twisted.protocols.basic import FileSender
+            sender = FileSender()
+            deferred = sender.beginFileTransfer(sfi.file, self)
+            deferred.chainDeferred(sfi.deferred)
+
+        if sendfile is None:
+            fallback(None)
+        else:
+            sfi.fallback.addCallback(fallback)
+            abstract.FileDescriptor._sendfile(self, sfi)
+        return sfi.deferred
 
 
     def writeSomeData(self, data):
@@ -307,7 +329,8 @@ class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser,
         return self.logstr
 
     def getTcpNoDelay(self):
-        return operator.truth(self.socket.getsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY))
+        return operator.truth(self.socket.getsockopt(socket.IPPROTO_TCP,
+                                                     socket.TCP_NODELAY))
 
     def setTcpNoDelay(self, enabled):
         self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, enabled)
@@ -318,7 +341,6 @@ class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser,
 
     def setTcpKeepAlive(self, enabled):
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, enabled)
-
 
 
 

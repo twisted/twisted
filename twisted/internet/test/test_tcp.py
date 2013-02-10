@@ -38,6 +38,7 @@ from twisted.internet.tcp import Connection, Server, _resolveIPv6
 from twisted.internet.test.connectionmixins import (
     LogObserverMixin, ConnectionTestsMixin, TCPClientTestsMixin, findFreePort,
     ConnectableProtocol, EndpointCreator, runProtocolsWithReactor)
+from twisted.internet.test.test_sendfile import SendfileIntegrationMixin
 from twisted.internet.test.test_core import ObjectModelIntegrationMixin
 from twisted.test.test_tcp import MyClientFactory, MyServerFactory
 from twisted.test.test_tcp import ClosingFactory, ClientStartStopFactory
@@ -1322,7 +1323,9 @@ class TCPTransportServerAddressTestMixin(object):
     Test mixing for TCP server address building and log prefix.
     """
 
-    def getConnectedClientAndServer(self, reactor, interface, addressFamily):
+    def getConnectedClientAndServer(self, reactor, interface, addressFamily,
+                                    protocolClientFactory=None,
+                                    protocolServerFactory=None):
         """
         Helper method returnine a L{Deferred} firing with a tuple of a client
         protocol, a server protocol, and a running TCP port.
@@ -1388,21 +1391,28 @@ class TCPTransportServerAddressTestMixin(object):
 
 
 class TCPTransportTestsBuilder(TCPTransportServerAddressTestMixin,
-                               WriteSequenceTestsMixin, ReactorBuilder):
+                               WriteSequenceTestsMixin,
+                               SendfileIntegrationMixin, ReactorBuilder):
     """
     Test standard L{ITCPTransport}s built with C{listenTCP} and C{connectTCP}.
     """
 
-    def getConnectedClientAndServer(self, reactor, interface, addressFamily):
+    def getConnectedClientAndServer(self, reactor, interface, addressFamily,
+                                    protocolClientFactory=None,
+                                    protocolServerFactory=None):
         """
         Return a L{Deferred} firing with a L{MyClientFactory} and
         L{MyServerFactory} connected pair, and the listening C{Port}.
         """
         server = MyServerFactory()
+        if protocolServerFactory is not None:
+            server.protocolFactory = protocolServerFactory
         server.protocolConnectionMade = Deferred()
         server.protocolConnectionLost = Deferred()
 
         client = MyClientFactory()
+        if protocolClientFactory is not None:
+            client.protocolFactory = protocolClientFactory
         client.protocolConnectionMade = Deferred()
         client.protocolConnectionLost = Deferred()
 
@@ -1437,13 +1447,16 @@ class TCPTransportTestsBuilder(TCPTransportServerAddressTestMixin,
 
 class AdoptStreamConnectionTestsBuilder(TCPTransportServerAddressTestMixin,
                                         WriteSequenceTestsMixin,
+                                        SendfileIntegrationMixin,
                                         ReactorBuilder):
     """
     Test server transports built using C{adoptStreamConnection}.
     """
     requiredInterfaces = (IReactorFDSet, IReactorSocket)
 
-    def getConnectedClientAndServer(self, reactor, interface, addressFamily):
+    def getConnectedClientAndServer(self, reactor, interface, addressFamily,
+                                    protocolClientFactory=None,
+                                    protocolServerFactory=None):
         """
         Return a L{Deferred} firing with a L{MyClientFactory} and
         L{MyServerFactory} connected pair, and the listening C{Port}. The
@@ -1454,10 +1467,14 @@ class AdoptStreamConnectionTestsBuilder(TCPTransportServerAddressTestMixin,
         firstServer.protocolConnectionMade = Deferred()
 
         server = MyServerFactory()
+        if protocolServerFactory is not None:
+            server.protocolFactory = protocolServerFactory
         server.protocolConnectionMade = Deferred()
         server.protocolConnectionLost = Deferred()
 
         client = MyClientFactory()
+        if protocolClientFactory is not None:
+            client.protocolFactory = protocolClientFactory
         client.protocolConnectionMade = Deferred()
         client.protocolConnectionLost = Deferred()
 

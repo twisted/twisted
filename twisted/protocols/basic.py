@@ -904,7 +904,7 @@ class FileSender:
 
     def beginFileTransfer(self, file, consumer, transform=None):
         """
-        Begin transferring a file
+        Begin transferring a file.
 
         @type file: Any file-like object
         @param file: The file object to read data from
@@ -913,13 +913,13 @@ class FileSender:
         @param consumer: The object to write data to
 
         @param transform: A callable taking one string argument and returning
-        the same.  All bytes read from the file are passed through this before
-        being written to the consumer.
+            the same.  All bytes read from the file are passed through this
+            before being written to the consumer.
 
         @rtype: C{Deferred}
         @return: A deferred whose callback will be invoked when the file has
-        been completely written to the consumer. The last byte written to the
-        consumer is passed to the callback.
+            been completely written to the consumer. The last byte written to
+            the consumer is passed to the callback.
         """
         self.file = file
         self.consumer = consumer
