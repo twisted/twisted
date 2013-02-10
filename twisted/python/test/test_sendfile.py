@@ -59,7 +59,7 @@ class SendfileTestCase(TestCase):
         try:
             client.connect(('127.0.0.1', self.serverSocket.getsockname()[1]))
         except socket.error as e:
-            self.assertEquals(e.args[0], errno.EINPROGRESS)
+            self.assertEqual(e.args[0], errno.EINPROGRESS)
         server, addr = self.serverSocket.accept()
 
         self.connections.extend((client, server))
@@ -72,16 +72,16 @@ class SendfileTestCase(TestCase):
         """
         server, client = self._connectedPair()
         s, o = sendfile(server.fileno(), self.file.fileno(), 0, 100)
-        self.assertEquals(s, 100)
-        self.assertEquals(o, 100)
+        self.assertEqual(s, 100)
+        self.assertEqual(o, 100)
         data = client.recv(500)
-        self.assertEquals(len(data), 100)
+        self.assertEqual(len(data), 100)
 
         s, o = sendfile(server.fileno(), self.file.fileno(), o, 150)
-        self.assertEquals(s, 150)
-        self.assertEquals(o, 250)
+        self.assertEqual(s, 150)
+        self.assertEqual(o, 250)
         data = client.recv(500)
-        self.assertEquals(len(data), 150)
+        self.assertEqual(len(data), 150)
 
 
     def test_afterSend(self):
@@ -91,11 +91,11 @@ class SendfileTestCase(TestCase):
         server, client = self._connectedPair()
         server.send('y' * 10)
         s, o = sendfile(server.fileno(), self.file.fileno(), 0, 100)
-        self.assertEquals(s, 100)
-        self.assertEquals(o, 100)
+        self.assertEqual(s, 100)
+        self.assertEqual(o, 100)
         data = client.recv(200)
         if len(data) < 100:
             data += client.recv(200)
-        self.assertEquals(len(data), 110)
-        self.assertEquals(data[:10], 'y' * 10)
-        self.assertEquals(data[10:20], 'x' * 10)
+        self.assertEqual(len(data), 110)
+        self.assertEqual(data[:10], 'y' * 10)
+        self.assertEqual(data[10:20], 'x' * 10)
