@@ -55,6 +55,8 @@ class SendfileIntegrationMixin(object):
     def createFile(self):
         """
         Create a file to send during tests.
+
+        @return: A file opened ready to be sent.
         """
         filename = self.mktemp()
         f = open(filename, 'wb+')
@@ -154,7 +156,7 @@ class SendfileIntegrationMixin(object):
         reactor = self.buildReactor()
         if not IReactorFDSet.providedBy(reactor):
             raise SkipTest("%s does not provide IReactorFDSet" % (
-                fullyQualifiedName(reactor.__class__)))
+                fullyQualifiedName(reactor.__class__),))
 
         def connected(protocols):
             client, server = protocols[:2]

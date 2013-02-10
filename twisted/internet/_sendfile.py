@@ -1,5 +1,10 @@
+# -*- test-case-name: twisted.internet.test.test_sendfile -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
+
+"""
+Helper module for C{sendfile} support.
+"""
 
 
 from twisted.internet.defer import Deferred
@@ -17,7 +22,7 @@ class SendfileInfo(object):
     """
     Hold information about a sendfile transfer.
 
-    @ivar started: whether the sendfile transfer has started or not.
+    @ivar started: Whether the sendfile transfer has started or not.
     @type started: C{bool}
 
     @ivar deferred: C{Deferred} fired when transfer is finished or when an
@@ -37,7 +42,7 @@ class SendfileInfo(object):
 
     def __init__(self, fileObject):
         """
-        @param fileObject: a file object, supported by sendfile(2) system call.
+        @param fileObject: A file object, supported by sendfile(2) system call.
         @type fileObject: C{file}
         """
         self.file = fileObject
@@ -53,7 +58,10 @@ class SendfileInfo(object):
 
     def done(self):
         """
-        Return C{True} if all the file has been sent.
+        Check if the transfer is done.
+
+        @return: C{True} if the whole file has been sent.
+        @rtype: C{bool}
         """
         return self.count == self.offset
 

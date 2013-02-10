@@ -278,7 +278,8 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
 
             # Send as much data as you can.
             if self.offset:
-                l = self.writeSomeData(lazyByteSlice(self.dataBuffer, self.offset))
+                l = self.writeSomeData(
+                    lazyByteSlice(self.dataBuffer, self.offset))
             else:
                 l = self.writeSomeData(self.dataBuffer)
 

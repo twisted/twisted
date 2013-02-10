@@ -1,4 +1,4 @@
-# Copyright (c) 2007-2010 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -24,6 +24,7 @@ class SendfileTestCase(TestCase):
 
     if sendfile is None:
         skip = "sendfile not available"
+
 
     def setUp(self):
         """
@@ -53,6 +54,8 @@ class SendfileTestCase(TestCase):
     def _connectedPair(self):
         """
         Return the two sockets which make up a new TCP connection.
+
+        @return: A C{tuple} of (client, server) connected sockets.
         """
         client = socket.socket()
         client.setblocking(False)

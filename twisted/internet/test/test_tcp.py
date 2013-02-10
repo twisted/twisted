@@ -1329,6 +1329,18 @@ class TCPTransportServerAddressTestMixin(object):
         """
         Helper method returnine a L{Deferred} firing with a tuple of a client
         protocol, a server protocol, and a running TCP port.
+
+        @param reactor: The reactor instance to test.
+
+        @param interface: The interface to listen upon.
+
+        @param addressFamily: C{socket.AF_INET} or C{socket.AF_INET6}.
+
+        @param protocolClientFactory: If specified, the client protocol factory
+            to use (default to C{AccumulatingProtocol}.
+
+        @param protocolServerFactory: If specified, the client protocol factory
+            to use (default to C{AccumulatingProtocol}.
         """
         raise NotImplementedError()
 
@@ -1403,6 +1415,18 @@ class TCPTransportTestsBuilder(TCPTransportServerAddressTestMixin,
         """
         Return a L{Deferred} firing with a L{MyClientFactory} and
         L{MyServerFactory} connected pair, and the listening C{Port}.
+
+        @param reactor: The reactor instance to test.
+
+        @param interface: The interface to listen upon.
+
+        @param addressFamily: C{socket.AF_INET} or C{socket.AF_INET6}.
+
+        @param protocolClientFactory: If specified, the client protocol factory
+            to use (default to C{AccumulatingProtocol}.
+
+        @param protocolServerFactory: If specified, the client protocol factory
+            to use (default to C{AccumulatingProtocol}.
         """
         server = MyServerFactory()
         if protocolServerFactory is not None:
@@ -1420,6 +1444,7 @@ class TCPTransportTestsBuilder(TCPTransportServerAddressTestMixin,
 
         lostDeferred = gatherResults([client.protocolConnectionLost,
                                       server.protocolConnectionLost])
+
         def stop(result):
             reactor.stop()
             return result
@@ -1462,6 +1487,18 @@ class AdoptStreamConnectionTestsBuilder(TCPTransportServerAddressTestMixin,
         L{MyServerFactory} connected pair, and the listening C{Port}. The
         particularity is that the server protocol has been obtained after doing
         a C{adoptStreamConnection} against the original server connection.
+
+        @param reactor: The reactor instance to test.
+
+        @param interface: The interface to listen upon.
+
+        @param addressFamily: C{socket.AF_INET} or C{socket.AF_INET6}.
+
+        @param protocolClientFactory: If specified, the client protocol factory
+            to use (default to C{AccumulatingProtocol}.
+
+        @param protocolServerFactory: If specified, the client protocol factory
+            to use (default to C{AccumulatingProtocol}.
         """
         firstServer = MyServerFactory()
         firstServer.protocolConnectionMade = Deferred()

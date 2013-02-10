@@ -184,6 +184,14 @@ class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
     def writeFile(self, fileObject):
         """
         Send the file over the wire, using a standard producer.
+
+        @param fileObject: A file object to be written on the socket. It needs
+            to be opened fo reading, and at the position where the sending
+            should happen.
+        @type fileObject: C{file}
+
+        @return: a C{Deferred} that fires when the whole file is sent.
+        @rtype: L{Deferred<twisted.internet.defer.Deferred>}
         """
         from twisted.protocols.basic import FileSender
         sender = FileSender()
