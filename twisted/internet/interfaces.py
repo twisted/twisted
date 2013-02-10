@@ -1622,7 +1622,7 @@ class IWriteFileTransport(Interface):
     A transport object supporting sending files over it, possibly in an
     optimized fashion.
 
-    @since: 12.3
+    @since: 13.0
     """
 
     def writeFile(fileObject):
