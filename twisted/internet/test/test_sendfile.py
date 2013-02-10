@@ -57,10 +57,10 @@ class SendfileIntegrationMixin(object):
         Create a file to send during tests.
         """
         filename = self.mktemp()
-        f = open(filename, 'w+')
-        f.write('x' * 1000000)
+        f = open(filename, 'wb+')
+        f.write(b'x' * 1000000)
         f.close()
-        return open(filename, 'r')
+        return open(filename, 'rb')
 
 
     def test_basic(self):
@@ -126,15 +126,15 @@ class SendfileIntegrationMixin(object):
             client, server = protocols[:2]
             client.doneDeferred = doneDeferred = Deferred()
             client.expected = 1000010
-            server.transport.write('y' * 10)
+            server.transport.write(b'y' * 10)
             doneDeferred.addCallback(finished, client)
             fileObject = self.createFile()
             return server.transport.writeFile(fileObject)
 
         def finished(data, client):
             self.assertEqual(1000010, len(data))
-            self.assertEqual('y' * 10, data[:10])
-            self.assertEqual('x' * 10, data[10:20])
+            self.assertEqual(b'y' * 10, data[:10])
+            self.assertEqual(b'x' * 10, data[10:20])
             client.transport.loseConnection()
 
         reactor = self.buildReactor()
@@ -170,7 +170,7 @@ class SendfileIntegrationMixin(object):
 
         def checkWriter(server):
             self.assertNotIn(server.transport, reactor.getWriters())
-            server.transport.write("x")
+            server.transport.write(b"x")
 
         def finished(data, client):
             self.assertEqual(1000001, len(data))
@@ -273,8 +273,8 @@ class SendfileInfoTestCase(TestCase):
         """
         self.assertRaises(AttributeError, SendfileInfo, "blah")
         filename = self.mktemp()
-        f = open(filename, 'w+')
-        f.write('x')
+        f = open(filename, 'wb+')
+        f.write(b'x')
         f.close()
         self.assertRaises(ValueError, SendfileInfo, f)
 
@@ -285,10 +285,10 @@ class SendfileInfoTestCase(TestCase):
         file position when doing so.
         """
         filename = self.mktemp()
-        f = open(filename, 'w+')
-        f.write('x' * 42)
+        f = open(filename, 'wb+')
+        f.write(b'x' * 42)
         f.close()
-        f = open(filename, 'r')
+        f = open(filename, 'rb')
         f.seek(7)
         self.addCleanup(f.close)
         sfi = SendfileInfo(f)

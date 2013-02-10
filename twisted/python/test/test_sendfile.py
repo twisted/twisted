@@ -58,7 +58,7 @@ class SendfileTestCase(TestCase):
         client.setblocking(False)
         try:
             client.connect(('127.0.0.1', self.serverSocket.getsockname()[1]))
-        except socket.error, e:
+        except socket.error as e:
             self.assertEquals(e.args[0], errno.EINPROGRESS)
         server, addr = self.serverSocket.accept()
 
