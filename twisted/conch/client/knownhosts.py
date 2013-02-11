@@ -15,14 +15,8 @@ import sys
 from zope.interface import implements
 
 from twisted.python.randbytes import secureRandom
-if sys.version_info >= (2, 5):
-    from twisted.python.hashlib import sha1
-else:
-    # We need to have an object with a method named 'new'.
-    import sha as sha1
-
+from twisted.python.hashlib import sha1
 from twisted.internet import defer
-
 from twisted.python import log
 from twisted.conch.interfaces import IKnownHostEntry
 from twisted.conch.error import HostKeyChanged, UserRejectedKey, InvalidEntry
