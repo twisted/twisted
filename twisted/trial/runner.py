@@ -188,7 +188,7 @@ class PyUnitTestCase(object):
     DEPRECATED in Twisted 8.0.
 
     This class decorates the pyunit.TestCase class, mainly to work around the
-    differences between unittest in Python 2.3, 2.4, and 2.5. These
+    differences between unittest in Python 2.4, and 2.5. These
     differences are::
 
         - The way doctest unittests describe themselves

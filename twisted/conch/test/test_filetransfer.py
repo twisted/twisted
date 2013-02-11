@@ -1,7 +1,10 @@
 # -*- test-case-name: twisted.conch.test.test_filetransfer -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE file for details.
 
+"""
+Tests for L{twisted.conch.ssh.filetransfer}.
+"""
 
 import os
 import re
@@ -14,12 +17,6 @@ try:
     unix # shut up pyflakes
 except ImportError:
     unix = None
-    try:
-        del sys.modules['twisted.conch.unix'] # remove the bad import
-    except KeyError:
-        # In Python 2.4, the bad import has already been cleaned up for us.
-        # Hooray.
-        pass
 
 from twisted.conch import avatar
 from twisted.conch.ssh import common, connection, filetransfer, session

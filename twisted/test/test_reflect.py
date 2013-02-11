@@ -5,16 +5,14 @@
 Test cases for twisted.reflect module.
 """
 
-import weakref, os
+import os
+import weakref
+from collections import deque
+
 try:
     from ihooks import ModuleImporter
 except ImportError:
     ModuleImporter = None
-
-try:
-    from collections import deque
-except ImportError:
-    deque = None
 
 from twisted.trial import unittest
 from twisted.python import reflect, util
@@ -272,9 +270,10 @@ class ObjectGrep(unittest.TestCase):
         self.assertEqual(['[0]', '[1][0]'], reflect.objgrep(d, a, reflect.isSame, maxDepth=2))
         self.assertEqual(['[0]', '[1][0]', '[1][1][0]'], reflect.objgrep(d, a, reflect.isSame, maxDepth=3))
 
+
     def test_deque(self):
         """
-        Test references search through a deque object. Only for Python > 2.3.
+        Test references search through a deque object.
         """
         o = object()
         D = deque()
@@ -282,9 +281,6 @@ class ObjectGrep(unittest.TestCase):
         D.append(o)
 
         self.assertIn("[1]", reflect.objgrep(D, o, reflect.isSame))
-
-    if deque is None:
-        test_deque.skip = "Deque not available"
 
 
 class GetClass(unittest.TestCase):

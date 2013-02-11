@@ -13,8 +13,7 @@ from twisted.web import domhelpers
 from twisted.python import reflect
 
 
-# parser.suite in Python 2.3 raises SyntaxError, <2.3 raises parser.ParserError
-parserErrors = (SyntaxError, parser.ParserError)
+parserErrors = (SyntaxError,)
 
 class TagChecker:
 
@@ -131,11 +130,11 @@ class DefaultTagChecker(TagChecker):
                     text = '\n'.join(lines) + '\n'
                     try:
                         parser.suite(text)
-                    except parserErrors, e:
+                    except SyntaxError:
                         # Pretend the "..." idiom is syntactically valid
                         text = text.replace("...","'...'")
                         parser.suite(text)
-                except parserErrors, e:
+                except SyntaxError as e:
                     self._reportError(filename, node,
                                       'invalid python code:' + str(e))
 
