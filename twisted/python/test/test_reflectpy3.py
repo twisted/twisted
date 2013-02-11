@@ -445,7 +445,8 @@ class SafeRepr(TestCase):
             breakRepr = True
 
         xRepr = reflect.safe_repr(X)
-        self.assertIn('0x%x' % (id(X),), xRepr)
+        xReprExpected = '<BrokenType instance at 0x%x with repr error:' % id(X)
+        self.assertEqual(xReprExpected, xRepr.split('\n')[0])
 
 
     def test_brokenClassStr(self):
