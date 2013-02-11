@@ -447,7 +447,8 @@ class SafeRepr(TestCase):
             breakRepr = True
 
         xRepr = reflect.safe_repr(X)
-        xReprExpected = '<BrokenType instance at 0x%x with repr error:' % (id(X),)
+        xReprExpected = ('<BrokenType instance at 0x%x with repr error:'
+                         % (id(X),))
         self.assertEqual(xReprExpected, xRepr.split('\n')[0])
 
 
