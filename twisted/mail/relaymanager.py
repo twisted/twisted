@@ -28,6 +28,8 @@ try:
 except ImportError:
     import pickle
 
+from zope.interface import Interface, implements
+
 from twisted.python import log
 from twisted.python.failure import Failure
 from twisted.python.compat import set
@@ -131,8 +133,137 @@ class ESMTPManagedRelayerFactory(SMTPManagedRelayerFactory):
         protocol.factory = self
         return protocol
 
+class IRelayQueue(Interface):
+    """
+    A queue of mail messages to be relayed.
+    """
+
+
+    def createNewMessage():
+        """
+        Create a new message in the queue.
+
+        @return: A tuple containing the message header and a file-like object containing references to the message file.
+        @rtype:  C{tuple}
+        """
+
+
+    def readDirectory():
+        """
+        Look for new messages in the messages directory adding them to queue of messages waiting to be relayed.
+
+        @return: C{None}
+        @rtype:  C{NoneType}
+        """
+
+
+    def done(message):
+        """
+        Remove message from the queue and delete it from the file system.
+
+        @param message: Message to be removed.
+        @type message: C{str}
+
+        @return: C{None}
+        @rtype:  C{NoneType}
+        """
+
+
+    def getPath(message):
+        """
+        Get the filesystem path of the given message.
+
+        @param message: Message for which the filesystem path of the file object is required
+        @type message: C{str}
+
+        @return: a string representing the filesystem path where the message is stored.
+        @rtype:  C{str}
+        """
+
+
+    def hasWaiting():
+        """
+        Check if there are any messages to be relayed.
+
+        @return: a boolean value which is C{True} if there are any messages waiting to be transferred and C{False} if there are no messages waiting to be transferred.
+        @rtype:  C{bool}
+        """
+
+
+    def getWaiting():
+        """
+        Return a list of messages waiting to be relayed.
+
+        @return: a list of messages waiting in the queue to be relayed.
+        @rtype:  C{list}
+        """
+
+
+    def setWaiting(message):
+        """
+        Add a message to the queue of messages waiting to be relayed.
+
+        @param message: Message to be added to the queue of messages waiting to be relayed.
+        @type message: C{str}
+
+        @return: C{None}
+        @rtype:  C{NoneType}
+        """
+
+
+    def addMessage(message):
+        """
+        Add a message to the queue of messages waiting to be relayed if and only if it has not already been relayed.
+
+        @param message: Message to be added to the queue of messages waiting to be relayed.
+        @type message: C{str}
+
+        @return: C{None}
+        @rtype:  C{NoneType}
+        """
+
+
+    def setRelaying(message):
+        """
+        Add a message from the waiting queue to the queue of messages to be relayed.
+
+        @param message: Message to be added to the queue of messages to be relayed.
+        @type message: C{str}
+
+        @return: C{None}
+        @rtype:  C{NoneType}
+        """
+
+
+    def getEnvelope(message):
+        """
+        Get a message file object for the given message.
+
+        @type message: C{str}
+        @param message: Message for which the file object is to be obtained.
+
+        @return: Message file object for the message.
+        @rtype:  C{object}
+        """
+
+
+    def getEnvelopeFile(message):
+        """
+        Get the file handle to the message file object of a given message.
+
+        @type message: C{str}
+        @param message: The message for which the file handle to its message file object is to be obtained.
+
+        @return: File handle of the message file object of message.
+        @rtype: C{file}
+        """
+
+
+
 class Queue:
     """A queue of ougoing emails."""
+
+    implements(IRelayQueue)
 
     noisy = True
 
@@ -341,7 +472,7 @@ class SmartHostSMTPRelayingManager:
 
     def __init__(self, queue, maxConnections=2, maxMessagesPerConnection=10):
         """
-        @type queue: Any implementor of C{IQueue}
+        @type queue: Any implementor of C{IRelayQueue}
         @param queue: The object used to queue messages on their way to
         delivery.
 

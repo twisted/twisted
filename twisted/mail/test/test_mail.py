@@ -15,6 +15,7 @@ import tempfile
 import signal
 
 from zope.interface import Interface, implements
+from zope.interface.verify import verifyObject
 
 from twisted.trial import unittest
 from twisted.mail import smtp
@@ -51,6 +52,7 @@ import twisted.cred.portal
 
 from twisted.test.proto_helpers import LineSendingProtocol
 
+from twisted.mail.relaymanager import IRelayQueue
 class DomainWithDefaultsTestCase(unittest.TestCase):
     def testMethods(self):
         d = dict([(x, x + 10) for x in range(10)])
@@ -1001,6 +1003,14 @@ class DirectoryQueueTestCase(unittest.TestCase):
                 envelopes.pop(0),
                 ['header', i]
             )
+
+
+    def test_queueInterface(self):
+        """
+        Verify that L{Queue} implements L{IRelayQueue}.
+        """
+        self.assertTrue(verifyObject(IRelayQueue, self.queue))
+
 
 from twisted.names import server
 from twisted.names import client
