@@ -1,0 +1,17 @@
+[Unit]
+Description=Example Web Server
+
+[Service]
+ExecStart=/usr/bin/twistd \
+    --nodaemon \
+    --pidfile= \
+    web --port systemd:domain=INET:index=0 --path .
+
+NonBlocking=true
+
+WorkingDirectory=/srv/www/www.example.com/static
+
+User=nobody
+Group=nobody
+
+Restart=always
