@@ -13,10 +13,8 @@ import warnings
 from twisted.python import compat
 
 if compat._PY3:
-    _winregModule = "winreg"
     _threadModule = "_thread"
 else:
-    _winregModule = "_winreg"
     _threadModule = "thread"
 
 
@@ -47,7 +45,9 @@ _timeFunctions = {
 
 
 class Platform:
-    """Gives us information about the platform we're running on"""
+    """
+    Gives us information about the platform we're running on.
+    """
 
     type = knownPlatforms.get(os.name)
     seconds = staticmethod(_timeFunctions.get(type, time.time))
@@ -62,19 +62,30 @@ class Platform:
 
 
     def isKnown(self):
-        """Do we know about this platform?"""
+        """
+        Do we know about this platform?
+
+        @return: Boolean indicating whether this is a known platform or not.
+        @rtype: C{bool}
+        """
         return self.type != None
 
 
     def getType(self):
-        """Return 'posix', 'win32' or 'java'"""
+        """
+        Get platform type.
+
+        @return: Either 'posix', 'win32' or 'java'
+        @rtype: C{str}
+        """
         return self.type
 
 
     def isMacOSX(self):
-        """Check if current platform is Mac OS X.
+        """
+        Check if current platform is Mac OS X.
 
-        @return: C{True} if the current platform has been detected as OS X
+        @return: C{True} if the current platform has been detected as OS X.
         @rtype: C{bool}
         """
         return self._platform == "darwin"
@@ -95,18 +106,7 @@ class Platform:
                 "twisted.python.runtime.Platform.isWinNT was deprecated in "
                 "Twisted 13.0. Use Platform.isWindows instead.",
                 DeprecationWarning, stacklevel=2)
-        if self.getType() == 'win32':
-            winreg = __import__(_winregModule)
-            try:
-                k = winreg.OpenKeyEx(
-                        winreg.HKEY_LOCAL_MACHINE,
-                        r'Software\Microsoft\Windows NT\CurrentVersion')
-                winreg.QueryValueEx(k, 'SystemRoot')
-                return True
-            except WindowsError:
-                return False
-        # not windows NT
-        return False
+        return self.isWindows()
 
 
     def isWindows(self):
@@ -144,7 +144,11 @@ class Platform:
 
 
     def supportsThreads(self):
-        """Can threads be created?
+        """
+        Can threads be created?
+
+        @return: C{True} if the threads are supported on the current platform.
+        @rtype: C{bool}
         """
         try:
             return imp.find_module(_threadModule)[0] is None

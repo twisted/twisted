@@ -2,13 +2,14 @@
 # See LICENSE for details.
 
 """
-Tests for runtime checks.
+Tests for L{twisted.python.runtime}.
 """
 
 from __future__ import division, absolute_import
 
 import sys
 
+from twisted.trial.util import suppress as SUPRESS
 from twisted.trial.unittest import SynchronousTestCase
 
 from twisted.python.runtime import Platform, shortPythonVersion
@@ -33,6 +34,19 @@ class PlatformTests(SynchronousTestCase):
     """
     Tests for the default L{Platform} initializer.
     """
+
+    isWinNTDeprecationMessage = ('twisted.python.runtime.Platform.isWinNT was '
+        'deprecated in Twisted 13.0. Use Platform.isWindows instead.')
+
+
+    def test_isKnown(self):
+        """
+        L{Platform.isKnown} returns a boolean indicating whether this is one of
+        the L{runtime.knownPlatforms}.
+        """
+        platform = Platform()
+        self.assertTrue(platform.isKnown())
+
 
     def test_isVistaConsistency(self):
         """
@@ -73,9 +87,12 @@ class PlatformTests(SynchronousTestCase):
         """
         platform = Platform()
         isWinNT = platform.isWinNT()
-        self.assertTrue(isWinNT in (False, True))
+        self.assertIn(isWinNT, (False, True))
         if platform.getType() != "win32":
             self.assertEqual(isWinNT, False)
+
+    test_isWinNT.suppress = [SUPRESS(category=DeprecationWarning,
+         message=isWinNTDeprecationMessage)]
 
 
     def test_isWinNTDeprecated(self):
@@ -87,10 +104,7 @@ class PlatformTests(SynchronousTestCase):
         warnings = self.flushWarnings([self.test_isWinNTDeprecated])
         self.assertEqual(len(warnings), 1)
         self.assertEqual(
-            warnings[0]['message'],
-            "twisted.python.runtime.Platform.isWinNT was deprecated in "
-            "Twisted 13.0. Use Platform.isWindows instead.")
-        return result
+            warnings[0]['message'], self.isWinNTDeprecationMessage)
 
 
     def test_supportsThreads(self):
