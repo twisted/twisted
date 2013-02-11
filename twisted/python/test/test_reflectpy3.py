@@ -20,7 +20,6 @@ from twisted.python import _reflectpy3 as reflect
 # fullyQualifiedName from there instead, to test the actual public interface
 # instead of this implementation detail.  See #5929.
 from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
-from twisted.python import util
 
 
 
@@ -440,12 +439,17 @@ class SafeRepr(TestCase):
     def test_brokenReprIncludesID(self):
         """
         C{id} is used to print the ID of the object in case of an error.
+
+        L{safe_repr} includes a traceback after a newline, so we only check
+        against the first line of the repr.
         """
         class X(BTBase):
             breakRepr = True
 
         xRepr = reflect.safe_repr(X)
-        self.assertIn('0x%x' % (id(X),), xRepr)
+        xReprExpected = ('<BrokenType instance at 0x%x with repr error:'
+                         % (id(X),))
+        self.assertEqual(xReprExpected, xRepr.split('\n')[0])
 
 
     def test_brokenClassStr(self):
