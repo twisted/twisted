@@ -55,15 +55,14 @@ class ProgramPathsTests(unittest.TestCase):
             self.assertEqual(win32.getProgramsMenuPath(),
                 "C:\\Windows\\Start Menu\\Programs")
         else:
-            self.assertNotNull(win32.getProgramsMenuPath())
+            self.assertIsInstance(win32.getProgramsMenuPath(), str)
 
 
     def test_getProgramFilesPath(self):
         """
         L{getProgramFilesPath} returns the "program files" path on win32.
         """
-        self.assertIsNotNone(win32.getProgramFilesPath())
-
+        self.assertIsInstance(win32.getProgramFilesPath(), str)
 
     if not platform.isWindows():
         test_getProgramFilesPath.skip = (
