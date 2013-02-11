@@ -440,6 +440,9 @@ class SafeRepr(TestCase):
     def test_brokenReprIncludesID(self):
         """
         C{id} is used to print the ID of the object in case of an error.
+
+        L{safe_repr} includes a traceback after a newline, so we only check
+        against the first line of the repr.
         """
         class X(BTBase):
             breakRepr = True
