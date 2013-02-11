@@ -54,8 +54,7 @@ Instance Method: s.center, where s is an instance of UserString.UserString::
 The C{set} builtin and the C{sets.Set} class are serialized to the same
 thing, and unserialized to C{set} if available, else to C{sets.Set}. It means
 that there's a possibility of type switching in the serialization process. The
-solution is to always use C{set} if possible; this can be accomplished by
-using L{twisted.python.compat.set}.
+solution is to always use C{set}.
 
 The same rule applies for C{frozenset} and C{sets.ImmutableSet}.
 
@@ -85,6 +84,15 @@ import copy
 
 import datetime
 from types import BooleanType
+
+try:
+    # Filter out deprecation warning for Python >= 2.6
+    warnings.filterwarnings("ignore", category=DeprecationWarning,
+        message="the sets module is deprecated", append=True)
+    import sets as _sets
+finally:
+    warnings.filters.pop()
+
 
 from zope.interface import implements
 
@@ -516,9 +524,9 @@ class _Jellier:
                     sxp.append(dictionary_atom)
                     for key, val in obj.items():
                         sxp.append([self.jelly(key), self.jelly(val)])
-                elif objType is set:
+                elif objType is set or objType is _sets.Set:
                     sxp.extend(self._jellyIterable(set_atom, obj))
-                elif objType is frozenset:
+                elif objType is frozenset or objType is _sets.ImmutableSet:
                     sxp.extend(self._jellyIterable(frozenset_atom, obj))
                 else:
                     className = qual(obj.__class__)
