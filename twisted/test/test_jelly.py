@@ -327,38 +327,38 @@ class JellyTestCase(unittest.TestCase):
 
 
     def test_oldSets(self):
-         """
-         Test jellying C{sets.Set}: it should serialize to the same thing as
-         C{set} jelly, and be unjellied as C{set} if available.
-         """
-         inputList = [jelly._sets.Set([1, 2, 3])]
-         inputJelly = jelly.jelly(inputList)
-         self.assertEqual(inputJelly, jelly.jelly([set([1, 2, 3])]))
-         output = jelly.unjelly(inputJelly)
-         # Even if the class is different, it should coerce to the same list
-         self.assertEqual(list(inputList[0]), list(output[0]))
-         if set is jelly._sets.Set:
-             self.assertIsInstance(output[0], jelly._sets.Set)
-         else:
-             self.assertIsInstance(output[0], set)
- 
- 
+        """
+        Test jellying C{sets.Set}: it should serialize to the same thing as
+        C{set} jelly, and be unjellied as C{set} if available.
+        """
+        inputList = [jelly._sets.Set([1, 2, 3])]
+        inputJelly = jelly.jelly(inputList)
+        self.assertEqual(inputJelly, jelly.jelly([set([1, 2, 3])]))
+        output = jelly.unjelly(inputJelly)
+        # Even if the class is different, it should coerce to the same list
+        self.assertEqual(list(inputList[0]), list(output[0]))
+        if set is jelly._sets.Set:
+            self.assertIsInstance(output[0], jelly._sets.Set)
+        else:
+            self.assertIsInstance(output[0], set)
+
+
     def test_oldImmutableSets(self):
-         """
-         Test jellying C{sets.ImmutableSet}: it should serialize to the same
-         thing as C{frozenset} jelly, and be unjellied as C{frozenset} if
-         available.
-         """
-         inputList = [jelly._sets.ImmutableSet([1, 2, 3])]
-         inputJelly = jelly.jelly(inputList)
-         self.assertEqual(inputJelly, jelly.jelly([frozenset([1, 2, 3])]))
-         output = jelly.unjelly(inputJelly)
-         # Even if the class is different, it should coerce to the same list
-         self.assertEqual(list(inputList[0]), list(output[0]))
-         if frozenset is jelly._sets.ImmutableSet:
-             self.assertIsInstance(output[0], jelly._sets.ImmutableSet)
-         else:
-             self.assertIsInstance(output[0], frozenset)
+        """
+        Test jellying C{sets.ImmutableSet}: it should serialize to the same
+        thing as C{frozenset} jelly, and be unjellied as C{frozenset} if
+        available.
+        """
+        inputList = [jelly._sets.ImmutableSet([1, 2, 3])]
+        inputJelly = jelly.jelly(inputList)
+        self.assertEqual(inputJelly, jelly.jelly([frozenset([1, 2, 3])]))
+        output = jelly.unjelly(inputJelly)
+        # Even if the class is different, it should coerce to the same list
+        self.assertEqual(list(inputList[0]), list(output[0]))
+        if frozenset is jelly._sets.ImmutableSet:
+            self.assertIsInstance(output[0], jelly._sets.ImmutableSet)
+        else:
+            self.assertIsInstance(output[0], frozenset)
 
 
     def test_simple(self):
