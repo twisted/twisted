@@ -1,8 +1,0 @@
-[Service]
-ExecStart=/home/richard/projects/combinator_paths/bincache/twistd --nodaemon \
-    web --port systemd:domain=INET:index=0 --path .
-Environment=\
-    PYTHONPATH=/home/richard/projects/Divmod/trunk/Combinator
-WorkingDirectory=/home/richard/www
-User=richard
-NonBlocking=true

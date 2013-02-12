@@ -80,7 +80,7 @@ $ twistd --nodaemon web --port 8080 --path /srv/www/www.example.com/static
 
 <h2>Basic Systemd Service Configuration</h2>
 <p>The essential configuration file for a <code>systemd</code> service is the
-  <a href="http://0pointer.de/public/systemd-man/systemd.service.html"><code>systemd.service</code></a>
+  <a href="http://www.freedesktop.org/software/systemd/man/systemd.service.html"><code>systemd.service</code></a>
   file.</p>
 <p>Later in this tutorial, you will learn about some other types of
   configuration file, which are used to control when and how your
@@ -89,17 +89,16 @@ $ twistd --nodaemon web --port 8080 --path /srv/www/www.example.com/static
   server immediately on system boot.</p>
 <ol>
   <li>
-    <h3>Create
-      a <a href="http://0pointer.de/public/systemd-man/systemd.service.html"><code>systemd.service</code></a>
-      file</h3>
-    <p>Create the service file
-      at <code>/etc/systemd/system/www.example.com.service</code> with
-      the following content:</p>
+    <h3>Create a systemd.service file</h3>
+    <p>Create
+      the <a href="http://www.freedesktop.org/software/systemd/man/systemd.service.html"><code>systemd.service</code></a>
+      file at <code>/etc/systemd/system/www.example.com.service</code>
+      with the following content:</p>
     <a href="listings/systemd/www.example.com.static.service"
     class="listing">/etc/systemd/system/www.example.com.service</a>
 
     <p>This configuration file contains the following note worthy
-      sections:</p>
+      directives:</p>
 
     <dl>
       <dt>ExecStart</dt>
@@ -112,7 +111,7 @@ $ twistd --nodaemon web --port 8080 --path /srv/www/www.example.com/static
         prevents <code>twistd</code> from writing a pidfile. A pidfile
         is not necessary when Twisted runs as a foreground
         process.</dd>
-      <dd>The <code>--path</code> flag to specifies the location of
+      <dd>The <code>--path</code> flag specifies the location of
         the website files. In this example we use <q>.</q> which
         makes <code>twistd</code> serve files from its current working
         directory (see below).</dd>
@@ -138,11 +137,22 @@ $ twistd --nodaemon web --port 8080 --path /srv/www/www.example.com/static
       <dd>In this example the <code>Restart</code> option is set
         to <code>always</code>, which ensures that <code>twistd</code> will be
         restarted under all circumstances.</dd>
+
+      <dt>WantedBy</dt>
+      <dd>Systemd service dependencies are controlled by
+        <code>WantedBy</code> and <code>RequiredBy</code> directives
+        in the <code>[Install]</code> section of configuration
+        file.</dd>
+      <dd>The <a href="http://www.freedesktop.org/software/systemd/man/systemd.special.html">special
+        <code>multi-user.target</code></a> is used in this example so
+        that <code>systemd</code> starts the <code>twistd web</code>
+        service when it reaches the multi-user stage of the boot
+        sequence.</dd>
     </dl>
 
-    <p>There are many more service options which are documented in the
-    <a href="http://0pointer.de/public/systemd-man/systemd.service.html"><code>systemd.service</code>
-      man page</a>.</p>
+    <p>There are many more service directives which are documented in the
+      <a href="http://www.freedesktop.org/software/systemd/man/systemd.directives.html"><code>systemd.directives
+      man page</code></a>.</p>
   </li>
 
   <li>
@@ -162,10 +172,10 @@ $ sudo systemctl start www.example.com
     </pre>
 
     <p><code>twistd</code> should now be running and listening on TCP
-      port 8080. You can verify this using the <code>systemctl</code>
+      port 8080. You can verify this using the <code>systemctl status</code>
       command. eg</p>
     <pre class="shell">
-$ sudo systemctl status www.example.com.service
+$ systemctl status www.example.com.service
 www.example.com.service - Example Web Server
           Loaded: loaded (/etc/systemd/system/www.example.com.service; enabled)
           Active: active (running) since Mon 2013-01-28 16:16:26 GMT; 1s ago
@@ -187,13 +197,14 @@ Jan 28 16:16:26 zorin.lan twistd[10695]: 2013-01-28 16:16:26+0000 [-] Starting f
     <p>This is especially useful for debugging and diagnosing service
       startup problems.</p>
     <p>The <code>twistd</code> subprocess will log messages
-      to <code>stderr</code> and <code>systemd</code> will in turn log
+      to <code>stderr</code> and <code>systemd</code> will log
       these messages to syslog. You can verify this by monitoring the
       syslog messages or by using the new <code>journalctl</code> tool
       in Fedora.</p>
     <p>See
-      the <a href="http://0pointer.de/public/systemd-man/systemctl.html"><code>systemctl</code>
-      man page</a> for details of the service available options.</p>
+      the <a href="http://www.freedesktop.org/software/systemd/man/systemctl.html"><code>systemctl</code>
+      man page</a> for details of other <code>systemctl</code> command
+      line options.</p>
   </li>
   <li>
     <h3>Enable the service</h3>
@@ -205,13 +216,15 @@ Jan 28 16:16:26 zorin.lan twistd[10695]: 2013-01-28 16:16:26+0000 [-] Starting f
 $ sudo systemctl enable www.example.com.service
 ln -s '/etc/systemd/system/www.example.com.service' '/etc/systemd/system/multi-user.target.wants/www.example.com.service'
     </pre>
-    <p>As you can see, this creates a symlink to the service file in
-      the <code>systemd</code> multi-user target directory.</p>
+    <p>This creates a symlink to the service file in
+      the <code>multi-user.target.wants</code> directory.</p>
     <p>The Twisted web server will now be started automatically at
       boot time.</p>
-    <p class="note">The default <code>systemd</code> boot <code>target</code>
-      is <q>multi-user</q>. Later in this tutorial you will learn how
-      to use the <q>sockets</q> target.</p>
+    <p class="note">The <code>multi-user.target</code> is an example
+      of
+      a <a href="http://www.freedesktop.org/software/systemd/man/systemd.special.html"><q>special</q>
+      systemd unit</a>. Later in this tutorial you will learn how to
+      use another special unit - the <code>sockets.target</code>.</p>
   </li>
 
   <li>
@@ -221,14 +234,14 @@ ln -s '/etc/systemd/system/www.example.com.service' '/etc/systemd/system/multi-u
       restart the <code>twistd</code> process if and when it exits
       unexpectedly.</p>
     <p>You can read about other <code>Restart</code> options in
-      the <a href="http://0pointer.de/public/systemd-man/systemd.service.html"><code>systemd.service</code>
+      the <a href="http://www.freedesktop.org/software/systemd/man/systemd.service.html"><code>systemd.service</code>
       man page.</a></p>
     <p>Try killing the <code>twistd</code> process and then checking its status
       again:</p>
     <pre class="shell">
 $ sudo kill 12543
 
-$ sudo systemctl status www.example.com.service
+$ systemctl status www.example.com.service
 www.example.com.service - Example Web Server
           Loaded: loaded (/etc/systemd/system/www.example.com.service; disabled)
           Active: active (running) since Mon 2013-01-28 17:47:37 GMT; 1s ago
@@ -244,7 +257,7 @@ www.example.com.service - Example Web Server
     <pre class="shell">
 $ sudo systemctl stop www.example.com.service
 
-$ sudo systemctl status www.example.com.service
+$ systemctl status www.example.com.service
 www.example.com.service - Example Web Server
           Loaded: loaded (/etc/systemd/system/www.example.com.service; enabled)
           Active: inactive (dead) since Mon 2013-01-28 16:51:12 GMT; 1s ago
@@ -256,33 +269,45 @@ www.example.com.service - Example Web Server
 <h2>Socket Activation</h2>
 <p>First you need to understand what <q>socket activation</q> is. This
   extract from
-  the <a href="http://www.0pointer.de/public/systemd-man/daemon.html">systemd
-  daemon man page</a> explains it clearly.</p>
-<blockquote>
-  In a socket-based activation scheme the creation and binding of the
-  listening socket as primary communication channel of daemons to
-  local (and sometimes remote) clients is moved out of the daemon code
-  and into the init system. Based on per-daemon configuration the init
-  system installs the sockets and then hands them off to the spawned
-  process as soon as the respective daemon is to be
-  started. Optionally activation of the service can be delayed until
-  the first inbound traffic arrives at the socket, to implement
-  on-demand activation of daemons. However, the primary advantage of
-  this scheme is that all providers and all consumers of the sockets
-  can be started in parallel as soon as all sockets are
-  established. In addition to that daemons can be restarted with
-  losing only a minimal number of client transactions or even any
-  client request at all (the latter is particularly true for
-  state-less protocols, such as DNS or syslog), because the socket
-  stays bound and accessible during the restart, and all requests are
-  queued while the daemon cannot process them.
-</blockquote>
+  the <a href="http://www.freedesktop.org/software/systemd/man/daemon.html">systemd
+  daemon man page</a> explains it quite clearly.</p>
+
+<blockquote>In a socket-based activation scheme the creation and
+  binding of the listening socket as primary communication channel of
+  daemons to local (and sometimes remote) clients is moved out of the
+  daemon code and into the init system.</blockquote>
+
+<blockquote>Based on per-daemon configuration the init system installs
+  the sockets and then hands them off to the spawned process as soon
+  as the respective daemon is to be started.</blockquote>
+
+<blockquote>Optionally activation of the service can be delayed until the first
+  inbound traffic arrives at the socket, to implement on-demand
+  activation of daemons.</blockquote>
+
+<blockquote>However, the primary advantage of this scheme is that all providers
+  and all consumers of the sockets can be started in parallel as soon
+  as all sockets are established.</blockquote>
+
+<blockquote>In addition to that daemons can be restarted with losing only a
+  minimal number of client transactions or even any client request at
+  all (the latter is particularly true for state-less protocols, such
+  as DNS or syslog), because the socket stays bound and accessible
+  during the restart, and all requests are queued while the daemon
+  cannot process them.</blockquote>
+
+<p>Another benefit of socket activation is that <code>systemd</code>
+  can listen on privileged ports and start Twisted with privileges
+  already dropped. This allows a Twisted service to be configured
+  and restarted by a non-root user.</p>
+
 <p>Twisted (since version 12.2) includes
   a <a href="endpoints.html"><code>systemd</code> endpoint API and a corresponding
   string ports syntax</a>, which allows a Twisted service to inherit a
   listening socket from <code>systemd</code>.</p>
 <p>The following example builds on the previous example, demonstrating
   how to enable socket activation for a simple Twisted web server.</p>
+
 <div class="note">
   <p>Before continuing, stop the previous example service with the
     following command:</p>
@@ -294,24 +319,25 @@ $ sudo systemctl stop www.example.com.service
 
 <ol>
   <li>
-    <h3>Create
-      a <a href="http://0pointer.de/public/systemd-man/systemd.socket.html"><code>systemd.socket</code></a>
-      file</h3>
-    <p>Create the socket file
-      at <code>/etc/systemd/system/www.example.com.socket</code> with
-      the following content:</p>
+    <h3>Create a systemd.socket file</h3>
+    <p>Create
+      the <a href="http://www.freedesktop.org/software/systemd/man/systemd.socket.html"><code>systemd.socket</code></a>
+      file at <code>/etc/systemd/system/www.example.com.socket</code>
+      with the following content:</p>
     <a href="listings/systemd/www.example.com.socket"
        class="listing">/etc/systemd/system/www.example.com.socket</a>
 
     <p>This configuration file contains the following important
-      sections:</p>
+      directives:</p>
     <dl>
       <dt>ListenStream=0.0.0.0:80</dt>
       <dd>This option configures <code>systemd</code> to create a
         listening TCP socket bound to all local IPv4 addresses on port
         80.</dd>
       <dt>WantedBy=sockets.target</dt>
-      <dd>This is a special target used by all socket activated
+      <dd>This is
+        a <a href="http://www.freedesktop.org/software/systemd/man/systemd.special.html">special
+        target</a> used by all socket activated
         services. <code>systemd</code> will automatically bind to all
         such socket activation ports during boot up.</dd>
     </dl>
@@ -320,7 +346,7 @@ $ sudo systemctl stop www.example.com.service
     follows:</p>
     <a href="listings/systemd/www.example.com.socketactivated.service"
        class="listing">/etc/systemd/system/www.example.com.service</a>
-    <p>Notice the following important changes:</p>
+    <p>Note the following important directives and changes:</p>
     <dl>
       <dt>ExecStart</dt>
       <dd>The <code>domain=INET</code> endpoint argument makes <code>twistd</code>
@@ -337,6 +363,10 @@ $ sudo systemctl stop www.example.com.service
       <dt>NonBlocking</dt>
       <dd>This must be set to <code>true</code> to ensure that <code>systemd</code>
         passes non-blocking sockets to Twisted.</dd>
+
+      <dt><del>[Install]</del></dt>
+      <dd>In this example, the <code>[Install]</code> section has been
+        moved to the socket configuration file.</dd>
     </dl>
     <p>Reload <code>systemd</code> so that it reads the updated
       configuration files.</p>
@@ -356,7 +386,7 @@ $ sudo systemctl start www.example.com.socket
     configuration file, <strong>not</strong> the service file.</p>
     <p><code>systemd</code> should now be listening on port 80</p>
     <pre class="shell">
-$ sudo systemctl status www.example.com.socket
+$ systemctl status www.example.com.socket
 www.example.com.socket
           Loaded: loaded (/etc/systemd/system/www.example.com.socket; disabled)
           Active: active (listening) since Tue 2013-01-29 14:53:17 GMT; 7s ago
@@ -367,7 +397,7 @@ Jan 29 14:53:17 zorin.lan systemd[1]: Listening on www.example.com.socket.
     <p>But <code>twistd</code> should not yet have started. You can verify this
       using the <code>systemctl</code> command. eg</p>
     <pre class="shell">
-$ sudo systemctl status www.example.com.service
+$ systemctl status www.example.com.service
 www.example.com.service - Example Web Server
           Loaded: loaded (/etc/systemd/system/www.example.com.service; static)
           Active: inactive (dead) since Tue 2013-01-29 14:48:42 GMT; 6min ago
@@ -381,7 +411,7 @@ ln -s '/etc/systemd/system/www.example.com.socket' '/etc/systemd/system/sockets.
     </pre>
   </li>
   <li>
-    <h3>Activate the port, start the service</h3>
+    <h3>Activate the port to start the service</h3>
 
     <p>Now try connecting
       to <a href="http://localhost:80">http://localhost:80</a> in
@@ -390,9 +420,9 @@ ln -s '/etc/systemd/system/www.example.com.socket' '/etc/systemd/system/sockets.
     <p><code>systemd</code> will accept the connection and
       start <code>twistd</code>, passing it the listening socket. You
       can verify this by using systemctl to report the status of the
-      service.. eg</p>
+      service. eg</p>
     <pre class="shell">
-$ sudo systemctl status www.example.com.service
+$ systemctl status www.example.com.service
 www.example.com.service - Example Web Server
           Loaded: loaded (/etc/systemd/system/www.example.com.service; static)
           Active: active (running) since Tue 2013-01-29 15:02:20 GMT; 3s ago
@@ -413,7 +443,7 @@ Jan 29 15:02:20 zorin.lan twistd[25605]: 2013-01-29 15:02:20+0000 [-] Starting f
 <h2>Conclusion</h2>
 <p>In this tutorial you have learned how to deploy a Twisted service
   using <code>systemd</code>. You have also learned how the service can be started
-  on demand, using socket activation</p>
+  on demand, using socket activation.</p>
 
 <h2 id="limitations">Limitations and Known Issues</h2>
 <ol>
@@ -424,7 +454,7 @@ Jan 29 15:02:20 zorin.lan twistd[25605]: 2013-01-29 15:02:20+0000 [-] Starting f
 </ol>
 <h2>Further Reading</h2>
 <ul>
-  <li><a href="http://0pointer.de/blog/projects/systemd-docs.html"><code>systemd</code>
+  <li><a href="http://www.freedesktop.org/software/systemd/man/"><code>systemd</code>
       Documentation</a></li>
 </ul>
 </body>
