@@ -17,7 +17,8 @@ class TestRunners(unittest.SynchronousTestCase):
     def test_id(self):
         """
         Check that the id() of the doctests' case object contains the FQPN of
-        the actual tests.
+        the actual tests. We need this because id() has weird behaviour w/
+        doctest in Python 2.3.
         """
         loader = runner.TestLoader()
         suite = loader.loadDoctests(mockdoctest)
@@ -42,7 +43,8 @@ class TestRunners(unittest.SynchronousTestCase):
         result = reporter.TestResult()
         suite.run(result)
         self.assertEqual(5, result.successes)
-        self.assertEqual(2, len(result.failures))
+        # doctest reports failures as errors in 2.3
+        self.assertEqual(2, len(result.errors) + len(result.failures))
 
 
     def test_expectedResults(self, count=1):

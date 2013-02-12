@@ -3,8 +3,7 @@
 
 from twisted.trial import unittest
 
-from twisted.words.protocols.jabber.xmpp_stringprep import (
-    nodeprep, resourceprep, nameprep)
+from twisted.words.protocols.jabber.xmpp_stringprep import nodeprep, resourceprep, nameprep, crippled
 
 class XMPPStringPrepTest(unittest.TestCase):
     """
@@ -27,6 +26,9 @@ class XMPPStringPrepTest(unittest.TestCase):
         self.assertEqual(resourceprep.prepare(u'resource'), u'resource')
         self.assertNotEquals(resourceprep.prepare(u'Resource'), u'resource')
         self.assertEqual(resourceprep.prepare(u' '), u' ')
+
+        if crippled:
+            return
 
         self.assertEqual(resourceprep.prepare(u'Henry \u2163'), u'Henry IV')
         self.assertEqual(resourceprep.prepare(u'foo\xad\u034f\u1806\u180b'
@@ -82,6 +84,9 @@ class XMPPStringPrepTest(unittest.TestCase):
         self.assertRaises(UnicodeError, nameprep.prepare, u'ex@mple.com')
         self.assertRaises(UnicodeError, nameprep.prepare, u'-example.com')
         self.assertRaises(UnicodeError, nameprep.prepare, u'example-.com')
+
+        if crippled:
+            return
 
         self.assertEqual(nameprep.prepare(u'stra\u00dfe.example.com'),
                           u'strasse.example.com')

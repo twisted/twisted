@@ -54,7 +54,8 @@ Instance Method: s.center, where s is an instance of UserString.UserString::
 The C{set} builtin and the C{sets.Set} class are serialized to the same
 thing, and unserialized to C{set} if available, else to C{sets.Set}. It means
 that there's a possibility of type switching in the serialization process. The
-solution is to always use C{set}.
+solution is to always use C{set} if possible, and only use C{sets.Set} under
+Python 2.3; this can be accomplished by using L{twisted.python.compat.set}.
 
 The same rule applies for C{frozenset} and C{sets.ImmutableSet}.
 
@@ -65,7 +66,6 @@ The same rule applies for C{frozenset} and C{sets.ImmutableSet}.
 import pickle
 import types
 import warnings
-import decimal
 from types import StringType
 from types import UnicodeType
 from types import IntType
@@ -84,6 +84,16 @@ import copy
 
 import datetime
 from types import BooleanType
+
+try:
+    import decimal
+except ImportError:
+    decimal = None
+
+try:
+    _set = set
+except NameError:
+    _set = None
 
 try:
     # Filter out deprecation warning for Python >= 2.6
@@ -508,7 +518,7 @@ class _Jellier:
                                                    obj.microseconds)]
             elif objType is ClassType or issubclass(objType, type):
                 return ['class', qual(obj)]
-            elif objType is decimal.Decimal:
+            elif decimal is not None and objType is decimal.Decimal:
                 return self.jelly_decimal(obj)
             else:
                 preRef = self._checkMutable(obj)
@@ -524,9 +534,11 @@ class _Jellier:
                     sxp.append(dictionary_atom)
                     for key, val in obj.items():
                         sxp.append([self.jelly(key), self.jelly(val)])
-                elif objType is set or objType is _sets.Set:
+                elif (_set is not None and objType is set or
+                      objType is _sets.Set):
                     sxp.extend(self._jellyIterable(set_atom, obj))
-                elif objType is frozenset or objType is _sets.ImmutableSet:
+                elif (_set is not None and objType is frozenset or
+                      objType is _sets.ImmutableSet):
                     sxp.extend(self._jellyIterable(frozenset_atom, obj))
                 else:
                     className = qual(obj.__class__)
@@ -687,8 +699,12 @@ class _Unjellier:
 
     def _unjelly_decimal(self, exp):
         """
-        Unjelly decimal objects.
+        Unjelly decimal objects, if decimal is available. If not, return a
+        L{Unpersistable} object instead.
         """
+        if decimal is None:
+            return Unpersistable(
+                "Could not unpersist decimal: %s" % (exp[0] * (10**exp[1]),))
         value = exp[0]
         exponent = exp[1]
         if value < 0:
@@ -800,16 +816,26 @@ class _Unjellier:
 
     def _unjelly_set(self, lst):
         """
-        Unjelly set using the C{set} builtin.
+        Unjelly set using either the C{set} builtin if available, or
+        C{sets.Set} as fallback.
         """
-        return self._unjellySetOrFrozenset(lst, set)
+        if _set is not None:
+            containerType = set
+        else:
+            containerType = _sets.Set
+        return self._unjellySetOrFrozenset(lst, containerType)
 
 
     def _unjelly_frozenset(self, lst):
         """
-        Unjelly frozenset using the C{frozenset} builtin.
+        Unjelly frozenset using either the C{frozenset} builtin if available,
+        or C{sets.ImmutableSet} as fallback.
         """
-        return self._unjellySetOrFrozenset(lst, frozenset)
+        if _set is not None:
+            containerType = frozenset
+        else:
+            containerType = _sets.ImmutableSet
+        return self._unjellySetOrFrozenset(lst, containerType)
 
 
     def _unjelly_dictionary(self, lst):
@@ -1015,7 +1041,8 @@ class SecurityOptions:
                              "NoneType": 1}
         if hasattr(types, 'UnicodeType'):
             self.allowedTypes['unicode'] = 1
-        self.allowedTypes['decimal'] = 1
+        if decimal is not None:
+            self.allowedTypes['decimal'] = 1
         self.allowedTypes['set'] = 1
         self.allowedTypes['frozenset'] = 1
         self.allowedModules = {}

@@ -132,8 +132,17 @@ if _PY3:
     del adict, inet_pton, inet_ntop
 
 
-set = set
-frozenset = frozenset
+
+try:
+    set = set
+except NameError:
+    from sets import Set as set
+
+
+try:
+    frozenset = frozenset
+except NameError:
+    from sets import ImmutableSet as frozenset
 
 
 try:

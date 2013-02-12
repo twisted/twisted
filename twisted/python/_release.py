@@ -441,7 +441,8 @@ class APIBuilder(object):
     """
     Generate API documentation from source files using
     U{pydoctor<http://codespeak.net/~mwh/pydoctor/>}.  This requires
-    pydoctor to be installed and usable.
+    pydoctor to be installed and usable (which means you won't be able to
+    use it with Python 2.3).
     """
     def build(self, projectName, projectURL, sourceURL, packagePath,
               outputPath):

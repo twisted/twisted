@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.conch.test.test_cftp -*-
-# Copyright (c) Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE file for details.
 
 """
@@ -18,7 +18,9 @@ if Crypto and pyasn1:
         from twisted.conch import unix
         from twisted.conch.scripts import cftp
         from twisted.conch.test.test_filetransfer import FileTransferForTestAvatar
-    except ImportError as e:
+    except ImportError, e:
+        # Python 2.3 compatibility fix
+        sys.modules.pop("twisted.conch.unix", None)
         unix = None
         _reason = str(e)
         del e
