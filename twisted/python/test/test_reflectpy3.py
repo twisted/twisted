@@ -275,8 +275,7 @@ class LookupsTestCase(TestCase):
         self.assertRaises(
             ZeroDivisionError,
             reflect.namedAny, "twisted.test.reflect_helper_ZDE")
-        # Make sure that this behavior is *consistent* for 2.3, where there is
-        # no post-failed-import cleanup
+        # Make sure there was post-failed-import cleanup
         self.assertRaises(
             ZeroDivisionError,
             reflect.namedAny, "twisted.test.reflect_helper_ZDE")
