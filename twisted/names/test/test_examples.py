@@ -2,9 +2,9 @@
 # See LICENSE for details.
 
 """
-Tests for L{twisted.names.tap}.
+Tests for L{twisted.names} example scripts.
 """
-import os
+
 import sys
 from StringIO import StringIO
 
@@ -43,7 +43,8 @@ class ExampleTestBase(object):
         for childName in self.examplePath:
             here = here.child(childName)
         if not here.exists():
-            raise SkipTest("Examples (%s) not found - cannot test" % (here.path,))
+            raise SkipTest(
+                "Examples (%s) not found - cannot test" % (here.path,))
         sys.path.append(here.parent().path)
         # Import the example as a module
         moduleName = here.basename().split('.')[0]
@@ -53,8 +54,8 @@ class ExampleTestBase(object):
 
     def tearDown(self):
         """
-        Remove the example directory from the path and remove all modules loaded by
-        the test from sys.modules.
+        Remove the example directory from the path and remove all
+        modules loaded by the test from sys.modules.
         """
         sys.modules.clear()
         sys.modules.update(self.originalModules)
@@ -62,38 +63,42 @@ class ExampleTestBase(object):
         sys.stderr = self.originalErr
 
 
-    def test_executable(self):
+    def test_shebang(self):
         """
-        The example scripts should start with the standard shebang
-        line and should be executable.
+        The example scripts start with the standard shebang line.
         """
         self.assertEquals(
             self.examplePath.open().readline().rstrip(),
             '#!/usr/bin/env python')
 
-        mode = oct(os.stat(self.examplePath.path).st_mode)[-3:]
-        self.assertEquals(
-            mode, '775',
-            'Wrong permissions. %r on %r' % (mode, self.examplePath.path))
 
-
-    def test_usage(self):
+    def test_usageConsistency(self):
         """
-        The example script prints a usage message to stderr and raises
-        SystemExit if it is passed incorrect command line
-        arguments. The first line should contain a USAGE summary and
-        the last line should contain an ERROR, explaining that
+        The example script prints a usage message to stderr if it is
+        passed unrecognised command line arguments.
+
+        The first line should contain a USAGE summary, explaining the
+        accepted command arguments.
+
+        The last line should contain an ERROR summary, explaining that
         incorrect arguments were supplied.
         """
         self.assertRaises(SystemExit, self.example.main, None)
         err = self.fakeErr.getvalue().splitlines()
-        self.assertEquals(err[0][:len('USAGE:')], 'USAGE:')
-        self.assertEquals(err[-1][:len('ERROR:')], 'ERROR:')
+        self.assertTrue(
+            err[0].startswith('USAGE:'),
+            'Usage message first line should start with "USAGE:". '
+            'Actual: %r' % (err[0],))
+        self.assertTrue(
+            err[-1].startswith('ERROR:'),
+            'Usage message last line should start with "ERROR:" '
+            'Actual: %r' % (err[-1],))
+
 
 
 class TestDnsTests(ExampleTestBase, TestCase):
     """
-    Tests for the testdns.py example script.
+    Test the testdns.py example script.
     """
 
     examplePath = 'doc/names/examples/testdns.py'.split('/')
@@ -101,7 +106,7 @@ class TestDnsTests(ExampleTestBase, TestCase):
 
 class GetHostByNameTests(ExampleTestBase, TestCase):
     """
-    Tests for the gethostbyname.py example script.
+    Test the gethostbyname.py example script.
     """
 
     examplePath = 'doc/names/examples/gethostbyname.py'.split('/')
@@ -109,7 +114,7 @@ class GetHostByNameTests(ExampleTestBase, TestCase):
 
 class DnsServiceTests(ExampleTestBase, TestCase):
     """
-    Tests for the dns-service.py example script.
+    Test the dns-service.py example script.
     """
 
     examplePath = 'doc/names/examples/dns-service.py'.split('/')
