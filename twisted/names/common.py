@@ -60,19 +60,7 @@ class ResolverBase:
 
     def query(self, query, timeout=None):
         """
-        Dispatch C{query} to the method which can handle its type.
-
-        @param query: The DNS query being issued, to which a response is to be
-            generated.
-        @type query: L{twisted.names.dns.Query}
-
-        @return: A L{Deferred} which fires with a three-tuple of lists of
-            L{twisted.names.dns.RRHeader} instances.  The first element of the
-            tuple gives answers.  The second element of the tuple gives
-            authorities.  The third element of the tuple gives additional
-            information.  The L{Deferred} may instead fail with one of the
-            exceptions defined in L{twisted.names.error} or with
-            C{NotImplementedError}.
+        @see: twisted.internet.interfaces.IResolver.query
         """
         try:
             method = self.typeToMethod[query.type]
@@ -86,143 +74,143 @@ class ResolverBase:
     def _lookup(self, name, cls, type, timeout):
         return defer.fail(NotImplementedError("ResolverBase._lookup"))
 
-    def lookupAddress(self, name, timeout = None):
+    def lookupAddress(self, name, timeout=None):
         """
-        @see: twisted.names.client.lookupAddress
+        @see: twisted.internet.interfaces.IResolver.lookupAddress
         """
         return self._lookup(name, dns.IN, dns.A, timeout)
 
-    def lookupIPV6Address(self, name, timeout = None):
+    def lookupIPV6Address(self, name, timeout=None):
         """
-        @see: twisted.names.client.lookupIPV6Address
+        @see: twisted.internet.interfaces.IResolver.lookupIPV6Address
         """
         return self._lookup(name, dns.IN, dns.AAAA, timeout)
 
-    def lookupAddress6(self, name, timeout = None):
+    def lookupAddress6(self, name, timeout=None):
         """
-        @see: twisted.names.client.lookupAddress6
+        @see: twisted.internet.interfaces.IResolver.lookupAddress6
         """
         return self._lookup(name, dns.IN, dns.A6, timeout)
 
-    def lookupMailExchange(self, name, timeout = None):
+    def lookupMailExchange(self, name, timeout=None):
         """
-        @see: twisted.names.client.lookupMailExchange
+        @see: twisted.internet.interfaces.IResolver.lookupMailExchange
         """
         return self._lookup(name, dns.IN, dns.MX, timeout)
 
-    def lookupNameservers(self, name, timeout = None):
+    def lookupNameservers(self, name, timeout=None):
         """
-        @see: twisted.names.client.lookupNameservers
+        @see: twisted.internet.interfaces.IResolver.lookupNameservers
         """
         return self._lookup(name, dns.IN, dns.NS, timeout)
 
-    def lookupCanonicalName(self, name, timeout = None):
+    def lookupCanonicalName(self, name, timeout=None):
         """
-        @see: twisted.names.client.lookupCanonicalName
+        @see: twisted.internet.interfaces.IResolver.lookupCanonicalName
         """
         return self._lookup(name, dns.IN, dns.CNAME, timeout)
 
-    def lookupMailBox(self, name, timeout = None):
+    def lookupMailBox(self, name, timeout=None):
         """
-        @see: twisted.names.client.lookupMailBox
+        @see: twisted.internet.interfaces.IResolver.lookupMailBox
         """
         return self._lookup(name, dns.IN, dns.MB, timeout)
 
-    def lookupMailGroup(self, name, timeout = None):
+    def lookupMailGroup(self, name, timeout=None):
         """
-        @see: twisted.names.client.lookupMailGroup
+        @see: twisted.internet.interfaces.IResolver.lookupMailGroup
         """
         return self._lookup(name, dns.IN, dns.MG, timeout)
 
-    def lookupMailRename(self, name, timeout = None):
+    def lookupMailRename(self, name, timeout=None):
         """
-        @see: twisted.names.client.lookupMailRename
+        @see: twisted.internet.interfaces.IResolver.lookupMailRename
         """
         return self._lookup(name, dns.IN, dns.MR, timeout)
 
-    def lookupPointer(self, name, timeout = None):
+    def lookupPointer(self, name, timeout=None):
         """
-        @see: twisted.names.client.lookupPointer
+        @see: twisted.internet.interfaces.IResolver.lookupPointer
         """
         return self._lookup(name, dns.IN, dns.PTR, timeout)
 
-    def lookupAuthority(self, name, timeout = None):
+    def lookupAuthority(self, name, timeout=None):
         """
-        @see: twisted.names.client.lookupAuthority
+        @see: twisted.internet.interfaces.IResolver.lookupAuthority
         """
         return self._lookup(name, dns.IN, dns.SOA, timeout)
 
-    def lookupNull(self, name, timeout = None):
+    def lookupNull(self, name, timeout=None):
         """
-        @see: twisted.names.client.lookupNull
+        @see: twisted.internet.interfaces.IResolver.lookupNull
         """
         return self._lookup(name, dns.IN, dns.NULL, timeout)
 
-    def lookupWellKnownServices(self, name, timeout = None):
+    def lookupWellKnownServices(self, name, timeout=None):
         """
-        @see: twisted.names.client.lookupWellKnownServices
+        @see: twisted.internet.interfaces.IResolver.lookupWellKnownServices
         """
         return self._lookup(name, dns.IN, dns.WKS, timeout)
 
-    def lookupService(self, name, timeout = None):
+    def lookupService(self, name, timeout=None):
         """
-        @see: twisted.names.client.lookupService
+        @see: twisted.internet.interfaces.IResolver.lookupService
         """
         return self._lookup(name, dns.IN, dns.SRV, timeout)
 
-    def lookupHostInfo(self, name, timeout = None):
+    def lookupHostInfo(self, name, timeout=None):
         """
-        @see: twisted.names.client.lookupHostInfo
+        @see: twisted.internet.interfaces.IResolver.lookupHostInfo
         """
         return self._lookup(name, dns.IN, dns.HINFO, timeout)
 
-    def lookupMailboxInfo(self, name, timeout = None):
+    def lookupMailboxInfo(self, name, timeout=None):
         """
-        @see: twisted.names.client.lookupMailboxInfo
+        @see: twisted.internet.interfaces.IResolver.lookupMailboxInfo
         """
         return self._lookup(name, dns.IN, dns.MINFO, timeout)
 
-    def lookupText(self, name, timeout = None):
+    def lookupText(self, name, timeout=None):
         """
-        @see: twisted.names.client.lookupText
+        @see: twisted.internet.interfaces.IResolver.lookupText
         """
         return self._lookup(name, dns.IN, dns.TXT, timeout)
 
-    def lookupSenderPolicy(self, name, timeout = None):
+    def lookupSenderPolicy(self, name, timeout=None):
         """
-        @see: twisted.names.client.lookupSenderPolicy
+        @see: twisted.internet.interfaces.IResolver.lookupSenderPolicy
         """
         return self._lookup(name, dns.IN, dns.SPF, timeout)
 
-    def lookupResponsibility(self, name, timeout = None):
+    def lookupResponsibility(self, name, timeout=None):
         """
-        @see: twisted.names.client.lookupResponsibility
+        @see: twisted.internet.interfaces.IResolver.lookupResponsibility
         """
         return self._lookup(name, dns.IN, dns.RP, timeout)
 
-    def lookupAFSDatabase(self, name, timeout = None):
+    def lookupAFSDatabase(self, name, timeout=None):
         """
-        @see: twisted.names.client.lookupAFSDatabase
+        @see: twisted.internet.interfaces.IResolver.lookupAFSDatabase
         """
         return self._lookup(name, dns.IN, dns.AFSDB, timeout)
 
-    def lookupZone(self, name, timeout = None):
+    def lookupZone(self, name, timeout=None):
         """
-        @see: twisted.names.client.lookupZone
+        @see: twisted.internet.interfaces.IResolver.lookupZone
         """
         return self._lookup(name, dns.IN, dns.AXFR, timeout)
 
 
     def lookupNamingAuthorityPointer(self, name, timeout=None):
         """
-        @see: twisted.names.client.lookupNamingAuthorityPointer
+        @see: twisted.internet.interfaces.IResolve.lookupNamingAuthorityPointer
         """
         return self._lookup(name, dns.IN, dns.NAPTR, timeout)
 
 
-    def lookupAllRecords(self, name, timeout = None):
+    def lookupAllRecords(self, name, timeout=None):
         """
-        @see: twisted.names.client.lookupAllRecords
+        @see: twisted.internet.interfaces.IResolver.lookupAllRecords
         """
         return self._lookup(name, dns.IN, dns.ALL_RECORDS, timeout)
 

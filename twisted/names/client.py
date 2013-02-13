@@ -404,11 +404,9 @@ class Resolver(common.ResolverBase):
 
 
     # This one doesn't ever belong on UDP
-    def lookupZone(self, name, timeout = 10):
+    def lookupZone(self, name, timeout=10):
         """
-        Perform an AXFR request. This is quite different from usual
-        DNS requests. See http://cr.yp.to/djbdns/axfr-notes.html for
-        more information.
+        @see: twisted.internet.interfaces.IResolve.lookupZone
         """
         address = self.pickServer()
         if address is None:
@@ -595,331 +593,133 @@ def getHostByName(name, timeout=None, effort=10):
 
 def lookupAddress(name, timeout=None):
     """
-    Perform an A record lookup.
-
-    @type name: C{str}
-    @param name: DNS name to resolve.
-
-    @type timeout: Sequence of C{int}
-    @param timeout: Number of seconds after which to reissue the query.
-    When the last timeout expires, the query is considered failed.
-
-    @rtype: C{Deferred}
+    @see: twisted.internet.interfaces.IResolver.lookupAddress
     """
     return getResolver().lookupAddress(name, timeout)
 
 def lookupIPV6Address(name, timeout=None):
     """
-    Perform an AAAA record lookup.
-
-    @type name: C{str}
-    @param name: DNS name to resolve.
-
-    @type timeout: Sequence of C{int}
-    @param timeout: Number of seconds after which to reissue the query.
-    When the last timeout expires, the query is considered failed.
-
-    @rtype: C{Deferred}
+    @see: twisted.internet.interfaces.IResolver.lookupIPV6Address
     """
     return getResolver().lookupIPV6Address(name, timeout)
 
 def lookupAddress6(name, timeout=None):
     """
-    Perform an A6 record lookup.
-
-    @type name: C{str}
-    @param name: DNS name to resolve.
-
-    @type timeout: Sequence of C{int}
-    @param timeout: Number of seconds after which to reissue the query.
-    When the last timeout expires, the query is considered failed.
-
-    @rtype: C{Deferred}
+    @see: twisted.internet.interfaces.IResolver.lookupAddress6
     """
     return getResolver().lookupAddress6(name, timeout)
 
 def lookupMailExchange(name, timeout=None):
     """
-    Perform an MX record lookup.
-
-    @type name: C{str}
-    @param name: DNS name to resolve.
-
-    @type timeout: Sequence of C{int}
-    @param timeout: Number of seconds after which to reissue the query.
-    When the last timeout expires, the query is considered failed.
-
-    @rtype: C{Deferred}
+    @see: twisted.internet.interfaces.IResolver.lookupMailExchange
     """
     return getResolver().lookupMailExchange(name, timeout)
 
 def lookupNameservers(name, timeout=None):
     """
-    Perform an NS record lookup.
-
-    @type name: C{str}
-    @param name: DNS name to resolve.
-
-    @type timeout: Sequence of C{int}
-    @param timeout: Number of seconds after which to reissue the query.
-    When the last timeout expires, the query is considered failed.
-
-    @rtype: C{Deferred}
+    @see: twisted.internet.interfaces.IResolver.lookupNameservers
     """
     return getResolver().lookupNameservers(name, timeout)
 
 def lookupCanonicalName(name, timeout=None):
     """
-    Perform a CNAME record lookup.
-
-    @type name: C{str}
-    @param name: DNS name to resolve.
-
-    @type timeout: Sequence of C{int}
-    @param timeout: Number of seconds after which to reissue the query.
-    When the last timeout expires, the query is considered failed.
-
-    @rtype: C{Deferred}
+    @see: twisted.internet.interfaces.IResolver.lookupCanonicalName
     """
     return getResolver().lookupCanonicalName(name, timeout)
 
 def lookupMailBox(name, timeout=None):
     """
-    Perform an MB record lookup.
-
-    @type name: C{str}
-    @param name: DNS name to resolve.
-
-    @type timeout: Sequence of C{int}
-    @param timeout: Number of seconds after which to reissue the query.
-    When the last timeout expires, the query is considered failed.
-
-    @rtype: C{Deferred}
+    @see: twisted.internet.interfaces.IResolver.lookupMailBox
     """
     return getResolver().lookupMailBox(name, timeout)
 
 def lookupMailGroup(name, timeout=None):
     """
-    Perform an MG record lookup.
-
-    @type name: C{str}
-    @param name: DNS name to resolve.
-
-    @type timeout: Sequence of C{int}
-    @param timeout: Number of seconds after which to reissue the query.
-    When the last timeout expires, the query is considered failed.
-
-    @rtype: C{Deferred}
+    @see: twisted.internet.interfaces.IResolver.lookupMailGroup
     """
     return getResolver().lookupMailGroup(name, timeout)
 
 def lookupMailRename(name, timeout=None):
     """
-    Perform an MR record lookup.
-
-    @type name: C{str}
-    @param name: DNS name to resolve.
-
-    @type timeout: Sequence of C{int}
-    @param timeout: Number of seconds after which to reissue the query.
-    When the last timeout expires, the query is considered failed.
-
-    @rtype: C{Deferred}
+    @see: twisted.internet.interfaces.IResolver.lookupMailRename
     """
     return getResolver().lookupMailRename(name, timeout)
 
 def lookupPointer(name, timeout=None):
     """
-    Perform a PTR record lookup.
-
-    @type name: C{str}
-    @param name: DNS name to resolve.
-
-    @type timeout: Sequence of C{int}
-    @param timeout: Number of seconds after which to reissue the query.
-    When the last timeout expires, the query is considered failed.
-
-    @rtype: C{Deferred}
+    @see: twisted.internet.interfaces.IResolver.lookupPointer
     """
     return getResolver().lookupPointer(name, timeout)
 
 def lookupAuthority(name, timeout=None):
     """
-    Perform an SOA record lookup.
-
-    @type name: C{str}
-    @param name: DNS name to resolve.
-
-    @type timeout: Sequence of C{int}
-    @param timeout: Number of seconds after which to reissue the query.
-    When the last timeout expires, the query is considered failed.
-
-    @rtype: C{Deferred}
+    @see: twisted.internet.interfaces.IResolver.lookupAuthority
     """
     return getResolver().lookupAuthority(name, timeout)
 
 def lookupNull(name, timeout=None):
     """
-    Perform a NULL record lookup.
-
-    @type name: C{str}
-    @param name: DNS name to resolve.
-
-    @type timeout: Sequence of C{int}
-    @param timeout: Number of seconds after which to reissue the query.
-    When the last timeout expires, the query is considered failed.
-
-    @rtype: C{Deferred}
+    @see: twisted.internet.interfaces.IResolver.lookupNull
     """
     return getResolver().lookupNull(name, timeout)
 
 def lookupWellKnownServices(name, timeout=None):
     """
-    Perform a WKS record lookup.
-
-    @type name: C{str}
-    @param name: DNS name to resolve.
-
-    @type timeout: Sequence of C{int}
-    @param timeout: Number of seconds after which to reissue the query.
-    When the last timeout expires, the query is considered failed.
-
-    @rtype: C{Deferred}
+    @see: twisted.internet.interfaces.IResolver.lookupWellKnownServices
     """
     return getResolver().lookupWellKnownServices(name, timeout)
 
 def lookupService(name, timeout=None):
     """
-    Perform an SRV record lookup.
-
-    @type name: C{str}
-    @param name: DNS name to resolve.
-
-    @type timeout: Sequence of C{int}
-    @param timeout: Number of seconds after which to reissue the query.
-    When the last timeout expires, the query is considered failed.
-
-    @rtype: C{Deferred}
+    @see: twisted.internet.interfaces.IResolver.lookupService
     """
     return getResolver().lookupService(name, timeout)
 
 def lookupHostInfo(name, timeout=None):
     """
-    Perform a HINFO record lookup.
-
-    @type name: C{str}
-    @param name: DNS name to resolve.
-
-    @type timeout: Sequence of C{int}
-    @param timeout: Number of seconds after which to reissue the query.
-    When the last timeout expires, the query is considered failed.
-
-    @rtype: C{Deferred}
+    @see: twisted.internet.interfaces.IResolver.lookupHostInfo
     """
     return getResolver().lookupHostInfo(name, timeout)
 
 def lookupMailboxInfo(name, timeout=None):
     """
-    Perform an MINFO record lookup.
-
-    @type name: C{str}
-    @param name: DNS name to resolve.
-
-    @type timeout: Sequence of C{int}
-    @param timeout: Number of seconds after which to reissue the query.
-    When the last timeout expires, the query is considered failed.
-
-    @rtype: C{Deferred}
+    @see: twisted.internet.interfaces.IResolver.lookupMailboxInfo
     """
     return getResolver().lookupMailboxInfo(name, timeout)
 
 def lookupText(name, timeout=None):
     """
-    Perform a TXT record lookup.
-
-    @type name: C{str}
-    @param name: DNS name to resolve.
-
-    @type timeout: Sequence of C{int}
-    @param timeout: Number of seconds after which to reissue the query.
-    When the last timeout expires, the query is considered failed.
-
-    @rtype: C{Deferred}
+    @see: twisted.internet.interfaces.IResolver.lookupText
     """
     return getResolver().lookupText(name, timeout)
 
 def lookupSenderPolicy(name, timeout=None):
     """
-    Perform a SPF record lookup.
-
-    @type name: C{str}
-    @param name: DNS name to resolve.
-
-    @type timeout: Sequence of C{int}
-    @param timeout: Number of seconds after which to reissue the query.
-    When the last timeout expires, the query is considered failed.
-
-    @rtype: C{Deferred}
+    @see: twisted.internet.interfaces.IResolver.lookupSenderPolicy
     """
     return getResolver().lookupSenderPolicy(name, timeout)
 
 def lookupResponsibility(name, timeout=None):
     """
-    Perform an RP record lookup.
-
-    @type name: C{str}
-    @param name: DNS name to resolve.
-
-    @type timeout: Sequence of C{int}
-    @param timeout: Number of seconds after which to reissue the query.
-    When the last timeout expires, the query is considered failed.
-
-    @rtype: C{Deferred}
+    @see: twisted.internet.interfaces.IResolver.lookupResponsibility
     """
     return getResolver().lookupResponsibility(name, timeout)
 
 def lookupAFSDatabase(name, timeout=None):
     """
-    Perform an AFSDB record lookup.
-
-    @type name: C{str}
-    @param name: DNS name to resolve.
-
-    @type timeout: Sequence of C{int}
-    @param timeout: Number of seconds after which to reissue the query.
-    When the last timeout expires, the query is considered failed.
-
-    @rtype: C{Deferred}
+    @see: twisted.internet.interfaces.IResolver.lookupAFSDatabase
     """
     return getResolver().lookupAFSDatabase(name, timeout)
 
 def lookupZone(name, timeout=None):
     """
-    Perform an AXFR record lookup.
-
-    @type name: C{str}
-    @param name: DNS name to resolve.
-
-    @type timeout: C{int}
-    @param timeout: When this timeout expires, the query is considered failed.
-
-    @rtype: C{Deferred}
+    @see: twisted.internet.interfaces.IResolver.lookupZone
     """
-    # XXX: timeout here is not a list of ints, it is a single int.
     return getResolver().lookupZone(name, timeout)
 
 def lookupAllRecords(name, timeout=None):
     """
-    ALL_RECORD lookup.
-
-    @type name: C{str}
-    @param name: DNS name to resolve.
-
-    @type timeout: Sequence of C{int}
-    @param timeout: Number of seconds after which to reissue the query.
-    When the last timeout expires, the query is considered failed.
-
-    @rtype: C{Deferred}
+    @see: twisted.internet.interfaces.IResolver.lookupAllRecords
     """
     return getResolver().lookupAllRecords(name, timeout)
 
@@ -927,15 +727,6 @@ def lookupAllRecords(name, timeout=None):
 
 def lookupNamingAuthorityPointer(name, timeout=None):
     """
-    NAPTR lookup.
-
-    @type name: C{str}
-    @param name: DNS name to resolve.
-
-    @type timeout: Sequence of C{int}
-    @param timeout: Number of seconds after which to reissue the query.
-        When the last timeout expires, the query is considered failed.
-
-    @rtype: C{Deferred}
+    @see: twisted.internet.interfaces.IResolve.lookupNamingAuthorityPointer
     """
     return getResolver().lookupNamingAuthorityPointer(name, timeout)
