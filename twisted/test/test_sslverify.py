@@ -137,6 +137,14 @@ class OpenSSLOptions(unittest.TestCase):
         self.cKey, self.cCert = makeCertificate(
             O=b"Client Test Certificate",
             CN=b"client")
+        self.caCert1 = makeCertificate(
+            O=b"CA Test Certificate 1",
+            CN=b"ca1")[1]
+        self.caCert2 = makeCertificate(
+            O=b"CA Test Certificate",
+            CN=b"ca2")[1]
+        self.caCerts = [self.caCert1, self.caCert2]
+
 
     def tearDown(self):
         if self.serverPort is not None:
@@ -173,6 +181,71 @@ class OpenSSLOptions(unittest.TestCase):
         self.serverPort = reactor.listenSSL(0, serverFactory, serverCertOpts)
         self.clientConn = reactor.connectSSL('127.0.0.1',
                 self.serverPort.getHost().port, clientFactory, clientCertOpts)
+
+
+    def test_constructorWithOnlyPrivateKey(self):
+        """
+        C{privateKey} and C{certificate} make only sense if both are set.
+        """
+        self.assertRaises(
+            ValueError,
+            sslverify.OpenSSLCertificateOptions, privateKey=self.sKey
+        )
+
+
+    def test_constructorWithOnlyCertificate(self):
+        """
+        C{privateKey} and C{certificate} make only sense if both are set.
+        """
+        self.assertRaises(
+            ValueError,
+            sslverify.OpenSSLCertificateOptions, certificate=self.sCert
+        )
+
+
+    def test_constructorWithCertificateAndPrivateKey(self):
+        """
+        Specifying C{privateKey} and C{certificate} initializes correctly.
+        """
+        opts = sslverify.OpenSSLCertificateOptions(privateKey=self.sKey,
+                                                   certificate=self.sCert)
+        self.assertEqual(opts.privateKey, self.sKey)
+        self.assertEqual(opts.certificate, self.sCert)
+
+
+    def test_constructorDoesNotAllowVerifyWithoutCACerts(self):
+        """
+        C{verify} must not be C{True} without specifying C{caCerts}.
+        """
+        self.assertRaises(
+            ValueError,
+            sslverify.OpenSSLCertificateOptions,
+            privateKey=self.sKey, certificate=self.sCert, verify=True
+        )
+
+
+    def test_constructorAllowsCACertsWithoutVerify(self):
+        """
+        It's currently a NOP, but valid.
+        """
+        opts = sslverify.OpenSSLCertificateOptions(privateKey=self.sKey,
+                                                   certificate=self.sCert,
+                                                   caCerts=self.caCerts)
+        self.assertFalse(opts.verify)
+        self.assertEqual(self.caCerts, opts.caCerts)
+
+
+    def test_constructorWithVerifyAndCACerts(self):
+        """
+        Specifying C{verify} and C{caCerts} initializes correctly.
+        """
+        opts = sslverify.OpenSSLCertificateOptions(privateKey=self.sKey,
+                                                   certificate=self.sCert,
+                                                   verify=True,
+                                                   caCerts=self.caCerts)
+        self.assertTrue(opts.verify)
+        self.assertEqual(self.caCerts, opts.caCerts)
+
 
     def test_abbreviatingDistinguishedNames(self):
         """
