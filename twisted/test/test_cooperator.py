@@ -282,7 +282,7 @@ class TestCooperator(unittest.TestCase):
         self.assertEqual(coop._delayedCall, None)
 
         # Add another task; scheduled call will be recreated:
-        task3 = coop.cooperate(iter([1, 2]))
+        coop.cooperate(iter([1, 2]))
         self.assertEqual(calls[0].cancelled, False)
         self.assertEqual(coop._delayedCall, calls[0])
 
