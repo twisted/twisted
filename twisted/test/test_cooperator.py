@@ -287,6 +287,15 @@ class TestCooperator(unittest.TestCase):
         self.assertEqual(coop._delayedCall, calls[0])
 
 
+    def test_runningWhenStarted(self):
+        """
+        L{Cooperator.running} reports C{True} if the L{Cooperator}
+        was started on creation.
+        """
+        c = task.Cooperator()
+        self.assertEqual(c.running(), True)
+
+
     def test_runningWhenNotStarted(self):
         """
         L{Cooperator.running} reports C{False} if the L{Cooperator}
