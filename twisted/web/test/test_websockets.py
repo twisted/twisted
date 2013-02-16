@@ -24,7 +24,8 @@ from twisted.web.resource import IResource, Resource
 from twisted.web.server import NOT_DONE_YET, Request
 from twisted.web.websockets import (
     _CONTROLS, _makeAccept, _mask, _makeFrame, _parseFrames, _WSException,
-    _WebSocketsFactory, WebSocketsResource, _WebSocketsProtocol)
+    _WebSocketsFactory, WebSocketsResource, _WebSocketsProtocol,
+    IWebSocketsResource)
 from twisted.web.test.test_web import DummyRequest, DummyChannel
 
 
@@ -443,9 +444,11 @@ class WebsocketsResourceTest(TestCase):
 
     def test_IResource(self):
         """
-        L{WebSocketsResource} implements L{IResource}.
+        L{WebSocketsResource} implements L{IResource} and
+        L{IWebSocketsResource}.
         """
         self.assertTrue(verifyObject(IResource, self.resource))
+        self.assertTrue(verifyObject(IWebSocketsResource, self.resource))
 
 
     def test_render(self):

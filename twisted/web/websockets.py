@@ -15,7 +15,7 @@ __all__ = ["WebSocketsResource"]
 from hashlib import sha1
 from struct import pack, unpack
 
-from zope.interface import implementer
+from zope.interface import implementer, Interface
 
 from twisted.protocols.policies import ProtocolWrapper, WrappingFactory
 from twisted.python import log
@@ -368,7 +368,30 @@ class _WebSocketsFactory(WrappingFactory):
 
 
 
-@implementer(IResource)
+class IWebSocketsResource(Interface):
+    """
+    A WebSockets resource.
+
+    @since: 13.0
+    """
+
+    def lookupProtocol(protocolNames, request):
+        """
+        Build a protocol instance for the given protocol options and request.
+
+        @param protocolNames: The asked protocols from the client.
+        @type protocolNames: C{list} of C{str}
+
+        @param request: The connecting client request.
+        @type request: L{IRequest<twistd.web.iweb.IRequest>}
+
+        @return: A tuple of (protocol, C{None}).
+        @rtype: C{tuple}
+        """
+
+
+
+@implementer(IResource, IWebSocketsResource)
 class WebSocketsResource(object):
     """
     A resource for serving a protocol through WebSockets.
