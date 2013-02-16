@@ -293,7 +293,7 @@ class TestCooperator(unittest.TestCase):
         was started on creation.
         """
         c = task.Cooperator()
-        self.assertEqual(c.running, True)
+        self.assertTrue(c.running)
 
 
     def test_runningWhenNotStarted(self):
@@ -302,7 +302,7 @@ class TestCooperator(unittest.TestCase):
         has not been started.
         """
         c = task.Cooperator(started=False)
-        self.assertEqual(c.running, False)
+        self.assertFalse(c.running)
 
 
     def test_runningWhenRunning(self):
@@ -313,7 +313,7 @@ class TestCooperator(unittest.TestCase):
         c = task.Cooperator(started=False)
         c.start()
         self.addCleanup(c.stop)
-        self.assertEqual(c.running, True)
+        self.assertTrue(c.running)
 
 
     def test_runningWhenStopped(self):
@@ -324,7 +324,7 @@ class TestCooperator(unittest.TestCase):
         c = task.Cooperator(started=False)
         c.start()
         c.stop()
-        self.assertEqual(c.running, False)
+        self.assertFalse(c.running)
 
 
 
