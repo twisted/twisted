@@ -1,6 +1,8 @@
 import os
 
 from twisted.internet.protocol import Factory
+from twisted.application.internet import TCPServer
+from twisted.application.service import Application
 
 from twisted.protocols.wire import Echo
 
@@ -14,12 +16,12 @@ class EchoFactory(Factory):
     protocol = Echo
 
 
-if __name__ == '__main__':
-    from twisted.internet import reactor
-    resource = WebSocketsResource(EchoFactory())
-    root = Resource()
-    root.putChild("ws", resource)
-    path = os.path.join(os.path.dirname(__file__), "websockets_echo.html")
-    root.putChild("echo", File(path))
-    reactor.listenTCP(7080, Site(root))
-    reactor.run()
+resource = WebSocketsResource(EchoFactory())
+root = Resource()
+path = os.path.join(os.path.dirname(__file__), "websockets_echo.html")
+root.putChild("", File(path))
+root.putChild("ws", resource)
+
+application = Application("websocket-echo")
+server = TCPServer(7080, Site(root))
+server.setServiceParent(application)
