@@ -903,9 +903,10 @@ class Request:
             l = []
             l.append('%s %s %s\r\n' % (version, self.code,
                                        self.code_message))
-            # if we don't have a content length, we send data in
+            # If we don't have a content length, we send data in
             # chunked mode, so that we can support pipelining in
-            # persistent connections.
+            # persistent connections. We also check that we don't have a status
+            # code which doesn't have a body, or that we're switching protocol.
             if ((version == "HTTP/1.1") and
                 self.responseHeaders.getRawHeaders('content-length') is None
                 and self.method != "HEAD" and
