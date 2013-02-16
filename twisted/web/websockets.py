@@ -12,7 +12,6 @@ factory.
 
 __all__ = ["WebSocketsResource"]
 
-from base64 import b64encode, b64decode
 from hashlib import sha1
 from struct import pack, unpack
 
@@ -62,13 +61,6 @@ _opcodeForType = {
     _CONTROLS.PING: 0x9,
     _CONTROLS.PONG: 0xa}
 
-
-_encoders = {
-    "base64": b64encode}
-
-
-_decoders = {
-    "base64": b64decode}
 
 # Authentication for WS.
 
@@ -257,7 +249,6 @@ class _WebSocketsProtocol(ProtocolWrapper):
     layer.
     """
     _buffer = None
-    codec = None
 
 
     def connectionMade(self):
@@ -287,8 +278,6 @@ class _WebSocketsProtocol(ProtocolWrapper):
             opcode, data = frame
             if opcode == _CONTROLS.NORMAL:
                 # Business as usual. Decode the frame, if we have a decoder.
-                if self.codec:
-                    data = _decoders[self.codec](data)
                 # Pass the frame to the underlying protocol.
                 ProtocolWrapper.dataReceived(self, data)
             elif opcode == _CONTROLS.CLOSE:
@@ -315,8 +304,6 @@ class _WebSocketsProtocol(ProtocolWrapper):
         """
         for frame in frames:
             # Encode the frame before sending it.
-            if self.codec:
-                frame = _encoders[self.codec](frame)
             packet = _makeFrame(frame)
             self.transport.write(packet)
 
@@ -420,12 +407,34 @@ class WebSocketsResource(object):
             "Cannot put IResource children under WebSocketsResource")
 
 
+    def lookupProtocol(self, protocolNames, request):
+        """
+        Build a protocol instance for the given protocol options and request.
+        This default implementation ignores the protocols and just return an
+        instance of protocols built by C{self._factory}.
+
+        @param protocolNames: The asked protocols from the client.
+        @type protocolNames: C{list} of C{str}
+
+        @param request: The connecting client request.
+        @type request: L{Request<twistd.web.http.Request>}
+
+        @return: A tuple of (protocol, C{None}).
+        @rtype: C{tuple}
+        """
+        protocol = self._factory.buildProtocol(request.transport.getPeer())
+        return protocol, None
+
+
     def render(self, request):
         """
         Render a request.
 
-        We're not actually rendering a request. We are secretly going to
-        handle a WebSockets connection instead.
+        We're not actually rendering a request. We are secretly going to handle
+        a WebSockets connection instead.
+
+        @param request: The connecting client request.
+        @type request: L{Request<twistd.web.http.Request>}
 
         @return: a strinf if the request fails, otherwise C{NOT_DONE_YET}.
         """
@@ -460,34 +469,15 @@ class WebSocketsResource(object):
             # 4.4 Forward-compatible version checking.
             request.setHeader("Sec-WebSocket-Version", "13")
 
-        # Check whether a codec is needed. WS calls this a "protocol" for
-        # reasons I cannot fathom. The specification permits multiple,
-        # comma-separated codecs to be listed, but this functionality isn't
-        # used in the wild. (If that ever changes, we'll have already added
-        # the requisite codecs here anyway.) The main reason why we check for
-        # codecs at all is that older draft versions of WebSockets used base64
-        # encoding to work around the inability to send \x00 bytes, and those
-        # runtimes would request base64 encoding during the handshake. We
-        # stand prepared to engage that behavior should any of those runtimes
-        # start supporting RFC WebSockets.
-        #
-        # We probably should remove this altogether, but I'd rather leave it
-        # because it will prove to be a useful reference if/when extensions
-        # are added, and it *does* work as advertised.
-        codec = request.getHeader("Sec-WebSocket-Protocol")
-
-        if codec:
-            if codec not in _encoders or codec not in _decoders:
-                log.msg("Codec %s is not implemented" % codec)
-                failed = True
-
         if failed:
             request.setResponseCode(400)
             return ""
 
-        # Create the protocol. This could fail, in which case we deliver an
-        # error status. Status 502 was decreed by glyph; blame him.
-        protocol = self._factory.buildProtocol(request.transport.getPeer())
+        askedProtocols = request.requestHeaders.getRawHeaders(
+            "Sec-WebSocket-Protocol")
+        protocol, protocolName = self.lookupProtocol(askedProtocols, request)
+
+        # If a protocol is not created, we deliver an error status.
         if not protocol.wrappedProtocol:
             request.setResponseCode(502)
             return ""
@@ -503,10 +493,8 @@ class WebSocketsResource(object):
         # 4.2.2.5.4 Response to the key challenge
         request.setHeader("Sec-WebSocket-Accept", _makeAccept(key))
         # 4.2.2.5.5 Optional codec declaration
-        if codec:
-            request.setHeader("Sec-WebSocket-Protocol", codec)
-        if codec:
-            protocol.codec = codec
+        if protocolName:
+            request.setHeader("Sec-WebSocket-Protocol", protocolName)
 
         # Provoke request into flushing headers and finishing the handshake.
         request.write("")

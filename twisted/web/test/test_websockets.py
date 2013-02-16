@@ -19,6 +19,7 @@ from twisted.python import log
 from twisted.test.proto_helpers import StringTransportWithDisconnection
 from twisted.protocols.policies import ProtocolWrapper
 
+from twisted.web.http_headers import Headers
 from twisted.web.resource import IResource, Resource
 from twisted.web.server import NOT_DONE_YET, Request
 from twisted.web.websockets import (
@@ -352,17 +353,6 @@ class WebsocketsProtocolTest(TestCase):
         self.assertEqual("\x81\x05Hello\x81\x05world", self.transport.value())
 
 
-    def test_frameReceivedWithCodec(self):
-        """
-        A codec can be specified with the C{_WebSocketsProtocol}, in which case
-        the data received and sent is encoded with it.
-        """
-        self.protocol.codec = "base64"
-        self.protocol.dataReceived("\x81\x08SGVsbG8=")
-        self.assertEqual("\x81\x08SGVsbG8=", self.transport.value())
-        self.assertEqual(["Hello"], self.echoProtocol.received)
-
-
     def test_ping(self):
         """
         When a C{PING} frame is received, the frame is resent with a C{PONG},
@@ -467,6 +457,7 @@ class WebsocketsResourceTest(TestCase):
         protocol provided by the user factory.
         """
         request = DummyRequest("/")
+        request.requestHeaders = Headers()
         transport = StringTransportWithDisconnection()
         request.transport = transport
         request.isSecure = lambda: False
@@ -487,16 +478,25 @@ class WebsocketsResourceTest(TestCase):
         self.assertIdentical(None, request.transport)
         self.assertIsInstance(transport.protocol, _WebSocketsProtocol)
         self.assertIsInstance(transport.protocol.wrappedProtocol, SavingEcho)
-        self.assertIdentical(None, transport.protocol.codec)
 
 
-    def test_renderCodec(self):
+    def test_renderProtocol(self):
         """
-        If a codec is specified via the C{Sec-WebSocket-Protocol} header,
-        L{WebSocketsResource} forwards in the request headers, and sets the
-        protocol codec attribute with the value.
+        If protocols are specified via the C{Sec-WebSocket-Protocol} header,
+        L{WebSocketsResource} passes them to its C{lookupProtocol} method,
+        which can decide which protocol to return, and which is accepted.
         """
+
+        def lookupProtocol(names, otherRequest):
+            self.assertEqual(["foo", "bar"], names)
+            self.assertIdentical(request, otherRequest)
+            return self.resource._factory.buildProtocol(None), "bar"
+
+        self.resource.lookupProtocol = lookupProtocol
+
         request = DummyRequest("/")
+        request.requestHeaders = Headers(
+            {"sec-websocket-protocol": ["foo", "bar"]})
         transport = StringTransportWithDisconnection()
         request.transport = transport
         request.isSecure = lambda: False
@@ -504,19 +504,17 @@ class WebsocketsResourceTest(TestCase):
             "upgrade": "Websocket",
             "connection": "Upgrade",
             "sec-websocket-key": "secure",
-            "sec-websocket-version": "13",
-            "sec-websocket-protocol": "base64"})
+            "sec-websocket-version": "13"})
         result = self.resource.render(request)
         self.assertEqual(NOT_DONE_YET, result)
         self.assertEqual(
             {"connection": "Upgrade",
              "upgrade": "WebSocket",
-             "sec-websocket-protocol": "base64",
+             "sec-websocket-protocol": "bar",
              "sec-websocket-accept": "oYBv54i42V5dw6KnZqOFroecUTc="},
             request.outgoingHeaders)
         self.assertEqual([""], request.written)
         self.assertEqual(101, request.responseCode)
-        self.assertEqual("base64", transport.protocol.codec)
 
 
     def test_renderWrongUpgrade(self):
@@ -620,37 +618,13 @@ class WebsocketsResourceTest(TestCase):
         self.assertEqual(400, request.responseCode)
 
 
-    def test_renderUnknownCodec(self):
-        """
-        If the codec passed to C{Sec-WebSocket-Protocol} is unknown,
-        L{WebSocketsResource} returns a failed request.
-        """
-        loggedMessages = []
-
-        def logMsg(eventDict):
-            loggedMessages.append(log.textFromEventDict(eventDict))
-
-        log.addObserver(logMsg)
-
-        request = DummyRequest("/")
-        request.headers.update({
-            "upgrade": "Websocket",
-            "connection": "Upgrade",
-            "sec-websocket-key": "secure",
-            "sec-websocket-version": "13",
-            "sec-websocket-protocol": "rot26"})
-
-        self.assertRequestFail(request)
-
-        self.assertEqual(["Codec rot26 is not implemented"], loggedMessages)
-
-
     def test_renderNoProtocol(self):
         """
         If the underlying factory doesn't return any protocol,
         L{WebSocketsResource} returns a failed request with a C{502} code.
         """
         request = DummyRequest("/")
+        request.requestHeaders = Headers()
         request.transport = StringTransportWithDisconnection()
         self.echoProtocol = None
         request.headers.update({
@@ -671,6 +645,7 @@ class WebsocketsResourceTest(TestCase):
         the protocol of the C{TLSMemoryBIOProtocol} instance.
         """
         request = DummyRequest("/")
+        request.requestHeaders = Headers()
         transport = StringTransportWithDisconnection()
         secureProtocol = ProtocolWrapper(Factory(), Protocol())
         transport.protocol = secureProtocol
