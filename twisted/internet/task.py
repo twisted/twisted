@@ -648,7 +648,8 @@ class Cooperator(object):
         """
         Is this L{Cooperator} is currently running?
 
-        C{True} if the L{Cooperator} is running, C{False} otherwise.
+        @return: C{True} if the L{Cooperator} is running, C{False} otherwise.
+        @rtype: C{bool}
         """
         return (self._started and not self._stopped)
 
