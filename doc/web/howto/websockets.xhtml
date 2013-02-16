@@ -24,18 +24,16 @@ factory, exposing that factory as a resource in a Web server, and can be used
 anywhere a normal <code>Resource</code> can be used.</p>
 
 <p>The following example creates a <code>Site</code> which responds to all
-requests with a WebSockets connection, which serves an
+requests to /ws with a WebSockets connection, which serves an
 <code>EchoProtocol</code>.</p>
 
-<a href="listings/websockets_echo.py" class="py-listing">websockets_echo.py</a>
+<a href="listings/websockets_echo.tac" class="py-listing">websockets_echo.tac</a>
 
-<p>After we run this command, we can connect with a client and send commands
-to the server:</p>
+<p>After we run this command, we can open http://localhost:7080/ with a browser, the <code>Site</code> serving the following HTML:</p>
 
 <a href="listings/websockets_echo.html" class="html-listing">websockets_echo.html</a>
 
-<p>This simple WebSockets client should have no problem connecting to the
-example server.</p>
+<p>The example sends a message and closes the connection on response of the echo. Note that you'll need a modern browser supporting RFC 6455.</p>
 
 </body>
 </html>
