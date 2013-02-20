@@ -478,33 +478,36 @@ class Reporter(TestResult):
 
 
     def _trimFrames(self, frames):
-        # when a SynchronousTestCase method fails synchronously, the stack looks
-        # like this:
-        # [0]: SynchronousTestCase._run
-        # [1]:  twisted.python.util.runWithWarningsSuppressed
-        # [2:-2]: code in the test method which failed
-        # [-1]: _synctest.fail
+        """
+        Trim frames to remove internal paths.
 
-        # when a TestCase method fails synchronously, the stack looks like this:
-        #  [0]: defer.maybeDeferred()
-        #  [1]: utils.runWithWarningsSuppressed()
-        #  [2:-2]: code in the test method which failed
-        #  [-1]: _synctest.fail
+        When a SynchronousTestCase method fails synchronously, the stack looks
+        like this:
+         [0]: SynchronousTestCase._run
+         [1]:  twisted.python.util.runWithWarningsSuppressed
+         [2:-2]: code in the test method which failed
+         [-1]: _synctest.fail
 
-        # when a method fails inside a Deferred (i.e., when the test method
-        # returns a Deferred, and that Deferred's errback fires), the stack
-        # captured inside the resulting Failure looks like this:
-        #  [0]: defer.Deferred._runCallbacks
-        #  [1:-2]: code in the testmethod which failed
-        #  [-1]: _synctest.fail
+        When a TestCase method fails synchronously, the stack looks like this:
+         [0]: defer.maybeDeferred()
+         [1]: _utilspy3.runWithWarningsSuppressed()
+         [2:-2]: code in the test method which failed
+         [-1]: _synctest.fail
 
-        # as a result, we want to trim either [maybeDeferred,runWWS] or
-        # [Deferred._runCallbacks] or [SynchronousTestCase._run,runWWS] from the
-        # front, and trim the [unittest.fail] from the end.
+        When a method fails inside a Deferred (i.e., when the test method
+        returns a Deferred, and that Deferred's errback fires), the stack
+        captured inside the resulting Failure looks like this:
+         [0]: defer.Deferred._runCallbacks
+         [1:-2]: code in the testmethod which failed
+         [-1]: _synctest.fail
 
-        # There is also another case, when the test method is badly defined and
-        # contains extra arguments.
+        As a result, we want to trim either [maybeDeferred,runWWS] or
+        [Deferred._runCallbacks] or [SynchronousTestCase._run,runWWS] from the
+        front, and trim the [unittest.fail] from the end.
 
+        There is also another case, when the test method is badly defined and
+        contains extra arguments.
+        """
         newFrames = list(frames)
 
         if len(frames) < 2:
@@ -530,7 +533,8 @@ class Reporter(TestResult):
             newFrames = newFrames[1:]
 
         if not newFrames:
-            # The method fails before getting called, probably an argument problem
+            # The method fails before getting called, probably an argument
+            # problem
             return newFrames
 
         last = newFrames[-1]

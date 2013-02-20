@@ -230,6 +230,10 @@ class TestUncleanWarningWrapperErrorReporting(TestErrorReporting):
 class TracebackHandling(unittest.SynchronousTestCase):
 
     def getErrorFrames(self, test):
+        """
+        Run the given C{test}, make sure it fails and return the trimmed
+        frames.
+        """
         stream = StringIO.StringIO()
         result = reporter.Reporter(stream)
         test.run(result)
@@ -261,6 +265,10 @@ class TracebackHandling(unittest.SynchronousTestCase):
                           ('subroutine', 'twisted/trial/test/erroneous')])
 
     def test_deferred(self):
+        """
+        C{_trimFrames} removes traces of C{_runCallbacks} when getting an error
+        in a callback returned by a C{TestCase} based test.
+        """
         test = erroneous.TestAsynchronousFail('test_fail')
         frames = self.getErrorFrames(test)
         self.checkFrames(frames,
@@ -277,8 +285,8 @@ class TracebackHandling(unittest.SynchronousTestCase):
     def test_exception(self):
         """
         C{_trimFrames} removes traces of C{runWithWarningsSuppressed} from
-        C{_utilspy3} when a synchronous exception happens in an asynchronous
-        test.
+        C{_utilspy3} when a synchronous exception happens in a C{TestCase}
+        based test.
         """
         test = erroneous.TestAsynchronousFail('test_exception')
         frames = self.getErrorFrames(test)

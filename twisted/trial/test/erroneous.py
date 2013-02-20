@@ -79,8 +79,14 @@ class TestRegularFail(unittest.SynchronousTestCase):
 
 
 class TestAsynchronousFail(unittest.TestCase):
+    """
+    Test failures for L{unittest.TestCase} based classes.
+    """
 
     def test_fail(self):
+        """
+        A test which fails in the callback of the returned L{defer.Deferred}.
+        """
         d = defer.Deferred()
         d.addCallback(self._later)
         reactor.callLater(0, d.callback, None)
@@ -92,6 +98,9 @@ class TestAsynchronousFail(unittest.TestCase):
 
 
     def test_exception(self):
+        """
+        A test which raises an exception synchronously.
+        """
         raise Exception("I fail")
 
 
