@@ -483,23 +483,23 @@ class Reporter(TestResult):
 
         When a SynchronousTestCase method fails synchronously, the stack looks
         like this:
-         [0]: SynchronousTestCase._run
-         [1]:  twisted.python.util.runWithWarningsSuppressed
-         [2:-2]: code in the test method which failed
-         [-1]: _synctest.fail
+         - [0]: SynchronousTestCase._run
+         - [1]:  twisted.python.util.runWithWarningsSuppressed
+         - [2:-2]: code in the test method which failed
+         - [-1]: _synctest.fail
 
         When a TestCase method fails synchronously, the stack looks like this:
-         [0]: defer.maybeDeferred()
-         [1]: _utilspy3.runWithWarningsSuppressed()
-         [2:-2]: code in the test method which failed
-         [-1]: _synctest.fail
+         - [0]: defer.maybeDeferred()
+         - [1]: _utilspy3.runWithWarningsSuppressed()
+         - [2:-2]: code in the test method which failed
+         - [-1]: _synctest.fail
 
         When a method fails inside a Deferred (i.e., when the test method
         returns a Deferred, and that Deferred's errback fires), the stack
         captured inside the resulting Failure looks like this:
-         [0]: defer.Deferred._runCallbacks
-         [1:-2]: code in the testmethod which failed
-         [-1]: _synctest.fail
+         - [0]: defer.Deferred._runCallbacks
+         - [1:-2]: code in the testmethod which failed
+         - [-1]: _synctest.fail
 
         As a result, we want to trim either [maybeDeferred,runWWS] or
         [Deferred._runCallbacks] or [SynchronousTestCase._run,runWWS] from the
