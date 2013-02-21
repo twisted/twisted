@@ -121,6 +121,16 @@ class TestDeferred(TestTester):
         self.assertEqual(result.testsRun, 1)
         self.failUnless(detests.DeferredTests.touched)
 
+
+    def test_passInlineCallbacks(self):
+        """
+        The body of a L{defer.inlineCallbacks} decorated test gets run.
+        """
+        result = self.runTest('test_passInlineCallbacks')
+        self.failUnless(result.wasSuccessful())
+        self.assertEqual(result.testsRun, 1)
+        self.failUnless(detests.DeferredTests.touched)
+
     def test_fail(self):
         result = self.runTest('test_fail')
         self.failIf(result.wasSuccessful())

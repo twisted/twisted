@@ -111,6 +111,14 @@ class DeferredTests(unittest.TestCase):
         yield None
     test_passGenerated = defer.deferredGenerator(test_passGenerated)
 
+    @defer.inlineCallbacks
+    def test_passInlineCallbacks(self):
+        """
+        Test case that is decorated with L{defer.inlineCallbacks}.
+        """
+        self._touchClass(None)
+        yield None
+
     def test_fail(self):
         return defer.fail(self.failureException('I fail'))
 
