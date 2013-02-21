@@ -880,7 +880,7 @@ class TestMalformedMethod(unittest.SynchronousTestCase):
             pass
         def test_bar():
             pass
-        test_spam = defer.deferredGenerator(test_bar)
+        test_spam = defer.inlineCallbacks(test_bar)
 
     def _test(self, method):
         """
