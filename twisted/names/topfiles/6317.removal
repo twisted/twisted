@@ -1,0 +1,4 @@
+twisted.names.root.retry, twisted.names.root.lookupNameservers,
+twisted.names.root.lookupAddress, twisted.names.root.extractAuthority,
+twisted.names.root.discoverAuthority and twisted.names.root.Resolver.discoverAuthority,
+deprecated since 10.0, have been removed.
