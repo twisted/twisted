@@ -1707,6 +1707,76 @@ class AliasTestCase(unittest.TestCase):
 
 
 
+class DummyDomain(object):
+    """
+    Test domain for L{AddressAliasTests}.
+    """
+    def __init__(self, address):
+        self.address = address
+
+
+    def exists(self, user, memo=None):
+        """
+        @returns: When a C{memo} is passed in this will raise a
+            L{smtp.SMTPBadRcpt} exception, otherwise a boolean
+            indicating if the C{user} and string version of
+            L{self.address} are equal or not.
+        @rtype: C{bool}
+        """
+        if memo:
+            raise mail.smtp.SMTPBadRcpt('ham')
+
+        return lambda: user == str(self.address)
+
+
+
+class AddressAliasTests(unittest.TestCase):
+    """
+    Tests for L{twisted.mail.alias.AddressAlias}.
+    """
+
+    def setUp(self):
+        """
+        Setup an L{AddressAlias}.
+        """
+        self.address = mail.smtp.Address('foo@bar')
+        domains = {self.address.domain: DummyDomain(self.address)}
+        self.alias = mail.alias.AddressAlias(self.address, domains,
+            self.address)
+
+
+    def test_createMessageReceiver(self):
+        """
+        L{createMessageReceiever} calls C{exists()} on the domain object
+        which key matches the C{alias} passed to L{AddressAlias}.
+        """
+        self.assertTrue(self.alias.createMessageReceiver())
+
+
+    def test_str(self):
+        """
+        The string presentation of L{AddressAlias} includes the alias.
+        """
+        self.assertEqual(str(self.alias), '<Address foo@bar>')
+
+
+    def test_resolve(self):
+        """
+        L{resolve} will look for additional aliases when an C{aliasmap}
+        dictionary is passed, and returns C{None} if none were found.
+        """
+        self.assertEqual(self.alias.resolve({self.address: 'bar'}), None)
+
+
+    def test_resolveWithoutAliasmap(self):
+        """
+        L{resolve} returns C{None} when the alias could not be found in the
+        C{aliasmap} and no L{mail.smtp.User} with this alias exists either.
+        """
+        self.assertEqual(self.alias.resolve({}), None)
+
+
+
 class DummyProcess(object):
     __slots__ = ['onEnd']
 

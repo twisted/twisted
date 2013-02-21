@@ -139,18 +139,7 @@ class AbstractMaildirDomain:
         Check for existence of C{user} in the domain.
         """
         if self.userDirectory(user.dest.local) is not None:
-            # save message for given user
-            if isinstance(user, str):
-                name, domain = user.split('@', 1)
-            else:
-                name, domain = user.dest.local, user.dest.domain
-            dir = self.userDirectory(name)
-            fname = _generateMaildirName()
-            filenameTemp = os.path.join(dir, 'tmp', fname)
-            filenameNew = os.path.join(dir, 'new', fname)
-            fp = open(filenameTemp, 'w')
-            return lambda: MaildirMessage('%s@%s' % (name, domain), fp,
-                                          filenameTemp, filenameNew)
+            return lambda: self._saveMessage(user)
         try:
             a = self.alias[user.dest.local]
         except:
@@ -161,6 +150,30 @@ class AbstractMaildirDomain:
                 return lambda: aliases
             log.err("Bad alias configuration: " + str(user))
             raise smtp.SMTPBadRcpt(user)
+
+
+    def startMessage(self, user):
+        """
+        Save a message for a given C{user}.
+        """
+        return self._saveMessage(user)
+
+
+    def _saveMessage(self, user):
+        """
+        Save a message for a given C{user}.
+        """
+        if isinstance(user, str):
+            name, domain = user.split('@', 1)
+        else:
+            name, domain = user.dest.local, user.dest.domain
+        dir = self.userDirectory(name)
+        fname = _generateMaildirName()
+        filenameTemp = os.path.join(dir, 'tmp', fname)
+        filenameNew = os.path.join(dir, 'new', fname)
+        fp = open(filenameTemp, 'w')
+        return MaildirMessage('%s@%s' % (name, domain), fp,
+                              filenameTemp, filenameNew)
 
 
     def willRelay(self, user, protocol):

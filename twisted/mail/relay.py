@@ -41,16 +41,7 @@ class DomainQueuer:
             orig = filter(None, str(user.orig).split('@', 1))
             dest = filter(None, str(user.dest).split('@', 1))
             if len(orig) == 2 and len(dest) == 2:
-                # add envelope to queue and returns ISMTPMessage
-                queue = self.service.queue
-                envelopeFile, smtpMessage = queue.createNewMessage()
-                try:
-                    log.msg('Queueing mail %r -> %r' % (str(user.orig),
-                        str(user.dest)))
-                    pickle.dump([str(user.orig), str(user.dest)], envelopeFile)
-                finally:
-                    envelopeFile.close()
-                return lambda: smtpMessage
+                return lambda: self._startMessage(user)
         raise smtp.SMTPBadRcpt(user)
 
 
@@ -65,6 +56,27 @@ class DomainQueuer:
         return (self.authed or isinstance(peer, UNIXAddress) or
             peer.host == '127.0.0.1')
 
+
+    def startMessage(self, user):
+        """
+        Add envelope to queue and returns ISMTPMessage.
+        """
+        return self._startMessage(user)
+
+
+    def _startMessage(self, user):
+        """
+        Add envelope to queue and returns ISMTPMessage.
+        """
+        queue = self.service.queue
+        envelopeFile, smtpMessage = queue.createNewMessage()
+        try:
+            log.msg('Queueing mail %r -> %r' % (str(user.orig),
+                str(user.dest)))
+            pickle.dump([str(user.orig), str(user.dest)], envelopeFile)
+        finally:
+            envelopeFile.close()
+        return smtpMessage
 
 
 class RelayerMixin:
