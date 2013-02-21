@@ -295,15 +295,9 @@ class PluggableAuthenticationModulesTest(unittest.TestCase):
         Replace L{pamauth.callIntoPAM} with a dummy implementation with
         easily-controlled behavior.
         """
+        self.patch(pamauth, 'callIntoPAM', self.callIntoPAM)
         self._oldCallIntoPAM = pamauth.callIntoPAM
         pamauth.callIntoPAM = self.callIntoPAM
-
-
-    def tearDown(self):
-        """
-        Restore the original value of L{pamauth.callIntoPAM}.
-        """
-        pamauth.callIntoPAM = self._oldCallIntoPAM
 
 
     def callIntoPAM(self, service, user, conv):
