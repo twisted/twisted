@@ -226,11 +226,12 @@ class TimerService(_VolatileDataService):
     when it stops.
     """
 
-    volatile = ['_loop']
+    volatile = ['_loop', '_loopFinshed']
 
     def __init__(self, step, callable, *args, **kwargs):
         self.step = step
         self.call = (callable, args, kwargs)
+        self.clock = None
 
     def startService(self):
         service.Service.startService(self)
@@ -240,7 +241,9 @@ class TimerService(_VolatileDataService):
         # LoopingCall were a _VolatileDataService, we wouldn't need to do
         # this.
         self._loop = task.LoopingCall(callable, *args, **kwargs)
-        self._loop.start(self.step, now=True).addErrback(self._failed)
+        self._loop.clock = _maybeGlobalReactor(self.clock)
+        self._loopFinished = self._loop.start(self.step, now=True)
+        self._loopFinished.addErrback(self._failed)
 
     def _failed(self, why):
         # make a note that the LoopingCall is no longer looping, so we don't
@@ -252,7 +255,9 @@ class TimerService(_VolatileDataService):
     def stopService(self):
         if self._loop.running:
             self._loop.stop()
-        return service.Service.stopService(self)
+        self._loopFinished.addCallback(lambda _:
+                service.Service.stopService(self))
+        return self._loopFinished
 
 
 

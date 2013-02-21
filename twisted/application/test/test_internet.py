@@ -11,9 +11,10 @@ from zope.interface.verify import verifyClass
 
 from twisted.internet.protocol import Factory
 from twisted.trial.unittest import TestCase
-from twisted.application.internet import StreamServerEndpointService
+from twisted.application.internet import StreamServerEndpointService, TimerService
 from twisted.internet.interfaces import IStreamServerEndpoint, IListeningPort
 from twisted.internet.defer import Deferred, CancelledError
+from twisted.internet.task import Clock
 
 class FakeServer(object):
     """
@@ -250,3 +251,40 @@ class TestEndpointService(TestCase):
         self.assertEqual(len(stoppingErrors), 1)
 
 
+
+class TestTimerService(TestCase):
+    """
+    Tests for L{twisted.application.internet.TimerService}.
+
+    @ivar timer: service to test
+    @type timer: L{TimerService}
+
+    @ivar clock: source of time
+    @type clock: L{Clock}
+
+    @ivar deferred: deferred returned by L{TestTimerService.call}.
+    @type deferred: L{Deferred}
+    """
+
+
+    def setUp(self):
+        self.timer = TimerService(2, self.call)
+        self.clock = self.timer.clock = Clock()
+        self.deferred = Deferred()
+
+
+    def call(self):
+        return self.deferred
+
+
+    def test_stopServiceWaits(self):
+        """
+        When L{TimerService.stopService} is called while a call is in progress.
+        the L{Deferred} returned doesn't fire until after the call finishes.
+        """
+        self.timer.startService()
+        self.clock.advance(0)
+        d = self.timer.stopService()
+        self.assertNoResult(d)
+        self.deferred.callback(object())
+        self.assertIs(self.successResultOf(d), None)
