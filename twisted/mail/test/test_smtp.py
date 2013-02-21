@@ -1611,3 +1611,45 @@ class SSLTestCase(unittest.TestCase):
 
         # The client give up
         self.assertEqual("QUIT\r\n", transport.value())
+
+
+    def test_esmtpClientTlsModeDeprecationGet(self):
+        """
+        L{smtp.ESMTPClient.tlsMode} is deprecated.
+        """
+        val = self.clientProtocol.tlsMode
+        del val
+        warningsShown = self.flushWarnings(
+            offendingFunctions=[self.test_esmtpClientTlsModeDeprecationGet])
+        self.assertEqual(len(warningsShown), 1)
+        self.assertIdentical(
+            warningsShown[0]['category'], DeprecationWarning)
+        self.assertEqual(
+            warningsShown[0]['message'],
+            "tlsMode attribute of twisted.mail.smtp.ESMTPClient "
+            "is deprecated since Twisted 13.0")
+
+
+    def test_esmtpClientTlsModeDeprecationGetAttributeError(self):
+        """
+        L{smtp.ESMTPClient.__getattr__} raises an attribute error for other
+        attribute names which do not exist.
+        """
+        self.assertRaises(
+            AttributeError, lambda: self.clientProtocol.doesNotExist)
+
+
+    def test_esmtpClientTlsModeDeprecationSet(self):
+        """
+        L{smtp.ESMTPClient.tlsMode} is deprecated.
+        """
+        self.clientProtocol.tlsMode = False
+        warningsShown = self.flushWarnings(
+            offendingFunctions=[self.test_esmtpClientTlsModeDeprecationSet])
+        self.assertEqual(len(warningsShown), 1)
+        self.assertIdentical(
+            warningsShown[0]['category'], DeprecationWarning)
+        self.assertEqual(
+            warningsShown[0]['message'],
+            "tlsMode attribute of twisted.mail.smtp.ESMTPClient "
+            "is deprecated since Twisted 13.0")

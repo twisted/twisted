@@ -8,6 +8,7 @@ Simple Mail Transfer Protocol implementation.
 
 import time, re, base64, types, socket, os, random, rfc822
 import binascii
+import warnings
 from email.base64MIME import encode as encode_base64
 
 from zope.interface import implements, Interface
@@ -984,7 +985,7 @@ class SMTPFactory(protocol.ServerFactory):
 class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
     """
     SMTP client for sending emails.
-    
+
     After the client has connected to the SMTP server, it repeatedly calls
     L{SMTPClient.getMailFrom}, L{SMTPClient.getMailTo} and
     L{SMTPClient.getMailData} and uses this information to send an email.
@@ -1234,7 +1235,7 @@ class ESMTPClient(SMTPClient):
     requireTransportSecurity = False
 
     # Indicate whether or not our transport can be considered secure.
-    tlsMode = False
+    _tlsMode = False
 
     # ClientContextFactory to use for STARTTLS
     context = None
@@ -1244,6 +1245,29 @@ class ESMTPClient(SMTPClient):
         self.authenticators = []
         self.secret = secret
         self.context = contextFactory
+
+
+    def __getattr__(self, name):
+        if name == "tlsMode":
+            warnings.warn(
+                "tlsMode attribute of twisted.mail.smtp.ESMTPClient "
+                "is deprecated since Twisted 13.0",
+                category=DeprecationWarning, stacklevel=2)
+            return self._tlsMode
+        else:
+            raise AttributeError(
+                'ESMTPClient instance has no attribute %r' % (name,))
+
+
+    def __setattr__(self, name, value):
+        if name == "tlsMode":
+            warnings.warn(
+                "tlsMode attribute of twisted.mail.smtp.ESMTPClient "
+                "is deprecated since Twisted 13.0",
+                category=DeprecationWarning, stacklevel=2)
+            self._tlsMode = value
+        else:
+            self.__dict__[name] = value
 
 
     def esmtpEHLORequired(self, code=-1, resp=None):
@@ -1684,7 +1708,7 @@ class SenderMixin:
 
 class SMTPSender(SenderMixin, SMTPClient):
     """
-    SMTP protocol that sends a single email based on information it 
+    SMTP protocol that sends a single email based on information it
     gets from its factory, a L{SMTPSenderFactory}.
     """
 
