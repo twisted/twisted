@@ -15,6 +15,7 @@ from twisted.application.internet import StreamServerEndpointService, TimerServi
 from twisted.internet.interfaces import IStreamServerEndpoint, IListeningPort
 from twisted.internet.defer import Deferred, CancelledError
 from twisted.internet.task import Clock
+from twisted.python.failure import Failure
 
 class FakeServer(object):
     """
@@ -283,8 +284,32 @@ class TestTimerService(TestCase):
         the L{Deferred} returned doesn't fire until after the call finishes.
         """
         self.timer.startService()
-        self.clock.advance(0)
         d = self.timer.stopService()
         self.assertNoResult(d)
         self.deferred.callback(object())
+        self.assertIs(self.successResultOf(d), None)
+
+
+    def test_stopServiceImmediately(self):
+        """
+        When L{TimerService.stopService} is called while a call isn't in progress.
+        the L{Deferred} returned has already been fired.
+        """
+        self.timer.startService()
+        self.deferred.callback(object())
+        d = self.timer.stopService()
+        self.assertIs(self.successResultOf(d), None)
+
+
+    def test_failedCallLogsError(self):
+        """
+        When function passed to L{TimerService} returns a deferred the errbacks,
+        the exception is logged, and L{TimerService.stopService} doesn't raise an error.
+        """
+        self.timer.startService()
+        self.clock.advance(0)
+        self.deferred.errback(Failure(ZeroDivisionError()))
+        errors = self.flushLoggedErrors(ZeroDivisionError)
+        self.assertEqual(1, len(errors))
+        d = self.timer.stopService()
         self.assertIs(self.successResultOf(d), None)

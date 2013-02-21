@@ -37,8 +37,6 @@ C{TCPServer(8080, server.Site(r))}.  See the documentation for the
 reactor.listen/connect* methods for more information.
 """
 
-import warnings
-
 from twisted.python import log
 from twisted.application import service
 from twisted.internet import task
