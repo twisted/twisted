@@ -21,11 +21,9 @@ except ImportError:
     crypt = None
 
 try:
-    from twisted.cred.pamauth import callIntoPAM
+    from twisted.cred import pamauth
 except ImportError:
     pamauth = None
-else:
-    from twisted.cred import pamauth
 
 
 class ITestable(Interface):
