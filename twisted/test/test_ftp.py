@@ -918,7 +918,7 @@ class DTPFactoryTests(unittest.TestCase):
         cancelled by L{ftp.DTPFactory.buildProtocol}.
         """
         self.factory.setTimeout(10)
-        protocol = self.factory.buildProtocol(None)
+        self.factory.buildProtocol(None)
         # Make sure the call is no longer active.
         self.assertFalse(self.reactor.calls)
 
