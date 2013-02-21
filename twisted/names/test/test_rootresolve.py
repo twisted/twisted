@@ -10,7 +10,6 @@ from random import randrange
 from zope.interface import implementer
 from zope.interface.verify import verifyClass
 
-from twisted.python.log import msg
 from twisted.trial.unittest import TestCase
 from twisted.internet.defer import Deferred, succeed, gatherResults
 from twisted.internet.task import Clock
@@ -262,7 +261,7 @@ class RootResolverTests(TestCase):
         resolver = Resolver(roots, maximumQueries)
 
         def query(query, serverAddresses, timeout, filter):
-            msg("Query for QNAME %s at %r" % (query.name, serverAddresses))
+            log.msg("Query for QNAME %s at %r" % (query.name, serverAddresses))
             for addr in serverAddresses:
                 try:
                     server = serverResponses[addr]
