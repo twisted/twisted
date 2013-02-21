@@ -1,0 +1,1 @@
+python.runtime.Platform.isWinNT is deprecated now. Use Platform.isWindows instead.
