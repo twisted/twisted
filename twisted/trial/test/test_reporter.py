@@ -118,8 +118,8 @@ class TestErrorReporting(StringTest):
     def test_formatErroredMethod(self):
         """
         A test method which runs and has an error recorded against it is
-        reported in the output stream with the I{ERROR} tag along with a summary
-        of what error was reported and the ID of the test.
+        reported in the output stream with the I{ERROR} tag along with a
+        summary of what error was reported and the ID of the test.
         """
         cls = erroneous.SynchronousTestFailureInSetUp
         suite = self.loader.loadClass(cls)
@@ -233,6 +233,10 @@ class TracebackHandling(unittest.SynchronousTestCase):
         """
         Run the given C{test}, make sure it fails and return the trimmed
         frames.
+
+        @param test: The test case to run.
+
+        @return: The C{list} of frames trimmed.
         """
         stream = StringIO.StringIO()
         result = reporter.Reporter(stream)
@@ -873,7 +877,8 @@ class TestTreeReporter(unittest.SynchronousTestCase):
     def test_printResults(self):
         """
         L{Reporter._printResults} uses the results list and formatter callable
-        passed to it to produce groups of results to write to its output stream.
+        passed to it to produce groups of results to write to its output
+        stream.
         """
         def formatter(n):
             return str(n) + '\n'
@@ -1464,7 +1469,8 @@ class TestAdaptedReporter(unittest.SynchronousTestCase):
 
 
     def assertWrapped(self, wrappedResult, test):
-        self.assertEqual(wrappedResult._originalReporter.test, self._testAdapter(test))
+        self.assertEqual(wrappedResult._originalReporter.test,
+                         self._testAdapter(test))
 
 
     def getFailure(self, exceptionInstance):
@@ -1505,7 +1511,8 @@ class TestAdaptedReporter(unittest.SynchronousTestCase):
         """
         C{addSkip} wraps its test with the provided adapter.
         """
-        self.wrappedResult.addSkip(self, self.getFailure(SkipTest('no reason')))
+        self.wrappedResult.addSkip(
+            self, self.getFailure(SkipTest('no reason')))
         self.assertWrapped(self.wrappedResult, self)
 
 
