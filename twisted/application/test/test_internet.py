@@ -11,7 +11,8 @@ from zope.interface.verify import verifyClass
 
 from twisted.internet.protocol import Factory
 from twisted.trial.unittest import TestCase
-from twisted.application.internet import StreamServerEndpointService, TimerService
+from twisted.application.internet import (
+        StreamServerEndpointService, TimerService)
 from twisted.internet.interfaces import IStreamServerEndpoint, IListeningPort
 from twisted.internet.defer import Deferred, CancelledError
 from twisted.internet.task import Clock
@@ -257,16 +258,15 @@ class TestTimerService(TestCase):
     """
     Tests for L{twisted.application.internet.TimerService}.
 
-    @ivar timer: service to test
     @type timer: L{TimerService}
+    @ivar timer: service to test
 
-    @ivar clock: source of time
     @type clock: L{Clock}
+    @ivar clock: source of time
 
-    @ivar deferred: deferred returned by L{TestTimerService.call}.
     @type deferred: L{Deferred}
+    @ivar deferred: deferred returned by L{TestTimerService.call}.
     """
-
 
     def setUp(self):
         self.timer = TimerService(2, self.call)
@@ -275,6 +275,12 @@ class TestTimerService(TestCase):
 
 
     def call(self):
+        """
+        Function called by L{TimerService} being tested.
+
+        @returns: C{self.deferred}
+        @rtype: L{Deferred}
+        """
         return self.deferred
 
 
@@ -287,7 +293,7 @@ class TestTimerService(TestCase):
         d = self.timer.stopService()
         self.assertNoResult(d)
         self.deferred.callback(object())
-        self.assertIs(self.successResultOf(d), None)
+        self.assertIdentical(self.successResultOf(d), None)
 
 
     def test_stopServiceImmediately(self):
@@ -298,7 +304,7 @@ class TestTimerService(TestCase):
         self.timer.startService()
         self.deferred.callback(object())
         d = self.timer.stopService()
-        self.assertIs(self.successResultOf(d), None)
+        self.assertIdentical(self.successResultOf(d), None)
 
 
     def test_failedCallLogsError(self):
@@ -312,4 +318,4 @@ class TestTimerService(TestCase):
         errors = self.flushLoggedErrors(ZeroDivisionError)
         self.assertEqual(1, len(errors))
         d = self.timer.stopService()
-        self.assertIs(self.successResultOf(d), None)
+        self.assertIdentical(self.successResultOf(d), None)
