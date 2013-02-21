@@ -15,7 +15,7 @@ from twisted.words import ewords, service
 from twisted.words.protocols import irc
 from twisted.spread import pb
 from twisted.internet.defer import Deferred, DeferredList, maybeDeferred, succeed
-from twisted.internet import address, reactor
+from twisted.internet import address, defer, reactor
 
 class RealmTestCase(unittest.TestCase):
     def _entityCreationTest(self, kind):
@@ -816,34 +816,20 @@ class PBProtocolTestCase(unittest.TestCase):
         return d
 
 
+    @defer.inlineCallbacks
     def testGroups(self):
         mindone = TestMind()
-        one = wFD(self._loggedInAvatar(u"one", "p1", mindone))
-        yield one
-        one = one.getResult()
+        one = yield self._loggedInAvatar(u"one", "p1", mindone)
 
         mindtwo = TestMind()
-        two = wFD(self._loggedInAvatar(u"two", "p2", mindtwo))
-        yield two
-        two = two.getResult()
+        two = yield self._loggedInAvatar(u"two", "p2", mindtwo)
 
-        add = wFD(self.realm.createGroup(u"foobar"))
-        yield add
-        add.getResult()
+        yield self.realm.createGroup(u"foobar")
 
-        groupone = wFD(one.join(u"foobar"))
-        yield groupone
-        groupone = groupone.getResult()
+        groupone = yield one.join(u"foobar")
 
-        grouptwo = wFD(two.join(u"foobar"))
-        yield grouptwo
-        grouptwo = grouptwo.getResult()
+        yield two.join(u"foobar")
 
-        msg = wFD(groupone.send({"text": "hello, monkeys"}))
-        yield msg
-        msg = msg.getResult()
+        yield groupone.send({"text": "hello, monkeys"})
 
-        leave = wFD(groupone.leave())
-        yield leave
-        leave = leave.getResult()
-    testGroups = dG(testGroups)
+        yield groupone.leave()
