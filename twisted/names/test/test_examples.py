@@ -28,8 +28,6 @@ class ExampleTestBase(object):
     features are added to it, and we want to test each one.
     """
 
-    examplePath = None
-
     def setUp(self):
         """
         Add our example directory to the path and record which modules are
@@ -37,19 +35,29 @@ class ExampleTestBase(object):
         """
         self.fakeErr = StringIO()
         self.originalErr, sys.stderr = sys.stderr, self.fakeErr
+        self.fakeOut = StringIO()
+        self.originalOut, sys.stdout = sys.stdout, self.fakeOut
+
         self.originalPath = sys.path[:]
         self.originalModules = sys.modules.copy()
+
+        # Get branch root
         here = FilePath(__file__).parent().parent().parent().parent()
-        for childName in self.examplePath:
+
+        # Find the example script within this branch
+        for childName in self.exampleRelativePath.split('/'):
             here = here.child(childName)
-        if not here.exists():
-            raise SkipTest(
-                "Examples (%s) not found - cannot test" % (here.path,))
-        sys.path.append(here.parent().path)
-        # Import the example as a module
-        moduleName = here.basename().split('.')[0]
-        self.example = __import__(moduleName)
+            if not here.exists():
+                raise SkipTest(
+                    "Examples (%s) not found - cannot test" % (here.path,))
         self.examplePath = here
+
+        # Add the example parent folder to the Python path
+        sys.path.append(self.examplePath.parent().path)
+
+        # Import the example as a module
+        moduleName = self.examplePath.basename().split('.')[0]
+        self.example = __import__(moduleName)
 
 
     def tearDown(self):
@@ -74,8 +82,28 @@ class ExampleTestBase(object):
 
     def test_usageConsistency(self):
         """
+        The example script prints a usage message to stdout if it is
+        passed a --help option and then exits.
+
+        The first line should contain a USAGE summary, explaining the
+        accepted command arguments.
+        """
+        # Pass None as first parameter - the reactor - it shouldn't
+        # get as far as calling it.
+        self.assertRaises(
+            SystemExit, self.example.main, None, '--help')
+
+        out = self.fakeOut.getvalue().splitlines()
+        self.assertTrue(
+            out[0].startswith('Usage:'),
+            'Usage message first line should start with "Usage:". '
+            'Actual: %r' % (out[0],))
+
+
+    def test_usageConsistencyOnError(self):
+        """
         The example script prints a usage message to stderr if it is
-        passed unrecognised command line arguments.
+        passed unrecognized command line arguments.
 
         The first line should contain a USAGE summary, explaining the
         accepted command arguments.
@@ -83,11 +111,15 @@ class ExampleTestBase(object):
         The last line should contain an ERROR summary, explaining that
         incorrect arguments were supplied.
         """
-        self.assertRaises(SystemExit, self.example.main, None)
+        # Pass None as first parameter - the reactor - it shouldn't
+        # get as far as calling it.
+        self.assertRaises(
+            SystemExit, self.example.main, None, '--unexpected_argument')
+
         err = self.fakeErr.getvalue().splitlines()
         self.assertTrue(
-            err[0].startswith('USAGE:'),
-            'Usage message first line should start with "USAGE:". '
+            err[0].startswith('Usage:'),
+            'Usage message first line should start with "Usage:". '
             'Actual: %r' % (err[0],))
         self.assertTrue(
             err[-1].startswith('ERROR:'),
@@ -101,7 +133,7 @@ class TestDnsTests(ExampleTestBase, TestCase):
     Test the testdns.py example script.
     """
 
-    examplePath = 'doc/names/examples/testdns.py'.split('/')
+    exampleRelativePath = 'doc/names/examples/testdns.py'
 
 
 class GetHostByNameTests(ExampleTestBase, TestCase):
@@ -109,7 +141,7 @@ class GetHostByNameTests(ExampleTestBase, TestCase):
     Test the gethostbyname.py example script.
     """
 
-    examplePath = 'doc/names/examples/gethostbyname.py'.split('/')
+    exampleRelativePath = 'doc/names/examples/gethostbyname.py'
 
 
 class DnsServiceTests(ExampleTestBase, TestCase):
@@ -117,4 +149,4 @@ class DnsServiceTests(ExampleTestBase, TestCase):
     Test the dns-service.py example script.
     """
 
-    examplePath = 'doc/names/examples/dns-service.py'.split('/')
+    exampleRelativePath = 'doc/names/examples/dns-service.py'

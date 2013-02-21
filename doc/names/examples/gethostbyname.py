@@ -4,7 +4,7 @@
 # See LICENSE for details.
 
 """
-USAGE: python gethostbyname.py HOSTNAME
+Usage: gethostbyname.py HOSTNAME
 
 Print the IP address for a given hostname. eg
 
@@ -20,6 +20,7 @@ import sys
 
 from twisted.names import client, error
 from twisted.internet.task import react
+from twisted.python import usage
 
 
 def printResult(address, hostname):
@@ -43,15 +44,25 @@ def printError(failure, hostname):
     sys.stderr.write('ERROR: hostname not found %r\n' % (hostname,))
 
 
+class Options(usage.Options):
+    synopsis = __doc__.strip()
+    longdesc = ''
+
+    def parseArgs(self, hostname):
+        self['hostname'] = hostname
+
+
 def main(reactor, *argv):
+    options = Options()
     try:
-        hostname = argv[0]
-    except IndexError:
+        options.parseOptions(argv)
+    except usage.UsageError as errortext:
         sys.stderr.write(
-            __doc__.lstrip() + '\n'
-            'ERROR: missing HOSTNAME argument\n')
+            __doc__.lstrip() + '\n')
+        sys.stderr.write('ERROR: %s\n' % (errortext,))
         raise SystemExit(1)
 
+    hostname = options['hostname']
     d = client.getHostByName(hostname)
     d.addCallback(printResult, hostname)
     d.addErrback(printError, hostname)

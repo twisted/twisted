@@ -4,7 +4,7 @@
 # See LICENSE for details.
 
 """
-USAGE: python dns-service.py SERVICE PROTO DOMAINNAME
+Usage: dns-service.py SERVICE PROTO DOMAINNAME
 
 Print the SRV records for a given DOMAINNAME eg
 
@@ -21,6 +21,7 @@ import sys
 
 from twisted.names import client, error
 from twisted.internet.task import react
+from twisted.python import usage
 
 
 def printResult(records, domainname):
@@ -48,17 +49,28 @@ def printError(failure, domainname):
     sys.stderr.write('ERROR: domain name not found %r\n' % (domainname,))
 
 
+class Options(usage.Options):
+    synopsis = __doc__.strip()
+    longdesc = ''
+
+    def parseArgs(self, service, proto, domainname):
+        self['service'] = service
+        self['proto'] = proto
+        self['domainname'] = domainname
+
+
 def main(reactor, *argv):
+    options = Options()
     try:
-        service, proto, domainname = sys.argv[1:]
-    except ValueError:
+        options.parseOptions(argv)
+    except usage.UsageError as errortext:
         sys.stderr.write(
-            __doc__.lstrip() + '\n'
-            'ERROR: incorrect command line arguments\n')
+            __doc__.lstrip() + '\n')
+        sys.stderr.write('ERROR: %s\n' % (errortext,))
         raise SystemExit(1)
 
     resolver = client.Resolver('/etc/resolv.conf')
-    domainname = '_%s._%s.%s' % (service, proto, domainname)
+    domainname = '_%(service)s._%(proto)s.%(domainname)s' % options
     d = resolver.lookupService(domainname)
     d.addCallback(printResult, domainname)
     d.addErrback(printError, domainname)

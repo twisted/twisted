@@ -4,7 +4,7 @@
 # See LICENSE for details.
 
 """
-USAGE: python testdns.py DOMAINNAME
+Usage: testdns.py DOMAINNAME
 
 Print the Address records, Mail-Exchanger records and the Nameserver
 records for the given domain name. eg
@@ -16,6 +16,7 @@ import sys
 from twisted.internet import defer
 from twisted.internet.task import react
 from twisted.names import client, dns, error
+from twisted.python import usage
 
 
 def formatRecords(records, heading):
@@ -54,15 +55,25 @@ def printError(failure, domainname):
     sys.stderr.write('ERROR: domain name not found %r\n' % (domainname,))
 
 
+class Options(usage.Options):
+    synopsis = __doc__.strip()
+    longdesc = ''
+
+    def parseArgs(self, domainname):
+        self['domainname'] = domainname
+
+
 def main(reactor, *argv):
+    options = Options()
     try:
-        domainname = argv[0]
-    except IndexError:
+        options.parseOptions(argv)
+    except usage.UsageError as errortext:
         sys.stderr.write(
-            __doc__.lstrip() + '\n'
-            'ERROR: missing DOMAINNAME argument\n')
+            __doc__.lstrip() + '\n')
+        sys.stderr.write('ERROR: %s\n' % (errortext,))
         raise SystemExit(1)
 
+    domainname = options['domainname']
     r = client.Resolver('/etc/resolv.conf')
     d = defer.gatherResults([
             r.lookupAddress(domainname).addCallback(
