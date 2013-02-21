@@ -285,6 +285,7 @@ deprecate.deprecatedModuleAttribute(
 
 
 
+@defer.inlineCallbacks
 def _runSequentially(callables, stopOnFirstError=False):
     """
     Run the given callables one after the other. If a callable returns a
@@ -302,16 +303,14 @@ def _runSequentially(callables, stopOnFirstError=False):
     results = []
     for f in callables:
         d = defer.maybeDeferred(f)
-        thing = defer.waitForDeferred(d)
-        yield thing
         try:
-            results.append((defer.SUCCESS, thing.getResult()))
+            thing = yield d
+            results.append((defer.SUCCESS, thing))
         except:
             results.append((defer.FAILURE, Failure()))
             if stopOnFirstError:
                 break
-    yield results
-_runSequentially = defer.deferredGenerator(_runSequentially)
+    defer.returnValue(results)
 
 
 
