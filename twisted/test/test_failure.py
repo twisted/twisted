@@ -91,9 +91,9 @@ class FailureTestCase(SynchronousTestCase):
         Assert that L{s} starts with a particular L{prefix}.
 
         @param s: The input string.
-        @type s: L{str}
+        @type s: C{str}
         @param prefix: The string that L{s} should start with.
-        @type prefix: L{str}
+        @type prefix: C{str}
         """
         self.assertTrue(s.startswith(prefix),
                         '%r is not the start of %r' % (prefix, s))
@@ -104,24 +104,25 @@ class FailureTestCase(SynchronousTestCase):
         Assert that L{s} end with a particular L{suffix}.
 
         @param s: The input string.
-        @type s: L{str}
+        @type s: C{str}
         @param suffix: The string that L{s} should end with.
-        @type suffix: L{str}
+        @type suffix: C{str}
         """
         self.assertTrue(s.endswith(suffix),
                         '%r is not the end of %r' % (suffix, s))
 
 
-    def assertCorrectTraceback(self, tb, prefix, suffix):
+    def assertTracebackFormat(self, tb, prefix, suffix):
         """
-        Assert that L{tb} contains a particular L{prefix} and L{suffix}.
+        Assert that the L{tb} traceback contains a particular L{prefix} and
+        L{suffix}.
 
-        @param tb: The input string.
-        @type tb: L{str}
+        @param tb: The traceback string.
+        @type tb: C{str}
         @param prefix: The string that L{tb} should start with.
-        @type prefix: L{str}
+        @type prefix: C{str}
         @param suffix: The string that L{tb} should end with.
-        @type suffix: L{str}
+        @type suffix: C{str}
         """
         self.assertStartsWith(tb, prefix)
         self.assertEndsWith(tb, suffix)
@@ -129,12 +130,45 @@ class FailureTestCase(SynchronousTestCase):
 
     def assertDetailedTraceback(self, captureVars=False, cleanFailure=False):
         """
-        Assert that L{printDetailedTraceback} produces a detailed traceback.
+        Assert that L{printDetailedTraceback} produces and prints a detailed
+        traceback.
+
+        The detailed traceback consists of a header::
+
+          *--- Failure #20 ---
+
+        The body contains the stacktrace::
+
+          /twisted/trial/_synctest.py:1180: _run(...)
+          /twisted/python/util.py:1076: runWithWarningsSuppressed(...)
+          --- <exception caught here> ---
+          /twisted/test/test_failure.py:39: getDivisionFailure(...)
+
+        If C{captureVars} is enabled the body also includes a list of
+        globals and locals::
+
+           [ Locals ]
+             exampleLocalVar : 'xyz'
+             ...
+           ( Globals )
+             ...
+
+        Or when C{captureVars} is disabled::
+
+           [Capture of Locals and Globals disabled (use captureVars=True)]
+
+        When C{cleanFailure} is enabled references to other objects are removed
+        and replaced with strings.
+           
+        And finally the footer with the L{Failure}'s value::
+
+          exceptions.ZeroDivisionError: float division
+          *--- End of Failure #20 ---
 
         @param captureVars: Enables L{Failure.captureVars}.
-        @type captureVars: L{bool}
+        @type captureVars: C{bool}
         @param cleanFailure: Enables L{Failure.cleanFailure}.
-        @type cleanFailure: L{bool}
+        @type cleanFailure: C{bool}
         """
         if captureVars:
             exampleLocalVar = 'xyz'
@@ -150,15 +184,19 @@ class FailureTestCase(SynchronousTestCase):
             (f.pickled and ' (pickled) ') or ' ')
         end = "%s: %s\n*--- End of Failure #%s ---\n" % (reflect.qual(f.type),
             reflect.safe_str(f.value), f.count)
-        self.assertCorrectTraceback(tb, start, end)
+        self.assertTracebackFormat(tb, start, end)
 
         # Variables are printed on lines with 2 leading spaces.
         linesWithVars = [line for line in tb.splitlines()
                              if line.startswith('  ')]
 
         if captureVars:
-            self.assertNotEqual(None, re.search('exampleLocalVar.*xyz', tb))
             self.assertNotEqual([], linesWithVars)
+            if cleanFailure:
+                line = '  exampleLocalVar : "\'xyz\'"'
+            else:
+                line = "  exampleLocalVar : 'xyz'"
+            self.assertIn(line, linesWithVars)
         else:
             self.assertEqual([], linesWithVars)
             self.assertIn(' [Capture of Locals and Globals disabled (use '
@@ -167,10 +205,25 @@ class FailureTestCase(SynchronousTestCase):
 
     def assertBriefTraceback(self, captureVars=False):
         """
-        Assert that L{printBriefTraceback} produces a brief traceback.
+        Assert that L{printBriefTraceback} produces and prints a brief
+        traceback.
+
+        The brief traceback consists of a header::
+
+          Traceback: <type 'exceptions.ZeroDivisionError'>: float division
+
+        The body with the stacktrace::
+
+          /twisted/trial/_synctest.py:1180:_run
+          /twisted/python/util.py:1076:runWithWarningsSuppressed
+
+        And the footer::
+
+          --- <exception caught here> ---
+          /twisted/test/test_failure.py:39:getDivisionFailure
 
         @param captureVars: Enables L{Failure.captureVars}.
-        @type captureVars: L{bool}
+        @type captureVars: C{bool}
         """
         if captureVars:
             exampleLocalVar = 'abcde'
@@ -183,8 +236,8 @@ class FailureTestCase(SynchronousTestCase):
         for method, filename, lineno, localVars, globalVars in f.frames:
             stack += '%s:%s:%s\n' % (filename, lineno, method)
 
-        self.assertCorrectTraceback(tb,
-            "Traceback",
+        self.assertTracebackFormat(tb,
+            "Traceback: <type 'exceptions.ZeroDivisionError'>: ",
             "%s\n%s" % (failure.EXCEPTION_CAUGHT_HERE, stack))
 
         if captureVars:
@@ -193,10 +246,26 @@ class FailureTestCase(SynchronousTestCase):
 
     def assertDefaultTraceback(self, captureVars=False):
         """
-        Assert that L{printTraceback} produces traceback.
+        Assert that L{printTraceback} produces and prints a default traceback.
+
+        The default traceback consists of a header::
+
+          Traceback (most recent call last):
+
+        The body with traceback::
+
+          File "/twisted/trial/_synctest.py", line 1180, in _run
+             runWithWarningsSuppressed(suppress, method)
+
+        And the footer::
+
+          --- <exception caught here> ---
+            File "twisted/test/test_failure.py", line 39, in getDivisionFailure
+              1/0
+            exceptions.ZeroDivisionError: float division
 
         @param captureVars: Enables L{Failure.captureVars}.
-        @type captureVars: L{bool}
+        @type captureVars: C{bool}
         """
         if captureVars:
             exampleLocalVar = 'xyzzy'
@@ -212,7 +281,7 @@ class FailureTestCase(SynchronousTestCase):
             stack += '    %s\n' % (linecache.getline(
                                    filename, lineno).strip(),)
 
-        self.assertCorrectTraceback(tb,
+        self.assertTracebackFormat(tb,
             "Traceback (most recent call last):",
             "%s\n%s%s: %s\n" % (failure.EXCEPTION_CAUGHT_HERE, stack,
             reflect.qual(f.type), reflect.safe_str(f.value)))
