@@ -364,24 +364,28 @@ class BasicFTPServerTestCase(FTPServerTestCase):
             s = ','.join(map(str, badValue))
             self.assertRaises(ValueError, ftp.decodeHostPort, s)
 
-    def testPASV(self):
+
+    def test_PASV(self):
+        """
+        When the client sends the command C{PASV}, the server responds with a
+        host and port, and is listening on that port.
+        """
         # Login
-        wfd = defer.waitForDeferred(self._anonymousLogin())
-        yield wfd
-        wfd.getResult()
-
-        # Issue a PASV command, and extract the host and port from the response
-        pasvCmd = defer.waitForDeferred(self.client.queueStringCommand('PASV'))
-        yield pasvCmd
-        responseLines = pasvCmd.getResult()
-        host, port = ftp.decodeHostPort(responseLines[-1][4:])
-
-        # Make sure the server is listening on the port it claims to be
-        self.assertEqual(port, self.serverProtocol.dtpPort.getHost().port)
-
+        d = self._anonymousLogin()
+        # Issue a PASV command
+        d.addCallback(lambda _: self.client.queueStringCommand('PASV'))
+        def cb(responseLines):
+            """
+            Extract the host and port from the resonse, and
+            verify the server is listening of the port it claims to be.
+            """
+            host, port = ftp.decodeHostPort(responseLines[-1][4:])
+            self.assertEqual(port, self.serverProtocol.dtpPort.getHost().port)
+        d.addCallback(cb)
         # Semi-reasonable way to force cleanup
-        self.serverProtocol.transport.loseConnection()
-    testPASV = defer.deferredGenerator(testPASV)
+        d.addCallback(lambda _: self.serverProtocol.transport.loseConnection())
+        return d
+
 
     def test_SYST(self):
         """SYST command will always return UNIX Type: L8"""
