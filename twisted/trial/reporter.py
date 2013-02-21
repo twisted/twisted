@@ -133,9 +133,9 @@ class TestResult(pyunit.TestResult, object):
         """
         Report that the given test was skipped.
 
-        In Trial, tests can be 'skipped'. Tests are skipped mostly because there
-        is some platform or configuration issue that prevents them from being
-        run correctly.
+        In Trial, tests can be 'skipped'. Tests are skipped mostly because
+        there is some platform or configuration issue that prevents them from
+        being run correctly.
 
         @type test: L{pyunit.TestCase}
         @type reason: L{str}
@@ -145,9 +145,9 @@ class TestResult(pyunit.TestResult, object):
     def addUnexpectedSuccess(self, test, todo):
         """Report that the given test succeeded against expectations.
 
-        In Trial, tests can be marked 'todo'. That is, they are expected to fail.
-        When a test that is expected to fail instead succeeds, it should call
-        this method to report the unexpected success.
+        In Trial, tests can be marked 'todo'. That is, they are expected to
+        fail.  When a test that is expected to fail instead succeeds, it should
+        call this method to report the unexpected success.
 
         @type test: L{pyunit.TestCase}
         @type todo: L{unittest.Todo}
@@ -158,7 +158,8 @@ class TestResult(pyunit.TestResult, object):
     def addExpectedFailure(self, test, error, todo):
         """Report that the given test failed, and was expected to do so.
 
-        In Trial, tests can be marked 'todo'. That is, they are expected to fail.
+        In Trial, tests can be marked 'todo'. That is, they are expected to
+        fail.
 
         @type test: L{pyunit.TestCase}
         @type error: L{Failure}
@@ -478,33 +479,45 @@ class Reporter(TestResult):
 
 
     def _trimFrames(self, frames):
-        # when a SynchronousTestCase method fails synchronously, the stack looks
-        # like this:
-        # [0]: SynchronousTestCase._run
-        # [1]:  twisted.python.util.runWithWarningsSuppressed
-        # [2:-2]: code in the test method which failed
-        # [-1]: _synctest.fail
+        """
+        Trim frames to remove internal paths.
 
-        # when a TestCase method fails synchronously, the stack looks like this:
-        #  [0]: defer.maybeDeferred()
-        #  [1]: utils.runWithWarningsSuppressed()
-        #  [2:-2]: code in the test method which failed
-        #  [-1]: _synctest.fail
+        When a C{SynchronousTestCase} method fails synchronously, the stack
+        looks like this:
+         - [0]: C{SynchronousTestCase._run}
+         - [1]: C{util.runWithWarningsSuppressed}
+         - [2:-2]: code in the test method which failed
+         - [-1]: C{_synctest.fail}
 
-        # when a method fails inside a Deferred (i.e., when the test method
-        # returns a Deferred, and that Deferred's errback fires), the stack
-        # captured inside the resulting Failure looks like this:
-        #  [0]: defer.Deferred._runCallbacks
-        #  [1:-2]: code in the testmethod which failed
-        #  [-1]: _synctest.fail
+        When a C{TestCase} method fails synchronously, the stack looks like
+        this:
+         - [0]: C{defer.maybeDeferred}
+         - [1]: C{_utilspy3.runWithWarningsSuppressed}
+         - [2]: C{_utilspy3.runWithWarningsSuppressed}
+         - [3:-2]: code in the test method which failed
+         - [-1]: C{_synctest.fail}
 
-        # as a result, we want to trim either [maybeDeferred,runWWS] or
-        # [Deferred._runCallbacks] or [SynchronousTestCase._run,runWWS] from the
-        # front, and trim the [unittest.fail] from the end.
+        When a method fails inside a C{Deferred} (i.e., when the test method
+        returns a C{Deferred}, and that C{Deferred}'s errback fires), the stack
+        captured inside the resulting C{Failure} looks like this:
+         - [0]: C{defer.Deferred._runCallbacks}
+         - [1:-2]: code in the testmethod which failed
+         - [-1]: C{_synctest.fail}
 
-        # There is also another case, when the test method is badly defined and
-        # contains extra arguments.
+        As a result, we want to trim either [maybeDeferred, runWWS, runWWS] or
+        [Deferred._runCallbacks] or [SynchronousTestCase._run, runWWS] from the
+        front, and trim the [unittest.fail] from the end.
 
+        There is also another case, when the test method is badly defined and
+        contains extra arguments.
+
+        If it doesn't recognize one of these cases, it just returns the
+        original frames.
+
+        @param frames: The C{list} of frames from the test failure.
+
+        @return: The C{list} of frames to display.
+        """
         newFrames = list(frames)
 
         if len(frames) < 2:
@@ -516,17 +529,22 @@ class Reporter(TestResult):
         secondMethod = newFrames[1][0]
         secondFile = os.path.splitext(os.path.basename(newFrames[1][1]))[0]
 
-        syncCase = (("_run", "_synctest"), ("runWithWarningsSuppressed", "util"))
-        asyncCase = (("maybeDeferred", "defer"), ("runWithWarningsSuppressed", "utils"))
+        syncCase = (("_run", "_synctest"),
+                    ("runWithWarningsSuppressed", "util"))
+        asyncCase = (("maybeDeferred", "defer"),
+                     ("runWithWarningsSuppressed", "_utilspy3"))
 
         twoFrames = ((firstMethod, firstFile), (secondMethod, secondFile))
-        if twoFrames in [syncCase, asyncCase]:
+        if twoFrames == syncCase:
             newFrames = newFrames[2:]
+        elif twoFrames == asyncCase:
+            newFrames = newFrames[3:]
         elif (firstMethod, firstFile) == ("_runCallbacks", "defer"):
             newFrames = newFrames[1:]
 
         if not newFrames:
-            # The method fails before getting called, probably an argument problem
+            # The method fails before getting called, probably an argument
+            # problem
             return newFrames
 
         last = newFrames[-1]
@@ -541,7 +559,8 @@ class Reporter(TestResult):
         if isinstance(fail, str):
             return fail.rstrip() + '\n'
         fail.frames, frames = self._trimFrames(fail.frames), fail.frames
-        result = fail.getTraceback(detail=self.tbformat, elideFrameworkCode=True)
+        result = fail.getTraceback(detail=self.tbformat,
+                                   elideFrameworkCode=True)
         fail.frames = frames
         return result
 
@@ -617,7 +636,7 @@ class Reporter(TestResult):
         Print all of the non-success results to the stream in full.
         """
         self._write('\n')
-        self._printResults('[SKIPPED]', self.skips, lambda x : '%s\n' % x)
+        self._printResults('[SKIPPED]', self.skips, lambda x: '%s\n' % x)
         self._printResults('[TODO]', self.expectedFailures,
                            self._printExpectedFailure)
         self._printResults('[FAIL]', self.failures,
@@ -639,8 +658,8 @@ class Reporter(TestResult):
             if num:
                 summaries.append('%s=%d' % (stat, num))
         if self.successes:
-           summaries.append('successes=%d' % (self.successes,))
-        summary = (summaries and ' ('+', '.join(summaries)+')') or ''
+            summaries.append('successes=%d' % (self.successes,))
+        summary = (summaries and ' (' + ', '.join(summaries) + ')') or ''
         return summary
 
 

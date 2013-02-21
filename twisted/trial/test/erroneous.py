@@ -64,23 +64,44 @@ class AsynchronousTestFailureInTearDown(
 
 
 class TestRegularFail(unittest.SynchronousTestCase):
+
     def test_fail(self):
         self.fail("I fail")
+
 
     def test_subfail(self):
         self.subroutine()
 
+
     def subroutine(self):
         self.fail("I fail inside")
 
-class TestFailureInDeferredChain(unittest.TestCase):
+
+
+class TestAsynchronousFail(unittest.TestCase):
+    """
+    Test failures for L{unittest.TestCase} based classes.
+    """
+
     def test_fail(self):
+        """
+        A test which fails in the callback of the returned L{defer.Deferred}.
+        """
         d = defer.Deferred()
         d.addCallback(self._later)
         reactor.callLater(0, d.callback, None)
         return d
+
+
     def _later(self, res):
         self.fail("I fail later")
+
+
+    def test_exception(self):
+        """
+        A test which raises an exception synchronously.
+        """
+        raise Exception("I fail")
 
 
 
