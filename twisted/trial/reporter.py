@@ -493,7 +493,8 @@ class Reporter(TestResult):
         this:
          - [0]: C{defer.maybeDeferred}
          - [1]: C{_utilspy3.runWithWarningsSuppressed}
-         - [2:-2]: code in the test method which failed
+         - [2]: C{_utilspy3.runWithWarningsSuppressed}
+         - [3:-2]: code in the test method which failed
          - [-1]: C{_synctest.fail}
 
         When a method fails inside a C{Deferred} (i.e., when the test method
@@ -503,7 +504,7 @@ class Reporter(TestResult):
          - [1:-2]: code in the testmethod which failed
          - [-1]: C{_synctest.fail}
 
-        As a result, we want to trim either [maybeDeferred, runWWS] or
+        As a result, we want to trim either [maybeDeferred, runWWS, runWWS] or
         [Deferred._runCallbacks] or [SynchronousTestCase._run, runWWS] from the
         front, and trim the [unittest.fail] from the end.
 
