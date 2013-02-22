@@ -1,45 +1,84 @@
 #!/usr/bin/env python
+# -*- test-case-name: twisted.names.test.test_examples -*-
 
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
-Sample app to lookup SRV records in DNS.
-To run this script:
-$ python dns-service.py <service> <proto> <domain>
-where,
-service = the symbolic name of the desired service.
-proto = the transport protocol of the desired service; this is usually either TCP or UDP.
-domain =  the domain name for which this record is valid.
-e.g.:
-$ python dns-service.py sip udp yahoo.com
-$ python dns-service.py xmpp-client tcp gmail.com
+Print the SRV records for a given DOMAINNAME eg
+
+ python dns-service.py xmpp-client tcp gmail.com
+
+SERVICE: the symbolic name of the desired service.
+
+PROTO: the transport protocol of the desired service; this is usually
+       either TCP or UDP.
+
+DOMAINNAME: the domain name for which this record is valid.
 """
 
-from twisted.names import client
-from twisted.internet import reactor
 import sys
 
-def printAnswer((answers, auth, add)):
-    if not len(answers):
-        print 'No answers'
+from twisted.names import client, error
+from twisted.internet.task import react
+from twisted.python import usage
+
+
+
+class Options(usage.Options):
+    synopsis = 'Usage: dns-service.py SERVICE PROTO DOMAINNAME'
+
+    def parseArgs(self, service, proto, domainname):
+        self['service'] = service
+        self['proto'] = proto
+        self['domainname'] = domainname
+
+
+
+def printResult(records, domainname):
+    """
+    Print the SRV records for the domainname or an error message if no
+    SRV records were found.
+    """
+    answers, authority, additional = records
+    if answers:
+        sys.stdout.write(
+            domainname + ' IN \n ' +
+            '\n '.join(str(x.payload) for x in answers) +
+            '\n')
     else:
-        print '\n'.join([str(x.payload) for x in answers])
-    reactor.stop()
+        sys.stderr.write(
+            'ERROR: No SRV records found for name %r\n' % (domainname,))
 
-def printFailure(arg):
-    print "error: could not resolve:", arg
-    reactor.stop()
 
-try:
-    service, proto, domain = sys.argv[1:]
-except ValueError:
-    sys.stderr.write('%s: usage:\n' % sys.argv[0] +
-                     '  %s SERVICE PROTO DOMAIN\n' % sys.argv[0])
-    sys.exit(1)
 
-resolver = client.Resolver('/etc/resolv.conf')
-d = resolver.lookupService('_%s._%s.%s' % (service, proto, domain), [1])
-d.addCallbacks(printAnswer, printFailure)
+def printError(failure, domainname):
+    """
+    Print a friendly error message if the domainname could not be
+    resolved.
+    """
+    failure.trap(error.DNSNameError)
+    sys.stderr.write('ERROR: domain name not found %r\n' % (domainname,))
 
-reactor.run()
+
+
+def main(reactor, *argv):
+    options = Options()
+    try:
+        options.parseOptions(argv)
+    except usage.UsageError as errortext:
+        sys.stderr.write(str(options) + '\n')
+        sys.stderr.write('ERROR: %s\n' % (errortext,))
+        raise SystemExit(1)
+
+    resolver = client.Resolver('/etc/resolv.conf')
+    domainname = '_%(service)s._%(proto)s.%(domainname)s' % options
+    d = resolver.lookupService(domainname)
+    d.addCallback(printResult, domainname)
+    d.addErrback(printError, domainname)
+    return d
+
+
+
+if __name__ == '__main__':
+    react(main, sys.argv[1:])
