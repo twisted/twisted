@@ -20,7 +20,7 @@ import os
 import errno
 import warnings
 
-from zope.interface import implementer
+from zope.interface import implementer, moduleProvides
 
 # Twisted imports
 from twisted.python.compat import nativeString
@@ -31,7 +31,8 @@ from twisted.python import log, failure
 from twisted.names import dns, common
 
 
-implementer(interfaces.IResolver)
+
+@implementer(interfaces.IResolver)
 class Resolver(common.ResolverBase):
     """
     @ivar _waiting: A C{dict} mapping tuple keys of query name/type/class to
@@ -406,7 +407,7 @@ class Resolver(common.ResolverBase):
     # This one doesn't ever belong on UDP
     def lookupZone(self, name, timeout=10):
         """
-        @see: twisted.internet.interfaces.IResolve.lookupZone
+        @see: L{twisted.internet.interfaces.IResolve.lookupZone}
         """
         address = self.pickServer()
         if address is None:
@@ -591,135 +592,146 @@ def getHostByName(name, timeout=None, effort=10):
     """
     return getResolver().getHostByName(name, timeout, effort)
 
+
+
+moduleProvides(interfaces.IResolver)
+
+
+def query(query, timeout=None):
+    """
+    @see: L{twisted.internet.interfaces.IResolver.query}
+    """
+    return getResolver().query(query, timeout)
+
 def lookupAddress(name, timeout=None):
     """
-    @see: twisted.internet.interfaces.IResolver.lookupAddress
+    @see: L{twisted.internet.interfaces.IResolver.lookupAddress}
     """
     return getResolver().lookupAddress(name, timeout)
 
 def lookupIPV6Address(name, timeout=None):
     """
-    @see: twisted.internet.interfaces.IResolver.lookupIPV6Address
+    @see: L{twisted.internet.interfaces.IResolver.lookupIPV6Address}
     """
     return getResolver().lookupIPV6Address(name, timeout)
 
 def lookupAddress6(name, timeout=None):
     """
-    @see: twisted.internet.interfaces.IResolver.lookupAddress6
+    @see: L{twisted.internet.interfaces.IResolver.lookupAddress6}
     """
     return getResolver().lookupAddress6(name, timeout)
 
 def lookupMailExchange(name, timeout=None):
     """
-    @see: twisted.internet.interfaces.IResolver.lookupMailExchange
+    @see: L{twisted.internet.interfaces.IResolver.lookupMailExchange}
     """
     return getResolver().lookupMailExchange(name, timeout)
 
 def lookupNameservers(name, timeout=None):
     """
-    @see: twisted.internet.interfaces.IResolver.lookupNameservers
+    @see: L{twisted.internet.interfaces.IResolver.lookupNameservers}
     """
     return getResolver().lookupNameservers(name, timeout)
 
 def lookupCanonicalName(name, timeout=None):
     """
-    @see: twisted.internet.interfaces.IResolver.lookupCanonicalName
+    @see: L{twisted.internet.interfaces.IResolver.lookupCanonicalName}
     """
     return getResolver().lookupCanonicalName(name, timeout)
 
 def lookupMailBox(name, timeout=None):
     """
-    @see: twisted.internet.interfaces.IResolver.lookupMailBox
+    @see: L{twisted.internet.interfaces.IResolver.lookupMailBox}
     """
     return getResolver().lookupMailBox(name, timeout)
 
 def lookupMailGroup(name, timeout=None):
     """
-    @see: twisted.internet.interfaces.IResolver.lookupMailGroup
+    @see: L{twisted.internet.interfaces.IResolver.lookupMailGroup}
     """
     return getResolver().lookupMailGroup(name, timeout)
 
 def lookupMailRename(name, timeout=None):
     """
-    @see: twisted.internet.interfaces.IResolver.lookupMailRename
+    @see: L{twisted.internet.interfaces.IResolver.lookupMailRename}
     """
     return getResolver().lookupMailRename(name, timeout)
 
 def lookupPointer(name, timeout=None):
     """
-    @see: twisted.internet.interfaces.IResolver.lookupPointer
+    @see: L{twisted.internet.interfaces.IResolver.lookupPointer}
     """
     return getResolver().lookupPointer(name, timeout)
 
 def lookupAuthority(name, timeout=None):
     """
-    @see: twisted.internet.interfaces.IResolver.lookupAuthority
+    @see: L{twisted.internet.interfaces.IResolver.lookupAuthority}
     """
     return getResolver().lookupAuthority(name, timeout)
 
 def lookupNull(name, timeout=None):
     """
-    @see: twisted.internet.interfaces.IResolver.lookupNull
+    @see: L{twisted.internet.interfaces.IResolver.lookupNull}
     """
     return getResolver().lookupNull(name, timeout)
 
 def lookupWellKnownServices(name, timeout=None):
     """
-    @see: twisted.internet.interfaces.IResolver.lookupWellKnownServices
+    @see: L{twisted.internet.interfaces.IResolver.lookupWellKnownServices}
     """
     return getResolver().lookupWellKnownServices(name, timeout)
 
 def lookupService(name, timeout=None):
     """
-    @see: twisted.internet.interfaces.IResolver.lookupService
+    @see: L{twisted.internet.interfaces.IResolver.lookupService}
     """
     return getResolver().lookupService(name, timeout)
 
 def lookupHostInfo(name, timeout=None):
     """
-    @see: twisted.internet.interfaces.IResolver.lookupHostInfo
+    @see: L{twisted.internet.interfaces.IResolver.lookupHostInfo}
     """
     return getResolver().lookupHostInfo(name, timeout)
 
 def lookupMailboxInfo(name, timeout=None):
     """
-    @see: twisted.internet.interfaces.IResolver.lookupMailboxInfo
+    @see: L{twisted.internet.interfaces.IResolver.lookupMailboxInfo}
     """
     return getResolver().lookupMailboxInfo(name, timeout)
 
 def lookupText(name, timeout=None):
     """
-    @see: twisted.internet.interfaces.IResolver.lookupText
+    @see: L{twisted.internet.interfaces.IResolver.lookupText}
     """
     return getResolver().lookupText(name, timeout)
 
 def lookupSenderPolicy(name, timeout=None):
     """
-    @see: twisted.internet.interfaces.IResolver.lookupSenderPolicy
+    @see: L{twisted.internet.interfaces.IResolver.lookupSenderPolicy}
     """
     return getResolver().lookupSenderPolicy(name, timeout)
 
 def lookupResponsibility(name, timeout=None):
     """
-    @see: twisted.internet.interfaces.IResolver.lookupResponsibility
+    @see: L{twisted.internet.interfaces.IResolver.lookupResponsibility}
     """
     return getResolver().lookupResponsibility(name, timeout)
 
 def lookupAFSDatabase(name, timeout=None):
     """
-    @see: twisted.internet.interfaces.IResolver.lookupAFSDatabase
+    @see: L{twisted.internet.interfaces.IResolver.lookupAFSDatabase}
     """
     return getResolver().lookupAFSDatabase(name, timeout)
 
 def lookupZone(name, timeout=None):
     """
-    @see: twisted.internet.interfaces.IResolver.lookupZone
+    @see: L{twisted.internet.interfaces.IResolver.lookupZone}
     """
     return getResolver().lookupZone(name, timeout)
 
 def lookupAllRecords(name, timeout=None):
     """
-    @see: twisted.internet.interfaces.IResolver.lookupAllRecords
+    @see: L{twisted.internet.interfaces.IResolver.lookupAllRecords}
     """
     return getResolver().lookupAllRecords(name, timeout)
 
@@ -727,6 +739,6 @@ def lookupAllRecords(name, timeout=None):
 
 def lookupNamingAuthorityPointer(name, timeout=None):
     """
-    @see: twisted.internet.interfaces.IResolve.lookupNamingAuthorityPointer
+    @see: L{twisted.internet.interfaces.IResolve.lookupNamingAuthorityPointer}
     """
     return getResolver().lookupNamingAuthorityPointer(name, timeout)

@@ -9,9 +9,11 @@ Test cases for twisted.names.
 import socket, operator, copy
 from StringIO import StringIO
 
+from zope.interface.verify import verifyClass, verifyObject
+
 from twisted.trial import unittest
 
-from twisted.internet import reactor, defer, error
+from twisted.internet import reactor, defer, error, interfaces
 from twisted.internet.task import Clock
 from twisted.internet.defer import succeed
 from twisted.names import client, server, common, authority, dns
@@ -815,3 +817,17 @@ class SecondaryAuthorityTests(unittest.TestCase):
 
         self.assertEqual(
             [dns.Query('example.com', dns.AXFR, dns.IN)], msg.queries)
+
+class ClientResolverTests(unittest.TestCase):
+    def test_clientProvidesIResolver(self):
+        """
+        L{client} provides L{interfaces.IResolver} through a series of free
+        functions.
+        """
+        verifyObject(interfaces.IResolver, client)
+
+    def test_clientResolverProvidesIResolver(self):
+        """
+        L{client.Resolver} provides L{interfaces.IResolver}.
+        """
+        verifyClass(interfaces.IResolver, client.Resolver)
