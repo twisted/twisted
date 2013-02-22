@@ -268,19 +268,6 @@ class SendfileInfoTestCase(TestCase):
     Tests for L{SendfileInfo}.
     """
 
-    def test_invalidFile(self):
-        """
-        L{SendfileInfo} raises C{AttributeError} when passed a plain string as
-        file, and a C{ValueError} when passwed a closed file.
-        """
-        self.assertRaises(AttributeError, SendfileInfo, "blah")
-        filename = self.mktemp()
-        f = open(filename, 'wb+')
-        f.write(b'x')
-        f.close()
-        self.assertRaises(ValueError, SendfileInfo, f)
-
-
     def test_lengthDetection(self):
         """
         L{SendfileInfo} is able to detect the file length and preserves the

@@ -257,7 +257,7 @@ class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser,
             fallback(None)
         else:
             sfi.fallback.addCallback(fallback)
-            abstract.FileDescriptor._sendfile(self, sfi)
+            self._sendfile(sfi)
         return sfi.deferred
 
 
