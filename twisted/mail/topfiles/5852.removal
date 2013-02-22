@@ -1,0 +1,1 @@
+tlsMode attribute of twisted.mail.smtp.ESMTPClient is deprecated.
