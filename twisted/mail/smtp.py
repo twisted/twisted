@@ -1256,7 +1256,8 @@ class ESMTPClient(SMTPClient):
             return self._tlsMode
         else:
             raise AttributeError(
-                'ESMTPClient instance has no attribute %r' % (name,))
+                '%s instance has no attribute %r' % (
+                    self.__class__.__name__, name,))
 
 
     def __setattr__(self, name, value):
