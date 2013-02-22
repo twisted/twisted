@@ -136,12 +136,14 @@ class TestDnsTests(ExampleTestBase, TestCase):
     exampleRelativePath = 'doc/names/examples/testdns.py'
 
 
+
 class GetHostByNameTests(ExampleTestBase, TestCase):
     """
     Test the gethostbyname.py example script.
     """
 
     exampleRelativePath = 'doc/names/examples/gethostbyname.py'
+
 
 
 class DnsServiceTests(ExampleTestBase, TestCase):
