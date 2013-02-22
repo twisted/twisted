@@ -12,6 +12,7 @@ from twisted.python.filepath import FilePath
 from twisted.trial.unittest import SkipTest, TestCase
 
 
+
 class ExampleTestBase(object):
     """
     This is a mixin which adds an example to the path, tests it, and then

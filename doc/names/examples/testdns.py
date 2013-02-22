@@ -4,19 +4,27 @@
 # See LICENSE for details.
 
 """
-Usage: testdns.py DOMAINNAME
-
 Print the Address records, Mail-Exchanger records and the Nameserver
 records for the given domain name. eg
 
  python testdns.py google.com
 """
+
 import sys
 
 from twisted.internet import defer
 from twisted.internet.task import react
 from twisted.names import client, dns, error
 from twisted.python import usage
+
+
+
+class Options(usage.Options):
+    synopsis = 'Usage: testdns.py DOMAINNAME'
+
+    def parseArgs(self, domainname):
+        self['domainname'] = domainname
+
 
 
 def formatRecords(records, heading):
@@ -36,12 +44,14 @@ def formatRecords(records, heading):
     return '\n'.join(line for line in lines)
 
 
+
 def printResults(results, domainname):
     """
     Print the formatted results for each DNS record type.
     """
     sys.stdout.write('# Domain Summary for %r\n' % (domainname,))
     sys.stdout.write('\n\n'.join(results) + '\n')
+
 
 
 def printError(failure, domainname):
@@ -55,21 +65,13 @@ def printError(failure, domainname):
     sys.stderr.write('ERROR: domain name not found %r\n' % (domainname,))
 
 
-class Options(usage.Options):
-    synopsis = __doc__.strip()
-    longdesc = ''
-
-    def parseArgs(self, domainname):
-        self['domainname'] = domainname
-
 
 def main(reactor, *argv):
     options = Options()
     try:
         options.parseOptions(argv)
     except usage.UsageError as errortext:
-        sys.stderr.write(
-            __doc__.lstrip() + '\n')
+        sys.stderr.write(str(options) + '\n')
         sys.stderr.write('ERROR: %s\n' % (errortext,))
         raise SystemExit(1)
 
@@ -87,6 +89,7 @@ def main(reactor, *argv):
     d.addCallback(printResults, domainname)
     d.addErrback(printError, domainname)
     return d
+
 
 
 if __name__ == '__main__':

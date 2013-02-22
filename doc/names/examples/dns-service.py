@@ -4,8 +4,6 @@
 # See LICENSE for details.
 
 """
-Usage: dns-service.py SERVICE PROTO DOMAINNAME
-
 Print the SRV records for a given DOMAINNAME eg
 
  python dns-service.py xmpp-client tcp gmail.com
@@ -24,6 +22,17 @@ from twisted.internet.task import react
 from twisted.python import usage
 
 
+
+class Options(usage.Options):
+    synopsis = 'Usage: dns-service.py SERVICE PROTO DOMAINNAME'
+
+    def parseArgs(self, service, proto, domainname):
+        self['service'] = service
+        self['proto'] = proto
+        self['domainname'] = domainname
+
+
+
 def printResult(records, domainname):
     """
     Print the SRV records for the domainname or an error message if no
@@ -40,6 +49,7 @@ def printResult(records, domainname):
             'ERROR: No SRV records found for name %r\n' % (domainname,))
 
 
+
 def printError(failure, domainname):
     """
     Print a friendly error message if the domainname could not be
@@ -49,23 +59,13 @@ def printError(failure, domainname):
     sys.stderr.write('ERROR: domain name not found %r\n' % (domainname,))
 
 
-class Options(usage.Options):
-    synopsis = __doc__.strip()
-    longdesc = ''
-
-    def parseArgs(self, service, proto, domainname):
-        self['service'] = service
-        self['proto'] = proto
-        self['domainname'] = domainname
-
 
 def main(reactor, *argv):
     options = Options()
     try:
         options.parseOptions(argv)
     except usage.UsageError as errortext:
-        sys.stderr.write(
-            __doc__.lstrip() + '\n')
+        sys.stderr.write(str(options) + '\n')
         sys.stderr.write('ERROR: %s\n' % (errortext,))
         raise SystemExit(1)
 
@@ -75,6 +75,8 @@ def main(reactor, *argv):
     d.addCallback(printResult, domainname)
     d.addErrback(printError, domainname)
     return d
+
+
 
 if __name__ == '__main__':
     react(main, sys.argv[1:])
