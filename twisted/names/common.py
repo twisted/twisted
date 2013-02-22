@@ -206,7 +206,7 @@ class ResolverBase:
 
     def lookupNamingAuthorityPointer(self, name, timeout=None):
         """
-        @see: L{twisted.internet.interfaces.IResolve.lookupNamingAuthorityPointer}
+        @see: L{twisted.internet.interfaces.IResolver.lookupNamingAuthorityPointer}
         """
         return self._lookup(name, dns.IN, dns.NAPTR, timeout)
 

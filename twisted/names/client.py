@@ -407,7 +407,7 @@ class Resolver(common.ResolverBase):
     # This one doesn't ever belong on UDP
     def lookupZone(self, name, timeout=10):
         """
-        @see: L{twisted.internet.interfaces.IResolve.lookupZone}
+        @see: L{twisted.internet.interfaces.IResolver.lookupZone}
         """
         address = self.pickServer()
         if address is None:
@@ -739,6 +739,6 @@ def lookupAllRecords(name, timeout=None):
 
 def lookupNamingAuthorityPointer(name, timeout=None):
     """
-    @see: L{twisted.internet.interfaces.IResolve.lookupNamingAuthorityPointer}
+    @see: L{twisted.internet.interfaces.IResolver.lookupNamingAuthorityPointer}
     """
     return getResolver().lookupNamingAuthorityPointer(name, timeout)
