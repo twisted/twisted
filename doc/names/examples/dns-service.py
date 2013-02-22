@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- test-case-name: twisted.names.test.test_examples -*-
 
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
@@ -15,6 +16,7 @@ PROTO: the transport protocol of the desired service; this is usually
 
 DOMAINNAME: the domain name for which this record is valid.
 """
+
 import sys
 
 from twisted.names import client, error

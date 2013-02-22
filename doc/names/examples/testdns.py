@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- test-case-name: twisted.names.test.test_examples -*-
 
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
