@@ -818,13 +818,19 @@ class SecondaryAuthorityTests(unittest.TestCase):
         self.assertEqual(
             [dns.Query('example.com', dns.AXFR, dns.IN)], msg.queries)
 
+
+
 class ClientResolverTests(unittest.TestCase):
+    """
+    Tests for L{twisted.names.client}.
+    """
     def test_clientProvidesIResolver(self):
         """
         L{client} provides L{interfaces.IResolver} through a series of free
         functions.
         """
         verifyObject(interfaces.IResolver, client)
+
 
     def test_clientResolverProvidesIResolver(self):
         """
