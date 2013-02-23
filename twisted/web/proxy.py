@@ -32,7 +32,7 @@ from twisted.web.http import HTTPClient, Request, HTTPChannel
 
 class ProxyClient(HTTPClient):
     """
-    Used by ProxyClientFactory to implement a simple web proxy.
+    Used by L{ProxyClientFactory} to implement a simple web proxy.
 
     @ivar _finished: A flag which indicates whether or not the original request
         has been finished yet.
@@ -40,6 +40,34 @@ class ProxyClient(HTTPClient):
     _finished = False
 
     def __init__(self, command, rest, version, headers, data, father):
+        """
+        Usually created when L{ProxyClientFactory.buildProtocol} is called.
+        The arguments passed to this constructor are the same as the ones
+        passed to the L{ProxyClientFactory} constructor.
+
+        @type command: C{str}
+        @param command: HTTP Command (GET, POST, HEAD, etc)
+        
+        @type rest: C{str}
+        @param rest: Rest of url other than host, ex. C{example.com/test.html}
+            where C{/test.html} is the rest.
+                     
+        @type version: C{str}
+        @param version: HTTP Version (HTTP/1.1, HTTP/1.0)
+        
+        @type headers: C{dict}
+        @param headers: The headers that were specified in the request to
+            (or through) the proxy server.
+         
+        @type data: C{str}
+        @param data: Data sent to (or through) the server for example with a
+            POST request.
+               
+        @type father: L{ProxyRequest}
+        @param father: The server request first passed to the
+            L{ProxyClientFactory} and then the L{ProxyClient} when
+            C{buildProtocol} is called.
+        """
         self.father = father
         self.command = command
         self.rest = rest
@@ -60,10 +88,35 @@ class ProxyClient(HTTPClient):
 
 
     def handleStatus(self, version, code, message):
+        """
+        Handles the status sent from the remote server back to the client.
+        Passes it onto the proxy server and then back to the user.
+
+        @param version: HTTP Version (HTTP/1.1. HTTP/1.0)
+        @type version: C{str}
+
+        @param code: HTTP status code (200, 404, 403, etc)
+        @type code: C{int}
+
+        @param message: Message sent with the status.
+        @type message: C{str}
+        """
         self.father.setResponseCode(int(code), message)
 
 
     def handleHeader(self, key, value):
+        """
+        Handles a header sent from the remote server back to the client.
+
+        Passes the header back to the proxy server and then back to the user.
+
+        @type key: C{str}
+        @param key: An HTTP header field name.
+
+        @type value: C{str}
+        @param value: An HTTP header field value.
+        """
+
         # t.web.server.Request sets default values for these headers in its
         # 'process' method. When these headers are received from the remote
         # server, they ought to override the defaults, rather than append to
@@ -75,11 +128,20 @@ class ProxyClient(HTTPClient):
 
 
     def handleResponsePart(self, buffer):
+        """
+        Handles some data received by the client.
+        Writes the data back to the proxy server.
+        
+        @type buffer: C(str)
+        @param buffer: The data that was received from the remote server.
+        """
         self.father.write(buffer)
 
 
     def handleResponseEnd(self):
         """
+        Handles the end of the connection to the remote server.
+
         Finish the original request, indicating that the response has been
         completely written to it, and disconnect the outgoing transport.
         """
@@ -92,13 +154,38 @@ class ProxyClient(HTTPClient):
 
 class ProxyClientFactory(ClientFactory):
     """
-    Used by ProxyRequest to implement a simple web proxy.
+    Used by L{ProxyRequest} to implement a simple web proxy.
     """
 
     protocol = ProxyClient
 
 
     def __init__(self, command, rest, version, headers, data, father):
+        """
+        @type command: C{str}
+        @param command: HTTP Command (GET, POST, HEAD, etc)
+        
+        @type rest: C{str}
+        @param rest: Rest of url other than host, ex. C{example.com/test.html}
+            C{/test.html} is the rest.
+                     
+        @type version: C{str}
+        @param version: HTTP Version (HTTP/1.1, HTTP/1.0)
+        
+        @type headers: C{dict}
+        @param headers: The headers that were specified in the request to
+            (or through) the proxy server
+         
+        @type data: C{str}
+        @param data: Data sent to (or through) the server for example with a
+           POST requst
+               
+        @type father: L{ProxyRequest}
+        @param father: The server request first passed to the
+            L{ProxyClientFactory} and then the L{ProxyClient} when
+            C{buildProtocol} is called.
+        
+        """
         self.father = father
         self.command = command
         self.rest = rest
@@ -108,6 +195,9 @@ class ProxyClientFactory(ClientFactory):
 
 
     def buildProtocol(self, addr):
+        """
+        Builds L{ProxyClient} and returns the protocol.
+        """
         return self.protocol(self.command, self.rest, self.version,
                              self.headers, self.data, self.father)
 
@@ -126,21 +216,48 @@ class ProxyClientFactory(ClientFactory):
 
 class ProxyRequest(Request):
     """
-    Used by Proxy to implement a simple web proxy.
+    Used by L{Proxy} to implement a simple web proxy.
 
-    @ivar reactor: the reactor used to create connections.
-    @type reactor: object providing L{twisted.internet.interfaces.IReactorTCP}
+    @ivar reactor: The reactor used to create connections.
+    @type reactor: Object providing L{twisted.internet.interfaces.IReactorTCP}
     """
 
     protocols = {'http': ProxyClientFactory}
     ports = {'http': 80}
 
     def __init__(self, channel, queued, reactor=reactor):
+        """
+        Implements the proxy server's request handler.
+        
+        @type channel: L{Proxy}
+        @param channel: Used as connection between your client and the proxy
+            server.
+        
+        @type queued: C{bool}
+        @param queued: Is the request queued or can we write to the transport
+            now?
+        
+        @type reactor: L{twisted.internet.reactor}
+        @param reactor: Needed here to connect the L{Proxy} client end to the
+            remote server.
+        """
         Request.__init__(self, channel, queued)
         self.reactor = reactor
 
 
     def process(self):
+        """
+        Called to process the request from your client.
+
+        This method parses the url (to see what the proxy needs to go fetch) and 
+        then connects to that url (just like if your program connect to example.com
+        except the proxy server does it not your client directly) using the class 
+        specified in protocols. 
+
+        Overide if you want to control things such as headers and method sent to
+        the remote server (for example if you want any GET request to change to a
+        HEAD request)
+        """
         parsed = urlparse.urlparse(self.uri)
         protocol = parsed[0]
         host = parsed[1]
@@ -167,7 +284,7 @@ class Proxy(HTTPChannel):
     """
     This class implements a simple web proxy.
 
-    Since it inherits from L{twisted.web.http.HTTPChannel}, to use it you
+    Since it inherits from L{twisted.protocols.http.HTTPChannel}, to use it you
     should do something like this::
 
         from twisted.web import http
@@ -176,6 +293,12 @@ class Proxy(HTTPChannel):
 
     Make the HTTPFactory a listener on a port as per usual, and you have
     a fully-functioning web proxy!
+
+    The HTTP channel that your client and the proxy server communicate over.
+    Subclasses HTTPChannel and just changes what request factory to use so
+    instead of using one that say servers files you use C(ProxyRequest) to then
+    connect to a remote host and serve that instead of boring files.
+
     """
 
     requestFactory = ProxyRequest
@@ -184,14 +307,14 @@ class Proxy(HTTPChannel):
 
 class ReverseProxyRequest(Request):
     """
-    Used by ReverseProxy to implement a simple reverse proxy.
+    Used by L{ReverseProxy} to implement a simple reverse proxy.
 
     @ivar proxyClientFactoryClass: a proxy client factory class, used to create
         new connections.
     @type proxyClientFactoryClass: L{ClientFactory}
 
-    @ivar reactor: the reactor used to create connections.
-    @type reactor: object providing L{twisted.internet.interfaces.IReactorTCP}
+    @ivar reactor: The reactor used to create connections.
+    @type reactor: Object providing L{twisted.internet.interfaces.IReactorTCP}
     """
 
     proxyClientFactoryClass = ProxyClientFactory
@@ -220,7 +343,7 @@ class ReverseProxy(HTTPChannel):
     """
     Implements a simple reverse proxy.
 
-    For details of usage, see the file examples/reverse-proxy.py.
+    For details of usage, see the file examples/proxy.py.
     """
 
     requestFactory = ReverseProxyRequest
@@ -301,3 +424,4 @@ class ReverseProxyResource(Resource):
             request.getAllHeaders(), request.content.read(), request)
         self.reactor.connectTCP(self.host, self.port, clientFactory)
         return NOT_DONE_YET
+
