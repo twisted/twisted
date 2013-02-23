@@ -25,11 +25,12 @@ from twisted.internet.error import (
     ConnectionLost, UserError, ConnectionRefusedError, ConnectionDone,
     ConnectionAborted)
 from twisted.internet.interfaces import (
-    ILoggingContext, IConnector, IReactorFDSet, IReactorSocket, IReactorTCP)
+    ILoggingContext, IConnector, IReactorFDSet, IReactorSocket, IReactorTCP, IResolverSimple)
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.defer import (
-    Deferred, DeferredList, maybeDeferred, gatherResults)
+    Deferred, DeferredList, maybeDeferred, gatherResults, succeed, fail)
 from twisted.internet.endpoints import TCP4ServerEndpoint, TCP4ClientEndpoint
+from twisted.internet.error import DNSLookupError
 from twisted.internet.protocol import ServerFactory, ClientFactory, Protocol
 from twisted.internet.interfaces import (
     IPushProducer, IPullProducer, IHalfCloseableProtocol)
@@ -107,6 +108,57 @@ def connect(client, destination):
         address = (host, port)
     client.connect(address)
 
+
+class Stop(ClientFactory):
+    """
+    A client factory which stops a reactor when a connection attempt fails.
+    """
+    def __init__(self, reactor):
+        self.reactor = reactor
+
+
+    def clientConnectionFailed(self, connector, reason):
+        self.reactor.stop()
+
+
+@implementer(IResolverSimple)
+class FakeResolver:
+    """
+    A resolver implementation based on a C{dict} mapping names to addresses.
+    """
+
+    def __init__(self, names):
+        self.names = names
+
+
+    def getHostByName(self, name, timeout=None):
+        try:
+            return succeed(self.names[name])
+        except KeyError:
+            return fail(DNSLookupError("FakeResolver couldn't find " + name))
+
+
+
+class TCPClientTestsBuilder(ReactorBuilder):
+    """
+    Builder defining tests relating to L{IReactorTCP.connectTCP}.
+    """
+    def _freePort(self, interface='127.0.0.1'):
+        probe = socket.socket()
+        try:
+            probe.bind((interface, 0))
+            return probe.getsockname()
+        finally:
+            probe.close()
+
+    def test_clientConnectionFailedStopsReactor(self):
+        """
+        The reactor can be stopped by a client factory's
+        C{clientConnectionFailed} method.
+        """
+        host, port = self._freePort()
+        reactor = self.buildReactor()
+        reactor.connectTCP(host, port, Stop(reactor))
 
 
 class FakeSocket(object):

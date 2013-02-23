@@ -12,13 +12,19 @@ except ImportError:
     from queue import Queue
 
 from zope.interface import implementer
+from zope.interface.verify import verifyClass
 
 from twisted.python.threadpool import ThreadPool
 from twisted.internet.interfaces import IReactorTime, IReactorThreads
+from twisted.internet.interfaces import INameResolver
 from twisted.internet.error import DNSLookupError
-from twisted.internet.base import ThreadedResolver, DelayedCall
+from twisted.internet.base import (
+    ThreadedNameResolver, ThreadedResolver, AddressInformation,
+    _ResolverComplexifier, DelayedCall)
 from twisted.internet.task import Clock
 from twisted.trial.unittest import TestCase
+
+from twisted.internet.test.test_tcp import FakeResolver
 
 
 @implementer(IReactorTime, IReactorThreads)
@@ -51,6 +57,90 @@ class FakeReactor(object):
     def _stop(self):
         self._threadpool.stop()
 
+
+
+class NameResolverAdapterTests(TestCase):
+    """
+    L{_ResolverComplexifier} adapters an L{IResolverSimple} provider
+    to L{INameResolver}.
+    """
+    def test_interface(self):
+        """
+        L{_ResolverComplexifier} implements L{INameResolver}.
+        """
+        self.assertTrue(verifyClass(INameResolver, _ResolverComplexifier))
+
+
+    def _successTest(self, address, family):
+        simple = FakeResolver({'example.com': address})
+        resolver = _ResolverComplexifier(simple)
+        d = resolver.getAddressInformation('example.com', 1234)
+        d.addCallback(
+            self.assertEquals, [
+                AddressInformation(
+                    family,
+                    socket.SOCK_STREAM,
+                    socket.IPPROTO_TCP,
+                    "",
+                    (address, 1234))])
+        return d
+
+
+    def test_ipv4Success(self):
+        """
+        L{_ResolverComplexifier} calls the wrapped object's
+        C{getHostByName} method and returns a L{Deferred} which fires
+        with a list of one element containing an AF_INET element with
+        the IPv4 address which C{getHostByName}'s L{Deferred} fired
+        with.
+        """
+        return self._successTest('192.168.1.12', socket.AF_INET)
+
+
+    def test_ipv6Success(self):
+        """
+        L{_ResolverComplexifier} calls the wrapped object's
+        C{getHostByName} method and returns a L{Deferred} which fires
+        with a list of one element containing an AF_INET6 element with
+        the IPv6 address which C{getHostByName}'s L{Deferred} fired
+        with.
+        """
+        return self._successTest('::1', socket.AF_INET6)
+
+
+    def test_failure(self):
+        """
+        The L{Deferred} L{_ResolverComplexifier.getAddressInformation}
+        returns fails if the wrapped resolver's C{getHostByName}
+        L{Deferred} fails.
+        """
+        error = DNSLookupError("Problems abound")
+        simple = FakeResolver({'example.com': error})
+        resolver = _ResolverComplexifier(simple)
+        d = resolver.getAddressInformation('example.com', 1234)
+        return self.assertFailure(d, DNSLookupError)
+
+
+
+class ThreadedNameResolverTests(TestCase):
+    """
+    Tests for L{ThreadedNameResolver}.
+    """
+    def test_interface(self):
+        """
+        L{ThreadedNameResolver} implements L{INameResolver}.
+        """
+        self.assertTrue(verifyClass(INameResolver, ThreadedNameResolver))
+
+
+    def test_success(self):
+        """
+        If the underlying C{getaddrinfo} library call completes
+        successfully and returns results, the L{Deferred} returned by
+        L{ThreadedNameResolver.getAddressInformation} fires with a
+        list of L{AddressInformation} instances representing those
+        results.
+        """
 
 
 class ThreadedResolverTests(TestCase):
