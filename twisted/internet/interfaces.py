@@ -54,8 +54,8 @@ class IConnector(Interface):
         """
 
 
-class IResolverSimple(Interface):
 
+class IResolverSimple(Interface):
     def getHostByName(name, timeout = (1, 3, 11, 45)):
         """
         Resolve the domain name C{name} into an IP address.
@@ -74,6 +74,8 @@ class IResolverSimple(Interface):
         @raise twisted.internet.defer.TimeoutError: Raised (asynchronously)
         if the name cannot be resolved within the specified timeout period.
         """
+
+
 
 class IResolver(IResolverSimple):
     def query(query, timeout=None):
@@ -98,6 +100,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
+
     def lookupAddress(name, timeout=None):
         """
         Perform an A record lookup.
@@ -118,6 +121,7 @@ class IResolver(IResolverSimple):
             exceptions defined in L{twisted.names.error} or with
             C{NotImplementedError}.
         """
+
 
     def lookupAddress6(name, timeout=None):
         """
@@ -140,6 +144,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
+
     def lookupIPV6Address(name, timeout=None):
         """
         Perform an AAAA record lookup.
@@ -160,6 +165,7 @@ class IResolver(IResolverSimple):
             exceptions defined in L{twisted.names.error} or with
             C{NotImplementedError}.
         """
+
 
     def lookupMailExchange(name, timeout=None):
         """
@@ -182,6 +188,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
+
     def lookupNameservers(name, timeout=None):
         """
         Perform an NS record lookup.
@@ -202,6 +209,7 @@ class IResolver(IResolverSimple):
             exceptions defined in L{twisted.names.error} or with
             C{NotImplementedError}.
         """
+
 
     def lookupCanonicalName(name, timeout=None):
         """
@@ -224,6 +232,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
+
     def lookupMailBox(name, timeout=None):
         """
         Perform an MB record lookup.
@@ -244,6 +253,7 @@ class IResolver(IResolverSimple):
             exceptions defined in L{twisted.names.error} or with
             C{NotImplementedError}.
         """
+
 
     def lookupMailGroup(name, timeout=None):
         """
@@ -266,6 +276,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
+
     def lookupMailRename(name, timeout=None):
         """
         Perform an MR record lookup.
@@ -286,6 +297,7 @@ class IResolver(IResolverSimple):
             exceptions defined in L{twisted.names.error} or with
             C{NotImplementedError}.
         """
+
 
     def lookupPointer(name, timeout=None):
         """
@@ -308,6 +320,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
+
     def lookupAuthority(name, timeout=None):
         """
         Perform an SOA record lookup.
@@ -328,6 +341,7 @@ class IResolver(IResolverSimple):
             exceptions defined in L{twisted.names.error} or with
             C{NotImplementedError}.
         """
+
 
     def lookupNull(name, timeout=None):
         """
@@ -350,6 +364,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
+
     def lookupWellKnownServices(name, timeout=None):
         """
         Perform a WKS record lookup.
@@ -370,6 +385,7 @@ class IResolver(IResolverSimple):
             exceptions defined in L{twisted.names.error} or with
             C{NotImplementedError}.
         """
+
 
     def lookupHostInfo(name, timeout=None):
         """
@@ -392,6 +408,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
+
     def lookupMailboxInfo(name, timeout=None):
         """
         Perform an MINFO record lookup.
@@ -412,6 +429,7 @@ class IResolver(IResolverSimple):
             exceptions defined in L{twisted.names.error} or with
             C{NotImplementedError}.
         """
+
 
     def lookupText(name, timeout=None):
         """
@@ -434,6 +452,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
+
     def lookupResponsibility(name, timeout=None):
         """
         Perform an RP record lookup.
@@ -454,6 +473,7 @@ class IResolver(IResolverSimple):
             exceptions defined in L{twisted.names.error} or with
             C{NotImplementedError}.
         """
+
 
     def lookupAFSDatabase(name, timeout=None):
         """
@@ -476,6 +496,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
+
     def lookupService(name, timeout=None):
         """
         Perform an SRV record lookup.
@@ -496,6 +517,7 @@ class IResolver(IResolverSimple):
             exceptions defined in L{twisted.names.error} or with
             C{NotImplementedError}.
         """
+
 
     def lookupAllRecords(name, timeout=None):
         """
@@ -518,6 +540,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
+
     def lookupSenderPolicy(name, timeout= 10):
         """
         Perform a SPF record lookup.
@@ -539,6 +562,7 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
+
     def lookupNamingAuthorityPointer(name, timeout=None):
         """
         Perform a NAPTR record lookup.
@@ -559,6 +583,7 @@ class IResolver(IResolverSimple):
             exceptions defined in L{twisted.names.error} or with
             C{NotImplementedError}.
         """
+
 
     def lookupZone(name, timeout=None):
         """
