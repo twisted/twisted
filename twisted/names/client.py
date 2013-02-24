@@ -20,19 +20,16 @@ import os
 import errno
 import warnings
 
-from zope.interface import implementer
-
 # Twisted imports
 from twisted.python.compat import nativeString
 from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath
-from twisted.internet import error, defer, protocol, interfaces
+from twisted.internet import error, defer, protocol
 from twisted.python import log, failure
 from twisted.names import dns, common
 
 
 
-@implementer(interfaces.IResolver)
 class Resolver(common.ResolverBase):
     """
     @ivar _waiting: A C{dict} mapping tuple keys of query name/type/class to
