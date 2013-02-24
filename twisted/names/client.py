@@ -418,15 +418,18 @@ class Resolver(common.ResolverBase):
             connector, timeout or 10)
         return d.addCallback(self._cbLookupZone, connector)
 
+
     def _timeoutZone(self, d, controller, connector, seconds):
         connector.disconnect()
         controller.timeoutCall = None
         controller.deferred = None
         d.errback(error.TimeoutError("Zone lookup timed out after %d seconds" % (seconds,)))
 
+
     def _cbLookupZone(self, result, connector):
         connector.disconnect()
         return (result, [], [])
+
 
 
 class AXFRController:
@@ -437,6 +440,7 @@ class AXFRController:
         self.deferred = deferred
         self.soa = None
         self.records = []
+
 
     def connectionMade(self, protocol):
         # dig saids recursion-desired to 0, so I will too
@@ -546,6 +550,8 @@ def createResolver(servers=None, resolvconf=None, hosts=None):
     L = [hostResolver, cache.CacheResolver(), theResolver]
     return resolve.ResolverChain(L)
 
+
+
 theResolver = None
 def getResolver():
     """
@@ -563,6 +569,8 @@ def getResolver():
         except ValueError:
             theResolver = createResolver(servers=[('127.0.0.1', 53)])
     return theResolver
+
+
 
 def getHostByName(name, timeout=None, effort=10):
     """
@@ -594,11 +602,15 @@ def lookupAddress(name, timeout=None):
     """
     return getResolver().lookupAddress(name, timeout)
 
+
+
 def lookupIPV6Address(name, timeout=None):
     """
     @see: L{twisted.internet.interfaces.IResolver.lookupIPV6Address}
     """
     return getResolver().lookupIPV6Address(name, timeout)
+
+
 
 def lookupAddress6(name, timeout=None):
     """
@@ -606,11 +618,15 @@ def lookupAddress6(name, timeout=None):
     """
     return getResolver().lookupAddress6(name, timeout)
 
+
+
 def lookupMailExchange(name, timeout=None):
     """
     @see: L{twisted.internet.interfaces.IResolver.lookupMailExchange}
     """
     return getResolver().lookupMailExchange(name, timeout)
+
+
 
 def lookupNameservers(name, timeout=None):
     """
@@ -618,11 +634,15 @@ def lookupNameservers(name, timeout=None):
     """
     return getResolver().lookupNameservers(name, timeout)
 
+
+
 def lookupCanonicalName(name, timeout=None):
     """
     @see: L{twisted.internet.interfaces.IResolver.lookupCanonicalName}
     """
     return getResolver().lookupCanonicalName(name, timeout)
+
+
 
 def lookupMailBox(name, timeout=None):
     """
@@ -630,11 +650,15 @@ def lookupMailBox(name, timeout=None):
     """
     return getResolver().lookupMailBox(name, timeout)
 
+
+
 def lookupMailGroup(name, timeout=None):
     """
     @see: L{twisted.internet.interfaces.IResolver.lookupMailGroup}
     """
     return getResolver().lookupMailGroup(name, timeout)
+
+
 
 def lookupMailRename(name, timeout=None):
     """
@@ -642,11 +666,15 @@ def lookupMailRename(name, timeout=None):
     """
     return getResolver().lookupMailRename(name, timeout)
 
+
+
 def lookupPointer(name, timeout=None):
     """
     @see: L{twisted.internet.interfaces.IResolver.lookupPointer}
     """
     return getResolver().lookupPointer(name, timeout)
+
+
 
 def lookupAuthority(name, timeout=None):
     """
@@ -654,11 +682,15 @@ def lookupAuthority(name, timeout=None):
     """
     return getResolver().lookupAuthority(name, timeout)
 
+
+
 def lookupNull(name, timeout=None):
     """
     @see: L{twisted.internet.interfaces.IResolver.lookupNull}
     """
     return getResolver().lookupNull(name, timeout)
+
+
 
 def lookupWellKnownServices(name, timeout=None):
     """
@@ -666,11 +698,15 @@ def lookupWellKnownServices(name, timeout=None):
     """
     return getResolver().lookupWellKnownServices(name, timeout)
 
+
+
 def lookupService(name, timeout=None):
     """
     @see: L{twisted.internet.interfaces.IResolver.lookupService}
     """
     return getResolver().lookupService(name, timeout)
+
+
 
 def lookupHostInfo(name, timeout=None):
     """
@@ -678,11 +714,15 @@ def lookupHostInfo(name, timeout=None):
     """
     return getResolver().lookupHostInfo(name, timeout)
 
+
+
 def lookupMailboxInfo(name, timeout=None):
     """
     @see: L{twisted.internet.interfaces.IResolver.lookupMailboxInfo}
     """
     return getResolver().lookupMailboxInfo(name, timeout)
+
+
 
 def lookupText(name, timeout=None):
     """
@@ -690,11 +730,15 @@ def lookupText(name, timeout=None):
     """
     return getResolver().lookupText(name, timeout)
 
+
+
 def lookupSenderPolicy(name, timeout=None):
     """
     @see: L{twisted.internet.interfaces.IResolver.lookupSenderPolicy}
     """
     return getResolver().lookupSenderPolicy(name, timeout)
+
+
 
 def lookupResponsibility(name, timeout=None):
     """
@@ -702,17 +746,23 @@ def lookupResponsibility(name, timeout=None):
     """
     return getResolver().lookupResponsibility(name, timeout)
 
+
+
 def lookupAFSDatabase(name, timeout=None):
     """
     @see: L{twisted.internet.interfaces.IResolver.lookupAFSDatabase}
     """
     return getResolver().lookupAFSDatabase(name, timeout)
 
+
+
 def lookupZone(name, timeout=None):
     """
     @see: L{twisted.internet.interfaces.IResolver.lookupZone}
     """
     return getResolver().lookupZone(name, timeout)
+
+
 
 def lookupAllRecords(name, timeout=None):
     """
