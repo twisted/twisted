@@ -9,16 +9,25 @@ from __future__ import division, absolute_import
 
 import time
 
+from zope.interface.verify import verifyClass
+
 from twisted.trial import unittest
 
 from twisted.names import dns, cache
-from twisted.internet import task
+from twisted.internet import task, interfaces
 
 
 class Caching(unittest.TestCase):
     """
     Tests for L{cache.CacheResolver}.
     """
+
+    def test_interface(self):
+        """
+        L{cache.CacheResolver} implements L{interfaces.IResolver}
+        """
+        verifyClass(interfaces.IResolver, cache.CacheResolver)
+
 
     def test_lookup(self):
         c = cache.CacheResolver({
