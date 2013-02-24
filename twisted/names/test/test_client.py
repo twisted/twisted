@@ -272,7 +272,7 @@ class ResolverTests(unittest.TestCase):
     """
     def test_clientResolverProvidesIResolver(self):
         """
-        L{client.Resolver} provides L{interfaces.IResolver}.
+        L{client.Resolver} provides L{IResolver}.
         """
         verifyClass(IResolver, client.Resolver)
 
