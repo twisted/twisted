@@ -26,6 +26,8 @@ _ANS, _AUTH, _ADD = range(3)
 
 EMPTY_RESULT = (), (), ()
 
+
+
 @implementer(interfaces.IResolver)
 class ResolverBase:
     """
@@ -74,65 +76,86 @@ class ResolverBase:
     def _lookup(self, name, cls, type, timeout):
         return defer.fail(NotImplementedError("ResolverBase._lookup"))
 
+
     def lookupAddress(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.A, timeout)
+
 
     def lookupIPV6Address(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.AAAA, timeout)
 
+
     def lookupAddress6(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.A6, timeout)
+
 
     def lookupMailExchange(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.MX, timeout)
 
+
     def lookupNameservers(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.NS, timeout)
+
 
     def lookupCanonicalName(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.CNAME, timeout)
 
+
     def lookupMailBox(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.MB, timeout)
+
 
     def lookupMailGroup(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.MG, timeout)
 
+
     def lookupMailRename(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.MR, timeout)
+
 
     def lookupPointer(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.PTR, timeout)
 
+
     def lookupAuthority(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.SOA, timeout)
+
 
     def lookupNull(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.NULL, timeout)
 
+
     def lookupWellKnownServices(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.WKS, timeout)
+
 
     def lookupService(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.SRV, timeout)
 
+
     def lookupHostInfo(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.HINFO, timeout)
+
 
     def lookupMailboxInfo(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.MINFO, timeout)
 
+
     def lookupText(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.TXT, timeout)
+
 
     def lookupSenderPolicy(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.SPF, timeout)
 
+
     def lookupResponsibility(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.RP, timeout)
 
+
     def lookupAFSDatabase(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.AFSDB, timeout)
+
 
     def lookupZone(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.AXFR, timeout)
@@ -160,6 +183,7 @@ class ResolverBase:
         if not result:
             raise error.DNSLookupError(name)
         return result
+
 
 
 def extractRecord(resolver, name, answers, level=10):
