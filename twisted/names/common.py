@@ -145,14 +145,14 @@ class ResolverBase:
     def lookupAllRecords(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.ALL_RECORDS, timeout)
 
-    def getHostByName(self, name, timeout = None, effort = 10):
-        """
-        @see: L{twisted.names.client.getHostByName}
-        """
+
+    # IResolverSimple
+    def getHostByName(self, name, timeout=None, effort=10):
         # XXX - respect timeout
         return self.lookupAllRecords(name, timeout
             ).addCallback(self._cbRecords, name, effort
             )
+
 
     def _cbRecords(self, records, name, effort):
         (ans, auth, add) = records
