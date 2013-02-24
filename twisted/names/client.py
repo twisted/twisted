@@ -20,7 +20,7 @@ import os
 import errno
 import warnings
 
-from zope.interface import implementer, moduleProvides
+from zope.interface import implementer
 
 # Twisted imports
 from twisted.python.compat import nativeString
@@ -591,7 +591,6 @@ def getHostByName(name, timeout=None, effort=10):
 
 
 
-moduleProvides(interfaces.IResolver)
 
 
 def query(query, timeout=None):
