@@ -406,9 +406,6 @@ class Resolver(common.ResolverBase):
 
     # This one doesn't ever belong on UDP
     def lookupZone(self, name, timeout=10):
-        """
-        @see: L{twisted.internet.interfaces.IResolver.lookupZone}
-        """
         address = self.pickServer()
         if address is None:
             return defer.fail(IOError('No domain name servers available'))
