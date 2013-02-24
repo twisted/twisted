@@ -47,22 +47,22 @@ class ProxyClient(HTTPClient):
 
         @type command: C{str}
         @param command: HTTP Command (GET, POST, HEAD, etc)
-        
+
         @type rest: C{str}
         @param rest: Rest of url other than host, ex. C{example.com/test.html}
             where C{/test.html} is the rest.
-                     
+
         @type version: C{str}
         @param version: HTTP Version (HTTP/1.1, HTTP/1.0)
-        
+
         @type headers: C{dict}
         @param headers: The headers that were specified in the request to
             (or through) the proxy server.
-         
+
         @type data: C{str}
         @param data: Data sent to (or through) the server for example with a
             POST request.
-               
+
         @type father: L{ProxyRequest}
         @param father: The server request first passed to the
             L{ProxyClientFactory} and then the L{ProxyClient} when
@@ -131,7 +131,7 @@ class ProxyClient(HTTPClient):
         """
         Handles some data received by the client.
         Writes the data back to the proxy server.
-        
+
         @type buffer: C(str)
         @param buffer: The data that was received from the remote server.
         """
@@ -164,27 +164,27 @@ class ProxyClientFactory(ClientFactory):
         """
         @type command: C{str}
         @param command: HTTP Command (GET, POST, HEAD, etc)
-        
+
         @type rest: C{str}
         @param rest: Rest of url other than host, ex. C{example.com/test.html}
             C{/test.html} is the rest.
-                     
+
         @type version: C{str}
         @param version: HTTP Version (HTTP/1.1, HTTP/1.0)
-        
+
         @type headers: C{dict}
         @param headers: The headers that were specified in the request to
             (or through) the proxy server
-         
+
         @type data: C{str}
         @param data: Data sent to (or through) the server for example with a
            POST requst
-               
+
         @type father: L{ProxyRequest}
         @param father: The server request first passed to the
             L{ProxyClientFactory} and then the L{ProxyClient} when
             C{buildProtocol} is called.
-        
+
         """
         self.father = father
         self.command = command
@@ -228,15 +228,15 @@ class ProxyRequest(Request):
     def __init__(self, channel, queued, reactor=reactor):
         """
         Implements the proxy server's request handler.
-        
+
         @type channel: L{Proxy}
         @param channel: Used as connection between your client and the proxy
             server.
-        
+
         @type queued: C{bool}
         @param queued: Is the request queued or can we write to the transport
             now?
-        
+
         @type reactor: L{twisted.internet.reactor}
         @param reactor: Needed here to connect the L{Proxy} client end to the
             remote server.
@@ -249,10 +249,10 @@ class ProxyRequest(Request):
         """
         Called to process the request from your client.
 
-        This method parses the url (to see what the proxy needs to go fetch) and 
+        This method parses the url (to see what the proxy needs to go fetch) and
         then connects to that url (just like if your program connect to example.com
-        except the proxy server does it not your client directly) using the class 
-        specified in protocols. 
+        except the proxy server does it not your client directly) using the class
+        specified in protocols.
 
         Overide if you want to control things such as headers and method sent to
         the remote server (for example if you want any GET request to change to a
@@ -424,4 +424,3 @@ class ReverseProxyResource(Resource):
             request.getAllHeaders(), request.content.read(), request)
         self.reactor.connectTCP(self.host, self.port, clientFactory)
         return NOT_DONE_YET
-
