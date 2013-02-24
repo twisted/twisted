@@ -591,14 +591,6 @@ def getHostByName(name, timeout=None, effort=10):
 
 
 
-
-
-def query(query, timeout=None):
-    """
-    @see: L{twisted.internet.interfaces.IResolver.query}
-    """
-    return getResolver().query(query, timeout)
-
 def lookupAddress(name, timeout=None):
     """
     @see: L{twisted.internet.interfaces.IResolver.lookupAddress}
