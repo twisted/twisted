@@ -637,3 +637,104 @@ class Constructors(unittest.TestCase):
 
 if interfaces.IReactorSSL(reactor, None) is None:
     Constructors.skip = "Reactor does not support SSL, cannot run SSL tests"
+
+
+
+class HostnameVerificationTests(unittest.TestCase):
+    """
+    Tests for hostname verification.
+    """
+    def test_matchHostnameIfEqual(self):
+        """
+        If C{sslverify.matchHostname} is called with a hostname that is in the
+        list of names, it returns True.
+        """
+        self.assertTrue(sslverify.matchHostname(b"example.com",
+                                                [b"example.com"]))
+        self.assertTrue(sslverify.matchHostname(b"example.com",
+                                                [b"test.com", b"example.com"]))
+
+
+    def test_noMatchHostname(self):
+        """
+        If C{matchHostname} is called with a hostname that is not in the list
+        of names, it returns False.
+        """
+        self.assertFalse(sslverify.matchHostname(b"www.example.com",
+                                                 [b"test.com", b"example.com",
+                                                  b"other.example.com"]))
+
+
+    def test_matchHostnameCaseInsensitive(self):
+        """
+        C{matchHostname} compares names in a case insensitive manner.
+        """
+        # We do full alphabet to make sure we don't get things in wrong in
+        # particular locales like Turkish where I is not upper-case version of
+        # i...
+        self.assertTrue(sslverify.matchHostname(b"abcdefghijklmnopqrstuvwxyz",
+                                                 [b"ABCDEFGHIJKLMNOPQRSTUVWXYZ"]))
+        self.assertTrue(sslverify.matchHostname(b"ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+                                                 [b"abcdefghijklmnopqrstuvwxyz"]))
+
+
+    def test_matchHostnameWildcard(self):
+        """
+        C{matchHostname} matches wildcard on the first domain element.
+        """
+        self.assertTrue(sslverify.matchHostname(b"www.example.com",
+                                                [b"*.example.com"]))
+        self.assertTrue(sslverify.matchHostname(b"WWW.example.com",
+                                                [b"*.example.com"]))
+        self.assertTrue(sslverify.matchHostname(b"abcd.example.com",
+                                                [b"*.example.com"]))
+
+
+    def test_matchHostnameWildcardFullElement(self):
+        """
+        C{matchHostname} matches wildcards using a matching number of domain
+        elements.
+        """
+        self.assertFalse(sslverify.matchHostname(b"example.com",
+                                                 [b"*.example.com"]))
+        self.assertFalse(sslverify.matchHostname(b"www.abc.example.com",
+                                                 [b"*.example.com"]))
+
+
+    def test_matchHostnameWildcardNoPeriod(self):
+        """
+        C{matchHostname} does not match wildcards on the first domain element
+        using a period.
+        """
+        self.assertFalse(sslverify.matchHostname(b"..example.com",
+                                                 [b"*.example.com"]))
+
+
+    def test_matchHostnameWildcardFirstOnly(self):
+        """
+        C{matchHostname} does not match wildcards on anything other than the
+        first domain element.
+        """
+        self.assertFalse(sslverify.matchHostname(b"example.com",
+                                                 [b"*xample.com"]))
+        self.assertFalse(sslverify.matchHostname(b"www.example.com",
+                                                 [b"www.*.com"]))
+        self.assertFalse(sslverify.matchHostname(b"www2.example.com",
+                                                 [b"www*.example.com"]))
+
+
+    def test_matchHostnameUnicode(self):
+        """
+        C{matchHostname} compares unicode domain names using their IDNA form.
+        """
+        # Don't allow *decoding*, comparison must be of ASCII form!
+        class safebytes(bytes):
+            def decode(self, *args): raise RuntimeError()
+        unicodeDomain = u"\N{SNOWMAN}.com"
+        bytesDomain = safebytes(unicodeDomain.encode("idna"))
+        self.assertTrue(bytesDomain.startswith("xn-"))
+        self.assertTrue(sslverify.matchHostname(bytesDomain, [unicodeDomain]))
+        self.assertTrue(sslverify.matchHostname(unicodeDomain, [bytesDomain]))
+
+if interfaces.IReactorSSL(reactor, None) is None:
+    HostnameVerificationTests.skip = "Reactor does not support SSL, cannot run SSL tests"

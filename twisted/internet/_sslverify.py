@@ -6,6 +6,7 @@
 from __future__ import division, absolute_import
 
 import itertools
+import string
 from hashlib import md5
 
 from OpenSSL import SSL, crypto
@@ -618,6 +619,50 @@ class KeyPair(PublicKey):
         return PrivateCertificate.fromCertificateAndKeyPair(
             self.signRequestObject(dn, self.requestObject(dn), serialNumber),
             self)
+
+# At some point the upper/lowecase functinality should be moved into general
+# utility function:
+_tolower = string.maketrans(b"ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+                            b"abcdefghijklmnopqrstuvwxyz")
+
+def matchHostname(hostname, certificateNames):
+    """
+    Return whether the names in the certificate match the given hostname.
+
+    This follows the rules of RFC 6125:
+    - Case insensitive.
+    - Wildcard comparision only for left most domain element.
+    - Unicode hostnames are encoded to IDNA before comparison.
+
+    @param hostname: A specific hostname.
+
+    @param certificateNames: A list of names provided by a certificate; some
+        of these may be wildcard names.
+    """
+    def allButFirst(domain):
+        return domain.split(".")[1:]
+
+    # Convert to A-label domain names:
+    if isinstance(hostname, unicode):
+        hostname = hostname.encode("idna")
+    asciiNames = []
+    for cn in certificateNames:
+        if isinstance(cn, unicode):
+            cn = cn.encode("idna")
+        asciiNames.append(cn)
+
+    # Lowercase the names. We don't use normal .lower() because it is
+    # locale-specific and won't do the right thing in e.g. Turkish locale.
+    hostname = hostname.translate(_tolower)
+    certificateNames = [name.translate(_tolower) for name in asciiNames]
+
+    # Compare:
+    for cn in certificateNames:
+        if cn.startswith("*.") and allButFirst(hostname) == allButFirst(cn):
+            return True
+        if hostname == cn:
+            return True
+    return False
 
 
 
