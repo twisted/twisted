@@ -47,7 +47,8 @@ class TimeTestsBuilder(ReactorBuilder):
             raise SkipTest("Do not know how to synthesize non-time event to "
                            "stop the test")
 
-        delayedCall = reactor.callLater(sys.maxsize, lambda: None)
+        # Pick a pretty big delay.
+        delayedCall = reactor.callLater(2 ** 128 + 1, lambda: None)
 
         def stop():
             msg("Stopping the reactor")

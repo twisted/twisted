@@ -704,7 +704,7 @@ class ReactorBase(object):
         """See twisted.internet.interfaces.IReactorTime.callLater.
         """
         assert callable(_f), "%s is not callable" % _f
-        assert sys.maxsize >= _seconds >= 0, \
+        assert _seconds >= 0, \
                "%s is not greater than or equal to 0 seconds" % (_seconds,)
         tple = DelayedCall(self.seconds() + _seconds, _f, args, kw,
                            self._cancelCallLater,
