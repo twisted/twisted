@@ -770,7 +770,14 @@ class ReactorBase(object):
             return None
 
         delay = self._pendingTimedCalls[0].time - self.seconds()
-        longest = 2147483 # 2 ** 31 / 1000
+
+        # Pick a somewhat arbitrary maximum possible value for the timeout.
+        # This value is 2 ** 31 / 1000, which is the number of seconds which can
+        # be represented as an integer number of milliseconds in a signed 32 bit
+        # integer.  This particular limit is imposed by the epoll_wait(3)
+        # interface which accepts a timeout as a C "int" type and treats it as
+        # representing a number of milliseconds.
+        longest = 2147483
 
         # Don't let the delay be in the past (negative) or exceed a plausible
         # maximum (platform-imposed) interval.
