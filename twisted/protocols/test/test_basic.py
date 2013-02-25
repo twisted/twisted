@@ -342,8 +342,8 @@ a'''
 
     def test_rawDataReceivedNotImplemented(self):
         """
-        L{LineReceiver.rawDataReceived} has to be implemented by a child
-        class, otherwise C{NotImplementedError} is raised.
+        When L{LineReceiver.rawDataReceived} is not overridden in a
+        subclass, calling it raises C{NotImplementedError}.
         """
         proto = basic.LineReceiver()
         self.assertRaises(NotImplementedError, proto.rawDataReceived, 'foo')
@@ -351,8 +351,8 @@ a'''
 
     def test_lineReceivedNotImplemented(self):
         """
-        L{LineReceiver.lineReceived} has to be implemented by a child
-        class, otherwise C{NotImplementedError} is raised.
+        When L{LineReceiver.lineReceived} is not overridden in a subclass,
+        calling it raises C{NotImplementedError}.
         """
         proto = basic.LineReceiver()
         self.assertRaises(NotImplementedError, proto.lineReceived, 'foo')
@@ -394,8 +394,8 @@ class LineOnlyReceiverTestCase(unittest.SynchronousTestCase):
 
     def test_lineReceivedNotImplemented(self):
         """
-        L{LineOnlyReceiver.lineReceived} has to be implemented by a child
-        class, otherwise C{NotImplementedError} is raised.
+        When L{LineOnlyReceiver.lineReceived} is not overridden in a subclass,
+        calling it raises C{NotImplementedError}.
         """
         proto = basic.LineOnlyReceiver()
         self.assertRaises(NotImplementedError, proto.lineReceived, 'foo')
@@ -681,11 +681,11 @@ class NetstringReceiverTestCase(unittest.SynchronousTestCase, LPTestCaseMixin):
 
     def test_stringReceivedNotImplemented(self):
         """
-        L{NetstringReceiver.stringReceived} has to be implemented by a child
-        class, otherwise C{NotImplementedError} is raised.
+        When L{NetstringReceiver.stringReceived} is not overridden in a
+        subclass, calling it raises C{NotImplementedError}.
         """
-        org = basic.NetstringReceiver()
-        self.assertRaises(NotImplementedError, org.stringReceived, 'foo')
+        proto = basic.NetstringReceiver()
+        self.assertRaises(NotImplementedError, proto.stringReceived, 'foo')
 
 
     def test_deprecatedModuleAttributes(self):
@@ -790,11 +790,11 @@ class IntNTestCaseMixin(LPTestCaseMixin):
 
     def test_stringReceivedNotImplemented(self):
         """
-        L{NetstringReceiver.IntNStringReceiver} has to be implemented by a
-        child class, otherwise C{NotImplementedError} is raised.
+        When L{IntNStringReceiver.stringReceived} is not overridden in a
+        subclass, calling it raises C{NotImplementedError}.
         """
-        org = basic.IntNStringReceiver()
-        self.assertRaises(NotImplementedError, org.stringReceived, 'foo')
+        proto = basic.IntNStringReceiver()
+        self.assertRaises(NotImplementedError, proto.stringReceived, 'foo')
 
 
 
