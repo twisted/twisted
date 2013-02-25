@@ -61,17 +61,20 @@ class FakeReactor(object):
 
 class NameResolverAdapterTests(TestCase):
     """
-    L{_ResolverComplexifier} adapters an L{IResolverSimple} provider
-    to L{INameResolver}.
+    L{_ResolverComplexifier} adapts an L{IResolverSimple} provider to
+    L{INameResolver}.
     """
     def test_interface(self):
         """
         L{_ResolverComplexifier} implements L{INameResolver}.
         """
-        self.assertTrue(verifyClass(INameResolver, _ResolverComplexifier))
+        verifyClass(INameResolver, _ResolverComplexifier)
 
 
     def _successTest(self, address, family):
+        """
+        A generic test for both INET and INET6 address families.
+        """
         simple = FakeResolver({'example.com': address})
         resolver = _ResolverComplexifier(simple)
         d = resolver.getAddressInformation('example.com', 1234)
@@ -114,8 +117,7 @@ class NameResolverAdapterTests(TestCase):
         returns fails if the wrapped resolver's C{getHostByName}
         L{Deferred} fails.
         """
-        error = DNSLookupError("Problems abound")
-        simple = FakeResolver({'example.com': error})
+        simple = FakeResolver({})
         resolver = _ResolverComplexifier(simple)
         d = resolver.getAddressInformation('example.com', 1234)
         return self.assertFailure(d, DNSLookupError)

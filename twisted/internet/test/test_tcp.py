@@ -25,7 +25,8 @@ from twisted.internet.error import (
     ConnectionLost, UserError, ConnectionRefusedError, ConnectionDone,
     ConnectionAborted)
 from twisted.internet.interfaces import (
-    ILoggingContext, IConnector, IReactorFDSet, IReactorSocket, IReactorTCP, IResolverSimple)
+    ILoggingContext, IConnector, IReactorFDSet, IReactorSocket, IReactorTCP,
+    IResolverSimple)
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.defer import (
     Deferred, DeferredList, maybeDeferred, gatherResults, succeed, fail)
@@ -121,6 +122,7 @@ class Stop(ClientFactory):
         self.reactor.stop()
 
 
+
 @implementer(IResolverSimple)
 class FakeResolver:
     """
@@ -128,6 +130,13 @@ class FakeResolver:
     """
 
     def __init__(self, names):
+        """
+        @param names: A C{dict} of fixed results which will be
+            returned in response to L{IResolverSimple.getHostByName}
+            calls.
+        @type names: A C{dict} mapping a domain name (C{str}) to IP
+            address (C{str}).
+        """
         self.names = names
 
 

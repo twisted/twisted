@@ -327,11 +327,11 @@ class RoundtripDNSTestCase(unittest.TestCase):
         L{dns.RRHeader.decode} reads from a file-like object to re-construct a
         L{dns.RRHeader} instance.
         """
-        # encode the RR
+        # Encode the RR
         f = BytesIO()
         dns.RRHeader(b"test.org", 3, 4, 17).encode(f)
 
-        # decode the result
+        # Decode the result
         f.seek(0, 0)
         result = dns.RRHeader()
         result.decode(f)

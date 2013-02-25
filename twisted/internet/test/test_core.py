@@ -49,8 +49,19 @@ class ObjectModelIntegrationMixin(object):
 
 @implementer(INameResolver)
 class MemoryNameResolver(object):
+    """
+    An in-memory provider of L{INameResolver} which returns a fixed
+    list of AddressInformation for testing purposes.
+    """
     def __init__(self, names):
+        """
+        @param names: A fixed list of results which will be returned
+           in response to L{INameResolver.getAddressInformation}
+           calls.
+        @type names: A C{list} of L{AddressInformation} instances.
+        """
         self._names = names
+
 
     def getAddressInformation(self, name, service, family=None, type=None,
                               protocol=None, flags=None):

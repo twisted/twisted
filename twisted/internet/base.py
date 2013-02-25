@@ -213,11 +213,22 @@ class DelayedCall:
 
 @implementer(INameResolver)
 class _ResolverComplexifier(object):
+    """
+    L{_ResolverComplexifier} adapts an L{IResolverSimple} provider to
+    L{INameResolver}.
+    """
     def __init__(self, resolver):
+        """
+        @param resolver: A resolver which will be adapted to the new
+            L{INameResolver} interface.
+        @type resolver: A provider of L{IResolverSimple}.
+        """
         self._resolver = resolver
 
 
     def getAddressInformation(self, name, service, *args):
+        # XXX: This looks wrong. Why lookup the address with
+        # getHostByName and then pass the address to getaddrinfo?
         d = self._resolver.getHostByName(name)
         def cbResolved(address):
             family = socket.getaddrinfo(address, 0)[0][0]
@@ -300,11 +311,40 @@ class ThreadedResolver(object):
         return userDeferred
 
 
+class ThreadedNameResolver(object):
+    pass
+
+
 
 class AddressInformation(object, FancyEqMixin):
+    """
+    A container for the results of
+    L{INameResolver.getAddressInformation}.
+    """
     compareAttributes = ('family', 'type', 'protocol', 'canonicalName', 'address')
 
     def __init__(self, family, type, protocol, canonicalName, address):
+        """
+        @param family: The address family.
+        @type family: One of the address family constants from the
+            socket module.  For example, L{socket.AF_INET}.
+
+        @param type: The address socket type.
+        @type type: One of the socket type constants from the socket
+            module.  For example, L{socket.SOCK_STREAM}.
+
+        @param protocol: The address socket protocol.
+        @type protocol: One of the protocol constants from the socket
+            module.  For example, L{socket.IPPROTO_TCP}.
+
+        @param canonicalName: A string representing the canonical name
+            of the host if AI_CANONNAME is part of the flags argument;
+            else canonname will be empty.
+        @type canonicalName: C{str}
+
+        @param address: The IP address of the specified name.
+        @type address: C{str}
+        """
         self.family = family
         self.type = type
         self.protocol = protocol
