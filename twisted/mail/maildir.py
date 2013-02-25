@@ -101,7 +101,7 @@ class MaildirMessage(mail.FileMessage):
 
 
 
-@implementer(mail.IDomain, mail.IAliasableDomain)
+@implementer(mail.IAliasableDomain)
 class AbstractMaildirDomain:
     """
     Abstract maildir-backed domain.
@@ -441,7 +441,7 @@ class StringListMailbox:
 
 
 
-@implementer(portal.IRealm, mail.IAliasableDomain)
+@implementer(portal.IRealm)
 class MaildirDirdbmDomain(AbstractMaildirDomain):
     """
     A Maildir Domain where membership is checked by a dirdbm file.
