@@ -10,11 +10,11 @@ from __future__ import division, absolute_import
 
 __metaclass__ = type
 
-import socket, errno
+import errno
+import socket
 
 from zope.interface import implementer
 
-from twisted.python.compat import _PY3
 from twisted.python.runtime import platform
 from twisted.python.failure import Failure
 from twisted.python import log
@@ -1323,9 +1323,7 @@ class TCPTransportServerAddressTestMixin(object):
     Test mixing for TCP server address building and log prefix.
     """
 
-    def getConnectedClientAndServer(self, reactor, interface, addressFamily,
-                                    protocolClientFactory=None,
-                                    protocolServerFactory=None):
+    def getConnectedClientAndServer(self, reactor, interface, addressFamily):
         """
         Helper method returnine a L{Deferred} firing with a tuple of a client
         protocol, a server protocol, and a running TCP port.
@@ -1335,12 +1333,6 @@ class TCPTransportServerAddressTestMixin(object):
         @param interface: The interface to listen upon.
 
         @param addressFamily: C{socket.AF_INET} or C{socket.AF_INET6}.
-
-        @param protocolClientFactory: If specified, the client protocol factory
-            to use (default to C{AccumulatingProtocol}.
-
-        @param protocolServerFactory: If specified, the client protocol factory
-            to use (default to C{AccumulatingProtocol}.
         """
         raise NotImplementedError()
 
@@ -1409,9 +1401,7 @@ class TCPTransportTestsBuilder(TCPTransportServerAddressTestMixin,
     Test standard L{ITCPTransport}s built with C{listenTCP} and C{connectTCP}.
     """
 
-    def getConnectedClientAndServer(self, reactor, interface, addressFamily,
-                                    protocolClientFactory=None,
-                                    protocolServerFactory=None):
+    def getConnectedClientAndServer(self, reactor, interface, addressFamily):
         """
         Return a L{Deferred} firing with a L{MyClientFactory} and
         L{MyServerFactory} connected pair, and the listening C{Port}.
@@ -1421,22 +1411,12 @@ class TCPTransportTestsBuilder(TCPTransportServerAddressTestMixin,
         @param interface: The interface to listen upon.
 
         @param addressFamily: C{socket.AF_INET} or C{socket.AF_INET6}.
-
-        @param protocolClientFactory: If specified, the client protocol factory
-            to use (default to C{AccumulatingProtocol}.
-
-        @param protocolServerFactory: If specified, the client protocol factory
-            to use (default to C{AccumulatingProtocol}.
         """
         server = MyServerFactory()
-        if protocolServerFactory is not None:
-            server.protocolFactory = protocolServerFactory
         server.protocolConnectionMade = Deferred()
         server.protocolConnectionLost = Deferred()
 
         client = MyClientFactory()
-        if protocolClientFactory is not None:
-            client.protocolFactory = protocolClientFactory
         client.protocolConnectionMade = Deferred()
         client.protocolConnectionLost = Deferred()
 
@@ -1479,9 +1459,7 @@ class AdoptStreamConnectionTestsBuilder(TCPTransportServerAddressTestMixin,
     """
     requiredInterfaces = (IReactorFDSet, IReactorSocket)
 
-    def getConnectedClientAndServer(self, reactor, interface, addressFamily,
-                                    protocolClientFactory=None,
-                                    protocolServerFactory=None):
+    def getConnectedClientAndServer(self, reactor, interface, addressFamily):
         """
         Return a L{Deferred} firing with a L{MyClientFactory} and
         L{MyServerFactory} connected pair, and the listening C{Port}. The
@@ -1493,25 +1471,15 @@ class AdoptStreamConnectionTestsBuilder(TCPTransportServerAddressTestMixin,
         @param interface: The interface to listen upon.
 
         @param addressFamily: C{socket.AF_INET} or C{socket.AF_INET6}.
-
-        @param protocolClientFactory: If specified, the client protocol factory
-            to use (default to C{AccumulatingProtocol}.
-
-        @param protocolServerFactory: If specified, the client protocol factory
-            to use (default to C{AccumulatingProtocol}.
         """
         firstServer = MyServerFactory()
         firstServer.protocolConnectionMade = Deferred()
 
         server = MyServerFactory()
-        if protocolServerFactory is not None:
-            server.protocolFactory = protocolServerFactory
         server.protocolConnectionMade = Deferred()
         server.protocolConnectionLost = Deferred()
 
         client = MyClientFactory()
-        if protocolClientFactory is not None:
-            client.protocolFactory = protocolClientFactory
         client.protocolConnectionMade = Deferred()
         client.protocolConnectionLost = Deferred()
 
@@ -1527,6 +1495,7 @@ class AdoptStreamConnectionTestsBuilder(TCPTransportServerAddressTestMixin,
 
         lostDeferred = gatherResults([client.protocolConnectionLost,
                                       server.protocolConnectionLost])
+
         def stop(result):
             if reactor.running:
                 reactor.stop()
@@ -1539,6 +1508,7 @@ class AdoptStreamConnectionTestsBuilder(TCPTransportServerAddressTestMixin,
 
         startDeferred = gatherResults([client.protocolConnectionMade,
                                        server.protocolConnectionMade])
+
         def start(protocols):
             client, server = protocols
             log.msg("client connected %s" % client)

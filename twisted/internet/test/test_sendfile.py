@@ -2,13 +2,12 @@
 # See LICENSE for details.
 
 """
-Tests for sendfile.
+Tests for sendfile integration in the reactor.
 """
 
 import socket
 
 from twisted.trial.unittest import TestCase, SkipTest
-from twisted.internet.defer import Deferred
 from twisted.internet._sendfile import SendfileInfo
 from twisted.internet import error, _sendfile
 from twisted.internet.interfaces import IReactorFDSet
@@ -16,45 +15,10 @@ from twisted.python import log
 from twisted.python.filepath import FilePath
 from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
 
-from twisted.test.proto_helpers import AccumulatingProtocol
-
 if _sendfile.sendfile is None:
     sendfileSkip = "sendfile not available"
 else:
     sendfileSkip = None
-
-
-
-class SendfileClientProtocol(AccumulatingProtocol):
-    """
-    Protocol used on the client receiving data of the sendfile server.
-
-    @ivar doneDeferred: deferred fired when all expected data has been
-        received.
-    @ivar expected: amount of data expected.
-    """
-    doneDeferred = None
-    expected = 0
-
-    def dataReceived(self, data):
-        """
-        Store the data, and fire the deferred if all data has been received.
-        """
-        self.data += data
-        if len(self.data) >= self.expected and self.doneDeferred:
-            doneDeferred, self.doneDeferred = self.doneDeferred, None
-            doneDeferred.callback(self.data)
-
-
-    def connectionLost(self, reason):
-        """
-        On connection lost, forward to C{reason} to L{AccumulatingProtocol},
-        and fires C{doneDeferred} if it's still present.
-        """
-        AccumulatingProtocol.connectionLost(self, reason)
-        if self.doneDeferred:
-            doneDeferred, self.doneDeferred = self.doneDeferred, None
-            doneDeferred.errback(reason)
 
 
 
@@ -82,29 +46,27 @@ class SendfileIntegrationMixin(object):
         C{IWriteFileTransport.writeFile} sends the whole content of a file over
         the wire.
         """
+        clients = []
 
         def connected(protocols):
             client, server = protocols[:2]
-            client.doneDeferred = doneDeferred = Deferred()
-            client.expected = 1000000
+            clients.append(client)
             fileObject = self.createFile()
-            server.transport.writeFile(fileObject)
-            doneDeferred.addCallback(finished, client)
-            doneDeferred.addBoth(stop, client)
+            doneDeferred = server.transport.writeFile(fileObject)
+            return doneDeferred.addBoth(finished, server)
 
-        def finished(data, client):
-            self.assertEqual(1000000, len(data))
-
-        def stop(passthrough, client):
-            client.transport.loseConnection()
+        def finished(passthrough, server):
+            server.transport.loseConnection()
             return passthrough
 
         reactor = self.buildReactor()
         d = self.getConnectedClientAndServer(
-            reactor, "127.0.0.1", socket.AF_INET, SendfileClientProtocol)
+            reactor, "127.0.0.1", socket.AF_INET)
         d.addCallback(connected)
         d.addErrback(log.err)
         self.runReactor(reactor)
+
+        self.assertEqual(1000000, len(clients[0].data))
 
 
     def test_writeFileClient(self):
@@ -112,30 +74,27 @@ class SendfileIntegrationMixin(object):
         C{IWriteFileTransport.writeFile} works from client transport side as
         well.
         """
+        servers = []
 
         def connected(protocols):
             client, server = protocols[:2]
-            server.doneDeferred = doneDeferred = Deferred()
-            server.expected = 1000000
+            servers.append(server)
             fileObject = self.createFile()
-            client.transport.writeFile(fileObject)
-            doneDeferred.addCallback(finished, server)
-            doneDeferred.addBoth(stop, server)
+            doneDeferred = client.transport.writeFile(fileObject)
+            return doneDeferred.addBoth(finished, client)
 
-        def finished(data, server):
-            self.assertEqual(1000000, len(data))
-
-        def stop(passthrough, server):
-            server.transport.loseConnection()
+        def finished(passthrough, client):
+            client.transport.loseConnection()
             return passthrough
 
         reactor = self.buildReactor()
         d = self.getConnectedClientAndServer(
-            reactor, "127.0.0.1", socket.AF_INET,
-            protocolServerFactory=SendfileClientProtocol)
+            reactor, "127.0.0.1", socket.AF_INET)
         d.addCallback(connected)
         d.addErrback(log.err)
         self.runReactor(reactor)
+
+        self.assertEqual(1000000, len(servers[0].data))
 
 
     def test_writeFilePendingData(self):
@@ -143,32 +102,31 @@ class SendfileIntegrationMixin(object):
         C{IWriteFileTransport.writeFile} doesn't take precedence over previous
         C{ITCPTransport.write} calls, the data staying in the same order.
         """
+        clients = []
 
         def connected(protocols):
             client, server = protocols[:2]
-            client.doneDeferred = doneDeferred = Deferred()
-            client.expected = 1000010
+            clients.append(client)
             server.transport.write(b'y' * 10)
-            doneDeferred.addCallback(finished, client)
-            doneDeferred.addBoth(stop, client)
             fileObject = self.createFile()
-            return server.transport.writeFile(fileObject)
+            doneDeferred = server.transport.writeFile(fileObject)
+            return doneDeferred.addBoth(finished, server)
 
-        def finished(data, client):
-            self.assertEqual(1000010, len(data))
-            self.assertEqual(b'y' * 10, data[:10])
-            self.assertEqual(b'x' * 10, data[10:20])
-
-        def stop(passthrough, client):
-            client.transport.loseConnection()
+        def finished(passthrough, server):
+            server.transport.loseConnection()
             return passthrough
 
         reactor = self.buildReactor()
         d = self.getConnectedClientAndServer(
-            reactor, "127.0.0.1", socket.AF_INET, SendfileClientProtocol)
+            reactor, "127.0.0.1", socket.AF_INET)
         d.addCallback(connected)
         d.addErrback(log.err)
         self.runReactor(reactor)
+
+        data = clients[0].data
+        self.assertEqual(1000010, len(data))
+        self.assertEqual(b'y' * 10, data[:10])
+        self.assertEqual(b'x' * 10, data[10:20])
 
 
     def test_writeFileStopWriting(self):
@@ -182,76 +140,72 @@ class SendfileIntegrationMixin(object):
             raise SkipTest("%s does not provide IReactorFDSet" % (
                 fullyQualifiedName(reactor.__class__),))
 
+        clients = []
+
         def connected(protocols):
             client, server = protocols[:2]
-            client.doneDeferred = doneDeferred = Deferred()
-            client.expected = 1000001
+            clients.append(client)
             fileObject = self.createFile()
-            writeDeferred = server.transport.writeFile(fileObject)
-            writeDeferred.addCallback(checkServer, server)
-            doneDeferred.addCallback(finished, client)
-            doneDeferred.addBoth(stop, client)
+            doneDeferred = server.transport.writeFile(fileObject)
+            return doneDeferred.addCallback(checkServer, server)
 
         def checkServer(ign, server):
+            # Leave room for the reactor to notice the unregister
             reactor.callLater(0, checkWriter, server)
 
         def checkWriter(server):
             self.assertNotIn(server.transport, reactor.getWriters())
             server.transport.write(b"x")
-
-        def finished(data, client):
-            self.assertEqual(1000001, len(data))
-
-        def stop(passthrough, client):
-            client.transport.loseConnection()
-            return passthrough
+            server.transport.loseConnection()
 
         d = self.getConnectedClientAndServer(
-            reactor, "127.0.0.1", socket.AF_INET, SendfileClientProtocol)
+            reactor, "127.0.0.1", socket.AF_INET)
         d.addCallback(connected)
         d.addErrback(log.err)
         self.runReactor(reactor)
+
+        self.assertEqual(1000001, len(clients[0].data))
 
 
     def test_writeFileError(self):
         """
         When an error happens during the C{IWriteFileTransport.writeFile} call,
         the L{Deferred} returned is fired with that error. We simulate that
-        case by patching C{sendfile} after some data, and make sure that we get
-        the error and that transfer is interrupted.
+        case by patching C{sendfile} after the first call, and make sure that
+        we get the error and that transfer is interrupted.
         """
+        originalSendfile = _sendfile.sendfile
+        calls = []
+        clients = []
 
         def sendError(*args):
+            if not calls:
+                calls.append(None)
+                return originalSendfile(*args)
             raise IOError("That's bad!")
+
+        self.patch(_sendfile, "sendfile", sendError)
 
         def connected(protocols):
             client, server = protocols[:2]
-            client.closedDeferred.addCallback(clientFinished, client)
-            client.doneDeferred = doneDeferred = Deferred()
-            client.expected = 100000
-            doneDeferred.addCallback(dataFinished, client)
+            clients.append(client)
             fileObject = self.createFile()
             sendFileDeferred = server.transport.writeFile(fileObject)
             return sendFileDeferred.addErrback(serverFinished)
-
-        def dataFinished(data, client):
-            self.assertTrue(len(data) >= 100000)
-            self.patch(_sendfile, "sendfile", sendError)
-
-        def clientFinished(ignored, client):
-            self.assertIsInstance(client.closedReason.value,
-                                  error.ConnectionDone)
-            self.assertTrue(len(client.data) < 1000000)
 
         def serverFinished(error):
             error.trap(IOError)
 
         reactor = self.buildReactor()
         d = self.getConnectedClientAndServer(
-            reactor, "127.0.0.1", socket.AF_INET, SendfileClientProtocol)
+            reactor, "127.0.0.1", socket.AF_INET)
         d.addCallback(connected)
         d.addErrback(log.err)
         self.runReactor(reactor)
+
+        client = clients[0]
+        self.assertIsInstance(client.closedReason.value, error.ConnectionDone)
+        self.assertTrue(len(client.data) < 1000000, len(client.data))
 
     if sendfileSkip:
         test_writeFileError.skip = sendfileSkip
@@ -263,6 +217,7 @@ class SendfileIntegrationMixin(object):
         an C{IOError}, C{IWriteFileTransport.writeFile} falls back to a
         standard producer.
         """
+        clients = []
 
         def sendError(*args):
             raise IOError("That's bad!")
@@ -271,26 +226,23 @@ class SendfileIntegrationMixin(object):
 
         def connected(protocols):
             client, server = protocols[:2]
-            client.doneDeferred = doneDeferred = Deferred()
-            client.expected = 1000000
+            clients.append(client)
             fileObject = self.createFile()
-            server.transport.writeFile(fileObject)
-            doneDeferred.addCallback(finished, client)
-            doneDeferred.addBoth(stop, client)
+            doneDeferred = server.transport.writeFile(fileObject)
+            return doneDeferred.addBoth(finished, server)
 
-        def finished(data, client):
-            self.assertEqual(1000000, len(data))
-
-        def stop(passthrough, client):
-            client.transport.loseConnection()
+        def finished(passthrough, server):
+            server.transport.loseConnection()
             return passthrough
 
         reactor = self.buildReactor()
         d = self.getConnectedClientAndServer(
-            reactor, "127.0.0.1", socket.AF_INET, SendfileClientProtocol)
+            reactor, "127.0.0.1", socket.AF_INET)
         d.addCallback(connected)
         d.addErrback(log.err)
         self.runReactor(reactor)
+
+        self.assertEqual(1000000, len(clients[0].data))
 
     if sendfileSkip:
         test_writeFileErrorAtFirstSight.skip = sendfileSkip
