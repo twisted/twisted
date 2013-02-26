@@ -205,6 +205,8 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         if self.producer is not None:
             self.producer.stopProducing()
             self.producer = None
+        for sfi in self._pendingSendFile:
+            sfi.deferred.errback(reason)
         self.stopReading()
         self.stopWriting()
 

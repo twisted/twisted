@@ -248,6 +248,55 @@ class SendfileIntegrationMixin(object):
         test_writeFileErrorAtFirstSight.skip = sendfileSkip
 
 
+    def test_writeFileClosedConnection(self):
+        """
+        If the client closed the connection before the C{sendfile} has
+        succeeded, the C{Deferred} returned by C{writeFile} fires with
+        L{error.ConnectionDone}.
+        """
+        originalSendfile = _sendfile.sendfile
+        calls = []
+        clients = []
+        servers = []
+        errors = []
+
+        def sendError(*args):
+            if not calls:
+                clients[0].transport.loseConnection()
+            calls.append(None)
+            return originalSendfile(*args)
+
+        self.patch(_sendfile, "sendfile", sendError)
+
+        def connected(protocols):
+            client, server = protocols[:2]
+            clients.append(client)
+            servers.append(server)
+            fileObject = self.createFile()
+            sendFileDeferred = server.transport.writeFile(fileObject)
+            return sendFileDeferred.addErrback(serverFinished)
+
+        def serverFinished(error):
+            errors.append(error)
+
+        reactor = self.buildReactor()
+        d = self.getConnectedClientAndServer(
+            reactor, "127.0.0.1", socket.AF_INET)
+        d.addCallback(connected)
+        d.addErrback(log.err)
+        self.runReactor(reactor)
+
+        client = clients[0]
+        self.assertIsInstance(client.closedReason.value, error.ConnectionDone)
+        self.assertTrue(len(client.data) < 1000000, len(client.data))
+
+        self.assertEqual(1, len(errors), errors)
+        errors[0].trap(error.ConnectionDone)
+
+    if sendfileSkip:
+        test_writeFileClosedConnection.skip = sendfileSkip
+
+
 
 class SendfileInfoTestCase(TestCase):
     """
