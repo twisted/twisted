@@ -48,7 +48,7 @@ class WorkerLogObserver(object):
 
 
 
-def main():
+def main(fdopen=os.fdopen):
     """
     Main function to be run if __name__ == "__main__".
     """
@@ -58,8 +58,8 @@ def main():
     from twisted.trial._dist.worker import WorkerProtocol
     workerProtocol = WorkerProtocol(config['force-gc'])
 
-    protocolIn = os.fdopen(_WORKER_AMP_STDIN)
-    protocolOut = os.fdopen(_WORKER_AMP_STDOUT, 'w')
+    protocolIn = fdopen(_WORKER_AMP_STDIN)
+    protocolOut = fdopen(_WORKER_AMP_STDOUT, 'w')
     workerProtocol.makeConnection(FileWrapper(protocolOut))
 
     observer = WorkerLogObserver(workerProtocol)
