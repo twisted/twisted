@@ -640,7 +640,7 @@ def matchHostname(hostname, certificateNames):
         of these may be wildcard names.
     """
     def allButFirst(domain):
-        return domain.split(".")[1:]
+        return domain.split(b".")[1:]
 
     # Convert to A-label domain names:
     if isinstance(hostname, unicode):
@@ -658,11 +658,46 @@ def matchHostname(hostname, certificateNames):
 
     # Compare:
     for cn in certificateNames:
-        if cn.startswith("*.") and allButFirst(hostname) == allButFirst(cn):
+        if cn.startswith(b"*.") and allButFirst(hostname) == allButFirst(cn):
             return True
         if hostname == cn:
             return True
     return False
+
+
+
+def getDomainsForMatching(x509):
+    """
+    Return a list of domains from a certificate, suitable for use with
+    L{matchHostname}.
+
+    The commonName and subjectAltName DNS entries will be extracted. Following
+    RFC 2818 rules, subjectAltName dNSNames are checked first, followed by the
+    commonName if there are no dNSNames. Unlike the RFC rules, IPs are not
+    extracted, and all commonNames are checked, not just the most specific.
+
+    @param x509: A C{X509} object.
+
+    @return: A list of domains extracted from the certificate.
+    @rtype: A C{list} of C{bytes}.
+    """
+    from pyasn1.codec.der.decoder import decode
+    from pyasn1_modules.rfc2459 import GeneralNames
+    result = []
+    for i in range(x509.get_extension_count()):
+        ext = x509.get_extension(i)
+        if ext.get_short_name() == 'subjectAltName':
+            names, _ = decode(ext.get_data(), asn1Spec=GeneralNames())
+            for name in names:
+                if name.getName() == 'dNSName':
+                    result.append(name.getComponent().asOctets())
+    if result:
+        return result
+    # XXX can there be multiple commonNames?
+    CN = x509.get_subject().commonName
+    if CN:
+        result.append(CN)
+    return result
 
 
 

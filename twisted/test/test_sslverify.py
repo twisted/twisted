@@ -12,7 +12,7 @@ import itertools
 
 try:
     from OpenSSL import SSL
-    from OpenSSL.crypto import PKey, X509, X509Req
+    from OpenSSL.crypto import PKey, X509, X509Req, X509Extension
     from OpenSSL.crypto import TYPE_RSA
     from twisted.internet import _sslverify as sslverify
 except ImportError:
@@ -735,6 +735,43 @@ class HostnameVerificationTests(unittest.TestCase):
         self.assertTrue(bytesDomain.startswith("xn-"))
         self.assertTrue(sslverify.matchHostname(bytesDomain, [unicodeDomain]))
         self.assertTrue(sslverify.matchHostname(unicodeDomain, [bytesDomain]))
+
+
+    def test_getDomainsCN(self):
+        """
+        When called with a C{X509} object, C{getDomainsForMatching} extracts
+        the commonName (CN) from the subject.
+        """
+        keypair, cert = makeCertificate(commonName='www.example.com')
+        self.assertEqual(sslverify.getDomainsForMatching(cert),
+                         [b"www.example.com"])
+
+
+    def test_getDomainsSubjectAltName(self):
+        """
+        When called with a C{X509} object, C{getDomainsForMatching} extracts
+        DNS entries from subjectAltName extensions.
+        """
+        keypair, cert = makeCertificate()
+        cert.add_extensions(
+            [X509Extension(b'subjectAltName', True, b'DNS:example.com'),
+             X509Extension(b'issuerAltName', True, b'DNS:issuer.com'),
+             X509Extension(b'subjectAltName', True, b'DNS:example2.com'),
+             X509Extension(b'subjectAltName', True, b'email:x@other.com'),])
+        self.assertEqual(sslverify.getDomainsForMatching(cert),
+                         [b"example.com", b"example2.com"])
+
+
+    def test_getDomainsBoth(self):
+        """
+        If both CN and subjectAltName are available, C{getDomainsForMatching}
+        returns only the DNS names.
+        """
+        keypair, cert = makeCertificate(CN="abc.com")
+        cert.add_extensions(
+            [X509Extension(b'subjectAltName', True, b'DNS:def.com')])
+        self.assertEqual(sslverify.getDomainsForMatching(cert),
+                         [b"def.com"])
 
 if interfaces.IReactorSSL(reactor, None) is None:
     HostnameVerificationTests.skip = "Reactor does not support SSL, cannot run SSL tests"
