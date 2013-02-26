@@ -29,7 +29,10 @@ def main(args):
 
     if 'setuptools' in sys.modules:
         from pkg_resources import parse_requirements
-        requirements = ["zope.interface >= 3.6.0"]
+        requirements = ["zope.interface >= 3.6.0",
+                        "pyOpenSSL >= 0.12",
+                        "pyasn1 >= 0.1.3",
+                        "pyasn1-modules >= 0.0.4"]
         try:
             list(parse_requirements(requirements))
         except:

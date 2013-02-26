@@ -8,6 +8,10 @@ Requirements
   Windows, version 0.10 or newer is required.  pyOpenSSL 0.10 or newer is also
   preferred on other platforms, but older versions will work as well.
 
+  Hostname verification requires pyOpenSSL 0.12 or later, as well as the
+  pyasn1 and pyasn1_modules. pyasn1 is also required for Conch (the SSH
+  package).
+
   On Windows pywin32 (<http://sourceforge.net/projects/pywin32/files/>) is
   required.  Build 215 or later is highly recommended for reliable operation
   (this is already included in ActivePython).
