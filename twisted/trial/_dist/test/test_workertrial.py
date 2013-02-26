@@ -114,6 +114,7 @@ class MainTestCase(TestCase):
         If reading the input stream fails with a C{IOError} with errno
         C{EINTR}, L{main} ignores it and continues reading.
         """
+        excInfos = []
 
         class FakeStream(object):
             count = 0
@@ -123,12 +124,13 @@ class MainTestCase(TestCase):
                 if oself.count == 1:
                     raise IOError(errno.EINTR)
                 else:
-                    self.assertEqual((None, None, None), sys.exc_info())
+                    excInfos.append(sys.exc_info())
                 return ''
 
         self.readStream = FakeStream()
         main(self.fdopen)
         self.assertEqual('', self.writeStream.getvalue())
+        self.assertEqual([(None, None, None)], excInfos)
 
 
     def test_otherReadError(self):
