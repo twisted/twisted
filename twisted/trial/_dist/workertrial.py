@@ -48,9 +48,12 @@ class WorkerLogObserver(object):
 
 
 
-def main(fdopen=os.fdopen):
+def main(_fdopen=os.fdopen):
     """
     Main function to be run if __name__ == "__main__".
+
+    @param _fdopen: If specified, the function to use in place of C{os.fdopen}.
+    @param _fdopen: C{callable}
     """
     config = WorkerOptions()
     config.parseOptions()
@@ -58,8 +61,8 @@ def main(fdopen=os.fdopen):
     from twisted.trial._dist.worker import WorkerProtocol
     workerProtocol = WorkerProtocol(config['force-gc'])
 
-    protocolIn = fdopen(_WORKER_AMP_STDIN)
-    protocolOut = fdopen(_WORKER_AMP_STDOUT, 'w')
+    protocolIn = _fdopen(_WORKER_AMP_STDIN)
+    protocolOut = _fdopen(_WORKER_AMP_STDOUT, 'w')
     workerProtocol.makeConnection(FileWrapper(protocolOut))
 
     observer = WorkerLogObserver(workerProtocol)
