@@ -31,8 +31,8 @@ else:
         return buffer(bObj, offset) + b"".join(bArray)
 
 
-
-_SendfileMarker = Exception()
+# Marker indicating that a sendfile has started
+_SendfileMarker = object()
 
 
 
@@ -252,10 +252,6 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
                 # Transfer is finished or some errors happened
                 self._pendingSendFile.pop(0)
                 self._tempDataBuffer.pop(0)
-                if result is _SendfileMarker:
-                    # There was an error, but we're handling it and fallback to
-                    # traditional writes
-                    result = None
         else:
             if len(self.dataBuffer) - self.offset < self.SEND_LIMIT:
                 # If there is currently less than SEND_LIMIT bytes left to send
@@ -422,7 +418,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         """
         Internal implementation for starting sendfile.
 
-        @param sfi: an object providing by C{doSendfile}.
+        @param sfi: an object providing C{doSendfile}.
         """
         if not self.connected or self._writeDisconnected:
             return

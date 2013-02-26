@@ -8,7 +8,6 @@ Helper module for C{sendfile} support.
 
 
 from twisted.internet.defer import Deferred
-from twisted.internet.abstract import _SendfileMarker
 from twisted.internet.main import CONNECTION_LOST
 
 try:
@@ -80,8 +79,10 @@ class SendfileInfo(object):
             if e.errno == EWOULDBLOCK:
                 return
             elif not self.started:
+                # Make sure done returns True
+                self.count = self.offset
                 self.fallback.callback(None)
-                return _SendfileMarker
+                return
             else:
                 self.deferred.errback(e)
                 return CONNECTION_LOST

@@ -1157,7 +1157,7 @@ class WriteSequenceTestsMixin(object):
 
     def setWriteBufferSize(self, transport, value):
         """
-        Set the write buffer size for the given transport, mananing possible
+        Set the write buffer size for the given transport, managing possible
         differences (ie, IOCP). Bug #4322 should remove the need of that hack.
         """
         if getattr(transport, "writeBufferSize", None) is not None:
