@@ -12,6 +12,7 @@ from hashlib import md5
 from OpenSSL import SSL, crypto
 
 from twisted.python.compat import nativeString, networkString
+from twisted.python.filepath import FilePath
 from twisted.python import _reflectpy3 as reflect, util
 from twisted.internet.defer import Deferred
 from twisted.internet.error import VerifyError, CertificateError
@@ -698,6 +699,43 @@ def getDomainsForMatching(x509):
     if CN:
         result.append(CN)
     return result
+
+
+
+def _getCACertificates():
+    """
+    Return a list of X509 objects for the authoritative CAs.
+
+    Packagers of Twisted (e.g. Linux distributions) may wish to override this
+    function to return certificates from their own CA database.
+
+    @return: A path to a file containing PEM certificates.
+    @rtype: C{list} of L{crypto.X509}.
+    """
+    f = FilePath(__file__.encode("utf-8")).sibling('ca-bundle.crt')
+    # Is there better way to load multiple certificates from single file?
+    CERT_END = b'-----END CERTIFICATE-----\n'
+    result = []
+    for chunk in f.getContent().split(CERT_END):
+        if chunk:
+            result.append(crypto.load_certificate(
+                    crypto.FILETYPE_PEM, chunk + CERT_END))
+    return result
+
+
+_cachedCAs = None
+
+def getCACertificates():
+    """
+    Return a list of X509 objects for the authoritative CAs.
+
+    @return: A path to a file containing PEM certificates.
+    @rtype: C{list} of L{crypto.X509}.
+    """
+    global _cachedCAs
+    if _cachedCAs is None:
+        _cachedCAs = _getCACertificates()
+    return _cachedCAs
 
 
 

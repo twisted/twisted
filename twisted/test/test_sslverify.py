@@ -773,5 +773,37 @@ class HostnameVerificationTests(unittest.TestCase):
         self.assertEqual(sslverify.getDomainsForMatching(cert),
                          [b"def.com"])
 
+
+    def test_getCACertificates(self):
+        """
+        C{getCACertificates} returns a reasonable-looking list of C{X509}
+        objects.
+
+        We can't test much more than that, since contents may change over
+        time.
+        """
+        CAs = sslverify.getCACertificates()
+        foundThawte = False
+        foundVerisign = False
+        for ca in CAs:
+            self.assertIsInstance(ca, X509)
+            commonName = ca.get_subject().CN
+            if commonName and "VeriSign" in commonName:
+                foundVerisign = True
+            if commonName and "Thawte" in commonName:
+                foundThawte = True
+        self.assertTrue(foundThawte)
+        self.assertTrue(foundVerisign)
+
+
+    def test_getCACertificatesCached(self):
+        """
+        C{getCACertificates} returns a cached result, and doesn't load the CAs
+        from scratch each time.
+        """
+        self.assertIdentical(sslverify.getCACertificates(), sslverify.getCACertificates())
+
+
+
 if interfaces.IReactorSSL(reactor, None) is None:
     HostnameVerificationTests.skip = "Reactor does not support SSL, cannot run SSL tests"
