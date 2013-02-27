@@ -704,7 +704,7 @@ class ReactorBase(object):
         """See twisted.internet.interfaces.IReactorTime.callLater.
         """
         assert callable(_f), "%s is not callable" % _f
-        assert sys.maxsize >= _seconds >= 0, \
+        assert _seconds >= 0, \
                "%s is not greater than or equal to 0 seconds" % (_seconds,)
         tple = DelayedCall(self.seconds() + _seconds, _f, args, kw,
                            self._cancelCallLater,
@@ -753,14 +753,35 @@ class ReactorBase(object):
                 heappush(self._pendingTimedCalls, call)
         self._newTimedCalls = []
 
+
     def timeout(self):
+        """
+        Determine the longest time the reactor may sleep (waiting on I/O
+        notification, perhaps) before it must wake up to service a time-related
+        event.
+
+        @return: The maximum number of seconds the reactor may sleep.
+        @rtype: L{float}
+        """
         # insert new delayed calls to make sure to include them in timeout value
         self._insertNewDelayedCalls()
 
         if not self._pendingTimedCalls:
             return None
 
-        return max(0, self._pendingTimedCalls[0].time - self.seconds())
+        delay = self._pendingTimedCalls[0].time - self.seconds()
+
+        # Pick a somewhat arbitrary maximum possible value for the timeout.
+        # This value is 2 ** 31 / 1000, which is the number of seconds which can
+        # be represented as an integer number of milliseconds in a signed 32 bit
+        # integer.  This particular limit is imposed by the epoll_wait(3)
+        # interface which accepts a timeout as a C "int" type and treats it as
+        # representing a number of milliseconds.
+        longest = 2147483
+
+        # Don't let the delay be in the past (negative) or exceed a plausible
+        # maximum (platform-imposed) interval.
+        return max(0, min(longest, delay))
 
 
     def runUntilCurrent(self):
