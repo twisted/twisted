@@ -664,6 +664,9 @@ class _Assertions(pyunit.TestCase, object):
         """
         Assert that C{deferred} does not have a result at this point.
 
+        If the assertion succeeds, then the result of C{deferred} is left
+        unchanged. Otherwise, any L{failure.Failure} result is swallowed.
+
         @param deferred: A L{Deferred<twisted.internet.defer.Deferred>} without
             a result.  This means that neither
             L{Deferred.callback<twisted.internet.defer.Deferred.callback>} nor
