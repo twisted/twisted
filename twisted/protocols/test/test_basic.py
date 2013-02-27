@@ -151,7 +151,8 @@ class LineOnlyTester(basic.LineOnlyReceiver):
 
 class LineReceiverTestCase(unittest.SynchronousTestCase):
     """
-    Test LineReceiver, using the C{LineTester} wrapper.
+    Test L{twisted.protocols.basic.LineReceiver}, using the C{LineTester}
+    wrapper.
     """
     buffer = b'''\
 len 10
@@ -339,10 +340,28 @@ a'''
         self.assertIsInstance(why, RuntimeError)
 
 
+    def test_rawDataReceivedNotImplemented(self):
+        """
+        When L{LineReceiver.rawDataReceived} is not overridden in a
+        subclass, calling it raises C{NotImplementedError}.
+        """
+        proto = basic.LineReceiver()
+        self.assertRaises(NotImplementedError, proto.rawDataReceived, 'foo')
+
+
+    def test_lineReceivedNotImplemented(self):
+        """
+        When L{LineReceiver.lineReceived} is not overridden in a subclass,
+        calling it raises C{NotImplementedError}.
+        """
+        proto = basic.LineReceiver()
+        self.assertRaises(NotImplementedError, proto.lineReceived, 'foo')
+
+
 
 class LineOnlyReceiverTestCase(unittest.SynchronousTestCase):
     """
-    Test line only receiveer.
+    Tests for L{twisted.protocols.basic.LineOnlyReceiver}.
     """
     buffer = b"""foo
     bleakness
@@ -371,6 +390,15 @@ class LineOnlyReceiverTestCase(unittest.SynchronousTestCase):
         a.makeConnection(t)
         res = a.dataReceived(b'x' * 200)
         self.assertIsInstance(res, error.ConnectionLost)
+
+
+    def test_lineReceivedNotImplemented(self):
+        """
+        When L{LineOnlyReceiver.lineReceived} is not overridden in a subclass,
+        calling it raises C{NotImplementedError}.
+        """
+        proto = basic.LineOnlyReceiver()
+        self.assertRaises(NotImplementedError, proto.lineReceived, 'foo')
 
 
 
@@ -430,7 +458,9 @@ class LPTestCaseMixin:
 
 
 class NetstringReceiverTestCase(unittest.SynchronousTestCase, LPTestCaseMixin):
-
+    """
+    Tests for L{twisted.protocols.basic.NetstringReceiver}.
+    """
     strings = [b'hello', b'world', b'how', b'are', b'you123', b':today',
                b"a" * 515]
 
@@ -649,6 +679,15 @@ class NetstringReceiverTestCase(unittest.SynchronousTestCase, LPTestCaseMixin):
                           self.netstringReceiver._consumeLength)
 
 
+    def test_stringReceivedNotImplemented(self):
+        """
+        When L{NetstringReceiver.stringReceived} is not overridden in a
+        subclass, calling it raises C{NotImplementedError}.
+        """
+        proto = basic.NetstringReceiver()
+        self.assertRaises(NotImplementedError, proto.stringReceived, 'foo')
+
+
     def test_deprecatedModuleAttributes(self):
         """
         Accessing one of the old module attributes used by the
@@ -747,6 +786,15 @@ class IntNTestCaseMixin(LPTestCaseMixin):
         r.dataReceived(
             struct.pack(r.structFormat, 11) + b'x' * 11)
         self.assertEqual(r.received, [])
+
+
+    def test_stringReceivedNotImplemented(self):
+        """
+        When L{IntNStringReceiver.stringReceived} is not overridden in a
+        subclass, calling it raises C{NotImplementedError}.
+        """
+        proto = basic.IntNStringReceiver()
+        self.assertRaises(NotImplementedError, proto.stringReceived, 'foo')
 
 
 
