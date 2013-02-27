@@ -77,7 +77,7 @@ class IResolverSimple(Interface):
             preference to A records.  If there are multiple records of
             the type to be returned, one will be selected at random.
 
-        @raise L{twisted.internet.defer.TimeoutError}: Raised
+        @raise twisted.internet.defer.TimeoutError: Raised
             (asynchronously) if the name cannot be resolved within the
             specified timeout period.
         """
