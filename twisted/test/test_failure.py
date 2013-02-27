@@ -88,11 +88,11 @@ class FailureTestCase(SynchronousTestCase):
 
     def assertStartsWith(self, s, prefix):
         """
-        Assert that L{s} starts with a particular L{prefix}.
+        Assert that C{s} starts with a particular C{prefix}.
 
         @param s: The input string.
         @type s: C{str}
-        @param prefix: The string that L{s} should start with.
+        @param prefix: The string that C{s} should start with.
         @type prefix: C{str}
         """
         self.assertTrue(s.startswith(prefix),
@@ -101,11 +101,11 @@ class FailureTestCase(SynchronousTestCase):
 
     def assertEndsWith(self, s, suffix):
         """
-        Assert that L{s} end with a particular L{suffix}.
+        Assert that C{s} end with a particular C{suffix}.
 
         @param s: The input string.
         @type s: C{str}
-        @param suffix: The string that L{s} should end with.
+        @param suffix: The string that C{s} should end with.
         @type suffix: C{str}
         """
         self.assertTrue(s.endswith(suffix),
@@ -114,14 +114,14 @@ class FailureTestCase(SynchronousTestCase):
 
     def assertTracebackFormat(self, tb, prefix, suffix):
         """
-        Assert that the L{tb} traceback contains a particular L{prefix} and
-        L{suffix}.
+        Assert that the C{tb} traceback contains a particular C{prefix} and
+        C{suffix}.
 
         @param tb: The traceback string.
         @type tb: C{str}
-        @param prefix: The string that L{tb} should start with.
+        @param prefix: The string that C{tb} should start with.
         @type prefix: C{str}
-        @param suffix: The string that L{tb} should end with.
+        @param suffix: The string that C{tb} should end with.
         @type suffix: C{str}
         """
         self.assertStartsWith(tb, prefix)
@@ -159,7 +159,7 @@ class FailureTestCase(SynchronousTestCase):
 
         When C{cleanFailure} is enabled references to other objects are removed
         and replaced with strings.
-           
+
         And finally the footer with the L{Failure}'s value::
 
           exceptions.ZeroDivisionError: float division
@@ -353,8 +353,8 @@ class FailureTestCase(SynchronousTestCase):
 
     def test_invalidFormatFramesDetail(self):
         """
-        L{failure.format_frames} raises a L{ValueError} if the supplied C{detail} level
-        is unknown.
+        L{failure.format_frames} raises a L{ValueError} if the supplied
+        C{detail} level is unknown.
         """
         self.assertRaises(ValueError, failure.format_frames, None, None,
             detail='noisia')
