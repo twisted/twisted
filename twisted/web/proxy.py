@@ -36,6 +36,7 @@ class ProxyClient(HTTPClient):
 
     @ivar _finished: A flag which indicates whether or not the original request
         has been finished yet.
+    @type _finished: C{bool}
     """
     _finished = False
 
@@ -107,7 +108,6 @@ class ProxyClient(HTTPClient):
     def handleHeader(self, key, value):
         """
         Handles a header sent from the remote server back to the client.
-
         Passes the header back to the proxy server and then back to the user.
 
         @type key: C{str}
@@ -219,7 +219,13 @@ class ProxyRequest(Request):
     Used by L{Proxy} to implement a simple web proxy.
 
     @ivar reactor: The reactor used to create connections.
-    @type reactor: Object providing L{twisted.internet.interfaces.IReactorTCP}
+    @type reactor: L{twisted.internet.interfaces.IReactorTCP}
+
+    @ivar protocols: Mapping of protocol/factory class.
+    @type protocols: C{dict}
+
+    @ivar ports: Mapping of protocol/port.
+    @type ports: C{dict}
     """
 
     protocols = {'http': ProxyClientFactory}
@@ -284,8 +290,7 @@ class Proxy(HTTPChannel):
     """
     This class implements a simple web proxy.
 
-    Since it inherits from L{twisted.protocols.http.HTTPChannel}, to use it you
-    should do something like this::
+    Since it inherits from L{HTTPChannel}, you can use it like this::
 
         from twisted.web import http
         f = http.HTTPFactory()
@@ -293,12 +298,6 @@ class Proxy(HTTPChannel):
 
     Make the HTTPFactory a listener on a port as per usual, and you have
     a fully-functioning web proxy!
-
-    The HTTP channel that your client and the proxy server communicate over.
-    Subclasses HTTPChannel and just changes what request factory to use so
-    instead of using one that say servers files you use C(ProxyRequest) to then
-    connect to a remote host and serve that instead of boring files.
-
     """
 
     requestFactory = ProxyRequest
@@ -309,12 +308,12 @@ class ReverseProxyRequest(Request):
     """
     Used by L{ReverseProxy} to implement a simple reverse proxy.
 
-    @ivar proxyClientFactoryClass: a proxy client factory class, used to create
+    @ivar proxyClientFactoryClass: A proxy client factory class, used to create
         new connections.
     @type proxyClientFactoryClass: L{ClientFactory}
 
     @ivar reactor: The reactor used to create connections.
-    @type reactor: Object providing L{twisted.internet.interfaces.IReactorTCP}
+    @type reactor: L{twisted.internet.interfaces.IReactorTCP}
     """
 
     proxyClientFactoryClass = ProxyClientFactory
@@ -342,8 +341,6 @@ class ReverseProxyRequest(Request):
 class ReverseProxy(HTTPChannel):
     """
     Implements a simple reverse proxy.
-
-    For details of usage, see the file examples/proxy.py.
     """
 
     requestFactory = ReverseProxyRequest
@@ -357,12 +354,12 @@ class ReverseProxyResource(Resource):
     Put this resource in the tree to cause everything below it to be relayed
     to a different server.
 
-    @ivar proxyClientFactoryClass: a proxy client factory class, used to create
+    @ivar proxyClientFactoryClass: A proxy client factory class, used to create
         new connections.
     @type proxyClientFactoryClass: L{ClientFactory}
 
-    @ivar reactor: the reactor used to create connections.
-    @type reactor: object providing L{twisted.internet.interfaces.IReactorTCP}
+    @ivar reactor: The reactor used to create connections.
+    @type reactor: L{twisted.internet.interfaces.IReactorTCP}
     """
 
     proxyClientFactoryClass = ProxyClientFactory
@@ -370,18 +367,17 @@ class ReverseProxyResource(Resource):
 
     def __init__(self, host, port, path, reactor=reactor):
         """
-        @param host: the host of the web server to proxy.
+        @param host: The hostname of the web server to proxy.
         @type host: C{str}
 
-        @param port: the port of the web server to proxy.
+        @param port: The port of the web server to proxy.
         @type port: C{port}
 
-        @param path: the base path to fetch data from. Note that you shouldn't
+        @param path: The base path to fetch data from. Note that you shouldn't
             put any trailing slashes in it, it will be added automatically in
             request. For example, if you put B{/foo}, a request on B{/bar} will
             be proxied to B{/foo/bar}.  Any required encoding of special
             characters (such as " " or "/") should have been done already.
-
         @type path: C{str}
         """
         Resource.__init__(self)
@@ -396,6 +392,9 @@ class ReverseProxyResource(Resource):
         Create and return a proxy resource with the same proxy configuration
         as this one, except that its path also contains the segment given by
         C{path} at the end.
+
+        @param path: Path segment.
+        @type path: C{str}
         """
         return ReverseProxyResource(
             self.host, self.port, self.path + '/' + urlquote(path, safe=""),
