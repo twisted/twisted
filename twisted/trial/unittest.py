@@ -38,4 +38,4 @@ from twisted.trial._synctest import (
 __all__ = [
     'FailTest', 'SkipTest', 'SynchronousTestCase', 'Todo', 'makeTodo',
 
-    'TestCase', 'TestSuite', 'suiteVisit', 'decorate']
+    'TestCase', 'TestSuite', 'decorate']

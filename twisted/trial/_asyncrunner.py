@@ -7,7 +7,7 @@ Infrastructure for test running and suites.
 """
 
 import doctest
-import warnings, gc
+import gc
 
 from twisted.python import components
 
