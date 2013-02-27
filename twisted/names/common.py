@@ -10,12 +10,14 @@ from __future__ import division, absolute_import
 
 import socket
 
+from zope.interface import implementer
+
 from twisted.names import dns
 from twisted.names.error import DNSFormatError, DNSServerError, DNSNameError
 from twisted.names.error import DNSNotImplementedError, DNSQueryRefusedError
 from twisted.names.error import DNSUnknownError
 
-from twisted.internet import defer, error
+from twisted.internet import defer, error, interfaces
 from twisted.python import failure
 
 # Helpers for indexing the three-tuples that get thrown around by this code a
@@ -24,10 +26,13 @@ _ANS, _AUTH, _ADD = range(3)
 
 EMPTY_RESULT = (), (), ()
 
+
+
+@implementer(interfaces.IResolver)
 class ResolverBase:
     """
     L{ResolverBase} is a base class for implementations of
-    L{IResolver<twisted.internet.interfaces.IResolver>} which deals with a lot
+    L{interfaces.IResolver} which deals with a lot
     of the boilerplate of implementing all of the lookup methods.
 
     @cvar _errormap: A C{dict} mapping DNS protocol failure response codes
@@ -59,21 +64,6 @@ class ResolverBase:
 
 
     def query(self, query, timeout=None):
-        """
-        Dispatch C{query} to the method which can handle its type.
-
-        @param query: The DNS query being issued, to which a response is to be
-            generated.
-        @type query: L{twisted.names.dns.Query}
-
-        @return: A L{Deferred} which fires with a three-tuple of lists of
-            L{twisted.names.dns.RRHeader} instances.  The first element of the
-            tuple gives answers.  The second element of the tuple gives
-            authorities.  The third element of the tuple gives additional
-            information.  The L{Deferred} may instead fail with one of the
-            exceptions defined in L{twisted.names.error} or with
-            C{NotImplementedError}.
-        """
         try:
             method = self.typeToMethod[query.type]
         except KeyError:
@@ -86,154 +76,106 @@ class ResolverBase:
     def _lookup(self, name, cls, type, timeout):
         return defer.fail(NotImplementedError("ResolverBase._lookup"))
 
-    def lookupAddress(self, name, timeout = None):
-        """
-        @see: twisted.names.client.lookupAddress
-        """
+
+    def lookupAddress(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.A, timeout)
 
-    def lookupIPV6Address(self, name, timeout = None):
-        """
-        @see: twisted.names.client.lookupIPV6Address
-        """
+
+    def lookupIPV6Address(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.AAAA, timeout)
 
-    def lookupAddress6(self, name, timeout = None):
-        """
-        @see: twisted.names.client.lookupAddress6
-        """
+
+    def lookupAddress6(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.A6, timeout)
 
-    def lookupMailExchange(self, name, timeout = None):
-        """
-        @see: twisted.names.client.lookupMailExchange
-        """
+
+    def lookupMailExchange(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.MX, timeout)
 
-    def lookupNameservers(self, name, timeout = None):
-        """
-        @see: twisted.names.client.lookupNameservers
-        """
+
+    def lookupNameservers(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.NS, timeout)
 
-    def lookupCanonicalName(self, name, timeout = None):
-        """
-        @see: twisted.names.client.lookupCanonicalName
-        """
+
+    def lookupCanonicalName(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.CNAME, timeout)
 
-    def lookupMailBox(self, name, timeout = None):
-        """
-        @see: twisted.names.client.lookupMailBox
-        """
+
+    def lookupMailBox(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.MB, timeout)
 
-    def lookupMailGroup(self, name, timeout = None):
-        """
-        @see: twisted.names.client.lookupMailGroup
-        """
+
+    def lookupMailGroup(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.MG, timeout)
 
-    def lookupMailRename(self, name, timeout = None):
-        """
-        @see: twisted.names.client.lookupMailRename
-        """
+
+    def lookupMailRename(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.MR, timeout)
 
-    def lookupPointer(self, name, timeout = None):
-        """
-        @see: twisted.names.client.lookupPointer
-        """
+
+    def lookupPointer(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.PTR, timeout)
 
-    def lookupAuthority(self, name, timeout = None):
-        """
-        @see: twisted.names.client.lookupAuthority
-        """
+
+    def lookupAuthority(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.SOA, timeout)
 
-    def lookupNull(self, name, timeout = None):
-        """
-        @see: twisted.names.client.lookupNull
-        """
+
+    def lookupNull(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.NULL, timeout)
 
-    def lookupWellKnownServices(self, name, timeout = None):
-        """
-        @see: twisted.names.client.lookupWellKnownServices
-        """
+
+    def lookupWellKnownServices(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.WKS, timeout)
 
-    def lookupService(self, name, timeout = None):
-        """
-        @see: twisted.names.client.lookupService
-        """
+
+    def lookupService(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.SRV, timeout)
 
-    def lookupHostInfo(self, name, timeout = None):
-        """
-        @see: twisted.names.client.lookupHostInfo
-        """
+
+    def lookupHostInfo(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.HINFO, timeout)
 
-    def lookupMailboxInfo(self, name, timeout = None):
-        """
-        @see: twisted.names.client.lookupMailboxInfo
-        """
+
+    def lookupMailboxInfo(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.MINFO, timeout)
 
-    def lookupText(self, name, timeout = None):
-        """
-        @see: twisted.names.client.lookupText
-        """
+
+    def lookupText(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.TXT, timeout)
 
-    def lookupSenderPolicy(self, name, timeout = None):
-        """
-        @see: twisted.names.client.lookupSenderPolicy
-        """
+
+    def lookupSenderPolicy(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.SPF, timeout)
 
-    def lookupResponsibility(self, name, timeout = None):
-        """
-        @see: twisted.names.client.lookupResponsibility
-        """
+
+    def lookupResponsibility(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.RP, timeout)
 
-    def lookupAFSDatabase(self, name, timeout = None):
-        """
-        @see: twisted.names.client.lookupAFSDatabase
-        """
+
+    def lookupAFSDatabase(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.AFSDB, timeout)
 
-    def lookupZone(self, name, timeout = None):
-        """
-        @see: twisted.names.client.lookupZone
-        """
+
+    def lookupZone(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.AXFR, timeout)
 
 
     def lookupNamingAuthorityPointer(self, name, timeout=None):
-        """
-        @see: twisted.names.client.lookupNamingAuthorityPointer
-        """
         return self._lookup(name, dns.IN, dns.NAPTR, timeout)
 
 
-    def lookupAllRecords(self, name, timeout = None):
-        """
-        @see: twisted.names.client.lookupAllRecords
-        """
+    def lookupAllRecords(self, name, timeout=None):
         return self._lookup(name, dns.IN, dns.ALL_RECORDS, timeout)
 
-    def getHostByName(self, name, timeout = None, effort = 10):
-        """
-        @see: twisted.names.client.getHostByName
-        """
+
+    # IResolverSimple
+    def getHostByName(self, name, timeout=None, effort=10):
         # XXX - respect timeout
         return self.lookupAllRecords(name, timeout
             ).addCallback(self._cbRecords, name, effort
             )
+
 
     def _cbRecords(self, records, name, effort):
         (ans, auth, add) = records
@@ -241,6 +183,7 @@ class ResolverBase:
         if not result:
             raise error.DNSLookupError(name)
         return result
+
 
 
 def extractRecord(resolver, name, answers, level=10):

@@ -7,7 +7,7 @@ Test cases for L{twisted.names.client}.
 
 import sys
 
-from zope.interface.verify import verifyObject
+from zope.interface.verify import verifyClass, verifyObject
 
 from twisted.python.compat import set
 from twisted.python import failure
@@ -270,6 +270,13 @@ class ResolverTests(unittest.TestCase):
     """
     Tests for L{client.Resolver}.
     """
+    def test_clientResolverProvidesIResolver(self):
+        """
+        L{client.Resolver} provides L{IResolver}.
+        """
+        verifyClass(IResolver, client.Resolver)
+
+
     def test_noServers(self):
         """
         L{client.Resolver} raises L{ValueError} if constructed with neither
