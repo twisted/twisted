@@ -242,7 +242,7 @@ class FailureTestCase(SynchronousTestCase):
             zde = "type 'exceptions.ZeroDivisionError'"
 
         self.assertTracebackFormat(tb,
-            "Traceback: <%s>: " % zde,
+            "Traceback: <%s>: " % (zde,),
             "%s\n%s" % (failure.EXCEPTION_CAUGHT_HERE, stack))
 
         if captureVars:
