@@ -270,6 +270,15 @@ class ResolverTests(unittest.TestCase):
     """
     Tests for L{client.Resolver}.
     """
+
+    def test_clientProvidesIResolver(self):
+        """
+        L{client} provides L{IResolver} through a series of free
+        functions.
+        """
+        verifyObject(IResolver, client)
+
+
     def test_clientResolverProvidesIResolver(self):
         """
         L{client.Resolver} provides L{IResolver}.
