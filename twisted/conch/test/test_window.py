@@ -63,5 +63,5 @@ class ScrolledAreaTests(TestCase):
         """
         widget = TextOutput()
         scrolled = ScrolledArea(widget)
-        self.assertIdentical(widget.parent, scrolled._viewport)
-        self.assertIdentical(scrolled._viewport.parent, scrolled)
+        self.assertIs(widget.parent, scrolled._viewport)
+        self.assertIs(scrolled._viewport.parent, scrolled)
