@@ -1,0 +1,2 @@
+The retry, Resolver.discoveredAuthority, lookupNameservers, lookupAddress, extractAuthority, and discoverAuthority APIs in twisted.names.root have been deprecated since 10.0 and have been removed.
+
