@@ -582,6 +582,9 @@ def getHostByName(name, timeout=None, effort=10):
     return getResolver().getHostByName(name, timeout, effort)
 
 
+def query(query, timeout=None):
+    return getResolver().query(query, timeout)
+
 
 def lookupAddress(name, timeout=None):
     return getResolver().lookupAddress(name, timeout)
