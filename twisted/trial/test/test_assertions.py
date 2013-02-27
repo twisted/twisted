@@ -908,6 +908,25 @@ class TestResultOfAssertions(unittest.SynchronousTestCase):
         self.assertNoResult(Deferred())
 
 
+    def test_assertNoResultPropagatesSuccess(self):
+        """
+        When passed a L{Deferred} with no current result, which is then
+        fired, the result gets passed on/
+        """
+        d = Deferred()
+        self.assertNoResult(d)
+        d.callback(self.result)
+        self.assertEqual(self.result, self.successResultOf(d))
+
+
+    def test_assertNoResultPropagatesFailure(self):
+        d = Deferred()
+        self.assertNoResult(d)
+        d.errback(self.failure)
+        f = self.failureResultOf(d)
+        self.assertEqual(self.failure, f)
+
+
 
 class TestAssertionNames(unittest.SynchronousTestCase):
     """
