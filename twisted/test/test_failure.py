@@ -236,8 +236,13 @@ class FailureTestCase(SynchronousTestCase):
         for method, filename, lineno, localVars, globalVars in f.frames:
             stack += '%s:%s:%s\n' % (filename, lineno, method)
 
+        if _PY3:
+            zde = "class 'ZeroDivisionError'"
+        else:
+            zde = "type 'exceptions.ZeroDivisionError'"
+
         self.assertTracebackFormat(tb,
-            "Traceback: <type 'exceptions.ZeroDivisionError'>: ",
+            "Traceback: <%s>: " % zde,
             "%s\n%s" % (failure.EXCEPTION_CAUGHT_HERE, stack))
 
         if captureVars:
