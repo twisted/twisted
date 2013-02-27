@@ -11,7 +11,7 @@ from zope.interface.verify import verifyObject
 
 from twisted.trial.itrial import IReporter, ITestCase
 from twisted.trial import unittest, runner, reporter, util
-from twisted.python import failure, log, reflect, filepath
+from twisted.python import failure, log, reflect
 from twisted.python.filepath import FilePath
 from twisted.scripts import trial
 from twisted.plugins import twisted_trial
