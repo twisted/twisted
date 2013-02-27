@@ -677,8 +677,14 @@ class _Assertions(pyunit.TestCase, object):
             L{Deferred<twisted.internet.defer.Deferred>} has a result.
         """
         result = []
-        deferred.addBoth(result.append)
+        def cb(res):
+            result.append(res)
+            return res
+        deferred.addBoth(cb)
         if result:
+            # If there is already a failure, the self.fail below will
+            # report it, so swallow it in the deferred
+            deferred.addErrback(lambda _: None)
             self.fail(
                 "No result expected on %r, found %r instead" % (
                     deferred, result[0]))
