@@ -436,12 +436,22 @@ class LineOnlyReceiver(protocol.Protocol):
     cases that raw mode is known to be unnecessary.
 
     @cvar delimiter: The line-ending delimiter to use. By default this is
-                     C{b'\\r\\n'}.
-    @cvar MAX_LENGTH: The maximum length of a line to allow (If a
-                      sent line is longer than this, the connection is dropped).
-                      Default is 16384.
+        C{b'\\r\\n'}.
+    @type delimiter: C{bytes}
+
+    @cvar MAX_LENGTH: The maximum length of a line to allow (If a sent line is
+        longer than this, the connection is dropped).  Default is 16384.
+    @type MAX_LENGTH: C{int}
+
+    @ivar _buffer: A list of data pieces received and buffered, waiting
+        for a delimiter.
+    @type _buffer: C{list} of C{bytes}
+
+    @ivar _bufferSize: The amount of data stored in L{_buffer}.
+    @type _bufferSize: C{int}
     """
-    _buffer = b''
+    _buffer = None
+    _bufferSize = 0
     delimiter = b'\r\n'
     MAX_LENGTH = 16384
 
@@ -449,8 +459,11 @@ class LineOnlyReceiver(protocol.Protocol):
         """
         Translates bytes into lines, and calls lineReceived.
         """
-        lines  = (self._buffer+data).split(self.delimiter)
-        self._buffer = lines.pop(-1)
+        if self._buffer is None:
+            self._buffer = []
+        lines = data.split(self.delimiter)
+        trailing = lines.pop()
+
         for line in lines:
             if self.transport.disconnecting:
                 # this is necessary because the transport may be told to lose
@@ -458,12 +471,21 @@ class LineOnlyReceiver(protocol.Protocol):
                 # important to disregard all the lines in that packet following
                 # the one that told it to close.
                 return
+
+            self._buffer.append(line)
+            line = b''.join(self._buffer)
+            self._buffer[:] = []
+            self._bufferSize = 0
+
             if len(line) > self.MAX_LENGTH:
                 return self.lineLengthExceeded(line)
             else:
                 self.lineReceived(line)
-        if len(self._buffer) > self.MAX_LENGTH:
-            return self.lineLengthExceeded(self._buffer)
+
+        self._buffer.append(trailing)
+        self._bufferSize += len(trailing)
+        if self._bufferSize > self.MAX_LENGTH:
+            return self.lineLengthExceeded(b''.join(self._buffer))
 
 
     def lineReceived(self, line):
@@ -527,10 +549,18 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
     This is useful for line-oriented protocols such as IRC, HTTP, POP, etc.
 
     @cvar delimiter: The line-ending delimiter to use. By default this is
-                     C{b'\\r\\n'}.
-    @cvar MAX_LENGTH: The maximum length of a line to allow (If a
-                      sent line is longer than this, the connection is dropped).
-                      Default is 16384.
+        C{b'\\r\\n'}.
+    @type delimiter: C{bytes}
+
+    @cvar MAX_LENGTH: The maximum length of a line to allow (If a sent line is
+        longer than this, the connection is dropped).  Default is 16384.
+
+    @ivar _buffer: A list of data pieces received and buffered. Either an
+        incomplete line, or raw data when the protocol is paused.
+    @type _buffer: C{list} of C{bytes}
+
+    @ivar _bufferSize: The amount of data stored in L{_buffer}.
+    @type _bufferSize: C{int}
     """
     line_mode = 1
     _buffer = b''
