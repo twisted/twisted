@@ -237,7 +237,11 @@ class NamesTests(TestCase, _ConstantsTestsMixin):
         subsequent access.
         """
         first = self.METHOD._enumerants
-        self.METHOD.GET # Side-effects!
+
+        # Accessing an attribute of the container should not have any observable
+        # side-effect on the _enumerants attribute.
+        self.METHOD.GET
+
         second = self.METHOD._enumerants
         self.assertIdentical(first, second)
 
