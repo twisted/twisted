@@ -27,9 +27,10 @@ class _Constant(object):
         constant is initialized by L{_ConstantsContainer}.
 
     @ivar _container: The L{_ConstantsContainer} subclass this constant belongs
-        to; only set once the constant is initialized by that subclass.
+        to; C{None} until the constant is initialized by that subclass.
     """
     def __init__(self):
+        self._container = None
         self._index = _constantOrder()
 
 
@@ -88,7 +89,12 @@ class _ConstantsContainerType(type):
         constants = []
         for (name, descriptor) in attributes.iteritems():
             if isinstance(descriptor, cls._constantType):
+                if descriptor._container is not None:
+                    raise ValueError(
+                        "Cannot use %s as the value of an attribute on %s" % (
+                            descriptor, cls.__name__))
                 constants.append((descriptor._index, name, descriptor))
+
         constants.sort()
         enumerants = {}
         for (index, enumerant, descriptor) in constants:
