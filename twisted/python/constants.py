@@ -81,7 +81,8 @@ class _ConstantsContainerType(type):
             any constants it is to contain.
         @type attributes: L{dict}
         """
-        cls = super(_ConstantsContainerType, self).__new__(self, name, bases, attributes)
+        cls = super(_ConstantsContainerType, self).__new__(
+            self, name, bases, attributes)
 
         if cls._constantType is None:
             return cls

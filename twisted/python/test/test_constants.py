@@ -103,6 +103,11 @@ class _ConstantsTestsMixin(object):
         """
         Assert that C{container._enumerants} does not change as a side-effect of
         one of its attributes being accessed.
+
+        @param container: A L{_ConstantsContainer} subclass which will be
+            tested.
+        @param constantName: The name of one of the constants which is an an
+            attribute of C{container}.
         """
         first = container._enumerants
 
@@ -112,7 +117,6 @@ class _ConstantsTestsMixin(object):
 
         second = container._enumerants
         self.assertIdentical(first, second)
-
 
 
 
@@ -293,7 +297,8 @@ class NamesTests(TestCase, _ConstantsTestsMixin):
 
         exc = self.assertRaises(ValueError, defineIt)
         self.assertEqual(
-            "Cannot use <METHOD=GET> as the value of an attribute on AnotherNames",
+            "Cannot use <METHOD=GET> as the value of an attribute on "
+            "AnotherNames",
             str(exc))
 
 
