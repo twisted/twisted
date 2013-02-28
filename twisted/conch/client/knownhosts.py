@@ -433,6 +433,8 @@ class KnownHostsFile(object):
                 if entry.matchesKey(key):
                     return True
                 else:
+                    # Notice that lineidx is 0-based but HostKeyChanged.lineno
+                    # is 1-based.
                     if lineidx < 0:
                         line = None
                         path = None
