@@ -715,6 +715,37 @@ class _WebToNormalContextFactory(object):
 
 
 
+class StandardWebContextFactory(object):
+    """
+    A web client context factory that follows the standard security rules.
+
+    Server-side hostnames are validated (using an approximation RFC 6125), and
+    certificates are validated using a set of "well-known" Certificate
+    Authorities.
+
+    You want to use this if you want the standard security behavior provided
+    by web browsers, which is to say almost always.
+    """
+
+    def _makeContextFactory(self, hostname):
+        """
+        Create a normal ContextFactory for the given hostname.
+
+        Currently this exists as a separate method for ease of unit testing.
+        """
+        from OpenSSL import SSL
+        from twisted.internet._sslverify import PLATFORM, OpenSSLCertificateOptions
+        return OpenSSLCertificateOptions(verify=True,
+                                         caCerts=PLATFORM,
+                                         hostname=hostname,
+                                         method=SSL.SSLv23_METHOD)
+
+
+    def getContext(self, hostname, port):
+        return self._makeContextFactory(hostname).getContext()
+
+
+
 @implementer(IBodyProducer)
 class FileBodyProducer(object):
     """

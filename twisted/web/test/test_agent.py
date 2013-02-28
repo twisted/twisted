@@ -26,7 +26,8 @@ from twisted.internet.protocol import Protocol, Factory
 from twisted.internet.defer import Deferred, succeed
 from twisted.internet.endpoints import TCP4ClientEndpoint, SSL4ClientEndpoint
 from twisted.web.client import FileBodyProducer, Request, HTTPConnectionPool
-from twisted.web.client import _WebToNormalContextFactory
+from twisted.web.client import (_WebToNormalContextFactory,
+                                StandardWebContextFactory)
 from twisted.web.client import WebClientContextFactory, _HTTP11ClientFactory
 from twisted.web.iweb import UNKNOWN_LENGTH, IBodyProducer, IResponse
 from twisted.web._newclient import HTTP11ClientProtocol, Response
@@ -2101,3 +2102,45 @@ class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
             self.assertEqual(302, fail.response.code)
 
         return deferred.addCallback(checkFailure)
+
+
+
+class StandardWebContextFactoryTests(unittest.TestCase):
+    """
+    Tests for StandardWebContextFactory.
+    """
+
+    def test_makeContextFactory(self):
+        """
+        L{StandardWebContextFactory._makeContextFactory} creates a
+        C{CertificateOptions} instance configured to use platform CAs, verify
+        hostnames, and support backwards compatibility with old SSL servers.
+        """
+        from OpenSSL import SSL
+        from twisted.internet._sslverify import PLATFORM
+        factory = StandardWebContextFactory()
+        contextFactory = factory._makeContextFactory(b"www.example.com")
+        self.assertEqual(contextFactory.hostname, b"www.example.com")
+        self.assertEqual(contextFactory.method, SSL.SSLv23_METHOD)
+        self.assertEqual(contextFactory.verify, True)
+        self.assertEqual(contextFactory.caCerts, PLATFORM)
+
+
+    def test_getContext(self):
+        """
+        L{StandardWebContextFactory.getContext} uses the factory created by
+        C{_makeContextFactory} to create a context object it returns.
+        """
+        from OpenSSL import SSL
+        called = []
+        class TestStandard(StandardWebContextFactory):
+            def _makeContextFactory(self, hostname):
+                called.append(hostname)
+                return StandardWebContextFactory._makeContextFactory(
+                    self, hostname)
+        context = TestStandard().getContext(b"example.com", 443)
+        self.assertEqual(called, [b"example.com"])
+        self.assertIsInstance(context, SSL.Context)
+
+    if not ssl:
+        skip = "SSL not supported."
