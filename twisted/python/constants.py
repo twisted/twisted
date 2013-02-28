@@ -66,9 +66,9 @@ class _ConstantsContainerType(type):
         """
         Create a new constants container class.
 
-        If C{attributes} does not include a C{"_constantType"} key, the new
-        class will not be initialized as a constants container and it will
-        behave as a normal class.
+        If C{attributes} includes a value of C{None} for the C{"_constantType"}
+        key, the new class will not be initialized as a constants container and
+        it will behave as a normal class.
 
         @param name: The name of the container class.
         @type name: L{str}
