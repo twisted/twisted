@@ -11,7 +11,6 @@ An implementation of the OpenSSH known_hosts database.
 from binascii import Error as DecodeError, b2a_base64
 import hmac
 import sys
-import itertools
 
 from zope.interface import implements
 
