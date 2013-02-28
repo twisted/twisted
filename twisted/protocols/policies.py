@@ -758,7 +758,7 @@ class _PullToPush(object):
     _finished = False
 
 
-    def __init__(self, pullProducer, consumer):
+    def __init__(self, pullProducer, consumer, cooperate=task.cooperate):
         """
         @param pullProducer: the underling non-streaming producer.
         @type pullProducer: L{IPullProducer<twisted.internet.interfaces.IPullProducer>}
@@ -766,9 +766,13 @@ class _PullToPush(object):
         @param consumer: the consumer with which the underlying producer was
             registered.
         @type consumer: L{IConsumer<twisted.internet.interfaces.IConsumer>}
+
+        @param cooperate: The L{cooperate<task.cooperate>} function to call
+        @type cooperate: L{callable}
         """
         self._producer = pullProducer
         self._consumer = consumer
+        self._cooperate = cooperate
 
 
     def _pull(self):
@@ -805,7 +809,7 @@ class _PullToPush(object):
 
         Start streaming data to the consumer.
         """
-        self._coopTask = task.cooperate(self._pull())
+        self._coopTask = self._cooperate(self._pull())
 
 
     def stopStreaming(self):
