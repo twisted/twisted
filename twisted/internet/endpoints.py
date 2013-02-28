@@ -764,8 +764,13 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
         certKey = privateKey
     kw = {}
     if sslmethod is not None:
-        kw['sslmethod'] = getattr(ssl.SSL, sslmethod)
-    cf = ssl.DefaultOpenSSLContextFactory(privateKey, certKey, **kw)
+        kw['method'] = getattr(ssl.SSL, sslmethod)
+    certPEM = FilePath(certKey).getContent()
+    keyPEM = FilePath(privateKey).getContent()
+    cf = ssl.CertificateOptions(
+        privateKey=ssl.PrivateCertificate.loadPEM(
+            keyPEM + certPEM).privateKey.original,
+        certificate=ssl.Certificate.loadPEM(certPEM).original, **kw)
     return ((int(port), factory, cf),
             {'interface': interface, 'backlog': int(backlog)})
 
