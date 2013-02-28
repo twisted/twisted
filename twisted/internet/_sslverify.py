@@ -712,7 +712,17 @@ def _getCACertificates():
     @return: A path to a file containing PEM certificates.
     @rtype: C{list} of L{crypto.X509}.
     """
-    f = FilePath(__file__.encode("utf-8")).sibling('ca-bundle.crt')
+    f = None
+    # It might be better to check what OS exactly we're in, and choose
+    # accordingly...
+    for path in ["/etc/ssl/certs/ca-certificates.crt", # Ubuntu
+                 "/etc/ssl/certs/ca-bundle.crt", # Fedora
+                 ]:
+        f = FilePath(path)
+        if f.exists():
+            break
+    if not f:
+        f = FilePath(__file__.encode("utf-8")).sibling('ca-bundle.crt')
     # Is there better way to load multiple certificates from single file?
     CERT_END = b'-----END CERTIFICATE-----\n'
     result = []
