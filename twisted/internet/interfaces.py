@@ -90,7 +90,7 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A L{Deferred} which fires with a three-tuple of lists of
             L{twisted.names.dns.RRHeader} instances.  The first element of the
             tuple gives answers.  The second element of the tuple gives
@@ -112,7 +112,7 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A L{Deferred} which fires with a three-tuple of lists of
             L{twisted.names.dns.RRHeader} instances.  The first element of the
             tuple gives answers.  The second element of the tuple gives
@@ -134,7 +134,7 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A L{Deferred} which fires with a three-tuple of lists of
             L{twisted.names.dns.RRHeader} instances.  The first element of the
             tuple gives answers.  The second element of the tuple gives
@@ -156,7 +156,7 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A L{Deferred} which fires with a three-tuple of lists of
             L{twisted.names.dns.RRHeader} instances.  The first element of the
             tuple gives answers.  The second element of the tuple gives
@@ -178,7 +178,7 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A L{Deferred} which fires with a three-tuple of lists of
             L{twisted.names.dns.RRHeader} instances.  The first element of the
             tuple gives answers.  The second element of the tuple gives
@@ -200,7 +200,7 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A L{Deferred} which fires with a three-tuple of lists of
             L{twisted.names.dns.RRHeader} instances.  The first element of the
             tuple gives answers.  The second element of the tuple gives
@@ -222,7 +222,7 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A L{Deferred} which fires with a three-tuple of lists of
             L{twisted.names.dns.RRHeader} instances.  The first element of the
             tuple gives answers.  The second element of the tuple gives
@@ -244,7 +244,7 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A L{Deferred} which fires with a three-tuple of lists of
             L{twisted.names.dns.RRHeader} instances.  The first element of the
             tuple gives answers.  The second element of the tuple gives
@@ -266,7 +266,7 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A L{Deferred} which fires with a three-tuple of lists of
             L{twisted.names.dns.RRHeader} instances.  The first element of the
             tuple gives answers.  The second element of the tuple gives
@@ -288,7 +288,7 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A L{Deferred} which fires with a three-tuple of lists of
             L{twisted.names.dns.RRHeader} instances.  The first element of the
             tuple gives answers.  The second element of the tuple gives
@@ -310,7 +310,7 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A L{Deferred} which fires with a three-tuple of lists of
             L{twisted.names.dns.RRHeader} instances.  The first element of the
             tuple gives answers.  The second element of the tuple gives
@@ -332,7 +332,7 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A L{Deferred} which fires with a three-tuple of lists of
             L{twisted.names.dns.RRHeader} instances.  The first element of the
             tuple gives answers.  The second element of the tuple gives
@@ -354,7 +354,7 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A L{Deferred} which fires with a three-tuple of lists of
             L{twisted.names.dns.RRHeader} instances.  The first element of the
             tuple gives answers.  The second element of the tuple gives
@@ -376,7 +376,7 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A L{Deferred} which fires with a three-tuple of lists of
             L{twisted.names.dns.RRHeader} instances.  The first element of the
             tuple gives answers.  The second element of the tuple gives
@@ -398,7 +398,7 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A L{Deferred} which fires with a three-tuple of lists of
             L{twisted.names.dns.RRHeader} instances.  The first element of the
             tuple gives answers.  The second element of the tuple gives
@@ -420,7 +420,7 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A L{Deferred} which fires with a three-tuple of lists of
             L{twisted.names.dns.RRHeader} instances.  The first element of the
             tuple gives answers.  The second element of the tuple gives
@@ -442,7 +442,7 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A L{Deferred} which fires with a three-tuple of lists of
             L{twisted.names.dns.RRHeader} instances.  The first element of the
             tuple gives answers.  The second element of the tuple gives
@@ -464,7 +464,7 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A L{Deferred} which fires with a three-tuple of lists of
             L{twisted.names.dns.RRHeader} instances.  The first element of the
             tuple gives answers.  The second element of the tuple gives
@@ -486,7 +486,7 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A L{Deferred} which fires with a three-tuple of lists of
             L{twisted.names.dns.RRHeader} instances.  The first element of the
             tuple gives answers.  The second element of the tuple gives
@@ -508,7 +508,7 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A L{Deferred} which fires with a three-tuple of lists of
             L{twisted.names.dns.RRHeader} instances.  The first element of the
             tuple gives answers.  The second element of the tuple gives
@@ -530,7 +530,7 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A L{Deferred} which fires with a three-tuple of lists of
             L{twisted.names.dns.RRHeader} instances.  The first element of the
             tuple gives answers.  The second element of the tuple gives
@@ -552,7 +552,7 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A L{Deferred} which fires with a three-tuple of lists of
             L{twisted.names.dns.RRHeader} instances.  The first element of the
             tuple gives answers.  The second element of the tuple gives
@@ -574,7 +574,7 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A L{Deferred} which fires with a three-tuple of lists of
             L{twisted.names.dns.RRHeader} instances.  The first element of the
             tuple gives answers.  The second element of the tuple gives
@@ -603,7 +603,7 @@ class IResolver(IResolverSimple):
         @param timeout: When this timeout expires, the query is
             considered failed.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A L{Deferred} which fires with a three-tuple of lists of
             L{twisted.names.dns.RRHeader} instances.
             The first element of the tuple gives answers.
