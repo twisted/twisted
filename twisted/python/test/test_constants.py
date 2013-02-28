@@ -99,6 +99,22 @@ class _ConstantsTestsMixin(object):
         self.assertEqual(name + " may not be instantiated.", str(exc))
 
 
+    def _initializedOnceTest(self, container, constantName):
+        """
+        Assert that C{container._enumerants} does not change as a side-effect of
+        one of its attributes being accessed.
+        """
+        first = container._enumerants
+
+        # Accessing an attribute of the container should not have any observable
+        # side-effect on the _enumerants attribute.
+        getattr(container, constantName)
+
+        second = container._enumerants
+        self.assertIdentical(first, second)
+
+
+
 
 class NamesTests(TestCase, _ConstantsTestsMixin):
     """
@@ -236,14 +252,7 @@ class NamesTests(TestCase, _ConstantsTestsMixin):
         L{Names._enumerants} is initialized once and its value re-used on
         subsequent access.
         """
-        first = self.METHOD._enumerants
-
-        # Accessing an attribute of the container should not have any observable
-        # side-effect on the _enumerants attribute.
-        self.METHOD.GET
-
-        second = self.METHOD._enumerants
-        self.assertIdentical(first, second)
+        self._initializedOnceTest(self.METHOD, "GET")
 
 
     def test_asForeignClassAttribute(self):
@@ -429,10 +438,8 @@ class ValuesTests(TestCase, _ConstantsTestsMixin):
         L{Values._enumerants} is initialized once and its value re-used on
         subsequent access.
         """
-        first = self.STATUS._enumerants
-        self.STATUS.OK # Side-effects!
-        second = self.STATUS._enumerants
-        self.assertIdentical(first, second)
+        self._initializedOnceTest(self.STATUS, "OK")
+
 
 
 class _FlagsTestsMixin(object):
@@ -629,10 +636,7 @@ class FlagsTests(_FlagsTestsMixin, TestCase, _ConstantsTestsMixin):
         L{Flags._enumerants} is initialized once and its value re-used on
         subsequent access.
         """
-        first = self.FXF._enumerants
-        self.FXF.READ # Side-effects!
-        second = self.FXF._enumerants
-        self.assertIdentical(first, second)
+        self._initializedOnceTest(self.FXF, "READ")
 
 
 
