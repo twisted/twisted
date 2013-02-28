@@ -483,6 +483,12 @@ class HTTPClient(basic.LineReceiver):
             self.handleResponse(b)
 
     def handleResponsePart(self, data):
+        """
+        Called when some data from the body is received.
+
+        @type buffer: C(bytes)
+        @param buffer: The data that was received from the remote serve
+        """
         self.__buffer.write(data)
 
     def connectionMade(self):
@@ -501,6 +507,12 @@ class HTTPClient(basic.LineReceiver):
     def handleHeader(self, key, val):
         """
         Called every time a header is received.
+
+        @type key: C{bytes}
+        @param key: An HTTP header field name.
+
+        @type value: C{bytes}
+        @param value: An HTTP header field value.
         """
 
     def handleEndHeaders(self):

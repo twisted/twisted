@@ -90,34 +90,10 @@ class ProxyClient(HTTPClient):
 
 
     def handleStatus(self, version, code, message):
-        """
-        Handles the status sent from the remote server back to the client.
-        Passes it onto the proxy server and then back to the user.
-
-        @param version: HTTP Version (HTTP/1.1. HTTP/1.0)
-        @type version: C{str}
-
-        @param code: HTTP status code (200, 404, 403, etc)
-        @type code: C{int}
-
-        @param message: Message sent with the status.
-        @type message: C{str}
-        """
         self.father.setResponseCode(int(code), message)
 
 
     def handleHeader(self, key, value):
-        """
-        Handles a header sent from the remote server back to the client.
-        Passes the header back to the proxy server and then back to the user.
-
-        @type key: C{str}
-        @param key: An HTTP header field name.
-
-        @type value: C{str}
-        @param value: An HTTP header field value.
-        """
-
         # t.web.server.Request sets default values for these headers in its
         # 'process' method. When these headers are received from the remote
         # server, they ought to override the defaults, rather than append to
@@ -129,23 +105,10 @@ class ProxyClient(HTTPClient):
 
 
     def handleResponsePart(self, buffer):
-        """
-        Handles some data received by the client.
-        Writes the data back to the proxy server.
-
-        @type buffer: C(str)
-        @param buffer: The data that was received from the remote server.
-        """
         self.father.write(buffer)
 
 
     def handleResponseEnd(self):
-        """
-        Handles the end of the connection to the remote server.
-
-        Finish the original request, indicating that the response has been
-        completely written to it, and disconnect the outgoing transport.
-        """
         if not self._finished:
             self._finished = True
             self.father.finish()
