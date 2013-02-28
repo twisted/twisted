@@ -1,0 +1,1 @@
+Constant values defined using twisted.python.constants can now be set as attributes of other classes without triggering an unhandled AttributeError from the constants implementation.

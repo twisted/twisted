@@ -99,6 +99,26 @@ class _ConstantsTestsMixin(object):
         self.assertEqual(name + " may not be instantiated.", str(exc))
 
 
+    def _initializedOnceTest(self, container, constantName):
+        """
+        Assert that C{container._enumerants} does not change as a side-effect of
+        one of its attributes being accessed.
+
+        @param container: A L{_ConstantsContainer} subclass which will be
+            tested.
+        @param constantName: The name of one of the constants which is an an
+            attribute of C{container}.
+        """
+        first = container._enumerants
+
+        # Accessing an attribute of the container should not have any observable
+        # side-effect on the _enumerants attribute.
+        getattr(container, constantName)
+
+        second = container._enumerants
+        self.assertIdentical(first, second)
+
+
 
 class NamesTests(TestCase, _ConstantsTestsMixin):
     """
@@ -120,6 +140,8 @@ class NamesTests(TestCase, _ConstantsTestsMixin):
             PUT = NamedConstant()
             POST = NamedConstant()
             DELETE = NamedConstant()
+
+            extra = object()
 
         self.METHOD = METHOD
 
@@ -176,6 +198,7 @@ class NamesTests(TestCase, _ConstantsTestsMixin):
         self.assertRaises(ValueError, self.METHOD.lookupByName, "lookupByName")
         self.assertRaises(ValueError, self.METHOD.lookupByName, "__init__")
         self.assertRaises(ValueError, self.METHOD.lookupByName, "foo")
+        self.assertRaises(ValueError, self.METHOD.lookupByName, "extra")
 
 
     def test_name(self):
@@ -236,10 +259,47 @@ class NamesTests(TestCase, _ConstantsTestsMixin):
         L{Names._enumerants} is initialized once and its value re-used on
         subsequent access.
         """
-        first = self.METHOD._enumerants
-        self.METHOD.GET # Side-effects!
-        second = self.METHOD._enumerants
-        self.assertIdentical(first, second)
+        self._initializedOnceTest(self.METHOD, "GET")
+
+
+    def test_asForeignClassAttribute(self):
+        """
+        A constant defined on a L{Names} subclass may be set as an attribute of
+        another class and then retrieved using that attribute.
+        """
+        class Another(object):
+            something = self.METHOD.GET
+
+        self.assertIdentical(self.METHOD.GET, Another.something)
+
+
+    def test_asForeignClassAttributeViaInstance(self):
+        """
+        A constant defined on a L{Names} subclass may be set as an attribute of
+        another class and then retrieved from an instance of that class using
+        that attribute.
+        """
+        class Another(object):
+            something = self.METHOD.GET
+
+        self.assertIdentical(self.METHOD.GET, Another().something)
+
+
+    def test_notAsAlternateContainerAttribute(self):
+        """
+        It is explicitly disallowed (via a L{ValueError}) to use a constant
+        defined on a L{Names} subclass as the value of an attribute of another
+        L{Names} subclass.
+        """
+        def defineIt():
+            class AnotherNames(Names):
+                something = self.METHOD.GET
+
+        exc = self.assertRaises(ValueError, defineIt)
+        self.assertEqual(
+            "Cannot use <METHOD=GET> as the value of an attribute on "
+            "AnotherNames",
+            str(exc))
 
 
 
@@ -402,10 +462,8 @@ class ValuesTests(TestCase, _ConstantsTestsMixin):
         L{Values._enumerants} is initialized once and its value re-used on
         subsequent access.
         """
-        first = self.STATUS._enumerants
-        self.STATUS.OK # Side-effects!
-        second = self.STATUS._enumerants
-        self.assertIdentical(first, second)
+        self._initializedOnceTest(self.STATUS, "OK")
+
 
 
 class _FlagsTestsMixin(object):
@@ -602,10 +660,7 @@ class FlagsTests(_FlagsTestsMixin, TestCase, _ConstantsTestsMixin):
         L{Flags._enumerants} is initialized once and its value re-used on
         subsequent access.
         """
-        first = self.FXF._enumerants
-        self.FXF.READ # Side-effects!
-        second = self.FXF._enumerants
-        self.assertIdentical(first, second)
+        self._initializedOnceTest(self.FXF, "READ")
 
 
 
