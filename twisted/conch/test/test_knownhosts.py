@@ -704,11 +704,12 @@ class KnownHostsDatabaseTests(TestCase):
             True, hostsFile.hasHostKey("brandnew.example.com", key))
 
 
-    def test_hasKeyMismatch(self):
+    def test_savedEntryHasKeyMismatch(self):
         """
-        L{KnownHostsFile.hasHostKey} raises L{HostKeyChanged} if the host key
-        is present, but different from the expected one.  The resulting
-        exception should have an C{offendingEntry} indicating the given entry.
+        L{KnownHostsFile.hasHostKey} raises L{HostKeyChanged} if the host key is
+        present in the underlying file, but different from the expected one.
+        The resulting exception should have an C{offendingEntry} indicating the
+        given entry.
         """
         hostsFile = self.loadSampleHostsFile()
         entries = list(hostsFile.iterentries())
@@ -718,6 +719,43 @@ class KnownHostsDatabaseTests(TestCase):
         self.assertEqual(exception.offendingEntry, entries[0])
         self.assertEqual(exception.lineno, 1)
         self.assertEqual(exception.path, hostsFile._savePath)
+
+
+    def test_savedEntryAfterAddHasKeyMismatch(self):
+        """
+        Even after a new entry has been added in memory but not yet saved, the
+        L{HostKeyChanged} exception raised by L{KnownHostsFile.hasHostKey} has a
+        C{lineno} attribute which indicates the 1-based line number of the
+        offending entry in the underlying file when the given host key does not
+        match the expected host key.
+        """
+        hostsFile = self.loadSampleHostsFile()
+        hostsFile.addHostKey(
+            "www.example.com", Key.fromString(otherSampleKey))
+        exception = self.assertRaises(
+            HostKeyChanged, hostsFile.hasHostKey,
+            "www.twistedmatrix.com", Key.fromString(otherSampleKey))
+        self.assertEqual(exception.lineno, 1)
+        self.assertEqual(exception.path, hostsFile._savePath)
+
+
+    def test_unsavedEntryHasKeyMismatch(self):
+        """
+        L{KnownHostsFile.hasHostKey} raises L{HostKeyChanged} if the host key is
+        present in memory (but not yet saved), but different from the expected
+        one.  The resulting exception has a C{offendingEntry} indicating the
+        given entry, but no filename or line number information (reflecting the
+        fact that the entry exists only in memory).
+        """
+        hostsFile = KnownHostsFile(FilePath(self.mktemp()))
+        entry = hostsFile.addHostKey(
+            "www.example.com", Key.fromString(otherSampleKey))
+        exception = self.assertRaises(
+            HostKeyChanged, hostsFile.hasHostKey,
+            "www.example.com", Key.fromString(thirdSampleKey))
+        self.assertEqual(exception.offendingEntry, entry)
+        self.assertEqual(exception.lineno, None)
+        self.assertEqual(exception.path, None)
 
 
     def test_addHostKey(self):

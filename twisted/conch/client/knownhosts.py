@@ -428,12 +428,18 @@ class KnownHostsFile(object):
         @raise HostKeyChanged: if the host key found for the given hostname
             does not match the given key.
         """
-        for lineidx, entry in enumerate(self.iterentries()):
+        for lineidx, entry in enumerate(self.iterentries(), -len(self._added)):
             if entry.matchesHost(hostname):
                 if entry.matchesKey(key):
                     return True
                 else:
-                    raise HostKeyChanged(entry, self._savePath, lineidx + 1)
+                    if lineidx < 0:
+                        line = None
+                        path = None
+                    else:
+                        line = lineidx + 1
+                        path = self._savePath
+                    raise HostKeyChanged(entry, path, line)
         return False
 
 
