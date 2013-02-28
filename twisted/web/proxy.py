@@ -32,7 +32,7 @@ from twisted.web.http import HTTPClient, Request, HTTPChannel
 
 class ProxyClient(HTTPClient):
     """
-    An L{HTTPClient} the forwards the response to the L{Request} given by
+    An L{HTTPClient} that forwards the response to the L{Request} given by
     C{father}.
 
     Used by L{ProxyClientFactory} to implement a simple web proxy.
@@ -48,21 +48,21 @@ class ProxyClient(HTTPClient):
 
     def __init__(self, command, rest, version, headers, data, father):
         """
-        @type command: C{str}
+        @type command: L{bytes}
         @param command: HTTP Command (GET, POST, HEAD, etc)
 
-        @type rest: C{str}
+        @type rest: L{bytes}
         @param rest: Rest of url other than host, ex. C{example.com/test.html}
             where C{/test.html} is the rest.
 
-        @type version: C{str}
+        @type version: L{bytes}
         @param version: HTTP Version (HTTP/1.1, HTTP/1.0)
 
         @type headers: C{dict}
         @param headers: The headers that were specified in the request to
             (or through) the proxy server.
 
-        @type data: C{str}
+        @type data: L{bytes}
         @param data: Data sent to (or through) the server for example with a
             POST request.
 
@@ -163,21 +163,21 @@ class ProxyClientFactory(ClientFactory):
 
     def __init__(self, command, rest, version, headers, data, father):
         """
-        @type command: C{str}
+        @type command: L{bytes}
         @param command: HTTP Command (GET, POST, HEAD, etc)
 
-        @type rest: C{str}
+        @type rest: L{bytes}
         @param rest: Rest of url other than host, ex. C{example.com/test.html}
             C{/test.html} is the rest.
 
-        @type version: C{str}
+        @type version: L{bytes}
         @param version: HTTP Version (HTTP/1.1, HTTP/1.0)
 
         @type headers: C{dict}
         @param headers: The headers that were specified in the request to
             (or through) the proxy server
 
-        @type data: C{str}
+        @type data: L{bytes}
         @param data: Data sent to (or through) the server for example with a
            POST requst
 
@@ -216,7 +216,8 @@ class ProxyClientFactory(ClientFactory):
 
 class ProxyRequest(Request):
     """
-    A L{Request} that proxies the completed request to another server.
+    A L{Request} that proxies the completed request to the server specifed
+    in the request.
 
     Used by L{Proxy} to implement a simple web proxy.
 
@@ -290,7 +291,7 @@ class Proxy(HTTPChannel):
     A simple web proxy.
 
     L{Proxy} is an implemention of HTTP that proxies requests that it
-    receives.
+    receives to the server specified in the request.
 
     Since it inherits from L{HTTPChannel}, you can use it like this::
 
@@ -308,6 +309,8 @@ class Proxy(HTTPChannel):
 
 class ReverseProxyRequest(Request):
     """
+    A L{Request} that proxies the completed request to a fixed server.
+
     Used by L{ReverseProxy} to implement a simple reverse proxy.
 
     @ivar proxyClientFactoryClass: A proxy client factory class, used to create
@@ -342,7 +345,10 @@ class ReverseProxyRequest(Request):
 
 class ReverseProxy(HTTPChannel):
     """
-    Implements a simple reverse proxy.
+    A simple reverse proxy.
+
+    L{ReverseProxy} is an implemention of HTTP that proxies requests that it
+    receives to a fixed server.
     """
 
     requestFactory = ReverseProxyRequest
@@ -370,7 +376,7 @@ class ReverseProxyResource(Resource):
     def __init__(self, host, port, path, reactor=reactor):
         """
         @param host: The hostname of the web server to proxy.
-        @type host: C{str}
+        @type host: L{bytes}
 
         @param port: The port of the web server to proxy.
         @type port: C{port}
@@ -380,7 +386,7 @@ class ReverseProxyResource(Resource):
             request. For example, if you put B{/foo}, a request on B{/bar} will
             be proxied to B{/foo/bar}.  Any required encoding of special
             characters (such as " " or "/") should have been done already.
-        @type path: C{str}
+        @type path: L{bytes}
         """
         Resource.__init__(self)
         self.host = host
@@ -396,7 +402,7 @@ class ReverseProxyResource(Resource):
         C{path} at the end.
 
         @param path: Path segment.
-        @type path: C{str}
+        @type path: L{bytes}
         """
         return ReverseProxyResource(
             self.host, self.port, self.path + '/' + urlquote(path, safe=""),
