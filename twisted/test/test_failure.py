@@ -16,7 +16,6 @@ import linecache
 from twisted.python.compat import NativeStringIO, _PY3
 from twisted.python import _reflectpy3 as reflect
 from twisted.python import failure
-from twisted.internet import defer
 
 from twisted.trial.unittest import SynchronousTestCase
 
@@ -814,34 +813,6 @@ class ExtendedGeneratorTests(SynchronousTestCase):
     Tests C{failure.Failure} support for generator features added in Python 2.5
     """
 
-    def test_inlineCallbacksTracebacks(self):
-        """
-        inlineCallbacks that re-raise tracebacks into their deferred
-        should not lose their tracebacks.
-        """
-        f = getDivisionFailure()
-        d = defer.Deferred()
-        try:
-            f.raiseException()
-        except:
-            d.errback()
-
-        failures = []
-        def collect_error(result):
-            failures.append(result)
-
-        def ic(d):
-            yield d
-        ic = defer.inlineCallbacks(ic)
-        ic(d).addErrback(collect_error)
-
-        newFailure, = failures
-        self.assertEqual(
-            traceback.extract_tb(newFailure.getTracebackObject())[-1][-1],
-            "1/0"
-        )
-
-
     def _throwIntoGenerator(self, f, g):
         try:
             f.throwExceptionIntoGenerator(g)
@@ -927,16 +898,13 @@ class ExtendedGeneratorTests(SynchronousTestCase):
         self.assertEqual(newFailures[0].getTraceback(), f.getTraceback())
 
     if _PY3:
-        test_inlineCallbacksTracebacks.todo = (
-            "Python 3 support to be fixed in #5949")
         test_findFailureInGenerator.todo = (
             "Python 3 support to be fixed in #5949")
         test_failureConstructionFindsOriginalFailure.todo = (
             "Python 3 support to be fixed in #5949")
-        # Remove these three lines in #6008:
+        # Remove these two lines in #6008 (unittest todo support):
         del test_findFailureInGenerator
         del test_failureConstructionFindsOriginalFailure
-        del test_inlineCallbacksTracebacks
 
 
     def test_ambiguousFailureInGenerator(self):

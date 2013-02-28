@@ -1071,6 +1071,43 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.assertNotEquals([], globalz)
 
 
+    def test_inlineCallbacksTracebacks(self):
+        """
+        inlineCallbacks that re-raise tracebacks into their deferred
+        should not lose their tracebacks.
+        """
+        # XXX: move, copy, or make getDivisionFailure util somewhere?
+        from twisted.test.test_failure import getDivisionFailure
+        f = getDivisionFailure()
+        d = defer.Deferred()
+        try:
+            f.raiseException()
+        except:
+            d.errback()
+
+        failures = []
+        def collect_error(result):
+            failures.append(result)
+
+        def ic(d):
+            yield d
+        ic = defer.inlineCallbacks(ic)
+        ic(d).addErrback(collect_error)
+
+        newFailure, = failures
+        self.assertEqual(
+            traceback.extract_tb(newFailure.getTracebackObject())[-1][-1],
+            "1/0"
+        )
+
+
+    if _PY3:
+        test_inlineCallbacksTracebacks.todo = (
+            "Python 3 support to be fixed in #5949")
+        # Remove this line in #6008 (unittest todo support):
+        del test_inlineCallbacksTracebacks
+
+
 
 class FirstErrorTests(unittest.SynchronousTestCase):
     """
