@@ -13,14 +13,14 @@ from io import BytesIO
 
 from zope.interface import implementer
 
-from twisted.python.compat import unicode
+from twisted.python.compat import unicode, intToBytes
 from twisted.internet.interfaces import (
-    ITransport, IConsumer, IPushProducer, IConnector)
-from twisted.internet.interfaces import (
-    IReactorTCP, IReactorSSL, IReactorUNIX, IReactorSocket)
-from twisted.internet.interfaces import IListeningPort
+    ITransport, IConsumer, IPushProducer, IConnector,
+    IReactorTCP, IReactorSSL, IReactorUNIX, IReactorSocket,
+    IListeningPort)
 from twisted.internet.abstract import isIPv6Address
 from twisted.internet.error import UnsupportedAddressFamily
+from twisted.internet import defer
 from twisted.protocols import basic
 from twisted.internet import protocol, error, address
 
@@ -571,3 +571,44 @@ class RaisingMemoryReactor(object):
         Fake L{reactor.connectUNIX}, that raises L{self._connectException}.
         """
         raise self._connectException
+
+
+
+class NonStreamingProducer(object):
+    """
+    A pull producer which writes 10 times only.
+    """
+
+    counter = 0
+    stopped = False
+
+    def __init__(self, consumer):
+        self.consumer = consumer
+        self.result = defer.Deferred()
+
+    def resumeProducing(self):
+        if self.counter < 10:
+            self.consumer.write(intToBytes(self.counter))
+            self.counter += 1
+            if self.counter == 10:
+                self.consumer.unregisterProducer()
+                self._done()
+        else:
+            if self.consumer is None:
+                raise RuntimeError("BUG: resume after unregister/stop.")
+
+
+    def pauseProducing(self):
+        raise RuntimeError("BUG: pause should never be called.")
+
+
+    def _done(self):
+        self.consumer = None
+        d = self.result
+        del self.result
+        d.callback(None)
+
+
+    def stopProducing(self):
+        self.stopped = True
+        self._done()

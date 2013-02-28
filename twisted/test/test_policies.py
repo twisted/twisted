@@ -6,12 +6,15 @@ Test code for policies.
 """
 from __future__ import division, absolute_import
 
+from zope.interface.verify import verifyObject
 from zope.interface import Interface, implementer, implementedBy
 
-from twisted.python.compat import NativeStringIO, _PY3
+from twisted.python.compat import NativeStringIO
 from twisted.trial import unittest
-from twisted.test.proto_helpers import StringTransport
-from twisted.test.proto_helpers import StringTransportWithDisconnection
+from twisted.test.proto_helpers import (
+        StringTransport, StringTransportWithDisconnection,
+        NonStreamingProducer)
+from twisted.python import log
 
 from twisted.internet import protocol, reactor, address, defer, task
 from twisted.protocols import policies
@@ -852,3 +855,253 @@ class LoggingFactoryTestCase(unittest.TestCase):
         f.resetCounter()
         self.assertEqual(f._counter, 0)
 
+
+
+class NonStreamingProducerTests(unittest.TestCase):
+    """
+    Non-streaming producers can be adapted into being streaming producers.
+    """
+
+    def streamUntilEnd(self, consumer):
+        """
+        Verify the consumer writes out all its data, but is not called after
+        that.
+        """
+        nsProducer = NonStreamingProducer(consumer)
+        streamingProducer = policies._PullToPush(nsProducer, consumer)
+        consumer.registerProducer(streamingProducer, True)
+
+        # The producer will call unregisterProducer(), and we need to hook
+        # that up so the streaming wrapper is notified; the
+        # TLSMemoryBIOProtocol will have to do this itself, which is tested
+        # elsewhere:
+        def unregister(orig=consumer.unregisterProducer):
+            orig()
+            streamingProducer.stopStreaming()
+        consumer.unregisterProducer = unregister
+
+        done = nsProducer.result
+        def doneStreaming(_):
+            # All data was streamed, and the producer unregistered itself:
+            self.assertEqual(consumer.value(), b"0123456789")
+            self.assertEqual(consumer.producer, None)
+            # And the streaming wrapper stopped:
+            self.assertEqual(streamingProducer._finished, True)
+        done.addCallback(doneStreaming)
+
+        # Now, start streaming:
+        streamingProducer.startStreaming()
+        return done
+
+
+    def test_writeUntilDone(self):
+        """
+        When converted to a streaming producer, the non-streaming producer
+        writes out all its data, but is not called after that.
+        """
+        consumer = StringTransport()
+        return self.streamUntilEnd(consumer)
+
+
+    def test_pause(self):
+        """
+        When the streaming producer is paused, the underlying producer stops
+        getting resumeProducing calls.
+        """
+        class PausingStringTransport(StringTransport):
+            writes = 0
+
+            def __init__(self):
+                StringTransport.__init__(self)
+                self.paused = defer.Deferred()
+
+            def write(self, data):
+                self.writes += 1
+                StringTransport.write(self, data)
+                if self.writes == 3:
+                    self.producer.pauseProducing()
+                    d = self.paused
+                    del self.paused
+                    d.callback(None)
+
+
+        consumer = PausingStringTransport()
+        nsProducer = NonStreamingProducer(consumer)
+        streamingProducer = policies._PullToPush(nsProducer, consumer)
+        consumer.registerProducer(streamingProducer, True)
+
+        # Make sure the consumer does not continue:
+        def shouldNotBeCalled(ignore):
+            self.fail("BUG: The producer should not finish!")
+        nsProducer.result.addCallback(shouldNotBeCalled)
+
+        done = consumer.paused
+        def paused(ignore):
+            # The CooperatorTask driving the producer was paused:
+            self.assertEqual(streamingProducer._coopTask._pauseCount, 1)
+        done.addCallback(paused)
+
+        # Now, start streaming:
+        streamingProducer.startStreaming()
+        return done
+
+
+    def test_resume(self):
+        """
+        When the streaming producer is paused and then resumed, the underlying
+        producer starts getting resumeProducing calls again after the resume.
+
+        The test will never finish (or rather, time out) if the resume
+        producing call is not working.
+        """
+        class PausingStringTransport(StringTransport):
+            writes = 0
+
+            def write(self, data):
+                self.writes += 1
+                StringTransport.write(self, data)
+                if self.writes == 3:
+                    self.producer.pauseProducing()
+                    self.producer.resumeProducing()
+
+        consumer = PausingStringTransport()
+        return self.streamUntilEnd(consumer)
+
+
+    def test_stopProducing(self):
+        """
+        When the streaming producer is stopped by the consumer, the underlying
+        producer is stopped, and streaming is stopped.
+        """
+        class StoppingStringTransport(StringTransport):
+            writes = 0
+
+            def write(self, data):
+                self.writes += 1
+                StringTransport.write(self, data)
+                if self.writes == 3:
+                    self.producer.stopProducing()
+
+        consumer = StoppingStringTransport()
+        nsProducer = NonStreamingProducer(consumer)
+        streamingProducer = policies._PullToPush(nsProducer, consumer)
+        consumer.registerProducer(streamingProducer, True)
+
+        done = nsProducer.result
+        def doneStreaming(_):
+            # Not all data was streamed, and the producer was stopped:
+            self.assertEqual(consumer.value(), b"012")
+            self.assertEqual(nsProducer.stopped, True)
+            # And the streaming wrapper stopped:
+            self.assertEqual(streamingProducer._finished, True)
+        done.addCallback(doneStreaming)
+
+        # Now, start streaming:
+        streamingProducer.startStreaming()
+        return done
+
+
+    def resumeProducingRaises(self, consumer, expectedExceptions):
+        """
+        Common implementation for tests where the underlying producer throws
+        an exception when its resumeProducing is called.
+        """
+        class ThrowingProducer(NonStreamingProducer):
+
+            def resumeProducing(self):
+                if self.counter == 2:
+                    return 1/0
+                else:
+                    NonStreamingProducer.resumeProducing(self)
+
+        nsProducer = ThrowingProducer(consumer)
+        streamingProducer = policies._PullToPush(nsProducer, consumer)
+        consumer.registerProducer(streamingProducer, True)
+
+        # Register log observer:
+        loggedMsgs = []
+        log.addObserver(loggedMsgs.append)
+        self.addCleanup(log.removeObserver, loggedMsgs.append)
+
+        # Make consumer unregister do what TLSMemoryBIOProtocol would do:
+        def unregister(orig=consumer.unregisterProducer):
+            orig()
+            streamingProducer.stopStreaming()
+        consumer.unregisterProducer = unregister
+
+        # Start streaming:
+        streamingProducer.startStreaming()
+
+        done = streamingProducer._coopTask.whenDone()
+        done.addErrback(lambda reason: reason.trap(task.TaskStopped))
+        def stopped(ign):
+            self.assertEqual(consumer.value(), b"01")
+            # Any errors from resumeProducing were logged:
+            errors = self.flushLoggedErrors()
+            self.assertEqual(len(errors), len(expectedExceptions))
+            for f, (expected, msg), logMsg in zip(
+                errors, expectedExceptions, loggedMsgs):
+                self.assertTrue(f.check(expected))
+                self.assertIn(msg, logMsg['why'])
+            # And the streaming wrapper stopped:
+            self.assertEqual(streamingProducer._finished, True)
+        done.addCallback(stopped)
+        return done
+
+
+    def test_resumeProducingRaises(self):
+        """
+        If the underlying producer raises an exception when resumeProducing is
+        called, the streaming wrapper should log the error, unregister from
+        the consumer and stop streaming.
+        """
+        consumer = StringTransport()
+        done = self.resumeProducingRaises(
+            consumer,
+            [(ZeroDivisionError, "failed, producing will be stopped")])
+        def cleanShutdown(ignore):
+            # Producer was unregistered from consumer:
+            self.assertEqual(consumer.producer, None)
+        done.addCallback(cleanShutdown)
+        return done
+
+
+    def test_resumeProducingRaiseAndUnregisterProducerRaises(self):
+        """
+        If the underlying producer raises an exception when resumeProducing is
+        called, the streaming wrapper should log the error, unregister from
+        the consumer and stop streaming even if the unregisterProducer call
+        also raise.
+        """
+        consumer = StringTransport()
+        def raiser():
+            raise RuntimeError()
+        consumer.unregisterProducer = raiser
+        return self.resumeProducingRaises(
+            consumer,
+            [(ZeroDivisionError, "failed, producing will be stopped"),
+             (RuntimeError, "failed to unregister producer")])
+
+
+    def test_stopStreamingTwice(self):
+        """
+        stopStreaming() can be called more than once without blowing
+        up. This is useful for error-handling paths.
+        """
+        consumer = StringTransport()
+        nsProducer = NonStreamingProducer(consumer)
+        streamingProducer = policies._PullToPush(nsProducer, consumer)
+        streamingProducer.startStreaming()
+        streamingProducer.stopStreaming()
+        streamingProducer.stopStreaming()
+        self.assertEqual(streamingProducer._finished, True)
+
+
+    def test_interface(self):
+        """
+        L{_PullToPush} implements L{IPushProducer}.
+        """
+        consumer = StringTransport()
+        nsProducer = NonStreamingProducer(consumer)
+        streamingProducer = policies._PullToPush(nsProducer, consumer)
+        self.assertTrue(verifyObject(policies.IPushProducer, streamingProducer))

@@ -13,13 +13,14 @@ from __future__ import division, absolute_import
 # system imports
 import sys, operator
 
-from zope.interface import directlyProvides, providedBy
+from zope.interface import directlyProvides, providedBy, implementer
 
 # twisted imports
 from twisted.internet.protocol import ServerFactory, Protocol, ClientFactory
-from twisted.internet import error
-from twisted.internet.interfaces import ILoggingContext
+from twisted.internet import error, task
+from twisted.internet.interfaces import ILoggingContext, IPushProducer
 from twisted.python import log
+from twisted.python._reflectpy3 import safe_str
 
 
 def _wrappedLogPrefix(wrapper, wrapped):
@@ -725,3 +726,109 @@ class TimeoutMixin:
         Override to define behavior other than dropping the connection.
         """
         self.transport.loseConnection()
+
+
+
+@implementer(IPushProducer)
+class _PullToPush(object):
+    """
+    An adapter that converts a non-streaming to a streaming producer.
+
+    Because of limitations of the producer API, this adapter requires the
+    cooperation of the consumer. When the consumer's C{registerProducer} is
+    called with a non-streaming producer, it must wrap it with L{_PullToPush}
+    and then call C{startStreaming} on the resulting object. When the
+    consumer's C{unregisterProducer} is called, it must call
+    C{stopStreaming} on the L{_PullToPush} instance.
+
+    If the underlying producer throws an exception from C{resumeProducing},
+    the producer will be unregistered from the consumer.
+
+    @ivar _producer: the underling non-streaming producer.
+
+    @ivar _consumer: the consumer with which the underlying producer was
+                     registered.
+
+    @ivar _finished: C{bool} indicating whether the producer has finished.
+
+    @ivar _coopTask: the result of calling L{cooperate}, the task driving the
+                     streaming producer.
+    """
+
+    _finished = False
+
+
+    def __init__(self, pullProducer, consumer):
+        """
+        @param pullProducer: the underling non-streaming producer.
+        @type pullProducer: L{IPullProducer<twisted.internet.interfaces.IPullProducer>}
+
+        @param consumer: the consumer with which the underlying producer was
+            registered.
+        @type consumer: L{IConsumer<twisted.internet.interfaces.IConsumer>}
+        """
+        self._producer = pullProducer
+        self._consumer = consumer
+
+
+    def _pull(self):
+        """
+        A generator that calls C{resumeProducing} on the underlying producer
+        forever.
+
+        If C{resumeProducing} throws an exception, the producer is
+        unregistered, which should result in streaming stopping.
+        """
+        while True:
+            try:
+                self._producer.resumeProducing()
+            except:
+                log.err(None, "%s failed, producing will be stopped:" %
+                        (safe_str(self._producer),))
+                try:
+                    self._consumer.unregisterProducer()
+                    # The consumer should now call stopStreaming() on us,
+                    # thus stopping the streaming.
+                except:
+                    # Since the consumer blew up, we may not have had
+                    # stopStreaming() called, so we just stop on our own:
+                    log.err(None, "%s failed to unregister producer:" %
+                            (safe_str(self._consumer),))
+                    self._finished = True
+                    return
+            yield None
+
+
+    def startStreaming(self):
+        """
+        This should be called by the consumer when the producer is registered.
+
+        Start streaming data to the consumer.
+        """
+        self._coopTask = task.cooperate(self._pull())
+
+
+    def stopStreaming(self):
+        """
+        This should be called by the consumer when the producer is unregistered.
+
+        Stop streaming data to the consumer.
+        """
+        if self._finished:
+            return
+        self._finished = True
+        self._coopTask.stop()
+
+
+    # IPushProducer implementation:
+    def pauseProducing(self):
+        self._coopTask.pause()
+
+
+    def resumeProducing(self):
+        self._coopTask.resume()
+
+
+    def stopProducing(self):
+        self.stopStreaming()
+        self._producer.stopProducing()
