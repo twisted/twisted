@@ -589,8 +589,11 @@ class Request:
     def __init__(self, channel, queued):
         """
         @param channel: the channel we're connected to.
+        @type channel: L{HTTPChannel}
+
         @param queued: are we in the request queue, or can we start writing to
             the transport?
+        @type queued: L{bool}
         """
         self.notifications = []
         self.channel = channel
@@ -795,9 +798,14 @@ class Request:
 
     def process(self):
         """
+        Method called to process completed request.
+
+        When this method is called, this L{Request} has been received
+        and parsed and is ready for a response to be generated.
+
         Override in subclasses.
 
-        This method is not intended for users.
+        This method is not intended to be called by users.
         """
         pass
 

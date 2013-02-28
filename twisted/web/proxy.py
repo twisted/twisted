@@ -32,20 +32,22 @@ from twisted.web.http import HTTPClient, Request, HTTPChannel
 
 class ProxyClient(HTTPClient):
     """
+    An L{HTTPClient} the forwards the response to the L{Request} given by
+    C{father}.
+
     Used by L{ProxyClientFactory} to implement a simple web proxy.
 
     @ivar _finished: A flag which indicates whether or not the original request
         has been finished yet.
     @type _finished: C{bool}
+
+    @ivar father: see L{__init__}
+    @type father: L{Request}
     """
     _finished = False
 
     def __init__(self, command, rest, version, headers, data, father):
         """
-        Usually created when L{ProxyClientFactory.buildProtocol} is called.
-        The arguments passed to this constructor are the same as the ones
-        passed to the L{ProxyClientFactory} constructor.
-
         @type command: C{str}
         @param command: HTTP Command (GET, POST, HEAD, etc)
 
@@ -64,10 +66,9 @@ class ProxyClient(HTTPClient):
         @param data: Data sent to (or through) the server for example with a
             POST request.
 
-        @type father: L{ProxyRequest}
-        @param father: The server request first passed to the
-            L{ProxyClientFactory} and then the L{ProxyClient} when
-            C{buildProtocol} is called.
+        @type father: L{Request}
+        @param father: The L{Request} to which we should forward the eventual
+            response.
         """
         self.father = father
         self.command = command
@@ -180,10 +181,9 @@ class ProxyClientFactory(ClientFactory):
         @param data: Data sent to (or through) the server for example with a
            POST requst
 
-        @type father: L{ProxyRequest}
-        @param father: The server request first passed to the
-            L{ProxyClientFactory} and then the L{ProxyClient} when
-            C{buildProtocol} is called.
+        @type father: L{Request}
+        @param father: The L{Request} to which we should forward the eventual
+            response.
 
         """
         self.father = father
@@ -216,9 +216,11 @@ class ProxyClientFactory(ClientFactory):
 
 class ProxyRequest(Request):
     """
+    A L{Request} that proxies the completed request to another server.
+
     Used by L{Proxy} to implement a simple web proxy.
 
-    @ivar reactor: The reactor used to create connections.
+    @ivar reactor: See L{__init__}.
     @type reactor: L{twisted.internet.interfaces.IReactorTCP}
 
     @ivar protocols: Mapping of protocol/factory class.
@@ -235,17 +237,15 @@ class ProxyRequest(Request):
         """
         Implements the proxy server's request handler.
 
-        @type channel: L{Proxy}
-        @param channel: Used as connection between your client and the proxy
-            server.
+        @type channel: L{HTTPChannel}
+        @param channel: The channel we're connected to.
 
-        @type queued: C{bool}
+        @type queued: L{bool}
         @param queued: Is the request queued or can we write to the transport
             now?
 
-        @type reactor: L{twisted.internet.reactor}
-        @param reactor: Needed here to connect the L{Proxy} client end to the
-            remote server.
+        @ivar reactor: The reactor used to create connections.
+        @type reactor: L{IReactorTCP<twisted.internet.interfaces.IReactorTCP>}
         """
         Request.__init__(self, channel, queued)
         self.reactor = reactor
@@ -253,16 +253,15 @@ class ProxyRequest(Request):
 
     def process(self):
         """
-        Called to process the request from your client.
+        Method called to process completed request.
 
-        This method parses the url (to see what the proxy needs to go fetch) and
-        then connects to that url (just like if your program connect to example.com
-        except the proxy server does it not your client directly) using the class
-        specified in protocols.
+        Parses the URI of this request, connects to the specified host and
+        arranges for the response to forward back to the original client.
 
-        Overide if you want to control things such as headers and method sent to
-        the remote server (for example if you want any GET request to change to a
-        HEAD request)
+        You can override this method if you want to modify the request, limit
+        hosts proxied to, or log request.
+        See U{logging-proxy.py<https://twistedmatrix.com/documents/current/web/examples/logging-proxy.py>}
+        for an example.
         """
         parsed = urlparse.urlparse(self.uri)
         protocol = parsed[0]
@@ -288,7 +287,10 @@ class ProxyRequest(Request):
 
 class Proxy(HTTPChannel):
     """
-    This class implements a simple web proxy.
+    A simple web proxy.
+
+    L{Proxy} is an implemention of HTTP that proxies requests that it
+    receives.
 
     Since it inherits from L{HTTPChannel}, you can use it like this::
 
