@@ -19,6 +19,7 @@ except ImportError:
     pass
 
 from twisted.python.compat import nativeString
+from twisted.python.runtime import platform
 from twisted.trial import unittest
 from twisted.internet import protocol, defer, reactor
 
@@ -539,6 +540,159 @@ class OpenSSLOptions(unittest.TestCase):
                 lambda result: self.assertEqual(result, WritingProtocol.byte))
 
 
+    def test_caCertsPlatformLinux(self):
+        """
+        Specifying a C{caCerts} of L{sslverify.PLATFORM} when initializing
+        C{OpenSSLCertificateOptions} loads the platform-provided trusted
+        certificates.
+        """
+        opts = sslverify.OpenSSLCertificateOptions(caCerts=sslverify.PLATFORM,
+                                                   verify=True)
+        called = []
+        class TestContext(SSL.Context):
+            def set_default_verify_paths(self):
+                SSL.Context.set_default_verify_paths(self)
+                called.append(self)
+        context = opts.getContext(_contextFactory=TestContext)
+        self.assertEqual(called, [context])
+
+    if not platform.isLinux():
+        test_caCertsPlatformLinux.skip = "Linux-specific test"
+
+
+    def test_caCertsPlatformOther(self):
+        """
+        Specifying a C{caCerts} of L{sslverify.PLATFORM} when initializing
+        C{OpenSSLCertificateOptions} loads the bundled trusted certificates.
+        """
+        raise NotImplementedError()
+    test_caCertsPlatformOther.todo = "Use getCACertificates"
+
+
+    def test_constructorWithHostname(self):
+        """
+        Specifying C{hostname} initializes C{OpenSSLCertificateOptions} correctly.
+        """
+        opts = sslverify.OpenSSLCertificateOptions(hostname=b"www.example.com",
+                                                   caCerts=sslverify.PLATFORM,
+                                                   verify=True)
+        self.assertTrue(opts.verify)
+        self.assertEqual(opts.hostname, b"www.example.com")
+
+
+    def test_constructorWithHostnameWithoutVerify(self):
+        """
+        Specifying C{hostname} without C{verify} is not allowed.
+        """
+        self.assertRaises(ValueError, sslverify.OpenSSLCertificateOptions,
+                          caCerts=sslverify.PLATFORM,
+                          hostname=b"www.example.com",
+                          verify=False)
+
+
+    def _buildCAandServerCertificates(self):
+        """
+        Create a self-signed CA certificate and server certificate signed by
+        the CA.
+        """
+        serverDN = sslverify.DistinguishedName(commonName='example.com')
+        serverKey = sslverify.KeyPair.generate()
+        serverCertReq = serverKey.certificateRequest(serverDN)
+
+        caDN = sslverify.DistinguishedName(commonName='CA')
+        caKey= sslverify.KeyPair.generate()
+        caCertReq = caKey.certificateRequest(caDN)
+        caSelfCertData = caKey.signCertificateRequest(
+                caDN, caCertReq, lambda dn: True, 516)
+        caSelfCert = caKey.newCertificate(caSelfCertData)
+
+        serverCertData = caKey.signCertificateRequest(
+                caDN, serverCertReq, lambda dn: True, 516)
+        serverCert = serverKey.newCertificate(serverCertData)
+        return caSelfCert, serverCert
+
+
+    def test_verifyCorrectHostname(self):
+        """
+        If hostname verification is required, C{OpenSSLCertificateOptions}
+        produces a context that succeeds if the given hostname matches the
+        peer's certified hostname.
+        """
+        caSelfCert, serverCert = self._buildCAandServerCertificates()
+        serverOpts = serverCert.options()
+        clientOpts = sslverify.OpenSSLCertificateOptions(
+            verify=True,
+            caCerts=[caSelfCert.original],
+            hostname="example.com")
+
+        onData = defer.Deferred()
+        self.loopback(serverOpts,
+                      clientOpts,
+                      onData=onData)
+
+        return onData.addCallback(
+                lambda result: self.assertEqual(result, WritingProtocol.byte))
+
+
+    def test_verifyWrongHostname(self):
+        """
+        If hostname verification is required, C{OpenSSLCertificateOptions}
+        produces a context that fails to the connect if the given hostname
+        doesn't match the peer's certified hostname.
+        """
+        caSelfCert, serverCert = self._buildCAandServerCertificates()
+        serverOpts = serverCert.options()
+        clientOpts = sslverify.OpenSSLCertificateOptions(
+            verify=True,
+            caCerts=[caSelfCert.original],
+            hostname="wrongdomain.com") # whereas server is 'example.com'
+
+        onServerLost = defer.Deferred()
+        onClientLost = defer.Deferred()
+        self.loopback(serverOpts, clientOpts,
+                      onServerLost=onServerLost,
+                      onClientLost=onClientLost)
+
+        d = defer.DeferredList([onClientLost, onServerLost],
+                               consumeErrors=True)
+        def afterLost(result):
+            ((cSuccess, cResult), (sSuccess, sResult)) = result
+            self.failIf(cSuccess)
+            self.failIf(sSuccess)
+
+        return d.addCallback(afterLost)
+
+
+    def test_verifyCorrectHostnameWrongCA(self):
+        """
+        If hostname verification is required, C{OpenSSLCertificateOptions}
+        produces a context that fails to connect if the given hostname matches
+        the peer's certified hostname, but the peer's certificate is not
+        signed by the context's configured CAs.
+        """
+        key, cert = makeCertificate(CN="example.com")
+        serverOpts = sslverify.OpenSSLCertificateOptions(
+            certificate=cert,
+            privateKey=key)
+        clientOpts = sslverify.OpenSSLCertificateOptions(
+            verify=True,
+            caCerts=[makeCertificate(CN="CA")[1]],
+            hostname="example.com")
+
+        onServerLost = defer.Deferred()
+        onClientLost = defer.Deferred()
+        self.loopback(serverOpts, clientOpts,
+                      onServerLost=onServerLost,
+                      onClientLost=onClientLost)
+
+        d = defer.DeferredList([onClientLost, onServerLost],
+                               consumeErrors=True)
+        def afterLost(result):
+            ((cSuccess, cResult), (sSuccess, sResult)) = result
+            self.failIf(cSuccess)
+            self.failIf(sSuccess)
+
+        return d.addCallback(afterLost)
 
 if interfaces.IReactorSSL(reactor, None) is None:
     OpenSSLOptions.skip = "Reactor does not support SSL, cannot run SSL tests"

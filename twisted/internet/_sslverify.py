@@ -14,6 +14,7 @@ from OpenSSL import SSL, crypto
 from twisted.python.compat import nativeString, networkString
 from twisted.python.filepath import FilePath
 from twisted.python import _reflectpy3 as reflect, util
+from twisted.python.runtime import platform
 from twisted.internet.defer import Deferred
 from twisted.internet.error import VerifyError, CertificateError
 
@@ -704,25 +705,13 @@ def getDomainsForMatching(x509):
 
 def _getCACertificates():
     """
-    Return a list of X509 objects for the authoritative CAs.
-
-    Packagers of Twisted (e.g. Linux distributions) may wish to override this
-    function to return certificates from their own CA database.
+    Return a list of X509 objects for the authoritative CAs, using the
+    packaged bundle.
 
     @return: A path to a file containing PEM certificates.
     @rtype: C{list} of L{crypto.X509}.
     """
-    f = None
-    # It might be better to check what OS exactly we're in, and choose
-    # accordingly...
-    for path in ["/etc/ssl/certs/ca-certificates.crt", # Ubuntu
-                 "/etc/ssl/certs/ca-bundle.crt", # Fedora
-                 ]:
-        f = FilePath(path)
-        if f.exists():
-            break
-    if not f:
-        f = FilePath(__file__.encode("utf-8")).sibling('ca-bundle.crt')
+    f = FilePath(__file__.encode("utf-8")).sibling('ca-bundle.crt')
     # Is there better way to load multiple certificates from single file?
     CERT_END = b'-----END CERTIFICATE-----\n'
     result = []
@@ -748,6 +737,9 @@ def getCACertificates():
     return _cachedCAs
 
 
+# Indicates that OpenSSLCertificateOptions should use the platform-provided
+# database of trusted CAs.
+PLATFORM = object()
 
 class OpenSSLCertificateOptions(object):
     """
@@ -774,7 +766,8 @@ class OpenSSLCertificateOptions(object):
                  enableSingleUseKeys=True,
                  enableSessions=True,
                  fixBrokenPeers=False,
-                 enableSessionTickets=False):
+                 enableSessionTickets=False,
+                 hostname=None):
         """
         Create an OpenSSL context SSL connection context factory.
 
@@ -791,11 +784,12 @@ class OpenSSLCertificateOptions(object):
             validation.  By default this is C{False}.
 
         @param caCerts: List of certificate authority certificate objects to
-            use to verify the peer's certificate.  Only used if verify is
-            C{True} and will be ignored otherwise.  Since verify is C{False} by
-            default, this is C{None} by default.
+            use to verify the peer's certificate, or L{PLATFORM} indicating
+            that platform-provided trusted certificates should be used.  Only
+            used if verify is C{True} and will be ignored otherwise.  Since
+            verify is C{False} by default, this is C{None} by default.
 
-        @type caCerts: C{list} of L{OpenSSL.crypto.X509}
+        @type caCerts: C{list} of L{OpenSSL.crypto.X509}, or L{PLATFORM} instance
 
         @param verifyDepth: Depth in certificate chain down to which to verify.
         If unspecified, use the underlying default (9).
@@ -822,6 +816,9 @@ class OpenSSLCertificateOptions(object):
         controlling session tickets. This option is off by default, as some
         server implementations don't correctly process incoming empty session
         ticket extensions in the hello.
+
+        @param hostname: If given, the peer's certificate will be validated
+        against the hostname.
         """
 
         if (privateKey is None) != (certificate is None):
@@ -846,6 +843,11 @@ class OpenSSLCertificateOptions(object):
         self.fixBrokenPeers = fixBrokenPeers
         self.enableSessionTickets = enableSessionTickets
 
+        if hostname and not verify:
+            raise ValueError("Specify hostname only if enabling certificate "
+                             "verification.")
+        self.hostname = hostname
+
 
     def __getstate__(self):
         d = self.__dict__.copy()
@@ -860,16 +862,16 @@ class OpenSSLCertificateOptions(object):
         self.__dict__ = state
 
 
-    def getContext(self):
+    def getContext(self, _contextFactory=SSL.Context):
         """Return a SSL.Context object.
         """
         if self._context is None:
-            self._context = self._makeContext()
+            self._context = self._makeContext(_contextFactory)
         return self._context
 
 
-    def _makeContext(self):
-        ctx = SSL.Context(self.method)
+    def _makeContext(self, contextFactory):
+        ctx = contextFactory(self.method)
 
         if self.certificate is not None and self.privateKey is not None:
             ctx.use_certificate(self.certificate)
@@ -885,15 +887,30 @@ class OpenSSLCertificateOptions(object):
             if self.verifyOnce:
                 verifyFlags |= SSL.VERIFY_CLIENT_ONCE
             if self.caCerts:
-                store = ctx.get_cert_store()
-                for cert in self.caCerts:
-                    store.add_cert(cert)
+                if self.caCerts is PLATFORM:
+                    if platform.isLinux():
+                        ctx.set_default_verify_paths()
+                    else:
+                        raise NotImplementedError("use getCACertificates()")
+                else:
+                    store = ctx.get_cert_store()
+                    for cert in self.caCerts:
+                        store.add_cert(cert)
 
-        # It'd be nice if pyOpenSSL let us pass None here for this behavior (as
-        # the underlying OpenSSL API call allows NULL to be passed).  It
-        # doesn't, so we'll supply a function which does the same thing.
-        def _verifyCallback(conn, cert, errno, depth, preverify_ok):
-            return preverify_ok
+        if self.hostname:
+            def _verifyCallback(conn, cert, errno, depth, preverify_ok):
+                if not preverify_ok:
+                    return False
+                if depth == 0:
+                    return matchHostname(self.hostname, getDomainsForMatching(cert))
+                else:
+                    return True
+        else:
+            # It'd be nice if pyOpenSSL let us pass None here for this behavior (as
+            # the underlying OpenSSL API call allows NULL to be passed).  It
+            # doesn't, so we'll supply a function which does the same thing.
+            def _verifyCallback(conn, cert, errno, depth, preverify_ok):
+                return preverify_ok
         ctx.set_verify(verifyFlags, _verifyCallback)
 
         if self.verifyDepth is not None:
