@@ -137,6 +137,8 @@ class NamesTests(TestCase, _ConstantsTestsMixin):
             POST = NamedConstant()
             DELETE = NamedConstant()
 
+            extra = object()
+
         self.METHOD = METHOD
 
 
@@ -192,6 +194,7 @@ class NamesTests(TestCase, _ConstantsTestsMixin):
         self.assertRaises(ValueError, self.METHOD.lookupByName, "lookupByName")
         self.assertRaises(ValueError, self.METHOD.lookupByName, "__init__")
         self.assertRaises(ValueError, self.METHOD.lookupByName, "foo")
+        self.assertRaises(ValueError, self.METHOD.lookupByName, "extra")
 
 
     def test_name(self):
