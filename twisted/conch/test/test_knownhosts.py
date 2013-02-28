@@ -447,11 +447,15 @@ class KnownHostsDatabaseTests(TestCase):
         of L{KnownHostsFile.save} overwrites any existing contents in the save
         path.
         """
-        hostsFile = KnownHostsFile(self.pathWithContent(sampleHashedLine))
+        path = self.pathWithContent(sampleHashedLine)
+        hostsFile = KnownHostsFile(path)
         entry = hostsFile.addHostKey(
             "www.example.com", Key.fromString(otherSampleKey))
         hostsFile.save()
+        # Check KnownHostsFile to see what it thinks the state is
         self.assertEqual([entry], list(hostsFile.iterentries()))
+        # And also directly check the underlying file itself
+        self.assertEqual(entry.toString() + "\n", path.getContent())
 
 
     def test_saveResetsClobberState(self):
