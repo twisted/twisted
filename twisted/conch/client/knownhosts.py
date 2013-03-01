@@ -18,6 +18,7 @@ from twisted.python.randbytes import secureRandom
 from twisted.python.hashlib import sha1
 from twisted.internet import defer
 from twisted.python import log
+from twisted.python.util import FancyEqMixin
 from twisted.conch.interfaces import IKnownHostEntry
 from twisted.conch.error import HostKeyChanged, UserRejectedKey, InvalidEntry
 from twisted.conch.ssh.keys import Key, BadKeyError
@@ -242,7 +243,7 @@ def _hmacedString(key, string):
 
 
 
-class HashedEntry(_BaseEntry):
+class HashedEntry(_BaseEntry, FancyEqMixin):
     """
     A L{HashedEntry} is a representation of an entry in a known_hosts file
     where the hostname has been hashed and salted.
@@ -258,6 +259,9 @@ class HashedEntry(_BaseEntry):
     implements(IKnownHostEntry)
 
     MAGIC = '|1|'
+
+    compareAttributes = (
+        "_hostSalt", "_hostHash", "keyType", "publicKey", "comment")
 
     def __init__(self, hostSalt, hostHash, keyType, publicKey, comment):
         self._hostSalt = hostSalt
@@ -338,19 +342,66 @@ class KnownHostsFile(object):
     """
     A structured representation of an OpenSSH-format ~/.ssh/known_hosts file.
 
-    @ivar _entries: a list of L{IKnownHostEntry} providers.
+    @ivar _added: A list of L{IKnownHostEntry} providers which have been added
+        to this instance in memory but not yet saved.
 
-    @ivar _savePath: the L{FilePath} to save new entries to.
+    @ivar _clobber: A flag indicating whether the current contents of the save
+        path will be disregarded and potentially overwritten or not.  If
+        C{True}, this will be done.  If C{False}, entries in the save path will
+        be read and new entries will be saved by appending rather than
+        overwriting.
+    @type _clobber: L{bool}
+
+    @ivar _savePath: See C{savePath} parameter of L{__init__}.
     """
 
     def __init__(self, savePath):
         """
         Create a new, empty KnownHostsFile.
 
-        You want to use L{KnownHostsFile.fromPath} to parse one of these.
+        Unless you want to erase the current contents of C{savePath}, you want
+        to use L{KnownHostsFile.fromPath} instead.
+
+        @param savePath: The L{FilePath} to which to save new entries.
+        @type savePath: L{FilePath}
         """
-        self._entries = []
+        self._added = []
         self._savePath = savePath
+        self._clobber = True
+
+
+    def iterentries(self):
+        """
+        Iterate over the host entries in this file.
+
+        @return: An iterable the elements of which provide L{IKnownHostEntry}.
+            There is an element for each entry in the file as well as an element
+            for each added but not yet saved entry.
+        @rtype: iterable of L{IKnownHostEntry} providers
+        """
+        for entry in self._added:
+            yield entry
+
+        if self._clobber:
+            return
+
+        try:
+            fp = self._savePath.open()
+        except IOError:
+            return
+
+        try:
+            for line in fp:
+                try:
+                    if line.startswith(HashedEntry.MAGIC):
+                        entry = HashedEntry.fromString(line)
+                    else:
+                        entry = PlainEntry.fromString(line)
+                except (DecodeError, InvalidEntry, BadKeyError):
+                    entry = UnparsedEntry(line)
+                yield entry
+        finally:
+            fp.close()
 
 
     def hasHostKey(self, hostname, key):
@@ -370,12 +421,20 @@ class KnownHostsFile(object):
         @raise HostKeyChanged: if the host key found for the given hostname
             does not match the given key.
         """
-        for lineidx, entry in enumerate(self._entries):
+        for lineidx, entry in enumerate(self.iterentries(), -len(self._added)):
             if entry.matchesHost(hostname):
                 if entry.matchesKey(key):
                     return True
                 else:
-                    raise HostKeyChanged(entry, self._savePath, lineidx + 1)
+                    # Notice that lineidx is 0-based but HostKeyChanged.lineno
+                    # is 1-based.
+                    if lineidx < 0:
+                        line = None
+                        path = None
+                    else:
+                        line = lineidx + 1
+                        path = self._savePath
+                    raise HostKeyChanged(entry, path, line)
         return False
 
 
@@ -449,7 +508,7 @@ class KnownHostsFile(object):
         keyType = "ssh-" + key.type().lower()
         entry = HashedEntry(salt, _hmacedString(salt, hostname),
                             keyType, key, None)
-        self._entries.append(entry)
+        self._added.append(entry)
         return entry
 
 
@@ -460,8 +519,19 @@ class KnownHostsFile(object):
         p = self._savePath.parent()
         if not p.isdir():
             p.makedirs()
-        self._savePath.setContent('\n'.join(
-                [entry.toString() for entry in self._entries]) + "\n")
+
+        if self._clobber:
+            mode = "w"
+        else:
+            mode = "a"
+
+        with self._savePath.open(mode) as hostsFileObj:
+            if self._added:
+                hostsFileObj.write(
+                    "\n".join([entry.toString() for entry in self._added]) +
+                    "\n")
+                self._added = []
+        self._clobber = False
 
 
     def fromPath(cls, path):
@@ -477,21 +547,9 @@ class KnownHostsFile(object):
         @return: A L{KnownHostsFile} initialized with entries from C{path}.
         @rtype: L{KnownHostsFile}
         """
-        self = cls(path)
-        try:
-            fp = path.open()
-        except IOError:
-            return self
-        for line in fp:
-            try:
-                if line.startswith(HashedEntry.MAGIC):
-                    entry = HashedEntry.fromString(line)
-                else:
-                    entry = PlainEntry.fromString(line)
-            except (DecodeError, InvalidEntry, BadKeyError):
-                entry = UnparsedEntry(line)
-            self._entries.append(entry)
-        return self
+        knownHosts = cls(path)
+        knownHosts._clobber = False
+        return knownHosts
 
     fromPath = classmethod(fromPath)
 
