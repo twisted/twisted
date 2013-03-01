@@ -90,11 +90,16 @@ class FixedResponseUI(object):
 
 
 class FakeClockSSHUserAuthServer(SSHUserAuthServer):
-    # Simplify the tests by disconnecting after the first authentication
-    # failure.  One should attempt should be sufficient to test authentication
-    # success and failure.  There is an off-by-one in the implementation of
-    # this feature in Conch, so set it to 0 in order to allow 1 attempt.
-    attemptsBeforeDisconnect = 0
+
+    # Delegate this setting to the factory to simplify tweaking it
+    @property
+    def attemptsBeforeDisconnect(self):
+        """
+        Use the C{attemptsBeforeDisconnect} value defined by the factory to make
+        it easier to override.
+        """
+        return self.transport.factory.attemptsBeforeDisconnect
+
 
     @property
     def clock(self):
@@ -118,6 +123,13 @@ class CommandFactory(SSHFactory):
         'ssh-userauth': FakeClockSSHUserAuthServer,
         'ssh-connection': SSHConnection
     }
+
+    # Simplify the tests by disconnecting after the first authentication
+    # failure.  One should attempt should be sufficient to test authentication
+    # success and failure.  There is an off-by-one in the implementation of
+    # this feature in Conch, so set it to 0 in order to allow 1 attempt.
+    attemptsBeforeDisconnect = 0
+
 
 # factory = _SSHSecureConnectionFactory()
 # secure = factory.getSecureConnection()
@@ -164,6 +176,23 @@ class Composite(object):
                 seen.add(i)
                 for m in i.names():
                     setattr(self, m, getattr(p, m))
+
+
+
+class MemorySSHPublicKeyDatabase(SSHPublicKeyDatabase):
+    def __init__(self, users):
+        self._users = users
+        self._userdb = UserDatabase()
+        for i, username in enumerate(self._users):
+            self._userdb.addUser(
+                username, b"garbage", 123 + i, 456, None, None, None)
+
+
+    def getAuthorizedKeysFiles(self, credentials):
+        try:
+            return self._users[credentials.username]
+        except KeyError:
+            return []
 
 
 
@@ -369,12 +398,11 @@ class SSHCommandEndpointTests(TestCase):
         self.failureResultOf(d).trap(ConnectionDone)
 
 
-    def test_authenticationFailure(self):
+    def test_passwordAuthenticationFailure(self):
         """
-        If the SSH server rejects the credentials presented during
-        authentication, the L{Deferred} returned by
-        L{SSHCommandEndpoint.connect} fires with a L{Failure} wrapping
-        L{AuthenticationFailed}.
+        If the SSH server rejects the password presented during authentication,
+        the L{Deferred} returned by L{SSHCommandEndpoint.connect} fires with a
+        L{Failure} wrapping L{AuthenticationFailed}.
         """
         endpoint = SSHCommandEndpoint(
             self.reactor, self.hostname, self.port, b"/bin/ls -l",
@@ -400,6 +428,102 @@ class SSHCommandEndpointTests(TestCase):
         f.trap(AuthenticationFailed)
         # XXX Should assert something specific about the arguments of the
         # exception
+
+        # Nothing useful can be done with the connection at this point, so the
+        # endpoint should close it.
+        self.assertTrue(client.transport.disconnecting)
+
+
+    def setupKeyChecker(self, portal, users):
+        """
+        Create an L{ISSHPrivateKey} checker which recognizes C{users} and add it
+        to C{portal}.
+
+        @param portal: A L{Portal} to which to add the checker.
+        @type portal: L{Portal}
+
+        @param users: The users and their keys the checker will recognize.  Keys
+            are byte strings giving user names.  Values are byte strings giving
+            OpenSSH-formatted private keys.
+        @type users: C{dict}
+        """
+        credentials = {}
+        for username, keyString in users.iteritems():
+            goodKey = Key.fromString(keyString)
+            authorizedKeys = FilePath(self.mktemp())
+            authorizedKeys.setContent(goodKey.public().toString("OPENSSH"))
+            credentials[username] = [authorizedKeys]
+        checker = MemorySSHPublicKeyDatabase(credentials)
+        portal.registerChecker(checker)
+
+
+    def test_publicKeyAuthenticationFailure(self):
+        """
+        If the SSH server rejects the key pair presented during authentication,
+        the L{Deferred} returned by L{SSHCommandEndpoint.connect} fires with a
+        L{Failure} wrapping L{AuthenticationFailed}.
+        """
+        badKey = Key.fromString(privateRSA_openssh)
+        self.setupKeyChecker(self.portal, {self.user: privateDSA_openssh})
+
+        endpoint = SSHCommandEndpoint(
+            self.reactor, self.hostname, self.port, b"/bin/ls -l",
+            self.user, keys=[badKey], knownHosts=self.knownHosts,
+            ui=FixedResponseUI(False))
+
+        factory = Factory()
+        factory.protocol = Protocol
+        connected = endpoint.connect(factory)
+
+        server, client, pump = self.connectedServerAndClient(
+            self.factory, self.memory.tcpClients[0][2])
+
+        f = self.failureResultOf(connected)
+        f.trap(AuthenticationFailed)
+        # XXX Should assert something specific about the arguments of the
+        # exception
+
+        # Nothing useful can be done with the connection at this point, so the
+        # endpoint should close it.
+        self.assertTrue(client.transport.disconnecting)
+
+
+    def test_authenticationFallback(self):
+        """
+        If the SSH server does not accept any of the specified SSH keys, the
+        specified password is tried.
+        """
+        badKey = Key.fromString(privateRSA_openssh)
+        self.setupKeyChecker(self.portal, {self.user: privateDSA_openssh})
+
+        endpoint = SSHCommandEndpoint(
+            self.reactor, self.hostname, self.port, b"/bin/ls -l", self.user,
+            keys=[badKey], password=self.password, knownHosts=self.knownHosts,
+            ui=FixedResponseUI(False))
+
+        factory = Factory()
+        factory.protocol = Protocol
+        connected = endpoint.connect(factory)
+
+        # Exercising fallback requires a failed authentication attempt.  Allow
+        # one.
+        self.factory.attemptsBeforeDisconnect += 1
+
+        server, client, pump = self.connectedServerAndClient(
+            self.factory, self.memory.tcpClients[0][2])
+
+        pump.pump()
+
+        # The server logs the channel open failure - this is expected.
+        errors = self.flushLoggedErrors(ConchError)
+        self.assertIn(
+            'unknown channel', (errors[0].value.data, errors[0].value.value))
+        self.assertEqual(1, len(errors))
+
+        # Now deal with the results on the endpoint side.
+        f = self.failureResultOf(connected)
+        f.trap(ConchError)
+        self.assertEqual('unknown channel', f.value.value)
 
         # Nothing useful can be done with the connection at this point, so the
         # endpoint should close it.
@@ -674,20 +798,7 @@ class SSHCommandEndpointTests(TestCase):
         try to use them to authenticate with the SSH server.
         """
         key = Key.fromString(privateDSA_openssh)
-        username = self.user
-        authorizedKeys = FilePath(self.mktemp())
-        authorizedKeys.setContent(key.public().toString("OPENSSH"))
-
-        class X(SSHPublicKeyDatabase):
-            def getAuthorizedKeysFiles(self, credentials):
-                if credentials.username == username:
-                    return [authorizedKeys]
-                return []
-
-        checker = X()
-        checker._userdb = UserDatabase()
-        checker._userdb.addUser(username, b"garbage", 123, 456, None, None, None)
-        self.portal.registerChecker(checker)
+        self.setupKeyChecker(self.portal, {self.user: privateDSA_openssh})
 
         self.realm.channelLookup[b'session'] = WorkingExecSession
         endpoint = SSHCommandEndpoint(
