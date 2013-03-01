@@ -1092,6 +1092,25 @@ class FileSenderTestCase(unittest.TestCase):
         self.assertFalse(consumer.streaming)
 
 
+    def test_multipleRegister(self):
+        """
+        If a producter is already registered with the transport,
+        L{basic.FileSender.beginFileTransfer} fires the returned L{Deferred}
+        with the error and doesn't raise an exception.
+        """
+        source = BytesIO(b"Test content")
+        consumer = proto_helpers.StringTransport()
+        sender = basic.FileSender()
+        sender.beginFileTransfer(source, consumer)
+
+        secondSender = basic.FileSender()
+        d = secondSender.beginFileTransfer(source, consumer)
+        failure = self.failureResultOf(d)
+        failure.trap(RuntimeError)
+        self.assertEqual("Cannot register two producers",
+                         str(failure.value))
+
+
     def test_transfer(self):
         """
         L{basic.FileSender} sends the content of the given file using a

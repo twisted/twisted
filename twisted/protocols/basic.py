@@ -926,7 +926,11 @@ class FileSender:
         self.transform = transform
 
         self.deferred = deferred = defer.Deferred()
-        self.consumer.registerProducer(self, False)
+        try:
+            self.consumer.registerProducer(self, False)
+        except Exception as e:
+            deferred.errback(e)
+            self.deferred = None
         return deferred
 
 
