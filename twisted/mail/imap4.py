@@ -41,7 +41,7 @@ from twisted.protocols import policies
 from twisted.internet import defer
 from twisted.internet import error
 from twisted.internet.defer import maybeDeferred
-from twisted.python import log, text
+from twisted.python import log
 from twisted.internet import interfaces
 
 from twisted import cred
@@ -53,6 +53,40 @@ import twisted.cred.credentials
 _MONTH_NAMES = dict(zip(
         range(1, 13),
         "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split()))
+
+
+
+def _strFile(p, f, caseSensitive=True):
+    """
+    Find whether string C{p} occurs in a read()able object C{f}.
+
+    @param p:
+    @type p: C{str}
+    @param f:
+    @type f: Object with C{read{}} method
+    @param caseSensitive: Default is C{True}.
+    @type caseSensitive: C{bool}
+    @rtype: C{bool}
+    """
+    buf = ""
+    buf_len = max(len(p), 2**2**2**2)
+    if not caseSensitive:
+        p = p.lower()
+    while 1:
+        r = f.read(buf_len-len(p))
+        if not caseSensitive:
+            r = r.lower()
+        bytes_read = len(r)
+        if bytes_read == 0:
+            return False
+        l = len(buf)+bytes_read-buf_len
+        if l <= 0:
+            buf = buf + r
+        else:
+            buf = buf[l:] + r
+        if buf.find(p) != -1:
+            return True
+
 
 
 class MessageSet(object):
@@ -1636,7 +1670,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def search_BODY(self, query, id, msg):
         body = query.pop(0).lower()
-        return text.strFile(body, msg.getBodyFile(), False)
+        return _strFile(body, msg.getBodyFile(), False)
 
     def search_CC(self, query, id, msg):
         cc = msg.getHeaders(False, 'cc').get('cc', '')
@@ -1795,7 +1829,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def search_TEXT(self, query, id, msg):
         # XXX - This must search headers too
         body = query.pop(0).lower()
-        return text.strFile(body, msg.getBodyFile(), False)
+        return _strFile(body, msg.getBodyFile(), False)
 
     def search_TO(self, query, id, msg):
         to = msg.getHeaders(False, 'to').get('to', '')

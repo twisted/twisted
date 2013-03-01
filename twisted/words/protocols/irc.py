@@ -35,12 +35,13 @@ import errno, os, random, re, stat, struct, sys, time, types, traceback
 import string, socket
 import warnings
 import textwrap
+import shlex
 from os import path
 
 from twisted.internet import reactor, protocol, task
 from twisted.persisted import styles
 from twisted.protocols import basic
-from twisted.python import log, reflect, text
+from twisted.python import log, reflect
 from twisted.python.compat import set
 
 NUL = chr(0)
@@ -2229,8 +2230,8 @@ class IRCClient(basic.LineReceiver):
                                % (user, dcctype))
 
     def dcc_SEND(self, user, channel, data):
-        # Use splitQuoted for those who send files with spaces in the names.
-        data = text.splitQuoted(data)
+        # Use shlex.split for those who send files with spaces in the names.
+        data = shlex.split(data)
         if len(data) < 3:
             raise IRCBadMessage, "malformed DCC SEND request: %r" % (data,)
 
@@ -2253,7 +2254,7 @@ class IRCClient(basic.LineReceiver):
         self.dccDoSend(user, address, port, filename, size, data)
 
     def dcc_ACCEPT(self, user, channel, data):
-        data = text.splitQuoted(data)
+        data = shlex.split(data)
         if len(data) < 3:
             raise IRCBadMessage, "malformed DCC SEND ACCEPT request: %r" % (data,)
         (filename, port, resumePos) = data[:3]
@@ -2266,7 +2267,7 @@ class IRCClient(basic.LineReceiver):
         self.dccDoAcceptResume(user, filename, port, resumePos)
 
     def dcc_RESUME(self, user, channel, data):
-        data = text.splitQuoted(data)
+        data = shlex.split(data)
         if len(data) < 3:
             raise IRCBadMessage, "malformed DCC SEND RESUME request: %r" % (data,)
         (filename, port, resumePos) = data[:3]
@@ -2278,7 +2279,7 @@ class IRCClient(basic.LineReceiver):
         self.dccDoResume(user, filename, port, resumePos)
 
     def dcc_CHAT(self, user, channel, data):
-        data = text.splitQuoted(data)
+        data = shlex.split(data)
         if len(data) < 3:
             raise IRCBadMessage, "malformed DCC CHAT request: %r" % (data,)
 

@@ -10,7 +10,7 @@ from xml.dom.pulldom import SAX2DOM
 from xml.sax import make_parser
 from xml.sax.xmlreader import InputSource
 
-from twisted.python import htmlizer, text
+from twisted.python import htmlizer
 from twisted.python.filepath import FilePath
 from twisted.web import domhelpers
 import process, latex, indexer, numberer, htmlbook
@@ -204,7 +204,7 @@ def addPyListings(document, dir):
         howManyLines = len(lines)
         data = '\n'.join(lines)
 
-        data = cStringIO.StringIO(text.removeLeadingTrailingBlanks(data))
+        data = cStringIO.StringIO(removeLeadingTrailingBlanks(data))
         htmlizer.filter(data, outfile, writer=htmlizer.SmallerHTMLWriter)
         sourceNode = dom.parseString(outfile.getvalue()).documentElement
         sourceNode.insertBefore(_makeLineNumbers(howManyLines), sourceNode.firstChild)
@@ -246,6 +246,24 @@ def _replaceWithListing(node, val, filename, class_):
             (class_, val, captionTitle, filename, filename))
     newnode = dom.parseString(text).documentElement
     node.parentNode.replaceChild(newnode, node)
+
+
+
+def _removeLeadingBlanks(lines):
+    ret = []
+    for line in lines:
+        if ret or line.strip():
+            ret.append(line)
+    return ret
+
+
+
+def removeLeadingTrailingBlanks(s):
+    lines = _removeLeadingBlanks(s.split('\n'))
+    lines.reverse()
+    lines = _removeLeadingBlanks(lines)
+    lines.reverse()
+    return '\n'.join(lines) + '\n'
 
 
 
