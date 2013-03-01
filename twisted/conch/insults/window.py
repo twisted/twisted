@@ -1,4 +1,6 @@
 # -*- test-case-name: twisted.conch.test.test_window -*-
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
 
 """
 Simple insults-based widget library
@@ -7,9 +9,11 @@ Simple insults-based widget library
 """
 
 import array
+import textwrap
 
 from twisted.conch.insults import insults, helper
-from twisted.python import text as tptext
+
+
 
 class YieldFocus(Exception):
     """Input focus manipulation exception
@@ -596,7 +600,7 @@ class TextOutputArea(TextOutput):
         outputLines = []
         while inputLines:
             if self.longLines == self.WRAP:
-                wrappedLines = tptext.greedyWrap(inputLines.pop(0), width)
+                wrappedLines = textwrap.wrap(inputLines.pop(0), width)
                 outputLines.extend(wrappedLines or [''])
             else:
                 outputLines.append(inputLines.pop(0)[:width])
