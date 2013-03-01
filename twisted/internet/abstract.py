@@ -246,7 +246,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         """
         result = None
 
-        if (self._pendingSendFile and
+        if (not self.dataBuffer and self._pendingSendFile and
             self._tempDataBuffer[0] is _SendfileMarker):
             sfi = self._pendingSendFile[0]
             result = sfi.doSendfile(self)

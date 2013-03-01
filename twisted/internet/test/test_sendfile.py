@@ -107,7 +107,7 @@ class SendfileIntegrationMixin(object):
         def connected(protocols):
             client, server = protocols[:2]
             clients.append(client)
-            server.transport.write(b'y' * 10)
+            server.transport.write(b'y' * 1000000)
             fileObject = self.createFile()
             doneDeferred = server.transport.writeFile(fileObject)
             return doneDeferred.addBoth(finished, server)
@@ -124,9 +124,9 @@ class SendfileIntegrationMixin(object):
         self.runReactor(reactor)
 
         data = clients[0].data
-        self.assertEqual(1000010, len(data))
-        self.assertEqual(b'y' * 10, data[:10])
-        self.assertEqual(b'x' * 10, data[10:20])
+        self.assertEqual(2000000, len(data))
+        self.assertEqual(999999, data.rindex(b'y'))
+        self.assertEqual(1000000, data.index(b'x'))
 
 
     def test_writeFileStopWriting(self):
