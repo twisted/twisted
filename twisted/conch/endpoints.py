@@ -186,8 +186,6 @@ class _CommandTransport(SSHClientTransport):
             reason = self._hostKeyFailure
         elif self._state == b'AUTHENTICATING':
             reason = Failure(AuthenticationFailed("Doh"))
-        # elif self._state == b'CHANNELLING':
-        #     reason = Failure(ChannelOpenFailed("What"))
         self.factory.commandConnected.errback(reason)
 
 
