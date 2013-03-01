@@ -314,15 +314,68 @@ class ThreadedResolver(object):
 
 @implementer(INameResolver)
 class ThreadedNameResolver(object):
+    """
+    L{ThreadedNameResolver} uses a reactor, a threadpool, and
+    L{socket.getaddrinfo} to perform name lookups without blocking the
+    reactor thread.  It also supports timeouts indepedently from
+    whatever timeout logic L{socket.getaddrinfo} might have.
+
+    @ivar reactor: The reactor the threadpool of which will be used to call
+        L{socket.getaddrinfo} and the I/O thread of which the result will be
+        delivered.
+    """
+
     def __init__(self, reactor):
         self.reactor = reactor
+        self._runningQueries = {}
 
 
     def getAddressInformation(self, name, service, family=None, socktype=None,
-                              proto=None, flags=None):
+                              proto=None, flags=None, timeout=60):
 
-        return defer.succeed(
-            socket.getaddrinfo(name, service, family, socktype, proto, flags))
+        query = (name, service, family, socktype, proto, flags)
+
+        userDeferred = defer.Deferred()
+
+        lookupDeferred = threads.deferToThreadPool(
+            self.reactor, self.reactor.getThreadPool(),
+            socket.getaddrinfo, *query)
+
+        cancelCall = self.reactor.callLater(
+            timeout, self._cleanup, query, lookupDeferred)
+
+        self._runningQueries[lookupDeferred] = (userDeferred, cancelCall)
+
+        lookupDeferred.addBoth(self._checkTimeout, query, lookupDeferred)
+
+        return userDeferred
+
+
+    def _fail(self, query, err):
+        return failure.Failure(
+            error.DNSLookupError(
+                "Query failure. query: %r, message: %s" % (query, err)))
+
+
+    def _cleanup(self, query, lookupDeferred):
+        userDeferred, cancelCall = self._runningQueries[lookupDeferred]
+        del self._runningQueries[lookupDeferred]
+        userDeferred.errback(self._fail(query, "timeout error"))
+
+
+    def _checkTimeout(self, result, query, lookupDeferred):
+        try:
+            userDeferred, cancelCall = self._runningQueries[lookupDeferred]
+        except KeyError:
+            pass
+        else:
+            del self._runningQueries[lookupDeferred]
+            cancelCall.cancel()
+
+            if isinstance(result, failure.Failure):
+                userDeferred.errback(self._fail(query, result.getErrorMessage()))
+            else:
+                userDeferred.callback(result)
 
 
 

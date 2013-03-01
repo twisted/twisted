@@ -46,11 +46,11 @@ class FakeReactor(object):
 
 
     def callFromThread(self, f, *args, **kwargs):
-        self._threadCalls.put_nowait((f, args, kwargs))
+        self._threadCalls.put((f, args, kwargs))
 
 
     def _runThreadCalls(self):
-        f, args, kwargs = self._threadCalls.get_nowait()
+        f, args, kwargs = self._threadCalls.get()
         f(*args, **kwargs)
 
 
@@ -152,7 +152,7 @@ class ThreadedNameResolverTests(TestCase):
             (10, 2, 17, '', ('2001:500:88:200::10', 80, 0, 0)),
             (10, 3, 0, '', ('2001:500:88:200::10', 80, 0, 0))]
 
-        name = "example.com"
+        query = ("example.com", 80, None, None, None, None)
         timeout = 30
 
         reactor = FakeReactor()
@@ -161,18 +161,18 @@ class ThreadedNameResolverTests(TestCase):
         lookedUp = []
         resolvedTo = []
 
-        def fakeGetAddrInfo(host, port, family, socktype, proto, flags):
-            lookedUp.append(name)
+        def fakeGetAddrInfo(*args):
+            lookedUp.append(args)
             return expectedResult
         self.patch(socket, 'getaddrinfo', fakeGetAddrInfo)
 
         resolver = ThreadedNameResolver(reactor)
-        d = resolver.getAddressInformation(name, (timeout,))
+        d = resolver.getAddressInformation(*(query + (timeout,)))
         d.addCallback(resolvedTo.append)
 
-#        reactor._runThreadCalls()
+        reactor._runThreadCalls()
 
-        self.assertEqual(lookedUp, [name])
+        self.assertEqual(lookedUp, [query])
         self.assertEqual(resolvedTo, [expectedResult])
 
         # Make sure that any timeout-related stuff gets cleaned up.
