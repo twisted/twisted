@@ -311,8 +311,12 @@ class ThreadedResolver(object):
         return userDeferred
 
 
+
+@implementer(INameResolver)
 class ThreadedNameResolver(object):
-    pass
+    def getAddressInformation(self, name, service, family=None, socktype=None,
+                              proto=None, flags=None):
+        pass
 
 
 

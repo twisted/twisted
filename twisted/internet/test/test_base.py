@@ -132,7 +132,7 @@ class ThreadedNameResolverTests(TestCase):
         """
         L{ThreadedNameResolver} implements L{INameResolver}.
         """
-        self.assertTrue(verifyClass(INameResolver, ThreadedNameResolver))
+        verifyClass(INameResolver, ThreadedNameResolver)
 
 
     def test_success(self):
