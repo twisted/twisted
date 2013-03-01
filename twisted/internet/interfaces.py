@@ -62,7 +62,7 @@ class INameResolver(Interface):
     RFC 3484.
     """
     def getAddressInformation(name, service, family=None, socktype=None,
-                              proto=None, flags=None):
+                              proto=None, flags=None, timeout=None):
         """
         Get the address information associated with the given name.
 
@@ -87,6 +87,13 @@ class INameResolver(Interface):
 
         @param flags: A bitvector specifying zero or more of the following::
             - Yea right.  Go read the `getaddrinfo(3)` man page.
+
+        @param timeout: The number of seconds after which to cancel
+            the L{Deferred} returned by this function. Can be a single
+            C{int} or an iterable of C{int} for implementations which
+            support retries, in which case the L{Deferred}
+            cancellation timeout will be the sum of all the C{int}s.
+        @type: timeout: C{int} or an iterable of C{int}
 
         @raise ValueError: If one of the specified flags is not supported by the
             implementation.  All flags are optional.
