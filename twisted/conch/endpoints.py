@@ -27,6 +27,7 @@ from twisted.conch.ssh.connection import SSHConnection
 from twisted.conch.ssh.userauth import SSHUserAuthClient
 from twisted.conch.ssh.channel import SSHChannel
 from twisted.conch.client.knownhosts import KnownHostsFile
+from twisted.conch.client.agent import SSHAgentClient
 
 class AuthenticationFailed(Exception):
     """
@@ -114,13 +115,31 @@ class _CommandConnection(SSHConnection):
 class UserAuth(SSHUserAuthClient):
     password = None
     keys = None
+    agent = None
 
     def getPublicKey(self):
+        if self.agent is not None:
+            return self.agent.getPublicKey()
+
         if self.keys:
             self.key = self.keys.pop(0)
         else:
             self.key = None
         return self.key.public()
+
+
+    def signData(self, publicKey, signData):
+        """
+        Extend the base signing behavior by using an SSH agent to sign the
+        data, if one is available.
+
+        @type publicKey: L{Key}
+        @type signData: C{str}
+        """
+        if self.agent is not None:
+            return self.agent.signData(publicKey.blob(), signData)
+        else:
+            return SSHUserAuthClient.signData(self, publicKey, signData)
 
 
     def getPrivateKey(self):
@@ -176,7 +195,26 @@ class _CommandTransport(SSHClientTransport):
         userauth.password = self.factory.password
         if self.factory.keys:
             userauth.keys = list(self.factory.keys)
-        self.requestService(userauth)
+
+        if self.factory.agentEndpoint is not None:
+            d = self._connectToAgent(userauth, self.factory.agentEndpoint)
+        else:
+            d = succeed(None)
+
+        def maybeGotAgent(ignored):
+            self.requestService(userauth)
+        d.addBoth(maybeGotAgent)
+
+
+    def _connectToAgent(self, userauth, endpoint):
+        factory = Factory()
+        factory.protocol = SSHAgentClient
+        d = endpoint.connect(factory)
+        def connected(agent):
+            userauth.agent = agent
+            return agent.getPublicKeys()
+        d.addCallback(connected)
+        return d
 
 
     def connectionLost(self, reason):
@@ -205,7 +243,7 @@ class SSHCommandEndpoint(object):
         return KnownHostsFile.fromPath(FilePath(expanduser(cls._KNOWN_HOSTS)))
 
 
-    def __init__(self, reactor, hostname, port, command, username, keys=None, password=None, knownHosts=None, ui=None):
+    def __init__(self, reactor, hostname, port, command, username, keys=None, password=None, agentEndpoint=None, knownHosts=None, ui=None):
         """
         @param reactor: The reactor to use to establish the connection.
         @type reactor: L{IReactorTCP} provider
@@ -232,6 +270,11 @@ class SSHCommandEndpoint(object):
             C{None}).
         @type password: L{bytes} or L{NoneType}
 
+        @param agentEndpoint: An L{IStreamClientEndpoint} provider which may be
+            used to connect to an SSH agent, if one is to be used to help with
+            authentication.
+        @type agentEndpoint: L{IStreamClientEndpoint} provider
+
         @param knownHosts: The currently known host keys, used to check the
             host key presented by the server we actually connect to.
         @type knownHosts: L{KnownHostsKey}
@@ -247,11 +290,11 @@ class SSHCommandEndpoint(object):
         self.username = username
         self.keys = keys
         self.password = password
+        self.agentEndpoint = agentEndpoint
         if knownHosts is None:
             knownHosts = self._knownHosts()
         self.knownHosts = knownHosts
         self.ui = ui
-
 
 
     def connect(self, protocolFactory):
@@ -275,6 +318,7 @@ class SSHCommandEndpoint(object):
         factory.username = self.username
         factory.keys = self.keys
         factory.password = self.password
+        factory.agentEndpoint = self.agentEndpoint
         factory.knownHosts = self.knownHosts
         factory.ui = self.ui
         factory.command = self.command

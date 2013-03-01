@@ -13,9 +13,9 @@ from zope.interface import implementer, providedBy
 from twisted.python.filepath import FilePath
 from twisted.python.failure import Failure
 from twisted.trial.unittest import TestCase
-from twisted.internet.interfaces import IStreamClientEndpoint
+from twisted.internet.interfaces import IAddress, IStreamClientEndpoint
 from twisted.internet.protocol import Factory, Protocol
-from twisted.internet.defer import Deferred, succeed
+from twisted.internet.defer import Deferred, succeed, fail
 from twisted.internet.error import ConnectionDone, ConnectionRefusedError
 from twisted.internet.address import IPv4Address
 
@@ -29,6 +29,7 @@ from twisted.conch.ssh.userauth import SSHUserAuthServer
 from twisted.conch.ssh.connection import SSHConnection
 from twisted.conch.ssh.keys import Key
 from twisted.conch.ssh.channel import SSHChannel
+from twisted.conch.ssh.agent import SSHAgentServer
 from twisted.conch.client.knownhosts import KnownHostsFile
 from twisted.conch.checkers import SSHPublicKeyDatabase
 
@@ -137,6 +138,34 @@ class CommandFactory(SSHFactory):
 # command = authenticated.getCommandChannel()
 # transport = command.getTransport()
 # clientProtocol.makeConnection(transport)
+
+
+@implementer(IAddress)
+class MemoryAddress(object):
+    pass
+
+
+@implementer(IStreamClientEndpoint)
+class SingleUseMemoryEndpoint(object):
+    def __init__(self, server):
+        self.pump = None
+        self._server = server
+
+
+    def connect(self, factory):
+        if self.pump is not None:
+            raise Exception("SingleUseMemoryEndpoint was already used")
+
+        try:
+            protocol = factory.buildProtocol(MemoryAddress())
+        except:
+            return fail()
+        else:
+            self.pump = connect(
+                self._server, FakeTransport(self._server, isServer=True),
+                protocol, FakeTransport(protocol, isServer=False))
+            return succeed(protocol)
+
 
 
 @implementer(IStreamClientEndpoint)
@@ -811,6 +840,42 @@ class SSHCommandEndpointTests(TestCase):
 
         server, client, pump = self.connectedServerAndClient(
             self.factory, self.memory.tcpClients[0][2])
+
+        protocol = self.successResultOf(connected)
+        self.assertNotIdentical(None, protocol.transport)
+
+
+    def test_agentAuthentication(self):
+        """
+        If L{SSHCommandEndpoint} is initialized with an L{SSHAgentClient}, the
+        agent is used to authenticate with the SSH server.
+        """
+        key = Key.fromString(privateRSA_openssh)
+        agentServer = SSHAgentServer()
+        agentServer.factory = Factory()
+        agentServer.factory.keys = {key.blob(): (key, "")}
+
+        self.setupKeyChecker(self.portal, {self.user: privateRSA_openssh})
+
+        agentEndpoint = SingleUseMemoryEndpoint(agentServer)
+        endpoint = SSHCommandEndpoint(
+            self.reactor, self.hostname, self.port, b"/bin/ls -l", self.user,
+            knownHosts=self.knownHosts, ui=FixedResponseUI(False),
+            agentEndpoint=agentEndpoint)
+
+        self.realm.channelLookup[b'session'] = WorkingExecSession
+
+        factory = Factory()
+        factory.protocol = Protocol
+        connected = endpoint.connect(factory)
+
+        server, client, pump = self.connectedServerAndClient(
+            self.factory, self.memory.tcpClients[0][2])
+
+        # Let the agent client talk with the agent server
+        for i in range(20): # XXX Argh unroll this loop... or something?
+            agentEndpoint.pump.pump()
+            pump.pump()
 
         protocol = self.successResultOf(connected)
         self.assertNotIdentical(None, protocol.transport)

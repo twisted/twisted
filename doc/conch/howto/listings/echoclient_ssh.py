@@ -4,9 +4,9 @@
 
 if __name__ == '__main__':
     import sys
-    import echoclient
+    import echoclient_ssh
     from twisted.internet.task import react
-    react(echoclient.main, sys.argv[1:])
+    react(echoclient_ssh.main, sys.argv[1:])
 
 import os, getpass
 
@@ -14,6 +14,7 @@ from twisted.python.filepath import FilePath
 from twisted.python.usage import Options
 from twisted.internet.defer import Deferred
 from twisted.internet.protocol import Factory, Protocol
+from twisted.internet.endpoints import UNIXClientEndpoint
 from twisted.conch.ssh.keys import EncryptedKeyError, Key
 from twisted.conch.client.knownhosts import KnownHostsFile, ConsoleUI
 from twisted.conch.endpoints import SSHCommandEndpoint
@@ -26,6 +27,10 @@ class EchoOptions(Options):
         ("identity", "i", "~/.ssh/id_rsa", "file from which to read a private key to use for authentication"),
         ("password", None, None, "password to use for authentication"),
         ("knownhosts", "k", "~/.ssh/known_hosts", "file containing known ssh server public key data"),
+        ]
+
+    optFlags = [
+        ["no-agent", None, "Disable use of key agent"],
         ]
 
 
@@ -79,11 +84,17 @@ def main(reactor, *argv):
     else:
         knownHosts = None
 
+    if config["no-agent"] or "SSH_AUTH_SOCK" not in os.environ:
+        agentEndpoint = None
+    else:
+        agentEndpoint = UNIXClientEndpoint(reactor, os.environ["SSH_AUTH_SOCK"])
+
     endpoint = SSHCommandEndpoint(
         reactor,
         config["host"], config["port"],
         command="/bin/cat", username=config["username"],
         keys=keys, password=config["password"],
+        agentEndpoint=agentEndpoint,
         knownHosts=knownHosts,
         ui=ui)
 
