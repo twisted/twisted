@@ -631,7 +631,8 @@ class KnownHostsDatabaseTests(TestCase):
         """
         path = FilePath(self.mktemp())
         knownHosts = KnownHostsFile(path)
-        entry = knownHosts.addHostKey("some.example.com", Key.fromString(sampleKey))
+        entry = knownHosts.addHostKey(
+            "some.example.com", Key.fromString(sampleKey))
         knownHosts.save()
         knownHosts.save()
 

@@ -534,7 +534,8 @@ class KnownHostsFile(object):
         with self._savePath.open(mode) as hostsFileObj:
             if self._added:
                 hostsFileObj.write(
-                    '\n'.join([entry.toString() for entry in self._added]) + "\n")
+                    "\n".join([entry.toString() for entry in self._added]) +
+                    "\n")
                 self._added = []
         self._clobber = False
 
