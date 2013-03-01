@@ -5,10 +5,9 @@
 Tests for L{twisted.python.text}.
 """
 
-from cStringIO import StringIO
-
 from twisted.trial import unittest
 from twisted.python import text
+from twisted.python.compat import NativeStringIO as StringIO
 
 
 sampleText = \

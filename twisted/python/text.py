@@ -7,6 +7,9 @@
 Miscellany of text-munging functions.
 """
 
+from __future__ import division, absolute_import
+
+
 
 def stringyString(object, indentation=''):
     """
@@ -24,7 +27,7 @@ def stringyString(object, indentation=''):
 
     if type(object) is dict:
         braces = '{}'
-        for key, value in object.items():
+        for key, value in list(object.items()):
             value = stringyString(value, indentation + '   ')
             if isMultiline(value):
                 if endsInNewline(value):
