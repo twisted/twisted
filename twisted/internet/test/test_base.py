@@ -46,11 +46,11 @@ class FakeReactor(object):
 
 
     def callFromThread(self, f, *args, **kwargs):
-        self._threadCalls.put((f, args, kwargs))
+        self._threadCalls.put_nowait((f, args, kwargs))
 
 
     def _runThreadCalls(self):
-        f, args, kwargs = self._threadCalls.get()
+        f, args, kwargs = self._threadCalls.get_nowait()
         f(*args, **kwargs)
 
 
@@ -143,6 +143,42 @@ class ThreadedNameResolverTests(TestCase):
         list of L{AddressInformation} instances representing those
         results.
         """
+#        import pdb; pdb.set_trace()
+        expectedResult = [
+            (2, 1, 6, '', ('192.0.43.10', 80)),
+            (2, 2, 17, '', ('192.0.43.10', 80)),
+            (2, 3, 0, '', ('192.0.43.10', 80)),
+            (10, 1, 6, '', ('2001:500:88:200::10', 80, 0, 0)),
+            (10, 2, 17, '', ('2001:500:88:200::10', 80, 0, 0)),
+            (10, 3, 0, '', ('2001:500:88:200::10', 80, 0, 0))]
+
+        name = "example.com"
+        timeout = 30
+
+        reactor = FakeReactor()
+        self.addCleanup(reactor._stop)
+
+        lookedUp = []
+        resolvedTo = []
+
+        def fakeGetAddrInfo(host, port, family, socktype, proto, flags):
+            lookedUp.append(name)
+            return expectedResult
+        self.patch(socket, 'getaddrinfo', fakeGetAddrInfo)
+
+        resolver = ThreadedNameResolver(reactor)
+        d = resolver.getAddressInformation(name, (timeout,))
+        d.addCallback(resolvedTo.append)
+
+#        reactor._runThreadCalls()
+
+        self.assertEqual(lookedUp, [name])
+        self.assertEqual(resolvedTo, [expectedResult])
+
+        # Make sure that any timeout-related stuff gets cleaned up.
+        reactor._clock.advance(timeout + 1)
+        self.assertEqual(reactor._clock.calls, [])
+
 
 
 class ThreadedResolverTests(TestCase):

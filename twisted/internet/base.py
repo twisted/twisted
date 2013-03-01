@@ -314,9 +314,15 @@ class ThreadedResolver(object):
 
 @implementer(INameResolver)
 class ThreadedNameResolver(object):
+    def __init__(self, reactor):
+        self.reactor = reactor
+
+
     def getAddressInformation(self, name, service, family=None, socktype=None,
                               proto=None, flags=None):
-        pass
+
+        return defer.succeed(
+            socket.getaddrinfo(name, service, family, socktype, proto, flags))
 
 
 
