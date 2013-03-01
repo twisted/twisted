@@ -928,8 +928,8 @@ class FileSender:
         self.deferred = deferred = defer.Deferred()
         try:
             self.consumer.registerProducer(self, False)
-        except Exception as e:
-            deferred.errback(e)
+        except:
+            deferred.errback()
             self.deferred = None
         return deferred
 
