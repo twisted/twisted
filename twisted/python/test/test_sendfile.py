@@ -2,13 +2,15 @@
 # See LICENSE for details.
 
 """
-Tests for sendfile.
+Tests for sendfile python bindings.
 """
 
 import socket
 import errno
 
 from twisted.trial.unittest import TestCase
+
+from twisted.python.filepath import FilePath
 
 try:
     from twisted.python._sendfile import sendfile
@@ -35,11 +37,9 @@ class SendfileTestCase(TestCase):
         self.serverSocket.bind(('127.0.0.1', 0))
         self.serverSocket.listen(1)
         self.connections = [self.serverSocket]
-        filename = self.mktemp()
-        f = open(filename, 'w+')
-        f.write('x' * 1000)
-        f.close()
-        self.file = open(filename, 'r')
+        path = FilePath(self.mktemp())
+        path.setContent('x' * 1000)
+        self.file = path.open('r')
 
 
     def tearDown(self):
