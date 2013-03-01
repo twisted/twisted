@@ -135,7 +135,8 @@ class ComparisonTestsMixin(object):
           implement the comparison
         - The object implements not-equal as the opposite of equal
     """
-    def assertNormalEqualityImplementation(self, firstValueOne, secondValueOne, valueTwo):
+    def assertNormalEqualityImplementation(self, firstValueOne, secondValueOne,
+                                           valueTwo):
         """
         Assert that C{firstValueOne} is equal to C{secondValueOne} but not
         equal to C{valueOne} and that it defines equality cooperatively with
