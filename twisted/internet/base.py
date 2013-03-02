@@ -375,7 +375,7 @@ class ThreadedNameResolver(object):
             if isinstance(result, failure.Failure):
                 userDeferred.errback(self._fail(query, result.getErrorMessage()))
             else:
-                userDeferred.callback(result)
+                userDeferred.callback([AddressInformation(*r) for r in result])
 
 
 

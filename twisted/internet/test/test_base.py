@@ -143,7 +143,7 @@ class ThreadedNameResolverTests(TestCase):
         list of L{AddressInformation} instances representing those
         results.
         """
-        expectedResult = [
+        expectedSocketResult = [
             (2, 1, 6, '', ('192.0.43.10', 80)),
             (2, 2, 17, '', ('192.0.43.10', 80)),
             (2, 3, 0, '', ('192.0.43.10', 80)),
@@ -162,7 +162,7 @@ class ThreadedNameResolverTests(TestCase):
 
         def fakeGetAddrInfo(*args):
             lookedUp.append(args)
-            return expectedResult
+            return expectedSocketResult
         self.patch(socket, 'getaddrinfo', fakeGetAddrInfo)
 
         resolver = ThreadedNameResolver(reactor)
@@ -172,7 +172,9 @@ class ThreadedNameResolverTests(TestCase):
         reactor._runThreadCalls()
 
         self.assertEqual(lookedUp, [query])
-        self.assertEqual(resolvedTo, [expectedResult])
+        self.assertEqual(
+            resolvedTo,
+            [[AddressInformation(*x) for x in expectedSocketResult]])
 
         # Make sure that any timeout-related stuff gets cleaned up.
         reactor._clock.advance(timeout + 1)
