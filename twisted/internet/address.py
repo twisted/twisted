@@ -80,7 +80,7 @@ class IPv6Address(_IPAddress):
 
 
 @implementer(IAddress)
-class HostnameAddress(object, util.FancyEqMixin):
+class HostnameAddress(object, FancyEqMixin):
     """
     A L{HostnameAddress} represents the address of a L{HostnameEndpoint}.
 
@@ -108,7 +108,7 @@ class HostnameAddress(object, util.FancyEqMixin):
 
 
 @implementer(IAddress)
-class UNIXAddress(object, util.FancyEqMixin):
+class UNIXAddress(object, FancyEqMixin):
     """
     Object representing a UNIX socket endpoint.
 

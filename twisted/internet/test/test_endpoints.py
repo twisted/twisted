@@ -1123,16 +1123,8 @@ class HostnameEndpointsOneIPv4TestCase(ClientEndpointTestCaseMixin,
             mreactor, clientFactory)
         print "!!", ep._reactor
         d = ep.connect(clientFactory)  # something's not right here
-
-        receivedExceptions = []
-
-        def checkFailure(f):
-            print "inside checkfailure", f
-            receivedExceptions.append(f.value)
-
-        d.addErrback(checkFailure)
-
-        self.assertEqual(receivedExceptions, [expectedError])
+#        print "!!", self.failureResultOf(d)
+        self.assertNoResult(d)
 
 
 
