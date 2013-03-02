@@ -1115,24 +1115,15 @@ class HostnameEndpointsOneIPv4TestCase(ClientEndpointTestCaseMixin,
         expectedError = error.ConnectError(string="Connection Failed")
 
         mreactor = RaisingMemoryReactorWithClock(connectException=expectedError)
-        print "!!", mreactor, mreactor._connectException
 
         clientFactory = object()
 
         ep, ignoredArgs, ignoredDest = self.createClientEndpoint(
             mreactor, clientFactory)
-        print "!!", ep._reactor
-        d = ep.connect(clientFactory)  # something's not right here
-#        print "!!", self.failureResultOf(d)
-#        self.assertNoResult(d)
-        self.assertIsInstance(self.failureResultOf(d).value, expectedError)
 
-
-
-
-#    def test_endpointConnectFailure(self):
-#        pass
-        # FIXME: Issues with RaisingMemoryReactor
+        d = ep.connect(clientFactory)
+        mreactor.advance(0.3)
+        self.assertEqual(self.failureResultOf(d).value, expectedError)
 
 
 
@@ -1239,8 +1230,22 @@ class HostnameEndpointsOneIPv6TestCase(ClientEndpointTestCaseMixin,
 
 
     def test_endpointConnectFailure(self):
-        pass
-        # FIXME: Issues with RaisingMemoryReactor
+        """
+        If an endpoint tries to connect to a non-listening port it gets
+        a C{ConnectError} failure.
+        """
+        expectedError = error.ConnectError(string="Connection Failed")
+
+        mreactor = RaisingMemoryReactorWithClock(connectException=expectedError)
+
+        clientFactory = object()
+
+        ep, ignoredArgs, ignoredDest = self.createClientEndpoint(
+            mreactor, clientFactory)
+
+        d = ep.connect(clientFactory)
+        mreactor.advance(0.3)
+        self.assertEqual(self.failureResultOf(d).value, expectedError)
 
 
 
