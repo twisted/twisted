@@ -1124,7 +1124,8 @@ class HostnameEndpointsOneIPv4TestCase(ClientEndpointTestCaseMixin,
         print "!!", ep._reactor
         d = ep.connect(clientFactory)  # something's not right here
 #        print "!!", self.failureResultOf(d)
-        self.assertNoResult(d)
+#        self.assertNoResult(d)
+        self.assertIsInstance(self.failureResultOf(d).value, expectedError)
 
 
 
