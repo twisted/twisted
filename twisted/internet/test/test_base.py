@@ -212,6 +212,41 @@ class ThreadedNameResolverTests(TestCase):
         self.assertEqual(reactor._clock.calls, [])
 
 
+    def test_timeout(self):
+        """
+        If L{socket.getaddrinfo} does not complete before the
+        specified timeout elapsed, the L{Deferred} returned by
+        L{ThreadedResolver.getAddressInformation} fails with
+        L{DNSLookupError}.
+        """
+        query = ("example.com", 80, None, None, None, None)
+        timeout = 10
+
+        reactor = FakeReactor()
+        self.addCleanup(reactor._stop)
+
+        result = Queue()
+        def fakeGetAddrInfo(name):
+            raise result.get()
+
+        self.patch(socket, 'getaddrinfo', fakeGetAddrInfo)
+
+        failedWith = []
+        resolver = ThreadedNameResolver(reactor)
+        d = resolver.getAddressInformation(*query, timeout=timeout)
+        self.assertFailure(d, DNSLookupError)
+        d.addCallback(failedWith.append)
+
+        reactor._clock.advance(timeout - 1)
+        self.assertEqual(failedWith, [])
+        reactor._clock.advance(1)
+        self.assertEqual(len(failedWith), 1)
+
+        # Eventually the socket.getaddrinfo does finish - in this
+        # case, with an exception.  Nobody cares, though.
+        result.put(IOError("The I/O was errorful"))
+
+
 
 class ThreadedResolverTests(TestCase):
     """
