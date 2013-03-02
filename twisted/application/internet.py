@@ -226,10 +226,10 @@ class TimerService(_VolatileDataService):
     @ivar clock: Source of time. This defaults to L{None} which is
         causes L{twisted.internet.reactor} to be used.
         Feel free to set this to something else, but it probably ought to be
-        set *before* calling L{start}.
+        set *before* calling L{startService}.
     @type clock: L{IReactorTime<twisted.internet.interfaces.IReactorTime>}
 
-    @ivar call: Function and arguments to call periodcally.
+    @ivar call: Function and arguments to call periodically.
     @type call: L{tuple} of C{(callable, args, kwargs)}
     """
 
@@ -237,7 +237,7 @@ class TimerService(_VolatileDataService):
 
     def __init__(self, step, callable, *args, **kwargs):
         """
-        @param step: The number of secons between calls.
+        @param step: The number of seconds between calls.
         @type step: L{float}
 
         @param callable: Function to call
@@ -274,8 +274,8 @@ class TimerService(_VolatileDataService):
         Stop the service.
 
         @rtype: L{Deferred<defer.Deferred>}
-        @return: a L{Deferred<defer.Deferred>} which is triggered when the
-            when any currently running call is finished.
+        @return: a L{Deferred<defer.Deferred>} which is fired when the
+            currently running call (if any) is finished.
         """
         if self._loop.running:
             self._loop.stop()

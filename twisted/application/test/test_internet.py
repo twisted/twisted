@@ -293,7 +293,7 @@ class TestTimerService(TestCase):
         self.timer.startService()
         self.assertTrue(self.timer.running, "Service is started")
         self.assertIsInstance(self.timer._loop, task.LoopingCall)
-        self.assertIs(self.clock, self.timer._loop.clock)
+        self.assertIdentical(self.clock, self.timer._loop.clock)
         self.assertTrue(self.timer._loop.running, "LoopingCall is started")
 
 
@@ -321,7 +321,7 @@ class TestTimerService(TestCase):
             return otherClock
         self.patch(internet, "_maybeGlobalReactor", getOtherClock)
         self.timer.startService()
-        self.assertIs(otherClock, self.timer._loop.clock)
+        self.assertIdentical(otherClock, self.timer._loop.clock)
 
 
     def test_stopServiceWaits(self):
