@@ -18,7 +18,7 @@ from twisted.python.compat import _PY3
 from twisted.trial import unittest
 from twisted.internet import error, interfaces, defer
 from twisted.internet import endpoints
-from twisted.internet.address import IPv4Address, IPv6Address, UNIXAddress
+from twisted.internet.address import IPv4Address, IPv6Address, UNIXAddress, HostnameAddress
 from twisted.internet.protocol import ClientFactory, Protocol
 from twisted.test.proto_helpers import (
     MemoryReactor, RaisingMemoryReactor, StringTransport)
@@ -28,9 +28,13 @@ from twisted.python.systemd import ListenFDs
 from twisted.python.filepath import FilePath
 from twisted.protocols import basic
 from twisted.internet import protocol, reactor
+from twisted.internet.task import Clock
+from twisted.internet.test.test_protocol import MemoryReactorWithConnectorsAndTime
 
 from twisted.test import __file__ as testInitPath
 pemPath = FilePath(testInitPath.encode("utf-8")).sibling(b"server.pem")
+
+MemoryReactor = MemoryReactorWithConnectorsAndTime   # This is mostly for HostnameEndpoints
 
 if not _PY3:
     from twisted.plugin import getPlugins
@@ -676,8 +680,6 @@ class StandardIOEndpointsTestCase(unittest.TestCase):
         self.d.addCallback(checkAddress)
         return self.d
 
-
-
 class TCP4EndpointsTestCase(EndpointTestCaseMixin, unittest.TestCase):
     """
     Tests for TCP IPv4 Endpoints.
@@ -993,6 +995,398 @@ class TCP6EndpointNameResolutionTestCase(ClientEndpointTestCaseMixin,
             [(fakegetaddrinfo, ("ipv6.example.com", 0, AF_INET6), {})], calls)
 
 
+#_________________________________________________________________________________________________
+# Begin testing HostnameEndpoint
+class RaisingMemoryReactorWithClock(RaisingMemoryReactor, Clock):
+    """
+    An extention of L{RaisingMemoryReactor} with L{task.Clock}.
+    """
+    def __init__(self, listenException=None, connectException=None):
+        Clock.__init__(self)
+        self._listenException = listenException
+        self._connectException = connectException
+        print "initialized reactor"
+
+
+
+class HostnameEndpointsOneIPv4TestCase(ClientEndpointTestCaseMixin,
+                                unittest.TestCase):
+    """
+    Tests for the hostname based endpoints when GAI returns only one
+    (IPv4) address.
+    """
+    def createClientEndpoint(self, reactor, clientFactory, **connectArgs):
+        address = HostnameAddress("example.com", 80)
+        endpoint = endpoints.HostnameEndpoint(reactor, "example.com",
+                                           address.port, **connectArgs)
+
+        def testNameResolution(host):
+            self.assertEqual("example.com", host)
+            data = [(AF_INET, SOCK_STREAM, IPPROTO_TCP, '', ('1.2.3.4', 0, 0, 0))]
+            return defer.succeed(data)
+
+        endpoint._nameResolution = testNameResolution
+
+        return (endpoint, ('1.2.3.4', address.port, clientFactory,
+                connectArgs.get('timeout', 30),
+                connectArgs.get('bindAddress', None)),
+                address)
+
+
+    def expectedClients(self, reactor):
+        """
+        @return: List of calls to L{IReactorTCP.connectTCP}
+        """
+        return reactor.tcpClients
+
+
+    def assertConnectArgs(self, receivedArgs, expectedArgs):
+        """
+        Compare host, port, timeout, and bindAddress in C{receivedArgs}
+        to C{expectedArgs}.  We ignore the factory because we don't
+        only care what protocol comes out of the
+        C{IStreamClientEndpoint.connect} call.
+
+        @param receivedArgs: C{tuple} of (C{host}, C{port}, C{factory},
+            C{timeout}, C{bindAddress}) that was passed to
+            L{IReactorTCP.connectTCP}.
+        @param expectedArgs: C{tuple} of (C{host}, C{port}, C{factory},
+            C{timeout}, C{bindAddress}) that we expect to have been passed
+            to L{IReactorTCP.connectTCP}.
+        """
+        (host, port, ignoredFactory, timeout, bindAddress) = receivedArgs
+        (expectedHost, expectedPort, _ignoredFactory,
+         expectedTimeout, expectedBindAddress) = expectedArgs
+
+        self.assertEqual(host, expectedHost)
+        self.assertEqual(port, expectedPort)
+        self.assertEqual(timeout, expectedTimeout)
+        self.assertEqual(bindAddress, expectedBindAddress)
+
+
+    def connectArgs(self):
+        """
+        @return: C{dict} of keyword arguments to pass to connect.
+        """
+        return {'timeout': 10, 'bindAddress': ('localhost', 49595)}
+
+
+    def test_endpointConnectingCancelled(self):
+        """
+        Calling L{Deferred.cancel} on the L{Deferred} returned from
+        L{IStreamClientEndpoint.connect} is errbacked with an expected
+        L{ConnectingCancelledError} exception.
+        """
+        mreactor = MemoryReactor()
+
+        clientFactory = protocol.Factory()
+        clientFactory.protocol = protocol.Protocol
+
+
+        ep, ignoredArgs, address = self.createClientEndpoint(
+            mreactor, clientFactory)
+
+        d = ep.connect(clientFactory)
+
+        receivedFailures = []
+
+        d.addErrback(receivedFailures.append)
+
+        d.cancel()
+        # When canceled, the connector will immediately notify its factory that
+        # the connection attempt has failed due to a UserError.
+        attemptFactory = self.retrieveConnectedFactory(mreactor)
+        attemptFactory.clientConnectionFailed(None, Failure(error.UserError()))
+        # This should be a feature of MemoryReactor: <http://tm.tl/5630>.
+
+        self.assertEqual(len(receivedFailures), 1)
+        failure = receivedFailures[0]
+
+        self.assertIsInstance(failure.value, error.ConnectingCancelledError)
+        self.assertEqual(failure.value.address, address)
+        self.assertTrue(mreactor.tcpClients[0][2]._connector.stoppedConnecting)
+
+
+    def test_endpointConnectFailure(self):
+        """
+        If an endpoint tries to connect to a non-listening port it gets
+        a C{ConnectError} failure.
+        """
+        expectedError = error.ConnectError(string="Connection Failed")
+
+        mreactor = RaisingMemoryReactorWithClock(connectException=expectedError)
+        print "!!", mreactor, mreactor._connectException
+
+        clientFactory = object()
+
+        ep, ignoredArgs, ignoredDest = self.createClientEndpoint(
+            mreactor, clientFactory)
+        print "!!", ep._reactor
+        d = ep.connect(clientFactory)  # something's not right here
+
+        receivedExceptions = []
+
+        def checkFailure(f):
+            print "inside checkfailure", f
+            receivedExceptions.append(f.value)
+
+        d.addErrback(checkFailure)
+
+        self.assertEqual(receivedExceptions, [expectedError])
+
+
+
+
+#    def test_endpointConnectFailure(self):
+#        pass
+        # FIXME: Issues with RaisingMemoryReactor
+
+
+
+class HostnameEndpointsOneIPv6TestCase(ClientEndpointTestCaseMixin,
+                                unittest.TestCase):
+    """
+    Tests for the hostname based endpoints when GAI returns only one
+    (IPv6) address.
+    """
+    def createClientEndpoint(self, reactor, clientFactory, **connectArgs):
+        address = HostnameAddress("ipv6.example.com", 80)
+        endpoint = endpoints.HostnameEndpoint(reactor, "ipv6.example.com",
+                                           address.port, **connectArgs)
+
+
+        def testNameResolution(host):
+            self.assertEqual("ipv6.example.com", host)
+            data = [(AF_INET6, SOCK_STREAM, IPPROTO_TCP, '', ('1:2::3:4', 0, 0, 0))]
+            return defer.succeed(data)
+
+        endpoint._nameResolution = testNameResolution
+
+        return (endpoint, ('1:2::3:4', address.port, clientFactory,
+                connectArgs.get('timeout', 30),
+                connectArgs.get('bindAddress', None)),
+                address)
+
+
+    def expectedClients(self, reactor):
+        """
+        @return: List of calls to L{IReactorTCP.connectTCP}
+        """
+        return reactor.tcpClients
+
+
+    def assertConnectArgs(self, receivedArgs, expectedArgs):
+        """
+        Compare host, port, timeout, and bindAddress in C{receivedArgs}
+        to C{expectedArgs}.  We ignore the factory because we don't
+        only care what protocol comes out of the
+        C{IStreamClientEndpoint.connect} call.
+
+        @param receivedArgs: C{tuple} of (C{host}, C{port}, C{factory},
+            C{timeout}, C{bindAddress}) that was passed to
+            L{IReactorTCP.connectTCP}.
+        @param expectedArgs: C{tuple} of (C{host}, C{port}, C{factory},
+            C{timeout}, C{bindAddress}) that we expect to have been passed
+            to L{IReactorTCP.connectTCP}.
+        """
+        (host, port, ignoredFactory, timeout, bindAddress) = receivedArgs
+        (expectedHost, expectedPort, _ignoredFactory,
+         expectedTimeout, expectedBindAddress) = expectedArgs
+
+        self.assertEqual(host, expectedHost)
+        self.assertEqual(port, expectedPort)
+        self.assertEqual(timeout, expectedTimeout)
+        self.assertEqual(bindAddress, expectedBindAddress)
+
+
+    def connectArgs(self):
+        """
+        @return: C{dict} of keyword arguments to pass to connect.
+        """
+        return {'timeout': 10, 'bindAddress': ('localhost', 49595)}
+
+
+    def test_endpointConnectingCancelled(self):
+        """
+        Calling L{Deferred.cancel} on the L{Deferred} returned from
+        L{IStreamClientEndpoint.connect} is errbacked with an expected
+        L{ConnectingCancelledError} exception.
+        """
+        mreactor = MemoryReactor()
+
+        clientFactory = protocol.Factory()
+        clientFactory.protocol = protocol.Protocol
+
+
+        ep, ignoredArgs, address = self.createClientEndpoint(
+            mreactor, clientFactory)
+
+        d = ep.connect(clientFactory)
+
+        receivedFailures = []
+
+        d.addErrback(receivedFailures.append)
+
+        d.cancel()
+        # When canceled, the connector will immediately notify its factory that
+        # the connection attempt has failed due to a UserError.
+        attemptFactory = self.retrieveConnectedFactory(mreactor)
+        attemptFactory.clientConnectionFailed(None, Failure(error.UserError()))
+        # This should be a feature of MemoryReactor: <http://tm.tl/5630>.
+
+        self.assertEqual(len(receivedFailures), 1)
+        failure = receivedFailures[0]
+
+        self.assertIsInstance(failure.value, error.ConnectingCancelledError)
+        self.assertEqual(failure.value.address, address)
+        self.assertTrue(mreactor.tcpClients[0][2]._connector.stoppedConnecting)
+
+
+    # TODO: Add a test to check deferToThread as well.
+
+
+    def test_endpointConnectFailure(self):
+        pass
+        # FIXME: Issues with RaisingMemoryReactor
+
+
+
+class HostnameEndpointsGAIFailureTestCase(unittest.TestCase):
+    """
+    Tests for the hostname based endpoints when GAI returns no address.
+    """
+    def test_failure(self):
+        endpoint = endpoints.HostnameEndpoint(Clock(), "example.com", 80)
+
+        def testNameResolution(host):
+            self.assertEqual("example.com", host)
+            data = error.DNSLookupError("Problems")
+            return defer.fail(data)
+
+        endpoint._nameResolution = testNameResolution
+        clientFactory = object()
+        dConnect = endpoint.connect(clientFactory)
+        return self.assertFailure(dConnect, error.DNSLookupError)
+
+
+#________________________________________________________________________
+
+
+class HostnameEndpointsFasterConnectionTestCase(unittest.TestCase):
+    """
+    Tests for the hostname based endpoints when gai returns an IPv4 and
+    an IPv6 address, and one connection takes less time than the other.
+    """
+    def setUp(self):
+        self.mreactor = MemoryReactor()
+        self.endpoint = endpoints.HostnameEndpoint(self.mreactor,
+                "www.example.com", 80)
+
+        def nameResolution(host):
+            self.assertEqual("www.example.com", host)
+            data = [
+                (AF_INET, SOCK_STREAM, IPPROTO_TCP, '', ('1.2.3.4', 0, 0, 0)),
+                (AF_INET6, SOCK_STREAM, IPPROTO_TCP, '', ('1:2::3:4', 0, 0, 0))
+            ]
+            return defer.succeed(data)
+
+        self.endpoint._nameResolution = nameResolution
+
+
+    def test_IPv4IsFaster(self):
+        """
+        The endpoint returns a connection to the IPv4 address.
+        """
+        clientFactory = protocol.Factory()
+        clientFactory.protocol = protocol.Protocol
+
+        d = self.endpoint.connect(clientFactory)
+        results = []
+        d.addCallback(results.append)
+        (host, port, factory, timeout, bindAddress) = self.mreactor.tcpClients[0]
+
+        # IPv4 ought to be the first attempt, since nameResolution (standing in
+        # for GAI here) returned it first.
+        self.assertEqual(host, '1.2.3.4')
+        self.assertEqual(port, 80)
+
+        # The IPv4 attempt succeeds.
+        proto = factory.buildProtocol((host, port))
+        fakeTransport = object()
+
+        # We haven't established the connection yet...
+        self.assertEqual(results, [])
+
+        # Establish the connection.
+        proto.makeConnection(fakeTransport)
+
+        # Now, the Deferred should have fired, with the protocol constructed
+        # from the above.
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].factory, clientFactory)
+
+
+
+    def test_IPv6IsFaster(self):
+        """
+        The endpoint returns a connection to the IPv6 address.
+        """
+        clientFactory = protocol.Factory()
+        clientFactory.protocol = protocol.Protocol
+
+        d = self.endpoint.connect(clientFactory)
+        results = []
+        d.addCallback(results.append)
+
+        self.mreactor.advance(0.3)
+        (host, port, factory, timeout, bindAddress) = self.mreactor.tcpClients[1]
+
+        # IPv6 ought to be the second attempt, since nameResolution (standing in
+        # for GAI here) returned it second.
+        self.assertEqual(host, '1:2::3:4')
+        self.assertEqual(port, 80)
+
+        # The IPv6 attempt succeeds.
+        proto = factory.buildProtocol((host, port))
+        fakeTransport = object()
+
+        # We haven't established the connection yet...
+        self.assertEqual(results, [])
+
+        # Establish the connection.
+        proto.makeConnection(fakeTransport)
+
+        # Now, the Deferred should have fired, with the protocol constructed
+        # from the above.
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].factory, clientFactory)
+
+
+    def test_otherConnectionsCancelled(self):
+        """"
+        Once the endpoint returns a succesful connection, all the
+        other pending connections are cancelled.
+        """
+        clientFactory = protocol.Factory()
+        clientFactory.protocol = protocol.Protocol
+
+        d = self.endpoint.connect(clientFactory)
+        results = []
+        d.addCallback(results.append)
+
+        self.mreactor.advance(0.3)
+        (host, port, factory, timeout, bindAddress) = self.mreactor.tcpClients[1]
+
+        # The IPv6 attempt succeeds.
+        proto = factory.buildProtocol((host, port))
+        fakeTransport = object()
+
+        # Establish the connection.
+        proto.makeConnection(fakeTransport)
+
+        # Now, the pending IPv4 connection should have been cancelled.
+        self.assertEqual(True, self.mreactor.tcpClients[0][2]._connector.stoppedConnecting)
+#_______________________________________________________________________________________________________
 
 class SSL4EndpointsTestCase(EndpointTestCaseMixin,
                             unittest.TestCase):
