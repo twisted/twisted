@@ -143,7 +143,6 @@ class ThreadedNameResolverTests(TestCase):
         list of L{AddressInformation} instances representing those
         results.
         """
-#        import pdb; pdb.set_trace()
         expectedResult = [
             (2, 1, 6, '', ('192.0.43.10', 80)),
             (2, 2, 17, '', ('192.0.43.10', 80)),
@@ -174,6 +173,39 @@ class ThreadedNameResolverTests(TestCase):
 
         self.assertEqual(lookedUp, [query])
         self.assertEqual(resolvedTo, [expectedResult])
+
+        # Make sure that any timeout-related stuff gets cleaned up.
+        reactor._clock.advance(timeout + 1)
+        self.assertEqual(reactor._clock.calls, [])
+
+
+    def test_failure(self):
+        """
+        L{ThreadedNameResolver.getAddressInformation} returns a
+        L{Deferred} which fires a L{Failure} if the call to
+        L{socket.getaddrinfo} raises an exception.
+        """
+        query = ("example.com", 80, None, None, None, None)
+        timeout = 30
+
+        reactor = FakeReactor()
+        self.addCleanup(reactor._stop)
+
+        def fakeGetAddrInfo(*args):
+            raise IOError("ENOBUFS (this is a funny joke)")
+
+        self.patch(socket, 'getaddrinfo', fakeGetAddrInfo)
+
+        failedWith = []
+        resolver = ThreadedNameResolver(reactor)
+        d = resolver.getAddressInformation(*query, timeout=timeout)
+#        import pdb;pdb.set_trace()
+        self.assertFailure(d, DNSLookupError)
+        d.addCallback(failedWith.append)
+
+        reactor._runThreadCalls()
+
+        self.assertEqual(len(failedWith), 1)
 
         # Make sure that any timeout-related stuff gets cleaned up.
         reactor._clock.advance(timeout + 1)
