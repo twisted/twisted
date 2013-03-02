@@ -297,7 +297,6 @@ class TestTimerService(TestCase):
         self.assertTrue(self.timer._loop.running, "LoopingCall is started")
 
 
-
     def test_startServiceRunsCallImmediately(self):
         """
         When L{TimerService.startService} is called, it calls the function
