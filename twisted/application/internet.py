@@ -216,17 +216,36 @@ for tran in 'TCP UNIX SSL UDP UNIXDatagram Multicast'.split():
 
 
 class TimerService(_VolatileDataService):
-
-    """Service to periodically call a function
+    """
+    Service to periodically call a function
 
     Every C{step} seconds call the given function with the given arguments.
     The service starts the calls when it starts, and cancels them
     when it stops.
+
+    @ivar clock: Source of time. This defaults to L{None} which is
+        causes L{twisted.internet.reactor} to be used.
+        Feel free to set this to something else, but it probably ought to be
+        set *before* calling L{start}.
+    @type clock: L{IReactorTime<twisted.internet.interfaces.IReactorTime>}
+
+    @ivar call: Function and arguments to call periodcally.
+    @type call: L{tuple} of C{(callable, args, kwargs)}
     """
 
     volatile = ['_loop', '_loopFinshed']
 
     def __init__(self, step, callable, *args, **kwargs):
+        """
+        @param step: The number of secons between calls.
+        @type step: L{float}
+
+        @param callable: Function to call
+        @type callable: L{callable}
+
+        @param args: Positional arguments to pass to function
+        @param kwargs: Keyword arguments to pass to function
+        """
         self.step = step
         self.call = (callable, args, kwargs)
         self.clock = None
@@ -251,6 +270,13 @@ class TimerService(_VolatileDataService):
         log.err(why)
 
     def stopService(self):
+        """
+        Stop the service.
+
+        @rtype: L{Deferred<defer.Deferred>}
+        @return: a L{Deferred<defer.Deferred>} which is triggered when the
+            when any currently running call is finished.
+        """
         if self._loop.running:
             self._loop.stop()
         self._loopFinished.addCallback(lambda _:
