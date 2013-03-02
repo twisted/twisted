@@ -308,7 +308,6 @@ class TestTimerService(TestCase):
         self.assertEqual([None], result)
 
 
-
     def test_startServiceUsesGlobalReactor(self):
         """
         L{TimerService.startService} uses L{internet._maybeGlobalReactor} to
