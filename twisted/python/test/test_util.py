@@ -1041,7 +1041,6 @@ class DeprecationTests(unittest.TestCase):
 
 
 
-
 class SuppressedWarningsTests(unittest.TestCase):
     """
     Tests for L{util.runWithWarningsSuppressed}.
