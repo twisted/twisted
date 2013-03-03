@@ -433,6 +433,8 @@ class MemoryReactor(object):
     def adoptStreamConnection(self, fileDescriptor, addressFamily, factory):
         """
         Record the given stream connection in C{adoptedStreamConnections}.
+
+        @see: L{twisted.internet.interfaces.IReactorSocket.adoptStreamConnection}
         """
         self.adoptedStreamConnections.append((
                 fileDescriptor, addressFamily, factory))
