@@ -45,7 +45,8 @@ __all__ = ["clientFromString", "serverFromString",
            "TCP4ClientEndpoint", "TCP6ClientEndpoint",
            "UNIXServerEndpoint", "UNIXClientEndpoint",
            "SSL4ServerEndpoint", "SSL4ClientEndpoint",
-           "AdoptedStreamServerEndpoint", "StandardIOEndpoint"]
+           "AdoptedStreamServerEndpoint", "StandardIOEndpoint",
+           "HostnameEndpoint"]
 
 __all3__ = ["TCP4ServerEndpoint", "TCP6ServerEndpoint",
             "TCP4ClientEndpoint", "TCP6ClientEndpoint",
@@ -449,21 +450,24 @@ class TCP6ClientEndpoint(object):
 
 
 
-
 @implementer(interfaces.IStreamClientEndpoint)
 class HostnameEndpoint(object):
     """
-    A smart name based endpoint that connects to the faster one of IPv4
-    or IPv6 host address resolved.
-    """
+    A smart name based endpoint that connects to the faster one of IPv4 or IPv6
+    host address resolved.
 
+    @ivar _getaddrinfo: A hook used for testing name resolution.
+
+    @ivar _deferToThread: A hook used for testing deferToThread.
+
+    @ivar _pending: A list of all the pending connection attempts.
+    """
     _getaddrinfo = socket.getaddrinfo
     _deferToThread = threads.deferToThread
 
     def __init__(self, reactor, host, port, timeout=30, bindAddress=None):
         """
-        @param host: An IPv6 address literal or a hostname with an
-            IPv6 address
+        @param host: An IPv6 address literal or a hostname with an IPv6 address
 
         @see: L{twisted.internet.interfaces.IReactorTCP.connectTCP}
         """
@@ -472,7 +476,7 @@ class HostnameEndpoint(object):
         self._port = port
         self._timeout = timeout
         self._bindAddress = bindAddress
-        self.pending = []
+        self._pending = []
 
 
     def _canceller(self, d):
@@ -488,31 +492,30 @@ class HostnameEndpoint(object):
         d.errback(error.ConnectingCancelledError(
             HostnameAddress(self._host, self._port)))
 
-        for p in self.pending[:]:   # Cancel all pending connections
+        for p in self._pending[:]:   # Cancel all pending connections
             p.cancel()
 
 
     def connect(self, protocolFactory):
         """
-        Attempts a connection to each address returned by gai, and
-        returns a connection that is the fastest.
+        Attempts a connection to each address returned by gai, and returns a
+        connection that is the fastest.
         """
-        wf = protocolFactory             # _WrappingFactory(protocolFactory)
+        wf = protocolFactory
 
         def errbackForGai(obj):
             """
-            Errback for when L{_nameResolution} returns a Deferred
-            that fires with failure.
+            Errback for when L{_nameResolution} returns a Deferred that fires
+            with failure.
             """
             return defer.fail(error.DNSLookupError("Couldn't find hostname"))
 
 
         def _endpoints(gaiResult):
             """
-            This method matches the host address famliy with an endpoint
-            for every address returned by GAI.
+            This method matches the host address famliy with an endpoint for
+            every address returned by GAI.
             """
-#            print "Running _endpoints."
             for family, socktype, proto, canonname, sockaddr in gaiResult:
                 if family in [AF_INET6]:
                     yield TCP6ClientEndpoint(self._reactor, sockaddr[0],
@@ -521,17 +524,11 @@ class HostnameEndpoint(object):
                     yield TCP4ClientEndpoint(self._reactor, sockaddr[0],
                             self._port, self._timeout, self._bindAddress)
                         # Yields an endpoint for every address returned by GAI
-                        # For now, will work for a maximum of two addresses:
-                        # one IPv4 and one IPv6 address in the result.
-
-        # TODO: Figure out a default return when the address is neither IPv6 nor
-        # IPv4
 
 
         def attemptConnection(endpoints):
             """
-            When L{endpoints} yields an endpoint, this method
-            attempts to connect it.
+            When L{endpoints} yields an endpoint, this method attempts to connect it.
             """
             # The trial attempts for each endpoints, the recording of
             # successful and failed attempts, and the algorithm to pick the
@@ -539,47 +536,34 @@ class HostnameEndpoint(object):
             # Return a Deferred that fires with the endpoint that wins,
             # or `failures` if none succeed.
 
-      #      pending = []
             endpointsListExhausted = []
             successful = []
             failures = []
             winner = defer.Deferred(canceller=self._canceller)
 
-#            print "Running attemptConnection."
-
-
             def usedEndpointRemoval(connResult, connAttempt):
-                print "Inside usedEndpointRemoval"
-                self.pending.remove(connAttempt)
+                self._pending.remove(connAttempt)
                 return connResult
 
             def afterConnectionAttempt(connResult):
-                print "Inside afterConnectionAttempt"
                 if lc.running:
                     lc.stop()
                 successful.append(True)
-                for p in self.pending[:]:
+                for p in self._pending[:]:
                     p.cancel()
                 winner.callback(connResult)
                 return None
 
             def almostDone():
-#                print "Inside almostDone", failures[0]
-                if endpointsListExhausted and not self.pending and not successful:
-                    print "inside almostDone's if"
+                if endpointsListExhausted and not self._pending and not successful:
                     winner.errback(failures.pop())
 
-
             def connectFailed(reason):
-                print "Inside connectFailed"
-#                print "The reason is:", reason
                 failures.append(reason)
-#                print "Winner = ", winner
                 almostDone()
                 return None
 
             def iterateEndpoint():
-    #            print "Inside iterateEndpoint"
                 try:
                     endpoint = endpoints.next()
                 except StopIteration:
@@ -589,7 +573,7 @@ class HostnameEndpoint(object):
                     almostDone()
                 else:
                     dconn = endpoint.connect(wf)
-                    self.pending.append(dconn)
+                    self._pending.append(dconn)
                     dconn.addBoth(usedEndpointRemoval, dconn)
                     dconn.addCallback(afterConnectionAttempt)
                     dconn.addErrback(connectFailed)
@@ -597,7 +581,6 @@ class HostnameEndpoint(object):
             lc = LoopingCall(iterateEndpoint)
             lc.clock = self._reactor
             lc.start(0.3)
-            print "Return from attemptConnection"
             return winner  # attemptConnection's return
 
         try:
@@ -605,7 +588,6 @@ class HostnameEndpoint(object):
             d.addErrback(errbackForGai)
             d.addCallback(_endpoints)
             d.addCallback(attemptConnection)
-            print "Returning the fastest connection now.."
             return d
         except:
             return defer.fail()

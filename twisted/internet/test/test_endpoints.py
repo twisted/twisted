@@ -680,6 +680,8 @@ class StandardIOEndpointsTestCase(unittest.TestCase):
         self.d.addCallback(checkAddress)
         return self.d
 
+
+
 class TCP4EndpointsTestCase(EndpointTestCaseMixin, unittest.TestCase):
     """
     Tests for TCP IPv4 Endpoints.
@@ -896,6 +898,7 @@ class TCP6EndpointsTestCase(EndpointTestCaseMixin, unittest.TestCase):
                 address)
 
 
+
 class TCP6EndpointNameResolutionTestCase(ClientEndpointTestCaseMixin,
                                          unittest.TestCase):
     """
@@ -995,8 +998,7 @@ class TCP6EndpointNameResolutionTestCase(ClientEndpointTestCaseMixin,
             [(fakegetaddrinfo, ("ipv6.example.com", 0, AF_INET6), {})], calls)
 
 
-#_________________________________________________________________________________________________
-# Begin testing HostnameEndpoint
+
 class RaisingMemoryReactorWithClock(RaisingMemoryReactor, Clock):
     """
     An extention of L{RaisingMemoryReactor} with L{task.Clock}.
@@ -1005,7 +1007,6 @@ class RaisingMemoryReactorWithClock(RaisingMemoryReactor, Clock):
         Clock.__init__(self)
         self._listenException = listenException
         self._connectException = connectException
-        print "initialized reactor"
 
 
 
@@ -1021,6 +1022,7 @@ class HostnameEndpointsOneIPv4TestCase(ClientEndpointTestCaseMixin,
                                            address.port, **connectArgs)
 
         def testNameResolution(host):
+            print "inside test name resolution"
             self.assertEqual("example.com", host)
             data = [(AF_INET, SOCK_STREAM, IPPROTO_TCP, '', ('1.2.3.4', 0, 0, 0))]
             return defer.succeed(data)
@@ -1081,15 +1083,13 @@ class HostnameEndpointsOneIPv4TestCase(ClientEndpointTestCaseMixin,
 
         clientFactory = protocol.Factory()
         clientFactory.protocol = protocol.Protocol
-
+        receivedFailures = []
 
         ep, ignoredArgs, address = self.createClientEndpoint(
             mreactor, clientFactory)
 
         d = ep.connect(clientFactory)
-
         receivedFailures = []
-
         d.addErrback(receivedFailures.append)
 
         d.cancel()
@@ -1126,6 +1126,28 @@ class HostnameEndpointsOneIPv4TestCase(ClientEndpointTestCaseMixin,
         self.assertEqual(self.failureResultOf(d).value, expectedError)
 
 
+    def test_nameResolution(self):
+        """
+        While resolving host names, _nameResolution calls
+        _deferToThread with _getaddrinfo.
+        """
+        calls = []
+        clientFactory = object()
+
+        def fakeDeferToThread(f, *args, **kwargs):
+            calls.append((f, args, kwargs))
+            return defer.Deferred()
+
+        endpoint = endpoints.HostnameEndpoint(reactor, 'ipv4.example.com',
+            1234)
+        fakegetaddrinfo = object()
+        endpoint._getaddrinfo = fakegetaddrinfo
+        endpoint._deferToThread = fakeDeferToThread
+        endpoint.connect(clientFactory)
+        self.assertEqual(
+            [(fakegetaddrinfo, ("ipv4.example.com", 0), {})], calls)
+
+
 
 class HostnameEndpointsOneIPv6TestCase(ClientEndpointTestCaseMixin,
                                 unittest.TestCase):
@@ -1136,8 +1158,7 @@ class HostnameEndpointsOneIPv6TestCase(ClientEndpointTestCaseMixin,
     def createClientEndpoint(self, reactor, clientFactory, **connectArgs):
         address = HostnameAddress("ipv6.example.com", 80)
         endpoint = endpoints.HostnameEndpoint(reactor, "ipv6.example.com",
-                                           address.port, **connectArgs)
-
+                                              address.port, **connectArgs)
 
         def testNameResolution(host):
             self.assertEqual("ipv6.example.com", host)
@@ -1197,10 +1218,8 @@ class HostnameEndpointsOneIPv6TestCase(ClientEndpointTestCaseMixin,
         L{ConnectingCancelledError} exception.
         """
         mreactor = MemoryReactor()
-
         clientFactory = protocol.Factory()
         clientFactory.protocol = protocol.Protocol
-
 
         ep, ignoredArgs, address = self.createClientEndpoint(
             mreactor, clientFactory)
@@ -1226,18 +1245,13 @@ class HostnameEndpointsOneIPv6TestCase(ClientEndpointTestCaseMixin,
         self.assertTrue(mreactor.tcpClients[0][2]._connector.stoppedConnecting)
 
 
-    # TODO: Add a test to check deferToThread as well.
-
-
     def test_endpointConnectFailure(self):
         """
         If an endpoint tries to connect to a non-listening port it gets
         a C{ConnectError} failure.
         """
         expectedError = error.ConnectError(string="Connection Failed")
-
         mreactor = RaisingMemoryReactorWithClock(connectException=expectedError)
-
         clientFactory = object()
 
         ep, ignoredArgs, ignoredDest = self.createClientEndpoint(
@@ -1246,6 +1260,28 @@ class HostnameEndpointsOneIPv6TestCase(ClientEndpointTestCaseMixin,
         d = ep.connect(clientFactory)
         mreactor.advance(0.3)
         self.assertEqual(self.failureResultOf(d).value, expectedError)
+
+
+    def test_nameResolution(self):
+        """
+        While resolving host names, _nameResolution calls
+        _deferToThread with _getaddrinfo.
+        """
+        calls = []
+        clientFactory = object()
+
+        def fakeDeferToThread(f, *args, **kwargs):
+            calls.append((f, args, kwargs))
+            return defer.Deferred()
+
+        endpoint = endpoints.HostnameEndpoint(reactor, 'ipv6.example.com',
+            1234)
+        fakegetaddrinfo = object()
+        endpoint._getaddrinfo = fakegetaddrinfo
+        endpoint._deferToThread = fakeDeferToThread
+        endpoint.connect(clientFactory)
+        self.assertEqual(
+            [(fakegetaddrinfo, ("ipv6.example.com", 0), {})], calls)
 
 
 
@@ -1267,8 +1303,6 @@ class HostnameEndpointsGAIFailureTestCase(unittest.TestCase):
         return self.assertFailure(dConnect, error.DNSLookupError)
 
 
-#________________________________________________________________________
-
 
 class HostnameEndpointsFasterConnectionTestCase(unittest.TestCase):
     """
@@ -1285,7 +1319,7 @@ class HostnameEndpointsFasterConnectionTestCase(unittest.TestCase):
             data = [
                 (AF_INET, SOCK_STREAM, IPPROTO_TCP, '', ('1.2.3.4', 0, 0, 0)),
                 (AF_INET6, SOCK_STREAM, IPPROTO_TCP, '', ('1:2::3:4', 0, 0, 0))
-            ]
+                ]
             return defer.succeed(data)
 
         self.endpoint._nameResolution = nameResolution
@@ -1322,7 +1356,6 @@ class HostnameEndpointsFasterConnectionTestCase(unittest.TestCase):
         # from the above.
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0].factory, clientFactory)
-
 
 
     def test_IPv6IsFaster(self):
@@ -1384,7 +1417,8 @@ class HostnameEndpointsFasterConnectionTestCase(unittest.TestCase):
 
         # Now, the pending IPv4 connection should have been cancelled.
         self.assertEqual(True, self.mreactor.tcpClients[0][2]._connector.stoppedConnecting)
-#_______________________________________________________________________________________________________
+
+
 
 class SSL4EndpointsTestCase(EndpointTestCaseMixin,
                             unittest.TestCase):
