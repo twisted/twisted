@@ -22,7 +22,7 @@ from twisted.internet.address import (
         IPv4Address, IPv6Address, UNIXAddress, HostnameAddress)
 from twisted.internet.protocol import ClientFactory, Protocol
 from twisted.test.proto_helpers import (
-    MemoryReactor, RaisingMemoryReactor, StringTransport)
+    RaisingMemoryReactor, StringTransport)
 from twisted.python.failure import Failure
 from twisted.python.systemd import ListenFDs
 
@@ -30,12 +30,11 @@ from twisted.python.filepath import FilePath
 from twisted.protocols import basic
 from twisted.internet import protocol, reactor
 from twisted.internet.task import Clock
-from twisted.internet.test.test_protocol import MemoryReactorWithConnectorsAndTime
+from twisted.internet.test.test_protocol import (
+        MemoryReactorWithConnectorsAndTime as MemoryReactor)
 
 from twisted.test import __file__ as testInitPath
 pemPath = FilePath(testInitPath.encode("utf-8")).sibling(b"server.pem")
-
-MemoryReactor = MemoryReactorWithConnectorsAndTime   # This is mostly for HostnameEndpoints
 
 if not _PY3:
     from twisted.plugin import getPlugins
