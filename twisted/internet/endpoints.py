@@ -503,7 +503,7 @@ class HostnameEndpoint(object):
         """
         wf = protocolFactory
 
-        def errbackForGai(obj):
+        def errbackForGai(failure):
             """
             Errback for when L{_nameResolution} returns a Deferred that fires
             with failure.
@@ -515,6 +515,9 @@ class HostnameEndpoint(object):
             """
             This method matches the host address famliy with an endpoint for
             every address returned by GAI.
+
+            @param gaiResult: A list of 5-tuples as returned by GAI.
+            @type gaiResult: list
             """
             for family, socktype, proto, canonname, sockaddr in gaiResult:
                 if family in [AF_INET6]:
@@ -555,7 +558,8 @@ class HostnameEndpoint(object):
                 return None
 
             def almostDone():
-                if endpointsListExhausted and not self._pending and not successful:
+                if endpointsListExhausted and not self._pending and\
+                    not successful:
                     winner.errback(failures.pop())
 
             def connectFailed(reason):

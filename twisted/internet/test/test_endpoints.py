@@ -18,7 +18,8 @@ from twisted.python.compat import _PY3
 from twisted.trial import unittest
 from twisted.internet import error, interfaces, defer
 from twisted.internet import endpoints
-from twisted.internet.address import IPv4Address, IPv6Address, UNIXAddress, HostnameAddress
+from twisted.internet.address import (
+        IPv4Address, IPv6Address, UNIXAddress, HostnameAddress)
 from twisted.internet.protocol import ClientFactory, Protocol
 from twisted.test.proto_helpers import (
     MemoryReactor, RaisingMemoryReactor, StringTransport)
@@ -1163,7 +1164,8 @@ class HostnameEndpointsOneIPv6TestCase(ClientEndpointTestCaseMixin,
 
         def testNameResolution(host):
             self.assertEqual("ipv6.example.com", host)
-            data = [(AF_INET6, SOCK_STREAM, IPPROTO_TCP, '', ('1:2::3:4', 0, 0, 0))]
+            data = [(AF_INET6, SOCK_STREAM, IPPROTO_TCP, '', ('1:2::3:4', 0, 0,
+                0))]
             return defer.succeed(data)
 
         endpoint._nameResolution = testNameResolution
@@ -1291,6 +1293,10 @@ class HostnameEndpointsGAIFailureTestCase(unittest.TestCase):
     Tests for the hostname based endpoints when GAI returns no address.
     """
     def test_failure(self):
+        """
+        If no address is returned by GAI for a hostname, the connection attempt
+        fails with L{error.DNSLookupError}.
+        """
         endpoint = endpoints.HostnameEndpoint(Clock(), "example.com", 80)
 
         def testNameResolution(host):
@@ -1395,7 +1401,7 @@ class HostnameEndpointsFasterConnectionTestCase(unittest.TestCase):
 
 
     def test_otherConnectionsCancelled(self):
-        """"
+        """
         Once the endpoint returns a succesful connection, all the
         other pending connections are cancelled.
         """
