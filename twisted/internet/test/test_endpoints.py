@@ -1022,9 +1022,9 @@ class HostnameEndpointsOneIPv4TestCase(ClientEndpointTestCaseMixin,
                                            address.port, **connectArgs)
 
         def testNameResolution(host):
-            print "inside test name resolution"
             self.assertEqual("example.com", host)
-            data = [(AF_INET, SOCK_STREAM, IPPROTO_TCP, '', ('1.2.3.4', 0, 0, 0))]
+            data = [(AF_INET, SOCK_STREAM, IPPROTO_TCP, '', ('1.2.3.4', 0, 0, 0)
+                )]
             return defer.succeed(data)
 
         endpoint._nameResolution = testNameResolution
@@ -1109,8 +1109,9 @@ class HostnameEndpointsOneIPv4TestCase(ClientEndpointTestCaseMixin,
 
     def test_endpointConnectFailure(self):
         """
-        If an endpoint tries to connect to a non-listening port it gets
-        a C{ConnectError} failure.
+        If L{HostnameEndpoint.connect} is invoked and there is no server
+        listening for connections, the returned L{Deferred} will fail with
+        C{ConnectError}.
         """
         expectedError = error.ConnectError(string="Connection Failed")
 
@@ -1128,8 +1129,8 @@ class HostnameEndpointsOneIPv4TestCase(ClientEndpointTestCaseMixin,
 
     def test_nameResolution(self):
         """
-        While resolving host names, _nameResolution calls
-        _deferToThread with _getaddrinfo.
+        While resolving host names, _nameResolution calls _deferToThread with
+        _getaddrinfo.
         """
         calls = []
         clientFactory = object()
