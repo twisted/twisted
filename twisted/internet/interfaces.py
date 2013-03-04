@@ -937,6 +937,7 @@ class IReactorSocket(Interface):
             by this reactor, or not supported with the given socket type.
         """
 
+
     def adoptStreamConnection(fileDescriptor, addressFamily, factory):
         """
         Add an existing connected I{SOCK_STREAM} socket to the reactor to

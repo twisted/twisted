@@ -11,7 +11,8 @@ from __future__ import division, absolute_import
 from socket import AF_INET, AF_INET6
 from io import BytesIO
 
-from zope.interface import implementer
+from zope.interface import implementer, implementedBy
+from zope.interface.verify import verifyClass
 
 from twisted.python.compat import unicode
 from twisted.internet.interfaces import (
@@ -394,6 +395,9 @@ class MemoryReactor(object):
 
     @ivar adoptedPorts: a list that keeps track of server listen attempts (ie,
         calls to C{adoptStreamPort}).
+
+    @ivar adoptedStreamConnections: a list that keeps track of stream-oriented
+        connections added using C{adoptStreamConnection}.
     """
 
     def __init__(self):
@@ -407,6 +411,7 @@ class MemoryReactor(object):
         self.unixClients = []
         self.unixServers = []
         self.adoptedPorts = []
+        self.adoptedStreamConnections = []
 
 
     def adoptStreamPort(self, fileno, addressFamily, factory):
@@ -423,6 +428,16 @@ class MemoryReactor(object):
 
         self.adoptedPorts.append((fileno, addressFamily, factory))
         return _FakePort(addr)
+
+
+    def adoptStreamConnection(self, fileDescriptor, addressFamily, factory):
+        """
+        Record the given stream connection in C{adoptedStreamConnections}.
+
+        @see: L{twisted.internet.interfaces.IReactorSocket.adoptStreamConnection}
+        """
+        self.adoptedStreamConnections.append((
+                fileDescriptor, addressFamily, factory))
 
 
     def listenTCP(self, port, factory, backlog=50, interface=''):
@@ -495,6 +510,8 @@ class MemoryReactor(object):
         conn = _FakeConnector(UNIXAddress(address))
         factory.startedConnecting(conn)
         return conn
+for iface in implementedBy(MemoryReactor):
+    verifyClass(iface, MemoryReactor)
 
 
 
