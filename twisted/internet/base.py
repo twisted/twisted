@@ -19,6 +19,7 @@ import traceback
 
 from twisted.python.util import FancyEqMixin
 from twisted.python.compat import set
+from twisted.python.components import registerAdapter
 from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorThreads
 from twisted.internet.interfaces import IResolverSimple, IReactorPluggableResolver
 from twisted.internet.interfaces import IConnector, IDelayedCall
@@ -241,6 +242,8 @@ class _ResolverComplexifier(object):
                     (address, service))]
         d.addCallback(cbResolved)
         return d
+
+registerAdapter(_ResolverComplexifier, IResolverSimple, INameResolver)
 
 
 

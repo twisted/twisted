@@ -71,6 +71,15 @@ class NameResolverAdapterTests(TestCase):
         verifyClass(INameResolver, _ResolverComplexifier)
 
 
+    def test_registeredAdapter(self):
+        """
+        L{_ResolverComplexifier} is registered as an adapter from
+        L{IResolverSimple} to L{INameResolver}.
+        """
+        simple = FakeResolver({})
+        INameResolver(simple)
+
+
     def _successTest(self, address, family):
         """
         A generic test for both INET and INET6 address families.
