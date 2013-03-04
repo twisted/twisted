@@ -5,10 +5,14 @@
 Tests for L{twisted.names} example scripts.
 """
 
+import os
 import sys
 from StringIO import StringIO
 
+from twisted.internet import defer, utils
+from twisted.names import client, error
 from twisted.python.filepath import FilePath
+from twisted.python import usage
 from twisted.trial.unittest import SkipTest, TestCase
 
 
@@ -28,6 +32,8 @@ class ExampleTestBase(object):
     documentation will often show the progression of a single piece of code as
     features are added to it, and we want to test each one.
     """
+
+    positionalArgCount = 0
 
     def setUp(self):
         """
@@ -72,6 +78,21 @@ class ExampleTestBase(object):
         sys.stderr = self.originalErr
 
 
+    def test_executable(self):
+        """
+        The example scripts should have an if __name__ ==
+        '__main__' so that they do something when called.
+        """
+        args = [self.examplePath.path, '--help']
+        d = utils.getProcessOutput(sys.executable, args, env=os.environ)
+        def whenComplete(res):
+            self.assertEqual(
+                res.splitlines()[0],
+                self.example.Options().synopsis)
+        d.addCallback(whenComplete)
+        return d
+
+
     def test_shebang(self):
         """
         The example scripts start with the standard shebang line.
@@ -81,47 +102,65 @@ class ExampleTestBase(object):
             '#!/usr/bin/env python')
 
 
-    def test_usageConsistency(self):
+    def test_definedOptions(self):
         """
-        The example script prints a usage message to stdout if it is
-        passed a --help option and then exits.
-
-        The first line should contain a USAGE summary, explaining the
-        accepted command arguments.
+        Example scripts contain an Options class which is a subclass
+        of l{twisted.python.usage.Options]
         """
-        # Pass None as first parameter - the reactor - it shouldn't
-        # get as far as calling it.
-        self.assertRaises(
-            SystemExit, self.example.main, None, '--help')
+        self.assertIsInstance(self.example.Options(), usage.Options)
 
-        out = self.fakeOut.getvalue().splitlines()
+
+    def test_usageMessageConsistency(self):
+        """
+        The example script usage message should begin with a "Usage:"
+        summary line.
+        """
+        out = self.example.Options.synopsis
         self.assertTrue(
-            out[0].startswith('Usage:'),
+            out.startswith('Usage:'),
             'Usage message first line should start with "Usage:". '
-            'Actual: %r' % (out[0],))
+            'Actual: %r' % (out,))
 
 
-    def test_usageConsistencyOnError(self):
+    def test_usageChecksPositionalArguments(self):
         """
-        The example script prints a usage message to stderr if it is
-        passed unrecognized command line arguments.
-
-        The first line should contain a USAGE summary, explaining the
-        accepted command arguments.
-
-        The last line should contain an ERROR summary, explaining that
-        incorrect arguments were supplied.
+        The example script validates positional arguments
         """
-        # Pass None as first parameter - the reactor - it shouldn't
-        # get as far as calling it.
+        options = self.example.Options()
+        options.parseOptions(
+            [str(x) for x in range(self.positionalArgCount)])
         self.assertRaises(
-            SystemExit, self.example.main, None, '--unexpected_argument')
+            usage.UsageError,
+            options.parseOptions,
+            [str(x) for x in range(self.positionalArgCount+1)])
 
+
+    def test_usageErrorsBeginWithUsage(self):
+        """
+        The example script prints a full usage message to stderr if it
+        is passed incorrect command line arguments
+        """
+        self.assertRaises(
+            SystemExit,
+            self.example.main,
+            None, '--unexpected_option')
+        err = self.fakeErr.getvalue()
+        usageMessage = str(self.example.Options())
+        self.assertEqual(
+            err[:len(usageMessage)],
+            usageMessage)
+
+
+    def test_usageErrorsEndWithError(self):
+        """
+        The example script prints an "Error:" summary on the last line
+        of stderr when incorrect arguments are supplied.
+        """
+        self.assertRaises(
+            SystemExit,
+            self.example.main,
+            None, '--unexpected_option')
         err = self.fakeErr.getvalue().splitlines()
-        self.assertTrue(
-            err[0].startswith('Usage:'),
-            'Usage message first line should start with "Usage:". '
-            'Actual: %r' % (err[0],))
         self.assertTrue(
             err[-1].startswith('ERROR:'),
             'Usage message last line should start with "ERROR:" '
@@ -135,6 +174,7 @@ class TestDnsTests(ExampleTestBase, TestCase):
     """
 
     exampleRelativePath = 'doc/names/examples/testdns.py'
+    positionalArgCount = 1
 
 
 
@@ -144,6 +184,76 @@ class GetHostByNameTests(ExampleTestBase, TestCase):
     """
 
     exampleRelativePath = 'doc/names/examples/gethostbyname.py'
+    positionalArgCount = 1
+
+
+    def test_lookupSuccess(self):
+        """
+        L{gethostbyname.main} uses
+        L{twisted.names.client.getHostByName} to resolve a hostname
+        asynchronously and returns its deferred result.
+        """
+        fakeName = 'foo.bar.example.com'
+        fakeResult = '192.0.2.1'
+        lookedUp = []
+
+        def fakeGetHostByName(host):
+            lookedUp.append(host)
+            return defer.succeed(fakeResult)
+        self.patch(client, 'getHostByName', fakeGetHostByName)
+
+        d = self.example.main(None, fakeName)
+        self.assertIsInstance(d, defer.Deferred)
+
+        def whenFinished(res):
+            self.assertEqual(lookedUp, [fakeName])
+            self.assertEquals(self.fakeOut.getvalue(), fakeResult + '\n')
+        d.addBoth(whenFinished)
+
+
+    def test_printResult(self):
+        """
+        L{gethostbyname.printResult} accepts an IP address and prints
+        it to stdout.
+        """
+        self.example.printResult('192.0.2.1', 'foo.bar.example.com')
+        self.assertEquals(self.fakeOut.getvalue(), '192.0.2.1' + '\n')
+
+
+    def test_printResultNoResult(self):
+        """
+        L{gethostbyname.printResult} accepts an error message to
+        stderr if it is passed and empty address.
+        """
+        self.example.printResult('', 'foo.bar.example.com')
+        self.assertEquals(
+            self.fakeErr.getvalue(),
+            "ERROR: No IP adresses found for name 'foo.bar.example.com'\n")
+
+
+    def test_printErrorExpected(self):
+        """
+        L{gethostbyname.printError} accepts an L{defer.failure.Failure} and prints
+        an error message to stderr if it is an instance of L{error.DNSNameError}.
+        """
+        self.example.printError(
+            defer.failure.Failure(error.DNSNameError()), 'foo.bar.example.com')
+        self.assertEquals(
+            self.fakeErr.getvalue(),
+            "ERROR: hostname not found 'foo.bar.example.com'\n")
+
+
+    def test_printErrorUnexpected(self):
+        """
+        L{gethostbyname.printError} accepts an
+        L{defer.failure.Failure} and raises the enclosed exception if
+        it is not an instance of L{error.DNSNameError}.
+        """
+        self.assertRaises(
+            defer.failure.Failure,
+            self.example.printError,
+            defer.failure.Failure(NotImplementedError()),
+            'foo.bar.example.com')
 
 
 
@@ -153,3 +263,4 @@ class DnsServiceTests(ExampleTestBase, TestCase):
     """
 
     exampleRelativePath = 'doc/names/examples/dns-service.py'
+    positionalArgCount = 3
