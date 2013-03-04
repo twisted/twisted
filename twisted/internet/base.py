@@ -228,8 +228,19 @@ class _ResolverComplexifier(object):
 
 
     def getAddressInformation(self, name, service, *args):
-        # XXX: This looks wrong. Why lookup the address with
+        # In this case of a complexified IResolverSimple,
+        # getHostByName and getAddressInformation should - for
+        # consistency - both return the same single IP address. (IPv4
+        # or IPv6 depending on the behaviour of gethostbyname)
+
+        # getAddressInformation will return that IP address as part of
+        # an AddressInformation instance whose type, protocol and
+        # canonicalName are fixed.
+
+        # XXX: I don't fully understand the motivation behind
+        # _ResolverComplexifier or why lookup the address with
         # getHostByName and then pass the address to getaddrinfo?
+        # -rwall
         d = self._resolver.getHostByName(name)
         def cbResolved(address):
             family = socket.getaddrinfo(address, 0)[0][0]
