@@ -13,17 +13,13 @@ from functools import wraps
 
 from twisted.internet import protocol, defer
 from twisted.python import failure
-from twisted.python.compat import _PY3
+from twisted.python.compat import _PY3, reraise
 
-if _PY3:
-    from twisted.python.compat import reraise
-    from twisted.python.compat import NativeStringIO as StringIO
-else:
+if not _PY3:
     try:
-        from cStringIO import StringIO
+        import cStringIO as StringIO
     except ImportError:
-        from StringIO import StringIO
-
+        import StringIO
 
 def _callProtocolWithDeferred(protocol, executable, args, env, path, reactor=None):
     if reactor is None:
@@ -33,6 +29,7 @@ def _callProtocolWithDeferred(protocol, executable, args, env, path, reactor=Non
     p = protocol(d)
     reactor.spawnProcess(p, executable, (executable,)+tuple(args), env, path)
     return d
+
 
 
 class _UnexpectedErrorOutput(IOError):
@@ -73,7 +70,7 @@ class _BackRelay(protocol.ProcessProtocol):
 
     def __init__(self, deferred, errortoo=0):
         self.deferred = deferred
-        self.s = StringIO()
+        self.s = StringIO.StringIO()
         if errortoo:
             self.errReceived = self.errReceivedIsGood
         else:
@@ -152,8 +149,8 @@ class _EverythingGetter(protocol.ProcessProtocol):
 
     def __init__(self, deferred):
         self.deferred = deferred
-        self.outBuf = StringIO()
-        self.errBuf = StringIO()
+        self.outBuf = StringIO.StringIO()
+        self.errBuf = StringIO.StringIO()
         self.outReceived = self.outBuf.write
         self.errReceived = self.errBuf.write
 
