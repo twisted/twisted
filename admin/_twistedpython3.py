@@ -164,7 +164,7 @@ testModules = [
     "twisted.test.test_failure",
     "twisted.test.test_fdesc",
     "twisted.test.test_internet",
-    "twisted.test.test_iutil",
+    "twisted.test.test_iutils",
     "twisted.test.test_log",
     "twisted.test.test_loopback",
     "twisted.test.test_monkey",
