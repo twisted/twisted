@@ -539,8 +539,8 @@ class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
             for line in download.splitlines():
                 list_folder_names.append(line.split(' ')[-1])
             self.assertEqual(2, len(list_folder_names))
-            self.assertTrue('foo' in list_folder_names)
-            self.assertTrue('bar' in list_folder_names)
+            self.assertIn('foo', list_folder_names)
+            self.assertIn('bar', list_folder_names)
 
         return d.addCallback(checkDownload)
 
