@@ -169,20 +169,13 @@ class SRVConnectorTest(unittest.TestCase):
         self.assertEqual(self.reactor.tcpClients, [])
 
 
-    def test_unicodeDomainWarning(self):
+    def test_unicodeDomain(self):
         """
-        Passing in a unicode domain is deprecated.
+        L{srvconnect.SRVConnector} automatically encodes unicode domain using
+        C{idna} encoding.
         """
-        self.connector = srvconnect.SRVConnector(self.reactor, 'xmpp-client',
-                                                 u'example.org', self.factory)
-        warnings = self.flushWarnings([self.test_unicodeDomainWarning])
-        self.assertEqual(1, len(warnings))
-        warning = warnings[0]
-        self.assertEqual(DeprecationWarning, warning['category'])
-        self.assertEqual("Domain argument to "
-                         "twisted.names.srvconnect.SRVConnector "
-                         "should be bytes, not unicode, "
-                         "since Twisted 12.3.0",
-                         warning['message'])
+        self.connector = srvconnect.SRVConnector(
+            self.reactor, 'xmpp-client', u'\u00e9chec.example.org',
+            self.factory)
         self.assertIsInstance(self.connector.domain, bytes)
-        self.assertEqual(b'example.org', self.connector.domain)
+        self.assertEqual(b'xn--chec-9oa.example.org', self.connector.domain)

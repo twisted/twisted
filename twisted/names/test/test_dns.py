@@ -131,33 +131,9 @@ class NameTests(unittest.TestCase):
         """
         Passing in a unicode domain is deprecated.
         """
-        name = dns.Name(u'example.org')
-        warnings = self.flushWarnings([self.test_unicodeName])
-        self.assertEqual(1, len(warnings))
-        warning = warnings[0]
-        self.assertEqual(DeprecationWarning, warning['category'])
-        self.assertEqual("A DNS name must be bytes, not unicode, "
-                         "since Twisted 12.3.0",
-                         warning['message'])
+        name = dns.Name(u'\u00e9chec.example.org')
         self.assertIsInstance(name.name, bytes)
-        self.assertEqual(b'example.org', name.name)
-
-
-    def test_unicodeNameNonASCII(self):
-        """
-        Passing in a non-ASCII unicode domain raises a UnicodeEncodeError.
-
-        Also, a deprecation warning is issued.
-        """
-        self.assertRaises(UnicodeEncodeError,
-                          dns.Name, u'\u00e9chec.example.org')
-        warnings = self.flushWarnings([self.assertRaises])
-        self.assertEqual(1, len(warnings))
-        warning = warnings[0]
-        self.assertEqual(DeprecationWarning, warning['category'])
-        self.assertEqual("A DNS name must be bytes, not unicode, "
-                         "since Twisted 12.3.0",
-                         warning['message'])
+        self.assertEqual(b'xn--chec-9oa.example.org', name.name)
 
 
     def test_decode(self):

@@ -354,11 +354,7 @@ class Name:
     """
     def __init__(self, name=b''):
         if isinstance(name, unicode):
-            warnings.warn(
-                "A DNS name must be bytes, not unicode, since Twisted 12.3.0",
-                category=DeprecationWarning,
-                stacklevel=2)
-            name = name.encode('ascii')
+            name = name.encode('idna')
         if not isinstance(name, bytes):
             raise TypeError("%r is not a byte string" % (name,))
         self.name = name
