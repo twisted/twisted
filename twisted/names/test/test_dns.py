@@ -129,7 +129,8 @@ class NameTests(unittest.TestCase):
 
     def test_unicodeName(self):
         """
-        Passing in a unicode domain is deprecated.
+        L{dns.Name} automatically encodes unicode domain name using C{idna}
+        encoding.
         """
         name = dns.Name(u'\u00e9chec.example.org')
         self.assertIsInstance(name.name, bytes)
