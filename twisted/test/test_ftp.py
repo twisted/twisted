@@ -647,12 +647,12 @@ class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
         self._download('LIST -aL', chainDeferred=d)
 
         def checkDownload(download):
-            list_folder_names = []
+            names = []
             for line in download.splitlines():
-                list_folder_names.append(line.split(' ')[-1])
-            self.assertEqual(2, len(list_folder_names))
-            self.assertIn('foo', list_folder_names)
-            self.assertIn('bar', list_folder_names)
+                names.append(line.split(' ')[-1])
+            self.assertEqual(2, len(names))
+            self.assertIn('foo', names)
+            self.assertIn('bar', names)
 
         return d.addCallback(checkDownload)
 
