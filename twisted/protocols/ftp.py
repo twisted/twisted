@@ -935,17 +935,8 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         if self.dtpInstance is None or not self.dtpInstance.isConnected:
             return defer.fail(BadCmdSequenceError('must send PORT or PASV before RETR'))
 
-        # bug in konqueror
-        if path == "-a":
-            path = ''
-        # bug in gFTP 2.0.15
-        if path == "-aL":
-            path = ''
-        # bug in Nautilus 2.10.0
-        if path == "-L":
-            path = ''
-        # bug in ange-ftp
-        if path == "-la":
+        # Various clients send flags like -L or -al etc.  We just ignore them.
+        if path.lower() in ['-a', '-l', '-la', '-al']:
             path = ''
 
         def gotListing(results):
