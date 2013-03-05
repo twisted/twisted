@@ -47,7 +47,7 @@ class SRVConnector:
         @ivar domain: The domain to connect to. Note that this is expected to
             be an ASCII byte string since Twisted 12.3.0. IDN domain names have
             to be encoded. See L{encodings.idna} for details.
-        @type domain: L{str}
+        @type domain: L{bytes}
         @ivar defaultPort: Optional default port number to be used when SRV
             lookup fails and the service name is unknown. This should be the
             port number associated with the service name as defined by the IANA
