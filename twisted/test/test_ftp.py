@@ -509,8 +509,10 @@ class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
             return downloader.buffer
         return chainDeferred.addCallback(downloadDone)
 
-    def testEmptyLIST(self):
-        # Login
+    def test_LISTEmpty(self):
+        """
+        When listing empty folders, LIST returns an empty response.
+        """
         d = self._anonymousLogin()
 
         # No files, so the file listing should be empty
@@ -519,8 +521,11 @@ class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
             self.assertEqual('', result)
         return d.addCallback(checkEmpty)
 
-    def testLISTWithBinLsFlags(self):
-        # Make some directories
+    def test_LISTWithBinLsFlags(self):
+        """
+        LIST ignores requests for folder with names like '-al' and will list
+        the content of current folder.
+        """
         os.mkdir(os.path.join(self.directory, 'foo'))
         os.mkdir(os.path.join(self.directory, 'bar'))
 
@@ -528,13 +533,22 @@ class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
         d = self._anonymousLogin()
 
         self._download('LIST -aL', chainDeferred=d)
+
         def checkDownload(download):
-            # We expect 2 lines because there are two files in the root.
-            self.assertEqual(2, len(download[:-2].split('\r\n')))
+            list_folder_names = []
+            for line in download.splitlines():
+                list_folder_names.append(line.split(' ')[-1])
+            self.assertEqual(2, len(list_folder_names))
+            self.assertTrue('foo' in list_folder_names)
+            self.assertTrue('bar' in list_folder_names)
+
         return d.addCallback(checkDownload)
 
-    def testTwoDirLIST(self):
-        # Make some directories
+    def test_LISTWithContent(self):
+        """
+        LIST returns all folder's members, each member listed on a separate
+        line and with name and other details.
+        """
         os.mkdir(os.path.join(self.directory, 'foo'))
         os.mkdir(os.path.join(self.directory, 'bar'))
 
