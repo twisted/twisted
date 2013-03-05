@@ -522,10 +522,10 @@ class HostnameEndpoint(object):
             for family, socktype, proto, canonname, sockaddr in gaiResult:
                 if family in [AF_INET6]:
                     yield TCP6ClientEndpoint(self._reactor, sockaddr[0],
-                            self._port, self._timeout, self._bindAddress)
+                            sockaddr[1], self._timeout, self._bindAddress)
                 elif family in [AF_INET]:
                     yield TCP4ClientEndpoint(self._reactor, sockaddr[0],
-                            self._port, self._timeout, self._bindAddress)
+                            sockaddr[1], self._timeout, self._bindAddress)
                         # Yields an endpoint for every address returned by GAI
 
 
@@ -588,7 +588,7 @@ class HostnameEndpoint(object):
             return winner
 
         try:
-            d = self._nameResolution(self._host)
+            d = self._nameResolution(self._host, self._port)
             d.addErrback(errbackForGai)
             d.addCallback(_endpoints)
             d.addCallback(attemptConnection)
@@ -597,12 +597,12 @@ class HostnameEndpoint(object):
             return defer.fail()
 
 
-    def _nameResolution(self, host):
+    def _nameResolution(self, host, port):
         """
         Resolve the hostname string into a tuple containig the host
         address.
         """
-        return self._deferToThread(self._getaddrinfo, host, 0)
+        return self._deferToThread(self._getaddrinfo, host, port, 0, socket.SOCK_STREAM)
 
 
 

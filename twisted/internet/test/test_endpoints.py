@@ -1021,10 +1021,9 @@ class HostnameEndpointsOneIPv4TestCase(ClientEndpointTestCaseMixin,
         endpoint = endpoints.HostnameEndpoint(reactor, "example.com",
                                            address.port, **connectArgs)
 
-        def testNameResolution(host):
+        def testNameResolution(host, port):
             self.assertEqual("example.com", host)
-            data = [(AF_INET, SOCK_STREAM, IPPROTO_TCP, '', ('1.2.3.4', 0, 0, 0)
-                )]
+            data = [(AF_INET, SOCK_STREAM, IPPROTO_TCP, '', ('1.2.3.4', port))]
             return defer.succeed(data)
 
         endpoint._nameResolution = testNameResolution
@@ -1141,7 +1140,7 @@ class HostnameEndpointsOneIPv4TestCase(ClientEndpointTestCaseMixin,
         endpoint._deferToThread = fakeDeferToThread
         endpoint.connect(clientFactory)
         self.assertEqual(
-            [(fakegetaddrinfo, ("ipv4.example.com", 0), {})], calls)
+            [(fakegetaddrinfo, ("ipv4.example.com", 1234, 0, SOCK_STREAM), {})], calls)
 
 
 
@@ -1156,9 +1155,9 @@ class HostnameEndpointsOneIPv6TestCase(ClientEndpointTestCaseMixin,
         endpoint = endpoints.HostnameEndpoint(reactor, "ipv6.example.com",
                                               address.port, **connectArgs)
 
-        def testNameResolution(host):
+        def testNameResolution(host, port):
             self.assertEqual("ipv6.example.com", host)
-            data = [(AF_INET6, SOCK_STREAM, IPPROTO_TCP, '', ('1:2::3:4', 0, 0,
+            data = [(AF_INET6, SOCK_STREAM, IPPROTO_TCP, '', ('1:2::3:4', port, 0,
                 0))]
             return defer.succeed(data)
 
@@ -1265,7 +1264,7 @@ class HostnameEndpointsGAIFailureTestCase(unittest.TestCase):
         """
         endpoint = endpoints.HostnameEndpoint(Clock(), "example.com", 80)
 
-        def testNameResolution(host):
+        def testNameResolution(host, port):
             self.assertEqual("example.com", host)
             data = error.DNSLookupError("Problems")
             return defer.fail(data)
@@ -1287,11 +1286,11 @@ class HostnameEndpointsFasterConnectionTestCase(unittest.TestCase):
         self.endpoint = endpoints.HostnameEndpoint(self.mreactor,
                 "www.example.com", 80)
 
-        def nameResolution(host):
+        def nameResolution(host, port):
             self.assertEqual("www.example.com", host)
             data = [
-                (AF_INET, SOCK_STREAM, IPPROTO_TCP, '', ('1.2.3.4', 0, 0, 0)),
-                (AF_INET6, SOCK_STREAM, IPPROTO_TCP, '', ('1:2::3:4', 0, 0, 0))
+                (AF_INET, SOCK_STREAM, IPPROTO_TCP, '', ('1.2.3.4', port)),
+                (AF_INET6, SOCK_STREAM, IPPROTO_TCP, '', ('1:2::3:4', port, 0, 0))
                 ]
             return defer.succeed(data)
 
