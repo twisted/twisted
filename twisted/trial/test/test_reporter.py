@@ -289,7 +289,7 @@ class TracebackHandling(unittest.SynchronousTestCase):
     def test_exception(self):
         """
         C{_trimFrames} removes traces of C{runWithWarningsSuppressed} from
-        C{_utilspy3} when a synchronous exception happens in a C{TestCase}
+        C{utils} when a synchronous exception happens in a C{TestCase}
         based test.
         """
         test = erroneous.TestAsynchronousFail('test_exception')
