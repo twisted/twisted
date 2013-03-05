@@ -347,4 +347,4 @@ class DeferredSuppressedWarningsTests(SuppressedWarningsTests):
             ["ignore foo 2"], [w['message'] for w in self.flushWarnings()])
 
 if _PY3:
-    del ProcessUtilsTest
+    del ProcessUtilsTests
