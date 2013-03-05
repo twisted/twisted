@@ -1264,28 +1264,6 @@ class HostnameEndpointsOneIPv6TestCase(ClientEndpointTestCaseMixin,
         self.assertEqual(self.failureResultOf(d).value, expectedError)
 
 
-    def test_nameResolution(self):
-        """
-        While resolving host names, _nameResolution calls
-        _deferToThread with _getaddrinfo.
-        """
-        calls = []
-        clientFactory = object()
-
-        def fakeDeferToThread(f, *args, **kwargs):
-            calls.append((f, args, kwargs))
-            return defer.Deferred()
-
-        endpoint = endpoints.HostnameEndpoint(reactor, 'ipv6.example.com',
-            1234)
-        fakegetaddrinfo = object()
-        endpoint._getaddrinfo = fakegetaddrinfo
-        endpoint._deferToThread = fakeDeferToThread
-        endpoint.connect(clientFactory)
-        self.assertEqual(
-            [(fakegetaddrinfo, ("ipv6.example.com", 0), {})], calls)
-
-
 
 class HostnameEndpointsGAIFailureTestCase(unittest.TestCase):
     """
