@@ -27,7 +27,7 @@ class Client(object):
         f.addBootstrap(xmlstream.STREAM_END_EVENT, self.disconnected)
         f.addBootstrap(xmlstream.STREAM_AUTHD_EVENT, self.authenticated)
         f.addBootstrap(xmlstream.INIT_FAILED_EVENT, self.init_failed)
-        domain = jid.host.encode('ascii')
+        domain = jid.host.encode('idna')
         connector = SRVConnector(
             reactor, 'xmpp-client', domain, f, defaultPort=5222)
         connector.connect()

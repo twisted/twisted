@@ -62,7 +62,7 @@ class SRVConnector:
                 "should be bytes, not unicode, since Twisted 12.3.0",
                 category=DeprecationWarning,
                 stacklevel=2)
-            domain = domain.encode('ascii')
+            domain = domain.encode('idna')
         self.domain = domain
         self.factory = factory
 

@@ -186,23 +186,3 @@ class SRVConnectorTest(unittest.TestCase):
                          warning['message'])
         self.assertIsInstance(self.connector.domain, bytes)
         self.assertEqual(b'example.org', self.connector.domain)
-
-
-    def test_unicodeDomainNonASCII(self):
-        """
-        Passing in a non-ASCII unicode domain raises a UnicodeEncodeError.
-
-        Also, a deprecation warning is issued.
-        """
-        self.assertRaises(UnicodeEncodeError, srvconnect.SRVConnector,
-                          self.reactor, 'xmpp-client',
-                          u'\u00e9chec.example.org', self.factory)
-        warnings = self.flushWarnings([self.assertRaises])
-        self.assertEqual(1, len(warnings))
-        warning = warnings[0]
-        self.assertEqual(DeprecationWarning, warning['category'])
-        self.assertEqual("Domain argument to "
-                         "twisted.names.srvconnect.SRVConnector "
-                         "should be bytes, not unicode, "
-                         "since Twisted 12.3.0",
-                         warning['message'])
