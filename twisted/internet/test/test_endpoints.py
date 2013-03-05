@@ -1083,15 +1083,11 @@ class HostnameEndpointsOneIPv4TestCase(ClientEndpointTestCaseMixin,
 
         clientFactory = protocol.Factory()
         clientFactory.protocol = protocol.Protocol
-        receivedFailures = []
 
         ep, ignoredArgs, address = self.createClientEndpoint(
             mreactor, clientFactory)
 
         d = ep.connect(clientFactory)
-        receivedFailures = []
-        d.addErrback(receivedFailures.append)
-
         d.cancel()
         # When canceled, the connector will immediately notify its factory that
         # the connection attempt has failed due to a UserError.
@@ -1099,8 +1095,7 @@ class HostnameEndpointsOneIPv4TestCase(ClientEndpointTestCaseMixin,
         attemptFactory.clientConnectionFailed(None, Failure(error.UserError()))
         # This should be a feature of MemoryReactor: <http://tm.tl/5630>.
 
-        self.assertEqual(len(receivedFailures), 1)
-        failure = receivedFailures[0]
+        failure = self.failureResultOf(d)
 
         self.assertIsInstance(failure.value, error.ConnectingCancelledError)
         self.assertEqual(failure.value.address, address)
@@ -1227,11 +1222,6 @@ class HostnameEndpointsOneIPv6TestCase(ClientEndpointTestCaseMixin,
             mreactor, clientFactory)
 
         d = ep.connect(clientFactory)
-
-        receivedFailures = []
-
-        d.addErrback(receivedFailures.append)
-
         d.cancel()
         # When canceled, the connector will immediately notify its factory that
         # the connection attempt has failed due to a UserError.
@@ -1239,8 +1229,7 @@ class HostnameEndpointsOneIPv6TestCase(ClientEndpointTestCaseMixin,
         attemptFactory.clientConnectionFailed(None, Failure(error.UserError()))
         # This should be a feature of MemoryReactor: <http://tm.tl/5630>.
 
-        self.assertEqual(len(receivedFailures), 1)
-        failure = receivedFailures[0]
+        failure = self.failureResultOf(d)
 
         self.assertIsInstance(failure.value, error.ConnectingCancelledError)
         self.assertEqual(failure.value.address, address)
