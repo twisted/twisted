@@ -1981,7 +1981,7 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         """
         builds = []
         builder = NewsBuilder()
-        builder.build = lambda path, output, header: builds.append((
+        builder.build = lambda path, output, header, delete: builds.append((
             path, output, header))
         builder._today = lambda: '2009-12-01'
 
@@ -2004,6 +2004,27 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
              (coreTopfiles, coreNews, coreHeader),
              (conchTopfiles, aggregateNews, conchHeader),
              (coreTopfiles, aggregateNews, coreHeader)])
+
+
+    def test_buildAllAggregate(self):
+        """
+        L{NewsBuilder.buildAll} aggregates I{NEWS} information into the top
+        files, only deleting framgments once it's done.
+        """
+        builder = NewsBuilder()
+        builder._today = lambda: '2009-12-01'
+
+        project = self.createFakeTwistedProject()
+        self.svnCommit(project)
+        builder.buildAll(project)
+
+        aggregateNews = project.child("NEWS")
+
+        aggregateContent = aggregateNews.getContent()
+        self.assertIn("Third feature addition", aggregateContent)
+        self.assertIn("Fixed that bug", aggregateContent)
+        self.assertIn("Old boring stuff from the past", aggregateContent)
+
 
 
     def test_changeVersionInNews(self):

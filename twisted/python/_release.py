@@ -774,7 +774,7 @@ class NewsBuilder(object):
         fileObj.write(entry + '\n\n')
 
 
-    def build(self, path, output, header):
+    def build(self, path, output, header, delete=True):
         """
         Load all of the change information from the given directory and write
         it out to the given output file. Once done, all the change information
@@ -790,6 +790,10 @@ class NewsBuilder(object):
 
         @param header: The top-level header to use when writing the news.
         @type header: L{str}
+
+        @param delete: If set, removes the fragments once the changes have been
+            processed. Default to C{True}.
+        @type delete: C{bool}
 
         @raise NotWorkingDirectory: If the C{path} is not an SVN checkout.
         """
@@ -826,6 +830,10 @@ class NewsBuilder(object):
         newNews.close()
         output.sibling('NEWS.new').moveTo(output)
 
+        if not delete:
+            # Keep the fragments for future usage.
+            return
+
         ticketTypes = self._headings.keys()
         for child in path.children():
             base, ext = os.path.splitext(child.basename())
@@ -851,11 +859,13 @@ class NewsBuilder(object):
         Iterate through the Twisted projects in C{baseDirectory}, yielding
         everything we need to know to build news for them.
 
-        Yields C{topfiles}, C{news}, C{name}, C{version} for each sub-project
-        in reverse-alphabetical order. C{topfile} is the L{FilePath} for the
-        topfiles directory, C{news} is the L{FilePath} for the NEWS file,
-        C{name} is the nice name of the project (as should appear in the NEWS
-        file), C{version} is the current version string for that project.
+        Yields C{topfiles}, C{news}, C{name}, C{version}, C{delete} for each
+        sub-project in reverse-alphabetical order. C{topfile} is the
+        L{FilePath} for the topfiles directory, C{news} is the L{FilePath} for
+        the NEWS file, C{name} is the nice name of the project (as should
+        appear in the NEWS file), C{version} is the current version string for
+        that project, C{delete} indicates that we don't need the fragments any
+        more and they can be deleted.
 
         @param baseDirectory: A L{FilePath} representing the root directory
             beneath which to find Twisted projects for which to generate
@@ -879,7 +889,7 @@ class NewsBuilder(object):
                     news = topfiles.child("NEWS")
                 name = self._getNewsName(project)
                 version = project.getVersion()
-                yield topfiles, news, name, version
+                yield topfiles, news, name, version, aggregateNews
 
 
     def buildAll(self, baseDirectory):
@@ -894,10 +904,11 @@ class NewsBuilder(object):
             news (see L{findTwistedProjects}).
         """
         today = self._today()
-        for topfiles, news, name, version in self._iterProjects(baseDirectory):
+        for topfiles, news, name, version, delete in self._iterProjects(
+                baseDirectory):
             self.build(
                 topfiles, news,
-                "Twisted %s %s (%s)" % (name, version.base(), today))
+                "Twisted %s %s (%s)" % (name, version.base(), today), delete)
 
 
     def _changeNewsVersion(self, news, name, oldVersion, newVersion, today):
