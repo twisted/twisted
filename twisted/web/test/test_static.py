@@ -10,7 +10,6 @@ import os, re, StringIO
 from zope.interface.verify import verifyObject
 
 from twisted.internet import abstract, interfaces
-from twisted.python.compat import set
 from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath
 from twisted.python import log

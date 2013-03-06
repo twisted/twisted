@@ -11,7 +11,7 @@ import os, time, pickle, errno, stat
 import contextlib
 from pprint import pformat
 
-from twisted.python.compat import set, _PY3
+from twisted.python.compat import _PY3
 from twisted.python.win32 import WindowsError, ERROR_DIRECTORY
 from twisted.python import filepath
 from twisted.python.runtime import platform

@@ -32,8 +32,6 @@ except ImportError:
 else:
     _extraInterfaces = (interfaces.IReactorSSL,)
 
-from twisted.python.compat import set
-
 MAX_TIMEOUT = 2000 # 2 seconds, see doIteration for explanation
 
 EVENTS_PER_LOOP = 1000 # XXX: what's a good value here?

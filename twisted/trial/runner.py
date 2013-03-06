@@ -23,7 +23,6 @@ import os, types, warnings, sys, inspect, imp
 import doctest, time
 
 from twisted.python import reflect, log, failure, modules, filepath
-from twisted.python.compat import set
 
 from twisted.internet import defer
 from twisted.trial import util, unittest

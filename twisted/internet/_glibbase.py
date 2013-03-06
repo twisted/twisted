@@ -20,7 +20,6 @@ from zope.interface import implementer
 from twisted.internet import base, posixbase, selectreactor
 from twisted.internet.interfaces import IReactorFDSet
 from twisted.python import log
-from twisted.python.compat import set
 
 
 

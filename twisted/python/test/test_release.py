@@ -22,7 +22,7 @@ from datetime import date
 
 from twisted.trial.unittest import TestCase
 
-from twisted.python.compat import execfile, set
+from twisted.python.compat import execfile
 from twisted.python.procutils import which
 from twisted.python import release
 from twisted.python.filepath import FilePath

@@ -18,7 +18,6 @@ import unittest as pyunit
 
 from zope.interface import implementer
 
-from twisted.python.compat import set
 from twisted.python import _reflectpy3 as reflect, log
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure

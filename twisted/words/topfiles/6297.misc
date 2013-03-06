@@ -1,0 +1,3 @@
+Removed deprecated set and frozenset imports from the following files:
+
+./twisted/words/protocols/irc.py:44
