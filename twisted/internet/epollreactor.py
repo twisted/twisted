@@ -13,7 +13,10 @@ listeners or connectors are added)::
 
 from __future__ import division, absolute_import
 
-import select
+try:
+    from select import epoll, EPOLLHUP, EPOLLERR, EPOLLIN, EPOLLOUT
+except ImportError:
+    epoll, EPOLLHUP, EPOLLERR, EPOLLIN, EPOLLOUT = (None,) * 5
 import errno
 
 from zope.interface import implementer
@@ -122,7 +125,8 @@ class _ContinuousPolling(posixbase._PollLikeMixin,
 
     def removeWriter(self, writer):
         """
-        Remove a C{FileDescriptor} from notification of data available to write.
+        Remove a C{FileDescriptor} from notification of data available to
+        write.
         """
         try:
             self._writers.remove(writer)
@@ -190,19 +194,19 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
     """
 
     # Attributes for _PollLikeMixin
-    _POLL_DISCONNECTED = (select.EPOLLHUP | select.EPOLLERR)
-    _POLL_IN = select.EPOLLIN
-    _POLL_OUT = select.EPOLLOUT
+    _POLL_DISCONNECTED = (EPOLLHUP | EPOLLERR)
+    _POLL_IN = EPOLLIN
+    _POLL_OUT = EPOLLOUT
 
     def __init__(self):
         """
         Initialize epoll object, file descriptor tracking dictionaries, and the
         base class.
         """
-        # Create the poller we're going to use.  The 1024 here is just a hint to
-        # the kernel, it is not a hard maximum.  After Linux 2.6.8, the size
+        # Create the poller we're going to use.  The 1024 here is just a hint
+        # to the kernel, it is not a hard maximum.  After Linux 2.6.8, the size
         # argument is completely ignored.
-        self._poller = select.epoll(1024)
+        self._poller = epoll(1024)
         self._reads = {}
         self._writes = {}
         self._selectables = {}
@@ -243,7 +247,7 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         """
         try:
             self._add(reader, self._reads, self._writes, self._selectables,
-                      select.EPOLLIN, select.EPOLLOUT)
+                      EPOLLIN, EPOLLOUT)
         except IOError as e:
             if e.errno == errno.EPERM:
                 # epoll(7) doesn't support certain file descriptors,
@@ -260,7 +264,7 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         """
         try:
             self._add(writer, self._writes, self._reads, self._selectables,
-                      select.EPOLLOUT, select.EPOLLIN)
+                      EPOLLOUT, EPOLLIN)
         except IOError as e:
             if e.errno == errno.EPERM:
                 # epoll(7) doesn't support certain file descriptors,
@@ -305,7 +309,7 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
             self._continuousPolling.removeReader(reader)
             return
         self._remove(reader, self._reads, self._writes, self._selectables,
-                     select.EPOLLIN, select.EPOLLOUT)
+                     EPOLLIN, EPOLLOUT)
 
 
     def removeWriter(self, writer):
@@ -316,7 +320,7 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
             self._continuousPolling.removeWriter(writer)
             return
         self._remove(writer, self._writes, self._reads, self._selectables,
-                     select.EPOLLOUT, select.EPOLLIN)
+                     EPOLLOUT, EPOLLIN)
 
 
     def removeAll(self):
