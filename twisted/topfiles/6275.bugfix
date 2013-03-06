@@ -1,1 +1,0 @@
-twisted.web.template now properly quotes attribute values, including Tag instances serialized within attribute values.

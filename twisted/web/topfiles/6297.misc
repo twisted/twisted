@@ -1,8 +1,0 @@
-Removed deprecated set imports from the following files:
-
-./twisted/web/_newclient.py:36
-./twisted/web/test/test_wsgi.py:17
-./twisted/web/test/test_static.py:13
-./twisted/web/test/test_http_headers.py
-./twisted/web/test/test_http.py
-./twisted/web/client.py:39

@@ -1,1 +1,0 @@
-All reactors included in Twisted itself now gracefully handle a rare case involving delayed calls scheduled very far in the future.
