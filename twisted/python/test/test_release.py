@@ -2005,7 +2005,7 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
     def test_buildAllAggregate(self):
         """
         L{NewsBuilder.buildAll} aggregates I{NEWS} information into the top
-        files, only deleting framgments once it's done.
+        files, only deleting fragments once it's done.
         """
         builder = NewsBuilder()
         project = self.createFakeTwistedProject()
