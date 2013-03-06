@@ -20,7 +20,6 @@ from operator import getitem
 
 from twisted.trial.unittest import TestCase
 from twisted.python.fakepwd import UserDatabase, ShadowDatabase
-from twisted.python.compat import set
 
 SYSTEM_UID_MAX = 999
 

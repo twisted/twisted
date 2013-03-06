@@ -18,7 +18,6 @@ try:
 except ImportError:
     import StringIO
 
-from twisted.python.compat import set
 from twisted.mail import pop3
 from twisted.mail import smtp
 from twisted.protocols import basic

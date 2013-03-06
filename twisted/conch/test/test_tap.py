@@ -24,7 +24,6 @@ if Crypto and pyasn1 and unix:
     from twisted.conch import tap
     from twisted.conch.openssh_compat.factory import OpenSSHFactory
 
-from twisted.python.compat import set
 from twisted.application.internet import StreamServerEndpointService
 from twisted.cred import error
 from twisted.cred.credentials import IPluggableAuthenticationModules

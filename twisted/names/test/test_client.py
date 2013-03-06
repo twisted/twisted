@@ -9,7 +9,6 @@ import sys
 
 from zope.interface.verify import verifyClass, verifyObject
 
-from twisted.python.compat import set
 from twisted.python import failure
 from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform

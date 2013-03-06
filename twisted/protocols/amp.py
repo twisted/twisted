@@ -182,7 +182,6 @@ from itertools import count
 
 from zope.interface import Interface, implements
 
-from twisted.python.compat import set
 from twisted.python.reflect import accumulateClassDict
 from twisted.python.failure import Failure
 from twisted.python import log, filepath

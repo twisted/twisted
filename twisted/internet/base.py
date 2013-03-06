@@ -17,7 +17,6 @@ from heapq import heappush, heappop, heapify
 
 import traceback
 
-from twisted.python.compat import set
 from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorThreads
 from twisted.internet.interfaces import IResolverSimple, IReactorPluggableResolver
 from twisted.internet.interfaces import IConnector, IDelayedCall

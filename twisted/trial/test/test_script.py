@@ -10,7 +10,6 @@ from twisted.trial.runner import (
 from twisted.trial._dist.disttrial import DistTrialRunner
 from twisted.scripts import trial
 from twisted.python import util
-from twisted.python.compat import set
 from twisted.python.usage import UsageError
 from twisted.python.filepath import FilePath
 

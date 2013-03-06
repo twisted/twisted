@@ -12,7 +12,7 @@ import socket, sys, traceback
 
 from twisted.trial import unittest
 
-from twisted.python.compat import set, frozenset, reduce, execfile, _PY3
+from twisted.python.compat import reduce, execfile, _PY3
 from twisted.python.compat import comparable, cmp, nativeString, networkString
 from twisted.python.compat import unicode as unicodeCompat, lazyByteSlice
 from twisted.python.compat import reraise, NativeStringIO, iterbytes, intToBytes
