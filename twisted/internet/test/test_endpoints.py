@@ -47,7 +47,7 @@ try:
     from twisted.test.test_sslverify import makeCertificate
     from twisted.internet.ssl import CertificateOptions, Certificate, \
         KeyPair, PrivateCertificate
-    from OpenSSL.SSL import ContextType, SSLv3_METHOD, TLSv1_METHOD
+    from OpenSSL.SSL import ContextType, SSLv23_METHOD, TLSv1_METHOD
     testCertificate = Certificate.loadPEM(pemPath.getContent())
     testPrivateCertificate = PrivateCertificate.loadPEM(pemPath.getContent())
 
@@ -1394,14 +1394,14 @@ class ServerStringTests(unittest.TestCase):
         server = endpoints.serverFromString(
             reactor,
             "ssl:1234:backlog=12:privateKey=%s:"
-            "certKey=%s:sslmethod=SSLv3_METHOD:interface=10.0.0.1"
+            "certKey=%s:sslmethod=TLSv1_METHOD:interface=10.0.0.1"
             % (escapedPEMPathName, escapedPEMPathName))
         self.assertIsInstance(server, endpoints.SSL4ServerEndpoint)
         self.assertIdentical(server._reactor, reactor)
         self.assertEqual(server._port, 1234)
         self.assertEqual(server._backlog, 12)
         self.assertEqual(server._interface, "10.0.0.1")
-        self.assertEqual(server._sslContextFactory.method, SSLv3_METHOD)
+        self.assertEqual(server._sslContextFactory.method, TLSv1_METHOD)
         ctx = server._sslContextFactory.getContext()
         self.assertIsInstance(ctx, ContextType)
 
@@ -1419,12 +1419,12 @@ class ServerStringTests(unittest.TestCase):
         self.assertEqual(server._port, 4321)
         self.assertEqual(server._backlog, 50)
         self.assertEqual(server._interface, "")
-        self.assertEqual(server._sslContextFactory.method, TLSv1_METHOD)
+        self.assertEqual(server._sslContextFactory.method, SSLv23_METHOD)
         ctx = server._sslContextFactory.getContext()
         self.assertIsInstance(ctx, ContextType)
 
     if skipSSL:
-        test_ssl.skip = test_sslWithDefaults = skipSSL
+        test_ssl.skip = test_sslWithDefaults.skip = skipSSL
 
 
     def test_unix(self):
