@@ -742,6 +742,8 @@ class OpenSSLCertificateOptions(object):
 
     def _makeContext(self):
         ctx = SSL.Context(self.method)
+        # Disallow insecure SSLv2. Applies only for SSLv23_METHOD.
+        ctx.set_options(SSL.OP_NO_SSLv2)
 
         if self.certificate is not None and self.privateKey is not None:
             ctx.use_certificate(self.certificate)

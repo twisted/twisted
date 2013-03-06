@@ -539,6 +539,17 @@ class OpenSSLOptions(unittest.TestCase):
                 lambda result: self.assertEqual(result, WritingProtocol.byte))
 
 
+    def test_SSLv2IsDisabledForSSLv23(self):
+        """
+        SSLv2 is insecure and should be disabled so when users use
+        SSLv23_METHOD, they get at least SSLV3.  It does nothing if
+        SSLv2_METHOD chosen explicitly.
+        """
+        opts = sslverify.OpenSSLCertificateOptions()
+        ctx = opts.getContext()
+        self.assertEqual(SSL.OP_NO_SSLv2, ctx.set_options(0) & SSL.OP_NO_SSLv2)
+
+
 
 if interfaces.IReactorSSL(reactor, None) is None:
     OpenSSLOptions.skip = "Reactor does not support SSL, cannot run SSL tests"
