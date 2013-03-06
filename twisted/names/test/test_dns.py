@@ -127,7 +127,16 @@ class NameTests(unittest.TestCase):
         self.assertRaises(TypeError, dns.Name, 123)
         self.assertRaises(TypeError, dns.Name, object())
         self.assertRaises(TypeError, dns.Name, [])
-        self.assertRaises(TypeError, dns.Name, u"text")
+
+
+    def test_unicodeName(self):
+        """
+        L{dns.Name} automatically encodes unicode domain name using C{idna}
+        encoding.
+        """
+        name = dns.Name(u'\u00e9chec.example.org')
+        self.assertIsInstance(name.name, bytes)
+        self.assertEqual(b'xn--chec-9oa.example.org', name.name)
 
 
     def test_decode(self):
