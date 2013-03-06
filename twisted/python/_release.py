@@ -777,9 +777,7 @@ class NewsBuilder(object):
     def build(self, path, output, header):
         """
         Load all of the change information from the given directory and write
-        it out to the given output file. Once done, all the change information
-        files are removed from version control, thus requiring to make the
-        build in a SVN directory.
+        it out to the given output file.
 
         @param path: A directory (probably a I{topfiles} directory) containing
             change information in the form of <ticket>.<change type> files.
@@ -823,7 +821,8 @@ class NewsBuilder(object):
     def _deleteFragments(self, path):
         """
         Delete the change information, to clean up the repository  once the
-        NEWS files have been built.
+        NEWS files have been built. It requires C{path} to be in a SVN
+        directory.
 
         @param path: A directory (probably a I{topfiles} directory) containing
             change information in the form of <ticket>.<change type> files.
@@ -903,14 +902,11 @@ class NewsBuilder(object):
                 baseDirectory):
             # We first build for the subproject
             news = topfiles.child("NEWS")
-            self.build(
-                topfiles, news,
-                "Twisted %s %s (%s)" % (name, version.base(), today))
+            header = "Twisted %s %s (%s)" % (name, version.base(), today)
+            self.build(topfiles, news, header)
             # Then for the global NEWS file
             news = baseDirectory.child("NEWS")
-            self.build(
-                topfiles, news,
-                "Twisted %s %s (%s)" % (name, version.base(), today))
+            self.build(topfiles, news, header)
             # Finally, delete the fragments
             self._deleteFragments(topfiles)
 
