@@ -1,1 +1,0 @@
-twisted.conch.client.knownhosts.KnownHostsFile now takes care not to overwrite changes to its save file made behind its back, making it safer to use with the same known_hosts file as is being used by other software.

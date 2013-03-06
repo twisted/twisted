@@ -1,1 +1,0 @@
-twisted.words.im.ircsupport no longer logs a failure whenever receiving ISUPPORT messages from an IRC server.
