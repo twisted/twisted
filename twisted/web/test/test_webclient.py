@@ -1061,6 +1061,7 @@ class TestHostHeader(unittest.TestCase):
                           b'foo.example.com:8080')
 
 
+
 if ssl is None or not hasattr(ssl, 'DefaultOpenSSLContextFactory'):
     for case in [WebClientSSLTestCase, WebClientRedirectBetweenSSLandPlainText]:
         case.skip = "OpenSSL not present"
