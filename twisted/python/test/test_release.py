@@ -1752,7 +1752,6 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         L{NewsBuilder.build} updates a NEWS file with new features based on the
         I{<ticket>.feature} files found in the directory specified.
         """
-        self.svnCommit()
         self.builder.build(
             self.project, self.project.child('NEWS'),
             "Super Awesometastic 32.16")
@@ -1803,7 +1802,6 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         project = FilePath(self.mktemp()).child("twisted")
         project.makedirs()
         self.createStructure(project, {'NEWS': self.existingText})
-        self.svnCommit(project)
 
         self.builder.build(
             project, project.child('NEWS'),
@@ -1830,7 +1828,6 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
             '\n'
             'Blah blah other stuff.\n')
 
-        self.svnCommit()
         self.builder.build(self.project, news, "Super Awesometastic 32.16")
 
         self.assertEqual(
@@ -1882,7 +1879,6 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
             if ticket.splitext()[1] in ('.feature', '.misc', '.doc'):
                 ticket.remove()
 
-        self.svnCommit()
         self.builder.build(
             self.project, self.project.child('NEWS'),
             'Some Thing 1.2')
@@ -1913,7 +1909,6 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         feature('5').copyTo(feature('15'))
         feature('5').copyTo(feature('16'))
 
-        self.svnCommit()
         self.builder.build(
             self.project, self.project.child('NEWS'),
             'Project Name 5.0')
@@ -1981,11 +1976,12 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         """
         builds = []
         builder = NewsBuilder()
-        builder.build = lambda path, output, header, delete: builds.append((
+        builder.build = lambda path, output, header: builds.append((
             path, output, header))
         builder._today = lambda: '2009-12-01'
 
         project = self.createFakeTwistedProject()
+        self.svnCommit(project)
         builder.buildAll(project)
 
         coreTopfiles = project.child("topfiles")
@@ -2012,8 +2008,6 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         files, only deleting framgments once it's done.
         """
         builder = NewsBuilder()
-        builder._today = lambda: '2009-12-01'
-
         project = self.createFakeTwistedProject()
         self.svnCommit(project)
         builder.buildAll(project)
@@ -2060,31 +2054,28 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
 
     def test_removeNEWSfragments(self):
         """
-        L{NewsBuilder.build} removes all the NEWS fragments after the build
+        L{NewsBuilder.buildALL} removes all the NEWS fragments after the build
         process, using the C{svn} C{rm} command.
         """
-        # Create another random file to make sure it's not removed
-        self.project.child("README").setContent("README")
-        self.svnCommit()
-        self.builder.build(
-            self.project, self.project.child('NEWS'),
-            "Super Awesometastic 32.16")
-        # The .svn directory, the NEWS and README files are remaining
-        self.assertEqual(3, len(self.project.children()))
-        output = runCommand(["svn", "status", self.project.path])
+        builder = NewsBuilder()
+        project = self.createFakeTwistedProject()
+        self.svnCommit(project)
+        builder.buildAll(project)
+
+        self.assertEqual(5, len(project.children()))
+        output = runCommand(["svn", "status", project.path])
         removed = [line for line in output.splitlines()
                    if line.startswith("D ")]
-        self.assertEqual(10, len(removed))
+        self.assertEqual(3, len(removed))
 
 
     def test_checkSVN(self):
         """
-        L{NewsBuilder.build} raises L{NotWorkingDirectory} when the given path
-        is not a SVN checkout.
+        L{NewsBuilder.buildAll} raises L{NotWorkingDirectory} when the given
+        path is not a SVN checkout.
         """
         self.assertRaises(
-            NotWorkingDirectory, self.builder.build, self.project,
-            self.project.child('NEWS'), "Super Awesometastic 32.16")
+            NotWorkingDirectory, self.builder.buildAll, self.project)
 
 
 
