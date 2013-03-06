@@ -2001,8 +2001,8 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         self.assertEqual(
             builds,
             [(conchTopfiles, conchNews, conchHeader),
-             (coreTopfiles, coreNews, coreHeader),
              (conchTopfiles, aggregateNews, conchHeader),
+             (coreTopfiles, coreNews, coreHeader),
              (coreTopfiles, aggregateNews, coreHeader)])
 
 

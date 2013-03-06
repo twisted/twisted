@@ -859,13 +859,11 @@ class NewsBuilder(object):
         Iterate through the Twisted projects in C{baseDirectory}, yielding
         everything we need to know to build news for them.
 
-        Yields C{topfiles}, C{news}, C{name}, C{version}, C{delete} for each
-        sub-project in reverse-alphabetical order. C{topfile} is the
-        L{FilePath} for the topfiles directory, C{news} is the L{FilePath} for
-        the NEWS file, C{name} is the nice name of the project (as should
+        Yields C{topfiles}, C{name}, C{version}, for each sub-project in
+        reverse-alphabetical order. C{topfile} is the L{FilePath} for the
+        topfiles directory, C{name} is the nice name of the project (as should
         appear in the NEWS file), C{version} is the current version string for
-        that project, C{delete} indicates that we don't need the fragments any
-        more and they can be deleted.
+        that project.
 
         @param baseDirectory: A L{FilePath} representing the root directory
             beneath which to find Twisted projects for which to generate
@@ -880,16 +878,11 @@ class NewsBuilder(object):
         # files.
         projects.reverse()
 
-        for aggregateNews in [False, True]:
-            for project in projects:
-                topfiles = project.directory.child("topfiles")
-                if aggregateNews:
-                    news = baseDirectory.child("NEWS")
-                else:
-                    news = topfiles.child("NEWS")
-                name = self._getNewsName(project)
-                version = project.getVersion()
-                yield topfiles, news, name, version, aggregateNews
+        for project in projects:
+            topfiles = project.directory.child("topfiles")
+            name = self._getNewsName(project)
+            version = project.getVersion()
+            yield topfiles, name, version
 
 
     def buildAll(self, baseDirectory):
@@ -904,11 +897,20 @@ class NewsBuilder(object):
             news (see L{findTwistedProjects}).
         """
         today = self._today()
-        for topfiles, news, name, version, delete in self._iterProjects(
+        for topfiles, name, version in self._iterProjects(
                 baseDirectory):
+            # We first build for the subproject
+            news = topfiles.child("NEWS")
             self.build(
                 topfiles, news,
-                "Twisted %s %s (%s)" % (name, version.base(), today), delete)
+                "Twisted %s %s (%s)" % (name, version.base(), today),
+                delete=False)
+            # Then for the global NEWS file, deleting the fragments
+            news = baseDirectory.child("NEWS")
+            self.build(
+                topfiles, news,
+                "Twisted %s %s (%s)" % (name, version.base(), today),
+                delete=True)
 
 
     def _changeNewsVersion(self, news, name, oldVersion, newVersion, today):
