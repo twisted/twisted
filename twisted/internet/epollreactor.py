@@ -13,10 +13,7 @@ listeners or connectors are added)::
 
 from __future__ import division, absolute_import
 
-try:
-    from select import epoll, EPOLLHUP, EPOLLERR, EPOLLIN, EPOLLOUT
-except ImportError:
-    epoll, EPOLLHUP, EPOLLERR, EPOLLIN, EPOLLOUT = (None,) * 5
+from select import epoll, EPOLLHUP, EPOLLERR, EPOLLIN, EPOLLOUT
 import errno
 
 from zope.interface import implementer
