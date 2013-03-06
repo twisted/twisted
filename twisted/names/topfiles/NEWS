@@ -1,33 +1,6 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
-Twisted Names 13.0.0pre1 (2013-03-06)
-=====================================
-
-Features
---------
- - twisted.names.dns.Name and twisted.names.srvconnect.SRVConnector
-   now support unicode domain names, automatically converting using
-   the idna encoding. (#6245)
-
-Improved Documentation
-----------------------
- - The API documentation for IResolver and its implementations has
-   been updated and consolidated in
-   twisted.internet.interfaces.IResolver. (#4685)
-
-Deprecations and Removals
--------------------------
- - The retry, Resolver.discoveredAuthority, lookupNameservers,
-   lookupAddress, extractAuthority, and discoverAuthority APIs in
-   twisted.names.root have been deprecated since 10.0 and have been
-   removed.  (#5564)
-
-Other
------
- - #5596, #5989, #6246, #6297
-
-
 Twisted Names 12.3.0 (2012-12-20)
 =================================
 

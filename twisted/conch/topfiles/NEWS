@@ -1,21 +1,6 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
-Twisted Conch 13.0.0pre1 (2013-03-06)
-=====================================
-
-Features
---------
- - twisted.conch.client.knownhosts.KnownHostsFile now takes care not
-   to overwrite changes to its save file made behind its back, making
-   it safer to use with the same known_hosts file as is being used by
-   other software. (#6256)
-
-Other
------
- - #5864, #6257, #6297
-
-
 Twisted Conch 12.3.0 (2012-12-20)
 =================================
 

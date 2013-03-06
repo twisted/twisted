@@ -1,0 +1,1 @@
+twisted.mail.smtp.ESMTPClient no longer attempts to negotiate a TLS session if transport security has been requested and the protocol is already running on a TLS connection.
