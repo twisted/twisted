@@ -898,8 +898,7 @@ class NewsBuilder(object):
                 % (baseDirectory.path,))
 
         today = self._today()
-        for topfiles, name, version in self._iterProjects(
-                baseDirectory):
+        for topfiles, name, version in self._iterProjects(baseDirectory):
             # We first build for the subproject
             news = topfiles.child("NEWS")
             header = "Twisted %s %s (%s)" % (name, version.base(), today)
