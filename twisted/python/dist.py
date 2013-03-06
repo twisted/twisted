@@ -450,12 +450,3 @@ def _checkCPython(sys=sys, platform=platform):
 
 
 _isCPython = _checkCPython()
-
-
-def _hasEpoll(builder):
-    """
-    Checks if the header for building epoll (C{sys/epoll.h}) is available.
-
-    @return: C{True} if the header is available, C{False} otherwise.
-    """
-    return builder._check_header("sys/epoll.h")
