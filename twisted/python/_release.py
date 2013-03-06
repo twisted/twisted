@@ -777,9 +777,7 @@ class NewsBuilder(object):
     def build(self, path, output, header):
         """
         Load all of the change information from the given directory and write
-        it out to the given output file. Once done, all the change information
-        files are removed from version control, thus requiring to make the
-        build in a SVN directory.
+        it out to the given output file.
 
         @param path: A directory (probably a I{topfiles} directory) containing
             change information in the form of <ticket>.<change type> files.
@@ -793,13 +791,6 @@ class NewsBuilder(object):
 
         @raise NotWorkingDirectory: If the C{path} is not an SVN checkout.
         """
-        try:
-            runCommand(["svn", "info", path.path])
-        except CommandFailed:
-            raise NotWorkingDirectory(
-                "%s does not appear to be an SVN working directory."
-                % (path.path,))
-
         changes = []
         for part in (self._FEATURE, self._BUGFIX, self._DOC, self._REMOVAL):
             tickets = self._findChanges(path, part)
@@ -826,6 +817,17 @@ class NewsBuilder(object):
         newNews.close()
         output.sibling('NEWS.new').moveTo(output)
 
+
+    def _deleteFragments(self, path):
+        """
+        Delete the change information, to clean up the repository  once the
+        NEWS files have been built. It requires C{path} to be in a SVN
+        directory.
+
+        @param path: A directory (probably a I{topfiles} directory) containing
+            change information in the form of <ticket>.<change type> files.
+        @type path: L{FilePath}
+        """
         ticketTypes = self._headings.keys()
         for child in path.children():
             base, ext = os.path.splitext(child.basename())
@@ -851,11 +853,11 @@ class NewsBuilder(object):
         Iterate through the Twisted projects in C{baseDirectory}, yielding
         everything we need to know to build news for them.
 
-        Yields C{topfiles}, C{news}, C{name}, C{version} for each sub-project
-        in reverse-alphabetical order. C{topfile} is the L{FilePath} for the
-        topfiles directory, C{news} is the L{FilePath} for the NEWS file,
-        C{name} is the nice name of the project (as should appear in the NEWS
-        file), C{version} is the current version string for that project.
+        Yields C{topfiles}, C{name}, C{version}, for each sub-project in
+        reverse-alphabetical order. C{topfile} is the L{FilePath} for the
+        topfiles directory, C{name} is the nice name of the project (as should
+        appear in the NEWS file), C{version} is the current version string for
+        that project.
 
         @param baseDirectory: A L{FilePath} representing the root directory
             beneath which to find Twisted projects for which to generate
@@ -870,16 +872,11 @@ class NewsBuilder(object):
         # files.
         projects.reverse()
 
-        for aggregateNews in [False, True]:
-            for project in projects:
-                topfiles = project.directory.child("topfiles")
-                if aggregateNews:
-                    news = baseDirectory.child("NEWS")
-                else:
-                    news = topfiles.child("NEWS")
-                name = self._getNewsName(project)
-                version = project.getVersion()
-                yield topfiles, news, name, version
+        for project in projects:
+            topfiles = project.directory.child("topfiles")
+            name = self._getNewsName(project)
+            version = project.getVersion()
+            yield topfiles, name, version
 
 
     def buildAll(self, baseDirectory):
@@ -893,11 +890,24 @@ class NewsBuilder(object):
             beneath which to find Twisted projects for which to generate
             news (see L{findTwistedProjects}).
         """
+        try:
+            runCommand(["svn", "info", baseDirectory.path])
+        except CommandFailed:
+            raise NotWorkingDirectory(
+                "%s does not appear to be an SVN working directory."
+                % (baseDirectory.path,))
+
         today = self._today()
-        for topfiles, news, name, version in self._iterProjects(baseDirectory):
-            self.build(
-                topfiles, news,
-                "Twisted %s %s (%s)" % (name, version.base(), today))
+        for topfiles, name, version in self._iterProjects(baseDirectory):
+            # We first build for the subproject
+            news = topfiles.child("NEWS")
+            header = "Twisted %s %s (%s)" % (name, version.base(), today)
+            self.build(topfiles, news, header)
+            # Then for the global NEWS file
+            news = baseDirectory.child("NEWS")
+            self.build(topfiles, news, header)
+            # Finally, delete the fragments
+            self._deleteFragments(topfiles)
 
 
     def _changeNewsVersion(self, news, name, oldVersion, newVersion, today):
