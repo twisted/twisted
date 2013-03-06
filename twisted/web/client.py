@@ -19,12 +19,12 @@ except ImportError:
     def urlunparse(parts):
         result = _urlunparse(tuple([p.decode("charmap") for p in parts]))
         return result.encode("charmap")
+from io import BytesIO
 import zlib
 
 from zope.interface import implementer
 
 from twisted.python.compat import _PY3, nativeString, intToBytes
-from zope.interface import implements
 
 from twisted.python import log
 from twisted.python.failure import Failure
@@ -1610,7 +1610,7 @@ class RedirectAgent(object):
 
 
 
-class CacheBodyProducer(proxyForInterface(IResponse)):
+class _CacheBodyProducer(proxyForInterface(IResponse)):
     """
     A wrapper for a L{Response} instance which handles cached response bodies.
     This type of response will be used if a cache hit occurs.
@@ -1641,7 +1641,7 @@ class CacheBodyProducer(proxyForInterface(IResponse)):
 
 
 
-class CacheBodyUpdater(proxyForInterface(IResponse)):
+class _CacheBodyUpdater(proxyForInterface(IResponse)):
     """
     A wrapper for a L{Response} instance which transparently generates a cache
     entry for new content.
@@ -1651,6 +1651,7 @@ class CacheBodyUpdater(proxyForInterface(IResponse)):
 
     @since: 13.1
     """
+
     def __init__(self, response, cache, cacheKey):
         self.original = response
         self.cache = cache
@@ -1672,21 +1673,21 @@ class _CachingProtocol(proxyForInterface(IProtocol)):
 
     @ivar cacheKey: The key to identify the current response by.
 
-    @since: 11.1
+    @since: 13.1
     """
 
     def __init__(self, protocol, cache, cacheKey):
         self.original = protocol
         self.cache = cache
         self.cacheKey = cacheKey
-        self.buffer = ''
+        self.buffer = BytesIO()
 
 
     def dataReceived(self, data):
         """
         Buffer all incoming C{data} before writing it to the receiving protocol
         """
-        self.buffer += data
+        self.buffer.write(data)
         self.original.dataReceived(data)
 
 
@@ -1698,12 +1699,13 @@ class _CachingProtocol(proxyForInterface(IProtocol)):
         entry = self.cache.get(self.cacheKey)
         if entry is None:
             entry = {}
-        entry['content'] = self.buffer
+        entry['content'] = self.buffer.getvalue()
         self.cache.put(self.cacheKey, entry)
         self.original.connectionLost(reason)
 
 
 
+@implementer(IHTTPCache)
 class MemoryCache(object):
     """
     An L{IHTTPCache} storing all data in system memory.
@@ -1715,7 +1717,6 @@ class MemoryCache(object):
 
     @since: 13.1
     """
-    implements(IHTTPCache)
 
     def __init__(self):
         self._storage = {}
@@ -1811,9 +1812,9 @@ class CachingAgent(object):
 
         if response.code == 304 and method == 'GET':
             response.code = 200
-            response = CacheBodyProducer(response, cache)
+            response = _CacheBodyProducer(response, cache)
         elif cache:
-            response = CacheBodyUpdater(
+            response = _CacheBodyUpdater(
                 response, cache=self._cache, cacheKey=cacheKey)
         return response
 
