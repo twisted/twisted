@@ -1,0 +1,200 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Deferred Generator</title>
+</head>
+
+<!-- status of document: INCOMPLETE, DRAFT -->
+
+<body>
+
+<h1>Deferred Generator</h1>
+
+<p>Twisted's <code class="API" base="twisted.internet.defer.waitForDeferred">deferred generator</code> capability allows you to run iterations in a way that is more intuitive and similar to what you may be used to seeing in the world of blocking code.</p>
+
+<p>Here's a simple example, courtesy of Alex Levy, that may help you understand how the concept works:</p>
+
+<pre class="python">
+from twisted.internet import defer, reactor
+# The reactor is running and we are going to obtain a Deferred "d"
+
+def getSomeDeferred():
+    """Some function that returns a Deferred."""
+    d = defer.Deferred()
+    reactor.callLater(1, d.callback, 'A string that yells "foo!"')
+    return d
+def anotherDeferred(needle, haystack):
+    """Some other function that returns a Deferred."""
+    d = defer.Deferred()
+    reactor.callLater(1, d.callback, haystack.find(needle))
+    return d
+@defer.deferredGenerator
+def find(needle):
+    """A Deferred generator function"""
+    print "I am going to find %s in a haystack." % needle
+    # After yielding waitForDeferred, our generator
+    # will be put on hold for a while.
+    wfd = defer.waitForDeferred(getSomeDeferred())
+    yield wfd
+    # The reactor will call .next(), and we resume here.
+    haystack = wfd.getResult()
+    print "I got my haystack back from a deferred."
+    # We're going to wait for another deferred result.
+    wfd = defer.waitForDeferred(anotherDeferred(needle, haystack))
+    yield wfd
+    # When we get our next result, the procedure resumes here.
+    print "I found %s at character %d" % (repr(needle), wfd.getResult())
+    reactor.stop()
+# We call the deferred generator like any other function and immediately
+# get a Deferred that fires when the generator is done.
+
+d = find('foo!')
+reactor.run()
+</pre>
+
+<p>The <code>find</code> function is a generator because it contains
+<code>yield</code> statements. In the blocking world, you would use it
+to iterate over multiple values, like this:</p>
+
+<pre class="python">
+for thing in find('foo'):
+    print "'%s' is either a needle or a haystack" % thing
+</pre>
+
+<p>However, waiting for a function to yield something is a form of blocking, which is a no-no when you're writing asynchronous code. So we instead wrap the <code>find</code> function in a <code>defer.deferredGenerator</code>. Now calling it immediately returns a <code>Deferred</code> that fires when it is <u>done</u> iterating.</p>
+
+<p>The actual stuff that gets done as part of the iteration is incorporated into the generator function itself. You <code>yield</code> whatever it is you want to be an iterator of, as usual, with some important differences.</p>
+
+<ul>
+<li>You don't yield the actual object, but rather something based on a <code>Deferred</code> that will eventually fire with the object. (If you could get the object immediately, there would be no reason to go to all this trouble.)</li>
+<li>To get the actual object from what you yielded (a <code>Deferred</code> that has been specially packaged by <code>defer.waitForDeferred</code>), after the Twisted event loop has taken time off to go do other stuff, by calling a <code>getResult</code> method of the yielded object.</li>
+</ul>
+
+<p>Now let's consider a more detailed example, the deferred generator that types fake keystrokes, one after the other, in the WinDictator application.</p>
+
+<pre class="python">
+from twisted.internet import defer
+# The reactor is running and we are inside a class instance that has
+# attributes referencing a "keyer," an "observer," and a "history."
+
+@defer.deferredGenerator
+def pressAndReleaseKeys(self, keyList):
+    """
+    This method is decorated with defer.deferredGenerator to immediately
+    return a Deferred that fires upon completion of an iteration over
+    key combinations, which are supplied as sub-sequences of the 'keyList'
+    sequence. The deferred fires with 'True' if all keys were observed to
+    have been pressed and reseased, 'False' otherwise.
+    The generator sends fake X key events for each key of each
+    sub-sequence, a keypress followed by a release, and waits for
+    confirmation of each faked key event before proceeding with the next
+    one.
+    """
+    running = True
+    def gotConfirmation(confirmed):
+        running = confirmed
+        return confirmed
+    def keyAndConfirm(func, key):
+        d = func(key)
+        d.addCallback(self.observer.confirm)
+        d.addCallback(gotConfirmation)
+        return d
+    stack = []
+    while running and keyList:
+        keySequence = keyList.pop(0)
+        # Depress each key in order
+        for key in keySequence:
+            stack.append(key)
+            d = keyAndConfirm(self.keyer.pressKey, key)
+            wfd = defer.waitForDeferred(d)
+            yield wfd
+</pre>
+
+<p>Here the first <code>waitForDeferred</code> instance is yielded from within a <code>while</code> loop that is doing a first batch of iterations. Note that we are yielding a wrapped <code>Deferred</code> that has a fairly complicated callback chain. Each key of a combination (<i>e.g.</i>, "Shift_L + a" = "A") is being virtually pressed in turn via the hidden machinations of the <code>keyer</code> and <code>confirm</code> objects.</p>
+
+<p>Processing of the callbacks occurs right inside our generator function, but it's done whenever the Twisted event loop can get around to it. You may wonder how that is possible given that Twisted code runs in a single thread. The answer lies in the <code>yield</code> statement, which is an invitation for code outside the generator to do stuff between iterations. See Norman Matloff's fine <a href='http://heather.cs.ucdavis.edu/~matloff/Python/PyIterGen.pdf'>tutorial</a> on generators for details.</p>
+
+<pre class="python">
+if not wfd.getResult():
+    # If key depression not noted, don't try typing any more of
+    # the text.
+    running = False
+    break
+</pre>
+
+<p>At this point, we have obtained the value that finally resulted from the calls to <code>self.keyer.pressKey</code> and <code>self.observer.confirm</code>. The result is a Boolean indicating that everything went OK in those operations. If it didn't, we set a flag to prevent further iterations and break out of the current one.</p>
+
+<p>Now comes the next iteration, for releasing the keys we've pressed:</p>
+
+<pre class="python">
+# Release each key in reverse order
+while running and stack:
+    key = stack.pop()
+    d = keyAndConfirm(self.keyer.releaseKey, key)
+    wfd = defer.waitForDeferred(d)
+    yield wfd
+    if not wfd.getResult():
+        # If key release not noted, don't try typing any more of
+        # the text.
+        running = False
+</pre>
+
+<p>Again, we yield the <code>Deferred</code> that we've packaged up with <code>defer.waitForDeferred</code>, let the Twisted event loop do its thing, and get the deferred result. Again, the result is a Boolean status value and we quit iterating if there's been a problem.</p>
+
+<p>Now we come to a part of the generator function where we want to deliver a final result to the caller. But how do we do that with all this yielding going on? How do you even return anything that could be construed as the "result" of a Python generator, when all you can normally do is iterate over the values it yields?</p>
+
+<p>Here Twisted's deferred generator adds some functionality to generator functions. The last object yielded that is not wrapped in a call to <code>defer.waitForDeferred</code>, is used as the deferred result of the <code>defer.deferredGenerator</code> call itself!</p>
+
+<pre class="python">
+# Final yield of a Boolean, rather than a wfd, is supplied to the
+# deferredGenerator's callback
+yield running
+</pre>
+
+<p>The running variable holds a status that is <code>True</code> unless made <code>False</code> by any of the key press and release operations. That's also the status of the entire key generator operation, and whatever function called it gets that as the deferred result.</p>
+
+<p>A method in the same class as <code>pressAndReleaseKeys</code> is an example of such a function:</p>
+
+<pre class="python">
+def backspace(self, N):
+    """
+    Deletes backwards I{N} characters using the C{BackSpace} keysym.
+    """
+    if self.typingEnabled():
+        self.history.backspace(N)
+        keyList = [("BackSpace",)] * N
+        d = self.pressAndReleaseKeys(keyList)
+    else:
+        # Typing isn't enabled, just return a Deferred that immediately
+        # fires with False typing-failed status
+        d = defer.succeed(False)
+    return d
+</pre>
+
+<p>The method calls <code>self.pressAndReleaseKeys()</code> and <u>immediately</u> gets a <code>Deferred</code> as the result even while the generator function is hammering out backspaces one by one. The backspace method, by the way, is used for making corrections to dictated text, which works surprisingly well.</p>
+
+<p>Here's another example of a method that uses our deferred generator, again in the same class:</p>
+
+<pre class="python">
+def insert(self, text):
+    """
+    Parses the supplied I{text} and sends chunks to the appropriate methods
+    of the keyer, returning C{True} if entry of all text was noted and
+    C{False} if not.
+    """
+    if self.typingEnabled:
+        text = self.contextAdjust(text)
+        keyList = self.keyCoder.textToKeys(text)
+        d = self.pressAndReleaseKeys(keyList)
+     else:
+        # Typing isn't enabled, just return a Deferred that immediately
+        # fires with False typing-failed status
+        d = defer.succeed(False)
+     return d
+</pre>
+
+</body>
+</html>
