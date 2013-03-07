@@ -2214,6 +2214,7 @@ class CachingAgentTests(unittest.SynchronousTestCase,
         data = '0123456789'
         transport = StringTransport()
         response = Response(('HTTP', 1, 1), 200, 'OK', headers, transport)
+        response.length = 10
         res.callback(response)
 
         result = self.successResultOf(d)
@@ -2225,6 +2226,7 @@ class CachingAgentTests(unittest.SynchronousTestCase,
         self.assertEqual(result.headers.getRawHeaders('etag'), ['qwertz'])
         self.assertEqual(result.headers.getRawHeaders('last-modified'),
                          ['Sun, 06 Nov 1994 08:49:37 GMT'])
+        self.assertEqual(result.length, 10)
 
         response._bodyDataReceived(data)
         response._bodyDataFinished()
@@ -2239,6 +2241,7 @@ class CachingAgentTests(unittest.SynchronousTestCase,
         self.assertEqual(cacheEntry['etag'], 'qwertz')
         self.assertEqual(cacheEntry['last-modified'],
                          'Sun, 06 Nov 1994 08:49:37 GMT')
+        self.assertEqual(cacheEntry['length'], 10)
 
         cacheProtocol = SimpleAgentProtocol()
         self.cache.deliverBody('http://example.com/foo', cacheProtocol)
@@ -2254,7 +2257,8 @@ class CachingAgentTests(unittest.SynchronousTestCase,
         data = '0123456789'
 
         cacheEntry = {
-            'etag': 'qwertz', 'last-modified': 'Sun, 06 Nov 1994 08:49:37 GMT'}
+            'etag': 'qwertz', 'last-modified': 'Sun, 06 Nov 1994 08:49:37 GMT',
+            'length': 10}
 
         self.cache.put('http://example.com/foo', cacheEntry)
         self.cache.dataReceived('http://example.com/foo', data)
@@ -2280,6 +2284,7 @@ class CachingAgentTests(unittest.SynchronousTestCase,
         self.assertEqual(result.headers.getRawHeaders('etag'), ['qwertz'])
         self.assertEqual(result.headers.getRawHeaders('last-modified'),
                          ['Sun, 06 Nov 1994 08:49:37 GMT'])
+        self.assertEqual(result.length, 10)
 
         response._bodyDataReceived('')
         response._bodyDataFinished()

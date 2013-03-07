@@ -1808,6 +1808,8 @@ class CachingAgent(object):
         if response.headers.hasHeader('last-modified'):
             entry['last-modified'] = response.headers.getRawHeaders(
                 'last-modified')[0]
+        if response.length is not UNKNOWN_LENGTH:
+            entry['length'] = response.length
         if entry:
             deferred = self._cache.put(cacheKey, entry)
         else:
@@ -1821,6 +1823,8 @@ class CachingAgent(object):
         if response.code == 304 and method == 'GET':
             response.code = 200
             response = _CacheBodyProducer(response, self._cache, cacheKey)
+            if 'length' in entry:
+                response.length = entry['length']
         elif entry:
             response = _CacheBodyUpdater(response, self._cache, cacheKey)
         return response
