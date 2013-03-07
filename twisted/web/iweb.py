@@ -513,8 +513,8 @@ class IResponse(Interface):
 
     def deliverBody(protocol):
         """
-        Register an L{IProtocol<twisted.internet.interfaces.IProtocol>} provider
-        to receive the response body.
+        Register an L{IProtocol<twisted.internet.interfaces.IProtocol>}
+        provider to receive the response body.
 
         The protocol will be connected to a transport which provides
         L{IPushProducer}.  The protocol's C{connectionLost} method will be
@@ -606,10 +606,17 @@ class IHTTPCache(Interface):
         """
 
 
-    def delete(key):
+    def dataReceived(key, data):
         """
-        Delete an entry L{key} from the cache.
+        Store content for the given C{key}.
         """
+
+
+    def deliverBody(key, protocol):
+        """
+        Deliver cached content to the given C{protocol}.
+        """
+
 
 
 __all__ = [

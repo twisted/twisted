@@ -2118,12 +2118,15 @@ class CachingAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
 
 
     def test_requestHeaders(self):
-
+        """
+        L{client.CachingAgent} puts I{if-none-match} and I{if-modified-since}
+        headers in the request if the URL is in the cache.
+        """
         cacheEntry = {
-            'etag': 'qwertz',
-            'last-modified': 'Sun, 06 Nov 1994 08:49:37 GMT',
-            'content': '0123456789'}
+            'etag': 'qwertz', 'last-modified': 'Sun, 06 Nov 1994 08:49:37 GMT'}
+
         self.cache.put('http://example.com/foo', cacheEntry)
+        self.cache.dataReceived('http://example.com/foo', '0123456789')
 
         self.agent.request('GET', 'http://example.com/foo')
 
@@ -2139,7 +2142,10 @@ class CachingAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
 
 
     def test_freshContent(self):
-
+        """
+        L{client.CachingAgent} updates the cache with the response data when
+        making a request for an URL not in the cache.
+        """
         d = self.agent.request('GET', 'http://example.com/foo')
 
         req, res = self.protocol.requests.pop()
@@ -2154,46 +2160,47 @@ class CachingAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         response.length = 10
         res.callback(response)
 
-        def checkResponse(result):
-            self.assertNotIdentical(result, response)
-            self.assertEqual(result.version, ('HTTP', 1, 1))
-            self.assertEqual(result.code, 200)
-            self.assertEqual(result.phrase, 'OK')
-            self.assertEqual(result.headers.getRawHeaders('etag'), ['qwertz'])
-            self.assertEqual(result.headers.getRawHeaders('last-modified'),
-                             ['Sun, 06 Nov 1994 08:49:37 GMT'])
+        result = self.successResultOf(d)
 
+        self.assertNotIdentical(result, response)
+        self.assertEqual(result.version, ('HTTP', 1, 1))
+        self.assertEqual(result.code, 200)
+        self.assertEqual(result.phrase, 'OK')
+        self.assertEqual(result.headers.getRawHeaders('etag'), ['qwertz'])
+        self.assertEqual(result.headers.getRawHeaders('last-modified'),
+                         ['Sun, 06 Nov 1994 08:49:37 GMT'])
 
-            response._bodyDataReceived(data)
-            response._bodyDataFinished()
+        response._bodyDataReceived(data)
+        response._bodyDataFinished()
 
-            protocol = SimpleAgentProtocol()
-            result.deliverBody(protocol)
+        protocol = SimpleAgentProtocol()
+        result.deliverBody(protocol)
 
-            self.assertEqual(protocol.received, [data])
+        self.assertEqual(protocol.received, [data])
 
-            cacheEntry = self.cache.get('http://example.com/foo')
-            self.assertEqual(cacheEntry['content'], data)
-            self.assertEqual(cacheEntry['etag'], 'qwertz')
-            self.assertEqual(cacheEntry['last-modified'],
-                             'Sun, 06 Nov 1994 08:49:37 GMT')
+        cacheEntry = self.cache.get('http://example.com/foo')
+        self.assertEqual(cacheEntry['etag'], 'qwertz')
+        self.assertEqual(cacheEntry['last-modified'],
+                         'Sun, 06 Nov 1994 08:49:37 GMT')
 
+        cacheProtocol = SimpleAgentProtocol()
+        self.cache.deliverBody('http://example.com/foo', cacheProtocol)
 
-            return defer.gatherResults([protocol.made, protocol.finished])
-
-        return d.addCallback(checkResponse)
+        self.assertEqual(cacheProtocol.received, [data])
 
 
     def test_cachedContent(self):
-
+        """
+        L{client.CachingAgent} returns the data from the cache if the request
+        matches a response in the cache and the server return B{304}.
+        """
         data = '0123456789'
 
         cacheEntry = {
-            'etag': 'qwertz',
-            'last-modified': 'Sun, 06 Nov 1994 08:49:37 GMT',
-            'content': data}
+            'etag': 'qwertz', 'last-modified': 'Sun, 06 Nov 1994 08:49:37 GMT'}
 
         self.cache.put('http://example.com/foo', cacheEntry)
+        self.cache.dataReceived('http://example.com/foo', data)
 
         d = self.agent.request('GET', 'http://example.com/foo')
 
@@ -2208,30 +2215,25 @@ class CachingAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         response.length = 10
         res.callback(response)
 
-        def checkResponse(result):
+        result = self.successResultOf(d)
 
-            self.assertNotIdentical(result, response)
-            self.assertEqual(result.version, ('HTTP', 1, 1))
-            self.assertEqual(result.code, 200)
-            self.assertEqual(result.phrase, 'OK')
-            self.assertEqual(result.headers.getRawHeaders('etag'), ['qwertz'])
-            self.assertEqual(result.headers.getRawHeaders('last-modified'),
-                             ['Sun, 06 Nov 1994 08:49:37 GMT'])
+        self.assertNotIdentical(result, response)
+        self.assertEqual(result.version, ('HTTP', 1, 1))
+        self.assertEqual(result.code, 200)
+        self.assertEqual(result.phrase, 'OK')
+        self.assertEqual(result.headers.getRawHeaders('etag'), ['qwertz'])
+        self.assertEqual(result.headers.getRawHeaders('last-modified'),
+                         ['Sun, 06 Nov 1994 08:49:37 GMT'])
 
-            response._bodyDataReceived('')
-            response._bodyDataFinished()
+        response._bodyDataReceived('')
+        response._bodyDataFinished()
 
-            protocol = SimpleAgentProtocol()
-            result.deliverBody(protocol)
+        protocol = SimpleAgentProtocol()
+        result.deliverBody(protocol)
 
-            self.assertEqual(protocol.received, [data])
+        self.assertEqual(protocol.received, [data])
 
-            cacheEntry = self.cache.get('http://example.com/foo')
-            self.assertEqual(cacheEntry['content'], data)
-            self.assertEqual(cacheEntry['etag'], 'qwertz')
-            self.assertEqual(cacheEntry['last-modified'],
-                             'Sun, 06 Nov 1994 08:49:37 GMT')
-
-            return defer.gatherResults([protocol.made, protocol.finished])
-
-        return d.addCallback(checkResponse)
+        cacheEntry = self.cache.get('http://example.com/foo')
+        self.assertEqual(cacheEntry['etag'], 'qwertz')
+        self.assertEqual(cacheEntry['last-modified'],
+                         'Sun, 06 Nov 1994 08:49:37 GMT')

@@ -1620,24 +1620,18 @@ class _CacheBodyProducer(proxyForInterface(IResponse)):
     @since: 13.1
     """
 
-    def __init__(self, response, cache):
+    def __init__(self, response, cache, cacheKey):
         self.original = response
         self.cache = cache
-        self.length = len(cache['content'])
+        self.cacheKey = cacheKey
 
 
     def deliverBody(self, protocol):
         """
         Override C{deliverBody} to deliver the cached content to the given
-        protocol
+        protocol.
         """
-        try:
-            protocol.connectionMade()
-            protocol.dataReceived(self.cache['content'])
-            protocol.connectionLost(
-                failure.Failure(ResponseDone('Body delivered from cache.')))
-        except:
-            protocol.connectionLost(failure.Failure())
+        self.cache.deliverBody(self.cacheKey, protocol)  # ???
 
 
 
@@ -1680,28 +1674,14 @@ class _CachingProtocol(proxyForInterface(IProtocol)):
         self.original = protocol
         self.cache = cache
         self.cacheKey = cacheKey
-        self.buffer = BytesIO()
 
 
     def dataReceived(self, data):
         """
         Buffer all incoming C{data} before writing it to the receiving protocol
         """
-        self.buffer.write(data)
+        self.cache.dataReceived(self.cacheKey, data)
         self.original.dataReceived(data)
-
-
-    def connectionLost(self, reason):
-        """
-        Forward the connection lost event, placing the buffered content into
-        the cache beforehand.
-        """
-        entry = self.cache.get(self.cacheKey)
-        if entry is None:
-            entry = {}
-        entry['content'] = self.buffer.getvalue()
-        self.cache.put(self.cacheKey, entry)
-        self.original.connectionLost(reason)
 
 
 
@@ -1709,16 +1689,16 @@ class _CachingProtocol(proxyForInterface(IProtocol)):
 class MemoryCache(object):
     """
     An L{IHTTPCache} storing all data in system memory.
-    A cache entry for this data store must be a C{dict} object that contains
-    all necessary http header fields as keys plus an extra 'content' key to map
-    the request body.
 
-    @ivar _storage: The C{dict} storing the cache entries.
+    @ivar _storage: The C{dict} storing the cache response.
+
+    @ivar _cache: The C{dict} storing the cache entries.
 
     @since: 13.1
     """
 
     def __init__(self):
+        self._cache = {}
         self._storage = {}
 
 
@@ -1727,7 +1707,7 @@ class MemoryCache(object):
         Returns a cache entry from the cache if one exists for a specific
         C{key}.  If none exists, C{default} is returned.
         """
-        return self._storage.get(key, default)
+        return self._cache.get(key, default)
 
 
     def put(self, key, entry):
@@ -1735,14 +1715,29 @@ class MemoryCache(object):
         Place a cache C{entry} into the store referenced by a unique C{key}.
         If an entry already exists for a key, this entry will be overwritten.
         """
-        self._storage[key] = entry
+        self._cache[key] = entry
 
 
-    def delete(self, key):
+    def dataReceived(self, key, data):
         """
-        Delete all entries from the cache that are referenced by C{key}.
+        Cache data for the given C{key} in a C{BytesIO}.
         """
-        self._storage.pop(key, None)
+        content = self._storage.get(key)
+        if content is None:
+            content = BytesIO()
+            self._storage[key] = content
+        content.write(data)
+
+
+    def deliverBody(self, key, protocol):
+        """
+        Delivered cached data to L{protocol}.
+        """
+        content = self._storage[key]
+        protocol.connectionMade()
+        protocol.dataReceived(content.getvalue())
+        protocol.connectionLost(
+            failure.Failure(ResponseDone('Body delivered from cache.')))
 
 
 
@@ -1801,8 +1796,6 @@ class CachingAgent(object):
         cache if necessary.
         """
         cache = self._cache.get(cacheKey, {})
-        if cache:
-            self._cache.delete(cacheKey)
         if response.headers.hasHeader('etag'):
             cache['etag'] = response.headers.getRawHeaders('etag')[0]
         if response.headers.hasHeader('last-modified'):
@@ -1812,10 +1805,9 @@ class CachingAgent(object):
 
         if response.code == 304 and method == 'GET':
             response.code = 200
-            response = _CacheBodyProducer(response, cache)
+            response = _CacheBodyProducer(response, self._cache, cacheKey)
         elif cache:
-            response = _CacheBodyUpdater(
-                response, cache=self._cache, cacheKey=cacheKey)
+            response = _CacheBodyUpdater(response, self._cache, cacheKey)
         return response
 
 
