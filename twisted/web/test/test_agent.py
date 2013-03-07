@@ -2214,7 +2214,6 @@ class CachingAgentTests(unittest.SynchronousTestCase,
         data = '0123456789'
         transport = StringTransport()
         response = Response(('HTTP', 1, 1), 200, 'OK', headers, transport)
-        response.length = 10
         res.callback(response)
 
         result = self.successResultOf(d)
@@ -2270,7 +2269,6 @@ class CachingAgentTests(unittest.SynchronousTestCase,
 
         transport = StringTransport()
         response = Response(('HTTP', 1, 1), 304, 'OK', headers, transport)
-        response.length = 10
         res.callback(response)
 
         result = self.successResultOf(d)
@@ -2296,3 +2294,35 @@ class CachingAgentTests(unittest.SynchronousTestCase,
         self.assertEqual(cacheEntry['etag'], 'qwertz')
         self.assertEqual(cacheEntry['last-modified'],
                          'Sun, 06 Nov 1994 08:49:37 GMT')
+
+
+    def test_noCache(self):
+        """
+        If the URL requested is not in the cache, and that the server doesn't
+        return any cache information, L{client.CachingAgent} simply returns the
+        original response.
+        """
+        d = self.agent.request('GET', 'http://example.com/foo')
+
+        req, res = self.protocol.requests.pop()
+
+        transport = StringTransport()
+        headers = http_headers.Headers()
+        response = Response(('HTTP', 1, 1), 200, 'OK', headers, transport)
+        res.callback(response)
+
+        result = self.successResultOf(d)
+
+        self.assertIdentical(result, response)
+
+        response._bodyDataReceived('')
+        response._bodyDataFinished()
+
+        protocol = SimpleAgentProtocol()
+        result.deliverBody(protocol)
+
+        self.assertEqual(protocol.received, [""])
+
+        cacheEntry = self.successResultOf(
+            self.cache.get('http://example.com/foo'))
+        self.assertIdentical(None, cacheEntry)

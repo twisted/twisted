@@ -1622,8 +1622,8 @@ class _CacheBodyProducer(proxyForInterface(IResponse)):
 
     def __init__(self, response, cache, cacheKey):
         self.original = response
-        self.cache = cache
-        self.cacheKey = cacheKey
+        self._cache = cache
+        self._cacheKey = cacheKey
 
 
     def deliverBody(self, protocol):
@@ -1631,7 +1631,7 @@ class _CacheBodyProducer(proxyForInterface(IResponse)):
         Override C{deliverBody} to deliver the cached content to the given
         protocol.
         """
-        self.cache.deliverBody(self.cacheKey, protocol)  # ???
+        self._cache.deliverBody(self._cacheKey, protocol)
 
 
 
@@ -1648,13 +1648,17 @@ class _CacheBodyUpdater(proxyForInterface(IResponse)):
 
     def __init__(self, response, cache, cacheKey):
         self.original = response
-        self.cache = cache
-        self.cacheKey = cacheKey
+        self._cache = cache
+        self._cacheKey = cacheKey
 
 
     def deliverBody(self, protocol):
+        """
+        Deliver the response to C{protocol}, updating the cache using
+        L{_CachingProtocol} in the process.
+        """
         self.original.deliverBody(
-            _CachingProtocol(protocol, self.cache, self.cacheKey))
+            _CachingProtocol(protocol, self._cache, self._cacheKey))
 
 
 
@@ -1781,15 +1785,12 @@ class CachingAgent(object):
 
     def _gotCache(self, entry, method, uri, headers, bodyProducer, cacheKey):
         if entry is not None:
-            if method in ('GET', 'HEAD'):
+            if method == 'GET':
                 if 'etag' in entry:
                     headers.addRawHeader('if-none-match', entry['etag'])
                 if 'last-modified' in entry:
                     headers.addRawHeader(
                         'if-modified-since', entry['last-modified'])
-            elif method == 'PUT':
-                if 'etag' in entry:
-                    headers.addRawHeader('if-match', entry['etag'])
         else:
             entry = {}
         deferred = self._agent.request(method, uri, headers, bodyProducer)
