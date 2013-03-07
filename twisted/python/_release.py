@@ -954,6 +954,61 @@ class NewsBuilder(object):
 
 
 
+class SphinxBuilder(object):
+    """
+    Generate HTML documentation using Sphinx.
+
+    Generates and runs a shell command that looks something like::
+
+        sphinx-build -b html -d [BUILDDIR]/doctrees [DOCDIR]/source [BUILDDIR]/html
+
+    where DOCDIR is a directory containing another directory called
+    "source" which contains the Sphinx source files, and BUILDDIR is the
+    directory in which the Sphinx output will be created.
+    """
+
+    def build(self, docDir, buildDir=None, version=''):
+        """
+        Build the documentation in C{docDir} with Sphinx.
+
+        @param docDir: The directory of the documentation.  This is a
+            directory which contains another directory called "source"
+            which contains the Sphinx "conf.py" file and sphinx source
+            documents.
+        @type docDir: L{twisted.python.filepath.FilePath}
+
+        @param buildDir: The directory to build the documentation in.
+            By default this will be a child directory of {docDir}
+            named "build".
+        @type buildDir: L{twisted.python.filepath.FilePath}
+
+        @param version: The version of Twisted to set in the docs.
+        @type version: C{str}
+        """
+
+        if buildDir is None:
+            buildDir = docDir.child('build')
+
+        doctreeDir = buildDir.child('doctrees')
+        sourceDir = docDir.child('source')
+
+        # only support html builder for now
+        builder, builderOpts = ('html', [])
+
+        argsList = ['sphinx-build', '-b', builder]
+        allSphinxOpts = ['-d', doctreeDir.path, sourceDir.path]
+        if builderOpts:
+            allSphinxOpts.extend(builderOpts)
+
+        outDir = buildDir.child(builder)
+
+        argsList.extend(allSphinxOpts)
+        argsList.append(outDir.path)
+
+        cmdOutput = runCommand(argsList)
+
+
+
 def filePathDelta(origin, destination):
     """
     Return a list of strings that represent C{destination} as a path relative

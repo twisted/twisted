@@ -14,6 +14,7 @@ import warnings
 import operator
 import os
 import sys
+import textwrap
 from StringIO import StringIO
 import tarfile
 from xml.dom import minidom as dom
@@ -28,6 +29,7 @@ from twisted.python import release
 from twisted.python.filepath import FilePath
 from twisted.python.versions import Version
 from twisted.test.testutils import XMLAssertionMixin
+from twisted.web.microdom import parseXMLString
 from twisted.python._release import (
     _changeVersionInFile, getNextVersion, findTwistedProjects, replaceInFile,
     replaceProjectVersion, Project, generateVersionFileData,
@@ -35,13 +37,12 @@ from twisted.python._release import (
     NoDocumentsFound, filePathDelta, CommandFailed, BookBuilder,
     DistributionBuilder, APIBuilder, BuildAPIDocsScript, buildAllTarballs,
     runCommand, UncleanWorkingDirectory, NotWorkingDirectory,
-    ChangeVersionsScript, BuildTarballsScript, NewsBuilder)
+    ChangeVersionsScript, BuildTarballsScript, NewsBuilder, SphinxBuilder)
 
 if os.name != 'posix':
     skip = "Release toolchain only supported on POSIX."
 else:
     skip = None
-
 
 # Check a bunch of dependencies to skip tests if necessary.
 try:
@@ -63,6 +64,14 @@ else:
         pydoctorSkip = "Pydoctor is too old."
     else:
         pydoctorSkip = skip
+
+
+try:
+    import sphinx
+except ImportError:
+    sphinxSkip = "Sphinx not available."
+else:
+    sphinxSkip = None
 
 
 if which("latex") and which("dvips") and which("ps2pdf13"):
@@ -2076,6 +2085,126 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         """
         self.assertRaises(
             NotWorkingDirectory, self.builder.buildAll, self.project)
+
+
+
+class SphinxBuilderTests(TestCase):
+    """
+    Tests for L{SphinxBuilder}.
+
+    NOTE: this test case depends on twisted.web, which violates the standard
+          Twisted practice of not having anything in twisted.python depend
+          on other Twisted packages and opens up the possibility of creating
+          circular dependencies.  Do not use this as an example of
+          how to structure your dependencies.
+
+    @ivar builder: A plain L{SphinxBuilder}.
+    @ivar sphinxDir: A L{FilePath} representing a directory to be used for
+        containing a Sphinx project.
+    @ivar sourceDir: A L{FilePath} representing a directory to be used for
+        containing the source files for a Sphinx project.
+    """
+    skip = sphinxSkip
+
+    confContent = """\
+                  source_suffix = '.rst'
+                  master_doc = 'index'
+                  """
+    confContent = textwrap.dedent(confContent)
+
+    indexContent = """\
+                   ==============
+                   This is a Test
+                   ==============
+
+                   This is only a test
+                   -------------------
+
+                   In case you hadn't figured it out yet, this is a test.
+                   """
+    indexContent = textwrap.dedent(indexContent)
+
+
+    def setUp(self):
+        """
+        Set up a few instance variables that will be useful.
+        """
+        self.builder = SphinxBuilder()
+
+        # set up a place for a fake sphinx project
+        self.sphinxDir = FilePath(self.mktemp())
+        self.sphinxDir.makedirs()
+        self.sourceDir = self.sphinxDir.child('source')
+        self.sourceDir.makedirs()
+
+
+    def createFakeSphinxProject(self):
+        """
+        Create a fake Sphinx project for test purposes.
+
+        Creates a fake Sphinx project with the absolute minimum of source files.
+        This includes a single source file ('index.rst') and the smallest
+        'conf.py' file possible in order to find that source file.
+        """
+        self.sourceDir.child("conf.py").setContent(self.confContent)
+        self.sourceDir.child("index.rst").setContent(self.indexContent)
+
+
+    def verifyFileExists(self, fileDir, fileName):
+        """
+        Helper which verifies that fileName exists in fileDir, has some
+        content, and that the content is parseable by parseXMLString if
+        the file extension indicates that it should be html.
+        """
+        # check that file exists
+        fpath = fileDir.child(fileName)
+        self.assertTrue(fpath.exists())
+
+        # check that the output files have some content
+        fcontents = fpath.getContent()
+        self.assertTrue(len(fcontents) > 0)
+
+        # check that the html files are at least html-ish
+        # this is not a terribly rigorous check
+        if fpath.path.endswith('.html'):
+            try:
+                parseXMLString(fcontents)
+            except:
+                # any exception probably means some kind of parse error
+                raise
+                self.fail("Sphinx output not parsed")
+
+
+    def test_build(self):
+        """
+        Creates and builds a fake Sphinx project using a L{SphinxBuilder}.
+        """
+        self.createFakeSphinxProject()
+        self.builder.build(self.sphinxDir)
+
+        # assert some stuff
+        for each in ['doctrees', 'html']:
+            fpath = self.sphinxDir.child('build').child(each)
+            self.assertTrue(fpath.exists())
+
+        htmlDir = self.sphinxDir.child('build').child('html')
+
+        self.verifyFileExists(htmlDir, 'index.html')
+        self.verifyFileExists(htmlDir, 'genindex.html')
+        self.verifyFileExists(htmlDir, 'objects.inv')
+        self.verifyFileExists(htmlDir, 'search.html')
+        self.verifyFileExists(htmlDir, 'searchindex.js')
+
+
+    def test_failToBuild(self):
+        """
+        Check that SphinxBuilder.build fails when run against a non-sphinx
+        directory.
+        """
+        # note no fake sphinx project is created
+        self.assertRaises(CommandFailed,
+                          self.builder.build,
+                          self.sphinxDir)
 
 
 
