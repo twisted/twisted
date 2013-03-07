@@ -1707,7 +1707,7 @@ class MemoryCache(object):
         Returns a cache entry from the cache if one exists for a specific
         C{key}.  If none exists, C{default} is returned.
         """
-        return self._cache.get(key, default)
+        return defer.succeed(self._cache.get(key, default))
 
 
     def put(self, key, entry):
@@ -1716,6 +1716,7 @@ class MemoryCache(object):
         If an entry already exists for a key, this entry will be overwritten.
         """
         self._cache[key] = entry
+        return defer.succeed(None)
 
 
     def dataReceived(self, key, data):
@@ -1774,7 +1775,11 @@ class CachingAgent(object):
             headers = headers.copy()
 
         cacheKey = uri
-        entry = self._cache.get(cacheKey)
+        deferred = self._cache.get(cacheKey)
+        return deferred.addCallback(self._gotCache, method, uri, headers,
+                                    bodyProducer, cacheKey)
+
+    def _gotCache(self, entry, method, uri, headers, bodyProducer, cacheKey):
         if entry is not None:
             if method in ('GET', 'HEAD'):
                 if 'etag' in entry:
@@ -1785,28 +1790,37 @@ class CachingAgent(object):
             elif method == 'PUT':
                 if 'etag' in entry:
                     headers.addRawHeader('if-match', entry['etag'])
+        else:
+            entry = {}
         deferred = self._agent.request(method, uri, headers, bodyProducer)
         return deferred.addCallback(
-            self._handleResponse, method=method, cacheKey=cacheKey)
+            self._handleResponse, method, cacheKey, entry)
 
 
-    def _handleResponse(self, response, method, cacheKey):
+    def _handleResponse(self, response, method, cacheKey, entry):
         """
         Check if the server response with a cache hit and read or write to the
         cache if necessary.
         """
-        cache = self._cache.get(cacheKey, {})
         if response.headers.hasHeader('etag'):
-            cache['etag'] = response.headers.getRawHeaders('etag')[0]
+            entry['etag'] = response.headers.getRawHeaders('etag')[0]
         if response.headers.hasHeader('last-modified'):
-            cache['last-modified'] = response.headers.getRawHeaders(
+            entry['last-modified'] = response.headers.getRawHeaders(
                 'last-modified')[0]
-        self._cache.put(cacheKey, cache)
+        if entry:
+            deferred = self._cache.put(cacheKey, entry)
+        else:
+            deferred = defer.succeed(None)
 
+        return deferred.addCallback(self._storedCache, response, method,
+                                    cacheKey, entry)
+
+
+    def _storedCache(self, ignore, response, method, cacheKey, entry):
         if response.code == 304 and method == 'GET':
             response.code = 200
             response = _CacheBodyProducer(response, self._cache, cacheKey)
-        elif cache:
+        elif entry:
             response = _CacheBodyUpdater(response, self._cache, cacheKey)
         return response
 

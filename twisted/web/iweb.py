@@ -589,13 +589,24 @@ class IHTTPCache(Interface):
     """
     An object representing a cache to store and satisfy http content requests.
     To accomplish that, it stores cache entries which are in themselves C{dict}
-    objects containing the keys and values as produced by the L{Response} plus
-    a special 'content' key holding the message body, if any.
+    objects containing the keys and values as produced by the L{Response}, and
+    then use C{dataReceived} and C{deliverBody} to manage content attached to
+    the response.
+
+    @since: 13.1
     """
 
     def put(key, entry):
         """
         Place a cache entry into the cache.
+
+        @param key: The cache key identifying the entry.
+        @type key: C{bytes}
+
+        @param entry: The cache metadata.
+        @param entry: C{dict}
+
+        @return: A C{Deferred} which fires when the put has been done.
         """
 
 
@@ -603,18 +614,41 @@ class IHTTPCache(Interface):
         """
         Retrieve an entry from the cache referenced by L{key}.
         If no such entry exists, return L{default}.
+
+        @param key: The cache key identifying the entry.
+        @type key: C{bytes}
+
+        @param default: The entry return if not found in the cache.
+        @type default: any
+
+        @return: A C{Deferred} which fires with the cache entry associated with
+            the C{key}.
         """
 
 
     def dataReceived(key, data):
         """
         Store content for the given C{key}.
+
+        @param key: The key previously associate with a cache entry, for which
+            to store the data.
+        @type key: C{bytes}
+
+        @param data: The chunk of the response received.
+        @type data: C{bytes}
         """
 
 
     def deliverBody(key, protocol):
         """
         Deliver cached content to the given C{protocol}.
+
+        @param key: The key previously associate with a cache entry, for which
+            to retrieve the data.
+        @type key: C{bytes}
+
+        @param protocol: A C{IProtocol} implementation, as used by
+            L{IResponse.deliverBody}
         """
 
 

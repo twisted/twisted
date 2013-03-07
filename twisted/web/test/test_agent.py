@@ -2178,7 +2178,8 @@ class CachingAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
 
         self.assertEqual(protocol.received, [data])
 
-        cacheEntry = self.cache.get('http://example.com/foo')
+        cacheEntry = self.successResultOf(
+            self.cache.get('http://example.com/foo'))
         self.assertEqual(cacheEntry['etag'], 'qwertz')
         self.assertEqual(cacheEntry['last-modified'],
                          'Sun, 06 Nov 1994 08:49:37 GMT')
@@ -2233,7 +2234,8 @@ class CachingAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
 
         self.assertEqual(protocol.received, [data])
 
-        cacheEntry = self.cache.get('http://example.com/foo')
+        cacheEntry = self.successResultOf(
+            self.cache.get('http://example.com/foo'))
         self.assertEqual(cacheEntry['etag'], 'qwertz')
         self.assertEqual(cacheEntry['last-modified'],
                          'Sun, 06 Nov 1994 08:49:37 GMT')
