@@ -2104,7 +2104,64 @@ class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
 
 
 
-class CachingAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
+class MemoryCacheAgent(unittest.SynchronousTestCase):
+
+    def setUp(self):
+        self.cache = client.MemoryCache()
+
+
+    def test_get(self):
+        """
+        L{client.MemoryCache.get} returns a C{Deferred} which fires with entry
+        associated with the key.
+        """
+        self.cache.put("key", {"foo": "bar"})
+        deferred = self.cache.get("key")
+        self.assertEqual({"foo": "bar"}, self.successResultOf(deferred))
+
+
+    def test_getDefault(self):
+        """
+        If the key is not found, L{client.MemoryCache.get} returns a
+        C{Deferred} which fires with the default value provided.
+        """
+        self.cache.put("key", {"foo": "bar"})
+        deferred = self.cache.get("other-key", "default")
+        self.assertEqual("default", self.successResultOf(deferred))
+
+
+    def test_dataReceived(self):
+        """
+        L{client.MemoryCache.dataReceived} stores data available later by its
+        C{deliverBody} method.
+        """
+        self.cache.dataReceived("key", "foo")
+        self.cache.dataReceived("key", "bar")
+
+        protocol = SimpleAgentProtocol()
+        self.cache.deliverBody("key", protocol)
+
+        self.assertEqual(protocol.received, ["foobar"])
+
+
+    def test_deliverBody(self):
+        """
+        L{client.MemoryCache.deliverBody} retrieves cached data, and calls the
+        C{connectionMade} and C{connectionLost} methods of the given protocol.
+        """
+        self.cache.dataReceived("key", "foo")
+
+        protocol = SimpleAgentProtocol()
+        self.cache.deliverBody("key", protocol)
+
+        self.assertEqual(protocol.received, ["foo"])
+        self.assertIdentical(None, self.successResultOf(protocol.made))
+        self.assertIdentical(None, self.successResultOf(protocol.finished))
+
+
+
+class CachingAgentTests(unittest.SynchronousTestCase,
+                        FakeReactorAndConnectMixin):
 
     def setUp(self):
         """
