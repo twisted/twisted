@@ -1,1 +1,0 @@
-The twisted.protocols.ftp.FTP server now treats "LIST -La", "LIST -al", and all other combinations of ordering and case of the "-l" and "-a" flags the same: by ignoring them rather than treating them as a pathname.

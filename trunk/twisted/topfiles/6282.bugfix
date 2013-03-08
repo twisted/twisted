@@ -1,3 +1,0 @@
-twisted.trial.reporter.Reporter._trimFrames correctly removes frames from
-twisted.internet.utils.runWithWarningsSuppressed again, after being broke in
-#6009.

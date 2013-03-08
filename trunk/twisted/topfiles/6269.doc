@@ -1,1 +1,0 @@
-"Components: Interfaces and Adapters" howto now uses zope.interface's decorator-based API.

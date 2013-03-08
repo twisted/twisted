@@ -1,3 +1,0 @@
-"""
-Twisted Quotes
-"""
