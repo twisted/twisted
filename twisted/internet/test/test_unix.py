@@ -17,14 +17,12 @@ except ImportError:
     AF_UNIX = None
 
 from zope.interface import implements
-from zope.interface.verify import verifyObject
 
 from twisted.python.log import addObserver, removeObserver, err
 from twisted.python.failure import Failure
 from twisted.python.hashlib import md5
 from twisted.python.runtime import platform
-from twisted.internet.interfaces import (
-    IConnector, IFileDescriptorReceiver, IReactorUNIX)
+from twisted.internet.interfaces import IFileDescriptorReceiver, IReactorUNIX
 from twisted.internet.error import ConnectionClosed, FileDescriptorOverrun
 from twisted.internet.address import UNIXAddress
 from twisted.internet.endpoints import UNIXServerEndpoint, UNIXClientEndpoint
@@ -33,12 +31,12 @@ from twisted.internet.task import LoopingCall
 from twisted.internet import interfaces
 from twisted.internet.protocol import (
     ServerFactory, ClientFactory, DatagramProtocol)
-from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.test.test_core import ObjectModelIntegrationMixin
 from twisted.internet.test.test_tcp import StreamTransportTestsMixin
 from twisted.internet.test.connectionmixins import (
     EndpointCreator, ConnectableProtocol, runProtocolsWithReactor,
-    ConnectionTestsMixin)
+    ConnectionTestsMixin, StreamClientTestsMixin)
+from twisted.internet.test.reactormixins import ReactorBuilder
 
 try:
     from twisted.python import sendmsg
@@ -211,14 +209,6 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
     requiredInterfaces = (IReactorUNIX,)
 
     endpoints = UNIXCreator()
-
-    def test_interface(self):
-        """
-        L{IReactorUNIX.connectUNIX} returns an object providing L{IConnector}.
-        """
-        reactor = self.buildReactor()
-        connector = reactor.connectUNIX(self.mktemp(), ClientFactory())
-        self.assertTrue(verifyObject(IConnector, connector))
 
 
     def test_mode(self):
@@ -557,3 +547,40 @@ class UNIXPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin,
 globals().update(UNIXTestsBuilder.makeTestCaseClasses())
 globals().update(UNIXDatagramTestsBuilder.makeTestCaseClasses())
 globals().update(UNIXPortTestsBuilder.makeTestCaseClasses())
+
+
+
+class UnixClientTestsBuilder(ReactorBuilder, StreamClientTestsMixin):
+    """
+    Define tests for L{IReactorUNIX.connectUNIX}.
+    """
+    requiredInterfaces = (IReactorUNIX,)
+
+    _path = None
+
+    @property
+    def path(self):
+        """
+        Return a path usable by C{connectUNIX} and C{listenUNIX}.
+        """
+        if self._path is None:
+            self._path = _abstractPath(self)
+        return self._path
+
+
+    def listen(self, reactor, factory):
+        """
+        Start an UNIX server with the given C{factory}.
+        """
+        return reactor.listenUNIX(self.path, factory)
+
+
+    def connect(self, reactor, factory):
+        """
+        Start an UNIX client with the given C{factory}.
+        """
+        return reactor.connectUNIX(self.path, factory)
+
+
+
+globals().update(UnixClientTestsBuilder.makeTestCaseClasses())
