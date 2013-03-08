@@ -769,10 +769,12 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
         kw['method'] = ssl.SSL.SSLv23_METHOD
     certPEM = FilePath(certKey).getContent()
     keyPEM = FilePath(privateKey).getContent()
+    privateCertificate = ssl.PrivateCertificate.loadPEM(certPEM + keyPEM)
     cf = ssl.CertificateOptions(
-        privateKey=ssl.PrivateCertificate.loadPEM(
-            keyPEM + certPEM).privateKey.original,
-        certificate=ssl.Certificate.loadPEM(certPEM).original, **kw)
+        privateKey=privateCertificate.privateKey.original,
+        certificate=privateCertificate.original,
+        **kw
+    )
     return ((int(port), factory, cf),
             {'interface': interface, 'backlog': int(backlog)})
 
