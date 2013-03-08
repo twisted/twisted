@@ -28,7 +28,8 @@ from twisted.internet.endpoints import TCP4ClientEndpoint, SSL4ClientEndpoint
 from twisted.web.client import FileBodyProducer, Request, HTTPConnectionPool
 from twisted.web.client import _WebToNormalContextFactory
 from twisted.web.client import WebClientContextFactory, _HTTP11ClientFactory
-from twisted.web.iweb import UNKNOWN_LENGTH, IBodyProducer, IResponse
+from twisted.web.iweb import (
+    UNKNOWN_LENGTH, IBodyProducer, IResponse, IHTTPCache)
 from twisted.web._newclient import HTTP11ClientProtocol, Response
 from twisted.web.error import SchemeNotSupported
 
@@ -2108,6 +2109,13 @@ class MemoryCacheAgent(unittest.SynchronousTestCase):
 
     def setUp(self):
         self.cache = client.MemoryCache()
+
+
+    def test_interface(self):
+        """
+        L{client.MemoryCache} implements the L{IHTTPCache} interfaces.
+        """
+        self.assertTrue(verifyObject(IHTTPCache, self.cache))
 
 
     def test_get(self):

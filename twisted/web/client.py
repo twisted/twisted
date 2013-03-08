@@ -1666,6 +1666,9 @@ class _CachingProtocol(proxyForInterface(IProtocol)):
     A L{Protocol} implementation which wraps another one, transparently caching
     the content as data is received.
 
+    @ivar _cacheProtocol: The instance of cache protocol returned by
+        L{IHTTPCache.getProtocol}.
+
     @since: 13.1
     """
 
@@ -1676,13 +1679,17 @@ class _CachingProtocol(proxyForInterface(IProtocol)):
 
     def dataReceived(self, data):
         """
-        Buffer all incoming C{data} before writing it to the receiving protocol
+        Send C{data} to the cache protocol and the real one.
         """
         self._cacheProtocol.dataReceived(data)
         self.original.dataReceived(data)
 
 
     def connectionLost(self, reason):
+        """
+        Forwards the connection lost event to the cache protocol and the real
+        one.
+        """
         self._cacheProtocol.connectionLost(reason)
         self.original.connectionLost(reason)
 
@@ -1725,16 +1732,44 @@ class MemoryCache(object):
 
 
     def getProtocol(self, key, entry):
+        """
+        Return a protocol instance used to store response content for this
+        cache.
+        """
         return _MemoryCacheProtocol(self, key, entry)
 
 
     def _storeContent(self, key, entry, content):
+        """
+        Private callack for the cache protocol to update the global cache
+        information.
+
+        @param key: The cache key.
+        @type key: C{bytes}
+
+        @param entry: The cache entry, as passed to C{getProtocol}.
+        @type entry: C{dict}
+
+        @param content: The content delivered by the response.
+        @type content: C{BytesIO}
+        """
         self._storage[key] = content
         self._cache[key] = entry
 
 
 
 class _MemoryCacheProtocol(protocol.Protocol):
+    """
+    Cache protocol for L{MemoryCache}.
+
+    @ivar _cache: Reference to the L{MemoryCache} instance.
+
+    @ivar _cacheKey: Key for the cache.
+
+    @ivar _entry: The cache metadata.
+
+    @ivar _storage: Buffer for storing the response.
+    """
 
     def __init__(self, cache, cacheKey, entry):
         self._cache = cache
@@ -1744,10 +1779,16 @@ class _MemoryCacheProtocol(protocol.Protocol):
 
 
     def dataReceived(self, data):
+        """
+        Write received data to C{self._storage}.
+        """
         self._storage.write(data)
 
 
     def connectionLost(self, reason):
+        """
+        If the request was successful, sends the cache data to C{self._cache}.
+        """
         if reason.check(ResponseDone):
             self._cache._storeContent(self._cacheKey, self._entry,
                                       self._storage)

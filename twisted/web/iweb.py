@@ -612,7 +612,7 @@ class IHTTPCache(Interface):
         """
 
 
-    def getProtocol(key):
+    def getProtocol(key, entry):
         """
         Return a L{IProtocol} implementation which will manage received content
         for the cache entry.
