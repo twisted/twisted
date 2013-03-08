@@ -46,15 +46,13 @@ except NameError:
 # XXX fix this to use python's builtin _winreg?
 
 def getProgramsMenuPath():
-    """
-    Get the path to the Programs menu.
+    """Get the path to the Programs menu.
 
     Probably will break on non-US Windows.
 
-    @return: the filesystem location of the common Start Menu->Programs.
-    @rtype: L{str}
+    @returns: the filesystem location of the common Start Menu->Programs.
     """
-    if not platform.isWindows():
+    if not platform.isWinNT():
         return "C:\\Windows\\Start Menu\\Programs"
     keyname = 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Shell Folders'
     hShellFolders = win32api.RegOpenKeyEx(win32con.HKEY_LOCAL_MACHINE,
@@ -68,7 +66,6 @@ def getProgramFilesPath():
     currentV = win32api.RegOpenKeyEx(win32con.HKEY_LOCAL_MACHINE,
                                      keyname, 0, win32con.KEY_READ)
     return win32api.RegQueryValueEx(currentV, 'ProgramFilesDir')[0]
-
 
 _cmdLineQuoteRe = re.compile(r'(\\*)"')
 _cmdLineQuoteRe2 = re.compile(r'(\\+)\Z')

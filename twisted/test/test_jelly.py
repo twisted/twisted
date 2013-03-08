@@ -13,6 +13,7 @@ except ImportError:
     decimal = None
 
 from twisted.spread import jelly, pb
+from twisted.python.compat import set, frozenset
 from twisted.trial import unittest
 from twisted.test.proto_helpers import StringTransport
 

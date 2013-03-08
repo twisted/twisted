@@ -1,0 +1,328 @@
+Ticket numbers in this file can be looked up by visiting
+http://twistedmatrix.com/trac/ticket/<number>
+
+Twisted Mail 12.3.0 (2012-12-20)
+================================
+
+Bugfixes
+--------
+ - twisted.mail.imap4._FetchParser now raises
+   IllegalClientResponse("Invalid Argument") when protocol encounters
+   extra bytes at the end of a valid FETCH command. (#4000)
+
+Improved Documentation
+----------------------
+ - twisted.mail.tap now documents example usage in its longdesc
+   output for the 'mail' plugin (#5922)
+
+Other
+-----
+ - #3751
+
+
+Twisted Mail 12.2.0 (2012-08-26)
+================================
+
+Bugfixes
+--------
+ - twisted.mail.imap4.IMAP4Server will now generate an error response
+   when it receives an illegal SEARCH term from a client. (#4080)
+ - twisted.mail.imap4 now serves BODYSTRUCTURE responses which provide
+   more information and conform to the IMAP4 RFC more closely. (#5763)
+
+Deprecations and Removals
+-------------------------
+ - twisted.mail.protocols.SSLContextFactory is now deprecated. (#4963)
+ - The --passwordfile option to twistd mail is now removed. (#5541)
+
+Other
+-----
+ - #5697, #5750, #5751, #5783
+
+
+Twisted Mail 12.1.0 (2012-06-02)
+================================
+
+Bugfixes
+--------
+ - twistd mail --auth, broken in 11.0, now correctly connects
+   authentication to the portal being used (#5219)
+
+Other
+-----
+ - #5686
+
+
+Twisted Mail 12.0.0 (2012-02-10)
+================================
+
+No significant changes have been made for this release.
+
+
+Twisted Mail 11.1.0 (2011-11-15)
+================================
+
+Features
+--------
+ - twisted.mail.smtp.LOGINCredentials now generates challenges with
+   ":" instead of "\0" for interoperability with Microsoft Outlook.
+   (#4692)
+
+Bugfixes
+--------
+ - When run from an unpacked source tarball or a VCS checkout,
+   bin/mail/mailmail will now use the version of Twisted it is part
+   of. (#3526)
+
+Other
+-----
+ - #4796, #5006
+
+
+Twisted Mail 11.0.0 (2011-04-01)
+================================
+
+Features
+--------
+ - The `twistd mail` command line now accepts endpoint descriptions
+   for POP3 and SMTP servers. (#4739)
+ - The twistd mail plugin now accepts new authentication options via
+   strcred.AuthOptionMixin.  These include --auth, --auth-help, and
+   authentication type-specific help options. (#4740)
+
+Bugfixes
+--------
+ - twisted.mail.imap4.IMAP4Server now generates INTERNALDATE strings
+   which do not consider the locale. (#4937)
+
+Improved Documentation
+----------------------
+ - Added a simple SMTP example, showing how to use sendmail. (#4042)
+
+Other
+-----
+
+ - #4162
+
+
+Twisted Mail 10.2.0 (2010-11-29)
+================================
+
+Improved Documentation
+----------------------
+ - The email server example now demonstrates how to set up
+   authentication and authorization using twisted.cred. (#4609)
+
+Deprecations and Removals
+-------------------------
+ - twisted.mail.smtp.sendEmail, deprecated since mid 2003 (before
+   Twisted 2.0), has been removed. (#4529)
+
+Other
+-----
+ - #4038, #4572
+
+
+Twisted Mail 10.1.0 (2010-06-27)
+================================
+
+Bugfixes
+--------
+ - twisted.mail.imap4.IMAP4Server no longer fails on search queries
+   that contain wildcards. (#2278)
+ - A case which would cause twisted.mail.imap4.IMAP4Server to loop
+   indefinitely when handling a search command has been fixed. (#4385)
+
+Other
+-----
+ - #4069, #4271, #4467
+
+
+Twisted Mail 10.0.0 (2010-03-01)
+================================
+
+Bugfixes
+--------
+ - twisted.mail.smtp.ESMTPClient and
+   twisted.mail.smtp.LOGINAuthenticator now implement the (obsolete)
+   LOGIN SASL mechanism according to the draft specification. (#4031)
+
+ - twisted.mail.imap4.IMAP4Client will no longer misparse all html-
+   formatted message bodies received in response to a fetch command.
+   (#4049)
+
+ - The regression in IMAP4 search handling of "OR" and "NOT" terms has
+   been fixed. (#4178)
+
+Other
+-----
+ - #4028, #4170, #4200
+
+
+Twisted Mail 9.0.0 (2009-11-24)
+===============================
+
+Features
+--------
+ - maildir.StringListMailbox, an in-memory maildir mailbox, now supports
+   deletion, undeletion, and syncing (#3547)
+ - SMTPClient's callbacks are now more completely documented (#684)
+
+Fixes
+-----
+ - Parse UNSEEN response data and include it in the result of
+   IMAP4Client.examine (#3550)
+ - The IMAP4 client now delivers more unsolicited server responses to callbacks
+   rather than ignoring them, and also won't ignore solicited responses that
+   arrive on the same line as an unsolicited one (#1105)
+ - Several bugs in the SMTP client's idle timeout support were fixed (#3641,
+   #1219)
+ - A case where the SMTP client could skip some recipients when retrying
+   delivery has been fixed (#3638)
+ - Errors during certain data transfers will no longer be swallowed. They will
+   now bubble up to the higher-level API (such as the sendmail function) (#3642)
+ - Escape sequences inside quoted strings in IMAP4 should now be parsed
+   correctly by the IMAP4 server protocol (#3659)
+ - The "imap4-utf-7" codec that is registered by twisted.mail.imap4 had a number
+   of fixes that allow it to work better with the Python codecs system, and to
+   actually work (#3663)
+ - The Maildir implementation now ensures time-based ordering of filenames so
+   that the lexical sorting of messages matches the order in which they were
+   received (#3812)
+ - SASL PLAIN credentials generated by the IMAP4 protocol implementations
+   (client and server) should now be RFC-compliant (#3939)
+ - Searching for a set of sequences using the IMAP4 "SEARCH" command should 
+   now work on the IMAP4 server protocol implementation. This at least improves
+   support for the Pine mail client (#1977)
+
+Other
+-----
+ - #2763, #3647, #3750, #3819, #3540, #3846, #2023, #4050
+
+
+Mail 8.2.0 (2008-12-16)
+=======================
+
+Fixes
+-----
+ - The mailmail tool now provides better error messages for usage errors (#3339)
+ - The SMTP protocol implementation now works on PyPy (#2976)
+
+Other
+-----
+ - #3475
+
+
+8.1.0 (2008-05-18)
+==================
+
+Fixes
+-----
+ - The deprecated mktap API is no longer used (#3127)
+
+
+8.0.0 (2008-03-17)
+==================
+
+Features
+--------
+ - Support CAPABILITY responses that include atoms of the form "FOO" and
+   "FOO=BAR" in IMAP4 (#2695)
+ - Parameterize error handling behavior of imap4.encoder and imap4.decoder.
+   (#2929)
+
+Fixes
+-----
+ - Handle empty passwords in SMTP auth. (#2521)
+ - Fix IMAP4Client's parsing of literals which are not preceeded by whitespace.
+   (#2700)
+ - Handle MX lookup suceeding without answers. (#2807)
+ - Fix issues with aliases(5) process support. (#2729)
+
+Misc
+----
+ - #2371, #2123, #2378, #739, #2640, #2746, #1917, #2266, #2864, #2832, #2063,
+   #2865, #2847
+
+
+0.4.0 (2007-01-06)
+==================
+
+Features
+--------
+ - Plaintext POP3 logins are now possible over SSL or TLS (#1809)
+
+Fixes
+-----
+ - ESMTP servers now greet with an "ESMTP" string (#1891)
+ - The POP3 client can now correctly deal with concurrent POP3
+   retrievals (#1988, #1691)
+ - In the IMAP4 server, a bug involving retrieving the first part
+   of a single-part message was fixed. This improves compatibility
+   with Pine (#1978)
+ - A bug in the IMAP4 server which caused corruption under heavy
+   pipelining was fixed (#1992)
+ - More strict support for the AUTH command was added to the SMTP
+   server, to support the AUTH <mechanism>
+   <initial-authentication-data> form of the command (#1552)
+ - An SMTP bug involving the interaction with validateFrom, which
+   caused multiple conflicting SMTP messages to be sent over the wire,
+   was fixed (#2158)
+
+Misc
+----
+ - #1648, #1801, #1636, #2003, #1936, #1202, #2051, #2072, #2248, #2250
+
+0.3.0 (2006-05-21)
+==================
+
+Features
+--------
+  - Support Deferred results from POP3's IMailbox.listMessages (#1701).
+
+Fixes
+-----
+  - Quote usernames and passwords automatically in the IMAP client (#1411).
+  - Improved parsing of literals in IMAP4 client and server (#1417).
+  - Recognize unsolicted FLAGS response in IMAP4 client (#1105).
+  - Parse and respond to requests with multiple BODY arguments in IMAP4
+    server (#1307).
+  - Misc: #1356, #1290, #1602
+
+0.2.0:
+ - SMTP server:
+   - Now gives application-level code opportunity to set a different
+     Received header for each recipient of a multi-recipient message.
+ - IMAP client:
+   - New `startTLS' method to allow explicit negotiation of transport
+     security.
+- POP client:
+   - Support for per-command timeouts
+   - New `startTLS' method, similar to the one added to the IMAP
+     client.
+   - NOOP, RSET, and STAT support added
+- POP server:
+   - Bug handling passwords of "" fixed
+
+
+0.1.0:
+ - Tons of bugfixes in IMAP4, POP3, and SMTP protocols
+ - Maildir append support
+ - Brand new, improved POP3 client (twisted.mail.pop3.AdvancedPOP3Client)
+ - Deprecated the old POP3 client (twisted.mail.pop3.POP3Client)
+ - SMTP client:
+   - Support SMTP AUTH
+   - Allow user to supply SSL context
+   - Improved error handling, via new exception classes and an overridable
+     hook to customize handling.
+   - Order to try the authenication schemes is user-definable.
+   - Timeout support.
+ - SMTP server:
+   - Properly understand <> sender.
+   - Parameterize remote port
+ - IMAP4:
+   - LOGIN authentication compatibility improved
+   - Improved unicode mailbox support
+   - Fix parsing/handling of "FETCH BODY[HEADER]"
+   - Many many quoting fixes
+   - Timeout support on client

@@ -1,0 +1,343 @@
+<?xml version="1.0"?>                                                                           
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html>                      
+  <head>
+    <title>Applications of the Twisted Framework</title>
+    <link href="stylesheet.css" type="text/css" rel="stylesheet" />                                                                
+  </head>                                                                                                                           
+  <body>                                                                                                                   
+    <h1>Applications of the Twisted Framework</h1>
+    <p>Jp Calderone</p>
+    <p>exarkun@twistedmatrix.com</p>
+
+    <h2>ABSTRACT</h2>
+
+    <p>Two projects developed using the Twisted framework are described;
+    one, Twisted.names, which is included as part of the Twisted
+    distribution, a domain name server and client API, and one, Pynfo, which
+    is packaged separately, a network information robot.</p>
+
+    <h2>Twisted (dot) Names</h2>
+
+    <h3>Motivation</h3>
+    <p>The field of domain name servers is well explored and numerous
+    strong, widely-deployed implementations of the protocol exist.  DNSSEC,
+    IPv6, service location, geographical location, and many of the other DNS
+    extension proposals all have high quality support in BIND, djbdns,
+    maradns, and others.  From a client's perspective, though, the landscape
+    looks a little different.  APIs to perform arbitrary domain name lookups
+    are sparse.  In contrast, Twisted.names presents a richly featured,
+    asynchronous client API.</p>
+
+    <h3>Names Server</h3>
+    <p><b>Names</b> is capable of operating as a fully functional domain
+    name server.  It implements caching, recursive lookups, and can act as
+    the authority for an arbitrary number of domains.  It is not, however, a
+    finely tuned performance machine.  Responding to queries can take about
+    twice the time other domain name servers might need.  It has not been
+    investigated whether this is a design limitation or merely the result of
+    an unoptimized implementation.</p>
+
+    <h3>Names Client</h3>
+    <p>As a client, <b>Names</b> provides an easy interface to every type of
+    record supported by.  Looking up the MX records for a host, for example,
+    might look like this:</p>
+
+    <pre class="python">
+    def _cbMailExchange(results):
+        # Callback for MX query
+        answers = results[0]
+        print 'Mail Exchange is: ', answers
+
+    def _ebMailExchange(failure):
+        # Error callback for MX query
+        print 'Lookup failed:'
+        failure.printTraceback()
+
+    from twisted.names import client
+    d = client.lookupMailExchange('example-domain.com')
+    d.addCallbacks(_cbMailExchange, _ebMailExchange)
+    </pre>
+
+    <p>Looking up other record types is as simple as calling a different
+    <code>lookup*</code> function.</p>
+
+    <h3>Implementation</h3> 
+
+    <p>As with most network software written using Twisted, the first step
+    in developing <b>Names</b> was to write the protocol support.  In this
+    case, the protocol was DNS, and support was partially implemented. 
+    However, it attempted to merge support for both UDP and TCP, and ended
+    up with less than optimal results.  Much of this code was discarded,
+    though some of the lowest level encoding and decoding code worked well
+    and was re-used.</p>
+
+    <p>With the two protocol classes, DNSDatagramProtocol and DNSProtocol
+    (the TCP version) implemented, the next step was to write classes which
+    created the proper behavior for a domain name server.  This logic was
+    put in the <code>twisted.names.server.DNSServerFactory</code> class,
+    which in turn relies on several different kind of <code>Resolver</code>s
+    to find the appropriate response to queries it receives from the
+    protocol instance.</p>
+
+    <p>The chain of execution, then, is this: a packet is received by the
+    protocol object (a <code>DNSDatagramProtocol</code> or
+    <code>DNSProtocol</code> instance); the packet is decoded by
+    <code>twisted.protocols.dns.RRHeader</code> in cooperation with one of
+    the record classes (<code>twisted.protocols.dns.Record_A</code> for
+    example); the decoded <code>twisted.protocols.dns.Query</code> object is
+    passed up to the <code>twisted.names.server.DNSServerFactory</code>,
+    which determines the query type and invokes the appropriate lookup
+    method on each of its resolver objects in turn; if an answer is found,
+    it is passed back down to the protocol instance (otherwise the
+    appropriate bit for an error condition is set), where it is encoded and
+    transmitted back to the client.</p>
+
+    <p>There are four kinds of resolvers in the current implementation.  The
+    first three are authorities, caches, and recursive resolvers.  They are
+    generally queried, in this order, using the fourth resolver, the "chain"
+    resolver, which simply queries the resolvers it knows about, moving on
+    to the next when any given resolver fails to produce a response, and
+    generating the proper exception when the last resolver has failed.</p>
+
+    <h3>Shortcomings</h3>
+    
+    <p>There are several aspects of Twisted Names that might preclude its
+    use in "production" software.  These issues stem mainly from its
+    immaturity, it being less than six months old at the writing of this
+    paper.</p>
+
+    <ul>
+    <li><p>Possibly of foremost interest to those who might use it in a
+    high-load environment, it has somewhat poor runtime performance
+    characteristics.  One potential reason for this is the extensive use of
+    exceptions to signal the relatively common case of a resolver lookup
+    failing.  Solutions to this problem are apparent, but an implementation
+    change has not been attempted.  Until this area of its development is
+    more fully examined, it will likely not be of use in anything other than
+    for low- to mid-load tasks, or with more hardware available to it than
+    might seem reasonable.</p></li>
+
+    <li>No attempt has been made to implement DNSSEC.</li>
+
+    <li>Certain areas of the server remain out of compliance with the
+    standardized RFCs, occasionally causing undesirable behavior when
+    interacting with clients.  This most frequently manifests itself as a
+    lookup which fails the first time and succeeds on subsequent attempts.
+    It is not believed that these represent architectural flaws, only small
+    oversights in areas such as the "additional processing" sections of the
+    current authority resolver implementations.</li>
+    </ul>
+    <h2>Pynfo</h2>
+
+    <h3>Motivation</h3>
+    <p>Pynfo was originally begun as a learning project to become acquainted
+    with the Twisted framework.  After a brief initial development period
+    and an extended period of non-development, Pynfo was picked up again to
+    serve as a replacement for several existing robots, each with fragile
+    code bases and with designs not intended for future integration with
+    other services.  After it subsumed the functions of network relaying and
+    Google searches, other desired features, which enhanced the IRC medium
+    and had not previously been considered due to the difficulty of
+    extending existing robots, were added to Pynfo, prompting the development
+    of an elementary plug-in system to further facilitate the integration
+    process.</p>
+
+    <h3>Architecture</h3>
+    <p>Pynfo performs such simple tasks as noting the last time an
+    individual spoke and querying the Google search engine, as well as
+    several more complex operations like relaying traffic between different
+    IRC networks and publishing channel logs through an HTTP interface.</p>
+
+    <p>Toward these ends, it is useful to abstract the functionality into
+    several different layers:</p>
+
+    <ul>
+    <li><p>The factory:  All shared data, such as the channels a given user is
+    known to be in, the plugins currently loaded, and the addresses of servers
+    to connect to, is aggregated here.  When it is necessary to make a
+    connection, the factory creates an instance of the appropriate Protocol
+    subclass, in a manner similar to this:
+
+    <pre class="python">
+    def buildProtocol(self, address):
+        for net in self.data['networks'].values():
+            if net.address == address:
+                break
+
+        proto = IRCProtocol(net)
+        self.allBots[net.alias] = proto
+        proto.factory = self
+        return proto
+    </pre>
+
+    The factory instance is created only once, and that instance persists
+    through the entire time a particular Pynfo bot operates.</p>
+    </li>
+
+    <li><p>The protocol: Each kind of service Pynfo can connect to has a
+    Protocol class associated with it, a class which handles the specifics
+    of communicating over this protocol.  Unlike the factory, protocols
+    instances can be short lived and are created and destroyed as many times
+    as network connectivity demands.  When a Pynfo robot shuts down and is
+    serialized to disk, all Protocol instances are destroyed and discarded,
+    to be created anew when the robot is restarted.</p>
+    </li>
+
+    <li><p>Plugins: These give Pynfo most of its functionality.  From the
+    very simple logging module, which does no more than write strings to
+    disk, to the esoteric lookup module, which translates hostnames into
+    dotted-quads, to the informative dictionary module, which queries an <a
+    href="http://dict.org">online dictionary</a>, plugins come in all shapes
+    and sizes, and can be written to fill almost any niche.</p>
+    </li>
+    </ul>
+
+    <h3>Employing Components</h3> 
+    <p>Twisted provides a <i>component</i> system which Pynfo relies on to
+    split up useful functionality used in different areas of the code.  The
+    Interface class is the primary element in the component system, and is
+    used as a location for a semi-format definition of an API, as well as
+    documentation.  Classes declare that they implement an Interface by
+    including it in their __implements__ tuple attribute.  Interfaces can
+    also be added to classes by third parties using the registerAdapter()
+    function.  This takes an Adapter type in addition to the interface being
+    registered and the type it is being registered for.  Adapters are a
+    objects which can store additional state information and implement
+    functionality without being part of the classes that are "actually"
+    being operated upon.  They, as their name suggests, adapt components to
+    conform to interfaces.</p>
+
+    <p>Components can implement interfaces themselves, or maintain a cache
+    of adapter objects for each interfaces that is requested of them.  These
+    persist like any other attribute, and so state stored in adapters
+    remains associated with the component as long as that component exists, or
+    until the adapter is explicitly removed.</p>
+
+    <p>Pynfo's Factory class uses two adapters to implement two basic
+    Interfaces that many plugins find useful.  The first is the IStorage
+    interface.
+
+    <pre class="python">
+    class IStorage(components.Interface):
+
+        def store(self, key, version, value):
+            """
+            Store any pickleable object
+            """
+
+        def retrieve(self, key, version):
+            """
+            Retrieve the previously stored object associated with key and
+            version
+            """
+    </pre>
+    An example usage of this interface is the PyPI plugin, which polls the
+    Python Package Index and reports updates to a configurable list of
+    outputs:
+
+    <pre class="python">
+    def init(factory):
+        global notifyChannels
+        store = factory.getComponent(interfaces.IStorage)
+        try:
+            notifyChannels = store.retrieve('pypi', __version__)
+        except error.RetrievalError:
+            notifyChannels = []
+
+    </pre>
+    <p>The module requests the component of factory which implements
+    IStorage, then attempts to load any previously stored version of
+    "notifyChannels".  If none is found, it defaults to none.  In the
+    finalizer below, this global is stored, using the same interfaced, to be
+    retrieved when the module is next initialized.</p>
+
+    <pre class="python">
+    def fini(factory):
+        s = factory.getComponent(interfaces.IStorage)
+        s.store('pypi', __version__, notifyChannels)
+    </pre>
+
+    The second interface allows low granularity scheduling of events:
+    
+    <pre class="python">
+    class IScheduler(components.Interface):
+        MINUTELY = 60
+        HOURLY = 60 * 60
+        DAILY = 60 * 60 * 24
+        WEEKLY = 60 * 60 * 24 * 7
+
+
+        def schedule(self, period, fn, *args, **kw):
+            """
+            Cause a function to be invoked at regular intervals with the given
+            arguments.
+            """
+    </pre>
+    The Adapter which implements this interface is just as simple:
+    <pre class="python">
+    class SchedulerAdapter(components.Adapter):
+        __implements__ = (interfaces.IScheduler,)
+
+        def schedule(self, period, fn, *args, **kw):
+            from twisted.internet import reactor
+            def cycle():
+                fn(*args, **kw)
+                reactor.callLater(period, cycle)
+            reactor.callLater(period, cycle)
+    </pre>
+    </p>
+    
+    <p>Implementing these interfaces as adapters using the component system
+    has two primary advantages over a simple inheritance or mixins approach. 
+    First, it allows plugins to add completely new behavior to the system
+    without complex and fragile manipulation of the factory's __class__
+    attribute.  This is a big win when it comes to plugins that want to
+    share new functionality with other plugins.  For example, the "ignore"
+    plugin adds an IDiscriminating interface and an adapter which implements
+    it.  Once this plugin is loaded, any other plugin can request the
+    component for IDiscriminating and add users to or remove users from the
+    ignore list.</p>
+
+    <h3>The Plugin Framework</h3>
+
+    <p>Before a module can be loaded and initialized as a plugin, it must be
+    located.  This could be done with a simple use of
+    <code>os.listdir()</code>, or <code>__all__</code> could be set to include
+    each new plugin added.  Twisted provides another way, though.</p>
+
+    <p>The <code>twisted.python.plugin</code> provides the most high-level
+    interface to the plugin system, a function called
+    <code>getPlugIns</code>.  It usually takes one argument, a plugin type,
+    which is an arbitrary string used to categorize the different kinds of
+    plugins available on a system.  Twisted's own "mktap" tool uses the
+    "tap" plugin type.  For Pynfo, I have elected to use the "infobot"
+    string.  <code>getPlugIns("infobot")</code> searches the system (by way
+    of PYTHONPATH) for files named "plugins.tml".  These files contain
+    python source, and are run as such; a function, "register" is placed in
+    their namespace, and the most common action for them is to invoke this
+    function one or more times, providing information about a plugin.  Here
+    is a snippet from one which Pynfo uses:</p>
+
+    <pre class="python">
+    register(
+        "Weather",
+        "Pynfo.plugins.weather",
+        description="Commands to check the weather at "
+                    "various places around the world.",
+        type="infobot"
+    )
+    </pre>
+
+    <p>Any number of plugin.tml files may exist in the filesystem, allowing
+    per-user and even per-robot plugins to be installed, all without
+    modifying the Pynfo installation itself.
+
+    The second argument indicates the module which may be imported to get
+    this plugin.  Pynfo traverses the resulting list, importing these modules,
+    and initializing them if necessary.</p>
+
+  </body>
+</html>

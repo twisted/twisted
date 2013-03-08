@@ -1,0 +1,57 @@
+.TH CKEYGEN "1" "October 2002" "" ""
+.SH NAME
+ckeygen \- manipulate public/private keys
+.SH SYNOPSIS
+.B ckeygen [-b \fIbits\fR] [-f \fIfilename\fR] [-t \fItype\fR]
+.B [-C \fIcomment\fR] [-N \fInew passphrase\fR] [-P \fIold passphrase\fR]
+.B [-l] [-p] [-q] [-y]
+.SH DESCRIPTION
+.PP
+The \fB\--help\fR prints out a usage message to standard output.
+.TP
+\fB-b\fR, \fB--bits\fR <bits>
+Number of bits in the key to create (default: 1024)
+.TP
+\fB-f\fR, \fB--filename\fR <file name>
+Filename of the key file.
+.TP
+\fB-t\fR, \fB--type\fR <type>
+Type of key (rsa or dsa).
+.TP
+\fB-C\fR, \fB--comment\fR <comment>
+Provide a new comment.
+.TP
+\fB-N\fR, \fB--newpass\fR <pass phrase>
+Provide new passphrase.
+.TP
+\fB-P\fR, \fB--pass\fR <pass phrase>
+Provide old passphrase.
+.TP
+\fB-l\fR, \fB--fingerprint\fR
+Show fingerprint of key file.
+.TP
+\fB-p\fR, \fB--changepass\fR
+Change passphrase of private key file.
+.TP
+\fB-q\fR, \fB--quiet\fR
+Be quiet.
+.TP
+\fB-y\fR, \fB--showpub\fR
+Read private key file and print public key.
+.TP
+\fB--version\fR
+Display version number only.
+.SH DESCRIPTION
+Manipulate public/private keys in various ways.
+If no filename is given, a file name will be requested interactively.
+.SH AUTHOR
+Written by Moshe Zadka, based on ckeygen's help messages
+.SH "REPORTING BUGS"
+To report a bug, visit \fIhttp://twistedmatrix.com/bugs/\fR
+.SH COPYRIGHT
+Copyright \(co 2002-2011 Twisted Matrix Laboratories.
+.br
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.SH "SEE ALSO"
+ssh(1), conch(1)

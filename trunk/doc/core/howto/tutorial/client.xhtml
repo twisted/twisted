@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>The Evolution of Finger: a Twisted finger client</title>
+  </head>
+<body>
+
+<h1>The Evolution of Finger: a Twisted finger client</h1>
+
+<h2>Introduction</h2>
+
+<p> This is the ninth part of the Twisted tutorial <a
+href="index.xhtml">Twisted from Scratch, or The Evolution of Finger</a>.</p>
+
+<p>In this part, we develop a client for the finger server: a proxy finger
+server which forwards requests to another finger server.</p>
+
+<h2>Finger Proxy</h2>
+
+<p>Writing new clients with Twisted is much like writing new servers.
+We implement the protocol, which just gathers up all the data, and
+give it to the factory. The factory keeps a deferred which is triggered
+if the connection either fails or succeeds. When we use the client,
+we first make sure the deferred will never fail, by producing a message
+in that case. Implementing a wrapper around client which just returns
+the deferred is a common pattern.  While less flexible than
+using the factory directly, it's also more convenient.</p>
+
+
+<a href="listings/finger/fingerproxy.tac" class="py-listing">fingerproxy.tac</a>
+
+</body>
+</html>

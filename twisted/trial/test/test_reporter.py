@@ -118,8 +118,8 @@ class TestErrorReporting(StringTest):
     def test_formatErroredMethod(self):
         """
         A test method which runs and has an error recorded against it is
-        reported in the output stream with the I{ERROR} tag along with a
-        summary of what error was reported and the ID of the test.
+        reported in the output stream with the I{ERROR} tag along with a summary
+        of what error was reported and the ID of the test.
         """
         cls = erroneous.SynchronousTestFailureInSetUp
         suite = self.loader.loadClass(cls)
@@ -194,6 +194,13 @@ class TestErrorReporting(StringTest):
             self.doubleSeparator,
             '[FAIL]',
             'Traceback (most recent call last):',
+            # Some irrelevant trial implementation details leak into the traceback:
+            re.compile(r'^\s+File .*$'),
+            re.compile(r'^\s+.*$'),
+            re.compile(r'^\s+File .*$'),
+            re.compile(r'^\s+.*$'),
+            re.compile(r'^\s+File .*$'),
+            re.compile(r'^\s+.*$'),
             re.compile(r'^\s+File .*erroneous\.py., line \d+, in '
                        'testHiddenException$'),
             re.compile(r'^\s+self\.fail\("Deliberate failure to mask the '
@@ -209,7 +216,8 @@ class TestErrorReporting(StringTest):
             re.compile('^\s+File .*erroneous\.py", line \d+, in go'),
             re.compile('^\s+raise RuntimeError\(self.hiddenExceptionMsg\)'),
             'exceptions.RuntimeError: something blew up',
-            'twisted.trial.test.erroneous.DelayedCall.testHiddenException']
+            'twisted.trial.test.erroneous.DelayedCall.testHiddenException',
+            ]
         self.stringComparison(match, output)
 
 
@@ -228,22 +236,13 @@ class TestUncleanWarningWrapperErrorReporting(TestErrorReporting):
 
 
 class TracebackHandling(unittest.SynchronousTestCase):
-
     def getErrorFrames(self, test):
-        """
-        Run the given C{test}, make sure it fails and return the trimmed
-        frames.
-
-        @param test: The test case to run.
-
-        @return: The C{list} of frames trimmed.
-        """
         stream = StringIO.StringIO()
         result = reporter.Reporter(stream)
         test.run(result)
         bads = result.failures + result.errors
-        self.assertEqual(len(bads), 1)
-        self.assertEqual(bads[0][0], test)
+        assert len(bads) == 1
+        assert bads[0][0] == test
         return result._trimFrames(bads[0][1].frames)
 
     def checkFrames(self, observedFrames, expectedFrames):
@@ -269,11 +268,7 @@ class TracebackHandling(unittest.SynchronousTestCase):
                           ('subroutine', 'twisted/trial/test/erroneous')])
 
     def test_deferred(self):
-        """
-        C{_trimFrames} removes traces of C{_runCallbacks} when getting an error
-        in a callback returned by a C{TestCase} based test.
-        """
-        test = erroneous.TestAsynchronousFail('test_fail')
+        test = erroneous.TestFailureInDeferredChain('test_fail')
         frames = self.getErrorFrames(test)
         self.checkFrames(frames,
                          [('_later', 'twisted/trial/test/erroneous')])
@@ -285,17 +280,6 @@ class TracebackHandling(unittest.SynchronousTestCase):
     def test_oneFrame(self):
         result = reporter.Reporter(None)
         self.assertEqual(['fake frame'], result._trimFrames(['fake frame']))
-
-    def test_exception(self):
-        """
-        C{_trimFrames} removes traces of C{runWithWarningsSuppressed} from
-        C{_utilspy3} when a synchronous exception happens in a C{TestCase}
-        based test.
-        """
-        test = erroneous.TestAsynchronousFail('test_exception')
-        frames = self.getErrorFrames(test)
-        self.checkFrames(frames,
-                         [('test_exception', 'twisted/trial/test/erroneous')])
 
 
 class FormatFailures(StringTest):
@@ -877,8 +861,7 @@ class TestTreeReporter(unittest.SynchronousTestCase):
     def test_printResults(self):
         """
         L{Reporter._printResults} uses the results list and formatter callable
-        passed to it to produce groups of results to write to its output
-        stream.
+        passed to it to produce groups of results to write to its output stream.
         """
         def formatter(n):
             return str(n) + '\n'
@@ -1469,8 +1452,7 @@ class TestAdaptedReporter(unittest.SynchronousTestCase):
 
 
     def assertWrapped(self, wrappedResult, test):
-        self.assertEqual(wrappedResult._originalReporter.test,
-                         self._testAdapter(test))
+        self.assertEqual(wrappedResult._originalReporter.test, self._testAdapter(test))
 
 
     def getFailure(self, exceptionInstance):
@@ -1511,8 +1493,7 @@ class TestAdaptedReporter(unittest.SynchronousTestCase):
         """
         C{addSkip} wraps its test with the provided adapter.
         """
-        self.wrappedResult.addSkip(
-            self, self.getFailure(SkipTest('no reason')))
+        self.wrappedResult.addSkip(self, self.getFailure(SkipTest('no reason')))
         self.assertWrapped(self.wrappedResult, self)
 
 

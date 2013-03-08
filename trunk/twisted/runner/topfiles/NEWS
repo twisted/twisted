@@ -1,0 +1,113 @@
+Ticket numbers in this file can be looked up by visiting
+http://twistedmatrix.com/trac/ticket/<number>
+
+Twisted Runner 12.3.0 (2012-12-20)
+==================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 12.2.0 (2012-08-26)
+==================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 12.1.0 (2012-06-02)
+==================================
+
+Deprecations and Removals
+-------------------------
+ - ProcessMonitor.active, consistencyDelay, and consistency in
+   twisted.runner.procmon were deprecated since 10.1 have been
+   removed. (#5517)
+
+
+Twisted Runner 12.0.0 (2012-02-10)
+==================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 11.1.0 (2011-11-15)
+==================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 11.0.0 (2011-04-01)
+==================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 10.2.0 (2010-11-29)
+==================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 10.1.0 (2010-06-27)
+==================================
+
+Features
+--------
+ - twistd now has a procmon subcommand plugin - a convenient way to
+   monitor and automatically restart another process. (#4356)
+
+Deprecations and Removals
+-------------------------
+ - twisted.runner.procmon.ProcessMonitor's active, consistency, and
+   consistencyDelay attributes are now deprecated. (#1763)
+
+Other
+-----
+ - #3775
+
+
+Twisted Runner 10.0.0 (2010-03-01)
+==================================
+
+Other
+-----
+ - #3961
+
+
+Twisted Runner 9.0.0 (2009-11-24)
+=================================
+
+Features
+--------
+ - procmon.ProcessMonitor.addProcess now accepts an 'env' parameter which allows
+   users to specify the environment in which a process will be run (#3691)
+
+Other
+-----
+ - #3540
+
+
+Runner 8.2.0 (2008-12-16)
+=========================
+
+No interesting changes since Twisted 8.0.
+
+8.0.0 (2008-03-17)
+==================
+
+Misc
+----
+ - Remove all "API Stability" markers (#2847)
+
+
+0.2.0 (2006-05-24)
+==================
+
+Fixes
+-----
+ - Fix a bug that broke inetdtap.RPCServer.
+ - Misc: #1142
+
+
+0.1.0
+=====
+ - Pass *blocking* sockets to subprocesses run by inetd

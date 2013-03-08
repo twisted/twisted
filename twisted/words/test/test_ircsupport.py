@@ -33,7 +33,6 @@ class IRCProtoTests(TestCase):
         self.account = IRCAccount(
             "Some account", False, "alice", None, "example.com", 6667)
         self.proto = IRCProto(self.account, StubChatUI(), None)
-        self.transport = StringTransport()
 
 
     def test_login(self):
@@ -41,9 +40,10 @@ class IRCProtoTests(TestCase):
         When L{IRCProto} is connected to a transport, it sends I{NICK} and
         I{USER} commands with the username from the account object.
         """
-        self.proto.makeConnection(self.transport)
+        transport = StringTransport()
+        self.proto.makeConnection(transport)
         self.assertEqual(
-            self.transport.value(),
+            transport.value(),
             "NICK alice\r\n"
             "USER alice foo bar :Twisted-IM user\r\n")
 
@@ -54,10 +54,11 @@ class IRCProtoTests(TestCase):
         I{PASS} command before the I{NICK} and I{USER} commands.
         """
         self.account.password = "secret"
-        self.proto.makeConnection(self.transport)
+        transport = StringTransport()
+        self.proto.makeConnection(transport)
         self.assertEqual(
-            self.transport.value(),
-            "PASS secret\r\n"
+            transport.value(),
+            "PASS :secret\r\n"
             "NICK alice\r\n"
             "USER alice foo bar :Twisted-IM user\r\n")
 
@@ -68,21 +69,11 @@ class IRCProtoTests(TestCase):
         joins each of those channels after registering.
         """
         self.account.channels = ['#foo', '#bar']
-        self.proto.makeConnection(self.transport)
+        transport = StringTransport()
+        self.proto.makeConnection(transport)
         self.assertEqual(
-            self.transport.value(),
+            transport.value(),
             "NICK alice\r\n"
             "USER alice foo bar :Twisted-IM user\r\n"
             "JOIN #foo\r\n"
             "JOIN #bar\r\n")
-
-
-    def test_isupport(self):
-        """
-        L{IRCProto} can interpret I{ISUPPORT} (I{005}) messages from the server
-        and reflect their information in its C{supported} attribute.
-        """
-        self.proto.makeConnection(self.transport)
-        self.proto.dataReceived(
-            ":irc.example.com 005 alice MODES=4 CHANLIMIT=#:20\r\n")
-        self.assertEqual(4, self.proto.supported.getFeature("MODES"))

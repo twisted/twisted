@@ -9,6 +9,7 @@ import os
 
 from twisted.trial.unittest import TestCase
 from twisted.python.filepath import FilePath
+from twisted.python.compat import set
 
 try:
     import Crypto.Cipher.DES3

@@ -1,0 +1,340 @@
+*** warner has joined channel #twisted
+<glyph> warner: newpb!
+<kenaan> Twisted: warner * r10709 sandbox/warner/ (10 files): revamp exceptions, remote calls kinda work now
+<exarkun> OMG
+<glyph> see everybody? now _that_ is the kind of response I like
+%
+<exarkun> it's really too bad people live so long
+<exarkun> and that it is generally considered immoral to experiment on them
+%
+<Tv> I want an incrimental knifi.
+<exarkun> Able to slice multiple things simultaneously without making its user interface non-responsive!?
+<exarkun> SUCH A THING SURELY COULD NOT EXIST
+<Tv> exarkun: Yeah, except it would a poor weapon, because it COULD NOT BLOCK!
+%
+<SamB> few people know the secret of growing donuts
+%
+<hypatia> I distrust projects that require you to socialise with the developers in order to learn how to use them.
+%
+<radix> well hey, I'm getting back on sane schedule
+<radix> I'll probably stay up until about 5pm today
+%
+<spiv> I am confident some people should be made to feel pain, itamar's possible insanity notwithstanding.
+%
+<dash> for some reason i keep putting off becoming an alcoholic
+%
+<itamar> if I got a cookie for every day I didn't work
+<itamar> I'd be radix
+%
+-!- itamar2 [~itamar@pool-162-83-253-243.ny5030.east.verizon.net] has joined #twisted
+<dash> argh
+<dash> who left the robot clone factory switched on
+%
+<markp> copy editors can blow me
+%
+<itamar> the question is
+<itamar> do I *really* need five more tshirts with monkeys on them
+%
+<`anthony> Yah, yah, debian has advantages, but their glacial release cycle is not good.
+<Jerub> if you want me to go around aj's house and kneecap him, my paypal account is stephen@thorne.id.au
+%
+<moshez> dash: greet me into the 21st century!!
+<dash> moshez: it has been the 21st century here for a while! did .il daylight savings just kick in?
+%
+<dash> brb fighting pirates
+%
+<dash> radix
+<dash> er i mean, twisted.lore
+%
+<mattcamp> Anybody know why twisted.protocols.toc is deprecated?
+<exarkun> because the toc protocol itself is deprecated
+<dash> is TOC really deprecated?
+<dash> %google deprecated TOC AIM
+<pynfo> deprecated TOC AIM: http://twistedmatrix.com/documents/current/api/twisted.protocols.toc.TOCClient.html
+<dash> google is now useless
+%
+<itamar> I bet simulating glyph wouldn't be hard
+<itamar> "We just make a <noun> that will <verb> the <other noun>! it will be awesome! I can do it in a week!"
+%
+<PenguinOfDoom> slyphon: I am torn between going to Quizno's to buy a sub and brutally murdering you.
+%
+* slyphon thinks red hat should change it's motto to, "Eh, it's good enough"
+%
+<radix> facts are awesome
+%
+<PenguinOfDoom> You pigfuckers are sitting there, staring at me with etrade.com open, waiting for JUICY INSIDER INFO
+<exarkun> I use ameritrade.
+%
+<dash> dizzyd: yeah, i got bored of that whole college thing after a while
+<dash> so i graduated
+%
+<jimbug> You know, I would knock the curses author over the head if he didn't invent rogue.
+%
+<glyph> exarkun: you could just write a C module that would do all that ugly dl module crud
+<exarkun> glyph: yea, but then I'd have to write a C module
+<exarkun> Py_Incref in Python is neat, I think :)
+<glyph> exarkun: that guy who wrote pyrex is spinning in his grave, and he isn't even dead
+%
+<morning> yes, but i almost wrote a book on orthogonal persistence, until i realized i couldn't spell it.
+%
+<radix> ayn rand had sex?
+%
+<glyph> I am going up through levels of abstraction so fast, reading from top to bottom, I am worried about getting the bends
+%
+--- iratsu gives channel operator status to dash glyph rev_bot
+--- Users on #ddb: @glyph @rev_bot @dash @iratsu
+<iratsu> yay communism
+%
+<exarkun> I don't think I even knew what XML was the last time I used DOS EDIT.
+%
+<slyphon> wtf is NIH?
+<Tv> slyphon: tla
+<Tv> :)
+<slyphon> Tv: duh
+<`anthony> slyphon: tla for Not Invented Here.
+<orbitz> slyphon: Nice Illegal Honey
+<slyphon> ah
+<Tv> slyphon: that's not a tla!
+<Tv> saying something is a tla implies "go look up it up in the standard places"
+<orbitz> Don't Upset him
+<Tv> orbitz: Your Honey is a him?
+<slyphon> oy
+<orbitz> Tv: honey you eat!
+<Tv> orbitz: EWW!
+%
+<dialtone> I can even run python on my clock
+<dialtone> and my watch
+<dialtone> and have my watch sync with my clock
+<exarkun> what time is it right now
+<dialtone> don't have my watch on right now
+%
+<e> birthday paradox cake
+<exarkun> e: Is that the paradox where, if you have more than 30 people in a room, they'll eat your birthday cake?
+%
+<saph_w> my shirt has a moose
+<radix> family channel
+<saph_w> wth
+<saph_w> moose moose mooose
+<radix> jesus fucking H you've got a mouth on you
+%
+<Nafai> A coworker saw my machine once; I was using the Apple II xscreensaver with the Twisted Quotes as the source
+<Nafai> He asked, "Is that glyph's screensaver?"
+%
+<MFen> actually, #python kinda makes sense
+%
+<Yosomono> why does every discussion of survival of the fittest end with hitler?
+<Yosomono> goddamn nazis have ruined everything
+%
+<saph> PenguinOfDoom: you sap energy from people with evil eye rays
+<saph> you are all e_e----------
+<saph> and the other person is :o
+<saph> and then they are -_-
+<saph> and you are ^_^
+%
+<glyph> people would just roll dice all the time in chat rooms
+<glyph> for *no reason*
+<glyph> because it was a feature of the system that was added for RPG players
+<glyph> and the dice-rolling syntax was pretty involved
+<glyph> infinitely involved, actually
+<glyph> it was a complete RainMan interpreter
+<glyph> you could backdoor the whole goddamn system with the dice roller
+<glyph> user: "I'd like to roll some very big dice"
+<glyph> system: "sure, maybe you would like an admin console and some dev tools to help you manage them"
+%
+<faisal> [sushi is] one of the 3 essential food groups for the networking community
+<kiad> what are the other two?
+<faisal> sushi, caffeine, ietf drafts (for fiber)
+%
+<radix> oh no the galaxies
+<radix> they're going to collide :(
+<radix> BUT PHYSICS SAVES THE DAY
+%
+<dash> there is some law of thermodynamics that says you can't pump all the stupid into one container and expect it to stay there
+<dash> diffusion, or something
+<exarkun> we need a membrane
+<glyph> a membrane with a gun
+%
+<Cerin> and I thought mono was an up and coming technology
+<capnSTABN> your sister gave me mono
+<Cerin> she is pretty tech savvy
+%
+<radix> My computer is gone :-(
+<exarkun> radix: ono!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+<exarkun> radix: wait
+<radix> :-(
+<exarkun> radix: I am suspicious.
+<radix> Why
+<exarkun> radix: Well, let's see
+<exarkun> radix: LOOKTHEREYOUARE
+%
+<foom> wait when was the earth created?
+<flophouse> just look at the expiration date
+<flophouse> it's on the bottom, under the ice cap
+%
+<warner> at a touchscreen voting platform, nobody knows if you're a dog..
+%
+<Tv> thomasvs: why not just talk some authentication protocol to the other host?
+<thomasvs> Tv: why use something arcane and difficult when I have THE POWER OF TWISTED ?
+%
+<brian_> I'm pretty sure from twisted import __version__ will work
+<slyphon> or i guess you could do that
+<brian_> I import dictionaries
+<slyphon> really? do you have to declare them in customs?
+<dash> slyphon: You are an inspiration to me
+<dash> slyphon: the next language I will design will have an alternative to the import statement
+<dash> slyphon: 'smuggle'
+<MFen> dash: no, that should be your execfile replacement
+<dash> from america.south smuggle guns, drugs, dictionaries
+<slyphon> :D
+<MFen> hah
+%
+<MFen> why is programming so *hard*
+<radix> because you try to do it on windows
+<MFen> radix: that is because i already beat the end guy on unix
+%
+<exarkun> If I can make just one person blow chunks, I'm doing my job right.
+%
+<itamar> our manager was looking for you
+<coworker_home> oh?  just now?
+<itamar> I think he got your cell# off someone though
+<itamar> yeah
+<coworker_home> ah.  good thing my cell is dead
+(Names changed to protect the innocent - Ed.)
+%
+<warner> huh. this one proposition is funded by large corporations on one side, and 204 lawyers on the other
+<glyph> warner: wait - proposition?  are you IRCing from inside a voting booth?
+<glyph> those new diebold machines must be awesome
+%
+<Karnaugh> my attempt at implementing Ramanujan went horribly wrong
+<Vhata> because Python isn't the best language for reincarnating tubercular indians?
+%
+<Vhata> maybe I should write my own operating system, where you CAN write to sockets
+<Vhata> my operating system will have beer and hookers, too
+<Vhata> in fact, screw the sockets
+%
+<dash> mmm, ken macleod
+<dash> if I had a "People I Would Be Most Likely To Engage in Apocalyptic Anime-Style Battle With" list, he would be #1 on it
+%
+<glyph> I am going to break with tradition and make one rule here
+<glyph> as long as I'm still active, nobody say anything supportive of Bush
+( ... later ...)
+<chrchr> scout^2: Give us a fact that ties Iraq to 9/11 and you will not be kicked.
+<scout^2> well shit man.. if its gonna come down to that..
+<-- scout^2 has quit ("www.twistedmatrix.com, www.kwikdeath.com")
+ [Note the instant quit when *facts* entered the discussion.]
+%
+<hypatia> spiv: get the tshirt. "Beats me, I'm an arch user." Good for all manner of situations.
+<spiv> hypatia: With a companion shirt "Beat me, I'm an arch developer" ;)
+%
+<orbitz> radix: do you know what it's like to be a team player?
+<radix> orbitz: No. I hate you.
+<orbitz> :(
+<orbitz> radix: well i'm a team player
+<orbitz> so i hate me too
+%
+<blanu> arma: What's bamboo?
+<arma> blanu: some guy named sean rhea from berkeley has been pimping it on p2p-hackers
+<blanu> What's the interesting thing about it?
+<arma> blanu: apparently it works.
+<arma> blanu: seems pretty novel to me. :)
+%
+<tjs> I want to know
+<tjs> why are my pants a topic of conversation?
+%
+<glyph> How was your sunday?  Relax at all?
+<exarkun> I played _Silent Hill_ most of the day
+<exarkun> On the one hand, you could say that is relaxing
+<exarkun> On the other hand, no, no you can't
+%
+<arg> argh, my wife calls to complain about her mother while im in the
+      middle of trying to understand someone elses metaclasses
+%
+<Moof> I'm tryign to compile pyopenssl
+<Moof> but there's a syntax error in Python.h
+<mwh> this seems unlikely, on the face of it
+%
+<vit--> dash, do you have any recommendations for python jabber libraries?
+<dash> vit--: kill yourself now
+%
+<orbitz> once i found two people having MUSH sex though
+<orbitz> ieee
+<orbitz> i was 13
+<orbitz> scared for life
+<orbitz> the yellow font burned into my soul
+%
+<exarkun> radix: Are you ready to get a tummy host yet?
+<Tv> tummy hosting is that thing the Jaffa do in Stargate, right?
+%
+<dialtone> my monitor can do Mhz
+<dialtone> in horizontal refresh though
+<exarkun> dialtone: hey that gives me an awesome idea
+<exarkun> I am going to turn my monitor on its side
+%
+<tjs> jml: You are going to die one day.
+...
+<tjs> And when you die, part of what makes up your being is the knowledge of how
+to write Java.
+<tjs> I don't have that problem.
+%
+<chrchr> exarkun: Note that all kryptonite locks are vulnerable to hacksaws.
+<exarkun> chrchr: That's why I have another lock too.
+<exarkun> chrchr: How many thieves carry around _two_ hacksaws?
+%
+$ php sucks.php
+
+PHP EQUALITY -- An experiment:
+0 == "": TRUE.
+0 == "0": TRUE.
+"" == "0": FALSE.
+'none' == 0: TRUE.
+%
+Kragen Sitaker: sub f{grep{(1x$_)!~/^(11+)\1+$/}2..pop}
+Itamar: that looks scary
+Kragen Sitaker: the haskell version is just as short and nearly as opaque
+Kragen Sitaker: but even more inefficient!
+%
+<exarkun> it's not drugs, it's ubuntu
+%
+<arg> i think a significant percentage of twisted apps begin as the logbot example
+<chrchr> Twisted is a fantastic framework for building logbots.
+%
+<mumak> hmm. I think my flatmate is asleep.
+<Brend> You should take this opportunity to glue all the furniture to the ceiling
+<mumak> Brend: well, I have to live here too 
+<mumak> Brend: and besides, I'm on holidays. That sounds like too much work.
+<Brend> If you just glue your flatmate to the ceiling, you achieve the same thing with less work, and no impedence to yourself!
+<mumak> you present a strong and compelling case
+<mumak> however, I think my flatmate wouldn't appreciate it.
+<Brend> Anyone who can't see the value of being glued to the ceiling deserves punishment by ceiling-glue 
+%
+<MFen> i bet i could beat him at football though
+<MFen> or shoe tying
+<MFen> i'd kick his ass at shoe tying
+<MFen> and then when i was done tying my shoes i stand up and shout IN YOUR FACE. IN YOUR FACE, PI BOY.  SEE THESE SHOES? NOT COMING OFF.  WHO'S THE SAVANT NOW BITCH?
+<MFen> and do a little dance
+<MFen> i bet he can't dance either
+%
+<glyph> kevc: are you volunteering to maintain it, hmmmmm? :)
+<kevc> heh, no, I have no time free at present
+<glyph> kevc: TOO LATE
+* glyph slaps the manacles on kevc
+<kevc> glyph: last time someone played "tag you're it" on me, I ended up
+       running some uni computing project for three years
+<kevc> went to the pub, woke up with a root password written on my arm
+%
+<tjs> I cant do anything
+<tjs> im running XP atm
+%
+<rik> ew.
+<rik> a python packet filter.
+<rik> that'd have almost windows-like performance.
+<afshar> well, it would be for windows
+%
+[In response to http://journal.jafo.ca/sw-20030328-18biganno.jpg]
+<Brend> Wow. You guys are younger than I thought.
+<dash> Brend: glyph's on like his third host body
+%
+<hypatia> Hey, hidden bonus of having actual named maintainers is having
+          people to assign bugs to...
+<hypatia> Of course, it always ends up being exarkun anyway.
+%

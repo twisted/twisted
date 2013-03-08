@@ -1,0 +1,257 @@
+#!/usr/bin/python
+from slides import Slide, Bullet, SubBullet, URL, Image, PRE
+from twslides import Lecture
+
+class PythonSource:
+    def __init__(self, content):
+        self.content = content 
+    def toHTML(self):
+        return '<pre class="python">%s</pre>' % (self.content,)
+
+class Raw:
+    def __init__(self, content):
+        self.content = content
+    def toHTML(self):
+        return self.content + '\n'
+
+lecture = Lecture(
+    "Applications of Twisted",
+    Slide("Twisted.names",
+        Bullet("Domain Name Server", SubBullet(
+            Bullet("Authoritative"),
+            Bullet("Caching"),
+            Bullet("Other!"),
+        )),
+        Bullet("Domain Name Client"),
+    ),
+    Slide("Mostly Functional",
+        Bullet("All common records support; 22 supported total", SubBullet(
+            Bullet("A, NS, CNAME, SOA, PTR, HINFO, MX, TXT"),
+            Bullet("IPv6 records AAAA and A6"),
+        )),
+        Bullet("No DNSSEC support"),
+        Bullet("Server and Client functionality"),
+    ),
+    Slide("Rapidly Developed",
+        Bullet("One month initial development period", SubBullet(
+            Bullet("Python is good for rapid development"),
+            Bullet("Twisted handles all the boring network details"),
+        )),
+        Bullet("Easily extended", SubBullet(
+            Bullet("Doesn't choke on unrecognized record types"),
+            Bullet("Support for a new record type can be added in "
+                      "just a few minutes"),
+            Bullet(PythonSource("""\
+from twisted.protocols import dns
+
+class Record_A:
+    __implements__ = (dns.IEncodable,)
+    TYPE = dns.QUERY_TYPES['A'] = 1
+
+    def __init__(self, address = '0.0.0.0'):
+        self.address = socket.inet_aton(address)
+
+    def encode(self, strio, compDict = None):
+        strio.write(self.address)
+
+    def decode(self, strio, length = None):
+        self.address = readPrecisely(strio, 4)
+"""
+            )),
+        )),
+    ),
+    Slide("Easily Configured",
+        Bullet("BIND zonefile syntax"),
+        Bullet("Python source", SubBullet(
+            Bullet(PythonSource("""\
+zone = [
+    AAAA('intarweb.us', '3ffe:b80:1886:1::1'),
+    SRV('_http._tcp.www.intarweb.us', 0, 0, 8080, 'intarweb.us'),
+    MX('intarweb.us', 10, 'mail.intarweb.us')
+]
+"""
+            )),
+        )),
+        Bullet("Twisted's mktap and twistd tools", SubBullet(
+            PRE("mktap dns --pyzone a.domain.zonefile --recursive --cache"),
+            PRE("twistd -f dns.tap"),
+        )),
+    ),
+    Slide("Client API",
+        Bullet("Asynchronous", SubBullet(
+            Bullet("All lookup functions return Deferred objects"),
+            Bullet(PythonSource(
+"""\
+import random
+from twisted.names import client
+
+def addressFor(service, protocol, domain):
+    d = client.theResolver.lookupService(
+        '_%s._%s.%s' % (service, protocol, domain)
+    )
+
+    def grabPayload((answers, authority, additional)):
+        return [r.payload for r in answers]
+
+    def randomAnswer(results):
+        if len(results) == 1 and results[0] == '.':
+            raise RuntimeException, "No service records found"
+        return random.choice(results)
+
+    return d.addCallback(grabPayload).addCallback(randomAnswer)
+"""
+            )),
+        )),
+    ),
+    Slide("Uses",
+        Bullet("Service Records", SubBullet(
+            Bullet("Potential to simplify user experience"),
+            Bullet("Not widely accessible"),
+            Bullet("Names' client API makes accessing them trivial"),
+        )),
+    ),
+    Slide("Pynfo: A Network Information 'Bot",
+        Bullet("A 'bot with the goal of integrating access to miscellaneous data inputs"),
+    ),
+    Slide("Architecture",
+        Bullet("Factories", SubBullet(
+            Bullet("Takes care of connecting to different services"),
+            Bullet("Acts as a central storage for shared data"),
+            Bullet("Currently only IRC is supported"),
+            Bullet("Planned support for web, IM, and PB interfaces")
+        )),
+        Bullet("Protocols", SubBullet(
+            Bullet("Created by Factories"),
+            Bullet("Handles all service-specific interaction"),
+            Bullet("Refers back to the factory for shared data"),
+            Bullet("Current support for IRC only")
+        )),
+        Image("pynfo-chart.png"),
+        Bullet("Separation of Factory and Protocols", SubBullet(
+            Bullet("Per-protocol data separate, per-robot data shared"),
+            Bullet("Protocols destroyed on disconnect, factory manage reconnecting"),
+        )),
+    ),
+    Slide("Plugins",
+        Bullet("Plugins are modules plus some metadata", SubBullet(
+            Bullet("A plugin name"),
+            Bullet("A plugin description"),
+            Bullet("A plugin type"),
+            Bullet("Any other data appropriate for the type"),
+        )),
+        Bullet("Initialization / Finalization hooks"),
+        Bullet("Input filtering, for behaviors like ignore"),
+        Bullet("An example", SubBullet(
+            Bullet(PythonSource("""
+from twisted.names import client
+def info_LOOKUP(bot, user, channel, query):
+    def tellUserResponse((ans, auth, add)):
+        bot.reply(user, "%s: %s" % (query, [str(a.payload) for a in ans]))
+
+    def tellUserError(failure):
+        bot.reply(user, "Host lookup failed.")
+
+    client.lookupAddress(query).addCallbacks(
+        tellUserResponse, tellUserError
+    )
+"""
+            )),
+        )),
+    ),
+    Slide("But where do they come from?",
+        Bullet("Twisted's plugin module", SubBullet(
+            Bullet(PythonSource("""\
+from twisted.python import plugin
+class InfoBotFactory:
+    ...
+    def loadPlugins(self):
+        ...
+        p = plugin.getPlugIns('infobot')
+        ....
+"""
+            )),
+        )),
+    ),
+    Slide("Persistence",
+        Bullet("Addresses to connect to and protocols to use"),
+        Bullet("Administrators, passwords, keys"),
+        Bullet("Connection statistics"),
+        Bullet("Plugins can store objects for later retrieval")
+    ),
+    Slide("Components",
+        Bullet("Shared and pluggable behavior is implemented as Adapters for Interfaces", SubBullet(
+            Bullet("IScheduler, IStorage, IAuthenticator"),
+        )),
+        Bullet("Plugins can register their own adapters for the factory", SubBullet(
+            Bullet("Gracefully add new capabilities without __class__ hacks"),
+            Bullet("Share capabilities with other plugins"),
+            Bullet("Avoids namespace collisions"),
+        )),
+    ),
+    Slide("Interaction",
+        Bullet("Commands and responses are issued through normal protocol actions"),
+        Bullet('Three levels of command "security"'),
+        Bullet("Access to some commands is unrestricted",
+            Raw("<code>"),
+            SubBullet("<exarkun> pyn: networks"),
+            SubBullet("<pyn> Connected to: oftc -> ('irc.oftc.net', 6667), fn -> ('irc.freenode.net', 6667)"),
+            Raw("</code>"),
+        ),
+        Bullet("Access to others is granted via an ACL",
+            Raw("<code>"),
+            SubBullet("<exarkun> pyn: rebuild"),
+            SubBullet("<pyn> You aren't allowed to do that."),
+            Raw("</code>"),
+        ),
+        Bullet("Still further access is granted by the possession of a secret key",
+            Raw("<code>"),
+            SubBullet("<exarkun> pyn: spill self.transport.getHost()"),
+            SubBullet("<pyn> Command queued.  Challenge: BBKSkYCRCGQETx4kTmceUg==%"),
+            SubBullet("<exarkun> pyn: respond 2lwcgSVnJPzrW6Yvq7sg+g==%"), 
+            SubBullet("<pyn> ('INET', '192.168.123.137', 45539)"),
+            Raw("</code>"),
+        )
+    ),
+    Slide("Network Bridging",
+        Bullet("Pass messages between networks",
+            Raw("<code>"),
+            SubBullet("<pyn> Yosomono (~fake@hostmask) has joined on efnet"),
+            SubBullet("<pyn> <Yosomono@efnet> hello"),
+            Raw("</code>"),
+        ),
+        Bullet("Requesting user information across networks",
+            Raw("<code>"),
+            SubBullet("<exarkun> pyn: whois Yosomono@efnet"),
+            SubBullet("<pyn> Hostmask: Yosomono!fake@hostmask"),
+            SubBullet("<pyn> Channels: @#python"),
+            Raw("</code>"),
+        ),
+    ),
+    Slide("Conversation Logging",
+        Bullet("The 'conversation' command", SubBullet(
+            Raw("<code>"),
+            SubBullet("<exar[con]> pyn: conversation begin PyCon example conversation"),
+            SubBullet("<pyn> Beginning tagged conversation 'PyCon example conversation'."),
+            SubBullet("<exar[con]> Hello, PyCon"),
+            SubBullet("<exar[con]> Enjoy the example!"),
+            SubBullet("<exar[con]> pyn: conversation end PyCon example conversation"),
+            SubBullet("<pyn> Ended tagged conversation 'PyCon example conversation'."),
+            Raw("</code>"),
+        )),
+        Bullet("Web interface", SubBullet(
+            URL("http://c.intarweb.us:8008/%23tanstaafl/PyCon%20example%20conversation"),
+        )),
+        Bullet("Search previous logs and add conversation tags"),
+    ),
+    Slide("Various other plugins",
+        Bullet("PyPI monitor and querying"),
+        Bullet("Network specific operations - IRC operator module"),
+        Bullet("Freshmeat and Google querying"),
+        Bullet("Link shortener"),
+        Bullet("PyMetar plugin"),
+        Bullet("Manhole"),
+    ),
+    Slide("Questions?"),
+)
+
+lecture.renderHTML(".", "applications-%d.html", css="stylesheet.css") 

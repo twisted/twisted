@@ -1,0 +1,154 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>Using Threads in Twisted</title>
+  </head>
+
+  <body>
+    <h1>Using Threads in Twisted</h1>
+
+    <h2>Running code in a thread-safe manner</h2>
+
+    <p>Most code in Twisted is not thread-safe. For example,
+    writing data to a transport from a protocol is not thread-safe.
+    Therefore, we want a way to schedule methods to be run in the
+    main event loop. This can be done using the function <code
+    class="API">twisted.internet.interfaces.IReactorThreads.callFromThread</code>:</p>
+<pre class="python">
+from twisted.internet import reactor
+
+def notThreadSafe(x):
+     """do something that isn't thread-safe"""
+     # ...
+
+def threadSafeScheduler():
+    """Run in thread-safe manner."""
+    reactor.callFromThread(notThreadSafe, 3) # will run 'notThreadSafe(3)'
+                                             # in the event loop
+reactor.run()
+</pre>
+
+    <h2>Running code in threads</h2>
+
+    <p>Sometimes we may want to run methods in threads - for
+    example, in order to access blocking APIs. Twisted provides
+    methods for doing so using the IReactorThreads API (<code
+    class="API">twisted.internet.interfaces.IReactorThreads</code>).
+    Additional utility functions are provided in <code
+    class="API">twisted.internet.threads</code>. Basically, these
+    methods allow us to queue methods to be run by a thread
+    pool.</p>
+
+    <p>For example, to run a method in a thread we can do:</p>
+<pre class="python">
+from twisted.internet import reactor
+
+def aSillyBlockingMethod(x):
+    import time
+    time.sleep(2)
+    print x
+
+# run method in thread
+reactor.callInThread(aSillyBlockingMethod, "2 seconds have passed")
+reactor.run()
+</pre>
+
+    <h2>Utility Methods</h2>
+
+    <p>The utility methods are not part of the <code
+    class="API">twisted.internet.reactor</code> APIs, but are implemented
+    in <code class="API">twisted.internet.threads</code>.</p>
+
+    <p>If we have multiple methods to run sequentially within a thread,
+    we can do:</p>
+
+<pre class="python">
+from twisted.internet import reactor, threads
+
+def aSillyBlockingMethodOne(x):
+    import time
+    time.sleep(2)
+    print x
+
+def aSillyBlockingMethodTwo(x):
+    print x
+
+# run both methods sequentially in a thread
+commands = [(aSillyBlockingMethodOne, ["Calling First"], {})]
+commands.append((aSillyBlockingMethodTwo, ["And the second"], {}))
+threads.callMultipleInThread(commands)
+reactor.run()
+</pre>
+
+    <p>For functions whose results we wish to get, we can have the
+    result returned as a Deferred:</p>
+<pre class="python">
+from twisted.internet import reactor, threads
+
+def doLongCalculation():
+    # .... do long calculation here ...
+    return 3
+
+def printResult(x):
+    print x
+
+# run method in thread and get result as defer.Deferred
+d = threads.deferToThread(doLongCalculation)
+d.addCallback(printResult)
+reactor.run()
+</pre>
+
+    <p>If you wish to call a method in the reactor thread and get its result,
+    you can use <code class="API"
+    base="twisted.internet.threads">blockingCallFromThread</code>:</p>
+
+<pre class="python">
+from twisted.internet import threads, reactor, defer
+from twisted.web.client import getPage
+from twisted.web.error import Error
+
+def inThread():
+    try:
+        result = threads.blockingCallFromThread(
+            reactor, getPage, "http://twistedmatrix.com/")
+    except Error, exc:
+        print exc
+    else:
+        print result
+    reactor.callFromThread(reactor.stop)
+
+reactor.callInThread(inThread)
+reactor.run()
+</pre>
+
+    <p><code>blockingCallFromThread</code> will return the object or raise
+    the exception returned or raised by the function passed to it. If the
+    function passed to it returns a Deferred, it will return the value the
+    Deferred is called back with or raise the exception it is errbacked
+    with.</p>
+
+    <h2>Managing the Thread Pool</h2>
+
+    <p>The thread pool is implemented by <code
+    class="API">twisted.python.threadpool.ThreadPool</code>.</p>
+
+    <p>We may want to modify the size of the threadpool, increasing
+    or decreasing the number of threads in use.  We can do this
+    do this quite easily:</p>
+
+<pre class="python">
+from twisted.internet import reactor
+
+reactor.suggestThreadPoolSize(30)
+</pre>
+
+  <p>The default size of the thread pool depends on the reactor being used;
+  the default reactor uses a minimum size of 5 and a maximum size of 10.  Be
+  careful that you understand threads and their resource usage before
+  drastically altering the thread pool sizes.</p>
+  </body>
+</html>
+

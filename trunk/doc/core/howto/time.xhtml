@@ -1,0 +1,82 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>Scheduling tasks for the future</title>
+  </head>
+
+  <body>
+    <h1>Scheduling tasks for the future</h1>
+
+    <p>Let's say we want to run a task X seconds in the future.
+    The way to do that is defined in the reactor interface <code
+    class="API">twisted.internet.interfaces.IReactorTime</code>:</p>
+<pre class="python">
+from twisted.internet import reactor
+
+def f(s):
+    print "this will run 3.5 seconds after it was scheduled: %s" % s
+
+reactor.callLater(3.5, f, "hello, world")
+
+# f() will only be called if the event loop is started.
+reactor.run()
+</pre>
+
+    <p>If the result of the function is important or if it may be necessary
+    to handle exceptions it raises, then the <code
+    class="API">twisted.internet.task.deferLater</code> utility conveniently
+    takes care of creating a <code class="API"
+    base="twisted.internet.defer">Deferred</code> and setting up a delayed
+    call:</p>
+<pre class="python">
+from twisted.internet import task
+from twisted.internet import reactor
+
+def f(s):
+    return "This will run 3.5 seconds after it was scheduled: %s" % s
+
+d = task.deferLater(reactor, 3.5, f, "hello, world")
+def called(result):
+    print result
+d.addCallback(called)
+
+# f() will only be called if the event loop is started.
+reactor.run()
+</pre>
+
+    <p>If we want a task to run every X seconds repeatedly, we can
+    use <code
+    class="API">twisted.internet.task.LoopingCall</code>:</p>
+<pre class="python">
+from twisted.internet import task
+from twisted.internet import reactor
+
+def runEverySecond():
+    print "a second has passed"
+
+l = task.LoopingCall(runEverySecond)
+l.start(1.0) # call every second
+
+# l.stop() will stop the looping calls
+reactor.run()
+</pre>
+
+    <p>If we want to cancel a task that we've scheduled:</p>
+<pre class="python">
+from twisted.internet import reactor
+
+def f():
+    print "I'll never run."
+
+callID = reactor.callLater(5, f)
+callID.cancel()
+reactor.run()
+</pre>     
+
+    <p>As with all reactor-based code, in order for scheduling to work the reactor must be started using <code class="python">reactor.run()</code>.</p>
+  </body>
+</html>
+

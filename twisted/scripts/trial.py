@@ -12,6 +12,7 @@ from twisted.python import usage, reflect, failure
 from twisted.python.filepath import FilePath
 from twisted import plugin
 from twisted.python.util import spewer
+from twisted.python.compat import set
 from twisted.trial import runner, itrial, reporter
 
 
@@ -138,7 +139,7 @@ class _BasicOptions(object):
     tracer = None
 
     def __init__(self):
-        self['tests'] = []
+        self['tests'] = set()
         usage.Options.__init__(self)
 
 
@@ -183,9 +184,9 @@ class _BasicOptions(object):
             return
         filename = os.path.abspath(filename)
         if isTestFile(filename):
-            self['tests'].append(filename)
+            self['tests'].add(filename)
         else:
-            self['tests'].extend(getTestModules(filename))
+            self['tests'].update(getTestModules(filename))
 
 
     def opt_spew(self):
@@ -269,7 +270,7 @@ class _BasicOptions(object):
 
 
     def parseArgs(self, *args):
-        self['tests'].extend(args)
+        self['tests'].update(args)
 
 
     def _loadReporterByName(self, name):

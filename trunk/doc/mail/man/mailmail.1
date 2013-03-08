@@ -1,0 +1,21 @@
+.TH MAILMAIL "1" "July 2003" "" ""
+.SH NAME
+mailmail \- Twisted sendmail compatibility script
+.SH SYNOPSIS
+.B mailmail [recipient addresses]
+.SH DESCRIPTION
+mailmail reads RFC822 message text from standard input and delivers them,
+using SMTP, to a Mail Transfer Agent listening at 127.0.0.1:25.  It accepts
+(but does not necessarily implement) many of the standard sendmail(1)
+options, but it is preferable to list only the recipient addresses on
+the command line, and include a \fBFrom\fR header within the message text
+indicating the sender.
+.SH AUTHOR
+Written by Jp Calderone
+.SH "REPORTING BUGS"
+To report a bug, visit \fIhttp://twistedmatrix.com/bugs/\fR
+.SH COPYRIGHT
+Copyright \(co 2003-2008 Twisted Matrix Laboratories.
+.br
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.

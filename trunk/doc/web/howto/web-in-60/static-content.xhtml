@@ -1,0 +1,83 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Serving Static Content From a Directory</title>
+</head>
+
+<body>
+<h1>Serving Static Content From a Directory</h1>
+
+<p>The goal of this example is to show you how to serve static content
+from a filesystem. First, we need to import some objects:</p>
+
+<ul>
+
+<li>
+<code class="API" base="twisted.web.server">Site</code>, an <code
+class="API"
+base="twisted.internet.interfaces">IProtocolFactory</code> which
+glues a listening server port (<code class="API"
+base="twisted.internet.interfaces">IListeningPort</code>) to the <code
+class="API" base="twisted.web.http">HTTPChannel</code>
+implementation:
+<pre class="python">from twisted.web.server import Site</pre>
+</li>
+
+<li>
+<code class="API" base="twisted.web.static">File</code>, an <code
+class="API" base="twisted.web.resource">IResource</code> which glues
+the HTTP protocol implementation to the filesystem:
+<pre class="python">from twisted.web.static import File</pre>
+</li>
+
+<li>
+The <code class="API" base="twisted.internet">reactor</code>, which
+drives the whole process, actually accepting TCP connections and
+moving bytes into and out of them:
+<pre class="python">from twisted.internet import reactor</pre>
+</li>
+
+</ul>
+
+Next, we create an instance of the File resource pointed at the
+directory to serve:
+<pre class="python">resource = File("/tmp")</pre>
+
+Then we create an instance of the Site factory with that resource:
+<pre class="python">factory = Site(resource)</pre>
+
+Now we glue that factory to a TCP port:
+<pre class="python">reactor.listenTCP(8888, factory)</pre>
+
+Finally, we start the reactor so it can make the program work:
+<pre class="python">reactor.run()</pre>
+And that's it. Here's the complete program:
+
+<pre class="python">
+from twisted.web.server import Site
+from twisted.web.static import File
+from twisted.internet import reactor
+
+resource = File('/tmp')
+factory = Site(resource)
+reactor.listenTCP(8888, factory)
+reactor.run()
+</pre>
+
+<p>Bonus example! For those times when you don't actually want to
+write a new program, the above implemented functionality is one of the
+things the command line <code>twistd</code> tool can do. In this case,
+the command
+<pre>
+twistd -n web --path /tmp
+</pre>
+will accomplish the same thing as the above server. See <a
+href="../../../core/howto/basics.xhtml">helper programs</a> in the
+Twisted Core documentation for more information on using
+<code>twistd</code>.</p>
+
+</body>
+</html>

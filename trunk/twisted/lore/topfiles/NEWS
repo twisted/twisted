@@ -1,0 +1,167 @@
+Ticket numbers in this file can be looked up by visiting
+http://twistedmatrix.com/trac/ticket/<number>
+
+Twisted Lore 12.3.0 (2012-12-20)
+================================
+
+No significant changes have been made for this release.
+
+
+Twisted Lore 12.2.0 (2012-08-26)
+================================
+
+No significant changes have been made for this release.
+
+
+Twisted Lore 12.1.0 (2012-06-02)
+================================
+
+Bugfixes
+--------
+ - twisted.plugins.twisted_lore's MathProcessor plugin is now
+   associated with the correct implementation module. (#5326)
+
+
+Twisted Lore 12.0.0 (2012-02-10)
+================================
+
+No significant changes have been made for this release.
+
+
+Twisted Lore 11.1.0 (2011-11-15)
+================================
+
+Bugfixes
+--------
+ - When run from an unpacked source tarball or a VCS checkout,
+   bin/lore/lore will now use the version of Twisted it is part of.
+   (#3526)
+
+Deprecations and Removals
+-------------------------
+ - Removed compareMarkPos and comparePosition from lore.tree,
+   deprecated in Twisted 9.0. (#5127)
+
+
+Twisted Lore 11.0.0 (2011-04-01)
+================================
+
+No significant changes have been made for this release.
+
+
+Twisted Lore 10.2.0 (2010-11-29)
+================================
+
+No significant changes have been made for this release.
+
+Other
+-----
+ - #4571
+
+
+Twisted Lore 10.1.0 (2010-06-27)
+================================
+
+No significant changes have been made for this release.
+
+
+Twisted Lore 10.0.0 (2010-03-01)
+================================
+
+Other
+-----
+ - #4241
+
+
+Twisted Lore 9.0.0 (2009-11-24)
+===============================
+
+Features
+--------
+ - Python source listings now include line numbers (#3486)
+
+Fixes
+-----
+ - Lore now uses minidom instead of Twisted's microdom, which incidentally
+   fixes some Lore bugs such as throwing away certain whitespace
+   (#3560, #414, #3619)
+ - Lore's "lint" command should no longer break on documents with links in them
+   (#4051, #4115)
+
+Deprecations and Removals
+-------------------------
+ - Lore no longer uses the ancient "tml" Twisted plugin system (#1911)
+
+Other
+-----
+ - #3565, #3246, #3540, #3750, #4050
+
+
+Lore 8.2.0 (2008-12-16)
+=======================
+
+Other
+-----
+ - #2207, #2514
+
+
+8.1.0 (2008-05-18)
+==================
+
+Fixes
+-----
+ - The deprecated mktap API is no longer used (#3127)
+
+
+8.0.0 (2008-03-17)
+==================
+
+Fixes
+-----
+ - Change twisted.lore.tree.setIndexLin so that it removes node with index-link
+   class when the specified index filename is None. (#812)
+ - Fix the conversion of the list of options in man pages to Lore format.
+   (#3017)
+ - Fix conch man pages generation. (#3075)
+ - Fix management of the interactive command tag in man2lore. (#3076)
+
+Misc
+----
+ - #2847
+
+
+0.3.0 (2007-01-06)
+==================
+
+Features
+--------
+ - Many docstrings were added to twisted.lore.tree (#2301)
+
+Fixes
+-----
+ - Emitting a span with an index class to latex now works (#2134)
+
+
+0.2.0 (2006-05-24)
+==================
+
+Features
+--------
+ - Docstring improvements.
+
+Fixes
+-----
+ - Embedded Dia support for Latex no longer requires the 'which'
+   command line tool.
+ - Misc: #1142.
+
+Deprecations
+------------
+ - The unused, undocumented, untested and severely crashy 'bookify'
+   functionality was removed.
+
+
+0.1.0
+=====
+ - Use htmlizer mode that doesn't insert extra span tags, thus making
+   it not mess up in Safari.

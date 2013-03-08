@@ -10,7 +10,7 @@ from twisted.internet import error, interfaces
 
 from twisted.names import client, dns
 from twisted.names.error import DNSNameError
-from twisted.python.compat import reduce, unicode
+from twisted.python.compat import reduce
 
 class _SRVConnector_ClientFactoryWrapper:
     def __init__(self, connector, wrappedFactory):
@@ -43,10 +43,7 @@ class SRVConnector:
                  defaultPort=None,
                  ):
         """
-        @param domain: The domain to connect to.  If passed as a unicode
-            string, it will be encoded using C{idna} encoding.
-        @type domain: L{bytes} or L{unicode}
-        @param defaultPort: Optional default port number to be used when SRV
+        @ivar defaultPort: Optional default port number to be used when SRV
             lookup fails and the service name is unknown. This should be the
             port number associated with the service name as defined by the IANA
             registry.
@@ -54,8 +51,6 @@ class SRVConnector:
         """
         self.reactor = reactor
         self.service = service
-        if isinstance(domain, unicode):
-            domain = domain.encode('idna')
         self.domain = domain
         self.factory = factory
 

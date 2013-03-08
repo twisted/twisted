@@ -621,10 +621,8 @@ class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
             return downloader.buffer
         return chainDeferred.addCallback(downloadDone)
 
-    def test_LISTEmpty(self):
-        """
-        When listing empty folders, LIST returns an empty response.
-        """
+    def testEmptyLIST(self):
+        # Login
         d = self._anonymousLogin()
 
         # No files, so the file listing should be empty
@@ -633,34 +631,8 @@ class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
             self.assertEqual('', result)
         return d.addCallback(checkEmpty)
 
-    def test_LISTWithBinLsFlags(self):
-        """
-        LIST ignores requests for folder with names like '-al' and will list
-        the content of current folder.
-        """
-        os.mkdir(os.path.join(self.directory, 'foo'))
-        os.mkdir(os.path.join(self.directory, 'bar'))
-
-        # Login
-        d = self._anonymousLogin()
-
-        self._download('LIST -aL', chainDeferred=d)
-
-        def checkDownload(download):
-            names = []
-            for line in download.splitlines():
-                names.append(line.split(' ')[-1])
-            self.assertEqual(2, len(names))
-            self.assertIn('foo', names)
-            self.assertIn('bar', names)
-
-        return d.addCallback(checkDownload)
-
-    def test_LISTWithContent(self):
-        """
-        LIST returns all folder's members, each member listed on a separate
-        line and with name and other details.
-        """
+    def testTwoDirLIST(self):
+        # Make some directories
         os.mkdir(os.path.join(self.directory, 'foo'))
         os.mkdir(os.path.join(self.directory, 'bar'))
 
@@ -852,26 +824,6 @@ class FTPServerPortDataConnectionTestCase(FTPServerPasvDataConnectionTestCase):
                 'PORT ' + ftp.encodeHostPort('127.0.0.1', portNum),
                 ["425 Can't open data connection."])
         return d.addCallback(gotPortNum)
-
-
-    def test_nlstGlobbing(self):
-        """
-        When Unix shell globbing is used with NLST only files matching the
-        pattern will be returned.
-        """
-        self.dirPath.child('test.txt').touch()
-        self.dirPath.child('ceva.txt').touch()
-        self.dirPath.child('no.match').touch()
-        d = self._anonymousLogin()
-
-        self._download('NLST *.txt', chainDeferred=d)
-
-        def checkDownload(download):
-            filenames = download[:-2].split('\r\n')
-            filenames.sort()
-            self.assertEqual(['ceva.txt', 'test.txt'], filenames)
-
-        return d.addCallback(checkDownload)
 
 
 
@@ -2376,44 +2328,6 @@ class PathHandling(unittest.TestCase):
 
         for inp in ['../..', '../../', '../a/../..']:
             self.assertRaises(ftp.InvalidPath, ftp.toSegments, ['x'], inp)
-
-
-
-class IsGlobbingExpressionTests(unittest.TestCase):
-    """
-    Tests for _isGlobbingExpression utility function.
-    """
-
-    def test_isGlobbingExpressionEmptySegments(self):
-        """
-        _isGlobbingExpression will return False for None, or empty
-        segments.
-        """
-        self.assertFalse(ftp._isGlobbingExpression())
-        self.assertFalse(ftp._isGlobbingExpression([]))
-        self.assertFalse(ftp._isGlobbingExpression(None))
-
-
-    def test_isGlobbingExpressionNoGlob(self):
-        """
-        _isGlobbingExpression will return False for plain segments.
-
-        Also, it only checks the last segment part (filename) and will not
-        check the path name.
-        """
-        self.assertFalse(ftp._isGlobbingExpression(['ignore', 'expr']))
-        self.assertFalse(ftp._isGlobbingExpression(['*.txt', 'expr']))
-
-
-    def test_isGlobbingExpressionGlob(self):
-        """
-        _isGlobbingExpression will return True for segments which contains
-        globbing characters in the last segment part (filename).
-        """
-        self.assertTrue(ftp._isGlobbingExpression(['ignore', '*.txt']))
-        self.assertTrue(ftp._isGlobbingExpression(['ignore', '[a-b].txt']))
-        self.assertTrue(ftp._isGlobbingExpression(['ignore', 'fil?.txt']))
-
 
 
 class BaseFTPRealmTests(unittest.TestCase):

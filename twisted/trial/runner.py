@@ -22,6 +22,7 @@ import os, types, warnings, sys, inspect, imp
 import doctest, time
 
 from twisted.python import reflect, log, failure, modules, filepath
+from twisted.python.compat import set
 
 from twisted.internet import defer
 from twisted.trial import util, unittest
@@ -599,16 +600,13 @@ class TestLoader(object):
         to same value and collapse to one test unexpectedly if using simpler
         means: e.g. set().
         """
-        seen = set()
+        entries = []
         for thing in things:
             if isinstance(thing, types.MethodType):
-                thing = (thing, thing.im_class)
+                entries.append((thing, thing.im_class))
             else:
-                thing = (thing,)
-
-            if thing not in seen:
-                yield thing[0]
-                seen.add(thing)
+                entries.append((thing,))
+        return [entry[0] for entry in set(entries)]
 
 
 

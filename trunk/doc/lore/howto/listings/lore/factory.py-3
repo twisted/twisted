@@ -1,0 +1,21 @@
+from twisted.lore import default
+from myhtml import spitters
+
+class MyProcessingFunctionFactory(default.ProcessingFunctionFactory):
+    # 1. add the keys "chapter" and "section" to latexSpitters to handle the
+    # --config chapter and --config section options
+    latexSpitters={None: spitters.MyLatexSpitter,
+                   "section": spitters.MySectionLatexSpitter,
+                   "chapter": spitters.MyChapterLatexSpitter,
+                   }
+
+    def getLintChecker(self):
+        checker = lint.getDefaultChecker()
+        checker.allowedClasses = checker.allowedClasses.copy()
+        oldSpan = checker.allowedClasses['span']
+        checkfunc=lambda cl: oldSpan(cl) or cl in ['marketinglie',
+                                                   'productname']
+        checker.allowedClasses['span'] = checkfunc
+        return checker
+
+factory=MyProcessingFunctionFactory()

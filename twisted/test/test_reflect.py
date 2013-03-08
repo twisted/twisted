@@ -5,8 +5,7 @@
 Test cases for twisted.reflect module.
 """
 
-import weakref
-import warnings
+import weakref, os
 try:
     from ihooks import ModuleImporter
 except ImportError:
@@ -18,24 +17,14 @@ except ImportError:
     deque = None
 
 from twisted.trial import unittest
-from twisted.python import reflect
+from twisted.python import reflect, util
 from twisted.python.versions import Version
 from twisted.python.test.test_reflectpy3 import LookupsTestCase
-
-with warnings.catch_warnings():
-    warnings.filterwarnings(action="ignore", category=DeprecationWarning,
-            message="twisted.python.reflect.Accessor was deprecated")
-    warnings.filterwarnings(action="ignore", category=DeprecationWarning,
-            message="twisted.python.reflect.PropertyAccessor was deprecated")
-    warnings.filterwarnings(action="ignore", category=DeprecationWarning,
-            message="twisted.python.reflect.Settable was deprecated")
-
-    from twisted.python.reflect import Accessor, PropertyAccessor, Settable
 
 
 class SettableTest(unittest.TestCase):
     def setUp(self):
-        self.setter = Settable()
+        self.setter = reflect.Settable()
 
     def tearDown(self):
         del self.setter
@@ -47,7 +36,7 @@ class SettableTest(unittest.TestCase):
 
 
 
-class AccessorTester(Accessor):
+class AccessorTester(reflect.Accessor):
 
     def set_x(self, x):
         self.y = x
@@ -64,7 +53,7 @@ class AccessorTester(Accessor):
 
 
 
-class PropertyAccessorTester(PropertyAccessor):
+class PropertyAccessorTester(reflect.PropertyAccessor):
     """
     Test class to check L{reflect.PropertyAccessor} functionalities.
     """

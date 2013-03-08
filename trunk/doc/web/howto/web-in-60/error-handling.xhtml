@@ -1,0 +1,94 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Error Handling</title>
+</head>
+
+<body>
+<h1>Error Handling</h1>
+
+<p>In this example we'll extend dynamic dispatch to return a 404 (not found)
+response when a client requests a non-existent URL.</p>
+
+<p>As in the previous examples, we'll start with <code class="API"
+base="twisted.web.server">Site</code>, <code class="API"
+base="twisted.web.resource">Resource</code>, and <code class="API"
+base="twisted.internet">reactor</code> imports:</p>
+
+<pre class="python">
+from twisted.web.server import Site
+from twisted.web.resource import Resource
+from twisted.internet import reactor
+</pre>
+
+<p>Next, we'll add one more import. <code class="API"
+base="twisted.web.error">NoResource</code> is one of the pre-defined error
+resources provided by Twisted Web. It generates the necessary 404 response code
+and renders a simple html page telling the client there is no such resource.</p>
+
+<pre class="python">
+from twisted.web.error import NoResource
+</pre>
+
+<p>Next, we'll define a custom resource which does some dynamic URL
+dispatch. This example is going to be just like
+the <a href="dynamic-dispatch.xhtml">previous one</a>, where the path segment is
+interpreted as a year; the difference is that this time we'll handle requests
+which don't conform to that pattern by returning the not found response:</p>
+
+<pre class="python">
+class Calendar(Resource):
+    def getChild(self, name, request):
+        try:
+            year = int(name)
+        except ValueError:
+            return NoResource()
+        else:
+            return YearPage(year)
+</pre>
+
+<p>Aside from including the definition of <code>YearPage</code> from
+the previous example, the only other thing left to do is the
+normal <code>Site</code> and <code>reactor</code> setup. Here's the
+complete code for this example:</p>
+
+<pre class="python">
+from twisted.web.server import Site
+from twisted.web.resource import Resource
+from twisted.internet import reactor
+from twisted.web.error import NoResource
+
+from calendar import calendar
+
+class YearPage(Resource):
+    def __init__(self, year):
+        Resource.__init__(self)
+        self.year = year
+
+    def render_GET(self, request):
+        return "&lt;html&gt;&lt;body&gt;&lt;pre&gt;%s&lt;/pre&gt;&lt;/body&gt;&lt;/html&gt;" % (calendar(self.year),)
+
+class Calendar(Resource):
+    def getChild(self, name, request):
+        try:
+            year = int(name)
+        except ValueError:
+            return NoResource()
+        else:
+            return YearPage(year)
+
+root = Calendar()
+factory = Site(root)
+reactor.listenTCP(8880, factory)
+reactor.run()
+</pre>
+
+<p>This server hands out the same calendar views as the one from the previous
+installment, but it will also hand out a nice error page with a 404 response
+when a request is made for a URL which cannot be interpreted as a year.</p>
+
+</body>
+</html>

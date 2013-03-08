@@ -1,0 +1,118 @@
+.TH TWISTD "1" "Dec 2011" "" ""
+.SH NAME
+twistd \- run Twisted applications (TACs, TAPs)
+.SH SYNOPSIS
+.B twistd
+[options]
+.SH DESCRIPTION
+Read a twisted.application.service.Application out of a file and run it.
+.SH OPTIONS
+\fB\-n\fR, \fB\--nodaemon\fR
+Don't daemonize (stay in foreground).
+.TP
+\fB\-q\fR, \fB\--quiet\fR
+No-op for backwards compatibility.
+.TP
+\fB\-p\fR, \fB\--profile\fR \fI<profile output>\fR
+Run the application under the profiler, dumping results to the specified file.
+.TP
+\fB\--profiler\fR \fI<profiler name>\fR
+Specify the profiler to use. Defaults to the 'hotshot' profiler.
+.TP
+\fB--savestats\fR
+Save the Stats object rather than the text output of the profiler.
+.TP
+\fB\-b\fR, \fB\--debug\fR
+Run the application in the Python Debugger (implies \fB\--nodaemon\fR option).
+Sending a SIGINT or SIGUSR2 signal to the process will drop it into the
+debugger.
+.TP
+\fB\-e\fR, \fB\--encrypted\fR \fI<file>\fR
+The specified tap/aos file is encrypted.
+.TP
+\fB--euid\fR
+Set only effective user-id rather than real user-id. This option has no  
+effect unless the server is running as root, in which case it means not  
+to shed all privileges after binding ports, retaining the option to regain 
+privileges in cases such as spawning processes. Use with caution. 
+.TP
+\fB\-o\fR, \fB\--no_save\fR
+Do not save shutdown state.
+.TP
+\fB\--originalname\fR
+Behave as though the specified Application has no process name set, and run
+with the standard process name (the Python binary in most cases).
+.TP
+\fB\-l\fR, \fB\--logfile\fR \fI<logfile>\fR
+Log to a specified file, - for stdout (default: twistd.log).
+The log file will be rotated on SIGUSR1.
+.TP
+\fB\-l\fR, \fB\--logger\fR \fI<fully qualified python name>\fR
+A fully-qualified name to a log observer factory to use for the initial log
+observer. Takes precedence over --logfile and --syslog.
+.TP
+\fB\--pidfile\fR \fI<pidfile>\fR
+Save pid in specified file (default: twistd.pid).
+.TP
+\fB\--chroot\fR \fI<directory>\fR
+Chroot to a supplied directory before running (default: don't chroot).
+Chrooting is done before changing the current directory.
+.TP
+\fB\-d\fR, \fB\--rundir\fR \fI<directory>\fR
+Change to a supplied directory before running (default: .).
+.TP
+\fB\-u\fR, \fB\--uid\fR \fI<uid>\fR
+The uid to run as (default: don't change).
+.TP
+\fB\-g\fR, \fB\--gid\fR \fI<gid>\fR
+The gid to run as (default: don't change).
+.TP
+\fB--umask\fR \fI<mask>\fR
+The (octal) file creation mask to apply. (default: 0077 for daemons, no
+change otherwise).
+.TP
+\fB\-r\fR, \fB\--reactor\fR \fI<reactor>\fR
+Choose which reactor to use. See \fB\--help-reactors\fR for a list of
+possibilities.
+.TP
+\fB--help-reactors\fR
+List the names of possibly available reactors.
+.TP
+\fB\--spew\fR
+Write an extremely verbose log of everything that happens. Useful for
+debugging freezes or locks in complex code.
+.TP
+\fB\-f\fR, \fB\--file\fR \fI<tap file>\fR
+Read the given .tap file (default: twistd.tap).
+.TP
+\fB\-s\fR, \fB\--source\fR \fI<tas file>\fR
+Load an Application from the given .tas (AOT Python source) file.
+.TP
+\fB\-y\fR, \fB\--python\fR \fI<python file>\fR
+Use the variable "application" from the given Python file. This option overrides
+\fB\-f\fR. This option implies \fB\--no_save\fR.
+.TP
+\fB\--syslog\fR
+Log to syslog instead of a file.
+.TP
+\fB\--version\fR
+Print version information and exit.
+.TP
+\fB\--prefix\fR \fI<prefix>\fR
+Use the specified prefix when logging to logfile. Default is "twisted".
+.PP
+Note that if \fBtwistd\fR is run as root, the working directory is \fInot\fR
+searched for Python modules.
+.SH SIGNALS
+A running twistd accepts SIGINT for a clean shutdown and SIGUSR1 to rotate log
+files.
+.SH AUTHOR
+Written by Moshe Zadka, based on twistd's help messages.
+.SH "REPORTING BUGS"
+To report a bug, visit
+\fIhttp://twistedmatrix.com/trac/wiki/TwistedDevelopment#DevelopmentProcess\fR
+.SH COPYRIGHT
+Copyright \(co 2001-2011 Twisted Matrix Laboratories.
+.br
+This is free software; see the source for copying conditions. There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.

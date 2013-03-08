@@ -1,0 +1,1106 @@
+<html><head><title>A Twisted Web Tutorial</title></head><body>
+
+<h1>A Twisted Web Tutorial</h1>
+
+<h2>Twisted Web -- The Tutorial</h2><ul>
+<li>Welcome</li>
+
+<li>Gimmick -- Buffy quotes</li>
+
+</ul>
+<hr />
+<em>Sweet (Once More With Feeling, season 6) -- Showtime</em>
+<h2>Twisted Web</h2><ul>
+<li>Web server, using Twisted<ul><li>Like Apache, Zope...</li>
+</ul></li>
+
+<li>Serve static files</li>
+
+<li>Run CGIs</li>
+
+<li>Other uses...</li>
+
+</ul>
+<hr />
+<em>Giles (I Robot -- You Jane, season 1) -- There's a demon in the internet</em>
+<h2>Short Example: Putting a Server Up</h2><ul>
+<li>Here's all you need to know to bring up a server</li></ul>
+
+<pre class="shell">
+% mktap --uid=33 --gid=33 web --path=/var/www/htdocs --port=80
+% sudo twistd -f web.tap
+</pre>
+<ul><li>The rest of the talk will explain what that means...</li>
+
+<li>...and how to do more complicated things</li>
+
+</ul>
+<hr />
+<em>Buffy (Once More, With Feeling, season 6) -- I've got a theory. It doesn't matter.</em>
+<h2>Setup and Configuration Utilities</h2><ul>
+<li>mktap</li>
+
+<li>twistd</li>
+
+<li>websetroot<ul><li>Won't be covered, unless there is time</li>
+</ul></li>
+
+</ul>
+<hr />
+<em>Xander (The Harvest, season 1) -- crosses, garlic, stake through the heart</em>
+<h2>Digression: What are TAPs</h2><ul>
+<li>Pickled 'application configuration'</li>
+
+<li>Object which contains all the information about application</li>
+
+<li>The canonical way to represent configurations in Twisted</li>
+
+<li>Machine editable</li>
+
+</ul>
+<hr />
+<em>Master (The Wish, season 3) -- Behold the technical wonder</em>
+<h2>mktap</h2><ul>
+<li>General usage</li>
+
+<li>Flexibility and Power</li>
+
+</ul>
+<hr />
+<em>Buffy (Bad Eggs, season 2) -- I'm gonna need a *big* weapon</em>
+<h2>mktap web: Common Useful Options</h2><ul>
+<li>--path: serve from given path</li>
+
+<li>--port: listen on given port</li>
+
+<li>--user: serve from users' directories and personal servers</li>
+
+<li>--logfile: log to NCSA compatible logfile given</li>
+
+<li>--processor: add a special processor for a given extension</li>
+
+</ul>
+<hr />
+<em>Buffy (Bad Eggs, season 2) -- That's probably not gonna be the winning argument, is it?</em>
+
+<h2>twistd</h2><ul>
+<li>Start a Twisted Application</li>
+
+<li>Loads an instance of twisted.internet.app.Application from a file</li>
+
+<li>Daemonizes, binds to appropriate ports, and starts the Twisted mainloop</li>
+
+</ul>
+<hr />
+<em>Giles (Teacher's Pet, season 1) -- That's all he said? Fork Guy?</em>
+<h2>What's a Resource?</h2><ul>
+<li>Everything represented as twisted.web.resource.Resource</li>
+
+<li>Important interface:<ul><li>getChild()</li>
+
+<li>render()</li>
+</ul></li>
+
+</ul>
+<hr />
+<em>Sean (Go Fish, season 3) -- You're soakin' in it, bud.</em>
+<h2>Resource Examples</h2><ul>
+<li>Files<ul><li>MIME</li>
+
+<li>Processors</li>
+</ul></li>
+
+<li>Others<ul><li>Virtual hosts</li>
+
+<li>User directories</li>
+</ul></li>
+
+</ul>
+<hr />
+<em>Xander (As You Were, season 6) -- We have friends, family and demons</em>
+<h2>Web Development</h2><ul>
+<li>Processors<ul><li>Inherited from resource.Resource</li>
+
+<li>Interpret files as code rather than data</li>
+</ul></li>
+
+<li>Default processors<ul><li>.php -- default PHP</li>
+
+<li>.cgi -- Common Gateway Interface</li>
+
+<li>.rpy -- Correct way, Python scripting</li>
+
+<li>.trp -- Resource pickles</li>
+<li>...more</li>
+</ul></li>
+
+<li>You can also write your own</li>
+
+</ul>
+<hr />
+<em>Xander (Family, season 5) -- That was a tangled web</em>
+<h2>Custom Processor</h2><ul>
+<li>A custom processor to handle Perl CGIs (in a module called PerlScript)</li></ul>
+
+<pre class="python">
+from twisted.web import static, twcgi
+
+class PerlScript(twcgi.FilteredScript):
+    filter = '/usr/bin/perl' # Points to the perl parser
+</pre>
+<ul><li>Use:<ul><li>mktap web --path=/home/nafai/public_html --processor=.pl=PerlScript.PerlScript</li>
+</ul></li>
+
+</ul>
+<hr />
+<em>Tara (Family, season 4) -- There was the front of a camel</em>
+<h2>Resource Scripting</h2><ul>
+<li>Subclass resource.Resource</li>
+
+<li>Write a render(self, request) method<ul><li>Return string for immediate response</li>
+
+<li>Return NOT_DONE_YET and write to request</li>
+</ul></li>
+
+<li>Create an .rpy file that sets 'resource' to an instance</li>
+
+</ul>
+<hr />
+<em>Tara (Once More, With Feeling, season 6) -- You make me complete</em>
+<h2>.rpy example</h2>
+<pre class="python">
+from twisted.web import resource as resourcelib
+
+class MyGreatResource(resourcelib.Resource):
+    def render(self, request):
+        return "&lt;html&gt;foo&lt;/html&gt;"
+
+resource = MyGreatResource()
+</pre>
+<hr />
+<em>Willow (Welcome to the Hellmouth, season 1) -- It's probably easy for you.</em>
+<h2>Alternative Configuration Formats</h2><ul>
+<li>xml</li>
+
+<li>source</li>
+
+<li>Python</li>
+
+</ul>
+<hr />
+<em>Ben (The Gift, season 5) -- I wish there was another way</em>
+<h2>Alternative Configuration Formats -- Python</h2><ul>
+<li>Write manually</li>
+
+<li>Just uses twisted.web API</li>
+
+<li>Possible to do anything<ul><li>Write loops</li>
+
+<li>Read other files</li>
+
+<li>(not recommended) Define functions or classes</li>
+</ul></li>
+
+</ul>
+<hr />
+<em>Buffy (The I In Team, season 4) -- But I've learned that it pays to be flexible in life.</em>
+
+<h2>Python Configuration Example</h2><ul>
+
+<li>Create application</li>
+
+<li>Make it listen on port 80 for web requests...</li>
+
+<li>...which should be served from /var/www/htdocs</li></ul>
+
+<pre class="python">
+from twisted.internet import app
+from twisted.web import static, server
+
+application = app.Application('web')
+application.listenTCP(80,
+              server.Site(static.File("/var/www/htdocs")))
+</pre>
+<hr />
+<em>Willow (The Pack, season 1) -- It's simple, really.</em>
+
+<h2>Bannerfish -- A Case Study in Deployment</h2><ul>
+<li>Serves banner ads</li>
+
+<li>Has algorithms to maintain randomness and fairness</li>
+
+<li><a href="http://itamarst.org/software/bannerfish/">http://itamarst.org/software/bannerfish/</a></li>
+
+<li>But how to deploy?</li>
+
+</ul>
+<hr />
+<em>Xander (Halloween, season 2) --  Let's move out.</em>
+<h2>Bannerfish -- Standalone tap</h2><ul>
+<li>mktap bannerfish</li>
+
+<li>twistd -f bannerfish.tap</li>
+
+<li>For full list of options<ul><li>mktap --help bannerfish</li>
+</ul></li>
+
+</ul>
+<hr />
+<em>Ethan (Halloween, season 2) -- Don't wish to blow my own trumpet, but --</em>
+<h2>Bannerfish -- Standalone tap (behind reverse proxy)</h2><ul>
+<li>mktap bannerfish --port 81 --proxyhost=example.com</li>
+
+<li>twistd -f bannerfish.tap</li>
+
+<li>Now can work on internal server behind firewall</li>
+
+<li>If main server is Twisted Web, following Resource script will serve from bannerfish</li></ul>
+
+<pre class="python">
+resource = proxy.ReverseProxyResource('localhost', 81, '/')
+</pre>
+<hr />
+<em>Buffy (Halloween, season 2) -- You're sweet. A terrible liar, but sweet.</em>
+<h2>Bannerfish -- Standalone Python</h2>
+<pre class="python">
+from twisted.internet import app
+from twisted.cred import authorizer
+from twisted.web import server
+from bannerfish import service
+
+application = app.Application("bannerfish")
+auth = authorizer.DefaultAuthorizer(app)
+svc = service.BannerService('/var/bannerfish',
+                            "bannerfish", application, auth)
+site = server.Site(svc.buildResource(None, None))
+application.listenTCP(80, site)
+</pre>
+<hr />
+<em>Spike (Halloween, season 2) -- Shaking. Terrified. Alone. Lost little lamb.</em>
+<h2>Bannerfish -- /etc/twisted-web/local.d Drop In</h2>
+<pre class="python">
+from twisted.cred import authorizer
+from bannerfish import service
+
+auth = authorizer.DefaultAuthorizer(app)
+svc = service.BannerService('/var/bannerfish',
+                       "bannerfish", application, auth)
+resource = svc.buildResource(None, None)
+default.addChild("bannerfish", resource)
+</pre>
+<hr />
+<em>Cordelia (Halloween, season 2) -- Well, I guess you better get them back to their parents.</em>
+<h2>Bannerfish -- Resource Script</h2>
+<pre class="python">
+from twisted.cred import authorizer
+from twisted.internet import app
+from bannerfish import service
+
+application = registry.getComponent(app.Application)
+auth = authorizer.DefaultAuthorizer(application)
+svc = service.BannerService('/var/bannerfish',
+                           "bannerfish", application, auth)
+resource = svc.buildResource(None, None)
+</pre>
+<ul><li>But see later, about registry</li>
+
+</ul>
+<hr />
+<em>Xander (Innocence, season 2) -- They like to see the big guns.</em>
+<h2>Bannerfish -- Distributed (Slave)</h2>
+
+<pre class="python">
+from twisted.internet import application
+from twisted.cred import authorizer
+from twisted.web import server
+from bannerfish import service
+application = app.Application("bannerfish")
+auth = authorizer.DefaultAuthorizer(application)
+svc = service.BannerService('/var/bannerfish',
+                         "bannerfish", application, auth)
+site = server.Site(svc.buildResource(None, None))
+fact = pb.BrokerFactory(site)
+site = server.Site(root)
+application.listenUNIX('/var/run/bannerfish', fact)
+</pre>
+<h2>Bannerfish -- Distributed (Master, Resource Script)</h2>
+
+<pre class="python">
+from twisted.web import distrib
+
+resource = distrib.ResourceSubscription('unix',
+                        '/var/run/bannerfish')
+</pre>
+<hr />
+<em>Oz (Innocence, season 2) -- So, do you guys steal weapons from the Army a lot?</em>
+<h2>Bannerfish -- Other options</h2><ul>
+<li>Mix and match possible</li>
+
+<li>Can serve same content multiple ways simultaneously</li>
+
+<li>Might be useful as a way to serve same ads different ways</li>
+
+<li>...or serve ads from several bannerfish servers...</li>
+
+<li>...each deployed differently.</li>
+
+</ul>
+<hr />
+<em>Buffy (Tabula Rasa, season 6) -- I'm like a superhero or something</em>
+<h2>Bannerfish -- Conclusions</h2><ul>
+<li>What are the tradeoffs?</li>
+
+<li>Everything works in the simple cases</li>
+
+<li>Not enough complicated cases to have data</li>
+
+<li>Luckily, easy to move between them</li>
+
+<li>Motto -- move deployment choices as late as possible</li>
+
+</ul>
+<hr />
+<em>Giles (Killed By Death, season 2) -- Simple enough, but, but</em>
+<h2>Further Reading</h2><ul>
+<li>Short overview -- doc/howto/web-overview.html</li>
+
+<li>In depth review -- doc/howto/using-twistedweb.html</li>
+
+<li>Using databases -- doc/howto/enterprise.html</li>
+
+<li>Deferred execution -- doc/howto/deferred.html</li>
+
+<li>Resource script examples -- doc/examples/*.rpy.py</li>
+
+</ul>
+<hr />
+<em>Giles (I Was Made to Love You, Season 5) -- There's an enormous amount of research we should do before -- no I'm lying</em>
+<h2>Questions?</h2>
+<em>Vampire Willow (Dopplegangland, season 3): Questions? Comments?</em>
+<h2>Bonus Slides</h2>
+<em>Xander (The Dark Age, season 2) -- A bonus day of class plus Cordelia.</em>
+
+<h2>Python Configuration -- Hints</h2><ul>
+<li>Working with persistence</li>
+
+<li>Processors</li>
+
+<li>Indices</li>
+
+<li>Virtual Hosts</li>
+
+</ul>
+<hr />
+<em>Buffy (Phases, season 2) -- Have you dropped any hints?</em>
+<h2>Python Configuration -- Persistence</h2><ul>
+<li>Don't define functions or classes</li>
+
+<li>Don't modify class attributes</li>
+
+</ul>
+<hr />
+<em>Spike (Once More, With Feeling) -- Let me rest in peace</em>
+<h2>Python Configuration -- Processors</h2>
+<pre class="python">
+
+from twisted.internet import app
+from twisted.web import static, server
+from twisted.web import twcgi
+
+root = static.File("/var/www")
+root.processors = {".cgi": twcgi.CGIScript}
+application = app.Application('web')
+application.listenTCP(80, server.Site(root))
+</pre>
+<hr />
+<em>Manny (Doublemeat Palace, season 6) -- It's a meat process</em>
+<h2>Python Configuration -- Indices</h2>
+<pre class="python">
+
+root = static.File("/var/www")
+root.indices = ['index.rpy', 'index.html']
+</pre>
+<hr />
+<em>Willow (Buffy vs. Dracula, season 5) -- Labelling your amulets and indexing your diaries</em>
+<h2>Python Configuration -- Virtual Hosts</h2>
+<pre class="python">
+
+from twisted.web import vhost
+default = static.File("/var/www")
+foo = static.File("/var/foo")
+root = vhost.NamedVirtualHost(default)
+root.addHost('foo.com', foo)
+</pre>
+<hr />
+<em>Fritz (I Robot, You Jane, season 1) -- The only reality is virtual.</em>
+<h2>Python Configuration -- uber example</h2>
+<pre class="python">
+
+from twisted.internet import app
+from twisted.web import static, server, vhost, script
+
+default = static.File("/var/www")
+default.processors = {".rpy", script.ResourceScript}
+root = vhost.NamedVirtualHost(default
+foo = static.File("/var/foo")
+foo.indices = ['index.xhtml', 'index.html']
+root.addHost('foo.com', foo)
+site = server.Site(root)
+application = app.Application('web')
+application.listenTCP(80, site, interface='127.0.0.1')
+</pre>
+<hr />
+<em>Buffy (Potential, season 7) -- It was putting a lot of stock in that uber-vamp</em>
+<h2>Python Configuration -- Splitting With Reverse Proxy</h2><ul>
+<li>Original use case - SVN</li></ul>
+
+<pre class="python">
+from twisted.web import proxy
+
+root.putChild('foo',
+     proxy.ReverseProxyResource('localhost',
+                                81, '/foo/'))
+</pre>
+<hr />
+<em>Buffy (Once More, With Feeling, season 6 -- So I will walk through the fire</em>
+<h2>mktap examples</h2><ul>
+<li>mktap web</li>
+
+<li>mktap web --path=/var/www --logfile=/var/log/twistedweb.log</li>
+
+<li>mktap web --port=80 --path=/var/www --mime-type=text/plain</li>
+
+<li>mktap web --path=/home/nafai/public_html --processor=.pl=PerlProcessor.PerlProcessor --index=index.pl</li>
+
+</ul>
+<hr />
+<em>Anya (I Was Made to Love You, season 4) -- You can also see the website I designed for the magic shop</em>
+<h2>mktap examples (cont'd)</h2><ul>
+<li>mktap web --users</li>
+
+<li>mktap web --ignore-ext=.cgi</li>
+
+<li>mktap web --index=index.cgi --index=index.rpy --index=index.html</li>
+
+</ul>
+<hr />
+<em>Buffy (Once More, With Feeling, season 6) -- All the twists and bends</em>
+<h2>mktap examples (alternate formats)</h2><ul>
+<li>mktap --type=source web</li>
+
+<li>mktap --type=xml web</li>
+
+</ul>
+<hr />
+<em>Tara (Seeing Red, season 6) -- It isn't written in any ancient language we could identify.</em>
+<h2>mktap examples (setting uid)</h2><ul>
+<li>mktap --uid=33 web</li>
+
+<li>mktap --gid=33 web</li>
+
+<li>Uid/Gid of www-data on Debian systems</li>
+
+<li>Not possible to use username</li>
+
+<li>More about this later</li>
+
+</ul>
+<hr />
+<em>Buffy (Who Are You?, season 4) -- I would be Buffy</em>
+
+<h2>twistd examples</h2><ul>
+<li>twistd -f web.tap -l /var/log/twisted.log</li>
+
+<li>twistd -f web.tap --pidfile /var/run/web.pid</li>
+
+<li>twistd -x web.tax<ul><li>For mktap --type=xml</li>
+</ul></li>
+
+<li>twistd -s web.tas<ul><li>For mktap --type=source</li>
+</ul></li>
+
+</ul>
+<hr />
+<em>Xander (Teacher's Pet, season 1) -- How come *that* never came up?</em>
+<h2>Shutting down twistd</h2><ul>
+<li>On Unix (in general): <ul><li>kill `cat twistd.pid`</li>
+</ul></li>
+
+<li>On Windows: <ul><li>Cannot daemonize on Windows, so just run twistd in a command prompt</li>
+
+<li>Switch to the command prompt, and press Control-C</li>
+</ul></li>
+
+</ul>
+<hr />
+<em>Buffy (Prophecy Girl, season 1) --  I don't wanna die.</em>
+<h2>Shutdown TAPs</h2><ul>
+<li>Since TAPs store persistent data for an application, a 'shutdown' TAP is created on twistd shutdown</li>
+
+<li>You'll often want to start your Twisted application on subsequent runs with the shutdown TAP</li>
+
+</ul>
+<hr />
+<em>Headstone (The Gift, season 5) -- She saved the world. A lot.</em>
+<h2>twistd and security</h2><ul>
+<li>When twistd is run as root, it will shed root privileges for the uid and gid of either the user that created the TAP or those specified on the mktap commandline.</li>
+
+</ul>
+<hr />
+<em>Buffy (Dopplegangland, season 3) -- I think it's good to be reliable</em>
+
+<h2>Resource Call Examples</h2><ul>
+<li>/foo/bar/baz gets converted to:</li></ul>
+
+<pre class="python">
+site.getChild('foo', request
+   ).getChild('bar', request
+   ).getChild('baz', request
+   ).render(request)
+</pre>
+<hr />
+<em>Willow/Tara (Afterlife, Part 2, season 6) -- Child of words, hear thy makers</em>
+<h2>Resource Call Examples (cont'd)</h2><ul>
+<li>/foo/bar/baz/ gets converted to:</li></ul>
+
+<pre class="python">
+site.getChild('foo', request
+   ).getChild('bar', request
+   ).getChild('baz', request
+   ).getChild('', request
+   ).render(request)
+</pre>
+<hr />
+<em>Buffy (Gone, season 6) -- Stop trying to see me.</em>
+<h2>Distributed Servers -- Theory</h2><ul>
+<li>Master is a resource</li>
+
+<li>Slave is a server</li>
+
+<li>Same server can have both master and slave parts</li>
+
+</ul>
+<hr />
+<em>Anya (Once More, With Feeling, season 6) -- I've got a theory, it could be bunnies</em>
+<h2>Distributed Servers -- Manually</h2>
+<pre class="python">
+from twisted.internet import app, protocol
+from twisted.web import server, distrib, static
+from twisted.spread import pb
+
+application = app.Application("silly-web")
+# The "master" server
+site = server.Site(distrib.ResourceSubscription('unix', '.rp'))
+application.listenTCP(19988, site)
+# The "slave" server
+fact = pb.BrokerFactory(distrib.ResourcePublisher(
+           server.Site(static.File('static'))))
+application.listenUNIX('./.rp', fact)
+</pre>
+<hr />
+<em>Buffy (Some Assembly Required, season 2) -- Men dig up the corpses and the women have the babies.</em>
+<h2>Distributed Servers -- Manual (cont'd)</h2><ul>
+<li>First Server</li></ul>
+
+<pre class="python">
+from twisted.internet import app, protocol
+from twisted.web import server, distrib, static, vhost
+from twisted.spread import pb
+
+application = app.Application("ping-web")
+
+default = static.File("/var/www/foo")
+root = vhost.NamedVirtualHost(default)
+root.addVhost("foo.com", default)
+bar = distrib.ResourceSubscription('unix', '.bar')
+root.addVhost("bar.com", bar)
+
+fact = pb.BrokerFactory(static.Site(default))
+site = server.Site(root)
+application.listenTCP(19988, site)
+application.listenUNIX('./.foo', fact)
+</pre>
+<hr />
+<em>Buffy (Welcome to the Hellmouth, season 1) -- Now, we can do this the hard way, or...</em>
+<h2>Distributed Servers -- Manual (cont'd 2)</h2><ul>
+<li>Second Server</li></ul>
+
+<pre class="python">
+from twisted.internet import app, protocol
+from twisted.web import server, distrib, static, vhost
+from twisted.spread import pb
+
+application = app.Application("pong-web")
+
+foo = distrib.ResourceSubscription('unix', '.foo')
+root = vhost.NamedVirtualHost(foo)
+root.addVhost("foo.com", foo)
+bar = static.File("/var/www/bar")
+root.addVhost("bar.com", bar)
+
+fact = pb.BrokerFactory(static.Site(bar))
+site = server.Site(root)
+application.listenTCP(19989, site)
+application.listenUNIX('./.bar', fact)
+</pre>
+<hr />
+<em>Buffy (Welcome to the Hellmouth, season 1) -- ...well, actually there's just the hard way.</em>
+<h2>Distributed Servers -- User Directory</h2><ul>
+<li>A resource</li>
+
+<li>Child that looks like 'moshez' -- ~moshez/public_html </li>
+
+<li>Child that looks like 'moshez.twistd' -- moshez's personal server</li>
+
+</ul>
+<hr />
+<em>Master (The Wish, season 3) -- Mass production!</em>
+<h2>Distributed Servers -- User Directory Server</h2><ul>
+<li>With mktap: mktap web --user</li>
+
+<li>With Python configuration</li></ul>
+
+<pre class="python">
+from twisted.internet import app
+from twisted.web import static, server, distrib
+
+root = static.File("/var/www")
+root.putChild("users", distrib.UserDirectory())
+site = server.Site(root)
+application = app.Application('web')
+application.listenTCP(80, site)
+</pre>
+<hr />
+<em>Richard (Reptile Boy, season 2) -- In his name.</em>
+<h2>Distributed Servers -- Personal Servers</h2><ul>
+<li>With mktap: mktap web --personal ...</li>
+
+<li>With Python configuration</li></ul>
+
+<pre class="python">
+from twisted.internet import app
+from twisted.web import static, server, distrib
+from twisted.spread import pb
+
+root = static.File("/home/moshez/twistd")
+site = server.Site(root)
+
+fact = pb.BrokerFactory(distrib.ResourcePublisher(site))
+application.listenUNIX('/home/moshez/.twisted-web-pb', fact)
+</pre>
+<hr />
+<em>Giles (Bargaining, season 6) -- It's my personal collection</em>
+<h2>Debian Configuration</h2><ul>
+<li>Inside twisted-web package</li>
+
+<li>Goal -- look like other web servers to users</li>
+
+<li>Goal -- interoperate easily</li>
+
+<li>Goal -- allow users to avoid modifying files</li>
+
+</ul>
+<hr />
+<em>Buffy (Bad Girls, season 3) -- We can help each other.</em>
+<h2>Debian Configuration -- Usage</h2><ul>
+<li>Changing port -- edit /etc/twisted-web/ports</li>
+
+<li>Want to use behind reverse proxy? Use rptwisted</li>
+
+<li>Change anything else -- drop files in /etc/twisted-web/local.d</li>
+
+</ul>
+<hr />
+<em>Faith (Home Coming, season 3) -- we'll use 'em</em>
+<h2>Debian Configuration -- Drop In Examples</h2>
+<pre class="python">
+from twisted.web import static
+import os
+
+vhostDir = '/var/www/vhost/'
+
+for file in os.listdir(vhostDir):
+    root.addHost(file, static.File(os.path.join(vhostDir, file)))
+</pre>
+<hr />
+<em>Buffy (The Freshman, season 4) -- I just thought I'd drop in</em>
+<h2>Debian Configuration -- Drop In Examples (cont'd)</h2>
+<pre class="python">
+from twisted.web import script, static
+
+default.processors['.rpy'] = script.ResourceScript
+default.ignoreExt('rpy')
+</pre>
+<hr />
+<em>Riley (As You Were, season 6) -- Sorry to just drop in on you</em>
+<h2>Debian Configuration -- Drop In Examples (cont'd 2)</h2>
+<pre class="python">
+from twisted.web import vhost
+
+default.putChild('vhost', vhost.VHostMonsterResource())
+</pre>
+<hr />
+<em>Sam (As You Were, season 6) -- a hairy night drop into hostile territory</em>
+<h2>twistedmatrix.com Configuration</h2><ul>
+<li>Some highlights</li></ul>
+
+<pre class="python">
+...
+indexNames = ['index', 'index.html', 'index.xhtml', 'index.rpy','index.cgi']
+...
+root.putChild('mailman', twcgi.CGIDirectory('/usr/lib/cgi-bin'))
+root.putChild('users', distrib.UserDirectory())
+root.putChild('cgi-bin', twcgi.CGIDirectory('/usr/lib/cgi-bin'))
+root.putChild('doc', static.File('/usr/share/doc'))
+...
+uid = pwd.getpwnam('www-data')[2]
+gid = grp.getgrnam('www-data')[2]
+...
+top = rewrite.RewriterResource(root, rewrite.tildeToUsers)
+...
+application = app.Application("web", uid=uid, gid=gid)
+</pre>
+<hr />
+<em>Xander (The Witch, season 1) -- May all lesser cretins bow before me.</em>
+<h2>Apache vs. Twisted Web</h2><ul>
+<li>Apache is faster</li>
+
+<li>Apache -- Threads/processes model</li>
+
+<li>Twisted -- async model</li>
+
+<li>Apache -- has C security holes (buffer overflows)</li>
+
+<li>Twisted -- easy to set up</li>
+
+<li>Twisted -- built in Python programmability</li>
+
+</ul>
+<hr />
+<em>Willow (Buffy vs. Dracular, season 5) -- I think we've just put our finger on why we're the sidekicks</em>
+<h2>Apache/Twisted Web Integration</h2><ul>
+<li>Use both!</li>
+
+<li>Apache's reverse proxy works well</li>
+
+<li>Easy to have a site which is partially managed by Apache</li>
+
+<li>Documentation has examples of configurations</li>
+
+</ul>
+<hr />
+<em>Xander (What's My Line, season 2) -- Angel's our friend! Except I don't like him.</em>
+<h2>Zope vs. Twisted Web</h2><ul>
+<li>Zope -- fully editable through the web</li>
+
+<li>Zope -- uses ZODB, not file system</li>
+
+<li>Twisted -- can integrate with other protocols easily</li>
+
+<li>Twisted -- extension code has much less overhead</li>
+
+</ul>
+<hr />
+<em>Willow (Dopplegangland, season 3) -- Competition is natural and healthy</em>
+<h2>Zope/Twisted Web Integration</h2><ul>
+<li>Possible to use Twisted as Zope's network layer</li>
+
+<li>Hackish with Zope2</li>
+
+<li>Easier with Zope3</li>
+
+</ul>
+<hr />
+<em>Snyder (Dopplegangland, season 3) -- It's a perfect match.</em>
+<h2>Zope/Twisted Web Integration (cont'd)</h2><ul>
+<li>Less direct -- use Apache</li>
+
+<li>Reverse proxy parts to Zope</li>
+
+<li>Reverse proxy parts to Twisted Web</li>
+
+</ul>
+<hr />
+<em>Wesley (Dopplegangland, season 3) -- Still a little sloppy, though</em>
+<h2>Applications Appropriate for Twisted Web</h2><ul>
+<li>Webmail</li>
+
+<li>Blogs</li>
+
+<li>Web/other protocol chat systems</li>
+
+</ul>
+<hr />
+<em>Sweet (Once More, With Feeling) -- Why don't you come and play?</em>
+<h2>Behind Reverse Proxy</h2><ul>
+<li>Sometimes, we want Twisted to pretend to be another host/port</li>
+
+<li>Reverse proxies, NATs, etc.</li>
+
+<li>Reverse proxy to /vhost/http/&lt;host:port&gt;/</li>
+
+<li>Make sure root has a child called vhost of type twisted.web.vhost.VirtualHostingMonster</li>
+
+</ul>
+<hr />
+<em>Jenny (I Robot -- You Jane, season 1) -- The divine exists in cyberspace</em>
+<h2>Rewrite Rules</h2><ul>
+<li>Change a URL to another</li>
+
+<li>Useful for different treatment from outside resources</li>
+
+<li>Wraps a resource</li>
+
+</ul>
+<hr />
+<em>Spike (What's My Line, season 2) -- Read it again.</em>
+<h2>Rewrite Rules -- Example</h2>
+<pre class="python">
+
+root = static.File("/var/www")
+root.putChild("users", distrib.UserDirectory())
+root = rewrite.RewriterResource(root, rewrite.tildeToUsers)
+</pre>
+<ul><li>Now, /~moshez/ works</li>
+
+</ul>
+<hr />
+<em>Spike (What's My Line, season 2) -- I think it's just enough kill.</em>
+<h2>websetroot</h2><ul>
+<li>Used to change what the root of the server points to</li>
+
+<li>Set it to a Resource contained either in a Python source file or a Pickle file</li>
+
+</ul>
+<hr />
+<em>Manny (DoubleMeat Palace, season 6) -- We have a lot of turnover here</em>
+<h2>Sample websetroot command lines</h2><ul>
+<li>websetroot -p 80 -f web.tap --script rootResource.py</li>
+
+<li>websetroot -p 8080 -f web.tap --pickle rootPickle</li>
+
+</ul>
+<hr />
+<em>Manny (DoubleMeat Palace, season 6) -- You can toss it</em>
+<h2>init.d</h2><ul>
+<li>pidfile</li>
+
+<li>chdir</li>
+
+<li>chroot?</li>
+
+<li>No smooth reloading</li>
+
+<li>Persistence</li>
+
+</ul>
+<hr />
+<em>Bob (Zeppo, season 3) -- He hasn't been initiated.</em>
+<h2>Special Bonus - How to Configure &lt;user&gt;.example.com</h2>
+<pre class="python">
+import pwd, os
+from twisted.web import resource, error, distrib
+from twisted.protocols import http
+
+class UserNameVirtualHost(resource.Resource):
+
+    def __init__(self, default, tail):
+        resource.Resource.__init__(self)
+        self.default = default
+        self.tail = tail
+        self.users = {}
+
+    def _getResourceForRequest(self, request):
+        host=request.getHeader('host')
+        if host.endswith(tail):
+            username = host[:-len(tail)]
+        else:
+            username = default
+        if self.users.has_key(username):
+            return self.users[username]
+        try:
+            (pw_name, pw_passwd, pw_uid, pw_gid, pw_gecos, pw_dir,
+             pw_shell) = pwd.getpwnam(username)
+        except KeyError:
+            return error.ErrorPage(http.NOT_FOUND,
+                                   "No Such User",
+                          "The user %s was not found on this system." %
+                                   repr(username))
+        twistdsock = os.path.join(pw_dir, ".twistd-web-pb")
+        rs = distrib.ResourceSubscription('unix',twistdsock)
+        self.users[username] = rs
+        return rs
+
+    def render(self, request):
+        resrc = self._getResourceForRequest(request)
+        return resrc.render(request)
+
+    def getChild(self, path, request):
+        resrc = self._getResourceForRequest(request)
+        request.path=request.path[:-1]
+        request.postpath=request.uri.split('/')[1:]
+        print request, request.path, request.postpath
+        return resrc.getChildForRequest(request)
+</pre>
+<hr />
+<em>Morgan (The Puppet Show, season 1) -- Weird? What d'you mean?</em>
+<h2>Special Bonus - How to Configure &lt;user&gt;.example.com (cont'd)</h2><ul>
+<li>Put above in a module (say, uservhost)</li>
+
+<li>Use following configuration file</li></ul>
+
+<pre class="python">
+from twisted.internet import app
+from twisted.web import server
+import uservhost
+
+root = UserNameVirtualHost("www", "example.com")
+site = server.Site(root)
+application = app.Application('web')
+application.listenTCP(80, site)
+</pre>
+<hr />
+<em>Snyder (The Puppet Show, season 1) --  You need to integrate into this school, people.</em>
+<h2>Using the Twisted Registry</h2><ul>
+<li>Use especially in Resource Scripts</li>
+
+<li>Save persistent information</li>
+
+<li>Uses Twisted's Componentized to be extensible</li>
+
+</ul>
+<hr />
+<em>Angel (Helpless, season 3) -- I wanted to keep it safe</em>
+<h2>Using the Twisted Registry -- example</h2>
+<pre class="python">
+
+from twisted.web import distrib
+
+resource = registry.getComponent(distrib.UserDirectory)
+if not resource:
+    resource = distrib.UserDirectory()
+    registry.setComponent(distrib.UserDirectory, resource)
+</pre>
+<hr />
+<em>Paul (The Freshman, season 4) -- Do you know where they're distributing the [...] applications?</em>
+<h2>Using the Twisted Registry -- problems</h2><ul>
+<li>In most cases -- need to write a custom class</li>
+
+<li>Saves data in-memory</li>
+
+<li>Won't work as expected unless -shutdown taps are used</li>
+
+</ul>
+<hr />
+<em>Anya (Once More, With Feeling, season 6) -- The only trouble is [pause] I'll never tell.</em>
+<h2>Alternative Configuration Formats -- XML</h2><ul>
+<li>Can be generated from mktap</li>
+
+<li>Editable with any XML editor</li>
+
+<li>Easy to do easy things<ul><li>Change a port</li>
+</ul></li>
+
+<li>Nontrivial to do hard things<ul><li>Bind to specific IP</li>
+</ul></li>
+
+</ul>
+<hr />
+<em>Buffy (Once More, With Feeling, season 6) -- To fit in in this glittering world.</em>
+<h2>Alternative Configuration Formats -- XML -- example</h2>
+<pre class="python">
+&lt;?xml version="1.0"?&gt;
+
+&lt;instance class="twisted.internet.app.Application" reference="1"&gt;
+  &lt;dictionary&gt;
+...
+    &lt;string role="key" value="tcpPorts" /&gt;
+    &lt;list&gt;
+      &lt;tuple&gt;
+        &lt;int value="80" /&gt;
+        &lt;instance class="twisted.web.server.Site"&gt;
+          &lt;dictionary&gt;
+...
+            &lt;string role="key" value="resource" /&gt;
+            &lt;instance class="twisted.web.static.File"&gt;
+              &lt;dictionary&gt;
+...
+                &lt;string role="key" value="path" /&gt;
+                &lt;string value="/var/www" /&gt;
+...
+              &lt;/dictionary&gt;
+            &lt;/instance&gt;
+...
+          &lt;/dictionary&gt;
+        &lt;/instance&gt;
+...
+      &lt;/tuple&gt;
+    &lt;/list&gt;
+...
+  &lt;/dictionary&gt;
+&lt;/instance&gt;
+</pre>
+<hr />
+<em>Natalie (Teacher's Pet, season 1) -- There's nothing ugly about these creatures</em>
+<h2>Alternative Configuration Formats -- Source</h2><ul>
+<li>Can be generated from mktap</li>
+
+<li>Editable with any Python source editor</li>
+
+<li>Easy to do easy things<ul><li>Change a port</li>
+</ul></li>
+
+<li>Nontrivial to do hard things<ul><li>Bind to specific IP</li>
+</ul></li>
+
+</ul>
+<hr />
+<em>Willow/Giles/Xander (Primeval, season 4) -- You could never hope to grasp the source</em>
+<h2>Alternative Configuration Formats -- Source -- Example</h2>
+<pre class="python">
+app=Ref(1,
+  Instance('twisted.internet.app.Application',{
+...
+      'tcpPorts':[
+        (
+          80,
+          Instance('twisted.web.server.Site',
+...
+            resource=Instance('twisted.web.static.File',{
+...
+                'path':'/var/www',
+...
+          ),
+        ],
+...
+      }))
+</pre>
+<hr />
+<em>Tara (Family, season 5) -- You learn her source, and, uh we'll introduce her to her insect reflection</em>
+<h2>Twisted Web - Beginnings</h2>
+<pre class="python">
+
+&lt;glyphAtWork&gt; the http server was so we could say "Web!" if we ever did
+              a freshmeat announcement
+&lt;glyphAtWork&gt; this makes people excited
+</pre>
+<ul><li>Turned out he was right</li>
+
+</ul>
+<hr />
+<em>Dawn (Get It Done, season 7) -- I think it's an origin myth.</em>
+<h2>Woven Overview</h2><ul>
+<li>HTML templates</li>
+
+<li>Model/View/Controller architecture</li>
+
+<li>Integrated with deferred</li>
+
+<li>Classical systems work badly with async</li>
+
+<li>More -- beyond scope of this tutorial</li>
+
+</ul>
+<hr />
+<em>Razor (Bargaining, season 6) -- A pretty toy</em>
+</body></html>

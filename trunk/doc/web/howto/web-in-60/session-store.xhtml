@@ -1,0 +1,148 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Storing Objects in the Session</title>
+</head>
+
+<body>
+<h1>Storing Objects in the Session</h1>
+
+<p>This example shows you how you can persist objects across requests in the
+session object.</p>
+
+<p>As was discussed <a href="session-basics.xhtml">previously</a>, instances
+of <code class="API" base="twisted.web.server">Session</code> last as long as
+the notional session itself does. Each time <code class="API"
+base="twisted.web.server">Request.getSession</code> is called, if the session
+for the request is still active, then the same <code>Session</code> instance is
+returned as was returned previously. Because of this, <code>Session</code>
+instances can be used to keep other objects around for as long as the session
+exists.</p>
+
+<p>It's easier to demonstrate how this works than explain it, so here's an
+example:</p>
+
+<pre class="shell">
+>>> from zope.interface import Interface, Attribute, implements
+>>> from twisted.python.components import registerAdapter
+>>> from twisted.web.server import Session
+>>> class ICounter(Interface):
+...     value = Attribute("An int value which counts up once per page view.")
+...
+>>> class Counter(object):
+...     implements(ICounter)
+...     def __init__(self, session):
+...         self.value = 0
+...
+>>> registerAdapter(Counter, Session, ICounter)
+>>> ses = Session(None, None)
+>>> data = ICounter(ses)
+>>> print data
+&#060;__main__.Counter object at 0x8d535ec>
+>>> print data is ICounter(ses)
+True
+>>>
+</pre>
+
+<p><i>What?</i>, I hear you say.</p>
+
+<p>What's shown in this example is the interface and adaption-based
+API which <code>Session</code> exposes for persisting state. There are
+several critical pieces interacting here:</p>
+
+<ul>
+  <li><code>ICounter</code> is an interface which serves several purposes. Like
+    all interfaces, it documents the API of some class of objects (in this case,
+    just the <code>value</code> attribute). It also serves as a key into what is
+    basically a dictionary within the session object: the interface is used to
+    store or retrieve a value on the session (the <code>Counter</code> instance,
+    in this case).</li>
+  <li><code>Counter</code> is the class which actually holds the session data in
+    this example. It implements <code>ICounter</code> (again, mostly for
+    documentation purposes). It also has a <code>value</code> attribute, as the
+    interface declared.</li>
+  <li>The <code class="API"
+    base="twisted.python.components">registerAdapter</code> call sets up the
+    relationship between its three arguments so that adaption will do what we
+    want in this case.</li>
+  <li>Adaption is performed by the expression <code>ICounter(ses)</code>. This
+    is read as : adapt <code>ses</code> to <code>ICounter</code>. Because
+    of the <code>registerAdapter</code> call, it is roughly equivalent
+    to <code>Counter(ses)</code>. However (because of certain
+    things <code>Session</code> does), it also saves the <code>Counter</code>
+    instance created so that it will be returned the next time this adaption is
+    done. This is why the last statement produces <code>True</code>.</li>
+</ul>
+
+<p>If you're still not clear on some of the details there, don't worry about it
+and just remember this: <code>ICounter(ses)</code> gives you an object you can
+persist state on. It can be as much or as little state as you want, and you can
+use as few or as many different <code>Interface</code> classes as you want on a
+single <code>Session</code> instance.</p>
+
+<p>With those conceptual dependencies out of the way, it's a very short step to
+actually getting persistent state into a Twisted Web application. Here's an
+example which implements a simple counter, re-using the definitions from the
+example above:</p>
+
+<pre class="python">
+from twisted.web.resource import Resource
+
+class CounterResource(Resource):
+    def render_GET(self, request):
+        session = request.getSession()
+        counter = ICounter(session)
+        counter.value += 1
+        return "Visit #%d for you!" % (counter.value,)
+</pre>
+
+<p>Pretty simple from this side, eh? All this does is
+use <code>Request.getSession</code> and the adaption from above, plus some
+integer math to give you a session-based visit counter.</p>
+
+<p>Here's the complete source for an <a href="rpy-scripts.xhtml">rpy script</a>
+based on this example:</p>
+
+<pre class="python">
+cache()
+
+from zope.interface import Interface, Attribute, implements
+from twisted.python.components import registerAdapter
+from twisted.web.server import Session
+from twisted.web.resource import Resource
+
+class ICounter(Interface):
+    value = Attribute("An int value which counts up once per page view.")
+
+class Counter(object):
+    implements(ICounter)
+    def __init__(self, session):
+        self.value = 0
+
+registerAdapter(Counter, Session, ICounter)
+
+class CounterResource(Resource):
+    def render_GET(self, request):
+        session = request.getSession()
+        counter = ICounter(session)
+        counter.value += 1
+        return "Visit #%d for you!" % (counter.value,)
+
+resource = CounterResource()
+</pre>
+
+<p>One more thing to note is the <code>cache()</code> call at the top
+of this example. As with the <a href="http-auth.xhtml">previous
+example</a> where this came up, this rpy script is stateful. This
+time, it's the <code>ICounter</code> definition and
+the <code>registerAdapter</code> call that need to be executed only
+once. If we didn't use <code>cache</code>, every request would define
+a new, different interface named <code>ICounter</code>. Each of these
+would be a different key in the session, so the counter would never
+get past one.</p>
+
+</body>
+</html>

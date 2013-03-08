@@ -1,0 +1,122 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Session Endings</title>
+</head>
+
+<body>
+<h1>Session Endings</h1>
+
+<p>The previous two examples introduced Twisted Web's session APIs. This
+included accessing the session object, storing state on it, and retrieving it
+later, as well as the idea that the <code class="API"
+base="twisted.web.server">Session</code> object has a lifetime which is tied to
+the notional session it represents. This example demonstrates how to exert some
+control over that lifetime and react when it expires.</p>
+
+<p>The lifetime of a session is controlled by the <code>sessionTimeout</code>
+attribute of the <code>Session</code> class. This attribute gives the number of
+seconds a session may go without being accessed before it expires. The default
+is 15 minutes. In this example we'll change that to a different value.</p>
+
+<p>One way to override the value is with a subclass:</p>
+
+<pre class="python">
+from twisted.web.server import Session
+
+class ShortSession(Session):
+    sessionTimeout = 60
+</pre>
+
+<p>To have Twisted Web actually make use of this session class, rather
+than the default, it is also necessary to override
+the <code>sessionFactory</code> attribute of <code class="API"
+base="twisted.web.server">Site</code>. We could do this with another
+subclass, but we could also do it to just one instance
+of <code>Site</code>:</p>
+
+<pre class="python">
+from twisted.web.server import Site
+
+factory = Site(rootResource)
+factory.sessionFactory = ShortSession
+</pre>
+
+<p>Sessions given out for requests served by this <code>Site</code> will
+use <code>ShortSession</code> and only last one minute without activity.</p>
+
+<p>You can have arbitrary functions run when sessions expire,
+too. This can be useful for cleaning up external resources associated
+with the session, tracking usage statistics, and more. This
+functionality is provided via <code class="API"
+base="twisted.web.server">Session.notifyOnExpire</code>. It accepts a
+single argument: a function to call when the session expires. Here's a
+trivial example which prints a message whenever a session expires:</p>
+
+<pre class="python">
+from twisted.web.resource import Resource
+
+class ExpirationLogger(Resource):
+    sessions = set()
+
+    def render_GET(self, request):
+        session = request.getSession()
+        if session.uid not in self.sessions:
+            self.sessions.add(session.uid)
+            session.notifyOnExpire(lambda: self._expired(session.uid))
+        return ""
+
+    def _expired(self, uid):
+        print "Session", uid, "has expired."
+        self.sessions.remove(uid)
+</pre>
+
+<p>Keep in mind that using a method as the callback will keep the instance (in
+this case, the <code>ExpirationLogger</code> resource) in memory until the
+session expires.</p>
+
+<p>With those pieces in hand, here's an example that prints a message whenever a
+session expires, and uses sessions which last for 5 seconds:</p>
+
+<pre class="python">
+from twisted.web.server import Site, Session
+from twisted.web.resource import Resource
+from twisted.internet import reactor
+
+class ShortSession(Session):
+    sessionTimeout = 5
+
+class ExpirationLogger(Resource):
+    sessions = set()
+
+    def render_GET(self, request):
+        session = request.getSession()
+        if session.uid not in self.sessions:
+            self.sessions.add(session.uid)
+            session.notifyOnExpire(lambda: self._expired(session.uid))
+        return ""
+
+    def _expired(self, uid):
+        print "Session", uid, "has expired."
+        self.sessions.remove(uid)
+
+rootResource = Resource()
+rootResource.putChild("logme", ExpirationLogger())
+factory = Site(rootResource)
+factory.sessionFactory = ShortSession
+
+reactor.listenTCP(8080, factory)
+reactor.run()
+</pre>
+
+<p>Since <code>Site</code> customization is required, this example can't be
+rpy-based, so it brings back the manual <code>reactor.listenTCP</code>
+and <code>reactor.run</code> calls. Run it and visit <code>/logme</code> to see
+it in action. Keep visiting it to keep your session active. Stop visiting it for
+five seconds to see your session expiration message.</p>
+
+</body>
+</html>

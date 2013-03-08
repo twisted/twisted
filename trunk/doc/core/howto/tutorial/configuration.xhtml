@@ -1,0 +1,82 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>The Evolution of Finger: configuration and packaging of the finger service</title>
+  </head>
+<body>
+
+<h1>The Evolution of Finger: configuration and packaging of the finger service</h1>
+
+<h2>Introduction</h2>
+
+<p> This is the eleventh part of the Twisted tutorial <a
+href="index.xhtml">Twisted from Scratch, or The Evolution of Finger</a>.</p>
+
+<p>In this part, we make it easier for non-programmers to configure a finger
+server and show how to package it in the .deb and RPM package formats. Plugins
+are discussed further in the <a href="../plugin.xhtml">Twisted Plugin System</a>
+howto. Writing twistd plugins is covered in <a href="../tap.xhtml">Writing a
+twistd Plugin</a>, and .tac applications are covered in <a
+href="../application.xhtml">Using the Twisted Application Framework</a>.</p>
+
+<h2>Plugins</h2>
+
+<p>So far, the user had to be somewhat of a programmer to be able to configure
+stuff. Maybe we can eliminate even that? Move old code
+to <code>finger/__init__.py</code> and...</p>
+<p>
+Full source code for finger module here: <a class="py-listing"
+href="listings/finger/finger/finger.py">finger module</a>
+</p>
+
+<a href="listings/finger/finger/tap.py" class="py-listing">finger/tap.py</a>
+
+<p>And register it all:</p>
+
+<a href="listings/finger/twisted/plugins/finger_tutorial.py" class="py-listing">
+twisted/plugins/finger_tutorial.py
+</a>
+
+<p>Note that the second argument to <code class="API"
+base="twisted.application.service">ServiceMaker</code>,
+<code>finger.tap</code>, is a reference to a module
+(<code>finger/tap.py</code>), not to a filename.</p>
+
+<p>And now, the following works</p>
+
+<pre class="shell">
+% sudo twistd -n finger --file=/etc/users --ircnick=fingerbot
+</pre>
+
+<p>
+  For more details about this, see the <a href="../tap.xhtml">twistd plugin
+  documentation</a>.
+</p>
+
+<h2>OS Integration</h2>
+
+<p>If we already have the <q>finger</q> package installed in
+ <code>PYTHONPATH</code> (e.g.  we added it to <code>site-packages</code>), we
+can achieve easy integration:</p>
+
+<h3>Debian</h3>
+
+<pre class="shell">
+% tap2deb --unsigned -m "Foo &lt;foo@example.com&gt;" --type=python finger.tac
+% sudo dpkg -i .build/*.deb
+</pre>
+
+<h3>Red Hat / Mandrake</h3>
+
+<pre class="shell">
+% tap2rpm --type=python finger.tac
+% sudo rpm -i *.rpm
+</pre>
+
+<p>These packages will properly install and register <code>init.d</code>
+scripts, etc. for the given file.</p>
+
+<p>If it doesn't work on your favorite OS: patches accepted!</p>
+</body>
+</html>

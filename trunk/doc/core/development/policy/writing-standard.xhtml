@@ -1,0 +1,306 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>Twisted Writing Standard</title>
+  </head>
+
+  <body>
+    <h1>Twisted Writing Standard</h1>
+
+    <p>The Twisted writing standard describes the documentation writing
+    styles we prefer in our documentation. This standard applies particularly
+    to howtos and other descriptive documentation.</p>
+
+    <p>This document should be read with the <a
+    href="doc-standard.xhtml">documentation standard</a>, which describes
+    markup style for the documentation.</p>
+
+    <p>This document is meant to help Twisted documentation authors produce
+    documentation that does not have the following problems:</p>
+
+    <ul>
+    <li>misleads users about what is good Twisted style;</li>
+    <li>misleads users into thinking that an advanced howto is an introduction
+    to writing their first Twisted server; and</li>
+    <li>misleads users about whether they fit the document's target audience:
+    for example, that they are able to use enterprise without knowing how to
+    write SQL queries.</li>
+    </ul>
+
+    <h2>General style</h2>
+
+    <p>Documents should aim to be clear and concise, allowing the API
+    documentation and the example code to tell as much of the story as they
+    can. Demonstrations and where necessary supported arguments should always
+    preferred to simple statements (&quot;here is how you would simplify this
+    code with Deferreds&quot; rather than &quot;Deferreds make code
+    simpler&quot;).</p>
+
+    <p>Documents should be clearly delineated into sections and subsections.
+    Each of these sections, like the overall document, should have a single
+    clear purpose. This is most easily tested by trying to have meaningful
+    headings: a section which is headed by &quot;More details&quot; or
+    &quot;Advanced stuff&quot; is not purposeful enough. There should be
+    fairly obvious ways to split a document. The two most common are task
+    based sectioning and sectioning which follows module and class
+    separations.</p>
+
+    <p>Documentation must use American English spelling, and where possible
+    avoid any local variants of either vocabulary or grammar. Grammatically
+    complex sentences should ideally be avoided: these make reading
+    unnecessarily difficult, particularly for non-native speakers.</p>
+
+    <h2>Evangelism and usage documents</h2>
+
+    <p>The Twisted documentation should maintain a reasonable distinction
+    between &quot;evangelism&quot; documentation, which compares the Twisted
+    design or Twisted best practice with other approaches and argues for the
+    Twisted approach, and &quot;usage&quot; documentation, which describes the
+    Twisted approach in detail without comparison to other possible
+    approaches.</p>
+
+    <p>While both kinds of documentation are useful, they have different
+    audiences. The first kind of document, evangelical documents, is useful to
+    a reader who is researching and comparing approaches and seeking to
+    understand the Twisted approach or Twisted functionality in order to
+    decide whether it is useful to them. The second kind of document, usage
+    documents, are useful to a reader who has decided to use Twisted and
+    simply wants further information about available functions and
+    architectures they can use to accomplish their goal.</p>
+
+    <p>Since they have distinct audiences, evangelism and detailed usage
+    documentation belongs in separate files. There should be links between
+    them in 'Further reading' or similar sections.</p>
+
+    <h2>Descriptions of features</h2>
+
+    <p>Descriptions of any feature added since release 2.0 of Twisted core
+    must have a note describing which release of which Twisted project they
+    were added in at the first mention in each document. If they are not yet
+    released, give them the number of the next minor release.</p>
+
+    <p>For example, a substantial change might have a version number added in
+    the introduction:</p>
+
+    <blockquote>
+    This document describes the Application infrastructure for deploying
+    Twisted applications <em>(added in Twisted 1.3)</em>.
+    </blockquote>
+
+    <p>The version does not need to be mentioned elsewhere in the document
+    except for specific features which were added in subsequent releases,
+    which might should be mentioned separately.</p>
+
+    <blockquote>
+    The simplest way to create a <code>.tac</code> file, SuperTac <em>(added
+    in Twisted Core 99.7)</em>...</blockquote>
+
+    <p>In the case where the usage of a feature has substantially changed, the
+    number should be that of the release in which the current usage became
+    available. For example:</p>
+
+    <blockquote> This document describes the Application infrastructure for
+    deploying Twisted applications <em>(updated[/substantially updated] in Twisted
+    2.7)</em>.  </blockquote>
+
+    <h2>Linking</h2>
+
+    <p>The first occurrence of the name of any module, class or function should
+    always link to the API documents. Subsequent mentions may or may not link
+    at the author's discretion: discussions which are very closely bound to a
+    particular API should probably link in the first mention in the given
+    section.</p>
+
+    <p>Links between howtos are encouraged. Overview documents and tutorials
+    should always link to reference documents and in depth documents. These
+    documents should link among themselves wherever it's needed: if you're
+    tempted to re-describe the functionality of another module, you should
+    certainly link instead.</p>
+
+    <h2>Introductions</h2>
+
+    <p>The introductory section of a Twisted howto should immediately follow
+    the top-level heading and precede any subheadings.</p>
+
+    <p>The following items should be present in the introduction to Twisted
+    howtos: the introductory paragraph and the description of the target
+    audience.</p>
+
+    <h3>Introductory paragraph</h3>
+
+    <p>The introductory paragraph of a document should summarize what the
+    document is designed to present. It should use the both proper names for
+    the Twisted technologies and simple non-Twisted descriptions of the
+    technologies. For example, in this paragraph both the name of the technology
+    (&quot;Conch&quot;) and a description (&quot;SSH server&quot;) are used:</p>
+
+    <blockquote>
+    This document describes setting up a SSH server to serve data from the
+    file system using Conch, the Twisted SSH implementation.
+    </blockquote>
+
+    <p>The introductory paragraph should be relatively short, but should, like
+    the above, somewhere define the document's objective: what the reader
+    should be able to do using instructions in the document.</p>
+
+    <h3>Description of target audience</h3>
+
+    <p>Subsequent paragraphs in the introduction should describe the target
+    audience of the document: who would want to read it, and what they should
+    know before they can expect to use your document. For example:</p>
+
+    <blockquote>
+    <p>
+    The target audience of this document is a Twisted user who has a set of
+    filesystem like data objects that they would like to make available to
+    authenticated users over SFTP.
+    </p>
+    
+    <p>
+    Following the directions in this document will require that you are
+    familiar with managing authentication via the Twisted Cred system.
+    </p>
+    </blockquote>
+
+    <p>Use your discretion about the extent to which you list assumed
+    knowledge. Very introductory documents that are going to be among a
+    reader's first exposure to Twisted will even need to specify that they
+    rely on knowledge of Python and of certain networking concepts (ports,
+    servers, clients, connections) but documents that are going to be sought
+    out by existing Twisted users for particular purposes only need to specify
+    other Twisted knowledge that is assumed.</p>
+
+    <p>Any knowledge of technologies that wouldn't be considered &quot;core
+    Python&quot; and/or &quot;simple networking&quot; need to be explicitly
+    specified, no matter how obvious they seem to someone familiar with the
+    technology. For example, it needs to be stated that someone using
+    enterprise should know SQL and should know how to set up and populate
+    databases for testing purposes.</p>
+
+    <p>Where possible, link to other documents that will fill in missing
+    knowledge for the reader. Linking to documents in the Twisted repository
+    is preferred but not essential.</p>
+
+    <h3>Goals of document</h3>
+
+    <p>The introduction should finish with a list of tasks that the user can
+    expect to see the document accomplish. These tasks should be concrete
+    rather than abstract, so rather than telling the user that they will
+    &quot;understand Twisted Conch&quot;, you would list the specific tasks
+    that they will see the document do. For example:</p>
+
+    <blockquote>
+    <p>
+    This document will demonstrate the following tasks using Twisted Conch:
+    </p>
+    
+    <ul>
+    <li>creating an anonymous access read-only SFTP server using a filesystem
+    backend;</li>
+    <li>creating an anonymous access read-only SFTP server using a proxy
+    backend connecting to an HTTP server; and</li>
+    <li>creating a anonymous access read and write SFTP server using a
+    filesystem backend.</li>
+    </ul>
+    </blockquote>
+
+    <p>In many cases this will essentially be a list of your code examples,
+    but it need not be. If large sections of your code are devoted to design
+    discussions, your goals might resemble the following:</p>
+
+    <blockquote>
+    <p>
+    This document will discuss the following design aspects of writing Conch
+    servers:
+    </p>
+    
+    <ul>
+    <li>authentication of users; and</li>
+    <li>choice of data backends.</li>
+    </ul>
+    </blockquote>
+
+
+    <h2>Example code</h2>
+
+    <p>Wherever possible, example code should be provided to illustrate a
+    certain technique or piece of functionality.</p>
+
+    <p>Example code should try and meet as many of the following requirements
+    as possible:</p>
+
+    <ul>
+    <li>example code should be a complete working example suitable for copying
+    and pasting and running by the reader (where possible, provide a link to a
+    file to download);</li>
+    <li>example code should be short;</li>
+    <li>example code should be commented very extensively, with the assumption
+    that this code may be read by a Twisted newcomer;</li>
+    <li>example code should conform to the <a
+    href="coding-standard.xhtml">coding standard</a>; and</li>
+    <li>example code should exhibit 'best practice', not only for dealing with
+    the target functionality, but also for use of the application framework
+    and so on.</li>
+    </ul>
+
+    <p>The requirement to have a complete working example will occasionally
+    impose upon authors the need to have a few dummy functions: in Twisted
+    documentation the most common example is where a function is needed to
+    generate a Deferred and fire it after some time has passed. An example
+    might be this, where <code class="API"
+    base="twisted.internet.task">deferLater</code> is used to fire a callback
+    after a period of time:</p>
+
+    <pre class="python">
+    from twisted.internet import task, reactor
+    
+    def getDummyDeferred():
+        """
+        Dummy method which returns a deferred that will fire in 5 seconds with
+        a result
+        """
+        return task.deferLater(reactor, 5, lambda x: "RESULT")
+    </pre>
+
+    <p>As in the above example, it is imperative to clearly mark that the
+    function is a dummy in as many ways as you can: using <code>Dummy</code> in
+    the function name, explaining that it is a dummy in the docstring, and
+    marking particular lines as being required to create an effect for the
+    purposes of demonstration. In most cases, this will save the reader from
+    mistaking this dummy method for an idiom they should use in their Twisted
+    code.</p>
+    
+    <h2>Conclusions</h2>
+
+    <p>The conclusion of a howto should follow the very last section heading
+    in a file. This heading would usually be called &quot;Conclusion&quot;.</p>
+
+    <p>The conclusion of a howto should remind the reader of the tasks that
+    they have done while reading the document. For example:</p>
+
+    <blockquote>
+    <p>
+    In this document, you have seen how to:
+    </p>
+
+    <ol>
+    <li>set up an anonymous read-only SFTP server;</li>
+    <li>set up a SFTP server where users authenticate;</li>
+    <li>set up a SFTP server where users are restricted to some parts of the
+    filesystem based on authentication; and</li>
+    <li>set up a SFTP server where users have write access to some parts of
+    the filesystem based on authentication.</li>
+    </ol>
+    </blockquote>
+
+    <p>If appropriate, the howto could follow this description with links to
+    other documents that might be of interest to the reader with their
+    newfound knowledge. However, these links should be limited to fairly
+    obvious extensions of at least one of the listed tasks.</p>
+
+  </body>
+</html>
+

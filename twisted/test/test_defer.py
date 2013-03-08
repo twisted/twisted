@@ -2,7 +2,7 @@
 # See LICENSE for details.
 
 """
-Test cases for L{twisted.internet.defer}.
+Test cases for defer module.
 """
 
 from __future__ import division, absolute_import
@@ -13,7 +13,7 @@ from twisted.python.compat import _PY3
 from twisted.trial import unittest
 from twisted.internet import defer
 from twisted.python import failure, log
-
+from twisted.python.util import unsignedID
 
 class GenericError(Exception):
     pass
@@ -891,9 +891,9 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         representation of the internal Python ID.
         """
         d = defer.Deferred()
-        address = id(d)
+        address = hex(unsignedID(d))
         self.assertEqual(
-            repr(d), '<Deferred at 0x%x>' % (address,))
+            repr(d), '<Deferred at %s>' % (address,))
 
 
     def test_reprWithResult(self):
@@ -904,8 +904,8 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         d = defer.Deferred()
         d.callback('orange')
         self.assertEqual(
-            repr(d), "<Deferred at 0x%x current result: 'orange'>" % (
-                id(d),))
+            repr(d), "<Deferred at %s current result: 'orange'>" % (
+                hex(unsignedID(d))))
 
 
     def test_reprWithChaining(self):
@@ -918,8 +918,8 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         b = defer.Deferred()
         b.chainDeferred(a)
         self.assertEqual(
-            repr(a), "<Deferred at 0x%x waiting on Deferred at 0x%x>" % (
-                id(a), id(b)))
+            repr(a), "<Deferred at %s waiting on Deferred at %s>" % (
+                hex(unsignedID(a)), hex(unsignedID(b))))
 
 
     def test_boundedStackDepth(self):

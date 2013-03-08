@@ -11,6 +11,7 @@ import os, sys, signal, threading
 
 from twisted.trial.unittest import TestCase, SkipTest
 from twisted.internet.test.reactormixins import ReactorBuilder
+from twisted.python.compat import set
 from twisted.python.log import msg, err
 from twisted.python.runtime import platform, platformType
 from twisted.python.filepath import FilePath

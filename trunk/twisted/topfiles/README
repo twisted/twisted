@@ -1,0 +1,14 @@
+Twisted Core 12.3.0
+===================
+
+Twisted Core makes up the core parts of Twisted, including:
+
+ * Networking support (twisted.internet)
+ * Trial, the unit testing framework (twisted.trial)
+ * AMP, the Asynchronous Messaging Protocol (twisted.protocols.amp)
+ * Twisted Spread, a remote object system (twisted.spread)
+ * Utility code (twisted.python)
+ * Basic abstractions that multiple subprojects use
+   (twisted.cred, twisted.application, twisted.plugin)
+ * Database connectivity support (twisted.enterprise)
+ * A few basic protocols and protocol abstractions (twisted.protocols)

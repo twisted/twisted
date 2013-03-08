@@ -1,0 +1,52 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>Creating and working with a names (DNS) server</title></head>
+<body>
+<h1>Creating and working with a names (DNS) server</h1>
+
+<p>A Names server can be perform three basic operations:</p>
+
+<ul>
+<li>act as a recursive server, forwarding queries to other servers</li>
+<li>perform local caching of recursively discovered records</li>
+<li>act as the authoritative server for a domain</li>
+</ul>
+
+<h2>Creating a non-authoritative server</h2>
+
+<p>
+The first two of these are easy, and you can create a server that performs them
+with the command <code class="shell">twistd -n dns --recursive --cache</code>.
+You may wish to run this as root since it will try to bind to UDP port 53.  Try
+performing a lookup with it, <code class="shell">dig twistedmatrix.com
+@127.0.0.1</code>.
+</p>
+
+<h2>Creating an authoritative server</h2>
+
+<p>To act as the authority for a domain, two things are necessary: the address
+of the machine on which the domain name server will run must be registered
+as a nameserver for the domain; and the domain name server must be
+configured to act as the authority.  The first requirement is beyond the
+scope of this howto and will not be covered.
+</p>
+
+<p>To configure Names to act as the authority
+for <code>example-domain.com</code>, we first create a zone file for
+this domain.</p>
+
+<a href="listings/names/example-domain.com" class="py-listing">Zone file</a>
+
+<p>Next, run the command <code class="shell">twistd -n dns --pyzone
+example-domain.com</code>.  Now try querying the domain locally (again, with
+dig): <code class="shell">dig -t any example-domain.com @127.0.0.1</code>.
+</p>
+
+<p>Names can also read a traditional, BIND-syntax zone file.  Specify these
+with the <code>--bindzone</code> parameter.  The $GENERATE and $INCLUDE
+directives are not yet supported.
+</p>
+
+</body></html>

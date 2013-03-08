@@ -1,0 +1,206 @@
+.Dd May 22, 2004
+.Dt CONCH 1
+.Os
+.Sh NAME
+.Nm conch
+.Nd Conch SSH client
+.Sh SYNOPSIS
+.Nm conch
+.Op Fl AaCfINnrsTtVvx
+.Op Fl c Ar cipher_spec
+.Op Fl e Ar escape_char
+.Op Fl i Ar identity_file
+.Op Fl K Ar connection_spec
+.Bk -words
+.Oo Fl L Xo
+.Sm off
+.Ar port :
+.Ar host :
+.Ar hostport
+.Sm on
+.Xc
+.Oc
+.Ek
+.Op Fl l Ar user
+.Op Fl m Ar mac_spec
+.Op Fl o Ar openssh_option
+.Op Fl p Ar port
+.Bk -words
+.Oo Fl R Xo
+.Sm off
+.Ar port :
+.Ar host :
+.Ar hostport
+.Sm on
+.Xc
+.Oc
+.Ek
+.Oo Ar user Ns @ Ns Oc Ar hostname
+.Op Ar command
+.Sh DESCRIPTION
+.Nm
+is a SSHv2 client for logging into a remote machine and executing commands.  It provides encrypted and secure communications across a possibly insecure network.  Arbitrary TCP/IP ports can also be forwarded over the secure connection.
+.Pp 
+.Nm
+connects and logs into 
+.Ar hostname
+(as 
+.Ar user
+or the current username).  The user must prove her/his identity through a public\-key or a password.  Alternatively, if a connection is already open to a server, a new shell can be opened over the connection without having to reauthenticate.
+.Pp 
+If 
+.Ar command
+is specified, 
+.Ar command
+is executed instead of a shell.  If the 
+.Fl s
+option is given, 
+.Ar command
+is treated as an SSHv2 subsystem name. 
+.Ss Authentication
+Conch supports the public-key, keyboard-interactive, and password authentications.
+.Pp
+The public-key method allows the RSA or DSA algorithm to be used.  The client uses his/her private key,
+.Pa $HOME/.ssh/id_rsa
+or
+.Pa $HOME/.ssh/id_dsa
+to sign the session identifier, known only by the client and server.  The server checks that the matching public key is valid for the user, and that the signature is correct.
+.Pp
+If public-key authentication fails,
+.Nm
+can authenticate by sending an encrypted password over the connection.
+.Ss Connection sharing
+.Nm
+has the ability to multiplex multiple shells, commands and TCP/IP ports over the same secure connection.  To disable multiplexing for a connection, use the
+.Fl I
+flag.
+.Pp
+The
+.Fl K
+option determines how the client connects to the remote host.  It is a comma-separated list of the methods to use, in order of preference.  The two connection methods are 
+.Ql unix
+(for connecting over a multiplexed connection) and 
+.Ql direct 
+(to connect directly).
+To disable connecting over a multiplexed connection, do not include
+.Ql unix
+in the preference list.
+.Pp
+As an example of how connection sharing works, to speed up CVS over SSH:
+.Pp
+.Nm
+--noshell --fork -l cvs_user cvs_host
+.br
+set CVS_RSH=\fBconch\fR
+.Pp
+Now, when CVS connects to cvs_host as cvs_user, instead of making a new connection to the server,
+.Nm
+will add a new channel to the existing connection.  This saves the cost of repeatedly negotiating the cryptography and authentication.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl A
+Enables authentication agent forwarding.
+.It Fl a
+Disables authentication agent forwarding (default).
+.It Fl C
+Enable compression.
+.It Fl c Ar cipher_spec
+Selects encryption algorithms to be used for this connection, as a comma-separated list of ciphers in order of preference.  The list that
+.Nm
+supports is (in order of default preference): aes256-ctr, aes256-cbc, aes192-ctr, aes192-cbc, aes128-ctr, aes128-cbc, cast128-ctr, cast128-cbc, blowfish-ctr, blowfish, idea-ctr, idea-cbc, 3des-ctr, 3des-cbc.
+.It Fl e Ar ch | ^ch | none
+Sets the escape character for sessions with a PTY (default:
+.Ql ~ ) .
+The escape character is only recognized at the beginning of a line (after a newline).
+The escape character followed by a dot
+.Pq Ql \&.
+closes the connection;
+followed by ^Z suspends the connection;
+and followed by the escape character sends the escape character once.
+Setting the character to
+.Dq none
+disables any escapes.
+.It Fl f
+Fork to background after authentication.
+.It Fl I
+Do not allow connection sharing over this connection.
+.It Fl i Ar identity_spec
+The file from which the identity (private key) for RSA or DSA authentication is read.
+The defaults are
+.Pa $HOME/.ssh/id_rsa
+and
+.Pa $HOME/.ssh/id_dsa . 
+It is possible to use this option more than once to use more than one private key.
+.It Fl K Ar connection_spec
+Selects methods for connection to the server, as a comma-separated list of methods in order of preference.  See
+.Cm Connection sharing
+for more information.
+.It Fl L Xo
+.Sm off
+.Ar port : host : hostport
+.Sm on
+.Xc
+Specifies that the given port on the client host is to be forwarded to the given host and port on the remote side.  This allocates a socket to listen to
+.Ar port 
+on the local side, and when connections are made to that socket, they are forwarded over the secure channel and a connection is made to
+.Ar host
+port
+.Ar hostport
+from the remote machine.
+Only root can forward privieged ports.
+.It Fl l Ar user
+Log in using this username.
+.It Fl m Ar mac_spec
+Selects MAC (message authentication code) algorithms, as a comma-separated list in order of preference.  The list that
+.Nm
+supports is (in order of preference): hmac-sha1, hmac-md5.
+.It Fl N
+Do not execute a shell or command.
+.It Fl n
+Redirect input from /dev/null.
+.It Fl o Ar openssh_option
+Ignored OpenSSH options.
+.It Fl p Ar port
+The port to connect to on the server.
+.It Fl R Xo
+.Sm off
+.Ar port : host : hostport
+.Sm on
+.Xc
+Specifies that the given port on the remote host is to be forwarded to the given host and port on the local side.  This allocates a socket to listen to
+.Ar port 
+on the remote side, and when connections are made to that socket, they are forwarded over the secure channel and a connection is made to
+.Ar host
+port
+.Ar hostport
+from the client host.
+Only root can forward privieged ports.
+.It Fl s
+Reconnect to the server if the connection is lost.
+.It Fl s
+Invoke
+.Ar command
+(mandatory) as a SSHv2 subsystem.
+.It Fl T
+Do not allocate a TTY.
+.It Fl t
+Allocate a TTY even if command is given.
+.It Fl V
+Display version number only.
+.It Fl v
+Log to stderr.
+.It Fl x
+Disable X11 connection forwarding (default).
+.El
+.Sh AUTHOR
+Written by Paul Swartz <z3p@twistedmatrix.com>.
+.Sh "REPORTING BUGS"
+To report a bug, visit \fIhttp://twistedmatrix.com/bugs/\fR
+.Sh COPYRIGHT
+Copyright \(co 2002-2008 Twisted Matrix Laboratories.
+.br 
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.Sh SEE ALSO
+ssh(1)

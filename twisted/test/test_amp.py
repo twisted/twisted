@@ -12,6 +12,7 @@ import decimal
 from zope.interface import implements
 from zope.interface.verify import verifyClass, verifyObject
 
+from twisted.python.util import setIDFunction
 from twisted.python import filepath
 from twisted.python.failure import Failure
 from twisted.protocols import amp
@@ -1357,10 +1358,13 @@ class AMPTest(unittest.TestCase):
         otherProto = TestProto(None, "outgoing data")
         a = amp.AMP()
         a.innerProtocol = otherProto
+        def fakeID(obj):
+            return {a: 0x1234}.get(obj, id(obj))
+        self.addCleanup(setIDFunction, setIDFunction(fakeID))
 
         self.assertEqual(
-            repr(a), "<AMP inner <TestProto #%d> at 0x%x>" % (
-                otherProto.instanceId, id(a)))
+            repr(a), "<AMP inner <TestProto #%d> at 0x1234>" % (
+                otherProto.instanceId,))
 
 
     def test_innerProtocolNotInRepr(self):
@@ -1369,7 +1373,10 @@ class AMPTest(unittest.TestCase):
         is set.
         """
         a = amp.AMP()
-        self.assertEqual(repr(a), "<AMP at 0x%x>" % (id(a),))
+        def fakeID(obj):
+            return {a: 0x4321}.get(obj, id(obj))
+        self.addCleanup(setIDFunction, setIDFunction(fakeID))
+        self.assertEqual(repr(a), "<AMP at 0x4321>")
 
 
     def test_simpleSSLRepr(self):

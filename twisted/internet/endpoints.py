@@ -425,7 +425,7 @@ class TCP6ClientEndpoint(object):
 
     def _nameResolution(self, host):
         """
-        Resolve the hostname string into a tuple containing the host
+        Resolve the hostname string into a tuple containig the host
         IPv6 address.
         """
         return self._deferToThread(

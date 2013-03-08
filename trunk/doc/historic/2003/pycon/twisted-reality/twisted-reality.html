@@ -1,0 +1,578 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html>
+  <head>
+    <title>Twisted Reality: A Flexible Framework for Virtual Worlds</title>
+    <link href="stylesheet.css" type="text/css" rel="stylesheet" />
+  </head>
+  <body>
+    <h1>Twisted Reality: A Flexible Framework for Virtual Worlds</h1>
+
+      <ul>
+    <li>Allen Short
+<a href="washort@twistedmatrix.com">&lt;washort@twistedmatrix.com&gt;</a></li>
+    <li>Glyph Lefkowitz
+    <a href="glyph@twistedmatrix.com">&lt;glyph@twistedmatrix.com&gt;</a></li>
+      </ul>
+
+    <h2>Abstract</h2>
+    <p>Flexibly modelling virtual worlds in object-oriented languages has
+      historically been difficult; the issues arising from multiple
+      inheritance and order-of-execution resolution have limited the
+      sophistication of existing object-oriented simulations. Twisted
+      Reality avoids these problems by reifying both actions and
+      relationships, and avoiding inheritance in favor of automated
+      composition through adapters and interfaces.</p>
+
+    <h2>Motivation</h2>
+
+    <p>Text-based simulations have a long and venerable history, from
+    games such as Infocom's Zork and Bartle's MUD to modern systems
+    such as Inform, LambdaMOO and Cold. The general trend in the
+    development of these systems has been toward domain-specific
+    languages, which has largely been an improvement. However, a
+    discrepancy remains between systems for single-user and
+    multiple-user simulations: in single-user systems such as Inform,
+    incremental extensibility has been sacrificed to allow for complex
+    interaction with the world; whereas in multiple-user systems,
+    incremental extensibility is paramount, but it is achieved at the
+    cost of a much simpler model of interaction. Twisted Reality aims
+    to bring the sophistication of Inform's action model to multiuser
+    simulation.</p>
+
+
+<h2>The Twisted Component Model</h2>
+
+<p>Twisted's component system is almost identical to Zope 3's. The
+primary element is the interface, a class used as a point of
+integration and documentation. Classes may declare the interfaces they
+implement by setting their <code class="python">__implements__</code>
+attribute to a tuple of interfaces. Additional interfaces may be added
+to classes with <code
+class="python">registerAdapter(adapterClass,originalClass,interface)</code>;
+when <code class="python">getAdapter(obj, interfaceClass)</code> is
+called on an object, the adapter associated with that interface and
+class is looked up and instantiated as a wrapper around <code
+class="python">obj</code>. (Alternately, if <code
+class="python">obj</code> implements the requested interface, the
+original object is simply returned.)</p>
+
+<h3>Componentized</h3> 
+<p>In addition to the basic system of adapters and interfaces, Twisted
+has the <code class="python">Componentized</code> class. Instances of
+<code class="python">Componentized</code> hold instances of their
+adapters. This storage of adapter instances encourages separation of
+concerns; multiple related instances representing aspects of a
+simulation object can be automatically composed in a single
+Componentized instance.</p>
+
+<p><code class="python">Componentized</code> is the heart of Twisted
+Reality; it is subclassed by <code class="python">Thing</code>, the
+base class for all simulation objects.  Functionality is added to
+<code class="python">Thing</code>s with adapters; for example, the
+<code class="python">Portable</code> adapter adds the abilities to be
+picked up and dropped. </p>
+
+<p>By separating aspects of the simulation object into multiple
+instances, several improvements in ease of code maintenance can be
+realized. Persistence of simulation objects, for example, is greatly
+eased by <code class="python">Componentized</code>: each adapter's
+state can be stored in a separate database table or similar data
+store.</p>
+
+<h2>Parsing System</h2>
+
+<p>The key element missing from multiuser simulations' parsing systems
+is an abstract representation of actions. Current systems proceed
+directly from parsing the user's input to executing object-specific
+code. For example, LambdaMOO, one of the most popular object-oriented
+simulation frameworks, handles input using a non-customizable lexer
+which dispatches to parsing methods on simulation objects. The
+ColdCore framework, a similar effort, improves on this model by
+providing pattern-matching facilities for the lexer, but performs
+dispatch in essentially the same fashion. In contrast to these
+systems, Twisted Reality separates parsing from simulation objects
+entirely, keeping a global registry of parser methods which produce
+objects representing actions, rather than directly performing the
+actions. Adding this layer allows for more sophisticated parsing and
+sensitivity to ambiguity.</p>
+
+<p>The parser in <code class="python">reality.text.english</code> uses
+a relatively simple strategy: it keeps a parser registry which maps
+<q>verbs</q> (i.e., substrings at the beginning of the user input) to
+parser methods, and runs all methods whose prefixes match the input,
+collecting the actions they return. Parsing methods are added to the
+system by registering <code class="python">Subparser</code>s. </p>
+
+<pre class="python">class MusicParser(english.Subparser):
+    def parse_blow(self, player, instrumentName):
+        actor = player.getComponent(IPlayWindInstrumentActor)
+        if actor is None:
+            return []
+        return [PlayWindInstrument(actor, instrumentName)]
+
+english.registerSubparser(MusicParser())</pre>
+
+<p><code class="python">english.registerSubparser</code> collects
+      methods prefixed with <code class="python">parse_</code> from
+      the subparser and places them in the parsing registry.</p>
+
+<pre class="shell">a Room
+You see a rocket, a whistle, and a candle.
+Exits: a door, north
+bob: <b>blow whistle</b>
+You play a shrill blast upon a whistle.</pre>
+
+<p>Here is one of the simplest cases for the parser: <q><code
+class="shell">blow whistle</code></q> should obviously resolve to a
+single action, in this case <code class="python"
+>PlayWindInstrument</code>.</p>
+
+<p>The parser calls <code class="python">MusicParser.parse_blow</code>
+with the actor and the remainder of the input, and adds the list of
+actions it returns to the collection of possible actions. If only one
+action is possible, it immediately dispatches it. This strategy allows
+the parser to examine the state of the simulation before committing to
+a decision about what the player means. For example, the check for the
+actor interface is a simple form of permissions; if you don't
+implement the required interface, you aren't allowed to perform the
+action.</p>
+
+<p>Since this sort of parser is quite common, it has been generalized
+      to a simple mapping of command names to actions:</p>
+<pre class="python">class FireParser(english.Subparser):
+    simpleTargetParsers = {"blow": Extinguish}
+
+english.registerSubparser(FireParser())</pre>
+<pre class="shell">bob: <b>blow candle</b>
+You blow out a candle.
+</pre>
+<p>The real test of any parsing system of this nature, of course, is
+its ability to handle ambiguity. Since two possibilities for
+parsing a command starting with <q>blow</q> now exist, the parser has two
+potential actions to examine: <code class="python"
+>PlayWindInstrument</code> and <code class="python"
+>Extinguish</code>. Obviously, only <code class="python"
+>Extinguish</code> makes sense, and the parser determines this by
+examining the interfaces on the targets and rejecting actions for
+which the target is invalid.</p>
+
+<pre class="python">class ExplosivesParser(english.Subparser):
+    simpleToolParsers = {"blow": BlowUp}
+
+english.registerSubparser(ExplosivesParser())
+</pre>
+<pre class="shell">bob: <b>blow door</b>
+You fire a rocket at a door.
+*BOOM*!! 
+The door shatters to pieces!
+</pre>
+
+<p> The other common case is actions with three participants -- actor,
+target, and tool. The parser generated here is intelligent enough to
+look around for an appropriate tool (again, by examining interfaces)
+and include it in the action.</p>
+
+<p>Despite these techniques for disambiguating the user's meaning,
+situations will inevitably arise where multiple actions are equally
+valid parses. In these cases, the parser formats the list of potential
+actions and presents the choices to the user.</p>
+
+<pre class="shell">You see a short sword, and a long sword.
+bob: <b>get sword</b>
+Which Target?
+1: long sword
+2: short sword
+bob: <b>1</b>
+You take a long sword.</pre>
+
+<h2>Actions System</h2>
+
+
+<p>Actions in Twisted Reality, as in Inform, are objects representing
+a successful parse of a player's intentions. Actions are classified
+according to the number of objects they operate upon: <code
+class="python">NoTargetAction</code> (actions such as <code
+class="python">Say</code> or <code class="python">Look</code>), <code
+class="python">TargetAction</code> (e.g. <code
+class="python">Eat</code>, <code class="python">Wear</code>), <code
+class="python">ToolAction</code> (e.g. <code
+class="python">Open</code>, <code class="python">Take</code>). When
+actions are defined, interfaces corresponding to the possible roles in
+the action are also created. When an action is instantiated, it asks
+the participants in the action to adapt themselves to the actor,
+target, or tool interfaces, as appropriate. When dispatched, the
+action may call handler methods on the adapted objects or dispatch
+subsidiary actions.</p>
+
+<pre class="python">IDamageActor = things.IThing
+class Damage(actions.ToolAction):
+    def formatToActor(self):
+        with = ""
+        if self.tool:
+            with = " with ", self.tool
+        return ("You hit ",self.target) + with + (".",)
+    def formatToTarget(self):
+        with = ()
+        if self.tool:
+            with = " with ", self.tool
+        return (self.actor," hits you") + with + (".",)         
+    def formatToOther(self):
+        with = ""
+        if self.tool:
+            with = " with ", self.tool
+        return self.actor," hits ",self.target) + with + (".",)
+    def doAction(self):
+        amount = self.tool.getDamageAmount()
+        self.target.damage(amount)
+
+class Weapon(components.Adapter):
+    __implements__ = IDamageTool    
+    def getDamageAmount(self):
+        return 10
+
+class Damageable(components.Adapter):
+    __implements__ = IDamageTarget
+    def damage(self, amount):
+        self.original.emitEvent("Ow! that hurt. You take %d points of damage."
+                                % amount, intensity=1)
+class HarmParser(english.Subparser):
+    simpleToolParsers = {"hit":Damage}
+
+english.registerSubparser(HarmParser())
+components.registerAdapter(Damageable, things.Actor, IDamageTarget)</pre>
+
+<p><code class="python">actions.ToolAction</code>, via metaclass
+magic, creates three interfaces when subclasssed, named after the
+subclass: in this case, <code class="python">IDamageActor</code>,
+<code class="python" >IDamageTarget</code>, and <code
+class="python">IDamageTool</code>. However, since <code
+class="python">IDamageActor</code> already exists, the metaclass does
+ not clobber it. Setting <code class="python">IDamageActor</code> to
+<code class="python">IThing</code> indicates that any <code
+class="python">Thing</code> may perform the <code
+ class="python">Damage</code> action. The other elements of the action
+are represented here by <code class="python">Weapon</code> and <code
+class="python">Damageable</code> as the tool and the target,
+respectively. The <code class="python">HarmParser</code> adds a
+<q>hit</q> command, and the call to <code
+class="python">registerAdapter</code> ensures that any <code
+class="python">Actor</code>s who do not already have a 
+component implementing <code class="python">IDamageTarget</code> will
+receive a <code class="python">Damageable</code> when needed. 
+</p>
+<pre class="python">room = ambulation.Room("room")
+bob = things.Actor( "Bob")
+rodney = things.Actor("rodneY")
+sword = things.Movable("sword")
+
+sword.addAdapter(conveyance.Portable, True)
+sword.addAdapter(harm.Weapon, True)
+
+
+for o in rodney, bob, sword:
+    o.moveTo(room)
+</pre>
+
+<p>In this example, we create instances of <code
+class="python">Movable</code> <code class="python">Actor</code>
+(subclasses of <code class="python">Thing</code>), a <code
+class="python">Room</code>, then adds a <code
+class="python">Portable</code> adapter to the sword, allowing it to be
+picked up and dropped, as well as a <code class="python">Weapon</code>
+adapter, and finally moves all three into the room.</p>
+
+<pre class="shell">a room
+You see rodneY, and a sword.
+Bob: <b>get sword</b>
+You take a sword.
+Bob: <b>hit rodney with sword</b>
+You hit rodneY with a sword.</pre>
+
+<p>The parser instantiates the <code class="python">Damage</code>
+action with Bob, Rodney, and the sword as actor, target, and tool. The
+action is dispatched, calling <code
+class="python">Damage.doAction</code>, which inflicts damage upon
+Rodney. From Rodney's perspective:</p>
+
+<pre class="shell">a room
+You see Bob, and a sword.
+Bob takes a sword.
+Bob hits you with a sword.
+Ow! that hurt. You take 10 points of damage.
+rodneY:</pre>
+
+<p>The primary advantage of this actions system is that it provides a
+central point for dispatching object-specific behaviour in a
+customizable manner. This mechanism prevents order-of-execution
+problems: in other simulations of this type, combining multiple game
+effects is difficult since the connections between them are not made
+explicit. When confronted with ambiguity, TR's action system refuses
+to guess: all combinations of effects that make sense must be
+implemented separately. The Adapters system makes this manageable even
+in the face of arbitrarily extended complexity.</p>
+
+<p>Also, it allows for centralized handling of string formatting,
+instead of having each actor or target handle output of event
+descriptions. For example, suppose there is a zone prohibiting PvP
+combat. The <code class="python">Damage</code> action can suppress the
+usual messages describing combat (as well as the actual damage
+routines) since it is responsible for generating them.</p>
+
+
+<h2>Composing Simulations with Adapters</h2>
+
+<p>The combination of these features -- an incrementally extendable
+parser, actions as first-class objects, componentized simulation
+objects -- provide a powerful basis for the composition of simulations
+within a virtual world, often enabling extensions to the world and
+object behaviour without touching unrelated code. For example, to add
+armor that reduces damage to the simple combat simulation described
+above, we add an <code class="python">Armor</code> class which
+forwards the <code class="python">IDamageTarget</code> interface:</p>
+<pre class="python">class Armor(raiment.Wearable):
+    __implements__ = IDamageTarget,  raiment.IWearTarget, raiment.IUnwearTarget
+    originalTarget = None
+    armorCoefficient = 0.5
+    def dress(self, wearer):
+        originalTarget = wearer.getComponent(IDamageTarget)
+        if originalTarget:            
+            self.originalTarget = originalTarget
+            wearer.original.setComponent(IDamageTarget, self)
+
+    def undress(self, wearer):
+        if self.originalTarget:
+            wearer.setComponent(IDamageTarget, self.originalTarget)
+            
+    def damage(self, amount):
+        self.original.emitEvent("Your armor cushions the blow.", intensity=2)
+        if self.originalTarget:
+            self.originalTarget.damage(amount * self.armorCoefficient)</pre>
+
+<p><code class="python">Armor</code> inherits from the <code
+class="python">Wearable</code> adapter, and thus receives notification
+of the player wearing or removing it. When this happens, it forwards
+or unforwards the <code class="python">damage</code> method,
+respectively.</p>
+<pre class="shell">a room
+You see an armor, Bob, and a sword.
+rodneY: <b>take armor</b>
+You take an armor.
+rodneY: <b>wear armor</b>
+You put on an armor.
+Bob hits you with a sword.
+Your armor cushions the blow.
+Ow! that hurt. You take 5 points of damage.</pre>
+
+<p>In this fashion, the combat simulation can be extended to deal with
+various types of weapons, armor, damageable objects, and types of
+damage, with little or no changes to existing code.</p>
+
+<p> Now, let us consider a second type of simulation common to virtual
+ worlds: shops. We wish to prevent unpaid items from leaving the shop,
+ and to have a price associated with each item.</p>
+
+<pre class="python">
+class IVendor(components.Interface): pass
+class IMerchandise(components.Interface): pass
+
+class Buy(actions.TargetAction):
+    def formatToOther(self):
+        return ""
+    def formatToActor(self):
+        return ("You buy ",self.target," from ",self.vendor," for ",
+                self.target.price," zorkmids.")
+    
+    def doAction(self):
+        vendors = self.actor.original.lookFor(None, IVendor)
+        if vendors:
+            #assume only one vendor per room, for now
+            self.vendor = vendors[0]
+        else:
+            raise errors.Failure("There appears to be no shopkeeper here "
+                                 "to receive your payment.")
+        amt = self.target.price
+        self.actor.withdraw(amt)
+        self.vendor.buy(self.target, amt)
+
+class ShopParser(english.Subparser):
+    simpleTargetParsers = {"buy": Buy}
+english.registerSubparser(ShopParser())</pre>
+
+<p>The basic behaviour for buying an object in a shop is simple:
+first, a vendor is located, the price is looked up, then money is
+transferred from the buyer's account to the vendor's.</p>
+
+<pre class="python">class Customer(components.Adapter):
+    __implements__ = IBuyActor
+
+    def withdraw(self, amt):
+        "interface to accounting system goes here"
+        
+class Vendor(components.Adapter):
+    __implements__ = IVendor
+
+    def shoutPrice(self, merch, cust):
+        n = self.getComponent(english.INoun)
+        title = ('creature', 'sir','lady'
+                 )[cust.getComponent(things.IThing).gender]
+        merchName = merch.original.getComponent(english.INoun).name))
+        self.original.emitEvent('%s says "For you, good %s, only %d '
+                                'zorkmids for this %s."' % (n.nounPhrase(cust),
+                                                            title, merch.price,
+                                                            merchName))
+
+    def buy(self, merchandise, amount):
+        self.deposit(amount)
+        merchandise.original.removeComponent(merchandise)
+
+    def stock(self, obj, price):
+        m = Merchandise(obj)
+        m.price = price
+        m.owner = self
+        m.home = self.original.location
+        obj.addComponent(m, ignoreClass=1)
+
+    def deposit(self, amt):
+        "more accounting code"</pre>
+<p>The essential operations for management of shop inventory are
+<code class="python">Vendor.stock</code> and <code
+class="python">Vendor.buy</code>, which add and remove a <code
+class="python">Merchandise</code> adapter, which stores the
+state related to the shop simulation for the object (in this case, its
+price, its owner, and the location it lives).</p>
+       
+<pre class="shell">A weapons shop.  You see a long sword, and Asidonhopo.
+Exits: a Secret Trapdoor, down; a Security Door, north
+bob: <b>get sword</b>
+You take a long sword.
+Asidonhopo says "For you, good sir, only 100 zorkmids for this long sword."
+</pre>
+
+<p>To enforce our anti-theft policy, we put constraints on the exits
+to the shop.</p>
+<pre class="python">
+class ShopDoor(ambulation.Door):
+    def collectImplementors(self, asker, iface, collection, seen,
+                            event=None, name=None, intensity=2):
+        if iface == ambulation.IWalkTarget:
+            unpaidItems = asker.searchContents(None, IMerchandise)
+            if unpaidItems:                
+                collection[self] = things.Refusal(self, "You cant leave, "
+                                                        "you haven't paid!")
+                return
+                
+        ambulation.Door.collectImplementors(self, asker, iface,
+                                            collection, seen, event,
+                                            name, intensity)
+        return collection</pre>
+
+<p><code class="python">collectImplementors</code> is the means by
+which queries for action participants are accomplished. It is a rather
+general graph-traversal mechanism and thus takes a few arguments:
+<code class="python">asker</code> is the object that initiated the
+query. <code class="python">iface</code> is the interface the results
+must conform to, <code class="python">collection</code> is the results
+so far, and <code class="python">seen</code> is a collection of
+objects already visited. The check done here is fairly simple: it
+refuses queries for <code class="python">IWalkTarget</code>s (the
+interface needed for walking between rooms) if the asker contains
+things that implement <code class="python">IMerchandise</code>, in
+particular unpaid items. Otherwise, it passes on the query to its
+superclass.</p>
+
+<pre class="shell">bob: <b>go north</b>
+You cant leave, you haven't paid!</pre>
+
+<p>Here, the <q>Security Door</q> examines the actor's contents for
+objects implementing IMerchandise. Since the sword still has a
+Merchandise adapter attached, the passage is barred.</p>
+
+<pre class="shell">bob: <b>go down</b></pre> 
+
+<p>However, relying on the exits
+to contain merchandise is potentially error-prone; it demands knowing
+about all forms of locomotion in advance. If an unsecured exit from
+        the shop exists, or the player has the ability to teleport,
+        this form of security can be bypassed. Therefore, it is
+advantageous to have the Merchandise adapter itself keep the item
+within the shop.</p>
+
+<pre class="python">class Merchandise(components.Adapter):
+    __implements__ = IMerchandise, things.IMoveListener, IBuyTarget
+
+    def thingArrived(*args):
+        pass
+    def thingLeft(*args):
+        pass
+    def thingMoved(self, emitter, event):
+        if self.original == emitter and isinstance(event, conveyance.Take):
+            self.owner.shoutPrice(self, self.original.location)
+        if self.original.getOutermostRoom() != self.home:
+            self.original.emitEvent("The %s vanishes with a *foop*."
+                                    % self.getComponent(english.INoun).name)
+            self.original.moveTo(self.home)</pre>
+
+<p>When objects move, they broadcast events to nearby things
+        (where <q>nearby</q> is determined, again, by <code
+          class="python">collectImplementors</code>) that implement
+        <code class="python">IMoveListener</code>. In this case, the
+        <code class="python">Merchandise</code> adapter <q>listens</q>
+        for being picked up, and prompts the shopkeeper to quote the
+        price, and also checks to make sure it is contained by its
+        home room. If the player manages to leave the shop with unpaid
+        merchandise --</p>
+
+<pre class="shell">The long sword vanishes with a *foop*.</pre>
+
+<p>then it sets its location to its home room and informs the prospective
+shoplifter he no longer has his prize.</p>
+
+<h2>Future Directions</h2>
+
+<p>Current development efforts focus on enlarging the standard library
+of simulation objects and behaviour, developing web-based interfaces
+to the simulation, and improving the persistence layer. Possible
+extensions include client-side generation of action objects, enabling
+the development of graphical interfaces, or adapting the text system
+to other languages than English.</p>
+
+<h2>Conclusions</h2>
+
+<p>As seen in these examples, Twisted Reality provides features not
+found in other object-oriented simulation frameworks. The component
+model allows automatic aggregation of related objects; the actions
+system provides a mechanism for precise control of game effects; and
+the parser enables incremental extension of user input
+handling. Combined, they provide a powerful basis for modelling
+virtual worlds by composing simulations.</p>
+
+<h2>Acknowledgements</h2>
+<p>Thanks to Chris Armstrong and Donovan Preston for contributions to
+      Twisted Reality, and to Ying Li for editorial assistance.</p>
+
+<h2>References</h2>
+<ul>
+<li>Jason Asbahr, <a
+            href="http://asbahr.com/paper1html/paper1.html">Beyond: A
+            Portable Virtual World Simulation Framework</a>,
+          <i>Proceedings of the Seventh International Python
+            Conference</i> (1998).</li>
+
+<li>Pavel Curtis, <a
+            href="ftp://ftp.lambda.moo.mud.org/pub/MOO/ProgrammersManual.html"><i>LambdaMOO programmer's manual</i></a>, 1997.</li>
+<li> Jim Fulton, <a href="?">Zope Component Architecture</a></li>
+<li> Brandon Gillespie, <i><a
+              href="http://ice.cold.org:1180/bin/help?node=coldc">ColdC Reference Manual</a></i>, 2001.</li>
+<li>Glyph Lefkowitz, and Moshe Zadka, <q><a
+            href="http://twistedmatrix.com/doc/historic/ipc10paper">The Twisted Network Framework</a></q>, <i>Proceedings of the Tenth International Python Conference</i> (2002): 83.</li>
+<li>Graham Nelson, <i><a href="http://www.inform-fiction.org/manual/about_dm4.html">The
+            Inform Designer's Manual</a></i>. 4th ed. (St Charles, IL:
+          Interactive Fiction Library, 2001).</li>
+
+      </ul>
+
+  </body>
+</html>

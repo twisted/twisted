@@ -1,0 +1,92 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Custom Response Codes</title>
+</head>
+
+<body>
+<h1>Custom Response Codes</h1>
+
+<p>The previous example introduced <code class="API"
+base="twisted.web.error">NoResource</code>, a Twisted Web error resource which
+responds with a 404 (not found) code. This example will cover the APIs
+that <code>NoResource</code> uses to do this so that you can generate your own
+custom response codes as desired.</p>
+
+<p>First, the now-standard import preamble:</p>
+
+<pre class="python">
+from twisted.web.server import Site
+from twisted.web.resource import Resource
+from twisted.internet import reactor
+</pre>
+
+<p>Now we'll define a new resource class that always returns a 402 (payment
+required) response. This is really not very different from the resources that
+was defined in previous examples. The fact that it has a response code other
+than 200 doesn't change anything else about its role. This will require using
+the request object, though, which none of the previous examples have done.</p>
+
+<p>The <code class="API" base="twisted.web.server">Request</code> object has
+shown up in a couple of places, but so far we've ignored it. It is a parameter
+to the <code class="API" base="twisted.web.resource.Resource">getChild</code>
+API as well as to render methods such as <code>render_GET</code>. As you might
+have suspected, it represents the request for which a response is to be
+generated. Additionally, it also represents the response being generated. In
+this example we're going to use its <code class="API"
+base="twisted.web.http.Request">setResponseCode</code> method to - you guessed
+it - set the response's status code.</p>
+
+<pre class="python">
+class PaymentRequired(Resource):
+    def render_GET(self, request):
+        request.setResponseCode(402)
+        return "&lt;html&gt;&lt;body&gt;Please swipe your credit card.&lt;/body&gt;&lt;/html&gt;"
+</pre>
+
+<p>Just like the other resources I've demonstrated, this one returns a
+string from its <code>render_GET</code> method to define the body of
+the response. All that's different is the call
+to <code>setResponseCode</code> to override the default response code,
+200, with a different one.</p>
+
+<p>Finally, the code to set up the site and reactor. We'll put an instance of
+the above defined resource at <code>/buy</code>:</p>
+
+<pre class="python">
+root = Resource()
+root.putChild("buy", PaymentRequired())
+factory = Site(root)
+reactor.listenTCP(8880, factory)
+reactor.run()
+</pre>
+
+<p>Here's the complete example:</p>
+
+<pre class="python">
+from twisted.web.server import Site
+from twisted.web.resource import Resource
+from twisted.internet import reactor
+
+class PaymentRequired(Resource):
+    def render_GET(self, request):
+        request.setResponseCode(402)
+        return "&lt;html&gt;&lt;body&gt;Please swipe your credit card.&lt;/body&gt;&lt;/html&gt;"
+
+root = Resource()
+root.putChild("buy", PaymentRequired())
+factory = Site(root)
+reactor.listenTCP(8880, factory)
+reactor.run()
+</pre>
+
+<p>Run the server and visit <code>http://localhost:8880/buy</code> in your
+browser. It'll look pretty boring, but if you use Firefox's View Page Info
+right-click menu item (or your browser's equivalent), you'll be able to see that
+the server indeed sent back a 402 response code.</p>
+
+</body>
+</html>

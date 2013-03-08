@@ -41,6 +41,7 @@ from twisted.internet import reactor, protocol, task
 from twisted.persisted import styles
 from twisted.protocols import basic
 from twisted.python import log, reflect, text
+from twisted.python.compat import set
 
 NUL = chr(0)
 CR = chr(015)

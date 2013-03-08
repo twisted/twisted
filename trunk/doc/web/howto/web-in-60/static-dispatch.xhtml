@@ -1,0 +1,100 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Static URL Dispatch</title>
+</head>
+
+<body>
+<h1>Static URL Dispatch</h1>
+
+<p>The goal of this example is to show you how to serve different content at
+different URLs.</p>
+
+<p>The key to understanding how different URLs are handled with the resource
+APIs in Twisted Web is understanding that any URL can be used to address a node
+in a tree. Resources in Twisted Web exist in such a tree, and a request for a
+URL will be responded to by the resource which that URL addresses. The
+addressing scheme considers only the path segments of the URL. Starting with the
+root resource (the one used to construct the <code>Site</code>) and the first
+path segment, a child resource is looked up. As long as there are more path
+segments, this process is repeated using the result of the previous lookup and
+the next path segment. For example, to handle a request
+for <code>"/foo/bar"</code>, first the root's <code>"foo"</code> child is
+retrieved, then that resource's <code>"bar"</code> child is retrieved, then that
+resource is used to create the response.</p>
+
+<p>With that out of the way, let's consider an example that can serve a few
+different resources at a few different URLs.</p>
+
+<p>First things first: we need to import <code class="API"
+base="twisted.web.server">Site</code>, the factory for HTTP servers, <code
+class="API" base="twisted.web.resource">Resource</code>, a convenient base class
+for custom pages, and <code class="API" base="twisted.internet">reactor</code>,
+the object which implements the Twisted main loop. We'll also import <code
+class="API" base="twisted.web.static">File</code> to use as the resource at one
+of the example URLs.</p>
+
+<pre class="python">
+from twisted.web.server import Site
+from twisted.web.resource import Resource
+from twisted.internet import reactor
+from twisted.web.static import File
+</pre>
+
+<p>Now we create a resource which will correspond to the root of the URL
+hierarchy: all URLs are children of this resource.</p>
+
+<pre class="python">
+root = Resource()
+</pre>
+
+<p>Here comes the interesting part of this example. We're now going to
+create three more resources and attach them to the three
+URLs <code>/foo</code>, <code>/bar</code>, and <code>/baz</code>:</p>
+
+<pre class="python">
+root.putChild("foo", File("/tmp"))
+root.putChild("bar", File("/lost+found"))
+root.putChild("baz", File("/opt"))
+</pre>
+
+<p>Last, all that's required is to create a <code>Site</code> with the root
+resource, associate it with a listening server port, and start the reactor:</p>
+
+<pre class="python">
+factory = Site(root)
+reactor.listenTCP(8880, factory)
+reactor.run()
+</pre>
+
+<p>With this server running, <code>http://localhost:8880/foo</code>
+will serve a listing of files
+from <code>/tmp</code>, <code>http://localhost:8880/bar</code> will
+serve a listing of files from <code>/lost+found</code>,
+and <code>http://localhost:8880/baz</code> will serve a listing of
+files from <code>/opt</code>.</p>
+
+<p>Here's the whole example uninterrupted:</p>
+
+<pre class="python">
+from twisted.web.server import Site
+from twisted.web.resource import Resource
+from twisted.internet import reactor
+from twisted.web.static import File
+
+root = Resource()
+root.putChild("foo", File("/tmp"))
+root.putChild("bar", File("/lost+found"))
+root.putChild("baz", File("/opt"))
+
+factory = Site(root)
+reactor.listenTCP(8880, factory)
+reactor.run()
+</pre>
+
+</body>
+</html>
+

@@ -1,0 +1,103 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Session Basics</title>
+</head>
+
+<body>
+<h1>Session Basics</h1>
+
+<p>Sessions are the most complicated topic covered in this series of examples,
+and because of that it is going to take a few examples to cover all of the
+different aspects. This first example demonstrates the very basics of the
+Twisted Web session API: how to get the session object for the current request
+and how to prematurely expire a session.</p>
+
+<p>Before diving into the APIs, let's look at the big picture of
+sessions in Twisted Web. Sessions are represented by instances
+of <code class="API"
+base="twisted.web.server">Session</code>. The <code class="API"
+base="twisted.web.server">Site</code> creates a new instance
+of <code>Session</code> the first time an application asks for it for
+a particular session. <code>Session</code> instances are kept on
+the <code>Site</code> instance until they expire (due to inactivity or
+because they are explicitly expired). Each time after the first that a
+particular session's <code>Session</code> object is requested, it is
+retrieved from the <code>Site</code>.</p>
+
+<p>With the conceptual underpinnings of the upcoming API in place, here comes
+the example. This will be a very simple <a href="rpy-scripts.xhtml">rpy
+script</a> which tells a user what its unique session identifier is and lets it
+prematurely expire the session.</p>
+
+<p>First, we'll import <code class="API"
+base="twisted.web.resource">Resource</code> so we can define a couple of
+subclasses of it:</p>
+
+<pre class="python">
+from twisted.web.resource import Resource
+</pre>
+
+<p>Next we'll define the resource which tells the client what its session
+identifier is. This is done easily by first getting the session object
+using <code class="API" base="twisted.web.server">Request.getSession</code> and
+then getting the session object's uid attribute:</p>
+
+<pre class="python">
+class ShowSession(Resource):
+    def render_GET(self, request):
+        return 'Your session id is: ' + request.getSession().uid
+</pre>
+
+<p>To let the client expire its own session before it times out, we'll define
+another resource which expires whatever session it is requested with. This is
+done using the <code class="API" base="twisted.web.server">Session.expire</code>
+method:</p>
+
+<pre class="python">
+class ExpireSession(Resource):
+    def render_GET(self, request):
+        request.getSession().expire()
+        return 'Your session has been expired.'
+</pre>
+
+<p>Finally, to make the example an rpy script, we'll make an instance
+of <code>ShowSession</code> and give it an instance
+of <code>ExpireSession</code> as a child using <code class="API"
+base="twisted.web.resource">Resource.putChild</code>:</p>
+
+<pre class="python">
+resource = ShowSession()
+resource.putChild("expire", ExpireSession())
+</pre>
+
+<p>And that is the complete example. You can fire this up and load the top
+page. You'll see a (rather opaque) session identifier that remains the same
+across reloads (at least until you flush the <code>TWISTED_SESSION</code> cookie
+from your browser or enough time passes). You can then visit
+the <code>expire</code> child and go back to the top page and see that you have
+a new session.</p>
+
+<p>Here's the complete source for the example:</p>
+
+<pre class="python">
+from twisted.web.resource import Resource
+
+class ShowSession(Resource):
+    def render_GET(self, request):
+        return 'Your session id is: ' + request.getSession().uid
+
+class ExpireSession(Resource):
+    def render_GET(self, request):
+        request.getSession().expire()
+        return 'Your session has been expired.'
+
+resource = ShowSession()
+resource.putChild("expire", ExpireSession())
+</pre>
+
+</body>
+</html>

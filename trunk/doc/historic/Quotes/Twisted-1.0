@@ -1,0 +1,2623 @@
+December 5, 2000:
+Washort says, " $self._hasIntelligence()"
+Washort says, "1"
+Washort says, "*ponders setting that to 0 on certain people*"
+Maxwell says, "yes, that's our Ego-Enhancing API"
+ [this from before we had 'emote'.  I added it 10 minutes later. -ed]
+%
+You say, "I wanted to discourage people from using the [old] code as examples...".
+You say, "but I don't think that bad java style is going to damage your budding programming skills :)".
+* washort nods. 'I seriously hope not.' [see, i told you I added 'emote' -ed]
+Washort says, "Oh, did i ever tell you about the Java assignment i had at the beginning of the semester?"
+Washort says, "I was bored so i did it without any loops or temp variables."
+Washort says, "so... don't tell ME about bad style. ;)"
+%
+<glyph> it's times like this when I wish I could just swallow my pride and use a standard thing like asyncore :)
+%
+<jedin> Since it's completely unsolicited, I'd just like to add that anyone who tries implementing Keynesian economics in this game will be put behind the door with the Elder Sign....
+%
+<Nafai> I love Python.  It has made me look smart in this consulting job.  Because of how easily I was able to do what they need me to do, they ended up doubling my pay rate. :)  Woot!
+<glyph> Woot *indeed*, good sir. :)
+%
+<glyph> you know, when I say *now* I mean "in a minute" :)
+%
+Glyph: "You need to start working on Twisted Reality."
+Mike: "What makes you say that?"
+Glyph: "Because it pains me to hear you talk about how you were 'in the same bed as' someone on AIM.  There is no bed.  There is no spoon.  There's just some gay-ass peer-to-peer shit going on."
+%
+02:26:44 AreteComp: I've decided I'm going to warn you every 5 minutes until you go to bed.
+(You have been warned by AreteComp (5%))
+02:28:48 AreteComp: Tick, tick, motherfucker.
+%
+<washort> "TONIGHT on CELEBRITY DEATHMATCH: Kenaan vs The Shrike"
+%
+<washort> yow. autoconf can be *thorough* sometimes..
+<washort> "checking for EBCDIC... no"
+<washort> i hesitate to ask what it would have done had the answer been "yes"
+%
+<glyphAtWork> the http server was so we could say "Web!" if we ever did a freshmeat announcement
+<glyphAtWork> this makes people excited
+%
+FifthKow: jello is beyond good and evil
+%
+<washort> besides, we need a way to handle the cases of characters on drugs...
+%
+<jerji> sorry glyph, but I have to take away your dork award. det is far more deserving.:)
+%
+<det> glyph: you be on tomorrow ?
+<glyph> det: what, you think I'll suddenly grow a life?
+%
+<glyph> det: if it were any more generic it would be socket.socket
+-- (responding to det's request to make twisted.web more generic)
+%
+<glyph> GenericBoy: Dude, this is *python*... objects get created when you sneeze
+%
+<tenth> I get the feeling that I could rack up some ad impressions by posting an announcement to FM about a webserver "powered entirely by love, that I made out of this bong I had".
+<tenth> Well, as long as it did something really l88t that other bong-servers didn't do, anyway.
+%
+01:35:08 AreteComp:
+Before you finish linking, you must answer the following:
+Are you a Jew?[y/N]: y
+Nice try, Yid.
+%
+<samuel> oh why do you mock me rpm
+%
+<jerji> oh no!
+%
+<tpck> http://www.twistedmatrix.com/whatisdivunal.html << makes it sound likes its done and played by millions worldwide
+<washort> tpck: that's what ad copy is for
+%
+<tpck> glyph: I thought Enterprise Class Software wasn't supposed to crash?
+<glyph> tpck: It costs extra for the kind that doesn't crash, I think
+%
+<glyph> now you're probably wondering how to run cvs
+<samuel> actually i was thinking of naked women.
+<samuel> but sure.
+%
+<\\mimic> graydon: it's when you start constructing conditional branches in sed that the men in white coats come for you
+<graydon> mimic: been there, done that. wrote a qmail crypto extension in sed this summer :)
+%
+<jerji> dude tf programming, in my experience, was just about reading the help file and hacking something until it worked.
+<jerji>  not really the kind of place to employ software engineering principles. ;)
+%
+<denial> CanDoo: I would rather run a home trepaning centre than do tech support :)
+%
+<zedboy> washort "A given program in PERL is like a turd. you can see it. smell it. touch it. yuck! it's definitely a turd. it's compact. it's smelly. it's brown. a turd, thru and thru"
+<zedboy> washort "The *same* program in C/C++/Java/your favorite imperative language here is like a roll
+   of toilet paper, with the turd smeared *all over it*. you tear of one sheet. yuck! another sheet. ugh! another sheet. ewww! etc"
+ --- quoting Chet Murphy
+%
+<shapr> I get the feeling regexes in emacs are subtly different from python
+%
+<moshez> I'm not touching anything not abstracted from hardware at least two levels
+%
+<dreid> wh00t!
+<dreid> i made the quotefile!
+%
+<dreid> "lispachu, parentheses attack!"
+%
+<e@ircnet> internet
+%
+<washort> this was experimentally determined using an unholy combination of emacs, python's interactive mode, and bc
+%
+<smoke:#lisp> perhaps i should write a "Teach yourself CL in 21 days" book and hide from Peter Norvig for a few years
+%
+<GenericBoy> I'm not high!
+%
+<Mike_L> what is twisted python?
+<glyph> Mike_L: it's the python libraries your mother would use, if she were a programmer, had a lot of free time, and was very VERY patient
+%
+KaraNiSuru: Your opinion has differing degrees of importance to me.  On
+programming, it's almost like law; on fashion, it's unimportant; on cuteness,
+it serves only to warn me away.
+(addressed to glyph, from his girlfriend)
+%
+<washort> glyph: you're evil, too
+<glyph> washort: I try
+<washort> not the good kind of evil
+<washort> the other kind
+%
+<Yosomono@efnet> swing is to gui programming what cupholders are to cdrom drives
+<Yosomono@efnet> something easily mistaken for the real thing
+%
+<glyph> well, I'm working on divunal now
+<washort> and what are you doing to it?
+<glyph> I'm making the clouds work again
+<glyph> the clouds were always one of my favorite bits
+<washort> bah
+<washort> typical vapourware
+%
+<glyph> washort: I learned C from reading the E sources.
+<washort> glyph: well, i learned python from reading Zope
+<washort> glyph: so i think we're about equally damaged
+%
+--> glyph (glyph@adsl-64-123-27-108.dsl.austtx.swbell.net) has joined #python
+<glyph> yay for pushing the wrong button
+<washort> when will you xchat people learn
+<washort> silly hacker, irc is for terminals
+<washort> you dont see *me* typing '/quite' by accident ;)
+<-- washort has quit (either =))
+--> washort (washort@131.204.216.12) has joined #Python
+<washort> glyph: you bastard.
+%
+<GenericBoy> I wish I had enough knowledge to start working on this damn thing
+<GenericBoy> glyph: But you had to crush my hopes. ;)
+<GenericBoy> not that that's bad though, I am grateful for giving me a better
+perspective
+<glyph> GenericBoy: crushing hopes is what I do best
+<glyph> GenericBoy: you call me "glyph", but in ancient mesopotamia they called me the "eater of souls"
+%
+<glyph> many as-yet-untranslated pre-cuneform tablets will one day be
+translated to say "beware he who will write a webserver that will deprive you
+of your very will to live!"
+<glyph> GenericBoy: although I'm not sure if they were talking about me or
+marc andreissen
+%
+<GenericBoy> I'll be the t.w guy from now on
+<glyph> yay!
+<glyph> YAY!
+<glyph> SOMEBODY ELSE IS GOING TO MAINTAIN MY SOFTWARE
+<glyph> oh god I think I'm going to cry
+<GenericBoy> ack
+<washort> GenericBoy: i think that was a mistake :)
+* GenericBoy runs
+%
+<glyph> GenericBoy: * New in 0.8.0: carmstro's soul now comes with twisted.web
+%
+<jepler> C:
+<jepler>         char buf[1024]
+<jepler>         strcpy(buf, user_data)
+<jepler> Python:
+<jepler>         buf = user_data[:1024]
+<jepler>         if len(user_data) > 1024: security_hole(user_data[1024:])
+<jepler> actually, the translation is not difficult, so long as you implement security_hole() properly.
+%
+<LynchM0b> ... do u have an easier way
+<glyph> python ;-)
+<LynchM0b> thank the lord
+<LynchM0b> java is rediculous
+%
+<yy[Z]@efnet> i can say with all confidence that my python code was the
+fastest and tightest code on the whole java project i been on for the last year
+%
+<ben3> OO is a seductive failure.
+%
+<dreid> washort: i don't want to take over the world
+<dreid> i want to marry the chick who is going to take over the world
+%
+<demoncrat> forth is much better than sanity
+%
+<snibril> Tim can go on at length on issues which are not really the core of the problem, complicating said problem for himself and everybody else.
+<snibril> glyph: sounds like you ;)
+<glyph> snibril: the difference is there is rarely actually a problem, when I'm involved :)
+%
+<glyph> So if I understand you correctly you want software that will b-2-b education portal internet enterprise mission-critical!
+<muks> yep
+<glyph> Ah.  then you want Zope.
+%
+<shapr> glyph: ok, where's the tw tutorial?
+<glyph> shapr: feh, you think there is *documentation*?   You just need to be at harmony with the universe, and the api calls will come to you.
+<shapr> I just got a job writing Java. harmony is nowhere close to me.
+%
+<shapr> I just *love* your Python vs Java rant :) it's GREAT
+%
+<shapr> glyph: while reading through the last part of your rant, I got this mental picture of "Glyph Lefkowitz, Python Ninja" systematically chopping limbs off the JVM
+<shapr> glyph: the problem is that "don't expect your apps to run" was cutting the head off, and for cinematic effect, it should be on the bottom
+%
+<dreid> GenericBoy: but multiple eterms tailing various logfiles are great for making it look like your actually doing something :)
+<GenericBoy> hehe
+<dreid> i'm preparing myself for when i have to work in a corporate setting
+%
+<TomG> I'm in the wrong channel.
+%
+<dreid> Yoso: i like to think that i'm a fairly sane individual for a python programmer anyway
+%
+<glyph> snibril: I think we should put *you* in the unit tests dir.
+%
+<bram> have I mentioned there's a FRIGGIN BUTTLOAD of ways web input can go bad?
+%
+<washort> GenericBoy: if we knew what we were doing, we would not call it programming
+%
+<GenericBoy> Usually relying on magic buttons from the future doesn't work
+[in reply to something Mike_L said. --ed]
+%
+<blupingu> hi glyph. i'm trying out python because of twisted python :)
+%
+        newpath = os.path.join(self.path, path)
+        # forgive me, oh lord, for I know not what I do
+        p, ext = os.path.splitext(newpath)
+%
+<Nafai> There's a twisted python philosophy tutorial?
+<washort> Nafai: yes.... read it, expand your consciousness
+<obanta> It's actually a new religion
+%
+<glyph> washort: coding angry lends whole new meaning to song lyrics :)
+%
+<GenericBoy> what's the point of all of this?
+<glyph> GenericBoy: I don't know
+%
+<Acapnotic> [ Read Past Entries ] [ Modify an entry ] [ Write new entry ] [ Have me add one for you. ]
+<Acapnotic> include: [ ] generic angst [ ] relationship trouble (or lack thereof)
+            [ ] other family trouble [ ] cynical technology rants
+<Acapnotic> also bash: [ ] slashdot [ ] users [ ] sysadmins [ ] politicians [ ] voters
+<Cysgod> [ ] Perl
+
+ -- proposed new configuration interface for the standard twisted.web weblog
+%
+<moshez@ircnet> I'm going to write a treatise "girls as open-source projects".
+<moshez@ircnet> Instead of "reaching second-base", you're "writing patches".
+<moshez@ircnet> "So, are you writing patches for you-know-who?" "Well, no, but I'm using the CVS version"
+<moshez@ircnet> Should translate to "We're only kissing, but that's as serious as it got"
+%
+<dreid> watching a beautiful girl sleep is amazingly fun
+<dreid> more fun than coding
+<washort> do you mean 'more fun than coding Enterprise Applications in java', 'more fun than coding display hacks in C', or 'more fun than coding weblogs in python'?
+%
+        # ha ha, python can do lexical closures good enough for me
+        # (Bah. if these were lexical closures you wouldn't need the
+        # 'obj=obj',  and you could do 'return setdesc' and the
+        # function would still work after escaping. -was)
+        def setdesc(desc, obj=obj):
+            obj.description=desc
+%
+<_Krelin> Data hiding and encapsulation are at least in-laws, if not blood brothers
+<glyph> data hiding is encapsulation's shrewish mother-in-law
+%
+<dreid> Zope is pretty much the reason i learned PHP, (and TPy is the reason i stopped)
+%
+* Nafai doesn't think he is worthy of the quotefile
+<washort> you're in it twice
+%
+<washort@opn> "twisted python.... it's featurrific!"
+%
+<moshez> living is just syntactic sugar.
+%
+<det> glyph: what are you going to do now that UO2 is canceled ?
+<washort> det: take over the world
+<washort> det: same as before
+<det> washort: but thats what he was going to do last night
+<washort> det: glyph is a man of habit
+%
+<washort> who invented this "time zone" crap? everybody should be on IRC at once
+%
+--- washort has changed the topic to: | <-- you must be smarter than this stick to ride the internet
+%
+<Krelin> TwistedPython may, in fact, have both "enterprise" AND "internet"  ;)
+%
+<thirmite@efnet> nothing like a pop tart to remind me i live in a first world country
+%
+<glyph> yosomono: in fact, I'll turn this box of Cheese Nips and
+        this 3-liter bottle of Mountain Dew into a irc2web  interface
+%
+<h3x> actually i have clothes on
+<h3x> believe it or not
+%
+<\broken:#openprojects> geez that tomg bot is in here again
+<\broken:#openprojects> didn't we ban it a couple of times already
+%
+<Yosomono> uh, move zig zamboni to push grandma cats down the stairs to protect her/him from the terrible secret of space, which is that she/he can't skate?
+%
+<washort> o/` once i was the king of spain o/`
+* Acapnotic throws a humble pie at washort
+%
+<bram> the more I get into the art of design, the more I design things like I'm seven years old
+<bram> 'I don't want to do things that way because it's too hard'
+<bram> 'I wanna do it like this because I understand it'
+<bram> 'I'm ignoring that because it's scary'
+<bram> 'I don't want to work with him because he's a poopy-head'
+<bram> 'I don't want to use this because it smells like poo'
+<bram> 'this is no fun any more, I'm going home'
+%
+<cube> Greetings, O Twisted One
+%
+<Forest> Someone please tell me that this thing about P3K and Perl 6 is just a sick April Fool's joke
+<glyph> Forest: what, print>> wasn't a big enough hint?
+%
+* moshez lives to workaround design decisions made by others.
+(-- after just proposing to implement IRC over HTTP via Zope.)
+%
+ <idcmp>  /msg ry a/s/l
+%
+<glyph> okay, cvs is scaring me
+<det> glyph: when I was 5,  when the other children were going as ninjas and dracula,  I went as CVS!
+<glyph> det: you should have gone as SCCS
+<det> glyph: you gotta be a little cute to get the candy
+%
+<cube> If you are anal, and you love to be right all the time, C++ gives you a multitude of mostly untimportant details to fret about so you can feel good about yourself for getting them "right", while missing the big picture entirely
+%
+<cube> C++ extends the machine-efficiency requirement all the way up from
+       line-by-line implementation into entity abstraction as classes, it
+       corrupts far end of the coding spectrum with "efficiency" concerns.
+%
+<glyph> that's why I love IRC
+<glyph> you can't be late for IRC
+%
+<radix> uh oh.
+<radix> 'destroy here' isn't a good idea. :)
+%
+<radix> glyph: the problem with writing a framework for text universe is
+that text adventure authors want to do the craziest shit :)
+%
+<thirmite@efnet> are you jewish?
+<moshez> yes.
+<moshez> be afraid
+%
+<thirmite> btw, e, what are the girls like in .fi?
+<e@ircnet> bipedal, warm blooded, pink skinned, about 1.5-2.0 meters tall
+%
+<dash> jeffk isn't funny, the people who think he's real are funny. :)
+<thirmite> he isn't real?!?
+%
+<cyli> it'd be so cool.  i'd feel all l33t and shit
+%
+<dash> if they had neural interfaces to computers, we'd both be dead by now
+%
+<skreech> I declare myself god
+<skreech> the end
+%
+<radix> GenericBoy is no more
+<radix> I killed him, and have taken his place
+<Acapnotic> radix: whadja do with the body?
+<det> Acapnotic: killed in a metophorical sense
+<radix> that's what you think.
+<Acapnotic> What happened to the metaphorical body?
+<det> Acapnotic: the metaphorical body is decaying at the bottom of lake washington
+<radix> that's what he thinks.
+%
+ <dnm:#lisp> i'm convinced the core of loop [the Common Lisp facility] is a n-dimensional singularity and
+             that the common macro people implement is merrely the tessaract to loop's hypercube.
+%
+<radix> I'm an at least somewhat-educated dope fiend
+%
+<jedin> I figured your lasers would be a good impetus to action.
+<glyph> Don't forget about them.
+<glyph> They're hovering, just over your head... where you can't see them.  Remember that.
+<jedin> Okay.
+<jedin> Hm.  That could be a cool theme for a new breakfast cereal!
+%
+<moshez> glyph: I don't know anything about reality.
+%
+<Acapnotic> There are *many* differences between Texas and yogurt.  Texas is drier than yogurt.  Texas is larger than any amount of yogurt I've seen in one place at a time.  (or ALL the yogurt I've seen at ANY time).  Eating Texas would be less enjoyable than eating yogurt.
+<Acapnotic> Texas does not come in eight ounce plastic containers with tinfoil lids.  To the best of my knowledge, there is no "fruit on the bottom" version of Texas.  Texas is not available in the dairy section of your grocer.  Texas does not help fufill your daily dietary requirement of calcium.
+%
+<eAndroid> MAKE YOUR LOGO AL GORE ON A STICK
+%
+<dash> radix: the question is, do you _really_ want to do that? :)
+<radix> no, but I want to make other people do it
+%
+<Rainy-Day> i ascended several times.. once as a tourist without wishes or material transformations
+%
+<radix> dash: Hey, what do you think a good visual aid for a talk on anarcho-capitalism would be?
+<glyph> radix: a gun.
+<glyph> radix: correction: a gun and a big pile of money :)
+%
+<mothra> Most large software projects are disasters. Nothing new there.
+<dash> most large software projects use java or C++. not a coincidence.
+%
+<dash> the program isn't debugged until the last user is dead
+%
+<moshez> glyph: I prefer to think of it as a community project...since not every interface is equal
+<moshez> some interfaces are more equal then others.
+%
+<det> glyph: why not use xml? (only because it is sort of a python standard [dont kill me])
+%
+<LiquidAngle> can you do socket programming with python ?
+<dash> boy can you _ever_
+%
+<spiv> In python, you can, but in Java you can't.
+ [ this comment had context, but it's really just axiomatic --ed]
+%
+<faassen> I'm not a python luminary, I just play one on TV. :)
+%
+<h3x> but the point is, i dont have to juggle dlopen() bullshit
+<h3x> because that gets old real fast
+%
+<glyph> shapr-werk: I can't even imagine the hell of having to write java while quitting smoking.  I am behind you 100% ;)
+<shapr-werk> glyph: yah, anyone in front of me has already been mauled :-)
+%
+<Krelin> glyph: You have created a powerful solution for which there are no problems.  Everyone is impressed, but duly confused.
+%
+<radix> crack! *that's* what I need!
+%
+<glyph> I like writing code that overloads operators in python
+<e> get help
+%
+<Yosomono> rasterman is the millionth monkey
+%
+<solomon> john tesh get out of my head!
+%
+<dash> i want distributed everything
+<dash> yesterday
+%
+<parks> glyph please please dont jump on the P2P XML bandwagon
+<dash> parks: satan will be buying ice skates before glyph does that
+%
+<shapr> this is where I tell you to stop hyperfocussing on bad stuff and think about something nifty like metaclasses or sex
+%
+* itamar loves changing an object's own class at run time
+<snibril> itamar: and you eat little babies, too
+%
+<TQuid> So glyph is a master of the occult as well as the obscure.  :)
+%
+<glyph> "What?" "Take the red continuation." "What?" "Take the blue continuation." "Huh?" "Take the red continuation." "What?"...
+%
+* rik cheers for twisted python
+<rik> it's the easiest network coding toolkit I've come across
+<rik> as soon as you have the flash of inspiration as to how it works, you'll not look back
+%
+<dnm> ugh. linear cosmologist fever.
+%
+<e> we have powers that reach beyond the pickle
+%
+<TQuid> "No one expects the python acquisition!"
+%
+<laotse> I'm sorry. I used to be sane. Then I learned Perl and now I'm like this. ;)
+<dash> laotse: that's my excuse too
+<dash> laotse: that, and 4 years of university CS
+%
+ <h3x> i get my best programming done in the nude
+%
+<timmy> what is the recommended way to do client sockets in python
+<e2d2@ircnet> timmy: a chainsaw! AHAHAHAHA!
+* e2d2@ircnet goes back to sleep
+%
+<Acapnotic> No more doc about twist-dee, needs another page or three...
+<Acapnotic> You call this an application server?  This is a slide projector and a bedsheet!
+* Acapnotic is going to have to speak to Bob about this.
+%
+<phed> dash: that's the cool part of system programming, programming half-finished programs, and tell others you're finished
+%
+<dash> if i'm going to use an obscure language with poor system integration, it might as well be lisp
+%
+<radix> I feel so special when people quote me
+%
+<spiv> dash: so we need to wrap integers... Java does that too, so it can't be that bad ;)
+* dash doesn't know how to respond to that except with physical violence
+%
+<glyph> It's just like a method call, but ON FIRE AND UPSIDE DOWN!!!
+%
+<dash> design patterns in general are just java/c++ crutches
+<dash> which isn't to say they're useless. when your language is crippled you need crutches
+%
+<laotse> Java is the tell me when I've been bad language ;)
+%
+<e> so he is writing a python interpreter in python
+<firegod> dash: is he actually that evil?
+<dash> firegod: for glyph, this is relatively non-evil.
+%
+<gary> btw, my gcc compile line is gcc -o foo foo.o includes.o -lstdcxx is there I can cut that stdcxx out?  My executables are like half a meg.
+<glyph> nope
+<glyph> if you didn't want your executables to be huge and slow for no reason, you could stop using c++ :)
+%
+<glyph> the industry average per programmer/day is 10 lines
+<gary> yeah I know.  its sorta sad.
+<gary> have you ever wanted to, like, be part of the backstreet boys or something?  It would probably make life quite easier.  Or at least different.
+ [This is what C++ does to your brain, kids. -ed]
+%
+<red_one> PORK IS NOT A VERB.
+%
+* shapr reads market speak
+<shapr> Vertical navigation through business domain trees (classification trees).
+<shapr> Horizontal navigation through multidimensional classification trees.
+<shapr> I bet moshe wrote this advertising
+%
+<snibril> glyph: others do secret sex perversities, and you join #c++
+%
+<jumpy> we are the knights who say INT! SHORT! and UNSIGGGGGGGGGGGGGGGGNNNNNNNNNNNEDDDDDDDDDDDDD LONNNNNNNNNGGGGGG!
+%
+<saint_go@efnet> Why?
+<dash> because C++ is an excellent language for doing slow and late projects in. :)
+<makk@efnet> dash:  at least it's good for something. :)
+%
+KaraNiSuru: who needs a real live girl when you can get thousands of prettier girls displayed on a gorgeous 1365x768 resolution, 16.7 million color flat-panel plasma tv?
+%
+<radix> yeah, I saw that OBSOLETE_base attribute and thought to myself "Maybe glyph already tried this, and found that it sucks"
+%
+<jafo> Our fathers were our models for God. If they bailed, what does that tell you about God? You have to be prepared for the possibility that God does not like you.
+%
+<Acapnotic> ... whenever I hear anything in this channel that smacks my brain three feet into kata, chances are that glyph is the one that said it
+%
+<hunter> ... I'm execfile()'ing a file provided by j random sysadmin, so I'm pretty much holding a gun to my head.
+%
+<deeptape> I just got a vision of a version of Gaunlet that pits Pythonistas against an endless horde of C++ and Java zealouts
+<deeptape> Red Hacker needs Source, Badly
+%
+--> java (dutkiewicz@91.portland-01-02rs.or.dial-access.att.net) has joined #python
+<java> yes
+<-- java (dutkiewicz@91.portland-01-02rs.or.dial-access.att.net) has left #python
+<glyph> goodbye, java
+<glyph> hehe, that's surprisingly satisfying to say
+%
+<glyph> dash! dash! he's our man!  If he can't do it, we'll make him write in ASP until he dies!  bwahahhaha
+<dash> i hate you, milkman glyph
+%
+<thirmite> i have <glyph> and <dash> both subbed to the one message: <tpy> $1-
+%
+<glyph> so thirmite
+<glyph> it sounds like you have some issues
+<thirmite> duh i've been hanging around #python for around 4 years
+<thirmite> i have every issue possible
+%
+<Acapnotic> glyph: why are you being an asshole and insisting on seven bits instead of eight, anyway?
+<glyph> Acapnotic: because I gave up that bit in exchange for eternal life
+%
+<churchr> XML wasn't invented. It was excreted.
+%
+<faassen> I'm not a PSU agent.
+%
+<thirmite> i *think* i have a girlfriend
+%
+<dash> roey: i've got some code you should look at
+<dash> roey: http://twistedmatrix.com/
+<Acapnotic> dash: it's amazing how much you can make "I've got some code you
+should look at" sound like "do you have stairs in your house?"
+%
+<Mike_L> hmm ELF sounds complex =/
+* Mike_L hates file formats
+<Mike_L> i suppose I could just make my bytecode file format based on XML
+%
+<glyph> I am *not* a PSU agent.
+%
+<dash> glyph: nice people dont name functions "b1282int"
+%
+<jemfinch> I mean, if GNU wants everything to use guile, they should probably make it suck less.
+%
+<dash> i feel the power of the confusatron
+%
+<Yosomono> [Ying] is a fantastic artist, that's for certain.
+%
+<shapr> so, is the twisted crowd moving to Oz?
+<dash> shapr: no. Oz is coming to _us_
+%
+<h3x> why dosent someone write a rfc or w3 spec on server push text fields?
+<Acapnotic> look, everybody knows that "push" had it's chance, and it flunked.  Pushing failed.  Pushing is not the answer.
+<dash> Acapnotic: SHOVING IS THE ANSWER
+<Acapnotic> yes, shoving is the answer.  We must have shoving streaming media.  "I am the shover transport -- I push the newsfeed down their throats."
+%
+<mitiege> dash: where do you go to school?
+<tpck> mitiege: PSU
+<mitiege> tpck: didn't faassen go there too?
+%
+<eihrul> .NET is kinda the quickening
+%
+<shapr> we're all CODEpendant.
+%
+<robbe@ircnet> AttributeError: CMD
+<robbe@ircnet> what is here the failure?!?
+<radix> robbe: the 'cmd' object doesn't have a member named CMD
+<robbe@ircnet> radix: how i can make it?
+<radix> robbe: set us up the bomb
+%
+<M-x> sure, excessive use of the Emacs causes social problems
+<M-x> in understanding the trivial problems other people have
+<M-x> like you see them indenting a whole file of source code manually, or jumping between make output and trying to find the offending line
+%
+<dash> "COM Error: Errors occurred"
+* dash attacks ASP with a rusty hacksaw blade
+%
+<lyn:#lisp> making things fast generally seems to involve trading space for time
+<dan`b:#lisp> not so!  you're thinking like a typical lisp programer
+<dan`b:#lisp> you can also trade correctness, like any self-respecting C hacker
+%
+<shapr> dash: I know Python adds sanity points to me.
+<dash> shapr: reading glyph's code does not
+%
+<tireg> i see the light!!
+<tireg> AND IT BURNS!
+<dash> tireg: welcome to python
+%
+<Acapnotic> jemfinch: What's to parse?  A numeric code, perhaps a chicken, and some arguments
+%
+<Acapnotic> dash: yes, about that, do you have anything besides spam?
+<dash> Acapnotic: got spam, spam, internet, enterprise, and spam
+<dash> Acapnotic: that doesn't got _much_ spam
+%
+<itamar> if moshez ever gets into the Python RPG he'll have "different definitions of basic concepts leads to conflicts with everyone" as a disadvantage
+%
+<e@ircnet> meikan adsl:n asennus makso sentaan muistaakseni 3000 ja silta
+sedalta meni 10min :)
+<e@ircnet> oops, wrong channel
+<radix> eek
+<radix> scary words
+<dash> radix: ph34r the ph1nn1sh!
+%
+<matsaleh> glyph has been *trying* to bring me up to speed on twisted
+<matsaleh> all I know is that if he gets any smarter i'm in trouble
+<dash> matsaleh: we already are, i think
+%
+<moshez> glyph: what's Twisted Matrix Laboratories?
+<dash> moshez: the only enemy the PSU fears
+%
+<radix> scripts are just usually short programs that do a very specific thing
+<radix> that's why a lot of us people who use interpreted languages hate it when someone calls our language a "Scripting language" ;)
+<radix> (I mean, look at Twisted and call it a "script" with a straight face)
+%
+<Afterglow> glyth: what's odd is i keep getting a segfault and i don't know why
+<glyph> Afterglow: are you using C?
+<Afterglow> yes
+<glyph> Afterglow: ah.  There's your problem.
+%
+<peryklez> should i learn python?
+<moshez> peryklez: no. instead, you should be an anarcho-vegeterian.
+<moshez> peryklez: here, see this channel? Do you ever see us talking about Python? No! Because Python sucks.
+<glyph> peryklez: Yes.  You should learn python.
+<glyph> peryklez: Also, stay away from crack cocaine, which moshez is evidently smoking...
+%
+<radix> well, running it works well :>
+<glyph> radix: yeah, but don't ask what it does because it'll KILL YOU WITH
+ITS TEETH
+%
+<dnm_> Twisted tickles my high-level competent software design and concisely functional code that does something useful which was done poorly elsewhere in comparison bones.
+%
+<snibril> radix: i met some _professional_ (or supposed-to-be) admins that had probs even with "ldd"
+<dash> snibril: so, uh.... what did these guys _do_?
+<snibril> dash: ask stupid qs
+%
+<e@ircnet> on the internet the concepts of time and space lose meaning
+%
+<matsaleh> well, maybe we should evangelize a bit...
+<matsaleh> one thing to do would be to convince some kind of public site - techie oriented - to use twisted in some implementation
+<glyph> any ideas come to mind?
+<matsaleh> start small... google? :)
+%
+<radix> I was drinking tea before this job
+%
+<LcModerator:#live> <radix> have you heard of Twisted? Did you know that TwistedMatrix Laboratories is the only feared enemy of the PSU?
+<gvanrossum:#live> radix: I've heard of Twisted and even downloaded his code once, but I couldn't understand one bit of it.  Twisted, if you're here, sorry, but that's a fact.
+<gvanrossum:#live> The PSU, of course, doesn't exist.
+<dash:#python> radix: you're a bad, bad boy
+%
+<snibril> guido, when will you stop calling python a scripting language? ;)
+%
+<gvanrossum:#live> zilch: I'm a big fan of wxPython [...]
+<radix:#python> I no longer respect that man
+%
+<gvanrossum:#live> What afro?
+%
+<dash> jenn: you DONT FEEL LIKE PROGRAMMING? what's WRONG with you??
+%
+<Erwin> #python FAQ: How do I build X? A: Wait for twisted.X.
+%
+<thirmite> i'm in the psu!
+%
+<e> most people on irc are professional and shit.
+%
+<dash> glyph: maybe that'd stop, if we stopped denying that the PSU is real and is actually coordina~~4%~~..~*'#n`+>~~.]
+<-- dash has quit
+%
+<rbm> glyph: Now I want to get more to your side of the darkness >:->
+%
+* Nafai will vouch for the fact of glyph's being the master of the obscure
+%
+<churchr> glyph: So why can't you make that into a database?
+<glyph> churchr: I will set you on fire.
+%
+<skreech> I'm gonna kinda miss code red when its gone, my webpage has never gotten this many hits before
+%
+<Acapnotic> garble.  if I don't find a twisted.spread example soon, I might try to figure out what .spread is supposed to do by looking at the source directly
+<Acapnotic> which would probably be unhealthy
+<dash> Acapnotic: hey! i've been reading the source for the past month! didididididn't bother me at all!
+* dash giggles
+%
+<Acapnotic> hmm.  I wonder what would happen if you fed .bash_history to megahal and then set that as your shell.
+%
+<thirmite> the pull to IRC is so much less now i have my drivers license
+<dash> thirmite: so why are you telling _us_ that? ;)
+<thirmite> dash: who else am i gonna tell? :)
+%
+<thirmite> faassen: it was on the internet
+<faassen> thirmite: don't use the internet.
+<thirmite> i love the internet
+<h3x> pike, the language of your internet
+<Jii> what's internet?
+%
+<glyph> HELP ME SMALL CHILD I HAVE ATTEMPTED TO CREATE A WEB SERVER BUT I HAVE BECOME LOST
+%
+<glyph> I *hate* thinking.
+%
+<Acapnotic> Unlike BASIC, Python doesn't have circle-drawing and paint-fill operations either.
+%
+* glyph returns
+* rik wonders what glyph returns
+<radix> rik: NOT_DONE_YET
+%
+<thirmite> dash: i don't really IRC while drunk *anymore*
+%
+<_pHI_> what is twised.words? and why did i just create an account :) ?
+%
+<churchr> I don't know why you guys want to hurt people.
+<glyph> churchr: money, usually
+<dash> glyph: wow, i can get _paid_ to hurt people?
+<dash> they didn't mention this at Career Day
+%
+<glyph> ddent, the man who was born to program in python, but doesn't
+<dash> glyph: you're thinking of his evil twin, "ndent".
+<shapr> Python as Guido and ndent did.
+%
+<shapr> I am an object!
+%
+<glyph> you know, if I'm going to develop a massive cult of personality, I need to have a better website
+%
+<Inhibitor> this is commercial software - there are no security holes
+<Inhibitor> not like your crappy open source - written by students - stuff
+<glyph> right, I had forgotten
+%
+<e@ircnet> i have been known to occasionally infact say "internet".
+%
+<Yosomono@efnet> The next version of Shapr 0.96 will have integrated Twisted support.
+%
+<Yosomono@efnet> glyph: the colors! the colors! they're burning my eyes!
+%
+* shapr goes into his a capella techno rendition of "mission impossible"
+<shapr> doodle oooo.... doodlee ooo!!
+<radix> doodlee ooo??
+<radix> I don't remember that part
+<shapr> radix: yah, that's at the beginning
+<bitPoet> radix: that's before the duh-duh-duhduh-duh-duh-duhduh part
+%
+<bram> talking about the engineering of p2p apps is like talking about the engineering of red cars
+%
+<thirmite> well the only way i could think of a girl turning me into a vegetarian is by offering me continous sexual favours, but that wouldn't work on glyph because he has some sort of dignity
+%
+<glyph> no land wars in asia or sicilian blood feuds
+<glyph> or threads
+%
+<glyph> it's easy to be dogmatic when you're right and everyone else is an idiot
+%
+<e@ircnet> thirmite: we added window manager support to bridgette.
+<thirmite> e: i hope you're drunk
+%
+<e@ircnet> error handling is important, arguing tha silent failure is ok for "production systems" does not alleviate problems when something goes wrong with "production systems" :)
+%
+<h3x> everybody is left of something
+%
+<glyph> but one person's identity could have multiple perspectives
+<e@ircnet> multiple perspective disorder
+%
+<e@ircnet> glyph: that would make twisted the most buzzword compliant application server platform known to man!
+%
+<glyph> "Fetch me my internet pants."
+%
+<moshez> What is programming, if not fighting a world of idiotic design decisions?
+<moshez> And where can you find design decisions more idiotic?
+<glyph> moshez: landscaping
+<moshez> glyph: hmmm......point.
+%
+<eAndroid> Guido has been on crack for a while.
+<eAndroid> I think he bought some cheap stuff, that's all
+%
+<dash> this feels like saving christmas from santa claus
+  [on trying to prevent Guido from making python less dynamic]
+%
+<e@ircnet> fwiw writing a sexp parser in virtually any language is easier than learning to use xml libraries for that platform.
+%
+* Blackb|rd has been spoiled by years of C and C++ and the hideous exposition to Java 1.0.2
+<radix> Blackb|rd: not "spoiled", "mentally mutilated"
+%
+<glyph> CHECKED IN
+<radix> RUN!
+<glyph> GENERATE CODE!
+* dash runs around in circles screaming, then falls over
+<glyph> INTRODUCE INSTABILITY!
+<glyph> SUDDEN EXIT!
+%
+<adu> i'm a great hacker, but i'm horrible at thinking of things to hack
+<glyph> adu: you are my new best friend
+%
+<dash> wal-mart, purveyor of fine $9.48 chinese keyboards
+%
+<itamar|nyc> think positive thoughst and then cat /dev/urandom > file
+%
+* radix would rather go see glyph than Linus :-)
+<Viiru> radix: Why?
+%
+<dash> radix: you laugh a bit too quickly for someone who's working with a
+project with a business plan based on a pokey cartoon
+%
+<moshez> If I wanted to code with syntax highlighting, I'd just take LSD. 'My, what a green comment'
+%
+<dreid> twisted can do pretty much anything if glyph gets drunk enough
+%
+<deltab> glyph: there's something strangely fitting about being able to "from internet import delay"
+%
+<TQuid> Jesus shit.  Is there anything twisted doesn't do, or at least doesn't intend to do?
+<dash> tquid: XML.
+%
+<Acapnotic> What do you get out of writing docstrings if you can't confuse, mislead, and infuriate your audience?
+%
+<gt3> i thought i had mono once for an entire year, turned out it was cuz i was using Perl
+%
+<dash> det: our chief weapons are misinformation and asynchronous networking
+<det> dash: at least you can deliver it at maximum effieciency
+%
+<dash> (breaking encapsulation for fun and profit since 1998!)
+%
+<dash> bask in the rosy glow of my ignorance
+%
+<Tv> So, now there's my way, a simpler way, _and_ the correct way? I'm getting confused.
+<Tv> Back when I was a youngster, there was just my way and the correct way :)
+%
+<Yosomono@efnet> glyph: you're telling me I'm 6 months behind you?
+<Yosomono@efnet> glyph: that makes sense, considering the time lag between film releases in the US and Japan =)
+%
+<Yosomono@efnet> Twisted: Bring Out Yer Dead (Paradigms)
+%
+<Yosomono@efnet> Fuck, what's this world coming to?
+<thirmite> yosomono: obviously something less than good.
+%
+<Tv> Mwahahaa!
+<Tv> I can encode and decode arbitrary ASN.1 structures :)
+<e@ircnet> get help
+%
+<wondr> ever since they moved over to twisted google has seemed a little bit flaky
+%
+<itamar|nyc> twisted is what medusa should've been, I think
+%
+<moshez> glyph: yes, TCP connection forwarder is good.
+<illume> why not twisted.internet.tcp_forwarder then?
+<moshez> illume: because I wanted to use the word "stupid" in code.
+%
+e2d2 (~erno@2002:d432:8efa:0:0:0:0:1) joined on ircnet
+<e2d2@ircnet> internet 6!
+%
+<dash> web in my head get it out get it out
+%
+<radix> yosomono: One of these days, I'm going to actually see what you do
+<Yosomono> radix: You will turn to stone almost immediately
+%
+<mothra> i'm not sexist, women are just a pain in the ass
+%
+<eAndroid> win still has fork though right?
+<jepler> no
+<eAndroid> hmm. no wonder my daemons don't work
+%
+<jedin> Know any good informational/instructional sites on Prolog?
+<glyph> kill yourself now
+<jedin> But I just vacuumed!
+%
+<redoz> 2 years?
+<glyph> redoz: I've been working on twisted for a while
+<redoz> apparantly
+<chrchr> glyph: Most people in this channel haven't even been _alive_ for two years.
+%
+<glyph> BLOCKING OPERATIONS ARE NEVER VALID!
+<glyph> HAVE YOU SET YOUR SOCKET'S BLOCKING FLAG TO ZERO SMALL CHILD??
+%
+<shapr> I've never used a small child as a flag.
+<shapr> not even once.
+<glyph> shapr: MAKE SURE YOU BRING LOTS OF STAPLES!
+%
+<mothra> cars have the same beauty of form as women, without the nagging
+<glyph> mothra: maybe your issues with women stem from that misunderstanding
+<glyph> mothra: to start, women are *soft*, whereas cars are not
+%
+<radix> so are you coming to IPC10?
+<dash> if you, me, moshez, and glyph end up in the same room though, we may
+assemble into a giant robot and lay waste to virginia
+<dash> and that's always inconvenient
+%
+<mbac> would it be foolish of me to wish java banished to the depths of hell and in it's place is python?
+%
+<Rainy-Day> dash: i think you know what it means but for odd reasons make it
+look like you don't :P
+<radix> Rainy-Day: he does that a lot
+<radix> :>
+<Rainy-Day> yeah
+<Rainy-Day> it's annoying as hell!
+<dash> Rainy-Day: is it really?
+<Rainy-Day> yep..
+<dash> my plan has succeeded!!
+%
+<bitPoet> all of twisted is probably like 3 lines of apl
+%
+<radix> thirmite: we're not a 3rd world country. =)
+<dash> radix: not this week anyway
+%
+<glyph> let's have some more corporations
+<glyph> then we can absolve all individuals acting on their behalf of
+responsibility and collude with the government to steal money!
+<dash> glyph: YES! where do i sign up?
+<glyph> dash: www.microsoft.com, look for "passport"
+%
+<jafo> If java had real garbage-collection, it would delete most programs
+before it executed them.
+%
+<dash> (hacking implies the use of an edged tool, java isn't sharp ;)
+%
+(context: http://yellow5.com/pokey/archive/index76.html)
+[glyph] pokey's taste for the cereal reminds me of my own preference for python :-)
+[glyph] "GLYPH THEY ARE USING WOOD GLUE AS AN OBJECT MODEL!"
+[glyph] "I WANT ANOTHER INSTANCE"
+%
+<liiwi> hrmpf. python compared to to perl is like c++ compared to c
+<dash> liiwi: so, which are you implying? that C++ is a good thing, or that
+python is a bad thing?
+<dash> liiwi: either way we have to kill you, i think
+%
+<radix> It's gonna take a lot of effort ripping reality apart
+<glyph> it's going to be almost as hard to stand idly by while you do so :-)
+<radix> I kill you!
+<glyph> no, you kill my CODE :-)
+%
+<Rainy-Day> no? jesus was like, love thy neighbour and shit
+%
+<spiv> NeuroMorphus: That's not really meaningful, though.
+<NeuroMorphus> spiv: it's not a matter of meaning, it's an assignment
+%
+<radix> man, Rune better kick ass
+<radix> this demo I'm downloading is *90MB*
+<radix> games are so huge these days
+<radix> In my time a game that filled up a whole 1.4MB diskette was big!
+<Erwin> You know what else I noticed? Today's 21" monitors are bigger than
+yesterday's 14" monitors :)
+<radix> bah :)
+%
+<bitPoet> the full name of the enterprise is probably something buzzword-
+compliant like "scalable enterprise java interspacial XML warp drive", it's
+just "enterprise" for short  :-)
+%
+<dnm> Someone quote me already.
+<dnm> I'm trying to plithy.
+%
+<skreech> some say there is documentation in them there hills
+%
+<Acapnotic> "Required course materials: 1 copy of 'Java and You', an installation of JBuilder+, and a HID vomit-proofing kit for each workstation you will use."
+%
+<glyph> jafo: Are you ircing as you *DRIVE*!?
+<dash> glyph: well, duh
+<dash> glyph: cant pull over every time you want to say something
+%
+<glyph> h3x: so... you're a professional extortionist?
+<h3x> pretty much
+<glyph> h3x: do you offer professional apprenticeships?
+<h3x> i should
+<dash> glyph: gah, you beat me to it
+%
+<glyph> dash: So while we're on the subject, are there features you feel the PB protocol lacks at its lowest level that you might find useful?
+<Acapnotic> (Like the "YOU FUCKED UP AN SUBCLASSED THE WRONG THING, MORON!" feature? :)
+<glyph> Acapnotic: If python had decent metaclasses, ViewPoint would scream profanity at you personally, but until that time, I'll have to do it by proxy.
+<glyph> Acapnotic: Do you have a phone in your house? ;-)
+<Acapnotic> glyph: Yeah, it's right by the stairs.  Why do you ask?
+%
+<itamar> stuouid keyboard hates me
+%
+<Nanosecond> And BTW, we taliban guys use Macs. All of us.
+%
+<Gand> <sigh> ... first day as a python programer and already I have to start writing my own functions ...
+%
+<Acapnotic> My computer is playing reggae out of thin air!
+%
+<e@ircnet> pcmC0D0c  pcmC0D0p  pcmC0D1p  pcmC0D2c  pcmC0D2p
+<glyph> e: are those the lyrics to some weird finnish music?
+<e@ircnet> glyph: not yet
+%
+<dash> guess there's a fine line between "tilting at windmills" and "hitting the fan"
+%
+<thirmite> what's a web widget??
+<glyph> thirmite: internet on a stick, on fire
+<Acapnotic> with web sauce!
+%
+<thirmite> bea: how are you?
+<bea> thirmite: not bored
+<thirmite> then why are you on IRC? ;)
+%
+<Acapnotic> something's wrong, none of the tests failed
+%
+<Tenshihan> then where does modular programming come from?
+<dash> Tenshihan: the lesser magellanic cloud
+<glyph> dash: the origin of the modular programming technique is classified!
+%
+<Rugal> Do I have to study something else in order to use twisted? i mean, is
+twisted to python how C++ is to java?
+%
+[Just another night in #Python... -ed]
+* X86BSD-H throws a ball of yarn in front of rik
+* rik watches it bounce past
+* X86BSD-H needs to get a G4 PB
+* dreid beats system-wide fetchmail with a stick
+* rik looks at X86BSD-H
+%
+<radix> but a year of python programming is like 5 years of C programming
+<radix> because in those 5 years of C programming about 4 of them are dealing
+with memory management
+%
+--> bdash (mark21rowe@chch-d109.connections.net.nz) has joined #python
+<Deep6> oh no! its the lower grade dash!
+%
+<glyph> dash: let me put it another way -- I will upgrade to 2.2, if for no
+other reason than to bitch on clp.
+%
+<det> pokey reminds me of yosomono
+<det> except on drugs
+%
+<radix> it's kind of interesting to think about twisted philosophically
+<radix> it's basically a bunch of APIs layered on top of each other
+<radix> each one making a task easier to do
+<dreid> until finally trained monkeys can do it
+<dreid> "Twisted, the framework of a million monkeys with typewriters."
+%
+<radix> rep's just this happy little lisp
+<radix> and CL is the giant living on the mountain
+<radix> rarraa I'm 8MB!
+%
+<radix> man, everyone else has cool programming fathers but me
+<radix> I'm going to be a cool programming father to a kid some day
+<dash> radix: i'm going to have a lot of kids and teach them all to play quake.
+<dash> radix: we'll be the best clan in the state.
+%
+<glyph> oooh
+<glyph> OOOH
+<radix> oh shit
+<radix> glyph just had an idea
+%
+<glyph> It's interesting that people often say "Hey, I'm looking for
+something to work on!"
+<glyph> then someone else says "Glyph's code needs a little help." then
+the original asker says "SWEET MARY MOTHER OF GOD I'M NOT TOUCHING THAT!
+I mean, uh, that's too much work or I'm not good at it.  Or something."
+[...]
+<tpck> You want me to read and understand and then rewrite a 795 line
+piece of code that contains doc strings like "WARNING!        This source code
+for this method may cause your eyeballs to melt."
+%
+<itamar> ok, it's JAVA TIME FOR BOYS AND GIRLS
+%
+<itamar> actually, I don't have the patience for java right now
+%
+<sayke> Acapnotic: don't make it twisted-specific
+<dash> sayke: pffft
+<dash> sayke: twisted isn't specific
+%
+<tpck> merriam-webster is nothing to me
+%
+<kingkill> glyph: i was under the impression you didn't like twisted
+%
+<amien@efnet> ? swing is bad? :)
+%
+<e2d2@ircnet> don't use threads :)
+<glyph> e2d2: it's java... you don't really have an option
+<e2d2@ircnet> don't use java :)
+<glyph> e2d2: sage words
+%
+*** Signoff: glyph[Ping timeout for glyph]
+*** glyph joined channel #python
+ * Nafai wonders if glyph is really there
+<Yosomono> He's never really been "all there"
+<Acapnotic> glyph is never *really* there, but sometimes the probablitiy
+becomes high enough that he influences internet.
+<Yosomono> He's like an electron cloud.
+<Yosomono> You can't really tell where he is at a given moment, just a
+probability.
+<Yosomono> Also, you can't tell both where he is AND how much coding he's
+doing at the same time.
+<Yosomono> This is the Glyphenberg Uncertainty principle
+%
+<glyph> I probably shouldn't think of it as an accomplishment that I manage
+to cancel all of my social- and entertainment-oriented engagements on friday
+night so I can work
+%
+<flippo> When programming languages started using four-letter names, APL was
+doomed.
+%
+<datazone> glyph: you are stupid
+%
+<radix> continuations make me want to hurt you, dash
+<dash> continuations made me want to hurt a lot of people
+%
+<radix> you're a pragmatic bastard, dash :)
+%
+<mbac> strange
+<mbac> all my life i've hated object oriented programming
+<mbac> when the problem was simply that i was using C++
+%
+<MoonFallen> how well does twisted work with xml?
+<radix> MoonFallen: PUT YOUR FACE INTO THE JELLY
+%
+<radix> MoonFallen: well, there is a very simple xml-rpc implementation
+<radix> MoonFallen: but we generally don't like to talk about it
+%
+<Acapnotic> When you're holding an automatic weapon, a remarkable number of things become your choice.
+%
+<dash> if perl is a swiss army chainsaw, this is a dynamically reconfigurable
+nanosword
+%
+<radix> skreech: hey guess what!
+<skreech> what
+<radix> skreech: exciting night tonight
+<skreech> radix: women?
+<radix> skreech: twisted release! =D
+<skreech> radix: YES!!!!!!!!!!
+<radix> hee hee
+<radix> I know you live for these moments, skreech
+<skreech> VROOOM
+<skreech> Lemme get my Twisted-Release-socks
+<skreech> and noisemakers
+%
+<glyph> backinasec,Ibrokemyspacebar
+%
+Let the record show that on Saturday, November 24th 2001, at 8:38 PM UTC,
+Glyph Lefkowitz did speak thusly:
+
+   "OK.  I have a crack-laden idea.
+    or perhaps a crack-destroying id
+    Deferreds are confusing as hell
+    Let's just use threads."
+%
+<radix> I HATE METAPHORS
+%
+<dash> wow. this code does something highly entertaining, but nowhere near correct
+%
+<skreech> I can feel my brain
+%
+<nikon_> i want to live in a country thats run by beautiful large breasted women
+%
+<itamar> def revenueGenerator():
+<itamar>     yield cash
+%
+<mothra> one day i want my life to be so automated that getting out of bed will
+be a configuration option
+%
+<moshez_> I love portraying prejudices
+%
+<skreech> its only 10:40pm here
+<skreech> everyones going to *sleep?*
+<Intention> I am staying up! There is much to read on the web.
+%
+[in regards to http://www.askemos.org/]
+<glyph> he is *completely* insane :)
+<dash> glyph: yes
+<dash> glyph: i hope he IRCs
+<dash> this seems like a person i could hurl abuse at for hours
+%
+<e2d2@ircnet> verwilst: debugging is easier when you read the error messages :)
+%
+[dreid] i'd like to learn Forth at some point also
+[dash] save it for last
+[dash] forth has the power to destroy minds
+[dreid] sorta the snowcrash of programming languages?
+%
+<moshez_> dash: I'm a very nice man, except in hypothetical situations
+%
+<Intention> Moral: HOORAY FOR PYTHON. IT CAN GET YOU LAID.
+%
+<glyph> steve: Are you the creator of the Grease(TM) Plan for Internet Success?
+<steve> glpyh:  i'm just a vessel for Grease
+%
+<Intention> Twisted did raise me from the dead after two weeks. It is a miracle
+            of software engineering.
+%
+<Kuja> Wow twisted can do all that.
+%
+<radix> Thain: I think the point is that you'd be hacking C code, not python
+<Thain> but c is easy...what's your point?
+%
+<chrchr> dsmith: Twisted is neat, but unfortunately, it's not object-oriented.
+%
+<datazone> twisted is madness
+%
+<skreech> glyph: SUDDEN INTeRNET!!
+%
+<Pahan> hunter2: RedHat is an evil distro of death! How could you not know this?
+<hunter2> Pahan: um, as a former employee and current stockholder, I probably
+didn't know due to brainwashing. :)
+<Pahan> hunter2: Oh.
+%
+<itamar> jail time and 50K fines are great marketing tools
+%
+<mcc> My justification for java's existence is "it's not quite as bad as c++"
+%
+Broadcast Message from carmstro@zaibach
+        (/dev/pts/21) at 2:24 ...
+
+who needs IRC when you can w4llx0r
+%
+* the internet
+%
+<itamar> DIE
+%
+* dash holds up his "WILL WRITE PROGRAMS THAT WRITE PROGRAMS THAT WRITE PROGRAMS FOR FOOD" sign
+* Nafai holds up his "WILL FOLLOW AROUND dash TO WRITE PROGRAMS THAT WRITE PROGRAMS" sign
+* Nafai holds up underneath a sign reading "HOPING HE MAY ACTUALLY LEARN SOMETHING"
+%
+<comatoast> hm, you could join #artois on DALnet if you're interested in making
+a version of C++ that doesn't suck
+<dash> comatoast: uh
+<dash> comatoast:  i am experiencing extreme cognitive dissonance
+%
+<resolve> we are the freedom police! you must stop this happyness right now.
+%
+<jafo> I used to hang out with this chick that ran a BBS.
+<jafo> She had a great baud.
+%
+<__funky__> so where's the real python channel?
+%
+<internet> e
+%
+<glyph> Actually, they all need for Twisted.  They burn for it in the very
+core of their souls, like a vampire's thirst for blood.  Programmers NEED
+twisted; existance without it is a pale shadow of the righteous glory that
+the Twisted hacker can achieve.
+%
+<chrchr> I'll like anything for money.
+%
+<thirmite_> radix: you dropped out?
+<radix> thirmite: yeah.
+<thirmite_> <GenericBoy> yay i am at college;<radix> #python has made me cynical
+i hate life
+%
+<sayke> dash: i wasn't sure what to call the system daemon/service/kernel
+module/things, so i called them "gods" and made them into a pantheon. i
+then made a creation myth as a metaphor for the system boot process, which
+i combined with a programming-as-magik analogy to form a user interface
+vocabulary roughly reminiscent of, well, crowleyian wizardry.
+<dash> sayke: you are a special and unique person
+%
+<itamar> I want to kill someone
+<glyph> Why?
+<itamar> java
+%
+<moshez> "I give thy soul to the gods of the web, may they take this offering and grant us sane protocols"
+%
+<moshez> the only reason to get a life is to get a girl
+<moshez> I'm hoping to get a girl without the seemingly mandatory life thing
+<itamar> yeah? how?
+<moshez> itamar: no specific plans
+<moshez> just random hopes ;-)
+%
+<Intention> KRIS KROSS'LL MAKE YOU LONGJMP SETJMP
+%
+<glyph> You should want me dead, you'll get all my stuff.
+<cyli> I don't want you dead -- I get all your stuff anyway.
+%
+<thirmite_> if you had 100k to spend on an engine why would you make a game? :)
+<radix> thirmite: so you can make a million dollars off of it
+<thirmite_> radix: i'd still rather buy a dedicated server in the US that did
+nothing but email dash spam on c++
+%
+<dash> i remember those days.
+<dash> the world was cold and without hope....
+<dash> twisted had not been released yet.
+%
+* dash feels the idea "3d postgres-db visualisation with twisted, pyopengl, and pygame" waft through his brain
+<glyph> dash: uh-oh, you've caught the asbahr wave
+%
+<itamar> who is megahal?
+<itamar> does he do bar-mitzvahs?
+%
+<radix> I'm fighting a huge cat with breasts
+<spiv> radix: Congratulations.  I think.
+<e> i have trouble imagining how you fight with breasts
+%
+<sayke> i moved left, [the cow] moved left. i moved right, [the cow] moved
+right. i yelled "WHY ARE YOU IN MY WAY? MOVE!!", and waited a second for it to
+concoct a reply. when none was forthcoming, i dropped into stance and kicked
+it in the nose.
+%
+<dash> i can think of ways to do it but they're mostly evil. what are you doing?
+%
+<thirmite> i want one of those jobs where you get people out of cults
+- pause -
+<thirmite> by blowing up cult headquarters
+%
+<glyph> I love the fact that there's apparently a text-based Tribes-2 deathmatch going on interspersed with the argument though.
+%
+<Darkvise> I guess you could say that Windows and Linux are like two different chicks. Windows gets along with most people and it knows how to party but she's been with so many guys that you dont know what virus she might be carrying, and Linux could be some nerdy chick who may not seem that attractive on the outside but she's not shallow and braindead like Windows.
+%
+<tenth> One of our prospective clients has been asking about using MSSQL for his database
+<tenth> He can use whatever he wants. MSSQL just isn't currently supported. (So if it wakes him up in the dark hours of the morning with shrill, piping calls and cries of "Yig! Yig!" and immerses him in sanity-shattering cosmic horror, which MSSQL 6.7 has been known to do, he can't call tech support about it.)
+<tenth> "Okay... What version of BusinessMind are you using? Good... okay, what database are you using? Hmm... Well, what does it say at the top of the window? Is it a red border, or a blue border, or a shimmering band of tones and shades seeming only barely within the reach of human eyes, both confusing and terrible to look upon? Colour Out Of Space? yeah, sorry, we don't support that one. You should get MySQL."
+<glyph> Warning!  Kill songs unsung while still unheard [y/N]?
+<tenth> "Please enter the number of songs you wish to kill (up to the maximum displayed next to the field) and click the Yellow Sign to continue."
+<tenth> BusinessMind For Those Who Cannot Be Named
+%
+<glyph> *whew*
+<glyph> took the call and emerged testicles intact.
+* dash points out to glyph, needlessly, that he has issues
+<radix> dash: I think they're calling them "women" these days
+%
+<johs> Oh, please. Threads ownz j00.
+%
+<ThreeSeas> maybe it's be easier if I used te metaphor of the matrix characters?
+<dash> ThreeSeas: no
+%
+<chrchr> radix: A software engineer is somebody who can extend a system without reading any code.
+%
+<glyph> funny.  I'm looking at twistedmatrix.com right now and the most recent
+version is still 0.13.0
+<radix> :P
+<radix> glyph: find a QOTR
+%
+<glyph> dash: Isn't "efficiency" supposed to be your department? :)
+<dash> glyph: "crack" is my department.
+ * radix gets depressed because his department is "bitch"
+%
+<radix> What the hell was I thinking?
+<dash> radix: get used to that feeling
+<dash> that feeling is called "design" ;)
+%
+<Nafai> Wait.  I think I got it to work!
+<Nafai> YAY
+<Nafai> w00t!
+<Nafai> Houston, we have a contact manager!
+<glyph> Nafai: austin.
+%
+<itamar> two more webmonkey days, and then I'm off to the USA
+* shapr hands a web-banana to itamar
+<desaster@ircnet> my god, the banana is full of ads
+%
+<cheeser> i think the general method of developing address books is to write a random number generator and use that as input for any decision making.
+%
+<glyph> e: look upon my work, o kings, and despair!
+* e@ircnet viewcvs'es
+<glyph> e: aren't you going to "viewcvs and despair"? ;)
+<e@ircnet> i will despair once i see it.
+%
+<e@ircnet> when i die i want to be dried into a scary looking dried up corpse and be used to scare young children
+%
+<Acapnotic> he just logged the fact that he got r3wt0rz3d
+<radix> he's on windows
+<radix> it comes pre-rewted
+%
+<itamar> we should lock z3p up in a protocol factory
+<z3p> self.factory.stopFactory(); self.factory.letMeEscape()
+%
+<pjarks> today is a good day to install zope
+%
+<faassen> I mean, geez, the guy thinks there is a conspiracy of programmers! a conspiracy
+related to programming!!
+<faassen> who'd have ever thought of that? :)
+%
+<radix> I am just the bombest dude in the world
+%
+"Alarm Sounds Like" -- Whoop Whoop
+%
+<noa> did anyone cause the alarm to go off just to see what it sounds like?
+%
+<ZC-Matt> You you *can* take an unwrapped object and stash it in a C module, poised to leap out at any unsuspecting transaction that wanders by.
+<zigg> ooo, above my head.
+<JimFulton> mine too. ;)
+%
+--- ChanServ gives channel operator status to dash
+<dash> magc35us: you've got 30 seconds to be witty, relevant, or at least apologetic
+%
+<Intention> How EXACTLY are cameras used to keep planes from hitting skyscrapers?  Do they have laser attatchments?
+%
+<draukuWORK> moshez, i signed the zope contributors agreement today... there goes my first born
+<draukuWORK> or any first born i may borrow
+%
+<dash> glyph: go to #lisp and ask about relative pathnames. :)
+<chrchr> dash: Don't make him do that.
+<dash> chrchr: he knows better
+%
+<Nafai> What to do, what to do.
+<Nafai> No class at all next week!
+* glyph gets the "documentation" hat and starts running after Nafai
+<Nafai> AHHHHHHHHHHHHHHHHHHHHHH
+* Nafai jumps on the snowboard and takes off
+%
+<resolve> hah! java is the jerry springer of computer languages
+%
+<matju> chrchr: the web will allow us to metaparadigmatically outpace
+innovation beyond the future
+<matju> chrchr: that's why it's so revolutionary
+%
+--- shapr is now known as world
+<world> hello
+%
+<glyph>  so we need to target this website to three groups -- end users, corporate shills, and open source developers
+<dash>   and unfortunately JavaScript is not advanced enough to determine which is which.
+%
+<exarkun> I think there's a rather large difference between a stale twinkie and a kernel swap daemon
+%
+<stranger> ok i think i need a polymorphic language with continuations and closures to write this properly
+<stranger> should I give up and implement in C?
+%
+<yosomono> When I was done with my first test gtk app using twisted, my first thought was "is that it?"
+%
+<thirmite> srbaker: www.twistedmatrix.com - a framework for building
+asynchronous network based apps
+<dreid> in other words, doing cool stuff with little work and even less
+documentation
+[*ahem*, hopefully not for long --ed]
+%
+<glyph> if you've ever dealt with MS, it's like dealing with ... well, germany.
+<glyph> it's big and not everybody agrees on everything
+%
+* skreech runs mothra over in his shrike.
+* dreid rushes to an inventory station and grabs a sniper rifle
+<resolve> hey skreech, i just went and made myself some lunch, and you're still doing that. :) i think it's time to stop
+%
+* stampy tosses a fruitcake mortar skreech's way
+<skreech> NOT FRUITCAKE
+* stampy sprays skreech with napalm eggnog
+* skreech loses control of his shrike.
+<skreech> MY EYES
+* skreech ejects
+<glyph> dash: it's a performance art version of t2, I think
+%
+* dreid hands skreech a chaingun and dash a spinfuser
+* skreech jumps and jets.
+* Novas007 picks up a mortar
+* dash tries to work out which end to hold
+<skreech> dash: raaaatatatatatatatatata
+* moshez gets a radioactive spider to bite him
+<moshez> yay! I have spider-powers
+* Novas007 flies up to the nearest high place and begins raining mortars down
+<dreid> hah
+* skreech blows up.
+* moshez uses his spider powers to help human kind.
+<skreech> Shazbot!
+<dreid> "damn lag!"
+%
+--- dash has changed the topic to: from enemy_base import flag
+%
+* skreech throws a satchel charge in the middle of the channel.
+* dreid hides behind a generator
+<skreech> lets argue.
+%
+<skreech> THE SENSOR NETWORK IS DOWN
+* skreech pilots his shrike into the side of #python
+%
+* dreid fires his spinfuser at skreech
+<skreech> BAM!! Glyph's body flys across the map after being hit by skreech's shrike going 355kph!
+* skreech avoids various heat seaking missiles launched by mothra.
+<skreech> dreid's disc hits skreech's shrike and sits it veering into a hill.
+<skreech> Nooooo!
+* skreech 's shrike flips upside down.
+<skreech> EJECT EJECT
+* skreech 's shrike explodes in a fiery ballness of flame.
+* dreid starts saturation bombing of the area where skreech's shrike crashed
+<skreech> AAAAA
+* skreech dies.
+<dreid> skreech: :)
+<dreid> gg
+%
+<Acapnotic> Ooh, I just figured out what my first twisted.reality creation will be.
+<dash> Acapnotic: oh?
+<Acapnotic> "Being Glyph Lefkowitz"
+%
+* Intention enjoys very much being able to keep programs, editors, photo editors, and games runing for a week or more at a time without fucking up or crashing or making everything else slow. God bless younicks.
+<Intention> I never had even concieved of forgetting that programs were running until unix. Now it is like.. erm..
+%
+<spiv> Apparently my company used to be a Linux company, many years ago.
+<spiv> The website consisted of Perl CGI scripts serving stock data.
+<spiv> We moved to Windows because someone couldn't figure out how to give our customers case-insenstive website logins.
+%
+<radix> glyph: so, tell us about the trip!
+<radix> did you have fun?
+<glyph> radix: It was awesome.  Sin is the best thing ever!
+%
+<radix> xihr: while moshez is indeed completely insane, he's not much of an ass-talker
+%
+<fooz> oh, mozart is "write once run anywhere" like java
+<fooz> that means it probably won't work on any platform I care about
+%
+<liiwi> moshez: gotta squish radix to do 0.15.5 soon
+(oh, my god, it's spreading - Ed.)
+%
+<Aardappel> this "I hate c++" is so old
+<dash> it's as old as C++, yes
+%
+<Blue> glyph: USE TWISTED
+%
+--> moshez (~moshez@p9.j3.actcom.co.il) has joined #python
+<itamar> look, it's moses!
+--- ameoba is now known as redC
+* redC parts
+%
+<itamar> Lesson of the day: you can't test the win32 event loop if you're not running the win32 event loop
+%
+<Yosomono@efnet> radix: It looks pretty disturbing when you see a bunch of people beating the shit out of a leprechaun who has arrows sticking out of his head
+%
+<glyph> I am tasting the pepperoni-pizza-combo flavored taste of independence.
+<matsaleh> don't let it go to your head
+<glyph> well, I still have a very strong sense of "I could crash into any of these objects at any time"
+<glyph> I figure as long as I hang on to that really tightly, I'll be OK
+<matsaleh> probably a good plan
+<matsaleh> one word of advice tho
+<matsaleh> don't drive for at least 1 hr after playing any FPS
+<matsaleh> everything looks like a power up
+%
+<exarkun> twistedmatrix.com looks a lot different in netscape than it does in links
+<exarkun> I suddenly have a much higher opinion of twisted
+<exarkun> before I thought it was all garbage.  now it is all garbage with a great web page
+%
+<radix> ViperCA: you can make good websites without doing stupid shit, you know. :-)
+%
+<Pahan> foot.get_owner's_gun_through_obscure_meta_tricks.shoot(self)
+%
+<TheJester> .seen god
+<xena> God seen changing nickname to God_|Away|PersecutingAtheists  ~ 52 day(s) 4 hr(s) 32 min(s) 58 sec(s) ago
+%
+<itamar> we're ripe for a syndicalist-anarchist revolution ;)
+<radix> yay!
+<radix> do you guys have a lot of those?
+%
+<radix> the sysadmin of the future is going to know twisted-shelling like the back of his hand
+%
+<Donatien_Alphonse> :) no promises - the truth may be a star, but we have a
+proper motion relative to it. Oneof my favorite quoites - a wise man I knew
+once said "Honor is truth in motion."
+<glyph> Donatien_Alphonse: A wise man I once new said "I invented the hippo!"
+It's not always best to live by the words of wise men.
+<stranger> Donatien_Alphonse: i'm beginning to think wise men should keep
+their traps shut :)
+%
+<Intention> Java and Squeak are sort of similar. They are both superdynamico and have their own widgety things and run in a VM. [Squeak] has way more colors though.
+%
+<skreech> no matter what, when I come back to my #twisted window theres always 'squish' somewhere
+%
+<red_one> hm
+<red_one> is there a python that's statically typed?
+<exarkun> red_one: the south american red python is of static type
+%
+* StevenK starts to plot a drive to Belgium, but gets stuck.
+<StevenK> Damn ocean.
+* moshez starts to plot a drive to Belgium, but gets stuck.
+<moshez> Damn arabs.
+%
+<Intention> radix: Once upon a time, I truly GOT C++. This profound body of
+knowledge was so complex, it formed a separate personality in my head just to
+DEAL with the complexity without killing me. So every once in a while, when truly
+troubled, I flip to that personality. When I come back, I have no idea what
+happened. It's NIRVANA.
+%
+<moshez> dash: you should go back for completions of logic...
+* dash points at his shirt
+<dash> "AUBURN GRADUATE (PAID)"
+<dash> i've done all the learning i'm ever going to do
+%
+<moshez> Nafai: I once met a girl on a bus. She told me her name was Li. I proved to her Aleph null is less then 2 to the Aleph null. She gave me her phone #.
+<itamar> what does her name have to do with it?
+<moshez> itamar: Lie groups.
+%
+<d1ver> python programmers?! it's not even a computer language - it doesn't even support proper tail recursion!
+%
+<skreech> radix: apparantly, in stories, chinese ISPs have responded to being blocked by the rest of the world with "take block off"
+<skreech> take off every block for great justice!
+<skreech> someone set up us the packet filter
+<skreech> <zig>
+%
+<dash> BardCat: so. what's communism?
+<BardCat> dash: It's when a boy and a girl love each other, and then there is a cabbage and a baby!
+<dash> BardCat: wait
+<dash> BardCat: i thought that was syndicalism
+%
+<gt3> perlsucks?yes:wtf_yes_it_does;
+%
+<hmmm-@efnet> sitting here seeing stuff like <ry> <exarkun@opn>  really makes me feel like a minion talking to his gods :P
+%
+<dash> blag
+<dash> let's finish all this 'twisted' crap so we can write some fun stuff
+%
+<skreech> WTF. The sf.net skill profile does not have a skill for "molecular biology"
+%
+<dash> moshez: you aren't  making sense now
+<moshez> dash: *now*? I'm not making sense *now*?
+%
+<stranger> Hey! I've got an idea: <byte><bit value=1/><bit value=0/><bit value=0/>....</byte>
+%
+<etcha@efnet> btw whats ry>? is it a kind of irc gateway?
+<e@ircnet> it's a bit like a mind flayer, except it also relays messages.
+%
+<Pahan> Damn, I threw a horrible insult, and got no wise-ass retorts.
+<sayke> Pahan: i was just going to say "ask me about my apathy"
+<dash> sayke: he doesn't care about your apathy.
+%
+<shapr> man I had a radix quality dream
+<shapr> it was about this guy who found a dinosaur preserved in ice, and removed its stomach, and surgically altered the stomach to be able to survive in lake awter by itself
+%
+<gt3> i had a dream guido really did get hit by a bus
+<jafo> :-(
+<jafo> He's a nice guy.
+<gt3> then somehow twisted came standard with it after dash took over
+<gt3> he seems nice
+<gt3> but nice doesn't stop a bus
+%
+<skreech> How do I keep people from reading my Perl code? Oh wait. Ha ha!
+%
+<Acapnotic> I care not for your somnable teeth.  I wish only to master the multipart/form-data
+%
+<Tenshihan> why do drugs make us commit so many crimes?!
+%
+<gt3> programming should be an adventure, those damn college courses make it so its like yer joining the navy seals so you can work at sea world as a whale feeder
+%
+<Jii> "internet with python" spells twisted
+%
+<Qelf> Did you doods find it hard when you 1st started?
+<dash> Qelf: well sure
+<dash> Qelf: in fact i would characterise my programming education as being in a state of near-permanent confusion
+%
+<ElectricElf> infinity: M-x font-lock-mode
+<ElectricElf> infinity: You can set it do be on by default, but that requires
+              editing a file somewhere and I can't remember which nor what to
+              add ;)
+%
+<shapr> so, where do I buy stock in glyph? ;)
+%
+* hmh looks at unmime.c in fetchmail and cries in agony
+<moshez> hmh: eh? what would a fucking MAIL DOWNLOADER be doing with mime?
+<hmh> moshez: being too fucking smart for its own good.
+<hmh> moshez: in a very dumb way, too.
+%
+<radix> I can switch screens like none other!
+<radix> look! I just switched!
+<radix> and again!
+<radix> wee!
+<itamar> wow
+<itamar> I no longer feel bored
+<itamar> compared to you, my life *scintillates*
+%
+<glyph> yo ho ho and a bottle of internet
+%
+<kosh#zope> sorry no games are worth what xp costs in terms of the freedoms removed
+%
+<Nafai> Dang.  sendmail ain't working all the sudden
+<exarkun> "all of a sudden"?
+<exarkun> Nafai: where have you been for the last decade?
+%
+<dash> the primary function of the human brain is to make witty remarks on irc
+%
+<radix> i've gotta move to one of those socialist countries and become a school-bum like princepsz
+<HappyFool> please. 'professional student', not 'school-bum'
+%
+<radix> Like, imagine sitting around with your Marine buddies in your transport spaceship, going to Mars, getting rowdied up for the battle with the space aliens
+<radix> and then you get there and a thousand marines pour out of the ships  and meet a horde of 10,000 imps
+<dash> radix: AND YOUR FRAMERATE GOES IN THE TOILET
+%
+<exarkun> crack attack is life
+%
+<flippo> I was reading a book about C++ templates today, then I glanced at a preview of the Python cookbook, and I thought my ears would explode from the change in pressure.
+%
+<glyph> skreech: you think "Acquireable" is hard to spell? ;-)
+[ed: dict acquireable]
+%
+<faassen> moshez: consistency's hobgoblin has a little mind!
+* dash dubs moshez "consistency's hobgoblin"
+%
+<Overfiend> bwa ha ha ha ha
+<Overfiend> 03:28AM|<moshez> what I like about Manoj is his desire for
+            simple and small solutions. like EMACS. or dvt.
+<Overfiend> 03:29AM|<Manoj> well, dvt was _supposed_ to be simple
+<Overfiend> 03:29AM|<Manoj> it only took 2 weeks to write
+<Overfiend> that's just a classic exchange
+<Overfiend> "Well, it's really quite simple if you conceive of it as a
+            partially bounded n-dimensional manifold where n is the factorial
+            of the number of ballot options"
+%
+<TQuid> Twisted blows my mind so severely I want desperately to do
+something with it, yet I don't know what.
+<TQuid> You read about it and it's like "twisted will shortly assassinate
+Bill Gates, reformulate intellectual property law to make both BSD and GNU
+fanatics happy, and also make you a nice grilled-cheese sandwich."
+%	
+<hmh> moshez: I know ESR thinks he is a god of sex, and I know his signal
+      handling code says otherwise...
+%
+<II-V-I> subliminal message: python is good
+<Yosomono@efnet> subliminal retort: damn good
+<sun> subliminal antagonism: have you tried Ruby?
+%
+<spiv> Imar: Saying "php is good because it is better than C" is like saying "maiming is good because it is better than severe maiming with shrapnel and burning oil".
+%
+<radix> why do i hang out with you geeks ;)
+<dash> radix: the money, the power, the chicks
+<radix> YES
+<radix> :)
+<dash> the self-delusion
+%
+<iLLf8d> hey all how can I get more info from python exceptions?
+<gt3> play good cop/bad cop
+%
+<stranger> too much lag. going to pub.
+*** stranger is now known as stranger[pub]
+%
+<radix> how was the [censor]?
+<radix> oh.
+* radix pats his trusty Secure-o-matic.
+<glyph> radix: Terrific!  [censored] was there, and so was [censored].  We built a [CENSORED] and used it to target
+<glyph> [INFORMATION QUOTA EXCEEDED]
+<radix> whoah there, buddy.
+<glyph> Erase is delete.
+<glyph> Kill is control-U (^U).
+<glyph> Interrupt is control-C (^C).
+<glyph> Ahem
+<glyph> right.  So, it went well.
+%
+<schirkaan> and i thought distro wars where over a long time ago ;)
+<radix> schirkaan: are you new to IRC? :)
+%
+<wiggy> for some reason the drugs aren't working today
+*** wiggy is ~wichert@cabal.xs4all.nl (Wichert Akkerman)
+%
+You may think I'm uncooperative, but perhaps I'm just stupid.
+Bye,
+    Mike
+--
+|=| Michael Piefel
+%
+<skreech> If MS had bought Nintendo then Pikachu could be an MS Office Assistent.
+<shapr> paperclippachu, irritation attack!
+<shapr> paperclippachu, window close immunity!
+%
+<aj> Tv: it's been around for ages, but never got put in the mainline cgi's
+     (doogie saw some bright and shiny and got distracted...)
+%
+<SteveA> I want a new builtin type for Python 2.3: zenbool
+<SteveA> It is like the new bool type, but has three possible values: True, False and Mu
+%
+<aj> willy: so the question is, do i want to try my luck with another willy
+     upload? do i feel lucky? well, do i, punk?
+%
+<skreech> kill guard
+<skreech> drink potion
+<skreech> [lag]
+<skreech> ...
+<skreech> YOU MISSED GUARD HITS YOU MISSED GUARD HITS YOU MISSED GUARD HITS
+<skreech> You can't do that when you're dead.
+%
+<rc> I'm making a game called Tycoon Tycoon. It simulates competing software companies making 'Tycoon' games.
+%
+<faassen> "Hey I could speak in Slashdot messages only" An interesting
+experiment.
+%
+<glyph> So...
+<glyph> XML.
+*** Quits: dash:#twisted [washort@d136.narrowgate.net] (Read error: 113 (No route to host))
+<glyph> Wow... just _saying_ it makes him disappear
+%
+<Overfiend> Eric Raymond got frustrated because his code wasn't getting
+            merged, and it wasn't helping him out with the chicks who only
+            give blow jobs to people whose code actually makes it into the
+            kernel.
+%
+<dash> a famous evil genius is a dead evil genius
+<dash> unless you've got a robot army or something
+<dash> and mine's on back order
+%
+<itamar> you know what causes most evilness? the WEB
+%
+<spiv> My life is a sequence of blissful sleeps interspersed by bits between sleeping (most people call those bits "days").
+<spiv> I live for sleeping.
+<spiv> It's like my natural, base state of being.  The Aristotlean ideal of me is me sleeping.
+%
+<itamar> [in XMLRPC] the header saying you *used* compression is as long as the banana packet
+%
+[ 23:07:38 ] <glyph> DeepTape: Are you familiar with the Time Cube?
+[ 23:08:06 ] <DeepTape> glyph: is that a comic?
+[ 23:08:13 ] <dash> DeepTape: not.... exactly
+%
+<cyli> Your minions are like the little elves, or trolls, who make shoes.
+       Except, not really shoes: internet.
+%
+<radix> there are stick men!!!
+<dash> yes
+<dash> uml has stick men
+<radix> I LOVE UML!!!!!!
+%
+<dash> get thee down, be thou funky
+%
+<thirmite> the novelty has worn off and i once again need heroin.
+%
+<thirmite> some would argue radix on crack is a different person!!
+<exarkun> thirmite: some would argue that radix _not_ on crack is a different person
+<demoncrat> some might argue radix on crack is two different people
+%
+<glyph> and the rexec'd code would run in a thread, and could use a Bastion to frob a PB reference synchronously
+<radix> here comes the crack, fellas
+%
+<adiabatic> Every day you stay awake too long God kills a kitten. Please, think of the kittens.
+%
+<o2s@ircnet> its nott the size that matters but the code
+%
+<Nafai> After I do some preliminary testing, I will soon be using Twisted towards commericial purposes
+<Aco> like what?
+* exarkun crosses his fingers and hopes for microlaser brain surgery hardware control.
+<exarkun> Twisted: The Framework That's Cutting Up Your Brain
+%
+<sayke> "your mission, sayke, should you choose to accept it, is as follows: define r(n, b[n], x, u); where r() is reality's iteration definition rule function, n is
+the number of dimensions, b[n] is the boundry size (in each dimension) of the automata, x is the number of cell states, and u is the state of the universe, last
+iteration."
+<radix> sayke: use Twisted!
+%
+* moshez kills dash and eats him
+<krz> You feel jumpy.
+%
+<ameoba> now that everything is an object, I'm afraid you'll have to return those integers until we can verify your credit.
+%
+<faassen> I created it. but I'm not *responsible* :)
+<faassen> it started lurching around by itself..
+%
+<skreech> I dont even take a lot of whats on IRC to _brain_ much less to heart.
+%
+<dash> javadoc is a cold and demanding master
+%
+* itamar looks out the window at the view and cheers up
+<itamar> nothing like a peanut factory to remind you how good life is
+[...]
+<itamar> there's a peanut factory next to the office, and that's what I see
+<itamar> great big peanut containers, towering above me
+%
+<glyph> itamar: we should set up a really nasty looking demo with emacs and java and pb all talking to each other
+* glyph ponders code-generation-based support for PB in C++
+<glyph> OK, I am guessing that dull pain behind my eyes means I should stop thinking
+%
+[re: emacs/PB, and the implementation thereof]
+<glyph> LEXICAL-LET is cool, I don't care how it works.  I don't _want_ to know how it
+works.  And now I have an appreciation for why I should never, ever change PB
+again :)
+%
+<aj> mstone: the raving lunatic camp rarely manages to
+     implement stuff +effectively, so they follow the people who can... </aj's
+     theory of life, the +universe and everything>
+%
+<skreech> web
+<itamar> web?
+<glyph> skreech: INTAR-web.
+<skreech> .org
+%
+<shapr> itamar: I've heard jdk1.4 is using a modified version of the mach kernel...
+<itamar> hahahahah
+<itamar> you're kidding, I hope
+<shapr> itamar: see, YOU'RE NOT SURE
+%
+<ameoba> print "\n".join(["".join([(lambda n, f=lambda c : "\033[%dm#"%c: f(n=='0' and 30 or n=='1' and 33 or n=='2' and 35 or n=='3' and 31 or n=='4' and 34 or n=='5' and 32 or n=='6' and 37))(char) for char in line]) for line in ["%06d"%x for x in [1002,31502,314233,314251,131152,314214,411531,234562,152212]]])
+<ameoba> ex : it's a diagram of a crack-attack board +)
+<ameoba> 'cuz I can't dcc shit to shapr while he's behind that firewall +)
+%
+<__del__> is there a special method a class can implement if it does its own garbage collection?
+--- __del__ is now known as gc
+* gc collects himslef
+<-- gc has kicked gc from #zope (gc)
+%
+"Much like in the world of Frisbee, new game developers and game
+development companies should never make a statement with more predictive
+power than "Watch this!" "
+- Glyph
+%
+Brian Crowder: It's both relevant and terrifying at the same time.
+Glyph: That's the best kind of relevant.
+Matt Walker: Yes, but it's the worst kind of terrifying.
+%
+<glyph> exarkun: The issue with globals is that they make resource management nearly impossible.
+<exarkun> glyph: why kind of resources?
+<glyph> exarkun: memory, disk, process time.
+<exarkun> glyph: I don't see how...
+<glyph> exarkun: Well, let's start with a hypothetical world with twenty billion obje[Out of memory error: server stopped]
+%
+* moshez decides to call himself GNU/Moshez
+%
+<skreech> (#%&@$@
+<shapr> perl? or lisp?
+%
+<noa> "let sleeping dongs lie"
+%
+<glyph> moshez: see?  xml makes people happy.
+%
+<resolve> we live in a world where some people get their jollies having sex
+          with dead people - i don't think the notion of windows supporters
+	  is entirely inconceivable
+%
+<ameoba> isn't a latvia part of the female genitalia?
+%
+<glyph> blargchoo
+%
+<Yosomono@efnet> premature optimization is like that other "premature" thing, messy and embarrassing
+%
+<SteveA> I just had a very odd phone call
+<SteveA> from a researcher with the french TV station "TF1"
+<SteveA> asking about inflatable football referees
+%
+<exarkun> english am dumb
+%
+<sjj> i believe my monitor just blanked out
+<sjj> i hope i'm in the IRC window ;)
+<skreech> sjj: no use telling you 'yes'
+%
+<dash> careful with that syntax, eugene
+%
+<VladDrac> does it [Twisted - ed] make my penis grow?
+<shapr> if so, you better be careful how many people run Twisted all at once.
+<shapr> you could die of blood loss.
+%
+<shapr> in reality, it just means I can throw down some Zope stuff and then play more crack attack rather than wrestling with J2EE for months.
+<shapr> ya know, no one on #java plays crack-attack
+<shapr> I think there's a not so hidden truth there.
+%
+<EWSJames> we can be knights in shining armor if we want, but peasants who make up 99.9% percent of the people just see us as asses who wear shiny shit and talk funny
+%
+* TuxedoKamen wonders why everyone always assumes he's on linux
+<Erwin> benefit of the doubt :)
+%
+<allexpro> dash: put me in a tent and give it to moshez!
+%
+<glyph> dash: we need to come up with a "basic rules of discourse" webpage
+<exarkun> glyph: why
+<glyph> exarkun: because if one more person makes a completely unfounded assertion in front of me I AM GOING TO EXPLODE THIS BACKPACK-SIZED NUCLEAR DEVICE
+<dash> glyph: I invented the hippo!@
+%
+<dash> we've all got stupid ideas in our past
+<dash> thanks to the power of the internet, the shame associated with them need never dim!
+%
+<sjj> itamar: if you use the word 'embedded' a lot, you sound smart.
+%
+<liiwi> ah, coldness, the lovely coldness. And the ever-protecting darkness.
+%
+From the /topic on #web:
+The First Rule of Web Development is, "We Don't Talk About Netscape 4.x"
+%
+<spiv> I'm not entirely happy with it, but it works.  Well, actually it doesn't.  But until 5 minutes ago I thought it did :)
+ [regarding the god-cursed FTP support in Twisted -ed]
+%
+<dash> your RDF is massive and unstoppable.  [to glyph -ed]
+%
+<skreech> ooooh shit
+<skreech> I have moderator points!
+<skreech> RAAAAAMPAAAAAAAGE!!$*^
+%
+<tenth> "And then you run this Z80 assembly on the resulting bytecode in the emulator of your choice to create your makefile."
+<tenth> "The inital register settings of the real or simulated Z80 are left as an exercise for the reader."
+    [the nebula build process is just not fun. -ed]
+%
+<dash> i find it interesting that your roadmap showed twisted improving most while you're in jail.
+[in reference to http://twistedmatrix.com/pipermail/twisted-python/2001-April/000037.html -ed]
+%
+<allexpro> discovering twisted is probably the best thing that has happened in my life
+%
+<sjj> dash: i'm fine with you dealing drugs, just keep them away from radix
+<dash> sjj: look, if i dont keep radix stocked, we get no releases.
+%
+<radix> /msg exarkun [lilo] HI ALL GIMME MONEYS AND LOOK AT MY WEBBARSITE
+%
+* radix harnesses the power of fudgepops for good, rather than evil
+%
+<dreid> radix: any system that relies so heavily on a human concept like trust is inherently flawed ...
+<dreid> radix: i just use gpg to encrypt my porn
+%
+<Bergenlund> how do I add twisted to autoexec.bat?
+%
+* skreech squints really hard and tries to change his neuron patterns.
+%
+<radix> MY TAPEWORM TELLS ME WHAT TO DO
+<radix> s/MY TAPEWORM/MOSHEZ/
+%
+<dash> .rhosts auth is effectively "root one get one free"
+%
+<dash> the os module is why python doesn't suck
+<glyph> dash: concrete is what makes skyscrapers not suck
+<glyph> dash: doesn't mean I want to go swimming in it
+%
+<dash> is there some connection between German and disgusting modifications to C?
+    [c.f. The Nebula Device, CLISP -ed]
+%
+<dreid> earth# apt-get install good-will-towards-man
+<dreid> Reading Package Lists... Done
+<dreid> Building Dependency Tree... Done
+<dreid> Sorry but the following packages have unmet dependencies:
+<dreid>          good-will-towards-man: Depends: peace-on-earth but it is not going to be installed
+<_moshez> dreid: file a bug against good-will-towards-men
+<_moshez> dreid: unless it is in contrib?
+<Nafai> non-free, perhaps
+%
+<dreid>    <xpp>
+<dreid>       <xout>Hello World!</xout>
+<dreid>    </xpp>
+<bruce> dreid: just fucking learn Common Lisp. :)
+%
+<exarkun> let the unwashed masses write their C
+<exarkun> you will reap the benefits of their pain and toil
+%
+<glyph> jemfinch: Are you really a captain of a spaceship from the mirror earth, on the other side of the sun?
+<jemfinch> I don't quite catch your meaning :)
+<glyph> jemfinch: Aah.  Wink wink, know what you mean, say no more, say no more.
+%
+<dash> "mwahahahahahahahahahaha"
+<Nafai> you are the christina aguilera of evil
+%
+<glyph> > flirt with cyli
+<glyph> You flirt with cyli. [moshez is here, flirting with cyli]
+<glyph> > wink at cyli
+<glyph> You wink flirtatiously at cyli.
+<glyph> Glyph enters the room.
+<glyph> # glare moshez
+<glyph> Glyph glares at you!
+<glyph> # kill moshez with sword of infinite slaying
+<glyph> Glyph hits! Glyph hits! glyph hits! -more-
+%
+<bruce> i wish i was only doing an imitation of a dumb user rather than really being one. :)
+%
+<sjj> you can't be a satinist without god either
+<spiv> You can be a satanist without pants though.  The world is an amazing place.
+%
+* glyph finally places the order to get his carpets cleaned
+<shapr> is carpet cleaning thread safe?
+%
+<tenth> "As a developer, I'm often discouraged by the amount of time and effort it takes to gouge out my own eyes in pain and frustration. Thanks to Gouge#.net, this distasteful task can be peformed quickly and easily by a trained professional*. Thank you, .net. Jesus, my eyes.
+    (* Professionally designed GougeWizard(TM) with your choice of animated agent character)
+%
+<resolve> i miss the days of programming computers in machine code. all this new-fangled source code is a waste of time.
+<itamar> machine code? hah
+<itamar> in my day we ran programs in our *head*
+<moshez> itamar: you had a *head*? pah
+%
+<glyph> who could forget binky?
+<radix> glyph: well, anyone who naturally blocks out haunting things so they don't have nightmares
+<glyph> radix: Kenaan disapproves.
+%
+<hornby> Slavery doesn't seem so bad.
+%
+<getchomsky> "so, mister nooning, did you know you are associating with a man named glyph, a man authorities consider to be the most dangerous jewish man alive?"
+<getchomsky> "his mastery of open source programing makes him a threat to every man and woman alive on this planet. he must be stopped. Forget everything you think you know about him, and about this "twisted" of his"
+%
+<exarkun> twisted.web has used 1 CPU second of time in the week I've had it running.
+%
+<psy> How do I stop a factory?
+<Aco> psy: syndicate strike
+%
+<exarkun> exceptions in C++ are a _huge_ mistake.
+<radix> s/exceptions in/
+%
+<exarkun> glyph: do _you_ know about super()?
+<exarkun> glyph: As far as I can tell, it's a plot, one that would be likely perpetrated by an organisation not unlike the PSU (if the PSU existed, of course), to kidnap our firstborn and empty our jars of cookies.
+<Nafai> My cookies!?
+%
+<glyph> You know, I don't think I've reached a point in my life where I said "I don't have enough emotional trauma", irc-related or otherwise.
+<dash> glyph: cool. let's go troll #c++.
+%
+<sjj> i've heard there is a /quit command.
+<ameoba> sjj : "/quit" : absurd liberal myth
+<sjj> figured.
+%
+<_moshez> itamar: so, the security people ask them what they do, and they say they are mathematicians
+<_moshez> itamar: and to prove it, they show papers with their name on it.
+<_moshez> itmaar: and then the security guys ask them to explain what the papers are about!
+<_moshez> itamar: apparently, one hasn't lived until he heard a mathematician explain to a security guy what equivariant cobordisms between symplectic manifolds are
+%
+<ameoba> c++ is 700 times faster than Python
+<princepsd> ameoba: based on? ;))
+<ameoba> princeps: something somebody said on usenet +)
+%
+<itamar> take money from elderly and weak with knife
+[itamar writes test cases for the Twisted Reality parser]
+%
+<matiu> (I have to write help files) :(
+<ameoba> matiu : you could do it with twisted.
+<matiu> ameoba: So you're saying twisted has a "help file writer" somewhere deep down?
+<dash> matiu: yes and his name is bruce
+%
+<glyph> dash: uh... what is the correct answer to the question "The short common lisp site name"?
+<dash> glyph: "it buuuuuuurns"
+<skreech> my eyes, the googles do nothing!
+%
+<skreech> Why do I feel the sudden urge to buy a nice quality florescent desk lamp?
+%
+<skreech> the woot, the woot, the woot is on fire.
+%
+<skreech> itamar: heres your nickel back.
+%
+<datazone> okay, tell me if i am crazy
+<Yosomono> you are
+<datazone> damn
+%
+<bruce> and i like doing what i enjoy in my spare time. :)
+<bruce> which, although you all might think so, isn't harassing you all to do more work.
+<bruce> although you all do need to do more work.
+%
+<snibril> JRuby? hmmm, only java ppl have to reimplement ever other lang to replace theirs ;)
+<radix> scheme people, too
+<cleverdra> Scheme people don't do that!
+<radix> how many object systems have YOU written today?
+<cleverdra> radix - today?  12, but one of them wasn't really.
+%
+<radix> excuse me for visiting my DEAR OLD BABUSHKA on her EIGHTY-SIXTH BIRTHDAY when I should be WORKING ON TWISTED
+%
+<radix> every time you make a terrible joke, a baby rabbit dies
+%
+<itamar> "We put the 's' in 'drwxr-sr-x'!"
+%
+<bruce> i've apparently gotten someone at work to clean up their act.
+<glyph> bruce: clean up their act how?
+<glyph> bruce: were they like a pedophile heroin addict or were they just checking in buggy code?
+<dash> glyph: like there's a difference
+%
+<dash> It's moshez. Remember the briefing.
+%
+<dash> glyph: so, i am trying to jump off the side of the NSF headquarters without losing my legs
+<fzZzy> reminds me of college
+%
+<itamar> IN THE INTERNET AGE YOU WILL BE ABLE TO CHAT WITH YOUR TOASTER
+%
+<itamar> I liked the "2 years C# and .NET experience" job
+<gt3> i guess they're hiring dogs
+%
+<fzZzy> how do you quit a twisted telnet session?
+<allexpro> ctrl + ]?
+<fzZzy> there's no cleaner way?
+<exarkun> calling close() on your connection's socket is pretty clean.
+<exarkun> I suppose you could call in a tactical nuclear strike on the remote host
+<fzZzy> considering the remote host is my computer right here, that would take care of everything for me
+%
+<glyph> spiv: is bugzilla bad?
+<spiv> glyph: It's... large.  And perl.  Join the dots.
+%
+<itamar> write a kqueue reactor
+<itamar> all the FreeBSD people will then go nuts
+<bruce> FeerBSD people are already nuts
+%
+<radix> don't let's all go break a million tests, eh?
+%
+<dash> adiabatic: citizen, you have committed an error
+%
+<bruce> i'm feeling motivated
+<glyph> bruce: yaay!
+<glyph> bruce: what flavour of motivation?
+<bruce> beating you up
+%
+<moshez> it's the holy trinity, dash, radix & glyph
+%
+<bruce> what's #ypn ?
+<glyph> bruce: the fifth circle of hell
+<moshez> bruce: young programmers' network
+<moshez> glyph: potato potahto
+%
+<bruce> allexpro is a view of the future of humanity as a group consciousness.
+%
+<exarkun> njjeeeee
+<itamar> njjeeee?
+<exarkun> ancient aramethaic warcry
+<exarkun> infamous for its ability to strike confusion into the hearts of enemies of aramathia
+%
+<exarkun> radix: lisp freak
+<exarkun> radix: go suck on a car
+%
+<ameoba> it's frightening to remember that twisted is an overgrown MUD
+%
+<fariseo> i am completely lost, all i do understand is an OS with a database backend and a scripting language, but i am missing the whole xml/.net/j2ee/twisted...
+<glyph> I'm both honored and appalled that Twisted shows up in that list :)
+%
+<exarkun> Pop up a Tkinter dialog saying "There's some information waiting for you" and do a beep every time the ethernet IRQ goes high
+%
+<hornby> 1. Create laws that promote a fair, just society.
+<exarkun> 2. ????
+<exarkun> 3. PROFIT
+%
+<moshez> skreech: I claimed the typical anti anarchist attack goes something like:
+<moshez> "say someone cracks into your computer, downloads all your porn, burns it to a CD and throws it at you?"
+<moshez> anarcho-communist: nothing. the community would reprimand him.
+<moshez> anarcho-capitalist: my private security forces would shoot him before the CD left his fingers
+<moshez> attacker: "SEE! under anarchism you'd have people throwing porn CDs at people, and people either ignoring them and shooting them!"
+%
+<rmt> Every python program needs to have direct access to a mouse over ssh!
+%
+<strib> Sorry, I'm just in the middle of a paradigm warp right now.
+<dash> strib: welcome to twisted
+%
+<exarkun> entirely not your fault, I'd say.  the current behavior is somewhat broken
+<exarkun> luckily I documented it as being broken so it's not my fault either.
+%
+<kriptik> wow twisted is neat
+<kriptik> *bleeds from the eyes*
+%
+<allexpro> i said 'hello'
+<allexpro> and when i 'cat test.au > /dev/dsp'... it sounded like a tiger roar
+%
+* moshez sings the radix song
+<moshez> "for he's a squishy good radix"
+<moshez> "for he's a squishy good radix"
+<moshez> "for he's a squishy good raaaaaaadix"
+<moshez> "and nobody can deny"
+%
+<allexpro> and how do observer patterns work?
+<dash> the PSU watches your data and notifies the authorities when it becomes suspicious.
+%
+<comajelly> hrm, I wanted to snipe this guy, but he got ran over.
+<fzZzy> heh
+<fzZzy> I hate it when that happens
+%
+<itamar> night all
+<-- itamar has quit ("Client Exiting")
+<radix> me too
+<radix> heh, it's weird going to sleep at the same time as itamar
+%
+<glyph> radix: I think that the twisted vs. asyncore table should begin with this quote, though: "Our conviction is like an arrow already in flight.  Your life will only last until it reaches you."
+%
+<Erwin> I recompiled XFree 4.2 with gcc 3.2-beta-from-cvs with -O42 and -march-pentium4-800Mhz and I am sure that the MOUSE CURSOR is moving 5 % FASTER!
+%
+<bruce> I CONTROL YOUR WEBSITE!@$$
+%
+--> IAmNotAPickle (slt5v@12-255-1-203.client.attbi.com) has joined #twisted
+<radix> PICKLE
+<-- IAmNotAPickle (slt5v@12-255-1-203.client.attbi.com) has left #twisted
+<radix> :(
+<exarkun> you scared it
+%
+<exarkun> heh
+<exarkun> I was at home depot the other day
+<exarkun> and they had a big rack of free AOL CDs
+<exarkun> So I took about 40 and stuck them under people's windshield wipers in the parking lot
+%
+> Linux is complicated, becasue you compile.
+Corollary: Windows is simple because no compiler comes with the system...
+[Seen on linux-il]
+%
+<sjj> dash: soon there'll be another level of college labelled "unlearn university crap"
+%
+<wzZy> arg. these infinite recursion tracebacks take forever to render in the browser
+%
+<exarkun> I'm just kidding.  I'll spend on good computer books, but I failed to do any prepatory research in order to know whether any of the books there were worth anything.
+<exarkun> And I'd just spent $80 at the camping store.
+<adiabatic> wadja get?
+<exarkun> some kerosene and a cooler and a coupla chairs
+<dash> nothing like a good old fashioned book burning
+%
+<radix> you have the pokey gene
+<zigg> ack, where'd I get it from :-P
+<radix> it's random
+<zigg> triple ultra-recessive
+%
+<radix> krz: we know that glyph owns all of our souls equally
+%
+<moshez> glyph: teehee. good always loses
+%
+<sjj> if you package twisted with python, it becomes py2ee
+%
+<sjj> when does something denote enterprise? :P
+<deltab> when it's the most expensive version in its line
+<inapt> when it's terribly inefficient, but scales ;-)
+<deltab> alternatively: database
+%
+<glyph> The world made more sense when I thought software was a physical thing you sold in stores, and I wrote code in C++; making software was a lot more like mixing cement, then, not poetry or revolution.
+%
+<skreech> I'm sorry. I forgot that in #twisted, all suggestions are taken seriously.
+%
+<sjj> what do you do for your clients? :)
+<sjj> "distributed enterprise networking technology solutions" ?
+<bruce> we put DENTS in your budget.
+%
+<Jerub> All these things that would be next to impossible with php, that I can think to do in twisted.web
+%
+<timmy> so it's basically a lot of libs for doing stuff?
+[timmy becomes enlightened to the Twisted Way -ed]
+%
+<Joey> I sense disturbance in the security buildd structure.
+%
+<wzZzy> AQUAMAN VS THE GERMANS IS THE BEST MOVIE EVER MADE 
+%
+<eevench> is LISP good
+<exarkun> The short answer is yes and no.
+<exarkun> You don't want the long answer.
+%
+<radix> who has the power to wield the almighty +t?
+<radix> Me!
+<exarkun> radix: I don't think you can handle the +t
+%
+<willy> you can tune a fs but you can't call a string
+%
+<Jerub> What l33t skilzz do I have to pick up to get a python job?  Zope? Twisted?
+<dash> Jerub: the power to cloud the minds of men
+<Jerub> dash: I'm afraid I only have a Wand of Clouding vs. Women
+<glyph> Jerub: oh, that's easy
+<glyph> use the wand on a woman
+<glyph> women have the clouding-men's-minds intrinsic
+<glyph> so you can either make her your pet and then wander around
+near some businessmen for a while
+<glyph> or eat her corpse and get the intrinsic yourself
+<glyph> no wait, that's not how it works...
+<dash> glyph: wrong game
+ * dash twitches violently as he thinks of "nethack, enterprise edition"
+%
+<spiv> AaronSw: You should never, ever be creating a transport... Twisted is supposed to do that for you.
+<AaronSw> I should never create the tcp.Client stuff or I shouldn't manually set them as the transport?
+<spiv> AaronSw: Use reactor.clientTCP (or better yet, reactor.connectTCP in CVS).
+<spiv> Don't create tcp.Client directly either.       
+<spiv> http://twistedmatrix.com/documents/TwistedDocs/Twisted-0.19.0/twisted/internet/interfaces_IReactorTCP.py.html
+<spiv> AaronSw: But of course, that API is deprecated in 0.99  (but creating a tcp.Client directly is even more deprecated :P)
+<AaronSw> Are you guys abstraction astronauts or something? ;-)
+%
+<DeepTape> Oh no, taxes!  They are trying to steal your arctic circle income
+%
+<pkomarek> dash: the worst part about perl is that it is intuitive, right up until you need something to work correctly.
+%
+<dash> finally! an essential representation of the confusion.
+	[ed: referring to a diagram of twisted.cred]
+%
+<Acapnotic> Good afternoon, Agent.  
+<glyph> Acapnotic: "agent"?  You've been immersing yourself in the One True Game, I take it.
+<Acapnotic> What's going on out there is no game.  Those guys are using real bullets.
+<Acapnotic> That last mission?  I got sloppy at the end of it.  Real sloppy.  Barely had a leg to stand on when I got on that chopper.
+%
+<glyph> Hello .au
+<Jerub> hello .us
+<Jerub> or, alteratively,
+<Jerub> hello None
+%
+<moshez> doogie: Clint wants you to lap-dance.
+<doogie> I charge more than the normal $20
+<Clint> with or without the hat?
+<doogie> that'd be the only thing I'd wear
+%
+[About a tm.com redesign]
+<evol> But what kinda design is the goal here
+<itamar> not ugly?
+<moshez> evol: a good one.
+<dash> evol: "non sucky"
+%
+<sjj> glyph: ahh too bad, if you have a windows box it lets you use windows media player...
+<dash> sjj: he's a terrorist PPC user not a patriotic x86 user
+%
+<JerubBaal> why can religious fanatics and nigerians not figure out capslock?
+<glyph> JerubBaal: IF IS SPEAK LIKE A TELEGRAM YOU WILL LISTEN TO ME STOP IF I USE NORMAL ENGLISH YOU MAY FIND IT BLAND AND NOT READ IT ALL STOP
+<JerubBaal> Sorry, I lost interest after you shouted 'telegram'
+%
+<dash> twisted doesn't currently have any trouble with 2.2, right?
+<radix> nope
+<dash> good good
+* dash prepares to make trouble
+%
+<dash> looks like we have people who just totally fall off our radar because they're totally happy with twisted and dont _need_ to say anything =)
+%
+<spiv> glyph: You have the deepest insight into XML of anyone I know ;)
+%
+<mesozoic> I tried adding one in coil, and got more errors.  I'm not sure if I'm going about it properly.  Is there any other way to configure a vhost?  
+<ameoba> call the vhost-bustters
+%
+<Jerub> I got in trouble for drawing a smiley face on a gantt chart.
+%
+* moshez does the evil lowering squishation resistance level dance.
+%
+<glyph> CDATA is not an integration strategy.
+%
+<nessus> The PSU?  Is that that thing that I used to send $50 a year to?
+%
+<radix> "Don't expect romantic attachments to be strictly logical or rational!" [from a fortune cookie -ed]
+<deltab> do expect them to be in DOC format
+<deltab> "May all your romantic attachments be in an unreadable file format"
+%
+<sjj> skreech: you go to all classes?
+<skreech> sjj: yes.
+<sjj> skreech: why? :)
+<sjj> skreech: uni was made to be skipped
+<sjj> man, americans must be dedicated students.
+%
+* moshez doubts they realize Linux has *WAY* more brand-awareness than SCO, and possibly equal to "UNIX"
+<dash> where SCO is recognised
+<dash> it is recognised as suffering
+%
+--- ivan is now known as grub
+<grub> please donate to this IRC server I need lots of money i don't know how i can stay online.
+--- grub is now known as ivan
+%
+<glyph> I've started to think that having a lot of stable, robust stuff and a
+	lot of half-finished proof-of-concept stuff in one project is a good
+	business model
+<glyph> like "You know we can do good work, but we got bored with that bit; if
+        you want us to finish it, pay"
+<dash> glyph: good, because that's what we have
+%
+<StevenK> steven@broken:~$ ssh squished
+<StevenK> steven@squished's password:
+<StevenK> Linux squished 2.4.18-686 #1 Sun Apr 14 11:32:47 EST 2002 i686
+%
+<bruce> how are the jails in israel?
+<itamar> well, the one I was in was pretty nice
+%
+<dash> glyph: how many PSU agents did you have to kill to get that working?
+<glyph> dash: 3, and they were all waiting just inside the door.  Amateurs.
+%
+<glyph> and it's considered a professional courtesy, when you are *invited*
+        into a bank, not to steal all their moneys and shoot the managers full
+        of assault rifle bullets
+%
+<moshez> itamar: you're AT WORK?
+<itamar> moshez: I am not an employee
+%
+<tenth> Doing stuff in MySQL is like getting dates at [name elided to
+        protect the guilty -ed] College... "How ugly do you want it?"
+%
+<tenth> I think we need a god verb "0wnz0r" on the
+        reality-pencil-type-thing. I'm not sure exactly what it would do, but I
+        think it may be necessary.
+%
+<dash> Saying that complexity isn't real because it "was invented somewhere else" is the most useless kind of wishful thinking
+%
+<xcabbage> mind.sf.net crashed my browser
+<dash> signs of intelligent life!
+%
+<glyph> The only thing more absurd than the technology of XML is the politics surrounding it. 
+%
+<glyph> While it is *possible* that I'm smarter than you think I am, it is certain that I'm more stubborn.
+%
+<z3p> glyph: what group of programmers are you picking on tonight?
+<glyph> z3p: PyXML again
+<z3p> sounds like a blast :)
+<glyph> z3p: ugh.  Actually I have a pretty high opinion of some of those people so it bugs me to have to be flaming :)
+<dash> glyph: bah, just lower your opinion of them
+<dash> no need to consider their past character, if they're wrong, they're scum@#!
+* dash twitches
+%
+<glyph> _moshez: debian really needs to make start-stop-daemon do something
+        cute, like put icons across the top of the fbdev
+%
+<glyph> we need PB for C#
+* moshez squishes glyph
+<moshez> glyph: squishy insane person
+%
+<dash> moshez: we dont have the right kind of soil to not grow wheat in
+%
+<exarkun> I try to limit myself to one major screw up a week
+%
+<tenth> in OSX, they deprecate things with hammers and nailguns
+%
+<Lan_Rover> it is my official decree that it is easier to config and run twisted as a web server than to install apache2 and mod_python
+%
+<liiwi> http://slashdot.org/articles/02/09/12/160255.shtml?tid=99
+    [the topic is "squishy Digital Rights Management" -ed]
+* dash looks at slashdot
+* dash looks at moshez
+<dash> moshez: just _what_ have you been up to lately????
+%
+<itamar> thank god I'm not religious
+%
+<dash> Hi. Allow me to express my opinion of Word now that i've gotten to know it a little better. 
+<dash> AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAaaaa.
+%
+<glyph> Stravad: whereas eval is like slitting your own throat before going
+        out for a walk so as to make the mugger's job easier
+%
+<glyph> radix: keep your eyes on the bot!  we move fast.
+%
+<infinity> moshez : I won't denounce PHP... It still has its uses.. <shrug>...
+           I denounced most PHP *users* about a week after adopting it, though.
+<infinity> That language attracts more idiots...
+[Ed: infinity is the Debian PHP maintainer]
+%
+<Aco> radix: ever heard for this russian group tato/taty? pop
+<radix> Aco: nope
+<Aco> radix: well, girls were like 16 when they started. they sing in
+ther white underpants, and they wet them with water.. so you can see
+under. very interesting. want some pictures? :)
+<dash> Aco: please do not corrupt our release manager
+<dash> Aco: at least not until after 1.0
+%
+<radix> hehe yeah the whore house was awesome :D
+<radix> if you go in with a high-level the chicks pass out after you're done
+        with them
+%
+<Tv> What kind of dope is that? md5 digests _are_ 16 bytes.
+<warner> don't trust the hash, man
+%
+<bruce> hmmm. i didn't get my 11pm cron output email.
+* bruce forgets which cronjob that is though.
+<skreech> bruce: nuclear war has erupted. haven't you heard?
+<bruce> (or what machine it runs on)
+<bruce> (or what user it runs as on what machine)
+<glyph> skreech: in 2002, war was beginning
+* skreech makes a "boooosshhh" sound.
+<skreech> glyph: what happen?
+<glyph> skreech: somebody set up bruce the cron, apparently
+<skreech> glyph: main vi turn on
+%
+<shapr> c:\> vrms
+%
+<itamar> yes, but that doesn't make sense, how can you be proud of a civil war?
+<exarkuN> itamar: we won
+<exarkuN> itamar: what's not to be proud of?
+%
+<jml> is there a doc on twisted's version numbering conventions?
+<dash> jml: glyph rolls dice
+%
+<itamar> dash is *already* pre-strectched
+<itamar> he's like 6 feet
+<itamar> well
+<itamar> he's actualy 1.80 meters
+<itamar> or so
+<itamar> it's not that he's a giant insect
+%
+<_moshez> itamar: I'm agaisnt the state too :)
+<shapr> _moshez: are you purely functional?
+%
+<jml> dash: there's an otherwise normal guy at work who uses tcl as his scripting language of choice
+%
+<sjj> let me tell you something.  I worked at BK for 1 year, and the veggie burgers have more meat than the whoppers, but nobody complained!
+%
+<sjj> moshez: don't kid yourself, if a cow got the chance he'd eat you and everyone you cared about.
+%
+<dash> zb0: ok, let me describe what you sound like
+<dash> zb0: "Hi. I want to drive a spike through my foot into the floor. Can someone help me with that? I know i dont need to, but there are other things i want to drive spikes into."
+%
+<itamar> it's "moshez vs. the CS profs of doom"
+<dash> itamar: i think in a war with the CS profs of doom, i'd be on moshez's
+       side.
+<itamar> yes, but your goals are different
+<itamar> inevitably your pact would weaken
+<dash> itamar: well, we'd fight a duel if we both survived the war.
+%
+<dash> |mmy: cgi is not an enterprise solution.
+%
+<_moshez> cyli: oh, yes. what did you think of my flame to val?
+<cyli> moshez: i didn't get to read all of it.  glyph kept interrupting me
+       with questions of what i thought of it.  and then i had dinner.
+%
+<glyph> phed: the abbreviation FAQ does not have the word "smart" in it
+%
+<cvs> Commit from glyph (changed 1) in Twisted/twisted/web: "A more expository docstring.  Sometimes I'm distracted easily and I might stop in the middle of" static.py
+%
+<anonymous> i keep forgetting how much *fun* python is without zope
+%
+<glyph> radix: so ... it doesn't already do what you want?
+<radix> glyph: Well, now that I understand that what I wanted is impossible, yes. :-)
+<radix> I mean, yes, it does everything that I want, now. ;-)
+-vinge.openprojects.net- glyph changed topic: Learn from radix: if Twisted doesn't do what you want, modify your desires.
+%
+<CainKnight> Right now, I could care less about the best way to do this, or the
+             intricacies involved. What I care about is making a function get
+             called.
+<CainKnight> If that involves ritual sacrifice to dark gods, fine.
+<CainKnight> I don't care why the dark gods want chicken blood.
+<CainKnight> All I need to know right now is will they accept it and make the
+             volcano not wipe out my city.
+<CainKnight> Once the volcano is placated, then i can go back and figure out
+             that it wasn't the blood, it was the heat mixed with the iron in a
+             rich oxygen environment, and adjust the ritual properly in the
+             future.
+%
+<Yosomono@efnet> I'm so open source that I sequenced my genome and released ISOs
+%
+<glyph> one of the nice things about being american and effectively 
+        culture-free
+[The next line isn't really important, is it? --ed]
+%
+<glyph> radix: there is NO bit of canada that's that close to you
+%
+<radix> ok, *6* hours ;-)
+<glyph> radix: yeah, if your car can _fly_
+%
+<Erwin> I will code your website and polish your shoes! With my toung!
+<moshez> Erwin: how do you code a website with your tongue?
+<dash> moshez: two words
+<dash> "salivaproof keyboard"
+%
+<z3p> WHY DO YOU MOCK ME UNIX
+%
+<radix> what does wifi have to do with feng shui? :P
+<dash> radix: optimal flows of internet through your house
+%
+* moshez doesn't see how you can not have a computer in the bedroom
+<moshez> I mean, what if you wake up at 4am and need to talk to someone
+<dash> moshez: walk into the other room?
+<moshez> dash: I'd need to get dressed for that
+<dash> moshez: bathrobe
+<moshez> dash: I'm sane
+<moshez> dash: my bathrobe is in the bathroom
+%
+<itamar> dash: how'd you learn?
+<dash> itamar: lessons
+%
+<radix> bathrobe is easier than boxers ;-)
+<moshez> radix: how so?
+<radix> moshez: eh, you have to deal with legs
+<radix> a swoosh around the shoulders is easier, I think
+<moshez> radix: it takes more presence of mind to tie the belt-thingy
+<jml> moshez: compared to buttons on boxers? I think not
+<moshez> buttons???????
+<moshez> jml: who makes your boxers? Chinese Torture 'R' Us?
+%
+<moshez> I'm always nice.
+%
+<moshez> jml: you're like all men, you're afraid of committing
+<jml> moshez: it's a deep seated fear of conflict
+%
+<glyph> bruce_: GPL can't force you to write code under non-MIT/BSD licenses
+<exarkun> GPL+mindflayer can though
+%
+<zen-@ircnet> which the ratio simplicity/expressivitiy of python?
+<moshez> 2.49866397309784
+<moshez> approximately
+<tigrux> moshez ?
+<moshez> tigrux: well, it's for Python2.2
+<moshez> I haven't had time to modify my calculations for the CVS version
+%
+<spiv> mjs: You've probably noticed by now that dash is only here to make occasional remarks about Twisted & World Domination... ;)
+<mjs> spiv: yeah I starting to notice... but I am sure it will become more fervent when we have a Lisp twisted implementation. =)
+<dash> mjs: when that happens, i will become more powerful than you can possibly imagine
+%

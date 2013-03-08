@@ -6,14 +6,7 @@
 # This script is not meant to be distributed to users of Twisted.
 # It is only for use in making upstream Twisted releases.
 
-import sys, os
-extra = os.path.dirname(os.path.dirname(sys.argv[0]))
-sys.path.insert(0, extra)
-try:
-    import _preamble
-except ImportError:
-    sys.exc_clear()
-sys.path.remove(extra)
+import sys
 
 from twisted.python._release import NewsBuilder
 

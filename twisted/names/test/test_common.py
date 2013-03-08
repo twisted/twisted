@@ -7,9 +7,6 @@ Tests for L{twisted.names.common}.
 
 from __future__ import division, absolute_import
 
-from zope.interface.verify import verifyClass
-
-from twisted.internet.interfaces import IResolver
 from twisted.trial.unittest import SynchronousTestCase
 from twisted.python.failure import Failure
 from twisted.names.common import ResolverBase
@@ -82,14 +79,6 @@ class QueryTests(SynchronousTestCase):
     """
     Tests for L{ResolverBase.query}.
     """
-
-    def test_resolverBaseProvidesIResolver(self):
-        """
-        L{ResolverBase} provides the L{IResolver} interface.
-        """
-        verifyClass(IResolver, ResolverBase)
-
-
     def test_typeToMethodDispatch(self):
         """
         L{ResolverBase.query} looks up a method to invoke using the type of the
@@ -134,3 +123,4 @@ class QueryTests(SynchronousTestCase):
         queryDeferred.addBoth(result.append)
         self.assertIsInstance(result[0], Failure)
         result[0].trap(NotImplementedError)
+

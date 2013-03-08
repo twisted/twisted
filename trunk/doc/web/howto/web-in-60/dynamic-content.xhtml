@@ -1,0 +1,103 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Generating a Page Dynamically</title>
+</head>
+
+<body>
+<h1>Generating a Page Dynamically</h1>
+
+<p>The goal of this example is to show you how to dynamically generate the
+contents of a page.</p>
+
+<p>Taking care of some of the necessary imports first, we'll import <code
+class="API" base="twisted.web.server">Site</code> and the <code class="API"
+base="twisted.internet">reactor</code>:</p>
+
+<pre class="python">
+from twisted.internet import reactor
+from twisted.web.server import Site
+</pre>
+
+<p>The Site is a factory which associates a listening port with the HTTP
+protocol implementation. The reactor is the main loop that drives any Twisted
+application; we'll use it to actually create the listening port in a moment.</p>
+
+<p>Next, we'll import one more thing from Twisted
+Web: <code class="API" base="twisted.web.resource">Resource</code>. An
+instance of <code>Resource</code> (or a subclass) represents a page
+(technically, the entity addressed by a URI).</p>
+
+<pre class="python">
+from twisted.web.resource import Resource
+</pre>
+
+<p>Since we're going to make the demo resource a clock, we'll also import the
+time module:</p>
+
+<pre class="python">
+import time
+</pre>
+
+<p>With imports taken care of, the next step is to define
+a <code>Resource</code> subclass which has the dynamic rendering
+behavior we want. Here's a resource which generates a page giving the
+time:</p>
+
+<pre class="python">
+class ClockPage(Resource):
+    isLeaf = True
+    def render_GET(self, request):
+        return "&lt;html&gt;&lt;body&gt;%s&lt;/body&gt;&lt;/html&gt;" % (time.ctime(),)
+</pre>
+
+<p>Setting <code>isLeaf</code> to <code>True</code> indicates
+that <code>ClockPage</code> resources will never have any
+children.</p>
+
+<p>The <code>render_GET</code> method here will be called whenever the URI we
+hook this resource up to is requested with the <code>GET</code> method. The byte
+string it returns is what will be sent to the browser.</p>
+
+<p>With the resource defined, we can create a <code>Site</code> from it:</p>
+
+<pre class="python">
+resource = ClockPage()
+factory = Site(resource)
+</pre>
+
+<p>Just as with the previous static content example, this
+configuration puts our resource at the very top of the URI hierarchy,
+ie at <code>/</code>. With that <code>Site</code> instance, we can
+tell the reactor to <a href="../../../core/howto/servers.xhtml">create
+a TCP server</a> and start servicing requests:</p>
+
+<pre class="python">
+reactor.listenTCP(8880, factory)
+reactor.run()
+</pre>
+
+<p>Here's the code with no interruptions:</p>
+
+<pre class="python">
+from twisted.internet import reactor
+from twisted.web.server import Site
+from twisted.web.resource import Resource
+import time
+
+class ClockPage(Resource):
+    isLeaf = True
+    def render_GET(self, request):
+        return "&lt;html&gt;&lt;body&gt;%s&lt;/body&gt;&lt;/html&gt;" % (time.ctime(),)
+
+resource = ClockPage()
+factory = Site(resource)
+reactor.listenTCP(8880, factory)
+reactor.run()
+</pre>
+
+</body>
+</html>

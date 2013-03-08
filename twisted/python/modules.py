@@ -527,21 +527,18 @@ def _defaultSysPathFactory():
 class PythonPath:
     """
     I represent the very top of the Python object-space, the module list in
-    C{sys.path} and the modules list in C{sys.modules}.
+    sys.path and the modules list in sys.modules.
 
-    @ivar _sysPath: A sequence of strings like C{sys.path}.  This attribute is
+    @ivar _sysPath: a sequence of strings like sys.path.  This attribute is
     read-only.
 
-    @ivar sysPath: The current value of the module search path list.
-    @type sysPath: C{list}
+    @ivar moduleDict: a dictionary mapping string module names to module
+    objects, like sys.modules.
 
-    @ivar moduleDict: A dictionary mapping string module names to module
-    objects, like C{sys.modules}.
+    @ivar sysPathHooks: a list of PEP-302 path hooks, like sys.path_hooks.
 
-    @ivar sysPathHooks: A list of PEP-302 path hooks, like C{sys.path_hooks}.
-
-    @ivar moduleLoader: A function that takes a fully-qualified python name and
-    returns a module, like L{twisted.python.reflect.namedAny}.
+    @ivar moduleLoader: a function that takes a fully-qualified python name and
+    returns a module, like twisted.python.reflect.namedAny.
     """
 
     def __init__(self,

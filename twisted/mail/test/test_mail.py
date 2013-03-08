@@ -14,7 +14,6 @@ import rfc822
 import tempfile
 import signal
 
-from zope.interface.verify import verifyClass
 from zope.interface import Interface, implements
 
 from twisted.trial import unittest
@@ -568,21 +567,6 @@ class MaildirTestCase(unittest.TestCase):
         self.assertEqual(mb.listMessages(5), 6)
         self.failIf(os.path.exists(j(self.d, '.Trash', 'cur', f)))
         self.failUnless(os.path.exists(j(self.d, msgs[5])))
-
-
-
-class AbstractMaildirDomainTestCase(unittest.TestCase):
-    """
-    Tests for L{twisted.mail.maildir.AbstractMaildirDomain}.
-    """
-    def test_interface(self):
-        """
-        L{maildir.AbstractMaildirDomain} implements L{mail.IAliasableDomain}.
-        """
-        verifyClass(mail.mail.IAliasableDomain,
-            mail.maildir.AbstractMaildirDomain)
-
-
 
 class MaildirDirdbmDomainTestCase(unittest.TestCase):
     def setUp(self):

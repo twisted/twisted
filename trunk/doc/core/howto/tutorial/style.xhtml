@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>The Evolution of Finger: cleaning up the finger code</title>
+  </head>
+<body>
+
+<h1>The Evolution of Finger: cleaning up the finger code</h1>
+
+<h2>Introduction</h2>
+
+<p> This is the third part of the Twisted tutorial <a
+href="index.xhtml">Twisted from Scratch, or The Evolution of Finger</a>.</p>
+
+<p>In this section of the tutorial, we'll clean up our code so that it is
+closer to a readable and extensible style.</p>
+
+<h2>Write Readable Code</h2>
+
+<p>The last version of the application had a lot of hacks. We avoided
+sub-classing, didn't support things like user listings over the web, 
+and removed all blank lines -- all in the interest of code
+which is shorter. Here we take a step back, subclass what is more
+naturally a subclass, make things which should take multiple lines
+take them, etc. This shows a much better style of developing Twisted
+applications, though the hacks in the previous stages are sometimes
+used in throw-away prototypes.</p>
+
+<a href="listings/finger/finger18.tac" class="py-listing">finger18.tac</a>
+
+</body>
+</html>

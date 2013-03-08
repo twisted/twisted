@@ -8,12 +8,14 @@ An in-memory caching resolver.
 
 from __future__ import division, absolute_import
 
+from zope.interface import implementer
+
 from twisted.names import dns, common
 from twisted.python import failure, log
-from twisted.internet import defer
+from twisted.internet import interfaces, defer
 
 
-
+implementer(interfaces.IResolver)
 class CacheResolver(common.ResolverBase):
     """
     A resolver that serves records from a local, memory cache.

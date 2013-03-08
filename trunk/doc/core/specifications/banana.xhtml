@@ -1,0 +1,195 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>Banana Protocol Specifications</title>
+  </head>
+
+  <body>
+    <h1>Banana Protocol Specifications</h1>
+
+    <h2>Introduction</h2>
+
+    <p>
+      Banana is an efficient, extendable protocol for sending and receiving s-expressions.
+      A s-expression in this context is a list composed of byte strings, integers, 
+      large integers, floats and/or s-expressions.
+    </p>
+
+    <h2>Banana Encodings</h2>
+
+    <p>
+      The banana protocol is a stream of data composed of elements. Each element has the
+      following general structure - first, the length of element encoded in base-128, least signficant
+      bit first. For example length 4674 will be sent as <code>0x42 0x24</code>. For certain element
+      types the length will be omitted (e.g. float) or have a different meaning (it is the actual
+      value of integer elements).
+    </p>
+
+    <p>
+      Following the length is a delimiter byte, which tells us what kind of element this
+      is. Depending on the element type, there will then follow the number of bytes specified
+      in the length. The byte's high-bit will always be set, so that we can differentiate
+      between it and the length (since the length bytes use 128-base, their high bit will
+      never be set).
+    </p>
+
+    <h2>Element Types</h2>
+
+    <p>
+      Given a series of bytes that gave us length N, these are the different delimiter bytes:
+    </p>
+
+    <dl>
+      <dt>List -- 0x80</dt>
+      
+      <dd>The following bytes are a list of N elements.  Lists may be nested,
+        and a child list counts as only one element to its parent (regardless
+        of how many elements the child list contains). </dd>
+
+      <dt>Integer -- 0x81</dt>
+      <dd>The value of this element is the positive integer N. Following bytes are not part of this element. Integers can have values of 0 &lt;= N &lt;= 2147483647.</dd>
+
+      <dt>String -- 0x82</dt>
+      <dd>The following N bytes are a string element.</dd>
+
+      <dt>Negative Integer -- 0x83</dt>
+      <dd>The value of this element is the integer N * -1, i.e. -N. Following bytes are not part of this element. Negative integers can have values of 0 &gt;= -N &gt;= -2147483648.</dd>
+
+      <dt>Float - 0x84</dt>
+      <dd>The next 8 bytes are the float encoded in IEEE 754 floating-point <q>double format</q> bit layout.
+	No length bytes should have been defined.
+      </dd>
+
+      <dt>Large Integer -- 0x85</dt>
+      <dd>The value of this element is the positive large integer N. Following bytes are not part of this element. Large integers have no size limitation.</dd>
+
+      <dt>Large Negative Integer -- 0x86</dt>
+      <dd>The value of this element is the negative large integer -N. Following bytes are not part of this element. Large integers have no size limitation.</dd>
+    </dl>
+
+    <p>
+      Large integers are intended for arbitary length integers. Regular integers types (positive and negative) are limited to 32-bit values.
+    </p>
+
+    <h3>Examples</h3>
+
+    <p>
+      Here are some examples of elements and their encodings - the type bytes are marked in bold:
+    </p>
+
+    <dl>
+      <dt><code>1</code></dt>
+      <dd><code>0x01 <strong>0x81</strong></code></dd>
+      <dt><code>-1</code></dt>
+      <dd><code>0x01 <strong>0x83</strong></code></dd>
+      <dt><code>1.5</code></dt>
+      <dd><code><strong>0x84</strong> 0x3f 0xf8 0x00 0x00 0x00 0x00 0x00 0x00</code></dd>
+      <dt><code>"hello"</code></dt>
+      <dd><code>0x05 <strong>0x82</strong> 0x68 0x65 0x6c 0x6c 0x6f</code></dd>
+      <dt><code>[]</code></dt>
+      <dd><code>0x00 <strong>0x80</strong></code></dd>
+      <dt><code>[1, 23]</code></dt>
+      <dd><code>0x02 <strong>0x80</strong> 0x01 <strong>0x81</strong> 0x17 <strong>0x81</strong></code></dd>
+      <dt><code>123456789123456789</code></dt>
+      <dd><code>0x15 0x3e 0x41 0x66 0x3a 0x69 0x26 0x5b 0x01 <strong>0x85</strong></code></dd>
+      <dt><code>[1, ["hello"]]</code></dt>
+      <dd><code>0x02 <strong>0x80</strong> 0x01 <strong>0x81</strong> 0x01 <strong>0x80</strong> 0x05 <strong>0x82</strong> 0x68 0x65 0x6c 0x6c 0x6f</code></dd>
+    </dl>
+
+    <h2>Profiles</h2>
+    
+    <p>
+      The Banana protocol is extendable. Therefore, it supports the concept of profiles. Profiles allow
+      developers to extend the banana protocol, adding new element types, while still keeping backwards
+      compatability with implementations that don't support the extensions. The profile used in each
+      session is determined at the handshake stage (see below.)
+    </p>
+
+    <p>
+      A profile is specified by a unique string. This specification defines two profiles
+      - <code>"none"</code> and <code>"pb"</code>. The <code>"none"</code> profile is the standard
+      profile that should be supported by all Banana implementations.
+      Additional profiles may be added in the future.
+    </p>
+    
+    <h3>The <code>"none"</code> Profile</h3>
+
+    <p>
+      The <code>"none"</code> profile is identical to the delimiter types listed above. It is highly recommended
+      that all Banana clients and servers support the <code>"none"</code> profile.
+    </p>
+
+    <h3>The <code>"pb"</code> Profile</h3>
+
+    <p>
+      The <code>"pb"</code> profile is intended for use with the Perspective Broker protocol, that runs on top
+      of Banana. Basically, it converts commonly used PB strings into shorter versions, thus
+      minimizing bandwidth usage. It starts with a single byte, which tells us to which string element
+      to convert it, and ends with the delimiter byte, <code>0x87</code>, which should not be prefixed
+      by a length.
+    </p>
+    
+    <dl>
+      <dt>0x01</dt> <dd>'None'</dd>
+      <dt>0x02</dt> <dd>'class'</dd>
+      <dt>0x03</dt> <dd>'dereference'</dd>
+      <dt>0x04</dt> <dd>'reference'</dd>
+      <dt>0x05</dt> <dd>'dictionary'</dd>
+      <dt>0x06</dt> <dd>'function'</dd>
+      <dt>0x07</dt> <dd>'instance'</dd>
+      <dt>0x08</dt> <dd>'list'</dd>
+      <dt>0x09</dt> <dd>'module'</dd>
+      <dt>0x0a</dt> <dd>'persistent'</dd>
+      <dt>0x0b</dt> <dd>'tuple'</dd>
+      <dt>0x0c</dt> <dd>'unpersistable'</dd>
+      <dt>0x0d</dt> <dd>'copy'</dd>
+      <dt>0x0e</dt> <dd>'cache'</dd>
+      <dt>0x0f</dt> <dd>'cached'</dd>
+      <dt>0x10</dt> <dd>'remote'</dd>
+      <dt>0x11</dt> <dd>'local'</dd>
+      <dt>0x12</dt> <dd>'lcache'</dd>
+      <dt>0x13</dt> <dd>'version'</dd>
+      <dt>0x14</dt> <dd>'login'</dd>
+      <dt>0x15</dt> <dd>'password'</dd>
+      <dt>0x16</dt> <dd>'challenge'</dd>
+      <dt>0x17</dt> <dd>'logged_in'</dd>
+      <dt>0x18</dt> <dd>'not_logged_in'</dd>
+      <dt>0x19</dt> <dd>'cachemessage'</dd>
+      <dt>0x1a</dt> <dd>'message'</dd>
+      <dt>0x1b</dt> <dd>'answer'</dd>
+      <dt>0x1c</dt> <dd>'error'</dd>
+      <dt>0x1d</dt> <dd>'decref'</dd>
+      <dt>0x1e</dt> <dd>'decache'</dd>
+      <dt>0x1f</dt> <dd>'uncache'</dd>
+      </dl>
+
+    <h2>Protocol Handshake and Behaviour</h2>
+
+    <p>
+      The initiating side of the connection will be referred to as <q>client</q>, and the other
+      side as <q>server</q>.
+    </p>
+
+    <p>
+      Upon connection, the server will send the client a list of string elements, signifying
+      the profiles it supports. It is recommended that <code>"none"</code> be included in this list. The client
+      then sends the server a string from this list, telling the server which profile it wants to
+      use. At this point the whole session will use this profile.
+    </p>
+    
+    <p>
+      Once a profile has been established, the two sides may start exchanging elements. There is no
+      limitation on order or dependencies of messages. Any such limitation (e.g. <q>server can only
+      send an element to client in response to a request from client</q>) is application specific.
+    </p>
+
+    <p>
+      Upon receiving illegal messages, failed handshakes, etc., a Banana client or server should
+      close its connection.
+    </p>
+
+  </body>
+</html>

@@ -1,0 +1,482 @@
+<html><head><title>Writing Web Clients</title></head><body>
+
+<h1>Writing Web Clients</h1>
+
+<h2>Web Clients -- The Tutorial</h2><ul>
+<li>Welcome</li>
+
+<li>Gimmick -- Buffy quotes</li>
+
+</ul>
+<hr />
+<em>Anya (Family, season 5) -- Thank you for coming. We value your patronage.</em>
+<h2>What Are Web Clients?</h2><ul>
+<li>Clarification: non-interactive web clients</li>
+
+<li>Special purpose</li>
+
+<li>Often, quick and dirty hacks</li>
+
+<li>Make a web page into API</li>
+
+</ul>
+<hr />
+<em>Giles (Family, season 5) -- Could we please be a little less effusive, Anya?</em>
+<h2>What Are Web Clients Useful For?</h2><ul>
+<li>Mass download</li>
+
+<li>Periodic checking</li>
+
+<li>Automating tasks<ul><li>Make a web page more friendly</li>
+</ul></li>
+
+</ul>
+<hr />
+<em>Harmony (Family, season 5) -- Aww. You're my little lamb.</em>
+<h2>Review of Modules</h2><ul>
+<li>htmllib</li>
+
+<li>sgmllib</li>
+
+<li>httplib</li>
+
+<li>urllib</li>
+
+<li>urllib2</li>
+
+<li>urlparse</li>
+
+</ul>
+<hr />
+<em>Buffy (Family, season 5) -- Your definition of narrow is impressively wide.</em>
+<h2>Modules -- htmllib</h2><ul>
+<li>Most useful for easy filtering of images</li>
+
+<li>...or links</li>
+
+<li>Other things often easier with sgmllib</li>
+
+<li>Or with re</li>
+
+<li>Or with string manipulation</li>
+
+</ul>
+<hr />
+<em>Xander (Family, season 5) -- The answer is somewhere here.</em>
+<h2>Modules -- htmllib -- idiomatic usage</h2>
+<pre>
+# For lists
+import htmllib, formatter
+
+h = htmllib.HTMLParser(formatter.NullFormatter())
+h.feed(htmlString)
+print h.anchorlist
+</pre>
+
+<hr />
+<em>Xander (Family, season 5) -- I'm helping, I'm reading, I'm quiet.</em>
+<h2>Modules -- htmllib -- idiotmatic usage (cont'd)</h2>
+<pre>
+import htmllib, formatter
+
+class IMGFinder(htmllib.HTMLParser):
+
+    def __init__(self, *args, **kw):
+        htmllib.HTMLParser.__init__(self, *args, **kw)
+        self.ims = []
+
+    def handle_image(self, src, *args): self.ims.append(src)
+
+h = IMGFinder(formatter.NullFormatter())
+h.feed(htmlString)
+print h.ims
+</pre>
+
+<hr />
+<em>Donny (Family, season 5) -- Look what I found!</em>
+<h2>Modules -- htmllib -- base</h2><ul>
+<li>Some sites use 'base' for different relative linking</li>
+
+<li>For example, Zope does</li>
+
+<li>In above examples, 'h.base' has the base</li>
+
+</ul>
+<hr />
+<em>Dawn (Family, season 5) -- This is the source of my gladness.</em>
+<h2>Modules -- htmllib -- base (example)</h2><ul>
+<li>If the page on http://example.com/foo/bar.html has a link to '../baz.html'<ul><li>It means http://example.com/baz.html</li>
+</ul></li>
+
+<li>If the original page has base='/foo/quux'<ul><li>It means http://example.com/foo/baz.html</li>
+</ul></li>
+
+</ul>
+<hr />
+<em>Riley (Family, season 5) -- Every time I think I'm getting close to you...</em>
+<h2>Modules -- urllib/urllib2</h2><ul>
+<li>High-level interface</li>
+
+<li>Treat URLs as file-like objects</li>
+
+<li>...but still allows low-level operations</li>
+
+<li>Interface largely compatible</li>
+
+</ul>
+<hr />
+<em>Glory (Family, season 5) -- I am great and I am beautiful.</em>
+<h2>Modules -- urllib/urllib2 (cont'd)</h2><ul>
+<li>Can work through object-interface</li>
+
+<li>More flexible</li>
+
+<li>Interface no longer compatible</li>
+
+<li>urllib2 better usually</li>
+
+</ul>
+<hr />
+<em>Joyce (Ted, season 2) -- He redid my entire system.</em>
+<h2>Modules -- urllib/urllib2 (examples)</h2><ul>
+<li>urllib.urlopen("http://www.yahoo.com/").read() -&gt; contents</li>
+
+<li>urllib.urlopen("http://www.yahoo.com/").info() -&gt; headers</li>
+
+<li>Same works with urllib2</li>
+
+<li>Automatically uses environment variables for proxies</li>
+
+<li>urllib2 supports proxies with authentication</li>
+
+</ul>
+<hr />
+<em>Xander (Ted, season 2) -- Yum-my!</em>
+<h2>Digression -- HTTP Overview</h2><ul>
+<li>Request/Response</li>
+
+<li>Request is command followed by headers followed by body</li>
+
+<li>Response is error code followed by headers followed by body</li>
+
+<li>No welcome message</li>
+
+</ul>
+<hr />
+<em>Tara (Family, season 5) -- ...in terms of the karmic cycle.</em>
+<h2>Example HTTP Sessions</h2><ul>
+<li>Client</li>
+</ul>
+
+<pre>
+GET /foo/bar.html HTTP/1.0
+Host: www.example.org
+&lt;blank line&gt;
+</pre>
+
+<ul><li>Server</li></ul>
+
+<pre>
+HTTP/1.0 200 OK
+Content-Type: text/html
+
+&lt;html&gt;&lt;body&gt;lalalala&lt;/body&gt;&lt;/html&gt;
+</pre>
+
+<hr />
+<em>Giles (Family, season 5) -- And you are talking about what on earth?</em>
+<h2>Modules -- httplib</h2><ul>
+<li>Low-level interface to innards of HTTP</li>
+
+<li>Absolute control</li>
+
+<li>No abstractions</li>
+
+</ul>
+<hr />
+<em>Mr. MacLay (Family, season 5) -- We know how to control her...problem.</em>
+<h2>Modules -- httplib -- example</h2><ul>
+<li>Note: usually, the Host header is important<ul><li>Virtual hosting</li>
+</ul></li></ul>
+
+<pre>
+&gt;&gt;&gt; import httplib
+&gt;&gt;&gt; h=httplib.HTTP("moshez.org")
+&gt;&gt;&gt; h.putrequest('GET', '/')
+&gt;&gt;&gt; h.putheader('Host', 'moshez.org')
+&gt;&gt;&gt; h.endheaders()
+&gt;&gt;&gt; h.getreply()
+(200, 'OK', &lt;mimetools.Message instance at 0x81220dc&gt;)
+&gt;&gt;&gt; h.getfile().read(10)
+"&lt;HTML&gt;\n&lt;HE"
+</pre>
+<hr />
+<em>Anya (Family, season 5) -- ...and it was fun!</em>
+<h2>Modules -- urlparse</h2><ul>
+<li>urlparse.urljoin -- like os.path.join for URLs</li>
+
+<li>For path manipulation<ul><li>urlparse.urlsplit</li>
+
+<li>urlparse.urlunsplit</li>
+</ul></li>
+
+</ul>
+<hr />
+<em>Buffy (Family, season 5) -- You know what, you guys, just leave it here.</em>
+<h2>Downloading Dilbert</h2>
+<pre>
+import urllib2, re
+
+URL = 'http://www.dilbert.com/'
+f = urllib2.urlopen(URL)
+s = f.read()
+href = re.compile('&lt;a href="(/comics/.*?/dilbert.*?gif)"&gt;')
+m = href.search(value)
+f = urllib2.urlretrieve(urlparse.urljoin(URL, m.group(1)),
+                        "dilbert.gif")
+</pre>
+<hr />
+<em>Tara (Family, season 5) -- That was funny if you [...] are a complete dork.</em>
+<h2>Downloading Dark Angel Transcripts</h2><ul>
+<li>Common situation of mass download</li></ul>
+
+<pre>
+import urllib2, htmllib, formatter, posixpath
+URL="http://www.darkangelfan.com/episode/"
+LINK_RE = re.compile('/trans_[0-9]+\.shtml$')
+s = urllib2.urlopen(URL).read()
+h = htmllib.HTMLParser(formatter.NullFormatter())
+h.feed(s)
+links = [urlparse.urljoin(URL, link)
+              for link in h.anchorlist if LINK_RE.search(link)]
+### -- really download --
+for link in links:
+    urllib2.urlretrieve(link, posixpath.basename(link))
+</pre>
+
+<hr />
+<em>Intern (Family, season 5) -- Yeah. That makes like five this month.</em>
+<h2>Downloading Dark Angel Transcripts (select)</h2>
+
+<pre>
+class Downloader:
+
+    def __init__(self, fin, fout):
+        self.fin, self.fout, self.fileno = fin, fout, fin.fileno
+
+    def read(self):
+        buf = self.fin.read(4096)
+        if not buf:
+            for f in [self.fout, self.fin]: f.close()
+            return 1
+        self.fout.write(buf)
+</pre>
+<hr />
+<em>Joyce (Ted, season 2) -- I've been looking for the right moment.</em>
+<h2>Downloading Dark Angel Transcripts (select, cont'd)</h2><ul>
+<li>Same code up to 'really download'</li></ul>
+
+<pre>
+downloaders = [Downloader(urllib2.urlopen(link),
+                 open(posixpath.basename(link), 'wb'))
+                                      for link in links]
+while downloaders:
+    toRead = select.select(None, [downloaders], [], [])
+    for downloader in toRead:
+         if downloader.read():
+             downloaders.remove(downloader)
+</pre>
+<hr />
+<em>Buffy (Family, season 5) -- Tara's damn birthday is just one too many things for me to worry about.</em>
+<h2>Downloading Dark Angel Transcripts (threads)</h2><ul>
+<li>Bare bones example</li></ul>
+
+<pre>
+import threading
+
+for link in links:
+    Thread(target=urllib2.urlretrieve,
+           args=(link,posixpath.basename(link)))
+</pre>
+<hr />
+<em>Buffy (Ted, season 2) -- Sounds like fun.</em>
+<h2>Digression - twisted.web.client</h2><ul>
+<li>Part of the Twisted networking framework</li>
+
+<li>High level interface to HTTP client</li>
+
+<li>Completely asynchronous</li>
+
+<li>Reports results via callbacks</li>
+
+<li>client.getpage("http://www.yahoo.com").addCallbacks(gotResult, gotError)</li>
+
+</ul>
+<hr />
+<em>Buffy (Ted, season 2) -- You're supposed to use your powers for good!</em>
+<h2>Downloading Dark Angel Transcripts (web.client)</h2>
+<pre>
+from twisted.web import client
+from twisted.internet import import reactor, defer
+
+defer.DeferredList(
+[client.downloadPage(link, posixpath.basename(link))
+            for link in links]).addBoth(lambda _: reactor.stop())
+reactor.run()
+</pre>
+<hr />
+<em>Ted (Ted, season 2) -- You don't have to worry about anything.</em>
+<h2>HTTP Authentication</h2><ul>
+<li>Client attempts to connect</li>
+
+<li>Server sends back a 401 (please authenticate)</li>
+
+<li>Client sends same request back -- with auth tokens</li>
+
+<li>Only HTTP Basic authentication widely supported</li>
+
+<li>Client can send auth tokens on more requests automatically</li>
+
+</ul>
+<hr />
+<em>Buffy (Ted, season 2) -- Ummm... Who are these people?</em>
+<h2>HTTP Authentication - manually</h2><ul>
+<li>In HTTP, authentication is a header</li>
+
+<li>Base authentication is sending username and password</li>
+</ul>
+<pre>
+user = 'moshez'
+password = 's3kr1t'
+import httplib
+h=httplib.HTTP("localhost")
+h.putrequest('GET', '/protected/stuff.html')
+h.putheader('Authorization',
+            base64.encodestring(user+":"+password).strip())
+h.endheaders()
+h.getreply()
+print h.getfile().read()
+</pre>
+<hr />
+<em>Tara (Family, season 5) -- And, uh, these are my-my friends.</em>
+<h2>HTTP Authentication - urllib2</h2><ul>
+<li>Can read username/password from URL</li>
+
+<li>urllib2.urlopen("http://moshez:s3krit@example.com"
+                    "/protected/stuff.html")</li>
+
+</ul>
+<hr />
+<em>Xander (Ted, season 2) -- I am really jinxing the hell out of us.</em>
+<h2>Further Reading</h2><ul>
+<li>htmllib docs <a href="http://www.python.org/doc/current/lib/module-htmllib.html">http://www.python.org/doc/current/lib/module-htmllib.html</a></li>
+
+<li>sgmllib docs<a href="http://www.python.org/doc/current/lib/module-sgmllib.html">http://www.python.org/doc/current/lib/module-sgmllib.html</a></li>
+
+<li>urllib docs<a href="http://www.python.org/doc/current/lib/module-urllib.html">http://www.python.org/doc/current/lib/module-urllib.html</a></li>
+
+<li>urllib2 docs<a href="http://www.python.org/doc/current/lib/module-urllib2.html">http://www.python.org/doc/current/lib/module-urllib2.html</a></li>
+
+<li>httplib docs<a href="http://www.python.org/doc/current/lib/module-httplib.html">http://www.python.org/doc/current/lib/module-httplib.html</a></li>
+
+<li>re docs<a href="http://www.python.org/doc/current/lib/module-re.html">http://www.python.org/doc/current/lib/module-re.html</a></li>
+
+<li>HTTP RFC<a href="http://www.w3.org/Protocols/rfc2616/rfc2616.html">http://www.w3.org/Protocols/rfc2616/rfc2616.html</a></li>
+
+<li>W3C HTML Page<a href="http://www.w3.org/MarkUp/">http://www.w3.org/MarkUp/</a></li>
+
+<li>Twisted<a href="http://twistedmatrix.com">http://twistedmatrix.com</a></li>
+
+</ul>
+<hr />
+<em>Willow (Ted, season 2) -- 'Book-cracker Buffy', it's kind of her nickname.</em>
+<h2>Questions?</h2>
+<em>Buffy (Family, season 5) -- I let you come, now sit down and look studious.</em>
+<h2>Bonus Slides</h2>
+<em>Tara (Family, season 5) -- You always make me feel special.</em>
+
+<h2>Cookies</h2><ul>
+<li>Carry state from one page to another</li>
+
+<li>Server sends header: Set-Cookie</li>
+
+<li>Client sends on later requests header: Cookie</li>
+
+</ul>
+<hr />
+<em>Ted (Ted, season 2) -- Who's up for dessert? I made chocolate-chip cookies!</em>
+<h2>urllib2 cookies</h2><ul>
+<li>Unfortunately, no automatic cookie jar support</li>
+
+<li>Can manually use .info() to read cookies...</li>
+
+<li>...and the Request() API to send them to the server</li>
+
+</ul>
+<hr />
+<em>Joyce (Ted, season 2) -- Mm! Buffy, you've got to try one of these!</em>
+<h2>Logging Into Advogato</h2>
+<pre>
+
+import urllib2
+
+u = urllib2.urlopen("http://advogato.org/acct/loginsub.html",
+                    urllib2.urlencode({'u': 'moshez',
+                                       'pass': 'not my real pass'})
+cookie = u.info()['set-cookie']
+cookie = cookie[:cookie.find(';')]
+r = Request('http://advogato.org/diary/post.html',
+            urllib2.urlencode(
+            {'entry': open('entry').read(), 'post': 'Post'}),
+            {'Cookie': cookie})
+urllib2.urlopen(r).read()
+</pre>
+
+<hr />
+<em>Anya (Family, season 5) -- I have a place in the world now.</em>
+<h2>On Being Nice - Robots</h2><ul>
+<li>Some sites don't want automatic crawlers</li>
+
+<li>It is up to you whether to play nice</li>
+
+<li>But you should know the rules before you break them</li>
+
+<li>Robots file -- at /robots.txt</li>
+
+</ul>
+<hr />
+<em>Willow (Ted, season 2) -- There were design features in that robot that pre-date...</em>
+<h2>Using robotparser</h2>
+<pre>
+import robotparser
+rp = robotparser.RobotFileParser()
+rp.set_url('http://www.example.com/robots.txt')
+rp.read()
+if not rp.can_fetch('', 'http://www.example.com/'):
+    sys.exit(1)
+</pre>
+
+<hr />
+<em>Buffy (Ted, season 2) -- Tell me you didn't keep any parts.</em>
+<h2>webchecker</h2><ul>
+<li>In the source distribution, in Tools/</li>
+
+<li>Understands robots.txt</li>
+
+<li>Can override which links gets chased</li>
+
+</ul>
+<hr />
+<em>Willow (Ted, season 2) -- What do you mean, check him out?</em>
+<h2>websucker</h2><ul>
+<li>In the source distribution, in Tools/</li>
+
+<li>Uses webchecker as a module</li>
+
+<li>Saves the pages it downloads</li>
+
+</ul>
+<hr />
+<em>Buffy (Ted, season 2) -- Find out his secrets, hack into his life.</em>
+
+</body></html>

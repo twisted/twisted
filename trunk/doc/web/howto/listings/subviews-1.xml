@@ -1,0 +1,3 @@
+<ul xmlns:t="http://twistedmatrix.com/ns/twisted.web.template/0.1">
+    <li t:render="widgets"><span t:render="name" /></li>
+</ul>

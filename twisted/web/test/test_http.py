@@ -14,7 +14,7 @@ except ImportError:
     from urllib.parse import (
         ParseResultBytes, urlparse, urlunsplit, clear_cache)
 
-from twisted.python.compat import _PY3, iterbytes, networkString, unicode, intToBytes
+from twisted.python.compat import _PY3, set, iterbytes, networkString, unicode, intToBytes
 from twisted.python.failure import Failure
 from twisted.trial import unittest
 from twisted.trial.unittest import TestCase

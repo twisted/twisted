@@ -1,0 +1,187 @@
+<html>
+	<head><title>Lore: A Document Generation System</title></head>
+
+	<body>
+	<h1>Lore: A Document Generation System</h1>
+
+    <div class="author">Andrew Bennetts &lt;andrew@puzzling.org&gt;</div>
+    <div class="author">(Twisted Lore maintainer)</div>
+
+    <h2>Introduction</h2>
+    <ul>
+          <li>Document generation system</li>
+          <li>Input format is essentially a subset of XHTML</li>
+          <li>Outputs nicely formatted HTML and LaTeX</li>
+          <li>Used to generate &gt;200 pages of Twisted documentation</li>
+    </ul>
+
+    <h2>History</h2>
+    <ul>
+          <li>Twisted needed documentation  -- and a format</li>
+          <li>We didn't want to depend on a big system
+              <ul>
+                  <li>The lower the barrier for documentation contributions, the
+                      better</li>
+              </ul>
+          </li>
+          <li>We wanted something quick and easy 
+              <ul>
+                  <li>Lots of people already know simple HTML</li>
+                  <li>People were already using HTML to write docs</li>
+              </ul>
+          </li>
+          <li>Our needs matured: table of contents, printable version</li>
+          <li>So we created Lore</li>
+    </ul>
+
+    <h2>Goals</h2>
+    <ul>
+          <li>Easy to use for authors</li>
+          <li>Easy to install</li>
+          <li>(Uncommon) Source format should be readable
+              <ul>
+                  <li>Even to non-hackers</li>
+              </ul>
+          </li>
+    </ul>
+
+    <h2>Small Example</h2>
+        <pre>
+&lt;html&gt;
+&lt;head&gt;
+&lt;title&gt;Example&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;h1&gt;Example&lt;/h1&gt;
+&lt;p&gt;Simple paragraph&lt;span class="footnote"&gt;footnote&lt;/span&gt;&lt;/p&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</pre>
+
+    <h2>Contents</h2>
+    <ul>
+          <li>twisted.lore Python package</li>
+          <li><code class="shell">lore</code> command-line program</li>
+          <li>Comes with every Twisted installation</li>
+          <li>In particular -- works on Linux, Win32, Mac</li>
+          <li>In particular -- supports Python 2.1, 2.2, 2.3 alpha</li>
+    </ul>
+
+    <h2>Alternatives - HTML</h2>
+    <ul>
+          <li>Too flexible</li>
+          <li>No support for needed idioms
+	         <ul>
+                 <li>Special-purpose Python markup</li>
+                 <li>Tables of contents</li>
+                 <li>Inlining</li>
+	         </ul>
+          </li>
+          <li>Renders badly to dead trees with current tools</li>
+    </ul>
+
+    <h2>Alternatives - LaTeX</h2>
+    <ul>
+          <li>Very good at printed results</li>
+          <li>LaTeX's design makes alternative parsers near-impossible</li>
+          <li>Renderers to HTML are buggy and fragile
+             <ul>
+                 <li>Although the Python Standard Library seems to cope :-)</li>
+            </ul>
+         </li>
+    </ul>
+
+    <h2>Alternatives - Docbook</h2>
+    <ul>
+          <li>Using correctly requires too much work
+             <ul>
+             <li>Write a DTD with special elements</li>
+             <li>Write Jade stylesheets</li>
+	         </ul>
+          </li>
+          <li>Lore is probably smaller than docbook specialization</li>
+    </ul>
+
+    <h2>Alternatives - Texinfo</h2>
+    <ul>
+          <li>Next slide, please</li>
+    </ul>
+
+    <h2>Lore goodies</h2>
+    <ul>
+          <li>Special tag to mark classes/modules/functions
+             <ul>
+             <li>Can be made to point to auto-generated docs</li>
+	         </ul>
+          </li>
+
+          <li>Inline code-examples
+             <ul>
+             <li>No need to escape all those &lt;, &gt; and &amp;</li>
+             </ul>
+          </li>
+
+          <li>Syntax-highlight Python code</li>
+    </ul>
+
+    <h2>'lore -o lint': A lint-like tool</h2>
+    <ul>
+          <li>Checks for many common errors
+             <ul>
+              <li>Invalid XML</li>
+              <li>Unhandled elements</li>
+              <li>Misspelled (or miscased) class names</li>
+              <li>Checks Python code for syntax errors</li>
+             </ul>
+          </li>
+    </ul>
+
+    <h2>Extending Lore</h2>
+    <ul>
+           <li>Easily done with some Python code</li>
+           <li>Input-enhancements decide which output formats to handle</li>
+           <li>Example: math-lore, Lore with LaTeX formulae</li>
+    </ul>
+
+    <h2>Extending Lore (cont'd)</h2>
+    <div class="pause" />
+    <ul>
+          <li>Another example: These slides!</li>
+          <li>The <code>lore-slides</code> plugin can output to
+              <ul>
+                  <li>Magicpoint</li>
+                  <li>HTML (one page per slide)</li>
+                  <li>HTML (one big page)</li>
+              </ul>
+          </li>
+    </ul>
+
+    <h2>HTML Output</h2>
+    <ul>
+          <li>HTML is a flexible output format</li>
+          <li>Documents often have to integrate with a site</li>
+          <li>Lore produces HTML documents based on a template</li>
+          <li>Lore uses only HTML <code>class</code> attributes, never <code>font</code>
+              <ul>
+                  <li>Plays nice with CSS</li>
+              </ul>
+          </li>
+    </ul>
+
+    <h2>Man Pages</h2>
+    <ul>
+          <li>Lore has a program to convert man pages to Lore documents</li>
+          <li>Man pages are written anyway</li>
+          <li>No man output: the format is too limited</li>
+    </ul>
+
+    <h2>Future Directions</h2>
+    <ul>
+          <li>More output formats</li>
+          <li>Some more classes -- abstract, bibliography</li>
+          <li>Index</li>
+    </ul>
+
+	</body>
+</html>
+		

@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>Glossary</title>
+  </head>
+  <body>
+    <h1>Glossary</h1>
+
+    <p class="note">This glossary is very incomplete.  Contributions are
+    welcome.</p>
+
+    <dl>
+      <dt><a name="resource">resource</a></dt>
+      <dd>
+        An object accessible via HTTP at one or more URIs.  In Twisted Web,
+        a resource is represented by an object which provides <code
+        class="API">twisted.web.resource.IResource</code> and most often is
+        a subclass of <code
+        class="API">twisted.web.resource.Resource</code>.  For example, here
+        is a resource which represents a simple HTML greeting.
+
+<pre class="python">
+from twisted.web.resource import Resource
+
+class Greeting(Resource):
+    def render_GET(self, request):
+        return "<html><body>Hello, world.</body></html>"
+</pre>
+      </dd>
+    </dl>
+  </body>
+</html>

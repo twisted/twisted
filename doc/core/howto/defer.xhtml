@@ -254,13 +254,13 @@ errback (you can add multiple errbacks, just like with callbacks). You can
 think of your errbacks as being like <code class="python">except</code> blocks
 of ordinary Python code.</p>
 
-<p>Unless you explicitly <code class="python">raise</code> an error in an except
+<p>Unless you explicitly <code class="python">raise</code> an error in except
 block, the <code class="python">Exception</code> is caught and stops
 propagating, and normal execution continues. The same thing happens with
 errbacks: unless you explicitly <code class="python">return</code> a <code
 class="python">Failure</code> or (re-)raise an exception, the error stops
 propagating, and normal callbacks continue executing from that point (using the
-value returned from the errback). If the errback does return a <code
+value returned from the errback). If the errback does returns a <code
 class="python">Failure</code> or raise an exception, then that is passed to the
 next errback, and so on.</p>
 

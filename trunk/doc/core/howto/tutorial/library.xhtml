@@ -1,0 +1,93 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>The Evolution of Finger: making a finger library</title>
+  </head>
+<body>
+
+<h1>The Evolution of Finger: making a finger library</h1>
+
+<h2>Introduction</h2>
+
+<p> This is the tenth part of the Twisted tutorial <a
+href="index.xhtml">Twisted from Scratch, or The Evolution of Finger</a>.</p>
+
+<p>In this part, we separate the application code that launches a finger service
+from the library code which defines a finger service, placing the application in
+a Twisted Application Configuration (.tac) file. We also move configuration
+(such as HTML templates) into separate files. Configuration and deployment with
+.tac and twistd are introduced in <a href="../application.xhtml">Using the
+Twisted Application Framework</a>.</p>
+
+<h2>Organization</h2>
+
+<p>Now this code, while quite modular and well-designed, isn't
+properly organized. Everything above the <code>application=</code> belongs in a
+module, and the HTML templates all belong in separate files.
+</p>
+
+<p>We can use the <code>templateFile</code> and <code>templateDirectory</code>
+attributes to indicate what HTML template file to use for each Page, and where
+to look for it.</p>
+
+<a href="listings/finger/organized-finger.tac" class="py-listing">organized-finger.tac</a>
+
+<p>
+Note that our program is now quite separated. We have:
+<ul>
+  <li>Code (in the module)</li>
+  <li>Configuration (file above)</li>
+  <li>Presentation (templates)</li>
+  <li>Content (<code>/etc/users</code>)</li>
+  <li>Deployment (twistd)</li>
+</ul>
+
+Prototypes don't need this level of separation, so our earlier examples all
+bunched together. However, real applications do. Thankfully, if we write our
+code correctly, it is easy to achieve a good separation of parts.
+</p>
+
+
+<h2>Easy Configuration</h2>
+
+<p>We can also supply easy configuration for common cases with a makeService
+method that will also help build .tap files later:</p>
+
+<a href="listings/finger/finger_config.py" class="py-listing">finger_config.py</a>
+
+<p>And we can write simpler files now:</p>
+
+<a href="listings/finger/simple-finger.tac" class="py-listing">simple-finger.tac</a>
+
+<pre class="shell">
+% twisted -ny simple-finger.tac
+</pre>
+
+
+<p>Note: the finger <em>user</em> still has ultimate power: he can use
+ <code>makeService</code>, or he can use the lower-level interface if he has
+specific needs (maybe an IRC server on some other port? Maybe we want the
+non-SSL webserver to listen only locally?  etc. etc.)  This is an important
+design principle: never force a layer of abstraction: allow usage of layers of
+abstractions.</p>
+
+<p>The pasta theory of design:</p>
+
+<ul>
+<li>Spaghetti: each piece of code interacts with every other piece of
+    code [can be implemented with GOTO, functions, objects]</li>
+<li>Lasagna: code has carefully designed layers. Each layer is, in
+    theory independent. However low-level layers usually cannot be
+    used easily, and high-level layers depend on low-level layers.</li>
+<li>Ravioli: each part of the code is useful by itself. There is a thin
+    layer of interfaces between various parts [the sauce]. Each part
+    can be usefully be used elsewhere.</li>
+<li>...but sometimes, the user just wants to order <q>Ravioli</q>, so one
+    coarse-grain easily definable layer of abstraction on top of it all
+    can be useful.</li>
+</ul>
+
+
+</body>
+</html>

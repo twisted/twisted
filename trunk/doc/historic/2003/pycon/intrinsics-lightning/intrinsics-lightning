@@ -1,0 +1,97 @@
+#!/usr/bin/python
+
+from slides import *
+from twslides import *
+
+class PythonSource:
+    def __init__(self, content):
+        self.content = content 
+    def toHTML(self):
+        return '<pre class="python">%s</pre>' % (self.content,)
+
+lecture = Lecture(
+    "Changing the Type of Literals",
+    Slide("New-style classes",
+        Bullet("In 2.2+, built-in types can be subclassed"),
+        Bullet("These can be created explicitly by using their name", SubBullet(
+            Bullet("For example, an int subclass that displays itself in roman numerals"),
+            Bullet("print RomanNumeral(13) -> XIII"),
+        )),
+    ),
+    Slide("Literals are less accessable",
+        Bullet("When you write [] or 7, the list or int type is instantiated"),
+        Bullet("This behavior seems inaccessable"),
+        Bullet("While this makes for more readable code, it limits the scope of possible evil"),
+    ),
+    Slide("Throw in an extension module...",
+        Bullet("intrinsics.so exposes one function, 'replace'"),
+        Bullet("It takes two arguments", SubBullet(
+            Bullet("A type object to replace"),
+            Bullet("The type object with which to replace it"),
+        )),
+        Bullet("Magic is performed, and the new type is now used whenever the old one would have been"),
+    ),
+    Slide("An example",
+        PythonSource("""\
+class RomanNumeral(int):
+    def __str__(self):
+        # Regular code for formatting roman numerals
+
+old_int = intrinsics.replace(int, RomanNumeral)
+print 13
+"""
+        ),
+        Bullet("The output is simply the roman numerals XIII"),
+    ),
+    Slide("intrinsics.c - The replacement",
+        PRE("""\
+PyObject*
+intrinsics_replace(PyObject* self, PyObject* args) {
+    static PyTypeObject* const types[] = {
+        &PyInt_Type,    &PyLong_Type,         &PyFloat_Type, &PyComplex_Type,
+        &PyBool_Type,   &PyBaseObject_Type,   &PyDict_Type,  &PyTuple_Type,
+        &PyBuffer_Type, &PyClassMethod_Type,  &PyEnum_Type,  &PyProperty_Type,
+        &PyList_Type,   &PyStaticMethod_Type, &PySlice_Type, &PySuper_Type,
+        &PyType_Type,   &PyRange_Type,        &PyFile_Type,  &PyUnicode_Type,
+        &PyString_Type,
+        NULL
+    };
+
+    int i = 0;
+    PyObject *old, *new;
+    PyTypeObject* space;
+
+    if (!PyArg_ParseTuple(args, "OO:replace", &old, &new))
+        return NULL;
+"""
+        ),
+    ),
+    Slide("intrinsics.c - The actual replacement",
+        PRE("""\
+    while (types[i]) {
+        if (types[i] == (PyTypeObject*)old) {
+            space = PyObject_New(PyTypeObject, &PyType_Type);
+            *space = *(types[i]);
+            *(types[i]) = *(PyTypeObject*)new;
+            break;
+        }
+        ++i;
+    }
+    if (!types[i]) {
+        PyErr_SetString(replace_error, "unknown type");
+        return NULL;
+    }
+    Py_INCREF(new);
+    Py_INCREF(space);
+    return (PyObject*)space;
+}
+"""
+        ),
+    ),
+    Slide("This is the wrong answer",
+        Bullet("The right answer is to add more flexibility to the Python compiler"),
+        Bullet("This is a lot less code, though"),
+    )
+)
+
+lecture.renderHTML(".", "intrinsics-lightning-%d.html", css="stylesheet.css") 

@@ -24,7 +24,7 @@ from twisted.trial import util
 from twisted.trial.util import (
     DirtyReactorAggregateError, _Janitor, excInfoOrFailureToExcInfo,
     acquireAttribute)
-from twisted.trial.test import suppression
+from twisted.trial.test import packages, suppression
 
 
 
@@ -93,6 +93,62 @@ class TestIntrospection(SynchronousTestCase):
         self.assertEqual(1, len(warnings))
     if _PY3:
         test_containers.skip = "getPythonContainers is unsupported on Python 3."
+
+
+
+class TestFindObject(packages.SysPathManglingTest):
+    """
+    Tests for L{twisted.trial.util.findObject}
+    """
+
+    def test_deprecation(self):
+        """
+        Calling L{findObject} results in a deprecation warning
+        """
+        util.findObject('')
+        warningsShown = self.flushWarnings()
+        self.assertEqual(len(warningsShown), 1)
+        self.assertIdentical(warningsShown[0]['category'], DeprecationWarning)
+        self.assertEqual(warningsShown[0]['message'],
+                          "twisted.trial.util.findObject was deprecated "
+                          "in Twisted 10.1.0: Please use "
+                          "twisted.python.reflect.namedAny instead.")
+
+
+    def test_importPackage(self):
+        package1 = util.findObject('package')
+        import package as package2
+        self.assertEqual(package1, (True, package2))
+
+    def test_importModule(self):
+        test_sample2 = util.findObject('goodpackage.test_sample')
+        from goodpackage import test_sample
+        self.assertEqual((True, test_sample), test_sample2)
+
+    def test_importError(self):
+        self.failUnlessRaises(ZeroDivisionError,
+                              util.findObject, 'package.test_bad_module')
+
+    def test_sophisticatedImportError(self):
+        self.failUnlessRaises(ImportError,
+                              util.findObject, 'package2.test_module')
+
+    def test_importNonexistentPackage(self):
+        self.assertEqual(util.findObject('doesntexist')[0], False)
+
+    def test_findNonexistentModule(self):
+        self.assertEqual(util.findObject('package.doesntexist')[0], False)
+
+    def test_findNonexistentObject(self):
+        self.assertEqual(util.findObject(
+            'goodpackage.test_sample.doesnt')[0], False)
+        self.assertEqual(util.findObject(
+            'goodpackage.test_sample.AlphabetTest.doesntexist')[0], False)
+
+    def test_findObjectExist(self):
+        alpha1 = util.findObject('goodpackage.test_sample.AlphabetTest')
+        from goodpackage import test_sample
+        self.assertEqual(alpha1, (True, test_sample.AlphabetTest))
 
 
 

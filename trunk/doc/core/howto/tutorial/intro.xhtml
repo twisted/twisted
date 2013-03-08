@@ -1,0 +1,310 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>The Evolution of Finger: building a simple finger service</title>
+  </head>
+<body>
+
+<h1>The Evolution of Finger: building a simple finger service</h1>
+
+<h2>Introduction</h2>
+
+<p>This is the first part of the Twisted tutorial <a
+href="index.xhtml">Twisted from Scratch, or The Evolution of Finger</a>.</p>
+
+<p>If you're not familiar with 'finger' it's probably because it's not used as
+much nowadays as it used to be. Basically, if you run <code>finger nail</code>
+or <code>finger nail@example.com</code> the target computer spits out some
+information about the user named <code>nail</code>. For instance:</p>
+
+<pre class="shell">
+Login: nail                           Name: Nail Sharp
+Directory: /home/nail                 Shell: /usr/bin/sh
+Last login Wed Mar 31 18:32 2004 (PST)
+New mail received Thu Apr  1 10:50 2004 (PST)
+     Unread since Thu Apr  1 10:50 2004 (PST)
+No Plan.
+</pre>
+
+<p>If the target computer does not have
+the <code>fingerd</code> <a href="../glossary.xhtml#Daemon">daemon</a>
+running you'll get a "Connection Refused" error. Paranoid sysadmins
+keep <code>fingerd</code> off or limit the output to hinder crackers
+and harassers. The above format is the standard <code>fingerd</code>
+default, but an alternate implementation can output anything it wants,
+such as automated responsibility status for everyone in an
+organization. You can also define pseudo "users", which are
+essentially keywords.</p>
+
+<p>This portion of the tutorial makes use of factories and protocols as
+introduced in the <a href="../servers.xhtml">Writing a TCP Server howto</a> and
+deferreds as introduced in <a href="../defer.xhtml">Using Deferreds</a>
+and <a href="../gendefer.xhtml">Generating Deferreds</a>. Services and
+applications are discussed in <a href="../application.xhtml">Using the Twisted
+Application Framework</a>.</p>
+
+<p>By the end of this section of the tutorial, our finger server will answer
+TCP finger requests on port 1079, and will read data from the web.</p>
+
+<h2>Refuse Connections</h2>
+
+<a href="listings/finger/finger01.py" class="py-listing">finger01.py</a>
+
+<p>This example only runs the reactor. It will consume almost no CPU
+resources. As it is not listening on any port, it can't respond to network
+requests &mdash; nothing at all will happen until we interrupt the program.  At
+this point if you run <code>finger nail</code> or <code>telnet localhost
+1079</code>, you'll get a "Connection refused" error since there's no daemon
+running to respond.  Not very useful, perhaps &mdash; but this is the skeleton
+inside which the Twisted program will grow.
+</p>
+
+<p>As implied above, at various points in this tutorial you'll want to
+observe the behavior of the server being developed.  Unless you have a
+finger program which can use an alternate port, the easiest way to do this
+is with a telnet client.  <code>telnet localhost 1079</code> will connect to
+the local host on port 1079, where a finger server will eventually be
+listening.</p>
+
+<h3>The Reactor</h3>
+
+<p>You don't call Twisted, Twisted calls you. The <code class="API"
+base="twisted.internet">reactor</code> is Twisted's main event loop, similar to
+the main loop in other toolkits available in Python (Qt, wx, and Gtk). There is
+exactly one reactor in any running Twisted application. Once started it loops
+over and over again, responding to network events and making scheduled calls to
+code.</p>
+
+<p>Note that there are actually several different reactors to choose
+from; <code>from twisted.internet import reactor</code> returns the
+current reactor.  If you haven't chosen a reactor class yet, it
+automatically chooses the default.  See
+the <a href="../reactor-basics.xhtml">Reactor Basics HOWTO</a> for
+more information.</p>
+
+<h2>Do Nothing</h2>
+
+<a href="listings/finger/finger02.py" class="py-listing">finger02.py</a>
+
+<p>Here, <code>reactor.listenTCP</code> opens port 1079. (The number 1079 is a
+reminder that eventually we want to run on port 79, the standard port for
+finger servers.)  The specified factory, <code>FingerFactory</code>, is used to
+handle incoming requests on that port.  Specifically, for each request, the
+reactor calls the factory's <code>buildProtocol</code> method, which in this
+case causes <code>FingerProtocol</code> to be instantiated. Since the protocol
+defined here does not actually respond to any events, connections to 1079 will
+be accepted, but the input ignored.</p>
+
+<p>A Factory is the proper place for data that you want to make available to
+the protocol instances, since the protocol instances are garbage collected when
+the connection is closed.</p>
+
+
+<h2>Drop Connections</h2>
+
+<a href="listings/finger/finger03.py" class="py-listing">finger03.py</a>
+
+<p>Here we add to the protocol the ability to respond to the event of beginning
+a connection &mdash; by terminating it.  Perhaps not an interesting behavior,
+but it is already close to behaving according to the letter of the standard
+finger protocol. After all, there is no requirement to send any data to the
+remote connection in the standard.  The only problem, as far as the standard is
+concerned, is that we terminate the connection too soon. A client which is slow
+enough will see his <code>send()</code> of the username result in an error.</p>
+
+
+<h2>Read Username, Drop Connections</h2>
+
+<a href="listings/finger/finger04.py" class="py-listing">finger04.py</a>
+
+<p>Here we make <code>FingerProtocol</code> inherit from <code class="API"
+base="twisted.protocols.basic">LineReceiver</code>, so that we get data-based
+events on a line-by-line basis. We respond to the event of receiving the line
+with shutting down the connection.</p>
+
+<p>If you use a telnet client to interact with this server, the result will
+look something like this:</p>
+
+<pre class="shell">
+$ telnet localhost 1079
+Trying 127.0.0.1...
+Connected to localhost.localdomain.
+alice
+Connection closed by foreign host.
+</pre>
+
+<p>Congratulations, this is the first standard-compliant version of the code.
+However, usually people actually expect some data about users to be
+transmitted.</p>
+
+<h2>Read Username, Output Error, Drop Connections</h2>
+
+<a href="listings/finger/finger05.py" class="py-listing">finger05.py</a>
+
+<p>Finally, a useful version. Granted, the usefulness is somewhat limited by
+the fact that this version only prints out a <q>No such user</q> message. It
+could be used for devastating effect in honey-pots (decoy servers), of
+course.</p>
+
+
+<h2>Output From Empty Factory</h2>
+
+<a href="listings/finger/finger06.py" class="py-listing">finger06.py</a>
+
+<p>The same behavior, but finally we see what usefulness the
+factory has: as something that does not get constructed for
+every connection, it can be in charge of the user database.
+In particular, we won't have to change the protocol if
+the user database back-end changes.</p>
+
+
+<h2>Output from Non-empty Factory</h2>
+
+<a href="listings/finger/finger07.py" class="py-listing">finger07.py</a>
+
+<p>Finally, a really useful finger database. While it does not
+supply information about logged in users, it could be used to
+distribute things like office locations and internal office
+numbers. As hinted above, the factory is in charge of keeping
+the user database: note that the protocol instance has not
+changed. This is starting to look good: we really won't have
+to keep tweaking our protocol.</p>
+
+
+<h2>Use Deferreds</h2>
+
+<a href="listings/finger/finger08.py" class="py-listing">finger08.py</a>
+
+<p>But, here we tweak it just for the hell of it. Yes, while the
+previous version worked, it did assume the result of getUser is
+always immediately available. But what if instead of an in-memory
+database, we would have to fetch the result from a remote Oracle server?  By
+allowing getUser to return a Deferred, we make it easier for the data to be
+retrieved asynchronously so that the CPU can be used for other tasks in the
+meanwhile.</p>
+
+<p>As described in the <a href="../defer.xhtml">Deferred HOWTO</a>, Deferreds
+allow a program to be driven by events.  For instance, if one task in a program
+is waiting on data, rather than have the CPU (and the program!) idly waiting
+for that data (a process normally called 'blocking'), the program can perform
+other operations in the meantime, and waits for some signal that data is ready
+to be processed before returning to that process.</p>
+
+<p>In brief, the code in <code>FingerFactory</code> above creates a
+Deferred, to which we start to attach <em>callbacks</em>.  The
+deferred action in <code>FingerFactory</code> is actually a
+fast-running expression consisting of one dictionary
+method, <code>get</code>. Since this action can execute without
+delay, <code>FingerFactory.getUser</code>
+uses <code>defer.succeed</code> to create a Deferred which already has
+a result, meaning its return value will be passed immediately to the
+first callback function, which turns out to
+be <code>FingerProtocol.writeResponse</code>.  We've also defined
+an <em>errback</em> (appropriately
+named <code>FingerProtocol.onError</code>) that will be called instead
+of <code>writeResponse</code> if something goes wrong.</p>
+
+<h2>Run 'finger' Locally</h2>
+
+<a href="listings/finger/finger09.py" class="py-listing">finger09.py</a>
+
+<p>This example also makes use of a
+Deferred. <code>twisted.internet.utils.getProcessOutput</code> is a
+non-blocking version of Python's <code>commands.getoutput</code>: it
+runs a shell command (<code>finger</code>, in this case) and captures
+its standard output.  However, <code>getProcessOutput</code> returns a
+Deferred instead of the output itself.
+Since <code>FingerProtocol.lineReceived</code> is already expecting a
+Deferred to be returned by <code>getUser</code>, it doesn't need to be
+changed, and it returns the standard output as the finger result.</p>
+
+<p>Note that in this case the shell's built-in <code>finger</code> command is
+simply run with whatever arguments it is given. This is probably insecure, so
+you probably don't want a real server to do this without a lot more validation
+of the user input. This will do exactly what the standard version of the finger
+server does.</p>
+
+<h2>Read Status from the Web</h2>
+
+<p>The web. That invention which has infiltrated homes around the
+world finally gets through to our invention. In this case we use the
+built-in Twisted web client
+via <code>twisted.web.client.getPage</code>, a non-blocking version of
+Python's <code>urllib2.urlopen(URL).read()</code>.
+Like <code>getProcessOutput</code> it returns a Deferred which will be
+called back with a string, and can thus be used as a drop-in
+replacement.</p>
+
+<p>Thus, we have examples of three different database back-ends, none of which
+change the protocol class. In fact, we will not have to change the protocol
+again until the end of this tutorial: we have achieved, here, one truly usable
+class.</p>
+
+<a href="listings/finger/finger10.py" class="py-listing">finger10.py</a>
+
+<h2>Use Application</h2>
+
+<p>Up until now, we faked. We kept using port 1079, because really, who wants to
+run a finger server with root privileges? Well, the common solution
+is <q>privilege shedding</q>: after binding to the network, become a different,
+less privileged user. We could have done it ourselves, but Twisted has a
+built-in way to do it. We will create a snippet as above, but now we will define
+an application object. That object will have <code>uid</code>
+and <code>gid</code> attributes. When running it (later we will see how) it will
+bind to ports, shed privileges and then run.</p>
+
+<p>Read on to find out how to run this code using the twistd utility.</p>
+
+<h2>twistd</h2>
+
+<p>This is how to run <q>Twisted Applications</q> &mdash; files which define an
+'application'. A daemon is expected to adhere to certain behavioral standards
+so that standard tools can stop/start/query them.  If a Twisted application is
+run via twistd, the TWISTed Daemonizer, all this behavioral stuff will be
+handled for you. twistd does everything a daemon can be expected to &mdash;
+shuts down stdin/stdout/stderr, disconnects from the terminal and can even
+change runtime directory, or even the root filesystems. In short, it does
+everything so the Twisted application developer can concentrate on writing his
+networking code.</p>
+
+<pre class="shell">
+root% twistd -ny finger11.tac # just like before
+root% twistd -y finger11.tac # daemonize, keep pid in twistd.pid
+root% twistd -y finger11.tac --pidfile=finger.pid
+root% twistd -y finger11.tac --rundir=/
+root% twistd -y finger11.tac --chroot=/var
+root% twistd -y finger11.tac -l /var/log/finger.log
+root% twistd -y finger11.tac --syslog # just log to syslog
+root% twistd -y finger11.tac --syslog --prefix=twistedfinger # use given prefix
+</pre>
+
+<p>There are several ways to tell twistd where your application is; here we
+show how it is done using the <code>application</code> global variable in a
+Python source file (a <a href="../glossary.xhtml#TAC">Twisted Application
+Configuration</a> file).</p>
+
+<a href="listings/finger/finger11.tac" class="py-listing">finger11.tac</a>
+
+
+<p>Instead of using <code>reactor.listenTCP</code> as in the above
+examples, here we are using its application-aware
+counterpart, <code>internet.TCPServer</code>.  Notice that when it is
+instantiated, the application object itself does not reference either
+the protocol or the factory.  Any services (such as TCPServer) which
+have the application as their parent will be started when the
+application is started by twistd.  The application object is more
+useful for returning an object that supports the <code class="API"
+base="twisted.application.service">IService</code>, <code class="API"
+base="twisted.application.service">IServiceCollection</code>, <code class="API"
+base="twisted.application.service">IProcess</code>,
+and <code class="API" base="twisted.persisted">sob.IPersistable</code>
+interfaces with the given parameters; we'll be seeing these in the
+next part of the tutorial. As the parent of the TCPServer we opened,
+the application lets us manage the TCPServer.</p>
+
+<p>With the daemon running on the standard finger port, you can test it with
+the standard finger command: <code>finger moshez</code>.</p>
+
+</body>
+</html>

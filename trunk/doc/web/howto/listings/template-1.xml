@@ -1,0 +1,9 @@
+<html xmlns:t="http://twistedmatrix.com/ns/twisted.web.template/0.1">
+<body>
+  <div t:render="header" />
+  <div id="content">
+    <p>Content goes here.</p>
+  </div>
+  <div t:render="footer" />
+</body>
+</html>

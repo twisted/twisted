@@ -643,17 +643,6 @@ class Cooperator(object):
             self._delayedCall = None
 
 
-    @property
-    def running(self):
-        """
-        Is this L{Cooperator} is currently running?
-
-        @return: C{True} if the L{Cooperator} is running, C{False} otherwise.
-        @rtype: C{bool}
-        """
-        return (self._started and not self._stopped)
-
-
 
 _theCooperator = Cooperator()
 

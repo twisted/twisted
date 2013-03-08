@@ -1,0 +1,34 @@
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Security</title>
+</head>
+<body>
+
+<h1>Security</h1>
+
+<p>We need to do a full audit of Twisted, module by module.
+This document list the sort of things you want to look for
+when doing this, or when writing your own code.</p>
+
+<h2>Bad input</h2>
+
+<p>Any place we receive untrusted data, we need to be careful.
+In some cases we are not careful enough. For example, in HTTP
+there are many places where strings need to be converted to
+ints, so we use <code class="python">int()</code>. The problem
+is that this well accept negative numbers as well, whereas
+the protocol should only be accepting positive numbers.</p>
+
+<h2>Resource Exhaustion and DoS</h2>
+
+<p>Make sure we never allow users to create arbitarily large
+strings or files. Some of the protocols still have issues
+like this. Place a limit which allows reasonable use but
+will cut off huge requests, and allow changing of this limit.
+</p>
+
+<p>Another operation to look out for are exceptions. They can fill
+up logs and take a lot of CPU time to render in web pages.</p>
+
+</body>
+</html>

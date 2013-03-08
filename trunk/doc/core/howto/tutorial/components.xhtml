@@ -1,0 +1,67 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>The Evolution of Finger: moving to a component based architecture</title>
+  </head>
+<body>
+
+<h1>The Evolution of Finger: moving to a component based architecture</h1>
+
+<h2>Introduction</h2>
+
+<p> This is the fourth part of the Twisted tutorial <a
+href="index.xhtml">Twisted from Scratch, or The Evolution of Finger</a>.</p>
+
+<p>In this section of the tutorial, we'll move our code to a component
+architecture so that adding new features is trivial.
+See <a href="../components.xhtml">Interfaces and Adapters</a> for a more
+complete discussion of components.</p>
+
+<h2>Write Maintainable Code</h2>
+
+
+<p>In the last version, the service class was three times longer than any other
+class, and was hard to understand. This was because it turned out to have
+multiple responsibilities. It had to know how to access user information, by
+rereading the file every half minute, but also how to display itself in a myriad
+of protocols. Here, we used the component-based architecture that Twisted
+provides to achieve a separation of concerns. All the service is responsible
+for, now, is supporting <code>getUser</code>/<code>getUsers</code>. It declares
+its support via a call to <code>zope.interface.implements</code>. Then, adapters
+are used to make this service look like an appropriate class for various things:
+for supplying a finger factory to <code>TCPServer</code>, for supplying a
+resource to site's constructor, and to provide an IRC client factory
+for <code>TCPClient</code>.  All the adapters use are the methods
+in <code>FingerService</code> they are declared to use:
+<code>getUser</code>/<code>getUsers</code>. We could, of course, skip the
+interfaces and let the configuration code use things
+like <code>FingerFactoryFromService(f)</code> directly. However, using
+interfaces provides the same flexibility inheritance gives: future subclasses
+can override the adapters.</p>
+
+<a href="listings/finger/finger19.tac" class="py-listing">finger19.tac</a>
+
+<h2>Advantages of Latest Version</h2>
+
+<ul>
+<li>Readable -- each class is short</li>
+<li>Maintainable -- each class knows only about interfaces</li>
+<li>Dependencies between code parts are minimized</li>
+<li>Example: writing a new <code>IFingerService</code> is easy</li>
+</ul>
+<a href="listings/finger/finger19a_changes.py" class="py-listing">finger19a_changes.py</a>
+<p>
+Full source code here: <a class="py-listing" href="listings/finger/finger19a.tac">finger19a.tac</a>
+</p>
+
+<h2>Aspect-Oriented Programming</h2>
+
+<p>At last, an example of aspect-oriented programming that isn't about logging
+or timing. This code is actually useful! Watch how aspect-oriented programming
+helps you write less code and have fewer dependencies!
+</p>
+
+
+</body>
+</html>

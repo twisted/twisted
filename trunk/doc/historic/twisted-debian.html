@@ -1,0 +1,96 @@
+<html><head><title>Twisted and Debian</title></head><body>
+
+<h1>Twisted and Debian</h1>
+
+<h3>Moshe Zadka</h3>
+<h4>&lt;moshez@debian.org&gt; &lt;moshez@twistedmatrix.com&gt;</h4>
+
+<h2>Twisted</h2>
+
+<p>
+Twisted is a Python networking framework. It is useful for development
+of both clients and servers, and strives to support as many externalities
+as possible -- from network protocols (with over a two dozen RFCs implemented)
+to GUI toolkits (supporting GTK+, Qt, wxWindows and Tk).
+</p>
+
+<h2>Debian</h2>
+
+<p>
+Debian is a free, stable and comprehensive operating system, based on GNU
+software and the Linux kernel. Debian supports eleven hardware archtecture
+and over 6000 programs. Debian, as a free, community-supported, operating
+system, has been used as a base for many other operating systems, including
+Lindows and Knoppix.
+</p>
+
+
+<h2>Using Twisted on a Debian System</h2>
+
+<p>
+The latest stable release of Debian, woody, comes with Twisted 0.15.5 built
+in. New versions of Twisted, which are tested on both stable and unstable,
+are always available from 
+"deb http://twistedmatrix.com/users/moshez/apt". So, even those using
+stable Debian can use the latest Twisted releases, including the upcoming 1.0, 
+without the overhead of adding unstable sources to their sources.list, dealing
+with apt-pinning or building the sources themselves. 
+</p>
+
+<p>
+Of course, users of Debian unstable can get the releases directly from Debian 
+-- the released packages, already having been tested on the main Twisted
+Debian machine, are usually uploaded to Debian unstable within hours of
+the official release.
+</p>
+
+<p>
+Twisted supports,
+as fully as possible, the Python versions available in Debian -- currently,
+2.1, 2.2 and pre-releases of 2.3. For those needing just a version of
+Twisted which works with the Debian default Python version, "python-twisted"
+is available. For low-impact on production servers, the documentation of
+Twisted (over half a megabyte) is packaged seperately. Twisted uses
+the Recommends: and Suggests: fields, to allow the Debian packaging tools
+to supply the information about which packages can be used to maximise
+the potential of Twisted.
+</p>
+
+<p>
+For those on the bleeding edge, or people who want to make sure their 
+applications work flawlessly for the next version of Twisted, all release
+candidates are available from the apt source 
+"deb http://twistedmatrix.com/users/moshez/snapshot". These are the release
+candidates the Twisted team uses itself to prepare for the next release --
+but third party developers interested in assuring compatibility are also
+welcome to use them.
+</p>
+
+<h2>Using Twisted's Debian Integration</h2>
+
+<p>
+For Twisted-based server application developers who want to deploy on
+Debian, Twisted supplies the <code>tap2deb</code> program. This program
+wraps a tap file (Twisted Application Pickle, a Twisted configuration)
+in a Debian archive, including correct installation and removal scripts
+and <code>init.d</code> scripts. For the more savvy Debian users, the
+<code>tap2deb</code> also generates the source package, allowing her
+to modify and polish things which automated software cannot detect
+(such as dependencies or relationships to virtual packages). In addition,
+the Twisted team itself intends to produce Debian packages for some common
+services, such as web servers and an inetd replacement. Those packages
+will enjoy the best of all worlds -- both the consistency which comes
+from being based on the <code>tap2deb</code> and the delicate manual
+tweaking of a Debian maintainer, insuring perfect integration with
+Debian.
+</p>
+
+<p>
+This things will insure you can run a fully functional Debian system
+which relies on Twisted for many of its core, and security sensitive,
+portions -- thus, eliminating many of the classical security holes
+(such as buffer overlows, uninitialized memory access and stack smashing),
+allowing you to sleep better at night.
+</p>
+
+</body></html>

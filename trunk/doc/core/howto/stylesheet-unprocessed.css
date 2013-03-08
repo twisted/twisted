@@ -1,0 +1,20 @@
+
+span.footnote {
+  vertical-align: super;
+  font-size: small;
+}
+
+span.footnote:before
+{
+  content: "[Footnote: ";
+}
+
+span.footnote:after
+{
+  content: "]";
+}
+
+div.note:before
+{
+  content: "Note: ";
+}

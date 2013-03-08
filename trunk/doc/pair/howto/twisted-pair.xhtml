@@ -1,0 +1,75 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Twisted Pair: Low-level Networking</title>
+</head>
+
+<body>
+<h1>Twisted Pair: Low-level Networking</h1>
+
+<p>Twisted can do low-level networking, too.</p>
+
+<p>Here's an example that tries to show the relationships of different
+classes and how data could flow for receiving packets.</p>
+
+<pre>
+FileWrapper
+   |
+   v
+PcapProtocol  TuntapPort
+   |            |
+   +------------+
+   v
+EthernetProtocol
+   |
+   +------------+-----------+---...
+   v            v           v
+IPProtocol    ARPProtocol  IPv6Protocol
+   |
+   +-------------+----------------+---...
+   v             v                v
+RawUDPProtocol  RawICMPProtocol  RawTCPProtocol
+   |
+   v
+DatagramProtocol
+</pre>
+
+<p>Of course, for writing, the picture would look pretty much
+identical, except all arrows would be reversed.</p>
+
+<h2>Overview of classes</h2>
+
+<p>TODO</p>
+
+<h3>Transports</h3>
+
+<p>TODO</p>
+
+<ul>
+<li>TuntapPort: TODO</li>
+</ul>
+
+<h3>Protocols</h3>
+
+<p>TODO</p>
+
+<ul>
+<li>EthernetProtocol: TODO</li>
+<li>IPProtocol: TODO</li>
+<li>RawUDPProtocol: TODO</li>
+</ul>
+
+<h3>Interfaces</h3>
+
+<p>TODO</p>
+
+<ul>
+<li>IRawDatagramProtocol: TODO</li>
+<li>IRawPacketProtocol: TODO</li>
+</ul>
+
+</body>
+</html>

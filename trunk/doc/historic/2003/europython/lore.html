@@ -1,0 +1,502 @@
+<html><head><title>Lore</title></head><body>
+
+<h1>Lore</h1>
+<h2>Lore - A Document Generation System</h2><ul>
+<li>Gimmick -- Gilmore girls quotes</li>
+
+<li>Goal - take something which is easy to write, transforms to something easy to read</li>
+
+<li>For correct definitions of 'easy', of course</li>
+
+</ul>
+<hr />
+<em>Rory (Concert Interruptus, season 1) -- Yeah, well I've always thought easy is completely overrated.</em>
+<h2>Source Format</h2><ul>
+<li>Subset of XHTML 1.0<ul><li>Except for some new attributes</li>
+
+<li>Shouldn't bother browsers</li>
+</ul></li>
+
+<li>Slanted towards logical markup</li>
+
+</ul>
+<hr />
+<em>Alex (I Solemnly Swear, season 3) -- That would've been far too logical.</em>
+
+<h2>Output Formats</h2><ul>
+<li>Screen and paper<ul><li>Screen - 'fancy HTML'</li>
+
+<li>Paper - LaTeX<ul><li>Use LaTeX to produce PDF or PostScript</li>
+</ul></li>
+</ul></li>
+
+</ul>
+<hr />
+<em>Madelaine (The Lorelais' First Day at Chilton, season 1) -- You don't know she's going out for the paper.</em>
+<h2>Minimal Lore Document</h2>
+<pre>
+&lt;html&gt;
+&lt;head&gt;&lt;title&gt;Title&lt;/title&gt;&lt;/head&gt;
+&lt;body&gt;&lt;h1&gt;Title&lt;/h1&gt;&lt;/body&gt;
+&lt;/html&gt;</pre>
+
+<hr />
+<em>Luke (There's the Rub, season 2) -- You said minimal</em>
+<h2>Minimal Lore Document Explained</h2><ul>
+<li>title element in head -- a must</li>
+
+<li>h1 element in head -- a must<ul><li>Must have same content</li>
+</ul></li>
+
+</ul>
+<hr />
+<em>Tom (There's the Rub, season 2) -- Hey, this is minimal</em>
+<h2>External Listings</h2><ul>
+<li>Advantage -- no need to quote</li>
+
+<li>Advantage -- test your examples</li>
+
+<li>Example:<ul><li><code>&lt;a class="python-listing" href="/usr/lib/python2.2/os.py"&gt;os.py&lt;/a&gt;</code>
+</li>
+</ul></li>
+
+</ul>
+<hr />
+<em>Kirk (Red Light on the Wedding Night, season 2) -- I include it as an example of the excellence I aspire to.</em>
+<h2>Using Lore to Generate HTML</h2><ul>
+<li>Write template</li>
+
+<li>[optional] Write stylesheet</li>
+
+<li>Run lore</li>
+
+</ul>
+<hr />
+<em>Paris (Run Away, Little Boy, season 2) -- I went on the web and found this site</em>
+<h2>Generating LaTeX</h2><ul>
+<li>lore -olatex file.html --&gt; produces file.tex</li>
+
+<li>Default is to create an 'article'</li>
+
+<li>Creating PostScript<ul><li>latex file.tex</li>
+
+<li>latex file.tex</li>
+
+<li>dvips -o file.ps file.dvi</li>
+</ul></li>
+
+<li>Creating PDF<li>latex file.tex</li>
+<li>pdflatex file.tex</li>
+</li>
+
+</ul>
+<hr />
+<em>Rory (Christopher Returns, season 1) -- He had already printed like a million</em>
+<h2>Using Lint</h2><ul>
+<li>lore -olint doc/howto/*.html</li>
+
+<li>lore -n -olint doc/howto/*.html #no output except warnings</li>
+
+</ul>
+<hr />
+<em>Max (The Deer-Hunters, season 1) -- I know a D seems pretty dismal</em>
+<h2>Further Reading</h2><ul>
+<li>Man page -- doc/man/lore.xhtml</li>
+
+<li>Howto -- doc/howto/lore.xhtml</li>
+
+<li>Extending howto -- doc/howto/extending-lore.xhtml</li>
+
+<li>Documentation standard -- doc/howto/doc-standard.xhtml</li>
+
+<li>Lore paper -- doc/historic/2003/pycon/lore/lore.html</li>
+
+</ul>
+<hr />
+<em>Paris (The Bracebridge Dinner, season 2) -- Rereading the Iliad a third time is not not doing anything</em>
+<h2>Questions?</h2>
+<em>Lorelai (Forgiveness and Stuff, season 1) -- A person needs details.</em>
+<h2>Bonus Slides</h2>
+<em>Miss James (The Lorelais' First Day at Chilton, season 1) -- If you do it in Latin you get extra credit.</em>
+<h2>Lore Alternatives - LaTeX</h2><ul>
+<li>Very good at printed results</li>
+
+<li>Model makes alternative parsers near-impossible</li>
+
+<li>Renderers to HTML are buggy and fragile</li>
+
+<li>People find it hard to use</li>
+
+</ul>
+<hr />
+<em>Michel (Love, Daisies and Troubadors, season 1) -- It increases my ennui</em>
+<h2>Lore Alternatives - HTML</h2><ul>
+<li>Too flexible</li>
+
+<li>No support for needed idioms<ul><li>Special-purpose Python markup</li>
+
+<li>Tables of contents</li>
+
+<li>Inlining</li>
+
+<li>Footnotes</li>
+</ul></li>
+
+<li>Renders badly to dead trees with current tools</li>
+
+</ul>
+<hr />
+<em>Lorelai (Love, Daisies and Troubadors, season 1) -- It was broken [...] I'm not crazy</em>
+<h2>Lore Alternatives - Docbook</h2><ul>
+<li>Using correctly requires too much work<ul><li>Write a DTD with special elements</li>
+
+<li>Write Jade stylesheets</li>
+</ul></li>
+
+<li>Lore is probably smaller than docbook specialisation</li>
+
+<li>People find it hard to use</li>
+
+</ul>
+<hr />
+<em>Rory (Hammers and Veils, season 2) -- What do you want me to do it?</em>
+<h2>Lore Alternatives - Texinfo</h2><ul>
+<li>Next slide, please</li>
+
+</ul>
+<hr />
+<em>Man (Hammers and Veils, season 2) -- There's a ton of hurt that almost happened here.</em>
+<h2>Lore Alternatives - reST</h2><ul>
+<li>Completely new language (no editor support)</li>
+
+<li>Hard to add new tags</li>
+
+<li>No linter</li>
+
+</ul>
+<hr />
+<em>Emily (Hammers and Veils, season 2) -- And this is what we need to discuss right now?</em>
+<h2>Lore Alternatives - LyX</h2><ul>
+<li>Dependent on GUI</li>
+
+</ul>
+<hr />
+<em>Rory (Hammers and Veils, season 2) -- Well, it's just dressed up a little.</em>
+<h2>Some Standard Tags -- XHTML Primer</h2><ul>
+<li><code>&lt;p&gt;paragraph&lt;/p&gt;</code>
+</li>
+
+<li><code>&lt;em&gt;emphasis&lt;/em&gt;</code>
+</li>
+
+<li><code>&lt;strong&gt;strong emphasis&lt;/strong&gt;</code>
+</li>
+
+<li>Headers<ul><li>&lt;h2&gt;sectionheader&lt;/h2&gt;</li><li>&lt;h3&gt;subsection&lt;/h3&gt;</li></ul></li>
+
+<li>Lists<ul><li>&lt;ol&gt;&lt;li&gt;ordered list item&lt;/li&gt;&lt;/ol&gt;</li><li>&lt;ul&gt;&lt;li&gt;unordered list item&lt;/li&gt;&lt;/ul&gt;</li></ul></li>
+
+<li><code>&lt;img src="http://example.com/img.png" /&gt;</code>
+<ul><li>Note '/' at end!</li>
+</ul></li>
+
+</ul>
+<hr />
+<em>Rory (Kiss and Tell, season 1) -- See, even a little information in your hands is dangerous.</em>
+<h2>More HTML</h2><ul>
+<li>Indicating authorship -- &lt;link rel="author" href="author@example.com" title="Author Name" /&gt;</li>
+
+<li>Put in &lt;head&gt;</li>
+
+<li>sub/sup -- subscripts, superscripts</li>
+
+</ul>
+<hr />
+<em>Max (The Lorelais' First Day at Chilton, season 1) -- Tolstoy's favourite author, for instance, was...</em>
+<h2>More HTML -- cross references</h2><ul>
+<li>Label<ul><code>&lt;a name="label-name" /&gt;</code>
+</ul></li>
+
+<li>Reference in file<ul><li><code>&lt;a href="#label-name"&gt;reference text&lt;/a&gt;</code></li>
+</ul></li>
+
+<li>Reference in other file<ul><li><code>&lt;a href="file-name#label-name"&gt;reference text&lt;/a&gt;</code></li>
+</ul></li>
+
+<li>Refer to URL<ul><li><code>&lt;a href="http://example.com"&gt;reference text&lt;/a&gt;</code></li>
+</ul></li>
+
+</ul>
+<hr />
+<em>Christopher (Christopher Returns, season 1) -- It's just a weird reference.</em>
+<h2>Special Markup</h2><ul>
+<li>Things not in XHTML are done with div/span classes</li>
+
+<li>&lt;div class="note"&gt;note&lt;/a&gt; -- notes</li>
+
+<li>&lt;div class="doit"&gt;doit&lt;/a&gt; -- something not implemented</li>
+
+<li>&lt;span class="footnote"&gt;footnote&lt;/a&gt; -- put in a footnote</li>
+
+</ul>
+<hr />
+<em>Taylor (Take The Deviled Eggs, season 3) -- Out attention spans are gnat-like tonight</em>
+<h2>API References</h2><ul>
+<li><code>&lt;code class="API"&gt;urllib&lt;/code&gt;</code>
+</li>
+
+<li><code>&lt;code base="urllib" class="API"&gt;urlencode&lt;/code&gt;</code>
+</li>
+
+<li><code>&lt;code base="twisted" class="API"&gt;copyright.version&lt;/code&gt;</code>
+</li>
+
+</ul>
+<hr />
+<em>Lorelai (The Road Trip To Harvard, season 2) -- We're just kinda hanging out between classes</em>
+<h2>API References Explained</h2><ul>
+<li>Integrate with systems for docstring generation</li>
+
+<li>Generate links to auto-generated docs</li>
+
+</ul>
+<hr />
+<em>Luke (Love and War and Snow, season 1) -- How do you know? Do you have written documentation?</em>
+<h2>Inline Listings</h2><ul>
+<li>Use &lt;pre&gt;</li>
+
+<li>Possible classes: python, shell, python-interpreter</li>
+
+<li>Example:</li>
+
+</ul>
+<pre>
+&lt;pre class="python"&gt;
+def foo():
+    return forbnicate(4)
+&lt;/pre&gt;</pre>
+<hr />
+<em>Taylor (Take The Deviled Eggs, season 3) -- That's not even English.</em>
+<h2>Inline Listings -- short</h2><ul>
+<li>Use &lt;code&gt;</li>
+
+<li>Possible classes: python, shell, py-signature</li>
+
+<li>...and more</li>
+
+</ul>
+<hr />
+<em>Rory (Double Date, season 1) -- It's like this weird code thing with her.</em>
+<h2>Generating HTML -- writing templates</h2><ul>
+<li>Templates are XHTML documents</li>
+
+<li>Put in reference to stylesheet -- head is mostly kept as is</li>
+
+<li>Title will be prepended to document's title</li>
+
+<li>&lt;div class="toc" /&gt; will be replaced by table of contents</li>
+
+<li>&lt;div class="body" /&gt; will be replaced by processed body</li>
+
+</ul>
+<hr />
+<em>Paris (I Can't Get Started, season 2) -- How's this sound for a template?</em>
+<h2>Generating HTML -- using commandline</h2><ul>
+<li>Full details: the lore manpage</li>
+
+<li>Basic format: lore file.html --&gt; outputs file.xhtml<ul><li>--config template=template.tpl to use different template</li>
+
+<li>--config baseurl=format-string for the url of the auto-generated docstring docs</li>
+</ul></li>
+
+</ul>
+<hr />
+<em>Richard (The Third Lorelai, season 1) -- Your wish is my command.</em>
+<h2>Generating HTML -- using commandline -- examples</h2><ul>
+<li>lore --config template=strange.tpl foo.html</li>
+
+<li>lore --docsdir doc/howto/</li>
+
+<li>lore -p --docsdir doc/howto/ # use plain progress</li>
+
+</ul>
+<hr />
+<em>Jackson (A Deep-Fried Korean Thanksgiving, season 3) -- Deep-fried cake!</em>
+<h2>Generating HTML -- using commandline -- examples (cont'd)</h2><ul>
+<li>lore --docsdir doc/howto/ --config baseurl=../api/%s.html</li>
+
+<li>lore --ext='' foo.html # produce 'foo' as output</li>
+
+</ul>
+<hr />
+<em>Jackson (A Deep-Fried Korean Thanksgiving, season 3) -- Deep-fried shoe!</em>
+<h2>Generating HTML -- notes about stylesheets</h2><ul>
+<li>Many 'class's in the output</li>
+
+<li>The stylesheet Twisted uses can be used as example<ul><li>Especially the .py-src-* classes: used for syntax highlighting</li>
+</ul></li>
+
+</ul>
+<hr />
+<em>Miss Patty (Cinnamon's Wake, season 1) -- If you had a better hair style I might consider dating</em>
+<h2>Generating LaTeX -- examples</h2><ul>
+<li>lore -olatex --config section file.html</li>
+
+<li>lore -olatex --config book file.html</li>
+
+<li>lore -olatex --config section --docsdir doc/howto/</li>
+
+</ul>
+<hr />
+<em>Luke (Hammers and Veils, season 2) -- Just an example</em>
+<h2>Using Lint -- notes</h2><ul>
+<li>If there is an element which lint gives a warning you disagree with: &lt;element hlint="off"&gt;mistake&lt;/element&gt;</li>
+
+<li>But usually the linter is right</li>
+
+<li>lint exits with non-zero status iff some document was not clean -- useful in shell scripts</li>
+
+</ul>
+<hr />
+<em>Paris (The Deer-Hunters, season 1) -- That would be cause for concern.</em>
+<h2>Understanding Lint Warnings</h2><ul>
+<li>Format: file:line:column:warning</li>
+
+<li>Line/column always point to start/end of element</li>
+
+<li>Some justifications:<ul><li>&lt;pre&gt; with &gt;80 characters/line renders badly, both in HTML and in LaTeX</li>
+</ul></li>
+
+</ul>
+<hr />
+<em>Jess (Teach Me Tonight, season 2) -- I appreciate the warning.</em>
+<h2>Using Lore For Slides</h2><ul>
+<li>lore -ilore-slides -omgp file.html for magic point</li>
+
+<li>lore -ilore-slides -oprosper file.html for prosper</li>
+
+<li>lore -ilore-slides -ohtml file.html for HTML next/prev</li>
+
+<li>Splits on 'h2'</li>
+
+<li>Dogfooding</li>
+
+</ul>
+<hr />
+<em>Emily (Road Trip to Harvard, season 2) -- Why in the world do you insist on taking slides?</em>
+<h2>Extending Lore</h2><ul>
+<li>Accept more input tags</li>
+
+<li>Change how documents are processed</li>
+
+<li>Add more output formats</li>
+
+</ul>
+<hr />
+<em>Rory (The Lorelais' First Day at Chilton, season 1) -- Well, add a couple of plaid skirts</em>
+<h2>Extending Lore -- example</h2><ul>
+<li>We want to add a way to blink: &lt;span class="blink"&gt;</li>
+
+<li>Modify HTML output</li>
+
+<li>Modify lint output</li>
+
+<li>Make it 'small caps' in LaTeX</li>
+
+<li>Distribute as package 'blinker'</li>
+
+</ul>
+<hr />
+<em>Lorelai (Presenting Lorelai Gilmore, season 2) -- No, no, if you wanna do it, I'll help. It's just weird.</em>
+<h2>Extending Lore -- example (cont'd)</h2>
+<pre>
+# blinker/html.py
+from twisted.lore import tree
+from twisted.web import microdom, domhelpers
+
+def doBlink(document):
+    for node in domhelpers.findElementsWithAttribute(document, 'class',
+                                                    'blink'):
+        newNode = microdom.Element('blink')
+        newNode.children = node.children
+        node.parentNode.replaceChild(newNode, node)
+
+def doFile(fn, docsdir, ext, url, templ, linkrel=''):
+    doc = tree.parseFileAndReport(fn)
+    doBlink(doc)
+    cn = templ.cloneNode(1)
+    tree.munge(doc, cn, linkrel, docsdir, fn, ext, url)
+    cn.writexml(open(os.path.splitext(fn)[0]+ext, 'wb'))
+</pre>
+
+<hr />
+<em>Christopher (Presenting Lorelai Gilmore, season 2) -- I can't believe you're letting her do it.</em>
+<h2>Extending Lore -- example (cont'd 2)</h2>
+<pre>
+# blinker/latex.py
+class BlinkerLatexSpitter(latex.LatexSpitter):
+
+    def visitNode_span_blink(self, node):
+        self.writer('{\sc ')
+        self.visitNodeDefault(node)
+        self.writer('}')
+</pre>
+
+<hr />
+<em>Lorelai (Presenting Lorelai Gilmore, season 2) -- I'm sorry, I meant what scenario on my planet</em>
+<h2>Extending Lore -- example (cont'd 3)</h2>
+<pre>
+# blinker/factory.py
+from blinker import html, latex
+from twisted.lore import default
+
+class ProcessingFunctionFactory(default.ProcessingFunctionFactory):
+
+    doFile = [doFile]
+
+    latexSpitters = {None: latex.BlinkLatexSpitter}
+
+    def getLintChecker(self):
+        checker = lint.getDefaultChecker()
+        checker.allowedClasses = checker.allowedClasses.copy()
+        oldSpan = checker.allowedClasses['span']
+        checker.allowedClasses['span'] = (lambda x:oldSpan(x) or
+                                                     x=='blink')
+        return checker
+
+factory = ProcessingFunctionFactory()
+</pre>
+<pre>
+# blinker/plugins.tml
+register("Blink-Lore",
+         "blinker.factory",
+         description="Lore format with blink",
+         type="lore",
+         tapname="blinklore")
+</pre>
+<p>...and that's it!</p>
+
+<hr />
+<em>Rory (Presenting Lorelai Gilmore, season 2) -- Sorry, we haven't tamed my wild ways yet.</em>
+<h2>Man page support</h2><ul>
+<li>No output</li>
+
+<li>Man-&gt;Lore conversion</li>
+
+<li>lore -iman -olint file.1 --&gt; generates file.html</li>
+
+</ul>
+<hr />
+<em>Lorelai (Concert Interruptus, season 1) -- would you like to write out some sort of instruction manual to go with the dishes?</em>
+<h2>Man page support</h2><ul>
+<li>No output</li>
+
+<li>Man-&gt;Lore conversion</li>
+
+<li>lore -iman -olint file.1 --&gt; generates file.html</li>
+
+</ul>
+<hr />
+<em>Lorelai (Concert Interruptus, season 1) -- would you like to write out some sort of instruction manual to go with the dishes?</em>
+
+</body></html>

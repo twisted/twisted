@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>The Evolution of Finger: using a single factory for
+    multiple protocols</title>
+  </head>
+<body>
+
+<h1>The Evolution of Finger: using a single factory for
+    multiple protocols</h1>
+
+<h2>Introduction</h2>
+
+<p> This is the eighth part of the Twisted tutorial <a
+href="index.xhtml">Twisted from Scratch, or The Evolution of Finger</a>.</p>
+
+<p>In this part, we add HTTPS support to our web frontend, showing how to have a
+single factory listen on multiple ports. More information on using SSL in
+Twisted can be found in the <a href="../ssl.xhtml">SSL howto</a>.</p>
+
+<h2>Support HTTPS</h2>
+
+<p>All we need to do to code an HTTPS site is just write a context factory (in
+this case, which loads the certificate from a certain file) and then use the
+twisted.application.internet.SSLServer method. Note that one factory (in this
+case, a site) can listen on multiple ports with multiple protocols.</p>
+
+<a href="listings/finger/finger22.py" class="py-listing">finger22.py</a>
+
+
+</body>
+</html>

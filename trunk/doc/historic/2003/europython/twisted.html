@@ -1,0 +1,608 @@
+<html><head><title>Twisted Tutorial</title></head>
+<body>
+
+<h1>Twisted Tutorial</h1>
+
+<h2>Twisted -- The Tutorial</h2><ul>
+<li>Welcome</li>
+
+<li>Gimmick -- Charmed quotes</li>
+
+</ul>
+<hr />
+<em>Prue (Something Wicca This Way Comes, season 1) -- Piper, the girl has no vision, no sense of the future.</em>
+<h2>Twisted -- Networking For Python</h2><ul>
+<li>Handles the icky socket stuff</li>
+
+<li>Handles the icky select stuff</li>
+
+<li>No threads, no blocking</li>
+
+</ul>
+<hr />
+<em>Leo (Bite Me, season 4) -- As far as I know they're apart of a whole different network now.</em>
+<h2>Finger</h2><ul>
+<li>Send username</li>
+
+<li>Get back some stuff about user</li>
+
+<li>Will only implement subset of protocol here</li>
+
+</ul>
+<hr />
+<em>Natalie (Blinded By the Whitelighter) -- I'll assume a demon attacked your finger</em>
+<h2>Finger - Protocol code</h2>
+<pre class="python">
+from twisted.protocols import basic
+
+class FingerClient(basic.LineReceiver):
+
+    # This will be called when the connection is made
+    def connectionMade(self): self.sendLine(self.factory.user)
+
+    # This will be called when the server sends us a line.
+    # IMPORTANT: line *without "\n" at end.
+    # Yes, this means empty line does not mean EOF
+    def lineReceived(self, line): print line
+
+    # This will be called when the connection is terminated
+    def connectionLost(self, _): print "-"*40
+</pre>
+<hr />
+<em>Phoebe (Blind Sided, season 1) -- Standard dating protocol.</em>
+<h2>Finger - client factory</h2><ul>
+<li>Keep configuration information</li>
+
+<li>In this case, just the username</li></ul>
+
+<pre class="python">
+from twisted.internet import protocol
+
+class FingerFactory(protocol.ClientFactory):
+    protocol = FingerProtocol
+
+    def __init__(self, user): self.user = user
+
+    def clientConnectionFailed(self, _, reason):
+        print "error", reason.value
+</pre>
+
+<hr />
+<em>Jack (Ms. Hellfire, season 2) -- Well, they'd better be a rich client</em>
+<h2>Finger - tying it all together</h2><ul>
+<li>Actually run above code</li>
+
+<li>Use reactors</li></ul>
+
+<pre class="python">
+from twisted.internet import reactor
+import sys
+
+user, host = sys.argv[1].split('@')
+port = 79
+reactor.connectTCP(host, port, FingerFactory(port))
+reactor.run()
+</pre>
+<hr />
+<em>Prue/Phoebe/Piper (Something Wicca This Way Comes, season 1) -- The power of three will set us free</em>
+<h2>Finger - a bug</h2><ul>
+<li>Succeed or fail, program doesn't exit</li>
+
+<li>Reactor continues in a loop</li>
+
+<li>Takes almost no CPU time...</li>
+
+<li>...but still wrong behaviour</li>
+
+</ul>
+<hr />
+<em>Leo (Trial By Magic, season 4) -- Demons you can handle but not rats?</em>
+<h2>Digression - Deferreds</h2><ul>
+<li>In order to be more flexible, we want callbacks</li>
+
+<li>Common callbacks are too weak</li>
+
+<li>We used 'deferreds' as an abstraction for callbacks</li>
+
+</ul>
+<hr />
+<em>Piper (Morality Bites, season 2) -- Talk about it later.</em>
+<h2>Finger - reimplementing correctly</h2>
+<pre class="python">
+from twisted.protocols import basic
+from twisted.internet import protocol, defer
+import sys
+
+class FingerClient(basic.LineReceiver):
+
+    def connectionMade(self):
+        self.transport.write(self.factory.user+"\n")
+
+    def lineReceived(self, line):
+        self.factory.gotLine(line)
+</pre>
+
+
+<h2>Finger - reimplementing correctly (cont'd)</h2>
+<pre class="python">
+class FingerFactory(protocol.ClientFactory):
+    protocol = FingerProtocol
+
+    def __init__(self, user):
+        self.user, self.d = user, defer.Deferred()
+
+    def gotLine(self, line): print line
+
+    def clientConnectionLost(self, _, why): self.d.callback(None)
+
+    def clientConnectionFailed(self, _, why): self.d.errback(why)
+</pre>
+
+<h2>Finger - reimplementing correctly (cont'd 2)</h2>
+<pre class="python">
+if __name__ == '__main__':
+    from twisted.internet import reactor
+    from twisted.python import util
+    user, host = sys.argv[1].split('@')
+    f = FingerFactory(user)
+    port = 79
+    reactor.connectTCP(host, port, FingerFactory(port))
+    f.d.addCallback(lambda _: reactor.stop())
+    f.d.addErrback(lambda _: (util.println("could not connect"),
+                              reactor.stop()))
+    reactor.run()
+</pre>
+<hr />
+<em>Phoebe (Charmed and Dangerous, season 4) -- That's what we were missing.</em>
+<h2>Servers</h2><ul>
+<li>Servers are actually easier</li>
+
+<li>Servers meant to wait for events</li>
+
+<li>Most of concepts similar to clients</li>
+
+</ul>
+<hr />
+<em>Genie (Be Careful What You Witch For, season 2) -- All I know is that you rubbed and now I serve.</em>
+<h2>Finger - protocol</h2>
+<pre class="python">
+class FingerServer(basic.LineReceiver):
+
+    def lineReceived(self, line):
+        self.transport.write(self.factory.getUser(line))
+        self.transport.loseConnection()
+</pre>
+<hr />
+<em>Secretary (The Painted World, season 2) -- Well, you won't have any trouble with this if you figured that out.</em>
+<h2>Finger - factory</h2>
+<pre class="python">
+class FingerServerFactory(protocol.Factory):
+
+    protocol = FingerServer
+
+    def __init__(self):
+        self.users = {}
+        self.message = "No such user\n"
+
+    def getUser(self, name):
+        return self.users.get(name, self.message)
+
+    def setUser(self, user, status):
+        self.users[user] = status
+</pre>
+<hr />
+<em>Prue (The Demon Who Came In From the Cole, season 3) -- Okay, so who are they?</em>
+<h2>Finger - glue</h2>
+<pre class="python">
+factory = FingerServerFactory()
+factory.setUser("moshez", "Online - Sitting at computer\n")
+factory.setUser("spiv", "Offline - Surfing the waves\n")
+
+reactor.listenTCP(79, factory)
+</pre>
+<hr />
+<em>Prue (All Halliwell's Eve, season 3) -- Put it all together, it may just work.</em>
+<h2>Finger Server - problem</h2><ul>
+<li>What if server has to actually work to find user's status?</li>
+
+<li>For example, read status from a website</li>
+
+<li>API forces us to block -- not good</li>
+
+</ul>
+<hr />
+<em>Piper (All Halliwell's Eve, season 3) -- We've got big problems, a little time and a little magic.</em>
+<h2>Finger server -- new protocol</h2>
+<pre class="python">
+class FingerServer(basic.LineReceiver):
+
+    def lineReceived(self, line):
+        d = self.factory.getUser(line)
+        d.addCallback(self.writeResponse)
+        d.addErrback(self.writeError)
+
+    def writeResponse(self, response):
+        self.transport.write(response)
+        self.transport.loseConnection()
+
+    def writeError(self, error):
+        self.transport.write("Server error -- try later\n")
+        self.transport.loseConnection()
+</pre>
+<hr />
+<em>Piper (Ex Libris, season 2) -- We'll worry about it later.</em>
+<h2>Finger - factory</h2>
+<pre class="python">
+class FingerServerFactory(protocol.Factory):
+
+    protocol = FingerServer
+
+    def __init__(self):
+        self.users = {}
+        self.message = "No such user\n"
+
+    def getUser(self, name):
+        return defer.succeed(self.users.get(name, self.message))
+
+    def setUser(self, user, status):
+        self.users[user] = status
+</pre>
+<hr />
+<em>Piper/Zen Master (Enter the Demon, season 4) -- It is a different realm down there with new rules.</em>
+<h2>Finger - web factory</h2>
+<pre class="python">
+from twisted.web import client
+
+class FingerWebFactory(protocol.Factory):
+    protocol = FingerServer
+
+    def getUser(self, name):
+        url = "http://example.com/~%s/online" % name
+        d = client.getPage(url)
+        d.addErrback(lambda _: "No such user\n")
+        return d
+</pre>
+<hr />
+<em>Applicant #3 (The Painted World, season 2) -- in this day and age, who can't write in the HTML numeric languages, right?</em>
+<h2>Application</h2><ul>
+<li>The Twisted way of configuration files</li>
+
+<li>Decouple configuration from running</li></ul>
+
+<h2>Application (Example)</h2>
+<pre class="python">
+# File: finger.tpy
+from twisted.internet import app
+import fingerserver
+
+factory = fingerserver.FingerServerFactory()
+factory.setUser("moshez", "Online - Sitting at computer\n")
+factory.setUser("spiv", "Offline - Surfing the waves\n")
+application = app.Application("finger")
+application.listenTCP(79, factory)
+</pre>
+
+<hr />
+<em>Paige (Hell Hath No Fury, season 4) -- I am taking full responsibility for being late with the application.</em>
+<h2>twistd</h2><ul>
+<li>TWISTed Daemonizer</li>
+
+<li>Daemonizes Twisted servers</li>
+
+<li>Takes care of log files, PID files, etc.</li>
+
+<li>twistd -y finger.tpy</li>
+
+</ul>
+<hr />
+<em>Phoebe (Sleuthing With the Enemy, season 3) -- Was it some sick twisted demonic thrill?</em>
+<h2>twistd examples</h2><ul>
+<li>twistd -y finger.tpy -l /var/finger/log</li>
+
+<li>twistd -y finger.tpy --pidfile /var/run/finger.pid</li>
+
+<li>twistd -y finger.tpy --chroot /var/run</li>
+
+</ul>
+<hr />
+<em>Professor Whittlessy (Is There a Woogy In the House?, season 1) -- I use your house as an example</em>
+<h2>Writing Plugins</h2><ul>
+<li>Automatically create application configurations</li>
+
+<li>Accessible via commandline or GUI</li></ul>
+
+<h2>Writing Plugins (Example)</h2>
+<pre class="python">
+# File finger/tap.py
+from twisted.python import usage
+
+class Options(usage.Options):
+    synopsis = "Usage: mktap finger [options]"
+    optParameters = [["port", "p", 6666,"Set the port number."]]
+    longdesc = 'Finger Server'
+    users = ()
+
+    def opt_user(self, user):
+        if not '=' in user: status = "Online"
+        else: user, status = user.split('=', 1)
+        self.users += ((user, status+"\n"),)
+</pre>
+
+        
+<h2>Writing Plugins (Example cont'd)</h2>
+<pre class="python">
+def updateApplication(app, config):
+    f = FingerFactory()
+    for (user, status) in config.users:
+        f.setUser(user, status)
+    app.listenTCP(int(config.opts['port']), s)
+</pre>
+<hr />
+<em>Paige (Bite Me, season 4) -- They won't join us willingly.</em>
+<h2>Writing Plugins (Example cont'd 2)</h2>
+<pre class="python">
+# File finger/plugins.tml
+register("Finger",
+         "finger.tap",
+         description="Finger Server",
+         type='tap',
+         tapname="finger")
+</pre>
+<hr />
+<em>Queen (Bite Me, season 4) -- That's what families are for.</em>
+<h2>Using mktap</h2><ul>
+<li>mktap finger --user moshez --user spiv=Offline</li>
+
+<li>twistd -f finger.tap</li>
+
+</ul>
+<hr />
+<em>Piper (Charmed and Dangerous, season 4) -- We'll use potions instead.</em>
+<h2>Delayed execution</h2><ul>
+<li>Basic interface: reactor.callLater(&lt;time&gt;, &lt;function&gt;, [&lt;arg&gt;, [&lt;arg&gt; ...]])</li>
+
+<li>reactor.callLater(10, reactor.stop)</li>
+
+<li>reactor.callLater(5, util.println, 'hello', 'world')</li>
+
+</ul>
+<hr />
+<em>Cole (Enter the Demon, season 4) -- I know, but not right now.</em>
+<h2>callLater(0,) -- An idiom</h2><ul>
+<li>Use to set up a call in next iteration of loop</li>
+
+<li>Can be used in algorithm-heavy code to let other code run</li></ul>
+
+<pre class="python">
+def calculateFact(cur, acc=1, d=None):
+    d = d or defer.Deferred()
+    if cur&lt;=1: d.callback(acc)
+    else: reactor.callLater(0, calculateFact, acc*cur, cur-1, d)
+
+calculateFact(10
+).addCallback(lambda n: (util.println(n), reactor.stop()))
+reactor.run()
+</pre>
+<hr />
+<em>Piper (Lost and Bound, season 4) -- Someone, I won't say who, has the insane notion</em>
+<h2>UNIX Domain Sockets</h2><ul>
+<li>Servers<ul><li>reactor.listenUNIX('/var/run/finger.sock', FingerWebFactory())</li>
+</ul></li>
+
+<li>Clients<ul><li>reactor.connectUNIX('/var/run/finger.sock', FingerFactory())</li>
+</ul></li>
+
+</ul>
+<hr />
+<em>Kate (Once Upon a Time, season 3) -- Fairies don't talk the same way people do.</em>
+<h2>SSL Servers</h2>
+
+<pre class="python">
+from OpenSSL import SSL
+
+class ServerContextFactory:
+
+    def getContext(self):
+        ctx = SSL.Context(SSL.SSLv23_METHOD)
+        ctx.use_certificate_file('server.pem')
+        ctx.use_privatekey_file('server.pem')
+        return ctx
+
+reactor.listenSSL(111, FingerWebFactory(), ServerContextFactory())
+</pre>
+
+<h2>SSL Clients</h2>
+
+<ul>
+<li>from twisted.internet import ssl</li>
+
+<li>reactor.connectSSL(111, 'localhost', FingerFactory(), ssl.ClientContextFactory())</li>
+</ul>
+<hr />
+<em>Natalie (Blinded By the Whitelighter, season 3) -- I mean, in private if you wouldn't mind</em>
+<h2>Running Processes</h2><ul>
+<li>A process has two outputs: stdout and stderr</li>
+
+<li>Protocol to interface with it is different</li></ul>
+
+<pre class="python">
+class Advertizer(protocol.ProcessProtocol):
+    def outReceived(self, data): print "out", `data`
+
+    def errReceived(self, data): print "error", `data`
+
+    def processEnded(self, reason): print "ended", reason
+
+reactor.spawnProcess(Advertizer(),
+                     "echo", ["echo", "hello", "world"])
+</pre>
+<hr />
+<em>Prue (Coyote Piper, season 3) -- You have to know that you can talk to me</em>
+<h2>Further Reading</h2><ul>
+<li><a href="http://twistedmatrix.com/documents/">Twisted Docs</a></li>
+
+</ul>
+<hr />
+<em>Phoebe (Animal Pragmatism, season 2) -- Ooh, the girls in school are reading this.</em>
+<h2>Questions?</h2>
+<em>Piper (Something Wicca This Way Comes, season 1) -- Tell me that's not our old spirit board?</em>
+<h2>Bonus Slides</h2>
+<em>Prue (Sleuthing With the Enemy, season 3) -- All right, you start talking or we start the bonus round.</em>
+<h2>Perspective Broker</h2><ul>
+<li>Meant to be worked async</li>
+
+<li>Can transfer references or copies</li>
+
+<li>Secure (no pickles or other remote execution mechanisms)</li>
+
+<li>Lightweight (bandwidth and CPU)</li>
+
+<li>Translucent</li>
+
+</ul>
+<hr />
+<em>Paige (Charmed Again, season 4) -- I guess I just kind of feel - connected somehow.</em>
+<h2>PB Remote Control Finger (Server)</h2>
+<pre class="python">
+from twisted.spread import pb
+
+class FingerSetter(pb.Root):
+
+    def __init__(self, ff): self.ff = ff
+
+    def remote_setUser(self, name, status):
+        self.ff.setUser(name, status+"\n")
+
+ff = FingerServerFactory()
+setter = FingerSetter(ff)
+reactor.listenUNIX("/var/run/finger.control",
+                  pb.BrokerFactory(setter))
+</pre>
+<hr />
+<em>Piper (Be Careful What You Witch For, season 2) -- Okay, you think you can control the power this time?</em>
+<h2>PB Remote Control Finger (Client)</h2>
+<pre class="python">
+from twisted.spread import pb
+from twisted.internet import reactor
+import sys
+
+def failed(reason):
+    print "failed:", reason.value;reactor.stop()
+
+pb.getObjectAt("unix", "/var/run/finger.control", 30
+).addCallback(lambda o: o.callRemote("setUser", *sys.argv[1:3],
+).addCallbacks(lambda _: reactor.stop(), failed)
+
+reactor.run()
+</pre>
+<hr />
+<em>Leo (Be Careful What You Witch For, season 2) -- How about you just keep your arms down until you learn how to work the controls.</em>
+<h2>Perspective Broker (Trick)</h2><ul>
+<li>Add to the application something which will call reactor.stop()</li>
+
+<li>Portable (works on Windows)</li>
+
+<li>Gets around OS security limitations</li>
+
+<li>Need to add application-level security</li>
+
+<li>The docs have the answers (see 'cred')</li>
+
+</ul>
+<hr />
+<em>Piper (Lost and Bound, season 4) -- They're not good or bad by themselves, it's how we use them</em>
+<h2>Perspective Broker (Authentication)</h2><ul>
+<li>pb.cred</li>
+
+<li>Perspectives</li>
+
+<li>Can get remote user with every call<ul><li>Inherit from pb.Perpsective</li>
+
+<li>Call methods perspective_&lt;name&gt;(self, remoteUser, ...)</li>
+</ul></li>
+
+</ul>
+<hr />
+<em>Piper (She's a Man, Baby, a Man!, season 2) -- Okey-Dokey. I get the point.</em>
+
+<h2>Perspective Broker - About Large Data Streams</h2>
+
+<ul>
+
+<li>Sending large (>640kb) strings is impossible -- feature, not bug.</li>
+
+<li>It stops DoSes</li>
+
+<li>Nobody would ever need...<ul><li>JokeTooOldError</li></ul></li>
+
+<li>Use twisted.spread.utils.Pager -- sends the data in managable chunks.</li>
+
+</ul>
+
+<hr />
+<em>Piper (Womb Raider, season 4) --
+Oral tradition tales of a giant whose body served as a portal to other
+dimensions.</em>
+
+<h2>Producers and Consumers</h2><ul>
+<li>Use for things like sending a big file</li>
+
+<li>A good alternative to manually reactor.callLater(0,)-ing</li>
+
+<li>See twisted.internet.interfaces.{IProducer,IConsumer}</li>
+
+</ul>
+<hr />
+<em>Phoebe (Black as Cole, season 4) -- Apparently he feeds on the remains of other demons' victims.</em>
+<h2>Threads (callInThread)</h2><ul>
+<li>Use for long running calculations</li>
+
+<li>Use for blocking calls you can't do without</li>
+
+<li>deferred = reactor.callInThread(function, arg, arg)</li>
+
+</ul>
+<hr />
+<em>Piper (The Painted World, season 2) -- There will be consequences. There always are.</em>
+<h2>Threads (callFromThread)</h2><ul>
+<li>Use from a function running in a different thread</li>
+
+<li>Always thread safe</li>
+
+<li>Interface to non-thread-safe APIs</li>
+
+<li>reactor.callFromThread(protocol.transport.write, s)</li>
+
+</ul>
+<hr />
+<em>Phoebe (Witch Trial, season 2) -- Maybe it's still in the house. Just on different plane.</em>
+
+<h2>Using ApplicationService</h2><ul>
+<li>Keep useful data...</li>
+
+<li>...or useful volatile objects</li>
+
+<li>Support start/stop notification</li>
+
+<li>Example: process monitor</li>
+
+</ul>
+<hr />
+<em>Phoebe (Marry Go Round, season 4) -- Yeah, that's just in case you need psychic services.</em>
+
+<h2>Playing With Persistence</h2><ul>
+<li>Shutdown taps are useful</li>
+
+<li>Even if you use twistd -y</li>
+
+<li>So remember<ul><li>Classes belong in modules</li>
+
+<li>Functions belong in modules</li>
+
+<li>Modifying class attributes should be avoided</li>
+</ul></li>
+
+</ul>
+<hr />
+<em>Cole (Marry Go Round, season 4) -- That Lazerus demon is a time bomb waiting to explode</em>
+</body></html>

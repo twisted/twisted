@@ -15,7 +15,7 @@ import sys
 
 from zope.interface import implementer, classImplements
 
-from twisted.python.compat import _PY3
+from twisted.python.compat import set, _PY3
 from twisted.internet.interfaces import IReactorUNIX, IReactorUNIXDatagram
 from twisted.internet.interfaces import (
     IReactorTCP, IReactorUDP, IReactorSSL, IReactorSocket)

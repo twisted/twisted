@@ -1113,18 +1113,13 @@ class SynchronousTestCase(_Assertions):
 
     def mktemp(self):
         """
-        Create a new path name which can be used for a new file or directory.
+        Returns a unique name that may be used as either a temporary directory
+        or filename.
 
-        The result is a relative path that is guaranteed to be unique within the
-        current working directory.  The parent of the path will exist, but the
-        path will not.
+        @note: you must call os.mkdir on the value returned from this method if
+            you wish to use it as a directory!
 
-        For a temporary directory call os.mkdir on the path.  For a temporary
-        file just create the file (e.g. by opening the path for writing and then
-        closing it).
-
-        @return: The newly created path
-        @rtype: C{str}
+        @return: C{str}
         """
         MAX_FILENAME = 32 # some platforms limit lengths of filenames
         base = os.path.join(self.__class__.__module__[:MAX_FILENAME],

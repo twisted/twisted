@@ -11,13 +11,14 @@ import os
 import stat
 import socket
 
-from zope.interface import implementer
+from zope.interface import implements
 
 try:
     import cStringIO as StringIO
 except ImportError:
     import StringIO
 
+from twisted.python.compat import set
 from twisted.mail import pop3
 from twisted.mail import smtp
 from twisted.protocols import basic
@@ -98,29 +99,22 @@ class MaildirMessage(mail.FileMessage):
         self.finalName = self.finalName+',S=%d' % self.size
         return mail.FileMessage.eomReceived(self)
 
-
-
-@implementer(mail.IAliasableDomain)
 class AbstractMaildirDomain:
-    """
-    Abstract maildir-backed domain.
+    """Abstract maildir-backed domain.
     """
     alias = None
     root = None
 
     def __init__(self, service, root):
-        """
-        Initialize.
+        """Initialize.
         """
         self.root = root
 
-
     def userDirectory(self, user):
-        """
-        Get the maildir directory for the given C{user}.
+        """Get the maildir directory for a given user
 
         Override to specify where to save mails for users.
-        Return C{None} for non-existing users.
+        Return None for non-existing users.
         """
         return None
 
@@ -135,8 +129,7 @@ class AbstractMaildirDomain:
     ## IDomain
     ##
     def exists(self, user, memo=None):
-        """
-        Check for existence of C{user} in the domain.
+        """Check for existence of user in the domain
         """
         if self.userDirectory(user.dest.local) is not None:
             return lambda: self.startMessage(user)
@@ -151,10 +144,8 @@ class AbstractMaildirDomain:
             log.err("Bad alias configuration: " + str(user))
             raise smtp.SMTPBadRcpt(user)
 
-
     def startMessage(self, user):
-        """
-        Save a message for the given C{user}.
+        """Save a message for a given user
         """
         if isinstance(user, str):
             name, domain = user.split('@', 1)
@@ -167,14 +158,11 @@ class AbstractMaildirDomain:
         return MaildirMessage('%s@%s' % (name, domain), fp, filename,
                               os.path.join(dir, 'new', fname))
 
-
     def willRelay(self, user, protocol):
         return False
 
-
     def addUser(self, user, password):
         raise NotImplementedError
-
 
     def getCredentialsCheckers(self):
         raise NotImplementedError
@@ -182,10 +170,8 @@ class AbstractMaildirDomain:
     ## end of IDomain
     ##
 
-
-
-@implementer(interfaces.IConsumer)
 class _MaildirMailboxAppendMessageTask:
+    implements(interfaces.IConsumer)
 
     osopen = staticmethod(os.open)
     oswrite = staticmethod(os.write)
@@ -369,9 +355,6 @@ class MaildirMailbox(pop3.Mailbox):
         task.startUp()
         return result
 
-
-
-@implementer(pop3.IMailbox)
 class StringListMailbox:
     """
     L{StringListMailbox} is an in-memory mailbox.
@@ -382,6 +365,8 @@ class StringListMailbox:
     @ivar _delete: A C{set} of the indexes of messages which have been deleted
         since the last C{sync} call.
     """
+    implements(pop3.IMailbox)
+
     def __init__(self, msgs):
         self.msgs = msgs
         self._delete = set()
@@ -440,18 +425,17 @@ class StringListMailbox:
 
 
 
-@implementer(portal.IRealm)
 class MaildirDirdbmDomain(AbstractMaildirDomain):
+    """A Maildir Domain where membership is checked by a dirdbm file
     """
-    A Maildir Domain where membership is checked by a dirdbm file.
-    """
+
+    implements(portal.IRealm, mail.IAliasableDomain)
 
     portal = None
     _credcheckers = None
 
     def __init__(self, service, root, postmaster=0):
-        """
-        Initialize.
+        """Initialize
 
         The first argument is where the Domain directory is rooted.
         The second is whether non-existing addresses are simply
@@ -516,10 +500,8 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
             lambda: None
         )
 
-
-
-@implementer(checkers.ICredentialsChecker)
 class DirdbmDatabase:
+    implements(checkers.ICredentialsChecker)
 
     credentialInterfaces = (
         credentials.IUsernamePassword,
