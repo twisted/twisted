@@ -7,9 +7,12 @@ Tests for implementations of L{IReactorTime}.
 
 __metaclass__ = type
 
+from twisted.python.log import msg
 from twisted.python.runtime import platform
+
+from twisted.trial.unittest import SkipTest
 from twisted.internet.test.reactormixins import ReactorBuilder
-from twisted.internet.interfaces import IReactorTime
+from twisted.internet.interfaces import IReactorTime, IReactorThreads
 
 
 class TimeTestsBuilder(ReactorBuilder):
@@ -25,6 +28,47 @@ class TimeTestsBuilder(ReactorBuilder):
         reactor = self.buildReactor()
         reactor.callLater(0, reactor.stop)
         reactor.run()
+
+
+    def test_distantDelayedCall(self):
+        """
+        Scheduling a delayed call at a point in the extreme future does not
+        prevent normal reactor operation.
+        """
+        reactor = self.buildReactor()
+        if IReactorThreads.providedBy(reactor):
+            def eventSource(reactor, event):
+                msg(format="Thread-based event-source scheduling %(event)r",
+                    event=event)
+                reactor.callFromThread(event)
+        else:
+            raise SkipTest("Do not know how to synthesize non-time event to "
+                           "stop the test")
+
+        # Pick a pretty big delay.
+        delayedCall = reactor.callLater(2 ** 128 + 1, lambda: None)
+
+        def stop():
+            msg("Stopping the reactor")
+            reactor.stop()
+
+        # Use repeated invocation of the event source to set up the call to stop
+        # the reactor.  This makes it more likely at least one normal iteration
+        # will take place with the delayed call in place before the slightly
+        # different reactor shutdown logic alters things.
+        eventSource(reactor, lambda: eventSource(reactor, stop))
+
+        # Run the reactor directly, without a timeout.  A timeout would
+        # interfere with the purpose of this test, which is to have the timeout
+        # passed to the reactor's doIterate implementation (potentially) be
+        # very, very large.  Hopefully the event source defined above will work
+        # and cause the reactor to stop.
+        reactor.run()
+
+        # The reactor almost surely stopped before the delayed call
+        # fired... right?
+        self.assertTrue(delayedCall.active())
+        self.assertIn(delayedCall, reactor.getDelayedCalls())
 
 
 

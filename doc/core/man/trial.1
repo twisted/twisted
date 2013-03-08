@@ -13,7 +13,8 @@ packages and files listed on the command line.
 trial will take either filenames or fully qualified Python names as
 arguments.  Thus `trial myproject/foo.py', `trial myproject.foo' and
 `trial myproject.foo.SomeTestCase.test_method' are all valid ways to
-invoke trial.
+invoke trial. Multiple such arguments are also accepted, and their order will
+determine the order in which the corresponding tests are run.
 .PP
 After running the given test suite, the default test reporter prints a summary
 of the test run. This consists of the word "PASSED" (if all tests ran as

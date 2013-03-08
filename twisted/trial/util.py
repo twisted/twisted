@@ -20,10 +20,10 @@ Maintainer: Jonathan Lange
 
 from __future__ import division, absolute_import, print_function
 
-import traceback, sys
+import sys
 from random import randrange
 
-from twisted.python.compat import _PY3, reraise
+from twisted.python.compat import _PY3
 from twisted.internet import defer, _utilspy3 as utils, interfaces
 from twisted.python.failure import Failure
 from twisted.python import deprecate, versions
@@ -282,53 +282,6 @@ deprecate.deprecatedModuleAttribute(
     versions.Version("Twisted", 12, 3, 0),
     "This function never worked correctly.  Implement lookup on your own.",
     __name__, "getPythonContainers")
-
-
-deprecate.deprecatedModuleAttribute(
-    versions.Version("Twisted", 10, 1, 0),
-    "Please use twisted.python.reflect.namedAny instead.",
-    __name__, "findObject")
-
-
-
-def findObject(name):
-    """Get a fully-named package, module, module-global object or attribute.
-    Forked from twisted.python.reflect.namedAny.
-
-    Returns a tuple of (bool, obj).  If bool is True, the named object exists
-    and is returned as obj.  If bool is False, the named object does not exist
-    and the value of obj is unspecified.
-    """
-    names = name.split('.')
-    topLevelPackage = None
-    moduleNames = names[:]
-    while not topLevelPackage:
-        trialname = '.'.join(moduleNames)
-        if len(trialname) == 0:
-            return (False, None)
-        try:
-            topLevelPackage = __import__(trialname)
-        except ImportError:
-            # if the ImportError happened in the module being imported,
-            # this is a failure that should be handed to our caller.
-            # count stack frames to tell the difference.
-            exc_info = sys.exc_info()
-            if len(traceback.extract_tb(exc_info[2])) > 1:
-                try:
-                    # Clean up garbage left in sys.modules.
-                    del sys.modules[trialname]
-                except KeyError:
-                    # Python 2.4 has fixed this.  Yay!
-                    pass
-                reraise(exc_info[1], exc_info[2])
-            moduleNames.pop()
-    obj = topLevelPackage
-    for n in names[1:]:
-        try:
-            obj = getattr(obj, n)
-        except AttributeError:
-            return (False, obj)
-    return (True, obj)
 
 
 

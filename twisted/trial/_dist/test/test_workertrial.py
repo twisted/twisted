@@ -6,7 +6,6 @@ Tests for L{twisted.trial._dist.workertrial}.
 """
 
 import errno
-import os
 import sys
 from cStringIO import StringIO
 
@@ -14,8 +13,9 @@ from twisted.protocols.amp import AMP
 from twisted.test.proto_helpers import StringTransport
 from twisted.trial.unittest import TestCase
 from twisted.trial._dist.workertrial import WorkerLogObserver, main
-from twisted.trial._dist import workertrial
-from twisted.trial._dist import workercommands, managercommands
+from twisted.trial._dist import (
+    workertrial, _WORKER_AMP_STDIN, _WORKER_AMP_STDOUT, workercommands,
+    managercommands)
 
 
 
@@ -44,8 +44,8 @@ class WorkerLogObserverTestCase(TestCase):
 
         observer = WorkerLogObserver(FakeClient())
         observer.emit({'message': ['Some log']})
-        self.assertEqual(calls,
-            [(managercommands.TestWrite, {'out': 'Some log'})])
+        self.assertEqual(
+            calls, [(managercommands.TestWrite, {'out': 'Some log'})])
 
 
 
@@ -57,7 +57,6 @@ class MainTestCase(TestCase):
     def setUp(self):
         self.readStream = StringIO()
         self.writeStream = StringIO()
-        self.patch(os, 'fdopen', self.fdopen)
         self.patch(workertrial, 'startLoggingWithObserver',
                    self.startLoggingWithObserver)
         self.addCleanup(setattr, sys, "argv", sys.argv)
@@ -69,12 +68,14 @@ class MainTestCase(TestCase):
         Fake C{os.fdopen} implementation which returns C{self.readStream} for
         the stdin fd and C{self.writeStream} for the stdout fd.
         """
-        if fd == 3:
+        if fd == _WORKER_AMP_STDIN:
             self.assertIdentical(None, mode)
             return self.readStream
-        elif fd == 4:
+        elif fd == _WORKER_AMP_STDOUT:
             self.assertEqual('w', mode)
             return self.writeStream
+        else:
+            raise AssertionError("Unexpected fd %r" % (fd,))
 
 
     def startLoggingWithObserver(self, emit, setStdout):
@@ -88,7 +89,7 @@ class MainTestCase(TestCase):
         """
         If no data is ever written, L{main} exits without writing data out.
         """
-        main()
+        main(self.fdopen)
         self.assertEqual('', self.writeStream.getvalue())
 
 
@@ -103,7 +104,7 @@ class MainTestCase(TestCase):
         client.callRemote(workercommands.Run, testCase="doesntexist")
         self.readStream = clientTransport.io
         self.readStream.seek(0, 0)
-        main()
+        main(self.fdopen)
         self.assertIn(
             "No module named 'doesntexist'", self.writeStream.getvalue())
 
@@ -113,6 +114,7 @@ class MainTestCase(TestCase):
         If reading the input stream fails with a C{IOError} with errno
         C{EINTR}, L{main} ignores it and continues reading.
         """
+        excInfos = []
 
         class FakeStream(object):
             count = 0
@@ -122,12 +124,13 @@ class MainTestCase(TestCase):
                 if oself.count == 1:
                     raise IOError(errno.EINTR)
                 else:
-                    self.assertEqual((None, None, None), sys.exc_info())
+                    excInfos.append(sys.exc_info())
                 return ''
 
         self.readStream = FakeStream()
-        main()
+        main(self.fdopen)
         self.assertEqual('', self.writeStream.getvalue())
+        self.assertEqual([(None, None, None)], excInfos)
 
 
     def test_otherReadError(self):
@@ -146,4 +149,4 @@ class MainTestCase(TestCase):
                 return ''
 
         self.readStream = FakeStream()
-        self.assertRaises(IOError, main)
+        self.assertRaises(IOError, main, self.fdopen)

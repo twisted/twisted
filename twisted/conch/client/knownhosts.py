@@ -15,15 +15,10 @@ import sys
 from zope.interface import implements
 
 from twisted.python.randbytes import secureRandom
-if sys.version_info >= (2, 5):
-    from twisted.python.hashlib import sha1
-else:
-    # We need to have an object with a method named 'new'.
-    import sha as sha1
-
+from twisted.python.hashlib import sha1
 from twisted.internet import defer
-
 from twisted.python import log
+from twisted.python.util import FancyEqMixin
 from twisted.conch.interfaces import IKnownHostEntry
 from twisted.conch.error import HostKeyChanged, UserRejectedKey, InvalidEntry
 from twisted.conch.ssh.keys import Key, BadKeyError
@@ -32,6 +27,12 @@ from twisted.conch.ssh.keys import Key, BadKeyError
 def _b64encode(s):
     """
     Encode a binary string as base64 with no trailing newline.
+
+    @param s: The string to encode.
+    @type s: L{bytes}
+
+    @return: The base64-encoded string.
+    @rtype: L{bytes}
     """
     return b2a_base64(s).strip()
 
@@ -41,9 +42,14 @@ def _extractCommon(string):
     """
     Extract common elements of base64 keys from an entry in a hosts file.
 
-    @return: a 4-tuple of hostname data (L{str}), ssh key type (L{str}), key
-    (L{Key}), and comment (L{str} or L{None}).  The hostname data is simply the
-    beginning of the line up to the first occurrence of whitespace.
+    @param string: A known hosts file entry (a single line).
+    @type string: L{bytes}
+
+    @return: a 4-tuple of hostname data (L{bytes}), ssh key type (L{bytes}), key
+        (L{Key}), and comment (L{bytes} or L{None}).  The hostname data is
+        simply the beginning of the line up to the first occurrence of
+        whitespace.
+    @rtype: L{tuple}
     """
     elements = string.split(None, 2)
     if len(elements) != 3:
@@ -86,9 +92,12 @@ class _BaseEntry(object):
         """
         Check to see if this entry matches a given key object.
 
+        @param keyObject: A public key object to check.
         @type keyObject: L{Key}
 
-        @rtype: bool
+        @return: C{True} if this entry's key matches C{keyObject}, C{False}
+            otherwise.
+        @rtype: L{bool}
         """
         return self.publicKey == keyObject
 
@@ -144,9 +153,13 @@ class PlainEntry(_BaseEntry):
         """
         Check to see if this entry matches a given hostname.
 
+        @param hostname: A hostname or IP address literal to check against this
+            entry.
         @type hostname: L{str}
 
-        @rtype: bool
+        @return: C{True} if this entry is for the given hostname or IP address,
+            C{False} otherwise.
+        @rtype: L{bool}
         """
         return hostname in self._hostnames
 
@@ -155,6 +168,10 @@ class PlainEntry(_BaseEntry):
         """
         Implement L{IKnownHostEntry.toString} by recording the comma-separated
         hostnames, key type, and base-64 encoded key.
+
+        @return: The string representation of this entry, with unhashed hostname
+            information.
+        @rtype: L{bytes}
         """
         fields = [','.join(self._hostnames),
                   self.keyType,
@@ -162,6 +179,7 @@ class PlainEntry(_BaseEntry):
         if self.comment is not None:
             fields.append(self.comment)
         return ' '.join(fields)
+
 
 
 class UnparsedEntry(object):
@@ -197,6 +215,10 @@ class UnparsedEntry(object):
     def toString(self):
         """
         Returns the input line, without its newline if one was given.
+
+        @return: The string representation of this entry, almost exactly as was
+            used to initialize this entry but without a trailing newline.
+        @rtype: L{bytes}
         """
         return self._string.rstrip("\n")
 
@@ -205,6 +227,15 @@ class UnparsedEntry(object):
 def _hmacedString(key, string):
     """
     Return the SHA-1 HMAC hash of the given key and string.
+
+    @param key: The HMAC key.
+    @type key: L{bytes}
+
+    @param string: The string to be hashed.
+    @type string: L{bytes}
+
+    @return: The keyed hash value.
+    @rtype: L{bytes}
     """
     hash = hmac.HMAC(key, digestmod=sha1)
     hash.update(string)
@@ -212,7 +243,7 @@ def _hmacedString(key, string):
 
 
 
-class HashedEntry(_BaseEntry):
+class HashedEntry(_BaseEntry, FancyEqMixin):
     """
     A L{HashedEntry} is a representation of an entry in a known_hosts file
     where the hostname has been hashed and salted.
@@ -229,6 +260,9 @@ class HashedEntry(_BaseEntry):
 
     MAGIC = '|1|'
 
+    compareAttributes = (
+        "_hostSalt", "_hostHash", "keyType", "publicKey", "comment")
+
     def __init__(self, hostSalt, hostHash, keyType, publicKey, comment):
         self._hostSalt = hostSalt
         self._hostHash = hostHash
@@ -240,15 +274,22 @@ class HashedEntry(_BaseEntry):
         Load a hashed entry from a string representing a line in a known_hosts
         file.
 
+        @param string: A complete single line from a I{known_hosts} file,
+            formatted as defined by OpenSSH.
+        @type string: L{bytes}
+
         @raise DecodeError: if the key, the hostname, or the is not valid
-        encoded as valid base64
+            encoded as valid base64
 
         @raise InvalidEntry: if the entry does not have the right number of
-        elements and is therefore invalid, or the host/hash portion contains
-        more items than just the host and hash.
+            elements and is therefore invalid, or the host/hash portion contains
+            more items than just the host and hash.
 
         @raise BadKeyError: if the key, once decoded from base64, is not
-        actually an SSH key.
+            actually an SSH key.
+
+        @return: The newly created L{HashedEntry} instance, initialized with the
+            information from C{string}.
         """
         stuff, keyType, key, comment = _extractCommon(string)
         saltAndHash = stuff[len(cls.MAGIC):].split("|")
@@ -266,6 +307,14 @@ class HashedEntry(_BaseEntry):
         """
         Implement L{IKnownHostEntry.matchesHost} to compare the hash of the
         input to the stored hash.
+
+        @param hostname: A hostname or IP address literal to check against this
+            entry.
+        @type hostname: L{bytes}
+
+        @return: C{True} if this entry is for the given hostname or IP address,
+            C{False} otherwise.
+        @rtype: L{bool}
         """
         return (_hmacedString(self._hostSalt, hostname) == self._hostHash)
 
@@ -274,6 +323,10 @@ class HashedEntry(_BaseEntry):
         """
         Implement L{IKnownHostEntry.toString} by base64-encoding the salt, host
         hash, and key.
+
+        @return: The string representation of this entry, with the hostname part
+            hashed.
+        @rtype: L{bytes}
         """
         fields = [self.MAGIC + '|'.join([_b64encode(self._hostSalt),
                                          _b64encode(self._hostHash)]),
@@ -289,37 +342,99 @@ class KnownHostsFile(object):
     """
     A structured representation of an OpenSSH-format ~/.ssh/known_hosts file.
 
-    @ivar _entries: a list of L{IKnownHostEntry} providers.
+    @ivar _added: A list of L{IKnownHostEntry} providers which have been added
+        to this instance in memory but not yet saved.
 
-    @ivar _savePath: the L{FilePath} to save new entries to.
+    @ivar _clobber: A flag indicating whether the current contents of the save
+        path will be disregarded and potentially overwritten or not.  If
+        C{True}, this will be done.  If C{False}, entries in the save path will
+        be read and new entries will be saved by appending rather than
+        overwriting.
+    @type _clobber: L{bool}
+
+    @ivar _savePath: See C{savePath} parameter of L{__init__}.
     """
 
     def __init__(self, savePath):
         """
         Create a new, empty KnownHostsFile.
 
-        You want to use L{KnownHostsFile.fromPath} to parse one of these.
+        Unless you want to erase the current contents of C{savePath}, you want
+        to use L{KnownHostsFile.fromPath} instead.
+
+        @param savePath: The L{FilePath} to which to save new entries.
+        @type savePath: L{FilePath}
         """
-        self._entries = []
+        self._added = []
         self._savePath = savePath
+        self._clobber = True
+
+
+    def iterentries(self):
+        """
+        Iterate over the host entries in this file.
+
+        @return: An iterable the elements of which provide L{IKnownHostEntry}.
+            There is an element for each entry in the file as well as an element
+            for each added but not yet saved entry.
+        @rtype: iterable of L{IKnownHostEntry} providers
+        """
+        for entry in self._added:
+            yield entry
+
+        if self._clobber:
+            return
+
+        try:
+            fp = self._savePath.open()
+        except IOError:
+            return
+
+        try:
+            for line in fp:
+                try:
+                    if line.startswith(HashedEntry.MAGIC):
+                        entry = HashedEntry.fromString(line)
+                    else:
+                        entry = PlainEntry.fromString(line)
+                except (DecodeError, InvalidEntry, BadKeyError):
+                    entry = UnparsedEntry(line)
+                yield entry
+        finally:
+            fp.close()
 
 
     def hasHostKey(self, hostname, key):
         """
-        @return: True if the given hostname and key are present in this file,
-        False if they are not.
+        Check for an entry with matching hostname and key.
 
+        @param hostname: A hostname or IP address literal to check for.
+        @type hostname: L{bytes}
+
+        @param key: The public key to check for.
+        @type key: L{Key}
+
+        @return: C{True} if the given hostname and key are present in this file,
+            C{False} if they are not.
         @rtype: L{bool}
 
         @raise HostKeyChanged: if the host key found for the given hostname
-        does not match the given key.
+            does not match the given key.
         """
-        for lineidx, entry in enumerate(self._entries):
+        for lineidx, entry in enumerate(self.iterentries(), -len(self._added)):
             if entry.matchesHost(hostname):
                 if entry.matchesKey(key):
                     return True
                 else:
-                    raise HostKeyChanged(entry, self._savePath, lineidx + 1)
+                    # Notice that lineidx is 0-based but HostKeyChanged.lineno
+                    # is 1-based.
+                    if lineidx < 0:
+                        line = None
+                        path = None
+                    else:
+                        line = lineidx + 1
+                        path = self._savePath
+                    raise HostKeyChanged(entry, path, line)
         return False
 
 
@@ -339,9 +454,8 @@ class KnownHostsFile(object):
         @param key: The public key of the server.
 
         @return: a L{Deferred} that fires with True when the key has been
-        verified, or fires with an errback when the key either cannot be
-        verified or has changed.
-
+            verified, or fires with an errback when the key either cannot be
+            verified or has changed.
         @rtype: L{Deferred}
         """
         hhk = defer.maybeDeferred(self.hasHostKey, hostname, key)
@@ -363,12 +477,13 @@ class KnownHostsFile(object):
                         return response
                     else:
                         raise UserRejectedKey()
-                return ui.prompt(
+                proceed = ui.prompt(
                     "The authenticity of host '%s (%s)' "
                     "can't be established.\n"
                     "RSA key fingerprint is %s.\n"
                     "Are you sure you want to continue connecting (yes/no)? " %
-                    (hostname, ip, key.fingerprint())).addCallback(promptResponse)
+                    (hostname, ip, key.fingerprint()))
+                return proceed.addCallback(promptResponse)
         return hhk.addCallback(gotHasKey)
 
 
@@ -379,13 +494,21 @@ class KnownHostsFile(object):
         Note that you still need to call L{KnownHostsFile.save} if you wish
         these changes to be persisted.
 
-        @return: the L{HashedEntry} that was added.
+        @param hostname: A hostname or IP address literal to associate with the
+            new entry.
+        @type hostname: L{bytes}
+
+        @param key: The public key to associate with the new entry.
+        @type key: L{Key}
+
+        @return: The L{HashedEntry} that was added.
+        @rtype: L{HashedEntry}
         """
         salt = secureRandom(20)
         keyType = "ssh-" + key.type().lower()
         entry = HashedEntry(salt, _hmacedString(salt, hostname),
                             keyType, key, None)
-        self._entries.append(entry)
+        self._added.append(entry)
         return entry
 
 
@@ -396,46 +519,55 @@ class KnownHostsFile(object):
         p = self._savePath.parent()
         if not p.isdir():
             p.makedirs()
-        self._savePath.setContent('\n'.join(
-                [entry.toString() for entry in self._entries]) + "\n")
+
+        if self._clobber:
+            mode = "w"
+        else:
+            mode = "a"
+
+        with self._savePath.open(mode) as hostsFileObj:
+            if self._added:
+                hostsFileObj.write(
+                    "\n".join([entry.toString() for entry in self._added]) +
+                    "\n")
+                self._added = []
+        self._clobber = False
 
 
     def fromPath(cls, path):
         """
-        @param path: A path object to use for both reading contents from and
-        later saving to.
+        Create a new L{KnownHostsFile}, potentially reading existing known
+        hosts information from the given file.
 
+        @param path: A path object to use for both reading contents from and
+            later saving to.  If no file exists at this path, it is not an
+            error; a L{KnownHostsFile} with no entries is returned.
         @type path: L{FilePath}
+
+        @return: A L{KnownHostsFile} initialized with entries from C{path}.
+        @rtype: L{KnownHostsFile}
         """
-        self = cls(path)
-        try:
-            fp = path.open()
-        except IOError:
-            return self
-        for line in fp:
-            try:
-                if line.startswith(HashedEntry.MAGIC):
-                    entry = HashedEntry.fromString(line)
-                else:
-                    entry = PlainEntry.fromString(line)
-            except (DecodeError, InvalidEntry, BadKeyError):
-                entry = UnparsedEntry(line)
-            self._entries.append(entry)
-        return self
+        knownHosts = cls(path)
+        knownHosts._clobber = False
+        return knownHosts
 
     fromPath = classmethod(fromPath)
+
 
 
 class ConsoleUI(object):
     """
     A UI object that can ask true/false questions and post notifications on the
     console, to be used during key verification.
-
-    @ivar opener: a no-argument callable which should open a console file-like
-    object to be used for reading and writing.
     """
-
     def __init__(self, opener):
+        """
+        @param opener: A no-argument callable which should open a console
+            binary-mode file-like object to be used for reading and writing.
+            This initializes the C{opener} attribute.
+        @type opener: callable taking no arguments and returning a read/write
+            file-like object
+        """
         self.opener = opener
 
 
@@ -444,9 +576,13 @@ class ConsoleUI(object):
         Write the given text as a prompt to the console output, then read a
         result from the console input.
 
+        @param text: Something to present to a user to solicit a yes or no
+            response.
+        @type text: L{bytes}
+
         @return: a L{Deferred} which fires with L{True} when the user answers
-        'yes' and L{False} when the user answers 'no'.  It may errback if there
-        were any I/O errors.
+            'yes' and L{False} when the user answers 'no'.  It may errback if
+            there were any I/O errors.
         """
         d = defer.succeed(None)
         def body(ignored):
@@ -469,6 +605,9 @@ class ConsoleUI(object):
         """
         Notify the user (non-interactively) of the provided text, by writing it
         to the console.
+
+        @param text: Some information the user is to be made aware of.
+        @type text: L{bytes}
         """
         try:
             f = self.opener()

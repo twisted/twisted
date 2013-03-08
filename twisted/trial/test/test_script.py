@@ -10,7 +10,6 @@ from twisted.trial.runner import (
 from twisted.trial._dist.disttrial import DistTrialRunner
 from twisted.scripts import trial
 from twisted.python import util
-from twisted.python.compat import set
 from twisted.python.usage import UsageError
 from twisted.python.filepath import FilePath
 
@@ -594,3 +593,34 @@ class TestRun(unittest.TestCase):
             self.assertIn("foo", str(e))
         else:
             self.fail("Should have exited due to non-existent debugger!")
+
+
+
+class TestArgumentOrderTests(unittest.TestCase):
+    """
+    Tests for the order-preserving behavior on provided command-line tests.
+    """
+
+    def setUp(self):
+        self.config = trial.Options()
+        self.loader = TestLoader()
+
+
+    def test_preserveArgumentOrder(self):
+        """
+        Multiple tests passed on the command line are not reordered.
+        """
+        tests = [
+            "twisted.trial.test.test_tests",
+            "twisted.trial.test.test_assertions",
+            "twisted.trial.test.test_deferreds",
+            ]
+        self.config.parseOptions(tests)
+
+        suite = trial._getSuite(self.config)
+        names = testNames(suite)
+
+        expectedSuite = TestSuite(map(self.loader.loadByName, tests))
+        expectedNames = testNames(expectedSuite)
+
+        self.assertEqual(names, expectedNames)

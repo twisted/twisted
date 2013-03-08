@@ -36,7 +36,6 @@ from twisted.python.components import proxyForInterface
 from twisted.web import error
 from twisted.web.iweb import UNKNOWN_LENGTH, IBodyProducer, IResponse
 from twisted.web.http_headers import Headers
-from twisted.python.compat import set
 
 
 class PartialDownloadError(error.Error):

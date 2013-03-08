@@ -46,6 +46,7 @@ from twisted.python.util import sibpath
 from twisted.lore.scripts import lore
 
 from twisted.web import domhelpers
+from twisted.test.testutils import XMLAssertionMixin
 
 def sp(originalFileName):
     return sibpath(__file__, originalFileName)
@@ -54,20 +55,7 @@ options = {"template" : sp("template.tpl"), 'baseurl': '%s', 'ext': '.xhtml' }
 d = options
 
 
-class _XMLAssertionMixin:
-    """
-    Test mixin defining a method for comparing serialized XML documents.
-    """
-    def assertXMLEqual(self, first, second):
-        """
-        Verify that two strings represent the same XML document.
-        """
-        self.assertEqual(
-            dom.parseString(first).toxml(),
-            dom.parseString(second).toxml())
-
-
-class TestFactory(unittest.TestCase, _XMLAssertionMixin):
+class TestFactory(unittest.TestCase, XMLAssertionMixin):
 
     file = sp('simple.html')
     linkrel = ""
@@ -1144,7 +1132,7 @@ class XMLParsingTests(unittest.TestCase):
 
 
 
-class XMLSerializationTests(unittest.TestCase, _XMLAssertionMixin):
+class XMLSerializationTests(unittest.TestCase, XMLAssertionMixin):
     """
     Tests for L{tree._writeDocument}.
     """

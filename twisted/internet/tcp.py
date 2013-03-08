@@ -97,7 +97,7 @@ from errno import errorcode
 from twisted.internet import base, address, fdesc
 from twisted.internet.task import deferLater
 from twisted.python import log, failure, _reflectpy3 as reflect
-from twisted.python.util import unsignedID, untilConcludes
+from twisted.python.util import untilConcludes
 from twisted.internet.error import CannotListenError
 from twisted.internet import abstract, main, interfaces, error
 
@@ -727,7 +727,7 @@ class _BaseTCPClient(object):
 
 
     def __repr__(self):
-        s = '<%s to %s at %x>' % (self.__class__, self.addr, unsignedID(self))
+        s = '<%s to %s at %x>' % (self.__class__, self.addr, id(self))
         return s
 
 

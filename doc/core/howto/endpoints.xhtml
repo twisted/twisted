@@ -233,13 +233,13 @@ available.</p>
   socket.  lockfile enables use of a separate lock file to prove the server is
   still running.  For example, <code>unix:address=/var/run/web.sock:lockfile=1</code>.
   </li>
-  <li>systemd.  Supported arguments: domain, index.  domain indicates which
-  socket domain the inherited file descriptor belongs to (eg INET, INET6).
-  index indicates an offset into the array of file descriptors which have been
-  inherited from systemd.  For
-  example, <code>systemd:domain=INET6:index=3</code>.
+  <li>systemd.  Supported arguments: domain, index.  domain indicates
+  which socket domain the inherited file descriptor belongs to (eg
+  INET, INET6).  index indicates an offset into the array of file
+  descriptors which have been inherited from systemd.  For
+  example, <code>systemd:domain=INET6:index=3</code>. See
+  also <a href="systemd.xhtml">Deploying Twisted with systemd</a>.
   </li>
 </ul>
-
 </body>
 </html>

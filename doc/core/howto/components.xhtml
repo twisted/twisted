@@ -227,18 +227,16 @@ interface for a specific class.</p>
 <p>Let's look at how we declare that a class implements an interface:</p>
 
 <pre class="python">
-from zope.interface import implements
+from zope.interface import implementer
 
+@implementer(IAmericanSocket)
 class AmericanSocket:
-
-    implements(IAmericanSocket)
-
     def voltage(self):
         return 120
 </pre>
 
 <p>So, to declare that a class implements an interface, we simply
-call <code>zope.interface.implements</code> at the class level.</p>
+decorate it with <code>zope.interface.implementer</code>.</p>
 
 <p>Now, let's say we want to rewrite
 the <code>AdaptToAmericanSocket</code> class as a real adapter. In
@@ -246,12 +244,10 @@ this case we also specify it as
 implementing <code>IAmericanSocket</code>:</p>
 
 <pre class="python">
-from zope.interface import implements
+from zope.interface import implementer
 
+@implementer(IAmericanSocket)
 class AdaptToAmericanSocket:
-
-    implements(IAmericanSocket)
-
     def __init__(self, original):
         """
         Pass the original UKSocket object as original
@@ -274,7 +270,7 @@ for the <code>UKSocket</code> class. It is easier to see how this is
 done in code than to describe it:</p>
 
 <pre class="python">
-from zope.interface import Interface, implements
+from zope.interface import Interface, implementer
 from twisted.python import components
 
 class IAmericanSocket(Interface):
@@ -282,9 +278,8 @@ class IAmericanSocket(Interface):
       """Return the voltage produced by this socket object, as an integer.
       """
     
+@implementer(IAmericanSocket)
 class AmericanSocket:
-    implements(IAmericanSocket)
-
     def voltage(self):
         return 120
 
@@ -292,10 +287,8 @@ class UKSocket:
     def voltage(self):
         return 240
 
+@implementer(IAmericanSocket)
 class AdaptToAmericanSocket:
-
-    implements(IAmericanSocket)
-
     def __init__(self, original):
         self.original = original
 
@@ -392,23 +385,25 @@ served by a new Broker instance. It has an <code>implements</code> setting
 like:</p>
 
 <pre class="python">
-from zope.interface import implements
+from zope.interface import implementer
 
+@implementer(IPBRoot)
 class Root(Referenceable):
-    implements(IPBRoot)
+    pass
 </pre>
 
 <p>Suppose you have your own class which implements your 
 <code>IMyInterface</code> interface:</p>
 
 <pre class="python">
-from zope.interface import implements, Interface
+from zope.interface import implementer, Interface
 
 class IMyInterface(Interface):
     pass
 
+@implementer(IMyInterface)
 class MyThing:
-    implements(IMyInterface)
+    pass
 </pre>
 
 <p>Now if you want to make this class inherit from <code>pb.Root</code>, 
@@ -417,13 +412,14 @@ the interfaces code will automatically determine that it also implements
 
 <pre class="python">
 from twisted.spread import pb
-from zope.interface import implements, Interface
+from zope.interface import implementer, Interface
 
 class IMyInterface(Interface):
     pass
 
+@implementer(IMyInterface)
 class MyThing(pb.Root):
-    implements(IMyInterface)
+    pass
 </pre>
 
 <pre class="python-interpreter">
@@ -433,17 +429,18 @@ True
 </pre>
 
 <p>If you want <code>MyThing</code> to inherit from <code>pb.Root</code> but <em>not</em> implement <code>IPBRoot</code> like <code>pb.Root</code> does,
-use <code>implementOnly</code>:</p>
+use <code>@implementer_only</code>:</p>
 
 <pre class="python">
 from twisted.spread import pb
-from zope.interface import implementsOnly, Interface
+from zope.interface import implementer_only, Interface
 
 class IMyInterface(Interface):
     pass
 
+@implementer_only(IMyInterface)
 class MyThing(pb.Root):
-    implementsOnly(IMyInterface)
+    pass
 </pre>
 
 <pre class="python-interpreter">

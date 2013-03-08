@@ -28,7 +28,7 @@ from twisted.internet import reactor
 from twisted.internet import interfaces
 from twisted.internet.task import Clock
 from twisted.trial import unittest
-from twisted.python import util
+from twisted.python import util, log
 from twisted.python import failure
 
 from twisted import cred
@@ -799,6 +799,83 @@ class IMAP4HelperTestCase(unittest.TestCase):
             self.assertEqual(query, expected)
 
 
+    def test_queryKeywordFlagWithQuotes(self):
+        """
+        When passed the C{keyword} argument, L{imap4.Query} returns an unquoted
+        string.
+
+        @see: U{http://tools.ietf.org/html/rfc3501#section-9}
+        @see: U{http://tools.ietf.org/html/rfc3501#section-6.4.4}
+        """
+        query = imap4.Query(keyword='twisted')
+        self.assertEqual('(KEYWORD twisted)', query)
+
+
+    def test_queryUnkeywordFlagWithQuotes(self):
+        """
+        When passed the C{unkeyword} argument, L{imap4.Query} returns an
+        unquoted string.
+
+        @see: U{http://tools.ietf.org/html/rfc3501#section-9}
+        @see: U{http://tools.ietf.org/html/rfc3501#section-6.4.4}
+        """
+        query = imap4.Query(unkeyword='twisted')
+        self.assertEqual('(UNKEYWORD twisted)', query)
+
+
+    def _keywordFilteringTest(self, keyword):
+        """
+        Helper to implement tests for value filtering of KEYWORD and UNKEYWORD
+        queries.
+
+        @param keyword: A native string giving the name of the L{imap4.Query}
+            keyword argument to test.
+        """
+        # Check all the printable exclusions
+        self.assertEqual(
+            '(%s twistedrocks)' % (keyword.upper(),),
+            imap4.Query(**{keyword: r'twisted (){%*"\] rocks'}))
+
+        # Check all the non-printable exclusions
+        self.assertEqual(
+            '(%s twistedrocks)' % (keyword.upper(),),
+            imap4.Query(**{
+                    keyword: 'twisted %s rocks' % (
+                    ''.join(chr(ch) for ch in range(33)),)}))
+
+
+    def test_queryKeywordFlag(self):
+        """
+        When passed the C{keyword} argument, L{imap4.Query} returns an
+        C{atom} that consists of one or more non-special characters.
+
+        List of the invalid characters:
+
+            ( ) { % * " \ ] CTL SP
+
+        @see: U{ABNF definition of CTL and SP<https://tools.ietf.org/html/rfc2234>}
+        @see: U{IMAP4 grammar<http://tools.ietf.org/html/rfc3501#section-9>}
+        @see: U{IMAP4 SEARCH specification<http://tools.ietf.org/html/rfc3501#section-6.4.4>}
+        """
+        self._keywordFilteringTest("keyword")
+
+
+    def test_queryUnkeywordFlag(self):
+        """
+        When passed the C{unkeyword} argument, L{imap4.Query} returns an
+        C{atom} that consists of one or more non-special characters.
+
+        List of the invalid characters:
+
+            ( ) { % * " \ ] CTL SP
+
+        @see: U{ABNF definition of CTL and SP<https://tools.ietf.org/html/rfc2234>}
+        @see: U{IMAP4 grammar<http://tools.ietf.org/html/rfc3501#section-9>}
+        @see: U{IMAP4 SEARCH specification<http://tools.ietf.org/html/rfc3501#section-6.4.4>}
+        """
+        self._keywordFilteringTest("unkeyword")
+
+
     def test_invalidIdListParser(self):
         """
         Trying to parse an invalid representation of a sequence range raises an
@@ -1041,21 +1118,27 @@ class IMAP4HelperMixin:
         theAccount.mboxType = SimpleMailbox
         SimpleServer.theAccount = theAccount
 
+
     def tearDown(self):
         del self.server
         del self.client
         del self.connected
 
+
     def _cbStopClient(self, ignore):
         self.client.transport.loseConnection()
+
 
     def _ebGeneral(self, failure):
         self.client.transport.loseConnection()
         self.server.transport.loseConnection()
-        failure.raiseException()
+        log.err(failure, "Problem with %r" % (self.function,))
+
 
     def loopback(self):
         return loopback.loopbackAsync(self.server, self.client)
+
+
 
 class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
     def testCapability(self):
@@ -3889,6 +3972,55 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
 
     def testFetchSimplifiedBodyRFC822UID(self):
         return self.testFetchSimplifiedBodyRFC822(1)
+
+
+    def test_fetchSimplifiedBodyMultipart(self):
+        """
+        L{IMAP4Client.fetchSimplifiedBody} returns a dictionary mapping message
+        sequence numbers to fetch responses for the corresponding messages.  In
+        particular, for a multipart message, the value in the dictionary maps
+        the string C{"BODY"} to a list giving the body structure information for
+        that message, in the form of a list of subpart body structure
+        information followed by the subtype of the message (eg C{"alternative"}
+        for a I{multipart/alternative} message).  This structure is self-similar
+        in the case where a subpart is itself multipart.
+        """
+        self.function = self.client.fetchSimplifiedBody
+        self.messages = '21'
+
+        # A couple non-multipart messages to use as the inner-most payload
+        singles = [
+            FakeyMessage(
+                {'content-type': 'text/plain'},
+                (), 'date', 'Stuff', 54321,  None),
+            FakeyMessage(
+                {'content-type': 'text/html'},
+                (), 'date', 'Things', 32415, None)]
+
+        # A multipart/alternative message containing the above non-multipart
+        # messages.  This will be the payload of the outer-most message.
+        alternative = FakeyMessage(
+            {'content-type': 'multipart/alternative'},
+            (), '', 'Irrelevant', 12345, singles)
+
+        # The outer-most message, also with a multipart type, containing just
+        # the single middle message.
+        mixed = FakeyMessage(
+            # The message is multipart/mixed
+            {'content-type': 'multipart/mixed'},
+            (), '', 'RootOf', 98765, [alternative])
+
+        self.msgObjs = [mixed]
+
+        self.expected = {
+            0: {'BODY': [
+                    [['text', 'plain', None, None, None, None, '5', '1'],
+                     ['text', 'html', None, None, None, None, '6', '1'],
+                     'alternative'],
+                    'mixed']}}
+
+        return self._fetchWork(False)
+
 
     def testFetchMessage(self, uid=0):
         self.function = self.client.fetchMessage

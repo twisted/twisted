@@ -457,6 +457,20 @@ class IMailboxListener(Interface):
         C{None}.
         """
 
+# Some constants to help define what an atom is and is not - see the grammar
+# section of the IMAP4 RFC - <https://tools.ietf.org/html/rfc3501#section-9>.
+# Some definitions (SP, CTL, DQUOTE) are also from the ABNF RFC -
+# <https://tools.ietf.org/html/rfc2234>.
+_SP = ' '
+_CTL = ''.join(chr(ch) for ch in range(0x21) + range(0x80, 0x100))
+
+# It is easier to define ATOM-CHAR in terms of what it does not match than in
+# terms of what it does match.
+_nonAtomChars = r'(){%*"\]' + _SP + _CTL
+
+# This is all the bytes that match the ATOM-CHAR from the grammar in the RFC.
+_atomChars = ''.join(chr(ch) for ch in range(0x100) if chr(ch) not in _nonAtomChars)
+
 class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     """
     Protocol implementation for an IMAP4rev1 server.
@@ -724,7 +738,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         return d or (arg, rest)
 
     # ATOM: Any CHAR except ( ) { % * " \ ] CTL SP (CHAR is 7bit)
-    atomre = re.compile(r'(?P<atom>[^\](){%*"\\\x00-\x20\x80-\xff]+)( (?P<rest>.*$)|$)')
+    atomre = re.compile(r'(?P<atom>[%s]+)( (?P<rest>.*$)|$)' % (re.escape(_atomChars),))
 
     def arg_atom(self, line):
         """
@@ -3614,9 +3628,37 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             # ["BODY", ["HEADER.FIELDS", ["SUBJECT"]], VALUE]
             # ["BODY", ["HEADER.FIELDS", ["SUBJECT"]], "<N.M>", VALUE]
             #
-            # Here, check for these cases and grab as many extra elements as
-            # necessary to retrieve the body information.
-            if key in ("BODY", "BODY.PEEK") and isinstance(value, list) and len(value) < 3:
+            # Additionally, BODY responses for multipart messages are
+            # represented as:
+            #
+            #    ["BODY", VALUE]
+            #
+            # with list as the type of VALUE and the type of VALUE[0].
+            #
+            # See #6281 for ideas on how this might be improved.
+
+            if key not in ("BODY", "BODY.PEEK"):
+                # Only BODY (and by extension, BODY.PEEK) responses can have
+                # body sections.
+                hasSection = False
+            elif not isinstance(value, list):
+                # A BODY section is always represented as a list.  Any non-list
+                # is not a BODY section.
+                hasSection = False
+            elif len(value) > 2:
+                # The list representing a BODY section has at most two elements.
+                hasSection = False
+            elif value and isinstance(value[0], list):
+                # A list containing a list represents the body structure of a
+                # multipart message, instead.
+                hasSection = False
+            else:
+                # Otherwise it must have a BODY section to examine.
+                hasSection = True
+
+            # If it has a BODY section, grab some extra elements and shuffle
+            # around the shape of the key a little bit.
+            if hasSection:
                 if len(value) < 2:
                     key = (key, tuple(value))
                 else:
@@ -4106,6 +4148,12 @@ def Query(sorted=0, **kwarg):
            cmd.append(k)
         elif k == 'HEADER':
             cmd.extend([k, v[0], '"%s"' % (v[1],)])
+        elif k == 'KEYWORD' or k == 'UNKEYWORD':
+            # Discard anything that does not fit into an "atom".  Perhaps turn
+            # the case where this actually removes bytes from the value into a
+            # warning and then an error, eventually.  See #6277.
+            v = string.translate(v, string.maketrans('', ''), _nonAtomChars)
+            cmd.extend([k, v])
         elif k not in _NO_QUOTES:
            cmd.extend([k, '"%s"' % (v,)])
         else:

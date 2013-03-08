@@ -37,8 +37,6 @@ C{TCPServer(8080, server.Site(r))}.  See the documentation for the
 reactor.listen/connect* methods for more information.
 """
 
-import warnings
-
 from twisted.python import log
 from twisted.application import service
 from twisted.internet import task
@@ -218,19 +216,39 @@ for tran in 'TCP UNIX SSL UDP UNIXDatagram Multicast'.split():
 
 
 class TimerService(_VolatileDataService):
-
-    """Service to periodically call a function
+    """
+    Service to periodically call a function
 
     Every C{step} seconds call the given function with the given arguments.
     The service starts the calls when it starts, and cancels them
     when it stops.
+
+    @ivar clock: Source of time. This defaults to L{None} which is
+        causes L{twisted.internet.reactor} to be used.
+        Feel free to set this to something else, but it probably ought to be
+        set *before* calling L{startService}.
+    @type clock: L{IReactorTime<twisted.internet.interfaces.IReactorTime>}
+
+    @ivar call: Function and arguments to call periodically.
+    @type call: L{tuple} of C{(callable, args, kwargs)}
     """
 
-    volatile = ['_loop']
+    volatile = ['_loop', '_loopFinshed']
 
     def __init__(self, step, callable, *args, **kwargs):
+        """
+        @param step: The number of seconds between calls.
+        @type step: L{float}
+
+        @param callable: Function to call
+        @type callable: L{callable}
+
+        @param args: Positional arguments to pass to function
+        @param kwargs: Keyword arguments to pass to function
+        """
         self.step = step
         self.call = (callable, args, kwargs)
+        self.clock = None
 
     def startService(self):
         service.Service.startService(self)
@@ -240,7 +258,9 @@ class TimerService(_VolatileDataService):
         # LoopingCall were a _VolatileDataService, we wouldn't need to do
         # this.
         self._loop = task.LoopingCall(callable, *args, **kwargs)
-        self._loop.start(self.step, now=True).addErrback(self._failed)
+        self._loop.clock = _maybeGlobalReactor(self.clock)
+        self._loopFinished = self._loop.start(self.step, now=True)
+        self._loopFinished.addErrback(self._failed)
 
     def _failed(self, why):
         # make a note that the LoopingCall is no longer looping, so we don't
@@ -250,9 +270,18 @@ class TimerService(_VolatileDataService):
         log.err(why)
 
     def stopService(self):
+        """
+        Stop the service.
+
+        @rtype: L{Deferred<defer.Deferred>}
+        @return: a L{Deferred<defer.Deferred>} which is fired when the
+            currently running call (if any) is finished.
+        """
         if self._loop.running:
             self._loop.stop()
-        return service.Service.stopService(self)
+        self._loopFinished.addCallback(lambda _:
+                service.Service.stopService(self))
+        return self._loopFinished
 
 
 

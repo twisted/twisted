@@ -1,0 +1,1 @@
+twisted.protocols.ftp.FTP now recognizes all glob expressions supported by fnmatch.

@@ -353,6 +353,8 @@ class Name:
     @type name: C{bytes}
     """
     def __init__(self, name=b''):
+        if isinstance(name, unicode):
+            name = name.encode('idna')
         if not isinstance(name, bytes):
             raise TypeError("%r is not a byte string" % (name,))
         self.name = name

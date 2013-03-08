@@ -1,0 +1,3 @@
+Removed deprecated set imports from the following files:
+
+./twisted/names/test/test_client.py:12

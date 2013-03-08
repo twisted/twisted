@@ -7,8 +7,6 @@ Tests for L{twisted.internet.task}.
 
 from __future__ import division, absolute_import
 
-from twisted.python.compat import set
-
 from twisted.trial import unittest
 
 from twisted.internet import interfaces, task, reactor, defer, error

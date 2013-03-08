@@ -855,12 +855,15 @@ class StatefulStringProtocol:
     """
     A stateful string protocol.
 
-    This is a mixin for string protocols (Int32StringReceiver,
-    NetstringReceiver) which translates stringReceived into a callback
-    (prefixed with 'proto_') depending on state.
+    This is a mixin for string protocols (L{Int32StringReceiver},
+    L{NetstringReceiver}) which translates L{stringReceived} into a callback
+    (prefixed with C{'proto_'}) depending on state.
 
-    The state 'done' is special; if a proto_* method returns it, the
+    The state C{'done'} is special; if a C{proto_*} method returns it, the
     connection will be closed immediately.
+
+    @ivar state: Current state of the protocol. Defaults to C{'init'}.
+    @type state: C{str}
     """
 
     state = 'init'
@@ -870,16 +873,16 @@ class StatefulStringProtocol:
         Choose a protocol phase function and call it.
 
         Call back to the appropriate protocol phase; this begins with
-        the function proto_init and moves on to proto_* depending on
-        what each proto_* function returns.  (For example, if
-        self.proto_init returns 'foo', then self.proto_foo will be the
+        the function C{proto_init} and moves on to C{proto_*} depending on
+        what each C{proto_*} function returns.  (For example, if
+        C{self.proto_init} returns 'foo', then C{self.proto_foo} will be the
         next function called when a protocol message is received.
         """
         try:
-            pto = 'proto_'+self.state
-            statehandler = getattr(self,pto)
+            pto = 'proto_' + self.state
+            statehandler = getattr(self, pto)
         except AttributeError:
-            log.msg('callback',self.state,'not found')
+            log.msg('callback', self.state, 'not found')
         else:
             self.state = statehandler(string)
             if self.state == 'done':
@@ -902,7 +905,7 @@ class FileSender:
     lastSent = ''
     deferred = None
 
-    def beginFileTransfer(self, file, consumer, transform = None):
+    def beginFileTransfer(self, file, consumer, transform=None):
         """
         Begin transferring a file
 
@@ -945,7 +948,7 @@ class FileSender:
         if self.transform:
             chunk = self.transform(chunk)
         self.consumer.write(chunk)
-        self.lastSent = chunk[-1]
+        self.lastSent = chunk[-1:]
 
 
     def pauseProducing(self):
@@ -957,7 +960,3 @@ class FileSender:
             self.deferred.errback(
                 Exception("Consumer asked us to stop producing"))
             self.deferred = None
-
-if _PY3:
-    # Add it back as part of ticket #6026:
-    del FileSender

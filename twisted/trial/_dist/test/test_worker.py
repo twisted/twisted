@@ -97,7 +97,7 @@ class LocalWorkerAMPTestCase(TestCase):
 
         config = trial.Options()
         self.testName = "twisted.doesnexist"
-        config['tests'].add(self.testName)
+        config['tests'].append(self.testName)
         self.testCase = trial._getSuite(config)._tests.pop()
 
         self.managerAMP.run(self.testCase, self.result)

@@ -16,9 +16,11 @@ except ImportError:
     pwd = grp = None
 
 from twisted.trial import unittest
+from twisted.trial.util import suppress as SUPPRESS
 
 from twisted.python.compat import _PY3
 from twisted.python import util
+from twisted.python.versions import Version
 from twisted.internet import reactor
 from twisted.internet.interfaces import IReactorProcess
 from twisted.internet.protocol import ProcessProtocol
@@ -27,8 +29,10 @@ from twisted.internet.error import ProcessDone
 
 if _PY3:
     MockOS = None
+    from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
 else:
     from twisted.test.test_process import MockOS
+    from twisted.python.reflect import fullyQualifiedName
 
 
 
@@ -841,10 +845,31 @@ class RunAsEffectiveUserTests(unittest.TestCase):
 
 
 
+def _getDeprecationSuppression(f):
+    """
+    Returns a tuple of arguments needed to suppress deprecation warnings from
+    a specified function.
+
+    @param f: function to suppress dperecation warnings for
+    @type f: L{callable}
+
+    @return: tuple to add to C{suppress} attribute
+    """
+    return SUPPRESS(
+        category=DeprecationWarning,
+        message='%s was deprecated' % (fullyQualifiedName(f),))
+
+
+
 class UnsignedIDTests(unittest.TestCase):
     """
     Tests for L{util.unsignedID} and L{util.setIDFunction}.
     """
+
+    suppress = [
+        _getDeprecationSuppression(util.unsignedID),
+        _getDeprecationSuppression(util.setIDFunction),
+        ]
 
     def setUp(self):
         """
@@ -862,6 +887,16 @@ class UnsignedIDTests(unittest.TestCase):
         previous = util.setIDFunction(value)
         result = util.setIDFunction(previous)
         self.assertIdentical(value, result)
+
+
+    def test_setIDFunctionDeprecated(self):
+        """
+        L{util.setIDFunction} is deprecated.
+        """
+        self.callDeprecated(
+            (Version("Twisted", 13, 0, 0)),
+            util.setIDFunction, UnsignedIDTests)
+    test_setIDFunctionDeprecated.suppress = []
 
 
     def test_unsignedID(self):
@@ -882,6 +917,16 @@ class UnsignedIDTests(unittest.TestCase):
 
         self.assertEqual(util.unsignedID(foo), 17)
         self.assertEqual(util.unsignedID(bar), (sys.maxsize + 1) * 2 - 73)
+
+
+    def test_unsignedIDDeprecated(self):
+        """
+        L{util.unsignedID} is deprecated, use the builtin C{id} instead.
+        """
+        self.callDeprecated(
+            (Version("Twisted", 13, 0, 0), "builtin id"),
+            util.unsignedID, UnsignedIDTests)
+    test_unsignedIDDeprecated.suppress = []
 
 
     def test_defaultIDFunction(self):
@@ -989,6 +1034,10 @@ class DeprecationTests(unittest.TestCase):
             "12.2.")
         self.assertEqual(warnings[0]['category'], DeprecationWarning)
         self.assertEqual(len(warnings), 1)
+    test_addPluginDir.suppress = [
+            SUPPRESS(category=DeprecationWarning,
+                     message="twisted.python.util.getPluginDirs is deprecated")
+            ]
 
 
 

@@ -1,5 +1,8 @@
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
+
 """
-Twisted runer: run and monitor processes
+Twisted runner: run and monitor processes
 
 Maintainer: Andrew Bennetts
 

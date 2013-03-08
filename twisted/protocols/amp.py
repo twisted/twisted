@@ -182,8 +182,6 @@ from itertools import count
 
 from zope.interface import Interface, implements
 
-from twisted.python.compat import set
-from twisted.python.util import unsignedID
 from twisted.python.reflect import accumulateClassDict
 from twisted.python.failure import Failure
 from twisted.python import log, filepath
@@ -2397,7 +2395,7 @@ class AMP(BinaryBoxProtocol, BoxDispatcher,
         else:
             innerRepr = ''
         return '<%s%s at 0x%x>' % (
-            self.__class__.__name__, innerRepr, unsignedID(self))
+            self.__class__.__name__, innerRepr, id(self))
 
 
     def makeConnection(self, transport):
