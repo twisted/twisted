@@ -487,7 +487,7 @@ class LoaderTest(packages.SysPathManglingTest):
             "inheritancepackage.test_x.A.test_foo",
             "twisted.trial.test.sample",
             "goodpackage",
-            "twisted.trial.test.test_test_visitor",
+            "twisted.trial.test.test_log",
             "twisted.trial.test.sample.FooTest",
             "package.test_module"]
         suite1 = self.loader.loadByNames(modules)
