@@ -210,7 +210,7 @@ if _docTestCase:
         _BrokenIDTestCaseAdapter, _docTestCase, itrial.ITestCase)
 
 
-def _iterateTests(testSuiteOrCase):
+def iterateTests(testSuiteOrCase):
     """
     Iterate through all of the test cases in C{testSuiteOrCase}.
     """
@@ -220,7 +220,7 @@ def _iterateTests(testSuiteOrCase):
         yield testSuiteOrCase
     else:
         for test in suite:
-            for subtest in _iterateTests(test):
+            for subtest in iterateTests(test):
                 yield subtest
 
 

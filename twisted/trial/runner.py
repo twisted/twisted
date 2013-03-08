@@ -793,7 +793,7 @@ class TrialRunner(object):
         suite = TrialSuite([test], forceGarbageCollection)
         startTime = time.time()
         if self.mode == self.DRY_RUN:
-            for single in unittest._iterateTests(suite):
+            for single in unittest.iterateTests(suite):
                 result.startTest(single)
                 result.addSuccess(single)
                 result.stopTest(single)

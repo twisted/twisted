@@ -21,7 +21,7 @@ if not _PY3:
         TestSuite, TestDecorator, suiteVisit,
         decorate)
     from twisted.trial._asyncrunner import (
-        _ForceGarbageCollectionDecorator, _iterateTests, _clearSuite)
+        _ForceGarbageCollectionDecorator, iterateTests, _clearSuite)
 
 # Further obscure the origins of these objects, to reduce surprise (and this is
 # what the values were before code got shuffled around between files, but was
