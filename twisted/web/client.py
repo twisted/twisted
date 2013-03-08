@@ -1646,10 +1646,9 @@ class _CacheBodyUpdater(proxyForInterface(IResponse)):
     @since: 13.1
     """
 
-    def __init__(self, response, cache, cacheKey):
+    def __init__(self, response, cacheProtocol):
         self.original = response
-        self._cache = cache
-        self._cacheKey = cacheKey
+        self._cacheProtocol = cacheProtocol
 
 
     def deliverBody(self, protocol):
@@ -1658,7 +1657,7 @@ class _CacheBodyUpdater(proxyForInterface(IResponse)):
         L{_CachingProtocol} in the process.
         """
         self.original.deliverBody(
-            _CachingProtocol(protocol, self._cache, self._cacheKey))
+            _CachingProtocol(protocol, self._cacheProtocol))
 
 
 
@@ -1667,25 +1666,25 @@ class _CachingProtocol(proxyForInterface(IProtocol)):
     A L{Protocol} implementation which wraps another one, transparently caching
     the content as data is received.
 
-    @ivar cache: The cache object used for storing cached responses.
-
-    @ivar cacheKey: The key to identify the current response by.
-
     @since: 13.1
     """
 
-    def __init__(self, protocol, cache, cacheKey):
+    def __init__(self, protocol, cacheProtocol):
         self.original = protocol
-        self.cache = cache
-        self.cacheKey = cacheKey
+        self._cacheProtocol = cacheProtocol
 
 
     def dataReceived(self, data):
         """
         Buffer all incoming C{data} before writing it to the receiving protocol
         """
-        self.cache.dataReceived(self.cacheKey, data)
+        self._cacheProtocol.dataReceived(data)
         self.original.dataReceived(data)
+
+
+    def connectionLost(self, reason):
+        self._cacheProtocol.connectionLost(reason)
+        self.original.connectionLost(reason)
 
 
 
@@ -1714,26 +1713,6 @@ class MemoryCache(object):
         return defer.succeed(self._cache.get(key, default))
 
 
-    def put(self, key, entry):
-        """
-        Place a cache C{entry} into the store referenced by a unique C{key}.
-        If an entry already exists for a key, this entry will be overwritten.
-        """
-        self._cache[key] = entry
-        return defer.succeed(None)
-
-
-    def dataReceived(self, key, data):
-        """
-        Cache data for the given C{key} in a C{BytesIO}.
-        """
-        content = self._storage.get(key)
-        if content is None:
-            content = BytesIO()
-            self._storage[key] = content
-        content.write(data)
-
-
     def deliverBody(self, key, protocol):
         """
         Delivered cached data to L{protocol}.
@@ -1743,6 +1722,35 @@ class MemoryCache(object):
         protocol.dataReceived(content.getvalue())
         protocol.connectionLost(
             failure.Failure(ResponseDone('Body delivered from cache.')))
+
+
+    def getProtocol(self, key, entry):
+        return _MemoryCacheProtocol(self, key, entry)
+
+
+    def _storeContent(self, key, entry, content):
+        self._storage[key] = content
+        self._cache[key] = entry
+
+
+
+class _MemoryCacheProtocol(protocol.Protocol):
+
+    def __init__(self, cache, cacheKey, entry):
+        self._cache = cache
+        self._cacheKey = cacheKey
+        self._entry = entry
+        self._storage = BytesIO()
+
+
+    def dataReceived(self, data):
+        self._storage.write(data)
+
+
+    def connectionLost(self, reason):
+        if reason.check(ResponseDone):
+            self._cache._storeContent(self._cacheKey, self._entry,
+                                      self._storage)
 
 
 
@@ -1784,6 +1792,10 @@ class CachingAgent(object):
                                     bodyProducer, cacheKey)
 
     def _gotCache(self, entry, method, uri, headers, bodyProducer, cacheKey):
+        """
+        Given the cache C{entry}, adds the cache headers if appropriate, and
+        make the actual request.
+        """
         if entry is not None:
             if method == 'GET':
                 if 'etag' in entry:
@@ -1810,23 +1822,15 @@ class CachingAgent(object):
                 'last-modified')[0]
         if response.length is not UNKNOWN_LENGTH:
             entry['length'] = response.length
-        if entry:
-            deferred = self._cache.put(cacheKey, entry)
-        else:
-            deferred = defer.succeed(None)
 
-        return deferred.addCallback(self._storedCache, response, method,
-                                    cacheKey, entry)
-
-
-    def _storedCache(self, ignore, response, method, cacheKey, entry):
         if response.code == 304 and method == 'GET':
             response.code = 200
             response = _CacheBodyProducer(response, self._cache, cacheKey)
             if 'length' in entry:
                 response.length = entry['length']
         elif entry:
-            response = _CacheBodyUpdater(response, self._cache, cacheKey)
+            protocol = self._cache.getProtocol(cacheKey, entry)
+            response = _CacheBodyUpdater(response, protocol)
         return response
 
 

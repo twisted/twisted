@@ -2115,7 +2115,9 @@ class MemoryCacheAgent(unittest.SynchronousTestCase):
         L{client.MemoryCache.get} returns a C{Deferred} which fires with entry
         associated with the key.
         """
-        self.cache.put("key", {"foo": "bar"})
+        protocol = self.cache.getProtocol("key", {"foo": "bar"})
+        protocol.dataReceived("foo")
+        protocol.connectionLost(Failure(client.ResponseDone('Done.')))
         deferred = self.cache.get("key")
         self.assertEqual({"foo": "bar"}, self.successResultOf(deferred))
 
@@ -2125,18 +2127,20 @@ class MemoryCacheAgent(unittest.SynchronousTestCase):
         If the key is not found, L{client.MemoryCache.get} returns a
         C{Deferred} which fires with the default value provided.
         """
-        self.cache.put("key", {"foo": "bar"})
         deferred = self.cache.get("other-key", "default")
         self.assertEqual("default", self.successResultOf(deferred))
 
 
     def test_dataReceived(self):
         """
-        L{client.MemoryCache.dataReceived} stores data available later by its
-        C{deliverBody} method.
+        C{_MemoryCacheProtocol.dataReceived} stores data and passes it to
+        L{client.MemoryCache} so that it's available later on via
+        C{deliverBody}.
         """
-        self.cache.dataReceived("key", "foo")
-        self.cache.dataReceived("key", "bar")
+        protocol = self.cache.getProtocol("key", {})
+        protocol.dataReceived("foo")
+        protocol.dataReceived("bar")
+        protocol.connectionLost(Failure(client.ResponseDone('Done.')))
 
         protocol = SimpleAgentProtocol()
         self.cache.deliverBody("key", protocol)
@@ -2149,7 +2153,9 @@ class MemoryCacheAgent(unittest.SynchronousTestCase):
         L{client.MemoryCache.deliverBody} retrieves cached data, and calls the
         C{connectionMade} and C{connectionLost} methods of the given protocol.
         """
-        self.cache.dataReceived("key", "foo")
+        protocol = self.cache.getProtocol("key", {})
+        protocol.dataReceived("foo")
+        protocol.connectionLost(Failure(client.ResponseDone('Done.')))
 
         protocol = SimpleAgentProtocol()
         self.cache.deliverBody("key", protocol)
@@ -2182,8 +2188,10 @@ class CachingAgentTests(unittest.SynchronousTestCase,
         cacheEntry = {
             'etag': 'qwertz', 'last-modified': 'Sun, 06 Nov 1994 08:49:37 GMT'}
 
-        self.cache.put('http://example.com/foo', cacheEntry)
-        self.cache.dataReceived('http://example.com/foo', '0123456789')
+        cacheProtocol = self.cache.getProtocol('http://example.com/foo',
+                                               cacheEntry)
+        cacheProtocol.dataReceived('0123456789')
+        cacheProtocol.connectionLost(Failure(client.ResponseDone('Done.')))
 
         self.agent.request('GET', 'http://example.com/foo')
 
@@ -2252,7 +2260,7 @@ class CachingAgentTests(unittest.SynchronousTestCase,
     def test_cachedContent(self):
         """
         L{client.CachingAgent} returns the data from the cache if the request
-        matches a response in the cache and the server return B{304}.
+        matches a response in the cache and the server return I{304}.
         """
         data = '0123456789'
 
@@ -2260,8 +2268,10 @@ class CachingAgentTests(unittest.SynchronousTestCase,
             'etag': 'qwertz', 'last-modified': 'Sun, 06 Nov 1994 08:49:37 GMT',
             'length': 10}
 
-        self.cache.put('http://example.com/foo', cacheEntry)
-        self.cache.dataReceived('http://example.com/foo', data)
+        cacheProtocol = self.cache.getProtocol('http://example.com/foo',
+                                               cacheEntry)
+        cacheProtocol.dataReceived('0123456789')
+        cacheProtocol.connectionLost(Failure(client.ResponseDone('Done.')))
 
         d = self.agent.request('GET', 'http://example.com/foo')
 

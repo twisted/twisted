@@ -590,25 +590,11 @@ class IHTTPCache(Interface):
     An object representing a cache to store and satisfy http content requests.
     To accomplish that, it stores cache entries which are in themselves C{dict}
     objects containing the keys and values as produced by the L{Response}, and
-    then use C{dataReceived} and C{deliverBody} to manage content attached to
+    then use C{getProtocol} and C{deliverBody} to manage content attached to
     the response.
 
     @since: 13.1
     """
-
-    def put(key, entry):
-        """
-        Place a cache entry into the cache.
-
-        @param key: The cache key identifying the entry.
-        @type key: C{bytes}
-
-        @param entry: The cache metadata.
-        @param entry: C{dict}
-
-        @return: A C{Deferred} which fires when the put has been done.
-        """
-
 
     def get(key, default=None):
         """
@@ -626,16 +612,16 @@ class IHTTPCache(Interface):
         """
 
 
-    def dataReceived(key, data):
+    def getProtocol(key):
         """
-        Store content for the given C{key}.
+        Return a L{IProtocol} implementation which will manage received content
+        for the cache entry.
 
-        @param key: The key previously associate with a cache entry, for which
-            to store the data.
+        @param key: The cache key identifying the received data.
         @type key: C{bytes}
 
-        @param data: The chunk of the response received.
-        @type data: C{bytes}
+        @param entry: The cache metadata.
+        @param entry: C{dict}
         """
 
 
@@ -643,7 +629,7 @@ class IHTTPCache(Interface):
         """
         Deliver cached content to the given C{protocol}.
 
-        @param key: The key previously associate with a cache entry, for which
+        @param key: The key previously associated with a cache entry, for which
             to retrieve the data.
         @type key: C{bytes}
 
