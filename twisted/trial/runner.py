@@ -9,10 +9,9 @@ Maintainer: Jonathan Lange
 """
 
 __all__ = [
-    'suiteVisit', 'TestSuite',
+    'TestSuite',
 
-    'DestructiveTestSuite', 'DryRunVisitor',
-    'ErrorHolder', 'LoggedSuite', 'PyUnitTestCase',
+    'DestructiveTestSuite', 'DryRunVisitor', 'ErrorHolder', 'LoggedSuite',
     'TestHolder', 'TestLoader', 'TrialRunner', 'TrialSuite',
 
     'filenameToModule', 'isPackage', 'isPackageDirectory', 'isTestCase',
@@ -30,7 +29,7 @@ from twisted.trial.itrial import ITestCase
 from twisted.trial.reporter import UncleanWarningsReporterWrapper
 
 # These are imported so that they remain in the public API for t.trial.runner
-from twisted.trial.unittest import suiteVisit, TestSuite
+from twisted.trial.unittest import TestSuite
 
 from zope.interface import implements
 
@@ -179,61 +178,6 @@ class LoggedSuite(TestSuite):
         for error in observer.getErrors():
             result.addError(TestHolder(NOT_IN_TEST), error)
         observer.flushErrors()
-
-
-
-class PyUnitTestCase(object):
-    """
-    DEPRECATED in Twisted 8.0.
-
-    This class decorates the pyunit.TestCase class, mainly to work around the
-    differences between unittest in Python 2.3, 2.4, and 2.5. These
-    differences are::
-
-        - The way doctest unittests describe themselves
-        - Where the implementation of TestCase.run is (used to be in __call__)
-        - Where the test method name is kept (mangled-private or non-mangled
-          private variable)
-
-    It also implements visit, which we like.
-    """
-
-    def __init__(self, test):
-        warnings.warn("Deprecated in Twisted 8.0.",
-                      category=DeprecationWarning)
-        self._test = test
-        test.id = self.id
-
-    def id(self):
-        cls = self._test.__class__
-        tmn = getattr(self._test, '_TestCase__testMethodName', None)
-        if tmn is None:
-            # python2.5's 'unittest' module is more sensible; but different.
-            tmn = self._test._testMethodName
-        return (cls.__module__ + '.' + cls.__name__ + '.' +
-                tmn)
-
-    def __repr__(self):
-        return 'PyUnitTestCase<%r>'%(self.id(),)
-
-    def __call__(self, results):
-        return self._test(results)
-
-
-    def visit(self, visitor):
-        """
-        Call the given visitor with the original, standard library, test case
-        that C{self} wraps. See L{unittest.TestCase.visit}.
-
-        Deprecated in Twisted 8.0.
-        """
-        warnings.warn("Test visitors deprecated in Twisted 8.0",
-                      category=DeprecationWarning)
-        visitor(self._test)
-
-
-    def __getattr__(self, name):
-        return getattr(self._test, name)
 
 
 
@@ -389,13 +333,6 @@ class ErrorHolder(TestHolder):
         result.startTest(self)
         result.addError(self, self.error)
         result.stopTest(self)
-
-
-    def visit(self, visitor):
-        """
-        See L{unittest.TestCase.visit}.
-        """
-        visitor(self)
 
 
 
