@@ -294,10 +294,12 @@ class ResolverTests(unittest.TestCase):
         reactor = MemoryReactor()
         resolver = client.Resolver(resolv=self.mktemp(), reactor=reactor)
         resolver.lookupAddress('foo.bar.example.com')
-        # The reactor should have received two delayedCalls, one for
-        # checking for changes in resolv.conf file and another for a
-        # DNS query timeout.
+        # Parameterized reactor.callLater should have been called
+        # twice.  Once for checking for changes in resolv.conf file
+        # and again for scheduling the DNS query timeout.
         self.assertEqual(len(reactor.calls), 2)
+        # Parameterized reactor.listenUDP should have been called once
+        self.assertEqual(len(reactor.udpPorts), 1)
 
 
     def test_missingConfiguration(self):
