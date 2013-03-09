@@ -7,76 +7,19 @@ Tests for L{twisted.names} example scripts.
 
 import os
 import sys
-from StringIO import StringIO
 
 from twisted.internet import defer, utils
 from twisted.names import client, error
-from twisted.python.filepath import FilePath
 from twisted.python import usage
-from twisted.trial.unittest import SkipTest, TestCase
+from twisted.test.testutils import ExampleTestBase
+from twisted.trial.unittest import TestCase
 
 
 
-class ExampleTestBase(object):
+class NamesExampleTestBase(ExampleTestBase):
     """
-    This is a mixin which adds an example to the path, tests it, and then
-    removes it from the path and unimports the modules which the test loaded.
-    Test cases which test example code and documentation listings should use
-    this.
-
-    This is done this way so that examples can live in isolated path entries,
-    next to the documentation, replete with their own plugin packages and
-    whatever other metadata they need.  Also, example code is a rare instance
-    of it being valid to have multiple versions of the same code in the
-    repository at once, rather than relying on version control, because
-    documentation will often show the progression of a single piece of code as
-    features are added to it, and we want to test each one.
+    A base class for all the L{twisted.names} examples.
     """
-
-    positionalArgCount = 0
-
-    def setUp(self):
-        """
-        Add our example directory to the path and record which modules are
-        currently loaded.
-        """
-        self.fakeErr = StringIO()
-        self.originalErr, sys.stderr = sys.stderr, self.fakeErr
-        self.fakeOut = StringIO()
-        self.originalOut, sys.stdout = sys.stdout, self.fakeOut
-
-        self.originalPath = sys.path[:]
-        self.originalModules = sys.modules.copy()
-
-        # Get branch root
-        here = FilePath(__file__).parent().parent().parent().parent()
-
-        # Find the example script within this branch
-        for childName in self.exampleRelativePath.split('/'):
-            here = here.child(childName)
-            if not here.exists():
-                raise SkipTest(
-                    "Examples (%s) not found - cannot test" % (here.path,))
-        self.examplePath = here
-
-        # Add the example parent folder to the Python path
-        sys.path.append(self.examplePath.parent().path)
-
-        # Import the example as a module
-        moduleName = self.examplePath.basename().split('.')[0]
-        self.example = __import__(moduleName)
-
-
-    def tearDown(self):
-        """
-        Remove the example directory from the path and remove all
-        modules loaded by the test from sys.modules.
-        """
-        sys.modules.clear()
-        sys.modules.update(self.originalModules)
-        sys.path[:] = self.originalPath
-        sys.stderr = self.originalErr
-
 
     def test_executable(self):
         """
@@ -132,7 +75,7 @@ class ExampleTestBase(object):
         self.assertRaises(
             usage.UsageError,
             options.parseOptions,
-            [str(x) for x in range(self.positionalArgCount+1)])
+            [str(x) for x in range(self.positionalArgCount + 1)])
 
 
     def test_usageErrorsBeginWithUsage(self):
@@ -168,7 +111,7 @@ class ExampleTestBase(object):
 
 
 
-class TestDnsTests(ExampleTestBase, TestCase):
+class TestDnsTests(NamesExampleTestBase, TestCase):
     """
     Test the testdns.py example script.
     """
@@ -178,7 +121,7 @@ class TestDnsTests(ExampleTestBase, TestCase):
 
 
 
-class GetHostByNameTests(ExampleTestBase, TestCase):
+class GetHostByNameTests(NamesExampleTestBase, TestCase):
     """
     Test the gethostbyname.py example script.
     """
@@ -257,7 +200,7 @@ class GetHostByNameTests(ExampleTestBase, TestCase):
 
 
 
-class DnsServiceTests(ExampleTestBase, TestCase):
+class DnsServiceTests(NamesExampleTestBase, TestCase):
     """
     Test the dns-service.py example script.
     """

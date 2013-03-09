@@ -12,11 +12,17 @@ don't-use-it-outside-Twisted-we-won't-maintain-compatibility rule!
     their own test cases.
 """
 
-from io import BytesIO
+import sys
 
+from io import BytesIO
+from StringIO import StringIO
 from xml.dom import minidom as dom
 
 from twisted.internet.protocol import FileWrapper
+from twisted.python.filepath import FilePath
+from twisted.trial.unittest import SkipTest
+
+
 
 class IOPump:
     """Utility to pump data between clients and servers for protocol testing.
@@ -55,6 +61,7 @@ class IOPump:
             return 1
         else:
             return 0
+
 
 
 def returnConnected(server, client):
@@ -142,8 +149,9 @@ class ComparisonTestsMixin(object):
         equal to C{valueOne} and that it defines equality cooperatively with
         other types it doesn't know about.
 
-        @param firstValueOne: An object which is expected to compare as equal to
-            C{secondValueOne} and not equal to C{valueTwo}.
+        @param firstValueOne: An object which is expected to compare
+            as equal to C{secondValueOne} and not equal to
+            C{valueTwo}.
 
         @param secondValueOne: A different object than C{firstValueOne} but
             which is expected to compare equal to that object.
@@ -167,3 +175,65 @@ class ComparisonTestsMixin(object):
         self.assertFalse(firstValueOne != _Equal())
         self.assertFalse(firstValueOne == _NotEqual())
         self.assertTrue(firstValueOne != _NotEqual())
+
+
+
+class ExampleTestBase(object):
+    """
+    This is a mixin which adds an example to the path, tests it, and then
+    removes it from the path and unimports the modules which the test loaded.
+    Test cases which test example code and documentation listings should use
+    this.
+
+    This is done this way so that examples can live in isolated path entries,
+    next to the documentation, replete with their own plugin packages and
+    whatever other metadata they need.  Also, example code is a rare instance
+    of it being valid to have multiple versions of the same code in the
+    repository at once, rather than relying on version control, because
+    documentation will often show the progression of a single piece of code as
+    features are added to it, and we want to test each one.
+    """
+
+    positionalArgCount = 0
+
+    def setUp(self):
+        """
+        Add our example directory to the path and record which modules are
+        currently loaded.
+        """
+        self.fakeErr = StringIO()
+        self.originalErr, sys.stderr = sys.stderr, self.fakeErr
+        self.fakeOut = StringIO()
+        self.originalOut, sys.stdout = sys.stdout, self.fakeOut
+
+        self.originalPath = sys.path[:]
+        self.originalModules = sys.modules.copy()
+
+        # Get branch root
+        here = FilePath(__file__).parent().parent().parent()
+
+        # Find the example script within this branch
+        for childName in self.exampleRelativePath.split('/'):
+            here = here.child(childName)
+            if not here.exists():
+                raise SkipTest(
+                    "Examples (%s) not found - cannot test" % (here.path,))
+        self.examplePath = here
+
+        # Add the example parent folder to the Python path
+        sys.path.append(self.examplePath.parent().path)
+
+        # Import the example as a module
+        moduleName = self.examplePath.basename().split('.')[0]
+        self.example = __import__(moduleName)
+
+
+    def tearDown(self):
+        """
+        Remove the example directory from the path and remove all
+        modules loaded by the test from sys.modules.
+        """
+        sys.modules.clear()
+        sys.modules.update(self.originalModules)
+        sys.path[:] = self.originalPath
+        sys.stderr = self.originalErr
