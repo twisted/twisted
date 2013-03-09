@@ -8,7 +8,9 @@ Tests for L{twisted.names} example scripts.
 import os
 import sys
 
-from twisted.internet import defer, utils
+from zope.interface.verify import verifyObject
+
+from twisted.internet import defer, interfaces, utils
 from twisted.names import client, error
 from twisted.python import usage
 from twisted.test.testutils import ExampleTestBase
@@ -146,10 +148,12 @@ class GetHostByNameTests(NamesExampleTestBase, TestCase):
         fakeResult = '192.0.2.1'
         lookedUp = []
 
-        def fakeGetHostByName(host):
+        def fakeGetHostByName(host, timeout=None):
             lookedUp.append(host)
             return defer.succeed(fakeResult)
         self.patch(client, 'getHostByName', fakeGetHostByName)
+
+        verifyObject(interfaces.IResolverSimple, client, tentative=True)
 
         d = self.example.main(None, fakeName)
         self.assertIsInstance(d, defer.Deferred)
