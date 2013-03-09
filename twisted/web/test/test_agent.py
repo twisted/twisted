@@ -2105,7 +2105,10 @@ class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
 
 
 
-class MemoryCacheAgent(unittest.SynchronousTestCase):
+class MemoryCacheAgentTests(unittest.SynchronousTestCase):
+    """
+    Tests for L{client.MemoryCache}.
+    """
 
     def setUp(self):
         self.cache = client.MemoryCache()
@@ -2123,7 +2126,7 @@ class MemoryCacheAgent(unittest.SynchronousTestCase):
         L{client.MemoryCache.get} returns a C{Deferred} which fires with entry
         associated with the key.
         """
-        protocol = self.cache.getProtocol("key", {"foo": "bar"})
+        protocol = self.cache.contentStorageProtocol("key", {"foo": "bar"})
         protocol.dataReceived("foo")
         protocol.connectionLost(Failure(client.ResponseDone('Done.')))
         deferred = self.cache.get("key")
@@ -2145,7 +2148,7 @@ class MemoryCacheAgent(unittest.SynchronousTestCase):
         L{client.MemoryCache} so that it's available later on via
         C{deliverBody}.
         """
-        protocol = self.cache.getProtocol("key", {})
+        protocol = self.cache.contentStorageProtocol("key", {})
         protocol.dataReceived("foo")
         protocol.dataReceived("bar")
         protocol.connectionLost(Failure(client.ResponseDone('Done.')))
@@ -2161,7 +2164,7 @@ class MemoryCacheAgent(unittest.SynchronousTestCase):
         L{client.MemoryCache.deliverBody} retrieves cached data, and calls the
         C{connectionMade} and C{connectionLost} methods of the given protocol.
         """
-        protocol = self.cache.getProtocol("key", {})
+        protocol = self.cache.contentStorageProtocol("key", {})
         protocol.dataReceived("foo")
         protocol.connectionLost(Failure(client.ResponseDone('Done.')))
 
@@ -2169,8 +2172,8 @@ class MemoryCacheAgent(unittest.SynchronousTestCase):
         self.cache.deliverBody("key", protocol)
 
         self.assertEqual(protocol.received, ["foo"])
-        self.assertIdentical(None, self.successResultOf(protocol.made))
-        self.assertIdentical(None, self.successResultOf(protocol.finished))
+        self.successResultOf(protocol.made)
+        self.successResultOf(protocol.finished)
 
 
 
@@ -2196,8 +2199,8 @@ class CachingAgentTests(unittest.SynchronousTestCase,
         cacheEntry = {
             'etag': 'qwertz', 'last-modified': 'Sun, 06 Nov 1994 08:49:37 GMT'}
 
-        cacheProtocol = self.cache.getProtocol('http://example.com/foo',
-                                               cacheEntry)
+        cacheProtocol = self.cache.contentStorageProtocol(
+            'http://example.com/foo', cacheEntry)
         cacheProtocol.dataReceived('0123456789')
         cacheProtocol.connectionLost(Failure(client.ResponseDone('Done.')))
 
@@ -2276,8 +2279,8 @@ class CachingAgentTests(unittest.SynchronousTestCase,
             'etag': 'qwertz', 'last-modified': 'Sun, 06 Nov 1994 08:49:37 GMT',
             'length': 10}
 
-        cacheProtocol = self.cache.getProtocol('http://example.com/foo',
-                                               cacheEntry)
+        cacheProtocol = self.cache.contentStorageProtocol(
+            'http://example.com/foo', cacheEntry)
         cacheProtocol.dataReceived('0123456789')
         cacheProtocol.connectionLost(Failure(client.ResponseDone('Done.')))
 

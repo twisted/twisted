@@ -590,8 +590,8 @@ class IHTTPCache(Interface):
     An object representing a cache to store and satisfy http content requests.
     To accomplish that, it stores cache entries which are in themselves C{dict}
     objects containing the keys and values as produced by the L{Response}, and
-    then use C{getProtocol} and C{deliverBody} to manage content attached to
-    the response.
+    then use C{contentStorageProtocol} and C{deliverBody} to manage content
+    attached to the response.
 
     @since: 13.1
     """
@@ -612,7 +612,7 @@ class IHTTPCache(Interface):
         """
 
 
-    def getProtocol(key, entry):
+    def contentStorageProtocol(key, entry):
         """
         Return a L{IProtocol} implementation which will manage received content
         for the cache entry.

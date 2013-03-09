@@ -1667,7 +1667,7 @@ class _CachingProtocol(proxyForInterface(IProtocol)):
     the content as data is received.
 
     @ivar _cacheProtocol: The instance of cache protocol returned by
-        L{IHTTPCache.getProtocol}.
+        L{IHTTPCache.contentStorageProtocol}.
 
     @since: 13.1
     """
@@ -1731,7 +1731,7 @@ class MemoryCache(object):
             failure.Failure(ResponseDone('Body delivered from cache.')))
 
 
-    def getProtocol(self, key, entry):
+    def contentStorageProtocol(self, key, entry):
         """
         Return a protocol instance used to store response content for this
         cache.
@@ -1747,7 +1747,7 @@ class MemoryCache(object):
         @param key: The cache key.
         @type key: C{bytes}
 
-        @param entry: The cache entry, as passed to C{getProtocol}.
+        @param entry: The cache entry, as passed to C{contentStorageProtocol}.
         @type entry: C{dict}
 
         @param content: The content delivered by the response.
@@ -1870,7 +1870,7 @@ class CachingAgent(object):
             if 'length' in entry:
                 response.length = entry['length']
         elif entry:
-            protocol = self._cache.getProtocol(cacheKey, entry)
+            protocol = self._cache.contentStorageProtocol(cacheKey, entry)
             response = _CacheBodyUpdater(response, protocol)
         return response
 
