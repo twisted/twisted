@@ -153,6 +153,8 @@ class GetHostByNameTests(NamesExampleTestBase, TestCase):
             return defer.succeed(fakeResult)
         self.patch(client, 'getHostByName', fakeGetHostByName)
 
+        # XXX: the tentative=True argument can be removed if and when
+        # the #6328 branch is merged.
         verifyObject(interfaces.IResolverSimple, client, tentative=True)
 
         d = self.example.main(None, fakeName)
