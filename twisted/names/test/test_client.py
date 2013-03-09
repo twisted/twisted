@@ -24,6 +24,7 @@ from twisted.names.error import DNSQueryTimeoutError
 from twisted.names.common import ResolverBase
 
 from twisted.names.test.test_hosts import GoodTempPathMixin
+from twisted.names.test.test_rootresolve import MemoryReactor
 
 from twisted.trial import unittest
 
@@ -282,6 +283,21 @@ class ResolverTests(unittest.TestCase):
         servers nor a nameserver configuration file.
         """
         self.assertRaises(ValueError, client.Resolver)
+
+
+    def test_resolverUsesOnlyParameterizedReactor(self):
+        """
+        L{client.Resolver} accepts a reactor parameter. If a reactor
+        instance is supplied the global reactor should not be used
+        when queries are issued.
+        """
+        reactor = MemoryReactor()
+        resolver = client.Resolver(resolv=self.mktemp(), reactor=reactor)
+        resolver.lookupAddress('foo.bar.example.com')
+        # The reactor should have received two delayedCalls, one for
+        # checking for changes in resolv.conf file and another for a
+        # DNS query timeout.
+        self.assertEqual(len(reactor.calls), 2)
 
 
     def test_missingConfiguration(self):
