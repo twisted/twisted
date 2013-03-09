@@ -19,7 +19,13 @@ from twisted.trial.unittest import TestCase
 class NamesExampleTestBase(ExampleTestBase):
     """
     A base class for all the L{twisted.names} examples.
+
+    @ivar positionalArgCount: The maximum number of positional
+        arguments expected by the example script under test.
     """
+
+    positionalArgCount = 0
+
 
     def test_executable(self):
         """

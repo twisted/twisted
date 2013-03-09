@@ -194,8 +194,6 @@ class ExampleTestBase(object):
     features are added to it, and we want to test each one.
     """
 
-    positionalArgCount = 0
-
     def setUp(self):
         """
         Add our example directory to the path and record which modules are
