@@ -16,7 +16,8 @@ from twisted.trial.unittest import TestCase
 
 from twisted.internet.protocol import Factory, Protocol
 from twisted.python import log
-from twisted.test.proto_helpers import StringTransportWithDisconnection
+from twisted.test.proto_helpers import (
+    StringTransportWithDisconnection, AccumulatingProtocol)
 from twisted.protocols.policies import ProtocolWrapper
 
 from twisted.web.http_headers import Headers
@@ -24,7 +25,8 @@ from twisted.web.resource import IResource, Resource
 from twisted.web.server import NOT_DONE_YET, Request
 from twisted.web.websockets import (
     CONTROLS, _makeAccept, _mask, _makeFrame, _parseFrames, _WSException,
-    WebSocketsResource, WebSocketsProtocol, IWebSocketsResource)
+    WebSocketsResource, WebSocketsProtocol, IWebSocketsResource,
+    WebSocketsProtocolWrapper)
 from twisted.web.test.test_web import DummyRequest, DummyChannel
 
 
@@ -403,6 +405,56 @@ class WebsocketsProtocolTest(TestCase):
         self.assertFalse(self.transport.connected)
         [error] = self.flushLoggedErrors(_WSException)
         self.assertEqual("Reserved flag in frame (114)", str(error.value))
+
+
+
+class WebsocketsProtocolWrapperTest(TestCase):
+    """
+    Tests for L{WebSocketsProtocolWrapper}.
+    """
+
+    def setUp(self):
+        self.accumulatingProtocol = AccumulatingProtocol()
+        self.protocol = WebSocketsProtocolWrapper(self.accumulatingProtocol)
+        self.transport = StringTransportWithDisconnection()
+        self.protocol.makeConnection(self.transport)
+        self.transport.protocol = self.protocol
+
+
+    def test_dataReceived(self):
+        """
+        """
+        self.protocol.dataReceived(
+            _makeFrame("Hello", CONTROLS.TEXT, True, mask="abcd"))
+        self.assertEqual("Hello", self.accumulatingProtocol.data)
+
+
+    def test_write(self):
+        """
+        """
+        self.accumulatingProtocol.transport.write("Hello")
+        self.assertEqual("\x81\x05Hello", self.transport.value())
+
+
+    def test_writeSequence(self):
+        """
+        """
+        self.accumulatingProtocol.transport.writeSequence(["Hello", "World"])
+        self.assertEqual("\x81\x05Hello\x81\x05World", self.transport.value())
+
+
+    def test_getHost(self):
+        """
+        """
+        self.assertEqual(self.transport.getHost(),
+                         self.accumulatingProtocol.transport.getHost())
+
+
+    def test_getPeer(self):
+        """
+        """
+        self.assertEqual(self.transport.getPeer(),
+                         self.accumulatingProtocol.transport.getPeer())
 
 
 

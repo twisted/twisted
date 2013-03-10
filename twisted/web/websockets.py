@@ -10,12 +10,14 @@ The WebSockets protocol (RFC 6455), provided as a resource which wraps a
 factory.
 """
 
-__all__ = ["WebSocketsResource"]
+__all__ = ["WebSocketsResource", "IWebSocketsProtocol", "IWebSocketsResource",
+           "WebSocketsProtocol", "WebSocketsProtocolWrapper"]
+
 
 from hashlib import sha1
 from struct import pack, unpack
 
-from zope.interface import implementer, Interface
+from zope.interface import implementer, Interface, providedBy, directlyProvides
 
 from twisted.python import log
 from twisted.python.constants import Flags, FlagConstant
@@ -247,7 +249,9 @@ def _parseFrames(frameBuffer, needMask=True):
 
 
 class IWebSocketsProtocol(IProtocol):
-
+    """
+    @since: 13.1
+    """
 
     def sendFrame(opcode, data, fin):
         """
@@ -271,8 +275,7 @@ class IWebSocketsProtocol(IProtocol):
 @implementer(IWebSocketsProtocol)
 class WebSocketsProtocol(Protocol):
     """
-    Protocol which wraps another protocol to provide a WebSockets transport
-    layer.
+    @since: 13.1
     """
     _disconnecting = False
     _buffer = None
@@ -360,11 +363,72 @@ class WebSocketsProtocol(Protocol):
 
 
 
+class WebSocketsProtocolWrapper(WebSocketsProtocol):
+    """
+    @since: 13.1
+    """
+
+    def __init__(self, wrappedProtocol, defaultOpcode=CONTROLS.TEXT):
+        self.wrappedProtocol = wrappedProtocol
+        self.defaultOpcode = defaultOpcode
+
+
+    def makeConnection(self, transport):
+        """
+        """
+        directlyProvides(self, providedBy(transport))
+        WebSocketsProtocol.makeConnection(self, transport)
+        self.wrappedProtocol.makeConnection(self)
+
+
+    def connectionMade(self):
+        """
+        """
+        WebSocketsProtocol.connectionMade(self)
+        self._messages = []
+
+
+    def write(self, data):
+        """
+        """
+        self.sendFrame(self.defaultOpcode, data, True)
+
+
+    def writeSequence(self, data):
+        """
+        """
+        for chunk in data:
+            self.write(chunk)
+
+
+    def __getattr__(self, name):
+        """
+        """
+        return getattr(self.transport, name)
+
+
+    def frameReceived(self, opcode, data, fin):
+        """
+        """
+        self._messages.append(data)
+        if fin:
+            content = "".join(self._messages)
+            self._messages[:] = []
+            self.wrappedProtocol.dataReceived(content)
+
+
+    def connectionLost(self, reason):
+        """
+        """
+        self.wrappedProtocol.connectionLost(reason)
+
+
+
 class IWebSocketsResource(Interface):
     """
     A WebSockets resource.
 
-    @since: 13.0
+    @since: 13.1
     """
 
     def lookupProtocol(protocolNames, request):
@@ -394,7 +458,7 @@ class WebSocketsResource(object):
     Due to unresolved questions of logistics, this resource cannot have
     children.
 
-    @since: 13.0
+    @since: 13.1
     """
     isLeaf = True
 
@@ -517,6 +581,9 @@ class WebSocketsResource(object):
         # And now take matters into our own hands. We shall manage the
         # transport's lifecycle.
         transport, request.transport = request.transport, None
+
+        if not IWebSocketsProtocol.providedBy(protocol):
+            protocol = WebSocketsProtocolWrapper(protocol)
 
         # Connect the transport to our factory, and make things go. We need to
         # do some stupid stuff here; see #3204, which could fix it.
