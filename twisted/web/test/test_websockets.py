@@ -23,9 +23,8 @@ from twisted.web.http_headers import Headers
 from twisted.web.resource import IResource, Resource
 from twisted.web.server import NOT_DONE_YET, Request
 from twisted.web.websockets import (
-    _CONTROLS, _makeAccept, _mask, _makeFrame, _parseFrames, _WSException,
-    _WebSocketsFactory, WebSocketsResource, _WebSocketsProtocol,
-    IWebSocketsResource)
+    CONTROLS, _makeAccept, _mask, _makeFrame, _parseFrames, _WSException,
+    WebSocketsResource, WebSocketsProtocol, IWebSocketsResource)
 from twisted.web.test.test_web import DummyRequest, DummyChannel
 
 
@@ -80,44 +79,44 @@ class TestFrameHelpers(TestCase):
         """
         A sample unmasked frame of "Hello" from HyBi-10, 4.7.
         """
-        frame = "\x81\x05Hello"
-        frames, buf = _parseFrames(frame)
+        frame = ["\x81\x05Hello"]
+        frames = list(_parseFrames(frame, needMask=False))
         self.assertEqual(len(frames), 1)
-        self.assertEqual(frames[0], (_CONTROLS.NORMAL, "Hello"))
-        self.assertEqual(buf, "")
+        self.assertEqual(frames[0], (CONTROLS.TEXT, "Hello", True))
+        self.assertEqual(frame, [])
 
 
     def test_parseUnmaskedLargeText(self):
         """
         L{_parseFrames} handles frame with text longer than 125 bytes.
         """
-        frame = "\x81\x7e\x00\xc8" + "x" * 200
-        frames, buf = _parseFrames(frame)
+        frame = ["\x81\x7e\x00\xc8", "x" * 200]
+        frames = list(_parseFrames(frame, needMask=False))
         self.assertEqual(len(frames), 1)
-        self.assertEqual(frames[0], (_CONTROLS.NORMAL, "x" * 200))
-        self.assertEqual(buf, "")
+        self.assertEqual(frames[0], (CONTROLS.TEXT, "x" * 200, True))
+        self.assertEqual(frame, [])
 
 
     def test_parseUnmaskedHugeText(self):
         """
         L{_parseFrames} handles frame with text longer than 64 kB.
         """
-        frame = "\x81\x7f\x00\x00\x00\x00\x00\x01\x86\xa0" + "x" * 100000
-        frames, buf = _parseFrames(frame)
+        frame = ["\x81\x7f\x00\x00\x00\x00\x00\x01\x86\xa0", "x" * 100000]
+        frames = list(_parseFrames(frame, needMask=False))
         self.assertEqual(len(frames), 1)
-        self.assertEqual(frames[0], (_CONTROLS.NORMAL, "x" * 100000))
-        self.assertEqual(buf, "")
+        self.assertEqual(frames[0], (CONTROLS.TEXT, "x" * 100000, True))
+        self.assertEqual(frame, [])
 
 
     def test_parseMaskedText(self):
         """
         A sample masked frame of "Hello" from HyBi-10, 4.7.
         """
-        frame = "\x81\x857\xfa!=\x7f\x9fMQX"
-        frames, buf = _parseFrames(frame)
+        frame = ["\x81\x857\xfa!=\x7f\x9fMQX"]
+        frames = list(_parseFrames(frame))
         self.assertEqual(len(frames), 1)
-        self.assertEqual(frames[0], (_CONTROLS.NORMAL, "Hello"))
-        self.assertEqual(buf, "")
+        self.assertEqual(frames[0], (CONTROLS.TEXT, "Hello", True))
+        self.assertEqual(frame, [])
 
 
     def test_parseMaskedPartialText(self):
@@ -125,10 +124,10 @@ class TestFrameHelpers(TestCase):
         L{_parseFrames} stops parsing if a masked frame isn't long enough to
         contain the length of the text.
         """
-        frame = "\x81\x827\xfa"
-        frames, buf = _parseFrames(frame)
+        frame = ["\x81\x827\xfa"]
+        frames = list(_parseFrames(frame))
         self.assertEqual(len(frames), 0)
-        self.assertEqual(buf, "\x81\x827\xfa")
+        self.assertEqual(frame, ["\x81\x827\xfa"])
 
 
     def test_parseUnmaskedTextFragments(self):
@@ -137,12 +136,12 @@ class TestFrameHelpers(TestCase):
 
         From HyBi-10, 4.7.
         """
-        frame = "\x01\x03Hel\x80\x02lo"
-        frames, buf = _parseFrames(frame)
+        frame = ["\x01\x03Hel\x80\x02lo"]
+        frames = list(_parseFrames(frame, needMask=False))
         self.assertEqual(len(frames), 2)
-        self.assertEqual(frames[0], (_CONTROLS.NORMAL, "Hel"))
-        self.assertEqual(frames[1], (_CONTROLS.NORMAL, "lo"))
-        self.assertEqual(buf, "")
+        self.assertEqual(frames[0], (CONTROLS.TEXT, "Hel", False))
+        self.assertEqual(frames[1], (CONTROLS.CONTINUE, "lo", True))
+        self.assertEqual(frame, [])
 
 
     def test_parsePing(self):
@@ -151,11 +150,11 @@ class TestFrameHelpers(TestCase):
 
         From HyBi-10, 4.7.
         """
-        frame = "\x89\x05Hello"
-        frames, buf = _parseFrames(frame)
+        frame = ["\x89\x05Hello"]
+        frames = list(_parseFrames(frame, needMask=False))
         self.assertEqual(len(frames), 1)
-        self.assertEqual(frames[0], (_CONTROLS.PING, "Hello"))
-        self.assertEqual(buf, "")
+        self.assertEqual(frames[0], (CONTROLS.PING, "Hello", True))
+        self.assertEqual(frame, [])
 
 
     def test_parsePong(self):
@@ -164,11 +163,11 @@ class TestFrameHelpers(TestCase):
 
         From HyBi-10, 4.7.
         """
-        frame = "\x8a\x05Hello"
-        frames, buf = _parseFrames(frame)
+        frame = ["\x8a\x05Hello"]
+        frames = list(_parseFrames(frame, needMask=False))
         self.assertEqual(len(frames), 1)
-        self.assertEqual(frames[0], (_CONTROLS.PONG, "Hello"))
-        self.assertEqual(buf, "")
+        self.assertEqual(frames[0], (CONTROLS.PONG, "Hello", True))
+        self.assertEqual(frame, [])
 
 
     def test_parseCloseEmpty(self):
@@ -177,12 +176,12 @@ class TestFrameHelpers(TestCase):
         the generic error code 1000, and has no particular justification or
         error message.
         """
-        frame = "\x88\x00"
-        frames, buf = _parseFrames(frame)
+        frame = ["\x88\x00"]
+        frames = list(_parseFrames(frame, needMask=False))
         self.assertEqual(len(frames), 1)
         self.assertEqual(
-            frames[0], (_CONTROLS.CLOSE, (1000, "No reason given")))
-        self.assertEqual(buf, "")
+            frames[0], (CONTROLS.CLOSE, (1000, "No reason given"), True))
+        self.assertEqual(frame, [])
 
 
     def test_parseCloseReason(self):
@@ -191,21 +190,22 @@ class TestFrameHelpers(TestCase):
         error code, and may optionally include trailing text explaining why
         the connection was closed.
         """
-        frame = "\x88\x0b\x03\xe8No reason"
-        frames, buf = _parseFrames(frame)
+        frame = ["\x88\x0b\x03\xe8No reason"]
+        frames = list(_parseFrames(frame, needMask=False))
         self.assertEqual(len(frames), 1)
-        self.assertEqual(frames[0], (_CONTROLS.CLOSE, (1000, "No reason")))
-        self.assertEqual(buf, "")
+        self.assertEqual(
+            frames[0], (CONTROLS.CLOSE, (1000, "No reason"), True))
+        self.assertEqual(frame, [])
 
 
     def test_parsePartialNoLength(self):
         """
         Partial frames are stored for later decoding.
         """
-        frame = "\x81"
-        frames, buf = _parseFrames(frame)
+        frame = ["\x81"]
+        frames = list(_parseFrames(frame, needMask=False))
         self.assertEqual(len(frames), 0)
-        self.assertEqual(buf, "\x81")
+        self.assertEqual(frame, ["\x81"])
 
 
     def test_parsePartialTruncatedLengthInt(self):
@@ -213,10 +213,10 @@ class TestFrameHelpers(TestCase):
         Partial frames are stored for later decoding, even if they are cut on
         length boundaries.
         """
-        frame = "\x81\xfe"
-        frames, buf = _parseFrames(frame)
+        frame = ["\x81\xfe"]
+        frames = list(_parseFrames(frame, needMask=False))
         self.assertEqual(len(frames), 0)
-        self.assertEqual(buf, "\x81\xfe")
+        self.assertEqual(frame, ["\x81\xfe"])
 
 
     def test_parsePartialTruncatedLengthDouble(self):
@@ -224,10 +224,10 @@ class TestFrameHelpers(TestCase):
         Partial frames are stored for later decoding, even if they are marked
         as being extra-long.
         """
-        frame = "\x81\xff"
-        frames, buf = _parseFrames(frame)
+        frame = ["\x81\xff"]
+        frames = list(_parseFrames(frame, needMask=False))
         self.assertEqual(len(frames), 0)
-        self.assertEqual(buf, "\x81\xff")
+        self.assertEqual(frame, ["\x81\xff"])
 
 
     def test_parsePartialNoData(self):
@@ -235,10 +235,10 @@ class TestFrameHelpers(TestCase):
         Partial frames with full headers but no data are stored for later
         decoding.
         """
-        frame = "\x81\x05"
-        frames, buf = _parseFrames(frame)
+        frame = ["\x81\x05"]
+        frames = list(_parseFrames(frame, needMask=False))
         self.assertEqual(len(frames), 0)
-        self.assertEqual(buf, "\x81\x05")
+        self.assertEqual(frame, ["\x81\x05"])
 
 
     def test_parsePartialTruncatedData(self):
@@ -246,10 +246,10 @@ class TestFrameHelpers(TestCase):
         Partial frames with full headers and partial data are stored for later
         decoding.
         """
-        frame = "\x81\x05Hel"
-        frames, buf = _parseFrames(frame)
+        frame = ["\x81\x05Hel"]
+        frames = list(_parseFrames(frame, needMask=False))
         self.assertEqual(len(frames), 0)
-        self.assertEqual(buf, "\x81\x05Hel")
+        self.assertEqual(frame, ["\x81\x05Hel"])
 
 
     def test_parseReservedFlag(self):
@@ -257,8 +257,8 @@ class TestFrameHelpers(TestCase):
         L{_parseFrames} raises a L{_WSException} error when the header uses a
         reserved flag.
         """
-        frame = "\x72\x05"
-        error = self.assertRaises(_WSException, _parseFrames, frame)
+        frame = ["\x72\x05"]
+        error = self.assertRaises(_WSException, list, _parseFrames(frame))
         self.assertEqual("Reserved flag in frame (114)", str(error))
 
 
@@ -267,8 +267,8 @@ class TestFrameHelpers(TestCase):
         L{_parseFrames} raises a L{_WSException} error when the error uses an
         unknown opcode.
         """
-        frame = "\x8f\x05"
-        error = self.assertRaises(_WSException, _parseFrames, frame)
+        frame = ["\x8f\x05"]
+        error = self.assertRaises(_WSException, list, _parseFrames(frame))
         self.assertEqual("Unknown opcode 15 in frame", str(error))
 
 
@@ -277,7 +277,7 @@ class TestFrameHelpers(TestCase):
         L{_makeFrame} makes valid HyBi-07 packets.
         """
         frame = "\x81\x05Hello"
-        buf = _makeFrame("Hello")
+        buf = _makeFrame("Hello", CONTROLS.TEXT, True)
         self.assertEqual(frame, buf)
 
 
@@ -287,7 +287,7 @@ class TestFrameHelpers(TestCase):
         payload is more than 125 bytes.
         """
         frame = "\x81\x7e\x00\xc8" + "x" * 200
-        buf = _makeFrame("x" * 200)
+        buf = _makeFrame("x" * 200, CONTROLS.TEXT, True)
         self.assertEqual(frame, buf)
 
 
@@ -297,23 +297,42 @@ class TestFrameHelpers(TestCase):
         payload is more than 64 kB.
         """
         frame = "\x81\x7f\x00\x00\x00\x00\x00\x01\x86\xa0" + "x" * 100000
-        buf = _makeFrame("x" * 100000)
+        buf = _makeFrame("x" * 100000, CONTROLS.TEXT, True)
+        self.assertEqual(frame, buf)
+
+
+    def test_makeNonFinFrame(self):
+        """
+        L{_makeFrame} can build fragmented frames.
+        """
+        frame = "\x01\x05Hello"
+        buf = _makeFrame("Hello", CONTROLS.TEXT, False)
+        self.assertEqual(frame, buf)
+
+
+    def test_makeMaskedFrame(self):
+        """
+        L{_makeFrame} can build masked frames.
+        """
+        frame = "\x81\x857\xfa!=\x7f\x9fMQX"
+        buf = _makeFrame("Hello", CONTROLS.TEXT, True, mask="7\xfa!=")
         self.assertEqual(frame, buf)
 
 
 
-class SavingEcho(Protocol):
+class SavingEcho(WebSocketsProtocol):
     """
     A test protocol saving the data received and sending it back.
     """
 
     def connectionMade(self):
+        WebSocketsProtocol.connectionMade(self)
         self.received = []
 
 
-    def dataReceived(self, data):
-        self.received.append(data)
-        self.transport.write(data)
+    def frameReceived(self, opcode, data, fin):
+        self.received.append((opcode, data, fin))
+        self.sendFrame(opcode, data, fin)
 
 
 
@@ -324,12 +343,10 @@ class WebsocketsProtocolTest(TestCase):
         class SavingEchoFactory(Factory):
 
             def buildProtocol(oself, addr):
-                return self.echoProtocol
+                return self.protocol
 
-        factory = SavingEchoFactory()
-        self.echoProtocol = SavingEcho()
-        self.factory = _WebSocketsFactory(factory)
-        self.protocol = self.factory.buildProtocol(None)
+        self.protocol = SavingEcho()
+        self.factory = SavingEchoFactory()
         self.transport = StringTransportWithDisconnection()
         self.protocol.makeConnection(self.transport)
         self.transport.protocol = self.protocol
@@ -340,18 +357,11 @@ class WebsocketsProtocolTest(TestCase):
         C{_WebSocketsProtocol.dataReceived} translates bytes into frames, and
         then write it back encoded into frames.
         """
-        self.protocol.dataReceived("\x81\x05Hello")
+        self.protocol.dataReceived(
+            _makeFrame("Hello", CONTROLS.TEXT, True, mask="abcd"))
         self.assertEqual("\x81\x05Hello", self.transport.value())
-        self.assertEqual(["Hello"], self.echoProtocol.received)
-
-
-    def test_writeSequence(self):
-        """
-        C{_WebSocketsProtocol.writeSequence} allows sending several frames at
-        once.
-        """
-        self.echoProtocol.transport.writeSequence(["Hello", "world"])
-        self.assertEqual("\x81\x05Hello\x81\x05world", self.transport.value())
+        self.assertEqual([(CONTROLS.TEXT, "Hello", True)],
+                         self.protocol.received)
 
 
     def test_ping(self):
@@ -359,9 +369,10 @@ class WebsocketsProtocolTest(TestCase):
         When a C{PING} frame is received, the frame is resent with a C{PONG},
         but the application protocol doesn't receive any data.
         """
-        self.protocol.dataReceived("\x89\x05Hello")
+        self.protocol.dataReceived(
+            _makeFrame("Hello", CONTROLS.PING, True, mask="abcd"))
         self.assertEqual("\x8a\x05Hello", self.transport.value())
-        self.assertEqual([], self.echoProtocol.received)
+        self.assertEqual([], self.protocol.received)
 
 
     def test_close(self):
@@ -376,7 +387,8 @@ class WebsocketsProtocolTest(TestCase):
 
         log.addObserver(logConnectionLostMsg)
 
-        self.protocol.dataReceived("\x88\x00")
+        self.protocol.dataReceived(
+            _makeFrame("", CONTROLS.CLOSE, True, mask="abcd"))
         self.assertFalse(self.transport.connected)
         self.assertEqual(["Closing connection: 'No reason given' (1000)"],
                          loggedMessages)
@@ -479,8 +491,7 @@ class WebsocketsResourceTest(TestCase):
         self.assertEqual([""], request.written)
         self.assertEqual(101, request.responseCode)
         self.assertIdentical(None, request.transport)
-        self.assertIsInstance(transport.protocol, _WebSocketsProtocol)
-        self.assertIsInstance(transport.protocol.wrappedProtocol, SavingEcho)
+        self.assertIsInstance(transport.protocol, SavingEcho)
 
 
     def test_renderProtocol(self):
@@ -669,10 +680,7 @@ class WebsocketsResourceTest(TestCase):
         self.assertEqual([""], request.written)
         self.assertEqual(101, request.responseCode)
         self.assertIdentical(None, request.transport)
-        self.assertIsInstance(
-            transport.protocol.wrappedProtocol, _WebSocketsProtocol)
-        self.assertIsInstance(
-            transport.protocol.wrappedProtocol.wrappedProtocol, SavingEcho)
+        self.assertIsInstance(transport.protocol.wrappedProtocol, SavingEcho)
 
 
     def test_renderRealRequest(self):

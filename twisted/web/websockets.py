@@ -17,9 +17,10 @@ from struct import pack, unpack
 
 from zope.interface import implementer, Interface
 
-from twisted.protocols.policies import ProtocolWrapper, WrappingFactory
 from twisted.python import log
-from twisted.python.constants import NamedConstant, Names
+from twisted.python.constants import Flags, FlagConstant
+from twisted.internet.protocol import Protocol
+from twisted.internet.interfaces import IProtocol
 from twisted.web.resource import IResource
 from twisted.web.server import NOT_DONE_YET
 
@@ -32,37 +33,18 @@ class _WSException(Exception):
 
 
 
-# Control frame specifiers. Some versions of WS have control signals sent
-# in-band. Adorable, right?
-
-class _CONTROLS(Names):
+class CONTROLS(Flags):
     """
     Control frame specifiers.
     """
 
-    NORMAL = NamedConstant()
-    CLOSE = NamedConstant()
-    PING = NamedConstant()
-    PONG = NamedConstant()
+    CONTINUE = FlagConstant(0)
+    TEXT = FlagConstant(1)
+    BINARY = FlagConstant(2)
+    CLOSE = FlagConstant(8)
+    PING = FlagConstant(9)
+    PONG = FlagConstant(10)
 
-
-_opcodeTypes = {
-    0x0: _CONTROLS.NORMAL,
-    0x1: _CONTROLS.NORMAL,
-    0x2: _CONTROLS.NORMAL,
-    0x8: _CONTROLS.CLOSE,
-    0x9: _CONTROLS.PING,
-    0xa: _CONTROLS.PONG}
-
-
-_opcodeForType = {
-    _CONTROLS.NORMAL: 0x1,
-    _CONTROLS.CLOSE: 0x8,
-    _CONTROLS.PING: 0x9,
-    _CONTROLS.PONG: 0xa}
-
-
-# Authentication for WS.
 
 # The GUID for WebSockets, from RFC 6455.
 _WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
@@ -114,7 +96,7 @@ def _mask(buf, key):
 
 
 
-def _makeFrame(buf, _opcode=_CONTROLS.NORMAL):
+def _makeFrame(buf, opcode, fin, mask=None):
     """
     Make a frame.
 
@@ -124,65 +106,82 @@ def _makeFrame(buf, _opcode=_CONTROLS.NORMAL):
     @type buf: C{str}
     @param buf: A buffer of bytes.
 
-    @type _opcode: C{_CONTROLS}
-    @param _opcode: Which type of frame to create.
+    @type opcode: C{CONTROLS}
+    @param opcode: Which type of frame to create.
 
     @rtype: C{str}
     @return: A packed frame.
     """
     bufferLength = len(buf)
+    if mask is not None:
+        lengthMask = 0x80
+    else:
+        lengthMask = 0
 
     if bufferLength > 0xffff:
-        length = "\x7f%s" % pack(">Q", bufferLength)
+        length = "%s%s" % (chr(lengthMask | 0x7f), pack(">Q", bufferLength))
     elif bufferLength > 0x7d:
-        length = "\x7e%s" % pack(">H", bufferLength)
+        length = "%s%s" % (chr(lengthMask | 0x7e), pack(">H", bufferLength))
     else:
-        length = chr(bufferLength)
+        length = chr(lengthMask | bufferLength)
 
-    # Always make a normal packet.
-    header = chr(0x80 | _opcodeForType[_opcode])
+    if fin:
+        header = 0x80
+    else:
+        header = 0x01
+
+    header = chr(header | opcode.value)
+    if mask is not None:
+        buf = "%s%s" % (mask, _mask(buf, mask))
     frame = "%s%s%s" % (header, length, buf)
     return frame
 
 
 
-def _parseFrames(buf):
+def _parseFrames(frameBuffer, needMask=True):
     """
     Parse frames in a highly compliant manner.
 
-    @type buf: C{str}
-    @param buf: A buffer of bytes.
+    @param frameBuffer: A buffer of bytes.
+    @type frameBuffer: C{list}
 
-    @rtype: C{list}
-    @return: A list of frames.
+    @param needMast: If C{True}, refuse any frame which is not masked.
+    @type needMast: C{bool}
     """
     start = 0
-    frames = []
+    payload = "".join(frameBuffer)
 
     while True:
         # If there's not at least two bytes in the buffer, bail.
-        if len(buf) - start < 2:
+        if len(payload) - start < 2:
             break
 
         # Grab the header. This single byte holds some flags nobody cares
         # about, and an opcode which nobody cares about.
-        header = ord(buf[start])
+        header = ord(payload[start])
         if header & 0x70:
             # At least one of the reserved flags is set. Pork chop sandwiches!
             raise _WSException("Reserved flag in frame (%d)" % header)
+
+        fin = header & 0x80
 
         # Get the opcode, and translate it to a local enum which we actually
         # care about.
         opcode = header & 0xf
         try:
-            opcode = _opcodeTypes[opcode]
-        except KeyError:
+            opcode = CONTROLS.lookupByValue(opcode)
+        except ValueError:
             raise _WSException("Unknown opcode %d in frame" % opcode)
 
         # Get the payload length and determine whether we need to look for an
         # extra length.
-        length = ord(buf[start + 1])
+        length = ord(payload[start + 1])
         masked = length & 0x80
+
+        if not masked and needMask:
+            # The client must mask the data sent
+            raise _WSException("Received data not masked")
+
         length &= 0x7f
 
         # The offset we're gonna be using to walk through the frame. We use
@@ -192,14 +191,14 @@ def _parseFrames(buf):
 
         # Extra length fields.
         if length == 0x7e:
-            if len(buf) - start < 4:
+            if len(payload) - start < 4:
                 break
 
-            length = buf[start + 2:start + 4]
+            length = payload[start + 2:start + 4]
             length = unpack(">H", length)[0]
             offset += 2
         elif length == 0x7f:
-            if len(buf) - start < 10:
+            if len(payload) - start < 10:
                 break
 
             # Protocol bug: The top bit of this long long *must* be cleared;
@@ -207,28 +206,28 @@ def _parseFrames(buf):
             # fucking stupid, if you don't mind me saying so, and so we're
             # interpreting it as unsigned anyway. If you wanna send exabytes
             # of data down the wire, then go ahead!
-            length = buf[start + 2:start + 10]
+            length = payload[start + 2:start + 10]
             length = unpack(">Q", length)[0]
             offset += 8
 
         if masked:
-            if len(buf) - (start + offset) < 4:
+            if len(payload) - (start + offset) < 4:
                 # This is not strictly necessary, but it's more explicit so
                 # that we don't create an invalid key.
                 break
 
-            key = buf[start + offset:start + offset + 4]
+            key = payload[start + offset:start + offset + 4]
             offset += 4
 
-        if len(buf) - (start + offset) < length:
+        if len(payload) - (start + offset) < length:
             break
 
-        data = buf[start + offset:start + offset + length]
+        data = payload[start + offset:start + offset + length]
 
         if masked:
             data = _mask(data, key)
 
-        if opcode == _CONTROLS.CLOSE:
+        if opcode == CONTROLS.CLOSE:
             if len(data) >= 2:
                 # Gotta unpack the opcode and return usable data here.
                 data = unpack(">H", data[:2])[0], data[2:]
@@ -236,18 +235,46 @@ def _parseFrames(buf):
                 # No reason given; use generic data.
                 data = 1000, "No reason given"
 
-        frames.append((opcode, data))
+        yield opcode, data, bool(fin)
         start += offset + length
 
-    return frames, buf[start:]
+    if len(payload) > start:
+        frameBuffer[:] = [payload[start:]]
+    else:
+        frameBuffer[:] = []
 
 
 
-class _WebSocketsProtocol(ProtocolWrapper):
+
+class IWebSocketsProtocol(IProtocol):
+
+
+    def sendFrame(opcode, data, fin):
+        """
+        Send a frame.
+        """
+
+
+    def frameReceived(opcode, data, fin):
+        """
+        Callback when a frame is received.
+        """
+
+
+    def loseConnection():
+        """
+        Close the connection sending a close frame first.
+        """
+
+
+
+@implementer(IWebSocketsProtocol)
+class WebSocketsProtocol(Protocol):
     """
     Protocol which wraps another protocol to provide a WebSockets transport
     layer.
     """
+    _disconnecting = False
     _buffer = None
 
 
@@ -255,7 +282,6 @@ class _WebSocketsProtocol(ProtocolWrapper):
         """
         Log the new connection and initialize the buffer list.
         """
-        ProtocolWrapper.connectionMade(self)
         log.msg("Opening connection with %s" % self.transport.getPeer())
         self._buffer = []
 
@@ -264,48 +290,40 @@ class _WebSocketsProtocol(ProtocolWrapper):
         """
         Find frames in incoming data and pass them to the underlying protocol.
         """
-        try:
-            frames, rest = _parseFrames("".join(self._buffer))
-        except _WSException:
-            # Couldn't parse all the frames, something went wrong, let's bail.
-            log.err()
-            self.loseConnection()
-            return
-
-        self._buffer[:] = [rest]
-
-        for frame in frames:
-            opcode, data = frame
-            if opcode == _CONTROLS.NORMAL:
+        for frame in _parseFrames(self._buffer):
+            opcode, data, fin = frame
+            if opcode in (CONTROLS.CONTINUE, CONTROLS.TEXT, CONTROLS.BINARY):
                 # Business as usual. Decode the frame, if we have a decoder.
                 # Pass the frame to the underlying protocol.
-                ProtocolWrapper.dataReceived(self, data)
-            elif opcode == _CONTROLS.CLOSE:
+                self.frameReceived(opcode, data, fin)
+            elif opcode == CONTROLS.CLOSE:
                 # The other side wants us to close. I wonder why?
                 reason, text = data
                 log.msg("Closing connection: %r (%d)" % (text, reason))
 
                 # Close the connection.
-                self.loseConnection()
+                self.transport.loseConnection()
                 return
-            elif opcode == _CONTROLS.PING:
+            elif opcode == CONTROLS.PING:
                 # 5.5.2 PINGs must be responded to with PONGs.
                 # 5.5.3 PONGs must contain the data that was sent with the
                 # provoking PING.
-                self.transport.write(_makeFrame(data, _opcode=_CONTROLS.PONG))
+                self.transport.write(_makeFrame(data, CONTROLS.PONG, True))
 
 
-    def _sendFrames(self, frames):
+    def frameReceived(self, opcode, data, fin):
         """
-        Send all pending frames.
-
-        @param frames: A list of byte strings to send.
-        @type frames: C{list}
+        Callback to implement.
         """
-        for frame in frames:
-            # Encode the frame before sending it.
-            packet = _makeFrame(frame)
-            self.transport.write(packet)
+        raise NotImplementedError()
+
+
+    def sendFrame(self, opcode, data, fin):
+        """
+        Build a frame packet and send it over the wire.
+        """
+        packet = _makeFrame(data, opcode, fin)
+        self.transport.write(packet)
 
 
     def dataReceived(self, data):
@@ -313,26 +331,12 @@ class _WebSocketsProtocol(ProtocolWrapper):
         Append the data to the buffer list and parse the whole.
         """
         self._buffer.append(data)
-
-        self._parseFrames()
-
-
-    def write(self, data):
-        """
-        Write to the transport.
-
-        This method will only be called by the underlying protocol.
-        """
-        self._sendFrames([data])
-
-
-    def writeSequence(self, data):
-        """
-        Write a sequence of data to the transport.
-
-        This method will only be called by the underlying protocol.
-        """
-        self._sendFrames(data)
+        try:
+            self._parseFrames()
+        except _WSException:
+            # Couldn't parse all the frames, something went wrong, let's bail.
+            log.err()
+            self.transport.loseConnection()
 
 
     def loseConnection(self):
@@ -348,23 +352,11 @@ class _WebSocketsProtocol(ProtocolWrapper):
         """
         # Send a closing frame. It's only polite. (And might keep the browser
         # from hanging.)
-        if not self.disconnecting:
-            frame = _makeFrame("", _opcode=_CONTROLS.CLOSE)
+        if not self._disconnecting:
+            frame = _makeFrame("", CONTROLS.CLOSE, True)
             self.transport.write(frame)
-
-            ProtocolWrapper.loseConnection(self)
-
-
-
-class _WebSocketsFactory(WrappingFactory):
-    """
-    Factory which wraps another factory to provide WebSockets frames for all
-    of its protocols.
-
-    This factory does not provide the HTTP headers required to perform a
-    WebSockets handshake; see C{WebSocketsResource}.
-    """
-    protocol = _WebSocketsProtocol
+            self._disconnecting = True
+            self.transport.loseConnection()
 
 
 
@@ -407,7 +399,7 @@ class WebSocketsResource(object):
     isLeaf = True
 
     def __init__(self, factory):
-        self._factory = _WebSocketsFactory(factory)
+        self._factory = factory
 
 
     def getChildWithDefault(self, name, request):
@@ -501,7 +493,7 @@ class WebSocketsResource(object):
         protocol, protocolName = self.lookupProtocol(askedProtocols, request)
 
         # If a protocol is not created, we deliver an error status.
-        if not protocol.wrappedProtocol:
+        if not protocol:
             request.setResponseCode(502)
             return ""
 
