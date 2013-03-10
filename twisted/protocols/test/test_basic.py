@@ -1140,6 +1140,25 @@ class FileSenderTestCase(unittest.TestCase):
         self.assertFalse(consumer.streaming)
 
 
+    def test_multipleRegister(self):
+        """
+        If a producter is already registered with the transport,
+        L{basic.FileSender.beginFileTransfer} fires the returned L{Deferred}
+        with the error and doesn't raise an exception.
+        """
+        source = BytesIO(b"Test content")
+        consumer = proto_helpers.StringTransport()
+        sender = basic.FileSender()
+        sender.beginFileTransfer(source, consumer)
+
+        secondSender = basic.FileSender()
+        d = secondSender.beginFileTransfer(source, consumer)
+        failure = self.failureResultOf(d)
+        failure.trap(RuntimeError)
+        self.assertEqual("Cannot register two producers",
+                         str(failure.value))
+
+
     def test_transfer(self):
         """
         L{basic.FileSender} sends the content of the given file using a
@@ -1221,3 +1240,61 @@ class FileSenderTestCase(unittest.TestCase):
         failure.trap(Exception)
         self.assertEqual("Consumer asked us to stop producing",
                          str(failure.value))
+
+
+    def createFile(self):
+        """
+        Create a file to send during tests.
+
+        @return: A file opened ready to be sent.
+        """
+        from twisted.python.filepath import FilePath
+        path = FilePath(self.mktemp())
+        path.setContent(b'x' * 1000000)
+        f = path.open()
+        self.addCleanup(f.close)
+        return f
+
+
+    def test_sendfile(self):
+        """
+        """
+        from twisted.internet.endpoints import TCP4ServerEndpoint, TCP4ClientEndpoint
+        from twisted.internet import reactor
+        from twisted.internet.defer import Deferred
+        server = TCP4ServerEndpoint(reactor, 0, interface="127.0.0.1")
+
+        class AccumulatingFactory(protocol.Factory):
+            protocol = proto_helpers.AccumulatingProtocol
+            protocolConnectionMade = None
+            protocolConnectionLost = None
+
+        serverFactory = AccumulatingFactory()
+        serverFactory.protocolConnectionMade = Deferred()
+        serverFactory.protocolConnectionMade.addCallback(
+            lambda proto: self.addCleanup(proto.transport.loseConnection))
+
+        d = server.listen(serverFactory)
+
+        def gotPort(port):
+            self.addCleanup(port.stopListening)
+            clientFactory = AccumulatingFactory()
+            clientFactory.protocolConnectionMade = Deferred()
+            clientFactory.protocolConnectionMade.addCallback(
+                lambda proto: self.addCleanup(proto.transport.loseConnection))
+            client = TCP4ClientEndpoint(reactor, "127.0.0.1",
+                                        port.getHost().port)
+            d = client.connect(clientFactory)
+            return d.addCallback(gotClient)
+
+        def gotClient(clientProtocol):
+            file = self.createFile()
+            sender = basic.FileSender()
+            d = sender.beginFileTransfer(file, clientProtocol.transport)
+            return d.addCallback(transferDone, clientProtocol)
+
+        def transferDone(result, clientProtocol):
+            clientProtocol.transport.loseConnection()
+
+
+        return d.addCallback(gotPort)

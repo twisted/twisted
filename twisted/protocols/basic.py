@@ -22,6 +22,11 @@ from twisted.python.compat import _PY3
 from twisted.internet import protocol, defer, interfaces, error
 from twisted.python import log, deprecate, versions
 
+try:
+    from twisted.python._sendfile import sendfile
+except ImportError:
+    sendfile = None
+
 
 # Unfortunately we cannot use regular string formatting on Python 3; see
 # http://bugs.python.org/issue3982 for details.
@@ -904,10 +909,12 @@ class FileSender:
 
     lastSent = ''
     deferred = None
+    _offset = 0
+    _count = 0
 
     def beginFileTransfer(self, file, consumer, transform=None):
         """
-        Begin transferring a file
+        Begin transferring a file.
 
         @type file: Any file-like object
         @param file: The file object to read data from
@@ -916,24 +923,68 @@ class FileSender:
         @param consumer: The object to write data to
 
         @param transform: A callable taking one string argument and returning
-        the same.  All bytes read from the file are passed through this before
-        being written to the consumer.
+            the same.  All bytes read from the file are passed through this
+            before being written to the consumer.
 
         @rtype: C{Deferred}
         @return: A deferred whose callback will be invoked when the file has
-        been completely written to the consumer. The last byte written to the
-        consumer is passed to the callback.
+            been completely written to the consumer. The last byte written to
+            the consumer is passed to the callback.
         """
         self.file = file
         self.consumer = consumer
         self.transform = transform
 
         self.deferred = deferred = defer.Deferred()
-        self.consumer.registerProducer(self, False)
+
+        if (not transform and sendfile and
+                interfaces.IFileDescriptor.providedBy(consumer)):
+            current = file.tell()
+            file.seek(0, 2)
+            self._count = file.tell()
+            file.seek(current)
+            self.resumeProducing = self.resumeProducingSendfile
+        else:
+            self.resumeProducing = self.resumeProducingWrite
+
+        try:
+            self.consumer.registerProducer(self, False)
+        except:
+            deferred.errback()
+            self.deferred = None
         return deferred
 
 
-    def resumeProducing(self):
+    def resumeProducingSendfile(self):
+        try:
+            l, self._offset = sendfile(self.consumer.fileno(),
+                                       self.file.fileno(), self._offset,
+                                       self._count)
+        except IOError as e:
+            from twisted.internet.tcp import EWOULDBLOCK
+            if e.errno == EWOULDBLOCK:
+                return
+            elif not self.started:
+                self.resumeProducing = self.resumeProducingWrite
+                self.resumeProducing()
+                return
+            else:
+                self.deferred.errback()
+                self.deferred = None
+        except Exception:
+            deferred, self.deferred = self.deferred, None
+            deferred.errback()
+        else:
+            self.started = True
+            if self._offset == self._count:
+                self.consumer.unregisterProducer()
+                deferred, self.deferred = self.deferred, None
+                deferred.callback(None)
+            else:
+                self.consumer.reactor.addWriter(self.consumer)
+
+
+    def resumeProducingWrite(self):
         chunk = ''
         if self.file:
             chunk = self.file.read(self.CHUNK_SIZE)
@@ -941,8 +992,8 @@ class FileSender:
             self.file = None
             self.consumer.unregisterProducer()
             if self.deferred:
-                self.deferred.callback(self.lastSent)
-                self.deferred = None
+                deferred, self.deferred = self.deferred, None
+                deferred.callback(self.lastSent)
             return
 
         if self.transform:
@@ -957,6 +1008,6 @@ class FileSender:
 
     def stopProducing(self):
         if self.deferred:
-            self.deferred.errback(
+            deferred, self.deferred = self.deferred, None
+            deferred.errback(
                 Exception("Consumer asked us to stop producing"))
-            self.deferred = None
