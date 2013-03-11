@@ -911,6 +911,7 @@ class FileSender:
     deferred = None
     _offset = 0
     _count = 0
+    _started = False
 
     def beginFileTransfer(self, file, consumer, transform=None):
         """
@@ -937,8 +938,7 @@ class FileSender:
 
         self.deferred = deferred = defer.Deferred()
 
-        if (not transform and sendfile and
-                interfaces.IFileDescriptor.providedBy(consumer)):
+        if self._trySendFile():
             current = file.tell()
             file.seek(0, 2)
             self._count = file.tell()
@@ -955,6 +955,26 @@ class FileSender:
         return deferred
 
 
+    def _trySendFile(self):
+        """
+        Check if we should try to use sendfile for the transfer.
+
+        The different factors in play are:
+         - We must not use transform.
+         - The extension must be available.
+         - We must have a real file object, not just file-like. Obviously
+           it's a bit hard to check, so we verify it has a fileno method, and
+           rely on the extension to fail sanely on the first call, so that we
+           can fallback to normal writes.
+         - The consumer must be a C{IFileDescriptor} provider.
+         - The reactor must be a C{IReactorFDSet} provider.
+        """
+        return (not self.transform and sendfile is not None and
+                getattr(self.file, "fileno", None) is not None and
+                interfaces.IFileDescriptor.providedBy(self.consumer) and
+                interfaces.IReactorFDSet.providedBy(self.consumer.reactor))
+
+
     def resumeProducingSendfile(self):
         try:
             l, self._offset = sendfile(self.consumer.fileno(),
@@ -963,23 +983,30 @@ class FileSender:
         except IOError as e:
             from twisted.internet.tcp import EWOULDBLOCK
             if e.errno == EWOULDBLOCK:
+                self.consumer.reactor.addWriter(self.consumer)
                 return
-            elif not self.started:
+            elif not self._started:
                 self.resumeProducing = self.resumeProducingWrite
                 self.resumeProducing()
                 return
             else:
+                deferred, self.deferred = self.deferred, None
                 self.deferred.errback()
-                self.deferred = None
         except Exception:
             deferred, self.deferred = self.deferred, None
             deferred.errback()
         else:
-            self.started = True
+            self._started = True
             if self._offset == self._count:
                 self.consumer.unregisterProducer()
+                # Maintain backward compatible behavior by getting the last
+                # byte of the file.
+                current = self.file.tell()
+                self.file.seek(-1, 2)
+                self.lastSent = self.file.read(1)
+                self.file.seek(current)
                 deferred, self.deferred = self.deferred, None
-                deferred.callback(None)
+                deferred.callback(self.lastSent)
             else:
                 self.consumer.reactor.addWriter(self.consumer)
 

@@ -1294,6 +1294,7 @@ class FileSenderTestCase(unittest.TestCase):
             return d.addCallback(transferDone, clientProtocol)
 
         def transferDone(result, clientProtocol):
+            self.assertEqual(b"x", result)
             clientProtocol.transport.loseConnection()
 
 
