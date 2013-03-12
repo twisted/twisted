@@ -917,11 +917,14 @@ class FileSender:
         """
         Begin transferring a file.
 
-        @type file: Any file-like object
-        @param file: The file object to read data from
+        It optionally uses sendfile if C{transform} is not set, and C{file} and
+        C{consumer} are suitable for such a use.
 
-        @type consumer: Any implementor of IConsumer
-        @param consumer: The object to write data to
+        @type file: Any file-like object.
+        @param file: The file object to read data from.
+
+        @type consumer: Any implementor of IConsumer.
+        @param consumer: The object to write data to.
 
         @param transform: A callable taking one string argument and returning
             the same.  All bytes read from the file are passed through this
@@ -943,9 +946,9 @@ class FileSender:
             file.seek(0, 2)
             self._count = file.tell()
             file.seek(current)
-            self.resumeProducing = self.resumeProducingSendfile
+            self.resumeProducing = self._resumeProducingNoOp
         else:
-            self.resumeProducing = self.resumeProducingWrite
+            self.resumeProducing = self._resumeProducingWrite
 
         try:
             self.consumer.registerProducer(self, False)
@@ -975,7 +978,30 @@ class FileSender:
                 interfaces.IReactorFDSet.providedBy(self.consumer.reactor))
 
 
-    def resumeProducingSendfile(self):
+    def _resumeProducingNoOp(self):
+        """
+        Skip a production cycle and register C{_resumeProducingSendfile} as
+        C{resumeProducing}.
+        """
+        # That's really unfortunate, but we need to skip the first call:
+        # the reactor is calling use immediately after registerProducer,
+        # but the buffer can still contain things to send: we don't want
+        # sendfile to mix bytes with previous write calls. So we wait for
+        # resumeProducing to be called, which will happen when the buffer
+        # is actually empty.
+        self.resumeProducing = self._resumeProducingSendfile
+        self.consumer.reactor.addWriter(self.consumer)
+
+
+    def _resumeProducingSendfile(self):
+        """
+        Produce data using the C{sendfile} system call.
+
+        Contrary to C{_resumeProducingWrite}, it doesn't use C{write} to send
+        bytes. To tell the reactor that we still need to be caleld, we use
+        C{addWriter} to enforce C{doWrite} to be called even if there is no
+        data in the local buffer.
+        """
         try:
             l, self._offset = sendfile(self.consumer.fileno(),
                                        self.file.fileno(), self._offset,
@@ -986,13 +1012,15 @@ class FileSender:
                 self.consumer.reactor.addWriter(self.consumer)
                 return
             elif not self._started:
-                self.resumeProducing = self.resumeProducingWrite
+                self.resumeProducing = self._resumeProducingWrite
                 self.resumeProducing()
                 return
             else:
+                self.consumer.unregisterProducer()
                 deferred, self.deferred = self.deferred, None
-                self.deferred.errback()
+                deferred.errback()
         except Exception:
+            self.consumer.unregisterProducer()
             deferred, self.deferred = self.deferred, None
             deferred.errback()
         else:
@@ -1011,7 +1039,10 @@ class FileSender:
                 self.consumer.reactor.addWriter(self.consumer)
 
 
-    def resumeProducingWrite(self):
+    def _resumeProducingWrite(self):
+        """
+        Produce data using standard writes.
+        """
         chunk = ''
         if self.file:
             chunk = self.file.read(self.CHUNK_SIZE)
@@ -1030,10 +1061,16 @@ class FileSender:
 
 
     def pauseProducing(self):
-        pass
+        """
+        Stub method, as we're don't have anything to pause.
+        """
 
 
     def stopProducing(self):
+        """
+        If the connection is lost before the end of the transfer, fire the
+        C{beginFileTransfer}'s C{Deferred}.
+        """
         if self.deferred:
             deferred, self.deferred = self.deferred, None
             deferred.errback(
