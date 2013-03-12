@@ -1256,12 +1256,10 @@ class FileSenderTestCase(unittest.TestCase):
 
 
 
-
 class FileSenderSendfileTestCase(ReactorBuilder):
     """
     Tests for L{basic.FileSender} sendfile support.
     """
-
 
     def createFile(self):
         """
@@ -1278,8 +1276,12 @@ class FileSenderSendfileTestCase(ReactorBuilder):
 
     def getConnectedClientAndServer(self, reactor):
         """
-        Return a L{Deferred} firing with a L{MyClientFactory} and
-        L{MyServerFactory} connected pair.
+        Build a server and client connection.
+
+        @param reactor: The built reactor used for the tests.
+
+        @return: A L{Deferred} firing with a L{MyClientFactory} and
+            L{MyServerFactory} connected pair.
         """
         server = MyServerFactory()
         server.protocolConnectionMade = Deferred()
@@ -1315,14 +1317,13 @@ class FileSenderSendfileTestCase(ReactorBuilder):
 
         def start(protocols):
             client, server = protocols
-            log.msg("client connected %s" % client)
-            log.msg("server connected %s" % server)
+            log.msg("client connected %s" % (client,))
+            log.msg("server connected %s" % (server,))
             deferred.callback((client, server))
 
         startDeferred.addCallback(start)
 
         return deferred
-
 
 
     def test_server(self):

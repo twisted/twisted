@@ -971,6 +971,9 @@ class FileSender:
            can fallback to normal writes.
          - The consumer must be a C{IFileDescriptor} provider.
          - The reactor must be a C{IReactorFDSet} provider.
+
+        @return: C{True} if we should try to use C{sendfile} for this transfer.
+        @rtype: C{bool}
         """
         return (not self.transform and sendfile is not None and
                 getattr(self.file, "fileno", None) is not None and
