@@ -1,4 +1,4 @@
-Twisted 13.0.0pre1
+Twisted 13.0.0
 
 Quote of the Release:
 
@@ -7,7 +7,7 @@ Quote of the Release:
   <PenguinOfDoom> the rest of the world has been writing unicode to sockets for years!
 
 
-For information on what's new in Twisted 13.0.0pre1, see the NEWS file that comes
+For information on what's new in Twisted 13.0.0, see the NEWS file that comes
 with the distribution.
 
 What is this?
