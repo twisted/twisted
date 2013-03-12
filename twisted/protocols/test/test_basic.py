@@ -22,6 +22,7 @@ from twisted.protocols import basic
 from twisted.internet import protocol, error, task
 from twisted.internet.defer import Deferred, gatherResults
 from twisted.internet.interfaces import IProducer, IReactorFDSet
+from twisted.internet.endpoints import TCP4ServerEndpoint, TCP4ClientEndpoint
 from twisted.internet.test.reactormixins import ReactorBuilder
 
 from twisted.test.test_tcp import MyClientFactory, MyServerFactory
@@ -1278,7 +1279,7 @@ class FileSenderSendfileTestCase(ReactorBuilder):
     def getConnectedClientAndServer(self, reactor):
         """
         Return a L{Deferred} firing with a L{MyClientFactory} and
-        L{MyServerFactory} connected pair, and the listening C{Port}.
+        L{MyServerFactory} connected pair.
         """
         server = MyServerFactory()
         server.protocolConnectionMade = Deferred()
@@ -1288,7 +1289,15 @@ class FileSenderSendfileTestCase(ReactorBuilder):
         client.protocolConnectionMade = Deferred()
         client.protocolConnectionLost = Deferred()
 
-        port = reactor.listenTCP(0, server, interface="127.0.0.1")
+        serverEndpoint = TCP4ServerEndpoint(reactor, 0, interface="127.0.0.1")
+        portDeferred = serverEndpoint.listen(server)
+
+        def startClient(port):
+            clientEndpoint = TCP4ClientEndpoint(reactor, "127.0.0.1",
+                                                port.getHost().port)
+            return clientEndpoint.connect(client)
+
+        portDeferred.addCallback(startClient)
 
         lostDeferred = gatherResults([client.protocolConnectionLost,
                                       server.protocolConnectionLost])
@@ -1308,64 +1317,22 @@ class FileSenderSendfileTestCase(ReactorBuilder):
             client, server = protocols
             log.msg("client connected %s" % client)
             log.msg("server connected %s" % server)
-            deferred.callback((client, server, port))
+            deferred.callback((client, server))
 
         startDeferred.addCallback(start)
 
-        reactor.connectTCP("127.0.0.1", port.getHost().port, client)
-
         return deferred
 
-    def _test_sendfile(self):
-        """
-        """
-        from twisted.internet.endpoints import TCP4ServerEndpoint, TCP4ClientEndpoint
-        server = TCP4ServerEndpoint(reactor, 0, interface="127.0.0.1")
-
-        class AccumulatingFactory(protocol.Factory):
-            protocol = proto_helpers.AccumulatingProtocol
-            protocolConnectionMade = None
-            protocolConnectionLost = None
-
-        serverFactory = AccumulatingFactory()
-        serverFactory.protocolConnectionMade = Deferred()
-        serverFactory.protocolConnectionMade.addCallback(
-            lambda proto: self.addCleanup(proto.transport.loseConnection))
-
-        d = server.listen(serverFactory)
-
-        def gotPort(port):
-            self.addCleanup(port.stopListening)
-            clientFactory = AccumulatingFactory()
-            clientFactory.protocolConnectionMade = Deferred()
-            clientFactory.protocolConnectionMade.addCallback(
-                lambda proto: self.addCleanup(proto.transport.loseConnection))
-            client = TCP4ClientEndpoint(reactor, "127.0.0.1",
-                                        port.getHost().port)
-            d = client.connect(clientFactory)
-            return d.addCallback(gotClient)
-
-        def gotClient(clientProtocol):
-            file = self.createFile()
-            sender = basic.FileSender()
-            d = sender.beginFileTransfer(file, clientProtocol.transport)
-            return d.addCallback(transferDone, clientProtocol)
-
-        def transferDone(result, clientProtocol):
-            self.assertEqual(b"x", result)
-            clientProtocol.transport.loseConnection()
-
-
-        return d.addCallback(gotPort)
 
 
     def test_server(self):
         """
+        L{basic.FileSender} supports sending a file from the server side.
         """
         clients = []
 
         def connected(protocols):
-            client, server = protocols[:2]
+            client, server = protocols
             clients.append(client)
             fileObject = self.createFile()
             sender = basic.FileSender()
@@ -1388,11 +1355,12 @@ class FileSenderSendfileTestCase(ReactorBuilder):
 
     def test_client(self):
         """
+        L{basic.FileSender} supports sending a file from the client side.
         """
         servers = []
 
         def connected(protocols):
-            client, server = protocols[:2]
+            client, server = protocols
             servers.append(server)
             fileObject = self.createFile()
             sender = basic.FileSender()
@@ -1415,11 +1383,14 @@ class FileSenderSendfileTestCase(ReactorBuilder):
 
     def test_pendingData(self):
         """
+        If there are any pending data before L{basic.FileSender} starts
+        producing data, it waits for the buffer to be empty before sending
+        bytes.
         """
         clients = []
 
         def connected(protocols):
-            client, server = protocols[:2]
+            client, server = protocols
             clients.append(client)
             server.transport.write(b'y' * 1000000)
             fileObject = self.createFile()
@@ -1446,6 +1417,8 @@ class FileSenderSendfileTestCase(ReactorBuilder):
 
     def test_stopWriting(self):
         """
+        The consumer is unregistered from the reactor when the file transfer
+        initiated by L{basic.FileSender} is over.
         """
         reactor = self.buildReactor()
         if not IReactorFDSet.providedBy(reactor):
@@ -1455,7 +1428,7 @@ class FileSenderSendfileTestCase(ReactorBuilder):
         clients = []
 
         def connected(protocols):
-            client, server = protocols[:2]
+            client, server = protocols
             clients.append(client)
             fileObject = self.createFile()
             sender = basic.FileSender()
@@ -1482,7 +1455,13 @@ class FileSenderSendfileTestCase(ReactorBuilder):
 
     def test_error(self):
         """
+        If an C{IOError} happens during the C{sendfile} call, but after the
+        first one, the transfer done by L{basic.FileSender} fails.
         """
+        reactor = self.buildReactor()
+        if not IReactorFDSet.providedBy(reactor):
+            raise unittest.SkipTest("%s does not provide IReactorFDSet" % (
+                fullyQualifiedName(reactor.__class__),))
         originalSendfile = basic.sendfile
         calls = []
         clients = []
@@ -1496,7 +1475,7 @@ class FileSenderSendfileTestCase(ReactorBuilder):
         self.patch(basic, "sendfile", sendError)
 
         def connected(protocols):
-            client, server = protocols[:2]
+            client, server = protocols
             clients.append(client)
             fileObject = self.createFile()
             sender = basic.FileSender()
@@ -1508,7 +1487,6 @@ class FileSenderSendfileTestCase(ReactorBuilder):
             error.trap(IOError)
             server.transport.loseConnection()
 
-        reactor = self.buildReactor()
         d = self.getConnectedClientAndServer(reactor)
         d.addCallback(connected)
         d.addErrback(log.err)
@@ -1524,7 +1502,14 @@ class FileSenderSendfileTestCase(ReactorBuilder):
 
     def test_errorAtFirstSight(self):
         """
+        If an C{IOError} happens during the first C{sendfile} call done by
+        L{basic.FileSender}, it falls back to traditional writes and the
+        transfer succeeds.
         """
+        reactor = self.buildReactor()
+        if not IReactorFDSet.providedBy(reactor):
+            raise unittest.SkipTest("%s does not provide IReactorFDSet" % (
+                fullyQualifiedName(reactor.__class__),))
         clients = []
 
         def sendError(*args):
@@ -1533,7 +1518,7 @@ class FileSenderSendfileTestCase(ReactorBuilder):
         self.patch(basic, "sendfile", sendError)
 
         def connected(protocols):
-            client, server = protocols[:2]
+            client, server = protocols
             clients.append(client)
             fileObject = self.createFile()
             sender = basic.FileSender()
@@ -1545,7 +1530,6 @@ class FileSenderSendfileTestCase(ReactorBuilder):
             server.transport.loseConnection()
             return passthrough
 
-        reactor = self.buildReactor()
         d = self.getConnectedClientAndServer(reactor)
         d.addCallback(connected)
         d.addErrback(log.err)
@@ -1559,7 +1543,13 @@ class FileSenderSendfileTestCase(ReactorBuilder):
 
     def test_closedConnection(self):
         """
+        If the connection is closed during a L{basic.FileSender} transfer, the
+        C{Deferred} returned fires with an L{Exception}.
         """
+        reactor = self.buildReactor()
+        if not IReactorFDSet.providedBy(reactor):
+            raise unittest.SkipTest("%s does not provide IReactorFDSet" % (
+                fullyQualifiedName(reactor.__class__),))
         originalSendfile = basic.sendfile
         calls = []
         clients = []
@@ -1575,7 +1565,7 @@ class FileSenderSendfileTestCase(ReactorBuilder):
         self.patch(basic, "sendfile", sendError)
 
         def connected(protocols):
-            client, server = protocols[:2]
+            client, server = protocols
             clients.append(client)
             servers.append(server)
             fileObject = self.createFile()
@@ -1587,7 +1577,6 @@ class FileSenderSendfileTestCase(ReactorBuilder):
         def serverFinished(error):
             errors.append(error)
 
-        reactor = self.buildReactor()
         d = self.getConnectedClientAndServer(reactor)
         d.addCallback(connected)
         d.addErrback(log.err)
