@@ -1267,7 +1267,7 @@ class FileSenderSendfileTestCase(ReactorBuilder):
 
         @return: A file opened ready to be sent.
         """
-        path = FilePath(self.mktemp())
+        path = FilePath(self.mktemp().encode('utf-8'))
         path.setContent(b'x' * 1000000)
         f = path.open()
         self.addCleanup(f.close)
