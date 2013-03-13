@@ -8,8 +8,6 @@ if __name__ == '__main__':
 
 import sys
 
-from OpenSSL import SSL
-
 from twisted.internet import reactor
 from twisted.internet.protocol import Factory
 from twisted.internet import ssl, reactor
