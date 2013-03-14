@@ -38,6 +38,16 @@ class TLSNegotiation:
             tpt.loseConnection()
 
 
+
+class FakeAddress(object):
+    """
+    The default address type for the host and peer of L{FakeTransport}
+    connections.
+    """
+    implements(interfaces.IAddress)
+
+
+
 class FakeTransport:
     """
     A wrapper around a file-like object to make it behave as a Transport.
@@ -57,14 +67,40 @@ class FakeTransport:
     streamingProducer = 0
     tls = None
 
-    def __init__(self):
+    def __init__(self, protocol, isServer, hostAddress=None, peerAddress=None):
+        """
+        @param protocol: This transport will deliver bytes to this protocol.
+        @type protocol: L{IProtocol} provider
+
+        @param isServer: C{True} if this is the accepting side of the
+            connection, C{False} if it is the connecting side.
+        @type isServer: L{bool}
+
+        @param hostAddress: The value to return from C{getHost}.  C{None}
+            results in a new L{FakeAddress} being created to use as the value.
+        @type hostAddress: L{IAddress} provider or L{NoneType}
+
+        @param peerAddress: The value to return from C{getPeer}.  C{None}
+            results in a new L{FakeAddress} being created to use as the value.
+        @type peerAddress: L{IAddress} provider or L{NoneType}
+        """
+        self.protocol = protocol
+        self.isServer = isServer
         self.stream = []
         self.serial = self._nextserial()
+        if hostAddress is None:
+            hostAddress = FakeAddress()
+        self.hostAddress = hostAddress
+        if peerAddress is None:
+            peerAddress = FakeAddress()
+        self.peerAddress = peerAddress
+
 
     def __repr__(self):
         return 'FakeTransport<%s,%s,%s>' % (
             self.isServer and 'S' or 'C', self.serial,
             self.protocol.__class__.__name__)
+
 
     def write(self, data):
         if self.tls is not None:
@@ -109,11 +145,10 @@ class FakeTransport:
 
     def getPeer(self):
         # XXX: According to ITransport, this should return an IAddress!
-        return 'file', 'file'
+        return self.peerAddress
 
     def getHost(self):
-        # XXX: According to ITransport, this should return an IAddress!
-        return 'file'
+        return self.hostAddress
 
     def resumeProducing(self):
         # Never sends data anyways
@@ -170,17 +205,31 @@ class FakeTransport:
 
 
 
-def makeFakeClient(c):
-    ft = FakeTransport()
-    ft.isServer = False
-    ft.protocol = c
-    return ft
+def makeFakeClient(clientProtocol):
+    """
+    Create and return a new in-memory transport hooked up to the given protocol.
 
-def makeFakeServer(s):
-    ft = FakeTransport()
-    ft.isServer = True
-    ft.protocol = s
-    return ft
+    @param clientProtocol: The client protocol to use.
+    @type clientProtocol: L{IProtocol} provider
+
+    @rtype: L{FakeTransport}
+    """
+    return FakeTransport(clientProtocol, isServer=False)
+
+
+
+def makeFakeServer(serverProtocol, **kwargs):
+    """
+    Create and return a new in-memory transport hooked up to the given protocol.
+
+    @param serverProtocol: The server protocol to use.
+    @type serverProtocol: L{IProtocol} provider
+
+    @rtype: L{FakeTransport}
+    """
+    return FakeTransport(serverProtocol, isServer=True)
+
+
 
 class IOPump:
     """Utility to pump data between clients and servers for protocol testing.
@@ -252,6 +301,42 @@ class IOPump:
         return False
 
 
+
+def connect(serverProtocol, serverTransport,
+            clientProtocol, clientTransport, debug=False):
+    """
+    Create a new L{IOPump} connecting two protocols.
+
+    @param serverProtocol: The protocol to use on the accepting side of the
+        connection.
+    @type serverProtocol: L{IProtocol} provider
+
+    @param serverTransport: The transport to associate with C{serverProtocol}.
+    @type serverTransport: L{FakeTransport}
+
+    @param clientProtocol: The transport to associate with C{clientProtocol}.
+    @type clientProtocol: L{IProtocol} provider
+
+    @param clientTransport:
+    @type clientTransport: L{FakeTransport}
+
+    @param debug: A flag indicating whether to log information about what the
+        L{IOPump} is doing.
+    @type debug: L{bool}
+
+    @return: An L{IOPump} which connects C{serverProtocol} and C{clientProtocol}
+        and delivers bytes between them when it is pumped.
+    @rtype: L{IOPump}
+    """
+    serverProtocol.makeConnection(serverTransport)
+    clientProtocol.makeConnection(clientTransport)
+    pump = IOPump(clientProtocol, serverProtocol, clientTransport, serverTransport, debug)
+    # kick off server greeting, etc
+    pump.flush()
+    return pump
+
+
+
 def connectedServerAndClient(ServerClass, ClientClass,
                              clientTransportFactory=makeFakeClient,
                              serverTransportFactory=makeFakeServer,
@@ -262,9 +347,4 @@ def connectedServerAndClient(ServerClass, ClientClass,
     s = ServerClass()
     cio = clientTransportFactory(c)
     sio = serverTransportFactory(s)
-    c.makeConnection(cio)
-    s.makeConnection(sio)
-    pump = IOPump(c, s, cio, sio, debug)
-    # kick off server greeting, etc
-    pump.flush()
-    return c, s, pump
+    return c, s, connect(s, sio, c, cio, debug)
