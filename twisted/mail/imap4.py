@@ -58,14 +58,17 @@ _MONTH_NAMES = dict(zip(
 
 def _strFile(p, f, caseSensitive=True):
     """
-    Find whether string C{p} occurs in a read()able object C{f}.
+    Find whether string C{p} occurs in a C{read()}-able object C{f}.
 
-    @param p:
+    @param p: The string to search for.
     @type p: C{str}
-    @param f:
-    @type f: Object with C{read{}} method
-    @param caseSensitive: Default is C{True}.
+    @param f: The readable object to search in.
+    @type f: Object with C{read()} method.
+    @param caseSensitive: Indicates if the search should be case-sensitive.
+        Default is C{True}.
     @type caseSensitive: C{bool}
+
+    @return: Boolean indicating that string C{p} was found or not.
     @rtype: C{bool}
     """
     buf = ""
@@ -73,13 +76,13 @@ def _strFile(p, f, caseSensitive=True):
     if not caseSensitive:
         p = p.lower()
     while 1:
-        r = f.read(buf_len-len(p))
+        r = f.read(buf_len - len(p))
         if not caseSensitive:
             r = r.lower()
         bytes_read = len(r)
         if bytes_read == 0:
             return False
-        l = len(buf)+bytes_read-buf_len
+        l = len(buf) + bytes_read - buf_len
         if l <= 0:
             buf = buf + r
         else:

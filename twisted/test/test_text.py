@@ -6,8 +6,9 @@ Tests for L{twisted.python.text}.
 """
 
 from twisted.trial import unittest
-from twisted.python import text
 from twisted.python.compat import NativeStringIO as StringIO
+from twisted.python.text import (wordWrap, isMultiline, endsInNewline,
+    stringyString, splitQuoted, strFile)
 
 
 sampleText = \
@@ -22,6 +23,27 @@ science.
 """
 
 
+
+class DeprecationTestCase(unittest.TestCase):
+    """
+    L{twisted.python.text} is deprecated.
+    """
+    def test_moduleDeprecation(self):
+        """
+        The entire L{twisted.python.text} module is deprecated.
+        """
+        from twisted.python import text
+        warnings = self.flushWarnings(
+            offendingFunctions=[self.test_moduleDeprecation])
+        self.assertEqual(DeprecationWarning, warnings[0]['category'])
+        self.assertEqual(
+            "twisted.python.text was deprecated in Twisted 13.1.0: "
+            "text has been deprecated.",
+            warnings[0]['message'])
+        self.assertEqual(1, len(warnings))
+
+
+
 class WrapTest(unittest.TestCase):
     """
     Tests for L{text.greedyWrap}.
@@ -29,7 +51,7 @@ class WrapTest(unittest.TestCase):
     def setUp(self):
         self.lineWidth = 72
         self.sampleSplitText = sampleText.split()
-        self.output = text.wordWrap(sampleText, self.lineWidth)
+        self.output = wordWrap(sampleText, self.lineWidth)
 
 
     def test_wordCount(self):
@@ -77,7 +99,7 @@ class WrapTest(unittest.TestCase):
         Allow paragraphs delimited by two \ns.
         """
         sampleText = "et\n\nphone\nhome."
-        result = text.wordWrap(sampleText, self.lineWidth)
+        result = wordWrap(sampleText, self.lineWidth)
         self.assertEqual(result, ["et", "", "phone home.", ""]) 
 
 
@@ -91,11 +113,11 @@ class LineTest(unittest.TestCase):
         L{text.isMultiline} returns C{True} if the string has a newline in it.
         """
         s = 'This code\n "breaks."'
-        m = text.isMultiline(s)
+        m = isMultiline(s)
         self.assertTrue(m)
 
         s = 'This code does not "break."'
-        m = text.isMultiline(s)
+        m = isMultiline(s)
         self.assertFalse(m)
 
 
@@ -104,11 +126,11 @@ class LineTest(unittest.TestCase):
         L{text.endsInNewline} returns C{True} if the string ends in a newline.
         """
         s = 'newline\n'
-        m = text.endsInNewline(s)
+        m = endsInNewline(s)
         self.assertTrue(m)
 
         s = 'oldline'
-        m = text.endsInNewline(s)
+        m = endsInNewline(s)
         self.assertFalse(m)
 
 
@@ -122,7 +144,7 @@ class StringyStringTest(unittest.TestCase):
         Tuple elements are displayed on separate lines.
         """
         s = ('a', 'b')
-        m = text.stringyString(s)
+        m = stringyString(s)
         self.assertEqual(m, '(a,\n b,)\n')
 
 
@@ -131,7 +153,7 @@ class StringyStringTest(unittest.TestCase):
         Dicts elements are displayed using C{str()}.
         """
         s = {'a': 0}
-        m = text.stringyString(s)
+        m = stringyString(s)
         self.assertEqual(m, '{a: 0}')
 
 
@@ -140,7 +162,7 @@ class StringyStringTest(unittest.TestCase):
         List elements are displayed on separate lines using C{str()}.
         """
         s = ['a', 'b']
-        m = text.stringyString(s)
+        m = stringyString(s)
         self.assertEqual(m, '[a,\n b,]\n')
 
 
@@ -154,13 +176,13 @@ class SplitTest(unittest.TestCase):
         Splitting strings with one-word phrases.
         """
         s = 'This code "works."'
-        r = text.splitQuoted(s)
+        r = splitQuoted(s)
         self.assertEqual(['This', 'code', 'works.'], r)
 
 
     def test_multiWord(self):
         s = 'The "hairy monkey" likes pie.'
-        r = text.splitQuoted(s)
+        r = splitQuoted(s)
         self.assertEqual(['The', 'hairy monkey', 'likes', 'pie.'], r)
 
     # Some of the many tests that would fail:
@@ -168,17 +190,20 @@ class SplitTest(unittest.TestCase):
     #def test_preserveWhitespace(self):
     #    phrase = '"MANY     SPACES"'
     #    s = 'With %s between.' % (phrase,)
-    #    r = text.splitQuoted(s)
+    #    r = splitQuoted(s)
     #    self.assertEqual(['With', phrase, 'between.'], r)
 
     #def test_escapedSpace(self):
     #    s = r"One\ Phrase"
-    #    r = text.splitQuoted(s)
+    #    r = splitQuoted(s)
     #    self.assertEqual(["One Phrase"], r)
 
 
 
 class StrFileTest(unittest.TestCase):
+    """
+    Tests for L{twisted.python.text.strFile}.
+    """
     def setUp(self):
         self.io = StringIO("this is a test string")
 
@@ -186,56 +211,79 @@ class StrFileTest(unittest.TestCase):
         pass
 
     def test_1_f(self):
-        self.assertEqual(False, text.strFile("x", self.io))
+        self.assertEqual(False, strFile("x", self.io))
+
 
     def test_1_1(self):
-        self.assertEqual(True, text.strFile("t", self.io))
+        self.assertEqual(True, strFile("t", self.io))
+
 
     def test_1_2(self):
-        self.assertEqual(True, text.strFile("h", self.io))
+        self.assertEqual(True, strFile("h", self.io))
+
 
     def test_1_3(self):
-        self.assertEqual(True, text.strFile("i", self.io))
+        self.assertEqual(True, strFile("i", self.io))
+
 
     def test_1_4(self):
-        self.assertEqual(True, text.strFile("s", self.io))
+        self.assertEqual(True, strFile("s", self.io))
+
 
     def test_1_5(self):
-        self.assertEqual(True, text.strFile("n", self.io))
+        self.assertEqual(True, strFile("n", self.io))
+
 
     def test_1_6(self):
-        self.assertEqual(True, text.strFile("g", self.io))
+        self.assertEqual(True, strFile("g", self.io))
+
 
     def test_3_1(self):
-        self.assertEqual(True, text.strFile("thi", self.io))
+        self.assertEqual(True, strFile("thi", self.io))
+
 
     def test_3_2(self):
-        self.assertEqual(True, text.strFile("his", self.io))
+        self.assertEqual(True, strFile("his", self.io))
+
 
     def test_3_3(self):
-        self.assertEqual(True, text.strFile("is ", self.io))
+        self.assertEqual(True, strFile("is ", self.io))
+
 
     def test_3_4(self):
-        self.assertEqual(True, text.strFile("ing", self.io))
+        self.assertEqual(True, strFile("ing", self.io))
+
 
     def test_3_f(self):
-        self.assertEqual(False, text.strFile("bla", self.io))
+        self.assertEqual(False, strFile("bla", self.io))
+
 
     def test_large_1(self):
-        self.assertEqual(True, text.strFile("this is a test", self.io))
+        self.assertEqual(True, strFile("this is a test", self.io))
+
 
     def test_large_2(self):
-        self.assertEqual(True, text.strFile("is a test string", self.io))
+        self.assertEqual(True, strFile("is a test string", self.io))
+
 
     def test_large_f(self):
-        self.assertEqual(False, text.strFile("ds jhfsa k fdas", self.io))
+        self.assertEqual(False, strFile("ds jhfsa k fdas", self.io))
+
 
     def test_overlarge_f(self):
-        self.assertEqual(False, text.strFile("djhsakj dhsa fkhsa s,mdbnfsauiw bndasdf hreew", self.io))
+        self.assertEqual(
+            False, 
+            strFile("djhsakj dhsa fkhsa s,mdbnfsauiw bndasdf hreew", self.io))
+
 
     def test_self(self):
-        self.assertEqual(True, text.strFile("this is a test string", self.io))
+        self.assertEqual(
+            True,
+            strFile("this is a test string", self.io))
+
 
     def test_insensitive(self):
-        self.assertEqual(True, text.strFile("ThIs is A test STRING", self.io, False))
+        self.assertEqual(
+            True,
+            strFile("ThIs is A test STRING", self.io, False))
 
