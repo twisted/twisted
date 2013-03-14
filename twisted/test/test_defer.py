@@ -20,6 +20,21 @@ class GenericError(Exception):
 
 
 
+def getDivisionFailure(*args, **kwargs):
+    """
+    Make a L{failure.Failure} of a divide-by-zero error.
+
+    @param args: Any C{*args} are passed to Failure's constructor.
+    @param kwargs: Any C{**kwargs} are passed to Failure's constructor.
+    """
+    try:
+        1/0
+    except:
+        f = failure.Failure(*args, **kwargs)
+    return f
+
+
+
 class ImmediateFailureMixin(object):
     """
     Add additional assertion methods.
@@ -1073,11 +1088,9 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
 
     def test_inlineCallbacksTracebacks(self):
         """
-        inlineCallbacks that re-raise tracebacks into their deferred
+        L{defer.inlineCallbacks} that re-raise tracebacks into their deferred
         should not lose their tracebacks.
         """
-        # XXX: move, copy, or make getDivisionFailure util somewhere?
-        from twisted.test.test_failure import getDivisionFailure
         f = getDivisionFailure()
         d = defer.Deferred()
         try:
@@ -1085,20 +1098,19 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         except:
             d.errback()
 
-        failures = []
-        def collect_error(result):
-            failures.append(result)
-
         def ic(d):
             yield d
         ic = defer.inlineCallbacks(ic)
-        ic(d).addErrback(collect_error)
+        newFailure = self.failureResultOf(d)
+        tb = traceback.extract_tb(newFailure.getTracebackObject())
 
-        newFailure, = failures
-        self.assertEqual(
-            traceback.extract_tb(newFailure.getTracebackObject())[-1][-1],
-            "1/0"
-        )
+        self.assertEqual(len(tb), 2)
+        self.assertIn('test_defer', tb[0][0])
+        self.assertEqual('test_inlineCallbacksTracebacks', tb[0][2])
+        self.assertEqual('f.raiseException()', tb[0][3])
+        self.assertIn('test_defer', tb[1][0])
+        self.assertEqual('getDivisionFailure', tb[1][2])
+        self.assertEqual('1/0', tb[1][3])
 
 
     if _PY3:
