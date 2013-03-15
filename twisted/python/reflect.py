@@ -13,11 +13,7 @@ import pickle
 import weakref
 import re
 import warnings
-
-try:
-    from collections import deque
-except ImportError:
-    deque = list
+from collections import deque
 
 RegexType = type(re.compile(""))
 
