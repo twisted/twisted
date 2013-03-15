@@ -2078,6 +2078,9 @@ class ConnectProtocolTests(unittest.TestCase):
         result = Deferred()
         class Endpoint:
             def connect(self, factory):
+                """
+                Return a marker object for use in our assertion.
+                """
                 return result
 
         endpoint = Endpoint()
