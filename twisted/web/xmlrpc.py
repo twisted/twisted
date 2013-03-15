@@ -28,11 +28,6 @@ Binary = xmlrpclib.Binary
 Boolean = xmlrpclib.Boolean
 DateTime = xmlrpclib.DateTime
 
-# On Python 2.4 and earlier, DateTime.decode returns unicode.
-if sys.version_info[:2] < (2, 5):
-    _decode = DateTime.decode
-    DateTime.decode = lambda self, value: _decode(self, value.encode('ascii'))
-
 
 def withRequest(f):
     """
@@ -128,8 +123,6 @@ class XMLRPC(resource.Resource):
 
 
     def __setattr__(self, name, value):
-        if name == "useDateTime" and value and sys.version_info[:2] < (2, 5):
-            raise RuntimeError("useDateTime requires Python 2.5 or later.")
         self.__dict__[name] = value
 
 
