@@ -265,20 +265,6 @@ class TestMergeFunctionMetadata(unittest.TestCase):
         self.assertEqual(baz.__module__, foo.__module__)
 
 
-    def test_moduleBuiltinTypeNotMerged(self):
-        """
-        Merging C{object} and C{dict}, both built-in/extension types, returns
-        a function with the C{__module__} attribute preserved because it is
-        read-only and cannot be assigned to.
-        """
-        baz = util.mergeFunctionMetadata(object, dict)
-
-        self.assertEqual(baz.__module__, object.__module__)
-        self.assertEqual(baz.__name__, dict.__name__)
-        self.assertEqual(baz.__doc__, dict.__doc__)
-        self.assertEqual(baz.__dict__, dict.__dict__)
-
-
     def test_docstringIsMerged(self):
         """
         Merging C{foo} into C{bar} returns a function with C{foo}'s docstring.

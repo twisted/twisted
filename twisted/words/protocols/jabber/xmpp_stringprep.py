@@ -9,20 +9,44 @@ from encodings import idna
 # We require Unicode version 3.2.
 from unicodedata import ucd_3_2_0 as unicodedata
 
+from twisted.python.versions import Version
+from twisted.python.deprecate import deprecatedModuleAttribute 
+
 from zope.interface import Interface, implements
 
 
+crippled = False
+deprecatedModuleAttribute(
+    Version("Twisted", 13, 1, 0),
+    "crippled is always False",
+    __name__,
+    "crippled")
+
+
+
 class ILookupTable(Interface):
-    """ Interface for character lookup classes. """
+    """
+    Interface for character lookup classes.
+    """
 
     def lookup(c):
-        """ Return whether character is in this table. """
+        """
+        Return whether character is in this table.
+        """
+
+
 
 class IMappingTable(Interface):
-    """ Interface for character mapping classes. """
+    """
+    Interface for character mapping classes.
+    """
 
     def map(c):
-        """ Return mapping for character. """
+        """
+        Return mapping for character.
+        """
+
+
 
 class LookupTableFromFunction:
 
@@ -30,6 +54,8 @@ class LookupTableFromFunction:
 
     def __init__(self, in_table_function):
         self.lookup = in_table_function
+
+
 
 class LookupTable:
 
@@ -41,12 +67,16 @@ class LookupTable:
     def lookup(self, c):
         return c in self._table
 
+
+
 class MappingTableFromFunction:
 
     implements(IMappingTable)
 
     def __init__(self, map_table_function):
         self.map = map_table_function
+
+
 
 class EmptyMappingTable:
 
@@ -60,6 +90,8 @@ class EmptyMappingTable:
             return None
         else:
             return c
+
+
 
 class Profile:
     def __init__(self, mappings=[],  normalize=True, prohibiteds=[],
