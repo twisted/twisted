@@ -13,7 +13,7 @@ import itertools
 try:
     from OpenSSL import SSL
     from OpenSSL.crypto import PKey, X509, X509Req
-    from OpenSSL.crypto import TYPE_RSA
+    from OpenSSL.crypto import TYPE_RSA, FILETYPE_PEM
     from twisted.internet import _sslverify as sslverify
 except ImportError:
     pass
@@ -584,6 +584,70 @@ class OpenSSLOptions(unittest.TestCase):
     else:
         test_caCertsPlatformLinux.skip = "Linux test"
 
+
+    def _buildCAandServerCertificates(self):
+        """
+        Create a self-signed CA certificate and server certificate signed by
+        the CA.
+        """
+        serverDN = sslverify.DistinguishedName(commonName='example.com')
+        serverKey = sslverify.KeyPair.generate()
+        serverCertReq = serverKey.certificateRequest(serverDN)
+
+        caDN = sslverify.DistinguishedName(commonName='CA')
+        caKey= sslverify.KeyPair.generate()
+        caCertReq = caKey.certificateRequest(caDN)
+        caSelfCertData = caKey.signCertificateRequest(
+                caDN, caCertReq, lambda dn: True, 516)
+        caSelfCert = caKey.newCertificate(caSelfCertData)
+
+        serverCertData = caKey.signCertificateRequest(
+                caDN, serverCertReq, lambda dn: True, 516)
+        serverCert = serverKey.newCertificate(serverCertData)
+        return caSelfCert, serverCert
+
+
+    def test_caCertsPlatformRejectsSelfSigned(self):
+        """
+        Specifying a C{caCerts} of L{sslverify.PLATFORM} when initializing
+        C{OpenSSLCertificateOptions} causes self-signed certificates to be
+        rejected by an SSL connection using these options.
+        """
+        caSelfCert, serverCert = self._buildCAandServerCertificates()
+        chainedCert = self.mktemp()
+        with file(chainedCert, "wb") as f:
+            f.write(serverCert.dump(FILETYPE_PEM) + caSelfCert.dump(FILETYPE_PEM))
+        privateKey = self.mktemp()
+        with file(privateKey, "wb") as f:
+            f.write(serverCert.privateKey.dump(FILETYPE_PEM))
+
+        class ContextFactory(object):
+            def getContext(self):
+                ctx = SSL.Context(SSL.TLSv1_METHOD)
+                ctx.use_certificate_chain_file(chainedCert)
+                ctx.use_privatekey_file(privateKey)
+                return ctx
+
+        serverOpts = ContextFactory()
+        clientOpts = sslverify.OpenSSLCertificateOptions(
+            verify=True,
+            caCerts=sslverify.PLATFORM)
+
+        onServerLost = defer.Deferred()
+        onClientLost = defer.Deferred()
+        self.loopback(serverOpts,
+                      clientOpts,
+                      onServerLost=onServerLost,
+                      onClientLost=onClientLost)
+
+        d = defer.DeferredList([onClientLost, onServerLost],
+                               consumeErrors=True)
+        def afterLost(result):
+            ((cSuccess, cResult), (sSuccess, sResult)) = result
+            self.failIf(cSuccess)
+            self.failIf(sSuccess)
+
+        return d.addCallback(afterLost)
 
 
 if interfaces.IReactorSSL(reactor, None) is None:
