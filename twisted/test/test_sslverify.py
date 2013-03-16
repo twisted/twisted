@@ -607,11 +607,11 @@ class OpenSSLOptions(unittest.TestCase):
         return caSelfCert, serverCert
 
 
-    def test_caCertsPlatformRejectsSelfSigned(self):
+    def test_caCertsPlatformRejectsRandomCA(self):
         """
         Specifying a C{caCerts} of L{sslverify.PLATFORM} when initializing
-        C{OpenSSLCertificateOptions} causes self-signed certificates to be
-        rejected by an SSL connection using these options.
+        C{OpenSSLCertificateOptions} causes certificates issued by a newly
+        created CA to be rejected by an SSL connection using these options.
         """
         caSelfCert, serverCert = self._buildCAandServerCertificates()
         chainedCert = self.mktemp()
