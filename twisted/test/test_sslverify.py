@@ -19,6 +19,7 @@ except ImportError:
     pass
 
 from twisted.python.compat import nativeString
+from twisted.python.runtime import platform
 from twisted.trial import unittest
 from twisted.internet import protocol, defer, reactor
 
@@ -549,6 +550,34 @@ class OpenSSLOptions(unittest.TestCase):
         ctx = opts.getContext()
         self.assertEqual(SSL.OP_NO_SSLv2, ctx.set_options(0) & SSL.OP_NO_SSLv2)
 
+
+    def test_caCertsPlatformLinux(self):
+        """
+        Specifying a C{caCerts} of L{sslverify.PLATFORM} when initializing
+        C{OpenSSLCertificateOptions} loads the platform-provided trusted
+        certificates.
+        """
+        opts = sslverify.OpenSSLCertificateOptions(caCerts=sslverify.PLATFORM,
+                                                   verify=True)
+        called = []
+        class TestContext(SSL.Context):
+            def set_default_verify_paths(self):
+                SSL.Context.set_default_verify_paths(self)
+                called.append(self)
+        context = opts.getContext(_contextFactory=TestContext)
+        self.assertEqual(called, [context])
+
+    if not platform.isLinux():
+        test_caCertsPlatformLinux.skip = "Linux-specific test"
+
+
+    def test_caCertsPlatformOther(self):
+        """
+        Specifying a C{caCerts} of L{sslverify.PLATFORM} when initializing
+        C{OpenSSLCertificateOptions} loads the bundled trusted certificates.
+        """
+        raise NotImplementedError()
+    test_caCertsPlatformOther.todo = "Use getCACertificates"
 
 
 if interfaces.IReactorSSL(reactor, None) is None:
