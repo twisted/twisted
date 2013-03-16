@@ -567,17 +567,23 @@ class OpenSSLOptions(unittest.TestCase):
         context = opts.getContext(_contextFactory=TestContext)
         self.assertEqual(called, [context])
 
-    if not platform.isLinux():
-        test_caCertsPlatformLinux.skip = "Linux-specific test"
-
 
     def test_caCertsPlatformOther(self):
         """
         Specifying a C{caCerts} of L{sslverify.PLATFORM} when initializing
-        C{OpenSSLCertificateOptions} loads the bundled trusted certificates.
+        C{OpenSSLCertificateOptions} raises C{NotImplementedError} on non-Linux
+        platforms, pending implementation of this functionality in other
+        tickets.
         """
-        raise NotImplementedError()
-    test_caCertsPlatformOther.todo = "Use getCACertificates"
+        self.assertRaises(NotImplementedError,
+                          sslverify.OpenSSLCertificateOptions,
+                          caCerts=sslverify.PLATFORM, verify=True)
+
+    if platform.isLinux():
+        test_caCertsPlatformOther.skip = "Non-Linux test"
+    else:
+        test_caCertsPlatformLinux.skip = "Linux test"
+
 
 
 if interfaces.IReactorSSL(reactor, None) is None:
