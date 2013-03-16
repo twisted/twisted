@@ -553,12 +553,13 @@ class OpenSSLOptions(unittest.TestCase):
 
     def test_caCertsPlatformLinux(self):
         """
-        Specifying a C{caCerts} of L{sslverify.PLATFORM} when initializing
-        C{OpenSSLCertificateOptions} loads the platform-provided trusted
-        certificates.
+        Specifying a C{caCerts} of L{sslverify.CASources.PLATFORM} when
+        initializing C{OpenSSLCertificateOptions} loads the platform-provided
+        trusted certificates.
         """
-        opts = sslverify.OpenSSLCertificateOptions(caCerts=sslverify.PLATFORM,
-                                                   verify=True)
+        opts = sslverify.OpenSSLCertificateOptions(
+            caCerts=sslverify.CASources.PLATFORM,
+            verify=True)
         called = []
         class TestContext(SSL.Context):
             def set_default_verify_paths(self):
@@ -570,14 +571,14 @@ class OpenSSLOptions(unittest.TestCase):
 
     def test_caCertsPlatformOther(self):
         """
-        Specifying a C{caCerts} of L{sslverify.PLATFORM} when initializing
-        C{OpenSSLCertificateOptions} raises C{NotImplementedError} on non-Linux
-        platforms, pending implementation of this functionality in other
-        tickets.
+        Specifying a C{caCerts} of L{sslverify.CASources.PLATFORM} when
+        initializing C{OpenSSLCertificateOptions} raises
+        C{NotImplementedError} on non-Linux platforms, pending implementation
+        of this functionality in other tickets.
         """
         self.assertRaises(NotImplementedError,
                           sslverify.OpenSSLCertificateOptions,
-                          caCerts=sslverify.PLATFORM, verify=True)
+                          caCerts=sslverify.CASources.PLATFORM, verify=True)
 
     if platform.isLinux():
         test_caCertsPlatformOther.skip = "Non-Linux test"
@@ -609,9 +610,10 @@ class OpenSSLOptions(unittest.TestCase):
 
     def test_caCertsPlatformRejectsRandomCA(self):
         """
-        Specifying a C{caCerts} of L{sslverify.PLATFORM} when initializing
-        C{OpenSSLCertificateOptions} causes certificates issued by a newly
-        created CA to be rejected by an SSL connection using these options.
+        Specifying a C{caCerts} of L{sslverify.CASources.PLATFORM} when
+        initializing C{OpenSSLCertificateOptions} causes certificates issued
+        by a newly created CA to be rejected by an SSL connection using these
+        options.
         """
         caSelfCert, serverCert = self._buildCAandServerCertificates()
         chainedCert = self.mktemp()
@@ -631,7 +633,7 @@ class OpenSSLOptions(unittest.TestCase):
         serverOpts = ContextFactory()
         clientOpts = sslverify.OpenSSLCertificateOptions(
             verify=True,
-            caCerts=sslverify.PLATFORM)
+            caCerts=sslverify.CASources.PLATFORM)
 
         onServerLost = defer.Deferred()
         onClientLost = defer.Deferred()

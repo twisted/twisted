@@ -13,6 +13,7 @@ from OpenSSL import SSL, crypto
 from twisted.python.compat import nativeString, networkString
 from twisted.python import _reflectpy3 as reflect, util
 from twisted.python.runtime import platform
+from twisted.python.constants import Names, NamedConstant
 from twisted.internet.defer import Deferred
 from twisted.internet.error import VerifyError, CertificateError
 
@@ -621,9 +622,16 @@ class KeyPair(PublicKey):
             self)
 
 
-# Indicates that OpenSSLCertificateOptions should use the platform-provided
-# database of trusted CAs.
-PLATFORM = object()
+
+class CASources(Names):
+    """
+    Constants defining sources for trusted certificate authorities.
+    """
+    # Indicates that OpenSSLCertificateOptions should use the platform-provided
+    # database of trusted CAs.
+    PLATFORM = NamedConstant()
+
+
 
 class OpenSSLCertificateOptions(object):
     """
@@ -667,12 +675,14 @@ class OpenSSLCertificateOptions(object):
             validation.  By default this is C{False}.
 
         @param caCerts: List of certificate authority certificate objects to
-            use to verify the peer's certificate, or L{PLATFORM} indicating
-            that platform-provided trusted certificates should be used.  Only
-            used if verify is C{True} and will be ignored otherwise.  Since
-            verify is C{False} by default, this is C{None} by default.
+            use to verify the peer's certificate, or L{CASources.PLATFORM}
+            indicating that platform-provided trusted certificates should be
+            used.  Only used if verify is C{True} and will be ignored
+            otherwise.  Since verify is C{False} by default, this is C{None}
+            by default.
 
-        @type caCerts: C{list} of L{OpenSSL.crypto.X509}, or L{PLATFORM} instance
+        @type caCerts: C{list} of L{OpenSSL.crypto.X509}, or
+             L{CASources} constants.
 
         @param verifyDepth: Depth in certificate chain down to which to verify.
         If unspecified, use the underlying default (9).
@@ -764,7 +774,7 @@ class OpenSSLCertificateOptions(object):
             if self.verifyOnce:
                 verifyFlags |= SSL.VERIFY_CLIENT_ONCE
             if self.caCerts:
-                if self.caCerts is PLATFORM:
+                if self.caCerts is CASources.PLATFORM:
                     if platform.isLinux():
                         ctx.set_default_verify_paths()
                     else:
