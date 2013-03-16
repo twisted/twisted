@@ -769,7 +769,8 @@ class OpenSSLCertificateOptions(object):
                         ctx.set_default_verify_paths()
                     else:
                         raise NotImplementedError(
-                            "Only Linux supports platform-trusted CAs")
+                            "Only Linux supports platform-trusted CAs "
+                            "(see #6371, #6372, #6334 for other plaforms)")
                 else:
                     store = ctx.get_cert_store()
                     for cert in self.caCerts:
