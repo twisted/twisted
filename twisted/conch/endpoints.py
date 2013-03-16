@@ -97,18 +97,15 @@ class _CommandChannel(SSHChannel):
 
 
 
-class _CommandConnection(SSHConnection):
-    def __init__(self, command, protocolFactory, commandConnected):
+class _ConnectionReady(SSHConnection):
+    def __init__(self, factory):
         SSHConnection.__init__(self)
-        self._command = command
-        self._protocolFactory = protocolFactory
-        self._commandConnected = commandConnected
+        self._factory = factory
 
 
     def serviceStarted(self):
-        channel = _CommandChannel(
-            self._command, self._protocolFactory, self._commandConnected)
-        self.openChannel(channel)
+        d, self._factory.connectionReady = self._factory.connectionReady, None
+        d.callback(self)
 
 
 
@@ -177,20 +174,11 @@ class _CommandTransport(SSHClientTransport):
         return reason
 
 
-    def _disconnect(self, passthrough):
-        self.transport.loseConnection()
-        return passthrough
-
-
     def connectionSecure(self):
         self._state = b'AUTHENTICATING'
 
-        self.factory.commandConnected.addErrback(self._disconnect)
+        command = _ConnectionReady(self.factory)
 
-        command = _CommandConnection(
-            self.factory.command,
-            self.factory.commandProtocolFactory,
-            self.factory.commandConnected)
         userauth = UserAuth(self.factory.username, command)
         userauth.password = self.factory.password
         if self.factory.keys:
@@ -218,13 +206,13 @@ class _CommandTransport(SSHClientTransport):
 
 
     def connectionLost(self, reason):
-        if self._state == b'RUNNING' or self.factory.commandConnected is None:
+        if self._state == b'RUNNING' or self.factory.connectionReady is None:
             return
         if self._state == b'SECURING' and self._hostKeyFailure is not None:
             reason = self._hostKeyFailure
         elif self._state == b'AUTHENTICATING':
             reason = Failure(AuthenticationFailed("Doh"))
-        self.factory.commandConnected.errback(reason)
+        self.factory.connectionReady.errback(reason)
 
 
 
@@ -312,6 +300,12 @@ class SSHCommandEndpoint(object):
             created by C{protocolFactory} once it has been connected to the
             command.
         """
+        d = self._secureConnection()
+        d.addCallback(self._executeCommand, protocolFactory)
+        return d
+
+
+    def _secureConnection(self):
         factory = Factory()
         factory.protocol = _CommandTransport
         factory.hostname = self.hostname
@@ -320,19 +314,27 @@ class SSHCommandEndpoint(object):
         factory.password = self.password
         factory.agentEndpoint = self.agentEndpoint
         factory.knownHosts = self.knownHosts
-        factory.ui = self.ui
         factory.command = self.command
-        factory.commandProtocolFactory = protocolFactory
-        factory.commandConnected = Deferred()
-        factory.commandConnected.addBoth(self._clearConnected, factory)
+        factory.ui = self.ui
+
+        factory.connectionReady = Deferred()
 
         sshClient = TCP4ClientEndpoint(self.reactor, self.hostname, self.port)
 
         d = sshClient.connect(factory)
-        d.addErrback(factory.commandConnected.errback)
-        return factory.commandConnected
+        d.addCallback(lambda ignored: factory.connectionReady)
+        return d
 
 
-    def _clearConnected(self, passthrough, factory):
-        factory.commandConnected = None
-        return passthrough
+    def _executeCommand(self, connection, protocolFactory):
+        commandConnected = Deferred()
+        def disconnectOnFailure(passthrough):
+            connection.transport.loseConnection()
+            return passthrough
+        commandConnected.addErrback(disconnectOnFailure)
+
+        channel = _CommandChannel(
+            self.command, protocolFactory, commandConnected)
+        connection.openChannel(channel)
+        return commandConnected
+
