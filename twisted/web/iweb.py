@@ -510,9 +510,6 @@ class IResponse(Interface):
         "the response includes a I{Content-Length} header, it will be "
         "available in C{headers}.")
 
-    request = Attribute(
-        "The L{IRequest} that resulted in this response.")
-
 
     def deliverBody(protocol):
         """

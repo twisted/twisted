@@ -1023,37 +1023,6 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         self.assertEqual('192.168.0.1', address)
 
 
-    def test_responseIncludesRequest(self):
-        """
-        L{Response}s returned by L{Agent.request} have a reference to the
-        L{Request} that was originally issued, and a C{absoluteURI} attribute.
-        """
-        def _checkResponseWithRequest(response, expectedRequest):
-            self.assertIdentical(response.request, expectedRequest)
-            self.assertEquals(response.absoluteURI, b'http://example.com')
-
-        agent = self.buildAgentForWrapperTest(self.reactor)
-        d = agent.request('GET', b'http://example.com')
-
-        # The request should be issued.
-        self.assertEqual(len(self.protocol.requests), 1)
-        req, res = self.protocol.requests.pop()
-        self.assertIsInstance(req, Request)
-
-        d.addCallback(_checkResponseWithRequest, req)
-
-        resp = client.Response(
-            ('HTTP', 1, 1),
-            200,
-            'OK',
-            client.Headers({}),
-            None,
-            req)
-        res.callback(resp)
-
-        return d
-
-
 
 class HTTPConnectionPoolRetryTests(unittest.TestCase, FakeReactorAndConnectMixin):
     """
