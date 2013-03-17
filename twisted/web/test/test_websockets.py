@@ -99,6 +99,17 @@ class TestFrameHelpers(TestCase):
         self.assertEqual(frame, [])
 
 
+    def test_parseUnmaskedTextWithMaskNeeded(self):
+        """
+        L{_parseFrames} raises L{_WSException} if the frame is not masked and
+        C{needMask} is set to C{True}.
+        """
+        frame = ["\x81\x05Hello"]
+        error = self.assertRaises(
+            _WSException, list, _parseFrames(frame, needMask=True))
+        self.assertEqual("Received data not masked", str(error))
+
+
     def test_parseUnmaskedHugeText(self):
         """
         L{_parseFrames} handles frame with text longer than 64 kB.
@@ -339,6 +350,9 @@ class SavingEcho(WebSocketsProtocol):
 
 
 class WebsocketsProtocolTest(TestCase):
+    """
+    Tests for C{WebSocketsProtocol}.
+    """
 
     def setUp(self):
 
@@ -356,7 +370,7 @@ class WebsocketsProtocolTest(TestCase):
 
     def test_frameReceived(self):
         """
-        C{_WebSocketsProtocol.dataReceived} translates bytes into frames, and
+        C{WebSocketsProtocol.dataReceived} translates bytes into frames, and
         then write it back encoded into frames.
         """
         self.protocol.dataReceived(
@@ -398,13 +412,25 @@ class WebsocketsProtocolTest(TestCase):
 
     def test_invalidFrame(self):
         """
-        If an invalid frame is received, C{_WebSocketsProtocol} closes the
+        If an invalid frame is received, C{WebSocketsProtocol} closes the
         connection and logs an error.
         """
         self.protocol.dataReceived("\x72\x05")
         self.assertFalse(self.transport.connected)
         [error] = self.flushLoggedErrors(_WSException)
         self.assertEqual("Reserved flag in frame (114)", str(error.value))
+
+
+    def test_loseConnection(self):
+        """
+        C{WebSocketsProtocol.loseConnection} sends a close frame and closes the
+        transport afterwards.
+        """
+        self.protocol.loseConnection()
+        self.assertFalse(self.transport.connected)
+        self.assertEqual("\x88\x00", self.transport.value())
+        # We can call loseConnection again without side effects
+        self.protocol.loseConnection()
 
 
 
@@ -423,6 +449,8 @@ class WebsocketsProtocolWrapperTest(TestCase):
 
     def test_dataReceived(self):
         """
+        L{WebSocketsProtocolWrapper.dataReceived} forwards frame content to the
+        underlying protocol.
         """
         self.protocol.dataReceived(
             _makeFrame("Hello", CONTROLS.TEXT, True, mask="abcd"))
@@ -431,6 +459,8 @@ class WebsocketsProtocolWrapperTest(TestCase):
 
     def test_write(self):
         """
+        L{WebsocketsProtocolWrapper.write} creates and writes a frame from the
+        payload passed.
         """
         self.accumulatingProtocol.transport.write("Hello")
         self.assertEqual("\x81\x05Hello", self.transport.value())
@@ -438,6 +468,8 @@ class WebsocketsProtocolWrapperTest(TestCase):
 
     def test_writeSequence(self):
         """
+        L{WebsocketsProtocolWrapper.writeSequence} writes a frame for every
+        chunk passed.
         """
         self.accumulatingProtocol.transport.writeSequence(["Hello", "World"])
         self.assertEqual("\x81\x05Hello\x81\x05World", self.transport.value())
@@ -445,6 +477,7 @@ class WebsocketsProtocolWrapperTest(TestCase):
 
     def test_getHost(self):
         """
+        L{WebsocketsProtocolWrapper.getHost} returns the transport C{getHost}.
         """
         self.assertEqual(self.transport.getHost(),
                          self.accumulatingProtocol.transport.getHost())
@@ -452,6 +485,7 @@ class WebsocketsProtocolWrapperTest(TestCase):
 
     def test_getPeer(self):
         """
+        L{WebsocketsProtocolWrapper.getPeer} returns the transport C{getPeer}.
         """
         self.assertEqual(self.transport.getPeer(),
                          self.accumulatingProtocol.transport.getPeer())
@@ -520,7 +554,7 @@ class WebsocketsResourceTest(TestCase):
         When rendering a request, L{WebSocketsResource}, checks the C{Upgrade},
         C{Connection} and C{Sec-WebSocket-Version} headers, and use the
         C{Sec-WebSocket-Key} header to generate a C{Sec-WebSocket-Accept}
-        value. It creates a L{_WebSocketsProtocol} instance connected to the
+        value. It creates a L{WebSocketsProtocol} instance connected to the
         protocol provided by the user factory.
         """
         request = DummyRequest("/")
