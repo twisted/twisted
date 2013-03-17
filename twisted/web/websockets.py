@@ -436,14 +436,19 @@ class IWebSocketsResource(Interface):
     def lookupProtocol(protocolNames, request):
         """
         Build a protocol instance for the given protocol options and request.
+        The returned protocol is plugged to the HTTP transport, and the
+        returned protocol name, if specified, is used as
+        I{Sec-WebSocket-Protocol} value. If the protocol provides
+        L{IWebSocketsProtocol}, it will be connected directly, otherwise it
+        will be wrapped by L{WebSocketsProtocolWrapper}.
 
         @param protocolNames: The asked protocols from the client.
         @type protocolNames: C{list} of C{str}
 
         @param request: The connecting client request.
-        @type request: L{IRequest<twistd.web.iweb.IRequest>}
+        @type request: L{IRequest<twisted.web.iweb.IRequest>}
 
-        @return: A tuple of (protocol, C{None}).
+        @return: A tuple of (protocol, matched protocol name).
         @rtype: C{tuple}
         """
 
@@ -460,6 +465,11 @@ class WebSocketsResource(object):
     Due to unresolved questions of logistics, this resource cannot have
     children.
 
+    @param factory: The factory producing either L{IWebSocketsProtocol} or
+        L{IProtocol} providers, which will be used by the default
+        C{lookupProtocol} implementation.
+    @type factory: L{twisted.internet.protocol.Factory}
+
     @since: 13.1
     """
     isLeaf = True
@@ -475,7 +485,7 @@ class WebSocketsResource(object):
         connection.
         """
         raise RuntimeError(
-            "Cannot get IResource children from WebsocketsResourceTest")
+            "Cannot get IResource children from WebsocketsResource")
 
 
     def putChild(self, path, child):
@@ -498,7 +508,7 @@ class WebSocketsResource(object):
         @type protocolNames: C{list} of C{str}
 
         @param request: The connecting client request.
-        @type request: L{Request<twistd.web.http.Request>}
+        @type request: L{Request<twisted.web.http.Request>}
 
         @return: A tuple of (protocol, C{None}).
         @rtype: C{tuple}
@@ -515,9 +525,9 @@ class WebSocketsResource(object):
         a WebSockets connection instead.
 
         @param request: The connecting client request.
-        @type request: L{Request<twistd.web.http.Request>}
+        @type request: L{Request<twisted.web.http.Request>}
 
-        @return: a strinf if the request fails, otherwise C{NOT_DONE_YET}.
+        @return: a string if the request fails, otherwise C{NOT_DONE_YET}.
         """
         request.defaultContentType = None
         # If we fail at all, we're gonna fail with 400 and no response.
