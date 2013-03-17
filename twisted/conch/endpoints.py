@@ -6,11 +6,14 @@
 Endpoint implementations of various SSH interactions.
 """
 
-__all__ = ['AuthenticationFailed', 'SSHCommandAddress', 'SSHCommandEndpoint']
+__all__ = [
+    'ISSHConnectionCreator',
+
+    'AuthenticationFailed', 'SSHCommandAddress', 'SSHCommandEndpoint']
 
 from os.path import expanduser
 
-from zope.interface import implementer
+from zope.interface import Interface, implementer
 
 from twisted.python.filepath import FilePath
 from twisted.python.failure import Failure
@@ -34,6 +37,16 @@ class AuthenticationFailed(Exception):
     An SSH session could not be established because authentication was not
     successful.
     """
+
+
+
+class ISSHConnectionCreator(Interface):
+    def secureConnection():
+        """
+        Return a connected, secured, but not yet authenticated instance of
+        L{twisted.conch.ssh.transport.SSHServerTransport} or
+        L{twisted.conch.ssh.transport.SSHClientTransport}.
+        """
 
 
 
@@ -221,6 +234,15 @@ class SSHCommandEndpoint(object):
     """
     """
 
+    def __init__(self, creator):
+        """
+        @param creator: An L{ISSHConnectionCreator} provider which will be used
+            to set up the SSH connection which will be used to run a command.
+        @type creator: L{ISSHConnectionCreator} provider
+        """
+        self._creator = creator
+
+
     @classmethod
     def newConnection(cls, reactor, command, username, hostname, port=None, keys=None, password=None, agentEndpoint=None, knownHosts=None, ui=None):
         """
@@ -263,31 +285,17 @@ class SSHCommandEndpoint(object):
             whether to accept the server host keys.
         @type ui: L{ConsoleUI}
         """
-        self = _NewConnectionHelper()
-        self.reactor = reactor
-        self.hostname = hostname
-        self.port = port
-        self.command = command
-        self.username = username
-        self.keys = keys
-        self.password = password
-        self.agentEndpoint = agentEndpoint
-        if knownHosts is None:
-            knownHosts = self._knownHosts()
-        self.knownHosts = knownHosts
-        self.ui = ui
-
-        endpoint = cls.__new__(cls)
-        endpoint.params = self
-        return endpoint
+        helper = _NewConnectionHelper(
+            reactor, hostname, port, command, username, keys, password,
+            agentEndpoint, knownHosts, ui)
+        return cls(helper)
 
 
     @classmethod
     def existingConnection(cls, connection, command):
-        endpoint = cls.__new__(cls)
-        endpoint.params = _ExistingConnectionHelper(connection)
-        endpoint.params.command = command
-        return endpoint
+        helper = _ExistingConnectionHelper(connection)
+        helper.command = command
+        return endpoint(helper)
 
 
     def connect(self, protocolFactory):
@@ -305,7 +313,7 @@ class SSHCommandEndpoint(object):
             created by C{protocolFactory} once it has been connected to the
             command.
         """
-        d = self.params.secureConnection()
+        d = self._creator.secureConnection()
         d.addCallback(self._executeCommand, protocolFactory)
         return d
 
@@ -318,14 +326,31 @@ class SSHCommandEndpoint(object):
         commandConnected.addErrback(disconnectOnFailure)
 
         channel = _CommandChannel(
-            self.params.command, protocolFactory, commandConnected)
+            self._creator.command, protocolFactory, commandConnected)
         connection.openChannel(channel)
         return commandConnected
 
 
 
+@implementer(ISSHConnectionCreator)
 class _NewConnectionHelper(object):
     _KNOWN_HOSTS = "~/.ssh/known_hosts"
+
+    def __init__(self, reactor, hostname, port, command, username, keys,
+                 password, agentEndpoint, knownHosts, ui):
+        self.reactor = reactor
+        self.hostname = hostname
+        self.port = port
+        self.command = command
+        self.username = username
+        self.keys = keys
+        self.password = password
+        self.agentEndpoint = agentEndpoint
+        if knownHosts is None:
+            knownHosts = self._knownHosts()
+        self.knownHosts = knownHosts
+        self.ui = ui
+
 
     @classmethod
     def _knownHosts(cls):
@@ -358,7 +383,9 @@ class _NewConnectionHelper(object):
 
 
 
+@implementer(ISSHConnectionCreator)
 class _ExistingConnectionHelper(object):
+
     def __init__(self, connection):
         self.connection = connection
 

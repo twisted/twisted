@@ -7,7 +7,7 @@ Tests for L{twisted.conch.endpoints}.
 
 from os import environ
 
-from zope.interface.verify import verifyObject
+from zope.interface.verify import verifyObject, verifyClass
 from zope.interface import implementer, providedBy
 
 from twisted.python.filepath import FilePath
@@ -42,8 +42,8 @@ from twisted.conch.test.keydata import (
 from twisted.conch.avatar import ConchUser
 
 from twisted.conch.endpoints import (
-    AuthenticationFailed, SSHCommandAddress, SSHCommandEndpoint,
-    _NewConnectionHelper)
+    ISSHConnectionCreator, AuthenticationFailed, SSHCommandAddress,
+    SSHCommandEndpoint, _NewConnectionHelper, _ExistingConnectionHelper)
 
 
 class BrokenExecSession(SSHChannel):
@@ -873,11 +873,44 @@ class SSHCommandEndpointTests(TestCase):
 
 
 
+class ExistingConnectionHelperTests(TestCase):
+    """
+    Tests for L{_ExistingConnectionHelper}.
+    """
+    def test_interface(self):
+        """
+        L{_ExistingConnectionHelper} implements L{ISSHConnectionCreator}.
+        """
+        self.assertTrue(
+            verifyClass(ISSHConnectionCreator, _ExistingConnectionHelper))
+
+
+    def test_secureConnection(self):
+        """
+        L{_ExistingConnectionHelper.secureConnection} returns a L{Deferred}
+        which fires with whatever object was fed to
+        L{_ExistingConnectionHelper.__init__}.
+        """
+        result = object()
+        helper = _ExistingConnectionHelper(result)
+        self.assertIdentical(
+            result, self.successResultOf(helper.secureConnection()))
+
+
+
 class NewConnectionHelperTests(TestCase):
     """
     Tests for L{_NewConnectionHelper} behaviors related to I{known_hosts} file
     handling.
     """
+    def test_interface(self):
+        """
+        L{_NewConnectionHelper} implements L{ISSHConnectionCreator}.
+        """
+        self.assertTrue(
+            verifyClass(ISSHConnectionCreator, _NewConnectionHelper))
+
+
     def test_defaultPath(self):
         """
         The default I{known_hosts} path is I{~/.ssh/known_hosts}.
@@ -892,8 +925,12 @@ class NewConnectionHelperTests(TestCase):
         L{KnownHostsFile} if one is not passed to the initializer.
         """
         result = object()
-        self.patch(_NewConnectionHelper, "_knownHosts", lambda cls: result)
-        helper = _NewConnectionHelper()
+        self.patch(_NewConnectionHelper, '_knownHosts', lambda cls: result)
+
+        # helper = _NewConnectionHelper(*[None] * 10)
+        helper = _NewConnectionHelper(
+            None, None, None, None, None, None, None, None, None, None)
+
         self.assertIdentical(result, helper.knownHosts)
 
 
