@@ -81,7 +81,6 @@ def _shadowGetByName(username):
     return runAsEffectiveUser(0, 0, f, username)
 
 
-
 class UNIXPasswordDatabase:
     """
     A checker which validates users out of the UNIX password databases, or

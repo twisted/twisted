@@ -1,7 +1,8 @@
+# -*- test-case-name: twisted.conch.test.test_unix -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from twisted.cred import portal
+from twisted.cred import checkers, portal
 from twisted.python import components, log
 from twisted.internet.error import ProcessExitedAlready
 from zope import interface
@@ -24,12 +25,18 @@ try:
 except ImportError:
     utmp = None
 
+
+
 class UnixSSHRealm:
     interface.implements(portal.IRealm)
 
     def requestAvatar(self, username, mind, *interfaces):
+        if username == checkers.ANONYMOUS:
+            username = pwd.getpwuid(os.getuid()).pw_name
+
         user = UnixConchUser(username)
         return interfaces[0], user, user.logout
+
 
 
 class UnixConchUser(ConchUser):
@@ -67,10 +74,10 @@ class UnixConchUser(ConchUser):
         hostToBind, portToBind = forwarding.unpackGlobal_tcpip_forward(data)
         from twisted.internet import reactor
         try: listener = self._runAsUser(
-                            reactor.listenTCP, portToBind, 
+                            reactor.listenTCP, portToBind,
                             forwarding.SSHListenForwardingFactory(self.conn,
                                 (hostToBind, portToBind),
-                                forwarding.SSHListenServerForwardingChannel), 
+                                forwarding.SSHListenServerForwardingChannel),
                             interface = hostToBind)
         except:
             return 0
@@ -160,7 +167,7 @@ class SSHSessionForUnixConchUser:
         b = utmp.UtmpRecord(utmp.WTMP_FILE)
         b.pututline(entry)
         b.endutent()
-                            
+
 
     def getPty(self, term, windowSize, modes):
         self.environ['TERM'] = term
@@ -168,7 +175,7 @@ class SSHSessionForUnixConchUser:
         self.modes = modes
         master, slave = pty.openpty()
         ttyname = os.ttyname(slave)
-        self.environ['SSH_TTY'] = ttyname 
+        self.environ['SSH_TTY'] = ttyname
         self.ptyTuple = (master, slave, ttyname)
 
     def openShell(self, proto):
@@ -191,7 +198,7 @@ class SSHSessionForUnixConchUser:
                   shell, ['-%s' % shellExec], self.environ, homeDir, uid, gid,
                    usePTY = self.ptyTuple)
         self.addUTMPEntry()
-        fcntl.ioctl(self.pty.fileno(), tty.TIOCSWINSZ, 
+        fcntl.ioctl(self.pty.fileno(), tty.TIOCSWINSZ,
                     struct.pack('4H', *self.winSize))
         if self.modes:
             self.setModes()
@@ -232,7 +239,7 @@ class SSHSessionForUnixConchUser:
         finally:
             os.setegid(egid)
             os.seteuid(euid)
-        
+
     def setModes(self):
         pty = self.pty
         attr = tty.tcgetattr(pty.fileno())
@@ -276,7 +283,7 @@ class SSHSessionForUnixConchUser:
 
     def windowChanged(self, winSize):
         self.winSize = winSize
-        fcntl.ioctl(self.pty.fileno(), tty.TIOCSWINSZ, 
+        fcntl.ioctl(self.pty.fileno(), tty.TIOCSWINSZ,
                         struct.pack('4H', *self.winSize))
 
     def _writeHack(self, data):

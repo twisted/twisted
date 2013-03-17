@@ -8,8 +8,8 @@ Currently implemented authentication types are public-key and password.
 
 Maintainer: Paul Swartz
 """
-
-import struct, warnings
+import struct
+import warnings
 from twisted.conch import error, interfaces
 from twisted.conch.ssh import keys, transport, service
 from twisted.conch.ssh.common import NS, getNS
@@ -50,6 +50,9 @@ class SSHUserAuthServer(service.SSHService):
     @ivar supportedAuthentications: A list of the supported authentication
         methods.
     @type supportedAuthentications: C{list} of C{str}
+    @ivar rfcSupportedAuthentications: A list of the supported authentication
+        methods, so long as they are in RFC 4252
+    @type rfcSupportedAuthentications: C{list} of C{str}
     @ivar user: the last username the client tried to authenticate with
     @type user: C{str}
     @ivar method: the current authentication method
@@ -72,9 +75,10 @@ class SSHUserAuthServer(service.SSHService):
     passwordDelay = 1 # number of seconds to delay on a failed password
     clock = reactor
     interfaceToMethod = {
-        credentials.ISSHPrivateKey : 'publickey',
-        credentials.IUsernamePassword : 'password',
-        credentials.IPluggableAuthenticationModules : 'keyboard-interactive',
+        credentials.IAnonymous: 'none',
+        credentials.ISSHPrivateKey: 'publickey',
+        credentials.IUsernamePassword: 'password',
+        credentials.IPluggableAuthenticationModules: 'keyboard-interactive',
     }
 
 
@@ -103,6 +107,13 @@ class SSHUserAuthServer(service.SSHService):
                 self.supportedAuthentications.remove('password')
             if 'keyboard-interactive' in self.supportedAuthentications:
                 self.supportedAuthentications.remove('keyboard-interactive')
+
+        # strip 'none' out of the list of supported authentications,
+        # as per RFC 4252 section 5.2: The "none" Authentication
+        # Request [...] MUST NOT be listed as supported by the server
+        self.rfcSupportedAuthentications = [
+            auth for auth in self.supportedAuthentications if auth != 'none']
+
         self._cancelLoginTimeout = self.clock.callLater(
             self.loginTimeout,
             self.timeoutAuthentication)
@@ -172,8 +183,9 @@ class SSHUserAuthServer(service.SSHService):
         @type packet: C{str}
         """
         user, nextService, method, rest = getNS(packet, 3)
+
         if user != self.user or nextService != self.nextService:
-            self.authenticatedWith = [] # clear auth state
+            self.authenticatedWith = []  # clear auth state
         self.user = user
         self.nextService = nextService
         self.method = method
@@ -216,7 +228,7 @@ class SSHUserAuthServer(service.SSHService):
         """
         reason.trap(error.NotEnoughAuthentication)
         self.transport.sendPacket(MSG_USERAUTH_FAILURE,
-                NS(','.join(self.supportedAuthentications)) + '\xff')
+                NS(','.join(self.rfcSupportedAuthentications)) + '\xff')
 
 
     def _ebBadAuth(self, reason):
@@ -231,23 +243,33 @@ class SSHUserAuthServer(service.SSHService):
         """
         if reason.check(error.IgnoreAuthentication):
             return
-        if self.method != 'none':
-            log.msg('%s failed auth %s' % (self.user, self.method))
-            if reason.check(UnauthorizedLogin):
-                log.msg('unauthorized login: %s' % reason.getErrorMessage())
-            elif reason.check(error.ConchError):
-                log.msg('reason: %s' % reason.getErrorMessage())
-            else:
-                log.msg(reason.getTraceback())
-            self.loginAttempts += 1
-            if self.loginAttempts > self.attemptsBeforeDisconnect:
-                self.transport.sendDisconnect(
-                        transport.DISCONNECT_NO_MORE_AUTH_METHODS_AVAILABLE,
-                        'too many bad auths')
-                return
+
+        log.msg('%s failed auth %s' % (self.user, self.method))
+        if reason.check(UnauthorizedLogin):
+            log.msg('unauthorized login: %s' % reason.getErrorMessage())
+        elif reason.check(error.ConchError):
+            log.msg('reason: %s' % reason.getErrorMessage())
+        else:
+            log.msg(reason.getTraceback())
+        self.loginAttempts += 1
+        if self.loginAttempts > self.attemptsBeforeDisconnect:
+            self.transport.sendDisconnect(
+                    transport.DISCONNECT_NO_MORE_AUTH_METHODS_AVAILABLE,
+                    'too many bad auths')
+            return
         self.transport.sendPacket(
                 MSG_USERAUTH_FAILURE,
-                NS(','.join(self.supportedAuthentications)) + '\x00')
+                NS(','.join(self.rfcSupportedAuthentications)) + '\x00')
+
+
+    def auth_none(self, packet):
+        """
+        Anonymous authentication.  Payload is ignored.
+
+        Make an Anonymous credential and verify it with our portal.
+        """
+        c = credentials.Anonymous()
+        return self.portal.login(c, None, interfaces.IConchUser)
 
 
     def auth_publickey(self, packet):

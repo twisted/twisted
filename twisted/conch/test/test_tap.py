@@ -24,6 +24,7 @@ if Crypto and pyasn1 and unix:
     from twisted.conch import tap
     from twisted.conch.openssh_compat.factory import OpenSSHFactory
 
+from twisted.python.usage import UsageError
 from twisted.application.internet import StreamServerEndpointService
 from twisted.cred import error
 from twisted.cred.credentials import IPluggableAuthenticationModules
@@ -116,6 +117,19 @@ class MakeServiceTest(TestCase):
         self.options.parseOptions(['--auth', 'file:' + self.filename,
                                    '--auth', 'memory:testuser:testpassword'])
         self.assertEqual(len(self.options['credCheckers']), 2)
+
+
+    def test_anonyousAuthNotAllowedWithOtherAuth(self):
+        """
+        C{--auth anonymous} combined with another other authentication method
+        raises a L{UsageError}
+        """
+        self.assertRaises(UsageError, self.options.parseOptions,
+                          ['--auth', 'anonymous',
+                           '--auth', 'memory:testuser:testpassword'])
+        self.assertRaises(UsageError, self.options.parseOptions,
+                          ['--auth', 'memory:testuser:testpassword',
+                           '--auth', 'anonymous'])
 
 
     def test_authFailure(self):
