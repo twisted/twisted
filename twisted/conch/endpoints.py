@@ -41,9 +41,12 @@ class AuthenticationFailed(Exception):
 
 
 class ISSHConnectionCreator(Interface):
+    """
+    An L{ISSHConnectionCreator} knows how to create SSH connections somehow.
+    """
     def secureConnection():
         """
-        Return a connected, secured, but not yet authenticated instance of
+        Return a new, connected, secured, but not yet authenticated instance of
         L{twisted.conch.ssh.transport.SSHServerTransport} or
         L{twisted.conch.ssh.transport.SSHClientTransport}.
         """
@@ -51,13 +54,28 @@ class ISSHConnectionCreator(Interface):
 
 
 class SSHCommandAddress(object):
+    """
+    An L{SSHCommandAddress} instance represents the address of an SSH server, a
+    username which was used to authenticate with that server, and a command
+    which was run there.
+
+    @ivar server: See L{__init__}
+    @ivar username: See L{__init__}
+    @ivar command: See L{__init__}
+    """
     def __init__(self, server, username, command):
         """
         @param server: The address of the SSH server on which the command is
             running.
         @type server: L{IAddress} provider
 
-        @param username:
+        @param username: An authentication username which was used to
+            authenticate against the server at the given address.
+        @type username: L{bytes}
+
+        @param command: A command which was run in a session channel on the
+            server at the given address.
+        @type command: L{bytes}
         """
         self.server = server
         self.username = username
@@ -66,9 +84,29 @@ class SSHCommandAddress(object):
 
 
 class _CommandChannel(SSHChannel):
-    name = 'session'
+    """
+    A L{_CommandChannel} executes a command in a session channel and connects
+    its input and output to an L{IProtocol} provider.
+
+    @ivar _command: See L{__init__}
+    @ivar _protocolFactory:  See L{__init__}
+    @ivar _commandConnected:  See L{__init__}
+    @ivar _protocol: An L{IProtocol} provider created using C{_protocolFactory}
+        which is hooked up to the running command's input and output streams.
+    """
+    name = b'session'
 
     def __init__(self, command, protocolFactory, commandConnected):
+        """
+        @param command: The command to be executed.
+        @type command: L{bytes}
+
+        @param protocolFactory: A client factory to use to build a L{IProtocol}
+            provider to use to associate with the running command.
+
+        @param commandConnected:
+        @type commandConnected: L{Deferred}
+        """
         SSHChannel.__init__(self)
         self._command = command
         self._protocolFactory = protocolFactory
@@ -76,20 +114,41 @@ class _CommandChannel(SSHChannel):
 
 
     def openFailed(self, reason):
+        """
+        When the request to open a new channel to run this command in fails,
+        fire the C{commandConnected} deferred with a failure indicating that.
+        """
         self._commandConnected.errback(reason)
 
 
     def channelOpen(self, ignored):
+        """
+        When the request to open a new channel to run this command in succeeds,
+        issue an C{"exec"} request to run the command.
+        """
         command = self.conn.sendRequest(
             self, 'exec', NS(self._command), wantReply=True)
         command.addCallbacks(self._execSuccess, self._execFailure)
 
 
     def _execFailure(self, reason):
+        """
+        When the request to execute the command in this channel fails, fire the
+        C{commandConnected} deferred with a failure indicating this.
+        """
         self._commandConnected.errback(reason)
 
 
-    def _execSuccess(self, result):
+    def _execSuccess(self, ignored):
+        """
+        When the request to execute the command in this channel succeeds, use
+        C{protocolFactory} to build a protocol to handle the command's input and
+        output and connect the protocol to a transport representing those
+        streams.
+
+        Also fire C{commandConnected} with the created protocol after it is
+        connected to its transport.
+        """
         self._protocol = self._protocolFactory.buildProtocol(
             SSHCommandAddress(
                 self.conn.transport.transport.getPeer(),
@@ -99,11 +158,22 @@ class _CommandChannel(SSHChannel):
         self._commandConnected.callback(self._protocol)
 
 
-    def dataReceived(self, bytes):
-        self._protocol.dataReceived(bytes)
+    def dataReceived(self, data):
+        """
+        When the command's stdout data arrives over the channel, deliver it to
+        the protocol instance.
+
+        @param data: The bytes from the command's stdout.
+        @type data: L{bytes}
+        """
+        self._protocol.dataReceived(data)
 
 
     def closed(self):
+        """
+        When the channel closes, deliver disconnection notification to the
+        protocol.
+        """
         self.conn.transport.loseConnection()
         self._protocol.connectionLost(
             Failure(ConnectionDone("ssh channel closed")))
@@ -249,7 +319,11 @@ class SSHCommandEndpoint(object):
         @param reactor: The reactor to use to establish the connection.
         @type reactor: L{IReactorTCP} provider
 
-        @param command: The command line to execute on the SSH server.
+        @param command: The command line to execute on the SSH server.  This
+            byte string is interpreted by a shell on the SSH server, so it may
+            have a value like C{"ls /"}.  Take care when trying to run a command
+            like C{"/Volumes/My Stuff/a-program"} - spaces (and other special
+            bytes) may require escaping.
         @type command: L{bytes}
 
         @param username: The username with which to authenticate to the SSH
