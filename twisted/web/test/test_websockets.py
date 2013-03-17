@@ -349,9 +349,9 @@ class SavingEcho(WebSocketsProtocol):
 
 
 
-class WebsocketsProtocolTest(TestCase):
+class WebSocketsProtocolTest(TestCase):
     """
-    Tests for C{WebSocketsProtocol}.
+    Tests for L{WebSocketsProtocol}.
     """
 
     def setUp(self):
@@ -370,7 +370,7 @@ class WebsocketsProtocolTest(TestCase):
 
     def test_frameReceived(self):
         """
-        C{WebSocketsProtocol.dataReceived} translates bytes into frames, and
+        L{WebSocketsProtocol.dataReceived} translates bytes into frames, and
         then write it back encoded into frames.
         """
         self.protocol.dataReceived(
@@ -412,7 +412,7 @@ class WebsocketsProtocolTest(TestCase):
 
     def test_invalidFrame(self):
         """
-        If an invalid frame is received, C{WebSocketsProtocol} closes the
+        If an invalid frame is received, L{WebSocketsProtocol} closes the
         connection and logs an error.
         """
         self.protocol.dataReceived("\x72\x05")
@@ -423,7 +423,7 @@ class WebsocketsProtocolTest(TestCase):
 
     def test_loseConnection(self):
         """
-        C{WebSocketsProtocol.loseConnection} sends a close frame and closes the
+        L{WebSocketsProtocol.loseConnection} sends a close frame and closes the
         transport afterwards.
         """
         self.protocol.loseConnection()
@@ -434,7 +434,7 @@ class WebsocketsProtocolTest(TestCase):
 
 
 
-class WebsocketsProtocolWrapperTest(TestCase):
+class WebSocketsProtocolWrapperTest(TestCase):
     """
     Tests for L{WebSocketsProtocolWrapper}.
     """
@@ -459,7 +459,7 @@ class WebsocketsProtocolWrapperTest(TestCase):
 
     def test_write(self):
         """
-        L{WebsocketsProtocolWrapper.write} creates and writes a frame from the
+        L{WebSocketsProtocolWrapper.write} creates and writes a frame from the
         payload passed.
         """
         self.accumulatingProtocol.transport.write("Hello")
@@ -468,7 +468,7 @@ class WebsocketsProtocolWrapperTest(TestCase):
 
     def test_writeSequence(self):
         """
-        L{WebsocketsProtocolWrapper.writeSequence} writes a frame for every
+        L{WebSocketsProtocolWrapper.writeSequence} writes a frame for every
         chunk passed.
         """
         self.accumulatingProtocol.transport.writeSequence(["Hello", "World"])
@@ -477,7 +477,7 @@ class WebsocketsProtocolWrapperTest(TestCase):
 
     def test_getHost(self):
         """
-        L{WebsocketsProtocolWrapper.getHost} returns the transport C{getHost}.
+        L{WebSocketsProtocolWrapper.getHost} returns the transport C{getHost}.
         """
         self.assertEqual(self.transport.getHost(),
                          self.accumulatingProtocol.transport.getHost())
@@ -485,14 +485,23 @@ class WebsocketsProtocolWrapperTest(TestCase):
 
     def test_getPeer(self):
         """
-        L{WebsocketsProtocolWrapper.getPeer} returns the transport C{getPeer}.
+        L{WebSocketsProtocolWrapper.getPeer} returns the transport C{getPeer}.
         """
         self.assertEqual(self.transport.getPeer(),
                          self.accumulatingProtocol.transport.getPeer())
 
 
+    def test_connectionLost(self):
+        """
+        L{WebSocketsProtocolWrapper.connectionLost} forwards the connection
+        lost call to the underlying protocol.
+        """
+        self.transport.loseConnection()
+        self.assertTrue(self.accumulatingProtocol.closed)
 
-class WebsocketsResourceTest(TestCase):
+
+
+class WebSocketsResourceTest(TestCase):
 
     def setUp(self):
 
@@ -801,3 +810,32 @@ class WebsocketsResourceTest(TestCase):
             channel.transport.value())
         self.assertEqual(101, request.code)
         self.assertIdentical(None, request.transport)
+
+
+    def test_renderIProtocol(self):
+        """
+        If the protocol returned by C{lookupProtocol} doesn't implement
+        C{IWebSocketsProtocol}, L{WebSocketsResource} wraps it automatically
+        with L{WebSocketsProtocolWrapper}.
+        """
+
+        def lookupProtocol(names, otherRequest):
+            return AccumulatingProtocol(), None
+
+        self.resource.lookupProtocol = lookupProtocol
+
+        request = DummyRequest("/")
+        request.requestHeaders = Headers()
+        transport = StringTransportWithDisconnection()
+        request.transport = transport
+        request.isSecure = lambda: False
+        request.headers.update({
+            "upgrade": "Websocket",
+            "connection": "Upgrade",
+            "sec-websocket-key": "secure",
+            "sec-websocket-version": "13"})
+        result = self.resource.render(request)
+        self.assertEqual(NOT_DONE_YET, result)
+        self.assertIsInstance(transport.protocol, WebSocketsProtocolWrapper)
+        self.assertIsInstance(transport.protocol.wrappedProtocol,
+                              AccumulatingProtocol)
