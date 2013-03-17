@@ -563,13 +563,23 @@ class Request:
 
     @ivar persistent: Set to C{True} when you use HTTP persistent connection.
     @type persistent: C{bool}
+
+    @ivar parsedURI: Parsed I{URI} for the request, or C{None}.
+    @type parsedURI: L{_URI}
     """
-    def __init__(self, method, uri, headers, bodyProducer, persistent=False):
+    def __init__(self, method, uri, headers, bodyProducer, persistent=False,
+                 parsedURI=None):
         self.method = method
         self.uri = uri
         self.headers = headers
         self.bodyProducer = bodyProducer
         self.persistent = persistent
+        self.parsedURI = parsedURI
+
+
+    def absoluteURI(self):
+        return self.parsedURI.uri
+    absoluteURI = property(absoluteURI)
 
 
     def _writeHeaders(self, transport, TEorCL):

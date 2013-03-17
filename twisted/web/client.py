@@ -538,23 +538,6 @@ class HTTPDownloader(HTTPClientFactory):
 
 
 
-class _URL(tuple):
-    """
-    A parsed URL.
-
-    At some point this should be replaced with a better URL implementation.
-    """
-    def __new__(self, scheme, host, port, path):
-        return tuple.__new__(_URL, (scheme, host, port, path))
-
-
-    def __init__(self, scheme, host, port, path):
-        self.scheme = scheme
-        self.host = host
-        self.port = port
-        self.path = path
-
-
 def _parse(url, defaultPort=None):
     """
     Split the given URL into the scheme, host, port, and path.
@@ -569,29 +552,109 @@ def _parse(url, defaultPort=None):
     @return: A four-tuple of the scheme, host, port, and path of the URL.  All
     of these are C{bytes} instances except for port, which is an C{int}.
     """
-    url = url.strip()
-    parsed = http.urlparse(url)
-    scheme = parsed[0]
-    path = urlunparse((b'', b'') + parsed[2:])
+    uri = _URI.parse(url, defaultPort=defaultPort)
+    return uri.scheme, uri.host, uri.port, uri.originForm
 
-    if defaultPort is None:
-        if scheme == b'https':
-            defaultPort = 443
-        else:
-            defaultPort = 80
 
-    host, port = parsed[1], defaultPort
-    if b':' in host:
-        host, port = host.split(b':')
-        try:
-            port = int(port)
-        except ValueError:
-            port = defaultPort
 
-    if path == b'':
-        path = b'/'
+class _URI(object):
+    """
+    A parsed URI object.
 
-    return _URL(scheme, host, port, path)
+    @type scheme: L{bytes}
+    @ivar scheme: URI scheme specifier.
+
+    @type netloc: L{bytes}
+    @ivar netloc: Network location component.
+
+    @type host: L{bytes}
+    @ivar host: Host name.
+
+    @type port: L{int}
+    @ivar port: Port number.
+
+    @type path: L{bytes}
+    @ivar path: Hierarchical path.
+
+    @type params: L{bytes}
+    @ivar params: Parameters for last path segment.
+
+    @type query: L{bytes}
+    @ivar query: Query string.
+
+    @type fragment: L{bytes}
+    @ivar fragment: Fragment identifier.
+    """
+    def __init__(self, scheme, netloc, host, port, path, params, query,
+                 fragment):
+        self.scheme = scheme
+        self.netloc = netloc
+        self.host = host
+        self.port = port
+        self.path = path
+        self.params = params
+        self.query = query
+        self.fragment = fragment
+
+
+    def parse(cls, uri, defaultPort=None):
+        """
+        Parse the given URI into a L{_URI}.
+
+        @type uri: C{bytes}
+        @param uri: URI to parse.
+
+        @type defaultPort: C{int} or C{None}
+        @param defaultPort: An alternate value to use as the port if the URI
+            does not include one.
+
+        @rtype: L{_URI}
+        @return: Parsed URI instance.
+        """
+        uri = uri.strip()
+        scheme, netloc, path, params, query, fragment = http.urlparse(uri)
+
+        if defaultPort is None:
+            if scheme == b'https':
+                defaultPort = 443
+            else:
+                defaultPort = 80
+
+        host, port = netloc, defaultPort
+        if b':' in host:
+            host, port = host.split(b':')
+            try:
+                port = int(port)
+            except ValueError:
+                port = defaultPort
+
+        return cls(scheme, netloc, host, port, path, params, query, fragment)
+    parse = classmethod(parse)
+
+
+    def uri(self):
+        """
+        Fully formed I{URI}.
+        """
+        return urlunparse(
+            (self.scheme, self.netloc, self.path, self.params, self.query,
+             self.fragment))
+    uri = property(uri)
+
+
+    def originForm(self):
+        """
+        The absolute I{URI} path including I{URI} parameters, query string and
+        fragment identifier.
+        """
+        # The HTTP RFC says the origin form should not include the fragment.
+        path = urlunparse(
+            (b'', b'', self.path, self.params, self.query, b''))
+        if path == b'':
+            path = b'/'
+        return path
+    originForm = property(originForm)
+
 
 
 def _makeGetterFactory(url, factoryFactory, contextFactory=None,
@@ -1102,7 +1165,8 @@ class _AgentBase(object):
         def cbConnected(proto):
             return proto.request(
                 Request(method, requestPath, headers, bodyProducer,
-                        persistent=self._pool.persistent))
+                        persistent=self._pool.persistent,
+                        parsedURI=parsedURI))
         d.addCallback(cbConnected)
         return d
 
@@ -1211,7 +1275,7 @@ class Agent(_AgentBase):
             given URI is not supported.
         @rtype: L{Deferred}
         """
-        parsedURI = _parse(uri)
+        parsedURI = _URI.parse(uri)
         try:
             endpoint = self._getEndpoint(parsedURI.scheme, parsedURI.host,
                                          parsedURI.port)
@@ -1219,7 +1283,8 @@ class Agent(_AgentBase):
             return defer.fail(Failure())
         key = (parsedURI.scheme, parsedURI.host, parsedURI.port)
         return self._requestWithEndpoint(key, endpoint, method, parsedURI,
-                                         headers, bodyProducer, parsedURI.path)
+                                         headers, bodyProducer,
+                                         parsedURI.originForm)
 
 
 
@@ -1251,8 +1316,8 @@ class ProxyAgent(_AgentBase):
         # ("http-proxy-CONNECT", scheme, host, port), and an endpoint that
         # wraps _proxyEndpoint with an additional callback to do the CONNECT.
         return self._requestWithEndpoint(key, self._proxyEndpoint, method,
-                                         _parse(uri), headers, bodyProducer,
-                                         uri)
+                                         _URI.parse(uri), headers,
+                                         bodyProducer, uri)
 
 
 

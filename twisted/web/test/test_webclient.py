@@ -1068,3 +1068,187 @@ if ssl is None or not hasattr(ssl, 'DefaultOpenSSLContextFactory'):
 if not interfaces.IReactorSSL(reactor, None):
     for case in [WebClientSSLTestCase, WebClientRedirectBetweenSSLandPlainText]:
         case.skip = "Reactor doesn't support SSL"
+
+
+
+class URITests(unittest.TestCase):
+    """
+    Tests for L{twisted.web.client._URI}.
+    """
+    def assertURIEquals(self, uri, scheme, netloc, host, port, path,
+                        params=b'', query=b'', fragment=b''):
+        """
+        Assert that all of a L{client._URI}'s components match the expected
+        values.
+        """
+        self.assertEquals(scheme, uri.scheme)
+        self.assertEquals(netloc, uri.netloc)
+        self.assertEquals(host, uri.host)
+        self.assertEquals(port, uri.port)
+        self.assertEquals(path, uri.path)
+        self.assertEquals(params, uri.params)
+        self.assertEquals(query, uri.query)
+        self.assertEquals(fragment, uri.fragment)
+
+
+    def test_parseDefaultPort(self):
+        """
+        L{client._URI.parse} by default assumes port 80 for the I{http} scheme
+        and 443 for the I{https} scheme.
+        """
+        uri = client._URI.parse(b'http://example.com')
+        self.assertEquals(80, uri.port)
+        # Weird (but commonly accepted) structure uses default port.
+        uri = client._URI.parse(b'http://example.com:')
+        self.assertEquals(80, uri.port)
+        uri = client._URI.parse(b'https://example.com')
+        self.assertEquals(443, uri.port)
+
+
+    def test_parseCustomDefaultPort(self):
+        """
+        L{client._URI.parse} accepts a C{defaultPort} parameter that overrides
+        the normal default port logic.
+        """
+        uri = client._URI.parse(b'http://example.com', defaultPort=5144)
+        self.assertEquals(5144, uri.port)
+        uri = client._URI.parse(b'https://example.com', defaultPort=5144)
+        self.assertEquals(5144, uri.port)
+
+
+    def test_netlocHostPort(self):
+        """
+        Parsing a I{URI} splits the network location component into I{host} and
+        I{port}.
+        """
+        uri = client._URI.parse(b'http://example.com:5144')
+        self.assertEquals(5144, uri.port)
+        self.assertEquals(b'example.com', uri.host)
+        self.assertEquals(b'example.com:5144', uri.netloc)
+
+        # Spaces in the hostname are trimmed, the default path is /.
+        uri = client._URI.parse(b'http://example.com ')
+        self.assertEquals(b'example.com', uri.netloc)
+
+
+    def test_path(self):
+        """
+        Parse the path from a I{URI}.
+        """
+        uri = b'http://example.com'
+        self.assertURIEquals(
+            client._URI.parse(uri),
+            scheme=b'http',
+            netloc=b'example.com',
+            host=b'example.com',
+            port=80,
+            path=b'')
+        self.assertEquals(uri, client._URI.parse(uri).uri)
+
+        uri = b'http://example.com/'
+        self.assertURIEquals(
+            client._URI.parse(uri),
+            scheme=b'http',
+            netloc=b'example.com',
+            host=b'example.com',
+            port=80,
+            path=b'/')
+
+        uri = b'http://example.com/foo/bar'
+        self.assertURIEquals(
+            client._URI.parse(uri),
+            scheme=b'http',
+            netloc=b'example.com',
+            host=b'example.com',
+            port=80,
+            path=b'/foo/bar')
+        self.assertEquals(uri, client._URI.parse(uri).uri)
+
+
+    def test_param(self):
+        """
+        Parse I{URI} parameters from a I{URI}.
+        """
+        uri = b'http://example.com/foo/bar;param'
+        self.assertURIEquals(
+            client._URI.parse(uri),
+            scheme=b'http',
+            netloc=b'example.com',
+            host=b'example.com',
+            port=80,
+            path=b'/foo/bar',
+            params=b'param')
+        self.assertEquals(uri, client._URI.parse(uri).uri)
+
+
+    def test_query(self):
+        """
+        Parse the query string from a I{URI}.
+        """
+        uri = b'http://example.com/foo/bar;param?a=1&b=2'
+        self.assertURIEquals(
+            client._URI.parse(uri),
+            scheme=b'http',
+            netloc=b'example.com',
+            host=b'example.com',
+            port=80,
+            path=b'/foo/bar',
+            params=b'param',
+            query=b'a=1&b=2')
+        self.assertEquals(uri, client._URI.parse(uri).uri)
+
+
+    def test_fragment(self):
+        """
+        Parse the fragment identifier from a I{URI}.
+        """
+        uri = b'http://example.com/foo/bar;param?a=1&b=2#frag'
+        self.assertURIEquals(
+            client._URI.parse(uri),
+            scheme=b'http',
+            netloc=b'example.com',
+            host=b'example.com',
+            port=80,
+            path=b'/foo/bar',
+            params=b'param',
+            query=b'a=1&b=2',
+            fragment='frag')
+        self.assertEquals(uri, client._URI.parse(uri).uri)
+
+
+    def test_originForm(self):
+        """
+        L{client._URI.originForm} produces an absolute I{URI} path including
+        the I{URI} path, parameters, query string but excludes the fragment
+        identifier.
+        """
+        uri = client._URI.parse(b'http://example.com')
+        self.assertEquals(b'/', uri.originForm)
+
+        uri = client._URI.parse(b'http://example.com/')
+        self.assertEquals(b'/', uri.originForm)
+
+        uri = client._URI.parse(b'http://example.com/foo')
+        self.assertEquals(b'/foo', uri.originForm)
+
+        uri = client._URI.parse(b'http://example.com/foo;param?a=1#frag')
+        self.assertEquals(b'/foo;param?a=1', uri.originForm)
+
+
+    def test_externalUnicodeInterference(self):
+        """
+        L{client._URI} should parse into C{bytes} for the scheme, host, path,
+        parameters, query string and fragment attributes, even when passed a
+        URI which has previously been passed to L{urlparse} as a C{unicode}
+        string.
+        """
+        badInput = u'http://example.com/path'
+        goodInput = badInput.encode('ascii')
+        urlparse(badInput)
+        uri = client._URI.parse(goodInput)
+        self.assertIsInstance(uri.scheme, bytes)
+        self.assertIsInstance(uri.host, bytes)
+        self.assertIsInstance(uri.path, bytes)
+        self.assertIsInstance(uri.params, bytes)
+        self.assertIsInstance(uri.query, bytes)
+        self.assertIsInstance(uri.fragment, bytes)
