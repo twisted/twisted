@@ -364,14 +364,12 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
         fileno = server.fileno()
 
         victim = Descriptor(fileno)
-        print victim.fileno()
         reactor.addWriter(victim)
         server.close()
 
         newC, newS = self._connectedPair()
         os.dup2(newS.fileno(), fileno)
         unrelated = Descriptor(fileno)
-        print unrelated.fileno()
         reactor.addReader(unrelated)
         self.assertIn(unrelated, reactor.getReaders())
         self.assertNotIn(unrelated, reactor.getWriters())
