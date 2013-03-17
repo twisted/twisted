@@ -235,6 +235,9 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
                         # We appear to have some bad reactor state (see
                         # e.g. #6346) where we thought fd was in other state,
                         # but epoll disagrees. So clear it out and try again.
+                        if fd in selectables:
+                            log.msg("%r still registered, but no longer in epoll()."
+                                    % (selectables[fd],))
                         del other[fd]
                         return self._add(xer, primary, other, selectables,
                                          event, antievent)
