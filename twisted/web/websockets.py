@@ -69,12 +69,6 @@ def _makeAccept(key):
 
 
 
-# Frame helpers.
-# Separated out to make unit testing a lot easier.
-# Frames are bonghits in newer WS versions, so helpers are appreciated.
-
-
-
 def _mask(buf, key):
     """
     Mask or unmask a buffer of bytes with a masking key.
@@ -88,8 +82,6 @@ def _mask(buf, key):
     @rtype: C{str}
     @return: A masked buffer of bytes.
     """
-
-    # This is super-secure, I promise~
     key = [ord(i) for i in key]
     buf = list(buf)
     for i, char in enumerate(buf):
@@ -158,8 +150,7 @@ def _parseFrames(frameBuffer, needMask=True):
         if len(payload) - start < 2:
             break
 
-        # Grab the header. This single byte holds some flags nobody cares
-        # about, and an opcode which nobody cares about.
+        # Grab the header. This single byte holds some flags and an opcode
         header = ord(payload[start])
         if header & 0x70:
             # At least one of the reserved flags is set. Pork chop sandwiches!
@@ -204,10 +195,7 @@ def _parseFrames(frameBuffer, needMask=True):
                 break
 
             # Protocol bug: The top bit of this long long *must* be cleared;
-            # that is, it is expected to be interpreted as signed. That's
-            # fucking stupid, if you don't mind me saying so, and so we're
-            # interpreting it as unsigned anyway. If you wanna send exabytes
-            # of data down the wire, then go ahead!
+            # that is, it is expected to be interpreted as signed.
             length = payload[start + 2:start + 10]
             length = unpack(">Q", length)[0]
             offset += 8
@@ -250,6 +238,8 @@ def _parseFrames(frameBuffer, needMask=True):
 
 class IWebSocketsProtocol(IProtocol):
     """
+    A protocol which understands the WebSockets interface.
+
     @since: 13.1
     """
 
@@ -300,7 +290,7 @@ class WebSocketsProtocol(Protocol):
                 # Pass the frame to the underlying protocol.
                 self.frameReceived(opcode, data, fin)
             elif opcode == CONTROLS.CLOSE:
-                # The other side wants us to close. I wonder why?
+                # The other side wants us to close.
                 reason, text = data
                 log.msg("Closing connection: %r (%d)" % (text, reason))
 
@@ -365,6 +355,9 @@ class WebSocketsProtocol(Protocol):
 
 class WebSocketsProtocolWrapper(WebSocketsProtocol):
     """
+    A protocol wrapper which provides L{IWebSocketsProtocol} by making messages
+    as data frames.
+
     @since: 13.1
     """
 
@@ -375,6 +368,8 @@ class WebSocketsProtocolWrapper(WebSocketsProtocol):
 
     def makeConnection(self, transport):
         """
+        Upon connection, provides the transport interface, and forwards ourself
+        as the transport to C{self.wrappedProtocol}.
         """
         directlyProvides(self, providedBy(transport))
         WebSocketsProtocol.makeConnection(self, transport)
@@ -383,6 +378,7 @@ class WebSocketsProtocolWrapper(WebSocketsProtocol):
 
     def connectionMade(self):
         """
+        Initialize the list of messages.
         """
         WebSocketsProtocol.connectionMade(self)
         self._messages = []
@@ -390,12 +386,14 @@ class WebSocketsProtocolWrapper(WebSocketsProtocol):
 
     def write(self, data):
         """
+        Write to the websocket protocol, transforming C{data} in a frame.
         """
         self.sendFrame(self.defaultOpcode, data, True)
 
 
     def writeSequence(self, data):
         """
+        Send all chunks from C{data} using C{write}.
         """
         for chunk in data:
             self.write(chunk)
@@ -403,12 +401,15 @@ class WebSocketsProtocolWrapper(WebSocketsProtocol):
 
     def __getattr__(self, name):
         """
+        Forward all non-local attributes and methods to C{self.transport}.
         """
         return getattr(self.transport, name)
 
 
     def frameReceived(self, opcode, data, fin):
         """
+        FOr each frame received, accumulate the data (ignoring the opcode), and
+        forwarding the messages if C{fin} is set.
         """
         self._messages.append(data)
         if fin:
@@ -419,6 +420,7 @@ class WebSocketsProtocolWrapper(WebSocketsProtocol):
 
     def connectionLost(self, reason):
         """
+        Forward C{connectionLost} to C{self.wrappedProtocol}.
         """
         self.wrappedProtocol.connectionLost(reason)
 
@@ -519,7 +521,6 @@ class WebSocketsResource(object):
         """
         request.defaultContentType = None
         # If we fail at all, we're gonna fail with 400 and no response.
-        # You might want to pop open the RFC and read along.
         failed = False
 
         if request.method != "GET":
