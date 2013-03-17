@@ -220,27 +220,12 @@ class _CommandTransport(SSHClientTransport):
 class SSHCommandEndpoint(object):
     """
     """
-    _KNOWN_HOSTS = "~/.ssh/known_hosts"
 
     @classmethod
-    def _knownHosts(cls):
-        """
-        Create and return a L{KnownHostsFile} instance pointed at the user's
-        personal I{known hosts} file.
-        """
-        return KnownHostsFile.fromPath(FilePath(expanduser(cls._KNOWN_HOSTS)))
-
-
-    def __init__(self, reactor, hostname, port, command, username, keys=None, password=None, agentEndpoint=None, knownHosts=None, ui=None):
+    def newConnection(cls, reactor, command, username, hostname, port=None, keys=None, password=None, agentEndpoint=None, knownHosts=None, ui=None):
         """
         @param reactor: The reactor to use to establish the connection.
         @type reactor: L{IReactorTCP} provider
-
-        @param hostname: The hostname of the SSH server.
-        @type hostname: L{bytes}
-
-        @param port: The port number of the SSH server.
-        @type port: L{int}
 
         @param command: The command line to execute on the SSH server.
         @type command: L{bytes}
@@ -248,6 +233,13 @@ class SSHCommandEndpoint(object):
         @param username: The username with which to authenticate to the SSH
             server.
         @type username: L{bytes}
+
+        @param hostname: The hostname of the SSH server.
+        @type hostname: L{bytes}
+
+        @param port: The port number of the SSH server.  By default, the
+            standard SSH port number is used.
+        @type port: L{int}
 
         @param keys: Private keys with which to authenticate to the SSH server,
             if key authentication is to be attempted (otherwise C{None}).
@@ -271,6 +263,7 @@ class SSHCommandEndpoint(object):
             whether to accept the server host keys.
         @type ui: L{ConsoleUI}
         """
+        self = _NewConnectionHelper()
         self.reactor = reactor
         self.hostname = hostname
         self.port = port
@@ -283,6 +276,18 @@ class SSHCommandEndpoint(object):
             knownHosts = self._knownHosts()
         self.knownHosts = knownHosts
         self.ui = ui
+
+        endpoint = cls.__new__(cls)
+        endpoint.params = self
+        return endpoint
+
+
+    @classmethod
+    def existingConnection(cls, connection, command):
+        endpoint = cls.__new__(cls)
+        endpoint.params = _ExistingConnectionHelper(connection)
+        endpoint.params.command = command
+        return endpoint
 
 
     def connect(self, protocolFactory):
@@ -300,12 +305,38 @@ class SSHCommandEndpoint(object):
             created by C{protocolFactory} once it has been connected to the
             command.
         """
-        d = self._secureConnection()
+        d = self.params.secureConnection()
         d.addCallback(self._executeCommand, protocolFactory)
         return d
 
 
-    def _secureConnection(self):
+    def _executeCommand(self, connection, protocolFactory):
+        commandConnected = Deferred()
+        def disconnectOnFailure(passthrough):
+            connection.transport.loseConnection()
+            return passthrough
+        commandConnected.addErrback(disconnectOnFailure)
+
+        channel = _CommandChannel(
+            self.params.command, protocolFactory, commandConnected)
+        connection.openChannel(channel)
+        return commandConnected
+
+
+
+class _NewConnectionHelper(object):
+    _KNOWN_HOSTS = "~/.ssh/known_hosts"
+
+    @classmethod
+    def _knownHosts(cls):
+        """
+        Create and return a L{KnownHostsFile} instance pointed at the user's
+        personal I{known hosts} file.
+        """
+        return KnownHostsFile.fromPath(FilePath(expanduser(cls._KNOWN_HOSTS)))
+
+
+    def secureConnection(self):
         factory = Factory()
         factory.protocol = _CommandTransport
         factory.hostname = self.hostname
@@ -326,15 +357,11 @@ class SSHCommandEndpoint(object):
         return d
 
 
-    def _executeCommand(self, connection, protocolFactory):
-        commandConnected = Deferred()
-        def disconnectOnFailure(passthrough):
-            connection.transport.loseConnection()
-            return passthrough
-        commandConnected.addErrback(disconnectOnFailure)
 
-        channel = _CommandChannel(
-            self.command, protocolFactory, commandConnected)
-        connection.openChannel(channel)
-        return commandConnected
+class _ExistingConnectionHelper(object):
+    def __init__(self, connection):
+        self.connection = connection
 
+
+    def secureConnection(self):
+        return succeed(self.connection)

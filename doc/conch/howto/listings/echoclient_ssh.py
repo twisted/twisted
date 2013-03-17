@@ -111,14 +111,10 @@ class ConnectionParameters(object):
 
 
     def endpointForCommand(self, command):
-        return SSHCommandEndpoint(
-            self.reactor,
-            self.host, self.port,
-            command, username=self.username,
-            keys=self.keys, password=self.password,
-            agentEndpoint=self.agent,
-            knownHosts=self.knownHosts,
-            ui=self.ui)
+        return SSHCommandEndpoint.newConnection(
+            self.reactor, command, self.username, self.host,
+            port=self.port, keys=self.keys, password=self.password,
+            agentEndpoint=self.agent, knownHosts=self.knownHosts, ui=self.ui)
 
 
 

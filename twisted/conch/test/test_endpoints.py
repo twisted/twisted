@@ -41,7 +41,9 @@ from twisted.conch.test.keydata import (
     publicRSA_openssh, privateRSA_openssh, privateDSA_openssh)
 from twisted.conch.avatar import ConchUser
 
-from twisted.conch.endpoints import AuthenticationFailed, SSHCommandAddress, SSHCommandEndpoint
+from twisted.conch.endpoints import (
+    AuthenticationFailed, SSHCommandAddress, SSHCommandEndpoint,
+    _NewConnectionHelper)
 
 
 class BrokenExecSession(SSHChannel):
@@ -143,6 +145,7 @@ class CommandFactory(SSHFactory):
 @implementer(IAddress)
 class MemoryAddress(object):
     pass
+
 
 
 @implementer(IStreamClientEndpoint)
@@ -287,9 +290,9 @@ class SSHCommandEndpointTests(TestCase):
         """
         L{SSHCommandEndpoint} instances provide L{IStreamClientEndpoint}.
         """
-        endpoint = SSHCommandEndpoint(
-            self.reactor, self.hostname, self.port,
-            b"dummy command", b"dummy user")
+        endpoint = SSHCommandEndpoint.newConnection(
+            self.reactor, b"dummy command", b"dummy user",
+            self.hostname, self.port)
         self.assertTrue(verifyObject(IStreamClientEndpoint, endpoint))
 
 
@@ -298,9 +301,9 @@ class SSHCommandEndpointTests(TestCase):
         L{SSHCommandEndpoint} uses the L{IReactorTCP} passed to it to attempt a
         connection to the host/port address also passed to it.
         """
-        endpoint = SSHCommandEndpoint(
-            self.reactor, self.hostname, self.port, b"/bin/ls -l",
-            b"dummy user", knownHosts=self.knownHosts,
+        endpoint = SSHCommandEndpoint.newConnection(
+            self.reactor, b"/bin/ls -l", b"dummy user",
+            self.hostname, self.port, knownHosts=self.knownHosts,
             ui=FixedResponseUI(False))
         factory = Factory()
         factory.protocol = Protocol
@@ -318,9 +321,9 @@ class SSHCommandEndpointTests(TestCase):
         L{SSHCommandEndpoint.connect} fires with a L{Failure} the reason for
         the connection setup failure.
         """
-        endpoint = SSHCommandEndpoint(
-            self.reactor, self.hostname, self.port, b"/bin/ls -l",
-            b"dummy user", knownHosts=self.knownHosts,
+        endpoint = SSHCommandEndpoint.newConnection(
+            self.reactor, b"/bin/ls -l", b"dummy user",
+            self.hostname, self.port, knownHosts=self.knownHosts,
             ui=FixedResponseUI(False))
         factory = Factory()
         factory.protocol = Protocol
@@ -339,9 +342,9 @@ class SSHCommandEndpointTests(TestCase):
         server, the L{Deferred} returned by L{SSHCommandEndpoint.connect} fires
         with a L{Failure} wrapping L{UserRejectedKey}.
         """
-        endpoint = SSHCommandEndpoint(
-            self.reactor, self.hostname, self.port, b"/bin/ls -l",
-            b"dummy user", knownHosts=KnownHostsFile(self.mktemp()),
+        endpoint = SSHCommandEndpoint.newConnection(
+            self.reactor, b"/bin/ls -l", b"dummy user",
+            self.hostname, self.port, knownHosts=KnownHostsFile(self.mktemp()),
             ui=FixedResponseUI(False))
 
         factory = Factory()
@@ -373,10 +376,10 @@ class SSHCommandEndpointTests(TestCase):
         # allowed to complete a connection.
         ui = FixedResponseUI(True)
 
-        endpoint = SSHCommandEndpoint(
-            self.reactor, self.hostname, self.port, b"/bin/ls -l",
-            b"dummy user", password=b"dummy password", knownHosts=knownHosts,
-            ui=ui)
+        endpoint = SSHCommandEndpoint.newConnection(
+            self.reactor, b"/bin/ls -l", b"dummy user",
+            self.hostname, self.port, password=b"dummy password",
+            knownHosts=knownHosts, ui=ui)
 
         factory = Factory()
         factory.protocol = Protocol
@@ -389,18 +392,6 @@ class SSHCommandEndpointTests(TestCase):
         f.trap(HostKeyChanged)
 
 
-    def test_defaultKnownHosts(self):
-        """
-        L{SSHCommandEndpoint._knownHosts} is used to create a L{KnownHostsFile}
-        if one is not passed to the initializer.
-        """
-        result = object()
-        self.patch(SSHCommandEndpoint, "_knownHosts", lambda cls: result)
-        endpoint = SSHCommandEndpoint(
-            self.reactor, self.hostname, self.port, b"/bin/ls -l", self.user)
-        self.assertIdentical(result, endpoint.knownHosts)
-
-
     def test_connectionClosedBeforeSecure(self):
         """
         If the connection closes at any point before the SSH transport layer
@@ -409,9 +400,9 @@ class SSHCommandEndpointTests(TestCase):
         L{SSHCommandEndpoint.connect} fires with a L{Failure} wrapping the
         reason for the lost connection.
         """
-        endpoint = SSHCommandEndpoint(
-            self.reactor, self.hostname, self.port, b"/bin/ls -l",
-            b"dummy user", knownHosts=self.knownHosts,
+        endpoint = SSHCommandEndpoint.newConnection(
+            self.reactor, b"/bin/ls -l", b"dummy user",
+            self.hostname, self.port, knownHosts=self.knownHosts,
             ui=FixedResponseUI(False))
 
         factory = Factory()
@@ -433,9 +424,9 @@ class SSHCommandEndpointTests(TestCase):
         the L{Deferred} returned by L{SSHCommandEndpoint.connect} fires with a
         L{Failure} wrapping L{AuthenticationFailed}.
         """
-        endpoint = SSHCommandEndpoint(
-            self.reactor, self.hostname, self.port, b"/bin/ls -l",
-            b"dummy user",  password=b"dummy password",
+        endpoint = SSHCommandEndpoint.newConnection(
+            self.reactor, b"/bin/ls -l", b"dummy user",
+            self.hostname, self.port,  password=b"dummy password",
             knownHosts=self.knownHosts, ui=FixedResponseUI(False))
 
         factory = Factory()
@@ -495,10 +486,10 @@ class SSHCommandEndpointTests(TestCase):
         badKey = Key.fromString(privateRSA_openssh)
         self.setupKeyChecker(self.portal, {self.user: privateDSA_openssh})
 
-        endpoint = SSHCommandEndpoint(
-            self.reactor, self.hostname, self.port, b"/bin/ls -l",
-            self.user, keys=[badKey], knownHosts=self.knownHosts,
-            ui=FixedResponseUI(False))
+        endpoint = SSHCommandEndpoint.newConnection(
+            self.reactor, b"/bin/ls -l", self.user,
+            self.hostname, self.port, keys=[badKey],
+            knownHosts=self.knownHosts, ui=FixedResponseUI(False))
 
         factory = Factory()
         factory.protocol = Protocol
@@ -525,8 +516,8 @@ class SSHCommandEndpointTests(TestCase):
         badKey = Key.fromString(privateRSA_openssh)
         self.setupKeyChecker(self.portal, {self.user: privateDSA_openssh})
 
-        endpoint = SSHCommandEndpoint(
-            self.reactor, self.hostname, self.port, b"/bin/ls -l", self.user,
+        endpoint = SSHCommandEndpoint.newConnection(
+            self.reactor, b"/bin/ls -l", self.user, self.hostname, self.port,
             keys=[badKey], password=self.password, knownHosts=self.knownHosts,
             ui=FixedResponseUI(False))
 
@@ -565,8 +556,8 @@ class SSHCommandEndpointTests(TestCase):
         L{Deferred} returned by L{SSHCommandEndpoint.connect} fires with a
         L{Failure} wrapping the reason given by the server.
         """
-        endpoint = SSHCommandEndpoint(
-            self.reactor, self.hostname, self.port, b"/bin/ls -l", self.user,
+        endpoint = SSHCommandEndpoint.newConnection(
+            self.reactor, b"/bin/ls -l", self.user, self.hostname, self.port,
             password=self.password, knownHosts=self.knownHosts,
             ui=FixedResponseUI(False))
 
@@ -600,8 +591,8 @@ class SSHCommandEndpointTests(TestCase):
         reason given by the server.
         """
         self.realm.channelLookup[b'session'] = BrokenExecSession
-        endpoint = SSHCommandEndpoint(
-            self.reactor, self.hostname, self.port, b"/bin/ls -l", self.user,
+        endpoint = SSHCommandEndpoint.newConnection(
+            self.reactor, b"/bin/ls -l", self.user, self.hostname, self.port,
             password=self.password, knownHosts=self.knownHosts,
             ui=FixedResponseUI(False))
 
@@ -630,8 +621,8 @@ class SSHCommandEndpointTests(TestCase):
         executed.
         """
         self.realm.channelLookup[b'session'] = WorkingExecSession
-        endpoint = SSHCommandEndpoint(
-            self.reactor, self.hostname, self.port, b"/bin/ls -l", self.user,
+        endpoint = SSHCommandEndpoint.newConnection(
+            self.reactor, b"/bin/ls -l", self.user, self.hostname, self.port,
             password=self.password, knownHosts=self.knownHosts,
             ui=FixedResponseUI(False))
 
@@ -656,8 +647,8 @@ class SSHCommandEndpointTests(TestCase):
         command's stdin and stdout.
         """
         self.realm.channelLookup[b'session'] = WorkingExecSession
-        endpoint = SSHCommandEndpoint(
-            self.reactor, self.hostname, self.port, b"/bin/ls -l", self.user,
+        endpoint = SSHCommandEndpoint.newConnection(
+            self.reactor, b"/bin/ls -l", self.user, self.hostname, self.port,
             password=self.password, knownHosts=self.knownHosts,
             ui=FixedResponseUI(False))
 
@@ -679,8 +670,8 @@ class SSHCommandEndpointTests(TestCase):
         method.
         """
         self.realm.channelLookup[b'session'] = WorkingExecSession
-        endpoint = SSHCommandEndpoint(
-            self.reactor, self.hostname, self.port, b"/bin/ls -l", self.user,
+        endpoint = SSHCommandEndpoint.newConnection(
+            self.reactor, b"/bin/ls -l", self.user, self.hostname, self.port,
             password=self.password, knownHosts=self.knownHosts,
             ui=FixedResponseUI(False))
 
@@ -706,8 +697,8 @@ class SSHCommandEndpointTests(TestCase):
         method is called.
         """
         self.realm.channelLookup[b'session'] = WorkingExecSession
-        endpoint = SSHCommandEndpoint(
-            self.reactor, self.hostname, self.port, b"/bin/ls -l", self.user,
+        endpoint = SSHCommandEndpoint.newConnection(
+            self.reactor, b"/bin/ls -l", self.user, self.hostname, self.port,
             password=self.password, knownHosts=self.knownHosts,
             ui=FixedResponseUI(False))
 
@@ -737,8 +728,8 @@ class SSHCommandEndpointTests(TestCase):
         sends bytes to the input of the command executing on the SSH server.
         """
         self.realm.channelLookup[b'session'] = WorkingExecSession
-        endpoint = SSHCommandEndpoint(
-            self.reactor, self.hostname, self.port, b"/bin/ls -l", self.user,
+        endpoint = SSHCommandEndpoint.newConnection(
+            self.reactor, b"/bin/ls -l", self.user, self.hostname, self.port,
             password=self.password, knownHosts=self.knownHosts,
             ui=FixedResponseUI(False))
 
@@ -764,8 +755,8 @@ class SSHCommandEndpointTests(TestCase):
         sends bytes to the input of the command executing on the SSH server.
         """
         self.realm.channelLookup[b'session'] = WorkingExecSession
-        endpoint = SSHCommandEndpoint(
-            self.reactor, self.hostname, self.port, b"/bin/ls -l", self.user,
+        endpoint = SSHCommandEndpoint.newConnection(
+            self.reactor, b"/bin/ls -l", self.user, self.hostname, self.port,
             password=self.password, knownHosts=self.knownHosts,
             ui=FixedResponseUI(False))
 
@@ -792,8 +783,8 @@ class SSHCommandEndpointTests(TestCase):
         the overall connection to be closed.
         """
         self.realm.channelLookup[b'session'] = WorkingExecSession
-        endpoint = SSHCommandEndpoint(
-            self.reactor, self.hostname, self.port, b"/bin/ls -l", self.user,
+        endpoint = SSHCommandEndpoint.newConnection(
+            self.reactor, b"/bin/ls -l", self.user, self.hostname, self.port,
             password=self.password, knownHosts=self.knownHosts,
             ui=FixedResponseUI(False))
 
@@ -830,8 +821,8 @@ class SSHCommandEndpointTests(TestCase):
         self.setupKeyChecker(self.portal, {self.user: privateDSA_openssh})
 
         self.realm.channelLookup[b'session'] = WorkingExecSession
-        endpoint = SSHCommandEndpoint(
-            self.reactor, self.hostname, self.port, b"/bin/ls -l", self.user,
+        endpoint = SSHCommandEndpoint.newConnection(
+            self.reactor, b"/bin/ls -l", self.user, self.hostname, self.port,
             keys=[key], knownHosts=self.knownHosts, ui=FixedResponseUI(False))
 
         factory = Factory()
@@ -858,8 +849,8 @@ class SSHCommandEndpointTests(TestCase):
         self.setupKeyChecker(self.portal, {self.user: privateRSA_openssh})
 
         agentEndpoint = SingleUseMemoryEndpoint(agentServer)
-        endpoint = SSHCommandEndpoint(
-            self.reactor, self.hostname, self.port, b"/bin/ls -l", self.user,
+        endpoint = SSHCommandEndpoint.newConnection(
+            self.reactor, b"/bin/ls -l", self.user, self.hostname, self.port,
             knownHosts=self.knownHosts, ui=FixedResponseUI(False),
             agentEndpoint=agentEndpoint)
 
@@ -882,22 +873,34 @@ class SSHCommandEndpointTests(TestCase):
 
 
 
-class KnownHostsTests(TestCase):
+class NewConnectionHelperTests(TestCase):
     """
-    Tests for L{SSHCommandEndpoint} behaviors related to I{known_hosts} file
+    Tests for L{_NewConnectionHelper} behaviors related to I{known_hosts} file
     handling.
     """
     def test_defaultPath(self):
         """
         The default I{known_hosts} path is I{~/.ssh/known_hosts}.
         """
-        self.assertEqual("~/.ssh/known_hosts", SSHCommandEndpoint._KNOWN_HOSTS)
+        self.assertEqual(
+            "~/.ssh/known_hosts", _NewConnectionHelper._KNOWN_HOSTS)
+
+
+    def test_defaultKnownHosts(self):
+        """
+        L{_NewConnectionHelper._knownHosts} is used to create a
+        L{KnownHostsFile} if one is not passed to the initializer.
+        """
+        result = object()
+        self.patch(_NewConnectionHelper, "_knownHosts", lambda cls: result)
+        helper = _NewConnectionHelper()
+        self.assertIdentical(result, helper.knownHosts)
 
 
     def test_readExisting(self):
         """
         Existing entries in the I{known_hosts} file are reflected by the
-        L{KnownHostsFile} created by L{SSHCommandEndpoint} when none is
+        L{KnownHostsFile} created by L{_NewConnectionHelper} when none is
         supplied to it.
         """
         key = CommandFactory.publicKeys['ssh-rsa']
@@ -906,7 +909,9 @@ class KnownHostsTests(TestCase):
         knownHosts.addHostKey("127.0.0.1", key)
         knownHosts.save()
 
-        self.patch(SSHCommandEndpoint, "_KNOWN_HOSTS", path.path.replace(environ["HOME"], "~"))
+        self.patch(
+            _NewConnectionHelper, "_KNOWN_HOSTS",
+            path.path.replace(environ["HOME"], "~"))
 
-        loaded = SSHCommandEndpoint._knownHosts()
+        loaded = _NewConnectionHelper._knownHosts()
         self.assertTrue(loaded.hasHostKey("127.0.0.1", key))
