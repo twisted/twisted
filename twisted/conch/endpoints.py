@@ -174,6 +174,8 @@ class _CommandChannel(SSHChannel):
         When the channel closes, deliver disconnection notification to the
         protocol.
         """
+        # TODO: Calling loseConnection needs to be conditional probably to
+        # support proper existingConnection re-use
         self.conn.transport.loseConnection()
         self._protocol.connectionLost(
             Failure(ConnectionDone("ssh channel closed")))
@@ -181,18 +183,45 @@ class _CommandChannel(SSHChannel):
 
 
 class _ConnectionReady(SSHConnection):
+    """
+    L{_ConnectionReady} is an L{twisted.conch.ssh.transport.service.SSHService}
+    which only propagates the I{serviceStarted} event to a L{Deferred} to be
+    handled elsewhere.
+    """
     def __init__(self, factory):
+        """
+        @param factory: Some random object with a C{connectionReady} attribute
+            which is a L{Deferred} which will get fired when I{serviceStarted}
+            happens.  TODO This is a poor docstring.
+        """
         SSHConnection.__init__(self)
         self._factory = factory
 
 
     def serviceStarted(self):
+        """
+        When the SSH I{connection} I{service} this object represents is ready to
+        be used, fire the C{connectionReady} L{Deferred} to publish that event
+        to some other interested party.
+
+        Also clear the reference to that deferred on its container to help the
+        garbage collector and to signal to other parts of this implementation
+        that it has already been fired and does not need to be fired again.
+        """
         d, self._factory.connectionReady = self._factory.connectionReady, None
         d.callback(self)
 
 
 
 class UserAuth(SSHUserAuthClient):
+    """
+    L{UserAuth} implements the client part of SSH user authentication in the
+    convenient way a user might expect if they are familiar with the interactive
+    I{ssh} command line client.
+
+    L{UserAuth} supports key-based authentication, password-based
+    authentication, and delegating authentication to an agent.
+    """
     password = None
     keys = None
     agent = None
@@ -237,11 +266,26 @@ class UserAuth(SSHUserAuthClient):
 
 
 class _CommandTransport(SSHClientTransport):
+    """
+    L{_CommandTransport} is an SSH client I{transport} which includes a host key
+    verification step before it will proceed to secure the connection.
+
+    L{_CommandTransport} also knows how to set up a connection to an
+    authentication agent if it is told where it can connect to one.
+    """
+
     _state = b'STARTING' # -> b'SECURING' -> b'AUTHENTICATING' -> b'CHANNELLING' -> b'RUNNING'
 
     _hostKeyFailure = None
 
     def verifyHostKey(self, hostKey, fingerprint):
+        """
+        Verify the host key presented by the server by asking the L{IKnownHosts}
+        provider available on the factory which created this protocol.
+
+        @return: A L{Deferred} which fires with the result of
+            L{IKnownHosts.verifyHostKey}.
+        """
         hostname = self.factory.hostname
         ip = self.transport.getPeer().host
 
@@ -253,11 +297,18 @@ class _CommandTransport(SSHClientTransport):
 
 
     def _saveHostKeyFailure(self, reason):
+        """
+        When host key verification fails, record the reason for the failure in
+        order to fire a L{Deferred} with it later.
+        """
         self._hostKeyFailure = reason
         return reason
 
 
     def connectionSecure(self):
+        """
+        When the connection is secure, start the authentication process.
+        """
         self._state = b'AUTHENTICATING'
 
         command = _ConnectionReady(self.factory)
@@ -278,6 +329,21 @@ class _CommandTransport(SSHClientTransport):
 
 
     def _connectToAgent(self, userauth, endpoint):
+        """
+        Set up a connection to the authentication agent and trigger its
+        initialization.
+
+        @param userauth: The L{UserAuth} instance which is in charge of the
+            overall authentication process.
+        @type userauth: L{UserAuth}
+
+        @param endpoint: An endpoint which can be used to connect to the
+            authentication agent.
+        @type endpoint: L{IStreamClientEndpoint} provider
+
+        @return: A L{Deferred} which fires when the agent connection is ready
+            for use.
+        """
         factory = Factory()
         factory.protocol = SSHAgentClient
         d = endpoint.connect(factory)
@@ -289,6 +355,10 @@ class _CommandTransport(SSHClientTransport):
 
 
     def connectionLost(self, reason):
+        """
+        When the underlying connection to the SSH server is lost, if there were
+        any connection setup errors, propagate them.
+        """
         if self._state == b'RUNNING' or self.factory.connectionReady is None:
             return
         if self._state == b'SECURING' and self._hostKeyFailure is not None:
@@ -302,6 +372,17 @@ class _CommandTransport(SSHClientTransport):
 @implementer(IStreamClientEndpoint)
 class SSHCommandEndpoint(object):
     """
+    L{SSHCommandEndpoint} exposes the command-executing functionality of SSH servers.
+
+    L{SSHCommandEndpoint} can set up a new SSH, authenticate it in any one of a
+    number of different ways (keys, passwords, agents), launch a command over
+    that connection and then associate its input and output with a protocol.
+
+    It can also re-use an existing, already-authenticated SSH connection
+    (perhaps one which already has some SSH channels being used for other
+    purposes).  In this case it creates a new SSH channel to use to execute the
+    command.  Notably this means it supports multiplexing several different
+    command invocations over a single SSH connection.
     """
 
     def __init__(self, creator):
@@ -314,8 +395,15 @@ class SSHCommandEndpoint(object):
 
 
     @classmethod
-    def newConnection(cls, reactor, command, username, hostname, port=None, keys=None, password=None, agentEndpoint=None, knownHosts=None, ui=None):
+    def newConnection(cls, reactor, command, username, hostname, port=None,
+                      keys=None, password=None, agentEndpoint=None,
+                      knownHosts=None, ui=None):
         """
+        Create and return a new endpoint which will try to create a new
+        connection to an SSH server and run a command over it.  It will also
+        close the connection if there are problems leading up to the command
+        being executed or after the command finishes.
+
         @param reactor: The reactor to use to establish the connection.
         @type reactor: L{IReactorTCP} provider
 
@@ -358,6 +446,8 @@ class SSHCommandEndpoint(object):
         @param ui: An object for interacting with users to make decisions about
             whether to accept the server host keys.
         @type ui: L{ConsoleUI}
+
+        @return: A new instance of C{cls} (probably L{SSHCommandEndpoint}).
         """
         helper = _NewConnectionHelper(
             reactor, hostname, port, command, username, keys, password,
@@ -367,6 +457,21 @@ class SSHCommandEndpoint(object):
 
     @classmethod
     def existingConnection(cls, connection, command):
+        """
+        Create and return a new endpoint which will try to open a new channel on
+        an existing SSH connection and run a command over it.  It will B{not}
+        close the connection if there is a problem executing the command or
+        after the command finishes.
+
+        @param connection: An existing connection to an SSH server.
+        @type connection: L{SSHConnection}
+
+        @param command: See L{SSHCommandEndpoint.newConnection}'s C{command}
+            parameter.
+        @type command: L{bytes}
+
+        @return: A new instance of C{cls} (probably L{SSHCommandEndpoint}).
+        """
         helper = _ExistingConnectionHelper(connection)
         helper.command = command
         return endpoint(helper)
@@ -393,6 +498,19 @@ class SSHCommandEndpoint(object):
 
 
     def _executeCommand(self, connection, protocolFactory):
+        """
+        Given a secured SSH connection, try to execute a command in a new
+        channel created on it and associate the result with a protocol from the
+        given factory.
+
+        @param connection: See L{SSHCommandEndpoint.existingConnection}'s
+            C{connection} parameter.
+
+        @param protocolFactory: See L{SSHCommandEndpoint.connect}'s
+            C{protocolFactory} parameter.
+
+        @return: See L{SSHCommandEndpoint.connect}'s return value.
+        """
         commandConnected = Deferred()
         def disconnectOnFailure(passthrough):
             connection.transport.loseConnection()
@@ -408,6 +526,11 @@ class SSHCommandEndpoint(object):
 
 @implementer(ISSHConnectionCreator)
 class _NewConnectionHelper(object):
+    """
+    L{_NewConnectionHelper} implements L{ISSHConnectionCreator} by establishing
+    a brand new SSH connection, securing it, and authenticating.
+    """
+
     _KNOWN_HOSTS = "~/.ssh/known_hosts"
 
     def __init__(self, reactor, hostname, port, command, username, keys,
@@ -436,6 +559,14 @@ class _NewConnectionHelper(object):
 
 
     def secureConnection(self):
+        """
+        Create and return a new SSH connection which has been secured and on
+        which authentication has already happened.
+
+        @return: A L{Deferred} which fires with the ready-to-use connection or
+            with a failure if something prevents the connection from being
+            setup, secured, or authenticated.
+        """
         factory = Factory()
         factory.protocol = _CommandTransport
         factory.hostname = self.hostname
@@ -459,10 +590,22 @@ class _NewConnectionHelper(object):
 
 @implementer(ISSHConnectionCreator)
 class _ExistingConnectionHelper(object):
+    """
+    L{_ExistingConnectionHelper} implements L{ISSHConnectionCreator} by handing
+    out an existing SSH connection which is supplied to its initializer.
+    """
 
     def __init__(self, connection):
+        """
+        @param connection: See L{SSHCommandEndpoint.existingConnection}'s
+            C{connection} parameter.
+        """
         self.connection = connection
 
 
     def secureConnection(self):
+        """
+        @return: A L{Deferred} that fires synchronously with the
+            already-established connection object.
+        """
         return succeed(self.connection)
