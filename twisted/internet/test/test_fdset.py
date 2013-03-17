@@ -347,6 +347,10 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
         C{IReadWriteDescriptor}.
         """
         reactor = self.buildReactor()
+
+        if reactor.__class__.__name__ == 'PollReactor':
+            raise SkipTest("poll reactor is covered by #6374")
+
         client, server = self._connectedPair()
 
         class Descriptor(FileDescriptor):
