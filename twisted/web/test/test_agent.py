@@ -1980,6 +1980,7 @@ class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
 
         def checkResponse(result):
             self.assertIdentical(result, response)
+            self.assertIdentical(result.response, None)
 
         return deferred.addCallback(checkResponse)
 
@@ -2133,3 +2134,32 @@ class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
             self.assertEqual(302, fail.response.code)
 
         return deferred.addCallback(checkFailure)
+
+
+    def test_responseHistory(self):
+        """
+        L{Response.response} references the previous L{Response} from
+        a redirect, or C{None} if there was no previous response.
+        """
+        def _checkHistory(response2, response):
+            self.assertIdentical(response2.response, response)
+            self.assertIdentical(response.response, None)
+
+        agent = self.buildAgentForWrapperTest(self.reactor)
+        redirectAgent = client.RedirectAgent(agent)
+
+        deferred = redirectAgent.request('GET', 'http://example.com/foo')
+
+        req, res = self.protocol.requests.pop()
+
+        headers = http_headers.Headers(
+            {'location': ['http://example.com/bar']})
+        response = Response(('HTTP', 1, 1), 302, 'OK', headers, None)
+        res.callback(response)
+
+        req2, res2 = self.protocol.requests.pop()
+
+        response2 = Response(('HTTP', 1, 1), 200, 'OK', headers, None)
+        res2.callback(response2)
+
+        return deferred.addCallback(_checkHistory, response)

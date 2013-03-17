@@ -511,7 +511,12 @@ class IResponse(Interface):
         "available in C{headers}.")
 
     request = Attribute(
-        "The L{IRequest} that resulted in this response.")
+        "The L{Request} that resulted in this response.")
+
+    response = Attribute(
+        "The previous response from a redirect, or C{None} if there was no "
+        "previous response. This can be used to walk the response or request "
+        "history for redirections.")
 
 
     def deliverBody(protocol):

@@ -1650,6 +1650,10 @@ class RedirectAgent(object):
             raise ResponseFailed([failure.Failure(err)], response)
         location = locationHeaders[0]
         deferred = self._agent.request(method, location, headers)
+        def _chainResponse(newResponse):
+            newResponse.response = response
+            return newResponse
+        deferred.addCallback(_chainResponse)
         return deferred.addCallback(
             self._handleResponse, method, uri, headers, redirectCount + 1)
 

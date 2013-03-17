@@ -879,9 +879,6 @@ class Response:
 
     L{Response} should not be subclassed or instantiated.
 
-    @type request: L{IRequest}
-    @ivar request: The request that resulted in this response.
-
     @ivar _transport: The transport which is delivering this response.
 
     @ivar _bodyProtocol: The L{IProtocol} provider to which the body is
@@ -935,6 +932,7 @@ class Response:
         self._bodyBuffer = []
         self._state = 'INITIAL'
         self.request = request
+        self.response = None
 
 
     def absoluteURI(self):
