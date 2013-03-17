@@ -416,7 +416,8 @@ class HTTPClientParser(HTTPParser):
             statusCode,
             parts[2],
             self.headers,
-            self.transport)
+            self.transport,
+            self.request)
 
 
     def _finished(self, rest):
@@ -878,6 +879,9 @@ class Response:
 
     L{Response} should not be subclassed or instantiated.
 
+    @type request: L{IRequest}
+    @ivar request: The request that resulted in this response.
+
     @ivar _transport: The transport which is delivering this response.
 
     @ivar _bodyProtocol: The L{IProtocol} provider to which the body is
@@ -921,7 +925,8 @@ class Response:
     _bodyProtocol = None
     _bodyFinished = False
 
-    def __init__(self, version, code, phrase, headers, _transport):
+    def __init__(self, version, code, phrase, headers, _transport,
+                 request=None):
         self.version = version
         self.code = code
         self.phrase = phrase
@@ -929,6 +934,12 @@ class Response:
         self._transport = _transport
         self._bodyBuffer = []
         self._state = 'INITIAL'
+        self.request = request
+
+
+    def absoluteURI(self):
+        return getattr(self.request, 'absoluteURI')
+    absoluteURI = property(absoluteURI)
 
 
     def deliverBody(self, protocol):
