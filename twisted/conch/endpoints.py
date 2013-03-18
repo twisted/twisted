@@ -429,13 +429,22 @@ class SSHCommandEndpoint(object):
     command invocations over a single SSH connection.
     """
 
-    def __init__(self, creator):
+    def __init__(self, creator, command):
         """
         @param creator: An L{ISSHConnectionCreator} provider which will be used
             to set up the SSH connection which will be used to run a command.
         @type creator: L{ISSHConnectionCreator} provider
+
+        @param command: The command line to execute on the SSH server.  This
+            byte string is interpreted by a shell on the SSH server, so it may
+            have a value like C{"ls /"}.  Take care when trying to run a command
+            like C{"/Volumes/My Stuff/a-program"} - spaces (and other special
+            bytes) may require escaping.
+        @type command: L{bytes}
+
         """
         self._creator = creator
+        self._command = command
 
 
     @classmethod
@@ -451,12 +460,7 @@ class SSHCommandEndpoint(object):
         @param reactor: The reactor to use to establish the connection.
         @type reactor: L{IReactorTCP} provider
 
-        @param command: The command line to execute on the SSH server.  This
-            byte string is interpreted by a shell on the SSH server, so it may
-            have a value like C{"ls /"}.  Take care when trying to run a command
-            like C{"/Volumes/My Stuff/a-program"} - spaces (and other special
-            bytes) may require escaping.
-        @type command: L{bytes}
+        @param command: See L{__init__}'s C{command} argument.
 
         @param username: The username with which to authenticate to the SSH
             server.
@@ -496,7 +500,7 @@ class SSHCommandEndpoint(object):
         helper = _NewConnectionHelper(
             reactor, hostname, port, command, username, keys, password,
             agentEndpoint, knownHosts, ui)
-        return cls(helper)
+        return cls(helper, command)
 
 
     @classmethod
@@ -517,8 +521,7 @@ class SSHCommandEndpoint(object):
         @return: A new instance of C{cls} (probably L{SSHCommandEndpoint}).
         """
         helper = _ExistingConnectionHelper(connection)
-        helper.command = command
-        return cls(helper)
+        return cls(helper, command)
 
 
     def connect(self, protocolFactory):
@@ -562,7 +565,7 @@ class SSHCommandEndpoint(object):
         commandConnected.addErrback(disconnectOnFailure)
 
         channel = _CommandChannel(
-            self._creator, self._creator.command, protocolFactory, commandConnected)
+            self._creator, self._command, protocolFactory, commandConnected)
         channel._creator = self._creator
         connection.openChannel(channel)
         return commandConnected
