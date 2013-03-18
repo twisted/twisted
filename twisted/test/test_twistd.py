@@ -44,6 +44,9 @@ try:
     from twisted.scripts import _twistd_unix
 except ImportError:
     _twistd_unix = None
+else:
+    from twisted.scripts._twistd_unix import UnixApplicationRunner
+    from twisted.scripts._twistd_unix import UnixAppLogger
 
 
 try:
@@ -51,13 +54,6 @@ try:
 except ImportError:
     syslog = None
 
-try:
-    from twisted.scripts import _twistd_unix
-except ImportError:
-    _twistd_unix = None
-else:
-    from twisted.scripts._twistd_unix import UnixApplicationRunner
-    from twisted.scripts._twistd_unix import UnixAppLogger
 
 try:
     import profile
@@ -379,7 +375,8 @@ class TapFileTest(unittest.TestCase):
         """
         config = twistd.ServerOptions()
         config.parseOptions(['-f', self.tapfile])
-        application = CrippledApplicationRunner(config).createOrGetApplication()
+        application = CrippledApplicationRunner(
+            config).createOrGetApplication()
         self.assertEqual(service.IService(application).name, 'Hi!')
 
 
@@ -1507,7 +1504,7 @@ class UnixAppLoggerTestCase(unittest.TestCase):
         self.patch(signal, "getsignal", fakeGetSignal)
         filename = self.mktemp()
         logger = UnixAppLogger({"logfile": filename})
-        observer = logger._getLogObserver()
+        logger._getLogObserver()
 
         self.assertEqual(self.signals, [])
 
@@ -1520,7 +1517,7 @@ class UnixAppLoggerTestCase(unittest.TestCase):
         """
         logFiles = _patchFileLogObserver(self.patch)
         logger = UnixAppLogger({"logfile": "", "nodaemon": False})
-        observer = logger._getLogObserver()
+        logger._getLogObserver()
 
         self.assertEqual(len(logFiles), 1)
         self.assertEqual(logFiles[0].path, os.path.abspath("twistd.log"))
@@ -1750,4 +1747,4 @@ class DaemonizeTests(unittest.TestCase):
 
 
 if _twistd_unix is None:
-    DaemonizeTests.skip = "No daemonize for you"
+    DaemonizeTests.skip = "twistd unix support not available"
