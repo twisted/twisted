@@ -1064,7 +1064,7 @@ class Satellite(PositioningBeacon):
         @type signalToNoiseRatio: C{float}
 
         """
-        super(Satellite, self).__init__(int(identifier), isUsed)
+        PositioningBeacon.__init__(int(identifier), isUsed)
 
         self.azimuth = azimuth
         self.elevation = elevation
