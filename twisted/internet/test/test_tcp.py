@@ -24,14 +24,14 @@ from twisted.internet.error import (
     ConnectionLost, UserError, ConnectionRefusedError, ConnectionDone,
     ConnectionAborted, DNSLookupError)
 from twisted.internet.test.connectionmixins import (
-    LogObserverMixin, ConnectionTestsMixin, StreamClientTestsMixin,
-    findFreePort, ConnectableProtocol, EndpointCreator,
-    runProtocolsWithReactor, serverFactoryFor, Stop, BrokenContextFactory)
+    ConnectionTestsMixin, StreamClientTestsMixin, findFreePort,
+    ConnectableProtocol, EndpointCreator, runProtocolsWithReactor,
+    serverFactoryFor, Stop, BrokenContextFactory, StreamTransportTestsMixin)
 from twisted.internet.test.reactormixins import (
     ReactorBuilder, needsRunningReactor)
 from twisted.internet.interfaces import (
-    ILoggingContext, IConnector, IReactorFDSet, IReactorSocket, IReactorTCP,
-    IResolverSimple, ITLSTransport)
+    IConnector, IReactorFDSet, IReactorSocket, IReactorTCP, IResolverSimple,
+    ITLSTransport)
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.defer import (
     Deferred, DeferredList, maybeDeferred, gatherResults, succeed, fail)
@@ -40,7 +40,6 @@ from twisted.internet.protocol import ServerFactory, ClientFactory, Protocol
 from twisted.internet.interfaces import (
     IPushProducer, IPullProducer, IHalfCloseableProtocol)
 from twisted.internet.tcp import Connection, Server, _resolveIPv6
-from twisted.internet.test.test_core import ObjectModelIntegrationMixin
 from twisted.test.test_tcp import MyClientFactory, MyServerFactory
 from twisted.test.test_tcp import ClosingFactory, ClientStartStopFactory
 
@@ -791,70 +790,6 @@ def createTestSocket(test, addressFamily, socketType):
 
 
 
-class StreamTransportTestsMixin(LogObserverMixin):
-    """
-    Mixin defining tests which apply to any port/connection based transport.
-    """
-    def test_startedListeningLogMessage(self):
-        """
-        When a port starts, a message including a description of the associated
-        factory is logged.
-        """
-        loggedMessages = self.observe()
-        reactor = self.buildReactor()
-
-        @implementer(ILoggingContext)
-        class SomeFactory(ServerFactory):
-            def logPrefix(self):
-                return "Crazy Factory"
-
-        factory = SomeFactory()
-        p = self.getListeningPort(reactor, factory)
-        expectedMessage = self.getExpectedStartListeningLogMessage(
-            p, "Crazy Factory")
-        self.assertEqual((expectedMessage,), loggedMessages[0]['message'])
-
-
-    def test_connectionLostLogMsg(self):
-        """
-        When a connection is lost, an informative message should be logged
-        (see L{getExpectedConnectionLostLogMsg}): an address identifying
-        the port and the fact that it was closed.
-        """
-
-        loggedMessages = []
-        def logConnectionLostMsg(eventDict):
-            loggedMessages.append(log.textFromEventDict(eventDict))
-
-        reactor = self.buildReactor()
-        p = self.getListeningPort(reactor, ServerFactory())
-        expectedMessage = self.getExpectedConnectionLostLogMsg(p)
-        log.addObserver(logConnectionLostMsg)
-
-        def stopReactor(ignored):
-            log.removeObserver(logConnectionLostMsg)
-            reactor.stop()
-
-        def doStopListening():
-            log.addObserver(logConnectionLostMsg)
-            maybeDeferred(p.stopListening).addCallback(stopReactor)
-
-        reactor.callWhenRunning(doStopListening)
-        reactor.run()
-
-        self.assertIn(expectedMessage, loggedMessages)
-
-
-    def test_allNewStyle(self):
-        """
-        The L{IListeningPort} object is an instance of a class with no
-        classic classes in its hierarchy.
-        """
-        reactor = self.buildReactor()
-        port = self.getListeningPort(reactor, ServerFactory())
-        self.assertFullyNewStyle(port)
-
-
 class ListenTCPMixin(object):
     """
     Mixin which uses L{IReactorTCP.listenTCP} to hand out listening TCP ports.
@@ -1187,14 +1122,12 @@ class TCPPortTestsMixin(object):
 
 
 class TCPPortTestsBuilder(ReactorBuilder, ListenTCPMixin, TCPPortTestsMixin,
-                          ObjectModelIntegrationMixin,
                           StreamTransportTestsMixin):
     pass
 
 
 
 class TCPFDPortTestsBuilder(ReactorBuilder, SocketTCPMixin, TCPPortTestsMixin,
-                            ObjectModelIntegrationMixin,
                             StreamTransportTestsMixin):
     pass
 

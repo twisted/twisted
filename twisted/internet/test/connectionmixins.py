@@ -14,16 +14,19 @@ from gc import collect
 from weakref import ref
 
 from zope.interface.verify import verifyObject
+from zope.interface import implementer
 
 from twisted.python import context, log
 from twisted.python.failure import Failure
 from twisted.python.runtime import platform
 from twisted.python.log import ILogContext, msg, err
-from twisted.internet.defer import Deferred, gatherResults
-from twisted.internet.interfaces import IConnector, IReactorFDSet
+from twisted.internet.defer import Deferred, gatherResults, maybeDeferred
+from twisted.internet.interfaces import (
+    IConnector, IReactorFDSet, ILoggingContext)
 from twisted.internet.protocol import ClientFactory, Protocol, ServerFactory
 from twisted.trial.unittest import SkipTest
 from twisted.internet.test.reactormixins import needsRunningReactor
+from twisted.internet.test.test_core import ObjectModelIntegrationMixin
 from twisted.test.test_tcp import ClosingProtocol
 
 
@@ -351,6 +354,7 @@ class ConnectionTestsMixin(object):
         protocol = lambda: ClosingLaterProtocol(serverConnectionLostDeferred)
         portDeferred = self.endpoints.server(reactor).listen(
             serverFactoryFor(protocol))
+
         def listening(port):
             msg("Listening on %r" % (port.getHost(),))
             endpoint = self.endpoints.client(reactor, port.getHost())
@@ -358,6 +362,7 @@ class ConnectionTestsMixin(object):
             lostConnectionDeferred = Deferred()
             protocol = lambda: ClosingLaterProtocol(lostConnectionDeferred)
             client = endpoint.connect(factoryFor(protocol))
+
             def write(proto):
                 msg("About to write to %r" % (proto,))
                 proto.transport.write(b'x')
@@ -396,11 +401,13 @@ class ConnectionTestsMixin(object):
         reactor = self.buildReactor()
         portDeferred = self.endpoints.server(reactor).listen(
             serverFactoryFor(Protocol))
+
         def listening(port):
             msg("Listening on %r" % (port.getHost(),))
             endpoint = self.endpoints.client(reactor, port.getHost())
 
             client = endpoint.connect(factoryFor(lambda: clientProtocol))
+
             def disconnect(proto):
                 msg("About to disconnect %r" % (proto,))
                 proto.transport.loseConnection()
@@ -452,9 +459,9 @@ class StreamClientTestsMixin(object):
     """
     This mixin defines tests applicable to SOCK_STREAM client implementations.
 
-    This must be mixed in to a L{ReactorBuilder
-    <twisted.internet.test.reactormixins.ReactorBuilder>} subclass, as it
-    depends on several of its methods.
+    This must be mixed in to a
+    L{ReactorBuilder <twisted.internet.test.reactormixins.ReactorBuilder>}
+    subclass, as it depends on several of its methods.
 
     Then the methods C{connect} and C{listen} must defined, defining a client
     and a server communicating with each other.
@@ -620,3 +627,69 @@ class StreamClientTestsMixin(object):
         self.runReactor(reactor)
         # If the test failed, we logged an error already and trial
         # will catch it.
+
+
+
+class StreamTransportTestsMixin(LogObserverMixin, ObjectModelIntegrationMixin):
+    """
+    Mixin defining tests which apply to any port/connection based transport.
+    """
+
+    def test_startedListeningLogMessage(self):
+        """
+        When a port starts, a message including a description of the associated
+        factory is logged.
+        """
+        loggedMessages = self.observe()
+        reactor = self.buildReactor()
+
+        @implementer(ILoggingContext)
+        class SomeFactory(ServerFactory):
+            def logPrefix(self):
+                return "Crazy Factory"
+
+        factory = SomeFactory()
+        p = self.getListeningPort(reactor, factory)
+        expectedMessage = self.getExpectedStartListeningLogMessage(
+            p, "Crazy Factory")
+        self.assertEqual((expectedMessage,), loggedMessages[0]['message'])
+
+
+    def test_connectionLostLogMsg(self):
+        """
+        When a connection is lost, an informative message should be logged
+        (see L{getExpectedConnectionLostLogMsg}): an address identifying
+        the port and the fact that it was closed.
+        """
+        loggedMessages = []
+
+        def logConnectionLostMsg(eventDict):
+            loggedMessages.append(log.textFromEventDict(eventDict))
+
+        reactor = self.buildReactor()
+        p = self.getListeningPort(reactor, ServerFactory())
+        expectedMessage = self.getExpectedConnectionLostLogMsg(p)
+        log.addObserver(logConnectionLostMsg)
+
+        def stopReactor(ignored):
+            log.removeObserver(logConnectionLostMsg)
+            reactor.stop()
+
+        def doStopListening():
+            log.addObserver(logConnectionLostMsg)
+            maybeDeferred(p.stopListening).addCallback(stopReactor)
+
+        reactor.callWhenRunning(doStopListening)
+        reactor.run()
+
+        self.assertIn(expectedMessage, loggedMessages)
+
+
+    def test_allNewStyle(self):
+        """
+        The L{IListeningPort} object is an instance of a class with no
+        classic classes in its hierarchy.
+        """
+        reactor = self.buildReactor()
+        port = self.getListeningPort(reactor, ServerFactory())
+        self.assertFullyNewStyle(port)
