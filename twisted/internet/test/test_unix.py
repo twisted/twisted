@@ -22,7 +22,8 @@ from twisted.python.log import addObserver, removeObserver, err
 from twisted.python.failure import Failure
 from twisted.python.hashlib import md5
 from twisted.python.runtime import platform
-from twisted.internet.interfaces import IFileDescriptorReceiver, IReactorUNIX
+from twisted.internet.interfaces import (
+    IFileDescriptorReceiver, IReactorUNIX, IReactorSocket)
 from twisted.internet.error import ConnectionClosed, FileDescriptorOverrun
 from twisted.internet.address import UNIXAddress
 from twisted.internet.endpoints import UNIXServerEndpoint, UNIXClientEndpoint
@@ -32,11 +33,11 @@ from twisted.internet import interfaces
 from twisted.internet.protocol import (
     ServerFactory, ClientFactory, DatagramProtocol)
 from twisted.internet.test.test_core import ObjectModelIntegrationMixin
-from twisted.internet.test.test_tcp import StreamTransportTestsMixin
 from twisted.internet.test.connectionmixins import (
     EndpointCreator, ConnectableProtocol, runProtocolsWithReactor,
-    ConnectionTestsMixin, StreamClientTestsMixin)
+    ConnectionTestsMixin, StreamClientTestsMixin, StreamTransportTestsMixin)
 from twisted.internet.test.reactormixins import ReactorBuilder
+from twisted.trial.unittest import SkipTest
 
 try:
     from twisted.python import sendmsg
@@ -121,8 +122,8 @@ class SendFileDescriptor(ConnectableProtocol):
 
     def connectionMade(self):
         """
-        Send C{self.fd} and, if it is not C{None}, C{self.data}.  Then close the
-        connection.
+        Send C{self.fd} and, if it is not C{None}, C{self.data}.  Then close
+        the connection.
         """
         self.transport.sendFileDescriptor(self.fd)
         if self.data:
@@ -138,15 +139,15 @@ class SendFileDescriptor(ConnectableProtocol):
 
 class ReceiveFileDescriptor(ConnectableProtocol):
     """
-    L{ReceiveFileDescriptor} provides an API for waiting for file descriptors to
-    be received.
+    L{ReceiveFileDescriptor} provides an API for waiting for file descriptors
+    to be received.
 
     @ivar reason: The reason the connection was lost, after C{connectionLost}
         is called.
 
     @ivar waiting: A L{Deferred} which fires with a file descriptor once one is
-        received, or with a failure if the connection is lost with no descriptor
-        arriving.
+        received, or with a failure if the connection is lost with no
+        descriptor arriving.
     """
     implements(IFileDescriptorReceiver)
 
@@ -168,8 +169,8 @@ class ReceiveFileDescriptor(ConnectableProtocol):
 
     def fileDescriptorReceived(self, descriptor):
         """
-        Fire the waiting Deferred, initialized by C{waitForDescriptor}, with the
-        file descriptor just received.
+        Fire the waiting Deferred, initialized by C{waitForDescriptor}, with
+        the file descriptor just received.
         """
         self.waiting.callback(descriptor)
         self.waiting = None
@@ -184,15 +185,16 @@ class ReceiveFileDescriptor(ConnectableProtocol):
         C{fileDescriptorReceived}.
         """
         if self.waiting is not None:
-            self.waiting.errback(Failure(Exception(
-                        "Received bytes (%r) before descriptor." % (data,))))
+            self.waiting.errback(
+                Failure(Exception(
+                    "Received bytes (%r) before descriptor." % (data,))))
             self.waiting = None
 
 
     def connectionLost(self, reason):
         """
-        Fail the waiting Deferred, initialized by C{waitForDescriptor}, if there
-        is one.
+        Fail the waiting Deferred, initialized by C{waitForDescriptor}, if
+        there is one.
         """
         ConnectableProtocol.connectionLost(self, reason)
         if self.waiting is not None:
@@ -221,9 +223,9 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
 
     def test_listenOnLinuxAbstractNamespace(self):
         """
-        On Linux, a UNIX socket path may begin with C{'\0'} to indicate a socket
-        in the abstract namespace.  L{IReactorUNIX.listenUNIX} accepts such a
-        path.
+        On Linux, a UNIX socket path may begin with C{'\0'} to indicate a
+        socket in the abstract namespace.  L{IReactorUNIX.listenUNIX} accepts
+        such a path.
         """
         # Don't listen on a path longer than the maximum allowed.
         path = _abstractPath(self)
@@ -284,6 +286,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
 
         client = ReceiveFileDescriptor()
         d = client.waitForDescriptor()
+
         def checkDescriptor(descriptor):
             received = fromfd(descriptor, AF_INET, SOCK_STREAM)
             # Thanks for the free dup, fromfd()
@@ -308,8 +311,8 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
 
     def test_sendFileDescriptorTriggersPauseProducing(self):
         """
-        If a L{IUNIXTransport.sendFileDescriptor} call fills up the send buffer,
-        any registered producer is paused.
+        If a L{IUNIXTransport.sendFileDescriptor} call fills up the send
+        buffer, any registered producer is paused.
         """
         class DoesNotRead(ConnectableProtocol):
             def connectionMade(self):
@@ -321,6 +324,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
             def connectionMade(self):
                 self.socket = socket()
                 self.transport.registerProducer(self, True)
+
                 def sender():
                     self.transport.sendFileDescriptor(self.socket.fileno())
                     self.transport.write("x")
@@ -359,9 +363,9 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         """
         If L{IUNIXTransport.sendFileDescriptor} is used to queue a greater
         number of file descriptors than the number of bytes sent using
-        L{ITransport.write}, the connection is closed and the protocol connected
-        to the transport has its C{connectionLost} method called with a failure
-        wrapping L{FileDescriptorOverrun}.
+        L{ITransport.write}, the connection is closed and the protocol
+        connected to the transport has its C{connectionLost} method called with
+        a failure wrapping L{FileDescriptorOverrun}.
         """
         cargo = socket()
         server = SendFileDescriptor(cargo.fileno(), None)
@@ -414,8 +418,9 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         probeClient.close()
 
         # A non-blocking recv will return "" if the connection is closed, as
-        # desired.  If the connection has not been closed, because the duplicate
-        # file descriptor is still open, it will fail with EAGAIN instead.
+        # desired.  If the connection has not been closed, because the
+        # duplicate file descriptor is still open, it will fail with EAGAIN
+        # instead.
         probeServer.setblocking(False)
         self.assertEqual("", probeServer.recv(1024))
 
@@ -499,9 +504,9 @@ class UNIXDatagramTestsBuilder(UNIXFamilyMixin, ReactorBuilder):
 
     def test_listenOnLinuxAbstractNamespace(self):
         """
-        On Linux, a UNIX socket path may begin with C{'\0'} to indicate a socket
-        in the abstract namespace.  L{IReactorUNIX.listenUNIXDatagram} accepts
-        such a path.
+        On Linux, a UNIX socket path may begin with C{'\0'} to indicate a
+        socket in the abstract namespace.  L{IReactorUNIX.listenUNIXDatagram}
+        accepts such a path.
         """
         path = _abstractPath(self)
         reactor = self.buildReactor()
@@ -513,8 +518,7 @@ class UNIXDatagramTestsBuilder(UNIXFamilyMixin, ReactorBuilder):
 
 
 
-class UNIXPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin,
-                           StreamTransportTestsMixin):
+class UNIXPortTestsBuilder(ReactorBuilder, StreamTransportTestsMixin):
     """
     Tests for L{IReactorUNIX.listenUnix}
     """
@@ -524,14 +528,59 @@ class UNIXPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin,
         """
         Get a UNIX port from a reactor
         """
-        # self.mktemp() often returns a path which is too long to be used.
-        path = mktemp(suffix='.sock', dir='.')
-        return reactor.listenUNIX(path, factory)
+        return reactor.listenUNIX(_abstractPath(self), factory)
 
 
     def getExpectedStartListeningLogMessage(self, port, factory):
         """
-        Get the message expected to be logged when a UNIX port starts listening.
+        Get the message expected to be logged when a UNIX port starts
+        listening.
+        """
+        return "%s starting on %r" % (factory, port.getHost().name)
+
+
+    def getExpectedConnectionLostLogMsg(self, port):
+        """
+        Get the expected connection lost message for a UNIX port
+        """
+        return "(UNIX Port %s Closed)" % (repr(port.port),)
+
+
+
+class UNIXSocketTestsBuilder(ReactorBuilder, StreamTransportTestsMixin):
+    """
+    Mixin which uses L{IReactorSocket.adoptStreamPort} to hand out listening
+    UNIX ports.
+    """
+
+    def getListeningPort(self, reactor, factory):
+        """
+        Get a UNIX port from a reactor, wrapping an already-initialized file
+        descriptor.
+        """
+        if IReactorSocket.providedBy(reactor):
+            portSock = socket(AF_UNIX)
+            portSock.bind(_abstractPath(self))
+            portSock.listen(3)
+            portSock.setblocking(False)
+            try:
+                return reactor.adoptStreamPort(
+                    portSock.fileno(), portSock.family, factory)
+            finally:
+                # The socket should still be open; fileno will raise if it is
+                # not.
+                portSock.fileno()
+                # Now clean it up, because the rest of the test does not need
+                # it.
+                portSock.close()
+        else:
+            raise SkipTest("Reactor does not provide IReactorSocket")
+
+
+    def getExpectedStartListeningLogMessage(self, port, factory):
+        """
+        Get the message expected to be logged when a UNIX port starts
+        listening.
         """
         return "%s starting on %r" % (factory, port.getHost().name)
 
@@ -547,6 +596,7 @@ class UNIXPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin,
 globals().update(UNIXTestsBuilder.makeTestCaseClasses())
 globals().update(UNIXDatagramTestsBuilder.makeTestCaseClasses())
 globals().update(UNIXPortTestsBuilder.makeTestCaseClasses())
+globals().update(UNIXSocketTestsBuilder.makeTestCaseClasses())
 
 
 

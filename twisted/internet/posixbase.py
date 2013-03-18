@@ -460,11 +460,17 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
 
         @see: L{twisted.internet.interfaces.IReactorSocket.adoptStreamPort}
         """
-        if addressFamily not in (socket.AF_INET, socket.AF_INET6):
+        if addressFamily not in (socket.AF_INET, socket.AF_INET6,
+                                 socket.AF_UNIX):
             raise error.UnsupportedAddressFamily(addressFamily)
 
-        p = tcp.Port._fromListeningDescriptor(
-            self, fileDescriptor, addressFamily, factory)
+        if addressFamily == socket.AF_UNIX:
+            from twisted.internet import unix
+            p = unix.Port._fromListeningDescriptor(
+                self, fileDescriptor, factory)
+        else:
+            p = tcp.Port._fromListeningDescriptor(
+                self, fileDescriptor, addressFamily, factory)
         p.startListening()
         return p
 
@@ -594,7 +600,7 @@ class _PollLikeMixin(object):
             # Any non-disconnect event turns into a doRead or a doWrite.
             try:
                 # First check to see if the descriptor is still valid.  This
-                # gives fileno() a chance to raise an exception, too. 
+                # gives fileno() a chance to raise an exception, too.
                 # Ideally, disconnection would always be indicated by the
                 # return value of doRead or doWrite (or an exception from
                 # one of those methods), but calling fileno here helps make

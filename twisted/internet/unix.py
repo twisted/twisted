@@ -244,10 +244,12 @@ class Port(_UNIXPort, tcp.Port):
     transport = Server
     lockFile = None
 
-    def __init__(self, fileName, factory, backlog=50, mode=0666, reactor=None, wantPID = 0):
+    def __init__(self, fileName, factory, backlog=50, mode=0666, reactor=None,
+                 wantPID=0):
         tcp.Port.__init__(self, fileName, factory, backlog, reactor=reactor)
         self.mode = mode
         self.wantPID = wantPID
+
 
     def __repr__(self):
         factoryName = reflect.qual(self.factory.__class__)
@@ -256,8 +258,32 @@ class Port(_UNIXPort, tcp.Port):
         else:
             return '<%s (not listening)>' % (factoryName,)
 
+
     def _buildAddr(self, name):
         return address.UNIXAddress(name)
+
+
+    @classmethod
+    def _fromListeningDescriptor(cls, reactor, fd, factory):
+        """
+        Create a new L{Port} based on an existing listening I{SOCK_STREAM}
+        socket.
+
+        Arguments are the same as to L{Port.__init__}, except where noted.
+
+        @param fd: An integer file descriptor associated with a listening
+            socket.  The socket must be in non-blocking mode.  Any additional
+            attributes desired, such as I{FD_CLOEXEC}, must also be set
+            already.
+
+        @return: A new instance of C{cls} wrapping the socket given by C{fd}.
+        """
+        port = socket.fromfd(fd, cls.addressFamily, cls.socketType)
+        path = port.getsockname()
+        self = cls(path, factory, reactor=reactor)
+        self._preexistingSocket = port
+        return self
+
 
     def startListening(self):
         """
@@ -286,21 +312,29 @@ class Port(_UNIXPort, tcp.Port):
                         pass
 
         self.factory.doStart()
-        try:
-            skt = self.createInternetSocket()
-            skt.bind(self.port)
-        except socket.error, le:
-            raise CannotListenError, (None, self.port, le)
+
+        if self._preexistingSocket is None:
+            try:
+                skt = self.createInternetSocket()
+                skt.bind(self.port)
+            except socket.error, le:
+                raise CannotListenError(None, self.port, le)
         else:
-            if _inFilesystemNamespace(self.port):
-                # Make the socket readable and writable to the world.
-                os.chmod(self.port, self.mode)
-            skt.listen(self.backlog)
-            self.connected = True
-            self.socket = skt
-            self.fileno = self.socket.fileno
-            self.numberAccepts = 100
-            self.startReading()
+            # Re-use the externally specified socket
+            skt = self._preexistingSocket
+            self._preexistingSocket = None
+            # Avoid shutting it down at the end.
+            self._socketShutdownMethod = None
+
+        if _inFilesystemNamespace(self.port):
+            # Make the socket readable and writable to the world.
+            os.chmod(self.port, self.mode)
+        skt.listen(self.backlog)
+        self.connected = True
+        self.socket = skt
+        self.fileno = self.socket.fileno
+        self.numberAccepts = 100
+        self.startReading()
 
 
     def _logConnectionLostMsg(self):
