@@ -475,9 +475,9 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
         instances which have the dotted-quad string form of the resolved
         adddress of the local and remote endpoints of the connection
         respectively as their C{host} attribute, not the hostname originally
-        passed in to L{connectTCP
-        <twisted.internet.interfaces.IReactorTCP.connectTCP>}, if a hostname
-        was used.
+        passed in to
+        L{connectTCP<twisted.internet.interfaces.IReactorTCP.connectTCP>}, if a
+        hostname was used.
         """
         host, port = findFreePort(self.interface, self.family)[:2]
         reactor = self.buildReactor()
@@ -488,11 +488,13 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
             0, serverFactoryFor(Protocol), interface=host)
         serverAddress = server.getHost()
 
-        addresses = {'host': None, 'peer': None}
+        transportData = {'host': None, 'peer': None, 'instance': None}
+
         class CheckAddress(Protocol):
             def makeConnection(self, transport):
-                addresses['host'] = transport.getHost()
-                addresses['peer'] = transport.getPeer()
+                transportData['host'] = transport.getHost()
+                transportData['peer'] = transport.getPeer()
+                transportData['instance'] = transport
                 reactor.stop()
 
         clientFactory = Stop(reactor)
@@ -509,12 +511,19 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
         if clientFactory.failReason:
             self.fail(clientFactory.failReason.getTraceback())
 
+        transportRepr = "<%s to %s at %x>" % (
+            transportData['instance'].__class__,
+            transportData['instance'].addr,
+            id(transportData['instance']))
+
         self.assertEqual(
-            addresses['host'],
+            transportData['host'],
             self.addressClass('TCP', self.interface, port))
         self.assertEqual(
-            addresses['peer'],
+            transportData['peer'],
             self.addressClass('TCP', self.interface, serverAddress.port))
+        self.assertEqual(
+            repr(transportData['instance']), transportRepr)
 
 
     def test_badContext(self):
