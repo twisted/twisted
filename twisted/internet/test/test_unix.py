@@ -518,82 +518,14 @@ class UNIXDatagramTestsBuilder(UNIXFamilyMixin, ReactorBuilder):
 
 
 
+globals().update(UNIXTestsBuilder.makeTestCaseClasses())
+globals().update(UNIXDatagramTestsBuilder.makeTestCaseClasses())
+
+
+
 class UNIXStreamTransportTestsMixin(StreamTransportTestsMixin):
     """
     Implement check methods used by L{StreamTransportTestsMixin} tests.
-    """
-
-    def getExpectedStartListeningLogMessage(self, port, factory):
-        """
-        Get the message expected to be logged when a UNIX port starts
-        listening.
-        """
-        return "%s starting on %r" % (factory, port.getHost().name)
-
-
-    def getExpectedConnectionLostLogMsg(self, port):
-        """
-        Get the expected connection lost message for a UNIX port
-        """
-        return "(UNIX Port %s Closed)" % (repr(port.port),)
-
-
-
-class UNIXPortTestsBuilder(ReactorBuilder, UNIXStreamTransportTestsMixin):
-    """
-    Tests for L{IReactorUNIX.listenUnix}
-    """
-    requiredInterfaces = (interfaces.IReactorUNIX,)
-
-    def getListeningPort(self, reactor, factory):
-        """
-        Get a UNIX port from a reactor
-        """
-        return reactor.listenUNIX(_abstractPath(self), factory)
-
-
-
-class UNIXSocketTestsBuilder(ReactorBuilder, UNIXStreamTransportTestsMixin):
-    """
-    Mixin which uses L{IReactorSocket.adoptStreamPort} to hand out listening
-    UNIX ports.
-    """
-
-    def getListeningPort(self, reactor, factory):
-        """
-        Get a UNIX port from a reactor, wrapping an already-initialized file
-        descriptor.
-        """
-        if IReactorSocket.providedBy(reactor):
-            portSock = socket(AF_UNIX)
-            portSock.bind(_abstractPath(self))
-            portSock.listen(3)
-            portSock.setblocking(False)
-            try:
-                return reactor.adoptStreamPort(
-                    portSock.fileno(), portSock.family, factory)
-            finally:
-                # The socket should still be open; fileno will raise if it is
-                # not.
-                portSock.fileno()
-                # Now clean it up, because the rest of the test does not need
-                # it.
-                portSock.close()
-        else:
-            raise SkipTest("Reactor does not provide IReactorSocket")
-
-
-
-globals().update(UNIXTestsBuilder.makeTestCaseClasses())
-globals().update(UNIXDatagramTestsBuilder.makeTestCaseClasses())
-globals().update(UNIXPortTestsBuilder.makeTestCaseClasses())
-globals().update(UNIXSocketTestsBuilder.makeTestCaseClasses())
-
-
-
-class UnixClientTestsBuilder(ReactorBuilder, StreamClientTestsMixin):
-    """
-    Define tests for L{IReactorUNIX.connectUNIX}.
     """
     requiredInterfaces = (IReactorUNIX,)
 
@@ -611,19 +543,6 @@ class UnixClientTestsBuilder(ReactorBuilder, StreamClientTestsMixin):
         return self._path
 
 
-    def listen(self, reactor, factory):
-        """
-        Start an UNIX server with the given C{factory}.
-
-        @param reactor: The reactor to create the UNIX port in.
-
-        @param factory: The server factory.
-
-        @return: A UNIX port instance.
-        """
-        return reactor.listenUNIX(self.path, factory)
-
-
     def connect(self, reactor, factory):
         """
         Start an UNIX client with the given C{factory}.
@@ -637,5 +556,73 @@ class UnixClientTestsBuilder(ReactorBuilder, StreamClientTestsMixin):
         return reactor.connectUNIX(self.path, factory)
 
 
+    def getExpectedStartListeningLogMessage(self, port, factory):
+        """
+        Get the message expected to be logged when a UNIX port starts
+        listening.
+        """
+        return "%s starting on %r" % (factory, port.getHost().name)
 
-globals().update(UnixClientTestsBuilder.makeTestCaseClasses())
+
+    def getExpectedConnectionLostLogMsg(self, port):
+        """
+        Get the expected connection lost message for a UNIX port
+        """
+        return "(UNIX Port %s Closed)" % (repr(port.port),)
+
+
+
+class UNIXStreamTestsBuilder(ReactorBuilder, StreamClientTestsMixin,
+                             UNIXStreamTransportTestsMixin):
+    """
+    Define tests for L{IReactorUNIX.connectUNIX}.
+    """
+
+    def listen(self, reactor, factory):
+        """
+        Start an UNIX server with the given C{factory}.
+
+        @param reactor: The reactor to create the UNIX port in.
+
+        @param factory: The server factory.
+
+        @return: A UNIX port instance.
+        """
+        return reactor.listenUNIX(self.path, factory)
+
+
+
+class UNIXSocketStreamTestsBuilder(ReactorBuilder, StreamClientTestsMixin,
+                                   UNIXStreamTransportTestsMixin):
+    """
+    Mixin which uses L{IReactorSocket.adoptStreamPort} to hand out listening
+    UNIX ports.
+    """
+
+    def listen(self, reactor, factory):
+        """
+        Get a UNIX port from a reactor, wrapping an already-initialized file
+        descriptor.
+        """
+        if IReactorSocket.providedBy(reactor):
+            portSock = socket(AF_UNIX)
+            portSock.bind(self.path)
+            portSock.listen(3)
+            portSock.setblocking(False)
+            try:
+                return reactor.adoptStreamPort(
+                    portSock.fileno(), portSock.family, factory)
+            finally:
+                # The socket should still be open; fileno will raise if it is
+                # not.
+                portSock.fileno()
+                # Now clean it up, because the rest of the test does not need
+                # it.
+                portSock.close()
+        else:
+            raise SkipTest("Reactor does not provide IReactorSocket")
+
+
+
+globals().update(UNIXStreamTestsBuilder.makeTestCaseClasses())
+globals().update(UNIXSocketStreamTestsBuilder.makeTestCaseClasses())

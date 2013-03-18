@@ -794,7 +794,7 @@ class ListenTCPMixin(object):
     """
     Mixin which uses L{IReactorTCP.listenTCP} to hand out listening TCP ports.
     """
-    def getListeningPort(self, reactor, factory, port=0, interface=''):
+    def listen(self, reactor, factory, port=0, interface=''):
         """
         Get a TCP port from a reactor.
         """
@@ -807,7 +807,7 @@ class SocketTCPMixin(object):
     Mixin which uses L{IReactorSocket.adoptStreamPort} to hand out listening TCP
     ports.
     """
-    def getListeningPort(self, reactor, factory, port=0, interface=''):
+    def listen(self, reactor, factory, port=0, interface=''):
         """
         Get a TCP port from a reactor, wrapping an already-initialized file
         descriptor.
@@ -865,7 +865,7 @@ class TCPPortTestsMixin(object):
         listening port listens on an IPv4 address.
         """
         reactor = self.buildReactor()
-        port = self.getListeningPort(reactor, ServerFactory())
+        port = self.listen(reactor, ServerFactory())
         address = port.getHost()
         self.assertIsInstance(address, IPv4Address)
 
@@ -879,7 +879,7 @@ class TCPPortTestsMixin(object):
         reactor = self.buildReactor()
         host, portNumber = findFreePort(
             family=socket.AF_INET6, interface='::1')[:2]
-        port = self.getListeningPort(
+        port = self.listen(
             reactor, ServerFactory(), portNumber, host)
         address = port.getHost()
         self.assertIsInstance(address, IPv6Address)
@@ -898,7 +898,7 @@ class TCPPortTestsMixin(object):
         """
         linkLocal = getLinkLocalIPv6Address()
         reactor = self.buildReactor()
-        port = self.getListeningPort(reactor, ServerFactory(), 0, linkLocal)
+        port = self.listen(reactor, ServerFactory(), 0, linkLocal)
         address = port.getHost()
         self.assertIsInstance(address, IPv6Address)
         self.assertEqual(linkLocal, address.host)
@@ -932,7 +932,7 @@ class TCPPortTestsMixin(object):
 
         factory = ObserveAddress()
         reactor = self.buildReactor()
-        port = self.getListeningPort(reactor, factory, 0, interface)
+        port = self.listen(reactor, factory, 0, interface)
         client.setblocking(False)
         try:
             connect(client, (port.getHost().host, port.getHost().port))
@@ -1015,7 +1015,7 @@ class TCPPortTestsMixin(object):
         reactor = self.buildReactor()
         factory = ServerFactory()
         factory.protocol = ObserveAddress
-        port = self.getListeningPort(reactor, factory, 0, interface)
+        port = self.listen(reactor, factory, 0, interface)
         client.setblocking(False)
         try:
             connect(client, (port.getHost().host, port.getHost().port))

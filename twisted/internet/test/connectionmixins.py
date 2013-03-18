@@ -621,12 +621,13 @@ class StreamClientTestsMixin(object):
                 log.msg("ClientProtocol.connectionLost")
                 finished.callback(None)
 
-        clientFactory = ClientFactory()
+        clientFactory = Stop(reactor)
         clientFactory.protocol = ClientProtocol
         self.connect(reactor, clientFactory)
         self.runReactor(reactor)
         # If the test failed, we logged an error already and trial
         # will catch it.
+        self.assertIdentical(None, clientFactory.failReason)
 
 
 
@@ -649,7 +650,7 @@ class StreamTransportTestsMixin(LogObserverMixin, ObjectModelIntegrationMixin):
                 return "Crazy Factory"
 
         factory = SomeFactory()
-        p = self.getListeningPort(reactor, factory)
+        p = self.listen(reactor, factory)
         expectedMessage = self.getExpectedStartListeningLogMessage(
             p, "Crazy Factory")
         self.assertEqual((expectedMessage,), loggedMessages[0]['message'])
@@ -667,7 +668,7 @@ class StreamTransportTestsMixin(LogObserverMixin, ObjectModelIntegrationMixin):
             loggedMessages.append(log.textFromEventDict(eventDict))
 
         reactor = self.buildReactor()
-        p = self.getListeningPort(reactor, ServerFactory())
+        p = self.listen(reactor, ServerFactory())
         expectedMessage = self.getExpectedConnectionLostLogMsg(p)
         log.addObserver(logConnectionLostMsg)
 
@@ -691,5 +692,5 @@ class StreamTransportTestsMixin(LogObserverMixin, ObjectModelIntegrationMixin):
         classic classes in its hierarchy.
         """
         reactor = self.buildReactor()
-        port = self.getListeningPort(reactor, ServerFactory())
+        port = self.listen(reactor, ServerFactory())
         self.assertFullyNewStyle(port)
