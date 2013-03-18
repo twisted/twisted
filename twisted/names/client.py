@@ -209,7 +209,7 @@ class Resolver(common.ResolverBase):
         Return a new L{DNSDatagramProtocol} bound to a randomly selected port
         number.
         """
-        proto = dns.DNSDatagramProtocol(self)
+        proto = dns.DNSDatagramProtocol(self, reactor=self._reactor)
         while True:
             try:
                 self._reactor.listenUDP(dns.randomSource(), proto)

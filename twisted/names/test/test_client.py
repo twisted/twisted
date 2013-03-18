@@ -24,6 +24,7 @@ from twisted.names.error import DNSQueryTimeoutError
 from twisted.names.common import ResolverBase
 
 from twisted.names.test.test_hosts import GoodTempPathMixin
+from twisted.names.test.test_rootresolve import MemoryReactor
 
 from twisted.trial import unittest
 
@@ -498,6 +499,18 @@ class ResolverTests(unittest.TestCase):
         return defer.gatherResults([
                 defer.maybeDeferred(firstProto.transport.stopListening),
                 defer.maybeDeferred(secondProto.transport.stopListening)])
+
+
+    def test_resolverUsesOnlyParameterizedReactor(self):
+        """
+        If a reactor instance is supplied to L{client.Resolver}
+        L{client.Resolver._connectedProtocol} should pass that reactor
+        to L{twisted.names.dns.DNSDatagramProtocol}.
+        """
+        reactor = MemoryReactor()
+        resolver = client.Resolver(resolv=self.mktemp(), reactor=reactor)
+        proto = resolver._connectedProtocol()
+        self.assertIdentical(proto._reactor, reactor)
 
 
     def test_differentProtocol(self):
