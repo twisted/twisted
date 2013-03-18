@@ -903,9 +903,46 @@ class TestResultOfAssertions(unittest.SynchronousTestCase):
     def test_assertNoResult(self):
         """
         When passed a L{Deferred} with no current result,
-        L{SynchronousTestCase.assertNoResult} raises no exception.
         """
         self.assertNoResult(Deferred())
+
+
+    def test_assertNoResultPropagatesSuccess(self):
+        """
+        When passed a L{Deferred} with no current result, which is then
+        fired with a success result, L{SynchronousTestCase.assertNoResult}
+        doesn't modify the result of the L{Deferred}.
+        """
+        d = Deferred()
+        self.assertNoResult(d)
+        d.callback(self.result)
+        self.assertEqual(self.result, self.successResultOf(d))
+
+
+    def test_assertNoResultPropagatesLaterFailure(self):
+        """
+        When passed a L{Deferred} with no current result, which is then
+        fired with a L{Failure} result, L{SynchronousTestCase.assertNoResult}
+        doesn't modify the result of the L{Deferred}.
+        """
+        d = Deferred()
+        self.assertNoResult(d)
+        d.errback(self.failure)
+        self.assertEqual(self.failure, self.failureResultOf(d))
+
+
+    def test_assertNoResultSwallowsImmediateFailure(self):
+        """
+        When passed a L{Deferred} which currently has a L{Failure} result,
+        L{SynchronousTestCase.assertNoResult} changes the result of the
+        L{Deferred} to a success.
+        """
+        d = fail(self.failure)
+        try:
+            self.assertNoResult(d)
+        except self.failureException:
+            pass
+        self.assertEqual(None, self.successResultOf(d))
 
 
 
