@@ -701,6 +701,11 @@ class PositionError(object, FancyEqMixin):
     """
     Position error information.
 
+    @cvar _ALLOWABLE_THRESHOLD: The maximum allowable difference between PDOP
+    and the geometric mean of VDOP and HDOP. That difference is supposed to be
+    zero (mathematically speaking) but can be non-zero because of limited
+    reporting precision. You should never have to change this value.
+    @type _ALLOWABLE_THRESHOLD: C{float}
     @ivar pdop: The position dilution of precision. C{None} if unknown.
     @type pdop: C{float} or C{NoneType}
     @ivar hdop: The horizontal dilution of precision. C{None} if unknown.
@@ -734,7 +739,7 @@ class PositionError(object, FancyEqMixin):
         self._testDilutionOfPositionInvariant()
 
 
-    ALLOWABLE_TRESHOLD = 0.01
+    _ALLOWABLE_TRESHOLD = 0.01
 
 
     def _testDilutionOfPositionInvariant(self):
@@ -755,7 +760,7 @@ class PositionError(object, FancyEqMixin):
                 return
 
         delta = abs(self.pdop - (self.hdop**2 + self.vdop**2)**.5)
-        if delta > self.ALLOWABLE_TRESHOLD:
+        if delta > self._ALLOWABLE_TRESHOLD:
             raise ValueError("invalid combination of dilutions of precision: "
                              "position: %s, horizontal: %s, vertical: %s"
                              % (self.pdop, self.hdop, self.vdop))
