@@ -1097,33 +1097,38 @@ def _inlineCallbacks(result, g, deferred):
             return deferred
 
         if isinstance(result, Deferred):
-            def extendErrbackStack(r):
+            def extendErrbackStack(f):
                 """
                 A failure was yielded by the generator, so for the failure's
                 traceback to be useful insert the current yield line into the
                 stack of frames.
                 """
-                f = g.gi_frame
+                frame = g.gi_frame
 
                 # The following code is lifted almost straight from
                 # twisted.python.failure.Failure.__init__()
-                localz = f.f_locals.copy()
-                if f.f_locals is f.f_globals:
-                    globalz = {}
+                if f.captureVars:
+                    localz = frame.f_locals.copy()
+                    if frame.f_locals is frame.f_globals:
+                        globalz = {}
+                    else:
+                        globalz = frame.f_globals.copy()
+                    for d in globalz, localz:
+                        if d.has_key("__builtins__"):
+                            del d["__builtins__"]
+                    localz = list(localz.items())
+                    globalz = list(globalz.items())
                 else:
-                    globalz = f.f_globals.copy()
-                for d in globalz, localz:
-                    if d.has_key("__builtins__"):
-                        del d["__builtins__"]
+                    localz = globalz = ()
 
-                r.frames.insert(0, [
-                    f.f_code.co_name,
-                    f.f_code.co_filename,
-                    f.f_lineno,
-                    localz.items(),
-                    globalz.items(),
+                f.frames.insert(0, [
+                    frame.f_code.co_name,
+                    frame.f_code.co_filename,
+                    frame.f_lineno,
+                    localz,
+                    globalz,
                     ])
-                return r
+                return f
             result.addErrback(extendErrbackStack)
 
             # a deferred was yielded, get the result.
