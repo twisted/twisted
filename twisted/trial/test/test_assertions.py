@@ -838,6 +838,18 @@ class TestResultOfAssertions(unittest.SynchronousTestCase):
             self.failureException, self.successResultOf, fail(self.failure))
 
 
+    def test_successResultOfWithFailureHasTraceback(self):
+        """
+        L{SynchronousTestCase.successResultOf} raises a
+        L{SynchronousTestCase.failureException} that has the original failure
+        traceback when called with a L{Deferred} with a failure result.
+        """
+        try:
+            self.successResultOf(fail(self.failure))
+        except self.failureException as e:
+            self.assertIn(self.failure.getTraceback(), e.message)
+
+
     def test_withoutFailureResult(self):
         """
         L{SynchronousTestCase.failureResultOf} raises
