@@ -23,6 +23,8 @@ import os, types, warnings, sys, inspect, imp
 import doctest, time
 
 from twisted.python import reflect, log, failure, modules, filepath
+from twisted.python.deprecate import deprecatedModuleAttribute
+from twisted.python.versions import Version
 
 from twisted.internet import defer
 from twisted.trial import util, unittest
@@ -680,6 +682,12 @@ class DryRunVisitor(object):
     A visitor that makes a reporter think that every test visited has run
     successfully.
     """
+
+    deprecatedModuleAttribute(
+            Version("Twisted", 13, 0, 0),
+            "Trial no longer has support for visitors",
+            "twisted.trial.runner", "DryRunVisitor")
+
 
     def __init__(self, reporter):
         """
