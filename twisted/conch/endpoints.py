@@ -32,6 +32,7 @@ from twisted.conch.ssh.channel import SSHChannel
 from twisted.conch.client.knownhosts import KnownHostsFile
 from twisted.conch.client.agent import SSHAgentClient
 
+
 class AuthenticationFailed(Exception):
     """
     An SSH session could not be established because authentication was not
@@ -244,6 +245,15 @@ class UserAuth(SSHUserAuthClient):
     agent = None
 
     def getPublicKey(self):
+        """
+        Retrieve the next public key object to offer to the server, possibly
+        delegating to an authentication agent if there is one.
+
+        @return: The public part of a key pair that could be used to
+            authenticate with the server, or C{None} if there are no more public
+            keys to try.
+        @rtype: L{twisted.conch.ssh.keys.Key} or L{NoneType}
+        """
         if self.agent is not None:
             return self.agent.getPublicKey()
 
@@ -269,14 +279,31 @@ class UserAuth(SSHUserAuthClient):
 
 
     def getPrivateKey(self):
+        """
+        Get the private part of a key pair to use for authentication.  The key
+        corresponds to the public part most recently returned from
+        C{getPublicKey}.
+
+        @return: A L{Deferred} which fires with the private key.
+        @rtype: L{Deferred}
+        """
         return succeed(self.key)
 
 
     def getPassword(self):
+        """
+        Get the password to use for authentication.
+
+        @return: A L{Deferred} which fires with the password.
+        """
         return succeed(self.password)
 
 
     def ssh_USERAUTH_SUCCESS(self, packet):
+        """
+        Handle user authentication success in the normal way, but also make a
+        note of the state change on the L{_CommandTransport}.
+        """
         self.transport._state = b'CHANNELLING'
         return SSHUserAuthClient.ssh_USERAUTH_SUCCESS(self, packet)
 
@@ -607,6 +634,10 @@ class _NewConnectionHelper(object):
 
 
     def cleanupConnection(self, connection):
+        """
+        Clean up the connection by closing it.  The command running on the
+        endpoint has ended so the connection is no longer needed.
+        """
         connection.transport.loseConnection()
 
 
@@ -635,4 +666,7 @@ class _ExistingConnectionHelper(object):
 
 
     def cleanupConnection(self, connection):
-        pass
+        """
+        Do not do any cleanup on the connection.  Leave that responsibility to
+        whatever code created it in the first place.
+        """
