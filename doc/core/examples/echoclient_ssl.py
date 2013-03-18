@@ -1,9 +1,11 @@
 #!/usr/bin/env python
-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from OpenSSL import SSL
+if __name__ == '__main__':
+    import echoclient_ssl
+    raise SystemExit(echoclient_ssl.main())
+
 import sys
 
 from twisted.internet.protocol import ClientFactory
@@ -39,8 +41,5 @@ class EchoClientFactory(ClientFactory):
 
 def main():
     factory = EchoClientFactory()
-    reactor.connectSSL('localhost', 8000, factory, ssl.ClientContextFactory())
+    reactor.connectSSL('localhost', 8000, factory, ssl.CertificateOptions())
     reactor.run()
-
-if __name__ == '__main__':
-    main()
