@@ -144,7 +144,6 @@ class FakeTransport:
         self.protocol.connectionLost(Failure(err))
 
     def getPeer(self):
-        # XXX: According to ITransport, this should return an IAddress!
         return self.peerAddress
 
     def getHost(self):
