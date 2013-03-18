@@ -228,12 +228,263 @@ class MemorySSHPublicKeyDatabase(SSHPublicKeyDatabase):
 
 
 
-class SSHCommandEndpointTests(TestCase):
+class SSHCommandEndpointTestsMixin(object):
     """
     Tests for L{SSHCommandEndpoint}, an L{IStreamClientEndpoint}
     implementations which connects a protocol with the stdin and stdout of a
     command running in an SSH session.
+
+    These tests apply to L{SSHCommandEndpoint} whether it is constructed using
+    L{SSHCommandEndpoint.existingConnection} or
+    L{SSHCommandEndpoint.newConnection}.
     """
+    def test_interface(self):
+        """
+        L{SSHCommandEndpoint} instances provide L{IStreamClientEndpoint}.
+        """
+        endpoint = SSHCommandEndpoint.newConnection(
+            self.reactor, b"dummy command", b"dummy user",
+            self.hostname, self.port)
+        self.assertTrue(verifyObject(IStreamClientEndpoint, endpoint))
+
+
+    def test_channelOpenFailure(self):
+        """
+        If a channel cannot be opened on the authenticated SSH connection, the
+        L{Deferred} returned by L{SSHCommandEndpoint.connect} fires with a
+        L{Failure} wrapping the reason given by the server.
+        """
+        endpoint = self.create()
+
+        factory = Factory()
+        factory.protocol = Protocol
+        connected = endpoint.connect(factory)
+
+        server, client, pump = self.connectedServerAndClient(
+            self.factory, self.memory.tcpClients[0][2])
+
+        # The server logs the channel open failure - this is expected.
+        errors = self.flushLoggedErrors(ConchError)
+        self.assertIn(
+            'unknown channel', (errors[0].value.data, errors[0].value.value))
+        self.assertEqual(1, len(errors))
+
+        # Now deal with the results on the endpoint side.
+        f = self.failureResultOf(connected)
+        f.trap(ConchError)
+        self.assertEqual('unknown channel', f.value.value)
+
+        # Nothing useful can be done with the connection at this point, so the
+        # endpoint should close it.
+        self.assertTrue(client.transport.disconnecting)
+
+
+    def test_execFailure(self):
+        """
+        If execution of the command fails, the L{Deferred} returned by
+        L{SSHCommandEndpoint.connect} fires with a L{Failure} wrapping the
+        reason given by the server.
+        """
+        self.realm.channelLookup[b'session'] = BrokenExecSession
+        endpoint = self.create()
+
+        factory = Factory()
+        factory.protocol = Protocol
+        connected = endpoint.connect(factory)
+
+        server, client, pump = self.connectedServerAndClient(
+            self.factory, self.memory.tcpClients[0][2])
+
+        f = self.failureResultOf(connected)
+        f.trap(ConchError)
+        self.assertEqual('channel request failed', f.value.value)
+
+        # Nothing useful can be done with the connection at this point, so the
+        # endpoint should close it.
+        self.assertTrue(client.transport.disconnecting)
+
+
+    def test_buildProtocol(self):
+        """
+        Once the necessary SSH actions have completed successfully,
+        L{SSHCommandEndpoint.connect} uses the factory passed to it to
+        construct a protocol instance by calling its C{buildProtocol} method
+        with an address object representing the SSH connection and command
+        executed.
+        """
+        self.realm.channelLookup[b'session'] = WorkingExecSession
+        endpoint = self.create()
+
+        factory = AddressSpyFactory()
+        factory.protocol = Protocol
+        endpoint.connect(factory)
+
+        server, client, pump = self.connectedServerAndClient(
+            self.factory, self.memory.tcpClients[0][2])
+
+        self.assertIsInstance(factory.address, SSHCommandAddress)
+        self.assertEqual(server.transport.getHost(), factory.address.server)
+        self.assertEqual(self.user, factory.address.username)
+        self.assertEqual(b"/bin/ls -l", factory.address.command)
+
+
+    def test_makeConnection(self):
+        """
+        L{SSHCommandEndpoint} establishes an SSH connection, creates a channel
+        in it, runs a command in that channel, and uses the protocol's
+        C{makeConnection} to associate it with a protocol representing that
+        command's stdin and stdout.
+        """
+        self.realm.channelLookup[b'session'] = WorkingExecSession
+        endpoint = self.create()
+
+        factory = Factory()
+        factory.protocol = Protocol
+        connected = endpoint.connect(factory)
+
+        server, client, pump = self.connectedServerAndClient(
+            self.factory, self.memory.tcpClients[0][2])
+
+        protocol = self.successResultOf(connected)
+        self.assertNotIdentical(None, protocol.transport)
+
+
+    def test_dataReceived(self):
+        """
+        After establishing the connection, when the command on the SSH server
+        produces output, it is delivered to the protocol's C{dataReceived}
+        method.
+        """
+        self.realm.channelLookup[b'session'] = WorkingExecSession
+        endpoint = self.create()
+
+        factory = Factory()
+        factory.protocol = Protocol
+        connected = endpoint.connect(factory)
+
+        server, client, pump = self.connectedServerAndClient(
+            self.factory, self.memory.tcpClients[0][2])
+
+        protocol = self.successResultOf(connected)
+        dataReceived = []
+        protocol.dataReceived = dataReceived.append
+
+        server.service.channels[0].write(b"hello, world")
+        pump.pump()
+        self.assertEqual(b"hello, world", b"".join(dataReceived))
+
+
+    def test_connectionLost(self):
+        """
+        When the command closes the channel, the protocol's C{connectionLost}
+        method is called.
+        """
+        self.realm.channelLookup[b'session'] = WorkingExecSession
+        endpoint = self.create()
+
+        factory = Factory()
+        factory.protocol = Protocol
+        connected = endpoint.connect(factory)
+
+        server, client, pump = self.connectedServerAndClient(
+            self.factory, self.memory.tcpClients[0][2])
+
+        protocol = self.successResultOf(connected)
+        connectionLost = []
+        protocol.connectionLost= connectionLost.append
+
+        server.service.channels[0].loseConnection()
+        pump.pump()
+        connectionLost[0].trap(ConnectionDone)
+
+        # Nothing useful can be done with the connection at this point, so the
+        # endpoint should close it.
+        self.assertTrue(client.transport.disconnecting)
+
+
+    def test_write(self):
+        """
+        The transport connected to the protocol has a C{write} method which
+        sends bytes to the input of the command executing on the SSH server.
+        """
+        self.realm.channelLookup[b'session'] = WorkingExecSession
+        endpoint = self.create()
+
+        factory = Factory()
+        factory.protocol = Protocol
+        connected = endpoint.connect(factory)
+
+        server, client, pump = self.connectedServerAndClient(
+            self.factory, self.memory.tcpClients[0][2])
+
+        protocol = self.successResultOf(connected)
+
+        dataReceived = []
+        server.service.channels[0].dataReceived = dataReceived.append
+        protocol.transport.write(b"hello, world")
+        pump.pump()
+        self.assertEqual(b"hello, world", b"".join(dataReceived))
+
+
+    def test_writeSequence(self):
+        """
+        The transport connected to the protocol has a C{writeSequence} method which
+        sends bytes to the input of the command executing on the SSH server.
+        """
+        self.realm.channelLookup[b'session'] = WorkingExecSession
+        endpoint = self.create()
+
+        factory = Factory()
+        factory.protocol = Protocol
+        connected = endpoint.connect(factory)
+
+        server, client, pump = self.connectedServerAndClient(
+            self.factory, self.memory.tcpClients[0][2])
+
+        protocol = self.successResultOf(connected)
+
+        dataReceived = []
+        server.service.channels[0].dataReceived = dataReceived.append
+        protocol.transport.writeSequence(list(b"hello, world"))
+        pump.pump()
+        self.assertEqual(b"hello, world", b"".join(dataReceived))
+
+
+    def test_loseConnection(self):
+        """
+        The transport connected to the protocol has a C{loseConnection} method
+        which causes the channel in which the command is running to close and
+        the overall connection to be closed.
+        """
+        self.realm.channelLookup[b'session'] = WorkingExecSession
+        endpoint = self.create()
+
+        factory = Factory()
+        factory.protocol = Protocol
+        connected = endpoint.connect(factory)
+
+        server, client, pump = self.connectedServerAndClient(
+            self.factory, self.memory.tcpClients[0][2])
+
+        protocol = self.successResultOf(connected)
+        closed = []
+        server.service.channels[0].closed = lambda: closed.append(True)
+        protocol.transport.loseConnection()
+        pump.pump()
+        self.assertEqual([True], closed)
+
+        # Let the last bit of network traffic flow.  This lets the server's
+        # close acknowledgement through, at which point the client can close
+        # the overall SSH connection.
+        pump.pump()
+
+        # Nothing useful can be done with the connection at this point, so the
+        # endpoint should close it.
+        self.assertTrue(client.transport.disconnecting)
+
+
+
+class SSHCommandEndpointTests(TestCase, SSHCommandEndpointTestsMixin):
     def setUp(self):
         """
         Configure an SSH server with password authentication enabled for a
@@ -270,6 +521,13 @@ class SSHCommandEndpointTests(TestCase):
         self.knownHosts.save()
 
 
+    def create(self):
+        return SSHCommandEndpoint.newConnection(
+            self.reactor, b"/bin/ls -l", self.user, self.hostname, self.port,
+            password=self.password, knownHosts=self.knownHosts,
+            ui=FixedResponseUI(False))
+
+
     def connectedServerAndClient(self, serverFactory, clientFactory):
         clientProtocol = clientFactory.buildProtocol(None)
         serverProtocol = serverFactory.buildProtocol(None)
@@ -286,24 +544,14 @@ class SSHCommandEndpointTests(TestCase):
         return serverProtocol, clientProtocol, pump
 
 
-    def test_interface(self):
-        """
-        L{SSHCommandEndpoint} instances provide L{IStreamClientEndpoint}.
-        """
-        endpoint = SSHCommandEndpoint.newConnection(
-            self.reactor, b"dummy command", b"dummy user",
-            self.hostname, self.port)
-        self.assertTrue(verifyObject(IStreamClientEndpoint, endpoint))
-
-
     def test_destination(self):
         """
         L{SSHCommandEndpoint} uses the L{IReactorTCP} passed to it to attempt a
         connection to the host/port address also passed to it.
         """
         endpoint = SSHCommandEndpoint.newConnection(
-            self.reactor, b"/bin/ls -l", b"dummy user",
-            self.hostname, self.port, knownHosts=self.knownHosts,
+            self.reactor, b"/bin/ls -l", self.user, self.hostname, self.port,
+            password=self.password, knownHosts=self.knownHosts,
             ui=FixedResponseUI(False))
         factory = Factory()
         factory.protocol = Protocol
@@ -544,268 +792,6 @@ class SSHCommandEndpointTests(TestCase):
         f = self.failureResultOf(connected)
         f.trap(ConchError)
         self.assertEqual('unknown channel', f.value.value)
-
-        # Nothing useful can be done with the connection at this point, so the
-        # endpoint should close it.
-        self.assertTrue(client.transport.disconnecting)
-
-
-    def test_channelOpenFailure(self):
-        """
-        If a channel cannot be opened on the authenticated SSH connection, the
-        L{Deferred} returned by L{SSHCommandEndpoint.connect} fires with a
-        L{Failure} wrapping the reason given by the server.
-        """
-        endpoint = SSHCommandEndpoint.newConnection(
-            self.reactor, b"/bin/ls -l", self.user, self.hostname, self.port,
-            password=self.password, knownHosts=self.knownHosts,
-            ui=FixedResponseUI(False))
-
-        factory = Factory()
-        factory.protocol = Protocol
-        connected = endpoint.connect(factory)
-
-        server, client, pump = self.connectedServerAndClient(
-            self.factory, self.memory.tcpClients[0][2])
-
-        # The server logs the channel open failure - this is expected.
-        errors = self.flushLoggedErrors(ConchError)
-        self.assertIn(
-            'unknown channel', (errors[0].value.data, errors[0].value.value))
-        self.assertEqual(1, len(errors))
-
-        # Now deal with the results on the endpoint side.
-        f = self.failureResultOf(connected)
-        f.trap(ConchError)
-        self.assertEqual('unknown channel', f.value.value)
-
-        # Nothing useful can be done with the connection at this point, so the
-        # endpoint should close it.
-        self.assertTrue(client.transport.disconnecting)
-
-
-    def test_execFailure(self):
-        """
-        If execution of the command fails, the L{Deferred} returned by
-        L{SSHCommandEndpoint.connect} fires with a L{Failure} wrapping the
-        reason given by the server.
-        """
-        self.realm.channelLookup[b'session'] = BrokenExecSession
-        endpoint = SSHCommandEndpoint.newConnection(
-            self.reactor, b"/bin/ls -l", self.user, self.hostname, self.port,
-            password=self.password, knownHosts=self.knownHosts,
-            ui=FixedResponseUI(False))
-
-        factory = Factory()
-        factory.protocol = Protocol
-        connected = endpoint.connect(factory)
-
-        server, client, pump = self.connectedServerAndClient(
-            self.factory, self.memory.tcpClients[0][2])
-
-        f = self.failureResultOf(connected)
-        f.trap(ConchError)
-        self.assertEqual('channel request failed', f.value.value)
-
-        # Nothing useful can be done with the connection at this point, so the
-        # endpoint should close it.
-        self.assertTrue(client.transport.disconnecting)
-
-
-    def test_buildProtocol(self):
-        """
-        Once the necessary SSH actions have completed successfully,
-        L{SSHCommandEndpoint.connect} uses the factory passed to it to
-        construct a protocol instance by calling its C{buildProtocol} method
-        with an address object representing the SSH connection and command
-        executed.
-        """
-        self.realm.channelLookup[b'session'] = WorkingExecSession
-        endpoint = SSHCommandEndpoint.newConnection(
-            self.reactor, b"/bin/ls -l", self.user, self.hostname, self.port,
-            password=self.password, knownHosts=self.knownHosts,
-            ui=FixedResponseUI(False))
-
-        factory = AddressSpyFactory()
-        factory.protocol = Protocol
-        endpoint.connect(factory)
-
-        server, client, pump = self.connectedServerAndClient(
-            self.factory, self.memory.tcpClients[0][2])
-
-        self.assertIsInstance(factory.address, SSHCommandAddress)
-        self.assertEqual(server.transport.getHost(), factory.address.server)
-        self.assertEqual(self.user, factory.address.username)
-        self.assertEqual(b"/bin/ls -l", factory.address.command)
-
-
-    def test_makeConnection(self):
-        """
-        L{SSHCommandEndpoint} establishes an SSH connection, creates a channel
-        in it, runs a command in that channel, and uses the protocol's
-        C{makeConnection} to associate it with a protocol representing that
-        command's stdin and stdout.
-        """
-        self.realm.channelLookup[b'session'] = WorkingExecSession
-        endpoint = SSHCommandEndpoint.newConnection(
-            self.reactor, b"/bin/ls -l", self.user, self.hostname, self.port,
-            password=self.password, knownHosts=self.knownHosts,
-            ui=FixedResponseUI(False))
-
-        factory = Factory()
-        factory.protocol = Protocol
-        connected = endpoint.connect(factory)
-
-        server, client, pump = self.connectedServerAndClient(
-            self.factory, self.memory.tcpClients[0][2])
-
-        protocol = self.successResultOf(connected)
-        self.assertNotIdentical(None, protocol.transport)
-
-
-    def test_dataReceived(self):
-        """
-        After establishing the connection, when the command on the SSH server
-        produces output, it is delivered to the protocol's C{dataReceived}
-        method.
-        """
-        self.realm.channelLookup[b'session'] = WorkingExecSession
-        endpoint = SSHCommandEndpoint.newConnection(
-            self.reactor, b"/bin/ls -l", self.user, self.hostname, self.port,
-            password=self.password, knownHosts=self.knownHosts,
-            ui=FixedResponseUI(False))
-
-        factory = Factory()
-        factory.protocol = Protocol
-        connected = endpoint.connect(factory)
-
-        server, client, pump = self.connectedServerAndClient(
-            self.factory, self.memory.tcpClients[0][2])
-
-        protocol = self.successResultOf(connected)
-        dataReceived = []
-        protocol.dataReceived = dataReceived.append
-
-        server.service.channels[0].write(b"hello, world")
-        pump.pump()
-        self.assertEqual(b"hello, world", b"".join(dataReceived))
-
-
-    def test_connectionLost(self):
-        """
-        When the command closes the channel, the protocol's C{connectionLost}
-        method is called.
-        """
-        self.realm.channelLookup[b'session'] = WorkingExecSession
-        endpoint = SSHCommandEndpoint.newConnection(
-            self.reactor, b"/bin/ls -l", self.user, self.hostname, self.port,
-            password=self.password, knownHosts=self.knownHosts,
-            ui=FixedResponseUI(False))
-
-        factory = Factory()
-        factory.protocol = Protocol
-        connected = endpoint.connect(factory)
-
-        server, client, pump = self.connectedServerAndClient(
-            self.factory, self.memory.tcpClients[0][2])
-
-        protocol = self.successResultOf(connected)
-        connectionLost = []
-        protocol.connectionLost= connectionLost.append
-
-        server.service.channels[0].loseConnection()
-        pump.pump()
-        connectionLost[0].trap(ConnectionDone)
-
-        # Nothing useful can be done with the connection at this point, so the
-        # endpoint should close it.
-        self.assertTrue(client.transport.disconnecting)
-
-
-    def test_write(self):
-        """
-        The transport connected to the protocol has a C{write} method which
-        sends bytes to the input of the command executing on the SSH server.
-        """
-        self.realm.channelLookup[b'session'] = WorkingExecSession
-        endpoint = SSHCommandEndpoint.newConnection(
-            self.reactor, b"/bin/ls -l", self.user, self.hostname, self.port,
-            password=self.password, knownHosts=self.knownHosts,
-            ui=FixedResponseUI(False))
-
-        factory = Factory()
-        factory.protocol = Protocol
-        connected = endpoint.connect(factory)
-
-        server, client, pump = self.connectedServerAndClient(
-            self.factory, self.memory.tcpClients[0][2])
-
-        protocol = self.successResultOf(connected)
-
-        dataReceived = []
-        server.service.channels[0].dataReceived = dataReceived.append
-        protocol.transport.write(b"hello, world")
-        pump.pump()
-        self.assertEqual(b"hello, world", b"".join(dataReceived))
-
-
-    def test_writeSequence(self):
-        """
-        The transport connected to the protocol has a C{writeSequence} method which
-        sends bytes to the input of the command executing on the SSH server.
-        """
-        self.realm.channelLookup[b'session'] = WorkingExecSession
-        endpoint = SSHCommandEndpoint.newConnection(
-            self.reactor, b"/bin/ls -l", self.user, self.hostname, self.port,
-            password=self.password, knownHosts=self.knownHosts,
-            ui=FixedResponseUI(False))
-
-        factory = Factory()
-        factory.protocol = Protocol
-        connected = endpoint.connect(factory)
-
-        server, client, pump = self.connectedServerAndClient(
-            self.factory, self.memory.tcpClients[0][2])
-
-        protocol = self.successResultOf(connected)
-
-        dataReceived = []
-        server.service.channels[0].dataReceived = dataReceived.append
-        protocol.transport.writeSequence(list(b"hello, world"))
-        pump.pump()
-        self.assertEqual(b"hello, world", b"".join(dataReceived))
-
-
-    def test_loseConnection(self):
-        """
-        The transport connected to the protocol has a C{loseConnection} method
-        which causes the channel in which the command is running to close and
-        the overall connection to be closed.
-        """
-        self.realm.channelLookup[b'session'] = WorkingExecSession
-        endpoint = SSHCommandEndpoint.newConnection(
-            self.reactor, b"/bin/ls -l", self.user, self.hostname, self.port,
-            password=self.password, knownHosts=self.knownHosts,
-            ui=FixedResponseUI(False))
-
-        factory = Factory()
-        factory.protocol = Protocol
-        connected = endpoint.connect(factory)
-
-        server, client, pump = self.connectedServerAndClient(
-            self.factory, self.memory.tcpClients[0][2])
-
-        protocol = self.successResultOf(connected)
-        closed = []
-        server.service.channels[0].closed = lambda: closed.append(True)
-        protocol.transport.loseConnection()
-        pump.pump()
-        self.assertEqual([True], closed)
-
-        # Let the last bit of network traffic flow.  This lets the server's
-        # close acknowledgement through, at which point the client can close
-        # the overall SSH connection.
-        pump.pump()
 
         # Nothing useful can be done with the connection at this point, so the
         # endpoint should close it.
