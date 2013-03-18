@@ -660,7 +660,8 @@ class _Assertions(pyunit.TestCase, object):
             self.fail(
                 "Failure result expected on %r, "
                 "found success result (%r) instead" % (deferred, result[0]))
-        elif not result[0].check(*expectedExceptionTypes):
+        elif (expectedExceptionTypes and
+              not result[0].check(*expectedExceptionTypes)):
             expected_string = " or ".join([
                 repr(t) for t in expectedExceptionTypes])
 
