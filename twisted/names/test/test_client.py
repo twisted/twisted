@@ -285,18 +285,6 @@ class ResolverTests(unittest.TestCase):
         self.assertRaises(ValueError, client.Resolver)
 
 
-    def test_resolverUsesOnlyParameterizedReactor(self):
-        """
-        If a reactor instance is supplied to L{client.Resolver}
-        L{client.Resolver._connectedProtocol} should pass that reactor
-        to L{twisted.names.dns.DNSDatagramProtocol}.
-        """
-        reactor = MemoryReactor()
-        resolver = client.Resolver(resolv=self.mktemp(), reactor=reactor)
-        proto = resolver._connectedProtocol()
-        self.assertIdentical(proto._reactor, reactor)
-
-
     def test_missingConfiguration(self):
         """
         A missing nameserver configuration file results in no server information
@@ -511,6 +499,18 @@ class ResolverTests(unittest.TestCase):
         return defer.gatherResults([
                 defer.maybeDeferred(firstProto.transport.stopListening),
                 defer.maybeDeferred(secondProto.transport.stopListening)])
+
+
+    def test_resolverUsesOnlyParameterizedReactor(self):
+        """
+        If a reactor instance is supplied to L{client.Resolver}
+        L{client.Resolver._connectedProtocol} should pass that reactor
+        to L{twisted.names.dns.DNSDatagramProtocol}.
+        """
+        reactor = MemoryReactor()
+        resolver = client.Resolver(resolv=self.mktemp(), reactor=reactor)
+        proto = resolver._connectedProtocol()
+        self.assertIdentical(proto._reactor, reactor)
 
 
     def test_differentProtocol(self):
