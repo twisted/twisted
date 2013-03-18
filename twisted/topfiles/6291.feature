@@ -1,2 +1,2 @@
-twisted.trial.unittest.SyncTestCase.assertNoResult no longer swallos the result,
+twisted.trial.unittest.SyncTestCase.assertNoResult no longer swallows the result,
 if the assertion succeeds.
