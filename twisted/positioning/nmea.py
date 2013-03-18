@@ -122,11 +122,9 @@ class NMEAProtocol(LineReceiver, base.PositioningSentenceProducerMixin):
 
         sentence = NMEASentence(sentenceData)
 
-        try:
-            callback = getattr(self, self.METHOD_PREFIX + sentenceType)
+        callback = getattr(self, self.METHOD_PREFIX + sentenceType, None)
+        if callback is not None:
             callback(sentence)
-        except AttributeError:
-            pass # No sentence-specific callback on the protocol
 
         if self.receiver is not None:
             self.receiver.sentenceReceived(sentence)

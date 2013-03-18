@@ -124,6 +124,33 @@ class CallbackTests(TestCase):
 
 
 
+class AttributeErrorRaisingNMEAProtocol(nmea.NMEAProtocol):
+    """
+    An NMEA protocol that raises AttributeError in a callback.
+    """
+    def nmea_GPGGA(self, sentence):
+        raise AttributeError()
+
+
+
+class BrokenNMEAProtocolTests(TestCase):
+    """
+    Tests for broken NMEA subclasses.
+    """
+    def setUp(self):
+        self.protocol = AttributeErrorRaisingNMEAProtocol(None)
+
+
+    def test_dontSwallowCallbackExceptions(self):
+        """
+        Tests that an AttributeErrors in a sentence callback of an
+        NMEAProtocol don't get accidentally swallowed.
+        """
+        lineReceived = self.protocol.lineReceived
+        self.assertRaises(AttributeError, lineReceived, '$GPGGA*56')
+
+
+
 class SplitTest(TestCase):
     """
     Checks splitting of NMEA sentences.
