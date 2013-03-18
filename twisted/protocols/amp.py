@@ -179,6 +179,7 @@ from cStringIO import StringIO
 from struct import pack
 import decimal, datetime
 from itertools import count
+import json
 
 from zope.interface import Interface, implements
 
@@ -2701,3 +2702,83 @@ class DateTime(Argument):
             sign,
             abs(minutesOffset) // 60,
             abs(minutesOffset) % 60)
+
+
+
+class Spec(object):
+    """
+    A loader for AMP Commands specified using the AMP/JSON syntax.
+
+    """
+    def __init__(self, typeMapping):
+        """
+        @type typeMapping: C{dict}
+        @param typeMapping: A namespace used to look up the AMP Type and
+            Exception references found in the JSON source. Keys should be
+            C{str}s and values should be the AMP Type or Exception class
+            to be used.
+        """
+        self._typeMapping = typeMapping
+
+
+    def fromFile(self, f):
+        """
+        @type f: C{file}
+        @param f: A file-like object to read the JSON Command
+            specifications from.
+        """
+        j = json.load(f)
+        for cmdDef in j['commands']:
+            setattr(self, cmdDef['name'], self._loadCommand(cmdDef))
+
+
+    def _loadCommand(self, cmdDef):
+        arguments = []
+        if 'arguments' in cmdDef:
+            arguments = [self._parseArgSpec(argSpec) for argSpec in cmdDef['arguments']]
+        response = []
+        if 'response' in cmdDef:
+            response = [self._parseArgSpec(argSpec) for argSpec in cmdDef['response']]
+        errors = []
+        if 'errors' in cmdDef:
+            errors    = [self._parseErrorSpec(errSpec) for errSpec in cmdDef['errors']]
+
+        name = str(cmdDef['name']) # can't be Unicode
+        return Command.__metaclass__(name,
+                                     (Command,),
+                                     {'arguments' : arguments,
+                                      'response'  : response,
+                                      'errors'    : errors,
+                                     })
+
+
+    def _parseArgSpec(self, argSpec):
+        name, typeSpec = argSpec
+        return [str(name), self._resolveType(typeSpec)]
+
+
+    def _resolveType(self, typeSpec):
+        if isinstance(typeSpec, dict):
+            cls = self._typeMapping[typeSpec[u'type']]
+            args = []
+            ofSpec = typeSpec.get(u'of', None)
+            if ofSpec is not None:
+                # recurse!
+                if isinstance(ofSpec, list):
+                    args = [self._resolveType(k) for k in ofSpec]
+                else:
+                    # should be a unicode, then
+                    args = [self._resolveType(ofSpec)]
+
+            optional = typeSpec.get(u'optional', False)
+            t = cls(*args, optional=optional)
+        else:
+            # should be a unicode, then
+            t = self._typeMapping[str(typeSpec)]()
+        return t
+
+
+    def _parseErrorSpec(self, errSpec):
+        errCode, excType = map(str, errSpec)
+        return [errCode, self._typeMapping[excType]]
+
