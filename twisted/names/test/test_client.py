@@ -287,19 +287,14 @@ class ResolverTests(unittest.TestCase):
 
     def test_resolverUsesOnlyParameterizedReactor(self):
         """
-        L{client.Resolver} accepts a reactor parameter. If a reactor
-        instance is supplied the global reactor should not be used
-        when queries are issued.
+        If a reactor instance is supplied to L{client.Resolver}
+        L{client.Resolver._connectedProtocol} should pass that reactor
+        to L{twisted.names.dns.DNSDatagramProtocol}.
         """
         reactor = MemoryReactor()
         resolver = client.Resolver(resolv=self.mktemp(), reactor=reactor)
-        resolver.lookupAddress('foo.bar.example.com')
-        # Parameterized reactor.callLater should have been called
-        # twice.  Once for checking for changes in resolv.conf file
-        # and again for scheduling the DNS query timeout.
-        self.assertEqual(len(reactor.calls), 2)
-        # Parameterized reactor.listenUDP should have been called once
-        self.assertEqual(len(reactor.udpPorts), 1)
+        proto = resolver._connectedProtocol()
+        self.assertIdentical(proto._reactor, reactor)
 
 
     def test_missingConfiguration(self):
