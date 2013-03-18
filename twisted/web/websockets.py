@@ -55,9 +55,7 @@ _WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
 def _makeAccept(key):
     """
-    Create an "accept" response for a given key.
-
-    This dance is expected to somehow magically make WebSockets secure.
+    Create an B{accept} response for a given key.
 
     @type key: C{str}
     @param key: The key to respond to.
@@ -139,8 +137,8 @@ def _parseFrames(frameBuffer, needMask=True):
     @param frameBuffer: A buffer of bytes.
     @type frameBuffer: C{list}
 
-    @param needMast: If C{True}, refuse any frame which is not masked.
-    @type needMast: C{bool}
+    @param needMask: If C{True}, refuse any frame which is not masked.
+    @type needMask: C{bool}
     """
     start = 0
     payload = "".join(frameBuffer)
@@ -177,9 +175,8 @@ def _parseFrames(frameBuffer, needMask=True):
 
         length &= 0x7f
 
-        # The offset we're gonna be using to walk through the frame. We use
-        # this because the offset is variable depending on the length and
-        # mask.
+        # The offset we'll be using to walk through the frame. We use this
+        # because the offset is variable depending on the length and mask.
         offset = 2
 
         # Extra length fields.
@@ -448,7 +445,7 @@ class IWebSocketsResource(Interface):
         @param request: The connecting client request.
         @type request: L{IRequest<twisted.web.iweb.IRequest>}
 
-        @return: A tuple of (protocol, matched protocol name).
+        @return: A tuple of (protocol, matched protocol name or C{None}).
         @rtype: C{tuple}
         """
 
@@ -485,7 +482,7 @@ class WebSocketsResource(object):
         connection.
         """
         raise RuntimeError(
-            "Cannot get IResource children from WebsocketsResource")
+            "Cannot get IResource children from WebSocketsResource")
 
 
     def putChild(self, path, child):
@@ -500,9 +497,9 @@ class WebSocketsResource(object):
 
     def lookupProtocol(self, protocolNames, request):
         """
-        Build a protocol instance for the given protocol options and request.
-        This default implementation ignores the protocols and just return an
-        instance of protocols built by C{self._factory}.
+        Build a protocol instance for the given protocol names and request.
+        This default implementation ignores the protocol names and just return
+        a protocol instance built by C{self._factory}.
 
         @param protocolNames: The asked protocols from the client.
         @type protocolNames: C{list} of C{str}
@@ -530,7 +527,7 @@ class WebSocketsResource(object):
         @return: a string if the request fails, otherwise C{NOT_DONE_YET}.
         """
         request.defaultContentType = None
-        # If we fail at all, we're gonna fail with 400 and no response.
+        # If we fail at all, we'll fail with 400 and no response.
         failed = False
 
         if request.method != "GET":
