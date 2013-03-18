@@ -474,7 +474,7 @@ class SSHCommandEndpoint(object):
         """
         helper = _ExistingConnectionHelper(connection)
         helper.command = command
-        return endpoint(helper)
+        return cls(helper)
 
 
     def connect(self, protocolFactory):

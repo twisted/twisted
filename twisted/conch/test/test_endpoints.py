@@ -238,6 +238,45 @@ class SSHCommandEndpointTestsMixin(object):
     L{SSHCommandEndpoint.existingConnection} or
     L{SSHCommandEndpoint.newConnection}.
     """
+    def setUp(self):
+        self.hostname = b"ssh.example.com"
+        self.port = 42022
+        self.user = b"user"
+        self.password = b"password"
+        self.clock = Clock()
+        self.memory = MemoryReactor()
+        self.reactor = Composite([self.clock, self.memory])
+        self.realm = TrivialRealm()
+        self.portal = Portal(self.realm)
+        self.passwdDB = InMemoryUsernamePasswordDatabaseDontUse()
+        self.passwdDB.addUser(self.user, self.password)
+        self.portal.registerChecker(self.passwdDB)
+        self.factory = CommandFactory()
+        self.factory.reactor = self.reactor
+        self.factory.portal = self.portal
+        self.factory.doStart()
+        self.addCleanup(self.factory.doStop)
+
+        self.clientAddress = IPv4Address("TCP", "10.0.0.1", 12345)
+        self.serverAddress = IPv4Address("TCP", "192.168.100.200", 54321)
+
+
+    def connectedServerAndClient(self, serverFactory, clientFactory):
+        clientProtocol = clientFactory.buildProtocol(None)
+        serverProtocol = serverFactory.buildProtocol(None)
+
+        clientTransport = FakeTransport(
+            clientProtocol, isServer=False, hostAddress=self.clientAddress,
+            peerAddress=self.serverAddress)
+        serverTransport = FakeTransport(
+            serverProtocol, isServer=True, hostAddress=self.serverAddress,
+            peerAddress=self.clientAddress)
+
+        pump = connect(
+            serverProtocol, serverTransport, clientProtocol, clientTransport)
+        return serverProtocol, clientProtocol, pump
+
+
     def test_interface(self):
         """
         L{SSHCommandEndpoint} instances provide L{IStreamClientEndpoint}.
@@ -260,8 +299,7 @@ class SSHCommandEndpointTestsMixin(object):
         factory.protocol = Protocol
         connected = endpoint.connect(factory)
 
-        server, client, pump = self.connectedServerAndClient(
-            self.factory, self.memory.tcpClients[0][2])
+        server, client, pump = self.finishConnection()
 
         # The server logs the channel open failure - this is expected.
         errors = self.flushLoggedErrors(ConchError)
@@ -292,8 +330,7 @@ class SSHCommandEndpointTestsMixin(object):
         factory.protocol = Protocol
         connected = endpoint.connect(factory)
 
-        server, client, pump = self.connectedServerAndClient(
-            self.factory, self.memory.tcpClients[0][2])
+        server, client, pump = self.finishConnection()
 
         f = self.failureResultOf(connected)
         f.trap(ConchError)
@@ -317,10 +354,10 @@ class SSHCommandEndpointTestsMixin(object):
 
         factory = AddressSpyFactory()
         factory.protocol = Protocol
+
         endpoint.connect(factory)
 
-        server, client, pump = self.connectedServerAndClient(
-            self.factory, self.memory.tcpClients[0][2])
+        server, client, pump = self.finishConnection()
 
         self.assertIsInstance(factory.address, SSHCommandAddress)
         self.assertEqual(server.transport.getHost(), factory.address.server)
@@ -342,8 +379,7 @@ class SSHCommandEndpointTestsMixin(object):
         factory.protocol = Protocol
         connected = endpoint.connect(factory)
 
-        server, client, pump = self.connectedServerAndClient(
-            self.factory, self.memory.tcpClients[0][2])
+        server, client, pump = self.finishConnection()
 
         protocol = self.successResultOf(connected)
         self.assertNotIdentical(None, protocol.transport)
@@ -362,14 +398,17 @@ class SSHCommandEndpointTestsMixin(object):
         factory.protocol = Protocol
         connected = endpoint.connect(factory)
 
-        server, client, pump = self.connectedServerAndClient(
-            self.factory, self.memory.tcpClients[0][2])
+        server, client, pump = self.finishConnection()
 
         protocol = self.successResultOf(connected)
         dataReceived = []
         protocol.dataReceived = dataReceived.append
 
-        server.service.channels[0].write(b"hello, world")
+        # Figure out which channel on the connection this protocol is associated
+        # with so the test can do a write on it.
+        channelId = protocol.transport.id
+
+        server.service.channels[channelId].write(b"hello, world")
         pump.pump()
         self.assertEqual(b"hello, world", b"".join(dataReceived))
 
@@ -386,20 +425,38 @@ class SSHCommandEndpointTestsMixin(object):
         factory.protocol = Protocol
         connected = endpoint.connect(factory)
 
-        server, client, pump = self.connectedServerAndClient(
-            self.factory, self.memory.tcpClients[0][2])
+        server, client, pump = self.finishConnection()
 
         protocol = self.successResultOf(connected)
         connectionLost = []
-        protocol.connectionLost= connectionLost.append
+        protocol.connectionLost = connectionLost.append
 
-        server.service.channels[0].loseConnection()
+        # Figure out which channel on the connection this protocol is associated
+        # with so the test can do a write on it.
+        channelId = protocol.transport.id
+        server.service.channels[channelId].loseConnection()
+
         pump.pump()
         connectionLost[0].trap(ConnectionDone)
 
         # Nothing useful can be done with the connection at this point, so the
         # endpoint should close it.
         self.assertTrue(client.transport.disconnecting)
+
+
+    def record(self, server, protocol, event, noArgs=False):
+        # Figure out which channel the test is going to send data over so we can
+        # look for it to arrive at the right place on the server.
+        channelId = protocol.transport.id
+
+        recorder = []
+        if noArgs:
+            f = lambda: recorder.append(None)
+        else:
+            f = recorder.append
+
+        setattr(server.service.channels[channelId], event, f)
+        return recorder
 
 
     def test_write(self):
@@ -414,13 +471,12 @@ class SSHCommandEndpointTestsMixin(object):
         factory.protocol = Protocol
         connected = endpoint.connect(factory)
 
-        server, client, pump = self.connectedServerAndClient(
-            self.factory, self.memory.tcpClients[0][2])
+        server, client, pump = self.finishConnection()
+        channelIdentifier = client
 
         protocol = self.successResultOf(connected)
 
-        dataReceived = []
-        server.service.channels[0].dataReceived = dataReceived.append
+        dataReceived = self.record(server, protocol, 'dataReceived')
         protocol.transport.write(b"hello, world")
         pump.pump()
         self.assertEqual(b"hello, world", b"".join(dataReceived))
@@ -438,13 +494,11 @@ class SSHCommandEndpointTestsMixin(object):
         factory.protocol = Protocol
         connected = endpoint.connect(factory)
 
-        server, client, pump = self.connectedServerAndClient(
-            self.factory, self.memory.tcpClients[0][2])
+        server, client, pump = self.finishConnection()
 
         protocol = self.successResultOf(connected)
 
-        dataReceived = []
-        server.service.channels[0].dataReceived = dataReceived.append
+        dataReceived = self.record(server, protocol, 'dataReceived')
         protocol.transport.writeSequence(list(b"hello, world"))
         pump.pump()
         self.assertEqual(b"hello, world", b"".join(dataReceived))
@@ -463,15 +517,13 @@ class SSHCommandEndpointTestsMixin(object):
         factory.protocol = Protocol
         connected = endpoint.connect(factory)
 
-        server, client, pump = self.connectedServerAndClient(
-            self.factory, self.memory.tcpClients[0][2])
+        server, client, pump = self.finishConnection()
 
         protocol = self.successResultOf(connected)
-        closed = []
-        server.service.channels[0].closed = lambda: closed.append(True)
+        closed = self.record(server, protocol, 'closed', noArgs=True)
         protocol.transport.loseConnection()
         pump.pump()
-        self.assertEqual([True], closed)
+        self.assertEqual([None], closed)
 
         # Let the last bit of network traffic flow.  This lets the server's
         # close acknowledgement through, at which point the client can close
@@ -484,33 +536,17 @@ class SSHCommandEndpointTestsMixin(object):
 
 
 
-class SSHCommandEndpointTests(TestCase, SSHCommandEndpointTestsMixin):
+class SSHCommandEndpointNewConnectionTests(TestCase, SSHCommandEndpointTestsMixin):
+    """
+    Tests for L{SSHCommandEndpoint} when using the C{existingConnection}
+    constructor.
+    """
     def setUp(self):
         """
         Configure an SSH server with password authentication enabled for a
         well-known (to the tests) account.
         """
-        self.hostname = b"ssh.example.com"
-        self.port = 42022
-        self.user = b"user"
-        self.password = b"password"
-        self.clock = Clock()
-        self.memory = MemoryReactor()
-        self.reactor = Composite([self.clock, self.memory])
-        self.realm = TrivialRealm()
-        self.portal = Portal(self.realm)
-        self.passwdDB = InMemoryUsernamePasswordDatabaseDontUse()
-        self.passwdDB.addUser(self.user, self.password)
-        self.portal.registerChecker(self.passwdDB)
-        self.factory = CommandFactory()
-        self.factory.reactor = self.reactor
-        self.factory.portal = self.portal
-        self.factory.doStart()
-        self.addCleanup(self.factory.doStop)
-
-        self.clientAddress = IPv4Address("TCP", "10.0.0.1", 12345)
-        self.serverAddress = IPv4Address("TCP", "192.168.100.200", 54321)
-
+        SSHCommandEndpointTestsMixin.setUp(self)
         # Make the server's host key available to be verified by the client.
         self.hostKeyPath = FilePath(self.mktemp())
         self.knownHosts = KnownHostsFile(self.hostKeyPath)
@@ -522,26 +558,19 @@ class SSHCommandEndpointTests(TestCase, SSHCommandEndpointTestsMixin):
 
 
     def create(self):
+        """
+        Create and return a new L{SSHCommandEndpoint} using the C{newConnection}
+        constructor.
+        """
         return SSHCommandEndpoint.newConnection(
             self.reactor, b"/bin/ls -l", self.user, self.hostname, self.port,
             password=self.password, knownHosts=self.knownHosts,
             ui=FixedResponseUI(False))
 
 
-    def connectedServerAndClient(self, serverFactory, clientFactory):
-        clientProtocol = clientFactory.buildProtocol(None)
-        serverProtocol = serverFactory.buildProtocol(None)
-
-        clientTransport = FakeTransport(
-            clientProtocol, isServer=False, hostAddress=self.clientAddress,
-            peerAddress=self.serverAddress)
-        serverTransport = FakeTransport(
-            serverProtocol, isServer=True, hostAddress=self.serverAddress,
-            peerAddress=self.clientAddress)
-
-        pump = connect(
-            serverProtocol, serverTransport, clientProtocol, clientTransport)
-        return serverProtocol, clientProtocol, pump
+    def finishConnection(self):
+        return self.connectedServerAndClient(
+            self.factory, self.memory.tcpClients[0][2])
 
 
     def test_destination(self):
@@ -856,6 +885,84 @@ class SSHCommandEndpointTests(TestCase, SSHCommandEndpointTestsMixin):
 
         protocol = self.successResultOf(connected)
         self.assertNotIdentical(None, protocol.transport)
+
+
+
+class PermissiveKnownHostsFile(object):
+    def matchesKey(self, key):
+        return True
+
+
+    def matchesHost(self, hostname):
+        return True
+
+
+    def toString(self):
+        return b""
+
+
+
+class SSHCommandEndpointExistingConnectionTests(TestCase, SSHCommandEndpointTestsMixin):
+    """
+    Tests for L{SSHCommandEndpoint} when using the C{existingConnection}
+    constructor.
+    """
+    def setUp(self):
+        """
+        Configure an SSH server with password authentication enabled for a
+        well-known (to the tests) account.
+        """
+        SSHCommandEndpointTestsMixin.setUp(self)
+
+        knownHosts = KnownHostsFile(FilePath(self.mktemp()))
+        knownHosts.addHostKey(
+            self.hostname, self.factory.publicKeys['ssh-rsa'])
+        knownHosts.addHostKey(
+            self.serverAddress.host, self.factory.publicKeys['ssh-rsa'])
+
+        self.endpoint = SSHCommandEndpoint.newConnection(
+            self.reactor, b"/bin/ls -l", self.user, self.hostname, self.port,
+            password=self.password, knownHosts=knownHosts,
+            ui=FixedResponseUI(False))
+
+
+    def create(self):
+        """
+        Create and return a new L{SSHCommandEndpoint} using the C{existingConnection}
+        constructor.
+        """
+        factory = Factory()
+        factory.protocol = Protocol
+        connected = self.endpoint.connect(factory)
+
+        # Please, let me in.  This kinda sucks.
+        channelLookup = self.realm.channelLookup.copy()
+        try:
+            self.realm.channelLookup[b'session'] = WorkingExecSession
+
+            server, client, pump = self.connectedServerAndClient(
+                self.factory, self.memory.tcpClients[0][2])
+
+        finally:
+            self.realm.channelLookup.clear()
+            self.realm.channelLookup.update(channelLookup)
+
+        self._server = server
+        self._client = client
+        self._pump = pump
+
+        protocol = self.successResultOf(connected)
+        connection = protocol.transport.conn
+        return SSHCommandEndpoint.existingConnection(
+            connection, b"/bin/ls -l")
+
+
+    def finishConnection(self):
+        self._pump.pump()
+        self._pump.pump()
+        self._pump.pump()
+        self._pump.pump()
+        return self._server, self._client, self._pump
 
 
 
