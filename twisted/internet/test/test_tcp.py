@@ -386,6 +386,14 @@ class FakeResolver(object):
 
 
     def getHostByName(self, name, timeout):
+        """
+        Return the address mapped to C{name} if it exists, or raise a
+        C{DNSLookupError}.
+
+        @param name: The name to resolve.
+
+        @param timeout: The lookup timeout, ignore here.
+        """
         try:
             return succeed(self.names[name])
         except KeyError:
@@ -439,7 +447,10 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
     def port(self):
         """
         Return the port number to connect to, using C{self._port} set up by
-        C{listen if available.
+        C{listen} if available.
+
+        @return: The port number to connect to.
+        @rtype: C{int}
         """
         if self._port is not None:
             return self._port.getHost().port
@@ -457,6 +468,12 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
     def listen(self, reactor, factory):
         """
         Start a TCP server with the given C{factory}.
+
+        @param reactor: The reactor to create the TCP port in.
+
+        @param factory: The server factory.
+
+        @return: A TCP port instance.
         """
         self._port = reactor.listenTCP(0, factory, interface=self.interface)
         return self._port
@@ -465,6 +482,12 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
     def connect(self, reactor, factory):
         """
         Start a TCP client with the given C{factory}.
+
+        @param reactor: The reactor to create the connection in.
+
+        @param factory: The client factory.
+
+        @return: A TCP connector instance.
         """
         return reactor.connectTCP(self.interface, self.port, factory)
 

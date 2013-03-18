@@ -562,6 +562,8 @@ class UnixClientTestsBuilder(ReactorBuilder, StreamClientTestsMixin):
     def path(self):
         """
         Return a path usable by C{connectUNIX} and C{listenUNIX}.
+
+        @return: A path instance, built with C{_abstractPath}.
         """
         if self._path is None:
             self._path = _abstractPath(self)
@@ -571,6 +573,12 @@ class UnixClientTestsBuilder(ReactorBuilder, StreamClientTestsMixin):
     def listen(self, reactor, factory):
         """
         Start an UNIX server with the given C{factory}.
+
+        @param reactor: The reactor to create the UNIX port in.
+
+        @param factory: The server factory.
+
+        @return: A UNIX port instance.
         """
         return reactor.listenUNIX(self.path, factory)
 
@@ -578,6 +586,12 @@ class UnixClientTestsBuilder(ReactorBuilder, StreamClientTestsMixin):
     def connect(self, reactor, factory):
         """
         Start an UNIX client with the given C{factory}.
+
+        @param reactor: The reactor to create the connection in.
+
+        @param factory: The client factory.
+
+        @return: A UNIX connector instance.
         """
         return reactor.connectUNIX(self.path, factory)
 

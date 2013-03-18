@@ -237,7 +237,7 @@ class _AcceptOneClient(ServerFactory):
 class _SimplePullProducer(object):
     """
     A pull producer which writes one byte whenever it is resumed.  For use by
-    L{test_unregisterProducerAfterDisconnect}.
+    C{test_unregisterProducerAfterDisconnect}.
     """
     def __init__(self, consumer):
         self.consumer = consumer
