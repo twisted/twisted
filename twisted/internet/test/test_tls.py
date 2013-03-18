@@ -321,7 +321,7 @@ class TLSPortTestsBuilder(TLSMixin, ContextGeneratingMixin,
     """
     Tests for L{IReactorSSL.listenSSL}
     """
-    def getListeningPort(self, reactor, factory):
+    def listen(self, reactor, factory):
         """
         Get a TLS port from a reactor.
         """

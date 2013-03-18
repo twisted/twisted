@@ -323,7 +323,8 @@ class Port(_UNIXPort, tcp.Port):
             # Re-use the externally specified socket
             skt = self._preexistingSocket
             self._preexistingSocket = None
-            # Avoid shutting it down at the end.
+            # Avoid shutting it down at the end. Maybe it's not really useful
+            # in the case of UNIX sockets, but we'll skip it anyway.
             self._socketShutdownMethod = None
 
         if _inFilesystemNamespace(self.port):
