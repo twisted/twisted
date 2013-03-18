@@ -52,43 +52,50 @@ class ResultsTestMixin(object):
         self.suite = self.loader.loadTestsFromTestCase(suite)
         self.reporter = reporter.TestResult()
 
-
     def test_setUp(self):
+        """
+        test the setup
+        """
         self.failUnless(self.reporter.wasSuccessful())
         self.assertEqual(self.reporter.errors, [])
         self.assertEqual(self.reporter.failures, [])
         self.assertEqual(self.reporter.skips, [])
 
-
     def assertCount(self, numTests):
+        """
+        Asserts that the test count is plausable
+        """
         self.assertEqual(self.suite.countTestCases(), numTests)
         self.suite(self.reporter)
         self.assertEqual(self.reporter.testsRun, numTests)
 
 
-
 class SuccessMixin(object):
     """
-    Tests for the reporting of successful tests.
+    Tests for the reporting of successful tests in L{twisted.trial.unittest.TestCase}.
     """
     def setUp(self):
+        """
+        Setup our test case
+        """
         self.result = reporter.TestResult()
-
 
     def test_successful(self):
         """
         A successful test, used by other tests.
         """
 
-
     def assertSuccessful(self, test, result):
+        """
+        Utility function -- assert there is one success and the state is 
+        plausable
+        """
         self.assertEqual(result.successes, 1)
         self.assertEqual(result.failures, [])
         self.assertEqual(result.errors, [])
         self.assertEqual(result.expectedFailures, [])
         self.assertEqual(result.unexpectedSuccesses, [])
         self.assertEqual(result.skips, [])
-
 
     def test_successfulIsReported(self):
         """
@@ -99,7 +106,6 @@ class SuccessMixin(object):
         test.run(self.result)
         self.assertSuccessful(test, self.result)
 
-
     def test_defaultIsSuccessful(self):
         """
         The test case type can be instantiated with no arguments, run, and
@@ -108,7 +114,6 @@ class SuccessMixin(object):
         test = self.__class__()
         test.run(self.result)
         self.assertSuccessful(test, self.result)
-
 
     def test_noReference(self):
         """
@@ -123,32 +128,33 @@ class SuccessMixin(object):
         self.assertIdentical(ref(), None)
 
 
-
 class SynchronousSuccessTests(SuccessMixin, unittest.SynchronousTestCase):
     """
-    See module docstring.
+    Tests for the reporting of successful tests in the synchronous case.
     """
-
 
 
 class AsynchronousSuccessTests(SuccessMixin, unittest.TestCase):
     """
-    See module docstring.
+    Tests for the reporting of successful tests in the synchronous case.
     """
-
 
 
 class SkipMethodsMixin(ResultsTestMixin):
     """
-    Tests for the reporting of skipping tests.
+    Tests for the reporting of skipping tests in L{twisted.trial.unittest.TestCase}.
     """
     def setUp(self):
+        """
+        Setup our test case
+        """
         self.loadSuite(self.Skipping)
 
-
     def test_counting(self):
+        """
+        Assert that there are three tests.
+        """
         self.assertCount(3)
-
 
     def test_results(self):
         """
@@ -163,7 +169,6 @@ class SkipMethodsMixin(ResultsTestMixin):
         self.assertEqual(self.reporter.failures, [])
         self.assertEqual(len(self.reporter.skips), 3)
         self.assertEqual(self.reporter.successes, 0)
-
 
     def test_setUp(self):
         """
@@ -180,15 +185,16 @@ class SkipMethodsMixin(ResultsTestMixin):
         self.assertEqual(len(self.reporter.skips), 2)
         self.assertEqual(self.reporter.successes, 0)
 
-
     def test_reasons(self):
+        """
+        Test that reasons work
+        """
         self.suite(self.reporter)
         prefix = 'test_'
         # whiteboxing reporter
         for test, reason in self.reporter.skips:
             self.assertEqual(test.shortDescription()[len(prefix):],
                                  str(reason))
-
 
     def test_deprecatedSkipWithoutReason(self):
         """
@@ -207,10 +213,11 @@ class SkipMethodsMixin(ResultsTestMixin):
             warnings[0]['message'])
 
 
-
 class SynchronousSkipMethodTests(SkipMethodsMixin, unittest.SynchronousTestCase):
     """
-    See module docstring.
+    Tests for the reporting of skipping tests in the synchronous case.
+
+    See: L{twisted.trial.test.test_tests.SkipMethodsMixin}
     """
     from twisted.trial.test.skipping import (
         SynchronousSkipping as Skipping,
@@ -218,10 +225,11 @@ class SynchronousSkipMethodTests(SkipMethodsMixin, unittest.SynchronousTestCase)
         SynchronousDeprecatedReasonlessSkip as DeprecatedReasonlessSkip)
 
 
-
 class AsynchronousSkipMethodTests(SkipMethodsMixin, unittest.TestCase):
     """
-    See module docstring.
+    Tests for the reporting of skipping tests in the asynchronous case.
+
+    See: L{twisted.trial.test.test_tests.SkipMethodsMixin}
     """
     from twisted.trial.test.skipping import (
         AsynchronousSkipping as Skipping,
@@ -229,16 +237,16 @@ class AsynchronousSkipMethodTests(SkipMethodsMixin, unittest.TestCase):
         AsynchronousDeprecatedReasonlessSkip as DeprecatedReasonlessSkip)
 
 
-
-
 class SkipClassesMixin(ResultsTestMixin):
     """
     Test the class skipping features of L{twisted.trial.unittest.TestCase}.
     """
     def setUp(self):
+        """
+        Setup our test case
+        """
         self.loadSuite(self.SkippedClass)
         self.SkippedClass._setUpRan = False
-
 
     def test_counting(self):
         """
@@ -246,14 +254,12 @@ class SkipClassesMixin(ResultsTestMixin):
         """
         self.assertCount(4)
 
-
     def test_setUpRan(self):
         """
         The C{setUp} method is not called if the class is set to skip.
         """
         self.suite(self.reporter)
         self.assertFalse(self.SkippedClass._setUpRan)
-
 
     def test_results(self):
         """
@@ -269,7 +275,6 @@ class SkipClassesMixin(ResultsTestMixin):
         self.assertEqual(len(self.reporter.skips), 4)
         self.assertEqual(self.reporter.successes, 0)
 
-
     def test_reasons(self):
         """
         Test methods which raise L{unittest.SkipTest} or have their C{skip}
@@ -282,23 +287,24 @@ class SkipClassesMixin(ResultsTestMixin):
         self.assertEqual(expectedReasons, reasonsGiven)
 
 
-
 class SynchronousSkipClassTests(SkipClassesMixin, unittest.SynchronousTestCase):
     """
-    See module docstring.
+    Test the class skipping features in the synchronous case.
+
+    See: L{twisted.trial.test.test_tests.SkipClassesMixin}
     """
     from twisted.trial.test.skipping import (
         SynchronousSkippedClass as SkippedClass)
 
 
-
 class AsynchronousSkipClassTests(SkipClassesMixin, unittest.TestCase):
     """
-    See module docstring.
+    Test the class skipping features in the asynchronous case.
+
+    See: L{twisted.trial.test.test_tests.SkipClassesMixin}
     """
     from twisted.trial.test.skipping import (
         AsynchronousSkippedClass as SkippedClass)
-
 
 
 class TodoMixin(ResultsTestMixin):
@@ -307,12 +313,16 @@ class TodoMixin(ResultsTestMixin):
     L{twisted.trial.unittest.TestCase}.
     """
     def setUp(self):
+        """
+        Setup our test case
+        """
         self.loadSuite(self.Todo)
 
-
     def test_counting(self):
+        """
+        Ensure that we've got three test cases.
+        """
         self.assertCount(3)
-
 
     def test_results(self):
         """
@@ -332,22 +342,25 @@ class TodoMixin(ResultsTestMixin):
         self.assertEqual(len(self.reporter.unexpectedSuccesses), 1)
         self.assertEqual(self.reporter.successes, 0)
 
-
     def test_expectedFailures(self):
+        """
+        Ensure that expected failures are handled properly.
+        """
         self.suite(self.reporter)
         expectedReasons = ['todo1', 'todo2']
         reasonsGiven = [ r.reason
                          for t, e, r in self.reporter.expectedFailures ]
         self.assertEqual(expectedReasons, reasonsGiven)
 
-
     def test_unexpectedSuccesses(self):
+        """
+        Ensure that unexpected successes are caught.
+        """
         self.suite(self.reporter)
         expectedReasons = ['todo3']
         reasonsGiven = [ r.reason
                          for t, r in self.reporter.unexpectedSuccesses ]
         self.assertEqual(expectedReasons, reasonsGiven)
-
 
     def test_expectedSetUpFailure(self):
         """
@@ -363,7 +376,6 @@ class TodoMixin(ResultsTestMixin):
         self.assertEqual(len(self.reporter.expectedFailures), 0)
         self.assertEqual(len(self.reporter.unexpectedSuccesses), 0)
         self.assertEqual(self.reporter.successes, 0)
-
 
     def test_expectedTearDownFailure(self):
         """
@@ -384,10 +396,11 @@ class TodoMixin(ResultsTestMixin):
         self.assertEqual(self.reporter.successes, 0)
 
 
-
 class SynchronousTodoTests(TodoMixin, unittest.SynchronousTestCase):
     """
-    See module docstring.
+    Test the class skipping features in the synchronous case.
+
+    See: L{twisted.trial.test.test_tests.TodoMixin}
     """
     from twisted.trial.test.skipping import (
         SynchronousTodo as Todo,
@@ -395,16 +408,16 @@ class SynchronousTodoTests(TodoMixin, unittest.SynchronousTestCase):
         SynchronousTearDownTodo as TearDownTodo)
 
 
-
 class AsynchronousTodoTests(TodoMixin, unittest.TestCase):
     """
-    See module docstring.
+    Test the class skipping features in the asynchronous case.
+
+    See: L{twisted.trial.test.test_tests.TodoMixin}
     """
     from twisted.trial.test.skipping import (
         AsynchronousTodo as Todo,
         AsynchronousSetUpTodo as SetUpTodo,
         AsynchronousTearDownTodo as TearDownTodo)
-
 
 
 class ClassTodoMixin(ResultsTestMixin):
@@ -413,11 +426,16 @@ class ClassTodoMixin(ResultsTestMixin):
     L{twisted.trial.unittest.TestCase}.
     """
     def setUp(self):
+        """
+        Setup our test case
+        """
         self.loadSuite(self.TodoClass)
 
     def test_counting(self):
+        """
+        Ensure that we've got four test cases.
+        """
         self.assertCount(4)
-
 
     def test_results(self):
         """
@@ -437,8 +455,10 @@ class ClassTodoMixin(ResultsTestMixin):
         self.assertEqual(len(self.reporter.unexpectedSuccesses), 2)
         self.assertEqual(self.reporter.successes, 0)
 
-
     def test_expectedFailures(self):
+        """
+        Ensure that expected failures are handled properly.
+        """
         self.suite(self.reporter)
         expectedReasons = ['method', 'class']
         reasonsGiven = [ r.reason
@@ -446,6 +466,9 @@ class ClassTodoMixin(ResultsTestMixin):
         self.assertEqual(expectedReasons, reasonsGiven)
 
     def test_unexpectedSuccesses(self):
+        """
+        Ensure that unexpected successes are caught.
+        """
         self.suite(self.reporter)
         expectedReasons = ['method', 'class']
         reasonsGiven = [ r.reason
@@ -453,23 +476,24 @@ class ClassTodoMixin(ResultsTestMixin):
         self.assertEqual(expectedReasons, reasonsGiven)
 
 
-
 class SynchronousClassTodoTests(ClassTodoMixin, unittest.SynchronousTestCase):
     """
-    See module docstring.
+    Tests for the class-wide I{expected failure} features in the synchronous case.
+
+    See: L{twisted.trial.test.test_tests.ClassTodoMixin}
     """
     from twisted.trial.test.skipping import (
         SynchronousTodoClass as TodoClass)
 
 
-
 class AsynchronousClassTodoTests(ClassTodoMixin, unittest.TestCase):
     """
-    See module docstring.
+    Tests for the class-wide I{expected failure} features in the asynchronous case.
+
+    See: L{twisted.trial.test.test_tests.ClassTodoMixin}
     """
     from twisted.trial.test.skipping import (
         AsynchronousTodoClass as TodoClass)
-
 
 
 class StrictTodoMixin(ResultsTestMixin):
@@ -479,11 +503,16 @@ class StrictTodoMixin(ResultsTestMixin):
     expected is indicated.
     """
     def setUp(self):
+        """
+        Setup our test case
+        """
         self.loadSuite(self.StrictTodo)
 
     def test_counting(self):
+        """
+        Assert there are seven test cases
+        """
         self.assertCount(7)
-
 
     def test_results(self):
         """
@@ -500,16 +529,20 @@ class StrictTodoMixin(ResultsTestMixin):
         self.assertEqual(self.reporter.successes, 0)
         self.assertEqual(self.reporter.skips, [])
 
-
     def test_expectedFailures(self):
+        """
+        Ensure that expected failures are handled properly.
+        """
         self.suite(self.reporter)
         expectedReasons = ['todo1', 'todo2', 'todo5']
         reasonsGotten = [ r.reason
                           for t, e, r in self.reporter.expectedFailures ]
         self.assertEqual(expectedReasons, reasonsGotten)
 
-
     def test_unexpectedSuccesses(self):
+        """
+        Ensure that unexpected successes are caught.
+        """
         self.suite(self.reporter)
         expectedReasons = [([RuntimeError], 'todo7')]
         reasonsGotten = [ (r.errors, r.reason)
@@ -517,10 +550,12 @@ class StrictTodoMixin(ResultsTestMixin):
         self.assertEqual(expectedReasons, reasonsGotten)
 
 
-
 class SynchronousStrictTodoTests(StrictTodoMixin, unittest.SynchronousTestCase):
     """
-    See module docstring.
+    Tests for the expected failure case when the exact failure that is expected
+    is indicated in the synchronous case
+
+    See: L{twisted.trial.test.test_tests.StrictTodoMixin}
     """
     from twisted.trial.test.skipping import (
         SynchronousStrictTodo as StrictTodo)
@@ -529,7 +564,10 @@ class SynchronousStrictTodoTests(StrictTodoMixin, unittest.SynchronousTestCase):
 
 class AsynchronousStrictTodoTests(StrictTodoMixin, unittest.TestCase):
     """
-    See module docstring.
+    Tests for the expected failure case when the exact failure that is expected
+    is indicated in the asynchronous case
+
+    See: L{twisted.trial.test.test_tests.StrictTodoMixin}
     """
     from twisted.trial.test.skipping import (
         AsynchronousStrictTodo as StrictTodo)
@@ -541,16 +579,17 @@ class TestReactorCleanup(unittest.SynchronousTestCase):
     Tests for cleanup and reporting of reactor event sources left behind by test
     methods.
     """
-
     if _PY3:
         skip = _PY3PORTNEEDED
 
     def setUp(self):
+        """
+        Setup our test case
+        """
         self.result = reporter.Reporter(NativeStringIO())
         self.loader = runner.TestLoader()
 
-
-    def testLeftoverSockets(self):
+    def test_leftoverSockets(self):
         """
         Trial reports a L{util.DirtyReactorAggregateError} if a test leaves
         sockets behind.
@@ -566,8 +605,7 @@ class TestReactorCleanup(unittest.SynchronousTestCase):
         failure = self.result.errors[0][1]
         self.failUnless(failure.check(util.DirtyReactorAggregateError))
 
-
-    def testLeftoverPendingCalls(self):
+    def test_leftoverPendingCalls(self):
         """
         Trial reports a L{util.DirtyReactorAggregateError} and fails the test
         if a test leaves a L{DelayedCall} hanging.
@@ -580,16 +618,16 @@ class TestReactorCleanup(unittest.SynchronousTestCase):
         self.failUnless(failure.check(util.DirtyReactorAggregateError))
 
 
-
 class FixtureMixin(object):
     """
     Tests for broken fixture helper methods (e.g. setUp, tearDown).
     """
-
     def setUp(self):
+        """
+        Setup our test case
+        """
         self.reporter = reporter.Reporter()
         self.loader = pyunit.TestLoader()
-
 
     def test_brokenSetUp(self):
         """
@@ -601,7 +639,6 @@ class FixtureMixin(object):
         self.assertIsInstance(
             self.reporter.errors[0][1].value, erroneous.FoolishError)
         self.assertEqual(0, self.reporter.successes)
-
 
     def test_brokenTearDown(self):
         """
@@ -615,37 +652,40 @@ class FixtureMixin(object):
         self.assertEqual(0, self.reporter.successes)
 
 
-
 class SynchronousFixtureTest(FixtureMixin, unittest.SynchronousTestCase):
     """
-    See module docstring.
+    Tests for broken fixture helper methods in the synchronous case
+
+    See: L{twisted.trial.test.test_tests.FixtureMixin}
     """
     from twisted.trial.test.erroneous import (
         SynchronousTestFailureInSetUp as TestFailureInSetUp,
         SynchronousTestFailureInTearDown as TestFailureInTearDown)
 
 
-
 class AsynchronousFixtureTest(FixtureMixin, unittest.TestCase):
     """
-    See module docstring.
+    Tests for broken fixture helper methods in the asynchronous case
+
+    See: L{twisted.trial.test.test_tests.FixtureMixin}
     """
     from twisted.trial.test.erroneous import (
         AsynchronousTestFailureInSetUp as TestFailureInSetUp,
         AsynchronousTestFailureInTearDown as TestFailureInTearDown)
 
 
-
 class AsynchronousSuppressionTest(SuppressionMixin, unittest.TestCase):
     """
-    See module docstring.
+    Tests for the warning suppression features of 
+    L{twisted.trial.unittest.TestCase}
+
+    See L{twisted.trial.test.test_suppression.SuppressionMixin}
     """
     from twisted.trial.test.suppression import (
         AsynchronousTestSetUpSuppression as TestSetUpSuppression,
         AsynchronousTestTearDownSuppression as TestTearDownSuppression,
         AsynchronousTestSuppression as TestSuppression,
         AsynchronousTestSuppression2 as TestSuppression2)
-
 
 
 class GCMixin:
@@ -658,20 +698,30 @@ class GCMixin:
         skip = _PY3PORTNEEDED
 
     class BasicTest(unittest.SynchronousTestCase):
+        """
+        Mock test to run.
+        """
         def setUp(self):
+            """
+            Mock setUp
+            """
             self._log('setUp')
         def test_foo(self):
+            """
+            Mock test case
+            """
             self._log('test')
         def tearDown(self):
+            """
+            Mock tear tearDown
+            """
             self._log('tearDown')
 
-    class ClassTest(unittest.SynchronousTestCase):
-        def test_1(self):
-            self._log('test1')
-        def test_2(self):
-            self._log('test2')
 
     def _log(self, msg):
+        """
+        Log function
+        """
         self._collectCalled.append(msg)
 
     def collect(self):
@@ -679,17 +729,25 @@ class GCMixin:
         self._log('collect')
 
     def setUp(self):
+        """
+        Setup our test case
+        """
         self._collectCalled = []
-        self.BasicTest._log = self.ClassTest._log = self._log
+        self.BasicTest._log = self._log
         self._oldCollect = gc.collect
         gc.collect = self.collect
 
     def tearDown(self):
+        """
+        Tear down the test
+        """
         gc.collect = self._oldCollect
 
 
-
 class TestGarbageCollectionDefault(GCMixin, unittest.SynchronousTestCase):
+    """
+    By default, tests should not force garbage collection.
+    """
 
     def test_collectNotDefault(self):
         """
@@ -703,7 +761,9 @@ class TestGarbageCollectionDefault(GCMixin, unittest.SynchronousTestCase):
 
 
 class TestGarbageCollection(GCMixin, unittest.SynchronousTestCase):
-
+    """
+    Test that, when force GC, it works.
+    """
     def test_collectCalled(self):
         """
         test gc.collect is called before and after each test.
@@ -717,13 +777,19 @@ class TestGarbageCollection(GCMixin, unittest.SynchronousTestCase):
             ['collect', 'setUp', 'test', 'tearDown', 'collect'])
 
 
-
 class TestUnhandledDeferred(unittest.SynchronousTestCase):
+    """
+    Test what happens when we have an unhandled deferred left around after
+    a test.
+    """
 
     if _PY3:
         skip = _PY3PORTNEEDED
 
     def setUp(self):
+        """
+        Setup our test case
+        """
         from twisted.trial.test import weird
         # test_unhandledDeferred creates a cycle. we need explicit control of gc
         gc.disable()
@@ -757,10 +823,12 @@ class TestUnhandledDeferred(unittest.SynchronousTestCase):
         self.assertEqual(len(x), 0, 'Errors logged after gc.collect')
 
     def tearDown(self):
+        """
+        Tear down the test
+        """
         gc.collect()
         gc.enable()
         self.flushLoggedErrors()
-
 
 
 class AddCleanupMixin(object):
@@ -768,10 +836,12 @@ class AddCleanupMixin(object):
     Test the addCleanup method of TestCase.
     """
     def setUp(self):
+        """
+        Setup our test case
+        """
         super(AddCleanupMixin, self).setUp()
         self.result = reporter.TestResult()
         self.test = self.AddCleanup()
-
 
     def test_addCleanupCalledIfSetUpFails(self):
         """
@@ -781,7 +851,6 @@ class AddCleanupMixin(object):
         self.test.addCleanup(self.test.append, 'foo')
         self.test.run(self.result)
         self.assertEqual(['setUp', 'foo'], self.test.log)
-
 
     def test_addCleanupCalledIfSetUpSkips(self):
         """
@@ -794,7 +863,6 @@ class AddCleanupMixin(object):
         self.test.run(self.result)
         self.assertEqual(['setUp', 'foo'], self.test.log)
 
-
     def test_addCleanupCalledInReverseOrder(self):
         """
         Callables added with C{addCleanup} should be called before C{tearDown}
@@ -805,7 +873,6 @@ class AddCleanupMixin(object):
         self.test.run(self.result)
         self.assertEqual(['setUp', 'runTest', 'bar', 'foo', 'tearDown'],
                          self.test.log)
-
 
     def test_errorInCleanupIsCaptured(self):
         """
@@ -821,7 +888,6 @@ class AddCleanupMixin(object):
         self.assertEqual(test, self.test)
         self.assertEqual(error.getErrorMessage(), 'foo')
 
-
     def test_cleanupsContinueRunningAfterError(self):
         """
         If a cleanup raises an error then that does not stop the other
@@ -836,7 +902,6 @@ class AddCleanupMixin(object):
         [(test, error)] = self.result.errors
         self.assertEqual(test, self.test)
         self.assertEqual(error.getErrorMessage(), 'bar')
-
 
     def test_multipleErrorsReported(self):
         """
@@ -856,18 +921,20 @@ class AddCleanupMixin(object):
         self.assertEqual(error2.getErrorMessage(), 'foo')
 
 
-
 class SynchronousAddCleanupTests(AddCleanupMixin, unittest.SynchronousTestCase):
     """
-    See module docstring.
+    Test the addCleanup method of TestCase in the synchronous case
+
+    See: L{twisted.trial.test.test_tests.AddCleanupMixin}
     """
     from twisted.trial.test.skipping import SynchronousAddCleanup as AddCleanup
 
 
-
 class AsynchronousAddCleanupTests(AddCleanupMixin, unittest.TestCase):
     """
-    See module docstring.
+    Test the addCleanup method of TestCase in the asynchronous case
+
+    See: L{twisted.trial.test.test_tests.AddCleanupMixin}
     """
     from twisted.trial.test.skipping import AsynchronousAddCleanup as AddCleanup
 
@@ -886,7 +953,6 @@ class AsynchronousAddCleanupTests(AddCleanupMixin, unittest.TestCase):
         self.test.run(self.result)
         self.assertEqual(['setUp', 'runTest', 'bar', 'foo', 'tearDown'],
                          self.test.log)
-
 
 
 class SuiteClearingMixin(object):
@@ -926,21 +992,24 @@ class SuiteClearingMixin(object):
         self.assertEqual(0, suite.countTestCases())
 
 
-
 class SynchronousSuiteClearingTests(SuiteClearingMixin, unittest.SynchronousTestCase):
     """
-    See module docstring.
+    Tests for our extension that allows us to clear out a L{TestSuite} in the 
+    synchronous case.
+
+    See L{twisted.trial.test.test_tests.SuiteClearingMixin}
     """
     TestCase = unittest.SynchronousTestCase
 
 
-
 class AsynchronousSuiteClearingTests(SuiteClearingMixin, unittest.TestCase):
     """
-    See module docstring.
+    Tests for our extension that allows us to clear out a L{TestSuite} in the 
+    asynchronous case.
+
+    See L{twisted.trial.test.test_tests.SuiteClearingMixin}
     """
     TestCase = unittest.TestCase
-
 
 
 class TestDecoratorMixin(object):
@@ -962,7 +1031,6 @@ class TestDecoratorMixin(object):
         if observedOriginal is expectedOriginal is None:
             self.assertIdentical(observed, expected)
 
-
     def assertSuitesEqual(self, observed, expected):
         """
         Assert that the given test suites with decorated tests are equal.
@@ -978,7 +1046,6 @@ class TestDecoratorMixin(object):
             else:
                 self.assertTestsEqual(observedTest, expectedTest)
 
-
     def test_usesAdaptedReporterWithRun(self):
         """
         For decorated tests, C{run} uses a result adapter that preserves the
@@ -993,7 +1060,6 @@ class TestDecoratorMixin(object):
         result = LoggingReporter()
         decoratedTest.run(result)
         self.assertTestsEqual(result.test, decoratedTest)
-
 
     def test_usesAdaptedReporterWithCall(self):
         """
@@ -1011,7 +1077,6 @@ class TestDecoratorMixin(object):
         decoratedTest(result)
         self.assertTestsEqual(result.test, decoratedTest)
 
-
     def test_decorateSingleTest(self):
         """
         Calling L{decorate} on a single test case returns the test case
@@ -1020,7 +1085,6 @@ class TestDecoratorMixin(object):
         test = self.TestCase()
         decoratedTest = unittest.decorate(test, unittest.TestDecorator)
         self.assertTestsEqual(unittest.TestDecorator(test), decoratedTest)
-
 
     def test_decorateTestSuite(self):
         """
@@ -1032,7 +1096,6 @@ class TestDecoratorMixin(object):
         decoratedTest = unittest.decorate(suite, unittest.TestDecorator)
         self.assertSuitesEqual(
             decoratedTest, unittest.TestSuite([unittest.TestDecorator(test)]))
-
 
     def test_decorateInPlaceMutatesOriginal(self):
         """
@@ -1046,7 +1109,6 @@ class TestDecoratorMixin(object):
             decoratedTest, unittest.TestSuite([unittest.TestDecorator(test)]))
         self.assertSuitesEqual(
             suite, unittest.TestSuite([unittest.TestDecorator(test)]))
-
 
     def test_decorateTestSuiteReferences(self):
         """
@@ -1068,7 +1130,6 @@ class TestDecoratorMixin(object):
         count2 = getrefcount(test)
         self.assertEqual(count1, count2)
 
-
     def test_decorateNestedTestSuite(self):
         """
         Calling L{decorate} on a test suite with nested suites will return a
@@ -1082,7 +1143,6 @@ class TestDecoratorMixin(object):
             [unittest.TestSuite([unittest.TestDecorator(test)])])
         self.assertSuitesEqual(decoratedTest, expected)
 
-
     def test_decorateDecoratedSuite(self):
         """
         Calling L{decorate} on a test suite with already-decorated tests
@@ -1094,7 +1154,6 @@ class TestDecoratorMixin(object):
                                             unittest.TestDecorator)
         self.assertTestsEqual(redecoratedTest,
                               unittest.TestDecorator(decoratedTest))
-
 
     def test_decoratePreservesSuite(self):
         """
@@ -1109,21 +1168,22 @@ class TestDecoratorMixin(object):
             runner.DestructiveTestSuite([unittest.TestDecorator(test)]))
 
 
-
 class SynchronousTestDecoratorTests(TestDecoratorMixin, unittest.SynchronousTestCase):
     """
-    See module docstring.
+    Tests for our test decoration features in the synchronous case.
+
+    See L{twisted.trial.test.test_tests.TestDecoratorMixin}
     """
     TestCase = unittest.SynchronousTestCase
 
 
-
 class AsynchronousTestDecoratorTests(TestDecoratorMixin, unittest.TestCase):
     """
-    See module docstring.
+    Tests for our test decoration features in the asynchronous case.
+
+    See L{twisted.trial.test.test_tests.TestDecoratorMixin}
     """
     TestCase = unittest.TestCase
-
 
 
 class MonkeyPatchMixin(object):
@@ -1131,11 +1191,13 @@ class MonkeyPatchMixin(object):
     Tests for the patch() helper method in L{unittest.TestCase}.
     """
     def setUp(self):
+        """
+        Setup our test case
+        """
         self.originalValue = 'original'
         self.patchedValue = 'patched'
         self.objectToPatch = self.originalValue
         self.test = self.TestCase()
-
 
     def test_patch(self):
         """
@@ -1144,7 +1206,6 @@ class MonkeyPatchMixin(object):
         """
         self.test.patch(self, 'objectToPatch', self.patchedValue)
         self.assertEqual(self.objectToPatch, self.patchedValue)
-
 
     def test_patchRestoredAfterRun(self):
         """
@@ -1155,7 +1216,6 @@ class MonkeyPatchMixin(object):
         self.test.run(reporter.Reporter())
         self.assertEqual(self.objectToPatch, self.originalValue)
 
-
     def test_revertDuringTest(self):
         """
         C{patch()} return a L{monkey.MonkeyPatcher} object that can be used to
@@ -1164,7 +1224,6 @@ class MonkeyPatchMixin(object):
         patch = self.test.patch(self, 'objectToPatch', self.patchedValue)
         patch.restore()
         self.assertEqual(self.objectToPatch, self.originalValue)
-
 
     def test_revertAndRepatch(self):
         """
@@ -1175,7 +1234,6 @@ class MonkeyPatchMixin(object):
         patch.restore()
         patch.patch()
         self.assertEqual(self.objectToPatch, self.patchedValue)
-
 
     def test_successivePatches(self):
         """
@@ -1189,21 +1247,22 @@ class MonkeyPatchMixin(object):
         self.assertEqual(self.objectToPatch, self.originalValue)
 
 
-
 class SynchronousMonkeyPatchTests(MonkeyPatchMixin, unittest.SynchronousTestCase):
     """
-    See module docstring.
+    Tests for the patch() helper method in the synchronous case.
+
+    See L{twisted.trial.test.test_tests.MonkeyPatchMixin}
     """
     TestCase = unittest.SynchronousTestCase
 
 
-
 class AsynchronousMonkeyPatchTests(MonkeyPatchMixin, unittest.TestCase):
     """
-    See module docstring.
+    Tests for the patch() helper method in the asynchronous case.
+
+    See L{twisted.trial.test.test_tests.MonkeyPatchMixin}
     """
     TestCase = unittest.TestCase
-
 
 
 class IterateTestsMixin(object):
@@ -1251,17 +1310,21 @@ class IterateTestsMixin(object):
         self.assertEqual([test, self], list(unittest._iterateTests(suite)))
 
 
-
 class SynchronousIterateTestsTests(IterateTestsMixin, unittest.SynchronousTestCase):
     """
-    See module docstring.
+    Check that L{_iterateTests} returns a list of all test cases in a test suite 
+    or test case for synchronous tests.
+
+    See L{twisted.trial.test.test_tests.IterateTestsMixin}
     """
     TestCase = unittest.SynchronousTestCase
 
 
-
 class AsynchronousIterateTestsTests(IterateTestsMixin, unittest.TestCase):
     """
-    See module docstring.
+    Check that L{_iterateTests} returns a list of all test cases in a test suite 
+    or test case for asynchronous tests.
+
+    See L{twisted.trial.test.test_tests.IterateTestsMixin}
     """
     TestCase = unittest.TestCase
