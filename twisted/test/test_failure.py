@@ -86,6 +86,40 @@ class FailureTestCase(SynchronousTestCase):
             self.fail("Exception was not re-raised.")
 
 
+    def test_TrappedAndReRaiseFailure(self):
+        """
+        If the failure doesn't match the error pre-defined, this test case will raise the same failure. 
+        """
+        exception = ValueError()
+        try:
+            raise exception
+        except:
+            f = failure.Failure()
+        # On Python 2, the same failure is reraised:    
+        untrapped = self.assertRaises(failure.Failure, f.trap, OverflowError)
+        self.assertIdentical(f, untrapped)
+
+
+    def test_TrappedAndReRaiseException(self):
+        """
+        If the failure doesn't match the error pre-defined, the underlying exception will be re-raised. 
+        """
+        exception = ValueError()
+        try:
+            raise exception
+        except:
+            f = failure.Failure()
+        # On both Python 2 and Python 3, the underlying exception is passed
+        # on:
+        try:
+            f.trap(OverflowError)
+        except:
+            untrapped = failure.Failure()
+            self.assertIdentical(untrapped.value, exception)
+        else:
+            self.fail("Exception was not re-raised.")
+
+
     def assertStartsWith(self, s, prefix):
         """
         Assert that C{s} starts with a particular C{prefix}.
@@ -977,3 +1011,9 @@ class ExtendedGeneratorTests(SynchronousTestCase):
             self._throwIntoGenerator(f, g)
         except:
             self.assertIsInstance(failure.Failure().value, IndexError)
+
+
+
+if _PY3:
+    FailureTestCase.test_TrappedAndReRaiseFailure.skip = "This test works only with Python 2"
+
