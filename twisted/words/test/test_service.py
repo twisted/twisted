@@ -103,7 +103,8 @@ class RealmTestCase(unittest.TestCase):
 
         self.assertIdentical(group, retrieved)
 
-        self.failureResultOf(realm.getGroup(u"nosuchgroup")).trap(ewords.NoSuchGroup)
+        (self.failureResultOf(realm.getGroup(u"nosuchgroup"))
+             .trap(ewords.NoSuchGroup))
 
 
     def testGroupAddition(self):
@@ -296,7 +297,8 @@ class IRCProtocolTestCase(unittest.TestCase):
     def testJoin(self):
         firstuser = self.successResultOf(self.realm.lookupUser(u'firstuser'))
 
-        somechannel = self.successResultOf(self.realm.createGroup(u"somechannel"))
+        somechannel = self.successResultOf(
+                self.realm.createGroup(u"somechannel"))
 
         somechannel.meta['topic'] = 'some random topic'
 
@@ -450,7 +452,8 @@ class IRCProtocolTestCase(unittest.TestCase):
     def testSetTopic(self):
         user = self._loggedInUser(u'useruser')
 
-        somechannel = self.successResultOf(self.realm.createGroup(u"somechannel"))
+        somechannel = self.successResultOf(
+                self.realm.createGroup(u"somechannel"))
 
         user.write("JOIN #somechannel\r\n")
 
