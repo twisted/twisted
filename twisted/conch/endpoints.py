@@ -52,6 +52,19 @@ class ISSHConnectionCreator(Interface):
         """
 
 
+    def cleanupConnection(connection):
+        """
+        Perform cleanup necessary for a connection object previously returned
+        from this creator's C{secureConnection} method.
+
+        @param connection: An L{twisted.conch.ssh.transport.SSHServerTransport}
+            or L{twisted.conch.ssh.transport.SSHClientTransport} returned by a
+            previous call to C{secureConnection}.  It is no longer needed by the
+            caller of that method and may be closed or otherwise cleaned up as
+            necessary.
+        """
+
+
 
 class SSHCommandAddress(object):
     """
@@ -88,6 +101,7 @@ class _CommandChannel(SSHChannel):
     A L{_CommandChannel} executes a command in a session channel and connects
     its input and output to an L{IProtocol} provider.
 
+    @ivar _creator: See L{__init__}
     @ivar _command: See L{__init__}
     @ivar _protocolFactory:  See L{__init__}
     @ivar _commandConnected:  See L{__init__}
@@ -96,8 +110,12 @@ class _CommandChannel(SSHChannel):
     """
     name = b'session'
 
-    def __init__(self, command, protocolFactory, commandConnected):
+    def __init__(self, creator, command, protocolFactory, commandConnected):
         """
+        @param creator: The L{ISSHConnectionCreator} provider which was used to
+            get the connection which this channel exists on.
+        @type creator: L{ISSHConnectionCreator} provider
+
         @param command: The command to be executed.
         @type command: L{bytes}
 
@@ -108,6 +126,7 @@ class _CommandChannel(SSHChannel):
         @type commandConnected: L{Deferred}
         """
         SSHChannel.__init__(self)
+        self._creator = creator
         self._command = command
         self._protocolFactory = protocolFactory
         self._commandConnected = commandConnected
@@ -174,9 +193,7 @@ class _CommandChannel(SSHChannel):
         When the channel closes, deliver disconnection notification to the
         protocol.
         """
-        # TODO: Calling loseConnection needs to be conditional probably to
-        # support proper existingConnection re-use
-        self.conn.transport.loseConnection()
+        self._creator.cleanupConnection(self.conn)
         self._protocol.connectionLost(
             Failure(ConnectionDone("ssh channel closed")))
 
@@ -513,12 +530,13 @@ class SSHCommandEndpoint(object):
         """
         commandConnected = Deferred()
         def disconnectOnFailure(passthrough):
-            connection.transport.loseConnection()
+            self._creator.cleanupConnection(connection)
             return passthrough
         commandConnected.addErrback(disconnectOnFailure)
 
         channel = _CommandChannel(
             self._creator.command, protocolFactory, commandConnected)
+        channel._creator = self._creator
         connection.openChannel(channel)
         return commandConnected
 
@@ -577,6 +595,7 @@ class _NewConnectionHelper(object):
         factory.knownHosts = self.knownHosts
         factory.command = self.command
         factory.ui = self.ui
+        factory.creator = self
 
         factory.connectionReady = Deferred()
 
@@ -585,6 +604,10 @@ class _NewConnectionHelper(object):
         d = sshClient.connect(factory)
         d.addCallback(lambda ignored: factory.connectionReady)
         return d
+
+
+    def cleanupConnection(self, connection):
+        connection.transport.loseConnection()
 
 
 
@@ -609,3 +632,7 @@ class _ExistingConnectionHelper(object):
             already-established connection object.
         """
         return succeed(self.connection)
+
+
+    def cleanupConnection(self, connection):
+        pass

@@ -32,7 +32,7 @@ class PrinterProtocol(Protocol):
 
 def main(reactor, *argv):
     parameters = ConnectionParameters.fromCommandLine(reactor, argv)
-    endpoint = parameters.endpointForCommand(b"/bin/echo")
+    endpoint = parameters.endpointForCommand(b"/bin/cat")
 
     done = []
     factory = Factory()
@@ -42,16 +42,16 @@ def main(reactor, *argv):
     def gotConnection(proto):
         conn = proto.transport.conn
 
-        for i in range(5):
+        for i in range(50):
             factory = Factory()
             factory.protocol = PrinterProtocol
-            done.append(Deferred())
-            factory.done = done[-1]
+            factory.done = Deferred()
+            done.append(factory.done)
 
             e = SSHCommandEndpoint.existingConnection(conn, b"/bin/echo %d" % (i,))
             yield e.connect(factory)
-            yield factory.done
 
     d.addCallback(gotConnection)
+    d.addCallback(lambda ignored: gatherResults(done))
 
     return d

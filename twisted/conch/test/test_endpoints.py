@@ -312,9 +312,7 @@ class SSHCommandEndpointTestsMixin(object):
         f.trap(ConchError)
         self.assertEqual('unknown channel', f.value.value)
 
-        # Nothing useful can be done with the connection at this point, so the
-        # endpoint should close it.
-        self.assertTrue(client.transport.disconnecting)
+        self.assertClientTransportState(client)
 
 
     def test_execFailure(self):
@@ -336,9 +334,7 @@ class SSHCommandEndpointTestsMixin(object):
         f.trap(ConchError)
         self.assertEqual('channel request failed', f.value.value)
 
-        # Nothing useful can be done with the connection at this point, so the
-        # endpoint should close it.
-        self.assertTrue(client.transport.disconnecting)
+        self.assertClientTransportState(client)
 
 
     def test_buildProtocol(self):
@@ -439,9 +435,7 @@ class SSHCommandEndpointTestsMixin(object):
         pump.pump()
         connectionLost[0].trap(ConnectionDone)
 
-        # Nothing useful can be done with the connection at this point, so the
-        # endpoint should close it.
-        self.assertTrue(client.transport.disconnecting)
+        self.assertClientTransportState(client)
 
 
     def record(self, server, protocol, event, noArgs=False):
@@ -504,37 +498,6 @@ class SSHCommandEndpointTestsMixin(object):
         self.assertEqual(b"hello, world", b"".join(dataReceived))
 
 
-    def test_loseConnection(self):
-        """
-        The transport connected to the protocol has a C{loseConnection} method
-        which causes the channel in which the command is running to close and
-        the overall connection to be closed.
-        """
-        self.realm.channelLookup[b'session'] = WorkingExecSession
-        endpoint = self.create()
-
-        factory = Factory()
-        factory.protocol = Protocol
-        connected = endpoint.connect(factory)
-
-        server, client, pump = self.finishConnection()
-
-        protocol = self.successResultOf(connected)
-        closed = self.record(server, protocol, 'closed', noArgs=True)
-        protocol.transport.loseConnection()
-        pump.pump()
-        self.assertEqual([None], closed)
-
-        # Let the last bit of network traffic flow.  This lets the server's
-        # close acknowledgement through, at which point the client can close
-        # the overall SSH connection.
-        pump.pump()
-
-        # Nothing useful can be done with the connection at this point, so the
-        # endpoint should close it.
-        self.assertTrue(client.transport.disconnecting)
-
-
 
 class SSHCommandEndpointNewConnectionTests(TestCase, SSHCommandEndpointTestsMixin):
     """
@@ -571,6 +534,12 @@ class SSHCommandEndpointNewConnectionTests(TestCase, SSHCommandEndpointTestsMixi
     def finishConnection(self):
         return self.connectedServerAndClient(
             self.factory, self.memory.tcpClients[0][2])
+
+
+    def assertClientTransportState(self, client):
+        # Nothing useful can be done with the connection at this point, so the
+        # endpoint should close it.
+        self.assertTrue(client.transport.disconnecting)
 
 
     def test_destination(self):
@@ -726,9 +695,7 @@ class SSHCommandEndpointNewConnectionTests(TestCase, SSHCommandEndpointTestsMixi
         # XXX Should assert something specific about the arguments of the
         # exception
 
-        # Nothing useful can be done with the connection at this point, so the
-        # endpoint should close it.
-        self.assertTrue(client.transport.disconnecting)
+        self.assertClientTransportState(client)
 
 
     def setupKeyChecker(self, portal, users):
@@ -887,6 +854,37 @@ class SSHCommandEndpointNewConnectionTests(TestCase, SSHCommandEndpointTestsMixi
         self.assertNotIdentical(None, protocol.transport)
 
 
+    def test_loseConnection(self):
+        """
+        The transport connected to the protocol has a C{loseConnection} method
+        which causes the channel in which the command is running to close and
+        the overall connection to be closed.
+        """
+        self.realm.channelLookup[b'session'] = WorkingExecSession
+        endpoint = self.create()
+
+        factory = Factory()
+        factory.protocol = Protocol
+        connected = endpoint.connect(factory)
+
+        server, client, pump = self.finishConnection()
+
+        protocol = self.successResultOf(connected)
+        closed = self.record(server, protocol, 'closed', noArgs=True)
+        protocol.transport.loseConnection()
+        pump.pump()
+        self.assertEqual([None], closed)
+
+        # Let the last bit of network traffic flow.  This lets the server's
+        # close acknowledgement through, at which point the client can close
+        # the overall SSH connection.
+        pump.pump()
+
+        # Nothing useful can be done with the connection at this point, so the
+        # endpoint should close it.
+        self.assertTrue(client.transport.disconnecting)
+
+
 
 class SSHCommandEndpointExistingConnectionTests(TestCase, SSHCommandEndpointTestsMixin):
     """
@@ -956,6 +954,13 @@ class SSHCommandEndpointExistingConnectionTests(TestCase, SSHCommandEndpointTest
         self._pump.pump()
         self._pump.pump()
         return self._server, self._client, self._pump
+
+
+    def assertClientTransportState(self, client):
+        # The connection came from someone else's code, they're responsible for
+        # closing the connection, so nothing the existingConnection tests do
+        # should cause it to close.  endpoint should close it.
+        self.assertFalse(client.transport.disconnecting)
 
 
 
