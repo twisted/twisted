@@ -702,9 +702,9 @@ class PositionError(object, FancyEqMixin):
     Position error information.
 
     @cvar _ALLOWABLE_THRESHOLD: The maximum allowable difference between PDOP
-    and the geometric mean of VDOP and HDOP. That difference is supposed to be
-    zero (mathematically speaking) but can be non-zero because of limited
-    reporting precision. You should never have to change this value.
+        and the geometric mean of VDOP and HDOP. That difference is supposed
+        to be zero, but can be non-zero because of rounding error and limited
+        reporting precision. You should never have to change this value.
     @type _ALLOWABLE_THRESHOLD: C{float}
     @ivar pdop: The position dilution of precision. C{None} if unknown.
     @type pdop: C{float} or C{NoneType}
