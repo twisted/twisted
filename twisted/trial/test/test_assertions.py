@@ -858,6 +858,31 @@ class TestResultOfAssertions(unittest.SynchronousTestCase):
             self.failureException, self.failureResultOf, succeed(self.result))
 
 
+    def test_failureResultOfWithWrongFailure(self):
+        """
+        L{SynchronousTestCase.failureResultOf} raises
+        L{SynchronousTestCase.failureException} when called with a L{Deferred}
+        with a failure type that was not expected.
+        """
+        self.assertRaises(
+            self.failureException, self.failureResultOf, fail(self.failure),
+            KeyError)
+
+
+    def test_failureResultOfWithWrongFailureHasTraceback(self):
+        """
+        L{SynchronousTestCase.failureResultOf} raises
+        L{SynchronousTestCase.failureException} when called with a L{Deferred}
+        with a failure type that was not expected, and the
+        L{SynchronousTestCase.failureException} message contains the original
+        failure traceback.
+        """
+        try:
+            self.failureResultOf(fail(self.failure), KeyError)
+        except self.failureException as e:
+            self.assertIn(self.failure.getTraceback(), str(e))
+
+
     def test_withSuccessResult(self):
         """
         When passed a L{Deferred} which currently has a result (ie,
@@ -872,9 +897,22 @@ class TestResultOfAssertions(unittest.SynchronousTestCase):
     def test_withFailureResult(self):
         """
         When passed a L{Deferred} which currently has a L{Failure} result (ie,
-        L{Deferred.addErrback} would cause the added errback to be called before
-        C{addErrback} returns), L{SynchronousTestCase.failureResultOf} returns
-        that L{Failure}.
+        L{Deferred.addErrback} would cause the added errback to be called
+        before C{addErrback} returns), L{SynchronousTestCase.failureResultOf}
+        returns that L{Failure} if that L{Failure}'s type is expected.
+        """
+        self.assertIdentical(
+            self.failure,
+            self.failureResultOf(fail(self.failure), self.failure.type,
+                                 KeyError))
+
+
+    def test_withExpectedFailureResult(self):
+        """
+        When passed a L{Deferred} which currently has a L{Failure} result
+        (ie, L{Deferred.addErrback} would cause the added errback to be called
+        before C{addErrback} returns), L{SynchronousTestCase.failureResultOf}
+        returns that L{Failure}.
         """
         self.assertIdentical(
             self.failure, self.failureResultOf(fail(self.failure)))

@@ -624,7 +624,8 @@ class _Assertions(pyunit.TestCase, object):
             return result[0]
 
 
-    def failureResultOf(self, deferred):
+
+    def failureResultOf(self, deferred, *expectedExceptionTypes):
         """
         Return the current failure result of C{deferred} or raise
         C{self.failException}.
@@ -638,9 +639,13 @@ class _Assertions(pyunit.TestCase, object):
             L{failure.Failure}.
         @type deferred: L{Deferred<twisted.internet.defer.Deferred>}
 
+        @param expectedExceptionTypes: Exception types to expect - if
+            provided, and the the exception wrapped by the failure result is
+            not one of the types provided, then this test will fail.
+
         @raise SynchronousTestCase.failureException: If the
-            L{Deferred<twisted.internet.defer.Deferred>} has no result or has a
-            success result.
+            L{Deferred<twisted.internet.defer.Deferred>} has no result, has a
+            success result, or has an unexpected failure result.
 
         @return: The failure result of C{deferred}.
         @rtype: L{failure.Failure}
@@ -655,6 +660,15 @@ class _Assertions(pyunit.TestCase, object):
             self.fail(
                 "Failure result expected on %r, "
                 "found success result (%r) instead" % (deferred, result[0]))
+        elif not result[0].check(*expectedExceptionTypes):
+            expected_string = " or ".join([
+                repr(t) for t in expectedExceptionTypes])
+
+            self.fail(
+                "Failure of type (%s) expected on %r, "
+                "found type %r instead: %s" % (
+                    expected_string, deferred, result[0].type,
+                    result[0].getTraceback()))
         else:
             return result[0]
 
