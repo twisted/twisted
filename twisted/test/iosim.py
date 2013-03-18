@@ -143,6 +143,9 @@ class FakeTransport:
             err = self.disconnectReason
         self.protocol.connectionLost(Failure(err))
 
+    def logPrefix(self):
+        return "iosim"
+
     def getPeer(self):
         return self.peerAddress
 
