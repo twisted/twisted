@@ -459,6 +459,17 @@ if __name__ == "__main__":
     main()
 </pre>
 
+    <p>
+      A <code class="API" base="twisted.web.client">Response</code> contains
+      a reference to both the <code class="API"
+      base="twisted.web.client.Response">request</code> that it is a response
+      to, and the previously received <code class="API"
+      base="twisted.web.client.Response">response</code>. In most cases there
+      will not be a previous response, but in the case of
+      <code>RedirectAgent</code> the response history can be obtained by
+      following the previous responses from response to response.
+    </p>
+
     <h3>Using a HTTP proxy</h3>
 
     <p>
