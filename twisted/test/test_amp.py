@@ -1825,11 +1825,11 @@ class AMPTest(unittest.TestCase):
                     mixedCase='mixed case arg test',
                     dash_arg='x',
                     underscore_arg='y',
+                    From=s.transport.getPeer(),
 
                     # XXX - should optional arguments just not be passed?
                     # passing None seems a little odd, looking at the way it
                     # turns out here... -glyph
-                    From=('file', 'file'),
                     Print=None,
                     optional=None,
                     )))
