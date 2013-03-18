@@ -34,13 +34,13 @@ class ExampleTestBase(object):
         Add our example directory to the path and record which modules are
         currently loaded.
         """
-        self.fakeErr = StringIO()
-        self.originalErr, sys.stderr = sys.stderr, self.fakeErr
-        self.fakeOut = StringIO()
-        self.originalOut, sys.stdout = sys.stdout, self.fakeOut
-
         self.originalPath = sys.path[:]
         self.originalModules = sys.modules.copy()
+
+        self.fakeErr = StringIO()
+        self.patch(sys, 'stderr', self.fakeErr)
+        self.fakeOut = StringIO()
+        self.patch(sys, 'stdout', self.fakeOut)
 
         # Get branch root
         here = FilePath(__file__).parent().parent().parent().parent()
@@ -69,7 +69,6 @@ class ExampleTestBase(object):
         sys.modules.clear()
         sys.modules.update(self.originalModules)
         sys.path[:] = self.originalPath
-        sys.stderr = self.originalErr
 
 
     def test_shebang(self):
