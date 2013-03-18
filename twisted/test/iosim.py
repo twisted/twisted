@@ -211,19 +211,21 @@ def makeFakeClient(clientProtocol):
     @param clientProtocol: The client protocol to use.
     @type clientProtocol: L{IProtocol} provider
 
+    @return: The transport.
     @rtype: L{FakeTransport}
     """
     return FakeTransport(clientProtocol, isServer=False)
 
 
 
-def makeFakeServer(serverProtocol, **kwargs):
+def makeFakeServer(serverProtocol):
     """
     Create and return a new in-memory transport hooked up to the given protocol.
 
     @param serverProtocol: The server protocol to use.
     @type serverProtocol: L{IProtocol} provider
 
+    @return: The transport.
     @rtype: L{FakeTransport}
     """
     return FakeTransport(serverProtocol, isServer=True)
@@ -329,7 +331,8 @@ def connect(serverProtocol, serverTransport,
     """
     serverProtocol.makeConnection(serverTransport)
     clientProtocol.makeConnection(clientTransport)
-    pump = IOPump(clientProtocol, serverProtocol, clientTransport, serverTransport, debug)
+    pump = IOPump(
+        clientProtocol, serverProtocol, clientTransport, serverTransport, debug)
     # kick off server greeting, etc
     pump.flush()
     return pump
