@@ -119,17 +119,12 @@ class MakeServiceTest(TestCase):
         self.assertEqual(len(self.options['credCheckers']), 2)
 
 
-    def test_anonyousAuthNotAllowedWithOtherAuth(self):
+    def test_anonymousNotAllowed(self):
         """
-        C{--auth anonymous} combined with another other authentication method
-        raises a L{UsageError}
+        C{--auth anonymous} authentication method raises a L{UsageError}
         """
         self.assertRaises(UsageError, self.options.parseOptions,
-                          ['--auth', 'anonymous',
-                           '--auth', 'memory:testuser:testpassword'])
-        self.assertRaises(UsageError, self.options.parseOptions,
-                          ['--auth', 'memory:testuser:testpassword',
-                           '--auth', 'anonymous'])
+                          ['--auth', 'anonymous'])
 
 
     def test_authFailure(self):

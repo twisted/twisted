@@ -6,7 +6,8 @@
 Support module for making SSH servers with twistd.
 """
 
-from twisted.cred.credentials import IAnonymous
+from twisted.cred.credentials import (
+    IUsernamePassword, ISSHPrivateKey, IPluggableAuthenticationModules)
 from twisted.conch import unix
 from twisted.conch import checkers as conch_checkers
 from twisted.conch.openssh_compat import factory
@@ -25,9 +26,8 @@ class Options(usage.Options, strcred.AuthOptionMixin):
     longdesc = ("Makes a Conch SSH server.  If no authentication methods are "
         "specified, the default authentication methods are UNIX passwords, "
         "SSH public keys, and PAM if it is available.  If --auth options are "
-        "passed, only the measures specified will be used.\n\nNote: currently "
-        "Conch can only have anonymous access OR authenticated access, but "
-        "not both.")
+        "passed, only the measures specified will be used (except anonymous "
+        "access, which is not supported yet).")
     optParameters = [
         ["interface", "i", "", "local interface to which we listen"],
         ["port", "p", "tcp:22", "Port on which to listen"],
@@ -40,6 +40,8 @@ class Options(usage.Options, strcred.AuthOptionMixin):
                     "moduli": usage.CompleteDirs(descr="moduli directory"),
                     "interface": usage.CompleteNetInterfaces()}
         )
+    supportedInterfaces = [IPluggableAuthenticationModules,
+                           IUsernamePassword, ISSHPrivateKey]
 
 
     def __init__(self, *a, **kw):
@@ -69,12 +71,6 @@ class Options(usage.Options, strcred.AuthOptionMixin):
             self._usingDefaultAuth = False
 
         super(Options, self).addChecker(checker)
-
-        if (len(self['credInterfaces']) > 1 and
-            IAnonymous in self['credInterfaces']):
-            raise usage.UsageError(
-                "Conch can currently only have either all-anonymous access or "
-                "authenticated access")
 
 
 def makeService(config):

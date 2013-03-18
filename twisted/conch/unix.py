@@ -14,10 +14,15 @@ from avatar import ConchUser
 from error import ConchError
 from interfaces import ISession, ISFTPServer, ISFTPFile
 
-import struct, os, time, socket
-import fcntl, tty
-import pwd, grp
+import fcntl
+import grp
+import os
+import pwd
 import pty
+import socket
+import struct
+import time
+import tty
 import ttymodes
 
 try:
@@ -32,7 +37,8 @@ class UnixSSHRealm:
 
     def requestAvatar(self, username, mind, *interfaces):
         if username == checkers.ANONYMOUS:
-            username = pwd.getpwuid(os.getuid()).pw_name
+            raise NotImplementedError(
+                "Anonymous access for Unix SSH Realm is not yet supported")
 
         user = UnixConchUser(username)
         return interfaces[0], user, user.logout
