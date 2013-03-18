@@ -197,10 +197,8 @@ class FakeTransport(transport.SSHTransportBase):
 
 class Realm(object):
     """
-    A mock realm for testing L{userauth.SSHUserAuthServer}.
-
-    This realm is not actually used in the course of testing, so it returns the
-    simplest thing that could possibly work.
+    A mock realm for testing L{userauth.SSHUserAuthServer} that always
+    successfully returns an avatar.
     """
     implements(IRealm)
 
@@ -212,10 +210,8 @@ class Realm(object):
 
 class RealmNoAnonymous(object):
     """
-    A mock realm for testing L{userauth.SSHUserAuthServer}.
-
-    This realm is not actually used in the course of testing, so it returns the
-    simplest thing that could possibly work.
+    A mock realm for testing L{userauth.SSHUserAuthServer} that always
+    successfully returns an avatar so long as the avatar ID is not anonymous.
     """
     implements(IRealm)
 

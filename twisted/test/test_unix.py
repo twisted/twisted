@@ -398,7 +398,6 @@ class DatagramUnixSocketTestCase(unittest.TestCase):
             NewStyleProtocol(), "twisted.test.test_unix.NewStyleProtocol")
 
 
-
 if not interfaces.IReactorUNIX(reactor, None):
     UnixSocketTestCase.skip = "This reactor does not support UNIX domain sockets"
 if not interfaces.IReactorUNIXDatagram(reactor, None):
