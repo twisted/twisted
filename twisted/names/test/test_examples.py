@@ -8,9 +8,12 @@ Tests for L{twisted.names} example scripts.
 import sys
 from StringIO import StringIO
 
+from zope.interface.verify import verifyClass
+
+from twisted.internet import interfaces
 from twisted.python.filepath import FilePath
 from twisted.trial.unittest import SkipTest, TestCase
-
+from twisted.names.test.test_client import MemoryReactor
 
 
 class ExampleTestBase(object):
@@ -153,3 +156,12 @@ class DnsServiceTests(ExampleTestBase, TestCase):
     """
 
     exampleRelativePath = 'doc/names/examples/dns-service.py'
+
+
+
+class VerifiedFakeTests(TestCase):
+    def test_verifyClass(self):
+        """
+        L{MemoryReactor} implements the L{IResolver} interface.
+        """
+        verifyClass(interfaces.IResolver, MemoryReactor)
