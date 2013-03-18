@@ -227,11 +227,9 @@ class _UNIXPort(object):
 
         This indicates the server's address.
         """
-        if sys.version_info > (2, 5) or _inFilesystemNamespace(self.port):
+        if _inFilesystemNamespace(self.port):
             path = self.socket.getsockname()
         else:
-            # Abstract namespace sockets aren't well supported on Python 2.4.
-            # getsockname() always returns ''.
             path = self.port
         return address.UNIXAddress(path)
 
@@ -297,7 +295,7 @@ class Port(_UNIXPort, tcp.Port):
         if self.wantPID:
             self.lockFile = lockfile.FilesystemLock(self.port + ".lock")
             if not self.lockFile.lock():
-                raise CannotListenError, (None, self.port, "Cannot acquire lock")
+                raise CannotListenError(None, self.port, "Cannot acquire lock")
             else:
                 if not self.lockFile.clean:
                     try:
@@ -319,6 +317,10 @@ class Port(_UNIXPort, tcp.Port):
                 skt.bind(self.port)
             except socket.error, le:
                 raise CannotListenError(None, self.port, le)
+
+            if _inFilesystemNamespace(self.port):
+                # Make the socket readable and writable to the world.
+                os.chmod(self.port, self.mode)
         else:
             # Re-use the externally specified socket
             skt = self._preexistingSocket
@@ -327,9 +329,6 @@ class Port(_UNIXPort, tcp.Port):
             # in the case of UNIX sockets, but we'll skip it anyway.
             self._socketShutdownMethod = None
 
-        if _inFilesystemNamespace(self.port):
-            # Make the socket readable and writable to the world.
-            os.chmod(self.port, self.mode)
         skt.listen(self.backlog)
         self.connected = True
         self.socket = skt
@@ -346,7 +345,8 @@ class Port(_UNIXPort, tcp.Port):
 
 
     def connectionLost(self, reason):
-        if _inFilesystemNamespace(self.port):
+        if (_inFilesystemNamespace(self.port) and
+                self._socketShutdownMethod is not None):
             os.unlink(self.port)
         if self.lockFile is not None:
             self.lockFile.unlock()

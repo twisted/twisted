@@ -1,5 +1,7 @@
 
-import errno, socket
+import os
+import errno
+import socket
 
 from twisted.python.log import err
 from twisted.internet.interfaces import IReactorSocket
@@ -7,6 +9,7 @@ from twisted.internet.error import UnsupportedAddressFamily
 from twisted.internet.protocol import ServerFactory
 from twisted.internet.test.reactormixins import (
     ReactorBuilder, needsRunningReactor)
+from twisted.internet.test.test_unix import _abstractPath
 
 
 class AdoptStreamPortErrorsTestsBuilder(ReactorBuilder):
@@ -57,12 +60,13 @@ class AdoptStreamPortErrorsTestsBuilder(ReactorBuilder):
             reactor.adoptStreamPort, port.fileno(), arbitrary, ServerFactory())
 
 
-    def test_stopOnlyCloses(self):
+    def test_stopOnlyClosesTCP(self):
         """
-        When the L{IListeningPort} returned by L{IReactorSocket.adoptStreamPort}
-        is stopped using C{stopListening}, the underlying socket is closed but
-        not shutdown.  This allows another process which still has a reference
-        to it to continue accepting connections over it.
+        When the L{IListeningPort} returned by
+        L{IReactorSocket.adoptStreamPort} is stopped using C{stopListening},
+        the underlying socket is closed but not shutdown.  This allows another
+        process which still has a reference to it to continue accepting
+        connections over it.
         """
         reactor = self.buildReactor()
 
@@ -76,11 +80,13 @@ class AdoptStreamPortErrorsTestsBuilder(ReactorBuilder):
         port = reactor.adoptStreamPort(
             portSocket.fileno(), portSocket.family, ServerFactory())
         d = port.stopListening()
+
         def stopped(ignored):
-            # Should still be possible to accept a connection on portSocket.  If
-            # it was shutdown, the exception would be EINVAL instead.
+            # Should still be possible to accept a connection on portSocket.
+            # If it was shutdown, the exception would be EINVAL instead.
             exc = self.assertRaises(socket.error, portSocket.accept)
             self.assertEqual(exc.args[0], errno.EAGAIN)
+
         d.addCallback(stopped)
         d.addErrback(err, "Failed to accept on original port.")
 
@@ -90,6 +96,40 @@ class AdoptStreamPortErrorsTestsBuilder(ReactorBuilder):
 
         reactor.run()
 
+
+    def test_stopOnlyClosesUNIX(self):
+        """
+        When the L{IListeningPort} returned by
+        L{IReactorSocket.adoptStreamPort} is stopped using C{stopListening},
+        the underlying socket is closed but not shutdown, and the path file is
+        not removed.
+        """
+        reactor = self.buildReactor()
+
+        portSocket = socket.socket(socket.AF_UNIX)
+        self.addCleanup(portSocket.close)
+
+        path = _abstractPath(self)
+        portSocket.bind(path)
+        portSocket.listen(1)
+        portSocket.setblocking(False)
+
+        # The file descriptor is duplicated by adoptStreamPort
+        port = reactor.adoptStreamPort(
+            portSocket.fileno(), portSocket.family, ServerFactory())
+        d = port.stopListening()
+
+        def stopped(ignored):
+            self.assertTrue(os.path.exists(path))
+
+        d.addCallback(stopped)
+        d.addErrback(err, "Failed to accept on original port.")
+
+        needsRunningReactor(
+            reactor,
+            lambda: d.addCallback(lambda ignored: reactor.stop()))
+
+        reactor.run()
 
 
 class AdoptStreamConnectionErrorsTestsBuilder(ReactorBuilder):
