@@ -7,7 +7,7 @@ Infrastructure for test running and suites.
 """
 
 import doctest
-import warnings, gc
+import gc
 
 from twisted.python import components
 
@@ -18,39 +18,13 @@ pyunit = __import__('unittest')
 
 from zope.interface import implements
 
-def suiteVisit(suite, visitor):
-    """
-    Visit each test in C{suite} with C{visitor}.
-
-    Deprecated in Twisted 8.0.
-
-    @param visitor: A callable which takes a single argument, the L{TestCase}
-    instance to visit.
-    @return: None
-    """
-    warnings.warn("Test visitors deprecated in Twisted 8.0",
-                  category=DeprecationWarning)
-    for case in suite._tests:
-        visit = getattr(case, 'visit', None)
-        if visit is not None:
-            visit(visitor)
-        elif isinstance(case, pyunit.TestCase):
-            case = itrial.ITestCase(case)
-            case.visit(visitor)
-        elif isinstance(case, pyunit.TestSuite):
-            suiteVisit(case, visitor)
-        else:
-            case.visit(visitor)
-
 
 
 class TestSuite(pyunit.TestSuite):
     """
-    Extend the standard library's C{TestSuite} with support for the visitor
-    pattern and a consistently overrideable C{run} method.
+    Extend the standard library's C{TestSuite} with a consistently overrideable
+    C{run} method.
     """
-
-    visit = suiteVisit
 
     def __call__(self, result):
         return self.run(result)
@@ -149,15 +123,6 @@ class _PyUnitTestCaseAdapter(TestDecorator):
     """
     Adapt from pyunit.TestCase to ITestCase.
     """
-
-
-    def visit(self, visitor):
-        """
-        Deprecated in Twisted 8.0.
-        """
-        warnings.warn("Test visitors deprecated in Twisted 8.0",
-                      category=DeprecationWarning)
-        visitor(self)
 
 
 

@@ -191,11 +191,10 @@ class TrialRunnerWithUncleanWarningsReporter(TrialRunnerTestsMixin,
 
 
 class DryRunMixin(object):
-
-    suppress = [util.suppress(
-        category=DeprecationWarning,
-        message="Test visitors deprecated in Twisted 8.0")]
-
+    """
+    Mixin for testing that 'dry run' mode works with various
+    L{pyunit.TestCase} subclasses.
+    """
 
     def setUp(self):
         self.log = []

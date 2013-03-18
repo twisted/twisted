@@ -10,7 +10,6 @@ from zope.interface import implementer
 
 from twisted.python.compat import _PY3
 from twisted.python.failure import Failure
-from twisted.trial import util
 from twisted.trial.unittest import SynchronousTestCase, PyUnitResultAdapter
 from twisted.trial.itrial import IReporter, ITestCase
 
@@ -28,20 +27,6 @@ class TestPyUnitTestCase(SynchronousTestCase):
     def setUp(self):
         self.original = self.PyUnitTest('test_pass')
         self.test = ITestCase(self.original)
-
-
-    def test_visit(self):
-        """
-        Trial assumes that test cases implement visit().
-        """
-        log = []
-        def visitor(test):
-            log.append(test)
-        self.test.visit(visitor)
-        self.assertEqual(log, [self.test])
-    test_visit.suppress = [
-        util.suppress(category=DeprecationWarning,
-                      message="Test visitors deprecated in Twisted 8.0")]
 
 
     def test_callable(self):
