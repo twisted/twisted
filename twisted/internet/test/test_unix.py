@@ -518,18 +518,10 @@ class UNIXDatagramTestsBuilder(UNIXFamilyMixin, ReactorBuilder):
 
 
 
-class UNIXPortTestsBuilder(ReactorBuilder, StreamTransportTestsMixin):
+class UNIXStreamTransportTestsMixin(StreamTransportTestsMixin):
     """
-    Tests for L{IReactorUNIX.listenUnix}
+    Implement check methods used by L{StreamTransportTestsMixin} tests.
     """
-    requiredInterfaces = (interfaces.IReactorUNIX,)
-
-    def getListeningPort(self, reactor, factory):
-        """
-        Get a UNIX port from a reactor
-        """
-        return reactor.listenUNIX(_abstractPath(self), factory)
-
 
     def getExpectedStartListeningLogMessage(self, port, factory):
         """
@@ -547,7 +539,21 @@ class UNIXPortTestsBuilder(ReactorBuilder, StreamTransportTestsMixin):
 
 
 
-class UNIXSocketTestsBuilder(ReactorBuilder, StreamTransportTestsMixin):
+class UNIXPortTestsBuilder(ReactorBuilder, UNIXStreamTransportTestsMixin):
+    """
+    Tests for L{IReactorUNIX.listenUnix}
+    """
+    requiredInterfaces = (interfaces.IReactorUNIX,)
+
+    def getListeningPort(self, reactor, factory):
+        """
+        Get a UNIX port from a reactor
+        """
+        return reactor.listenUNIX(_abstractPath(self), factory)
+
+
+
+class UNIXSocketTestsBuilder(ReactorBuilder, UNIXStreamTransportTestsMixin):
     """
     Mixin which uses L{IReactorSocket.adoptStreamPort} to hand out listening
     UNIX ports.
@@ -575,21 +581,6 @@ class UNIXSocketTestsBuilder(ReactorBuilder, StreamTransportTestsMixin):
                 portSock.close()
         else:
             raise SkipTest("Reactor does not provide IReactorSocket")
-
-
-    def getExpectedStartListeningLogMessage(self, port, factory):
-        """
-        Get the message expected to be logged when a UNIX port starts
-        listening.
-        """
-        return "%s starting on %r" % (factory, port.getHost().name)
-
-
-    def getExpectedConnectionLostLogMsg(self, port):
-        """
-        Get the expected connection lost message for a UNIX port
-        """
-        return "(UNIX Port %s Closed)" % (repr(port.port),)
 
 
 
