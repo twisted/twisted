@@ -236,8 +236,7 @@ class SSHUserAuthServer(service.SSHService):
         The final errback in the authentication chain.  If the reason is
         error.IgnoreAuthentication, we simply return; the authentication
         method has sent its own response.  Otherwise, send a failure message
-        and (if the method is not 'none') increment the number of login
-        attempts.
+        and increment the number of login attempts.
 
         @type reason: L{twisted.python.failure.Failure}
         """

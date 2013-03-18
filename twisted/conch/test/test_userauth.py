@@ -343,6 +343,9 @@ class SSHUserAuthServerBaseTestCase(unittest.TestCase):
 
 
     def _checkSuccess(self, ignored):
+        """
+        Check that the authentication has succeeded
+        """
         self.assertEqual(
             self.authServer.transport.packets,
             [(userauth.MSG_USERAUTH_SUCCESS, '')])
