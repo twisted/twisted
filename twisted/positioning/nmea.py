@@ -7,15 +7,15 @@ devices.
 
 @since: 11.1
 """
-
 import itertools
 import operator
 import datetime
 from zope.interface import implements, classProvides
 
-from twisted.protocols.basic import LineReceiver
 from twisted.positioning import base, ipositioning
 from twisted.positioning.base import LATITUDE, LONGITUDE, VARIATION
+from twisted.protocols.basic import LineReceiver
+from twisted.python.compat import reduce
 
 # GPGGA fix quality:
 (GGA_INVALID_FIX, GGA_GPS_FIX, GGA_DGPS_FIX, GGA_PPS_FIX, GGA_RTK_FIX,
