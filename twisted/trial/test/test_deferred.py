@@ -18,7 +18,7 @@ from twisted.trial.test import detests
 class TestSetUp(unittest.TestCase):
     def _loadSuite(self, klass):
         """
-        This testcase loads the test suite and accumulates the results
+        Load the test suite and accumulate the results
         """
         loader = pyunit.TestLoader()
         r = reporter.TestResult()
@@ -27,7 +27,8 @@ class TestSetUp(unittest.TestCase):
 
     def test_success(self):
         """
-        Tests whether the loaded test suite was successful and fail the test if C{result.testsRun} fails.
+        Tests whether the loaded test suite was successful and fail
+        the test if C{result.testsRun} fails.
         """
         result, suite = self._loadSuite(detests.DeferredSetUpOK)
         suite(result)
@@ -36,7 +37,8 @@ class TestSetUp(unittest.TestCase):
 
     def test_fail(self):
         """
-        Test the result of C{detests.DeferredSetUpFail} and fails if it is returning any failures  
+        Test the result of C{detests.DeferredSetUpFail} and fails if
+        it is returning any failures
         """
         self.failIf(detests.DeferredSetUpFail.testCalled)
         result, suite = self._loadSuite(detests.DeferredSetUpFail)
@@ -49,7 +51,8 @@ class TestSetUp(unittest.TestCase):
 
     def test_callbackFail(self):
         """
-        Test the result of C{detests.DeferredSetUpCallbackFail} and fails if it is returning any failures in call back. 
+        Test the result of C{detests.DeferredSetUpCallbackFail} and
+        fails if it is returning any failures in call back.
         """
         self.failIf(detests.DeferredSetUpCallbackFail.testCalled)
         result, suite = self._loadSuite(detests.DeferredSetUpCallbackFail)
@@ -62,7 +65,8 @@ class TestSetUp(unittest.TestCase):
 
     def test_error(self):
         """
-        Test the result of L{detests.DeferredSetUpError} and fails if it is resulting any set up errors or failures.
+        Test the result of L{detests.DeferredSetUpError} and fails if
+        it is resulting any set up errors or failures.
         """
         self.failIf(detests.DeferredSetUpError.testCalled)
         result, suite = self._loadSuite(detests.DeferredSetUpError)
@@ -75,7 +79,8 @@ class TestSetUp(unittest.TestCase):
 
     def test_skip(self):
         """
-        Tests for the result of  L{detests.DeferredSetUpSkip} and fails if it is resulting in any failures or errors.
+        Tests for the result of L{detests.DeferredSetUpSkip} and fails
+        if it is resulting in any failures or errors.
         """
         self.failIf(detests.DeferredSetUpSkip.testCalled)
         result, suite = self._loadSuite(detests.DeferredSetUpSkip)
@@ -91,14 +96,16 @@ class TestSetUp(unittest.TestCase):
 class TestNeverFire(unittest.TestCase):
     def setUp(self):
         """
-        Set up the old timeout as the default timeout duration and reset the C{util.DEFAULT_TIMEOUT_DURATION} as 0.1
+        Set up the old timeout as the default timeout duration and
+        reset the C{util.DEFAULT_TIMEOUT_DURATION} as 0.1
         """
         self._oldTimeout = util.DEFAULT_TIMEOUT_DURATION
         util.DEFAULT_TIMEOUT_DURATION = 0.1
 
     def tearDown(self):
         """
-        Set the C{util.DEFAULT_TIMEOUT_DURATION} as the value of old timeout.
+        Set the C{util.DEFAULT_TIMEOUT_DURATION} as the value of old
+        timeout.
         """
         util.DEFAULT_TIMEOUT_DURATION = self._oldTimeout
 
@@ -113,7 +120,8 @@ class TestNeverFire(unittest.TestCase):
 
     def test_setUp(self):
         """
-        Test the result of C{detests.DeferredSetUpNeverFire} and fails if any failure or errors are detected. 
+        Test the result of C{detests.DeferredSetUpNeverFire} and fails
+        if any failure or errors are detected.
         """
         self.failIf(detests.DeferredSetUpNeverFire.testCalled)
         result, suite = self._loadSuite(detests.DeferredSetUpNeverFire)
@@ -135,7 +143,8 @@ class TestTester(unittest.TestCase):
 
     def runTest(self, name):
         """
-        This test run the C{reporter.TestResult} C{getTest} with the argument passed.
+        This test run the C{reporter.TestResult} C{getTest} with the
+        argument passed.
         """
         result = reporter.TestResult()
         self.getTest(name).run(result)
@@ -148,7 +157,8 @@ class TestDeferred(TestTester):
 
     def test_pass(self):
         """
-        C{runTest} is run with test_pass as argument. This test fails if C{runTest} fails 
+        C{runTest} is run with test_pass as argument. This test fails
+        if C{runTest} fails
         """
         result = self.runTest('test_pass')
         self.failUnless(result.wasSuccessful())
