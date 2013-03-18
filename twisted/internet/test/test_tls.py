@@ -26,11 +26,10 @@ from twisted.internet.task import Cooperator
 from twisted.trial.unittest import TestCase, SkipTest
 from twisted.python.runtime import platform
 
-from twisted.internet.test.test_core import ObjectModelIntegrationMixin
-from twisted.internet.test.test_tcp import (
-    StreamTransportTestsMixin, AbortConnectionMixin)
+from twisted.internet.test.test_tcp import AbortConnectionMixin
 from twisted.internet.test.connectionmixins import (
-    EndpointCreator, ConnectionTestsMixin, BrokenContextFactory)
+    EndpointCreator, ConnectionTestsMixin, BrokenContextFactory,
+    StreamTransportTestsMixin)
 
 try:
     from OpenSSL.crypto import FILETYPE_PEM
@@ -317,8 +316,8 @@ class SSLClientTestsMixin(TLSMixin, ReactorBuilder, ContextGeneratingMixin,
 
 
 class TLSPortTestsBuilder(TLSMixin, ContextGeneratingMixin,
-                          ObjectModelIntegrationMixin, BadContextTestsMixin,
-                          StreamTransportTestsMixin, ReactorBuilder):
+                          BadContextTestsMixin, StreamTransportTestsMixin,
+                          ReactorBuilder):
     """
     Tests for L{IReactorSSL.listenSSL}
     """
