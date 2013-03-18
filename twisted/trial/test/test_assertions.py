@@ -847,7 +847,7 @@ class TestResultOfAssertions(unittest.SynchronousTestCase):
         try:
             self.successResultOf(fail(self.failure))
         except self.failureException as e:
-            self.assertIn(self.failure.getTraceback(), e.message)
+            self.assertIn(self.failure.getTraceback(), str(e))
 
 
     def test_withoutFailureResult(self):
@@ -868,29 +868,6 @@ class TestResultOfAssertions(unittest.SynchronousTestCase):
         """
         self.assertRaises(
             self.failureException, self.failureResultOf, succeed(self.result))
-
-    def test_failureResultOfWithWrongFailure(self):
-        """
-        L{SynchronousTestCase.failureResultOf} raises
-        L{SynchronousTestCase.failureException} when called with a L{Deferred}
-        with a failure type that was not expected.
-        """
-        self.assertRaises(
-            self.failureException, self.failureResultOf, fail(self.failure),
-            KeyError)
-
-    def test_failureResultOfWithWrongFailureHasTraceback(self):
-        """
-        L{SynchronousTestCase.failureResultOf} raises
-        L{SynchronousTestCase.failureException} when called with a L{Deferred}
-        with a failure type that was not expected, and the
-        L{SynchronousTestCase.failureException} message contains the original
-        failure traceback.
-        """
-        try:
-            self.failureResultOf(fail(self.failure), KeyError)
-        except self.failureException as e:
-            self.assertIn(self.failure.getTraceback(), e.message)
 
     def test_withSuccessResult(self):
         """

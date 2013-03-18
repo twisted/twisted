@@ -1,1 +1,0 @@
-An optional expected exception type argument has been added to twisted.trial.unittest.TestCase.failureResultOf, and both failureResultOf and successResultOf failures now contain the original failure tracebacks.
