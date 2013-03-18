@@ -888,20 +888,6 @@ class SSHCommandEndpointNewConnectionTests(TestCase, SSHCommandEndpointTestsMixi
 
 
 
-class PermissiveKnownHostsFile(object):
-    def matchesKey(self, key):
-        return True
-
-
-    def matchesHost(self, hostname):
-        return True
-
-
-    def toString(self):
-        return b""
-
-
-
 class SSHCommandEndpointExistingConnectionTests(TestCase, SSHCommandEndpointTestsMixin):
     """
     Tests for L{SSHCommandEndpoint} when using the C{existingConnection}
@@ -958,6 +944,13 @@ class SSHCommandEndpointExistingConnectionTests(TestCase, SSHCommandEndpointTest
 
 
     def finishConnection(self):
+        """
+        Give back the connection established in L{create} over which the new
+        command channel being tested will exchange data.
+        """
+        # The connection was set up and the first command channel set up, but
+        # some more I/O needs to happen for the second command channel to be
+        # ready.  Make that I/O happen before giving back the objects.
         self._pump.pump()
         self._pump.pump()
         self._pump.pump()
