@@ -20,7 +20,7 @@ p_ip.addProto(17, p_udp)
 p_eth = ethernet.EthernetProtocol()
 p_eth.addProto(0x800, p_ip)
 
-port = tuntap.TuntapPort(interface='tap%d', proto=p_eth, reactor=reactor)
+port = tuntap.TuntapPort(interface='tap-twtest-pi', proto=p_eth, reactor=reactor)
 
 # Ha ha!  It does not yet work.  Next you need to do:
 # $ sudo ifconfig tap0 up

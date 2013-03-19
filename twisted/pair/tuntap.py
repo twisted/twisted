@@ -136,8 +136,8 @@ class TuntapPort(base.BasePort):
     def _bindSocket(self):
         log.msg("%s starting on %s"%(self.protocol.__class__, self.interface))
         try:
-            # XXX No test coverage for the use of TUN_NO_PI - which does not even work
-            fileno, interface = self._openTunnel(self.interface, self._mode | TunnelFlags.IFF_NO_PI)
+            fileno, interface = self._openTunnel(
+                self.interface, self._mode | TunnelFlags.IFF_NO_PI)
         except (IOError, OSError) as e:
             raise error.CannotListenError(None, self.interface, e)
 

@@ -7,8 +7,12 @@ Tests for L{twisted.pair.tuntap}.
 
 from __future__ import division, absolute_import
 
-import os, struct, socket, fcntl
-from errno import EPERM, EAGAIN, EWOULDBLOCK, ENOSYS, EBADF, EINVAL, EINTR, ENOBUFS
+import os
+import struct
+import socket
+import fcntl
+from errno import (
+    EPERM, EAGAIN, EWOULDBLOCK, ENOSYS, EBADF, EINVAL, EINTR, ENOBUFS)
 from signal import SIGCHLD
 from random import randrange
 from functools import wraps
@@ -31,9 +35,9 @@ from twisted.internet.task import Clock
 from twisted.trial.unittest import SynchronousTestCase
 from twisted.internet.error import CannotListenError
 from twisted.pair.raw import IRawPacketProtocol
-from twisted.pair.ethernet import EthernetProtocol
 from twisted.pair.tuntap import (
-    TUNSETIFF, TUNGETIFF, IFNAMSIZ, TunnelType, TunnelFlags, TunnelAddress, TuntapPort)
+    TUNSETIFF, IFNAMSIZ, TunnelType, TunnelFlags, TunnelAddress, TuntapPort)
+
 
 
 @implementer(IReactorFDSet)
@@ -43,7 +47,8 @@ class ReactorFDSet(object):
     descriptors have been registered for reading and writing.
 
     This implementation isn't actually capable of determining readability or
-    writeability and generates no events for the descriptors registered with it.
+    writeability and generates no events for the descriptors registered with
+    it.
     """
     def __init__(self):
         self._readers = set()
@@ -94,6 +99,7 @@ class Composite(object):
     L{ReactorFDSet} to create a reactor which provides L{IReactorTime} and
     L{IReactorFDSet}.
     """
+
     def __init__(self, parts):
         """
         @param parts: An iterable of the objects to compose.  The methods of
@@ -123,8 +129,8 @@ class Tunnel(object):
     """
     _DEVICE_NAME = b"/dev/net/tun"
 
-
-    # Between POSIX and Python, there are 4 combinations.  Here are two, at least.
+    # Between POSIX and Python, there are 4 combinations.  Here are two, at
+    # least.
     EAGAIN_STYLE = IOError(EAGAIN, "Resource temporarily unavailable")
     EWOULDBLOCK_STYLE = OSError(EWOULDBLOCK, "Operation would block")
 
@@ -162,7 +168,11 @@ class Tunnel(object):
 
     def read(self, limit):
         if self.readBuffer:
-            return self.readBuffer.popleft()[:limit]
+            header = ""
+            if not self.tunnelMode & TunnelFlags.IFF_NO_PI.value:
+                header = "\x00\x00\x00\x00"
+                limit -= 4
+            return header + self.readBuffer.popleft()[:limit]
         elif self.blocking:
             raise OSError(ENOSYS, "Function not implemented")
         else:
@@ -213,9 +223,7 @@ class MemoryIOSystem(object):
 
     OPERATIONS = [
         'open', 'read', 'write', 'ioctl', 'close',
-
-        'O_RDWR', 'O_NONBLOCK', 'O_CLOEXEC',
-        ]
+        'O_RDWR', 'O_NONBLOCK', 'O_CLOEXEC']
 
     def __init__(self):
         self._devices = {}
@@ -321,8 +329,10 @@ class _FakePort(object):
 
         datagrams = []
         receiver = DatagramProtocol()
+
         def capture(datagram, address):
             datagrams.append(datagram)
+
         receiver.datagramReceived = capture
 
         udp = RawUDPProtocol()
@@ -331,7 +341,8 @@ class _FakePort(object):
         ip = IPProtocol()
         ip.addProto(17, udp)
 
-        if self._system._openFiles[self._fileno].tunnelMode == TunnelType.TAP.value:
+        if (self._system._openFiles[self._fileno].tunnelMode ==
+                TunnelType.TAP.value):
             ether = EthernetProtocol()
             ether.addProto(0x800, ip)
             datagramReceived = ether.datagramReceived
@@ -348,7 +359,9 @@ class _FakePort(object):
 def H(n):
     return struct.pack('>H', n)
 
+
 IPv4 = 0x0800
+
 
 def _ethernet(src, dst, protocol, payload):
     return dst + src + H(protocol) + payload
@@ -356,15 +369,13 @@ def _ethernet(src, dst, protocol, payload):
 
 def _ip(src, dst, payload):
     ipHeader = (
-        '\x45'                     # version and header length, 4 bits each
-        '\x00'                     # differentiated services field
-        + H(20 + len(payload)) # total length
-        + '\x00\x01\x00\x00@\x11'
-        + H(0)                     # checksum
-                                   # source address
-        + socket.inet_pton(socket.AF_INET, src)
-                                   # destination address
-        + socket.inet_pton(socket.AF_INET, dst))
+        '\x45'  # version and header length, 4 bits each
+        '\x00'  # differentiated services field
+        + H(20 + len(payload))  # total length
+        + '\x00\x01\x00\x00\x40\x11'
+        + H(0)  # checksum
+        + socket.inet_pton(socket.AF_INET, src)  # source address
+        + socket.inet_pton(socket.AF_INET, dst))  # destination address
 
     # Total all of the 16-bit integers in the header
     checksumStep1 = sum(struct.unpack('!10H', ipHeader))
@@ -386,6 +397,7 @@ def _ip(src, dst, payload):
     return ipHeader + payload
 
 
+
 def _udp(src, dst, payload):
     udpHeader = (
         H(src)                  # source port
@@ -397,6 +409,7 @@ def _udp(src, dst, payload):
 
 
 class TapMixin(object):
+
     _TUNNEL_TYPE = staticmethod(TunnelType.TAP)
 
     def encapsulate(self, payload):
@@ -412,8 +425,10 @@ class TapMixin(object):
     def parser(self):
         datagrams = []
         receiver = DatagramProtocol()
+
         def capture(*args):
             datagrams.append(args)
+
         receiver.datagramReceived = capture
 
         udp = RawUDPProtocol()
@@ -430,6 +445,7 @@ class TapMixin(object):
 
 
 class TunMixin(object):
+
     _TUNNEL_TYPE = staticmethod(TunnelType.TUN)
 
 
@@ -443,8 +459,10 @@ class TunMixin(object):
     def parser(self):
         datagrams = []
         receiver = DatagramProtocol()
+
         def capture(*args):
             datagrams.append(args)
+
         receiver.datagramReceived = capture
 
         udp = RawUDPProtocol()
@@ -454,7 +472,8 @@ class TunMixin(object):
         ip.addProto(17, udp)
 
         def parse(data):
-            return ip.datagramReceived(data[4:], False, None, None, None)
+            # Skip the ethernet frame
+            return ip.datagramReceived(data[14:], False, None, None, None)
 
         return datagrams, parse
 
@@ -463,7 +482,8 @@ class TunMixin(object):
 class TunnelDeviceTestsMixin(object):
     def setUp(self):
         self.device = self.device()
-        self.fileno = self.device.open(b"/dev/net/tun", os.O_RDWR | os.O_NONBLOCK)
+        self.fileno = self.device.open(b"/dev/net/tun",
+                                       os.O_RDWR | os.O_NONBLOCK)
         self.addCleanup(self.device.close, self.fileno)
         config = struct.pack(
             "%dsH" % (IFNAMSIZ,), self._TUNNEL_DEVICE, self._TUNNEL_TYPE.value)
@@ -558,8 +578,9 @@ class TunnelDeviceTestsMixin(object):
                         break
                     raise
                 else:
-                    # XXX Slice off the four bytes of flag/proto prefix that always
-                    # seem to be there.  Why can't I get this to work any other way?
+                    # XXX Slice off the four bytes of flag/proto prefix that
+                    # always seem to be there.  Why can't I get this to work
+                    # any other way?
                     parse(packet[4:])
                     if (message, source) in datagrams:
                         found = True
@@ -574,7 +595,7 @@ class TunnelDeviceTestsMixin(object):
 
     def test_send(self):
         protocol = IPv4
-        key = 1234567 # randrange(2 ** 64)
+        key = 1234567  # randrange(2 ** 64)
         message = "hello world:%d" % (key,)
 
         port = self.device.receiveUDP(self.fileno, self._TUNNEL_LOCAL, 12345)
@@ -601,12 +622,16 @@ class FakeDeviceTestsMixin(object):
 
 
 
-class FakeTapDeviceTests(TapMixin, FakeDeviceTestsMixin, TunnelDeviceTestsMixin, SynchronousTestCase):
+class FakeTapDeviceTests(TapMixin, FakeDeviceTestsMixin,
+                         TunnelDeviceTestsMixin, SynchronousTestCase):
     pass
 
 
-class FakeTunDeviceTests(TunMixin, FakeDeviceTestsMixin, TunnelDeviceTestsMixin, SynchronousTestCase):
+
+class FakeTunDeviceTests(TunMixin, FakeDeviceTestsMixin,
+                         TunnelDeviceTestsMixin, SynchronousTestCase):
     pass
+
 
 
 class RealSpecial(object):
@@ -637,35 +662,39 @@ class RealDeviceTestsMixin(object):
         # and ethernet frames must be put into it.  Grant access to it to an
         # otherwise unprivileged user.
         #
-        #         ip tuntap add dev tap-twistedtest mode tap user exarkun group exarkun
+        # ip tuntap add dev tap-twistedtest mode tap user exarkun group exarkun
         #
         # Bring the device up, since otherwise it's not usable for anything.
         #
-        #         ip link set up dev tap-twistedtest
+        # ip link set up dev tap-twistedtest
         #
-        # Give the device an address.  Just like an ethernet device may be given
-        # an address, perhaps a statically allocated one.  This will also
+        # Give the device an address.  Just like an ethernet device may be
+        # given an address, perhaps a statically allocated one.  This will also
         # implicitly create a route for traffic destined for addresses on the
         # same network as the address assigned here to travel via this device.
         #
-        #         ip addr add 10.0.0.1/24 dev tap-twistedtest
+        # ip addr add 10.0.0.1/24 dev tap-twistedtest
         #
-        # Statically populate the arp cache with some addresses that might exist
-        # on that network and thus be accessible via this device.
+        # Statically populate the arp cache with some addresses that might
+        # exist on that network and thus be accessible via this device.
         #
-        #         ip neigh add 10.0.0.2 lladdr de:ad:be:ef:ca:fe dev tap-twistedtest
+        # ip neigh add 10.0.0.2 lladdr de:ad:be:ef:ca:fe dev tap-twistedtest
         #
-        # Once all that's done, RealSpecial will satisfy the requirements of the
-        # tests inherited by this class.
+        # Once all that's done, RealSpecial will satisfy the requirements of
+        # the tests inherited by this class.
         #
         # You can undo it all just by getting rid of the tunnel device.
         #
-        #         ip tuntap del dev tap-twistedtest mode tap
+        # ip tuntap del dev tap-twistedtest mode tap
         #
         return RealSpecial()
 
 
-class RealDeviceWithProtocolInformationTests(TapMixin, RealDeviceTestsMixin, TunnelDeviceTestsMixin, SynchronousTestCase):
+
+class RealDeviceWithProtocolInformationTests(TapMixin, RealDeviceTestsMixin,
+                                             TunnelDeviceTestsMixin,
+                                             SynchronousTestCase):
+
     _TUNNEL_TYPE = staticmethod(TunnelType.TAP)
     _TUNNEL_DEVICE = "tap-twtest-pi"
     _TUNNEL_LOCAL = "10.1.0.1"
@@ -673,7 +702,10 @@ class RealDeviceWithProtocolInformationTests(TapMixin, RealDeviceTestsMixin, Tun
 
 
 
-class RealDeviceWithoutProtocolInformationTests(TapMixin, RealDeviceTestsMixin, TunnelDeviceTestsMixin, SynchronousTestCase):
+class RealDeviceWithoutProtocolInformationTests(TapMixin, RealDeviceTestsMixin,
+                                                TunnelDeviceTestsMixin,
+                                                SynchronousTestCase):
+
     _TUNNEL_TYPE = staticmethod(TunnelType.TAP)
     _TUNNEL_DEVICE = "tap-twtest"
     _TUNNEL_LOCAL = "10.0.0.1"
@@ -682,11 +714,13 @@ class RealDeviceWithoutProtocolInformationTests(TapMixin, RealDeviceTestsMixin, 
 
 
 class TunnelTestsMixin(object):
+
     def setUp(self):
         self.name = b"tun0"
         self.device = MemoryIOSystem()
         self.device._devices[Tunnel._DEVICE_NAME] = Tunnel
-        self.protocol = self.factory.buildProtocol(TunnelAddress(self.TUNNEL_TYPE, self.name))
+        self.protocol = self.factory.buildProtocol(
+            TunnelAddress(self.TUNNEL_TYPE, self.name))
         self.clock = Clock()
         self.reactor = Composite([self.clock, ReactorFDSet()])
         self.port = TuntapPort(self.name, self.protocol, reactor=self.reactor)
@@ -716,8 +750,8 @@ class TunnelTestsMixin(object):
 
     def test_startListeningConnectsProtocol(self):
         """
-        L{TuntapPort.startListening} calls C{makeConnection} on the protocol the
-        port was initialized with, passing the port as an argument.
+        L{TuntapPort.startListening} calls C{makeConnection} on the protocol
+        the port was initialized with, passing the port as an argument.
         """
         self.port.startListening()
         self.assertIdentical(self.port, self.protocol.transport)
@@ -744,8 +778,8 @@ class TunnelTestsMixin(object):
 
     def test_startListeningHandlesConfigureFailure(self):
         """
-        L{TuntapPort.startListening} raises L{CannotListenError} if the C{ioctl}
-        call to configure the tunnel device fails.
+        L{TuntapPort.startListening} raises L{CannotListenError} if the
+        C{ioctl} call to configure the tunnel device fails.
         """
         self.device.permissions.remove('ioctl')
         self.assertRaises(CannotListenError, self.port.startListening)
@@ -775,8 +809,8 @@ class TunnelTestsMixin(object):
 
     def test_stopListeningStopsProtocol(self):
         """
-        L{TuntapPort.stopListening} calls C{doStop} on the protocol the port was
-        initialized with.
+        L{TuntapPort.stopListening} calls C{doStop} on the protocol the port
+        was initialized with.
         """
         self.port.startListening()
         self._stopPort(self.port)
@@ -966,8 +1000,8 @@ class TunnelTestsMixin(object):
 
     def test_interruptedWrite(self):
         """
-        If the platform write call is interrupted (causing the Python wrapper to
-        raise C{IOError} with errno set to C{EINTR}), the write is re-tried.
+        If the platform write call is interrupted (causing the Python wrapper
+        to raise C{IOError} with errno set to C{EINTR}), the write is re-tried.
         """
         self.port.startListening()
         tunnel = self.device.getTunnel(self.port)
@@ -1057,6 +1091,7 @@ class TunnelAddressTests(SynchronousTestCase):
     """
     Tests for L{TunnelAddress}.
     """
+
     def test_interfaces(self):
         """
         A L{TunnelAddress} instances provides L{IAddress}.
@@ -1068,8 +1103,8 @@ class TunnelAddressTests(SynchronousTestCase):
     def test_indexing(self):
         """
         A L{TunnelAddress} instance can be indexed to retrieve either the byte
-        string C{"TUNTAP"} or the name of the tunnel interface, while triggering
-        a deprecation warning.
+        string C{"TUNTAP"} or the name of the tunnel interface, while
+        triggering a deprecation warning.
         """
         address = TunnelAddress(TunnelType.TAP, "tap0")
         self.assertEqual("TUNTAP", address[0])
@@ -1085,8 +1120,10 @@ class TunnelAddressTests(SynchronousTestCase):
         self.assertEqual(2, len(warnings))
 
 
+
 @implementer(IRawPacketProtocol)
 class IPRecordingProtocol(AbstractDatagramProtocol):
+
     def startProtocol(self):
         self.received = []
 
@@ -1108,6 +1145,7 @@ class TunTests(TunnelTestsMixin, SynchronousTestCase):
 
 
 class EthernetRecordingProtocol(EthernetProtocol):
+
     def startProtocol(self):
         self.received = []
 
@@ -1118,6 +1156,7 @@ class EthernetRecordingProtocol(EthernetProtocol):
 
 
 class TapTests(TunnelTestsMixin, SynchronousTestCase):
+
     TUNNEL_TYPE = staticmethod(TunnelType.TAP)
 
     factory = Factory()
