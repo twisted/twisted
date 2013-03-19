@@ -327,9 +327,8 @@ class _WrapIProtocol(ProcessProtocol):
             return self.protocol.dataReceived(data)
         elif childFD == 2 and self.errFlag == StandardErrorBehavior.LOG:
             log.msg(
-                format=
-                "Process %(executable)r wrote stderr unhandled by "
-                "%(protocol)s: %(data)s",
+                format="Process %(executable)r wrote stderr unhandled by "
+                       "%(protocol)s: %(data)s",
                 executable=self.executable, protocol=self.protocol,
                 data=data)
 

@@ -771,8 +771,8 @@ class ProcessEndpointsTestCase(unittest.TestCase):
     def setUp(self):
         self.ep = endpoints.ProcessEndpoint(MemoryProcessReactor(),
                                             '/bin/executable')
-        self.f = protocol.Factory()
-        self.f.protocol = StubApplicationProtocol
+        self.factory = protocol.Factory()
+        self.factory.protocol = StubApplicationProtocol
 
 
     def test_constructorDefaults(self):
@@ -819,7 +819,7 @@ class ProcessEndpointsTestCase(unittest.TestCase):
         The wrapper function _WrapIProtocol gives an IProcessProtocol
         implementation that wraps over an IProtocol.
         """
-        d = self.ep.connect(self.f)
+        d = self.ep.connect(self.factory)
         self.successResultOf(d)
         wpp = self.ep._reactor.processProtocol
         self.assertIsInstance(wpp, endpoints._WrapIProtocol)
@@ -837,7 +837,7 @@ class ProcessEndpointsTestCase(unittest.TestCase):
             memoryReactor, '/bin/executable',
             ['/bin/executable'], {'HOME': environ['HOME']},
             '/runProcessHere/', 1, 2, True, {3: 'w', 4: 'r', 5: 'r'})
-        d = ep.connect(self.f)
+        d = ep.connect(self.factory)
         self.successResultOf(d)
 
         self.assertIsInstance(memoryReactor.processProtocol,
@@ -882,7 +882,7 @@ class ProcessEndpointsTestCase(unittest.TestCase):
         L{ProcessEndpoint.connect} returns a Deferred with the connected
         protocol.
         """
-        proto = self.successResultOf(self.ep.connect(self.f))
+        proto = self.successResultOf(self.ep.connect(self.factory))
         self.assertIsInstance(proto, StubApplicationProtocol)
 
 
@@ -897,7 +897,7 @@ class ProcessEndpointsTestCase(unittest.TestCase):
             raise Exception()
 
         self.ep._spawnProcess = testSpawnProcess
-        d = self.ep.connect(self.f)
+        d = self.ep.connect(self.factory)
         error = self.failureResultOf(d)
         error.trap(Exception)
 
@@ -979,15 +979,15 @@ class WrappedIProtocolTests(unittest.TestCase):
         self.ep = endpoints.ProcessEndpoint(
             MemoryProcessReactor(), '/bin/executable')
         self.eventLog = None
-        self.f = protocol.Factory()
-        self.f.protocol = StubApplicationProtocol
+        self.factory = protocol.Factory()
+        self.factory.protocol = StubApplicationProtocol
 
 
     def test_constructor(self):
         """
         Stores an L{IProtocol} provider and the flag to log/drop stderr
         """
-        d = self.ep.connect(self.f)
+        d = self.ep.connect(self.factory)
         self.successResultOf(d)
         wpp = self.ep._reactor.processProtocol
         self.assertIsInstance(wpp.protocol, StubApplicationProtocol)
@@ -999,7 +999,7 @@ class WrappedIProtocolTests(unittest.TestCase):
         Our process transport is properly hooked up to the wrappedIProtocol
         when a connection is made.
         """
-        d = self.ep.connect(self.f)
+        d = self.ep.connect(self.factory)
         self.successResultOf(d)
         wpp = self.ep._reactor.processProtocol
         self.assertEqual(wpp.protocol.transport, wpp.transport)
@@ -1017,7 +1017,7 @@ class WrappedIProtocolTests(unittest.TestCase):
         When the _errFlag is set to L{StandardErrorBehavior.LOG},
         L{endpoints._WrapIProtocol} logs stderr (in childDataReceived).
         """
-        d = self.ep.connect(self.f)
+        d = self.ep.connect(self.factory)
         self.successResultOf(d)
         wpp = self.ep._reactor.processProtocol
         log.addObserver(self._stdLog)
@@ -1039,7 +1039,7 @@ class WrappedIProtocolTests(unittest.TestCase):
         L{endpoints._WrapIProtocol} ignores stderr.
         """
         self.ep._errFlag = StandardErrorBehavior.DROP
-        d = self.ep.connect(self.f)
+        d = self.ep.connect(self.factory)
         self.successResultOf(d)
         wpp = self.ep._reactor.processProtocol
         log.addObserver(self._stdLog)
@@ -1054,7 +1054,7 @@ class WrappedIProtocolTests(unittest.TestCase):
         In childDataReceived of L{_WrappedIProtocol} instance, the protocol's
         dataReceived is called when stdout is generated.
         """
-        d = self.ep.connect(self.f)
+        d = self.ep.connect(self.factory)
         self.successResultOf(d)
         wpp = self.ep._reactor.processProtocol
 
@@ -1067,7 +1067,7 @@ class WrappedIProtocolTests(unittest.TestCase):
         L{error.ProcessDone} with status=0 is turned into a clean disconnect
         type, i.e. L{error.ConnectionDone}.
         """
-        d = self.ep.connect(self.f)
+        d = self.ep.connect(self.factory)
         self.successResultOf(d)
         wpp = self.ep._reactor.processProtocol
 
@@ -1082,7 +1082,7 @@ class WrappedIProtocolTests(unittest.TestCase):
         Exceptions other than L{error.ProcessDone} with status=0 are turned
         into L{error.ConnectionLost}.
         """
-        d = self.ep.connect(self.f)
+        d = self.ep.connect(self.factory)
         self.successResultOf(d)
         wpp = self.ep._reactor.processProtocol
 
