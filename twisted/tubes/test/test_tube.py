@@ -88,10 +88,10 @@ class TubeTest(TestCase):
         L{IDrain.progress}.
         """
         got = []
-        class V(Pump):
+        class ProgressingPump(Pump):
             def progressed(self, amount=None):
                 got.append(amount)
-        self.tube.pump = V()
+        self.tube.pump = ProgressingPump()
         self.assertEqual(got, [])
         self.tube.progress()
         self.tube.progress(0.6)
@@ -104,10 +104,10 @@ class TubeTest(TestCase):
         if its L{Pump} does not call its C{deliver} method.
         """
         got = []
-        class V(Pump):
+        class ProgressingPump(Pump):
             def progressed(self, amount=None):
                 got.append(amount)
-        self.tube.flowTo(Tube(V()))
+        self.tube.flowTo(Tube(ProgressingPump()))
         self.tube.receive(2)
         self.assertEquals(got, [None])
 
@@ -118,14 +118,14 @@ class TubeTest(TestCase):
         method if its L{Pump} I{does} call its C{deliver} method.
         """
         got = []
-        class V(Pump):
+        class ReceivingPump(Pump):
             def received(self, item):
                 self.tube.deliver(item + 1)
-        class V1(Pump):
+        class ProgressingPump(Pump):
             def progressed(self, amount=None):
                 got.append(amount)
-        self.tube.__init__(V())
-        self.tube.flowTo(Tube(V1()))
+        self.tube.__init__(ReceivingPump())
+        self.tube.flowTo(Tube(ProgressingPump()))
         self.tube.receive(2)
         self.assertEquals(got, [])
 
