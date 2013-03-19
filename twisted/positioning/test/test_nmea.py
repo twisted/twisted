@@ -708,6 +708,13 @@ class CoordinateFixerTests(FixerTestMixin, TestCase):
         """
         Tests that an NMEA representation of a coordinate at the given
         location converts correctly into a L{base.Coordinate}.
+
+        @param degrees: The integer degrees for this angle.
+        @type degrees: C{int}
+        @param minutes: The decimal minutes value for this angle.
+        @type minutes: C{float}
+        @param hemisphere: NMEA shorthand for the hemisphere. One of "NESW".
+        @type hemisphere: C{str}
         """
         coordinateType = _coordinateType(hemisphere)
         if coordinateType is Angles.LATITUDE:
