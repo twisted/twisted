@@ -120,15 +120,6 @@ class Tube(object):
         self.fount.resumeFlow()
 
 
-    def isFlowing(self):
-        """
-        Is this flowing?
-        """
-        if self.fount is None:
-            return False
-        return self.fount.isFlowing()
-
-
     def receive(self, item):
         """
         An item was received.  Subclasses should override to process it.
@@ -169,19 +160,9 @@ class Tube(object):
 
 class Pump(object):
     """
-    Helper / null implementation for L{IPump}.  You can inherit from this to
-    get no-op implementation of all of L{IPump}'s required implementation so
-    you can just just implement the parts you're interested in.
-
-    ::
-
-                      +-----  the
-                     / +----  fount
-                    / /
-                   /o+---O the pump
-                  / /
-        the   ---+ /
-        drain ----+
+    Null implementation for L{IPump}.  You can inherit from this to get no-op
+    implementation of all of L{IPump}'s required implementation so you can just
+    just implement the parts you're interested in.
 
     @ivar tube: the L{Tube} whose flow this pump is controlling.  This
         attribute will be set before 'started' is called.

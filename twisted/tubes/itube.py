@@ -172,6 +172,18 @@ class IPump(Interface):
     behavior don't need to inherit from anything in order to use it.  L{Pump}
     provides a default implementation which does nothing in response to every
     method.
+
+    Look at this awesome ASCII art::
+
+                      +-----  the
+                     / +----  fount
+                    / /
+                   /o+---O the pump
+                  / /
+        the   ---+ /
+        drain ----+
+
+    (Image credit Nam Nguyen)
     """
 
     inputType = Attribute(
