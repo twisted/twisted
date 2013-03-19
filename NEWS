@@ -1,8 +1,8 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
-Twisted Core 13.0.0pre2 (2013-03-18)
-====================================
+Twisted Core 13.0.0 (2013-03-19)
+================================
 
 Features
 --------
@@ -72,8 +72,8 @@ Other
    #6349
 
 
-Twisted Conch 13.0.0pre2 (2013-03-18)
-=====================================
+Twisted Conch 13.0.0 (2013-03-19)
+=================================
 
 Features
 --------
@@ -87,14 +87,14 @@ Other
  - #5864, #6257, #6297
 
 
-Twisted Lore 13.0.0pre2 (2013-03-18)
-====================================
+Twisted Lore 13.0.0 (2013-03-19)
+================================
 
 No significant changes have been made for this release.
 
 
-Twisted Mail 13.0.0pre2 (2013-03-18)
-====================================
+Twisted Mail 13.0.0 (2013-03-19)
+================================
 
 Bugfixes
 --------
@@ -118,8 +118,8 @@ Other
  - #6218, #6297
 
 
-Twisted Names 13.0.0pre2 (2013-03-18)
-=====================================
+Twisted Names 13.0.0 (2013-03-19)
+=================================
 
 Features
 --------
@@ -145,20 +145,20 @@ Other
  - #5596, #6246, #6297
 
 
-Twisted News 13.0.0pre2 (2013-03-18)
-====================================
+Twisted News 13.0.0 (2013-03-19)
+================================
 
 No significant changes have been made for this release.
 
 
-Twisted Pair 13.0.0pre2 (2013-03-18)
-====================================
+Twisted Pair 13.0.0 (2013-03-19)
+================================
 
 No significant changes have been made for this release.
 
 
-Twisted Runner 13.0.0pre2 (2013-03-18)
-======================================
+Twisted Runner 13.0.0 (2013-03-19)
+==================================
 
 No significant changes have been made for this release.
 
@@ -167,8 +167,8 @@ Other
  - #5740
 
 
-Twisted Web 13.0.0pre2 (2013-03-18)
-===================================
+Twisted Web 13.0.0 (2013-03-19)
+===============================
 
 Bugfixes
 --------
@@ -180,8 +180,8 @@ Other
  - #6167, #6297, #6326
 
 
-Twisted Words 13.0.0pre2 (2013-03-18)
-=====================================
+Twisted Words 13.0.0 (2013-03-19)
+=================================
 
 Bugfixes
 --------
