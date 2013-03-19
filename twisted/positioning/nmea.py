@@ -66,7 +66,7 @@ def validateChecksum(sentence):
     Simply returns on sentences that either don't have a checksum,
     or have a valid checksum.
     """
-    if sentence[-3] == '*': # sentence has a checksum
+    if sentence[-3] == '*': # Sentence has a checksum
         reference, source = int(sentence[-2:], 16), sentence[1:-3]
         computed = reduce(operator.xor, (ord(x) for x in source))
         if computed != reference:
@@ -340,6 +340,9 @@ class NMEASentence(base.BaseSentence):
     def _isFirstGSVSentence(self):
         """
         Tests if this current GSV sentence is the first one in a sequence.
+
+        @return: C{True} if this is the first GSV sentence.
+        @rtype: C{bool}
         """
         return self.GSVSentenceIndex == "1"
 
@@ -347,6 +350,9 @@ class NMEASentence(base.BaseSentence):
     def _isLastGSVSentence(self):
         """
         Tests if this current GSV sentence is the final one in a sequence.
+
+        @return: C{True} if this is the last GSV sentence.
+        @rtype: C{bool}
         """
         return self.GSVSentenceIndex == self.numberOfGSVSentences
 
