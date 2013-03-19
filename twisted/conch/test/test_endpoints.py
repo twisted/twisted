@@ -451,7 +451,7 @@ class SSHCommandEndpointTestsMixin(object):
         self.assertClientTransportState(client)
 
 
-    def _exitStatusTest(self, request, requestArg, exitCode, signal):
+    def _exitStatusTest(self, request, requestArg):
         """
         Test handling of non-zero exit statuses or exit signals.
         """
@@ -475,12 +475,21 @@ class SSHCommandEndpointTestsMixin(object):
 
         server.service.sendRequest(channel, request, requestArg)
         channel.loseConnection()
-
         pump.pump()
-        connectionLost[0].trap(ProcessTerminated)
-        self.assertEqual(exitCode, connectionLost[0].value.exitCode)
-        self.assertEqual(signal, connectionLost[0].value.signal)
         self.assertClientTransportState(client)
+        return connectionLost[0]
+
+
+    def test_zeroExitCode(self):
+        """
+        When the command exits with a non-zero status, the protocol's
+        C{connectionLost} method is called with a L{Failure} wrapping an
+        exception which encapsulates that status.
+        """
+        exitCode = 0
+        signal = None
+        exc = self._exitStatusTest('exit-status', pack('>L', exitCode))
+        exc.trap(ConnectionDone)
 
 
     def test_nonZeroExitStatus(self):
@@ -490,8 +499,11 @@ class SSHCommandEndpointTestsMixin(object):
         exception which encapsulates that status.
         """
         exitCode = 123
-        self._exitStatusTest(
-            'exit-status', pack('>L', exitCode), exitCode, None)
+        signal = None
+        exc = self._exitStatusTest('exit-status', pack('>L', exitCode))
+        exc.trap(ProcessTerminated)
+        self.assertEqual(exitCode, exc.value.exitCode)
+        self.assertEqual(signal, exc.value.signal)
 
 
     def test_nonZeroExitSignal(self):
@@ -500,9 +512,12 @@ class SSHCommandEndpointTestsMixin(object):
         C{connectionLost} method is called with a L{Failure} wrapping an
         exception which encapsulates that status.
         """
+        exitCode = None
         signal = 123
-        self._exitStatusTest(
-            'exit-signal', pack('>L', signal), None, signal)
+        exc = self._exitStatusTest('exit-signal', pack('>L', signal))
+        exc.trap(ProcessTerminated)
+        self.assertEqual(exitCode, exc.value.exitCode)
+        self.assertEqual(signal, exc.value.signal)
 
 
     def record(self, server, protocol, event, noArgs=False):

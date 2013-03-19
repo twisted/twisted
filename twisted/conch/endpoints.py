@@ -200,7 +200,8 @@ class _CommandChannel(SSHChannel):
         delivery to the protocol.
         """
         (status,) = unpack('>L', data)
-        self._reason = ProcessTerminated(status, None, None)
+        if status != 0:
+            self._reason = ProcessTerminated(status, None, None)
 
 
     def request_exit_signal(self, data):
