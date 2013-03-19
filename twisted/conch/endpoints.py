@@ -160,6 +160,9 @@ class _CommandChannel(SSHChannel):
         """
         When the request to execute the command in this channel fails, fire the
         C{commandConnected} deferred with a failure indicating this.
+
+        @param reason: The cause of the command execution failure.
+        @type reason: L{Failure}
         """
         self._commandConnected.errback(reason)
 
@@ -173,6 +176,8 @@ class _CommandChannel(SSHChannel):
 
         Also fire C{commandConnected} with the created protocol after it is
         connected to its transport.
+
+        @param ignored: The (ignored) result of the execute request
         """
         self._protocol = self._protocolFactory.buildProtocol(
             SSHCommandAddress(
@@ -198,6 +203,10 @@ class _CommandChannel(SSHChannel):
         """
         When the server sends the command's exit status, record it for later
         delivery to the protocol.
+
+        @param data: The network-order four byte representation of the exit
+            status of the command.
+        @type data: L{bytes}
         """
         (status,) = unpack('>L', data)
         if status != 0:
@@ -208,6 +217,10 @@ class _CommandChannel(SSHChannel):
         """
         When the server sends the command's exit status, record it for later
         delivery to the protocol.
+
+        @param data: The network-order four byte representation of the exit
+            signal of the command.
+        @type data: L{bytes}
         """
         (signal,) = unpack('>L', data)
         self._reason = ProcessTerminated(None, signal, None)
@@ -345,8 +358,8 @@ class _CommandTransport(SSHClientTransport):
     L{_CommandTransport} also knows how to set up a connection to an
     authentication agent if it is told where it can connect to one.
     """
-
-    _state = b'STARTING' # -> b'SECURING' -> b'AUTHENTICATING' -> b'CHANNELLING' -> b'RUNNING'
+    # STARTING -> SECURING -> AUTHENTICATING -> CHANNELLING -> RUNNING
+    _state = b'STARTING'
 
     _hostKeyFailure = None
 
@@ -372,6 +385,12 @@ class _CommandTransport(SSHClientTransport):
         """
         When host key verification fails, record the reason for the failure in
         order to fire a L{Deferred} with it later.
+
+        @param reason: The cause of the host key verification failure.
+        @type reason: L{Failure}
+
+        @return: C{reason}
+        @rtype: L{Failure}
         """
         self._hostKeyFailure = reason
         return reason
@@ -630,8 +649,9 @@ class _NewConnectionHelper(object):
     @classmethod
     def _knownHosts(cls):
         """
-        Create and return a L{KnownHostsFile} instance pointed at the user's
-        personal I{known hosts} file.
+        @return: A L{KnownHostsFile} instance pointed at the user's personal
+            I{known hosts} file.
+        @type: L{KnownHostsFile}
         """
         return KnownHostsFile.fromPath(FilePath(expanduser(cls._KNOWN_HOSTS)))
 
@@ -670,6 +690,9 @@ class _NewConnectionHelper(object):
         """
         Clean up the connection by closing it.  The command running on the
         endpoint has ended so the connection is no longer needed.
+
+        @param connection: The L{SSHConnection} to close.
+        @type connection: L{SSHConnection}
         """
         connection.transport.loseConnection()
 
@@ -702,4 +725,8 @@ class _ExistingConnectionHelper(object):
         """
         Do not do any cleanup on the connection.  Leave that responsibility to
         whatever code created it in the first place.
+
+        @param connection: The L{SSHConnection} which will not be modified in
+            any way.
+        @type connection: L{SSHConnection}
         """
