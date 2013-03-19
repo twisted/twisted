@@ -220,7 +220,7 @@ class ConnectionLost(ConnectionClosed):
     """Connection to the other side was lost in a non-clean fashion"""
 
     def __str__(self):
-        s = self.__doc__
+        s = self.__doc__.strip().splitlines()[0]
         if self.args:
             s = '%s: %s' % (s, ' '.join(self.args))
         s = '%s.' % s
@@ -328,7 +328,7 @@ class ProcessDone(ConnectionDone):
 
 class ProcessTerminated(ConnectionLost):
     """
-    A process has ended with a probable error condition.
+    A process has ended with a probable error condition
 
     @ivar exitCode: See L{__init__}
     @ivar signal: See L{__init__}
