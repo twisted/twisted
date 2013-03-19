@@ -9,9 +9,12 @@ from twisted.python.log import startLogging
 
 startLogging(stdout, setStdout=False)
 
+
 class MyProto(protocol.DatagramProtocol):
+
     def datagramReceived(self, *a, **kw):
         print a, kw
+
 
 p_udp = rawudp.RawUDPProtocol()
 p_udp.addProto(42, MyProto())
@@ -20,7 +23,7 @@ p_ip.addProto(17, p_udp)
 p_eth = ethernet.EthernetProtocol()
 p_eth.addProto(0x800, p_ip)
 
-port = tuntap.TuntapPort(interface='tap-twtest-pi', proto=p_eth, reactor=reactor)
+port = tuntap.TuntapPort(interface='tap0', proto=p_eth, reactor=reactor)
 
 # Ha ha!  It does not yet work.  Next you need to do:
 # $ sudo ifconfig tap0 up

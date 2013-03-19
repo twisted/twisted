@@ -60,7 +60,7 @@ class TunnelAddress(object):
 
     def __getitem__(self, index):
         warnings.warn(
-            "TunnelAddress.__getitem__ is deprecated since Twisted 12.3.  "
+            "TunnelAddress.__getitem__ is deprecated since Twisted 13.1  "
             "Use attributes instead.", category=DeprecationWarning,
             stacklevel=2)
         return ('TUNTAP', self.name)[index]
@@ -220,7 +220,7 @@ class TuntapPort(base.BasePort):
 
     def loseConnection(self):
         warnings.warn(
-            "TuntapPort.loseConnection is deprecated since Twisted 12.3.  "
+            "TuntapPort.loseConnection is deprecated since Twisted 13.1  "
             "Use TuntapPort.stopListening instead.",
             category=DeprecationWarning, stacklevel=2)
         self.stopListening().addErrback(log.err)
