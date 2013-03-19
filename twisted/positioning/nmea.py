@@ -645,10 +645,9 @@ class NMEAAdapter(object):
         Extracts the information regarding which satellites were used in
         obtaining the GPS fix from a GSA sentence.
 
-        @precondition: A GSA sentence was fired.
-        @postcondition: The current sentence data (C{self._sentenceData} will
-            contain a set of the currently used PRNs (under the key
-            C{_usedPRNs}.
+        Precondition: A GSA sentence was fired. Postcondition: The current
+        sentence data (C{self._sentenceData} will contain a set of the
+        currently used PRNs (under the key C{_usedPRNs}.
         """
         self._sentenceData['_usedPRNs'] = set()
         for key in ("usedSatellitePRN_%d" % (x,) for x in range(12)):
