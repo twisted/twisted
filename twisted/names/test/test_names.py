@@ -12,7 +12,6 @@ from StringIO import StringIO
 from twisted.trial import unittest
 
 from twisted.internet import reactor, defer, error
-from twisted.internet.task import Clock
 from twisted.internet.defer import succeed
 from twisted.names import client, server, common, authority, dns
 from twisted.python import failure

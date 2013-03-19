@@ -17,7 +17,6 @@ from twisted.internet.defer import CancelledError
 from twisted.internet.protocol import (
     Protocol, ClientCreator, Factory, ProtocolToConsumerAdapter,
     ConsumerToProtocolAdapter)
-from twisted.internet.task import Clock
 from twisted.trial.unittest import TestCase
 from twisted.test.proto_helpers import MemoryReactorClock, StringTransport
 

@@ -18,8 +18,7 @@ from twisted.web._newclient import ResponseNeverReceived, ResponseFailed
 from twisted.internet import defer, task
 from twisted.python.failure import Failure
 from twisted.python.components import proxyForInterface
-from twisted.test.proto_helpers import StringTransport
-from twisted.test.proto_helpers import MemoryReactor
+from twisted.test.proto_helpers import StringTransport, MemoryReactorClock
 from twisted.internet.task import Clock
 from twisted.internet.error import ConnectionRefusedError, ConnectionDone
 from twisted.internet.protocol import Protocol, Factory
@@ -300,7 +299,7 @@ class FakeReactorAndConnectMixin:
     A test mixin providing a testable C{Reactor} class and a dummy C{connect}
     method which allows instances to pretend to be endpoints.
     """
-    from twisted.test.proto_helpers import MemoryReactorClock as Reactor
+    Reactor = MemoryReactorClock
 
     class StubEndpoint(object):
         """
