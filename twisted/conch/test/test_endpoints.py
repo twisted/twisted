@@ -10,6 +10,7 @@ from os import environ
 from zope.interface.verify import verifyObject, verifyClass
 from zope.interface import implementer, providedBy
 
+from twisted.python.log import msg
 from twisted.python.filepath import FilePath
 from twisted.python.failure import Failure
 from twisted.trial.unittest import TestCase
@@ -1054,9 +1055,11 @@ class NewConnectionHelperTests(TestCase):
         knownHosts.addHostKey("127.0.0.1", key)
         knownHosts.save()
 
-        self.patch(
-            _NewConnectionHelper, "_KNOWN_HOSTS",
-            path.path.replace(environ["HOME"], "~"))
+        msg("Created known_hosts file at %r" % (path.path,))
+
+        default = path.path.replace(environ["HOME"], "~")
+        self.patch(_NewConnectionHelper, "_KNOWN_HOSTS", default)
+        msg("Patched _KNOWN_HOSTS with %r" % (default,))
 
         loaded = _NewConnectionHelper._knownHosts()
         self.assertTrue(loaded.hasHostKey("127.0.0.1", key))
