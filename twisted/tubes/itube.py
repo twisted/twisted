@@ -133,11 +133,12 @@ class IDrain(Interface):
             indicating the estimated amount of progress made towards the next
             call to L{receive} on this L{IDrain}.  For example, if an item is
             received in 4 chunks, this would ideally be called with 0.25, 0.5,
-            0.75 and 1.0. Note however that this value represents and
+            0.75 and 1.0. Note however that this value represents an
             I{estimate} and its exact semantics may vary considerably depending
             on the nature of the underlying transport.  In many cases, the
             amount of progress made is entirely unknown: for example, when some
-            bytes are received by the underlying transport.  In those cases,
+            bytes are received by the underlying transport when no length
+            prefix is avialable in the transport protocol.  In those cases,
             C{None} should be passed here.
         @type amount: C{float} or C{NoneType}
 
