@@ -135,11 +135,14 @@ class IDrain(Interface):
             received in 4 chunks, this would ideally be called with 0.25, 0.5,
             0.75 and 1.0. Note however that this value represents an
             I{estimate} and its exact semantics may vary considerably depending
-            on the nature of the underlying transport.  In many cases, the
-            amount of progress made is entirely unknown: for example, when some
-            bytes are received by the underlying transport when no length
-            prefix is avialable in the transport protocol.  In those cases,
-            C{None} should be passed here.
+            on the nature of the underlying transport.  In fact, although
+            callers really should remain within the 0.0/1.0 range,
+            implementations of this method should be resilient to invalid
+            values, and treat any value outside that range as equivalent to
+            C{None}.  In many cases, the amount of progress made is entirely
+            unknown: for example, when some bytes are received by the
+            underlying transport when no length prefix is avialable in the
+            transport protocol.  In those cases, C{None} should be passed here.
         @type amount: C{float} or C{NoneType}
 
         @return: C{None}
@@ -148,9 +151,15 @@ class IDrain(Interface):
 
     def flowStopped(reason):
         """
-        The flow has stopped.  The given Failure object will say why.  After a
+        The flow has stopped.  The given L{Failure
+        <twisted.internet.failure.Failure>} object indicates why.  After a
         L{IFount} invokes this method, it must stop invoking all other methods
         on this L{IDrain}.
+
+        @param reason: The reason why the flow has terminated.  This may be any
+            exception type, depending on the L{IFount} delivering data to this
+            L{IDrain}.
+        @type reason: L{Failure <twisted.internet.failure.Failure>}
         """
 
 
