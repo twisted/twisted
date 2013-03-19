@@ -23,14 +23,6 @@ from twisted.test.proto_helpers import MemoryReactor, StringTransport
 
 
 
-class MemoryConnector:
-    _disconnected = False
-
-    def disconnect(self):
-        self._disconnected = True
-
-
-
 class MemoryReactorWithConnectorsAndTime(MemoryReactor, Clock):
     """
     An extension of L{MemoryReactor} which returns L{IConnector}
@@ -39,28 +31,6 @@ class MemoryReactorWithConnectorsAndTime(MemoryReactor, Clock):
     def __init__(self):
         MemoryReactor.__init__(self)
         Clock.__init__(self)
-        self.connectors = []
-
-
-    def connectTCP(self, *a, **kw):
-        MemoryReactor.connectTCP(self, *a, **kw)
-        connector = MemoryConnector()
-        self.connectors.append(connector)
-        return connector
-
-
-    def connectUNIX(self, *a, **kw):
-        MemoryReactor.connectUNIX(self, *a, **kw)
-        connector = MemoryConnector()
-        self.connectors.append(connector)
-        return connector
-
-
-    def connectSSL(self, *a, **kw):
-        MemoryReactor.connectSSL(self, *a, **kw)
-        connector = MemoryConnector()
-        self.connectors.append(connector)
-        return connector
 
 
 

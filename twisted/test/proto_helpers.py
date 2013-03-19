@@ -322,7 +322,7 @@ class _FakeConnector(object):
 
     @ivar _address: An L{IAddress} provider that represents our destination.
     """
-
+    _disconnected = False
     stoppedConnecting = False
 
     def __init__(self, address):
@@ -345,6 +345,7 @@ class _FakeConnector(object):
         """
         Implement L{IConnector.disconnect} as a no-op.
         """
+        self._disconnected = True
 
 
     def connect(self):
@@ -412,6 +413,7 @@ class MemoryReactor(object):
         self.unixServers = []
         self.adoptedPorts = []
         self.adoptedStreamConnections = []
+        self.connectors = []
 
 
     def adoptStreamPort(self, fileno, addressFamily, factory):
@@ -464,6 +466,7 @@ class MemoryReactor(object):
         else:
             conn = _FakeConnector(IPv4Address('TCP', host, port))
         factory.startedConnecting(conn)
+        self.connectors.append(conn)
         return conn
 
 
@@ -488,6 +491,7 @@ class MemoryReactor(object):
                                 timeout, bindAddress))
         conn = _FakeConnector(IPv4Address('TCP', host, port))
         factory.startedConnecting(conn)
+        self.connectors.append(conn)
         return conn
 
 
@@ -509,6 +513,7 @@ class MemoryReactor(object):
         self.unixClients.append((address, factory, timeout, checkPID))
         conn = _FakeConnector(UNIXAddress(address))
         factory.startedConnecting(conn)
+        self.connectors.append(conn)
         return conn
 for iface in implementedBy(MemoryReactor):
     verifyClass(iface, MemoryReactor)
