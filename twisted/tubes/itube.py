@@ -41,19 +41,6 @@ class IFount(Interface):
         """
 
 
-    def switchFlowTo(newDrain, unprocessed=()):
-        """
-        Change the flow of this fount to point at a new drain.
-
-        @param newDrain: a new L{IDrain}.
-
-        @param unprocessed: an iterable of un-processed objects of this
-            L{IFount}'s C{outputType} to pass on to the new thing.
-
-        @return: same as C{IDrainFount.flowTo}
-        """
-
-
     def pauseFlow():
         """
         Momentarily pause delivering items to the currently active drain, until

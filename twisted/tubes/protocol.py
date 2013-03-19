@@ -74,15 +74,6 @@ class ProtocolFount(object):
         return drain # XXX test me
 
 
-    def switchFlowTo(self, newDrain, unprocessed=()):
-        """
-        Switch flow to the new drain.
-        """
-        self.drain = newDrain
-        for chunk in unprocessed:
-            self.drain.receive(chunk)
-
-
     _flowPaused = False
     def pauseFlow(self):
         """
