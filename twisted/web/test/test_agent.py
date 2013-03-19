@@ -300,12 +300,7 @@ class FakeReactorAndConnectMixin:
     A test mixin providing a testable C{Reactor} class and a dummy C{connect}
     method which allows instances to pretend to be endpoints.
     """
-
-    class Reactor(MemoryReactor, Clock):
-        def __init__(self):
-            MemoryReactor.__init__(self)
-            Clock.__init__(self)
-
+    from twisted.test.proto_helpers import MemoryReactorClock as Reactor
 
     class StubEndpoint(object):
         """
@@ -387,7 +382,6 @@ class HTTPConnectionPoolTests(unittest.TestCase, FakeReactorAndConnectMixin):
     """
     Tests for the L{HTTPConnectionPool} class.
     """
-
     def setUp(self):
         self.fakeReactor = self.Reactor()
         self.pool = HTTPConnectionPool(self.fakeReactor)

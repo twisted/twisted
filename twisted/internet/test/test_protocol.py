@@ -19,19 +19,7 @@ from twisted.internet.protocol import (
     ConsumerToProtocolAdapter)
 from twisted.internet.task import Clock
 from twisted.trial.unittest import TestCase
-from twisted.test.proto_helpers import MemoryReactor, StringTransport
-
-
-
-class MemoryReactorWithConnectorsAndTime(MemoryReactor, Clock):
-    """
-    An extension of L{MemoryReactor} which returns L{IConnector}
-    providers from its C{connectTCP} method.
-    """
-    def __init__(self):
-        MemoryReactor.__init__(self)
-        Clock.__init__(self)
-
+from twisted.test.proto_helpers import MemoryReactorClock, StringTransport
 
 
 class ClientCreatorTests(TestCase):
@@ -53,7 +41,7 @@ class ClientCreatorTests(TestCase):
         class SomeProtocol(Protocol):
             pass
 
-        reactor = MemoryReactorWithConnectorsAndTime()
+        reactor = MemoryReactorClock()
         cc = ClientCreator(reactor, SomeProtocol)
         factory = check(reactor, cc)
         protocol = factory.buildProtocol(None)
@@ -125,7 +113,7 @@ class ClientCreatorTests(TestCase):
         @return: A L{Deferred} which fires when the test is complete or fails if
             there is a problem.
         """
-        reactor = MemoryReactorWithConnectorsAndTime()
+        reactor = MemoryReactorClock()
         cc = ClientCreator(reactor, Protocol)
         d = connect(cc)
         connector = reactor.connectors.pop()
@@ -171,7 +159,7 @@ class ClientCreatorTests(TestCase):
         cancelled after the connection is set up but before it is fired with the
         resulting protocol instance.
         """
-        reactor = MemoryReactorWithConnectorsAndTime()
+        reactor = MemoryReactorClock()
         cc = ClientCreator(reactor, Protocol)
         d = connect(reactor, cc)
         connector = reactor.connectors.pop()
@@ -256,7 +244,7 @@ class ClientCreatorTests(TestCase):
         cancelled after the connection attempt has failed but before it is fired
         with the resulting failure.
         """
-        reactor = MemoryReactorWithConnectorsAndTime()
+        reactor = MemoryReactorClock()
         cc = ClientCreator(reactor, Protocol)
         d, factory = connect(reactor, cc)
         connector = reactor.connectors.pop()

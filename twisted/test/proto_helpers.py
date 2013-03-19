@@ -25,6 +25,7 @@ from twisted.internet.error import UnsupportedAddressFamily
 from twisted.protocols import basic
 from twisted.internet import protocol, error, address
 
+from twisted.internet.task import Clock
 from twisted.internet.address import IPv4Address, UNIXAddress, IPv6Address
 
 
@@ -517,6 +518,13 @@ class MemoryReactor(object):
         return conn
 for iface in implementedBy(MemoryReactor):
     verifyClass(iface, MemoryReactor)
+
+
+
+class MemoryReactorClock(MemoryReactor, Clock):
+    def __init__(self):
+        MemoryReactor.__init__(self)
+        Clock.__init__(self)
 
 
 
