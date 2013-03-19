@@ -621,12 +621,13 @@ class StandardIOEndpointsTestCase(unittest.TestCase):
         """
         The endpoint creates an L{endpoints.StandardIO} instance.
         """
-        self.d = self.ep.listen(StdioFactory())
+        d = self.ep.listen(StdioFactory())
+
         def checkInstanceAndLoseConnection(stdioOb):
             self.assertIsInstance(stdioOb, stdio.StandardIO)
             stdioOb.loseConnection()
-        self.d.addCallback(checkInstanceAndLoseConnection)
-        return self.d
+
+        return d.addCallback(checkInstanceAndLoseConnection)
 
 
     def test_reactor(self):
@@ -640,7 +641,8 @@ class StandardIOEndpointsTestCase(unittest.TestCase):
         """
         The protocol used in the endpoint is a L{basic.LineReceiver} instance.
         """
-        self.d = self.ep.listen(StdioFactory())
+        d = self.ep.listen(StdioFactory())
+
         def checkProtocol(stdioOb):
             from twisted.python.runtime import platform
             if platform.isWindows():
@@ -648,8 +650,8 @@ class StandardIOEndpointsTestCase(unittest.TestCase):
             else:
                 self.assertIsInstance(stdioOb.protocol, basic.LineReceiver)
             stdioOb.loseConnection()
-        self.d.addCallback(checkProtocol)
-        return self.d
+
+        return d.addCallback(checkProtocol)
 
 
     def test_address(self):
@@ -671,14 +673,13 @@ class StandardIOEndpointsTestCase(unittest.TestCase):
                 return self._address
 
         myFactory = TestAddrFactory()
-        self.d = self.ep.listen(myFactory)
+        d = self.ep.listen(myFactory)
 
         def checkAddress(stdioOb):
             self.assertIsInstance(myFactory.getAddress(), PipeAddress)
             stdioOb.loseConnection()
 
-        self.d.addCallback(checkAddress)
-        return self.d
+        return d.addCallback(checkAddress)
 
 
 
@@ -795,22 +796,22 @@ class ProcessEndpointsTestCase(unittest.TestCase):
         The parameters passed to the endpoint are stored in it.
         """
         environ = {'HOME': None}
-        self.ep = endpoints.ProcessEndpoint(
+        ep = endpoints.ProcessEndpoint(
             MemoryProcessReactor(), '/bin/executable',
             ['/bin/executable'], {'HOME': environ['HOME']},
             '/runProcessHere/', 1, 2, True, {3: 'w', 4: 'r', 5: 'r'},
             StandardErrorBehavior.DROP)
 
-        self.assertIsInstance(self.ep._reactor, MemoryProcessReactor)
-        self.assertEqual(self.ep._executable, '/bin/executable')
-        self.assertEqual(self.ep._args, ['/bin/executable'])
-        self.assertEqual(self.ep._env, {'HOME': environ['HOME']})
-        self.assertEqual(self.ep._path, '/runProcessHere/')
-        self.assertEqual(self.ep._uid, 1)
-        self.assertEqual(self.ep._gid, 2)
-        self.assertEqual(self.ep._usePTY, True)
-        self.assertEqual(self.ep._childFDs, {3: 'w', 4: 'r', 5: 'r'})
-        self.assertEqual(self.ep._errFlag, StandardErrorBehavior.DROP)
+        self.assertIsInstance(ep._reactor, MemoryProcessReactor)
+        self.assertEqual(ep._executable, '/bin/executable')
+        self.assertEqual(ep._args, ['/bin/executable'])
+        self.assertEqual(ep._env, {'HOME': environ['HOME']})
+        self.assertEqual(ep._path, '/runProcessHere/')
+        self.assertEqual(ep._uid, 1)
+        self.assertEqual(ep._gid, 2)
+        self.assertEqual(ep._usePTY, True)
+        self.assertEqual(ep._childFDs, {3: 'w', 4: 'r', 5: 'r'})
+        self.assertEqual(ep._errFlag, StandardErrorBehavior.DROP)
 
 
     def test_wrappedProtocol(self):
@@ -818,10 +819,10 @@ class ProcessEndpointsTestCase(unittest.TestCase):
         The wrapper function _WrapIProtocol gives an IProcessProtocol
         implementation that wraps over an IProtocol.
         """
-        self.d = self.ep.connect(self.f)
+        d = self.ep.connect(self.f)
+        self.successResultOf(d)
         wpp = self.ep._reactor.processProtocol
         self.assertIsInstance(wpp, endpoints._WrapIProtocol)
-        return self.d
 
 
     def test_spawnProcess(self):
@@ -832,22 +833,23 @@ class ProcessEndpointsTestCase(unittest.TestCase):
         environ = {'HOME': None}
 
         memoryReactor = MemoryProcessReactor()
-        self.ep = endpoints.ProcessEndpoint(
+        ep = endpoints.ProcessEndpoint(
             memoryReactor, '/bin/executable',
             ['/bin/executable'], {'HOME': environ['HOME']},
             '/runProcessHere/', 1, 2, True, {3: 'w', 4: 'r', 5: 'r'})
-        self.ep.connect(self.f)
+        d = ep.connect(self.f)
+        self.successResultOf(d)
 
         self.assertIsInstance(memoryReactor.processProtocol,
                               endpoints._WrapIProtocol)
-        self.assertEqual(memoryReactor.executable, self.ep._executable)
-        self.assertEqual(memoryReactor.args, self.ep._args)
-        self.assertEqual(memoryReactor.env, self.ep._env)
-        self.assertEqual(memoryReactor.path, self.ep._path)
-        self.assertEqual(memoryReactor.uid, self.ep._uid)
-        self.assertEqual(memoryReactor.gid, self.ep._gid)
-        self.assertEqual(memoryReactor.usePTY, self.ep._usePTY)
-        self.assertEqual(memoryReactor.childFDs, self.ep._childFDs)
+        self.assertEqual(memoryReactor.executable, ep._executable)
+        self.assertEqual(memoryReactor.args, ep._args)
+        self.assertEqual(memoryReactor.env, ep._env)
+        self.assertEqual(memoryReactor.path, ep._path)
+        self.assertEqual(memoryReactor.uid, ep._uid)
+        self.assertEqual(memoryReactor.gid, ep._gid)
+        self.assertEqual(memoryReactor.usePTY, ep._usePTY)
+        self.assertEqual(memoryReactor.childFDs, ep._childFDs)
 
 
     def test_processAddress(self):
@@ -870,13 +872,9 @@ class ProcessEndpointsTestCase(unittest.TestCase):
                 return self._address
 
         myFactory = TestAddrFactory()
-        self.d = self.ep.connect(myFactory)
-
-        def checkAddress(proto):
-            self.assertIsInstance(myFactory.getAddress(), ProcessAddress)
-
-        self.d.addCallback(checkAddress)
-        return self.d
+        d = self.ep.connect(myFactory)
+        self.successResultOf(d)
+        self.assertIsInstance(myFactory.getAddress(), ProcessAddress)
 
 
     def test_connect(self):
@@ -884,13 +882,8 @@ class ProcessEndpointsTestCase(unittest.TestCase):
         L{ProcessEndpoint.connect} returns a Deferred with the connected
         protocol.
         """
-        self.d = self.ep.connect(self.f)
-
-        def checkProto(proto):
-            self.assertIsInstance(proto, StubApplicationProtocol)
-
-        self.d.addCallback(checkProto)
-        return self.d
+        proto = self.successResultOf(self.ep.connect(self.f))
+        self.assertIsInstance(proto, StubApplicationProtocol)
 
 
     def test_connectFailure(self):
@@ -903,17 +896,10 @@ class ProcessEndpointsTestCase(unittest.TestCase):
                              uid, gid, usePTY, childFDs):
             raise Exception()
 
-        receivedExceptions = []
         self.ep._spawnProcess = testSpawnProcess
         d = self.ep.connect(self.f)
-
-        def checkFailure(f):
-            receivedExceptions.append(f.value)
-
-        d.addErrback(checkFailure)
-
-        self.assertEqual(len(receivedExceptions), 1)
-        self.assertIsInstance(receivedExceptions.pop(), Exception)
+        error = self.failureResultOf(d)
+        error.trap(Exception)
 
 
 
@@ -922,6 +908,7 @@ class ProcessEndpointTransportTests(unittest.TestCase):
     Test the behaviour of the implementation detail
     L{endpoints._ProcessEndpointTransport}.
     """
+
     def setUp(self):
         self.process = MemoryProcessTransport()
         self.endpointTransport = endpoints._ProcessEndpointTransport(
@@ -1000,7 +987,8 @@ class WrappedIProtocolTests(unittest.TestCase):
         """
         Stores an L{IProtocol} provider and the flag to log/drop stderr
         """
-        self.d = self.ep.connect(self.f)
+        d = self.ep.connect(self.f)
+        self.successResultOf(d)
         wpp = self.ep._reactor.processProtocol
         self.assertIsInstance(wpp.protocol, StubApplicationProtocol)
         self.assertEqual(wpp.errFlag, self.ep._errFlag)
@@ -1011,15 +999,10 @@ class WrappedIProtocolTests(unittest.TestCase):
         Our process transport is properly hooked up to the wrappedIProtocol
         when a connection is made.
         """
-        self.d = self.ep.connect(self.f)
+        d = self.ep.connect(self.f)
+        self.successResultOf(d)
         wpp = self.ep._reactor.processProtocol
-        # The protocol passed to the reactor
-
-        def checkMakeConnection(process):
-            self.assertEqual(wpp.protocol.transport, wpp.transport)
-
-        self.d.addCallback(checkMakeConnection)
-        return self.d
+        self.assertEqual(wpp.protocol.transport, wpp.transport)
 
 
     def _stdLog(self, eventDict):
@@ -1034,23 +1017,20 @@ class WrappedIProtocolTests(unittest.TestCase):
         When the _errFlag is set to L{StandardErrorBehavior.LOG},
         L{endpoints._WrapIProtocol} logs stderr (in childDataReceived).
         """
-        self.d = self.ep.connect(self.f)
+        d = self.ep.connect(self.f)
+        self.successResultOf(d)
         wpp = self.ep._reactor.processProtocol
         log.addObserver(self._stdLog)
         self.addCleanup(log.removeObserver, self._stdLog)
 
-        def checkStderr(process):
-            wpp.childDataReceived(2, 'stderr1')
-            self.assertEqual(self.eventLog['executable'], wpp.executable)
-            self.assertEqual(self.eventLog['data'], 'stderr1')
-            self.assertEqual(self.eventLog['protocol'], wpp.protocol)
-            self.assertEqual(
-                self.eventLog['format'],
-                'Process %(executable)r wrote stderr unhandled '
-                'by %(protocol)s: %(data)s')
-
-        self.d.addCallback(checkStderr)
-        return self.d
+        wpp.childDataReceived(2, 'stderr1')
+        self.assertEqual(self.eventLog['executable'], wpp.executable)
+        self.assertEqual(self.eventLog['data'], 'stderr1')
+        self.assertEqual(self.eventLog['protocol'], wpp.protocol)
+        self.assertEqual(
+            self.eventLog['format'],
+            'Process %(executable)r wrote stderr unhandled '
+            'by %(protocol)s: %(data)s')
 
 
     def test_stderrSkip(self):
@@ -1059,17 +1039,14 @@ class WrappedIProtocolTests(unittest.TestCase):
         L{endpoints._WrapIProtocol} ignores stderr.
         """
         self.ep._errFlag = StandardErrorBehavior.DROP
-        self.d = self.ep.connect(self.f)
+        d = self.ep.connect(self.f)
+        self.successResultOf(d)
         wpp = self.ep._reactor.processProtocol
         log.addObserver(self._stdLog)
         self.addCleanup(log.removeObserver, self._stdLog)
 
-        def checkStderrSkip(process):
-            wpp.childDataReceived(2, 'stderr2')
-            self.assertEqual(self.eventLog, None)
-
-        self.d.addCallback(checkStderrSkip)
-        return self.d
+        wpp.childDataReceived(2, 'stderr2')
+        self.assertEqual(self.eventLog, None)
 
 
     def test_stdout(self):
@@ -1077,15 +1054,12 @@ class WrappedIProtocolTests(unittest.TestCase):
         In childDataReceived of L{_WrappedIProtocol} instance, the protocol's
         dataReceived is called when stdout is generated.
         """
-        self.d = self.ep.connect(self.f)
+        d = self.ep.connect(self.f)
+        self.successResultOf(d)
         wpp = self.ep._reactor.processProtocol
 
-        def checkStdout(process):
-            wpp.childDataReceived(1, 'stdout')
-            self.assertEqual(wpp.protocol.data, 'stdout')
-
-        self.d.addCallback(checkStdout)
-        return self.d
+        wpp.childDataReceived(1, 'stdout')
+        self.assertEqual(wpp.protocol.data, 'stdout')
 
 
     def test_processDone(self):
@@ -1093,17 +1067,14 @@ class WrappedIProtocolTests(unittest.TestCase):
         L{error.ProcessDone} with status=0 is turned into a clean disconnect
         type, i.e. L{error.ConnectionDone}.
         """
-        self.d = self.ep.connect(self.f)
+        d = self.ep.connect(self.f)
+        self.successResultOf(d)
         wpp = self.ep._reactor.processProtocol
 
-        def checkProcessDone(obj):
-            wpp.processEnded(Failure(error.ProcessDone(0)))
-            self.assertEqual(
-                wpp.protocol.reason.check(error.ConnectionDone),
-                error.ConnectionDone)
-
-        self.d.addCallback(checkProcessDone)
-        return self.d
+        wpp.processEnded(Failure(error.ProcessDone(0)))
+        self.assertEqual(
+            wpp.protocol.reason.check(error.ConnectionDone),
+            error.ConnectionDone)
 
 
     def test_processEnded(self):
@@ -1111,16 +1082,13 @@ class WrappedIProtocolTests(unittest.TestCase):
         Exceptions other than L{error.ProcessDone} with status=0 are turned
         into L{error.ConnectionLost}.
         """
-        self.d = self.ep.connect(self.f)
+        d = self.ep.connect(self.f)
+        self.successResultOf(d)
         wpp = self.ep._reactor.processProtocol
 
-        def checkProcessEnded(obj):
-            wpp.processEnded(Failure(error.ProcessTerminated()))
-            self.assertEqual(wpp.protocol.reason.check(error.ConnectionLost),
-                             error.ConnectionLost)
-
-        self.d.addCallback(checkProcessEnded)
-        return self.d
+        wpp.processEnded(Failure(error.ProcessTerminated()))
+        self.assertEqual(wpp.protocol.reason.check(error.ConnectionLost),
+                         error.ConnectionLost)
 
 
 
