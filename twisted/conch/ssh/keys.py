@@ -22,7 +22,6 @@ from pyasn1.codec.ber import encoder as berEncoder
 
 # twisted
 from twisted.python import randbytes
-from twisted.python.filepath import FilePath
 from twisted.python.hashlib import md5, sha1
 
 # sibling imports
@@ -78,35 +77,8 @@ class Key(object):
 
         @rtype: C{Key}
         """
-        return Class.fromFilePath(FilePath(filename), type, passphrase)
+        return Class.fromString(file(filename, 'rb').read(), type, passphrase)
     fromFile = classmethod(fromFile)
-
-
-    def fromFilePath(Class, filepath, type=None, passphrase=None):
-        """
-        Return a Key object corresponding to the data in file represented
-        by the filepath.
-
-        If the file cannot be openned, and ownerIds is provided,
-
-        type and passphrase function as they do in L{fromString}.
-
-        @param filename: the name of the file to read from
-        @type filename: C{str}
-
-        @param type: optionally the type of the key (e.g. "blob",
-            "private_blob", "public_openssh", "private_openssh", "public_lsh",
-            "private_lsh", "agentv3")
-        @type type: C{None}/C{str}
-
-        @param passphrase: If the key is encrypted, passphrase is used as
-            the decryption key
-        @type passphrase: C{None}/C{str}
-
-        @rtype: C{Key}
-        """
-        return Class.fromString(filepath.getContents(), type, passphrase)
-    fromFilePath = classmethod(fromFilePath)
 
 
     def fromString(Class, data, type=None, passphrase=None):
