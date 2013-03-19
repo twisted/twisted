@@ -202,9 +202,9 @@ class _CommandChannel(SSHChannel):
 
 class _ConnectionReady(SSHConnection):
     """
-    L{_ConnectionReady} is an L{twisted.conch.ssh.transport.service.SSHService}
-    which only propagates the I{serviceStarted} event to a L{Deferred} to be
-    handled elsewhere.
+    L{_ConnectionReady} is an L{twisted.conch.ssh.service.SSHService} which
+    only propagates the I{serviceStarted} event to a L{Deferred} to be handled
+    elsewhere.
     """
     def __init__(self, factory):
         """
@@ -252,7 +252,7 @@ class UserAuth(SSHUserAuthClient):
         @return: The public part of a key pair that could be used to
             authenticate with the server, or C{None} if there are no more public
             keys to try.
-        @rtype: L{twisted.conch.ssh.keys.Key} or L{NoneType}
+        @rtype: L{twisted.conch.ssh.keys.Key} or L{types.NoneType}
         """
         if self.agent is not None:
             return self.agent.getPublicKey()
@@ -324,11 +324,11 @@ class _CommandTransport(SSHClientTransport):
 
     def verifyHostKey(self, hostKey, fingerprint):
         """
-        Verify the host key presented by the server by asking the L{IKnownHosts}
-        provider available on the factory which created this protocol.
+        Ask the L{KnownHostsFile} provider available on the factory which
+        created this protocol this protocol to verify the given host key.
 
         @return: A L{Deferred} which fires with the result of
-            L{IKnownHosts.verifyHostKey}.
+            L{KnownHostsFile.verifyHostKey}.
         """
         hostname = self.factory.hostname
         ip = self.transport.getPeer().host
@@ -480,7 +480,7 @@ class SSHCommandEndpoint(object):
         @param password: The password with which to authenticate to the SSH
             server, if password authentication is to be attempted (otherwise
             C{None}).
-        @type password: L{bytes} or L{NoneType}
+        @type password: L{bytes} or L{types.NoneType}
 
         @param agentEndpoint: An L{IStreamClientEndpoint} provider which may be
             used to connect to an SSH agent, if one is to be used to help with
@@ -489,7 +489,7 @@ class SSHCommandEndpoint(object):
 
         @param knownHosts: The currently known host keys, used to check the
             host key presented by the server we actually connect to.
-        @type knownHosts: L{KnownHostsKey}
+        @type knownHosts: L{KnownHostsFile}
 
         @param ui: An object for interacting with users to make decisions about
             whether to accept the server host keys.
