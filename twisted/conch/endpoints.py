@@ -11,20 +11,21 @@ __all__ = [
 
     'AuthenticationFailed', 'SSHCommandAddress', 'SSHCommandEndpoint']
 
+from struct import unpack
 from os.path import expanduser
 
 from zope.interface import Interface, implementer
 
 from twisted.python.filepath import FilePath
 from twisted.python.failure import Failure
-from twisted.internet.error import ConnectionDone
+from twisted.internet.error import ConnectionDone, ProcessTerminated
 from twisted.internet.interfaces import IStreamClientEndpoint
 from twisted.internet.protocol import Factory
 from twisted.internet.defer import Deferred, succeed
 from twisted.internet.endpoints import TCP4ClientEndpoint
 
 from twisted.conch.ssh.keys import Key
-from twisted.conch.ssh.common import NS
+from twisted.conch.ssh.common import NS, getMP
 from twisted.conch.ssh.transport import SSHClientTransport
 from twisted.conch.ssh.connection import SSHConnection
 from twisted.conch.ssh.userauth import SSHUserAuthClient
@@ -134,6 +135,7 @@ class _CommandChannel(SSHChannel):
         self._command = command
         self._protocolFactory = protocolFactory
         self._commandConnected = commandConnected
+        self._reason = None
 
 
     def openFailed(self, reason):
@@ -192,14 +194,26 @@ class _CommandChannel(SSHChannel):
         self._protocol.dataReceived(data)
 
 
+    def request_exit_status(self, data):
+        """
+        When the server sends the command's exit status, record it for later
+        delivery to the protocol.
+        """
+        (status,) = unpack('>L', data)
+        self._reason = ProcessTerminated(status, None, None)
+
+
     def closed(self):
         """
         When the channel closes, deliver disconnection notification to the
         protocol.
         """
         self._creator.cleanupConnection(self.conn)
-        self._protocol.connectionLost(
-            Failure(ConnectionDone("ssh channel closed")))
+        if self._reason is None:
+            reason = ConnectionDone("ssh channel closed")
+        else:
+            reason = self._reason
+        self._protocol.connectionLost(Failure(reason))
 
 
 

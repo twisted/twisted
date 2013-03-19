@@ -5,7 +5,8 @@
 Tests for L{twisted.conch.endpoints}.
 """
 
-from os import environ
+from os import WIFEXITED, WEXITSTATUS, WIFSIGNALED, WTERMSIG, environ
+from struct import pack
 
 from zope.interface.verify import verifyObject, verifyClass
 from zope.interface import implementer, providedBy
@@ -20,6 +21,7 @@ from twisted.internet.error import ConnectionDone, ConnectionRefusedError
 from twisted.internet.address import IPv4Address
 from twisted.trial.unittest import TestCase
 from twisted.test.proto_helpers import MemoryReactorClock
+from twisted.internet.error import ProcessTerminated
 
 from twisted.cred.portal import Portal
 from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
@@ -449,6 +451,43 @@ class SSHCommandEndpointTestsMixin(object):
         self.assertClientTransportState(client)
 
 
+    def test_nonZeroExitStatus(self):
+        """
+        When the command exits with a non-zero status, the protocol's
+        C{connectionLost} method is called with a L{Failure} wrapping an
+        exception which encapsulates that status.
+        """
+        self.realm.channelLookup[b'session'] = WorkingExecSession
+        endpoint = self.create()
+
+        factory = Factory()
+        factory.protocol = Protocol
+        connected = endpoint.connect(factory)
+
+        server, client, pump = self.finishConnection()
+
+        protocol = self.successResultOf(connected)
+        connectionLost = []
+        protocol.connectionLost = connectionLost.append
+
+        # Figure out which channel on the connection this protocol is associated
+        # with so the test can simulate command exit and channel close.
+        channelId = protocol.transport.id
+        channel = server.service.channels[channelId]
+
+        exitCode = 123
+        signal = None
+
+        server.service.sendRequest(channel, 'exit-status', pack('>L', exitCode))
+        channel.loseConnection()
+
+        pump.pump()
+        connectionLost[0].trap(ProcessTerminated)
+        self.assertEqual(exitCode, connectionLost[0].value.exitCode)
+        self.assertEqual(signal, connectionLost[0].value.signal)
+        self.assertClientTransportState(client)
+
+
     def record(self, server, protocol, event, noArgs=False):
         # Figure out which channel the test is going to send data over so we can
         # look for it to arrive at the right place on the server.
@@ -867,8 +906,8 @@ class SSHCommandEndpointNewConnectionTests(TestCase, SSHCommandEndpointTestsMixi
         # Let the agent client talk with the agent server and the ssh client
         # talk with the ssh server.
         for i in range(14):
-            print i, agentEndpoint.pump.pump()
-            print i, pump.pump()
+            agentEndpoint.pump.pump()
+            pump.pump()
 
         protocol = self.successResultOf(connected)
         self.assertNotIdentical(None, protocol.transport)
