@@ -18,7 +18,8 @@ from twisted.python.compat import _PY3
 from twisted.trial import unittest
 from twisted.internet import error, interfaces, defer
 from twisted.internet import endpoints, protocol, reactor
-from twisted.internet.address import IPv4Address, IPv6Address, UNIXAddress, ProcessAddress
+from twisted.internet.address import (
+    IPv4Address, IPv6Address, UNIXAddress, ProcessAddress)
 from twisted.internet.protocol import ClientFactory, Protocol
 from twisted.test.proto_helpers import (
     MemoryReactor, RaisingMemoryReactor, StringTransport)
@@ -45,8 +46,8 @@ if not _PY3:
 
 try:
     from twisted.test.test_sslverify import makeCertificate
-    from twisted.internet.ssl import CertificateOptions, Certificate, \
-        KeyPair, PrivateCertificate
+    from twisted.internet.ssl import (
+        CertificateOptions, Certificate, KeyPair, PrivateCertificate)
     from OpenSSL.SSL import ContextType
     testCertificate = Certificate.loadPEM(pemPath.getContent())
     testPrivateCertificate = PrivateCertificate.loadPEM(pemPath.getContent())
@@ -88,8 +89,8 @@ class TestProtocol(Protocol):
 @implementer(interfaces.IHalfCloseableProtocol)
 class TestHalfCloseableProtocol(TestProtocol):
     """
-    A Protocol that implements L{IHalfCloseableProtocol} and records whether its
-    C{readConnectionLost} and {writeConnectionLost} methods are called.
+    A Protocol that implements L{IHalfCloseableProtocol} and records whether
+    its C{readConnectionLost} and {writeConnectionLost} methods are called.
 
     @ivar readLost: A C{bool} indicating whether C{readConnectionLost} has been
         called.
@@ -709,6 +710,7 @@ class MemoryProcessTransport(object):
     @ivar dataList: A list to which data is appended in writeToChild. Acts as
         the child's stdin for testing.
     """
+
     def __init__(self):
         self.dataList = []
 
@@ -736,6 +738,7 @@ class MemoryProcessReactor(object):
     """
     A fake L{IReactorProcess} provider to be used in tests.
     """
+
     def spawnProcess(self, processProtocol, executable, args=(), env={},
                      path=None, uid=None, gid=None, usePTY=0, childFDs=None):
         """
@@ -753,6 +756,7 @@ class ProcessEndpointsTestCase(unittest.TestCase):
     """
     Tests for child process endpoints.
     """
+
     def setUp(self):
         self.ep = endpoints.ProcessEndpoint(MemoryProcessReactor(),
                                             '/bin/executable')
@@ -781,9 +785,11 @@ class ProcessEndpointsTestCase(unittest.TestCase):
         The parameters passed to the endpoint are stored in it.
         """
         environ = {'HOME': None}
-        self.ep = endpoints.ProcessEndpoint(MemoryProcessReactor(), '/bin/executable',
+        self.ep = endpoints.ProcessEndpoint(
+            MemoryProcessReactor(), '/bin/executable',
             ['/bin/executable'], {'HOME': environ['HOME']},
-            '/runProcessHere/', 1, 2, True, {3:'w', 4:'r', 5:'r'}, StandardErrorBehavior.DROP)
+            '/runProcessHere/', 1, 2, True, {3: 'w', 4: 'r', 5: 'r'},
+            StandardErrorBehavior.DROP)
 
         self.assertIsInstance(self.ep._reactor, MemoryProcessReactor)
         self.assertEqual(self.ep._executable, '/bin/executable')
@@ -793,7 +799,7 @@ class ProcessEndpointsTestCase(unittest.TestCase):
         self.assertEqual(self.ep._uid, 1)
         self.assertEqual(self.ep._gid, 2)
         self.assertEqual(self.ep._usePTY, True)
-        self.assertEqual(self.ep._childFDs, {3:'w', 4:'r', 5:'r'})
+        self.assertEqual(self.ep._childFDs, {3: 'w', 4: 'r', 5: 'r'})
         self.assertEqual(self.ep._errFlag, StandardErrorBehavior.DROP)
 
 
@@ -802,7 +808,7 @@ class ProcessEndpointsTestCase(unittest.TestCase):
         The endpoint's errFlag stores a constant from
         L{endpoints.StandardErrorBehavior}
         """
-        self.assertTrue(self.ep._errFlag in StandardErrorBehavior.iterconstants())
+        self.assertIn(self.ep._errFlag, StandardErrorBehavior.iterconstants())
 
 
     def test_wrappedProtocol(self):
@@ -822,6 +828,7 @@ class ProcessEndpointsTestCase(unittest.TestCase):
         the endpoint's connect method is invoked.
         """
         environ = {'HOME': None}
+
         def testSpawnProcess(pp, executable, args, env, path,
                              uid, gid, usePTY, childFDs):
             self.assertIsInstance(pp, endpoints._WrapIProtocol)
@@ -834,9 +841,10 @@ class ProcessEndpointsTestCase(unittest.TestCase):
             self.assertEqual(usePTY, self.ep._usePTY)
             self.assertEqual(childFDs, self.ep._childFDs)
 
-        self.ep = endpoints.ProcessEndpoint(reactor, '/bin/executable',
+        self.ep = endpoints.ProcessEndpoint(
+            reactor, '/bin/executable',
             ['/bin/executable'], {'HOME': environ['HOME']},
-            '/runProcessHere/', 1, 2, True, {3:'w', 4:'r', 5:'r'})
+            '/runProcessHere/', 1, 2, True, {3: 'w', 4: 'r', 5: 'r'})
         self.ep._spawnProcess = testSpawnProcess
         self.d = self.ep.connect(self.f)
         return self.d
@@ -847,6 +855,7 @@ class ProcessEndpointsTestCase(unittest.TestCase):
         The address passed to the factory's buildProtocol in the endpoint is a
         ProcessAddress instance.
         """
+
         class TestAddrFactory(protocol.Factory):
             protocol = StubApplicationProtocol
             _address = None
@@ -889,6 +898,7 @@ class ProcessEndpointsTestCase(unittest.TestCase):
         In case of failure, L{ProcessEndpoint.connect} returns a Deferred that
         fails.
         """
+
         def testSpawnProcess(pp, executable, args, env, path,
                              uid, gid, usePTY, childFDs):
             raise Exception
@@ -931,15 +941,14 @@ class ProcessEndpointTransportTests(unittest.TestCase):
         The writeSequence method of L{_ProcessEndpointTransport} writes a list
         of string passed to it to the transport's stdin.
         """
-
-        self.endpointTransport.writeSequence(['test1','test2', 'test3'])
-        self.assertEqual(self.process.dataList, ['test1','test2', 'test3'])
+        self.endpointTransport.writeSequence(['test1', 'test2', 'test3'])
+        self.assertEqual(self.process.dataList, ['test1', 'test2', 'test3'])
 
 
     def test_write(self):
         """
-        The write method of L{_ProcessEndpointTransport} writes a string of data
-        passed to it to the child process's stdin.
+        The write method of L{_ProcessEndpointTransport} writes a string of
+        data passed to it to the child process's stdin.
         """
         self.endpointTransport.write('test')
         self.assertEqual(self.process.dataList.pop(), 'test')
@@ -976,8 +985,8 @@ class WrappedIProtocolTests(unittest.TestCase):
     Test the behaviour of the implementation detail C{_WrapIProtocol}.
     """
     def setUp(self):
-        self.ep = endpoints.ProcessEndpoint(MemoryProcessReactor(),
-                '/bin/executable')
+        self.ep = endpoints.ProcessEndpoint(
+            MemoryProcessReactor(), '/bin/executable')
         self.eventLog = None
         self.f = protocol.Factory()
         self.f.protocol = StubApplicationProtocol
@@ -995,16 +1004,15 @@ class WrappedIProtocolTests(unittest.TestCase):
 
     def test_makeConnection(self):
         """
-        Our process transport is properly hooked up to the wrappedIProtocol when
-        a connection is made.
+        Our process transport is properly hooked up to the wrappedIProtocol
+        when a connection is made.
         """
         self.d = self.ep.connect(self.f)
         wpp = self.ep._reactor.processProtocol
         # The protocol passed to the reactor
 
         def checkMakeConnection(process):
-            self.assertEqual(wpp.protocol.transport,
-                wpp.transport)
+            self.assertEqual(wpp.protocol.transport, wpp.transport)
 
         self.d.addCallback(checkMakeConnection)
         return self.d
