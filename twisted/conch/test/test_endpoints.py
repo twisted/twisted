@@ -451,11 +451,9 @@ class SSHCommandEndpointTestsMixin(object):
         self.assertClientTransportState(client)
 
 
-    def test_nonZeroExitStatus(self):
+    def _exitStatusTest(self, request, requestArg, exitCode, signal):
         """
-        When the command exits with a non-zero status, the protocol's
-        C{connectionLost} method is called with a L{Failure} wrapping an
-        exception which encapsulates that status.
+        Test handling of non-zero exit statuses or exit signals.
         """
         self.realm.channelLookup[b'session'] = WorkingExecSession
         endpoint = self.create()
@@ -475,10 +473,7 @@ class SSHCommandEndpointTestsMixin(object):
         channelId = protocol.transport.id
         channel = server.service.channels[channelId]
 
-        exitCode = 123
-        signal = None
-
-        server.service.sendRequest(channel, 'exit-status', pack('>L', exitCode))
+        server.service.sendRequest(channel, request, requestArg)
         channel.loseConnection()
 
         pump.pump()
@@ -486,6 +481,28 @@ class SSHCommandEndpointTestsMixin(object):
         self.assertEqual(exitCode, connectionLost[0].value.exitCode)
         self.assertEqual(signal, connectionLost[0].value.signal)
         self.assertClientTransportState(client)
+
+
+    def test_nonZeroExitStatus(self):
+        """
+        When the command exits with a non-zero status, the protocol's
+        C{connectionLost} method is called with a L{Failure} wrapping an
+        exception which encapsulates that status.
+        """
+        exitCode = 123
+        self._exitStatusTest(
+            'exit-status', pack('>L', exitCode), exitCode, None)
+
+
+    def test_nonZeroExitSignal(self):
+        """
+        When the command exits with a non-zero signal, the protocol's
+        C{connectionLost} method is called with a L{Failure} wrapping an
+        exception which encapsulates that status.
+        """
+        signal = 123
+        self._exitStatusTest(
+            'exit-signal', pack('>L', signal), None, signal)
 
 
     def record(self, server, protocol, event, noArgs=False):

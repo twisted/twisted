@@ -203,6 +203,15 @@ class _CommandChannel(SSHChannel):
         self._reason = ProcessTerminated(status, None, None)
 
 
+    def request_exit_signal(self, data):
+        """
+        When the server sends the command's exit status, record it for later
+        delivery to the protocol.
+        """
+        (signal,) = unpack('>L', data)
+        self._reason = ProcessTerminated(None, signal, None)
+
+
     def closed(self):
         """
         When the channel closes, deliver disconnection notification to the
