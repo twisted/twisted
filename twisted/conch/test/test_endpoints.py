@@ -1057,7 +1057,7 @@ class NewConnectionHelperTests(TestCase):
 
         msg("Created known_hosts file at %r" % (path.path,))
 
-        default = path.path.replace(environ["HOME"], "~")
+        default = path.path.replace(environ["HOME"], "~/")
         self.patch(_NewConnectionHelper, "_KNOWN_HOSTS", default)
         msg("Patched _KNOWN_HOSTS with %r" % (default,))
 
