@@ -5,7 +5,7 @@
 Tests for L{twisted.names} example scripts.
 """
 
-from zope.interface.verify import verifyObject, verifyClass
+from zope.interface.verify import verifyObject
 
 from twisted.internet import defer, interfaces
 from twisted.names import client, error
