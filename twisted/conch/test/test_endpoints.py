@@ -484,7 +484,6 @@ class SSHCommandEndpointTestsMixin(object):
         connected = endpoint.connect(factory)
 
         server, client, pump = self.finishConnection()
-        channelIdentifier = client
 
         protocol = self.successResultOf(connected)
 
