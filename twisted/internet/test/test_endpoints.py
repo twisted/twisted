@@ -738,7 +738,6 @@ class MemoryProcessReactor(object):
     """
     A fake L{IReactorProcess} provider to be used in tests.
     """
-
     def spawnProcess(self, processProtocol, executable, args=(), env={},
                      path=None, uid=None, gid=None, usePTY=0, childFDs=None):
         """
@@ -746,6 +745,15 @@ class MemoryProcessReactor(object):
         @return: An L{IProcessTransport} provider.
         """
         self.processProtocol = processProtocol
+        self.executable = executable
+        self.args = args
+        self.env = env
+        self.path = path
+        self.uid = uid
+        self.gid = gid
+        self.usePTY = usePTY
+        self.childFDs = childFDs
+
         self.processTransport = object()
         self.processProtocol.makeConnection(self.processTransport)
         return self.processTransport
@@ -803,14 +811,6 @@ class ProcessEndpointsTestCase(unittest.TestCase):
         self.assertEqual(self.ep._errFlag, StandardErrorBehavior.DROP)
 
 
-    def test_errFlag(self):
-        """
-        The endpoint's errFlag stores a constant from
-        L{endpoints.StandardErrorBehavior}
-        """
-        self.assertIn(self.ep._errFlag, StandardErrorBehavior.iterconstants())
-
-
     def test_wrappedProtocol(self):
         """
         The wrapper function _WrapIProtocol gives an IProcessProtocol
@@ -829,25 +829,23 @@ class ProcessEndpointsTestCase(unittest.TestCase):
         """
         environ = {'HOME': None}
 
-        def testSpawnProcess(pp, executable, args, env, path,
-                             uid, gid, usePTY, childFDs):
-            self.assertIsInstance(pp, endpoints._WrapIProtocol)
-            self.assertEqual(executable, self.ep._executable)
-            self.assertEqual(args, self.ep._args)
-            self.assertEqual(env, self.ep._env)
-            self.assertEqual(path, self.ep._path)
-            self.assertEqual(uid, self.ep._uid)
-            self.assertEqual(gid, self.ep._gid)
-            self.assertEqual(usePTY, self.ep._usePTY)
-            self.assertEqual(childFDs, self.ep._childFDs)
-
+        memoryReactor = MemoryProcessReactor()
         self.ep = endpoints.ProcessEndpoint(
-            reactor, '/bin/executable',
+            memoryReactor, '/bin/executable',
             ['/bin/executable'], {'HOME': environ['HOME']},
             '/runProcessHere/', 1, 2, True, {3: 'w', 4: 'r', 5: 'r'})
-        self.ep._spawnProcess = testSpawnProcess
-        self.d = self.ep.connect(self.f)
-        return self.d
+        self.ep.connect(self.f)
+
+        self.assertIsInstance(memoryReactor.processProtocol,
+                              endpoints._WrapIProtocol)
+        self.assertEqual(memoryReactor.executable, self.ep._executable)
+        self.assertEqual(memoryReactor.args, self.ep._args)
+        self.assertEqual(memoryReactor.env, self.ep._env)
+        self.assertEqual(memoryReactor.path, self.ep._path)
+        self.assertEqual(memoryReactor.uid, self.ep._uid)
+        self.assertEqual(memoryReactor.gid, self.ep._gid)
+        self.assertEqual(memoryReactor.usePTY, self.ep._usePTY)
+        self.assertEqual(memoryReactor.childFDs, self.ep._childFDs)
 
 
     def test_processAddress(self):
@@ -901,7 +899,7 @@ class ProcessEndpointsTestCase(unittest.TestCase):
 
         def testSpawnProcess(pp, executable, args, env, path,
                              uid, gid, usePTY, childFDs):
-            raise Exception
+            raise Exception()
 
         receivedExceptions = []
         self.ep._spawnProcess = testSpawnProcess
