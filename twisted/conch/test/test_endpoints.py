@@ -5,18 +5,18 @@
 Tests for L{twisted.conch.endpoints}.
 """
 
-from os import WIFEXITED, WEXITSTATUS, WIFSIGNALED, WTERMSIG, environ
+from os import environ
 from struct import pack
 
 from zope.interface.verify import verifyObject, verifyClass
-from zope.interface import implementer, providedBy
+from zope.interface import implementer
 
 from twisted.python.log import msg
 from twisted.python.filepath import FilePath
 from twisted.python.failure import Failure
 from twisted.internet.interfaces import IAddress, IStreamClientEndpoint
 from twisted.internet.protocol import Factory, Protocol
-from twisted.internet.defer import Deferred, succeed, fail
+from twisted.internet.defer import succeed, fail
 from twisted.internet.error import ConnectionDone, ConnectionRefusedError
 from twisted.internet.address import IPv4Address
 from twisted.trial.unittest import TestCase
@@ -56,8 +56,7 @@ else:
         SSHCommandEndpoint, _NewConnectionHelper, _ExistingConnectionHelper)
 
 from twisted.python.fakepwd import UserDatabase
-from twisted.internet.task import Clock
-from twisted.test.proto_helpers import StringTransport, MemoryReactor
+from twisted.test.proto_helpers import StringTransport
 from twisted.test.iosim import FakeTransport, connect
 
 
@@ -487,7 +486,6 @@ class SSHCommandEndpointTestsMixin(object):
         exception which encapsulates that status.
         """
         exitCode = 0
-        signal = None
         exc = self._exitStatusTest('exit-status', pack('>L', exitCode))
         exc.trap(ConnectionDone)
 

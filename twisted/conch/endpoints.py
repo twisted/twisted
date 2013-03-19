@@ -25,7 +25,7 @@ from twisted.internet.defer import Deferred, succeed
 from twisted.internet.endpoints import TCP4ClientEndpoint
 
 from twisted.conch.ssh.keys import Key
-from twisted.conch.ssh.common import NS, getMP
+from twisted.conch.ssh.common import NS
 from twisted.conch.ssh.transport import SSHClientTransport
 from twisted.conch.ssh.connection import SSHConnection
 from twisted.conch.ssh.userauth import SSHUserAuthClient
