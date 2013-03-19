@@ -53,7 +53,8 @@ class TubeTest(TestCase):
 
     def test_tubeReceiveCallsPumpReceived(self):
         """
-        L{Tube.receive} will call C{pump}.
+        L{Tube.receive} will call C{pump.received} and synthesize a fake "0.5"
+        progress result if L{None} is returned.
         """
         got = []
         class ReceivingPump(Pump):
@@ -67,14 +68,15 @@ class TubeTest(TestCase):
 
     def test_tubeReceiveRelaysPumpReceivedResult(self):
         """
-        L{Tube.receive} will call C{Pump.received}.
+        L{Tube.receive} will call C{Pump.received} and relay its resulting
+        progress value if one is provided.
         """
         got = []
-        class V(Pump):
+        class ReceivingPumpWithProgress(Pump):
             def received(self, item):
                 got.append(item)
                 return 0.8
-        self.tube.pump = V()
+        self.tube.pump = ReceivingPumpWithProgress()
         result = self.tube.receive("some input")
         self.assertEqual(result, 0.8)
         self.assertEqual(got, ["some input"])
