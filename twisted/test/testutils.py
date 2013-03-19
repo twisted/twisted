@@ -12,11 +12,20 @@ don't-use-it-outside-Twisted-we-won't-maintain-compatibility rule!
     their own test cases.
 """
 
-from io import BytesIO
+import os
+import sys
 
+from io import BytesIO
+from StringIO import StringIO
 from xml.dom import minidom as dom
 
+from twisted.internet import utils
 from twisted.internet.protocol import FileWrapper
+from twisted.python.filepath import FilePath
+from twisted.python import usage
+from twisted.trial.unittest import SkipTest
+
+
 
 class IOPump:
     """Utility to pump data between clients and servers for protocol testing.
@@ -55,6 +64,7 @@ class IOPump:
             return 1
         else:
             return 0
+
 
 
 def returnConnected(server, client):
@@ -142,8 +152,9 @@ class ComparisonTestsMixin(object):
         equal to C{valueOne} and that it defines equality cooperatively with
         other types it doesn't know about.
 
-        @param firstValueOne: An object which is expected to compare as equal to
-            C{secondValueOne} and not equal to C{valueTwo}.
+        @param firstValueOne: An object which is expected to compare
+            as equal to C{secondValueOne} and not equal to
+            C{valueTwo}.
 
         @param secondValueOne: A different object than C{firstValueOne} but
             which is expected to compare equal to that object.
@@ -167,3 +178,164 @@ class ComparisonTestsMixin(object):
         self.assertFalse(firstValueOne != _Equal())
         self.assertFalse(firstValueOne == _NotEqual())
         self.assertTrue(firstValueOne != _NotEqual())
+
+
+
+class ExampleTestBase(object):
+    """
+    This is a mixin which adds an example to the path, tests it, and then
+    removes it from the path and unimports the modules which the test loaded.
+    Test cases which test example code and documentation listings should use
+    this.
+
+    This is done this way so that examples can live in isolated path entries,
+    next to the documentation, replete with their own plugin packages and
+    whatever other metadata they need.  Also, example code is a rare instance
+    of it being valid to have multiple versions of the same code in the
+    repository at once, rather than relying on version control, because
+    documentation will often show the progression of a single piece of code as
+    features are added to it, and we want to test each one.
+    """
+
+    def setUp(self):
+        """
+        Add our example directory to the path and record which modules are
+        currently loaded.
+        """
+        self.fakeErr = StringIO()
+        self.originalErr, sys.stderr = sys.stderr, self.fakeErr
+        self.fakeOut = StringIO()
+        self.originalOut, sys.stdout = sys.stdout, self.fakeOut
+
+        self.originalPath = sys.path[:]
+        self.originalModules = sys.modules.copy()
+
+        # Get branch root
+        here = FilePath(__file__).parent().parent().parent()
+
+        # Find the example script within this branch
+        for childName in self.exampleRelativePath.split('/'):
+            here = here.child(childName)
+            if not here.exists():
+                raise SkipTest(
+                    "Examples (%s) not found - cannot test" % (here.path,))
+        self.examplePath = here
+
+        # Add the example parent folder to the Python path
+        sys.path.append(self.examplePath.parent().path)
+
+        # Import the example as a module
+        moduleName = self.examplePath.basename().split('.')[0]
+        self.example = __import__(moduleName)
+
+
+    def tearDown(self):
+        """
+        Remove the example directory from the path and remove all
+        modules loaded by the test from sys.modules.
+        """
+        sys.modules.clear()
+        sys.modules.update(self.originalModules)
+        sys.path[:] = self.originalPath
+        sys.stderr = self.originalErr
+
+
+
+class StandardExecutableExampleTestBase(ExampleTestBase):
+    """
+    A base class for all the executable examples.
+
+    @ivar positionalArgCount: The maximum number of positional
+        arguments expected by the example script under test.
+    """
+
+    positionalArgCount = 0
+
+
+    def test_executable(self):
+        """
+        The example scripts should have an if __name__ ==
+        '__main__' so that they do something when called.
+        """
+        args = [self.examplePath.path, '--help']
+        d = utils.getProcessOutput(sys.executable, args, env=os.environ)
+        def whenComplete(res):
+            self.assertEqual(
+                res.splitlines()[0],
+                self.example.Options().synopsis)
+        d.addCallback(whenComplete)
+        return d
+
+
+    def test_shebang(self):
+        """
+        The example scripts start with the standard shebang line.
+        """
+        self.assertEquals(
+            self.examplePath.open().readline().rstrip(),
+            '#!/usr/bin/env python')
+
+
+    def test_definedOptions(self):
+        """
+        Example scripts contain an Options class which is a subclass
+        of l{twisted.python.usage.Options]
+        """
+        self.assertIsInstance(self.example.Options(), usage.Options)
+
+
+    def test_usageMessageConsistency(self):
+        """
+        The example script usage message should begin with a "Usage:"
+        summary line.
+        """
+        out = self.example.Options.synopsis
+        self.assertTrue(
+            out.startswith('Usage:'),
+            'Usage message first line should start with "Usage:". '
+            'Actual: %r' % (out,))
+
+
+    def test_usageChecksPositionalArguments(self):
+        """
+        The example script validates positional arguments
+        """
+        options = self.example.Options()
+        options.parseOptions(
+            [str(x) for x in range(self.positionalArgCount)])
+        self.assertRaises(
+            usage.UsageError,
+            options.parseOptions,
+            [str(x) for x in range(self.positionalArgCount + 1)])
+
+
+    def test_usageErrorsBeginWithUsage(self):
+        """
+        The example script prints a full usage message to stderr if it
+        is passed incorrect command line arguments
+        """
+        self.assertRaises(
+            SystemExit,
+            self.example.main,
+            None, '--unexpected_option')
+        err = self.fakeErr.getvalue()
+        usageMessage = str(self.example.Options())
+        self.assertEqual(
+            err[:len(usageMessage)],
+            usageMessage)
+
+
+    def test_usageErrorsEndWithError(self):
+        """
+        The example script prints an "Error:" summary on the last line
+        of stderr when incorrect arguments are supplied.
+        """
+        self.assertRaises(
+            SystemExit,
+            self.example.main,
+            None, '--unexpected_option')
+        err = self.fakeErr.getvalue().splitlines()
+        self.assertTrue(
+            err[-1].startswith('ERROR:'),
+            'Usage message last line should start with "ERROR:" '
+            'Actual: %r' % (err[-1],))
