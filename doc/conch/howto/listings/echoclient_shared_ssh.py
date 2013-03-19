@@ -6,18 +6,16 @@ if __name__ == '__main__':
     import sys
     import echoclient_shared_ssh
     from twisted.internet.task import react
-
-    # from twisted.python.log import startLogging
-    # startLogging(sys.stderr)
-
     react(echoclient_shared_ssh.main, sys.argv[1:])
 
-from twisted.internet.defer import Deferred, gatherResults, inlineCallbacks
+from twisted.internet.task import cooperate
+from twisted.internet.defer import Deferred, gatherResults
 from twisted.internet.protocol import Factory, Protocol
 
 from twisted.conch.endpoints import SSHCommandEndpoint
 
 from echoclient_ssh import ConnectionParameters
+
 
 class PrinterProtocol(Protocol):
     def dataReceived(self, data):
@@ -38,7 +36,7 @@ def main(reactor, *argv):
     factory = Factory()
     factory.protocol = Protocol
     d = endpoint.connect(factory)
-    @inlineCallbacks
+
     def gotConnection(proto):
         conn = proto.transport.conn
 
@@ -48,10 +46,12 @@ def main(reactor, *argv):
             factory.done = Deferred()
             done.append(factory.done)
 
-            e = SSHCommandEndpoint.existingConnection(conn, b"/bin/echo %d" % (i,))
+            e = SSHCommandEndpoint.existingConnection(
+                conn, b"/bin/echo %d" % (i,))
             yield e.connect(factory)
 
     d.addCallback(gotConnection)
+    d.addCallback(lambda work: cooperate(work).whenDone())
     d.addCallback(lambda ignored: gatherResults(done))
 
     return d

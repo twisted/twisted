@@ -34,7 +34,7 @@ second version of this protocol.</p>
       connection, performs necessary authentication, opens a channel, and
       launches a command in that channel.  It then associates the output of that
       command with the input of a protocol you supply, and associates output
-      from that protocol with input the input of that command.  Effectively,
+      from that protocol with the input of that command.  Effectively,
       this lets you ignore most of the complexity of SSH and just interact with
       a remote process as though it were any other stream-oriented connection -
       such as TCP or SSL.
@@ -80,6 +80,16 @@ second version of this protocol.</p>
       and bounced back by the <code class="shell">/bin/cat</code> process the
       protocol is interacting with.
     </p>
+
+    <p>
+      It is also possible to run commands (one or more) over an
+      already-established connection.  This is done using the alternate
+      constructor <code>SSHCommandEndpoint.existingConnection</code>.
+    </p>
+
+    <a href="listings/echoclient_shared_ssh.py" class="py-listing">
+      Bounce some bytes off an SSH-based echo server many times using one TCP connection
+    </a>
 
     <h2>Writing a client</h2>
 

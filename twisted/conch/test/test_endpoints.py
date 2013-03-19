@@ -146,18 +146,10 @@ class CommandFactory(SSHFactory):
     }
 
     # Simplify the tests by disconnecting after the first authentication
-    # failure.  One should attempt should be sufficient to test authentication
-    # success and failure.  There is an off-by-one in the implementation of
-    # this feature in Conch, so set it to 0 in order to allow 1 attempt.
+    # failure.  One attempt should be sufficient to test authentication success
+    # and failure.  There is an off-by-one in the implementation of this
+    # feature in Conch, so set it to 0 in order to allow 1 attempt.
     attemptsBeforeDisconnect = 0
-
-
-# factory = _SSHSecureConnectionFactory()
-# secure = factory.getSecureConnection()
-# authenticated = secure.getAuthenticatedConnection()
-# command = authenticated.getCommandChannel()
-# transport = command.getTransport()
-# clientProtocol.makeConnection(transport)
 
 
 @implementer(IAddress)

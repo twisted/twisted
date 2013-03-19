@@ -31,6 +31,7 @@ from twisted.conch.ssh.userauth import SSHUserAuthClient
 from twisted.conch.ssh.channel import SSHChannel
 from twisted.conch.client.knownhosts import KnownHostsFile
 from twisted.conch.client.agent import SSHAgentClient
+from twisted.conch.client.default import _KNOWN_HOSTS
 
 
 class AuthenticationFailed(Exception):
@@ -123,7 +124,9 @@ class _CommandChannel(SSHChannel):
         @param protocolFactory: A client factory to use to build a L{IProtocol}
             provider to use to associate with the running command.
 
-        @param commandConnected:
+        @param commandConnected: A L{Deferred} to use to signal that execution
+            of the command has failed or that it has succeeded and the command
+            is now running.
         @type commandConnected: L{Deferred}
         """
         SSHChannel.__init__(self)
@@ -202,15 +205,16 @@ class _CommandChannel(SSHChannel):
 
 class _ConnectionReady(SSHConnection):
     """
-    L{_ConnectionReady} is an L{twisted.conch.ssh.service.SSHService} which
-    only propagates the I{serviceStarted} event to a L{Deferred} to be handled
+    L{_ConnectionReady} is an L{SSHConnection} (an SSH service) which only
+    propagates the I{serviceStarted} event to a L{Deferred} to be handled
     elsewhere.
     """
     def __init__(self, factory):
         """
-        @param factory: Some random object with a C{connectionReady} attribute
+        @param factory: The factory used to create the connection this service
+            is running over to grant access to the C{connectionReady} attribute
             which is a L{Deferred} which will get fired when I{serviceStarted}
-            happens.  TODO This is a poor docstring.
+            happens.
         """
         SSHConnection.__init__(self)
         self._factory = factory
@@ -231,13 +235,13 @@ class _ConnectionReady(SSHConnection):
 
 
 
-class UserAuth(SSHUserAuthClient):
+class _UserAuth(SSHUserAuthClient):
     """
-    L{UserAuth} implements the client part of SSH user authentication in the
-    convenient way a user might expect if they are familiar with the interactive
-    I{ssh} command line client.
+    L{_UserAuth} implements the client part of SSH user authentication in the
+    convenient way a user might expect if they are familiar with the
+    interactive I{ssh} command line client.
 
-    L{UserAuth} supports key-based authentication, password-based
+    L{_UserAuth} supports key-based authentication, password-based
     authentication, and delegating authentication to an agent.
     """
     password = None
@@ -357,7 +361,7 @@ class _CommandTransport(SSHClientTransport):
 
         command = _ConnectionReady(self.factory)
 
-        userauth = UserAuth(self.factory.username, command)
+        userauth = _UserAuth(self.factory.username, command)
         userauth.password = self.factory.password
         if self.factory.keys:
             userauth.keys = list(self.factory.keys)
@@ -377,9 +381,9 @@ class _CommandTransport(SSHClientTransport):
         Set up a connection to the authentication agent and trigger its
         initialization.
 
-        @param userauth: The L{UserAuth} instance which is in charge of the
+        @param userauth: The L{_UserAuth} instance which is in charge of the
             overall authentication process.
-        @type userauth: L{UserAuth}
+        @type userauth: L{_UserAuth}
 
         @param endpoint: An endpoint which can be used to connect to the
             authentication agent.
@@ -408,7 +412,8 @@ class _CommandTransport(SSHClientTransport):
         if self._state == b'SECURING' and self._hostKeyFailure is not None:
             reason = self._hostKeyFailure
         elif self._state == b'AUTHENTICATING':
-            reason = Failure(AuthenticationFailed("Doh"))
+            reason = Failure(
+                AuthenticationFailed("Connection lost while authenticating"))
         self.factory.connectionReady.errback(reason)
 
 
@@ -416,11 +421,13 @@ class _CommandTransport(SSHClientTransport):
 @implementer(IStreamClientEndpoint)
 class SSHCommandEndpoint(object):
     """
-    L{SSHCommandEndpoint} exposes the command-executing functionality of SSH servers.
+    L{SSHCommandEndpoint} exposes the command-executing functionality of SSH
+    servers.
 
-    L{SSHCommandEndpoint} can set up a new SSH, authenticate it in any one of a
-    number of different ways (keys, passwords, agents), launch a command over
-    that connection and then associate its input and output with a protocol.
+    L{SSHCommandEndpoint} can set up a new SSH connection, authenticate it in
+    any one of a number of different ways (keys, passwords, agents), launch a
+    command over that connection and then associate its input and output with a
+    protocol.
 
     It can also re-use an existing, already-authenticated SSH connection
     (perhaps one which already has some SSH channels being used for other
@@ -578,8 +585,7 @@ class _NewConnectionHelper(object):
     L{_NewConnectionHelper} implements L{ISSHConnectionCreator} by establishing
     a brand new SSH connection, securing it, and authenticating.
     """
-
-    _KNOWN_HOSTS = "~/.ssh/known_hosts"
+    _KNOWN_HOSTS = _KNOWN_HOSTS
 
     def __init__(self, reactor, hostname, port, command, username, keys,
                  password, agentEndpoint, knownHosts, ui):

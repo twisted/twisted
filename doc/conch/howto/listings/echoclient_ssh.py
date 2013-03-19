@@ -19,14 +19,21 @@ from twisted.conch.ssh.keys import EncryptedKeyError, Key
 from twisted.conch.client.knownhosts import KnownHostsFile, ConsoleUI
 from twisted.conch.endpoints import SSHCommandEndpoint
 
+
 class EchoOptions(Options):
     optParameters = [
-        ("host", "h", "localhost", "hostname of the SSH server to which to connect"),
-        ("port", "p", 22, "port number of SSH server to which to connect", int),
-        ("username", "u", getpass.getuser(), "username with which to authenticate with the SSH server"),
-        ("identity", "i", "~/.ssh/id_rsa", "file from which to read a private key to use for authentication"),
-        ("password", None, None, "password to use for authentication"),
-        ("knownhosts", "k", "~/.ssh/known_hosts", "file containing known ssh server public key data"),
+        ("host", "h", "localhost",
+         "hostname of the SSH server to which to connect"),
+        ("port", "p", 22,
+         "port number of SSH server to which to connect", int),
+        ("username", "u", getpass.getuser(),
+         "username with which to authenticate with the SSH server"),
+        ("identity", "i", "~/.ssh/id_rsa",
+         "file from which to read a private key to use for authentication"),
+        ("password", None, None,
+         "password to use for authentication"),
+        ("knownhosts", "k", "~/.ssh/known_hosts",
+         "file containing known ssh server public key data"),
         ]
 
     optFlags = [
@@ -69,7 +76,8 @@ def readKey(path):
 
 
 class ConnectionParameters(object):
-    def __init__(self, reactor, ui, host, port, username, password, keys, knownHosts, agent):
+    def __init__(self, reactor, ui, host, port, username, password, keys,
+                 knownHosts, agent):
         self.reactor = reactor
         self.ui = ui
         self.host = host
@@ -102,7 +110,8 @@ class ConnectionParameters(object):
         if config["no-agent"] or "SSH_AUTH_SOCK" not in os.environ:
             agentEndpoint = None
         else:
-            agentEndpoint = UNIXClientEndpoint(reactor, os.environ["SSH_AUTH_SOCK"])
+            agentEndpoint = UNIXClientEndpoint(
+                reactor, os.environ["SSH_AUTH_SOCK"])
 
         return cls(
             reactor, ui, config["host"], config["port"],
@@ -128,4 +137,3 @@ def main(reactor, *argv):
     d = endpoint.connect(factory)
     d.addCallback(lambda proto: proto.finished)
     return d
-
