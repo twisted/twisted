@@ -13,12 +13,13 @@ from zope.interface import implementer, providedBy
 from twisted.python.log import msg
 from twisted.python.filepath import FilePath
 from twisted.python.failure import Failure
-from twisted.trial.unittest import TestCase
 from twisted.internet.interfaces import IAddress, IStreamClientEndpoint
 from twisted.internet.protocol import Factory, Protocol
 from twisted.internet.defer import Deferred, succeed, fail
 from twisted.internet.error import ConnectionDone, ConnectionRefusedError
 from twisted.internet.address import IPv4Address
+from twisted.trial.unittest import TestCase
+from twisted.test.proto_helpers import MemoryReactorClock
 
 from twisted.cred.portal import Portal
 from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
@@ -181,46 +182,6 @@ class SingleUseMemoryEndpoint(object):
 
 
 
-@implementer(IStreamClientEndpoint)
-class SpyClientEndpoint(object):
-    def connect(self, factory):
-        self.result = Deferred()
-        self.factory = factory
-        return self.result
-
-
-
-class Composite(object):
-    """
-    A helper to compose other objects based on their declared (zope.interface)
-    interfaces.
-
-    This is used here to create a reactor from separate implementations of
-    different reactor interfaces - for example, from L{Clock} and
-    L{ReactorFDSet} to create a reactor which provides L{IReactorTime} and
-    L{IReactorFDSet}.
-    """
-    def __init__(self, parts):
-        """
-        @param parts: An iterable of the objects to compose.  The methods of
-            these objects which are part of any interface the objects declare
-            they provide will be made methods of C{self}.  (Non-method
-            attributes are not supported.)
-
-        @raise ValueError: If an interface is provided by more than one of the
-            objects in C{parts}.
-        """
-        seen = set()
-        for p in parts:
-            for i in providedBy(p):
-                if i in seen:
-                    raise ValueError("More than one part provides %r" % (i,))
-                seen.add(i)
-                for m in i.names():
-                    setattr(self, m, getattr(p, m))
-
-
-
 class MemorySSHPublicKeyDatabase(SSHPublicKeyDatabase):
     def __init__(self, users):
         self._users = users
@@ -253,9 +214,7 @@ class SSHCommandEndpointTestsMixin(object):
         self.port = 42022
         self.user = b"user"
         self.password = b"password"
-        self.clock = Clock()
-        self.memory = MemoryReactor()
-        self.reactor = Composite([self.clock, self.memory])
+        self.reactor = MemoryReactorClock()
         self.realm = TrivialRealm()
         self.portal = Portal(self.realm)
         self.passwdDB = InMemoryUsernamePasswordDatabaseDontUse()
@@ -542,7 +501,7 @@ class SSHCommandEndpointNewConnectionTests(TestCase, SSHCommandEndpointTestsMixi
 
     def finishConnection(self):
         return self.connectedServerAndClient(
-            self.factory, self.memory.tcpClients[0][2])
+            self.factory, self.reactor.tcpClients[0][2])
 
 
     def assertClientTransportState(self, client):
@@ -564,10 +523,10 @@ class SSHCommandEndpointNewConnectionTests(TestCase, SSHCommandEndpointTestsMixi
         factory.protocol = Protocol
         endpoint.connect(factory)
 
-        host, port, factory, timeout, bindAddress = self.memory.tcpClients[0]
+        host, port, factory, timeout, bindAddress = self.reactor.tcpClients[0]
         self.assertEqual(self.hostname, host)
         self.assertEqual(self.port, port)
-        self.assertEqual(1, len(self.memory.tcpClients))
+        self.assertEqual(1, len(self.reactor.tcpClients))
 
 
     def test_connectionFailed(self):
@@ -584,7 +543,7 @@ class SSHCommandEndpointNewConnectionTests(TestCase, SSHCommandEndpointTestsMixi
         factory.protocol = Protocol
         d = endpoint.connect(factory)
 
-        factory = self.memory.tcpClients[0][2]
+        factory = self.reactor.tcpClients[0][2]
         factory.clientConnectionFailed(None, Failure(ConnectionRefusedError()))
 
         self.failureResultOf(d).trap(ConnectionRefusedError)
@@ -607,7 +566,7 @@ class SSHCommandEndpointNewConnectionTests(TestCase, SSHCommandEndpointTestsMixi
         connected = endpoint.connect(factory)
 
         server, client, pump = self.connectedServerAndClient(
-            self.factory, self.memory.tcpClients[0][2])
+            self.factory, self.reactor.tcpClients[0][2])
 
         f = self.failureResultOf(connected)
         f.trap(UserRejectedKey)
@@ -641,7 +600,7 @@ class SSHCommandEndpointNewConnectionTests(TestCase, SSHCommandEndpointTestsMixi
         connected = endpoint.connect(factory)
 
         server, client, pump = self.connectedServerAndClient(
-            self.factory, self.memory.tcpClients[0][2])
+            self.factory, self.reactor.tcpClients[0][2])
 
         f = self.failureResultOf(connected)
         f.trap(HostKeyChanged)
@@ -665,7 +624,7 @@ class SSHCommandEndpointNewConnectionTests(TestCase, SSHCommandEndpointTestsMixi
         d = endpoint.connect(factory)
 
         transport = StringTransport()
-        factory = self.memory.tcpClients[0][2]
+        factory = self.reactor.tcpClients[0][2]
         client= factory.buildProtocol(None)
         client.makeConnection(transport)
 
@@ -689,12 +648,12 @@ class SSHCommandEndpointNewConnectionTests(TestCase, SSHCommandEndpointTestsMixi
         connected = endpoint.connect(factory)
 
         server, client, pump = self.connectedServerAndClient(
-            self.factory, self.memory.tcpClients[0][2])
+            self.factory, self.reactor.tcpClients[0][2])
 
         # For security, the server delays password authentication failure
         # response.  Advance the simulation clock so the client sees the
         # failure.
-        self.clock.advance(server.service.passwordDelay)
+        self.reactor.advance(server.service.passwordDelay)
 
         # Let the failure response traverse the "network"
         pump.flush()
@@ -749,7 +708,7 @@ class SSHCommandEndpointNewConnectionTests(TestCase, SSHCommandEndpointTestsMixi
         connected = endpoint.connect(factory)
 
         server, client, pump = self.connectedServerAndClient(
-            self.factory, self.memory.tcpClients[0][2])
+            self.factory, self.reactor.tcpClients[0][2])
 
         f = self.failureResultOf(connected)
         f.trap(AuthenticationFailed)
@@ -783,7 +742,7 @@ class SSHCommandEndpointNewConnectionTests(TestCase, SSHCommandEndpointTestsMixi
         self.factory.attemptsBeforeDisconnect += 1
 
         server, client, pump = self.connectedServerAndClient(
-            self.factory, self.memory.tcpClients[0][2])
+            self.factory, self.reactor.tcpClients[0][2])
 
         pump.pump()
 
@@ -821,7 +780,7 @@ class SSHCommandEndpointNewConnectionTests(TestCase, SSHCommandEndpointTestsMixi
         connected = endpoint.connect(factory)
 
         server, client, pump = self.connectedServerAndClient(
-            self.factory, self.memory.tcpClients[0][2])
+            self.factory, self.reactor.tcpClients[0][2])
 
         protocol = self.successResultOf(connected)
         self.assertNotIdentical(None, protocol.transport)
@@ -852,7 +811,7 @@ class SSHCommandEndpointNewConnectionTests(TestCase, SSHCommandEndpointTestsMixi
         connected = endpoint.connect(factory)
 
         server, client, pump = self.connectedServerAndClient(
-            self.factory, self.memory.tcpClients[0][2])
+            self.factory, self.reactor.tcpClients[0][2])
 
         # Let the agent client talk with the agent server
         for i in range(20): # XXX Argh unroll this loop... or something?
@@ -934,7 +893,7 @@ class SSHCommandEndpointExistingConnectionTests(TestCase, SSHCommandEndpointTest
             self.realm.channelLookup[b'session'] = WorkingExecSession
 
             server, client, pump = self.connectedServerAndClient(
-                self.factory, self.memory.tcpClients[0][2])
+                self.factory, self.reactor.tcpClients[0][2])
 
         finally:
             self.realm.channelLookup.clear()
