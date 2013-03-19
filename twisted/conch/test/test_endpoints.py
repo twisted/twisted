@@ -24,26 +24,37 @@ from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
 
 from twisted.conch.interfaces import IConchUser
 from twisted.conch.error import ConchError, UserRejectedKey, HostKeyChanged
-from twisted.conch.ssh.factory import SSHFactory
-from twisted.conch.ssh.userauth import SSHUserAuthServer
-from twisted.conch.ssh.connection import SSHConnection
-from twisted.conch.ssh.keys import Key
-from twisted.conch.ssh.channel import SSHChannel
-from twisted.conch.ssh.agent import SSHAgentServer
-from twisted.conch.client.knownhosts import KnownHostsFile
-from twisted.conch.checkers import SSHPublicKeyDatabase
+
+try:
+    from Crypto.Cipher import AES
+    from pyasn1 import type
+except ImportError as e:
+    skip = "can't run w/o PyCrypto and pyasn1 (%s)" % (e,)
+    SSHFactory = SSHUserAuthServer = SSHConnection = Key = SSHChannel = \
+        SSHAgentServer = KnownHostsFile = SSHPublicKeyDatabase = ConchUser = \
+        object
+else:
+    from twisted.conch.ssh.factory import SSHFactory
+    from twisted.conch.ssh.userauth import SSHUserAuthServer
+    from twisted.conch.ssh.connection import SSHConnection
+    from twisted.conch.ssh.keys import Key
+    from twisted.conch.ssh.channel import SSHChannel
+    from twisted.conch.ssh.agent import SSHAgentServer
+    from twisted.conch.client.knownhosts import KnownHostsFile
+    from twisted.conch.checkers import SSHPublicKeyDatabase
+    from twisted.conch.avatar import ConchUser
+
+    from twisted.conch.test.keydata import (
+        publicRSA_openssh, privateRSA_openssh, privateDSA_openssh)
+
+    from twisted.conch.endpoints import (
+        ISSHConnectionCreator, AuthenticationFailed, SSHCommandAddress,
+        SSHCommandEndpoint, _NewConnectionHelper, _ExistingConnectionHelper)
 
 from twisted.python.fakepwd import UserDatabase
 from twisted.internet.task import Clock
 from twisted.test.proto_helpers import StringTransport, MemoryReactor
 from twisted.test.iosim import FakeTransport, connect
-from twisted.conch.test.keydata import (
-    publicRSA_openssh, privateRSA_openssh, privateDSA_openssh)
-from twisted.conch.avatar import ConchUser
-
-from twisted.conch.endpoints import (
-    ISSHConnectionCreator, AuthenticationFailed, SSHCommandAddress,
-    SSHCommandEndpoint, _NewConnectionHelper, _ExistingConnectionHelper)
 
 
 class BrokenExecSession(SSHChannel):
@@ -116,12 +127,18 @@ class FakeClockSSHUserAuthServer(SSHUserAuthServer):
 
 
 class CommandFactory(SSHFactory):
-    publicKeys = {
-        'ssh-rsa': Key.fromString(data=publicRSA_openssh)
-    }
-    privateKeys = {
-        'ssh-rsa': Key.fromString(data=privateRSA_openssh)
-    }
+    @property
+    def publicKeys(self):
+        return {
+            'ssh-rsa': Key.fromString(data=publicRSA_openssh)
+            }
+
+    @property
+    def privateKeys(self):
+        return {
+            'ssh-rsa': Key.fromString(data=privateRSA_openssh)
+            }
+
     services = {
         'ssh-userauth': FakeClockSSHUserAuthServer,
         'ssh-connection': SSHConnection
@@ -1031,7 +1048,7 @@ class NewConnectionHelperTests(TestCase):
         L{KnownHostsFile} created by L{_NewConnectionHelper} when none is
         supplied to it.
         """
-        key = CommandFactory.publicKeys['ssh-rsa']
+        key = CommandFactory().publicKeys['ssh-rsa']
         path = FilePath(self.mktemp())
         knownHosts = KnownHostsFile(path)
         knownHosts.addHostKey("127.0.0.1", key)
