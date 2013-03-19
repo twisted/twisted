@@ -23,10 +23,10 @@ class Tube(object):
     @ivar fount: the implementation of the L{IDrain.fount} attribute.  The
         L{IFount} which is flowing to this L{Tube}'s L{IDrain} implementation.
 
-    @ivar valve: the L{Valve} which will receive values from this tube and call
+    @ivar pump: the L{Pump} which will receive values from this tube and call
         C{deliver} to deliver output to it.  (When set, this will automatically
-        set the C{tube} attribute of said L{Valve} as well, as well as
-        un-setting the C{tube} attribute of the old valve.)
+        set the C{tube} attribute of said L{Pump} as well, as well as
+        un-setting the C{tube} attribute of the old pump.)
 
     @ivar _currentlyPaused: is this L{Tube} currently paused?  Boolean: C{True}
         if paused, C{False} if not.  This variable tracks whether this L{Tube}
@@ -42,45 +42,45 @@ class Tube(object):
 
     _currentlyPaused = False
     _delivered = False
-    _valve = None
+    _pump = None
 
-    def __init__(self, valve):
+    def __init__(self, pump):
         """
-        Initialize this L{Tube} with the given L{Valve} to control its
+        Initialize this L{Tube} with the given L{Pump} to control its
         behavior.
         """
         self._pendingOutput = []
-        self.valve = valve
+        self.pump = pump
 
 
-    def _get_valve(self):
-        return self._valve
+    def _get_pump(self):
+        return self._pump
 
 
-    def _set_valve(self, newValve):
-        if self._valve is not None:
-            self._valve.tube = None
-        self._valve = newValve
-        self._valve.tube = self
+    def _set_pump(self, newPump):
+        if self._pump is not None:
+            self._pump.tube = None
+        self._pump = newPump
+        self._pump.tube = self
 
-    valve = property(_get_valve, _set_valve)
+    pump = property(_get_pump, _set_pump)
 
 
     @property
     def inputType(self):
-        return self.valve.inputType
+        return self.pump.inputType
 
 
     @property
     def outputType(self):
-        return self.valve.outputType
+        return self.pump.outputType
 
 
     def flowingFrom(self, fount):
         """
         This tube will now have 'receive' called.
         """
-        self.valve.started() # XXX testme
+        self.pump.started() # XXX testme
         ot = fount.outputType
         it = self.inputType
         if ot is not None and it is not None and not it.isOrExtends(ot):
@@ -133,9 +133,9 @@ class Tube(object):
         """
         An item was received.  Subclasses should override to process it.
         """
-        result = self.valve.received(item)
+        result = self.pump.received(item)
         if result is None:
-            # postel principle, let valves be as lax as possible
+            # postel principle, let pumps be as lax as possible
             result = 0.5
         if self.drain is not None:
             if not self._delivered:
@@ -149,7 +149,7 @@ class Tube(object):
         """
         Progress was made.
         """
-        self.valve.progressed(amount)
+        self.pump.progressed(amount)
 
 
     def deliver(self, item):
@@ -167,13 +167,23 @@ class Tube(object):
 
 
 
-class Valve(object):
+class Pump(object):
     """
-    Helper / null implementation for L{IValve}.  You can inherit from this to
-    get no-op implementation of all of L{IValve}'s required implementation so
+    Helper / null implementation for L{IPump}.  You can inherit from this to
+    get no-op implementation of all of L{IPump}'s required implementation so
     you can just just implement the parts you're interested in.
 
-    @ivar tube: the L{Tube} whose flow this valve is controlling.  This
+    ::
+
+                      +-----  the
+                     / +----  fount
+                    / /
+                   /o+---O the pump
+                  / /
+        the   ---+ /
+        drain ----+
+
+    @ivar tube: the L{Tube} whose flow this pump is controlling.  This
         attribute will be set before 'started' is called.
 
     @ivar inputType: The type of data expected to be received by C{receive}.
@@ -188,25 +198,25 @@ class Valve(object):
 
     def started(self):
         """
-        @see: L{IValve.started}
+        @see: L{IPump.started}
         """
 
 
     def received(self, item):
         """
-        @see: L{IValve.received}
+        @see: L{IPump.received}
         """
 
 
     def progressed(self, amount=None):
         """
-        @see: L{IValve.progressed}
+        @see: L{IPump.progressed}
         """
 
 
     def stopped(self, reason):
         """
-        @see: L{IValve.stopped}
+        @see: L{IPump.stopped}
         """
 
 

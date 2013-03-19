@@ -9,7 +9,7 @@ from twisted.tubes.test.util import ResultProducingMixin
 from twisted.tubes.test.util import StringEndpoint
 from twisted.trial.unittest import TestCase
 from twisted.tubes.protocol import ProtocolAdapterCreatorThing
-from twisted.tubes.tube import Valve
+from twisted.tubes.tube import Pump
 from twisted.tubes.tube import Tube
 from twisted.tubes.test.util import FakeFount
 
@@ -25,14 +25,14 @@ class FlowingAdapterTests(TestCase, ResultProducingMixin):
         self.endpoint = StringEndpoint()
         self.adapter = self.result(
             self.endpoint.connect(ProtocolAdapterCreatorThing())).now()
-        class TestValve(Valve):
+        class TestPump(Pump):
             def __init__(self):
                 self.items = []
 
             def received(self, item):
                 self.items.append(item)
 
-        self.tube = Tube(TestValve())
+        self.tube = Tube(TestPump())
 
 
     def test_flowToSetsDrain(self):
@@ -51,7 +51,7 @@ class FlowingAdapterTests(TestCase, ResultProducingMixin):
         """
         self.adapter.flowTo(self.tube)
         self.adapter.dataReceived("some data")
-        self.assertEquals(self.tube.valve.items, ["some data"])
+        self.assertEquals(self.tube.pump.items, ["some data"])
 
 
     def test_endFlowStopsConnection(self):

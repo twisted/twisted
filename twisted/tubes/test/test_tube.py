@@ -6,10 +6,10 @@ Tests for L{twisted.tubes.tube}.
 """
 
 from twisted.trial.unittest import TestCase
-from twisted.tubes.test.util import TesterValve
+from twisted.tubes.test.util import TesterPump
 from twisted.tubes.test.util import FakeFount
 from twisted.tubes.test.util import FakeDrain
-from twisted.tubes.tube import Valve
+from twisted.tubes.tube import Pump
 from twisted.tubes.tube import Tube
 from twisted.tubes.test.util import IFakeInput
 
@@ -22,23 +22,23 @@ class TubeTest(TestCase):
         """
         Create a tube, and a fake drain and fount connected to it.
         """
-        self.tube = Tube(TesterValve())
+        self.tube = Tube(TesterPump())
         self.ff = FakeFount()
         self.fd = FakeDrain()
 
 
-    def test_valveAttribute(self):
+    def test_pumpAttribute(self):
         """
-        The L{Tube.valve} conveniently keeps L{Valve.tube} up to date when you
+        The L{Tube.pump} conveniently keeps L{Pump.tube} up to date when you
         set it.
         """
-        firstValve = self.tube.valve
-        secondValve = Valve()
-        self.assertIdentical(firstValve.tube, self.tube)
-        self.assertIdentical(secondValve.tube, None)
-        self.tube.valve = secondValve
-        self.assertIdentical(firstValve.tube, None)
-        self.assertIdentical(secondValve.tube, self.tube)
+        firstPump = self.tube.pump
+        secondPump = Pump()
+        self.assertIdentical(firstPump.tube, self.tube)
+        self.assertIdentical(secondPump.tube, None)
+        self.tube.pump = secondPump
+        self.assertIdentical(firstPump.tube, None)
+        self.assertIdentical(secondPump.tube, self.tube)
 
 
     def test_flowingFromFirst(self):
@@ -51,45 +51,45 @@ class TubeTest(TestCase):
         self.assertIdentical(self.fd.fount, self.tube)
 
 
-    def test_tubeReceiveCallsValveReceived(self):
+    def test_tubeReceiveCallsPumpReceived(self):
         """
-        L{Tube.receive} will call C{valve}.
+        L{Tube.receive} will call C{pump}.
         """
         got = []
-        class V(Valve):
+        class ReceivingPump(Pump):
             def received(self, item):
                 got.append(item)
-        self.tube.valve = V()
+        self.tube.pump = ReceivingPump()
         result = self.tube.receive("sample item")
         self.assertEqual(result, 0.5)
         self.assertEqual(got, ["sample item"])
 
 
-    def test_tubeReceiveRelaysValveReceivedResult(self):
+    def test_tubeReceiveRelaysPumpReceivedResult(self):
         """
-        L{Tube.receive} will call C{Valve.received}.
+        L{Tube.receive} will call C{Pump.received}.
         """
         got = []
-        class V(Valve):
+        class V(Pump):
             def received(self, item):
                 got.append(item)
                 return 0.8
-        self.tube.valve = V()
+        self.tube.pump = V()
         result = self.tube.receive("some input")
         self.assertEqual(result, 0.8)
         self.assertEqual(got, ["some input"])
 
 
-    def test_tubeProgressRelaysValveProgress(self):
+    def test_tubeProgressRelaysPumpProgress(self):
         """
-        L{Tube.progress} will call L{Valve.progress}, and also call
+        L{Tube.progress} will call L{Pump.progress}, and also call
         L{IDrain.progress}.
         """
         got = []
-        class V(Valve):
+        class V(Pump):
             def progressed(self, amount=None):
                 got.append(amount)
-        self.tube.valve = V()
+        self.tube.pump = V()
         self.assertEqual(got, [])
         self.tube.progress()
         self.tube.progress(0.6)
@@ -99,10 +99,10 @@ class TubeTest(TestCase):
     def test_tubeReceiveRelaysProgressDownStream(self):
         """
         L{Tube.receive} will call its downstream L{IDrain}'s C{progress} method
-        if its L{Valve} does not call its C{deliver} method.
+        if its L{Pump} does not call its C{deliver} method.
         """
         got = []
-        class V(Valve):
+        class V(Pump):
             def progressed(self, amount=None):
                 got.append(amount)
         self.tube.flowTo(Tube(V()))
@@ -113,13 +113,13 @@ class TubeTest(TestCase):
     def test_tubeReceiveDoesntRelayUnnecessaryProgress(self):
         """
         L{Tube.receive} will not call its downstream L{IDrain}'s C{progress}
-        method if its L{Valve} I{does} call its C{deliver} method.
+        method if its L{Pump} I{does} call its C{deliver} method.
         """
         got = []
-        class V(Valve):
+        class V(Pump):
             def received(self, item):
                 self.tube.deliver(item + 1)
-        class V1(Valve):
+        class V1(Pump):
             def progressed(self, amount=None):
                 got.append(amount)
         self.tube.__init__(V())
@@ -144,9 +144,9 @@ class TubeTest(TestCase):
         L{Tube.flowingFrom} checks the type of its input.  If it doesn't match
         (both are specified explicitly, and they don't match).
         """
-        class V(Valve):
+        class ToPump(Pump):
             inputType = IFakeInput
-        self.tube.valve = V()
+        self.tube.pump = ToPump()
         self.failUnlessRaises(TypeError, self.ff.flowTo, self.tube)
 
 
@@ -154,7 +154,7 @@ class TubeTest(TestCase):
         """
         L{Tube.flowTo} returns the L{Tube} being flowed to.
         """
-        tubeB = Tube(Valve())
+        tubeB = Tube(Pump())
         result = self.tube.flowTo(tubeB)
         self.assertIdentical(result, tubeB)
 
@@ -186,7 +186,7 @@ class TubeTest(TestCase):
         if it has nowhere to deliver onward to, then it issues a pause.  Note
         also that this happens when data is delivered via the L{Tube} and
         I{not} when data arrives via the L{Tube}'s C{receive} method, since
-        C{receive} delivers onwards to the L{Valve} immediately, and does not
+        C{receive} delivers onwards to the L{Pump} immediately, and does not
         require any buffering.
         """
         self.ff.flowTo(self.tube)
@@ -194,13 +194,13 @@ class TubeTest(TestCase):
         self.assertEquals(self.ff.flowIsPaused, True)
 
 
-    def test_receiveCallsValveReceived(self):
+    def test_receiveCallsPumpReceived(self):
         """
-        L{Tube.receive} will deliver its input to L{IValve.received} on its
-        valve.
+        L{Tube.receive} will deliver its input to L{IPump.received} on its
+        pump.
         """
         self.tube.receive("one-item")
-        self.assertEquals(self.tube.valve.allReceivedItems,
+        self.assertEquals(self.tube.pump.allReceivedItems,
                           ["one-item"])
 
 

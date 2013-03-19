@@ -12,7 +12,7 @@ from twisted.internet import reactor
 from twisted.protocols.amp import AmpBox
 from twisted.protocols.amp import IBoxSender
 from twisted.tubes.itube import ISegment
-from twisted.tubes.tube import Valve
+from twisted.tubes.tube import Pump
 from twisted.tubes.tube import Tube
 from twisted.protocols.basic import Int16StringReceiver
 
@@ -23,7 +23,7 @@ class IString(Interface):
     """
 
 
-class DataToStrings(Int16StringReceiver, Valve):
+class DataToStrings(Int16StringReceiver, Pump):
 
     inputType = ISegment
     outputType = IString
@@ -37,7 +37,7 @@ class DataToStrings(Int16StringReceiver, Valve):
 
 
 
-class StringsToBoxes(Valve):
+class StringsToBoxes(Pump):
 
     inputType = IString
     outputType = None # AmpBox -> TODO, implement classes.
@@ -68,7 +68,7 @@ class StringsToBoxes(Valve):
 
 
 
-class BoxesToData(Valve):
+class BoxesToData(Pump):
     """
     Shortcut: I want to go from boxes directly to data.
     """
@@ -80,7 +80,7 @@ class BoxesToData(Valve):
 
 
 
-class BoxConsumer(Valve):
+class BoxConsumer(Pump):
 
     implements(IBoxSender)
 

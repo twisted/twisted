@@ -169,12 +169,12 @@ class IDrain(Interface):
 
 
 
-class IValve(Interface):
+class IPump(Interface):
     """
-    An L{IValve} provider is a control object for a L{Tube}.  A valve provides
+    An L{IPump} provider is a control object for a L{Tube}.  A pump provides
     all the behavior associated with a the L{Tube}'s translation of input to
     output, so that users of L{Tube}'s buffering and pipeline establishment
-    behavior don't need to inherit from anything in order to use it.  L{Valve}
+    behavior don't need to inherit from anything in order to use it.  L{Pump}
     provides a default implementation which does nothing in response to every
     method.
     """
@@ -207,7 +207,7 @@ class IValve(Interface):
     def received(item):
         """
         An item was received from 'upstream', i.e. the framework, or the
-        lower-level data source that this L{Valve} is interacting with.
+        lower-level data source that this L{Pump} is interacting with.
         """
 
 

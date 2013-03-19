@@ -12,7 +12,7 @@ from twisted.test.proto_helpers import StringTransport
 from twisted.internet.defer import succeed
 from twisted.tubes.itube import IDrain
 from twisted.tubes.itube import IFount
-from twisted.tubes.tube import Valve
+from twisted.tubes.tube import Pump
 
 
 class Result(object):
@@ -149,9 +149,9 @@ class FakeFount(object):
 
 
 
-class TesterValve(Valve):
+class TesterPump(Pump):
     """
-    Valve for testing that records its inputs.
+    Pump for testing that records its inputs.
     """
 
     def __init__(self):
