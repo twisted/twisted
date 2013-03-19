@@ -208,6 +208,9 @@ class SSHCommandEndpointTestsMixin(object):
     These tests apply to L{SSHCommandEndpoint} whether it is constructed using
     L{SSHCommandEndpoint.existingConnection} or
     L{SSHCommandEndpoint.newConnection}.
+
+    Subclasses must override L{create}, L{assertClientTransportState}, and
+    L{finishConnection}.
     """
     def setUp(self):
         self.hostname = b"ssh.example.com"
@@ -230,7 +233,46 @@ class SSHCommandEndpointTestsMixin(object):
         self.serverAddress = IPv4Address("TCP", "192.168.100.200", 54321)
 
 
+    def create(self):
+        """
+        Create and return a new L{SSHCommandEndpoint} to be tested.  Override
+        this to implement creation in an interesting way the endpoint.
+        """
+        raise NotImplementedError(
+            "%r did not implement create" % (self.__class__.__name__,))
+
+
+    def assertClientTransportState(self, client):
+        """
+        Make an assertion about the connectedness of the given protocol's
+        transport.  Override this to implement either a check for the
+        connection still being open or having been closed as appropriate.
+        """
+        raise NotImplementedError(
+            "%r did not implement assertClientTransportState" % (
+                self.__class__.__name__,))
+
+
+    def finishConnection(self):
+        """
+        Do any remaining work necessary to complete an in-memory connection
+        attempted initiated using C{self.reactor}.
+        """
+        raise NotImplementedError(
+            "%r did not implement finishConnection" % (
+                self.__class__.__name__,))
+
+
     def connectedServerAndClient(self, serverFactory, clientFactory):
+        """
+        Set up an in-memory connection between protocols created by
+        C{serverFactory} and C{clientFactory}.
+
+        @return: A three-tuple.  The first element is the protocol created by
+            C{serverFactory}.  The second element is the protocol created by
+            C{clientFactory}.  The third element is the L{IOPump} connecting
+            them.
+        """
         clientProtocol = clientFactory.buildProtocol(None)
         serverProtocol = serverFactory.buildProtocol(None)
 
@@ -500,11 +542,20 @@ class SSHCommandEndpointNewConnectionTests(TestCase, SSHCommandEndpointTestsMixi
 
 
     def finishConnection(self):
+        """
+        Establish the first attempted TCP connection using the SSH server which
+        C{self.factory} can create.
+        """
         return self.connectedServerAndClient(
             self.factory, self.reactor.tcpClients[0][2])
 
 
     def assertClientTransportState(self, client):
+        """
+        Assert that the transport for the given protocol has been disconnected.
+        L{SSHCommandEndpoint.newConnection} creates a new dedicated SSH
+        connection and cleans it up after the command exits.
+        """
         # Nothing useful can be done with the connection at this point, so the
         # endpoint should close it.
         self.assertTrue(client.transport.disconnecting)
@@ -532,8 +583,8 @@ class SSHCommandEndpointNewConnectionTests(TestCase, SSHCommandEndpointTestsMixi
     def test_connectionFailed(self):
         """
         If a connection cannot be established, the L{Deferred} returned by
-        L{SSHCommandEndpoint.connect} fires with a L{Failure} the reason for
-        the connection setup failure.
+        L{SSHCommandEndpoint.connect} fires with a L{Failure} representing the
+        reason for the connection setup failure.
         """
         endpoint = SSHCommandEndpoint.newConnection(
             self.reactor, b"/bin/ls -l", b"dummy user",
@@ -813,10 +864,11 @@ class SSHCommandEndpointNewConnectionTests(TestCase, SSHCommandEndpointTestsMixi
         server, client, pump = self.connectedServerAndClient(
             self.factory, self.reactor.tcpClients[0][2])
 
-        # Let the agent client talk with the agent server
-        for i in range(20): # XXX Argh unroll this loop... or something?
-            agentEndpoint.pump.pump()
-            pump.pump()
+        # Let the agent client talk with the agent server and the ssh client
+        # talk with the ssh server.
+        for i in range(14):
+            print i, agentEndpoint.pump.pump()
+            print i, pump.pump()
 
         protocol = self.successResultOf(connected)
         self.assertNotIdentical(None, protocol.transport)
@@ -925,9 +977,12 @@ class SSHCommandEndpointExistingConnectionTests(TestCase, SSHCommandEndpointTest
 
 
     def assertClientTransportState(self, client):
-        # The connection came from someone else's code, they're responsible for
-        # closing the connection, so nothing the existingConnection tests do
-        # should cause it to close.  endpoint should close it.
+        """
+        Assert that the transport for the given protocol is still connected.
+        L{SSHCommandEndpoint.existingConnection} re-uses an SSH connected
+        created by some other code, so other code is responsible for cleaning
+        it up.
+        """
         self.assertFalse(client.transport.disconnecting)
 
 
@@ -986,7 +1041,6 @@ class NewConnectionHelperTests(TestCase):
         result = object()
         self.patch(_NewConnectionHelper, '_knownHosts', lambda cls: result)
 
-        # helper = _NewConnectionHelper(*[None] * 10)
         helper = _NewConnectionHelper(
             None, None, None, None, None, None, None, None, None, None)
 
