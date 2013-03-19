@@ -9,7 +9,7 @@ from zope.interface import implements
 from twisted.positioning import base, nmea, ipositioning
 from twisted.trial.unittest import TestCase
 
-from twisted.positioning.base import LATITUDE, LONGITUDE
+from twisted.positioning.base import Angles
 
 # Sample sentences
 GPGGA = '$GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*47'
@@ -685,15 +685,16 @@ def _coordinateType(hemisphere):
     """
     Return the type of a coordinate.
 
-    This is L{LATITUDE} if the coordinate is in the northern or southern
-    hemispheres, L{LONGITUDE} otherwise.
+    This is L{Angles.LATITUDE} if the coordinate is in the northern or
+    southern hemispheres, L{Angles.LONGITUDE} otherwise.
 
     @param hemisphere: NMEA shorthand for the hemisphere. One of "NESW".
     @type hemisphere: C{str}
 
-    @return: The type of the coordinate (L{LATITUDE} or L{LONGITUDE})
+    @return: The type of the coordinate (L{Angles.LATITUDE} or
+        L{Angles.LONGITUDE})
     """
-    return LATITUDE if hemisphere in "NS" else LONGITUDE
+    return Angles.LATITUDE if hemisphere in "NS" else Angles.LONGITUDE
 
 
 
@@ -707,7 +708,7 @@ class CoordinateFixerTests(FixerTestMixin, TestCase):
         location converts correctly into a L{base.Coordinate}.
         """
         coordinateType = _coordinateType(hemisphere)
-        if coordinateType is LATITUDE:
+        if coordinateType is Angles.LATITUDE:
             typeName = "latitude"
         else:
             typeName = "longitude"

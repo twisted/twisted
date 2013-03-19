@@ -7,6 +7,7 @@ Generic positioning base classes.
 @since: 13.0
 """
 from zope.interface import implements
+from twisted.python.constants import Names, NamedConstant
 from twisted.python.util import FancyEqMixin
 
 from twisted.positioning import ipositioning
@@ -15,8 +16,27 @@ MPS_PER_KNOT = 0.5144444444444444
 MPS_PER_KPH = 0.27777777777777777
 METERS_PER_FOOT = 0.3048
 
-LATITUDE, LONGITUDE, HEADING, VARIATION = range(4)
-NORTH, EAST, SOUTH, WEST = range(4)
+
+
+class Angles(Names):
+    """
+    The types of angles.
+    """
+    LATITUDE = NamedConstant()
+    LONGITUDE = NamedConstant()
+    HEADING = NamedConstant()
+    VARIATION = NamedConstant()
+
+
+
+class Directions(Names):
+    """
+    The four cardinal directions (north, east, south, west).
+    """
+    NORTH = NamedConstant()
+    EAST = NamedConstant()
+    SOUTH = NamedConstant()
+    WEST = NamedConstant()
 
 
 
@@ -216,22 +236,22 @@ class Angle(object, FancyEqMixin):
 
     @cvar RANGE_EXPRESSIONS: A collections of expressions for the allowable
         range for the angular value of a particular coordinate value.
-    @type RANGE_EXPRESSIONS: A mapping of coordinate types (C{LATITUDE},
-        C{LONGITUDE}, C{HEADING}, C{VARIATION}) to 1-argument callables.
+    @type RANGE_EXPRESSIONS: A mapping of coordinate types (one of L{Angles})
+        to 1-argument callables.
     """
     RANGE_EXPRESSIONS = {
-        LATITUDE: lambda latitude: -90.0 < latitude < 90.0,
-        LONGITUDE: lambda longitude: -180.0 < longitude < 180.0,
-        HEADING: lambda heading:  0 <= heading < 360,
-        VARIATION: lambda variation: -180 < variation <= 180,
+        Angles.LATITUDE: lambda latitude: -90.0 < latitude < 90.0,
+        Angles.LONGITUDE: lambda longitude: -180.0 < longitude < 180.0,
+        Angles.HEADING: lambda heading:  0 <= heading < 360,
+        Angles.VARIATION: lambda variation: -180 < variation <= 180,
     }
 
 
     ANGLE_TYPE_NAMES  = {
-        LATITUDE: "latitude",
-        LONGITUDE: "longitude",
-        VARIATION: "variation",
-        HEADING: "heading",
+        Angles.LATITUDE: "latitude",
+        Angles.LONGITUDE: "longitude",
+        Angles.VARIATION: "variation",
+        Angles.HEADING: "heading",
     }
 
 
@@ -246,8 +266,7 @@ class Angle(object, FancyEqMixin):
             unknown).
         @type angle: C{float} or C{NoneType}
         @param angleType: A symbolic constant describing the angle type. Should
-            be one of LATITUDE, LONGITUDE, HEADING, VARIATION. C{None} if
-            unknown.
+            be one of L{AngleTypes} or {None} if unknown.
 
         @raises ValueError: If the angle type is not the default argument, but it
             is an unknown type (it's not present in C{Angle.RANGE_EXPRESSIONS}),
@@ -384,7 +403,7 @@ class Heading(Angle):
         """
         Initializes a angle with an optional variation.
         """
-        Angle.__init__(self, angle, HEADING)
+        Angle.__init__(self, angle, Angles.HEADING)
         self.variation = variation
 
 
@@ -399,7 +418,7 @@ class Heading(Angle):
         @type variationValue: C{float}
         @return A C{Heading } with the given values.
         """
-        variation = Angle(variationValue, VARIATION)
+        variation = Angle(variationValue, Angles.VARIATION)
         return cls(angleValue, variation)
 
 
@@ -417,7 +436,7 @@ class Heading(Angle):
             return None
 
         angle = (self.inDecimalDegrees - self.variation.inDecimalDegrees) % 360
-        return Angle(angle, HEADING)
+        return Angle(angle, Angles.HEADING)
 
 
     def setSign(self, sign):
@@ -475,40 +494,37 @@ class Coordinate(Angle, FancyEqMixin):
             -90.0 and +90.0 (exclusive). If this value describes a longitude,
             this value must be within -180.0 and +180.0 (exclusive).
         @type angle: C{float}
-        @param coordinateType: One of L{LATITUDE}, L{LONGITUDE}. Used to return
-            hemisphere names.
+        @param coordinateType: One of L{Angles.LATITUDE}, L{Angles.LONGITUDE}.
         """
         Angle.__init__(self, angle, coordinateType)
 
 
     HEMISPHERES_BY_TYPE_AND_SIGN = {
-        LATITUDE: [
-            NORTH, # Positive
-            SOUTH, # Negative
+        Angles.LATITUDE: [
+            Directions.NORTH, # Positive
+            Directions.SOUTH, # Negative
         ],
 
-        LONGITUDE: [
-            EAST, # Positve
-            WEST, # Negative
+        Angles.LONGITUDE: [
+            Directions.EAST, # Positve
+            Directions.WEST, # Negative
         ]
     }
 
 
-    def _getHemisphere(self):
+    @property
+    def hemisphere(self):
         """
         Gets the hemisphere of this coordinate.
 
-        @return: A symbolic constant representing a hemisphere (C{NORTH},
-            C{EAST}, C{SOUTH} or C{WEST}).
+        @return: A symbolic constant representing a hemisphere (one of
+            L{Angles})
         """
         try:
             sign = int(self.inDecimalDegrees < 0)
             return self.HEMISPHERES_BY_TYPE_AND_SIGN[self.angleType][sign]
         except KeyError:
             raise ValueError("unknown coordinate type (cant find hemisphere)")
-
-
-    hemisphere = property(fget=_getHemisphere)
 
 
 
@@ -612,7 +628,8 @@ class _BaseSpeed(object, FancyEqMixin):
         self._speed = speed
 
 
-    def _getSpeedInKnots(self):
+    @property
+    def inKnots(self):
         """
         Returns the speed represented by this object, expressed in knots.
 
@@ -620,9 +637,6 @@ class _BaseSpeed(object, FancyEqMixin):
         @rtype: C{float}
         """
         return self._speed / MPS_PER_KNOT
-
-
-    inKnots = property(_getSpeedInKnots)
 
 
     inMetersPerSecond = property(lambda self: self._speed)

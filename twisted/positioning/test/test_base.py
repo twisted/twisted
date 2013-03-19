@@ -5,8 +5,7 @@ Test cases for positioning primitives.
 """
 from twisted.trial.unittest import TestCase
 from twisted.positioning import base
-from twisted.positioning.base import LATITUDE, LONGITUDE
-from twisted.positioning.base import NORTH, EAST, SOUTH, WEST
+from twisted.positioning.base import Angles, Directions
 
 
 class AngleTests(TestCase):
@@ -25,7 +24,7 @@ class AngleTests(TestCase):
         """
         Tests the repr of an empty variation.
         """
-        a = base.Angle(angleType=base.VARIATION)
+        a = base.Angle(angleType=Angles.VARIATION)
         self.assertEquals("<Variation (unknown value)>", repr(a))
 
 
@@ -153,7 +152,7 @@ class HeadingTests(TestCase):
         Simple test for a corrected heading.
         """
         h = base.Heading.fromFloats(1., variationValue=-10.)
-        self.assertEquals(h.correctedHeading, base.Angle(11., base.HEADING))
+        self.assertEquals(h.correctedHeading, base.Angle(11., Angles.HEADING))
 
 
     def test_correctedHeadingOverflow(self):
@@ -162,7 +161,7 @@ class HeadingTests(TestCase):
         correctly handled.
         """
         h = base.Heading.fromFloats(359., variationValue=-2.)
-        self.assertEquals(h.correctedHeading, base.Angle(1., base.HEADING))
+        self.assertEquals(h.correctedHeading, base.Angle(1., Angles.HEADING))
 
 
     def test_correctedHeadingOverflowEdgeCase(self):
@@ -171,7 +170,7 @@ class HeadingTests(TestCase):
         is correctly handled.
         """
         h = base.Heading.fromFloats(359., variationValue=-1.)
-        self.assertEquals(h.correctedHeading, base.Angle(0., base.HEADING))
+        self.assertEquals(h.correctedHeading, base.Angle(0., Angles.HEADING))
 
 
     def test_correctedHeadingUnderflow(self):
@@ -180,7 +179,7 @@ class HeadingTests(TestCase):
         correctly handled.
         """
         h = base.Heading.fromFloats(1., variationValue=2.)
-        self.assertEquals(h.correctedHeading, base.Angle(359., base.HEADING))
+        self.assertEquals(h.correctedHeading, base.Angle(359., Angles.HEADING))
 
 
     def test_correctedHeadingUnderflowEdgeCase(self):
@@ -189,7 +188,7 @@ class HeadingTests(TestCase):
         correctly handled.
         """
         h = base.Heading.fromFloats(1., variationValue=1.)
-        self.assertEquals(h.correctedHeading, base.Angle(0., base.HEADING))
+        self.assertEquals(h.correctedHeading, base.Angle(0., Angles.HEADING))
 
 
     def test_setVariationSign(self):
@@ -248,7 +247,7 @@ class CoordinateTests(TestCase):
         Tests creating positive latitudes and verifies their repr.
         """
         value = 50.0
-        c = base.Coordinate(value, LATITUDE)
+        c = base.Coordinate(value, Angles.LATITUDE)
         self.assertEquals(repr(c), "<Latitude (%s degrees)>" % value)
 
 
@@ -257,7 +256,7 @@ class CoordinateTests(TestCase):
         Tests creating negative latitudes and verifies their repr.
         """
         value = -50.0
-        c = base.Coordinate(value, LATITUDE)
+        c = base.Coordinate(value, Angles.LATITUDE)
         self.assertEquals(repr(c), "<Latitude (%s degrees)>" % value)
 
 
@@ -266,7 +265,7 @@ class CoordinateTests(TestCase):
         Tests creating positive longitudes and verifies their repr.
         """
         value = 50.0
-        c = base.Coordinate(value, LONGITUDE)
+        c = base.Coordinate(value, Angles.LONGITUDE)
         self.assertEquals(repr(c), "<Longitude (%s degrees)>" % value)
 
 
@@ -275,7 +274,7 @@ class CoordinateTests(TestCase):
         Tests creating negative longitudes and verifies their repr.
         """
         value = -50.0
-        c = base.Coordinate(value, LONGITUDE)
+        c = base.Coordinate(value, Angles.LONGITUDE)
         self.assertEquals(repr(c), "<Longitude (%s degrees)>" % value)
 
 
@@ -307,8 +306,8 @@ class CoordinateTests(TestCase):
         Tests that coordinates with the same angles but different types
         compare unequal.
         """
-        c1 = base.Coordinate(1.0, LATITUDE)
-        c2 = base.Coordinate(1.0, LONGITUDE)
+        c1 = base.Coordinate(1.0, Angles.LATITUDE)
+        c2 = base.Coordinate(1.0, Angles.LONGITUDE)
         self.assertNotEquals(c1, c2)
 
 
@@ -316,7 +315,7 @@ class CoordinateTests(TestCase):
         """
         Tests that setting the sign on a coordinate works.
         """
-        c = base.Coordinate(50., LATITUDE)
+        c = base.Coordinate(50., Angles.LATITUDE)
         c.setSign(1)
         self.assertEquals(c.inDecimalDegrees, 50.)
         c.setSign(-1)
@@ -329,7 +328,7 @@ class CoordinateTests(TestCase):
         C{ValueError} and doesn't affect the coordinate.
         """
         value = 50.0
-        c = base.Coordinate(value, LATITUDE)
+        c = base.Coordinate(value, Angles.LATITUDE)
 
         self.assertRaises(ValueError, c.setSign, -50)
         self.assertEquals(c.inDecimalDegrees, 50.)
@@ -346,10 +345,10 @@ class CoordinateTests(TestCase):
         Checks that coordinates know which hemisphere they're in.
         """
         coordinatesAndHemispheres = [
-            (base.Coordinate(1.0, LATITUDE), NORTH),
-            (base.Coordinate(-1.0, LATITUDE), SOUTH),
-            (base.Coordinate(1.0, LONGITUDE), EAST),
-            (base.Coordinate(-1.0, LONGITUDE), WEST),
+            (base.Coordinate(1.0, Angles.LATITUDE), Directions.NORTH),
+            (base.Coordinate(-1.0, Angles.LATITUDE), Directions.SOUTH),
+            (base.Coordinate(1.0, Angles.LONGITUDE), Directions.EAST),
+            (base.Coordinate(-1.0, Angles.LONGITUDE), Directions.WEST),
         ]
 
         for coordinate, expectedHemisphere in coordinatesAndHemispheres:
@@ -370,8 +369,8 @@ class CoordinateTests(TestCase):
         Tests that latitudes outside of M{-90.0 < latitude < 90.0} raise
         C{ValueError}.
         """
-        self.assertRaises(ValueError, base.Coordinate, 150.0, LATITUDE)
-        self.assertRaises(ValueError, base.Coordinate, -150.0, LATITUDE)
+        self.assertRaises(ValueError, base.Coordinate, 150.0, Angles.LATITUDE)
+        self.assertRaises(ValueError, base.Coordinate, -150.0, Angles.LATITUDE)
 
 
     def test_badLongitudeValues(self):
@@ -379,18 +378,18 @@ class CoordinateTests(TestCase):
         Tests that longitudes outside of M{-180.0 < longitude < 180.0} raise
         C{ValueError}.
         """
-        self.assertRaises(ValueError, base.Coordinate, 250.0, LONGITUDE)
-        self.assertRaises(ValueError, base.Coordinate, -250.0, LONGITUDE)
+        self.assertRaises(ValueError, base.Coordinate, 250.0, Angles.LONGITUDE)
+        self.assertRaises(ValueError, base.Coordinate, -250.0, Angles.LONGITUDE)
 
 
     def test_inDegreesMinutesSeconds(self):
         """
         Tests accessing coordinate values in degrees, minutes and seconds.
         """
-        c = base.Coordinate(50.5, LATITUDE)
+        c = base.Coordinate(50.5, Angles.LATITUDE)
         self.assertEquals(c.inDegreesMinutesSeconds, (50, 30, 0))
 
-        c = base.Coordinate(50.213, LATITUDE)
+        c = base.Coordinate(50.213, Angles.LATITUDE)
         self.assertEquals(c.inDegreesMinutesSeconds, (50, 12, 46))
 
 

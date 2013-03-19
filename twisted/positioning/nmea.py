@@ -13,7 +13,7 @@ import datetime
 from zope.interface import implements, classProvides
 
 from twisted.positioning import base, ipositioning
-from twisted.positioning.base import LATITUDE, LONGITUDE, VARIATION
+from twisted.positioning.base import Angles
 from twisted.protocols.basic import LineReceiver
 from twisted.python.compat import reduce
 
@@ -441,8 +441,8 @@ class NMEAAdapter(object):
         """
         Turns the NMEAProtocol coordinate format into Python float.
 
-        @param coordinateType: The coordinate type. Should be L{base.LATITUDE}
-            or L{base.LONGITUDE}.
+        @param coordinateType: The coordinate type. Should be either
+            L{Angles.LATITUDE} or L{Angles.LONGITUDE}.
         """
         coordinateName = base.Coordinate.ANGLE_TYPE_NAMES[coordinateType]
         key = coordinateName + 'Float'
@@ -468,8 +468,8 @@ class NMEAAdapter(object):
             - C{self.FIXERS['latitudeFloat']}
             - C{self.FIXERS['longitudeFloat']}
 
-        @param coordinateType: Coordinate type. One of L{base.LATITUDE},
-            L{base.LONGITUDE} or L{base.VARIATION}.
+        @param coordinateType: Coordinate type. One of L{Angles.LATITUDE},
+            L{Angles.LONGITUDE} or L{Angles.VARIATION}.
         @param sentenceDataKey: The key name of the hemisphere sign being
             fixed in the sentence data. If unspecified, C{coordinateType} is
             used.
@@ -492,13 +492,16 @@ class NMEAAdapter(object):
         """
         Returns the hemisphere sign for a given coordinate type.
 
-        @param coordinateType: Coordinate type. One of L{base.LATITUDE},
-            L{base.LONGITUDE} or L{base.VARIATION}.
+        @param coordinateType: The coordinate type to find the hemisphere for.
+        @type coordinateType: L{Angles.LATITUDE}, L{Angles.LONGITUDE} or
+            L{base.VARIATION}.
+        @return: The sign of that hemisphere (-1 or 1).
+        @rtype: C{int}
         """
-        if coordinateType in (LATITUDE, LONGITUDE):
+        if coordinateType in (Angles.LATITUDE, Angles.LONGITUDE):
             baseName = base.Coordinate.ANGLE_TYPE_NAMES[coordinateType]
             hemisphereKey = baseName + 'Hemisphere'
-        elif coordinateType == VARIATION:
+        elif coordinateType == Angles.VARIATION:
             hemisphereKey = 'magneticVariationDirection'
         else:
             raise ValueError("unknown coordinate type %s" % (coordinateType,))
@@ -540,7 +543,7 @@ class NMEAAdapter(object):
             ('heading', base.Heading, '_angle', float),
         'magneticVariation':
             ('heading', base.Heading, 'variation',
-             lambda angle: base.Angle(float(angle), VARIATION)),
+             lambda angle: base.Angle(float(angle), Angles.VARIATION)),
 
         'horizontalDilutionOfPrecision':
             ('positionError', base.PositionError, 'hdop', float),
@@ -681,13 +684,13 @@ class NMEAAdapter(object):
             lambda self: self._fixDatestamp(),
 
         'latitudeFloat':
-            lambda self: self._fixCoordinateFloat(LATITUDE),
+            lambda self: self._fixCoordinateFloat(Angles.LATITUDE),
         'latitudeHemisphere':
-            lambda self: self._fixHemisphereSign(LATITUDE, 'latitude'),
+            lambda self: self._fixHemisphereSign(Angles.LATITUDE, 'latitude'),
         'longitudeFloat':
-            lambda self: self._fixCoordinateFloat(LONGITUDE),
+            lambda self: self._fixCoordinateFloat(Angles.LONGITUDE),
         'longitudeHemisphere':
-            lambda self: self._fixHemisphereSign(LONGITUDE, 'longitude'),
+            lambda self: self._fixHemisphereSign(Angles.LONGITUDE, 'longitude'),
 
         'altitude':
             lambda self: self._convert('altitude',
@@ -708,13 +711,13 @@ class NMEAAdapter(object):
             lambda self: self._statefulUpdate('magneticVariation'),
 
         'magneticVariationDirection':
-            lambda self: self._fixHemisphereSign(VARIATION,
-                                                 'heading'),
+            lambda self: self._fixHemisphereSign(Angles.VARIATION,
+                                            'heading'),
 
         'speedInKnots':
             lambda self: self._fixUnits(valueKey='speed',
-                                        sourceKey='speedInKnots',
-                                        unit='N'),
+                                   sourceKey='speedInKnots',
+                                   unit='N'),
 
         'positionDilutionOfPrecision':
             lambda self: self._statefulUpdate('positionDilutionOfPrecision'),
