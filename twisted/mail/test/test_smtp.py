@@ -116,12 +116,8 @@ class DummyDomain(object):
 
     def exists(self, user):
         if user.dest.local in self.messages:
-            return defer.succeed(lambda: self.startMessage(user))
+            return defer.succeed(lambda: DummyMessage(self, user))
         return defer.fail(smtp.SMTPBadRcpt(user))
-
-
-    def startMessage(self, user):
-        return DummyMessage(self, user)
 
 
 
@@ -411,15 +407,15 @@ class DummyProto:
         self.dummyMixinBase.connectionMade(self)
         self.message = {}
 
-    def startMessage(self, users):
-        return DummySMTPMessage(self, users)
 
     def receivedHeader(*spam):
         return None
 
+
     def validateTo(self, user):
         self.delivery = SimpleDelivery(None)
-        return lambda: self.startMessage([user])
+        return lambda: DummySMTPMessage(self, [user])
+
 
     def validateFrom(self, helo, origin):
         return origin

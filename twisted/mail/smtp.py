@@ -499,7 +499,9 @@ class IMessage(Interface):
         """
 
 class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
-    """SMTP server-side protocol."""
+    """
+    SMTP server-side protocol.
+    """
 
     timeout = 600
     host = DNSNAME
@@ -925,7 +927,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
         """
         Validate the address for which the message is destined.
 
-        @type user: C{User}
+        @type user: L{User}
         @param user: The address to validate.
 
         @rtype: no-argument callable
@@ -957,10 +959,6 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
                                rfc822date())
         return "Received: %s\n\t%s\n\t%s" % (from_, by, for_)
 
-    def startMessage(self, recipients):
-        if self.delivery:
-            return self.delivery.startMessage(recipients)
-        return []
 
 
 class SMTPFactory(protocol.ServerFactory):
@@ -1735,6 +1733,7 @@ class SMTPSenderFactory(protocol.ClientFactory):
 
         @param deferred: A Deferred to callback or errback when sending
         of this message completes.
+        @type deferred: L{defer.Deferred}
 
         @param retries: The number of times to retry delivery of this
         message.

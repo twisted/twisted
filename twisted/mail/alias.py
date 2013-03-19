@@ -110,8 +110,12 @@ class AliasBase:
         memo[str(self)] = None
         return self.createMessageReceiver()
 
+
+
 class AddressAlias(AliasBase):
-    """The simplest alias, translating one email address into another."""
+    """
+    The simplest alias, translating one email address into another.
+    """
 
     implements(IAlias)
 
@@ -123,7 +127,7 @@ class AddressAlias(AliasBase):
         return '<Address %s>' % (self.alias,)
 
     def createMessageReceiver(self):
-        return self.domain().startMessage(str(self.alias))
+        return self.domain().exists(str(self.alias))
 
     def resolve(self, aliasmap, memo=None):
         if memo is None:
