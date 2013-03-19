@@ -31,8 +31,20 @@ class IFount(Interface):
         """
         Add a drain to this fount to consume its output.
 
-        @raise AlreadyDraining: if there is already a drain (i.e.  C{flowTo} has
-            already been called on this L{IFount}.)
+        This will I{synchronously} call L{flowingFrom(fount)
+        <IDrain.flowingFrom>} on C{drain} to indicate to C{drain} which
+        L{IFount} its future input will come from - I{unless} this L{IFount} is
+        exhausted and will never produce more output.  In this case, C{flowTo}
+        must I{not} call C{flowingFrom}, and must return L{None}.
+
+        Typically, this will return the result of L{drain.flowingFrom(fount)
+        <IDrain.flowingFrom>} to allow construction of pipelines with the
+        C{x.flowTo(...).flowTo(...).flowTo(...)} idiom; however,
+        implementations of L{IFount} are at liberty to return L{None} or any
+        valid L{IFount}.
+
+        @raise AlreadyDraining: if there is already a drain (i.e.  C{flowTo}
+            has already been called on this L{IFount}.)
 
         @return: another L{IFount} provider, or C{None}.  By convention, this
             will return the value of C{flowingFrom} and allow the drain to
@@ -54,21 +66,7 @@ class IFount(Interface):
         """
 
 
-    def isFlowing():
-        """
-        Return a boolean: is this fount currently delivering output?  This means
-        that it is started, it isn't paused, and it isn't ended (although it may
-        be I{ending}).
-        """
-
-
-    def isEnded():
-        """
-        Return a boolean: has this fount finished delivering all output?
-        """
-
-
-    def endFlow():
+    def stopFlow():
         """
         End the flow from this L{IFount}; it should never call L{IDrain.receive}
         again.

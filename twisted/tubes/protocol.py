@@ -91,30 +91,13 @@ class ProtocolFount(object):
         self.transport.resumeProducing()
 
 
-    def isFlowing(self):
-        """
-        Is this fount currently flowing?
-        """
-        return (
-            self._flowStarted and not self._flowEnded and not self._flowPaused
-        )
-
-
-    def isEnded(self):
-        """
-        Is this fount completely done?  (Has it finished delivering all of its
-        output to its C{drain}?)
-        """
-        return self._flowEnded
-
-
     _flowEnded = False
-    def endFlow(self):
+    def stopFlow(self):
         """
         End the flow from this fount, dropping the TCP connection in the
         process.
         """
-        # XXX really endFlow just ends the *read* connection.
+        # XXX really stopFlow just ends the *read* connection.
         self._flowEnded = True
         self._protocol.transport.loseConnection()
 

@@ -54,12 +54,12 @@ class FlowingAdapterTests(TestCase, ResultProducingMixin):
         self.assertEquals(self.tube.pump.items, ["some data"])
 
 
-    def test_endFlowStopsConnection(self):
+    def test_stopFlowStopsConnection(self):
         """
-        L{ProtocolAdapter.endFlow} will close the underlying connection.
+        L{ProtocolAdapter.stopFlow} will close the underlying connection.
         """
         self.adapter.flowTo(self.tube)
-        self.adapter.endFlow()
+        self.adapter.stopFlow()
         self.assertEquals(self.adapter.transport.disconnecting, True)
         self.assertEqual(self.adapter.isEnded(), True)
 
