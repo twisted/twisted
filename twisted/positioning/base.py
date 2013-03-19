@@ -388,7 +388,7 @@ class Heading(Angle):
     """
     The heading of a mobile object.
 
-    @ivar variation: The (optional) variation.
+    @ivar variation: The (optional) magnetic variation.
         The sign of the variation is positive for variations towards the east
         (clockwise from north), and negative for variations towards the west
         (counterclockwise from north).
