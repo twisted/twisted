@@ -31,6 +31,7 @@ from twisted.web.client import FileBodyProducer, Request, HTTPConnectionPool
 from twisted.web.client import _WebToNormalContextFactory
 from twisted.web.client import WebClientContextFactory, _HTTP11ClientFactory
 from twisted.web.iweb import UNKNOWN_LENGTH, IBodyProducer, IResponse
+from twisted.web.http_headers import Headers
 from twisted.web._newclient import HTTP11ClientProtocol, Response
 from twisted.web.error import SchemeNotSupported
 
@@ -2102,6 +2103,9 @@ class GetBodyTests(unittest.TestCase):
         code = 200
         phrase = "OK"
 
+        def __init__(self, headers=None):
+            self.headers = headers or Headers()
+
         def deliverBody(self, protocol):
             self.protocol = protocol
 
@@ -2139,3 +2143,115 @@ class GetBodyTests(unittest.TestCase):
         response.protocol.dataReceived("first")
         response.protocol.connectionLost(Failure(ConnectionLost()))
         self.failureResultOf(d).trap(ConnectionLost)
+
+
+    def test_getJSONBody(self):
+        """
+        When L{getJSONBody} is called with a response containing valid
+        JSON, it returns a L{Deferred} that fires with the decoded JSON.
+        """
+        response = self.FakeResponse()
+        d = client.getJSONBody(response)
+        response.protocol.dataReceived('{"name": "value"}')
+        response.protocol.connectionLost(Failure(ConnectionDone()))
+        self.assertEqual(self.successResultOf(d), {'name': 'value'})
+
+
+    def test_getJSONBodyInvalid(self):
+        """
+        When L{getJSONBody} is called with a response containing invalid
+        JSON, it returns a L{Deferred} that fails with L{ValueError}.
+        """
+        response = self.FakeResponse()
+        d = client.getJSONBody(response)
+        response.protocol.dataReceived("'test'")
+        response.protocol.connectionLost(Failure(ConnectionDone()))
+        self.failureResultOf(d).check(ValueError)
+
+
+
+    def test_getTextBody(self):
+        """
+        When L{getTextBody} is called with a response containing
+        ASCII encoded text, it retruns a deferred that fires with
+        a L{unicode} object.
+        """
+        response = self.FakeResponse()
+        d = client.getTextBody(response)
+        response.protocol.dataReceived(b"test")
+        response.protocol.connectionLost(Failure(ConnectionDone()))
+        body = self.successResultOf(d)
+        self.assertIsInstance(body, unicode)
+        self.assertEqual(body, u"test")
+
+
+
+
+    def test_getTextBody_Latin1(self):
+        """
+        When L{getTextBody} is called with a response containing
+        ASCII encoded text, it retruns a deferred that fires with
+        a L{unicode} object.
+        """
+        response = self.FakeResponse()
+        d = client.getTextBody(response)
+        response.protocol.dataReceived(b"\xc5")
+        response.protocol.connectionLost(Failure(ConnectionDone()))
+        body = self.successResultOf(d)
+        self.assertIsInstance(body, unicode)
+        self.assertEqual(body, u"\xc5")
+
+
+
+
+    def test_getTextBody_UTF8(self):
+        """
+        When L{getTextBody} is called with a response containing
+        UTF-8 encoded text, it retruns a deferred that fires with
+        a L{unicode} object.
+        """
+        response = self.FakeResponse()
+        d = client.getTextBody(response, 'UTF-8')
+        response.protocol.dataReceived(b"\xe2\x98\x83")
+        response.protocol.connectionLost(Failure(ConnectionDone()))
+        body = self.successResultOf(d)
+        self.assertIsInstance(body, unicode)
+        self.assertEqual(body, u"\u2603")
+
+
+
+
+    def test_getTextBody_withContentType_UTF8(self):
+        """
+        When L{getTextBody} is called with a response containing
+        ASCII encoded text, it retruns a deferred that fires with
+        a L{unicode} object.
+        """
+        response = self.FakeResponse(
+                Headers({'Content-Type': ['text/plain; charset=utf-8']}))
+        d = client.getTextBody(response)
+        response.protocol.dataReceived(b"\xe2\x98\x83")
+        response.protocol.connectionLost(Failure(ConnectionDone()))
+        body = self.successResultOf(d)
+        self.assertIsInstance(body, unicode)
+        self.assertEqual(body, u"\u2603")
+
+
+
+
+    def test_getTextBody_withMultipleContentType(self):
+        """
+        When L{getTextBody} is called with a response containing
+        ASCII encoded text, it retruns a deferred that fires with
+        a L{unicode} object.
+        """
+        headers = Headers({'Content-Type':
+            ['text/plain; charset=latin1',
+                              'text/plain; charset=utf-8']})
+        response = self.FakeResponse(headers)
+        d = client.getTextBody(response)
+        response.protocol.dataReceived(b"\xe2\x98\x83")
+        response.protocol.connectionLost(Failure(ConnectionDone()))
+        body = self.successResultOf(d)
+        self.assertIsInstance(body, unicode)
+        self.assertEqual(body, u"\u2603")

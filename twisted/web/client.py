@@ -9,6 +9,7 @@ HTTP client.
 from __future__ import division, absolute_import
 
 import os, types
+import json, cgi
 try:
     from urlparse import urlunparse
     from urllib import splithost, splittype
@@ -1634,19 +1635,67 @@ class _GetBodyProtocol(protocol.Protocol):
 
 def getBody(response):
     """
-    Get the body of an {IResponse} and return it as a byte string.
+    Get the body of an L{IResponse} and return it as a byte string.
 
     This is a helper function, for clients that don't want to incrementally
-    recieve the body of an HTTP response. 
+    recieve the body of an HTTP response.
 
     @type response: L{IResponse}
     @param response: An HTTP response
-    
+
     @return: A L{Deferred} which will fire with the body of the response.
     """
     d = defer.Deferred()
     response.deliverBody(_GetBodyProtocol(response.code, response.phrase, d))
     return d
+
+
+
+def getJSONBody(response):
+    """
+    Get the body of an L{IResponse} interpreted as JSON.
+
+    @type resposne: L{IResponse}
+    @param resposne: An HTTP response
+
+    @return: A L{Deferred} which will fire with the decoded body of the response.
+    """
+    return getBody(response).addCallback(json.loads)
+
+
+
+def _getRequestEncoding(headers):
+    contentTypes = headers.getRawHeaders('content-type')
+    if contentTypes is None:
+        return
+
+    # This seems to be the choice browsers make when encountering multiple
+    # content-type headers.
+    contentType, params = cgi.parse_header(contentTypes[-1])
+
+    if 'charset' in params:
+        return params.get('charset').strip("'\"")
+
+
+
+def getTextBody(response, defaultEncoding='ISO-8859-1'):
+    """
+    Get the body of an L{IResponse} converted to unicode.
+
+    C{getTextBody} tries to guess the content type from the HTTP headers.
+
+    @type resposne: L{IResponse}
+    @param resposne: An HTTP response
+
+    @type defaultEncoding: L{str}
+    @param defaultEncoding: default encoding to use, if it can't be guessed.
+
+    @return: A L{Deferred} which will fire with the decoded body of the response.
+    """
+    encoding = _getRequestEncoding(response.headers) or defaultEncoding
+    def decode(body):
+        return body.decode(encoding)
+    return getBody(response).addCallback(decode)
 
 
 
