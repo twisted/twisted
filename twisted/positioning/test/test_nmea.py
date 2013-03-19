@@ -320,10 +320,10 @@ class NMEASentenceTests(NMEAReceiverSetup, TestCase):
              "}>"),
         ]
 
-        for sentence, repr_ in sentencesWithExpectedRepr:
+        for sentence, expectedRepr in sentencesWithExpectedRepr:
             self.protocol.lineReceived(sentence)
             received = self.receiver.receivedSentence
-            self.assertEquals(repr(received), repr_)
+            self.assertEquals(repr(received), expectedRepr)
 
 
 
