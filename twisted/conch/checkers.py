@@ -6,7 +6,10 @@
 Provide L{ICredentialsChecker} implementations to be used in Conch protocols.
 """
 
-import os, base64, binascii, errno
+import base64
+import binascii
+import errno
+import os
 try:
     import pwd
 except ImportError:
@@ -119,57 +122,34 @@ class UNIXPasswordDatabase:
 
 
 
-def _verifySSHKeySignature(credentials, publicKey=None):
+def keysFromStrings(keyStrings, keyType="public_openssh"):
     """
-    Verify the key signature of the public key, which should bave been
-    derived from the credentials.  If successful, returns None.
+    Turns an iterable of strings into a generator of keys.
 
-    @param credentials: The credentials offered by the user.
-    @type credentials: L{ISSHPrivateKey} provider
+    @param keyStrings: an iterable of strings containing keys of C{keyType}
+    @type filepaths: C{iterable} of C{str}
 
-    @param publicKey: A public key object to verify the signature of.  This
-        key should have been derived from the credentials, since it will
-        be verify the signature and signed data from the credentials.  If not
-        provided, it will be calculated from the credentials, but if it had
-        already been created it can be passed as an optimization.
-    @type publicKey: L{twisted.conch.ssh.keys.Key}
+    @param keyType: The type of key is represented by the keys in C{filepaths}.
+        By default, it is "public_openssh".  If C{None} is passed, the type
+        will be guessed.
+    @type keyType: C{str} or C{None}
 
-    @raise UnauthorizedLogin: if the user provides an invalid signature.
-
-    @raise ValidPublicKey: if the key matches the user but the credentials
-        do not include a signature. See L{error.ValidPublicKey} for more
-        information.
-
-    @return None
+    @return: a C{generator} object whose values L{twisted.conch.ssh.keys.Key}
+        objects corresponding to the key
     """
-    if not credentials.signature:
-        raise error.ValidPublicKey()
-
-    try:
-        if publicKey is None:
-            publicKey = keys.Key.fromString(credentials.blob)
-        publicKey.verify(credentials.signature, credentials.sigData)
-    except:  # any error should be treated as a failed login
-        log.err()
-        raise UnauthorizedLogin('error while verifying key')
-
-    raise UnauthorizedLogin("unable to verify key")
+    return (keys.Key.fromString(keyString, type=keyType) for
+            keyString in keyStrings)
 
 
 
-def authenticateAgainstFiles(keyToCheck, filepaths, keyType="public_openssh",
-                             ownerIds=None):
+def keysFromFilepaths(filepaths, keyType="public_openssh", ownerIds=None):
     """
-    Check a public key against an iterable of files.  If the ownerIds are
-    provided, when the file is not readable due to permissions it will be
-    retried as that ownerId.
+    Turns an iterable of absolute filenames (the full path) into a generator
+    of keys.
 
-    @param keyToCheck: the key to check the contents of the filepath against
-    @type keyToCheck: L{twisted.conch.ssh.keys.Key}
-
-    @param filepaths: an iterable of filepaths containing keys of C{keyType}
-        to check C{keyToCheck} against
-    @type filepaths: C{iterable} of L{twisted.python.filepath.FilePath}
+    @param filenames: an iterable of C{FilePaths} corresponding to files
+        containing keys of C{keyType}
+    @type filenames: C{iterable} of L{twisted.python.filepath.FilePath}
 
     @param keyType: The type of key is represented by the keys in C{filepaths}.
         By default, it is "public_openssh".  If C{None} is passed, the type
@@ -182,59 +162,86 @@ def authenticateAgainstFiles(keyToCheck, filepaths, keyType="public_openssh",
         content is made.
     @type ownerIds: C{tuple} of C{(uid, gid)}
 
-    @return: True if the C{keyToCheck} matches one of the keys in C{filepaths},
-        False else
-    @rtype: C{boolean}
+    @return: a C{generator} object whose values L{twisted.conch.ssh.keys.Key}
+        objects corresponding to the key
     """
-    for filepath in filepaths:
-        if filepath.exists():
-            try:
-                content = filepath.getContents()
-            except IOError as e:
-                if ownerIds is not None and e.errno == errno.EACCES:
-                    content = runAsEffectiveUser(ownerIds[0], ownerIds[1],
-                                                 filepath.getContents())
-                else:
-                    raise
-            if keys.Key.fromString(content, type=keyType) == keyToCheck:
-                return True
+    def _tryGetContent(filepath):
+        try:
+            return filepath.getContents()
+        except IOError as e:
+            if ownerIds is not None and e.errno == errno.EACCES:
+                return runAsEffectiveUser(ownerIds[0], ownerIds[1],
+                                          filepath.getContents())
+            else:
+                raise
 
-    return False
+    return keysFromStrings((_tryGetContent(fp) for fp in filepaths
+                            if fp.exists()), keyType)
 
 
-def authenticateAgainstStrings(keyToCheck, keyStrings,
-                               keyType="public_openssh"):
+
+def authenticateAndVerifySSHKey(authorizedKeys, credentials):
     """
-    Check a public key against an iterable of strings.
+    Authenticates the credentials against a bunch of authorized keys,
+    and then if the key is valid, verifies the key signature.
 
-    @param keyToCheck: the key to check the contents of the filepath against
-    @type keyToCheck: L{twisted.conch.ssh.keys.Key}
+    This is important because in the SSH protocol (RFC 4252, Section 7), the
+    public key blob is sent along with other info first.  The server then must
+    determine whether this blob is a valid authenticator for the user.  If
+    no signature is provided, C{SSH_MSG_USERAUTH_PK_OK} is sent back to the
+    client to indicate that the key is valid, but not signed.
 
-    @param keyStrings: an iterable of strings containing keys of C{keyType}
-        to check C{keyToCheck} against
-    @type filepaths: C{iterable} of C{str}
+    The client may then send the signed key again, and if the key is a valid
+    authenticator and it is correctly signed, then if this is the end of
+    the authentications required by the server then the server must send a
+    C{SSH_MSG_USERAUTH_SUCCESS}.
 
-    @param keyType: The type of key is represented by the keys in C{filepaths}.
-        By default, it is "public_openssh".  If C{None} is passed, the type
-        will be guessed.
-    @type keyType: C{str} or C{None}
+    The intent is for this method to be called for both the initial non-signed
+    check and for the signed check.
 
-    @return: True if the C{keyToCheck} matches one of the keys in
-        C{keyStrings}, False else
-    @rtype: C{boolean}
+    If the key is unsigned, then L{error.validPublicKey} is raised, which
+    indicates that a C{SSH_MSG_USERAUTH_PK_OK} should be sent.
+
+
+    @param credentials: The credentials offered by the user.
+    @type credentials: L{ISSHPrivateKey} provider
+
+    @param authorizedKeys: a generator of key objects that are valid
+        authenticators for the user.  The functions L{keysFromStrings} or
+        L{keysFromFilepaths} can be used to generate this parameter.
+        A generator is required so that, in the case of files, no more file
+        access than necessary needs to occur.
+    @type authorizedKeys: C{generator} of L{twisted.conch.ssh.keys.Key}
+
+    @raise UnauthorizedLogin: if the user provides invalid credentials
+
+    @raise ValidPublicKey: if the key is a a valid authenticator for the user
+        (matches one of the authorized keys) but the credentials do not
+        include a signature. See L{error.ValidPublicKey} for more information.
+
+    @return: the username in the credentials if verification is successful -
+        if unsuccessful in any way an exception will be raised
     """
-    for keyString in keyStrings:
-        if keys.Key.fromString(keyString, type=keyType) == keyToCheck:
-            return True
-    return False
+    publicKey = keys.Key.fromString(credentials.blob)
+    # because the argument to any is a generator, any only evaluates enough
+    # items to get a True and no more
+    if not any((key == publicKey for key in authorizedKeys)):
+        raise UnauthorizedLogin("invalid key")
 
+    if not credentials.signature:
+        raise error.ValidPublicKey()
 
-def _authenticateAndVerifySSHKey(credentials, validKeys,
-                                keyType="public_openssh"):
-    """
-    Authenticate a set of user credentials against an iterable of valid
-    keys.
-    """
+    verified = False
+    try:
+        if publicKey.verify(credentials.signature, credentials.sigData):
+            return credentials.username
+    except Exception as e:  # any error should be treated as a failed login
+        log.err(e)
+        raise UnauthorizedLogin('error while verifying key')
+
+    if not verified:
+        raise UnauthorizedLogin("unable to verify key")
+
 
 
 @implementer(ICredentialsChecker)
@@ -248,8 +255,13 @@ class SSHPublicKeyDatabase:
     _userdb = pwd
 
     def requestAvatarId(self, credentials):
-        d = defer.maybeDeferred(self.checkKey, credentials)
-        d.addCallback(self._cbRequestAvatarId, credentials)
+        def _getAuthorizedKeys():
+            ouid, ogid = self._userdb.getpwnam(credentials.username)[2:4]
+            return keysFromFilepaths(self.getAuthorizedKeysFiles(credentials),
+                                     ownerIds=(ouid, ogid))
+
+        d = defer.maybeDeferred(_getAuthorizedKeys)
+        d.addCallback(authenticateAndVerifySSHKey, credentials)
         d.addErrback(self._ebRequestAvatarId)
         return d
 
