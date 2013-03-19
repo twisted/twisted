@@ -713,6 +713,8 @@ class MemoryProcessTransport(object):
 
     def __init__(self):
         self.dataList = []
+        self.host = ProcessAddress()
+        self.peer = ProcessAddress()
 
 
     def writeToChild(self, childFD, data):
@@ -725,11 +727,11 @@ class MemoryProcessTransport(object):
 
 
     def getPeer(self):
-        return ProcessAddress()
+        return self.peer
 
 
     def getHost(self):
-        return ProcessAddress()
+        return self.host
 
 
 
@@ -963,18 +965,22 @@ class ProcessEndpointTransportTests(unittest.TestCase):
 
     def test_getHost(self):
         """
-        A call to the getHost method of a L{_ProcessEndpointTransport} instance
-        calls the process transport's getHost.
+        L{_ProcessEndpointTransport.getHost} returns a L{ProcessAddress}
+        instance matching the process C{getHost}.
         """
-        self.assertIsInstance(self.endpointTransport.getHost(), ProcessAddress)
+        host = self.endpointTransport.getHost()
+        self.assertIsInstance(host, ProcessAddress)
+        self.assertIdentical(host, self.process.host)
 
 
     def test_getPeer(self):
         """
-        A call to the getPeer method of a L{_ProcessEndpointTransport} instance
-        calls the process transport's getPeer.
+        L{_ProcessEndpointTransport.getPeer} returns a L{ProcessAddress}
+        instance matching the process C{getPeer}.
         """
-        self.assertIsInstance(self.endpointTransport.getPeer(), ProcessAddress)
+        peer = self.endpointTransport.getPeer()
+        self.assertIsInstance(peer, ProcessAddress)
+        self.assertIdentical(peer, self.process.peer)
 
 
 
@@ -1038,6 +1044,10 @@ class WrappedIProtocolTests(unittest.TestCase):
             self.assertEqual(self.eventLog['executable'], wpp.executable)
             self.assertEqual(self.eventLog['data'], 'stderr1')
             self.assertEqual(self.eventLog['protocol'], wpp.protocol)
+            self.assertEqual(
+                self.eventLog['format'],
+                'Process %(executable)r wrote stderr unhandled '
+                'by %(protocol)s: %(data)s')
 
         self.d.addCallback(checkStderr)
         return self.d
@@ -1098,8 +1108,8 @@ class WrappedIProtocolTests(unittest.TestCase):
 
     def test_processEnded(self):
         """
-        Exceptions other than L{error.ProcessDone} with status=0 pass through
-        directly in processEnded.
+        Exceptions other than L{error.ProcessDone} with status=0 are turned
+        into L{error.ConnectionLost}.
         """
         self.d = self.ep.connect(self.f)
         wpp = self.ep._reactor.processProtocol
