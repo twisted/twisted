@@ -5,7 +5,11 @@
 Support for Linux ethernet and IP tunnel devices.
 """
 
-import os, errno, struct, warnings
+import os
+import fcntl
+import errno
+import struct
+import warnings
 
 from zope.interface import implementer
 
@@ -14,10 +18,14 @@ from twisted.python import log
 from twisted.internet import base, error, task, interfaces, defer
 from twisted.pair import ethernet, raw
 
+
+
 IFNAMSIZ = 16
 TUNSETIFF = 0x400454ca
 TUNGETIFF = 0x800454d2
 TUN_KO_PATH = b"/dev/net/tun"
+
+
 
 class TunnelType(Flags):
     # XXX these are the kernel internal names I think
@@ -44,6 +52,7 @@ class TunnelFlags(Flags):
 
 @implementer(interfaces.IAddress)
 class TunnelAddress(object):
+
     def __init__(self, type, name):
         self.type = type
         self.name = name
@@ -65,26 +74,20 @@ class TuntapPort(base.BasePort):
     TODO: Share general start/stop etc implementation details with
     twisted.internet.udp.Port.
     """
-    from os import (
-        open as _open, read as _read, write as _write, close as _close)
-    from fcntl import ioctl as _ioctl
 
-    _open = staticmethod(_open)
-    _read = staticmethod(_read)
-    _write = staticmethod(_write)
-    _close = staticmethod(_close)
-    _ioctl = staticmethod(_ioctl)
+    _open = staticmethod(os.open)
+    _read = staticmethod(os.read)
+    _write = staticmethod(os.write)
+    _close = staticmethod(os.close)
+    _ioctl = staticmethod(fcntl.ioctl)
 
-    from os import O_RDWR as _O_RDWR, O_NONBLOCK as _O_NONBLOCK
-
+    _O_RDWR = os.O_RDWR
+    _O_NONBLOCK = os.O_NONBLOCK
     # Introduced in Python 3.x
-    try:
-        from os import O_CLOEXEC as _O_CLOEXEC
-    except ImportError:
-        # Ubuntu 12.04, /usr/include/x86_64-linux-gnu/bits/fcntl.h
-        _O_CLOEXEC = 0o2000000
+    # Ubuntu 12.04, /usr/include/x86_64-linux-gnu/bits/fcntl.h
+    _O_CLOEXEC = getattr(os, "O_CLOEXEC", 0o2000000)
 
-    maxThroughput = 256 * 1024 # max bytes we read in one eventloop iteration
+    maxThroughput = 256 * 1024  # Max bytes we read in one eventloop iteration
 
     def __init__(self, interface, proto, maxPacketSize=8192, reactor=None):
         if ethernet.IEthernetProtocol.providedBy(proto):
@@ -107,7 +110,7 @@ class TuntapPort(base.BasePort):
     def __repr__(self):
         args = (self.protocol.__class__,)
         if self.connected:
-            args =  args + ("",)
+            args = args + ("",)
         else:
             args = args + ("not ",)
         args = args + (self._mode.name, self.interface)
@@ -134,7 +137,8 @@ class TuntapPort(base.BasePort):
 
 
     def _bindSocket(self):
-        log.msg("%s starting on %s"%(self.protocol.__class__, self.interface))
+        log.msg("%s starting on %s" % (self.protocol.__class__,
+                                       self.interface))
         try:
             fileno, interface = self._openTunnel(
                 self.interface, self._mode | TunnelFlags.IFF_NO_PI)
