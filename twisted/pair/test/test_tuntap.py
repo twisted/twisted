@@ -849,7 +849,7 @@ class TunnelTestsMixin(object):
         warnings = self.flushWarnings([self.test_loseConnection])
         self.assertEqual(DeprecationWarning, warnings[0]['category'])
         self.assertEqual(
-            "TuntapPort.loseConnection is deprecated since Twisted 12.3.  "
+            "TuntapPort.loseConnection is deprecated since Twisted 13.1  "
             "Use TuntapPort.stopListening instead.",
             warnings[0]['message'])
         self.assertEqual(1, len(warnings))
@@ -1111,7 +1111,7 @@ class TunnelAddressTests(SynchronousTestCase):
         self.assertEqual("tap0", address[1])
         warnings = self.flushWarnings([self.test_indexing])
         message = (
-            "TunnelAddress.__getitem__ is deprecated since Twisted 12.3.  "
+            "TunnelAddress.__getitem__ is deprecated since Twisted 13.1  "
             "Use attributes instead.")
         self.assertEqual(DeprecationWarning, warnings[0]['category'])
         self.assertEqual(message, warnings[0]['message'])
