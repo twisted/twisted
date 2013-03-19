@@ -206,11 +206,13 @@ class NMEAReceiverSetup:
 
     @ivar receiver: An NMEA receiver that remembers the last sentence.
     @type receiver: L{NMEATestReceiver}
-
     @ivar protocol: An NMEA protocol attached to the receiver.
     @type protocol: L{twisted.positioning.nmea.NMEAProtocol}
     """
     def setUp(self):
+        """
+        Sets up an NMEA receiver.
+        """
         self.receiver = NMEATestReceiver()
         self.protocol = nmea.NMEAProtocol(self.receiver)    
 

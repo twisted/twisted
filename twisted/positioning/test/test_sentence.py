@@ -163,7 +163,7 @@ class MixinTests(TestCase, SentenceTestsMixin):
         """
         sentenceAttributes = self.protocol.getSentenceAttributes()
         self.assertNotIn(None, sentenceAttributes)
-        
+
         sentenceContents = self.protocol.SENTENCE_CONTENTS
         sentenceSpecAttributes = itertools.chain(*sentenceContents.values())
         self.assertIn(None, sentenceSpecAttributes)
