@@ -1,10 +1,10 @@
 # -*- test-case-name: twisted.positioning.test.test_base,twisted.positioning.test.test_sentence -*-
-# Copyright (c) 2009-2011 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 """
 Generic positioning base classes.
 
-@since: 11.1
+@since: 13.0
 """
 from zope.interface import implements
 from twisted.python.util import FancyEqMixin
@@ -95,6 +95,7 @@ class InvalidChecksum(Exception):
     """
 
 
+
 class BaseSentence(object):
     """
     A base sentence class for a particular protocol.
@@ -178,7 +179,7 @@ class PositioningSentenceProducerMixin(object):
     (such as the C{NMEAProtocol} and the C{ClassicGPSDProtocol}) implement the
     L{IPositioningSentenceProducingProtocol} interface.
     """
-    #@classmethod
+    @classmethod
     def getSentenceAttributes(cls):
         """
         Returns a set of all attributes that might be found in the sentences
@@ -200,10 +201,7 @@ class PositioningSentenceProducerMixin(object):
         return attributes
 
 
-    getSentenceAttributes = classmethod(getSentenceAttributes)
 
-
-    
 class Angle(object, FancyEqMixin):
     """
     An object representing an angle.
@@ -390,7 +388,7 @@ class Heading(Angle):
         self.variation = variation
 
 
-    #@classmethod
+    @classmethod
     def fromFloats(cls, angleValue=None, variationValue=None):
         """
         Constructs a Heading from the float values of the angle and variation.
@@ -399,15 +397,14 @@ class Heading(Angle):
         @type angleValue: C{float}
         @param variationValue: The value of the variation of this heading.
         @type variationValue: C{float}
+        @return A C{Heading } with the given values.
         """
         variation = Angle(variationValue, VARIATION)
         return cls(angleValue, variation)
 
 
-    fromFloats = classmethod(fromFloats)
-
-
-    def _getCorrectedHeading(self):
+    @property
+    def correctedHeading(self):
         """
         Corrects the heading by the given variation. This is sometimes known as
         the true heading.
@@ -421,9 +418,6 @@ class Heading(Angle):
 
         angle = (self.inDecimalDegrees - self.variation.inDecimalDegrees) % 360
         return Angle(angle, HEADING)
-
-
-    correctedHeading = property(_getCorrectedHeading)
 
 
     def setSign(self, sign):
@@ -489,13 +483,13 @@ class Coordinate(Angle, FancyEqMixin):
 
     HEMISPHERES_BY_TYPE_AND_SIGN = {
         LATITUDE: [
-            NORTH, # positive
-            SOUTH, # negative
+            NORTH, # Positive
+            SOUTH, # Negative
         ],
 
         LONGITUDE: [
-            EAST, # positve
-            WEST, # negative
+            EAST, # Positve
+            WEST, # Negative
         ]
     }
 
@@ -788,6 +782,9 @@ class PositionError(object, FancyEqMixin):
         """
         Gets a particular dilution of position value.
 
+        @param dopType: The type of dilution of position to get. One of
+            ('pdop', 'hdop', 'vdop').
+        @type dopType: C{str}
         @return: The DOP if it is known, C{None} otherwise.
         @rtype: C{float} or C{NoneType}
         """

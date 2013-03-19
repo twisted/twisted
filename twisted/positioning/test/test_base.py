@@ -1,4 +1,4 @@
-# Copyright (c) 2009-2011 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 """
 Test cases for positioning primitives.
@@ -57,8 +57,9 @@ class HeadingTests(TestCase):
         """
         Tests the repr of a heading without a variation.
         """
-        h = base.Heading(1.)
-        self.assertEquals(repr(h), "<Heading (1.0 degrees, unknown variation)>")
+        heading = base.Heading(1.)
+        expectedRepr = "<Heading (1.0 degrees, unknown variation)>"
+        self.assertEquals(repr(heading), expectedRepr)
 
 
     def test_headingWithVariationRepr(self):
@@ -100,7 +101,7 @@ class HeadingTests(TestCase):
         """
         Helper function for verifying that bad values raise C{ValueError}.
 
-        Passes C{**kw} to L{base.Heading.fromFloats}, and checks if that raises.
+        @param kw: The keyword arguments passed to L{base.Heading.fromFloats}.
         """
         self.assertRaises(ValueError, base.Heading.fromFloats, **kw)
 
@@ -601,6 +602,15 @@ class PositionErrorTests(TestCase):
         """
         Tests the DOP values in a position error, and the repr of that
         position error.
+
+        @param pe: The position error under test.
+        @type pe: C{PositionError}
+        @param pdop: The expected position dilution of precision.
+        @type pdop: C{float} or C{NoneType}
+        @param hdop: The expected horizontal dilution of precision.
+        @type hdop: C{float} or C{NoneType}
+        @param vdop: The expected vertical dilution of precision.
+        @type vdop: C{float} or C{NoneType}
         """
         self.assertEquals(pe.pdop, pdop)
         self.assertEquals(pe.hdop, hdop)

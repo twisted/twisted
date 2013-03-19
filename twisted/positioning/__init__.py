@@ -1,7 +1,8 @@
-# Copyright (c) 2009-2011 Twisted Matrix Laboratories.
+# -*- test-case-name: twisted.positioning.test -*-
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 """
 The Twisted positioning framework.
 
-@since: 11.1
+@since: 13.0
 """

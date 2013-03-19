@@ -1,11 +1,11 @@
 # -*- test-case-name: twisted.positioning.test.test_nmea -*-
-# Copyright (c) 2009-2011 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 """
 Classes for working with NMEA (and vaguely NMEA-like) sentence producing
 devices.
 
-@since: 11.1
+@since: 13.0
 """
 import itertools
 import operator
@@ -45,12 +45,13 @@ def split(sentence):
     >>> split("$GPGGA,spam,eggs*00")
     ['GPGGA', 'spam', 'eggs']
     """
-    if sentence[-3] == "*": # sentence with checksum
+    if sentence[-3] == "*": # Sentence with checksum
         return sentence[1:-3].split(',')
-    elif sentence[-1] == "*": # sentence without checksum
+    elif sentence[-1] == "*": # Sentence without checksum
         return sentence[1:-1].split(',')
     else:
-        raise base.InvalidSentence("malformed sentence %s" % sentence)
+        raise base.InvalidSentence("malformed sentence %s" % (sentence,))
+
 
 
 def validateChecksum(sentence):
@@ -221,9 +222,9 @@ class NMEAProtocol(LineReceiver, base.PositioningSentenceProducerMixin):
             'longitudeHemisphere',
 
             'elevation',
-            'numberOfIterations', # unused
-            'numberOfDopplerIntervals', # unused 
-            'updateDistanceInNauticalMiles', # unused
+            'numberOfIterations', # Unused
+            'numberOfDopplerIntervals', # Unused
+            'updateDistanceInNauticalMiles', # Unused
             'satellitePRN',
         ],
 
@@ -413,15 +414,15 @@ class NMEAAdapter(object):
 
         if self.DATESTAMP_HANDLING == self.INTELLIGENT_DATESTAMPS:
             if year > self.INTELLIGENT_DATE_THRESHOLD:
-                year = int('19%02d' % year)
+                year = int('19%02d' % (year,))
             else:
-                year = int('20%02d' % year)
+                year = int('20%02d' % (year,))
 
         elif self.DATESTAMP_HANDLING == self.DATESTAMPS_FROM_20XX:
-            year = int('20%02d' % year)
+            year = int('20%02d' % (year,))
 
         elif self.DATESTAMP_HANDLING == self.DATESTAMPS_FROM_19XX:
-            year = int('19%02d' % year)
+            year = int('19%02d' % (year,))
 
         else:
             raise ValueError("unknown datestamp handling method (%s)"
@@ -463,6 +464,10 @@ class NMEAAdapter(object):
 
         @param coordinateType: Coordinate type. One of L{base.LATITUDE},
             L{base.LONGITUDE} or L{base.VARIATION}.
+        @param sentenceDataKey: The key name of the hemisphere sign being
+            fixed in the sentence data. If unspecified, C{coordinateType} is
+            used.
+        @type sentenceDataKey: C{str} (unless C{None})
         """
         sentenceDataKey = sentenceDataKey or coordinateType
         sign = self._getHemisphereSign(coordinateType)
@@ -485,8 +490,8 @@ class NMEAAdapter(object):
             L{base.LONGITUDE} or L{base.VARIATION}.
         """
         if coordinateType in (LATITUDE, LONGITUDE):
-            hemisphereKey = (base.Coordinate.ANGLE_TYPE_NAMES[coordinateType]
-                             + 'Hemisphere')
+            baseName = base.Coordinate.ANGLE_TYPE_NAMES[coordinateType]
+            hemisphereKey = baseName + 'Hemisphere'
         elif coordinateType == VARIATION:
             hemisphereKey = 'magneticVariationDirection'
         else:
@@ -495,9 +500,9 @@ class NMEAAdapter(object):
         hemisphere = getattr(self.currentSentence, hemisphereKey)
 
         try: 
-           return self.COORDINATE_SIGNS[hemisphere.upper()]
+            return self.COORDINATE_SIGNS[hemisphere.upper()]
         except KeyError:
-            raise ValueError("bad hemisphere/direction: %s" % hemisphere)
+            raise ValueError("bad hemisphere/direction: %s" % (hemisphere,))
 
 
     def _convert(self, sourceKey, converter=float, destinationKey=None):
@@ -565,7 +570,8 @@ class NMEAAdapter(object):
     }
 
 
-    def _fixUnits(self, unitKey=None, valueKey=None, sourceKey=None, unit=None):
+    def _fixUnits(self, unitKey=None, valueKey=None, sourceKey=None,
+        unit=None):
         """
         Fixes the units of a certain value.
 
@@ -608,7 +614,8 @@ class NMEAAdapter(object):
         """
         # To anyone who knows NMEA, this method's name should raise a chuckle's
         # worth of schadenfreude. 'Fix' GSV? Hah! Ludicrous.
-        self._sentenceData['_partialBeaconInformation'] = base.BeaconInformation()
+        beaconInformation = base.BeaconInformation()
+        self._sentenceData['_partialBeaconInformation'] = beaconInformation
 
         for index in range(4):
             keys = ["%s_%i" % (key, index) for key in self.GSV_KEYS]
@@ -624,8 +631,7 @@ class NMEAAdapter(object):
                 continue # pragma: no cover
 
             satellite = base.Satellite(prn, azimuth, elevation, snr)
-            bi = self._sentenceData['_partialBeaconInformation']
-            bi.beacons.add(satellite)
+            beaconInformation.beacons.add(satellite)
 
 
     def _fixGSA(self):
@@ -639,7 +645,7 @@ class NMEAAdapter(object):
             C{_usedPRNs}.
         """
         self._sentenceData['_usedPRNs'] = set()
-        for key in ("usedSatellitePRN_%d" % x for x in range(12)):
+        for key in ("usedSatellitePRN_%d" % (x,) for x in range(12)):
             prn = getattr(self.currentSentence, key, None)
             if prn is not None:
                 self._sentenceData['_usedPRNs'].add(int(prn))
@@ -811,8 +817,9 @@ class NMEAAdapter(object):
         C{datetime.datetime} object suitable for sending to the
         L{IPositioningReceiver}.
         """
-        if not ('_date' in self._sentenceData or '_time' in self._sentenceData):
-            return
+        for key in ["_date", "_time"]:
+            if key not in self._sentenceData:
+                return
 
         date, time = [self._sentenceData.get(key) or self._state.get(key)
                       for key in ('_date', '_time')]
@@ -828,14 +835,14 @@ class NMEAAdapter(object):
         """
         Fires sentence callbacks for the current sentence.
 
-        A callback will only fire if all of the keys it requires are present in
-        the current state and at least one such field was altered in the
+        A callback will only fire if all of the keys it requires are present
+        in the current state and at least one such field was altered in the
         current sentence.
 
         The callbacks will only be fired with data from L{self._state}.
         """
-        for callbackName, requiredFields in self.REQUIRED_CALLBACK_FIELDS.items():
-            callback = getattr(self._receiver, callbackName)
+        for name, requiredFields in self.REQUIRED_CALLBACK_FIELDS.items():
+            callback = getattr(self._receiver, name)
 
             kwargs = {}
             atLeastOnePresentInSentence = False
