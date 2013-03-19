@@ -179,9 +179,12 @@ class SSHPublicKeyDatabaseTestCase(TestCase):
     Tests for L{SSHPublicKeyDatabase}.
     """
     skip = euidSkip or dependencySkip
+    if not skip:
+        pubKeyDatabaseType = checkers.SSHPublicKeyDatabase
+
 
     def setUp(self):
-        self.checker = checkers.SSHPublicKeyDatabase()
+        self.checker = self.pubKeyDatabaseType()
         self.key1 = base64.encodestring("foobar")
         self.key2 = base64.encodestring("eggspam")
         self.content = "t1 %s foo\nt2 %s egg\n" % (self.key1, self.key2)
@@ -199,6 +202,10 @@ class SSHPublicKeyDatabaseTestCase(TestCase):
             'user', 'password', 1, 2, 'first last',
             self.mockos.path.path, '/bin/shell')
         self.checker._userdb = userdb
+
+        self.validCredentials = SSHPrivateKey(
+            'test', 'ssh-rsa', keydata.publicRSA_openssh, 'foo',
+            keys.Key.fromString(keydata.privateRSA_openssh).sign('foo'))
 
 
     def _testCheckKey(self, filename):
@@ -259,33 +266,44 @@ class SSHPublicKeyDatabaseTestCase(TestCase):
         self.assertEqual(self.mockos.setegidCalls, [2, 1234])
 
 
+    def _trueCheckKey(self, ignored):
+        """
+        Always returns True
+        """
+        return True
+
+
+    def _falseCheckKey(self, ignored):
+        """
+        Always returns False
+        """
+        return False
+
+
     def test_requestAvatarId(self):
         """
         L{SSHPublicKeyDatabase.requestAvatarId} should return the avatar id
-        passed in if its C{_checkKey} method returns True.
+        passed in if its C{checkKey} method returns True and its credentials
+        are valid.
         """
-        def _checkKey(ignored):
-            return True
-        self.patch(self.checker, 'checkKey', _checkKey)
-        credentials = SSHPrivateKey(
-            'test', 'ssh-rsa', keydata.publicRSA_openssh, 'foo',
-            keys.Key.fromString(keydata.privateRSA_openssh).sign('foo'))
-        d = self.checker.requestAvatarId(credentials)
+        self.patch(self.checker, 'checkKey', self._trueCheckKey)
+
         def _verify(avatarId):
             self.assertEqual(avatarId, 'test')
+
+        d = self.checker.requestAvatarId(self.validCredentials)
         return d.addCallback(_verify)
 
 
     def test_requestAvatarIdWithoutSignature(self):
         """
+        Even if its C{checkKey} method returns true,
         L{SSHPublicKeyDatabase.requestAvatarId} should raise L{ValidPublicKey}
         if the credentials represent a valid key without a signature.  This
         tells the user that the key is valid for login, but does not actually
         allow that user to do so without a signature.
         """
-        def _checkKey(ignored):
-            return True
-        self.patch(self.checker, 'checkKey', _checkKey)
+        self.patch(self.checker, 'checkKey', self._trueCheckKey)
         credentials = SSHPrivateKey(
             'test', 'ssh-rsa', keydata.publicRSA_openssh, None, None)
         d = self.checker.requestAvatarId(credentials)
@@ -295,12 +313,11 @@ class SSHPublicKeyDatabaseTestCase(TestCase):
     def test_requestAvatarIdInvalidKey(self):
         """
         If L{SSHPublicKeyDatabase.checkKey} returns False,
-        C{_cbRequestAvatarId} should raise L{UnauthorizedLogin}.
+        C{_cbRequestAvatarId} should raise L{UnauthorizedLogin} even if the
+        sigature is valid.
         """
-        def _checkKey(ignored):
-            return False
-        self.patch(self.checker, 'checkKey', _checkKey)
-        d = self.checker.requestAvatarId(None);
+        self.patch(self.checker, 'checkKey', self._falseCheckKey)
+        d = self.checker.requestAvatarId(self.validCredentials)
         return self.assertFailure(d, UnauthorizedLogin)
 
 
@@ -310,9 +327,7 @@ class SSHPublicKeyDatabaseTestCase(TestCase):
         L{SSHPublicKeyDatabase.requestAvatarId} to return a {UnauthorizedLogin}
         failure
         """
-        def _checkKey(ignored):
-            return True
-        self.patch(self.checker, 'checkKey', _checkKey)
+        self.patch(self.checker, 'checkKey', self._trueCheckKey)
         credentials = SSHPrivateKey(
             'test', 'ssh-rsa', keydata.publicRSA_openssh, 'foo',
             keys.Key.fromString(keydata.privateDSA_openssh).sign('foo'))
@@ -320,22 +335,235 @@ class SSHPublicKeyDatabaseTestCase(TestCase):
         return self.assertFailure(d, UnauthorizedLogin)
 
 
-    def test_requestAvatarIdNormalizeException(self):
+    def test_requestAvatarId_NormalizeKeyVerificationException(self):
         """
-        Exceptions raised while verifying the key should be normalized into an
-        C{UnauthorizedLogin} failure.
+        Exceptions raised while verifying the key (making sure that the key
+        matches its signature) should be normalized into an
+        C{UnauthorizedLogin} failure
         """
-        def _checkKey(ignored):
-            return True
-        self.patch(self.checker, 'checkKey', _checkKey)
+        self.patch(self.checker, 'checkKey', self._trueCheckKey)
         credentials = SSHPrivateKey('test', None, 'blob', 'sigData', 'sig')
-        d = self.checker.requestAvatarId(credentials)
+
         def _verifyLoggedException(failure):
             errors = self.flushLoggedErrors(keys.BadKeyError)
             self.assertEqual(len(errors), 1)
             return failure
+
+        d = self.checker.requestAvatarId(credentials)
         d.addErrback(_verifyLoggedException)
         return self.assertFailure(d, UnauthorizedLogin)
+
+
+    def test_requestAvatarId_NormalizeKeyValidationException(self):
+        """
+        Exceptions raised while validating the key (matching it against
+        authorized_keys) should be normalized into an
+        C{UnauthorizedLogin} failure
+        """
+        def _checkKey(ignored):
+            raise IOError
+
+        self.patch(self.checker, 'checkKey', _checkKey)
+
+        d = self.checker.requestAvatarId(self.validCredentials)
+        return self.assertFailure(d, UnauthorizedLogin)
+
+
+
+class UNIXAccountPublicKeyCheckerTestCase(SSHPublicKeyDatabaseTestCase):
+    """
+    Tests for L{UNIXAccountPublicKeyChecker}.  This should be almost
+    completely backwards-compatible with L{SSHPublicKeyDatabase}
+    """
+    skip = euidSkip or dependencySkip
+    if not skip:
+        pubKeyDatabaseType = checkers.UNIXAccountPublicKeyChecker
+
+
+
+class BaseSSHPublicKeyCheckerTestCase(TestCase):
+    """
+    Tests for L{BaseSSHPublicKeyChecker}.
+    """
+
+    skip = dependencySkip
+
+    def _goodValidateKey(self, *args, **kwargs):
+        return self.username
+
+
+    def _badValidateKey(self, *args, **kwargs):
+        raise UnauthorizedLogin("invalid login")
+
+
+    def setUp(self):
+        self.username = 'username'
+        self.checker = checkers.BaseSSHPublicKeyChecker()
+        self.patch(self.checker, 'validateKey', self._goodValidateKey)
+        self.validCredentials = SSHPrivateKey(
+            self.username, 'ssh-rsa', keydata.publicRSA_openssh, 'signme',
+            keys.Key.fromString(keydata.privateRSA_openssh).sign('signme'))
+
+
+    def test_requestAvatarId_ValidSignature_ValidKey(self):
+        """
+        L{BaseSSHPublicKeyChecker.requestAvatarId} should return the avatar id
+        passed in if its L{validateKey} method returns True and its credentials
+        are verified.
+        """
+        def _verify(avatarId):
+            self.assertEqual(avatarId, self.username)
+
+        d = self.checker.requestAvatarId(self.validCredentials)
+        return d.addCallback(_verify)
+
+
+    def test_requestAvatarId_ValidSignature_InvalidKey(self):
+        """
+        L{BaseSSHPublicKeyChecker.requestAvatarId} should raise a
+        UnauthorizedLogin exception if its L{validateKey} method returns False,
+        even if its credentials are verified.
+        """
+        self.patch(self.checker, 'validateKey', self._badValidateKey)
+        d = self.checker.requestAvatarId(self.validCredentials)
+        return self.assertFailure(d, UnauthorizedLogin)
+
+
+    def test_requestAvatarId_WithoutSignature(self):
+        """
+        L{BaseSSHPublicKeyChecker.requestAvatarId} should raise a
+        ValidPublicKey exception if the credentials have no signature, even
+        if its L{validateKey} method returns True.
+
+        This tells the user that the key is valid for login, but does not
+        actually allow that user to do so without a signature.
+        """
+        credentials = SSHPrivateKey(
+            'test', 'ssh-rsa', keydata.publicRSA_openssh, None, None)
+        d = self.checker.requestAvatarId(credentials)
+        return self.assertFailure(d, ValidPublicKey)
+
+
+    def test_requestAvatarId_NonsensicalKey(self):
+        """
+        L{BaseSSHPublicKeyChecker.requestAvatarId} should raise an
+        UnauthorizedLogin exception if the credentials have a nonsense key,
+        even if its L{validateKey} method returns True.
+        """
+        def _verifyLoggedException(failure):
+            errors = self.flushLoggedErrors(keys.BadKeyError)
+            self.assertEqual(len(errors), 1)
+            return failure
+
+        credentials = SSHPrivateKey('test', None, 'blob', 'sigData', 'sig')
+        d = self.checker.requestAvatarId(credentials)
+        d.addErrback(_verifyLoggedException)
+        return self.assertFailure(d, UnauthorizedLogin)
+
+
+    def test_requestAvatarId_InvalidSignature(self):
+        """
+        L{BaseSSHPublicKeyChecker.requestAvatarId} should raise an
+        UnauthorizedLogin exception if the credentials' signature is wrong,
+        even if its L{validateKey} method returns True.
+        """
+        credentials = SSHPrivateKey(
+            'test', 'ssh-rsa', keydata.publicRSA_openssh, 'signme',
+            keys.Key.fromString(keydata.privateDSA_openssh).sign('signme'))
+        d = self.checker.requestAvatarId(credentials)
+        return self.assertFailure(d, UnauthorizedLogin)
+
+
+
+class FakeCred(object):
+    def __init__(self, username):
+        self.username = username
+
+
+
+class InMemorySSHPublicKeyCheckerTestCase(TestCase):
+    """
+    Tests for L{InMemorySSHPublicKeyChecker}.
+    """
+
+    skip = dependencySkip
+
+    def _getKeyPair(self, rsadsa):
+        pubKeys = [getattr(keydata, 'public%s_openssh' % (rsadsa,))]
+        nextKey = getattr(keydata, 'public%s_openssh_alternate' % (rsadsa,),
+                          None)
+        if nextKey:
+            pubKeys.append(nextKey)
+        return ([keys.Key.fromString(blob) for blob in pubKeys],
+                keys.Key.fromString(pubKeys[0]))
+
+
+    def setUp(self):
+        # build a dictionary of username:public key to pass to validateKey
+        self.checkKeys = {}
+        # build a dictionary of username:[public key] to initialize the checker
+        self.pubKeys = {}
+
+        # for simplicity, we'll use 'rsa' and 'dsa' as usernames too
+        for keyType in ('rsa', 'dsa'):
+            publist, pub = self._getKeyPair(keyType.upper())
+            self.checkKeys[keyType] = pub
+            self.pubKeys[keyType] = publist
+
+        self.checker = checkers.InMemorySSHPublicKeyChecker(self.pubKeys)
+
+
+    def test_validateKey_success(self):
+        """
+        If the key supplied to L{InMemorySSHPublicKeyChecker.validateKey}
+        matches an in-memory key of the user, the username should be returned
+        """
+        self.assertEqual(
+            'rsa',
+            self.checker.validateKey(self.checkKeys['rsa'], FakeCred('rsa')))
+
+
+    def test_validateKey_failWrongKey(self):
+        """
+        If the key supplied to L{InMemorySSHPublicKeyChecker.validateKey}
+        doesn't match any in-memory key of the user, UnauthorizedLogin should
+        be raised
+        """
+        self.assertRaises(
+            UnauthorizedLogin,
+            self.checker.validateKey, self.checkKeys['rsa'], FakeCred('dsa'))
+
+
+    def test_validateKey_failInvalidUser(self):
+        """
+        If credentials supplied to L{InMemorySSHPublicKeyChecker.validateKey}
+        are for a user that is not recognized, UnauthorizedLogin should be
+        raised.
+        """
+        self.assertRaises(
+            UnauthorizedLogin,
+            self.checker.validateKey, self.checkKeys['rsa'], FakeCred('random'))
+
+
+    def test_validateKey_failNoKey(self):
+        """
+        If no key is supplied to L{InMemorySSHPublicKeyChecker.validateKey},
+        UnauthorizedLogin should be raised.
+        """
+        self.assertRaises(
+            UnauthorizedLogin,
+            self.checker.validateKey, None, FakeCred('rsa'))
+
+
+    def test_validateKey_failNoCred(self):
+        """
+        If no credentials are supplied to
+        L{InMemorySSHPublicKeyChecker.validateKey}, UnauthorizedLogin should be
+        raised.
+        """
+        self.assertRaises(
+            UnauthorizedLogin,
+            self.checker.validateKey, self.checkKeys['rsa'], None)
 
 
 
