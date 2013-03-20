@@ -869,7 +869,7 @@ class BeaconInformation(object):
     towers).
 
     @ivar beacons: A set of visible beacons. Note that visible beacons are not
-        necessarily used in acquiring a postioning fix.
+        necessarily used in acquiring a positioning fix.
     @type beacons: C{set} of L{IPositioningBeacon}
 
     @ivar usedBeacons: An iterable of the beacons that were used in obtaining a
