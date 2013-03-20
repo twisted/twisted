@@ -1713,4 +1713,4 @@ __all__ = [
     'HTTPClientFactory', 'HTTPDownloader', 'getPage', 'downloadPage',
     'ResponseDone', 'Response', 'ResponseFailed', 'Agent', 'CookieAgent',
     'ProxyAgent', 'ContentDecoderAgent', 'GzipDecoder', 'RedirectAgent',
-    'HTTPConnectionPool', 'getBody' ]
+    'HTTPConnectionPool', 'getBody', 'getJSONBody', 'getTextBody' ]
