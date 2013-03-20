@@ -4,7 +4,7 @@
 """
 Generic positioning base classes.
 
-@since: 13.0
+@since: 13.1
 """
 from zope.interface import implements
 from twisted.python.constants import Names, NamedConstant

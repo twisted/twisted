@@ -5,7 +5,7 @@
 Classes for working with NMEA (and vaguely NMEA-like) sentence producing
 devices.
 
-@since: 13.0
+@since: 13.1
 """
 import itertools
 import operator
