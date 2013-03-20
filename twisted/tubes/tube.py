@@ -164,7 +164,7 @@ class Pump(object):
     get no-op implementation of all of L{IPump}'s required implementation so
     you can just just implement the parts you're interested in.
 
-    @ivar tube: the L{Tube} whose flow this pump is controlling.  This
+    @ivar tube: The L{Tube} whose flow this pump is controlling.  This
         attribute will be set before 'started' is called.
 
     @ivar inputType: The type of data expected to be received by C{receive}.
