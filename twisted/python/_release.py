@@ -441,8 +441,7 @@ class APIBuilder(object):
     """
     Generate API documentation from source files using
     U{pydoctor<http://codespeak.net/~mwh/pydoctor/>}.  This requires
-    pydoctor to be installed and usable (which means you won't be able to
-    use it with Python 2.3).
+    pydoctor to be installed and usable.
     """
     def build(self, projectName, projectURL, sourceURL, packagePath,
               outputPath):
@@ -1408,3 +1407,69 @@ class BuildAPIDocsScript(object):
             sys.exit("Must specify two arguments: "
                      "Twisted checkout and destination path")
         self.buildAPIDocs(FilePath(args[0]), FilePath(args[1]))
+
+
+
+class BuildDocsScript(object):
+    """
+    A thing for building the main documentation. See L{main}.
+    """
+
+    def buildDocs(self, projectRoot, template):
+        """
+        Build the main documentation of Twisted, with our project policy.
+
+        @param projectRoot: A L{FilePath} representing the root of the Twisted
+            checkout.
+        @type projectRoot: L{FilePath}
+
+        @param template: A L{FilePath} pointing to the template file that is
+            used for the look and feel of the howto documentation.
+        @type template: L{FilePath}
+        """
+        version = Project(projectRoot.child("twisted")).getVersion()
+        versionString = version.base()
+        apiURL = "http://twistedmatrix.com/documents/%s/api/" % (
+            versionString,)
+
+        dirs = {}
+        docRoot = projectRoot.child("doc")
+
+        for p in docRoot.walk():
+            if p.basename() == 'man':
+                ManBuilder().build(p)
+
+        howtoRoot = docRoot.descendant(["core", "howto"])
+
+        for p in docRoot.walk():
+            if p.basename().endswith('.xhtml'):
+                if p.parent() not in dirs:
+                    dirs[p.parent()] = True
+                    DocBuilder().build(
+                        versionString, howtoRoot, p.parent(),
+                        template,
+                        apiURL + "%s.html",
+                        False)
+
+        BookBuilder().build(howtoRoot, dirs.keys(),
+                            howtoRoot.child('book.tex'),
+                            howtoRoot.child('book.pdf'))
+
+        for path in dirs:
+            for doc in path.globChildren("*.xhtml"):
+                doc.remove()
+
+
+    def main(self, args):
+        """
+        Build the main documentation.
+
+        @type args: list of str
+        @param args: The command line arguments to process.  This must contain
+            two strings: the path to the root of the Twisted checkout and the
+            path to the Twisted website template.
+        """
+        if len(args) != 2:
+            sys.exit("Must specify two arguments: "
+                     "Twisted checkout path and template path.")
+        self.buildDocs(FilePath(args[0]), FilePath(args[1]))
