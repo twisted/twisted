@@ -350,6 +350,32 @@ class FlagConstant(_Constant):
         return result
 
 
+    def __iter__(self):
+        """
+        @return: An iterator of flags set on this instance set.
+        """
+        return (self._container.lookupByName(name) for name in self.names)
+
+
+    def __contains__(self, flag):
+        """
+        @param flag: The flag to test for membership in this instance
+            set.
+
+        @return: C{True} if C{flag} is in this instance set, else
+            C{False}.
+        """
+        # Optimization for testing membership without iteration.
+        return bool(flag & self)
+
+
+    def __nonzero__(self):
+        """
+        @return: C{False} if this flag's value is 0, else C{True}.
+        """
+        return bool(self.value)
+
+
 
 class Flags(Values):
     """

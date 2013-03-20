@@ -698,6 +698,41 @@ class FlagConstantSimpleOrTests(_FlagsTestsMixin, TestCase):
         self.assertEqual("<FXF={READ,WRITE}>", repr(flag))
 
 
+    def test_iterate(self):
+        """
+        A L{FlagConstant} instance which results from C{|} can be
+        iterated upon to yield the original constants.
+        """
+        self.assertEqual(
+            set(self.FXF.WRITE & self.FXF.READ), # No flags
+            set(()))
+        self.assertEqual(
+            set(self.FXF.WRITE),
+            set((self.FXF.WRITE,)))
+        self.assertEqual(
+            set(self.FXF.WRITE | self.FXF.EXCLUSIVE),
+            set((self.FXF.WRITE, self.FXF.EXCLUSIVE)))
+
+
+    def test_membership(self):
+        """
+        A L{FlagConstant} instance which results from C{|} can be
+        tested for membership.
+        """
+        flags = self.FXF.WRITE | self.FXF.EXCLUSIVE
+        self.assertIn(self.FXF.WRITE, flags)
+        self.assertNotIn(self.FXF.READ, flags)
+
+
+    def test_truthiness(self):
+        """
+        Empty flags is false, non-empty flags is true.
+        """
+        self.assertTrue(self.FXF.WRITE)
+        self.assertTrue(self.FXF.WRITE | self.FXF.EXCLUSIVE)
+        self.assertFalse(self.FXF.WRITE & self.FXF.EXCLUSIVE)
+
+
 
 class FlagConstantSimpleAndTests(_FlagsTestsMixin, TestCase):
     """
