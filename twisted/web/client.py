@@ -1614,7 +1614,7 @@ class _GetBodyProtocol(protocol.Protocol):
     """
     Protocol that collects data sent to it.
 
-    This is a helper for L{Agent.deliverBody}, which collects
+    This is a helper for L{IRespone.deliverBody}, which collects
     the body and fires a deferred with it.
 
     @ivar deferred: See L{__init__}.
@@ -1654,7 +1654,8 @@ class _GetBodyProtocol(protocol.Protocol):
             self.deferred.callback(b''.join(self.buf))
         elif reason.check(PotentialDataLoss):
             self.deferred.errback(
-                PartialDownloadError(self.status, self.message, b''.join(self.buf)))
+                PartialDownloadError(self.status, self.message,
+                                     b''.join(self.buf)))
         else:
             self.deferred.errback(reason)
 
