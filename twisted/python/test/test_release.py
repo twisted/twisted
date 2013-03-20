@@ -769,19 +769,42 @@ process with this.</p>
 
 
     def setupTeXFiles(self, howtoDir):
+        """
+        Create a main TeX file with 3 sections in C{howtoDir}.
+
+        @param howtoDir: The path in which to create the TeX files.
+
+        @return: The main TeX file C{FilePath}.
+        """
         sections = range(3)
-        self._setupTeXSections(sections, howtoDir)
-        return self._setupTeXBook(sections, howtoDir)
+        self.setupTeXSections(sections, howtoDir)
+        return self.setupTeXBook(sections, howtoDir)
 
 
-    def _setupTeXSections(self, sections, howtoDir):
-        for texSectionNumber in sections:
-            texPath = howtoDir.child("%d.tex" % (texSectionNumber,))
+    def setupTeXSections(self, sections, howtoDir):
+        """
+        For every C{sections}, create a TeX file in C{howtoDir}.
+
+        @param sections: A list of sections to create.
+
+        @param howtoDir: The path in which to create the TeX files.
+        """
+        for section in sections:
+            texPath = howtoDir.child("%s.tex" % (section,))
             texPath.setContent(
-                self.getArbitraryOutput("1.2.3", texSectionNumber))
+                self.getArbitraryOutput("1.2.3", section))
 
 
-    def _setupTeXBook(self, sections, howtoDir):
+    def setupTeXBook(self, sections, howtoDir):
+        """
+        Setup the main C{book.tex} file referencing C{sections}.
+
+        @param sections: A list of sections to reference.
+
+        @param howtoDir: The path in which to create the TeX files.
+
+        @return: The main TeX file C{FilePath}.
+        """
         bookTeX = howtoDir.child("book.tex")
         bookTeX.setContent(
             r"\documentclass{book}" "\n"
@@ -1563,7 +1586,7 @@ class BookBuilderTests(TestCase, BuilderTestsMixin):
         for sectionNumber in sections:
             self.howtoDir.child("%d.xhtml" % (sectionNumber,)).setContent(
                 self.getArbitraryLoreInput(sectionNumber))
-        bookTeX = self._setupTeXBook(sections, self.howtoDir)
+        bookTeX = self.setupTeXBook(sections, self.howtoDir)
         bookPDF = FilePath(self.mktemp())
 
         builder = BookBuilder()
@@ -1580,7 +1603,7 @@ class BookBuilderTests(TestCase, BuilderTestsMixin):
         for sectionNumber in sections:
             self.howtoDir.child("%d.xhtml" % (sectionNumber,)).setContent(
                 self.getArbitraryLoreInput(sectionNumber))
-        bookTeX = self._setupTeXBook(sections, self.howtoDir)
+        bookTeX = self.setupTeXBook(sections, self.howtoDir)
         bookPDF = FilePath(self.mktemp())
 
         builder = BookBuilder()
