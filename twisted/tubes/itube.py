@@ -175,13 +175,15 @@ class IPump(Interface):
 
     Look at this awesome ASCII art::
 
-                      +-----  the
-                     / +----  fount
-                    / /
-                   /o+---O the pump
-                  / /
-        the   ---+ /
-        drain ----+
+                      +-----  the                   +-----  the
+                     / +----  fount                / +----  fount
+                    / /                           / /
+                   /o+---O the pump              /o+---O the pump
+                  / /                           / /
+        the   ---+ /                  the   ---+ /
+        drain ----+                   drain ----+
+
+              =========> direction of flow =========>
 
     (Image credit Nam Nguyen)
     """
