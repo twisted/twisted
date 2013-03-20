@@ -1017,13 +1017,6 @@ def deferredGenerator(f):
 
 ## inlineCallbacks
 
-# BaseException is only in Py 2.5.
-try:
-    BaseException
-except NameError:
-    BaseException=Exception
-
-
 
 class _DefGen_Return(BaseException):
     def __init__(self, value):
@@ -1169,21 +1162,22 @@ def inlineCallbacks(f):
             thing = yield makeSomeRequestResultingInDeferred()
             print thing #the result! hoorj!
 
-    When you call anything that results in a L{Deferred}, you can simply yield it;
-    your generator will automatically be resumed when the Deferred's result is
-    available. The generator will be sent the result of the L{Deferred} with the
-    'send' method on generators, or if the result was a failure, 'throw'.
+    When you call anything that results in a L{Deferred}, you can simply yield
+    it; your generator will automatically be resumed when the Deferred's result
+    is available. The generator will be sent the result of the L{Deferred} with
+    the 'send' method on generators, or if the result was a failure, 'throw'.
 
     Things that are not L{Deferred}s may also be yielded, and your generator
     will be resumed with the same object sent back. This means C{yield}
     performs an operation roughly equivalent to L{maybeDeferred}.
 
-    Your inlineCallbacks-enabled generator will return a L{Deferred} object, which
-    will result in the return value of the generator (or will fail with a
+    Your inlineCallbacks-enabled generator will return a L{Deferred} object,
+    which will result in the return value of the generator (or will fail with a
     failure object if your generator raises an unhandled exception). Note that
-    you can't use C{return result} to return a value; use C{returnValue(result)}
-    instead. Falling off the end of the generator, or simply using C{return}
-    will cause the L{Deferred} to have a result of C{None}.
+    you can't use C{return result} to return a value; use
+    C{returnValue(result)} instead. Falling off the end of the generator, or
+    simply using C{return} will cause the L{Deferred} to have a result of
+    C{None}.
 
     Be aware that L{returnValue} will not accept a L{Deferred} as a parameter.
     If you believe the thing you'd like to return could be a L{Deferred}, do
