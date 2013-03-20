@@ -447,103 +447,50 @@ class SSHPublicKeyCheckerTestCase(TestCase):
 
 
 
-# class SSHPublicKeyCheckerTestCase(TestCase):
-#     """
-#     Tests for L{SSHPublicKeyChecker}.
-#     """
-#     skip = euidSkip or dependencySkip
+class DotSSHAuthorizedKeysGeneratorTestCase(TestCase):
+    """
+    Tests for L{checkers.dotSSHAuthorizedKeysGenerator}.
+    """
+    skip = euidSkip or dependencySkip
 
-#     def setUp(self):
-#         self.checker = checkers.SSHPublicKeyDatabase()
-#         self.key1 = base64.encodestring("foobar")
-#         self.key2 = base64.encodestring("eggspam")
-#         self.content = "t1 %s foo\nt2 %s egg\n" % (self.key1, self.key2)
+    def setUp(self):
+        self.mockos = MockOS()
+        self.mockos.path = FilePath(self.mktemp())
+        self.userdb = UserDatabase()
+        self.userdb.addUser('user', 'password', 1, 2, 'first last',
+                            self.mockos.path.path, '/bin/shell')
 
-#         self.mockos = MockOS()
-#         self.mockos.path = FilePath(self.mktemp())
-#         self.mockos.path.makedirs()
-#         self.patch(checkers, 'os', self.mockos)
-#         self.patch(util, 'os', self.mockos)
-#         self.sshDir = self.mockos.path.child('.ssh')
-#         self.sshDir.makedirs()
+        self.keysFromFilepathsCalls = []
+        self.keysFromFilepathsResult = 'keysFromFilepaths result'
 
-#         userdb = UserDatabase()
-#         userdb.addUser(
-#             'user', 'password', 1, 2, 'first last',
-#             self.mockos.path.path, '/bin/shell')
-#         self.checker._userdb = userdb
+        def _fakeKeysFromFilepaths(*args, **kwargs):
+            self.keysFromFilepathsCalls.append((args, kwargs))
+            return self.keysFromFilepathsResult
 
-#         self.keysFromFilepathsCalls = []
-#         self.authenticateAndVerifyCalls = []
-
-#         self.keysFromFilepathsResult = 'keysFromFilepaths result'
-#         self.authenticateAndVerifyResult = 'authenticateAndVerify result'
-
-#         def _fakeKeysFromFilepaths(*args, **kwargs):
-#             self.keysFromFilepathsCalls.append((args, kwargs))
-#             if isinstance(self.keysFromFilepathsResult, Exception):
-#                 raise self.keysFromFilepathsResult
-#             else:
-#                 return self.keysFromFilepathsResult
-
-#         def _fakeAuthenticateAndVerify(*args, **kwargs):
-#             self.authenticateAndVerifyCalls.append((args, kwargs))
-#             if isinstance(self.authenticateAndVerifyResult, Exception):
-#                 raise self.authenticateAndVerifyResult
-#             else:
-#                 return self.authenticateAndVerifyResult
-
-#         self.patch(checkers, 'keysFromFilepaths', _fakeKeysFromFilepaths)
-#         self.patch(checkers, 'authenticateAndVerifySSHKey',
-#                    _fakeAuthenticateAndVerify)
+        self.patch(checkers, 'publicKeysFromFilepaths', _fakeKeysFromFilepaths)
 
 
-#     # def test_getAuthorizedKeysFiles(self):
-#     #     """
-#     #     L{SSHPublicKeyDatabase..getAuthorizedKeysFiles} looks up the user's
-#     #     home directory and returns a list of filepaths corresponding to
-#     #     $HOME/.ssh/authorized_keys and $HOME/.ssh/authorized_keys2
-#     #     """
-#     #     result = self.checker.getAuthorizedKeysFiles(
-#     #         SSHPrivateKey('user', 'rsa', 'blob', 'sigData', 'sig'))
-#     #     self.assertEqual(
-#     #         result, [FilePath(os.path.join(self.mockos.path.path, '.ssh',
-#     #                                        'authorized_keys')),
-#     #                  FilePath(os.path.join(self.mockos.path.path, '.ssh',
-#     #                                        'authorized_keys2'))])
+    def test_authorizedKeyGenerator(self):
+        """
+        L{checkers.dotSSHAuthorizedKeysGenerator} gets the authorized files,
+        passes it to L{checkers.publicKeysFromFilepaths} along with the uid
+        and the gid of the user (which it getes from the userdb).
 
+        The return value is whatever is returned by
+        L{checkers.publicKeysFromFilepaths}
+        """
+        credentials = SSHPrivateKey('user', 'rsa', 'blob', 'sigData', 'sig')
+        result = checkers.dotSSHAuthorizedKeysGenerator(credentials,
+                                                        userdb=self.userdb)
+        self.assertEqual(result, self.keysFromFilepathsResult)
 
-#     def test_requestAvatarId(self):
-#         """
-#         L{SSHPublicKeyDatabase.requestAvatarId} first gets the authorized
-#         files, passes it to L{checkers.keysFromFilepaths} along with the uid
-#         and the gid of the user (which it getes from C{pwd}), and passes the
-#         the result of L{checkers.keysFromFilepaths} and the credentials to
-#         L{checkers.authenticateAndVerifySSHKey}.  If no errors occur, it
-#         returns the result of L{checkers.authenticateAndVerifySSHKey}.
-#         """
-#         self.checker.getAuthorizedKeysFiles = lambda creds: [1, 2, 3]
-#         credentials = SSHPrivateKey('user', 'rsa', 'blob', 'sigData', 'sig')
-#         d = self.checker.requestAvatarId(credentials)
-#         self.assertEqual(self.successResultOf(d),
-#                          'authenticateAndVerify result')
-#         self.assertEqual(self.keysFromFilepathsCalls,
-#                          [(([1, 2, 3],), {'ownerIds': (1, 2)})])
-#         self.assertEqual(self.authenticateAndVerifyCalls,
-#                          [(('keysFromFilepaths result', credentials), {})])
+        filepaths = [FilePath(os.path.join(self.mockos.path.path, '.ssh',
+                                           'authorized_keys')),
+                     FilePath(os.path.join(self.mockos.path.path, '.ssh',
+                                           'authorized_keys2'))]
 
-
-#     def test_requestAvatarIdNormalizeException(self):
-#         """
-#         Other exceptions raised in the course of
-#         L{SSHPublicKeyDatabase.requestAvatarId} (for instance a KeyError from
-#         attempting to look up a non-existant user in pwd) are normalized into
-#         an C{UnauthorizedLogin} failure.
-#         """
-#         self.checker.getAuthorizedKeysFiles = lambda creds: [1, 2, 3]
-#         credentials = SSHPrivateKey('bleh', 'rsa', 'blob', 'sigData', 'sig')
-#         f = self.failureResultOf(self.checker.requestAvatarId(credentials))
-#         self.assertTrue(f.check(UnauthorizedLogin))
+        self.assertEqual(self.keysFromFilepathsCalls,
+                         [((filepaths,), {'ownerIds': (1, 2)})])
 
 
 

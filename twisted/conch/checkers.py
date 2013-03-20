@@ -279,7 +279,8 @@ class SSHPublicKeyChecker(object):
         return f
 
 
-def getDotSSHAuthorizedKeys(credentials):
+
+def dotSSHAuthorizedKeysGenerator(credentials, userdb=pwd):
     """
     On OpenSSH servers, the default location of the file containing the
     list of authorized public keys is
@@ -289,10 +290,21 @@ def getDotSSHAuthorizedKeys(credentials):
     U{deprecated by OpenSSH since
     2001<http://marc.info/?m=100508718416162>}.
 
+    @param credentials: The credentials offered by the user.
+    @type credentials: L{ISSHPrivateKey} provider
+
+    @param userdb: the user db to use to get user info (default is L{pwd})
+    @type userdb: L{pwd}-like object
+
     @return: a C{generator}) of L{twisted.conch.ssh.keys.Key} corresponding to
         authorized keys in U{$HOME/.ssh/authorized_keys} and
-        U{$HOME/.ssh/authorized_keys}
+        U{$HOME/.ssh/authorized_keys2}
     """
+    struct_passwd = userdb.getpwnam(credentials.username)
+    root = FilePath(struct_passwd.pw_dir).child('.ssh')
+    files = ['authorized_keys', 'authorized_keys2']
+    return publicKeysFromFilepaths([root.child(f) for f in files],
+                                   ownerIds=struct_passwd[2:4])
 
 
 
