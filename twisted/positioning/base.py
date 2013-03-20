@@ -525,8 +525,8 @@ class Coordinate(Angle, FancyEqMixin):
         @return: A symbolic constant representing a hemisphere (one of
             L{Angles})
         """
+        sign = int(self.inDecimalDegrees < 0)
         try:
-            sign = int(self.inDecimalDegrees < 0)
             return self.HEMISPHERES_BY_TYPE_AND_SIGN[self.angleType][sign]
         except KeyError:
             raise ValueError("unknown coordinate type (cant find hemisphere)")
