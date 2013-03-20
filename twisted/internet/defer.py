@@ -1118,17 +1118,15 @@ def _inlineCallbacks(result, g, deferred):
 
         if isinstance(result, Deferred):
             def extendErrbackStack(f):
-                """
-                A failure was yielded by the generator, so for the failure's
-                traceback to be useful insert the current yield line into the
-                stack of frames.
-                """
+                # A failure was yielded by the generator, so for the failure's
+                # traceback to be useful insert the current yield line into the
+                # stack of frames.
                 f.frames.insert(
                     0, failure.buildFrameRecord(g.gi_frame, f.captureVars))
                 return f
             result.addErrback(extendErrbackStack)
 
-            # a deferred was yielded, get the result.
+            # A deferred was yielded, get the result.
             def gotResult(r):
                 if waiting[0]:
                     waiting[0] = False
@@ -1148,8 +1146,6 @@ def _inlineCallbacks(result, g, deferred):
             # waiting, but this isn't a problem because gotResult is only
             # executed once, and if it hasn't been executed yet, the return
             # branch above would have been taken.
-
-
             waiting[0] = True
             waiting[1] = None
 
