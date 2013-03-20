@@ -702,8 +702,6 @@ class Climb(_BaseSpeed):
         @param climb: The climb that this object represents, expressed in
             meters per second.
         @type climb: C{float}
-
-        @raises ValueError: Raised if the provided climb was less than zero.
         """
         _BaseSpeed.__init__(self, climb)
 
