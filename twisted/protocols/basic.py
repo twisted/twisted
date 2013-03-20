@@ -10,6 +10,7 @@ Basic protocols, such as line-oriented, netstring, and int prefixed strings.
 from __future__ import absolute_import, division
 
 # System imports
+import os
 import re
 from struct import pack, unpack, calcsize
 from io import BytesIO
@@ -949,10 +950,7 @@ class FileSender:
         self.deferred = deferred = defer.Deferred()
 
         if self._trySendFile():
-            current = file.tell()
-            file.seek(0, 2)
-            self._count = file.tell()
-            file.seek(current)
+            self._count = os.fstat(file.fileno()).st_size
             self.resumeProducing = self._resumeProducingNoOp
         else:
             self.resumeProducing = self._resumeProducingWrite
@@ -1013,8 +1011,8 @@ class FileSender:
         data in the local buffer.
         """
         try:
-            sent  = sendfile(self.consumer.fileno(), self.file.fileno(),
-                             self._offset, self._count)
+            sent = self._sendfile(self.consumer.fileno(), self.file.fileno(),
+                                  self._offset, self._count)
         except IOError as e:
             from twisted.internet.tcp import EWOULDBLOCK
             if e.errno == EWOULDBLOCK:

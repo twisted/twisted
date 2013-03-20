@@ -1463,23 +1463,20 @@ class FileSenderSendfileTestCase(ReactorBuilder):
         if not IReactorFDSet.providedBy(reactor):
             raise unittest.SkipTest("%s does not provide IReactorFDSet" % (
                 fullyQualifiedName(reactor.__class__),))
-        originalSendfile = basic.sendfile
         calls = []
         clients = []
 
         def sendError(*args):
             if not calls:
                 calls.append(None)
-                return originalSendfile(*args)
+                return basic.sendfile(*args)
             raise IOError("That's bad!")
-
-        self.patch(basic, "sendfile", sendError)
 
         def connected(protocols):
             client, server = protocols
             clients.append(client)
             fileObject = self.createFile()
-            sender = basic.FileSender()
+            sender = basic.FileSender(sendError)
             sendFileDeferred = sender.beginFileTransfer(
                 fileObject, server.transport)
             return sendFileDeferred.addErrback(serverFinished, server)
@@ -1516,13 +1513,11 @@ class FileSenderSendfileTestCase(ReactorBuilder):
         def sendError(*args):
             raise IOError("That's bad!")
 
-        self.patch(basic, "sendfile", sendError)
-
         def connected(protocols):
             client, server = protocols
             clients.append(client)
             fileObject = self.createFile()
-            sender = basic.FileSender()
+            sender = basic.FileSender(sendError)
             sendFileDeferred = sender.beginFileTransfer(
                 fileObject, server.transport)
             return sendFileDeferred.addBoth(finished, server)
@@ -1551,7 +1546,6 @@ class FileSenderSendfileTestCase(ReactorBuilder):
         if not IReactorFDSet.providedBy(reactor):
             raise unittest.SkipTest("%s does not provide IReactorFDSet" % (
                 fullyQualifiedName(reactor.__class__),))
-        originalSendfile = basic.sendfile
         calls = []
         clients = []
         servers = []
@@ -1561,16 +1555,14 @@ class FileSenderSendfileTestCase(ReactorBuilder):
             if not calls:
                 clients[0].transport.loseConnection()
             calls.append(None)
-            return originalSendfile(*args)
-
-        self.patch(basic, "sendfile", sendError)
+            return basic.sendfile(*args)
 
         def connected(protocols):
             client, server = protocols
             clients.append(client)
             servers.append(server)
             fileObject = self.createFile()
-            sender = basic.FileSender()
+            sender = basic.FileSender(sendError)
             sendFileDeferred = sender.beginFileTransfer(
                 fileObject, server.transport)
             return sendFileDeferred.addErrback(serverFinished)
