@@ -532,12 +532,12 @@ class UtilityTest(TestCase):
         the dict that is found in the file is replaced with the corresponding
         value.
         """
-        in_ = 'foo\nhey hey $VER\nbar\n'
+        content = 'foo\nhey hey $VER\nbar\n'
         outf = open('release.replace', 'w')
-        outf.write(in_)
+        outf.write(content)
         outf.close()
 
-        expected = in_.replace('$VER', '2.0.0')
+        expected = content.replace('$VER', '2.0.0')
         replaceInFile('release.replace', {'$VER': '2.0.0'})
         self.assertEqual(open('release.replace').read(), expected)
 

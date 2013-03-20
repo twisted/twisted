@@ -1429,7 +1429,8 @@ class BuildDocsScript(object):
         """
         version = Project(projectRoot.child("twisted")).getVersion()
         versionString = version.base()
-        apiURL = "http://twistedmatrix.com/documents/%s/api/" % versionString
+        apiURL = "http://twistedmatrix.com/documents/%s/api/" % (
+            versionString,)
 
         dirs = {}
         docRoot = projectRoot.child("doc")
