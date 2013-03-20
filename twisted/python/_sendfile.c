@@ -16,7 +16,7 @@
 #endif
 
 
-PyDoc_STRVAR(_sendfile_doc,
+PyDoc_STRVAR(sendfile_wrapper_doc,
 "sendfile(inFd, outFd, offset, count)\n\
 \n\
 Copies data between the file descriptor inFd open for reading and the file\n\
@@ -24,7 +24,7 @@ descriptor outFd open for writing. Returns the number of bytes written to\n\
 outFd and the offset in inFd.");
 
 
-static PyObject * _sendfile(PyObject *self, PyObject *args) {
+static PyObject * sendfile_wrapper(PyObject *self, PyObject *args) {
     int outFd, inFd;
     off_t offset;
 
@@ -32,6 +32,7 @@ static PyObject * _sendfile(PyObject *self, PyObject *args) {
     int sts;
     size_t nbytes;
     off_t sbytes = 0;
+    Py_ssize_t result;
 
     if (!PyArg_ParseTuple(args, "iiLi", &outFd, &inFd, &offset, &nbytes)) {
         return NULL;
@@ -48,12 +49,13 @@ static PyObject * _sendfile(PyObject *self, PyObject *args) {
         }
     }
 
-    offset += sbytes;
-    return Py_BuildValue("LL", sbytes, offset);
+    result = offset + sbytes;
+    return Py_BuildValue("LL", sbytes, result);
 #else
 #if defined(__APPLE__)
     int sts;
     off_t nbytes;
+    Py_ssize_t result;
 
     if (!PyArg_ParseTuple(args, "iiLL", &outFd, &inFd, &offset, &nbytes)) {
         return NULL;
@@ -70,8 +72,8 @@ static PyObject * _sendfile(PyObject *self, PyObject *args) {
         }
     }
 
-    offset += nbytes;
-    return Py_BuildValue("LL", nbytes, offset);
+    result = offset + nbytes;
+    return Py_BuildValue("LL", nbytes, result);
 #else
     size_t count, sent;
 
@@ -95,8 +97,8 @@ static PyObject * _sendfile(PyObject *self, PyObject *args) {
 
 
 static PyMethodDef sendfilemethods[] = {
-    {"sendfile", (PyCFunction)_sendfile,
-     METH_VARARGS|METH_KEYWORDS, _sendfile_doc},
+    {"sendfile", (PyCFunction)sendfile_wrapper,
+     METH_VARARGS|METH_KEYWORDS, sendfile_wrapper_doc},
     {NULL},
 };
 
