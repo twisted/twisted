@@ -176,9 +176,10 @@ class HelperTests(TestCase):
 
 
 
-class KeyFromXTestsCases(TestCase):
+class PublicKeysFromXTestsCases(TestCase):
     """
-    Tests for L{checkers.keysFromString} and L{checkers.keysFromFilepaths}
+    Tests for L{checkers.publicKeysFromString} and
+    L{checkers.publicKeysFromFilepaths}
     """
     def setUp(self):
         self.keyCalls = []
@@ -192,7 +193,7 @@ class KeyFromXTestsCases(TestCase):
         self.patch(checkers.keys, 'Key', FakeKey)
 
         class FakeFilePath(object):
-            def getContents(self):
+            def getContent(self):
                 return 'contents'
 
             def exists(self):
@@ -206,7 +207,7 @@ class KeyFromXTestsCases(TestCase):
         L{checkers.keysFromStrings} produces a generator of key objects given
         a list of strings and passes whatever key type was supplied
         """
-        result = checkers.keysFromStrings('iterable', keyType='skeleton')
+        result = checkers.publicKeysFromStrings('iterable', keyType='skeleton')
         self.assertEqual(self.keyCalls, [],
                          "It's a generator, there should be no calls yet")
         result = list(result)
@@ -221,7 +222,7 @@ class KeyFromXTestsCases(TestCase):
         L{checkers.keysFromStrings} passes the default keytype if no keytype is
         supplied
         """
-        list(checkers.keysFromStrings('iterable'))
+        list(checkers.publicKeysFromStrings('iterable'))
         self.assertEqual(
             self.keyCalls,
             [((letter,), {'type': 'public_openssh'}) for letter in 'iterable'])
@@ -234,10 +235,10 @@ class KeyFromXTestsCases(TestCase):
         test case, we have permission to access the files.
         """
         class FakeFilePath(object):
-            def getContents(self):
+            def getContent(self):
                 return 'contents'
 
-        result = checkers.keysFromFilepaths(
+        result = checkers.publicKeysFromFilepaths(
             [checkers.FilePath() for i in range(5)], keyType='skeleton')
         self.assertEqual(self.keyCalls, [],
                          "It's a generator, there should be no calls yet")
@@ -252,7 +253,7 @@ class KeyFromXTestsCases(TestCase):
         L{checkers.keysFromFilepaths} passes the default keytype if no keytype
         is supplied
         """
-        list(checkers.keysFromFilepaths(
+        list(checkers.publicKeysFromFilepaths(
             [checkers.FilePath() for i in range(5)]))
         self.assertEqual(self.keyCalls,
                          [(('contents',), {'type': 'public_openssh'})] * 5)
@@ -264,14 +265,14 @@ class KeyFromXTestsCases(TestCase):
         a list of FilePaths, but only those FilePaths that exist.
         """
         class FakeFilePath(object):
-            def getContents(self):
+            def getContent(self):
                 return 'contents'
 
             def exists(self):
                 return False
 
-        self.assertEqual([], list(
-            checkers.keysFromFilepaths([FakeFilePath() for i in range(5)])))
+        self.assertEqual([], list(checkers.publicKeysFromFilepaths(
+            [FakeFilePath() for i in range(5)])))
 
 
     def test_keysFromFilepathsInvalidPermissionsWithOwnerIds(self):
@@ -283,7 +284,7 @@ class KeyFromXTestsCases(TestCase):
         class FakeFilePath(object):
             errored = False
 
-            def getContents(self):
+            def getContent(self):
                 if not self.errored:
                     self.errored = True
                     raise IOError(errno.EACCES, "this is a test")
@@ -300,23 +301,20 @@ class KeyFromXTestsCases(TestCase):
 
         self.patch(checkers, 'runAsEffectiveUser', _fakeRunAsUser)
 
-        list(checkers.keysFromFilepaths([FakeFilePath() for i in range(5)],
-                                        ownerIds=(1, 1)))
+        list(checkers.publicKeysFromFilepaths(
+            [FakeFilePath() for i in range(5)], ownerIds=(1, 1)))
         self.assertEqual(self.keyCalls,
                          [(('contents',), {'type': 'public_openssh'})] * 5)
         self.assertEqual(runAsUserCalls, [(1, 1)] * 5)
 
 
-class AuthenticateAndVerifySSHKeyHelpers(TestCase):
+
+class SSHPublicKeyCheckerTestCase(TestCase):
     """
-    Tests for L{checkers.authenticateAndVerifySSHKey}
+    Tests for L{checkers.SSHPublicKeyChecker}
     """
     def setUp(self):
         class FakeKey(object):
-            """
-            This generator never ends - will produce FakeKey objects forever,
-            and the count of C{keysGenerated} will keep increasing
-            """
             @classmethod
             def fromString(cls, *args, **kwargs):
                 return FakeKey(args[0])
@@ -337,7 +335,7 @@ class AuthenticateAndVerifySSHKeyHelpers(TestCase):
 
         self.keysGenerated = 0
 
-        def generate():
+        def generate(_):
             """
             This generator never ends - will produce FakeKey objects until 20,
             and the count of C{keysGenerated} will keep increasing
@@ -346,69 +344,72 @@ class AuthenticateAndVerifySSHKeyHelpers(TestCase):
                 self.keysGenerated += 1
                 yield FakeKey(self.keysGenerated)
 
-        self.generator = generate()
+        self.checker = checkers.SSHPublicKeyChecker(generate)
 
 
     def test_validKeyAndValidSignature(self):
         """
-        L{checkers.authenticateAndVerifySSHKey} checks the blob against
+        L{checkers.SSHPublicKeyChecker.requestAvatarId} checks the blob against
         a set of authorized keys (and only enough of them to authenticate the
         key), and when the signature checks out, returns the username provided
         with the credentials.
         """
-        self.assertEqual(
-            'username', checkers.authenticateAndVerifySSHKey(
-                self.generator, self.credentials))
+        d = self.checker.requestAvatarId(self.credentials)
+        self.assertEqual('username', self.successResultOf(d))
         self.assertEqual(self.keysGenerated, 5)
 
 
     def test_validKeyNoSignature(self):
         """
-        If L{checkers.authenticateAndVerifySSHKey} matches the blob against
-        the authorized keys but there is no signature, it raises
+        If L{checkers.SSHPublicKeyChecker.requestAvatarId} matches the blob
+        against the authorized keys but there is no signature, it raises
         L{ValidPublicKey}.
         """
         self.credentials.signature = None
-        self.assertRaises(ValidPublicKey, checkers.authenticateAndVerifySSHKey,
-                          self.generator, self.credentials)
+        d = self.checker.requestAvatarId(self.credentials)
+        failure = self.failureResultOf(d)
+        self.assertTrue(failure.check(ValidPublicKey))
         # should match the blob anyway
         self.assertEqual(self.keysGenerated, 5)
 
 
     def test_invalidKeyNoSignature(self):
         """
-        If L{checkers.authenticateAndVerifySSHKey} fails to matches the blob
-        against the authorized keys and there is no signature, it raises
-        L{UnauthorizedLogin}.
+        If L{checkers.SSHPublicKeyChecker.requestAvatarId} fails to matches
+        the blob against the authorized keys and there is no signature, it
+        raises L{UnauthorizedLogin}.
         """
         self.credentials.signature = None
         self.credentials.blob = 100
-        self.assertRaises(UnauthorizedLogin,
-                          checkers.authenticateAndVerifySSHKey,
-                          self.generator, self.credentials)
+        d = self.checker.requestAvatarId(self.credentials)
+        failure = self.failureResultOf(d)
+        self.assertTrue(failure.check(UnauthorizedLogin))
         # should have tried to match all the blobs anyway
         self.assertEqual(self.keysGenerated, 20)
 
 
     def test_validKeyInvalidSignature(self):
         """
-        If L{checkers.authenticateAndVerifySSHKey} matches the blob against
-        the authorized keys and there is a signature but it doesn't match,
-        it raises L{UnauthorizedLogin}.
+        If L{checkers.SSHPublicKeyChecker.requestAvatarId} matches the blob
+        against the authorized keys and there is a signature but it doesn't
+        match, it raises L{UnauthorizedLogin}.
         """
         self.credentials.signature = 'wrong'
-        self.assertRaises(UnauthorizedLogin,
-                          checkers.authenticateAndVerifySSHKey,
-                          self.generator, self.credentials)
+        d = self.checker.requestAvatarId(self.credentials)
+        failure = self.failureResultOf(d)
+        self.assertTrue(failure.check(UnauthorizedLogin))
         self.assertEqual(self.keysGenerated, 5)
 
 
-    def test_validKeyErrorVerifyingSignature(self):
+    def test_obscuresErrors(self):
         """
-        If L{checkers.authenticateAndVerifySSHKey} matches the blob against
-        the authorized keys but there is a problem verifying the signature,
-        it raises L{UnauthorizedLogin}.
+        If some unexpected error occurs while executing
+        L{checkers.SSHPublicKeyChecker.requestAvatarId}, the error will be
+        logged and obscured with a L{UnauthorizedLogin}.
         """
+        class UnexpectedError(Exception):
+            pass
+
         class FakeKey(object):
             """
             This generator never ends - will produce FakeKey objects forever,
@@ -425,14 +426,114 @@ class AuthenticateAndVerifySSHKeyHelpers(TestCase):
                 return self.value == other.value
 
             def verify(self, signature, sigData):
-                raise Exception('hats are fun')
+                raise UnexpectedError('hats are fun')
 
         self.patch(checkers.keys, 'Key', FakeKey)
-        self.assertRaises(UnauthorizedLogin,
-                          checkers.authenticateAndVerifySSHKey,
-                          self.generator, self.credentials)
-        loggedErrors = self.flushLoggedErrors(Exception)
+        d = self.checker.requestAvatarId(self.credentials)
+        failure = self.failureResultOf(d)
+        self.assertTrue(failure.check(UnauthorizedLogin))
+        loggedErrors = self.flushLoggedErrors(UnexpectedError)
         self.assertEqual(len(loggedErrors), 1)
+
+
+
+# class SSHPublicKeyCheckerTestCase(TestCase):
+#     """
+#     Tests for L{SSHPublicKeyChecker}.
+#     """
+#     skip = euidSkip or dependencySkip
+
+#     def setUp(self):
+#         self.checker = checkers.SSHPublicKeyDatabase()
+#         self.key1 = base64.encodestring("foobar")
+#         self.key2 = base64.encodestring("eggspam")
+#         self.content = "t1 %s foo\nt2 %s egg\n" % (self.key1, self.key2)
+
+#         self.mockos = MockOS()
+#         self.mockos.path = FilePath(self.mktemp())
+#         self.mockos.path.makedirs()
+#         self.patch(checkers, 'os', self.mockos)
+#         self.patch(util, 'os', self.mockos)
+#         self.sshDir = self.mockos.path.child('.ssh')
+#         self.sshDir.makedirs()
+
+#         userdb = UserDatabase()
+#         userdb.addUser(
+#             'user', 'password', 1, 2, 'first last',
+#             self.mockos.path.path, '/bin/shell')
+#         self.checker._userdb = userdb
+
+#         self.keysFromFilepathsCalls = []
+#         self.authenticateAndVerifyCalls = []
+
+#         self.keysFromFilepathsResult = 'keysFromFilepaths result'
+#         self.authenticateAndVerifyResult = 'authenticateAndVerify result'
+
+#         def _fakeKeysFromFilepaths(*args, **kwargs):
+#             self.keysFromFilepathsCalls.append((args, kwargs))
+#             if isinstance(self.keysFromFilepathsResult, Exception):
+#                 raise self.keysFromFilepathsResult
+#             else:
+#                 return self.keysFromFilepathsResult
+
+#         def _fakeAuthenticateAndVerify(*args, **kwargs):
+#             self.authenticateAndVerifyCalls.append((args, kwargs))
+#             if isinstance(self.authenticateAndVerifyResult, Exception):
+#                 raise self.authenticateAndVerifyResult
+#             else:
+#                 return self.authenticateAndVerifyResult
+
+#         self.patch(checkers, 'keysFromFilepaths', _fakeKeysFromFilepaths)
+#         self.patch(checkers, 'authenticateAndVerifySSHKey',
+#                    _fakeAuthenticateAndVerify)
+
+
+#     # def test_getAuthorizedKeysFiles(self):
+#     #     """
+#     #     L{SSHPublicKeyDatabase..getAuthorizedKeysFiles} looks up the user's
+#     #     home directory and returns a list of filepaths corresponding to
+#     #     $HOME/.ssh/authorized_keys and $HOME/.ssh/authorized_keys2
+#     #     """
+#     #     result = self.checker.getAuthorizedKeysFiles(
+#     #         SSHPrivateKey('user', 'rsa', 'blob', 'sigData', 'sig'))
+#     #     self.assertEqual(
+#     #         result, [FilePath(os.path.join(self.mockos.path.path, '.ssh',
+#     #                                        'authorized_keys')),
+#     #                  FilePath(os.path.join(self.mockos.path.path, '.ssh',
+#     #                                        'authorized_keys2'))])
+
+
+#     def test_requestAvatarId(self):
+#         """
+#         L{SSHPublicKeyDatabase.requestAvatarId} first gets the authorized
+#         files, passes it to L{checkers.keysFromFilepaths} along with the uid
+#         and the gid of the user (which it getes from C{pwd}), and passes the
+#         the result of L{checkers.keysFromFilepaths} and the credentials to
+#         L{checkers.authenticateAndVerifySSHKey}.  If no errors occur, it
+#         returns the result of L{checkers.authenticateAndVerifySSHKey}.
+#         """
+#         self.checker.getAuthorizedKeysFiles = lambda creds: [1, 2, 3]
+#         credentials = SSHPrivateKey('user', 'rsa', 'blob', 'sigData', 'sig')
+#         d = self.checker.requestAvatarId(credentials)
+#         self.assertEqual(self.successResultOf(d),
+#                          'authenticateAndVerify result')
+#         self.assertEqual(self.keysFromFilepathsCalls,
+#                          [(([1, 2, 3],), {'ownerIds': (1, 2)})])
+#         self.assertEqual(self.authenticateAndVerifyCalls,
+#                          [(('keysFromFilepaths result', credentials), {})])
+
+
+#     def test_requestAvatarIdNormalizeException(self):
+#         """
+#         Other exceptions raised in the course of
+#         L{SSHPublicKeyDatabase.requestAvatarId} (for instance a KeyError from
+#         attempting to look up a non-existant user in pwd) are normalized into
+#         an C{UnauthorizedLogin} failure.
+#         """
+#         self.checker.getAuthorizedKeysFiles = lambda creds: [1, 2, 3]
+#         credentials = SSHPrivateKey('bleh', 'rsa', 'blob', 'sigData', 'sig')
+#         f = self.failureResultOf(self.checker.requestAvatarId(credentials))
+#         self.assertTrue(f.check(UnauthorizedLogin))
 
 
 
@@ -461,30 +562,6 @@ class SSHPublicKeyDatabaseTestCase(TestCase):
             'user', 'password', 1, 2, 'first last',
             self.mockos.path.path, '/bin/shell')
         self.checker._userdb = userdb
-
-        self.keysFromFilepathsCalls = []
-        self.authenticateAndVerifyCalls = []
-
-        self.keysFromFilepathsResult = 'keysFromFilepaths result'
-        self.authenticateAndVerifyResult = 'authenticateAndVerify result'
-
-        def _fakeKeysFromFilepaths(*args, **kwargs):
-            self.keysFromFilepathsCalls.append((args, kwargs))
-            if isinstance(self.keysFromFilepathsResult, Exception):
-                raise self.keysFromFilepathsResult
-            else:
-                return self.keysFromFilepathsResult
-
-        def _fakeAuthenticateAndVerify(*args, **kwargs):
-            self.authenticateAndVerifyCalls.append((args, kwargs))
-            if isinstance(self.authenticateAndVerifyResult, Exception):
-                raise self.authenticateAndVerifyResult
-            else:
-                return self.authenticateAndVerifyResult
-
-        self.patch(checkers, 'keysFromFilepaths', _fakeKeysFromFilepaths)
-        self.patch(checkers, 'authenticateAndVerifySSHKey',
-                   _fakeAuthenticateAndVerify)
 
 
     def _testCheckKey(self, filename):
@@ -545,54 +622,83 @@ class SSHPublicKeyDatabaseTestCase(TestCase):
         self.assertEqual(self.mockos.setegidCalls, [2, 1234])
 
 
-    def test_getAuthorizedKeysFiles(self):
-        """
-        L{SSHPublicKeyDatabase..getAuthorizedKeysFiles} looks up the user's
-        home directory and returns a list of filepaths corresponding to
-        $HOME/.ssh/authorized_keys and $HOME/.ssh/authorized_keys2
-        """
-        result = self.checker.getAuthorizedKeysFiles(
-            SSHPrivateKey('user', 'rsa', 'blob', 'sigData', 'sig'))
-        self.assertEqual(
-            result, [FilePath(os.path.join(self.mockos.path.path, '.ssh',
-                                           'authorized_keys')),
-                     FilePath(os.path.join(self.mockos.path.path, '.ssh',
-                                           'authorized_keys2'))])
-
-
     def test_requestAvatarId(self):
         """
-        L{SSHPublicKeyDatabase.requestAvatarId} first gets the authorized
-        files, passes it to L{checkers.keysFromFilepaths} along with the uid
-        and the gid of the user (which it getes from C{pwd}), and passes the
-        the result of L{checkers.keysFromFilepaths} and the credentials to
-        L{checkers.authenticateAndVerifySSHKey}.  If no errors occur, it
-        returns the result of L{checkers.authenticateAndVerifySSHKey}.
+        L{SSHPublicKeyDatabase.requestAvatarId} should return the avatar id
+        passed in if its C{_checkKey} method returns True.
         """
-        self.checker.getAuthorizedKeysFiles = lambda creds: [1, 2, 3]
-        credentials = SSHPrivateKey('user', 'rsa', 'blob', 'sigData', 'sig')
+        def _checkKey(ignored):
+            return True
+        self.patch(self.checker, 'checkKey', _checkKey)
+        credentials = SSHPrivateKey(
+            'test', 'ssh-rsa', keydata.publicRSA_openssh, 'foo',
+            keys.Key.fromString(keydata.privateRSA_openssh).sign('foo'))
         d = self.checker.requestAvatarId(credentials)
-        self.assertEqual(self.successResultOf(d),
-                         'authenticateAndVerify result')
-        self.assertEqual(self.keysFromFilepathsCalls,
-                         [(([1, 2, 3],), {'ownerIds': (1, 2)})])
-        self.assertEqual(self.authenticateAndVerifyCalls,
-                         [(('keysFromFilepaths result', credentials), {})])
+        def _verify(avatarId):
+            self.assertEqual(avatarId, 'test')
+        return d.addCallback(_verify)
+
+
+    def test_requestAvatarIdWithoutSignature(self):
+        """
+        L{SSHPublicKeyDatabase.requestAvatarId} should raise L{ValidPublicKey}
+        if the credentials represent a valid key without a signature.  This
+        tells the user that the key is valid for login, but does not actually
+        allow that user to do so without a signature.
+        """
+        def _checkKey(ignored):
+            return True
+        self.patch(self.checker, 'checkKey', _checkKey)
+        credentials = SSHPrivateKey(
+            'test', 'ssh-rsa', keydata.publicRSA_openssh, None, None)
+        d = self.checker.requestAvatarId(credentials)
+        return self.assertFailure(d, ValidPublicKey)
+
+
+    def test_requestAvatarIdInvalidKey(self):
+        """
+        If L{SSHPublicKeyDatabase.checkKey} returns False,
+        C{_cbRequestAvatarId} should raise L{UnauthorizedLogin}.
+        """
+        def _checkKey(ignored):
+            return False
+        self.patch(self.checker, 'checkKey', _checkKey)
+        d = self.checker.requestAvatarId(None);
+        return self.assertFailure(d, UnauthorizedLogin)
+
+
+    def test_requestAvatarIdInvalidSignature(self):
+        """
+        Valid keys with invalid signatures should cause
+        L{SSHPublicKeyDatabase.requestAvatarId} to return a {UnauthorizedLogin}
+        failure
+        """
+        def _checkKey(ignored):
+            return True
+        self.patch(self.checker, 'checkKey', _checkKey)
+        credentials = SSHPrivateKey(
+            'test', 'ssh-rsa', keydata.publicRSA_openssh, 'foo',
+            keys.Key.fromString(keydata.privateDSA_openssh).sign('foo'))
+        d = self.checker.requestAvatarId(credentials)
+        return self.assertFailure(d, UnauthorizedLogin)
 
 
     def test_requestAvatarIdNormalizeException(self):
         """
-        Other exceptions raised in the course of
-        L{SSHPublicKeyDatabase.requestAvatarId} (for instance a KeyError from
-        attempting to look up a non-existant user in pwd) are normalized into
-        an C{UnauthorizedLogin} failure.
+        Exceptions raised while verifying the key should be normalized into an
+        C{UnauthorizedLogin} failure.
         """
-        self.checker.getAuthorizedKeysFiles = lambda creds: [1, 2, 3]
-        credentials = SSHPrivateKey('bleh', 'rsa', 'blob', 'sigData', 'sig')
-        f = self.failureResultOf(self.checker.requestAvatarId(credentials))
-        self.assertTrue(f.check(UnauthorizedLogin))
-        loggedErrors = self.flushLoggedErrors(KeyError)
-        self.assertEqual(len(loggedErrors), 1)
+        def _checkKey(ignored):
+            return True
+        self.patch(self.checker, 'checkKey', _checkKey)
+        credentials = SSHPrivateKey('test', None, 'blob', 'sigData', 'sig')
+        d = self.checker.requestAvatarId(credentials)
+        def _verifyLoggedException(failure):
+            errors = self.flushLoggedErrors(keys.BadKeyError)
+            self.assertEqual(len(errors), 1)
+            return failure
+        d.addErrback(_verifyLoggedException)
+        return self.assertFailure(d, UnauthorizedLogin)
 
 
 

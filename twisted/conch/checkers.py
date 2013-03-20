@@ -122,7 +122,7 @@ class UNIXPasswordDatabase:
 
 
 
-def keysFromStrings(keyStrings, keyType="public_openssh"):
+def publicKeysFromStrings(keyStrings, keyType="public_openssh"):
     """
     Turns an iterable of strings into a generator of keys.
 
@@ -142,7 +142,8 @@ def keysFromStrings(keyStrings, keyType="public_openssh"):
 
 
 
-def keysFromFilepaths(filepaths, keyType="public_openssh", ownerIds=None):
+def publicKeysFromFilepaths(filepaths, keyType="public_openssh",
+                            ownerIds=None):
     """
     Turns an iterable of absolute filenames (the full path) into a generator
     of keys.
@@ -167,103 +168,182 @@ def keysFromFilepaths(filepaths, keyType="public_openssh", ownerIds=None):
     """
     def _tryGetContent(filepath):
         try:
-            return filepath.getContents()
+            return filepath.getContent()
         except IOError as e:
             if ownerIds is not None and e.errno == errno.EACCES:
                 return runAsEffectiveUser(ownerIds[0], ownerIds[1],
-                                          filepath.getContents)
+                                          filepath.getContent)
             else:
                 raise
 
-    return keysFromStrings((_tryGetContent(fp) for fp in filepaths
-                            if fp.exists()), keyType)
+    return publicKeysFromStrings((_tryGetContent(fp) for fp in filepaths
+                                  if fp.exists()), keyType)
 
 
 
-def authenticateAndVerifySSHKey(authorizedKeys, credentials):
+@implementer(ICredentialsChecker)
+class SSHPublicKeyChecker(object):
     """
-    Authenticates the credentials against a bunch of authorized keys,
-    and then if the key is valid, verifies the key signature.
+    Checker that authenticates the credentials against a bunch of authorized
+    keys.  The order of operations is that it authenticates, and then, if the
+    key is valid, it verifies the key signature, and if the signature is valid
+    it returns the avatar Id.
 
-    This is important because in the SSH protocol (RFC 4252, Section 7), the
-    public key blob is sent along with other info first.  The server then must
-    determine whether this blob is a valid authenticator for the user.  If
-    no signature is provided, C{SSH_MSG_USERAUTH_PK_OK} is sent back to the
-    client to indicate that the key is valid, but not signed.
+    In the SSH protocol (RFC 4252, Section 7), the public key blob is sent
+    along with other info first.  The server then must determine whether this
+    blob is a valid authenticator for the user.  If no signature is provided,
+    C{SSH_MSG_USERAUTH_PK_OK} is sent back to the client to indicate that the
+    key is valid, but not signed.
 
     The client may then send the signed key again, and if the key is a valid
     authenticator and it is correctly signed, then if this is the end of
     the authentications required by the server then the server must send a
     C{SSH_MSG_USERAUTH_SUCCESS}.
 
-    The intent is for this method to be called for both the initial non-signed
-    check and for the signed check.
+    The intent is for L{requestAvatarId} to be called for both the initial
+    non-signed check and for the signed check.
 
-    If the key is unsigned, then L{error.validPublicKey} is raised, which
-    indicates that a C{SSH_MSG_USERAUTH_PK_OK} should be sent.
+    @ivar authorizedKeyProducer: a callable that returns a C{iterable}
+        (preferably a C{generator}) of L{twisted.conch.ssh.keys.Key} objects
+        that are valid authenticators for the user.
 
+        The functions L{publicKeysFromStrings} or L{publicKeysFromFilepaths}
+        can be used to produce said iterable.
 
-    @param credentials: The credentials offered by the user.
-    @type credentials: L{ISSHPrivateKey} provider
-
-    @param authorizedKeys: a generator of key objects that are valid
-        authenticators for the user.  The functions L{keysFromStrings} or
-        L{keysFromFilepaths} can be used to generate this parameter.
-        A generator is required so that, in the case of files, no more file
+        A generator is preferred so that, in the case of files, no more file
         access than necessary needs to occur.
-    @type authorizedKeys: C{generator} of L{twisted.conch.ssh.keys.Key}
 
-    @raise UnauthorizedLogin: if the user provides invalid credentials
-
-    @raise ValidPublicKey: if the key is a a valid authenticator for the user
-        (matches one of the authorized keys) but the credentials do not
-        include a signature. See L{error.ValidPublicKey} for more information.
-
-    @return: the username in the credentials if verification is successful -
-        if unsuccessful in any way an exception will be raised
+    @type authorizedKeys: C{callable} that takes the credentials (a
+        C{ISSHPrivateKey}) as an argument.
     """
-    publicKey = keys.Key.fromString(credentials.blob)
-    # because the argument to any is a generator, any only evaluates enough
-    # items to get a True and no more
-    if not any((key == publicKey for key in authorizedKeys)):
-        raise UnauthorizedLogin("invalid key")
+    credentialInterfaces = (ISSHPrivateKey,)
 
-    if not credentials.signature:
-        raise error.ValidPublicKey()
 
-    verified = False
-    try:
+    def __init__(self, authorizedKeyProducer):
+        self.authorizedKeyProducer = authorizedKeyProducer
+
+
+    def requestAvatarId(self, credentials):
+        """
+        Authenticates and verifies the signature of the credentials
+
+        @param credentials: The credentials offered by the user.
+        @type credentials: L{ISSHPrivateKey} provider
+
+        @raise UnauthorizedLogin: if the user provides invalid credentials
+
+        @raise ValidPublicKey: if the key is a a valid authenticator for the
+            user (matches one of the authorized keys) but the credentials do
+            not include a signature. Indicates that a
+            C{SSH_MSG_USERAUTH_PK_OK} should be sent.  See
+            L{error.ValidPublicKey} for more information.
+
+        @return: the username in the credentials if verification is successful.
+            If unsuccessful in any way an exception will be raised
+        """
+        d = defer.maybeDeferred(self.authorizedKeyProducer, credentials)
+        d.addCallback(self._authenticateAndVerifySSHKey, credentials)
+        d.addErrback(self._normalizeErrors)
+        return d
+
+
+    def _authenticateAndVerifySSHKey(self, authorizedKeys, credentials):
+        """
+        What actually authenticates and verifies the signature.
+        """
+        publicKey = keys.Key.fromString(credentials.blob)
+
+        if not any((publicKey == key for key in authorizedKeys)):
+            raise UnauthorizedLogin("invalid key")
+
+        if not credentials.signature:
+            raise error.ValidPublicKey()
+
         if publicKey.verify(credentials.signature, credentials.sigData):
             return credentials.username
-    except Exception as e:  # any error should be treated as a failed login
-        log.err(e, 'error while verifying key')
-        raise UnauthorizedLogin('error while verifying key')
 
-    if not verified:
         raise UnauthorizedLogin("unable to verify key")
 
 
+    def _normalizeErrors(self, f):
+        """
+        Obscure non-UnauthorizedLogin errors (of which L{error.ValidPublicKey}
+        is a subclass).
+        """
+        if not f.check(UnauthorizedLogin):
+            log.err(f, 'unknown/unexpected error')
+            raise UnauthorizedLogin("unable to get avatar id")
+        return f
 
-@implementer(ICredentialsChecker)
+
+def getDotSSHAuthorizedKeys(credentials):
+    """
+    On OpenSSH servers, the default location of the file containing the
+    list of authorized public keys is
+    U{$HOME/.ssh/authorized_keys<http://www.openbsd.org/cgi-bin/man.cgi?query=sshd_config>}.
+
+    I{$HOME/.ssh/authorized_keys2} is also returned, though it has been
+    U{deprecated by OpenSSH since
+    2001<http://marc.info/?m=100508718416162>}.
+
+    @return: a C{generator}) of L{twisted.conch.ssh.keys.Key} corresponding to
+        authorized keys in U{$HOME/.ssh/authorized_keys} and
+        U{$HOME/.ssh/authorized_keys}
+    """
+
+
+
 class SSHPublicKeyDatabase:
     """
     Checker that authenticates SSH public keys, based on public keys listed in
     authorized_keys and authorized_keys2 files in user .ssh/ directories.
     """
+    implements(ICredentialsChecker)
+
     credentialInterfaces = (ISSHPrivateKey,)
 
     _userdb = pwd
 
     def requestAvatarId(self, credentials):
-        def _getAuthorizedKeys():
-            ouid, ogid = self._userdb.getpwnam(credentials.username)[2:4]
-            return keysFromFilepaths(self.getAuthorizedKeysFiles(credentials),
-                                     ownerIds=(ouid, ogid))
-
-        d = defer.maybeDeferred(_getAuthorizedKeys)
-        d.addCallback(authenticateAndVerifySSHKey, credentials)
+        d = defer.maybeDeferred(self.checkKey, credentials)
+        d.addCallback(self._cbRequestAvatarId, credentials)
         d.addErrback(self._ebRequestAvatarId)
         return d
+
+    def _cbRequestAvatarId(self, validKey, credentials):
+        """
+        Check whether the credentials themselves are valid, now that we know
+        if the key matches the user.
+
+        @param validKey: A boolean indicating whether or not the public key
+            matches a key in the user's authorized_keys file.
+
+        @param credentials: The credentials offered by the user.
+        @type credentials: L{ISSHPrivateKey} provider
+
+        @raise UnauthorizedLogin: (as a failure) if the key does not match the
+            user in C{credentials}. Also raised if the user provides an invalid
+            signature.
+
+        @raise ValidPublicKey: (as a failure) if the key matches the user but
+            the credentials do not include a signature. See
+            L{error.ValidPublicKey} for more information.
+
+        @return: The user's username, if authentication was successful.
+        """
+        if not validKey:
+            return failure.Failure(UnauthorizedLogin("invalid key"))
+        if not credentials.signature:
+            return failure.Failure(error.ValidPublicKey())
+        else:
+            try:
+                pubKey = keys.Key.fromString(credentials.blob)
+                if pubKey.verify(credentials.signature, credentials.sigData):
+                    return credentials.username
+            except: # any error should be treated as a failed login
+                log.err()
+                return failure.Failure(UnauthorizedLogin('error while verifying key'))
+        return failure.Failure(UnauthorizedLogin("unable to verify key"))
 
 
     def getAuthorizedKeysFiles(self, credentials):
@@ -274,15 +354,13 @@ class SSHPublicKeyDatabase:
 
         On OpenSSH servers, the default location of the file containing the
         list of authorized public keys is
-        U{$HOME/.ssh/authorized_keys}.
-        <http://www.openbsd.org/cgi-bin/man.cgi?query=sshd_config>
+        U{$HOME/.ssh/authorized_keys<http://www.openbsd.org/cgi-bin/man.cgi?query=sshd_config>}.
 
         I{$HOME/.ssh/authorized_keys2} is also returned, though it has been
         U{deprecated by OpenSSH since
-        2001 <http://marc.info/?m=100508718416162>}.
+        2001<http://marc.info/?m=100508718416162>}.
 
-        @return: A list of L{FilePath} instances to files with the authorized
-            keys.
+        @return: A list of L{FilePath} instances to files with the authorized keys.
         """
         pwent = self._userdb.getpwnam(credentials.username)
         root = FilePath(pwent.pw_dir).child('.ssh')
@@ -321,7 +399,7 @@ class SSHPublicKeyDatabase:
 
     def _ebRequestAvatarId(self, f):
         if not f.check(UnauthorizedLogin):
-            log.err(f, 'normalized error')
+            log.msg(f)
             return failure.Failure(UnauthorizedLogin("unable to get avatar id"))
         return f
 
