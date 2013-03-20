@@ -158,7 +158,16 @@ class BaseSentence(object):
         self._sentenceData = sentenceData
 
 
-    presentAttributes = property(lambda self: iter(self._sentenceData))
+    @property
+    def presentAttributes(self):
+        """
+        An iterable containing the names of the attributes that are present in
+        this sentence.
+
+        @return: The iterable of names of present attributes.
+        @rtype: iterable of C{str}
+        """
+        return iter(self._sentenceData)
 
 
     def __getattr__(self, name):
@@ -226,14 +235,6 @@ class Angle(object, FancyEqMixin):
     """
     An object representing an angle.
 
-    @ivar inDecimalDegrees: The value of this angle, expressed in decimal
-        degrees. C{None} if unknown. This attribute is read-only.
-    @type inDecimalDegrees: C{float} (or C{NoneType})
-    @ivar inDegreesMinutesSeconds: The value of this angle, expressed in
-        degrees, minutes and seconds. C{None} if unknown. This attribute is
-        read-only.
-    @type inDegreesMinutesSeconds: 3-C{tuple} of C{int} (or C{NoneType})
-
     @cvar RANGE_EXPRESSIONS: A collections of expressions for the allowable
         range for the angular value of a particular coordinate value.
     @type RANGE_EXPRESSIONS: A mapping of coordinate types (one of L{Angles})
@@ -284,12 +285,23 @@ class Angle(object, FancyEqMixin):
         self._angle = angle
 
 
-    inDecimalDegrees = property(lambda self: self._angle)
-
-
-    def _getDMS(self):
+    @property
+    def inDecimalDegrees(self):
         """
-        Gets the value of this angle as a degrees, minutes, seconds tuple.
+        The value of this angle in decimal degrees. This value is immutable.
+
+        @return: This angle expressed in decimal degrees, or C{None} if the
+            angle is unknown.
+        @rtype: C{float} (or C{NoneType})
+        """
+        return self._angle
+
+
+    @property
+    def inDegreesMinutesSeconds(self):
+        """
+        The value of this angle as a degrees, minutes, seconds tuple. This
+        value is immutable.
 
         @return: This angle expressed in degrees, minutes, seconds. C{None} if
             the angle is unknown.
@@ -307,9 +319,6 @@ class Angle(object, FancyEqMixin):
         decimalSeconds = 60 * fractionalMinutes
 
         return degrees, minutes, int(decimalSeconds)
-
-
-    inDegreesMinutesSeconds = property(_getDMS)
 
 
     def setSign(self, sign):
@@ -348,7 +357,8 @@ class Angle(object, FancyEqMixin):
         return "<%s (%s)>" % (self._angleTypeNameRepr, self._angleValueRepr)
 
 
-    def _getAngleValueRepr(self):
+    @property
+    def _angleValueRepr(self):
         """
         Returns a string representation of the angular value of this angle.
 
@@ -363,10 +373,8 @@ class Angle(object, FancyEqMixin):
             return "unknown value"
 
 
-    _angleValueRepr = property(_getAngleValueRepr)
-
-
-    def _getAngleTypeNameRepr(self):
+    @property
+    def _angleTypeNameRepr(self):
         """
         Returns a string representation of the type of this angle.
 
@@ -378,9 +386,6 @@ class Angle(object, FancyEqMixin):
         angleTypeName = self.ANGLE_TYPE_NAMES.get(
             self.angleType, "angle of unknown type").capitalize()
         return angleTypeName
-
-
-    _angleTypeNameRepr = property(_getAngleTypeNameRepr)
 
 
 
@@ -551,7 +556,8 @@ class Altitude(object, FancyEqMixin):
         self._altitude = altitude
 
 
-    def _getAltitudeInFeet(self):
+    @property
+    def inFeet(self):
         """
         Gets the altitude this object represents, in feet.
 
@@ -561,10 +567,8 @@ class Altitude(object, FancyEqMixin):
         return self._altitude / METERS_PER_FOOT
 
 
-    inFeet = property(_getAltitudeInFeet)
-
-
-    def _getAltitudeInMeters(self):
+    @property
+    def inMeters(self):
         """
         Returns the altitude this object represents, in meters.
 
@@ -572,9 +576,6 @@ class Altitude(object, FancyEqMixin):
         @rtype: C{float}
         """
         return self._altitude
-
-
-    inMeters = property(_getAltitudeInMeters)
 
 
     def __float__(self):
@@ -604,13 +605,6 @@ class _BaseSpeed(object, FancyEqMixin):
     movement) of a mobile object.
 
     This primarily has behavior for converting between units and comparison.
-
-    @ivar inMetersPerSecond: The speed that this object represents, expressed
-        in meters per second. This attribute is immutable.
-    @type inMetersPerSecond: C{float}
-
-    @ivar inKnots: Same as above, but expressed in knots.
-    @type inKnots: C{float}
     """
     compareAttributes = 'inMetersPerSecond',
 
@@ -629,17 +623,27 @@ class _BaseSpeed(object, FancyEqMixin):
 
 
     @property
+    def inMetersPerSecond(self):
+        """
+        The speed that this object represents, expressed in meters per second.
+        This attribute is immutable.
+
+        @return: The speed this object represents, in meters per second.
+        @rtype: C{float}
+        """
+        return self._speed
+
+
+    @property
     def inKnots(self):
         """
-        Returns the speed represented by this object, expressed in knots.
+        Returns the speed represented by this object, expressed in knots. This
+        attribute is immutable.
 
         @return: The speed this object represents, in knots.
         @rtype: C{float}
         """
         return self._speed / MPS_PER_KNOT
-
-
-    inMetersPerSecond = property(lambda self: self._speed)
 
 
     def __float__(self):
@@ -896,7 +900,8 @@ class BeaconInformation(object):
         self.beacons = set(beacons)
 
 
-    def _getUsedBeacons(self):
+    @property
+    def usedBeacons(self):
         """
         Returns a generator of used beacons.
 
@@ -910,10 +915,8 @@ class BeaconInformation(object):
                 yield beacon
 
 
-    usedBeacons = property(fget=_getUsedBeacons)
-
-
-    def _getNumberOfBeaconsSeen(self):
+    @property
+    def seen(self):
         """
         Returns the number of beacons that can be seen.
 
@@ -923,10 +926,8 @@ class BeaconInformation(object):
         return len(self.beacons)
 
 
-    seen = property(_getNumberOfBeaconsSeen)
-
-
-    def _getNumberOfBeaconsUsed(self):
+    @property
+    def used(self):
         """
         Returns the number of beacons that can be seen.
 
@@ -942,9 +943,6 @@ class BeaconInformation(object):
             elif beacon.isUsed:
                 numberOfUsedBeacons += 1
         return numberOfUsedBeacons
-
-
-    used = property(_getNumberOfBeaconsUsed)
 
 
     def __iter__(self):
