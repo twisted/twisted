@@ -160,9 +160,9 @@ class Tube(object):
 
 class Pump(object):
     """
-    Null implementation for L{IPump}.  You can inherit from this to get no-op
-    implementation of all of L{IPump}'s required implementation so you can just
-    just implement the parts you're interested in.
+    Null implementation for L{IPump}.  You can inherit from this to
+    get no-op implementation of all of L{IPump}'s required implementation so
+    you can just just implement the parts you're interested in.
 
     @ivar tube: the L{Tube} whose flow this pump is controlling.  This
         attribute will be set before 'started' is called.
