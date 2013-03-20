@@ -21,7 +21,7 @@ PyDoc_STRVAR(sendfile_wrapper_doc,
 \n\
 Copies data between the file descriptor inFd open for reading and the file\n\
 descriptor outFd open for writing. Returns the number of bytes written to\n\
-outFd and the offset in inFd.");
+outFd.");
 
 
 static PyObject * sendfile_wrapper(PyObject *self, PyObject *args) {
@@ -32,7 +32,6 @@ static PyObject * sendfile_wrapper(PyObject *self, PyObject *args) {
     int sts;
     size_t nbytes;
     off_t sbytes = 0;
-    Py_ssize_t result;
 
     if (!PyArg_ParseTuple(args, "iiLi", &outFd, &inFd, &offset, &nbytes)) {
         return NULL;
@@ -49,13 +48,11 @@ static PyObject * sendfile_wrapper(PyObject *self, PyObject *args) {
         }
     }
 
-    result = offset + sbytes;
-    return Py_BuildValue("LL", sbytes, result);
+    return Py_BuildValue("L", sbytes);
 #else
 #if defined(__APPLE__)
     int sts;
     off_t nbytes;
-    Py_ssize_t result;
 
     if (!PyArg_ParseTuple(args, "iiLL", &outFd, &inFd, &offset, &nbytes)) {
         return NULL;
@@ -72,8 +69,7 @@ static PyObject * sendfile_wrapper(PyObject *self, PyObject *args) {
         }
     }
 
-    result = offset + nbytes;
-    return Py_BuildValue("LL", nbytes, result);
+    return Py_BuildValue("L", nbytes);
 #else
     size_t count, sent;
 
@@ -90,7 +86,7 @@ static PyObject * sendfile_wrapper(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    return Py_BuildValue("ll", sent, offset);
+    return Py_BuildValue("l", sent);
 #endif
 #endif
 }

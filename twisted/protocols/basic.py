@@ -23,9 +23,12 @@ from twisted.internet import protocol, defer, interfaces, error
 from twisted.python import log, deprecate, versions
 
 try:
-    from twisted.python._sendfile import sendfile
+    from os import sendfile
 except ImportError:
-    sendfile = None
+    try:
+        from twisted.python._sendfile import sendfile
+    except ImportError:
+        sendfile = None
 
 
 # Unfortunately we cannot use regular string formatting on Python 3; see
@@ -913,6 +916,10 @@ class FileSender:
     _count = 0
     _started = False
 
+    def __init__(self, sendfile=sendfile):
+        self._sendfile = sendfile
+
+
     def beginFileTransfer(self, file, consumer, transform=None):
         """
         Begin transferring a file.
@@ -975,7 +982,7 @@ class FileSender:
         @return: C{True} if we should try to use C{sendfile} for this transfer.
         @rtype: C{bool}
         """
-        return (not self.transform and sendfile is not None and
+        return (self.transform is None and self._sendfile is not None and
                 getattr(self.file, "fileno", None) is not None and
                 interfaces.IFileDescriptor.providedBy(self.consumer) and
                 interfaces.IReactorFDSet.providedBy(self.consumer.reactor))
@@ -1006,9 +1013,8 @@ class FileSender:
         data in the local buffer.
         """
         try:
-            l, self._offset = sendfile(self.consumer.fileno(),
-                                       self.file.fileno(), self._offset,
-                                       self._count)
+            sent  = sendfile(self.consumer.fileno(), self.file.fileno(),
+                             self._offset, self._count)
         except IOError as e:
             from twisted.internet.tcp import EWOULDBLOCK
             if e.errno == EWOULDBLOCK:
@@ -1028,6 +1034,7 @@ class FileSender:
             deferred.errback()
         else:
             self._started = True
+            self._offset += sent
             if self._offset == self._count:
                 self.consumer.unregisterProducer()
                 # Maintain backward compatible behavior by getting the last

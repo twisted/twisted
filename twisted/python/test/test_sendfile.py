@@ -74,15 +74,13 @@ class SendfileTestCase(TestCase):
         Test the basic behavior for sendfile.
         """
         server, client = self._connectedPair()
-        s, o = sendfile(server.fileno(), self.file.fileno(), 0, 100)
+        s = sendfile(server.fileno(), self.file.fileno(), 0, 100)
         self.assertEqual(s, 100)
-        self.assertEqual(o, 100)
         data = client.recv(500)
         self.assertEqual(len(data), 100)
 
-        s, o = sendfile(server.fileno(), self.file.fileno(), o, 150)
+        s = sendfile(server.fileno(), self.file.fileno(), s, 150)
         self.assertEqual(s, 150)
-        self.assertEqual(o, 250)
         data = client.recv(500)
         self.assertEqual(len(data), 150)
 
@@ -93,9 +91,8 @@ class SendfileTestCase(TestCase):
         """
         server, client = self._connectedPair()
         server.send('y' * 10)
-        s, o = sendfile(server.fileno(), self.file.fileno(), 0, 100)
+        s = sendfile(server.fileno(), self.file.fileno(), 0, 100)
         self.assertEqual(s, 100)
-        self.assertEqual(o, 100)
         data = client.recv(200)
         if len(data) < 100:
             data += client.recv(200)
