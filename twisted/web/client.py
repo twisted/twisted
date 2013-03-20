@@ -1664,7 +1664,16 @@ def getJSONBody(response):
 
 
 
-def _getRequestEncoding(headers):
+def _guessRequestEncoding(headers):
+    """
+    Guess the encoding used by the request.
+
+    @type headers: L{Headers}
+    @param headers: HTTP reponse headers
+
+    @rtype: L{str} or L{None}
+    @return: Guessed encoding
+    """
     contentTypes = headers.getRawHeaders('content-type')
     if contentTypes is None:
         return
@@ -1692,7 +1701,7 @@ def getTextBody(response, defaultEncoding='ISO-8859-1'):
 
     @return: A L{Deferred} which will fire with the decoded body of the response.
     """
-    encoding = _getRequestEncoding(response.headers) or defaultEncoding
+    encoding = _guessRequestEncoding(response.headers) or defaultEncoding
     def decode(body):
         return body.decode(encoding)
     return getBody(response).addCallback(decode)
