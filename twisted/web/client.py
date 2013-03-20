@@ -1610,10 +1610,37 @@ class RedirectAgent(object):
 
 
 
-
 class _GetBodyProtocol(protocol.Protocol):
+    """
+    Protocol that collects data sent to it.
+
+    This is a helper for L{Agent.deliverBody}, which collects
+    the body and fires a deferred with it.
+
+    @ivar deferred: See L{__init__}.
+    @type deferred: L{Deferred} firing with L{bytes}
+
+    @ivar status: See L{__init__}.
+    @ivar status: L{int}
+
+    @ivar message: See L{__init__}.
+    @type message: L{bytes}
+
+    @ivar buf: list of byte-strings received
+    @type buf: L{list} of L{bytes}
+    """
 
     def __init__(self, status, message, deferred):
+        """
+        @ivar deferred: deferred to fire when response is complete
+        @type deferred: L{Deferred} firing with L{bytes}
+
+        @ivar status: Status of L{IResponse}
+        @ivar status: L{int}
+
+        @ivar message: Message of L{IResponse}
+        @type message: L{bytes}
+        """
         self.deferred = deferred
         self.status = status
         self.message = message
@@ -1655,8 +1682,8 @@ def getJSONBody(response):
     """
     Get the body of an L{IResponse} interpreted as JSON.
 
-    @type resposne: L{IResponse}
-    @param resposne: An HTTP response
+    @type response: L{IResponse}
+    @param response: An HTTP response
 
     @return: A L{Deferred} which will fire with the decoded body of the response.
     """
@@ -1693,8 +1720,8 @@ def getTextBody(response, defaultEncoding='ISO-8859-1'):
 
     C{getTextBody} tries to guess the content type from the HTTP headers.
 
-    @type resposne: L{IResponse}
-    @param resposne: An HTTP response
+    @type response: L{IResponse}
+    @param response: An HTTP response
 
     @type defaultEncoding: L{str}
     @param defaultEncoding: default encoding to use, if it can't be guessed.
