@@ -18,15 +18,8 @@ else:
     import crypt
 
 try:
-    # Python 2.5 got spwd to interface with shadow passwords
-    import spwd
+    import shadow
 except ImportError:
-    spwd = None
-    try:
-        import shadow
-    except ImportError:
-        shadow = None
-else:
     shadow = None
 
 try:
@@ -69,15 +62,13 @@ def _pwdGetByName(username):
 
 def _shadowGetByName(username):
     """
-    Look up a user in the /etc/shadow database using the spwd or shadow
-    modules.  If neither module is available, return None.
+    Look up a user in the /etc/shadow database using the shadow
+    module.  If neither module is available, return None.
 
     @param username: the username of the user to return the shadow database
         information for.
     """
-    if spwd is not None:
-        f = spwd.getspnam
-    elif shadow is not None:
+    if shadow is not None:
         f = shadow.getspnam
     else:
         return None
