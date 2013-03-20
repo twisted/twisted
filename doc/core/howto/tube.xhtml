@@ -21,15 +21,21 @@ Finally, you select an <code class="API" base="twisted.tubes.itube">IDrain</code
 <p>Let's see a simple example of what that would look like.  Imagine that you have a wire protocol which decodes length-prefixed chunks of base64-encoded data into UTF-8 text, upper-cases that text, and then emits it as output as length-prefixed, (character)-reversed, UTF-8-encoded strings.</p>
 
 <pre class="python">
-(fount.flowTo(Tube(NetstringToString()))
-      .flowTo(Tube(Base64Decode()))
-      .flowTo(Tube(UTF8Decode()))
-      .flowTo(Tube(Uppercase()))
-      .flowTo(Tube(Reverse()))
-      .flowTo(Tube(UTF8Encode()))
-      .flowTo(Tube(StringToNetstring()))
-      .flowTo(drain))
+def funkyConvert(fount, drain):
+    return (fount.flowTo(Tube(NetstringToString()))
+                 .flowTo(Tube(Base64Decode()))
+                 .flowTo(Tube(UTF8Decode()))
+                 .flowTo(Tube(Uppercase()))
+                 .flowTo(Tube(Reverse()))
+                 .flowTo(Tube(UTF8Encode()))
+                 .flowTo(Tube(StringToNetstring()))
+                 .flowTo(drain))
 </pre>
+
+<p>
+In the above example, notice that the initial "fount" and "drain" are provided as inputs (they will be constructed from objects within Twisted) and you instantiate Tube directly.
+In typical usage, behavior that you need to provide comes in the form of a custom Pump.
+</p>
 
 </body>
 </html>
