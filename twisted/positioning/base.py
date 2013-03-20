@@ -885,15 +885,15 @@ class BeaconInformation(object):
         positioning fix. This attribute is immutable.
     @type used: C{int}
     """
-    def __init__(self, beacons=None):
+    def __init__(self, beacons=()):
         """
         Initializes a beacon information object.
 
         @param beacons: A collection of beacons that will be present in this
             beacon information object.
-        @type beacons: iterable of L{IPositioningBeacon} or C{Nonetype}
+        @type beacons: iterable of L{IPositioningBeacon} or C{NoneType}
         """
-        self.beacons = set(beacons or [])
+        self.beacons = set(beacons)
 
 
     def _getUsedBeacons(self):
