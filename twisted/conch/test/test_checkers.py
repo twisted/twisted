@@ -228,6 +228,16 @@ class PublicKeysFromXTestsCases(TestCase):
             [((letter,), {'type': 'public_openssh'}) for letter in 'iterable'])
 
 
+    def test_keysFromStringsMultilineStrings(self):
+        """
+        L{checkers.keysFromStrings} produces multiple keys from a C{keyString}
+        if the C{keyString} has multiple keys, one on each line.  It also
+        filters out empty lines
+        """
+        results = list(checkers.publicKeysFromStrings(['1\n2\n  \n \n  \n3']))
+        self.assertEqual(results, ['this is a key!'] * 3)
+
+
     def test_keysFromFilepaths(self):
         """
         L{checkers.keysFromFilepaths} produces a generator of key objects given

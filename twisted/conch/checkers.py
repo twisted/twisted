@@ -124,7 +124,8 @@ class UNIXPasswordDatabase:
 
 def publicKeysFromStrings(keyStrings, keyType="public_openssh"):
     """
-    Turns an iterable of strings into a generator of keys.
+    Turns an iterable of strings into a generator of keys.  Each string may
+    contain more than one key, but each key should be on a separate line.
 
     @param keyStrings: an iterable of strings containing keys of C{keyType}
     @type filepaths: C{iterable} of C{str}
@@ -137,8 +138,10 @@ def publicKeysFromStrings(keyStrings, keyType="public_openssh"):
     @return: a C{generator} object whose values L{twisted.conch.ssh.keys.Key}
         objects corresponding to the key
     """
-    return (keys.Key.fromString(keyString, type=keyType) for
-            keyString in keyStrings)
+    for keyString in keyStrings:
+        allKeys = [line for line in keyString.split('\n') if line.strip()]
+        for oneKey in allKeys:
+            yield keys.Key.fromString(oneKey, type=keyType)
 
 
 
