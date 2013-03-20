@@ -786,7 +786,7 @@ process with this.</p>
         bookTeX.setContent(
             r"\documentclass{book}" "\n"
             r"\begin{document}" "\n" +
-            "\n".join([r"\input{%d.tex}" % (n,) for n in sections]) +
+            "\n".join([r"\input{%s.tex}" % (n,) for n in sections]) +
             r"\end{document}" "\n")
         return bookTeX
 

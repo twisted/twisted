@@ -1448,11 +1448,15 @@ class BuildDocsScript(object):
                         versionString, howtoRoot, p.parent(),
                         template,
                         apiURL + "%s.html",
-                        True)
+                        False)
 
         BookBuilder().build(howtoRoot, dirs.keys(),
                             howtoRoot.child('book.tex'),
                             howtoRoot.child('book.pdf'))
+
+        for path in dirs:
+            for doc in path.globChildren("*.xhtml"):
+                doc.remove()
 
 
     def main(self, args):
