@@ -2166,7 +2166,7 @@ class GetBodyTests(unittest.TestCase):
         d = client.getJSONBody(response)
         response.protocol.dataReceived("'test'")
         response.protocol.connectionLost(Failure(ConnectionDone()))
-        self.failureResultOf(d).check(ValueError)
+        self.failureResultOf(d).trap(ValueError)
 
 
 
