@@ -874,7 +874,7 @@ class BeaconInformation(object):
 
     @ivar usedBeacons: An iterable of the beacons that were used in obtaining a
         positioning fix. This only contains beacons that are actually used, not
-        beacons of which it is  unknown if they are used or not. This attribute
+        beacons for which it is unknown if they are used or not. This attribute
         is immutable.
     @type usedBeacons: iterable of L{IPositioningBeacon}
 
