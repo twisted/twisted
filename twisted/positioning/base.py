@@ -929,12 +929,12 @@ class BeaconInformation(object):
     @property
     def used(self):
         """
-        Returns the number of beacons that can be seen.
+        Returns the number of beacons that are used.
 
-        @return: The number of beacons that can be seen, or C{None} if the number
-            is unknown. This happens as soon as one of the beacons has an unknown
-            (C{None}) C{isUsed} attribute.
-        @rtype: C{int} or C{NoneType}
+        @return: The number of beacons that is used, or C{None} if the number
+            is unknown. This happens as soon as one of the beacons has an
+            unknown (C{None}) C{isUsed} attribute. @rtype: C{int} or
+            C{NoneType}
         """
         numberOfUsedBeacons = 0
         for beacon in self.beacons:
