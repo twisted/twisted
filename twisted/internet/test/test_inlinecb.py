@@ -12,8 +12,11 @@ well.
 from __future__ import division, absolute_import
 
 from twisted.trial.unittest import TestCase
-from twisted.internet.defer import Deferred, returnValue, inlineCallbacks
+from twisted.internet.defer import (
+    Deferred, returnValue, inlineCallbacks, setDebugging, getDebugging)
 from twisted.python.failure import Failure
+
+
 
 class NonLocalExitTests(TestCase):
     """
@@ -76,11 +79,13 @@ class NonLocalExitTests(TestCase):
         and therefore moved its generator function along.
         """
         cause = Deferred()
+
         @inlineCallbacks
         def inline():
             yield cause
             self.mistakenMethod()
             returnValue(2)
+
         effect = inline()
         results = []
         effect.addCallback(results.append)
@@ -89,15 +94,22 @@ class NonLocalExitTests(TestCase):
         self.assertMistakenMethodWarning(results)
 
 
+
 class FrameStackTests(TestCase):
+
+    def setUp(self):
+        # Restore the debug flag to its original state when done.
+        self.addCleanup(setDebugging, getDebugging())
+
+
     def test_failureContainsCallingFrames(self):
         """
-        When L{inlineCallbacks} yields a failure, it should add itself to the
+        When L{inlineCallbacks} yields a failure, it adds itself to the
         failure's frames so that the traceback is more useful.
         """
         @inlineCallbacks
         def inline1():
-            yield 1/0
+            yield 1 / 0
 
         @inlineCallbacks
         def inline2():
@@ -115,9 +127,65 @@ class FrameStackTests(TestCase):
         self.assertIsInstance(failure, Failure)
 
         functionNames = []
-        for funcName, filename, lineno, localVars, globalVars in failure.frames:
+        for funcName, _, _, _, _ in failure.frames:
             functionNames.append(funcName)
         self.assertIn('inline1', functionNames)
         self.assertIn('inline2', functionNames)
         self.assertIn('inline3', functionNames)
 
+
+    def test_framesDoNotIncludeLocalsOrGlobalsWhenDebuggingIsDisabled(self):
+        """
+        When a failure is caught from an L{inlineCallbacks} stack, by default
+        the locals and globals of the intermediate stack frames are not be
+        saved.
+        """
+        setDebugging(False)
+
+        @inlineCallbacks
+        def inline1():
+            yield 1 / 0
+
+        @inlineCallbacks
+        def inline2(someLocal=3):
+            yield inline1()
+
+        d = inline2()
+        results = []
+        d.addBoth(results.append)
+
+        failure = results[0]
+        self.assertIsInstance(failure, Failure)
+
+        for _, _, _, localVars, globalVars in failure.frames:
+            self.assertEqual(len(localVars), 0)
+            self.assertEqual(len(globalVars), 0)
+
+
+    def test_framesIncludeLocalsAndGlobalsWhenDebuggingIsEnabled(self):
+        """
+        When a failure is caught from an L{inlineCallbacks} stack, if that
+        failure has the captureVars flag set, the flag is respected and locals
+        and globals are stored.
+        """
+        setDebugging(True)
+
+        @inlineCallbacks
+        def inline1():
+            yield 1 / 0
+
+        @inlineCallbacks
+        def inline2(someLocal=3):
+            yield inline1()
+
+        d = inline2()
+        results = []
+        d.addBoth(results.append)
+
+        failure = results[0]
+        self.assertIsInstance(failure, Failure)
+
+        for funcName, _, _, localVars, globalVars in failure.frames:
+            self.assertNotEqual(len(globalVars), 0)
+            if funcName == 'inline2':
+                self.assertIn(('someLocal', 3), localVars)
