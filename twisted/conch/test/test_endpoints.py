@@ -451,8 +451,8 @@ class SSHCommandEndpointTestsMixin(object):
         dataReceived = []
         protocol.dataReceived = dataReceived.append
 
-        # Figure out which channel on the connection this protocol is associated
-        # with so the test can do a write on it.
+        # Figure out which channel on the connection this protocol is
+        # associated with so the test can do a write on it.
         channelId = protocol.transport.id
 
         server.service.channels[channelId].write(b"hello, world")
@@ -630,7 +630,7 @@ class SSHCommandEndpointTestsMixin(object):
 
 
 
-class SSHCommandEndpointNewConnectionTests(TestCase, SSHCommandEndpointTestsMixin):
+class NewConnectionTests(TestCase, SSHCommandEndpointTestsMixin):
     """
     Tests for L{SSHCommandEndpoint} when using the C{existingConnection}
     constructor.
@@ -1027,7 +1027,7 @@ class SSHCommandEndpointNewConnectionTests(TestCase, SSHCommandEndpointTestsMixi
 
 
 
-class SSHCommandEndpointExistingConnectionTests(TestCase, SSHCommandEndpointTestsMixin):
+class ExistingConnectionTests(TestCase, SSHCommandEndpointTestsMixin):
     """
     Tests for L{SSHCommandEndpoint} when using the C{existingConnection}
     constructor.

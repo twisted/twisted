@@ -144,6 +144,9 @@ class FakeTransport:
         self.protocol.connectionLost(Failure(err))
 
     def logPrefix(self):
+        """
+        Identify this transport/event source to the logging system.
+        """
         return "iosim"
 
     def getPeer(self):
