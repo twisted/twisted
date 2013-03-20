@@ -545,6 +545,21 @@ class SSHPublicKeyDatabaseTestCase(TestCase):
         self.assertEqual(self.mockos.setegidCalls, [2, 1234])
 
 
+    def test_getAuthorizedKeysFiles(self):
+        """
+        L{SSHPublicKeyDatabase..getAuthorizedKeysFiles} looks up the user's
+        home directory and returns a list of filepaths corresponding to
+        $HOME/.ssh/authorized_keys and $HOME/.ssh/authorized_keys2
+        """
+        result = self.checker.getAuthorizedKeysFiles(
+            SSHPrivateKey('user', 'rsa', 'blob', 'sigData', 'sig'))
+        self.assertEqual(
+            result, [FilePath(os.path.join(self.mockos.path.path, '.ssh',
+                                           'authorized_keys')),
+                     FilePath(os.path.join(self.mockos.path.path, '.ssh',
+                                           'authorized_keys2'))])
+
+
     def test_requestAvatarId(self):
         """
         L{SSHPublicKeyDatabase.requestAvatarId} first gets the authorized
