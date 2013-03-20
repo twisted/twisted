@@ -61,13 +61,37 @@ from twisted.test.iosim import FakeTransport, connect
 
 
 class BrokenExecSession(SSHChannel):
+    """
+    L{BrokenExecSession} is a session on which exec requests always fail.
+    """
     def request_exec(self, data):
+        """
+        Fail all exec requests.
+
+        @param data: Information about what is being executed.
+        @type data: L{bytes}
+
+        @return: C{0} to indicate failure
+        @rtype: L{int}
+        """
         return 0
 
 
 
 class WorkingExecSession(SSHChannel):
+    """
+    L{BrokenExecSession} is a session on which exec requests always succeed.
+    """
     def request_exec(self, data):
+        """
+        Succeed all exec requests.
+
+        @param data: Information about what is being executed.
+        @type data: L{bytes}
+
+        @return: C{1} to indicate success
+        @rtype: L{int}
+        """
         return 1
 
 
@@ -75,6 +99,7 @@ class WorkingExecSession(SSHChannel):
 class TrivialRealm(object):
     def __init__(self):
         self.channelLookup = {}
+
 
     def requestAvatar(self, avatarId, mind, *interfaces):
         avatar = ConchUser()
@@ -162,7 +187,21 @@ class MemoryAddress(object):
 
 @implementer(IStreamClientEndpoint)
 class SingleUseMemoryEndpoint(object):
+    """
+    L{SingleUseMemoryEndpoint} is a client endpoint which allows one connection
+    to be set up and then exposes an API for moving around bytes related to
+    that connection.
+
+    @ivar pump: L{None} until a connection is attempted, then a L{IOPump}
+        instance associated with the protocol which is connected.
+    @type pump: L{IOPump}
+    """
     def __init__(self, server):
+        """
+        @param server: An L{IProtocol} provider to which the client will be
+            connected.
+        @type server: L{IProtocol} provider
+        """
         self.pump = None
         self._server = server
 
@@ -519,6 +558,19 @@ class SSHCommandEndpointTestsMixin(object):
 
 
     def record(self, server, protocol, event, noArgs=False):
+        """
+        Hook into and record events which happen to C{protocol}.
+
+        @param server: The SSH server protocol over which C{protocol} is
+            running.
+        @type server: L{IProtocol} provider
+
+        @param protocol:
+
+        @param event:
+
+        @param noArgs:
+        """
         # Figure out which channel the test is going to send data over so we can
         # look for it to arrive at the right place on the server.
         channelId = protocol.transport.id
