@@ -73,6 +73,46 @@ def format_frames(frames, write, detail="default"):
             for name, val in globalVars:
                 w("  %s : %s\n" %  (name, repr(val)))
 
+
+
+def buildFrameRecord(frame, captureVars, lineno=None):
+    """
+    Builds a frame record, optionally capturing local and global variables.
+
+    @param frame: the frame from which to build the record
+    @type frame: python stack frame
+
+    @param captureVars: whether or not to capture locals and globals
+    @type captureVars: C{bool}
+
+    @param lineno: if given, overrides the line number in the stack frame
+    @param lineno: C{int}
+
+    @returns: (funcName, fileName, lineNumber, locals.items(), globals.items())
+    """
+    if captureVars:
+        localz = frame.f_locals.copy()
+        if frame.f_locals is frame.f_globals:
+            globalz = {}
+        else:
+            globalz = frame.f_globals.copy()
+        for d in globalz, localz:
+            if "__builtins__" in d:
+                del d["__builtins__"]
+        localz = list(localz.items())
+        globalz = list(globalz.items())
+    else:
+        localz = globalz = ()
+
+    if lineno is None:
+        lineno = frame.f_lineno
+    return (frame.f_code.co_name,
+            frame.f_code.co_filename,
+            lineno,
+            localz,
+            globalz)
+
+
 # slyphon: i have a need to check for this value in trial
 #          so I made it a module-level constant
 EXCEPTION_CAUGHT_HERE = "--- <exception caught here> ---"
@@ -262,50 +302,14 @@ class Failure:
         #   what called upon the PB object.
 
         while f:
-            if captureVars:
-                localz = f.f_locals.copy()
-                if f.f_locals is f.f_globals:
-                    globalz = {}
-                else:
-                    globalz = f.f_globals.copy()
-                for d in globalz, localz:
-                    if "__builtins__" in d:
-                        del d["__builtins__"]
-                localz = localz.items()
-                globalz = globalz.items()
-            else:
-                localz = globalz = ()
-            stack.insert(0, (
-                f.f_code.co_name,
-                f.f_code.co_filename,
-                f.f_lineno,
-                localz,
-                globalz,
-                ))
+            frameRecord = buildFrameRecord(f, captureVars)
+            stack.insert(0, frameRecord)
             f = f.f_back
 
         while tb is not None:
-            f = tb.tb_frame
-            if captureVars:
-                localz = f.f_locals.copy()
-                if f.f_locals is f.f_globals:
-                    globalz = {}
-                else:
-                    globalz = f.f_globals.copy()
-                for d in globalz, localz:
-                    if "__builtins__" in d:
-                        del d["__builtins__"]
-                localz = list(localz.items())
-                globalz = list(globalz.items())
-            else:
-                localz = globalz = ()
-            frames.append((
-                f.f_code.co_name,
-                f.f_code.co_filename,
-                tb.tb_lineno,
-                localz,
-                globalz,
-                ))
+            frameRecord = buildFrameRecord(tb.tb_frame, captureVars,
+                lineno=tb.tb_lineno)
+            frames.append(frameRecord)
             tb = tb.tb_next
         if inspect.isclass(self.type) and issubclass(self.type, Exception):
             parentCs = getmro(self.type)

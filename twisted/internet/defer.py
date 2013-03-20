@@ -1123,31 +1123,8 @@ def _inlineCallbacks(result, g, deferred):
                 traceback to be useful insert the current yield line into the
                 stack of frames.
                 """
-                frame = g.gi_frame
-
-                # The following code is lifted almost straight from
-                # twisted.python.failure.Failure.__init__()
-                if f.captureVars:
-                    localz = frame.f_locals.copy()
-                    if frame.f_locals is frame.f_globals:
-                        globalz = {}
-                    else:
-                        globalz = frame.f_globals.copy()
-                    for d in globalz, localz:
-                        if d.has_key("__builtins__"):
-                            del d["__builtins__"]
-                    localz = list(localz.items())
-                    globalz = list(globalz.items())
-                else:
-                    localz = globalz = ()
-
-                f.frames.insert(0, [
-                    frame.f_code.co_name,
-                    frame.f_code.co_filename,
-                    frame.f_lineno,
-                    localz,
-                    globalz,
-                    ])
+                f.frames.insert(
+                    0, failure.buildFrameRecord(g.gi_frame, f.captureVars))
                 return f
             result.addErrback(extendErrbackStack)
 
