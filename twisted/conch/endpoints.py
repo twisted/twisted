@@ -9,7 +9,7 @@ Endpoint implementations of various SSH interactions.
 __all__ = [
     'ISSHConnectionCreator',
 
-    'AuthenticationFailed', 'SSHCommandAddress', 'SSHCommandEndpoint']
+    'AuthenticationFailed', 'SSHCommandAddress', 'SSHCommandClientEndpoint']
 
 from struct import unpack
 from os.path import expanduser
@@ -462,15 +462,15 @@ class _CommandTransport(SSHClientTransport):
 
 
 @implementer(IStreamClientEndpoint)
-class SSHCommandEndpoint(object):
+class SSHCommandClientEndpoint(object):
     """
-    L{SSHCommandEndpoint} exposes the command-executing functionality of SSH
-    servers.
+    L{SSHCommandClientEndpoint} exposes the command-executing functionality of
+    SSH servers.
 
-    L{SSHCommandEndpoint} can set up a new SSH connection, authenticate it in
-    any one of a number of different ways (keys, passwords, agents), launch a
-    command over that connection and then associate its input and output with a
-    protocol.
+    L{SSHCommandClientEndpoint} can set up a new SSH connection, authenticate
+    it in any one of a number of different ways (keys, passwords, agents),
+    launch a command over that connection and then associate its input and
+    output with a protocol.
 
     It can also re-use an existing, already-authenticated SSH connection
     (perhaps one which already has some SSH channels being used for other
@@ -545,7 +545,8 @@ class SSHCommandEndpoint(object):
             whether to accept the server host keys.
         @type ui: L{ConsoleUI}
 
-        @return: A new instance of C{cls} (probably L{SSHCommandEndpoint}).
+        @return: A new instance of C{cls} (probably
+            L{SSHCommandClientEndpoint}).
         """
         helper = _NewConnectionHelper(
             reactor, hostname, port, command, username, keys, password,
@@ -564,11 +565,12 @@ class SSHCommandEndpoint(object):
         @param connection: An existing connection to an SSH server.
         @type connection: L{SSHConnection}
 
-        @param command: See L{SSHCommandEndpoint.newConnection}'s C{command}
-            parameter.
+        @param command: See L{SSHCommandClientEndpoint.newConnection}'s
+            C{command} parameter.
         @type command: L{bytes}
 
-        @return: A new instance of C{cls} (probably L{SSHCommandEndpoint}).
+        @return: A new instance of C{cls} (probably
+            L{SSHCommandClientEndpoint}).
         """
         helper = _ExistingConnectionHelper(connection)
         return cls(helper, command)
@@ -600,13 +602,13 @@ class SSHCommandEndpoint(object):
         channel created on it and associate the result with a protocol from the
         given factory.
 
-        @param connection: See L{SSHCommandEndpoint.existingConnection}'s
+        @param connection: See L{SSHCommandClientEndpoint.existingConnection}'s
             C{connection} parameter.
 
-        @param protocolFactory: See L{SSHCommandEndpoint.connect}'s
+        @param protocolFactory: See L{SSHCommandClientEndpoint.connect}'s
             C{protocolFactory} parameter.
 
-        @return: See L{SSHCommandEndpoint.connect}'s return value.
+        @return: See L{SSHCommandClientEndpoint.connect}'s return value.
         """
         commandConnected = Deferred()
         def disconnectOnFailure(passthrough):
@@ -707,7 +709,7 @@ class _ExistingConnectionHelper(object):
 
     def __init__(self, connection):
         """
-        @param connection: See L{SSHCommandEndpoint.existingConnection}'s
+        @param connection: See L{SSHCommandClientEndpoint.existingConnection}'s
             C{connection} parameter.
         """
         self.connection = connection

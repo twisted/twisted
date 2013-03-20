@@ -17,7 +17,7 @@ from twisted.internet.protocol import Factory, Protocol
 from twisted.internet.endpoints import UNIXClientEndpoint
 from twisted.conch.ssh.keys import EncryptedKeyError, Key
 from twisted.conch.client.knownhosts import KnownHostsFile, ConsoleUI
-from twisted.conch.endpoints import SSHCommandEndpoint
+from twisted.conch.endpoints import SSHCommandClientEndpoint
 
 
 class EchoOptions(Options):
@@ -120,7 +120,7 @@ class ConnectionParameters(object):
 
 
     def endpointForCommand(self, command):
-        return SSHCommandEndpoint.newConnection(
+        return SSHCommandClientEndpoint.newConnection(
             self.reactor, command, self.username, self.host,
             port=self.port, keys=self.keys, password=self.password,
             agentEndpoint=self.agent, knownHosts=self.knownHosts, ui=self.ui)

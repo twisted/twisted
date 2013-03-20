@@ -12,7 +12,7 @@ from twisted.internet.task import cooperate
 from twisted.internet.defer import Deferred, gatherResults
 from twisted.internet.protocol import Factory, Protocol
 
-from twisted.conch.endpoints import SSHCommandEndpoint
+from twisted.conch.endpoints import SSHCommandClientEndpoint
 
 from echoclient_ssh import ConnectionParameters
 
@@ -46,7 +46,7 @@ def main(reactor, *argv):
             factory.done = Deferred()
             done.append(factory.done)
 
-            e = SSHCommandEndpoint.existingConnection(
+            e = SSHCommandClientEndpoint.existingConnection(
                 conn, b"/bin/echo %d" % (i,))
             yield e.connect(factory)
 

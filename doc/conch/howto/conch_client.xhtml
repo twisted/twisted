@@ -23,7 +23,7 @@ second version of this protocol.</p>
     <p>
       If your objective is to execute a command on a remote host over an SSH
       connection, then the easiest approach may be to
-      use <code class="API">twisted.conch.endpoints.SSHCommandEndpoint</code>.
+      use <code class="API">twisted.conch.endpoints.SSHCommandClientEndpoint</code>.
       If you haven't used endpoints before, first take a look
       at <a href="../../core/howto/endpoints.xhtml">the endpoint howto</a> to
       get an idea of how endpoints work in general.
@@ -47,7 +47,7 @@ second version of this protocol.</p>
     </p>
 
     <p>
-      Using the <code>SSHCommandEndpoint</code> is about as simple as using any
+      Using the <code>SSHCommandClientEndpoint</code> is about as simple as using any
       other stream-oriented client endpoint.  Just create the endpoint defining
       where the SSH server to connect to is and a factory defining what kind of
       protocol to use to interact with the command and let them get to work
@@ -64,7 +64,7 @@ second version of this protocol.</p>
       <em>known_hosts</em> files, and parsing command line options.  Focus on
       the latter half of the <code>main</code> function to see the code that is
       most directly responsible for actually doing the necessary SSH connection
-      setup.  <code>SSHCommandEndpoint</code> accepts quite a few options, since
+      setup.  <code>SSHCommandClientEndpoint</code> accepts quite a few options, since
       there is a lot of flexibility in SSH and many possible different server
       configurations, but once the endpoint object itself is created, its use is
       no more complicated than the use of any other endpoint: pass a factory to
@@ -84,7 +84,7 @@ second version of this protocol.</p>
     <p>
       It is also possible to run commands (one or more) over an
       already-established connection.  This is done using the alternate
-      constructor <code>SSHCommandEndpoint.existingConnection</code>.
+      constructor <code>SSHCommandClientEndpoint.existingConnection</code>.
     </p>
 
     <a href="listings/echoclient_shared_ssh.py" class="py-listing">
