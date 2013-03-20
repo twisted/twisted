@@ -452,7 +452,7 @@ class Heading(Angle):
             signs, respectively.
         @type sign: C{int}
 
-        @raise ValueErorr: If the C{sign} parameter is not C{-1} or C{1}.
+        @raise ValueError: If the C{sign} parameter is not C{-1} or C{1}.
         """
         if self.variation.inDecimalDegrees is None:
             raise ValueError("can't set the sign of an unknown variation")
