@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>An Introduction to Tubes</title>
+</head>
+<body>
+<h1>An Introduction to Tubes</h1>
+
+<p>Tubes are a mechanism for easily dealing with data flowing through your Twisted application.</p>
+
+<p>
+A working series of tubes is composed of a few different elements.  First, you have to have a data source; or, in tubes terminology, an <code class="API" base="twisted.tubes.itube">IFount</code>.
+Then, you transform the data coming from the <code class="API" base="twisted.tubes.itube">IFount</code> by flowing it through a <code class="API" base="twisted.tubes.tube">Tube</code>.
+Each <code class="API" base="twisted.tubes.tube">Tube</code> has a <code class="API" base="twisted.tubes.tube">Pump</code> which deals with processing its input into its output.
+A <code class="API" base="twisted.tubes.tube">Tube</code> is itself an <code class="API" base="twisted.tubes.itube">IFount</code>, so you can repeat this process by flowing each <code class="API" base="twisted.tubes.tube">Tube</code> into the next, until you have the desired output type.
+Finally, you select an <code class="API" base="twisted.tubes.itube">IDrain</code> to send the outgoing data to, and flow your final <code class="API" base="twisted.tubes.tube">Tube</code> into that <code class="API" base="twisted.tubes.itube">IDrain</code>.
+</p>
+
+<p>Let's see a simple example of what that would look like.  Imagine that you have a wire protocol which decodes length-prefixed chunks of base64-encoded data into UTF-8 text, upper-cases that text, and then emits it as output as length-prefixed, (character)-reversed, UTF-8-encoded strings.</p>
+
+<pre class="python">
+(fount.flowTo(Tube(NetstringToString()))
+      .flowTo(Tube(Base64Decode()))
+      .flowTo(Tube(UTF8Decode()))
+      .flowTo(Tube(Uppercase()))
+      .flowTo(Tube(Reverse()))
+      .flowTo(Tube(UTF8Encode()))
+      .flowTo(Tube(StringToNetstring()))
+      .flowTo(drain))
+</pre>
+
+</body>
+</html>
