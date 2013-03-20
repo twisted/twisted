@@ -756,7 +756,7 @@ class PositionError(object, FancyEqMixin):
         position invariant (PDOP = (HDOP**2 + VDOP**2)*.5), unless the
         C{self._testInvariant} instance variable is C{False}.
 
-        @return: C{None} if the invariant was not satisifed or not tested.
+        @return: C{None} if the invariant was not satisfied or not tested.
         @raises ValueError: Raised if the invariant was tested but not
             satisfied.
         """
