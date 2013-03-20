@@ -1617,17 +1617,17 @@ class _GetBodyProtocol(protocol.Protocol):
         self.deferred = deferred
         self.status = status
         self.message = message
-        self.buf = ''
+        self.buf = []
 
     def dataReceived(self, bytes):
-        self.buf += bytes
+        self.buf.append(bytes)
 
     def connectionLost(self, reason):
         if reason.check(ConnectionDone):
-            self.deferred.callback(self.buf)
+            self.deferred.callback(b''.join(self.buf))
         elif reason.check(PotentialDataLoss):
             self.deferred.errback(
-                PartialDownloadError(self.status, self.message, self.buf))
+                PartialDownloadError(self.status, self.message, b''.join(self.buf)))
         else:
             self.deferred.errback(reason)
 
