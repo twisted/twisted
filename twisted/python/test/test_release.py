@@ -768,6 +768,29 @@ process with this.</p>
             'prefix': prefix, 'version': version}).toxml("utf-8")
 
 
+    def setupTeXFiles(self, howtoDir):
+        sections = range(3)
+        self._setupTeXSections(sections, howtoDir)
+        return self._setupTeXBook(sections, howtoDir)
+
+
+    def _setupTeXSections(self, sections, howtoDir):
+        for texSectionNumber in sections:
+            texPath = howtoDir.child("%d.tex" % (texSectionNumber,))
+            texPath.setContent(
+                self.getArbitraryOutput("1.2.3", texSectionNumber))
+
+
+    def _setupTeXBook(self, sections, howtoDir):
+        bookTeX = howtoDir.child("book.tex")
+        bookTeX.setContent(
+            r"\documentclass{book}" "\n"
+            r"\begin{document}" "\n" +
+            "\n".join([r"\input{%d.tex}" % (n,) for n in sections]) +
+            r"\end{document}" "\n")
+        return bookTeX
+
+
 
 class DocBuilderTestCase(TestCase, BuilderTestsMixin):
     """
@@ -946,29 +969,89 @@ class DocBuilderTestCase(TestCase, BuilderTestsMixin):
         self.assertEqual(linkrel, "../../howto/")
 
 
+
+class BuildDocsScriptTests(TestCase, BuilderTestsMixin,
+                           StructureAssertingMixin):
+    """
+    Tests for L{BuildDocsScript}.
+    """
+
+    def setUp(self):
+        """
+        Create a L{BuildDocsScript} in C{self.script}.
+        """
+        BuilderTestsMixin.setUp(self)
+        self.script = BuildDocsScript()
+
+
+    def test_buildDocs(self):
+        """
+        L{BuildDocsScript.buildDocs} generates Lore man pages, turn all Lore
+        pages to HTML, and build the PDF book.
+        """
+        rootDir = FilePath(self.mktemp())
+        rootDir.createDirectory()
+        loreInput, loreOutput = self.getArbitraryLoreInputAndOutput(
+            "10.0.0",
+            apiBaseURL="http://twistedmatrix.com/documents/10.0.0/api/%s.html")
+        coreIndexInput, coreIndexOutput = self.getArbitraryLoreInputAndOutput(
+            "10.0.0", prefix="howto/",
+            apiBaseURL="http://twistedmatrix.com/documents/10.0.0/api/%s.html")
+
+        manInput = self.getArbitraryManInput()
+        manOutput = self.getArbitraryManHTMLOutput("10.0.0", "../howto/")
+
+        structure = {
+            "LICENSE": "copyright!",
+            "twisted": {"_version.py": genVersion("twisted", 10, 0, 0)},
+            "doc": {"core": {"index.xhtml": coreIndexInput,
+                             "howto": {"template.tpl": self.template,
+                                       "index.xhtml": loreInput},
+                             "man": {"twistd.1": manInput}}}}
+
+        outStructure = {
+            "LICENSE": "copyright!",
+            "twisted": {"_version.py": genVersion("twisted", 10, 0, 0)},
+            "doc": {"core": {"index.html": coreIndexOutput,
+                             "howto": {"template.tpl": self.template,
+                                       "index.html": loreOutput},
+                             "man": {"twistd.1": manInput,
+                                     "twistd-man.html": manOutput}}}}
+
+        self.createStructure(rootDir, structure)
+
+        howtoDir = rootDir.descendant(["doc", "core", "howto"])
+        self.setupTeXFiles(howtoDir)
+
+        templateFile = howtoDir.child("template.tpl")
+        self.script.buildDocs(rootDir, templateFile)
+
+        howtoDir.child("book.tex").remove()
+        howtoDir.child("book.pdf").remove()
+        self.assertStructure(rootDir, outStructure)
+
+    test_buildDocs.skip = latexSkip or loreSkip
+
+
     def test_docsBuilderScriptMainRequiresThreeArguments(self):
         """
         SystemExit is raised when the incorrect number of command line
         arguments are passed to the main documentation building script.
         """
-        script = BuildDocsScript()
-        self.assertRaises(SystemExit, script.main, [])
-        self.assertRaises(SystemExit, script.main, ["foo"])
-        self.assertRaises(SystemExit, script.main, ["foo", "bar"])
-        self.assertRaises(SystemExit, script.main, ["foo", "bar", "baz", "boo"])
+        self.assertRaises(SystemExit, self.script.main, [])
+        self.assertRaises(SystemExit, self.script.main, ["foo"])
+        self.assertRaises(SystemExit, self.script.main, ["foo", "bar", "baz"])
 
 
     def test_docsBuilderScriptMain(self):
         """
-        The main documentation building script invokes the same code that
-        L{test_buildWithPolicy} tests.
+        The main documentation building script invokes C{buildDocs} with the
+        arguments passed to it cast as L{FilePath}.
         """
-        script = BuildDocsScript()
         calls = []
-        script.buildDocs = lambda a, b, c: calls.append((a, b, c))
-        script.main(["hello", "hi", "there"])
-        self.assertEqual(calls, [(FilePath("hello"), FilePath("hi"),
-            FilePath("there"))])
+        self.script.buildDocs = lambda a, b: calls.append((a, b))
+        self.script.main(["hello", "there"])
+        self.assertEqual(calls, [(FilePath("hello"), FilePath("there"))])
 
 
 
@@ -1348,35 +1431,12 @@ class BookBuilderTests(TestCase, BuilderTestsMixin):
             None)
 
 
-    def _setupTeXFiles(self):
-        sections = range(3)
-        self._setupTeXSections(sections)
-        return self._setupTeXBook(sections)
-
-
-    def _setupTeXSections(self, sections):
-        for texSectionNumber in sections:
-            texPath = self.howtoDir.child("%d.tex" % (texSectionNumber,))
-            texPath.setContent(
-                self.getArbitraryOutput("1.2.3", texSectionNumber))
-
-
-    def _setupTeXBook(self, sections):
-        bookTeX = self.howtoDir.child("book.tex")
-        bookTeX.setContent(
-            r"\documentclass{book}" "\n"
-            r"\begin{document}" "\n" +
-            "\n".join([r"\input{%d.tex}" % (n,) for n in sections]) +
-            r"\end{document}" "\n")
-        return bookTeX
-
-
     def test_buildPDF(self):
         """
         L{BookBuilder.buildPDF} creates a PDF given an index tex file and a
         directory containing .tex files.
         """
-        bookPath = self._setupTeXFiles()
+        bookPath = self.setupTeXFiles(self.howtoDir)
         outputPath = FilePath(self.mktemp())
 
         builder = BookBuilder()
@@ -1400,7 +1460,7 @@ class BookBuilderTests(TestCase, BuilderTestsMixin):
         self.howtoDir.makedirs()
 
         # This will use the above long path.
-        bookPath = self._setupTeXFiles()
+        bookPath = self.setupTeXFiles(self.howtoDir)
         outputPath = FilePath(self.mktemp())
 
         builder = BookBuilder()
@@ -1425,7 +1485,7 @@ class BookBuilderTests(TestCase, BuilderTestsMixin):
                 self.commands.append(command)
                 return BookBuilder.run(self, command)
 
-        bookPath = self._setupTeXFiles()
+        bookPath = self.setupTeXFiles(self.howtoDir)
         outputPath = FilePath(self.mktemp())
 
         builder = InspectableBookBuilder()
@@ -1460,7 +1520,7 @@ class BookBuilderTests(TestCase, BuilderTestsMixin):
         the input book are the same before and after the call.
         """
         startDir = os.getcwd()
-        bookTeX = self._setupTeXFiles()
+        bookTeX = self.setupTeXFiles(self.howtoDir)
         startTeXSiblings = bookTeX.parent().children()
         startHowtoChildren = self.howtoDir.children()
 
@@ -1503,7 +1563,7 @@ class BookBuilderTests(TestCase, BuilderTestsMixin):
         for sectionNumber in sections:
             self.howtoDir.child("%d.xhtml" % (sectionNumber,)).setContent(
                 self.getArbitraryLoreInput(sectionNumber))
-        bookTeX = self._setupTeXBook(sections)
+        bookTeX = self._setupTeXBook(sections, self.howtoDir)
         bookPDF = FilePath(self.mktemp())
 
         builder = BookBuilder()
@@ -1520,7 +1580,7 @@ class BookBuilderTests(TestCase, BuilderTestsMixin):
         for sectionNumber in sections:
             self.howtoDir.child("%d.xhtml" % (sectionNumber,)).setContent(
                 self.getArbitraryLoreInput(sectionNumber))
-        bookTeX = self._setupTeXBook(sections)
+        bookTeX = self._setupTeXBook(sections, self.howtoDir)
         bookPDF = FilePath(self.mktemp())
 
         builder = BookBuilder()

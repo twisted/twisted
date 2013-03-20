@@ -1415,16 +1415,14 @@ class BuildDocsScript(object):
     A thing for building the main documentation. See L{main}.
     """
 
-    def buildDocs(self, projectRoot, output, template):
+    def buildDocs(self, projectRoot, template):
         """
         Build the main documentation of Twisted, with our project policy.
 
         @param projectRoot: A L{FilePath} representing the root of the Twisted
             checkout.
         @type projectRoot: L{FilePath}
-        @param output: A L{FilePath} pointing to the desired output directory.
-            The directory will be created if it doesn't exist.
-        @type output: L{FilePath}
+
         @param template: A L{FilePath} pointing to the template file that is
             used for the look and feel of the howto documentation.
         @type template: L{FilePath}
@@ -1433,15 +1431,11 @@ class BuildDocsScript(object):
         versionString = version.base()
         apiURL = "http://twistedmatrix.com/documents/%s/api/" % versionString
 
-        if not output.exists():
-            output.createDirectory()
-
         dirs = {}
         docRoot = projectRoot.child("doc")
 
         for p in docRoot.walk():
             if p.basename() == 'man':
-                dirs[p] = True
                 ManBuilder().build(p)
 
         howtoRoot = docRoot.descendant(["core", "howto"])
@@ -1454,11 +1448,11 @@ class BuildDocsScript(object):
                         versionString, howtoRoot, p.parent(),
                         template,
                         apiURL + "%s.html",
-                        False)
+                        True)
 
         BookBuilder().build(howtoRoot, dirs.keys(),
                             howtoRoot.child('book.tex'),
-                            output.child('book.pdf'))
+                            howtoRoot.child('book.pdf'))
 
 
     def main(self, args):
@@ -1467,10 +1461,10 @@ class BuildDocsScript(object):
 
         @type args: list of str
         @param args: The command line arguments to process.  This must contain
-            three strings: the path to the root of the Twisted checkout, a path
-            to an output directory, and the path to the Twisted website template.
+            two strings: the path to the root of the Twisted checkout and the
+            path to the Twisted website template.
         """
-        if len(args) != 3:
-            sys.exit("Must specify three arguments: "
-                     "Twisted checkout path, destination path, and template path.")
-        self.buildDocs(FilePath(args[0]), FilePath(args[1]), FilePath(args[2]))
+        if len(args) != 2:
+            sys.exit("Must specify two arguments: "
+                     "Twisted checkout path and template path.")
+        self.buildDocs(FilePath(args[0]), FilePath(args[1]))
