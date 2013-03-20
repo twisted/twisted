@@ -697,7 +697,7 @@ class Climb(_BaseSpeed):
     """
     def __init__(self, climb):
         """
-        Initializes a L{Clib} object.
+        Initializes a L{Climb} object.
 
         @param climb: The climb that this object represents, expressed in
             meters per second.
