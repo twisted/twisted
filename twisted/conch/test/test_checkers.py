@@ -121,11 +121,33 @@ class HelperTests(TestCase):
 
     def test_shadowGetByName(self):
         """
-        L{_shadowGetByName} uses the C{shadow} module to return a tuple of
-        items from the UNIX /etc/shadow database if the C{shadow} module is.
+        L{_shadowGetByName} returns a tuple of items from the UNIX /etc/shadow
+        database if the L{spwd} is present.
         """
         userdb = ShadowDatabase()
         userdb.addUser('bob', 'passphrase', 1, 2, 3, 4, 5, 6, 7)
+        self.patch(checkers, 'spwd', userdb)
+
+        self.mockos.euid = 2345
+        self.mockos.egid = 1234
+        self.patch(checkers, 'os', self.mockos)
+        self.patch(util, 'os', self.mockos)
+
+        self.assertEquals(
+            checkers._shadowGetByName('bob'), userdb.getspnam('bob'))
+        self.assertEquals(self.mockos.seteuidCalls, [0, 2345])
+        self.assertEquals(self.mockos.setegidCalls, [0, 1234])
+
+
+    def test_shadowGetByNameWithoutSpwd(self):
+        """
+        L{_shadowGetByName} uses the C{shadow} module to return a tuple of items
+        from the UNIX /etc/shadow database if the C{spwd} module is not present
+        and the C{shadow} module is.
+        """
+        userdb = ShadowDatabase()
+        userdb.addUser('bob', 'passphrase', 1, 2, 3, 4, 5, 6, 7)
+        self.patch(checkers, 'spwd', None)
         self.patch(checkers, 'shadow', userdb)
         self.patch(checkers, 'os', self.mockos)
         self.patch(util, 'os', self.mockos)
@@ -139,10 +161,12 @@ class HelperTests(TestCase):
         self.assertEquals(self.mockos.setegidCalls, [0, 1234])
 
 
-    def test_shadowGetByNameWithoutShadow(self):
+    def test_shadowGetByNameWithoutEither(self):
         """
-        L{_shadowGetByName} returns C{None} if C{shadow} is not present.
+        L{_shadowGetByName} returns C{None} if neither C{spwd} nor C{shadow} is
+        present.
         """
+        self.patch(checkers, 'spwd', None)
         self.patch(checkers, 'shadow', None)
         self.patch(checkers, 'os', self.mockos)
 
@@ -765,13 +789,13 @@ class UNIXPasswordDatabaseTests(TestCase):
                     1, 2, 'foo', '/foo', '/bin/sh')
         # x and * are convention for "look elsewhere for the password"
         pwd.addUser('bob', 'x', 1, 2, 'bar', '/bar', '/bin/sh')
-        shadow = ShadowDatabase()
-        shadow.addUser('alice', 'wrong', 1, 2, 3, 4, 5, 6, 7)
-        shadow.addUser('bob', crypted('bob', 'password'),
-                       8, 9, 10, 11, 12, 13, 14)
+        spwd = ShadowDatabase()
+        spwd.addUser('alice', 'wrong', 1, 2, 3, 4, 5, 6, 7)
+        spwd.addUser('bob', crypted('bob', 'password'),
+                     8, 9, 10, 11, 12, 13, 14)
 
         self.patch(checkers, 'pwd', pwd)
-        self.patch(checkers, 'shadow', shadow)
+        self.patch(checkers, 'spwd', spwd)
 
         mockos = MockOS()
         self.patch(checkers, 'os', mockos)
