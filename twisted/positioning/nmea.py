@@ -10,7 +10,7 @@ devices.
 import itertools
 import operator
 import datetime
-from zope.interface import implements, classProvides
+from zope.interface import implementer, classProvides
 
 from twisted.positioning import base, ipositioning
 from twisted.positioning.base import Angles
@@ -336,7 +336,7 @@ class NMEASentence(base.BaseSentence):
 
     """
     ALLOWED_ATTRIBUTES = NMEAProtocol.getSentenceAttributes()
-    
+
     def _isFirstGSVSentence(self):
         """
         Tests if this current GSV sentence is the first one in a sequence.
@@ -358,6 +358,7 @@ class NMEASentence(base.BaseSentence):
 
 
 
+@implementer(ipositioning.INMEAReceiver)
 class NMEAAdapter(object):
     """
     An adapter from NMEAProtocol receivers to positioning receivers.
@@ -376,9 +377,6 @@ class NMEAAdapter(object):
         twenty-first century (20xx).
     @type INTELLIGENT_DATE_THRESHOLD: L{int}
     """
-    implements(ipositioning.INMEAReceiver)
-
-
     def __init__(self, receiver):
         """
         Initializes a new NMEA adapter.
@@ -508,7 +506,7 @@ class NMEAAdapter(object):
 
         hemisphere = getattr(self.currentSentence, hemisphereKey)
 
-        try: 
+        try:
             return self.COORDINATE_SIGNS[hemisphere.upper()]
         except KeyError:
             raise ValueError("bad hemisphere/direction: %s" % (hemisphere,))
@@ -539,8 +537,7 @@ class NMEAAdapter(object):
 
     STATEFUL_UPDATE = {
         # sentenceKey: (stateKey, factory, attributeName, converter),
-        'trueHeading':
-            ('heading', base.Heading, '_angle', float),
+        'trueHeading': ('heading', base.Heading, '_angle', float),
         'magneticVariation':
             ('heading', base.Heading, 'variation',
              lambda angle: base.Angle(float(angle), Angles.VARIATION)),

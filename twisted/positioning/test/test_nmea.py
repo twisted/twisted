@@ -4,7 +4,7 @@
 Test cases for using NMEA sentences.
 """
 import datetime
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.positioning import base, nmea, ipositioning
 from twisted.trial.unittest import TestCase
@@ -29,14 +29,13 @@ $GPGSV,3,3,11,22,42,067,42,24,14,311,43,27,05,244,00,,,,*4D
 
 
 
+@implementer(ipositioning.INMEAReceiver)
 class NMEATestReceiver(object):
     """
     An NMEA receiver for testing.
 
     Remembers the last sentence it has received.
     """
-    implements(ipositioning.INMEAReceiver)
-
     def __init__(self):
         self.clear()
 
@@ -214,7 +213,7 @@ class NMEAReceiverSetup:
         Sets up an NMEA receiver.
         """
         self.receiver = NMEATestReceiver()
-        self.protocol = nmea.NMEAProtocol(self.receiver)    
+        self.protocol = nmea.NMEAProtocol(self.receiver)
 
 
 
@@ -507,7 +506,7 @@ class ParsingTests(NMEAReceiverSetup, TestCase):
 
             'dataMode': 'A',
             'fixType': '3',
-            
+
             'usedSatellitePRN_0': '19',
             'usedSatellitePRN_1': '28',
             'usedSatellitePRN_2': '14',
@@ -724,7 +723,7 @@ class CoordinateFixerTests(FixerTestMixin, TestCase):
 
         sentenceData = {"%sFloat" % typeName: _nmeaFloat(degrees, minutes),
                         "%sHemisphere" % typeName: hemisphere}
-        
+
         coordinateValue = _coordinateSign(hemisphere)*(degrees + minutes/60)
         coordinate = base.Coordinate(coordinateValue, coordinateType)
 
@@ -965,7 +964,7 @@ class InvalidFixTests(FixerTestMixin, TestCase):
         self._invalidFixTest(sentenceData)
 
 
-        
+
     def test_badGSADataMode(self):
         """
         Tests that GSA sentence data is not used when there is no GPS fix, but
@@ -979,7 +978,7 @@ class InvalidFixTests(FixerTestMixin, TestCase):
         self._invalidFixTest(sentenceData)
 
 
-        
+
     def test_badGSAFixType(self):
         """
         Tests that GSA sentence data is not used when the fix claims to be

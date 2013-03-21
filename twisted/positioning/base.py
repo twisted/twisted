@@ -6,7 +6,7 @@ Generic positioning base classes.
 
 @since: 13.1
 """
-from zope.interface import implements
+from zope.interface import implementer
 from twisted.python.constants import Names, NamedConstant
 from twisted.python.util import FancyEqMixin
 
@@ -40,6 +40,7 @@ class Directions(Names):
 
 
 
+@implementer(ipositioning.IPositioningReceiver)
 class BasePositioningReceiver(object):
     """
     A base positioning receiver.
@@ -51,8 +52,6 @@ class BasePositioningReceiver(object):
     People who want to implement positioning receivers should subclass this
     class and override the specific callbacks they want to handle.
     """
-    implements(ipositioning.IPositioningReceiver)
-
     def timeReceived(self, time):
         """
         Implements L{IPositioningReceiver.timeReceived} stub.
