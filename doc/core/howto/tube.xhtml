@@ -22,13 +22,13 @@ Finally, you select an <code class="API" base="twisted.tubes.itube">IDrain</code
 
 <pre class="python">
 def funkyConvert(fount, drain):
-    return (fount.flowTo(Tube(NetstringToString()))
+    return (fount.flowTo(Tube(netstringsToStrings()))
                  .flowTo(Tube(Base64Decode()))
                  .flowTo(Tube(UTF8Decode()))
                  .flowTo(Tube(Uppercase()))
                  .flowTo(Tube(Reverse()))
                  .flowTo(Tube(UTF8Encode()))
-                 .flowTo(Tube(StringToNetstring()))
+                 .flowTo(Tube(stringsToNetstrings()))
                  .flowTo(drain))
 </pre>
 
@@ -38,12 +38,12 @@ In typical usage, behavior that you need to provide comes in the form of a custo
 However, the above example is fairly complex, so let's start with something simpler: how would we just pass on the input straight to the output?
 </p>
 <pre class="python">
-def simpleForward(fount, drain):
+def echoTubeFactory(fount, drain):
     return fount.flowTo(drain)
 </pre>
 
 <p>
-This is pretty simple; however, in order to actually <i>do</i> anything, we need to find a real-life <code>fount</code> and <code>drain</code> to call <code>simpleForward</code>.
+This is pretty simple; however, in order to actually <i>do</i> anything, we need to find a real-life <code>fount</code> and <code>drain</code> to call <code>echoTubeFactory</code>.
 </p>
 
 <a href="listings/tubes/echotube.py" class="py-listing">echotube.py</a>
@@ -52,6 +52,29 @@ This is pretty simple; however, in order to actually <i>do</i> anything, we need
 This fully-functioning example (just run it with "<code>python echotube.py</code>") implements an echo server.
 You can test it out with <code>telnet localhost 4321</code> or <code>nc localhost 4321</code>.
 (If you are on Windows, and do not have <code>telnet</code> installed, try running <code>pkgmgr /iu:"TelnetClient"</code> first; after waiting a few moments, <code>telnet</code> should be available.)
+</p>
+
+<p>
+A more interesting example might demonstrate the use of tubes to send data to another server.
+</p>
+
+<a href="listings/tubes/portforward.py" class="py-listing">portforward.py</a>
+
+<p>
+Here for each incoming connection on port <code>6543</code> we creating an outgoing connection to the echo server in our previous example.
+When we have successfully connected to the echo server we connect our incoming <code>listeningFount</code> to our outgoing <code>connectingDrain</code> and our <code>connectingFount</code> to our <code>listeningDrain</code>.
+This forwards all bytes from your <code>telnet</code> or <code>nc</code> client to our echo server, and all bytes from our echo server to your client.
+</p>
+
+<pre class="python">
+def echoTubeFactory(fount, drain):
+    return (fount.flowTo(Tube(stringToNetstring()))
+                 .flowTo(drain))
+</pre>
+
+<p>
+Here you see that <code class="API" base="twisted.tubes.itube.IFount">flowTo</code> returns an <code class="API" base="twisted.tube.itube">IFount</code> so you can chain them to construct "flows".
+We have now extended our simple <code>echoTubeFactory</code> to convert your input string to a <a href="http://cr.yp.to/proto/netstrings.txt">netstring</a> before echoing it back to your client.
 </p>
 
 </body>
