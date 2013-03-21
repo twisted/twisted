@@ -45,12 +45,14 @@ else:
     euidSkip = None
 
 
+skip = dependencySkip  # if checkers is not importable, don't bother running.
+
+
 class HelperTests(TestCase):
     """
     Tests for helper functions L{checkers.verifyCryptedPassword},
     L{checkers._pwdGetByName}, and L{checkers._shadowGetByName}
     """
-    skip = cryptSkip or dependencySkip
 
     def setUp(self):
         self.mockos = MockOS()
