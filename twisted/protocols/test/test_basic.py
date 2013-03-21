@@ -1476,7 +1476,8 @@ class FileSenderSendfileTestCase(ReactorBuilder):
             client, server = protocols
             clients.append(client)
             fileObject = self.createFile()
-            sender = basic.FileSender(sendError)
+            sender = basic.FileSender()
+            sender._sendfile = sendError
             sendFileDeferred = sender.beginFileTransfer(
                 fileObject, server.transport)
             return sendFileDeferred.addErrback(serverFinished, server)
@@ -1517,7 +1518,8 @@ class FileSenderSendfileTestCase(ReactorBuilder):
             client, server = protocols
             clients.append(client)
             fileObject = self.createFile()
-            sender = basic.FileSender(sendError)
+            sender = basic.FileSender()
+            sender._sendfile = sendError
             sendFileDeferred = sender.beginFileTransfer(
                 fileObject, server.transport)
             return sendFileDeferred.addBoth(finished, server)
@@ -1562,7 +1564,8 @@ class FileSenderSendfileTestCase(ReactorBuilder):
             clients.append(client)
             servers.append(server)
             fileObject = self.createFile()
-            sender = basic.FileSender(sendError)
+            sender = basic.FileSender()
+            sender._sendfile = sendError
             sendFileDeferred = sender.beginFileTransfer(
                 fileObject, server.transport)
             return sendFileDeferred.addErrback(serverFinished)

@@ -10,6 +10,7 @@ Basic protocols, such as line-oriented, netstring, and int prefixed strings.
 from __future__ import absolute_import, division
 
 # System imports
+import errno
 import os
 import re
 from struct import pack, unpack, calcsize
@@ -22,6 +23,7 @@ from zope.interface import implementer
 from twisted.python.compat import _PY3
 from twisted.internet import protocol, defer, interfaces, error
 from twisted.python import log, deprecate, versions
+from twisted.python.failure import Failure
 
 try:
     from os import sendfile
@@ -907,18 +909,29 @@ class FileSender:
     This is a helper for protocols that, at some point, will take a
     file-like object, read its contents, and write them out to the network,
     optionally performing some transformation on the bytes in between.
+
+    @cvar CHUNK_SIZE: Size of chunks to send when using standard writes.
+    @type CHUNK_SIZE: C{int}
+
+    @ivar lastSent: The last byte sent, available when the transfer finished.
+    @type lastSent: C{bytes}
+
+    @ivar deferred: The deferred firing when the transfer is done or failed.
+    @type deferred: L{defer.Deferred}
+
+    @cvar _sendfile: If available, the sendfile system call wrapper.
+    @type _sendfile: C{callable} or C{NoneType}
+
+    @ivar _producer: The reference to the current producing mechanism.
+    @type _producer: C{object}
     """
 
     CHUNK_SIZE = 2 ** 14
 
-    lastSent = ''
+    lastSent = b''
     deferred = None
-    _offset = 0
-    _count = 0
-    _started = False
-
-    def __init__(self, sendfile=sendfile):
-        self._sendfile = sendfile
+    _sendfile = sendfile
+    _producer = None
 
 
     def beginFileTransfer(self, file, consumer, transform=None):
@@ -947,19 +960,18 @@ class FileSender:
         self.consumer = consumer
         self.transform = transform
 
-        self.deferred = deferred = defer.Deferred()
+        deferred = defer.Deferred()
 
         if self._trySendFile():
-            self._count = os.fstat(file.fileno()).st_size
-            self.resumeProducing = self._resumeProducingNoOp
+            self._producer = _FileSenderNoOp(self)
         else:
-            self.resumeProducing = self._resumeProducingWrite
+            self._producer = _FileSenderWrite(self)
 
         try:
             self.consumer.registerProducer(self, False)
         except:
             deferred.errback()
-            self.deferred = None
+        self.deferred = deferred
         return deferred
 
 
@@ -986,86 +998,11 @@ class FileSender:
                 interfaces.IReactorFDSet.providedBy(self.consumer.reactor))
 
 
-    def _resumeProducingNoOp(self):
+    def resumeProducing(self):
         """
-        Skip a production cycle and register C{_resumeProducingSendfile} as
-        C{resumeProducing}.
+        Delegate producing to C{self._producer}.
         """
-        # That's really unfortunate, but we need to skip the first call:
-        # the reactor is calling use immediately after registerProducer,
-        # but the buffer can still contain things to send: we don't want
-        # sendfile to mix bytes with previous write calls. So we wait for
-        # resumeProducing to be called, which will happen when the buffer
-        # is actually empty.
-        self.resumeProducing = self._resumeProducingSendfile
-        self.consumer.reactor.addWriter(self.consumer)
-
-
-    def _resumeProducingSendfile(self):
-        """
-        Produce data using the C{sendfile} system call.
-
-        Contrary to C{_resumeProducingWrite}, it doesn't use C{write} to send
-        bytes. To tell the reactor that we still need to be caleld, we use
-        C{addWriter} to enforce C{doWrite} to be called even if there is no
-        data in the local buffer.
-        """
-        try:
-            sent = self._sendfile(self.consumer.fileno(), self.file.fileno(),
-                                  self._offset, self._count)
-        except IOError as e:
-            from twisted.internet.tcp import EWOULDBLOCK
-            if e.errno == EWOULDBLOCK:
-                self.consumer.reactor.addWriter(self.consumer)
-                return
-            elif not self._started:
-                self.resumeProducing = self._resumeProducingWrite
-                self.resumeProducing()
-                return
-            else:
-                self.consumer.unregisterProducer()
-                deferred, self.deferred = self.deferred, None
-                deferred.errback()
-        except Exception:
-            self.consumer.unregisterProducer()
-            deferred, self.deferred = self.deferred, None
-            deferred.errback()
-        else:
-            self._started = True
-            self._offset += sent
-            if self._offset == self._count:
-                self.consumer.unregisterProducer()
-                # Maintain backward compatible behavior by getting the last
-                # byte of the file.
-                current = self.file.tell()
-                self.file.seek(-1, 2)
-                self.lastSent = self.file.read(1)
-                self.file.seek(current)
-                deferred, self.deferred = self.deferred, None
-                deferred.callback(self.lastSent)
-            else:
-                self.consumer.reactor.addWriter(self.consumer)
-
-
-    def _resumeProducingWrite(self):
-        """
-        Produce data using standard writes.
-        """
-        chunk = ''
-        if self.file:
-            chunk = self.file.read(self.CHUNK_SIZE)
-        if not chunk:
-            self.file = None
-            self.consumer.unregisterProducer()
-            if self.deferred:
-                deferred, self.deferred = self.deferred, None
-                deferred.callback(self.lastSent)
-            return
-
-        if self.transform:
-            chunk = self.transform(chunk)
-        self.consumer.write(chunk)
-        self.lastSent = chunk[-1:]
+        self._producer.produce()
 
 
     def pauseProducing(self):
@@ -1079,7 +1016,131 @@ class FileSender:
         If the connection is lost before the end of the transfer, fire the
         C{beginFileTransfer}'s C{Deferred}.
         """
-        if self.deferred:
+        self._fire(
+            Failure(Exception("Consumer asked us to stop producing")))
+
+
+    def _fire(self, value):
+        """
+        Fire C{self.deferred} if still present.
+        """
+        if self.deferred is not None:
             deferred, self.deferred = self.deferred, None
-            deferred.errback(
-                Exception("Consumer asked us to stop producing"))
+            deferred.callback(value)
+
+
+
+class _FileSenderNoOp(object):
+    """
+    A L{FileSender} producer which doesn't do anything, and change the producer
+    to L{_FileSenderSendfile}.
+    """
+
+    def __init__(self, sender):
+        self.sender = sender
+
+
+    def produce(self):
+        """
+        Skip a production cycle and register C{_resumeProducingSendfile} as
+        C{resumeProducing}.
+        """
+        # That's really unfortunate, but we need to skip the first call:
+        # the reactor is calling use immediately after registerProducer,
+        # but the buffer can still contain things to send: we don't want
+        # sendfile to mix bytes with previous write calls. So we wait for
+        # resumeProducing to be called, which will happen when the buffer
+        # is actually empty.
+        self.sender._producer = _FileSenderSendfile(self.sender)
+        self.sender.consumer.reactor.addWriter(self.sender.consumer)
+
+
+
+class _FileSenderSendfile(object):
+    """
+    A L{FileSender} producer using the sendfile systme call, with the
+    ability of fallback to L{_FileSenderWrite} in case of errors.
+
+    @ivar _count: The size of the file to send, in bytes.
+    @type _count: C{int}
+
+    @ivar _offset: The current offset in the file, in bytes.
+    @type _offset: C{int}
+    """
+
+    _count = 0
+    _offset = 0
+
+    def __init__(self, sender):
+        self.sender = sender
+        self._count = os.fstat(sender.file.fileno()).st_size
+
+
+    def produce(self):
+        """
+        Produce data using the C{sendfile} system call.
+
+        Contrary to C{_resumeProducingWrite}, it doesn't use C{write} to send
+        bytes. To tell the reactor that we still need to be caleld, we use
+        C{addWriter} to enforce C{doWrite} to be called even if there is no
+        data in the local buffer.
+        """
+        try:
+            sent = self.sender._sendfile(self.sender.consumer.fileno(),
+                                         self.sender.file.fileno(),
+                                         self._offset, self._count)
+        except IOError as e:
+            if e.errno == errno.EAGAIN:
+                self.sender.consumer.reactor.addWriter(self.consumer)
+                return
+            elif not self._offset:
+                self.sender._producer = _FileSenderWrite(self.sender)
+                self.sender.resumeProducing()
+                return
+            else:
+                self.sender.consumer.unregisterProducer()
+                self.sender._fire(Failure())
+        except Exception:
+            self.sender.consumer.unregisterProducer()
+            self.sender._fire(Failure())
+        else:
+            self._started = True
+            self._offset += sent
+            if self._offset == self._count:
+                self.sender.consumer.unregisterProducer()
+                # Maintain backward compatible behavior by getting the last
+                # byte of the file.
+                self.sender.file.seek(-1, 2)
+                self.sender.lastSent = self.sender.file.read(1)
+                self.sender._fire(self.sender.lastSent)
+            else:
+                self.sender.consumer.reactor.addWriter(self.sender.consumer)
+
+
+
+class _FileSenderWrite(object):
+    """
+    A L{FileSender} producer using standard writes.
+    """
+
+    def __init__(self, sender):
+        self.sender = sender
+
+
+    def produce(self):
+        """
+        Produce data using standard writes.
+        """
+        chunk = b''
+        if self.sender.file:
+            chunk = self.sender.file.read(self.sender.CHUNK_SIZE)
+        if not chunk:
+            self.sender.file = None
+            self.sender.consumer.unregisterProducer()
+            self.sender._fire(self.sender.lastSent)
+            return
+
+        if self.sender.transform:
+            chunk = self.sender.transform(chunk)
+        self.sender.consumer.write(chunk)
+        self.sender.lastSent = chunk[-1:]
