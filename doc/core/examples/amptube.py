@@ -23,17 +23,15 @@ class IString(Interface):
     """
 
 
-class DataToStrings(Int16StringReceiver, Pump):
+class DataToStrings(Pump):
 
     inputType = ISegment
     outputType = IString
 
-    def stringReceived(self, string):
-        self.tube.deliver(string)
-
-
-    def received(self, item):
-        self.dataReceived(item)
+    def __init__(self, stringReceiverClass, stringReceiverMethod):
+        self._stringReceiver = stringReceiverClass()
+        setattr(self._stringReceiver, stringReceiverMethod, self.tube.deliver)
+        self.received = self._stringReceiver.dataReceived
 
 
 
@@ -109,7 +107,7 @@ class BoxConsumer(Pump):
 
 
 def boot(fount, drain):
-    (fount.flowTo(Tube(DataToStrings()))
+    (fount.flowTo(Tube(DataToStrings(Int16StringReceiver, "stringReceived")))
           .flowTo(Tube(StringsToBoxes()))
           .flowTo(Tube(BoxConsumer(Math())))
           .flowTo(Tube(BoxesToData()))
