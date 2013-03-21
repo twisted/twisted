@@ -101,6 +101,13 @@ class Tube(object):
         return result
 
 
+    def flowStopped(self, reason):
+        """
+        This tube has now stopped.
+        """
+        self.pump.stopped(reason)
+
+
     def pauseFlow(self):
         """
         Pause the flow from the fount, or remember to do that when the
@@ -118,6 +125,13 @@ class Tube(object):
         Resume the flow from the fount to this L{Tube}.
         """
         self.fount.resumeFlow()
+
+
+    def stopFlow(self):
+        """
+        Stop the flow from the fount to this L{Tube}.
+        """
+        self.fount.stopFlow()
 
 
     def receive(self, item):
@@ -148,7 +162,6 @@ class Tube(object):
         Deliver the given item to this L{Tube}'s C{drain} attribute, if it has
         yet been set by L{flowingFrom}.
         """
-        self.pauseFlow()
         self._delivered = True
         if self.drain is None:
             self._pendingOutput.append(item)
@@ -199,5 +212,3 @@ class Pump(object):
         """
         @see: L{IPump.stopped}
         """
-
-
