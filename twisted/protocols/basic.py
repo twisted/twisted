@@ -1081,9 +1081,13 @@ class _FileSenderSendfile(object):
         Produce data using the C{sendfile} system call.
 
         Contrary to C{_resumeProducingWrite}, it doesn't use C{write} to send
-        bytes. To tell the reactor that we still need to be caleld, we use
+        bytes. To tell the reactor that we still need to be called, we use
         C{addWriter} to enforce C{doWrite} to be called even if there is no
-        data in the local buffer.
+        data in the local buffer. This relies on the current behavior of
+        C{FileDescriptor.doWrite}, which first calls C{stopWriting} before
+        calling C{resumeProducing}. Fortunately, C{addWriter} is a no-op if the
+        descriptor is already registered, so changing the behavior underneath
+        wouldn't harm anything, but it would make things cleaner here.
         """
         try:
             sent = self.sender._sendfile(self.sender.consumer.fileno(),

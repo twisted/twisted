@@ -879,6 +879,7 @@ class RecvdAttributeMixin(object):
             mix.append(SWITCH)
 
         result = []
+
         def stringReceived(receivedString):
             result.append(receivedString)
             proto.recvd = proto.recvd[len(SWITCH):]
@@ -905,6 +906,7 @@ class RecvdAttributeMixin(object):
         message = self.makeMessage(proto, DATA)
 
         result = []
+
         def lengthLimitExceeded(length):
             result.append(length)
             result.append(proto.recvd)
@@ -1178,7 +1180,7 @@ class FileSenderTestCase(unittest.TestCase):
         C{IConsumer} interface via C{beginFileTransfer}. It returns a
         L{Deferred} which fires with the last byte sent.
         """
-        source = BytesIO(b"Test content")
+        source = BytesIO(b"Test content X")
         consumer = proto_helpers.StringTransport()
         sender = basic.FileSender()
         d = sender.beginFileTransfer(source, consumer)
@@ -1187,8 +1189,8 @@ class FileSenderTestCase(unittest.TestCase):
         sender.resumeProducing()
         self.assertEqual(consumer.producer, None)
 
-        self.assertEqual(b"t", self.successResultOf(d))
-        self.assertEqual(b"Test content", consumer.value())
+        self.assertEqual(b"X", self.successResultOf(d))
+        self.assertEqual(b"Test content X", consumer.value())
 
 
     def test_transferMultipleChunks(self):
@@ -1196,7 +1198,7 @@ class FileSenderTestCase(unittest.TestCase):
         L{basic.FileSender} reads at most C{CHUNK_SIZE} every time it resumes
         producing.
         """
-        source = BytesIO(b"Test content")
+        source = BytesIO(b"Test content X")
         consumer = proto_helpers.StringTransport()
         sender = basic.FileSender()
         sender.CHUNK_SIZE = 4
@@ -1208,11 +1210,13 @@ class FileSenderTestCase(unittest.TestCase):
         self.assertEqual(b"Test con", consumer.value())
         sender.resumeProducing()
         self.assertEqual(b"Test content", consumer.value())
+        sender.resumeProducing()
+        self.assertEqual(b"Test content X", consumer.value())
         # resumeProducing only finishes after trying to read at eof
         sender.resumeProducing()
 
-        self.assertEqual(b"t", self.successResultOf(d))
-        self.assertEqual(b"Test content", consumer.value())
+        self.assertEqual(b"X", self.successResultOf(d))
+        self.assertEqual(b"Test content X", consumer.value())
 
 
     def test_transferWithTransform(self):
@@ -1224,7 +1228,7 @@ class FileSenderTestCase(unittest.TestCase):
         def transform(chunk):
             return chunk.swapcase()
 
-        source = BytesIO(b"Test content")
+        source = BytesIO(b"Test content X")
         consumer = proto_helpers.StringTransport()
         sender = basic.FileSender()
         d = sender.beginFileTransfer(source, consumer, transform)
@@ -1232,8 +1236,8 @@ class FileSenderTestCase(unittest.TestCase):
         # resumeProducing only finishes after trying to read at eof
         sender.resumeProducing()
 
-        self.assertEqual(b"T", self.successResultOf(d))
-        self.assertEqual(b"tEST CONTENT", consumer.value())
+        self.assertEqual(b"x", self.successResultOf(d))
+        self.assertEqual(b"tEST CONTENT x", consumer.value())
 
 
     def test_abortedTransfer(self):
@@ -1268,7 +1272,7 @@ class FileSenderSendfileTestCase(ReactorBuilder):
         @return: A file opened ready to be sent.
         """
         path = FilePath(self.mktemp().encode('utf-8'))
-        path.setContent(b'x' * 1000000)
+        path.setContent(b'x' * 999999 + b'y')
         f = path.open()
         self.addCleanup(f.close)
         return f
@@ -1339,6 +1343,7 @@ class FileSenderSendfileTestCase(ReactorBuilder):
             sender = basic.FileSender()
             doneDeferred = sender.beginFileTransfer(
                 fileObject, server.transport)
+            doneDeferred.addCallback(self.assertEqual, b"y")
             return doneDeferred.addBoth(finished, server)
 
         def finished(passthrough, server):
@@ -1367,6 +1372,7 @@ class FileSenderSendfileTestCase(ReactorBuilder):
             sender = basic.FileSender()
             doneDeferred = sender.beginFileTransfer(
                 fileObject, client.transport)
+            doneDeferred.addCallback(self.assertEqual, b"y")
             return doneDeferred.addBoth(finished, client)
 
         def finished(passthrough, client):
@@ -1393,7 +1399,7 @@ class FileSenderSendfileTestCase(ReactorBuilder):
         def connected(protocols):
             client, server = protocols
             clients.append(client)
-            server.transport.write(b'y' * 1000000)
+            server.transport.write(b'z' * 1000000)
             fileObject = self.createFile()
             sender = basic.FileSender()
             doneDeferred = sender.beginFileTransfer(
@@ -1412,7 +1418,7 @@ class FileSenderSendfileTestCase(ReactorBuilder):
 
         data = clients[0].data
         self.assertEqual(2000000, len(data))
-        self.assertEqual(999999, data.rindex(b'y'))
+        self.assertEqual(999999, data.rindex(b'z'))
         self.assertEqual(1000000, data.index(b'x'))
 
 
@@ -1493,7 +1499,8 @@ class FileSenderSendfileTestCase(ReactorBuilder):
 
         client = clients[0]
         self.assertIsInstance(client.closedReason.value, error.ConnectionDone)
-        self.assertTrue(len(client.data) < 1000000, len(client.data))
+        self.assertTrue(len(client.data) < 1000000,
+                        "Too much data transfered: %s" % (len(client.data),))
 
     if sendfileSkip:
         test_error.skip = sendfileSkip
