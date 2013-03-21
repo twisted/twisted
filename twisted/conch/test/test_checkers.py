@@ -176,10 +176,9 @@ class HelperTests(TestCase):
 
 
 
-class PublicKeysFromXTestsCases(TestCase):
+class PublicKeysFromFilepathsTestsCases(TestCase):
     """
-    Tests for L{checkers.publicKeysFromString} and
-    L{checkers.publicKeysFromFilepaths}
+    Tests for L{checkers.publicKeysFromFilepaths}
     """
     def setUp(self):
         self.keyCalls = []
@@ -192,81 +191,33 @@ class PublicKeysFromXTestsCases(TestCase):
 
         self.patch(checkers.keys, 'Key', FakeKey)
 
-        class FakeFilePath(object):
-            def getContent(self):
-                return 'contents'
+        self.doGetContent = lambda: 'contents'
+        self.doExists = lambda: True
 
-            def exists(self):
-                return True
+        class FakeFilePath(object):
+            def getContent(fpself):
+                return self.doGetContent()
+
+            def exists(fpself):
+                return self.doExists()
 
         self.patch(checkers, 'FilePath', FakeFilePath)
-
-
-    def test_keysFromStrings(self):
-        """
-        L{checkers.keysFromStrings} produces a generator of key objects given
-        a list of strings and passes whatever key type was supplied
-        """
-        result = checkers.publicKeysFromStrings('iterable', keyType='skeleton')
-        self.assertEqual(self.keyCalls, [],
-                         "It's a generator, there should be no calls yet")
-        result = list(result)
-        self.assertEqual(
-            self.keyCalls,
-            [((letter,), {'type': 'skeleton'}) for letter in 'iterable'])
-        self.assertEqual(result, ['this is a key!'] * len('iterable'))
-
-
-    def test_keysFromStringsDefaultKeytype(self):
-        """
-        L{checkers.keysFromStrings} passes the default keytype if no keytype is
-        supplied
-        """
-        list(checkers.publicKeysFromStrings('iterable'))
-        self.assertEqual(
-            self.keyCalls,
-            [((letter,), {'type': 'public_openssh'}) for letter in 'iterable'])
-
-
-    def test_keysFromStringsMultilineStrings(self):
-        """
-        L{checkers.keysFromStrings} produces multiple keys from a C{keyString}
-        if the C{keyString} has multiple keys, one on each line.  It also
-        filters out empty lines
-        """
-        results = list(checkers.publicKeysFromStrings(['1\n2\n  \n \n  \n3']))
-        self.assertEqual(results, ['this is a key!'] * 3)
 
 
     def test_keysFromFilepaths(self):
         """
         L{checkers.keysFromFilepaths} produces a generator of key objects given
-        a list of FilePaths and passes whatever key type was supplied.  In this
+        a list of FilePaths and passes a keytype of 'public_openssh'.  In this
         test case, we have permission to access the files.
         """
-        class FakeFilePath(object):
-            def getContent(self):
-                return 'contents'
-
         result = checkers.publicKeysFromFilepaths(
-            [checkers.FilePath() for i in range(5)], keyType='skeleton')
+            [checkers.FilePath() for i in range(5)])
         self.assertEqual(self.keyCalls, [],
                          "It's a generator, there should be no calls yet")
         result = list(result)
         self.assertEqual(self.keyCalls,
-                         [(('contents',), {'type': 'skeleton'})] * 5)
-        self.assertEqual(result, ['this is a key!'] * 5)
-
-
-    def test_keysFromFilepathsDefaultKeytype(self):
-        """
-        L{checkers.keysFromFilepaths} passes the default keytype if no keytype
-        is supplied
-        """
-        list(checkers.publicKeysFromFilepaths(
-            [checkers.FilePath() for i in range(5)]))
-        self.assertEqual(self.keyCalls,
                          [(('contents',), {'type': 'public_openssh'})] * 5)
+        self.assertEqual(result, ['this is a key!'] * 5)
 
 
     def test_keysFromFilepathsFiltersNonexistentKeypaths(self):
@@ -274,15 +225,9 @@ class PublicKeysFromXTestsCases(TestCase):
         L{checkers.keysFromFilepaths} produces a generator of key objects given
         a list of FilePaths, but only those FilePaths that exist.
         """
-        class FakeFilePath(object):
-            def getContent(self):
-                return 'contents'
-
-            def exists(self):
-                return False
-
+        self.doExists = lambda: False
         self.assertEqual([], list(checkers.publicKeysFromFilepaths(
-            [FakeFilePath() for i in range(5)])))
+            [checkers.FilePath() for i in range(5)])))
 
 
     def test_keysFromFilepathsInvalidPermissionsWithOwnerIds(self):
@@ -291,17 +236,17 @@ class PublicKeysFromXTestsCases(TestCase):
         permissions, if owner ids are provided, attempts to open them again
         using those owner ids before giving up
         """
-        class FakeFilePath(object):
-            errored = False
+        self.counter = 0
 
-            def getContent(self):
-                if not self.errored:
-                    self.errored = True
-                    raise IOError(errno.EACCES, "this is a test")
-                return 'contents'
+        # so it will give an error first and then alternate between contents
+        # and error
+        def _getContent():
+            self.counter += 1
+            if self.counter % 2 != 0:
+                raise IOError(errno.EACCES, "this is a test")
+            return 'contents'
 
-            def exists(self):
-                return True
+        self.doGetContent = _getContent
 
         runAsUserCalls = []
 
@@ -312,10 +257,22 @@ class PublicKeysFromXTestsCases(TestCase):
         self.patch(checkers, 'runAsEffectiveUser', _fakeRunAsUser)
 
         list(checkers.publicKeysFromFilepaths(
-            [FakeFilePath() for i in range(5)], ownerIds=(1, 1)))
+            [checkers.FilePath() for i in range(5)], ownerIds=(1, 1)))
         self.assertEqual(self.keyCalls,
                          [(('contents',), {'type': 'public_openssh'})] * 5)
         self.assertEqual(runAsUserCalls, [(1, 1)] * 5)
+
+
+    def test_keysFromFilepathsMultipleKeys(self):
+        """
+        L{checkers.keysFromFilepaths} produces multiple keys from a
+        L{FilePath} if the file contains has multiple keys, one on each line.
+        It also filters out empty lines
+        """
+        self.doGetContent = lambda: '1\n2\n  \n \n  \n3'
+        results = list(checkers.publicKeysFromFilepaths(
+            [checkers.FilePath() for i in range(5)]))
+        self.assertEqual(results, ['this is a key!'] * 15)  # 3 each file
 
 
 
@@ -447,7 +404,7 @@ class SSHPublicKeyCheckerTestCase(TestCase):
 
 
 
-class DotSSHAuthorizedKeysGeneratorTestCase(TestCase):
+class UserAuthorizedKeysGeneratorTestCase(TestCase):
     """
     Tests for L{checkers.dotSSHAuthorizedKeysGenerator}.
     """
@@ -480,8 +437,8 @@ class DotSSHAuthorizedKeysGeneratorTestCase(TestCase):
         L{checkers.publicKeysFromFilepaths}
         """
         credentials = SSHPrivateKey('user', 'rsa', 'blob', 'sigData', 'sig')
-        result = checkers.dotSSHAuthorizedKeysGenerator(credentials,
-                                                        userdb=self.userdb)
+        result = checkers.userAuthorizedKeysGenerator(credentials,
+                                                      userdb=self.userdb)
         self.assertEqual(result, self.keysFromFilepathsResult)
 
         filepaths = [FilePath(os.path.join(self.mockos.path.path, '.ssh',

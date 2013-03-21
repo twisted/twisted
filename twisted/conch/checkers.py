@@ -122,34 +122,11 @@ class UNIXPasswordDatabase:
 
 
 
-def publicKeysFromStrings(keyStrings, keyType="public_openssh"):
-    """
-    Turns an iterable of strings into a generator of keys.  Each string may
-    contain more than one key, but each key should be on a separate line.
-
-    @param keyStrings: an iterable of strings containing keys of C{keyType}
-    @type filepaths: C{iterable} of C{str}
-
-    @param keyType: The type of key is represented by the keys in C{filepaths}.
-        By default, it is "public_openssh".  If C{None} is passed, the type
-        will be guessed.
-    @type keyType: C{str} or C{None}
-
-    @return: a C{generator} object whose values L{twisted.conch.ssh.keys.Key}
-        objects corresponding to the key
-    """
-    for keyString in keyStrings:
-        allKeys = [line for line in keyString.split('\n') if line.strip()]
-        for oneKey in allKeys:
-            yield keys.Key.fromString(oneKey, type=keyType)
-
-
-
-def publicKeysFromFilepaths(filepaths, keyType="public_openssh",
-                            ownerIds=None):
+def publicKeysFromFilepaths(filepaths, ownerIds=None):
     """
     Turns an iterable of absolute filenames (the full path) into a generator
-    of keys.
+    of keys.  Each file may contain more than one openssh-type public key, but
+    each key should be on a separate line.
 
     @param filenames: an iterable of C{FilePaths} corresponding to files
         containing keys of C{keyType}
@@ -179,8 +156,10 @@ def publicKeysFromFilepaths(filepaths, keyType="public_openssh",
             else:
                 raise
 
-    return publicKeysFromStrings((_tryGetContent(fp) for fp in filepaths
-                                  if fp.exists()), keyType)
+    for content in (_tryGetContent(fp) for fp in filepaths if fp.exists()):
+        fileKeys = [line for line in content.split('\n') if line.strip()]
+        for oneKey in fileKeys:
+            yield keys.Key.fromString(oneKey, type="public_openssh")
 
 
 
@@ -206,7 +185,7 @@ class SSHPublicKeyChecker(object):
     The intent is for L{requestAvatarId} to be called for both the initial
     non-signed check and for the signed check.
 
-    @ivar authorizedKeyProducer: a callable that returns a C{iterable}
+    @ivar requestAuthorizedKeys: a callable that returns a C{iterable}
         (preferably a C{generator}) of L{twisted.conch.ssh.keys.Key} objects
         that are valid authenticators for the user.
 
@@ -216,14 +195,14 @@ class SSHPublicKeyChecker(object):
         A generator is preferred so that, in the case of files, no more file
         access than necessary needs to occur.
 
-    @type authorizedKeys: C{callable} that takes the credentials (a
-        C{ISSHPrivateKey}) as an argument.
+    @type requestAuthorizedKeys: C{callable} that takes the credentials (a
+        C{iterable} of C{ISSHPrivateKey}) as an argument.
     """
     credentialInterfaces = (ISSHPrivateKey,)
 
 
-    def __init__(self, authorizedKeyProducer):
-        self.authorizedKeyProducer = authorizedKeyProducer
+    def __init__(self, requestAuthorizedKeys):
+        self.requestAuthorizedKeys = requestAuthorizedKeys
 
 
     def requestAvatarId(self, credentials):
@@ -244,7 +223,7 @@ class SSHPublicKeyChecker(object):
         @return: the username in the credentials if verification is successful.
             If unsuccessful in any way an exception will be raised
         """
-        d = defer.maybeDeferred(self.authorizedKeyProducer, credentials)
+        d = defer.maybeDeferred(self.requestAuthorizedKeys, credentials)
         d.addCallback(self._authenticateAndVerifySSHKey, credentials)
         d.addErrback(self._normalizeErrors)
         return d
@@ -280,7 +259,7 @@ class SSHPublicKeyChecker(object):
 
 
 
-def dotSSHAuthorizedKeysGenerator(credentials, userdb=pwd):
+def userAuthorizedKeysGenerator(credentials, userdb=pwd):
     """
     On OpenSSH servers, the default location of the file containing the
     list of authorized public keys is
