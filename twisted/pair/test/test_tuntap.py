@@ -89,35 +89,13 @@ verifyObject(IReactorFDSet, ReactorFDSet())
 
 
 
-class Composite(object):
+class FSSetClock(Clock, ReactorFDSet):
     """
-    A helper to compose other objects based on their declared (zope.interface)
-    interfaces.
-
-    This is used here to create a reactor from separate implementations of
-    different reactor interfaces - for example, from L{Clock} and
-    L{ReactorFDSet} to create a reactor which provides L{IReactorTime} and
-    L{IReactorFDSet}.
+    An L{FSSetClock} is a L{IReactorFDSet} and an L{IReactorClock}.
     """
-
-    def __init__(self, parts):
-        """
-        @param parts: An iterable of the objects to compose.  The methods of
-            these objects which are part of any interface the objects declare
-            they provide will be made methods of C{self}.  (Non-method
-            attributes are not supported.)
-
-        @raise ValueError: If an interface is provided by more than one of the
-            objects in C{parts}.
-        """
-        seen = set()
-        for p in parts:
-            for i in providedBy(p):
-                if i in seen:
-                    raise ValueError("More than one part provides %r" % (i,))
-                seen.add(i)
-                for m in i.names():
-                    setattr(self, m, getattr(p, m))
+    def __init__(self):
+        Clock.__init__(self)
+        ReactorFDSet.__init__(self)
 
 
 
@@ -721,8 +699,7 @@ class TunnelTestsMixin(object):
         self.device._devices[Tunnel._DEVICE_NAME] = Tunnel
         self.protocol = self.factory.buildProtocol(
             TunnelAddress(self.TUNNEL_TYPE, self.name))
-        self.clock = Clock()
-        self.reactor = Composite([self.clock, ReactorFDSet()])
+        self.reactor = FSSetClock()
         self.port = TuntapPort(self.name, self.protocol, reactor=self.reactor)
 
         # TODO Would be nice if this setup were a method of the device?
@@ -789,7 +766,7 @@ class TunnelTestsMixin(object):
         stopped = port.stopListening()
         self.assertNotIn(port, self.reactor.getReaders())
         # An unfortunate implementation detail
-        self.clock.advance(0)
+        self.reactor.advance(0)
         self.assertIdentical(None, self.successResultOf(stopped))
 
 
@@ -830,7 +807,7 @@ class TunnelTestsMixin(object):
         self.port.startListening()
         first = self.port.stopListening()
         second = self.port.stopListening()
-        self.clock.advance(0)
+        self.reactor.advance(0)
         self.assertIdentical(None, self.successResultOf(first))
         self.assertIdentical(None, self.successResultOf(second))
 
@@ -843,7 +820,7 @@ class TunnelTestsMixin(object):
 
         self.port.loseConnection()
         # An unfortunate implementation detail
-        self.clock.advance(0)
+        self.reactor.advance(0)
 
         self.assertFalse(self.port.connected)
         warnings = self.flushWarnings([self.test_loseConnection])
