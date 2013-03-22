@@ -561,14 +561,14 @@ class HostnameEndpoint(object):
                 winner.callback(connResult)
                 return None
 
-            def almostDone():
+            def checkDone():
                 if endpointsListExhausted and not pending and\
                     not successful:
                     winner.errback(failures.pop())
 
             def connectFailed(reason):
                 failures.append(reason)
-                almostDone()
+                checkDone()
                 return None
 
             def iterateEndpoint():
@@ -578,7 +578,7 @@ class HostnameEndpoint(object):
                     # The list of endpoints ends.
                     endpointsListExhausted.append(True)
                     lc.stop()
-                    almostDone()
+                    checkDone()
                 else:
                     dconn = endpoint.connect(wf)
                     pending.append(dconn)
