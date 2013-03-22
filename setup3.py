@@ -88,6 +88,7 @@ modules = [
     "twisted.test",
     "twisted.test.proto_helpers",
     "twisted.test.ssl_helpers",
+    "twisted.test.testutils",
     "twisted.trial",
     "twisted.trial._asynctest",
     "twisted.trial.itrial",
@@ -208,10 +209,14 @@ almostModules = [
     # twisted.names.client semi-depends on twisted.names.root, but only on
     # Windows really:
     "twisted.names.root",
+    # Used by other tests
+    "twisted.names.test.test_rootresolve",
     # Missing test coverage:
     "twisted.protocols.loopback",
     # Minimally used by setup3.py:
     "twisted.python.dist",
+    # Required by endpoints
+    "twisted.python.systemd",
     # twisted.python.filepath depends on twisted.python.win32, but on Linux it
     # only really needs to import:
     "twisted.python.win32",
