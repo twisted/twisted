@@ -459,15 +459,18 @@ class HostnameEndpoint(object):
     @ivar _getaddrinfo: A hook used for testing name resolution.
 
     @ivar _deferToThread: A hook used for testing deferToThread.
-
-    @ivar _pending: A list of all the pending connection attempts.
     """
     _getaddrinfo = socket.getaddrinfo
     _deferToThread = threads.deferToThread
 
     def __init__(self, reactor, host, port, timeout=30, bindAddress=None):
         """
-        @param host: An IPv6 address literal or a hostname with an IPv6 address
+        @param host: A host name to connect to.
+        @type host: str
+
+        @param timeout: For each individual connection attempt, the number of
+        seconds to wait before assuming the connection has failed.
+        @type timeout: int
 
         @see: L{twisted.internet.interfaces.IReactorTCP.connectTCP}
         """
@@ -476,24 +479,6 @@ class HostnameEndpoint(object):
         self._port = port
         self._timeout = timeout
         self._bindAddress = bindAddress
-        self._pending = []
-
-
-    def _canceller(self, d):
-        """
-        The outgoing connection attempt was cancelled.  Fail that L{Deferred}
-        with an L{error.ConnectingCancelledError}.
-
-        @param d: The L{Deferred <defer.Deferred>} that was cancelled
-        @type d: L{Deferred <defer.Deferred>}
-
-        @return: C{None}
-        """
-        d.errback(error.ConnectingCancelledError(
-            HostnameAddress(self._host, self._port)))
-
-        for p in self._pending[:]:   # Cancel all pending connections
-            p.cancel()
 
 
     def connect(self, protocolFactory):
@@ -502,13 +487,32 @@ class HostnameEndpoint(object):
         connection that is the fastest.
         """
         wf = protocolFactory
+        pending = []
+
+
+        def _canceller(d):
+            """
+            The outgoing connection attempt was cancelled.  Fail that L{Deferred}
+            with an L{error.ConnectingCancelledError}.
+
+            @param d: The L{Deferred <defer.Deferred>} that was cancelled
+            @type d: L{Deferred <defer.Deferred>}
+
+            @return: C{None}
+            """
+            d.errback(error.ConnectingCancelledError(
+                HostnameAddress(self._host, self._port)))
+
+            for p in pending[:]:   # Cancel all pending connections
+                p.cancel()
+
 
         def errbackForGai(failure):
             """
             Errback for when L{_nameResolution} returns a Deferred that fires
             with failure.
             """
-            return defer.fail(error.DNSLookupError("Couldn't find hostname"))
+            return defer.fail(error.DNSLookupError("Couldn't find the hostname '%s'" % (self._host,)))
 
 
         def _endpoints(gaiResult):
@@ -542,23 +546,23 @@ class HostnameEndpoint(object):
             endpointsListExhausted = []
             successful = []
             failures = []
-            winner = defer.Deferred(canceller=self._canceller)
+            winner = defer.Deferred(canceller=_canceller)
 
             def usedEndpointRemoval(connResult, connAttempt):
-                self._pending.remove(connAttempt)
+                pending.remove(connAttempt)
                 return connResult
 
             def afterConnectionAttempt(connResult):
                 if lc.running:
                     lc.stop()
                 successful.append(True)
-                for p in self._pending[:]:
+                for p in pending[:]:
                     p.cancel()
                 winner.callback(connResult)
                 return None
 
             def almostDone():
-                if endpointsListExhausted and not self._pending and\
+                if endpointsListExhausted and not pending and\
                     not successful:
                     winner.errback(failures.pop())
 
@@ -577,7 +581,7 @@ class HostnameEndpoint(object):
                     almostDone()
                 else:
                     dconn = endpoint.connect(wf)
-                    self._pending.append(dconn)
+                    pending.append(dconn)
                     dconn.addBoth(usedEndpointRemoval, dconn)
                     dconn.addCallback(afterConnectionAttempt)
                     dconn.addErrback(connectFailed)
