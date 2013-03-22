@@ -189,8 +189,8 @@ class SSHPublicKeyChecker(object):
         (preferably a C{generator}) of L{twisted.conch.ssh.keys.Key} objects
         that are valid authenticators for the user.
 
-        The functions L{publicKeysFromStrings} or L{publicKeysFromFilepaths}
-        can be used to produce said iterable.
+        The function L{publicKeysFromFilepaths} can be used to produce said
+        iterable.
 
         A generator is preferred so that, in the case of files, no more file
         access than necessary needs to occur.
@@ -232,6 +232,13 @@ class SSHPublicKeyChecker(object):
     def _authenticateAndVerifySSHKey(self, authorizedKeys, credentials):
         """
         What actually authenticates and verifies the signature.
+
+        @param authorizedKeys: the iterator (preferably generator) of
+            authorized returned by ``self.requestAuthorizedKeys``
+        @type authorizedKeys: C{iterable} or C{generator}
+
+        @param credentials: The credentials offered by the user.
+        @type credentials: L{ISSHPrivateKey} provider
         """
         publicKey = keys.Key.fromString(credentials.blob)
 
@@ -247,15 +254,15 @@ class SSHPublicKeyChecker(object):
         raise UnauthorizedLogin("unable to verify key")
 
 
-    def _normalizeErrors(self, f):
+    def _normalizeErrors(self, failure):
         """
         Obscure non-UnauthorizedLogin errors (of which L{error.ValidPublicKey}
         is a subclass).
         """
-        if not f.check(UnauthorizedLogin):
-            log.err(f, 'unknown/unexpected error')
+        if not failure.check(UnauthorizedLogin):
+            log.err(failure, 'unknown/unexpected error')
             raise UnauthorizedLogin("unable to get avatar id")
-        return f
+        return failure
 
 
 
@@ -279,11 +286,11 @@ def userAuthorizedKeysGenerator(credentials, userdb=pwd):
         authorized keys in U{$HOME/.ssh/authorized_keys} and
         U{$HOME/.ssh/authorized_keys2}
     """
-    struct_passwd = userdb.getpwnam(credentials.username)
-    root = FilePath(struct_passwd.pw_dir).child('.ssh')
+    structPasswd = userdb.getpwnam(credentials.username)
+    root = FilePath(structPasswd.pw_dir).child('.ssh')
     files = ['authorized_keys', 'authorized_keys2']
     return publicKeysFromFilepaths([root.child(f) for f in files],
-                                   ownerIds=struct_passwd[2:4])
+                                   ownerIds=structPasswd[2:4])
 
 
 
