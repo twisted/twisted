@@ -14,10 +14,11 @@ Maintainer: Paul Swartz
 import struct
 import zlib
 import array
+import string
+import hmac
 
 # external library imports
 from Crypto import Util
-from Crypto.Cipher import XOR
 
 # twisted imports
 from twisted.internet import protocol, defer
@@ -65,6 +66,11 @@ def _generateX(random, bits):
         x = _getRandomNumber(random, bits)
         if 2 <= x <= (2 ** bits) - 2:
             return x
+
+
+class _StupidMACParams(tuple):
+    pass
+
 
 class SSHTransportBase(protocol.Protocol):
     """
@@ -1359,7 +1365,6 @@ class SSHCiphers:
     @ivar inMAc: see outMAC, but for the incoming MAC.
     """
 
-
     cipherMap = {
         '3des-cbc':('DES3', 24, 0),
         'blowfish-cbc':('Blowfish', 16,0 ),
@@ -1451,10 +1456,12 @@ class SSHCiphers:
         if not mod:
             return (None, '', '', 0)
         ds = mod().digest_size
-        key = key[:ds] + '\x00' * (64 - ds)
-        i = XOR.new('\x36').encrypt(key)
-        o = XOR.new('\x5c').encrypt(key)
-        return mod, i, o, ds
+        key = key[:ds] + ('\x00' * (64 - ds))
+        i = string.translate(key, hmac.trans_36)
+        o = string.translate(key, hmac.trans_5C)
+        result = _StupidMACParams((mod,  i, o, ds))
+        result.key = key
+        return result
 
 
     def encrypt(self, blocks):
@@ -1490,10 +1497,7 @@ class SSHCiphers:
         if not self.outMAC[0]:
             return ''
         data = struct.pack('>L', seqid) + data
-        mod, i, o, ds = self.outMAC
-        inner = mod(i + data)
-        outer = mod(o + inner.digest())
-        return outer.digest()
+        return hmac.HMAC(self.outMAC.key, data, self.outMAC[0]).digest()
 
 
     def verify(self, seqid, data, mac):
@@ -1512,11 +1516,8 @@ class SSHCiphers:
         if not self.inMAC[0]:
             return mac == ''
         data = struct.pack('>L', seqid) + data
-        mod, i, o, ds = self.inMAC
-        inner = mod(i + data)
-        outer = mod(o + inner.digest())
-        return mac == outer.digest()
-
+        outer = hmac.HMAC(self.inMAC.key, data, self.inMAC[0]).digest()
+        return mac == outer
 
 
 class _Counter:

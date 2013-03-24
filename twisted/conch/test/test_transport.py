@@ -5,6 +5,8 @@
 Tests for ssh/transport.py and the classes therein.
 """
 
+import struct
+
 try:
     import pyasn1
 except ImportError:
@@ -1863,21 +1865,24 @@ class SSHCiphersTestCase(unittest.TestCase):
 
     def test_getMAC(self):
         """
-        Test that the _getMAC method returns the correct MAC.
+        _getMAC computes the HMAC parameters for a particular hash function and
+        key.
         """
         ciphers = transport.SSHCiphers('A', 'B', 'C', 'D')
-        key = '\x00' * 64
+        # MD5 digest is 16 bytes.  Pad out with 48 more bytes to get 64 bytes.
+        key = '\x55\xaa' * 8 + '\x00' * 48
+
         for macName, mac in ciphers.macMap.items():
             mod = ciphers._getMAC(macName, key)
             if macName == 'none':
                 self.assertIdentical(mac, None)
             else:
-                self.assertEqual(mod[0], mac)
-                self.assertEqual(mod[1],
-                                  Crypto.Cipher.XOR.new('\x36').encrypt(key))
-                self.assertEqual(mod[2],
-                                  Crypto.Cipher.XOR.new('\x5c').encrypt(key))
-                self.assertEqual(mod[3], len(mod[0]().digest()))
+                self.assertEqual(
+                    (mac,
+                     b''.join(chr(ord(b) ^ 0x36) for b in key),
+                     b''.join(chr(ord(b) ^ 0x5c) for b in key),
+                     len(mod[0]().digest())),
+                    mod)
 
 
     def test_setKeysCiphers(self):
@@ -1931,6 +1936,31 @@ class SSHCiphersTestCase(unittest.TestCase):
                 mac = ''
             self.assertEqual(outMac.makeMAC(seqid, data), mac)
             self.assertTrue(inMac.verify(seqid, data, mac))
+
+
+
+    def test_makeMAC(self):
+        """
+        L{SSHCiphers.makeMAC} computes the HMAC of an outgoing SSH message with
+        a particular sequence id and content data.
+        """
+        vectors = [
+            (b"\x0b" * 16, b"Hi There",
+             b"9294727a3638bb1c13f48ef8158bfc9d"),
+            (b"Jefe", b"what do ya want for nothing?",
+             b"750c783e6ab0b503eaa86e310a5db738"),
+            (b"\xAA" * 16, b"\xDD" * 50,
+             b"56be34521d144c88dbb8c733f0e8b3f6"),
+            ]
+
+        for key, data, mac in vectors:
+            outMAC = transport.SSHCiphers('none', 'none', 'hmac-md5', 'none')
+            outMAC.outMAC = outMAC._getMAC("hmac-md5", key)
+            (seqid,) = struct.unpack('>L', data[:4])
+            shortened = data[4:]
+            self.assertEqual(
+                mac, outMAC.makeMAC(seqid, shortened).encode("hex"),
+                "Failed HMAC test vector; key=%r data=%r" % (key, data))
 
 
 
