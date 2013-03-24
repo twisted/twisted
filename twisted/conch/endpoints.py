@@ -618,7 +618,6 @@ class SSHCommandClientEndpoint(object):
 
         channel = _CommandChannel(
             self._creator, self._command, protocolFactory, commandConnected)
-        channel._creator = self._creator
         connection.openChannel(channel)
         return commandConnected
 
