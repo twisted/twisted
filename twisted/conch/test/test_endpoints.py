@@ -5,6 +5,7 @@
 Tests for L{twisted.conch.endpoints}.
 """
 
+import os.path
 from os import environ
 from struct import pack
 
@@ -1184,7 +1185,9 @@ class NewConnectionHelperTests(TestCase):
 
         msg("Created known_hosts file at %r" % (path.path,))
 
-        default = path.path.replace(environ["HOME"], "~/")
+        # Unexpand ${HOME} to make sure ~ syntax is respected.
+        home = os.path.expanduser("~/")
+        default = path.path.replace(home, "~/")
         self.patch(_NewConnectionHelper, "_KNOWN_HOSTS", default)
         msg("Patched _KNOWN_HOSTS with %r" % (default,))
 
