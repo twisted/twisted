@@ -1653,6 +1653,18 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         self.assertRaises(RuntimeError, req.finish)
 
 
+    def test_repr(self):
+        """
+        L{Request.__repr__} returns the method, uri and client protocol of the
+        C{Request} instance as a C{string} in the form <METHOD URI PROTOCOL>.
+        """
+        request = http.Request(DummyChannel(), False)
+        request.clientproto = b"HTTP/1.0"
+        request.method = b"GET"
+        request.uri = b"/foo/bar"
+        self.assertEqual(repr(request), '<GET /foo/bar HTTP/1.0>')
+
+
 
 class MultilineHeadersTestCase(unittest.TestCase):
     """

@@ -1,0 +1,1 @@
+twisted.web.test_http.RequestTests.test_repr has been added as a test for twisted.web.http.Request.__repr__.

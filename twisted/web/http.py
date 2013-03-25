@@ -791,7 +791,15 @@ class Request:
 
 
     def __repr__(self):
-        return '<%s %s %s>'% (self.method, self.uri, self.clientproto)
+        """
+        Return the method, uri and client protocol of the C{Request} instance
+        as a C{string} in the form <METHOD URI PROTOCOL>.
+
+        @return: C{string} in the form <METHOD URI PROTOCOL>.
+        @rtype: C{string}.
+        """
+        return '<%s %s %s>' % (self.method, self.uri, self.clientproto)
+
 
     def process(self):
         """
