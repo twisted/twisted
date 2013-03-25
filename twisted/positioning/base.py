@@ -204,7 +204,7 @@ class PositioningSentenceProducerMixin(object):
     A mixin for certain protocols that produce positioning sentences.
 
     This mixin helps protocols that have C{SENTENCE_CONTENTS} class variables
-    (such as the C{NMEAProtocol} and the C{ClassicGPSDProtocol}) implement the
+    (such as the C{NMEAProtocol}) provide the
     L{IPositioningSentenceProducingProtocol} interface.
     """
     @classmethod
