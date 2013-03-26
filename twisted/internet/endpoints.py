@@ -30,7 +30,7 @@ from twisted.python.systemd import ListenFDs
 from twisted.internet.abstract import isIPv6Address
 from twisted.python.failure import Failure
 from twisted.python import log
-from twisted.internet.address import ProcessAddress
+from twisted.internet.address import _ProcessAddress
 from twisted.python.components import proxyForInterface
 
 if not _PY3:
@@ -403,7 +403,7 @@ class ProcessEndpoint(object):
         @param protocolFactory: A factory for an L{IProtocol} provider which
             will be notified of all events related to the created process.
         """
-        proto = protocolFactory.buildProtocol(ProcessAddress())
+        proto = protocolFactory.buildProtocol(_ProcessAddress())
         try:
             self._spawnProcess(
                 _WrapIProtocol(proto, self._executable, self._errFlag),

@@ -81,11 +81,9 @@ class IPv6Address(_IPAddress):
 
 
 @implementer(IAddress)
-class ProcessAddress(object):
+class _ProcessAddress(object):
     """
     An L{interfaces.IAddress} provider for process transports.
-
-    @since: 13.1
     """
 
 
