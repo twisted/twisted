@@ -734,40 +734,6 @@ class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
             '0 Jan 01  1970 my resum\xc3\xa9\r\n')
 
 
-    def _deprecatedListTestHelper(self, command, expectedOutput):
-        """
-        Like L{_listTestHelper}, but with an additional assertion that a warning
-        is emitted telling application developers to return C{unicode} from
-        L{IFTPShell.list} implementations, not L{bytes}.
-        """
-        d = self._listTestHelper(
-            command,
-            ('my resum\xc3\xa9', (0, 1, 0777, 0, 0, 'user', 'group')),
-            expectedOutput)
-
-        def checkDeprecation(offendingFunction):
-            warnings = self.flushWarnings([offendingFunction])
-            self.assertEqual(warnings[0]['category'], DeprecationWarning)
-            self.assertEqual(
-                warnings[0]['message'],
-                "Support for returning byte strings from IFTPShell.list "
-                "is deprecated since Twisted 13.0.  Return unicode strings "
-                "only.")
-            self.assertEqual(1, len(warnings))
-        return d.addCallback(checkDeprecation)
-
-
-    def test_LISTNonASCIIBytes(self):
-        """
-        Support for returning byte strings from L{IFTPShell.list} is deprecated
-        and doing so results in a warning, but in the filename being sent as-is.
-        """
-        return self._deprecatedListTestHelper(
-            "LIST",
-            'drwxrwxrwx   0 user      group                   '
-            '0 Jan 01  1970 my resum\xc3\xa9\r\n')
-
-
     def testManyLargeDownloads(self):
         # Login
         d = self._anonymousLogin()
@@ -860,16 +826,6 @@ class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
         return self._listTestHelper(
             "NLST",
             (u'my resum\xe9', (0, 1, 0777, 0, 0, 'user', 'group')),
-            'my resum\xc3\xa9\r\n')
-
-
-    def test_NLSTNonASCIIBytes(self):
-        """
-        Support for returning byte strings from L{IFTPShell.list} is deprecated
-        and doing so results in a warning, but in the filename being sent as-is.
-        """
-        return self._deprecatedListTestHelper(
-            "NLST",
             'my resum\xc3\xa9\r\n')
 
 
@@ -1137,27 +1093,6 @@ class DTPTests(unittest.TestCase):
 
         dataSent = self.transport.value()
         self.assertEqual(lineContent + '\r\n', dataSent)
-
-
-    def test_sendLineUnicode(self):
-        """
-        L{ftp.DTP.sendLine} notices unicode lines, encodes them to strings using
-        UTF-8, and emits a warning to not send unicode strings.
-        """
-        dtpInstance = self.factory.buildProtocol(None)
-        dtpInstance.makeConnection(self.transport)
-        lineContent = u'my resum\xe9'
-
-        self.assertWarns(
-            DeprecationWarning,
-            "Passing unicode to DTP.sendLine is deprecated since "
-            "Twisted 13.0.  Pass only byte strings.",
-            __file__,
-            lambda: dtpInstance.sendLine(lineContent))
-
-        dataSent = self.transport.value()
-        self.assertIsInstance(dataSent, bytes)
-        self.assertEqual(lineContent.encode('utf-8') + b'\r\n', dataSent)
 
 
 

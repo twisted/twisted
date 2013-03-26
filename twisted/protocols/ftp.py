@@ -424,13 +424,6 @@ class DTP(object, protocol.Protocol):
         @param line: The line to be sent.
         @type line: L{bytes}
         """
-        if isinstance(line, unicode):
-            warnings.warn(
-                "Passing unicode to DTP.sendLine is deprecated since "
-                "Twisted 13.0.  Pass only byte strings.",
-                category=DeprecationWarning, stacklevel=2)
-            line = line.encode('utf-8')
-
         self.transport.write(line + '\r\n')
 
 
@@ -939,8 +932,8 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
     def _checkListResult(self, name):
         """
         Inspect an element from the list returned by an L{IFTPShell.list}
-        implementation to make sure it is of the correct type and issue a
-        warning if not.
+        implementation to make sure the content is formated to be
+        send on the wire.
 
         @param name: The name of a file, as returned by L{IFTPShell.list}.
         @type name: L{bytes} or L{unicode}
@@ -951,11 +944,6 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         """
         if isinstance(name, unicode):
             return name.encode('utf-8')
-        warnAboutFunction(
-            self.shell.list,
-            "Support for returning byte strings from "
-            "IFTPShell.list is deprecated since Twisted "
-            "13.0.  Return unicode strings only.")
         return name
 
 
