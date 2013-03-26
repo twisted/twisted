@@ -62,8 +62,10 @@ class FailureTestCase(SynchronousTestCase):
 
     def test_trapRaisesCurrentFailure(self):
         """
-        In Python 2, L{failure.Failure.trap} raises the current
-        L{failure.Failure} ie C{self}.
+        If the wrapped C{Exception} is not one of the expected types
+        (or a subclass of one of the expected types),
+        L{failure.Failure.trap} raises the current L{failure.Failure}
+        ie C{self}.
         """
         exception = ValueError()
         try:
@@ -76,29 +78,30 @@ class FailureTestCase(SynchronousTestCase):
 
     if _PY3:
         test_trapRaisesCurrentFailure.skip = (
-            "In Python3, Failure.trap raises the original Exception "
-            "instead of the failure instance.")
+            "In Python3, Failure.trap raises the wrapped Exception "
+            "instead of the original Failure instance.")
 
 
-    def test_trappedAndReRaiseException(self):
+    def test_trapRaisesWrappedException(self):
         """
-        Raise an exception if the trapped exception is on
-        overflow error.
+        If the wrapped C{Exception} is not one of the expected types
+        (or a subclass of one of the expected types),
+        L{failure.Failure.trap} raises the wrapped C{Exception}.
         """
         exception = ValueError()
         try:
             raise exception
         except:
             f = failure.Failure()
-        # On both Python 2 and Python 3, the underlying exception is passed
-        # on:
-        try:
-            f.trap(OverflowError)
-        except:
-            untrapped = failure.Failure()
-            self.assertIdentical(untrapped.value, exception)
-        else:
-            self.fail("Exception was not re-raised.")
+
+        untrapped = self.assertRaises(ValueError, f.trap, OverflowError)
+        self.assertIdentical(exception, untrapped)
+
+
+    if not _PY3:
+        test_trapRaisesWrappedException.skip = (
+            "In Python2, Failure.trap raises the current Failure instance "
+            "instead of the wrapped Exception.")
 
 
     def assertStartsWith(self, s, prefix):
