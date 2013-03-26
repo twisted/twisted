@@ -6,6 +6,7 @@ Tests for L{twisted.trial._dist.disttrial}.
 """
 
 import os
+import sys
 from cStringIO import StringIO
 
 from twisted.internet.protocol import ProcessProtocol
@@ -119,12 +120,14 @@ class DistTrialRunnerTestCase(TestCase):
             arguments.append(args[0])
             arguments.append(args[1])
             arguments.append(args[2])
+            arguments.append(env)
 
         self.runner.launchWorkerProcesses(
             fakeSpawnProcess, protocols, ["foo"])
         self.assertEqual(arguments[0], arguments[1])
         self.assertTrue(os.path.exists(arguments[2]))
         self.assertEqual("foo", arguments[3])
+        self.assertEqual(":".join(sys.path), arguments[4]["TRIAL_PYTHONPATH"])
 
 
     def test_run(self):

@@ -10,11 +10,12 @@ the workers.
 @since: 12.3
 """
 
-import _preamble
-
 import sys
 import os
 import errno
+
+if 'TRIAL_PYTHONPATH' in os.environ:
+    sys.path[:] = os.environ['TRIAL_PYTHONPATH'].split(':')
 
 from twisted.internet.protocol import FileWrapper
 from twisted.python.log import startLoggingWithObserver, textFromEventDict
