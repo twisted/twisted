@@ -1745,8 +1745,9 @@ class SSLClientStringTests(unittest.TestCase):
 
     def test_sslWithDefaults(self):
         """
-        When passed an SSL strports description, L{clientFromString} returns a
-        L{SSL4ClientEndpoint} instance initialized with default values.
+        When passed an SSL strports description without extra arguments,
+        L{clientFromString} returns a L{SSL4ClientEndpoint} instance
+        whose context factory is initialized with default values.
         """
         reactor = object()
         client = endpoints.clientFromString(reactor, "ssl:example.net:4321")
