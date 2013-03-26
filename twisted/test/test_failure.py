@@ -74,6 +74,13 @@ class FailureTestCase(SynchronousTestCase):
         self.assertIdentical(f, untrapped)
 
 
+    if _PY3:
+        test_trappedAndReRaiseFailure.skip = (
+            "In Python3, failure.trap raises the original Exception "
+            "instead of a failure instance "
+            "because Python3 can only raise BaseException subclasses.")
+
+
     def test_trappedAndReRaiseException(self):
         """
         Raise an exception if the trapped exception is on
@@ -93,12 +100,6 @@ class FailureTestCase(SynchronousTestCase):
             self.assertIdentical(untrapped.value, exception)
         else:
             self.fail("Exception was not re-raised.")
-
-    if _PY3:
-        FailureTestCase.test_TrappedAndReRaiseFailure.skip = (
-            "In Python3, failure.trap raises the original Exception "
-            "instead of a failure instance "
-            "because Python3 can only raise BaseException subclasses.")
 
 
     def assertStartsWith(self, s, prefix):
