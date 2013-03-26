@@ -1655,8 +1655,9 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
 
     def test_repr(self):
         """
-        L{Request.__repr__} returns the method, uri and client protocol of the
-        C{Request} instance as a C{string} in the form <METHOD URI PROTOCOL>.
+        L{http.Request.__repr__} returns the method, uri and client
+        protocol of the L{http.Request} instance as a C{string} in the
+        form <METHOD URI PROTOCOL>.
         """
         request = http.Request(DummyChannel(), False)
         request.clientproto = b"HTTP/1.0"

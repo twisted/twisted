@@ -792,7 +792,7 @@ class Request:
 
     def __repr__(self):
         """
-        Return the method, uri and client protocol of the C{Request} instance
+        Return the method, uri and client protocol of this L{Request}
         as a C{string} in the form <METHOD URI PROTOCOL>.
 
         @return: C{string} in the form <METHOD URI PROTOCOL>.
