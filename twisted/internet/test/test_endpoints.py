@@ -56,6 +56,7 @@ except ImportError:
     skipSSL = "OpenSSL is required to construct SSL Endpoints"
 
 
+
 class TestProtocol(Protocol):
     """
     Protocol whose only function is to callback deferreds on the
@@ -892,6 +893,7 @@ class TCP6EndpointsTestCase(EndpointTestCaseMixin, unittest.TestCase):
                  connectArgs.get('timeout', 30),
                  connectArgs.get('bindAddress', None)),
                 address)
+
 
 
 class TCP6EndpointNameResolutionTestCase(ClientEndpointTestCaseMixin,
@@ -1796,6 +1798,7 @@ class SSLClientStringTests(unittest.TestCase):
         self.assertEqual(certOptions.verify, False)
         ctx = certOptions.getContext()
         self.assertIsInstance(ctx, ContextType)
+
 
 
 class AdoptedStreamServerEndpointTestCase(ServerEndpointTestCaseMixin,
