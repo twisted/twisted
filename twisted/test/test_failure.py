@@ -27,6 +27,7 @@ except ImportError:
     raiser = None
 
 
+
 def getDivisionFailure(*args, **kwargs):
     """
     Make a C{Failure} of a divide-by-zero error.
@@ -68,15 +69,15 @@ class FailureTestCase(SynchronousTestCase):
             raise exception
         except:
             f = failure.Failure()
-        # On Python 2, the same failure is reraised:    
+        # On Python 2, the same failure is reraised:
         untrapped = self.assertRaises(failure.Failure, f.trap, OverflowError)
         self.assertIdentical(f, untrapped)
 
 
     def test_trappedAndReRaiseException(self):
         """
-        Raise an exception if the trapped exception is on 
-        overflow error. 
+        Raise an exception if the trapped exception is on
+        overflow error.
         """
         exception = ValueError()
         try:
@@ -92,7 +93,7 @@ class FailureTestCase(SynchronousTestCase):
             self.assertIdentical(untrapped.value, exception)
         else:
             self.fail("Exception was not re-raised.")
-        
+
     if _PY3:
         FailureTestCase.test_TrappedAndReRaiseFailure.skip = "In Python3, failure.trap raises the original Exception instead of a failure instance because Python3 can only raise BaseException subclasses."
 
@@ -988,7 +989,3 @@ class ExtendedGeneratorTests(SynchronousTestCase):
             self._throwIntoGenerator(f, g)
         except:
             self.assertIsInstance(failure.Failure().value, IndexError)
-
-
-
-
