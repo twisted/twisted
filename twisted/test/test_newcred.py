@@ -296,8 +296,6 @@ class PluggableAuthenticationModulesTest(unittest.TestCase):
         easily-controlled behavior.
         """
         self.patch(pamauth, 'callIntoPAM', self.callIntoPAM)
-        self._oldCallIntoPAM = pamauth.callIntoPAM
-        pamauth.callIntoPAM = self.callIntoPAM
 
 
     def callIntoPAM(self, service, user, conv):
