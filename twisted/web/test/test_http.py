@@ -1662,7 +1662,9 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         request.clientproto = b"HTTP/1.0"
         request.method = b"GET"
         request.uri = b"/foo/bar"
-        self.assertEqual(repr(request), '<GET /foo/bar HTTP/1.0>')
+        self.assertEqual(
+            repr(request),
+            '<%s %s %s>' % (request.method, request.uri, request.clientproto))
 
 
 
