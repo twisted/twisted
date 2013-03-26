@@ -95,7 +95,10 @@ class FailureTestCase(SynchronousTestCase):
             self.fail("Exception was not re-raised.")
 
     if _PY3:
-        FailureTestCase.test_TrappedAndReRaiseFailure.skip = "In Python3, failure.trap raises the original Exception instead of a failure instance because Python3 can only raise BaseException subclasses."
+        FailureTestCase.test_TrappedAndReRaiseFailure.skip = (
+            "In Python3, failure.trap raises the original Exception "
+            "instead of a failure instance "
+            "because Python3 can only raise BaseException subclasses.")
 
 
     def assertStartsWith(self, s, prefix):
