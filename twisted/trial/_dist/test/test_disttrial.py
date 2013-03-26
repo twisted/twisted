@@ -127,7 +127,8 @@ class DistTrialRunnerTestCase(TestCase):
         self.assertEqual(arguments[0], arguments[1])
         self.assertTrue(os.path.exists(arguments[2]))
         self.assertEqual("foo", arguments[3])
-        self.assertEqual(":".join(sys.path), arguments[4]["TRIAL_PYTHONPATH"])
+        self.assertEqual(os.pathsep.join(sys.path),
+                         arguments[4]["TRIAL_PYTHONPATH"])
 
 
     def test_run(self):

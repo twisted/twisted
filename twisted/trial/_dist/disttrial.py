@@ -117,7 +117,7 @@ class DistTrialRunner(object):
         childFDs = {0: 'w', 1: 'r', 2: 'r', _WORKER_AMP_STDIN: 'w',
                     _WORKER_AMP_STDOUT: 'r'}
         environ = os.environ.copy()
-        environ['TRIAL_PYTHONPATH'] = ':'.join(sys.path)
+        environ['TRIAL_PYTHONPATH'] = os.pathsep.join(sys.path)
         for worker in protocols:
             args = [sys.executable, workertrialPath]
             args.extend(arguments)
