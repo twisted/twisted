@@ -1,0 +1,30 @@
+{"commands" : {
+    "Sum" : {
+        "arguments" : [["a", "Integer"],
+                       ["b", "Integer"]],
+        "response"  : [["total", "Integer"]]
+            },
+
+    "Divide" : {
+        "arguments" : [["numerator", "Float"],
+                       ["denominator", "Float"]],
+        "response"  : [["result", "Float"]],
+            
+        "errors"    : [["ZERO_DIVISION", "ZeroDivisionError"]]
+               },
+
+    "SumList" : {
+        "arguments" : [["args", {"type" : "ListOf", "of" : "Integer"}],
+                       ["basevalue", {"type" : "Integer",
+                                      "optional" : true}]
+                      ],
+        "response"  : [["total", "Integer"]]
+                },
+
+    "SumPairs" : {
+        "arguments" : [["args", {"type" : "TupleList",
+                                 "of" : ["Integer", "Integer"]}]],
+        "response"  : [["total", "Integer"]]
+                 }
+    }
+}

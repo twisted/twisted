@@ -8,7 +8,6 @@ Tests for L{twisted.protocols.amp}.
 
 import datetime
 import decimal
-import os.path
 
 from zope.interface import implements
 from zope.interface.verify import verifyClass, verifyObject
@@ -3172,173 +3171,183 @@ class TupleList(amp.Argument):
 
 
 
-class SpecTestCase(unittest.TestCase):
+class SchemaLoaderTestCase(unittest.TestCase):
+    """
+    Tests for amp.SchemaLoader to ensure various types of Command definitions
+    may be loaded from a JSON schema document.
+    """
 
     def setUp(self):
-        specPath = os.path.join(os.path.dirname(__file__), 'testspec.amp.json')
-        typeMapping = {'Integer' : amp.Integer,
-                       'Float'   : amp.Float,
-                       'ZeroDivisionError' : ZeroDivisionError,
-                       'TupleList' : TupleList,
-                       'ListOf'    : amp.ListOf,
-                       }
-        self.spec = amp.Spec(typeMapping)
-        with open(specPath, 'rb') as f:
-            self.spec.fromFile(f)
+        typeMapping = amp.defaultTypeMapping.copy()
+        typeMapping.update({
+            'ZeroDivisionError' : ZeroDivisionError,
+            'TupleList' : TupleList
+            })
+        schemaPath = filepath.FilePath(__file__).sibling('test_schema.amp.json')
+        with schemaPath.open('rb') as f:
+            self.loader = amp.SchemaLoader.fromJSON(
+                    f.read(), typeMapping=typeMapping)
 
 
     def test_sum(self):
-        cmd = self.spec.Sum
+        """
+        Test that a "Sum" command is constructed correctly.
+        """
+        cmd = self.loader.Sum
 
         self.assert_(issubclass(cmd, amp.Command))
 
-        self.assertEquals(len(cmd.arguments), 2)
-        self.assertEquals(len(cmd.response), 1)
-        self.assertEquals(len(cmd.errors), 0)
+        self.assertEqual(len(cmd.arguments), 2)
+        self.assertEqual(len(cmd.response), 1)
+        self.assertEqual(len(cmd.errors), 0)
 
-        self.assertEquals(cmd.arguments[0][0], 'a')
-        self.assert_(isinstance(cmd.arguments[0][1], amp.Integer))
+        self.assertEqual(cmd.arguments[0][0], 'a')
+        self.assertIsInstance(cmd.arguments[0][1], amp.Integer)
 
-        self.assertEquals(cmd.arguments[1][0], 'b')
-        self.assert_(isinstance(cmd.arguments[1][1], amp.Integer))
+        self.assertEqual(cmd.arguments[1][0], 'b')
+        self.assertIsInstance(cmd.arguments[1][1], amp.Integer)
 
-        self.assertEquals(cmd.response[0][0], 'total')
-        self.assert_(isinstance(cmd.arguments[0][1], amp.Integer))
+        self.assertEqual(cmd.response[0][0], 'total')
+        self.assertIsInstance(cmd.arguments[0][1], amp.Integer)
 
 
     def test_divide(self):
-        cmd = self.spec.Divide
+        """
+        Test that a "Divide" command is constructed correctly.
+        """
+        cmd = self.loader.Divide
 
         self.assert_(issubclass(cmd, amp.Command))
 
-        self.assertEquals(len(cmd.arguments), 2)
-        self.assertEquals(len(cmd.response), 1)
-        self.assertEquals(len(cmd.errors), 1)
+        self.assertEqual(len(cmd.arguments), 2)
+        self.assertEqual(len(cmd.response), 1)
+        self.assertEqual(len(cmd.errors), 1)
 
-        self.assertEquals(cmd.arguments[0][0], 'numerator')
-        self.assert_(isinstance(cmd.arguments[0][1], amp.Float))
+        self.assertEqual(cmd.arguments[0][0], 'numerator')
+        self.assertIsInstance(cmd.arguments[0][1], amp.Float)
 
-        self.assertEquals(cmd.arguments[1][0], 'denominator')
-        self.assert_(isinstance(cmd.arguments[1][1], amp.Float))
+        self.assertEqual(cmd.arguments[1][0], 'denominator')
+        self.assertIsInstance(cmd.arguments[1][1], amp.Float)
 
-        self.assertEquals(cmd.response[0][0], 'result')
-        self.assert_(isinstance(cmd.arguments[0][1], amp.Float))
+        self.assertEqual(cmd.response[0][0], 'result')
+        self.assertIsInstance(cmd.arguments[0][1], amp.Float)
 
-        self.assertEquals(cmd.errors[0][0], 'ZERO_DIVISION')
+        self.assertEqual(cmd.errors[0][0], 'ZERO_DIVISION')
         self.assertIdentical(cmd.errors[0][1], ZeroDivisionError)
 
 
     def test_sumlist(self):
-        cmd = self.spec.SumList
+        """
+        Test that a "SumList" command is constructed correctly.
+        """
+        cmd = self.loader.SumList
 
         self.assert_(issubclass(cmd, amp.Command))
 
-        self.assertEquals(len(cmd.arguments), 2)
-        self.assertEquals(len(cmd.response), 1)
-        self.assertEquals(len(cmd.errors), 0)
+        self.assertEqual(len(cmd.arguments), 2)
+        self.assertEqual(len(cmd.response), 1)
+        self.assertEqual(len(cmd.errors), 0)
 
-        self.assertEquals(cmd.arguments[0][0], 'args')
+        self.assertEqual(cmd.arguments[0][0], 'args')
         t = cmd.arguments[0][1]
-        self.assert_(isinstance(t, amp.ListOf))
-        self.assert_(isinstance(t.elementType, amp.Integer))
+        self.assertIsInstance(t, amp.ListOf)
+        self.assertIsInstance(t.elementType, amp.Integer)
 
-        self.assertEquals(cmd.arguments[1][0], 'basevalue')
+        self.assertEqual(cmd.arguments[1][0], 'basevalue')
 
         t = cmd.arguments[1][1]
-        self.assert_(isinstance(t, amp.Integer))
-        self.assertEquals(t.optional, True)
+        self.assertIsInstance(t, amp.Integer)
+        self.assertEqual(t.optional, True)
 
-        self.assertEquals(cmd.response[0][0], 'total')
+        self.assertEqual(cmd.response[0][0], 'total')
         t = cmd.response[0][1]
-        self.assert_(isinstance(t, amp.Integer))
-        self.assertEquals(t.optional, False)
+        self.assertIsInstance(t, amp.Integer)
+        self.assertEqual(t.optional, False)
 
 
     def test_sumpairs(self):
-        cmd = self.spec.SumPairs
+        """
+        Test that a "SumPairs" command is constructed correctly.
+        """
+        cmd = self.loader.SumPairs
 
         self.assert_(issubclass(cmd, amp.Command))
 
-        self.assertEquals(len(cmd.arguments), 1)
-        self.assertEquals(len(cmd.response), 1)
-        self.assertEquals(len(cmd.errors), 0)
+        self.assertEqual(len(cmd.arguments), 1)
+        self.assertEqual(len(cmd.response), 1)
+        self.assertEqual(len(cmd.errors), 0)
 
-        self.assertEquals(cmd.arguments[0][0], 'args')
+        self.assertEqual(cmd.arguments[0][0], 'args')
         t = cmd.arguments[0][1]
-        self.assert_(isinstance(t, TupleList))
-        self.assert_(isinstance(t.t1, amp.Integer))
-        self.assert_(isinstance(t.t2, amp.Integer))
+        self.assertIsInstance(t, TupleList)
+        self.assertIsInstance(t.t1, amp.Integer)
+        self.assertIsInstance(t.t2, amp.Integer)
 
-        self.assertEquals(cmd.response[0][0], 'total')
+        self.assertEqual(cmd.response[0][0], 'total')
         t = cmd.response[0][1]
-        self.assert_(isinstance(t, amp.Integer))
+        self.assertIsInstance(t, amp.Integer)
 
 
 
-class TestAMPClient(amp.AMP):
-    def __init__(self, *args, **kw):
-        amp.AMP.__init__(self, *args, **kw)
-        self.d = defer.Deferred()
-
-
-    def connectionLost(self, r):
-        self.d.callback(None)
-
-
-
-class SpecIntegrationTestCase(unittest.TestCase):
-
-    def setUp(self):
-        specPath = os.path.join(os.path.dirname(__file__),
-                                'testspec.amp.json')
-        typeMapping = {'Integer' : amp.Integer,
-                       'Float'   : amp.Float,
-                       'ZeroDivisionError' : ZeroDivisionError,
-                       'TupleList' : TupleList,
-                       'ListOf'    : amp.ListOf,
-                       }
-        spec = self.spec = amp.Spec(typeMapping)
-        with open(specPath, 'rb') as f:
-            self.spec.fromFile(f)
-
-        class MyAMP(amp.AMP):
-            @spec.Sum.responder
-            def sum(self, a, b):
-                return {'total' : a+b}
-
-        f = protocol.ServerFactory()
-        f.protocol = MyAMP
-        self.port = reactor.listenTCP(0, f)
-        self.listeningPort = self.port.getHost().port
-
-
-    def tearDown(self):
-        return self.port.stopListening()
-
+class SchemaLoaderIntegrationTestCase(unittest.TestCase):
+    """
+    Test to verify end-to-end functionality of an AMP Command
+    loaded from a JSON schema document.
+    """
 
     def test_sum_call(self):
         """
         Do a Sum call to ensure the loaded Command is
         end-to-end functional.
         """
-        return protocol.ClientCreator(reactor, TestAMPClient
-                ).connectTCP('localhost', self.listeningPort
-                ).addCallback(self._sum_call_cb)
+        typeMapping = amp.defaultTypeMapping.copy()
+        typeMapping.update({
+            'ZeroDivisionError' : ZeroDivisionError,
+            'TupleList' : TupleList
+            })
+        schemaPath = filepath.FilePath(__file__).sibling('test_schema.amp.json')
+        with schemaPath.open('rb') as f:
+            loader = self.loader = amp.SchemaLoader.fromJSON(
+                    f.read(), typeMapping=typeMapping)
+
+        class LoadedAMP(amp.AMP):
+            @loader.Sum.responder
+            def sum(self, a, b):
+                return {'total' : a + b}
+
+        c, s, p = connectedServerAndClient(ServerClass=LoadedAMP)
+        L = []
+        c.callRemote(loader.Sum, a=13, b=81).addCallback(L.append)
+        p.flush()
+        self.assertEqual(L[0]['total'], 94)
 
 
-    def _sum_call_cb(self, proto):
-        return proto.callRemote(self.spec.Sum, a=5, b=7
-                ).addCallback(self._done
-                ).addBoth(self._cleanup, proto)
+
+class TypeMappingDictTestCase(unittest.TestCase):
+    """
+    Test that trying to mutate a _TypeMappingDict instance
+    raises AssertionError.
+    """
+
+    def test_no_update(self):
+        """
+        update() method should raise.
+        """
+        d = amp._TypeMappingDict({'foo' : 'bar'})
+        self.assertRaises(AssertionError, d.update, {'baz' : 'quux'})
 
 
-    def _done(self, r):
-        self.assertEquals(r['total'], 12)
+    def test_no_setitem(self):
+        """
+        setting a key should raise.
+        """
+        d = amp._TypeMappingDict({'foo' : 'bar'})
 
+        def try_setitem():
+            d['baz'] = 'quux'
 
-    def _cleanup(self, r, proto):
-        proto.transport.loseConnection()
-        return proto.d
+        self.assertRaises(AssertionError, try_setitem)
+
 
 
 

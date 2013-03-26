@@ -1,1 +1,1 @@
-Implemented an AMP standard using JSON for specifying AMP Command structures.
+Implemented an AMP schema standard, initially supporting JSON for specifying AMP Command definitions.

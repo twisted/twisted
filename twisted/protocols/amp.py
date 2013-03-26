@@ -2705,34 +2705,94 @@ class DateTime(Argument):
 
 
 
-class Spec(object):
+class _TypeMappingDict(dict):
     """
-    A loader for AMP Commands specified using the AMP/JSON syntax.
+    A dict that is not easily mutated.
 
+    Used for the C{defaultTypeMapping} dict defined below.
+    
+    Rationale: We wish to provide C{defaultTypeMapping} as a public attribute
+    since a common usage pattern will be for the user to make a copy of this
+    dict, then .update() it with mappings for any custom AMP Argument or Error
+    types they are using. Without some protection against mutation, this could
+    very easily lead to the user forgetting to copy the dict first, and
+    inadvertantly mutating the default type mappings.
+    """
+    _err = ("You probably want to .copy() this dict before adding your own "
+            "type mappings.")
+
+    def update(self, _):
+        raise AssertionError(self._err)
+
+
+    def __setitem__(self, key, value):
+        raise AssertionError(self._err)
+
+
+
+defaultTypeMapping = _TypeMappingDict({
+    'Integer'   : Integer,
+    'String'    : String,
+    'Float'     : Float,
+    'Boolean'   : Boolean,
+    'Decimal'   : Decimal,
+    'DateTime'  : DateTime,
+    'Unicode'   : Unicode,
+    'ListOf'    : ListOf,
+    'AmpList'   : AmpList,
+
+    'UnhandledCommand'   : UnhandledCommand,
+    'UnknownRemoteError' : UnknownRemoteError
+    })
+
+
+
+class SchemaLoader(object):
+    """
+    A loader for AMP schema documents.
+
+    An AMP schema document defines AMP Commands' arguments, responses and
+    error codes much like normal subclasses of amp.Command.
+
+    Once loaded, Commands defined in the schema document will be available
+    as attributes on this object. e.g.::
+
+        with open('myschema.json', 'rb') as f:
+            loader = amp.SchemaLoader.fromJSON(f.read())
+        
+        class MyServer(amp.AMP):
+            @loader.Sum.responder
+            def handle_sum(self, a=None, b=None):
+                return {'total' : a + b}
+
+    @since: 13.0
     """
     def __init__(self, typeMapping):
+        self._typeMapping = typeMapping
+
+
+    @classmethod
+    def fromJSON(klass, jsonBytes, typeMapping=defaultTypeMapping):
         """
+        @type jsonBytes: C{str}
+        @param jsonBytes: A byte-string containing the JSON data.
+
         @type typeMapping: C{dict}
         @param typeMapping: A namespace used to look up the AMP Type and
             Exception references found in the JSON source. Keys should be
             C{str}s and values should be the AMP Type or Exception class
             to be used.
         """
-        self._typeMapping = typeMapping
+        j = json.loads(jsonBytes)
+        loader = klass(typeMapping)
+        for cmdName in j['commands']:
+            cmdName = cmdName.encode('ascii') # must be valid Python identifier
+            cmdDef = j['commands'][cmdName]
+            setattr(loader, cmdName, loader._loadCommand(cmdName, cmdDef))
+        return loader
 
 
-    def fromFile(self, f):
-        """
-        @type f: C{file}
-        @param f: A file-like object to read the JSON Command
-            specifications from.
-        """
-        j = json.load(f)
-        for cmdDef in j['commands']:
-            setattr(self, cmdDef['name'], self._loadCommand(cmdDef))
-
-
-    def _loadCommand(self, cmdDef):
+    def _loadCommand(self, cmdName, cmdDef):
         arguments = []
         if 'arguments' in cmdDef:
             arguments = [self._parseArgSpec(argSpec) for argSpec in cmdDef['arguments']]
@@ -2743,8 +2803,7 @@ class Spec(object):
         if 'errors' in cmdDef:
             errors    = [self._parseErrorSpec(errSpec) for errSpec in cmdDef['errors']]
 
-        name = str(cmdDef['name']) # can't be Unicode
-        return Command.__metaclass__(name,
+        return Command.__metaclass__(cmdName,
                                      (Command,),
                                      {'arguments' : arguments,
                                       'response'  : response,
@@ -2754,7 +2813,10 @@ class Spec(object):
 
     def _parseArgSpec(self, argSpec):
         name, typeSpec = argSpec
-        return [str(name), self._resolveType(typeSpec)]
+        # name is the AMP argument "key", which according to the wire protocol
+        # can be any arbitrary byte-string. Since we can only get Unicode from
+        # JSON, encoding as UTF-8 here seems like the most sane thing to do.
+        return [name.encode('utf-8'), self._resolveType(typeSpec)]
 
 
     def _resolveType(self, typeSpec):
@@ -2773,12 +2835,16 @@ class Spec(object):
             optional = typeSpec.get(u'optional', False)
             t = cls(*args, optional=optional)
         else:
-            # should be a unicode, then
-            t = self._typeMapping[str(typeSpec)]()
+            # should be a unicode, then.
+            t = self._typeMapping[typeSpec]()
         return t
 
 
     def _parseErrorSpec(self, errSpec):
-        errCode, excType = map(str, errSpec)
+        # AMP error codes are arbitrary byte-strings according to the wire
+        # protocol. Since we can only get Unicode from JSON, encoding to UTF-8
+        # seems like the most sane thing to do here.
+        errCode, excType = errSpec
+        errCode = errCode.encode('utf-8')
         return [errCode, self._typeMapping[excType]]
 
