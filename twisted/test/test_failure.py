@@ -27,7 +27,6 @@ except ImportError:
     raiser = None
 
 
-
 def getDivisionFailure(*args, **kwargs):
     """
     Make a C{Failure} of a divide-by-zero error.
@@ -60,35 +59,9 @@ class FailureTestCase(SynchronousTestCase):
         self.assertEqual(f.type, NotImplementedError)
 
 
-    def test_notTrapped(self):
+    def test_trappedAndReRaiseFailure(self):
         """
-        Making sure L{trap} doesn't trap what it shouldn't.
-        """
-        exception = ValueError()
-        try:
-            raise exception
-        except:
-            f = failure.Failure()
-
-        # On Python 2, the same failure is reraised:
-        if not _PY3:
-            untrapped = self.assertRaises(failure.Failure, f.trap, OverflowError)
-            self.assertIdentical(f, untrapped)
-
-        # On both Python 2 and Python 3, the underlying exception is passed
-        # on:
-        try:
-            f.trap(OverflowError)
-        except:
-            untrapped = failure.Failure()
-            self.assertIdentical(untrapped.value, exception)
-        else:
-            self.fail("Exception was not re-raised.")
-
-
-    def test_TrappedAndReRaiseFailure(self):
-        """
-        If the failure doesn't match the error pre-defined, this test case will raise the same failure. 
+        Fail the test if the exception is not on overflow error.
         """
         exception = ValueError()
         try:
@@ -100,9 +73,10 @@ class FailureTestCase(SynchronousTestCase):
         self.assertIdentical(f, untrapped)
 
 
-    def test_TrappedAndReRaiseException(self):
+    def test_trappedAndReRaiseException(self):
         """
-        If the failure doesn't match the error pre-defined, the underlying exception will be re-raised. 
+        Raise an exception if the trapped exception is on 
+        overflow error. 
         """
         exception = ValueError()
         try:
@@ -118,6 +92,9 @@ class FailureTestCase(SynchronousTestCase):
             self.assertIdentical(untrapped.value, exception)
         else:
             self.fail("Exception was not re-raised.")
+        
+    if _PY3:
+        FailureTestCase.test_TrappedAndReRaiseFailure.skip = "In Python3, failure.trap raises the original Exception instead of a failure instance because Python3 can only raise BaseException subclasses."
 
 
     def assertStartsWith(self, s, prefix):
@@ -1014,6 +991,4 @@ class ExtendedGeneratorTests(SynchronousTestCase):
 
 
 
-if _PY3:
-    FailureTestCase.test_TrappedAndReRaiseFailure.skip = "This test works only with Python 2"
 
