@@ -60,25 +60,24 @@ class FailureTestCase(SynchronousTestCase):
         self.assertEqual(f.type, NotImplementedError)
 
 
-    def test_trappedAndReRaiseFailure(self):
+    def test_trapRaisesCurrentFailure(self):
         """
-        Fail the test if the exception is not on overflow error.
+        In Python 2, L{failure.Failure.trap} raises the current
+        L{failure.Failure} ie C{self}.
         """
         exception = ValueError()
         try:
             raise exception
         except:
             f = failure.Failure()
-        # On Python 2, the same failure is reraised:
         untrapped = self.assertRaises(failure.Failure, f.trap, OverflowError)
         self.assertIdentical(f, untrapped)
 
 
     if _PY3:
-        test_trappedAndReRaiseFailure.skip = (
-            "In Python3, failure.trap raises the original Exception "
-            "instead of a failure instance "
-            "because Python3 can only raise BaseException subclasses.")
+        test_trapRaisesCurrentFailure.skip = (
+            "In Python3, Failure.trap raises the original Exception "
+            "instead of the failure instance.")
 
 
     def test_trappedAndReRaiseException(self):
