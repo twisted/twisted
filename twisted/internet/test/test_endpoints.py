@@ -1743,6 +1743,23 @@ class SSLClientStringTests(unittest.TestCase):
         self.assertEqual(client._bindAddress, "10.0.0.3")
 
 
+    def test_sslWithDefaults(self):
+        """
+        When passed an SSL strports description, L{clientFromString} returns a
+        L{SSL4ClientEndpoint} instance initialized with default values.
+        """
+        reactor = object()
+        client = endpoints.clientFromString(reactor, "ssl:example.net:4321")
+        self.assertIsInstance(client, endpoints.SSL4ClientEndpoint)
+        self.assertIdentical(client._reactor, reactor)
+        self.assertEqual(client._host, "example.net")
+        self.assertEqual(client._port, 4321)
+        certOptions = client._sslContextFactory
+        self.assertEqual(certOptions.method, SSLv23_METHOD)
+        self.assertEqual(certOptions.certificate, None)
+        self.assertEqual(certOptions.privateKey, None)
+
+
     def test_unreadableCertificate(self):
         """
         If a certificate in the directory is unreadable,
@@ -1778,7 +1795,6 @@ class SSLClientStringTests(unittest.TestCase):
         self.assertEqual(certOptions.verify, False)
         ctx = certOptions.getContext()
         self.assertIsInstance(ctx, ContextType)
-
 
 
 class AdoptedStreamServerEndpointTestCase(ServerEndpointTestCaseMixin,
