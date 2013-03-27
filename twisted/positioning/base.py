@@ -115,7 +115,7 @@ class InvalidChecksum(Exception):
 
 
 
-class BaseSentence(object):
+class _BaseSentence(object):
     """
     A base sentence class for a particular protocol.
 
@@ -199,7 +199,7 @@ class BaseSentence(object):
 
 
 
-class PositioningSentenceProducerMixin(object):
+class _PositioningSentenceProducerMixin(object):
     """
     A mixin for certain protocols that produce positioning sentences.
 
@@ -268,10 +268,10 @@ class Angle(object, FancyEqMixin):
         @param angleType: A symbolic constant describing the angle type. Should
             be one of L{AngleTypes} or {None} if unknown.
 
-        @raises ValueError: If the angle type is not the default argument, but it
-            is an unknown type (it's not present in C{Angle.RANGE_EXPRESSIONS}),
-            or it is a known type but the supplied value was out of the allowable
-            range for said type.
+        @raises ValueError: If the angle type is not the default argument,
+            but it is an unknown type (not in  C{Angle.RANGE_EXPRESSIONS}),
+            or it is a known type but the supplied value was out of the
+            allowable range for said type.
         """
         if angle is not None and angleType is not None:
             if angleType not in self.RANGE_EXPRESSIONS:
@@ -399,9 +399,9 @@ class Heading(Angle):
         If the variation is unknown or not applicable, this is C{None}.
     @type variation: C{Angle} or C{NoneType}.
     @ivar correctedHeading: The heading, corrected for variation. If the
-        variation is unknown (C{None}), is None. This attribute is read-only (its
-        value is determined by the angle and variation attributes). The value is
-        coerced to being between 0 (inclusive) and 360 (exclusive).
+        variation is unknown (C{None}), is None. This attribute is read-only
+        (its value is determined by the angle and variation attributes). The
+        value is coerced to being between 0 (inclusive) and 360 (exclusive).
     """
     def __init__(self, angle=None, variation=None):
         """
@@ -505,13 +505,13 @@ class Coordinate(Angle, FancyEqMixin):
 
     HEMISPHERES_BY_TYPE_AND_SIGN = {
         Angles.LATITUDE: [
-            Directions.NORTH, # Positive
-            Directions.SOUTH, # Negative
+            Directions.NORTH,  # Positive
+            Directions.SOUTH,  # Negative
         ],
 
         Angles.LONGITUDE: [
-            Directions.EAST, # Positve
-            Directions.WEST, # Negative
+            Directions.EAST,  # Positve
+            Directions.WEST,  # Negative
         ]
     }
 
@@ -900,11 +900,11 @@ class BeaconInformation(object):
     @property
     def usedBeacons(self):
         """
-        Returns a generator of used beacons.
+        Returns an iterable of used beacons.
 
-        @return: A generator containing all of the used positioning beacons. This
-            only contains beacons that are actually used, not beacons of which it
-            is  unknown if they are used or not.
+        @return: A iterable containing all of the used positioning beacons.
+            This only contains beacons that are actually used, not beacons
+            of which it is unknown if they are used or not.
         @rtype: iterable of L{PositioningBeacon}
         """
         for beacon in self.beacons:

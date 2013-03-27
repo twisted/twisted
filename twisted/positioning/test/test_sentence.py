@@ -27,7 +27,7 @@ class DummyProtocol(object):
 
 
 
-class DummySentence(base.BaseSentence):
+class DummySentence(base._BaseSentence):
     """
     A sentence for L{DummyProtocol}.
     """
@@ -35,7 +35,7 @@ class DummySentence(base.BaseSentence):
 
 
 
-class MixinProtocol(base.PositioningSentenceProducerMixin):
+class MixinProtocol(base._PositioningSentenceProducerMixin):
     """
     A simple, fake protocol that declaratively tells you the sentences
     it produces using L{base.PositioningSentenceProducerMixin}.
@@ -44,13 +44,13 @@ class MixinProtocol(base.PositioningSentenceProducerMixin):
         None: [
             sentinelValueOne,
             sentinelValueTwo,
-            None # See MixinTests.test_noNoneInSentenceAttributes
+            None  # See MixinTests.test_noNoneInSentenceAttributes
         ],
     }
 
 
 
-class MixinSentence(base.BaseSentence):
+class MixinSentence(base._BaseSentence):
     """
     A sentence for L{MixinProtocol}.
     """
@@ -58,7 +58,7 @@ class MixinSentence(base.BaseSentence):
 
 
 
-class SentenceTestsMixin:
+class SentenceTestsMixin(object):
     """
     Tests for positioning protocols and their respective sentences.
     """

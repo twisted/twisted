@@ -66,7 +66,7 @@ def validateChecksum(sentence):
     Simply returns on sentences that either don't have a checksum,
     or have a valid checksum.
     """
-    if sentence[-3] == '*': # Sentence has a checksum
+    if sentence[-3] == '*':  # Sentence has a checksum
         reference, source = int(sentence[-2:], 16), sentence[1:-3]
         computed = reduce(operator.xor, (ord(x) for x in source))
         if computed != reference:
@@ -74,7 +74,7 @@ def validateChecksum(sentence):
 
 
 
-class NMEAProtocol(LineReceiver, base.PositioningSentenceProducerMixin):
+class NMEAProtocol(LineReceiver, base._PositioningSentenceProducerMixin):
     """
     A protocol that parses and verifies the checksum of an NMEA sentence (in
     string form, not L{NMEASentence}), and delegates to a receiver.
@@ -252,7 +252,7 @@ class NMEAProtocol(LineReceiver, base.PositioningSentenceProducerMixin):
     }
 
 
-class NMEASentence(base.BaseSentence):
+class NMEASentence(base._BaseSentence):
     """
     An object representing an NMEA sentence.
 
