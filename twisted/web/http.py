@@ -798,11 +798,10 @@ class Request:
         @return: C{string} in the form <METHOD URI PROTOCOL>.
         @rtype: C{string}.
         """
-        templateVars = {}
-        for attrName in ('method', 'uri', 'clientproto'):
-            templateVars[attrName] = nativeString(getattr(self, attrName))
-
-        return '<%(method)s %(uri)s %(clientproto)s>' % templateVars
+        return '<%s %s %s>' % (
+            nativeString(self.method),
+            nativeString(self.uri),
+            nativeString(self.clientproto))
 
 
     def process(self):
