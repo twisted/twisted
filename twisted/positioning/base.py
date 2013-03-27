@@ -905,7 +905,7 @@ class BeaconInformation(object):
         @return: A iterable containing all of the used positioning beacons.
             This only contains beacons that are actually used, not beacons
             of which it is unknown if they are used or not.
-        @rtype: iterable of L{PositioningBeacon}
+        @rtype: iterable of L{IPositioningBeacon}
         """
         for beacon in self.beacons:
             if beacon.isUsed:
