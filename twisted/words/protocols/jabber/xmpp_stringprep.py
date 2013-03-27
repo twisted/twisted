@@ -10,7 +10,7 @@ from encodings import idna
 from unicodedata import ucd_3_2_0 as unicodedata
 
 from twisted.python.versions import Version
-from twisted.python.deprecate import deprecatedModuleAttribute 
+from twisted.python.deprecate import deprecatedModuleAttribute
 
 from zope.interface import Interface, implements
 
