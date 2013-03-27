@@ -268,16 +268,21 @@ class _ProcessEndpointTransport(proxyForInterface(
         methods on this object to write data to a child process.
     @type _process: L{interfaces.IProcessTransport} provider
     """
+
     def write(self, data):
         """
         Write to the child process's standard input.
+
+        @param data: The data to write on stdin.
         """
-        return self._process.writeToChild(0, data)
+        self._process.writeToChild(0, data)
 
 
     def writeSequence(self, data):
         """
         Write a list of strings to child process's stdin.
+
+        @param data: The list of chunks to write on stdin.
         """
         for chunk in data:
             self._process.writeToChild(0, chunk)
