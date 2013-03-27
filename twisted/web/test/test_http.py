@@ -1668,6 +1668,11 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
             '<GET /foo/bar HTTP/1.0>')
 
 
+    def test_reprDefaults(self):
+        """
+        L{http.Request.__repr__} includes default values for method,
+        uri and client protocol if they have not been explicitly set.
+        """
         request = http.Request(DummyChannel(), False)
         self.assertEqual(
             repr(request),
