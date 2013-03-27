@@ -84,7 +84,7 @@ class NMEAProtocol(LineReceiver, base._PositioningSentenceProducerMixin):
     components. It then wraps them in L{NMEASentence} objects and
     calls the appropriate receiver method with them.
     """
-    classProvides(ipositioning.IPositioningSentenceProducer)
+    classProvides(ipositioning._IPositioningSentenceProducer)
     METHOD_PREFIX = "nmea_"
 
     def __init__(self, receiver):

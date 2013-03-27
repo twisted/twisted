@@ -19,7 +19,7 @@ class DummyProtocol(object):
     """
     A simple, fake protocol.
     """
-    classProvides(ipositioning.IPositioningSentenceProducer)
+    classProvides(ipositioning._IPositioningSentenceProducer)
 
     @staticmethod
     def getSentenceAttributes():
