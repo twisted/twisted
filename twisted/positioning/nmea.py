@@ -252,6 +252,7 @@ class NMEAProtocol(LineReceiver, base._PositioningSentenceProducerMixin):
     }
 
 
+
 class NMEASentence(base._BaseSentence):
     """
     An object representing an NMEA sentence.
@@ -333,7 +334,6 @@ class NMEASentence(base._BaseSentence):
         Optionally suffixed with C{_N}, as with C{satellitePRN}.
     @ivar C{usedSatellitePRN_N}: Where C{int(N) in range(12)}. The PRN
         of a satelite used in computing the fix.
-
     """
     ALLOWED_ATTRIBUTES = NMEAProtocol.getSentenceAttributes()
 
