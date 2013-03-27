@@ -662,13 +662,14 @@ class _Assertions(pyunit.TestCase, object):
                 "found success result (%r) instead" % (deferred, result[0]))
         elif (expectedExceptionTypes and
               not result[0].check(*expectedExceptionTypes)):
-            expected_string = " or ".join([
-                repr(t) for t in expectedExceptionTypes])
+            expectedString = " or ".join([
+                '.'.join((t.__module__, t.__name__)) for t in
+                expectedExceptionTypes])
 
             self.fail(
                 "Failure of type (%s) expected on %r, "
                 "found type %r instead: %s" % (
-                    expected_string, deferred, result[0].type,
+                    expectedString, deferred, result[0].type,
                     result[0].getTraceback()))
         else:
             return result[0]

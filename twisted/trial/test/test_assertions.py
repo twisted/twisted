@@ -869,18 +869,38 @@ class TestResultOfAssertions(unittest.SynchronousTestCase):
             KeyError)
 
 
-    def test_failureResultOfWithWrongFailureHasTraceback(self):
+    def test_failureResultOfWithWrongFailureOneExpectedFailure(self):
         """
         L{SynchronousTestCase.failureResultOf} raises
         L{SynchronousTestCase.failureException} when called with a L{Deferred}
         with a failure type that was not expected, and the
         L{SynchronousTestCase.failureException} message contains the original
-        failure traceback.
+        failure traceback as well as the expected failure type
         """
         try:
             self.failureResultOf(fail(self.failure), KeyError)
         except self.failureException as e:
             self.assertIn(self.failure.getTraceback(), str(e))
+            self.assertIn("Failure of type (exceptions.KeyError) expected on",
+                          str(e))
+
+
+    def test_failureResultOfWithWrongFailureMultiExpectedFailure(self):
+        """
+        L{SynchronousTestCase.failureResultOf} raises
+        L{SynchronousTestCase.failureException} when called with a L{Deferred}
+        with a failure type that was not expected, and the
+        L{SynchronousTestCase.failureException} message contains the original
+        failure traceback as well as the expected failure types in the error
+        message
+        """
+        try:
+            self.failureResultOf(fail(self.failure), KeyError, IOError)
+        except self.failureException as e:
+            self.assertIn(self.failure.getTraceback(), str(e))
+            self.assertIn(("Failure of type (exceptions.KeyError or "
+                           "exceptions.IOError) expected on"),
+                          str(e))
 
 
     def test_withSuccessResult(self):
@@ -894,7 +914,7 @@ class TestResultOfAssertions(unittest.SynchronousTestCase):
             self.result, self.successResultOf(succeed(self.result)))
 
 
-    def test_withFailureResult(self):
+    def test_withExpectedFailureResult(self):
         """
         When passed a L{Deferred} which currently has a L{Failure} result (ie,
         L{Deferred.addErrback} would cause the added errback to be called
@@ -907,7 +927,7 @@ class TestResultOfAssertions(unittest.SynchronousTestCase):
                                  KeyError))
 
 
-    def test_withExpectedFailureResult(self):
+    def test_withFailureResult(self):
         """
         When passed a L{Deferred} which currently has a L{Failure} result
         (ie, L{Deferred.addErrback} would cause the added errback to be called
