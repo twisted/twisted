@@ -1686,7 +1686,7 @@ class ClientTests(TestCase):
 
     def test_away(self):
         """
-        L{IRCCLient.away} sends an AWAY command with the specified message.
+        L{IRCClient.away} sends an AWAY command with the specified message.
         """
         message = "Sorry, I'm not here."
         self.protocol.away(message)
