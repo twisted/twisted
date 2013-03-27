@@ -798,7 +798,14 @@ class Request:
         @return: C{string} in the form <METHOD URI PROTOCOL>.
         @rtype: C{string}.
         """
-        return '<%s %s %s>' % (self.method, self.uri, self.clientproto)
+        templateVars = {}
+        for attrName in ('method', 'uri', 'clientproto'):
+            val = getattr(self, attrName)
+            if isinstance(val, bytes):
+                val = val.decode('ascii')
+            templateVars[attrName] = val
+
+        return '<%(method)s %(uri)s %(clientproto)s>' % templateVars
 
 
     def process(self):

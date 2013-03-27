@@ -1665,8 +1665,13 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         request.uri = b"/foo/bar"
         self.assertEqual(
             repr(request),
-            '<%s %s %s>' % (request.method, request.uri, request.clientproto))
+            '<GET /foo/bar HTTP/1.0>')
 
+
+        request = http.Request(DummyChannel(), False)
+        self.assertEqual(
+            repr(request),
+            '<(no method yet) (no uri yet) (no clientproto yet)>')
 
 
 class MultilineHeadersTestCase(unittest.TestCase):
