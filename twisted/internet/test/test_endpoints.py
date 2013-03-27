@@ -2473,6 +2473,4 @@ if _PY3:
          ServerStringTests, ClientStringTests, SSLClientStringTests,
          AdoptedStreamServerEndpointTestCase, SystemdEndpointPluginTests,
          TCP6ServerEndpointPluginTests, StandardIOEndpointPluginTests,
-         ProcessEndpointsTestCase, WrappedIProtocolTests,
-         ProcessEndpointTransportTests,
          )
