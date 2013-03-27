@@ -800,10 +800,7 @@ class Request:
         """
         templateVars = {}
         for attrName in ('method', 'uri', 'clientproto'):
-            val = getattr(self, attrName)
-            if isinstance(val, bytes):
-                val = val.decode('ascii')
-            templateVars[attrName] = val
+            templateVars[attrName] = nativeString(getattr(self, attrName))
 
         return '<%(method)s %(uri)s %(clientproto)s>' % templateVars
 
