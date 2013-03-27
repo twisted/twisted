@@ -881,8 +881,10 @@ class TestResultOfAssertions(unittest.SynchronousTestCase):
             self.failureResultOf(fail(self.failure), KeyError)
         except self.failureException as e:
             self.assertIn(self.failure.getTraceback(), str(e))
-            self.assertIn("Failure of type (exceptions.KeyError) expected on",
-                          str(e))
+            self.assertIn(
+                "Failure of type ({0}.{1}) expected on".format(
+                    KeyError.__module__, KeyError.__name__),
+                str(e))
 
 
     def test_failureResultOfWithWrongFailureMultiExpectedFailure(self):
@@ -898,9 +900,11 @@ class TestResultOfAssertions(unittest.SynchronousTestCase):
             self.failureResultOf(fail(self.failure), KeyError, IOError)
         except self.failureException as e:
             self.assertIn(self.failure.getTraceback(), str(e))
-            self.assertIn(("Failure of type (exceptions.KeyError or "
-                           "exceptions.IOError) expected on"),
-                          str(e))
+            self.assertIn(
+                "Failure of type ({0}.{1} or {2}.{3}) expected on".format(
+                    KeyError.__module__, KeyError.__name__,
+                    IOError.__module__, IOError.__name__),
+                str(e))
 
 
     def test_withSuccessResult(self):
