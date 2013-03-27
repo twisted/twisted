@@ -70,8 +70,8 @@ class SentenceTestsMixin(object):
         """
         thisSentinel = object()
         sentence = self.sentenceClass({sentinelValueOne: thisSentinel})
-        self.assertEquals(getattr(sentence, sentinelValueOne), thisSentinel)
-        self.assertEquals(getattr(sentence, sentinelValueTwo), None)
+        self.assertEqual(getattr(sentence, sentinelValueOne), thisSentinel)
+        self.assertEqual(getattr(sentence, sentinelValueTwo), None)
 
 
     def test_raiseOnMissingAttributeAccess(self):

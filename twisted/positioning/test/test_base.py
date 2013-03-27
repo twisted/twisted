@@ -17,7 +17,7 @@ class AngleTests(TestCase):
         Tests the repr of an empty angle.
         """
         a = base.Angle()
-        self.assertEquals("<Angle of unknown type (unknown value)>", repr(a))
+        self.assertEqual("<Angle of unknown type (unknown value)>", repr(a))
 
 
     def test_variation(self):
@@ -25,7 +25,7 @@ class AngleTests(TestCase):
         Tests the repr of an empty variation.
         """
         a = base.Angle(angleType=Angles.VARIATION)
-        self.assertEquals("<Variation (unknown value)>", repr(a))
+        self.assertEqual("<Variation (unknown value)>", repr(a))
 
 
     def test_unknownType(self):
@@ -33,7 +33,7 @@ class AngleTests(TestCase):
         Tests the repr of an unknown angle of a 1 decimal degree value.
         """
         a = base.Angle(1.0)
-        self.assertEquals("<Angle of unknown type (1.0 degrees)>", repr(a))
+        self.assertEqual("<Angle of unknown type (1.0 degrees)>", repr(a))
 
 
 
@@ -46,10 +46,10 @@ class HeadingTests(TestCase):
         Tests some of the basic features of a very simple heading.
         """
         h = base.Heading(1.)
-        self.assertEquals(h.inDecimalDegrees, 1.)
-        self.assertEquals(h.variation, None)
-        self.assertEquals(h.correctedHeading, None)
-        self.assertEquals(float(h), 1.)
+        self.assertEqual(h.inDecimalDegrees, 1.)
+        self.assertEqual(h.variation, None)
+        self.assertEqual(h.correctedHeading, None)
+        self.assertEqual(float(h), 1.)
 
 
     def test_headingWithoutVariationRepr(self):
@@ -58,7 +58,7 @@ class HeadingTests(TestCase):
         """
         heading = base.Heading(1.)
         expectedRepr = "<Heading (1.0 degrees, unknown variation)>"
-        self.assertEquals(repr(heading), expectedRepr)
+        self.assertEqual(repr(heading), expectedRepr)
 
 
     def test_headingWithVariationRepr(self):
@@ -70,14 +70,14 @@ class HeadingTests(TestCase):
 
         variationRepr = '<Variation (%s degrees)>' % (variation,)
         expectedRepr = '<Heading (%s degrees, %s)>' % (angle, variationRepr)
-        self.assertEquals(repr(h), expectedRepr)
+        self.assertEqual(repr(h), expectedRepr)
 
 
     def test_equality(self):
         """
         Tests if equal headings compare equal.
         """
-        self.assertEquals(base.Heading(1.), base.Heading(1.))
+        self.assertEqual(base.Heading(1.), base.Heading(1.))
 
 
     def test_inequality(self):
@@ -152,7 +152,7 @@ class HeadingTests(TestCase):
         Simple test for a corrected heading.
         """
         h = base.Heading.fromFloats(1., variationValue=-10.)
-        self.assertEquals(h.correctedHeading, base.Angle(11., Angles.HEADING))
+        self.assertEqual(h.correctedHeading, base.Angle(11., Angles.HEADING))
 
 
     def test_correctedHeadingOverflow(self):
@@ -161,7 +161,7 @@ class HeadingTests(TestCase):
         correctly handled.
         """
         h = base.Heading.fromFloats(359., variationValue=-2.)
-        self.assertEquals(h.correctedHeading, base.Angle(1., Angles.HEADING))
+        self.assertEqual(h.correctedHeading, base.Angle(1., Angles.HEADING))
 
 
     def test_correctedHeadingOverflowEdgeCase(self):
@@ -170,7 +170,7 @@ class HeadingTests(TestCase):
         is correctly handled.
         """
         h = base.Heading.fromFloats(359., variationValue=-1.)
-        self.assertEquals(h.correctedHeading, base.Angle(0., Angles.HEADING))
+        self.assertEqual(h.correctedHeading, base.Angle(0., Angles.HEADING))
 
 
     def test_correctedHeadingUnderflow(self):
@@ -179,7 +179,7 @@ class HeadingTests(TestCase):
         correctly handled.
         """
         h = base.Heading.fromFloats(1., variationValue=2.)
-        self.assertEquals(h.correctedHeading, base.Angle(359., Angles.HEADING))
+        self.assertEqual(h.correctedHeading, base.Angle(359., Angles.HEADING))
 
 
     def test_correctedHeadingUnderflowEdgeCase(self):
@@ -188,7 +188,7 @@ class HeadingTests(TestCase):
         correctly handled.
         """
         h = base.Heading.fromFloats(1., variationValue=1.)
-        self.assertEquals(h.correctedHeading, base.Angle(0., Angles.HEADING))
+        self.assertEqual(h.correctedHeading, base.Angle(0., Angles.HEADING))
 
 
     def test_setVariationSign(self):
@@ -197,9 +197,9 @@ class HeadingTests(TestCase):
         """
         h = base.Heading.fromFloats(1., variationValue=1.)
         h.setSign(1)
-        self.assertEquals(h.variation.inDecimalDegrees, 1.)
+        self.assertEqual(h.variation.inDecimalDegrees, 1.)
         h.setSign(-1)
-        self.assertEquals(h.variation.inDecimalDegrees, -1.)
+        self.assertEqual(h.variation.inDecimalDegrees, -1.)
 
 
     def test_setBadVariationSign(self):
@@ -209,13 +209,13 @@ class HeadingTests(TestCase):
         """
         h = base.Heading.fromFloats(1., variationValue=1.)
         self.assertRaises(ValueError, h.setSign, -50)
-        self.assertEquals(h.variation.inDecimalDegrees, 1.)
+        self.assertEqual(h.variation.inDecimalDegrees, 1.)
 
         self.assertRaises(ValueError, h.setSign, 0)
-        self.assertEquals(h.variation.inDecimalDegrees, 1.)
+        self.assertEqual(h.variation.inDecimalDegrees, 1.)
 
         self.assertRaises(ValueError, h.setSign, 50)
-        self.assertEquals(h.variation.inDecimalDegrees, 1.)
+        self.assertEqual(h.variation.inDecimalDegrees, 1.)
 
 
     def test_setUnknownVariationSign(self):
@@ -224,7 +224,7 @@ class HeadingTests(TestCase):
         fails predictably.
         """
         h = base.Heading.fromFloats(1.)
-        self.assertEquals(None, h.variation.inDecimalDegrees)
+        self.assertEqual(None, h.variation.inDecimalDegrees)
         self.assertRaises(ValueError, h.setSign, 1)
 
 
@@ -237,9 +237,9 @@ class CoordinateTests(TestCase):
         """
         value = 10.0
         c = base.Coordinate(value)
-        self.assertEquals(float(c), value)
-        expectedRepr = "<Angle of unknown type (%s degrees)>" % (value,) 
-        self.assertEquals(repr(c), expectedRepr)
+        self.assertEqual(float(c), value)
+        expectedRepr = "<Angle of unknown type (%s degrees)>" % (value,)
+        self.assertEqual(repr(c), expectedRepr)
 
 
     def test_positiveLatitude(self):
@@ -248,7 +248,7 @@ class CoordinateTests(TestCase):
         """
         value = 50.0
         c = base.Coordinate(value, Angles.LATITUDE)
-        self.assertEquals(repr(c), "<Latitude (%s degrees)>" % value)
+        self.assertEqual(repr(c), "<Latitude (%s degrees)>" % value)
 
 
     def test_negativeLatitude(self):
@@ -257,7 +257,7 @@ class CoordinateTests(TestCase):
         """
         value = -50.0
         c = base.Coordinate(value, Angles.LATITUDE)
-        self.assertEquals(repr(c), "<Latitude (%s degrees)>" % value)
+        self.assertEqual(repr(c), "<Latitude (%s degrees)>" % value)
 
 
     def test_positiveLongitude(self):
@@ -266,7 +266,7 @@ class CoordinateTests(TestCase):
         """
         value = 50.0
         c = base.Coordinate(value, Angles.LONGITUDE)
-        self.assertEquals(repr(c), "<Longitude (%s degrees)>" % value)
+        self.assertEqual(repr(c), "<Longitude (%s degrees)>" % value)
 
 
     def test_negativeLongitude(self):
@@ -275,7 +275,7 @@ class CoordinateTests(TestCase):
         """
         value = -50.0
         c = base.Coordinate(value, Angles.LONGITUDE)
-        self.assertEquals(repr(c), "<Longitude (%s degrees)>" % value)
+        self.assertEqual(repr(c), "<Longitude (%s degrees)>" % value)
 
 
     def test_badCoordinateType(self):
@@ -289,7 +289,7 @@ class CoordinateTests(TestCase):
         """
         Tests that equal coordinates compare equal.
         """
-        self.assertEquals(base.Coordinate(1.0), base.Coordinate(1.0))
+        self.assertEqual(base.Coordinate(1.0), base.Coordinate(1.0))
 
 
     def test_differentAnglesInequality(self):
@@ -317,9 +317,9 @@ class CoordinateTests(TestCase):
         """
         c = base.Coordinate(50., Angles.LATITUDE)
         c.setSign(1)
-        self.assertEquals(c.inDecimalDegrees, 50.)
+        self.assertEqual(c.inDecimalDegrees, 50.)
         c.setSign(-1)
-        self.assertEquals(c.inDecimalDegrees, -50.)
+        self.assertEqual(c.inDecimalDegrees, -50.)
 
 
     def test_badVariationSign(self):
@@ -331,13 +331,13 @@ class CoordinateTests(TestCase):
         c = base.Coordinate(value, Angles.LATITUDE)
 
         self.assertRaises(ValueError, c.setSign, -50)
-        self.assertEquals(c.inDecimalDegrees, 50.)
+        self.assertEqual(c.inDecimalDegrees, 50.)
 
         self.assertRaises(ValueError, c.setSign, 0)
-        self.assertEquals(c.inDecimalDegrees, 50.)
+        self.assertEqual(c.inDecimalDegrees, 50.)
 
         self.assertRaises(ValueError, c.setSign, 50)
-        self.assertEquals(c.inDecimalDegrees, 50.)
+        self.assertEqual(c.inDecimalDegrees, 50.)
 
 
     def test_hemispheres(self):
@@ -352,7 +352,7 @@ class CoordinateTests(TestCase):
         ]
 
         for coordinate, expectedHemisphere in coordinatesAndHemispheres:
-            self.assertEquals(expectedHemisphere, coordinate.hemisphere)
+            self.assertEqual(expectedHemisphere, coordinate.hemisphere)
 
 
     def test_badHemisphere(self):
@@ -387,10 +387,10 @@ class CoordinateTests(TestCase):
         Tests accessing coordinate values in degrees, minutes and seconds.
         """
         c = base.Coordinate(50.5, Angles.LATITUDE)
-        self.assertEquals(c.inDegreesMinutesSeconds, (50, 30, 0))
+        self.assertEqual(c.inDegreesMinutesSeconds, (50, 30, 0))
 
         c = base.Coordinate(50.213, Angles.LATITUDE)
-        self.assertEquals(c.inDegreesMinutesSeconds, (50, 12, 46))
+        self.assertEqual(c.inDegreesMinutesSeconds, (50, 12, 46))
 
 
     def test_unknownAngleInDegreesMinutesSeconds(self):
@@ -399,7 +399,7 @@ class CoordinateTests(TestCase):
         and seconds.
         """
         c = base.Coordinate(None, None)
-        self.assertEquals(c.inDegreesMinutesSeconds, None)
+        self.assertEqual(c.inDegreesMinutesSeconds, None)
 
 
 
@@ -412,10 +412,10 @@ class AltitudeTests(TestCase):
         Tests basic altitude functionality.
         """
         a = base.Altitude(1.)
-        self.assertEquals(float(a), 1.)
-        self.assertEquals(a.inMeters, 1.)
-        self.assertEquals(a.inFeet, 1./base.METERS_PER_FOOT)
-        self.assertEquals(repr(a), "<Altitude (1.0 m)>")
+        self.assertEqual(float(a), 1.)
+        self.assertEqual(a.inMeters, 1.)
+        self.assertEqual(a.inFeet, 1./base.METERS_PER_FOOT)
+        self.assertEqual(repr(a), "<Altitude (1.0 m)>")
 
 
     def test_equality(self):
@@ -424,7 +424,7 @@ class AltitudeTests(TestCase):
         """
         a1 = base.Altitude(1.)
         a2 = base.Altitude(1.)
-        self.assertEquals(a1, a2)
+        self.assertEqual(a1, a2)
 
 
     def test_inequality(self):
@@ -446,9 +446,9 @@ class SpeedTests(TestCase):
         Tests basic speed functionality.
         """
         s = base.Speed(50.0)
-        self.assertEquals(s.inMetersPerSecond, 50.0)
-        self.assertEquals(float(s), 50.0)
-        self.assertEquals(repr(s), "<Speed (50.0 m/s)>")
+        self.assertEqual(s.inMetersPerSecond, 50.0)
+        self.assertEqual(float(s), 50.0)
+        self.assertEqual(repr(s), "<Speed (50.0 m/s)>")
 
 
     def test_negativeSpeeds(self):
@@ -463,14 +463,14 @@ class SpeedTests(TestCase):
         Tests that speeds can be converted into knots correctly.
         """
         s = base.Speed(1.0)
-        self.assertEquals(1/base.MPS_PER_KNOT, s.inKnots)
+        self.assertEqual(1/base.MPS_PER_KNOT, s.inKnots)
 
 
     def test_asFloat(self):
         """
         Tests that speeds can be converted into C{float}s correctly.
         """
-        self.assertEquals(1.0, float(base.Speed(1.0)))
+        self.assertEqual(1.0, float(base.Speed(1.0)))
 
 
 
@@ -483,9 +483,9 @@ class ClimbTests(TestCase):
         Basic functionality for climb objects.
         """
         s = base.Climb(42.)
-        self.assertEquals(s.inMetersPerSecond, 42.)
-        self.assertEquals(float(s), 42.)
-        self.assertEquals(repr(s), "<Climb (42.0 m/s)>")
+        self.assertEqual(s.inMetersPerSecond, 42.)
+        self.assertEqual(float(s), 42.)
+        self.assertEqual(repr(s), "<Climb (42.0 m/s)>")
 
 
     def test_negativeClimbs(self):
@@ -500,14 +500,14 @@ class ClimbTests(TestCase):
         Tests that climbs can be converted into knots correctly.
         """
         s = base.Climb(1.0)
-        self.assertEquals(1/base.MPS_PER_KNOT, s.inKnots)
+        self.assertEqual(1/base.MPS_PER_KNOT, s.inKnots)
 
 
     def test_asFloat(self):
         """
         Tests that speeds can be converted into C{float}s correctly.
         """
-        self.assertEquals(1.0, float(base.Climb(1.0)))
+        self.assertEqual(1.0, float(base.Climb(1.0)))
 
 
 
@@ -522,7 +522,7 @@ class PositionErrorTests(TestCase):
         """
         pe = base.PositionError()
         for x in (pe.pdop, pe.hdop, pe.vdop):
-            self.assertEquals(None, x)
+            self.assertEqual(None, x)
 
 
     def test_allUnsetWithInvariant(self):
@@ -532,7 +532,7 @@ class PositionErrorTests(TestCase):
         """
         pe = base.PositionError(testInvariant=True)
         for x in (pe.pdop, pe.hdop, pe.vdop):
-            self.assertEquals(None, x)
+            self.assertEqual(None, x)
 
 
     def test_simpleWithoutInvariant(self):
@@ -575,7 +575,7 @@ class PositionErrorTests(TestCase):
         """
         pe = base.PositionError(hdop=1.0, vdop=1.0)
         pe.pdop = 100.0
-        self.assertEquals(pe.pdop, 100.0)
+        self.assertEqual(pe.pdop, 100.0)
 
 
     def test_setDOPWithInvariant(self):
@@ -611,10 +611,10 @@ class PositionErrorTests(TestCase):
         @param vdop: The expected vertical dilution of precision.
         @type vdop: C{float} or C{NoneType}
         """
-        self.assertEquals(pe.pdop, pdop)
-        self.assertEquals(pe.hdop, hdop)
-        self.assertEquals(pe.vdop, vdop)
-        self.assertEquals(repr(pe), self.REPR_TEMPLATE % (pdop, hdop, vdop))
+        self.assertEqual(pe.pdop, pdop)
+        self.assertEqual(pe.hdop, hdop)
+        self.assertEqual(pe.vdop, vdop)
+        self.assertEqual(repr(pe), self.REPR_TEMPLATE % (pdop, hdop, vdop))
 
 
     def test_positionAndHorizontalSet(self):
@@ -661,9 +661,9 @@ class BeaconInformationTests(TestCase):
         the object.
         """
         bi = base.BeaconInformation()
-        self.assertEquals(len(list(bi.usedBeacons)), 0)
-        self.assertEquals(len(list(bi)), 0)
-        self.assertEquals(repr(bi),
+        self.assertEqual(len(list(bi.usedBeacons)), 0)
+        self.assertEqual(len(list(bi)), 0)
+        self.assertEqual(repr(bi),
             "<BeaconInformation (seen: 0, used: 0, beacons: {})>")
 
 
@@ -686,10 +686,10 @@ class BeaconInformationTests(TestCase):
 
         bi = base.BeaconInformation(beacons)
 
-        self.assertEquals(len(list(bi.usedBeacons)), 0)
-        self.assertEquals(bi.used, None)
-        self.assertEquals(len(list(bi)), 9)
-        self.assertEquals(repr(bi),
+        self.assertEqual(len(list(bi.usedBeacons)), 0)
+        self.assertEqual(bi.used, None)
+        self.assertEqual(len(list(bi)), 9)
+        self.assertEqual(repr(bi),
             "<BeaconInformation (seen: 9, used: ?, beacons: {"
             "<Satellite (1), azimuth: 1, elevation: 1, snr: 1.0, used: ?>, "
             "<Satellite (2), azimuth: 1, elevation: 1, snr: 1.0, used: ?>, "
@@ -721,12 +721,12 @@ class BeaconInformationTests(TestCase):
 
         bi = base.BeaconInformation(beacons)
 
-        self.assertEquals(len(list(bi.usedBeacons)), 5)
-        self.assertEquals(bi.used, 5)
-        self.assertEquals(len(list(bi)), 9)
-        self.assertEquals(len(bi.beacons), 9)
-        self.assertEquals(bi.seen, 9)
-        self.assertEquals(repr(bi),
+        self.assertEqual(len(list(bi.usedBeacons)), 5)
+        self.assertEqual(bi.used, 5)
+        self.assertEqual(len(list(bi)), 9)
+        self.assertEqual(len(bi.beacons), 9)
+        self.assertEqual(bi.seen, 9)
+        self.assertEqual(repr(bi),
             "<BeaconInformation (seen: 9, used: 5, beacons: {"
             "<Satellite (1), azimuth: 1, elevation: 1, snr: 1.0, used: Y>, "
             "<Satellite (2), azimuth: 1, elevation: 1, snr: 1.0, used: N>, "
@@ -750,7 +750,7 @@ class PositioningBeaconTests(TestCase):
         Tests the repr of a positioning beacon being used.
         """
         s = base.PositioningBeacon("A", True)
-        self.assertEquals(repr(s), "<Beacon (identifier: A, used: Y)>")
+        self.assertEqual(repr(s), "<Beacon (identifier: A, used: Y)>")
 
 
     def test_unusedRepr(self):
@@ -758,7 +758,7 @@ class PositioningBeaconTests(TestCase):
         Tests the repr of a positioning beacon not being used.
         """
         s = base.PositioningBeacon("A", False)
-        self.assertEquals(repr(s), "<Beacon (identifier: A, used: N)>")
+        self.assertEqual(repr(s), "<Beacon (identifier: A, used: N)>")
 
 
     def test_dontKnowIfUsed(self):
@@ -766,7 +766,7 @@ class PositioningBeaconTests(TestCase):
         Tests the repr of a positioning beacon that might be used.
         """
         s = base.PositioningBeacon("A", None)
-        self.assertEquals(repr(s), "<Beacon (identifier: A, used: ?)>")
+        self.assertEqual(repr(s), "<Beacon (identifier: A, used: ?)>")
 
 
 
@@ -782,11 +782,11 @@ class SatelliteTests(TestCase):
         are C{None} and verifies the repr.
         """
         s = base.Satellite(1)
-        self.assertEquals(s.identifier, 1)
-        self.assertEquals(s.azimuth, None)
-        self.assertEquals(s.elevation, None)
-        self.assertEquals(s.signalToNoiseRatio, None)
-        self.assertEquals(repr(s), "<Satellite (1), azimuth: ?, "
+        self.assertEqual(s.identifier, 1)
+        self.assertEqual(s.azimuth, None)
+        self.assertEqual(s.elevation, None)
+        self.assertEqual(s.signalToNoiseRatio, None)
+        self.assertEqual(repr(s), "<Satellite (1), azimuth: ?, "
                                    "elevation: ?, snr: ?, used: ?>")
 
 
@@ -803,9 +803,9 @@ class SatelliteTests(TestCase):
                            signalToNoiseRatio=25.,
                            isUsed=True)
 
-        self.assertEquals(s.identifier, 1)
-        self.assertEquals(s.azimuth, 270.)
-        self.assertEquals(s.elevation, 30.)
-        self.assertEquals(s.signalToNoiseRatio, 25.)
-        self.assertEquals(repr(s), "<Satellite (1), azimuth: 270.0, "
+        self.assertEqual(s.identifier, 1)
+        self.assertEqual(s.azimuth, 270.)
+        self.assertEqual(s.elevation, 30.)
+        self.assertEqual(s.signalToNoiseRatio, 25.)
+        self.assertEqual(repr(s), "<Satellite (1), azimuth: 270.0, "
                                    "elevation: 30.0, snr: 25.0, used: Y>")

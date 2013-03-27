@@ -115,7 +115,7 @@ class CallbackTests(TestCase):
 
                 for sentenceType in NMEACallbackTestProtocol.SENTENCE_TYPES:
                     if sentenceType == calledSentenceType:
-                        self.assertEquals(called[sentenceType], True)
+                        self.assertEqual(called[sentenceType], True)
                     else:
                         self.assertNotIn(sentenceType, called)
 
@@ -324,7 +324,7 @@ class NMEASentenceTests(NMEAReceiverSetup, TestCase):
         for sentence, expectedRepr in sentencesWithExpectedRepr:
             self.protocol.lineReceived(sentence)
             received = self.receiver.receivedSentence
-            self.assertEquals(repr(received), expectedRepr)
+            self.assertEqual(repr(received), expectedRepr)
 
 
 
@@ -343,7 +343,7 @@ class ParsingTests(NMEAReceiverSetup, TestCase):
         """
         self.protocol.lineReceived(sentence)
         received = self.receiver.receivedSentence
-        self.assertEquals(expected, received._sentenceData)
+        self.assertEqual(expected, received._sentenceData)
 
 
     def test_fullRMC(self):
@@ -563,7 +563,7 @@ class FixerTestMixin:
 
         if exceptionClass is None:
             receiveSentence()
-            self.assertEquals(self.adapter._state, expected)
+            self.assertEqual(self.adapter._state, expected)
         else:
             self.assertRaises(exceptionClass, receiveSentence)
 
@@ -579,7 +579,7 @@ class TimestampFixerTests(FixerTestMixin, TestCase):
         """
         Tests that a simple timestamp is converted correctly.
         """
-        data = {'timestamp': '123456'} # 12:34:56Z
+        data = {'timestamp': '123456'}  # 12:34:56Z
         expected = {'_time': datetime.time(12, 34, 56)}
         self._fixerTest(data, expected)
 
@@ -1064,7 +1064,7 @@ class NMEAReceiverTest(TestCase):
             self.protocol.lineReceived(sentence)
 
         actuallyFired = self.receiver.called.keys()
-        self.assertEquals(set(actuallyFired), set(expectedFired))
+        self.assertEqual(set(actuallyFired), set(expectedFired))
 
         if extraTest is not None:
             extraTest()
@@ -1201,7 +1201,7 @@ class NMEAReceiverTest(TestCase):
 
         def checkTime():
             expectedDateTime = datetime.datetime(1994, 3, 23, 12, 35, 19)
-            self.assertEquals(self.adapter._state['time'], expectedDateTime)
+            self.assertEqual(self.adapter._state['time'], expectedDateTime)
 
         self._receiverTest(sentences, callbacksFired, checkTime)
 
