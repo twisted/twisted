@@ -158,7 +158,7 @@ class SplitTest(TestCase):
         """
         Tests that an NMEA sentence with a checksum gets split correctly.
         """
-        splitSentence = nmea.split("$GPGGA,spam,eggs*00")
+        splitSentence = nmea._split("$GPGGA,spam,eggs*00")
         self.assertEqual(splitSentence, ['GPGGA', 'spam', 'eggs'])
 
 
@@ -166,7 +166,7 @@ class SplitTest(TestCase):
         """
         Tests that an NMEA sentence without a checksum gets split correctly.
         """
-        splitSentence = nmea.split("$GPGGA,spam,eggs*")
+        splitSentence = nmea._split("$GPGGA,spam,eggs*")
         self.assertEqual(splitSentence, ['GPGGA', 'spam', 'eggs'])
 
 
@@ -182,19 +182,21 @@ class ChecksumTests(TestCase):
         sentences = [GPGGA, GPGGA[:-2]]
 
         for s in sentences:
-            nmea.validateChecksum(s)
+            nmea._validateChecksum(s)
 
 
     def test_invalid(self):
         """
         Tests checksum validation on invalid checksums.
         """
+        validate = nmea._validateChecksum
+
         bareSentence, checksum = GPGGA.split("*")
         badChecksum = "%x" % (int(checksum, 16) + 1)
         sentences = ["%s*%s" % (bareSentence, badChecksum)]
 
         for s in sentences:
-            self.assertRaises(base.InvalidChecksum, nmea.validateChecksum, s)
+            self.assertRaises(base.InvalidChecksum, validate, s)
 
 
 
@@ -349,18 +351,18 @@ class ParsingTests(NMEAReceiverSetup, TestCase):
         Tests that a full RMC sentence is correctly parsed.
         """
         expected = {
-             'type': 'GPRMC',
-             'latitudeFloat': '4807.038',
-             'latitudeHemisphere': 'N',
-             'longitudeFloat': '01131.000',
-             'longitudeHemisphere': 'E',
-             'magneticVariation': '003.1',
-             'magneticVariationDirection': 'W',
-             'speedInKnots': '022.4',
-             'timestamp': '123519',
-             'datestamp': '230394',
-             'trueHeading': '084.4',
-             'dataMode': 'A',
+            'type': 'GPRMC',
+            'latitudeFloat': '4807.038',
+            'latitudeHemisphere': 'N',
+            'longitudeFloat': '01131.000',
+            'longitudeHemisphere': 'E',
+            'magneticVariation': '003.1',
+            'magneticVariationDirection': 'W',
+            'speedInKnots': '022.4',
+            'timestamp': '123519',
+            'datestamp': '230394',
+            'trueHeading': '084.4',
+            'dataMode': 'A',
         }
         self._parserTest(GPRMC, expected)
 

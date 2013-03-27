@@ -34,7 +34,7 @@ GSA_NO_FIX, GSA_2D_FIX, GSA_3D_FIX = '1', '2', '3'
 NMEA_NORTH, NMEA_EAST, NMEA_SOUTH, NMEA_WEST = "N", "E", "S", "W"
 
 
-def split(sentence):
+def _split(sentence):
     """
     Returns the split version of an NMEA sentence, minus header
     and checksum.
@@ -54,7 +54,7 @@ def split(sentence):
 
 
 
-def validateChecksum(sentence):
+def _validateChecksum(sentence):
     """
     Validates the checksum of an NMEA sentence.
 
@@ -106,8 +106,8 @@ class NMEAProtocol(LineReceiver, base._PositioningSentenceProducerMixin):
         """
         sentence = rawSentence.strip()
 
-        validateChecksum(sentence)
-        splitSentence = split(sentence)
+        _validateChecksum(sentence)
+        splitSentence = _split(sentence)
 
         sentenceType, contents = splitSentence[0], splitSentence[1:]
 
@@ -222,9 +222,9 @@ class NMEAProtocol(LineReceiver, base._PositioningSentenceProducerMixin):
             'longitudeHemisphere',
 
             'elevation',
-            'numberOfIterations', # Unused
-            'numberOfDopplerIntervals', # Unused
-            'updateDistanceInNauticalMiles', # Unused
+            'numberOfIterations',  # Unused
+            'numberOfDopplerIntervals',  # Unused
+            'updateDistanceInNauticalMiles',  # Unused
             'satellitePRN',
         ],
 
@@ -868,3 +868,10 @@ class NMEAAdapter(object):
 NMEAAdapter.REQUIRED_CALLBACK_FIELDS = dict(
     (name, method.positional) for name, method
     in ipositioning.IPositioningReceiver.namesAndDescriptions())
+
+
+__all__ = [
+    "NMEAProtocol",
+    "NMEASentence",
+    "NMEAAdapter"
+]
