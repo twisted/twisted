@@ -17,18 +17,17 @@ from zope.interface.verify import verifyObject
 from twisted.python.compat import _PY3
 from twisted.trial import unittest
 from twisted.internet import error, interfaces, defer
-from twisted.internet import endpoints, protocol, reactor
-from twisted.internet.address import (
-    IPv4Address, IPv6Address, UNIXAddress, _ProcessAddress)
+from twisted.internet import endpoints
+from twisted.internet.address import IPv4Address, IPv6Address, UNIXAddress
 from twisted.internet.protocol import ClientFactory, Protocol
 from twisted.test.proto_helpers import (
     MemoryReactor, RaisingMemoryReactor, StringTransport)
 from twisted.python.failure import Failure
 from twisted.python.systemd import ListenFDs
+
 from twisted.python.filepath import FilePath
 from twisted.protocols import basic
-from twisted.python import log
-from twisted.internet.endpoints import StandardErrorBehavior
+from twisted.internet import protocol, reactor
 
 from twisted.test import __file__ as testInitPath
 pemPath = FilePath(testInitPath.encode("utf-8")).sibling(b"server.pem")
@@ -46,8 +45,8 @@ if not _PY3:
 
 try:
     from twisted.test.test_sslverify import makeCertificate
-    from twisted.internet.ssl import (
-        CertificateOptions, Certificate, KeyPair, PrivateCertificate)
+    from twisted.internet.ssl import CertificateOptions, Certificate, \
+        KeyPair, PrivateCertificate
     from OpenSSL.SSL import ContextType, SSLv23_METHOD, TLSv1_METHOD
     testCertificate = Certificate.loadPEM(pemPath.getContent())
     testPrivateCertificate = PrivateCertificate.loadPEM(pemPath.getContent())
@@ -90,8 +89,8 @@ class TestProtocol(Protocol):
 @implementer(interfaces.IHalfCloseableProtocol)
 class TestHalfCloseableProtocol(TestProtocol):
     """
-    A Protocol that implements L{IHalfCloseableProtocol} and records whether
-    its C{readConnectionLost} and {writeConnectionLost} methods are called.
+    A Protocol that implements L{IHalfCloseableProtocol} and records whether its
+    C{readConnectionLost} and {writeConnectionLost} methods are called.
 
     @ivar readLost: A C{bool} indicating whether C{readConnectionLost} has been
         called.
@@ -141,6 +140,7 @@ class TestFactory(ClientFactory):
     two deferreds which are called back when my protocol connects and
     disconnects.
     """
+
     protocol = TestProtocol
 
 
@@ -191,8 +191,8 @@ class WrappingFactoryTests(unittest.TestCase):
 
         d = self.assertFailure(wf._onConnection, ValueError)
         d.addCallback(lambda e: self.assertEqual(
-            e.args,
-            ("My protocol is poorly defined.",)))
+                e.args,
+                ("My protocol is poorly defined.",)))
 
         return d
 
@@ -210,9 +210,8 @@ class WrappingFactoryTests(unittest.TestCase):
 
     def test_logPrefixDefault(self):
         """
-        If the wrapped protocol does not provide L{ILoggingContext}, the
-        wrapped protocol's class name is returned from
-        L{_WrappingProtocol.logPrefix}.
+        If the wrapped protocol does not provide L{ILoggingContext}, the wrapped
+        protocol's class name is returned from L{_WrappingProtocol.logPrefix}.
         """
         class NoProtocol(object):
             pass
@@ -278,10 +277,11 @@ class WrappingFactoryTests(unittest.TestCase):
         wf = endpoints._WrappingFactory(TestFactory())
         expectedFailure = Failure(error.ConnectError(string="fail"))
 
-        wf.clientConnectionFailed(None, expectedFailure)
+        wf.clientConnectionFailed(
+            None,
+            expectedFailure)
 
         errors = []
-
         def gotError(f):
             errors.append(f)
 
@@ -300,8 +300,7 @@ class WrappingFactoryTests(unittest.TestCase):
         wrapper = endpoints._WrappingProtocol(
             connectedDeferred, applicationProtocol)
         self.assertTrue(interfaces.IFileDescriptorReceiver.providedBy(wrapper))
-        self.assertTrue(
-            verifyObject(interfaces.IFileDescriptorReceiver, wrapper))
+        self.assertTrue(verifyObject(interfaces.IFileDescriptorReceiver, wrapper))
 
 
     def test_wrappingProtocolNotFileDescriptorReceiver(self):
@@ -316,8 +315,8 @@ class WrappingFactoryTests(unittest.TestCase):
 
     def test_wrappedProtocolFileDescriptorReceived(self):
         """
-        L{_WrappingProtocol.fileDescriptorReceived} calls the wrapped
-        protocol's C{fileDescriptorReceived} method.
+        L{_WrappingProtocol.fileDescriptorReceived} calls the wrapped protocol's
+        C{fileDescriptorReceived} method.
         """
         wrappedProtocol = TestFileDescriptorReceiverProtocol()
         wrapper = endpoints._WrappingProtocol(
@@ -382,8 +381,7 @@ class ClientEndpointTestCaseMixin(object):
         The endpoint provides L{interfaces.IStreamClientEndpoint}
         """
         clientFactory = object()
-        ep, ignoredArgs, address = self.createClientEndpoint(
-            MemoryReactor(), clientFactory)
+        ep, ignoredArgs, address = self.createClientEndpoint(MemoryReactor(), clientFactory)
         self.assertTrue(verifyObject(interfaces.IStreamClientEndpoint, ep))
 
 
@@ -525,7 +523,7 @@ class ServerEndpointTestCaseMixin(object):
         """
         factory = object()
         ep, ignoredArgs, ignoredDest = self.createServerEndpoint(
-            MemoryReactor(), factory)
+                MemoryReactor(), factory)
         self.assertTrue(verifyObject(interfaces.IStreamServerEndpoint, ep))
 
 
@@ -624,13 +622,12 @@ class StandardIOEndpointsTestCase(unittest.TestCase):
         """
         The endpoint creates an L{endpoints.StandardIO} instance.
         """
-        d = self.ep.listen(StdioFactory())
-
+        self.d = self.ep.listen(StdioFactory())
         def checkInstanceAndLoseConnection(stdioOb):
             self.assertIsInstance(stdioOb, stdio.StandardIO)
             stdioOb.loseConnection()
-
-        return d.addCallback(checkInstanceAndLoseConnection)
+        self.d.addCallback(checkInstanceAndLoseConnection)
+        return self.d
 
 
     def test_reactor(self):
@@ -644,8 +641,7 @@ class StandardIOEndpointsTestCase(unittest.TestCase):
         """
         The protocol used in the endpoint is a L{basic.LineReceiver} instance.
         """
-        d = self.ep.listen(StdioFactory())
-
+        self.d = self.ep.listen(StdioFactory())
         def checkProtocol(stdioOb):
             from twisted.python.runtime import platform
             if platform.isWindows():
@@ -653,439 +649,33 @@ class StandardIOEndpointsTestCase(unittest.TestCase):
             else:
                 self.assertIsInstance(stdioOb.protocol, basic.LineReceiver)
             stdioOb.loseConnection()
-
-        return d.addCallback(checkProtocol)
+        self.d.addCallback(checkProtocol)
+        return self.d
 
 
     def test_address(self):
         """
         The address passed to the factory's buildProtocol in the endpoint
-        is a PipeAddress instance.
+        should be a PipeAddress instance.
         """
         class TestAddrFactory(protocol.Factory):
             protocol = basic.LineReceiver
-            address = None
-
+            _address = None
             def buildProtocol(self, addr):
-                self.address = addr
+                self._address = addr
                 p = self.protocol()
                 p.factory = self
                 return p
+            def getAddress(self):
+                return self._address
 
         myFactory = TestAddrFactory()
-        d = self.ep.listen(myFactory)
-
+        self.d = self.ep.listen(myFactory)
         def checkAddress(stdioOb):
-            self.assertIsInstance(myFactory.address, PipeAddress)
+            self.assertIsInstance(myFactory.getAddress(), PipeAddress)
             stdioOb.loseConnection()
-
-        return d.addCallback(checkAddress)
-
-
-
-class StubApplicationProtocol(protocol.Protocol):
-    """
-    An L{IProtocol} provider.
-    """
-    def dataReceived(self, data):
-        """
-        @param data: The data received by the protocol.
-        @type data: str
-        """
-        self.data = data
-
-
-    def connectionLost(self, reason):
-        """
-        @type reason: L{twisted.python.failure.Failure}
-        """
-        self.reason = reason
-
-
-
-@implementer(interfaces.IProcessTransport)
-class MemoryProcessTransport(object):
-    """
-    A fake L{IProcessTransport} provider to be used in tests.
-
-    @ivar dataList: A list to which data is appended in writeToChild. Acts as
-        the child's stdin for testing.
-    """
-
-    def __init__(self):
-        self.dataList = []
-        self.host = _ProcessAddress()
-        self.peer = _ProcessAddress()
-
-
-    def writeToChild(self, childFD, data):
-        if childFD == 0:
-            self.dataList.append(data)
-
-
-    def loseConnection(self):
-        self.loseConnectionFlag = True
-
-
-    def getPeer(self):
-        return self.peer
-
-
-    def getHost(self):
-        return self.host
-
-
-
-@implementer(interfaces.IReactorProcess)
-class MemoryProcessReactor(object):
-    """
-    A fake L{IReactorProcess} provider to be used in tests.
-    """
-    def spawnProcess(self, processProtocol, executable, args=(), env={},
-                     path=None, uid=None, gid=None, usePTY=0, childFDs=None):
-        """
-        @ivar processProtocol: Stores the protocol passed to the reactor.
-        @return: An L{IProcessTransport} provider.
-        """
-        self.processProtocol = processProtocol
-        self.executable = executable
-        self.args = args
-        self.env = env
-        self.path = path
-        self.uid = uid
-        self.gid = gid
-        self.usePTY = usePTY
-        self.childFDs = childFDs
-
-        self.processTransport = object()
-        self.processProtocol.makeConnection(self.processTransport)
-        return self.processTransport
-
-
-
-class ProcessEndpointsTestCase(unittest.TestCase):
-    """
-    Tests for child process endpoints.
-    """
-
-    def setUp(self):
-        self.reactor = MemoryProcessReactor()
-        self.ep = endpoints.ProcessEndpoint(self.reactor, '/bin/executable')
-        self.factory = protocol.Factory()
-        self.factory.protocol = StubApplicationProtocol
-
-
-    def test_constructorDefaults(self):
-        """
-        Default values are set for the optional parameters in the endpoint.
-        """
-        self.assertIsInstance(self.ep._reactor, MemoryProcessReactor)
-        self.assertEqual(self.ep._executable, '/bin/executable')
-        self.assertEqual(self.ep._args, ())
-        self.assertEqual(self.ep._env, {})
-        self.assertEqual(self.ep._path, None)
-        self.assertEqual(self.ep._uid, None)
-        self.assertEqual(self.ep._gid, None)
-        self.assertEqual(self.ep._usePTY, 0)
-        self.assertEqual(self.ep._childFDs, None)
-        self.assertEqual(self.ep._errFlag, StandardErrorBehavior.LOG)
-
-
-    def test_constructorNonDefaults(self):
-        """
-        The parameters passed to the endpoint are stored in it.
-        """
-        environ = {'HOME': None}
-        ep = endpoints.ProcessEndpoint(
-            MemoryProcessReactor(), '/bin/executable',
-            ['/bin/executable'], {'HOME': environ['HOME']},
-            '/runProcessHere/', 1, 2, True, {3: 'w', 4: 'r', 5: 'r'},
-            StandardErrorBehavior.DROP)
-
-        self.assertIsInstance(ep._reactor, MemoryProcessReactor)
-        self.assertEqual(ep._executable, '/bin/executable')
-        self.assertEqual(ep._args, ['/bin/executable'])
-        self.assertEqual(ep._env, {'HOME': environ['HOME']})
-        self.assertEqual(ep._path, '/runProcessHere/')
-        self.assertEqual(ep._uid, 1)
-        self.assertEqual(ep._gid, 2)
-        self.assertEqual(ep._usePTY, True)
-        self.assertEqual(ep._childFDs, {3: 'w', 4: 'r', 5: 'r'})
-        self.assertEqual(ep._errFlag, StandardErrorBehavior.DROP)
-
-
-    def test_wrappedProtocol(self):
-        """
-        The wrapper function _WrapIProtocol gives an IProcessProtocol
-        implementation that wraps over an IProtocol.
-        """
-        d = self.ep.connect(self.factory)
-        self.successResultOf(d)
-        wpp = self.reactor.processProtocol
-        self.assertIsInstance(wpp, endpoints._WrapIProtocol)
-
-
-    def test_spawnProcess(self):
-        """
-        The parameters for spawnProcess stored in the endpoint are passed when
-        the endpoint's connect method is invoked.
-        """
-        environ = {'HOME': None}
-
-        memoryReactor = MemoryProcessReactor()
-        ep = endpoints.ProcessEndpoint(
-            memoryReactor, '/bin/executable',
-            ['/bin/executable'], {'HOME': environ['HOME']},
-            '/runProcessHere/', 1, 2, True, {3: 'w', 4: 'r', 5: 'r'})
-        d = ep.connect(self.factory)
-        self.successResultOf(d)
-
-        self.assertIsInstance(memoryReactor.processProtocol,
-                              endpoints._WrapIProtocol)
-        self.assertEqual(memoryReactor.executable, ep._executable)
-        self.assertEqual(memoryReactor.args, ep._args)
-        self.assertEqual(memoryReactor.env, ep._env)
-        self.assertEqual(memoryReactor.path, ep._path)
-        self.assertEqual(memoryReactor.uid, ep._uid)
-        self.assertEqual(memoryReactor.gid, ep._gid)
-        self.assertEqual(memoryReactor.usePTY, ep._usePTY)
-        self.assertEqual(memoryReactor.childFDs, ep._childFDs)
-
-
-    def test_processAddress(self):
-        """
-        The address passed to the factory's buildProtocol in the endpoint is a
-        _ProcessAddress instance.
-        """
-
-        class TestAddrFactory(protocol.Factory):
-            protocol = StubApplicationProtocol
-            address = None
-
-            def buildProtocol(self, addr):
-                self.address = addr
-                p = self.protocol()
-                p.factory = self
-                return p
-
-        myFactory = TestAddrFactory()
-        d = self.ep.connect(myFactory)
-        self.successResultOf(d)
-        self.assertIsInstance(myFactory.address, _ProcessAddress)
-
-
-    def test_connect(self):
-        """
-        L{ProcessEndpoint.connect} returns a Deferred with the connected
-        protocol.
-        """
-        proto = self.successResultOf(self.ep.connect(self.factory))
-        self.assertIsInstance(proto, StubApplicationProtocol)
-
-
-    def test_connectFailure(self):
-        """
-        In case of failure, L{ProcessEndpoint.connect} returns a Deferred that
-        fails.
-        """
-
-        def testSpawnProcess(pp, executable, args, env, path,
-                             uid, gid, usePTY, childFDs):
-            raise Exception()
-
-        self.ep._spawnProcess = testSpawnProcess
-        d = self.ep.connect(self.factory)
-        error = self.failureResultOf(d)
-        error.trap(Exception)
-
-
-
-class ProcessEndpointTransportTests(unittest.TestCase):
-    """
-    Test the behaviour of the implementation detail
-    L{endpoints._ProcessEndpointTransport}.
-    """
-
-    def setUp(self):
-        self.process = MemoryProcessTransport()
-        self.endpointTransport = endpoints._ProcessEndpointTransport(
-            self.process)
-
-
-    def test_constructor(self):
-        """
-        The L{_ProcessEndpointTransport} instance stores the process passed to
-        it.
-        """
-        self.assertEqual(self.endpointTransport._process, self.process)
-
-
-    def test_writeSequence(self):
-        """
-        The writeSequence method of L{_ProcessEndpointTransport} writes a list
-        of string passed to it to the transport's stdin.
-        """
-        self.endpointTransport.writeSequence(['test1', 'test2', 'test3'])
-        self.assertEqual(self.process.dataList, ['test1', 'test2', 'test3'])
-
-
-    def test_write(self):
-        """
-        The write method of L{_ProcessEndpointTransport} writes a string of
-        data passed to it to the child process's stdin.
-        """
-        self.endpointTransport.write('test')
-        self.assertEqual(self.process.dataList.pop(), 'test')
-
-
-    def test_loseConnection(self):
-        """
-        A call to the loseConnection method of a L{_ProcessEndpointTransport}
-        instance returns a call to the process transport's loseConnection.
-        """
-        self.endpointTransport.loseConnection()
-        self.assertEqual(self.process.loseConnectionFlag, True)
-
-
-    def test_getHost(self):
-        """
-        L{_ProcessEndpointTransport.getHost} returns a L{_ProcessAddress}
-        instance matching the process C{getHost}.
-        """
-        host = self.endpointTransport.getHost()
-        self.assertIsInstance(host, _ProcessAddress)
-        self.assertIdentical(host, self.process.host)
-
-
-    def test_getPeer(self):
-        """
-        L{_ProcessEndpointTransport.getPeer} returns a L{_ProcessAddress}
-        instance matching the process C{getPeer}.
-        """
-        peer = self.endpointTransport.getPeer()
-        self.assertIsInstance(peer, _ProcessAddress)
-        self.assertIdentical(peer, self.process.peer)
-
-
-
-class WrappedIProtocolTests(unittest.TestCase):
-    """
-    Test the behaviour of the implementation detail C{_WrapIProtocol}.
-    """
-    def setUp(self):
-        self.reactor = MemoryProcessReactor()
-        self.ep = endpoints.ProcessEndpoint(self.reactor, '/bin/executable')
-        self.eventLog = None
-        self.factory = protocol.Factory()
-        self.factory.protocol = StubApplicationProtocol
-
-
-    def test_constructor(self):
-        """
-        Stores an L{IProtocol} provider and the flag to log/drop stderr
-        """
-        d = self.ep.connect(self.factory)
-        self.successResultOf(d)
-        wpp = self.reactor.processProtocol
-        self.assertIsInstance(wpp.protocol, StubApplicationProtocol)
-        self.assertEqual(wpp.errFlag, self.ep._errFlag)
-
-
-    def test_makeConnection(self):
-        """
-        Our process transport is properly hooked up to the wrappedIProtocol
-        when a connection is made.
-        """
-        d = self.ep.connect(self.factory)
-        self.successResultOf(d)
-        wpp = self.reactor.processProtocol
-        self.assertEqual(wpp.protocol.transport, wpp.transport)
-
-
-    def _stdLog(self, eventDict):
-        """
-        A log observer.
-        """
-        self.eventLog = eventDict
-
-
-    def test_logStderr(self):
-        """
-        When the _errFlag is set to L{StandardErrorBehavior.LOG},
-        L{endpoints._WrapIProtocol} logs stderr (in childDataReceived).
-        """
-        d = self.ep.connect(self.factory)
-        self.successResultOf(d)
-        wpp = self.reactor.processProtocol
-        log.addObserver(self._stdLog)
-        self.addCleanup(log.removeObserver, self._stdLog)
-
-        wpp.childDataReceived(2, 'stderr1')
-        self.assertEqual(self.eventLog['executable'], wpp.executable)
-        self.assertEqual(self.eventLog['data'], 'stderr1')
-        self.assertEqual(self.eventLog['protocol'], wpp.protocol)
-        self.assertEqual(
-            self.eventLog['format'],
-            'Process %(executable)r wrote stderr unhandled '
-            'by %(protocol)s: %(data)s')
-
-
-    def test_stderrSkip(self):
-        """
-        When the _errFlag is set to L{StandardErrorBehavior.DROP},
-        L{endpoints._WrapIProtocol} ignores stderr.
-        """
-        self.ep._errFlag = StandardErrorBehavior.DROP
-        d = self.ep.connect(self.factory)
-        self.successResultOf(d)
-        wpp = self.reactor.processProtocol
-        log.addObserver(self._stdLog)
-        self.addCleanup(log.removeObserver, self._stdLog)
-
-        wpp.childDataReceived(2, 'stderr2')
-        self.assertEqual(self.eventLog, None)
-
-
-    def test_stdout(self):
-        """
-        In childDataReceived of L{_WrappedIProtocol} instance, the protocol's
-        dataReceived is called when stdout is generated.
-        """
-        d = self.ep.connect(self.factory)
-        self.successResultOf(d)
-        wpp = self.reactor.processProtocol
-
-        wpp.childDataReceived(1, 'stdout')
-        self.assertEqual(wpp.protocol.data, 'stdout')
-
-
-    def test_processDone(self):
-        """
-        L{error.ProcessDone} with status=0 is turned into a clean disconnect
-        type, i.e. L{error.ConnectionDone}.
-        """
-        d = self.ep.connect(self.factory)
-        self.successResultOf(d)
-        wpp = self.reactor.processProtocol
-
-        wpp.processEnded(Failure(error.ProcessDone(0)))
-        self.assertEqual(
-            wpp.protocol.reason.check(error.ConnectionDone),
-            error.ConnectionDone)
-
-
-    def test_processEnded(self):
-        """
-        Exceptions other than L{error.ProcessDone} with status=0 are turned
-        into L{error.ConnectionLost}.
-        """
-        d = self.ep.connect(self.factory)
-        self.successResultOf(d)
-        wpp = self.reactor.processProtocol
-
-        wpp.processEnded(Failure(error.ProcessTerminated()))
-        self.assertEqual(wpp.protocol.reason.check(error.ConnectionLost),
-                         error.ConnectionLost)
+        self.d.addCallback(checkAddress)
+        return self.d
 
 
 
@@ -1325,8 +915,10 @@ class TCP6EndpointNameResolutionTestCase(ClientEndpointTestCaseMixin,
             L{IReactorTCP.connectTCP}
         """
         address = IPv6Address("TCP", "::2", 80)
-        self.ep = endpoints.TCP6ClientEndpoint(
-            reactor, 'ipv6.example.com', address.port, **connectArgs)
+        self.ep = endpoints.TCP6ClientEndpoint(reactor,
+                                             'ipv6.example.com',
+                                             address.port,
+                                             **connectArgs)
 
         def testNameResolution(host):
             self.assertEqual("ipv6.example.com", host)
@@ -1393,8 +985,8 @@ class TCP6EndpointNameResolutionTestCase(ClientEndpointTestCaseMixin,
             calls.append((f, args, kwargs))
             return defer.Deferred()
 
-        endpoint = endpoints.TCP6ClientEndpoint(
-            reactor, 'ipv6.example.com', 1234)
+        endpoint = endpoints.TCP6ClientEndpoint(reactor, 'ipv6.example.com',
+            1234)
         fakegetaddrinfo = object()
         endpoint._getaddrinfo = fakegetaddrinfo
         endpoint._deferToThread = fakeDeferToThread
@@ -1666,9 +1258,8 @@ class ParserTestCase(unittest.TestCase):
         """
         Simple strings with a 'tcp:' prefix should be parsed as TCP.
         """
-        self.assertEqual(
-            self.parse('tcp:80', self.f),
-            ('TCP', (80, self.f), {'interface': '', 'backlog': 50}))
+        self.assertEqual(self.parse('tcp:80', self.f),
+                         ('TCP', (80, self.f), {'interface':'', 'backlog':50}))
 
 
     def test_interfaceTCP(self):
@@ -1676,17 +1267,17 @@ class ParserTestCase(unittest.TestCase):
         TCP port descriptions parse their 'interface' argument as a string.
         """
         self.assertEqual(
-            self.parse('tcp:80:interface=127.0.0.1', self.f),
-            ('TCP', (80, self.f), {'interface': '127.0.0.1', 'backlog': 50}))
+             self.parse('tcp:80:interface=127.0.0.1', self.f),
+             ('TCP', (80, self.f), {'interface':'127.0.0.1', 'backlog':50}))
 
 
     def test_backlogTCP(self):
         """
         TCP port descriptions parse their 'backlog' argument as an integer.
         """
-        self.assertEqual(
-            self.parse('tcp:80:backlog=6', self.f),
-            ('TCP', (80, self.f), {'interface': '', 'backlog': 6}))
+        self.assertEqual(self.parse('tcp:80:backlog=6', self.f),
+                         ('TCP', (80, self.f),
+                                 {'interface':'', 'backlog':6}))
 
 
     def test_simpleUNIX(self):
@@ -1914,12 +1505,10 @@ def addFakePlugin(testCase, dropinSource="fakeendpoint.py"):
     import sys
     savedModules = sys.modules.copy()
     savedPluginPath = plugins.__path__
-
     def cleanup():
         sys.modules.clear()
         sys.modules.update(savedModules)
         plugins.__path__[:] = savedPluginPath
-
     testCase.addCleanup(cleanup)
     fp = FilePath(testCase.mktemp())
     fp.createDirectory()
@@ -2105,7 +1694,9 @@ class SSLClientStringTests(unittest.TestCase):
             reactor,
             "ssl:host=example.net:port=4321:privateKey=%s:"
             "certKey=%s:bindAddress=10.0.0.3:timeout=3:caCertsDir=%s" %
-            (escapedPEMPathName, escapedPEMPathName, escapedCAsPathName))
+             (escapedPEMPathName,
+              escapedPEMPathName,
+              escapedCAsPathName))
         self.assertIsInstance(client, endpoints.SSL4ClientEndpoint)
         self.assertIdentical(client._reactor, reactor)
         self.assertEqual(client._host, "example.net")
@@ -2116,13 +1707,14 @@ class SSLClientStringTests(unittest.TestCase):
         self.assertIsInstance(certOptions, CertificateOptions)
         ctx = certOptions.getContext()
         self.assertIsInstance(ctx, ContextType)
-        self.assertEqual(Certificate(certOptions.certificate), testCertificate)
+        self.assertEqual(Certificate(certOptions.certificate),
+                          testCertificate)
         privateCert = PrivateCertificate(certOptions.certificate)
         privateCert._setPrivateKey(KeyPair(certOptions.privateKey))
         self.assertEqual(privateCert, testPrivateCertificate)
         expectedCerts = [
             Certificate.loadPEM(x.getContent()) for x in
-            [casPath.child("thing1.pem"), casPath.child("thing2.pem")]
+                [casPath.child("thing1.pem"), casPath.child("thing2.pem")]
             if x.basename().lower().endswith('.pem')
         ]
         self.assertEqual(sorted((Certificate(x) for x in certOptions.caCerts),
@@ -2142,7 +1734,9 @@ class SSLClientStringTests(unittest.TestCase):
             reactor,
             "ssl:example.net:4321:privateKey=%s:"
             "certKey=%s:bindAddress=10.0.0.3:timeout=3:caCertsDir=%s" %
-            (escapedPEMPathName, escapedPEMPathName, escapedCAsPathName))
+             (escapedPEMPathName,
+              escapedPEMPathName,
+              escapedCAsPathName))
         self.assertIsInstance(client, endpoints.SSL4ClientEndpoint)
         self.assertIdentical(client._reactor, reactor)
         self.assertEqual(client._host, "example.net")
@@ -2218,8 +1812,7 @@ class AdoptedStreamServerEndpointTestCase(ServerEndpointTestCaseMixin,
         an invalid file descriptor.  This is convenient for a number of unit
         tests.
         """
-        e = endpoints.AdoptedStreamServerEndpoint(reactor, fileno,
-                                                  addressFamily)
+        e = endpoints.AdoptedStreamServerEndpoint(reactor, fileno, addressFamily)
         # Stub out some syscalls which would fail, given our invalid file
         # descriptor.
         e._close = lambda fd: None
@@ -2272,35 +1865,28 @@ class AdoptedStreamServerEndpointTestCase(ServerEndpointTestCaseMixin,
         reactor = MemoryReactor()
         endpoint = self._createStubbedAdoptedEndpoint(reactor, 13, AF_INET)
         endpoint.listen(object())
-        d = self.assertFailure(
-            endpoint.listen(object()), error.AlreadyListened)
-
+        d = self.assertFailure(endpoint.listen(object()), error.AlreadyListened)
         def listenFailed(ignored):
             self.assertEqual(1, len(reactor.adoptedPorts))
-
         d.addCallback(listenFailed)
         return d
 
 
     def test_descriptionNonBlocking(self):
         """
-        L{AdoptedStreamServerEndpoint.listen} sets the file description given
-        to it to non-blocking.
+        L{AdoptedStreamServerEndpoint.listen} sets the file description given to
+        it to non-blocking.
         """
         reactor = MemoryReactor()
         endpoint = self._createStubbedAdoptedEndpoint(reactor, 13, AF_INET)
         events = []
-
         def setNonBlocking(fileno):
             events.append(("setNonBlocking", fileno))
-
         endpoint._setNonBlocking = setNonBlocking
 
         d = endpoint.listen(object())
-
         def listened(ignored):
             self.assertEqual([("setNonBlocking", 13)], events)
-
         d.addCallback(listened)
         return d
 
@@ -2313,17 +1899,13 @@ class AdoptedStreamServerEndpointTestCase(ServerEndpointTestCaseMixin,
         reactor = MemoryReactor()
         endpoint = self._createStubbedAdoptedEndpoint(reactor, 13, AF_INET)
         events = []
-
         def close(fileno):
             events.append(("close", fileno, len(reactor.adoptedPorts)))
-
         endpoint._close = close
 
         d = endpoint.listen(object())
-
         def listened(ignored):
             self.assertEqual([("close", 13, 1)], events)
-
         d.addCallback(listened)
         return d
 
@@ -2345,8 +1927,7 @@ class SystemdEndpointPluginTests(unittest.TestCase):
         L{interfaces.IStreamServerEndpointStringParser} interface.
         """
         parsers = list(getPlugins(
-            interfaces.IStreamServerEndpointStringParser))
-
+                interfaces.IStreamServerEndpointStringParser))
         for p in parsers:
             if isinstance(p, self._parserClass):
                 break
@@ -2361,7 +1942,7 @@ class SystemdEndpointPluginTests(unittest.TestCase):
         """
         parser = self._parserClass()
         self.assertTrue(verifyObject(
-            interfaces.IStreamServerEndpointStringParser, parser))
+                interfaces.IStreamServerEndpointStringParser, parser))
 
 
     def _parseStreamServerTest(self, addressFamily, addressFamilyString):
@@ -2372,8 +1953,7 @@ class SystemdEndpointPluginTests(unittest.TestCase):
         Handling of the address family given will be verify.  If there is a
         problem a test-failing exception will be raised.
 
-        @param addressFamily: An address family constant, like
-            L{socket.AF_INET}.
+        @param addressFamily: An address family constant, like L{socket.AF_INET}.
 
         @param addressFamilyString: A string which should be recognized by the
             parser as representing C{addressFamily}.
@@ -2421,8 +2001,7 @@ class SystemdEndpointPluginTests(unittest.TestCase):
 
 class TCP6ServerEndpointPluginTests(unittest.TestCase):
     """
-    Unit tests for the TCP IPv6 stream server endpoint string description
-    parser.
+    Unit tests for the TCP IPv6 stream server endpoint string description parser.
     """
     _parserClass = endpoints._TCP6ServerParser
 
@@ -2432,13 +2011,12 @@ class TCP6ServerEndpointPluginTests(unittest.TestCase):
         L{interfaces.IStreamServerEndpointStringParser} interface.
         """
         parsers = list(getPlugins(
-            interfaces.IStreamServerEndpointStringParser))
+                interfaces.IStreamServerEndpointStringParser))
         for p in parsers:
             if isinstance(p, self._parserClass):
                 break
         else:
-            self.fail(
-                "Did not find TCP6ServerEndpoint parser in %r" % (parsers,))
+            self.fail("Did not find TCP6ServerEndpoint parser in %r" % (parsers,))
 
 
     def test_interface(self):
@@ -2448,16 +2026,16 @@ class TCP6ServerEndpointPluginTests(unittest.TestCase):
         """
         parser = self._parserClass()
         self.assertTrue(verifyObject(
-            interfaces.IStreamServerEndpointStringParser, parser))
+                interfaces.IStreamServerEndpointStringParser, parser))
 
 
     def test_stringDescription(self):
         """
-        L{serverFromString} returns a L{TCP6ServerEndpoint} instance with a
-        'tcp6' endpoint string description.
+        L{serverFromString} returns a L{TCP6ServerEndpoint} instance with a 'tcp6'
+        endpoint string description.
         """
-        ep = endpoints.serverFromString(
-            MemoryReactor(), "tcp6:8080:backlog=12:interface=\:\:1")
+        ep = endpoints.serverFromString(MemoryReactor(),
+            "tcp6:8080:backlog=12:interface=\:\:1")
         self.assertIsInstance(ep, endpoints.TCP6ServerEndpoint)
         self.assertIsInstance(ep._reactor, MemoryReactor)
         self.assertEqual(ep._port, 8080)
@@ -2478,13 +2056,12 @@ class StandardIOEndpointPluginTests(unittest.TestCase):
         L{interfaces.IStreamServerEndpointStringParser} interface.
         """
         parsers = list(getPlugins(
-            interfaces.IStreamServerEndpointStringParser))
+                interfaces.IStreamServerEndpointStringParser))
         for p in parsers:
             if isinstance(p, self._parserClass):
                 break
         else:
-            self.fail(
-                "Did not find StandardIOEndpoint parser in %r" % (parsers,))
+            self.fail("Did not find StandardIOEndpoint parser in %r" % (parsers,))
 
 
     def test_interface(self):
@@ -2494,13 +2071,13 @@ class StandardIOEndpointPluginTests(unittest.TestCase):
         """
         parser = self._parserClass()
         self.assertTrue(verifyObject(
-            interfaces.IStreamServerEndpointStringParser, parser))
+                interfaces.IStreamServerEndpointStringParser, parser))
 
 
     def test_stringDescription(self):
         """
-        L{serverFromString} returns a L{StandardIOEndpoint} instance with a
-        'stdio' endpoint string description.
+        L{serverFromString} returns a L{StandardIOEndpoint} instance with a 'stdio'
+        endpoint string description.
         """
         ep = endpoints.serverFromString(MemoryReactor(), "stdio:")
         self.assertIsInstance(ep, endpoints.StandardIOEndpoint)
@@ -2512,6 +2089,4 @@ if _PY3:
          ServerStringTests, ClientStringTests, SSLClientStringTests,
          AdoptedStreamServerEndpointTestCase, SystemdEndpointPluginTests,
          TCP6ServerEndpointPluginTests, StandardIOEndpointPluginTests,
-         ProcessEndpointsTestCase, WrappedIProtocolTests,
-         ProcessEndpointTransportTests,
          )

@@ -81,14 +81,6 @@ class IPv6Address(_IPAddress):
 
 
 @implementer(IAddress)
-class _ProcessAddress(object):
-    """
-    An L{interfaces.IAddress} provider for process transports.
-    """
-
-
-
-@implementer(IAddress)
 class UNIXAddress(FancyEqMixin, object):
     """
     Object representing a UNIX socket endpoint.

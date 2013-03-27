@@ -14,44 +14,35 @@ parsed by the L{clientFromString} and L{serverFromString} functions.
 
 from __future__ import division, absolute_import
 
-import os
-import socket
+import os, socket
 
 from zope.interface import implementer, directlyProvides
 import warnings
 
 from twisted.python.compat import _PY3
 from twisted.internet import interfaces, defer, error, fdesc, threads
-from twisted.internet.protocol import ClientFactory, Protocol, ProcessProtocol
+from twisted.internet.protocol import ClientFactory, Protocol
 from twisted.internet.interfaces import IStreamServerEndpointStringParser
 from twisted.internet.interfaces import IStreamClientEndpointStringParser
 from twisted.python.filepath import FilePath
 from twisted.python.systemd import ListenFDs
 from twisted.internet.abstract import isIPv6Address
-from twisted.python.failure import Failure
-from twisted.python import log
-from twisted.internet.address import _ProcessAddress
-from twisted.python.components import proxyForInterface
 
 if not _PY3:
     from twisted.plugin import IPlugin, getPlugins
     from twisted.internet import stdio
     from twisted.internet.stdio import PipeAddress
-    from twisted.python.constants import NamedConstant, Names
 else:
     from zope.interface import Interface
     class IPlugin(Interface):
         pass
-    NamedConstant = object
-    Names = object
 
 __all__ = ["clientFromString", "serverFromString",
            "TCP4ServerEndpoint", "TCP6ServerEndpoint",
            "TCP4ClientEndpoint", "TCP6ClientEndpoint",
            "UNIXServerEndpoint", "UNIXClientEndpoint",
            "SSL4ServerEndpoint", "SSL4ClientEndpoint",
-           "AdoptedStreamServerEndpoint", "StandardIOEndpoint",
-           "ProcessEndpoint", "StandardErrorBehavior"]
+           "AdoptedStreamServerEndpoint", "StandardIOEndpoint"]
 
 __all3__ = ["TCP4ServerEndpoint", "TCP6ServerEndpoint",
             "TCP4ClientEndpoint", "TCP6ClientEndpoint",
@@ -257,170 +248,6 @@ class StandardIOEndpoint(object):
 
 
 
-@implementer(interfaces.ITransport)
-class _ProcessEndpointTransport(proxyForInterface(
-                                interfaces.IProcessTransport, '_process')):
-    """
-    An L{ITransport} provider for the L{IProtocol} instance passed to the
-    process endpoint.
-
-    @ivar _process: An active process transport which will be used by write
-        methods on this object to write data to a child process.
-    @type _process: L{interfaces.IProcessTransport} provider
-    """
-
-    def write(self, data):
-        """
-        Write to the child process's standard input.
-
-        @param data: The data to write on stdin.
-        """
-        self._process.writeToChild(0, data)
-
-
-    def writeSequence(self, data):
-        """
-        Write a list of strings to child process's stdin.
-
-        @param data: The list of chunks to write on stdin.
-        """
-        for chunk in data:
-            self._process.writeToChild(0, chunk)
-
-
-
-class _WrapIProtocol(ProcessProtocol):
-    """
-    An L{IProcessProtocol} provider that wraps an L{IProtocol}.
-
-    @ivar transport: A L{_ProcessEndpointTransport} provider that is hooked to
-        the wrapped L{IProtocol} provider.
-
-    @see: L{protocol.ProcessProtocol}
-    """
-
-    def __init__(self, proto, executable, errFlag):
-        """
-        @param proto: An L{IProtocol} provider.
-        @param errFlag: A constant belonging to L{StandardErrorBehavior}
-            that determines if stderr is logged or dropped.
-        @param executable: The file name (full path) to spawn.
-        """
-        self.protocol = proto
-        self.errFlag = errFlag
-        self.executable = executable
-
-
-    def makeConnection(self, process):
-        """
-        Call L{IProtocol} provider's makeConnection method with an
-        L{ITransport} provider.
-
-        @param process: An L{IProcessTransport} provider.
-        """
-        self.transport = _ProcessEndpointTransport(process)
-        return self.protocol.makeConnection(self.transport)
-
-
-    def childDataReceived(self, childFD, data):
-        """
-        This is called with data from the process's stdout or stderr pipes. It
-        checks the status of the errFlag to setermine if stderr should be
-        logged (default) or dropped.
-        """
-        if childFD == 1:
-            return self.protocol.dataReceived(data)
-        elif childFD == 2 and self.errFlag == StandardErrorBehavior.LOG:
-            log.msg(
-                format="Process %(executable)r wrote stderr unhandled by "
-                       "%(protocol)s: %(data)s",
-                executable=self.executable, protocol=self.protocol,
-                data=data)
-
-
-    def processEnded(self, reason):
-        """
-        If the process ends with L{error.ProcessDone}, this method calls the
-        L{IProtocol} provider's L{connectionLost} with a
-        L{error.ConnectionDone}
-
-        @see: L{ProcessProtocol.processEnded}
-        """
-        if (reason.check(error.ProcessDone) == error.ProcessDone) and (
-                reason.value.status == 0):
-            return self.protocol.connectionLost(
-                Failure(error.ConnectionDone()))
-        else:
-            return self.protocol.connectionLost(reason)
-
-
-
-class StandardErrorBehavior(Names):
-    """
-    Constants used in ProcessEndpoint to decide what to do with stderr.
-
-    @cvar LOG: Indicates that stderr is to be logged.
-    @cvar DROP: Indicates that stderr is to be dropped (and not logged).
-
-    @since: 13.1
-    """
-    LOG = NamedConstant()
-    DROP = NamedConstant()
-
-
-
-@implementer(interfaces.IStreamClientEndpoint)
-class ProcessEndpoint(object):
-    """
-    An endpoint for child processes
-
-    @ivar _spawnProcess: A hook used for testing the spawning of child process.
-
-    @since: 13.1
-    """
-    def __init__(self, reactor, executable, args=(), env={}, path=None,
-                 uid=None, gid=None, usePTY=0, childFDs=None,
-                 errFlag=StandardErrorBehavior.LOG):
-        """
-        See L{IReactorProcess.spawnProcess}.
-
-        @param errFlag: Determines if stderr should be logged.
-        @type errFlag: L{endpoints.StandardErrorBehavior}
-        """
-        self._reactor = reactor
-        self._executable = executable
-        self._args = args
-        self._env = env
-        self._path = path
-        self._uid = uid
-        self._gid = gid
-        self._usePTY = usePTY
-        self._childFDs = childFDs
-        self._errFlag = errFlag
-        self._spawnProcess = self._reactor.spawnProcess
-
-
-    def connect(self, protocolFactory):
-        """
-        Implement L{IStreamClientEndpoint.connect} to launch a child process
-        and connect it to a protocol created by C{protocolFactory}.
-
-        @param protocolFactory: A factory for an L{IProtocol} provider which
-            will be notified of all events related to the created process.
-        """
-        proto = protocolFactory.buildProtocol(_ProcessAddress())
-        try:
-            self._spawnProcess(
-                _WrapIProtocol(proto, self._executable, self._errFlag),
-                self._executable, self._args, self._env, self._path, self._uid,
-                self._gid, self._usePTY, self._childFDs)
-        except:
-            return defer.fail()
-        else:
-            return defer.succeed(proto)
-
-
-
 @implementer(interfaces.IStreamServerEndpoint)
 class _TCPServerEndpoint(object):
     """
@@ -448,8 +275,7 @@ class _TCPServerEndpoint(object):
 
     def listen(self, protocolFactory):
         """
-        Implement L{IStreamServerEndpoint.listen} to listen on a TCP
-        socket
+        Implement L{IStreamServerEndpoint.listen} to listen on a TCP socket
         """
         return defer.execute(self._reactor.listenTCP,
                              self._port,
