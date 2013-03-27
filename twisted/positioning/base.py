@@ -1092,3 +1092,26 @@ class Satellite(PositioningBeacon):
 
         return "<Satellite (%s), %s, used: %s>" % (
             self.identifier, properties, self._usedRepr())
+
+
+
+__all__ = [
+    'Altitude',
+    'Angle',
+    'Angles',
+    'BasePositioningReceiver',
+    'BeaconInformation',
+    'Climb',
+    'Coordinate',
+    'Directions',
+    'Heading',
+    'InvalidChecksum',
+    'InvalidSentence',
+    'METERS_PER_FOOT',
+    'MPS_PER_KNOT',
+    'MPS_PER_KPH',
+    'PositionError',
+    'PositioningBeacon',
+    'Satellite',
+    'Speed'
+]
