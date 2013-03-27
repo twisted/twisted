@@ -51,7 +51,7 @@ __all__ = ["clientFromString", "serverFromString",
            "UNIXServerEndpoint", "UNIXClientEndpoint",
            "SSL4ServerEndpoint", "SSL4ClientEndpoint",
            "AdoptedStreamServerEndpoint", "StandardIOEndpoint",
-           "ProcessEndpoint"]
+           "ProcessEndpoint", "StandardErrorBehavior"]
 
 __all3__ = ["TCP4ServerEndpoint", "TCP6ServerEndpoint",
             "TCP4ClientEndpoint", "TCP6ClientEndpoint",
@@ -414,9 +414,10 @@ class ProcessEndpoint(object):
                 _WrapIProtocol(proto, self._executable, self._errFlag),
                 self._executable, self._args, self._env, self._path, self._uid,
                 self._gid, self._usePTY, self._childFDs)
-            return defer.succeed(proto)
         except:
             return defer.fail()
+        else:
+            return defer.succeed(proto)
 
 
 
