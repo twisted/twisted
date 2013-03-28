@@ -2037,18 +2037,18 @@ class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         return deferred.addCallback(checkFailure)
 
 
-    def test_307OnPost(self):
+    def _testPageRedirectFailure(self, code, method):
         """
-        When getting a 307 redirect on a C{POST} request, L{RedirectAgent} fais
-        with a L{ResponseFailed} error wrapping a L{error.PageRedirect}
-        exception.
+        When getting a redirect on an unsupported request method,
+        L{RedirectAgent} fails with a L{ResponseFailed} error wrapping
+        a L{error.PageRedirect} exception.
         """
-        deferred = self.agent.request('POST', 'http://example.com/foo')
+        deferred = self.agent.request(method, 'http://example.com/foo')
 
         req, res = self.protocol.requests.pop()
 
         headers = http_headers.Headers()
-        response = Response(('HTTP', 1, 1), 307, 'OK', headers, None)
+        response = Response(('HTTP', 1, 1), code, 'OK', headers, None)
         res.callback(response)
 
         self.assertFailure(deferred, client.ResponseFailed)
@@ -2057,9 +2057,36 @@ class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
             fail.reasons[0].trap(error.PageRedirect)
             self.assertEqual('http://example.com/foo',
                              fail.reasons[0].value.location)
-            self.assertEqual(307, fail.response.code)
+            self.assertEqual(code, fail.response.code)
 
         return deferred.addCallback(checkFailure)
+
+
+    def test_301OnPost(self):
+        """
+        When getting a 301 redirect on a C{POST} request, L{RedirectAgent}
+        fails with a L{ResponseFailed} error wrapping a L{error.PageRedirect}
+        exception.
+        """
+        return self._testPageRedirectFailure(301, 'POST')
+
+
+    def test_302OnPost(self):
+        """
+        When getting a 302 redirect on a C{POST} request, L{RedirectAgent}
+        fails with a L{ResponseFailed} error wrapping a L{error.PageRedirect}
+        exception.
+        """
+        return self._testPageRedirectFailure(302, 'POST')
+
+
+    def test_307OnPost(self):
+        """
+        When getting a 307 redirect on a C{POST} request, L{RedirectAgent}
+        fails with a L{ResponseFailed} error wrapping a L{error.PageRedirect}
+        exception.
+        """
+        return self._testPageRedirectFailure(307, 'POST')
 
 
     def test_redirectLimit(self):
