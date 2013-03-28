@@ -578,9 +578,12 @@ class Request:
         self._parsedURI = _parsedURI
 
 
+    @property
     def absoluteURI(self):
+        """
+        The absolute URI of the requested resource.
+        """
         return self._parsedURI.uri
-    absoluteURI = property(absoluteURI)
 
 
     def _writeHeaders(self, transport, TEorCL):
@@ -935,9 +938,12 @@ class Response:
         self.response = None
 
 
+    @property
     def absoluteURI(self):
+        """
+        The absolute URI of the response.
+        """
         return getattr(self.request, 'absoluteURI')
-    absoluteURI = property(absoluteURI)
 
 
     def deliverBody(self, protocol):
