@@ -1028,9 +1028,6 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         L{Response}s returned by L{Agent.request} have a reference to the
         L{Request} that was originally issued.
         """
-        def _checkResponseWithRequest(response, expectedRequest):
-            self.assertIdentical(response.request, expectedRequest)
-
         uri = b'http://example.com/'
         agent = self.buildAgentForWrapperTest(self.reactor)
         d = agent.request('GET', uri)
@@ -1040,8 +1037,6 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         req, res = self.protocol.requests.pop()
         self.assertIsInstance(req, Request)
 
-        d.addCallback(_checkResponseWithRequest, req)
-
         resp = client.Response(
             ('HTTP', 1, 1),
             200,
@@ -1051,16 +1046,14 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
             req)
         res.callback(resp)
 
-        return d
+        response = self.successResultOf(d)
+        self.assertIdentical(response.request, req)
 
 
     def test_responseAbsoluteURI(self):
         """
         L{Response.absoluteURI} is the absolute URI of the response.
         """
-        def _checkResponseWithRequest(response, expectedRequest):
-            self.assertEquals(response.absoluteURI, uri)
-
         uri = b'http://example.com/foo;1234?bar#frag'
         agent = self.buildAgentForWrapperTest(self.reactor)
         d = agent.request('GET', uri)
@@ -1070,8 +1063,6 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         req, res = self.protocol.requests.pop()
         self.assertIsInstance(req, Request)
 
-        d.addCallback(_checkResponseWithRequest, req)
-
         resp = client.Response(
             ('HTTP', 1, 1),
             200,
@@ -1081,7 +1072,8 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
             req)
         res.callback(resp)
 
-        return d
+        response = self.successResultOf(d)
+        self.assertEquals(response.absoluteURI, uri)
 
 
 
@@ -2170,10 +2162,6 @@ class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         L{Response.response} references the previous L{Response} from
         a redirect, or C{None} if there was no previous response.
         """
-        def _checkHistory(response2, response):
-            self.assertIdentical(response2.response, response)
-            self.assertIdentical(response.response, None)
-
         agent = self.buildAgentForWrapperTest(self.reactor)
         redirectAgent = client.RedirectAgent(agent)
 
@@ -2191,4 +2179,6 @@ class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         response2 = Response(('HTTP', 1, 1), 200, 'OK', headers, None)
         res2.callback(response2)
 
-        return deferred.addCallback(_checkHistory, response)
+        finalResponse = self.successResultOf(deferred)
+        self.assertIdentical(finalResponse.response, response)
+        self.assertIdentical(response.response, None)
