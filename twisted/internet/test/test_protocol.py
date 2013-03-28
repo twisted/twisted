@@ -11,14 +11,15 @@ from zope.interface.verify import verifyObject
 from zope.interface import implementer
 
 from twisted.python.failure import Failure
-from twisted.internet.interfaces import (IProtocol, ILoggingContext,
-                                         IProtocolFactory, IConsumer)
+from twisted.internet.interfaces import (
+    IProtocol, ILoggingContext, IProtocolFactory, IConsumer)
 from twisted.internet.defer import CancelledError
 from twisted.internet.protocol import (
     Protocol, ClientCreator, Factory, ProtocolToConsumerAdapter,
     ConsumerToProtocolAdapter)
 from twisted.trial.unittest import TestCase
 from twisted.test.proto_helpers import MemoryReactorClock, StringTransport
+
 
 
 class ClientCreatorTests(TestCase):
@@ -342,6 +343,7 @@ class FactoryTests(TestCase):
     """
     Tests for L{protocol.Factory}.
     """
+
     def test_interfaces(self):
         """
         L{Factory} instances provide both L{IProtocolFactory} and
@@ -364,9 +366,8 @@ class FactoryTests(TestCase):
 
     def test_defaultBuildProtocol(self):
         """
-        L{Factory.buildProtocol} by default constructs a protocol by
-        calling its C{protocol} attribute, and attaches the factory to the
-        result.
+        L{Factory.buildProtocol} by default constructs a protocol by calling
+        its C{protocol} attribute, and attaches the factory to the result.
         """
         class SomeProtocol(Protocol):
             pass
@@ -375,6 +376,21 @@ class FactoryTests(TestCase):
         protocol = f.buildProtocol(None)
         self.assertIsInstance(protocol, SomeProtocol)
         self.assertIdentical(protocol.factory, f)
+
+
+    def test_forProtocol(self):
+        """
+        L{Factory.forProtocol} constructs a Factory, passing along any
+        additional arguments, and sets its C{protocol} attribute to the given
+        Protocol subclass.
+        """
+        class ArgTakingFactory(Factory):
+            def __init__(self, *args, **kwargs):
+                self.args, self.kwargs = args, kwargs
+        factory = ArgTakingFactory.forProtocol(Protocol, 1, 2, foo=12)
+        self.assertEqual(factory.protocol, Protocol)
+        self.assertEqual(factory.args, (1, 2))
+        self.assertEqual(factory.kwargs, {"foo": 12})
 
 
 

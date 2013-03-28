@@ -13,9 +13,7 @@ from twisted.internet.endpoints import TCP4ClientEndpoint
 
 def connect():
     endpoint = TCP4ClientEndpoint(reactor, "127.0.0.1", 8750)
-    factory = Factory()
-    factory.protocol = AMP
-    return endpoint.connect(factory)
+    return endpoint.connect(Factory.forProtocol(AMP))
 
 
 def main():
