@@ -33,6 +33,21 @@ class Factory:
     numPorts = 0
     noisy = True
 
+    @classmethod
+    def forProtocol(cls, protocol, *args, **kwargs):
+        """
+        Create a factory for the given protocol.
+
+        It sets the C{protocol} attribute and returns the constructed factory
+        instance.
+
+        @param protocol: a L{Protocol} subclass
+        """
+        factory = cls(*args, **kwargs)
+        factory.protocol = protocol
+        return factory
+
+
     def logPrefix(self):
         """
         Describe this factory for log messages.

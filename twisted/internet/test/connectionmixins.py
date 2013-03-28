@@ -28,23 +28,6 @@ from twisted.test.test_tcp import ClosingProtocol
 
 
 
-def serverFactoryFor(protocol):
-    """
-    Helper function which returns a L{ServerFactory} which will build instances
-    of C{protocol}.
-
-    @param protocol: A callable which returns an L{IProtocol} provider to be
-        used to handle connections to the port the returned factory listens on.
-    """
-    factory = ServerFactory()
-    factory.protocol = protocol
-    return factory
-
-# ServerFactory is good enough for client endpoints, too.
-factoryFor = serverFactoryFor
-
-
-
 def findFreePort(interface='127.0.0.1', family=socket.AF_INET,
                  type=socket.SOCK_STREAM):
     """
@@ -350,14 +333,14 @@ class ConnectionTestsMixin(object):
         serverConnectionLostDeferred = Deferred()
         protocol = lambda: ClosingLaterProtocol(serverConnectionLostDeferred)
         portDeferred = self.endpoints.server(reactor).listen(
-            serverFactoryFor(protocol))
+            ServerFactory.forProtocol(protocol))
         def listening(port):
             msg("Listening on %r" % (port.getHost(),))
             endpoint = self.endpoints.client(reactor, port.getHost())
 
             lostConnectionDeferred = Deferred()
             protocol = lambda: ClosingLaterProtocol(lostConnectionDeferred)
-            client = endpoint.connect(factoryFor(protocol))
+            client = endpoint.connect(ClientFactory.forProtocol(protocol))
             def write(proto):
                 msg("About to write to %r" % (proto,))
                 proto.transport.write(b'x')
@@ -395,12 +378,13 @@ class ConnectionTestsMixin(object):
 
         reactor = self.buildReactor()
         portDeferred = self.endpoints.server(reactor).listen(
-            serverFactoryFor(Protocol))
+            ServerFactory.forProtocol(Protocol))
         def listening(port):
             msg("Listening on %r" % (port.getHost(),))
             endpoint = self.endpoints.client(reactor, port.getHost())
 
-            client = endpoint.connect(factoryFor(lambda: clientProtocol))
+            client = endpoint.connect(
+                ClientFactory.forProtocol(lambda: clientProtocol))
             def disconnect(proto):
                 msg("About to disconnect %r" % (proto,))
                 proto.transport.loseConnection()
@@ -488,7 +472,7 @@ class StreamClientTestsMixin(object):
         """
         reactor = self.buildReactor()
 
-        self.listen(reactor, serverFactoryFor(Protocol))
+        self.listen(reactor, ServerFactory.forProtocol(Protocol))
         connected = []
 
         class CheckConnection(Protocol):
@@ -516,7 +500,7 @@ class StreamClientTestsMixin(object):
         would be necessary if the transport were still connected.
         """
         reactor = self.buildReactor()
-        self.listen(reactor, serverFactoryFor(ClosingProtocol))
+        self.listen(reactor, ServerFactory.forProtocol(ClosingProtocol))
 
         finished = Deferred()
         finished.addErrback(log.err)
@@ -578,7 +562,7 @@ class StreamClientTestsMixin(object):
             def resumeProducing(self):
                 log.msg("Producer.resumeProducing")
 
-        self.listen(reactor, serverFactoryFor(Protocol))
+        self.listen(reactor, ServerFactory.forProtocol(Protocol))
 
         finished = Deferred()
         finished.addErrback(log.err)

@@ -26,7 +26,7 @@ from twisted.internet.error import (
 from twisted.internet.test.connectionmixins import (
     LogObserverMixin, ConnectionTestsMixin, StreamClientTestsMixin,
     findFreePort, ConnectableProtocol, EndpointCreator,
-    runProtocolsWithReactor, serverFactoryFor, Stop, BrokenContextFactory)
+    runProtocolsWithReactor, Stop, BrokenContextFactory)
 from twisted.internet.test.reactormixins import (
     ReactorBuilder, needsRunningReactor)
 from twisted.internet.interfaces import (
@@ -508,7 +508,7 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
         reactor.installResolver(FakeResolver({fakeDomain: self.interface}))
 
         server = reactor.listenTCP(
-            0, serverFactoryFor(Protocol), interface=host)
+            0, ServerFactory.forProtocol(Protocol), interface=host)
         serverAddress = server.getHost()
 
         transportData = {'host': None, 'peer': None, 'instance': None}
@@ -560,9 +560,7 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
         brokenFactory = BrokenContextFactory()
         results = []
 
-        serverFactory = ServerFactory()
-        serverFactory.protocol = Protocol
-
+        serverFactory = ServerFactory.forProtocol(Protocol)
         port = reactor.listenTCP(0, serverFactory, interface=self.interface)
         endpoint = self.endpoints.client(reactor, port.getHost())
 
