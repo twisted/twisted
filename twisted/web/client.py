@@ -632,6 +632,7 @@ class _URI(object):
     parse = classmethod(parse)
 
 
+    @property
     def uri(self):
         """
         Fully formed I{URI}.
@@ -639,9 +640,9 @@ class _URI(object):
         return urlunparse(
             (self.scheme, self.netloc, self.path, self.params, self.query,
              self.fragment))
-    uri = property(uri)
 
 
+    @property
     def originForm(self):
         """
         The absolute I{URI} path including I{URI} parameters, query string and
@@ -653,7 +654,6 @@ class _URI(object):
         if path == b'':
             path = b'/'
         return path
-    originForm = property(originForm)
 
 
 
