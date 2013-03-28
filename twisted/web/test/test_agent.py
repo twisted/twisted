@@ -1026,10 +1026,39 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
     def test_responseIncludesRequest(self):
         """
         L{Response}s returned by L{Agent.request} have a reference to the
-        L{Request} that was originally issued, and a C{absoluteURI} attribute.
+        L{Request} that was originally issued.
         """
         def _checkResponseWithRequest(response, expectedRequest):
             self.assertIdentical(response.request, expectedRequest)
+
+        uri = b'http://example.com/'
+        agent = self.buildAgentForWrapperTest(self.reactor)
+        d = agent.request('GET', uri)
+
+        # The request should be issued.
+        self.assertEqual(len(self.protocol.requests), 1)
+        req, res = self.protocol.requests.pop()
+        self.assertIsInstance(req, Request)
+
+        d.addCallback(_checkResponseWithRequest, req)
+
+        resp = client.Response(
+            ('HTTP', 1, 1),
+            200,
+            'OK',
+            client.Headers({}),
+            None,
+            req)
+        res.callback(resp)
+
+        return d
+
+
+    def test_responseAbsoluteURI(self):
+        """
+        L{Response.absoluteURI} is the absolute URI of the response.
+        """
+        def _checkResponseWithRequest(response, expectedRequest):
             self.assertEquals(response.absoluteURI, uri)
 
         uri = b'http://example.com/foo;1234?bar#frag'
