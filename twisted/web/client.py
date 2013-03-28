@@ -1548,8 +1548,19 @@ class RedirectAgent(object):
     @param redirectLimit: The maximum number of times the agent is allowed to
         follow redirects before failing with a L{error.InfiniteRedirection}.
 
+    @cvar _redirectResponses: A L{list} of HTTP status codes to be redirected
+        for I{GET} and I{HEAD} methods.
+
+    @cvar _seeOtherResponses: A L{list} of HTTP status codes to be redirected
+        for any method and the method altered to I{GET}.
+
     @since: 11.1
     """
+
+    _redirectResponses = [http.MOVED_PERMANENTLY, http.FOUND,
+                          http.TEMPORARY_REDIRECT]
+    _seeOtherResponses = [http.SEE_OTHER]
+
 
     def __init__(self, agent, redirectLimit=20):
         self._agent = agent
@@ -1593,14 +1604,13 @@ class RedirectAgent(object):
         """
         Handle the response, making another request if it indicates a redirect.
         """
-        if response.code in (http.MOVED_PERMANENTLY, http.FOUND,
-                             http.TEMPORARY_REDIRECT):
+        if response.code in self._redirectResponses:
             if method not in ('GET', 'HEAD'):
                 err = error.PageRedirect(response.code, location=uri)
                 raise ResponseFailed([failure.Failure(err)], response)
             return self._handleRedirect(response, method, uri, headers,
                                         redirectCount)
-        elif response.code == http.SEE_OTHER:
+        elif response.code in self._seeOtherResponses:
             return self._handleRedirect(response, 'GET', uri, headers,
                                         redirectCount)
         return response
