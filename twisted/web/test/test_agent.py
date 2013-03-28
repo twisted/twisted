@@ -1913,17 +1913,11 @@ class ProxyAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
 
 
 
-class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
+class _RedirectAgentTestsMixin(object):
     """
-    Tests for L{client.RedirectAgent}.
+    Test cases mixin for L{RedirectAgentTests} and
+    L{BrowserLikeRedirectAgentTests}.
     """
-
-    def setUp(self):
-        self.reactor = self.Reactor()
-        self.agent = client.RedirectAgent(
-            self.buildAgentForWrapperTest(self.reactor))
-
-
     def test_noRedirect(self):
         """
         L{client.RedirectAgent} behaves like L{client.Agent} if the response
@@ -1993,23 +1987,31 @@ class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         self._testRedirectDefault(307)
 
 
-    def test_redirect303(self):
+    def _testRedirectToGet(self, status, method):
         """
-        L{RedirectAgent} changes the methods to C{GET} when getting a redirect
-        on a C{POST} request.
+        L{RedirectAgent} changes the methods to I{GET} when getting a redirect
+        on a non-I{GET} request.
         """
-        self.agent.request('POST', 'http://example.com/foo')
+        self.agent.request(method, 'http://example.com/foo')
 
         req, res = self.protocol.requests.pop()
 
         headers = http_headers.Headers(
             {'location': ['http://example.com/bar']})
-        response = Response(('HTTP', 1, 1), 303, 'OK', headers, None)
+        response = Response(('HTTP', 1, 1), status, 'OK', headers, None)
         res.callback(response)
 
         req2, res2 = self.protocol.requests.pop()
         self.assertEqual('GET', req2.method)
         self.assertEqual('/bar', req2.uri)
+
+
+    def test_redirect303(self):
+        """
+        L{RedirectAgent} changes the methods to I{GET} when getting a 303
+        redirect on a I{POST} request.
+        """
+        self._testRedirectToGet(303, 'POST')
 
 
     def test_noLocationField(self):
@@ -2062,24 +2064,6 @@ class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         return deferred.addCallback(checkFailure)
 
 
-    def test_301OnPost(self):
-        """
-        When getting a 301 redirect on a C{POST} request, L{RedirectAgent}
-        fails with a L{ResponseFailed} error wrapping a L{error.PageRedirect}
-        exception.
-        """
-        return self._testPageRedirectFailure(301, 'POST')
-
-
-    def test_302OnPost(self):
-        """
-        When getting a 302 redirect on a C{POST} request, L{RedirectAgent}
-        fails with a L{ResponseFailed} error wrapping a L{error.PageRedirect}
-        exception.
-        """
-        return self._testPageRedirectFailure(302, 'POST')
-
-
     def test_307OnPost(self):
         """
         When getting a 307 redirect on a C{POST} request, L{RedirectAgent}
@@ -2121,3 +2105,63 @@ class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
             self.assertEqual(302, fail.response.code)
 
         return deferred.addCallback(checkFailure)
+
+
+
+class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin,
+                         _RedirectAgentTestsMixin):
+    """
+    Tests for L{client.RedirectAgent}.
+    """
+
+    def setUp(self):
+        self.reactor = self.Reactor()
+        self.agent = client.RedirectAgent(
+            self.buildAgentForWrapperTest(self.reactor))
+
+
+    def test_301OnPost(self):
+        """
+        When getting a 301 redirect on a C{POST} request, L{RedirectAgent}
+        fails with a L{ResponseFailed} error wrapping a L{error.PageRedirect}
+        exception.
+        """
+        return self._testPageRedirectFailure(301, 'POST')
+
+
+    def test_302OnPost(self):
+        """
+        When getting a 302 redirect on a C{POST} request, L{RedirectAgent}
+        fails with a L{ResponseFailed} error wrapping a L{error.PageRedirect}
+        exception.
+        """
+        return self._testPageRedirectFailure(302, 'POST')
+
+
+
+class BrowserLikeRedirectAgentTests(unittest.TestCase,
+                                    FakeReactorAndConnectMixin,
+                                    _RedirectAgentTestsMixin):
+    """
+    Tests for L{client.BrowserLikeRedirectAgent}.
+    """
+    def setUp(self):
+        self.reactor = self.Reactor()
+        self.agent = client.BrowserLikeRedirectAgent(
+            self.buildAgentForWrapperTest(self.reactor))
+
+
+    def test_redirectToGet301(self):
+        """
+        L{RedirectAgent} changes the methods to I{GET} when getting a 302
+        redirect on a I{POST} request.
+        """
+        self._testRedirectToGet(301, 'POST')
+
+
+    def test_redirectToGet302(self):
+        """
+        L{RedirectAgent} changes the methods to I{GET} when getting a 302
+        redirect on a I{POST} request.
+        """
+        self._testRedirectToGet(302, 'POST')

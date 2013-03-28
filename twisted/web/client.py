@@ -1545,6 +1545,9 @@ class RedirectAgent(object):
     The implementation is rather strict: 301 and 302 behaves like 307, not
     redirecting automatically on methods different from C{GET} and C{HEAD}.
 
+    See L{BrowserLikeRedirectAgent} for a redirecting Agent that behaves more
+    like a web browser.
+
     @param redirectLimit: The maximum number of times the agent is allowed to
         follow redirects before failing with a L{error.InfiniteRedirection}.
 
@@ -1614,6 +1617,24 @@ class RedirectAgent(object):
             return self._handleRedirect(response, 'GET', uri, headers,
                                         redirectCount)
         return response
+
+
+
+class BrowserLikeRedirectAgent(RedirectAgent):
+    """
+    An L{Agent} wrapper which handles HTTP redirects in the same fashion as web
+    browsers.
+
+    Unlike L{RedirectAgent}, the implementation is more relaxed: 301 and 302
+    behave like 303, redirecting automatically on any method and altering the
+    redirect request to a I{GET}.
+
+    @see: L{RedirectAgent}
+
+    @since: 13.1
+    """
+    _redirectResponses = [http.TEMPORARY_REDIRECT]
+    _seeOtherResponses = [http.MOVED_PERMANENTLY, http.FOUND, http.SEE_OTHER]
 
 
 
