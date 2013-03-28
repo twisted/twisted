@@ -3,52 +3,50 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import sys, warnings
+import stringprep
+from encodings import idna
+
+# We require Unicode version 3.2.
+from unicodedata import ucd_3_2_0 as unicodedata
+
+from twisted.python.versions import Version
+from twisted.python.deprecate import deprecatedModuleAttribute
+
 from zope.interface import Interface, implements
 
-if sys.version_info < (2,3,2):
-    import re
 
-    class IDNA:
-        dots = re.compile(u"[\u002E\u3002\uFF0E\uFF61]")
-        def nameprep(self, label):
-            return label.lower()
+crippled = False
+deprecatedModuleAttribute(
+    Version("Twisted", 13, 1, 0),
+    "crippled is always False",
+    __name__,
+    "crippled")
 
-    idna = IDNA()
 
-    crippled = True
-
-    warnings.warn("Accented and non-Western Jabber IDs will not be properly "
-                  "case-folded with this version of Python, resulting in "
-                  "incorrect protocol-level behavior.  It is strongly "
-                  "recommended you upgrade to Python 2.3.2 or newer if you "
-                  "intend to use Twisted's Jabber support.")
-
-else:
-    import stringprep
-    # We require Unicode version 3.2. Python 2.5 and later provide this as
-    # a separate object. Before that the unicodedata module uses 3.2.
-    try:
-        from unicodedata import ucd_3_2_0 as unicodedata
-    except:
-        import unicodedata
-    from encodings import idna
-
-    crippled = False
-
-del sys, warnings
 
 class ILookupTable(Interface):
-    """ Interface for character lookup classes. """
+    """
+    Interface for character lookup classes.
+    """
 
     def lookup(c):
-        """ Return whether character is in this table. """
+        """
+        Return whether character is in this table.
+        """
+
+
 
 class IMappingTable(Interface):
-    """ Interface for character mapping classes. """
+    """
+    Interface for character mapping classes.
+    """
 
     def map(c):
-        """ Return mapping for character. """
+        """
+        Return mapping for character.
+        """
+
+
 
 class LookupTableFromFunction:
 
@@ -56,6 +54,8 @@ class LookupTableFromFunction:
 
     def __init__(self, in_table_function):
         self.lookup = in_table_function
+
+
 
 class LookupTable:
 
@@ -67,12 +67,16 @@ class LookupTable:
     def lookup(self, c):
         return c in self._table
 
+
+
 class MappingTableFromFunction:
 
     implements(IMappingTable)
 
     def __init__(self, map_table_function):
         self.map = map_table_function
+
+
 
 class EmptyMappingTable:
 
@@ -86,6 +90,8 @@ class EmptyMappingTable:
             return None
         else:
             return c
+
+
 
 class Profile:
     def __init__(self, mappings=[],  normalize=True, prohibiteds=[],
@@ -211,43 +217,30 @@ class NamePrep:
             raise UnicodeError, "Invalid trailing hyphen-minus"
         return label
 
-if crippled:
-    case_map = MappingTableFromFunction(lambda c: c.lower())
-    nodeprep = Profile(mappings=[case_map],
-                       normalize=False,
-                       prohibiteds=[LookupTable([u' ', u'"', u'&', u"'", u'/',
-                                                 u':', u'<', u'>', u'@'])],
-                       check_unassigneds=False,
-                       check_bidi=False)
 
-    resourceprep = Profile(normalize=False,
-                           check_unassigneds=False,
-                           check_bidi=False)
+C_11 = LookupTableFromFunction(stringprep.in_table_c11)
+C_12 = LookupTableFromFunction(stringprep.in_table_c12)
+C_21 = LookupTableFromFunction(stringprep.in_table_c21)
+C_22 = LookupTableFromFunction(stringprep.in_table_c22)
+C_3 = LookupTableFromFunction(stringprep.in_table_c3)
+C_4 = LookupTableFromFunction(stringprep.in_table_c4)
+C_5 = LookupTableFromFunction(stringprep.in_table_c5)
+C_6 = LookupTableFromFunction(stringprep.in_table_c6)
+C_7 = LookupTableFromFunction(stringprep.in_table_c7)
+C_8 = LookupTableFromFunction(stringprep.in_table_c8)
+C_9 = LookupTableFromFunction(stringprep.in_table_c9)
 
-else:
-    C_11 = LookupTableFromFunction(stringprep.in_table_c11)
-    C_12 = LookupTableFromFunction(stringprep.in_table_c12)
-    C_21 = LookupTableFromFunction(stringprep.in_table_c21)
-    C_22 = LookupTableFromFunction(stringprep.in_table_c22)
-    C_3 = LookupTableFromFunction(stringprep.in_table_c3)
-    C_4 = LookupTableFromFunction(stringprep.in_table_c4)
-    C_5 = LookupTableFromFunction(stringprep.in_table_c5)
-    C_6 = LookupTableFromFunction(stringprep.in_table_c6)
-    C_7 = LookupTableFromFunction(stringprep.in_table_c7)
-    C_8 = LookupTableFromFunction(stringprep.in_table_c8)
-    C_9 = LookupTableFromFunction(stringprep.in_table_c9)
+B_1 = EmptyMappingTable(stringprep.in_table_b1)
+B_2 = MappingTableFromFunction(stringprep.map_table_b2)
 
-    B_1 = EmptyMappingTable(stringprep.in_table_b1)
-    B_2 = MappingTableFromFunction(stringprep.map_table_b2)
+nodeprep = Profile(mappings=[B_1, B_2],
+                   prohibiteds=[C_11, C_12, C_21, C_22,
+                                C_3, C_4, C_5, C_6, C_7, C_8, C_9,
+                                LookupTable([u'"', u'&', u"'", u'/',
+                                             u':', u'<', u'>', u'@'])])
 
-    nodeprep = Profile(mappings=[B_1, B_2],
-                       prohibiteds=[C_11, C_12, C_21, C_22,
-                                    C_3, C_4, C_5, C_6, C_7, C_8, C_9,
-                                    LookupTable([u'"', u'&', u"'", u'/',
-                                                 u':', u'<', u'>', u'@'])])
-
-    resourceprep = Profile(mappings=[B_1,],
-                           prohibiteds=[C_12, C_21, C_22,
-                                        C_3, C_4, C_5, C_6, C_7, C_8, C_9])
+resourceprep = Profile(mappings=[B_1,],
+                       prohibiteds=[C_12, C_21, C_22,
+                                    C_3, C_4, C_5, C_6, C_7, C_8, C_9])
 
 nameprep = NamePrep()

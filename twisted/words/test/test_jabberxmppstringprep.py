@@ -3,11 +3,34 @@
 
 from twisted.trial import unittest
 
-from twisted.words.protocols.jabber.xmpp_stringprep import nodeprep, resourceprep, nameprep, crippled
+from twisted.words.protocols.jabber.xmpp_stringprep import (
+    nodeprep, resourceprep, nameprep)
+
+
+
+class DeprecationTestCase(unittest.TestCase):
+    """
+    Deprecations in L{twisted.words.protocols.jabber.xmpp_stringprep}.
+    """
+    def test_crippled(self):
+        """
+        L{xmpp_stringprep.crippled} is deprecated and always returns C{False}.
+        """
+        from twisted.words.protocols.jabber.xmpp_stringprep import crippled
+        warnings = self.flushWarnings(
+            offendingFunctions=[self.test_crippled])
+        self.assertEqual(DeprecationWarning, warnings[0]['category'])
+        self.assertEqual(
+            "twisted.words.protocols.jabber.xmpp_stringprep.crippled was "
+            "deprecated in Twisted 13.1.0: crippled is always False",
+            warnings[0]['message'])
+        self.assertEqual(1, len(warnings))
+        self.assertEqual(crippled, False)
+
+
 
 class XMPPStringPrepTest(unittest.TestCase):
     """
-
     The nodeprep stringprep profile is similar to the resourceprep profile,
     but does an extra mapping of characters (table B.2) and disallows
     more characters (table C.1.1 and eight extra punctuation characters).
@@ -19,16 +42,12 @@ class XMPPStringPrepTest(unittest.TestCase):
     flag to be false. This implementation assumes it to be true, and restricts
     the allowed set of characters.  The tests here only check for the
     differences.
-    
     """
 
     def testResourcePrep(self):
         self.assertEqual(resourceprep.prepare(u'resource'), u'resource')
         self.assertNotEquals(resourceprep.prepare(u'Resource'), u'resource')
         self.assertEqual(resourceprep.prepare(u' '), u' ')
-
-        if crippled:
-            return
 
         self.assertEqual(resourceprep.prepare(u'Henry \u2163'), u'Henry IV')
         self.assertEqual(resourceprep.prepare(u'foo\xad\u034f\u1806\u180b'
@@ -65,6 +84,7 @@ class XMPPStringPrepTest(unittest.TestCase):
                           u'\u06271\u0628')
         self.assertRaises(UnicodeError, resourceprep.prepare, u'\U000e0002')
 
+
     def testNodePrep(self):
         self.assertEqual(nodeprep.prepare(u'user'), u'user')
         self.assertEqual(nodeprep.prepare(u'User'), u'user')
@@ -84,9 +104,6 @@ class XMPPStringPrepTest(unittest.TestCase):
         self.assertRaises(UnicodeError, nameprep.prepare, u'ex@mple.com')
         self.assertRaises(UnicodeError, nameprep.prepare, u'-example.com')
         self.assertRaises(UnicodeError, nameprep.prepare, u'example-.com')
-
-        if crippled:
-            return
 
         self.assertEqual(nameprep.prepare(u'stra\u00dfe.example.com'),
                           u'strasse.example.com')
