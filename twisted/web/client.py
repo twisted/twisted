@@ -1166,7 +1166,7 @@ class _AgentBase(object):
             return proto.request(
                 Request(method, requestPath, headers, bodyProducer,
                         persistent=self._pool.persistent,
-                        parsedURI=parsedURI))
+                        _parsedURI=parsedURI))
         d.addCallback(cbConnected)
         return d
 

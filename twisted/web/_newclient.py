@@ -565,21 +565,21 @@ class Request:
     @ivar persistent: Set to C{True} when you use HTTP persistent connection.
     @type persistent: C{bool}
 
-    @ivar parsedURI: Parsed I{URI} for the request, or C{None}.
-    @type parsedURI: L{_URI}
+    @ivar _parsedURI: Parsed I{URI} for the request, or C{None}.
+    @type _parsedURI: L{_URI}
     """
     def __init__(self, method, uri, headers, bodyProducer, persistent=False,
-                 parsedURI=None):
+                 _parsedURI=None):
         self.method = method
         self.uri = uri
         self.headers = headers
         self.bodyProducer = bodyProducer
         self.persistent = persistent
-        self.parsedURI = parsedURI
+        self._parsedURI = _parsedURI
 
 
     def absoluteURI(self):
-        return self.parsedURI.uri
+        return self._parsedURI.uri
     absoluteURI = property(absoluteURI)
 
 
