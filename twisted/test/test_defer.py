@@ -20,6 +20,21 @@ class GenericError(Exception):
 
 
 
+def getDivisionFailure(*args, **kwargs):
+    """
+    Make a L{failure.Failure} of a divide-by-zero error.
+
+    @param args: Any C{*args} are passed to Failure's constructor.
+    @param kwargs: Any C{**kwargs} are passed to Failure's constructor.
+    """
+    try:
+        1/0
+    except:
+        f = failure.Failure(*args, **kwargs)
+    return f
+
+
+
 class ImmediateFailureMixin(object):
     """
     Add additional assertion methods.
@@ -1069,6 +1084,40 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         localz, globalz = fail.frames[0][-2:]
         self.assertNotEquals([], localz)
         self.assertNotEquals([], globalz)
+
+
+    def test_inlineCallbacksTracebacks(self):
+        """
+        L{defer.inlineCallbacks} that re-raise tracebacks into their deferred
+        should not lose their tracebacks.
+        """
+        f = getDivisionFailure()
+        d = defer.Deferred()
+        try:
+            f.raiseException()
+        except:
+            d.errback()
+
+        def ic(d):
+            yield d
+        ic = defer.inlineCallbacks(ic)
+        newFailure = self.failureResultOf(d)
+        tb = traceback.extract_tb(newFailure.getTracebackObject())
+
+        self.assertEqual(len(tb), 2)
+        self.assertIn('test_defer', tb[0][0])
+        self.assertEqual('test_inlineCallbacksTracebacks', tb[0][2])
+        self.assertEqual('f.raiseException()', tb[0][3])
+        self.assertIn('test_defer', tb[1][0])
+        self.assertEqual('getDivisionFailure', tb[1][2])
+        self.assertEqual('1/0', tb[1][3])
+
+
+    if _PY3:
+        test_inlineCallbacksTracebacks.todo = (
+            "Python 3 support to be fixed in #5949")
+        # Remove this line in #6008 (unittest todo support):
+        del test_inlineCallbacksTracebacks
 
 
 
