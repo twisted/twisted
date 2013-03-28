@@ -1233,22 +1233,3 @@ class URITests(unittest.TestCase):
 
         uri = client._URI.parse(b'http://example.com/foo;param?a=1#frag')
         self.assertEquals(b'/foo;param?a=1', uri.originForm)
-
-
-    def test_externalUnicodeInterference(self):
-        """
-        L{client._URI} should parse into C{bytes} for the scheme, host, path,
-        parameters, query string and fragment attributes, even when passed a
-        URI which has previously been passed to L{urlparse} as a C{unicode}
-        string.
-        """
-        badInput = u'http://example.com/path'
-        goodInput = badInput.encode('ascii')
-        urlparse(badInput)
-        uri = client._URI.parse(goodInput)
-        self.assertIsInstance(uri.scheme, bytes)
-        self.assertIsInstance(uri.host, bytes)
-        self.assertIsInstance(uri.path, bytes)
-        self.assertIsInstance(uri.params, bytes)
-        self.assertIsInstance(uri.query, bytes)
-        self.assertIsInstance(uri.fragment, bytes)
