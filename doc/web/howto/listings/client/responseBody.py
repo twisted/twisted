@@ -16,7 +16,7 @@ def cbRequest(response):
     return d
 
 def cbBody(body):
-    print 'Rsponse body:'
+    print 'Response body:'
     print body
 
 def main(reactor):
@@ -27,5 +27,6 @@ def main(reactor):
         Headers({'User-Agent': ['Twisted Web Client Example']}),
         None)
     d.addCallback(cbRequest)
+    return d
 
 react(main, ())

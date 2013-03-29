@@ -29,7 +29,6 @@ from twisted.python import log
 from twisted.python.failure import Failure
 from twisted.web import http
 from twisted.internet import defer, protocol, task, reactor
-from twisted.internet.error import ConnectionDone
 from twisted.internet.interfaces import IProtocol
 from twisted.internet.endpoints import TCP4ClientEndpoint, SSL4ClientEndpoint
 from twisted.python import failure
@@ -1626,8 +1625,8 @@ class _GetBodyProtocol(protocol.Protocol):
     @ivar message: See L{__init__}.
     @type message: L{bytes}
 
-    @ivar buf: list of byte-strings received
-    @type buf: L{list} of L{bytes}
+    @ivar dataBuffer: list of byte-strings received
+    @type dataBuffer: L{list} of L{bytes}
     """
 
     def __init__(self, status, message, deferred):
@@ -1644,18 +1643,20 @@ class _GetBodyProtocol(protocol.Protocol):
         self.deferred = deferred
         self.status = status
         self.message = message
-        self.buf = []
+        self.dataBuffer = []
+
 
     def dataReceived(self, bytes):
-        self.buf.append(bytes)
+        self.dataBuffer.append(bytes)
+
 
     def connectionLost(self, reason):
-        if reason.check(ConnectionDone):
-            self.deferred.callback(b''.join(self.buf))
+        if reason.check(ResponseDone):
+            self.deferred.callback(b''.join(self.dataBuffer))
         elif reason.check(PotentialDataLoss):
             self.deferred.errback(
                 PartialDownloadError(self.status, self.message,
-                                     b''.join(self.buf)))
+                                     b''.join(self.dataBuffer)))
         else:
             self.deferred.errback(reason)
 
@@ -1665,8 +1666,8 @@ def getBody(response):
     """
     Get the body of an L{IResponse} and return it as a byte string.
 
-    This is a helper function, for clients that don't want to incrementally
-    recieve the body of an HTTP response.
+    This is a helper function for clients that don't want to incrementally
+    receive the body of an HTTP response.
 
     @type response: L{IResponse}
     @param response: An HTTP response
