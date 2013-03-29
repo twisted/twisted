@@ -491,8 +491,8 @@ class Reporter(TestResult):
         When a C{TestCase} method fails synchronously, the stack looks like
         this:
          - [0]: C{defer.maybeDeferred}
-         - [1]: C{_utilspy3.runWithWarningsSuppressed}
-         - [2]: C{_utilspy3.runWithWarningsSuppressed}
+         - [1]: C{utils.runWithWarningsSuppressed}
+         - [2]: C{utils.runWithWarningsSuppressed}
          - [3:-2]: code in the test method which failed
          - [-1]: C{_synctest.fail}
 
@@ -531,7 +531,7 @@ class Reporter(TestResult):
         syncCase = (("_run", "_synctest"),
                     ("runWithWarningsSuppressed", "util"))
         asyncCase = (("maybeDeferred", "defer"),
-                     ("runWithWarningsSuppressed", "_utilspy3"))
+                     ("runWithWarningsSuppressed", "utils"))
 
         twoFrames = ((firstMethod, firstFile), (secondMethod, secondFile))
         if twoFrames == syncCase:

@@ -24,7 +24,7 @@ import sys
 from random import randrange
 
 from twisted.python.compat import _PY3
-from twisted.internet import defer, _utilspy3 as utils, interfaces
+from twisted.internet import defer, utils, interfaces
 from twisted.python.failure import Failure
 from twisted.python import deprecate, versions
 from twisted.python.filepath import FilePath
