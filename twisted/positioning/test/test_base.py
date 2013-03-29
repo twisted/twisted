@@ -14,7 +14,8 @@ class AngleTests(TestCase):
     """
     def test_empty(self):
         """
-        Tests the repr of an empty angle.
+        The repr of an empty angle says that is of unknown type and unknown
+        value.
         """
         a = base.Angle()
         self.assertEqual("<Angle of unknown type (unknown value)>", repr(a))
@@ -22,7 +23,8 @@ class AngleTests(TestCase):
 
     def test_variation(self):
         """
-        Tests the repr of an empty variation.
+        The repr of an empty variation says that it is a variation of unknown
+        value.
         """
         a = base.Angle(angleType=Angles.VARIATION)
         self.assertEqual("<Variation (unknown value)>", repr(a))
@@ -30,7 +32,8 @@ class AngleTests(TestCase):
 
     def test_unknownType(self):
         """
-        Tests the repr of an unknown angle of a 1 decimal degree value.
+        The repr of an angle of unknown type but a given value displays that
+        type and value in its repr.
         """
         a = base.Angle(1.0)
         self.assertEqual("<Angle of unknown type (1.0 degrees)>", repr(a))
@@ -43,18 +46,21 @@ class HeadingTests(TestCase):
     """
     def test_simple(self):
         """
-        Tests some of the basic features of a very simple heading.
+        Tests that a simple heading has a value in decimal degrees, which is
+        also its value when converted to a float. Its variation, and by
+        consequence its corrected heading, is C{None}.
         """
         h = base.Heading(1.)
         self.assertEqual(h.inDecimalDegrees, 1.)
+        self.assertEqual(float(h), 1.)
         self.assertEqual(h.variation, None)
         self.assertEqual(h.correctedHeading, None)
-        self.assertEqual(float(h), 1.)
 
 
     def test_headingWithoutVariationRepr(self):
         """
-        Tests the repr of a heading without a variation.
+        A repr of a heading with no variation reports its value and that the
+        variation is unknown.
         """
         heading = base.Heading(1.)
         expectedRepr = "<Heading (1.0 degrees, unknown variation)>"
@@ -63,7 +69,8 @@ class HeadingTests(TestCase):
 
     def test_headingWithVariationRepr(self):
         """
-        Tests the repr of a heading with a variation.
+        A repr of a heading with known variation reports its value and the
+        value of that variation.
         """
         angle, variation = 1.0, -10.0
         h = base.Heading.fromFloats(angle, variationValue=variation)
@@ -73,26 +80,32 @@ class HeadingTests(TestCase):
         self.assertEqual(repr(h), expectedRepr)
 
 
-    def test_equality(self):
+    def test_valueEquality(self):
         """
-        Tests if equal headings compare equal.
+        Headings with the same values compare equal.
         """
         self.assertEqual(base.Heading(1.), base.Heading(1.))
 
 
-    def test_inequality(self):
+    def test_valueInequality(self):
         """
-        Tests if unequal headings compare unequal.
+        Headings with different values compare unequal.
         """
         self.assertNotEquals(base.Heading(1.), base.Heading(2.))
 
 
-    def test_edgeCases(self):
+    def test_zeroHeadingEdgeCase(self):
         """
-        Tests that the two edge cases of a heading value of zero and a heading
-        value of zero with a variation of C{180.0} don't fail.
+        Headings can be instantiated with a value of 0 and no variation.
         """
         base.Heading(0)
+
+
+    def test_zeroHeading180DegreeVariationEdgeCase(self):
+        """
+        Headings can be instantiated with a value of 0 and a variation of 180
+        degrees.
+        """
         base.Heading(0, 180)
 
 
@@ -107,49 +120,49 @@ class HeadingTests(TestCase):
 
     def test_badAngleValueEdgeCase(self):
         """
-        Tests that a heading with value C{360.0} fails.
+        Headings can not be instantiated with a value of 360 degrees.
         """
         self._badValueTest(angleValue=360.0)
 
 
     def test_badVariationEdgeCase(self):
         """
-        Tests that a variation of C{-180.0} fails.
+        Headings can not be instantiated with a variation of -180 degrees.
         """
         self._badValueTest(variationValue=-180.0)
 
 
     def test_negativeHeading(self):
         """
-        Tests that negative heading values cause C{ValueError}.
+        Negative heading values raise C{ValueError}.
         """
         self._badValueTest(angleValue=-10.0)
 
 
     def test_headingTooLarge(self):
         """
-        Tests that an angle value larger than C{360.0} raises C{ValueError}.
+        Heading values greater than C{360.0} raise C{ValueError}.
         """
         self._badValueTest(angleValue=370.0)
 
 
     def test_variationTooNegative(self):
         """
-        Tests that variation values less than C{-180.0} fail.
+        Variation values less than C{-180.0} raise C{ValueError}.
         """
         self._badValueTest(variationValue=-190.0)
 
 
     def test_variationTooPositive(self):
         """
-        Tests that variation values greater than C{-180.0} fail.
+        Variation values greater than C{180.0} raise C{ValueError}.
         """
         self._badValueTest(variationValue=190.0)
 
 
     def test_correctedHeading(self):
         """
-        Simple test for a corrected heading.
+        A heading with a value and a variation has a corrected heading.
         """
         h = base.Heading.fromFloats(1., variationValue=-10.)
         self.assertEqual(h.correctedHeading, base.Angle(11., Angles.HEADING))
@@ -157,8 +170,9 @@ class HeadingTests(TestCase):
 
     def test_correctedHeadingOverflow(self):
         """
-        Tests that a corrected heading that comes out above 360 degrees is
-        correctly handled.
+        A heading with a value and a variation has the appropriate corrected
+        heading value, even when the variation puts it across the 360 degree
+        boundary.
         """
         h = base.Heading.fromFloats(359., variationValue=-2.)
         self.assertEqual(h.correctedHeading, base.Angle(1., Angles.HEADING))
@@ -166,8 +180,9 @@ class HeadingTests(TestCase):
 
     def test_correctedHeadingOverflowEdgeCase(self):
         """
-        Tests that a corrected heading that comes out to exactly 360 degrees
-        is correctly handled.
+        A heading with a value and a variation has the appropriate corrected
+        heading value, even when the variation puts it exactly at the 360
+        degree boundary.
         """
         h = base.Heading.fromFloats(359., variationValue=-1.)
         self.assertEqual(h.correctedHeading, base.Angle(0., Angles.HEADING))
@@ -175,8 +190,9 @@ class HeadingTests(TestCase):
 
     def test_correctedHeadingUnderflow(self):
         """
-        Tests that a corrected heading that comes out under 0 degrees is
-        correctly handled.
+        A heading with a value and a variation has the appropriate corrected
+        heading value, even when the variation puts it under the 0 degree
+        boundary.
         """
         h = base.Heading.fromFloats(1., variationValue=2.)
         self.assertEqual(h.correctedHeading, base.Angle(359., Angles.HEADING))
@@ -184,8 +200,9 @@ class HeadingTests(TestCase):
 
     def test_correctedHeadingUnderflowEdgeCase(self):
         """
-        Tests that a corrected heading that comes out under 0 degrees is
-        correctly handled.
+        A heading with a value and a variation has the appropriate corrected
+        heading value, even when the variation puts it exactly at the 0
+        degree boundary.
         """
         h = base.Heading.fromFloats(1., variationValue=1.)
         self.assertEqual(h.correctedHeading, base.Angle(0., Angles.HEADING))
@@ -193,7 +210,7 @@ class HeadingTests(TestCase):
 
     def test_setVariationSign(self):
         """
-        Tests that setting the sign on a variation works.
+        Setting the sign of a heading changes the variation sign.
         """
         h = base.Heading.fromFloats(1., variationValue=1.)
         h.setSign(1)
@@ -204,8 +221,8 @@ class HeadingTests(TestCase):
 
     def test_setBadVariationSign(self):
         """
-        Tests that setting invalid sign values on a variation fails
-        predictably.
+        Setting the sign of a heading to values that aren't C{-1} or C{1}
+        raises C{ValueError} and does not affect the heading.
         """
         h = base.Heading.fromFloats(1., variationValue=1.)
         self.assertRaises(ValueError, h.setSign, -50)
@@ -220,16 +237,16 @@ class HeadingTests(TestCase):
 
     def test_setUnknownVariationSign(self):
         """
-        Tests that setting an otherwise correct sign on an unknown variation
-        fails predictably.
+        Setting the sign on a heading with unknown variation raises
+        C{ValueError}.
         """
         h = base.Heading.fromFloats(1.)
-        self.assertEqual(None, h.variation.inDecimalDegrees)
+        self.assertIdentical(None, h.variation.inDecimalDegrees)
         self.assertRaises(ValueError, h.setSign, 1)
 
 
 
-class CoordinateTests(TestCase):
+class CoordinateTests(TestCase): ## TODO: START HERE
     def test_simple(self):
         """
         Test that coordinates are convertible into a float, and verifies the
