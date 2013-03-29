@@ -329,6 +329,7 @@ class DeferredSuppressedWarningsTests(SuppressedWarningsTests):
         self.assertEqual(
             ["ignore foo 2"], [w['message'] for w in self.flushWarnings()])
 
+
     def test_deferredErrback(self):
         """
         If the function called by L{utils.runWithWarningsSuppressed} returns a
