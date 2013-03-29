@@ -246,91 +246,107 @@ class HeadingTests(TestCase):
 
 
 
-class CoordinateTests(TestCase): ## TODO: START HERE
-    def test_simple(self):
+class CoordinateTests(TestCase):
+    def test_float(self):
         """
-        Test that coordinates are convertible into a float, and verifies the
-        generic coordinate repr.
+        Coordinates can be converted to floats.
         """
-        value = 10.0
-        c = base.Coordinate(value)
-        self.assertEqual(float(c), value)
-        expectedRepr = "<Angle of unknown type (%s degrees)>" % (value,)
-        self.assertEqual(repr(c), expectedRepr)
+        coordinate = base.Coordinate(10.0)
+        self.assertEqual(float(coordinate), 10.0)
+
+
+    def test_repr(self):
+        """
+        Coordinates that aren't explicitly latitudes or longitudes have an
+        appropriate repr.
+        """
+        coordinate = base.Coordinate(10.0)
+        expectedRepr = "<Angle of unknown type ({} degrees)>".format(10.0)
+        self.assertEqual(repr(coordinate), expectedRepr)
 
 
     def test_positiveLatitude(self):
         """
-        Tests creating positive latitudes and verifies their repr.
+        Positive latitudes have a repr that specifies their type and value.
         """
-        value = 50.0
-        c = base.Coordinate(value, Angles.LATITUDE)
-        self.assertEqual(repr(c), "<Latitude (%s degrees)>" % value)
+        coordinate = base.Coordinate(10.0, Angles.LATITUDE)
+        expectedRepr = "<Latitude ({} degrees)>".format(10.0)
+        self.assertEqual(repr(coordinate), expectedRepr)
 
 
     def test_negativeLatitude(self):
         """
-        Tests creating negative latitudes and verifies their repr.
+        Negative latitudes have a repr that specifies their type and value.
         """
-        value = -50.0
-        c = base.Coordinate(value, Angles.LATITUDE)
-        self.assertEqual(repr(c), "<Latitude (%s degrees)>" % value)
+        coordinate = base.Coordinate(-50.0, Angles.LATITUDE)
+        expectedRepr = "<Latitude ({} degrees)>".format(-50.0)
+        self.assertEqual(repr(coordinate), expectedRepr)
 
 
     def test_positiveLongitude(self):
         """
-        Tests creating positive longitudes and verifies their repr.
+        Positive longitudes have a repr that specifies their type and value.
         """
-        value = 50.0
-        c = base.Coordinate(value, Angles.LONGITUDE)
-        self.assertEqual(repr(c), "<Longitude (%s degrees)>" % value)
+        longitude = base.Coordinate(50.0, Angles.LONGITUDE)
+        expectedRepr = "<Longitude ({} degrees)>".format(50.0)
+        self.assertEqual(repr(longitude), expectedRepr)
 
 
     def test_negativeLongitude(self):
         """
-        Tests creating negative longitudes and verifies their repr.
+        Negative longitudes have a repr that specifies their type and value.
         """
-        value = -50.0
-        c = base.Coordinate(value, Angles.LONGITUDE)
-        self.assertEqual(repr(c), "<Longitude (%s degrees)>" % value)
+        longitude = base.Coordinate(-50.0, Angles.LONGITUDE)
+        expectedRepr = "<Longitude ({} degrees)>".format(-50.0)
+        self.assertEqual(repr(longitude), expectedRepr)
 
 
-    def test_badCoordinateType(self):
+    def test_bogusCoordinateType(self):
         """
-        Tests that creating coordinates with bogus types raises C{ValueError}.
+        Creating coordinates with bogus types rasies C{ValueError}.
         """
         self.assertRaises(ValueError, base.Coordinate, 150.0, "BOGUS")
 
 
+    def test_angleTypeNotCoordinate(self):
+        """
+        Creating coordinates with angle types that aren't coordinates raises
+        C{ValueError}.
+        """
+        self.assertRaises(ValueError, base.Coordinate, 150.0, Angles.HEADING)
+
+
     def test_equality(self):
         """
-        Tests that equal coordinates compare equal.
+        Coordinates with the same value and type are equal.
         """
-        self.assertEqual(base.Coordinate(1.0), base.Coordinate(1.0))
+        def makeCoordinate():
+            return base.Coordinate(1.0, Angles.LONGITUDE)
+        self.assertEqual(makeCoordinate(), makeCoordinate())
 
 
     def test_differentAnglesInequality(self):
         """
-        Tests that coordinates with different angles compare unequal.
+        Coordinates with different values aren't equal.
         """
         c1 = base.Coordinate(1.0)
         c2 = base.Coordinate(-1.0)
-        self.assertNotEquals(c1, c2)
+        self.assertNotEqual(c1, c2)
 
 
     def test_differentTypesInequality(self):
         """
-        Tests that coordinates with the same angles but different types
-        compare unequal.
+        Coordinates with the same values but different types aren't equal.
         """
         c1 = base.Coordinate(1.0, Angles.LATITUDE)
         c2 = base.Coordinate(1.0, Angles.LONGITUDE)
-        self.assertNotEquals(c1, c2)
+        self.assertNotEqual(c1, c2)
 
 
     def test_sign(self):
         """
-        Tests that setting the sign on a coordinate works.
+        Setting the sign on a coordinate sets the sign of the value of the
+        coordinate.
         """
         c = base.Coordinate(50., Angles.LATITUDE)
         c.setSign(1)
@@ -341,7 +357,7 @@ class CoordinateTests(TestCase): ## TODO: START HERE
 
     def test_badVariationSign(self):
         """
-        Tests that setting a bogus sign value on a coordinate raises
+        Setting a bogus sign value (not -1 or 1) on a coordinate raises
         C{ValueError} and doesn't affect the coordinate.
         """
         value = 50.0
