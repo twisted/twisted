@@ -143,9 +143,6 @@ class HTTPPageGetter(http.HTTPClient):
             return
         url = l[0]
         if self.followRedirect:
-            scheme, host, port, path = \
-                _parse(url, defaultPort=self.transport.getPeer().port)
-
             self.factory._redirectCount += 1
             if self.factory._redirectCount >= self.factory.redirectLimit:
                 err = error.InfiniteRedirection(
@@ -372,12 +369,12 @@ class HTTPClientFactory(protocol.ClientFactory):
 
     def setURL(self, url):
         self.url = url
-        scheme, host, port, path = _parse(url)
-        if scheme and host:
-            self.scheme = scheme
-            self.host = host
-            self.port = port
-        self.path = path
+        uri = _URI.parse(url)
+        if uri.scheme and uri.host:
+            self.scheme = uri.scheme
+            self.host = uri.host
+            self.port = uri.port
+        self.path = uri.originForm
 
     def buildProtocol(self, addr):
         p = protocol.ClientFactory.buildProtocol(self, addr)
@@ -538,25 +535,6 @@ class HTTPDownloader(HTTPClientFactory):
 
 
 
-def _parse(url, defaultPort=None):
-    """
-    Split the given URL into the scheme, host, port, and path.
-
-    @type url: C{bytes}
-    @param url: An URL to parse.
-
-    @type defaultPort: C{int} or C{None}
-    @param defaultPort: An alternate value to use as the port if the URL does
-    not include one.
-
-    @return: A four-tuple of the scheme, host, port, and path of the URL.  All
-    of these are C{bytes} instances except for port, which is an C{int}.
-    """
-    uri = _URI.parse(url, defaultPort=defaultPort)
-    return uri.scheme, uri.host, uri.port, uri.originForm
-
-
-
 class _URI(object):
     """
     A parsed URI object.
@@ -673,15 +651,16 @@ def _makeGetterFactory(url, factoryFactory, contextFactory=None,
 
     @return: The factory created by C{factoryFactory}
     """
-    scheme, host, port, path = _parse(url)
+    uri = _URI.parse(url)
     factory = factoryFactory(url, *args, **kwargs)
-    if scheme == b'https':
+    if uri.scheme == b'https':
         from twisted.internet import ssl
         if contextFactory is None:
             contextFactory = ssl.ClientContextFactory()
-        reactor.connectSSL(nativeString(host), port, factory, contextFactory)
+        reactor.connectSSL(
+            nativeString(uri.host), uri.port, factory, contextFactory)
     else:
-        reactor.connectTCP(nativeString(host), port, factory)
+        reactor.connectTCP(nativeString(uri.host), uri.port, factory)
     return factory
 
 

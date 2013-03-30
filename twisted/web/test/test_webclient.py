@@ -216,56 +216,6 @@ class CountingResource(resource.Resource):
         return b"Success"
 
 
-class ParseUrlTestCase(unittest.TestCase):
-    """
-    Test URL parsing facility and defaults values.
-    """
-
-    def test_parse(self):
-        """
-        L{client._parse} correctly parses a URL into its various components.
-        """
-        # The default port for HTTP is 80.
-        self.assertEqual(
-            client._parse(b'http://127.0.0.1/'),
-            (b'http', b'127.0.0.1', 80, b'/'))
-
-        # The default port for HTTPS is 443.
-        self.assertEqual(
-            client._parse(b'https://127.0.0.1/'),
-            (b'https', b'127.0.0.1', 443, b'/'))
-
-        # Specifying a port.
-        self.assertEqual(
-            client._parse(b'http://spam:12345/'),
-            (b'http', b'spam', 12345, b'/'))
-
-        # Weird (but commonly accepted) structure uses default port.
-        self.assertEqual(
-            client._parse(b'http://spam:/'),
-            (b'http', b'spam', 80, b'/'))
-
-        # Spaces in the hostname are trimmed, the default path is /.
-        self.assertEqual(
-            client._parse(b'http://foo '),
-            (b'http', b'foo', 80, b'/'))
-
-
-    def test_externalUnicodeInterference(self):
-        """
-        L{client._parse} should return C{bytes} for the scheme, host, and path
-        elements of its return tuple, even when passed an URL which has
-        previously been passed to L{urlparse} as a C{unicode} string.
-        """
-        badInput = u'http://example.com/path'
-        goodInput = badInput.encode('ascii')
-        urlparse(badInput)
-        scheme, host, port, path = client._parse(goodInput)
-        self.assertIsInstance(scheme, bytes)
-        self.assertIsInstance(host, bytes)
-        self.assertIsInstance(path, bytes)
-
-
 
 class HTTPPageGetterTests(unittest.TestCase):
     """
@@ -577,9 +527,9 @@ class WebClientTestCase(unittest.TestCase):
 
     def testFactoryInfo(self):
         url = self.getURL('file')
-        scheme, host, port, path = client._parse(url)
+        uri = client._URI.parse(url)
         factory = client.HTTPClientFactory(url)
-        reactor.connectTCP(nativeString(host), port, factory)
+        reactor.connectTCP(nativeString(uri.host), uri.port, factory)
         return factory.deferred.addCallback(self._cbFactoryInfo, factory)
 
     def _cbFactoryInfo(self, ignoredResult, factory):
@@ -901,9 +851,9 @@ class WebClientSSLTestCase(WebClientTestCase):
 
     def testFactoryInfo(self):
         url = self.getURL('file')
-        scheme, host, port, path = client._parse(url)
+        uri = client._URI.parse(url)
         factory = client.HTTPClientFactory(url)
-        reactor.connectSSL(nativeString(host), port, factory,
+        reactor.connectSSL(nativeString(uri.host), uri.port, factory,
                            ssl.ClientContextFactory())
         # The base class defines _cbFactoryInfo correctly for this
         return factory.deferred.addCallback(self._cbFactoryInfo, factory)
