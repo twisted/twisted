@@ -833,6 +833,60 @@ class WebClientTestCase(unittest.TestCase):
         del method
 
 
+    def test_setURL(self):
+        """
+        L{client.HTTPClientFactory.setURL} alters the scheme, host, port and
+        path for absolute URLs.
+        """
+        url = b'http://example.com'
+        f = client.HTTPClientFactory(url)
+        self.assertEquals(url, f.url)
+        self.assertEquals(b'http', f.scheme)
+        self.assertEquals(b'example.com', f.host)
+        self.assertEquals(80, f.port)
+        self.assertEquals(b'/', f.path)
+
+        url = b'https://foo.com:8443/bar;123?a#frag'
+        f.setURL(url)
+        self.assertEquals(url, f.url)
+        self.assertEquals(b'https', f.scheme)
+        self.assertEquals(b'foo.com', f.host)
+        self.assertEquals(8443, f.port)
+        self.assertEquals(b'/bar;123?a', f.path)
+
+
+    def test_setURLRelativePath(self):
+        """
+        L{client.HTTPClientFactory.setURL} alters the path in a relative URL.
+        """
+        f = client.HTTPClientFactory(b'http://example.com')
+        url = b'/hello'
+        f.setURL(url)
+        self.assertEquals(url, f.url)
+        self.assertEquals(b'http', f.scheme)
+        self.assertEquals(b'example.com', f.host)
+        self.assertEquals(80, f.port)
+        self.assertEquals(b'/hello', f.path)
+
+
+    def test_setURLRelativeScheme(self):
+        """
+        L{client.HTTPClientFactory.setURL} alters the host and port in
+        a scheme-relative URL.
+        """
+        f = client.HTTPClientFactory(b'http://example.com')
+        url = b'//foo.com:81/bar'
+        f.setURL(url)
+        self.assertEquals(url, f.url)
+        self.assertEquals(b'http', f.scheme)
+        self.assertEquals(b'foo.com', f.host)
+        self.assertEquals(80, f.port)
+        self.assertEquals(b'/bar', f.path)
+
+    test_setURLRelativeScheme.todo = \
+        'HTTPClientFactory.setURL does not support scheme-relative URLs.'
+
+
 
 class WebClientSSLTestCase(WebClientTestCase):
     def _listen(self, site):
