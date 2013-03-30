@@ -1084,6 +1084,33 @@ class URITests(unittest.TestCase):
         """
         Assert that all of a L{client._URI}'s components match the expected
         values.
+
+        @param uri: U{client._URI} instance whose attributes will be checked
+            for equality.
+
+        @type scheme: L{bytes}
+        @param scheme: URI scheme specifier.
+
+        @type netloc: L{bytes}
+        @param netloc: Network location component.
+
+        @type host: L{bytes}
+        @param host: Host name.
+
+        @type port: L{int}
+        @param port: Port number.
+
+        @type path: L{bytes}
+        @param path: Hierarchical path.
+
+        @type params: L{bytes}
+        @param params: Parameters for last path segment, defaults to C{b''}.
+
+        @type query: L{bytes}
+        @param query: Query string, defaults to C{b''}.
+
+        @type fragment: L{bytes}
+        @param fragment: Fragment identifier, defaults to C{b''}.
         """
         self.assertEquals(scheme, uri.scheme)
         self.assertEquals(netloc, uri.netloc)
