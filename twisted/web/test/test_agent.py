@@ -1076,6 +1076,44 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         self.assertEquals(response.absoluteURI, uri)
 
 
+    def test_responseMissingAbsoluteURI(self):
+        """
+        L{Response.absoluteURI} is C{None} if the response does not include
+        a request.
+        """
+        response = client.Response(
+            ('HTTP', 1, 1),
+            200,
+            'OK',
+            client.Headers({}),
+            None,
+            None)
+        self.assertIdentical(response.absoluteURI, None)
+
+
+    def test_requestAbsoluteURI(self):
+        """
+        L{Request.absoluteURI} is the absolute URI of the request.
+        """
+        uri = b'http://example.com/foo;1234?bar#frag'
+        agent = self.buildAgentForWrapperTest(self.reactor)
+        d = agent.request('GET', uri)
+
+        # The request should be issued.
+        self.assertEqual(len(self.protocol.requests), 1)
+        req, res = self.protocol.requests.pop()
+        self.assertIsInstance(req, Request)
+        self.assertEquals(req.absoluteURI, uri)
+
+
+    def test_requestMissingAbsoluteURI(self):
+        """
+        L{Request.absoluteURI} is C{None} if C{_parsedURI} is not provided.
+        """
+        request = client.Request('FOO', '/', client.Headers(), None)
+        self.assertIdentical(request.absoluteURI, None)
+
+
 
 class HTTPConnectionPoolRetryTests(unittest.TestCase, FakeReactorAndConnectMixin):
     """
