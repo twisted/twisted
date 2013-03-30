@@ -491,7 +491,7 @@ class AltitudeTests(TestCase):
     """
     Tests for the L{twisted.positioning.base.Altitude} class.
     """
-    def test_simple(self):
+    def test_simple(self):  ## TODO: fix
         """
         Tests basic altitude functionality.
         """
@@ -525,7 +525,7 @@ class SpeedTests(TestCase):
     """
     Tests for the L{twisted.positioning.base.Speed} class.
     """
-    def test_simple(self):
+    def test_simple(self):  ## TODO: fix
         """
         Tests basic speed functionality.
         """
@@ -537,14 +537,14 @@ class SpeedTests(TestCase):
 
     def test_negativeSpeeds(self):
         """
-        Tests that negative speeds raise C{ValueError}.
+        Creating a negative speed raises C{ValueError}.
         """
         self.assertRaises(ValueError, base.Speed, -1.0)
 
 
     def test_inKnots(self):
         """
-        Tests that speeds can be converted into knots correctly.
+        A speed can be converted into its value in knots.
         """
         s = base.Speed(1.0)
         self.assertEqual(1/base.MPS_PER_KNOT, s.inKnots)
@@ -552,7 +552,7 @@ class SpeedTests(TestCase):
 
     def test_asFloat(self):
         """
-        Tests that speeds can be converted into C{float}s correctly.
+        A speed can be converted into a C{float}.
         """
         self.assertEqual(1.0, float(base.Speed(1.0)))
 
@@ -562,7 +562,7 @@ class ClimbTests(TestCase):
     """
     Tests for L{twisted.positioning.base.Climb}.
     """
-    def test_simple(self):
+    def test_simple(self):  ## TODO: fix
         """
         Basic functionality for climb objects.
         """
@@ -574,14 +574,14 @@ class ClimbTests(TestCase):
 
     def test_negativeClimbs(self):
         """
-        Tests that creating negative climbs works.
+        Climbs can have negative values.
         """
         base.Climb(-42.)
 
 
     def test_speedInKnots(self):
         """
-        Tests that climbs can be converted into knots correctly.
+        A climb can be converted into its value in knots.
         """
         s = base.Climb(1.0)
         self.assertEqual(1/base.MPS_PER_KNOT, s.inKnots)
@@ -589,7 +589,7 @@ class ClimbTests(TestCase):
 
     def test_asFloat(self):
         """
-        Tests that speeds can be converted into C{float}s correctly.
+        A climb can be converted into a C{float}.
         """
         self.assertEqual(1.0, float(base.Climb(1.0)))
 
