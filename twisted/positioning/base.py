@@ -247,7 +247,7 @@ class Angle(object, FancyEqMixin):
     }
 
 
-    ANGLE_TYPE_NAMES  = {
+    ANGLE_TYPE_NAMES = {
         Angles.LATITUDE: "latitude",
         Angles.LONGITUDE: "longitude",
         Angles.VARIATION: "variation",

@@ -373,51 +373,86 @@ class CoordinateTests(TestCase):
         self.assertEqual(c.inDecimalDegrees, 50.)
 
 
-    def test_hemispheres(self):
+    def test_northernHemisphere(self):
         """
-        Checks that coordinates know which hemisphere they're in.
+        Positive latitudes are in the northern hemisphere.
         """
-        coordinatesAndHemispheres = [
-            (base.Coordinate(1.0, Angles.LATITUDE), Directions.NORTH),
-            (base.Coordinate(-1.0, Angles.LATITUDE), Directions.SOUTH),
-            (base.Coordinate(1.0, Angles.LONGITUDE), Directions.EAST),
-            (base.Coordinate(-1.0, Angles.LONGITUDE), Directions.WEST),
-        ]
+        coordinate = base.Coordinate(1.0, Angles.LATITUDE)
+        self.assertEqual(coordinate.hemisphere, Directions.NORTH)
 
-        for coordinate, expectedHemisphere in coordinatesAndHemispheres:
-            self.assertEqual(expectedHemisphere, coordinate.hemisphere)
+
+    def test_easternHemisphere(self):
+        """
+        Positive longitudes are in the eastern hemisphere.
+        """
+        coordinate = base.Coordinate(1.0, Angles.LONGITUDE)
+        self.assertEqual(coordinate.hemisphere, Directions.EAST)
+
+
+    def test_southernHemisphere(self):
+        """
+        Negative latitudes are in the southern hemisphere.
+        """
+        coordinate = base.Coordinate(-1.0, Angles.LATITUDE)
+        self.assertEqual(coordinate.hemisphere, Directions.SOUTH)
+
+
+    def test_westernHemisphere(self):
+        """
+        Negative longitudes are in the western hemisphere.
+        """
+        coordinate = base.Coordinate(-1.0, Angles.LONGITUDE)
+        self.assertEqual(coordinate.hemisphere, Directions.WEST)
 
 
     def test_badHemisphere(self):
         """
-        Checks that asking for a hemisphere when the coordinate doesn't know
+        Accessing the hemisphere for a coordinate that can't compute it
         raises C{ValueError}.
         """
-        c = base.Coordinate(1.0, None)
-        self.assertRaises(ValueError, lambda: c.hemisphere)
+        coordinate = base.Coordinate(1.0, None)
+        self.assertRaises(ValueError, lambda: coordinate.hemisphere)
 
 
-    def test_badLatitudeValues(self):
+    def test_latitudeTooLarge(self):
         """
-        Tests that latitudes outside of M{-90.0 < latitude < 90.0} raise
-        C{ValueError}.
+        Creating a latitude with a value greater than or equal to 90 degrees
+        raises C{ValueError}.
         """
-        self.assertRaises(ValueError, base.Coordinate, 150.0, Angles.LATITUDE)
-        self.assertRaises(ValueError, base.Coordinate, -150.0, Angles.LATITUDE)
+        self.assertRaises(ValueError, _makeLatitude, 150.0)
+        self.assertRaises(ValueError, _makeLatitude, 90.0)
 
 
-    def test_badLongitudeValues(self):
+    def test_latitudeTooSmall(self):
         """
-        Tests that longitudes outside of M{-180.0 < longitude < 180.0} raise
-        C{ValueError}.
+        Creating a latitude with a value less than or equal to -90 degrees
+        raises C{ValueError}.
         """
-        self.assertRaises(ValueError, base.Coordinate, 250.0, Angles.LONGITUDE)
-        self.assertRaises(ValueError, base.Coordinate, -250.0, Angles.LONGITUDE)
+        self.assertRaises(ValueError, _makeLatitude, -150.0)
+        self.assertRaises(ValueError, _makeLatitude, -90.0)
+
+
+    def test_longitudeTooLarge(self):
+        """
+        Creating a longitude with a value greater than or equal to 180 degrees
+        raises C{ValueError}.
+        """
+        self.assertRaises(ValueError, _makeLongitude, 250.0)
+        self.assertRaises(ValueError, _makeLongitude, 180.0)
+
+
+    def test_longitudeTooSmall(self):
+        """
+        Creating a longitude with a value less than or equal to -180 degrees
+        raises C{ValueError}.
+        """
+        self.assertRaises(ValueError, _makeLongitude, -250.0)
+        self.assertRaises(ValueError, _makeLongitude, -180.0)
 
 
     def test_inDegreesMinutesSeconds(self):
         """
-        Tests accessing coordinate values in degrees, minutes and seconds.
+        Coordinate values can be accessed in degrees, minutes, seconds.
         """
         c = base.Coordinate(50.5, Angles.LATITUDE)
         self.assertEqual(c.inDegreesMinutesSeconds, (50, 30, 0))
@@ -428,11 +463,27 @@ class CoordinateTests(TestCase):
 
     def test_unknownAngleInDegreesMinutesSeconds(self):
         """
-        Tests accessing unknown coordinate values in degrees, minutes
-        and seconds.
+        If the vaue of a coordinate is C{None}, its values in degrees,
+        minutes, seconds is also C{None}.
         """
         c = base.Coordinate(None, None)
         self.assertEqual(c.inDegreesMinutesSeconds, None)
+
+
+
+def _makeLatitude(value):
+    """
+    Builds and returns a latitude of given value.
+    """
+    return base.Coordinate(value, Angles.LATITUDE)
+
+
+
+def _makeLongitude(value):
+    """
+    Builds and returns a longitude of given value.
+    """
+    return base.Coordinate(value, Angles.LONGITUDE)
 
 
 
@@ -453,7 +504,7 @@ class AltitudeTests(TestCase):
 
     def test_equality(self):
         """
-        Tests that equal altitudes compare equal.
+        Altitudes with equal values compare equal.
         """
         a1 = base.Altitude(1.)
         a2 = base.Altitude(1.)
@@ -462,7 +513,7 @@ class AltitudeTests(TestCase):
 
     def test_inequality(self):
         """
-        Tests that unequal altitudes compare unequal.
+        Altitudes with different values don't compare equal.
         """
         a1 = base.Altitude(1.)
         a2 = base.Altitude(-1.)
