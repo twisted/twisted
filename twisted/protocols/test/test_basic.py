@@ -264,8 +264,41 @@ a'''
         t = proto_helpers.StringIOWithoutClosing()
         a.makeConnection(protocol.FileWrapper(t))
         a.dataReceived(b'produce\nhello world\nunproduce\ngoodbye\n')
-        self.assertEqual(a.received,
-                          [b'produce', b'hello world', b'unproduce', b'goodbye'])
+        self.assertEqual(
+            a.received,
+            [b'produce', b'hello world', b'unproduce', b'goodbye'])
+
+
+    def test_longLineWithDelimiter(self):
+        """
+        When MAX_LENGTH is exceeded *and* a delimiter has been received,
+        lineLengthExceeded is called with the right bytes.
+        """
+        # Set up a line receiver with a short MAX_LENGTH that logs
+        # lineLengthExceeded events.
+        class LineReceiverThatRecords(basic.LineReceiver):
+            MAX_LENGTH = 10
+
+            def connectionMade(self):
+                self.calls = []
+
+            def lineReceived(self, line):
+                self.calls.append(('lineReceived', line))
+
+            def lineLengthExceeded(self, line):
+                self.calls.append(('lineLengthExceeded', line))
+
+        lineReceiver = LineReceiverThatRecords()
+        t = proto_helpers.StringIOWithoutClosing()
+        lineReceiver.makeConnection(protocol.FileWrapper(t))
+        # Call dataReceived with two lines, the first longer than MAX_LENGTH.
+        longLine = ('x' * 11) + '\r\n'
+        nextLine = 'next line\r\n'
+        lineReceiver.dataReceived(longLine + nextLine)
+        # We expect lineLengthExceeded to be called with exactly what we just
+        # passed dataReceived.  lineReceived is not called.
+        expectedCalls = [('lineLengthExceeded', longLine + nextLine)]
+        self.assertEqual(expectedCalls, lineReceiver.calls)
 
 
     def test_clearLineBuffer(self):
@@ -322,7 +355,7 @@ a'''
         proto = basic.LineReceiver()
         transport = proto_helpers.StringTransport()
         proto.makeConnection(transport)
-        proto.dataReceived(b'x' * (proto.MAX_LENGTH + 1))
+        proto.dataReceived(b'x' * (proto.MAX_LENGTH + 2))
         self.assertTrue(transport.disconnecting)
 
 

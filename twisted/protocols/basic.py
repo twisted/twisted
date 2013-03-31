@@ -13,6 +13,7 @@ from __future__ import absolute_import, division
 import re
 from struct import pack, unpack, calcsize
 from io import BytesIO
+from collections import deque
 import math
 
 from zope.interface import implementer
@@ -527,14 +528,14 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
     This is useful for line-oriented protocols such as IRC, HTTP, POP, etc.
 
     @cvar delimiter: The line-ending delimiter to use. By default this is
-                     C{b'\\r\\n'}.
+        C{b'\\r\\n'}.
     @cvar MAX_LENGTH: The maximum length of a line to allow (If a
-                      sent line is longer than this, the connection is dropped).
-                      Default is 16384.
+        sent line is longer than this, the connection is dropped).  Default is
+        16384.
     """
     line_mode = 1
-    _buffer = b''
-    _busyReceiving = False
+    _lineBuffer = None
+    _buffer = None
     delimiter = b'\r\n'
     MAX_LENGTH = 16384
 
@@ -545,51 +546,85 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
         @return: All of the cleared buffered data.
         @rtype: C{bytes}
         """
-        b, self._buffer = self._buffer, b""
+        if self._buffer is None:
+            self._buffer = BytesIO()
+            self._lineBuffer = deque()
+
+        # This temporarily appends _buffer into _lineBuffer to avoid creating
+        # an extra temporary list or string.
+        self._buffer.seek(0)
+        self._lineBuffer.append(self._buffer.read())
+        b = self.delimiter.join(self._lineBuffer)
+        self._lineBuffer.clear()
+        self._buffer.seek(0)
+        self._buffer.truncate()
         return b
+
+
+    def _addToBuffer(self, data):
+        """
+        Append L{data} to the internal buffer.
+        """
+        # When in line mode, this will convert data in L{_buffer} into lines in
+        # L{_lineBuffer}.
+
+        # _addToBuffer is called internally even when paused, so that the
+        # delimiter search optimization doesn't break.
+        if self._buffer is None:
+            self._buffer = BytesIO()
+            self._lineBuffer = deque()
+
+        self._buffer.write(data)
+
+        if self.line_mode:
+            # The idea is to look for the delimiter in a subset of the buffer.
+            # This prevents slowdown if the line length is long and the bytes
+            # are being received slowly.
+            self._buffer.seek(-(len(data) + len(self.delimiter)), 2)
+
+            # This does two things: get up to len(self.delimiter) bytes,
+            # and always seek to the very end.
+            searchArea = self._buffer.read()
+
+            if self.delimiter in searchArea:
+                self._buffer.seek(0)
+                splitted = self._buffer.read().split(self.delimiter)
+                self._buffer.seek(0)
+                self._buffer.truncate()
+                self._buffer.write(splitted.pop())
+                self._lineBuffer.extend(splitted)
 
 
     def dataReceived(self, data):
         """
-        Protocol.dataReceived.
         Translates bytes into lines, and calls lineReceived (or
         rawDataReceived, depending on mode.)
         """
-        if self._busyReceiving:
-            self._buffer += data
-            return
+        self._addToBuffer(data)
 
-        try:
-            self._busyReceiving = True
-            self._buffer += data
-            while self._buffer and not self.paused:
-                if self.line_mode:
-                    try:
-                        line, self._buffer = self._buffer.split(
-                            self.delimiter, 1)
-                    except ValueError:
-                        if len(self._buffer) > self.MAX_LENGTH:
-                            line, self._buffer = self._buffer, b''
-                            return self.lineLengthExceeded(line)
-                        return
-                    else:
-                        lineLength = len(line)
-                        if lineLength > self.MAX_LENGTH:
-                            exceeded = line + self._buffer
-                            self._buffer = b''
-                            return self.lineLengthExceeded(exceeded)
-                        why = self.lineReceived(line)
-                        if (why or self.transport and
-                            self.transport.disconnecting):
-                            return why
-                else:
-                    data = self._buffer
-                    self._buffer = b''
+        while not self.paused:
+            if self.line_mode:
+                if not self._lineBuffer:
+                    if (self._buffer.tell() >=
+                            self.MAX_LENGTH + len(self.delimiter)):
+                        return self.lineLengthExceeded(self.clearLineBuffer())
+                    break
+
+                line = self._lineBuffer.popleft()
+                if len(line) > self.MAX_LENGTH:
+                    exceeded = line + self.delimiter + self.clearLineBuffer()
+                    return self.lineLengthExceeded(exceeded)
+                why = self.lineReceived(line)
+                if why or self.transport and self.transport.disconnecting:
+                    return why
+            else:
+                data = self.clearLineBuffer()
+                if data:
                     why = self.rawDataReceived(data)
-                    if why:
+                    if why or self.transport and self.transport.disconnecting:
                         return why
-        finally:
-            self._busyReceiving = False
+                else:
+                    break
 
 
     def setLineMode(self, extra=b''):
@@ -606,7 +641,7 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
         """
         self.line_mode = 1
         if extra:
-            return self.dataReceived(extra)
+            self._addToBuffer(extra)
 
 
     def setRawMode(self):
