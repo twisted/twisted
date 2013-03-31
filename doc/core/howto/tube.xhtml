@@ -73,8 +73,10 @@ def echoTubeFactory(fount, drain):
 </pre>
 
 <p>
-Here you see that <code class="API" base="twisted.tubes.itube.IFount">flowTo</code> returns an <code class="API" base="twisted.tube.itube">IFount</code> so you can chain them to construct "flows".
-We have now extended our simple <code>echoTubeFactory</code> to convert your input string to a <a href="http://cr.yp.to/proto/netstrings.txt">netstring</a> before echoing it back to your client.
+Here you see that <code class="API" base="twisted.tubes.itube.IFount">flowTo</code> can return a <code class="API" base="twisted.tube.itube">IFount</code> so you can chain <code class="API" base="twisted.tubes.itube.IFount">flowTo</code> calls to construct a "flow".
+In this case, <code>.flowTo(Tube(stringToNetstring()))</code> returns a new <code class="API" base="twisted.tubes.itube">IFount</code> whose output will be <a href="http://cr.yp.to/proto/netstrings.txt">netstring</a>s.
+We have now extended our simple <code>echoTubeFactory</code> to add a length prefix to each chunk of its input before echoing it back to your client.
+This demonstrates how you can manipulate data as it passes through a flow.
 </p>
 
 </body>
