@@ -190,12 +190,14 @@ class Adapter:
 
 
 class Componentized:
-    """I am a mixin to allow you to be adapted in various ways persistently.
+    """
+    Componentized is a mixin to allow you to be adapted in various ways
+    persistently.
 
-    I define a list of persistent adapters.  This is to allow adapter classes
-    to store system-specific state, and initialized on demand.  The
-    getComponent method implements this.  You must also register adapters for
-    this class for the interfaces that you wish to pass to getComponent.
+    Componentized define a list of persistent adapters.  This is to allow
+    adapter classes to store system-specific state, and initialized on demand.
+    The getComponent method implements this.  You must also register adapters
+    for this class for the interfaces that you wish to pass to getComponent.
 
     Many other classes and utilities listed here are present in Zope3; this one
     is specific to Twisted.
@@ -207,18 +209,41 @@ class Componentized:
         self._adapterCache = {}
 
     def locateAdapterClass(self, klass, interfaceClass, default):
+        """
+        Return registered adapter for a given class and interface.
+
+        Note that is tied to the *Twisted* global registry, and will
+        thus not find adapters registered elsewhere.
+
+        @param klass: The adapter class
+
+        @param interfaceClass: the interface class.
+
+        #param default: The default adapter to return.
+        """
         return getAdapterFactory(klass, interfaceClass, default)
 
     def setAdapter(self, interfaceClass, adapterClass):
         """
         Cache a provider for the given interface, by adapting C{self} using
         the given adapter class.
+
+        @param interfaceClass: the interface class.
+
+        #param adapterClass: the adapter class to register
         """
         self.setComponent(interfaceClass, adapterClass(self))
 
     def addAdapter(self, adapterClass, ignoreClass=0):
-        """Utility method that calls addComponent.  I take an adapter class and
-        instantiate it with myself as the first argument.
+        """Utility method that calls addComponent.
+
+        @param adapterClass: The component to be instantiated with 
+        the current object as the first argument.  
+
+        @param ignoreClass: In order to determine which interfaces are 
+        appropriate, the component's provided interfaces will be scanned. 
+        If the argument 'ignoreClass' is True, then all interfaces are
+        considered appropriate.
 
         @return: The adapter instantiated.
         """
@@ -229,24 +254,28 @@ class Componentized:
     def setComponent(self, interfaceClass, component):
         """
         Cache a provider of the given interface.
+
+        @param interfaceClass: The interface class the component 
+        is an adapter for.
+
+        @param component: The component to be added.
         """
         self._adapterCache[reflect.qual(interfaceClass)] = component
 
     def addComponent(self, component, ignoreClass=0):
         """
-        Add a component to me, for all appropriate interfaces.
+        Add a component, for all appropriate interfaces.
 
-        In order to determine which interfaces are appropriate, the component's
-        provided interfaces will be scanned.
+        @param component: The component to be added.
 
+        @param ignoreClass: In order to determine which interfaces are 
+        appropriate, the component's provided interfaces will be scanned. 
         If the argument 'ignoreClass' is True, then all interfaces are
         considered appropriate.
 
         Otherwise, an 'appropriate' interface is one for which its class has
         been registered as an adapter for my class according to the rules of
         getComponent.
-
-        @return: the list of appropriate interfaces
         """
         for iface in declarations.providedBy(component):
             if (ignoreClass or
@@ -255,13 +284,19 @@ class Componentized:
                 self._adapterCache[reflect.qual(iface)] = component
 
     def unsetComponent(self, interfaceClass):
-        """Remove my component specified by the given interface class."""
+        """
+        Remove the component specified by the given interface class.
+
+        @param interfaceClass: The interface class to be removed.
+        """
         del self._adapterCache[reflect.qual(interfaceClass)]
 
     def removeComponent(self, component):
         """
-        Remove the given component from me entirely, for all interfaces for which
+        Remove the given component entirely, for all interfaces for which
         it has been registered.
+
+        @param component: The component to be removed.
 
         @return: a list of the interfaces that were removed.
         """
@@ -287,6 +322,13 @@ class Componentized:
         If you want to automatically register an adapter for all appropriate
         interfaces (with addComponent), set the attribute 'multiComponent' to
         True on your adapter class.
+
+        @param interface: The interface to be added
+
+        @param default: The default adapter to return if there isn't one 
+        already present.
+
+        @return: default or an adapter for the interface.
         """
         k = reflect.qual(interface)
         if k in self._adapterCache:
