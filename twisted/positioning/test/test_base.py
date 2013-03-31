@@ -601,52 +601,58 @@ class PositionErrorTests(TestCase):
     """
     def test_allUnset(self):
         """
-        Tests that creating an empty L{PositionError} works without checking
-        the invariant.
+        In an empty L{base.PositionError} with no invariant testing, all
+        dilutions of positions are C{None}.
         """
-        pe = base.PositionError()
-        for x in (pe.pdop, pe.hdop, pe.vdop):
-            self.assertEqual(None, x)
+        positionError = base.PositionError()
+        self.assertEqual(positionError.pdop, None)
+        self.assertEqual(positionError.hdop, None)
+        self.assertEqual(positionError.vdop, None)
 
 
     def test_allUnsetWithInvariant(self):
         """
-        Tests that creating an empty L{PositionError} works while checking the
-        invariant.
+        In an empty L{base.PositionError} with invariant testing, all
+        dilutions of positions are C{None}.
         """
-        pe = base.PositionError(testInvariant=True)
-        for x in (pe.pdop, pe.hdop, pe.vdop):
-            self.assertEqual(None, x)
+        positionError = base.PositionError(testInvariant=True)
+        self.assertEqual(positionError.pdop, None)
+        self.assertEqual(positionError.hdop, None)
+        self.assertEqual(positionError.vdop, None)
 
 
-    def test_simpleWithoutInvariant(self):
+    def test_withoutInvariant(self):
         """
-        Tests that creating a simple L{PositionError} with just a HDOP without
+        L{base.PositionError}s can be instantiated with just a HDOP.
+        """
+        positionError = base.PositionError(hdop=1.0)
+        self.assertEqual(positionError.hdop, 1.0)
+
+
+    def test_withInvariant(self):
+        """
+        Creating a simple L{base.PositionError} with just a HDOP while
         checking the invariant works.
         """
-        base.PositionError(hdop=1.0)
-
-
-    def test_simpleWithInvariant(self):
-        """
-        Tests that creating a simple L{PositionError} with just a HDOP while
-        checking the invariant works.
-        """
-        base.PositionError(hdop=1.0, testInvariant=True)
+        positionError = base.PositionError(hdop=1.0, testInvariant=True)
+        self.assertEqual(positionError.hdop, 1.0)
 
 
     def test_invalidWithoutInvariant(self):
         """
-        Tests that creating a simple L{PositionError} with all values set
-        without checking the invariant works.
+        Creating a L{base.PositionError} with values set to an impossible
+        combination works if the invariant is not checked.
         """
-        base.PositionError(pdop=1.0, vdop=1.0, hdop=1.0)
+        error = base.PositionError(pdop=1.0, vdop=1.0, hdop=1.0)
+        self.assertEqual(error.pdop, 1.0)
+        self.assertEqual(error.hdop, 1.0)
+        self.assertEqual(error.vdop, 1.0)
 
 
     def test_invalidWithInvariant(self):
         """
-        Tests that creating a simple L{PositionError} with all values set to
-        inconsistent values while checking the invariant raises C{ValueError}.
+        Creating a L{base.PositionError} with values set to an impossible
+        combination raises C{ValueError} if the invariant is being tested.
         """
         self.assertRaises(ValueError, base.PositionError,
                           pdop=1.0, vdop=1.0, hdop=1.0, testInvariant=True)
@@ -654,8 +660,8 @@ class PositionErrorTests(TestCase):
 
     def test_setDOPWithoutInvariant(self):
         """
-        Tests that setting the PDOP value (with HDOP and VDOP already known)
-        to an inconsistent value without checking the invariant works.
+        You can set the PDOP value to value inconsisted with HDOP and VDOP
+        when not checking the invariant.
         """
         pe = base.PositionError(hdop=1.0, vdop=1.0)
         pe.pdop = 100.0
@@ -664,9 +670,8 @@ class PositionErrorTests(TestCase):
 
     def test_setDOPWithInvariant(self):
         """
-        Tests that setting the PDOP value (with HDOP and VDOP already known)
-        to an inconsistent value while checking the invariant raises
-        C{ValueError}.
+        Attempting to set the PDOP value to value inconsisted with HDOP and
+        VDOP when checking the invariant raises C{ValueError}.
         """
         pe = base.PositionError(hdop=1.0, vdop=1.0, testInvariant=True)
         pdop = pe.pdop
@@ -703,7 +708,7 @@ class PositionErrorTests(TestCase):
 
     def test_positionAndHorizontalSet(self):
         """
-        Tests that the VDOP is correctly determined from PDOP and HDOP.
+        The VDOP is correctly determined from PDOP and HDOP.
         """
         pdop, hdop = 2.0, 1.0
         vdop = (pdop**2 - hdop**2)**.5
@@ -713,7 +718,7 @@ class PositionErrorTests(TestCase):
 
     def test_positionAndVerticalSet(self):
         """
-        Tests that the HDOP is correctly determined from PDOP and VDOP.
+        The HDOP is correctly determined from PDOP and VDOP.
         """
         pdop, vdop = 2.0, 1.0
         hdop = (pdop**2 - vdop**2)**.5
@@ -723,7 +728,7 @@ class PositionErrorTests(TestCase):
 
     def test_horizontalAndVerticalSet(self):
         """
-        Tests that the PDOP is correctly determined from HDOP and VDOP.
+        The PDOP is correctly determined from HDOP and VDOP.
         """
         hdop, vdop = 1.0, 1.0
         pdop = (hdop**2 + vdop**2)**.5
