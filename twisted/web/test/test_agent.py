@@ -2107,6 +2107,78 @@ class _RedirectAgentTestsMixin(object):
         return deferred.addCallback(checkFailure)
 
 
+    def _testRedirectURI(self, uri, location, finalURI):
+        """
+        When L{client.RedirectAgent} encounters a relative redirect I{URI}, it
+        is resolved against the request I{URI} before following the redirect.
+        """
+        # XXX: If we had a way to get the final absolute URI from a request we
+        # wouldn't need to do this.
+        def _resolveLocation(requestURI, location):
+            self._redirectedURI = _origialResolveLocation(requestURI, location)
+            return self._redirectedURI
+
+        self._redirectedURI = None
+        _origialResolveLocation = self.agent._resolveLocation
+        self.patch(self.agent, '_resolveLocation', _resolveLocation)
+
+        self.agent.request('GET', uri)
+
+        req, res = self.protocol.requests.pop()
+
+        headers = http_headers.Headers(
+            {'location': [location]})
+        response = Response(('HTTP', 1, 1), 302, 'OK', headers, None)
+        res.callback(response)
+
+        req2, res2 = self.protocol.requests.pop()
+        self.assertEqual('GET', req2.method)
+        self.assertEqual(finalURI, self._redirectedURI)
+
+
+    def test_relativeURI(self):
+        """
+        L{client.RedirectAgent} resolves and follows relative I{URI}s in
+        redirects, preserving query strings.
+        """
+        self._testRedirectURI(
+            'http://example.com/foo/bar', 'baz',
+            'http://example.com/foo/baz')
+        self._testRedirectURI(
+            'http://example.com/foo/bar', '/baz',
+            'http://example.com/baz')
+        self._testRedirectURI(
+            'http://example.com/foo/bar', '/baz?a',
+            'http://example.com/baz?a')
+
+
+    def test_relativeURIPreserveFragments(self):
+        """
+        L{client.RedirectAgent} resolves and follows relative I{URI}s in
+        redirects, preserving fragments in way that complies with the HTTP 1.1
+        bis draft.
+        """
+        self._testRedirectURI(
+            'http://example.com/foo/bar#frag', '/baz?a',
+            'http://example.com/baz?a#frag')
+        self._testRedirectURI(
+            'http://example.com/foo/bar', '/baz?a#frag2',
+            'http://example.com/baz?a#frag2')
+
+
+    def test_relativeURISchemeRelative(self):
+        """
+        L{client.RedirectAgent} resolves and follows scheme relative I{URI}s in
+        redirects, replacing the hostname and port when required.
+        """
+        self._testRedirectURI(
+            'http://example.com/foo/bar', '//foo.com/baz',
+            'http://foo.com/baz')
+        self._testRedirectURI(
+            'http://example.com/foo/bar', '//foo.com:81/baz',
+            'http://foo.com:81/baz')
+
+
 
 class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin,
                          _RedirectAgentTestsMixin):

@@ -10,10 +10,10 @@ from __future__ import division, absolute_import
 
 import os, types
 try:
-    from urlparse import urlunparse
+    from urlparse import urlunparse, urljoin, urldefrag
     from urllib import splithost, splittype
 except ImportError:
-    from urllib.parse import splithost, splittype
+    from urllib.parse import splithost, splittype, urljoin, urldefrag
     from urllib.parse import urlunparse as _urlunparse
 
     def urlunparse(parts):
@@ -592,6 +592,27 @@ def _parse(url, defaultPort=None):
         path = b'/'
 
     return _URL(scheme, host, port, path)
+
+
+
+def _urljoin(base, url):
+    """
+    Construct a full ("absolute") URL by combining a "base URL" (base) with
+    another URL (url). Informally, this uses components of the base URL, in
+    particular the addressing scheme, the network location and (part of) the
+    path, to provide missing components in the relative URL.
+
+    Additionally, the fragment identifier is preserved according to the HTTP
+    1.1 bis draft.
+
+    @see: L{urlparse.urljoin}
+
+    @see: U{https://tools.ietf.org/html/draft-ietf-httpbis-p2-semantics-22#section-7.1.2}
+    """
+    base, baseFrag = urldefrag(base)
+    url, urlFrag = urldefrag(urljoin(base, url))
+    return urljoin(url, '#' + (urlFrag or baseFrag))
+
 
 
 def _makeGetterFactory(url, factoryFactory, contextFactory=None,
@@ -1581,6 +1602,22 @@ class RedirectAgent(object):
             self._handleResponse, method, uri, headers, 0)
 
 
+    def _resolveLocation(self, requestURI, location):
+        """
+        Resolve the redirect location against the request I{URI}.
+
+        @type requestURI: C{bytes}
+        @param requestURI: The request I{URI}.
+
+        @type location: C{bytes}
+        @param location: The redirect location.
+
+        @rtype: C{bytes}
+        @return: Final resolved I{URI}.
+        """
+        return _urljoin(requestURI, location)
+
+
     def _handleRedirect(self, response, method, uri, headers, redirectCount):
         """
         Handle a redirect response, checking the number of redirects already
@@ -1597,7 +1634,7 @@ class RedirectAgent(object):
             err = error.RedirectWithNoLocation(
                 response.code, 'No location header field', uri)
             raise ResponseFailed([failure.Failure(err)], response)
-        location = locationHeaders[0]
+        location = self._resolveLocation(uri, locationHeaders[0])
         deferred = self._agent.request(method, location, headers)
         return deferred.addCallback(
             self._handleResponse, method, uri, headers, redirectCount + 1)
@@ -1643,4 +1680,4 @@ __all__ = [
     'HTTPClientFactory', 'HTTPDownloader', 'getPage', 'downloadPage',
     'ResponseDone', 'Response', 'ResponseFailed', 'Agent', 'CookieAgent',
     'ProxyAgent', 'ContentDecoderAgent', 'GzipDecoder', 'RedirectAgent',
-    'HTTPConnectionPool']
+    'BrowserLikeRedirectAgent', 'HTTPConnectionPool']
