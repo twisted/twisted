@@ -191,10 +191,10 @@ class Adapter:
 
 class Componentized:
     """
-    Componentized is a mixin to allow you to be adapted in various ways
+    Componentized is a mixin to allow subclasses to be adapted in various ways
     persistently.
 
-    Componentized define a list of persistent adapters.  This is to allow
+    Componentized defines a list of persistent adapters.  This is to allow
     adapter classes to store system-specific state, and initialized on demand.
     The getComponent method implements this.  You must also register adapters
     for this class for the interfaces that you wish to pass to getComponent.
@@ -210,7 +210,7 @@ class Componentized:
 
     def locateAdapterClass(self, klass, interfaceClass, default):
         """
-        Return registered adapter for a given class and interface.
+        Locate the registered adapter for a given class and interface.
 
         Note that is tied to the *Twisted* global registry, and will
         thus not find adapters registered elsewhere.
