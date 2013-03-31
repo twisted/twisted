@@ -292,8 +292,8 @@ a'''
         t = proto_helpers.StringIOWithoutClosing()
         lineReceiver.makeConnection(protocol.FileWrapper(t))
         # Call dataReceived with two lines, the first longer than MAX_LENGTH.
-        longLine = ('x' * 11) + '\r\n'
-        nextLine = 'next line\r\n'
+        longLine = (b'x' * 11) + b'\r\n'
+        nextLine = b'next line\r\n'
         lineReceiver.dataReceived(longLine + nextLine)
         # We expect lineLengthExceeded to be called with exactly what we just
         # passed dataReceived.  lineReceived is not called.
@@ -321,6 +321,16 @@ a'''
         protocol.dataReceived(b'quux\r\n')
         self.assertEqual(protocol.line, b'quux')
         self.assertEqual(protocol.rest, b'')
+
+
+    def test_clearLineBufferNoData(self):
+        """
+        L{LineReceiver.clearLineBuffer} returns an empty string if called
+        before any data is received.
+        """
+        protocol = basic.LineReceiver()
+        data = protocol.clearLineBuffer()
+        self.assertEqual(b'', data)
 
 
     def test_stackRecursion(self):

@@ -529,9 +529,16 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
 
     @cvar delimiter: The line-ending delimiter to use. By default this is
         C{b'\\r\\n'}.
+
     @cvar MAX_LENGTH: The maximum length of a line to allow (If a
         sent line is longer than this, the connection is dropped).  Default is
         16384.
+
+    @ivar line_mode: Indicate whether we're current in line mode or not.
+
+    @ivar _lineBuffer: Store current parsed lines.
+
+    @ivar _buffer: Store current received data.
     """
     line_mode = 1
     _lineBuffer = None
@@ -549,6 +556,7 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
         if self._buffer is None:
             self._buffer = BytesIO()
             self._lineBuffer = deque()
+            return b''
 
         # This temporarily appends _buffer into _lineBuffer to avoid creating
         # an extra temporary list or string.
@@ -580,7 +588,7 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
             # The idea is to look for the delimiter in a subset of the buffer.
             # This prevents slowdown if the line length is long and the bytes
             # are being received slowly.
-            self._buffer.seek(-(len(data) + len(self.delimiter)), 2)
+            self._buffer.seek(-len(data) - len(self.delimiter), 2)
 
             # This does two things: get up to len(self.delimiter) bytes,
             # and always seek to the very end.
