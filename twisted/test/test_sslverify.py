@@ -118,6 +118,42 @@ class WritingProtocol(protocol.Protocol):
         self.factory.onLost.errback(reason)
 
 
+
+class FakeContext:
+    """
+    Introspectable fake of an OpenSSL.SSL.Context.
+    """
+
+    def __init__(self, method):
+        self._method = method
+        self._extraCertChain = []
+
+    def set_options(self, options):
+        pass
+
+    def use_certificate(self, certificate):
+        self._certificate = certificate
+
+    def use_privatekey(self, privateKey):
+        self._privateKey = privateKey
+
+    def check_privatekey(self):
+        return None
+
+    def set_verify(self, flags, callback):
+        self._verify = flags, callback
+
+    def set_verify_depth(self, depth):
+        self._verifyDepth = depth
+
+    def set_session_id(self, sessionID):
+        self._sessionID = sessionID
+
+    def add_extra_chain_cert(self, cert):
+        self._extraCertChain.append(cert)
+
+
+
 class OpenSSLOptions(unittest.TestCase):
     serverPort = clientConn = None
     onServerLost = onClientLost = None
@@ -144,6 +180,7 @@ class OpenSSLOptions(unittest.TestCase):
             O=b"CA Test Certificate",
             CN=b"ca2")[1]
         self.caCerts = [self.caCert1, self.caCert2]
+        self.extraCertChain = self.caCerts
 
 
     def tearDown(self):
@@ -211,6 +248,7 @@ class OpenSSLOptions(unittest.TestCase):
                                                    certificate=self.sCert)
         self.assertEqual(opts.privateKey, self.sKey)
         self.assertEqual(opts.certificate, self.sCert)
+        self.assertEqual(opts.extraCertChain, [])
 
 
     def test_constructorDoesNotAllowVerifyWithoutCACerts(self):
@@ -245,6 +283,58 @@ class OpenSSLOptions(unittest.TestCase):
                                                    caCerts=self.caCerts)
         self.assertTrue(opts.verify)
         self.assertEqual(self.caCerts, opts.caCerts)
+
+
+    def test_constructorSetsExtraChain(self):
+        """
+        Setting C{extraCertChain} sets both if C{certificate} and C{privateKey}
+        are set too.
+        """
+        opts = sslverify.OpenSSLCertificateOptions(
+            privateKey=self.sKey,
+            certificate=self.sCert,
+            extraCertChain=self.extraCertChain,
+        )
+        self.assertEqual(self.extraCertChain, opts.extraCertChain)
+
+
+    def test_constructorDoesNotAllowExtraChainWithoutPrivateKey(self):
+        """
+        A C{extraCertChain} without C{privateKey} doesn't make sense and is
+        thus rejected.
+        """
+        self.assertRaises(
+            ValueError,
+            sslverify.OpenSSLCertificateOptions,
+            certificate=self.sCert,
+            extraCertChain=self.extraCertChain,
+        )
+
+
+    def test_constructorDoesNotAllowExtraChainWithOutPrivateKey(self):
+        """
+        A C{extraCertChain} without C{certificate} doesn't make sense and is
+        thus rejected.
+        """
+        self.assertRaises(
+            ValueError,
+            sslverify.OpenSSLCertificateOptions,
+            privateKey=self.sKey,
+            extraCertChain=self.extraCertChain,
+        )
+
+
+    def test_extraChainFilesAreAddedIfSupplied(self):
+        opts = sslverify.OpenSSLCertificateOptions(
+            privateKey=self.sKey,
+            certificate=self.sCert,
+            extraCertChain=self.extraCertChain,
+        )
+        opts._contextFactory = lambda method: FakeContext(method)
+        ctx = opts.getContext()
+        self.assertEqual(self.sKey, ctx._privateKey)
+        self.assertEqual(self.sCert, ctx._certificate)
+        self.assertEqual(self.extraCertChain, ctx._extraCertChain)
 
 
     def test_abbreviatingDistinguishedNames(self):
