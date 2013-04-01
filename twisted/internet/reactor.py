@@ -6,7 +6,8 @@ The reactor is the Twisted event loop within Twisted, the loop which drives
 applications using Twisted. The reactor provides APIs for networking,
 threading, dispatching events, and more.
 
-The default reactor depends on the platform and will be installed if this
+Different platforms have different optimal reactor implementation, thus the
+default reactor depends on the platform and will be installed if this
 module is imported without another reactor being explicitly installed
 beforehand.
 
@@ -19,17 +20,17 @@ enhancement), though this is not currently possible.
 
 For example, if the library code is::
 
-    def do_something_later(*args, reactor=None, **kwargs):
-        reactor.callLater(5, do_something, *args, **kwargs)
+    def doSomethingLater(reactor, *args, **kwargs):
+        reactor.callLater(5, doSomething, *args, **kwargs)
 
 And the application or plugin code has something like::
 
     def makeService(options):
-        import reactor
+        from twisted.internet import reactor
         ...
-        do_something_later("something", reactor=reactor)
+        doSomethingLater(reactor, "something")
 
-Then the `do_something_later` function can be tested by passing a
+Then the - C{doSomethingLater} function can be tested by passing a
 L{IReactorTime<twisted.internet.interfaces.IReactorTime>} provider (see
 L{twisted.internet.task.Clock}).  If the library code imported
 the reactor instead of accepting it as an argument, then the reactor may need
