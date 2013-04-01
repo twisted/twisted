@@ -8,10 +8,32 @@ Tests for L{twisted.tubes.protocol}.
 from twisted.tubes.test.util import ResultProducingMixin
 from twisted.tubes.test.util import StringEndpoint
 from twisted.trial.unittest import TestCase
-from twisted.tubes.protocol import ProtocolAdapterCreatorThing
+from twisted.tubes.protocol import factoryFromFlow
 from twisted.tubes.tube import Pump
 from twisted.tubes.tube import Tube
 from twisted.tubes.test.util import FakeFount
+
+class RememberingPump(Pump):
+    """
+    A pump that remembers what it receives.
+
+    @ivar items: a list of objects that have been received.
+    """
+
+    def __init__(self):
+        self.items = []
+        self.wasStopped = False
+        self.started()
+
+
+    def received(self, item):
+        self.items.append(item)
+
+
+    def stopped(self, reason):
+        self.wasStopped = True
+
+
 
 class FlowingAdapterTests(TestCase, ResultProducingMixin):
     """
@@ -23,16 +45,14 @@ class FlowingAdapterTests(TestCase, ResultProducingMixin):
         Sert up these tests.
         """
         self.endpoint = StringEndpoint()
-        self.adapter = self.result(
-            self.endpoint.connect(ProtocolAdapterCreatorThing())).now()
-        class TestPump(Pump):
-            def __init__(self):
-                self.items = []
+        def flowFunction(fount, drain):
+            self.adaptedDrain = drain
+            self.adaptedFount = fount
+        self.adaptedProtocol = self.successResultOf(
+            self.endpoint.connect(factoryFromFlow(flowFunction))
+        )
 
-            def received(self, item):
-                self.items.append(item)
-
-        self.tube = Tube(TestPump())
+        self.tube = Tube(RememberingPump())
 
 
     def test_flowToSetsDrain(self):
@@ -40,8 +60,8 @@ class FlowingAdapterTests(TestCase, ResultProducingMixin):
         L{ProtocolAdapter.flowTo} will set the C{drain} attribute of the
         L{ProtocolAdapter}.
         """
-        self.adapter.flowTo(self.tube)
-        self.assertIdentical(self.adapter.drain, self.tube)
+        self.adaptedFount.flowTo(self.tube)
+        self.assertIdentical(self.adaptedFount.drain, self.tube)
 
 
     def test_flowToDeliversData(self):
@@ -49,8 +69,8 @@ class FlowingAdapterTests(TestCase, ResultProducingMixin):
         L{ProtocolAdapter.flowTo} will cause subsequent calls to
         L{ProtocolAdapter.dataReceived} to invoke L{receive} on its drain.
         """
-        self.adapter.flowTo(self.tube)
-        self.adapter.dataReceived("some data")
+        self.adaptedFount.flowTo(self.tube)
+        self.adaptedProtocol.dataReceived("some data")
         self.assertEquals(self.tube.pump.items, ["some data"])
 
 
@@ -58,10 +78,10 @@ class FlowingAdapterTests(TestCase, ResultProducingMixin):
         """
         L{ProtocolAdapter.stopFlow} will close the underlying connection.
         """
-        self.adapter.flowTo(self.tube)
-        self.adapter.stopFlow()
-        self.assertEquals(self.adapter.transport.disconnecting, True)
-        self.assertEqual(self.adapter.isEnded(), True)
+        self.adaptedFount.flowTo(self.tube)
+        self.adaptedFount.stopFlow()
+        self.assertEquals(self.adaptedProtocol.transport.disconnecting, True)
+        self.assertEquals(self.tube.pump.wasStopped, True)
 
 
     def test_flowingFromFlowControl(self):
@@ -70,8 +90,8 @@ class FlowingAdapterTests(TestCase, ResultProducingMixin):
         to deliver L{pauseFlow} notifications to.
         """
         ff = FakeFount()
-        self.adapter.flowingFrom(ff)
-        self.assertIdentical(self.adapter.fount, ff)
+        self.adaptedDrain.flowingFrom(ff)
+        self.assertIdentical(self.adaptedDrain.fount, ff)
 
 
 
