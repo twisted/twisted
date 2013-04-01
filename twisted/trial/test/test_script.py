@@ -1,8 +1,12 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+import StringIO
 import gc
-import StringIO, sys, types
+import re
+import sys
+import textwrap
+import types
 
 from twisted.trial import unittest
 from twisted.trial.runner import (
@@ -624,3 +628,187 @@ class TestArgumentOrderTests(unittest.TestCase):
         expectedNames = testNames(expectedSuite)
 
         self.assertEqual(names, expectedNames)
+
+
+
+class OrderTests(unittest.TestCase):
+    """
+    Tests for the --order option.
+    """
+    def setUp(self):
+        self.config = trial.Options()
+
+
+    def test_alphabetical(self):
+        """
+        --order=alphabetical causes trial to run tests alphabetically within
+        each test case.
+        """
+        self.config.parseOptions([
+            "--order", "alphabetical",
+            "twisted.trial.test.ordertests.FooTest"])
+
+        loader = trial._getLoader(self.config)
+        suite = loader.loadByNames(self.config['tests'])
+
+        self.assertEqual(
+            testNames(suite), [
+            'twisted.trial.test.ordertests.FooTest.test_first',
+            'twisted.trial.test.ordertests.FooTest.test_fourth',
+            'twisted.trial.test.ordertests.FooTest.test_second',
+            'twisted.trial.test.ordertests.FooTest.test_third'])
+
+
+    def test_alphabeticalModule(self):
+        """
+        --order=alphabetical causes trial to run test classes within a given
+        module alphabetically.
+        """
+        self.config.parseOptions([
+            "--order", "alphabetical", "twisted.trial.test.ordertests"])
+        loader = trial._getLoader(self.config)
+        suite = loader.loadByNames(self.config['tests'])
+
+        self.assertEqual(
+            testNames(suite), [
+            'twisted.trial.test.ordertests.BarTest.test_bar',
+            'twisted.trial.test.ordertests.BazTest.test_baz',
+            'twisted.trial.test.ordertests.FooTest.test_first',
+            'twisted.trial.test.ordertests.FooTest.test_fourth',
+            'twisted.trial.test.ordertests.FooTest.test_second',
+            'twisted.trial.test.ordertests.FooTest.test_third'])
+
+
+    def test_alphabeticalPackage(self):
+        """
+        --order=alphabetical causes trial to run test modules within a given
+        package alphabetically, with tests within each module alphabetized.
+        """
+        self.config.parseOptions([
+            "--order", "alphabetical", "twisted.trial.test"])
+        loader = trial._getLoader(self.config)
+        suite = loader.loadByNames(self.config['tests'])
+
+        names = testNames(suite)
+        self.assertTrue(names, msg="Failed to load any tests!")
+        self.assertEqual(names, sorted(names))
+
+
+    def test_toptobottom(self):
+        """
+        --order=toptobottom causes trial to run test methods within a given
+        test case from top to bottom as they are defined in the body of the
+        class.
+        """
+        self.config.parseOptions([
+            "--order", "toptobottom",
+            "twisted.trial.test.ordertests.FooTest"])
+
+        loader = trial._getLoader(self.config)
+        suite = loader.loadByNames(self.config['tests'])
+
+        self.assertEqual(
+            testNames(suite), [
+            'twisted.trial.test.ordertests.FooTest.test_first',
+            'twisted.trial.test.ordertests.FooTest.test_second',
+            'twisted.trial.test.ordertests.FooTest.test_third',
+            'twisted.trial.test.ordertests.FooTest.test_fourth'])
+
+
+    def test_toptobottomModule(self):
+        """
+        --order=toptobottom causes trial to run test classes within a given
+        module from top to bottom as they are defined in the module's source.
+        """
+        self.config.parseOptions([
+            "--order", "toptobottom", "twisted.trial.test.ordertests"])
+        loader = trial._getLoader(self.config)
+        suite = loader.loadByNames(self.config['tests'])
+
+        self.assertEqual(
+            testNames(suite), [
+            'twisted.trial.test.ordertests.FooTest.test_first',
+            'twisted.trial.test.ordertests.FooTest.test_second',
+            'twisted.trial.test.ordertests.FooTest.test_third',
+            'twisted.trial.test.ordertests.FooTest.test_fourth',
+            'twisted.trial.test.ordertests.BazTest.test_baz',
+            'twisted.trial.test.ordertests.BarTest.test_bar'])
+
+
+    def test_toptobottomPackage(self):
+        """
+        --order=toptobottom causes trial to run test modules within a given
+        package alphabetically, with tests within each module run top to
+        bottom.
+        """
+        self.config.parseOptions([
+            "--order", "toptobottom", "twisted.trial.test"])
+        loader = trial._getLoader(self.config)
+        suite = loader.loadByNames(self.config['tests'])
+
+        names = testNames(suite)
+        self.assertEqual(
+            names, sorted(names, key=lambda name : name.partition(".")[0]),
+        )
+
+
+    def test_toptobottomMissingSource(self):
+        """
+        --order=toptobottom detects the source line of methods from modules
+        whose source file is missing.
+        """
+        tempdir = self.mktemp().encode('utf-8')
+        package = FilePath(tempdir).child(b'twisted_toptobottom_temp')
+        package.makedirs()
+        package.child(b'__init__.py').setContent(b'')
+        package.child(b'test_missing.py').setContent(textwrap.dedent(b'''
+        from twisted.trial.unittest import TestCase
+        class TestMissing(TestCase):
+            def test_second(self): pass
+            def test_third(self): pass
+            def test_fourth(self): pass
+            def test_first(self): pass
+        '''))
+        pathEntry = package.parent().path.decode('utf-8')
+        sys.path.insert(0, pathEntry)
+        self.addCleanup(sys.path.remove, pathEntry)
+        from twisted_toptobottom_temp import test_missing
+        self.addCleanup(sys.modules.pop, 'twisted_toptobottom_temp')
+        self.addCleanup(sys.modules.pop, test_missing.__name__)
+        package.child(b'test_missing.py').remove()
+
+        self.config.parseOptions([
+            "--order", "toptobottom", "twisted.trial.test.ordertests"])
+        loader = trial._getLoader(self.config)
+        suite = loader.loadModule(test_missing)
+
+        self.assertEqual(
+            testNames(suite), [
+            'twisted_toptobottom_temp.test_missing.TestMissing.test_second',
+            'twisted_toptobottom_temp.test_missing.TestMissing.test_third',
+            'twisted_toptobottom_temp.test_missing.TestMissing.test_fourth',
+            'twisted_toptobottom_temp.test_missing.TestMissing.test_first'])
+
+
+
+class HelpOrderTests(unittest.TestCase):
+    """
+    Tests for the --help-orders flag.
+    """
+    def test_help_ordersPrintsSynopsisAndQuits(self):
+        """
+        --help-orders prints each of the available orders and then exits.
+        """
+        self.status = None
+        self.patch(
+            trial.sys, "exit", lambda status: setattr(self, "status", status))
+        self.patch(sys, "stdout", StringIO.StringIO())
+
+        trial.Options().parseOptions(["--help-orders"])
+
+        for orderName, orderDesc in trial._runOrders:
+            match = re.search(
+                "{0}.*{1}".format(orderName, orderDesc), sys.stdout.getvalue(),
+            )
+            self.assertTrue(match)
+        self.assertEqual(self.status, 0)

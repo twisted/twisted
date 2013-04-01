@@ -117,6 +117,10 @@ the default, except it makes tests run about ten times slower.
 \fB-h\fR, \fB--help\fR
 Print a usage message to standard output, then exit.
 .TP
+\fB--help-order\fR
+Print a list of possible orders that TestCase test methods can be run in, then
+exit. The orders can be used with the --order option described below.
+.TP
 \fB--help-reporters\fR
 Print a list of valid reporters to standard output, then exit. Reporters can
 be selected with the --reporter option described below.
@@ -140,6 +144,11 @@ every subpackage.  Unless, that is, you specify this option.
 \fB--nopm\fR
 Don't automatically jump into debugger for post-mortem analysis of
 exceptions.  Only usable in conjunction with --debug.
+.TP
+\fB--order\fR \fIorder\fR
+Specify what order to run the individual test methods within the given
+TestCases. By default, they are run alphabetically. See --help-order for a list
+of other valid values.
 .TP
 \fB--profile\fR
 Run tests under the Python profiler.
@@ -204,7 +213,7 @@ Written by Jonathan M. Lange
 .SH "REPORTING BUGS"
 To report a bug, visit http://twistedmatrix.com/trac/newticket
 .SH COPYRIGHT
-Copyright \(co 2003-2011 Twisted Matrix Laboratories
+Copyright \(co 2003-2013 Twisted Matrix Laboratories
 .br
 This is free software; see the source for copying conditions.  There is NO
 warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.

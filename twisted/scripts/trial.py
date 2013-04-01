@@ -4,7 +4,16 @@
 # See LICENSE for details.
 
 
-import sys, os, random, gc, pdb, time, warnings
+from __future__ import print_function
+import dis
+import gc
+import inspect
+import os
+import pdb
+import random
+import sys
+import time
+import warnings
 
 from twisted.internet import defer
 from twisted.application import app
@@ -94,6 +103,16 @@ def _reporterAction():
 
 
 
+# orders which can be passed to trial --order
+_runOrders = [
+    ("alphabetical",
+     "alphabetical order for test methods, arbitrary order for test cases"),
+    ("toptobottom",
+     "attempt to run test cases and methods in the order they were defined"),
+]
+
+
+
 class _BasicOptions(object):
     """
     Basic options shared between trial and its local workers.
@@ -106,6 +125,7 @@ class _BasicOptions(object):
 
     optFlags = [["help", "h"],
                 ["no-recurse", "N", "Don't recurse into packages"],
+                ['help-orders', None, "Help on available test running orders"],
                 ['help-reporters', None,
                  "Help on available output plugins (reporters)"],
                 ["rterrors", "e", "realtime errors, print out tracebacks as "
@@ -117,6 +137,8 @@ class _BasicOptions(object):
                 ]
 
     optParameters = [
+        ["order", "o", None, "Specify what order to run test cases and methods"
+         ". See --help-orders for more info."],
         ["random", "z", None,
          "Run tests in random order using the specified seed"],
         ['temp-directory', None, '_trial_temp',
@@ -126,7 +148,9 @@ class _BasicOptions(object):
          'more info.']]
 
     compData = usage.Completions(
-        optActions={"reporter": _reporterAction,
+        optActions={"order": usage.CompleteList(
+                        name for name, _ in _runOrders),
+                    "reporter": _reporterAction,
                     "logfile": usage.CompleteFiles(descr="log file name"),
                     "random": usage.Completer(descr="random seed")},
         extraActions=[usage.CompleteFiles(
@@ -149,7 +173,7 @@ class _BasicOptions(object):
         """
         coverdir = 'coverage'
         result = FilePath(self['temp-directory']).child(coverdir)
-        print "Setting coverage directory to %s." % (result.path,)
+        print("Setting coverage directory to %s." % (result.path,))
         return result
 
 
@@ -196,14 +220,24 @@ class _BasicOptions(object):
         sys.settrace(spewer)
 
 
+    def opt_help_orders(self):
+        synopsis = ("Trial can attempt to run test cases and their methods in "
+                    "a few different\n orders. You can select any of the "
+                    "following options using --order=<foo>.\n")
+
+        print(synopsis)
+        for name, description in _runOrders:
+            print('   ', name, '\t', description)
+        sys.exit(0)
+
+
     def opt_help_reporters(self):
         synopsis = ("Trial's output can be customized using plugins called "
                     "Reporters. You can\nselect any of the following "
                     "reporters using --reporter=<foo>\n")
-        print synopsis
+        print(synopsis)
         for p in plugin.getPlugins(itrial.IReporter):
-            print '   ', p.longOpt, '\t', p.description
-        print
+            print('   ', p.longOpt, '\t', p.description)
         sys.exit(0)
 
 
@@ -226,6 +260,22 @@ class _BasicOptions(object):
         except KeyError:
             raise usage.UsageError(
                 "tbformat must be 'plain', 'emacs', or 'cgitb'.")
+
+
+    def opt_order(self, order):
+        """
+        Run the tests in the given order.
+
+        @param order: a test ordering
+        """
+
+        if order == "toptobottom":
+            self['order'] = _maybeFindSourceLine
+        elif order == "alphabetical":
+            self['order'] = runner.name
+        else:
+            orders = ", ".join(repr(order) for order, _ in _runOrders)
+            raise usage.UsageError("order must be one of " + orders)
 
 
     def opt_recursionlimit(self, arg):
@@ -403,13 +453,45 @@ def _getSuite(config):
 
 
 
+def _maybeFindSourceLine(thing):
+    """
+    Try to find the source line of the given test thing.
+
+
+    @param testThing: a test method or class
+    @rtype: int
+    @return: the starting source line, or -1 if one couldn't be found
+    """
+
+    method = getattr(thing, "_testMethodName", None)
+    if method is not None:
+        thing = getattr(thing, method)
+
+    # If it's a function, we can get the line number even if the source file no
+    # longer exists
+    code = getattr(thing, "func_code", None)
+    if code is not None:
+        _, startLine = next(dis.findlinestarts(code))
+        return startLine
+
+    try:
+        return inspect.getsourcelines(thing)[1]
+    except (IOError, TypeError):
+        # either thing is a module, which raised a TypeError, or the file
+        # couldn't be read
+        return -1
+
+
+
 def _getLoader(config):
     loader = runner.TestLoader()
     if config['random']:
         randomer = random.Random()
         randomer.seed(config['random'])
         loader.sorter = lambda x : randomer.random()
-        print 'Running tests shuffled with seed %d\n' % config['random']
+        print('Running tests shuffled with seed %d\n' % config['random'])
+    elif config['order']:
+        loader.sorter = config['order']
     if not config['until-failure']:
         loader.suiteFactory = runner.DestructiveTestSuite
     return loader
@@ -425,7 +507,7 @@ def _wrappedPdb():
     try:
         import readline
     except ImportError:
-        print "readline module not available"
+        print("readline module not available")
         sys.exc_clear()
     for path in ('.pdbrc', 'pdbrc'):
         if os.path.exists(path):
