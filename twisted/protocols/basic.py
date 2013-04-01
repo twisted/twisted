@@ -571,7 +571,9 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
 
     def _addToBuffer(self, data):
         """
-        Append L{data} to the internal buffer.
+        Append C{data} to the internal buffer.
+
+        @param data: A chunk of C{bytes} received.
         """
         # When in line mode, this will convert data in L{_buffer} into lines in
         # L{_lineBuffer}.
