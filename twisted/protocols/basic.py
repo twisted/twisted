@@ -534,7 +534,7 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
         sent line is longer than this, the connection is dropped).  Default is
         16384.
 
-    @ivar line_mode: Indicate whether we're current in line mode or not.
+    @ivar line_mode: Indicate whether we're currently in line mode or not.
 
     @ivar _lineBuffer: Store current parsed lines.
 
@@ -615,8 +615,7 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
         while not self.paused:
             if self.line_mode:
                 if not self._lineBuffer:
-                    if (self._buffer.tell() >=
-                            self.MAX_LENGTH + len(self.delimiter)):
+                    if self._buffer.tell() > self.MAX_LENGTH:
                         return self.lineLengthExceeded(self.clearLineBuffer())
                     break
 

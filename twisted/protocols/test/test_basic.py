@@ -365,7 +365,7 @@ a'''
         proto = basic.LineReceiver()
         transport = proto_helpers.StringTransport()
         proto.makeConnection(transport)
-        proto.dataReceived(b'x' * (proto.MAX_LENGTH + 2))
+        proto.dataReceived(b'x' * (proto.MAX_LENGTH + 1))
         self.assertTrue(transport.disconnecting)
 
 

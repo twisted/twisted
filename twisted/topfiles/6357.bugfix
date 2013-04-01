@@ -1,2 +1,2 @@
-twisted.protocols.basic.LineReceiver no longer uses quadractic complexity to
-manage its internal buffer.
+twisted.protocols.basic.LineReceiver no longer uses quadractic complexity
+algorithms to manage its internal buffer.
