@@ -10,6 +10,7 @@ Basic protocols, such as line-oriented, netstring, and int prefixed strings.
 from __future__ import absolute_import, division
 
 # System imports
+import os
 import re
 from struct import pack, unpack, calcsize
 from io import BytesIO
@@ -536,13 +537,21 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
 
     @ivar line_mode: Indicate whether we're currently in line mode or not.
 
-    @ivar _lineBuffer: Store current parsed lines.
+    @ivar _lineBuffer: Store current parsed lines. It's filled by emptying
+        C{_buffer} with the list of complete lines received.
 
-    @ivar _buffer: Store current received data.
+    @ivar _buffer: Store current received data. It holds the data which doesn't
+        form a complete line when in line mode, or data to be sent to
+        C{rawDataReceived} in raw mode.
+
+    @ivar _busyReceiving: Flag preventing reentrant calls to dataReceived. It's
+        only necessary now to support the deprecated behavior of returning a
+        value in C{dataReceived}.
     """
     line_mode = 1
     _lineBuffer = None
     _buffer = None
+    _busyReceiving = False
     delimiter = b'\r\n'
     MAX_LENGTH = 16384
 
@@ -590,7 +599,7 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
             # The idea is to look for the delimiter in a subset of the buffer.
             # This prevents slowdown if the line length is long and the bytes
             # are being received slowly.
-            self._buffer.seek(-len(data) - len(self.delimiter), 2)
+            self._buffer.seek(-len(data) - len(self.delimiter), os.SEEK_END)
 
             # This does two things: get up to len(self.delimiter) bytes,
             # and always seek to the very end.
@@ -605,6 +614,13 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
                 self._lineBuffer.extend(splitted)
 
 
+    def _bufferSize(self):
+        """
+        Return the amount of current buffered data.
+        """
+        return self._buffer.tell()
+
+
     def dataReceived(self, data):
         """
         Translates bytes into lines, and calls lineReceived (or
@@ -612,28 +628,38 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
         """
         self._addToBuffer(data)
 
-        while not self.paused:
-            if self.line_mode:
-                if not self._lineBuffer:
-                    if self._buffer.tell() > self.MAX_LENGTH:
-                        return self.lineLengthExceeded(self.clearLineBuffer())
-                    break
+        if self._busyReceiving:
+            return
 
-                line = self._lineBuffer.popleft()
-                if len(line) > self.MAX_LENGTH:
-                    exceeded = line + self.delimiter + self.clearLineBuffer()
-                    return self.lineLengthExceeded(exceeded)
-                why = self.lineReceived(line)
-                if why or self.transport and self.transport.disconnecting:
-                    return why
-            else:
-                data = self.clearLineBuffer()
-                if data:
-                    why = self.rawDataReceived(data)
+        self._busyReceiving = True
+        try:
+            while not self.paused:
+                if self.line_mode:
+                    if not self._lineBuffer:
+                        if self._bufferSize() > self.MAX_LENGTH:
+                            return self.lineLengthExceeded(
+                                self.clearLineBuffer())
+                        break
+
+                    line = self._lineBuffer.popleft()
+                    if len(line) > self.MAX_LENGTH:
+                        exceeded = (line + self.delimiter +
+                                    self.clearLineBuffer())
+                        return self.lineLengthExceeded(exceeded)
+                    why = self.lineReceived(line)
                     if why or self.transport and self.transport.disconnecting:
                         return why
                 else:
-                    break
+                    data = self.clearLineBuffer()
+                    if data:
+                        why = self.rawDataReceived(data)
+                        if (why or self.transport and
+                                self.transport.disconnecting):
+                            return why
+                    else:
+                        break
+        finally:
+            self._busyReceiving = False
 
 
     def setLineMode(self, extra=b''):

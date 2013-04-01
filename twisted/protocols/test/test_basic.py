@@ -401,6 +401,27 @@ a'''
         self.assertRaises(NotImplementedError, proto.lineReceived, 'foo')
 
 
+    def test_reentrantLineReceived(self):
+        """
+        L{basic.LineReceiver} stops reentrant calls to C{dataReceived}, in the
+        case where we interrupt the connection by returning data.
+        """
+        # This test should go away when we remove the deprecated behavior of
+        # returning a value in dataReceived/lineReceived.
+        calls = []
+
+        class ReentrantLineReceiver(basic.LineReceiver):
+
+            def lineReceived(self, line):
+                calls.append(line)
+                self.dataReceived("ok")
+                return "bye"
+
+        proto = ReentrantLineReceiver()
+        proto.dataReceived("foo\r\nbar\r\n")
+        self.assertEqual(["foo"], calls)
+
+
 
 class LineOnlyReceiverTestCase(unittest.SynchronousTestCase):
     """
