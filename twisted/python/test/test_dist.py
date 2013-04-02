@@ -502,7 +502,7 @@ oldPypySys = FakeModule({"modules": {"__pypy__": None}})
 
 class OldPythonsFallbackTest(TestCase):
     """
-    Tests for L{_checkCPython} when used on a Python 2.4-like platform, when
+    Tests for L{_checkCPython} when used on a Python-like platform, where
     neither C{platform.python_implementation} nor C{sys.subversion} is
     available.
     """

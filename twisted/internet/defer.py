@@ -955,10 +955,10 @@ def _deferGenerator(g, deferred):
 
 def deferredGenerator(f):
     """
-    deferredGenerator and waitForDeferred help you write L{Deferred}-using code
-    that looks like a regular sequential function. If your code has a minimum
-    requirement of Python 2.5, consider the use of L{inlineCallbacks} instead,
-    which can accomplish the same thing in a more concise manner.
+    L{deferredGenerator} and L{waitForDeferred} help you write
+    L{Deferred}-using code that looks like a regular sequential function.
+    Consider the use of L{inlineCallbacks} instead, which can accomplish
+    the same thing in a more concise manner.
 
     There are two important functions involved: L{waitForDeferred}, and
     L{deferredGenerator}.  They are used together, like this::
@@ -1016,12 +1016,6 @@ def deferredGenerator(f):
 
 
 ## inlineCallbacks
-
-# BaseException is only in Py 2.5.
-try:
-    BaseException
-except NameError:
-    BaseException=Exception
 
 
 
@@ -1149,18 +1143,8 @@ def _inlineCallbacks(result, g, deferred):
 
 def inlineCallbacks(f):
     """
-    WARNING: this function will not work in Python 2.4 and earlier!
-
     inlineCallbacks helps you write Deferred-using code that looks like a
-    regular sequential function. This function uses features of Python 2.5
-    generators.  If you need to be compatible with Python 2.4 or before, use
-    the L{deferredGenerator} function instead, which accomplishes the same
-    thing, but with somewhat more boilerplate.  For example::
-
-        @inlineCallBacks
-        def thingummy():
-            thing = yield makeSomeRequestResultingInDeferred()
-            print thing #the result! hoorj!
+    regular sequential function.
 
     When you call anything that results in a L{Deferred}, you can simply yield it;
     your generator will automatically be resumed when the Deferred's result is

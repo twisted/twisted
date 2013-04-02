@@ -320,8 +320,6 @@ class ErrorHolder(TestHolder):
 
     def __repr__(self):
         return "<ErrorHolder description=%r error=%s%s>" % (
-            # Format the exception type and arguments explicitly, as exception
-            # objects do not have nice looking string formats on Python 2.4.
             self.description, self.error[0].__name__, self.error[1].args)
 
 
