@@ -6,14 +6,24 @@ Checker for common errors in Lore documents.
 """
 
 from xml.dom import minidom as dom
-import parser, urlparse, os.path
+import parser
+import urlparse
+import os.path
 
 from twisted.lore import tree, process
 from twisted.web import domhelpers
 from twisted.python import reflect
+from twisted.python.versions import Version
+from twisted.python.deprecate import deprecatedModuleAttribute
 
 
 parserErrors = (SyntaxError,)
+deprecatedModuleAttribute(
+    Version("Twisted", 13, 1, 0),
+    "parserErrors is deprecated",
+    __name__,
+    "parserErrors")
+
 
 class TagChecker:
 
