@@ -26,16 +26,10 @@ class TestSuite(pyunit.TestSuite):
     C{run} method.
     """
 
-    def __call__(self, result):
-        return self.run(result)
-
-
     def run(self, result):
         """
         Call C{run} on every member of the suite.
         """
-        # we implement this because Python 2.3 unittest defines this code
-        # in __call__, whereas 2.4 defines the code in run.
         for test in self._tests:
             if result.shouldStop:
                 break
@@ -188,13 +182,3 @@ def _iterateTests(testSuiteOrCase):
             for subtest in _iterateTests(test):
                 yield subtest
 
-
-
-# Support for Python 2.3
-try:
-    iter(pyunit.TestSuite())
-except TypeError:
-    # Python 2.3's TestSuite doesn't support iteration. Let's monkey patch it!
-    def __iter__(self):
-        return iter(self._tests)
-    pyunit.TestSuite.__iter__ = __iter__

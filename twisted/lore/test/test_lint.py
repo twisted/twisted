@@ -15,6 +15,27 @@ from twisted.lore.process import ProcessingFailure
 
 
 
+class DeprecationTestCase(TestCase):
+    """
+    Deprecations in L{twisted.lore.lint}.
+    """
+    def test_parserErrors(self):
+        """
+        L{lint.parserErrors} is deprecated.
+        """
+        from twisted.lore.lint import parserErrors
+        warnings = self.flushWarnings(
+            offendingFunctions=[self.test_parserErrors])
+        self.assertEqual(DeprecationWarning, warnings[0]['category'])
+        self.assertEqual(
+            "twisted.lore.lint.parserErrors was deprecated in Twisted 13.1.0: "
+            "parserErrors is deprecated",
+            warnings[0]['message'])
+        self.assertEqual(1, len(warnings))
+        self.assertEqual(parserErrors, (SyntaxError,))
+
+
+
 class DefaultTagCheckerTests(TestCase):
     """
     Tests for L{twisted.lore.lint.DefaultTagChecker}.
