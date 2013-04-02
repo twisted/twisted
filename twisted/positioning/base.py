@@ -498,8 +498,14 @@ class Coordinate(Angle, FancyEqMixin):
             -90.0 and +90.0 (exclusive). If this value describes a longitude,
             this value must be within -180.0 and +180.0 (exclusive).
         @type angle: C{float}
-        @param coordinateType: One of L{Angles.LATITUDE}, L{Angles.LONGITUDE}.
+        @param coordinateType: The coordinate type. One of L{Angles.LATITUDE},
+            L{Angles.LONGITUDE} or C{None} if unknown.
         """
+        if coordinateType not in [Angles.LATITUDE, Angles.LONGITUDE, None]:
+            raise ValueError("coordinateType must be one of Angles.LATITUDE, "
+                             "Angles.LONGITUDE or None, was {!r}"
+                             .format(coordinateType))
+
         Angle.__init__(self, angle, coordinateType)
 
 
