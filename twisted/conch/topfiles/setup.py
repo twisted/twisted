@@ -11,7 +11,7 @@ except ImportError:
                      "attempting to install any other Twisted projects.")
 
 if __name__ == '__main__':
-    if sys.version_info[:2] >= (2, 4):
+    if sys.version_info[:2] >= (2, 6):
         extraMeta = dict(
             classifiers=[
                 "Development Status :: 4 - Beta",
