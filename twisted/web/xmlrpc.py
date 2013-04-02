@@ -8,8 +8,8 @@ A generic resource for publishing objects via XML-RPC.
 Maintainer: Itamar Shtull-Trauring
 """
 
-# System Imports
-import sys, xmlrpclib, urlparse
+import xmlrpclib
+import urlparse
 
 
 # Sibling Imports
@@ -101,8 +101,8 @@ class XMLRPC(resource.Resource):
     @ivar allowNone: Permit XML translating of Python constant None.
     @type allowNone: C{bool}
 
-    @ivar useDateTime: Present datetime values as datetime.datetime objects?
-        Requires Python >= 2.5.
+    @ivar useDateTime: Present C{datetime} values as C{datetime.datetime}
+        objects?
     @type useDateTime: C{bool}
     """
 
@@ -139,12 +139,8 @@ class XMLRPC(resource.Resource):
         request.content.seek(0, 0)
         request.setHeader("content-type", "text/xml")
         try:
-            if self.useDateTime:
-                args, functionPath = xmlrpclib.loads(request.content.read(),
-                    use_datetime=True)
-            else:
-                # Maintain backwards compatibility with Python < 2.5
-                args, functionPath = xmlrpclib.loads(request.content.read())
+            args, functionPath = xmlrpclib.loads(request.content.read(),
+                use_datetime=self.useDateTime)
         except Exception, e:
             f = Fault(self.FAILURE, "Can't deserialize input: %s" % (e,))
             self._cbRender(f, request)
@@ -393,8 +389,8 @@ class _QueryFactory(protocol.ClientFactory):
     @type password: C{str} or C{NoneType}
 
     @ivar useDateTime: Accept datetime values as datetime.datetime objects.
-        also passed to the underlying xmlrpclib implementation.  Default to
-        False.  Requires Python >= 2.5.
+        also passed to the underlying xmlrpclib implementation.  Defaults to
+        C{False}.
     @type useDateTime: C{bool}
     """
 
@@ -408,7 +404,8 @@ class _QueryFactory(protocol.ClientFactory):
         @type method: C{str}
 
         @param allowNone: allow the use of None values in parameters. It's
-            passed to the underlying xmlrpclib implementation. Default to False.
+            passed to the underlying xmlrpclib implementation. Defaults to
+            C{False}.
         @type allowNone: C{bool} or C{NoneType}
 
         @param args: the arguments to pass to the method.
@@ -429,12 +426,8 @@ class _QueryFactory(protocol.ClientFactory):
         if not self.deferred:
             return
         try:
-            if self.useDateTime:
-                response = xmlrpclib.loads(contents,
-                    use_datetime=True)[0][0]
-            else:
-                # Maintain backwards compatibility with Python < 2.5
-                response = xmlrpclib.loads(contents)[0][0]
+            response = xmlrpclib.loads(contents,
+                use_datetime=self.useDateTime)[0][0]
         except:
             deferred, self.deferred = self.deferred, None
             deferred.errback(failure.Failure())
@@ -461,7 +454,7 @@ class Proxy:
 
     Pass the URL of the remote XML-RPC server to the constructor.
 
-    Use proxy.callRemote('foobar', *args) to call remote method
+    Use C{proxy.callRemote('foobar', *args)} to call remote method
     'foobar' with *args.
 
     @ivar user: The username with which to authenticate with the server
@@ -477,22 +470,23 @@ class Proxy:
     @type password: C{str} or C{NoneType}
 
     @ivar allowNone: allow the use of None values in parameters. It's
-        passed to the underlying xmlrpclib implementation. Default to False.
+        passed to the underlying C{xmlrpclib} implementation. Defaults to
+        C{False}.
     @type allowNone: C{bool} or C{NoneType}
 
     @ivar useDateTime: Accept datetime values as datetime.datetime objects.
-        also passed to the underlying xmlrpclib implementation.  Default to
-        False.  Requires Python >= 2.5.
+        also passed to the underlying C{xmlrpclib} implementation. Defaults to
+        C{False}.
     @type useDateTime: C{bool}
 
     @ivar connectTimeout: Number of seconds to wait before assuming the
         connection has failed.
     @type connectTimeout: C{float}
 
-    @ivar _reactor: the reactor used to create connections.
-    @type _reactor: object providing L{twisted.internet.interfaces.IReactorTCP}
+    @ivar _reactor: The reactor used to create connections.
+    @type _reactor: Object providing L{twisted.internet.interfaces.IReactorTCP}
 
-    @ivar queryFactory: object returning a factory for XML-RPC protocol. Mainly
+    @ivar queryFactory: Object returning a factory for XML-RPC protocol. Mainly
         useful for tests.
     """
     queryFactory = _QueryFactory
@@ -539,8 +533,6 @@ class Proxy:
 
 
     def __setattr__(self, name, value):
-        if name == "useDateTime" and value and sys.version_info[:2] < (2, 5):
-            raise RuntimeError("useDateTime requires Python 2.5 or later.")
         self.__dict__[name] = value
 
 

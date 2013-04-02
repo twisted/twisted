@@ -5,7 +5,6 @@
 Tests for L{twisted.python.zipstream}
 """
 
-import sys
 import random
 import zipfile
 
@@ -226,16 +225,6 @@ class ZipstreamTest(unittest.TestCase):
         czf = zipstream.ChunkingZipFile(fn)
         self.assertRaises(zipfile.BadZipfile, czf.readfile, "0")
         self.assertEqual(czf.readfile("1").read(), "more contents")
-
-
-    if sys.version_info < (2, 5):
-        # In python 2.4 and earlier, consistency between the directory and the
-        # file header are verified at archive-opening time.  In python 2.5
-        # (and, presumably, later) it is readzipfile's responsibility.
-        message = "Consistency-checking only necessary in 2.5."
-        test_invalidHeader.skip = message
-        test_filenameMismatch.skip = message
-
 
 
     def test_unsupportedCompression(self):
