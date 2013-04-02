@@ -743,17 +743,15 @@ class BeaconInformationTests(TestCase):
     """
     def test_minimal(self):
         """
-        Tests some basic features of a minimal beacon information object.
-
-        Tests the number of used beacons is zero, the total number of
-        beacons (the number of seen beacons) is zero, and the repr of
-        the object.
+        For an empty beacon information object, the number of used
+        beacons is zero, the number of seen beacons is zero, and the
+        repr of the object reflects that.
         """
         bi = base.BeaconInformation()
         self.assertEqual(len(list(bi.usedBeacons)), 0)
         self.assertEqual(len(list(bi)), 0)
-        self.assertEqual(repr(bi),
-            "<BeaconInformation (seen: 0, used: 0, beacons: {})>")
+        expectedRepr = '<BeaconInformation (seen: 0, used: 0, beacons: {})>'
+        self.assertEqual(repr(bi), expectedRepr)
 
 
     satelliteKwargs = {"azimuth": 1, "elevation": 1, "signalToNoiseRatio": 1.}

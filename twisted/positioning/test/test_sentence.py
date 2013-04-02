@@ -64,9 +64,9 @@ class SentenceTestsMixin(object):
     """
     def test_attributeAccess(self):
         """
-        Tests that accessing a sentence attribute gets the correct value, and
-        accessing an unset attribute (which is specified as being a valid
-        sentence attribute) gets C{None}.
+        A sentence attribute gets the correct value, and accessing an
+        unset attribute (which is specified as being a valid sentence
+        attribute) gets C{None}.
         """
         thisSentinel = object()
         sentence = self.sentenceClass({sentinelValueOne: thisSentinel})
@@ -76,7 +76,7 @@ class SentenceTestsMixin(object):
 
     def test_raiseOnMissingAttributeAccess(self):
         """
-        Tests that accessing a nonexistant attribute raises C{AttributeError}.
+        Accessing a nonexistant attribute raises C{AttributeError}.
         """
         sentence = self.sentenceClass({})
         self.assertRaises(AttributeError, getattr, sentence, "BOGUS")
@@ -84,7 +84,7 @@ class SentenceTestsMixin(object):
 
     def test_raiseOnBadAttributeAccess(self):
         """
-        Tests that accessing bogus attributes raises C{AttributeError}, *even*
+        Accessing bogus attributes raises C{AttributeError}, *even*
         when that attribute actually is in the sentence data.
         """
         sentence = self.sentenceClass({"BOGUS": None})
@@ -152,7 +152,7 @@ class MixinTests(TestCase, SentenceTestsMixin):
 
     def test_noNoneInSentenceAttributes(self):
         """
-        Tests that C{None} does not appear in the sentence attributes of the
+        C{None} does not appear in the sentence attributes of the
         protocol, even though it's in the specification.
 
         This is because C{None} is a placeholder for parts of the sentence you

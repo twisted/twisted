@@ -99,7 +99,7 @@ class CallbackTests(TestCase):
 
     def test_callbacksCalled(self):
         """
-        Tests that the correct callbacks fire, and that *only* those fire.
+        The correct callbacks fire, and that *only* those fire.
         """
         sentencesByType = {'GPGGA': ['$GPGGA*56'],
                            'GPGLL': ['$GPGLL*50'],
@@ -142,8 +142,8 @@ class BrokenNMEAProtocolTests(TestCase):
 
     def test_dontSwallowCallbackExceptions(self):
         """
-        Tests that an AttributeErrors in a sentence callback of an
-        NMEAProtocol don't get accidentally swallowed.
+        An C{AttributeError}s in a sentence callback of an
+        C{NMEAProtocol} don't get accidentally swallowed.
         """
         lineReceived = self.protocol.lineReceived
         self.assertRaises(AttributeError, lineReceived, '$GPGGA*56')
@@ -156,7 +156,7 @@ class SplitTest(TestCase):
     """
     def test_withChecksum(self):
         """
-        Tests that an NMEA sentence with a checksum gets split correctly.
+        An NMEA sentence with a checksum gets split correctly.
         """
         splitSentence = nmea._split("$GPGGA,spam,eggs*00")
         self.assertEqual(splitSentence, ['GPGGA', 'spam', 'eggs'])
@@ -164,7 +164,7 @@ class SplitTest(TestCase):
 
     def test_noCheckum(self):
         """
-        Tests that an NMEA sentence without a checksum gets split correctly.
+        An NMEA sentence without a checksum gets split correctly.
         """
         splitSentence = nmea._split("$GPGGA,spam,eggs*")
         self.assertEqual(splitSentence, ['GPGGA', 'spam', 'eggs'])
@@ -177,17 +177,22 @@ class ChecksumTests(TestCase):
     """
     def test_valid(self):
         """
-        Tests checkum validation for valid or missing checksums.
+        Sentences with valid checksums get validated.
         """
-        sentences = [GPGGA, GPGGA[:-2]]
+        nmea._validateChecksum(GPGGA)
 
-        for s in sentences:
-            nmea._validateChecksum(s)
+
+    def test_missing(self):
+        """
+        Sentences with missing checksums get validated.
+        """
+        nmea._validateChecksum(GPGGA[:-2])
 
 
     def test_invalid(self):
         """
-        Tests checksum validation on invalid checksums.
+        Sentences with a bad checksum raise L{base.InvalidChecksum} when
+        attempting to validate them.
         """
         validate = nmea._validateChecksum
 
@@ -221,11 +226,11 @@ class NMEAReceiverSetup:
 
 class GSVSequenceTests(NMEAReceiverSetup, TestCase):
     """
-    Tests if GSV sentence sequences are identified correctly.
+    Tests for the interpretation of GSV sequences.
     """
     def test_firstSentence(self):
         """
-        Tests if the last sentence in a GSV sequence is correctly identified.
+        The first sentence in a GSV sequence is correctly identified.
         """
         self.protocol.lineReceived(GPGSV_FIRST)
         sentence = self.receiver.receivedSentence
@@ -236,7 +241,7 @@ class GSVSequenceTests(NMEAReceiverSetup, TestCase):
 
     def test_middleSentence(self):
         """
-        Tests if a sentence in the middle of a GSV sequence is correctly
+        A sentence in the middle of a GSV sequence is correctly
         identified (as being neither the last nor the first).
         """
         self.protocol.lineReceived(GPGSV_MIDDLE)
@@ -248,7 +253,7 @@ class GSVSequenceTests(NMEAReceiverSetup, TestCase):
 
     def test_lastSentence(self):
         """
-        Tests if the last sentence in a GSV sequence is correctly identified.
+        The last sentence in a GSV sequence is correctly identified.
         """
         self.protocol.lineReceived(GPGSV_LAST)
         sentence = self.receiver.receivedSentence
@@ -278,16 +283,15 @@ class BogusSentenceTests(NMEAReceiverSetup, TestCase):
 
     def test_raiseOnUnknownSentenceType(self):
         """
-        Tests that the protocol raises C{ValueError} when you feed it a
-        well-formed sentence of unknown type.
+        Receiving a well-formed sentence of unknown type raises
+        C{ValueError}.
         """
         self.assertRaisesOnSentence(ValueError, "$GPBOGUS*5b")
 
 
     def test_raiseOnMalformedSentences(self):
         """
-        Tests that the protocol raises L{base.InvalidSentence} when you feed
-        it a malformed sentence.
+        Receiving a malformed sentence raises L{base.InvalidSentence}.
         """
         self.assertRaisesOnSentence(base.InvalidSentence, "GPBOGUS")
 
@@ -299,8 +303,7 @@ class NMEASentenceTests(NMEAReceiverSetup, TestCase):
     """
     def test_repr(self):
         """
-        Checks that the C{repr} of L{nmea.NMEASentence} objects is
-        predictable.
+        The C{repr} of L{nmea.NMEASentence} objects is correct.
         """
         sentencesWithExpectedRepr = [
             (GPGSA,
@@ -348,7 +351,7 @@ class ParsingTests(NMEAReceiverSetup, TestCase):
 
     def test_fullRMC(self):
         """
-        Tests that a full RMC sentence is correctly parsed.
+        A full RMC sentence is correctly parsed.
         """
         expected = {
             'type': 'GPRMC',
@@ -369,7 +372,7 @@ class ParsingTests(NMEAReceiverSetup, TestCase):
 
     def test_fullGGA(self):
         """
-        Tests that a full GGA sentence is correctly parsed.
+        A full GGA sentence is correctly parsed.
         """
         expected = {
             'type': 'GPGGA',
@@ -395,7 +398,7 @@ class ParsingTests(NMEAReceiverSetup, TestCase):
 
     def test_fullGLL(self):
         """
-        Tests that a full GLL sentence is correctly parsed.
+        A full GLL sentence is correctly parsed.
         """
         expected = {
             'type': 'GPGLL',
@@ -413,7 +416,7 @@ class ParsingTests(NMEAReceiverSetup, TestCase):
 
     def test_partialGLL(self):
         """
-        Tests that a partial GLL sentence is correctly parsed.
+        A partial GLL sentence is correctly parsed.
         """
         expected = {
             'type': 'GPGLL',
@@ -428,7 +431,7 @@ class ParsingTests(NMEAReceiverSetup, TestCase):
 
     def test_fullGSV(self):
         """
-        Tests that a full GSV sentence is correctly parsed.
+        A full GSV sentence is correctly parsed.
         """
         expected = {
             'type': 'GPGSV',
@@ -461,7 +464,7 @@ class ParsingTests(NMEAReceiverSetup, TestCase):
 
     def test_partialGSV(self):
         """
-        Tests that a partial GSV sentence is correctly parsed.
+        A partial GSV sentence is correctly parsed.
         """
         expected = {
             'type': 'GPGSV',
@@ -490,7 +493,7 @@ class ParsingTests(NMEAReceiverSetup, TestCase):
 
     def test_fullHDT(self):
         """
-        Tests that a full HDT sentence is correctly parsed.
+        A full HDT sentence is correctly parsed.
         """
         expected = {
             'type': 'GPHDT',
@@ -501,7 +504,7 @@ class ParsingTests(NMEAReceiverSetup, TestCase):
 
     def test_typicalGSA(self):
         """
-        Tests that a typical GSA sentence is correctly parsed.
+        A typical GSA sentence is correctly parsed.
         """
         expected = {
             'type': 'GPGSA',
@@ -577,7 +580,7 @@ class TimestampFixerTests(FixerTestMixin, TestCase):
     """
     def test_simple(self):
         """
-        Tests that a simple timestamp is converted correctly.
+        A simple timestamp is converted correctly.
         """
         data = {'timestamp': '123456'}  # 12:34:56Z
         expected = {'_time': datetime.time(12, 34, 56)}
@@ -586,7 +589,7 @@ class TimestampFixerTests(FixerTestMixin, TestCase):
 
     def test_broken(self):
         """
-        Tests that a broken timestamp raises C{ValueError}.
+        A broken timestamp raises C{ValueError}.
         """
         badTimestamps = '993456', '129956', '123499'
 
@@ -598,8 +601,8 @@ class TimestampFixerTests(FixerTestMixin, TestCase):
 class DatestampFixerTests(FixerTestMixin, TestCase):
     def test_intelligent(self):
         """
-        Tests "intelligent" datestamp handling (guess century based on last
-        two digits). Also tests that this is the default.
+        Intelligent datestamp handling correctly guesses the year from the
+        last two digits. Also tests that this is the default.
         """
         self.assertEqual(self.adapter.DATESTAMP_HANDLING,
                          self.adapter.INTELLIGENT_DATESTAMPS)
@@ -613,7 +616,7 @@ class DatestampFixerTests(FixerTestMixin, TestCase):
 
     def test_19xx(self):
         """
-        Tests 20th-century-only datestam handling method.
+        Tests 20th-century-only datestamp handling method.
         """
         self.adapter.DATESTAMP_HANDLING = self.adapter.DATESTAMPS_FROM_19XX
 
@@ -626,7 +629,7 @@ class DatestampFixerTests(FixerTestMixin, TestCase):
 
     def test_20xx(self):
         """
-        Tests 21st-century-only datestam handling method.
+        Tests 21st-century-only datestamp handling method.
         """
         self.adapter.DATESTAMP_HANDLING = self.adapter.DATESTAMPS_FROM_20XX
 
@@ -639,7 +642,7 @@ class DatestampFixerTests(FixerTestMixin, TestCase):
 
     def test_bogusMethod(self):
         """
-        Tests that using a nonexistent datestamp handling method raises C{ValueError}.
+        A nonexistent datestamp handling method raises C{ValueError}.
         """
         self.adapter.DATESTAMP_HANDLING = "BOGUS_VALUE"
         self._fixerTest({'datestamp': '010199'}, exceptionClass=ValueError)
@@ -647,7 +650,7 @@ class DatestampFixerTests(FixerTestMixin, TestCase):
 
     def test_broken(self):
         """
-        Tests that a broken datestring raises C{ValueError}.
+        A broken datestring raises C{ValueError}.
         """
         self._fixerTest({'datestamp': '123456'}, exceptionClass=ValueError)
 
@@ -707,7 +710,7 @@ class CoordinateFixerTests(FixerTestMixin, TestCase):
     """
     def _coordinateFixerTest(self, degrees, minutes, hemisphere):
         """
-        Tests that an NMEA representation of a coordinate at the given
+        An NMEA representation of a coordinate at the given
         location converts correctly into a L{base.Coordinate}.
 
         @param degrees: The integer degrees for this angle.
@@ -734,7 +737,7 @@ class CoordinateFixerTests(FixerTestMixin, TestCase):
 
     def test_north(self):
         """
-        Tests that NMEA coordinate representations in the northern hemisphere
+        NMEA coordinate representations in the northern hemisphere
         convert correctly.
         """
         self._coordinateFixerTest(10, 30.0, "N")
@@ -742,7 +745,7 @@ class CoordinateFixerTests(FixerTestMixin, TestCase):
 
     def test_south(self):
         """
-        Tests that NMEA coordinate representations in the southern hemisphere
+        NMEA coordinate representations in the southern hemisphere
         convert correctly.
         """
         self._coordinateFixerTest(45, 12.145, "S")
@@ -750,7 +753,7 @@ class CoordinateFixerTests(FixerTestMixin, TestCase):
 
     def test_east(self):
         """
-        Tests that NMEA coordinate representations in the eastern hemisphere
+        NMEA coordinate representations in the eastern hemisphere
         convert correctly.
         """
         self._coordinateFixerTest(53, 31.513, "E")
@@ -758,7 +761,7 @@ class CoordinateFixerTests(FixerTestMixin, TestCase):
 
     def test_west(self):
         """
-        Tests that NMEA coordinate representations in the western hemisphere
+        NMEA coordinate representations in the western hemisphere
         convert correctly.
         """
         self._coordinateFixerTest(12, 45.120, "W")
@@ -766,7 +769,7 @@ class CoordinateFixerTests(FixerTestMixin, TestCase):
 
     def test_badHemisphere(self):
         """
-        Tests that NMEA coordinate representations for nonexistent hemispheres
+        NMEA coordinate representations for nonexistent hemispheres
         raise C{ValueError} when you attempt to parse them.
         """
         sentenceData = {'longitudeHemisphere': 'Q'}
@@ -775,7 +778,7 @@ class CoordinateFixerTests(FixerTestMixin, TestCase):
 
     def test_badHemisphereSign(self):
         """
-        Tests that NMEA coordinate repesentation parsing fails predictably
+        NMEA coordinate repesentation parsing fails predictably
         when you pass nonexistent coordinate types (not latitude or
         longitude).
         """
@@ -790,8 +793,8 @@ class AltitudeFixerTests(FixerTestMixin, TestCase):
     """
     def test_fixAltitude(self):
         """
-        Tests that the NMEA representation of an altitude (above mean sea
-        level) is correctly converted.
+        The NMEA representation of an altitude (above mean sea level)
+        is correctly converted.
         """
         key, value = 'altitude', '545.4'
         altitude = base.Altitude(float(value))
@@ -800,8 +803,8 @@ class AltitudeFixerTests(FixerTestMixin, TestCase):
 
     def test_heightOfGeoidAboveWGS84(self):
         """
-        Tests that the NMEA representation of an altitude of the geoid (above
-        the WGS84 reference level) is correctly converted.
+        The NMEA representation of an altitude of the geoid (above the
+        WGS84 reference level) is correctly converted.
         """
         key, value = 'heightOfGeoidAboveWGS84', '46.9'
         altitude = base.Altitude(float(value))
@@ -815,8 +818,8 @@ class SpeedFixerTests(FixerTestMixin, TestCase):
     """
     def test_speedInKnots(self):
         """
-        Tests if speeds reported in knots correctly get converted to
-        meters per second.
+        Speeds reported in knots correctly get converted to meters per
+        second.
         """
         key, value, targetKey = "speedInKnots", "10", "speed"
         speed = base.Speed(float(value) * base.MPS_PER_KNOT)
@@ -856,7 +859,7 @@ class VariationFixerTests(FixerTestMixin, TestCase):
 
     def test_withHeading(self):
         """
-        Tests if variation values get combined with headings correctly.
+        Variation values get combined with headings correctly.
         """
         trueHeading, variation, direction = "123.12", "1.34", "E"
         sentenceData = {'trueHeading': trueHeading,
@@ -904,7 +907,7 @@ class ValidFixTests(FixerTestMixin, TestCase):
     """
     def test_GGA(self):
         """
-        Tests that GGA data with a valid fix is used.
+        GGA data with a valid fix is used.
         """
         sentenceData = {'type': 'GPGGA',
                         'altitude': '545.4',
@@ -916,7 +919,7 @@ class ValidFixTests(FixerTestMixin, TestCase):
 
     def test_GLL(self):
         """
-        Tests that GLL data with a valid data mode is used.
+        GLL data with a valid data mode is used.
         """
         sentenceData = {'type': 'GPGLL',
                         'altitude': '545.4',
@@ -937,7 +940,7 @@ class InvalidFixTests(FixerTestMixin, TestCase):
     """
     def _invalidFixTest(self, sentenceData):
         """
-        Tests that sentences with an invalid fix or data mode result in empty
+        Sentences with an invalid fix or data mode result in empty
         state (ie, the data isn't used).
         """
         self._fixerTest(sentenceData, {})
@@ -945,7 +948,7 @@ class InvalidFixTests(FixerTestMixin, TestCase):
 
     def test_GGA(self):
         """
-        Tests that GGA sentence data is unused when there is no fix.
+        GGA sentence data is unused when there is no fix.
         """
         sentenceData = {'type': 'GPGGA',
                         'altitude': '545.4',
@@ -956,7 +959,7 @@ class InvalidFixTests(FixerTestMixin, TestCase):
 
     def test_GLL(self):
         """
-        Tests that GLL sentence data is unused when the data is flagged as
+        GLL sentence data is unused when the data is flagged as
         void.
         """
         sentenceData = {'type': 'GPGLL',
@@ -966,12 +969,12 @@ class InvalidFixTests(FixerTestMixin, TestCase):
         self._invalidFixTest(sentenceData)
 
 
-
     def test_badGSADataMode(self):
         """
-        Tests that GSA sentence data is not used when there is no GPS fix, but
-        the data mode claims the data is "active". Some GPSes do do this,
-        unfortunately, and that means you shouldn't use the data.
+        GSA sentence data is not used when there is no GPS fix, but
+        the data mode claims the data is "active". Some GPSes do do
+        this, unfortunately, and that means you shouldn't use the
+        data.
         """
         sentenceData = {'type': 'GPGSA',
                         'altitude': '545.4',
@@ -983,10 +986,10 @@ class InvalidFixTests(FixerTestMixin, TestCase):
 
     def test_badGSAFixType(self):
         """
-        Tests that GSA sentence data is not used when the fix claims to be
-        valid (albeit only 2D), but the data mode says the data is void. Some
-        GPSes do do this, unfortunately, and that means you shouldn't use the
-        data.
+        GSA sentence data is not used when the fix claims to be valid
+        (albeit only 2D), but the data mode says the data is void.
+        Some GPSes do do this, unfortunately, and that means you
+        shouldn't use the data.
         """
         sentenceData = {'type': 'GPGSA',
                         'altitude': '545.4',
@@ -998,8 +1001,8 @@ class InvalidFixTests(FixerTestMixin, TestCase):
 
     def test_badGSADataModeAndFixType(self):
         """
-        Tests that GSA sentence data is not use when neither the fix nor the
-        data mode is any good.
+        GSA sentence data is not use when neither the fix nor the data
+        mode is any good.
         """
         sentenceData = {'type': 'GPGSA',
                         'altitude': '545.4',
@@ -1075,7 +1078,7 @@ class NMEAReceiverTest(TestCase):
 
     def test_positionErrorUpdateAcrossStates(self):
         """
-        Tests that the positioning error is updated across multiple states.
+        The positioning error is updated across multiple states.
         """
         sentences = [GPGSA] + GPGSV_SEQ
         callbacksFired = ['positionErrorReceived', 'beaconInformationReceived']
@@ -1090,8 +1093,8 @@ class NMEAReceiverTest(TestCase):
 
     def test_emptyMiddleGSV(self):
         """
-        Tests that a GSV sentence with empty entries in any position
-        does not mean the entries in subsequent positions are ignored.
+        A GSV sentence with empty entries in any position does not
+        mean the entries in subsequent positions are ignored.
         """
         sentences = [GPGSV_EMPTY_MIDDLE]
         callbacksFired = ['beaconInformationReceived']
@@ -1106,7 +1109,7 @@ class NMEAReceiverTest(TestCase):
 
     def test_GGASentences(self):
         """
-        Tests that a sequence of GGA sentences fires C{positionReceived},
+        A sequence of GGA sentences fires C{positionReceived},
         C{positionErrorReceived} and C{altitudeReceived}.
         """
         sentences = [GPGGA]
@@ -1119,7 +1122,7 @@ class NMEAReceiverTest(TestCase):
 
     def test_RMCSentences(self):
         """
-        Tests that a sequence of RMC sentences fires C{positionReceived},
+        A sequence of RMC sentences fires C{positionReceived},
         C{speedReceived}, C{headingReceived} and C{timeReceived}.
         """
         sentences = [GPRMC]
@@ -1133,7 +1136,7 @@ class NMEAReceiverTest(TestCase):
 
     def test_GSVSentences(self):
         """
-        Verifies that a complete sequence of GSV sentences fires
+        A complete sequence of GSV sentences fires
         C{beaconInformationReceived}.
         """
         sentences = [GPGSV_FIRST, GPGSV_MIDDLE, GPGSV_LAST]
@@ -1147,8 +1150,8 @@ class NMEAReceiverTest(TestCase):
 
     def test_emptyMiddleEntriesGSVSequence(self):
         """
-        Verifies that a complete sequence of GSV sentences with empty entries
-        in the middle still fires C{beaconInformationReceived}.
+        A complete sequence of GSV sentences with empty entries in the
+        middle still fires C{beaconInformationReceived}.
         """
         sentences = [GPGSV_EMPTY_MIDDLE]
         self._receiverTest(sentences, ["beaconInformationReceived"])
@@ -1156,7 +1159,7 @@ class NMEAReceiverTest(TestCase):
 
     def test_incompleteGSVSequence(self):
         """
-        Verifies that an incomplete sequence of GSV sentences does not fire.
+        An incomplete sequence of GSV sentences does not fire any callbacks.
         """
         sentences = [GPGSV_FIRST]
         self._receiverTest(sentences)
@@ -1164,8 +1167,8 @@ class NMEAReceiverTest(TestCase):
 
     def test_singleSentenceGSVSequence(self):
         """
-        Verifies that the parser does not fail badly when the sequence consists
-        of only one sentence (but is otherwise complete).
+        The parser does not fail badly when the sequence consists of
+        only one sentence (but is otherwise complete).
         """
         sentences = [GPGSV_SINGLE]
         self._receiverTest(sentences, ["beaconInformationReceived"])
@@ -1173,7 +1176,7 @@ class NMEAReceiverTest(TestCase):
 
     def test_GLLSentences(self):
         """
-        Verfies that GLL sentences fire C{positionReceived}.
+        GLL sentences fire C{positionReceived}.
         """
         sentences = [GPGLL_PARTIAL, GPGLL]
         self._receiverTest(sentences,  ['positionReceived'])
@@ -1181,7 +1184,7 @@ class NMEAReceiverTest(TestCase):
 
     def test_HDTSentences(self):
         """
-        Verfies that HDT sentences fire C{headingReceived}.
+        HDT sentences fire C{headingReceived}.
         """
         sentences = [GPHDT]
         self._receiverTest(sentences, ['headingReceived'])
@@ -1189,7 +1192,7 @@ class NMEAReceiverTest(TestCase):
 
     def test_mixedSentences(self):
         """
-        Verifies that a mix of sentences fires the correct callbacks.
+        A mix of sentences fires the correct callbacks.
         """
         sentences = [GPRMC, GPGGA]
         callbacksFired = ['altitudeReceived',
@@ -1208,9 +1211,11 @@ class NMEAReceiverTest(TestCase):
 
     def test_lotsOfMixedSentences(self):
         """
-        Tests for an entire gamut of sentences. These are more than you'd
-        expect from your average consumer GPS device. They have most of the
-        important information, including beacon information and visibility.
+        Sends an entire gamut of sentences and verifies the
+        appropriate callbacks fire. These are more than you'd expect
+        from your average consumer GPS device. They have most of the
+        important information, including beacon information and
+        visibility.
         """
         sentences = [GPGSA] + GPGSV_SEQ + [GPRMC, GPGGA, GPGLL]
 
