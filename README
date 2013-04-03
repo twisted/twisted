@@ -1,13 +1,12 @@
-Twisted 12.3.0
+Twisted 13.0.0
 
 Quote of the Release:
 
 
-  <PenguinOfDoom> yeah twisted should get on with the times
-  <PenguinOfDoom> the rest of the world has been writing unicode to sockets for years!
+  <itamar> software engineering is 99% smooshing and 1% cursing
 
 
-For information on what's new in Twisted 12.3.0, see the NEWS file that comes
+For information on what's new in Twisted 13.0.0, see the NEWS file that comes
 with the distribution.
 
 What is this?
@@ -94,7 +93,7 @@ Documentation and Support
 Copyright
 =========
 
-  All of the code in this distribution is Copyright (c) 2001-2012
+  All of the code in this distribution is Copyright (c) 2001-2013
   Twisted Matrix Laboratories.
 
   Twisted is made available under the MIT license. The included

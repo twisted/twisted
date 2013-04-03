@@ -1,4 +1,0 @@
-Removed deprecated set imports from the following files:
-
-./twisted/mail/relaymanager.py:33
-./twisted/mail/maildir.py:21

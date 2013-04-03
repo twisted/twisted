@@ -1,4 +1,0 @@
-Removed deprecated set imports from the following files:
-
-./twisted/conch/test/test_openssh_compat.py:12
-./twisted/conch/test/test_tap.py:27

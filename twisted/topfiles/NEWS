@@ -1,6 +1,77 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Core 13.0.0 (2013-03-19)
+================================
+
+Features
+--------
+ - The twisted.protocols.ftp.FTP server now treats "LIST -La", "LIST
+   -al", and all other combinations of ordering and case of the "-l"
+   and "-a" flags the same: by ignoring them rather than treating them
+   as a pathname. (#1333)
+ - twisted.python.log.FileLogObserver now uses `datetime.strftime` to
+   format timestamps, adding support for microseconds and timezone
+   offsets to the `timeFormat` string. (#3513)
+ - trial now deterministically runs tests in the order in which they
+   were specified on the command line, instead of quasi-randomly
+   according to dictionary key ordering. (#5520)
+ - Cooperator.running can be used to determine the current cooperator
+   status. (#5937)
+ - twisted.python.modules.PythonPath now implements `__contains__` to
+   allow checking, by name, whether a particular module exists within
+   it. (#6198)
+ - twisted.application.internet.TimerService.stopService now waits for
+   any currently running call to finish before firing its deferred.
+   (#6290)
+
+Bugfixes
+--------
+ - twisted.protocols.ftp.FTP now recognizes all glob expressions
+   supported by fnmatch. (#4181)
+ - Constant values defined using twisted.python.constants can now be
+   set as attributes of other classes without triggering an unhandled
+   AttributeError from the constants implementation. (#5797)
+ - Fixed problem where twisted.names.client.Resolver was not closing
+   open file handles which can lead to an out of file descriptor error
+   on PyPy. (#6216)
+ - All reactors included in Twisted itself now gracefully handle a
+   rare case involving delayed calls scheduled very far in the future.
+   (#6259)
+ - twisted.trial.reporter.Reporter._trimFrames correctly removes
+   frames from twisted.internet.utils.runWithWarningsSuppressed again,
+   after being broke in #6009. (#6282)
+
+Improved Documentation
+----------------------
+ - A new "Deploying Twisted with systemd" howto document which
+   demonstrates how to start a Twisted service using systemd socket
+   activation. (#5601)
+ - New "Introduction to Deferreds" howto.  Old howto rebranded as
+   reference documentation. (#6180)
+ - "Components: Interfaces and Adapters" howto now uses
+   zope.interface's decorator-based API. (#6269)
+
+Deprecations and Removals
+-------------------------
+ - twisted.python.util.unsignedID and setIDFunction are deprecated
+   now. (#5544)
+ - twisted.python.zshcomp deprecated since 11.1.0 has now been
+   removed. Shell tab-completion is now handled by
+   twisted.python.usage. (#5767)
+ - python.runtime.Platform.isWinNT is deprecated now. Use
+   Platform.isWindows instead. (#5925)
+ - twisted.trial.util.findObject, deprecated since Twisted 10.1.0, has
+   been removed. (#6260)
+
+Other
+-----
+ - #2915, #4009, #4315, #5909, #5918, #5953, #6026, #6046, #6165,
+   #6201, #6207, #6208, #6211, #6235, #6236, #6247, #6265, #6272,
+   #6288, #6297, #6309, #6322, #6323, #6324, #6327, #6332, #6338,
+   #6349
+
+
 Twisted Core 12.3.0 (2012-12-20)
 ================================
 
