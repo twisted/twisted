@@ -28,7 +28,6 @@ from twisted.python.systemd import ListenFDs
 from twisted.python.filepath import FilePath
 from twisted.protocols import basic
 from twisted.python import log
-from twisted.internet.endpoints import StandardErrorBehavior
 
 from twisted.test import __file__ as testInitPath
 pemPath = FilePath(testInitPath.encode("utf-8")).sibling(b"server.pem")
@@ -39,6 +38,7 @@ if not _PY3:
     from twisted.python.modules import getModule
     from twisted.internet import stdio
     from twisted.internet.stdio import PipeAddress
+    from twisted.internet.endpoints import StandardErrorBehavior
 
     casPath = getModule(__name__).filePath.sibling("fake_CAs")
     escapedPEMPathName = endpoints.quoteStringArgument(pemPath.path)
@@ -2473,4 +2473,5 @@ if _PY3:
          ServerStringTests, ClientStringTests, SSLClientStringTests,
          AdoptedStreamServerEndpointTestCase, SystemdEndpointPluginTests,
          TCP6ServerEndpointPluginTests, StandardIOEndpointPluginTests,
+         ProcessEndpointsTestCase, WrappedIProtocolTests,
          )
