@@ -1653,23 +1653,50 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         self.assertRaises(RuntimeError, req.finish)
 
 
-    def test_repr(self):
+    def test_reprUninitialized(self):
         """
-        L{Request.__repr__} returns the class name, address, uri and client protocol of
-        the C{Request} instance as a C{string} in the form
-            <ClASSNAME at ADDRESS method=METHOD uri=URI clientproto=CLIENTPROTOCOL>
+        L{Request.__repr__} returns the class name, object address, and
+        dummy-place holder values when used on a L{Request} which has not yet
+        been initialized.
         """
-
         request = http.Request(DummyChannel(), False)
-        self.assertEqual(repr(request),
-            '<twisted.web.http.Request at 0x%x method=(no method yet) uri=(no uri yet) clientproto=(no clientproto yet)>' % (
-            id(request),))
+        self.assertEqual(
+            repr(request),
+            '<Request at 0x%x method=(no method yet) uri=(no uri yet) '
+            'clientproto=(no clientproto yet)>' % (id(request),))
+
+
+    def test_reprInitialized(self):
+        """
+        L{Request.__repr__} returns, as a L{str}, the class name, object
+        address, and the method, uri, and client protocol of the HTTP request
+        it represents.  The string is in the form::
+
+          <Request at ADDRESS method=METHOD uri=URI clientproto=PROTOCOL>
+       """
+        request = http.Request(DummyChannel(), False)
         request.clientproto = b'HTTP/1.0'
         request.method = b'GET'
         request.uri = b'/foo/bar'
-        self.assertEqual(repr(request),
-            '<twisted.web.http.Request at 0x%x method=GET uri=/foo/bar clientproto=HTTP/1.0>' % (
-            id(request),))
+        self.assertEqual(
+            repr(request),
+            '<Request at 0x%x method=GET uri=/foo/bar '
+            'clientproto=HTTP/1.0>' % (id(request),))
+
+
+    def test_reprSubclass(self):
+        """
+        Subclasses of L{Request} inherit a C{__repr__} implementation which
+        includes the subclass's name in place of the string C{"Request"}.
+        """
+        class Otherwise(http.Request):
+            pass
+
+        request = Otherwise(DummyChannel(), False)
+        self.assertEqual(
+            repr(request),
+            '<Otherwise at 0x%x method=(no method yet) uri=(no uri yet) '
+            'clientproto=(no clientproto yet)>' % (id(request),))
 
 
 

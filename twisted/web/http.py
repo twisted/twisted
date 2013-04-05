@@ -793,20 +793,20 @@ class Request:
     def __repr__(self):
         """
         Return the class name, address, method, uri and client protocol of the
-        C{Request} instance as a C{string} in the form
-            <CLASSNAME at ADDRESS method=METHOD uri=URI clientproto=CLIENTPROTOCOL>
+        L{Request} instance as a L{str} in the form::
 
-        @return: C{string} in the form
-            <CLASSNAME at ADDRESS method=METHOD uri=URI clientproto=CLIENTPROTOCOL>
-        @rtype: C{string}
+            <CLASSNAME at ADDRESS method=METHOD uri=URI clientproto=PROTOCOL>
+
+        @return: A string loosely describing this L{Request} object.
+        @rtype: L{str}
         """
-        return '<%s.%s at 0x%x method=%s uri=%s clientproto=%s>' % (
-            self.__module__,
+        return '<%s at 0x%x method=%s uri=%s clientproto=%s>' % (
             self.__class__.__name__,
             id(self),
             nativeString(self.method),
             nativeString(self.uri),
             nativeString(self.clientproto))
+
 
     def process(self):
         """
