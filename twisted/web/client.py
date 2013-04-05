@@ -949,6 +949,7 @@ class HTTPConnectionPool(object):
         self._connections = {}
         self._timeouts = {}
 
+
     def getConnection(self, key, endpoint):
         """
         Retrieve a connection, either new or cached, to be used for a HTTP
