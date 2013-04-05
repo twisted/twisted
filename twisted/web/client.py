@@ -952,17 +952,15 @@ class HTTPConnectionPool(object):
 
     def getConnection(self, key, endpoint):
         """
-        Retrieve a connection, either new or cached, to be used for a HTTP
-        request.
+        Supply a connection, newly created or retrieved from the pool, to be
+        used for one HTTP request.
 
-        If a cached connection is returned, it will not be used for other
-        requests until it is put back (which will happen automatically), since
-        we do not support pipelined requests. If no cached connection is
-        available, the passed in endpoint is used to create the connection.
+        The connection will remain out of the pool (not available to be
+        returned from future calls to this method) until one HTTP request has
+        been completed over it.
 
-        If the connection doesn't disconnect at the end of its request, it
-        will be returned to this pool automatically. As such, only a single
-        request should be sent using the returned connection.
+        Afterwards, if the connection is still open, it will automatically be
+        added to the pool.
 
         @param key: A unique key identifying connections that can be used
             interchangeably.
