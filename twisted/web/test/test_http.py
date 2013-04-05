@@ -1653,6 +1653,25 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         self.assertRaises(RuntimeError, req.finish)
 
 
+    def test_repr(self):
+        """
+        L{Request.__repr__} returns the class name, address, uri and client protocol of
+        the C{Request} instance as a C{string} in the form
+            <ClASSNAME at ADDRESS method=METHOD uri=URI clientproto=CLIENTPROTOCOL>
+        """
+
+        request = http.Request(DummyChannel(), False)
+        self.assertEqual(repr(request),
+            '<twisted.web.http.Request at 0x%x method=(no method yet) uri=(no uri yet) clientproto=(no clientproto yet)>' % (
+            id(request),))
+        request.clientproto = b'HTTP/1.0'
+        request.method = b'GET'
+        request.uri = b'/foo/bar'
+        self.assertEqual(repr(request),
+            '<twisted.web.http.Request at 0x%x method=GET uri=/foo/bar clientproto=HTTP/1.0>' % (
+            id(request),))
+
+
 
 class MultilineHeadersTestCase(unittest.TestCase):
     """
