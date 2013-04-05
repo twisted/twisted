@@ -1185,8 +1185,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             """
             if isinstance(err.value, FTPCmdError):
                 return (err.value.errorCode, '/'.join(newsegs))
-            log.msg("Unexpected error received while opening file:")
-            log.err(err)
+            log.err(err, "Unexpected error received while opening file:")
             return (FILE_NOT_FOUND, '/'.join(newsegs))
 
         def cbConsumer(cons):
@@ -1220,8 +1219,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             Called from data transport when there are errors during the
             transfer.
             """
-            log.msg("Unexpected error received during transfer:")
-            log.err(err)
+            log.err(err, "Unexpected error received during transfer:")
             if err.check(FTPCmdError):
                 return err
             return (CNX_CLOSED_TXFR_ABORTED,)
