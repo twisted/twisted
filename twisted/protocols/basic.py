@@ -938,20 +938,21 @@ class FileSender:
         """
         Begin transferring a file.
 
-        It optionally uses sendfile if C{transform} is not set, and C{file} and
-        C{consumer} are suitable for such a use.
+        It optionally uses C{sendfile} if C{transform} is not set, and C{file}
+        and C{consumer} are suitable for such a use.
 
         @type file: Any file-like object.
         @param file: The file object to read data from.
 
-        @type consumer: Any implementor of IConsumer.
+        @type consumer: Any implementor of
+            L{IConsumer<twisted.internet.interfaces.IConsumer>}.
         @param consumer: The object to write data to.
 
         @param transform: A callable taking one string argument and returning
             the same.  All bytes read from the file are passed through this
             before being written to the consumer.
 
-        @rtype: C{Deferred}
+        @rtype: L{defer.Deferred}
         @return: A deferred whose callback will be invoked when the file has
             been completely written to the consumer. The last byte written to
             the consumer is passed to the callback.
@@ -1008,6 +1009,9 @@ class FileSender:
     def pauseProducing(self):
         """
         Stub method, as we're don't have anything to pause.
+
+        It's there for compatibility reason as L{FileSender} ought to be a
+        C{IPullProducer}.
         """
 
 
@@ -1066,14 +1070,20 @@ class _FileSenderSendfile(object):
 
     @ivar _offset: The current offset in the file, in bytes.
     @type _offset: C{int}
+
+    @ivar _position: The position in the file when the transfer started.
+    @type _position: C{int}
     """
 
     _count = 0
     _offset = 0
+    _position = 0
 
     def __init__(self, sender):
         self.sender = sender
         self._count = os.fstat(sender.file.fileno()).st_size
+        self._position = sender.file.tell()
+        self._offset = self._position
 
 
     def produce(self):
@@ -1097,7 +1107,7 @@ class _FileSenderSendfile(object):
             if e.errno == errno.EAGAIN:
                 self.sender.consumer.reactor.addWriter(self.consumer)
                 return
-            elif not self._offset:
+            elif self._offset == self._position:
                 self.sender._producer = _FileSenderWrite(self.sender)
                 self.sender.resumeProducing()
                 return

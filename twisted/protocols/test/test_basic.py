@@ -1388,6 +1388,37 @@ class FileSenderSendfileTestCase(ReactorBuilder):
         self.assertEqual(1000000, len(servers[0].data))
 
 
+    def test_preserveFilePosition(self):
+        """
+        L{basic.FileSender} sends the file from the position it's at when
+        passed to C{beginFileTransfer}.
+        """
+        clients = []
+
+        def connected(protocols):
+            client, server = protocols
+            clients.append(client)
+            fileObject = self.createFile()
+            fileObject.seek(100000)
+            sender = basic.FileSender()
+            doneDeferred = sender.beginFileTransfer(
+                fileObject, server.transport)
+            doneDeferred.addCallback(self.assertEqual, b"y")
+            return doneDeferred.addBoth(finished, server)
+
+        def finished(passthrough, server):
+            server.transport.loseConnection()
+            return passthrough
+
+        reactor = self.buildReactor()
+        d = self.getConnectedClientAndServer(reactor)
+        d.addCallback(connected)
+        d.addErrback(log.err)
+        self.runReactor(reactor)
+
+        self.assertEqual(900000, len(clients[0].data))
+
+
     def test_pendingData(self):
         """
         If there are any pending data before L{basic.FileSender} starts
