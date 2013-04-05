@@ -513,7 +513,7 @@ class BasicFTPServerTestCase(FTPServerTestCase):
             )
         return d
 
-    def test_STOR_cbOpened_FTPCMDError(self):
+    def test_STORreturnsErrorFromOpen(self):
         """
         Any FTP error raised inside STOR while opening the file is returned
         to the client.
@@ -549,7 +549,7 @@ class BasicFTPServerTestCase(FTPServerTestCase):
             )
         return d
 
-    def test_STOR_cbOpened_UnknownError(self):
+    def test_STORunknownErrorBecomesFileNotFound(self):
         """
         Any non FTP error raised inside STOR while opening the file is
         converted into FileNotFound error and returned to the client together
@@ -617,7 +617,7 @@ class FTPServerTestCaseAdvancedClient(FTPServerTestCase):
         d2.addErrback(eb)
         return defer.gatherResults([d1, d2])
 
-    def test_STOR_ebSent_FTPCMDError(self):
+    def test_STORtransferErrorIsReturned(self):
         """
         Any FTP error raised by STOR while transferring the file is returned
         to the client.
@@ -646,7 +646,7 @@ class FTPServerTestCaseAdvancedClient(FTPServerTestCase):
         d2.addErrback(eb)
         return defer.gatherResults([d1, d2])
 
-    def test_STOR_ebSent_UnknownError(self):
+    def test_STORunknownTransferErrorBecomesAbort(self):
         """
         Any non FTP error raised by STOR while transferring the file is
         converted into a critical error and transfer is closed.
