@@ -6,7 +6,7 @@
 Provide L{ICredentialsChecker} implementations to be used in Conch protocols.
 """
 
-import os, base64, binascii, errno
+import base64, binascii, errno
 try:
     import pwd
 except ImportError:
@@ -199,7 +199,6 @@ class SSHPublicKeyDatabase:
         Retrieve files containing authorized keys and check against user
         credentials.
         """
-        uid, gid = os.geteuid(), os.getegid()
         ouid, ogid = self._userdb.getpwnam(credentials.username)[2:4]
         for filepath in self.getAuthorizedKeysFiles(credentials):
             if not filepath.exists():
