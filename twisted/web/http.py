@@ -830,11 +830,6 @@ class Request:
             self.transport.unregisterProducer()
         self.producer = None
 
-    # private http response methods
-
-    def _sendError(self, code, resp=''):
-        self.transport.write('%s %s %s\r\n\r\n' % (self.clientproto, code, resp))
-
 
     # The following is the public interface that people should be
     # writing to.
