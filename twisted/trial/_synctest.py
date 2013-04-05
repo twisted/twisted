@@ -358,7 +358,7 @@ class _Assertions(pyunit.TestCase, object):
     failUnlessEqual = failUnlessEquals = assertEquals = assertEqual
 
 
-    def assertIdentical(self, first, second, msg=None):
+    def assertIs(self, first, second, msg=None):
         """
         Fail the test if C{first} is not C{second}.  This is an
         obect-identity-equality test, not an object equality
@@ -370,10 +370,10 @@ class _Assertions(pyunit.TestCase, object):
         if first is not second:
             raise self.failureException(msg or '%r is not %r' % (first, second))
         return first
-    failUnlessIdentical = assertIdentical
+    failUnlessIdentical = assertIdentical = assertIs
 
 
-    def assertNotIdentical(self, first, second, msg=None):
+    def assertIsNot(self, first, second, msg=None):
         """
         Fail the test if C{first} is C{second}.  This is an
         obect-identity-equality test, not an object equality
@@ -385,7 +385,7 @@ class _Assertions(pyunit.TestCase, object):
         if first is second:
             raise self.failureException(msg or '%r is %r' % (first, second))
         return first
-    failIfIdentical = assertNotIdentical
+    failIfIdentical = assertNotIdentical = assertIsNot
 
 
     def assertNotEqual(self, first, second, msg=None):
