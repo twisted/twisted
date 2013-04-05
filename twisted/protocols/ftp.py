@@ -1220,11 +1220,10 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             Called from data transport when there are errors during the
             transfer.
             """
-            if err.check(FTPCmdError):
-                return (err.value.errorCode, '/'.join(newsegs))
-
             log.msg("Unexpected error received during transfer:")
             log.err(err)
+            if err.check(FTPCmdError):
+                return err
             return (CNX_CLOSED_TXFR_ABORTED,)
 
         d = self.shell.openForWriting(newsegs)

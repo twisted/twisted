@@ -625,7 +625,7 @@ class FTPServerTestCaseAdvancedClient(FTPServerTestCase):
         # Make a failing file writer.
         class FailingFileWriter(ftp._FileWriter):
             def receive(self):
-                return defer.fail(ftp.IsADirectoryError("blah"))
+                return defer.fail(ftp.IsADirectoryError("failing_file"))
 
         def failingSTOR(a, b):
             return defer.succeed(FailingFileWriter(None))
@@ -636,6 +636,9 @@ class FTPServerTestCaseAdvancedClient(FTPServerTestCase):
 
         def eb(res):
             res.trap(ftp.CommandFailed)
+            logs = self.flushLoggedErrors()
+            self.assertEqual(1, len(logs))
+            self.assertIsInstance(logs[0].value, ftp.IsADirectoryError)
             self.assertEqual(
                 res.value.args[0][0],
                 "550 failing_file: is a directory")
