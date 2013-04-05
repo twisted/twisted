@@ -507,6 +507,40 @@ class TestSynchronousAssertions(unittest.SynchronousTestCase):
                               self.failIfSubstring, x, z)
 
 
+    def test_assertIs(self):
+        """
+        L{assertIs} passes if two objects are identical.
+        """
+        a = MockEquality("first")
+        self.assertIs(a, a)
+
+
+    def test_assertIsError(self):
+        """
+        L{assertIs} fails if two objects are not identical.
+        """
+        a, b = MockEquality("first"), MockEquality("first")
+        self.assertEqual(a, b)
+        self.assertRaises(self.failureException, self.assertIs, a, b)
+
+
+    def test_assertIsNot(self):
+        """
+        L{assertIsNot} passes if two objects are not identical.
+        """
+        a, b = MockEquality("first"), MockEquality("first")
+        self.assertEqual(a, b)
+        self.assertIsNot(a, b)
+
+
+    def test_assertIsNotError(self):
+        """
+        L{assertIsNot} fails if two objects are identical.
+        """
+        a = MockEquality("first")
+        self.assertRaises(self.failureException, self.assertIsNot, a, a)
+
+
     def test_assertIsInstance(self):
         """
         Test a true condition of assertIsInstance.
