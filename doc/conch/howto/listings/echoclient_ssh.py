@@ -28,7 +28,7 @@ class EchoOptions(Options):
          "port number of SSH server to which to connect", int),
         ("username", "u", getpass.getuser(),
          "username with which to authenticate with the SSH server"),
-        ("identity", "i", "~/.ssh/id_rsa",
+        ("identity", "i", None,
          "file from which to read a private key to use for authentication"),
         ("password", None, None,
          "password to use for authentication"),
@@ -96,11 +96,12 @@ class ConnectionParameters(object):
 
         ui = ConsoleUI(lambda: open("/dev/tty", "r+"))
 
-        keyPath = os.path.expanduser(config["identity"])
-        if os.path.exists(keyPath):
-            keys = [readKey(keyPath)]
-        else:
-            keys = []
+        keys = []
+        if config["identity"]:
+            keyPath = os.path.expanduser(config["identity"])
+            if os.path.exists(keyPath):
+                keys.append(readKey(keyPath))
+
         knownHostsPath = FilePath(os.path.expanduser(config["knownhosts"]))
         if knownHostsPath.exists():
             knownHosts = KnownHostsFile.fromPath(knownHostsPath)
