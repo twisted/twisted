@@ -949,7 +949,6 @@ class HTTPConnectionPool(object):
         self._connections = {}
         self._timeouts = {}
 
-
     def getConnection(self, key, endpoint):
         """
         Retrieve a connection, either new or cached, to be used for a HTTP
@@ -962,7 +961,8 @@ class HTTPConnectionPool(object):
 
         If the connection doesn't disconnect at the end of its request, it
         will be returned to this pool automatically. As such, only a single
-        request should be sent using the returned connection.
+        request should be sent using the returned connection.  In other words,
+        don't cache connections yourself.
 
         @param key: A unique key identifying connections that can be used
             interchangeably.
