@@ -513,6 +513,91 @@ class BasicFTPServerTestCase(FTPServerTestCase):
             )
         return d
 
+    def test_STORreturnsErrorFromOpen(self):
+        """
+        Any FTP error raised inside STOR while opening the file is returned
+        to the client.
+        """
+        # We create a folder inside user's home folder and then
+        # we try to write a file with the same name.
+        # This will trigger an FTPCmdError.
+        self.dirPath.child(self.username).createDirectory()
+        self.dirPath.child(self.username).child('folder').createDirectory()
+        d = self._userLogin()
+
+        def sendPASV(result):
+            """
+            Send the PASV command required before port.
+            """
+            return self.client.queueStringCommand('PASV')
+
+        def mockDTPInstance(result):
+            """
+            Fake an incoming connection and create a mock DTPInstance so
+            that PORT command will start processing the request.
+            """
+            self.serverProtocol.dtpFactory.deferred.callback(None)
+            self.serverProtocol.dtpInstance = object()
+            return result
+
+        d.addCallback(sendPASV)
+        d.addCallback(mockDTPInstance)
+        self.assertCommandFailed(
+            'STOR folder',
+            ["550 folder: is a directory"],
+            chainDeferred=d,
+            )
+        return d
+
+    def test_STORunknownErrorBecomesFileNotFound(self):
+        """
+        Any non FTP error raised inside STOR while opening the file is
+        converted into FileNotFound error and returned to the client together
+        with the path.
+
+        The unknown error is logged.
+        """
+        d = self._userLogin()
+
+        def failingOpenForWriting(ignore):
+            return defer.fail(AssertionError())
+
+        def sendPASV(result):
+            """
+            Send the PASV command required before port.
+            """
+            return self.client.queueStringCommand('PASV')
+
+        def mockDTPInstance(result):
+            """
+            Fake an incoming connection and create a mock DTPInstance so
+            that PORT command will start processing the request.
+            """
+            self.serverProtocol.dtpFactory.deferred.callback(None)
+            self.serverProtocol.dtpInstance = object()
+            self.serverProtocol.shell.openForWriting = failingOpenForWriting
+            return result
+
+        def checkLogs(result):
+            """
+            Check that unknown errors are logged.
+            """
+            logs = self.flushLoggedErrors()
+            self.assertEqual(1, len(logs))
+            self.assertIsInstance(logs[0].value, AssertionError)
+
+        d.addCallback(sendPASV)
+        d.addCallback(mockDTPInstance)
+
+        self.assertCommandFailed(
+            'STOR something',
+            ["550 something: No such file or directory."],
+            chainDeferred=d,
+            )
+        d.addCallback(checkLogs)
+        return d
+
+
 class FTPServerTestCaseAdvancedClient(FTPServerTestCase):
     """
     Test FTP server with the L{ftp.FTPClient} class.
@@ -532,30 +617,61 @@ class FTPServerTestCaseAdvancedClient(FTPServerTestCase):
         d2.addErrback(eb)
         return defer.gatherResults([d1, d2])
 
-
-    def test_STORwriteError(self):
+    def test_STORtransferErrorIsReturned(self):
         """
-        Any errors during writing a file inside a STOR should be returned to
-        the client.
+        Any FTP error raised by STOR while transferring the file is returned
+        to the client.
         """
         # Make a failing file writer.
         class FailingFileWriter(ftp._FileWriter):
             def receive(self):
-                return defer.fail(ftp.IsNotADirectoryError("blah"))
+                return defer.fail(ftp.IsADirectoryError("failing_file"))
 
         def failingSTOR(a, b):
             return defer.succeed(FailingFileWriter(None))
 
         # Monkey patch the shell so it returns a file writer that will
-        # fail.
+        # fail during transfer.
         self.patch(ftp.FTPAnonymousShell, 'openForWriting', failingSTOR)
 
         def eb(res):
-            self.flushLoggedErrors()
             res.trap(ftp.CommandFailed)
+            logs = self.flushLoggedErrors()
+            self.assertEqual(1, len(logs))
+            self.assertIsInstance(logs[0].value, ftp.IsADirectoryError)
             self.assertEqual(
                 res.value.args[0][0],
-                "550 Cannot rmd, blah is not a directory")
+                "550 failing_file: is a directory")
+        d1, d2 = self.client.storeFile('failing_file')
+        d2.addErrback(eb)
+        return defer.gatherResults([d1, d2])
+
+    def test_STORunknownTransferErrorBecomesAbort(self):
+        """
+        Any non FTP error raised by STOR while transferring the file is
+        converted into a critical error and transfer is closed.
+
+        The unknown error is logged.
+        """
+        class FailingFileWriter(ftp._FileWriter):
+            def receive(self):
+                return defer.fail(AssertionError())
+
+        def failingSTOR(a, b):
+            return defer.succeed(FailingFileWriter(None))
+
+        # Monkey patch the shell so it returns a file writer that will
+        # fail during transfer.
+        self.patch(ftp.FTPAnonymousShell, 'openForWriting', failingSTOR)
+
+        def eb(res):
+            res.trap(ftp.CommandFailed)
+            logs = self.flushLoggedErrors()
+            self.assertEqual(1, len(logs))
+            self.assertIsInstance(logs[0].value, AssertionError)
+            self.assertEqual(
+                res.value.args[0][0],
+                "426 Transfer aborted.  Data connection closed.")
         d1, d2 = self.client.storeFile('failing_file')
         d2.addErrback(eb)
         return defer.gatherResults([d1, d2])

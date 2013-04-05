@@ -1136,6 +1136,17 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
 
 
     def ftp_STOR(self, path):
+        """
+        STORE (STOR)
+
+        This command causes the server-DTP to accept the data
+        transferred via the data connection and to store the data as
+        a file at the server site.  If the file specified in the
+        pathname exists at the server site, then its contents shall
+        be replaced by the data being transferred.  A new file is
+        created at the server site if the file specified in the
+        pathname does not already exist.
+        """
         if self.dtpInstance is None:
             raise BadCmdSequenceError('PORT or PASV required before STOR')
 
@@ -1154,17 +1165,36 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             self.setTimeout(self.factory.timeOut)
             return result
 
-        def cbSent(result):
-            return (TXFR_COMPLETE_OK,)
+        def cbOpened(file):
+            """
+            File was open for reading. Launch the data transfer channel via
+            the file consumer.
+            """
+            d = file.receive()
+            d.addCallback(cbConsumer)
+            d.addCallback(lambda ignored: file.close())
+            d.addCallbacks(cbSent, ebSent)
+            return d
 
-        def ebSent(err):
-            log.msg("Unexpected error receiving file from client:")
-            log.err(err)
-            if err.check(FTPCmdError):
-                return err
-            return (CNX_CLOSED_TXFR_ABORTED,)
+        def ebOpened(err):
+            """
+            Called when failed to open the file for reading.
+
+            For known errors, return the FTP error code.
+            For all other, return a file not found error.
+            """
+            if isinstance(err.value, FTPCmdError):
+                return (err.value.errorCode, '/'.join(newsegs))
+            log.err(err, "Unexpected error received while opening file:")
+            return (FILE_NOT_FOUND, '/'.join(newsegs))
 
         def cbConsumer(cons):
+            """
+            Called after the file was opended for reading.
+
+            Prepare the data transfer channel and send the response
+            to the command channel.
+            """
             if not self.binary:
                 cons = ASCIIConsumerWrapper(cons)
 
@@ -1178,20 +1208,21 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
 
             return d
 
-        def cbOpened(file):
-            d = file.receive()
-            d.addCallback(cbConsumer)
-            d.addCallback(lambda ignored: file.close())
-            d.addCallbacks(cbSent, ebSent)
-            return d
+        def cbSent(result):
+            """
+            Called from data transport when tranfer is done.
+            """
+            return (TXFR_COMPLETE_OK,)
 
-        def ebOpened(err):
-            if not err.check(PermissionDeniedError, FileNotFoundError, IsNotADirectoryError):
-                log.msg("Unexpected error attempting to open file for upload:")
-                log.err(err)
-            if isinstance(err.value, FTPCmdError):
-                return (err.value.errorCode, '/'.join(newsegs))
-            return (FILE_NOT_FOUND, '/'.join(newsegs))
+        def ebSent(err):
+            """
+            Called from data transport when there are errors during the
+            transfer.
+            """
+            log.err(err, "Unexpected error received during transfer:")
+            if err.check(FTPCmdError):
+                return err
+            return (CNX_CLOSED_TXFR_ABORTED,)
 
         d = self.shell.openForWriting(newsegs)
         d.addCallbacks(cbOpened, ebOpened)
