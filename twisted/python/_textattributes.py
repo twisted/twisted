@@ -220,6 +220,8 @@ class DefaultFormattingState(object, FancyEqMixin):
     def copy(self):
         """
         Make a copy of this formatting state.
+
+        @return: A formatting state instance.
         """
         return type(self)()
 
@@ -231,13 +233,22 @@ class DefaultFormattingState(object, FancyEqMixin):
         @param name: Attribute name to be added to formatting state.
 
         @param value: Attribute value.
+
+        @return: A formatting state instance with the new attribute.
         """
         return self.copy()
 
 
     def wantOne(self, **kw):
         """
-        See L{DefaultFormattingState._withAttribute}.
+        Add a character attribute to a copy of this formatting state.
+
+        @param **kw: An optional attribute name and value can be provided with
+            a keyword argument.
+
+        @return: A formatting state instance with the new attribute.
+
+        @see: L{DefaultFormattingState._withAttribute}.
         """
         k, v = kw.popitem()
         return self._withAttribute(k, v)
@@ -247,6 +258,9 @@ class DefaultFormattingState(object, FancyEqMixin):
         """
         Emit a VT102 control sequence that will set up all the attributes this
         formatting state has set.
+
+        @return: A string containing VT102 control sequences that mimic this
+            formatting state.
         """
         return ''
 
@@ -307,9 +321,9 @@ def flatten(output, attrs, attributeRenderer='toVT102'):
     @return: A string expressing the text and display attributes specified by
         L{output}.
     """
-    L = []
-    output.serialize(L.append, attrs, attributeRenderer)
-    return ''.join(L)
+    flattened = []
+    output.serialize(flattened.append, attrs, attributeRenderer)
+    return ''.join(flattened)
 
 
 

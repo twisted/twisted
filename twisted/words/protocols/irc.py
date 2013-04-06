@@ -2993,6 +2993,13 @@ class _FormattingState(_textattributes._FormattingStateMixin):
 
 
     def toMIRCControlCodes(self):
+        """
+        Emit a mIRC control sequence that will set up all the attributes this
+        formatting state has set.
+
+        @return: A string containing mIRC control sequences that mimic this
+            formatting state.
+        """
         attrs = []
         if self.bold:
             attrs.append(_BOLD)
@@ -3130,6 +3137,8 @@ class _FormattingParser(_CommandDispatcherMixin):
 
         Along with regular text, single token formatting codes are handled
         in this state too.
+
+        @param ch: The character being processed.
         """
         formatName = self._formatCodes.get(ch)
         if formatName == 'color':
@@ -3154,6 +3163,8 @@ class _FormattingParser(_CommandDispatcherMixin):
         Foreground colors can consist of up to two digits and may optionally
         end in a I{,}. Any non-digit or non-comma characters are treated as
         invalid input and result in the state being reset to "text".
+
+        @param ch: The character being processed.
         """
         # Color codes may only be a maximum of two characters.
         if ch.isdigit() and len(self._buffer) < 2:
@@ -3190,6 +3201,8 @@ class _FormattingParser(_CommandDispatcherMixin):
         a foreground color and must be preceded by a I{,}. Any non-digit
         character is treated as invalid input and results in the state being
         set to "text".
+
+        @param ch: The character being processed.
         """
         # Color codes may only be a maximum of two characters.
         if ch.isdigit() and len(self._buffer) < 2:
@@ -3215,6 +3228,7 @@ def parseFormattedText(text):
     Color codes are mapped from 0 to 15 and wrap around if greater than 15.
 
     @type text: C{str}
+    @param text: Formatted text to parse.
 
     @return: Structured text and attributes.
 
@@ -3271,9 +3285,11 @@ def assembleFormattedText(formatted):
 
     @see: U{http://www.mirc.co.uk/help/color.txt}
 
-    @type formatted: Structured text and attributes.
+    @param formatted: Structured text and attributes.
 
     @rtype: C{str}
+    @return: String containing control mIRC control sequences that mimic those
+        specified by L{formatted}.
 
     @since: 13.1
     """
@@ -3287,8 +3303,10 @@ def stripFormatting(text):
     Remove all formatting codes from C{text}, leaving only the text.
 
     @type text: C{str}
+    @param text: Formatted text to parse.
 
     @rtype: C{str}
+    @return: Plain text without any control sequences.
 
     @since: 13.1
     """
