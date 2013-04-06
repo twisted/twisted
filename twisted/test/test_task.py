@@ -839,7 +839,7 @@ class ReactTests(unittest.SynchronousTestCase):
             return finished
         r = _FakeReactor()
         exitError = self.assertRaises(
-            SystemExit, task.react, main, [], _reactor=r)
+            SystemExit, task.react, main, _reactor=r)
         self.assertEqual(0, exitError.code)
         self.assertEqual(timePassed, [True])
         self.assertEqual(r.seconds(), 2)
@@ -855,7 +855,7 @@ class ReactTests(unittest.SynchronousTestCase):
             return defer.succeed(None)
         r = _FakeReactor()
         exitError = self.assertRaises(
-            SystemExit, task.react, main, [], _reactor=r)
+            SystemExit, task.react, main, _reactor=r)
         self.assertEqual(0, exitError.code)
         self.assertEqual(r.seconds(), 0)
 
@@ -875,7 +875,7 @@ class ReactTests(unittest.SynchronousTestCase):
             return finished
         r = _FakeReactor()
         exitError = self.assertRaises(
-            SystemExit, task.react, main, [], _reactor=r)
+            SystemExit, task.react, main, _reactor=r)
 
         self.assertEqual(1, exitError.code)
 
@@ -896,7 +896,7 @@ class ReactTests(unittest.SynchronousTestCase):
             return defer.fail(ExpectedException())
         r = _FakeReactor()
         exitError = self.assertRaises(
-            SystemExit, task.react, main, [], _reactor=r)
+            SystemExit, task.react, main, _reactor=r)
         self.assertEqual(1, exitError.code)
         self.assertEqual(r.seconds(), 0)
         errors = self.flushLoggedErrors(ExpectedException)
@@ -917,7 +917,7 @@ class ReactTests(unittest.SynchronousTestCase):
             return finished
         r = _FakeReactor()
         exitError = self.assertRaises(
-            SystemExit, task.react, main, [], _reactor=r)
+            SystemExit, task.react, main, _reactor=r)
         self.assertEqual(r.seconds(), 1)
 
         self.assertEqual(0, exitError.code)
@@ -940,7 +940,7 @@ class ReactTests(unittest.SynchronousTestCase):
             return finished
         r = _FakeReactor()
         exitError = self.assertRaises(
-            SystemExit, task.react, main, [], _reactor=r)
+            SystemExit, task.react, main, _reactor=r)
 
         self.assertEqual(1, exitError.code)
 
