@@ -39,7 +39,6 @@ import operator
 import string, socket
 import warnings
 import textwrap
-from copy import deepcopy
 from os import path
 
 from twisted.internet import reactor, protocol, task
@@ -3112,9 +3111,7 @@ class _FormattingParser(_CommandDispatcherMixin):
         """
         if self._buffer:
             attrs = [getattr(attributes, name) for name in self._attrs]
-            attrs.extend(
-                filter(None, [
-                    deepcopy(self.foreground), deepcopy(self.background)]))
+            attrs.extend(filter(None, [self.foreground, self.background]))
             if not attrs:
                 attrs.append(attributes.normal)
             attrs.append(self._buffer)

@@ -375,6 +375,9 @@ class FormattedTextTests(unittest.TestCase):
         self.assertEqual(
             irc.parseFormattedText('\x0301,02yay\x03'),
             A.fg.black[A.bg.blue['yay']])
+        self.assertEqual(
+            irc.parseFormattedText('\x0301yay\x0302yipee\x03'),
+            A.fg.black['yay', A.fg.blue['yipee']])
 
 
     def test_weirdColorFormatting(self):
