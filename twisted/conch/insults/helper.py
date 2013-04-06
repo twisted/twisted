@@ -436,5 +436,4 @@ class ExpectableBuffer(TerminalBuffer):
         return d
 
 __all__ = [
-    'CharacterAttribute', 'FormattingState', 'TerminalBuffer',
-    'ExpectableBuffer']
+    'CharacterAttribute',  'TerminalBuffer', 'ExpectableBuffer']
