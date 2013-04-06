@@ -14,10 +14,10 @@ subclassing L{CharacterAttributeMixin}.
 
 Serializing a character attribute structure is done with L{flatten}.
 
-@see: L{twisted.conch.insults.helper.CharacterAttribute}
-@see: L{twisted.conch.insults.text.CharacterAttributes}
-@see: L{twisted.words.protocols.irc.CharacterAttribute}
-@see: L{twisted.words.protocols.irc.CharacterAttributes}
+@see: L{twisted.conch.insults.helper._CharacterAttribute}
+@see: L{twisted.conch.insults.text._CharacterAttributes}
+@see: L{twisted.words.protocols.irc._CharacterAttribute}
+@see: L{twisted.words.protocols.irc._CharacterAttributes}
 """
 
 from twisted.python.util import FancyEqMixin

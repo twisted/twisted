@@ -71,7 +71,7 @@ _TEXT_COLORS = {
 
 
 
-class CharacterAttributes(_textattributes.CharacterAttributesMixin):
+class _CharacterAttributes(_textattributes.CharacterAttributesMixin):
     fg = _textattributes._ColorAttribute(
         _textattributes._ForegroundColorAttr, _TEXT_COLORS)
     bg = _textattributes._ColorAttribute(
@@ -85,6 +85,6 @@ class CharacterAttributes(_textattributes.CharacterAttributesMixin):
 
 
 
-attributes = CharacterAttributes()
+attributes = _CharacterAttributes()
 
 __all__ = ['attributes', 'flatten']
