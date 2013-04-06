@@ -269,10 +269,11 @@ def flatten(output, attrs, attributeRenderer='toVT102'):
     """
     Serialize a sequence of characters with attribute information
 
-    The resulting string can be interpreted by VT102-compatible
-    terminals so that the contained characters are displayed and, for
-    those attributes which the terminal supports, have the attributes
-    specified in the input.
+    The resulting string can be interpreted by compatible software so that the
+    contained characters are displayed and, for those attributes which are
+    supported by the software, the attributes expressed. The exact result of
+    the serialization depends on the behavior of the method specified by
+    L{attributeRenderer}.
 
     For example, if your terminal is VT102 compatible, you might run
     this for a colorful variation on the \"hello world\" theme::
@@ -295,7 +296,8 @@ def flatten(output, attrs, attributeRenderer='toVT102'):
         called to render the attributes during serialization. Defaults to
         C{'toVT102'}.
 
-    @return: A VT102-friendly string
+    @return: A string expressing the text and display attributes specified by
+        L{output}.
     """
     L = []
     output.serialize(L.append, attrs, attributeRenderer)
