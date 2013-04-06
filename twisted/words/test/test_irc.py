@@ -185,9 +185,6 @@ class MiscTests(unittest.TestCase):
         self.assertEqual(
             irc._foldr(operator.sub, 0, [1, 2, 3, 4]),
             -2)
-        self.assertEqual(
-            reduce(operator.sub, [1, 2, 3, 4], 0),
-            -10)
 
         def insertTop(l, x):
             l.insert(0, x)
@@ -196,10 +193,6 @@ class MiscTests(unittest.TestCase):
         self.assertEqual(
             irc._foldr(insertTop, [], [[1], [2], [3], [4]]),
             [[[[[], 4], 3], 2], 1])
-
-        self.assertEqual(
-            reduce(insertTop, [[1], [2], [3], [4]], []),
-            [[4], [3], [2], [1]])
 
 
 
