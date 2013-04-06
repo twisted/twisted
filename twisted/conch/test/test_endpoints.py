@@ -6,7 +6,6 @@ Tests for L{twisted.conch.endpoints}.
 """
 
 import os.path
-from os import environ
 from struct import pack
 
 from zope.interface.verify import verifyObject, verifyClass
