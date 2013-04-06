@@ -120,7 +120,7 @@ class _OtherAttr(_Attribute):
 
 
     def serialize(self, write, attrs, attributeRenderer):
-        attrs = attrs.wantOne(**{self.attrname: self.attrvalue})
+        attrs = attrs._withAttribute(self.attrname, self.attrvalue)
         _Attribute.serialize(self, write, attrs, attributeRenderer)
 
 
@@ -143,7 +143,7 @@ class _ColorAttr(_Attribute):
 
 
     def serialize(self, write, attrs, attributeRenderer):
-        attrs = attrs.wantOne(**{self.ground: self.color})
+        attrs = attrs._withAttribute(self.ground, self.color)
         _Attribute.serialize(self, write, attrs, attributeRenderer)
 
 
@@ -224,12 +224,13 @@ class DefaultCharacterAttribute(object, FancyEqMixin):
         return type(self)()
 
 
-    def wantOne(self, **kw):
+    def _withAttribute(self, name, value):
         """
-        Create a new attribute instance.
+        Create a new attribute instance and add a character attribute to it.
 
-        @param **kw: An optional attribute name and value can be provided with
-            a keyword argument.
+        @param name: Attribute name to be added to the character attribute.
+
+        @param value: Attribute value.
         """
         return self.copy()
 
@@ -253,12 +254,11 @@ class CharacterAttributeMixin(DefaultCharacterAttribute):
         return c
 
 
-    def wantOne(self, **kw):
-        k, v = kw.popitem()
-        if getattr(self, k) != v:
+    def _withAttribute(self, name, value):
+        if getattr(self, name) != value:
             attr = self.copy()
-            attr._subtracting = not v
-            setattr(attr, k, v)
+            attr._subtracting = not value
+            setattr(attr, name, value)
             return attr
         else:
             return self.copy()
