@@ -19,7 +19,6 @@ class DefaultFormattingStateTests(unittest.TestCase):
         L{DefaultFormattingState}s are always equal to other
         L{DefaultFormattingState}s.
         """
-        b = DefaultFormattingState()
         self.assertEquals(
             DefaultFormattingState(),
             DefaultFormattingState())
