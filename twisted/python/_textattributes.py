@@ -235,6 +235,14 @@ class DefaultCharacterAttribute(object, FancyEqMixin):
         return self.copy()
 
 
+    def wantOne(self, **kw):
+        """
+        See L{DefaultCharacterAttribute._withAttribute}.
+        """
+        k, v = kw.popitem()
+        return self._withAttribute(k, v)
+
+
     def toVT102(self):
         """
         Emit a VT102 control sequence that will set up all the attributes this
