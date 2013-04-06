@@ -24,6 +24,11 @@ from twisted.conch.client import agent
 
 import os, sys, base64, getpass
 
+# The default location of the known hosts file (probably should be parsed out
+# of an ssh config file someday).
+_KNOWN_HOSTS = "~/.ssh/known_hosts"
+
+
 # This name is bound so that the unit tests can use 'patch' to override it.
 _open = open
 
@@ -71,11 +76,10 @@ def verifyHostKey(transport, host, pubKey, fingerprint):
     actualKey = keys.Key.fromString(pubKey)
     kh = KnownHostsFile.fromPath(FilePath(
             transport.factory.options['known-hosts']
-            or os.path.expanduser("~/.ssh/known_hosts")
+            or os.path.expanduser(_KNOWN_HOSTS)
             ))
     ui = ConsoleUI(lambda : _open("/dev/tty", "r+b"))
     return kh.verifyHostKey(ui, actualHost, host, actualKey)
-
 
 
 def isInKnownHosts(host, pubKey, options):
@@ -88,7 +92,7 @@ def isInKnownHosts(host, pubKey, options):
     if not options['known-hosts'] and not os.path.exists(os.path.expanduser('~/.ssh/')):
         print 'Creating ~/.ssh directory...'
         os.mkdir(os.path.expanduser('~/.ssh'))
-    kh_file = options['known-hosts'] or '~/.ssh/known_hosts'
+    kh_file = options['known-hosts'] or _KNOWN_HOSTS
     try:
         known_hosts = open(os.path.expanduser(kh_file))
     except IOError:

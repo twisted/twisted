@@ -23,7 +23,7 @@ class FakeTelnet(protocol.Protocol):
                              self.dirToRunIn, usePTY=1)
     def dataReceived(self, data):
         self.propro.transport.write(data)
-    def conectionLost(self):
+    def conectionLost(self, reason):
         print 'connection lost'
         self.propro.tranport.loseConnection()
 

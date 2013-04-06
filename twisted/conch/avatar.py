@@ -17,8 +17,8 @@ class ConchUser:
         if not klass:
             raise ConchError(OPEN_UNKNOWN_CHANNEL_TYPE, "unknown channel")
         else:
-            return klass(remoteWindow = windowSize, 
-                         remoteMaxPacket = maxPacket, 
+            return klass(remoteWindow=windowSize,
+                         remoteMaxPacket=maxPacket,
                          data=data, avatar=self)
 
     def lookupSubsystem(self, subsystem, data):
