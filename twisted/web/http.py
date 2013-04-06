@@ -792,10 +792,8 @@ class Request:
 
     def __repr__(self):
         """
-        Return the class name, address, method, uri and client protocol of the
-        L{Request} instance as a L{str} in the form::
-
-            <CLASSNAME at ADDRESS method=METHOD uri=URI clientproto=PROTOCOL>
+        Return a string description of the request including such information
+        as the request method and request URI.
 
         @return: A string loosely describing this L{Request} object.
         @rtype: L{str}
