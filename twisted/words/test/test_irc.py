@@ -458,35 +458,35 @@ class FormattedTextTests(unittest.TestCase):
 
 
 
-class CharacterAttributeTests(unittest.TestCase):
+class FormattingStateAttributeTests(unittest.TestCase):
     """
-    Tests for L{twisted.words.protocols.irc._CharacterAttribute}.
+    Tests for L{twisted.words.protocols.irc._FormattingState}.
     """
     def test_equality(self):
         """
-        L{irc._CharacterAttribute}s must have matching character attribute
+        L{irc._FormattingState}s must have matching character attribute
         values (bold, underline, etc) with the same values to be considered
         equal.
         """
         self.assertEqual(
-            irc._CharacterAttribute(),
-            irc._CharacterAttribute())
+            irc._FormattingState(),
+            irc._FormattingState())
 
         self.assertEqual(
-            irc._CharacterAttribute(),
-            irc._CharacterAttribute(off=False))
+            irc._FormattingState(),
+            irc._FormattingState(off=False))
 
         self.assertEqual(
-            irc._CharacterAttribute(
+            irc._FormattingState(
                 bold=True, underline=True, off=False, reverseVideo=True,
                 foreground=irc._IRC_COLORS['blue']),
-            irc._CharacterAttribute(
+            irc._FormattingState(
                 bold=True, underline=True, off=False, reverseVideo=True,
                 foreground=irc._IRC_COLORS['blue']))
 
         self.assertNotEquals(
-            irc._CharacterAttribute(bold=True),
-            irc._CharacterAttribute(bold=False))
+            irc._FormattingState(bold=True),
+            irc._FormattingState(bold=False))
 
 
 

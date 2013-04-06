@@ -6,23 +6,23 @@ Tests for L{twisted.python.textattributes}.
 """
 
 from twisted.trial import unittest
-from twisted.python._textattributes import DefaultCharacterAttribute
+from twisted.python._textattributes import DefaultFormattingState
 
 
 
-class DefaultCharacterAttributeTests(unittest.TestCase):
+class DefaultFormattingStateTests(unittest.TestCase):
     """
-    Tests for L{twisted.python._textattributes.DefaultCharacterAttribute}.
+    Tests for L{twisted.python._textattributes.DefaultFormattingState}.
     """
     def test_equality(self):
         """
-        L{DefaultCharacterAttribute}s are always equal to other
-        L{DefaultCharacterAttribute}s.
+        L{DefaultFormattingState}s are always equal to other
+        L{DefaultFormattingState}s.
         """
-        b = DefaultCharacterAttribute()
+        b = DefaultFormattingState()
         self.assertEquals(
-            DefaultCharacterAttribute(),
-            DefaultCharacterAttribute())
+            DefaultFormattingState(),
+            DefaultFormattingState())
         self.assertNotEquals(
-            DefaultCharacterAttribute(),
+            DefaultFormattingState(),
             'hello')

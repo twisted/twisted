@@ -22,9 +22,9 @@ BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE, N_COLORS = range(9)
 
 
 
-class CharacterAttribute(_textattributes.CharacterAttributeMixin):
+class _FormattingState(_textattributes._FormattingStateMixin):
     """
-    Represents the attributes of a single character.
+    Represents the formatting state/attributes of a single character.
 
     Character set, intensity, underlinedness, blinkitude, video
     reversal, as well as foreground and background colors made up a
@@ -70,6 +70,8 @@ class CharacterAttribute(_textattributes.CharacterAttributeMixin):
             return '\x1b[' + ';'.join(map(str, attrs)) + 'm'
         return ''
 
+CharacterAttribute = _FormattingState
+
 
 
 # XXX - need to support scroll regions and scroll history
@@ -110,8 +112,8 @@ class TerminalBuffer(protocol.Protocol):
         for b in bytes.replace('\n', '\r\n'):
             self.insertAtCursor(b)
 
-    def _currentCharacterAttributes(self):
-        return CharacterAttribute(self.activeCharset, **self.graphicRendition)
+    def _currentFormattingState(self):
+        return _FormattingState(self.activeCharset, **self.graphicRendition)
 
     def insertAtCursor(self, b):
         """
@@ -134,7 +136,7 @@ class TerminalBuffer(protocol.Protocol):
         elif b in string.printable:
             if self.x >= self.width:
                 self.nextLine()
-            ch = (b, self._currentCharacterAttributes())
+            ch = (b, self._currentFormattingState())
             if self.modes.get(insults.modes.IRM):
                 self.lines[self.y][self.x:self.x] = [ch]
                 self.lines[self.y].pop()
@@ -143,7 +145,8 @@ class TerminalBuffer(protocol.Protocol):
             self.x += 1
 
     def _emptyLine(self, width):
-        return [(self.void, self._currentCharacterAttributes()) for i in xrange(width)]
+        return [(self.void, self._currentFormattingState())
+                for i in xrange(width)]
 
     def _scrollDown(self):
         self.y += 1
@@ -432,4 +435,6 @@ class ExpectableBuffer(TerminalBuffer):
         self._checkExpected()
         return d
 
-__all__ = ['CharacterAttribute', 'TerminalBuffer', 'ExpectableBuffer']
+__all__ = [
+    'CharacterAttribute', 'FormattingState', 'TerminalBuffer',
+    'ExpectableBuffer']

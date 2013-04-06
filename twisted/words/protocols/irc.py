@@ -2965,9 +2965,9 @@ attributes = _CharacterAttributes()
 
 
 
-class _CharacterAttribute(_textattributes.CharacterAttributeMixin):
+class _FormattingState(_textattributes._FormattingStateMixin):
     """
-    Attributes of a single character.
+    Formatting state/attributes of a single character.
 
     Attributes include:
         - Formatting nullifier
@@ -3030,7 +3030,7 @@ def _foldr(f, z, xs):
 
 
 
-class _FormattingState(_CommandDispatcherMixin):
+class _FormattingParser(_CommandDispatcherMixin):
     """
     A finite-state machine that parses formatted IRC text.
 
@@ -3223,7 +3223,7 @@ def parseFormattedText(text):
 
     @since: 13.1
     """
-    state = _FormattingState()
+    state = _FormattingParser()
     for ch in text:
         state.process(ch)
     return state.complete()
@@ -3281,7 +3281,7 @@ def assembleFormattedText(formatted):
     @since: 13.1
     """
     return _textattributes.flatten(
-        formatted, _CharacterAttribute(), 'toMIRCControlCodes')
+        formatted, _FormattingState(), 'toMIRCControlCodes')
 
 
 
@@ -3297,7 +3297,7 @@ def stripFormatting(text):
     """
     formatted = parseFormattedText(text)
     return _textattributes.flatten(
-        formatted, _textattributes.DefaultCharacterAttribute())
+        formatted, _textattributes.DefaultFormattingState())
 
 
 

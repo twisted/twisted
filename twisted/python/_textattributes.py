@@ -10,13 +10,13 @@ Defining the mechanism by which text containing character attributes is
 constructed begins by subclassing L{CharacterAttributesMixin}.
 
 Defining how a single character attribute is to be serialized begins by
-subclassing L{CharacterAttributeMixin}.
+subclassing L{_FormattingStateMixin}.
 
 Serializing a character attribute structure is done with L{flatten}.
 
-@see: L{twisted.conch.insults.helper._CharacterAttribute}
+@see: L{twisted.conch.insults.helper._FormattingState}
 @see: L{twisted.conch.insults.text._CharacterAttributes}
-@see: L{twisted.words.protocols.irc._CharacterAttribute}
+@see: L{twisted.words.protocols.irc._FormattingState}
 @see: L{twisted.words.protocols.irc._CharacterAttributes}
 """
 
@@ -71,7 +71,7 @@ class _Attribute(object, FancyEqMixin):
             C{'toVT102'}.
         """
         if attrs is None:
-            attrs = DefaultCharacterAttribute()
+            attrs = DefaultFormattingState()
         for ch in self.children:
             if isinstance(ch, _Attribute):
                 ch.serialize(write, attrs.copy(), attributeRenderer)
@@ -207,7 +207,7 @@ class CharacterAttributesMixin(object):
 
 
 
-class DefaultCharacterAttribute(object, FancyEqMixin):
+class DefaultFormattingState(object, FancyEqMixin):
     """
     A character attribute that does nothing, thus applying no attributes to
     text.
@@ -237,7 +237,7 @@ class DefaultCharacterAttribute(object, FancyEqMixin):
 
     def wantOne(self, **kw):
         """
-        See L{DefaultCharacterAttribute._withAttribute}.
+        See L{DefaultFormattingState._withAttribute}.
         """
         k, v = kw.popitem()
         return self._withAttribute(k, v)
@@ -252,12 +252,12 @@ class DefaultCharacterAttribute(object, FancyEqMixin):
 
 
 
-class CharacterAttributeMixin(DefaultCharacterAttribute):
+class _FormattingStateMixin(DefaultFormattingState):
     """
-    Mixin for the attributes of a single character.
+    Mixin for the formatting state/attributes of a single character.
     """
     def copy(self):
-        c = DefaultCharacterAttribute.copy(self)
+        c = DefaultFormattingState.copy(self)
         c.__dict__.update(vars(self))
         return c
 
@@ -287,11 +287,11 @@ def flatten(output, attrs, attributeRenderer='toVT102'):
     this for a colorful variation on the \"hello world\" theme::
 
         from twisted.conch.insults.text import flatten, attributes as A
-        from twisted.conch.insults.helper import CharacterAttribute
+        from twisted.conch.insults.helper import FormattingState
         print flatten(
             A.normal[A.bold[A.fg.red['He'], A.fg.green['ll'], A.fg.magenta['o'], ' ',
                             A.fg.yellow['Wo'], A.fg.blue['rl'], A.fg.cyan['d!']]],
-            CharacterAttribute())
+            FormattingState())
 
     @param output: Object returned by accessing attributes of the
         module-level attributes object.
@@ -314,4 +314,4 @@ def flatten(output, attrs, attributeRenderer='toVT102'):
 
 
 __all__ = [
-    'flatten', 'DefaultCharacterAttribute', 'CharacterAttributesMixin']
+    'flatten', 'DefaultFormattingState', 'CharacterAttributesMixin']
