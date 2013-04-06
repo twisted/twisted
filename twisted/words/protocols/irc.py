@@ -3046,10 +3046,15 @@ class _FormattingState(_CommandDispatcherMixin):
     @ivar state: Current state of the finite-state machine.
 
     @type _buffer: C{str}
-    @ivar _buffer: Accumulation buffer.
+    @ivar _buffer: Buffer, containing the text content, of the formatting
+        sequence currently being parsed, the buffer is used as the content for
+        L{_attrs} before being added to L{_result} and emptied upon calling
+        L{emit}.
 
     @type _attrs: C{set}
-    @ivar _attrs: Current state of text attributes.
+    @ivar _attrs: Set of the applicable formatting states (bold, underline,
+        etc.) for the current L{_buffer}, these are applied to L{_buffer} when
+        calling L{emit}.
 
     @type foreground: L{_ForegroundColorAttr}
     @ivar foreground: Current foreground color attribute, or C{None}.
