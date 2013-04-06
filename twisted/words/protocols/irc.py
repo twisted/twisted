@@ -2947,7 +2947,7 @@ class CharacterAttributes(_textattributes.CharacterAttributesMixin):
     @ivar bg: Background colors accessed by attribute name, see above
         for possible names.
 
-    @since: 12.1
+    @since: 13.1
     """
     fg = _textattributes._ColorAttribute(
         _textattributes._ForegroundColorAttr, _IRC_COLORS)
@@ -2977,7 +2977,7 @@ class CharacterAttribute(_textattributes.CharacterAttributeMixin):
         - Foreground color
         - Background color
 
-    @since: 12.1
+    @since: 13.1
     """
     compareAttributes = (
         'off', 'bold', 'underline', 'reverseVideo', 'foreground', 'background')
@@ -3216,7 +3216,7 @@ def parseFormattedText(text):
 
     @return: Structured text and attributes.
 
-    @since: 12.1
+    @since: 13.1
     """
     state = _FormattingState()
     for ch in text:
@@ -3273,7 +3273,7 @@ def assembleFormattedText(formatted):
 
     @rtype: C{str}
 
-    @since: 12.1
+    @since: 13.1
     """
     return _textattributes.flatten(
         formatted, CharacterAttribute(), 'toMIRCControlCodes')
@@ -3288,7 +3288,7 @@ def stripFormatting(text):
 
     @rtype: C{str}
 
-    @since: 12.1
+    @since: 13.1
     """
     formatted = parseFormattedText(text)
     return _textattributes.flatten(
