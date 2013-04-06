@@ -791,7 +791,20 @@ class Request:
 
 
     def __repr__(self):
-        return '<%s %s %s>'% (self.method, self.uri, self.clientproto)
+        """
+        Return a string description of the request including such information
+        as the request method and request URI.
+
+        @return: A string loosely describing this L{Request} object.
+        @rtype: L{str}
+        """
+        return '<%s at 0x%x method=%s uri=%s clientproto=%s>' % (
+            self.__class__.__name__,
+            id(self),
+            nativeString(self.method),
+            nativeString(self.uri),
+            nativeString(self.clientproto))
+
 
     def process(self):
         """
