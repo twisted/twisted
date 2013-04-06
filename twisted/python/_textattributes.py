@@ -4,15 +4,15 @@
 
 """
 This module provides some common functionality for the manipulation of
-character attributes.
+formatting states.
 
 Defining the mechanism by which text containing character attributes is
 constructed begins by subclassing L{CharacterAttributesMixin}.
 
-Defining how a single character attribute is to be serialized begins by
+Defining how a single formatting state is to be serialized begins by
 subclassing L{_FormattingStateMixin}.
 
-Serializing a character attribute structure is done with L{flatten}.
+Serializing a formatting structure is done with L{flatten}.
 
 @see: L{twisted.conch.insults.helper._FormattingState}
 @see: L{twisted.conch.insults.text._CharacterAttributes}
@@ -62,7 +62,7 @@ class _Attribute(object, FancyEqMixin):
         @param write: C{callable}, taking one C{str} argument, called to output
             a single text attribute at a time.
 
-        @param attrs: A character attribute instance used to determine how to
+        @param attrs: A formatting state instance used to determine how to
             serialize the attribute children.
 
         @type attributeRenderer: C{str}
@@ -219,16 +219,16 @@ class DefaultFormattingState(object, FancyEqMixin):
 
     def copy(self):
         """
-        Make a copy of this character attribute.
+        Make a copy of this formatting state.
         """
         return type(self)()
 
 
     def _withAttribute(self, name, value):
         """
-        Create a new attribute instance and add a character attribute to it.
+        Add a character attribute to a copy of this formatting state.
 
-        @param name: Attribute name to be added to the character attribute.
+        @param name: Attribute name to be added to formatting state.
 
         @param value: Attribute value.
         """
@@ -246,7 +246,7 @@ class DefaultFormattingState(object, FancyEqMixin):
     def toVT102(self):
         """
         Emit a VT102 control sequence that will set up all the attributes this
-        character attribute has set.
+        formatting state has set.
         """
         return ''
 
@@ -296,7 +296,7 @@ def flatten(output, attrs, attributeRenderer='toVT102'):
     @param output: Object returned by accessing attributes of the
         module-level attributes object.
 
-    @param attrs: A character attribute instance used to determine how to
+    @param attrs: A formatting state instance used to determine how to
         serialize C{output}.
 
     @type attributeRenderer: C{str}
