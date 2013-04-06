@@ -171,6 +171,7 @@ class ModeParsingTests(unittest.TestCase):
         self.assertEqual(removed, [])
 
 
+
 class MiscTests(unittest.TestCase):
     """
     Tests for miscellaneous functions.
@@ -181,10 +182,10 @@ class MiscTests(unittest.TestCase):
         a sequence, from right to left, so as to reduce the sequence to
         a single value.
         """
-        self.assertEquals(
+        self.assertEqual(
             irc._foldr(operator.sub, 0, [1, 2, 3, 4]),
             -2)
-        self.assertEquals(
+        self.assertEqual(
             reduce(operator.sub, [1, 2, 3, 4], 0),
             -10)
 
@@ -192,11 +193,11 @@ class MiscTests(unittest.TestCase):
             l.insert(0, x)
             return l
 
-        self.assertEquals(
+        self.assertEqual(
             irc._foldr(insertTop, [], [[1], [2], [3], [4]]),
             [[[[[], 4], 3], 2], 1])
 
-        self.assertEquals(
+        self.assertEqual(
             reduce(insertTop, [[1], [2], [3], [4]], []),
             [[4], [3], [2], [1]])
 
@@ -222,7 +223,7 @@ class FormattedTextTests(unittest.TestCase):
         """
         text = irc.assembleFormattedText(formatted)
         expectedText = irc.assembleFormattedText(expectedFormatted)
-        self.assertEquals(
+        self.assertEqual(
             irc.assembleFormattedText(formatted),
             expectedText,
             '%r (%r) is not equivalent to %r (%r)' % (
@@ -242,13 +243,13 @@ class FormattedTextTests(unittest.TestCase):
         whose text is the empty string assembles to two control codes: C{off}
         and that of the attribute.
         """
-        self.assertEquals(
+        self.assertEqual(
             irc.assembleFormattedText(A.normal),
             '')
 
         # Attempting to apply an attribute to the empty string should still
         # produce two control codes.
-        self.assertEquals(
+        self.assertEqual(
             irc.assembleFormattedText(
                 A.bold['']),
             '\x0f\x02')
@@ -259,7 +260,7 @@ class FormattedTextTests(unittest.TestCase):
         A I{normal} string assembles to a string prefixed with the I{off}
         control code.
         """
-        self.assertEquals(
+        self.assertEqual(
             irc.assembleFormattedText(
                 A.normal['hello']),
             '\x0fhello')
@@ -270,7 +271,7 @@ class FormattedTextTests(unittest.TestCase):
         A I{bold} string assembles to a string prefixed with the I{off} and
         I{bold} control codes.
         """
-        self.assertEquals(
+        self.assertEqual(
             irc.assembleFormattedText(
                 A.bold['hello']),
             '\x0f\x02hello')
@@ -281,7 +282,7 @@ class FormattedTextTests(unittest.TestCase):
         An I{underline} string assembles to a string prefixed with the I{off}
         and I{underline} control codes.
         """
-        self.assertEquals(
+        self.assertEqual(
             irc.assembleFormattedText(
                 A.underline['hello']),
             '\x0f\x1fhello')
@@ -292,7 +293,7 @@ class FormattedTextTests(unittest.TestCase):
         A I{reverse video} string assembles to a string prefixed with the I{off}
         and I{reverse video} control codes.
         """
-        self.assertEquals(
+        self.assertEqual(
             irc.assembleFormattedText(
                 A.reverseVideo['hello']),
             '\x0f\x16hello')
@@ -304,7 +305,7 @@ class FormattedTextTests(unittest.TestCase):
         I{off} and I{color} (followed by the relevant foreground color code)
         control codes.
         """
-        self.assertEquals(
+        self.assertEqual(
             irc.assembleFormattedText(
                 A.fg.blue['hello']),
             '\x0f\x0302hello')
@@ -317,7 +318,7 @@ class FormattedTextTests(unittest.TestCase):
         foreground color, followed by the relevant background color code)
         control codes.
         """
-        self.assertEquals(
+        self.assertEqual(
             irc.assembleFormattedText(
                 A.bg.blue['hello']),
             '\x0f\x03,02hello')
@@ -330,7 +331,7 @@ class FormattedTextTests(unittest.TestCase):
         foreground color, I{,} and the relevant background color code) control
         codes.
         """
-        self.assertEquals(
+        self.assertEqual(
             irc.assembleFormattedText(
                 A.bg.blue['hello']),
             '\x0f\x03,02hello')
@@ -340,12 +341,12 @@ class FormattedTextTests(unittest.TestCase):
         """
         Nested attributes retain the attributes of their parents.
         """
-        self.assertEquals(
+        self.assertEqual(
             irc.assembleFormattedText(
                 A.bold['hello', A.underline[' world']]),
             '\x0f\x02hello\x0f\x02\x1f world')
 
-        self.assertEquals(
+        self.assertEqual(
             irc.assembleFormattedText(
                 A.normal[
                     A.fg.red[A.bg.green['hello'], ' world'],
@@ -358,7 +359,7 @@ class FormattedTextTests(unittest.TestCase):
         Parsing unformatted text results in text with attributes that
         constitute a no-op.
         """
-        self.assertEquals(
+        self.assertEqual(
             irc.parseFormattedText('hello'),
             A.normal['hello'])
 
@@ -368,10 +369,10 @@ class FormattedTextTests(unittest.TestCase):
         Correctly formatted text with colors uses 2 digits to specify
         foreground and (optionally) background.
         """
-        self.assertEquals(
+        self.assertEqual(
             irc.parseFormattedText('\x0301yay\x03'),
             A.fg.black['yay'])
-        self.assertEquals(
+        self.assertEqual(
             irc.parseFormattedText('\x0301,02yay\x03'),
             A.fg.black[A.bg.blue['yay']])
 
@@ -446,7 +447,7 @@ class FormattedTextTests(unittest.TestCase):
         """
         Strip formatting codes from formatted text, leaving only the text parts.
         """
-        self.assertEquals(
+        self.assertEqual(
             irc.stripFormatting(
                 irc.assembleFormattedText(
                     A.bold[
@@ -467,15 +468,15 @@ class CharacterAttributeTests(unittest.TestCase):
         (bold, underline, etc) with the same values to be considered
         equal.
         """
-        self.assertEquals(
+        self.assertEqual(
             irc.CharacterAttribute(),
             irc.CharacterAttribute())
 
-        self.assertEquals(
+        self.assertEqual(
             irc.CharacterAttribute(),
             irc.CharacterAttribute(off=False))
 
-        self.assertEquals(
+        self.assertEqual(
             irc.CharacterAttribute(
                 bold=True, underline=True, off=False, reverseVideo=True,
                 foreground=irc._IRC_COLORS['blue']),
