@@ -72,6 +72,56 @@ _TEXT_COLORS = {
 
 
 class _CharacterAttributes(_textattributes.CharacterAttributesMixin):
+    """
+    Factory for character attributes, including foreground and background color
+    and non-color attributes such as bold, reverse video and underline.
+
+    Character attributes are applied to actual text by using object
+    indexing-syntax (C{obj['abc']}) after accessing a factory attribute, for
+    example::
+
+        attributes.bold['Some text']
+
+    These can be nested to mix attributes::
+
+        attributes.bold[attributes.underline['Some text']]
+
+    And multiple values can be passed::
+
+        attributes.normal[attributes.bold['Some'], ' text']
+
+    Non-color attributes can be accessed by attribute name, available
+    attributes are:
+
+        - bold
+        - reverseVideo
+        - underline
+
+    Non-color attributes can be accessed by attribute name, available
+    attributes are:
+
+        - bold
+        - blink
+        - reverseVideo
+        - underline
+
+    Available colors are:
+
+        0. black
+        1. red
+        2. green
+        3. yellow
+        4. blue
+        5. magenta
+        6. cyan
+        7. white
+
+    @ivar fg: Foreground colors accessed by attribute name, see above
+        for possible names.
+
+    @ivar bg: Background colors accessed by attribute name, see above
+        for possible names.
+    """
     fg = _textattributes._ColorAttribute(
         _textattributes._ForegroundColorAttr, _TEXT_COLORS)
     bg = _textattributes._ColorAttribute(
