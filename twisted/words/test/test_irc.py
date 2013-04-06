@@ -333,8 +333,8 @@ class FormattedTextTests(unittest.TestCase):
         """
         self.assertEqual(
             irc.assembleFormattedText(
-                A.bg.blue['hello']),
-            '\x0f\x03,02hello')
+                A.fg.red[A.bg.blue['hello']]),
+            '\x0f\x0305,02hello')
 
 
     def test_assembleNested(self):
