@@ -23,7 +23,7 @@ Test coverage needs to be better.
 @var MAX_COMMAND_LENGTH: The maximum length of a command, as defined by RFC
     2812 section 2.3.
 
-@var attributes: Singleton instance of L{CharacterAttributes}, used for
+@var attributes: Singleton instance of L{_CharacterAttributes}, used for
     constructing formatted text information.
 
 @author: Kevin Turner
@@ -2896,7 +2896,7 @@ _IRC_COLOR_NAMES = dict((code, name) for name, code in _IRC_COLORS.items())
 
 
 
-class CharacterAttributes(_textattributes.CharacterAttributesMixin):
+class _CharacterAttributes(_textattributes.CharacterAttributesMixin):
     """
     Factory for character attributes, including foreground and background color
     and non-color attributes such as bold, reverse video and underline.
@@ -2961,11 +2961,11 @@ class CharacterAttributes(_textattributes.CharacterAttributesMixin):
 
 
 
-attributes = CharacterAttributes()
+attributes = _CharacterAttributes()
 
 
 
-class CharacterAttribute(_textattributes.CharacterAttributeMixin):
+class _CharacterAttribute(_textattributes.CharacterAttributeMixin):
     """
     Attributes of a single character.
 
@@ -3281,7 +3281,7 @@ def assembleFormattedText(formatted):
     @since: 13.1
     """
     return _textattributes.flatten(
-        formatted, CharacterAttribute(), 'toMIRCControlCodes')
+        formatted, _CharacterAttribute(), 'toMIRCControlCodes')
 
 
 
