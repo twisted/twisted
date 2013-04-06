@@ -10,7 +10,7 @@ A = text.attributes
 
 class Serialization(unittest.TestCase):
     def setUp(self):
-        self.attrs = helper.FormattingState()
+        self.attrs = helper._FormattingState()
 
     def testTrivial(self):
         self.assertEqual(
@@ -67,7 +67,7 @@ class EfficiencyTestCase(unittest.TestCase):
             "activated and no conflicting attributes are set which need to be cleared.")
 
     def setUp(self):
-        self.attrs = helper.FormattingState()
+        self.attrs = helper._FormattingState()
 
     def testComplexStructure(self):
         output = A.normal[
