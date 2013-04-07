@@ -1869,7 +1869,11 @@ class SSHCiphersTestCase(unittest.TestCase):
         hash function and key.
         """
         ciphers = transport.SSHCiphers('A', 'B', 'C', 'D')
-        # MD5 digest is 16 bytes.  Pad out with 48 more bytes to get 64 bytes.
+
+        # MD5 digest is 16 bytes.  Put some non-zero bytes into that part of
+        # the key.  Maybe varying the bytes a little bit means a bug in the
+        # implementation is more likely to be caught by the assertions below.
+        # The remaining 48 bytes of NULs are to pad the key out to 64 bytes.
         key = '\x55\xaa' * 8 + '\x00' * 48
 
         for macName, mac in ciphers.macMap.items():
