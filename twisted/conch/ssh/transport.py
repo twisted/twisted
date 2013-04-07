@@ -68,7 +68,21 @@ def _generateX(random, bits):
             return x
 
 
-class _StupidMACParams(tuple):
+class _MACParams(tuple):
+    """
+    L{_MACParams} represents the parameters necessary to compute SSH MAC
+    (Message Authenticate Codes).
+
+    L{_MACParams} is a L{tuple} subclass to maintain compatibility with older
+    versions of the code.  The elements of a L{_MACParams} are::
+
+        0. The digest object used for the MAC
+        1. The inner pad ("ipad") string
+        2. The outer pad ("opad") string
+        3. The size of the digest produced by the digest object
+
+    @ivar key:
+    """
     pass
 
 
@@ -1464,7 +1478,7 @@ class SSHCiphers:
         key = key[:ds] + ('\x00' * (64 - ds))
         i = string.translate(key, hmac.trans_36)
         o = string.translate(key, hmac.trans_5C)
-        result = _StupidMACParams((mod,  i, o, ds))
+        result = _MACParams((mod,  i, o, ds))
         result.key = key
         return result
 
