@@ -11,6 +11,7 @@ from __future__ import absolute_import, division
 
 # System imports
 import re
+import warnings
 from struct import pack, unpack, calcsize
 from io import BytesIO
 import math
@@ -684,6 +685,9 @@ class _RecvdCompatHack(object):
     the default __set__ behavior in both new-style and old-style subclasses.
     """
     def __get__(self, oself, type=None):
+        warnings.warn(
+            "recvd was deprecated in Twisted 13.1. Use clearBuffer instead.",
+            DeprecationWarning, stacklevel=2)
         return oself._unprocessed[oself._compatibilityOffset:]
 
 
@@ -730,6 +734,21 @@ class IntNStringReceiver(protocol.Protocol, _PauseableMixin):
         raise NotImplementedError
 
 
+    def clearBuffer(self):
+        """
+        Reset the current buffer and return the pending data.
+
+        @return: The data current buffered by the protocol.
+        @rtype: C{bytes}
+
+        @since: 13.1
+        """
+        data = self._unprocessed[self._compatibilityOffset:]
+        self._unprocessed = b""
+        self._compatibilityOffset = 0
+        return data
+
+
     def lengthLimitExceeded(self, length):
         """
         Callback invoked when a length prefix greater than C{MAX_LENGTH} is
@@ -747,15 +766,15 @@ class IntNStringReceiver(protocol.Protocol, _PauseableMixin):
         Convert int prefixed strings into calls to stringReceived.
         """
         # Try to minimize string copying (via slices) by keeping one buffer
-        # containing all the data we have so far and a separate offset into that
-        # buffer.
+        # containing all the data we have so far and a separate offset into
+        # that buffer.
         alldata = self._unprocessed + data
         currentOffset = 0
         prefixLength = self.prefixLength
         fmt = self.structFormat
         self._unprocessed = alldata
 
-        while len(alldata) >= (currentOffset + prefixLength) and not self.paused:
+        while len(alldata) >= currentOffset + prefixLength and not self.paused:
             messageStart = currentOffset + prefixLength
             length, = unpack(fmt, alldata[currentOffset:messageStart])
             if length > self.MAX_LENGTH:
@@ -774,10 +793,18 @@ class IntNStringReceiver(protocol.Protocol, _PauseableMixin):
             self._compatibilityOffset = currentOffset
             self.stringReceived(packet)
 
-            # Check to see if the backwards compat "recvd" attribute got written
-            # to by application code.  If so, drop the current data buffer and
-            # switch to the new buffer given by that attribute's value.
+            if self._compatibilityOffset != currentOffset:
+                currentOffset = self._compatibilityOffset
+                alldata = self._unprocessed
+
+            # Check to see if the backwards compat "recvd" attribute got
+            # written to by application code.  If so, drop the current data
+            # buffer and switch to the new buffer given by that attribute's
+            # value.
             if 'recvd' in self.__dict__:
+                warnings.warn(
+                    "recvd was deprecated in Twisted 13.1. Use clearBuffer "
+                    "instead.", DeprecationWarning, stacklevel=2)
                 alldata = self.__dict__.pop('recvd')
                 self._unprocessed = alldata
                 self._compatibilityOffset = currentOffset = 0
@@ -786,8 +813,8 @@ class IntNStringReceiver(protocol.Protocol, _PauseableMixin):
                 return
 
         # Slice off all the data that has been processed, avoiding holding onto
-        # memory to store it, and update the compatibility attributes to reflect
-        # that change.
+        # memory to store it, and update the compatibility attributes to
+        # reflect that change.
         self._unprocessed = alldata[currentOffset:]
         self._compatibilityOffset = 0
 

@@ -820,14 +820,22 @@ class RecvdAttributeMixin(object):
         """
         result = []
         r = self.getProtocol()
+
         def stringReceived(receivedString):
             result.append(r.recvd)
+
         r.stringReceived = stringReceived
         completeMessage = (struct.pack(r.structFormat, 5) + (b'a' * 5))
         incompleteMessage = (struct.pack(r.structFormat, 5) + (b'b' * 4))
         # Receive a complete message, followed by an incomplete one
         r.dataReceived(completeMessage + incompleteMessage)
         self.assertEquals(result, [incompleteMessage])
+        warns = self.flushWarnings([stringReceived])
+        self.assertEqual(1, len(warns))
+        self.assertEqual(DeprecationWarning, warns[0]["category"])
+        self.assertEqual(
+            "recvd was deprecated in Twisted 13.1. Use clearBuffer instead.",
+            warns[0]["message"])
 
 
     def test_recvdChanged(self):
@@ -839,10 +847,12 @@ class RecvdAttributeMixin(object):
         result = []
         payloadC = b'c' * 5
         messageC = self.makeMessage(r, payloadC)
+
         def stringReceived(receivedString):
             if not result:
                 r.recvd = messageC
             result.append(receivedString)
+
         r.stringReceived = stringReceived
         payloadA = b'a' * 5
         payloadB = b'b' * 5
@@ -850,6 +860,12 @@ class RecvdAttributeMixin(object):
         messageB = self.makeMessage(r, payloadB)
         r.dataReceived(messageA + messageB)
         self.assertEquals(result, [payloadA, payloadC])
+        warns = self.flushWarnings([self.test_recvdChanged])
+        self.assertEqual(1, len(warns))
+        self.assertEqual(DeprecationWarning, warns[0]["category"])
+        self.assertEqual(
+            "recvd was deprecated in Twisted 13.1. Use clearBuffer instead.",
+            warns[0]["message"])
 
 
     def test_switching(self):
@@ -866,6 +882,7 @@ class RecvdAttributeMixin(object):
             mix.append(SWITCH)
 
         result = []
+
         def stringReceived(receivedString):
             result.append(receivedString)
             proto.recvd = proto.recvd[len(SWITCH):]
@@ -878,6 +895,8 @@ class RecvdAttributeMixin(object):
         self.assertEqual(result, self.strings)
         # And verify that another way
         self.assertEqual(proto.recvd, b"\x01")
+
+        self.assertEqual(5, len(self.flushWarnings()))
 
 
     def test_recvdInLengthLimitExceeded(self):
@@ -892,6 +911,7 @@ class RecvdAttributeMixin(object):
         message = self.makeMessage(proto, DATA)
 
         result = []
+
         def lengthLimitExceeded(length):
             result.append(length)
             result.append(proto.recvd)
@@ -900,6 +920,28 @@ class RecvdAttributeMixin(object):
         proto.dataReceived(message)
         self.assertEqual(result[0], len(DATA))
         self.assertEqual(result[1], message)
+        self.assertEqual(1, len(self.flushWarnings()))
+
+
+    def test_clearBuffer(self):
+        """
+        C{IntNStringReceiver.clearBuffer} allows to reset the buffer managed
+        during C{dataReceived}.
+        """
+        result = []
+        r = self.getProtocol()
+
+        def stringReceived(receivedString):
+            if result:
+                self.fail("Should only be called once")
+            result.append(r.clearBuffer())
+
+        r.stringReceived = stringReceived
+        completeMessage = (struct.pack(r.structFormat, 5) + (b'a' * 5))
+        incompleteMessage = (struct.pack(r.structFormat, 5) + (b'b' * 4))
+        # Receive a complete message, followed by an incomplete one
+        r.dataReceived(completeMessage + incompleteMessage)
+        self.assertEquals(result, [incompleteMessage])
 
 
 

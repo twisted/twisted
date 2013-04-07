@@ -1,0 +1,2 @@
+twisted.protocols.basic.IntNStringReceiver.recvd is now deprecated, replaced by
+a clearBuffer method returning and resetting the internal buffer.

@@ -2113,14 +2113,8 @@ class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver,
         L{clientConnectionLost} notification to.
         """
         # All the data that Int16Receiver has not yet dealt with belongs to our
-        # new protocol: luckily it's keeping that in a handy (although
-        # ostensibly internal) variable for us:
-        newProtoData = self.recvd
-        # We're quite possibly in the middle of a 'dataReceived' loop in
-        # Int16StringReceiver: let's make sure that the next iteration, the
-        # loop will break and not attempt to look at something that isn't a
-        # length prefix.
-        self.recvd = ''
+        # new protocol: luckily it's giving that with a handy method.
+        newProtoData = self.clearBuffer()
         # Finally, do the actual work of setting up the protocol and delivering
         # its first chunk of data, if one is available.
         self.innerProtocol = newProto
