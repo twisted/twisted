@@ -1456,6 +1456,11 @@ class SSHCiphers:
         if not mod:
             return (None, '', '', 0)
         ds = mod().digest_size
+
+        # Truncation here appears to contravene RFC 2104, section 2.  However,
+        # implementing the hashing behavior proscribed by the RFC breaks
+        # interoperability with OpenSSH (at least version 5.5p1).  This
+        # /appears/ to be due to the SSH_BUG_HMAC.
         key = key[:ds] + ('\x00' * (64 - ds))
         i = string.translate(key, hmac.trans_36)
         o = string.translate(key, hmac.trans_5C)
