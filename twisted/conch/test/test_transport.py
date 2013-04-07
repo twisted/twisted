@@ -1865,8 +1865,8 @@ class SSHCiphersTestCase(unittest.TestCase):
 
     def test_getMAC(self):
         """
-        _getMAC computes the HMAC parameters for a particular hash function and
-        key.
+        L{SSHCuphers._getMAC} computes the HMAC parameters for a particular
+        hash function and key.
         """
         ciphers = transport.SSHCiphers('A', 'B', 'C', 'D')
         # MD5 digest is 16 bytes.  Pad out with 48 more bytes to get 64 bytes.
@@ -1883,6 +1883,7 @@ class SSHCiphersTestCase(unittest.TestCase):
                      b''.join(chr(ord(b) ^ 0x5c) for b in key),
                      len(mod[0]().digest())),
                     mod)
+                self.assertEqual(key, mod.key)
 
 
     def test_setKeysCiphers(self):
