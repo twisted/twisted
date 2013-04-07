@@ -1949,6 +1949,7 @@ class SSHCiphersTestCase(unittest.TestCase):
         L{SSHCiphers.makeMAC} computes the HMAC of an outgoing SSH message with
         a particular sequence id and content data.
         """
+        # Use the test vectors given in the appendix of RFC 2104.
         vectors = [
             (b"\x0b" * 16, b"Hi There",
              b"9294727a3638bb1c13f48ef8158bfc9d"),
