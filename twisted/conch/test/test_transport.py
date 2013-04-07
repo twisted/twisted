@@ -1943,7 +1943,6 @@ class SSHCiphersTestCase(unittest.TestCase):
             self.assertTrue(inMac.verify(seqid, data, mac))
 
 
-
     def test_makeMAC(self):
         """
         L{SSHCiphers.makeMAC} computes the HMAC of an outgoing SSH message with
