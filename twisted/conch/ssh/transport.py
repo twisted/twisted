@@ -81,9 +81,12 @@ class _MACParams(tuple):
         2. The outer pad ("opad") string
         3. The size of the digest produced by the digest object
 
-    @ivar key:
+    L{_MACParams} is also an object lesson in why tuples are a bad type for
+    public APIs.
+
+    @ivar key: The HMAC key which will be used.
     """
-    pass
+
 
 
 class SSHTransportBase(protocol.Protocol):
