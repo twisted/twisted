@@ -817,8 +817,8 @@ def react(main, argv=(), _reactor=None):
     @param main: A callable which returns a L{Deferred}.  It should take as
         many arguments as there are elements in the list C{argv}.
 
-    @param argv: A list of arguments to pass to C{main}. If unprovided the
-        default will be an empty tuple.
+    @param argv: A list of arguments to pass to C{main}. If omitted the
+        callable will be invoked with no additional arguments.
 
     @param _reactor: An implementation detail to allow easier unit testing.  Do
         not supply this parameter.
