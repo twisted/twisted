@@ -308,7 +308,7 @@ class NMEASentence(base._BaseSentence):
         referenced in a sentence, where C{N in range(4)}.
     @ivar elevation: The elevation of a satellite in decimal degrees.
         Optionally suffixed with C{_N}, as with C{satellitePRN}.
-    @ivar azimuth}: The azimuth of a satellite in decimal degrees.
+    @ivar azimuth: The azimuth of a satellite in decimal degrees.
         Optionally suffixed with C{_N}, as with C{satellitePRN}.
     @ivar signalToNoiseRatio: The SNR of a satellite signal, in decibels.
         Optionally suffixed with C{_N}, as with C{satellitePRN}.
