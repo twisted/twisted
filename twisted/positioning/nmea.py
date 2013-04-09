@@ -26,10 +26,10 @@ from twisted.python.compat import reduce
 DATA_ACTIVE, DATA_VOID = "A", "V"
 
 # Selection modes (used in a variety of sentences):
-MODE_AUTO, MODE_MANUAL = 'A', 'M'
+MODE_AUTO, MODE_MANUAL = "A", "M"
 
 # GPGSA fix types:
-GSA_NO_FIX, GSA_2D_FIX, GSA_3D_FIX = '1', '2', '3'
+GSA_NO_FIX, GSA_2D_FIX, GSA_3D_FIX = "1", "2", "3"
 
 NMEA_NORTH, NMEA_EAST, NMEA_SOUTH, NMEA_WEST = "N", "E", "S", "W"
 
