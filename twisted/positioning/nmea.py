@@ -344,17 +344,18 @@ class NMEAAdapter(object):
     An adapter from NMEAProtocol receivers to positioning receivers.
 
     @cvar DATESTAMP_HANDLING: Determines the way incomplete (two-digit) NMEA
-        datestamps are handled.. One of L{INTELLIGENT_DATESTAMPS} (default,
-        assumes dates are twenty-first century if the two-digit date is below
-        the L{INTELLIGENT_DATE_THRESHOLD}, twentieth century otherwise),
-        L{DATESTAMPS_FROM_20XX} (assumes all dates are twenty-first century),
-        L{DATESTAMPS_FROM_19XX} (assumes all dates are twentieth century).
-        All of these are class attributes of this class.
+        datestamps are handled. One of L{NMEAAdapter.INTELLIGENT_DATESTAMPS}
+        (default), which assumes dates are twenty-first century if the
+        two-digit date is below the L{NMEAAdapter.INTELLIGENT_DATE_THRESHOLD},
+        twentieth century otherwise), L{NMEAAdapter.DATESTAMPS_FROM_20XX},
+        which assumes all dates are twenty-first century, or 
+        L{NMEAAdapter.DATESTAMPS_FROM_19XX}, which assumes all dates are
+        twentieth century.
 
     @cvar INTELLIGENT_DATE_THRESHOLD: The threshold that determines which
         century we guess a year is in. If the year value in a sentence is above
         this value, assumes the 20th century (19xx), otherwise assumes the
-        twenty-first century (20xx).
+        twenty-first century (20xx). C{0 <= INTELLIGENT_DATE_THRESHOLD < 100}.
     @type INTELLIGENT_DATE_THRESHOLD: L{int}
     """
     def __init__(self, receiver):
@@ -362,7 +363,7 @@ class NMEAAdapter(object):
         Initializes a new NMEA adapter.
 
         @param receiver: The receiver for positioning sentences.
-        @type receiver: L{twisted.positioning.IPositioningReceiver}
+        @type receiver: L{ipositioning.IPositioningReceiver}
         """
         self._state = {}
         self._sentenceData = {}
@@ -472,7 +473,7 @@ class NMEAAdapter(object):
 
         @param coordinateType: The coordinate type to find the hemisphere for.
         @type coordinateType: L{Angles.LATITUDE}, L{Angles.LONGITUDE} or
-            L{base.VARIATION}.
+            L{Angles.VARIATION}.
         @return: The sign of that hemisphere (-1 or 1).
         @rtype: C{int}
         """
