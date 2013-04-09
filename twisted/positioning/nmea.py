@@ -264,21 +264,13 @@ class NMEASentence(base._BaseSentence):
     sentence.  Not all of these necessarily have to be present in the
     sentence. Missing attributes are None when accessed.
 
-    Sentence-specific junk:
-
     @ivar type: The sentence type ("GPGGA", "GPGSV"...).
     @ivar numberOfGSVSentences: The total number of GSV sentences in a
         sequence.
     @ivar GSVSentenceIndex: The index of this GSV sentence in the GSV
         sequence.
-
-    Time-related attributes:
-
     @ivar timestamp: A timestamp. ("123456" -> 12:34:56Z)
     @ivar datestamp: A datestamp. ("230394" -> 23 Mar 1994)
-
-    Location-related attributes:
-
     @ivar latitudeFloat: Latitude value. (for example: "1234.567" ->
         12 degrees, 34.567 minutes).
     @ivar latitudeHemisphere: Latitudinal hemisphere ("N" or "S").
@@ -292,17 +284,11 @@ class NMEASentence(base._BaseSentence):
         the WGS84 ellipsoid model.
     @ivar heightOfGeoidAboveWGS84Units: The units in which the height
         above the geoid is expressed. (Always "M" for meters.)
-
-    Attributes related to direction and movement:
-
     @ivar trueHeading: The true heading.
     @ivar magneticVariation: The magnetic variation.
     @ivar magneticVariationDirection: The direction of the magnetic
         variation. One of C{"E"} or C{"W"}.
     @ivar speedInKnots: The ground speed, expressed in knots.
-
-    Attributes related to fix and data quality:
-
     @ivar fixQuality: The quality of the fix. This is a single digit
         from C{"0"} to C{"8"}. The important ones are C{"0"} (invalid
         fix), C{"1"} (GPS fix) and C{"2"} (DGPS fix).
@@ -312,17 +298,11 @@ class NMEASentence(base._BaseSentence):
         receiver.
     @ivar numberOfSatellitesUsed: The number of satellites used in
         computing the fix.
-
-    Attributes related to precision:
-
     @ivar horizontalDilutionOfPrecision: The dilution of the precision of the
         position on a plane tangential to the geoid. (HDOP)
     @ivar verticalDilutionOfPrecision: As C{horizontalDilutionOfPrecision},
         but for a position on a plane perpendicular to the geoid. (VDOP)
     @ivar positionDilutionOfPrecision: Euclidian norm of HDOP and VDOP.
-
-    Attributes related to satellite-specific data:
-
     @ivar C{satellitePRN}: The unique identifcation number of a particular
         satelite. Optionally suffixed with C{_N} if multiple satellites are
         referenced in a sentence, where C{N in range(4)}.
