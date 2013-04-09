@@ -262,28 +262,28 @@ class NMEASentence(base._BaseSentence):
 
     This object contains all the raw NMEA protocol data in a single
     sentence.  Not all of these necessarily have to be present in the
-    sentence. Missing attributes are None when accessed.
+    sentence. Missing attributes are C{None} when accessed.
 
-    @ivar type: The sentence type ("GPGGA", "GPGSV"...).
+    @ivar type: The sentence type (C{"GPGGA"}, C{"GPGSV"}...).
     @ivar numberOfGSVSentences: The total number of GSV sentences in a
         sequence.
     @ivar GSVSentenceIndex: The index of this GSV sentence in the GSV
         sequence.
-    @ivar timestamp: A timestamp. ("123456" -> 12:34:56Z)
-    @ivar datestamp: A datestamp. ("230394" -> 23 Mar 1994)
-    @ivar latitudeFloat: Latitude value. (for example: "1234.567" ->
+    @ivar timestamp: A timestamp. (C{"123456"} -> 12:34:56Z)
+    @ivar datestamp: A datestamp. (C{"230394"} -> 23 Mar 1994)
+    @ivar latitudeFloat: Latitude value. (for example: C{"1234.567"} ->
         12 degrees, 34.567 minutes).
-    @ivar latitudeHemisphere: Latitudinal hemisphere ("N" or "S").
+    @ivar latitudeHemisphere: Latitudinal hemisphere (C{"N"} or C{"S"}).
     @ivar longitudeFloat: Longitude value. See C{latitudeFloat} for an
         example.
-    @ivar longitudeHemisphere: Longitudinal hemisphere ("E" or "W").
+    @ivar longitudeHemisphere: Longitudinal hemisphere (C{"E"} or C{"W"}).
     @ivar altitude: The altitude above mean sea level.
     @ivar altitudeUnits: Units in which altitude is expressed. (Always
-        "M" for meters.)
+        C{"M"} for meters.)
     @ivar heightOfGeoidAboveWGS84: The local height of the geoid above
         the WGS84 ellipsoid model.
     @ivar heightOfGeoidAboveWGS84Units: The units in which the height
-        above the geoid is expressed. (Always "M" for meters.)
+        above the geoid is expressed. (Always C{"M"} for meters.)
     @ivar trueHeading: The true heading.
     @ivar magneticVariation: The magnetic variation.
     @ivar magneticVariationDirection: The direction of the magnetic
@@ -303,16 +303,16 @@ class NMEASentence(base._BaseSentence):
     @ivar verticalDilutionOfPrecision: As C{horizontalDilutionOfPrecision},
         but for a position on a plane perpendicular to the geoid. (VDOP)
     @ivar positionDilutionOfPrecision: Euclidian norm of HDOP and VDOP.
-    @ivar C{satellitePRN}: The unique identifcation number of a particular
+    @ivar satellitePRN: The unique identifcation number of a particular
         satelite. Optionally suffixed with C{_N} if multiple satellites are
         referenced in a sentence, where C{N in range(4)}.
-    @ivar C{elevation}: The elevation of a satellite in decimal degrees.
+    @ivar elevation: The elevation of a satellite in decimal degrees.
         Optionally suffixed with C{_N}, as with C{satellitePRN}.
-    @ivar C{azimuth}: The azimuth of a satellite in decimal degrees.
+    @ivar azimuth}: The azimuth of a satellite in decimal degrees.
         Optionally suffixed with C{_N}, as with C{satellitePRN}.
-    @ivar C{signalToNoiseRatio}: The SNR of a satellite signal, in decibels.
+    @ivar signalToNoiseRatio: The SNR of a satellite signal, in decibels.
         Optionally suffixed with C{_N}, as with C{satellitePRN}.
-    @ivar C{usedSatellitePRN_N}: Where C{int(N) in range(12)}. The PRN
+    @ivar usedSatellitePRN_N: Where C{int(N) in range(12)}. The PRN
         of a satelite used in computing the fix.
     """
     ALLOWED_ATTRIBUTES = NMEAProtocol.getSentenceAttributes()
