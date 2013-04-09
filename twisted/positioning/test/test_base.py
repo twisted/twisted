@@ -491,33 +491,41 @@ class AltitudeTests(TestCase):
     """
     Tests for the L{twisted.positioning.base.Altitude} class.
     """
-    def test_simple(self):  ## TODO: fix
+    def test_value(self):
         """
-        Tests basic altitude functionality.
+        Altitudes can be instantiated and reports the correct value in
+        meters and feet, as well as when converted to float.
         """
-        a = base.Altitude(1.)
-        self.assertEqual(float(a), 1.)
-        self.assertEqual(a.inMeters, 1.)
-        self.assertEqual(a.inFeet, 1./base.METERS_PER_FOOT)
-        self.assertEqual(repr(a), "<Altitude (1.0 m)>")
+        altitude = base.Altitude(1.)
+        self.assertEqual(float(altitude), 1.)
+        self.assertEqual(altitude.inMeters, 1.)
+        self.assertEqual(altitude.inFeet, 1./base.METERS_PER_FOOT)
+
+
+    def test_repr(self):
+        """
+        Altitudes report their type and value in their repr.
+        """
+        altitude = base.Altitude(1.)
+        self.assertEqual(repr(altitude), "<Altitude (1.0 m)>")
 
 
     def test_equality(self):
         """
         Altitudes with equal values compare equal.
         """
-        a1 = base.Altitude(1.)
-        a2 = base.Altitude(1.)
-        self.assertEqual(a1, a2)
+        firstAltitude = base.Altitude(1.)
+        secondAltitude = base.Altitude(1.)
+        self.assertEqual(firstAltitude, secondAltitude)
 
 
     def test_inequality(self):
         """
         Altitudes with different values don't compare equal.
         """
-        a1 = base.Altitude(1.)
-        a2 = base.Altitude(-1.)
-        self.assertNotEquals(a1, a2)
+        firstAltitude = base.Altitude(1.)
+        secondAltitude = base.Altitude(-1.)
+        self.assertNotEquals(firstAltitude, secondAltitude)
 
 
 
@@ -525,14 +533,22 @@ class SpeedTests(TestCase):
     """
     Tests for the L{twisted.positioning.base.Speed} class.
     """
-    def test_simple(self):  ## TODO: fix
+    def test_value(self):
         """
-        Tests basic speed functionality.
+        Speeds can be instantiated, and report their value in meters
+        per second, and can be converted to floats.
         """
-        s = base.Speed(50.0)
-        self.assertEqual(s.inMetersPerSecond, 50.0)
-        self.assertEqual(float(s), 50.0)
-        self.assertEqual(repr(s), "<Speed (50.0 m/s)>")
+        speed = base.Speed(50.0)
+        self.assertEqual(speed.inMetersPerSecond, 50.0)
+        self.assertEqual(float(speed), 50.0)
+
+
+    def test_repr(self):
+        """
+        Speeds report their type and value in their repr.
+        """
+        speed = base.Speed(50.0)
+        self.assertEqual(repr(speed), "<Speed (50.0 m/s)>")
 
 
     def test_negativeSpeeds(self):
@@ -546,8 +562,8 @@ class SpeedTests(TestCase):
         """
         A speed can be converted into its value in knots.
         """
-        s = base.Speed(1.0)
-        self.assertEqual(1/base.MPS_PER_KNOT, s.inKnots)
+        speed = base.Speed(1.0)
+        self.assertEqual(1/base.MPS_PER_KNOT, speed.inKnots)
 
 
     def test_asFloat(self):
@@ -562,29 +578,40 @@ class ClimbTests(TestCase):
     """
     Tests for L{twisted.positioning.base.Climb}.
     """
-    def test_simple(self):  ## TODO: fix
+    def test_simple(self):
         """
-        Basic functionality for climb objects.
+        Speeds can be instantiated, and report their value in meters
+        per second, and can be converted to floats.
         """
-        s = base.Climb(42.)
-        self.assertEqual(s.inMetersPerSecond, 42.)
-        self.assertEqual(float(s), 42.)
-        self.assertEqual(repr(s), "<Climb (42.0 m/s)>")
+        climb = base.Climb(42.)
+        self.assertEqual(climb.inMetersPerSecond, 42.)
+        self.assertEqual(float(climb), 42.)
+
+
+    def test_repr(self):
+        """
+        Climbs report their type and value in their repr.
+        """
+        climb = base.Climb(42.)
+        self.assertEqual(repr(climb), "<Climb (42.0 m/s)>")
 
 
     def test_negativeClimbs(self):
         """
-        Climbs can have negative values.
+        Climbs can have negative values, and still report that value
+        in meters per second and when converted to floats.
         """
-        base.Climb(-42.)
+        climb = base.Climb(-42.)
+        self.assertEqual(climb.inMetersPerSecond, -42.)
+        self.assertEqual(float(climb), -42.)
 
 
     def test_speedInKnots(self):
         """
         A climb can be converted into its value in knots.
         """
-        s = base.Climb(1.0)
-        self.assertEqual(1/base.MPS_PER_KNOT, s.inKnots)
+        climb = base.Climb(1.0)
+        self.assertEqual(1/base.MPS_PER_KNOT, climb.inKnots)
 
 
     def test_asFloat(self):
