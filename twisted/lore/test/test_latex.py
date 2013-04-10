@@ -69,6 +69,38 @@ class LatexSpitterTests(TestCase):
             '\\author{alice \\and $<$http://example.com/bob$>$ \\and $<$carol@example.com$>$}')
 
 
+    def test_pre(self):
+        """
+        L{LatexSpitter.visitNode} emits a verbatim block when it encounters a
+        I{pre} element.
+        """
+        pre = Element('pre')
+        text = Text()
+        text.data = u"\nfoo\n"
+        pre.appendChild(text)
+
+        self.spitter.visitNode(pre)
+        self.assertEqual(
+            ''.join(self.output),
+            "\\begin{verbatim}\nfoo\n\\end{verbatim}\n")
+
+
+    def test_code(self):
+        """
+        L{LatexSpitter.visitNode} emits a C{texttt} block when it encounters a
+        I{code} element.
+        """
+        code = Element('code')
+        text = Text()
+        text.data = u"print"
+        code.appendChild(text)
+
+        self.spitter.visitNode(code)
+        self.assertEqual(
+            ''.join(self.output),
+            "\\texttt{print}")
+
+
     def test_skipComments(self):
         """
         L{LatexSpitter.visitNode} writes nothing to its output stream for

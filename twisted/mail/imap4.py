@@ -1830,7 +1830,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         return subj.lower().find(query.pop(0).lower()) != -1
 
     def search_TEXT(self, query, id, msg):
-        # XXX - This must search headers too
+        # XXX - This must search headers too, see #6423
         body = query.pop(0).lower()
         return _strFile(body, msg.getBodyFile(), False)
 

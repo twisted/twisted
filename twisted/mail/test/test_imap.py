@@ -1778,6 +1778,7 @@ class IMAP4ServerSearchTestCase(IMAP4HelperMixin, unittest.TestCase):
         self.assertTrue(
             self.server.search_SENTBEFORE(self.laterQuery, self.seq, self.msg))
 
+
     def test_searchWildcard(self):
         """
         L{imap4.IMAP4Server.search_UID} returns True if the message UID is in
@@ -1791,6 +1792,7 @@ class IMAP4ServerSearchTestCase(IMAP4HelperMixin, unittest.TestCase):
         self.assertTrue(
             self.server.search_UID(['*'], self.seq, self.msg, (1, 1234)))
 
+
     def test_searchWildcardHigh(self):
         """
         L{imap4.IMAP4Server.search_UID} should return True if there is a
@@ -1799,6 +1801,7 @@ class IMAP4ServerSearchTestCase(IMAP4HelperMixin, unittest.TestCase):
         self.assertTrue(
             self.server.search_UID(['1235:*'], self.seq, self.msg, (1234, 1)))
 
+
     def test_reversedSearchTerms(self):
         """
         L{imap4.IMAP4Server.search_SENTON} returns True if the message date is
@@ -1806,6 +1809,7 @@ class IMAP4ServerSearchTestCase(IMAP4HelperMixin, unittest.TestCase):
         """
         msgset = imap4.parseIdList('4:2')
         self.assertEqual(list(msgset), [2, 3, 4])
+
 
     def test_searchSentOn(self):
         """
@@ -1822,7 +1826,7 @@ class IMAP4ServerSearchTestCase(IMAP4HelperMixin, unittest.TestCase):
 
     def test_searchSentSince(self):
         """
-        L{imap4.IMAP4Server.search_SENTSINCE} returns True if the message date
+        L{imap4.IMAP4Server.search_SENTSINCE} returns C{True} if the message date
         is later than the query date.
         """
         self.assertTrue(
@@ -1833,7 +1837,7 @@ class IMAP4ServerSearchTestCase(IMAP4HelperMixin, unittest.TestCase):
 
     def test_searchOr(self):
         """
-        L{imap4.IMAP4Server.search_OR} returns true if either of the two
+        L{imap4.IMAP4Server.search_OR} returns C{True} if either of the two
         expressions supplied to it returns true and returns false if neither
         does.
         """
@@ -1867,12 +1871,39 @@ class IMAP4ServerSearchTestCase(IMAP4HelperMixin, unittest.TestCase):
                 (None, None)))
 
 
+    def test_searchBody(self):
+        """
+        L{imap4.IMAP4Server.search_BODY} returns a boolean indicating whether
+        the string supplied to it is part of the message body.
+        """
+        self.msg = FakeyMessage({"date" : "Mon, 10 Apr 2012 14:04:10 GMT"}, [],
+                                '', 'the BoDy', 1234, None)
+
+        self.assertFalse(self.server.search_BODY(['foo'], self.seq, self.msg))
+        self.assertTrue(self.server.search_BODY(["body"], self.seq, self.msg))
+
+
+    def test_searchText(self):
+        """
+        L{imap4.IMAP4Server.search_TEXT} returns a boolean indicating whether
+        the string supplied to it is part of the message body.
+        """
+        self.msg = FakeyMessage({"date" : "Mon, 10 Apr 2012 14:04:10 GMT"}, [],
+                                '', 'the BoDy', 1234, None)
+
+        self.assertFalse(self.server.search_TEXT(['foo'], self.seq, self.msg))
+        self.assertTrue(self.server.search_TEXT(["body"], self.seq, self.msg))
+
+
+
 
 class TestRealm:
     theAccount = None
 
     def requestAvatar(self, avatarId, mind, *interfaces):
         return imap4.IAccount, self.theAccount, lambda: None
+
+
 
 class TestChecker:
     credentialInterfaces = (cred.credentials.IUsernameHashedPassword, cred.credentials.IUsernamePassword)

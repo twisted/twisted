@@ -43,8 +43,9 @@ Example input file::
     </html>
 """
 
+import re
+import os.path
 from xml.dom import minidom as dom
-import os.path, re
 from cStringIO import StringIO
 
 from twisted.lore import default
@@ -56,11 +57,14 @@ from twisted.lore.tree import getHeaders, removeLeadingTrailingBlanks
 from twisted.lore.tree import removeH1, fixAPI, fontifyPython
 from twisted.lore.tree import addPyListings, addHTMLListings, setTitle
 
+
 hacked_entities = { 'amp': ' &', 'gt': ' >', 'lt': ' <', 'quot': ' "',
                     'copy': ' (c)'}
 
 entities = { 'amp': '&', 'gt': '>', 'lt': '<', 'quot': '"',
              'copy': '(c)'}
+
+
 
 class MagicpointOutput(BaseLatexSpitter):
     bulletDepth = 0
