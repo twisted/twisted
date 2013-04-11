@@ -114,4 +114,25 @@ class FlowingAdapterTests(TestCase, ResultProducingMixin):
         self.assertIdentical(self.adaptedDrain.fount, ff)
 
 
+    def test_tooFull(self):
+        """
+        When an L{IFount} produces too much data for a L{_ProtocolDrain} to
+        process, the L{push producer
+        <twisted.internet.interfaces.IPushProducer>} associated with the
+        L{_ProtocolDrain}'s transport will relay the L{pauseProducing}
+        notification to that L{IFount}'s C{pauseFlow} method.
+        """
+        ff = FakeFount()
+        # Sanity check.
+        self.assertEquals(ff.flowIsPaused, False)
+        self.adaptedDrain.flowingFrom(ff)
+        # The connection is too full!  Back off!
+        self.adaptedProtocol.transport.producer.pauseProducing()
+        self.assertEquals(ff.flowIsPaused, True)
+        # All clear, start writing again.
+        self.adaptedProtocol.transport.producer.resumeProducing()
+        self.assertEquals(ff.flowIsPaused, False)
+
+
+
 
