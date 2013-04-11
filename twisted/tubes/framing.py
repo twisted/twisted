@@ -18,8 +18,8 @@ class StringsToData(Pump):
     def received(self, string):
         self._stringReceiver.sendString(string)
         self.tube.deliver(self._bytes.getvalue())
-        self._bytes.seek(0)
-        self._bytes.truncate(0)
+        # self._bytes.seek(0)
+        # self._bytes.truncate(0)
 
 
 
