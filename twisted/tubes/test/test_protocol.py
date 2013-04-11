@@ -141,6 +141,10 @@ class FlowingAdapterTests(TestCase, ResultProducingMixin):
         L{_ProtocolDrain}'s transport, the L{_ProtocolDrain}'s C{fount}'s
         C{stopFlow} method will be invoked.
         """
+        ff = FakeFount()
+        ff.flowTo(self.adaptedDrain)
+        self.adaptedDrain._transport.producer.stopProducing()
+        self.assertEquals(ff.flowIsStopped, True)
 
 
 
