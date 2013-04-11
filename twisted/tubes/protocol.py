@@ -164,7 +164,8 @@ class _ProtocolPlumbing(_Protocol):
         self._flowEnded = True
         if self._fount.drain is not None:
             self._fount.drain.flowStopped(reason)
-        self._drain.fount.stopFlow()
+        if self._drain.fount is not None:
+            self._drain.fount.stopFlow()
 
 
 
