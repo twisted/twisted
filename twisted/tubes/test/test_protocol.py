@@ -33,6 +33,7 @@ class RememberingPump(Pump):
 
     def stopped(self, reason):
         self.wasStopped = True
+        self.reason = reason
 
 
 
@@ -100,6 +101,7 @@ class FlowingAdapterTests(TestCase, ResultProducingMixin):
         f = Failure(MyFunException())
         self.adaptedProtocol.connectionLost(f)
         self.assertEquals(self.tube.pump.wasStopped, True)
+        self.assertIdentical(f, self.tube.pump.reason)
 
 
     def test_flowingFromFlowControl(self):
