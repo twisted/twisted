@@ -81,7 +81,9 @@ class FlowingAdapterTests(TestCase, ResultProducingMixin):
         self.adaptedFount.flowTo(self.tube)
         self.adaptedFount.stopFlow()
         self.assertEquals(self.adaptedProtocol.transport.disconnecting, True)
-        self.assertEquals(self.tube.pump.wasStopped, True)
+        # The connection has not been closed yet; we *asked* the flow to stop,
+        # but it may not have done.
+        self.assertEquals(self.tube.pump.wasStopped, False)
 
 
     def test_flowingFromFlowControl(self):
