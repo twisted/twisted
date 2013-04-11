@@ -134,5 +134,14 @@ class FlowingAdapterTests(TestCase, ResultProducingMixin):
         self.assertEquals(ff.flowIsPaused, False)
 
 
+    def test_stopProducing(self):
+        """
+        When C{stopProducing} is called on the L{push producer
+        <twisted.internet.interfaces.IPushProducer>} associated with the
+        L{_ProtocolDrain}'s transport, the L{_ProtocolDrain}'s C{fount}'s
+        C{stopFlow} method will be invoked.
+        """
+
+
 
 
