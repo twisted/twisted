@@ -29,8 +29,10 @@ class DataToStrings(Pump):
         self._stringReceiver.stringReceived = self.received
         self._stringReceiver.makeConnection(None)
 
+
     def received(self, string):
         self._stringReceiver.dataReceived(string)
+
 
 
 def stringsToNetstrings():
