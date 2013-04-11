@@ -1,7 +1,10 @@
+# -*- test-case-name: twisted.tubes.test.test_framing -*-
+"""
+Protocols to support framing.
+"""
+
 from io import BytesIO
-
 from twisted.tubes.tube import Pump
-
 from twisted.protocols.basic import NetstringReceiver
 
 
