@@ -11,6 +11,7 @@ from twisted.trial.unittest import TestCase
 from twisted.tubes.protocol import factoryFromFlow
 from twisted.tubes.tube import Pump
 from twisted.tubes.tube import Tube
+from twisted.python.failure import Failure
 from twisted.tubes.test.util import FakeFount
 
 class RememberingPump(Pump):
@@ -37,7 +38,8 @@ class RememberingPump(Pump):
 
 class FlowingAdapterTests(TestCase, ResultProducingMixin):
     """
-    Tests for L{ProtocolAdapter}.
+    Tests for L{factoryFromFlow} and the drain/fount/factory adapters it
+    constructs.
     """
 
     def setUp(self):
@@ -57,8 +59,8 @@ class FlowingAdapterTests(TestCase, ResultProducingMixin):
 
     def test_flowToSetsDrain(self):
         """
-        L{ProtocolAdapter.flowTo} will set the C{drain} attribute of the
-        L{ProtocolAdapter}.
+        L{_ProtocolFount.flowTo} will set the C{drain} attribute of the
+        L{_ProtocolFount}.
         """
         self.adaptedFount.flowTo(self.tube)
         self.assertIdentical(self.adaptedFount.drain, self.tube)
@@ -66,8 +68,8 @@ class FlowingAdapterTests(TestCase, ResultProducingMixin):
 
     def test_flowToDeliversData(self):
         """
-        L{ProtocolAdapter.flowTo} will cause subsequent calls to
-        L{ProtocolAdapter.dataReceived} to invoke L{receive} on its drain.
+        L{_ProtocolFount.flowTo} will cause subsequent calls to
+        L{_ProtocolFount.dataReceived} to invoke L{receive} on its drain.
         """
         self.adaptedFount.flowTo(self.tube)
         self.adaptedProtocol.dataReceived("some data")
@@ -76,7 +78,7 @@ class FlowingAdapterTests(TestCase, ResultProducingMixin):
 
     def test_stopFlowStopsConnection(self):
         """
-        L{ProtocolAdapter.stopFlow} will close the underlying connection by
+        L{_ProtocolFount.stopFlow} will close the underlying connection by
         calling C{loseConnection} on it.
         """
         self.adaptedFount.flowTo(self.tube)
@@ -85,6 +87,19 @@ class FlowingAdapterTests(TestCase, ResultProducingMixin):
         # The connection has not been closed yet; we *asked* the flow to stop,
         # but it may not have done.
         self.assertEquals(self.tube.pump.wasStopped, False)
+
+
+    def test_loseConnectionSendsFlowStopped(self):
+        """
+        L{_ProtocolPlumbing.connectionLost} will notify its C{_fount}'s
+        C{drain} that the flow has stopped, since the connection is now gone.
+        """
+        self.adaptedFount.flowTo(self.tube)
+        class MyFunException(Exception):
+            "An exception."
+        f = Failure(MyFunException())
+        self.adaptedProtocol.connectionLost(f)
+        self.assertEquals(self.tube.pump.wasStopped, True)
 
 
     def test_flowingFromFlowControl(self):
