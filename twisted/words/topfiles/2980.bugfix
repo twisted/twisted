@@ -1,2 +1,0 @@
-twisted.web.xmlrpc.QueryProtocol now generates valid Authorization headers for
-long user names and passwords.	

@@ -9,7 +9,7 @@ Maintainer: Itamar Shtull-Trauring
 """
 
 # System Imports
-import base64, sys, xmlrpclib, urlparse
+import sys, xmlrpclib, urlparse
 
 
 # Sibling Imports
@@ -340,7 +340,7 @@ class QueryProtocol(http.HTTPClient):
         self.sendHeader('Content-length', str(len(self.factory.payload)))
         if self.factory.user:
             auth = '%s:%s' % (self.factory.user, self.factory.password)
-            auth = base64.b64encode(auth)
+            auth = auth.encode('base64').strip()
             self.sendHeader('Authorization', 'Basic %s' % (auth,))
         self.endHeaders()
         self.transport.write(self.factory.payload)
