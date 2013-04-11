@@ -659,9 +659,23 @@ class XMLRPCTestAuthenticated(XMLRPCTestCase):
         return d
 
 
+    def test_longPassword(self):
+        """
+        C{QueryProtocol} uses the C{base64.b64encode} function to encode user
+        name and password in the I{Authorization} header, so that it doesn't
+        embed new lines when using long inputs.
+        """
+        longPassword = self.password * 40
+        p = xmlrpc.Proxy("http://127.0.0.1:%d/" % (
+            self.port,), self.user, longPassword)
+        d = p.callRemote("authinfo")
+        d.addCallback(self.assertEqual, [self.user, longPassword])
+        return d
+
+
     def test_explicitAuthInfoOverride(self):
         p = xmlrpc.Proxy("http://wrong:info@127.0.0.1:%d/" % (
-                self.port,), self.user, self.password)
+            self.port,), self.user, self.password)
         d = p.callRemote("authinfo")
         d.addCallback(self.assertEqual, [self.user, self.password])
         return d
