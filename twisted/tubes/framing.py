@@ -26,7 +26,7 @@ class StringsToData(Pump):
 class DataToStrings(Pump):
     def __init__(self, stringReceiverClass):
         self._stringReceiver = stringReceiverClass()
-        self.received = self._stringReceiver.stringReceived
+        self._stringReceiver.stringReceived = self.received
 
 
 def stringsToNetstrings():
