@@ -7,6 +7,7 @@ Utilities for testing L{twisted.tubes}.
 """
 
 from zope.interface import Interface, implements
+from zope.interface.verify import verifyClass
 
 from twisted.test.proto_helpers import StringTransport
 from twisted.internet.defer import succeed
@@ -110,9 +111,12 @@ class FakeDrain(object):
     inputType = IFakeInput
 
     fount = None
+    stopped = None
 
     def __init__(self):
         self.received = []
+        self.stopped = []
+        self.progressed = []
 
 
     def flowingFrom(self, fount):
@@ -121,6 +125,16 @@ class FakeDrain(object):
 
     def receive(self, item):
         self.received.append(item)
+
+
+    def flowStopped(self, reason):
+        self.stopped.append(reason)
+
+
+    def progress(self, amount=None):
+        self.progressed.append(amount)
+
+verifyClass(IDrain, FakeDrain)
 
 
 
