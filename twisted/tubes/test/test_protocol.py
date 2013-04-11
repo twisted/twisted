@@ -147,5 +147,21 @@ class FlowingAdapterTests(TestCase, ResultProducingMixin):
         self.assertEquals(ff.flowIsStopped, True)
 
 
+    def test_pureConsumerConnectionGetsShutDown(self):
+        """
+        When C{connectionLost} is called on a L{_ProtocolPlumbing} and it has
+        an L{IFount} flowing to it (in other words, flowing to its
+        L{_ProtocolDrain}), but no drain flowing I{from} it, the L{IFount}
+        should have C{stopFlow} invoked on it so that it will no longer deliver
+        to the now-dead transport.
+        """
+        ff = FakeFount()
+        ff.flowTo(self.adaptedDrain)
+        self.adaptedProtocol.connectionLost(
+            Failure(Exception("it's a fair cop"))
+        )
+        self.assertEquals(ff.flowIsStopped, True)
+
+
 
 

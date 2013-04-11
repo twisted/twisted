@@ -162,7 +162,8 @@ class _ProtocolPlumbing(_Protocol):
 
     def connectionLost(self, reason):
         self._flowEnded = True
-        self._fount.drain.flowStopped(reason)
+        if self._fount.drain is not None:
+            self._fount.drain.flowStopped(reason)
         # self._drain.fount.stopFlow()
 
 
