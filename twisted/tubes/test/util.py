@@ -147,6 +147,7 @@ class FakeFount(object):
     outputType = IFakeOutput
 
     flowIsPaused = False
+    flowIsStopped = False
 
     def flowTo(self, drain):
         self.drain = drain
@@ -160,6 +161,11 @@ class FakeFount(object):
     def resumeFlow(self):
         self.flowIsPaused = False
 
+
+    def stopFlow(self):
+        self.flowIsStopped = True
+
+verifyClass(IFount, FakeFount)
 
 
 
