@@ -104,7 +104,7 @@ class FlowingAdapterTests(TestCase, ResultProducingMixin):
         self.assertIdentical(f, self.tube.pump.reason)
 
 
-    def test_flowingFromFlowControl(self):
+    def test_flowingFromAttribute(self):
         """
         L{ProtocolAdapter.flowingFrom} will establish the appropriate L{IFount}
         to deliver L{pauseFlow} notifications to.
@@ -114,7 +114,7 @@ class FlowingAdapterTests(TestCase, ResultProducingMixin):
         self.assertIdentical(self.adaptedDrain.fount, ff)
 
 
-    def test_tooFull(self):
+    def test_pauseUnpause(self):
         """
         When an L{IFount} produces too much data for a L{_ProtocolDrain} to
         process, the L{push producer
