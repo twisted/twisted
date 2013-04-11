@@ -27,8 +27,8 @@ class _FountProducer(object):
         self._fount.resumeFlow()
 
 
-    def stopProducing(self):
-        self._fount.stopFlow()
+    # def stopProducing(self):
+    #     self._fount.stopFlow()
 
 
 
@@ -163,6 +163,7 @@ class _ProtocolPlumbing(_Protocol):
     def connectionLost(self, reason):
         self._flowEnded = True
         self._fount.drain.flowStopped(reason)
+        # self._drain.fount.stopFlow()
 
 
 
@@ -182,8 +183,7 @@ def factoryFromFlow(flow):
     """
     Construct a L{Factory} that is great.
 
-    @param flow: a 2-argument callable, taking (fount, drain) and returning
-        L{IFount}.
+    @param flow: a 2-argument callable, taking (fount, drain).
     """
     return _FlowFactory(flow)
 
