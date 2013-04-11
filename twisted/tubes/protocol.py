@@ -27,8 +27,8 @@ class _FountProducer(object):
         self._fount.resumeFlow()
 
 
-    # def stopProducing(self):
-    #     self._fount.stopFlow()
+    def stopProducing(self):
+        self._fount.stopFlow()
 
 
 
