@@ -2710,7 +2710,7 @@ class _TypeMappingDict(dict):
     A dict that is not easily mutated.
 
     Used for the C{defaultTypeMapping} dict defined below.
-    
+
     Rationale: We wish to provide C{defaultTypeMapping} as a public attribute
     since a common usage pattern will be for the user to make a copy of this
     dict, then .update() it with mappings for any custom AMP Argument or Error
@@ -2759,7 +2759,7 @@ class SchemaLoader(object):
 
         with open('myschema.json', 'rb') as f:
             loader = amp.SchemaLoader.fromJSON(f.read())
-        
+
         class MyServer(amp.AMP):
             @loader.Sum.responder
             def handle_sum(self, a=None, b=None):
@@ -2847,4 +2847,3 @@ class SchemaLoader(object):
         errCode, excType = errSpec
         errCode = errCode.encode('utf-8')
         return [errCode, self._typeMapping[excType]]
-

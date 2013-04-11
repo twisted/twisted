@@ -9,7 +9,7 @@
         "arguments" : [["numerator", "Float"],
                        ["denominator", "Float"]],
         "response"  : [["result", "Float"]],
-            
+
         "errors"    : [["ZERO_DIVISION", "ZeroDivisionError"]]
                },
 
