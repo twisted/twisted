@@ -3,23 +3,27 @@
 Protocols to support framing.
 """
 
-from io import BytesIO
 from twisted.tubes.tube import Pump
 from twisted.protocols.basic import NetstringReceiver
+
+class _Transporter(object):
+    def __init__(self, pump):
+        self.pump = pump
+
+
+    def write(self, data):
+        self.pump.tube.deliver(data)
+
 
 
 class StringsToData(Pump):
     def __init__(self, stringReceiverClass):
         self._stringReceiver = stringReceiverClass()
-        self._bytes = BytesIO()
-        self._stringReceiver.makeConnection(self._bytes)
+        self._stringReceiver.makeConnection(_Transporter(self))
 
 
     def received(self, string):
         self._stringReceiver.sendString(string)
-        self.tube.deliver(self._bytes.getvalue())
-        # self._bytes.seek(0)
-        # self._bytes.truncate(0)
 
 
 
