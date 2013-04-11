@@ -26,8 +26,11 @@ class StringsToData(Pump):
 class DataToStrings(Pump):
     def __init__(self, stringReceiverClass):
         self._stringReceiver = stringReceiverClass()
-        self._stringReceiver.stringReceived = self.received
         self._stringReceiver.makeConnection(None)
+
+
+    def started(self):
+        self._stringReceiver.stringReceived = self.tube.deliver
 
 
     def received(self, string):
@@ -37,6 +40,7 @@ class DataToStrings(Pump):
 
 def stringsToNetstrings():
     return StringsToData(NetstringReceiver)
+
 
 
 def netstringsToStrings():
