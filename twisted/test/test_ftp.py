@@ -734,6 +734,18 @@ class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
             '0 Jan 01  1970 my resum\xc3\xa9\r\n')
 
 
+    def test_LISTNonASCIIBytes(self):
+        """
+        Support for returning byte strings from L{IFTPShell.list} is deprecated
+        and doing so results in a warning, but in the filename being sent as-is.
+        """
+        return self._listTestHelper(
+            "LIST",
+            ('my resum\xc3\xa9', (0, 1, 0777, 0, 0, 'user', 'group')),
+            'drwxrwxrwx   0 user      group                   '
+            '0 Jan 01  1970 my resum\xc3\xa9\r\n')
+
+
     def testManyLargeDownloads(self):
         # Login
         d = self._anonymousLogin()
@@ -827,6 +839,17 @@ class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
             "NLST",
             (u'my resum\xe9', (0, 1, 0777, 0, 0, 'user', 'group')),
             'my resum\xc3\xa9\r\n')
+
+
+    def test_NLSTNonASCIIBytes(self):
+        """
+        NLST will just pass the non-Unicode data to lower level.
+        """
+        return self._listTestHelper(
+            "NLST",
+            ('my resum\xc3\xa9', (0, 1, 0777, 0, 0, 'user', 'group')),
+            'my resum\xc3\xa9\r\n')
+
 
 
     def test_NLSTOnPathToFile(self):

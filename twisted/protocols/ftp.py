@@ -25,7 +25,6 @@ from zope.interface import Interface, implements
 
 # Twisted Imports
 from twisted import copyright
-from twisted.python.deprecate import warnAboutFunction
 from twisted.internet import reactor, interfaces, protocol, error, defer
 from twisted.protocols import basic, policies
 
@@ -1581,14 +1580,14 @@ class IFTPShell(Interface):
         child of the directory.
 
         @param path: The path, as a list of segments, to list
-        @type path: C{list} of C{unicode}
+        @type path: C{list} of C{unicode} or C{bytes}
 
         @param keys: A tuple of keys desired in the resulting
         dictionaries.
 
         @return: A Deferred which fires with a list of (name, list),
-        where the name is the name of the entry as a unicode string
-        and each list contains values corresponding to the requested
+        where the name is the name of the entry as a unicode string or
+        bytes and each list contains values corresponding to the requested
         keys.  The following are possible elements of keys, and the
         values which should be returned for them:
 
