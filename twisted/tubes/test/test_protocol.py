@@ -76,7 +76,8 @@ class FlowingAdapterTests(TestCase, ResultProducingMixin):
 
     def test_stopFlowStopsConnection(self):
         """
-        L{ProtocolAdapter.stopFlow} will close the underlying connection.
+        L{ProtocolAdapter.stopFlow} will close the underlying connection by
+        calling C{loseConnection} on it.
         """
         self.adaptedFount.flowTo(self.tube)
         self.adaptedFount.stopFlow()
