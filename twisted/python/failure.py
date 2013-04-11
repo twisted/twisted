@@ -18,6 +18,7 @@ import sys
 import linecache
 import inspect
 import opcode
+import pdb
 from inspect import getmro
 
 from twisted.python.compat import _PY3, NativeStringIO as StringIO
@@ -629,26 +630,39 @@ def _safeReprVars(varsDictItems):
 # slyphon: make post-morteming exceptions tweakable
 
 DO_POST_MORTEM = True
+_Failure__init__ = Failure.__init__
 
-def _debuginit(self, exc_value=None, exc_type=None, exc_tb=None,
-               captureVars=False,
-               Failure__init__=Failure.__init__):
+
+def startDebugMode(debugger=None):
     """
-    Initialize failure object, possibly spawning pdb.
+    Enable debug hooks for L{Failure}s.
     """
-    if (exc_value, exc_type, exc_tb) == (None, None, None):
-        exc = sys.exc_info()
-        if not exc[0] == self.__class__ and DO_POST_MORTEM:
-            try:
-                strrepr = str(exc[1])
-            except:
-                strrepr = "broken str"
-            print("Jumping into debugger for post-mortem of exception '%s':" % (strrepr,))
-            import pdb
-            pdb.post_mortem(exc[2])
-    Failure__init__(self, exc_value, exc_type, exc_tb, captureVars)
 
+    if debugger is None:
+        debugger = pdb
+    post_mortem = getattr(debugger, "post_mortem", pdb.post_mortem)
 
-def startDebugMode():
-    """Enable debug hooks for Failures."""
+    def _debuginit(self, exc_value=None, exc_type=None, exc_tb=None,
+                   captureVars=False):
+        """
+        Initialize failure object, possibly spawning the debugger.
+        """
+        if (exc_value, exc_type, exc_tb) == (None, None, None):
+            exc = sys.exc_info()
+            if not exc[0] == self.__class__ and DO_POST_MORTEM:
+                try:
+                    strrepr = str(exc[1])
+                except:
+                    strrepr = "broken str"
+                print("Jumping into debugger for post-mortem of exception '%s':" % (strrepr,))
+                post_mortem(exc[2])
+        _Failure__init__(self, exc_value, exc_type, exc_tb, captureVars)
+
     Failure.__init__ = _debuginit
+
+
+def stopDebugMode():
+    """
+    Disable debug hooks for L{Failure}s.
+    """
+    Failure.__init__ = _Failure__init__
