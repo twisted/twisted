@@ -12,8 +12,6 @@
 Tubes are a mechanism for easily dealing with data flowing through your Twisted application.
 </p>
 
-<h2>Motivation</h2>
-
 <p>
 All programs transform input to output.  In other words, all programs are, at some level, like this:
 
@@ -25,11 +23,44 @@ def process(input):
 
 However, in the context of a concurrent, event-driven system like Twisted, not every input corresponds to exactly one output, so you can't always write simple functions like this.
 Sometimes you need to wait for more input before you can generate some output; sometimes one piece of input will generate multiple outputs.
-This is all pretty abstract, so let's look at an example.
+Within Twisted, the abstraction for receiving, buffering, and processing streams of data is in the <code>twisted.tubes</code> package, and in this document we're going to learn how to use it.
 </p>
 
 <p>
-Let's write a server that:
+Before we get into the interesting applications of the API, let's start with the simplest example; the simplest way to process any data is to avoid processing it entirely, to pass input straight on to output.
+In a networking context, that means an echo server.
+Here's a complete program which uses interfaces defined by <code>twisted.tubes</code> to send its input straight on to its output:
+</p>
+
+<pre class="python">
+def echoFlow(fount, drain):
+    return fount.flowTo(drain)
+</pre>
+
+<p>
+In the above example, <code>echoFlow</code> takes two things: a <i>fount</i>, or a source of data, and a <i>drain</i>, or a place where data eventually goes.
+In the context of using tubes, we call such a function a "flow", because it establishes a flow of data from one place to another.
+Most often, the arguments to such a function are the two parts of the same network connection. The fount represents data coming in over the connection, and the drain represents data going back out over that same connection.
+</p>
+
+<p>
+Let's do exactly that, and get <code>echoFlow</code> called with a real, network-facing <code>fount</code> and <code>drain</code>.
+</p>
+
+<a href="listings/tubes/echotube.py" class="py-listing">echotube.py</a>
+
+<p>
+This fully-functioning example (just run it with "<code>python echotube.py</code>") implements an echo server.
+You can test it out with <code>telnet localhost 4321</code> or <code>nc localhost 4321</code>.
+(If you are on Windows, and do not have <code>telnet</code> installed, try running <code>pkgmgr /iu:"TelnetClient"</code> first; after waiting a few moments, <code>telnet</code> should be available.)
+</p>
+
+<p>
+However, this example still performs no processing of the data that it is receiving.
+</p>
+
+<p>
+To demonstrate both receiving and processing data, let's write a server that:
 <ol>
     <li>accepts an incoming connection</li>
     <li>receives lines from that connection</li>
@@ -44,7 +75,38 @@ Let's write a server that:
 </ol>
 </p>
 
-<h2>Mechanism</h2>
+<p>
+In order to implement this program, we will use a series of <code>Tube</code> objects, each of which will be responsible for transforming the data; first from raw chunks of TCP data to a sequence of lines, then from lines into integers, and commands, then from integers and commands into sums and products (more integers), from those integers into lines, and finally from those lines into chunks of TCP data that are sent back out over the network.
+</p>
+
+<p>
+Getting connected to the network is the responsibility of other parts of Twisted, so first, let's just look at what a sketch of the data-flow processing part of this program would look like, the part that uses tubes:
+</p>
+
+<a href="listings/tubes/computube.py" class="py-listing">computube.py</a>
+
+<p>
+As with <code>echoFlow</code>, <code>mathFlow</code> takes a fount and a drain.  Rather than connecting them directly, it puts several objects between them.
+There are two kinds of objects being constructed by this example. One kind is the Tubes themselves, and the other is each Tube's <i>Pump</i>.
+An instance of <code>Tube</code> is, itself, both a fount (specifically, an <code class="API" base="twisted.tubes.itube">IFount</code>) and a drain (<code class="API" base="twisted.tubes.itube">IDrain</code>).
+However, a Tube is a fairly dumb object: it doesn't know what to do with the data that it receives.
+In order to process the data, the Tube relies on its Pump. The data processing (if any) is embedded in the Pump logic. In this example, one pump convert bytes to lines, another converts lines to integers, another pump calculates SUM or PRODUCT, and so on.
+</p>
+
+<p>
+Several of the classes involved are already within Twisted: Tube, for example, and several of the Pump classes.  Some of the Pumps, however, we will have to implement as part of the example.  So, to flesh out the <code>computube</code> example a little more, here's a version with the existing classes imported:
+</p>
+
+<a href="listings/tubes/computube2.py" class="py-listing">computube2.py</a>
+
+<p>
+So, to complete the example, we need to implement 3 classes:
+<ul>
+    <li><code>LinesToIntegersOrCommands</code></li>
+    <li><code>CommandsAndIntegersToResultIntegers</code></li>
+    <li><code>IntegersToLines</code></li>
+</ul>
+</p>
 
 <p>
 A working series of tubes is composed of a few different elements.  First, you have to have a data source; or, in tubes terminology, an <code class="API" base="twisted.tubes.itube">IFount</code>.
@@ -54,40 +116,9 @@ A <code class="API" base="twisted.tubes.tube">Tube</code> is itself an <code cla
 Finally, you select an <code class="API" base="twisted.tubes.itube">IDrain</code> to send the outgoing data to, and flow your final <code class="API" base="twisted.tubes.tube">Tube</code> into that <code class="API" base="twisted.tubes.itube">IDrain</code>.
 </p>
 
-<p>Let's see a simple example of what that would look like.  Imagine that you have a wire protocol which decodes length-prefixed chunks of base64-encoded data into UTF-8 text, upper-cases that text, and then emits it as output as length-prefixed, (character)-reversed, UTF-8-encoded strings.</p>
-
-<pre class="python">
-def funkyConvert(fount, drain):
-    return (fount.flowTo(Tube(netstringsToStrings()))
-                 .flowTo(Tube(Base64Decode()))
-                 .flowTo(Tube(UTF8Decode()))
-                 .flowTo(Tube(Uppercase()))
-                 .flowTo(Tube(Reverse()))
-                 .flowTo(Tube(UTF8Encode()))
-                 .flowTo(Tube(stringsToNetstrings()))
-                 .flowTo(drain))
-</pre>
-
 <p>
-In the above example, notice that the initial "fount" and "drain" are provided as inputs (they will be constructed from objects within Twisted) and you instantiate Tube directly.
 In typical usage, behavior that you need to provide comes in the form of a custom Pump.
 However, the above example is fairly complex, so let's start with something simpler: how would we just pass on the input straight to the output?
-</p>
-<pre class="python">
-def echoTubeFactory(fount, drain):
-    return fount.flowTo(drain)
-</pre>
-
-<p>
-This is pretty simple; however, in order to actually <i>do</i> anything, we need to find a real-life <code>fount</code> and <code>drain</code> to call <code>echoTubeFactory</code>.
-</p>
-
-<a href="listings/tubes/echotube.py" class="py-listing">echotube.py</a>
-
-<p>
-This fully-functioning example (just run it with "<code>python echotube.py</code>") implements an echo server.
-You can test it out with <code>telnet localhost 4321</code> or <code>nc localhost 4321</code>.
-(If you are on Windows, and do not have <code>telnet</code> installed, try running <code>pkgmgr /iu:"TelnetClient"</code> first; after waiting a few moments, <code>telnet</code> should be available.)
 </p>
 
 <p>
@@ -103,7 +134,7 @@ This forwards all bytes from your <code>telnet</code> or <code>nc</code> client 
 </p>
 
 <pre class="python">
-def echoTubeFactory(fount, drain):
+def echoFlow(fount, drain):
     return (fount.flowTo(Tube(stringToNetstring()))
                  .flowTo(drain))
 </pre>
@@ -115,7 +146,7 @@ In this case, <code>.flowTo(Tube(stringToNetstring()))</code> returns a new <cod
     If you're curious: specifically, <code class="API" base="twisted.tubes.itube.IFount">flowTo</code> takes an <code class="API" base="twisted.tube.itube">IDrain</code>, and returns the result of that <code class="API" base="twisted.tube.itube">IDrain</code>'s <code class="API" base="twisted.tubes.itube.IDrain">flowingFrom</code> method.
     This allows the <code>Tube</code> - which is the <code>IDrain</code> in this scenario, and therefore what knows what the output will be after it's processed it, to affect the return value of the previous <code>IFount</code>'s <code>flowTo</code> method.
 </div>
-We have now extended our simple <code>echoTubeFactory</code> to add a length prefix to each chunk of its input before echoing it back to your client.
+We have now extended our simple <code>echoFlow</code> to add a length prefix to each chunk of its input before echoing it back to your client.
 This demonstrates how you can manipulate data as it passes through a flow.
 </p>
 
