@@ -40,11 +40,12 @@ code.</li>
 <p>Twisted uses the <code class="API"
 base="twisted.internet.defer">Deferred</code> object to manage the callback
 sequence. The client application attaches a series of functions to the
-deferred to be called in order when the results of the asychronous request are
+deferred to be called in order when the results of the asynchronous request are
 available (this series of functions is known as a series of 
 <strong>callbacks</strong>, or a <strong>callback chain</strong>), together
 with a series of functions to be called if there is an error in the
-asychronous request (known as a series of <strong>errbacks</strong> or an  <strong>errback chain</strong>). The asychronous library code calls the first
+asynchronous request (known as a series of <strong>errbacks</strong> or an
+<strong>errback chain</strong>). The asynchronous library code calls the first
 callback when the result is available, or the first errback when an error
 occurs, and the <code>Deferred</code> object then hands the results of each
 callback or errback function to the next function in the chain.</p> 
