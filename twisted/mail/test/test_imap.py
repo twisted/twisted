@@ -4268,8 +4268,8 @@ class StrFileTests(unittest.TestCase):
         """
         Assert that passing C{inputString} to L{_strFile} returns C{True}.
 
-        @param inputString:
-        @type inputString:
+        @param inputString: The string that we're looking for.
+        @type inputString: C{str}
         """
         self.assertTrue(imap4._strFile(inputString, self.io))
 
@@ -4278,8 +4278,8 @@ class StrFileTests(unittest.TestCase):
         """
         Assert that passing C{inputString} to L{_strFile} returns C{False}.
 
-        @param inputString:
-        @type inputString:
+        @param inputString: The string that we're looking for.
+        @type inputString: C{str}
         """
         self.assertFalse(imap4._strFile(inputString, self.io))
 
@@ -4343,16 +4343,16 @@ class StrFileTests(unittest.TestCase):
 
     def test_lastMinusOneCharInFile(self):
         """
-        L{_strFile} returns C{True} when passing a single character that is equal
-        to the character one before the last of the file content.
+        L{_strFile} returns C{True} when passing a single character that is
+        equal to the character one before the last of the file content.
         """
         self.assertInFile("n")
 
 
     def test_finalCharInFile(self):
         """
-        L{_strFile} returns C{True} when passing a single character that is equal
-        to the last character of the file content.
+        L{_strFile} returns C{True} when passing a single character that is
+        equal to the last character of the file content.
         """
         self.assertInFile("g")
 
@@ -4369,7 +4369,8 @@ class StrFileTests(unittest.TestCase):
     def test_startingCharsInFile(self):
         """
         L{_strFile} returns C{True} when passing a string that starts with a
-        sequence of characters that are also found elsewhere in the file content.
+        sequence of characters that are also found elsewhere in the file
+        content.
         """
         self.assertInFile("his")
 
