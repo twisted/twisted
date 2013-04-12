@@ -43,7 +43,7 @@ class TexiSpitter(latex.BaseLatexSpitter):
         self.writer('@verbatim\n')
         buf = StringIO()
         latex.getLatexText(node, buf.write, entities=entities)
-        self.writer(tree.removeLeadingTrailingBlanks(buf.getvalue()))
+        self.writer(tree._removeLeadingTrailingBlanks(buf.getvalue()))
         self.writer('@end verbatim\n')
 
     def visitNode_code(self, node):

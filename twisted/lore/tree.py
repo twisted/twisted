@@ -204,7 +204,7 @@ def addPyListings(document, dir):
         howManyLines = len(lines)
         data = '\n'.join(lines)
 
-        data = cStringIO.StringIO(removeLeadingTrailingBlanks(data))
+        data = cStringIO.StringIO(_removeLeadingTrailingBlanks(data))
         htmlizer.filter(data, outfile, writer=htmlizer.SmallerHTMLWriter)
         sourceNode = dom.parseString(outfile.getvalue()).documentElement
         sourceNode.insertBefore(_makeLineNumbers(howManyLines), sourceNode.firstChild)
@@ -250,6 +250,14 @@ def _replaceWithListing(node, val, filename, class_):
 
 
 def _removeLeadingBlanks(lines):
+    """
+    Removes leading and trailing whitespace from each string
+    in the C{lines} list and returns them as a list.
+
+    @param lines: A list of strings.
+    @type lines: C{list}
+    @rtype: C{list}
+    """
     ret = []
     for line in lines:
         if ret or line.strip():
@@ -258,7 +266,15 @@ def _removeLeadingBlanks(lines):
 
 
 
-def removeLeadingTrailingBlanks(s):
+def _removeLeadingTrailingBlanks(s):
+    """
+    Breaks input string C{s} into lines, strips leading and trailing
+    whitespace from each line, and returns the result.
+
+    @param s: The input string.
+    @type s: C{str}
+    @rtype: C{str}
+    """
     lines = _removeLeadingBlanks(s.split('\n'))
     lines.reverse()
     lines = _removeLeadingBlanks(lines)

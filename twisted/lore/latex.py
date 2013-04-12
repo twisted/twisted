@@ -143,7 +143,7 @@ class LatexSpitter(BaseLatexSpitter):
         self.writer('\\begin{verbatim}\n')
         buf = StringIO()
         getLatexText(node, buf.write)
-        self.writer(tree.removeLeadingTrailingBlanks(buf.getvalue()))
+        self.writer(tree._removeLeadingTrailingBlanks(buf.getvalue()))
         self.writer('\\end{verbatim}\n')
 
     def visitNode_code(self, node):
@@ -210,7 +210,7 @@ class LatexSpitter(BaseLatexSpitter):
         lines = map(str.rstrip, open(fileName).readlines())
         skipLines = int(node.getAttribute('skipLines') or 0)
         lines = lines[skipLines:]
-        self.writer(tree.removeLeadingTrailingBlanks('\n'.join(lines)))
+        self.writer(tree._removeLeadingTrailingBlanks('\n'.join(lines)))
         self.writer('\\end{verbatim}')
 
         # Write a caption for this source listing

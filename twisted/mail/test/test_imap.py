@@ -1886,14 +1886,15 @@ class IMAP4ServerSearchTestCase(IMAP4HelperMixin, unittest.TestCase):
     def test_searchText(self):
         """
         L{imap4.IMAP4Server.search_TEXT} returns a boolean indicating whether
-        the string supplied to it is part of the message body.
+        the string supplied to it is part of the message body or header.
         """
+        # XXX: currently search_TEXT incorrectly searches the body only, but
+        #      should include the header as well (see #6423)
         self.msg = FakeyMessage({"date" : "Mon, 10 Apr 2012 14:04:10 GMT"}, [],
                                 '', 'the BoDy', 1234, None)
 
         self.assertFalse(self.server.search_TEXT(['foo'], self.seq, self.msg))
         self.assertTrue(self.server.search_TEXT(["body"], self.seq, self.msg))
-
 
 
 
@@ -4252,6 +4253,181 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
 
     def testFetchFastUID(self):
         return self.testFetchFast(1)
+
+
+
+class StrFileTests(unittest.TestCase):
+    """
+    Tests for L{twisted.mail.imap4._strFile}.
+    """
+    def setUp(self):
+        self.io = StringIO("this is a test string")
+
+
+    def assertInFile(self, inputString):
+        """
+        Assert that passing C{inputString} to L{_strFile} returns C{True}.
+
+        @param inputString:
+        @type inputString:
+        """
+        self.assertTrue(imap4._strFile(inputString, self.io))
+
+
+    def assertNotInFile(self, inputString):
+        """
+        Assert that passing C{inputString} to L{_strFile} returns C{False}.
+
+        @param inputString:
+        @type inputString:
+        """
+        self.assertFalse(imap4._strFile(inputString, self.io))
+
+
+    def test_exactMatch(self):
+        """
+        L{_strFile} returns C{True} when passing a string that is equal to the
+        file content.
+        """
+        self.assertInFile("this is a test string")
+
+
+    def test_insensitiveMatch(self):
+        """
+        L{_strFile} returns C{True} when passing a string that is only equal to
+        the file content when the C{caseSensitive} parameter is C{False}.
+        """
+        self.assertTrue(
+            imap4._strFile("ThIs is A test STRING", self.io, False))
+
+
+    def test_singleCharNotInFile(self):
+        """
+        L{_strFile} returns C{False} when passing a single character that does
+        not occur in the file content.
+        """
+        self.assertNotInFile("x")
+
+
+    def test_atLeastOneCharInFile(self):
+        """
+        L{_strFile} returns C{True} when passing a single character that occurs
+        at least once in the file content.
+        """
+        self.assertInFile("t")
+
+
+    def test_singleCharInFile(self):
+        """
+        L{_strFile} returns C{True} when passing a single character that occurs
+        once in the file content.
+        """
+        self.assertInFile("h")
+
+
+    def test_singleCharInFileThreeTimes(self):
+        """
+        L{_strFile} returns C{True} when passing a single character that occurs
+        three times in the file content.
+        """
+        self.assertInFile("i")
+
+
+    def test_fourCharsInFile(self):
+        """
+        L{_strFile} returns C{True} when passing a single character that occurs
+        four times in the file content.
+        """
+        self.assertInFile("s")
+
+
+    def test_lastMinusOneCharInFile(self):
+        """
+        L{_strFile} returns C{True} when passing a single character that is equal
+        to the character one before the last of the file content.
+        """
+        self.assertInFile("n")
+
+
+    def test_finalCharInFile(self):
+        """
+        L{_strFile} returns C{True} when passing a single character that is equal
+        to the last character of the file content.
+        """
+        self.assertInFile("g")
+
+
+    def test_endingCharsInFile(self):
+        """
+        L{_strFile} returns C{True} when passing a string that ends with a
+        sequence of characters that are also found elsewhere in the file
+        content.
+        """
+        self.assertInFile("thi")
+
+
+    def test_startingCharsInFile(self):
+        """
+        L{_strFile} returns C{True} when passing a string that starts with a
+        sequence of characters that are also found elsewhere in the file content.
+        """
+        self.assertInFile("his")
+
+
+    def test_twoCharsInFileTwice(self):
+        """
+        L{_strFile} returns C{True} when passing a string with a length of 2
+        that occurs twice in the file content.
+        """
+        self.assertInFile("is")
+
+
+    def test_threeCharsInFile(self):
+        """
+        L{_strFile} returns C{True} when passing a string with a length of 3
+        that is part of the file content.
+        """
+        self.assertInFile("ing")
+
+
+    def test_threeCharsNotInFile(self):
+        """
+        L{_strFile} returns C{False} when passing a string with a length of 3
+        that is part of the file content.
+        """
+        self.assertNotInFile("bla")
+
+
+    def test_largeStringStartsInFile(self):
+        """
+        L{_strFile} returns C{True} when passing a large string that is equal
+        to the start of the file content.
+        """
+        self.assertInFile("this is a test")
+
+
+    def test_largeStringEndsInFile(self):
+        """
+        L{_strFile} returns C{True} when passing a large string that is equal
+        to the end of the file content.
+        """
+        self.assertInFile("is a test string")
+
+
+    def test_largeStringNotInFile(self):
+        """
+        L{_strFile} returns C{False} when passing a large string that does not
+        occur in the file content.
+        """
+        self.assertNotInFile("ds jhfsa k fdas")
+
+
+    def test_overLargeStringNotInFile(self):
+        """
+        L{_strFile} returns C{False} when passing a huge string that does not
+        occur in the file content.
+        """
+        self.assertNotInFile("djhsakj dhsa fkhsa s,mdbnfsauiw bndasdf hreew")
 
 
 

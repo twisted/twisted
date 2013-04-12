@@ -53,7 +53,7 @@ from twisted.web import domhelpers
 # These should be factored out
 from twisted.lore.latex import BaseLatexSpitter, LatexSpitter, processFile
 from twisted.lore.latex import getLatexText, HeadingLatexSpitter
-from twisted.lore.tree import getHeaders, removeLeadingTrailingBlanks
+from twisted.lore.tree import getHeaders, _removeLeadingTrailingBlanks
 from twisted.lore.tree import removeH1, fixAPI, fontifyPython
 from twisted.lore.tree import addPyListings, addHTMLListings, setTitle
 
@@ -117,7 +117,7 @@ class MagicpointOutput(BaseLatexSpitter):
         buf = StringIO()
         getLatexText(node, buf.write, entities=entities)
         data = buf.getvalue()
-        data = removeLeadingTrailingBlanks(data)
+        data = _removeLeadingTrailingBlanks(data)
         lines = data.split('\n')
         self.fontStack.append(('typewriter', 4))
         self.writer('%' + self.fontName() + '\n')
