@@ -62,10 +62,9 @@ class FailureTestCase(SynchronousTestCase):
 
     def test_trapRaisesCurrentFailure(self):
         """
-        If the wrapped C{Exception} is not one of the expected types
-        (or a subclass of one of the expected types),
-        L{failure.Failure.trap} raises the current L{failure.Failure}
-        ie C{self}.
+        If the wrapped C{Exception} is not a subclass of one of the
+        expected types, L{failure.Failure.trap} raises the current
+        L{failure.Failure} ie C{self}.
         """
         exception = ValueError()
         try:
@@ -84,9 +83,9 @@ class FailureTestCase(SynchronousTestCase):
 
     def test_trapRaisesWrappedException(self):
         """
-        If the wrapped C{Exception} is not one of the expected types
-        (or a subclass of one of the expected types),
-        L{failure.Failure.trap} raises the wrapped C{Exception}.
+        If the wrapped C{Exception} is not a subclass of one of the
+        expected types, L{failure.Failure.trap} raises the wrapped
+        C{Exception}.
         """
         exception = ValueError()
         try:
