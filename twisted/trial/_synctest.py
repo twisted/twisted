@@ -913,11 +913,13 @@ class SynchronousTestCase(_Assertions):
 
         # Any collected warnings which the test method didn't flush get
         # re-emitted so they'll be logged or show up on stdout or whatever.
-        for w in self.flushWarnings():
-            try:
-                warnings.warn_explicit(**w)
-            except:
-                result.addError(self, failure.Failure())
+        with warnings.catch_warnings():
+            warnings.simplefilter('always')
+            for w in self.flushWarnings():
+                try:
+                    warnings.warn_explicit(**w)
+                except:
+                    result.addError(self, failure.Failure())
 
         result.stopTest(self)
 
