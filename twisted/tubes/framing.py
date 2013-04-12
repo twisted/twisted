@@ -22,7 +22,7 @@ class _Transporter(object):
 
 
 
-class StringsToData(Pump):
+class _StringsToData(Pump):
     def __init__(self, stringReceiverClass, sendMethodName="sendString"):
         self._stringReceiver = stringReceiverClass()
         self._stringReceiver.makeConnection(_Transporter(self))
@@ -37,7 +37,7 @@ class _NotDisconnecting(object):
     disconnecting = False
 
 
-class DataToStrings(Pump):
+class _DataToStrings(Pump):
     def __init__(self, stringReceiverClass,
                  receivedMethodName="stringReceived"):
         self._stringReceiver = stringReceiverClass()
@@ -56,20 +56,20 @@ class DataToStrings(Pump):
 
 
 def stringsToNetstrings():
-    return StringsToData(NetstringReceiver)
+    return _StringsToData(NetstringReceiver)
 
 
 
 def netstringsToStrings():
-    return DataToStrings(NetstringReceiver)
+    return _DataToStrings(NetstringReceiver)
 
 
 
 def linesToBytes():
-    return StringsToData(LineOnlyReceiver, "sendLine")
+    return _StringsToData(LineOnlyReceiver, "sendLine")
 
 
 
 def bytesToLines():
-    return DataToStrings(LineOnlyReceiver, "lineReceived")
+    return _DataToStrings(LineOnlyReceiver, "lineReceived")
 
