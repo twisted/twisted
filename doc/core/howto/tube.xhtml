@@ -12,6 +12,40 @@
 Tubes are a mechanism for easily dealing with data flowing through your Twisted application.
 </p>
 
+<h2>Motivation</h2>
+
+<p>
+All programs transform input to output.  In other words, all programs are, at some level, like this:
+
+<pre class="python">
+def process(input):
+    output = something(input)
+    return output
+</pre>
+
+However, in the context of a concurrent, event-driven system like Twisted, not every input corresponds to exactly one output, so you can't always write simple functions like this.
+Sometimes you need to wait for more input before you can generate some output; sometimes one piece of input will generate multiple outputs.
+This is all pretty abstract, so let's look at an example.
+</p>
+
+<p>
+Let's write a server that:
+<ol>
+    <li>accepts an incoming connection</li>
+    <li>receives lines from that connection</li>
+    <li>interprets those lines as either:
+        <ol>
+            <li>an integer, expressed as an ASCII decimal number, OR</li>
+            <li>a command, which is <code>SUM</code> or <code>PRODUCT</code></li>
+        </ol>
+    </li>
+    <li>executes the SUM and PRODUCT commands by adding or multiplying all of the numbers received since the last command (or the beginning of the connection)</li>
+    <li>responds to the SUM and PRODUCT commands by writing the result of the calculation out to the connection.</li>
+</ol>
+</p>
+
+<h2>Mechanism</h2>
+
 <p>
 A working series of tubes is composed of a few different elements.  First, you have to have a data source; or, in tubes terminology, an <code class="API" base="twisted.tubes.itube">IFount</code>.
 Then, you transform the data coming from the <code class="API" base="twisted.tubes.itube">IFount</code> by flowing it through a <code class="API" base="twisted.tubes.tube">Tube</code>, by calling <code class="API" base="twisted.tubes.itube.IFount">flowTo</code> on it.
