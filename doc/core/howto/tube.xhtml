@@ -61,7 +61,7 @@ A more interesting example might demonstrate the use of tubes to send data to an
 <a href="listings/tubes/portforward.py" class="py-listing">portforward.py</a>
 
 <p>
-Here for each incoming connection on port <code>6543</code> we creating an outgoing connection to the echo server in our previous example.
+For each incoming connection on port <code>6543</code>, we creating an outgoing connection to the echo server in our previous example.
 When we have successfully connected to the echo server we connect our incoming <code>listeningFount</code> to our outgoing <code>connectingDrain</code> and our <code>connectingFount</code> to our <code>listeningDrain</code>.
 This forwards all bytes from your <code>telnet</code> or <code>nc</code> client to our echo server, and all bytes from our echo server to your client.
 </p>
@@ -73,7 +73,7 @@ def echoTubeFactory(fount, drain):
 </pre>
 
 <p>
-Here you see that <code class="API" base="twisted.tubes.itube.IFount">flowTo</code> can return a <code class="API" base="twisted.tube.itube">IFount</code> so you can chain <code class="API" base="twisted.tubes.itube.IFount">flowTo</code> calls to construct a "flow".
+<code class="API" base="twisted.tubes.itube.IFount">flowTo</code> can return a <code class="API" base="twisted.tube.itube">IFount</code> so you can chain <code class="API" base="twisted.tubes.itube.IFount">flowTo</code> calls (in other words, call <code>flowTo</code> on the result of <code>flowTo</code>) to construct a "flow".
 In this case, <code>.flowTo(Tube(stringToNetstring()))</code> returns a new <code class="API" base="twisted.tubes.itube">IFount</code> whose output will be <a href="http://cr.yp.to/proto/netstrings.txt">netstring</a>s.
 <div class="note">
     If you're curious: specifically, <code class="API" base="twisted.tubes.itube.IFount">flowTo</code> takes an <code class="API" base="twisted.tube.itube">IDrain</code>, and returns the result of that <code class="API" base="twisted.tube.itube">IDrain</code>'s <code class="API" base="twisted.tubes.itube.IDrain">flowingFrom</code> method.
