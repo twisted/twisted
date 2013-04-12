@@ -286,11 +286,11 @@ def flatten(output, attrs, attributeRenderer='toVT102'):
     this for a colorful variation on the \"hello world\" theme::
 
         from twisted.conch.insults.text import flatten, attributes as A
-        from twisted.conch.insults.helper import FormattingState
+        from twisted.conch.insults.helper import CharacterAttribute
         print flatten(
             A.normal[A.bold[A.fg.red['He'], A.fg.green['ll'], A.fg.magenta['o'], ' ',
                             A.fg.yellow['Wo'], A.fg.blue['rl'], A.fg.cyan['d!']]],
-            FormattingState())
+            CharacterAttribute())
 
     @param output: Object returned by accessing attributes of the
         module-level attributes object.
