@@ -6,12 +6,11 @@ Tests for loading tests by name.
 """
 
 import os
-import shutil
 import sys
 
 import unittest as pyunit
 
-from twisted.python import util
+from twisted.python import util, filepath
 from twisted.python.hashlib import md5
 from twisted.trial.test import packages
 from twisted.trial import runner, reporter, unittest
@@ -86,12 +85,11 @@ class FileTest(packages.SysPathManglingTest):
     """
     def test_notFile(self):
         """
-        Raise C{ValueError} when a non-existing file is passed.
+        L{runner.filenameToModule} raises a C{ValueError} when a non-existing
+        file is passed.
         """
-        try:
-            runner.filenameToModule('it')
-        except ValueError as e:
-            self.assertEqual(str(e), "'it' doesn't exist")
+        err = self.assertRaises(ValueError, runner.filenameToModule, 'it')
+        self.assertEqual(str(err), "'it' doesn't exist")
 
 
     def test_moduleInPath(self):
@@ -163,22 +161,23 @@ class FileTest(packages.SysPathManglingTest):
 
     def test_directoryNotPackage(self):
         """
-        Raise C{ValueError} when the name of an empty directory is passed that
-        isn't considered a valid Python package.
+        L{runner.filenameToModule} raises a C{ValueError} when the name of an
+        empty directory is passed that isn't considered a valid Python package
+        because it doesn't contain a C{__init__.py} file.
         """
-        emptyDir = os.path.join(self.parent, "emptyDirectory")
-        os.makedirs(emptyDir)
+        emptyDir = filepath.FilePath(self.parent).child("emptyDirectory")
+        emptyDir.createDirectory()
 
-        try:
-            runner.filenameToModule(emptyDir)
-        except ValueError as e:
-            self.assertEqual(str(e),
-                "%r is not a package directory" % (emptyDir,))
+        err = self.assertRaises(ValueError, runner.filenameToModule,
+            emptyDir.path)
+        self.assertEqual(str(err), "%r is not a package directory" % (
+            emptyDir.path,))
 
 
     def test_filenameNotPython(self):
         """
-        A C{SyntaxError} is raised when a non-Python file is passed.
+        L{runner.filenameToModule} raises a C{SyntaxError} when a non-Python
+        file is passed.
         """
         self.failUnlessRaises(SyntaxError, runner.filenameToModule,
                               util.sibpath(__file__, 'notpython'))
@@ -188,14 +187,14 @@ class FileTest(packages.SysPathManglingTest):
         """
         The C{__file__} attribute of the module should match the package name.
         """
-        filename = os.path.join(self.parent, 'goodpackage.py')
-        with open(filename, 'w') as fd:
-            fd.write(packages.testModule)
+        filename = filepath.FilePath(self.parent).child('goodpackage.py')
+        filename.setContent(packages.testModule)
+
         try:
-            module = runner.filenameToModule(filename)
-            self.assertEqual(filename, module.__file__)
+            module = runner.filenameToModule(filename.path)
+            self.assertEqual(filename.path, module.__file__)
         finally:
-            os.remove(filename)
+            filename.remove()
 
 
     def test_directory(self):
@@ -203,17 +202,17 @@ class FileTest(packages.SysPathManglingTest):
         Test loader against a filesystem directory containing an empty
         C{__init__.py} file. It should handle 'path' and 'path/' the same way.
         """
-        path = util.sibpath(__file__, 'goodDirectory')
-        os.mkdir(path)
-        f = open(os.path.join(path, '__init__.py'), "w")
-        f.close()
+        goodDir = filepath.FilePath(self.parent).child('goodDirectory')
+        goodDir.createDirectory()
+        goodDir.child('__init__.py').setContent('')
+
         try:
-            module = runner.filenameToModule(path)
+            module = runner.filenameToModule(goodDir.path)
             self.assert_(module.__name__.endswith('goodDirectory'))
-            module = runner.filenameToModule(path + os.path.sep)
+            module = runner.filenameToModule(goodDir.path + os.path.sep)
             self.assert_(module.__name__.endswith('goodDirectory'))
         finally:
-            shutil.rmtree(path)
+            goodDir.remove()
 
 
 
