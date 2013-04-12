@@ -6,12 +6,11 @@ Tests for loading tests by name.
 """
 
 import os
-import shutil
 import sys
 
 import unittest as pyunit
 
-from twisted.python import util
+from twisted.python import util, filepath
 from twisted.python.hashlib import md5
 from twisted.trial.test import packages
 from twisted.trial import runner, reporter, unittest
@@ -33,6 +32,9 @@ def testNames(tests):
 
 
 class FinderTest(packages.PackageTest):
+    """
+    Tests for L{runner.TestLoader.findByName}.
+    """
     def setUp(self):
         packages.PackageTest.setUp(self)
         self.loader = runner.TestLoader()
@@ -82,10 +84,19 @@ class FileTest(packages.SysPathManglingTest):
     Tests for L{runner.filenameToModule}.
     """
     def test_notFile(self):
-        self.failUnlessRaises(ValueError,
-                              runner.filenameToModule, 'doesntexist')
+        """
+        L{runner.filenameToModule} raises a C{ValueError} when a non-existing
+        file is passed.
+        """
+        err = self.assertRaises(ValueError, runner.filenameToModule, 'it')
+        self.assertEqual(str(err), "'it' doesn't exist")
+
 
     def test_moduleInPath(self):
+        """
+        If the file in question is a module on the Python path, then it should
+        properly import and return that module.
+        """
         sample1 = runner.filenameToModule(util.sibpath(__file__, 'sample.py'))
         import sample as sample2
         self.assertEqual(sample2, sample1)
@@ -115,6 +126,10 @@ class FileTest(packages.SysPathManglingTest):
 
 
     def test_packageInPath(self):
+        """
+        If the file in question is a package on the Python path, then it should
+        properly import and return that package.
+        """
         package1 = runner.filenameToModule(os.path.join(self.parent,
                                                         'goodpackage'))
         import goodpackage
@@ -141,44 +156,63 @@ class FileTest(packages.SysPathManglingTest):
         self.mangleSysPath(self.newPath)
         import goodpackage
         self.assertEqual(os.path.splitext(goodpackage.__file__)[0],
-                             os.path.splitext(package1.__file__)[0])
+                         os.path.splitext(package1.__file__)[0])
 
 
     def test_directoryNotPackage(self):
-        self.failUnlessRaises(ValueError, runner.filenameToModule,
-                              util.sibpath(__file__, 'directory'))
+        """
+        L{runner.filenameToModule} raises a C{ValueError} when the name of an
+        empty directory is passed that isn't considered a valid Python package
+        because it doesn't contain a C{__init__.py} file.
+        """
+        emptyDir = filepath.FilePath(self.parent).child("emptyDirectory")
+        emptyDir.createDirectory()
+
+        err = self.assertRaises(ValueError, runner.filenameToModule,
+            emptyDir.path)
+        self.assertEqual(str(err), "%r is not a package directory" % (
+            emptyDir.path,))
+
 
     def test_filenameNotPython(self):
-        self.failUnlessRaises(ValueError, runner.filenameToModule,
-                              util.sibpath(__file__, 'notpython.py'))
+        """
+        L{runner.filenameToModule} raises a C{SyntaxError} when a non-Python
+        file is passed.
+        """
+        self.failUnlessRaises(SyntaxError, runner.filenameToModule,
+                              util.sibpath(__file__, 'notpython'))
+
 
     def test_filenameMatchesPackage(self):
-        filename = os.path.join(self.parent, 'goodpackage.py')
-        fd = open(filename, 'w')
-        fd.write(packages.testModule)
-        fd.close()
+        """
+        The C{__file__} attribute of the module should match the package name.
+        """
+        filename = filepath.FilePath(self.parent).child('goodpackage.py')
+        filename.setContent(packages.testModule)
+
         try:
-            module = runner.filenameToModule(filename)
-            self.assertEqual(filename, module.__file__)
+            module = runner.filenameToModule(filename.path)
+            self.assertEqual(filename.path, module.__file__)
         finally:
-            os.remove(filename)
+            filename.remove()
+
 
     def test_directory(self):
         """
-        Test loader against a filesystem directory. It should handle
-        'path' and 'path/' the same way.
+        Test loader against a filesystem directory containing an empty
+        C{__init__.py} file. It should handle 'path' and 'path/' the same way.
         """
-        path  = util.sibpath(__file__, 'goodDirectory')
-        os.mkdir(path)
-        f = file(os.path.join(path, '__init__.py'), "w")
-        f.close()
+        goodDir = filepath.FilePath(self.parent).child('goodDirectory')
+        goodDir.createDirectory()
+        goodDir.child('__init__.py').setContent('')
+
         try:
-            module = runner.filenameToModule(path)
+            module = runner.filenameToModule(goodDir.path)
             self.assert_(module.__name__.endswith('goodDirectory'))
-            module = runner.filenameToModule(path + os.path.sep)
+            module = runner.filenameToModule(goodDir.path + os.path.sep)
             self.assert_(module.__name__.endswith('goodDirectory'))
         finally:
-            shutil.rmtree(path)
+            goodDir.remove()
 
 
 
@@ -534,7 +568,7 @@ class PackageOrderingTest(packages.SysPathManglingTest):
         self.topDir = self.mktemp()
         parent = os.path.join(self.topDir, "uberpackage")
         os.makedirs(parent)
-        file(os.path.join(parent, "__init__.py"), "wb").close()
+        open(os.path.join(parent, "__init__.py"), "wb").close()
         packages.SysPathManglingTest.setUp(self, parent)
         self.mangleSysPath(self.oldPath + [self.topDir])
 
