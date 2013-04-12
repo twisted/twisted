@@ -4,6 +4,7 @@ Protocols to support framing.
 """
 
 from twisted.tubes.tube import Pump
+from twisted.protocols.basic import LineOnlyReceiver
 from twisted.protocols.basic import NetstringReceiver
 
 class _Transporter(object):
@@ -27,14 +28,24 @@ class StringsToData(Pump):
 
 
 
+class _NotDisconnecting(object):
+    """
+    Enough of a transport to pretend to not be disconnecting.
+    """
+    disconnecting = False
+
+
 class DataToStrings(Pump):
-    def __init__(self, stringReceiverClass):
+    def __init__(self, stringReceiverClass,
+                 receivedMethodName="stringReceived"):
         self._stringReceiver = stringReceiverClass()
-        self._stringReceiver.makeConnection(None)
+        self._receivedMethodName = receivedMethodName
+        self._stringReceiver.makeConnection(_NotDisconnecting())
 
 
     def started(self):
-        self._stringReceiver.stringReceived = self.tube.deliver
+        setattr(self._stringReceiver, self._receivedMethodName,
+                self.tube.deliver)
 
 
     def received(self, string):
@@ -49,3 +60,14 @@ def stringsToNetstrings():
 
 def netstringsToStrings():
     return DataToStrings(NetstringReceiver)
+
+
+
+def linesToBytes():
+    #return StringsToData(LineOnlyReceiver)
+    pass
+
+
+def bytesToLines():
+    return DataToStrings(LineOnlyReceiver, "lineReceived")
+

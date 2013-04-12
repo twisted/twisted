@@ -8,6 +8,7 @@ from twisted.tubes.test.util import FakeFount
 from twisted.tubes.test.util import FakeDrain
 from twisted.tubes.tube import Tube
 from twisted.tubes.framing import netstringsToStrings
+from twisted.tubes.framing import bytesToLines
 from twisted.trial.unittest import TestCase
 
 class NetstringTests(TestCase):
@@ -53,3 +54,19 @@ class NetstringTests(TestCase):
         ff.flowTo(Tube(netstringsToStrings())).flowTo(fd)
         ff.drain.receive("1:x,2:yz,3:")
         self.assertEquals(fd.received, ["x", "yz"])
+
+
+class LineTests(TestCase):
+    """
+    Tests for parsing delimited data ("lines").
+    """
+
+    def test_stringToLines(self):
+        """
+        A line is something delimited by CRLF.
+        """
+        ff = FakeFount()
+        fd = FakeDrain()
+        ff.flowTo(Tube(bytesToLines())).flowTo(fd)
+        ff.drain.receive("alpha\r\nbeta\r\ngamma")
+        self.assertEquals(fd.received, ["alpha", "beta"])

@@ -1,12 +1,11 @@
 
 from twisted.tubes.tube import Tube
-from twisted.tubes.framing import BytesToLines
-from twisted.tubes.framing import LinesToBytes
+from twisted.tubes.framing import bytesToLines, linesToBytes
 
 def mathFlow(fount, drain):
-    (fount.flowTo(Tube(BytesToLines()))
+    (fount.flowTo(Tube(bytesToLines()))
           .flowTo(Tube(LinesToIntegersOrCommands()))
           .flowTo(Tube(CommandsAndIntegersToResultIntegers()))
           .flowTo(Tube(IntegersToLines()))
-          .flowTo(Tube(LinesToBytes()))
+          .flowTo(Tube(linesToBytes()))
         .flowTo(drain))
