@@ -115,6 +115,23 @@ class FailureTestCase(SynchronousTestCase):
         self.assertIdentical(f2.value, exception)
 
 
+    def test_failureValueFromFoundFailure(self):
+        """
+        A L{failure.Failure} constructed without a C{exc_value}
+        argument, will search for an "original" C{Failure}, and if
+        found, its value will be used as the value for the new
+        C{Failure}.
+        """
+        exception = ValueError()
+        f1 = failure.Failure(exception)
+        try:
+            f1.trap(OverflowError)
+        except:
+            f2 = failure.Failure()
+
+        self.assertIdentical(f2.value, exception)
+
+
     def assertStartsWith(self, s, prefix):
         """
         Assert that C{s} starts with a particular C{prefix}.
