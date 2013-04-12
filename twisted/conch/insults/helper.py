@@ -14,7 +14,7 @@ from zope.interface import implements
 
 from twisted.internet import defer, protocol, reactor
 from twisted.python import log, _textattributes
-from twisted.python.deprecate import deprecated
+from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
 from twisted.python.versions import Version
 from twisted.conch.insults import insults
 
@@ -50,7 +50,7 @@ class _FormattingState(_textattributes._FormattingStateMixin):
         self._subtracting = _subtracting
 
 
-    @deprecated(Version('Twisted', 13, 0, 0))
+    @deprecated(Version('Twisted', 13, 1, 0))
     def wantOne(self, **kw):
         """
         Add a character attribute to a copy of this formatting state.
@@ -89,6 +89,12 @@ class _FormattingState(_textattributes._FormattingStateMixin):
         return ''
 
 CharacterAttribute = _FormattingState
+
+deprecatedModuleAttribute(
+    Version('Twisted', 13, 1, 0),
+    'Use twisted.conch.insults.text.assembleFormattedText instead.',
+    'twisted.conch.insults.helper',
+    'CharacterAttribute')
 
 
 
