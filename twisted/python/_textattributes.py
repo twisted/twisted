@@ -239,21 +239,6 @@ class DefaultFormattingState(object, FancyEqMixin):
         return self.copy()
 
 
-    def wantOne(self, **kw):
-        """
-        Add a character attribute to a copy of this formatting state.
-
-        @param **kw: An optional attribute name and value can be provided with
-            a keyword argument.
-
-        @return: A formatting state instance with the new attribute.
-
-        @see: L{DefaultFormattingState._withAttribute}.
-        """
-        k, v = kw.popitem()
-        return self._withAttribute(k, v)
-
-
     def toVT102(self):
         """
         Emit a VT102 control sequence that will set up all the attributes this

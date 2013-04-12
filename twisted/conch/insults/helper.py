@@ -14,6 +14,8 @@ from zope.interface import implements
 
 from twisted.internet import defer, protocol, reactor
 from twisted.python import log, _textattributes
+from twisted.python.deprecate import deprecated
+from twisted.python.versions import Version
 from twisted.conch.insults import insults
 
 FOREGROUND = 30
@@ -46,6 +48,22 @@ class _FormattingState(_textattributes._FormattingStateMixin):
         self.foreground = foreground
         self.background = background
         self._subtracting = _subtracting
+
+
+    @deprecated(Version('Twisted', 13, 0, 0))
+    def wantOne(self, **kw):
+        """
+        Add a character attribute to a copy of this formatting state.
+
+        @param **kw: An optional attribute name and value can be provided with
+            a keyword argument.
+
+        @return: A formatting state instance with the new attribute.
+
+        @see: L{DefaultFormattingState._withAttribute}.
+        """
+        k, v = kw.popitem()
+        return self._withAttribute(k, v)
 
 
     def toVT102(self):
