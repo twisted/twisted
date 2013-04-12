@@ -3,9 +3,9 @@ from twisted.internet.endpoints import TCP4ServerEndpoint
 from twisted.internet.defer import Deferred
 from twisted.internet.endpoints import TCP4ClientEndpoint
 
-def main(reactor):
-    clientEndpoint = TCP4ClientEndpoint(reactor, 'localhost', 4321)
-    serverEndpoint = TCP4ServerEndpoint(reactor, 6543)
+def main(reactor, host="localhost", port="4321", localport="6543"):
+    clientEndpoint = TCP4ClientEndpoint(reactor, host, int(port))
+    serverEndpoint = TCP4ServerEndpoint(reactor, int(localport))
 
     def forwardTubeFactory(listeningFount, listeningDrain):
         def outgoing(connectingFount, connectingDrain):
@@ -17,4 +17,5 @@ def main(reactor):
     return Deferred()
 
 from twisted.internet.task import react
-react(main, [])
+from sys import argv
+react(main, argv[1:])

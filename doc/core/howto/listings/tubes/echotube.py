@@ -5,10 +5,11 @@ from twisted.internet.defer import Deferred
 def echoFlow(fount, drain):
     return fount.flowTo(drain)
 
-def main(reactor):
-    endpoint = TCP4ServerEndpoint(reactor, 4321)
+def main(reactor, port="4321"):
+    endpoint = TCP4ServerEndpoint(reactor, int(port))
     endpoint.listen(factoryFromFlow(echoFlow))
     return Deferred()
 
 from twisted.internet.task import react
-react(main, [])
+from sys import argv
+react(main, argv[1:])
