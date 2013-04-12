@@ -103,6 +103,18 @@ class FailureTestCase(SynchronousTestCase):
             "instead of the wrapped Exception.")
 
 
+    def test_failureValueFromFailure(self):
+        """
+        A L{failure.Failure} constructed from another
+        L{failure.Failure} instance, has its C{value} property set to
+        the value of that L{failure.Failure} instance.
+        """
+        exception = ValueError()
+        f1 = failure.Failure(exception)
+        f2 = failure.Failure(f1)
+        self.assertIdentical(f2.value, exception)
+
+
     def assertStartsWith(self, s, prefix):
         """
         Assert that C{s} starts with a particular C{prefix}.
