@@ -109,19 +109,6 @@ So, to complete the example, we need to implement 3 classes:
 </p>
 
 <p>
-A working series of tubes is composed of a few different elements.  First, you have to have a data source; or, in tubes terminology, an <code class="API" base="twisted.tubes.itube">IFount</code>.
-Then, you transform the data coming from the <code class="API" base="twisted.tubes.itube">IFount</code> by flowing it through a <code class="API" base="twisted.tubes.tube">Tube</code>, by calling <code class="API" base="twisted.tubes.itube.IFount">flowTo</code> on it.
-Each <code class="API" base="twisted.tubes.tube">Tube</code> has a <code class="API" base="twisted.tubes.tube">Pump</code> which deals with processing its input into its output.
-A <code class="API" base="twisted.tubes.tube">Tube</code> is itself an <code class="API" base="twisted.tubes.itube">IFount</code>, so you can repeat this process by flowing each <code class="API" base="twisted.tubes.tube">Tube</code> into the next, until you have the desired output type.
-Finally, you select an <code class="API" base="twisted.tubes.itube">IDrain</code> to send the outgoing data to, and flow your final <code class="API" base="twisted.tubes.tube">Tube</code> into that <code class="API" base="twisted.tubes.itube">IDrain</code>.
-</p>
-
-<p>
-In typical usage, behavior that you need to provide comes in the form of a custom Pump.
-However, the above example is fairly complex, so let's start with something simpler: how would we just pass on the input straight to the output?
-</p>
-
-<p>
 A more interesting example might demonstrate the use of tubes to send data to another server.
 </p>
 
