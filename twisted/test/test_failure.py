@@ -59,9 +59,32 @@ class FailureTestCase(SynchronousTestCase):
         self.assertEqual(f.type, NotImplementedError)
 
 
-    def test_notTrapped(self):
+    def test_trapRaisesCurrentFailure(self):
         """
-        Making sure L{trap} doesn't trap what it shouldn't.
+        If the wrapped C{Exception} is not a subclass of one of the
+        expected types, L{failure.Failure.trap} raises the current
+        L{failure.Failure} ie C{self}.
+        """
+        exception = ValueError()
+        try:
+            raise exception
+        except:
+            f = failure.Failure()
+        untrapped = self.assertRaises(failure.Failure, f.trap, OverflowError)
+        self.assertIdentical(f, untrapped)
+
+
+    if _PY3:
+        test_trapRaisesCurrentFailure.skip = (
+            "In Python3, Failure.trap raises the wrapped Exception "
+            "instead of the original Failure instance.")
+
+
+    def test_trapRaisesWrappedException(self):
+        """
+        If the wrapped C{Exception} is not a subclass of one of the
+        expected types, L{failure.Failure.trap} raises the wrapped
+        C{Exception}.
         """
         exception = ValueError()
         try:
@@ -69,20 +92,43 @@ class FailureTestCase(SynchronousTestCase):
         except:
             f = failure.Failure()
 
-        # On Python 2, the same failure is reraised:
-        if not _PY3:
-            untrapped = self.assertRaises(failure.Failure, f.trap, OverflowError)
-            self.assertIdentical(f, untrapped)
+        untrapped = self.assertRaises(ValueError, f.trap, OverflowError)
+        self.assertIdentical(exception, untrapped)
 
-        # On both Python 2 and Python 3, the underlying exception is passed
-        # on:
+
+    if not _PY3:
+        test_trapRaisesWrappedException.skip = (
+            "In Python2, Failure.trap raises the current Failure instance "
+            "instead of the wrapped Exception.")
+
+
+    def test_failureValueFromFailure(self):
+        """
+        A L{failure.Failure} constructed from another
+        L{failure.Failure} instance, has its C{value} property set to
+        the value of that L{failure.Failure} instance.
+        """
+        exception = ValueError()
+        f1 = failure.Failure(exception)
+        f2 = failure.Failure(f1)
+        self.assertIdentical(f2.value, exception)
+
+
+    def test_failureValueFromFoundFailure(self):
+        """
+        A L{failure.Failure} constructed without a C{exc_value}
+        argument, will search for an "original" C{Failure}, and if
+        found, its value will be used as the value for the new
+        C{Failure}.
+        """
+        exception = ValueError()
+        f1 = failure.Failure(exception)
         try:
-            f.trap(OverflowError)
+            f1.trap(OverflowError)
         except:
-            untrapped = failure.Failure()
-            self.assertIdentical(untrapped.value, exception)
-        else:
-            self.fail("Exception was not re-raised.")
+            f2 = failure.Failure()
+
+        self.assertIdentical(f2.value, exception)
 
 
     def assertStartsWith(self, s, prefix):
