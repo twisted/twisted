@@ -203,7 +203,9 @@ class FormattedTextTests(unittest.TestCase):
     def assertAssembledEqually(self, text, expectedFormatted):
         """
         Assert that C{text} is parsed and assembled to the same value as what
-        C{expectedFormatted} is assembled to.
+        C{expectedFormatted} is assembled to. This provides a way to ignore
+        meaningless differences in the formatting structure that would be
+        difficult to detect without rendering the structures.
         """
         formatted = irc.parseFormattedText(text)
         self.assertAssemblesTo(formatted, expectedFormatted)
