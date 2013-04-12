@@ -1064,12 +1064,12 @@ here's some other stuff
         proto2.sendIgnore('')
         self.assertNotEqual(proto.gotVersion, proto2.gotVersion)
         self.assertNotEqual(proto.transport, proto2.transport)
-        self.assertNotEqual(
-            proto.outgoingPacketSequence, proto2.outgoingPacketSequence)
-        self.assertNotEqual(
-            proto.incomingPacketSequence, proto2.incomingPacketSequence)
-        self.assertNotEqual(
-            proto.currentEncryptions, proto2.currentEncryptions)
+        self.assertNotEqual(proto.outgoingPacketSequence,
+                            proto2.outgoingPacketSequence)
+        self.assertNotEqual(proto.incomingPacketSequence,
+                            proto2.incomingPacketSequence)
+        self.assertNotEqual(proto.currentEncryptions,
+                            proto2.currentEncryptions)
         self.assertNotEqual(proto.service, proto2.service)
 
 
