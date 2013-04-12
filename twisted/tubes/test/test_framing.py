@@ -9,6 +9,7 @@ from twisted.tubes.test.util import FakeDrain
 from twisted.tubes.tube import Tube
 from twisted.tubes.framing import netstringsToStrings
 from twisted.tubes.framing import bytesToLines
+from twisted.tubes.framing import linesToBytes
 from twisted.trial.unittest import TestCase
 
 class NetstringTests(TestCase):
@@ -68,5 +69,18 @@ class LineTests(TestCase):
         ff = FakeFount()
         fd = FakeDrain()
         ff.flowTo(Tube(bytesToLines())).flowTo(fd)
-        ff.drain.receive("alpha\r\nbeta\r\ngamma")
-        self.assertEquals(fd.received, ["alpha", "beta"])
+        ff.drain.receive(b"alpha\r\nbeta\r\ngamma")
+        self.assertEquals(fd.received, [b"alpha", b"beta"])
+
+
+    def test_linesToStrings(self):
+        """
+        Writing out lines delimits them, with the delimiter.
+        """
+        ff = FakeFount()
+        fd = FakeDrain()
+        ff.flowTo(Tube(linesToBytes())).flowTo(fd)
+        ff.drain.receive(b"hello")
+        ff.drain.receive(b"world")
+        self.assertEquals(b"".join(fd.received), b"hello\r\nworld\r\n")
+

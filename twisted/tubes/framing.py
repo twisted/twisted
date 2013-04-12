@@ -16,15 +16,17 @@ class _Transporter(object):
         self.pump.tube.deliver(data)
 
 
+    def writeSequence(self, dati):
+        for data in dati:
+            self.write(data)
+
+
 
 class StringsToData(Pump):
-    def __init__(self, stringReceiverClass):
+    def __init__(self, stringReceiverClass, sendMethodName="sendString"):
         self._stringReceiver = stringReceiverClass()
         self._stringReceiver.makeConnection(_Transporter(self))
-
-
-    def received(self, string):
-        self._stringReceiver.sendString(string)
+        self.received = getattr(self._stringReceiver, sendMethodName)
 
 
 
@@ -64,8 +66,8 @@ def netstringsToStrings():
 
 
 def linesToBytes():
-    #return StringsToData(LineOnlyReceiver)
-    pass
+    return StringsToData(LineOnlyReceiver, "sendLine")
+
 
 
 def bytesToLines():
