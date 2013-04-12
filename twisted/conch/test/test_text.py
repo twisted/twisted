@@ -91,7 +91,7 @@ class FormattedTextTests(unittest.TestCase):
 
     def test_flattenDeprecated(self):
         """
-        L{twisted.conch.insults.test.flatten} emits a deprecation warning when
+        L{twisted.conch.insults.text.flatten} emits a deprecation warning when
         imported or accessed.
         """
         warningsShown = self.flushWarnings([self.test_flattenDeprecated])

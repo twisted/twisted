@@ -5,7 +5,10 @@
 from twisted.conch.insults import helper
 from twisted.conch.insults.insults import G0, G1, G2, G3
 from twisted.conch.insults.insults import modes, privateModes
-from twisted.conch.insults.insults import NORMAL, BOLD, UNDERLINE, BLINK, REVERSE_VIDEO
+from twisted.conch.insults.insults import (
+    NORMAL, BOLD, UNDERLINE, BLINK, REVERSE_VIDEO)
+
+from twisted.python.versions import Version
 
 from twisted.trial import unittest
 
@@ -594,3 +597,23 @@ class CharacterAttributeTests(unittest.TestCase):
         self.assertNotEquals(
             helper.CharacterAttribute(bold=True),
             helper.CharacterAttribute(bold=False))
+
+
+    def test_wantOneDeprecated(self):
+        """
+        L{twisted.conch.insults.helper.CharacterAttribute.wantOne} emits
+        a deprecation warning when invoked.
+        """
+        warningsShown = self.flushWarnings([self.test_wantOneDeprecated])
+        self.assertEqual(len(warningsShown), 0)
+
+        # Trigger the deprecation warning.
+        helper._FormattingState().wantOne(bold=True)
+
+        warningsShown = self.flushWarnings([self.test_wantOneDeprecated])
+        self.assertEqual(len(warningsShown), 1)
+        self.assertIdentical(warningsShown[0]['category'], DeprecationWarning)
+        self.assertEqual(
+            warningsShown[0]['message'],
+            'twisted.conch.insults.helper.wantOne was deprecated in '
+            'Twisted 13.1.0')
