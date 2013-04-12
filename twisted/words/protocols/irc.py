@@ -3288,7 +3288,7 @@ def assembleFormattedText(formatted):
     @param formatted: Structured text and attributes.
 
     @rtype: C{str}
-    @return: String containing control mIRC control sequences that mimic those
+    @return: String containing mIRC control sequences that mimic those
         specified by L{formatted}.
 
     @since: 13.1
