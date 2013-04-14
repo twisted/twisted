@@ -1656,10 +1656,10 @@ class DaemonizeTests(unittest.TestCase):
 
     def test_successNoWait(self):
         """
-        If C{nowait} is set to C{True}, the forked child doesn't report success
+        If C{no-wait} is set to C{True}, the forked child doesn't report success
         to the status pipe.
         """
-        self.config['nowait'] = True
+        self.config['no-wait'] = True
         self.runner.postApplication()
         self.assertEqual(
             self.mockos.actions,
@@ -1670,10 +1670,10 @@ class DaemonizeTests(unittest.TestCase):
 
     def test_successInParentNotWait(self):
         """
-        If C{nowait} is set to C{True} and the child succeeds, the parent
+        If C{no-wait} is set to C{True} and the child succeeds, the parent
         doesn't try to read from the status pipe and assumes success.
         """
-        self.config['nowait'] = True
+        self.config['no-wait'] = True
         self.mockos.child = False
         self.mockos.readData = "0"
         self.assertRaises(SystemError, self.runner.postApplication)
@@ -1686,10 +1686,10 @@ class DaemonizeTests(unittest.TestCase):
 
     def test_errorNoWait(self):
         """
-        If C{nowait} is set to C{True}, the forked child doesn't write the
+        If C{no-wait} is set to C{True}, the forked child doesn't write the
         error message on the status pipe.
         """
-        self.config['nowait'] = True
+        self.config['no-wait'] = True
 
         class FakeService(service.Service):
 
@@ -1709,11 +1709,11 @@ class DaemonizeTests(unittest.TestCase):
 
     def test_errorInParentNoWait(self):
         """
-        If C{nowait} is set to C{True} and the child fails, the parent
+        If C{no-wait} is set to C{True} and the child fails, the parent
         doesn't try to read from the status pipe, so the behavior is the
         same as in success.
         """
-        self.config['nowait'] = True
+        self.config['no-wait'] = True
         self.mockos.child = False
         self.assertRaises(SystemError, self.runner.postApplication)
         self.assertEqual(

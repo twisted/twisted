@@ -28,7 +28,7 @@ class ServerOptions(app.ServerOptions):
                  "after binding ports, retaining the option to regain "
                  "privileges in cases such as spawning processes. "
                  "Use with caution.)"],
-                ['nowait', None, "Don't wait for application startup when "
+                ['no-wait', None, "Don't wait for application startup when "
                  "daemonize. If set, no error will be reported in case of "
                  "failure."],
                ]
@@ -268,7 +268,7 @@ class UnixApplicationRunner(app.ApplicationRunner):
         if daemon:
             from twisted.internet import reactor
             self.config["statusPipe"] = self.daemonize(
-                reactor, not self.config['nowait'])
+                reactor, not self.config['no-wait'])
         if pidfile:
             f = open(pidfile, 'wb')
             f.write(str(os.getpid()))
