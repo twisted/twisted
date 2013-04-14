@@ -834,8 +834,10 @@ class FakeNonDaemonizingReactor(object):
         self._beforeDaemonizeCalled = False
         self._afterDaemonizeCalled = False
 
+
     def beforeDaemonize(self):
         self._beforeDaemonizeCalled = True
+
 
     def afterDaemonize(self):
         self._afterDaemonizeCalled = True
@@ -1556,7 +1558,7 @@ class DaemonizeTests(unittest.TestCase):
         self.runner.startReactor = lambda *args: None
 
 
-    def test_daemonizeSuccess(self):
+    def test_success(self):
         """
         When double fork succeeded in C{daemonize}, the child process writes
         B{0} to the status pipe.
@@ -1569,7 +1571,7 @@ class DaemonizeTests(unittest.TestCase):
         self.assertEqual(self.mockos.closed, [-3, -2])
 
 
-    def test_daemonizeSuccessInParent(self):
+    def test_successInParent(self):
         """
         The parent process initiating the C{daemonize} call reads data from the
         status pipe and then exit the process.
@@ -1584,7 +1586,7 @@ class DaemonizeTests(unittest.TestCase):
         self.assertEqual(self.mockos.closed, [-1])
 
 
-    def test_daemonizeError(self):
+    def test_error(self):
         """
         If an error happens during daemonization, the child process writes the
         exception error to the status pipe.
@@ -1607,7 +1609,7 @@ class DaemonizeTests(unittest.TestCase):
         self.assertEqual(self.mockos.closed, [-3, -2])
 
 
-    def test_daemonizeErrorInParent(self):
+    def test_errorInParent(self):
         """
         When the child writes an error message to the status pipe during
         daemonization, the parent writes the message to C{stderr} and exits
@@ -1629,7 +1631,7 @@ class DaemonizeTests(unittest.TestCase):
         self.assertEqual(self.mockos.closed, [-1])
 
 
-    def test_daemonizeErrorMessageTruncated(self):
+    def test_errorMessageTruncated(self):
         """
         If an error in daemonize gives a too big error message, it's truncated
         by the child.
@@ -1652,7 +1654,7 @@ class DaemonizeTests(unittest.TestCase):
         self.assertEqual(self.mockos.closed, [-3, -2])
 
 
-    def test_daemonizeSuccessNoWait(self):
+    def test_successNoWait(self):
         """
         If C{nowait} is set to C{True}, the forked child doesn't report success
         to the status pipe.
@@ -1666,7 +1668,7 @@ class DaemonizeTests(unittest.TestCase):
         self.assertEqual(self.mockos.closed, [-3])
 
 
-    def test_daemonizeSuccessInParentNotWait(self):
+    def test_successInParentNotWait(self):
         """
         If C{nowait} is set to C{True} and the child succeeds, the parent
         doesn't try to read from the status pipe and assumes success.
@@ -1682,7 +1684,7 @@ class DaemonizeTests(unittest.TestCase):
         self.assertEqual(self.mockos.closed, [])
 
 
-    def test_daemonizeErrorNoWait(self):
+    def test_errorNoWait(self):
         """
         If C{nowait} is set to C{True}, the forked child doesn't write the
         error message on the status pipe.
@@ -1705,7 +1707,7 @@ class DaemonizeTests(unittest.TestCase):
         self.assertEqual(self.mockos.closed, [-3])
 
 
-    def test_daemonizeErrorInParentNoWait(self):
+    def test_errorInParentNoWait(self):
         """
         If C{nowait} is set to C{True} and the child fails, the parent
         doesn't try to read from the status pipe, so the behavior is the
@@ -1721,7 +1723,7 @@ class DaemonizeTests(unittest.TestCase):
         self.assertEqual(self.mockos.closed, [])
 
 
-    def test_daemonizationHooksCalled(self):
+    def test_hooksCalled(self):
         """
         C{daemonize} indeed calls L{IReactorDaemonize.beforeDaemonize} and
         L{IReactorDaemonize.afterDaemonize} if the reactor implements
@@ -1733,7 +1735,7 @@ class DaemonizeTests(unittest.TestCase):
         self.assertTrue(reactor._afterDaemonizeCalled)
 
 
-    def test_daemonizationHooksNotCalled(self):
+    def test_hooksNotCalled(self):
         """
         C{daemonize} does NOT call L{IReactorDaemonize.beforeDaemonize} or
         L{IReactorDaemonize.afterDaemonize} if the reactor does NOT implement
