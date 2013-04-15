@@ -155,10 +155,14 @@ class FakeFount(object):
 
 
     def pauseFlow(self):
+        if self.flowIsPaused:
+            raise Exception("The flow is paused.")
         self.flowIsPaused = True
 
 
     def resumeFlow(self):
+        if not self.flowIsPaused:
+            raise Exception("The flow was not paused yet.")
         self.flowIsPaused = False
 
 
