@@ -193,6 +193,15 @@ class TubeTest(TestCase):
         self.assertEquals(self.ff.flowIsPaused, True)
 
 
+    def test_deliverPausesJustOnce(self):
+        """
+        L{Tube.deliver} on a tube with an upstream L{IFount} will not call
+        its C{pauseFlow} method twice.
+        """
+        self.test_deliverWithoutDownstreamPauses()
+        self.tube.deliver("def")
+
+
     def test_addingDownstreamUnpauses(self):
         """
         When a L{Tube} that is not flowing to a drain yet pauses its upstream
