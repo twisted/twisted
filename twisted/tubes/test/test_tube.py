@@ -188,6 +188,7 @@ class TubeTest(TestCase):
         require any buffering.
         """
         self.ff.flowTo(self.tube)
+        self.assertEquals(self.ff.flowIsPaused, False)
         self.tube.deliver("abc")
         self.assertEquals(self.ff.flowIsPaused, True)
 
