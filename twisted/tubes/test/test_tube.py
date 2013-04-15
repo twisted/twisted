@@ -213,6 +213,45 @@ class TubeTest(TestCase):
         self.assertEquals(self.ff.flowIsPaused, False)
 
 
+    def test_pauseFlowWhileUnbuffering(self):
+        """
+        When a L{Tube} is unbuffering its inputs received while it didn't have
+        a downstream drain, it may be interrupted by its downstream drain
+        pausing it.
+
+        If this happens, it should stop delivering.  It also shouldn't pause
+        any upstream fount.
+        """
+        test = self
+        class SlowDrain(FakeDrain):
+            def __init__(self):
+                super(SlowDrain, self).__init__()
+                self.ready = True
+            def receive(self, item):
+                result = super(SlowDrain, self).receive(item)
+                self.fount.pauseFlow()
+                if not self.ready:
+                    test.fail("Received twice.")
+                self.ready = False
+                return result
+            def nextOne(self):
+                self.ready = True
+                self.fount.resumeFlow()
+        sd = SlowDrain()
+        self.ff.flowTo(self.tube)
+        # Buffer.
+        self.tube.deliver(1)
+        self.tube.deliver(2)
+        self.tube.deliver(3)
+        # Unbuffer.
+        self.tube.flowTo(sd)
+        self.assertEquals(sd.received, [1])
+        sd.nextOne()
+        self.assertEquals(sd.received, [1, 2])
+        sd.nextOne()
+        self.assertEquals(sd.received, [1, 2, 3])
+
+
     def test_receiveCallsPumpReceived(self):
         """
         L{Tube.receive} will deliver its input to L{IPump.received} on its
