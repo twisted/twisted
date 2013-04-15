@@ -417,6 +417,12 @@ class DTP(object, protocol.Protocol):
             self._onConnLost.callback(None)
 
     def sendLine(self, line):
+        """
+        Send a line to data channel.
+
+        @param line: The line to be sent.
+        @type line: L{bytes}
+        """
         self.transport.write(line + '\r\n')
 
 
@@ -922,6 +928,38 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         return self.dtpFactory.deferred.addCallbacks(connected, connFailed)
 
 
+    def _encodeName(self, name):
+        """
+        Encode C{name} to be sent over the wire.
+
+        This encodes L{unicode} objects as UTF-8 and leaves L{bytes} as-is.
+
+        As described by U{RFC 3659 section
+        2.2<https://tools.ietf.org/html/rfc3659#section-2.2>}::
+
+            Various FTP commands take pathnames as arguments, or return
+            pathnames in responses. When the MLST command is supported, as
+            indicated in the response to the FEAT command, pathnames are to be
+            transferred in one of the following two formats.
+
+                pathname = utf-8-name / raw
+                utf-8-name = <a UTF-8 encoded Unicode string>
+                raw = <any string that is not a valid UTF-8 encoding>
+
+            Which format is used is at the option of the user-PI or server-PI
+            sending the pathname.
+
+        @param name: Name to be encoded.
+        @type name: L{bytes} or L{unicode}
+
+        @return: Wire format of C{name}.
+        @rtype: L{bytes}
+        """
+        if isinstance(name, unicode):
+            return name.encode('utf-8')
+        return name
+
+
     def ftp_LIST(self, path=''):
         """ This command causes a list to be sent from the server to the
         passive DTP.  If the pathname specifies a directory or other
@@ -942,6 +980,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         def gotListing(results):
             self.reply(DATA_CNX_ALREADY_OPEN_START_XFR)
             for (name, attrs) in results:
+                name = self._encodeName(name)
                 self.dtpInstance.sendListResponse(name, attrs)
             self.dtpInstance.transport.loseConnection()
             return (TXFR_COMPLETE_OK,)
@@ -1005,6 +1044,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             self.reply(DATA_CNX_ALREADY_OPEN_START_XFR)
             for (name, ignored) in results:
                 if not glob or (glob and fnmatch.fnmatch(name, glob)):
+                    name = self._encodeName(name)
                     self.dtpInstance.sendLine(name)
             self.dtpInstance.transport.loseConnection()
             return (TXFR_COMPLETE_OK,)
@@ -1576,14 +1616,14 @@ class IFTPShell(Interface):
         child of the directory.
 
         @param path: The path, as a list of segments, to list
-        @type path: C{list} of C{unicode}
+        @type path: C{list} of C{unicode} or C{bytes}
 
         @param keys: A tuple of keys desired in the resulting
         dictionaries.
 
         @return: A Deferred which fires with a list of (name, list),
-        where the name is the name of the entry as a unicode string
-        and each list contains values corresponding to the requested
+        where the name is the name of the entry as a unicode string or
+        bytes and each list contains values corresponding to the requested
         keys.  The following are possible elements of keys, and the
         values which should be returned for them:
 

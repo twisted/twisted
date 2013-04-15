@@ -54,6 +54,7 @@ class Dummy(basic.LineReceiver):
         pass
 
 
+
 class _BufferingProtocol(protocol.Protocol):
     def connectionMade(self):
         self.buffer = ''
@@ -180,6 +181,7 @@ class FTPServerTestCase(unittest.TestCase):
             chainDeferred=d)
 
 
+
 class FTPAnonymousTestCase(FTPServerTestCase):
     """
     Simple tests for an FTP server with different anonymous username.
@@ -201,6 +203,7 @@ class FTPAnonymousTestCase(FTPServerTestCase):
             'PASS test@twistedmatrix.com',
             ['230 Anonymous login ok, access restrictions apply.'],
             chainDeferred=d)
+
 
 
 class BasicFTPServerTestCase(FTPServerTestCase):
@@ -513,6 +516,7 @@ class BasicFTPServerTestCase(FTPServerTestCase):
             )
         return d
 
+
     def test_STORreturnsErrorFromOpen(self):
         """
         Any FTP error raised inside STOR while opening the file is returned
@@ -548,6 +552,8 @@ class BasicFTPServerTestCase(FTPServerTestCase):
             chainDeferred=d,
             )
         return d
+
+
 
     def test_STORunknownErrorBecomesFileNotFound(self):
         """
@@ -596,6 +602,7 @@ class BasicFTPServerTestCase(FTPServerTestCase):
             )
         d.addCallback(checkLogs)
         return d
+
 
 
 class FTPServerTestCaseAdvancedClient(FTPServerTestCase):
@@ -709,6 +716,7 @@ class FTPServerTestCaseAdvancedClient(FTPServerTestCase):
         return d
 
 
+
 class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
     def _makeDataConnection(self, ignored=None):
         # Establish a passive data connection (i.e. client connecting to
@@ -816,6 +824,80 @@ class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
             self.assertEqual('', download)
         return d.addCallback(checkDownload)
 
+
+    def _listTestHelper(self, command, listOutput, expectedOutput):
+        """
+        Exercise handling by the implementation of I{LIST} or I{NLST} of certain
+        return values and types from an L{IFTPShell.list} implementation.
+
+        This will issue C{command} and assert that if the L{IFTPShell.list}
+        implementation includes C{listOutput} as one of the file entries then
+        the result given to the client is matches C{expectedOutput}.
+
+        @param command: Either C{b"LIST"} or C{b"NLST"}
+        @type command: L{bytes}
+
+        @param listOutput: A value suitable to be used as an element of the list
+            returned by L{IFTPShell.list}.  Vary the values and types of the
+            contents to exercise different code paths in the server's handling
+            of this result.
+
+        @param expectedOutput: A line of output to expect as a result of
+            C{listOutput} being transformed into a response to the command
+            issued.
+        @type expectedOutput: L{bytes}
+
+        @return: A L{Deferred} which fires when the test is done, either with an
+            L{Failure} if the test failed or with a function object if it
+            succeeds.  The function object is the function which implements
+            L{IFTPShell.list} (and is useful to make assertions about what
+            warnings might have been emitted).
+        @rtype: L{Deferred}
+        """
+        # Login
+        d = self._anonymousLogin()
+
+        def patchedList(segments, keys=()):
+            return defer.succeed([listOutput])
+
+        def loggedIn(result):
+            self.serverProtocol.shell.list = patchedList
+            return result
+        d.addCallback(loggedIn)
+
+        self._download('%s something' % (command,), chainDeferred=d)
+
+        def checkDownload(download):
+            self.assertEqual(expectedOutput, download)
+            return patchedList
+
+        return d.addCallback(checkDownload)
+
+
+    def test_LISTUnicode(self):
+        """
+        Unicode filenames returned from L{IFTPShell.list} are encoded using
+        UTF-8 before being sent with the response.
+        """
+        return self._listTestHelper(
+            "LIST",
+            (u'my resum\xe9', (0, 1, 0777, 0, 0, 'user', 'group')),
+            'drwxrwxrwx   0 user      group                   '
+            '0 Jan 01  1970 my resum\xc3\xa9\r\n')
+
+
+    def test_LISTNonASCIIBytes(self):
+        """
+        When LIST receive a filename as byte string from L{IFTPShell.list}
+        it will just pass the data to lower level without any change.
+        """
+        return self._listTestHelper(
+            "LIST",
+            ('my resum\xc3\xa9', (0, 1, 0777, 0, 0, 'user', 'group')),
+            'drwxrwxrwx   0 user      group                   '
+            '0 Jan 01  1970 my resum\xc3\xa9\r\n')
+
+
     def testManyLargeDownloads(self):
         # Login
         d = self._anonymousLogin()
@@ -900,6 +982,27 @@ class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
         return d.addCallback(checkDownload)
 
 
+    def test_NLSTUnicode(self):
+        """
+        NLST will receive Unicode filenames for IFTPShell.list, and will
+        encode them using UTF-8.
+        """
+        return self._listTestHelper(
+            "NLST",
+            (u'my resum\xe9', (0, 1, 0777, 0, 0, 'user', 'group')),
+            'my resum\xc3\xa9\r\n')
+
+
+    def test_NLSTNonASCIIBytes(self):
+        """
+        NLST will just pass the non-Unicode data to lower level.
+        """
+        return self._listTestHelper(
+            "NLST",
+            ('my resum\xc3\xa9', (0, 1, 0777, 0, 0, 'user', 'group')),
+            'my resum\xc3\xa9\r\n')
+
+
     def test_NLSTOnPathToFile(self):
         """
         NLST on an existent file returns only the path to that file.
@@ -911,6 +1014,7 @@ class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
         self.dirPath.child('test.txt').touch()
 
         self._download('NLST test.txt', chainDeferred=d)
+
         def checkDownload(download):
             filenames = download[:-2].split('\r\n')
             self.assertEqual(['test.txt'], filenames)
@@ -1127,6 +1231,46 @@ class DTPFactoryTests(unittest.TestCase):
 
 
 
+class DTPTests(unittest.TestCase):
+    """
+    Tests for L{ftp.DTP}.
+
+    The DTP instances in these tests are generated using
+    DTPFactory.buildProtocol()
+    """
+
+    def setUp(self):
+        """
+        Create a fake protocol interpreter, a L{ftp.DTPFactory} instance,
+        and dummy transport to help with tests.
+        """
+        self.reactor = task.Clock()
+
+        class ProtocolInterpreter(object):
+            dtpInstance = None
+
+        self.protocolInterpreter = ProtocolInterpreter()
+        self.factory = ftp.DTPFactory(
+            self.protocolInterpreter, None, self.reactor)
+        self.transport = proto_helpers.StringTransportWithDisconnection()
+
+
+    def test_sendLineNewline(self):
+        """
+        L{ftp.DTP.sendLine} writes the line passed to it plus a line delimiter
+        to its transport.
+        """
+        dtpInstance = self.factory.buildProtocol(None)
+        dtpInstance.makeConnection(self.transport)
+        lineContent = 'line content'
+
+        dtpInstance.sendLine(lineContent)
+
+        dataSent = self.transport.value()
+        self.assertEqual(lineContent + '\r\n', dataSent)
+
+
+
 # -- Client Tests -----------------------------------------------------------
 
 class PrintLines(protocol.Protocol):
@@ -1141,6 +1285,7 @@ class PrintLines(protocol.Protocol):
         self.transport.loseConnection()
 
 
+
 class MyFTPFileListProtocol(ftp.FTPFileListProtocol):
     def __init__(self):
         self.other = []
@@ -1148,6 +1293,7 @@ class MyFTPFileListProtocol(ftp.FTPFileListProtocol):
 
     def unknownLine(self, line):
         self.other.append(line)
+
 
 
 class FTPFileListingTests(unittest.TestCase):
@@ -1268,6 +1414,7 @@ class FTPFileListingTests(unittest.TestCase):
 
         d = loopback.loopbackAsync(PrintLine(), fileList)
         return d.addCallback(check)
+
 
 
 class FTPClientTests(unittest.TestCase):
@@ -3325,6 +3472,7 @@ class FTPReadWriteTestCase(unittest.TestCase, IReadWriteTestsMixin):
         return self.root.child(self.filename).getContent()
 
 
+
 class CloseTestWriter:
     implements(ftp.IWriteFile)
     closeStarted = False
@@ -3336,9 +3484,13 @@ class CloseTestWriter:
         self.closeStarted = True
         return self.d
 
+
+
 class CloseTestShell:
     def openForWriting(self, segs):
         return defer.succeed(self.writer)
+
+
 
 class FTPCloseTest(unittest.TestCase):
     """Tests that the server invokes IWriteFile.close"""
