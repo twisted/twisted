@@ -174,10 +174,15 @@ def _collectWarnings(observeWarning, f, *args, **kwargs):
     # be re-emitted by the call to f which happens below.
     _setWarningRegistryToNone(sys.modules)
 
-    with warnings.catch_warnings():
-        warnings.simplefilter('always')
+    origFilters = warnings.filters[:]
+    origShow = warnings.showwarning
+    warnings.simplefilter('always')
+    try:
         warnings.showwarning = showWarning
         result = f(*args, **kwargs)
+    finally:
+        warnings.filters[:] = origFilters
+        warnings.showwarning = origShow
     return result
 
 
@@ -913,13 +918,11 @@ class SynchronousTestCase(_Assertions):
 
         # Any collected warnings which the test method didn't flush get
         # re-emitted so they'll be logged or show up on stdout or whatever.
-        with warnings.catch_warnings():
-            warnings.simplefilter('always')
-            for w in self.flushWarnings():
-                try:
-                    warnings.warn_explicit(**w)
-                except:
-                    result.addError(self, failure.Failure())
+        for w in self.flushWarnings():
+            try:
+                warnings.warn_explicit(**w)
+            except:
+                result.addError(self, failure.Failure())
 
         result.stopTest(self)
 
