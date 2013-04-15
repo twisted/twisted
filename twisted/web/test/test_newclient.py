@@ -1574,12 +1574,13 @@ class HTTP11ClientProtocolTests(TestCase):
         received.
         """
         transport = StringTransport()
+        abort = []
+        transport.abortConnection = lambda: abort.append(None)
         protocol = HTTP11ClientProtocol()
         protocol.makeConnection(transport)
         result = protocol.request(Request('GET', '/', _boringHeaders, None))
         result.cancel()
-        self.assertTrue(transport.disconnecting)
-        protocol.connectionLost(Failure(ConnectionDone()))
+        self.assertEqual([None], abort)
         return assertWrapperExceptionTypes(
             self, result, ResponseNeverReceived, [CancelledError])
 
@@ -1591,13 +1592,14 @@ class HTTP11ClientProtocolTests(TestCase):
         the request was cancelled before all response headers were received.
         """
         transport = StringTransport()
+        abort = []
+        transport.abortConnection = lambda: abort.append(None)
         protocol = HTTP11ClientProtocol()
         protocol.makeConnection(transport)
         result = protocol.request(Request('GET', '/', _boringHeaders, None))
         protocol.dataReceived("HTTP/1.1 200 OK\r\n")
         result.cancel()
-        self.assertTrue(transport.disconnecting)
-        protocol.connectionLost(Failure(ConnectionDone()))
+        self.assertEqual([None], abort)
         return assertResponseFailed(self, result, [CancelledError])
 
 

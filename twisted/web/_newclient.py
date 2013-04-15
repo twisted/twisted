@@ -1301,7 +1301,8 @@ class HTTP11ClientProtocol(Protocol):
                     'TRANSMITTING', 'TRANSMITTING_AFTER_RECEIVING_RESPONSE'):
                 _requestDeferred.cancel()
             else:
-                self._giveUp(Failure(CancelledError()))
+                self.transport.abortConnection()
+                self._disconnectParser(Failure(CancelledError()))
         self._finishedRequest = Deferred(cancelRequest)
 
         # Keep track of the Request object in case we need to call stopWriting
