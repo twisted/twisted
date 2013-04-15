@@ -21,8 +21,8 @@ def process(input):
     return output
 </pre>
 
-However, in the context of a concurrent, event-driven system like Twisted, not every input corresponds to exactly one output, so you can't always write simple functions like this.
-Sometimes you need to wait for more input before you can generate some output; sometimes one piece of input will generate multiple outputs.
+However, in the context of a concurrent, event-driven system like Twisted, not every input corresponds to exactly one output, so we can't always write simple functions like this.
+Sometimes we need to wait for more input before we can generate some output; sometimes one piece of input will generate multiple outputs.
 Within Twisted, the abstraction for receiving, buffering, and processing streams of data is in the <code>twisted.tubes</code> package, and in this document we're going to learn how to use it.
 </p>
 
@@ -127,7 +127,7 @@ def echoFlow(fount, drain):
 </pre>
 
 <p>
-<code class="API" base="twisted.tubes.itube.IFount">flowTo</code> can return a <code class="API" base="twisted.tube.itube">IFount</code> so you can chain <code class="API" base="twisted.tubes.itube.IFount">flowTo</code> calls (in other words, call <code>flowTo</code> on the result of <code>flowTo</code>) to construct a "flow".
+<code class="API" base="twisted.tubes.itube.IFount">flowTo</code> can return a <code class="API" base="twisted.tube.itube">IFount</code> so we can chain <code class="API" base="twisted.tubes.itube.IFount">flowTo</code> calls (in other words, call <code>flowTo</code> on the result of <code>flowTo</code>) to construct a "flow".
 In this case, <code>.flowTo(Tube(stringToNetstring()))</code> returns a new <code class="API" base="twisted.tubes.itube">IFount</code> whose output will be <a href="http://cr.yp.to/proto/netstrings.txt">netstring</a>s.
 <div class="note">
     If you're curious: specifically, <code class="API" base="twisted.tubes.itube.IFount">flowTo</code> takes an <code class="API" base="twisted.tube.itube">IDrain</code>, and returns the result of that <code class="API" base="twisted.tube.itube">IDrain</code>'s <code class="API" base="twisted.tubes.itube.IDrain">flowingFrom</code> method.
