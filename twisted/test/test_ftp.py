@@ -54,6 +54,7 @@ class Dummy(basic.LineReceiver):
         pass
 
 
+
 class _BufferingProtocol(protocol.Protocol):
     def connectionMade(self):
         self.buffer = ''
@@ -180,6 +181,7 @@ class FTPServerTestCase(unittest.TestCase):
             chainDeferred=d)
 
 
+
 class FTPAnonymousTestCase(FTPServerTestCase):
     """
     Simple tests for an FTP server with different anonymous username.
@@ -201,6 +203,7 @@ class FTPAnonymousTestCase(FTPServerTestCase):
             'PASS test@twistedmatrix.com',
             ['230 Anonymous login ok, access restrictions apply.'],
             chainDeferred=d)
+
 
 
 class BasicFTPServerTestCase(FTPServerTestCase):
@@ -513,6 +516,8 @@ class BasicFTPServerTestCase(FTPServerTestCase):
             )
         return d
 
+
+
 class FTPServerTestCaseAdvancedClient(FTPServerTestCase):
     """
     Test FTP server with the L{ftp.FTPClient} class.
@@ -591,6 +596,7 @@ class FTPServerTestCaseAdvancedClient(FTPServerTestCase):
         d = self.client.retrieveFile('failing_file', proto)
         d.addErrback(check_response)
         return d
+
 
 
 class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
@@ -1079,6 +1085,7 @@ class DTPFactoryTests(unittest.TestCase):
         return d
 
 
+
 class DTPTests(unittest.TestCase):
     """
     Tests for L{ftp.DTP}.
@@ -1133,6 +1140,7 @@ class PrintLines(protocol.Protocol):
         self.transport.loseConnection()
 
 
+
 class MyFTPFileListProtocol(ftp.FTPFileListProtocol):
     def __init__(self):
         self.other = []
@@ -1140,6 +1148,7 @@ class MyFTPFileListProtocol(ftp.FTPFileListProtocol):
 
     def unknownLine(self, line):
         self.other.append(line)
+
 
 
 class FTPFileListingTests(unittest.TestCase):
@@ -1260,6 +1269,7 @@ class FTPFileListingTests(unittest.TestCase):
 
         d = loopback.loopbackAsync(PrintLine(), fileList)
         return d.addCallback(check)
+
 
 
 class FTPClientTests(unittest.TestCase):
@@ -3317,6 +3327,7 @@ class FTPReadWriteTestCase(unittest.TestCase, IReadWriteTestsMixin):
         return self.root.child(self.filename).getContent()
 
 
+
 class CloseTestWriter:
     implements(ftp.IWriteFile)
     closeStarted = False
@@ -3328,9 +3339,13 @@ class CloseTestWriter:
         self.closeStarted = True
         return self.d
 
+
+
 class CloseTestShell:
     def openForWriting(self, segs):
         return defer.succeed(self.writer)
+
+
 
 class FTPCloseTest(unittest.TestCase):
     """Tests that the server invokes IWriteFile.close"""
