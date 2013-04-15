@@ -96,8 +96,11 @@ class Tube(object):
         self.drain = drain
         # TODO: test for ordering
         result = self.drain.flowingFrom(self)
-        for item in self._pendingOutput: # XXX should consumes safely
-            self.drain.receive(item)
+        if self._pendingOutput:
+            for item in self._pendingOutput: # XXX should consumes safely
+                self.drain.receive(item)
+            if self.fount is not None:
+                self.fount.resumeFlow()
         return result
 
 
