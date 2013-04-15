@@ -857,7 +857,6 @@ class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
             'my resum\xc3\xa9\r\n')
 
 
-
     def test_NLSTOnPathToFile(self):
         """
         NLST on an existent file returns only the path to that file.
