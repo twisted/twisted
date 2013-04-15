@@ -139,7 +139,7 @@ class Tube(object):
 
     def receive(self, item):
         """
-        An item was received.  Subclasses should override to process it.
+        An item was received.
         """
         result = self.pump.received(item)
         if result is None:
