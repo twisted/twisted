@@ -193,6 +193,17 @@ class TubeTest(TestCase):
         self.assertEquals(self.ff.flowIsPaused, True)
 
 
+    def test_addingDownstreamUnpauses(self):
+        """
+        When a L{Tube} that is not flowing to a drain yet pauses its upstream
+        fount, it will I{resume} its upstream fount when a new downstream
+        arrives to un-buffer to.
+        """
+        self.test_deliverWithoutDownstreamPauses()
+        self.tube.flowTo(self.fd)
+        self.assertEquals(self.ff.flowIsPaused, False)
+
+
     def test_receiveCallsPumpReceived(self):
         """
         L{Tube.receive} will deliver its input to L{IPump.received} on its
