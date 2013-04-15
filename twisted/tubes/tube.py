@@ -29,10 +29,7 @@ class Tube(object):
         un-setting the C{tube} attribute of the old pump.)
 
     @ivar _currentlyPaused: is this L{Tube} currently paused?  Boolean: C{True}
-        if paused, C{False} if not.  This variable tracks whether this L{Tube}
-        has invoked L{pauseFlow} on I{its} C{fount} attribute, so it may only
-        be set if the fount has also been set (by calling
-        C{otherFount.flowTo(thisTube)}).
+        if paused, C{False} if not.
     """
 
     implements(IDrain, IFount)
@@ -96,12 +93,21 @@ class Tube(object):
         self.drain = drain
         # TODO: test for ordering
         result = self.drain.flowingFrom(self)
+        if self._currentlyPaused:
+            self.resumeFlow()
         if self._pendingOutput:
-            for item in self._pendingOutput: # XXX should consumes safely
-                self.drain.receive(item)
-            if self.fount is not None:
-                self.fount.resumeFlow()
+            self._unbufferSome()
         return result
+
+
+    def _unbufferSome(self):
+        """
+        Un-buffer some pending output into the downstream drain.
+        """
+        while self._pendingOutput and not self._currentlyPaused:
+            item = self._pendingOutput.pop(0)
+            self.drain.receive(item)
+            break
 
 
     def flowStopped(self, reason):
@@ -116,10 +122,8 @@ class Tube(object):
         Pause the flow from the fount, or remember to do that when the
         fount is attached, if it isn't yet.
         """
-        if self.fount is None:
-            self._shouldPauseWhenStarted = True
-        else:
-            self._currentlyPaused = True
+        self._currentlyPaused = True
+        if self.fount is not None:
             self.fount.pauseFlow()
 
 
@@ -127,7 +131,10 @@ class Tube(object):
         """
         Resume the flow from the fount to this L{Tube}.
         """
-        self.fount.resumeFlow()
+        self._currentlyPaused = False
+        if self.fount is not None:
+            self.fount.resumeFlow()
+        self._unbufferSome()
 
 
     def stopFlow(self):
@@ -167,9 +174,8 @@ class Tube(object):
         """
         self._delivered = True
         if self.drain is None:
-            if self.fount is not None:
-                if not self._pendingOutput:
-                    self.fount.pauseFlow()
+            if not self._pendingOutput:
+                self.pauseFlow()
             self._pendingOutput.append(item)
             return 1.0
         else:
