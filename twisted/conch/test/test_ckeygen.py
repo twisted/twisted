@@ -205,11 +205,82 @@ class KeyGenTests(TestCase):
 
     def test_changePassphraseWrongPassphrase(self):
         """
-        L{changePassPhrase} allows a user to change the passphrase of a
-        private key. It should exit if passed an invalid old passphrase.
+        L{changePassPhrase} exits if passed an invalid old passphrase when
+        trying to change the passphrase of a private key.
         """
         filename = self.mktemp()
         FilePath(filename).setContent(privateRSA_openssh_encrypted)
-        self.assertRaises(SystemExit,
-                          changePassPhrase,
-                          {'filename': filename, 'pass': 'wrong'})
+        error = self.assertRaises(
+            SystemExit, changePassPhrase,
+            {'filename': filename, 'pass': 'wrong'})
+        self.assertEqual('Could not change passphrase: old passphrase error',
+                         str(error))
+
+
+    def test_changePassphraseEmptyGetPass(self):
+        """
+        L{changePassPhrase} exits if no passphrase is specified for the
+        C{getpass} call and the key is encrypted.
+        """
+        self.patch(getpass, 'getpass', _make_getpass(''))
+        filename = self.mktemp()
+        FilePath(filename).setContent(privateRSA_openssh_encrypted)
+        error = self.assertRaises(
+            SystemExit, changePassPhrase, {'filename': filename})
+        self.assertEqual(
+            'Could not change passphrase: Passphrase must be provided '
+            'for an encrypted key',
+            str(error))
+
+
+    def test_changePassphraseBadKey(self):
+        """
+        L{changePassPhrase} exits if the file specified points to an invalid
+        key.
+        """
+        filename = self.mktemp()
+        FilePath(filename).setContent('foobar')
+        error = self.assertRaises(
+            SystemExit, changePassPhrase, {'filename': filename})
+        self.assertEqual(
+            "Could not change passphrase: cannot guess the type of 'foobar'",
+            str(error))
+
+
+    def test_changePassphraseCreateError(self):
+        """
+        L{changePassPhrase} doesn't modify the key file if an unexpected error
+        happens when trying to create the key with the new passphrase.
+        """
+        filename = self.mktemp()
+        FilePath(filename).setContent(privateRSA_openssh)
+
+        def toString(*args, **kwargs):
+            raise RuntimeError('oops')
+
+        self.patch(Key, 'toString', toString)
+
+        error = self.assertRaises(
+            SystemExit, changePassPhrase,
+            {'filename': filename,
+             'newpass': 'newencrypt'})
+
+        self.assertEqual(
+            'Could not change passphrase: oops', str(error))
+
+        self.assertEqual(privateRSA_openssh, FilePath(filename).getContent())
+
+
+    def test_changePassphrasePublicKey(self):
+        """
+        L{changePassPhrase} exits when trying to change the passphrase on a
+        public key, and doesn't change the file.
+        """
+        filename = self.mktemp()
+        FilePath(filename).setContent(publicRSA_openssh)
+        error = self.assertRaises(
+            SystemExit, changePassPhrase,
+            {'filename': filename, 'newpass': 'pass'})
+        self.assertEqual(
+            'Could not change passphrase: key not encrypted', str(error))
+        self.assertEqual(publicRSA_openssh, FilePath(filename).getContent())
