@@ -51,7 +51,7 @@ Let's do exactly that, and get <code>echoFlow</code> called with a real, network
 
 <p>
 This fully-functioning example (just run it with "<code>python echotube.py</code>") implements an echo server.
-You can test it out with <code>telnet localhost 4321</code> or <code>nc localhost 4321</code>.
+You can test it out with <code>telnet localhost 4321</code>.
 (If you are on Windows, and do not have <code>telnet</code> installed, try running <code>pkgmgr /iu:"TelnetClient"</code> first; after waiting a few moments, <code>telnet</code> should be available.)
 </p>
 
@@ -141,7 +141,7 @@ A more interesting example might demonstrate the use of tubes to send data to an
 <p>
 For each incoming connection on port <code>6543</code>, we creating an outgoing connection to the echo server in our previous example.
 When we have successfully connected to the echo server we connect our incoming <code>listeningFount</code> to our outgoing <code>connectingDrain</code> and our <code>connectingFount</code> to our <code>listeningDrain</code>.
-This forwards all bytes from your <code>telnet</code> or <code>nc</code> client to our echo server, and all bytes from our echo server to your client.
+This forwards all bytes from your <code>telnet</code> client to our echo server, and all bytes from our echo server to your client.
 </p>
 
 <pre class="python">
