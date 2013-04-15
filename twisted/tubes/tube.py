@@ -51,10 +51,19 @@ class Tube(object):
 
 
     def _get_pump(self):
+        """
+        Getter for the C{pump} property.
+        """
         return self._pump
 
 
     def _set_pump(self, newPump):
+        """
+        Setter for the C{pump} property.
+
+        @param newPump: the new L{IPump}
+        @type newPump: L{IPump}
+        """
         if self._pump is not None:
             self._pump.tube = None
         self._pump = newPump
