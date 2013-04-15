@@ -174,15 +174,10 @@ def _collectWarnings(observeWarning, f, *args, **kwargs):
     # be re-emitted by the call to f which happens below.
     _setWarningRegistryToNone(sys.modules)
 
-    origFilters = warnings.filters[:]
-    origShow = warnings.showwarning
-    warnings.simplefilter('always')
-    try:
+    with warnings.catch_warnings():
+        warnings.simplefilter('always')
         warnings.showwarning = showWarning
         result = f(*args, **kwargs)
-    finally:
-        warnings.filters[:] = origFilters
-        warnings.showwarning = origShow
     return result
 
 
