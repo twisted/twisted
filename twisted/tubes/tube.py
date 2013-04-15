@@ -168,7 +168,8 @@ class Tube(object):
         self._delivered = True
         if self.drain is None:
             if self.fount is not None:
-                self.fount.pauseFlow()
+                if not self._pendingOutput:
+                    self.fount.pauseFlow()
             self._pendingOutput.append(item)
             return 1.0
         else:
