@@ -80,7 +80,7 @@ In order to implement this program, we will use a series of <code>Tube</code> ob
 </p>
 
 <p>
-Getting connected to the network is the responsibility of other parts of Twisted, so first, let's just look at what a sketch of the data-flow processing part of this program would look like, the part that uses tubes:
+Here's a sketch of the overall structure of such a program:
 </p>
 
 <a href="listings/tubes/computube.py" class="py-listing">computube.py</a>
@@ -100,13 +100,37 @@ Several of the classes involved are already within Twisted: Tube, for example, a
 <a href="listings/tubes/computube2.py" class="py-listing">computube2.py</a>
 
 <p>
-So, to complete the example, we need to implement 3 classes:
+To complete the example, we need to implement 3 classes, each of which is a Pump:
 <ul>
     <li><code>LinesToIntegersOrCommands</code></li>
     <li><code>CommandsAndIntegersToResultIntegers</code></li>
     <li><code>IntegersToLines</code></li>
 </ul>
 </p>
+
+<p>
+Let's implement them.  First, <code>LinesToIntegersOrCommands</code> receives lines and converts them into either integers, or functions, then delivers them on.
+</p>
+
+<a href="listings/tubes/intparse.py" class="py-listing">intparse.py</a>
+
+<p>
+Next, <code>CommandsAndIntegersToResultIntegers</code> takes that output 
+</p>
+
+<a href="listings/tubes/worker.py" class="py-listing">worker.py</a>
+
+<p>
+Next, <code>IntegersToLines</code> converts <code>int</code> objects into lines for output.
+</p>
+
+<a href="listings/tubes/output.py" class="py-listing">output.py</a>
+
+<p>
+Finally, we can put them all together by importing them in our original program, and hooking it up to a server just like <code>echoFlow</code>.
+</p>
+
+<a href="listings/tubes/computube3.py" class="py-listing">computube3.py</a>
 
 <p>
 A more interesting example might demonstrate the use of tubes to send data to another server.
