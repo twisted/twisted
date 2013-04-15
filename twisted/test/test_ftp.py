@@ -736,8 +736,8 @@ class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
 
     def test_LISTNonASCIIBytes(self):
         """
-        Support for returning byte strings from L{IFTPShell.list} is deprecated
-        and doing so results in a warning, but in the filename being sent as-is.
+        When LIST receive a filename as byte string from L{IFTPShell.list}
+        it will just pass the data to lower level without any change.
         """
         return self._listTestHelper(
             "LIST",

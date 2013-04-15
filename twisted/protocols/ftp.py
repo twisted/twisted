@@ -928,22 +928,20 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         return self.dtpFactory.deferred.addCallbacks(connected, connFailed)
 
 
-    def _checkListResult(self, name):
+    def _checkWireFormat(self, value):
         """
-        Inspect an element from the list returned by an L{IFTPShell.list}
-        implementation to make sure the content is formated to be
+        Check C{value} to make sure the content is formatted to be
         send on the wire.
 
-        @param name: The name of a file, as returned by L{IFTPShell.list}.
-        @type name: L{bytes} or L{unicode}
+        @param value: Value to be checked.
+        @type value: L{bytes} or L{unicode}
 
-        @return: Either C{name} or the UTF-8 encoded form of it, if it is
-            L{unicode}.
+        @return: Wire format of C{value}.
         @rtype: L{bytes}
         """
-        if isinstance(name, unicode):
-            return name.encode('utf-8')
-        return name
+        if isinstance(value, unicode):
+            return value.encode('utf-8')
+        return value
 
 
     def ftp_LIST(self, path=''):
@@ -975,7 +973,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         def gotListing(results):
             self.reply(DATA_CNX_ALREADY_OPEN_START_XFR)
             for (name, attrs) in results:
-                name = self._checkListResult(name)
+                name = self._checkWireFormat(name)
                 self.dtpInstance.sendListResponse(name, attrs)
             self.dtpInstance.transport.loseConnection()
             return (TXFR_COMPLETE_OK,)
@@ -1039,7 +1037,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             self.reply(DATA_CNX_ALREADY_OPEN_START_XFR)
             for (name, ignored) in results:
                 if not glob or (glob and fnmatch.fnmatch(name, glob)):
-                    name = self._checkListResult(name)
+                    name = self._checkWireFormat(name)
                     self.dtpInstance.sendLine(name)
             self.dtpInstance.transport.loseConnection()
             return (TXFR_COMPLETE_OK,)
