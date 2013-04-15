@@ -2,10 +2,11 @@ from twisted.tubes.tube import Pump
 class LinesToIntegersOrCommands(Pump):
     def received(self, item):
         if item == 'SUM':
-            return sum
-        if item == 'PRODUCT':
-            return product
-        result = int(item)
+            result = sum
+        elif item == 'PRODUCT':
+            result = product
+        else:
+            result = int(item)
         self.tube.deliver(result)
 
 def product(numbers):
