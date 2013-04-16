@@ -8,8 +8,6 @@ from twisted.conch.insults.insults import modes, privateModes
 from twisted.conch.insults.insults import (
     NORMAL, BOLD, UNDERLINE, BLINK, REVERSE_VIDEO)
 
-from twisted.python.versions import Version
-
 from twisted.trial import unittest
 
 WIDTH = 80
