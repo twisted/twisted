@@ -14,7 +14,8 @@ from twisted.python.compat import intToBytes
 from twisted.internet.defer import Deferred, gatherResults, maybeDeferred
 from twisted.internet import protocol, reactor, error, defer, interfaces, udp
 from twisted.python import runtime
-
+import socket
+import time
 
 class Mixin:
 
@@ -113,6 +114,47 @@ class BadClient(protocol.DatagramProtocol):
         raise BadClientError("Application code is very buggy!")
 
 
+class BroadcastDatagramProtocol(protocol.DatagramProtocol):
+
+    d = None
+    sentmessage = None
+    broadcasthost = "127.0.0.255"
+    broadcastport = 6666
+
+    def setDeferred(self, d):
+        self.d = d
+
+    def startProtocol(self):
+        self.sentmessage = str(time.time())
+        self.transport.socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        self.sendDatagram(self.sentmessage, (self.broadcasthost, self.broadcastport))
+    
+    def sendDatagram(self, data, address):
+        self.transport.write(data, addr=address)
+
+    def datagramReceived(self, data, (host, port)):
+        if self.d is not None:
+            d, self.d = self.d, None
+            d.callback((data, self.sentmessage))
+
+class UDPBroadcastTestCase(unittest.TestCase):
+
+    def test_UDPBroadcast(self):
+
+        port = None
+
+        def cbverify(data):
+
+            self.assertEqual(data[0],data[1])
+            self.port.stopListening()
+            
+        senderprotocol = BroadcastDatagramProtocol()
+        self.port = reactor.listenUDP(senderprotocol.broadcastport, senderprotocol)
+
+        d = Deferred()
+        d.addCallback(cbverify)
+
+        senderprotocol.setDeferred(d)
 
 class UDPTestCase(unittest.TestCase):
 
