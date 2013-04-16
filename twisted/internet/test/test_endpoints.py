@@ -1140,7 +1140,8 @@ class HostnameEndpointsOneIPv4TestCase(ClientEndpointTestCaseMixin,
         endpoint._deferToThread = fakeDeferToThread
         endpoint.connect(clientFactory)
         self.assertEqual(
-            [(fakegetaddrinfo, ("ipv4.example.com", 1234, 0, SOCK_STREAM), {})], calls)
+            [(fakegetaddrinfo, ("ipv4.example.com", 1234, 0, SOCK_STREAM), {})],
+            calls)
 
 
 
@@ -1388,7 +1389,8 @@ class HostnameEndpointsFasterConnectionTestCase(unittest.TestCase):
         proto.makeConnection(fakeTransport)
 
         # Now, the pending IPv4 connection should have been cancelled.
-        self.assertEqual(True, self.mreactor.tcpClients[0][2]._connector.stoppedConnecting)
+        self.assertEqual(True,
+                self.mreactor.tcpClients[0][2]._connector.stoppedConnecting)
 
 
 

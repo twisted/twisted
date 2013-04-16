@@ -512,7 +512,8 @@ class HostnameEndpoint(object):
             Errback for when L{_nameResolution} returns a Deferred that fires
             with failure.
             """
-            return defer.fail(error.DNSLookupError("Couldn't find the hostname '%s'" % (self._host,)))
+            return defer.fail(error.DNSLookupError(
+                "Couldn't find the hostname '%s'" % (self._host,)))
 
 
         def _endpoints(gaiResult):
@@ -606,7 +607,8 @@ class HostnameEndpoint(object):
         Resolve the hostname string into a tuple containig the host
         address.
         """
-        return self._deferToThread(self._getaddrinfo, host, port, 0, socket.SOCK_STREAM)
+        return self._deferToThread(self._getaddrinfo, host, port, 0,
+                socket.SOCK_STREAM)
 
 
 
