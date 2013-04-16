@@ -15,7 +15,8 @@ class FormattedTextTests(unittest.TestCase):
     """
     def test_trivial(self):
         """
-        Trivial formatting that emits no control sequences.
+        Using no formatting attributes produces no VT102 control sequences in
+        the flattened output.
         """
         self.assertEquals(
             text.assembleFormattedText(A.normal['Hello, world.']),
@@ -24,7 +25,8 @@ class FormattedTextTests(unittest.TestCase):
 
     def test_bold(self):
         """
-        Bold formatting.
+        The bold formatting attribute, L{A.bold}, emits the VT102 control
+        sequence to enable bold when flattened.
         """
         self.assertEquals(
             text.assembleFormattedText(A.bold['Hello, world.']),
@@ -33,7 +35,8 @@ class FormattedTextTests(unittest.TestCase):
 
     def test_underline(self):
         """
-        Underline formatting.
+        The underline formatting attribute, L{A.underline}, emits the VT102
+        control sequence to enable underlining when flattened.
         """
         self.assertEquals(
             text.assembleFormattedText(A.underline['Hello, world.']),
@@ -42,7 +45,8 @@ class FormattedTextTests(unittest.TestCase):
 
     def test_blink(self):
         """
-        Blink formatting.
+        The blink formatting attribute, L{A.blink}, emits the VT102 control
+        sequence to enable blinking when flattened.
         """
         self.assertEquals(
             text.assembleFormattedText(A.blink['Hello, world.']),
@@ -51,7 +55,8 @@ class FormattedTextTests(unittest.TestCase):
 
     def test_reverseVideo(self):
         """
-        Reversed-video formatting.
+        The reverse-video formatting attribute, L{A.reverseVideo}, emits the
+        VT102 control sequence to enable reversed video when flattened.
         """
         self.assertEquals(
             text.assembleFormattedText(A.reverseVideo['Hello, world.']),
@@ -61,7 +66,8 @@ class FormattedTextTests(unittest.TestCase):
     def test_minus(self):
         """
         Formatting attributes prefixed with a minus (C{-}) temporarily disable
-        the prefixed attribute.
+        the prefixed attribute, emitting no VT102 control sequence to enable
+        it in the flattened output.
         """
         self.assertEquals(
             text.assembleFormattedText(
@@ -71,7 +77,8 @@ class FormattedTextTests(unittest.TestCase):
 
     def test_foreground(self):
         """
-        Foreground colors.
+        The foreground color formatting attribute, L{A.fg}, emits the VT102
+        control sequence to set the selected foreground color when flattened.
         """
         self.assertEquals(
             text.assembleFormattedText(
@@ -81,7 +88,8 @@ class FormattedTextTests(unittest.TestCase):
 
     def test_background(self):
         """
-        Background colors.
+        The background color formatting attribute, L{A.bg}, emits the VT102
+        control sequence to set the selected background color when flattened.
         """
         self.assertEquals(
             text.assembleFormattedText(

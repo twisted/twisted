@@ -604,9 +604,6 @@ class CharacterAttributeTests(unittest.TestCase):
         L{twisted.conch.insults.helper.CharacterAttribute.wantOne} emits
         a deprecation warning when invoked.
         """
-        warningsShown = self.flushWarnings([self.test_wantOneDeprecated])
-        self.assertEqual(len(warningsShown), 0)
-
         # Trigger the deprecation warning.
         helper._FormattingState().wantOne(bold=True)
 
