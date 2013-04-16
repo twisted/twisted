@@ -13,27 +13,33 @@ import re, string
 from zope.interface import implements
 
 from twisted.internet import defer, protocol, reactor
-from twisted.python import log
-
+from twisted.python import log, _textattributes
+from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
+from twisted.python.versions import Version
 from twisted.conch.insults import insults
 
 FOREGROUND = 30
 BACKGROUND = 40
 BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE, N_COLORS = range(9)
 
-class CharacterAttribute:
-    """Represents the attributes of a single character.
+
+
+class _FormattingState(_textattributes._FormattingStateMixin):
+    """
+    Represents the formatting state/attributes of a single character.
 
     Character set, intensity, underlinedness, blinkitude, video
     reversal, as well as foreground and background colors made up a
     character's attributes.
     """
-    def __init__(self, charset=insults.G0,
-                 bold=False, underline=False,
-                 blink=False, reverseVideo=False,
-                 foreground=WHITE, background=BLACK,
+    compareAttributes = (
+        'charset', 'bold', 'underline', 'blink', 'reverseVideo', 'foreground',
+        'background', '_subtracting')
 
-                 _subtracting=False):
+
+    def __init__(self, charset=insults.G0, bold=False, underline=False,
+                 blink=False, reverseVideo=False, foreground=WHITE,
+                 background=BLACK, _subtracting=False):
         self.charset = charset
         self.bold = bold
         self.underline = underline
@@ -41,29 +47,24 @@ class CharacterAttribute:
         self.reverseVideo = reverseVideo
         self.foreground = foreground
         self.background = background
-
         self._subtracting = _subtracting
 
-    def __eq__(self, other):
-        return vars(self) == vars(other)
 
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-    def copy(self):
-        c = self.__class__()
-        c.__dict__.update(vars(self))
-        return c
-
+    @deprecated(Version('Twisted', 13, 1, 0))
     def wantOne(self, **kw):
+        """
+        Add a character attribute to a copy of this formatting state.
+
+        @param **kw: An optional attribute name and value can be provided with
+            a keyword argument.
+
+        @return: A formatting state instance with the new attribute.
+
+        @see: L{DefaultFormattingState._withAttribute}.
+        """
         k, v = kw.popitem()
-        if getattr(self, k) != v:
-            attr = self.copy()
-            attr._subtracting = not v
-            setattr(attr, k, v)
-            return attr
-        else:
-            return self.copy()
+        return self._withAttribute(k, v)
+
 
     def toVT102(self):
         # Spit out a vt102 control sequence that will set up
@@ -86,6 +87,16 @@ class CharacterAttribute:
         if attrs:
             return '\x1b[' + ';'.join(map(str, attrs)) + 'm'
         return ''
+
+CharacterAttribute = _FormattingState
+
+deprecatedModuleAttribute(
+    Version('Twisted', 13, 1, 0),
+    'Use twisted.conch.insults.text.assembleFormattedText instead.',
+    'twisted.conch.insults.helper',
+    'CharacterAttribute')
+
+
 
 # XXX - need to support scroll regions and scroll history
 class TerminalBuffer(protocol.Protocol):
@@ -125,8 +136,8 @@ class TerminalBuffer(protocol.Protocol):
         for b in bytes.replace('\n', '\r\n'):
             self.insertAtCursor(b)
 
-    def _currentCharacterAttributes(self):
-        return CharacterAttribute(self.activeCharset, **self.graphicRendition)
+    def _currentFormattingState(self):
+        return _FormattingState(self.activeCharset, **self.graphicRendition)
 
     def insertAtCursor(self, b):
         """
@@ -149,7 +160,7 @@ class TerminalBuffer(protocol.Protocol):
         elif b in string.printable:
             if self.x >= self.width:
                 self.nextLine()
-            ch = (b, self._currentCharacterAttributes())
+            ch = (b, self._currentFormattingState())
             if self.modes.get(insults.modes.IRM):
                 self.lines[self.y][self.x:self.x] = [ch]
                 self.lines[self.y].pop()
@@ -158,7 +169,8 @@ class TerminalBuffer(protocol.Protocol):
             self.x += 1
 
     def _emptyLine(self, width):
-        return [(self.void, self._currentCharacterAttributes()) for i in xrange(width)]
+        return [(self.void, self._currentFormattingState())
+                for i in xrange(width)]
 
     def _scrollDown(self):
         self.y += 1
@@ -447,4 +459,5 @@ class ExpectableBuffer(TerminalBuffer):
         self._checkExpected()
         return d
 
-__all__ = ['CharacterAttribute', 'TerminalBuffer', 'ExpectableBuffer']
+__all__ = [
+    'CharacterAttribute',  'TerminalBuffer', 'ExpectableBuffer']

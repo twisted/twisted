@@ -5,7 +5,8 @@
 from twisted.conch.insults import helper
 from twisted.conch.insults.insults import G0, G1, G2, G3
 from twisted.conch.insults.insults import modes, privateModes
-from twisted.conch.insults.insults import NORMAL, BOLD, UNDERLINE, BLINK, REVERSE_VIDEO
+from twisted.conch.insults.insults import (
+    NORMAL, BOLD, UNDERLINE, BLINK, REVERSE_VIDEO)
 
 from twisted.trial import unittest
 
@@ -556,5 +557,58 @@ class ExpectTestCase(unittest.TestCase):
 
         self.fs.calls[0].call()
 
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0].group(), "zoom")
+        self.assertEquals(len(result), 1)
+        self.assertEquals(result[0].group(), "zoom")
+
+
+
+class CharacterAttributeTests(unittest.TestCase):
+    """
+    Tests for L{twisted.conch.insults.helper.CharacterAttribute}.
+    """
+    def test_equality(self):
+        """
+        L{CharacterAttribute}s must have matching character attribute values
+        (bold, blink, underline, etc) with the same values to be considered
+        equal.
+        """
+        self.assertEquals(
+            helper.CharacterAttribute(),
+            helper.CharacterAttribute())
+
+        self.assertEquals(
+            helper.CharacterAttribute(),
+            helper.CharacterAttribute(charset=G0))
+
+        self.assertEquals(
+            helper.CharacterAttribute(
+                bold=True, underline=True, blink=False, reverseVideo=True,
+                foreground=helper.BLUE),
+            helper.CharacterAttribute(
+                bold=True, underline=True, blink=False, reverseVideo=True,
+                foreground=helper.BLUE))
+
+        self.assertNotEquals(
+            helper.CharacterAttribute(),
+            helper.CharacterAttribute(charset=G1))
+
+        self.assertNotEquals(
+            helper.CharacterAttribute(bold=True),
+            helper.CharacterAttribute(bold=False))
+
+
+    def test_wantOneDeprecated(self):
+        """
+        L{twisted.conch.insults.helper.CharacterAttribute.wantOne} emits
+        a deprecation warning when invoked.
+        """
+        # Trigger the deprecation warning.
+        helper._FormattingState().wantOne(bold=True)
+
+        warningsShown = self.flushWarnings([self.test_wantOneDeprecated])
+        self.assertEqual(len(warningsShown), 1)
+        self.assertIdentical(warningsShown[0]['category'], DeprecationWarning)
+        self.assertEqual(
+            warningsShown[0]['message'],
+            'twisted.conch.insults.helper.wantOne was deprecated in '
+            'Twisted 13.1.0')
