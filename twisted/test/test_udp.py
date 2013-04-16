@@ -124,37 +124,42 @@ class BroadcastDatagramProtocol(protocol.DatagramProtocol):
     def setDeferred(self, d):
         self.d = d
 
+
     def startProtocol(self):
         self.sentmessage = str(time.time())
-        self.transport.socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        self.sendDatagram(self.sentmessage, (self.broadcasthost, self.broadcastport))
-    
+        self.transport.socket.setsockopt(
+            socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        self.sendDatagram(
+            self.sentmessage, (self.broadcasthost, self.broadcastport))
+
+
     def sendDatagram(self, data, address):
         self.transport.write(data, addr=address)
+
 
     def datagramReceived(self, data, (host, port)):
         if self.d is not None:
             d, self.d = self.d, None
             d.callback((data, self.sentmessage))
 
+
+
 class UDPBroadcastTestCase(unittest.TestCase):
-
     def test_UDPBroadcast(self):
-
-        port = None
-
         def cbverify(data):
-
             self.assertEqual(data[0],data[1])
-            self.port.stopListening()
-            
+            return self.port.stopListening()
+
         senderprotocol = BroadcastDatagramProtocol()
-        self.port = reactor.listenUDP(senderprotocol.broadcastport, senderprotocol)
+        self.port = reactor.listenUDP(
+            senderprotocol.broadcastport, senderprotocol)
 
         d = Deferred()
         d.addCallback(cbverify)
-
         senderprotocol.setDeferred(d)
+        return d
+
+
 
 class UDPTestCase(unittest.TestCase):
 
