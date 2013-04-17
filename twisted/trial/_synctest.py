@@ -1064,7 +1064,8 @@ class SynchronousTestCase(_Assertions):
                     # somewhat broken in Python < 2.6.  See Python bug 4845.
                     aModule = sys.modules[aFunction.__module__]
                     filename = inspect.getabsfile(aModule)
-
+                    if filename.lower()[-4:] in ('.pyc', '.pyo'):
+                        filename = filename[:-4] + '.py'
                     if filename != os.path.normcase(aWarning.filename):
                         continue
                     lineStarts = list(_findlinestarts(aFunction.__code__))

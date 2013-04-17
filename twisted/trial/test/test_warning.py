@@ -359,6 +359,58 @@ def foo():
         self.assertEqual(len(self.flushWarnings([module.foo])), 1)
 
 
+    def test_removedSource(self):
+        '''
+        Warnings emitted by a function defined in a file which has been removed
+        since it was initially compiled can still be flushed.
+        '''
+        package = FilePath(self.mktemp().encode('utf-8')).child(
+            b'twisted_removed_helper')
+        package.makedirs()
+        package.child(b'__init__.py').setContent(b'')
+        sourceFile = package.child(b'module.py')
+        sourceFile.setContent(b'''
+import warnings
+def foo():
+    warnings.warn("oh no")
+''')
+        pathEntry = package.parent().path.decode('utf-8')
+        sys.path.insert(0, pathEntry)
+        self.addCleanup(sys.path.remove, pathEntry)
+
+        # Import it to cause pycs to be generated
+        from twisted_removed_helper import module
+
+        # Clean up the state resulting from that import; we're not going to
+        #  immediately use this module, so it should go away.
+        del sys.modules['twisted_removed_helper']
+        del sys.modules[module.__name__]
+
+        # Some Python versions have extra state related to the just
+        # imported/renamed package.  Clean it up too.  See also
+        # http://bugs.python.org/issue15912
+        try:
+            from importlib import invalidate_caches
+        except ImportError:
+            pass
+        else:
+            invalidate_caches()
+
+        # Remove the source file
+        sourceFile.remove()
+
+        # Import the pyc based version
+        from twisted_removed_helper import module
+        self.addCleanup(sys.modules.pop, 'twisted_removed_helper')
+        self.addCleanup(sys.modules.pop, module.__name__)
+
+        # Generate the warning
+        module.foo()
+
+        # Flush it
+        self.assertEqual(len(self.flushWarnings([module.foo])), 1)
+
+
 
 class FakeWarning(Warning):
     pass
