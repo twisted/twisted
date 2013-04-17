@@ -70,7 +70,7 @@ def assertWrapperExceptionTypes(self, deferred, mainType, reasonTypes):
         trapped on C{deferred}.
 
     @param reasonTypes: A sequence of exception types which will be trapped on
-        the resulting L{mainType} exception instance's C{reasons} sequence.
+        the resulting C{mainType} exception instance's C{reasons} sequence.
 
     @return: A L{Deferred} which fires with the C{mainType} instance
         C{deferred} fails with, or which fails somehow.
@@ -1109,7 +1109,7 @@ class HTTP11ClientProtocolTests(TestCase):
     def test_connectionLostAfterReceivingResponseBeforeRequestGenerationDone(self):
         """
         If response bytes are delivered to L{HTTP11ClientProtocol} before the
-        request completes, calling L{connectionLost} on the protocol will
+        request completes, calling C{connectionLost} on the protocol will
         result in protocol being moved to C{'CONNECTION_LOST'} state.
         """
         request = SlowRequest()
@@ -1568,8 +1568,8 @@ class HTTP11ClientProtocolTests(TestCase):
 
     def test_cancelBeforeResponse(self):
         """
-        The Deferred returned by L{HTTP11ClientProtocol.request} will fire with
-        a L{ResponseNeverReceived} failure containing a L{CancelledError}
+        The L{Deferred} returned by L{HTTP11ClientProtocol.request} will fire
+        with a L{ResponseNeverReceived} failure containing a L{CancelledError}
         exception if the request was cancelled before any response headers were
         received.
         """
@@ -1587,9 +1587,10 @@ class HTTP11ClientProtocolTests(TestCase):
 
     def test_cancelDuringResponse(self):
         """
-        The Deferred returned by L{HTTP11ClientProtocol.request} will fire with
-        a L{ResponseFailed} failure containing a L{CancelledError} exception if
-        the request was cancelled before all response headers were received.
+        The L{Deferred} returned by L{HTTP11ClientProtocol.request} will fire
+        with a L{ResponseFailed} failure containing a L{CancelledError}
+        exception if the request was cancelled before all response headers were
+        received.
         """
         transport = StringTransport()
         abort = []
@@ -1605,10 +1606,10 @@ class HTTP11ClientProtocolTests(TestCase):
 
     def test_cancelDuringBodyProduction(self):
         """
-        The Deferred returned by L{HTTP11ClientProtocol.request} will fire with
-        a L{RequestGenerationFailed} failure containing a L{CancelledError}
-        exception if the request was cancelled before a C{bodyProducer} with an
-        explicit length has finished producing.
+        The L{Deferred} returned by L{HTTP11ClientProtocol.request} will fire
+        with a L{RequestGenerationFailed} failure containing a
+        L{CancelledError} exception if the request was cancelled before a
+        C{bodyProducer} with an explicit length has finished producing.
         """
         transport = StringTransport()
         protocol = HTTP11ClientProtocol()
@@ -1635,10 +1636,10 @@ class HTTP11ClientProtocolTests(TestCase):
 
     def test_cancelDuringChunkedBodyProduction(self):
         """
-        The Deferred returned by L{HTTP11ClientProtocol.request} will fire with
-        a L{RequestGenerationFailed} failure containing a L{CancelledError}
-        exception if the request was cancelled before a C{bodyProducer} with
-        C{UNKNOWN_LENGTH} has finished producing.
+        The L{Deferred} returned by L{HTTP11ClientProtocol.request} will fire
+        with a L{RequestGenerationFailed} failure containing a
+        L{CancelledError} exception if the request was cancelled before a
+        C{bodyProducer} with C{UNKNOWN_LENGTH} has finished producing.
         """
         transport = StringTransport()
         protocol = HTTP11ClientProtocol()
