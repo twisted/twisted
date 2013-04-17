@@ -37,6 +37,21 @@ class TubeTest(TestCase):
         self.assertIdentical(secondPump.tube, self.tube)
 
 
+    def test_pumpStarted(self):
+        """
+        The L{Tube} starts its L{Pump} upon C{flowingFrom}, but only after
+        initializing its C{fount} attribute.
+        """
+        fountValue = []
+        class FountValueRecorder(Pump):
+            def started(self):
+                fountValue.append(self.tube.fount)
+        self.tube.pump = FountValueRecorder()
+        self.assertEquals(fountValue, []) # sanity check
+        self.ff.flowTo(self.tube)
+        self.assertEquals([self.ff], fountValue)
+
+
     def test_flowingFromFirst(self):
         """
         If L{Tube.flowingFrom} is called before L{Tube.flowTo}, the argument to
