@@ -8,25 +8,29 @@ from twisted.protocols.basic import LineOnlyReceiver
 from twisted.protocols.basic import NetstringReceiver
 
 class _Transporter(object):
-    def __init__(self, pump):
-        self.pump = pump
+    def __init__(self, deliver):
+        self.deliver = deliver
 
 
     def write(self, data):
-        self.pump.tube.deliver(data)
+        self.deliver(data)
 
 
     def writeSequence(self, dati):
         for data in dati:
-            self.write(data)
+            self.deliver(data)
 
 
 
 class _StringsToData(Pump):
     def __init__(self, stringReceiverClass, sendMethodName="sendString"):
         self._stringReceiver = stringReceiverClass()
-        self._stringReceiver.makeConnection(_Transporter(self))
         self.received = getattr(self._stringReceiver, sendMethodName)
+
+
+    def started(self):
+        self._stringReceiver.makeConnection(_Transporter(self.tube.deliver))
+
 
 
 
