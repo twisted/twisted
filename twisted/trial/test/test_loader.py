@@ -179,8 +179,10 @@ class FileTest(packages.SysPathManglingTest):
         L{runner.filenameToModule} raises a C{SyntaxError} when a non-Python
         file is passed.
         """
-        self.failUnlessRaises(SyntaxError, runner.filenameToModule,
-                              util.sibpath(__file__, 'notpython'))
+        filename = filepath.FilePath(self.parent).child('notpython')
+        filename.setContent("This isn't python")
+        self.failUnlessRaises(
+            SyntaxError, runner.filenameToModule, filename.path)
 
 
     def test_filenameMatchesPackage(self):
