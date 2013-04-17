@@ -86,12 +86,12 @@ class Tube(object):
         """
         This tube will now have 'receive' called.
         """
-        self.pump.started() # XXX testme
-        ot = fount.outputType
-        it = self.inputType
-        if ot is not None and it is not None and not it.isOrExtends(ot):
+        out = fount.outputType
+        in_ = self.inputType
+        if out is not None and in_ is not None and not in_.isOrExtends(out):
             raise TypeError()
         self.fount = fount
+        self.pump.started()
         return self
 
 
