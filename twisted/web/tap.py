@@ -6,13 +6,14 @@ Support for creating a service which runs a web server.
 """
 
 import os
+import warnings
 
 # Twisted Imports
 from twisted.web import server, static, twcgi, script, demo, distrib, wsgi
-from twisted.internet import interfaces, reactor
+from twisted.internet import interfaces, reactor, endpoints
 from twisted.python import usage, reflect, threadpool
 from twisted.spread import pb
-from twisted.application import internet, service, strports
+from twisted.application import internet, service
 
 
 class Options(usage.Options):
@@ -21,12 +22,16 @@ class Options(usage.Options):
     """
     synopsis = "[web options]"
 
-    optParameters = [["port", "p", None, "strports description of the port to "
-                      "start the server on."],
-                     ["logfile", "l", None, "Path to web CLF (Combined Log Format) log file."],
-                     ["https", None, None, "Port to listen on for Secure HTTP."],
-                     ["certificate", "c", "server.pem", "SSL certificate to use for HTTPS. "],
-                     ["privkey", "k", "server.pem", "SSL certificate to use for HTTPS."],
+    optParameters = [["logfile", "l", None, "Path to web CLF (Combined Log Format) log file."],
+                     ["https", None, None, "Port to listen on for Secure HTTP. "
+                      "DEPRECATED: use "
+                      "'--port ssl:port:privateKey=pkey.pem:certKey=cert.pem'"],
+                     ["certificate", "c", "server.pem", "SSL certificate to use for HTTPS. "
+                      "DEPRECATED: use "
+                      "'--port ssl:port:privateKey=pkey.pem:certKey=cert.pem'"],
+                     ["privkey", "k", "server.pem", "SSL certificate to use for HTTPS. "
+                      "DEPRECATED: use "
+                      "'--port ssl:port:privateKey=pkey.pem:certKey=cert.pem'"],
                      ]
 
     optFlags = [["personal", "",
@@ -52,6 +57,29 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         usage.Options.__init__(self)
         self['indexes'] = []
         self['root'] = None
+        self.endpoints = []
+
+
+    def addEndpoint(self, description, privateKey=None, certificate=None):
+        """
+        Add an endpoint according to the description
+        """
+        self.endpoints.append(
+            _toEndpoint(description, privateKey=privateKey, certificate=certificate))
+
+
+    def opt_port(self, description):
+        """
+        Add a specified endpoint. You can add multiple endpoints by specifying
+        multiple --port options. For backwards compatibility, a bare TCP port number
+        can be specified, but this is deprecated.
+        [TCP Example: tcp:port]
+        [SSL Example: ssl:port:privateKey=mycert.pem]
+        The default value is: '--port tcp:8080'
+        """
+        self.addEndpoint(description)
+
+    opt_p = opt_port
 
 
     def opt_index(self, indexName):
@@ -169,18 +197,42 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         If no server port was supplied, select a default appropriate for the
         other options supplied.
         """
-        if self['https']:
-            try:
-                from twisted.internet.ssl import DefaultOpenSSLContextFactory
-            except ImportError:
-                raise usage.UsageError("SSL support not installed")
-        if self['port'] is None:
-            if self['personal']:
+        if self['personal']:
+            if not self.endpoints:
                 path = os.path.expanduser(
                     os.path.join('~', distrib.UserDirectory.userSocketName))
-                self['port'] = 'unix:' + path
-            else:
-                self['port'] = 'tcp:8080'
+                self.addEndpoint('unix:' + path)
+        else:
+            if not self.endpoints:
+                self.addEndpoint('tcp:8080')
+            if self['https']:
+                try:
+                    from twisted.internet.ssl import DefaultOpenSSLContextFactory
+                except ImportError:
+                    raise usage.UsageError("SSL support not installed")
+                self.addEndpoint(self['https'], privateKey=self['privkey'], certificate=self['certificate'])
+
+
+
+def _toEndpoint(description, privateKey=None, certificate=None):
+    """
+    Tries to guess whether a description is a bare TCP port or a endpoint.  If a
+    bare port is specified and a certificate file is present, returns an
+    SSL4ServerEndpoint and otherwise returns a TCP4ServerEndpoint.
+    """
+    try:
+        port = int(description)
+    except ValueError:
+        return endpoints.serverFromString(reactor, description)
+    warnings.warn(
+        "Specifying plain ports and/or a certificate is deprecated since "
+        "Twisted 11.0; use endpoint descriptions instead.",
+        category=DeprecationWarning, stacklevel=3)
+    if certificate:
+        from twisted.internet.ssl import DefaultOpenSSLContextFactory
+        ctx = DefaultOpenSSLContextFactory(privateKey, certificate)
+        return endpoints.SSL4ServerEndpoint(reactor, port, ctx)
+    return endpoints.TCP4ServerEndpoint(reactor, port)
 
 
 
@@ -217,16 +269,12 @@ def makeService(config):
     site.displayTracebacks = not config["notracebacks"]
 
     if config['personal']:
-        personal = strports.service(
-            config['port'], makePersonalServerFactory(site))
-        personal.setServiceParent(s)
+        siteFactory = makePersonalServerFactory(site)
     else:
-        if config['https']:
-            from twisted.internet.ssl import DefaultOpenSSLContextFactory
-            i = internet.SSLServer(int(config['https']), site,
-                          DefaultOpenSSLContextFactory(config['privkey'],
-                                                       config['certificate']))
-            i.setServiceParent(s)
-        strports.service(config['port'], site).setServiceParent(s)
+        siteFactory = site
+    for endpoint in config.endpoints:
+        svc = internet.StreamServerEndpointService(endpoint, siteFactory)
+        svc._raiseSynchronously = True
+        svc.setServiceParent(s)
 
     return s

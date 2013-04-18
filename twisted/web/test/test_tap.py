@@ -10,10 +10,9 @@ import os, stat
 from twisted.python.usage import UsageError
 from twisted.python.filepath import FilePath
 from twisted.internet.interfaces import IReactorUNIX
-from twisted.internet import reactor
+from twisted.internet import reactor, endpoints, defer
 from twisted.python.threadpool import ThreadPool
 from twisted.trial.unittest import TestCase
-from twisted.application import strports
 
 from twisted.web.server import Site
 from twisted.web.static import Data, File
@@ -27,6 +26,16 @@ from twisted.web.script import PythonScript
 from twisted.spread.pb import PBServerFactory
 
 application = object()
+
+class SpyEndpoint(object):
+    """
+    SpyEndpoint remembers what factory it is told to listen with.
+    """
+    listeningWith = None
+    def listen(self, factory):
+        self.listeningWith = factory
+        return defer.succeed(None)
+
 
 class ServiceTests(TestCase):
     """
@@ -110,6 +119,34 @@ class ServiceTests(TestCase):
         self.assertIdentical(serverFactory.root.site, site)
 
 
+    def test_dscMultipleEndpoints(self):
+        """
+        If one or more endpoints is included in the configuration passed to
+        L{makeService}, a service for starting a server is constructed
+        for each of them and attached to the returned service.
+        """
+        cleartext = SpyEndpoint()
+        secure = SpyEndpoint()
+        config = Options()
+        config.endpoints = [cleartext, secure]
+        service = makeService(config)
+        service.privilegedStartService()
+        service.startService()
+        self.addCleanup(service.stopService)
+        self.assertIsInstance(cleartext.listeningWith, Site)
+        self.assertIsInstance(secure.listeningWith, Site)
+
+
+    def test_dscBarePort(self):
+        """
+        For backwards compatibility, the I{--port} option supports the deprecated
+        bare port option like '--port 8080'.
+        """
+        options = Options()
+        options.parseOptions(['--port', '8080'])
+        self.assertEqual(options.endpoints[0]._port, 8080)
+
+
     def test_personalServer(self):
         """
         The I{--personal} option to L{makeService} causes it to return a
@@ -140,9 +177,7 @@ class ServiceTests(TestCase):
         options.parseOptions(['--personal'])
         path = os.path.expanduser(
             os.path.join('~', UserDirectory.userSocketName))
-        self.assertEqual(
-            strports.parse(options['port'], None)[:2],
-            ('UNIX', (path, None)))
+        self.assertEqual(options.endpoints[0]._address, path)
 
     if not IReactorUNIX.providedBy(reactor):
         test_defaultPersonalPath.skip = (
@@ -156,9 +191,7 @@ class ServiceTests(TestCase):
         """
         options = Options()
         options.parseOptions([])
-        self.assertEqual(
-            strports.parse(options['port'], None)[:2],
-            ('TCP', (8080, None)))
+        self.assertEqual(options.endpoints[0]._port, 8080)
 
 
     def test_wsgi(self):
