@@ -688,36 +688,6 @@ class NetstringReceiverTestCase(unittest.SynchronousTestCase, LPTestCaseMixin):
         self.assertRaises(NotImplementedError, proto.stringReceived, 'foo')
 
 
-    def test_deprecatedModuleAttributes(self):
-        """
-        Accessing one of the old module attributes used by the
-        NetstringReceiver parser emits a deprecation warning.
-        """
-        basic.LENGTH, basic.DATA, basic.COMMA, basic.NUMBER
-        warnings = self.flushWarnings(
-            offendingFunctions=[self.test_deprecatedModuleAttributes])
-
-        self.assertEqual(len(warnings), 4)
-        for warning in warnings:
-            self.assertEqual(warning['category'], DeprecationWarning)
-        self.assertEqual(
-            warnings[0]['message'],
-            ("twisted.protocols.basic.LENGTH was deprecated in Twisted 10.2.0: "
-             "NetstringReceiver parser state is private."))
-        self.assertEqual(
-            warnings[1]['message'],
-            ("twisted.protocols.basic.DATA was deprecated in Twisted 10.2.0: "
-             "NetstringReceiver parser state is private."))
-        self.assertEqual(
-            warnings[2]['message'],
-            ("twisted.protocols.basic.COMMA was deprecated in Twisted 10.2.0: "
-             "NetstringReceiver parser state is private."))
-        self.assertEqual(
-            warnings[3]['message'],
-            ("twisted.protocols.basic.NUMBER was deprecated in Twisted 10.2.0: "
-             "NetstringReceiver parser state is private."))
-
-
 
 class IntNTestCaseMixin(LPTestCaseMixin):
     """

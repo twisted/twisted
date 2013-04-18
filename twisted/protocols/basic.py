@@ -39,16 +39,6 @@ Convert some C{bytes} into netstring format.
 
 
 
-LENGTH, DATA, COMMA = range(3)
-NUMBER = re.compile(b'(\d*)(:?)')
-
-deprecatedSince = versions.Version("Twisted", 10, 2, 0)
-message = "NetstringReceiver parser state is private."
-for attr in ["LENGTH", "DATA", "COMMA", "NUMBER"]:
-    deprecate.deprecatedModuleAttribute(
-        deprecatedSince, message, __name__, attr)
-del deprecatedSince, message, attr
-
 DEBUG = 0
 
 class NetstringParseError(ValueError):
