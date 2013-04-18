@@ -609,10 +609,10 @@ def _urljoin(base, url):
     @param base: Base URL.
 
     @type url: C{bytes}
-    @param url: URL to combine with L{base}.
+    @param url: URL to combine with C{base}.
 
-    @return: An absolute URL resulting from the combination of L{base} and
-        L{url}.
+    @return: An absolute URL resulting from the combination of C{base} and
+        C{url}.
 
     @see: L{urlparse.urljoin}
 
