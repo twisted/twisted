@@ -534,7 +534,7 @@ class Options(dict):
                 longdesc = ''
 
         if longdesc:
-            longdesc = ('\n' + longdesc.strip() + '\n')
+            longdesc = '\n' + longdesc.strip() + '\n'
 
         if optDicts:
             chunks = docMakeChunks(optDicts, width)

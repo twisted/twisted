@@ -1,4 +1,3 @@
-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -348,6 +347,12 @@ class SubCommandTest(unittest.TestCase):
         self.failUnlessIdentical(oBar.subOptions.parent, oBar)
 
 
+class GetUsageOptions(usage.Options):
+    longdesc = ("\nA test documentation string.\n"
+                "This line has more than 80 characters-"
+                "PADDINGXXPADDINGXXPADDINGXXPADDINGXXPADDINGXXPADDINGXX\n")
+
+
 class HelpStringTest(unittest.TestCase):
     def setUp(self):
         """
@@ -378,6 +383,14 @@ class HelpStringTest(unittest.TestCase):
         lines = [s for s in str(self.nice).splitlines() if s.find("aflag")>=0]
         self.failUnless(len(lines) > 0)
         self.failUnless(lines[0].find("flagallicious") >= 0)
+
+    def test_longdescNotWrapped(self):
+        """
+        getUsage does not wrap lines in longdesc.
+        """
+        opt = GetUsageOptions()
+        opt.getUsage(width=80)
+        self.assertTrue(len(opt.longdesc.splitlines()[2]) > 80)
 
 
 class PortCoerceTestCase(unittest.TestCase):
@@ -583,21 +596,3 @@ class CompleterNotImplementedTestCase(unittest.TestCase):
                 action = cls(None)
             self.assertRaises(NotImplementedError, action._shellCode,
                               None, "bad_shell_type")
-
-class GetUsageOptions(usage.Options):
-    longdesc = """
-A test documentation string. 
-This line has more than 80 characters-PADDINGXXPADDINGXXPADDINGXXPADDINGXXPADDINGXXPADDINGXX
-""" 
-
-class GetUsageTestCase(unittest.TestCase):
-    """
-    Test Options.getUsage for proper output.
-    """
-    def test_longdescNotWrapped(self):
-        """
-        Check that lines in longdesc are not wrapped.
-        """
-        opt = GetUsageOptions()
-        opt.getUsage(width=80)
-        self.assertGreater(len(opt.longdesc.splitlines()[2]), 80)
