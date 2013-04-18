@@ -130,7 +130,7 @@ process know we are done writing to it.</p>
         self.transport.closeStdin()
 </pre>
 
-<p>At this point, the process has receieved the data, and it's time for us
+<p>At this point, the process has received the data, and it's time for us
 to read the results. Instead of being received in <code>dataReceived</code>,
 data from standard output is received in <code>outReceived</code>. This is
 to distinguish it from data on standard error.</p>
@@ -387,7 +387,7 @@ childFDs = { 0: "w", 1: "r", 2: "r" , 4: "w"}
 <h3>ProcessProtocols with extra file descriptors</h3>
 
 <p>When you provide a <q>childFDs</q> dictionary with more than the normal
-three fds, you need addtional methods to access those pipes. These methods
+three fds, you need additional methods to access those pipes. These methods
 are more generalized than the <code>.outReceived</code> ones described above.
 In fact, those methods (<code>outReceived</code> and 
  <code>errReceived</code>) are actually just wrappers left in for
@@ -500,7 +500,7 @@ more convenient.</p>
 
 <p>The stderr mapping (<q>2:2</q>) used will cause any GPG errors to be
 emitted by the parent program, just as if those errors had caused in the
-parent itself. This is sometimes desireable (it roughly corresponds to
+parent itself. This is sometimes desirable (it roughly corresponds to
 letting exceptions propagate upwards), especially if you do not expect to
 encounter errors in the child process and want them to be more visible to
 the end user. The alternative is to map stderr to a read-pipe and handle any
