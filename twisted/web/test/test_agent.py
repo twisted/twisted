@@ -2115,6 +2115,7 @@ class _RedirectAgentTestsMixin(object):
         """
         # XXX: If we had a way to get the final absolute URI from a request we
         # wouldn't need to do this.
+        # <https://twistedmatrix.com/trac/ticket/5435>
         def _resolveLocation(requestURI, location):
             self._redirectedURI = _originalResolveLocation(
                 requestURI, location)
