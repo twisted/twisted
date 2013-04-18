@@ -1932,17 +1932,15 @@ class _RedirectAgentTestsMixin(object):
         res.callback(response)
 
         self.assertEqual(0, len(self.protocol.requests))
-
-        def checkResponse(result):
-            self.assertIdentical(result, response)
-
-        return deferred.addCallback(checkResponse)
+        self.assertIdentical(response, self.successResultOf(deferred))
 
 
     def _testRedirectDefault(self, code):
         """
         When getting a redirect, L{RedirectAgent} follows the URL specified in
         the L{Location} header field and make a new request.
+
+        @param code: HTTP status code.
         """
         self.agent.request('GET', 'http://example.com/foo')
 
@@ -1987,10 +1985,14 @@ class _RedirectAgentTestsMixin(object):
         self._testRedirectDefault(307)
 
 
-    def _testRedirectToGet(self, status, method):
+    def _testRedirectToGet(self, code, method):
         """
         L{RedirectAgent} changes the methods to I{GET} when getting a redirect
         on a non-I{GET} request.
+
+        @param code: HTTP status code.
+
+        @param method: HTTP request method.
         """
         self.agent.request(method, 'http://example.com/foo')
 
@@ -1998,7 +2000,7 @@ class _RedirectAgentTestsMixin(object):
 
         headers = http_headers.Headers(
             {'location': ['http://example.com/bar']})
-        response = Response(('HTTP', 1, 1), status, 'OK', headers, None)
+        response = Response(('HTTP', 1, 1), code, 'OK', headers, None)
         res.callback(response)
 
         req2, res2 = self.protocol.requests.pop()
@@ -2028,15 +2030,11 @@ class _RedirectAgentTestsMixin(object):
         response = Response(('HTTP', 1, 1), 301, 'OK', headers, None)
         res.callback(response)
 
-        self.assertFailure(deferred, client.ResponseFailed)
-
-        def checkFailure(fail):
-            fail.reasons[0].trap(error.RedirectWithNoLocation)
-            self.assertEqual('http://example.com/foo',
-                             fail.reasons[0].value.uri)
-            self.assertEqual(301, fail.response.code)
-
-        return deferred.addCallback(checkFailure)
+        fail = self.failureResultOf(deferred, client.ResponseFailed)
+        fail.value.reasons[0].trap(error.RedirectWithNoLocation)
+        self.assertEqual('http://example.com/foo',
+                         fail.value.reasons[0].value.uri)
+        self.assertEqual(301, fail.value.response.code)
 
 
     def _testPageRedirectFailure(self, code, method):
@@ -2044,6 +2042,10 @@ class _RedirectAgentTestsMixin(object):
         When getting a redirect on an unsupported request method,
         L{RedirectAgent} fails with a L{ResponseFailed} error wrapping
         a L{error.PageRedirect} exception.
+
+        @param code: HTTP status code.
+
+        @param method: HTTP request method.
         """
         deferred = self.agent.request(method, 'http://example.com/foo')
 
@@ -2053,15 +2055,11 @@ class _RedirectAgentTestsMixin(object):
         response = Response(('HTTP', 1, 1), code, 'OK', headers, None)
         res.callback(response)
 
-        self.assertFailure(deferred, client.ResponseFailed)
-
-        def checkFailure(fail):
-            fail.reasons[0].trap(error.PageRedirect)
-            self.assertEqual('http://example.com/foo',
-                             fail.reasons[0].value.location)
-            self.assertEqual(code, fail.response.code)
-
-        return deferred.addCallback(checkFailure)
+        fail = self.failureResultOf(deferred, client.ResponseFailed)
+        fail.value.reasons[0].trap(error.PageRedirect)
+        self.assertEqual('http://example.com/foo',
+                         fail.value.reasons[0].value.location)
+        self.assertEqual(code, fail.value.response.code)
 
 
     def test_307OnPost(self):
@@ -2070,7 +2068,7 @@ class _RedirectAgentTestsMixin(object):
         fails with a L{ResponseFailed} error wrapping a L{error.PageRedirect}
         exception.
         """
-        return self._testPageRedirectFailure(307, 'POST')
+        self._testPageRedirectFailure(307, 'POST')
 
 
     def test_redirectLimit(self):
@@ -2096,21 +2094,24 @@ class _RedirectAgentTestsMixin(object):
         response2 = Response(('HTTP', 1, 1), 302, 'OK', headers, None)
         res2.callback(response2)
 
-        self.assertFailure(deferred, client.ResponseFailed)
+        fail = self.failureResultOf(deferred, client.ResponseFailed)
 
-        def checkFailure(fail):
-            fail.reasons[0].trap(error.InfiniteRedirection)
-            self.assertEqual('http://example.com/foo',
-                             fail.reasons[0].value.location)
-            self.assertEqual(302, fail.response.code)
-
-        return deferred.addCallback(checkFailure)
+        fail.value.reasons[0].trap(error.InfiniteRedirection)
+        self.assertEqual('http://example.com/foo',
+                         fail.value.reasons[0].value.location)
+        self.assertEqual(302, fail.value.response.code)
 
 
     def _testRedirectURI(self, uri, location, finalURI):
         """
         When L{client.RedirectAgent} encounters a relative redirect I{URI}, it
         is resolved against the request I{URI} before following the redirect.
+
+        @param uri: Request URI.
+
+        @param location: I{Location} header redirect URI.
+
+        @param finalURI: Expected final URI.
         """
         # XXX: If we had a way to get the final absolute URI from a request we
         # wouldn't need to do this.
@@ -2198,7 +2199,7 @@ class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin,
         fails with a L{ResponseFailed} error wrapping a L{error.PageRedirect}
         exception.
         """
-        return self._testPageRedirectFailure(301, 'POST')
+        self._testPageRedirectFailure(301, 'POST')
 
 
     def test_302OnPost(self):
@@ -2207,7 +2208,7 @@ class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin,
         fails with a L{ResponseFailed} error wrapping a L{error.PageRedirect}
         exception.
         """
-        return self._testPageRedirectFailure(302, 'POST')
+        self._testPageRedirectFailure(302, 'POST')
 
 
 

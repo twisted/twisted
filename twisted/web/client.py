@@ -597,13 +597,22 @@ def _parse(url, defaultPort=None):
 
 def _urljoin(base, url):
     """
-    Construct a full ("absolute") URL by combining a "base URL" (base) with
-    another URL (url). Informally, this uses components of the base URL, in
-    particular the addressing scheme, the network location and (part of) the
-    path, to provide missing components in the relative URL.
+    Construct a full ("absolute") URL by combining a "base URL" with another
+    URL. Informally, this uses components of the base URL, in particular the
+    addressing scheme, the network location and (part of) the path, to provide
+    missing components in the relative URL.
 
     Additionally, the fragment identifier is preserved according to the HTTP
     1.1 bis draft.
+
+    @type base: C{bytes}
+    @param base: Base URL.
+
+    @type url: C{bytes}
+    @param url: URL to combine with L{base}.
+
+    @return: An absolute URL resulting from the combination of L{base} and
+        L{url}.
 
     @see: L{urlparse.urljoin}
 
@@ -611,7 +620,7 @@ def _urljoin(base, url):
     """
     base, baseFrag = urldefrag(base)
     url, urlFrag = urldefrag(urljoin(base, url))
-    return urljoin(url, '#' + (urlFrag or baseFrag))
+    return urljoin(url, b'#' + (urlFrag or baseFrag))
 
 
 
