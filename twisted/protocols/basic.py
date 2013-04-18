@@ -20,7 +20,7 @@ from zope.interface import implementer
 # Twisted imports
 from twisted.python.compat import _PY3
 from twisted.internet import protocol, defer, interfaces, error
-from twisted.python import log, deprecate, versions
+from twisted.python import log
 
 
 # Unfortunately we cannot use regular string formatting on Python 3; see
