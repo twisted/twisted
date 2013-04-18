@@ -459,6 +459,15 @@ if __name__ == "__main__":
     main()
 </pre>
 
+    <p>
+      In contrast, <code
+      class="API">twisted.web.client.BrowserLikeRedirectAgent</code> implements
+      more lenient behaviour that closely emulates what web browsers do; in
+      other words 301 and 302 <code>POST</code> redirects are treated like 303,
+      meaning the method is changed to <code>GET</code> before making the redirect
+      request.
+    </p>
+
     <h3>Using a HTTP proxy</h3>
 
     <p>
