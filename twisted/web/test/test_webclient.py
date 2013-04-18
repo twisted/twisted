@@ -278,13 +278,13 @@ class URLJoinTests(unittest.TestCase):
         identifier.
         """
         self.assertEquals(
-            client._urljoin('http://foo.com/bar', '/quux'),
+            client._urljoin(b'http://foo.com/bar', b'/quux'),
             b'http://foo.com/quux')
         self.assertEquals(
-            client._urljoin('http://foo.com/bar#', '/quux'),
+            client._urljoin(b'http://foo.com/bar#', b'/quux'),
             b'http://foo.com/quux')
         self.assertEquals(
-            client._urljoin('http://foo.com/bar', '/quux#'),
+            client._urljoin(b'http://foo.com/bar', b'/quux#'),
             b'http://foo.com/quux')
 
 
@@ -297,13 +297,13 @@ class URLJoinTests(unittest.TestCase):
         @see: U{https://tools.ietf.org/html/draft-ietf-httpbis-p2-semantics-22#section-7.1.2}
         """
         self.assertEquals(
-            client._urljoin('http://foo.com/bar#frag', '/quux'),
+            client._urljoin(b'http://foo.com/bar#frag', b'/quux'),
             b'http://foo.com/quux#frag')
         self.assertEquals(
-            client._urljoin('http://foo.com/bar', '/quux#frag2'),
+            client._urljoin(b'http://foo.com/bar', b'/quux#frag2'),
             b'http://foo.com/quux#frag2')
         self.assertEquals(
-            client._urljoin('http://foo.com/bar#frag', '/quux#frag2'),
+            client._urljoin(b'http://foo.com/bar#frag', b'/quux#frag2'),
             b'http://foo.com/quux#frag2')
 
 
