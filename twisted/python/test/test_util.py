@@ -101,20 +101,15 @@ class NameToLabelTests(unittest.TestCase):
         Test the various kinds of inputs L{nameToLabel} supports.
         """
         nameData = [
+            ('', ''),
             ('f', 'F'),
             ('fo', 'Fo'),
             ('foo', 'Foo'),
-            ('F', 'F'),
-            ('FO', 'FO'),
-            ('FOO', 'FOO'),
             ('fooBar', 'Foo Bar'),
             ('fooBarBaz', 'Foo Bar Baz'),
-            ('FooBar', 'Foo Bar'),
-            ('FooBarBaz', 'Foo Bar Baz'),
-            ('FOObar', 'FOO Bar'),
-            ('fooBAR', 'Foo BAR'),
-            ('rmswaveRMSWAVErmswaveRMSWAVE', 'Rmswave RMSWAVE Rmswave RMSWAVE'),
-            ]
+            ('aCRoNym', 'A C Ro Nym'),
+            ('FF', ' FF'),
+        ]
         for inp, out in nameData:
             got = util.nameToLabel(inp)
             self.assertEqual(
