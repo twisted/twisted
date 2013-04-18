@@ -20,7 +20,7 @@ from zope.interface import implementer
 # Twisted imports
 from twisted.python.compat import _PY3
 from twisted.internet import protocol, defer, interfaces, error
-from twisted.python import log, deprecate, versions
+from twisted.python import log
 
 
 # Unfortunately we cannot use regular string formatting on Python 3; see
@@ -38,16 +38,6 @@ Convert some C{bytes} into netstring format.
 """
 
 
-
-LENGTH, DATA, COMMA = range(3)
-NUMBER = re.compile(b'(\d*)(:?)')
-
-deprecatedSince = versions.Version("Twisted", 10, 2, 0)
-message = "NetstringReceiver parser state is private."
-for attr in ["LENGTH", "DATA", "COMMA", "NUMBER"]:
-    deprecate.deprecatedModuleAttribute(
-        deprecatedSince, message, __name__, attr)
-del deprecatedSince, message, attr
 
 DEBUG = 0
 
