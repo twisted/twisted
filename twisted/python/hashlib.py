@@ -3,7 +3,7 @@
 # See LICENSE for details.
 
 """
-Deprecated in Twisted 12.3.1; please use hashlib from stdlib instead.
+Deprecated in Twisted 13.1.0; please use hashlib from stdlib instead.
 
 L{twisted.python.hashlib} presents a subset of the interface provided by
 U{hashlib<http://docs.python.org/library/hashlib.html>}.  The subset is the
@@ -19,5 +19,5 @@ __all__ = ["md5", "sha1"]
 
 warnings.warn(
     "twisted.python.hashlib was deprecated in "
-    "Twisted 12.3.1: Please use hashlib from stdlib.",
+    "Twisted 13.1.0: Please use hashlib from stdlib.",
     DeprecationWarning, stacklevel=2)

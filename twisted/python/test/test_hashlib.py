@@ -24,7 +24,7 @@ class HashObjectTests(TestCase):
         self.assertEqual(len(warnings), 1)
         self.assertEqual(warnings[0]['message'],
                 "twisted.python.hashlib was deprecated in "
-                "Twisted 12.3.1: Please use hashlib from stdlib.")
+                "Twisted 13.1.0: Please use hashlib from stdlib.")
 
 
     def test_md5(self):
@@ -69,7 +69,7 @@ class HashObjectTests(TestCase):
         # Instances of it should have a digest_size attribute
         self.assertEqual(md5().digest_size, 16)
     test_md5.suppress = [util.suppress(message="twisted.python.hashlib"
-          "was deprecated in Twisted 12.3.1: Please use hashlib from stdlib.")]
+          "was deprecated in Twisted 13.1.0: Please use hashlib from stdlib.")]
 
 
     def test_sha1(self):
@@ -109,4 +109,4 @@ class HashObjectTests(TestCase):
         self.assertEqual(
             sha1().digest_size, 20)
     test_sha1.suppress = [util.suppress(message="twisted.python.hashlib"
-          "was deprecated in Twisted 12.3.1: Please use hashlib from stdlib.")]
+          "was deprecated in Twisted 13.1.0: Please use hashlib from stdlib.")]
