@@ -1937,8 +1937,8 @@ class _RedirectAgentTestsMixin(object):
 
     def _testRedirectDefault(self, code):
         """
-        When getting a redirect, L{RedirectAgent} follows the URL specified in
-        the L{Location} header field and make a new request.
+        When getting a redirect, L{client.RedirectAgent} follows the URL
+        specified in the L{Location} header field and make a new request.
 
         @param code: HTTP status code.
         """
@@ -1966,29 +1966,29 @@ class _RedirectAgentTestsMixin(object):
 
     def test_redirect301(self):
         """
-        L{RedirectAgent} follows redirects on status code 301.
+        L{client.RedirectAgent} follows redirects on status code 301.
         """
         self._testRedirectDefault(301)
 
 
     def test_redirect302(self):
         """
-        L{RedirectAgent} follows redirects on status code 302.
+        L{client.RedirectAgent} follows redirects on status code 302.
         """
         self._testRedirectDefault(302)
 
 
     def test_redirect307(self):
         """
-        L{RedirectAgent} follows redirects on status code 307.
+        L{client.RedirectAgent} follows redirects on status code 307.
         """
         self._testRedirectDefault(307)
 
 
     def _testRedirectToGet(self, code, method):
         """
-        L{RedirectAgent} changes the methods to I{GET} when getting a redirect
-        on a non-I{GET} request.
+        L{client.RedirectAgent} changes the method to I{GET} when getting
+        a redirect on a non-I{GET} request.
 
         @param code: HTTP status code.
 
@@ -2010,7 +2010,7 @@ class _RedirectAgentTestsMixin(object):
 
     def test_redirect303(self):
         """
-        L{RedirectAgent} changes the methods to I{GET} when getting a 303
+        L{client.RedirectAgent} changes the method to I{GET} when getting a 303
         redirect on a I{POST} request.
         """
         self._testRedirectToGet(303, 'POST')
@@ -2019,7 +2019,7 @@ class _RedirectAgentTestsMixin(object):
     def test_noLocationField(self):
         """
         If no L{Location} header field is found when getting a redirect,
-        L{RedirectAgent} fails with a L{ResponseFailed} error wrapping a
+        L{client.RedirectAgent} fails with a L{ResponseFailed} error wrapping a
         L{error.RedirectWithNoLocation} exception.
         """
         deferred = self.agent.request('GET', 'http://example.com/foo')
@@ -2040,7 +2040,7 @@ class _RedirectAgentTestsMixin(object):
     def _testPageRedirectFailure(self, code, method):
         """
         When getting a redirect on an unsupported request method,
-        L{RedirectAgent} fails with a L{ResponseFailed} error wrapping
+        L{client.RedirectAgent} fails with a L{ResponseFailed} error wrapping
         a L{error.PageRedirect} exception.
 
         @param code: HTTP status code.
@@ -2064,18 +2064,18 @@ class _RedirectAgentTestsMixin(object):
 
     def test_307OnPost(self):
         """
-        When getting a 307 redirect on a C{POST} request, L{RedirectAgent}
-        fails with a L{ResponseFailed} error wrapping a L{error.PageRedirect}
-        exception.
+        When getting a 307 redirect on a C{POST} request,
+        L{client.RedirectAgent} fails with a L{ResponseFailed} error wrapping
+        a L{error.PageRedirect} exception.
         """
         self._testPageRedirectFailure(307, 'POST')
 
 
     def test_redirectLimit(self):
         """
-        If the limit of redirects specified to L{RedirectAgent} is reached, the
-        deferred fires with L{ResponseFailed} error wrapping a
-        L{InfiniteRedirection} exception.
+        If the limit of redirects specified to L{client.RedirectAgent} is
+        reached, the deferred fires with L{ResponseFailed} error wrapping
+        a L{InfiniteRedirection} exception.
         """
         agent = self.buildAgentForWrapperTest(self.reactor)
         redirectAgent = client.RedirectAgent(agent, 1)
@@ -2116,11 +2116,12 @@ class _RedirectAgentTestsMixin(object):
         # XXX: If we had a way to get the final absolute URI from a request we
         # wouldn't need to do this.
         def _resolveLocation(requestURI, location):
-            self._redirectedURI = _origialResolveLocation(requestURI, location)
+            self._redirectedURI = _originalResolveLocation(
+                requestURI, location)
             return self._redirectedURI
 
         self._redirectedURI = None
-        _origialResolveLocation = self.agent._resolveLocation
+        _originalResolveLocation = self.agent._resolveLocation
         self.patch(self.agent, '_resolveLocation', _resolveLocation)
 
         self.agent.request('GET', uri)
@@ -2158,6 +2159,8 @@ class _RedirectAgentTestsMixin(object):
         L{client.RedirectAgent} resolves and follows relative I{URI}s in
         redirects, preserving fragments in way that complies with the HTTP 1.1
         bis draft.
+
+        @see: U{https://tools.ietf.org/html/draft-ietf-httpbis-p2-semantics-22#section-7.1.2}
         """
         self._testRedirectURI(
             'http://example.com/foo/bar#frag', '/baz?a',
@@ -2195,18 +2198,18 @@ class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin,
 
     def test_301OnPost(self):
         """
-        When getting a 301 redirect on a C{POST} request, L{RedirectAgent}
-        fails with a L{ResponseFailed} error wrapping a L{error.PageRedirect}
-        exception.
+        When getting a 301 redirect on a C{POST} request,
+        L{client.RedirectAgent} fails with a L{ResponseFailed} error wrapping
+        a L{error.PageRedirect} exception.
         """
         self._testPageRedirectFailure(301, 'POST')
 
 
     def test_302OnPost(self):
         """
-        When getting a 302 redirect on a C{POST} request, L{RedirectAgent}
-        fails with a L{ResponseFailed} error wrapping a L{error.PageRedirect}
-        exception.
+        When getting a 302 redirect on a C{POST} request,
+        L{client.RedirectAgent} fails with a L{ResponseFailed} error wrapping
+        a L{error.PageRedirect} exception.
         """
         self._testPageRedirectFailure(302, 'POST')
 
@@ -2226,15 +2229,15 @@ class BrowserLikeRedirectAgentTests(unittest.TestCase,
 
     def test_redirectToGet301(self):
         """
-        L{RedirectAgent} changes the methods to I{GET} when getting a 302
-        redirect on a I{POST} request.
+        L{client.BrowserLikeRedirectAgent} changes the method to I{GET} when
+        getting a 302 redirect on a I{POST} request.
         """
         self._testRedirectToGet(301, 'POST')
 
 
     def test_redirectToGet302(self):
         """
-        L{RedirectAgent} changes the methods to I{GET} when getting a 302
-        redirect on a I{POST} request.
+        L{client.BrowserLikeRedirectAgent} changes the method to I{GET} when
+        getting a 302 redirect on a I{POST} request.
         """
         self._testRedirectToGet(302, 'POST')
