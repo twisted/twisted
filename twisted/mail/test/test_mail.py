@@ -13,6 +13,7 @@ import StringIO
 import rfc822
 import tempfile
 import signal
+from hashlib import md5
 
 from zope.interface.verify import verifyClass
 from zope.interface import Interface, implements
@@ -32,7 +33,6 @@ from twisted.internet.error import ProcessDone, ProcessTerminated
 from twisted.internet import address
 from twisted.python import failure
 from twisted.python.filepath import FilePath
-from twisted.python.hashlib import md5
 
 from twisted import mail
 import twisted.mail.mail

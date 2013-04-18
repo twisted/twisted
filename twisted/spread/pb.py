@@ -29,12 +29,12 @@ To get started, begin with L{PBClientFactory} and L{PBServerFactory}.
 
 import random
 import types
+from hashlib import md5
 
 from zope.interface import implements, Interface
 
 # Twisted Imports
 from twisted.python import log, failure, reflect
-from twisted.python.hashlib import md5
 from twisted.internet import defer, protocol
 from twisted.cred.portal import Portal
 from twisted.cred.credentials import IAnonymous, ICredentials

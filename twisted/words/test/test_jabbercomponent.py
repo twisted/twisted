@@ -4,9 +4,9 @@
 """
 Tests for L{twisted.words.protocols.jabber.component}
 """
+from hashlib import sha1
 
 from twisted.python import failure
-from twisted.python.hashlib import sha1
 from twisted.trial import unittest
 from twisted.words.protocols.jabber import component, xmlstream
 from twisted.words.protocols.jabber.jid import JID

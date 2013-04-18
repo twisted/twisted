@@ -7,7 +7,7 @@
 from zope.interface import implements, Interface
 
 import hmac, time, random
-from twisted.python.hashlib import md5
+from hashlib import md5
 from twisted.python.randbytes import secureRandom
 from twisted.cred._digest import calcResponse, calcHA1, calcHA2
 from twisted.cred import error

@@ -9,9 +9,9 @@ import os
 import sys
 
 import unittest as pyunit
+from hashlib import md5
 
 from twisted.python import util, filepath
-from twisted.python.hashlib import md5
 from twisted.trial.test import packages
 from twisted.trial import runner, reporter, unittest
 from twisted.trial.itrial import ITestCase

@@ -11,12 +11,12 @@ doing authentication on either client or server side, and working with XML
 Stanzas.
 """
 
+from hashlib import sha1
 from zope.interface import directlyProvides, implements
 
 from twisted.internet import defer, protocol
 from twisted.internet.error import ConnectionLost
 from twisted.python import failure, log, randbytes
-from twisted.python.hashlib import sha1
 from twisted.words.protocols.jabber import error, ijabber, jid
 from twisted.words.xish import domish, xmlstream
 from twisted.words.xish.xmlstream import STREAM_CONNECTED_EVENT

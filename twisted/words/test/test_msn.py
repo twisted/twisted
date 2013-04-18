@@ -7,6 +7,7 @@ Test cases for L{twisted.words.protocols.msn}.
 
 # System imports
 import StringIO
+from hashlib import md5
 
 # Twisted imports
 
@@ -24,7 +25,6 @@ else:
     from twisted.words.protocols import msn
 
 
-from twisted.python.hashlib import md5
 from twisted.protocols import loopback
 from twisted.internet.defer import Deferred
 from twisted.trial import unittest

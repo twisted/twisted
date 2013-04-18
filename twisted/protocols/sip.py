@@ -16,13 +16,13 @@ See L{twisted.cred.credentials} and L{twisted.cred._digest} for its new home.
 
 # system imports
 import socket, time, sys, random, warnings
+from hashlib import md5
 from zope.interface import implements, Interface
 
 # twisted imports
 from twisted.python import log, util
 from twisted.python.deprecate import deprecated
 from twisted.python.versions import Version
-from twisted.python.hashlib import md5
 from twisted.internet import protocol, defer, reactor
 
 from twisted import cred

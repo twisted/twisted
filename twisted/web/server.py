@@ -660,7 +660,7 @@ class Site(http.HTTPFactory):
         """
         (internal) Generate an opaque, unique ID for a user's session.
         """
-        from twisted.python.hashlib import md5
+        from hashlib import md5
         import random
         self.counter = self.counter + 1
         return md5(networkString(

@@ -10,6 +10,7 @@ from os import stat, close
 from tempfile import mktemp
 from socket import AF_INET, SOCK_STREAM, socket
 from pprint import pformat
+from hashlib import md5
 
 try:
     from socket import AF_UNIX
@@ -20,7 +21,6 @@ from zope.interface import implements
 
 from twisted.python.log import addObserver, removeObserver, err
 from twisted.python.failure import Failure
-from twisted.python.hashlib import md5
 from twisted.python.runtime import platform
 from twisted.internet.interfaces import IFileDescriptorReceiver, IReactorUNIX
 from twisted.internet.error import ConnectionClosed, FileDescriptorOverrun

@@ -12,9 +12,9 @@ Don't use this module directly.  Use twisted.mail.pop3 instead.
 """
 
 import re
+from hashlib import md5
 
 from twisted.python import log
-from twisted.python.hashlib import md5
 from twisted.internet import defer
 from twisted.protocols import basic
 from twisted.protocols import policies

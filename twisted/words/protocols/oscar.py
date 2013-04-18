@@ -15,10 +15,10 @@ import socket
 import random
 import types
 import re
+from hashlib import md5
 
 from twisted.internet import reactor, defer, protocol
 from twisted.python import log
-from twisted.python.hashlib import md5
 
 def logPacketData(data):
     lines = len(data)/16

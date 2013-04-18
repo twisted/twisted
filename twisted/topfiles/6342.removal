@@ -1,0 +1,1 @@
+twisted.python.hashlib is now deprecated in favor of hashlib from stdlib.

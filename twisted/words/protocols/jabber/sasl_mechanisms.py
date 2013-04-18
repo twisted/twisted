@@ -8,10 +8,10 @@ Protocol agnostic implementations of SASL authentication mechanisms.
 """
 
 import binascii, random, time, os
+from hashlib import md5
 
 from zope.interface import Interface, Attribute, implements
 
-from twisted.python.hashlib import md5
 
 class ISASLMechanism(Interface):
     name = Attribute("""Common name for the SASL Mechanism.""")
