@@ -1573,7 +1573,7 @@ class RedirectAgent(object):
     An L{Agent} wrapper which handles HTTP redirects.
 
     The implementation is rather strict: 301 and 302 behaves like 307, not
-    redirecting automatically on methods different from C{GET} and C{HEAD}.
+    redirecting automatically on methods different from I{GET} and I{HEAD}.
 
     See L{BrowserLikeRedirectAgent} for a redirecting Agent that behaves more
     like a web browser.

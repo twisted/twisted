@@ -2064,7 +2064,7 @@ class _RedirectAgentTestsMixin(object):
 
     def test_307OnPost(self):
         """
-        When getting a 307 redirect on a C{POST} request,
+        When getting a 307 redirect on a I{POST} request,
         L{client.RedirectAgent} fails with a L{ResponseFailed} error wrapping
         a L{error.PageRedirect} exception.
         """
@@ -2198,7 +2198,7 @@ class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin,
 
     def test_301OnPost(self):
         """
-        When getting a 301 redirect on a C{POST} request,
+        When getting a 301 redirect on a I{POST} request,
         L{client.RedirectAgent} fails with a L{ResponseFailed} error wrapping
         a L{error.PageRedirect} exception.
         """
@@ -2207,7 +2207,7 @@ class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin,
 
     def test_302OnPost(self):
         """
-        When getting a 302 redirect on a C{POST} request,
+        When getting a 302 redirect on a I{POST} request,
         L{client.RedirectAgent} fails with a L{ResponseFailed} error wrapping
         a L{error.PageRedirect} exception.
         """
