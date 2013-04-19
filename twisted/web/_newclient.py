@@ -966,6 +966,10 @@ class Response:
         return response
 
 
+    def setPreviousResponse(self, previousResponse):
+        self.previousResponse = previousResponse
+
+
     def deliverBody(self, protocol):
         """
         Dispatch the given L{IProtocol} depending of the current state of the

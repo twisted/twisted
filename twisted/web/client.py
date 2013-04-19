@@ -1638,7 +1638,7 @@ class RedirectAgent(object):
         location = locationHeaders[0]
         deferred = self._agent.request(method, location, headers)
         def _chainResponse(newResponse):
-            newResponse.previousResponse = response
+            newResponse.setPreviousResponse(response)
             return newResponse
         deferred.addCallback(_chainResponse)
         return deferred.addCallback(

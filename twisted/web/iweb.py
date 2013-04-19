@@ -544,6 +544,15 @@ class IResponse(Interface):
         """
 
 
+    def setPreviousResponse(response):
+        """
+        Set the reference to the previous L{IResponse}.
+
+        The value of the previous response can be read via
+        L{IResponse.previousResponse}.
+        """
+
+
 
 class _IRequestEncoder(Interface):
     """
