@@ -411,7 +411,7 @@ class HTTPClientParser(HTTPParser):
         except ValueError:
             raise ParseError("non-integer status code", status)
 
-        self.response = Response(
+        self.response = Response._construct(
             self.parseVersion(parts[0]),
             statusCode,
             parts[2],
@@ -580,6 +580,11 @@ class Request:
     @classmethod
     def _construct(cls, method, uri, headers, bodyProducer, persistent=False,
                    parsedURI=None):
+        """
+        Private constructor.
+
+        @return: L{Request} instance.
+        """
         request = cls(method, uri, headers, bodyProducer, persistent)
         request._parsedURI = parsedURI
         return request
@@ -933,8 +938,7 @@ class Response:
     _bodyProtocol = None
     _bodyFinished = False
 
-    def __init__(self, version, code, phrase, headers, _transport,
-                 request=None):
+    def __init__(self, version, code, phrase, headers, _transport):
         self.version = version
         self.code = code
         self.phrase = phrase
@@ -942,8 +946,20 @@ class Response:
         self._transport = _transport
         self._bodyBuffer = []
         self._state = 'INITIAL'
-        self.request = request
+        self.request = None
         self.previousResponse = None
+
+
+    @classmethod
+    def _construct(cls, version, code, phrase, headers, _transport, request):
+        """
+        Private constructor.
+
+        @return: L{Response} instance.
+        """
+        response = Response(version, code, phrase, headers, _transport)
+        response.request = request
+        return response
 
 
     @property

@@ -1037,7 +1037,7 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         req, res = self.protocol.requests.pop()
         self.assertIsInstance(req, Request)
 
-        resp = client.Response(
+        resp = client.Response._construct(
             ('HTTP', 1, 1),
             200,
             'OK',
@@ -1063,7 +1063,7 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         req, res = self.protocol.requests.pop()
         self.assertIsInstance(req, Request)
 
-        resp = client.Response(
+        resp = client.Response._construct(
             (b'HTTP', 1, 1),
             200,
             b'OK',
@@ -1081,7 +1081,7 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         L{Response.absoluteURI} is C{None} if the response does not include
         a request.
         """
-        response = client.Response(
+        response = client.Response._construct(
             (b'HTTP', 1, 1),
             200,
             b'OK',
