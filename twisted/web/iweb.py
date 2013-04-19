@@ -516,7 +516,7 @@ class IResponse(Interface):
         "response.")
 
 
-    response = Attribute(
+    previousResponse = Attribute(
         "The previous response from a redirect, or C{None} if there was no "
         "previous response. This can be used to walk the response or request "
         "history for redirections.")

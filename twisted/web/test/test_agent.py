@@ -2039,7 +2039,7 @@ class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
 
         def checkResponse(result):
             self.assertIdentical(result, response)
-            self.assertIdentical(result.response, None)
+            self.assertIdentical(result.previousResponse, None)
 
         return deferred.addCallback(checkResponse)
 
@@ -2218,5 +2218,5 @@ class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         res.callback(response)
 
         finalResponse = self.successResultOf(deferred)
-        self.assertIdentical(finalResponse.response, redirectResponse)
-        self.assertIdentical(redirectResponse.response, None)
+        self.assertIdentical(finalResponse.previousResponse, redirectResponse)
+        self.assertIdentical(redirectResponse.previousResponse, None)

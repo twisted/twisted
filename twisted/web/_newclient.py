@@ -936,7 +936,7 @@ class Response:
         self._bodyBuffer = []
         self._state = 'INITIAL'
         self.request = request
-        self.response = None
+        self.previousResponse = None
 
 
     @property
