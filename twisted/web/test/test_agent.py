@@ -1047,48 +1047,10 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         res.callback(resp)
 
         response = self.successResultOf(d)
-        self.assertIdentical(response.request, req)
-
-
-    def test_responseAbsoluteURI(self):
-        """
-        L{Response.absoluteURI} is the absolute URI of the response.
-        """
-        uri = b'http://example.com/foo;1234?bar#frag'
-        agent = self.buildAgentForWrapperTest(self.reactor)
-        d = agent.request('GET', uri)
-
-        # The request should be issued.
-        self.assertEqual(len(self.protocol.requests), 1)
-        req, res = self.protocol.requests.pop()
-        self.assertIsInstance(req, Request)
-
-        resp = client.Response._construct(
-            (b'HTTP', 1, 1),
-            200,
-            b'OK',
-            client.Headers({}),
-            None,
-            req)
-        res.callback(resp)
-
-        response = self.successResultOf(d)
-        self.assertEquals(response.absoluteURI, uri)
-
-
-    def test_responseMissingAbsoluteURI(self):
-        """
-        L{Response.absoluteURI} is C{None} if the response does not include
-        a request.
-        """
-        response = client.Response._construct(
-            (b'HTTP', 1, 1),
-            200,
-            b'OK',
-            client.Headers({}),
-            None,
-            None)
-        self.assertIdentical(response.absoluteURI, None)
+        self.assertEqual(
+            (response.request.method, response.request.absoluteURI,
+             response.request.headers),
+            (req.method, req.absoluteURI, req.headers))
 
 
     def test_requestAbsoluteURI(self):
@@ -1097,7 +1059,7 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         """
         uri = b'http://example.com/foo;1234?bar#frag'
         agent = self.buildAgentForWrapperTest(self.reactor)
-        d = agent.request(b'GET', uri)
+        agent.request(b'GET', uri)
 
         # The request should be issued.
         self.assertEqual(len(self.protocol.requests), 1)

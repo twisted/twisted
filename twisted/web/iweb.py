@@ -512,17 +512,13 @@ class IResponse(Interface):
 
 
     request = Attribute(
-        "The L{twisted.web._newclient.Request} that resulted in this "
-        "response.")
+        "The L{IClientRequest} that resulted in this response.")
 
 
     previousResponse = Attribute(
-        "The previous response from a redirect, or C{None} if there was no "
+        "The previous L{IResponse} from a redirect, or C{None} if there was no "
         "previous response. This can be used to walk the response or request "
         "history for redirections.")
-
-
-    absoluteURI = Attribute("The absolute URI of the requested resource.")
 
 
     def deliverBody(protocol):
@@ -595,11 +591,33 @@ class _IRequestEncoderFactory(Interface):
 
 
 
+class IClientRequest(Interface):
+    """
+    An object representing an HTTP request to make to an HTTP server.
+
+    @since: 13.1
+    """
+    method = Attribute(
+        "The HTTP method for this request, as L{bytes}. For example: "
+        "C{b'GET'}, C{b'HEAD'}, C{b'POST'}, etc.")
+
+
+    absoluteURI = Attribute(
+        "The absolute URI of the requested resource, as L{bytes}; or C{None} "
+        "if the absolute URI cannot be determined.")
+
+
+    headers = Attribute(
+        "Headers to be sent to the server, as "
+        "a L{twisted.web.http_headers.Headers} instance.")
+
+
+
 UNKNOWN_LENGTH = u"twisted.web.iweb.UNKNOWN_LENGTH"
 
 __all__ = [
     "IUsernameDigestHash", "ICredentialFactory", "IRequest",
     "IBodyProducer", "IRenderable", "IResponse", "_IRequestEncoder",
-    "_IRequestEncoderFactory",
+    "_IRequestEncoderFactory", "IClientRequest",
 
     "UNKNOWN_LENGTH"]

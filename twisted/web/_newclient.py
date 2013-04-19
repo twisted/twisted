@@ -31,6 +31,7 @@ __metaclass__ = type
 from zope.interface import implements
 
 from twisted.python import log
+from twisted.python.components import proxyForInterface
 from twisted.python.reflect import fullyQualifiedName
 from twisted.python.failure import Failure
 from twisted.internet.interfaces import IConsumer, IPushProducer
@@ -38,7 +39,7 @@ from twisted.internet.error import ConnectionDone
 from twisted.internet.defer import Deferred, succeed, fail, maybeDeferred
 from twisted.internet.protocol import Protocol
 from twisted.protocols.basic import LineReceiver
-from twisted.web.iweb import UNKNOWN_LENGTH, IResponse
+from twisted.web.iweb import UNKNOWN_LENGTH, IResponse, IClientRequest
 from twisted.web.http_headers import Headers
 from twisted.web.http import NO_CONTENT, NOT_MODIFIED
 from twisted.web.http import _DataLoss, PotentialDataLoss
@@ -593,7 +594,7 @@ class Request:
     @property
     def absoluteURI(self):
         """
-        The absolute URI of the response as C{bytes}, or C{None} if the
+        The absolute URI of the request as C{bytes}, or C{None} if the
         absolute URI cannot be determined.
         """
         return getattr(self._parsedURI, 'toBytes', lambda: None)()
@@ -958,17 +959,8 @@ class Response:
         @return: L{Response} instance.
         """
         response = Response(version, code, phrase, headers, _transport)
-        response.request = request
+        response.request = proxyForInterface(IClientRequest)(request)
         return response
-
-
-    @property
-    def absoluteURI(self):
-        """
-        The absolute URI of the response as C{bytes}, or C{None} if the
-        absolute URI cannot be determined.
-        """
-        return getattr(self.request, 'absoluteURI', None)
 
 
     def deliverBody(self, protocol):
