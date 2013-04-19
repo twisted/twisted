@@ -1169,7 +1169,7 @@ class URITests(unittest.TestCase):
             host=b'example.com',
             port=80,
             path=b'/foo/bar')
-        self.assertEqual(uri, client._URI.fromBytes(uri).uri)
+        self.assertEqual(uri, client._URI.fromBytes(uri).toBytes())
 
 
     def test_noPath(self):
@@ -1184,7 +1184,7 @@ class URITests(unittest.TestCase):
             host=b'example.com',
             port=80,
             path=b'')
-        self.assertEqual(uri, client._URI.fromBytes(uri).uri)
+        self.assertEqual(uri, client._URI.fromBytes(uri).toBytes())
 
 
     def test_emptyPath(self):
@@ -1214,7 +1214,7 @@ class URITests(unittest.TestCase):
             port=80,
             path=b'/foo/bar',
             params=b'param')
-        self.assertEqual(uri, client._URI.fromBytes(uri).uri)
+        self.assertEqual(uri, client._URI.fromBytes(uri).toBytes())
 
 
     def test_query(self):
@@ -1231,7 +1231,7 @@ class URITests(unittest.TestCase):
             path=b'/foo/bar',
             params=b'param',
             query=b'a=1&b=2')
-        self.assertEqual(uri, client._URI.fromBytes(uri).uri)
+        self.assertEqual(uri, client._URI.fromBytes(uri).toBytes())
 
 
     def test_fragment(self):
@@ -1249,7 +1249,7 @@ class URITests(unittest.TestCase):
             params=b'param',
             query=b'a=1&b=2',
             fragment='frag')
-        self.assertEqual(uri, client._URI.fromBytes(uri).uri)
+        self.assertEqual(uri, client._URI.fromBytes(uri).toBytes())
 
 
     def test_originForm(self):

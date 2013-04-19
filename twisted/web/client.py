@@ -611,10 +611,12 @@ class _URI(object):
         return cls(scheme, netloc, host, port, path, params, query, fragment)
 
 
-    @property
-    def uri(self):
+    def toBytes(self):
         """
-        Fully formed I{URI}.
+        Assemble the individual parts of the I{URI} into a fully formed I{URI}.
+
+        @rtype: C{bytes}
+        @return: A fully formed I{URI}.
         """
         return urlunparse(
             (self.scheme, self.netloc, self.path, self.params, self.query,
