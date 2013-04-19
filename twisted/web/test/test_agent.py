@@ -2205,18 +2205,18 @@ class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
 
         deferred = redirectAgent.request('GET', 'http://example.com/foo')
 
-        req, res = self.protocol.requests.pop()
+        redirectReq, redirectRes = self.protocol.requests.pop()
 
         headers = http_headers.Headers(
             {'location': ['http://example.com/bar']})
-        response = Response(('HTTP', 1, 1), 302, 'OK', headers, None)
+        redirectResponse = Response(('HTTP', 1, 1), 302, 'OK', headers, None)
+        redirectRes.callback(redirectResponse)
+
+        req, res = self.protocol.requests.pop()
+
+        response = Response(('HTTP', 1, 1), 200, 'OK', headers, None)
         res.callback(response)
 
-        req2, res2 = self.protocol.requests.pop()
-
-        response2 = Response(('HTTP', 1, 1), 200, 'OK', headers, None)
-        res2.callback(response2)
-
         finalResponse = self.successResultOf(deferred)
-        self.assertIdentical(finalResponse.response, response)
-        self.assertIdentical(response.response, None)
+        self.assertIdentical(finalResponse.response, redirectResponse)
+        self.assertIdentical(redirectResponse.response, None)
