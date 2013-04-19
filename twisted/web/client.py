@@ -537,7 +537,9 @@ class HTTPDownloader(HTTPClientFactory):
 
 class _URI(object):
     """
-    A parsed URI object.
+    A URI object.
+
+    @see: U{https://tools.ietf.org/html/draft-ietf-httpbis-p1-messaging-21}
     """
     def __init__(self, scheme, netloc, host, port, path, params, query,
                  fragment):
@@ -628,8 +630,11 @@ class _URI(object):
         """
         The absolute I{URI} path including I{URI} parameters, query string and
         fragment identifier.
+
+        @see: U{https://tools.ietf.org/html/draft-ietf-httpbis-p1-messaging-21#section-5.3}
         """
-        # The HTTP RFC says the origin form should not include the fragment.
+        # The HTTP bis draft says the origin form should not include the
+        # fragment.
         path = urlunparse(
             (b'', b'', self.path, self.params, self.query, b''))
         if path == b'':
