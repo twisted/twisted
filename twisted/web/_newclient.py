@@ -569,6 +569,9 @@ class Request:
     @ivar _parsedURI: Parsed I{URI} for the request, or C{None}.
     @type _parsedURI: L{_URI}
     """
+    implements(IClientRequest)
+
+
     def __init__(self, method, uri, headers, bodyProducer, persistent=False):
         self.method = method
         self.uri = uri
