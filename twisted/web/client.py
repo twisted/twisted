@@ -538,33 +538,34 @@ class HTTPDownloader(HTTPClientFactory):
 class _URI(object):
     """
     A parsed URI object.
-
-    @type scheme: L{bytes}
-    @ivar scheme: URI scheme specifier.
-
-    @type netloc: L{bytes}
-    @ivar netloc: Network location component.
-
-    @type host: L{bytes}
-    @ivar host: Host name.
-
-    @type port: L{int}
-    @ivar port: Port number.
-
-    @type path: L{bytes}
-    @ivar path: Hierarchical path.
-
-    @type params: L{bytes}
-    @ivar params: Parameters for last path segment.
-
-    @type query: L{bytes}
-    @ivar query: Query string.
-
-    @type fragment: L{bytes}
-    @ivar fragment: Fragment identifier.
     """
     def __init__(self, scheme, netloc, host, port, path, params, query,
                  fragment):
+        """
+        @type scheme: L{bytes}
+        @param scheme: URI scheme specifier.
+
+        @type netloc: L{bytes}
+        @param netloc: Network location component.
+
+        @type host: L{bytes}
+        @param host: Host name.
+
+        @type port: L{int}
+        @param port: Port number.
+
+        @type path: L{bytes}
+        @param path: Hierarchical path.
+
+        @type params: L{bytes}
+        @param params: Parameters for last path segment.
+
+        @type query: L{bytes}
+        @param query: Query string.
+
+        @type fragment: L{bytes}
+        @param fragment: Fragment identifier.
+        """
         self.scheme = scheme
         self.netloc = netloc
         self.host = host
