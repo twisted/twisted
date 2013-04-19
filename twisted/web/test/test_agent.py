@@ -1064,9 +1064,9 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         self.assertIsInstance(req, Request)
 
         resp = client.Response(
-            ('HTTP', 1, 1),
+            (b'HTTP', 1, 1),
             200,
-            'OK',
+            b'OK',
             client.Headers({}),
             None,
             req)
@@ -1082,9 +1082,9 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         a request.
         """
         response = client.Response(
-            ('HTTP', 1, 1),
+            (b'HTTP', 1, 1),
             200,
-            'OK',
+            b'OK',
             client.Headers({}),
             None,
             None)
@@ -1097,7 +1097,7 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         """
         uri = b'http://example.com/foo;1234?bar#frag'
         agent = self.buildAgentForWrapperTest(self.reactor)
-        d = agent.request('GET', uri)
+        d = agent.request(b'GET', uri)
 
         # The request should be issued.
         self.assertEqual(len(self.protocol.requests), 1)
@@ -1108,9 +1108,9 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
 
     def test_requestMissingAbsoluteURI(self):
         """
-        L{Request.absoluteURI} is C{None} if C{_parsedURI} is not provided.
+        L{Request.absoluteURI} is C{None} if L{Request._parsedURI} is C{None}.
         """
-        request = client.Request('FOO', '/', client.Headers(), None)
+        request = client.Request(b'FOO', b'/', client.Headers(), None)
         self.assertIdentical(request.absoluteURI, None)
 
 
@@ -2170,25 +2170,25 @@ class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         agent = self.buildAgentForWrapperTest(self.reactor)
         redirectAgent = client.RedirectAgent(agent, 1)
 
-        deferred = redirectAgent.request('GET', 'http://example.com/foo')
+        deferred = redirectAgent.request(b'GET', b'http://example.com/foo')
 
         req, res = self.protocol.requests.pop()
 
         headers = http_headers.Headers(
-            {'location': ['http://example.com/bar']})
-        response = Response(('HTTP', 1, 1), 302, 'OK', headers, None)
+            {b'location': [b'http://example.com/bar']})
+        response = Response((b'HTTP', 1, 1), 302, b'OK', headers, None)
         res.callback(response)
 
         req2, res2 = self.protocol.requests.pop()
 
-        response2 = Response(('HTTP', 1, 1), 302, 'OK', headers, None)
+        response2 = Response((b'HTTP', 1, 1), 302, b'OK', headers, None)
         res2.callback(response2)
 
         self.assertFailure(deferred, client.ResponseFailed)
 
         def checkFailure(fail):
             fail.reasons[0].trap(error.InfiniteRedirection)
-            self.assertEqual('http://example.com/foo',
+            self.assertEqual(b'http://example.com/foo',
                              fail.reasons[0].value.location)
             self.assertEqual(302, fail.response.code)
 
@@ -2203,18 +2203,18 @@ class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         agent = self.buildAgentForWrapperTest(self.reactor)
         redirectAgent = client.RedirectAgent(agent)
 
-        deferred = redirectAgent.request('GET', 'http://example.com/foo')
+        deferred = redirectAgent.request(b'GET', b'http://example.com/foo')
 
         redirectReq, redirectRes = self.protocol.requests.pop()
 
         headers = http_headers.Headers(
-            {'location': ['http://example.com/bar']})
-        redirectResponse = Response(('HTTP', 1, 1), 302, 'OK', headers, None)
+            {b'location': [b'http://example.com/bar']})
+        redirectResponse = Response((b'HTTP', 1, 1), 302, b'OK', headers, None)
         redirectRes.callback(redirectResponse)
 
         req, res = self.protocol.requests.pop()
 
-        response = Response(('HTTP', 1, 1), 200, 'OK', headers, None)
+        response = Response((b'HTTP', 1, 1), 200, b'OK', headers, None)
         res.callback(response)
 
         finalResponse = self.successResultOf(deferred)
