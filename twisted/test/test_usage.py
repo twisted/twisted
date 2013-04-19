@@ -347,12 +347,6 @@ class SubCommandTest(unittest.TestCase):
         self.failUnlessIdentical(oBar.subOptions.parent, oBar)
 
 
-class GetUsageOptions(usage.Options):
-    longdesc = ("\nA test documentation string.\n"
-                "This line has more than 80 characters-"
-                "PADDINGXXPADDINGXXPADDINGXXPADDINGXXPADDINGXXPADDINGXX\n")
-
-
 class HelpStringTest(unittest.TestCase):
     def setUp(self):
         """
@@ -386,11 +380,13 @@ class HelpStringTest(unittest.TestCase):
 
     def test_longdescNotWrapped(self):
         """
-        getUsage does not wrap lines in longdesc.
+        L{usage.Options.getUsage} does not wrap lines in C{longdesc}.
         """
-        opt = GetUsageOptions()
-        opt.getUsage(width=80)
-        self.assertTrue(len(opt.longdesc.splitlines()[2]) > 80)
+        self.nice.longdesc = ("\nA test documentation string.\n"
+                    "This line has more than 80 characters-"
+                    "PADDINGXXPADDINGXXPADDINGXXPADDINGXXPADDINGXXPADDING\n")
+        self.nice.getUsage(width=80)
+        self.assertTrue(len(self.nice.longdesc.splitlines()[2]) > 80)
 
 
 class PortCoerceTestCase(unittest.TestCase):
