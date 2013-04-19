@@ -584,7 +584,7 @@ class Request:
         The absolute URI of the response as C{bytes}, or C{None} if the
         absolute URI cannot be determined.
         """
-        return getattr(self._parsedURI, 'uri', None)
+        return getattr(self._parsedURI, 'toBytes', lambda: None)()
 
 
     def _writeHeaders(self, transport, TEorCL):
