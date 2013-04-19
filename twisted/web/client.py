@@ -1151,9 +1151,9 @@ class _AgentBase(object):
         d = self._pool.getConnection(key, endpoint)
         def cbConnected(proto):
             return proto.request(
-                Request(method, requestPath, headers, bodyProducer,
-                        persistent=self._pool.persistent,
-                        _parsedURI=parsedURI))
+                Request._construct(method, requestPath, headers, bodyProducer,
+                                   persistent=self._pool.persistent,
+                                   parsedURI=parsedURI))
         d.addCallback(cbConnected)
         return d
 

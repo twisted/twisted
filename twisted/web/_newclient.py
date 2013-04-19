@@ -568,14 +568,21 @@ class Request:
     @ivar _parsedURI: Parsed I{URI} for the request, or C{None}.
     @type _parsedURI: L{_URI}
     """
-    def __init__(self, method, uri, headers, bodyProducer, persistent=False,
-                 _parsedURI=None):
+    def __init__(self, method, uri, headers, bodyProducer, persistent=False):
         self.method = method
         self.uri = uri
         self.headers = headers
         self.bodyProducer = bodyProducer
         self.persistent = persistent
-        self._parsedURI = _parsedURI
+        self._parsedURI = None
+
+
+    @classmethod
+    def _construct(cls, method, uri, headers, bodyProducer, persistent=False,
+                   parsedURI=None):
+        request = cls(method, uri, headers, bodyProducer, persistent)
+        request._parsedURI = parsedURI
+        return request
 
 
     @property
