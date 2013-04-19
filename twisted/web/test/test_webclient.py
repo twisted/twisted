@@ -527,7 +527,7 @@ class WebClientTestCase(unittest.TestCase):
 
     def testFactoryInfo(self):
         url = self.getURL('file')
-        uri = client._URI.parse(url)
+        uri = client._URI.fromBytes(url)
         factory = client.HTTPClientFactory(url)
         reactor.connectTCP(nativeString(uri.host), uri.port, factory)
         return factory.deferred.addCallback(self._cbFactoryInfo, factory)
@@ -850,7 +850,7 @@ class WebClientSSLTestCase(WebClientTestCase):
 
     def testFactoryInfo(self):
         url = self.getURL('file')
-        uri = client._URI.parse(url)
+        uri = client._URI.fromBytes(url)
         factory = client.HTTPClientFactory(url)
         reactor.connectSSL(nativeString(uri.host), uri.port, factory,
                            ssl.ClientContextFactory())
@@ -1119,26 +1119,26 @@ class URITests(unittest.TestCase):
 
     def test_parseDefaultPort(self):
         """
-        L{client._URI.parse} by default assumes port 80 for the I{http} scheme
-        and 443 for the I{https} scheme.
+        L{client._URI.fromBytes} by default assumes port 80 for the I{http}
+        scheme and 443 for the I{https} scheme.
         """
-        uri = client._URI.parse(b'http://example.com')
+        uri = client._URI.fromBytes(b'http://example.com')
         self.assertEqual(80, uri.port)
         # Weird (but commonly accepted) structure uses default port.
-        uri = client._URI.parse(b'http://example.com:')
+        uri = client._URI.fromBytes(b'http://example.com:')
         self.assertEqual(80, uri.port)
-        uri = client._URI.parse(b'https://example.com')
+        uri = client._URI.fromBytes(b'https://example.com')
         self.assertEqual(443, uri.port)
 
 
     def test_parseCustomDefaultPort(self):
         """
-        L{client._URI.parse} accepts a C{defaultPort} parameter that overrides
-        the normal default port logic.
+        L{client._URI.fromBytes} accepts a C{defaultPort} parameter that
+        overrides the normal default port logic.
         """
-        uri = client._URI.parse(b'http://example.com', defaultPort=5144)
+        uri = client._URI.fromBytes(b'http://example.com', defaultPort=5144)
         self.assertEqual(5144, uri.port)
-        uri = client._URI.parse(b'https://example.com', defaultPort=5144)
+        uri = client._URI.fromBytes(b'https://example.com', defaultPort=5144)
         self.assertEqual(5144, uri.port)
 
 
@@ -1147,13 +1147,13 @@ class URITests(unittest.TestCase):
         Parsing a I{URI} splits the network location component into I{host} and
         I{port}.
         """
-        uri = client._URI.parse(b'http://example.com:5144')
+        uri = client._URI.fromBytes(b'http://example.com:5144')
         self.assertEqual(5144, uri.port)
         self.assertEqual(b'example.com', uri.host)
         self.assertEqual(b'example.com:5144', uri.netloc)
 
         # Spaces in the hostname are trimmed, the default path is /.
-        uri = client._URI.parse(b'http://example.com ')
+        uri = client._URI.fromBytes(b'http://example.com ')
         self.assertEqual(b'example.com', uri.netloc)
 
 
@@ -1163,13 +1163,13 @@ class URITests(unittest.TestCase):
         """
         uri = b'http://example.com/foo/bar'
         self.assertURIEquals(
-            client._URI.parse(uri),
+            client._URI.fromBytes(uri),
             scheme=b'http',
             netloc=b'example.com',
             host=b'example.com',
             port=80,
             path=b'/foo/bar')
-        self.assertEqual(uri, client._URI.parse(uri).uri)
+        self.assertEqual(uri, client._URI.fromBytes(uri).uri)
 
 
     def test_noPath(self):
@@ -1178,13 +1178,13 @@ class URITests(unittest.TestCase):
         """
         uri = b'http://example.com'
         self.assertURIEquals(
-            client._URI.parse(uri),
+            client._URI.fromBytes(uri),
             scheme=b'http',
             netloc=b'example.com',
             host=b'example.com',
             port=80,
             path=b'')
-        self.assertEqual(uri, client._URI.parse(uri).uri)
+        self.assertEqual(uri, client._URI.fromBytes(uri).uri)
 
 
     def test_emptyPath(self):
@@ -1193,7 +1193,7 @@ class URITests(unittest.TestCase):
         """
         uri = b'http://example.com/'
         self.assertURIEquals(
-            client._URI.parse(uri),
+            client._URI.fromBytes(uri),
             scheme=b'http',
             netloc=b'example.com',
             host=b'example.com',
@@ -1207,14 +1207,14 @@ class URITests(unittest.TestCase):
         """
         uri = b'http://example.com/foo/bar;param'
         self.assertURIEquals(
-            client._URI.parse(uri),
+            client._URI.fromBytes(uri),
             scheme=b'http',
             netloc=b'example.com',
             host=b'example.com',
             port=80,
             path=b'/foo/bar',
             params=b'param')
-        self.assertEqual(uri, client._URI.parse(uri).uri)
+        self.assertEqual(uri, client._URI.fromBytes(uri).uri)
 
 
     def test_query(self):
@@ -1223,7 +1223,7 @@ class URITests(unittest.TestCase):
         """
         uri = b'http://example.com/foo/bar;param?a=1&b=2'
         self.assertURIEquals(
-            client._URI.parse(uri),
+            client._URI.fromBytes(uri),
             scheme=b'http',
             netloc=b'example.com',
             host=b'example.com',
@@ -1231,7 +1231,7 @@ class URITests(unittest.TestCase):
             path=b'/foo/bar',
             params=b'param',
             query=b'a=1&b=2')
-        self.assertEqual(uri, client._URI.parse(uri).uri)
+        self.assertEqual(uri, client._URI.fromBytes(uri).uri)
 
 
     def test_fragment(self):
@@ -1240,7 +1240,7 @@ class URITests(unittest.TestCase):
         """
         uri = b'http://example.com/foo/bar;param?a=1&b=2#frag'
         self.assertURIEquals(
-            client._URI.parse(uri),
+            client._URI.fromBytes(uri),
             scheme=b'http',
             netloc=b'example.com',
             host=b'example.com',
@@ -1249,7 +1249,7 @@ class URITests(unittest.TestCase):
             params=b'param',
             query=b'a=1&b=2',
             fragment='frag')
-        self.assertEqual(uri, client._URI.parse(uri).uri)
+        self.assertEqual(uri, client._URI.fromBytes(uri).uri)
 
 
     def test_originForm(self):
@@ -1257,7 +1257,7 @@ class URITests(unittest.TestCase):
         L{client._URI.originForm} produces an absolute I{URI} path including
         the I{URI} path.
         """
-        uri = client._URI.parse(b'http://example.com/foo')
+        uri = client._URI.fromBytes(b'http://example.com/foo')
         self.assertEqual(b'/foo', uri.originForm)
 
 
@@ -1267,7 +1267,7 @@ class URITests(unittest.TestCase):
         the I{URI} path, parameters and query string but excludes the fragment
         identifier.
         """
-        uri = client._URI.parse(b'http://example.com/foo;param?a=1#frag')
+        uri = client._URI.fromBytes(b'http://example.com/foo;param?a=1#frag')
         self.assertEqual(b'/foo;param?a=1', uri.originForm)
 
 
@@ -1276,7 +1276,7 @@ class URITests(unittest.TestCase):
         L{client._URI.originForm} produces a path of C{b'/'} when the I{URI}
         specifies no path.
         """
-        uri = client._URI.parse(b'http://example.com')
+        uri = client._URI.fromBytes(b'http://example.com')
         self.assertEqual(b'/', uri.originForm)
 
 
@@ -1285,5 +1285,5 @@ class URITests(unittest.TestCase):
         L{client._URI.originForm} produces a path of C{b'/'} when the I{URI}
         specifies an empty path.
         """
-        uri = client._URI.parse(b'http://example.com/')
+        uri = client._URI.fromBytes(b'http://example.com/')
         self.assertEqual(b'/', uri.originForm)

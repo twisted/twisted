@@ -369,7 +369,7 @@ class HTTPClientFactory(protocol.ClientFactory):
 
     def setURL(self, url):
         self.url = url
-        uri = _URI.parse(url)
+        uri = _URI.fromBytes(url)
         if uri.scheme and uri.host:
             self.scheme = uri.scheme
             self.host = uri.host
@@ -576,7 +576,8 @@ class _URI(object):
         self.fragment = fragment
 
 
-    def parse(cls, uri, defaultPort=None):
+    @classmethod
+    def fromBytes(cls, uri, defaultPort=None):
         """
         Parse the given URI into a L{_URI}.
 
@@ -608,7 +609,6 @@ class _URI(object):
                 port = defaultPort
 
         return cls(scheme, netloc, host, port, path, params, query, fragment)
-    parse = classmethod(parse)
 
 
     @property
@@ -652,7 +652,7 @@ def _makeGetterFactory(url, factoryFactory, contextFactory=None,
 
     @return: The factory created by C{factoryFactory}
     """
-    uri = _URI.parse(url)
+    uri = _URI.fromBytes(url)
     factory = factoryFactory(url, *args, **kwargs)
     if uri.scheme == b'https':
         from twisted.internet import ssl
@@ -1255,7 +1255,7 @@ class Agent(_AgentBase):
             given URI is not supported.
         @rtype: L{Deferred}
         """
-        parsedURI = _URI.parse(uri)
+        parsedURI = _URI.fromBytes(uri)
         try:
             endpoint = self._getEndpoint(parsedURI.scheme, parsedURI.host,
                                          parsedURI.port)
@@ -1296,7 +1296,7 @@ class ProxyAgent(_AgentBase):
         # ("http-proxy-CONNECT", scheme, host, port), and an endpoint that
         # wraps _proxyEndpoint with an additional callback to do the CONNECT.
         return self._requestWithEndpoint(key, self._proxyEndpoint, method,
-                                         _URI.parse(uri), headers,
+                                         _URI.fromBytes(uri), headers,
                                          bodyProducer, uri)
 
 
