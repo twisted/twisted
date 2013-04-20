@@ -258,24 +258,16 @@ class ExecutableExampleTestMixin(ExampleTestBaseMixin):
         self.assertIsInstance(self.example.Options(), usage.Options)
 
 
-    def test_usageConsistency(self):
+    def test_usageMessageConsistency(self):
         """
-        The example script prints a usage message to stdout if it is
-        passed a --help option and then exits.
-
-        The first line should contain a USAGE summary, explaining the
-        accepted command arguments.
+        The example script usage message should begin with a "Usage:"
+        summary line.
         """
-        # Pass None as first parameter - the reactor - it shouldn't
-        # get as far as calling it.
-        self.assertRaises(
-            SystemExit, self.example.main, None, '--help')
-
-        out = self.fakeOut.getvalue().splitlines()
+        out = self.example.Options.synopsis
         self.assertTrue(
-            out[0].startswith('Usage:'),
+            out.startswith('Usage:'),
             'Usage message first line should start with "Usage:". '
-            'Actual: %r' % (out[0],))
+            'Actual: %r' % (out,))
 
 
     def test_usageConsistencyOnError(self):
