@@ -41,9 +41,9 @@ if __name__ == '__main__':
         url="http://twistedmatrix.com/trac/wiki/TwistedWords",
         license="MIT",
         long_description="""\
-Twisted Words contains implementations of many Instant Messaging protocols, 
-including IRC, Jabber, OSCAR (AIM & ICQ), and some functionality for creating 
-bots, inter-protocol gateways, and a client application for many of the 
+Twisted Words contains implementations of many Instant Messaging protocols,
+including IRC, Jabber, OSCAR (AIM & ICQ), and some functionality for creating
+bots, inter-protocol gateways, and a client application for many of the
 protocols.
 
 In support of Jabber, Twisted Words also contains X-ish, a library for
