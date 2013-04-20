@@ -18,6 +18,7 @@ import sys
 from xml.dom import minidom as dom
 
 from twisted.internet.protocol import FileWrapper
+from twisted.python import usage
 from twisted.python.filepath import FilePath
 from twisted.trial.unittest import SkipTest
 
@@ -247,6 +248,14 @@ class ExecutableExampleTestMixin(ExampleTestBaseMixin):
         self.assertEquals(
             self.examplePath.open().readline().rstrip(),
             '#!/usr/bin/env python')
+
+
+    def test_definedOptions(self):
+        """
+        Example scripts contain an Options class which is a subclass
+        of l{twisted.python.usage.Options]
+        """
+        self.assertIsInstance(self.example.Options(), usage.Options)
 
 
     def test_usageConsistency(self):
