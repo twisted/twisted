@@ -249,9 +249,16 @@ class ExecutableExampleTestMixin(ExampleTestBaseMixin):
         env = os.environ.copy()
         env['PYTHONPATH'] = os.pathsep.join(sys.path)
 
+        print 'PYTHONPATH_FULL:', env['PYTHONPATH']
+
         for p in sys.path:
-            print 'PYTHONPATH: ', p
-            os.path.abspath(p)
+            print 'PYTHONPATH_COMPONENT:', p
+            print 'PYTHONPATH_COMPONENT_ABS:',
+            print os.path.abspath(p)
+
+        print 'PYTHONPATH_FULL_ABS:',
+        print os.path.abspath(env['PYTHONPATH'])
+
         return
         d = utils.getProcessOutput(sys.executable, args, env=env)
         def whenComplete(res):
