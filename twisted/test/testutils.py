@@ -286,27 +286,16 @@ class ExecutableExampleTestMixin(ExampleTestBaseMixin):
             usageMessage)
 
 
-    def test_usageConsistencyOnError(self):
+    def test_usageErrorsEndWithError(self):
         """
-        The example script prints a usage message to stderr if it is
-        passed unrecognized command line arguments.
-
-        The first line should contain a USAGE summary, explaining the
-        accepted command arguments.
-
-        The last line should contain an ERROR summary, explaining that
-        incorrect arguments were supplied.
+        The example script prints an "Error:" summary on the last line
+        of stderr when incorrect arguments are supplied.
         """
-        # Pass None as first parameter - the reactor - it shouldn't
-        # get as far as calling it.
         self.assertRaises(
-            SystemExit, self.example.main, None, '--unexpected_argument')
-
+            SystemExit,
+            self.example.main,
+            None, '--unexpected_option')
         err = self.fakeErr.getvalue().splitlines()
-        self.assertTrue(
-            err[0].startswith('Usage:'),
-            'Usage message first line should start with "Usage:". '
-            'Actual: %r' % (err[0],))
         self.assertTrue(
             err[-1].startswith('ERROR:'),
             'Usage message last line should start with "ERROR:" '
