@@ -262,13 +262,10 @@ class ExecutableExampleTestMixin(ExampleTestBaseMixin):
         # print os.path.abspath(env['PYTHONPATH'])
 
         # return
-        d = utils.getProcessOutput(sys.executable, args, env=env)
+        d = utils.getProcessOutput(sys.executable, args, env=env, errortoo=True)
         def whenComplete(res):
-            print 'PROCESS_OUTPUT'
+            print 'PROCESS_OUTPUT',
             print res
-            self.assertEqual(
-                res.splitlines()[0],
-                self.example.Options().synopsis)
         d.addCallback(whenComplete)
         return d
 
