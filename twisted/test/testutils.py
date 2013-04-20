@@ -270,6 +270,22 @@ class ExecutableExampleTestMixin(ExampleTestBaseMixin):
             'Actual: %r' % (out,))
 
 
+    def test_usageErrorsBeginWithUsage(self):
+        """
+        The example script first prints a full usage message to stderr
+        if it is passed incorrect command line arguments.
+        """
+        self.assertRaises(
+            SystemExit,
+            self.example.main,
+            None, '--unexpected_option')
+        err = self.fakeErr.getvalue()
+        usageMessage = str(self.example.Options())
+        self.assertEqual(
+            err[:len(usageMessage)],
+            usageMessage)
+
+
     def test_usageConsistencyOnError(self):
         """
         The example script prints a usage message to stderr if it is
