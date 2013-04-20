@@ -13,10 +13,12 @@ don't-use-it-outside-Twisted-we-won't-maintain-compatibility rule!
 """
 
 from io import BytesIO
+import os
 from StringIO import StringIO
 import sys
 from xml.dom import minidom as dom
 
+from twisted.internet import utils
 from twisted.internet.protocol import FileWrapper
 from twisted.python import usage
 from twisted.python.filepath import FilePath
@@ -240,6 +242,21 @@ class ExecutableExampleTestMixin(ExampleTestBaseMixin):
     Tests for consistency and executability in executable example
     scripts.
     """
+
+    def test_executableModule(self):
+        """
+        The example scripts should have an if __name__ ==
+        '__main__' so that they do something when called.
+        """
+        args = [self.examplePath.path, '--help']
+        d = utils.getProcessOutput(sys.executable, args, env=os.environ)
+        def whenComplete(res):
+            self.assertEqual(
+                res.splitlines()[0],
+                self.example.Options().synopsis)
+        d.addCallback(whenComplete)
+        return d
+
 
     def test_shebang(self):
         """
