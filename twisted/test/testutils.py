@@ -247,11 +247,16 @@ class ExecutableExampleTestMixin(ExampleTestBaseMixin):
         # Give the subprocess access to the same Python paths as the
         # parent process
         env = os.environ.copy()
-        import tempfile
+
+        twistedPaths = []
         for p in sys.path:
             if os.path.exists(os.path.join(p, 'twisted', '__init__.py')):
-                env['PYTHONPATH'] = os.pathsep.join((p, tempfile.gettempdir()))
-                break
+                twistedPaths.append(p)
+
+        import tempfile
+        twistedPaths.append(tempfile.gettempdir())
+        env['PYTHONPATH'] = os.pathsep.join(twistedPaths)
+
 
         # print 'PYTHONPATH_FULL_ABS:',
         # print os.path.abspath(env['PYTHONPATH'])
