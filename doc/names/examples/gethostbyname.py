@@ -73,9 +73,4 @@ def main(reactor, *argv):
 
 
 if __name__ == '__main__':
-    print 'GETHOSTBYNAME SYSPATH_FULL:', sys.path
-    for d in sys.path:
-        print 'GETHOSTBYNAME SYSPATH_COMPONENT:',
-        print d
-
-    #react(main, sys.argv[1:])
+    react(main, sys.argv[1:])
