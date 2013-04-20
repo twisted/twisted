@@ -202,11 +202,6 @@ class ExampleTestBaseMixin(object):
         self.originalPath = sys.path[:]
         self.originalModules = sys.modules.copy()
 
-        self.fakeErr = StringIO()
-        self.patch(sys, 'stderr', self.fakeErr)
-        self.fakeOut = StringIO()
-        self.patch(sys, 'stdout', self.fakeOut)
-
         # Get branch root
         here = FilePath(__file__).parent().parent().parent()
 
@@ -249,7 +244,13 @@ class ExecutableExampleTestMixin(ExampleTestBaseMixin):
         '__main__' so that they do something when called.
         """
         args = [self.examplePath.path, '--help']
-        d = utils.getProcessOutput(sys.executable, args, env=os.environ)
+
+        # Give the subprocess access to the same Python paths as the
+        # parent process
+        env = os.environ.copy()
+        env['PYTHONPATH'] = ':'.join(sys.path)
+
+        d = utils.getProcessOutput(sys.executable, args, env=env)
         def whenComplete(res):
             self.assertEqual(
                 res.splitlines()[0],
@@ -292,11 +293,15 @@ class ExecutableExampleTestMixin(ExampleTestBaseMixin):
         The example script first prints a full usage message to stderr
         if it is passed incorrect command line arguments.
         """
+
+        fakeErr = StringIO()
+        self.patch(sys, 'stderr', fakeErr)
+
         self.assertRaises(
             SystemExit,
             self.example.main,
             None, '--unexpected_option')
-        err = self.fakeErr.getvalue()
+        err = fakeErr.getvalue()
         usageMessage = str(self.example.Options())
         self.assertEqual(
             err[:len(usageMessage)],
@@ -308,11 +313,14 @@ class ExecutableExampleTestMixin(ExampleTestBaseMixin):
         The example script prints an "Error:" summary on the last line
         of stderr when incorrect arguments are supplied.
         """
+        fakeErr = StringIO()
+        self.patch(sys, 'stderr', fakeErr)
+
         self.assertRaises(
             SystemExit,
             self.example.main,
             None, '--unexpected_option')
-        err = self.fakeErr.getvalue().splitlines()
+        err = fakeErr.getvalue().splitlines()
         self.assertTrue(
             err[-1].startswith('ERROR:'),
             'Usage message last line should start with "ERROR:" '
