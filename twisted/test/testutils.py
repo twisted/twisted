@@ -247,7 +247,7 @@ class ExecutableExampleTestMixin(ExampleTestBaseMixin):
         # Give the subprocess access to the same Python paths as the
         # parent process
         env = os.environ.copy()
-        env['PYTHONPATH'] = ':'.join(sys.path)
+        env['PYTHONPATH'] = os.pathsep.join(sys.path)
 
         d = utils.getProcessOutput(sys.executable, args, env=env)
         def whenComplete(res):
