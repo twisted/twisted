@@ -249,6 +249,10 @@ class ExecutableExampleTestMixin(ExampleTestBaseMixin):
         env = os.environ.copy()
         env['PYTHONPATH'] = os.pathsep.join(sys.path)
 
+        for p in sys.path:
+            print 'PYTHONPATH: ', p
+            os.path.abspath(p)
+        return
         d = utils.getProcessOutput(sys.executable, args, env=env)
         def whenComplete(res):
             self.assertEqual(
