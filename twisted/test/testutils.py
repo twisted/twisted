@@ -14,7 +14,6 @@ don't-use-it-outside-Twisted-we-won't-maintain-compatibility rule!
 
 from io import BytesIO
 import os
-from StringIO import StringIO
 import sys
 from xml.dom import minidom as dom
 
@@ -294,7 +293,7 @@ class ExecutableExampleTestMixin(ExampleTestBaseMixin):
         if it is passed incorrect command line arguments.
         """
 
-        fakeErr = StringIO()
+        fakeErr = BytesIO()
         self.patch(sys, 'stderr', fakeErr)
 
         self.assertRaises(
@@ -313,7 +312,7 @@ class ExecutableExampleTestMixin(ExampleTestBaseMixin):
         The example script prints an "Error:" summary on the last line
         of stderr when incorrect arguments are supplied.
         """
-        fakeErr = StringIO()
+        fakeErr = BytesIO()
         self.patch(sys, 'stderr', fakeErr)
 
         self.assertRaises(
