@@ -480,17 +480,6 @@ class OptionsTestCase(unittest.TestCase):
         self.assertEqual(["--recursionlimit", "2000"], args)
 
 
-    def test_randomConflictsWithOrder(self):
-        """
-        C{parseOptions} raises a C{UsageError} when C{--random} is passed along
-        C{--order}.
-        """
-        opts = ["--random", "4", "--order", "alphabetical"]
-        error = self.assertRaises(UsageError, self.options.parseOptions, opts)
-        self.assertEqual("You can't specify --random when using --order",
-                         str(error))
-
-
     def test_jobsConflictWithDebug(self):
         """
         C{parseOptions} raises a C{UsageError} when C{--debug} is passed along

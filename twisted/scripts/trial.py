@@ -466,9 +466,6 @@ class Options(_BasicOptions, usage.Options, app.ReactorSelectionMixin):
                 raise usage.UsageError("You must specify --debug when using "
                                        "--nopm ")
             failure.DO_POST_MORTEM = False
-        if self['order'] and self['random']:
-            raise usage.UsageError(
-                "You can't specify --random when using --order")
 
 
 
