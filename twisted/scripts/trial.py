@@ -5,7 +5,6 @@
 
 
 from __future__ import print_function
-import dis
 import gc
 import inspect
 import os
@@ -106,22 +105,23 @@ def _maybeFindSourceLine(testThing):
     """
     Try to find the source line of the given test thing.
 
-
-    @param testThing: a test method or class
+    @param testThing: the test item to attempt to inspect
+    @type testThing: an L{TestCase}, test method, or module, though only the
+        former two have a chance to succeed
     @rtype: int
     @return: the starting source line, or -1 if one couldn't be found
     """
 
+    # an instance of L{TestCase} -- locate the test it will run
     method = getattr(testThing, "_testMethodName", None)
     if method is not None:
         testThing = getattr(testThing, method)
 
     # If it's a function, we can get the line number even if the source file no
     # longer exists
-    code = getattr(testThing, "func_code", None)
+    code = getattr(testThing, "__code__", None)
     if code is not None:
-        _, startLine = next(dis.findlinestarts(code))
-        return startLine
+        return code.co_firstlineno
 
     try:
         return inspect.getsourcelines(testThing)[1]
@@ -150,13 +150,13 @@ def _coerceOrder(order):
     tests should be done when it actually will be used, as the default argument
     will not be coerced by this function.
 
-    @param order: one of the known orders in L{_runOrders}
+    @param order: one of the known orders in C{_runOrders}
     @return: the order unmodified
     """
     if order not in _runOrders:
         raise usage.UsageError(
             "--order must be one of: %s. See --help-orders for details" %
-            ", ".join(repr(order) for order in _runOrders))
+            (", ".join(repr(order) for order in _runOrders),))
     return order
 
 
@@ -270,7 +270,7 @@ class _BasicOptions(object):
 
     def opt_help_orders(self):
         synopsis = ("Trial can attempt to run test cases and their methods in "
-                    "a few different\n orders. You can select any of the "
+                    "a few different orders. You can select any of the "
                     "following options using --order=<foo>.\n")
 
         print(synopsis)
@@ -466,6 +466,9 @@ class Options(_BasicOptions, usage.Options, app.ReactorSelectionMixin):
                 raise usage.UsageError("You must specify --debug when using "
                                        "--nopm ")
             failure.DO_POST_MORTEM = False
+        if self['order'] and self['random']:
+            raise usage.UsageError(
+                "You can't specify --random when using --order")
 
 
 

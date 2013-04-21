@@ -480,6 +480,17 @@ class OptionsTestCase(unittest.TestCase):
         self.assertEqual(["--recursionlimit", "2000"], args)
 
 
+    def test_randomConflictsWithOrder(self):
+        """
+        C{parseOptions} raises a C{UsageError} when C{--random} is passed along
+        C{--order}.
+        """
+        opts = ["--random", "4", "--order", "alphabetical"]
+        error = self.assertRaises(UsageError, self.options.parseOptions, opts)
+        self.assertEqual("You can't specify --random when using --order",
+                         str(error))
+
+
     def test_jobsConflictWithDebug(self):
         """
         C{parseOptions} raises a C{UsageError} when C{--debug} is passed along
@@ -810,16 +821,14 @@ class HelpOrderTests(unittest.TestCase):
         """
         --help-orders prints each of the available orders and then exits.
         """
-        self.status = None
-        self.patch(
-            trial.sys, "exit", lambda status: setattr(self, "status", status))
         self.patch(sys, "stdout", StringIO.StringIO())
 
-        trial.Options().parseOptions(["--help-orders"])
+        exc = self.assertRaises(
+            SystemExit, trial.Options().parseOptions, ["--help-orders"])
+        self.assertEqual(exc.code, 0)
 
         for orderName, (orderDesc, _) in trial._runOrders.items():
             match = re.search(
                 "{0}.*{1}".format(orderName, orderDesc), sys.stdout.getvalue(),
             )
             self.assertTrue(match)
-        self.assertEqual(self.status, 0)
