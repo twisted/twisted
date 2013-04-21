@@ -747,8 +747,10 @@ class OrderTests(unittest.TestCase):
         suite = loader.loadByNames(self.config['tests'])
 
         names = testNames(suite)
+        # twisted.trial.test.test_module, so split and key on the first 4 to
+        # get stable alphabetical sort on those
         self.assertEqual(
-            names, sorted(names, key=lambda name : name.partition(".")[0]),
+            names, sorted(names, key=lambda name : name.split(".")[:4]),
         )
 
 
@@ -790,6 +792,15 @@ class OrderTests(unittest.TestCase):
             'twisted_toptobottom_temp.test_missing.TestMissing.test_first'])
 
 
+    def test_unknownOrder(self):
+        """
+        An unknown order passed to --order raises a L{UsageError}.
+        """
+
+        self.assertRaises(
+            UsageError, self.config.parseOptions, ["--order", "I don't exist"])
+
+
 
 class HelpOrderTests(unittest.TestCase):
     """
@@ -806,7 +817,7 @@ class HelpOrderTests(unittest.TestCase):
 
         trial.Options().parseOptions(["--help-orders"])
 
-        for orderName, orderDesc in trial._runOrders:
+        for orderName, (orderDesc, _) in trial._runOrders.items():
             match = re.search(
                 "{0}.*{1}".format(orderName, orderDesc), sys.stdout.getvalue(),
             )

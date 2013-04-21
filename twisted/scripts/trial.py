@@ -102,14 +102,62 @@ def _reporterAction():
                                plugin.getPlugins(itrial.IReporter)])
 
 
+def _maybeFindSourceLine(testThing):
+    """
+    Try to find the source line of the given test thing.
+
+
+    @param testThing: a test method or class
+    @rtype: int
+    @return: the starting source line, or -1 if one couldn't be found
+    """
+
+    method = getattr(testThing, "_testMethodName", None)
+    if method is not None:
+        testThing = getattr(testThing, method)
+
+    # If it's a function, we can get the line number even if the source file no
+    # longer exists
+    code = getattr(testThing, "func_code", None)
+    if code is not None:
+        _, startLine = next(dis.findlinestarts(code))
+        return startLine
+
+    try:
+        return inspect.getsourcelines(testThing)[1]
+    except (IOError, TypeError):
+        # either testThing is a module, which raised a TypeError, or the file
+        # couldn't be read
+        return -1
+
 
 # orders which can be passed to trial --order
-_runOrders = [
-    ("alphabetical",
-     "alphabetical order for test methods, arbitrary order for test cases"),
-    ("toptobottom",
-     "attempt to run test cases and methods in the order they were defined"),
-]
+_runOrders = {
+    "alphabetical" : (
+        "alphabetical order for test methods, arbitrary order for test cases",
+        runner.name),
+    "toptobottom" : (
+     "attempt to run test cases and methods in the order they were defined",
+     _maybeFindSourceLine),
+}
+
+
+def _coerceOrder(order):
+    """
+    Check that the given order is a known test running order.
+
+    Does nothing else, since looking up the appropriate callable to sort the
+    tests should be done when it actually will be used, as the default argument
+    will not be coerced by this function.
+
+    @param order: one of the known orders in L{_runOrders}
+    @return: the order unmodified
+    """
+    if order not in _runOrders:
+        raise usage.UsageError(
+            "--order must be one of: %s. See --help-orders for details" %
+            ", ".join(repr(order) for order in _runOrders))
+    return order
 
 
 
@@ -137,8 +185,9 @@ class _BasicOptions(object):
                 ]
 
     optParameters = [
-        ["order", "o", None, "Specify what order to run test cases and methods"
-         ". See --help-orders for more info."],
+        ["order", "o", "alphabetical",
+         "Specify what order to run test cases and methods. "
+         "See --help-orders for more info.", _coerceOrder],
         ["random", "z", None,
          "Run tests in random order using the specified seed"],
         ['temp-directory', None, '_trial_temp',
@@ -148,8 +197,7 @@ class _BasicOptions(object):
          'more info.']]
 
     compData = usage.Completions(
-        optActions={"order": usage.CompleteList(
-                        name for name, _ in _runOrders),
+        optActions={"order": usage.CompleteList(_runOrders),
                     "reporter": _reporterAction,
                     "logfile": usage.CompleteFiles(descr="log file name"),
                     "random": usage.Completer(descr="random seed")},
@@ -226,7 +274,7 @@ class _BasicOptions(object):
                     "following options using --order=<foo>.\n")
 
         print(synopsis)
-        for name, description in _runOrders:
+        for name, (description, _) in sorted(_runOrders.items()):
             print('   ', name, '\t', description)
         sys.exit(0)
 
@@ -260,22 +308,6 @@ class _BasicOptions(object):
         except KeyError:
             raise usage.UsageError(
                 "tbformat must be 'plain', 'emacs', or 'cgitb'.")
-
-
-    def opt_order(self, order):
-        """
-        Run the tests in the given order.
-
-        @param order: a test ordering
-        """
-
-        if order == "toptobottom":
-            self['order'] = _maybeFindSourceLine
-        elif order == "alphabetical":
-            self['order'] = runner.name
-        else:
-            orders = ", ".join(repr(order) for order, _ in _runOrders)
-            raise usage.UsageError("order must be one of " + orders)
 
 
     def opt_recursionlimit(self, arg):
@@ -453,36 +485,6 @@ def _getSuite(config):
 
 
 
-def _maybeFindSourceLine(thing):
-    """
-    Try to find the source line of the given test thing.
-
-
-    @param testThing: a test method or class
-    @rtype: int
-    @return: the starting source line, or -1 if one couldn't be found
-    """
-
-    method = getattr(thing, "_testMethodName", None)
-    if method is not None:
-        thing = getattr(thing, method)
-
-    # If it's a function, we can get the line number even if the source file no
-    # longer exists
-    code = getattr(thing, "func_code", None)
-    if code is not None:
-        _, startLine = next(dis.findlinestarts(code))
-        return startLine
-
-    try:
-        return inspect.getsourcelines(thing)[1]
-    except (IOError, TypeError):
-        # either thing is a module, which raised a TypeError, or the file
-        # couldn't be read
-        return -1
-
-
-
 def _getLoader(config):
     loader = runner.TestLoader()
     if config['random']:
@@ -491,7 +493,8 @@ def _getLoader(config):
         loader.sorter = lambda x : randomer.random()
         print('Running tests shuffled with seed %d\n' % config['random'])
     elif config['order']:
-        loader.sorter = config['order']
+        _, sorter = _runOrders[config['order']]
+        loader.sorter = sorter
     if not config['until-failure']:
         loader.suiteFactory = runner.DestructiveTestSuite
     return loader
