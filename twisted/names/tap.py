@@ -111,6 +111,18 @@ class Options(usage.Options):
         except ValueError:
             raise usage.UsageError("Invalid port: %r" % (self['port'],))
 
+        # If none of these variables have been set, we can't know what
+        # type of DNS service to provide, so fail early.
+        if not (self['recursive'] or self['hosts-file']
+                or self.secondaries or self.zonefiles or self.bindfiles):
+            raise usage.UsageError(
+                "Unknown operating mode. Please provide at least "
+                "one of the following operating mode options. ("
+                "--recursive, --resolv-conf, --hosts-file, "
+                "--secondary, --pyzone or --bindzone"
+                ")")
+
+
 
 def _buildResolvers(config):
     """
