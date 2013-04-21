@@ -15,9 +15,20 @@ from twisted.names.client import Resolver
 
 class OptionsTests(TestCase):
     """
-    Tests for L{Options}, defining how command line arguments for the DNS server
-    are parsed.
+    Tests for L{Options}, defining how command line arguments for the
+    DNS server are parsed.
     """
+    def test_unknownOperatingMode(self):
+        """
+        At least one of the DNS operating mode options must be given
+        ie --recursive, --secondary, --{py,bind}zone or --hosts-file,
+        or a L{UsageError} is raised.
+        """
+        options = Options()
+        self.assertRaises(
+            UsageError, options.parseOptions, [])
+
+
     def test_malformedSecondary(self):
         """
         If the value supplied for an I{--secondary} option does not provide a
