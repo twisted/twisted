@@ -1,0 +1,2 @@
+twistd dns now prints a helpful error message and exits immediately if
+no operating mode options have been provided on the command line.
