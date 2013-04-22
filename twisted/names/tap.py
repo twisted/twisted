@@ -6,10 +6,10 @@
 Domain Name Server
 """
 
-import os, traceback
+import os, sys, traceback
 
 from twisted.python import usage
-from twisted.names import dns
+from twisted.names import dns, resolve
 from twisted.application import internet, service
 
 from twisted.names import server
@@ -121,15 +121,6 @@ class Options(usage.Options):
         except ValueError:
             raise usage.UsageError("Invalid port: %r" % (self['port'],))
 
-        # If none of these variables have been set, we can't know what
-        # type of DNS service to provide, so fail early.
-        if not (self['cache'] or self['recursive'] or self['hosts-file']
-                or self.secondaries or self.zonefiles or self.bindfiles):
-            raise usage.UsageError(
-                "Unknown operating mode. Please provide at least "
-                "one of the following operating mode options: --%s" % (
-                    ", --".join(self._operatingModeOptions)))
-
 
 
 def _buildResolvers(config):
@@ -157,8 +148,17 @@ def _buildResolvers(config):
 
 def makeService(config):
     ca, cl = _buildResolvers(config)
+    try:
+        f = server.DNSServerFactory(
+            config.zones, ca, cl, config['verbose'])
+    except resolve.ResolverChainConstructionError:
+        sys.stderr.write(str(config) + '\n')
+        sys.stderr.write(
+            "Unknown operating mode. Please provide at least "
+            "one of the following operating mode options: --%s\n" % (
+                ", --".join(config._operatingModeOptions)))
+        raise SystemExit(1)
 
-    f = server.DNSServerFactory(config.zones, ca, cl, config['verbose'])
     p = dns.DNSDatagramProtocol(f)
     f.noisy = 0
     ret = service.MultiService()

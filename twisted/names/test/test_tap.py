@@ -5,9 +5,12 @@
 Tests for L{twisted.names.tap}.
 """
 
+from io import BytesIO
+import sys
+
 from twisted.trial.unittest import TestCase
 from twisted.python.usage import UsageError
-from twisted.names.tap import Options, _buildResolvers
+from twisted.names.tap import makeService, Options, _buildResolvers
 from twisted.names.dns import PORT
 from twisted.names.secondary import SecondaryAuthorityService
 from twisted.names.resolve import ResolverChain
@@ -37,11 +40,16 @@ class OptionsTests(TestCase):
         """
         At least one of the DNS operating mode options must be given
         ie --recursive, --secondary, --{py,bind}zone or --hosts-file,
-        or a L{UsageError} is raised.
+        or an error message is printed to stderr and L{SystemExit} is
+        raised.
         """
         options = Options()
+        options.parseOptions([])
+        fakeStderr = BytesIO()
+        self.patch(sys, 'stderr', fakeStderr)
         self.assertRaises(
-            UsageError, options.parseOptions, [])
+            SystemExit, makeService, options)
+        self.assertNotEqual(fakeStderr.getvalue(), '')
 
 
     def test_malformedSecondary(self):
