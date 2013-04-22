@@ -6,6 +6,8 @@ Tests for L{twisted.conch.ssh}.
 """
 
 import struct
+from zope.interface import implementer
+from zope.interface.verify import verifyClass
 
 try:
     import Crypto.Cipher.DES3
@@ -125,9 +127,10 @@ class ConchTestAvatar(avatar.ConchUser):
 
 
 
+@implementer(session.ISession)
 class ConchSessionForTestAvatar(object):
     """
-    An ISession adapter for ConchTestAvatar.
+    An L{session.ISession} adapter for ConchTestAvatar.
     """
     def __init__(self, avatar):
         """
@@ -144,6 +147,9 @@ class ConchSessionForTestAvatar(object):
 
 
     def getPty(self, term, windowSize, attrs):
+        """
+        Get a psuedo-terminal for use by a shell or command.
+        """
         log.msg('pty req')
         self._terminalType = term
         self._windowSize = windowSize
@@ -151,6 +157,9 @@ class ConchSessionForTestAvatar(object):
 
 
     def openShell(self, proto):
+        """
+        Open a shell and connect it to C{proto}.
+        """
         log.msg('opening shell')
         self.proto = proto
         EchoTransport(proto)
@@ -158,6 +167,9 @@ class ConchSessionForTestAvatar(object):
 
 
     def execCommand(self, proto, cmd):
+        """
+        Execute a command.
+        """
         self.cmd = cmd
         self.proto = proto
         f = cmd.split()[0]
@@ -182,18 +194,34 @@ class ConchSessionForTestAvatar(object):
             raise error.ConchError('bad exec')
         self.avatar.conn.transport.expectedLoseConnection = 1
 
+    def windowChanged(self, newWindowSize):
+        """
+        Called when the size of the remote screen has changed.
+        """
+        pass
+
 
     def eofReceived(self):
+        """
+        Called when the other side has indicated no more data will be sent.
+        """
         self.eof = 1
 
 
     def closed(self):
+        """
+        Called when the session is closed.
+        """
         log.msg('closed cmd "%s"' % self.cmd)
         self.remoteWindowLeftAtClose = self.proto.session.remoteWindowLeft
         self.onClose.callback(None)
 
+
+
 from twisted.python import components
 components.registerAdapter(ConchSessionForTestAvatar, ConchTestAvatar, session.ISession)
+
+
 
 class CrazySubsystem(protocol.Protocol):
 
@@ -523,6 +551,20 @@ if Crypto is not None and pyasn1 is not None:
 
         def closed(self):
             self.onClose.callback(None)
+
+
+
+class ConchSessionForTestAvatarTest(unittest.TestCase):
+    """
+    Test for L{ConchSessionForTestAvatar}.
+    """
+
+    def test_conchSessionForTestAvatarProvidesISession(self):
+        """
+        L{ConchSessionForTestAvatar} provides the L{session.ISession}
+        interface.
+        """
+        verifyClass(session.ISession, ConchSessionForTestAvatar)
 
 
 
