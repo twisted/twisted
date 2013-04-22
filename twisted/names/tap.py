@@ -156,7 +156,7 @@ def makeService(config):
         sys.stderr.write(
             "Unknown operating mode. Please provide at least "
             "one of the following operating mode options: --%s\n" % (
-                ", --".join(config._operatingModeOptions)))
+                ", --".join(config._operatingModeOptions),))
         raise SystemExit(1)
 
     p = dns.DNSDatagramProtocol(f)
