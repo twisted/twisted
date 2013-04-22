@@ -38,10 +38,9 @@ class OptionsTests(TestCase):
 
     def test_unknownOperatingMode(self):
         """
-        At least one of the DNS operating mode options must be given
-        ie --recursive, --secondary, --{py,bind}zone or --hosts-file,
-        or an error message is printed to stderr and L{SystemExit} is
-        raised.
+        At least one of the L{Options._operatingModeOptions} must be
+        given or an error message is printed to L{sys.stderr} and
+        L{SystemExit} is raised.
         """
         options = Options()
         options.parseOptions([])
