@@ -8,7 +8,7 @@ Tests for parts of our release automation system.
 
 import os
 import sys
-from collections import Counter
+from collections import defaultdict
 
 from distutils.core import Distribution
 
@@ -275,15 +275,24 @@ class GetAllScriptsTest(TestCase):
 
         scriptsReturned = dist.getAllScripts()
 
+        # This helper function provides the similiar functionality
+        # as provided by collections.Counter
+        def getCount(input):
+            ret = defaultdict(int)
+            for k in input:
+                ret[k] += 1
+            return ret
+
+
         # getAllScripts should call getScripts once on each directory which
         # corresponds to a subproject, and also on the current directory (for
         # the core subproject). It may do this in any order.
-        self.assertEqual(Counter(directoriesQueried),
-                         Counter(dummySubprojects + ['']))
+        self.assertEqual(getCount(directoriesQueried),
+                         getCount(dummySubprojects + ['']))
         # getAllScripts should collect all the scripts returned by getScripts,
         # in any order.
-        self.assertEqual(Counter(scriptsReturned),
-                         Counter(scriptsGiven))
+        self.assertEqual(getCount(scriptsReturned),
+                         getCount(scriptsGiven))
 
 
 
